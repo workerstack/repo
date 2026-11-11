@@ -59,7 +59,7 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
   const f = rustFakes();
   f.files.set(at("mutation-floors.json"), JSON.stringify({ "crates/a": 60 }));
   expect(await runMutate(["--rust"], f.deps)).toBe(0);
-  expect(f.calls.filter((c) => c.startsWith("git clone") || c.startsWith("git -C"))).toEqual([
+  expect(f.calls.filter((c) => c.startsWith("git clone") || c.startsWith("git -C"))).toStrictEqual([
     `git clone -q --shared ${ROOT} ${CLONE}`,
     `git -C ${CLONE} checkout -q --detach ${SHA}`,
   ]);
@@ -68,7 +68,7 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
     `cargo mutants -C=--locked --test-tool cargo --in-place --no-times --colors never -o ${OUT_DIR} --shard 0/1 @${CLONE}`,
   );
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);
-  expect(f.out).toEqual([
+  expect(f.out).toStrictEqual([
     `mutate: HEAD ${SHA.slice(0, 7)}\n`,
     "mutate: cargo-mutants, 28 mutants, shard 1/1\n",
     "mutate: crates/a 69.57% (floor 60), 7 survivors in .tmp/repo/mutation/report.json\n",
@@ -104,7 +104,7 @@ it("needs a Cargo.toml at the repo root, before any git call", async () => {
   const f = fakes(sim(), PACKAGES);
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe("repo mutate: --rust needs a Cargo.toml at the repo root\n");
-  expect(f.calls).toEqual([]);
+  expect(f.calls).toStrictEqual([]);
 });
 
 it("needs no file under coverage.mutate", async () => {
@@ -198,5 +198,5 @@ it("removes the clone when cargo throws", async () => {
 
 it("shards by the tool's 0-based index", () => {
   const plan = { root: ROOT, sha: SHA, files: [], shard: { index: 3, total: 3 } };
-  expect(mutantsArgs(plan, "o").slice(-2)).toEqual(["--shard", "2/3"]);
+  expect(mutantsArgs(plan, "o").slice(-2)).toStrictEqual(["--shard", "2/3"]);
 });

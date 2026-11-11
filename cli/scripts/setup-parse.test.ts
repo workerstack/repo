@@ -7,17 +7,17 @@ import { cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.t
 afterEach(cleanSetup);
 
 it("parseArgv keeps everything after -- as positionals", () => {
-  expect(parseArgv(["speak", "--", "--raw", "x"])).toEqual({ _: ["speak", "--raw", "x"], flags: {} });
+  expect(parseArgv(["speak", "--", "--raw", "x"])).toStrictEqual({ _: ["speak", "--raw", "x"], flags: {} });
 });
 
 it("parseArgv treats a flag at the end or before another flag as on", () => {
-  expect(parseArgv(["--redo"]).flags).toEqual({ redo: "1" });
-  expect(parseArgv(["--redo", "--device", "hw:1"]).flags).toEqual({ redo: "1", device: "hw:1" });
+  expect(parseArgv(["--redo"]).flags).toStrictEqual({ redo: "1" });
+  expect(parseArgv(["--redo", "--device", "hw:1"]).flags).toStrictEqual({ redo: "1", device: "hw:1" });
 });
 
 it("parseArgv stringifies non-string arguments and ignores a non-array argv", () => {
-  expect(parseArgv([7, "jev"])._).toEqual(["7", "jev"]);
-  expect(parseArgv("speak")).toEqual({ _: [], flags: {} });
+  expect(parseArgv([7, "jev"])._).toStrictEqual(["7", "jev"]);
+  expect(parseArgv("speak")).toStrictEqual({ _: [], flags: {} });
 });
 
 it("normalizeTarget maps aliases and rejects the rest", () => {
@@ -30,8 +30,8 @@ it("normalizeTarget maps aliases and rejects the rest", () => {
 });
 
 it("setupTargets always offers browser and jev, and the enabled packs", () => {
-  expect(setupTargets()).toEqual(["browser", "jev"]);
-  expect(setupTargets(["speak", "clasp"])).toEqual(["speak", "browser", "jev"]);
+  expect(setupTargets()).toStrictEqual(["browser", "jev"]);
+  expect(setupTargets(["speak", "clasp"])).toStrictEqual(["speak", "browser", "jev"]);
 });
 
 it("parseDesktopOAuth takes an object and rejects a body without a client id", () => {
@@ -43,8 +43,8 @@ it("parseDesktopOAuth takes an object and rejects a body without a client id", (
 it("loadOAuthInput reads inline JSON and a file, and rejects empty or missing input", () => {
   const dir = plant("setup-oauth-in-");
   const file = writeAt(path.join(dir, "client_secret.json"), JSON.stringify(desktopOauth));
-  expect(loadOAuthInput(JSON.stringify(desktopOauth))).toEqual(desktopOauth);
-  expect(loadOAuthInput(` ${file} `)).toEqual(desktopOauth);
+  expect(loadOAuthInput(JSON.stringify(desktopOauth))).toStrictEqual(desktopOauth);
+  expect(loadOAuthInput(` ${file} `)).toStrictEqual(desktopOauth);
   expect(() => loadOAuthInput("")).toThrow(/required/);
   expect(() => loadOAuthInput(undefined)).toThrow(/required/);
   expect(() => loadOAuthInput(path.join(dir, "nope.json"))).toThrow(/not found/);

@@ -45,32 +45,32 @@ function repo(packs: string, workflows: string[]): { root: string; cacheDir: str
 it("runs nothing without a config, without the release pack or without a workflow", async () => {
   const bare = temp();
   const spawn = answering(0, "");
-  expect(await checkActionlintAt(bare, { spawn, fetch: failFetch })).toEqual({ problems: [] });
+  expect(await checkActionlintAt(bare, { spawn, fetch: failFetch })).toStrictEqual({ problems: [] });
   const off = repo('["standards"]', ["ci.yml"]);
-  expect(await checkActionlintAt(off.root, { spawn, fetch: failFetch, cacheDir: off.cacheDir })).toEqual({
+  expect(await checkActionlintAt(off.root, { spawn, fetch: failFetch, cacheDir: off.cacheDir })).toStrictEqual({
     problems: [],
   });
   const none = repo('["release"]', ["notes.txt"]);
   fs.rmSync(path.join(none.root, ".github", "workflows", "notes.txt"));
-  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toEqual({
+  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toStrictEqual({
     problems: [],
   });
   fs.rmSync(path.join(none.root, ".github"), { recursive: true });
-  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toEqual({
+  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toStrictEqual({
     problems: [],
   });
-  expect(calls).toEqual([]);
+  expect(calls).toStrictEqual([]);
 });
 
 it("lints every .yml and .yaml workflow with the cached binary, in the repo root, and nothing else", async () => {
   vi.stubEnv("GIT_DIR", "/elsewhere");
   const { root, cacheDir } = repo('["release"]', ["b.yaml", "a.yml", "notes.txt"]);
   const out = await checkActionlintAt(root, { spawn: answering(0, "[]"), fetch: failFetch, cacheDir });
-  expect(out).toEqual({ problems: [] });
+  expect(out).toStrictEqual({ problems: [] });
   expect(calls).toHaveLength(1);
   const [call] = calls;
   expect(call?.command).toBe(path.join(cacheDir, EXE));
-  expect(call?.args).toEqual([
+  expect(call?.args).toStrictEqual([
     "-format",
     "{{json .}}",
     "-shellcheck=",
@@ -91,7 +91,7 @@ it("prints one line per problem actionlint finds", async () => {
   ];
   const spawn = answering(1, JSON.stringify(items.map((item) => ({ kind: "syntax-check", ...item }))));
   const out = await checkActionlintAt(root, { spawn, fetch: failFetch, cacheDir });
-  expect(out.problems).toEqual([
+  expect(out.problems).toStrictEqual([
     'actionlint: release.yml:40:9: unexpected key "runs_on" for "job" section [syntax-check]',
     "actionlint: release.yml:2:1: bad [expression]",
   ]);
@@ -104,5 +104,5 @@ it.each([
 ])("reports $name as a failure line", async ({ code, stdout, stderr, line }) => {
   const { root, cacheDir } = repo('["release"]', ["ci.yml"]);
   const out = await checkActionlintAt(root, { spawn: answering(code, stdout, stderr), fetch: failFetch, cacheDir });
-  expect(out.problems).toEqual([line]);
+  expect(out.problems).toStrictEqual([line]);
 });

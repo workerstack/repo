@@ -45,7 +45,7 @@ it("counts caught and timeout mutants as killed, per file", () => {
     mutant("crates/a/src/lib.rs", "Timeout", { line: 2 }),
     mutant("crates/b/src/lib.rs", "CaughtMutant"),
   );
-  expect(fromCargoMutants(raw)).toEqual({
+  expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: {
       "crates/a/src/lib.rs": { killed: 2, survivors: [] },
@@ -56,7 +56,7 @@ it("counts caught and timeout mutants as killed, per file", () => {
 
 it("makes a missed mutant a survivor at its span start, named by its genre", () => {
   const raw = outcomes(mutant("crates/a/src/lib.rs", "MissedMutant", { line: 16, genre: "FnValue" }));
-  expect(fromCargoMutants(raw)).toEqual({
+  expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: {
       "crates/a/src/lib.rs": {
@@ -79,14 +79,14 @@ it("leaves out unviable mutants, the baseline and a failed baseline", () => {
     mutant("crates/a/src/lib.rs", "Unviable"),
     mutant("crates/a/src/lib.rs", "CaughtMutant", { line: 3 }),
   );
-  expect(fromCargoMutants(raw)).toEqual({
+  expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: { "crates/a/src/lib.rs": { killed: 1, survivors: [] } },
   });
 });
 
 it("gives no files when only the baseline ran", () => {
-  expect(fromCargoMutants(outcomes(baseline))).toEqual({ ok: true, value: {} });
+  expect(fromCargoMutants(outcomes(baseline))).toStrictEqual({ ok: true, value: {} });
 });
 
 it("names a bad shape", () => {
@@ -108,7 +108,7 @@ it("requires the tool in a shard report", () => {
   const bad = parseReport(JSON.stringify({ ...base, tool: "jest" }));
   expect(bad.ok).toBe(false);
   for (const tool of ["stryker", "cargo-mutants"]) {
-    expect(parseReport(JSON.stringify({ ...base, tool }))).toEqual({
+    expect(parseReport(JSON.stringify({ ...base, tool }))).toStrictEqual({
       ok: true,
       value: { ...base, tool },
     });

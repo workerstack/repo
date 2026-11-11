@@ -91,10 +91,10 @@ function coverage(root: string, run?: CargoRun): Promise<number> {
 it("repo coverage: writes a floor for every measured file on the first run", { timeout: RUN_MS }, async () => {
   const root = project();
   expect(await coverage(root)).toBe(0);
-  expect(floorsOf(root)).toEqual({ "src/a.ts": MEASURED });
+  expect(floorsOf(root)).toStrictEqual({ "src/a.ts": MEASURED });
   const lines = ["statements new → 50", "branches new → 50", "functions new → 50", "lines new → 66"];
   expect(out.join("")).toBe(`${lines.map((line) => `src/a.ts ${line}\n`).join("")}wrote ${FLOORS}\n`);
-  expect(fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith("workerstack-cov-run"))).toEqual([]);
+  expect(fs.readdirSync(os.tmpdir()).filter((name) => name.startsWith("workerstack-cov-run"))).toStrictEqual([]);
 });
 
 it("repo coverage: floors every file the suite measures, sorted by path", { timeout: RUN_MS }, async () => {
@@ -103,8 +103,8 @@ it("repo coverage: floors every file the suite measures, sorted by path", { time
   fs.writeFileSync(path.join(root, "src/b.test.ts"), SECOND_TEST);
   expect(await coverage(root)).toBe(0);
   const written = floorsOf(root) /* the command wrote an object */ as Record<string, unknown>;
-  expect(Object.keys(written)).toEqual(["src/a.ts", "src/b.ts"]);
-  expect(written["src/b.ts"]).toEqual({ statements: 100, branches: 100, functions: 100, lines: 100 });
+  expect(Object.keys(written)).toStrictEqual(["src/a.ts", "src/b.ts"]);
+  expect(written["src/b.ts"]).toStrictEqual({ statements: 100, branches: 100, functions: 100, lines: 100 });
 });
 
 it(
@@ -115,7 +115,7 @@ it(
     fs.writeFileSync(path.join(root, FLOORS), JSON.stringify({ "src/a.ts": { ...MEASURED, branches: 40, lines: 30 } }));
     expect(await coverage(root)).toBe(0);
     expect(out.join("")).toBe(`src/a.ts branches 40 → 50\nsrc/a.ts lines 30 → 66\nwrote ${FLOORS}\n`);
-    expect(floorsOf(root)).toEqual({ "src/a.ts": MEASURED });
+    expect(floorsOf(root)).toStrictEqual({ "src/a.ts": MEASURED });
   },
 );
 
@@ -174,7 +174,7 @@ it(
 it("repo coverage: writes the file coverage.floors names in the config", { timeout: RUN_MS }, async () => {
   const root = project('export default { coverage: { floors: "ratchets/floors.json" } };\n');
   expect(await coverage(root)).toBe(0);
-  expect(floorsOf(root, "ratchets/floors.json")).toEqual({ "src/a.ts": MEASURED });
+  expect(floorsOf(root, "ratchets/floors.json")).toStrictEqual({ "src/a.ts": MEASURED });
   expect(out.join("")).toContain("wrote ratchets/floors.json\n");
   expect(fs.existsSync(path.join(root, FLOORS))).toBe(false);
 });
@@ -210,7 +210,7 @@ it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RU
   };
   expect(await coverage(root, run)).toBe(0);
   const rust = { lines: 66, functions: 66, regions: 58 };
-  expect(floorsOf(root)).toEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });
+  expect(floorsOf(root)).toStrictEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });
 });
 
 it(
@@ -220,6 +220,6 @@ it(
     const root = project();
     fs.rmSync(path.join(root, "src"), { recursive: true });
     expect(await coverage(root)).toBe(0);
-    expect(floorsOf(root)).toEqual({});
+    expect(floorsOf(root)).toStrictEqual({});
   },
 );

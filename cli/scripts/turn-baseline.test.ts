@@ -45,8 +45,8 @@ it(
     );
     expect(result.out).not.toContain("sync");
     expect(result.code).toBe(0);
-    expect(JSON.parse(git(root, "show", `:${BASELINE}`))).toEqual({ "src/a.ts": { [NN]: 1 } });
-    expect(staged(root)).toEqual([BASELINE, "src/a.ts", "src/b.ts"]);
+    expect(JSON.parse(git(root, "show", `:${BASELINE}`))).toStrictEqual({ "src/a.ts": { [NN]: 1 } });
+    expect(staged(root)).toStrictEqual([BASELINE, "src/a.ts", "src/b.ts"]);
   },
 );
 
@@ -58,8 +58,8 @@ it("the default mode lowers the baseline on disk and stages nothing", { timeout:
   write(root, { "src/a.ts": nonNull(1) });
   const result = await turn(root, []);
   expect(result.out).toContain(`lint ok, baseline lowered (src/a.ts ${NN} 2 → 1)`);
-  expect(JSON.parse(read(root, BASELINE))).toEqual({ "src/a.ts": { [NN]: 1 } });
-  expect(staged(root)).toEqual([]);
+  expect(JSON.parse(read(root, BASELINE))).toStrictEqual({ "src/a.ts": { [NN]: 1 } });
+  expect(staged(root)).toStrictEqual([]);
 });
 
 it("a broken baseline or tool config fails its step with the reason", { timeout: SLOW }, async () => {

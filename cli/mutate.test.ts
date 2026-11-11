@@ -11,7 +11,7 @@ it("clones HEAD shared, detaches to its sha, installs frozen, runs Stryker there
   const f = fakes();
   expect(await runMutate(SHARD, f.deps)).toBe(0);
   const git = f.calls.filter((c) => c.startsWith("git"));
-  expect(git).toEqual([
+  expect(git).toStrictEqual([
     "git rev-parse HEAD",
     "git status --porcelain",
     "git ls-tree -r --name-only HEAD",
@@ -19,10 +19,10 @@ it("clones HEAD shared, detaches to its sha, installs frozen, runs Stryker there
     `git -C ${CLONE} checkout -q --detach ${SHA}`,
   ]);
   const order = f.calls.map((c) => c.split(" ")[0] + (c.includes("install") ? " install" : ""));
-  expect(order.slice(-3)).toEqual(["bun install", "bun", "rm"]);
+  expect(order.slice(-3)).toStrictEqual(["bun install", "bun", "rm"]);
   expect(f.calls).toContain(`bun install --frozen-lockfile @${CLONE}`);
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);
-  expect(f.calls.filter((c) => c.startsWith("mkdtemp"))).toEqual(["mkdtemp workerstack-mutate-"]);
+  expect(f.calls.filter((c) => c.startsWith("mkdtemp"))).toStrictEqual(["mkdtemp workerstack-mutate-"]);
 });
 
 it("runs the bin the clone's package names under bun with the preload, config outside the clone", async () => {
@@ -44,7 +44,7 @@ it("writes a Stryker config with the shard's files and the options this repo nee
     write(file, text);
   };
   await runMutate(SHARD, f.deps);
-  expect(config).toEqual({
+  expect(config).toStrictEqual({
     testRunner: "vitest",
     mutate: ["src/a.ts"],
     reporters: ["json"],
@@ -87,7 +87,7 @@ it("shards the tracked matches by lines, writes the shard report and prints its 
   const f = fakes();
   expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.out.join("")).toBe(`mutate: HEAD ${SHA.slice(0, 7)}\nmutate: 1 file, shard 2/2, 0 survivors in ${OUT}\n`);
-  expect(JSON.parse(f.files.get(OUT) ?? "")).toEqual({
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toStrictEqual({
     tool: "stryker",
     head: SHA,
     shard: { index: 2, total: 2 },
@@ -170,7 +170,7 @@ it("refuses a bad --shard before touching git, and prints the config's errors", 
   const bad = fakes();
   expect(await runMutate(["--shard", "9/8"], bad.deps)).toBe(1);
   expect(bad.err.join("")).toBe("repo mutate: --shard takes i/n with 1 <= i <= n, such as 2/8\n");
-  expect(bad.calls).toEqual([]);
+  expect(bad.calls).toStrictEqual([]);
   const noConfig = fakes(sim({ config: ["workerstack.config.ts: no default export"] }));
   expect(await runMutate(SHARD, noConfig.deps)).toBe(1);
   expect(noConfig.err.join("")).toBe("repo mutate: workerstack.config.ts: no default export\n");

@@ -32,7 +32,7 @@ describe("readWorkspace", () => {
   it("reads a repo with no workspaces as the root alone", () => {
     const manifest = { name: "solo", dependencies: { "@workerstack/repo": "^1.0.0" } };
     const root = repo({ "package.json": manifest });
-    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest, packages: [] } });
   });
 
   it("keeps version, sideEffects, packageManager, bin and exports as they are written", () => {
@@ -45,12 +45,12 @@ describe("readWorkspace", () => {
       exports: { "./lint": { default: "./lint.ts" } },
     };
     const root = repo({ "package.json": manifest });
-    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest, packages: [] } });
   });
 
   it("reads a root without package.json as an empty manifest", () => {
     const root = repo({});
-    expect(readWorkspace(root)).toEqual({ ok: true, workspace: { root, manifest: {}, packages: [] } });
+    expect(readWorkspace(root)).toStrictEqual({ ok: true, workspace: { root, manifest: {}, packages: [] } });
   });
 
   it("expands an array of workspace globs into sorted package dirs with their manifests", () => {
@@ -61,7 +61,7 @@ describe("readWorkspace", () => {
       "apps/site/package.json": { name: "site" },
     });
     const result = readWorkspace(root);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: true,
       workspace: {
         root,
@@ -80,7 +80,7 @@ describe("readWorkspace", () => {
       "package.json": { workspaces: { packages: ["libs/*"], catalog: { zod: "^4.0.0" } } },
       "libs/core/package.json": { name: "core" },
     });
-    expect(dirsOf(root)).toEqual(["libs/core"]);
+    expect(dirsOf(root)).toStrictEqual(["libs/core"]);
   });
 
   it("drops dirs a ! pattern excludes", () => {
@@ -89,7 +89,7 @@ describe("readWorkspace", () => {
       "packages/api/package.json": {},
       "packages/legacy/package.json": {},
     });
-    expect(dirsOf(root)).toEqual(["packages/api"]);
+    expect(dirsOf(root)).toStrictEqual(["packages/api"]);
   });
 
   it("skips matched dirs without package.json, matched files and anything under node_modules", () => {
@@ -103,7 +103,7 @@ describe("readWorkspace", () => {
       "packages/a/b/deep/package.json": {},
       "tools/lint/package.json": {},
     });
-    expect(dirsOf(root)).toEqual(["packages/a/b/deep", "packages/api", "tools/lint"]);
+    expect(dirsOf(root)).toStrictEqual(["packages/a/b/deep", "packages/api", "tools/lint"]);
   });
 
   it("lists a dir matched by two patterns once", () => {
@@ -111,7 +111,7 @@ describe("readWorkspace", () => {
       "package.json": { workspaces: ["packages/*", "packages/api"] },
       "packages/api/package.json": {},
     });
-    expect(dirsOf(root)).toEqual(["packages/api"]);
+    expect(dirsOf(root)).toStrictEqual(["packages/api"]);
   });
 
   it("normalizes backslash dirs from the glob to POSIX separators", () => {
@@ -123,7 +123,7 @@ describe("readWorkspace", () => {
     });
     const glob = (pattern: string): string[] =>
       pattern === "packages/*" ? ["packages\\web", "packages\\api\\", "packages\\old"] : ["packages\\old"];
-    expect(dirsOf(root, glob)).toEqual(["packages/api", "packages/web"]);
+    expect(dirsOf(root, glob)).toStrictEqual(["packages/api", "packages/web"]);
   });
 
   it("keeps a package's private flag and refuses one that is not true or false", () => {
@@ -133,23 +133,23 @@ describe("readWorkspace", () => {
       "packages/web/package.json": {},
     });
     const result = readWorkspace(root);
-    expect(result.ok && result.workspace.packages.map((pkg) => pkg.manifest.private)).toEqual([true, undefined]);
+    expect(result.ok && result.workspace.packages.map((pkg) => pkg.manifest.private)).toStrictEqual([true, undefined]);
     const bad = readWorkspace(repo({ "package.json": { private: "yes" } }));
-    expect(!bad.ok && bad.errors).toEqual(["package.json: private: must be true or false"]);
+    expect(!bad.ok && bad.errors).toStrictEqual(["package.json: private: must be true or false"]);
   });
 
   it("reports a root package.json that is not JSON", () => {
     const root = repo({ "package.json": "{ nope" });
     const result = readWorkspace(root);
     expect(result.ok).toBe(false);
-    expect(!result.ok && result.errors).toEqual([expect.stringMatching(/^package\.json: not valid JSON: .+/)]);
+    expect(!result.ok && result.errors).toStrictEqual([expect.stringMatching(/^package\.json: not valid JSON: .+/)]);
   });
 
   it("reports manifest fields of the wrong shape, naming the file and the field", () => {
     const root = repo({
       "package.json": { workspaces: "packages/*", dependencies: { "@workerstack/repo": 1 } },
     });
-    expect(readWorkspace(root)).toEqual({
+    expect(readWorkspace(root)).toStrictEqual({
       ok: false,
       errors: [
         'package.json: workspaces: must be a list of globs or { "packages": [...] }',
@@ -160,7 +160,7 @@ describe("readWorkspace", () => {
 
   it("reports a manifest that is not an object", () => {
     const root = repo({ "package.json": "[]" });
-    expect(readWorkspace(root)).toEqual({ ok: false, errors: ["package.json: must be a JSON object"] });
+    expect(readWorkspace(root)).toStrictEqual({ ok: false, errors: ["package.json: must be a JSON object"] });
   });
 
   it("reports every malformed workspace package manifest", () => {
@@ -172,7 +172,7 @@ describe("readWorkspace", () => {
     });
     const result = readWorkspace(root);
     expect(result.ok).toBe(false);
-    expect(!result.ok && result.errors).toEqual([
+    expect(!result.ok && result.errors).toStrictEqual([
       "packages/api/package.json: name: must be a string",
       expect.stringMatching(/^packages\/web\/package\.json: not valid JSON: .+/),
     ]);
@@ -185,7 +185,10 @@ describe("readWorkspace", () => {
       "libs/core/package.json": { name: "core" },
     });
     const result = readWorkspace(root);
-    expect(result.ok && result.workspace.manifest).toEqual({ ...top, workspaces: { packages: ["libs/*"], ...top } });
+    expect(result.ok && result.workspace.manifest).toStrictEqual({
+      ...top,
+      workspaces: { packages: ["libs/*"], ...top },
+    });
   });
 
   it("refuses a catalog entry that is not a version string", () => {
@@ -197,8 +200,8 @@ describe("readWorkspace", () => {
 
 describe("catalogsOf", () => {
   it("is empty for a manifest without catalogs", () => {
-    expect(catalogsOf({})).toEqual({ default: {}, named: {} });
-    expect(catalogsOf({ workspaces: ["a"] })).toEqual({ default: {}, named: {} });
+    expect(catalogsOf({})).toStrictEqual({ default: {}, named: {} });
+    expect(catalogsOf({ workspaces: ["a"] })).toStrictEqual({ default: {}, named: {} });
   });
 
   it("merges both places, the top level winning", () => {
@@ -210,7 +213,7 @@ describe("catalogsOf", () => {
         catalogs: { legacy: { a: "1" }, next: { b: "2" } },
       },
     };
-    expect(catalogsOf(manifest)).toEqual({
+    expect(catalogsOf(manifest)).toStrictEqual({
       default: { zod: "^4", vitest: "^4" },
       named: { legacy: { zod: "^3", a: "1" }, next: { b: "2" } },
     });

@@ -94,7 +94,7 @@ describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
       expect(before.code).toBe(1);
       expect(repoCmd(root, "fmt").code).toBe(0);
       expect(fs.readFileSync(path.join(root, "src/b.ts"), "utf8")).toBe("export const a = { b: 1 };\n");
-      expect(repoCmd(root, "fmt", "--check")).toEqual({
+      expect(repoCmd(root, "fmt", "--check")).toStrictEqual({
         code: 0,
         out: expect.stringContaining("All matched files use the correct format"),
       });
@@ -178,7 +178,7 @@ describe("runTool", () => {
       await runTool("oxlint", ["--format", "unix", "src"], { cwd: path.join(root, "src"), stderr: io.stderr, run }),
     ).toBe(3);
     expect(run).toHaveBeenCalledWith("oxlint", ["--format", "unix", "src"], root);
-    expect(io.err).toEqual([]);
+    expect(io.err).toStrictEqual([]);
   });
 
   it("asks for repo sync when the tool's config is missing", async () => {
@@ -210,7 +210,7 @@ it("captureTool returns oxlint's json report and exit code instead of printing t
   const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const ok = 1;\n" });
   const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
   const report = JSON.parse(failing.stdout) as { diagnostics: { filename: string; code: string }[] };
-  expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toEqual([
+  expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toStrictEqual([
     1,
     ["src/a.ts typescript(no-non-null-assertion)"],
   ]);
@@ -222,6 +222,6 @@ it("captureTool returns oxlint's json report and exit code instead of printing t
 it("captureBun keeps all of a run's output when it exits right after writing, and fails a killed run", () => {
   const script = 'process.stdout.write("x".repeat(4 * 1024 * 1024)); process.stderr.write("done"); process.exit(3);';
   const run = captureBun(["-e", script], os.tmpdir());
-  expect([run.code, run.stdout.length, run.stderr]).toEqual([3, 4 * 1024 * 1024, "done"]);
+  expect([run.code, run.stdout.length, run.stderr]).toStrictEqual([3, 4 * 1024 * 1024, "done"]);
   expect(captureBun(["-e", "process.kill(process.pid, 'SIGKILL')"], os.tmpdir()).code).toBe(1);
 });

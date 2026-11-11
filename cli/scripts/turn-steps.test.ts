@@ -12,7 +12,7 @@ it(
     git(root, "add", "-f", "data.jsonc");
     const result = await turn(root, ["--staged"]);
     expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · /);
-    expect(staged(root)).toEqual(["data.jsonc"]);
+    expect(staged(root)).toStrictEqual(["data.jsonc"]);
     expect(git(root, "show", ":data.jsonc")).toBe('{\n  // why\n  "a": 1,\n  "b": /* inline */ 2\n}\n');
     expect(read(root, "data.jsonc")).toBe(git(root, "show", ":data.jsonc"));
   },

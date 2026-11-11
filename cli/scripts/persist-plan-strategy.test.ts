@@ -27,7 +27,7 @@ describe("plan strategy moves and fences", () => {
     const [head, ...body] = text.split("\n---\n");
     expect(head).toMatch(/commit: feat: add the thing\nstrategy: review-deep$/);
     expect(body.join("\n---\n")).not.toMatch(/^strategy:/m);
-    expect(validatePlan(savedOk(r).filename, text)).toEqual([]);
+    expect(validatePlan(savedOk(r).filename, text)).toStrictEqual([]);
   });
 
   it("leaves a strategy line inside a code fence alone", () => {
@@ -48,7 +48,7 @@ describe("plan strategy denials", () => {
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(NO_KEY);
     expect(fs.existsSync(path.join(ws, PLAN_DIR))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toStrictEqual([]);
   });
 
   it("denies an unknown or empty value", () => {

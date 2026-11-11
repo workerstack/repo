@@ -220,7 +220,7 @@ describe("hosts", () => {
           for (const rel of expected)
             expect(sb.exists(rel) || own.some((o) => o.path.startsWith(`${rel}/`)), rel).toBe(true);
           for (const rel of others) expect(sb.exists(rel), rel).toBe(false);
-          expect(validateOutputs(sb.repo, outputs)).toEqual([]);
+          expect(validateOutputs(sb.repo, outputs)).toStrictEqual([]);
           expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"], { env: ROOT_VARS }));
         } finally {
           sb.write("workerstack.config.ts", config);

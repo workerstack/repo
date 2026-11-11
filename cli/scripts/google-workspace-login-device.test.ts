@@ -43,7 +43,7 @@ it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhe
   openUrl("https://x", { platform: "darwin", spawnSyncFn });
   openUrl("https://x", { platform: "win32", spawnSyncFn });
   openUrl("https://x", { platform: "linux", spawnSyncFn });
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     ["open", ["https://x"], { stdio: "ignore" }],
     ["cmd", ["/c", "start", "", "https://x"], { stdio: "ignore", windowsVerbatimArguments: true }],
     ["xdg-open", ["https://x"], { stdio: "ignore" }],
@@ -60,8 +60,8 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
   const r = await withIo(() => main(["login"], spawn));
   expect(r.code).toBe(0);
   expect(r.logs).toContain("logged in via gcloud ADC");
-  expect(seen[0]).toEqual({ cmd: "gcloud", args: ["--version"] });
-  expect(seen[1]?.args.slice(0, 3)).toEqual(["auth", "application-default", "login"]);
+  expect(seen[0]).toStrictEqual({ cmd: "gcloud", args: ["--version"] });
+  expect(seen[1]?.args.slice(0, 3)).toStrictEqual(["auth", "application-default", "login"]);
   expect(seen[1]?.args[3]).toContain("--scopes=https://www.googleapis.com/auth/cloud-platform,");
 });
 

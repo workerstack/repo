@@ -25,12 +25,12 @@ it("finds the nearest package.json up to the root, and whether it is private", (
     "packages/a/package.json": '{ "private": true }',
     "packages/b/package.json": '{ "private": false }',
   });
-  expect(owner("packages/a/src/x.ts")).toEqual({ dir: "packages/a", public: false });
-  expect(owner("packages/b/x.ts")).toEqual({ dir: "packages/b", public: true });
-  expect(owner("cli/x.ts")).toEqual({ dir: ".", public: true });
+  expect(owner("packages/a/src/x.ts")).toStrictEqual({ dir: "packages/a", public: false });
+  expect(owner("packages/b/x.ts")).toStrictEqual({ dir: "packages/b", public: true });
+  expect(owner("cli/x.ts")).toStrictEqual({ dir: ".", public: true });
 });
 
 it("treats a file with no manifest, or one it cannot read or parse, as private", () => {
-  expect(tree({})("x.ts")).toEqual({ dir: ".", public: false });
-  expect(tree({ "a/package.json": "{ nope" })("a/x.ts")).toEqual({ dir: "a", public: false });
+  expect(tree({})("x.ts")).toStrictEqual({ dir: ".", public: false });
+  expect(tree({ "a/package.json": "{ nope" })("a/x.ts")).toStrictEqual({ dir: "a", public: false });
 });

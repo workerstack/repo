@@ -29,7 +29,7 @@ it("runSearch prints what rg found as file:line facts and keeps a line it cannot
   const dir = plant();
   plantRg(out("a.txt:1:  hello world \nb.txt:22:x\nno colon line\n"));
   const r = search(dir);
-  expect(r).toEqual({
+  expect(r).toStrictEqual({
     fallback: false,
     text: "3 matches.\n- a.txt:1 — hello world\n- b.txt:22 — x\n- no colon line\n",
     code: 0,
@@ -39,7 +39,7 @@ it("runSearch prints what rg found as file:line facts and keeps a line it cannot
 it("runSearch says no matches when rg exits 1", () => {
   const dir = plant();
   plantRg(out("", 1));
-  expect(search(dir)).toEqual({ fallback: false, text: "No matches.\n", code: 0 });
+  expect(search(dir)).toStrictEqual({ fallback: false, text: "No matches.\n", code: 0 });
 });
 
 it("runSearch reports rg's own error lines as a failed search", () => {
@@ -57,7 +57,7 @@ it("runSearch names the exit code when rg fails without a word", () => {
 it("runSearch falls back when rg prints html", () => {
   const dir = plant();
   plantRg(out("<!DOCTYPE html>\n"));
-  expect(search(dir)).toEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
+  expect(search(dir)).toStrictEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
 });
 
 it("runSearch stashes the hits when rg prints more than six", () => {
@@ -83,12 +83,12 @@ it("runSearch asks rg to search the path with the globs and the query", () => {
   fs.mkdirSync(path.join(dir, "sub"));
   search(dir, { path: "sub", glob: ["*.md", "*.ts"] });
   const args = recorded(tool);
-  expect(args.slice(-3)).toEqual(["-e", "hit", "sub"]);
+  expect(args.slice(-3)).toStrictEqual(["-e", "hit", "sub"]);
   expect(args).toContain("--hidden");
   const globs = args.flatMap((a, i) => (args[i - 1] === "-g" ? [a] : []));
-  expect(globs).toEqual(["!node_modules", "!dist", "!coverage", "!.next", "!build", "!.git", "*.md", "*.ts"]);
+  expect(globs).toStrictEqual(["!node_modules", "!dist", "!coverage", "!.next", "!build", "!.git", "*.md", "*.ts"]);
   search(dir);
-  expect(recorded(tool).slice(-1)).toEqual(["."]);
+  expect(recorded(tool).slice(-1)).toStrictEqual(["."]);
 });
 
 it.skipIf(process.platform === "win32")("runSearch walks the tree itself when rg is killed", () => {
@@ -118,11 +118,11 @@ it("endTreeAfterError ends the dead root and every descendant by parent pid, onl
   const failed = { error: new Error("spawnSync ENOBUFS"), pid: 10 };
   const { calls, runner } = recordingRunner("junk\r\n11 10\r\n12 11\n13 99\n10 1\n");
   expect(endTreeAfterError(failed, "win32", runner)).toBe(true);
-  expect(calls.map((c) => c.file)).toEqual(["powershell", "taskkill"]);
-  expect(calls[1]?.args).toEqual(["/F", "/T", "/PID", "10", "/PID", "11", "/PID", "12"]);
+  expect(calls.map((c) => c.file)).toStrictEqual(["powershell", "taskkill"]);
+  expect(calls[1]?.args).toStrictEqual(["/F", "/T", "/PID", "10", "/PID", "11", "/PID", "12"]);
   const none = recordingRunner("");
   expect(endTreeAfterError(failed, "win32", { ...none }.runner)).toBe(true);
-  expect(none.calls[1]?.args).toEqual(["/F", "/T", "/PID", "10"]);
+  expect(none.calls[1]?.args).toStrictEqual(["/F", "/T", "/PID", "10"]);
   const silent = vi.fn(() => ({}));
   expect(endTreeAfterError(failed, "win32", silent)).toBe(true);
   expect(silent).toHaveBeenCalledTimes(2);
@@ -142,7 +142,7 @@ it("descendantsOf follows parent pids through a cycle without looping", () => {
       [1, 3],
       [2, 1],
     ]),
-  ).toEqual([2, 3]);
+  ).toStrictEqual([2, 3]);
 });
 
 it("endTreeAfterError leaves a real run alone off Windows", () => {

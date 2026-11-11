@@ -137,7 +137,7 @@ describe("loadConfig", () => {
   });
 
   it.each(["personal"])("rejects the removed pack %s", async (name) => {
-    expect(await loadConfig(repo(`export default { packs: ["${name}"] }\n`))).toEqual({
+    expect(await loadConfig(repo(`export default { packs: ["${name}"] }\n`))).toStrictEqual({
       ok: false,
       errors: [
         `workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents, standards, docs, release or workspace`,
@@ -160,10 +160,14 @@ describe("loadConfig", () => {
   });
 
   it.each(['["docs"]', "[]"])("rejects agents without the agents pack (packs %s)", async (list) => {
-    expect(await loadConfig(repo(`export default { packs: ${list}, agents: { skills: ["listen"] } }\n`))).toEqual({
-      ok: false,
-      errors: ['workerstack.config.ts: agents: set only with the agents pack; add "agents" to packs or delete agents'],
-    });
+    expect(await loadConfig(repo(`export default { packs: ${list}, agents: { skills: ["listen"] } }\n`))).toStrictEqual(
+      {
+        ok: false,
+        errors: [
+          'workerstack.config.ts: agents: set only with the agents pack; add "agents" to packs or delete agents',
+        ],
+      },
+    );
   });
 
   it("reads the commit size limit under the standards pack, the default packs included", async () => {
@@ -182,7 +186,9 @@ describe("loadConfig", () => {
   });
 
   it.each(['["docs"]', "[]"])("rejects commit without the standards pack (packs %s)", async (list) => {
-    expect(await loadConfig(repo(`export default { packs: ${list}, commit: { maxChangedLines: 1500 } }\n`))).toEqual({
+    expect(
+      await loadConfig(repo(`export default { packs: ${list}, commit: { maxChangedLines: 1500 } }\n`)),
+    ).toStrictEqual({
       ok: false,
       errors: [
         'workerstack.config.ts: commit: set only with the standards pack; add "standards" to packs or delete commit',
@@ -191,39 +197,39 @@ describe("loadConfig", () => {
   });
 
   it.each(["0", "-5", "10.5", '"1500"'])("rejects a size limit of %s", async (value) => {
-    expect(await loadConfig(repo(`export default { commit: { maxChangedLines: ${value} } }\n`))).toEqual({
+    expect(await loadConfig(repo(`export default { commit: { maxChangedLines: ${value} } }\n`))).toStrictEqual({
       ok: false,
       errors: ["workerstack.config.ts: commit.maxChangedLines: must be a whole number of lines above 0"],
     });
   });
 
   it("rejects an unknown key under commit, and a commit that is not an object", async () => {
-    expect(await loadConfig(repo("export default { commit: { maxLines: 5 } }\n"))).toEqual({
+    expect(await loadConfig(repo("export default { commit: { maxLines: 5 } }\n"))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: commit: unknown key "maxLines"'],
     });
-    expect(await loadConfig(repo("export default { commit: 5 }\n"))).toEqual({
+    expect(await loadConfig(repo("export default { commit: 5 }\n"))).toStrictEqual({
       ok: false,
       errors: ["workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }"],
     });
   });
 
   it("rejects an unknown key", async () => {
-    expect(await loadConfig(repo("export default { pakcs: [] }\n"))).toEqual({
+    expect(await loadConfig(repo("export default { pakcs: [] }\n"))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: unknown key "pakcs"'],
     });
   });
 
   it("rejects each unknown key alongside a valid one", async () => {
-    expect(await loadConfig(repo('export default { packs: ["docs"], a: 1, b: 2 }\n'))).toEqual({
+    expect(await loadConfig(repo('export default { packs: ["docs"], a: 1, b: 2 }\n'))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: unknown key "a"', 'workerstack.config.ts: unknown key "b"'],
     });
   });
 
   it("rejects a name that is not a pack", async () => {
-    expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toEqual({
+    expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toStrictEqual({
       ok: false,
       errors: [
         'workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards, docs, release or workspace',
@@ -232,14 +238,14 @@ describe("loadConfig", () => {
   });
 
   it("rejects a pack listed twice", async () => {
-    expect(await loadConfig(repo('export default { packs: ["docs", "docs"] }\n'))).toEqual({
+    expect(await loadConfig(repo('export default { packs: ["docs", "docs"] }\n'))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: packs: "docs" is listed twice'],
     });
   });
 
   it("counts a pack listed more than twice", async () => {
-    expect(await loadConfig(repo('export default { packs: ["docs", "agents", "docs", "docs"] }\n'))).toEqual({
+    expect(await loadConfig(repo('export default { packs: ["docs", "agents", "docs", "docs"] }\n'))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: packs: "docs" is listed 3 times'],
     });
@@ -276,10 +282,10 @@ describe("loadConfig", () => {
 console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const run = spawnSync(process.execPath, ["--no-install", "-e", script], { cwd: root, encoding: "utf8" });
     const installHint = `workerstack.config.ts: @workerstack/repo is not installed in ${root}; run \`bun install\` there`;
-    expect(JSON.parse(run.stdout)).toEqual({ ok: false, errors: [installHint] });
+    expect(JSON.parse(run.stdout)).toStrictEqual({ ok: false, errors: [installHint] });
     const missing = () =>
       Promise.reject(new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`));
-    expect(await loadConfig(root, missing)).toEqual({ ok: false, errors: [installHint] });
+    expect(await loadConfig(root, missing)).toStrictEqual({ ok: false, errors: [installHint] });
   });
 
   it("keeps the import's own message for any other package the config cannot find", async () => {
@@ -314,11 +320,11 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
       expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
       expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(seen.filter((name) => name.startsWith(".workerstack.config."))).toEqual([]);
+      expect(seen.filter((name) => name.startsWith(".workerstack.config."))).toStrictEqual([]);
 
       fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
       expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["docs"] } });
-      expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+      expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
     } finally {
       watcher.close();
     }
@@ -329,7 +335,7 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     await loadConfig(root);
     fs.writeFileSync(path.join(root, CONFIG_FILE), 'throw new Error("config exploded")\n');
     expect(await loadConfig(root)).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
-    expect(fs.readdirSync(root).sort()).toEqual(["package.json", CONFIG_FILE]);
+    expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
   });
 });
 
@@ -374,30 +380,30 @@ it("lint.skip: defaults to no skips, with lint omitted or empty, the default pac
 
 it("lint.skip: refuses an entry without a reason, or with a reason under three words", async () => {
   const { reason: _, ...noReason } = SKIP;
-  expect(await loadConfig(repo(skipConfig(noReason)))).toEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
+  expect(await loadConfig(repo(skipConfig(noReason)))).toStrictEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
   const short = skipConfig({ ...SKIP, reason: "cache state" });
-  expect(await loadConfig(repo(short))).toEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
+  expect(await loadConfig(repo(short))).toStrictEqual(refusal(`lint.skip[0].reason: ${NO_REASON}`));
 });
 
 it("lint.skip: refuses an entry with no files or no rules", async () => {
-  expect(await loadConfig(repo(skipConfig({ ...SKIP, files: [] })))).toEqual(
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, files: [] })))).toStrictEqual(
     refusal("lint.skip[0].files: list at least one file glob"),
   );
-  expect(await loadConfig(repo(skipConfig({ ...SKIP, rules: [] })))).toEqual(
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, rules: [] })))).toStrictEqual(
     refusal('lint.skip[0].rules: list at least one rule, like "repo/no-module-state"'),
   );
 });
 
 it("lint.skip: refuses an unknown key in an entry and under lint", async () => {
-  expect(await loadConfig(repo(skipConfig({ ...SKIP, rule: "x" })))).toEqual(
+  expect(await loadConfig(repo(skipConfig({ ...SKIP, rule: "x" })))).toStrictEqual(
     refusal('lint.skip[0]: unknown key "rule"'),
   );
   const misspelt = 'export default { packs: ["standards"], lint: { skips: [] } }\n';
-  expect(await loadConfig(repo(misspelt))).toEqual(refusal('lint: unknown key "skips"'));
+  expect(await loadConfig(repo(misspelt))).toStrictEqual(refusal('lint: unknown key "skips"'));
 });
 
 it.each(['["docs"]', "[]"])("lint.skip: refuses lint without the standards pack (packs %s)", async (list) => {
-  expect(await loadConfig(repo(skipConfig(SKIP, list)))).toEqual(
+  expect(await loadConfig(repo(skipConfig(SKIP, list)))).toStrictEqual(
     refusal('lint: set only with the standards pack; add "standards" to packs or delete lint'),
   );
 });
@@ -409,8 +415,8 @@ describe("agents", () => {
   };
 
   it("lists the hosts and skill packs", () => {
-    expect(HOSTS).toEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
-    expect(SKILL_PACKS).toEqual(["google-workspace", "listen", "speak", "clasp"]);
+    expect(HOSTS).toStrictEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
+    expect(SKILL_PACKS).toStrictEqual(["google-workspace", "listen", "speak", "clasp"]);
   });
 
   it("parses agents.hosts and agents.skills", async () => {
@@ -418,36 +424,38 @@ describe("agents", () => {
       await agentsOf(
         'export default { packs: ["agents"], agents: { hosts: ["codex", "claude"], skills: ["listen", "clasp"] } }\n',
       ),
-    ).toEqual({
+    ).toStrictEqual({
       hosts: ["codex", "claude"],
       skills: ["listen", "clasp"],
     });
   });
 
   it("defaults hosts to all five and skills to none when only one is given", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { skills: ["speak"] } }\n')).toEqual({
+    expect(await agentsOf('export default { packs: ["agents"], agents: { skills: ["speak"] } }\n')).toStrictEqual({
       hosts: [...HOSTS],
       skills: ["speak"],
     });
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toEqual({
+    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toStrictEqual({
       hosts: ["grok"],
       skills: [],
     });
   });
 
   it("resolves a missing agents to every host and no skills", async () => {
-    expect(await agentsOf("export default { packs: [] }\n")).toEqual(AGENTS);
-    expect(await agentsOf('export default { packs: ["agents"] }\n')).toEqual(AGENTS);
+    expect(await agentsOf("export default { packs: [] }\n")).toStrictEqual(AGENTS);
+    expect(await agentsOf('export default { packs: ["agents"] }\n')).toStrictEqual(AGENTS);
   });
 
   it("rejects an unknown host", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["clod"] } }\n')).toEqual([
+    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["clod"] } }\n')).toStrictEqual([
       'workerstack.config.ts: agents.hosts[0]: "clod" is not a host; use claude, codex, antigravity, grok or cursor',
     ]);
   });
 
   it("rejects an unknown skill", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { skills: ["listen", "nope"] } }\n')).toEqual([
+    expect(
+      await agentsOf('export default { packs: ["agents"], agents: { skills: ["listen", "nope"] } }\n'),
+    ).toStrictEqual([
       'workerstack.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, speak or clasp',
     ]);
   });
@@ -457,20 +465,20 @@ describe("agents", () => {
       await agentsOf(
         'export default { packs: ["agents"], agents: { hosts: ["claude", "claude"], skills: ["listen", "listen"] } }\n',
       ),
-    ).toEqual([
+    ).toStrictEqual([
       'workerstack.config.ts: agents.hosts: "claude" is listed twice',
       'workerstack.config.ts: agents.skills: "listen" is listed twice',
     ]);
   });
 
   it("rejects an empty hosts list", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: [] } }\n')).toEqual([
+    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: [] } }\n')).toStrictEqual([
       "workerstack.config.ts: agents.hosts: list at least one host",
     ]);
   });
 
   it("rejects an unknown key inside agents", async () => {
-    expect(await agentsOf('export default { packs: ["agents"], agents: { host: [] } }\n')).toEqual([
+    expect(await agentsOf('export default { packs: ["agents"], agents: { host: [] } }\n')).toStrictEqual([
       'workerstack.config.ts: agents: unknown key "host"',
     ]);
   });
@@ -508,15 +516,15 @@ describe("defineConfig", () => {
 
   it("rejects an unknown pack or key at compile time", () => {
     // @ts-expect-error "lint" is not a pack
-    expect(defineConfig({ packs: ["lint"] })).toEqual({ packs: ["lint"] });
+    expect(defineConfig({ packs: ["lint"] })).toStrictEqual({ packs: ["lint"] });
     // @ts-expect-error "pakcs" is not a key
-    expect(defineConfig({ pakcs: [] })).toEqual({ pakcs: [] });
+    expect(defineConfig({ pakcs: [] })).toStrictEqual({ pakcs: [] });
   });
 });
 
 describe("defaultPacks", () => {
   it("is agents, standards and docs", () => {
-    expect(defaultPacks()).toEqual(["agents", "standards", "docs"]);
+    expect(defaultPacks()).toStrictEqual(["agents", "standards", "docs"]);
   });
 });
 
@@ -538,11 +546,11 @@ describe("coverage", () => {
   });
 
   it("refuses an unknown key and a path that is not text", async () => {
-    expect(await loadConfig(repo("export default { coverage: { floor: 'a.json' } }\n"))).toEqual({
+    expect(await loadConfig(repo("export default { coverage: { floor: 'a.json' } }\n"))).toStrictEqual({
       ok: false,
       errors: ['workerstack.config.ts: coverage: unknown key "floor"'],
     });
-    expect(await loadConfig(repo("export default { coverage: { floors: 5 } }\n"))).toEqual({
+    expect(await loadConfig(repo("export default { coverage: { floors: 5 } }\n"))).toStrictEqual({
       ok: false,
       errors: ["workerstack.config.ts: coverage.floors: must be a file path like coverage-floors.json"],
     });
@@ -563,13 +571,13 @@ describe("coverage, mutation", () => {
       const loaded = await loadConfig(repo(`export default { coverage: { ${body} } }\n`));
       return loaded.ok ? [] : loaded.errors;
     };
-    expect(await errors("mutate: []")).toEqual([
+    expect(await errors("mutate: []")).toStrictEqual([
       'workerstack.config.ts: coverage.mutate: must be a non-empty list of globs like ["src/**/*.ts"]',
     ]);
-    expect(await errors("mutate: [5]")).toEqual([
+    expect(await errors("mutate: [5]")).toStrictEqual([
       'workerstack.config.ts: coverage.mutate[0]: must be a non-empty list of globs like ["src/**/*.ts"]',
     ]);
-    expect(await errors("mutationFloors: 5")).toEqual([
+    expect(await errors("mutationFloors: 5")).toStrictEqual([
       "workerstack.config.ts: coverage.mutationFloors: must be a file path like coverage-floors.json",
     ]);
   });
@@ -579,16 +587,16 @@ describe("enabledSkills", () => {
   it("lists agents.skills of the repo at or above cwd", async () => {
     const root = repo('export default { packs: ["agents"], agents: { skills: ["speak", "clasp"] } }\n');
     fs.mkdirSync(path.join(root, "sub"));
-    expect(await enabledSkills(path.join(root, "sub"))).toEqual(["speak", "clasp"]);
+    expect(await enabledSkills(path.join(root, "sub"))).toStrictEqual(["speak", "clasp"]);
   });
 
   it("is empty with no config above cwd", async () => {
-    expect(await enabledSkills(tempDir())).toEqual([]);
+    expect(await enabledSkills(tempDir())).toStrictEqual([]);
   });
 
   it("is empty when the config is invalid", async () => {
     const root = repo('export default { packs: ["agents"], agents: { skills: ["nope"] } }\n');
-    expect(await enabledSkills(root)).toEqual([]);
+    expect(await enabledSkills(root)).toStrictEqual([]);
   });
 });
 
@@ -602,12 +610,12 @@ describe("owner", () => {
   });
 
   it("refuses an owner without a github login, and an unknown key", async () => {
-    expect(await loadConfig(repo('export default { owner: { name: "A" } }\n'))).toEqual(
+    expect(await loadConfig(repo('export default { owner: { name: "A" } }\n'))).toStrictEqual(
       refusal("owner.github: must be a GitHub login like lovrozagar"),
     );
     const extra = 'export default { owner: { name: "A", github: "a", email: "x" } }\n';
-    expect(await loadConfig(repo(extra))).toEqual(refusal('owner: unknown key "email"'));
-    expect(await loadConfig(repo('export default { owner: { name: "", github: "a" } }\n'))).toEqual(
+    expect(await loadConfig(repo(extra))).toStrictEqual(refusal('owner: unknown key "email"'));
+    expect(await loadConfig(repo('export default { owner: { name: "", github: "a" } }\n'))).toStrictEqual(
       refusal("owner.name: must be the owner's name, like Lovro Žagar"),
     );
   });
@@ -630,12 +638,12 @@ it("turbo.tasks: resolves an empty turbo section to no tasks, and an omitted one
 
 it.each(["typecheck", "test"])("turbo.tasks: refuses a task named %s", async (name) => {
   const loaded = await loadConfig(repo(tasks(JSON.stringify({ [name]: {} }))));
-  expect(loaded).toEqual(refusal(`turbo.tasks "${name}" is generated; pick another name`));
+  expect(loaded).toStrictEqual(refusal(`turbo.tasks "${name}" is generated; pick another name`));
 });
 
 it("turbo.tasks: names every generated task it finds", async () => {
   const loaded = await loadConfig(repo(tasks("{ typecheck: {}, test: {}, ok: {} }")));
-  expect(loaded).toEqual(
+  expect(loaded).toStrictEqual(
     refusal(
       'turbo.tasks "typecheck" is generated; pick another name',
       'turbo.tasks "test" is generated; pick another name',
@@ -645,7 +653,9 @@ it("turbo.tasks: names every generated task it finds", async () => {
 
 it("turbo.tasks: refuses turbo without the workspace pack", async () => {
   const loaded = await loadConfig(repo('export default { packs: ["docs"], turbo: {} }\n'));
-  expect(loaded).toEqual(refusal('turbo: set only with the workspace pack; add "workspace" to packs or delete turbo'));
+  expect(loaded).toStrictEqual(
+    refusal('turbo: set only with the workspace pack; add "workspace" to packs or delete turbo'),
+  );
 });
 
 it("turbo.tasks: refuses an unknown task key, a bad flag, a bad list and a turbo that is not an object", async () => {
@@ -667,8 +677,10 @@ it("link: parses a package-to-checkout map, and leaves it out when omitted", asy
 
 it("link: refuses a value that is not a path", async () => {
   const loaded = await loadConfig(repo('export default { link: { "@workerstack/flare": 1 } }\n'));
-  expect(loaded).toEqual(refusal("link.@workerstack/flare: must be a path like ../flare, relative to the repo root"));
-  expect(await loadConfig(repo("export default { link: [] }\n"))).toEqual(
+  expect(loaded).toStrictEqual(
+    refusal("link.@workerstack/flare: must be a path like ../flare, relative to the repo root"),
+  );
+  expect(await loadConfig(repo("export default { link: [] }\n"))).toStrictEqual(
     refusal('link: must be an object like { "@workerstack/flare": "../flare" }'),
   );
 });
@@ -682,11 +694,11 @@ it("clean: parses the extra build dir names, and leaves the section out when omi
 
 it("clean: refuses a name that is a path, a list that is not names, and a section that is not an object", async () => {
   const name = 'clean.build[0]: must be a dir name like ".flare", not a path';
-  expect(await loadConfig(repo('export default { clean: { build: ["a/b"] } }\n'))).toEqual(refusal(name));
-  expect(await loadConfig(repo("export default { clean: { build: 1 } }\n"))).toEqual(
+  expect(await loadConfig(repo('export default { clean: { build: ["a/b"] } }\n'))).toStrictEqual(refusal(name));
+  expect(await loadConfig(repo("export default { clean: { build: 1 } }\n"))).toStrictEqual(
     refusal('clean.build: must be a list of dir names like [".flare"]'),
   );
-  expect(await loadConfig(repo("export default { clean: [] }\n"))).toEqual(
+  expect(await loadConfig(repo("export default { clean: [] }\n"))).toStrictEqual(
     refusal('clean: must be an object like { build: [".flare"] }'),
   );
 });
@@ -703,11 +715,13 @@ it("ci.checks: parses named argv arrays, and defaults to none", async () => {
 });
 
 it("ci.checks: refuses an empty argv, a built-in label and an unknown key, each naming the fix", async () => {
-  expect(await loadConfig(repo("export default { ci: { checks: { a: [] } } }\n"))).toEqual(
+  expect(await loadConfig(repo("export default { ci: { checks: { a: [] } } }\n"))).toStrictEqual(
     refusal('ci.checks.a: must be a non-empty list of strings like ["bun", "scripts/check.ts"]'),
   );
-  expect(await loadConfig(repo('export default { ci: { checks: { fmt: ["x"] } } }\n'))).toEqual(
+  expect(await loadConfig(repo('export default { ci: { checks: { fmt: ["x"] } } }\n'))).toStrictEqual(
     refusal('ci.checks: "fmt" is a built-in gate label; pick another name'),
   );
-  expect(await loadConfig(repo("export default { ci: { nope: 1 } }\n"))).toEqual(refusal('ci: unknown key "nope"'));
+  expect(await loadConfig(repo("export default { ci: { nope: 1 } }\n"))).toStrictEqual(
+    refusal('ci: unknown key "nope"'),
+  );
 });

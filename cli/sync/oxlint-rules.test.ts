@@ -9,8 +9,8 @@ import { OFF_RULES } from "./oxlint-rules.ts";
 
 const SLOW = 60_000;
 
-/** The names oxlint lists in the catalog's categories and scopes, sorted. */
-function installedCatalog(): string[] {
+/** The rules oxlint lists in the catalog's scopes, each with its category. */
+function installedCatalog(): Record<string, string> {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-oxlint-rules-"));
   try {
     return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], root).stdout);
@@ -21,15 +21,19 @@ function installedCatalog(): string[] {
 
 it("every rule the base opts out of is in the catalog and says why", () => {
   for (const [rule, reason] of Object.entries(OFF_RULES)) {
-    expect(catalog, rule).toContain(rule);
+    expect(Object.keys(catalog), rule).toContain(rule);
     expect(reason.trim(), rule).not.toBe("");
   }
+});
+
+it("the catalog maps a rule outside the base categories to its category", () => {
+  expect(catalog).toHaveProperty(["unicorn/no-array-for-each"], "restriction");
 });
 
 it(
   "the catalog lists exactly the rules the installed oxlint has",
   () => {
-    expect(catalog, "the catalog is stale: run `bun dev/oxlint-catalog.ts`").toEqual(installedCatalog());
+    expect(catalog, "the catalog is stale: run `bun dev/oxlint-catalog.ts`").toStrictEqual(installedCatalog());
   },
   SLOW,
 );

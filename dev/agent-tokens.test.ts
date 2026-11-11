@@ -96,7 +96,7 @@ describe("run", () => {
   it("prints one row per spawn with model, first-turn input and whether AGENTS.md came in", () => {
     const { code, lines } = invoke([session(SPAWNS), "--match", "After"]);
     expect(code).toBe(0);
-    expect(lines).toEqual([
+    expect(lines).toStrictEqual([
       "agent             model              first-turn  agents.md  description",
       "implementer-fast  claude-sonnet-5-5  6002        yes        After implementer-fast",
       "implementer-fast  claude-sonnet-5-5  5103        no         After implementer-fast again",
@@ -105,7 +105,7 @@ describe("run", () => {
 
   it("without --match lists every spawn, in the order they started", () => {
     const { lines } = invoke([session([...SPAWNS].reverse())]);
-    expect(lines.slice(1).map((line) => line.split(/\s{2,}/)[0] + "|" + line.split(/\s{2,}/).at(-1))).toEqual([
+    expect(lines.slice(1).map((line) => line.split(/\s{2,}/)[0] + "|" + line.split(/\s{2,}/).at(-1))).toStrictEqual([
       "scout|Other scout",
       "implementer-fast|After implementer-fast",
       "implementer-fast|After implementer-fast again",
@@ -130,7 +130,7 @@ describe("run, on what a spawn did not do", () => {
     const dir = session([
       { id: "c1", agentType: "scout", description: "silent", entries: [user, { type: "attachment" }] },
     ]);
-    expect(invoke([dir]).lines).toEqual([
+    expect(invoke([dir]).lines).toStrictEqual([
       "agent  model  first-turn  agents.md  description",
       "scout  -      -           no         silent",
     ]);
@@ -139,17 +139,17 @@ describe("run, on what a spawn did not do", () => {
 
 describe("run, on wrong usage", () => {
   it("prints usage and exits 1 without a session dir", () => {
-    expect(invoke([])).toEqual({ code: 1, lines: [USAGE] });
-    expect(invoke(["--match", "x"])).toEqual({ code: 1, lines: [USAGE] });
+    expect(invoke([])).toStrictEqual({ code: 1, lines: [USAGE] });
+    expect(invoke(["--match", "x"])).toStrictEqual({ code: 1, lines: [USAGE] });
   });
 
   it("says so and exits 1 when the session has no subagents dir", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-agent-tokens-"));
     temps.push(dir);
-    expect(invoke([dir])).toEqual({ code: 1, lines: [`no subagents dir: ${path.join(dir, "subagents")}`] });
+    expect(invoke([dir])).toStrictEqual({ code: 1, lines: [`no subagents dir: ${path.join(dir, "subagents")}`] });
   });
 
   it("exits 1 when --match has no value", () => {
-    expect(invoke([session(SPAWNS), "--match"])).toEqual({ code: 1, lines: [USAGE] });
+    expect(invoke([session(SPAWNS), "--match"])).toStrictEqual({ code: 1, lines: [USAGE] });
   });
 });

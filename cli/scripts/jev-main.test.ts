@@ -45,9 +45,9 @@ it("the runner with defaults: reads the process environment and the user's home"
 it("runJev: answers whether a key exists, from the process environment and home by default", async () => {
   vi.spyOn(os, "homedir").mockReturnValue(plantDir());
   vi.stubEnv("TYPESAFE_API_KEY", "");
-  expect(await runJev(["--available"])).toEqual({ code: 0, text: "no\n" });
+  expect(await runJev(["--available"])).toStrictEqual({ code: 0, text: "no\n" });
   vi.stubEnv("TYPESAFE_API_KEY", KEY);
-  expect(await runJev(["--available"])).toEqual({ code: 0, text: "yes\n" });
+  expect(await runJev(["--available"])).toStrictEqual({ code: 0, text: "yes\n" });
 });
 
 it("runJev: needs both file flags", async () => {
@@ -58,7 +58,7 @@ it("runJev: needs both file flags", async () => {
 it("runJev: names the failure when a file cannot be read", async () => {
   const dir = plantDir();
   const { state } = plantInputs(dir);
-  expect(await runJev(["--state", state, "--questions", path.join(dir, "missing.json")])).toEqual({
+  expect(await runJev(["--state", state, "--questions", path.join(dir, "missing.json")])).toStrictEqual({
     code: 2,
     text: "state or questions file missing\n",
   });
@@ -77,7 +77,7 @@ it("runJev: hands the file contents and its options to the runner", async () => 
       return Promise.resolve({ code: 0, text: "ok\n" });
     },
   });
-  expect(out).toEqual({ code: 0, text: "ok\n" });
+  expect(out).toStrictEqual({ code: 0, text: "ok\n" });
   expect(seen[0]).toMatchObject({
     home: dir,
     env: { TYPESAFE_API_KEY: KEY },
@@ -112,6 +112,6 @@ it("main: runs the shared runner once per process", async () => {
   const opts = { home: dir, env: { TYPESAFE_API_KEY: KEY }, fetchImpl: scripted(reply(200, answerBody())) };
   const first = await runJev(argv, opts);
   expect(first.code).toBe(0);
-  expect(await runJev(argv, opts)).toEqual({ code: 2, text: "process request cap 1\n" });
+  expect(await runJev(argv, opts)).toStrictEqual({ code: 2, text: "process request cap 1\n" });
   expect(opts.fetchImpl.calls).toBe(1);
 });

@@ -107,7 +107,7 @@ describe("patches", () => {
     const { ws, roots } = plant();
     const out = rewritePatch("*** Delete File: gone.ts\n*** Add File: notes.md\n*** Update File: src/a.ts", roots);
     const scratch = path.join(ws, ".tmp", "repo", "notes.md");
-    expect(out.paths).toEqual([scratch, path.join(ws, "src", "a.ts")]);
+    expect(out.paths).toStrictEqual([scratch, path.join(ws, "src", "a.ts")]);
     expect(out.patch).toContain(`*** Add File: ${scratch}`);
     expect(out.patch).toContain("*** Delete File: gone.ts");
   });

@@ -62,7 +62,7 @@ it.each(CRASH_POINTS)(
     const last = crashAfter === planned.length - 1;
     expect(exists(root, COPIED_MARKER), `marker after step ${crashAfter} (${planned[crashAfter]?.kind})`).toBe(!last);
     if (!last) await migrate(root);
-    expect(snapshot(root), `after a crash behind step ${crashAfter}`).toEqual(expected);
+    expect(snapshot(root), `after a crash behind step ${crashAfter}`).toStrictEqual(expected);
     expect(git(root, "ls-files")).toBe(expectedTracked);
   },
   60_000,
@@ -78,9 +78,9 @@ it("replans only the removal when .rulesync/ was half removed", async () => {
   fs.rmSync(path.join(root, ".rulesync", "scripts", "browser.ts"));
   fs.rmSync(path.join(root, ".rulesync", "rules"), { recursive: true });
   const rest = await copiedPlan(root);
-  expect(rest.map((step) => step.kind)).toEqual(["remove"]);
+  expect(rest.map((step) => step.kind)).toStrictEqual(["remove"]);
   await applyMigration(root, rest);
-  expect(snapshot(root)).toEqual(snapshot(reference));
+  expect(snapshot(root)).toStrictEqual(snapshot(reference));
 });
 
 it("reads tracked paths with backslashes or a drive prefix as root-relative posix paths", () => {
@@ -96,7 +96,7 @@ it("reads tracked paths with backslashes or a drive prefix as root-relative posi
       ],
       "C:\\proj",
     ),
-  ).toEqual(["AGENTS.md", ".claude/settings.json", ".agents/skills/ask/SKILL.md", ".grok/config.toml"]);
+  ).toStrictEqual(["AGENTS.md", ".claude/settings.json", ".agents/skills/ask/SKILL.md", ".grok/config.toml"]);
 });
 
 it("plans the same untrack paths from git output in either spelling", async () => {
@@ -113,7 +113,7 @@ it("plans the same untrack paths from git output in either spelling", async () =
       ".grok\\config.toml",
     ],
   });
-  expect(spelled).toEqual(posix);
+  expect(spelled).toStrictEqual(posix);
 });
 
 it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an error", async () => {
@@ -127,7 +127,7 @@ it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an
   fs.writeFileSync(path.join(locked, ".git", "index.lock"), "");
   const failed = await sync(locked, [], true);
   expect(failed.code).toBe(1);
-  expect(failed.err).toEqual([expect.stringMatching(/^repo sync: git rm --cached failed: /)]);
+  expect(failed.err).toStrictEqual([expect.stringMatching(/^repo sync: git rm --cached failed: /)]);
   expect(exists(locked, COPIED_MARKER)).toBe(true);
 });
 

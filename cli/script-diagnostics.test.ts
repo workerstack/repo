@@ -13,7 +13,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
   const source =
     "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\nexport const n = (): number => 7;\n";
   const root = plant({ "src/a.ts": source });
-  expect(scriptDiagnostics(root, ["src/a.ts"])).toEqual({
+  expect(scriptDiagnostics(root, ["src/a.ts"])).toStrictEqual({
     ok: true,
     value: [hit("src/a.ts:1:14", GUARD, UNTESTED("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
   });
@@ -22,7 +22,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
 it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file", { timeout: SLOW }, () => {
   const root = plant({ "pkg/tsconfig.json": "{", "pkg/a.test.ts": "export {};\n" });
   const found = scriptDiagnostics(root, ["pkg/a.test.ts"]);
-  expect(found.ok ? [] : found.errors).toEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */
@@ -40,21 +40,21 @@ it("checkScriptsAt gives every hit of the checkout and those its skips leave", a
   );
   const a = hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"));
   const b = hit("src/b.ts:1:24", NUMBER, NAMES_NOTHING("7"));
-  expect(await checkScriptsAt(root)).toEqual({ all: [a, b], kept: [b], problems: [] });
+  expect(await checkScriptsAt(root)).toStrictEqual({ all: [a, b], kept: [b], problems: [] });
 });
 
 it("checkScriptsAt checks nothing without a config or the standards pack, and reports what stops it", async () => {
   const none = { all: [], kept: [], problems: [] };
-  expect(await checkScriptsAt(plant({ "src/a.ts": "export const f = () => 5;\n" }))).toEqual(none);
+  expect(await checkScriptsAt(plant({ "src/a.ts": "export const f = () => 5;\n" }))).toStrictEqual(none);
   const docs = checkout({ "src/a.ts": "export const f = () => 5;\n" }, { packs: ["docs"] });
-  expect(await checkScriptsAt(docs)).toEqual(none);
+  expect(await checkScriptsAt(docs)).toStrictEqual(none);
   const broken = checkout(
     { "pkg/tsconfig.json": "{", "pkg/a.ts": "export const f = () => 5;\n" },
     { packs: ["standards"] },
   );
-  expect((await checkScriptsAt(broken)).problems).toEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect((await checkScriptsAt(broken)).problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
   const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
-  expect((await checkScriptsAt(plain)).problems).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
+  expect((await checkScriptsAt(plain)).problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
 it(
@@ -65,12 +65,12 @@ it(
       "src/a.reject.ts": "export const a: number = 'x';\n",
       "src/b.ts": "export const b: number = 'x';\n",
     };
-    expect(await checkRejectionsAt(checkout(files, { packs: ["standards"] }))).toEqual([
+    expect(await checkRejectionsAt(checkout(files, { packs: ["standards"] }))).toStrictEqual([
       "src/a.reject.ts: line 1 fails unmarked: TS2322: Type 'string' is not assignable to type 'number'.",
     ]);
-    expect(await checkRejectionsAt(checkout(files, { packs: ["docs"] }))).toEqual([]);
-    expect(await checkRejectionsAt(plant(files))).toEqual([]);
+    expect(await checkRejectionsAt(checkout(files, { packs: ["docs"] }))).toStrictEqual([]);
+    expect(await checkRejectionsAt(plant(files))).toStrictEqual([]);
     const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
-    expect(await checkRejectionsAt(plain)).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
+    expect(await checkRejectionsAt(plain)).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
   },
 );

@@ -39,7 +39,7 @@ const CRATE = { "Cargo.toml": "[package]\n", "src/lib.rs": "pub fn f() {}\n", "s
 it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hits it turns off", () => {
   const ws = checkout(CRATE);
   const skips = [skip(["src/lib.rs"], ["clippy/unwrap_used", "repo/rust-block-comment"])];
-  expect(checkLintSkips(ws, skips, { scripts: [HIT, SCRIPT_HIT] })).toEqual({
+  expect(checkLintSkips(ws, skips, { scripts: [HIT, SCRIPT_HIT] })).toStrictEqual({
     report: [
       `skip clippy/unwrap_used in src/lib.rs: 1 hit (${REASON})`,
       `skip repo/rust-block-comment in src/lib.rs: 1 hit (${REASON})`,
@@ -52,7 +52,7 @@ it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hit
 it("checkLintSkips matches a glob over every .rs file, and fails a misspelled Rust rule as having no hit", () => {
   const ws = checkout(CRATE);
   const skips = [skip(["**/*.rs"], ["clippy/unwrap_used"]), skip(["src/main.rs"], ["clippy/unwrap_usd"])];
-  expect(checkLintSkips(ws, skips, { scripts: [HIT] })).toEqual({
+  expect(checkLintSkips(ws, skips, { scripts: [HIT] })).toStrictEqual({
     report: [`skip clippy/unwrap_used in **/*.rs: 1 hit (${REASON})`, "skips: clippy/unwrap_used 1"],
     problems: ['lint.skip[1]: clippy/unwrap_usd has no hit in "src/main.rs"; delete it from the entry'],
   });
@@ -60,7 +60,7 @@ it("checkLintSkips matches a glob over every .rs file, and fails a misspelled Ru
 
 it("checkLintSkips matches no .rs file without a Cargo.toml", () => {
   const ws = checkout({ "src/lib.rs": "pub fn f() {}\n" });
-  expect(checkLintSkips(ws, [skip(["src/lib.rs"], ["clippy/unwrap_used"])], { scripts: [HIT] })).toEqual({
+  expect(checkLintSkips(ws, [skip(["src/lib.rs"], ["clippy/unwrap_used"])], { scripts: [HIT] })).toStrictEqual({
     report: [],
     problems: ['lint.skip[0]: "src/lib.rs" matches no file; fix the path or delete the entry'],
   });
@@ -69,5 +69,5 @@ it("checkLintSkips matches no .rs file without a Cargo.toml", () => {
 it("checkLintSkips reports why the Rust files could not be listed", () => {
   const ws = checkout(CRATE, false);
   const checked = checkLintSkips(ws, [skip(["src/lib.rs"], ["clippy/unwrap_used"])], { scripts: [] });
-  expect(checked.problems).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
+  expect(checked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });

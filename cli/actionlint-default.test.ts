@@ -24,7 +24,7 @@ it("captures the output and exit code of a command, and a spawn error as stderr"
     cwd,
     env: childEnv(),
   });
-  expect(run).toEqual({ code: 3, stdout: "out\n", stderr: "err\n" });
+  expect(run).toStrictEqual({ code: 3, stdout: "out\n", stderr: "err\n" });
   const missing = spawnCaptured(path.join(cwd, "no-such-binary"), [], { cwd, env: childEnv() });
   expect(missing.code).toBe(1);
   expect(missing.stdout).toBe("");

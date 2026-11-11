@@ -30,8 +30,8 @@ describe("strategy and mode keys", () => {
 
   it("names the allowed values", () => {
     expect(strategyError()).toBe("strategy: default|review-fast|review-deep");
-    expect(modeErrors({})).toEqual([]);
-    expect(modeErrors({ mode: "away" })).toEqual([]);
-    expect(modeErrors({ mode: "" })).toEqual(["mode: ask|auto|away"]);
+    expect(modeErrors({})).toStrictEqual([]);
+    expect(modeErrors({ mode: "away" })).toStrictEqual([]);
+    expect(modeErrors({ mode: "" })).toStrictEqual(["mode: ask|auto|away"]);
   });
 });

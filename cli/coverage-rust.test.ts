@@ -59,7 +59,7 @@ const plant = (root: string, floors: unknown): void =>
 it("repo coverage: writes Rust rows in a repo with no vitest, saying each is new", async () => {
   const root = rustRepo();
   expect(await coverage(root, cargoReporting(root, 66.7))).toBe(0);
-  expect(floorsOf(root)).toEqual({ [LIB]: ROW });
+  expect(floorsOf(root)).toStrictEqual({ [LIB]: ROW });
   const rows = ["lines new → 66", "functions new → 66", "regions new → 58"].map((line) => `${LIB} ${line}\n`);
   expect(out.join("")).toBe(`${rows.join("")}wrote ${FLOORS}\n`);
 });
@@ -76,7 +76,7 @@ it("repo coverage: fails a Rust drop with its line and keeps the old floors", as
   plant(root, { [LIB]: { ...ROW, lines: 80 } });
   expect(await coverage(root, cargoReporting(root, 66.7))).toBe(1);
   expect(err.join("")).toBe(`coverage: ${LIB} lines would drop 80 → 66; restore the tests or keep the floor\n`);
-  expect(floorsOf(root)).toEqual({ [LIB]: { ...ROW, lines: 80 } });
+  expect(floorsOf(root)).toStrictEqual({ [LIB]: { ...ROW, lines: 80 } });
 });
 
 it("repo coverage: fails a failing Rust test with cargo's output and writes nothing", async () => {

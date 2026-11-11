@@ -66,7 +66,7 @@ describe("boundaries passes", () => {
     'import { serve } from "bun";\nimport { test } from "bun:test";\nimport a from "#internal/a.ts";',
     'import v from "virtual:module";\nexport const load = (name: string) => import(name);',
   ])("a package's own, declared, builtin, scheme and # specifiers: %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each([
@@ -74,7 +74,7 @@ describe("boundaries passes", () => {
     ["packages/null/src/a.ts", 'import { z } from "zod";'],
     ["src/a.ts", 'import { z } from "zod";\nimport root from "@app/root";'],
   ])("%s, whose manifest is unreadable or declares what it imports", (file, code) => {
-    expect(messagesOf(code, file)).toEqual([]);
+    expect(messagesOf(code, file)).toStrictEqual([]);
   });
 });
 
@@ -92,7 +92,7 @@ describe("boundaries fails", () => {
     ['import { x } from "../../broken/x.ts";', nameless("../../broken/x.ts", "packages/broken")],
     ['import { x } from "../../../src/x.ts";', reaches("../../../src/x.ts", "the root package", "@app/root")],
   ])("%j", (code, message) => {
-    expect(messagesOf(code)).toEqual([message]);
+    expect(messagesOf(code)).toStrictEqual([message]);
   });
 
   it.each([
@@ -104,7 +104,7 @@ describe("boundaries fails", () => {
     ["src/a.ts", 'import React from "react";', undeclared("react", "package.json")],
     ["packages/odd/a.ts", 'import { z } from "zod";', undeclared("zod", "packages/odd/package.json")],
   ])("%s: %j", (file, code, message) => {
-    expect(messagesOf(code, file)).toEqual([message]);
+    expect(messagesOf(code, file)).toStrictEqual([message]);
   });
 });
 
@@ -122,7 +122,7 @@ describe("boundaries on a public package", () => {
     // npm packs the bin and main targets even when `files` leaves them out.
     ["packages/pub/lib/main.ts", 'import { z } from "zod";'],
   ])("fails %s: %j", (file, code) => {
-    expect(messagesOf(code, file)).toEqual([devOnly()]);
+    expect(messagesOf(code, file)).toStrictEqual([devOnly()]);
   });
 
   it.each([
@@ -134,27 +134,27 @@ describe("boundaries on a public package", () => {
     ["packages/pub/extra/deep/a.ts", "a file the glob does not reach"],
     ["packages/closed/src/a.ts", "a private package's file"],
   ])("passes %s, %s", (file) => {
-    expect(messagesOf('import { z } from "zod";', file)).toEqual([]);
+    expect(messagesOf('import { z } from "zod";', file)).toStrictEqual([]);
   });
 });
 
 describe("boundaries on a public package's other files", () => {
   it("passes a dev-only name in a package without private", () => {
-    expect(messagesOf('import v from "vitest";', "packages/web/src/a.ts")).toEqual([]);
+    expect(messagesOf('import v from "vitest";', "packages/web/src/a.ts")).toStrictEqual([]);
   });
 
   it("passes a name its runtime fields also declare, and a runtime dependency", () => {
-    expect(messagesOf('import b from "both";\nimport r from "react";', "packages/pub/src/a.ts")).toEqual([]);
+    expect(messagesOf('import b from "both";\nimport r from "react";', "packages/pub/src/a.ts")).toStrictEqual([]);
   });
 
   it("ships every source file of a public package without files", () => {
-    expect(messagesOf('import { z } from "zod";', "packages/open/anywhere/a.ts")).toEqual([
+    expect(messagesOf('import { z } from "zod";', "packages/open/anywhere/a.ts")).toStrictEqual([
       '"zod" is only in devDependencies of packages/open/package.json; shipped code needs it in dependencies or peerDependencies',
     ]);
   });
 
   it("still reports a name nothing declares", () => {
-    expect(messagesOf('import { x } from "nope";', "packages/pub/src/a.ts")).toEqual([
+    expect(messagesOf('import { x } from "nope";', "packages/pub/src/a.ts")).toStrictEqual([
       undeclared("nope", "packages/pub/package.json"),
     ]);
   });
@@ -162,7 +162,7 @@ describe("boundaries on a public package's other files", () => {
 
 it("skips a file with no package.json at or above it", () => {
   const messages = reportsOf(boundaries, { "src/a.ts": 'import { z } from "zod";\nimport { x } from "../../x.ts";' });
-  expect(messages).toEqual([]);
+  expect(messages).toStrictEqual([]);
 });
 
 describe("boundaries on an absolute specifier", () => {

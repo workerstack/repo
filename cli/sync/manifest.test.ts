@@ -21,7 +21,10 @@ function rootWith(manifest: string | null): string {
 
 describe("readManifest", () => {
   it("reads a valid manifest", () => {
-    expect(readManifest(rootWith('{"version":1,"paths":["a","b/c"]}'))).toEqual({ version: 1, paths: ["a", "b/c"] });
+    expect(readManifest(rootWith('{"version":1,"paths":["a","b/c"]}'))).toStrictEqual({
+      version: 1,
+      paths: ["a", "b/c"],
+    });
   });
 
   it.each([
@@ -33,14 +36,14 @@ describe("readManifest", () => {
     '{"version":1,"paths":"a"}',
     '{"version":1,"paths":[1]}',
   ])("reads %j as empty", (text) => {
-    expect(readManifest(rootWith(text))).toEqual({ version: 1, paths: [] });
+    expect(readManifest(rootWith(text))).toStrictEqual({ version: 1, paths: [] });
   });
 });
 
 describe("renderManifest", () => {
   it("sorts and dedupes so equal sets give equal bytes", () => {
     expect(renderManifest(["b", "a", "b"])).toBe(renderManifest(["a", "b"]));
-    expect(JSON.parse(renderManifest(["b", "a"]))).toEqual({ version: 1, paths: ["a", "b"] });
+    expect(JSON.parse(renderManifest(["b", "a"]))).toStrictEqual({ version: 1, paths: ["a", "b"] });
     expect(renderManifest([]).endsWith("\n")).toBe(true);
   });
 });
@@ -73,6 +76,6 @@ describe("prunePaths", () => {
       version: 1 as const,
       paths: ["b", ".\\a\\x", "C:\\repo\\a\\y", "C:\\repo\\keep", "keep", "../out", "C:\\else\\z"],
     };
-    expect(prunePaths(prev, ["keep"], "C:\\repo")).toEqual(["a/x", "a/y", "b"]);
+    expect(prunePaths(prev, ["keep"], "C:\\repo")).toStrictEqual(["a/x", "a/y", "b"]);
   });
 });

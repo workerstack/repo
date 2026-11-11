@@ -109,7 +109,7 @@ it("folderMap core scopes correctly when root is an alias path git reports diffe
 
 it("folderMap core returns an empty map for a missing scope dir", () => {
   const root = repo({ "src/a.ts": "" });
-  expect(folderMap({ root, dir: "nope" })).toEqual({ text: "", rows: 0, tokens: 0, depth: 0 });
+  expect(folderMap({ root, dir: "nope" })).toStrictEqual({ text: "", rows: 0, tokens: 0, depth: 0 });
 });
 
 it("folderMap core returns null outside a git repo", () => {

@@ -22,7 +22,7 @@ const tmp = useTmp();
 it("Antigravity: denies a write_file and an edit_file in the main checkout in agy's deny shape, and passes them in a worktree", () => {
   const r = tmp.committed("gate-main-");
   for (const call of [agyWrite(r, path.join(r, "src/x.ts")), agyEdit(r, path.join(r, "src/x.ts"))]) {
-    expect(processHookPayload(call)).toEqual({ decision: "deny", reason: reasonOf(r) });
+    expect(processHookPayload(call)).toStrictEqual({ decision: "deny", reason: reasonOf(r) });
   }
   for (const call of [
     agyWrite(r, path.join(r, ".worktrees/a/src/x.ts")),
@@ -36,7 +36,7 @@ it("Antigravity: denies a write_file and an edit_file in the main checkout in ag
 it("Antigravity: denies a Path typed through an alias of the root", () => {
   const r = tmp.committed("gate-main-");
   const alias = aliasOf(r);
-  expect(processHookPayload(agyWrite(r, path.join(alias, "src/x.ts")))).toEqual({
+  expect(processHookPayload(agyWrite(r, path.join(alias, "src/x.ts")))).toStrictEqual({
     decision: "deny",
     reason: reasonOf(r),
   });
@@ -45,7 +45,7 @@ it("Antigravity: denies a Path typed through an alias of the root", () => {
 
 it("Antigravity: redirects a root-level scratch write_file under .tmp/repo, overwriting Path only", () => {
   const r = tmp.committed("gate-main-");
-  expect(processHookPayload(agyWrite(r, path.join(r, "notes.md")))).toEqual({
+  expect(processHookPayload(agyWrite(r, path.join(r, "notes.md")))).toStrictEqual({
     decision: "allow",
     overwrite: { Path: path.join(r, ".tmp/repo/notes.md") },
   });
@@ -55,12 +55,12 @@ it("Antigravity: redirects a root-level scratch write_file under .tmp/repo, over
 it("Antigravity: grants a git subcommand from the prompt text in lastUserInput, and nothing else", () => {
   const r = tmp.committed("gate-main-");
   const sh = (command: string, extra: Record<string, string>) => processFatTools(agySh(r, command, extra));
-  expect(processHookPayload(agySh(r, "git stash"))).toEqual({ decision: "deny", reason: STASH_REASON });
+  expect(processHookPayload(agySh(r, "git stash"))).toStrictEqual({ decision: "deny", reason: STASH_REASON });
   expect(notDenied(sh("git stash", { lastUserInput: "run git stash in the main checkout" }))).toBe(true);
   expect(sh("git clean -fd", { lastUserInput: "clean up the code" })).toMatchObject({ type: "deny" });
   expect(notDenied(sh("git clean -fd", { lastUserInput: "please git clean the repo" }))).toBe(true);
   // A subagent's calls carry an empty lastUserInput, so a child gets no grant.
-  expect(sh("git stash", { conversationId: "child", lastUserInput: "" })).toEqual(deny(STASH_REASON));
+  expect(sh("git stash", { conversationId: "child", lastUserInput: "" })).toStrictEqual(deny(STASH_REASON));
 });
 
 it("Antigravity: keeps the other harnesses' grant on the session's git-asked.json, not on lastUserInput", () => {

@@ -55,13 +55,13 @@ describe("collectHistory", () => {
     threeVersions(root);
 
     const history = collectHistory(root);
-    expect(history).toEqual({
+    expect(history).toStrictEqual({
       ".agents/skills/ask/SKILL.md": [hashText("ask\n")],
       "agents/hooks.jsonc": [hashText("v1\n"), hashText("v2\n"), hashText("v3 uncommitted\n")].sort(),
       "AGENTS.md": [hashText("agents\n")],
     });
-    expect(Object.keys(history)).toEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
-    expect(collectHistory(root)).toEqual(history);
+    expect(Object.keys(history)).toStrictEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
+    expect(collectHistory(root)).toStrictEqual(history);
   });
 
   it("skips a committed symlink under a stock path: its blob is a link target, not a stock version", () => {
@@ -72,7 +72,7 @@ describe("collectHistory", () => {
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "link");
     // the working tree still reads through the link, as a copy at the old path would hold the same text
-    expect(collectHistory(root, ["HEAD"])).toEqual({
+    expect(collectHistory(root, ["HEAD"])).toStrictEqual({
       ".agents/skills/ask/SKILL.md": [hashText("ask\n")],
       "agents/skills/ask/SKILL.md": [hashText("ask\n")],
     });
@@ -91,15 +91,15 @@ describe("collectHistory, from the index", () => {
     git(root, "add", "-A");
     git(root, "commit", "-q", "-m", "one");
     put(root, "agents/hooks.jsonc", "instrumented\n");
-    expect(collectHistory(root, ["HEAD"], "index")["agents/hooks.jsonc"]).toEqual([hashText("committed\n")]);
+    expect(collectHistory(root, ["HEAD"], "index")["agents/hooks.jsonc"]).toStrictEqual([hashText("committed\n")]);
     expect(collectHistory(root, ["HEAD"])["agents/hooks.jsonc"]).toContain(hashText("instrumented\n"));
     fs.mkdirSync(path.join(root, ".agents/skills"), { recursive: true });
     fs.symlinkSync("../../agents", path.join(root, ".agents/skills/link"));
     git(root, "add", "-A");
     put(root, "agents/hooks.jsonc", "instrumented again\n");
     const staged = collectHistory(root, ["HEAD"], "index");
-    expect(staged["agents/hooks.jsonc"]).toEqual([hashText("committed\n"), hashText("instrumented\n")].sort());
-    expect(Object.keys(staged)).toEqual(["agents/hooks.jsonc"]);
+    expect(staged["agents/hooks.jsonc"]).toStrictEqual([hashText("committed\n"), hashText("instrumented\n")].sort());
+    expect(Object.keys(staged)).toStrictEqual(["agents/hooks.jsonc"]);
   });
 });
 
@@ -110,7 +110,7 @@ describe("the shipped table", () => {
     const missing = Object.entries(fresh).flatMap(([rel, hashes]) =>
       hashes.filter((hash) => !(table[rel] ?? []).includes(hash)).map((hash) => `${rel}@${hash}`),
     );
-    expect(missing, "stock files changed: run `bun dev/stock-history.ts`").toEqual([]);
+    expect(missing, "stock files changed: run `bun dev/stock-history.ts`").toStrictEqual([]);
     expect(fresh["agents/hooks.jsonc"]?.length).toBeGreaterThan(0);
   });
 });

@@ -113,7 +113,7 @@ describe("release workflow", () => {
   });
 
   it("writes the whole release.yml for a public root package", () => {
-    expect(releaseWorkflow(context(["release"], PUBLIC))).toEqual({
+    expect(releaseWorkflow(context(["release"], PUBLIC))).toStrictEqual({
       outputs: [{ kind: "file", path: PATH, content: EXPECTED, tracked: true, managed: "whole" }],
       errors: [],
     });
@@ -124,23 +124,26 @@ describe("release workflow", () => {
     ["a root that does not say it is public", { name: "@acme/app" }],
     ["a root with no name", { private: false }],
   ])("writes nothing for %s", (_, manifest) => {
-    expect(releaseWorkflow(context(["release"], manifest))).toEqual({ outputs: [], errors: [] });
+    expect(releaseWorkflow(context(["release"], manifest))).toStrictEqual({ outputs: [], errors: [] });
   });
 
   it("writes nothing with the pack off", () => {
-    expect(releaseWorkflow(context(["agents", "standards", "docs"], PUBLIC))).toEqual({ outputs: [], errors: [] });
+    expect(releaseWorkflow(context(["agents", "standards", "docs"], PUBLIC))).toStrictEqual({
+      outputs: [],
+      errors: [],
+    });
   });
 });
 
 describe("release workflow owns its file", () => {
   it("rewrites a release.yml that has the generated header on its first line", () => {
     const result = releaseWorkflow(context(["release"], PUBLIC, { [PATH]: `${HEADER}\nname: old\n` }));
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toStrictEqual([]);
     expect(result.outputs).toHaveLength(1);
   });
 
   it("refuses a hand-written release.yml", () => {
-    expect(releaseWorkflow(context(["release"], PUBLIC, { [PATH]: "name: Release\n" }))).toEqual({
+    expect(releaseWorkflow(context(["release"], PUBLIC, { [PATH]: "name: Release\n" }))).toStrictEqual({
       outputs: [],
       errors: [".github/workflows/release.yml is hand-written; delete it so repo sync can own it"],
     });
@@ -178,11 +181,11 @@ describe("release workflow publishing", () => {
 describe("release workflow triggers", () => {
   it("runs only on the tag and by hand", () => {
     const on = generated().split("\njobs:")[0]?.split("\non:\n")[1]?.split("\n\nconcurrency")[0] ?? "";
-    expect(on.match(/^ {2}\w+:/gm)).toEqual(["  push:", "  workflow_dispatch:"]);
+    expect(on.match(/^ {2}\w+:/gm)).toStrictEqual(["  push:", "  workflow_dispatch:"]);
   });
 
   it("runs the release commands through bun repo, never a root repo.ts", () => {
-    expect(generated().match(/bun repo release \w+/g)).toEqual([
+    expect(generated().match(/bun repo release \w+/g)).toStrictEqual([
       "bun repo release gate",
       "bun repo release publish",
       "bun repo release github",

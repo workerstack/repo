@@ -45,7 +45,7 @@ it("strips GIT_* from the nested run and leaves the committed repo's index alone
   const result = redProof(root, change(["A", "e.test.ts"], ["M", "s.ts"]));
   vi.unstubAllEnvs();
   expect(problemOf(result)).toContain("(e.test.ts passed)");
-  expect(seen()).toEqual(before);
+  expect(seen()).toStrictEqual(before);
 });
 
 const failing =
@@ -71,8 +71,8 @@ it("throws when the archive cannot be unpacked", () => {
 });
 
 it("reads the NUL-separated name-status entries", () => {
-  expect(parseNameStatus("M\0a.ts\0A\0dir/b.test.ts\0D\0c.ts\0")).toEqual(
+  expect(parseNameStatus("M\0a.ts\0A\0dir/b.test.ts\0D\0c.ts\0")).toStrictEqual(
     change(["M", "a.ts"], ["A", "dir/b.test.ts"], ["D", "c.ts"]),
   );
-  expect(parseNameStatus("")).toEqual([]);
+  expect(parseNameStatus("")).toStrictEqual([]);
 });

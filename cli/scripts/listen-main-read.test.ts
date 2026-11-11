@@ -20,19 +20,19 @@ afterEach(cleanupTmp);
 describe("devices", () => {
   it("lists devices as id and name", async () => {
     const r = await run(["devices"], { spawnSyncFn: () => ({ status: 1, stderr: AV }) });
-    expect(r.logs).toEqual([":0  MacBook Pro Microphone"]);
+    expect(r.logs).toStrictEqual([":0  MacBook Pro Microphone"]);
   });
 
   it("says so when there are none", async () => {
     const r = await run(["devices"], { spawnSyncFn: () => ({ status: 1 }) });
     expect(r.code).toBe(0);
-    expect(r.logs).toEqual(["no audio devices"]);
+    expect(r.logs).toStrictEqual(["no audio devices"]);
   });
 
   it("needs ffmpeg", async () => {
     const r = await run(["devices"], { whichFn: which({}) });
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual([NEED_FFMPEG]);
+    expect(r.errs).toStrictEqual([NEED_FFMPEG]);
   });
 });
 
@@ -40,29 +40,29 @@ describe("latest", () => {
   it("fails without a transcript", async () => {
     const r = await run(["latest"]);
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["no transcript"]);
+    expect(r.errs).toStrictEqual(["no transcript"]);
   });
 
   it("prints the saved transcript", async () => {
     const cwd = tmp("listen-latest-");
     await run(["file", "--path", plantWav(cwd)], { cwd, fetchFn: textFetch("saved words") });
-    expect((await run(["latest"], { cwd })).logs).toEqual(["saved words"]);
+    expect((await run(["latest"], { cwd })).logs).toStrictEqual(["saved words"]);
   });
 });
 
 describe("status", () => {
   it("is idle without a session or without a pid", async () => {
     const cwd = tmp("listen-st-idle-");
-    expect((await run(["status"], { cwd })).logs).toEqual(["idle"]);
+    expect((await run(["status"], { cwd })).logs).toStrictEqual(["idle"]);
     plantSession(cwd, { wav: "/x.wav" });
-    expect((await run(["status"], { cwd })).logs).toEqual(["idle"]);
+    expect((await run(["status"], { cwd })).logs).toStrictEqual(["idle"]);
   });
 
   it("reports a live recorder through the default probe, keeping the session", async () => {
     const cwd = tmp("listen-st-live-");
     plantSession(cwd, { pid: process.pid, wav: "/x.wav" });
     const r = await run(["status"], { cwd });
-    expect(r.logs).toEqual([`recording  pid=${process.pid}  wav=/x.wav`]);
+    expect(r.logs).toStrictEqual([`recording  pid=${process.pid}  wav=/x.wav`]);
     expect(fs.existsSync(sessionPath(cwd))).toBe(true);
   });
 
@@ -70,7 +70,7 @@ describe("status", () => {
     const cwd = tmp("listen-st-stale-");
     plantSession(cwd, { pid: 4242 });
     const r = await run(["status"], { cwd, killFn: killTable([]).killFn });
-    expect(r.logs).toEqual(["stale  pid=4242  wav=-"]);
+    expect(r.logs).toStrictEqual(["stale  pid=4242  wav=-"]);
     expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   });
 });
@@ -91,7 +91,7 @@ describe("file", () => {
   it("fails without a path", async () => {
     const r = await run(["file"]);
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["file needs --path"]);
+    expect(r.errs).toStrictEqual(["file needs --path"]);
   });
 });
 
@@ -101,7 +101,7 @@ describe("file --clip", () => {
     const clip = clipboard();
     const r = await run(["file", "--path", plantWav(cwd), ...flag], { cwd, fetchFn: textFetch("clip me"), ...clip });
     expect(r.code).toBe(0);
-    expect(clip.inputs).toEqual(["clip me"]);
+    expect(clip.inputs).toStrictEqual(["clip me"]);
   });
 
   it("a failing clipboard fails the command but the transcript is saved", async () => {
@@ -112,7 +112,7 @@ describe("file --clip", () => {
       ...clipboard(1),
     });
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["pbcopy failed"]);
+    expect(r.errs).toStrictEqual(["pbcopy failed"]);
     expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toBe("kept\n");
   });
 
@@ -120,6 +120,6 @@ describe("file --clip", () => {
     const cwd = tmp("listen-file-noclip-");
     const clip = clipboard();
     await run(["file", "--path", plantWav(cwd)], { cwd, fetchFn: textFetch("x"), ...clip });
-    expect(clip.inputs).toEqual([]);
+    expect(clip.inputs).toStrictEqual([]);
   });
 });

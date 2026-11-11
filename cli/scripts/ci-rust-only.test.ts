@@ -33,13 +33,13 @@ function run(files: Record<string, string>, vitest: Captured) {
 
 it("with a root Cargo.toml vitest passes with no tests and the gate says it skipped", () => {
   const result = run({ "Cargo.toml": "[workspace]\n" }, NO_FILES);
-  expect(result.calls).toEqual(["run --coverage --passWithNoTests"]);
+  expect(result.calls).toStrictEqual(["run --coverage --passWithNoTests"]);
   expect(result.out).toContain("ci: tests skipped (no test files)");
 });
 
 it("without a root Cargo.toml vitest gets no flag and a repo with no tests still fails", () => {
   const result = run({}, NO_FILES_FAILED);
-  expect(result.calls).toEqual(["run --coverage"]);
+  expect(result.calls).toStrictEqual(["run --coverage"]);
   expect(result.code).toBe(1);
   expect(result.out).toContain("ci: tests failed");
 });

@@ -38,7 +38,7 @@ function committed(): string {
 }
 
 it("lists tracked and untracked unignored json and jsonc files as root-relative paths, without a deleted one", () => {
-  expect(repoJson(committed(), null)).toEqual({
+  expect(repoJson(committed(), null)).toStrictEqual({
     ok: true,
     files: ["a.json", "conf/e.jsonc", "fresh/e.json", "nested/b.json", "nested/deep/c.json", "other/d.json"],
   });
@@ -46,9 +46,9 @@ it("lists tracked and untracked unignored json and jsonc files as root-relative 
 
 it("narrows to a file, a folder and the root, by the paths given", () => {
   const root = committed();
-  expect(repoJson(root, ["nested"])).toEqual({ ok: true, files: ["nested/b.json", "nested/deep/c.json"] });
-  expect(repoJson(root, ["a.json", "other/d.json"])).toEqual({ ok: true, files: ["a.json", "other/d.json"] });
-  expect(repoJson(root, ["nest"])).toEqual({ ok: true, files: [] });
+  expect(repoJson(root, ["nested"])).toStrictEqual({ ok: true, files: ["nested/b.json", "nested/deep/c.json"] });
+  expect(repoJson(root, ["a.json", "other/d.json"])).toStrictEqual({ ok: true, files: ["a.json", "other/d.json"] });
+  expect(repoJson(root, ["nest"])).toStrictEqual({ ok: true, files: [] });
   expect(repoJson(root, [""]).files).toHaveLength(6);
 });
 
@@ -56,16 +56,16 @@ it("lists under a hook's GIT_* variables, which would aim git at another repo, a
   const root = committed();
   vi.stubEnv("GIT_DIR", path.join(os.tmpdir(), "workerstack-no-such-git-dir"));
   vi.stubEnv("GIT_CONFIG_COUNT", "0");
-  expect(repoJson(root, ["a.json"])).toEqual({ ok: true, files: ["a.json"] });
+  expect(repoJson(root, ["a.json"])).toStrictEqual({ ok: true, files: ["a.json"] });
 });
 
 it("lists nothing, without an error, when git is not there to run", () => {
   const notThere = () => ({ status: null, stdout: "" });
-  expect(repoJson(committed(), null, notThere)).toEqual({ ok: true, files: [] });
+  expect(repoJson(committed(), null, notThere)).toStrictEqual({ ok: true, files: [] });
 });
 
 it("lists nothing, without an error, when the root is not a git repo", () => {
-  expect(repoJson(jsonDir({ "a.json": "{}\n" }, false), null)).toEqual({ ok: true, files: [] });
+  expect(repoJson(jsonDir({ "a.json": "{}\n" }, false), null)).toStrictEqual({ ok: true, files: [] });
 });
 
 const IGNORES = ["/gen.json", "**/fixtures/**", "plain.json", "**/*.md"];
@@ -96,7 +96,7 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
   const root = jsonDir(TREE);
   const found = ["sub/gen.json", "mypackage.json", "data.json"].map((file) => ({ file, key: "hooks" }));
   const commented = ["comments.json", "conf/app.jsonc"].map((file) => ({ file, key: "a" }));
-  expect(sortJson(root, SORTABLE(TREE), false)).toEqual({ ok: true, found: [...found, ...commented] });
+  expect(sortJson(root, SORTABLE(TREE), false)).toStrictEqual({ ok: true, found: [...found, ...commented] });
   for (const file of found.map((entry) => entry.file)) expect(readText(root, file)).toBe(SORTED);
   for (const file of commented.map((entry) => entry.file)) expect(readText(root, file)).toBe(COMMENTED_SORTED);
   expect(readText(root, "conf/fixtures/app.jsonc")).toBe(COMMENTED);
@@ -120,7 +120,7 @@ it("leaves package.json to oxfmt", () => {
 
 it("names the first key of a file with comments under check, and writes nothing", () => {
   const root = jsonDir(TREE);
-  expect(sortJson(root, ["comments.json", "conf/app.jsonc"], true)).toEqual({
+  expect(sortJson(root, ["comments.json", "conf/app.jsonc"], true)).toStrictEqual({
     ok: true,
     found: [
       { file: "comments.json", key: "a" },
@@ -132,16 +132,16 @@ it("names the first key of a file with comments under check, and writes nothing"
 
 it("only reports under check, and a second run after a fix finds nothing and changes no byte", () => {
   const root = jsonDir(TREE);
-  expect(sortJson(root, ["data.json"], true)).toEqual({ ok: true, found: [{ file: "data.json", key: "hooks" }] });
+  expect(sortJson(root, ["data.json"], true)).toStrictEqual({ ok: true, found: [{ file: "data.json", key: "hooks" }] });
   expect(readText(root, "data.json")).toBe(UNSORTED);
   sortJson(root, ["data.json"], false);
-  expect(sortJson(root, ["data.json"], false)).toEqual({ ok: true, found: [] });
+  expect(sortJson(root, ["data.json"], false)).toStrictEqual({ ok: true, found: [] });
   expect(readText(root, "data.json")).toBe(SORTED);
 });
 
 it("skips a listed file that is gone, and takes a config with no ignore patterns as ignoring nothing", () => {
   const root = jsonDir({ ".oxfmtrc.jsonc": "{}\n", "gen.json": UNSORTED });
-  expect(sortJson(root, ["gone.json", "gen.json"], true)).toEqual({
+  expect(sortJson(root, ["gone.json", "gen.json"], true)).toStrictEqual({
     ok: true,
     found: [{ file: "gen.json", key: "hooks" }],
   });
@@ -149,8 +149,11 @@ it("skips a listed file that is gone, and takes a config with no ignore patterns
 
 it("says to run repo sync when the config is missing or not an oxfmt config", () => {
   const missing = ".oxfmtrc.jsonc is missing; run `bun repo sync` to write it";
-  expect(sortJson(jsonDir({ "a.json": UNSORTED }), ["a.json"], false)).toEqual({ ok: false, error: missing });
+  expect(sortJson(jsonDir({ "a.json": UNSORTED }), ["a.json"], false)).toStrictEqual({ ok: false, error: missing });
   const invalid = ".oxfmtrc.jsonc is not a valid oxfmt config; run `bun repo sync` to write it again";
-  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "{ nope" }), ["a.json"], false)).toEqual({ ok: false, error: invalid });
-  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "[]" }), ["a.json"], false)).toEqual({ ok: false, error: invalid });
+  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "{ nope" }), ["a.json"], false)).toStrictEqual({
+    ok: false,
+    error: invalid,
+  });
+  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "[]" }), ["a.json"], false)).toStrictEqual({ ok: false, error: invalid });
 });

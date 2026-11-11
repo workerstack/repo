@@ -179,7 +179,7 @@ function tokenFromClasprc(home: string): Token | null {
 }
 
 function loadToken(home: string = os.homedir()): Token | null {
-  return tokenFromStore(home) || tokenFromAdc(home) || tokenFromClasprc(home);
+  return (tokenFromStore(home) ?? tokenFromAdc(home)) || tokenFromClasprc(home);
 }
 
 function publicFields(t: Token): Rec {
@@ -362,7 +362,7 @@ async function gfetch(
     headers: {
       Authorization: "Bearer " + token,
       ...(init.body && typeof init.body === "string" ? { "Content-Type": "application/json" } : {}),
-      ...(init.headers || {}),
+      ...init.headers,
     },
   });
   const text = await r.text();
@@ -511,7 +511,7 @@ async function sheetClear({ id, range }: { id?: string | undefined; range?: stri
     body: "{}",
   });
   if (!r.ok) return fail(apiMessage(r.json, "sheet clear failed"));
-  return ok(`cleared ${String(r.json.clearedRange || range || "A1:Z")}`);
+  return ok(`cleared ${String((r.json.clearedRange || range) ?? "A1:Z")}`);
 }
 
 async function docAppend({ id, body }: { id?: string | undefined; body?: string | undefined }): Promise<number> {

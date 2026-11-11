@@ -18,8 +18,8 @@ async function run(argv: string[]) {
   const into =
     (lines: string[]) =>
     (text: string): boolean => (lines.push(text), true);
-  process.stdout.write = into(out) /* the code writes strings only */ as typeof process.stdout.write;
-  process.stderr.write = into(err) /* the code writes strings only */ as typeof process.stderr.write;
+  process.stdout.write = into(out); /* the code writes strings only */
+  process.stderr.write = into(err); /* the code writes strings only */
   const code = await main(argv);
   return { code, out: out.join(""), err: err.join("") };
 }
@@ -30,15 +30,15 @@ const USAGE =
 
 describe("repo release", () => {
   it("prints the usage for help", async () => {
-    expect(await run(["help"])).toEqual({ code: 0, out: USAGE, err: "" });
+    expect(await run(["help"])).toStrictEqual({ code: 0, out: USAGE, err: "" });
   });
 
   it("sends `wait` to the npm poll", async () => {
-    expect(await run(["wait"])).toEqual({ code: 1, out: "", err: `repo release wait: ${TAG_FORMAT}` });
+    expect(await run(["wait"])).toStrictEqual({ code: 1, out: "", err: `repo release wait: ${TAG_FORMAT}` });
   });
 
   it.each(["gate", "publish", "github"])("sends `%s` to its command", async (command) => {
-    expect(await run([command])).toEqual({ code: 1, out: "", err: `repo release ${command}: ${TAG_FORMAT}` });
+    expect(await run([command])).toStrictEqual({ code: 1, out: "", err: `repo release ${command}: ${TAG_FORMAT}` });
   });
 
   it("sends `pack` to the packer", async () => {
@@ -53,7 +53,7 @@ describe("repo release", () => {
 
   it("sends `consumer` to the consumer test", async () => {
     const got = await run(["consumer", "a.tgz", "b.tgz"]);
-    expect(got).toEqual({
+    expect(got).toStrictEqual({
       code: 1,
       out: "",
       err: "repo release consumer: takes at most one argument, the tarball to test\n",
@@ -76,6 +76,6 @@ describe("repo release consumer", () => {
   });
 
   it("sends anything else to the release", async () => {
-    expect(await run(["--bogus"])).toEqual({ code: 1, out: "", err: `repo release: ${USAGE}` });
+    expect(await run(["--bogus"])).toStrictEqual({ code: 1, out: "", err: `repo release: ${USAGE}` });
   });
 });

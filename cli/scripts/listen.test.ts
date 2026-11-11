@@ -92,7 +92,7 @@ const DSHOW_FIXTURE = `
 
 describe("parseArgv / clampSeconds / devices", () => {
   it("reads verb and flags", () => {
-    expect(parseArgv(["rec", "--seconds", "5", "--clip"])).toEqual({
+    expect(parseArgv(["rec", "--seconds", "5", "--clip"])).toStrictEqual({
       _: ["rec"],
       flags: { seconds: "5", clip: "1" },
     });
@@ -111,19 +111,19 @@ describe("parseArgv / clampSeconds / devices", () => {
   });
 
   it("ffmpeg input args", () => {
-    expect(ffmpegInputArgs("darwin", "", "")).toEqual(["-f", "avfoundation", "-i", ":0"]);
-    expect(ffmpegInputArgs("linux", "", "")).toEqual(["-f", "pulse", "-i", "default"]);
-    expect(ffmpegInputArgs("linux", "hw:0", "")).toEqual(["-f", "alsa", "-i", "hw:0"]);
-    expect(ffmpegInputArgs("win32", "Mic", "")).toEqual(["-f", "dshow", "-i", "audio=Mic"]);
+    expect(ffmpegInputArgs("darwin", "", "")).toStrictEqual(["-f", "avfoundation", "-i", ":0"]);
+    expect(ffmpegInputArgs("linux", "", "")).toStrictEqual(["-f", "pulse", "-i", "default"]);
+    expect(ffmpegInputArgs("linux", "hw:0", "")).toStrictEqual(["-f", "alsa", "-i", "hw:0"]);
+    expect(ffmpegInputArgs("win32", "Mic", "")).toStrictEqual(["-f", "dshow", "-i", "audio=Mic"]);
     expect(() => ffmpegInputArgs("win32", "", "")).toThrow(/LISTEN_DEVICE/);
   });
 
   it("parses avfoundation and dshow fixtures", () => {
-    expect(parseDevices(AV_FIXTURE, "darwin")).toEqual([
+    expect(parseDevices(AV_FIXTURE, "darwin")).toStrictEqual([
       { id: ":0", name: "MacBook Pro Microphone" },
       { id: ":1", name: "BlackHole 2ch" },
     ]);
-    expect(parseDevices(DSHOW_FIXTURE, "win32")).toEqual([
+    expect(parseDevices(DSHOW_FIXTURE, "win32")).toStrictEqual([
       { id: "Microphone (Realtek Audio)", name: "Microphone (Realtek Audio)" },
       { id: "Stereo Mix (Realtek Audio)", name: "Stereo Mix (Realtek Audio)" },
     ]);
@@ -350,7 +350,7 @@ describe("main", () => {
       log: { log() {}, error() {} },
     });
     expect(code).toBe(0);
-    expect(spawned[0]?.slice(0, 4)).toEqual([bin, "listen", "_record", "--out"]);
+    expect(spawned[0]?.slice(0, 4)).toStrictEqual([bin, "listen", "_record", "--out"]);
   });
 
   it("start writes session; stop transcribes", async () => {
@@ -426,7 +426,7 @@ describe("main", () => {
       home,
       cwd,
     });
-    expect(stt).toEqual({ kind: "local", bin: "/usr/bin/whisper-cli", model: path.resolve(model) });
+    expect(stt).toStrictEqual({ kind: "local", bin: "/usr/bin/whisper-cli", model: path.resolve(model) });
     expect(findWhisperModel({ cfg, home, cwd })).toBe(path.resolve(model));
     const logs: string[] = [];
     const code = await main(["file", "--path", wav], {
@@ -468,7 +468,7 @@ describe("main", () => {
         home,
         cwd: home,
       }),
-    ).toEqual({ kind: "openai", model: DEFAULT_MODEL });
+    ).toStrictEqual({ kind: "openai", model: DEFAULT_MODEL });
   });
 
   it("resolveStt without local or key throws", () => {
@@ -551,7 +551,7 @@ describe("main", () => {
       cwd: home,
       fetchFn: async () => ({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) }),
     });
-    expect(stt).toEqual({ kind: "openai", model: DEFAULT_MODEL });
+    expect(stt).toStrictEqual({ kind: "openai", model: DEFAULT_MODEL });
   });
 });
 
@@ -627,17 +627,17 @@ function plantSpeak(home: string, body: unknown) {
 
 describe("parseArgv edges", () => {
   it("keeps only strings, and treats a non-array as no arguments", () => {
-    expect(parseArgv("rec")).toEqual({ _: [], flags: {} });
-    expect(parseArgv(["rec", 5, null, "x"])).toEqual({ _: ["rec", "x"], flags: {} });
+    expect(parseArgv("rec")).toStrictEqual({ _: [], flags: {} });
+    expect(parseArgv(["rec", 5, null, "x"])).toStrictEqual({ _: ["rec", "x"], flags: {} });
   });
 
   it("stops flag parsing at --", () => {
-    expect(parseArgv(["rec", "--", "--seconds", "5"])).toEqual({ _: ["rec", "--seconds", "5"], flags: {} });
+    expect(parseArgv(["rec", "--", "--seconds", "5"])).toStrictEqual({ _: ["rec", "--seconds", "5"], flags: {} });
   });
 
   it("a flag followed by a flag or nothing is a boolean", () => {
-    expect(parseArgv(["--a", "--b", "--c"]).flags).toEqual({ a: "1", b: "1", c: "1" });
-    expect(parseArgv(["--a", ""]).flags).toEqual({ a: "1" });
+    expect(parseArgv(["--a", "--b", "--c"]).flags).toStrictEqual({ a: "1", b: "1", c: "1" });
+    expect(parseArgv(["--a", ""]).flags).toStrictEqual({ a: "1" });
   });
 });
 
@@ -728,7 +728,7 @@ describe("findWhisperBin", () => {
       return name === "whisper-cpp" ? "/x/whisper-cpp" : "";
     };
     expect(findWhisperBin(which, "/p", "darwin")).toBe("/x/whisper-cpp");
-    expect(seen).toEqual([
+    expect(seen).toStrictEqual([
       ["whisper-cli", "/p", "darwin"],
       ["whisper-cpp", "/p", "darwin"],
     ]);
@@ -788,7 +788,7 @@ describe("probeStt", () => {
     const home = tmp("listen-sel-a-");
     expect(probeStt(sttFor(home))).toBeNull();
     const cfg = cfgFor(home, { OPENAI_API_KEY: "k" });
-    expect(probeStt(sttFor(home, { cfg }))).toEqual({ kind: "openai", model: DEFAULT_MODEL });
+    expect(probeStt(sttFor(home, { cfg }))).toStrictEqual({ kind: "openai", model: DEFAULT_MODEL });
   });
 });
 
@@ -836,7 +836,7 @@ describe("downloadGgml success", () => {
     const errs: string[] = [];
     const log = { error: (m: string) => errs.push(m) };
     const dest = await downloadGgml({ home, fetchFn: bytesReply([1, 2, 3]), log });
-    expect([...fs.readFileSync(dest)]).toEqual([1, 2, 3]);
+    expect([...fs.readFileSync(dest)]).toStrictEqual([1, 2, 3]);
     expect(errs[0]).toContain(dest);
     expect(fs.existsSync(`${dest}.part`)).toBe(false);
   });
@@ -852,7 +852,7 @@ describe("downloadGgml success", () => {
     } finally {
       vi.unstubAllGlobals();
     }
-    expect(urls).toEqual([GGML_URL]);
+    expect(urls).toStrictEqual([GGML_URL]);
   });
 });
 
@@ -902,15 +902,15 @@ describe("paths", () => {
 
 describe("ffmpeg arguments", () => {
   it("an explicit format wins and win32 keeps an audio= prefix", () => {
-    expect(ffmpegInputArgs("linux", "hw:0", "pulse")).toEqual(["-f", "pulse", "-i", "hw:0"]);
-    expect(ffmpegInputArgs("win32", "audio=Mic", "")).toEqual(["-f", "dshow", "-i", "audio=Mic"]);
+    expect(ffmpegInputArgs("linux", "hw:0", "pulse")).toStrictEqual(["-f", "pulse", "-i", "hw:0"]);
+    expect(ffmpegInputArgs("win32", "audio=Mic", "")).toStrictEqual(["-f", "dshow", "-i", "audio=Mic"]);
   });
 
   it("a timed recording carries -t and -nostdin, with the seconds clamped", () => {
     const base = { platform: "linux", device: "", out: "/o.wav", ffmpegFormat: "" } as const;
     const timed = ffmpegRecordArgs({ ...base, seconds: 999 });
     expect(timed).toContain("-nostdin");
-    expect(timed.slice(timed.indexOf("-t"), timed.indexOf("-t") + 2)).toEqual(["-t", "120"]);
+    expect(timed.slice(timed.indexOf("-t"), timed.indexOf("-t") + 2)).toStrictEqual(["-t", "120"]);
     expect(timed.at(-1)).toBe("/o.wav");
   });
 
@@ -927,9 +927,9 @@ describe("ffmpeg arguments", () => {
   });
 
   it("recCaptureOpts sends stderr to the given fd, or ignores it", () => {
-    expect(recCaptureOpts(7).stdio).toEqual(["ignore", "ignore", 7]);
-    expect(recCaptureOpts(null).stdio).toEqual(["ignore", "ignore", "ignore"]);
-    expect(recCaptureOpts().stdio).toEqual(["ignore", "ignore", "ignore"]);
+    expect(recCaptureOpts(7).stdio).toStrictEqual(["ignore", "ignore", 7]);
+    expect(recCaptureOpts(null).stdio).toStrictEqual(["ignore", "ignore", "ignore"]);
+    expect(recCaptureOpts().stdio).toStrictEqual(["ignore", "ignore", "ignore"]);
   });
 });
 
@@ -993,7 +993,7 @@ describe("recCapture timeout", () => {
     const p = capture(fakeChild().child, (pid, sig) => killed.push([pid, sig]));
     vi.advanceTimersByTime(7001);
     expect(await p).toMatchObject({ status: null, signal: "SIGKILL", error: { code: "ETIMEDOUT" } });
-    expect(killed).toEqual([[-321, "SIGKILL"]]);
+    expect(killed).toStrictEqual([[-321, "SIGKILL"]]);
   });
 
   it("falls back to child.kill when the group kill throws", async () => {
@@ -1002,7 +1002,7 @@ describe("recCapture timeout", () => {
     const p = capture(fakeChild({ kill: (sig) => signals.push(sig) }).child, throwing);
     vi.advanceTimersByTime(7001);
     expect((await p).signal).toBe("SIGKILL");
-    expect(signals).toEqual(["SIGKILL"]);
+    expect(signals).toStrictEqual(["SIGKILL"]);
   });
 
   it("survives child.kill failing too, and skips the group kill without a pid", async () => {
@@ -1013,7 +1013,7 @@ describe("recCapture timeout", () => {
     vi.advanceTimersByTime(7001);
     expect((await both).error).toMatchObject({ code: "ETIMEDOUT" });
     await noPid;
-    expect(kills).toEqual([]);
+    expect(kills).toStrictEqual([]);
   });
 });
 
@@ -1024,13 +1024,13 @@ describe("pidAlive", () => {
     expect(pidAlive("abc", kill)).toBe(false);
     expect(pidAlive(0, kill)).toBe(false);
     expect(pidAlive(-4, kill)).toBe(false);
-    expect(probed).toEqual([]);
+    expect(probed).toStrictEqual([]);
   });
 
   it("probes with signal 0 and maps a throw to false", () => {
     const sigs: unknown[] = [];
     expect(pidAlive("12", (_p, s) => sigs.push(s))).toBe(true);
-    expect(sigs).toEqual([0]);
+    expect(sigs).toStrictEqual([0]);
     const gone = () => {
       throw new Error("ESRCH");
     };
@@ -1068,8 +1068,8 @@ describe("transcribeLocal output", () => {
       return { status: 0 };
     });
     expect(text).toBe("hi there");
-    expect(argv.slice(0, 4)).toEqual(["-m", "/m.bin", "-f", wav]);
-    expect(fs.readdirSync(path.dirname(wav))).toEqual(["a.wav"]);
+    expect(argv.slice(0, 4)).toStrictEqual(["-m", "/m.bin", "-f", wav]);
+    expect(fs.readdirSync(path.dirname(wav))).toStrictEqual(["a.wav"]);
   });
 });
 
@@ -1182,11 +1182,11 @@ describe("copyClip", () => {
   it("tries wl-copy, xclip, then xsel on linux and stops at the first that works", () => {
     const second = clipRecorder({ xclip: 0 });
     copyClip("hello", { platform: "linux", ...second });
-    expect(second.calls.map((c) => c.cmd)).toEqual(["wl-copy", "xclip"]);
-    expect(second.calls[1]?.args).toEqual(["-selection", "clipboard"]);
+    expect(second.calls.map((c) => c.cmd)).toStrictEqual(["wl-copy", "xclip"]);
+    expect(second.calls[1]?.args).toStrictEqual(["-selection", "clipboard"]);
     const none = clipRecorder({});
     expect(() => copyClip("x", { platform: "linux", ...none })).toThrow("no wl-copy, xclip, or xsel on PATH");
-    expect(none.calls.map((c) => c.cmd)).toEqual(["wl-copy", "xclip", "xsel"]);
+    expect(none.calls.map((c) => c.cmd)).toStrictEqual(["wl-copy", "xclip", "xsel"]);
   });
 });
 
@@ -1207,18 +1207,18 @@ describe("listDevicesText darwin and win32", () => {
 
   it("reads avfoundation devices from stderr or stdout", () => {
     const a = devices("darwin", { status: 1, stderr: AV_FIXTURE });
-    expect(a.list.map((d) => d.id)).toEqual([":0", ":1"]);
+    expect(a.list.map((d) => d.id)).toStrictEqual([":0", ":1"]);
     expect(a.calls[0]?.[1]).toContain("avfoundation");
     expect(devices("darwin", { status: 1, stdout: AV_FIXTURE }).list).toHaveLength(2);
-    expect(devices("darwin", { status: 1 }).list).toEqual([]);
+    expect(devices("darwin", { status: 1 }).list).toStrictEqual([]);
   });
 
   it("reads dshow devices from stderr or stdout", () => {
     const a = devices("win32", { status: 1, stderr: DSHOW_FIXTURE });
-    expect(a.list.map((d) => d.id)).toEqual(["Microphone (Realtek Audio)", "Stereo Mix (Realtek Audio)"]);
+    expect(a.list.map((d) => d.id)).toStrictEqual(["Microphone (Realtek Audio)", "Stereo Mix (Realtek Audio)"]);
     expect(a.calls[0]?.[1]).toContain("dshow");
     expect(devices("win32", { status: 1, stdout: DSHOW_FIXTURE }).list).toHaveLength(2);
-    expect(devices("win32", { status: 1 }).list).toEqual([]);
+    expect(devices("win32", { status: 1 }).list).toStrictEqual([]);
   });
 });
 
@@ -1227,29 +1227,33 @@ describe("listDevicesText linux", () => {
 
   it("lists pulse sources", () => {
     const ok = devices("linux", { status: 0, stdout: "0\talsa_input.pci\tmodule\n1\talsa_output.monitor\tm\n" });
-    expect(ok.list.map((d) => d.id)).toEqual(["alsa_input.pci", "alsa_output.monitor"]);
+    expect(ok.list.map((d) => d.id)).toStrictEqual(["alsa_input.pci", "alsa_output.monitor"]);
     expect(ok.calls[0]?.[0]).toBe("pactl");
   });
 
   it("falls back to the default source when pactl fails or lists nothing", () => {
-    expect(devices("linux", { status: 1, stdout: "0\tx" }).list).toEqual(fallback);
-    expect(devices("linux", { status: 0, stdout: "  " }).list).toEqual(fallback);
+    expect(devices("linux", { status: 1, stdout: "0\tx" }).list).toStrictEqual(fallback);
+    expect(devices("linux", { status: 0, stdout: "  " }).list).toStrictEqual(fallback);
   });
 });
 
 describe("parseDevices edges", () => {
   it("tolerates non-string input on linux", () => {
-    expect(parseDevices(undefined, "linux")).toEqual([{ id: "default", name: "pulse default" }]);
+    expect(parseDevices(undefined, "linux")).toStrictEqual([{ id: "default", name: "pulse default" }]);
   });
 
   it("darwin ignores lines outside the audio section and non-device lines", () => {
-    expect(parseDevices("Some audio devices:\n[0] Mic\nnot a device\n", "darwin")).toEqual([{ id: ":0", name: "Mic" }]);
-    expect(parseDevices("[0] before any section", "darwin")).toEqual([]);
-    expect(parseDevices("AVFoundation audio devices:\nAVFoundation video devices:\n[1] Cam", "darwin")).toEqual([]);
+    expect(parseDevices("Some audio devices:\n[0] Mic\nnot a device\n", "darwin")).toStrictEqual([
+      { id: ":0", name: "Mic" },
+    ]);
+    expect(parseDevices("[0] before any section", "darwin")).toStrictEqual([]);
+    expect(parseDevices("AVFoundation audio devices:\nAVFoundation video devices:\n[1] Cam", "darwin")).toStrictEqual(
+      [],
+    );
   });
 
   it("win32 ignores lines outside the audio section and unquoted lines", () => {
     const text = '"before section"\nDirectShow audio devices\n junk\n "A"\nDirectShow video devices\n "V"';
-    expect(parseDevices(text, "win32")).toEqual([{ id: "A", name: "A" }]);
+    expect(parseDevices(text, "win32")).toStrictEqual([{ id: "A", name: "A" }]);
   });
 });

@@ -40,7 +40,7 @@ const MOVE_PATCH = [
 describe("patchIgnoreEdits", () => {
   it("reads the plus lines of an added or updated .gitignore and skips other files", () => {
     const r = root();
-    expect(patchIgnoreEdits(ADD_PATCH, r)).toEqual([
+    expect(patchIgnoreEdits(ADD_PATCH, r)).toStrictEqual([
       { file: path.join(r, "pkg/.gitignore"), added: [".tmp/"] },
       { file: path.join(r, "other/.gitignore"), added: ["dist/"] },
     ]);
@@ -48,15 +48,15 @@ describe("patchIgnoreEdits", () => {
 
   it("follows a move to the new path and drops a deleted file's lines", () => {
     const r = root();
-    expect(patchIgnoreEdits(MOVE_PATCH, r)).toEqual([{ file: path.join(r, "pkg/.gitignore"), added: [".tmp/"] }]);
+    expect(patchIgnoreEdits(MOVE_PATCH, r)).toStrictEqual([{ file: path.join(r, "pkg/.gitignore"), added: [".tmp/"] }]);
   });
 
   it("ignores a move before any file section", () => {
-    expect(patchIgnoreEdits("*** Move to: pkg/.gitignore\n+x/", root())).toEqual([]);
+    expect(patchIgnoreEdits("*** Move to: pkg/.gitignore\n+x/", root())).toStrictEqual([]);
   });
 
   it("returns nothing for text with no sections", () => {
-    expect(patchIgnoreEdits("+x/\nplain", root())).toEqual([]);
+    expect(patchIgnoreEdits("+x/\nplain", root())).toStrictEqual([]);
   });
 });
 
@@ -66,14 +66,14 @@ describe("writeIgnoreEdits and projectEdit on odd input", () => {
   it("treats a missing .gitignore as empty, so every line is added", () => {
     const r = root();
     const file = path.join(r, "new/.gitignore");
-    expect(writeIgnoreEdits({ file_path: file, content: "a/\n" }, r, FIELDS)).toEqual([{ file, added: ["a/"] }]);
+    expect(writeIgnoreEdits({ file_path: file, content: "a/\n" }, r, FIELDS)).toStrictEqual([{ file, added: ["a/"] }]);
   });
 
   it("returns no edit when no field names a .gitignore", () => {
     const r = root();
-    expect(writeIgnoreEdits({ file_path: path.join(r, "notes.md"), content: "x" }, r, FIELDS)).toEqual([]);
-    expect(writeIgnoreEdits({ file_path: 3 }, r, FIELDS)).toEqual([]);
-    expect(writeIgnoreEdits({ file_path: "" }, r, FIELDS)).toEqual([]);
+    expect(writeIgnoreEdits({ file_path: path.join(r, "notes.md"), content: "x" }, r, FIELDS)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ file_path: 3 }, r, FIELDS)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ file_path: "" }, r, FIELDS)).toStrictEqual([]);
   });
 
   it("fails an edit list holding something that is not an edit", () => {

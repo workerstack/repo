@@ -35,7 +35,7 @@ const adoptionOf = (m: Mini, withOutputs = false) =>
 
 it("splits the extra sections of an edited stock rule into a -local file", () => {
   const own = `${read(CONSUMER_STOCK, RULE)}\n## Ours\n\nship on Fridays\n`;
-  expect(planOf(packed({ ".rulesync/rules/overview.md": own }), CONFIG, none)).toEqual([
+  expect(planOf(packed({ ".rulesync/rules/overview.md": own }), CONFIG, none)).toStrictEqual([
     {
       kind: "write",
       path: ".repo/rules/overview-local.md",
@@ -48,7 +48,7 @@ it("splits the extra sections of an edited stock rule into a -local file", () =>
 
 it("moves an own key of .claude/settings.json to .repo/settings/claude.json", () => {
   const own = JSON.stringify({ permissions: { deny: ["Agent(Explore)"] }, model: "opus" });
-  expect(planOf(packed({ ".claude/settings.json": own }), CONFIG, none)).toEqual([
+  expect(planOf(packed({ ".claude/settings.json": own }), CONFIG, none)).toStrictEqual([
     {
       kind: "write",
       path: ".repo/settings/claude.json",
@@ -60,15 +60,15 @@ it("moves an own key of .claude/settings.json to .repo/settings/claude.json", ()
 });
 
 it("removes an unedited copy of a stock skill instead of moving it", () => {
-  expect(planOf(packed({ ".agents/skills/ask/SKILL.md": "ask\n" }), CONFIG, none)).toEqual([
+  expect(planOf(packed({ ".agents/skills/ask/SKILL.md": "ask\n" }), CONFIG, none)).toStrictEqual([
     { kind: "remove", paths: [".agents/skills/ask", ".rulesync"] },
   ]);
 });
 
 it("leaves an unedited real copy of a stock skill under .claude/skills alone, and moves one with an extra file", () => {
-  expect(adoptionOf(packed({ ".claude/skills/ask/SKILL.md": "ask\n" }))).toEqual([]);
+  expect(adoptionOf(packed({ ".claude/skills/ask/SKILL.md": "ask\n" }))).toStrictEqual([]);
   const edited = packed({ ".claude/skills/ask/SKILL.md": "ask\n", ".claude/skills/ask/notes.md": "mine\n" });
-  expect(adoptionOf(edited)).toEqual([
+  expect(adoptionOf(edited)).toStrictEqual([
     {
       kind: "move",
       from: ".claude/skills/ask",
@@ -87,7 +87,7 @@ it("moves no server of .mcp.json: the file is the user's", () => {
   const m = packed({
     ".mcp.json": JSON.stringify({ mcpServers: { stock: { command: "s" }, docs: { command: "d" } } }),
   });
-  expect(adoptionOf(m, true)).toEqual([]);
+  expect(adoptionOf(m, true)).toStrictEqual([]);
 });
 
 it("writes .repo/settings/claude.json with its keys sorted by code unit, deep", () => {

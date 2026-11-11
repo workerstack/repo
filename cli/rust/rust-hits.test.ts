@@ -60,7 +60,7 @@ it("lists the rust files git knows, tracked or not, outside fixtures and target 
   });
   git(root, "init", "-q");
   git(root, "add", "src/lib.rs");
-  expect(rustFiles(root)).toEqual({ ok: true, files: ["src/a.rs", "src/lib.rs", "src/target.rs"] });
+  expect(rustFiles(root)).toStrictEqual({ ok: true, files: ["src/a.rs", "src/lib.rs", "src/target.rs"] });
 });
 
 it("says git failed when the root is not a checkout", () => {
@@ -71,7 +71,7 @@ it("says git failed when the root is not a checkout", () => {
 
 it("has no diagnostic without a root Cargo.toml", () => {
   const root = plant({ "src/lib.rs": USAGE });
-  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: lints })).toEqual({ ok: true, value: [] });
+  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: lints })).toStrictEqual({ ok: true, value: [] });
 });
 
 it("prints the source rules in Usage's form, in file order, without compiling when clippy is off", () => {
@@ -80,7 +80,7 @@ it("prints the source rules in Usage's form, in file order, without compiling wh
     throw new Error("cargo ran");
   };
   const text = "#[allow] sets a lint level in code; lint levels live on the command line, so fix the code";
-  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: false, run: never })).toEqual({
+  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: false, run: never })).toStrictEqual({
     ok: true,
     value: [
       {
@@ -100,12 +100,12 @@ it("prints the source rules in Usage's form, in file order, without compiling wh
 it("adds clippy's hits in the listed files, merged by place, and drops those in other files", () => {
   const root = plant({ "Cargo.toml": "", "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
   const result = rustHitsAt(root, ["src/lib.rs", "src/deleted.rs"], { clippy: true, run: lints });
-  expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toEqual([
+  expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toStrictEqual([
     "src/lib.rs:1:1",
     "src/lib.rs:2:1",
     "src/lib.rs:3:27",
   ]);
-  expect(result.ok && result.value[2]).toEqual({
+  expect(result.ok && result.value[2]).toStrictEqual({
     file: "src/lib.rs",
     rule: "clippy(unwrap_used)",
     line: "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value",
@@ -120,7 +120,7 @@ it("orders hits across files by path then place", () => {
     "a.rs": "\n/* c */\n",
   });
   const result = rustHitsAt(root, ["b.rs", "a.rs"], { clippy: false });
-  expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toEqual([
+  expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toStrictEqual([
     "a.rs:2:1",
     "b.rs:1:1",
     "b.rs:1:9",
@@ -130,7 +130,7 @@ it("orders hits across files by path then place", () => {
 it("returns the clippy problems alone when the run failed", () => {
   const root = plant({ "Cargo.toml": "", "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
   const missing: CargoRun = () => ({ status: 1, stdout: "", stderr: "", missing: true });
-  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: missing })).toEqual({
+  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: missing })).toStrictEqual({
     ok: false,
     errors: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
   });

@@ -14,7 +14,7 @@ describe("repo release consumer", () => {
     const got = await consume(fixture());
     expect(got).toMatchObject({ code: 0, out: OK });
     expect(got.err).toContain("fx-1.0.0.tgz");
-    expect(fs.readdirSync(got.tmp).filter((name) => name.startsWith(PROJECT_DIR_PREFIX))).toEqual([]);
+    expect(fs.readdirSync(got.tmp).filter((name) => name.startsWith(PROJECT_DIR_PREFIX))).toStrictEqual([]);
   });
 
   it("takes a tarball argument and does not pack", { timeout: TIMEOUT }, async () => {
@@ -34,7 +34,7 @@ describe("repo release consumer", () => {
     };
     const got = await consume(fixture(), [], { bun });
     expect(got.code).toBe(0);
-    expect(seen[1]).toEqual(["package.json"]);
+    expect(seen[1]).toStrictEqual(["package.json"]);
     expect(seen.flat()).not.toContain("repo.ts");
   });
 });
@@ -45,7 +45,7 @@ describe("repo release consumer cleanup", () => {
     expect(passed.code).toBe(0);
     const failed = await consume(fixture({ exports: { ...EXPORTS, "./gone": "./gone.js" } }));
     expect(failed.code).toBe(1);
-    for (const got of [passed, failed]) expect(got.made.filter((dir) => fs.existsSync(dir))).toEqual([]);
+    for (const got of [passed, failed]) expect(got.made.filter((dir) => fs.existsSync(dir))).toStrictEqual([]);
   });
 
   it("removes the directory it packed into when the pack is refused", { timeout: TIMEOUT }, async () => {
@@ -169,7 +169,7 @@ describe("repo release consumer peers", () => {
     const files = { "package.json": withPeers({ "peer-a": "^1.0.0", "peer-b": "2" }) };
     const got = await consume(fixture({ files }), [], { bun });
     expect(got.code).toBe(0);
-    expect(adds).toEqual([["add", "peer-a@^1.0.0", "peer-b@2"]]);
+    expect(adds).toStrictEqual([["add", "peer-a@^1.0.0", "peer-b@2"]]);
   });
 
   it("prints bun's stderr when adding a peer fails", { timeout: TIMEOUT }, async () => {
@@ -189,7 +189,7 @@ describe("repo release consumer tool failures", () => {
     const bun: Runner = () => ({ code: 1, stdout: "", stderr: "no such package\n" });
     const got = await consume(tempDir(), [tarball], { bun });
     expect(got).toMatchObject({ code: 1, out: "", err: `${PREFIX}bun add failed: no such package\n` });
-    expect(fs.readdirSync(got.tmp)).toEqual([]);
+    expect(fs.readdirSync(got.tmp)).toStrictEqual([]);
   });
 
   it("prints the refusal of a pack that names workspace:^", async () => {

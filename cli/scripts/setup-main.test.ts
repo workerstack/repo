@@ -28,7 +28,7 @@ it("main prints a thrown string, or an Error without a message, as text", async 
   expect(await main(argv, { ...quiet, io, home, cwd, loginFn: thrown("boom") })).toBe(1);
   expect(await main(argv, { ...quiet, io, home, cwd, loginFn: thrown({ message: "" }) })).toBe(1);
   expect(await main(argv, { ...quiet, io, home, cwd, loginFn: thrown(new Error("bad login")) })).toBe(1);
-  expect(io.errs).toEqual(["boom", "[object Object]", "bad login"]);
+  expect(io.errs).toStrictEqual(["boom", "[object Object]", "bad login"]);
 });
 
 it("main takes home from env HOME, then USERPROFILE, then the stubbed os home", async () => {
@@ -40,7 +40,7 @@ it("main takes home from env HOME, then USERPROFILE, then the stubbed os home", 
   await run({ HOME: a, USERPROFILE: b });
   await run({ USERPROFILE: b });
   await run({});
-  expect([a, b, c].map((h) => fs.existsSync(`${h}/.workerstack/jev.json`))).toEqual([true, true, true]);
+  expect([a, b, c].map((h) => fs.existsSync(`${h}/.workerstack/jev.json`))).toStrictEqual([true, true, true]);
 });
 
 it("main defaults cwd, env, platform and PATH from the process", async () => {
@@ -100,7 +100,7 @@ it("main asks before redoing a target that is ok, and --redo skips the question"
   const opts = { io, home, cwd, interactive: true, env: {}, ...bare };
   await main(["jev", "--api-key", "k1"], opts);
   expect(await main(["jev"], opts)).toBe(0);
-  expect(confirm.mock.calls[0]).toEqual([{ message: "jev already ok (config). Redo?", initialValue: false }]);
+  expect(confirm.mock.calls[0]).toStrictEqual([{ message: "jev already ok (config). Redo?", initialValue: false }]);
   expect(io.logs).toContain("skip jev (already ok)");
   expect(await main(["jev", "--redo", "--api-key", "k2"], opts)).toBe(0);
   expect(confirm).toHaveBeenCalledTimes(1);

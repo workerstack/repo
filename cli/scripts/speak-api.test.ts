@@ -37,7 +37,7 @@ it("whoami: checks the openai models endpoint with the bearer key", async () => 
     return Promise.resolve(okRes());
   };
   expect(await whoami({ cfg: openai(), fetchFn })).toBe("openai ok");
-  expect(urls).toEqual(["https://api.openai.com/v1/models Bearer sk_oa"]);
+  expect(urls).toStrictEqual(["https://api.openai.com/v1/models Bearer sk_oa"]);
 });
 
 it("whoami: reports a rejected openai key", async () => {

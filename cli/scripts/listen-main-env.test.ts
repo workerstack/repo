@@ -22,7 +22,7 @@ describe("main with no options", () => {
   it("prints usage for no verb", async () => {
     const r = await run([]);
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual([USAGE]);
+    expect(r.errs).toStrictEqual([USAGE]);
   });
 });
 
@@ -51,7 +51,7 @@ describe("main home and PATH", () => {
     await main(["nope"], { ...base, env: { PATH: "/env" }, pathEnv: "/given" });
     await main(["nope"], { ...base, env: { PATH: "/env" } });
     await main(["nope"], { ...base, env: {} });
-    expect(seen).toEqual(["/given", "/env", readEnv().PATH]);
+    expect(seen).toStrictEqual(["/given", "/env", readEnv().PATH]);
   });
 });
 
@@ -61,7 +61,7 @@ describe("main options", () => {
     fs.mkdirSync(path.join(real, ".tmp/repo/listen"), { recursive: true });
     fs.writeFileSync(path.join(real, ".tmp/repo/listen/latest.txt"), "kept\n");
     const r = await run(["latest", "--cwd", real], { cwd: tmp("listen-cwdflag-o-") });
-    expect(r.logs).toEqual(["kept"]);
+    expect(r.logs).toStrictEqual(["kept"]);
   });
 
   it.each([
@@ -72,7 +72,7 @@ describe("main options", () => {
     const spawnSyncFn = (): SpawnSyncResult => {
       throw thrown;
     };
-    expect((await run(["devices"], { spawnSyncFn })).errs).toEqual([want]);
+    expect((await run(["devices"], { spawnSyncFn })).errs).toStrictEqual([want]);
   });
 });
 
@@ -80,7 +80,7 @@ describe("whoami", () => {
   it("prints the openai engine and ffmpeg path", async () => {
     const r = await run(["whoami"]);
     expect(r.code).toBe(0);
-    expect(r.logs).toEqual([`stt=openai  model=whisper-1  ffmpeg=${FFMPEG}`]);
+    expect(r.logs).toStrictEqual([`stt=openai  model=whisper-1  ffmpeg=${FFMPEG}`]);
   });
 
   it("prints the local engine once the model exists", async () => {
@@ -90,14 +90,14 @@ describe("whoami", () => {
     fs.writeFileSync(model, "ggml");
     const r = await run(["whoami"], { home, whichFn: which({ "whisper-cli": "/w/whisper-cli" }) });
     expect(r.code).toBe(0);
-    expect(r.logs).toEqual([`stt=local  bin=/w/whisper-cli  model=${model}  ffmpeg=missing`]);
+    expect(r.logs).toStrictEqual([`stt=local  bin=/w/whisper-cli  model=${model}  ffmpeg=missing`]);
   });
 
   it("reports no engine, and a failed model download, with exit 1", async () => {
     const whichFn = which({ "whisper-cli": "/w/whisper-cli" });
     const r = await run(["whoami"], { env: {}, whichFn, fetchFn: failFetch });
     expect(r.code).toBe(1);
-    expect(r.logs).toEqual(["stt=none  ffmpeg=missing"]);
+    expect(r.logs).toStrictEqual(["stt=none  ffmpeg=missing"]);
     expect(r.errs.some((e) => e.startsWith("downloading"))).toBe(true);
     expect(r.errs).toContain(NEED_STT);
   });

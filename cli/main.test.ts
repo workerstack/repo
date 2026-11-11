@@ -322,7 +322,7 @@ describe("start", () => {
       options: { value: string }[];
     };
     expect(opts.initialValue).toBe("init");
-    expect(opts.options.map((o) => o.value)).toEqual([
+    expect(opts.options.map((o) => o.value)).toStrictEqual([
       "init",
       "check",
       "yolo",
@@ -334,7 +334,7 @@ describe("start", () => {
       "help",
       "quit",
     ]);
-    expect(init).toHaveBeenCalled();
+    expect(init).toHaveBeenCalledWith(process.cwd(), expect.objectContaining({ skipGlobals: false }));
     expect(isInteractive).toHaveBeenCalledOnce();
     expect(confirm).toHaveBeenCalledWith({
       message: APPLY_GLOBALS_CONFIRM,
@@ -388,7 +388,7 @@ describe("start", () => {
     });
     process.argv = ["node", "repo", "init"];
     await start();
-    expect(confirm).toHaveBeenCalled();
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ message: APPLY_GLOBALS_CONFIRM }));
     const globalsConfirm = confirm.mock.calls.find(
       (c) => (c[0] as { message?: string }).message === APPLY_GLOBALS_CONFIRM,
     );
@@ -629,7 +629,7 @@ describe("start check", () => {
     } finally {
       githubIo.gh = gh;
     }
-    expect(fake.calls).toEqual([]);
+    expect(fake.calls).toStrictEqual([]);
     expect(stderr.join("")).not.toContain("repo check: github:");
   });
 
@@ -667,7 +667,7 @@ describe("start check", () => {
     expect(stderr.join("")).toContain(
       "repo check: github: private vulnerability reporting is off: run `bun repo github`\n",
     );
-    expect(fake.writes()).toEqual([]);
+    expect(fake.writes()).toStrictEqual([]);
     expect(process.exitCode).toBe(1);
   });
 
@@ -853,7 +853,7 @@ describe("start check", () => {
     await start();
     const printed = stdout.mock.calls.map(([line]) => String(line));
     stdout.mockRestore();
-    expect(printed).toEqual([
+    expect(printed).toStrictEqual([
       `repo check: skip typescript/no-non-null-assertion in src/a.ts: 1 hit (${reason})\n`,
       "repo check: skips: typescript/no-non-null-assertion 1\n",
     ]);
@@ -861,7 +861,7 @@ describe("start check", () => {
       'repo check: lint.skip[1]: typescript/no-non-null-assertion has no hit in "src/b.ts"; delete it from the entry\n',
     );
     expect(process.exitCode).toBe(1);
-    expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toEqual([]);
+    expect(fs.readdirSync(dir).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
   }, 60_000);
 
   it("with the standards pack on, reports a skipped magic rule's hits and counts the other over the baseline", async () => {
@@ -885,7 +885,7 @@ describe("start check", () => {
     await start();
     const printed = stdout.mock.calls.map(([line]) => String(line));
     stdout.mockRestore();
-    expect(printed).toEqual([
+    expect(printed).toStrictEqual([
       `repo check: skip repo/magic-number in src/retry.ts: 2 hits (${reason})\n`,
       "repo check: skips: repo/magic-number 2\n",
     ]);

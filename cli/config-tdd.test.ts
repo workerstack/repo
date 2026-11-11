@@ -29,11 +29,11 @@ it("resolves tdd to false when the config omits it", async () => {
 });
 
 it.each(['"yes"', "1", "null"])("refuses tdd: %s and names tdd", async (value) => {
-  expect(await loadConfig(repo(`{ tdd: ${value} }`))).toEqual(refusal("tdd: must be true or false"));
+  expect(await loadConfig(repo(`{ tdd: ${value} }`))).toStrictEqual(refusal("tdd: must be true or false"));
 });
 
 it.each(['["docs"]', "[]"])("refuses tdd without the standards pack (packs %s)", async (list) => {
-  expect(await loadConfig(repo(`{ packs: ${list}, tdd: true }`))).toEqual(
+  expect(await loadConfig(repo(`{ packs: ${list}, tdd: true }`))).toStrictEqual(
     refusal('tdd: set only with the standards pack; add "standards" to packs or delete tdd'),
   );
 });

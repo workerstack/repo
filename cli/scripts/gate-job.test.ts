@@ -38,12 +38,12 @@ it("parses bun repo job, bun <bin> job, <bin> job and rtk <bin> job, and refuses
   const ok = (c: string) => isWorkspaceJobScript(c, roots, path.posix);
   for (const c of ACCEPTED) expect(ok(c), c).toBe(true);
   for (const c of REFUSED) expect(ok(c), c).toBe(false);
-  expect(parseJobCommand(`bun repo job --job test --query x`, roots)).toEqual({
+  expect(parseJobCommand(`bun repo job --job test --query x`, roots)).toStrictEqual({
     job: "test",
     hasQuery: true,
     hasStash: false,
   });
-  expect(parseJobCommand(`/r/node_modules/.bin/repo job --job exec --query x`, roots)).toEqual({
+  expect(parseJobCommand(`/r/node_modules/.bin/repo job --job exec --query x`, roots)).toStrictEqual({
     job: "exec",
     hasQuery: true,
     hasStash: false,
@@ -74,7 +74,7 @@ it("matches the bin through a symlinked checkout", () => {
   fs.symlinkSync(real, alias);
   const roots = { root: real, checkout: real, cwd: real };
   expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/repo job ${JOB}`, roots)).toBe(true);
-  expect(isWorkspaceJobScript(`${jobCommand(real, JOB)}`, roots)).toBe(true);
+  expect(isWorkspaceJobScript(jobCommand(real, JOB), roots)).toBe(true);
   expect(isWorkspaceJobScript(`${real}/bin/repo.ts job ${JOB}`, roots)).toBe(true);
   expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/other job ${JOB}`, roots)).toBe(false);
 });

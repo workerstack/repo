@@ -32,14 +32,14 @@ function errorsFor(edit: (text: string) => string, opts?: { fresh?: boolean }) {
 describe("validatePlan required keys", () => {
   it("accepts the saved plan and denies a filename outside the pattern", () => {
     const { filename, text } = saved();
-    expect(validatePlan(filename, text)).toEqual([]);
+    expect(validatePlan(filename, text)).toStrictEqual([]);
     expect(validatePlan("Plan One.md", text)).toContain("filename");
   });
 
   it("names a missing or unterminated frontmatter and stops there", () => {
     const { filename } = saved();
-    expect(validatePlan(filename, "# add-tmp-ignore\n")).toEqual(["missing frontmatter"]);
-    expect(validatePlan(filename, "---\nserial: 1\n")).toEqual(["unterminated frontmatter"]);
+    expect(validatePlan(filename, "# add-tmp-ignore\n")).toStrictEqual(["missing frontmatter"]);
+    expect(validatePlan(filename, "---\nserial: 1\n")).toStrictEqual(["unterminated frontmatter"]);
   });
 
   it("denies a serial line that is not a positive whole number", () => {
@@ -74,7 +74,7 @@ describe("validatePlan consistency rules", () => {
     const errors = errorsFor((t) =>
       t.replace(/^source: .*$/m, 'Not a key line\nsource: "bad \\q escape"').replace("reviews: 0", "reviews: 0"),
     );
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it("denies a name that differs from the filename slug and from the title", () => {

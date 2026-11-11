@@ -13,7 +13,7 @@ it("breaks a tie of hits by file name", () => {
   const ws = repo();
   save(ws, "b-one", lesson({ name: "b-one" }));
   save(ws, "a-one", lesson({ name: "a-one" }));
-  expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toEqual(["a-one.md", "b-one.md"]);
+  expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toStrictEqual(["a-one.md", "b-one.md"]);
 });
 
 it("skips an index row that does not have five cells", () => {
@@ -22,7 +22,7 @@ it("skips an index row that does not have five cells", () => {
   const index = path.join(ws, LESSONS_DIR, "INDEX.md");
   fs.chmodSync(index, 0o644);
   fs.appendFileSync(index, "| .repo/lessons/short.md | src/** | 3 |\n");
-  expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toEqual(["plan-forks.md"]);
+  expect(names(matchLessons({ workspaceRoot: ws, files: ["src/a.ts"] }))).toStrictEqual(["plan-forks.md"]);
 });
 
 // Windows cannot name a file with "|", and the glob must match one on disk.
@@ -51,11 +51,13 @@ it("keeps the row with more hits when two checkouts hold the same lesson", () =>
     [5, 2],
   ] as const) {
     const { roots, files } = twoCheckouts(rootHits, worktreeHits);
-    expect(matchLessons({ roots, files }).map((r) => r.hits)).toEqual([5]);
+    expect(matchLessons({ roots, files }).map((r) => r.hits)).toStrictEqual([5]);
   }
 });
 
 it("ignores a file in a checkout whose lessons dir has no index", () => {
   const ws = repo(["src/a.ts"]);
-  expect(matchLessons({ roots: resolveRoots({ workspaceRoot: ws }), files: [path.join(ws, "src/a.ts")] })).toEqual([]);
+  expect(
+    matchLessons({ roots: resolveRoots({ workspaceRoot: ws }), files: [path.join(ws, "src/a.ts")] }),
+  ).toStrictEqual([]);
 });

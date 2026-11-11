@@ -68,7 +68,7 @@ describe("mutate", () => {
 describe("bun repo", () => {
   it("has no tracked file but the bin that bun would run in its place", () => {
     const files = execFileSync("git", ["ls-files"], { encoding: "utf8" }).split("\n");
-    expect(files.filter((f) => /(?:^|\/)repo\.(?:[cm]?js|jsx|tsx?)$/.test(f))).toEqual(["bin/repo.ts"]);
+    expect(files.filter((f) => /(?:^|\/)repo\.(?:[cm]?js|jsx|tsx?)$/.test(f))).toStrictEqual(["bin/repo.ts"]);
   });
 });
 

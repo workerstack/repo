@@ -31,8 +31,8 @@ describe("listSkillDirNames", () => {
     fs.mkdirSync(path.join(root, "empty"));
     fs.mkdirSync(path.join(root, ".hidden"));
     writeSkill(path.join(root, ".hidden"), "x", "no");
-    expect(listSkillDirNames(root)).toEqual(["parent", "solo"]);
-    expect(listSkillDirNames(path.join(root, "missing"))).toEqual([]);
+    expect(listSkillDirNames(root)).toStrictEqual(["parent", "solo"]);
+    expect(listSkillDirNames(path.join(root, "missing"))).toStrictEqual([]);
   });
 });
 
@@ -42,14 +42,14 @@ describe("findSkillContentConflicts", () => {
     const pkg = tmp("sk-pkg-");
     writeSkill(ws, "parent", "same\n");
     writeSkill(pkg, "parent", "same\n");
-    expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toEqual([]);
+    expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toStrictEqual([]);
     expect(
       findSkillContentConflicts({
         workspaceSkillsDir: ws,
         packagedSkillsDir: path.join(pkg, "nope"),
       }),
-    ).toEqual([]);
-    expect(findSkillContentConflicts({})).toEqual([]);
+    ).toStrictEqual([]);
+    expect(findSkillContentConflicts({})).toStrictEqual([]);
   });
 
   it("reports name when SKILL.md bytes differ; skips workspace-only", () => {
@@ -64,7 +64,7 @@ describe("findSkillContentConflicts", () => {
       workspaceSkillsDir: ws,
       packagedSkillsDir: pkg,
     });
-    expect(hits.map((h) => h.name)).toEqual(["parent"]);
+    expect(hits.map((h) => h.name)).toStrictEqual(["parent"]);
     expect(hits[0]!.workspacePath).toContain(`${path.sep}parent${path.sep}SKILL.md`);
   });
 });

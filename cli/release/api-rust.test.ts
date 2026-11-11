@@ -82,6 +82,6 @@ describe("repo release api pins in a Rust repo", () => {
     expect(got.err.startsWith(`${PREFIX}${start}; run \`cargo install --locked cargo-semver-checks@0.51.0\``)).toBe(
       true,
     );
-    expect(fake.checks()).toEqual([]);
+    expect(fake.checks()).toStrictEqual([]);
   });
 });

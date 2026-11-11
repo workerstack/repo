@@ -90,7 +90,7 @@ it.each([
 
 it("reports a manifest with several defects one line each, in rule order", () => {
   const out = lines({ name: "x", private: false }, null);
-  expect(out.map((line) => line.split(";")[0])).toEqual([
+  expect(out.map((line) => line.split(";")[0])).toStrictEqual([
     'package.json: "description" is missing',
     'package.json: "keywords" is missing',
     'package.json: "license" is missing',
@@ -108,7 +108,7 @@ it("reports a manifest with several defects one line each, in rule order", () =>
 });
 
 it("does not check the keywords of a private package", () => {
-  expect(lines({ name: "x", private: true, keywords: ["Bad Topic"] }, null)).toEqual([]);
+  expect(lines({ name: "x", private: true, keywords: ["Bad Topic"] }, null)).toStrictEqual([]);
 });
 
 it("fails a public package whose keywords are not GitHub topics", () => {

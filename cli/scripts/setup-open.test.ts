@@ -9,8 +9,8 @@ it("openUrl hands the url to openUrlFn and spawns nothing", async () => {
   const spawned: string[] = [];
   const spawnSyncFn = (cmd: string) => spawned.push(cmd);
   await openUrl("https://x.test", { openUrlFn: (u) => opened.push(u), spawnSyncFn });
-  expect(opened).toEqual(["https://x.test"]);
-  expect(spawned).toEqual([]);
+  expect(opened).toStrictEqual(["https://x.test"]);
+  expect(spawned).toStrictEqual([]);
 });
 
 it("openUrl uses the platform's opener through spawnSyncFn", async () => {
@@ -19,7 +19,7 @@ it("openUrl uses the platform's opener through spawnSyncFn", async () => {
   await openUrl("https://x.test", { platform: "darwin", spawnSyncFn });
   await openUrl("https://x.test", { platform: "win32", spawnSyncFn });
   await openUrl("https://x.test", { platform: "linux", spawnSyncFn });
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     ["open", "https://x.test"],
     ["cmd", "/c", "start", "", "https://x.test"],
     ["xdg-open", "https://x.test"],

@@ -21,7 +21,7 @@ it("retries a 529 once after the advertised wait and counts both requests", asyn
   const { waits, sleep } = sleeper();
   const fetchImpl = retry(529, { "Retry-After": "1" });
   expect((await go({ home, fetchImpl, sleep })).code).toBe(0);
-  expect(waits).toEqual([1000]);
+  expect(waits).toStrictEqual([1000]);
   expect(fetchImpl.calls).toBe(2);
   expect(readLedgerFile(home).requests).toBe(2);
 });
@@ -29,14 +29,14 @@ it("retries a 529 once after the advertised wait and counts both requests", asyn
 it("waits from an HTTP date measured against the injected clock", async () => {
   const { waits, sleep } = sleeper();
   await go({ home: plantDir(), fetchImpl: retry(429, { "Retry-After": "Fri, 09 Oct 2026 12:00:01 GMT" }), sleep });
-  expect(waits).toEqual([1000]);
+  expect(waits).toStrictEqual([1000]);
 });
 
 it("reads Retry-After from a plain header map", async () => {
   const { waits, sleep } = sleeper();
   const fetchImpl = scripted(plainReply(429, { "retry-after": "0" }), reply(200, answerBody()));
   await go({ home: plantDir(), fetchImpl, sleep });
-  expect(waits).toEqual([0]);
+  expect(waits).toStrictEqual([0]);
   expect(fetchImpl.calls).toBe(2);
 });
 

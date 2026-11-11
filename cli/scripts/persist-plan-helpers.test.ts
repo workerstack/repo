@@ -68,7 +68,7 @@ describe("plan text helpers", () => {
   });
 
   it("denies a body whose second line is not blank as a missing card", () => {
-    expect(cardErrors("# t\nWHAT x")).toEqual([
+    expect(cardErrors("# t\nWHAT x")).toStrictEqual([
       "start with the 5-line card after the title: WHAT, WHY, RISK, TOUCH, DONE",
     ]);
   });
@@ -76,18 +76,18 @@ describe("plan text helpers", () => {
 
 describe("plan list helpers", () => {
   it("denies a Usage section with no body", () => {
-    expect(usageErrors(["Goal", "Usage"], { Usage: "" }, { fresh: true })).toEqual([
+    expect(usageErrors(["Goal", "Usage"], { Usage: "" }, { fresh: true })).toStrictEqual([
       '## Usage needs a fenced example or a "No visible change:" line',
     ]);
   });
 
   it("reads an absent mistakes section as empty", () => {
-    expect(parseMistakes(undefined, ["review"]).errors).toEqual(["## Previous mistakes is empty; write (none)"]);
+    expect(parseMistakes(undefined, ["review"]).errors).toStrictEqual(["## Previous mistakes is empty; write (none)"]);
   });
 
   it("lets a map with no status enter no gated status", () => {
-    expect(reviewErrors({ reviews: "0" }, null, { gates: { "in-progress": 1 }, review: "/review-plan {n}" })).toEqual(
-      [],
-    );
+    expect(
+      reviewErrors({ reviews: "0" }, null, { gates: { "in-progress": 1 }, review: "/review-plan {n}" }),
+    ).toStrictEqual([]);
   });
 });

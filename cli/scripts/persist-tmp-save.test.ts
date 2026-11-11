@@ -41,8 +41,8 @@ describe("persistTmp serials", () => {
     const dir = path.join(ws, TMP_DIR);
     for (let n = 1; n <= 6; n++) fs.mkdirSync(path.join(dir, `${n}-bank-email-draft-${STAMP}.md`), { recursive: true });
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP, created: CREATED });
-    expect(r).toEqual({ ok: false, error: "serial collision" });
-    expect(fs.readdirSync(dir).filter((n) => fs.statSync(path.join(dir, n)).isFile())).toEqual([]);
+    expect(r).toStrictEqual({ ok: false, error: "serial collision" });
+    expect(fs.readdirSync(dir).filter((n) => fs.statSync(path.join(dir, n)).isFile())).toStrictEqual([]);
   });
 
   it("skips a file with no number in front when counting", () => {
@@ -62,7 +62,7 @@ describe("persistTmp serial limits", () => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, `${"1".padEnd(22, "0")}-old-${STAMP}.md`), "x");
     const r = persistTmp({ workspaceRoot: ws, content: VALID_TMP, created: CREATED });
-    expect(r).toEqual({ ok: false, error: "filename" });
+    expect(r).toStrictEqual({ ok: false, error: "filename" });
     expect(fs.readdirSync(dir)).toHaveLength(1);
   });
 });
@@ -82,7 +82,7 @@ describe("persistTmp stamp and root", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const saved = persistTmp({ content: VALID_TMP });
     expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, TMP_DIR))).toEqual([saved.filename]);
-    expect(persistTmp()).toEqual({ ok: false, error: "missing TMP_NAME" });
+    expect(fs.readdirSync(path.join(root, TMP_DIR))).toStrictEqual([saved.filename]);
+    expect(persistTmp()).toStrictEqual({ ok: false, error: "missing TMP_NAME" });
   });
 });

@@ -14,7 +14,7 @@ describe("class-file passes", () => {
     "export default class {}",
     "export function parseRow(): void {}\nexport const ROWS = 1;\ntype Row = { id: string };",
   ])("one class with its imports and export, or a file with no class: %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
@@ -31,6 +31,6 @@ describe("class-file fails", () => {
     ["class Store {}\nexport default 1;", [move("this")]],
     ["export class Store {}\nnew Store();", [move("this")]],
   ])("%j", (code, messages) => {
-    expect(messagesOf(code)).toEqual(messages);
+    expect(messagesOf(code)).toStrictEqual(messages);
   });
 });

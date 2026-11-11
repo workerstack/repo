@@ -77,14 +77,14 @@ const desktopOauth = {
 
 describe("parseArgv / normalizeTarget", () => {
   it("reads target and key flags", () => {
-    expect(parseArgv(["speak", "--elevenlabs-key", "sk_el", "--skip-verify"])).toEqual({
+    expect(parseArgv(["speak", "--elevenlabs-key", "sk_el", "--skip-verify"])).toStrictEqual({
       _: ["speak"],
       flags: { "elevenlabs-key": "sk_el", "skip-verify": "1" },
     });
   });
 
   it("reads --key=value", () => {
-    expect(parseArgv(["speak", "--openai-key=sk-oa"])).toEqual({
+    expect(parseArgv(["speak", "--openai-key=sk-oa"])).toStrictEqual({
       _: ["speak"],
       flags: { "openai-key": "sk-oa" },
     });
@@ -257,7 +257,7 @@ describe("setupSpeak", () => {
       interactive: true,
       openUrlFn: (u: string) => opened.push(u),
     });
-    expect(opened).toEqual([ELEVENLABS_KEY_URL]);
+    expect(opened).toStrictEqual([ELEVENLABS_KEY_URL]);
     const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
       elevenlabs: { apiKey: string };
     };
@@ -347,7 +347,7 @@ describe("setupGoogleWorkspace", () => {
       },
     });
     expect(r.ok).toBe(true);
-    expect(logins).toEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
+    expect(logins).toStrictEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
     const saved = JSON.parse(
       fs.readFileSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"), "utf8"),
     ) as { installed: { client_id: string } };
@@ -558,7 +558,7 @@ describe("main", () => {
     const io = {
       ...captureIo(),
       select: async (opts: { options: { value: string }[] }) => {
-        expect(opts.options.map((o) => o.value)).toEqual(["browser", "jev"]);
+        expect(opts.options.map((o) => o.value)).toStrictEqual(["browser", "jev"]);
         return "browser";
       },
     };

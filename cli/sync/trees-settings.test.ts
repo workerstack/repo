@@ -29,7 +29,7 @@ it("merges .repo/settings/claude.json into .claude/settings.json", () => {
     }),
   });
   const settings = json<ClaudeSettings>(render(root, ["claude"]), SETTINGS);
-  expect(settings.env).toEqual({ MINE: "1" });
+  expect(settings.env).toStrictEqual({ MINE: "1" });
   expect(settings.permissions.allow).toContain("Bash(ls:*)");
   expect(settings.enableAllProjectMcpServers).toBe(true);
   expect(settings.permissions.deny.filter((rule) => rule === "Agent(Explore)")).toHaveLength(1);
@@ -45,21 +45,21 @@ it("appends .repo hooks after the generated ones and never repeats a stock hook"
     ".repo/settings/claude.json": JSON.stringify({ hooks: { PreToolUse: [stockGroup], PostToolUse: [mine] } }),
   });
   const settings = json<ClaudeSettings>(render(root, ["claude"]), SETTINGS);
-  expect(settings.hooks.PreToolUse).toEqual(plain.hooks.PreToolUse);
-  expect(settings.hooks.PostToolUse).toEqual([...(plain.hooks.PostToolUse ?? []), mine]);
-  expect(settings.hooks.PostToolUse?.at(-1)).toEqual(mine);
+  expect(settings.hooks.PreToolUse).toStrictEqual(plain.hooks.PreToolUse);
+  expect(settings.hooks.PostToolUse).toStrictEqual([...(plain.hooks.PostToolUse ?? []), mine]);
+  expect(settings.hooks.PostToolUse?.at(-1)).toStrictEqual(mine);
 });
 
 it("reports an unreadable .repo/settings/claude.json", () => {
   const root = consumer({ ".repo/settings/claude.json": "{" });
   const result = renderTrees(context(root, ["claude"]));
-  expect(result).toEqual({ ok: false, errors: [expect.stringContaining(".repo/settings/claude.json")] });
-  expect(stagesIn(root)).toEqual([]);
+  expect(result).toStrictEqual({ ok: false, errors: [expect.stringContaining(".repo/settings/claude.json")] });
+  expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("reports a .repo/settings/claude.json that is not an object", () => {
   const root = consumer({ ".repo/settings/claude.json": "[]" });
-  expect(renderTrees(context(root, ["claude"]))).toEqual({
+  expect(renderTrees(context(root, ["claude"]))).toStrictEqual({
     ok: false,
     errors: [expect.stringContaining("must be a JSON object")],
   });
@@ -68,20 +68,20 @@ it("reports a .repo/settings/claude.json that is not an object", () => {
 it("writes no .mcp.json, and reports one that is not valid JSON with nothing staged", () => {
   expect(find(render(consumer({ ".mcp.json": '{"mcpServers":{}}' }), HOSTS), ".mcp.json")).toBeUndefined();
   const root = consumer({ ".mcp.json": "{" });
-  expect(renderTrees(context(root, ["claude"]))).toEqual({
+  expect(renderTrees(context(root, ["claude"]))).toStrictEqual({
     ok: false,
     errors: ["mcp policy: .mcp.json: not valid JSON at line 1; fix it, nothing written"],
   });
-  expect(stagesIn(root)).toEqual([]);
+  expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("reports an emit step that rejects the merged mcp policy", () => {
   const root = consumer({ ".repo/mcp-policy.jsonc": '{ "allow": 5 }' });
-  expect(renderTrees(context(root, ["claude"]))).toEqual({
+  expect(renderTrees(context(root, ["claude"]))).toStrictEqual({
     ok: false,
     errors: ["mcp policy: allow must be an array"],
   });
-  expect(stagesIn(root)).toEqual([]);
+  expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("ignores .repo/settings/claude.json when claude is off", () => {
@@ -106,5 +106,5 @@ it("merges a .repo/mcp-policy.jsonc over the stock policy, its allow list pickin
     ".mcp.json": JSON.stringify({ mcpServers: { mine: { command: "x" }, off: { command: "y" } } }),
   });
   const mcp = json<McpFile>(render(root, ["antigravity"]), ".agents/mcp_config.json");
-  expect(mcp.mcpServers).toEqual({ mine: { command: "x" } });
+  expect(mcp.mcpServers).toStrictEqual({ mine: { command: "x" } });
 });

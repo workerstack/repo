@@ -54,7 +54,7 @@ describe("a PreToolUse payload that names no usable target", () => {
 
   it("answers an empty stdin with no reply and exit 0", () => {
     const run = runHook(main, "");
-    expect(run).toEqual({ status: 0, stdout: "" });
+    expect(run).toStrictEqual({ status: 0, stdout: "" });
   });
 });
 
@@ -78,7 +78,7 @@ describe("a spawn", () => {
     expect(fs.existsSync(record)).toBe(false);
     inSession("sp")(ws, "Task", { prompt: "/review-roadmap 1" });
     inSession("sp")(ws, "Task", { prompt: "/review-plan 1" });
-    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toEqual({ "roadmap 1": 0, "plan 1": 0 });
+    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual({ "roadmap 1": 0, "plan 1": 0 });
   });
 });
 
@@ -149,7 +149,7 @@ describe("a lesson notice", () => {
     fs.mkdirSync(path.dirname(seen), { recursive: true });
     fs.writeFileSync(seen, '{"a":1}');
     expect(edit(ws, "sj")?.additionalContext).toContain("plan-forks");
-    expect(JSON.parse(fs.readFileSync(seen, "utf8"))).toEqual([".repo/lessons/plan-forks.md"]);
+    expect(JSON.parse(fs.readFileSync(seen, "utf8"))).toStrictEqual([".repo/lessons/plan-forks.md"]);
   });
 
   it("never blocks the edit when the seen list cannot be saved", () => {

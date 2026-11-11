@@ -14,7 +14,7 @@ const manifest = {
 };
 
 it("derives a specifier per export but package.json and references", () => {
-  expect(specifiersOf(manifest.name, manifest.exports)).toEqual([
+  expect(specifiersOf(manifest.name, manifest.exports)).toStrictEqual([
     { text: "@workerstack/repo", prefix: false, shown: "@workerstack/repo" },
     { text: "@workerstack/repo/lint", prefix: false, shown: "@workerstack/repo/lint" },
     { text: "@workerstack/repo/tsconfig/", prefix: true, shown: "@workerstack/repo/tsconfig/*" },
@@ -23,7 +23,7 @@ it("derives a specifier per export but package.json and references", () => {
 
 it("names the exports no reference holds quoted or in a code span", () => {
   const docs = 'import x from "@workerstack/repo"; see `@workerstack/repo/tsconfig/bun`; "@workerstack/repo/linter"';
-  expect(exportFindings("", manifest, docs)).toEqual({
+  expect(exportFindings("", manifest, docs)).toStrictEqual({
     findings: ["@workerstack/repo/lint is exported but no reference names it; document it in references/"],
     checked: 3,
   });
@@ -31,7 +31,7 @@ it("names the exports no reference holds quoted or in a code span", () => {
 
 it("prefixes a package's paths with its folder and asks for the references export", () => {
   const pkg = { name: "@ws/a", exports: { ".": "./a.ts", "./x": "./x.ts" } };
-  expect(exportFindings("packages/a", pkg, "'@ws/a' and `@ws/a/x`")).toEqual({
+  expect(exportFindings("packages/a", pkg, "'@ws/a' and `@ws/a/x`")).toStrictEqual({
     findings: [`packages/a/package.json has no "./references/*" export; add "./references/*": "./references/*"`],
     checked: 2,
   });
@@ -41,14 +41,14 @@ it("prefixes a package's paths with its folder and asks for the references expor
 });
 
 it("reads a string, a list or a bare condition map as the . export, and none as nothing", () => {
-  expect(specifiersOf("p", "./index.js").map((one) => one.shown)).toEqual(["p"]);
-  expect(specifiersOf("p", { types: "./a.d.ts", default: "./a.js" }).map((one) => one.shown)).toEqual(["p"]);
-  expect(specifiersOf("p", ["./a.js"]).map((one) => one.shown)).toEqual(["p"]);
-  expect(specifiersOf("p", undefined)).toEqual([]);
+  expect(specifiersOf("p", "./index.js").map((one) => one.shown)).toStrictEqual(["p"]);
+  expect(specifiersOf("p", { types: "./a.d.ts", default: "./a.js" }).map((one) => one.shown)).toStrictEqual(["p"]);
+  expect(specifiersOf("p", ["./a.js"]).map((one) => one.shown)).toStrictEqual(["p"]);
+  expect(specifiersOf("p", undefined)).toStrictEqual([]);
 });
 
 it("asks a nameless manifest without exports for the references export", () => {
-  expect(exportFindings("", {}, "").findings).toEqual([
+  expect(exportFindings("", {}, "").findings).toStrictEqual([
     `package.json has no "./references/*" export; add "./references/*": "./references/*"`,
   ]);
 });

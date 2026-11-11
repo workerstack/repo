@@ -31,6 +31,6 @@ it("main runs the listen target when its pack is on", async () => {
   const io = captureIo();
   const argv = ["listen", "--openai-key", "sk", "--skip-download"];
   expect(await main(argv, { interactive: false, env: {}, home, cwd, io, ...bare })).toBe(0);
-  expect(readSpeakJson(home)).toEqual({ openai: { apiKey: "sk" } });
+  expect(readSpeakJson(home)).toStrictEqual({ openai: { apiKey: "sk" } });
   expect(io.logs.at(-1)).toMatch(/^listen {2}ok/);
 });

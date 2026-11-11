@@ -62,8 +62,8 @@ describe("githubFiles output", () => {
 
   it("writes the six tracked whole files, which sync heads in each one's comment syntax", () => {
     const { outputs, errors } = githubFiles(make());
-    expect(errors).toEqual([]);
-    expect(outputs.map((output) => output.path)).toEqual(PATHS);
+    expect(errors).toStrictEqual([]);
+    expect(outputs.map((output) => output.path)).toStrictEqual(PATHS);
     for (const output of outputs) {
       expect(output).toMatchObject({ kind: "file", tracked: true, managed: "whole" });
       const header = output.path.endsWith(".md") ? MD_HEADER : YML_HEADER;
@@ -94,7 +94,7 @@ describe("githubFiles repository and rewrite", () => {
     const first = githubFiles(make()).outputs;
     const files: Record<string, string> = { "package.json": PACKAGE_JSON };
     for (const output of first) if (output.kind === "file") files[output.path] = stamp(output.path, output.content);
-    expect(githubFiles(make({ files })).outputs).toEqual(first);
+    expect(githubFiles(make({ files })).outputs).toStrictEqual(first);
   });
 });
 
@@ -111,14 +111,14 @@ describe("githubFiles issue forms", () => {
 
   it("writes a chooser with blank issues off and a link to the advisories", () => {
     const config = CHOOSER_SCHEMA.parse(parseYaml(contentOf(githubFiles(make()).outputs, CHOOSER)));
-    expect(config.contact_links.map((link) => link.url)).toEqual([ADVISORIES]);
+    expect(config.contact_links.map((link) => link.url)).toStrictEqual([ADVISORIES]);
   });
 });
 
 describe("githubFiles refusals", () => {
   it.each(PATHS)("refuses a hand-written %s", (path) => {
     const files = { "package.json": PACKAGE_JSON, [path]: "mine\n" };
-    expect(githubFiles(make({ files }))).toEqual({
+    expect(githubFiles(make({ files }))).toStrictEqual({
       outputs: [],
       errors: [`${path} is hand-written; delete it so repo sync can own it`],
     });
@@ -140,6 +140,6 @@ describe("githubFiles skips", () => {
     ["no repository", pkg({ "package.json": "{}" })],
     ["a repository off GitHub", pkg({ "package.json": '{"repository":"https://example.com/a/b"}' })],
   ])("writes nothing for %s", (_name, setup) => {
-    expect(githubFiles(make(setup))).toEqual({ outputs: [], errors: [] });
+    expect(githubFiles(make(setup))).toStrictEqual({ outputs: [], errors: [] });
   });
 });

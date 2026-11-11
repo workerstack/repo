@@ -263,8 +263,8 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
   const n = Number(pid);
   if (!Number.isInteger(n) || n <= 1) return null;
   const platform = deps.platform || process.platform;
-  const readFile = deps.readFile || fs.readFileSync;
-  const spawn: NonNullable<ProbeDeps["spawn"]> = deps.spawn || spawnSync;
+  const readFile = deps.readFile ?? fs.readFileSync;
+  const spawn: NonNullable<ProbeDeps["spawn"]> = deps.spawn ?? spawnSync;
   if (platform === "linux") {
     try {
       const parsed = parseProcStat(readFile(`/proc/${n}/stat`, "utf8"));
@@ -476,7 +476,7 @@ export function recordHook(
   try {
     const session = sessionOf(data, env);
     if (!session || session === "default") return null;
-    const ident = deps.identity || hostIdentity({ probe: deps.probe || probeProcess });
+    const ident = deps.identity ?? hostIdentity({ probe: deps.probe ?? probeProcess });
     if (!ident) return null;
     const boot = deps.boot || readBootId();
     return note({

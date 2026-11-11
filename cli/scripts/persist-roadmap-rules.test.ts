@@ -34,7 +34,7 @@ function errorsFor(edit: (text: string) => string, opts?: Parameters<typeof vali
 
 describe("validateRoadmap frontmatter rules", () => {
   it("accepts a saved roadmap with no options", () => {
-    expect(validateRoadmap(FILE, saved())).toEqual([]);
+    expect(validateRoadmap(FILE, saved())).toStrictEqual([]);
   });
 
   it("denies a filename outside the pattern and a status outside the five", () => {
@@ -63,7 +63,7 @@ describe("validateRoadmap frontmatter rules", () => {
 
   it("keeps a quoted frontmatter value that is not JSON and skips lines that are not keys", () => {
     const errors = errorsFor((t) => t.replace(/^source: .*$/m, 'Not a key\nsource: "bad \\q escape"'));
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 });
 

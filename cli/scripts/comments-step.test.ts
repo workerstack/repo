@@ -20,7 +20,9 @@ function step(files: Record<string, string>, deleted: readonly string[] = []) {
 }
 
 it("passes files with no refused comment", () => {
-  expect(step({ "src/a.ts": '// @ts-expect-error "lint" is not a pack\n', "README.md": "// @ts-ignore\n" })).toEqual({
+  expect(
+    step({ "src/a.ts": '// @ts-expect-error "lint" is not a pack\n', "README.md": "// @ts-ignore\n" }),
+  ).toStrictEqual({
     label: "comments ok",
     ok: true,
     output: [],
@@ -29,7 +31,7 @@ it("passes files with no refused comment", () => {
 });
 
 it("fails on each refused comment, naming its file and line", () => {
-  expect(step({ "src/a.ts": "export const a = 1;\n// @ts-ignore\n" })).toEqual({
+  expect(step({ "src/a.ts": "export const a = 1;\n// @ts-ignore\n" })).toStrictEqual({
     label: "comments 1 refused",
     ok: false,
     output: [`src/a.ts:2: ${IGNORE}\n`],

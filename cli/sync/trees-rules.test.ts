@@ -13,7 +13,7 @@ it.each<{ hosts: readonly Host[] }>([{ hosts: ["claude"] }, { hosts: HOSTS }])(
   "renders a pathless .repo/rules rule into no file with $hosts on",
   ({ hosts }) => {
     const outputs = render(consumer(HOUSE), hosts);
-    expect(outputs.filter((o) => o.kind === "file" && o.content.includes("Always greet the cat."))).toEqual([]);
+    expect(outputs.filter((o) => o.kind === "file" && o.content.includes("Always greet the cat."))).toStrictEqual([]);
   },
 );
 
@@ -25,8 +25,8 @@ describe("a rule with paths", () => {
   };
 
   it("lands in .claude/rules for claude and is only pointed to from AGENTS.md for codex", () => {
-    expect(reach(["claude"])).toEqual([".claude/rules/team.md"]);
-    expect(reach(["codex"])).toEqual([]);
+    expect(reach(["claude"])).toStrictEqual([".claude/rules/team.md"]);
+    expect(reach(["codex"])).toStrictEqual([]);
     const agents = text(render(consumer({ ".repo/rules/team.md": rule }), ["codex"]), "AGENTS.md");
     expect(agents).toContain("- `src/**`: read `.repo/rules/team.md`");
   });
@@ -36,7 +36,7 @@ describe("a rule with paths", () => {
     const result = renderTrees(context(root, ["claude"]));
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors).toEqual([
+      expect(result.errors).toStrictEqual([
         ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
         ".repo/rules/b.md: invalid frontmatter: description is required",
       ]);
@@ -47,23 +47,23 @@ describe("a rule with paths", () => {
 it("fails on a tasks.json it cannot parse", () => {
   const root = consumer({ ".vscode/tasks.json": "{" });
   const result = renderTrees(context(root, ["claude"]));
-  expect(result).toEqual({ ok: false, errors: [expect.stringContaining(".vscode/tasks.json")] });
-  expect(stagesIn(root)).toEqual([]);
+  expect(result).toStrictEqual({ ok: false, errors: [expect.stringContaining(".vscode/tasks.json")] });
+  expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("names a .repo rule without frontmatter and removes the stage", () => {
   const root = consumer({ ".repo/rules/nofm.md": "no frontmatter here\n" });
-  expect(renderTrees(context(root, ["codex"]))).toEqual({
+  expect(renderTrees(context(root, ["codex"]))).toStrictEqual({
     ok: false,
     errors: [".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)"],
   });
-  expect(stagesIn(root)).toEqual([]);
+  expect(stagesIn(root)).toStrictEqual([]);
 });
 
 it("reports a missing stock package", () => {
   const bare = tempDir("workerstack-trees-");
   put(bare, "workerstack.config.ts", "export default {}\n");
-  expect(renderTrees(context(bare, ["claude"]))).toEqual({
+  expect(renderTrees(context(bare, ["claude"]))).toStrictEqual({
     ok: false,
     errors: [expect.stringContaining("bun install")],
   });

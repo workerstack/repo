@@ -66,7 +66,7 @@ describe("parseLesson keys", () => {
 describe("parseLesson defaults", () => {
   it("fills missing keys from defaults", () => {
     const bare = head().replace("name: a-b\n", "").replace("last-hit: 2026-10-31\n", "");
-    expect(errorsOf(bare + body, { name: "z", "last-hit": "2026-11-01" })).toEqual([]);
+    expect(errorsOf(bare + body, { name: "z", "last-hit": "2026-11-01" })).toStrictEqual([]);
   });
 
   it("round-trips a rendered lesson", () => {
@@ -94,6 +94,6 @@ describe("parseLesson body", () => {
 
   it("allows only Mistake then Fix", () => {
     const swapped = errorsOf(head() + "# T\n\nS.\n\n## Fix\nf\n\n## Mistake\nm\n");
-    expect(swapped).toEqual(["use only ## Mistake then ## Fix as section headings"]);
+    expect(swapped).toStrictEqual(["use only ## Mistake then ## Fix as section headings"]);
   });
 });

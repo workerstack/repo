@@ -43,17 +43,17 @@ function repo() {
 describe("redundantIgnoreLines", () => {
   it("names the parent rule that already ignores each added line", () => {
     const r = repo();
-    expect(redundantIgnoreLines(path.join(r, "packages/a/.gitignore"), [".tmp/"])).toEqual([
+    expect(redundantIgnoreLines(path.join(r, "packages/a/.gitignore"), [".tmp/"])).toStrictEqual([
       { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
     ]);
-    expect(redundantIgnoreLines(path.join(r, "packages/c/sub/.gitignore"), ["dist-local/"])).toEqual([
+    expect(redundantIgnoreLines(path.join(r, "packages/c/sub/.gitignore"), ["dist-local/"])).toStrictEqual([
       { line: "dist-local/", rule: `${path.join(r, "packages/c/.gitignore")}:1 dist-local/` },
     ]);
   });
 
   it("names the parent rule in the real spelling for a target typed through an alias", () => {
     const r = repo();
-    expect(redundantIgnoreLines(path.join(aliasOf(r), "packages/a/.gitignore"), [".tmp/"])).toEqual([
+    expect(redundantIgnoreLines(path.join(aliasOf(r), "packages/a/.gitignore"), [".tmp/"])).toStrictEqual([
       { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
     ]);
   });
@@ -61,14 +61,14 @@ describe("redundantIgnoreLines", () => {
   it("allows lines the parents miss, globs, negations, mixed writes, the root file and non-git dirs", () => {
     const r = repo();
     const a = path.join(r, "packages/a/.gitignore");
-    expect(redundantIgnoreLines(a, ["dist-local/"])).toEqual([]);
-    expect(redundantIgnoreLines(a, ["*.tmp"])).toEqual([]);
-    expect(redundantIgnoreLines(a, ["!keep"])).toEqual([]);
-    expect(redundantIgnoreLines(a, [".tmp/", "out/"])).toEqual([]);
-    expect(redundantIgnoreLines(path.join(r, ".gitignore"), [".tmp/"])).toEqual([]);
+    expect(redundantIgnoreLines(a, ["dist-local/"])).toStrictEqual([]);
+    expect(redundantIgnoreLines(a, ["*.tmp"])).toStrictEqual([]);
+    expect(redundantIgnoreLines(a, ["!keep"])).toStrictEqual([]);
+    expect(redundantIgnoreLines(a, [".tmp/", "out/"])).toStrictEqual([]);
+    expect(redundantIgnoreLines(path.join(r, ".gitignore"), [".tmp/"])).toStrictEqual([]);
     const loose = tmpDir("ignore-loose-");
     put(loose, ".gitignore", ".tmp/\n");
-    expect(redundantIgnoreLines(path.join(loose, "a/.gitignore"), [".tmp/"])).toEqual([]);
+    expect(redundantIgnoreLines(path.join(loose, "a/.gitignore"), [".tmp/"])).toStrictEqual([]);
   });
 
   it("counts only the parent .gitignore files", () => {
@@ -85,12 +85,12 @@ describe("redundantIgnoreLines", () => {
       `[core]\n\texcludesFile = ${gitPath("excludes")}\n[init]\n\ttemplateDir = ${gitPath("template")}\n`,
     );
     vi.stubEnv("GIT_CONFIG_GLOBAL", path.join(home, "gitconfig"));
-    expect(redundantIgnoreLines(a, ["secret/"])).toEqual([]);
+    expect(redundantIgnoreLines(a, ["secret/"])).toStrictEqual([]);
     put(r, "packages/a/.gitignore", "foo/\n");
-    expect(redundantIgnoreLines(a, ["foo/"])).toEqual([]);
+    expect(redundantIgnoreLines(a, ["foo/"])).toStrictEqual([]);
     const other = repo();
     vi.stubEnv("GIT_DIR", path.join(other, ".git"));
-    expect(redundantIgnoreLines(a, [".tmp/"])).toEqual([
+    expect(redundantIgnoreLines(a, [".tmp/"])).toStrictEqual([
       { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
     ]);
   });
@@ -99,8 +99,8 @@ describe("redundantIgnoreLines", () => {
     const r = repo();
     put(r, ".gitignore", "/packages/a/build/\n");
     const a = path.join(r, "packages/a/.gitignore");
-    expect(redundantIgnoreLines(a, ["build/"])).toEqual([]);
-    expect(redundantIgnoreLines(a, ["/build/"])).toEqual([
+    expect(redundantIgnoreLines(a, ["build/"])).toStrictEqual([]);
+    expect(redundantIgnoreLines(a, ["/build/"])).toStrictEqual([
       { line: "/build/", rule: `${path.join(r, ".gitignore")}:1 /packages/a/build/` },
     ]);
   });
@@ -119,7 +119,9 @@ describe("shellIgnoreEdits", () => {
   it.each(forms)("reads the added lines of %j", (command) => {
     const r = repo();
     put(r, "packages/a/.gitignore", "out/\n");
-    expect(shellIgnoreEdits(command, r)).toEqual([{ file: path.join(r, "packages/a/.gitignore"), added: [".tmp/"] }]);
+    expect(shellIgnoreEdits(command, r)).toStrictEqual([
+      { file: path.join(r, "packages/a/.gitignore"), added: [".tmp/"] },
+    ]);
   });
 
   const passes = [
@@ -130,7 +132,7 @@ describe("shellIgnoreEdits", () => {
     "cat <<EOF >> packages/a/.gitignore\n$HOME\nEOF",
   ];
   it.each(passes)("leaves %j alone", (command) => {
-    expect(shellIgnoreEdits(command, repo())).toEqual([]);
+    expect(shellIgnoreEdits(command, repo())).toStrictEqual([]);
   });
 });
 
@@ -168,21 +170,25 @@ describe("writeIgnoreEdits", () => {
     const r = repo();
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
-    expect(writeIgnoreEdits({ Path: file, Content: "out/\n.tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
-    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toEqual([
+    expect(writeIgnoreEdits({ Path: file, Content: "out/\n.tmp/\n" }, r, FIELDS)).toStrictEqual([
       { file, added: [".tmp/"] },
     ]);
-    expect(writeIgnoreEdits({ Path: file, Target: "missing", Replacement: ".tmp/" }, r, FIELDS)).toEqual([]);
+    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toStrictEqual([
+      { file, added: [".tmp/"] },
+    ]);
+    expect(writeIgnoreEdits({ Path: file, Target: "missing", Replacement: ".tmp/" }, r, FIELDS)).toStrictEqual([]);
   });
 
   it("still reads Claude's content and old_string/new_string", () => {
     const r = repo();
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
-    expect(writeIgnoreEdits({ file_path: file, content: ".tmp/\n" }, r, FIELDS)).toEqual([{ file, added: [".tmp/"] }]);
-    expect(writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS)).toEqual([
+    expect(writeIgnoreEdits({ file_path: file, content: ".tmp/\n" }, r, FIELDS)).toStrictEqual([
       { file, added: [".tmp/"] },
     ]);
+    expect(
+      writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS),
+    ).toStrictEqual([{ file, added: [".tmp/"] }]);
   });
 });
 
@@ -190,10 +196,10 @@ describe("paths", () => {
   it("resolves only .gitignore targets, on win32 too", () => {
     expect(ignoreTarget("packages\\a\\.gitignore", "C:\\r", path.win32)).toBe("C:\\r\\packages\\a\\.gitignore");
     expect(ignoreTarget("packages/a/notes.md", "/r")).toBeNull();
-    expect(parentIgnoreFiles("C:\\r\\packages\\a\\.gitignore", "C:/r", path.win32)).toEqual([
+    expect(parentIgnoreFiles("C:\\r\\packages\\a\\.gitignore", "C:/r", path.win32)).toStrictEqual([
       ".gitignore",
       "packages/.gitignore",
     ]);
-    expect(parentIgnoreFiles("/r/.gitignore", "/r")).toEqual([]);
+    expect(parentIgnoreFiles("/r/.gitignore", "/r")).toStrictEqual([]);
   });
 });

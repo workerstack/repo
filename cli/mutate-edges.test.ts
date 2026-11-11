@@ -37,9 +37,9 @@ it("reports a missing git or dir as a failed run instead of throwing", () => {
 it("reads and writes files, lists a dir, and tells a missing file and dir from an empty one", () => {
   const real = realFs;
   const dir = tempDir();
-  expect([real.read(path.join(dir, "x/y.json")), real.list(path.join(dir, "x"))]).toEqual([null, null]);
+  expect([real.read(path.join(dir, "x/y.json")), real.list(path.join(dir, "x"))]).toStrictEqual([null, null]);
   real.write(path.join(dir, "x/y.json"), "{}");
-  expect([real.read(path.join(dir, "x/y.json")), real.list(path.join(dir, "x"))]).toEqual(["{}", ["y.json"]]);
+  expect([real.read(path.join(dir, "x/y.json")), real.list(path.join(dir, "x"))]).toStrictEqual(["{}", ["y.json"]]);
   const base = real.mkdtemp("workerstack-mutate-test-");
   expect(path.basename(base)).toMatch(/^workerstack-mutate-test-/);
   real.rm(base);
@@ -50,7 +50,7 @@ it("finds the config of the repo above cwd, its errors, and no config", async ()
   const root = tempDir();
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { coverage: { mutate: ["lib/**"] } };\n');
   fs.mkdirSync(path.join(root, "deep"));
-  expect(await realDeps(path.join(root, "deep")).config(path.join(root, "deep"))).toEqual({
+  expect(await realDeps(path.join(root, "deep")).config(path.join(root, "deep"))).toStrictEqual({
     root: fs.realpathSync(root),
     mutate: ["lib/**"],
     floors: "mutation-floors.json",
@@ -67,9 +67,9 @@ it("lists workspace package dirs, none for an unreadable manifest", () => {
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
   fs.mkdirSync(path.join(root, "packages/a"), { recursive: true });
   fs.writeFileSync(path.join(root, "packages/a/package.json"), "{}");
-  expect(realDeps(root).packages(root)).toEqual(["packages/a"]);
+  expect(realDeps(root).packages(root)).toStrictEqual(["packages/a"]);
   fs.writeFileSync(path.join(root, "package.json"), "[");
-  expect(realDeps(root).packages(root)).toEqual([]);
+  expect(realDeps(root).packages(root)).toStrictEqual([]);
 });
 
 const manifestOf = (root: string, dir: string) => path.join(root, dir, "Cargo.toml");
@@ -85,11 +85,11 @@ it("lists the Cargo member dirs, root-relative with forward slashes and the root
   const root = tempDir();
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\n");
   const dirs = ["", "crates/a", "crates/b/inner"];
-  expect(packagesWith(metadata(root, dirs))(root)).toEqual([".", "crates/a", "crates/b/inner"]);
+  expect(packagesWith(metadata(root, dirs))(root)).toStrictEqual([".", "crates/a", "crates/b/inner"]);
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
   fs.mkdirSync(path.join(root, "packages/a"), { recursive: true });
   fs.writeFileSync(path.join(root, "packages/a/package.json"), "{}");
-  expect(packagesWith(metadata(root, ["crates/a"]))(root)).toEqual(["packages/a", "crates/a"]);
+  expect(packagesWith(metadata(root, ["crates/a"]))(root)).toStrictEqual(["packages/a", "crates/a"]);
 });
 
 it("lists no Cargo dir without a root Cargo.toml or when cargo cannot say", () => {
@@ -99,12 +99,12 @@ it("lists no Cargo dir without a root Cargo.toml or when cargo cannot say", () =
     asked = true;
     return { status: 1, stdout: "", stderr: "", missing: false };
   };
-  expect(packagesWith(spy)(root)).toEqual([]);
+  expect(packagesWith(spy)(root)).toStrictEqual([]);
   expect(asked).toBe(false);
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\n");
-  expect(packagesWith(metadata(root, [], { status: 1, stderr: "boom" }))(root)).toEqual([]);
+  expect(packagesWith(metadata(root, [], { status: 1, stderr: "boom" }))(root)).toStrictEqual([]);
   expect(asked).toBe(false);
-  expect(packagesWith(spy)(root)).toEqual([]);
+  expect(packagesWith(spy)(root)).toStrictEqual([]);
   expect(asked).toBe(true);
 });
 
@@ -157,8 +157,8 @@ it("writes through the process streams, and main runs in the current directory",
     deps.out("to stdout\n");
     deps.err("to stderr\n");
     expect(await main(["--fast"])).toBe(1);
-    expect(stdout.mock.calls).toEqual([["to stdout\n"]]);
-    expect(stderr.mock.calls.map(([text]) => String(text))).toEqual([
+    expect(stdout.mock.calls).toStrictEqual([["to stdout\n"]]);
+    expect(stderr.mock.calls.map(([text]) => String(text))).toStrictEqual([
       "to stderr\n",
       'repo mutate: unknown argument "--fast"; use --shard i/n, --report <file>, --rust or check <dir>\n',
     ]);

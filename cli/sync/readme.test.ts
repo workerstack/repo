@@ -31,7 +31,7 @@ function textOf(result: { outputs: { kind: string; content?: string }[] }): stri
 /** The README text a single public root generates; fails when the generator reports an error. */
 function render(files: Record<string, string>, manifest: PackageJson = PUBLIC): string {
   const result = readme(context({ manifest, files }));
-  expect(result.errors).toEqual([]);
+  expect(result.errors).toStrictEqual([]);
   return textOf(result);
 }
 
@@ -48,7 +48,7 @@ it("writes a whole, tracked README.md with line 1 left for the header, then name
     "references/hooks.md": "# Hooks\n\nRun them.\n",
     "package.json": JSON.stringify({ name: "@acme/lib", description: "A library." }),
   };
-  expect(readme(context({ files }))).toEqual({
+  expect(readme(context({ files }))).toStrictEqual({
     outputs: [
       {
         kind: "file",

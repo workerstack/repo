@@ -41,51 +41,51 @@ it("formatFacts reports a failure with at most three errors and names the stash"
 });
 
 it("squeezLines returns a short list whole and treats no list as empty", () => {
-  expect(squeezLines(numbered(6), "x")).toEqual(numbered(6));
-  expect(squeezLines(null, "x")).toEqual([]);
-  expect(squeezLines(undefined, undefined)).toEqual([]);
-  expect(squeezLines([1, 2], "")).toEqual(["1", "2"]);
+  expect(squeezLines(numbered(6), "x")).toStrictEqual(numbered(6));
+  expect(squeezLines(null, "x")).toStrictEqual([]);
+  expect(squeezLines(undefined, undefined)).toStrictEqual([]);
+  expect(squeezLines([1, 2], "")).toStrictEqual(["1", "2"]);
 });
 
 it("squeezLines keeps the first and last lines and fills with the plain ones", () => {
-  expect(squeezLines(numbered(10), "")).toEqual(["l0", "l1", "l2", "l3", "l4", "l9"]);
+  expect(squeezLines(numbered(10), "")).toStrictEqual(["l0", "l1", "l2", "l3", "l4", "l9"]);
 });
 
 it("squeezLines drops pass lines first and falls back to them to fill the room", () => {
   const lines = ["start", ...numbered(4, "PASS "), "mid5", "mid6", "mid7", "mid8", "end"];
-  expect(squeezLines(lines, "")).toEqual(["start", "mid5", "mid6", "mid7", "mid8", "end"]);
+  expect(squeezLines(lines, "")).toStrictEqual(["start", "mid5", "mid6", "mid7", "mid8", "end"]);
   const mostlyPass = ["start", ...numbered(6, "PASS "), "mid7", "PASS 8", "end"];
-  expect(squeezLines(mostlyPass, "")).toEqual(["start", "PASS 0", "PASS 1", "PASS 2", "mid7", "end"]);
+  expect(squeezLines(mostlyPass, "")).toStrictEqual(["start", "PASS 0", "PASS 1", "PASS 2", "mid7", "end"]);
 });
 
 it("squeezLines ranks failures and stack frames above everything", () => {
   const lines = numbered(10);
   lines[3] = "ERROR boom";
   lines[4] = "    at x (y.js:1:1)";
-  expect(squeezLines(lines, "")).toEqual(["l0", "l1", "l2", "ERROR boom", "    at x (y.js:1:1)", "l9"]);
+  expect(squeezLines(lines, "")).toStrictEqual(["l0", "l1", "l2", "ERROR boom", "    at x (y.js:1:1)", "l9"]);
 });
 
 it("squeezLines keeps only the first six when every line is a failure", () => {
-  expect(squeezLines(numbered(10, "FAIL "), "")).toEqual(numbered(6, "FAIL "));
+  expect(squeezLines(numbered(10, "FAIL "), "")).toStrictEqual(numbered(6, "FAIL "));
 });
 
 it("squeezLines does not add the first line twice when it already failed", () => {
   const lines = ["FAIL first", ...numbered(9)];
-  expect(squeezLines(lines, "")).toEqual(["FAIL first", "l0", "l1", "l2", "l3", "l8"]);
+  expect(squeezLines(lines, "")).toStrictEqual(["FAIL first", "l0", "l1", "l2", "l3", "l8"]);
 });
 
 it("squeezLines pulls in lines that match the query as a pattern", () => {
   const lines = [...numbered(5), "needle7 here", ...numbered(4, "m")];
-  expect(squeezLines(lines, "needle\\d")).toEqual(["l0", "l1", "l2", "l3", "needle7 here", "m3"]);
+  expect(squeezLines(lines, "needle\\d")).toStrictEqual(["l0", "l1", "l2", "l3", "needle7 here", "m3"]);
 });
 
 it("squeezLines reads a query that is not a pattern as plain text", () => {
   const lines = [...numbered(7), "call(x)", "l8", "l9"];
-  expect(squeezLines(lines, "(")).toEqual(["l0", "l1", "l2", "l3", "call(x)", "l9"]);
+  expect(squeezLines(lines, "(")).toStrictEqual(["l0", "l1", "l2", "l3", "call(x)", "l9"]);
 });
 
 it("squeezLines gives a non-matching query no weight", () => {
-  expect(squeezLines(numbered(10), "zzz")).toEqual(["l0", "l1", "l2", "l3", "l4", "l9"]);
+  expect(squeezLines(numbered(10), "zzz")).toStrictEqual(["l0", "l1", "l2", "l3", "l4", "l9"]);
 });
 
 it("shouldFallback lets bounded jobs through and refuses unknown jobs", () => {

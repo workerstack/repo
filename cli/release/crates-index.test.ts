@@ -28,18 +28,18 @@ it.each([
 it("asks the index with a generic user agent", async () => {
   const { fetchIndex, calls } = index(404);
   await baselineOf(crate("1.0.0"), fetchIndex);
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     { url: "https://index.crates.io/ad/le/adler", headers: { "User-Agent": "@workerstack/repo" } },
   ]);
 });
 
 it("is absent for a crate the index does not have", async () => {
-  expect(await baselineOf(crate("1.0.0"), index(404).fetchIndex)).toEqual({ kind: "absent" });
+  expect(await baselineOf(crate("1.0.0"), index(404).fetchIndex)).toStrictEqual({ kind: "absent" });
 });
 
 it("skips yanked versions and takes the highest at or below the crate's", async () => {
   const body = lines(row("1.0.0"), row("1.0.3", { yanked: true }), row("1.0.2"), row("0.9.9"), row("1.0.4"));
-  expect(await baselineOf(crate("1.0.3"), index(200, body).fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0.3"), index(200, body).fetchIndex)).toStrictEqual({
     kind: "found",
     version: "1.0.2",
     published: "t-1.0.2",
@@ -70,12 +70,12 @@ it("leaves out a version repo cannot order", async () => {
 
 it("is absent when every version is above the crate's or yanked", async () => {
   const body = lines(row("1.0.1"), row("0.9.0", { yanked: true }));
-  expect(await baselineOf(crate("1.0.0"), index(200, body).fetchIndex)).toEqual({ kind: "absent" });
+  expect(await baselineOf(crate("1.0.0"), index(200, body).fetchIndex)).toStrictEqual({ kind: "absent" });
 });
 
 it("takes a missing or null pubtime as null", async () => {
   const { pubtime: _gone, ...bare } = row("1.0.0");
-  expect(await baselineOf(crate("1.0.0"), index(200, lines(bare)).fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0.0"), index(200, lines(bare)).fetchIndex)).toStrictEqual({
     kind: "found",
     version: "1.0.0",
     published: null,
@@ -87,7 +87,7 @@ it("takes a missing or null pubtime as null", async () => {
 it("quotes the first line it cannot read", async () => {
   const long = `{"vers":${"1".repeat(100)}`;
   const fetchIndex = index(200, `${JSON.stringify(row("1.0.0"))}\n\n${long}\n`).fetchIndex;
-  expect(await baselineOf(crate("1.0.0"), fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0.0"), fetchIndex)).toStrictEqual({
     kind: "failed",
     line: `crates.io index for adler has an unreadable line: ${long.slice(0, 80)}...`,
   });
@@ -95,7 +95,7 @@ it("quotes the first line it cannot read", async () => {
 });
 
 it("says to try again on another status", async () => {
-  expect(await baselineOf(crate("1.0.0"), index(503).fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0.0"), index(503).fetchIndex)).toStrictEqual({
     kind: "failed",
     line: "crates.io index for adler answered 503; try again",
   });
@@ -103,14 +103,14 @@ it("says to try again on another status", async () => {
 
 it("says to try again when the fetch throws", async () => {
   const fetchIndex = () => Promise.reject(new Error("offline"));
-  expect(await baselineOf(crate("1.0.0"), fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0.0"), fetchIndex)).toStrictEqual({
     kind: "failed",
     line: "crates.io index for adler could not be reached; try again",
   });
 });
 
 it("fails a crate version that is not semver", async () => {
-  expect(await baselineOf(crate("1.0"), index(200).fetchIndex)).toEqual({
+  expect(await baselineOf(crate("1.0"), index(200).fetchIndex)).toStrictEqual({
     kind: "failed",
     line: "crate adler has version 1.0, which is not a version repo reads",
   });

@@ -124,7 +124,7 @@ it("each outcome is recorded by full sha with its branch, failed jobs and time",
     "run view 123 --json": view("failure", jobs),
     "run view 123 --log-failed": ok("x\n"),
   });
-  expect(got.record(SHA)).toEqual({
+  expect(got.record(SHA)).toStrictEqual({
     branch: "main",
     outcome: "failed",
     failed: ["test (windows-latest)"],

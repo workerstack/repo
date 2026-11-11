@@ -19,19 +19,19 @@ function reportOf(home: string, apply = false) {
 }
 
 it("purgeGlobalMcps argument edges: fails without a home and reports no rows", () => {
-  expect(purgeGlobalMcps({})).toEqual({ ok: false, report: [], error: "HOME required" });
-  expect(purgeGlobalMcps()).toEqual({ ok: false, report: [], error: "HOME required" });
+  expect(purgeGlobalMcps({})).toStrictEqual({ ok: false, report: [], error: "HOME required" });
+  expect(purgeGlobalMcps()).toStrictEqual({ ok: false, report: [], error: "HOME required" });
 });
 
 it("purgeGlobalMcps argument edges: parseArgv treats a non-list argv as no flags", () => {
-  expect(parseArgv("--apply")).toEqual({ ok: true, apply: false });
+  expect(parseArgv("--apply")).toStrictEqual({ ok: true, apply: false });
 });
 
 it("purgeGlobalMcps grok config: reports a missing file as noop and skips the write on apply", () => {
   const home = tmpHome("purge-grok-missing-");
   const r = reportOf(home, true);
   expect(r.ok).toBe(true);
-  expect(r.details).toEqual(["noop (missing)", "noop (missing)", "noop (missing)"]);
+  expect(r.details).toStrictEqual(["noop (missing)", "noop (missing)", "noop (missing)"]);
   expect(fs.existsSync(grokConfigPath(home))).toBe(false);
 });
 
@@ -103,7 +103,7 @@ it("purgeGlobalMcps grok config: completes a partial disabled_mcp_servers list w
     `disabled_mcp_servers = ["stripe", "stripe", "mine"]\n[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`,
   );
   expect(reportOf(home, true).details[0]).toBe("add cloudflare-docs, MCP_DOCKER to disabled_mcp_servers");
-  expect(parseToml(fs.readFileSync(abs, "utf8")).disabled_mcp_servers).toEqual([
+  expect(parseToml(fs.readFileSync(abs, "utf8")).disabled_mcp_servers).toStrictEqual([
     "stripe",
     "mine",
     "cloudflare-docs",

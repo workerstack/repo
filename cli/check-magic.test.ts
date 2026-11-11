@@ -36,7 +36,7 @@ const RETRY = [
 ].join("\n");
 
 it("reports each Usage hit at its line and column, in file and position order", { timeout: SLOW }, () => {
-  expect(magicOf({ "src/retry.ts": RETRY, "src/schema.ts": SCHEMA })).toEqual([
+  expect(magicOf({ "src/retry.ts": RETRY, "src/schema.ts": SCHEMA })).toStrictEqual([
     hit("src/retry.ts:3:7", STRING, COPIES("FAST", "fast")),
     hit("src/retry.ts:4:21", NUMBER, NAMES_NOTHING("5000")),
     hit("src/retry.ts:9:14", NUMBER, BOUND(".max(2048)")),
@@ -65,7 +65,7 @@ it(
       "src/root.ts": 'import { current } from "#modes";\nexport const fast = () => current === "fast";\n',
     });
     const found = magicDiagnostics(root, ["src/root.ts", "packages/api/src/use.ts", "packages/api/src/modes.ts"]);
-    expect(found).toEqual({ ok: true, value: [hit("src/root.ts:2:39", STRING, COMPARED("fast"))] });
+    expect(found).toStrictEqual({ ok: true, value: [hit("src/root.ts:2:39", STRING, COMPARED("fast"))] });
   },
 );
 
@@ -80,12 +80,12 @@ it(
       "src/other.ts": "export const other = (m: string) => m.length;\n",
       "src/other.test.ts": 'import { SLOW } from "./modes.ts";\nexport const t = (m: string) => m === SLOW;\n',
     });
-    expect(magicDiagnostics(root, ["src/modes.ts"])).toEqual({
+    expect(magicDiagnostics(root, ["src/modes.ts"])).toStrictEqual({
       ok: true,
       value: [hit("src/modes.ts:1:14", STRING, COPIES("SLOW", "slow"))],
     });
     // The copy lands in a file this run does not check, so it is left to the run that checks it.
-    expect(magicDiagnostics(root, ["src/use.ts"])).toEqual({ ok: true, value: [] });
+    expect(magicDiagnostics(root, ["src/use.ts"])).toStrictEqual({ ok: true, value: [] });
   },
 );
 
@@ -106,13 +106,13 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
   ];
   const checked = ["src/a.ts", "src/b.tsx", "src/c.mts", "src/d.cts"];
   const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, BODY]));
-  expect(magicOf(files).map((d) => d.file)).toEqual(checked);
+  expect(magicOf(files).map((d) => d.file)).toStrictEqual(checked);
 });
 
 it("reports a tsconfig.json typescript cannot read", () => {
   const root = plant({ "pkg/tsconfig.json": "{", "pkg/a.ts": "export const a = 1;\n" });
   const found = magicDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.errors).toEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 it("withoutSkipped drops only the hits of the rule a skip names, in the files its globs match", () => {
@@ -122,18 +122,18 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
     hit("lib/b.ts:1:1", NUMBER, NAMES_NOTHING("5")),
   ];
   const skips = [{ files: ["src/*.ts"], rules: ["repo/magic-number"], reason: "tuning lives here" }];
-  expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics.slice(1));
-  expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toEqual(diagnostics);
+  expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics.slice(1));
+  expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics);
 });
 
 const SHARDS = "export default { nightly: { shards: 8 } };\n";
 
 it("reports no magic number in the root workerstack.config.ts, which holds values, but does in the same literal elsewhere", () => {
   const found = magicOf({ "workerstack.config.ts": SHARDS, "src/shards.ts": SHARDS });
-  expect(found).toEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
+  expect(found).toStrictEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });
 
 it("reports a magic number in a workerstack.config.ts below the root", () => {
   const found = magicOf({ "pkg/workerstack.config.ts": SHARDS });
-  expect(found).toEqual([hit("pkg/workerstack.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
+  expect(found).toStrictEqual([hit("pkg/workerstack.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });

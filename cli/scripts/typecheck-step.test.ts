@@ -63,7 +63,7 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
     "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (packages/api/tsconfig.src.json missing) · related tests skipped (no vitest in packages/api)\n",
   );
   expect(result.err).toBe(NO_SRC("packages/api"));
-  expect(projects).toEqual(["packages/api"]);
+  expect(projects).toStrictEqual(["packages/api"]);
   expect(result.code).toBe(1);
 });
 
@@ -84,7 +84,7 @@ it("typecheck runs both configs per owner and names each failing config by path"
   const pass = fakeTsc([]);
   const passed = await turn(root, [], pass.bins);
   expect(label(passed.out)).toBe("typecheck ., packages/api");
-  expect(pass.projects).toEqual([".", "tsconfig.src.json", "packages/api", "packages/api/tsconfig.src.json"]);
+  expect(pass.projects).toStrictEqual([".", "tsconfig.src.json", "packages/api", "packages/api/tsconfig.src.json"]);
   expect(passed.code).toBe(0);
 
   const one = await turn(root, [], fakeTsc(["packages/api/tsconfig.src.json"]).bins);

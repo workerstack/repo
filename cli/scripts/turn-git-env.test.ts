@@ -50,9 +50,9 @@ it(
     vi.stubEnv("GIT_INDEX_FILE", path.join(root, ".git", "index"));
     const result = await turn(root, []);
     expect(result.out).toMatch(/ · 1 related test passed\n$/);
-    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toEqual([]);
+    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual([]);
     vi.unstubAllEnvs();
-    expect({ log: git(root, "log", "--format=%H"), branches: git(root, "branch", "--list") }).toEqual(before);
+    expect({ log: git(root, "log", "--format=%H"), branches: git(root, "branch", "--list") }).toStrictEqual(before);
     expect(git(root, "config", "--get", "core.bare")).toBe("false\n");
   },
 );

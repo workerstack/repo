@@ -95,40 +95,40 @@ function stubFetch(handler: (url: string, init?: RequestInit) => ReturnType<type
 
 describe("parseArgv", () => {
   it("reads verb noun and flags", () => {
-    expect(parseArgv(["sheet", "create", "--title", "Q3", "--csv", "a,b"])).toEqual({
+    expect(parseArgv(["sheet", "create", "--title", "Q3", "--csv", "a,b"])).toStrictEqual({
       _: ["sheet", "create"],
       flags: { title: "Q3", csv: "a,b" },
     });
   });
 
   it("parses --account", () => {
-    expect(parseArgv(["--account", "work", "whoami"])).toEqual({
+    expect(parseArgv(["--account", "work", "whoami"])).toStrictEqual({
       _: ["whoami"],
       flags: { account: "work" },
     });
   });
 
   it("treats bare --flag as set and stops at --", () => {
-    expect(parseArgv(["drive", "list", "--n", "3", "--"])).toEqual({
+    expect(parseArgv(["drive", "list", "--n", "3", "--"])).toStrictEqual({
       _: ["drive", "list"],
       flags: { n: "3" },
     });
-    expect(parseArgv(["mail", "list", "--q", "from:a", "--"])).toEqual({
+    expect(parseArgv(["mail", "list", "--q", "from:a", "--"])).toStrictEqual({
       _: ["mail", "list"],
       flags: { q: "from:a" },
     });
-    expect(parseArgv(["whoami", "--clip"])).toEqual({
+    expect(parseArgv(["whoami", "--clip"])).toStrictEqual({
       _: ["whoami"],
       flags: { clip: "1" },
     });
   });
 
   it("parseCsv splits rows", () => {
-    expect(parseCsv("a,b\n1,2\n")).toEqual([
+    expect(parseCsv("a,b\n1,2\n")).toStrictEqual([
       ["a", "b"],
       ["1", "2"],
     ]);
-    expect(parseCsv("")).toEqual([]);
+    expect(parseCsv("")).toStrictEqual([]);
   });
 
   it("rejects a bad account id", () => {
@@ -333,7 +333,7 @@ describe("main / verbs", () => {
       if (url.includes("/calendar/v3/calendars/primary/events")) {
         const body = JSON.parse(String(init?.body || "{}")) as { summary?: string; attendees?: unknown };
         expect(body.summary).toBe("Standup");
-        expect(body.attendees).toEqual([{ email: "a@b.com" }]);
+        expect(body.attendees).toStrictEqual([{ email: "a@b.com" }]);
         return jsonRes({
           id: "ev",
           summary: "Standup",

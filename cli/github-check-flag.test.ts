@@ -30,8 +30,8 @@ it("prints each setting that drifted with how to fix it, and exits 1 without wri
   };
   const fake = fakeGh(drifted);
   const result = await run(cwd, fake, ["--check"]);
-  expect([result.code, result.out]).toEqual([1, ""]);
-  expect(result.err.split("\n")).toEqual([
+  expect([result.code, result.out]).toStrictEqual([1, ""]);
+  expect(result.err.split("\n")).toStrictEqual([
     `repo github: ruleset main is missing the required check "consumer": ${RUN}`,
     `repo github: ruleset release tags is missing: ${RUN}`,
     `repo github: private vulnerability reporting is off: ${RUN}`,
@@ -40,13 +40,13 @@ it("prints each setting that drifted with how to fix it, and exits 1 without wri
     `repo github: topics are [lint], package.json keywords give [agents, ci, lint, monorepo, workerstack]: ${RUN}`,
     "",
   ]);
-  expect(fake.writes()).toEqual([]);
+  expect(fake.writes()).toStrictEqual([]);
 });
 
 it("passes a settled repo and says it is up to date", async () => {
   const cwd = githubRepo();
   const fake = fakeGh(await settledSettings(cwd));
-  expect(await run(cwd, fake, ["--check"])).toEqual({
+  expect(await run(cwd, fake, ["--check"])).toStrictEqual({
     code: 0,
     err: "",
     out: "repo github: workerstack/repo · up to date\n",

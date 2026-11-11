@@ -4,8 +4,8 @@ import { parseArgv, resolveHome } from "./purge-paths.ts";
 
 describe("parseArgv", () => {
   it("defaults dry-run; --apply writes", () => {
-    expect(parseArgv([])).toEqual({ ok: true, apply: false });
-    expect(parseArgv(["--apply"])).toEqual({ ok: true, apply: true });
+    expect(parseArgv([])).toStrictEqual({ ok: true, apply: false });
+    expect(parseArgv(["--apply"])).toStrictEqual({ ok: true, apply: true });
     expect(parseArgv(["--wat"]).ok).toBe(false);
   });
 });

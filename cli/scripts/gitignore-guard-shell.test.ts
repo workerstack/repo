@@ -31,12 +31,12 @@ const reads: [string, string[]][] = [
 describe("shellIgnoreEdits reads literal text", () => {
   it.each(reads)("reads %j", (command, added) => {
     const r = root();
-    expect(shellIgnoreEdits(command, r)).toEqual([{ file: path.join(r, "pkg/.gitignore"), added }]);
+    expect(shellIgnoreEdits(command, r)).toStrictEqual([{ file: path.join(r, "pkg/.gitignore"), added }]);
   });
 
   it("names a target whose directory does not exist yet", () => {
     const r = root();
-    expect(shellIgnoreEdits("echo x/ >> deep/new/.gitignore", r)).toEqual([
+    expect(shellIgnoreEdits("echo x/ >> deep/new/.gitignore", r)).toStrictEqual([
       { file: path.join(r, "deep/new/.gitignore"), added: ["x/"] },
     ]);
   });
@@ -75,6 +75,6 @@ const passes = [
 
 describe("shellIgnoreEdits leaves anything it cannot read literally", () => {
   it.each(passes)("returns no edit for %j", (command) => {
-    expect(shellIgnoreEdits(command, root())).toEqual([]);
+    expect(shellIgnoreEdits(command, root())).toStrictEqual([]);
   });
 });

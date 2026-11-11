@@ -45,6 +45,10 @@ const REPO_RULES = {
   "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",
 };
+const REJECTED =
+  "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types typescript/explicit-function-return-type unicorn/no-null eslint/no-ternary vitest/prefer-expect-assertions vitest/require-test-timeout eslint/no-magic-numbers typescript/prefer-optional-chain".split(
+    " ",
+  );
 const BASE_RULES = {
   "eslint/max-lines": ["error", { max: 200, ...SIZE }],
   "eslint/max-lines-per-function": ["error", { max: 30, ...SIZE }],
@@ -71,6 +75,13 @@ const BASE_RULES = {
   "typescript/no-unsafe-return": "error",
   "typescript/no-unsafe-call": "error",
   "typescript/no-unsafe-type-assertion": "off",
+  "typescript/strict-boolean-expressions": [
+    "error",
+    { allowString: false, allowNumber: false, allowNullableObject: false },
+  ],
+  "typescript/prefer-nullish-coalescing": "error",
+  "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
+  ...Object.fromEntries(REJECTED.map((rule) => [rule, "off"])),
   "typescript/switch-exhaustiveness-check": "error",
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
@@ -84,6 +95,8 @@ const TEST_OVERRIDE = {
     "vitest/no-focused-tests": "error",
     "vitest/no-disabled-tests": "error",
     "vitest/warn-todo": "error",
+    "vitest/prefer-strict-equal": "error",
+    "vitest/prefer-called-with": "error",
     "eslint/no-console": "off",
   },
 };
@@ -94,7 +107,7 @@ const CONFIG_OVERRIDE = {
 
 describe("oxlintConfig base", () => {
   it("loads the repo plugin, turns correctness and suspicious on at error, the other categories off, every listed rule on, type-aware, tests and configs relaxed, fixtures and reject files ignored", () => {
-    expect(configOf(workspace({ name: "app" }))).toEqual({
+    expect(configOf(workspace({ name: "app" }))).toStrictEqual({
       plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
       jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
       categories: CATEGORIES,
@@ -146,7 +159,7 @@ it("oxlintConfig writes one override per skip after every other, turning off onl
     { files: ["src/cache.ts"], rules: ["repo/no-module-state"], reason: REASON },
     { files: ["src/**/*.ts", "lib/*.ts"], rules: ["eslint/max-lines", "vitest/no-disabled-tests"], reason: REASON },
   ];
-  expect(configOf(APP, skips)).toEqual(
+  expect(configOf(APP, skips)).toStrictEqual(
     expect.objectContaining({
       rules: { ...REPO_RULES, ...BASE_RULES },
       overrides: [
@@ -158,21 +171,6 @@ it("oxlintConfig writes one override per skip after every other, turning off onl
       ],
     }),
   );
-});
-
-it("oxlintConfig refuses a rule the generated config does not run, naming the entry", () => {
-  const skips = [
-    { files: ["src/a.ts"], rules: ["repo/no-module-state"], reason: REASON },
-    { files: ["src/b.ts"], rules: ["eslint/no-console", "repo/no-modul-state"], reason: REASON },
-    { files: ["src/c.ts"], rules: ["no-module-state"], reason: REASON },
-  ];
-  expect(oxlintConfig(APP, skips)).toEqual({
-    ok: false,
-    errors: [
-      'workerstack.config.ts: lint.skip[1].rules: "repo/no-modul-state" is not a rule the generated config runs',
-      'workerstack.config.ts: lint.skip[2].rules: "no-module-state" is not a rule the generated config runs',
-    ],
-  });
 });
 
 it("oxlintConfig accepts the script rules in a skip and leaves them out of its overrides, writing none for an entry of only them", () => {
@@ -197,14 +195,4 @@ it("oxlintConfig accepts a skip of a rule an opt-out category turns on", () => {
     { files: ["bin/app.ts"], rules: { "repo/no-module-side-effects": "off" } },
     { files: ["src/a.ts"], rules: { "unicorn/no-array-sort": "off" } },
   ]);
-});
-
-it("oxlintConfig refuses a skip of a rule the base turns off", () => {
-  const skips = [{ files: ["src/a.ts"], rules: ["typescript/no-unsafe-type-assertion"], reason: REASON }];
-  expect(oxlintConfig(APP, skips)).toEqual({
-    ok: false,
-    errors: [
-      'workerstack.config.ts: lint.skip[0].rules: "typescript/no-unsafe-type-assertion" is not a rule the generated config runs',
-    ],
-  });
 });

@@ -13,11 +13,11 @@ describe("planMigration without a usable stock", () => {
   it("plans nothing while the stock package is not installed", () => {
     const m = mini({});
     fs.rmSync(path.join(m.stock, "package.json"));
-    expect(planOf(m)).toEqual([]);
+    expect(planOf(m)).toStrictEqual([]);
   });
 
   it("plans only the removal for an install that holds nothing of its own", () => {
-    expect(planOf(mini({}))).toEqual([REMOVAL]);
+    expect(planOf(mini({}))).toStrictEqual([REMOVAL]);
   });
 });
 
@@ -28,7 +28,7 @@ it("moves a rule the stock lacks, and keeps stock rules live by writing extra se
       "---\nroot: true\n---\n# Mine\n\n## Stock\n\nedited body\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n",
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
   });
-  expect(planOf(m).slice(0, 3)).toEqual([
+  expect(planOf(m).slice(0, 3)).toStrictEqual([
     {
       kind: "write",
       path: ".repo/rules/overview-local.md",
@@ -56,7 +56,7 @@ it("leaves a stock rule with no extra sections to the removal, and a -local sibl
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
     ".repo/rules/plain-local.md": `${CARRIED}## Extra\n\nhere\n`,
   });
-  expect(planOf(m)).toEqual([REMOVAL]);
+  expect(planOf(m)).toStrictEqual([REMOVAL]);
 });
 
 it("stops on a -local sibling that holds other text", () => {
@@ -64,7 +64,7 @@ it("stops on a -local sibling that holds other text", () => {
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
     ".repo/rules/plain-local.md": "other\n",
   });
-  expect(conflictLines(planOf(m))).toEqual([clash(".rulesync/rules/plain.md", ".repo/rules/plain-local.md")]);
+  expect(conflictLines(planOf(m))).toStrictEqual([clash(".rulesync/rules/plain.md", ".repo/rules/plain-local.md")]);
 });
 
 it("moves an edited stock subagent whole as an override, and leaves an identical one to the removal", () => {
@@ -72,11 +72,11 @@ it("moves an edited stock subagent whole as an override, and leaves an identical
     ".rulesync/subagents/scout.md": "edited scout\n",
     ".rulesync/subagents/orchestrator.md": "own\n",
   });
-  expect(notes(planOf(m))).toEqual([
+  expect(notes(planOf(m))).toStrictEqual([
     "moved .rulesync/subagents/orchestrator.md to .repo/subagents/orchestrator.md",
     "moved your edited .rulesync/subagents/scout.md to .repo/subagents/scout.md (it now replaces the stock subagent)",
   ]);
-  expect(planOf(mini({ ".rulesync/subagents/scout.md": "scout\r\n" }))).toEqual([REMOVAL]);
+  expect(planOf(mini({ ".rulesync/subagents/scout.md": "scout\r\n" }))).toStrictEqual([REMOVAL]);
 });
 
 const SKILL_COPIES = {
@@ -93,7 +93,7 @@ const ASK_MARK = {
 
 it("moves an edited stock skill whole, a skill the stock lacks, and removes the identical copies", () => {
   const m = mini(SKILL_COPIES, { stock: { "agents/skills/bro/SKILL.md": "bro\n" } });
-  expect(planOf(m)).toEqual([
+  expect(planOf(m)).toStrictEqual([
     {
       kind: "move",
       from: ".agents/skills/ask",

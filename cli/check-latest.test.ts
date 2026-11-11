@@ -44,10 +44,10 @@ const SKIPPED = (why: string) =>
 describe("repo check compares the installed @workerstack/repo with npm's latest", () => {
   it("reports a problem when the install is behind", async () => {
     const got = await check("0.1.0", () => latestDoc("0.2.0"));
-    expect(got.problems).toEqual([
+    expect(got.problems).toStrictEqual([
       "@workerstack/repo 0.1.0 is behind 0.2.0 on npm; run `bun update @workerstack/repo` and `bun repo sync`",
     ]);
-    expect(got.report).toEqual([]);
+    expect(got.report).toStrictEqual([]);
   });
 
   it.each(["0.2.0", "0.3.0"])("says nothing when the install is %s against a latest of 0.2.0", async (version) => {
@@ -58,7 +58,7 @@ describe("repo check compares the installed @workerstack/repo with npm's latest"
 describe("repo check skips the comparison quietly", () => {
   it("never fetches when the package is not installed", async () => {
     const got = await check(null, () => latestDoc("9.9.9"));
-    expect(got).toEqual({ problems: [], report: [], calls: [] });
+    expect(got).toStrictEqual({ problems: [], report: [], calls: [] });
   });
 
   it.each<[string, () => Response | Error, string]>([
@@ -79,7 +79,7 @@ describe("repo check skips the comparison quietly", () => {
 describe("repo check asks npm", () => {
   it("asks the registry it is given, with a timeout signal", async () => {
     const got = await check("0.1.0", () => latestDoc("0.1.0"), "http://localhost:4873");
-    expect(got.calls.map((call) => call.url)).toEqual(["http://localhost:4873/@workerstack%2frepo"]);
+    expect(got.calls.map((call) => call.url)).toStrictEqual(["http://localhost:4873/@workerstack%2frepo"]);
     expect(got.calls[0]?.signal).toBeInstanceOf(AbortSignal);
   });
 
@@ -87,7 +87,7 @@ describe("repo check asks npm", () => {
     const dir = project("0.1.0");
     fs.writeFileSync(path.join(dir, "node_modules", "@workerstack", "repo", "package.json"), manifest);
     const fetcher = () => Promise.resolve(latestDoc("0.2.0"));
-    expect(await checkLatestAt(dir, fetcher, REGISTRY)).toEqual({ problems: [], report: [] });
+    expect(await checkLatestAt(dir, fetcher, REGISTRY)).toStrictEqual({ problems: [], report: [] });
   });
 });
 

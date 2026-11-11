@@ -106,7 +106,7 @@ function parseArgs(args: string[]): { session: string; match: string } | undefin
       const value = args[++i];
       if (value === undefined) return undefined;
       match = value;
-    } else if (session === undefined) session = arg;
+    } else session ??= arg;
   }
   return session === undefined ? undefined : { session, match };
 }

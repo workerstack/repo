@@ -24,7 +24,7 @@ it("a SKILL.md that is a directory does not count as a skill", () => {
   const root = tmp();
   fs.mkdirSync(path.join(root, "odd", "SKILL.md"), { recursive: true });
   fs.writeFileSync(path.join(root, "loose.md"), "x");
-  expect(listSkillDirNames(root)).toEqual([]);
+  expect(listSkillDirNames(root)).toStrictEqual([]);
 });
 
 it("a packaged skill the workspace cannot read is skipped", () => {
@@ -33,9 +33,9 @@ it("a packaged skill the workspace cannot read is skipped", () => {
   fs.mkdirSync(path.join(ws, "a", "SKILL.md"), { recursive: true });
   fs.mkdirSync(path.join(pkg, "a"));
   fs.writeFileSync(path.join(pkg, "a", "SKILL.md"), "x");
-  expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toEqual([]);
+  expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toStrictEqual([]);
 });
 
 it("no dirs given means no conflicts", () => {
-  expect(findSkillContentConflicts()).toEqual([]);
+  expect(findSkillContentConflicts()).toStrictEqual([]);
 });

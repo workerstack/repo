@@ -56,23 +56,23 @@ describe("relInside", () => {
 describe("processFatTools guard table", () => {
   it("passes on when a guard returns undefined, until one answers", () => {
     const cwd = repoRoot();
-    expect(processFatTools(claude(cwd, "Bash", { command: "cat bun.lock" }))).toEqual(deny(REASON_DENYLIST));
+    expect(processFatTools(claude(cwd, "Bash", { command: "cat bun.lock" }))).toStrictEqual(deny(REASON_DENYLIST));
     expect(processFatTools(claude(cwd, "Bash", { command: "git status" }))).toBeNull();
   });
 
   it("stops with no answer on null, even where a later guard would answer", () => {
     const cwd = repoRoot();
     const grep = claude(cwd, "Grep", { pattern: "x", path: "node_modules" });
-    expect(processFatTools(grep)).toEqual(deny(REASON_DENYLIST));
+    expect(processFatTools(grep)).toStrictEqual(deny(REASON_DENYLIST));
     expect(processFatTools(asScout(grep))).toBeNull();
-    expect(processFatTools(codex(cwd, "Bash", { command: "cat bun.lock" }))).toEqual(deny(REASON_DENYLIST));
+    expect(processFatTools(codex(cwd, "Bash", { command: "cat bun.lock" }))).toStrictEqual(deny(REASON_DENYLIST));
     expect(processFatTools(codex(cwd, "apply_patch", { command: "cat bun.lock" }))).toBeNull();
     expect(processFatTools(claude(cwd, "Write", { file_path: path.join(cwd, "src.ts"), content: "x" }))).toBeNull();
   });
 
   it("answers with the object the first answering guard returns", () => {
     const cwd = repoRoot();
-    expect(processFatTools(claude(cwd, "Grep", { pattern: "x", path: "src" }))).toEqual({
+    expect(processFatTools(claude(cwd, "Grep", { pattern: "x", path: "src" }))).toStrictEqual({
       type: "rewrite",
       updatedInput: { pattern: "x", path: "src", head_limit: DEFAULT_GREP_HEAD_LIMIT },
     });

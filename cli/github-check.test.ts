@@ -13,13 +13,13 @@ const check = (cwd: string, fake: FakeGh, ci = false) => checkGithubAt(cwd, { gh
 
 it("passes a settled repo", async () => {
   const cwd = githubRepo();
-  expect(await check(cwd, fakeGh(await settledSettings(cwd)))).toEqual({ problems: [], report: [] });
+  expect(await check(cwd, fakeGh(await settledSettings(cwd)))).toStrictEqual({ problems: [], report: [] });
 });
 
 it("reports each drift as a problem", async () => {
   const cwd = githubRepo();
   const settled = await settledSettings(cwd, { reporting: false });
-  expect(await check(cwd, fakeGh(settled))).toEqual({
+  expect(await check(cwd, fakeGh(settled))).toStrictEqual({
     problems: [`github: private vulnerability reporting is off: ${RUN}`],
     report: [],
   });
@@ -28,8 +28,8 @@ it("reports each drift as a problem", async () => {
 it("skips under GITHUB_ACTIONS before any call", async () => {
   const fake = fakeGh();
   const skipped = { problems: [], report: [`${SKIP}CI's token cannot read admin settings`] };
-  expect(await check(githubRepo(), fake, true)).toEqual(skipped);
-  expect(fake.calls).toEqual([]);
+  expect(await check(githubRepo(), fake, true)).toStrictEqual(skipped);
+  expect(fake.calls).toStrictEqual([]);
 });
 
 const CASES: [string, GhFailure, string][] = [
@@ -52,22 +52,22 @@ it.each(CASES)("skips with the reason when %s", async (_, failure, reason) => {
     githubRepo(),
     fakeGh(EMPTY_SETTINGS(), () => failure),
   );
-  expect(result).toEqual({ problems: [], report: [SKIP + reason] });
+  expect(result).toStrictEqual({ problems: [], report: [SKIP + reason] });
 });
 
 it("skips with no GitHub origin, calling nothing", async () => {
   const fake = fakeGh();
-  expect(await check(githubRepo({ origin: null }), fake)).toEqual({
+  expect(await check(githubRepo({ origin: null }), fake)).toStrictEqual({
     problems: [],
     report: [`${SKIP}no GitHub origin`],
   });
-  expect(fake.calls).toEqual([]);
+  expect(fake.calls).toStrictEqual([]);
 });
 
 it("reports a refused keyword as a problem", async () => {
   const manifest = JSON.stringify({ ...MANIFEST, keywords: ["lint", "agents"] });
   const cwd = githubRepo({ files: { "package.json": manifest } });
-  expect(await check(cwd, fakeGh())).toEqual({
+  expect(await check(cwd, fakeGh())).toStrictEqual({
     problems: ['github: package.json: "keywords" are not sorted; write ["agents","lint"]'],
     report: [],
   });
@@ -77,7 +77,7 @@ it("leaves a config or a package.json it cannot read to sync", async () => {
   const config = githubRepo({ files: { "workerstack.config.ts": "export default 3;\n" } });
   const manifest = githubRepo({ files: { "package.json": "{" } });
   const results = await Promise.all([check(config, fakeGh()), check(manifest, fakeGh())]);
-  expect(results).toEqual([
+  expect(results).toStrictEqual([
     { problems: [], report: [] },
     { problems: [], report: [] },
   ]);
@@ -90,7 +90,7 @@ it("builds its own io when none is given", async () => {
 it("makes no gh call and prints nothing without the release pack", async () => {
   const fake = fakeGh();
   const cwd = githubRepo({ files: { "workerstack.config.ts": 'export default { packs: ["standards"] };\n' } });
-  expect(await check(cwd, fake)).toEqual({ problems: [], report: [] });
-  expect(await check(cwd, fake, true)).toEqual({ problems: [], report: [] });
-  expect(fake.calls).toEqual([]);
+  expect(await check(cwd, fake)).toStrictEqual({ problems: [], report: [] });
+  expect(await check(cwd, fake, true)).toStrictEqual({ problems: [], report: [] });
+  expect(fake.calls).toStrictEqual([]);
 });

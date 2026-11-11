@@ -290,7 +290,9 @@ describe("orchestrate-parent hook config", () => {
     const jsonc = parseJson<{ hooks: Record<string, { command: string; timeout: number }[]> }>(
       ssot.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""),
     );
-    expect(Object.keys(jsonc.hooks)).toEqual(expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]));
+    expect(Object.keys(jsonc.hooks)).toStrictEqual(
+      expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]),
+    );
     expect(Object.keys(jsonc.hooks)).not.toContain("userPromptSubmit");
     expect(jsonc.hooks.beforeSubmitPrompt![0]!.command).toMatch(/hook orchestrate-parent/);
     expect(jsonc.hooks.beforeSubmitPrompt![0]!.timeout).toBe(5);
@@ -431,7 +433,7 @@ describe("persisted writes", () => {
     const again = pre(ws, "Write", { file_path: path.relative(ws, saved), content: body });
     expect(again.updatedInput.file_path).toBe(saved);
     expect(again.updatedInput.content).toMatch(/^1\.1 \[x\] /m);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([path.basename(saved)]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([path.basename(saved)]);
     // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
     expect(fs.readFileSync(saved, "utf8")).toBe(before);
   });
@@ -563,7 +565,7 @@ describe("lessons in the write hook", () => {
 describe("isUnderTmp", () => {
   it("matches root files and rejects reserved and nested paths", () => {
     const ws = "/ws";
-    expect(TMP_RESERVED_DIRS).toEqual(
+    expect(TMP_RESERVED_DIRS).toStrictEqual(
       new Set([
         "plans",
         "roadmaps",
@@ -790,7 +792,7 @@ describe("y approval trigger", () => {
     });
     const saved = out.hookSpecificOutput.updatedInput.file_path;
     fs.writeFileSync(saved, out.hookSpecificOutput.updatedInput.content);
-    return saved as string;
+    return saved;
   }
   // A new save, then the review-bump re-save, as /write-plan does it.
   function reviewed(ws: string, sid: string, dir: "plans" | "roadmaps", body: string) {
@@ -827,7 +829,7 @@ describe("y approval trigger", () => {
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "s1" },
     );
     const roadmap = parseJson<HookOut>(grok.stdout).hookSpecificOutput.updatedInput.path;
-    expect(approvals(ws, "s1")).toEqual([plan, roadmap]);
+    expect(approvals(ws, "s1")).toStrictEqual([plan, roadmap]);
   });
 
   it("blocks once per turn until the reply ends with the closing line naming every pending item", () => {
@@ -835,7 +837,7 @@ describe("y approval trigger", () => {
     prompt(ws, "s2", "plan it");
     reviewed(ws, "s2", "plans", VALID_PLAN);
     const ask = stopWith(ws, "s2", "Plan 1 is saved.\nShall I start?");
-    expect(ask).toEqual({
+    expect(ask).toStrictEqual({
       decision: "block",
       reason: `end with: ${closingLine([{ kind: "plan", serial: 1, strategy: "default" }])}`,
     });
@@ -903,7 +905,7 @@ describe("y approval trigger", () => {
     const shown =
       'Saved.\n\nReply "y" to run plan 1 (strategy: default), or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.';
     expect(parseClosingLine(shown.split("\n").at(-1)!)).not.toBeNull();
-    expect(stopWith(ws, "mis", shown)).toEqual({
+    expect(stopWith(ws, "mis", shown)).toStrictEqual({
       decision: "block",
       reason:
         'end with: Reply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.',
@@ -966,7 +968,7 @@ describe("y approval trigger", () => {
     const withStrategy = (s: string) => VALID_PLAN.replace("strategy: default", `strategy: ${s}`);
     const roadmapWith = (s: string) => DRAFT_ROADMAP.replace("strategy: default", `strategy: ${s}`);
     const ctxOf = (ws: string, sid: string, text: string, tp?: string) =>
-      (prompt(ws, sid, text, tp ? { transcript_path: tp } : {})?.hookSpecificOutput?.additionalContext ?? "") as string;
+      prompt(ws, sid, text, tp ? { transcript_path: tp } : {})?.hookSpecificOutput?.additionalContext ?? "";
     const lines = (s: string) => s.split("\n");
     const strategyOf = (file: string) => /^strategy: (.*)$/m.exec(fs.readFileSync(file, "utf8"))![1];
 
@@ -987,7 +989,7 @@ describe("y approval trigger", () => {
           `y approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`,
         );
       }
-      expect([plan, roadmap].map((f) => fs.readFileSync(f, "utf8"))).toEqual(before);
+      expect([plan, roadmap].map((f) => fs.readFileSync(f, "utf8"))).toStrictEqual(before);
       expect(ctxOf(ws, "s6", "yes do it", tp)).not.toContain("y approves");
       expect(ctxOf(ws, "s6", "y", transcript(ws, "Plan 1 is saved. Start?"))).not.toContain("y approves");
       expect(ctxOf(ws, "s6", "y", transcript(ws, 'Reply "y" to run plan 1.'))).not.toContain("y approves");
@@ -1046,7 +1048,7 @@ describe("y approval trigger", () => {
       expect(lines(ctxOf(ws, "r1", "y review-deep", tp))).toContain(want);
       const after = fs.readFileSync(plan, "utf8");
       expect(after).toBe(before.replace("strategy: default", "strategy: review-deep"));
-      expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toEqual([]);
+      expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toStrictEqual([]);
       const mtime = fs.statSync(plan).mtimeMs;
       // Nothing left to write: the context is the plain approval, with no claim of a change.
       expect(lines(ctxOf(ws, "r1", "Y  Review-Deep ", tp))).toContain(
@@ -1072,7 +1074,7 @@ describe("y approval trigger", () => {
       );
       for (const f of [p1, p2, rm]) expect(strategyOf(f)).toBe("default");
       const rmText = fs.readFileSync(rm, "utf8");
-      expect(validateRoadmap(path.basename(rm), rmText, { fresh: false, previous: rmText })).toEqual([]);
+      expect(validateRoadmap(path.basename(rm), rmText, { fresh: false, previous: rmText })).toStrictEqual([]);
       ctxOf(ws, "r2", "y default", tp);
       expect(fs.readFileSync(rm, "utf8")).toBe(rmText);
     });
@@ -1186,7 +1188,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
     return (result.stdout ? parseJson<HookOut>(result.stdout) : null) as HookOut;
   }
   const say = (ws: string, sid: string, text: string, tp?: string) =>
-    (call(ws, sid, "UserPromptSubmit", { prompt: text, tp })?.hookSpecificOutput?.additionalContext ?? "") as string;
+    call(ws, sid, "UserPromptSubmit", { prompt: text, tp })?.hookSpecificOutput?.additionalContext ?? "";
   const stopWith = (ws: string, sid: string, msg: string) => call(ws, sid, "Stop", { msg });
   function save(ws: string, sid: string, file: string, content: string) {
     const input = shape === "claude" ? { file_path: file, content } : { path: file, content };
@@ -1250,7 +1252,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
   it("away blocks a reply ending in a question, allows a closing line, and gives up after the stop-block cap", () => {
     const ws = workspace();
     say(ws, "w1", "/away");
-    expect(stopWith(ws, "w1", "Two options.\n\nKeep --json or add --format=json?\n")).toEqual({
+    expect(stopWith(ws, "w1", "Two options.\n\nKeep --json or add --format=json?\n")).toStrictEqual({
       decision: "block",
       reason: AWAY,
     });
@@ -1270,7 +1272,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
     spawnReview(ws, "r1", "/review-plan 1\n\nReview it.");
     const reason =
       "plan 1's review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line";
-    expect(stopWith(ws, "r1", `Saved.\n\n${plan1}`)).toEqual({ decision: "block", reason });
+    expect(stopWith(ws, "r1", `Saved.\n\n${plan1}`)).toStrictEqual({ decision: "block", reason });
     setKey(plan, "reviews", "2");
     expect(stopWith(ws, "r1", `Saved.\n\n${plan1}`)).toBeNull();
   });
@@ -1279,7 +1281,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
     const ws = workspace();
     say(ws, "z1", "plan it");
     save(ws, "z1", ".tmp/repo/plans/x.md", VALID_PLAN);
-    expect(stopWith(ws, "z1", `Saved.\n\n${plan1}`)).toEqual({
+    expect(stopWith(ws, "z1", `Saved.\n\n${plan1}`)).toStrictEqual({
       decision: "block",
       reason: "plan 1 has reviews: 0; run /review-plan 1 in a fresh agent first",
     });
@@ -1299,7 +1301,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
       "h did not hand off plan 1: its review has not settled; wait for it, then end with the closing line again",
     );
     expect(fs.readFileSync(plan, "utf8")).toBe(before);
-    expect(handoffs(ws)).toEqual([]);
+    expect(handoffs(ws)).toStrictEqual([]);
   });
 
   it("h fast writes review-fast into the plan and one valid handoff that runs it", () => {
@@ -1316,7 +1318,7 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
       `h handed off plan 1 (strategy review-fast written) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
     );
     const text = fs.readFileSync(file, "utf8");
-    expect(validateHandoff(path.basename(file), text)).toEqual([]);
+    expect(validateHandoff(path.basename(file), text)).toStrictEqual([]);
     expect(text).toContain(plan);
     expect(text).toContain("h1");
     expect(text).toMatch(/^1\.1 \[ \] \/implement-plan 1$/m);
@@ -1342,12 +1344,12 @@ describe.each(["claude", "grok"] as const)("away mode, settled reviews and h han
       `h handed off plan 1 (strategy default), then roadmap 1 (strategy default) to ${file}; tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
     );
     const text = fs.readFileSync(file, "utf8");
-    expect(validateHandoff(path.basename(file), text)).toEqual([]);
+    expect(validateHandoff(path.basename(file), text)).toStrictEqual([]);
     expect(text).toContain(plan);
     expect(text).toContain(roadmap);
     const leaves = text.split("\n").filter((l) => /^\d+\.\d+ \[ \] /.test(l));
-    expect(leaves).toEqual(["1.1 [ ] /implement-plan 1", "1.2 [ ] set status locked, then /implement-roadmap 1"]);
-    expect([strategyOf(plan), strategyOf(roadmap)]).toEqual(["default", "default"]);
+    expect(leaves).toStrictEqual(["1.1 [ ] /implement-plan 1", "1.2 [ ] set status locked, then /implement-roadmap 1"]);
+    expect([strategyOf(plan), strategyOf(roadmap)]).toStrictEqual(["default", "default"]);
   });
 });
 
@@ -1536,7 +1538,7 @@ describe("one scratch root from subdirs and worktrees", () => {
 describe("git the user asked for", () => {
   const sessionFile = (ws: string, sid: string) => path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
   const words = (ws: string, sid: string) =>
-    parseJson<{ words: string[] }>(fs.readFileSync(sessionFile(ws, sid), "utf8")).words as string[];
+    parseJson<{ words: string[] }>(fs.readFileSync(sessionFile(ws, sid), "utf8")).words;
   const submit = (ws: string, sid: string, text: string, event = "UserPromptSubmit") => {
     const out = runHook(
       { cwd: ws, hook_event_name: event, session_id: sid, prompt: text },
@@ -1549,17 +1551,17 @@ describe("git the user asked for", () => {
   it("records the words a Claude, Codex or Grok prompt names, and the next prompt clears them", () => {
     const ws = fs.realpathSync(workspace());
     submit(ws, "g1", "stash the main checkout");
-    expect(JSON.parse(fs.readFileSync(sessionFile(ws, "g1"), "utf8"))).toEqual({ words: ["stash"] });
+    expect(JSON.parse(fs.readFileSync(sessionFile(ws, "g1"), "utf8"))).toStrictEqual({ words: ["stash"] });
     submit(ws, "g1", "thanks, now carry on");
-    expect(words(ws, "g1")).toEqual([]);
-    expect(fs.readdirSync(path.dirname(sessionFile(ws, "g1"))).filter((n) => n.endsWith(".tmp"))).toEqual([]);
+    expect(words(ws, "g1")).toStrictEqual([]);
+    expect(fs.readdirSync(path.dirname(sessionFile(ws, "g1"))).filter((n) => n.endsWith(".tmp"))).toStrictEqual([]);
     // Grok spells the payload in camelCase and names the session in its env.
     const grok = runHook(
       { hookEventName: "UserPromptSubmit", userPrompt: "git checkout main", workspaceRoot: ws },
       { GROK_HOOK_EVENT: "UserPromptSubmit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "gk" },
     );
     expect(grok.status).toBe(0);
-    expect(words(ws, "gk")).toEqual(["checkout"]);
+    expect(words(ws, "gk")).toStrictEqual(["checkout"]);
   });
 
   it("reads each phrase as one grant or none", () => {
@@ -1574,7 +1576,7 @@ describe("git the user asked for", () => {
     ];
     for (const [text, expected] of cases) {
       submit(ws, "g2", text);
-      expect(words(ws, "g2"), text).toEqual(expected);
+      expect(words(ws, "g2"), text).toStrictEqual(expected);
     }
   });
 
@@ -1594,7 +1596,7 @@ describe("git the user asked for", () => {
     const readerFile = (sid: string) => path.join(path.dirname(stampPath(ws, sid)), "git-asked.json");
     submit(ws, "../escape", "stash it");
     expect(readerFile("../escape")).toBe(path.join(ws, ".tmp/repo/sessions/escape/git-asked.json"));
-    expect(JSON.parse(fs.readFileSync(readerFile("../escape"), "utf8"))).toEqual({ words: ["stash"] });
+    expect(JSON.parse(fs.readFileSync(readerFile("../escape"), "utf8"))).toStrictEqual({ words: ["stash"] });
     expect(fs.existsSync(path.join(ws, ".tmp/escape"))).toBe(false);
     submit(ws, "../../agents/", "stash it");
     expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions/git-asked.json"))).toBe(false);
@@ -1604,7 +1606,7 @@ describe("git the user asked for", () => {
     const ws = fs.realpathSync(workspace());
     submit(ws, "g3", "stash it");
     submit(ws, "g3", "Stop hook feedback: keep going");
-    expect(words(ws, "g3")).toEqual(["stash"]);
+    expect(words(ws, "g3")).toStrictEqual(["stash"]);
     const blocked = fs.realpathSync(workspace());
     fs.mkdirSync(path.join(blocked, ".tmp/repo"), { recursive: true });
     fs.writeFileSync(path.join(blocked, ".tmp/repo/sessions"), "a file where the dir should be");
@@ -1693,7 +1695,7 @@ describe("Cursor events", () => {
     return (out.stdout ? parseJson<HookOut>(out.stdout) : null) as HookOut;
   };
   const nested = (reply: any) => {
-    expect(Object.keys(reply)).toEqual(["hookSpecificOutput"]);
+    expect(Object.keys(reply)).toStrictEqual(["hookSpecificOutput"]);
     expect(reply.hookSpecificOutput.permissionDecision).toBeUndefined();
   };
 
@@ -1702,14 +1704,14 @@ describe("Cursor events", () => {
     // Cursor's event does one thing: git-asked.json. No /ask stamp, board line, approval or additionalContext.
     expect(json(cursor(r, "beforeSubmitPrompt", { prompt: "/ask", attachments: [] }))).toBeNull();
     expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
-    expect(fs.readdirSync(path.join(r, ".tmp/repo/sessions/cu"))).toEqual(["git-asked.json"]);
-    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toEqual({
+    expect(fs.readdirSync(path.join(r, ".tmp/repo/sessions/cu"))).toStrictEqual(["git-asked.json"]);
+    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toStrictEqual({
       words: [],
     });
     expect(
       json(cursor(r, "beforeSubmitPrompt", { prompt: "please stash the main checkout", attachments: [] })),
     ).toBeNull();
-    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toEqual({
+    expect(JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"))).toStrictEqual({
       words: ["stash"],
     });
     expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
@@ -1722,7 +1724,7 @@ describe("Cursor events", () => {
     const stamp = path.join(r, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-cu`);
     fs.mkdirSync(path.dirname(stamp), { recursive: true });
     fs.writeFileSync(stamp, "ask");
-    expect(json(cursor(r, "stop", done))).toEqual({ decision: "block", reason: ASK_STOP_REASON });
+    expect(json(cursor(r, "stop", done))).toStrictEqual({ decision: "block", reason: ASK_STOP_REASON });
     expect(json(cursor(r, "stop", { ...done, last_assistant_message: "done. Continue?" }))).toBeNull();
   });
 
@@ -1758,7 +1760,11 @@ describe("Cursor events", () => {
     });
     expect(bad.hookSpecificOutput).toBeUndefined();
     const lock = json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "cat bun.lock" } }));
-    expect(lock).toEqual({ permission: "deny", user_message: expect.any(String), agent_message: expect.any(String) });
+    expect(lock).toStrictEqual({
+      permission: "deny",
+      user_message: expect.any(String),
+      agent_message: expect.any(String),
+    });
     expect(json(cursor(r, "preToolUse", { tool_name: "Read", tool_input: { file_path: "big.log" } }))).toBeNull();
     expect(json(cursor(r, "preToolUse", { tool_name: "Shell", tool_input: { command: "git status" } }))).toBeNull();
   });

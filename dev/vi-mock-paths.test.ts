@@ -35,7 +35,7 @@ describe("badMockPaths", () => {
     ['new URL("init.ts", import.meta.url).href'],
   ])("flags %s", (arg) => {
     for (const name of ["mock", "doMock", "unmock", "doUnmock", "importActual"]) {
-      expect(badMockPaths(call(name, arg))).toEqual([1]);
+      expect(badMockPaths(call(name, arg))).toStrictEqual([1]);
     }
   });
 
@@ -47,11 +47,11 @@ describe("badMockPaths", () => {
     ['new URL("../cli/sync.ts", import.meta.url).href'],
     ['new URL("./init.ts", import.meta.url).href'],
   ])("accepts %s", (arg) => {
-    expect(badMockPaths(call("mock", arg))).toEqual([]);
+    expect(badMockPaths(call("mock", arg))).toStrictEqual([]);
   });
 
   it("names the line", () => {
-    expect(badMockPaths(`a\nb\n${call("mock", '"./x.ts"')}`)).toEqual([3]);
+    expect(badMockPaths(`a\nb\n${call("mock", '"./x.ts"')}`)).toStrictEqual([3]);
   });
 });
 
@@ -63,5 +63,5 @@ it("no tracked test spells a mock path another way", () => {
   const hits = files.flatMap((file) =>
     badMockPaths(fs.readFileSync(path.join(root, file), "utf8")).map((line) => `${file}:${line}`),
   );
-  expect(hits).toEqual([]);
+  expect(hits).toStrictEqual([]);
 });

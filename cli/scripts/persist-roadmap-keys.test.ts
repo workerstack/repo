@@ -33,7 +33,7 @@ describe("roadmap strategy on a new save", () => {
     const unknown = save(withStrategy(DRAFT_ROADMAP, "review-medium"), ws);
     expect(unknown.ok).toBe(false);
     expect(unknown.errors).toContain(NO_KEY);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
   });
 });
 
@@ -75,7 +75,7 @@ describe("roadmap mode on a new save", () => {
     const bad = save(withMode(DRAFT_ROADMAP, "later"), ws);
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain(MODE_KEY);
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
     const ok = save(DRAFT_ROADMAP, ws);
     expect(ok.ok, ok.error).toBe(true);
     const abs = path.join(ws, savedOk(ok).path);
@@ -97,7 +97,7 @@ describe("roadmap mode on an update", () => {
     expect(read(abs)).toMatch(/^mode: auto$/m);
     const changed = update(ws, abs, withMode(DRAFT_ROADMAP, "ask"));
     expect(changed.ok, changed.error).toBe(true);
-    expect(read(abs).match(/^mode:/gm)).toEqual(["mode:"]);
+    expect(read(abs).match(/^mode:/gm)).toStrictEqual(["mode:"]);
     expect(read(abs)).toMatch(/^mode: ask$/m);
   });
 });

@@ -57,12 +57,12 @@ async function github(argv: string[], gh: Runner, changelog: string | null = CHA
 describe("repo release github", () => {
   it("creates the release from the changelog section of the version", async () => {
     const { gh, calls } = fakeGh(false);
-    expect(await github([TAG], gh)).toEqual({
+    expect(await github([TAG], gh)).toStrictEqual({
       code: 0,
       out: `repo release github: created release ${TAG} from CHANGELOG.md\n`,
       err: "",
     });
-    expect(calls).toEqual([
+    expect(calls).toStrictEqual([
       `release view ${TAG}`,
       `release create ${TAG} --verify-tag --title ${TAG} --notes ${NOTES}`,
     ]);
@@ -80,12 +80,12 @@ describe("repo release github", () => {
 describe("repo release github reruns", () => {
   it("leaves a release that exists alone", async () => {
     const { gh, calls } = fakeGh(true);
-    expect(await github([TAG], gh)).toEqual({
+    expect(await github([TAG], gh)).toStrictEqual({
       code: 0,
       out: `repo release github: release ${TAG} already exists\n`,
       err: "",
     });
-    expect(calls).toEqual([`release view ${TAG}`]);
+    expect(calls).toStrictEqual([`release view ${TAG}`]);
   });
 
   it("counts a failed create as done when the release exists by then", async () => {
@@ -100,7 +100,7 @@ describe("repo release github reruns", () => {
 describe("repo release github refuses", () => {
   it("a failed create with gh's reason", async () => {
     const { gh } = fakeGh(false, 1);
-    expect(await github([TAG], gh)).toEqual({
+    expect(await github([TAG], gh)).toStrictEqual({
       code: 1,
       out: "",
       err: "repo release github: gh release create failed: denied\n",
@@ -109,12 +109,12 @@ describe("repo release github refuses", () => {
 
   it("a changelog without the version's section", async () => {
     const { gh, calls } = fakeGh(false);
-    expect(await github(["@acme/app@9.9.9"], gh)).toEqual({
+    expect(await github(["@acme/app@9.9.9"], gh)).toStrictEqual({
       code: 1,
       out: "",
       err: "repo release github: CHANGELOG.md has no ## [9.9.9] section to make the notes from\n",
     });
-    expect(calls).toEqual([]);
+    expect(calls).toStrictEqual([]);
   });
 
   it("a missing changelog the same way", async () => {

@@ -15,14 +15,14 @@ const OVERRIDE_NOTE =
 it("moves a stock-named rule edited inside its sections whole, as an override", async () => {
   const m = mini({ ".rulesync/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nedited body\n" });
   const steps = planOf(m, CONFIG, none);
-  expect(notes(steps)).toEqual([OVERRIDE_NOTE]);
+  expect(notes(steps)).toStrictEqual([OVERRIDE_NOTE]);
   expect(await applyMigration(m.root, steps)).toContain(`repo sync: ${OVERRIDE_NOTE}`);
   expect(read(m.root, ".repo/rules/overview.md")).toContain("edited body");
 });
 
 it("moves a stock-named reference edited inside its sections to references/", () => {
   const m = mini({ ".rulesync/reference/cascade.md": "# Cascade\n\n## Stock\n\nedited\n" });
-  expect(notes(planOf(m, CONFIG, none))).toEqual([
+  expect(notes(planOf(m, CONFIG, none))).toStrictEqual([
     "moved your edited .rulesync/reference/cascade.md to references/cascade.md",
   ]);
 });
@@ -40,20 +40,20 @@ it("stops on scripts, the pipeline file and settings other than claude.json that
     { stock: { "cli/scripts/stock.ts": "stock script\n" } },
   );
   const steps = planOf(m, CONFIG, none);
-  expect(conflictLines(steps)).toEqual([
+  expect(conflictLines(steps)).toStrictEqual([
     yours(".rulesync/scripts/deep/tool.ts"),
     yours(".rulesync/scripts/mine.ts"),
     yours(".rulesync/settings/codex.json"),
     yours(".rulesync/repo.pipeline.jsonc"),
   ]);
   // An edited settings/claude.json is the overlay's own file and keeps moving there.
-  expect(notes(steps)).toEqual(["moved your .rulesync/settings/claude.json to .repo/settings/claude.json"]);
+  expect(notes(steps)).toStrictEqual(["moved your .rulesync/settings/claude.json to .repo/settings/claude.json"]);
   const old = hashText("old script\n");
   const known = mini(
     { ".rulesync/scripts/old.ts": "old script\n", ".rulesync/repo.pipeline.jsonc": "{}\n" },
     { stock: { "agents/repo.pipeline.jsonc": "{}\n" } },
   );
-  expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toEqual([REMOVAL]);
+  expect(planOf(known, CONFIG, { history: { ".rulesync/scripts/old.ts": [old] } })).toStrictEqual([REMOVAL]);
 });
 
 it("stops on any other entry of the copied dir, one line per entry, and leaves reference and the features file to their own handling", () => {
@@ -64,8 +64,8 @@ it("stops on any other entry of the copied dir, one line per entry, and leaves r
     ".rulesync/reference/deploy.md": "# Deploy\n",
   });
   const steps = planOf(m, CONFIG, none);
-  expect(conflictLines(steps)).toEqual([yours(".rulesync/misc"), yours(".rulesync/notes.md")]);
-  expect(notes(steps)).toEqual(["moved .rulesync/reference/deploy.md to references/deploy.md"]);
+  expect(conflictLines(steps)).toStrictEqual([yours(".rulesync/misc"), yours(".rulesync/notes.md")]);
+  expect(notes(steps)).toStrictEqual(["moved .rulesync/reference/deploy.md to references/deploy.md"]);
 });
 
 it("moves a folder found where a rule, subagent or global setting should be", () => {
@@ -74,7 +74,7 @@ it("moves a folder found where a rule, subagent or global setting should be", ()
     ".rulesync/subagents/folder/b.md": "b\n",
     ".rulesync/global-settings/folder/c.json": "{}\n",
   });
-  expect(notes(planOf(m, CONFIG, none))).toEqual([
+  expect(notes(planOf(m, CONFIG, none))).toStrictEqual([
     "moved .rulesync/rules/folder to .repo/rules/folder",
     "moved .rulesync/subagents/folder to .repo/subagents/folder",
     "moved your .rulesync/global-settings/folder to .repo/global-settings/folder",

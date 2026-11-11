@@ -72,14 +72,14 @@ describe("cleanPlan", () => {
   it("plans without nested dirs by default", () => {
     const root = tempDir();
     put(root, ".tmp/repo/a.log", "a");
-    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove.map((r) => r.kind)).toEqual(["file"]);
+    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove.map((r) => r.kind)).toStrictEqual(["file"]);
   });
 
   it("ignores a roadmaps entry that is not a readable file", () => {
     const root = tempDir();
     fs.mkdirSync(path.join(root, ".tmp/repo/roadmaps/odd"), { recursive: true });
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", "---\nstatus: done\n---\n");
-    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove).toEqual([]);
+    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove).toStrictEqual([]);
   });
 });
 
@@ -98,7 +98,7 @@ describe("nested .tmp/repo", () => {
     put(root, "file-pkg/.gitignore", ".tmp/repo\n");
     put(root, "file-pkg/.tmp/repo", "a file, not a dir");
     put(root, "empty-pkg/.gitignore", ".tmp/\n");
-    expect(nestedTmpDirs(root)).toEqual([path.join(root, "pkg/.tmp/repo")]);
+    expect(nestedTmpDirs(root)).toStrictEqual([path.join(root, "pkg/.tmp/repo")]);
     const { lines } = run(root, false);
     expect(lines).toContain("removed 1 nested dir (1 B)");
     expect(fs.existsSync(path.join(root, "pkg/.tmp/repo"))).toBe(false);
@@ -116,7 +116,7 @@ describe("main and liveSessions", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(main(["--dry-run"])).toBe(0);
-    expect(log.mock.calls.map((c) => c[0])).toEqual([
+    expect(log.mock.calls.map((c) => c[0])).toStrictEqual([
       ".tmp/repo/a.log",
       "would remove 1 file (1 B)",
       "would keep nothing",
@@ -128,6 +128,6 @@ describe("main and liveSessions", () => {
     const home = tempDir();
     vi.spyOn(os, "homedir").mockReturnValue(home);
     vi.stubEnv("REPO_BOARD_HOME", home);
-    expect(liveSessions()).toEqual(new Set());
+    expect(liveSessions()).toStrictEqual(new Set());
   });
 });

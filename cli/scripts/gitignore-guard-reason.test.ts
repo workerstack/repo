@@ -61,18 +61,18 @@ describe("redundantIgnoreLines when git misbehaves", () => {
     const r = repo();
     const git = fakeGit("init", 1);
     // rev-parse still works through the stand-in; only the scratch `git init` fails.
-    expect(redundantIgnoreLines(path.join(r, "pkg/.gitignore"), [".tmp/"], { git })).toEqual([]);
+    expect(redundantIgnoreLines(path.join(r, "pkg/.gitignore"), [".tmp/"], { git })).toStrictEqual([]);
   });
 
   it("passes when check-ignore fails outright", () => {
     const r = repo();
     const git = fakeGit("check-ignore", 128);
-    expect(redundantIgnoreLines(path.join(r, "pkg/.gitignore"), [".tmp/"], { git })).toEqual([]);
+    expect(redundantIgnoreLines(path.join(r, "pkg/.gitignore"), [".tmp/"], { git })).toStrictEqual([]);
   });
 
   it("judges a target whose directory does not exist yet by its nearest existing parent", () => {
     const r = repo();
-    expect(redundantIgnoreLines(path.join(r, "pkg/new/deeper/.gitignore"), [".tmp/"])).toEqual([
+    expect(redundantIgnoreLines(path.join(r, "pkg/new/deeper/.gitignore"), [".tmp/"])).toStrictEqual([
       { line: ".tmp/", rule: `${path.join(r, ".gitignore")}:1 .tmp/` },
     ]);
   });

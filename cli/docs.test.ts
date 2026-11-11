@@ -30,9 +30,9 @@ it("prints the ok line when the references hold up", async () => {
   });
   const run = docsRun(root, { pack: () => packed("references/INDEX.md", "references/auth.md") });
   expect(await main(["--check"], run.io)).toBe(0);
-  expect(run.out).toEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
-  expect(run.err).toEqual([]);
-  expect(run.synced).toEqual([]);
+  expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
+  expect(run.err).toStrictEqual([]);
+  expect(run.synced).toStrictEqual([]);
 });
 
 it("prints every finding with its line and exits 1", async () => {
@@ -42,7 +42,7 @@ it("prints every finding with its line and exits 1", async () => {
     bun: () => ({ code: 1, stdout: "", stderr: "Error: boom\n" }),
   });
   expect(await main(["--check"], run.io)).toBe(1);
-  expect(run.err).toEqual([
+  expect(run.err).toStrictEqual([
     "references/extra.md is not listed in references/INDEX.md; add a line that links it\n",
     "references/INDEX.md:3: links missing.md, which does not exist\n",
     "references/auth.md:2: links ../node_modules/@workerstack/backend/references/INDEX.md, but @workerstack/backend is not installed; add it or drop the link\n",
@@ -52,7 +52,7 @@ it("prints every finding with its line and exits 1", async () => {
     'package.json has no "./references/*" export; add "./references/*": "./references/*"\n',
     'references/auth.md is listed in references/INDEX.md but not in the packed tarball; add "references" to files in package.json\n',
   ]);
-  expect(run.out).toEqual([]);
+  expect(run.out).toStrictEqual([]);
 });
 
 it("skips the export and tarball checks of a private manifest", async () => {
@@ -64,7 +64,7 @@ it("skips the export and tarball checks of a private manifest", async () => {
   const pack = vi.fn(() => packed());
   const run = docsRun(root, { pack });
   expect(await main(["--check"], run.io)).toBe(0);
-  expect(run.out).toEqual(["docs ok: 2 references, 0 examples, 0 exports\n"]);
+  expect(run.out).toStrictEqual(["docs ok: 2 references, 0 examples, 0 exports\n"]);
   expect(pack).not.toHaveBeenCalled();
 });
 
@@ -83,7 +83,7 @@ it("prefixes each package's paths with its folder, and checks only the roots wit
     pack: (cwd) => packed("references/INDEX.md", path.basename(cwd) === "a" ? "references/x.md" : ""),
   });
   expect(await main(["--check"], run.io)).toBe(1);
-  expect(run.err).toEqual([
+  expect(run.err).toStrictEqual([
     "packages/a/references/x.md:3: links nope.md, which does not exist\n",
     "packages/b/references/y.md is not listed in packages/b/references/INDEX.md; add a line that links it\n",
     "@ws/b is exported but no reference names it; document it in packages/b/references/\n",
@@ -100,13 +100,13 @@ it("finds the doc roots from the nearest workerstack.config.ts", async () => {
   });
   const run = docsRun(`${root}/sub`);
   expect(await main(["--check"], run.io)).toBe(0);
-  expect(run.out).toEqual(["docs ok: 1 references, 0 examples, 0 exports\n"]);
+  expect(run.out).toStrictEqual(["docs ok: 1 references, 0 examples, 0 exports\n"]);
 });
 
 it("is ok in a folder without references, and reports a manifest it cannot read", async () => {
   const none = docsRun(tempRoot({ "package.json": "{}" }));
   expect(await main(["--check"], none.io)).toBe(0);
-  expect(none.out).toEqual(["docs ok: 0 references, 0 examples, 0 exports\n"]);
+  expect(none.out).toStrictEqual(["docs ok: 0 references, 0 examples, 0 exports\n"]);
   const bad = docsRun(tempRoot({ "package.json": "{" }));
   expect(await main(["--check"], bad.io)).toBe(1);
   expect(bad.err.join("")).toMatch(/package\.json/);

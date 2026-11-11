@@ -158,7 +158,7 @@ export function parseLesson(text: unknown, { defaults }: { defaults?: Record<str
   const fm = readFrontmatter(text);
   if (!fm) return { ok: false, errors: ["start with --- frontmatter (name, paths, hits, last-hit, evidence)"] };
   const errors: string[] = [];
-  const map: Record<string, string> = { ...(defaults || {}), ...fm.map };
+  const map: Record<string, string> = { ...defaults, ...fm.map };
   for (const k of Object.keys(fm.map)) if (!KEYS.includes(k)) errors.push(`unknown frontmatter key: ${k}`);
   const name = map.name ?? "";
   const lastHit = map["last-hit"] ?? "";
@@ -377,7 +377,7 @@ export function matchLessons(
     const holder = holdingCheckout(abs, scope);
     const rel = path.relative(holder, abs);
     if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) continue;
-    byHolder.set(holder, [...(byHolder.get(holder) || []), toPosix(rel)]);
+    byHolder.set(holder, [...(byHolder.get(holder) ?? []), toPosix(rel)]);
   }
   const rows = new Map<string, IndexRow>();
   for (const [holder, rels] of byHolder) {

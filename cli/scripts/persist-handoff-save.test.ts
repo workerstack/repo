@@ -90,8 +90,8 @@ describe("persistHandoff serial limits", () => {
     const taken = `100000000000000000000-sync-skills-to-hosts-${STAMP}.md`;
     fs.writeFileSync(path.join(dir, taken), "x");
     const r = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF, created: CREATED });
-    expect(r).toEqual({ ok: false, error: "serial collision" });
-    expect(fs.readdirSync(dir)).toEqual([taken]);
+    expect(r).toStrictEqual({ ok: false, error: "serial collision" });
+    expect(fs.readdirSync(dir)).toStrictEqual([taken]);
   });
 
   it("refuses a serial that no longer prints as digits", () => {
@@ -108,7 +108,7 @@ describe("persistHandoff serial limits", () => {
   it("refuses an empty body with the reasons it fails", () => {
     const r = persistHandoff({ workspaceRoot: tmpWs(), content: "" });
     expect(r.ok).toBe(false);
-    expect(r.errors).toEqual(expect.arrayContaining(["goal", "heading order", "State empty"]));
+    expect(r.errors).toStrictEqual(expect.arrayContaining(["goal", "heading order", "State empty"]));
   });
 });
 
@@ -121,7 +121,7 @@ describe("persistHandoff root", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const saved = persistHandoff({ content: VALID_HANDOFF });
     expect(saved.ok, saved.error).toBe(true);
-    expect(fs.readdirSync(path.join(root, HANDOFF_DIR))).toEqual([saved.filename]);
+    expect(fs.readdirSync(path.join(root, HANDOFF_DIR))).toStrictEqual([saved.filename]);
     expect(persistHandoff().ok).toBe(false);
   });
 });

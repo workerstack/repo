@@ -252,8 +252,8 @@ describe("pickEngine / paint hosts", () => {
 
   it("defaults to the host's platform and to a nav of no url with no engines", () => {
     const bins = { lightpanda: "/x/lightpanda", chromium: "/x/chromium" };
-    expect(pickEngine({ bins })).toEqual(pickEngine({ platform: process.platform, bins }));
-    expect(pickEngine()).toEqual(pickEngine({ platform: process.platform, verb: "nav", url: "", bins: {} }));
+    expect(pickEngine({ bins })).toStrictEqual(pickEngine({ platform: process.platform, bins }));
+    expect(pickEngine()).toStrictEqual(pickEngine({ platform: process.platform, verb: "nav", url: "", bins: {} }));
   });
 });
 
@@ -715,14 +715,14 @@ it("knows the paint hosts, their subdomains, and the google earth path", () => {
     "https://AMAZON.com/",
     "https://www.amazon.de/",
   );
-  expect(urls.filter((u) => !isPaintHost(u))).toEqual([]);
+  expect(urls.filter((u) => !isPaintHost(u))).toStrictEqual([]);
   const other = [
     "https://google.com/maps",
     "https://www.google.com/",
     "https://notfigma.com/",
     "https://x.test/amazon",
   ];
-  expect([...other, "", "not a url", undefined, null].filter((u) => isPaintHost(u))).toEqual([]);
+  expect([...other, "", "not a url", undefined, null].filter((u) => isPaintHost(u))).toStrictEqual([]);
 });
 
 it("calls a page blocked when it asks for javascript, or is empty with no refs", () => {
@@ -739,18 +739,18 @@ it("looks up lightpanda and the first chromium name on the given PATH", () => {
     fs.writeFileSync(path.join(dir, name), "#!/bin/sh\n", { mode: 0o755 });
     return path.join(dir, name);
   };
-  expect(lookupBins(dir, "linux")).toEqual({ lightpanda: "", chromium: "" });
+  expect(lookupBins(dir, "linux")).toStrictEqual({ lightpanda: "", chromium: "" });
   const second = put("chromium-browser");
   expect(lookupBins(dir, "linux").chromium).toBe(second);
   const [first, lp] = [put("chromium"), put("lightpanda")];
-  expect(lookupBins(dir, "linux")).toEqual({ lightpanda: lp, chromium: first });
-  expect(lookupBins(undefined, "linux")).toEqual(lookupBins(readEnv().PATH));
+  expect(lookupBins(dir, "linux")).toStrictEqual({ lightpanda: lp, chromium: first });
+  expect(lookupBins(undefined, "linux")).toStrictEqual(lookupBins(readEnv().PATH));
 });
 
 it("hints per platform, defaulting to this one", () => {
   expect(doctorHints("win32").join("\n")).toMatch(/winget/);
   expect(doctorHints("darwin").join("\n")).toMatch(/brew/);
-  expect(doctorHints()).toEqual(doctorHints(process.platform));
+  expect(doctorHints()).toStrictEqual(doctorHints(process.platform));
   expect(installHint("linux")).toMatch(
     /^no browser engine; install lightpanda \(https:\/\/github\.com\/lightpanda-io\/browser\) or Chromium\n/,
   );
@@ -760,11 +760,11 @@ it("hints per platform, defaulting to this one", () => {
 it("picks lightpanda, then chromium, and names the missing engine", () => {
   const both = { lightpanda: "/x/lp", chromium: "/x/cr" };
   const pick = (o: Parameters<typeof pickEngine>[0] = {}) => pickEngine({ platform: "linux", ...o });
-  expect(pick({ bins: both })).toEqual({ engine: "lightpanda" });
-  expect(pick({ bins: { lightpanda: "/x/lp" } })).toEqual({ engine: "lightpanda" });
-  expect(pick({ bins: { chromium: "/x/cr" } })).toEqual({ engine: "chromium" });
-  expect(pick({ bins: both, forceChromium: true })).toEqual({ engine: "chromium" });
-  expect(pick({ bins: both, url: "https://figma.com/x" })).toEqual({ engine: "chromium" });
+  expect(pick({ bins: both })).toStrictEqual({ engine: "lightpanda" });
+  expect(pick({ bins: { lightpanda: "/x/lp" } })).toStrictEqual({ engine: "lightpanda" });
+  expect(pick({ bins: { chromium: "/x/cr" } })).toStrictEqual({ engine: "chromium" });
+  expect(pick({ bins: both, forceChromium: true })).toStrictEqual({ engine: "chromium" });
+  expect(pick({ bins: both, url: "https://figma.com/x" })).toStrictEqual({ engine: "chromium" });
   expect(pick().engine).toBeNull();
   expect(pick().error).toMatch(/no browser engine/);
   expect(pick({ bins: { lightpanda: "/x/lp" }, verb: "shot" }).engine).toBeNull();
@@ -778,11 +778,11 @@ it("lists the verbs for no verb, help, -h and --help, in any case", async () => 
     stderr: "",
   };
   const argvs = [[], [""], ["help"], ["HELP"], ["-h"], ["--help"]];
-  expect(await Promise.all(argvs.map((a) => runBrowser(a)))).toEqual(argvs.map(() => help));
+  expect(await Promise.all(argvs.map((a) => runBrowser(a)))).toStrictEqual(argvs.map(() => help));
 });
 
 it("fails an unknown verb", async () => {
-  expect(await exec(tmp("browser-unk-"), ["frobnicate"])).toEqual(failure("unknown verb\n"));
+  expect(await exec(tmp("browser-unk-"), ["frobnicate"])).toStrictEqual(failure("unknown verb\n"));
 });
 
 it("keeps the session under the cwd's root, or the process cwd's when none is given", () => {
@@ -795,7 +795,7 @@ it("reports an engine that answers without a websocket as a failure, not a stack
   const cwd = tmp("browser-nows-");
   const port = await listen(http.createServer((_req, res) => res.end("{}")));
   plant(cwd, { engine: "lightpanda", pid: holder(), port, lastRefs: REFS });
-  expect(await exec(cwd, ["snap"])).toEqual(failure("engine not ready\n"));
+  expect(await exec(cwd, ["snap"])).toStrictEqual(failure("engine not ready\n"));
 });
 
 it("treats a missing, unreadable or malformed session as no session", async () => {
@@ -817,7 +817,7 @@ it("treats a missing, unreadable or malformed session as no session", async () =
       return exec(cwd, ["snap"]).then((r) => r.stderr);
     }),
   );
-  expect(stderrs).toEqual(bad.map(() => NO_SESSION));
+  expect(stderrs).toStrictEqual(bad.map(() => NO_SESSION));
   expect((await exec(tmp("browser-bad-none-"), ["snap"])).stderr).toBe(NO_SESSION);
 });
 
@@ -828,7 +828,7 @@ it("fills in defaults for missing fields and drops junk refs when it rewrites th
   expect((await exec(t.cwd, ["hover", "1"])).stdout).toBe("hover: 1\n");
   const s = readSession(t.cwd);
   expect(s).toMatchObject({ engine: "chromium", lastURL: "", escalated: false, swapCount: 0 });
-  expect(s.lastRefs).toEqual({ "1": { role: "", name: "", backendNodeId: 10 } });
+  expect(s.lastRefs).toStrictEqual({ "1": { role: "", name: "", backendNodeId: 10 } });
 });
 
 it("keeps escalated and a numeric swapCount, and reads a numeric string as a number", async () => {
@@ -869,7 +869,7 @@ it("snap numbers the ref-bearing nodes in either ax shape and remembers them", a
   const r = await exec(t.cwd, ["snap"]);
   const lines = "[1] button Go\n[2] link\n[3] textbox\n[4] link\n";
   expect(r.stdout).toBe(`engine: lightpanda\nurl: ${URL_X}\n\n# T\n\nsome page body text\n\n${lines}`);
-  expect(readSession(t.cwd).lastRefs).toEqual({
+  expect(readSession(t.cwd).lastRefs).toStrictEqual({
     "1": { role: "button", name: "Go", backendNodeId: 5, nodeId: "a" },
     "2": { role: "link", name: "", backendNodeId: 6 },
     "3": { role: "textbox", name: "" },
@@ -892,7 +892,9 @@ it("snap falls back to a bare url heading when the markdown call fails or answer
       return (await exec(t.cwd, ["snap"])).stdout;
     }),
   );
-  expect(outs).toEqual(replies.map(() => `engine: lightpanda\nurl: ${URL_X}\n\n# ${URL_X}\n\n${HOME_AND_SEARCH}`));
+  expect(outs).toStrictEqual(
+    replies.map(() => `engine: lightpanda\nurl: ${URL_X}\n\n# ${URL_X}\n\n${HOME_AND_SEARCH}`),
+  );
   const bare = await live({ lastURL: undefined }, { replies: { "LP.getMarkdown": "boom" } });
   expect((await exec(bare.cwd, ["snap"])).stdout).toBe(`engine: lightpanda\nurl: \n\n#\n\n${HOME_AND_SEARCH}`);
 });
@@ -913,7 +915,7 @@ it("snap goes on when accessibility cannot be enabled, and reads no refs from a 
   const replies = { "Accessibility.enable": "nope", "Accessibility.getFullAXTree": { nodes: "x" } };
   const t = await live({}, { replies, markdown: `# T\n\n${"w ".repeat(60)}` });
   expect((await exec(t.cwd, ["snap"])).code).toBe(0);
-  expect(readSession(t.cwd).lastRefs).toEqual({});
+  expect(readSession(t.cwd).lastRefs).toStrictEqual({});
 });
 
 it("snap stashes a long ref list and shows the headings and the first refs", async () => {
@@ -922,7 +924,7 @@ it("snap stashes a long ref list and shows the headings and the first refs", asy
   const lines = (await exec(t.cwd, ["snap"])).stdout.split("\n");
   expect(lines[0]).toBe("engine: lightpanda");
   expect(lines[2]).toMatch(/^26 shown\. stash=/);
-  expect(lines.slice(3, 5)).toEqual(["# One", "## Two"]);
+  expect(lines.slice(3, 5)).toStrictEqual(["# One", "## Two"]);
   expect(lines).toContain("[24] button B24");
   expect(lines).not.toContain("[25] button B25");
   const dir = path.join(t.cwd, ".tmp/repo/stash");
@@ -995,7 +997,7 @@ it("scroll goes 600 down, -600 up, a number of pixels, and 600 for anything else
       return [r.stdout, scrolls(t.calls)];
     }),
   );
-  expect(done).toEqual([
+  expect(done).toStrictEqual([
     ["scroll: down\n", ["window.scrollBy(0, 600)"]],
     ["scroll: down\n", ["window.scrollBy(0, 600)"]],
     ["scroll: up\n", ["window.scrollBy(0, -600)"]],
@@ -1008,8 +1010,8 @@ it("scroll goes 600 down, -600 up, a number of pixels, and 600 for anything else
 it("scroll brings a remembered ref into view", async () => {
   const t = await live();
   expect((await exec(t.cwd, ["scroll", "2"])).stdout).toBe("scroll: 2\n");
-  expect(methods(t.calls)).toEqual(["DOM.resolveNode", "Runtime.callFunctionOn"]);
-  expect(nth(t.calls, 0).params).toEqual({ backendNodeId: 11 });
+  expect(methods(t.calls)).toStrictEqual(["DOM.resolveNode", "Runtime.callFunctionOn"]);
+  expect(nth(t.calls, 0).params).toStrictEqual({ backendNodeId: 11 });
   expect(nth(t.calls, 1).params).toMatchObject({ objectId: "oid-11" });
   expect(String(nth(t.calls, 1).params.functionDeclaration)).toContain("scrollIntoView");
 });
@@ -1025,9 +1027,9 @@ it("scroll calls a ref stale when it no longer resolves, however the engine says
 
 it("scroll reports another engine error as it is, with one trailing newline", async () => {
   const t = await live({}, { replies: { "Runtime.evaluate": "Error: boom" } });
-  expect(await exec(t.cwd, ["scroll"])).toEqual(failure("boom\n"));
+  expect(await exec(t.cwd, ["scroll"])).toStrictEqual(failure("boom\n"));
   const nl = await live({}, { replies: { "Runtime.evaluate": "two\nlines\n" } });
-  expect(await exec(nl.cwd, ["scroll"])).toEqual(failure("two\nlines\n"));
+  expect(await exec(nl.cwd, ["scroll"])).toStrictEqual(failure("two\nlines\n"));
 });
 
 const callParams = (calls: Calls) => calls.filter((c) => c.method === "Runtime.callFunctionOn").map((c) => c.params);
@@ -1039,14 +1041,14 @@ it("click needs a session, then refs, then a known ref", async () => {
   const t = await live();
   expect((await exec(t.cwd, ["click", "7"])).stderr).toBe("missing ref: 7\n");
   expect((await exec(t.cwd, ["click"])).stderr).toBe("missing ref: \n");
-  expect(t.calls).toEqual([]);
+  expect(t.calls).toStrictEqual([]);
 });
 
 it("fill needs text and select needs a value", async () => {
   const t = await live();
   expect((await exec(t.cwd, ["fill", "2"])).stderr).toBe("fill <ref> <text>\n");
   expect((await exec(t.cwd, ["select", "2"])).stderr).toBe("select <ref> <value>\n");
-  expect(t.calls).toEqual([]);
+  expect(t.calls).toStrictEqual([]);
 });
 
 it("click and hover act on the resolved node", async () => {
@@ -1054,8 +1056,8 @@ it("click and hover act on the resolved node", async () => {
   expect((await exec(t.cwd, ["click", "1"])).stdout).toBe("click: 1\n");
   expect((await exec(t.cwd, ["hover", "2"])).stdout).toBe("hover: 2\n");
   const resolve = ["DOM.resolveNode", "Runtime.callFunctionOn"];
-  expect(methods(t.calls)).toEqual([...resolve, ...resolve]);
-  expect(nth(callParams(t.calls), 0)).toEqual({
+  expect(methods(t.calls)).toStrictEqual([...resolve, ...resolve]);
+  expect(nth(callParams(t.calls), 0)).toStrictEqual({
     objectId: "oid-10",
     functionDeclaration: "function() { this.click(); }",
   });
@@ -1067,13 +1069,13 @@ it("fill focuses, clears, inserts the joined words, then fires input", async () 
   const t = await live();
   const r = await exec(t.cwd, ["fill", "2", "hello", "big", "world"]);
   expect(r.stdout).toBe("fill: 2\n");
-  expect(methods(t.calls)).toEqual([
+  expect(methods(t.calls)).toStrictEqual([
     "DOM.resolveNode",
     "Runtime.callFunctionOn",
     "Input.insertText",
     "Runtime.callFunctionOn",
   ]);
-  expect(nth(t.calls, 2).params).toEqual({ text: "hello big world" });
+  expect(nth(t.calls, 2).params).toStrictEqual({ text: "hello big world" });
   expect(String(nth(callParams(t.calls), 0).functionDeclaration)).toContain("this.focus()");
   expect(String(nth(callParams(t.calls), 1).functionDeclaration)).toContain("'input'");
 });
@@ -1096,7 +1098,7 @@ it("click calls a ref stale when it does not resolve to an object", async () => 
 it("click reports another engine error as it is on chromium, with no chromium, or after a spent swap", async () => {
   const replies = { "Runtime.callFunctionOn": "boom" };
   const chrome = await live({ engine: "chromium" }, { replies });
-  expect(await exec(chrome.cwd, ["click", "1"], { bins: NEVER })).toEqual(failure("boom\n"));
+  expect(await exec(chrome.cwd, ["click", "1"], { bins: NEVER })).toStrictEqual(failure("boom\n"));
   const noBin = await live({}, { replies });
   expect((await exec(noBin.cwd, ["click", "1"])).stderr).toBe("boom\n");
   const spent = await live({ swapCount: 1 }, { replies });
@@ -1108,10 +1110,10 @@ it("click replays once on chromium when lightpanda fails the action", async () =
   const t = await live({}, { replies: { "Runtime.callFunctionOn": "boom" } });
   const chromium = writeFake(t.bin, "chromium");
   const r = await exec(t.cwd, ["click", "1"], { bins: { lightpanda: "", chromium } });
-  expect(r).toEqual({ code: 0, stdout: "click: 1\n", stderr: "" });
+  expect(r).toStrictEqual({ code: 0, stdout: "click: 1\n", stderr: "" });
   const s = readSession(t.cwd);
   expect(s).toMatchObject({ engine: "chromium", escalated: true, swapCount: 1, lastURL: URL_X });
-  expect(Object.keys(s.lastRefs)).toEqual(["1", "2"]);
+  expect(Object.keys(s.lastRefs)).toStrictEqual(["1", "2"]);
 });
 
 it("click reports a stale ref, or the engine's own error, when the chromium replay fails too", async () => {
@@ -1119,11 +1121,11 @@ it("click reports a stale ref, or the engine's own error, when the chromium repl
   const stale = await live({}, { replies: first });
   const staleBin = writeFake(stale.bin, "chromium", { state: { replies: { "DOM.resolveNode": "node is stale" } } });
   const a = await exec(stale.cwd, ["click", "1"], { bins: { lightpanda: "", chromium: staleBin } });
-  expect(a).toEqual(failure("stale ref: 1\n"));
+  expect(a).toStrictEqual(failure("stale ref: 1\n"));
   const other = await live({}, { replies: first });
   const otherBin = writeFake(other.bin, "chromium", { state: { replies: { "Runtime.callFunctionOn": "boom two" } } });
   const b = await exec(other.cwd, ["click", "1"], { bins: { lightpanda: "", chromium: otherBin } });
-  expect(b).toEqual(failure("boom two\n"));
+  expect(b).toStrictEqual(failure("boom two\n"));
 });
 
 it("shot and pdf need a session with a url", async () => {
@@ -1142,17 +1144,17 @@ it("shot names the install hint when no chromium exists", async () => {
 it("shot and pdf write the png and the pdf the engine paints, and say where", async () => {
   const t = await live({ engine: "chromium" });
   const shot = await exec(t.cwd, ["shot"], { bins: NEVER });
-  expect(shot).toEqual({
+  expect(shot).toStrictEqual({
     code: 0,
     stdout: `engine: chromium\nfile: ${path.join(".tmp/repo/browser", "shot.png")}\n`,
     stderr: "",
   });
   const png = fs.readFileSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"));
-  expect(png.subarray(0, 4)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  expect(png.subarray(0, 4)).toStrictEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   const pdf = await exec(t.cwd, ["pdf"], { bins: NEVER });
   expect(pdf.stdout).toBe(`engine: chromium\nfile: ${path.join(".tmp/repo/browser", "page.pdf")}\n`);
   expect(fs.readFileSync(path.join(t.cwd, ".tmp/repo/browser/page.pdf")).subarray(0, 5).toString()).toBe("%PDF-");
-  expect(methods(t.calls)).toEqual(["Page.captureScreenshot", "Page.printToPDF"]);
+  expect(methods(t.calls)).toStrictEqual(["Page.captureScreenshot", "Page.printToPDF"]);
 });
 
 it("shot swaps a lightpanda session that recorded no pid to chromium before painting", async () => {
@@ -1234,14 +1236,14 @@ it("nav reports 'engine not ready' when the chromium fallback never comes up eit
   const lightpanda = writeFake(path.join(cwd, "bin"), "lightpanda", { failProbe: true });
   const chromium = writeDud(path.join(cwd, "bin"), "chromium");
   const r = await exec(cwd, ["nav", "https://example.com/"], { bins: { lightpanda, chromium }, readyMs: 250 });
-  expect(r).toEqual(failure("engine not ready\n"));
+  expect(r).toStrictEqual(failure("engine not ready\n"));
 });
 
 it("nav fails when the engine refuses to navigate, but goes on when it only cannot enable pages", async () => {
   const cwd = tmp("browser-nav-refuse-");
   const bad = writeFake(path.join(cwd, "bin"), "lightpanda", { state: { replies: { "Page.navigate": "nav broke" } } });
   const r = await exec(cwd, ["nav", "https://example.com/"], { bins: { lightpanda: bad, chromium: "" } });
-  expect(r).toEqual(failure("nav broke\n"));
+  expect(r).toStrictEqual(failure("nav broke\n"));
   const ok = writeFake(path.join(cwd, "bin2"), "lightpanda", { state: { replies: { "Page.enable": "no" } } });
   const r2 = await exec(cwd, ["nav", "https://example.com/"], { bins: { lightpanda: ok, chromium: "" } });
   expect(r2.stdout).toBe("engine: lightpanda\nurl: https://example.com/\n");
@@ -1267,7 +1269,7 @@ it("nav launches a windows .cmd shim through its sibling .mjs, or through a shel
 it("stop clears a session that has no pid or a dead one", async () => {
   const cwd = tmp("browser-stop-nopid-");
   plant(cwd, { engine: "lightpanda", port: 1, lastRefs: {} });
-  expect(await exec(cwd, ["stop"])).toEqual({ code: 0, stdout: "stopped\n", stderr: "" });
+  expect(await exec(cwd, ["stop"])).toStrictEqual({ code: 0, stdout: "stopped\n", stderr: "" });
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   plant(cwd, { engine: "lightpanda", port: 1, pid: deadPid(), lastRefs: {} });
   expect((await exec(cwd, ["stop"])).code).toBe(0);
@@ -1390,11 +1392,11 @@ it("the fake carries short, mid-size and 70000 byte payloads in both directions"
   const cdp = await connectCdp(e.port);
   stopFns.push(() => cdp.close());
   const value = async (expression: string) => (await cdp.send("Runtime.evaluate", { expression })).result;
-  expect(await value("x".repeat(200))).toEqual({ type: "string", value: "s".repeat(10) });
+  expect(await value("x".repeat(200))).toStrictEqual({ type: "string", value: "s".repeat(10) });
   e.state.markdown = "m".repeat(300);
-  expect(await value("y".repeat(70_000))).toEqual({ type: "string", value: "m".repeat(300) });
+  expect(await value("y".repeat(70_000))).toStrictEqual({ type: "string", value: "m".repeat(300) });
   e.state.markdown = "b".repeat(70_000);
-  expect(await value("")).toEqual({ type: "string", value: "b".repeat(70_000) });
+  expect(await value("")).toStrictEqual({ type: "string", value: "b".repeat(70_000) });
 });
 
 /** Writes one request in three pieces and expects its reply. */
@@ -1405,13 +1407,15 @@ async function trickle(c: Awaited<ReturnType<typeof rawClient>>, id: number, siz
   c.write(frame.subarray(3, 12));
   await wait(60);
   c.write(frame.subarray(12));
-  expect(await c.texts(1)).toEqual([expect.stringContaining(`"id":${id},`)]);
+  expect(await c.texts(1)).toStrictEqual([expect.stringContaining(`"id":${id},`)]);
 }
 
 it("the fake reads unmasked frames, and frames whose header or body arrives in pieces", async () => {
   const c = await rawClient((await engine({ markdown: "ok" })).port);
   c.write(clientFrame(0x1, Buffer.from(JSON.stringify({ id: 1, method: "Runtime.evaluate" })), false));
-  expect(await c.texts(1)).toEqual([JSON.stringify({ id: 1, result: { result: { type: "string", value: "ok" } } })]);
+  expect(await c.texts(1)).toStrictEqual([
+    JSON.stringify({ id: 1, result: { result: { type: "string", value: "ok" } } }),
+  ]);
   await trickle(c, 2, 200);
   await trickle(c, 3, 70_000);
 });
@@ -1419,7 +1423,7 @@ it("the fake reads unmasked frames, and frames whose header or body arrives in p
 it("the fake answers two frames that arrive in one chunk", async () => {
   const c = await rawClient((await engine()).port);
   c.write(Buffer.concat([request(1), request(2)]));
-  expect((await c.texts(2)).map((t) => t.slice(0, 8)).sort()).toEqual(['{"id":1,', '{"id":2,']);
+  expect((await c.texts(2)).map((t) => t.slice(0, 8)).sort()).toStrictEqual(['{"id":1,', '{"id":2,']);
 });
 
 it("the fake takes binary frames, skips pings and bad json, and ends the socket on close", async () => {
@@ -1427,7 +1431,7 @@ it("the fake takes binary frames, skips pings and bad json, and ends the socket 
   c.write(clientFrame(0x9, Buffer.from("ping")));
   c.write(clientFrame(0x1, Buffer.from("not json")));
   c.write(clientFrame(0x2, Buffer.from(JSON.stringify({ id: 5, method: "Page.enable" }))));
-  expect(await c.texts(1)).toEqual([JSON.stringify({ id: 5, result: {} })]);
+  expect(await c.texts(1)).toStrictEqual([JSON.stringify({ id: 5, result: {} })]);
   c.write(clientFrame(0x8, Buffer.alloc(0)));
   await vi.waitFor(() => expect(c.closed()).toBe(true));
 });
@@ -1435,7 +1439,7 @@ it("the fake takes binary frames, skips pings and bad json, and ends the socket 
 it("the fake answers a request with no params and no method name", async () => {
   const c = await rawClient((await engine()).port);
   c.write(clientFrame(0x1, Buffer.from(JSON.stringify({ id: 9 }))));
-  expect(await c.texts(1)).toEqual([JSON.stringify({ id: 9, result: {} })]);
+  expect(await c.texts(1)).toStrictEqual([JSON.stringify({ id: 9, result: {} })]);
 });
 
 // ---- connectCdp against a server that scripts its replies ----------------------------------------------------
@@ -1479,7 +1483,7 @@ it("connectCdp matches replies to requests by id and ignores everything else", a
   stopFns.push(() => cdp.close());
   await expect(cdp.send("A")).rejects.toThrow("cdp");
   await expect(cdp.send("B")).rejects.toThrow("bad");
-  expect(await cdp.send("C")).toEqual({});
+  expect(await cdp.send("C")).toStrictEqual({});
 });
 
 it("connectCdp close() twice is harmless", async () => {

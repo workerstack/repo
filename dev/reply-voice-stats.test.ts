@@ -44,7 +44,7 @@ describe("replyVoiceStats", () => {
       reply("old → reply", "2026-10-01T10:00:00Z"),
       "not json",
     ]);
-    expect(replyVoiceStats({ root, since: "2026-10-15" })).toEqual({
+    expect(replyVoiceStats({ root, since: "2026-10-15" })).toStrictEqual({
       replies: 2,
       coldReplies: 1,
       arrows: 1,
@@ -62,7 +62,7 @@ describe("run", () => {
       err: () => undefined,
     });
     expect(code).toBe(0);
-    expect(lines).toEqual([
+    expect(lines).toStrictEqual([
       JSON.stringify({ root, since: "2026-10-15", replies: 2, coldReplies: 1, arrows: 1, keyValues: 1 }),
     ]);
   });

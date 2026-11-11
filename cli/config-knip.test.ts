@@ -47,7 +47,7 @@ it("resolves a file, a dependency and a binary ignore", async () => {
 it.each(['{ file: "a.ts" }', '{ file: "a.ts", reason: "" }'])(
   "refuses the ignore %s without a reason",
   async (entry) => {
-    expect(await loadConfig(repo(`{ knip: { ignore: [${entry}] } }`))).toEqual(
+    expect(await loadConfig(repo(`{ knip: { ignore: [${entry}] } }`))).toStrictEqual(
       refusal("knip.ignore[0].reason: say why knip cannot see the use"),
     );
   },
@@ -58,13 +58,13 @@ it.each([
   '{ file: "a.ts", binary: "x", dependency: "y", reason: "why" }',
   '{ reason: "why" }',
 ])("refuses the ignore %s naming not exactly one of its keys", async (entry) => {
-  expect(await loadConfig(repo(`{ knip: { ignore: [{ file: "ok.ts", reason: "why" }, ${entry}] } }`))).toEqual(
+  expect(await loadConfig(repo(`{ knip: { ignore: [{ file: "ok.ts", reason: "why" }, ${entry}] } }`))).toStrictEqual(
     refusal("knip.ignore[1]: name exactly one of file, dependency or binary"),
   );
 });
 
 it.each(['["docs"]', "[]"])("refuses knip without the standards pack (packs %s)", async (list) => {
-  expect(await loadConfig(repo(`{ packs: ${list}, knip: {} }`))).toEqual(
+  expect(await loadConfig(repo(`{ packs: ${list}, knip: {} }`))).toStrictEqual(
     refusal('knip: set only with the standards pack; add "standards" to packs or delete knip'),
   );
 });

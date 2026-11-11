@@ -19,7 +19,7 @@ it(
   async () => {
     const root = consumer({ "src/a.ts": "export const a = 1;\n", "src/b.ts": "export const b = 1;\n" }, NO_DEPS);
     fs.rmSync(path.join(root, "src/a.ts"));
-    expect(await turn(root, [])).toEqual({
+    expect(await turn(root, [])).toStrictEqual({
       code: 0,
       out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
       err: "",
@@ -38,7 +38,7 @@ it("vitest failing without a test count fails the related tests", { timeout: SLO
     tsc: () => ({ code: 0, stdout: "", stderr: "" }),
     vitest: () => ({ code: 1, stdout: "", stderr: "Error: no config\n" }),
   };
-  expect(await turn(root, [], bins)).toEqual({
+  expect(await turn(root, [], bins)).toStrictEqual({
     code: 1,
     out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · related tests failed\n",
     err: "Error: no config\n",

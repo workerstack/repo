@@ -29,12 +29,14 @@ const run = (files: Record<string, string>) => {
 describe("knownFailures, the code against the list", () => {
   it("fails an it.fails that is not listed, at its line", () => {
     const problems = run({ "a.test.ts": 'import { it } from "vitest";\n\nit.fails("parses", () => {});\n' });
-    expect(problems).toEqual(['a.test.ts:3: it.fails("parses") is not in known-failures.json; list it or fix it']);
+    expect(problems).toStrictEqual([
+      'a.test.ts:3: it.fails("parses") is not in known-failures.json; list it or fix it',
+    ]);
   });
 
   it("fails test.fails and it.concurrent.fails the same way", () => {
     const problems = run({ "a.test.ts": 'test.fails("one", () => {});\nit.concurrent.fails("two", () => {});\n' });
-    expect(problems).toEqual([
+    expect(problems).toStrictEqual([
       'a.test.ts:1: test.fails("one") is not in known-failures.json; list it or fix it',
       'a.test.ts:2: it.concurrent.fails("two") is not in known-failures.json; list it or fix it',
     ]);
@@ -48,7 +50,7 @@ describe("knownFailures, matching the list", () => {
       "a.test.ts":
         'describe("dates", () => { describe("utc", () => { it.fails("parses", () => {}); }); });\ntest.fails("top", () => {});\n',
     });
-    expect(problems).toEqual([]);
+    expect(problems).toStrictEqual([]);
   });
 
   it("fails a case whose describe path differs from the listed entry", () => {
@@ -56,7 +58,7 @@ describe("knownFailures, matching the list", () => {
       "known-failures.json": list("a.test.ts > parses"),
       "a.test.ts": 'describe("dates", () => { it.fails("parses", () => {}); });\n',
     });
-    expect(problems).toEqual([
+    expect(problems).toStrictEqual([
       'a.test.ts:1: it.fails("parses") is not in known-failures.json; list it or fix it',
       'known-failures.json lists "a.test.ts > parses", which has no it.fails; remove it from the list',
     ]);
@@ -64,7 +66,7 @@ describe("knownFailures, matching the list", () => {
 
   it("fails a listed entry with no such case", () => {
     const problems = run({ "known-failures.json": list("a.test.ts > gone"), "a.test.ts": "export {};\n" });
-    expect(problems).toEqual([
+    expect(problems).toStrictEqual([
       'known-failures.json lists "a.test.ts > gone", which has no it.fails; remove it from the list',
     ]);
   });
@@ -85,18 +87,18 @@ describe("knownFailures, titles and files", () => {
       "known-failures.json": list("a.test.ts > plain"),
       "a.test.ts": "it.fails(`plain`, () => {});\n",
     });
-    expect(problems).toEqual([]);
+    expect(problems).toStrictEqual([]);
   });
 });
 
 describe("knownFailures, what it leaves alone", () => {
   it("ignores plain cases and .fails on other objects", () => {
     const problems = run({ "a.test.ts": 'it("ok", () => {});\nconst r = { fails: () => 1 };\nr.fails();\n' });
-    expect(problems).toEqual([]);
+    expect(problems).toStrictEqual([]);
   });
 
   it("passes with no list file and no .fails", () => {
-    expect(run({ "a.test.ts": 'it("ok", () => {});\n' })).toEqual([]);
+    expect(run({ "a.test.ts": 'it("ok", () => {});\n' })).toStrictEqual([]);
   });
 
   it("reads the list from the path it is given", () => {
@@ -104,7 +106,7 @@ describe("knownFailures, what it leaves alone", () => {
       "lists/kf.json": list("a.test.ts > x"),
       "a.test.ts": 'it.fails("x", () => {});\n',
     });
-    expect(knownFailures(root, tests, "lists/kf.json")).toEqual([]);
+    expect(knownFailures(root, tests, "lists/kf.json")).toStrictEqual([]);
   });
 });
 
@@ -114,7 +116,7 @@ describe("knownFailures, odd shapes", () => {
       "a.test.ts":
         'it.fails(`a ${1}`, () => {});\nit.fails(5, () => {});\ndescribe(name, () => { it.fails("x", () => {}); });\nit.fails();\n',
     });
-    expect(problems.map((line) => line.slice(0, "a.test.ts:N".length))).toEqual([
+    expect(problems.map((line) => line.slice(0, "a.test.ts:N".length))).toStrictEqual([
       "a.test.ts:1",
       "a.test.ts:2",
       "a.test.ts:3",
@@ -126,13 +128,13 @@ describe("knownFailures, odd shapes", () => {
     const problems = run({
       "a.test.ts": 'it["fails"]("x", () => {});\nmake()("y");\nmake().fails("z");\nthis.fails("w");\nit.fails;\n',
     });
-    expect(problems).toEqual([]);
+    expect(problems).toStrictEqual([]);
   });
 
   it("reads an invalid list, a list that is no array and a missing test file as empty", () => {
     const bad = project({ "known-failures.json": "{", "a.test.ts": "export {};\n" });
-    expect(knownFailures(bad.root, bad.tests)).toEqual([]);
+    expect(knownFailures(bad.root, bad.tests)).toStrictEqual([]);
     const object = project({ "known-failures.json": "{}", "a.test.ts": "export {};\n" });
-    expect(knownFailures(object.root, [...object.tests, "gone.test.ts", "notes.md"])).toEqual([]);
+    expect(knownFailures(object.root, [...object.tests, "gone.test.ts", "notes.md"])).toStrictEqual([]);
   });
 });

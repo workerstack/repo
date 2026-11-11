@@ -15,7 +15,7 @@ const contentOf = (output: Output) => (output.kind === "file" ? output.content :
 
 describe("agentsFile", () => {
   it("turns a missing file into a tracked block holding the hashed region alone", () => {
-    expect(run(null)).toEqual({
+    expect(run(null)).toStrictEqual({
       kind: "file",
       path: "AGENTS.md",
       content: region(BODY),

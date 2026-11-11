@@ -40,7 +40,7 @@ describe("the commit-msg hook asks for a changelog entry", () => {
   ])("for %j in a public package", async (message, what) => {
     const root = plant(PLAIN);
     stage(root, SRC);
-    expect(await hook(root, message)).toEqual({ code: 1, stderr: refusal(what) });
+    expect(await hook(root, message)).toStrictEqual({ code: 1, stderr: refusal(what) });
   });
 
   it("only after the header itself is right", async () => {
@@ -55,7 +55,7 @@ describe("the commit-msg hook asks for a changelog entry", () => {
     const root = plant(MONO);
     stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n" });
     const got = await hook(root, "feat(pub): add x\n");
-    expect(got).toEqual({ code: 1, stderr: refusal("a feat", "packages/pub/CHANGELOG.md") });
+    expect(got).toStrictEqual({ code: 1, stderr: refusal("a feat", "packages/pub/CHANGELOG.md") });
   });
 });
 
@@ -63,7 +63,7 @@ describe("the commit-msg hook lets a commit through", () => {
   it("once the package's CHANGELOG.md is staged", async () => {
     const root = plant(MONO);
     stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n", "packages/pub/CHANGELOG.md": "# C\n" });
-    expect(await hook(root, "feat(pub): add x\n")).toEqual({ code: 0, stderr: "red-proof: ok\n" });
+    expect(await hook(root, "feat(pub): add x\n")).toStrictEqual({ code: 0, stderr: "red-proof: ok\n" });
   });
 
   it.each(["chore: x\n", "docs: x\n", "test: x\n"])("for the type of %j", async (message) => {
@@ -88,6 +88,6 @@ describe("the commit-msg hook lets a commit through", () => {
     const root = plant(PLAIN);
     stage(root, SRC);
     git(root, "commit", "-q", "-m", "feat: add x");
-    expect(await hook(root, "", "HEAD~1..HEAD")).toEqual({ code: 0, stderr: "" });
+    expect(await hook(root, "", "HEAD~1..HEAD")).toStrictEqual({ code: 0, stderr: "" });
   });
 });

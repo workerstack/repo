@@ -21,13 +21,13 @@ function crates() {
 
 it("counts a crate's own commits since a time, and not another crate's", () => {
   const { w, tools } = crates();
-  expect(commitsAfter(tools, { since: OLD, dir: path.join(w.work, "a") }).map((c) => c.subject)).toEqual([
+  expect(commitsAfter(tools, { since: OLD, dir: path.join(w.work, "a") }).map((c) => c.subject)).toStrictEqual([
     "feat!: break a",
   ]);
-  expect(commitsAfter(tools, { since: OLD, dir: "b" }).map((c) => c.subject)).toEqual(["fix: patch b"]);
+  expect(commitsAfter(tools, { since: OLD, dir: "b" }).map((c) => c.subject)).toStrictEqual(["fix: patch b"]);
 });
 
 it("counts nothing for commits older than the time", () => {
   const { w, tools } = crates();
-  expect(commitsAfter(tools, { since: FUTURE, dir: path.join(w.work, "a") })).toEqual([]);
+  expect(commitsAfter(tools, { since: FUTURE, dir: path.join(w.work, "a") })).toStrictEqual([]);
 });

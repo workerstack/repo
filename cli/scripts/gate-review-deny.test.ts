@@ -47,9 +47,9 @@ it.each(WRITE_KINDS)("%s: denies a parent product write and follows ENFORCED_HAR
     const w = tmp.dir("gate-review-");
     startReview(w, { strategy });
     const payload = reviewWrite(kind, { cwd: w, target: path.join(w, "src/x.ts") });
-    expect(processFatTools(payload), strategy).toEqual(parentAnswer(payload, strategy));
+    expect(processFatTools(payload), strategy).toStrictEqual(parentAnswer(payload, strategy));
     const nested = reviewWrite(kind, { cwd: w, target: path.join(w, "packages/a/.tmp/x.md") });
-    expect(processFatTools(nested), strategy).toEqual(parentAnswer(nested, strategy));
+    expect(processFatTools(nested), strategy).toStrictEqual(parentAnswer(nested, strategy));
   }
 });
 
@@ -71,9 +71,9 @@ it.each(WRITE_KINDS)("%s: holds the deny for a spelling of a product path, and a
   const w = tmp.dir("gate-review-");
   startReview(w);
   const dotted = reviewWrite(kind, { cwd: w, target: `${w}/agents/../src/x.ts` });
-  expect(processFatTools(dotted)).toEqual(parentAnswer(dotted));
+  expect(processFatTools(dotted)).toStrictEqual(parentAnswer(dotted));
   const relative = reviewWrite(kind, { cwd: w, target: "src/x.ts" });
-  expect(processFatTools(relative)).toEqual(parentAnswer(relative));
+  expect(processFatTools(relative)).toStrictEqual(parentAnswer(relative));
   for (const type of ["implementer-fast", "implementer-deep", "scout"]) {
     expect(sendAs(kind, w, { target: path.join(w, "src/x.ts"), type }), type).toBeNull();
   }
@@ -118,7 +118,7 @@ it.each(WRITE_KINDS)(
       const w = tmp.dir("gate-review-");
       if (state !== "none") startReview(w, { strategy: state });
       const { barred, free, scout } = implementerAnswers(kind, w);
-      expect(barred, state).toEqual([deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE)]);
+      expect(barred, state).toStrictEqual([deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE)]);
       expect(free.every(notDenied), state).toBe(true);
       expect(notDenied(scout), state).toBe(true);
     }
@@ -153,7 +153,7 @@ it("a reviewer parent's product write inside a worktree still gets the review re
   const w = tmp.committed("gate-review-");
   startReview(w);
   for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const) {
-    expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toEqual(deny(reviewReason("review-fast")));
+    expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toStrictEqual(deny(reviewReason("review-fast")));
   }
 });
 
@@ -163,7 +163,7 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
   const alias = aliasOf(w);
   for (const kind of ["claudeWrite", "codexTool", "codexHeredoc"] as const) {
     const product = reviewWrite(kind, { cwd: alias, target: path.join(alias, "src/x.ts") });
-    expect(processFatTools(product), kind).toEqual(parentAnswer(product));
+    expect(processFatTools(product), kind).toStrictEqual(parentAnswer(product));
     for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")]) {
       expect(notDenied(send(kind, alias, target)), `${kind} ${target}`).toBe(true);
     }

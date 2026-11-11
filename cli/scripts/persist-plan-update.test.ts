@@ -29,7 +29,7 @@ describe("plan updates in place", () => {
     expect(r.ok, r.error).toBe(true);
     expect(r.path).toBe(s.path);
     expect(r.serial).toBe(1);
-    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toEqual([s.filename]);
+    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toStrictEqual([s.filename]);
     const text = read(s.abs);
     expect(text).toMatch(/^status: in-progress$/m);
     expect(text).toMatch(/^created: 2026-08-26T14:30:00Z$/m);
@@ -53,7 +53,7 @@ describe("plan updates keeping the saved head", () => {
     const revised = VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay.");
     const r = update(ws, s.abs, revised);
     expect(r.ok, r.error).toBe(true);
-    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toEqual([s.filename]);
+    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toStrictEqual([s.filename]);
     const text = read(s.abs);
     expect(text).toMatch(/^serial: 1$/m);
     expect(text).toMatch(/^created: 2026-08-26T14:30:00Z$/m);

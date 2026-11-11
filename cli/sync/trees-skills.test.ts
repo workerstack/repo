@@ -39,7 +39,7 @@ it("lets a .repo/skills skill win over the stock one and add its own", () => {
 });
 
 it("fails without overrides in its SKILL.md and names the fix", () => {
-  expect(failures({ ".repo/skills/ask/SKILL.md": OWN_ASK })).toEqual([NAMED_LIKE_STOCK]);
+  expect(failures({ ".repo/skills/ask/SKILL.md": OWN_ASK })).toStrictEqual([NAMED_LIKE_STOCK]);
 });
 
 it("fails when SKILL.md has no frontmatter at all", () => {
@@ -54,15 +54,15 @@ it("links the own skill when SKILL.md says overrides with its name", () => {
 it("fails an overrides that names no stock skill", () => {
   expect(
     failures({ ".repo/skills/mine/SKILL.md": "---\nname: mine\ndescription: mine\noverrides: nope\n---\n" }),
-  ).toEqual(['.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name']);
+  ).toStrictEqual(['.repo/skills/mine/SKILL.md: overrides "nope" but no stock skill has that name']);
 });
 
 it("does not ask a new skill for anything", () => {
-  expect(failures({ ".repo/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\n" })).toEqual([]);
+  expect(failures({ ".repo/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\n" })).toStrictEqual([]);
 });
 
 it("reports skill and rule problems together", () => {
-  expect(failures({ ".repo/skills/ask/SKILL.md": OWN_ASK, ".repo/rules/a.md": "no fence\n" })).toEqual([
+  expect(failures({ ".repo/skills/ask/SKILL.md": OWN_ASK, ".repo/rules/a.md": "no fence\n" })).toStrictEqual([
     NAMED_LIKE_STOCK,
     ".repo/rules/a.md: missing frontmatter (start the file with a --- block)",
   ]);

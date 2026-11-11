@@ -43,9 +43,9 @@ describe("waitFor with a target", () => {
       "run watch": ok(),
       "run view 42 --json": VIEW,
     });
-    expect(got.outcome).toEqual({ kind: "passed" });
+    expect(got.outcome).toStrictEqual({ kind: "passed" });
     expect(got.out).toBe("waiting for ci on 3f2a1c9 (run 42)…\npassed\n");
-    expect(got.calls.filter((call) => call.startsWith("git"))).toEqual([]);
+    expect(got.calls.filter((call) => call.startsWith("git"))).toStrictEqual([]);
     expect(got.calls).toContain(
       `gh run list --commit ${SHA} --workflow ci.yml --json databaseId,status,conclusion,event,headBranch,createdAt`,
     );
@@ -53,7 +53,7 @@ describe("waitFor with a target", () => {
 
   it("keeps the gh login check", async () => {
     const got = await target({});
-    expect(got.outcome).toEqual({
+    expect(got.outcome).toStrictEqual({
       kind: "error",
       line: "gh is not installed or not logged in; run `gh auth login`",
       detail: "gh is not installed or not logged in; run `gh auth login`",
@@ -70,7 +70,7 @@ describe("waitFor on a branch ci does not run on", () => {
   it("is nothing, with the line that says why", async () => {
     const gh = { "auth status": ok(), "run list --commit": ok("[]"), "pr list": ok("[]") };
     const got = await target(gh, "feat/x");
-    expect(got.outcome).toEqual({
+    expect(got.outcome).toStrictEqual({
       kind: "nothing",
       line: "nothing to wait on: ci runs on pushes to the default branch and on pull requests, and feat/x has neither",
     });

@@ -15,7 +15,7 @@ it("every gate passing prints each gate line, then the summary, and exits 0", ()
       "ci: check ok · fmt ok · typecheck 2 configs · 4 tests passed\n",
     err: "",
   });
-  expect(run.calls).toEqual({
+  expect(run.calls).toStrictEqual({
     repo: ["check", "fmt --check"],
     tsc: ["--noEmit -p tsconfig.json", "--noEmit -p packages/a/tsconfig.json"],
     vitest: ["run --coverage"],
@@ -47,7 +47,7 @@ it.each(Object.entries(FAILING))(
     expect(at).toBeGreaterThanOrEqual(0);
     expect(lines.slice(at + 1).join("\n")).toContain(shown);
     expect(run.code).toBe(1);
-    expect(run.calls.vitest).toEqual(["run --coverage"]);
+    expect(run.calls.vitest).toStrictEqual(["run --coverage"]);
     expect(lines.at(-2)).toContain(label);
   },
 );
@@ -68,12 +68,12 @@ it("typechecks every tsconfig in the root and each package, not fixtures or inst
     "fixtures/f/package.json": '{ "name": "f" }\n',
     "fixtures/f/tsconfig.json": "{}\n",
     "vendor/x/y/package.json": '{ "name": "y" }\n',
-    [`vendor/x/y/${"node"}_modules/z/tsconfig.json`]: "{}\n",
-    [`vendor/${"node"}_modules/w/package.json`]: '{ "name": "w" }\n',
-    [`vendor/${"node"}_modules/w/tsconfig.json`]: "{}\n",
+    [`vendor/x/y/node_modules/z/tsconfig.json`]: "{}\n",
+    [`vendor/node_modules/w/package.json`]: '{ "name": "w" }\n',
+    [`vendor/node_modules/w/tsconfig.json`]: "{}\n",
   });
   const run = ci(root);
-  expect(run.calls.tsc.map((call) => call.replace("--noEmit -p ", ""))).toEqual([
+  expect(run.calls.tsc.map((call) => call.replace("--noEmit -p ", ""))).toStrictEqual([
     "tsconfig.build.json",
     "tsconfig.json",
     "tsconfig.src.json",
@@ -87,7 +87,7 @@ it("a workspace that cannot be read fails the typecheck gate with the reason", (
   const run = ci(plant({ "packages/a/package.json": "{ nope" }));
   expect(run.code).toBe(1);
   expect(run.out).toMatch(/ci: typecheck failed \(0\.5s\)\n.*packages\/a\/package\.json/);
-  expect(run.calls.tsc).toEqual([]);
+  expect(run.calls.tsc).toStrictEqual([]);
 });
 
 it("when vitest is absent the tests gate is skipped and the run still passes", () => {
@@ -104,7 +104,7 @@ it("a repo with no tsconfig skips the typecheck gate without a time", () => {
   expect(run.code).toBe(0);
   expect(run.out).toContain("ci: typecheck skipped (no tsconfig.json)\n");
   expect(run.out).toContain(" · typecheck skipped (no tsconfig.json) · ");
-  expect(run.calls.tsc).toEqual([]);
+  expect(run.calls.tsc).toStrictEqual([]);
 });
 
 it("outside a repo the run is refused", () => {
@@ -166,7 +166,7 @@ it("runs ci.checks after the gates, in config order, each timed and counted in t
       "product-tree failed (exit 1) · infra-gen failed (infra-gen-cli not found)\n",
   );
   expect(run.code).toBe(1);
-  expect(run.spawned.map((call) => [call.cmd, ...call.args])).toEqual([
+  expect(run.spawned.map((call) => [call.cmd, ...call.args])).toStrictEqual([
     ["bun", "scripts/check/container-images.ts"],
     ["bun", "scripts/check/product-tree.ts"],
     ["infra-gen-cli", "--check"],
@@ -196,7 +196,7 @@ it("reads ci.checks from the config when no deps give them", async () => {
     },
   });
   expect(code).toBe(0);
-  expect(seen).toEqual(["tool x"]);
+  expect(seen).toStrictEqual(["tool x"]);
   expect(out.join("")).toContain("ci: a-check ok (0.0s)\n");
 });
 
@@ -207,11 +207,11 @@ it("wait <branch> waits on that branch, and wait a b is refused with exit 2", as
   const run = (argv: string[]) =>
     main(argv, { cwd: "/repo", stdout: () => undefined, stderr: (s) => err.push(s), git });
   expect(await run(["wait", "feat/x"])).toBe(4);
-  expect(seen[0]).toEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
+  expect(seen[0]).toStrictEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
   expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");
   err.length = 0;
   seen.length = 0;
   expect(await run(["wait", "a", "b"])).toBe(2);
   expect(err.join("")).toBe("repo ci: wait takes at most one branch\n");
-  expect(seen).toEqual([]);
+  expect(seen).toStrictEqual([]);
 });

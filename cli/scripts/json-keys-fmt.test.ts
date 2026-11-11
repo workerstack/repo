@@ -42,7 +42,7 @@ it("fmt --check names the first key out of order and exits 1 whatever the tool s
   const run = vi.fn(() => 0);
   const out = io();
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run })).toBe(1);
-  expect(out.err).toEqual([`repo fmt: ${CLAUDE} has keys out of order, first "hooks"; run \`bun repo fmt\`\n`]);
+  expect(out.err).toStrictEqual([`repo fmt: ${CLAUDE} has keys out of order, first "hooks"; run \`bun repo fmt\`\n`]);
   expect(run).toHaveBeenCalledWith("oxfmt", ["--check"], root);
   expect(readText(root, CLAUDE)).toBe(UNSORTED);
 });
@@ -52,13 +52,13 @@ it("fmt --check names the first key of an unsorted jsonc and of a json with comm
   const root = formatRepo({ "conf/x.jsonc": commented, "tsconfig.json": commented, "ok.jsonc": SORTED });
   const out = io();
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(1);
-  expect(out.err).toEqual([
+  expect(out.err).toStrictEqual([
     `repo fmt: conf/x.jsonc has keys out of order, first "a"; run \`bun repo fmt\`\n`,
     `repo fmt: tsconfig.json has keys out of order, first "a"; run \`bun repo fmt\`\n`,
   ]);
   expect(readText(root, "tsconfig.json")).toBe(commented);
   expect(await fmt([], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(0);
-  expect([readText(root, "conf/x.jsonc"), readText(root, "tsconfig.json")]).toEqual([
+  expect([readText(root, "conf/x.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([
     '{\n  "a": 2,\n  "b": 1 // why\n}\n',
     '{\n  "a": 2,\n  "b": 1 // why\n}\n',
   ]);
@@ -79,8 +79,8 @@ it("fmt converts own-line block comments in the same listing, skips fixtures dir
   expect(out.err.join("")).not.toMatch(/a\.jsonc|fixtures/);
   expect(await fmt([], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(0);
   const converted = '{\n  // base\n  "extends": "x"\n}\n';
-  expect([readText(root, "a.jsonc"), readText(root, "dir/b.json")]).toEqual([converted, converted]);
-  expect([readText(root, "fixtures/c.jsonc"), readText(root, "dir/fixtures/d.json")]).toEqual([block, block]);
+  expect([readText(root, "a.jsonc"), readText(root, "dir/b.json")]).toStrictEqual([converted, converted]);
+  expect([readText(root, "fixtures/c.jsonc"), readText(root, "dir/fixtures/d.json")]).toStrictEqual([block, block]);
 });
 
 it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", async () => {
@@ -93,7 +93,7 @@ it("fmt leaves a git-ignored and an oxfmt-ignored jsonc untouched", async () => 
   const commented = '{\n  "b": 1,\n  "a": 2\n}\n';
   const root = formatRepo({ ".gitignore": "git.jsonc\n", "git.jsonc": commented, "fixtures/f.jsonc": commented });
   expect(await fmt([], { cwd: root, stderr: () => undefined, run: () => 0 })).toBe(0);
-  expect([readText(root, "git.jsonc"), readText(root, "fixtures/f.jsonc")]).toEqual([commented, commented]);
+  expect([readText(root, "git.jsonc"), readText(root, "fixtures/f.jsonc")]).toStrictEqual([commented, commented]);
 });
 
 it("fmt --check keeps the tool's own exit code when it fails, and is silent about a sorted tree", async () => {
@@ -101,21 +101,21 @@ it("fmt --check keeps the tool's own exit code when it fails, and is silent abou
   const out = io();
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(0);
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run: () => 2 })).toBe(2);
-  expect(out.err).toEqual([]);
+  expect(out.err).toStrictEqual([]);
 });
 
 it("fmt sorts the files and runs the tool; a path argument narrows the sort, from the working directory", async () => {
   const root = formatRepo({ "a.json": UNSORTED, "dir/b.json": UNSORTED, "dir/c.json": UNSORTED });
   const run = vi.fn(() => 0);
   expect(await fmt(["b.json"], { cwd: path.join(root, "dir"), stderr: () => undefined, run })).toBe(0);
-  expect([readText(root, "dir/b.json"), readText(root, "dir/c.json"), readText(root, "a.json")]).toEqual([
+  expect([readText(root, "dir/b.json"), readText(root, "dir/c.json"), readText(root, "a.json")]).toStrictEqual([
     SORTED,
     UNSORTED,
     UNSORTED,
   ]);
   expect(run).toHaveBeenCalledWith("oxfmt", ["b.json"], root);
   expect(await fmt([], { cwd: root, stderr: () => undefined, run })).toBe(0);
-  expect([readText(root, "a.json"), readText(root, "dir/c.json")]).toEqual([SORTED, SORTED]);
+  expect([readText(root, "a.json"), readText(root, "dir/c.json")]).toStrictEqual([SORTED, SORTED]);
 });
 
 it("fmt in a root with no git skips the key sort and runs the tool as before", async () => {
@@ -123,7 +123,7 @@ it("fmt in a root with no git skips the key sort and runs the tool as before", a
   const run = vi.fn(() => 3);
   const out = io();
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run })).toBe(3);
-  expect(out.err).toEqual([]);
+  expect(out.err).toStrictEqual([]);
   expect(run).toHaveBeenCalledWith("oxfmt", ["--check"], root);
   expect(readText(root, "a.json")).toBe(UNSORTED);
 });
@@ -149,8 +149,8 @@ it(
     const snapshot = [state(), readText(root, "data.json"), readText(root, "package.json")];
     expect(await fmt(["--check"], { cwd: root, stderr: out.stderr })).toBe(0);
     expect(await fmt([], { cwd: root, stderr: out.stderr })).toBe(0);
-    expect([state(), readText(root, "data.json"), readText(root, "package.json")]).toEqual(snapshot);
-    expect(out.err).toEqual([]);
+    expect([state(), readText(root, "data.json"), readText(root, "package.json")]).toStrictEqual(snapshot);
+    expect(out.err).toStrictEqual([]);
   },
 );
 
@@ -164,7 +164,7 @@ it(
     git(root, "add", "-f", "data.json", ".oxlintrc.json");
     const result = await turn(root, ["--staged"]);
     expect(result.out).toMatch(/^turn: 2 files · fmt 1 fixed · /);
-    expect(staged(root)).toEqual([".oxlintrc.json", "data.json"]);
+    expect(staged(root)).toStrictEqual([".oxlintrc.json", "data.json"]);
     expect(git(root, "show", ":data.json")).toBe(SORTED);
     expect(git(root, "show", ":.oxlintrc.json")).toBe(generated);
   },
@@ -193,7 +193,7 @@ it("writeFloors writes paths and metrics in code-unit order, deep", () => {
   const root = jsonDir({}, false);
   const floor = { statements: 1, branches: 2, functions: 3, lines: 4 };
   expect(writeFloors(root, "floors.json", { "a.ts": floor, "B.ts": floor, "_x.ts": floor })).toBe(true);
-  expect(keysOf(readText(root, "floors.json"))).toEqual(["B.ts", "_x.ts", "a.ts"]);
+  expect(keysOf(readText(root, "floors.json"))).toStrictEqual(["B.ts", "_x.ts", "a.ts"]);
   expect(sortedJsonText(readText(root, "floors.json"))).toBeNull();
 });
 
@@ -205,6 +205,6 @@ it("the stock history is written in code-unit order, deep", () => {
     cwd: root,
   });
   const text = historyText(collectHistory(root, ["HEAD"]));
-  expect(keysOf(text)).toEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
+  expect(keysOf(text)).toStrictEqual([".agents/skills/ask/SKILL.md", "AGENTS.md", "agents/hooks.jsonc"]);
   expect(sortedJsonText(text)).toBeNull();
 });

@@ -43,7 +43,7 @@ describe("persistPlan file", () => {
     expect(text).toMatch(/^name: add-tmp-ignore$/m);
     expect(text).toMatch(/^created: 2026-08-26T14:30:00Z$/m);
     expect(text).not.toMatch(/serial: 0001/);
-    expect(validatePlan(savedOk(r).filename, text)).toEqual([]);
+    expect(validatePlan(savedOk(r).filename, text)).toStrictEqual([]);
   });
 });
 
@@ -81,7 +81,7 @@ describe("persistPlan serials", () => {
     });
     expect(r.ok).toBe(true);
     const legacy = String(r.content).replace(/^created: 2026-08-26T14:30:00Z$/m, "created: 2026-08-26");
-    expect(validatePlan("1-add-tmp-ignore.md", legacy)).toEqual([]);
+    expect(validatePlan("1-add-tmp-ignore.md", legacy)).toStrictEqual([]);
   });
 
   it("increments serial and keeps the same stamp", () => {
@@ -112,9 +112,9 @@ describe("persistPlan commit subject", () => {
     expect(good.ok).toBe(true);
     const text = fs.readFileSync(path.join(ws, savedOk(good).path), "utf8");
     expect(text).toMatch(/^commit: feat\(plans\): record the subject$/m);
-    expect(validatePlan(savedOk(good).filename, text)).toEqual([]);
+    expect(validatePlan(savedOk(good).filename, text)).toStrictEqual([]);
     const noCommit = text.replace(/^commit:.*\n/m, "");
-    expect(validatePlan(savedOk(good).filename, noCommit)).toEqual([]);
+    expect(validatePlan(savedOk(good).filename, noCommit)).toStrictEqual([]);
   });
 });
 
@@ -152,7 +152,7 @@ describe("persistPlan refusals and location", () => {
     });
     expect(r.ok).toBe(false);
     expect(fs.existsSync(path.join(ws, PLAN_DIR))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, PLAN_DIR))).toStrictEqual([]);
   });
 
   it("writes under PLAN_DIR", () => {

@@ -94,10 +94,10 @@ it.each([
     expect(harnessOf(parent)).toBe(name === "codex" ? "codex" : "claude");
     expect(harnessOf(child)).toBe(harnessOf(parent));
     expect(ENFORCED_HARNESSES.has(harnessOf(parent))).toBe(true);
-    expect([sessionIdOf(parent), sessionIdOf(child)]).toEqual(c.sid);
-    expect([isParentOrchestrator(parent), subagentTypeOf(parent)]).toEqual([true, ""]);
-    expect([isParentOrchestrator(child), subagentTypeOf(child)]).toEqual([false, "scout"]);
-    expect(processFatTools({ ...parent, cwd: w })).toEqual({ type: "deny", reason: reviewReason("review-fast") });
+    expect([sessionIdOf(parent), sessionIdOf(child)]).toStrictEqual(c.sid);
+    expect([isParentOrchestrator(parent), subagentTypeOf(parent)]).toStrictEqual([true, ""]);
+    expect([isParentOrchestrator(child), subagentTypeOf(child)]).toStrictEqual([false, "scout"]);
+    expect(processFatTools({ ...parent, cwd: w })).toStrictEqual({ type: "deny", reason: reviewReason("review-fast") });
     expect(processFatTools({ ...child, cwd: w })).toBeNull();
   },
 );
@@ -115,10 +115,10 @@ it("Antigravity sends its session id only as conversationId, and its child carri
     stepIdx: 2,
     toolCall: { name: "run_command", args: { CommandLine: "printf 'child\\n' > /w/child.txt" } },
   };
-  expect([harnessOf(parent), harnessOf(child)]).toEqual(["antigravity", "antigravity"]);
-  expect([sessionIdOf(parent), sessionIdOf(child)]).toEqual(["d1398f48", "4ea12b55"]);
-  expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toEqual([true, true]);
-  expect([subagentTypeOf(parent), subagentTypeOf(child)]).toEqual(["", ""]);
+  expect([harnessOf(parent), harnessOf(child)]).toStrictEqual(["antigravity", "antigravity"]);
+  expect([sessionIdOf(parent), sessionIdOf(child)]).toStrictEqual(["d1398f48", "4ea12b55"]);
+  expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toStrictEqual([true, true]);
+  expect([subagentTypeOf(parent), subagentTypeOf(child)]).toStrictEqual(["", ""]);
   expect(ENFORCED_HARNESSES.has("antigravity")).toBe(false);
   // A review is running for the parent's conversation; an unenforced harness is still let through.
   const w = tmp.dir("gate-captured-");
@@ -151,7 +151,7 @@ it("Cursor's child has its own session id and no marker", () => {
     cursor_version: "2026.11.05-86047df",
   };
   const child = { ...parent, conversation_id: "26bb97fb", session_id: "26bb97fb", tool_input: tool("/w/child.txt") };
-  expect([harnessOf(parent), harnessOf(child)]).toEqual(["cursor", "cursor"]);
-  expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toEqual([true, true]);
+  expect([harnessOf(parent), harnessOf(child)]).toStrictEqual(["cursor", "cursor"]);
+  expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toStrictEqual([true, true]);
   expect(ENFORCED_HARNESSES.has("cursor")).toBe(false);
 });

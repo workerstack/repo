@@ -20,7 +20,7 @@ it("main: dry-run prints one line per file and writes nothing", () => {
   vi.stubEnv("HOME", home);
   const streams = captureStreams();
   expect(main([])).toBe(0);
-  expect(streams.out().trim().split("\n")).toEqual([
+  expect(streams.out().trim().split("\n")).toStrictEqual([
     `dry-run ${grok} remove cloudflare from [plugins].enabled; add cloudflare, stripe to [plugins].disabled; add cloudflare-docs, MCP_DOCKER, stripe to disabled_mcp_servers`,
     `dry-run ${path.join(home, ".cursor", "mcp.json")} noop (missing)`,
     `dry-run ${path.join(home, ".claude", "plugins", "installed_plugins.json")} noop (missing)`,
@@ -36,7 +36,7 @@ it("main: --apply writes the purge and prints apply lines", () => {
   const streams = captureStreams();
   expect(main(["--apply"])).toBe(0);
   expect(streams.out()).toContain(`apply ${cursor} remove MCP_DOCKER from mcpServers`);
-  expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toEqual({ mcpServers: {} });
+  expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toStrictEqual({ mcpServers: {} });
 });
 
 it("main: an unknown flag exits 1 with the reason on stderr and no stdout", () => {

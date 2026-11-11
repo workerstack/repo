@@ -49,8 +49,8 @@ it("setupListen prompts for an OpenAI key on a terminal when there is no local S
   const io = { ...captureIo(), password };
   const openUrlFn = (u: string) => opened.push(u);
   await setupListen({ home, io, interactive: true, openUrlFn, env: {}, ...bare });
-  expect(opened).toEqual(["https://platform.openai.com/api-keys"]);
-  expect(readSpeakJson(home)).toEqual({ openai: { apiKey: "sk_fallback" } });
+  expect(opened).toStrictEqual(["https://platform.openai.com/api-keys"]);
+  expect(readSpeakJson(home)).toStrictEqual({ openai: { apiKey: "sk_fallback" } });
   expect(io.logs.at(-1)).toMatch(/^stt=openai/);
 });
 
@@ -59,11 +59,11 @@ it("setupListen records --device and a mic id typed on a terminal", async () => 
   const flags = { "openai-key": "sk", "skip-download": "1", device: "hw:2" };
   const base = { whichFn: (n: string) => `/bin/${n}`, pathEnv: "/bin", env: {}, platform: "linux" as const };
   await setupListen({ flags, home, io: captureIo(), ...base });
-  expect(readSpeakJson(home)["listen"]).toEqual({ device: "hw:2" });
+  expect(readSpeakJson(home)["listen"]).toStrictEqual({ device: "hw:2" });
   const text = () => Promise.resolve("hw:7");
   const io = { ...captureIo(), text };
   await setupListen({ flags: { "openai-key": "sk", "skip-download": "1" }, home, io, interactive: true, ...base });
-  expect(readSpeakJson(home)["listen"]).toEqual({ device: "hw:7" });
+  expect(readSpeakJson(home)["listen"]).toStrictEqual({ device: "hw:7" });
 });
 
 it("setupListen leaves the device alone when the typed mic id is blank, and writes nothing without a patch", async () => {

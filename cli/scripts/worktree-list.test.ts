@@ -28,7 +28,7 @@ it("lists each linked worktree with its state, merge status and whether it is ma
   git(outside, "switch", "-q", "--detach");
   const rows = listWorktrees(r).map((w) => [w.path, w.branch, w.state, w.merged, w.managed]);
   const byPath = (a: unknown[], b: unknown[]) => String(a[0]).localeCompare(String(b[0]));
-  expect(rows.sort(byPath)).toEqual(
+  expect(rows.sort(byPath)).toStrictEqual(
     [
       [wt(r, "auth"), "wt/auth", "clean", false, true],
       [wt(r, "done"), "wt/done", "clean", true, true],
@@ -39,7 +39,7 @@ it("lists each linked worktree with its state, merge status and whether it is ma
 });
 
 it("lists nothing outside a git repo", () => {
-  expect(listWorktrees(tmp.dir("wt-none-"))).toEqual([]);
+  expect(listWorktrees(tmp.dir("wt-none-"))).toStrictEqual([]);
 });
 
 it("names origin/HEAD's branch first, then init.defaultBranch, main, master, and the checked-out branch last", () => {
@@ -86,14 +86,14 @@ it("removes only clean managed worktrees whose own commits reached the default b
   write(path.join(wt(r, "dirty"), "loose.txt"), "x");
   outsideOf(r);
   git(r, "branch", "wt/o", "main");
-  expect(pruneWorktrees(r)).toEqual([
+  expect(pruneWorktrees(r)).toStrictEqual([
     { path: wt(r, "m"), branch: "wt/m" },
     { path: null, branch: "wt/o" },
   ]);
   expect(fs.existsSync(wt(r, "m"))).toBe(false);
-  expect([hasBranch(r, "wt/m"), hasBranch(r, "wt/o")]).toEqual([false, false]);
+  expect([hasBranch(r, "wt/m"), hasBranch(r, "wt/o")]).toStrictEqual([false, false]);
   for (const n of ["fresh", "dirty", "un"]) expect(fs.existsSync(wt(r, n)), n).toBe(true);
-  expect(pruneWorktrees(r)).toEqual([]);
+  expect(pruneWorktrees(r)).toStrictEqual([]);
 });
 
 it("keeps a merged worktree git will not remove, and a merged branch git will not delete", () => {
@@ -104,7 +104,7 @@ it("keeps a merged worktree git will not remove, and a merged branch git will no
   git(r, "worktree", "lock", wt(r, "locked"));
   git(r, "branch", "wt/stuck", "main");
   write(path.join(r, ".git/refs/heads/wt/stuck.lock"), "");
-  expect(pruneWorktrees(r)).toEqual([]);
+  expect(pruneWorktrees(r)).toStrictEqual([]);
   expect(fs.existsSync(wt(r, "locked"))).toBe(true);
   expect(hasBranch(r, "wt/stuck")).toBe(true);
 });

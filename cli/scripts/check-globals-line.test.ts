@@ -78,7 +78,7 @@ describe("checkHosts", () => {
     const home = tmpDir("globals-home-");
     expect(syncGlobals({ workspaceRoot: ws, home, apply: true }).ok).toBe(true);
     const only = checkHosts({ home, workspaceRoot: ws, host: "claude" });
-    expect(only.map((s) => s.id)).toEqual(["claude"]);
+    expect(only.map((s) => s.id)).toStrictEqual(["claude"]);
     expect(only[0]?.state).toBe("ok");
     expect(() => checkHosts({ home, workspaceRoot: ws, host: "nowhere" })).toThrow("unknown host: nowhere");
   });
@@ -93,7 +93,7 @@ describe("checkGlobals with every argument defaulted", () => {
     const prev = process.cwd();
     process.chdir(ws);
     try {
-      expect(checkGlobals()).toEqual({ ok: true, drift: [] });
+      expect(checkGlobals()).toStrictEqual({ ok: true, drift: [] });
     } finally {
       process.chdir(prev);
     }

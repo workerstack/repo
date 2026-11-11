@@ -77,18 +77,18 @@ describe("roadmap serials and empty saves", () => {
   it("denies a save with no content", () => {
     const ws = tmpWs();
     expect(persistRoadmap({ workspaceRoot: ws }).ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toStrictEqual([]);
   });
 
   it("denies an unclosed fence in a save and in an update", () => {
     const ws = tmpWs();
     const bad = "```\nopen\n";
-    expect(persistRoadmap({ workspaceRoot: ws, content: bad }).errors).toEqual([
+    expect(persistRoadmap({ workspaceRoot: ws, content: bad }).errors).toStrictEqual([
       "unclosed code fence at line 1: close it with the same fence",
     ]);
     const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created });
     const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: path.join(ws, String(first.path)), content: bad });
-    expect(r.errors).toEqual(["unclosed code fence at line 1: close it with the same fence"]);
+    expect(r.errors).toStrictEqual(["unclosed code fence at line 1: close it with the same fence"]);
   });
 });
 

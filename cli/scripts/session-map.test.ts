@@ -100,7 +100,7 @@ describe("session-map hook", () => {
       "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/lib/\n",
     );
     const log = JSON.parse(fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"));
-    expect(log).toEqual({ rows: 1, tokens: 3, depth: 6 });
+    expect(log).toStrictEqual({ rows: 1, tokens: 3, depth: 6 });
   });
 
   it("keeps additionalContext under the 10,000-char hook cap even with a 5k config budget", () => {

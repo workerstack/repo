@@ -64,7 +64,7 @@ describe("repo persist <kind>", () => {
     expect(r.code, r.stderr).toBe(0);
     expect(r.stdout.endsWith("\n")).toBe(true);
     const json = parsePersistCliJson(r.stdout);
-    expect(Object.keys(json).sort()).toEqual(["absPath", "filename", "path", "serial"]);
+    expect(Object.keys(json).sort()).toStrictEqual(["absPath", "filename", "path", "serial"]);
     expect(json.path).toBe(`${dir}/${json.filename}`);
     expect(json.absPath).toBe(path.join(ws, json.path));
     expect(fs.existsSync(json.absPath)).toBe(true);

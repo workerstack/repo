@@ -82,7 +82,7 @@ it("puts a renamed file's old path back", () => {
   );
   const files = change(["D", "old.ts"], ["A", "new.ts"], ["A", "a.test.ts"]);
   expect(redProof(root, files, { vitest: run }).ok).toBe(true);
-  expect(seen).toEqual(["old\n", null]);
+  expect(seen).toStrictEqual(["old\n", null]);
 });
 
 it("runs two packages each in their own HEAD-tree dir with their modules linked", () => {
@@ -101,12 +101,12 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
       }),
   );
   const files = change(["A", "pkg-a/a.test.ts"], ["A", "pkg-b/b.test.ts"], ["A", "pkg-b/c.test.ts"]);
-  expect(redProof(root, files, { vitest: run })).toEqual({
+  expect(redProof(root, files, { vitest: run })).toStrictEqual({
     ok: true,
     line: "red-proof: 1 of 3 changed test files failed on HEAD",
   });
   const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     { cwd: nodePath.join(name, "pkg-a"), files: ["a.test.ts"], linked: true, rootLinked: true },
     { cwd: nodePath.join(name, "pkg-b"), files: ["b.test.ts", "c.test.ts"], linked: false, rootLinked: true },
   ]);
@@ -122,7 +122,7 @@ it("removes its dir after a pass and after a throw", () => {
     () => seen.push(fs.existsSync(tree)),
   );
   redProof(root, change(["A", "a.test.ts"]), { vitest: run });
-  expect(seen).toEqual([true]);
+  expect(seen).toStrictEqual([true]);
   expect(fs.existsSync(tree)).toBe(false);
   const boom = () => {
     throw new Error("boom");
@@ -133,7 +133,7 @@ it("removes its dir after a pass and after a throw", () => {
 
 it("skips with a line when there is no HEAD", () => {
   const root = plantUnborn({ "a.test.ts": PASS });
-  expect(redProof(root, change(["A", "a.test.ts"]), { vitest: fakeVitest(() => true) })).toEqual({
+  expect(redProof(root, change(["A", "a.test.ts"]), { vitest: fakeVitest(() => true) })).toStrictEqual({
     ok: true,
     line: "red-proof: skipped, no HEAD to run against",
   });
@@ -150,7 +150,7 @@ it("owns a nested test by the nearest package dir above it", () => {
   );
   redProof(root, change(["A", "cli/sub/deep/a.test.ts"], ["A", "top/b.test.ts"]), { vitest: run });
   const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     [nodePath.join(name, "cli"), "sub/deep/a.test.ts"],
     [name, "top/b.test.ts"],
   ]);

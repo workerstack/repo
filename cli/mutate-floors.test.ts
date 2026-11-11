@@ -24,7 +24,7 @@ it("attributes a file to the deepest package dir holding it, else the root", () 
   expect(packageOf("packages/ab/x.ts", packages)).toBe("packages/ab");
   expect(packageOf("packages/other/x.ts", packages)).toBe(".");
   const files = { "packages/a/x.ts": { killed: 1, survivors: [] }, "y.ts": { killed: 3, survivors: [survivor] } };
-  expect(Object.fromEntries(tally(files, packages))).toEqual({
+  expect(Object.fromEntries(tally(files, packages))).toStrictEqual({
     "packages/a": { killed: 1, survivors: 0 },
     ".": { killed: 3, survivors: 1 },
   });
@@ -50,19 +50,19 @@ function unsharded(floors: Record<string, number> | string | null) {
 it("prints each package's score against its floor and passes at or above every floor", async () => {
   const f = unsharded({ ".": 50, "packages/a": 75 });
   expect(await runMutate([], f.deps)).toBe(0);
-  expect(f.out.slice(1)).toEqual([
+  expect(f.out.slice(1)).toStrictEqual([
     "mutate: 2 files, shard 1/1\n",
     `mutate: . 50.00% (floor 50), 1 survivor in ${REPORT}\n`,
     `mutate: packages/a 75.00% (floor 75), 1 survivor in ${REPORT}\n`,
   ]);
-  expect(f.err).toEqual([]);
+  expect(f.err).toStrictEqual([]);
   expect(JSON.parse(f.files.get(at(REPORT)) ?? "")).toMatchObject({ shard: { index: 1, total: 1 } });
 });
 
 it("fails a package below its floor, naming the floors file and the report", async () => {
   const f = unsharded({ ".": 51, "packages/a": 75 });
   expect(await runMutate([], f.deps)).toBe(1);
-  expect(f.err).toEqual([
+  expect(f.err).toStrictEqual([
     `repo mutate: . scored 50.00%, below its floor of 51 in mf.json; see the survivors in ${REPORT}\n`,
   ]);
 });
@@ -87,5 +87,5 @@ it("treats --shard 1/1 as the whole run and checks no floor for a real shard", a
   expect(await runMutate(["--shard", "1/1"], whole.deps)).toBe(1);
   const part = unsharded({ ".": 99 });
   expect(await runMutate(["--shard", "1/2"], part.deps)).toBe(0);
-  expect(part.err).toEqual([]);
+  expect(part.err).toStrictEqual([]);
 });

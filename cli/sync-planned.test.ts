@@ -13,7 +13,7 @@ const ctx = {
   root: "/r",
   read: (rel: string) => (rel === "a.md" ? "disk\n" : null),
 } as unknown /* a stub that holds the two fields the planner reads */ as SyncContext;
-const reader: Generator = (view) => ({ outputs: [file("b.md", `${view.read("a.md") ?? "none"}`)], errors: [] });
+const reader: Generator = (view) => ({ outputs: [file("b.md", view.read("a.md") ?? "none")], errors: [] });
 
 it("a generator reads the text an earlier one planned, not the file on disk", () => {
   const writer: Generator = () => ({
@@ -23,9 +23,9 @@ it("a generator reads the text an earlier one planned, not the file on disk", ()
     ],
     errors: [],
   });
-  expect(planSync(ctx, [writer, reader], []).outputs.at(-1)).toEqual(file("b.md", "planned\n"));
+  expect(planSync(ctx, [writer, reader], []).outputs.at(-1)).toStrictEqual(file("b.md", "planned\n"));
 });
 
 it("a generator reads the disk when nothing earlier planned the path", () => {
-  expect(planSync(ctx, [reader], []).outputs).toEqual([file("b.md", "disk\n")]);
+  expect(planSync(ctx, [reader], []).outputs).toStrictEqual([file("b.md", "disk\n")]);
 });

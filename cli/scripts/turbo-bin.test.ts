@@ -28,11 +28,11 @@ it.each([
   { platform: "win32", arch: "arm64", name: "@turbo/windows-arm64", bin: "turbo.exe" },
 ])("$platform $arch resolves $name/package.json from turbo's dir to bin/$bin", ({ platform, arch, name, bin }) => {
   const { resolve, calls } = resolver([`${name}/package.json`]);
-  expect(turboBin(ROOT, resolve, { platform, arch })).toEqual({
+  expect(turboBin(ROOT, resolve, { platform, arch })).toStrictEqual({
     ok: true,
     path: path.resolve(`/repo/node_modules/${name}/bin/${bin}`),
   });
-  expect(calls).toEqual([
+  expect(calls).toStrictEqual([
     ["turbo/package.json", ROOT],
     [`${name}/package.json`, TURBO_DIR],
   ]);
@@ -40,7 +40,7 @@ it.each([
 
 it("refuses a platform package that is not installed with the fix line", () => {
   const { resolve } = resolver([]);
-  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "arm64" })).toEqual({
+  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "arm64" })).toStrictEqual({
     ok: false,
     error: "turbo has no @turbo/linux-arm64 binary; run `bun install` so its optional dependency installs",
   });
@@ -50,7 +50,7 @@ it("refuses a root where turbo itself is not installed", () => {
   const resolve = (): string => {
     throw new Error("no");
   };
-  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "x64" })).toEqual({
+  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "x64" })).toStrictEqual({
     ok: false,
     error: "turbo is not installed; run `bun install`",
   });
@@ -58,7 +58,7 @@ it("refuses a root where turbo itself is not installed", () => {
 
 it("an arch turbo does not ship is refused with the same line", () => {
   const { resolve } = resolver([]);
-  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "riscv64" })).toEqual({
+  expect(turboBin(ROOT, resolve, { platform: "linux", arch: "riscv64" })).toStrictEqual({
     ok: false,
     error: "turbo has no @turbo/linux-riscv64 binary; run `bun install` so its optional dependency installs",
   });
@@ -69,11 +69,11 @@ it("turboRunner runs the located binary in the directory with the env on top of 
   const run = turboRunner(() => ({ ok: true, path: process.execPath }))(["-e", script], process.cwd(), {
     P66_VAR: "x",
   });
-  expect(run).toEqual({ code: 3, stdout: `x ${process.cwd()}\n`, stderr: "err\n" });
+  expect(run).toStrictEqual({ code: 3, stdout: `x ${process.cwd()}\n`, stderr: "err\n" });
 });
 
 it("runTurbo reports a binary it cannot locate", () => {
-  expect(turboRunner(() => ({ ok: false, error: "gone" }))([], ROOT, {})).toEqual({ missing: "gone" });
+  expect(turboRunner(() => ({ ok: false, error: "gone" }))([], ROOT, {})).toStrictEqual({ missing: "gone" });
 });
 
 it("finds the turbo this repo installs, for this machine", () => {

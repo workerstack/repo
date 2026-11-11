@@ -41,8 +41,8 @@ it.each(["passed", "failed", "superseded", "nothing", "error"] as const)(
     const world = fakeFs();
     const failed = outcome === "failed" ? ["test (windows-latest)"] : [];
     expect(writeRecord({ root: ROOT, sha: SHA }, record(outcome, failed), world.fs)).toBe(true);
-    expect([...world.files.keys()]).toEqual([recordPath(ROOT, SHA)]);
-    expect(recordSchema().parse(JSON.parse(world.files.get(recordPath(ROOT, SHA)) ?? ""))).toEqual(
+    expect([...world.files.keys()]).toStrictEqual([recordPath(ROOT, SHA)]);
+    expect(recordSchema().parse(JSON.parse(world.files.get(recordPath(ROOT, SHA)) ?? ""))).toStrictEqual(
       record(outcome, failed),
     );
   },
@@ -71,7 +71,7 @@ it("writes with node's fs when none is given", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-record-"));
   try {
     expect(writeRecord({ root: dir, sha: SHA }, record("nothing"))).toBe(true);
-    expect(fs.readdirSync(path.join(dir, ".tmp", "repo", "ci"))).toEqual([`${SHA}.json`]);
+    expect(fs.readdirSync(path.join(dir, ".tmp", "repo", "ci"))).toStrictEqual([`${SHA}.json`]);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -82,7 +82,7 @@ it("the root is the parent of the common git dir, so a worktree and the root mee
   const args: string[][] = [];
   const git = (a: string[]) => (args.push(a), { code: 0, stdout: `${common}\n`, stderr: "" });
   expect(recordRoot(git, path.join(ROOT, ".worktrees", "x"))).toBe(ROOT);
-  expect(args[0]).toEqual(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  expect(args[0]).toStrictEqual(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   expect(recordRoot(() => ({ code: 128, stdout: "", stderr: "fatal" }), "/elsewhere")).toBe("/elsewhere");
   expect(recordRoot(() => ({ code: 0, stdout: "\n", stderr: "" }), "/elsewhere")).toBe("/elsewhere");
 });

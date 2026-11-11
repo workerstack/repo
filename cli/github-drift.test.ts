@@ -10,7 +10,7 @@ function withParameters(rules: Rule[], type: string, change: (p: RuleParameters)
 }
 
 it("finds no drift in what GitHub serves back for the wanted state, server-filled fields and all", () => {
-  expect(driftOf(wantedOf(), served())).toEqual([]);
+  expect(driftOf(wantedOf(), served())).toStrictEqual([]);
 });
 
 it("ignores the order of rules, checks and topics and parameters it does not manage", () => {
@@ -22,15 +22,15 @@ it("ignores the order of rules, checks and topics and parameters it does not man
     const merged = withParameters(swapped, "pull_request", (p) => ({ ...p, allowed_merge_methods: ["squash"] }));
     return { ...ruleset, rules: merged.toReversed() };
   });
-  expect(driftOf(wantedOf(), { ...reordered, topics: reordered.topics.toReversed() })).toEqual([]);
+  expect(driftOf(wantedOf(), { ...reordered, topics: reordered.topics.toReversed() })).toStrictEqual([]);
 });
 
 it("names a missing ruleset, by area and name", () => {
   const current = served();
-  expect(messages({ ...current, rulesets: [must(current.rulesets[0])] })).toEqual([
+  expect(messages({ ...current, rulesets: [must(current.rulesets[0])] })).toStrictEqual([
     `ruleset release tags is missing: ${RUN}`,
   ]);
-  expect(driftOf(wantedOf(), { ...current, rulesets: [] }).map((d) => [d.area, d.name])).toEqual([
+  expect(driftOf(wantedOf(), { ...current, rulesets: [] }).map((d) => [d.area, d.name])).toStrictEqual([
     ["ruleset", "main"],
     ["ruleset", "release tags"],
   ]);
@@ -48,7 +48,7 @@ it("names a required check the ruleset lacks, one from another app, and one CI n
       ],
     })),
   }));
-  expect(messages(current)).toEqual([
+  expect(messages(current)).toStrictEqual([
     `ruleset main is missing the required check "test (ubuntu-latest)": ${RUN}`,
     `ruleset main is missing the required check "consumer": ${RUN}`,
     `ruleset main requires "old", which CI does not report: ${RUN}`,
@@ -60,7 +60,7 @@ it("names a missing and an unwanted rule", () => {
     ...ruleset,
     rules: [{ type: "creation" }, { type: "update" }, { type: "required_linear_history" }],
   }));
-  expect(messages(current)).toEqual([
+  expect(messages(current)).toStrictEqual([
     `ruleset release tags is missing the rule "deletion": ${RUN}`,
     `ruleset release tags has the unwanted rule "required_linear_history": ${RUN}`,
   ]);
@@ -84,7 +84,7 @@ it("names a changed target, enforcement, refs, approval count, strictness and by
     }));
     return { ...moved(ruleset), rules: strict };
   });
-  expect(messages(current)).toEqual([
+  expect(messages(current)).toStrictEqual([
     `ruleset main targets "tag", wanted "branch": ${RUN}`,
     `ruleset main is "disabled", wanted "active": ${RUN}`,
     `ruleset main applies to [refs/heads/dev], wanted [~DEFAULT_BRANCH]: ${RUN}`,
@@ -97,7 +97,7 @@ it("names a changed target, enforcement, refs, approval count, strictness and by
 
 it("names the settings of rules that carry no parameters as unset", () => {
   const current = changed("main", (ruleset) => ({ ...ruleset, rules: ruleset.rules.map((r) => ({ type: r.type })) }));
-  expect(messages(current)).toEqual([
+  expect(messages(current)).toStrictEqual([
     `ruleset main requires unset approvals, wanted 0: ${RUN}`,
     `ruleset main has strict status checks unset, wanted false: ${RUN}`,
     `ruleset main is missing the required check "test (ubuntu-latest)": ${RUN}`,
@@ -107,7 +107,7 @@ it("names the settings of rules that carry no parameters as unset", () => {
 });
 
 it("names reporting and alerts that are off", () => {
-  expect(driftOf(wantedOf(), { ...served(), reporting: false, alerts: false })).toEqual([
+  expect(driftOf(wantedOf(), { ...served(), reporting: false, alerts: false })).toStrictEqual([
     { area: "reporting", message: `private vulnerability reporting is off: ${RUN}` },
     { area: "alerts", message: `Dependabot alerts are off: ${RUN}` },
   ]);
@@ -116,7 +116,7 @@ it("names reporting and alerts that are off", () => {
 it("names a description, homepage and topics that differ from package.json", () => {
   const current = { ...served(), description: "x", homepage: "", topics: ["lint"] };
   const { description, homepage, keywords } = MANIFEST;
-  expect(driftOf(wantedOf(), current)).toEqual([
+  expect(driftOf(wantedOf(), current)).toStrictEqual([
     {
       area: "description",
       message: `description is "x", package.json says "${description}": ${RUN}`,

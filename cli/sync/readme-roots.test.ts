@@ -76,7 +76,7 @@ it("replaces an empty README and one with the header or the legacy one", () => {
   const fresh = textOf(readme(context({ files })));
   for (const existing of ["", " \n\n", `${HEADER}${fresh}`, `${HEADER}\nold\n`, `${LEGACY}\nold\n`]) {
     const result = readme(context({ files: { ...files, "README.md": existing } }));
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toStrictEqual([]);
     expect(textOf(result)).toBe(fresh);
   }
 });
@@ -89,7 +89,7 @@ it("refuses a hand-written README with the exact error, naming the package folde
     "packages/api/references/INDEX.md": "# R\n",
     "packages/api/README.md": "mine",
   };
-  expect(readme(context({ packages: [pkg], files }))).toEqual({
+  expect(readme(context({ packages: [pkg], files }))).toStrictEqual({
     outputs: [],
     errors: [`README.md ${HAND_WRITTEN}`, `packages/api/README.md ${HAND_WRITTEN}`],
   });
@@ -97,8 +97,11 @@ it("refuses a hand-written README with the exact error, naming the package folde
 
 it("skips a private root, a root without references/INDEX.md and a config without the docs pack", () => {
   const files = { "references/INDEX.md": "# R\n" };
-  expect(readme(context({ manifest: { name: "app", private: true }, files }))).toEqual({ outputs: [], errors: [] });
-  expect(readme(context({ manifest: { name: "app" }, files }))).toEqual({ outputs: [], errors: [] });
-  expect(readme(context({ files: {} }))).toEqual({ outputs: [], errors: [] });
-  expect(readme(context({ packs: ["agents"], files }))).toEqual({ outputs: [], errors: [] });
+  expect(readme(context({ manifest: { name: "app", private: true }, files }))).toStrictEqual({
+    outputs: [],
+    errors: [],
+  });
+  expect(readme(context({ manifest: { name: "app" }, files }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(readme(context({ files: {} }))).toStrictEqual({ outputs: [], errors: [] });
+  expect(readme(context({ packs: ["agents"], files }))).toStrictEqual({ outputs: [], errors: [] });
 });

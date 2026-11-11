@@ -10,7 +10,7 @@ it("setupJev prompts for the key on a terminal and fails when the answer is blan
   const home = plant("setup-jev-tty-");
   const io = { ...captureIo(), password: () => Promise.resolve(" ts_key ") };
   const r = await setupJev({ home, io, interactive: true });
-  expect(JSON.parse(fs.readFileSync(r.dest, "utf8"))).toEqual({ apiKey: "ts_key" });
+  expect(JSON.parse(fs.readFileSync(r.dest, "utf8"))).toStrictEqual({ apiKey: "ts_key" });
   const blank = { ...captureIo(), password: () => Promise.resolve("") };
   await expect(setupJev({ home, io: blank, interactive: true })).rejects.toThrow("need a TypeSafe API key");
 });

@@ -28,5 +28,5 @@ it("captureBun drops GIT_DIR and GIT_INDEX_FILE, so a git run in a temp dir leav
   const run = captureBun(["-e", script, other], os.tmpdir());
   expect(run.code).toBe(0);
   expect(fs.existsSync(path.join(other, ".git"))).toBe(true);
-  expect(fs.readdirSync(gitDir).sort()).toEqual(before);
+  expect(fs.readdirSync(gitDir).sort()).toStrictEqual(before);
 });

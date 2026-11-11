@@ -61,16 +61,16 @@ describe("rtk-grok hook", () => {
   it("rewrites a command through rtk and keeps the other tool input", () => {
     const r = call("git status");
     expect(r.status).toBe(0);
-    expect(JSON.parse(r.stdout)).toEqual(updated("rtk git status"));
+    expect(JSON.parse(r.stdout)).toStrictEqual(updated("rtk git status"));
   });
 
   it("adds --ultra-compact to a rewrite that names an ultra subcommand", () => {
-    expect(JSON.parse(call("grep foo src").stdout)).toEqual(updated("rtk grep --ultra-compact foo src"));
-    expect(JSON.parse(call("grep").stdout)).toEqual(updated("rtk grep --ultra-compact"));
+    expect(JSON.parse(call("grep foo src").stdout)).toStrictEqual(updated("rtk grep --ultra-compact foo src"));
+    expect(JSON.parse(call("grep").stdout)).toStrictEqual(updated("rtk grep --ultra-compact"));
   });
 
   it("injects the flag into a command that already starts with rtk, and leaves it alone otherwise", () => {
-    expect(JSON.parse(call("rtk grep foo").stdout)).toEqual(updated("rtk grep --ultra-compact foo"));
+    expect(JSON.parse(call("rtk grep foo").stdout)).toStrictEqual(updated("rtk grep --ultra-compact foo"));
     expect(call("/usr/bin/rtk tsc").stdout).toBe("");
     expect(call("rtk grep --ultra-compact foo").stdout).toBe("");
     expect(call("rtk git status").stdout).toBe("");
@@ -78,8 +78,8 @@ describe("rtk-grok hook", () => {
   });
 
   it("prints nothing when rtk answers the same command or nothing", () => {
-    expect(call("same one")).toEqual({ status: 0, stdout: "" });
-    expect(call("none one")).toEqual({ status: 0, stdout: "" });
+    expect(call("same one")).toStrictEqual({ status: 0, stdout: "" });
+    expect(call("none one")).toStrictEqual({ status: 0, stdout: "" });
   });
 });
 
@@ -105,26 +105,26 @@ describe("rtk-grok hook on the process stdin", () => {
 
 describe("rtk-grok hook without a rewrite", () => {
   it("prints nothing when rtk is not on PATH", () => {
-    expect(call("git status", { PATH: tmp("rtk-empty-") })).toEqual({ status: 0, stdout: "" });
+    expect(call("git status", { PATH: tmp("rtk-empty-") })).toStrictEqual({ status: 0, stdout: "" });
   });
 
   it("prints nothing when PATH is not set", () => {
-    expect(call("git status", { PATH: undefined })).toEqual({ status: 0, stdout: "" });
+    expect(call("git status", { PATH: undefined })).toStrictEqual({ status: 0, stdout: "" });
   });
 
   it("prints nothing when rtk outlives the timeout", () => {
-    expect(call("slow one")).toEqual({ status: 0, stdout: "" });
+    expect(call("slow one")).toStrictEqual({ status: 0, stdout: "" });
   });
 
   it("prints nothing for a payload with no usable command", () => {
     for (const bad of ["not json", "{}", '{"tool_input":{"command":5}}', '{"tool_input":{"command":"   "}}']) {
-      expect(runHook(main, bad, withStub(stubDir()))).toEqual({ status: 0, stdout: "" });
+      expect(runHook(main, bad, withStub(stubDir()))).toStrictEqual({ status: 0, stdout: "" });
     }
     expect(call(7).stdout).toBe("");
   });
 
   it("prints nothing when the command cannot be handed to a process", () => {
-    expect(call("git\0status")).toEqual({ status: 0, stdout: "" });
+    expect(call("git\0status")).toStrictEqual({ status: 0, stdout: "" });
   });
 });
 
@@ -156,6 +156,6 @@ describe("repo hook rtk-grok (spawned)", () => {
       { env: withStub(stubDir()) },
     );
     expect(r.status, r.stderr).toBe(0);
-    expect(JSON.parse(r.stdout)).toEqual(updated("rtk git status"));
+    expect(JSON.parse(r.stdout)).toStrictEqual(updated("rtk git status"));
   });
 });

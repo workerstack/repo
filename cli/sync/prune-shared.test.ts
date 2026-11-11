@@ -45,7 +45,7 @@ describe("repairLines", () => {
       { kind: "link", path: ".claude/skills/ask", target: "elsewhere", tracked: false, managed: "whole" },
       shared("references/INDEX.md", ["closed repo:stack", "moved 1 edited line out of repo:packages"]),
     ];
-    expect(repairLines(outputs)).toEqual([
+    expect(repairLines(outputs)).toStrictEqual([
       ".gitignore: converted the old markers to repo:ignore",
       "references/INDEX.md: closed repo:stack",
       "references/INDEX.md: moved 1 edited line out of repo:packages",
@@ -53,7 +53,7 @@ describe("repairLines", () => {
   });
 
   it("is empty when no output was repaired", () => {
-    expect(repairLines([shared("references/INDEX.md", []), shared(".gitignore")])).toEqual([]);
+    expect(repairLines([shared("references/INDEX.md", []), shared(".gitignore")])).toStrictEqual([]);
   });
 });
 
@@ -68,31 +68,34 @@ describe("splitPrune", () => {
     });
     fs.mkdirSync(path.join(root, "dir"));
     const split = splitPrune(root, ["old.yml", "web/references/INDEX.md", "b/.gitignore", "a/.gitignore", "old.yml"]);
-    expect(split.cut).toEqual([
+    expect(split.cut).toStrictEqual([
       { path: "a/.gitignore", text: MINE, repairs: ["cut repo:ignore"] },
       { path: "b/.gitignore", text: "", repairs: ["cut the old markers"] },
       { path: "web/references/INDEX.md", text: "# Web\n", repairs: ["cut repo:deps"] },
     ]);
-    expect(split.remove).toEqual(["old.yml"]);
-    expect(splitPrune(root, ["plain.md", "dir", "missing.md"])).toEqual({ cut: [], remove: ["plain.md"] });
+    expect(split.remove).toStrictEqual(["old.yml"]);
+    expect(splitPrune(root, ["plain.md", "dir", "missing.md"])).toStrictEqual({ cut: [], remove: ["plain.md"] });
   });
 
   it("leaves a file whose only marker-shaped lines carry no hash: the user wrote them, so it is neither cut nor removed", () => {
     const root = rootWith({ "user/.gitignore": "# repo: vendored\nvendor/\n# /repo:vendored\n" });
-    expect(splitPrune(root, ["user/.gitignore"])).toEqual({ cut: [], remove: [] });
+    expect(splitPrune(root, ["user/.gitignore"])).toStrictEqual({ cut: [], remove: [] });
   });
 
   it("removes a link, never reading through it", () => {
     const root = rootWith({ "real/.gitignore": IGNORE });
     fs.symlinkSync("real", path.join(root, "link"), "dir");
-    expect(splitPrune(root, ["link"])).toEqual({ cut: [], remove: ["link"] });
+    expect(splitPrune(root, ["link"])).toStrictEqual({ cut: [], remove: ["link"] });
   });
 });
 
 it("splitPrune never cuts or removes the user's own .mcp.json, in a consumer or in this repo, but a nested one is no exception", () => {
   const root = rootWith({ ".mcp.json": '{ "mcpServers": {} }\n', "a/.mcp.json": "{}\n" });
-  expect(splitPrune(root, [".mcp.json", "a/.mcp.json"])).toEqual({ cut: [], remove: ["a/.mcp.json"] });
-  expect(splitPrune(path.resolve(import.meta.dirname, "..", ".."), [".mcp.json"])).toEqual({ cut: [], remove: [] });
+  expect(splitPrune(root, [".mcp.json", "a/.mcp.json"])).toStrictEqual({ cut: [], remove: ["a/.mcp.json"] });
+  expect(splitPrune(path.resolve(import.meta.dirname, "..", ".."), [".mcp.json"])).toStrictEqual({
+    cut: [],
+    remove: [],
+  });
 });
 
 describe("applyCuts", () => {
@@ -100,7 +103,7 @@ describe("applyCuts", () => {
     const root = rootWith({ "a/.gitignore": `${MINE}${IGNORE}`, "b/.gitignore": LEGACY });
     fs.chmodSync(path.join(root, "a/.gitignore"), 0o444);
     const { cut } = splitPrune(root, ["a/.gitignore", "b/.gitignore"]);
-    expect(applyCuts(root, cut, { platform: process.platform })).toEqual({
+    expect(applyCuts(root, cut, { platform: process.platform })).toStrictEqual({
       lines: [
         "cut repo:ignore from a/.gitignore",
         "cut the old markers from b/.gitignore",
@@ -122,8 +125,8 @@ describe("applyCuts that fail", () => {
       { path: "dir.md", text: "\n", repairs: ["cut repo:deps"] },
     ];
     const result = applyCuts(root, cut, { platform: process.platform, writeOutput: () => "disk full" });
-    expect(result.lines).toEqual([]);
-    expect(result.errors).toEqual([
+    expect(result.lines).toStrictEqual([]);
+    expect(result.errors).toStrictEqual([
       "x.md: could not cut: disk full",
       expect.stringMatching(/^dir\.md: could not cut: /),
     ]);
@@ -133,7 +136,7 @@ describe("applyCuts that fail", () => {
 
 describe("cutDriftLines", () => {
   it("names each file with regions no output writes, for --check", () => {
-    expect(cutDriftLines([{ path: "web/references/INDEX.md", text: "", repairs: ["cut repo:deps"] }])).toEqual([
+    expect(cutDriftLines([{ path: "web/references/INDEX.md", text: "", repairs: ["cut repo:deps"] }])).toStrictEqual([
       "web/references/INDEX.md has regions no output writes; run `bun repo sync`",
     ]);
   });

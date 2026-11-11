@@ -14,14 +14,14 @@ it("oxlintConfig writes no override for a Rust skip, even beside an oxlint rule"
   if (!built.ok) throw new Error(built.errors.join("\n"));
   const config = JSON.parse(built.value) /* the config sync writes */ as { overrides: { files: string[] }[] };
   const overrides = config.overrides;
-  expect(overrides.filter((override) => override.files.includes("src/lib.rs"))).toEqual([
+  expect(overrides.filter((override) => override.files.includes("src/lib.rs"))).toStrictEqual([
     { files: ["src/lib.rs"], rules: { "repo/no-module-state": "off" } },
   ]);
   expect(built.value).not.toContain("clippy");
 });
 
 it("oxlintConfig refuses the Rust names without a Cargo.toml, as it refuses any unknown name", () => {
-  expect(oxlintConfig(APP, [skip(["clippy/unwrap_used"]), skip(["repo/rust-block-comment", "foo/x"])])).toEqual({
+  expect(oxlintConfig(APP, [skip(["clippy/unwrap_used"]), skip(["repo/rust-block-comment", "foo/x"])])).toStrictEqual({
     ok: false,
     errors: [refused(0, "clippy/unwrap_used"), refused(1, "repo/rust-block-comment"), refused(1, "foo/x")],
   });
@@ -30,7 +30,7 @@ it("oxlintConfig refuses the Rust names without a Cargo.toml, as it refuses any 
 it("oxlintConfig with a Cargo.toml still refuses a name that is neither a lint in snake_case nor a Rust rule", () => {
   const skips = [skip(["foo/x", "clippy/Unwrap", "clippy/unwrap-used", "repo/rust-nothing", "rust/"])];
   const built = oxlintConfig(APP, skips, true);
-  expect(built.ok ? [] : built.errors).toEqual(
+  expect(built.ok ? [] : built.errors).toStrictEqual(
     ["foo/x", "clippy/Unwrap", "clippy/unwrap-used", "repo/rust-nothing", "rust/"].map((rule) => refused(0, rule)),
   );
 });

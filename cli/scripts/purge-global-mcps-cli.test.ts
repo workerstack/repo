@@ -27,7 +27,7 @@ it("purgeGlobalMcps does not touch a fixture project .grok/config.toml", () => {
   const r = purgeCli(["--apply"], ws, childEnv({ HOME: home }));
   expect(r.status).toBe(0);
   expect(fs.readFileSync(projectCfg, "utf8")).toBe(projectBody);
-  expect(readGrok(grokConfigPath(home)).plugins?.enabled || []).not.toContain("cloudflare");
+  expect(readGrok(grokConfigPath(home)).plugins?.enabled ?? []).not.toContain("cloudflare");
 });
 
 it("CLI bad args exit 1", () => {

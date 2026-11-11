@@ -61,7 +61,7 @@ it(
     const root = oldLayout();
     const result = await sync(root, ["--check"], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([
+    expect(result.err).toStrictEqual([
       ...MOVES.map((move) => `repo sync: would move ${move}\n`),
       "repo sync: 4 handover steps pending; run `bun repo sync`\n",
     ]);
@@ -85,7 +85,7 @@ it(
     expect(agents).toMatch(REGION);
     expect(agents.replace(REGION, "")).toBe("\nAlways run the linter.\n");
     expect(read(root, "packages/web/AGENTS.md").replace(REGION, "")).toBe("\nUse the ui kit.\n");
-    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toEqual({
+    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toStrictEqual({
       docs: { command: "own" },
       extra: { command: "e" },
       pol: { command: "p" },
@@ -98,7 +98,7 @@ it(
     for (const rel of ["AGENTS.md", ".mcp.json"]) expectMode(root, rel, 0o644);
     expect(lines(read(root, ".gitignore"))).not.toContain("AGENTS.md");
     expect(lines(read(root, ".gitignore"))).not.toContain(".mcp.json");
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );
@@ -111,7 +111,7 @@ it(
     fs.writeFileSync(path.join(root, ".mcp.json"), '{\n  "mcpServers": {\n  ,\n}');
     const result = await sync(root, [], true);
     expect(result.code).toBe(1);
-    expect(result.err).toEqual([
+    expect(result.err).toStrictEqual([
       "repo sync: mcp policy: .mcp.json: not valid JSON at line 3; fix it, nothing written\n",
     ]);
     expect(exists(root, ".repo/rules/agents.md")).toBe(true);
@@ -148,7 +148,7 @@ it(
     expect(agents).toContain(own);
     expect(agents).not.toContain("en-US default.");
     expect(exists(root, ".repo/rules/overview.md")).toBe(true);
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );
@@ -163,11 +163,11 @@ it(
     expect(read(root, "AGENTS.md").replace(REGION, "")).toBe(
       "\nOur team notes: ship on Fridays only with a rollback plan.\n\nTeam rule: run `make lint` before every push.\n",
     );
-    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toEqual({
+    expect(readJson<Servers>(root, ".mcp.json").mcpServers).toStrictEqual({
       docs: { command: "npx", args: ["-y", "docs-mcp"] },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain("servers");
-    expect(await sync(root, ["--check"], true)).toEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
   },
   SLOW,
 );

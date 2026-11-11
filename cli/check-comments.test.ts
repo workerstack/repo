@@ -39,7 +39,7 @@ it("names each refused comment with its file and line, in the order of the files
       "export const a = 1;\n\n// oxlint-disable-next-line repo/no-module-state\nlet b = 2;\n\nb++;\n// @ts-ignore\n",
     "src/b.ts": "// @ts-nocheck\n".concat("\n".repeat(7), "// @ts-expect-error\nexport const c: number = 'c';\n"),
   });
-  expect(commentProblems(root, ["src/a.ts", "src/b.ts"])).toEqual([
+  expect(commentProblems(root, ["src/a.ts", "src/b.ts"])).toStrictEqual([
     `src/a.ts:3: ${LINT("oxlint-disable-next-line")}`,
     `src/a.ts:7: ${IGNORE}`,
     `src/b.ts:1: ${NOCHECK}`,
@@ -57,7 +57,7 @@ it.each([
   ["/*\n   oxlint-disable */\n", 2, "oxlint-disable"],
   ["const s = 1;\n\n/* eslint-disable-next-line */\n", 3, "eslint-disable-next-line"],
 ])("refuses the lint directive in %j", (text, line, word) => {
-  expect(problemsOf(text)).toEqual([`a.ts:${line}: ${LINT(word)}`]);
+  expect(problemsOf(text)).toStrictEqual([`a.ts:${line}: ${LINT(word)}`]);
 });
 
 it.each([
@@ -71,7 +71,7 @@ it.each([
   ["/* @ts-expect-error */\n", 1, EXPECT],
   ["/**\n * @ts-expect-error */\n", 2, EXPECT],
 ])("refuses the TypeScript directive in %j", (text, line, message) => {
-  expect(problemsOf(text)).toEqual([`a.ts:${line}: ${message}`]);
+  expect(problemsOf(text)).toStrictEqual([`a.ts:${line}: ${message}`]);
 });
 
 it.each([
@@ -89,7 +89,7 @@ it.each([
   "/* @ts-nocheck */\n",
   "// @ts-nocheckers\n",
 ])("passes %j", (text) => {
-  expect(problemsOf(text)).toEqual([]);
+  expect(problemsOf(text)).toStrictEqual([]);
 });
 
 it("reads the multi-line block form as real tsc does: honored only on the block's last line", () => {
@@ -99,17 +99,17 @@ it("reads the multi-line block form as real tsc does: honored only on the block'
   });
   const tsc = path.join(path.dirname(Bun.resolveSync("typescript/package.json", import.meta.dirname)), "bin/tsc");
   const run = (rel: string) => captureBun([tsc, "--noEmit", "--strict", rel], root).code;
-  expect({ last: run("last.ts"), first: run("first.ts") }).toEqual({ last: 0, first: 2 });
-  expect(commentProblems(root, ["last.ts", "first.ts"])).toEqual([`last.ts:3: ${IGNORE}`]);
+  expect({ last: run("last.ts"), first: run("first.ts") }).toStrictEqual({ last: 0, first: 2 });
+  expect(commentProblems(root, ["last.ts", "first.ts"])).toStrictEqual([`last.ts:3: ${IGNORE}`]);
 }, 30_000);
 
 it("scans the comments a file with a parse error still returns", () => {
-  expect(problemsOf("// @ts-ignore\nconst = ;\n")).toEqual([`a.ts:1: ${IGNORE}`]);
+  expect(problemsOf("// @ts-ignore\nconst = ;\n")).toStrictEqual([`a.ts:1: ${IGNORE}`]);
 });
 
 it("skips a listed file that cannot be read, and files that are not source", () => {
   const root = plant({ "a.md": "// @ts-ignore\n", "fixtures/a.ts": "// @ts-ignore\n" });
-  expect(commentProblems(root, ["gone.ts", "a.md", "fixtures/a.ts"])).toEqual([]);
+  expect(commentProblems(root, ["gone.ts", "a.md", "fixtures/a.ts"])).toStrictEqual([]);
 });
 
 /** A git repo with a committed file, an untracked one, and files `sourceFiles` leaves out. */
@@ -132,19 +132,19 @@ function repo(): string {
 const LISTED = ["b.cjs", "b.cts", "b.js", "b.jsx", "b.mjs", "b.mts", "b.tsx", "src/a.ts"];
 
 it("lists tracked and untracked source files, leaving out ignored, fixtures and other extensions", () => {
-  expect(sourceFiles(repo())).toEqual({ ok: true, files: LISTED });
+  expect(sourceFiles(repo())).toStrictEqual({ ok: true, files: LISTED });
 });
 
 it("lists the same files under a hook's GIT_INDEX_FILE naming another index", () => {
   const root = repo();
   vi.stubEnv("GIT_INDEX_FILE", path.join(plant({}), "index"));
-  expect(sourceFiles(root)).toEqual({ ok: true, files: LISTED });
+  expect(sourceFiles(root)).toStrictEqual({ ok: true, files: LISTED });
 });
 
 it("says why when git cannot list the files", () => {
   const listed = sourceFiles(plant({}));
   expect(listed.ok).toBe(false);
-  expect(listed.ok ? [] : listed.errors).toEqual([
+  expect(listed.ok ? [] : listed.errors).toStrictEqual([
     expect.stringMatching(/^git ls-files failed: .*not a git repository/),
   ]);
 });
@@ -152,6 +152,6 @@ it("says why when git cannot list the files", () => {
 it("checkComments scans the listed files, or reports why it could not list them", () => {
   const root = repo();
   fs.writeFileSync(path.join(root, "src/a.ts"), "// @ts-ignore\n");
-  expect(checkComments(root)).toEqual([`src/a.ts:1: ${IGNORE}`]);
-  expect(checkComments(plant({}))).toEqual([expect.stringMatching(/^git ls-files failed: /)]);
+  expect(checkComments(root)).toStrictEqual([`src/a.ts:1: ${IGNORE}`]);
+  expect(checkComments(plant({}))).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });

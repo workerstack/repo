@@ -43,11 +43,13 @@ it("Codex: redirects heredoc and freeform patches with allow, and leaves Update 
   const { a, scratch } = repo();
   const moved = scratch("scratch/x.md");
   const viaShell = cx(a, "Bash", heredoc(patchAdd(REL)));
-  expect(processHookPayload(viaShell)).toEqual(codexAllow({ command: heredoc(patchAdd(moved)) }));
+  expect(processHookPayload(viaShell)).toStrictEqual(codexAllow({ command: heredoc(patchAdd(moved)) }));
   const viaTool = processHookPayload(cx(a, "apply_patch", patchAdd(REL)));
-  expect(viaTool).toEqual(codexAllow({ command: patchAdd(moved) }));
+  expect(viaTool).toStrictEqual(codexAllow({ command: patchAdd(moved) }));
   expect(processHookPayload(cx(a, "apply_patch", patchUpdate(".tmp/repo/scratch/u.md")))).toBeNull();
-  expect(processHookPayload(asChild(viaShell, "scout"))).toEqual(codexAllow({ command: heredoc(patchAdd(moved)) }));
+  expect(processHookPayload(asChild(viaShell, "scout"))).toStrictEqual(
+    codexAllow({ command: heredoc(patchAdd(moved)) }),
+  );
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   expect(fs.existsSync(scratch("scratch"))).toBe(false);
 });
@@ -57,7 +59,7 @@ it("Codex: Bash rewrites carry allow and denies keep the Claude body", () => {
   const out = processHookPayload(cx(a, "Bash", "cat big.log"));
   expect(out?.hookSpecificOutput?.permissionDecision).toBe("allow");
   expect(out?.hookSpecificOutput?.updatedInput?.command).toMatch(JOB_QUERY);
-  expect(processHookPayload(cx(a, "Bash", `cat ${deniedPath}`))).toEqual(claudeDeny(REASON_DENYLIST));
+  expect(processHookPayload(cx(a, "Bash", `cat ${deniedPath}`))).toStrictEqual(claudeDeny(REASON_DENYLIST));
 });
 
 it("Codex: every patched path counts as written for the re-read deny", () => {
@@ -68,8 +70,8 @@ it("Codex: every patched path counts as written for the re-read deny", () => {
   const read = (file: string, limit?: number) =>
     processFatTools(inSession(claudeCall(a, "Read", limit ? { file_path: file, limit } : { file_path: file }), "cx1"));
   for (const file of [path.join(a, "small.md"), path.join(a, "notes/n.md")]) {
-    expect(read(file, 10), file).not.toEqual({ type: "deny", reason: REASON_REREAD });
-    expect(read(file), file).toEqual({ type: "deny", reason: REASON_REREAD });
+    expect(read(file, 10), file).not.toStrictEqual({ type: "deny", reason: REASON_REREAD });
+    expect(read(file), file).toStrictEqual({ type: "deny", reason: REASON_REREAD });
   }
   expect(fs.existsSync(path.join(r, "notes"))).toBe(false);
 });
@@ -91,7 +93,7 @@ it("counts a write made through an alias of the repo for the re-read deny in eit
       { cwd: alias, file: "small.md" },
     ]) {
       const whole = processFatTools(inSession(claudeCall(cwd, "Read", { file_path: file }), sid));
-      expect(whole, `${sid} ${file}`).toEqual({ type: "deny", reason: REASON_REREAD });
+      expect(whole, `${sid} ${file}`).toStrictEqual({ type: "deny", reason: REASON_REREAD });
     }
   }
 });
@@ -100,16 +102,16 @@ it("Antigravity: overwrites only the changed args, denies with decision, and ski
   const { r, a, scratch } = repo();
   const agy = (name: string, args: Record<string, unknown>) => processHookPayload(agyCall(r, name, args));
   const target = path.join(a, REL);
-  expect(agy("write_file", { Path: target, Content: "hi" })).toEqual({
+  expect(agy("write_file", { Path: target, Content: "hi" })).toStrictEqual({
     decision: "allow",
     overwrite: { Path: scratch("scratch/x.md") },
   });
   const run = agy("run_command", { CommandLine: "cat big.log", Cwd: a, WaitMsBeforeAsync: 0 });
   expect(run?.decision).toBe("allow");
-  expect(Object.keys(run?.overwrite ?? {})).toEqual(["CommandLine"]);
+  expect(Object.keys(run?.overwrite ?? {})).toStrictEqual(["CommandLine"]);
   expect(run?.overwrite?.CommandLine).toMatch(JOB_QUERY);
   const denied = agy("run_command", { CommandLine: `cat ${deniedPath}`, Cwd: a });
-  expect(denied).toEqual({ decision: "deny", reason: REASON_DENYLIST });
+  expect(denied).toStrictEqual({ decision: "deny", reason: REASON_DENYLIST });
   expect(agy("read_file", { Path: path.join(a, "big.log"), StartLine: 1, EndLine: 10 })).toBeNull();
   expect(fs.existsSync(scratch("scratch"))).toBe(false);
 });
@@ -118,9 +120,9 @@ it("redirects a nested plan through tools orchestrate-parent cannot see, and lea
   const { r, a, scratch } = repo();
   const nested = path.join(a, ".tmp/repo/plans/p.md");
   const patched = processHookPayload(cx(a, "apply_patch", patchAdd(nested)));
-  expect(patched).toEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
+  expect(patched).toStrictEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
   const agy = processHookPayload(agyCall(r, "write_file", { Path: nested, Content: "x" }));
-  expect(agy).toEqual({ decision: "allow", overwrite: { Path: scratch("plans/p.md") } });
+  expect(agy).toStrictEqual({ decision: "allow", overwrite: { Path: scratch("plans/p.md") } });
   const claude = claudeCall(a, "Write", { file_path: nested, content: "x" });
   expect(processHookPayload(inSession(claude, "cl1"))).toBeNull();
 });

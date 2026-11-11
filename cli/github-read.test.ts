@@ -39,7 +39,7 @@ it("reads the settings the fake serves, null text as empty, and only the managed
     ok: true,
     current: { reporting: true, alerts: true, description: "", homepage: "", topics: ["a"] },
   });
-  expect(result.ok && result.current.rulesets.map((ruleset) => ruleset.name)).toEqual(["main", "release tags"]);
+  expect(result.ok && result.current.rulesets.map((ruleset) => ruleset.name)).toStrictEqual(["main", "release tags"]);
   expect(fake.calls.map((call) => call.path)).not.toContain(`${BASE}/rulesets/9`);
 });
 
@@ -60,7 +60,7 @@ it("reads an actor with no id as 0", async () => {
   };
   const json = { ...GOOD, [`${BASE}/rulesets`]: [{ id: 1, name: "main" }], [`${BASE}/rulesets/1`]: ruleset };
   const result = await readCurrent(canned(json), "o/r");
-  expect(result.ok && result.current.rulesets[0]?.bypass_actors).toEqual([
+  expect(result.ok && result.current.rulesets[0]?.bypass_actors).toStrictEqual([
     { actor_id: 0, actor_type: "OrganizationAdmin", bypass_mode: "always" },
   ]);
 });
@@ -69,7 +69,7 @@ const PATHS = [`${BASE}/rulesets`, BASE, `${BASE}/private-vulnerability-reportin
 
 it.each(PATHS)("fails with the failure of %s when that call fails", async (path) => {
   const result = await readCurrent(canned(GOOD, { [path]: failure("http", 500) }), "o/r");
-  expect(result).toEqual(failure("http", 500));
+  expect(result).toStrictEqual(failure("http", 500));
 });
 
 it("fails when a managed ruleset cannot be read by id", async () => {
@@ -77,10 +77,10 @@ it("fails when a managed ruleset cannot be read by id", async () => {
   const fake = fakeGh({ ...EMPTY_SETTINGS(), rulesets: [stored] }, (call) =>
     call.path.endsWith("/rulesets/1") ? failure("timeout") : undefined,
   );
-  expect(await readCurrent(fake.gh, "o/r")).toEqual(failure("timeout"));
+  expect(await readCurrent(fake.gh, "o/r")).toStrictEqual(failure("timeout"));
 });
 
 it.each(["<html>", { topics: "x" }])("fails on the answer %j, which is not the expected shape", async (answer) => {
   const unexpected = { ok: false, kind: "other", message: "GitHub answered something unexpected" };
-  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r")).toEqual(unexpected);
+  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r")).toStrictEqual(unexpected);
 });

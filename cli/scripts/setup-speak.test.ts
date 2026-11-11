@@ -22,10 +22,10 @@ it("setupSpeak asks for the OpenAI key only when the user picks openai, starting
   const opened: string[] = [];
   const flags = { provider: "openai", "skip-verify": "true" };
   await setupSpeak({ flags, home, io, interactive: true, openUrlFn: (u) => opened.push(u) });
-  expect(io.initial).toEqual(["openai"]);
-  expect(opened).toEqual([OPENAI_KEY_URL]);
-  expect(io.asked).toEqual(["OpenAI API key"]);
-  expect(readSpeakJson(home)).toEqual({ provider: "openai", openai: { apiKey: "sk_oa" } });
+  expect(io.initial).toStrictEqual(["openai"]);
+  expect(opened).toStrictEqual([OPENAI_KEY_URL]);
+  expect(io.asked).toStrictEqual(["OpenAI API key"]);
+  expect(readSpeakJson(home)).toStrictEqual({ provider: "openai", openai: { apiKey: "sk_oa" } });
 });
 
 it("setupSpeak asks for both keys on both and records no provider", async () => {
@@ -33,16 +33,16 @@ it("setupSpeak asks for both keys on both and records no provider", async () => 
   const io = tty({ select: "both", keys: ["sk_el", "sk_oa"] });
   const opened: string[] = [];
   await setupSpeak({ flags: { "skip-verify": "1" }, home, io, interactive: true, openUrlFn: (u) => opened.push(u) });
-  expect(opened).toEqual([ELEVENLABS_KEY_URL, OPENAI_KEY_URL]);
-  expect(readSpeakJson(home)).toEqual({ elevenlabs: { apiKey: "sk_el" }, openai: { apiKey: "sk_oa" } });
+  expect(opened).toStrictEqual([ELEVENLABS_KEY_URL, OPENAI_KEY_URL]);
+  expect(readSpeakJson(home)).toStrictEqual({ elevenlabs: { apiKey: "sk_el" }, openai: { apiKey: "sk_oa" } });
 });
 
 it("setupSpeak treats a blank menu answer as ElevenLabs", async () => {
   const home = plant("setup-sp-blank-");
   const io = tty({ select: "", keys: ["sk_el"] });
   await setupSpeak({ flags: { "skip-verify": "1" }, home, io, interactive: true, openUrlFn: () => 0 });
-  expect(io.initial).toEqual(["elevenlabs"]);
-  expect(readSpeakJson(home)).toEqual({ elevenlabs: { apiKey: "sk_el" } });
+  expect(io.initial).toStrictEqual(["elevenlabs"]);
+  expect(readSpeakJson(home)).toStrictEqual({ elevenlabs: { apiKey: "sk_el" } });
 });
 
 it("setupSpeak does not prompt for a key that was passed as a flag", async () => {
@@ -50,8 +50,8 @@ it("setupSpeak does not prompt for a key that was passed as a flag", async () =>
   const io = tty({ select: "elevenlabs" });
   const flags = { provider: "elevenlabs", elevenlabs: "sk_flag", "skip-verify": "1" };
   await setupSpeak({ flags, home, io, interactive: true, openUrlFn: () => 0 });
-  expect(io.asked).toEqual([]);
-  expect(readSpeakJson(home)).toEqual({ provider: "elevenlabs", elevenlabs: { apiKey: "sk_flag" } });
+  expect(io.asked).toStrictEqual([]);
+  expect(readSpeakJson(home)).toStrictEqual({ provider: "elevenlabs", elevenlabs: { apiKey: "sk_flag" } });
 });
 
 it("setupSpeak keeps both flag keys when a provider is named", async () => {

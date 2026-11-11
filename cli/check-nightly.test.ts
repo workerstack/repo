@@ -30,44 +30,44 @@ const input = (manifest: PackageJson, tracked: string[], packs: Pack[] = ["relea
 
 describe("nightlyProblems", () => {
   it("passes a root with both Stryker packages and a tracked file the globs match", () => {
-    expect(nightlyProblems(input(STRYKER, ["src/a.ts"]))).toEqual([]);
+    expect(nightlyProblems(input(STRYKER, ["src/a.ts"]))).toStrictEqual([]);
   });
 
   it("names the install when a Stryker package is missing", () => {
-    expect(nightlyProblems(input({}, ["src/a.ts"]))).toEqual([INSTALL_LINE]);
+    expect(nightlyProblems(input({}, ["src/a.ts"]))).toStrictEqual([INSTALL_LINE]);
     const half = { dependencies: { "@stryker-mutator/core": "10.1.1" } };
-    expect(nightlyProblems(input(half, ["src/a.ts"]))).toEqual([INSTALL_LINE]);
+    expect(nightlyProblems(input(half, ["src/a.ts"]))).toStrictEqual([INSTALL_LINE]);
   });
 
   it("accepts Stryker as a dependency", () => {
     const deps = { dependencies: STRYKER.devDependencies ?? {} };
-    expect(nightlyProblems(input(deps, ["src/a.ts"]))).toEqual([]);
+    expect(nightlyProblems(input(deps, ["src/a.ts"]))).toStrictEqual([]);
   });
 
   it("names coverage.mutate when it matches no tracked file, tests and fixtures not counting", () => {
-    expect(nightlyProblems(input(STRYKER, ["src/a.test.ts", "lib/b.ts"]))).toEqual([NO_FILE_LINE]);
+    expect(nightlyProblems(input(STRYKER, ["src/a.test.ts", "lib/b.ts"]))).toStrictEqual([NO_FILE_LINE]);
   });
 
   it("reports both problems, install first", () => {
-    expect(nightlyProblems(input({}, []))).toEqual([INSTALL_LINE, NO_FILE_LINE]);
+    expect(nightlyProblems(input({}, []))).toStrictEqual([INSTALL_LINE, NO_FILE_LINE]);
   });
 
   it("checks nothing without the release pack", () => {
-    expect(nightlyProblems(input({}, [], ["docs"]))).toEqual([]);
+    expect(nightlyProblems(input({}, [], ["docs"]))).toStrictEqual([]);
   });
 });
 
 describe("nightlyProblems in a Rust repo", () => {
   it("asks nothing of a Rust-only repo with no Stryker and no matching file", () => {
-    expect(nightlyProblems(input({}, ["Cargo.toml", "crates/a/src/lib.rs"]))).toEqual([]);
+    expect(nightlyProblems(input({}, ["Cargo.toml", "crates/a/src/lib.rs"]))).toStrictEqual([]);
   });
 
   it("asks a Rust repo with matching files for Stryker", () => {
-    expect(nightlyProblems(input({}, ["Cargo.toml", "src/a.ts"]))).toEqual([INSTALL_LINE]);
+    expect(nightlyProblems(input({}, ["Cargo.toml", "src/a.ts"]))).toStrictEqual([INSTALL_LINE]);
   });
 
   it("asks a Rust repo with Stryker for files to mutate", () => {
-    expect(nightlyProblems(input(STRYKER, ["Cargo.toml"]))).toEqual([NO_FILE_LINE]);
+    expect(nightlyProblems(input(STRYKER, ["Cargo.toml"]))).toStrictEqual([NO_FILE_LINE]);
   });
 });
 
@@ -90,28 +90,28 @@ const MANIFEST = JSON.stringify({ name: "app", ...STRYKER });
 describe("checkNightlyAt", () => {
   it("reads the config, the root manifest and the tracked files", async () => {
     const root = repo({ ["workerstack.config.ts"]: CONFIG, "package.json": "{}", "lib/a.ts": "" });
-    expect(await checkNightlyAt(root)).toEqual([INSTALL_LINE, NO_FILE_LINE]);
+    expect(await checkNightlyAt(root)).toStrictEqual([INSTALL_LINE, NO_FILE_LINE]);
   });
 
   it("passes a repo with Stryker and a tracked source", async () => {
     const root = repo({ "workerstack.config.ts": CONFIG, "package.json": MANIFEST, "src/a.ts": "" });
-    expect(await checkNightlyAt(root)).toEqual([]);
+    expect(await checkNightlyAt(root)).toStrictEqual([]);
   });
 
   it("does not count an untracked file", async () => {
     const root = repo({ "workerstack.config.ts": CONFIG, "package.json": MANIFEST }, true);
     fs.mkdirSync(path.join(root, "src"));
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
-    expect(await checkNightlyAt(root)).toEqual([NO_FILE_LINE]);
+    expect(await checkNightlyAt(root)).toStrictEqual([NO_FILE_LINE]);
   });
 
   it("leaves a bad config, an unreadable manifest and a missing git to the other checks", async () => {
-    expect(await checkNightlyAt(repo({ "workerstack.config.ts": "export default 3;\n" }))).toEqual([]);
-    expect(await checkNightlyAt(repo({ "workerstack.config.ts": CONFIG, "package.json": "[" }))).toEqual([]);
+    expect(await checkNightlyAt(repo({ "workerstack.config.ts": "export default 3;\n" }))).toStrictEqual([]);
+    expect(await checkNightlyAt(repo({ "workerstack.config.ts": CONFIG, "package.json": "[" }))).toStrictEqual([]);
     const bare = fs.mkdtempSync(path.join(os.tmpdir(), "check-nightly-bare-"));
     temps.push(bare);
     fs.writeFileSync(path.join(bare, "workerstack.config.ts"), CONFIG);
     fs.writeFileSync(path.join(bare, "package.json"), MANIFEST);
-    expect(await checkNightlyAt(bare)).toEqual([]);
+    expect(await checkNightlyAt(bare)).toStrictEqual([]);
   });
 });

@@ -24,7 +24,7 @@ it("an implementer's git add and git commit are denied under every strategy; rea
     const sh = (command: string, extra: HookInput = {}) =>
       processFatTools({ ...base, tool_input: { command }, agent_type: "implementer-fast", ...extra });
     for (const command of STAGING) {
-      expect(sh(command), `${state} ${command}`).toEqual({ type: "deny", reason: IMPLEMENTER_GIT });
+      expect(sh(command), `${state} ${command}`).toStrictEqual({ type: "deny", reason: IMPLEMENTER_GIT });
     }
     for (const command of ["git status", "git diff", "git log -1", "git diff --stat"]) {
       expect(notDenied(sh(command)), command).toBe(true);
@@ -35,6 +35,6 @@ it("an implementer's git add and git commit are denied under every strategy; rea
       inSession(codexCall(w, "Bash", { command: "git commit -m x" }), REVIEW_SID),
       "implementer-deep",
     );
-    expect(processFatTools(codex)).toEqual({ type: "deny", reason: IMPLEMENTER_GIT });
+    expect(processFatTools(codex)).toStrictEqual({ type: "deny", reason: IMPLEMENTER_GIT });
   }
 });

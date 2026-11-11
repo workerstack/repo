@@ -46,7 +46,7 @@ describe("roots", () => {
   it("applies and checks the process cwd when no options are given", () => {
     const ws = plant();
     vi.spyOn(process, "cwd").mockReturnValue(ws);
-    expect(applyUnion()).toEqual({ ok: true, check: false });
+    expect(applyUnion()).toStrictEqual({ ok: true, check: false });
     expect(fs.existsSync(path.join(ws, ".claude/settings.json"))).toBe(true);
     expect(checkUnion()).toContain("claude: missing scrub-spawn-prompt");
   });
@@ -62,7 +62,7 @@ describe("roots", () => {
     for (const f of [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"]) {
       put(ws, f, { hooks: { PreToolUse: ownedGroups() } });
     }
-    expect(applyUnion({ workspaceRoot: ws, check: true })).toEqual({ ok: true, check: true, failures: [] });
+    expect(applyUnion({ workspaceRoot: ws, check: true })).toStrictEqual({ ok: true, check: true, failures: [] });
   });
 
   it("reports drift as a failed check", () => {
@@ -97,9 +97,9 @@ describe("odd files", () => {
     put(ws, ".claude/settings.json", { hooks: { PreToolUse: odd }, permissions: { deny: ["Read(x)", 5, "Write(y)"] } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const pre = listAt(ws, ".claude/settings.json", "hooks", "PreToolUse");
-    expect(pre[0]).toEqual({ matcher: "Write|Edit", hooks: [{ type: "command", command: BEHIND }] });
-    expect(pre.slice(1)).toEqual(odd);
-    expect(listAt(ws, ".claude/settings.json", "permissions", "deny")).toEqual(["Read(x)", 5]);
+    expect(pre[0]).toStrictEqual({ matcher: "Write|Edit", hooks: [{ type: "command", command: BEHIND }] });
+    expect(pre.slice(1)).toStrictEqual(odd);
+    expect(listAt(ws, ".claude/settings.json", "permissions", "deny")).toStrictEqual(["Read(x)", 5]);
   });
 });
 
@@ -127,9 +127,9 @@ describe("flat session lists", () => {
     put(ws, ".agents/hooks.json", { rulesync: { SessionStart: sessions } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const cursor = listAt(ws, ".cursor/hooks.json", "hooks", "sessionStart");
-    expect(cursor.slice(0, 3)).toEqual([keep, "text", { command: "echo flat" }]);
+    expect(cursor.slice(0, 3)).toStrictEqual([keep, "text", { command: "echo flat" }]);
     expect(cursor).toHaveLength(6);
     const agents = listAt(ws, ".agents/hooks.json", "rulesync", "SessionStart");
-    expect(agents.slice(0, 3)).toEqual(cursor.slice(0, 3));
+    expect(agents.slice(0, 3)).toStrictEqual(cursor.slice(0, 3));
   });
 });

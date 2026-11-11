@@ -4,7 +4,6 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
-import type { HookInput } from "./hook-input.ts";
 import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.ts";
 
 const tmpDirs: string[] = [];
@@ -47,13 +46,13 @@ const noEnv = {};
 describe("resolveRoots", () => {
   it("gives the repo top for every root at the top of a plain repo", () => {
     const r = repo("roots-plain-");
-    expect(resolveRoots({}, { env: noEnv, cwd: r })).toEqual({ root: r, checkout: r, cwd: r });
+    expect(resolveRoots({}, { env: noEnv, cwd: r })).toStrictEqual({ root: r, checkout: r, cwd: r });
   });
 
   it("keeps root and checkout at the top from a subdir, and cwd in the subdir", () => {
     const r = repo("roots-sub-");
     const a = path.join(r, "packages/a");
-    expect(resolveRoots({ cwd: a }, { env: noEnv, cwd: r })).toEqual({ root: r, checkout: r, cwd: a });
+    expect(resolveRoots({ cwd: a }, { env: noEnv, cwd: r })).toStrictEqual({ root: r, checkout: r, cwd: a });
     expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: a }, cwd: a }).root).toBe(r);
   });
 
@@ -61,7 +60,7 @@ describe("resolveRoots", () => {
     const r = repo("roots-wt-");
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     const w = path.join(r, ".worktrees/w");
-    expect(resolveRoots({ cwd: path.join(w, "packages/a") }, { env: noEnv, cwd: r })).toEqual({
+    expect(resolveRoots({ cwd: path.join(w, "packages/a") }, { env: noEnv, cwd: r })).toStrictEqual({
       root: r,
       checkout: w,
       cwd: path.join(w, "packages/a"),
@@ -72,7 +71,7 @@ describe("resolveRoots", () => {
     const r = repo("roots-enter-");
     git(r, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
     const w = path.join(r, ".worktrees/w");
-    expect(resolveRoots({ cwd: w }, { env: { CLAUDE_PROJECT_DIR: r }, cwd: r })).toEqual({
+    expect(resolveRoots({ cwd: w }, { env: { CLAUDE_PROJECT_DIR: r }, cwd: r })).toStrictEqual({
       root: r,
       checkout: w,
       cwd: w,
@@ -147,12 +146,12 @@ describe("resolveRoots", () => {
   it("gives every root the real spelling when the cwd is an alias of the repo", () => {
     const r = repo("roots-alias-");
     const alias = aliasOf(r);
-    expect(resolveRoots({ cwd: path.join(alias, "packages/a") }, { env: noEnv, cwd: alias })).toEqual({
+    expect(resolveRoots({ cwd: path.join(alias, "packages/a") }, { env: noEnv, cwd: alias })).toStrictEqual({
       root: r,
       checkout: r,
       cwd: path.join(r, "packages/a"),
     });
-    expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: alias }, cwd: alias })).toEqual({
+    expect(resolveRoots({}, { env: { CLAUDE_PROJECT_DIR: alias }, cwd: alias })).toStrictEqual({
       root: r,
       checkout: r,
       cwd: r,
@@ -162,7 +161,7 @@ describe("resolveRoots", () => {
 
   it("uses the raw dir outside git", () => {
     const d = tmpDir("roots-nogit-");
-    expect(resolveRoots({}, { env: noEnv, cwd: d })).toEqual({ root: d, checkout: d, cwd: d });
+    expect(resolveRoots({}, { env: noEnv, cwd: d })).toStrictEqual({ root: d, checkout: d, cwd: d });
   });
 
   it("takes the first set candidate in D1 order", () => {
@@ -178,7 +177,7 @@ describe("resolveRoots", () => {
     ];
     const input = { workspaceRoot: ws, workspacePaths: [paths], cwd, toolCall: { args: { Cwd: agCwd } } };
     const env = { GROK_WORKSPACE_ROOT: grok, CLAUDE_PROJECT_DIR: claude };
-    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i as HookInput, { env: e, cwd: proc }).root;
+    const rootOf = (i: object, e: Partial<typeof env>) => resolveRoots(i, { env: e, cwd: proc }).root;
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
@@ -211,7 +210,7 @@ describe("resolveRoots", () => {
         abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
       realpath: (abs: string) => abs,
     };
-    expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toEqual({
+    expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toStrictEqual({
       root: "C:\\r",
       checkout: "C:\\r\\.worktrees\\w",
       cwd: "C:\\r\\.worktrees\\w\\src",

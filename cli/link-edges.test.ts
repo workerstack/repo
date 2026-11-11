@@ -16,7 +16,7 @@ it("links into the main checkout's install from a worktree without one, and find
   expect(versionIn(w.main, NAME)).toBe("0.4.0-dev");
   expect(fs.existsSync(mod(tree))).toBe(false);
   await unlinkMain([NAME], w.io(over));
-  expect(w.installs).toEqual([w.main]);
+  expect(w.installs).toStrictEqual([w.main]);
 });
 
 it("links into the worktree's own install when it has one", async () => {
@@ -55,7 +55,7 @@ it("judges required peers only, and ranges only", async () => {
     peerDependenciesMeta: { optional: { optional: true }, plain: {} },
   });
   await main([NAME], w.io());
-  expect(w.out.slice(1, -1)).toEqual([
+  expect(w.out.slice(1, -1)).toStrictEqual([
     `warning: ${NAME} needs react ^19, this checkout does not install it`,
     `warning: ${NAME} needs plain ^2, this checkout does not install it`,
   ]);
@@ -65,7 +65,7 @@ it("links a package that depends on nothing", async () => {
   const w = scene();
   sibling(w.flare, NAME, "0.4.0-dev", { dependencies: undefined });
   await main([NAME], w.io());
-  expect(w.out).toEqual([
+  expect(w.out).toStrictEqual([
     `linked ${NAME} 0.4.0-dev from ${w.flare} (npm had 0.3.2)`,
     `${NAME} is linked; \`bun repo unlink ${NAME}\` puts npm back`,
   ]);

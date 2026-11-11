@@ -32,13 +32,13 @@ function checkouts() {
 it("finds the main checkout and the siblings from a worktree without its own install", () => {
   const { base, main, tree } = checkouts();
   const roots = findRoots({ ...linkIo(), cwd: tree });
-  expect(roots).toEqual({ checkout: tree, main, install: main, siblings: base });
+  expect(roots).toStrictEqual({ checkout: tree, main, install: main, siblings: base });
 });
 
 it("installs into the worktree once it has its own install", () => {
   const { base, main, tree } = checkouts();
   fs.mkdirSync(path.join(tree, MODULES));
-  expect(findRoots({ ...linkIo(), cwd: tree })).toEqual({ checkout: tree, main, install: tree, siblings: base });
+  expect(findRoots({ ...linkIo(), cwd: tree })).toStrictEqual({ checkout: tree, main, install: tree, siblings: base });
 });
 
 it("reads git's answer, and null when git fails", () => {

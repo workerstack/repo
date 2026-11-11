@@ -33,15 +33,15 @@ it("lists the workspace members with their version and manifest", () => {
 
 it("is stale when --locked made cargo exit 101", () => {
   const stderr = "error: the lock file needs to be updated but --locked was passed to prevent this\n";
-  expect(workspaceCrates("/work", cargo([], { status: 101, stderr }))).toEqual({ kind: "stale" });
+  expect(workspaceCrates("/work", cargo([], { status: 101, stderr }))).toStrictEqual({ kind: "stale" });
 });
 
 it("fails with the same lines crateProblems gives", () => {
-  expect(workspaceCrates("/work", cargo([], { status: 1, missing: true }))).toEqual({
+  expect(workspaceCrates("/work", cargo([], { status: 1, missing: true }))).toStrictEqual({
     kind: "failed",
     problems: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
   });
-  expect(workspaceCrates("/work", cargo([], { stdout: "nope" }))).toEqual({
+  expect(workspaceCrates("/work", cargo([], { stdout: "nope" }))).toStrictEqual({
     kind: "failed",
     problems: ["cargo metadata printed output repo cannot read: nope"],
   });

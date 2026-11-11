@@ -24,7 +24,7 @@ describe("renderSubagents", () => {
     const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR, packages: [] }).sources;
     const out = renderSubagents(sources, HOSTS);
     const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
-    expect([...out.keys()].sort()).toEqual([...goldens.keys()].sort());
+    expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
     for (const [rel, text] of goldens) {
       // emitAgentShellTools later swaps the claude scout body for the stock one; ours is the pre-emit text:
       // the overlay frontmatter (equal to the golden's) plus the overlay body.
@@ -40,7 +40,7 @@ describe("renderSubagents", () => {
   it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
     const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
     const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
-    expect([...out.keys()].sort()).toEqual(committed.sort());
+    expect([...out.keys()].sort()).toStrictEqual(committed.sort());
     for (const rel of committed)
       expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
   });
@@ -122,7 +122,7 @@ describe("renderSubagents", () => {
         doc("c.md", { name: "c" }),
       ],
     };
-    expect([...renderSubagents(sources, ["claude"]).keys()]).toEqual([
+    expect([...renderSubagents(sources, ["claude"]).keys()]).toStrictEqual([
       ".claude/agents/c.md",
       ".claude/agents/z.md",
       ".claude/agents/a/b.md",

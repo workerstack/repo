@@ -136,7 +136,7 @@ it("retries the rebase once when the default branch moves during it", () => {
   raceHook(r, true);
   const out = cli(r, ["finish", "race"]);
   expect(out.status, out.stderr).toBe(0);
-  expect(subjects(r)).toEqual(["race.txt", "raced", "m.txt", "init"]);
+  expect(subjects(r)).toStrictEqual(["race.txt", "raced", "m.txt", "init"]);
   expect(git(r, "rev-list", "--merges", "main")).toBe("");
   expect(hasBranch(r, "wt/race")).toBe(false);
   expect(fs.existsSync(wt(r, "race"))).toBe(false);

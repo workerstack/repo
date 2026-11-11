@@ -29,7 +29,7 @@ it(
   () => {
     const result = rustHitsAt(crate("lib-crate"), ["src/lib.rs"], { clippy: true });
     const unwraps = result.ok ? result.value.filter((d) => d.rule === "clippy(unwrap_used)") : [];
-    expect(unwraps).toEqual([
+    expect(unwraps).toStrictEqual([
       {
         file: "src/lib.rs",
         rule: "clippy(unwrap_used)",
@@ -43,17 +43,17 @@ it("reads the root clippy.toml for a member crate in a subdir", { timeout: CARGO
   const result = rustHitsAt(crate("workspace-crate"), ["members/foo/src/lib.rs"], { clippy: true });
   const lines = result.ok ? result.value.map((d) => d.line) : [];
   // The threshold of 3 reaches the member, and allow-unwrap-in-tests spares its test module.
-  expect(lines.filter((line) => line.includes("too_many_arguments"))).toEqual([
+  expect(lines.filter((line) => line.includes("too_many_arguments"))).toStrictEqual([
     "members/foo/src/lib.rs:1:1: error clippy(too_many_arguments): this function has too many arguments (4/3)",
   ]);
-  expect(lines.filter((line) => line.includes("unwrap_used"))).toEqual([]);
+  expect(lines.filter((line) => line.includes("unwrap_used"))).toStrictEqual([]);
 });
 
 it("makes a crate that does not compile a problem, never a hit", { timeout: CARGO_MS }, () => {
   const root = crate("lib-crate");
   fs.writeFileSync(path.join(root, "src/lib.rs"), 'pub fn f() -> u8 { "a" }\n');
   const result = rustHitsAt(root, ["src/lib.rs"], { clippy: true });
-  expect(result).toEqual({ ok: false, errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"] });
+  expect(result).toStrictEqual({ ok: false, errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"] });
 });
 
 it("names the stale lock when Cargo.toml gains a dependency the lock does not list", { timeout: CARGO_MS }, () => {
@@ -63,7 +63,7 @@ it("names the stale lock when Cargo.toml gains a dependency the lock does not li
   fs.writeFileSync(path.join(root, "dep/src/lib.rs"), "");
   const manifest = path.join(root, "Cargo.toml");
   fs.appendFileSync(manifest, '\n[dependencies]\ndep = { path = "dep" }\n');
-  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true })).toEqual({
+  expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true })).toStrictEqual({
     ok: false,
     errors: ["Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it"],
   });

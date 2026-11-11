@@ -16,7 +16,7 @@ describe("workersPlugin, a module", () => {
   it("resolves to what cloudflareTest returns for the wrangler file", async () => {
     const cloudflareTest = (options: unknown) => ({ name: "cloudflare-test", options });
     const plugin = await workersPlugin(CONFIG_PATH, () => Promise.resolve({ cloudflareTest }));
-    expect(plugin).toEqual({ name: "cloudflare-test", options: { wrangler: { configPath: CONFIG_PATH } } });
+    expect(plugin).toStrictEqual({ name: "cloudflare-test", options: { wrangler: { configPath: CONFIG_PATH } } });
   });
 
   it.each([

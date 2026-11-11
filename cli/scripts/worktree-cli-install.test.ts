@@ -57,7 +57,7 @@ it("reports a failed install in one stderr line and still prints the path", () =
   expect(made.status).toBe(0);
   expect(made.stdout).toBe(`${wt(r, "bad")}\n`);
   const lines = made.stderr.split("\n").filter((l) => l.includes("could not install"));
-  expect(lines).toEqual([installFailed(wt(r, "bad"))]);
+  expect(lines).toStrictEqual([installFailed(wt(r, "bad"))]);
 });
 
 /** A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32, where git.exe needs its install. */

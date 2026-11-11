@@ -15,7 +15,7 @@ it("ends on a cycle of types", () => {
       "src/b.ts": 'import type { A } from "./a.ts";\nexport type B = { a: A };\n',
     },
   );
-  expect(namesIn(root)).toEqual({ "src/a.ts": ["A"], "src/b.ts": ["B"] });
+  expect(namesIn(root)).toStrictEqual({ "src/a.ts": ["A"], "src/b.ts": ["B"] });
 });
 
 it("ends on a cycle of star re-exports and of namespace re-exports", () => {
@@ -26,12 +26,12 @@ it("ends on a cycle of star re-exports and of namespace re-exports", () => {
       "src/b.ts": 'export * from "./a.ts";\nexport * as self from "./b.ts";\nexport const fromB = 1;\n',
     },
   );
-  expect(namesIn(root)).toEqual({ "src/a.ts": ["fromA"], "src/b.ts": ["fromB"] });
+  expect(namesIn(root)).toStrictEqual({ "src/a.ts": ["fromA"], "src/b.ts": ["fromB"] });
 });
 
 it("ends on a re-export that names itself", () => {
   const root = withEntries({ ".": "./src/a.ts" }, { "src/a.ts": 'export { x } from "./a.ts";\n' });
-  expect(unknownIn(root)).toEqual([{ file: "src/a.ts", form: "x", line: 1 }]);
+  expect(unknownIn(root)).toStrictEqual([{ file: "src/a.ts", form: "x", line: 1 }]);
 });
 
 type Closed = { name: string; code: string; form: string; line: number };
@@ -89,7 +89,7 @@ it.each(CLOSED)("fails closed on $name at an entry", ({ code, form, line }) => {
     "src/wide.ts": 'export * from "zod";\n',
     "src/star.ts": 'export { ghost } from "./other.ts";\n',
   });
-  expect(unknownIn(root)).toEqual([{ file: "src/index.ts", form, line }]);
+  expect(unknownIn(root)).toStrictEqual([{ file: "src/index.ts", form, line }]);
 });
 
 it("reports a form once however many entries and stars reach its file", () => {
@@ -100,12 +100,12 @@ it("reports a form once however many entries and stars reach its file", () => {
       "src/bad.ts": "const a = 1;\nexport = a;\n",
     },
   );
-  expect(unknownIn(root)).toEqual([{ file: "src/bad.ts", form: "TSExportAssignment", line: 2 }]);
+  expect(unknownIn(root)).toStrictEqual([{ file: "src/bad.ts", form: "TSExportAssignment", line: 2 }]);
 });
 
 it("fails closed on an entry that names no file or a directory", () => {
   const root = withEntries({ ".": "./src/gone.ts", "./dir": "./src/dir.ts" }, { "src/dir.ts/keep": "" });
-  expect(unknownIn(root)).toEqual([
+  expect(unknownIn(root)).toStrictEqual([
     { file: "src/gone.ts", form: "src/gone.ts", line: 1 },
     { file: "src/dir.ts", form: "src/dir.ts", line: 1 },
   ]);

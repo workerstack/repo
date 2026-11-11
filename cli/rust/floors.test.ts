@@ -21,11 +21,14 @@ const TS = { statements: 90, branches: 80, functions: 70, lines: 60 };
 const RUST = { lines: 66, functions: 66, regions: 58 };
 
 it("reads both row kinds", () => {
-  expect(readFloorsFile(write({ "a/x.ts": TS, "a/src/lib.rs": RUST }))).toEqual({ "a/x.ts": TS, "a/src/lib.rs": RUST });
+  expect(readFloorsFile(write({ "a/x.ts": TS, "a/src/lib.rs": RUST }))).toStrictEqual({
+    "a/x.ts": TS,
+    "a/src/lib.rs": RUST,
+  });
 });
 
 it("is empty for a missing file", () => {
-  expect(readFloorsFile(path.join(dir, "none.json"))).toEqual({});
+  expect(readFloorsFile(path.join(dir, "none.json"))).toStrictEqual({});
 });
 
 it("tells a rust key from any other", () => {

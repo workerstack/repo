@@ -35,7 +35,7 @@ describe("commit-msg red-proof in a public package", () => {
     const result = await hook(root, "feat: add x\n", { ok: false, problem: PROBLEM });
     expect(result.code).toBe(1);
     expect(result.stderr).toBe(`commit-msg: the message was refused\n  - ${PROBLEM}\n`);
-    expect(result.calls).toEqual([
+    expect(result.calls).toStrictEqual([
       {
         root,
         change: [
@@ -122,7 +122,7 @@ describe("commit-msg red-proof never runs", () => {
     async (message) => {
       const root = plant({ [CONFIG_FILE]: TDD });
       stage(root, SRC_AND_TEST);
-      expect((await hook(root, message)).calls).toEqual([]);
+      expect((await hook(root, message)).calls).toStrictEqual([]);
     },
   );
 
@@ -130,7 +130,7 @@ describe("commit-msg red-proof never runs", () => {
     const root = plant({ [CONFIG_FILE]: TDD });
     stage(root, { "src/x.ts": "x\n" });
     const result = await feat(root);
-    expect(result.calls).toEqual([]);
+    expect(result.calls).toStrictEqual([]);
     expect(result.code).toBe(1);
   });
 });

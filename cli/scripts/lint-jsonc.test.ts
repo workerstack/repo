@@ -33,18 +33,18 @@ it("fmt rewrites it before the tool runs, and keeps inline, string and fixture c
   const run = (...args: unknown[]) => calls.push(args) && 0;
   const o = io();
   const code = await fmt([], { cwd: root, stderr: o.stderr, run });
-  expect([code, o.err]).toEqual([0, []]);
-  expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toEqual([DONE, DONE]);
+  expect([code, o.err]).toStrictEqual([0, []]);
+  expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([DONE, DONE]);
   expect(readText(root, "inline.jsonc")).toContain("/* kept */");
   expect(readText(root, "fixtures/f.jsonc")).toBe(WITH);
-  expect(calls).toEqual([["oxfmt", [], root]]);
+  expect(calls).toStrictEqual([["oxfmt", [], root]]);
 });
 
 it("fmt --check names the file and line, exits 1 and writes nothing", async () => {
   const root = tree();
   const out = io();
   expect(await fmt(["--check"], { cwd: root, stderr: out.stderr, run: () => 0 })).toBe(1);
-  expect(out.err).toEqual([
+  expect(out.err).toStrictEqual([
     "repo fmt: a.jsonc has an own-line /* */ comment at line 2; run `bun repo fmt`\n",
     "repo fmt: tsconfig.json has an own-line /* */ comment at line 2; run `bun repo fmt`\n",
   ]);
@@ -55,7 +55,7 @@ it("fmt leaves plain json byte-equal and a path narrows the conversion", async (
   const root = tree();
   fs.writeFileSync(path.join(root, "plain.json"), PLAIN);
   expect(await fmt(["a.jsonc"], { cwd: root, stderr: io().stderr, run: () => 0 })).toBe(0);
-  expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json"), readText(root, "plain.json")]).toEqual([
+  expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json"), readText(root, "plain.json")]).toStrictEqual([
     DONE,
     WITH,
     PLAIN,

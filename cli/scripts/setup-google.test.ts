@@ -17,7 +17,7 @@ it("setupGoogleWorkspace names the account from --account and accepts --json", a
   const loginFn = (dest: string) => (logins.push(dest), Promise.resolve());
   const r = await setupGoogleWorkspace({ flags: { json: src, account: "work" }, home, io: captureIo(), loginFn });
   expect(r.dest).toBe(oauthWritePath(home, "work"));
-  expect(logins).toEqual([r.dest]);
+  expect(logins).toStrictEqual([r.dest]);
   expect(r.tokens).toBe(path.join(home, ".workerstack", "workspace", "work", "tokens.json"));
 });
 

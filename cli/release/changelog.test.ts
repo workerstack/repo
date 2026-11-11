@@ -6,29 +6,31 @@ const HEAD = "# Changelog\n\nAll notable changes.\n\n";
 describe("changelogFormatProblems headings", () => {
   it("passes a changelog in the Keep a Changelog format", () => {
     const text = `${HEAD}## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] - 2026-11-01\n\n### Fixed\n\n- y\n\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- z\n`;
-    expect(changelogFormatProblems(text)).toEqual([]);
+    expect(changelogFormatProblems(text)).toStrictEqual([]);
   });
 
   it("says a missing file is missing", () => {
-    expect(changelogFormatProblems(null)).toEqual(["CHANGELOG.md is missing; add one in the Keep a Changelog format"]);
+    expect(changelogFormatProblems(null)).toStrictEqual([
+      "CHANGELOG.md is missing; add one in the Keep a Changelog format",
+    ]);
   });
 
   it("asks for an Unreleased section", () => {
-    expect(changelogFormatProblems(`${HEAD}## [0.1.0] - 2026-10-01\n`)).toEqual([
+    expect(changelogFormatProblems(`${HEAD}## [0.1.0] - 2026-10-01\n`)).toStrictEqual([
       "CHANGELOG.md has no ## [Unreleased] section; add it above the newest version",
     ]);
   });
 
   it("wants a date on every version", () => {
     const text = `${HEAD}## [Unreleased]\n\n## [0.2.0]\n\n### Added\n\n- x\n`;
-    expect(changelogFormatProblems(text)).toEqual([
+    expect(changelogFormatProblems(text)).toStrictEqual([
       'CHANGELOG.md:7: "## [0.2.0]" needs a date; write ## [0.2.0] - YYYY-MM-DD',
     ]);
   });
 
   it("accepts only the six Keep a Changelog sections", () => {
     const text = `${HEAD}## [Unreleased]\n\n### Improved\n\n- x\n\n### Security\n\n- y\n`;
-    expect(changelogFormatProblems(text)).toEqual([
+    expect(changelogFormatProblems(text)).toStrictEqual([
       'CHANGELOG.md:7: "### Improved" is not a section; use Added, Changed, Deprecated, Removed, Fixed or Security',
     ]);
   });
@@ -37,38 +39,40 @@ describe("changelogFormatProblems headings", () => {
 describe("changelogFormatProblems order", () => {
   it("lists versions newest first, a prerelease below its release", () => {
     const text = `${HEAD}## [Unreleased]\n\n## [0.2.0] - 2026-11-01\n\n## [0.3.0] - 2026-11-02\n\n## [0.3.0-rc.0] - 2026-11-01\n`;
-    expect(changelogFormatProblems(text)).toEqual(["CHANGELOG.md:9: 0.3.0 is below 0.2.0; list versions newest first"]);
+    expect(changelogFormatProblems(text)).toStrictEqual([
+      "CHANGELOG.md:9: 0.3.0 is below 0.2.0; list versions newest first",
+    ]);
     const ok = `${HEAD}## [Unreleased]\n\n## [1.0.0] - 2026-11-02\n\n## [1.0.0-rc.1] - 2026-11-01\n\n## [1.0.0-rc.0] - 2026-10-30\n`;
-    expect(changelogFormatProblems(ok)).toEqual([]);
+    expect(changelogFormatProblems(ok)).toStrictEqual([]);
   });
 });
 
 describe("changelogFormatProblems prereleases", () => {
   it("puts a release above its prereleases and orders other prerelease ids by name", () => {
     const pre = `${HEAD}## [Unreleased]\n\n## [1.0.0-rc.0] - 2026-11-01\n\n## [1.0.0] - 2026-11-02\n`;
-    expect(changelogFormatProblems(pre)).toEqual([
+    expect(changelogFormatProblems(pre)).toStrictEqual([
       "CHANGELOG.md:9: 1.0.0 is below 1.0.0-rc.0; list versions newest first",
     ]);
     const ids = `${HEAD}## [Unreleased]\n\n## [1.0.0-beta.0] - 2026-11-01\n\n## [1.0.0-rc.0] - 2026-11-02\n`;
-    expect(changelogFormatProblems(ids)).toEqual([
+    expect(changelogFormatProblems(ids)).toStrictEqual([
       "CHANGELOG.md:9: 1.0.0-rc.0 is below 1.0.0-beta.0; list versions newest first",
     ]);
   });
 
   it("names a version listed twice", () => {
     const text = `${HEAD}## [Unreleased]\n\n## [0.2.0] - 2026-11-01\n\n## [0.2.0] - 2026-11-01\n`;
-    expect(changelogFormatProblems(text)).toEqual(["CHANGELOG.md:9: 0.2.0 is listed twice; merge the sections"]);
+    expect(changelogFormatProblems(text)).toStrictEqual(["CHANGELOG.md:9: 0.2.0 is listed twice; merge the sections"]);
   });
 
   it("asks for a version heading where a section has another name", () => {
-    expect(changelogFormatProblems(`${HEAD}## [Unreleased]\n\n## Notes\n`)).toEqual([
+    expect(changelogFormatProblems(`${HEAD}## [Unreleased]\n\n## Notes\n`)).toStrictEqual([
       'CHANGELOG.md:7: "## Notes" is not a version; write ## [x.y.z] - YYYY-MM-DD',
     ]);
   });
 
   it("does not read headings inside a code fence", () => {
     const text = `${HEAD}## [Unreleased]\n\n\`\`\`md\n### Improved\n## [9.9.9]\n\`\`\`\n`;
-    expect(changelogFormatProblems(text)).toEqual([]);
+    expect(changelogFormatProblems(text)).toStrictEqual([]);
   });
 });
 

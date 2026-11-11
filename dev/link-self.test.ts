@@ -89,7 +89,7 @@ describe("linkAndSync", () => {
       return 1;
     };
     expect(linkAndSync(dir, run)).toBe(1);
-    expect(calls).toEqual([dir, "bin\n"]);
+    expect(calls).toStrictEqual([dir, "bin\n"]);
     expect(linkAndSync(dir, () => 0)).toBe(0);
   });
 });
@@ -111,19 +111,22 @@ const ABSOLUTE = 8;
 
 describe("shebangOf", () => {
   it("takes the program after env as the launcher and flags bun and node", () => {
-    expect(shebangOf("#!/usr/bin/env bun\nx", "..\\bin\\repo.ts")).toEqual({ launcher: "bun", nodeOrBun: true });
-    expect(shebangOf("#!/usr/bin/env node\r\nx", "a.js")).toEqual({ launcher: "node", nodeOrBun: true });
-    expect(shebangOf("#!/usr/bin/env -S bun --smol\nx", "a.ts")).toEqual({ launcher: "bun --smol", nodeOrBun: true });
-    expect(shebangOf("#!/usr/bin/env python3\nx", "a")).toEqual({ launcher: "python3", nodeOrBun: false });
+    expect(shebangOf("#!/usr/bin/env bun\nx", "..\\bin\\repo.ts")).toStrictEqual({ launcher: "bun", nodeOrBun: true });
+    expect(shebangOf("#!/usr/bin/env node\r\nx", "a.js")).toStrictEqual({ launcher: "node", nodeOrBun: true });
+    expect(shebangOf("#!/usr/bin/env -S bun --smol\nx", "a.ts")).toStrictEqual({
+      launcher: "bun --smol",
+      nodeOrBun: true,
+    });
+    expect(shebangOf("#!/usr/bin/env python3\nx", "a")).toStrictEqual({ launcher: "python3", nodeOrBun: false });
   });
 
   it("keeps the whole line for a direct interpreter", () => {
-    expect(shebangOf("#!/bin/sh -e\nx", "a")).toEqual({ launcher: "/bin/sh -e", nodeOrBun: false });
+    expect(shebangOf("#!/bin/sh -e\nx", "a")).toStrictEqual({ launcher: "/bin/sh -e", nodeOrBun: false });
   });
 
   it("falls back to the extension when there is no shebang", () => {
-    expect(shebangOf("export {}\n", "..\\bin\\repo.ts")).toEqual({ launcher: "bun run", nodeOrBun: true });
-    expect(shebangOf("", "x.CMD")).toEqual({ launcher: "cmd /c", nodeOrBun: false });
+    expect(shebangOf("export {}\n", "..\\bin\\repo.ts")).toStrictEqual({ launcher: "bun run", nodeOrBun: true });
+    expect(shebangOf("", "x.CMD")).toStrictEqual({ launcher: "cmd /c", nodeOrBun: false });
     expect(shebangOf("data", "x.bin")).toBeNull();
   });
 });
@@ -132,7 +135,7 @@ describe("encodeBunx", () => {
   it("lays out a relative target run by bun: path, quote, nul, launcher, space, lengths, flags", () => {
     const binPath = "..\\bin\\repo.ts";
     const bytes = encodeBunx(binPath, false, { launcher: "bun", nodeOrBun: true });
-    expect([...bytes]).toEqual([
+    expect([...bytes]).toStrictEqual([
       ...wide(units(binPath)),
       ...wide([34, 0]),
       ...wide(units("bun")),
@@ -146,9 +149,9 @@ describe("encodeBunx", () => {
 
   it("sets the absolute and is-node bits; a target with no shebang ends at the flags", () => {
     const abs = encodeBunx("C:\\x\\a.js", true, { launcher: "node", nodeOrBun: true });
-    expect([...abs].slice(-2)).toEqual(u16(VERSION | NODE_OR_BUN | IS_NODE | HAS_SHEBANG | ABSOLUTE));
+    expect([...abs].slice(-2)).toStrictEqual(u16(VERSION | NODE_OR_BUN | IS_NODE | HAS_SHEBANG | ABSOLUTE));
     const bare = encodeBunx("a.exe", false, null);
-    expect([...bare]).toEqual([...wide([...units("a.exe"), 34, 0]), ...u16(VERSION)]);
+    expect([...bare]).toStrictEqual([...wide([...units("a.exe"), 34, 0]), ...u16(VERSION)]);
   });
 });
 
@@ -168,7 +171,7 @@ describe("linkSelf bin on win32", () => {
     expect(linkSelf(dir, "win32").bin).toBe("linked");
     const bin = path.dirname(binOf(dir));
     expect(fs.readFileSync(path.join(bin, "repo.exe"), "utf8")).toBe("ALPHA");
-    expect([...fs.readFileSync(path.join(bin, "repo.bunx"))]).toEqual([
+    expect([...fs.readFileSync(path.join(bin, "repo.bunx"))]).toStrictEqual([
       ...encodeBunx("..\\bin\\repo.ts", false, { launcher: "bun", nodeOrBun: true }),
     ]);
     expect(fs.lstatSync(binOf(dir), { throwIfNoEntry: false })).toBeUndefined();

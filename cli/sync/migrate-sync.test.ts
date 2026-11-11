@@ -56,7 +56,7 @@ function expectUpToDateInNewProcess(root: string): void {
       cwd: root,
       encoding: "utf8",
     });
-    expect({ status: again.status, out: again.stdout }).toEqual({ status: 0, out: "repo sync: up to date\n" });
+    expect({ status: again.status, out: again.stdout }).toStrictEqual({ status: 0, out: "repo sync: up to date\n" });
   }
 }
 
@@ -76,9 +76,9 @@ it("--check prints the pending count, exits 1 and writes nothing", async () => {
   const count = (await copiedPlan(root)).length;
   const result = await sync(root, ["--check"], true);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual([`repo sync: ${count} migration steps pending; run \`bun repo sync\`\n`]);
-  expect(result.out).toEqual([]);
-  expect(snapshot(root)).toEqual(before);
+  expect(result.err).toStrictEqual([`repo sync: ${count} migration steps pending; run \`bun repo sync\`\n`]);
+  expect(result.out).toStrictEqual([]);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("runs the migration first and prints its lines before the sync summary", async () => {
@@ -86,7 +86,7 @@ it("runs the migration first and prints its lines before the sync summary", asyn
   const result = await sync(root, [], true);
   expect(result.code).toBe(0);
   const migration = [...LINES, FINAL, ...HANDOVER];
-  expect(result.out.slice(0, migration.length)).toEqual(migration.map((line) => `${line}\n`));
+  expect(result.out.slice(0, migration.length)).toStrictEqual(migration.map((line) => `${line}\n`));
   expect(exists(root, ".rulesync")).toBe(false);
   expect(await sync(root, ["--check"], true)).toMatchObject({ code: 0, out: ["repo sync: up to date\n"] });
 });
@@ -97,14 +97,16 @@ it(
     const root = copied();
     addOwnHook(root);
     const result = await sync(root, [], true);
-    expect(result.err).toEqual(CONVERTED);
+    expect(result.err).toStrictEqual(CONVERTED);
     expect(result.code).toBe(0);
     const settings = readJson<MergedSettings>(root, ".claude/settings.json");
     expect(settings.permissions.allow).toContain("Bash(make lint:*)");
-    expect(settings.hooks.PostToolUse.map((group) => group.matcher)).toEqual(expect.arrayContaining(["Edit", "Write"]));
+    expect(settings.hooks.PostToolUse.map((group) => group.matcher)).toStrictEqual(
+      expect.arrayContaining(["Edit", "Write"]),
+    );
     expect(JSON.stringify(settings.hooks.PostToolUse)).toContain("make post-write");
     // .mcp.json is the user's: the handover moved the copied policy's one server into it, and sync writes it no more
-    expect(readJson<{ mcpServers: unknown }>(root, ".mcp.json").mcpServers).toEqual({
+    expect(readJson<{ mcpServers: unknown }>(root, ".mcp.json").mcpServers).toStrictEqual({
       docs: { command: "npx", args: ["-y", "docs-mcp"] },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain('"servers"');
@@ -131,11 +133,11 @@ it(
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, failing);
     expect(code).toBe(1);
-    expect(err).toEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
+    expect(err).toStrictEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
     expect(exists(root, ".rulesync")).toBe(false);
 
     const second = await sync(root, [], true);
-    expect(second.err).toEqual(CONVERTED);
+    expect(second.err).toStrictEqual(CONVERTED);
     expect(second.code).toBe(0);
     const settings = readJson<MergedSettings>(root, ".claude/settings.json");
     expect(settings.permissions.allow.filter((rule) => rule === "Bash(make lint:*)")).toHaveLength(1);

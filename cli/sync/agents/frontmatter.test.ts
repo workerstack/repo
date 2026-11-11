@@ -8,23 +8,23 @@ const GOLDEN = path.join(import.meta.dirname, "..", "fixtures", "golden");
 
 describe("parseDoc", () => {
   it("splits frontmatter from a trimmed LF body", () => {
-    expect(parseDoc("a.md", "\uFEFF---\r\nname: x\r\n---\r\n\r\n  body\r\nline two\r\n\r\n")).toEqual({
+    expect(parseDoc("a.md", "\uFEFF---\r\nname: x\r\n---\r\n\r\n  body\r\nline two\r\n\r\n")).toStrictEqual({
       data: { name: "x" },
       body: "body\nline two",
     });
   });
 
   it("reads YAML 1.2: yes stays a string", () => {
-    expect(parseDoc("a.md", "---\nflag: yes\nnum: 012\n---\n").data).toEqual({ flag: "yes", num: 12 });
+    expect(parseDoc("a.md", "---\nflag: yes\nnum: 012\n---\n").data).toStrictEqual({ flag: "yes", num: 12 });
   });
 
   it("drops null values at every level", () => {
     const text = "---\na:\nb: 1\nc:\n  d: ~\n  e: 2\nf: [x, null]\n---\n";
-    expect(parseDoc("a.md", text).data).toEqual({ b: 1, c: { e: 2 }, f: ["x"] });
+    expect(parseDoc("a.md", text).data).toStrictEqual({ b: 1, c: { e: 2 }, f: ["x"] });
   });
 
   it("gives an empty mapping for an empty block", () => {
-    expect(parseDoc("a.md", "---\n---\nbody")).toEqual({ data: {}, body: "body" });
+    expect(parseDoc("a.md", "---\n---\nbody")).toStrictEqual({ data: {}, body: "body" });
   });
 
   it("names the file when the frontmatter is missing", () => {
@@ -62,7 +62,7 @@ describe("parseDoc", () => {
 
 describe("emitYaml", () => {
   const roundTrip = (entries: [string, YamlValue][], mode?: "claude") =>
-    expect(parse(emitYaml(entries, mode))).toEqual(Object.fromEntries(entries));
+    expect(parse(emitYaml(entries, mode))).toStrictEqual(Object.fromEntries(entries));
 
   it("writes lists and nested maps in block style, in the order given", () => {
     const entries: [string, YamlValue][] = [

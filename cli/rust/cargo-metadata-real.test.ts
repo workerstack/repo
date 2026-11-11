@@ -31,5 +31,5 @@ it("is stale when Cargo.toml gained a dependency the lock lacks", { timeout: CAR
   expect(runCargo(root, ["generate-lockfile", "--offline"]).status).toBe(0);
   expect(crateProblems(root, runCargo).kind).toBe("checked");
   fs.appendFileSync(path.join(root, "Cargo.toml"), '\n[dependencies]\ndep = { path = "dep" }\n');
-  expect(crateProblems(root, runCargo)).toEqual({ kind: "stale" });
+  expect(crateProblems(root, runCargo)).toStrictEqual({ kind: "stale" });
 });

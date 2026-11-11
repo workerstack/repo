@@ -30,8 +30,8 @@ describe("readManifest runtime and public", () => {
       peerDependencies: { c: "1" },
       optionalDependencies: { d: "1" },
     });
-    expect(manifest.declared.toSorted()).toEqual(["a", "a", "b", "c", "d"]);
-    expect(manifest.devOnly).toEqual(["b"]);
+    expect(manifest.declared.toSorted()).toStrictEqual(["a", "a", "b", "c", "d"]);
+    expect(manifest.devOnly).toStrictEqual(["b"]);
     expect(manifest.isPublic).toBe(true);
   });
 
@@ -44,34 +44,34 @@ describe("readManifest ships", () => {
   const FILES = ["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "README.md", "other/d.ts"];
 
   it("ships every source file without files, and never a test or a config", () => {
-    expect(shipped({}, ["a.ts", "a.test.ts", "vitest.config.ts", "e2e/a.ts", "x/fixtures/a.ts", "a.md"])).toEqual([
-      "a.ts",
-    ]);
+    expect(shipped({}, ["a.ts", "a.test.ts", "vitest.config.ts", "e2e/a.ts", "x/fixtures/a.ts", "a.md"])).toStrictEqual(
+      ["a.ts"],
+    );
   });
 
   it.each([[{ files: "src" }], [{ files: 7 }]])("ignores files that is not a list: %j", (m) => {
-    expect(shipped(m, ["a.ts"])).toEqual(["a.ts"]);
+    expect(shipped(m, ["a.ts"])).toStrictEqual(["a.ts"]);
   });
 
   it("ships only targets when files lists nothing usable", () => {
-    expect(shipped({ files: [3, null], main: "a.ts" }, ["a.ts", "b.ts"])).toEqual(["a.ts"]);
+    expect(shipped({ files: [3, null], main: "a.ts" }, ["a.ts", "b.ts"])).toStrictEqual(["a.ts"]);
   });
 
   it("matches a file, a dir and a glob entry", () => {
     const files = ["./src/", "lib/c.ts", "bin/*.ts"];
-    expect(shipped({ files }, FILES)).toEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts"]);
+    expect(shipped({ files }, FILES)).toStrictEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts"]);
   });
 
   it("matches ** across dirs, ? for one character and escapes dots", () => {
-    expect(shipped({ files: ["**/b.ts", "l?b/*.ts"] }, [...FILES, "xb.ts", "lib/cxts"])).toEqual([
+    expect(shipped({ files: ["**/b.ts", "l?b/*.ts"] }, [...FILES, "xb.ts", "lib/cxts"])).toStrictEqual([
       "src/deep/b.ts",
       "lib/c.ts",
     ]);
-    expect(shipped({ files: ["src/**"] }, ["src/a.ts", "src/deep/b.ts", "srcxa.ts"])).toEqual([
+    expect(shipped({ files: ["src/**"] }, ["src/a.ts", "src/deep/b.ts", "srcxa.ts"])).toStrictEqual([
       "src/a.ts",
       "src/deep/b.ts",
     ]);
-    expect(shipped({ files: ["a.ts"] }, ["a.ts", "axts"])).toEqual(["a.ts"]);
+    expect(shipped({ files: ["a.ts"] }, ["a.ts", "axts"])).toStrictEqual(["a.ts"]);
   });
 });
 
@@ -79,7 +79,7 @@ describe("readManifest ships targets and exclusions", () => {
   const FILES = ["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "README.md", "other/d.ts"];
 
   it("drops what a ! entry matches, whatever order it is in", () => {
-    expect(shipped({ files: ["!src/deep", "src", "!lib/*.ts", "lib"] }, FILES)).toEqual(["src/a.ts"]);
+    expect(shipped({ files: ["!src/deep", "src", "!lib/*.ts", "lib"] }, FILES)).toStrictEqual(["src/a.ts"]);
   });
 
   it("ships main, module, types, bin and export targets that files leaves out", () => {
@@ -91,8 +91,8 @@ describe("readManifest ships targets and exclusions", () => {
       bin: { x: "bin/x.ts" },
       exports: { ".": { default: "./src/a.ts", types: ["./lib/c.ts"] }, "./package.json": "./package.json" },
     };
-    expect(shipped(manifest, FILES)).toEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "other/d.ts"]);
-    expect(shipped({ files: ["src"], bin: "bin/x.ts", exports: "./lib/c.ts" }, FILES)).toEqual([
+    expect(shipped(manifest, FILES)).toStrictEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "other/d.ts"]);
+    expect(shipped({ files: ["src"], bin: "bin/x.ts", exports: "./lib/c.ts" }, FILES)).toStrictEqual([
       "src/a.ts",
       "src/deep/b.ts",
       "lib/c.ts",
@@ -101,7 +101,7 @@ describe("readManifest ships targets and exclusions", () => {
   });
 
   it("ships a target even under a ! entry", () => {
-    expect(shipped({ files: ["src", "!src/deep"], main: "src/deep/b.ts" }, FILES)).toEqual([
+    expect(shipped({ files: ["src", "!src/deep"], main: "src/deep/b.ts" }, FILES)).toStrictEqual([
       "src/a.ts",
       "src/deep/b.ts",
     ]);

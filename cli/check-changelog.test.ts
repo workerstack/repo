@@ -16,25 +16,27 @@ function root(files: Record<string, unknown>): string {
 describe("checkChangelog", () => {
   it("holds a public root's CHANGELOG.md to Keep a Changelog, one line per problem", () => {
     const lines = checkChangelog(root({ "package.json": { name: "app" }, "CHANGELOG.md": BAD }));
-    expect(lines).toEqual([
+    expect(lines).toStrictEqual([
       'CHANGELOG.md:5: "### Improved" is not a section; use Added, Changed, Deprecated, Removed, Fixed or Security',
       'CHANGELOG.md:9: "## [0.2.0]" needs a date; write ## [0.2.0] - YYYY-MM-DD',
     ]);
   });
 
   it("passes a public root with a good changelog", () => {
-    expect(checkChangelog(root({ "package.json": { name: "app" }, "CHANGELOG.md": GOOD }))).toEqual([]);
+    expect(checkChangelog(root({ "package.json": { name: "app" }, "CHANGELOG.md": GOOD }))).toStrictEqual([]);
   });
 
   it("names a missing CHANGELOG.md in a public root", () => {
-    expect(checkChangelog(root({ "package.json": { name: "app" } }))).toEqual([
+    expect(checkChangelog(root({ "package.json": { name: "app" } }))).toStrictEqual([
       "CHANGELOG.md is missing; add one in the Keep a Changelog format",
     ]);
   });
 
   it("checks nothing in a private root, or one without a readable manifest", () => {
-    expect(checkChangelog(root({ "package.json": { name: "app", private: true }, "CHANGELOG.md": BAD }))).toEqual([]);
-    expect(checkChangelog(root({ "CHANGELOG.md": BAD }))).toEqual([]);
-    expect(checkChangelog(root({ "package.json": "[", "CHANGELOG.md": BAD }))).toEqual([]);
+    expect(checkChangelog(root({ "package.json": { name: "app", private: true }, "CHANGELOG.md": BAD }))).toStrictEqual(
+      [],
+    );
+    expect(checkChangelog(root({ "CHANGELOG.md": BAD }))).toStrictEqual([]);
+    expect(checkChangelog(root({ "package.json": "[", "CHANGELOG.md": BAD }))).toStrictEqual([]);
   });
 });

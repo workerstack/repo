@@ -73,7 +73,7 @@ describe("no-block-comment fixes", () => {
 
   it("fixes two own-line comments in a row independently", () => {
     const { reports, fixed } = run("/* one */\n/* two\n * three */\nconst a = 1;\n");
-    expect([reports, fixed]).toEqual([2, "// one\n// two\n// three\nconst a = 1;\n"]);
+    expect([reports, fixed]).toStrictEqual([2, "// one\n// two\n// three\nconst a = 1;\n"]);
   });
 
   it("converts an own-line reason before a wrapped cast", () => {
@@ -100,7 +100,7 @@ describe("no-block-comment keeps", () => {
     "// already a line\nexport const a = 1;\n",
     'export const s = "/* not a comment */";\n',
   ])("%j", (code) => {
-    expect(run(code)).toEqual({ reports: 0, fixed: code });
+    expect(run(code)).toStrictEqual({ reports: 0, fixed: code });
   });
 
   it("reports a banner that is not on the first line", () => {

@@ -18,17 +18,17 @@ describe("a marker-shaped line of a name no region lists", () => {
     ["a pair whose hash is not 8 hex", "<!--", "<!-- repo:gone abc -->\nmine\n<!-- /repo:gone -->\n"],
   ] as const)("is the user's text when it is %s: kept as is, with no repair", (_, syntax, before) => {
     const after = `${before}\n${block(syntax, ALPHA)}\n`;
-    expect(writeRegions(before, syntax, [ALPHA])).toEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, syntax, [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(writeRegions(before, syntax, [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, syntax, [ALPHA])).toStrictEqual({ text: after, repairs: [] });
   });
 
   it("leaves cutRegions nothing to cut in a file whose only marker-shaped lines sync did not write", () => {
-    expect(cutRegions(VENDORED, "#")).toEqual({ text: VENDORED, repairs: [] });
+    expect(cutRegions(VENDORED, "#")).toStrictEqual({ text: VENDORED, repairs: [] });
   });
 
   it("is cut with its body when its open carries a hash sync wrote", () => {
     const before = `${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\nmine/\n`;
-    expect(writeRegions(before, "#", [])).toEqual({ text: "mine/\n", repairs: ["cut repo:gone"] });
+    expect(writeRegions(before, "#", [])).toStrictEqual({ text: "mine/\n", repairs: ["cut repo:gone"] });
   });
 });
 
@@ -40,9 +40,9 @@ describe("fenced code in markdown", () => {
     ["a fence a shorter or other run does not close", `\`\`\`\`\n\`\`\`\n~~~~\n${sample}\n\`\`\`\`\n`],
   ])("reads no marker inside %s", (_, before) => {
     const after = `${before}\n${block("<!--", ALPHA)}\n`;
-    expect(writeRegions(before, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
-    expect(cutRegions(before, "<!--")).toEqual({ text: before, repairs: [] });
+    expect(writeRegions(before, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(cutRegions(before, "<!--")).toStrictEqual({ text: before, repairs: [] });
     expect(regionBody(before, "<!--", "alpha")).toBeUndefined();
   });
 
@@ -54,12 +54,12 @@ describe("fenced code in markdown", () => {
   it("reads markers after a fence no line closes, so a region written below it reads back", () => {
     expect(regionBody(`\`\`\`\n${sample}\n`, "<!--", "alpha")).toBe("one\ntwo");
     const after = `\`\`\`\nmine\n\n${block("<!--", ALPHA)}\n`;
-    expect(writeRegions("```\nmine\n", "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, "<!--", [ALPHA])).toEqual({ text: after, repairs: [] });
+    expect(writeRegions("```\nmine\n", "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
   });
 
   it("is no fence in a hash file, where a backtick line is a pattern", () => {
     const before = `\`\`\`\n${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\n\`\`\`\n`;
-    expect(cutRegions(before, "#")).toEqual({ text: "```\n```\n", repairs: ["cut repo:gone"] });
+    expect(cutRegions(before, "#")).toStrictEqual({ text: "```\n```\n", repairs: ["cut repo:gone"] });
   });
 });

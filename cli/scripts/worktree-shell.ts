@@ -67,7 +67,7 @@ function endWord(lx: ShellLexer): void {
 }
 
 function addText(lx: ShellLexer, text: string, literal = true): void {
-  lx.word = lx.word || { text: "", literal: true };
+  lx.word = lx.word ?? { text: "", literal: true };
   lx.word.text += text;
   if (!literal) lx.word.literal = false;
 }

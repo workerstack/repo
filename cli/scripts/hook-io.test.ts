@@ -42,12 +42,12 @@ describe("readHookInput", () => {
   it("parses a payload split over chunks once it is whole", () => {
     const json = JSON.stringify({ session_id: "s1", cwd: "/repo" });
     const { io } = fakeIo([json.slice(0, 5), json.slice(5, 12), json.slice(12)]);
-    expect(readHookInput(io)).toEqual({ session_id: "s1", cwd: "/repo" });
+    expect(readHookInput(io)).toStrictEqual({ session_id: "s1", cwd: "/repo" });
   });
 
   it("returns the first whole payload without waiting for the stream to close", () => {
     const never = fakeIo([JSON.stringify({ session_id: "s1" }), "ignored: the host keeps stdin open"]);
-    expect(readHookInput(never.io)).toEqual({ session_id: "s1" });
+    expect(readHookInput(never.io)).toStrictEqual({ session_id: "s1" });
     expect(never.reads()).toBe(1);
   });
 
@@ -57,7 +57,7 @@ describe("readHookInput", () => {
     const chunks = [bytes.subarray(0, cut), bytes.subarray(cut)];
     let at = 0;
     const io: HookIo = { readChunk: () => chunks[at++] ?? null, write: () => undefined };
-    expect(readHookInput(io)).toEqual({ prompt: "é" });
+    expect(readHookInput(io)).toStrictEqual({ prompt: "é" });
   });
 
   it("gives null for empty input", () => {
@@ -74,7 +74,7 @@ describe("HookIo.write", () => {
   it("reaches the sink", () => {
     const { io, written } = fakeIo([]);
     io.write("reply");
-    expect(written).toEqual(["reply"]);
+    expect(written).toStrictEqual(["reply"]);
   });
 });
 
@@ -103,14 +103,14 @@ afterEach(() => {
 describe("processHookIo", () => {
   it("reads a payload from the descriptor and reports the end as null", () => {
     const io = processHookIo(plantedFd(JSON.stringify({ session_id: "s9" })));
-    expect(readHookInput(io)).toEqual({ session_id: "s9" });
+    expect(readHookInput(io)).toStrictEqual({ session_id: "s9" });
     expect(io.readChunk()).toBeNull();
   });
 
   it("hands a payload larger than one read over in several chunks", () => {
     const text = JSON.stringify({ prompt: "x".repeat(HOOK_READ_CHUNK_BYTES * 2 + 10) });
     const io = processHookIo(plantedFd(text));
-    expect(readHookInput(io)).toEqual({ prompt: "x".repeat(HOOK_READ_CHUNK_BYTES * 2 + 10) });
+    expect(readHookInput(io)).toStrictEqual({ prompt: "x".repeat(HOOK_READ_CHUNK_BYTES * 2 + 10) });
   });
 
   it("reads null from a descriptor that is not open", () => {

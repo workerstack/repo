@@ -87,7 +87,7 @@ it("blocks a turn that pushed and never waited, then passes once the run passed"
   const { ws, sha, land } = checkout();
   expect(push(ws, "g1")).toBeNull();
   land();
-  expect(stop(ws, "g1", { last_assistant_message: "Done." })).toEqual({
+  expect(stop(ws, "g1", { last_assistant_message: "Done." })).toStrictEqual({
     decision: "block",
     reason: line(sha),
   });

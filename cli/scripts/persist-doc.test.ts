@@ -85,7 +85,7 @@ describe("frontmatter", () => {
 
   it("parses keys, decodes quoted values and keeps the body", () => {
     const fm = parseFrontmatter(doc);
-    expect(fm.map).toEqual({ serial: "4", name: "x", source: 'a "q" b', empty: "", bad: "\\x" });
+    expect(fm.map).toStrictEqual({ serial: "4", name: "x", source: 'a "q" b', empty: "", bad: "\\x" });
     expect(fm.body).toBe("# x\n");
   });
 
@@ -95,8 +95,8 @@ describe("frontmatter", () => {
   });
 
   it("reads loose lines when given the loose pattern", () => {
-    expect(frontmatterMap("serial:4\nname:  x", FM_LINE_LOOSE_RE)).toEqual({ serial: "4", name: "x" });
-    expect(frontmatterMap("serial:4")).toEqual({});
+    expect(frontmatterMap("serial:4\nname:  x", FM_LINE_LOOSE_RE)).toStrictEqual({ serial: "4", name: "x" });
+    expect(frontmatterMap("serial:4")).toStrictEqual({});
   });
 
   it("tells a present key from an absent one", () => {
@@ -142,7 +142,7 @@ describe("freeName", () => {
 
   it("names the first serial when it is free", () => {
     const dir = tmp();
-    expect(freeName(dir, parts)).toEqual({
+    expect(freeName(dir, parts)).toStrictEqual({
       serial: 3,
       filename: "3-s-20260102T030405Z.md",
       dest: path.join(dir, "3-s-20260102T030405Z.md"),

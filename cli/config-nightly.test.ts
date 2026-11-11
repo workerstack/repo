@@ -40,7 +40,7 @@ describe("nightly", () => {
   });
 
   it.each(["0", "33", "1.5", '"8"'])("refuses shards %s", async (shards) => {
-    expect(await loadConfig(withRelease(`{ shards: ${shards} }`))).toEqual(refusal(SHARDS_ERROR));
+    expect(await loadConfig(withRelease(`{ shards: ${shards} }`))).toStrictEqual(refusal(SHARDS_ERROR));
   });
 
   it.each(["1", "32"])("accepts shards %s", async (shards) => {
@@ -48,37 +48,37 @@ describe("nightly", () => {
   });
 
   it.each(['"api_token"', '"GITHUB_TOKEN"', '"1A"', '""', "7"])("refuses the secret %s", async (secret) => {
-    expect(await loadConfig(withRelease(`{ secrets: [${secret}] }`))).toEqual(refusal(SECRET_ERROR(0)));
+    expect(await loadConfig(withRelease(`{ secrets: [${secret}] }`))).toStrictEqual(refusal(SECRET_ERROR(0)));
   });
 
   it("names the index of the bad secret", async () => {
-    expect(await loadConfig(withRelease('{ secrets: ["A", "b"] }'))).toEqual(refusal(SECRET_ERROR(1)));
+    expect(await loadConfig(withRelease('{ secrets: ["A", "b"] }'))).toStrictEqual(refusal(SECRET_ERROR(1)));
   });
 });
 
 describe("nightly secrets", () => {
   it("refuses a duplicate secret with its count", async () => {
-    expect(await loadConfig(withRelease('{ secrets: ["A", "B", "A"] }'))).toEqual(
+    expect(await loadConfig(withRelease('{ secrets: ["A", "B", "A"] }'))).toStrictEqual(
       refusal('nightly.secrets: "A" is listed twice'),
     );
-    expect(await loadConfig(withRelease('{ secrets: ["A", "A", "A"] }'))).toEqual(
+    expect(await loadConfig(withRelease('{ secrets: ["A", "A", "A"] }'))).toStrictEqual(
       refusal('nightly.secrets: "A" is listed 3 times'),
     );
   });
 
   it("refuses secrets that are not a list and keys it does not know", async () => {
-    expect(await loadConfig(withRelease('{ secrets: "A" }'))).toEqual(
+    expect(await loadConfig(withRelease('{ secrets: "A" }'))).toStrictEqual(
       refusal("nightly.secrets: must be a list of secret names"),
     );
-    expect(await loadConfig(withRelease("{ cron: 1 }"))).toEqual(refusal('nightly: unknown key "cron"'));
-    expect(await loadConfig(withRelease("3"))).toEqual(
+    expect(await loadConfig(withRelease("{ cron: 1 }"))).toStrictEqual(refusal('nightly: unknown key "cron"'));
+    expect(await loadConfig(withRelease("3"))).toStrictEqual(
       refusal("nightly: must be an object like { shards: 8, secrets: [...] }"),
     );
   });
 
   it("refuses nightly without the release pack", async () => {
     const message = 'nightly: set only with the release pack; add "release" to packs or delete nightly';
-    expect(await loadConfig(repo("{ nightly: { shards: 8 } }"))).toEqual(refusal(message));
-    expect(await loadConfig(repo('{ packs: ["docs"], nightly: {} }'))).toEqual(refusal(message));
+    expect(await loadConfig(repo("{ nightly: { shards: 8 } }"))).toStrictEqual(refusal(message));
+    expect(await loadConfig(repo('{ packs: ["docs"], nightly: {} }'))).toStrictEqual(refusal(message));
   });
 });

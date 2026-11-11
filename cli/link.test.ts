@@ -7,14 +7,14 @@ import { main, unlinkMain } from "./link.ts";
 it("swaps in the packed sibling, warns about a dependency, and says how to undo it", async () => {
   const w = scene();
   expect(await main([NAME], w.io())).toBe(0);
-  expect(w.out).toEqual([
+  expect(w.out).toStrictEqual([
     `linked ${NAME} 0.4.0-dev from ${w.flare} (npm had 0.3.2)`,
     `warning: ${NAME} needs zod ^4, this checkout has 3.24.1`,
     `${NAME} is linked; \`bun repo unlink ${NAME}\` puts npm back`,
   ]);
   expect(versionIn(w.main, NAME)).toBe("0.4.0-dev");
-  expect(JSON.parse(read(mod(w.main, NAME), ".repo-link"))).toEqual({ name: NAME, source: w.flare });
-  expect(w.err).toEqual([]);
+  expect(JSON.parse(read(mod(w.main, NAME), ".repo-link"))).toStrictEqual({ name: NAME, source: w.flare });
+  expect(w.err).toStrictEqual([]);
 });
 
 it("warns when a dependency is not installed at all", async () => {
@@ -39,17 +39,17 @@ it("links the bins of the package, as an object or as one file", async () => {
 it("exits 1 naming the root when no sibling publishes it", async () => {
   const w = scene();
   expect(await main(["nope"], w.io())).toBe(1);
-  expect(w.err).toEqual([
+  expect(w.err).toStrictEqual([
     `repo link: no sibling of ${w.main} publishes "nope"; clone it beside this checkout, or map it in workerstack.config.ts \`link\``,
   ]);
-  expect(w.out).toEqual([]);
+  expect(w.out).toStrictEqual([]);
 });
 
 it("exits 1 when the sibling has no install to build with", async () => {
   const w = scene();
   fs.rmSync(path.join(w.flare, "node_modules"), { recursive: true });
   expect(await main([NAME], w.io())).toBe(1);
-  expect(w.err).toEqual([
+  expect(w.err).toStrictEqual([
     `repo link: ${w.flare} has no node_modules, so its prepack cannot build; run \`bun install\` there`,
   ]);
   expect(versionIn(w.main, NAME)).toBe("0.3.2");
@@ -59,7 +59,7 @@ it("exits 1 when this checkout has no install to link into", async () => {
   const w = scene();
   fs.rmSync(mod(w.main), { recursive: true });
   expect(await main([NAME], w.io())).toBe(1);
-  expect(w.err).toEqual([`repo link: ${w.main} has no node_modules; run \`bun install\` there`]);
+  expect(w.err).toStrictEqual([`repo link: ${w.main} has no node_modules; run \`bun install\` there`]);
 });
 
 it("keeps the last good copy when a pack fails, and the link with it", async () => {
@@ -71,7 +71,7 @@ it("keeps the last good copy when a pack fails, and the link with it", async () 
   const header = `repo link: ${NAME} failed to pack; node_modules keeps the last good copy:\n  `;
   expect(w.err[0]?.startsWith(header)).toBe(true);
   expect(w.err[0]).toContain("boom");
-  expect(w.out).toEqual([]);
+  expect(w.out).toStrictEqual([]);
   expect(versionIn(w.main, NAME)).toBe("0.4.0-dev");
   expect(stateOf(w.main).links[NAME]?.source).toBe(w.flare);
 });
@@ -96,5 +96,5 @@ it("changes neither package.json nor bun.lock through link and unlink", async ()
   const before = [read(w.main, "package.json"), read(w.main, "bun.lock")];
   await main([NAME], w.io());
   await unlinkMain([NAME], w.io());
-  expect([read(w.main, "package.json"), read(w.main, "bun.lock")]).toEqual(before);
+  expect([read(w.main, "package.json"), read(w.main, "bun.lock")]).toStrictEqual(before);
 });

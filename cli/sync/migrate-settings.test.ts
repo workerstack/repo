@@ -35,17 +35,17 @@ it("carries hook groups and commands that no stock version ran, under the same e
   const m = mini({ ".claude/settings.json": OWN_SETTINGS }, opts);
   const deps: MigrateDeps = { history: { [HOOK_COMMANDS_KEY]: [hashText("old stock")] } };
   const steps = planOf(m, CONFIG, deps);
-  expect(notes(steps).slice(0, 1)).toEqual([
+  expect(notes(steps).slice(0, 1)).toStrictEqual([
     `moved your .claude/settings.json keys permissions to ${TO}\nmoved your .claude/settings.json hooks PreToolUse (1) to ${TO}\nmoved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
   ]);
-  expect(firstWritten(steps)).toEqual({
+  expect(firstWritten(steps)).toStrictEqual({
     permissions: { allow: ["X"] },
     hooks: {
       PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: "mine-too" }] }],
       PostToolUse: [mine],
     },
   });
-  expect((await applyMigration(m.root, steps)).slice(0, 3)).toEqual([
+  expect((await applyMigration(m.root, steps)).slice(0, 3)).toStrictEqual([
     `repo sync: moved your .claude/settings.json keys permissions to ${TO}`,
     `repo sync: moved your .claude/settings.json hooks PreToolUse (1) to ${TO}`,
     `repo sync: moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
@@ -58,11 +58,11 @@ it("carries only hooks when nothing else is new, and plans nothing when every co
     { ".claude/settings.json": JSON.stringify({ hooks: { PostToolUse: [{ matcher: "x", hooks: [own] }] } }) },
     opts,
   );
-  expect(notes(planOf(only, CONFIG, { history: {} }))).toEqual([
+  expect(notes(planOf(only, CONFIG, { history: {} }))).toStrictEqual([
     `moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
   ]);
   const stockOnly = mini({ ".claude/settings.json": JSON.stringify({ hooks: { PreToolUse: [stockGroup] } }) }, opts);
-  expect(planOf(stockOnly, CONFIG, { history: {} })).toEqual([REMOVAL]);
+  expect(planOf(stockOnly, CONFIG, { history: {} })).toStrictEqual([REMOVAL]);
 });
 
 it("carries a group or an event value it cannot read as it is, and a hook with no command", () => {
@@ -74,11 +74,11 @@ it("carries a group or an event value it cannot read as it is, and a hook with n
     },
     opts,
   );
-  expect(firstWritten(planOf(m, CONFIG, { history: {} }))).toEqual({
+  expect(firstWritten(planOf(m, CONFIG, { history: {} }))).toStrictEqual({
     hooks: { A: ["text"], B: ["odd"], C: [{ matcher: "m", hooks: [{ type: "prompt" }] }], D: [{ matcher: "m" }] },
   });
   const notObject = mini({ ".claude/settings.json": JSON.stringify({ hooks: "nope", env: { Z: "1" } }) }, opts);
-  expect(notes(planOf(notObject, CONFIG, { history: {} }))).toEqual([
+  expect(notes(planOf(notObject, CONFIG, { history: {} }))).toStrictEqual([
     `moved your .claude/settings.json keys env to ${TO}`,
   ]);
 });

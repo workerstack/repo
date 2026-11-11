@@ -57,20 +57,20 @@ describe("persistPlan denials", () => {
     const ws = tmpWs();
     const r = persistPlan({ workspaceRoot: ws, content: "just words" });
     expect(r.ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
   });
 
   it("denies a save whose frontmatter never closes", () => {
     const ws = tmpWs();
     const r = persistPlan({ workspaceRoot: ws, content: `---\nserial: 1\n${VALID_PLAN}` });
     expect(r.ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
   });
 
   it("denies an empty save the same way", () => {
     const ws = tmpWs();
     expect(persistPlan({ workspaceRoot: ws }).ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
   });
 });
 
@@ -84,7 +84,7 @@ describe("persistPlan serials", () => {
     fs.writeFileSync(planted, "keep me");
     const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: demo");
     const r = persistPlan({ workspaceRoot: ws, content, created });
-    expect(r).toEqual({ ok: false, error: "serial collision" });
+    expect(r).toStrictEqual({ ok: false, error: "serial collision" });
     expect(fs.readFileSync(planted, "utf8")).toBe("keep me");
   });
 });
@@ -100,7 +100,7 @@ describe("persistPlan without a workspace argument", () => {
   it("denies an empty call and still prepares that root's plans dir", () => {
     const ws = envWorkspace();
     expect(persistPlan().ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
   });
 
   it("validates an update of a saved plan against that root", () => {
@@ -127,7 +127,7 @@ describe("preparePlanUpdate edges", () => {
     const ws = tmpWs();
     const r = preparePlanUpdate({ workspaceRoot: ws, filePath: savedPlan(ws), content: "```\nopen\n" });
     expect(r.ok).toBe(false);
-    expect(r.errors).toEqual(["unclosed code fence at line 1: close it with the same fence"]);
+    expect(r.errors).toStrictEqual(["unclosed code fence at line 1: close it with the same fence"]);
   });
 
   it("gives a body-only update with no title the saved plan's title", () => {

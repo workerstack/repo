@@ -54,9 +54,9 @@ const BUILT = ["src/a.ts", "keep/.turbo/log.txt", ".vite/tracked.json", ".tmp/re
 it("plans the ignored build dirs and tsbuildinfo files at any depth, and no tracked or unignored path", () => {
   const root = repo();
   const plan = planBuild(root, false, []);
-  expect(names(plan, "dir").sort()).toEqual(at(root, ".next", "apps/web/.next", "apps/web/.turbo").sort());
-  expect(names(plan, "info")).toEqual(at(root, "packages/a/tsconfig.tsbuildinfo"));
-  expect(names(plan, "modules")).toEqual([]);
+  expect(names(plan, "dir").sort()).toStrictEqual(at(root, ".next", "apps/web/.next", "apps/web/.turbo").sort());
+  expect(names(plan, "info")).toStrictEqual(at(root, "packages/a/tsconfig.tsbuildinfo"));
+  expect(names(plan, "modules")).toStrictEqual([]);
   const everything = plan.ok ? plan.items.map((item) => item.path) : [];
   for (const kept of at(root, ".vite", "keep/.turbo", "dist", ".flare", "node_modules"))
     expect(everything).not.toContain(kept);
@@ -65,13 +65,13 @@ it("plans the ignored build dirs and tsbuildinfo files at any depth, and no trac
 it("sizes each item by the bytes under it", () => {
   const plan = planBuild(repo(), false, []);
   const bytes = plan.ok ? plan.items.map((item) => item.bytes).sort((a, b) => a - b) : [];
-  expect(bytes).toEqual([1, 3, 5, 7]);
+  expect(bytes).toStrictEqual([1, 3, 5, 7]);
 });
 
 it("adds the ignored node_modules at any depth under deps", () => {
   const root = repo();
   const plan = planBuild(root, true, []);
-  expect(names(plan, "modules").sort()).toEqual(at(root, "apps/web/node_modules", "node_modules").sort());
+  expect(names(plan, "modules").sort()).toStrictEqual(at(root, "apps/web/node_modules", "node_modules").sort());
   expect(names(plan, "dir")).toHaveLength(3);
 });
 
@@ -86,7 +86,7 @@ it("removes what was planned and nothing else, the tracked .vite and the unignor
   const root = repo();
   const plan = planBuild(root, true, []);
   const result = plan.ok ? removeBuild(plan.items, false, fs.rmSync) : null;
-  expect(result?.skipped).toEqual([]);
+  expect(result?.skipped).toStrictEqual([]);
   expect(result?.done).toHaveLength(plan.ok ? plan.items.length : -1);
   for (const gone of at(root, ".next", "apps/web/.turbo", "node_modules", "packages/a/tsconfig.tsbuildinfo"))
     expect(fs.existsSync(gone)).toBe(false);
@@ -110,11 +110,11 @@ it("a second plan after removing finds nothing, and a path that fails is skipped
   }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
   const plan = planBuild(root, false, []);
   const result = plan.ok ? removeBuild(plan.items, false, busy) : null;
-  expect(result?.skipped.map((entry) => entry.code)).toEqual(["EBUSY", "EBUSY"]);
+  expect(result?.skipped.map((entry) => entry.code)).toStrictEqual(["EBUSY", "EBUSY"]);
   const clean = planBuild(root, false, []);
   expect(clean.ok ? names(clean, "dir").length : -1).toBe(2);
   if (clean.ok) removeBuild(clean.items, false, fs.rmSync);
-  expect(planBuild(root, false, [])).toEqual({ ok: true, items: [] });
+  expect(planBuild(root, false, [])).toStrictEqual({ ok: true, items: [] });
 });
 
 it("says so when the root is not a git repo", () => {

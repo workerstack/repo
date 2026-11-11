@@ -29,7 +29,7 @@ it("stateHome creates ~/.workerstack mode 0700, defaulting to the stubbed home",
 it("writeSecretJson writes mode 0600 JSON under new directories", () => {
   const dir = plant("setup-secret-");
   const p = writeSecretJson(path.join(dir, "a", "b.json"), { k: 1 });
-  expect(JSON.parse(fs.readFileSync(p, "utf8"))).toEqual({ k: 1 });
+  expect(JSON.parse(fs.readFileSync(p, "utf8"))).toStrictEqual({ k: 1 });
   expect(fs.statSync(p).mode & 0o777).toBe(WIN ? WIN_MODE : 0o600);
 });
 
@@ -49,7 +49,7 @@ it("mergeSpeakJson keeps sibling keys inside each provider and the listen block"
     openai: { apiKey: "oa" },
     listen: { device: "hw:1" },
   });
-  expect(readSpeakJson(home)).toEqual({
+  expect(readSpeakJson(home)).toStrictEqual({
     provider: "openai",
     elevenlabs: { apiKey: "new", voice: "v" },
     openai: { model: "m", apiKey: "oa" },
@@ -61,16 +61,16 @@ it("mergeSpeakJson starts over from a corrupt or non-object file", () => {
   const home = plant("setup-merge-bad-");
   writeAt(speakJsonPath(home), "not json");
   mergeSpeakJson(home, { provider: "openai" });
-  expect(readSpeakJson(home)).toEqual({ provider: "openai" });
+  expect(readSpeakJson(home)).toStrictEqual({ provider: "openai" });
   writeAt(speakJsonPath(home), "[1]");
   mergeSpeakJson(home, { provider: "elevenlabs" });
-  expect(readSpeakJson(home)).toEqual({ provider: "elevenlabs" });
+  expect(readSpeakJson(home)).toStrictEqual({ provider: "elevenlabs" });
 });
 
 it("installOAuthJson accepts inline JSON", () => {
   const dir = plant("setup-install-");
   const dest = installOAuthJson({ src: JSON.stringify(desktopOauth), dest: path.join(dir, "o.json") });
-  expect(JSON.parse(fs.readFileSync(dest, "utf8"))).toEqual(desktopOauth);
+  expect(JSON.parse(fs.readFileSync(dest, "utf8"))).toStrictEqual(desktopOauth);
 });
 
 it("oauthWritePath names the default account for a blank account", () => {

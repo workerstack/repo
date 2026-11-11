@@ -20,7 +20,7 @@ it("repo clean's flags with a config: main --build runs only the cache removal, 
   inRepo(root);
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   expect(await main(["--build"])).toBe(0);
-  expect(log.mock.calls.map((c) => c[0])).toEqual(["removed 3 build dirs and 1 tsbuildinfo file (7 B)"]);
+  expect(log.mock.calls.map((c) => c[0])).toStrictEqual(["removed 3 build dirs and 1 tsbuildinfo file (7 B)"]);
   expect(exists(root)(".tmp/repo/old.log")).toBe(true);
 });
 

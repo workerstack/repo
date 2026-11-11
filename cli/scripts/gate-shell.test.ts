@@ -11,7 +11,7 @@ it("rewrites bash dump to job and ls to rtk", () => {
   const bash = (command: string) => processFatTools(camelCall("Bash", { command }, { workspaceRoot: ws }));
   expect(bash("cat src/a.ts")?.type).toBe("rewrite");
   expect(commandOf(bash("cat src/a.ts"))).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
-  expect(bash("ls src")).toEqual({ type: "rewrite", updatedInput: { command: "rtk ls src" } });
+  expect(bash("ls src")).toStrictEqual({ type: "rewrite", updatedInput: { command: "rtk ls src" } });
 });
 
 it("passes compound bash through untouched", () => {

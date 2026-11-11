@@ -43,7 +43,7 @@ it("reports a busy lock after waiting out the stale window", async () => {
   let clock = Date.now();
   vi.spyOn(Date, "now").mockImplementation(() => (clock += 6000));
   const fetchImpl = ok();
-  expect(await go({ home, fetchImpl })).toEqual({ code: 2, text: "jev usage lock busy\n" });
+  expect(await go({ home, fetchImpl })).toStrictEqual({ code: 2, text: "jev usage lock busy\n" });
   expect(fetchImpl.calls).toBe(0);
 });
 

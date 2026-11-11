@@ -17,7 +17,7 @@ function setup(policy: unknown = DENY_ALL) {
 
 it("emitMcpPolicy results: returns the validation error without writing", () => {
   const { ws, home } = setup({ ...DENY_ALL, default: "allow" });
-  expect(emitMcpPolicy({ workspaceRoot: ws, home })).toEqual({
+  expect(emitMcpPolicy({ workspaceRoot: ws, home })).toStrictEqual({
     ok: false,
     check: false,
     error: 'default must be "deny"',
@@ -27,7 +27,7 @@ it("emitMcpPolicy results: returns the validation error without writing", () => 
 
 it("emitMcpPolicy results: returns the validation error in check mode too", () => {
   const { ws, home } = setup({ ...DENY_ALL, allow: "x" });
-  expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toEqual({
+  expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toStrictEqual({
     ok: false,
     check: true,
     error: "allow must be an array",
@@ -38,15 +38,15 @@ it("emitMcpPolicy results: uses the process cwd and HOME when neither is passed"
   const { ws, home } = setup();
   vi.spyOn(process, "cwd").mockReturnValue(ws);
   vi.stubEnv("HOME", home);
-  expect(emitMcpPolicy()).toEqual({ ok: true, check: false });
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+  expect(emitMcpPolicy()).toStrictEqual({ ok: true, check: false });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
 });
 
 it("emitMcpPolicy .mcp.json: never writes it, and a missing one means no servers", () => {
   const { ws, home } = setup({ ...DENY_ALL, allow: ["a"] });
   expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
   expect(fs.existsSync(path.join(ws, ".mcp.json"))).toBe(false);
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
 });
 
 it("emitMcpPolicy .mcp.json: reads the consumer's own, not the workspace's, and leaves it as it was", () => {
@@ -56,7 +56,7 @@ it("emitMcpPolicy .mcp.json: reads the consumer's own, not the workspace's, and 
   plant(consumer, ".mcp.json", text);
   plant(ws, ".mcp.json", JSON.stringify({ mcpServers: { a: { command: "stage" } } }));
   expect(emitMcpPolicy({ workspaceRoot: ws, home, consumerRoot: consumer }).ok).toBe(true);
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: { a: { command: "mine" } } });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: { a: { command: "mine" } } });
   expect(fs.readFileSync(path.join(consumer, ".mcp.json"), "utf8")).toBe(text);
 });
 
@@ -70,9 +70,9 @@ it.each([
 ])("emitMcpPolicy .mcp.json: fails named on %s and writes nothing, in check mode too", (_name, text, error) => {
   const { ws, home } = setup();
   plant(ws, ".mcp.json", text);
-  expect(emitMcpPolicy({ workspaceRoot: ws, home })).toEqual({ ok: false, check: false, error });
-  expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toEqual({ ok: false, check: true, error });
-  expect(fs.readdirSync(ws).sort()).toEqual([".mcp.json", "agents"]);
+  expect(emitMcpPolicy({ workspaceRoot: ws, home })).toStrictEqual({ ok: false, check: false, error });
+  expect(emitMcpPolicy({ workspaceRoot: ws, home, check: true })).toStrictEqual({ ok: false, check: true, error });
+  expect(fs.readdirSync(ws).sort()).toStrictEqual([".mcp.json", "agents"]);
 });
 
 it("emitMcpPolicy results: throws when a host file cannot be read as a file", () => {
@@ -101,12 +101,12 @@ it("emitMcpPolicy host files from sparse disks: treats blank files as empty and 
   plant(ws, ".claude/settings.json", " ");
   plant(ws, ".agents/mcp_config.json", "3");
   expect(emitMcpPolicy({ workspaceRoot: ws, home }).ok).toBe(true);
-  expect(readJson(ws, ".claude/settings.json")).toEqual({
+  expect(readJson(ws, ".claude/settings.json")).toStrictEqual({
     enableAllProjectMcpServers: false,
     enabledMcpjsonServers: [],
     permissions: { deny: ["mcp__*"] },
   });
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
   expect(readToml(ws, ".codex/config.toml")).toEqual({ agents: { max_depth: 1 } });
 });
 
@@ -191,16 +191,16 @@ it("emitMcpPolicy grok servers: copies a non-table .mcp.json spec as is, and wri
   plant(ws, ".mcp.json", SERVERS);
   emitMcpPolicy({ workspaceRoot: ws, home });
   expect(readToml(ws, ".grok/config.toml").mcp_servers).toEqual({ s: "stdio" });
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: { s: "stdio" } });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: { s: "stdio" } });
   expect(readToml(ws, ".codex/config.toml").mcp_servers).toEqual({ s: "stdio" });
-  expect(readJson(ws, ".claude/settings.json").enabledMcpjsonServers).toEqual(["s"]);
+  expect(readJson(ws, ".claude/settings.json").enabledMcpjsonServers).toStrictEqual(["s"]);
 });
 
 it("emitMcpPolicy grok servers: emits no servers for an allowed name .mcp.json does not define", () => {
   const { ws, home } = setup({ default: "deny", allow: ["ghost"] });
   plant(ws, ".mcp.json", SERVERS);
   emitMcpPolicy({ workspaceRoot: ws, home });
-  expect(readJson(ws, ".agents/mcp_config.json")).toEqual({ mcpServers: {} });
+  expect(readJson(ws, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
 });
 
 it("emitMcpPolicy grok servers: clears a stale codex mcp_servers when nothing is allowed", () => {

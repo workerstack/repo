@@ -40,7 +40,7 @@ it("--report writes the file after the gates, and the stdout is still the gate l
   expect(run.calls.vitest[0]).toMatch(
     /^run --coverage --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/,
   );
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toEqual({
+  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
     os: process.platform,
     skipped: ["src/a.test.ts > t"],
   });
@@ -50,7 +50,10 @@ it("--report with vitest absent still writes a report with no skips", () => {
   const root = plant();
   const run = ci(root, ["--report", "r.json"], { tests: null });
   expect(run.code).toBe(0);
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toEqual({ os: process.platform, skipped: [] });
+  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
+    os: process.platform,
+    skipped: [],
+  });
 });
 
 it("skips <dir> reads the reports in the directory relative to the working directory", () => {
@@ -83,7 +86,7 @@ it("wait is routed to the wait command with the injected runners", async () => {
 it("--no-coverage runs vitest without --coverage, and passes the other gates unchanged", () => {
   const run = ci(plant(), ["--no-coverage"]);
   expect(run.code).toBe(0);
-  expect(run.calls.vitest).toEqual(["run"]);
+  expect(run.calls.vitest).toStrictEqual(["run"]);
   expect(run.calls.tsc).toHaveLength(2);
 });
 
@@ -95,7 +98,7 @@ it.each([
   const run = ci(root, argv);
   expect(run.code).toBe(0);
   expect(run.calls.vitest[0]).toMatch(/^run --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/);
-  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toEqual({
+  expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
     os: process.platform,
     skipped: [],
   });

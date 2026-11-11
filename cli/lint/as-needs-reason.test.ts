@@ -20,7 +20,7 @@ describe("as-needs-reason passes", () => {
     "export const foo = {} satisfies Foo;",
     "export const foo = <Foo>value;",
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
@@ -37,11 +37,11 @@ describe("as-needs-reason fails", () => {
     ["export const foo = value as /* the schema parsed it above */ Foo;", "Foo"],
     ["export const foo = value as unknown as Foo;", "Foo"],
   ])("fails %j", (code, type) => {
-    expect(messagesOf(code)).toEqual([needs(type)]);
+    expect(messagesOf(code)).toStrictEqual([needs(type)]);
   });
 
   it("fails each cast of a statement once", () => {
-    expect(messagesOf("export const pair = [a as A, b as const, c as C];")).toEqual([needs("A"), needs("C")]);
+    expect(messagesOf("export const pair = [a as A, b as const, c as C];")).toStrictEqual([needs("A"), needs("C")]);
   });
 });
 
@@ -69,13 +69,13 @@ describe("as-needs-reason with a line reason", () => {
     "export const foo = (\n  value\n  // the schema parsed it above\n) as Foo;",
     "export const foo = (value // the schema parsed it above\n) as Foo;",
   ])("passes %j", (code) => {
-    expect(unparenthesized(code)).toEqual([]);
+    expect(unparenthesized(code)).toStrictEqual([]);
   });
 
   it.each([
     "export const foo = (value // the schema parsed it above\n  /* ok */) as Foo;",
     "export const foo = (value // why\n) as Foo;",
   ])("fails %j", (code) => {
-    expect(unparenthesized(code)).toEqual([needs("Foo")]);
+    expect(unparenthesized(code)).toStrictEqual([needs("Foo")]);
   });
 });

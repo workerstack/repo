@@ -81,7 +81,7 @@ describe("checkGlobals", () => {
   it("passes when every payload key is present in its dest", () => {
     const ws = tmpWorkspace();
     const home = syncedHome(ws);
-    expect(checkGlobals({ home, workspaceRoot: ws })).toEqual({ ok: true, drift: [] });
+    expect(checkGlobals({ home, workspaceRoot: ws })).toStrictEqual({ ok: true, drift: [] });
     const cli = runCli(ws, home);
     expect(cli.status).toBe(0);
     expect(cli.stderr).toBe("");
@@ -95,12 +95,12 @@ describe("checkGlobals", () => {
     });
     const r = checkGlobals({ home, workspaceRoot: ws });
     expect(r.ok).toBe(false);
-    expect(r.drift).toEqual([
+    expect(r.drift).toStrictEqual([
       { host: "cursor", dest: ".cursor/cli-config.json", key: "approvalMode", kind: "missing" },
     ]);
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
-    expect(cli.stdout.trim().split("\n")).toEqual([
+    expect(cli.stdout.trim().split("\n")).toStrictEqual([
       "grok ok · claude ok · codex ok · antigravity ok · cursor missing approvalMode",
       HINT,
     ]);
@@ -114,7 +114,7 @@ describe("checkGlobals", () => {
       v.extra = true;
     });
     const r = checkGlobals({ home, workspaceRoot: ws });
-    expect(r.drift).toEqual([
+    expect(r.drift).toStrictEqual([
       { host: "claude", dest: ".claude/settings.json", key: "permissions.defaultMode", kind: "differs" },
     ]);
   });
@@ -124,7 +124,7 @@ describe("checkGlobals", () => {
     const home = syncedHome(ws);
     fs.writeFileSync(path.join(home, ".codex/config.toml"), 'approval_policy = "on-request"\n');
     const r = checkGlobals({ home, workspaceRoot: ws });
-    expect(r.drift?.map((d: { key: string }) => d.key)).toEqual(["approval_policy", "sandbox_mode"]);
+    expect(r.drift?.map((d: { key: string }) => d.key)).toStrictEqual(["approval_policy", "sandbox_mode"]);
     expect(driftLine(r.drift![0]!)).toBe(`drift: codex .codex/config.toml approval_policy; ${HINT}`);
   });
 
@@ -136,11 +136,11 @@ describe("checkGlobals", () => {
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a", "b"] }));
     expect(
       checkGlobals({ home, workspaceRoot: ws }).drift?.filter((d: { host: string }) => d.host === "cursor"),
-    ).toEqual([]);
+    ).toStrictEqual([]);
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), JSON.stringify({ allow: ["a"] }));
     expect(
       checkGlobals({ home, workspaceRoot: ws }).drift?.filter((d: { host: string }) => d.host === "cursor"),
-    ).toEqual([{ host: "cursor", dest: ".cursor/cli-config.json", key: "allow", kind: "differs" }]);
+    ).toStrictEqual([{ host: "cursor", dest: ".cursor/cli-config.json", key: "allow", kind: "differs" }]);
   });
 
   it("a key matching skipKeyPattern is never required", () => {
@@ -151,7 +151,7 @@ describe("checkGlobals", () => {
       v.hooks = { PreToolUse: [] };
       v.permissions.token = "x";
     });
-    expect(checkGlobals({ home, workspaceRoot: ws })).toEqual({ ok: true, drift: [] });
+    expect(checkGlobals({ home, workspaceRoot: ws })).toStrictEqual({ ok: true, drift: [] });
   });
 
   it("a missing dest file drifts on every payload key", () => {
@@ -245,7 +245,7 @@ describe("checkGlobals", () => {
     const home = syncedHome(ws);
     fs.cpSync(path.join(ws, "agents/global-settings"), path.join(home, "agents/global-settings"), { recursive: true });
     const r = checkGlobals({ home, workspaceRoot: home });
-    expect(r).toEqual({ ok: true, drift: [] });
+    expect(r).toStrictEqual({ ok: true, drift: [] });
   });
 
   it("project config with [features] fails", () => {

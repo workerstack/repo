@@ -29,5 +29,5 @@ it("lints a planted workflow with the real binary from the real cache: runs_on f
 
 it("gives no line for a clean workflow", { timeout: SLOW }, async () => {
   const out = await checkActionlintAt(planted("    runs-on: ubuntu-latest"));
-  expect(out).toEqual({ problems: [] });
+  expect(out).toStrictEqual({ problems: [] });
 });

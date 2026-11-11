@@ -42,7 +42,7 @@ it("Write|Edit rewrites Write/Edit/write/search_replace path fields and never de
   const dest = path.resolve(ws, ".tmp/repo/scratch/notes.md");
   for (const toolName of ["Write", "Edit", "write", "search_replace"]) {
     const out = processFatTools(camelCall(toolName, { file_path: outside, content: "x" }, { workspaceRoot: ws }));
-    expect(out).toEqual({ type: "rewrite", updatedInput: { file_path: dest, content: "x" } });
+    expect(out).toStrictEqual({ type: "rewrite", updatedInput: { file_path: dest, content: "x" } });
   }
 });
 

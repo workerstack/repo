@@ -101,10 +101,10 @@ describe("repo release api cleanup", () => {
   it("removes the project and pack dirs after a pass and after a refusal", { timeout: TIMEOUT }, async () => {
     const passed = await api(removal("refactor!: drop them"), AGAINST);
     const refused = await api(removal("refactor: drop them"), AGAINST);
-    expect([passed.code, refused.code]).toEqual([0, 1]);
+    expect([passed.code, refused.code]).toStrictEqual([0, 1]);
     for (const got of [passed, refused]) {
       expect(got.made.length).toBeGreaterThanOrEqual(2);
-      expect(got.made.filter((dir) => fs.existsSync(dir))).toEqual([]);
+      expect(got.made.filter((dir) => fs.existsSync(dir))).toStrictEqual([]);
     }
   });
 });

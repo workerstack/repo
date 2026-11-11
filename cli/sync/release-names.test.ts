@@ -29,12 +29,12 @@ const VARIANTS: [string, PackageJson, Record<string, string>][] = [
 
 it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s root", (_, manifest, files) => {
   const ctx = context(["release"], manifest, files);
-  expect(ciJobNames(ctx).toSorted()).toEqual(yamlNames(ctx).toSorted());
+  expect(ciJobNames(ctx).toSorted()).toStrictEqual(yamlNames(ctx).toSorted());
 });
 
 it("ciJobNames lists the expanded matrix names, then the single jobs", () => {
   const ctx = context(["release"], { name: "pkg", private: false, scripts: E2E });
-  expect(ciJobNames(ctx)).toEqual([
+  expect(ciJobNames(ctx)).toStrictEqual([
     "test (ubuntu-latest)",
     "test (windows-latest)",
     "test (macos-latest)",
@@ -49,7 +49,7 @@ it("ciJobNames lists the expanded matrix names, then the single jobs", () => {
 });
 
 it("ciJobNames lists semver then msrv last for a Rust repo, as the YAML orders it", () => {
-  expect(ciJobNames(context(["release"], {}, CARGO))).toEqual([
+  expect(ciJobNames(context(["release"], {}, CARGO))).toStrictEqual([
     "test (ubuntu-latest)",
     "test (windows-latest)",
     "test (macos-latest)",
@@ -62,5 +62,5 @@ it("ciJobNames lists semver then msrv last for a Rust repo, as the YAML orders i
 });
 
 it("ciJobNames is empty without the release pack, which writes no ci.yml", () => {
-  expect(ciJobNames(context(["standards"]))).toEqual([]);
+  expect(ciJobNames(context(["standards"]))).toStrictEqual([]);
 });

@@ -30,7 +30,7 @@ it("relinks each link after an install, in name order, and records the npm versi
   installAgain(w.main, "0.3.3");
   w.out.length = 0;
   expect(await reapplyLinks(w.io())).toBe(0);
-  expect(w.out).toEqual([
+  expect(w.out).toStrictEqual([
     `repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}`,
     `repo link: relinked @workerstack/solo 1.0.0 from ${path.join(w.base, "solo")}`,
   ]);
@@ -45,10 +45,10 @@ it("warns for a source that is gone and leaves npm in place", async () => {
   fs.rmSync(w.flare, { recursive: true });
   w.out.length = 0;
   expect(await reapplyLinks(w.io())).toBe(0);
-  expect(w.err).toEqual([
+  expect(w.err).toStrictEqual([
     `repo link: warning: ${w.flare} is gone; ${NAME} stays on npm; \`bun repo unlink ${NAME}\` forgets it`,
   ]);
-  expect(w.out).toEqual([]);
+  expect(w.out).toStrictEqual([]);
   expect(versionIn(w.main, NAME)).toBe("0.3.3");
 });
 
@@ -60,8 +60,8 @@ it("leaves the same tree when it runs twice", async () => {
   const once = treeOf(mod(w.main));
   w.out.length = 0;
   await reapplyLinks(w.io());
-  expect(treeOf(mod(w.main))).toEqual(once);
-  expect(w.out).toEqual([`repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}`]);
+  expect(treeOf(mod(w.main))).toStrictEqual(once);
+  expect(w.out).toStrictEqual([`repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}`]);
   expect(stateOf(w.main).links[NAME]?.npm).toBe("0.3.3");
 });
 
@@ -73,8 +73,8 @@ it("leaves the npm copy after an unlink followed by a real reapply", async () =>
   const before = treeOf(mod(w.main));
   w.out.length = 0;
   expect(await reapplyLinks(w.io())).toBe(0);
-  expect(w.out).toEqual([]);
-  expect(treeOf(mod(w.main))).toEqual(before);
+  expect(w.out).toStrictEqual([]);
+  expect(treeOf(mod(w.main))).toStrictEqual(before);
   expect(versionIn(w.main, NAME)).toBe("0.3.2");
 });
 
@@ -95,7 +95,7 @@ it("says nothing and writes nothing with no links, no install dir, or no state",
   expect(fs.existsSync(stateFile(w.main))).toBe(false);
   fs.rmSync(mod(w.main), { recursive: true });
   expect(await reapplyLinks(w.io())).toBe(0);
-  expect([w.out, w.err]).toEqual([[], []]);
+  expect([w.out, w.err]).toStrictEqual([[], []]);
 });
 
 it("warns instead of failing when the state file is unreadable", async () => {
@@ -129,7 +129,7 @@ it("reapplies from a directory and prints a line each through the given writers"
   await reapplyAt(w.main, writers);
   fs.rmSync(w.flare, { recursive: true });
   await reapplyAt(w.main, writers);
-  expect(lines).toEqual([
+  expect(lines).toStrictEqual([
     `out repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}\n`,
     `err repo link: warning: ${w.flare} is gone; ${NAME} stays on npm; \`bun repo unlink ${NAME}\` forgets it\n`,
   ]);
