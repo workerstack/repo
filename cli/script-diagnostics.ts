@@ -1,14 +1,15 @@
 /**
- * The checks run as scripts on the TypeScript compiler API, joined for `repo check`, `repo turn` and `repo lint
- * --baseline`: the magic literals and the untested guards as lint diagnostics the baseline counts, and the reject files
- * check prints. Apart from `check-magic.ts` and `check-guards.ts`, which this imports, so neither imports the other.
+ * The checks run as scripts on the TypeScript compiler API, joined for `repo check`, `repo turn`, `repo lint
+ * --baseline` and, on the paths given or the whole repo, plain `repo lint`: the magic literals and the untested guards
+ * as lint diagnostics the baseline counts, and the reject files check prints. Apart from `check-magic.ts` and
+ * `check-guards.ts`, which this imports, so neither imports the other.
  */
 import path from "node:path";
 import { sourceFiles } from "./check-comments.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
-import { rustHitsAt, rustSourceDiagnostics, rustSources } from "./rust/rust-hits.ts";
+import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
 import { findRoot, loadConfig, type LintSkip } from "./config.ts";
@@ -73,22 +74,47 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
   return { all: found.value, kept: withoutSkipped(found.value, checkout.skips, matched), problems: [] };
 }
 
-/** What `repo lint` prints of Rust: the hit lines no skip turns off, and why it could not lint. */
-export type RustLint = { lines: string[]; problems: string[] };
+/** What `repo lint` checks: `paths` as given at the cwd (null: the whole checkout), and whether clippy runs too. */
+export type LintScope = { paths: readonly string[] | null; clippy: boolean };
+/** What `repo lint` prints of the script checks: the hit lines no skip turns off, and why it could not check. */
+export type ScriptLint = { lines: string[]; problems: string[] };
+
+/** The `all` files that equal one of `paths` (given at `cwd`, root-relative to `root`) or lie under one. */
+function filesUnder(at: { root: string; cwd: string }, paths: readonly string[], all: readonly string[]): string[] {
+  const given = paths.map((p) => path.relative(at.root, path.resolve(at.cwd, p)).split(path.sep).join("/"));
+  return all.filter((rel) => given.some((g) => g === "" || rel === g || rel.startsWith(`${g}/`)));
+}
+
+/** The script hits of `files`: magic and guards on the JS/TS ones, the Rust source rules (and clippy) on the `.rs`. */
+function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], options: RustOptions) {
+  const found = scriptDiagnostics(
+    checkout.root,
+    files.filter((rel) => !RUST_SOURCE.test(rel)),
+  );
+  if (!found.ok) return found;
+  const rust = rustHitsAt(
+    checkout.root,
+    files.filter((rel) => RUST_SOURCE.test(rel)),
+    options,
+  );
+  return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].toSorted(byPlace) } : rust;
+}
 
 /**
- * `repo lint`'s Rust hits for the repo at `cwd`. With `paths` (as given at `cwd`) only the source rules run, on those
- * of them that are `.rs` files; with null the whole repo is linted, clippy included. Nothing without a config, the
- * standards pack or a root Cargo.toml.
+ * `repo lint`'s script hits for the repo at `cwd`: the magic literals, untested guards and Rust source rules of the
+ * files `scope.paths` names (a directory: every source file under it; null: the whole checkout), and with
+ * `scope.clippy` clippy's too. Nothing without a config or the standards pack.
  */
-export async function rustLintAt(cwd: string, paths: readonly string[] | null, run?: CargoRun): Promise<RustLint> {
+export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun): Promise<ScriptLint> {
   const checkout = await checkoutAt(cwd);
   if (checkout === null) return { lines: [], problems: [] };
-  const given = (paths ?? []).map((p) => path.relative(checkout.root, path.resolve(cwd, p)).split(path.sep).join("/"));
-  const files = paths === null ? checkout.rust : given.filter((rel) => RUST_SOURCE.test(rel));
-  const found = rustHitsAt(checkout.root, files, { clippy: paths === null, run });
+  if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
+  const all = [...checkout.files.value, ...checkout.rust];
+  const files = scope.paths === null ? all : filesUnder({ root: checkout.root, cwd }, scope.paths, all);
+  const found = lintHits(checkout, files, { clippy: scope.clippy, run });
   if (!found.ok) return { lines: [], problems: found.errors };
-  return { lines: withoutSkipped(found.value, checkout.skips, checkout.rust).map((d) => d.line), problems: [] };
+  const matched = [...files, ...found.value.map((d) => d.file)];
+  return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };
 }
 
 /** `repo check`'s reject file problems for the repo at `cwd`: none without a config or the standards pack. */

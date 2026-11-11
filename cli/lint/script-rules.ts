@@ -1,7 +1,7 @@
 /**
- * The checks `repo check`, `repo turn` and `repo lint --baseline` run beside oxlint as scripts on the TypeScript
- * compiler API, by the names `lint.skip` takes. Kept apart from the checks so the oxlint config can accept the names
- * without loading typescript.
+ * The checks `repo check`, `repo turn`, `repo lint --baseline` and `repo lint` (on the paths given, or the whole repo)
+ * run beside oxlint as scripts on the TypeScript compiler API, by the names `lint.skip` takes. Kept apart from the
+ * checks so the oxlint config can accept the names without loading typescript.
  */
 export const MAGIC_NUMBER = "repo/magic-number";
 export const MAGIC_STRING = "repo/magic-string";

@@ -2423,6 +2423,7 @@
   "cli/scripts/fixtures/job-kit.ts": ["167ff09c09fcef9d", "1a3588b89016037a", "7d91c378381b42d1", "a3ad72e2760b98c5"],
   "cli/scripts/fixtures/json-dirs.ts": ["71f968b133ef2302", "a74e5daba77127c6"],
   "cli/scripts/fixtures/lessons-kit.ts": ["77e1480bfff6fa2f"],
+  "cli/scripts/fixtures/lint-scripts-kit.ts": ["79b1798db98a9d70"],
   "cli/scripts/fixtures/listen-env.ts": ["ced969c034457bb2", "f6d733823d30f64b"],
   "cli/scripts/fixtures/mcp-policy-kit.ts": ["1bfe30deb6d60d95", "4255a6f6a79a03a6"],
   "cli/scripts/fixtures/md-headings-lists.md": ["7a60e9ecf7a5f0a1"],
@@ -2722,8 +2723,15 @@
   ],
   "cli/scripts/lint-capture.test.ts": ["375e0f3dfd88a778", "97e5b96645dde33f"],
   "cli/scripts/lint-jsonc.test.ts": ["038d9baa86e55b48", "842b3aa1368fe4a7", "e12242b867dd4549"],
-  "cli/scripts/lint-main.test.ts": ["173247fd5a28b273", "6b71b24c93020b9b", "8b23c89b0ac69c77", "9be859401c4d9834"],
-  "cli/scripts/lint-main.ts": ["2c19debd1e276afc", "a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
+  "cli/scripts/lint-main.constants.ts": ["1a29acb0ca4af187"],
+  "cli/scripts/lint-main.test.ts": [
+    "173247fd5a28b273",
+    "1acd696bb6e6bfea",
+    "6b71b24c93020b9b",
+    "8b23c89b0ac69c77",
+    "9be859401c4d9834"
+  ],
+  "cli/scripts/lint-main.ts": ["2c19debd1e276afc", "a0c15a2c6f45cff8", "a3a33ace8d5aec70", "bf2e51b23e2ea5ba"],
   "cli/scripts/lint-plugin.test.ts": [
     "23612b6f293de8bd",
     "2563079d8a559123",
@@ -2741,7 +2749,13 @@
     "f366ab25750b408c",
     "f8f4994e44205b6b"
   ],
-  "cli/scripts/lint-rust.test.ts": ["4251e85820cd56ff", "be63214d00c8bbd2", "ed63f13c3c4ae627", "fd1698e37adb39a2"],
+  "cli/scripts/lint-rust.test.ts": [
+    "2cfc1e94659b7112",
+    "4251e85820cd56ff",
+    "be63214d00c8bbd2",
+    "ed63f13c3c4ae627",
+    "fd1698e37adb39a2"
+  ],
   "cli/scripts/lint-skips-manifest.test.ts": ["7e68217c09cf105d", "982a575df72bd1a8"],
   "cli/scripts/lint-skips-rust.test.ts": ["8d855e38ecd3cbea", "986d209d2ad008e1"],
   "cli/scripts/lint-skips.test.ts": ["20248a767ba4538b", "26e7bba0dc615a26", "2a221e3c731b1c87", "3dbf1d247a961602"],
