@@ -6,13 +6,29 @@ export type Bin = {
   dispatch: (argv: readonly string[]) => Promise<number | null>;
   /** Loads `cli/main.ts`, only once the registry has named nothing. */
   load: () => Promise<{ start: () => Promise<void> }>;
-  exit: (code?: number) => void;
+  exit: (code?: number) => void | Promise<void>;
 };
+
+/** What `exitWhenFlushed` ends: a writable whose `end` calls back once everything written has been handed on. */
+type Endable = { end: (done: () => void) => unknown };
+
+/**
+ * Ends every stream, then exits with `code` once all have finished. A bare `process.exit` right after a write to a pipe
+ * with a slow reader keeps only the first 64 KiB, which on CI dropped the tail of a command's output.
+ */
+export async function exitWhenFlushed(
+  streams: readonly Endable[],
+  exit: (code?: number) => void,
+  code?: number,
+): Promise<void> {
+  await Promise.all(streams.map((stream) => new Promise<void>((resolve) => stream.end(resolve))));
+  exit(code);
+}
 
 /** The registry, a lazy `cli/main.ts`, and the process's own exit. */
 export const BIN: Readonly<Bin> = {
   dispatch,
-  exit: (code) => process.exit(code),
+  exit: (code) => exitWhenFlushed([process.stdout, process.stderr], (c) => process.exit(c), code),
   load: () => import("./main.ts"),
 };
 
@@ -34,7 +50,7 @@ export async function main(argv: readonly string[], deps: Readonly<Bin> = BIN): 
     (code) => deps.exit(code),
     (err: unknown) => {
       process.stderr.write(`repo: ${err instanceof Error ? err.message : String(err)}\n`);
-      deps.exit(1);
+      return deps.exit(1);
     },
   );
 }

@@ -105,7 +105,7 @@ it("an argument is refused on the real stderr", async () => {
   const run = await realCi(process.cwd(), ["x.test.ts"]);
   expect(run).toStrictEqual({
     code: 1,
-    err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
+    err: "repo ci: use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir>, repo ci merge <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
     out: "",
   });
 });

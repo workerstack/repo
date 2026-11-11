@@ -27,6 +27,8 @@ const VARIANTS: [string, PackageJson, Record<string, string>][] = [
   ["public", { name: "pkg", private: false }, {}],
   ["public with e2e", { name: "pkg", private: false, scripts: E2E }, {}],
   ["unsharded e2e", { scripts: { "test:e2e": "tsx e2e.ts" } }, {}],
+  ["vitest", { devDependencies: { vitest: "^5.1.0" } }, {}],
+  ["public vitest with e2e", { dependencies: { vitest: "^5" }, name: "pkg", private: false, scripts: E2E }, {}],
   ["Rust public with e2e", { name: "pkg", private: false, scripts: E2E }, CARGO],
 ];
 
@@ -37,11 +39,12 @@ it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s roo
 
 const TEST_NAMES = [
   "test (ubuntu-latest)",
-  "test (windows-latest 1/5)",
-  "test (windows-latest 2/5)",
-  "test (windows-latest 3/5)",
-  "test (windows-latest 4/5)",
-  "test (windows-latest 5/5)",
+  "test (windows-latest 1/6)",
+  "test (windows-latest 2/6)",
+  "test (windows-latest 3/6)",
+  "test (windows-latest 4/6)",
+  "test (windows-latest 5/6)",
+  "test (windows-latest 6/6)",
   "test (macos-latest 1/3)",
   "test (macos-latest 2/3)",
   "test (macos-latest 3/3)",
@@ -53,7 +56,6 @@ it("ciJobNames lists the labelled matrix names, each shard its own, and the sing
     ...TEST_NAMES,
     "commits",
     "skips",
-    "no-node",
     "e2e (ubuntu-latest)",
     "e2e (windows-latest 1/3)",
     "e2e (windows-latest 2/3)",
@@ -76,7 +78,6 @@ it("ciJobNames lists semver then msrv last for a Rust repo, as the YAML orders i
     ...TEST_NAMES,
     "commits",
     "skips",
-    "no-node",
     "semver",
     "msrv",
   ]);

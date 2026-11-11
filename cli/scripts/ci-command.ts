@@ -1,5 +1,6 @@
-/** The command `repo ci` argv asks for: the gates and their flags, `skips <dir>`, `times <dir>`, `wait`, or usage. */
+/** The command `repo ci` argv asks for: the gates, `skips`, `times` or `merge <dir>`, `wait`, or usage. */
 import {
+  MERGE_COMMAND,
   NO_COVERAGE_FLAG,
   REPORT_FLAG,
   SHARD_FLAG,
@@ -13,13 +14,14 @@ export type Command =
   | { kind: "gates"; report?: string; coverage: boolean; shard?: string | undefined }
   | { kind: "skips"; dir: string }
   | { kind: "times"; dir: string }
+  | { kind: "merge"; dir: string }
   | { kind: "wait"; branch?: string }
   | { kind: "wait-many" }
   | { kind: "usage"; error?: string };
 
 /**
  * The gates run that `--no-coverage`, `--report <file>` and `--shard <i>/<n>`, in any order, ask for; refused for a
- * bad slice or one with coverage, since the per-file floors need every test, and null for anything else.
+ * bad slice, and null for anything else.
  */
 function gateFlags(argv: string[]): Command | null {
   const flags: { coverage: boolean; report?: string; shard?: string } = { coverage: true };
@@ -34,7 +36,7 @@ function gateFlags(argv: string[]): Command | null {
       return null;
     }
   }
-  const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard, flags.coverage);
+  const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard);
   return "error" in shard ? { error: shard.error, kind: "usage" } : { kind: "gates", ...flags, ...shard };
 }
 
@@ -44,11 +46,20 @@ function waitOf(branch: string | undefined, more: string[]): Command {
   return branch === undefined ? { kind: "wait" } : { branch, kind: "wait" };
 }
 
+/** `skips`, `times` or `merge` with exactly one directory after it; null for anything else. */
+function dirCommand(argv: string[]): Command | null {
+  const [first, dir, ...rest] = argv;
+  if (dir === undefined || rest.length > 0) return null;
+  if (first === SKIPS_COMMAND) return { dir, kind: "skips" };
+  if (first === TIMES_COMMAND) return { dir, kind: "times" };
+  return first === MERGE_COMMAND ? { dir, kind: "merge" } : null;
+}
+
 /** What `argv` asks `repo ci` for. */
 export function ciCommand(argv: string[]): Command {
   const [first, second, ...rest] = argv;
-  if (first === SKIPS_COMMAND && second !== undefined && rest.length === 0) return { dir: second, kind: "skips" };
-  if (first === TIMES_COMMAND && second !== undefined && rest.length === 0) return { dir: second, kind: "times" };
+  const dirs = dirCommand(argv);
+  if (dirs !== null) return dirs;
   if (first === WAIT_COMMAND) return waitOf(second, rest);
   return gateFlags(argv) ?? { kind: "usage" };
 }

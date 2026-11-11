@@ -2280,12 +2280,14 @@
   ],
   "cli/scripts/ci-checks.test.ts": ["19614e6edfaf829c", "a013e4b9d7bf3681"],
   "cli/scripts/ci-checks.ts": ["bf01fac73fc4bad8", "fc3ed9e94eb7f5ea"],
-  "cli/scripts/ci-command.test.ts": ["52255399bed0f77f"],
-  "cli/scripts/ci-command.ts": ["2216ebe527279a8f", "26548f317b7cb175"],
+  "cli/scripts/ci-command.test.ts": ["393e18b39074fb28", "52255399bed0f77f"],
+  "cli/scripts/ci-command.ts": ["2216ebe527279a8f", "26548f317b7cb175", "a4c33c70661f4f61"],
   "cli/scripts/ci-docs.constants.ts": ["0ed05dc3085968f5"],
   "cli/scripts/ci-docs.test.ts": ["6c2f242bf592f809", "8b62853070193346", "cd6efcb290e79909", "ffbbd67e4680f7c9"],
   "cli/scripts/ci-docs.ts": ["2cae8f7a1461cf83"],
   "cli/scripts/ci-gate.ts": ["477725a05310bb62"],
+  "cli/scripts/ci-merge.test.ts": ["f4ca1893d2899797"],
+  "cli/scripts/ci-merge.ts": ["70a423f9c090f725"],
   "cli/scripts/ci-push-gate-stop.test.ts": ["1b7ac0472977254e", "dae457f7e3fc2e32"],
   "cli/scripts/ci-push-gate.test.ts": ["7fd3864585d276ea", "bd87941757d97d32", "c17629b802f96826", "f13f0ac7e30d53c4"],
   "cli/scripts/ci-push-gate.ts": ["628b846244fb5c54", "65a806d4dcd78c6b", "db006dbedeeeb9fa"],
@@ -2300,6 +2302,7 @@
     "a996d5b99680ca26",
     "b69dbdd0a717c4c3",
     "c4084da6bee231c5",
+    "cc32e3dbf2155940",
     "d0ed89323da7e4f6",
     "e5b8cca8114df050"
   ],
@@ -2308,12 +2311,13 @@
     "2031c1d078501fbf",
     "5ea1e5d977c5ae5c",
     "734542af33700be6",
+    "7c1aef01ed87bff9",
     "9fb70c9d8140a504",
     "f8244b18ac6bbcd0",
     "fc8b5e8d98427889"
   ],
   "cli/scripts/ci-rust-only.test.ts": ["29e74e5f668aa437", "95eb56498edf4c39", "f28baf595eedd9c2", "ff4a4fa74d17508c"],
-  "cli/scripts/ci-shard.test.ts": ["6723f778005b5f8d", "8a6ee9a08ba2fc6e"],
+  "cli/scripts/ci-shard.test.ts": ["407a66a6fc554393", "6723f778005b5f8d", "8a6ee9a08ba2fc6e"],
   "cli/scripts/ci-skips.constants.ts": ["7a8ded2beaf8aa9c"],
   "cli/scripts/ci-skips.test.ts": [
     "7212c71ec00ba96d",
@@ -2329,7 +2333,7 @@
     "36756942b25cdd1d",
     "f1eea1352d74f50e"
   ],
-  "cli/scripts/ci-tests.ts": ["0ac3a1a68ebef685", "2fb132208b9c7c8c", "85c143e7af4fe0e3"],
+  "cli/scripts/ci-tests.ts": ["0ac3a1a68ebef685", "2fb132208b9c7c8c", "85c143e7af4fe0e3", "89e403d290022e86"],
   "cli/scripts/ci-times.test.ts": ["5bdc811ce5da283d"],
   "cli/scripts/ci-times.ts": ["b2df8f8194dc07ae"],
   "cli/scripts/ci-turbo.constants.ts": ["407f6ab778d4fe13", "a242c3e069f7ab20"],
@@ -2371,6 +2375,7 @@
     "d96e8df081cc00ff"
   ],
   "cli/scripts/ci.constants.ts": [
+    "1d57ac431a981e34",
     "2faa594e0df68edd",
     "45cb3c6f51c875d6",
     "5a18715d9bfdce8a",
@@ -2392,6 +2397,7 @@
     "d9659161b3890118"
   ],
   "cli/scripts/ci.ts": [
+    "17365872ee1b1635",
     "1d601e44dd81f823",
     "32b1d74d80f3b282",
     "359c6b616220349f",
@@ -3377,7 +3383,7 @@
     "c5afc00f099b6a57",
     "de18cbe5c7a3ae5d"
   ],
-  "cli/scripts/parse-shard.ts": ["295c9e66452f45f4"],
+  "cli/scripts/parse-shard.ts": ["295c9e66452f45f4", "9262f2fe2c043093"],
   "cli/scripts/persist-doc-checks.ts": ["446575c23a4b2812", "92242e9177605c92", "edc80195ff94496d"],
   "cli/scripts/persist-doc.constants.ts": ["50bad192d99a8360"],
   "cli/scripts/persist-doc.test.ts": ["4fe8499fd72f7b1b", "83a8086b2539fcdb", "a6adc068c849d71e", "baa0a0c0ab565c90"],

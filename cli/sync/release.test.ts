@@ -13,6 +13,18 @@ const UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
 const DOWNLOAD = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const CACHE = "actions/cache/%@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
 
+const NODE_STEPS = `      - name: Remove node
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -f $(which -a node nodejs)
+          sudo rm -rf /opt/hostedtoolcache/node
+          hash -r
+      - name: Assert node is gone
+        if: runner.os == 'Linux'
+        run: |
+          if command -v node; then echo "node is still on PATH"; exit 1; fi
+`;
+
 const HEAD = `name: ci
 
 on:
@@ -38,11 +50,12 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, shard: "", label: ubuntu-latest }
-          - { os: windows-latest, shard: 1/5, label: windows-latest 1/5 }
-          - { os: windows-latest, shard: 2/5, label: windows-latest 2/5 }
-          - { os: windows-latest, shard: 3/5, label: windows-latest 3/5 }
-          - { os: windows-latest, shard: 4/5, label: windows-latest 4/5 }
-          - { os: windows-latest, shard: 5/5, label: windows-latest 5/5 }
+          - { os: windows-latest, shard: 1/6, label: windows-latest 1/6 }
+          - { os: windows-latest, shard: 2/6, label: windows-latest 2/6 }
+          - { os: windows-latest, shard: 3/6, label: windows-latest 3/6 }
+          - { os: windows-latest, shard: 4/6, label: windows-latest 4/6 }
+          - { os: windows-latest, shard: 5/6, label: windows-latest 5/6 }
+          - { os: windows-latest, shard: 6/6, label: windows-latest 6/6 }
           - { os: macos-latest, shard: 1/3, label: macos-latest 1/3 }
           - { os: macos-latest, shard: 2/3, label: macos-latest 2/3 }
           - { os: macos-latest, shard: 3/3, label: macos-latest 3/3 }
@@ -51,7 +64,7 @@ jobs:
       - uses: ${SETUP_BUN}
         with:
           bun-version-file: package.json
-      - name: Refuse to run as root
+${NODE_STEPS}      - name: Refuse to run as root
         if: runner.os != 'Windows'
         run: |
           if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; the suite assumes unprivileged file permissions"; exit 1; fi
@@ -114,40 +127,6 @@ jobs:
           merge-multiple: true
           path: reports
       - run: bun repo ci skips reports
-
-  no-node:
-    name: no-node
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - uses: ${CHECKOUT}
-      - uses: ${SETUP_BUN}
-        with:
-          bun-version-file: package.json
-      - name: Remove node
-        run: |
-          sudo rm -f $(which -a node nodejs)
-          sudo rm -rf /opt/hostedtoolcache/node
-          hash -r
-      - name: Assert node is gone
-        run: |
-          if command -v node; then echo "node is still on PATH"; exit 1; fi
-      - run: bun install --frozen-lockfile
-      - run: bun repo ci
-`;
-
-const NO_NODE_SHALLOW = `    steps:
-      - uses: ${CHECKOUT}
-      - uses: ${SETUP_BUN}
-        with:
-          bun-version-file: package.json
-      - name: Remove node`;
-const NO_NODE_FULL = NO_NODE_SHALLOW.replace(
-  `- uses: ${CHECKOUT}`,
-  `- uses: ${CHECKOUT}\n        with:\n          fetch-depth: 0`,
-);
-
-const E2E_IN_NO_NODE = `      - run: bun run test:e2e
 `;
 
 const CONSUMER_JOB = `
@@ -177,11 +156,13 @@ describe("release", () => {
     });
   });
 
-  it("adds the e2e step and job when the root has a test:e2e script", () => {
+  it("adds the e2e job, which removes node on Linux, when the root has a test:e2e script", () => {
     const manifest: PackageJson = { scripts: { "test:e2e": "vitest" } };
     const output = lookup(context(["release"], manifest));
-    const before = `${HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE}\n  e2e:\n`;
-    expect(output?.kind === "file" && output.content.startsWith(before)).toBe(true);
+    const text = output?.kind === "file" ? output.content : "";
+    expect(text.startsWith(HEAD)).toBe(true);
+    expect(text.slice(text.indexOf("  e2e:"))).toContain(`          bun-version-file: package.json\n${NODE_STEPS}`);
+    expect(text).not.toContain("no-node");
   });
 
   it("ignores a scripts field that is not an object with a test:e2e string", () => {

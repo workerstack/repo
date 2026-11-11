@@ -19,9 +19,18 @@ const E2E_RUN_SHARDED = `      - name: Run the e2e tests
         run: bun run test:e2e $SHARD
 `;
 const PLAYWRIGHT_RUN_SHARDED = E2E_RUN_SHARDED.replace("--passWithNoTests", "--pass-with-no-tests");
-const E2E_JOB = `      - run: bun run test:e2e
-
-  e2e:
+const NODE_STEPS = `      - name: Remove node
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -f $(which -a node nodejs)
+          sudo rm -rf /opt/hostedtoolcache/node
+          hash -r
+      - name: Assert node is gone
+        if: runner.os == 'Linux'
+        run: |
+          if command -v node; then echo "node is still on PATH"; exit 1; fi
+`;
+const E2E_JOB = `  e2e:
     name: e2e (\${{ matrix.label }})
     runs-on: \${{ matrix.os }}
     timeout-minutes: 40
@@ -41,7 +50,7 @@ ${E2E_MATRIX_SHARDED}          - { os: macos-latest, shard: "", label: macos-lat
       - uses: ${SETUP_BUN}
         with:
           bun-version-file: package.json
-${INSTALL}${E2E_RUN_SHARDED}`;
+${NODE_STEPS}${INSTALL}${E2E_RUN_SHARDED}`;
 const UNSHARDED_JOB = E2E_JOB.replace(
   E2E_MATRIX_SHARDED,
   '          - { os: windows-latest, shard: "", label: windows-latest }\n',

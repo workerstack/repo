@@ -40,18 +40,20 @@ it("requires every job the generated ci.yml reports, from GitHub Actions", async
   await run(githubRepo(), fake);
   const rule = must(fake.settings.rulesets[0]).rules.find((r) => r.type === "required_status_checks");
   expect(rule?.parameters?.required_status_checks?.map((check) => check.context)).toStrictEqual([
-    "test (ubuntu-latest)",
-    "test (windows-latest 1/5)",
-    "test (windows-latest 2/5)",
-    "test (windows-latest 3/5)",
-    "test (windows-latest 4/5)",
-    "test (windows-latest 5/5)",
+    "test (ubuntu-latest 1/2)",
+    "test (ubuntu-latest 2/2)",
+    "test (windows-latest 1/6)",
+    "test (windows-latest 2/6)",
+    "test (windows-latest 3/6)",
+    "test (windows-latest 4/6)",
+    "test (windows-latest 5/6)",
+    "test (windows-latest 6/6)",
     "test (macos-latest 1/3)",
     "test (macos-latest 2/3)",
     "test (macos-latest 3/3)",
     "commits",
     "skips",
-    "no-node",
+    "coverage",
     "consumer",
   ]);
 });
