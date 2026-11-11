@@ -6,7 +6,9 @@ import { MAX_STDOUT } from "./job.constants.ts";
 
 useJobEnv();
 
-const numbered = (n: number, prefix = "l"): string[] => Array.from({ length: n }, (_, i) => `${prefix}${i}`);
+function numbered(n: number, prefix = "l"): string[] {
+  return Array.from({ length: n }, (_, i) => `${prefix}${i}`);
+}
 
 it("formatFacts says what a search or a command found, in the singular and the plural", () => {
   expect(formatFacts()).toBe("No output.\n");

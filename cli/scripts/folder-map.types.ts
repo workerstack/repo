@@ -14,7 +14,10 @@ export type MapOptions = {
   maxChars?: number;
 } & Partial<MapConfig>;
 
-/** A folder in the raw tree. `own` = holds a kept file directly; `pkg` is the package name ("" when unnamed) on package roots, else null. */
+/**
+ * A folder in the raw tree. `own` = holds a kept file directly; `pkg` is the package name ("" when unnamed) on
+ * package roots, else null.
+ */
 export type TreeNode = {
   name: string;
   path: string;

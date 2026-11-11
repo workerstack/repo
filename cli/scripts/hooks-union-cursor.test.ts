@@ -18,8 +18,12 @@ import { AUTORUN_NEEDLES, CURSOR_WRITE_MATCHER, OWNED_HOOKS } from "./hooks-unio
 import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
-const cursorHooks = (ws: string) => readJson<CursorDoc>(ws, ".cursor/hooks.json");
-const scriptOf = (e: FlatEntry) => AUTORUN_NEEDLES.find((n) => e.command.includes(n));
+function cursorHooks(ws: string) {
+  return readJson<CursorDoc>(ws, ".cursor/hooks.json");
+}
+function scriptOf(e: FlatEntry) {
+  return AUTORUN_NEEDLES.find((n) => e.command.includes(n));
+}
 
 /** A repo with rulesync's hook files and every consumer autorun script. */
 function consumerRepo(prefix: string): string {

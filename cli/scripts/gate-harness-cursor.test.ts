@@ -15,11 +15,15 @@ const deniedPath = ["node", "modules/x/package.json"].join("_");
 const JOB_EXEC = /node_modules\/\.bin\/repo job --job exec --query /;
 const WORKTREE_REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
 const ENV = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" };
-const payload = (cwd: string, tool: string, input: Record<string, unknown>) =>
-  inSession(cursorCall(cwd, tool, input), "cu1");
-const cursor = (cwd: string, tool: string, input: Record<string, unknown>) =>
-  processHookPayload(payload(cwd, tool, input));
-const denial = (reason: string) => ({ agent_message: reason, permission: "deny", user_message: reason });
+function payload(cwd: string, tool: string, input: Record<string, unknown>) {
+  return inSession(cursorCall(cwd, tool, input), "cu1");
+}
+function cursor(cwd: string, tool: string, input: Record<string, unknown>) {
+  return processHookPayload(payload(cwd, tool, input));
+}
+function denial(reason: string) {
+  return { agent_message: reason, permission: "deny", user_message: reason };
+}
 
 function expectDenial(out: HookOutput | null, reason: RegExp) {
   expect(out?.permission).toBe("deny");
@@ -46,7 +50,9 @@ it("denies a Shell dump of a denylisted path in Cursor's reply shape", () => {
 
 it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
   const { a } = repo();
-  const shell = (command: string) => cursor(a, "Shell", { command });
+  function shell(command: string) {
+    return cursor(a, "Shell", { command });
+  }
   expect(shell("cat small.md")?.hookSpecificOutput?.hookEventName).toBe("PreToolUse");
   expect(replyCommand(shell("cat small.md"))).toMatch(JOB_EXEC);
   expect(replyCommand(shell("curl https://example.com/x"))).toMatch(

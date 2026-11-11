@@ -15,8 +15,18 @@ import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 
 const tmp = useTmp();
 const GROK = { GROK_HOOK_EVENT: "pre_tool_use" };
-const pre = (tool: string, input: Record<string, unknown>, extra: HookInput = {}) =>
-  camelCall(tool, input, { hookEventName: "PreToolUse", ...extra });
+function pre(tool: string, input: Record<string, unknown>, extra: HookInput = {}) {
+  return camelCall(tool, input, { hookEventName: "PreToolUse", ...extra });
+}
+/** A parent grep of `src` for `foo`, and the input orchestrate-parent rewrites it to. */
+const SRC_GREP = { path: "src", pattern: "foo" };
+const SRC_GREP_LIMITED = { head_limit: DEFAULT_GREP_HEAD_LIMIT, ...SRC_GREP };
+
+/** orchestrate-parent's exit status and rewritten input for `payload` under `env`. */
+function orchRewrite(payload: HookInput, env: Record<string, string> = GROK) {
+  const result = runHook(orchMain, payload, env);
+  return { input: replyInput(replyOf(result.stdout)), status: result.status };
+}
 
 describe("gate-fat-tools adapter (stdin)", () => {
   it("fail-opens on invalid JSON", () => {
@@ -52,22 +62,19 @@ describe("repo hook gate-fat-tools (spawned)", () => {
 
 describe("orchestrate-parent fat tools (Grok SSOT)", () => {
   it("allows parent grep and injects head_limit", () => {
-    const result = runHook(orchMain, pre("grep", { path: "src", pattern: "foo" }), GROK);
-    expect(result.status).toBe(0);
-    const next = { head_limit: DEFAULT_GREP_HEAD_LIMIT, path: "src", pattern: "foo" };
-    expect(replyInput(replyOf(result.stdout))).toStrictEqual(next);
+    const { input, status } = orchRewrite(pre("grep", SRC_GREP));
+    expect(status).toBe(0);
+    expect(input).toStrictEqual(SRC_GREP_LIMITED);
   });
 
   it("parent-escape still fat-gates grep head_limit", () => {
     const ws = tmp.dir("orch-fat-escape-");
     fs.mkdirSync(path.join(ws, ORCHESTRATOR_LOGS_DIR), { recursive: true });
     fs.writeFileSync(path.join(ws, ORCHESTRATOR_LOGS_DIR, "parent-escape-ge"), "1");
-    const payload = pre("grep", { path: "src", pattern: "foo" }, { sessionId: "ge", workspaceRoot: ws });
-    const env = { ...GROK, GROK_SESSION_ID: "ge", GROK_WORKSPACE_ROOT: ws };
-    const result = runHook(orchMain, payload, env);
-    expect(result.status).toBe(0);
-    const next = { head_limit: DEFAULT_GREP_HEAD_LIMIT, path: "src", pattern: "foo" };
-    expect(replyInput(replyOf(result.stdout))).toStrictEqual(next);
+    const payload = pre("grep", SRC_GREP, { sessionId: "ge", workspaceRoot: ws });
+    const { input, status } = orchRewrite(payload, { ...GROK, GROK_SESSION_ID: "ge", GROK_WORKSPACE_ROOT: ws });
+    expect(status).toBe(0);
+    expect(input).toStrictEqual(SRC_GREP_LIMITED);
   });
 
   it("denies denylist read", () => {

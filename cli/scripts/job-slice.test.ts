@@ -17,7 +17,7 @@ function withStash(): string {
   return dir;
 }
 
-const missing = "Command failed.\n- missing stash\n";
+const MISSING = "Command failed.\n- missing stash\n";
 
 it("runSlice prints the lines from a start line to an end line", () => {
   const dir = withStash();
@@ -78,20 +78,20 @@ it("runSlice finds the stash under the process cwd when it is given no places", 
   const dir = withStash();
   const r = inDir(dir, () => runSlice({ from: "1", stash: "g7k", to: "1" }));
   expect(r.text).toBe("1 line.\n- stash:1 — row 1\n");
-  expect(inDir(dir, () => runSlice()).text).toBe(missing);
+  expect(inDir(dir, () => runSlice()).text).toBe(MISSING);
 });
 
 it("runSlice reports a missing stash as a failure, never as a fallback", () => {
   const dir = plant();
   const r = runSlice({ cwd: dir, root: dir, stash: "nope" });
-  expect(r).toStrictEqual({ code: 0, fallback: false, text: missing });
-  expect(runSlice({ cwd: dir, root: dir, stash: "../../etc/passwd" }).text).toBe(missing);
+  expect(r).toStrictEqual({ code: 0, fallback: false, text: MISSING });
+  expect(runSlice({ cwd: dir, root: dir, stash: "../../etc/passwd" }).text).toBe(MISSING);
 });
 
 it("runSlice reports a stash that is a directory as missing", () => {
   const dir = plant();
   fs.mkdirSync(path.join(stashDirOf(dir), "search-dir.txt"));
-  expect(runSlice({ cwd: dir, root: dir, stash: "dir" }).text).toBe(missing);
+  expect(runSlice({ cwd: dir, root: dir, stash: "dir" }).text).toBe(MISSING);
 });
 
 it("runSlice refuses a binary stash", () => {

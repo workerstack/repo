@@ -29,9 +29,9 @@ function scratchDir(roots: Roots, p: typeof path): string {
 /** The path below a `.tmp/repo/` marker as a safe relative posix path, or null when there is none or it climbs. */
 function scratchRel(posix: string, p: typeof path): string | null {
   const marker = SCRATCH_MARKER.exec(posix);
-  const rel = marker ? posix.slice(marker.index + marker[0].length) : "";
+  const rel = marker === null ? "" : posix.slice(marker.index + marker[0].length);
   const relNorm = p.posix.normalize(rel);
-  return !rel || rel.startsWith("/") || relNorm === "." || rel.split("/").includes("..") ? null : relNorm;
+  return rel === "" || rel.startsWith("/") || relNorm === "." || rel.split("/").includes("..") ? null : relNorm;
 }
 
 /**
@@ -39,13 +39,12 @@ function scratchRel(posix: string, p: typeof path): string | null {
  * Relative paths resolve against the hook cwd. Null when it is already root scratch or not scratch.
  */
 export function rewriteScratchPath(
-  filePath: unknown,
+  filePath: string | null | undefined,
   roots: Roots | null | undefined,
   p: typeof path = path,
 ): string | null {
-  if (filePath == null || !roots) return null;
-  const raw = String(filePath);
-  if (!raw) return null;
+  if (filePath == null || filePath === "" || roots == null) return null;
+  const raw = filePath;
   const destRoot = scratchDir(roots, p);
   const absIn = resolveTyped(roots, raw, p);
   if (isUnder(destRoot, absIn, p)) return null;
@@ -57,7 +56,10 @@ export function rewriteScratchPath(
   return relInside(destRoot, dest, p) === null ? null : dest;
 }
 
-/** `<scratch>/<rest>` for the segments left after a `tmp/` or `.tmp/<name>/` prefix, null when that leaves the scratch. */
+/**
+ * `<scratch>/<rest>` for the segments left after a `tmp/` or `.tmp/<name>/` prefix, null when that leaves the
+ * scratch.
+ */
 function scratchBelow(rest: string[], scratch: string, p: typeof path): string | null {
   const dest = p.resolve(scratch, ...rest);
   return relInside(scratch, dest, p) === null ? null : dest;
@@ -79,25 +81,27 @@ export function rewriteScratchWrite(
   roots: Roots | null | undefined,
   p: typeof path = path,
 ): string | null {
+  if (typeof filePath !== "string" || roots == null) return null;
   const existing = rewriteScratchPath(filePath, roots, p);
-  if (existing) return existing;
-  if (typeof filePath !== "string" || !roots) return null;
+  if (existing !== null) return existing;
   const rel = relInside(p.resolve(roots.checkout), resolveTyped(roots, filePath, p), p);
   if (rel === null) return null;
   const segs = rel.split("/");
   const scratch = scratchDir(roots, p);
   const rest = strayDirRest(segs);
-  if (rest) return scratchBelow(rest, scratch, p);
+  if (rest !== null) return scratchBelow(rest, scratch, p);
   return segs.length === 1 && SCRATCH_ROOT_RE.test(rel) ? p.resolve(scratch, rel) : null;
 }
 
 /** The patch inside a Codex `apply_patch <<'EOF' … EOF` shell command, else null. */
-export function patchOfCommand(command: unknown): string | null {
-  return PATCH_HEREDOC_RE.exec(String(command || ""))?.groups?.patch ?? null;
+export function patchOfCommand(command: string | undefined): string | null {
+  return PATCH_HEREDOC_RE.exec(command ?? "")?.groups?.patch ?? null;
 }
 
 /** True for the headers whose path is a file the patch creates. */
-const createsFile = (op: string): boolean => op === PATCH_ADD || op === PATCH_MOVE;
+function createsFile(op: string): boolean {
+  return op === PATCH_ADD || op === PATCH_MOVE;
+}
 
 /**
  * Add and Move headers whose path is scratch get the root scratch path, the same rule a Write gets.
@@ -113,8 +117,8 @@ export function rewritePatch(
   const moved: string[] = [];
   const next = String(patch).replace(PATCH_PATH_RE, (line: string, op: string, target: string) => {
     const dest = createsFile(op) ? rewriteScratchWrite(target, roots, p) : null;
-    if (op !== PATCH_DELETE) paths.push(dest || resolveTyped(roots, target, p));
-    if (!dest) return line;
+    if (op !== PATCH_DELETE) paths.push(dest ?? resolveTyped(roots, target, p));
+    if (dest === null) return line;
     moved.push(dest);
     return `*** ${op}: ${dest}`;
   });
@@ -131,13 +135,13 @@ export function writeTargets({
   if (tool.kind === "write") {
     const typed = WRITE_PATH_FIELDS.map((k) => input[k]);
     return typed.flatMap((v) =>
-      typeof v === "string" && v ? [rewriteScratchWrite(v, roots) || resolveTyped(roots, v)] : [],
+      typeof v === "string" && v !== "" ? [rewriteScratchWrite(v, roots) ?? resolveTyped(roots, v)] : [],
     );
   }
   // Every caller that is not a write holds a patch, and both groups of PATCH_PATH_RE always participate in a match.
   return [...String(patch).matchAll(PATCH_PATH_RE)].map(
     ([, op, target]) =>
-      (createsFile(String(op)) ? rewriteScratchWrite(target, roots) : null) || resolveTyped(roots, String(target)),
+      (createsFile(String(op)) ? rewriteScratchWrite(target, roots) : null) ?? resolveTyped(roots, String(target)),
   );
 }
 
@@ -145,47 +149,56 @@ export function writeTargets({
 function movedPath(call: GateCall, current: string, dest: string): string | null {
   const { tool, roots } = call;
   // orchestrate-parent redirects the same `.tmp/repo` path, persists it, and answers the Write itself.
-  const persisted = tool.persistShared && dest === rewriteScratchPath(current, roots) && persistOwner(dest, roots.root);
-  return persisted ? null : dest;
+  const isPersisted =
+    tool.persistShared === true &&
+    dest === rewriteScratchPath(current, roots) &&
+    persistOwner(dest, roots.root) !== null;
+  return isPersisted ? null : dest;
 }
 
 /** What one write field is recorded as, and where it moves to (null to stay). */
 function fieldPlan(call: GateCall, current: string): { recorded: string; moved: string | null } {
   const dest = rewriteScratchWrite(current, call.roots);
-  return { moved: dest ? movedPath(call, current, dest) : null, recorded: dest ?? current };
+  return { moved: dest === null ? null : movedPath(call, current, dest), recorded: dest ?? current };
 }
 
 /** Records the files a session wrote, when the call has a session. */
 function recordAll({ roots, sid }: GateCall, paths: readonly string[]): void {
-  if (sid) for (const p of paths) recordWrote(roots, sid, p);
+  if (sid !== "") for (const p of paths) recordWrote(roots, sid, p);
 }
 
-/** A write rewrites its stray scratch paths and records what it wrote; the answer is always its own (null when none moved). */
+/**
+ * A write rewrites its stray scratch paths and records what it wrote; the answer is always its own (null when none
+ * moved).
+ */
 export function writeGuard(call: GateCall): GuardResult {
   if (call.tool.kind !== "write") return undefined;
   const next = { ...call.input };
   const wrote: string[] = [];
-  let changed = false;
+  let isChanged = false;
   for (const key of WRITE_PATH_FIELDS) {
     const current = next[key];
-    if (typeof current !== "string" || !current) continue;
+    if (typeof current !== "string" || current === "") continue;
     const { recorded, moved } = fieldPlan(call, current);
     wrote.push(recorded);
     if (moved === null) continue;
     next[key] = moved;
-    changed = true;
+    isChanged = true;
   }
   recordAll(call, wrote);
-  return changed ? { type: "rewrite", updatedInput: next } : null;
+  return isChanged ? { type: "rewrite", updatedInput: next } : null;
 }
 
-/** A patch rewrites its scratch headers and records what it wrote; the answer is always its own (null when none moved). */
+/**
+ * A patch rewrites its scratch headers and records what it wrote; the answer is always its own (null when none
+ * moved).
+ */
 export function patchGuard(call: GateCall): GuardResult {
   const { patch, roots, input, text, field } = call;
-  if (!patch) return undefined;
+  if (patch === null || patch === "") return undefined;
   const out = rewritePatch(patch, roots);
   recordAll(call, out.paths);
   const rewritten = out.patch;
-  if (!rewritten) return null;
+  if (rewritten === null) return null;
   return { type: "rewrite", updatedInput: { ...input, [field]: text.replace(patch, () => rewritten) } };
 }

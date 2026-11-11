@@ -9,8 +9,14 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import type { HookInput } from "./hook-input.ts";
 
 const tmp = useTmp();
-const put = (file: string, extra: HookInput) =>
-  processFatTools(camelCall("Write", { content: "ok", file_path: file }, extra));
+function put(file: string, extra: HookInput) {
+  return processFatTools(camelCall("Write", { content: "ok", file_path: file }, extra));
+}
+
+/** The gate's answers to plain writes of README.md and of an unlisted src file in `ws`. */
+function plainWrites(ws: string) {
+  return [path.join(ws, "README.md"), path.join(ws, "src/other.ts")].map((f) => put(f, { workspaceRoot: ws }));
+}
 
 function writePlan(ws: string, status: string, listed: string) {
   const plans = path.join(ws, ".tmp", "repo", "plans");
@@ -29,8 +35,7 @@ it("plan allow-list: allows listed src and plan path; denies README/docs/example
   expect(put(listed, scout)).toBeNull();
   const edit = { file_path: planPath, new_string: "b", old_string: "a" };
   expect(processFatTools(camelCall("Edit", edit, scout))).toBeNull();
-  expect(put(path.join(ws, "README.md"), { workspaceRoot: ws })).toBeNull();
-  expect(put(path.join(ws, "src/other.ts"), { workspaceRoot: ws })).toBeNull();
+  expect(plainWrites(ws)).toStrictEqual([null, null]);
 });
 
 it("plan allow-list: prompt-listed path allowed despite in-progress plan; prompt exclusive denies unlisted", () => {
@@ -47,6 +52,5 @@ it("plan allow-list: prompt-listed path allowed despite in-progress plan; prompt
 it("plan allow-list: with no in-progress plan denies README.md and allows unlisted src", () => {
   const ws = tmp.dir("gate-impl-nop-");
   writePlan(ws, "ready", path.join(ws, "src", "listed.ts"));
-  expect(put(path.join(ws, "README.md"), { workspaceRoot: ws })).toBeNull();
-  expect(put(path.join(ws, "src/other.ts"), { workspaceRoot: ws })).toBeNull();
+  expect(plainWrites(ws)).toStrictEqual([null, null]);
 });

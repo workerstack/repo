@@ -1,26 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
 import { applyUnion, checkUnion } from "./hooks-union.ts";
 
-const tmpDirs: string[] = [];
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
-
-function plant(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "union-edge-"));
-  tmpDirs.push(dir);
-  return dir;
-}
+const { tempDir: plant } = useTempDirs("union-edge-");
 
 function put(ws: string, rel: string, body: unknown) {
   const abs = path.join(ws, rel);
@@ -43,8 +32,9 @@ function consumerScripts(ws: string) {
   for (const n of AUTORUN_NEEDLES) put(ws, `scripts/${n}`, "");
 }
 
-const ownedGroups = () =>
-  OWNED_HOOKS.map((n) => ({ hooks: [{ command: hookCommand(n), type: "command" }], matcher: "x" }));
+function ownedGroups() {
+  return OWNED_HOOKS.map((n) => ({ hooks: [{ command: hookCommand(n), type: "command" }], matcher: "x" }));
+}
 
 describe("roots", () => {
   it("applies and checks the process cwd when no options are given", () => {

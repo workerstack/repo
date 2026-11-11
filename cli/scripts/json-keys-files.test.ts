@@ -61,8 +61,11 @@ it("lists under a hook's GIT_* variables, which would aim git at another repo, a
   expect(repoJson(root, ["a.json"])).toStrictEqual({ files: ["a.json"], ok: true });
 });
 
+function notThere() {
+  return { status: null, stdout: "" };
+}
+
 it("lists nothing, without an error, when git is not there to run", () => {
-  const notThere = () => ({ status: null, stdout: "" });
   expect(repoJson(committed(), null, notThere)).toStrictEqual({ files: [], ok: true });
 });
 
@@ -74,7 +77,9 @@ const IGNORES = ["/gen.json", "**/fixtures/**", "plain.json", "**/*.md"];
 const LEFT = ["package.json", "pkgs/package.json"];
 const COMMENTED = '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n';
 const COMMENTED_SORTED = '{\n  "a": 2,\n  // keep\n  "b": 1\n}\n';
-const SORTABLE = (tree: Record<string, string>): string[] => Object.keys(tree).filter((f) => f !== ".oxfmtrc.jsonc");
+function sortable(tree: Record<string, string>): string[] {
+  return Object.keys(tree).filter((f) => f !== ".oxfmtrc.jsonc");
+}
 const TREE = {
   ".oxfmtrc.jsonc": ignoreConfig(IGNORES),
   "a/b/plain.json": UNSORTED,
@@ -98,7 +103,7 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
   const root = jsonDir(TREE);
   const found = ["data.json", "mypackage.json", "sub/gen.json"].map((file) => ({ file, key: "hooks" }));
   const commented = ["comments.json", "conf/app.jsonc"].map((file) => ({ file, key: "a" }));
-  expect(sortJson(root, SORTABLE(TREE), false)).toStrictEqual({ found: [...commented, ...found], ok: true });
+  expect(sortJson(root, sortable(TREE), { check: false })).toStrictEqual({ found: [...commented, ...found], ok: true });
   for (const file of found.map((entry) => entry.file)) expect(readText(root, file)).toBe(SORTED);
   for (const file of commented.map((entry) => entry.file)) expect(readText(root, file)).toBe(COMMENTED_SORTED);
   expect(readText(root, "conf/fixtures/app.jsonc")).toBe(COMMENTED);
@@ -115,14 +120,14 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
 
 it("leaves package.json to oxfmt", () => {
   const root = jsonDir(TREE);
-  sortJson(root, SORTABLE(TREE), false);
+  sortJson(root, sortable(TREE), { check: false });
   for (const [left, text] of Object.entries(TREE).filter(([file]) => LEFT.includes(file)))
     expect(readText(root, left)).toBe(text);
 });
 
 it("names the first key of a file with comments under check, and writes nothing", () => {
   const root = jsonDir(TREE);
-  expect(sortJson(root, ["comments.json", "conf/app.jsonc"], true)).toStrictEqual({
+  expect(sortJson(root, ["comments.json", "conf/app.jsonc"], { check: true })).toStrictEqual({
     found: [
       { file: "comments.json", key: "a" },
       { file: "conf/app.jsonc", key: "a" },
@@ -134,16 +139,19 @@ it("names the first key of a file with comments under check, and writes nothing"
 
 it("only reports under check, and a second run after a fix finds nothing and changes no byte", () => {
   const root = jsonDir(TREE);
-  expect(sortJson(root, ["data.json"], true)).toStrictEqual({ found: [{ file: "data.json", key: "hooks" }], ok: true });
+  expect(sortJson(root, ["data.json"], { check: true })).toStrictEqual({
+    found: [{ file: "data.json", key: "hooks" }],
+    ok: true,
+  });
   expect(readText(root, "data.json")).toBe(UNSORTED);
-  sortJson(root, ["data.json"], false);
-  expect(sortJson(root, ["data.json"], false)).toStrictEqual({ found: [], ok: true });
+  sortJson(root, ["data.json"], { check: false });
+  expect(sortJson(root, ["data.json"], { check: false })).toStrictEqual({ found: [], ok: true });
   expect(readText(root, "data.json")).toBe(SORTED);
 });
 
 it("skips a listed file that is gone, and takes a config with no ignore patterns as ignoring nothing", () => {
   const root = jsonDir({ ".oxfmtrc.jsonc": "{}\n", "gen.json": UNSORTED });
-  expect(sortJson(root, ["gone.json", "gen.json"], true)).toStrictEqual({
+  expect(sortJson(root, ["gone.json", "gen.json"], { check: true })).toStrictEqual({
     found: [{ file: "gen.json", key: "hooks" }],
     ok: true,
   });
@@ -151,11 +159,17 @@ it("skips a listed file that is gone, and takes a config with no ignore patterns
 
 it("says to run repo sync when the config is missing or not an oxfmt config", () => {
   const missing = ".oxfmtrc.jsonc is missing; run `bun repo sync` to write it";
-  expect(sortJson(jsonDir({ "a.json": UNSORTED }), ["a.json"], false)).toStrictEqual({ error: missing, ok: false });
+  expect(sortJson(jsonDir({ "a.json": UNSORTED }), ["a.json"], { check: false })).toStrictEqual({
+    error: missing,
+    ok: false,
+  });
   const invalid = ".oxfmtrc.jsonc is not a valid oxfmt config; run `bun repo sync` to write it again";
-  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "{ nope" }), ["a.json"], false)).toStrictEqual({
+  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "{ nope" }), ["a.json"], { check: false })).toStrictEqual({
     error: invalid,
     ok: false,
   });
-  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "[]" }), ["a.json"], false)).toStrictEqual({ error: invalid, ok: false });
+  expect(sortJson(jsonDir({ ".oxfmtrc.jsonc": "[]" }), ["a.json"], { check: false })).toStrictEqual({
+    error: invalid,
+    ok: false,
+  });
 });

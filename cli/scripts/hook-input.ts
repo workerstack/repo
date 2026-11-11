@@ -149,8 +149,12 @@ function copyWhere<K extends string, V>(
   return out;
 }
 
-const isString = (v: unknown): v is string => typeof v === "string";
-const isBoolean = (v: unknown): v is boolean => typeof v === "boolean";
+function isString(v: unknown): v is string {
+  return typeof v === "string";
+}
+function isBoolean(v: unknown): v is boolean {
+  return typeof v === "boolean";
+}
 
 /**
  * The string fields, the workspace paths, the boolean flags and the tool inputs that hold their type,

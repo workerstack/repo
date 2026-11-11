@@ -25,10 +25,10 @@ const tmpDir = plantDirs();
 const WORKTREE = hookCommand("worktree");
 const group = [{ hooks: [{ command: WORKTREE, timeout: 60, type: "command" }] }];
 
-const matcherFor = (name: string): Set<string> => {
+function matcherFor(name: string): Set<string> {
   const entry = must(repoSsot().hooks.preToolUse?.find((e) => e.command.endsWith(` hook ${name}`)));
   return new Set(must(entry.matcher).split("|").map(eventKey));
-};
+}
 const specs = Object.values(TOOLS).flatMap((m) => [...m]);
 
 it("routes every tool the gate answers to the gate", () => {
@@ -38,11 +38,13 @@ it("routes every tool the gate answers to the gate", () => {
 
 it("routes every shell tool and every persist-owned write to orchestrate-parent", () => {
   const parent = matcherFor(PARENT);
-  const owned = specs.filter(([, spec]) => spec.kind === "bash" || (spec.kind === "write" && spec.persistShared));
+  const owned = specs.filter(
+    ([, spec]) => spec.kind === "bash" || (spec.kind === "write" && spec.persistShared === true),
+  );
   expect(owned.map(([key]) => key).filter((key) => !parent.has(key))).toStrictEqual([]);
 });
 
-it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, and no other harness's, to the worktree hook", () => {
+it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, no other harness's, to the worktree hook", () => {
   const sot = repoSsot();
   const entry = [{ command: WORKTREE, timeout: 60, type: "command" }];
   expect(sot.claudecode.hooks).toStrictEqual({ worktreeCreate: entry, worktreeRemove: entry });
@@ -83,25 +85,29 @@ it("ships() probes <sourceRoot>/cli/scripts", () => {
   expect(fs.readdirSync(stock)).toStrictEqual(["cli"]);
 });
 
-it("puts a consumer's scripts hook and .repo/permissions.json deny into the hook files under workspaceRoot, and checks its git hooks", () => {
-  const [stock, consumer, out] = [tmpDir("union-stock-"), tmpDir("union-consumer-"), tmpDir("union-out-")];
-  seedOwnedDrivers(out);
-  fs.mkdirSync(path.join(consumer, "scripts/git-hooks"), { recursive: true });
-  fs.writeFileSync(path.join(consumer, "scripts/check-behind.mjs"), "");
-  fs.writeFileSync(path.join(consumer, "scripts/git-hooks/pre-commit"), "");
-  writeJson(consumer, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
-  writeJson(consumer, ".rulesync/permissions.json", { deny: ["Edit(ignored/**)"] });
-  const roots = { consumerRoot: consumer, sourceRoot: stock, workspaceRoot: out };
-  expect(applyUnion(roots).ok).toBe(true);
-  const text = fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8");
-  expect(text).toContain("check-behind.mjs");
-  expect(text).toContain(EDIT_PLATFORM);
-  expect(text).not.toContain("ignored/**");
-  expect(checkUnion(roots)).toStrictEqual([
-    "git-hook missing: scripts/git-hooks/pre-commit.mjs",
-    "git-hook missing: scripts/git-hooks/pre-push",
-    "git-hook missing: scripts/git-hooks/pre-push.mjs",
-  ]);
-  expect(fs.existsSync(path.join(consumer, ".claude"))).toBe(false);
-  expect(fs.existsSync(path.join(stock, ".claude"))).toBe(false);
-});
+it(
+  "puts a consumer's scripts hook and .repo/permissions.json deny into the hook files under workspaceRoot, " +
+    "and checks its git hooks",
+  () => {
+    const [stock, consumer, out] = [tmpDir("union-stock-"), tmpDir("union-consumer-"), tmpDir("union-out-")];
+    seedOwnedDrivers(out);
+    fs.mkdirSync(path.join(consumer, "scripts/git-hooks"), { recursive: true });
+    fs.writeFileSync(path.join(consumer, "scripts/check-behind.mjs"), "");
+    fs.writeFileSync(path.join(consumer, "scripts/git-hooks/pre-commit"), "");
+    writeJson(consumer, ".repo/permissions.json", { deny: [EDIT_PLATFORM] });
+    writeJson(consumer, ".rulesync/permissions.json", { deny: ["Edit(ignored/**)"] });
+    const roots = { consumerRoot: consumer, sourceRoot: stock, workspaceRoot: out };
+    expect(applyUnion(roots).ok).toBe(true);
+    const text = fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8");
+    expect(text).toContain("check-behind.mjs");
+    expect(text).toContain(EDIT_PLATFORM);
+    expect(text).not.toContain("ignored/**");
+    expect(checkUnion(roots)).toStrictEqual([
+      "git-hook missing: scripts/git-hooks/pre-commit.mjs",
+      "git-hook missing: scripts/git-hooks/pre-push",
+      "git-hook missing: scripts/git-hooks/pre-push.mjs",
+    ]);
+    expect(fs.existsSync(path.join(consumer, ".claude"))).toBe(false);
+    expect(fs.existsSync(path.join(stock, ".claude"))).toBe(false);
+  },
+);

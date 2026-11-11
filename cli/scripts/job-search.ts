@@ -2,8 +2,8 @@ import type { SpawnSyncReturns } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { resolveUnder } from "./job-args.ts";
-import { failedResult, nonEmptyLines, notFound, runCmd } from "./job-exec.ts";
+import { dirOrCwd, resolveUnder } from "./job-args.ts";
+import { failedResult, nonEmptyLines, notFound, outputsOf, runCmd } from "./job-exec.ts";
 import { escapeRe, fallbackResult, formatFacts, factsResult, isHtml, verdictFromLines } from "./job-format.ts";
 import {
   FACT_WIDTH,
@@ -20,9 +20,12 @@ import {
 } from "./job.constants.ts";
 import type { JobResult, SearchHits, SearchOptions, SearchScope, SearchState } from "./job.types.ts";
 
+/** One rg hit line: `file:line:text`. */
+const RG_HIT = /^(?<file>[^:]+):(?<line>\d+):(?<text>.*)$/;
+
 /** A glob as a whole-path pattern: `**` crosses dirs, `*` and `?` stay in one. */
-export function globToRegExp(glob: unknown): RegExp {
-  const g = String(glob || "").replaceAll("\\", "/");
+export function globToRegExp(glob: string | undefined): RegExp {
+  const g = (glob ?? "").replaceAll("\\", "/");
   let s = "";
   for (let i = 0; i < g.length; i++) {
     const c = g.charAt(i);
@@ -44,16 +47,16 @@ export function globToRegExp(glob: unknown): RegExp {
 }
 
 /** Whether `rel` matches `pattern`; a pattern with no slash matches at any depth. */
-export function globMatch(rel: unknown, pattern: unknown): boolean {
-  const n = String(rel || "").replaceAll("\\", "/");
-  let p = String(pattern || "").replaceAll("\\", "/");
-  if (!p) return false;
-  if (!p.includes("/")) p = `**/${p}`;
-  return globToRegExp(p).test(n) || globToRegExp(String(pattern).replaceAll("\\", "/")).test(n);
+export function globMatch(rel: string | undefined, pattern: string): boolean {
+  const n = (rel ?? "").replaceAll("\\", "/");
+  const raw = pattern.replaceAll("\\", "/");
+  if (raw === "") return false;
+  const p = raw.includes("/") ? raw : `**/${raw}`;
+  return globToRegExp(p).test(n) || globToRegExp(raw).test(n);
 }
 
 function fileMatchesGlobs(rel: string, globs: string[]): boolean {
-  if (!globs.length) return true;
+  if (globs.length === 0) return true;
   const base = path.posix.basename(rel);
   return globs.some((g) => globMatch(rel, g) || globMatch(base, g));
 }
@@ -79,9 +82,9 @@ function searchFile(st: SearchState, abs: string): void {
   const rel = path.relative(st.cwd, abs).replaceAll("\\", "/");
   const text = searchable(st, abs, rel);
   if (text === null) return;
-  const lines = text.split(/\n/);
+  const lines = text.split("\n");
   for (const [i, line] of lines.entries()) {
-    if (!(st.re ? st.re.test(line) : line.includes(st.query))) continue;
+    if (!(st.re === null ? line.includes(st.query) : st.re.test(line))) continue;
     st.n += 1;
     const fact = `${rel}:${i + 1} — ${line.trim().slice(0, FACT_WIDTH)}`;
     st.facts.push(fact);
@@ -132,8 +135,8 @@ function nodeSearch(query: string, scope: SearchScope): SearchHits {
 function parseSearchHits(stdout: string): { facts: string[]; raw: string } {
   const hits = nonEmptyLines(stdout);
   const facts = hits.map((line) => {
-    const m = /^(?<file>[^:]+):(?<line>\d+):(?<text>.*)$/.exec(line);
-    if (!m) return line.slice(0, LINE_WIDTH);
+    const m = RG_HIT.exec(line);
+    if (m === null) return line.slice(0, LINE_WIDTH);
     const g = m.groups;
     return `${String(g?.file)}:${String(g?.line)} — ${String(g?.text).trim().slice(0, FACT_WIDTH)}`;
   });
@@ -142,35 +145,36 @@ function parseSearchHits(stdout: string): { facts: string[]; raw: string } {
 
 /** The verdict of an rg run, or null when it ended without a status (killed) and node searches instead. */
 function rgVerdict(r: SpawnSyncReturns<string>, query: string, opts: SearchOptions): JobResult | null {
-  const stdout = String(r.stdout || "");
-  const stderr = String(r.stderr || "");
+  const { stdout, stderr } = outputsOf(r);
   if (isHtml(stdout, stderr)) return fallbackResult();
   if (r.status === RG_NO_MATCH) return factsResult(formatFacts({ facts: [], kind: SEARCH_JOB, n: 0 }));
   if (r.status === 0) {
     const { facts, raw } = parseSearchHits(stdout);
-    const truncated = facts.length >= MAX_HITS;
-    return verdictFromLines({ cwd: opts.cwd, kind: SEARCH_JOB, lines: facts, query, raw, root: opts.root, truncated });
+    const isTruncated = facts.length >= MAX_HITS;
+    const { cwd, root } = opts;
+    return verdictFromLines({ cwd, kind: SEARCH_JOB, lines: facts, query, raw, root, truncated: isTruncated });
   }
   if (r.status == null) return null;
   const errors = nonEmptyLines(stderr);
-  return failedResult(SEARCH_JOB, errors.length ? errors : [`rg exit ${r.status}`]);
+  return failedResult(SEARCH_JOB, errors.length > 0 ? errors : [`rg exit ${r.status}`]);
 }
 
 function globList(glob: SearchOptions["glob"]): string[] {
   if (Array.isArray(glob)) return glob.filter(Boolean);
-  return glob ? [String(glob)] : [];
+  return glob === undefined || glob === "" ? [] : [glob];
 }
 
 /** Searches with rg under the cwd (node when rg is missing); a path that leaves the cwd falls back. */
 export function runSearch(query: string, { cwd, root, path: searchPath, glob }: SearchOptions = {}): JobResult {
-  const base = cwd || process.cwd();
-  const start = searchPath ? resolveUnder(base, searchPath) : base;
-  if (!start) return fallbackResult();
+  const base = dirOrCwd(cwd);
+  const start = searchPath === undefined || searchPath === "" ? base : resolveUnder(base, searchPath);
+  if (start === null) return fallbackResult();
   const globs = globList(glob);
-  const rgArgs = [...RG_ARGS, ...globs.flatMap((g) => ["-g", g]), "-e", query, path.relative(base, start) || "."];
+  const rel = path.relative(base, start);
+  const rgArgs = [...RG_ARGS, ...globs.flatMap((g) => ["-g", g]), "-e", query, rel === "" ? "." : rel];
   const r = runCmd(RG, rgArgs, base);
   const verdict = notFound(r) ? null : rgVerdict(r, query, { cwd: base, root });
-  if (verdict) return verdict;
+  if (verdict !== null) return verdict;
   const node = nodeSearch(query, { cwd: base, glob: globs, start });
   const { facts, truncated } = node;
   return verdictFromLines({ cwd: base, kind: SEARCH_JOB, lines: facts, query, raw: facts.join("\n"), root, truncated });

@@ -36,9 +36,9 @@ async function version(port: number): Promise<Rec | null> {
 async function poll(port: number, until: number, failed?: () => Error | undefined): Promise<Rec> {
   if (Date.now() >= until) throw new Error(ENGINE_NOT_READY);
   const dead = failed?.();
-  if (dead) throw dead;
+  if (dead !== undefined) throw dead;
   const v = await version(port);
-  if (v) return v;
+  if (v !== null) return v;
   await sleep(POLL_MS);
   return poll(port, until, failed);
 }

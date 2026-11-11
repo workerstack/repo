@@ -84,10 +84,10 @@ it("calls a page blocked when it asks for javascript, or is empty with no refs",
 
 it("looks up lightpanda and the first chromium name on the given PATH", () => {
   const dir = tmp("bins-");
-  const put = (name: string) => {
+  function put(name: string) {
     fs.writeFileSync(path.join(dir, name), "#!/bin/sh\n", { mode: 0o755 });
     return path.join(dir, name);
-  };
+  }
   expect(lookupBins(dir, "linux")).toStrictEqual({ chromium: "", lightpanda: "" });
   const second = put("chromium-browser");
   expect(lookupBins(dir, "linux").chromium).toBe(second);
@@ -107,7 +107,9 @@ it("hints per platform, defaulting to this one", () => {
 });
 
 /** `pickEngine` on linux unless `o` says otherwise. */
-const pickLinux = (o: Parameters<typeof pickEngine>[0] = {}) => pickEngine({ platform: "linux", ...o });
+function pickLinux(o: Parameters<typeof pickEngine>[0] = {}) {
+  return pickEngine({ platform: "linux", ...o });
+}
 
 it("picks lightpanda, then chromium, and names the missing engine", () => {
   const both = { chromium: "/x/cr", lightpanda: "/x/lp" };

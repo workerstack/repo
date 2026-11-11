@@ -4,26 +4,20 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { isPlainObject, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
+import { BASE_POLICY } from "./fixtures/mcp-base-policy.ts";
 import { plantDirs, readJsonAs } from "./fixtures/mcp-policy-kit.ts";
 import { stripJsonc } from "./jsonc.ts";
 
 const tmpDir = plantDirs();
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
-const NO_SERVERS: string[] = [];
-const basePolicy = {
-  agents: { orchestrator: { inherit: false }, repo: { inherit: false } },
-  allow: NO_SERVERS,
-  default: "deny",
-  plugins: { denyDefault: true },
-};
 
 it("rejects default !== deny and non-array allow", () => {
-  expect(validatePolicy({ ...basePolicy, default: "allow" }).ok).toBe(false);
-  expect(validatePolicy({ ...basePolicy, allow: "x" }).ok).toBe(false);
+  expect(validatePolicy({ ...BASE_POLICY, default: "allow" }).ok).toBe(false);
+  expect(validatePolicy({ ...BASE_POLICY, allow: "x" }).ok).toBe(false);
 });
 
 it("rejects a servers key, which moved to .mcp.json", () => {
-  expect(validatePolicy({ ...basePolicy, servers: {} })).toStrictEqual({
+  expect(validatePolicy({ ...BASE_POLICY, servers: {} })).toStrictEqual({
     error: "mcp-policy.jsonc: servers moved to .mcp.json; run `bun repo sync`",
     ok: false,
   });
@@ -59,15 +53,23 @@ it("skipKeyPattern still matches mcp(servers)?", () => {
   expect(re.test("mcpServers")).toBe(true);
 });
 
+const GROK_NO_MCP = /mcpInheritance:\s*none/;
+const ANTIGRAVITY_NO_MCP = /inheritMcp:\s*false/;
+
+/** Whether a subagent's grokcli or antigravity-cli block lacks the flag that keeps MCP from being inherited. */
+function inheritsMcp(text: string): boolean {
+  return (
+    (text.includes("grokcli:") && !GROK_NO_MCP.test(text)) ||
+    (text.includes("antigravity-cli:") && !ANTIGRAVITY_NO_MCP.test(text))
+  );
+}
+
 it("subagent inherit flags stay none/false", () => {
   const dir = path.join(repoRoot, "agents/subagents");
   const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"));
   expect(files.length).toBeGreaterThan(0);
-  for (const name of files) {
-    const text = fs.readFileSync(path.join(dir, name), "utf8");
-    if (text.includes("grokcli:")) expect(text).toMatch(/mcpInheritance:\s*none/);
-    if (text.includes("antigravity-cli:")) expect(text).toMatch(/inheritMcp:\s*false/);
-  }
+  const inheriting = files.filter((name) => inheritsMcp(fs.readFileSync(path.join(dir, name), "utf8")));
+  expect(inheriting).toStrictEqual([]);
 });
 
 it("requiredDeepMatch allows extra disk keys", () => {
@@ -86,6 +88,6 @@ it("uses the stock policy alone when the consumer has none", () => {
   const stock = tmpDir("mcp-stock-");
   const consumer = tmpDir("mcp-consumer-");
   fs.mkdirSync(path.join(stock, "agents"), { recursive: true });
-  fs.writeFileSync(path.join(stock, "agents/mcp-policy.jsonc"), `// fixture\n${JSON.stringify(basePolicy)}\n`);
+  fs.writeFileSync(path.join(stock, "agents/mcp-policy.jsonc"), `// fixture\n${JSON.stringify(BASE_POLICY)}\n`);
   expect(loadPolicy(stock, consumer)).toStrictEqual(loadPolicy(stock));
 });

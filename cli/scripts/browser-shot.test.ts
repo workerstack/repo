@@ -16,15 +16,12 @@ import {
   tmp,
   writeFake,
 } from "./fixtures/browser-kit.ts";
+import { navigated } from "./fixtures/browser-nav-kit.ts";
 
 afterEach(cleanBrowser);
 
 it("shot with Lightpanda session → swap to Chromium replay; one swap cap", async () => {
-  const cwd = tmp("browser-shot-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  writeFake(bin, "chromium");
-  expect((await run(cwd, ["nav", "https://example.com/"], bin)).code).toBe(0);
+  const { bin, cwd } = await navigated("browser-shot-", ["lightpanda", "chromium"]);
   expect(readStored(cwd).engine).toBe("lightpanda");
   const shot = await run(cwd, ["shot"], bin);
   expect(shot.code).toBe(0);
@@ -40,11 +37,7 @@ it("shot with Lightpanda session → swap to Chromium replay; one swap cap", asy
 });
 
 it("pdf → Chromium path; never Lightpanda paint", async () => {
-  const cwd = tmp("browser-pdf-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  writeFake(bin, "chromium");
-  expect((await run(cwd, ["nav", "https://example.com/"], bin)).code).toBe(0);
+  const { bin, cwd } = await navigated("browser-pdf-", ["lightpanda", "chromium"]);
   const pdf = await run(cwd, ["pdf"], bin);
   expect(pdf.code).toBe(0);
   expect(readStored(cwd).engine).toBe("chromium");
@@ -64,9 +57,11 @@ it("shot/pdf with no session fails clearly", async () => {
 });
 
 it("shot and pdf need a session with a url", async () => {
-  expect((await exec(tmp("browser-shot-nosess-"), ["shot"], { bins: NEVER })).stderr).toBe(NO_SESSION);
+  const noSession = await exec(tmp("browser-shot-nosess-"), ["shot"], { bins: NEVER });
+  expect(noSession.stderr).toBe(NO_SESSION);
   const noUrl = await live({ lastURL: "" });
-  expect((await exec(noUrl.cwd, ["pdf"], { bins: NEVER })).stderr).toBe(NO_SESSION);
+  const pdf = await exec(noUrl.cwd, ["pdf"], { bins: NEVER });
+  expect(pdf.stderr).toBe(NO_SESSION);
 });
 
 it("shot names the install hint when no chromium exists", async () => {
@@ -95,13 +90,15 @@ it("shot and pdf write the png and the pdf the engine paints, and say where", as
 it("shot swaps a lightpanda session that recorded no pid to chromium before painting", async () => {
   const t = await live({ pid: undefined });
   const chromium = writeFake(t.bin, "chromium");
-  expect((await exec(t.cwd, ["shot"], { bins: { chromium, lightpanda: "" } })).code).toBe(0);
+  const shot = await exec(t.cwd, ["shot"], { bins: { chromium, lightpanda: "" } });
+  expect(shot.code).toBe(0);
   expect(readStored(t.cwd)).toMatchObject({ engine: "chromium", swapCount: 1 });
   expect(fs.existsSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"))).toBe(true);
 });
 
 it("shot fails a chromium session whose process is gone", async () => {
   const t = await live({ engine: "chromium", pid: deadPid() });
-  expect((await exec(t.cwd, ["shot"], { bins: NEVER })).stderr).toBe(NO_SESSION);
+  const shot = await exec(t.cwd, ["shot"], { bins: NEVER });
+  expect(shot.stderr).toBe(NO_SESSION);
   expect(fs.existsSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"))).toBe(false);
 });

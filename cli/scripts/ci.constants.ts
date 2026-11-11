@@ -17,8 +17,10 @@ export const VITEST_RUN_ARGS: readonly string[] = ["run", "--coverage"];
 export const VITEST_RUN_NO_COVERAGE_ARGS: readonly string[] = ["run"];
 export const SUMMARY_SEPARATOR = " · ";
 export const MS_PER_SECOND = 1000;
-export const USAGE =
-  "use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir>, repo ci merge <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
+export const USAGE: string =
+  "use repo ci [--no-coverage] [--report <file>] [--shard <i>/<n>], repo ci skips <dir>, repo ci times <dir>, " +
+  "repo ci merge <dir> or repo ci wait [<branch>] " +
+  "(exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)";
 export const REPORT_FLAG = "--report";
 export const NO_COVERAGE_FLAG = "--no-coverage";
 export const SHARD_FLAG = "--shard";

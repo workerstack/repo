@@ -24,26 +24,31 @@ function buildParts(items: readonly BuildItem[]): string {
 }
 
 /** The line `repo clean --build` and `--deps` end on: what was (or would be) removed, its size and the next step. */
-function buildSummary(done: readonly BuildItem[], dryRun: boolean, deps: boolean): string {
+function buildSummary(done: readonly BuildItem[], { deps, dryRun }: Pick<BuildRun, "deps" | "dryRun">): string {
   const verb = dryRun ? "would remove" : "removed";
   if (done.length === 0) return `${verb} ${buildParts(done)}`;
   const total = size(done.reduce((sum, item) => sum + item.bytes, 0));
   return `${verb} ${buildParts(done)} (${total})${deps ? AFTER_DEPS : ""}`;
 }
 
-/** What `repo clean --build` and `--deps` run: plan, remove unless dryRun, report through `out`; returns the exit code. */
+/**
+ * What `repo clean --build` and `--deps` run: plan, remove unless dryRun, report through `out`; returns the exit
+ * code.
+ */
 export function cleanBuilds(run: BuildRun): number {
   const { root, deps, dryRun, names, out, rm = fs.rmSync } = run;
-  const plan = planBuild(root, deps, names);
+  const plan = planBuild(root, { deps, extra: names });
   if (!plan.ok) {
     out(`${CLEAN_PREFIX}${plan.error}`);
     return 1;
   }
-  const relOf = (p: string): string => path.relative(root, p).split(path.sep).join("/");
-  const { done, skipped } = removeBuild(plan.items, dryRun, rm);
+  function relOf(p: string): string {
+    return path.relative(root, p).split(path.sep).join("/");
+  }
+  const { done, skipped } = removeBuild(plan.items, { dryRun, rm });
   if (dryRun) for (const item of done) out(relOf(item.path));
   for (const entry of skipped) out(`skipped ${relOf(entry.path)}: ${entry.code}`);
-  out(buildSummary(done, dryRun, deps));
+  out(buildSummary(done, { deps, dryRun }));
   return Math.min(skipped.length, 1);
 }
 

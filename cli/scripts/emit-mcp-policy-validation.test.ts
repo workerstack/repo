@@ -8,7 +8,9 @@ const tmp = plantDirs();
 
 afterEach(() => vi.restoreAllMocks());
 
-const withPatch = (patch: Record<string, unknown>) => ({ ...DENY_ALL, ...patch });
+function withPatch(patch: Record<string, unknown>) {
+  return { ...DENY_ALL, ...patch };
+}
 
 it.each([
   ["is not an object", null, "invalid policy"],

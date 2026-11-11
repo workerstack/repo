@@ -14,12 +14,21 @@ import {
 import type { MapConfig, RenderFit, Row, RowTextOptions, TreeFilter, TreeNode, TreePlace } from "./folder-map.types.ts";
 import { isRecord } from "./hook-input.ts";
 
+/** Trailing slashes a glob may end in. */
+const TRAILING_SLASHES_RE = /\/+$/;
+/** The regex metacharacters a glob part escapes, for `replaceAll`; `*` stays a wildcard. */
+const GLOB_LITERAL_RE = /[.+^${}()|[\]\\]/g;
+/** A `go.mod` module line; group 1 is the module path. */
+const GO_MODULE_RE = /^module\s+(\S+)/m;
+/** A TOML `name = "…"` line; group 1 is the name. */
+const TOML_NAME_RE = /^name\s*=\s*"([^"]+)"/m;
+
 /** `*` = one segment, `**` = any depth; matches the dir and everything under it. */
 function globRe(glob: string): RegExp {
-  const body = String(glob)
-    .replace(/\/+$/, "")
+  const body = glob
+    .replace(TRAILING_SLASHES_RE, "")
     .split("**")
-    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*"))
+    .map((part) => part.replaceAll(GLOB_LITERAL_RE, "\\$&").replaceAll("*", "[^/]*"))
     .join(".*");
   return new RegExp(`^${body}(/|$)`);
 }
@@ -31,8 +40,7 @@ function packageName(root: string, dir: string, manifest: string): string {
       const pkg: unknown = JSON.parse(text);
       return isRecord(pkg) && typeof pkg.name === "string" ? pkg.name : "";
     }
-    if (manifest === GO_MOD) return (text.match(/^module\s+(\S+)/m) ?? [])[1] || "";
-    return (text.match(/^name\s*=\s*"([^"]+)"/m) ?? [])[1] || "";
+    return (manifest === GO_MOD ? GO_MODULE_RE : TOML_NAME_RE).exec(text)?.[1] ?? "";
   } catch {
     return "";
   }
@@ -61,15 +69,15 @@ function keptSegs(f: string, filter: TreeFilter): string[] | null {
 /** The kid `s` of `node`, added with its package name when it is new. */
 function childOf(node: TreeNode, s: string, place: TreePlace): TreeNode {
   const known = node.kids.get(s);
-  if (known) return known;
-  const p = node.path ? `${node.path}/${s}` : s;
+  if (known !== undefined) return known;
+  const p = node.path === "" ? s : `${node.path}/${s}`;
   const m = place.manifests.get(p);
   const next: TreeNode = {
     kids: new Map<string, TreeNode>(),
     name: s,
     own: false,
     path: p,
-    pkg: m ? packageName(place.root, p, m) : null,
+    pkg: m === undefined ? null : packageName(place.root, p, m),
   };
   node.kids.set(s, next);
   return next;
@@ -100,7 +108,9 @@ export function buildTree(root: string, files: string[], opts: Partial<MapConfig
   return top;
 }
 
-const byName = (a: TreeNode, b: TreeNode): number => Number(a.name > b.name) - Number(a.name < b.name);
+function byName(a: TreeNode, b: TreeNode): number {
+  return Number(a.name > b.name) - Number(a.name < b.name);
+}
 
 /** `k` with its pass-through dirs collapsed: one kid, no package and no code of its own. */
 function collapsed(k: TreeNode, label: string): { node: TreeNode; label: string } {
@@ -115,11 +125,11 @@ function collapsed(k: TreeNode, label: string): { node: TreeNode; label: string 
  */
 export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[] {
   const o = { ...DEFAULTS, ...opts };
-  const kids = [...node.kids.values()].sort(byName);
+  const kids = [...node.kids.values()].toSorted(byName);
   const leaves = kids.filter((k) => k.kids.size === 0 && k.pkg == null).map((k) => k.name);
   const folded = leaves.length >= o.foldAt ? new Set(leaves) : new Set<string>();
   const rows: Row[] = [];
-  if (folded.size) rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
+  if (folded.size > 0) rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
 
   for (const kid of kids) {
     if (folded.has(kid.name)) continue;
@@ -137,9 +147,9 @@ export function rowText(row: Row, depth: number, { more = false, base = "" }: Ro
     const shown = row.label.slice(0, FOLD_SHOWN).join(", ");
     return `${pad}(${row.label.length} leaf dirs: ${shown}${row.label.length > FOLD_SHOWN ? ", …" : ""})`;
   }
-  const full = base ? `${base}/${row.path}` : row.path;
+  const full = base === "" ? row.path : `${base}/${row.path}`;
   let line = `${pad}${row.label}/`;
-  if (row.pkg != null) line += row.pkg ? `  # ${row.pkg}  ${full}` : `  # ${full}`;
+  if (row.pkg != null) line += row.pkg === "" ? `  # ${full}` : `  # ${row.pkg}  ${full}`;
   if (more) line += "  …";
   return line;
 }
@@ -162,14 +172,14 @@ function holdsPackage(row: Row): boolean {
  */
 function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
   const lines: string[] = [];
-  const walk = (list: Row[], depth: number, pkgDepth: number): void => {
+  function walk(list: Row[], depth: number, pkgDepth: number): void {
     for (const row of list) {
       const rel = row.pkg == null ? pkgDepth : 0;
       const hidden = row.kids.length > 0 && rel >= cap && !holdsPackage(row);
       lines.push(rowText(row, depth, { base, more: hidden }));
       if (!hidden) walk(row.kids, depth + 1, rel + 1);
     }
-  };
+  }
   walk(rows, 0, 1);
   return lines;
 }

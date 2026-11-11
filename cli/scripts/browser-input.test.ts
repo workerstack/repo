@@ -20,15 +20,14 @@ import {
   URL_X,
   writeFake,
 } from "./fixtures/browser-kit.ts";
+import { navigated } from "./fixtures/browser-nav-kit.ts";
 
 afterEach(cleanBrowser);
 
 it("click <ref> / fill <ref> <text> against last snap refs", async () => {
-  const cwd = tmp("browser-click-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  expect((await run(cwd, ["nav", "https://example.com/"], bin)).code).toBe(0);
-  expect((await run(cwd, ["snap"], bin)).code).toBe(0);
+  const { bin, cwd } = await navigated("browser-click-", ["lightpanda"]);
+  const snap = await run(cwd, ["snap"], bin);
+  expect(snap.code).toBe(0);
   const click = await run(cwd, ["click", "1"], bin);
   expect(click.code).toBe(0);
   const fill = await run(cwd, ["fill", "2", "hello"], bin);
@@ -46,11 +45,9 @@ it("click <ref> / fill <ref> <text> against last snap refs", async () => {
 });
 
 it("missing/stale ref fails clearly", async () => {
-  const cwd = tmp("browser-stale-");
-  const bin = path.join(cwd, "bin");
-  writeFake(bin, "lightpanda");
-  expect((await run(cwd, ["nav", "https://example.com/"], bin)).code).toBe(0);
-  expect((await run(cwd, ["snap"], bin)).code).toBe(0);
+  const { bin, cwd } = await navigated("browser-stale-", ["lightpanda"]);
+  const snap = await run(cwd, ["snap"], bin);
+  expect(snap.code).toBe(0);
   const missing = await run(cwd, ["click", "99"], bin);
   expect(missing.code).not.toBe(0);
   expect(missing.stderr).toMatch(/ref|stale|missing/i);
@@ -71,7 +68,8 @@ it("click/fill with no session / no prior snap fails; no implicit Chromium", asy
   expect(click.stderr).toMatch(/session|snap|nav/i);
   expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   writeFake(bin, "lightpanda");
-  expect((await run(cwd, ["nav", "https://example.com/"], bin)).code).toBe(0);
+  const nav = await run(cwd, ["nav", "https://example.com/"], bin);
+  expect(nav.code).toBe(0);
   const fill = await run(cwd, ["fill", "1", "x"], bin);
   expect(fill.code).not.toBe(0);
   expect(fill.stderr).toMatch(/snap|ref/i);
@@ -79,26 +77,34 @@ it("click/fill with no session / no prior snap fails; no implicit Chromium", asy
 });
 
 it("click needs a session, then refs, then a known ref", async () => {
-  expect((await exec(tmp("browser-act-none-"), ["click", "1"])).stderr).toBe(NO_SESSION);
+  const noSession = await exec(tmp("browser-act-none-"), ["click", "1"]);
+  expect(noSession.stderr).toBe(NO_SESSION);
   const norefs = await live({ lastRefs: {} });
-  expect((await exec(norefs.cwd, ["click", "1"])).stderr).toBe("no snap refs; run snap\n");
+  const noRefs = await exec(norefs.cwd, ["click", "1"]);
+  expect(noRefs.stderr).toBe("no snap refs; run snap\n");
   const t = await live();
-  expect((await exec(t.cwd, ["click", "7"])).stderr).toBe("missing ref: 7\n");
-  expect((await exec(t.cwd, ["click"])).stderr).toBe("missing ref: \n");
+  const unknown = await exec(t.cwd, ["click", "7"]);
+  expect(unknown.stderr).toBe("missing ref: 7\n");
+  const none = await exec(t.cwd, ["click"]);
+  expect(none.stderr).toBe("missing ref: \n");
   expect(t.calls).toStrictEqual([]);
 });
 
 it("fill needs text and select needs a value", async () => {
   const t = await live();
-  expect((await exec(t.cwd, ["fill", "2"])).stderr).toBe("fill <ref> <text>\n");
-  expect((await exec(t.cwd, ["select", "2"])).stderr).toBe("select <ref> <value>\n");
+  const fill = await exec(t.cwd, ["fill", "2"]);
+  expect(fill.stderr).toBe("fill <ref> <text>\n");
+  const select = await exec(t.cwd, ["select", "2"]);
+  expect(select.stderr).toBe("select <ref> <value>\n");
   expect(t.calls).toStrictEqual([]);
 });
 
 it("click and hover act on the resolved node", async () => {
   const t = await live();
-  expect((await exec(t.cwd, ["click", "1"])).stdout).toBe("click: 1\n");
-  expect((await exec(t.cwd, ["hover", "2"])).stdout).toBe("hover: 2\n");
+  const click = await exec(t.cwd, ["click", "1"]);
+  expect(click.stdout).toBe("click: 1\n");
+  const hover = await exec(t.cwd, ["hover", "2"]);
+  expect(hover.stdout).toBe("hover: 2\n");
   const resolve = ["DOM.resolveNode", "Runtime.callFunctionOn"];
   expect(methods(t.calls)).toStrictEqual([...resolve, ...resolve]);
   expect(nth(callParams(t.calls), 0)).toStrictEqual({
@@ -126,7 +132,8 @@ it("fill focuses, clears, inserts the joined words, then fires input", async () 
 
 it("select sets the value and fires change", async () => {
   const t = await live();
-  expect((await exec(t.cwd, ["select", "2", "opt", "a"])).stdout).toBe("select: 2\n");
+  const select = await exec(t.cwd, ["select", "2", "opt", "a"]);
+  expect(select.stdout).toBe("select: 2\n");
   const call = nth(callParams(t.calls), 0);
   expect(call).toMatchObject({
     arguments: [{ value: "opt a" }],
@@ -137,9 +144,11 @@ it("select sets the value and fires change", async () => {
 
 it("click calls a ref stale when it does not resolve to an object", async () => {
   const gone = await live({ lastRefs: { "1": { backendNodeId: 99 } } });
-  expect((await exec(gone.cwd, ["click", "1"])).stderr).toBe("stale ref: 1\n");
+  const goneRef = await exec(gone.cwd, ["click", "1"]);
+  expect(goneRef.stderr).toBe("stale ref: 1\n");
   const noObject = await live({}, { replies: { "DOM.resolveNode": {} } });
-  expect((await exec(noObject.cwd, ["click", "1"])).stderr).toBe("stale ref: 1\n");
+  const noObjectRef = await exec(noObject.cwd, ["click", "1"]);
+  expect(noObjectRef.stderr).toBe("stale ref: 1\n");
 });
 
 it("click reports another engine error as it is on chromium, with no chromium, or after a spent swap", async () => {
@@ -147,9 +156,11 @@ it("click reports another engine error as it is on chromium, with no chromium, o
   const chrome = await live({ engine: "chromium" }, { replies });
   expect(await exec(chrome.cwd, ["click", "1"], { bins: NEVER })).toStrictEqual(failure("boom\n"));
   const noBin = await live({}, { replies });
-  expect((await exec(noBin.cwd, ["click", "1"])).stderr).toBe("boom\n");
+  const noBinClick = await exec(noBin.cwd, ["click", "1"]);
+  expect(noBinClick.stderr).toBe("boom\n");
   const spent = await live({ swapCount: 1 }, { replies });
-  expect((await exec(spent.cwd, ["click", "1"], { bins: NEVER })).stderr).toBe("boom\n");
+  const spentClick = await exec(spent.cwd, ["click", "1"], { bins: NEVER });
+  expect(spentClick.stderr).toBe("boom\n");
   expect(readStored(spent.cwd).engine).toBe("lightpanda");
 });
 

@@ -11,13 +11,21 @@ import type { HookInput } from "./hook-input.ts";
 import { writeStamp } from "./strategy.ts";
 
 const tmp = useTmp();
-const job = (w: string, cmd: string) => jobCommand(w, `--job test --query ${quoteQuery(cmd)}`);
-const claudeSh = (w: string, command: string, extra: HookInput = {}): HookInput => ({
-  ...inSession(claudeCall(w, "Bash", { command }), REVIEW_SID),
-  ...extra,
-});
-const rewrite = (w: string, command: string) => ({ type: "rewrite", updatedInput: { command: job(w, command) } });
-const implementer = (type: string) => ({ agent_type: type });
+function job(w: string, cmd: string) {
+  return jobCommand(w, `--job test --query ${quoteQuery(cmd)}`);
+}
+function claudeSh(w: string, command: string, extra: HookInput = {}): HookInput {
+  return {
+    ...inSession(claudeCall(w, "Bash", { command }), REVIEW_SID),
+    ...extra,
+  };
+}
+function rewrite(w: string, command: string) {
+  return { type: "rewrite", updatedInput: { command: job(w, command) } };
+}
+function implementer(type: string) {
+  return { agent_type: type };
+}
 const SUITES = [
   "bun test",
   "bunx vitest run a.test.ts",

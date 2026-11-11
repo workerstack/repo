@@ -58,7 +58,7 @@ export function sessionHooks({ src, consumer }: Roots, { map = true }: { map?: b
 
 export function desiredPost(root: string, matcher: string = POST_WRITE_MATCHER): HookGroup[] | null {
   const hooks = POST_EXTRAS.filter(([script]) => hasScript(root, script)).map(([, cmd]) => hookCmd(cmd));
-  return hooks.length ? [{ hooks, matcher }] : null;
+  return hooks.length > 0 ? [{ hooks, matcher }] : null;
 }
 
 export function consumerNamed(root: string): Record<string, NamedHook> {

@@ -14,8 +14,10 @@ import type { NamedHook } from "./hooks-union.types.ts";
 
 /** Hook command for `rel`: the script in the project dir, else at that dir's git top level, else in the hook cwd. */
 export function rootCmd(rel: string, args?: string): string {
-  const cmd = `${ROOT_PREFIX}${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
-  return args ? `${cmd} ${args}` : cmd;
+  const cmd =
+    `${ROOT_PREFIX}${rel}" ] || ` +
+    `d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
+  return args === undefined || args === "" ? cmd : `${cmd} ${args}`;
 }
 
 /** Whether `command` is exactly a `rootCmd` string, with or without arguments. */

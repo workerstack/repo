@@ -11,7 +11,9 @@ import { canonicalPath } from "./workspace-root.ts";
 const tmp = useTmp();
 // A root that does not exist, in the spelling the product compares in (macOS expands /home).
 const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
-const R = (root: string) => ({ checkout: root, cwd: root, root });
+function rootsAt(root: string) {
+  return { checkout: root, cwd: root, root };
+}
 const nested = {
   checkout: path.resolve("/r"),
   cwd: path.join(path.resolve("/r"), "packages/a"),
@@ -19,24 +21,24 @@ const nested = {
 };
 
 it("rewriteScratchPath: rewrites outside-ws */.tmp/repo/* into workspace scratch", () => {
-  expect(rewriteScratchPath("/tmp/host/.tmp/repo/notes.md", R(ws))).toBe(path.resolve(ws, ".tmp/repo/notes.md"));
-  expect(rewriteScratchPath("/var/foo/.tmp/repo/handoffs/draft.md", R(ws))).toBe(
+  expect(rewriteScratchPath("/tmp/host/.tmp/repo/notes.md", rootsAt(ws))).toBe(path.resolve(ws, ".tmp/repo/notes.md"));
+  expect(rewriteScratchPath("/var/foo/.tmp/repo/handoffs/draft.md", rootsAt(ws))).toBe(
     path.resolve(ws, ".tmp/repo/handoffs/draft.md"),
   );
 });
 
 it("rewriteScratchPath: rejects empty, .., and escaped rel", () => {
-  expect(rewriteScratchPath("", R(ws))).toBeNull();
-  expect(rewriteScratchPath("/tmp/x/.tmp/repo/", R(ws))).toBeNull();
-  expect(rewriteScratchPath("/tmp/x/.tmp/repo/../../etc/passwd", R(ws))).toBeNull();
-  expect(rewriteScratchPath("/tmp/x/.tmp/repo/../escape.md", R(ws))).toBeNull();
-  expect(rewriteScratchPath("/tmp/x/.tmp/repo//abs", R(ws))).not.toBe("/abs");
+  expect(rewriteScratchPath("", rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath("/tmp/x/.tmp/repo/", rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath("/tmp/x/.tmp/repo/../../etc/passwd", rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath("/tmp/x/.tmp/repo/../escape.md", rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath("/tmp/x/.tmp/repo//abs", rootsAt(ws))).not.toBe("/abs");
 });
 
 it("rewriteScratchPath: does not rewrite in-workspace paths or non-scratch", () => {
-  expect(rewriteScratchPath(path.join(ws, ".tmp/repo/notes.md"), R(ws))).toBeNull();
-  expect(rewriteScratchPath(path.join(ws, "src/index.ts"), R(ws))).toBeNull();
-  expect(rewriteScratchPath("src/index.ts", R(ws))).toBeNull();
+  expect(rewriteScratchPath(path.join(ws, ".tmp/repo/notes.md"), rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath(path.join(ws, "src/index.ts"), rootsAt(ws))).toBeNull();
+  expect(rewriteScratchPath("src/index.ts", rootsAt(ws))).toBeNull();
 });
 
 it("Write|Edit rewrites Write/Edit/write/search_replace path fields and never denies", () => {
@@ -69,10 +71,11 @@ it("Write|Edit does not rewrite an escaping scratch path and still does not deny
 
 it("rewrites repo-root notes.md and leaves README", () => {
   const root = tmp.dir("gate-scratch-");
-  const write = (file: string) =>
-    processFatTools(camelCall("Write", { content: "x", file_path: file }, { workspaceRoot: root }));
-  expect(rewriteScratchWrite("notes.md", R(root))).toBe(path.join(root, ".tmp", "repo", "notes.md"));
-  expect(rewriteScratchWrite("README.md", R(root))).toBeNull();
+  function write(file: string) {
+    return processFatTools(camelCall("Write", { content: "x", file_path: file }, { workspaceRoot: root }));
+  }
+  expect(rewriteScratchWrite("notes.md", rootsAt(root))).toBe(path.join(root, ".tmp", "repo", "notes.md"));
+  expect(rewriteScratchWrite("README.md", rootsAt(root))).toBeNull();
   expect(write("notes.md")?.type).toBe("rewrite");
   expect(updatedInputOf(write("notes.md")).file_path).toBe(path.join(root, ".tmp", "repo", "notes.md"));
   expect(write("README.md")).toBeNull();

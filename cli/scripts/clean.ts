@@ -14,7 +14,7 @@ function emit(stream: "log" | "error", line: string): void {
   console[stream](line);
 }
 
-async function cleanBuildsMain(deps: boolean, dryRun: boolean): Promise<number> {
+async function cleanBuildsMain({ deps, dryRun }: { deps: boolean; dryRun: boolean }): Promise<number> {
   const { checkout } = resolveRoots();
   const configured = await configuredNames(checkout);
   if ("errors" in configured) {
@@ -26,14 +26,16 @@ async function cleanBuildsMain(deps: boolean, dryRun: boolean): Promise<number> 
 
 /** `repo clean`: the .tmp/repo sweep, or with --build or --deps only the ignored build output. */
 export function main(argv: string[]): number | Promise<number> {
-  const [build, deps, dryRun] = [BUILD_FLAG, DEPS_FLAG, DRY_RUN_FLAG].map((flag) => argv.includes(flag));
+  const build = argv.includes(BUILD_FLAG);
+  const deps = argv.includes(DEPS_FLAG);
+  const dryRun = argv.includes(DRY_RUN_FLAG);
   if (build && deps) {
     emit("error", BOTH_FLAGS);
     return USAGE_EXIT;
   }
-  if (build || deps) return cleanBuildsMain(Boolean(deps), Boolean(dryRun));
+  if (build || deps) return cleanBuildsMain({ deps, dryRun });
   return runClean({
-    dryRun: Boolean(dryRun),
+    dryRun,
     liveSessions: liveSessions(),
     now: Date.now(),
     out: (line) => emit("log", line),

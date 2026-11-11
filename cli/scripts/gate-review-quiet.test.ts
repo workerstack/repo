@@ -22,7 +22,9 @@ const COMMANDS = [
 
 /** Parent and scout calls of every kind the gate handles, in one workspace. */
 function calls(w: string): HookInput[] {
-  const sent = (tool: string, input: Record<string, unknown>) => inSession(claudeCall(w, tool, input), REVIEW_SID);
+  function sent(tool: string, input: Record<string, unknown>) {
+    return inSession(claudeCall(w, tool, input), REVIEW_SID);
+  }
   const out: HookInput[] = [];
   for (const kind of WRITE_KINDS) {
     const targets = [
@@ -46,7 +48,11 @@ function answers(w: string): string[] {
   fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
   // JSON doubles a win32 path's backslashes and shell commands spell it with slashes; both become <ws>.
   const spellings = [JSON.stringify(w).slice(1, -1), w.split(path.sep).join("/")];
-  return calls(w).map((c) => spellings.reduce((s, ws) => s.split(ws).join("<ws>"), JSON.stringify(processFatTools(c))));
+  return calls(w).map((c) => {
+    let text = JSON.stringify(processFatTools(c));
+    for (const ws of spellings) text = text.split(ws).join("<ws>");
+    return text;
+  });
 }
 
 const states: [string, (w: string) => void][] = [
@@ -65,13 +71,17 @@ const states: [string, (w: string) => void][] = [
   ["stamp for another session", (w) => writeStamp(w, "other", planFile(w, "review-fast").file)],
 ];
 
-it("without a running review the gate answers as it did before: no stamp, no session id, or a stamp of an ended plan", () => {
-  const base = answers(tmp.dir("gate-review-"));
-  expect(base.filter((r) => r.includes('"deny"'))).toStrictEqual([]);
-  expect(base.filter((r) => r === "null").length).toBeGreaterThan(30);
-  for (const [name, arm] of states) {
-    const w = tmp.dir("gate-review-");
-    arm(w);
-    expect(answers(w), name).toStrictEqual(base);
-  }
-});
+it(
+  "without a running review the gate answers as it did before: " +
+    "no stamp, no session id, or a stamp of an ended plan",
+  () => {
+    const base = answers(tmp.dir("gate-review-"));
+    expect(base.filter((r) => r.includes('"deny"'))).toStrictEqual([]);
+    expect(base.filter((r) => r === "null").length).toBeGreaterThan(30);
+    for (const [name, arm] of states) {
+      const w = tmp.dir("gate-review-");
+      arm(w);
+      expect(answers(w), name).toStrictEqual(base);
+    }
+  },
+);

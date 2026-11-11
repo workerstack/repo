@@ -14,8 +14,8 @@ export type SkipsIo = { cwd: string; stdout: (s: string) => void; stderr: (s: st
 /** What a test job uploads; `durations` is absent from reports written before it was added. */
 export type Report = { os: string; skipped: string[]; durations?: Record<string, number> | undefined };
 
-const vitestReport = () =>
-  z.object({
+function vitestReport() {
+  return z.object({
     testResults: z.array(
       z.object({
         assertionResults: z.array(z.object({ fullName: z.string(), status: z.string() })),
@@ -25,14 +25,18 @@ const vitestReport = () =>
       }),
     ),
   });
-const ciReport = () =>
-  z.object({
+}
+function ciReport() {
+  return z.object({
     durations: z.record(z.string(), z.number()).optional(),
     os: z.string().min(1),
     skipped: z.array(z.string()),
   });
+}
 
-const posix = (file: string) => file.replaceAll("\\", "/");
+function posix(file: string) {
+  return file.replaceAll("\\", "/");
+}
 
 /** The ids of the tests vitest's JSON report says did not run, sorted and unique; the paths are root-relative posix. */
 export function skippedIds(json: unknown, root: string): string[] {
@@ -142,10 +146,10 @@ const SKIPS_WORDS: ReportWords = {
 /** `repo ci skips <dir>`: fails each test skipped in every report; `dir` is shown as given. */
 export function skipsMain(dir: string, io: SkipsIo): number {
   const read = readReports(dir, io.cwd, SKIPS_WORDS);
-  const fail = (lines: string[]) => {
+  function fail(lines: string[]) {
     for (const line of lines) io.stderr(`repo ci skips: ${line}\n`);
     return 1;
-  };
+  }
   if ("failures" in read) return fail(read.failures);
   const byOs = new Map<string, Set<string>>();
   for (const report of read.reports) {

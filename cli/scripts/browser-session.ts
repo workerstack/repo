@@ -12,6 +12,23 @@ export function asRec(v: unknown): Rec {
   return isRecord(v) ? v : {};
 }
 
+/** `v` as text: a string as is, a number or boolean spelled out, anything else empty. */
+export function textOf(v: unknown): string {
+  if (typeof v === "string") return v;
+  return typeof v === "number" || typeof v === "boolean" ? String(v) : "";
+}
+
+/** `v` as a number; 0 when it is not one. */
+export function numberOf(v: unknown): number {
+  const n = Number(v);
+  return Number.isNaN(n) ? 0 : n;
+}
+
+/** `s`, or undefined when it is empty. */
+export function filled(s: string | undefined): string | undefined {
+  return s === "" ? undefined : s;
+}
+
 /** The message of a thrown value. */
 export function errMessage(e: unknown): string {
   return String(asRec(e).message);
@@ -19,7 +36,7 @@ export function errMessage(e: unknown): string {
 
 /** The session dir under the root `cwd` sits in. */
 export function sessionDir(cwd?: string): string {
-  return path.join(resolveRoots({}, { cwd: cwd || process.cwd() }).root, SESSION_REL);
+  return path.join(resolveRoots({}, { cwd: filled(cwd) ?? process.cwd() }).root, SESSION_REL);
 }
 
 function sessionFile(cwd?: string): string {
@@ -36,9 +53,9 @@ function toRefs(v: unknown): Record<string, RefEntry> {
     if (!isRecord(e)) continue;
     lastRefs[id] = {
       backendNodeId: e.backendNodeId,
-      name: String(e.name ?? ""),
+      name: textOf(e.name),
       nodeId: e.nodeId,
-      role: String(e.role ?? ""),
+      role: textOf(e.role),
     };
   }
   return lastRefs;
@@ -48,15 +65,15 @@ function toSession(v: unknown): Session | null {
   if (!isRecord(v)) return null;
   const engine = engineOf(v.engine);
   const port = Number(v.port);
-  if (!engine || !Number.isFinite(port)) return null;
+  if (engine === null || !Number.isFinite(port)) return null;
   return {
     engine,
     escalated: v.escalated === true,
     lastRefs: toRefs(v.lastRefs),
-    lastURL: String(v.lastURL ?? ""),
+    lastURL: textOf(v.lastURL),
     pid: typeof v.pid === "number" ? v.pid : undefined,
     port,
-    swapCount: Number(v.swapCount) || 0,
+    swapCount: numberOf(v.swapCount),
   };
 }
 
@@ -87,7 +104,7 @@ export function readSession(cwd?: string): Session | null {
 
 /** Whether `pid` names a running process. */
 export function alive(pid: number | undefined): boolean {
-  if (!pid) return false;
+  if (pid === undefined || pid === 0) return false;
   try {
     process.kill(pid, 0);
     return true;
@@ -99,7 +116,7 @@ export function alive(pid: number | undefined): boolean {
 /** The stored session when its engine still runs. */
 export function liveSession(cwd: string): Session | null {
   const session = readSession(cwd);
-  return session && alive(session.pid) ? session : null;
+  return session !== null && alive(session.pid) ? session : null;
 }
 
 export function writeSession(cwd: string, session: Session): void {

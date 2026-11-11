@@ -29,8 +29,9 @@ afterAll(() => {
   server.kill();
 });
 
-const fetchIn = (dir: string, url: string, timeoutMs?: number) =>
-  runFetch(url, { cwd: dir, root: dir, ...(timeoutMs ? { timeoutMs } : {}) });
+function fetchIn(dir: string, url: string, timeoutMs?: number) {
+  return runFetch(url, { cwd: dir, root: dir, ...(timeoutMs === undefined ? {} : { timeoutMs }) });
+}
 
 /** A 127.0.0.1 port nothing listens on. */
 async function closedPort(): Promise<number> {
@@ -38,7 +39,7 @@ async function closedPort(): Promise<number> {
   await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
   const address = probe.address();
   await new Promise((resolve) => probe.close(resolve));
-  return typeof address === "object" && address ? address.port : 0;
+  return typeof address === "object" && address !== null ? address.port : 0;
 }
 
 it("runFetch lists the title and the sentences of a page without its markup", () => {

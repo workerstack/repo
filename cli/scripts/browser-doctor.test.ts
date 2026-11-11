@@ -4,33 +4,36 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { lookupBins, pickEngine } from "./browser-engine.ts";
-import { whichBin } from "./doctor-which.ts";
 import { cleanBrowser, envFor, run, runOn, tmp, writeFake } from "./fixtures/browser-kit.ts";
 
 afterEach(cleanBrowser);
 
-it("missing engines linux/darwin/win32 → unified doctor exit 1 OS install strings; no playwright install; lightpanda-io/browser", async () => {
-  const cwd = tmp("browser-doc-");
-  const bin = path.join(cwd, "bin");
-  fs.mkdirSync(bin, { recursive: true });
-  const linux = await runOn("linux")(cwd, ["doctor"], bin);
-  const darwin = await runOn("darwin")(cwd, ["doctor"], bin);
-  const win = await runOn("win32")(cwd, ["doctor"], bin);
-  const ensure = await runOn("linux")(cwd, ["ensure"], bin);
-  for (const r of [linux, darwin, win, ensure]) {
-    expect(r.code).toBe(1);
-    expect(r.stdout).toMatch(/lightpanda-io\/browser/);
-    expect(`${r.stdout}${r.stderr}`).not.toMatch(/playwright install/);
-  }
-  expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
-  expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser|brew install lightpanda-io\/browser\/lightpanda/);
-  expect(win.stdout).toMatch(/winget/);
-  expect(win.stdout).toMatch(/WSL2/i);
-  expect(ensure.stdout).toBe(linux.stdout);
-  const help = await run(cwd, ["help"], bin);
-  expect(help.stdout).toMatch(/doctor/);
-  expect(help.stdout).toMatch(/ensure/);
-});
+it(
+  "missing engines linux/darwin/win32 → unified doctor exit 1 OS install strings; " +
+    "no playwright install; lightpanda-io/browser",
+  async () => {
+    const cwd = tmp("browser-doc-");
+    const bin = path.join(cwd, "bin");
+    fs.mkdirSync(bin, { recursive: true });
+    const linux = await runOn("linux")(cwd, ["doctor"], bin);
+    const darwin = await runOn("darwin")(cwd, ["doctor"], bin);
+    const win = await runOn("win32")(cwd, ["doctor"], bin);
+    const ensure = await runOn("linux")(cwd, ["ensure"], bin);
+    for (const r of [linux, darwin, win, ensure]) {
+      expect(r.code).toBe(1);
+      expect(r.stdout).toMatch(/lightpanda-io\/browser/);
+      expect(`${r.stdout}${r.stderr}`).not.toMatch(/playwright install/);
+    }
+    expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
+    expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser|brew install lightpanda-io\/browser\/lightpanda/);
+    expect(win.stdout).toMatch(/winget/);
+    expect(win.stdout).toMatch(/WSL2/i);
+    expect(ensure.stdout).toBe(linux.stdout);
+    const help = await run(cwd, ["help"], bin);
+    expect(help.stdout).toMatch(/doctor/);
+    expect(help.stdout).toMatch(/ensure/);
+  },
+);
 
 it("win32: Chromium/winget/WSL2 notes; not native Lightpanda required", async () => {
   const cwd = tmp("browser-doc-win-");
@@ -52,13 +55,6 @@ it("bins present → reports paths via unified doctor", async () => {
   const r = await runOn("linux")(cwd, ["doctor"], bin);
   expect(r.stdout).toContain(lp);
   expect(r.stdout).toContain(cr);
-});
-
-it("win32 whichBin finds chrome.exe in mock PATH dir", () => {
-  const dir = tmp("which-win-");
-  const exe = path.join(dir, "chrome.exe");
-  fs.writeFileSync(exe, "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-  expect(whichBin("chrome", dir, "win32").toLowerCase()).toBe(exe.toLowerCase());
 });
 
 it("playwright-only PATH is NOT treated as Chromium engine", async () => {

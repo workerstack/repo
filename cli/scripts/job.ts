@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { parseArgv, resolveJobCwd } from "./job-args.ts";
+import { dirOrCwd, parseArgv, resolveJobCwd } from "./job-args.ts";
 import { runExec, runSlice } from "./job-exec.ts";
 import { runFetch } from "./job-fetch.ts";
 import { fallbackResult, shouldFallback } from "./job-format.ts";
@@ -22,9 +22,9 @@ export function runJob({
   to,
   unknown,
 }: JobOptions = {}): JobResult {
-  if (unknown || shouldFallback(job, query, { stash })) return fallbackResult();
-  const at = cwd || process.cwd();
-  const stashRoot = root || resolveRoots({}, { cwd: at }).root;
+  if (unknown === true || shouldFallback(job, query, { stash })) return fallbackResult();
+  const at = dirOrCwd(cwd);
+  const stashRoot = root === undefined || root === "" ? resolveRoots({}, { cwd: at }).root : root;
   // shouldFallback passed, so a search, fetch or exec job has a non-empty query.
   const q = String(query);
   if (job === SEARCH_JOB) return runSearch(q, { cwd: at, glob, path: searchPath, root: stashRoot });
@@ -50,8 +50,8 @@ export function main(argv: string[]): number {
     const parsed = parseArgv(argv);
     if (parsed.unknown) return fallbackExit();
     const roots = resolveRoots();
-    const cwd = parsed.cwd ? resolveJobCwd(parsed.cwd, roots.cwd) : roots.cwd;
-    if (!cwd) return fallbackExit();
+    const cwd = parsed.cwd === "" ? roots.cwd : resolveJobCwd(parsed.cwd, roots.cwd);
+    if (cwd === null) return fallbackExit();
     const result = runJob(optionsOf(parsed, cwd, roots.root));
     process.stdout.write(result.text);
     return result.code;

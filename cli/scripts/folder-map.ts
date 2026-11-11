@@ -20,7 +20,7 @@ import type { FolderMapResult, MapOptions } from "./folder-map.types.ts";
 
 /** The files under `scope`, relative to it; all of them at the top. */
 function scopedFiles(files: string[], scope: string): string[] {
-  if (!scope) return files;
+  if (scope === "") return files;
   return files.filter((f) => f.startsWith(`${scope}/`)).map((f) => f.slice(scope.length + 1));
 }
 
@@ -36,22 +36,22 @@ export function folderMap({
   ...opts
 }: MapOptions & { root: string; dir?: string }): FolderMapResult | null {
   const top = repoRoot(root);
-  if (!top) return null;
+  if (top === null || top === "") return null;
   const files = listFiles(top);
-  if (!files) return null;
+  if (files === null) return null;
   const o = { ...loadMapConfig(top), ...opts };
-  const scope = dir ? repoPrefix(path.resolve(root, dir)) : "";
+  const scope = dir === "" ? "" : repoPrefix(path.resolve(root, dir));
   if (scope == null) return { depth: 0, rows: 0, text: "", tokens: 0 };
-  const rows = displayRows(buildTree(scope ? path.join(top, scope) : top, scopedFiles(files, scope), o), o);
+  const rows = displayRows(buildTree(scope === "" ? top : path.join(top, scope), scopedFiles(files, scope), o), o);
   const limit = Math.min(o.budget * CHARS_PER_TOKEN, o.maxChars ?? Infinity);
   const { lines, depth } = renderToFit(rows, { base: scope, cap: o.depthCap, limit });
-  const text = lines.length ? `${lines.join("\n")}\n` : "";
+  const text = lines.length > 0 ? `${lines.join("\n")}\n` : "";
   return { depth, rows: lines.length, text, tokens: tokens(text) };
 }
 
 /** Text for `bun repo map [dir]` run from `cwd`. */
 export function mapCommand(cwd: string, dir = ""): string {
   const out = folderMap({ dir, root: cwd });
-  if (!out) return "repo map: not a git repository\n";
-  return out.text || "repo map: no code folders\n";
+  if (out === null) return "repo map: not a git repository\n";
+  return out.text === "" ? "repo map: no code folders\n" : out.text;
 }

@@ -97,7 +97,8 @@ export const GLOBSTAR_DIR = "**/";
 export const RG = "rg";
 /** rg exits 1 when nothing matched. */
 export const RG_NO_MATCH = 1;
-// --hidden: .repo/ (lessons, overlay) and the generated host trees (.claude, .agents, .grok, .codex) are dot dirs; .gitignore still applies.
+// --hidden: .repo/ (lessons, overlay) and the generated host trees (.claude, .agents, .grok, .codex) are dot dirs;
+// .gitignore still applies.
 export const RG_ARGS: readonly string[] = [
   "-n",
   "--hidden",

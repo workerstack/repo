@@ -9,8 +9,10 @@ import { waitMain } from "./ci-wait.ts";
 import { GH, GIT, LIST, SHA, BRANCH_LIST, answerer, bad, job, ok, run, view, world } from "./fixtures/ci-wait-world.ts";
 
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
-const TIP = (branch: string) => `rev-parse --verify --quiet refs/remotes/origin/${branch}`;
-const FEAT = { ...GIT, [TIP("feat/x")]: ok(`${SHA}\n`) };
+function tip(branch: string) {
+  return `rev-parse --verify --quiet refs/remotes/origin/${branch}`;
+}
+const FEAT = { ...GIT, [tip("feat/x")]: ok(`${SHA}\n`) };
 const NOTHING = "nothing to wait on: ci runs on pushes to main and on pull requests, and feat/x has neither\n";
 
 it("no run, no open PR and not the default branch is nothing to wait on, decided on the first look", async () => {
@@ -66,7 +68,7 @@ it("<branch> waits on that branch's tip without asking for HEAD or its name", as
     "feat/x",
   );
   expect(got.code).toBe(0);
-  expect(got.calls).toContain(`git ${TIP("feat/x")}`);
+  expect(got.calls).toContain(`git ${tip("feat/x")}`);
   expect(got.calls.some((call) => call.startsWith("git branch -r"))).toBe(false);
   expect(got.calls).not.toContain("git rev-parse HEAD");
   expect(got.calls).not.toContain("git rev-parse --abbrev-ref HEAD");
@@ -83,7 +85,7 @@ it("a branch that is not on origin is named, exits 4 without a record, and is no
 it("a branch ahead of origin is waited on at origin's sha, not the local one", async () => {
   const origin = "c0ffee00123456789abcdef0123456789abcdef0";
   const got = await world(
-    { ...GIT, [TIP("feat/x")]: ok(`${origin}\n`), "rev-parse feat/x": ok(`${SHA}\n`) },
+    { ...GIT, [tip("feat/x")]: ok(`${origin}\n`), "rev-parse feat/x": ok(`${SHA}\n`) },
     {
       ...GH,
       [`${LIST} ${origin}`]: ok(JSON.stringify([run(9, "2026-11-09T10:00:00Z", "feat/x")])),
@@ -134,8 +136,8 @@ it("each outcome is recorded by full sha with its branch, failed jobs and time",
   });
   const superseded = await world(GIT, {
     ...GH,
-    "run view 123 --json": view("cancelled", []),
     [BRANCH_LIST]: ok(JSON.stringify([{ createdAt: "2026-11-09T10:05:00Z", databaseId: 124 }])),
+    "run view 123 --json": view("cancelled", []),
   });
   expect(superseded.record(SHA)).toMatchObject({ outcome: "superseded" });
 });

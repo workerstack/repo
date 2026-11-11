@@ -24,7 +24,10 @@ function bytesUnder(p: string): number {
 }
 
 /** The kind of item git's ignored `entry` is, or null: `--directory` ends a dir with a slash. */
-function kindOf(entry: string, deps: boolean, names: ReadonlySet<string>): BuildItem["kind"] | null {
+function kindOf(
+  entry: string,
+  { deps, names }: { deps: boolean; names: ReadonlySet<string> },
+): BuildItem["kind"] | null {
   const isDir = entry.endsWith("/");
   const base = path.posix.basename(entry);
   if (!isDir) return base.endsWith(TSBUILDINFO_SUFFIX) ? "info" : null;
@@ -36,18 +39,18 @@ function kindOf(entry: string, deps: boolean, names: ReadonlySet<string>): Build
  * The paths under `root` that git ignores and that are build output: `git ls-files -o -i --directory` lists only
  * untracked, ignored paths, so a tracked file or an unignored dir is never planned. Matches by basename.
  */
-export function planBuild(root: string, deps: boolean, extra: readonly string[]): BuildPlan {
+export function planBuild(root: string, { deps, extra }: { deps: boolean; extra: readonly string[] }): BuildPlan {
   const listed = spawnSync("git", ["ls-files", "-o", "-i", "--directory", "--exclude-standard", "-z"], {
     cwd: root,
     encoding: "utf8",
     env: childEnv(),
     maxBuffer: LIST_BUFFER,
   });
-  if (listed.status !== 0) return { error: `git ls-files failed: ${String(listed.stderr).trim()}`, ok: false };
+  if (listed.status !== 0) return { error: `git ls-files failed: ${listed.stderr.trim()}`, ok: false };
   const names = new Set([...BUILD_DIRS, ...extra]);
   const items: BuildItem[] = [];
   for (const entry of listed.stdout.split("\0")) {
-    const kind = kindOf(entry, deps, names);
+    const kind = kindOf(entry, { deps, names });
     if (kind === null) continue;
     const abs = path.resolve(root, entry);
     items.push({ bytes: bytesUnder(abs), kind, path: abs });
@@ -61,8 +64,11 @@ export type BuildResult = {
   skipped: { path: string; code: string | undefined }[];
 };
 
-/** Removes each item unless `dryRun`; a failure is recorded and the rest go on. */
-export function removeBuild(items: readonly BuildItem[], dryRun: boolean, rm: typeof fs.rmSync): BuildResult {
+/** Removes each item with `rm` unless `dryRun`; a failure is recorded and the rest go on. */
+export function removeBuild(
+  items: readonly BuildItem[],
+  { dryRun, rm }: { dryRun: boolean; rm: typeof fs.rmSync },
+): BuildResult {
   const result: BuildResult = { done: [], skipped: [] };
   for (const item of items) {
     try {

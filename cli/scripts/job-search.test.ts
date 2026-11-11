@@ -17,11 +17,12 @@ function facts(text: string): string[] {
   return text
     .split("\n")
     .filter((l) => l.startsWith("- "))
-    .sort();
+    .toSorted();
 }
 
-const search = (dir: string, query: string, extra: { path?: string; glob?: string[] | string } = {}) =>
-  runSearch(query, { cwd: dir, root: dir, ...extra });
+function search(dir: string, query: string, extra: { path?: string; glob?: string[] | string } = {}) {
+  return runSearch(query, { cwd: dir, root: dir, ...extra });
+}
 
 it("runSearch lists each matching line with its file and line number", () => {
   const dir = plant();

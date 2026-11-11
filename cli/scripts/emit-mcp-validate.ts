@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
 import { stripJsonc } from "./jsonc.ts";
 
@@ -56,10 +57,13 @@ function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
   return out;
 }
 
-/** The stock policy at `<sourceRoot>/agents/mcp-policy.jsonc`, with `<consumerRoot>/.repo/mcp-policy.jsonc` merged over it when given and present. */
+/**
+ * The stock policy at `<sourceRoot>/agents/mcp-policy.jsonc`, with `<consumerRoot>/.repo/mcp-policy.jsonc` merged over
+ * it when given and present.
+ */
 export function loadPolicy(sourceRoot?: string, consumerRoot?: string): JsonObject {
-  const stock = readPolicyFile(path.join(sourceRoot || process.cwd(), POLICY_REL));
-  if (!consumerRoot) return stock;
+  const stock = readPolicyFile(path.join(nonEmptyOr(sourceRoot, process.cwd()), POLICY_REL));
+  if (consumerRoot === undefined || consumerRoot === "") return stock;
   const own = path.join(consumerRoot, CONSUMER_POLICY_REL);
   return fs.existsSync(own) ? mergePolicy(stock, readPolicyFile(own)) : stock;
 }
@@ -76,8 +80,9 @@ function agentsError(policy: JsonObject): string | null {
   return bad === undefined ? null : `agents.${bad}.inherit must be false`;
 }
 
-const nonEmptyStrings = (v: unknown): boolean =>
-  Array.isArray(v) && v.every((name) => typeof name === "string" && name !== "");
+function nonEmptyStrings(v: unknown): boolean {
+  return Array.isArray(v) && v.every((name) => typeof name === "string" && name !== "");
+}
 
 /** The field checks in order: each returns the policy's error, or null when its field holds. */
 const CHECKS: readonly ((policy: JsonObject) => string | null)[] = [

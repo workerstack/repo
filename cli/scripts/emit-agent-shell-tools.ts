@@ -1,10 +1,12 @@
 #!/usr/bin/env bun
-/** After the subagent generator (`cli/sync/agents/subagents.ts`): Claude repo body uses Bash; other targets keep run_terminal_command. */
+/**
+ * After the subagent generator (`cli/sync/agents/subagents.ts`): Claude repo body uses Bash; other targets keep
+ * run_terminal_command.
+ */
 import fs from "node:fs";
 import path from "node:path";
 
-import { NOT_FOUND } from "./emit.constants.ts";
-import { isRecord } from "./hook-input.ts";
+import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
 
 export type Frontmatter = { ok: true; fm: string; body: string } | { ok: false; error: string };
 
@@ -24,13 +26,17 @@ export const CLAUDE_TOOL_LIST = "Read, Grep, Glob, Bash, Write, Edit, Web";
 
 /** The line that opens and closes a frontmatter block. */
 const FENCE = "---";
+/** The line break right after the opening fence. */
+const OPEN_BREAK = /^\r?\n/;
+/** The closing fence on its own line. */
+const CLOSE_FENCE = /\r?\n---\s*(?:\r?\n|$)/;
 
 export function splitFrontmatter(text: unknown): Frontmatter {
-  const src = String(text ?? "");
+  const src = typeof text === "string" ? text : "";
   if (!src.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
-  const rest = src.slice(FENCE.length).replace(/^\r?\n/, "");
-  const m = rest.match(/\r?\n---\s*(?:\r?\n|$)/);
-  if (!m || m.index == null) return { error: "missing frontmatter close", ok: false };
+  const rest = src.slice(FENCE.length).replace(OPEN_BREAK, "");
+  const m = CLOSE_FENCE.exec(rest);
+  if (m === null) return { error: "missing frontmatter close", ok: false };
   return { body: rest.slice(m.index + m[0].length), fm: rest.slice(0, m.index), ok: true };
 }
 
@@ -44,15 +50,6 @@ export function toClaudeShellBody(body: unknown): string {
     .join("Bash");
 }
 
-function readText(abs: string): string | null {
-  try {
-    return fs.readFileSync(abs, "utf8");
-  } catch (err) {
-    if (isRecord(err) && err.code === NOT_FOUND) return null;
-    throw err;
-  }
-}
-
 function joinMarkdown(fm: string, body: string): string {
   const b = body.endsWith("\n") || body === "" ? body : `${body}\n`;
   return `---\n${fm}\n---\n${b}`;
@@ -63,26 +60,29 @@ type ScoutPair = { ok: true; claudeRaw: string; next: string } | { ok: false; er
 
 /** Reads the scout source and the generated Claude scout and builds the scout's next text. */
 function scoutPair(ssotAbs: string, claudeAbs: string): ScoutPair {
-  const ssotRaw = readText(ssotAbs);
+  const ssotRaw = readTextOrNull(ssotAbs);
   if (ssotRaw == null) return { error: `missing ${SSOT_REL}`, ok: false };
   const ssot = splitFrontmatter(ssotRaw);
   if (!ssot.ok) return { error: `ssot: ${ssot.error}`, ok: false };
-  const claudeRaw = readText(claudeAbs);
+  const claudeRaw = readTextOrNull(claudeAbs);
   if (claudeRaw == null) return { error: `missing ${CLAUDE_SCOUT_REL}`, ok: false };
   const claude = splitFrontmatter(claudeRaw);
   if (!claude.ok) return { error: `claude repo: ${claude.error}`, ok: false };
   return { claudeRaw, next: joinMarkdown(claude.fm, toClaudeShellBody(ssot.body)), ok: true };
 }
 
-/** The scout source is read from `sourceRoot` (default `workspaceRoot`); the generated Claude scout under `workspaceRoot` is rewritten. */
+/**
+ * The scout source is read from `sourceRoot` (default `workspaceRoot`); the generated Claude scout under
+ * `workspaceRoot` is rewritten.
+ */
 export function emitAgentShellTools({
   workspaceRoot,
   sourceRoot,
   check = false,
 }: { workspaceRoot?: string; sourceRoot?: string; check?: boolean } = {}): EmitResult {
-  const ws = workspaceRoot || process.cwd();
+  const ws = nonEmptyOr(workspaceRoot, process.cwd());
   const claudeAbs = path.join(ws, CLAUDE_SCOUT_REL);
-  const pair = scoutPair(path.join(sourceRoot || ws, SSOT_REL), claudeAbs);
+  const pair = scoutPair(path.join(nonEmptyOr(sourceRoot, ws), SSOT_REL), claudeAbs);
   if (!pair.ok) return { check, error: pair.error, ok: false };
   if (check) {
     if (pair.claudeRaw !== pair.next)

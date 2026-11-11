@@ -21,16 +21,19 @@ const AGENT_TYPE_KEYS = [
   "name",
   "agentType",
 ] as const satisfies readonly (keyof HookAgent)[];
+/** A bare number, which names an id rather than an agent type. */
+const DIGITS_RE = /^[0-9]+$/;
+/** A path separator, which names a file rather than an agent type. */
+const PATH_SEP_RE = /[/\\]/;
 
-function nonEmptyChildId(raw: unknown): boolean {
-  if (raw == null) return false;
-  return String(raw).trim() !== "";
+function nonEmptyChildId(raw: string | undefined): boolean {
+  return raw !== undefined && raw.trim() !== "";
 }
 
 /** The nested agent object of a payload, or null when it sends a name string, an array or nothing. */
 function agentObjectOf(data: HookInput): HookAgent | null {
   const { agent } = data;
-  return agent && typeof agent === "object" && !Array.isArray(agent) ? agent : null;
+  return typeof agent === "object" && !Array.isArray(agent) ? agent : null;
 }
 
 /** True when PreToolUse names a child session (UUID ok). Not a fat-gate type. */
@@ -42,19 +45,19 @@ export function hasChildAgentMarker(data: Payload): boolean {
 }
 
 /** A lowercased agent type, or "" for an id, a number, a path or anything too long to be a name. */
-function coerceChildType(raw: unknown): string {
-  if (raw == null) return "";
-  const s = String(raw).trim().toLowerCase();
-  if (UUID_RE.test(s) || /^[0-9]+$/.test(s)) return "";
-  if (s.length > MAX_CHILD_TYPE_LENGTH || /[/\\]/.test(s)) return "";
+function coerceChildType(raw: string | undefined): string {
+  if (raw === undefined) return "";
+  const s = raw.trim().toLowerCase();
+  if (UUID_RE.test(s) || DIGITS_RE.test(s)) return "";
+  if (s.length > MAX_CHILD_TYPE_LENGTH || PATH_SEP_RE.test(s)) return "";
   return s;
 }
 
 /** The first key of `source` that holds an agent type, else "". */
-function firstType<T>(source: T, keys: readonly (keyof T)[]): string {
+function firstType<K extends string>(source: Partial<Record<K, string>>, keys: readonly K[]): string {
   for (const k of keys) {
     const t = coerceChildType(source[k]);
-    if (t) return t;
+    if (t !== "") return t;
   }
   return "";
 }
@@ -62,14 +65,14 @@ function firstType<T>(source: T, keys: readonly (keyof T)[]): string {
 export function subagentTypeOf(data: Payload): string {
   if (!isHookObject(data)) return "";
   const top = firstType(data, [...CHILD_TYPE_KEYS, ...CHILD_ID_KEYS]);
-  if (top) return top;
+  if (top !== "") return top;
   const agent = agentObjectOf(data);
-  if (agent) return firstType(agent, AGENT_TYPE_KEYS);
+  if (agent !== null) return firstType(agent, AGENT_TYPE_KEYS);
   return typeof data.agent === "string" ? coerceChildType(data.agent) : "";
 }
 
 export function isParentOrchestrator(data: Payload): boolean {
-  return !subagentTypeOf(data) && !hasChildAgentMarker(data);
+  return subagentTypeOf(data) === "" && !hasChildAgentMarker(data);
 }
 
 /** True for a child spawned from an implementer-* agent. */
@@ -79,6 +82,7 @@ export function isImplementer(sub: unknown): boolean {
 
 // Antigravity sends its session id only as `conversationId` (phase 6 probe).
 export function sessionIdOf(data: Payload): string {
-  const sid = String((data && (data.sessionId || data.session_id || data.conversationId)) || "").trim();
+  const raw = [data?.sessionId, data?.session_id, data?.conversationId].find(Boolean) ?? "";
+  const sid = raw.trim();
   return sid === DEFAULT_SESSION ? "" : sid;
 }

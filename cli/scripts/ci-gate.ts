@@ -6,7 +6,23 @@ export type GateCtx = { root: string; bins: Bins };
 /** A gate's outcome; `ran` is false when no tool ran, so there is no time to show. */
 export type Gate = { label: string; ok: boolean; output: string[]; ran: boolean };
 
-export const pass = (label: string, ran = true): Gate => ({ label, ok: true, output: [], ran });
-export const fail = (label: string, output: string[], ran = true): Gate => ({ label, ok: false, output, ran });
-export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
-export const textOf = (run: Captured) => `${run.stdout}${run.stderr}`;
+export function pass(label: string): Gate {
+  return { label, ok: true, output: [], ran: true };
+}
+/** A gate that passed without running a tool, so it shows no time. */
+export function skip(label: string): Gate {
+  return { label, ok: true, output: [], ran: false };
+}
+export function fail(label: string, output: string[]): Gate {
+  return { label, ok: false, output, ran: true };
+}
+/** A gate whose tool did not start: failed, with no output and no time. */
+export function failToStart(label: string): Gate {
+  return { label, ok: false, output: [], ran: false };
+}
+export function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+export function textOf(run: Captured) {
+  return `${run.stdout}${run.stderr}`;
+}

@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 import { alreadyRtk, isWorkspaceJobScript, parseJobCommand, stripFlagValue } from "./gate-job.ts";
 import { bashTargetsDenylist } from "./gate-paths.ts";
 
-const ws = "/planted/ws";
-const roots = { checkout: ws, cwd: ws, root: ws };
-const bin = path.join(ws, ["node_modules", ".bin", "repo"].join("/"));
+const WS = "/planted/WS";
+const roots = { checkout: WS, cwd: WS, root: WS };
+const bin = path.join(WS, ["node_modules", ".bin", "repo"].join("/"));
 
 describe("bashTargetsDenylist edges", () => {
   it("lets an empty or missing command through", () => {

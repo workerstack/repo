@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
+import { BASE_POLICY } from "./fixtures/mcp-base-policy.ts";
 import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./fixtures/mcp-policy-kit.ts";
 
 const tmpDir = plantDirs();
@@ -28,14 +29,6 @@ type GrokFile = {
 type CodexFile = {
   agents?: { max_depth?: number };
   mcp_servers?: Record<string, unknown>;
-};
-
-const NO_SERVERS: string[] = [];
-const basePolicy = {
-  agents: { orchestrator: { inherit: false }, repo: { inherit: false } },
-  allow: NO_SERVERS,
-  default: "deny",
-  plugins: { denyDefault: true },
 };
 
 /** Writes `<root>/.mcp.json` holding `servers`, as the user keeps it. */
@@ -88,7 +81,7 @@ it("deny-all emit on tmp workspaceRoot", () => {
   const ws = tmpDir("emit-mcp-deny-");
   const home = tmpDir("emit-mcp-home-");
   const homeCfg = plant(home, ".grok/config.toml", "keep = true\n");
-  plantPolicy(ws, basePolicy);
+  plantPolicy(ws, BASE_POLICY);
   seedHostStubs(ws);
   const r = emitMcpPolicy({ check: false, workspaceRoot: ws });
   expect(r.ok).toBe(true);
@@ -112,7 +105,7 @@ function expectGrokAllowsNotes(ws: string): void {
 
 it("named-allow fixture emits only that server; leftover grok disabled", () => {
   const ws = tmpDir("emit-mcp-allow-");
-  plantPolicy(ws, { ...basePolicy, allow: ["notes"] });
+  plantPolicy(ws, { ...BASE_POLICY, allow: ["notes"] });
   const own = writeMcpJson(ws, { extra: { command: "nope" }, notes: { args: ["-y", "notes-mcp"], command: "npx" } });
   seedHostStubs(ws);
   plant(ws, ".grok/config.toml", '[mcp_servers.stale]\ncommand = "old"\nenabled = true\n');
@@ -123,14 +116,14 @@ it("named-allow fixture emits only that server; leftover grok disabled", () => {
   expectGrokAllowsNotes(ws);
   expect(readJsonAs<ClaudeSettings>(ws, ".claude/settings.json").enabledMcpjsonServers).toStrictEqual(["notes"]);
   const codex = readTomlAs<CodexFile>(ws, ".codex/config.toml");
-  expect(Object.keys(codex.mcp_servers || {})).toStrictEqual(["notes"]);
+  expect(Object.keys(codex.mcp_servers ?? {})).toStrictEqual(["notes"]);
   expect(codex.mcp_servers?.stale).toBeUndefined();
 });
 
 it("project [features] is drift", () => {
   const ws = tmpDir("emit-mcp-feat-");
   const home = tmpDir("emit-mcp-feat-home-");
-  plantPolicy(ws, basePolicy);
+  plantPolicy(ws, BASE_POLICY);
   seedHostStubs(ws);
   expect(emitMcpPolicy({ check: false, home, workspaceRoot: ws }).ok).toBe(true);
   fs.appendFileSync(path.join(ws, ".grok/config.toml"), "\n[features]\ntwo_pass_compaction = true\n");
@@ -142,7 +135,7 @@ it("project [features] is drift", () => {
 
 it("home workspace keeps [features] and check passes", () => {
   const home = tmpDir("emit-mcp-feat-home-");
-  plantPolicy(home, basePolicy);
+  plantPolicy(home, BASE_POLICY);
   seedHostStubs(home);
   expect(emitMcpPolicy({ check: false, home, workspaceRoot: home }).ok).toBe(true);
   const homeGrok = path.join(home, ".grok/config.toml");
@@ -157,7 +150,7 @@ it("home workspace keeps [features] and check passes", () => {
 
 it("--check fails on drift then passes; writes nothing on check", () => {
   const ws = tmpDir("emit-mcp-check-");
-  plantPolicy(ws, basePolicy);
+  plantPolicy(ws, BASE_POLICY);
   seedHostStubs(ws);
   expect(emitMcpPolicy({ check: false, workspaceRoot: ws }).ok).toBe(true);
   expect(emitMcpPolicy({ check: true, workspaceRoot: ws }).ok).toBe(true);
@@ -172,7 +165,7 @@ it("--check fails on drift then passes; writes nothing on check", () => {
   expect(emitMcpPolicy({ check: true, workspaceRoot: ws }).ok).toBe(true);
 });
 
-const stockPolicy = { ...basePolicy, allow: ["a"] };
+const stockPolicy = { ...BASE_POLICY, allow: ["a"] };
 const servers = { a: { command: "a" }, b: { command: "b" }, c: { command: "c" } };
 
 it("reads the stock policy from sourceRoot and writes only under workspaceRoot", () => {

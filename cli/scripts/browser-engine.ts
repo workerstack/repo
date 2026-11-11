@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { connectCdp } from "./browser-cdp.ts";
-import { newSession, sessionDir } from "./browser-session.ts";
+import { filled, newSession, sessionDir } from "./browser-session.ts";
 import { isPaintHost } from "./browser-snap.ts";
 import { freePort, waitVersion } from "./browser-wait.ts";
 import { CHROMIUM_VERBS, HOST, PROFILE_DIR, TASKKILL_MS } from "./browser.constants.ts";
@@ -15,10 +15,13 @@ import { CHROMIUM_BINS, LIGHTPANDA_REPO } from "./doctor.constants.ts";
 /** What a verb prints when no engine can run. */
 export const NO_ENGINE: string = `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;
 
+/** A Windows shell shim's extension, which `spawnEngine` runs through its `.mjs` or a shell. */
+const SHIM_EXT = /\.(cmd|bat)$/i;
+
 function firstChromium(pathEnv: string | undefined, platform: NodeJS.Platform): string {
   for (const name of CHROMIUM_BINS) {
     const bin = whichBin(name, pathEnv, platform);
-    if (bin) return bin;
+    if (bin !== "") return bin;
   }
   return "";
 }
@@ -39,20 +42,25 @@ export function installHint(platform: NodeJS.Platform = process.platform): strin
 }
 
 function wantsChromium(opts: PickOpts, platform: NodeJS.Platform): boolean {
-  if (opts.forceChromium || platform === "win32") return true;
-  return CHROMIUM_VERBS.has(String(opts.verb ?? "")) || isPaintHost(opts.url ?? "");
+  if (opts.forceChromium === true || platform === "win32") return true;
+  return CHROMIUM_VERBS.has(opts.verb ?? "") || isPaintHost(opts.url ?? "");
 }
 
 export function pickEngine(opts: PickOpts = {}): Picked {
   const platform = opts.platform ?? process.platform;
   const bins = opts.bins ?? {};
-  if (bins.lightpanda && !wantsChromium(opts, platform)) return { engine: "lightpanda" };
-  if (bins.chromium) return { engine: "chromium" };
+  if (filled(bins.lightpanda) !== undefined && !wantsChromium(opts, platform)) return { engine: "lightpanda" };
+  if (filled(bins.chromium) !== undefined) return { engine: "chromium" };
   return { engine: null, error: installHint(platform) };
 }
 
-/** Whether a spawn or kill here goes through Windows: the platform asked for, or the host, whose process model decides. */
-const onWindows = (platform: NodeJS.Platform): boolean => platform === "win32" || process.platform === "win32";
+/**
+ * Whether a spawn or kill here goes through Windows: the platform asked for, or the host, whose process model
+ * decides.
+ */
+function onWindows(platform: NodeJS.Platform): boolean {
+  return platform === "win32" || process.platform === "win32";
+}
 
 function tryKill(pid: number, signal?: NodeJS.Signals): void {
   try {
@@ -64,7 +72,7 @@ function tryKill(pid: number, signal?: NodeJS.Signals): void {
 
 /** Stops the engine `pid` and, off Windows, its process group. */
 export function killPid(pid: number | undefined, platform: NodeJS.Platform): void {
-  if (!pid) return;
+  if (pid === undefined || pid === 0) return;
   if (onWindows(platform)) {
     // The tree first: a shell shim's child outlives the shell once that is killed, and holds the profile dir open.
     spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
@@ -86,8 +94,8 @@ function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
     env: ctx.env,
     stdio: ["ignore", "pipe", "pipe"],
   };
-  if (!onWindows(ctx.platform) || !/\.(cmd|bat)$/i.test(bin)) return spawn(bin, args, opts);
-  const mjs = `${bin.replace(/\.(cmd|bat)$/i, "")}.mjs`;
+  if (!onWindows(ctx.platform) || !SHIM_EXT.test(bin)) return spawn(bin, args, opts);
+  const mjs = `${bin.replace(SHIM_EXT, "")}.mjs`;
   try {
     fs.accessSync(mjs, fs.constants.F_OK);
     return spawn(process.execPath, [mjs, ...args], opts);
@@ -116,7 +124,8 @@ async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   const port = await freePort();
   const child = spawnEngine(bin, spawnArgs(engine, port, profile), ctx);
   child.unref();
-  // An engine that cannot start (missing, not executable) reports through 'error'; unhandled it would crash the process.
+  // An engine that cannot start (missing, not executable) reports through 'error'; unhandled it would crash the
+  // process.
   let spawnError: Error | undefined;
   child.once("error", (err) => {
     spawnError = new Error(`engine failed to start: ${err.message}`);
@@ -142,14 +151,14 @@ async function probe(session: Session): Promise<void> {
 /** A session on `engine`, or on Chromium when Lightpanda starts but fails its probe; null when none starts. */
 export async function openSession(engine: Engine, ctx: Ctx): Promise<Session | null> {
   const session = await launchEngine(engine, ctx).catch(() => null);
-  if (!session || engine !== "lightpanda") return session;
+  if (session === null || engine !== "lightpanda") return session;
   const probed = await probe(session).then(
     () => true,
     () => false,
   );
   if (probed) return session;
   killPid(session.pid, ctx.platform);
-  if (!ctx.bins.chromium) return null;
+  if (ctx.bins.chromium === "") return null;
   const next = await launchEngine("chromium", ctx);
   return { ...next, escalated: true, swapCount: 1 };
 }
@@ -180,6 +189,6 @@ export async function swapToChromium(session: Session, ctx: Ctx): Promise<Sessio
   next.lastRefs = session.lastRefs;
   next.escalated = true;
   next.swapCount = session.swapCount + 1;
-  if (url) await navigate(next, url);
+  if (url !== "") await navigate(next, url);
   return next;
 }

@@ -9,21 +9,23 @@ import { toolEnv } from "./tool-env.ts";
 export type Runner = (args: string[], cwd: string) => Captured;
 
 /** A runner of `bin`; a tool that cannot start is a failed run with the reason as its stderr. */
-export const spawnRunner =
-  (bin: string): Runner =>
-  (args, cwd) => {
+export function spawnRunner(bin: string): Runner {
+  return (args, cwd) => {
     const result = spawnSync(bin, args, { cwd, encoding: "utf8", env: toolEnv(childEnv()) });
-    if (result.error) return { code: 1, stderr: result.error.message, stdout: "" };
+    if (result.error !== undefined) return { code: 1, stderr: result.error.message, stdout: "" };
     return { code: result.status ?? 1, stderr: result.stderr, stdout: result.stdout };
   };
+}
 
 /** A runner of `bin` that shares this process's terminal, so the tool can prompt and its output is not captured. */
-export const inheritRunner =
-  (bin: string): Runner =>
-  (args, cwd) => {
+export function inheritRunner(bin: string): Runner {
+  return (args, cwd) => {
     const result = spawnSync(bin, args, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
-    if (result.error) return { code: 1, stderr: result.error.message, stdout: "" };
+    if (result.error !== undefined) return { code: 1, stderr: result.error.message, stdout: "" };
     return { code: result.status ?? 1, stderr: "", stdout: "" };
   };
+}
 
-export const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+export function realSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

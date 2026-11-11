@@ -8,6 +8,7 @@ import { expect, it, onTestFinished } from "vitest";
 
 import { fwd } from "../../dev/test-paths.ts";
 import { readEnv } from "../env.ts";
+import { mainWithOutWorktree } from "./fixtures/worktree-repo.ts";
 import {
   HOOK_NAMES,
   HOOK_USAGE,
@@ -25,18 +26,22 @@ function tempDir(prefix: string): string {
   return dir;
 }
 
-const OLD_FORM = (rel: string) =>
-  `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
+function oldForm(rel: string) {
+  const top = `d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"`;
+  return `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || ${top}; bun "$d/${rel}"`;
+}
 
 /**
  * The text every host has run since hooks went through the bin;
  * generated files and old manifests compare against it.
  */
 const WORKTREE_COMMAND =
-  'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; [ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || ' +
+  'd="${GROK_WORKSPACE_ROOT:-${CLAUDE_PROJECT_DIR:-.}}"; b=node_modules/.bin/repo; ' +
+  '[ -e "$d/$b" ] || [ -e "$d/$b.exe" ] || ' +
   'd="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; ' +
   'm="$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"; m="${m%/*}"; r=; ' +
-  'for c in "$d" "$m"; do for e in "" .exe; do [ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ' +
+  'for c in "$d" "$m"; do for e in "" .exe; do ' +
+  '[ -n "$c" ] && [ -e "$c/$b$e" ] && { r="$c/$b$e"; break 2; }; done; done; ' +
   '[ -x "$r" ] || { echo "repo: $d/$b is missing; run bun install" >&2; exit 1; }; "$r" hook worktree';
 
 it("hook names: names hooks, and nothing else", () => {
@@ -98,31 +103,27 @@ it("hookCommand: says run bun install and exits 1 in a checkout with no install"
   expect(r.stderr).toBe(`repo: ${dir}/node_modules/.bin/repo is missing; run bun install\n`);
 });
 
+/** A bin in `dir` that echoes `tag` and its arguments; none when `bin` is null. */
+function put(dir: string, bin: string | null, tag: string) {
+  if (bin === null) return;
+  fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
+  fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), `#!/bin/sh\necho "${tag} $@"\n`, { mode: 0o755 });
+}
+
 function setup(mainBin: "repo" | "repo.exe" | null, ownBin: "repo" | "repo.exe" | null = null) {
   const base = fs.realpathSync(tempDir("hook-wt-"));
-  const main = path.join(base, "main");
-  const wt = path.join(base, "out", "fix-x");
-  fs.mkdirSync(main, { recursive: true });
-  const git = (cwd: string, ...a: string[]) =>
-    spawnSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...a], { cwd, encoding: "utf8" });
-  git(main, "init", "-q");
-  git(main, "commit", "-q", "--allow-empty", "-m", "i");
-  git(main, "worktree", "add", "-q", wt);
-  const put = (dir: string, bin: string | null, tag: string) => {
-    if (!bin) return;
-    fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
-    fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), `#!/bin/sh\necho "${tag} $@"\n`, { mode: 0o755 });
-  };
+  const { main, wt } = mainWithOutWorktree(base);
   put(main, mainBin, "main");
   put(wt, ownBin, "own");
   return { base, main, wt };
 }
-const run = (cwd: string, project: string) =>
-  spawnSync("sh", ["-c", hookCommand("session-map")], {
+function run(cwd: string, project: string) {
+  return spawnSync("sh", ["-c", hookCommand("session-map")], {
     cwd,
     encoding: "utf8",
     env: { CLAUDE_PROJECT_DIR: project, PATH: readEnv().PATH },
   });
+}
 
 it("hookCommand in a linked worktree: runs the main checkout's bin when the worktree has no install", () => {
   const { wt } = setup("repo");
@@ -152,16 +153,19 @@ it.each(["repo", "repo.exe"] as const)(
   },
 );
 
+/** What the bin `repoBinLookup(".")` finds from `cwd` prints, whatever project the agent env names. */
+function lookup(cwd: string, project: string) {
+  return spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
+    cwd,
+    encoding: "utf8",
+    env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: readEnv().PATH },
+  }).stdout;
+}
+
 it(
   "hookCommand in a linked worktree: from . (a git hook) runs the bin of the checkout git runs it in, " +
     "whatever project the agent env names",
   () => {
-    const lookup = (cwd: string, project: string) =>
-      spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
-        cwd,
-        encoding: "utf8",
-        env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: readEnv().PATH },
-      }).stdout;
     const installed = setup("repo", "repo");
     expect(lookup(installed.wt, installed.main)).toBe("own turn --staged\n");
     const bare = setup("repo");
@@ -206,14 +210,14 @@ it.each(HOOK_NAMES)("hookNameOf: reads %s back from its command", (name) => {
 });
 
 it("hookNameOf: reads the old direct script forms", () => {
-  expect(hookNameOf(OLD_FORM("cli/scripts/gate-fat-tools.ts"))).toBe("gate-fat-tools");
-  expect(hookNameOf(OLD_FORM("cli/scripts/orchestrate-parent.ts"))).toBe("orchestrate-parent");
-  expect(hookNameOf(`${OLD_FORM("cli/scripts/worktree.ts")} hook`)).toBe("worktree");
+  expect(hookNameOf(oldForm("cli/scripts/gate-fat-tools.ts"))).toBe("gate-fat-tools");
+  expect(hookNameOf(oldForm("cli/scripts/orchestrate-parent.ts"))).toBe("orchestrate-parent");
+  expect(hookNameOf(`${oldForm("cli/scripts/worktree.ts")} hook`)).toBe("worktree");
   expect(hookNameOf('bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"')).toBe("rtk-grok");
 });
 
 it("hookNameOf: is null for any other command", () => {
-  expect(hookNameOf(OLD_FORM("scripts/daily-pull-check.mjs"))).toBeNull();
+  expect(hookNameOf(oldForm("scripts/daily-pull-check.mjs"))).toBeNull();
   expect(hookNameOf('"$d/node_modules/.bin/repo" hook nope')).toBeNull();
   expect(hookNameOf("echo gate-fat-tools.tsx")).toBeNull();
   expect(hookNameOf("bun run worktree.ts.bak")).toBeNull();

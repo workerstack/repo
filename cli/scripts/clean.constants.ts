@@ -24,8 +24,11 @@ export const MD_EXT = ".md";
 export const NESTED_KIND = "nested";
 /** No serial seen yet; every real serial is above it. */
 export const NO_SERIAL = -1;
+/** The slashes git's `--directory` listing ends a dir entry with. */
+export const TRAILING_SLASHES_RE: RegExp = /\/+$/;
 
-// How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted silently.
+// How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted
+// silently.
 // clean.test.ts holds POLICY to TMP_RESERVED_DIRS, so a reserved dir without a policy fails the suite.
 export const POLICY: Readonly<Record<string, Policy>> = {
   browser: "keep",

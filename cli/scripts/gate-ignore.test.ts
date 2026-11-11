@@ -11,9 +11,9 @@ import type { HookOutput } from "./gate-harness.ts";
 const tmp = useTmp();
 type Input = Record<string, unknown>;
 const addC = { new_string: "dist-local/\n.tmp/\n", old_string: "dist-local/\n" };
-const appendA = "cat <<'EOF' >> packages/a/.gitignore\n.tmp/\nEOF";
-const patchAddA = "*** Begin Patch\n*** Add File: packages/a/.gitignore\n+.tmp/\n*** End Patch\n";
-const patchUpdateC =
+const APPEND_A = "cat <<'EOF' >> packages/a/.gitignore\n.tmp/\nEOF";
+const PATCH_ADD_A = "*** Begin Patch\n*** Add File: packages/a/.gitignore\n+.tmp/\n*** End Patch\n";
+const PATCH_UPDATE_C =
   "*** Begin Patch\n*** Update File: packages/c/.gitignore\n@@\n dist-local/\n+.tmp/\n*** End Patch\n";
 
 function repo() {
@@ -25,14 +25,26 @@ function repo() {
   return r;
 }
 
-const claudeSent = (r: string, tool: string, input: Input) => inSession(claudeCall(r, tool, input), "ig");
-const claude = (r: string, tool: string, input: Input) => processHookPayload(claudeSent(r, tool, input));
-const codex = (r: string, tool: string, input: Input) => processHookPayload(inSession(codexCall(r, tool, input), "ig"));
-const antigravity = (r: string, name: string, args: Input) =>
-  processHookPayload(inSession(agyCall(r, name, args), "ig"));
-const hookDeny = (out: HookOutput | null) =>
-  out?.hookSpecificOutput?.permissionDecision === "deny" ? (out.hookSpecificOutput.permissionDecisionReason ?? "") : "";
-const decisionDeny = (out: HookOutput | null) => (out?.decision === "deny" ? (out.reason ?? "") : "");
+function claudeSent(r: string, tool: string, input: Input) {
+  return inSession(claudeCall(r, tool, input), "ig");
+}
+function claude(r: string, tool: string, input: Input) {
+  return processHookPayload(claudeSent(r, tool, input));
+}
+function codex(r: string, tool: string, input: Input) {
+  return processHookPayload(inSession(codexCall(r, tool, input), "ig"));
+}
+function antigravity(r: string, name: string, args: Input) {
+  return processHookPayload(inSession(agyCall(r, name, args), "ig"));
+}
+function hookDeny(out: HookOutput | null) {
+  return out?.hookSpecificOutput?.permissionDecision === "deny"
+    ? (out.hookSpecificOutput.permissionDecisionReason ?? "")
+    : "";
+}
+function decisionDeny(out: HookOutput | null) {
+  return out?.decision === "deny" ? (out.reason ?? "") : "";
+}
 
 it("denies a redundant nested line in every harness's shape, naming the parent rule", () => {
   const r = repo();
@@ -42,10 +54,10 @@ it("denies a redundant nested line in every harness's shape, naming the parent r
   const hook = [
     claude(r, "Write", { content: ".tmp/\n", file_path: a }),
     claude(r, "Edit", { file_path: c, ...addC }),
-    claude(r, "Bash", { command: appendA }),
-    processHookPayload(asChild(claudeSent(r, "Bash", { command: appendA }), "scout")),
-    codex(r, "apply_patch", { command: patchAddA }),
-    codex(r, "Bash", { command: `apply_patch <<'EOF'\n${patchUpdateC}EOF\n` }),
+    claude(r, "Bash", { command: APPEND_A }),
+    processHookPayload(asChild(claudeSent(r, "Bash", { command: APPEND_A }), "scout")),
+    codex(r, "apply_patch", { command: PATCH_ADD_A }),
+    codex(r, "Bash", { command: `apply_patch <<'EOF'\n${PATCH_UPDATE_C}EOF\n` }),
   ];
   for (const [i, out] of hook.entries()) expect(hookDeny(out), String(i)).toContain(rule);
   const decision = [

@@ -9,7 +9,8 @@ afterEach(cleanTemps);
 
 const IGNORE = '"@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason';
 const PIN = `bun@${Bun.version}`;
-const APP_MANIFEST = `${JSON.stringify({ name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" })}\n`;
+const APP = { name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
+const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
 const UNUSED: Bins = { tsc: () => ({ code: 1, stderr: "", stdout: "" }), vitest: () => null };
 
 /** The comments step over `files` written to a temp root, each changed, or deleted when listed in `deleted`. */

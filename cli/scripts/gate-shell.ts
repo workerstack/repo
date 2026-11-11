@@ -15,6 +15,9 @@ import {
 } from "./gate.constants.ts";
 import { activeReview } from "./strategy.ts";
 
+/** Leading blanks and an `rtk ` prefix, which a job query drops. */
+const LEADING_RTK_RE = /^\s*(rtk\s+)?/;
+
 /** The call with its command swapped for `command`. */
 function withCommand({ input, field }: GateCall, command: string): GateResult {
   return { type: "rewrite", updatedInput: { ...input, [field]: command } };
@@ -26,7 +29,9 @@ function jobFor({ roots }: GateCall, job: string, query: string): string {
 }
 
 /** True when job and rtk can take the command: it is one plain command and not already rtk's. */
-const takesJob = (cmd: string): boolean => !alreadyRtk(cmd) && !SHELL_META.test(cmd);
+function takesJob(cmd: string): boolean {
+  return !alreadyRtk(cmd) && !SHELL_META.test(cmd);
+}
 
 export function denylistShellGuard(call: GateCall): GuardResult {
   return bashTargetsDenylist(call.text) ? { reason: REASON_DENYLIST, type: "deny" } : undefined;
@@ -44,22 +49,22 @@ export function jobScriptGuard(call: GateCall): GuardResult {
 export function testRunGuard(call: GateCall): GuardResult {
   const { text, sub, parent, sid, roots } = call;
   if (!TEST_CMD.test(text) || SHELL_META.test(text)) return undefined;
-  const reviewing = parent && sid && activeReview(roots.root, sid);
-  return isImplementer(sub) || reviewing ? withCommand(call, jobFor(call, "test", text.trim())) : undefined;
+  const isReviewing = parent && sid !== "" && activeReview(roots.root, sid) !== null;
+  return isImplementer(sub) || isReviewing ? withCommand(call, jobFor(call, "test", text.trim())) : undefined;
 }
 
 /** A fetch goes through `job fetch`; one with no URL to fetch is denied. */
 export function webGuard(call: GateCall): GuardResult {
   if (!BASH_WEB.test(call.text)) return undefined;
   const url = BASH_URL.exec(call.text)?.[0];
-  return url ? withCommand(call, jobFor(call, "fetch", url)) : { reason: REASON_DENYLIST, type: "deny" };
+  return url === undefined ? { reason: REASON_DENYLIST, type: "deny" } : withCommand(call, jobFor(call, "fetch", url));
 }
 
 /** A plain dump or search runs as `job exec` or `job search`. */
 export function dumpGuard(call: GateCall): GuardResult {
   const { text } = call;
   if (!BASH_DUMP_CMDS.test(text) || !takesJob(text)) return undefined;
-  const query = text.replace(/^\s*(rtk\s+)?/, "").trim();
+  const query = text.replace(LEADING_RTK_RE, "").trim();
   return withCommand(call, jobFor(call, BASH_SEARCH.test(text) ? "search" : "exec", query));
 }
 

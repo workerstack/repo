@@ -3,6 +3,7 @@ import type { SpawnSyncReturns } from "node:child_process";
 import { afterEach, expect, it } from "vitest";
 
 import { main } from "./ci.ts";
+import { ciFromConfig, spawnReply } from "./fixtures/ci-config-run.ts";
 import { ci, bad, OK, PASSED, plant } from "./fixtures/ci-run.ts";
 import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
 
@@ -115,16 +116,6 @@ it("outside a repo the run is refused", () => {
   expect(run.err).toMatch(/^repo ci: no workerstack\.config\.ts in .* or any parent; run `bun repo init`\n$/);
 });
 
-const reply = (over: Partial<SpawnSyncReturns<string>> = {}): SpawnSyncReturns<string> => ({
-  output: [],
-  pid: 0,
-  signal: null,
-  status: 0,
-  stderr: "",
-  stdout: "",
-  ...over,
-});
-
 const CHECKS = {
   "container-images": ["bun", "scripts/check/container-images.ts"],
   // Checks run in config order, so infra-gen sits after product-tree to show the order is not sorted.
@@ -148,7 +139,7 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
     repo: () => OK,
     spawn: (cmd, args, opts) => {
       spawned.push({ args, cmd, cwd: opts.cwd });
-      return reply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
+      return spawnReply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
     },
     stderr: () => {},
     stdout: (s) => out.push(s),
@@ -186,29 +177,27 @@ it("reads ci.checks from the config when no deps give them", async () => {
   const root = plant({
     "workerstack.config.ts": 'export default { packs: [], ci: { checks: { "a-check": ["tool", "x"] } } };\n',
   });
-  const out: string[] = [];
   const seen: string[] = [];
-  const code = await main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
-    cwd: root,
-    now: () => 0,
-    repo: () => OK,
+  const { code, out } = await ciFromConfig(root, {
     spawn: (cmd, args) => {
       seen.push([cmd, ...args].join(" "));
-      return reply();
+      return spawnReply();
     },
-    stdout: (s) => out.push(s),
   });
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["tool x"]);
-  expect(out.join("")).toContain("ci: a-check ok (0.0s)\n");
+  expect(out).toContain("ci: a-check ok (0.0s)\n");
 });
 
 it("wait <branch> waits on that branch, and wait a b is refused with exit 2", async () => {
   const seen: string[][] = [];
   const err: string[] = [];
-  const git = (args: string[]) => (seen.push(args), { code: 1, stderr: "no git", stdout: "" });
-  const run = (argv: string[]) => main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => {} });
+  function git(args: string[]) {
+    return (seen.push(args), { code: 1, stderr: "no git", stdout: "" });
+  }
+  function run(argv: string[]) {
+    return main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => {} });
+  }
   expect(await run(["wait", "feat/x"])).toBe(4);
   expect(seen[0]).toStrictEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
   expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");

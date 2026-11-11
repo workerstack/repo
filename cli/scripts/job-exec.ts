@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { childEnv } from "../env.ts";
 import { SHELL_META } from "./gate-harness.ts";
+import { dirOrCwd } from "./job-args.ts";
 import { factsResult, fallbackResult, formatFacts, isHtml, squeezLines, verdictFromLines } from "./job-format.ts";
 import { resolveStashFile, stashRef } from "./job-stash.ts";
 import { endTreeAfterError } from "./job-tree.ts";
@@ -23,10 +24,17 @@ import {
 import type { JobResult, SliceOptions, StashRoots } from "./job.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
+const WHITESPACE = /\s+/;
+
+/** A run's stdout and stderr as text; a run that never started has neither. */
+export function outputsOf(run: { stdout?: string | null; stderr?: string | null }): { stdout: string; stderr: string } {
+  return { stderr: run.stderr ?? "", stdout: run.stdout ?? "" };
+}
+
 /** Runs `file` with `args` in `cwd`, bounded in time and output; ends its tree after a timeout. */
 export function runCmd(file: string, args: string[], cwd?: string): SpawnSyncReturns<string> {
   const run = spawnSync(file, args, {
-    cwd: cwd || process.cwd(),
+    cwd: dirOrCwd(cwd),
     encoding: "utf8",
     env: childEnv(),
     maxBuffer: STASH_CAP + BUFFER_SLACK,
@@ -45,7 +53,7 @@ export function notFound(run: SpawnSyncReturns<string>): boolean {
 /** The trimmed non-empty lines of `text`. */
 export function nonEmptyLines(text: string): string[] {
   return text
-    .split(/\n/)
+    .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
 }
@@ -63,39 +71,39 @@ function runTool(file: string, args: string[], cwd: string | undefined): SpawnSy
 }
 
 function failedRun(r: SpawnSyncReturns<string>, query: string, { cwd, root }: StashRoots): JobResult {
-  const stdout = String(r.stdout || "");
-  const stderr = String(r.stderr || "");
+  const { stdout, stderr } = outputsOf(r);
   const errors = nonEmptyLines(stderr);
-  if (!errors.length) errors.push(...nonEmptyLines(stdout));
+  if (errors.length === 0) errors.push(...nonEmptyLines(stdout));
   const raw = [stdout, stderr].filter(Boolean).join("\n");
-  const lines = errors.length ? errors : [`exit ${r.status}`];
+  const lines = errors.length > 0 ? errors : [`exit ${r.status}`];
   return verdictFromLines({ cwd, errors: lines, kind: EXEC_JOB, lines, query, raw, root });
 }
 
 function doneRun(r: SpawnSyncReturns<string>, query: string, { cwd, root }: StashRoots): JobResult {
-  const stdout = String(r.stdout || "");
-  const stderr = String(r.stderr || "");
+  const { stdout, stderr } = outputsOf(r);
   const lines = nonEmptyLines(stdout);
-  if (!lines.length && !stderr.trim()) return factsResult(formatFacts({ facts: [], kind: EXEC_JOB, n: 0 }));
-  const body = lines.length ? lines : [stderr.trim()];
-  return verdictFromLines({ cwd, kind: EXEC_JOB, lines: body, query, raw: stdout || stderr, root });
+  if (lines.length === 0 && stderr.trim() === "") return factsResult(formatFacts({ facts: [], kind: EXEC_JOB, n: 0 }));
+  const body = lines.length > 0 ? lines : [stderr.trim()];
+  const raw = stdout === "" ? stderr : stdout;
+  return verdictFromLines({ cwd, kind: EXEC_JOB, lines: body, query, raw, root });
 }
 
 /** Runs one shell-free command line and prints its verdict; shell syntax or html output falls back. */
 export function runExec(query: string, { cwd, root }: StashRoots = {}): JobResult {
-  const q = String(query).trim();
+  const q = query.trim();
   if (SHELL_META.test(q)) return fallbackResult();
-  const [file, ...args] = q.split(/\s+/).filter(Boolean);
-  if (!file) return fallbackResult();
+  const [file, ...args] = q.split(WHITESPACE).filter(Boolean);
+  if (file === undefined) return fallbackResult();
   const r = runTool(file, args, cwd);
   if (notFound(r)) return failedResult(EXEC_JOB, [NOT_FOUND]);
-  if (isHtml(r.stdout, r.stderr)) return fallbackResult();
+  const { stdout, stderr } = outputsOf(r);
+  if (isHtml(stdout, stderr)) return fallbackResult();
   return r.status === 0 ? doneRun(r, q, { cwd, root }) : failedRun(r, q, { cwd, root });
 }
 
 /** The text of a stash file, or the error a slice prints for it. */
 function readStash(abs: string | null): { text: string } | { error: string } {
-  if (!abs) return { error: MISSING_STASH };
+  if (abs === null) return { error: MISSING_STASH };
   try {
     const text = fs.readFileSync(abs, "utf8");
     return text.includes("\0") ? { error: BINARY_STASH } : { text };
@@ -111,7 +119,7 @@ function bound(value: SliceOptions["from"]): number {
 
 /** The numbered lines of `text` in `from`..`to` that hold `filter`, as facts. */
 function pickLines(text: string, { path: filter, from, to }: SliceOptions): string[] {
-  const numbered = text.split(/\n/).map((l, i) => ({ l, n: i + 1 }));
+  const numbered = text.split("\n").map((l, i) => ({ l, n: i + 1 }));
   const a = bound(from);
   const b = bound(to);
   let picked = numbered;
@@ -120,7 +128,7 @@ function pickLines(text: string, { path: filter, from, to }: SliceOptions): stri
     const end = Number.isFinite(b) ? b : numbered.length;
     picked = numbered.filter((x) => x.n >= start && x.n <= end);
   }
-  if (filter) picked = picked.filter((x) => x.l.includes(String(filter)));
+  if (filter !== undefined && filter !== "") picked = picked.filter((x) => x.l.includes(filter));
   return picked.map((x) => `stash:${x.n} — ${x.l.trim().slice(0, FACT_WIDTH)}`);
 }
 

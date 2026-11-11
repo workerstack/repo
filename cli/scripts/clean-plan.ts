@@ -37,7 +37,9 @@ function keepDir(state: PlanState, name: string, p: string): void {
   state.keep.push({ kind: name, path: p });
 }
 
-/** True when an entry of an aged dir goes: a serial file, not the newest, old, done when the policy asks, not pinned. */
+/**
+ * True when an entry of an aged dir goes: a serial file, not the newest, old, done when the policy asks, not pinned.
+ */
 function agedOut(state: PlanState, a: AgedEntry): boolean {
   if (a.entry === a.keeper || serialOf(a.name, a.entry) === null || !old(state, a.child)) return false;
   if (POLICY[a.name] === "age-done" && statusOf(a.child) !== DONE_STATUS) return false;
@@ -120,8 +122,8 @@ export function cleanPlan({ root, now, liveSessions, nested = [] }: PlanInput): 
   for (const name of names) plannerOf(name)(state, name, path.join(tmp, name));
   for (const dir of nested) {
     const held = nestedHolds(dir);
-    if (held) state.keep.push({ holds: held, kind: NESTED_KIND, path: dir });
-    else state.remove.push({ kind: "nested dir", path: dir });
+    if (held === null) state.remove.push({ kind: "nested dir", path: dir });
+    else state.keep.push({ holds: held, kind: NESTED_KIND, path: dir });
   }
   return { keep: state.keep, remove: state.remove };
 }

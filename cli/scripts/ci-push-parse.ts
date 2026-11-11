@@ -9,8 +9,12 @@ const WORD = /"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<bare>\S+)/g;
 const ENV_ASSIGN = /^[A-Za-z_]\w*=/;
 const WINDOWS_PATH = /^([A-Za-z]:[\\/]|\\\\)/;
 const HEADS = "refs/heads/";
+const FORCE_PREFIX = /^\+/;
 
-/** One ref a push names: the branch it updates, the ref it sends, the commit that ref is now, and the directory it runs in. */
+/**
+ * One ref a push names: the branch it updates, the ref it sends, the commit that ref is now, and the directory it runs
+ * in.
+ */
 export type PushedRef = { branch: string; src: string; sha: string; dir: string };
 type Push = { dir: string; refs: string[] };
 
@@ -20,14 +24,15 @@ function resolveDir(base: string, dir: string): string {
   return flavor.resolve(base, dir);
 }
 
-const wordsOf = (text: string): string[] =>
-  [...text.matchAll(WORD)].map(({ groups }) => String(groups?.double ?? groups?.single ?? groups?.bare));
+function wordsOf(text: string): string[] {
+  return [...text.matchAll(WORD)].map(({ groups }) => String(groups?.double ?? groups?.single ?? groups?.bare));
+}
 
 /** The push in `git <words>`, with the directory its `-C` options lead to; null for any other git command. */
 function parsePush(words: string[], base: string): Push | null {
   let dir = base;
   let i = 0;
-  for (; words[i]?.startsWith("-"); i++) {
+  for (; words[i]?.startsWith("-") === true; i++) {
     if (words[i] === DIR_OPTION) dir = resolveDir(dir, String(words[++i]));
     else if (words[i] === CONFIG_OPTION) i++;
   }
@@ -43,28 +48,28 @@ function pushesIn(command: string, cwd: string): Push[] {
   for (const segment of command.split(SEGMENT)) {
     const words = wordsOf(segment);
     while (ENV_ASSIGN.test(words[0] ?? "")) words.shift();
-    if (words[0] === CD && words[1]) here = resolveDir(here, words[1]);
+    if (words[0] === CD && words[1] !== undefined && words[1] !== "") here = resolveDir(here, words[1]);
     const push = words[0] === GIT ? parsePush(words.slice(1), here) : null;
-    if (push) found.push(push);
+    if (push !== null) found.push(push);
   }
   return found;
 }
 
 /** The ref one refspec of a push names, in `dir`; null for a delete, a tag, a detached HEAD or an unknown ref. */
 function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
-  const parts = spec.replace(/^\+/, "").split(":");
-  const src = String(parts[0]) || HEAD;
-  const dst = parts[1] ?? src;
+  const [given, target] = spec.replace(FORCE_PREFIX, "").split(":");
+  const src = given === "" || given === undefined ? HEAD : given;
+  const dst = target ?? src;
   const head = dst === HEAD ? git(["rev-parse", "--abbrev-ref", HEAD], dir).stdout.trim() : dst;
   const branch = head.startsWith(HEADS) ? head.slice(HEADS.length) : head;
   const sha = git(["rev-parse", "--verify", src], dir);
-  const skip = parts[0] === "" || branch === HEAD || branch.startsWith("refs/") || sha.code !== 0;
+  const skip = given === "" || branch === HEAD || branch.startsWith("refs/") || sha.code !== 0;
   return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
 /** Every branch ref the `git push` forms in `command` update, resolved in the directory each push runs in. */
 export function pushedRefs(git: Runner, command: string, cwd: string): PushedRef[] {
   return pushesIn(command, cwd).flatMap((p) =>
-    (p.refs.length ? p.refs : [HEAD]).flatMap((spec) => resolveSpec(git, p.dir, spec) ?? []),
+    (p.refs.length > 0 ? p.refs : [HEAD]).flatMap((spec) => resolveSpec(git, p.dir, spec) ?? []),
   );
 }

@@ -46,15 +46,25 @@ const blocked = [
   `${stockDir}/x/${nm}/y.md`,
 ];
 const dumps = ["cat", "head", "rg x", "find"];
-const win = (p: string) => `C:\\r\\${p.replaceAll("/", "\\")}`;
-const denied = (r: GateResult) => r?.type === "deny";
-const claude = (toolName: string, toolInput: ToolArgs) => processFatTools(camelCall(toolName, toolInput));
-const cursor = (tool_name: string, tool_input: ToolArgs) =>
-  processFatTools({ cursor_version: "1", tool_input, tool_name });
+function win(p: string) {
+  return `C:\\r\\${p.replaceAll("/", "\\")}`;
+}
+function denied(r: GateResult) {
+  return r?.type === "deny";
+}
+function claude(toolName: string, toolInput: ToolArgs) {
+  return processFatTools(camelCall(toolName, toolInput));
+}
+function cursor(toolName: string, toolInput: ToolArgs) {
+  return processFatTools({ cursor_version: "1", tool_input: toolInput, tool_name: toolName });
+}
 const shells: [string, Run][] = [
   ["claude", (command) => claude("Bash", { command })],
   ["codex", (command) => processFatTools({ model: "m", tool_input: { command }, tool_name: "bash", turn_id: "t" })],
-  ["antigravity", (CommandLine) => processFatTools({ toolCall: { args: { CommandLine }, name: "RunCommand" } })],
+  [
+    "antigravity",
+    (commandLine) => processFatTools({ toolCall: { args: { CommandLine: commandLine }, name: "RunCommand" } }),
+  ],
   ["cursor", (command) => cursor("shell", { command })],
 ];
 const tools: [string, Run][] = [
@@ -103,9 +113,12 @@ it("stock references: a match does not hide a deny segment around it", () => {
   expect(pathIsDenied(stockFile)).toBe(false);
 });
 
+function ignored(tool: string, input: ToolArgs) {
+  return updatedInputOf(claude(tool, input));
+}
+
 it("stock references: injects an ignore list without the dependency dir for a search rooted in them", () => {
   const rest = GLOB_IGNORE.filter((s) => s !== nm);
-  const ignored = (tool: string, input: ToolArgs) => updatedInputOf(claude(tool, input));
   expect(ignored("Glob", { path: stockDir, pattern: "*" }).ignore).toStrictEqual(rest);
   expect(ignored("Glob", { pattern: "*", targetDirectory: stockDir }).ignoreGlobs).toStrictEqual(rest);
   expect(ignored("Glob", { path: "src", pattern: "*" }).ignore).toStrictEqual(GLOB_IGNORE);
