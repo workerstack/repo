@@ -10,6 +10,7 @@ import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.con
 import { CARGO_PATH } from "./rust.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
+import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
 /** Where the git hooks live; sync points `core.hooksPath` here. */
@@ -21,8 +22,6 @@ const GIT_HOOKS = {
   "pre-push": "link --pre-push",
 } as const;
 const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
-/** The line width oxfmt formats to. */
-export const PRINT_WIDTH = 120;
 
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`), JSONC without trailing commas, and no

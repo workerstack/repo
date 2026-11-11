@@ -9,6 +9,8 @@ import type { PackageJson } from "../sync/workspace.ts";
 import { captureTool, pluginModules } from "./lint.ts";
 
 const SLOW = 60_000;
+/** `export const wide = "` is 21 columns and `"` 1 more, so this fill makes the line 121 columns. */
+const WIDE_FILL = 99;
 const temps: string[] = [];
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
@@ -78,6 +80,7 @@ const PLANTED = {
     'it.skipIf(process.platform === "win32")("on posix", () => {});\nit.skipIf(isCi)("on ci", () => {});\n',
   "src/home.ts": "export const home = (): string | undefined => process.env.HOME;\n",
   "src/clean.ts": "export const clean = 1;\n",
+  "src/wide.ts": `export const wide = "${"x".repeat(WIDE_FILL)}"\n`,
   "src/store.ts": "export class Store {}\nexport function parseRow(): void {}\n",
   "vite.config.ts": 'const plugins = "react";\nexport default { plugins };\n',
   "src/index.ts": 'export { clean } from "./clean.ts";\nexport const index = 1;\n',
@@ -116,6 +119,7 @@ const EXPECTED = [
   "src/store.ts typescript(no-extraneous-class): Unexpected empty class.",
   "src/todo.ts repo(todo-needs-id): TODO needs an issue or lesson ID: TODO(#123), TODO(ABC-123) or TODO(<lesson slug>)",
   "src/user.types.ts repo(types-file): a .types.ts file holds only exported types and interfaces; move this into a module",
+  "src/wide.ts repo(max-line-width): this line is 121 columns, over 120; split the string with + or a join",
   'vite.config.ts repo(config-file): a config file holds only imports and exports; move "plugins" into a module it imports',
 ];
 
@@ -137,6 +141,9 @@ it(
       .toSorted();
     expect([run.code, lines]).toStrictEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
+    expect(captureTool("oxlint", ["src/wide.ts"], root).stdout).toContain(
+      "src/wide.ts:1:121: error repo(max-line-width)",
+    );
   },
 );
 
