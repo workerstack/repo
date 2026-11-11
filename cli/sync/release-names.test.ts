@@ -52,8 +52,9 @@ it("ciJobNames lists the labelled matrix names, each shard its own, and the sing
     "skips",
     "no-node",
     "e2e (ubuntu-latest)",
-    "e2e (windows-latest 1/2)",
-    "e2e (windows-latest 2/2)",
+    "e2e (windows-latest 1/3)",
+    "e2e (windows-latest 2/3)",
+    "e2e (windows-latest 3/3)",
     "e2e (macos-latest)",
     "consumer",
   ]);

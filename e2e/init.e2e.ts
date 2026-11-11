@@ -3,7 +3,6 @@
  * registry into real consumer repos, then use what it installed. Init copies nothing:
  * `bun install` runs `repo sync` (postinstall), which generates the gitignored agent trees.
  */
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -12,222 +11,31 @@ import { beforeAll, describe, expect, inject, it } from "vitest";
 
 import { readEnv } from "../cli/env.ts";
 import { nodelessPath } from "../dev/nodeless-path.ts";
-import { installedBin, linkText } from "../dev/test-paths.ts";
-import { isRecord, isStringList, isStringMap } from "./json";
+import { installedBin } from "../dev/test-paths.ts";
+import {
+  claudeGate,
+  expectClean,
+  expectGatesPass,
+  expectPlantedFails,
+  expectSkipsChecked,
+  FLOATING,
+  GENERATED,
+  generatedHashes,
+  hashes,
+  hookCalls,
+  hookPayloads,
+  ignoredFiles,
+  installedVersion,
+  isPackageJson,
+  NON_NULL,
+  removeGenerated,
+  setHosts,
+} from "./init-helpers";
 import { PACKAGE_NAME } from "./registry";
-import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
+import { BROKEN_RUNTIME, Sandbox, tail } from "./sandbox";
 
 const version = inject("version");
-const oldVersion = inject("oldVersion");
 const registryUrl = inject("registryUrl");
-
-function expectClean(sb: Sandbox, r: Run) {
-  expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
-  sb.expectOk(r);
-}
-
-/** `repo turn` and `repo check` both fail the planted file's non-null assertion against an empty baseline. */
-async function expectPlantedFails(sb: Sandbox, env: Record<string, string>) {
-  const turn = await sb.run("bun", ["repo", "turn"], { env });
-  expect(turn.status, tail(turn.out)).toBe(1);
-  expect(turn.stderr).toContain(
-    "repo turn: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
-  );
-  expect(turn.stdout).toMatch(/^turn: 1 file · fmt ok · comments ok · lint 2 over baseline · /);
-  const check = await sb.run("bun", ["repo", "check"], { env });
-  expect(check.status, tail(check.out)).toBe(1);
-  expect(check.stderr).toContain(
-    "repo check: .repo/lint-baseline.json: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0",
-  );
-}
-
-const SKIP_REASON = "the lookup result is always present";
-const skipOf = (file: string, rule = "typescript/no-non-null-assertion") => ({
-  files: [file],
-  reason: SKIP_REASON,
-  rules: [rule],
-});
-
-/**
- * With `src/skipped.ts` planted: check reports the live skip and fails the one whose file is gone, leaving no
- * skip-free config behind, and sync refuses a skip of a rule the config never runs.
- */
-async function expectSkipsChecked(sb: Sandbox, original: string) {
-  const withSkips = (...skips: object[]) =>
-    original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
-  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
-  expectClean(sb, await sb.run("bun", ["repo", "sync"]));
-  const check = await sb.run("bun", ["repo", "check"]);
-  expect(check.status, tail(check.out)).toBe(1);
-  expect(check.stdout).toContain(
-    `repo check: skip typescript/no-non-null-assertion in src/skipped.ts: 1 hit (${SKIP_REASON})\n` +
-      "repo check: skips: typescript/no-non-null-assertion 1\n",
-  );
-  expect(check.stderr).toContain(
-    'repo check: lint.skip[1]: "src/gone.ts" matches no file; fix the path or delete the entry',
-  );
-  expect(fs.readdirSync(sb.repo).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
-  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts", "repo/no-modul-state")));
-  const sync = await sb.run("bun", ["repo", "sync"]);
-  expect(sync.status, tail(sync.out)).toBe(1);
-  expect(sync.stderr).toContain(
-    'repo sync: workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
-  );
-}
-
-/** On a clean tree `repo turn` has nothing to gate and `repo check` passes. */
-async function expectGatesPass(sb: Sandbox, env: Record<string, string>) {
-  const turn = await sb.run("bun", ["repo", "turn"], { env });
-  expect({ status: turn.status, stdout: turn.stdout }, tail(turn.out)).toStrictEqual({
-    status: 0,
-    stdout: "turn: no changes\n",
-  });
-  expectClean(sb, await sb.run("bun", ["repo", "check"], { env }));
-}
-
-async function installedVersion(sb: Sandbox) {
-  return sb.expectOk(await sb.cli("version")).stdout.trim();
-}
-
-/** A package.json as init leaves it: scripts and devDependencies are always there. */
-type PackageJson = { scripts: Record<string, string>; devDependencies: Record<string, string> };
-
-function isPackageJson(v: unknown): v is PackageJson {
-  return isRecord(v) && isStringMap(v.scripts) && isStringMap(v.devDependencies);
-}
-
-function isClaudeSettings(v: unknown): v is { permissions: { allow: string[] } } {
-  return isRecord(v) && isRecord(v.permissions) && isStringList(v.permissions.allow);
-}
-
-/** An agent host's hook config: hook groups keyed by event, when it has any. */
-function isHookConfig(v: unknown): v is { hooks?: Record<string, unknown> } {
-  return isRecord(v) && (v.hooks === undefined || isRecord(v.hooks));
-}
-
-/** Every path `repo sync` generates for the default config; none is tracked in the consumer. */
-const GENERATED = [".claude", ".codex", ".agents", ".grok", ".cursor", ".oxlintrc.json", ".oxfmtrc.jsonc", "knip.json"];
-
-const NON_NULL = 'export function first(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
-const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
-
-/** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
-const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees)(?:\/|$)/;
-
-const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
-
-/** One line per file (sha256 of its bytes) and per link (its target) that `keep` accepts, links never followed. */
-function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[] {
-  const lines: string[] = [];
-  for (const name of fs.readdirSync(path.join(root, dir)).sort()) {
-    const rel = dir ? `${dir}/${name}` : name;
-    if (SKIPPED.test(rel)) continue;
-    const abs = path.join(root, rel);
-    const stat = fs.lstatSync(abs);
-    if (stat.isSymbolicLink()) {
-      if (keep(rel)) lines.push(`${rel} -> ${linkText(abs)}`);
-    } else if (stat.isDirectory()) lines.push(...hashes(root, keep, rel));
-    else if (keep(rel)) lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
-  }
-  return lines;
-}
-
-/**
- * The ignored, untracked files and links git sees: what `repo sync` generated. Git for Windows walks into a
- * junction and lists the files behind it, so each of those is folded back into the link that holds it.
- */
-async function ignoredFiles(sb: Sandbox) {
-  const out = (await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z")).stdout;
-  const listed = out.split("\0").filter((f) => f && !SKIPPED.test(f));
-  return [...new Set(listed.map((rel) => holdingLink(sb.repo, rel) ?? rel))];
-}
-
-/** The nearest parent of `rel` that is a link, or null when every parent is a real directory. */
-function holdingLink(root: string, rel: string): string | null {
-  const parts = rel.split("/");
-  for (let i = 1; i < parts.length; i++) {
-    const parent = parts.slice(0, i).join("/");
-    if (fs.lstatSync(path.join(root, parent)).isSymbolicLink()) return parent;
-  }
-  return null;
-}
-
-/** Removes a generated file, or a generated link without touching what it points to. */
-function removeGenerated(abs: string) {
-  if (fs.lstatSync(abs, { throwIfNoEntry: false })?.isSymbolicLink()) fs.unlinkSync(abs);
-  else fs.rmSync(abs, { force: true });
-}
-
-async function generatedHashes(sb: Sandbox) {
-  const ignored = new Set(await ignoredFiles(sb));
-  return hashes(sb.repo, (rel) => ignored.has(rel));
-}
-
-/** Overwrite the config's `agents.hosts` list. */
-function setHosts(sb: Sandbox, hosts: string[]) {
-  const text = sb.read("workerstack.config.ts");
-  expect(text).toMatch(/hosts: \[[^\]]*\]/);
-  sb.write("workerstack.config.ts", text.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify(hosts)}`));
-}
-
-type HookCall = { file: string; event: string; matcher?: string; command: string };
-
-/** Every command hook the consumer's agent hosts would run. */
-function hookCalls(sb: Sandbox): HookCall[] {
-  const files = [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json"];
-  const grokDir = path.join(sb.repo, ".grok", "hooks");
-  for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json")) files.push(`.grok/hooks/${f}`);
-  const calls: HookCall[] = [];
-  for (const file of files) {
-    const hooks = sb.json(file, isHookConfig).hooks ?? {};
-    for (const [event, groups] of Object.entries(hooks)) {
-      if (!Array.isArray(groups)) continue;
-      for (const g of groups as { matcher?: string; hooks?: { type: string; command: string }[] }[]) {
-        for (const h of g.hooks ?? [])
-          if (h.type === "command") calls.push({ command: h.command, event, file, matcher: g.matcher });
-      }
-    }
-  }
-  return calls;
-}
-
-function claudeGate(sb: Sandbox) {
-  const gate = hookCalls(sb).find(
-    (c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"),
-  );
-  expect(gate, "claude gate hook").toBeDefined();
-  return gate!;
-}
-
-const TOOL_CALLS = [
-  { tool_input: { file_path: "src/index.ts" }, tool_name: "Read" },
-  { tool_input: { command: "git status", description: "status" }, tool_name: "Bash" },
-  { tool_input: { description: "look", prompt: "List the src folder.", subagent_type: "scout" }, tool_name: "Agent" },
-];
-
-function hookPayloads(sb: Sandbox, call: HookCall) {
-  const base = {
-    cwd: sb.repo,
-    hook_event_name: call.event,
-    session_id: "e2e-session",
-    transcript_path: path.join(sb.root, "transcript.jsonl"),
-  };
-  if (call.event === "PreToolUse" || call.event === "PostToolUse") {
-    const re = new RegExp(`^(?:${call.matcher || ".*"})$`);
-    return TOOL_CALLS.filter((t) => re.test(t.tool_name)).map((t) => ({
-      ...base,
-      ...t,
-      tool_input: t.tool_name === "Read" ? { file_path: path.join(sb.repo, "src/index.ts") } : t.tool_input,
-      ...(call.event === "PostToolUse" ? { tool_response: { success: true } } : {}),
-    }));
-  }
-  if (call.event === "UserPromptSubmit") return [{ ...base, prompt: "Summarize src/index.ts." }];
-  if (call.event === "SessionStart") return [{ ...base, source: "startup" }];
-  // Create then Remove, in settings order, so the sandbox ends with no worktree.
-  if (call.event === "WorktreeCreate") return [{ ...base, name: "e2e" }];
-  if (call.event === "WorktreeRemove") return [{ ...base, worktree_path: path.join(sb.repo, ".worktrees", "e2e") }];
-  return [{ ...base, stop_hook_active: false }];
-}
 
 describe("bunx", () => {
   describe("fresh repo", () => {
@@ -613,172 +421,5 @@ describe("bunx", () => {
       expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
       expect((await sb.git("status", "--porcelain")).stdout).toBe("");
     });
-  });
-
-  it("an empty dir with no git inits from the packed build: it runs git init, writes the trees and passes both gates", async () => {
-    const sb = new Sandbox("empty");
-    const init = await sb.launch(PACKAGE_NAME, "init");
-    expectClean(sb, init);
-    expect(init.out).toContain("repo init: ran git init");
-    for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
-    expect((await sb.git("config", "core.hooksPath")).stdout.trim()).toBe(".githooks");
-    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
-    expectClean(sb, await sb.run("bun", ["repo", "check"]));
-  });
-
-  it("a copied install from the older build migrates when bumped, writes the release ci.yml and keeps its own rule", async () => {
-    const sb = new Sandbox("upgrade");
-    await sb.scaffold();
-    expectClean(sb, await sb.launch(`${PACKAGE_NAME}@${oldVersion}`, "init", "--yes", "--packs", "none"));
-    expect(await installedVersion(sb)).toBe(oldVersion);
-    expect(sb.exists(".rulesync/scripts"), "the older init copies the scripts").toBe(true);
-    const own = "Our team notes: ship on Fridays only with a rollback plan.";
-    sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
-    const agent =
-      "---\nname: release-notes\ndescription: Drafts our release notes.\n---\nWrite the notes from the merged pull requests.\n";
-    const skill =
-      "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
-    sb.write(".rulesync/subagents/release-notes.md", agent);
-    sb.write(".agents/skills/deploy-notes/SKILL.md", skill);
-    await sb.commit("older init and own rule");
-
-    // The bump's install runs the postinstall sync, which migrates the copied install.
-    const bump = await sb.run("bun", ["add", "-d", `${PACKAGE_NAME}@${version}`]);
-    expect(await installedVersion(sb)).toBe(version);
-    // Every pack the older build wrote is a pack again, so the bump's own sync migrates and writes the release ci.yml.
-    expect(bump.out).not.toContain("is not a pack");
-    const migrate = bump;
-    expectClean(sb, migrate);
-    // The new build rewrites the older build's legacy header line with its own.
-    expect(sb.read(".github/workflows/ci.yml")).toMatch(/^# @generated by @workerstack\/repo\n/);
-    expect(migrate.out).toContain("repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md");
-    expect(migrate.out).toContain("and removed the copied .rulesync/; commit the result");
-    expect(sb.exists(".rulesync")).toBe(false);
-    // The upgraded rule has no paths, so the handover moves it below the region of AGENTS.md.
-    expect(migrate.out).toContain("repo sync: moved .repo/rules/team.md into AGENTS.md below repo:rules");
-    expect(sb.exists(".repo/rules/team.md")).toBe(false);
-    expect(sb.read("AGENTS.md").split("<!-- /repo:rules -->\n")[1]).toContain(own);
-    expect(migrate.out).toContain(
-      "repo sync: moved .rulesync/subagents/release-notes.md to .repo/subagents/release-notes.md",
-    );
-    expect(migrate.out).toContain("repo sync: moved .agents/skills/deploy-notes to .repo/skills/deploy-notes");
-    expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
-    expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
-    expect(sb.read(".claude/agents/release-notes.md")).toContain("Write the notes from the merged pull requests.");
-    expect(sb.read(".claude/skills/deploy-notes/SKILL.md")).toBe(skill);
-
-    await sb.commit("migrated");
-    const tracked = (await sb.git("ls-files")).stdout.split("\n").filter(Boolean);
-    expect(tracked.filter((f) => /^(?:\.rulesync|\.claude|\.codex|\.agents|\.grok|\.cursor)\//.test(f))).toStrictEqual(
-      [],
-    );
-    expect(tracked).toContain("AGENTS.md");
-    const again = await sb.run("bun", ["install"]);
-    expectClean(sb, again);
-    expect(again.out).not.toContain("moved");
-    const second = await sb.run("bun", ["repo", "sync"]);
-    expectClean(sb, second);
-    expect(second.stdout).toContain("up to date");
-    expect(second.out).not.toContain("moved");
-    expect(sb.read(".repo/subagents/release-notes.md")).toBe(agent);
-    expect(sb.read(".repo/skills/deploy-notes/SKILL.md")).toBe(skill);
-    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
-    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
-  });
-});
-
-describe("a two-package workspace", () => {
-  it("gives each package an AGENTS.md holding its pathless rules, scoped rules, nested skills and a deps index, in sync", async () => {
-    const sb = new Sandbox("packages");
-    await sb.scaffold({ workspaces: ["packages/*"] });
-    sb.write(
-      "packages/api/package.json",
-      `${JSON.stringify({ main: "src/main.ts", name: "@acme/api", private: true, sideEffects: false })}\n`,
-    );
-    sb.write("packages/api/src/main.ts", "export const main = 1;\n");
-    sb.write("packages/api/references/INDEX.md", "# Api\n");
-    sb.write(
-      "packages/web/package.json",
-      `${JSON.stringify({ dependencies: { "@acme/api": "workspace:*" }, name: "@acme/web", private: true, sideEffects: false })}\n`,
-    );
-    sb.write("packages/web/references/INDEX.md", "# Web\n");
-    sb.write("packages/web/src/api/a.ts", "export const a = 1;\n");
-    sb.write(
-      "packages/web/src/main.ts",
-      'import { main as api } from "@acme/api";\nimport { a } from "./api/a.ts";\n\nexport const main = api + a;\n',
-    );
-    sb.write(
-      "packages/web/.repo/rules/components.md",
-      "---\ndescription: Components\n---\nComponents live in src/components and use the ui kit.\n",
-    );
-    sb.write("packages/web/.repo/rules/api.md", "---\ndescription: Api\npaths:\n  - src/api/**\n---\nApi rule.\n");
-    sb.write("packages/web/.repo/skills/deploy/SKILL.md", "---\nname: deploy\ndescription: Ships web.\n---\nDeploy.\n");
-    await sb.commit("workspace");
-    expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
-
-    const unhashed = (rel: string) => sb.read(rel).replace(/^<!-- repo:rules [\da-f]{8} -->/, "<!-- repo:rules -->");
-    const pointer = "<!-- repo:rules -->\nStart at references/INDEX.md in this package.\n";
-    expect(unhashed("packages/web/AGENTS.md")).toBe(
-      `${pointer}\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n<!-- /repo:rules -->\n\nComponents live in src/components and use the ui kit.\n`,
-    );
-    expect(unhashed("packages/api/AGENTS.md")).toBe(`${pointer}<!-- /repo:rules -->\n`);
-    for (const gone of [
-      "packages/web/CLAUDE.md",
-      "packages/web/.repo/rules/components.md",
-      ".claude/rules/packages/web/components.md",
-    ]) {
-      expect(sb.exists(gone), gone).toBe(false);
-    }
-    expect(linkText(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
-    expect(sb.read("AGENTS.md")).not.toContain("Components live");
-    const deps = /<!-- repo:deps [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
-      sb.read("packages/web/references/INDEX.md"),
-    )?.[1];
-    expect(deps).toBe("- [@acme/api](../../api/references/INDEX.md)\n");
-
-    await sb.commit("after init");
-    expect(await ignoredFiles(sb)).toContain("packages/web/.claude/skills/deploy");
-    const tracked = (await sb.git("ls-files")).stdout.split("\n");
-    expect(tracked).toStrictEqual(expect.arrayContaining(["packages/web/AGENTS.md", "packages/api/AGENTS.md"]));
-    expect((await sb.git("status", "--porcelain")).stdout).toBe("");
-    expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
-    expectClean(sb, await sb.run("bun", ["repo", "check"]));
-    const webManifest = sb.read("packages/web/package.json");
-    sb.write("packages/web/package.json", webManifest.replace('"private":true,', ""));
-    const missing = await sb.run("bun", ["repo", "check"]);
-    expect(missing.status, tail(missing.out)).toBe(1);
-    expect(missing.stderr).toContain(
-      'repo check: packages/web/package.json: "private" is missing; set true, or false to publish it',
-    );
-    sb.write("packages/web/package.json", webManifest);
-
-    // Scopes are the package names' last segments; a commit under any other is refused.
-    sb.write("packages/web/src/api/a.test.ts", "export const a = 1;\n");
-    await sb.git("add", "packages/web/src/api/a.test.ts");
-    const scoped = await sb.run("git", ["commit", "-q", "-m", "feat(app): add a test"]);
-    expect(scoped.status, tail(scoped.out)).toBe(1);
-    expect(scoped.stderr).toContain(
-      '  - unknown scope "app"; use a workspace package name or one of repo, deps, ci (api, web)\n',
-    );
-    expect(sb.expectOk(await sb.run("git", ["commit", "-q", "-m", "feat(web): add a test"])).status).toBe(0);
-  });
-});
-
-describe("existing repo content survives init", () => {
-  it("keeps user scripts, dependencies, AGENTS.md text and Claude settings keys", async () => {
-    const sb = new Sandbox("existing");
-    await sb.scaffold({ devDependencies: { typescript: "^5.9.3" }, scripts: { build: "tsc -p ." } });
-    sb.write("AGENTS.md", "# Team rules\n\nAlways run the linter.\n");
-    sb.write(".claude/settings.json", `${JSON.stringify({ permissions: { allow: ["Bash(make test)"] } }, null, 2)}\n`);
-    await sb.commit("existing content");
-    expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
-
-    const pkg = sb.json("package.json", isPackageJson);
-    expect(pkg.scripts.build).toBe("tsc -p .");
-    expect(pkg.devDependencies.typescript).toBe("^5.9.3");
-    expect(sb.read("AGENTS.md")).toContain("Always run the linter.");
-    expect(sb.exists(".repo/rules/agents.md")).toBe(false);
-    expect(sb.json(".claude/settings.json", isClaudeSettings).permissions.allow).toContain("Bash(make test)");
-    expect((await sb.git("ls-files")).stdout.split("\n")).toContain("AGENTS.md");
   });
 });
