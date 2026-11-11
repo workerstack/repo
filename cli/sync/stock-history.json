@@ -2474,6 +2474,7 @@
   "cli/scripts/doctor-status.test.ts": ["29e929273f9ecbac", "38e4571932d2298c", "4c1116a4796306a3"],
   "cli/scripts/doctor-which.test.ts": ["20f23cb941e411ae", "3e1ca731f99806f1", "4d189c56f7f39fc2"],
   "cli/scripts/doctor.test.ts": [
+    "078f7f9f9e660f85",
     "2eee92ac9c066b9c",
     "3680a0428d800cf1",
     "4e7ee899f0fca7dd",
