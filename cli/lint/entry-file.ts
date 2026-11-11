@@ -19,11 +19,12 @@ function isBin(filename: string): boolean {
   return manifest.bins.some((bin) => path.resolve(path.dirname(manifest.file), bin) === self);
 }
 
-const importsMain = (program: ESTree.Program): boolean =>
-  program.body.some(
+function importsMain(program: ESTree.Program): boolean {
+  return program.body.some(
     (statement) =>
       statement.type === "ImportDeclaration" && statement.specifiers.some((item) => item.local.name === ENTRY_EXPORT),
   );
+}
 
 /** `main(…)`, `await main(…)` or `void main(…)` as a statement. */
 function callsMain(statement: Statement): boolean {
@@ -44,13 +45,13 @@ export const entryFile: CreateRule = {
     return {
       Program(program) {
         const imported = importsMain(program);
-        let called = false;
+        let isCalled = false;
         for (const statement of program.body) {
           if (statement.type === "ImportDeclaration") continue;
-          if (imported && !called && callsMain(statement)) called = true;
+          if (imported && !isCalled && callsMain(statement)) isCalled = true;
           else context.report({ message: MESSAGE, node: statement });
         }
-        if (!called) context.report({ message: MISSING, node: program });
+        if (!isCalled) context.report({ message: MISSING, node: program });
       },
     };
   },

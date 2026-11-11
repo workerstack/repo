@@ -24,8 +24,12 @@ type Deps = { run: CargoRun; coverage: boolean; floors: string };
 /** What the test run left: its output (for the counts) and, under coverage, the per-file rows. */
 type Tested = { text: string; rows: Record<string, RustFloor> | null };
 
-const outputOf = (result: CargoResult): string => `${result.stdout}${result.stderr}`;
-const failed = (lines: string[]): Gate => fail(FAILED_LABEL, lines);
+function outputOf(result: CargoResult): string {
+  return `${result.stdout}${result.stderr}`;
+}
+function failed(lines: string[]): Gate {
+  return fail(FAILED_LABEL, lines);
+}
 
 /** The first pin problem of the tools this run needs: nextest always, llvm-cov only under coverage. */
 function pinLine(root: string, deps: Deps): string | null {

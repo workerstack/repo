@@ -11,11 +11,13 @@ const CONSTANTS_PACKAGE = /^(?:@[^/]+\/)?[^/]*constants(?:\/|$)/;
 const MEANINGFUL = /[\p{L}\p{N}]/u;
 
 /** Whether an import of `specifier` reaches a constants file or a constants package. */
-export const isConstantsModule = (specifier: string): boolean =>
-  CONSTANTS_FILE.test(specifier) || CONSTANTS_PACKAGE.test(specifier);
+export function isConstantsModule(specifier: string): boolean {
+  return CONSTANTS_FILE.test(specifier) || CONSTANTS_PACKAGE.test(specifier);
+}
 
-export const isConstDeclaration = (declaration: ts.VariableDeclaration): boolean =>
-  (ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const) !== 0;
+export function isConstDeclaration(declaration: ts.VariableDeclaration): boolean {
+  return (ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const) !== 0;
+}
 
 /** `node` without the parentheses, `as` and `satisfies` around it, which change a type and never a value. */
 function unwrapped(node: ts.Expression): ts.Expression {
@@ -26,8 +28,9 @@ function unwrapped(node: ts.Expression): ts.Expression {
 }
 
 /** A string literal that says something: not empty and not punctuation alone. */
-export const isMeaningful = (node: ts.Expression): node is ts.StringLiteralLike =>
-  ts.isStringLiteralLike(node) && MEANINGFUL.test(node.text);
+export function isMeaningful(node: ts.Expression): node is ts.StringLiteralLike {
+  return ts.isStringLiteralLike(node) && MEANINGFUL.test(node.text);
+}
 
 /** The string a `const` holds, when its initializer is a literal that says something; null for any other. */
 export function constString(declaration: ts.VariableDeclaration): string | null {

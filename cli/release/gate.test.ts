@@ -15,7 +15,9 @@ describe("repo release gate passes", () => {
     expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual({
       code: 0,
       err: "",
-      out: `repo release gate: ${NAME}@0.2.0 is ${short}, version 0.2.0, changelog ok · waiting for ci on ${short} (run 7)… · passed\n`,
+      out:
+        `repo release gate: ${NAME}@0.2.0 is ${short}, version 0.2.0, changelog ok · ` +
+        `waiting for ci on ${short} (run 7)… · passed\n`,
     });
   });
 
@@ -25,24 +27,26 @@ describe("repo release gate passes", () => {
     const sha = gitIn(w.work, "rev-parse", "HEAD");
     commit(w, "chore: later", { "later.txt": "x\n" });
     const calls: string[] = [];
-    expect((await runGate(w, [`${NAME}@0.2.0`], ghFor("main", {}, calls))).code).toBe(0);
+    const got = await runGate(w, [`${NAME}@0.2.0`], ghFor("main", {}, calls));
+    expect(got.code).toBe(0);
     expect(calls).toContain(`run list --commit ${sha} --workflow ci.yml --json ${LIST}`);
   });
 });
 
-describe("repo release gate on a ci that did not pass", () => {
-  const setup = () => {
-    const w = world({}, false);
-    return { short: tagRelease(w, { version: "0.2.0" }), w };
-  };
+function setup() {
+  const w = world({}, false);
+  return { short: tagRelease(w, { version: "0.2.0" }), w };
+}
 
+describe("repo release gate on a ci that did not pass", () => {
   it("prints the failed jobs and tells you to release the next version", async () => {
     const { w, short } = setup();
     const got = await runGate(w, [`${NAME}@0.2.0`], ghFor("main", { conclusion: "failure" }));
     expect(got.code).toBe(1);
     expect(got.out).toContain("failed: test; logs below\nboom\n");
     expect(got.err).toBe(
-      `repo release gate: CI failed on ${short}; a tag is never moved, so fix it in a new commit and release the next version\n`,
+      `repo release gate: CI failed on ${short}; a tag is never moved, ` +
+        "so fix it in a new commit and release the next version\n",
     );
   });
 
@@ -70,7 +74,8 @@ describe("repo release gate on a branch ci does not run on", () => {
     gitIn(w.work, "remote", "set-head", "origin", "-d");
     const got = await runGate(w, [`${NAME}@0.2.0`], ghFor("main", { run: false }));
     expect(got.err).toBe(
-      `repo release gate: no CI will run for ${short} (nothing to wait on: ci runs on pushes to the default branch and on pull requests, and main has neither); release from a branch ci runs on\n`,
+      `repo release gate: no CI will run for ${short} (nothing to wait on: ci runs on pushes to the default branch ` +
+        "and on pull requests, and main has neither); release from a branch ci runs on\n",
     );
   });
 });

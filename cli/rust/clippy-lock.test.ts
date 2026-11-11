@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
-import { clippyHits, type CargoResult, type CargoRun } from "./clippy.ts";
+import { clippyHits, type CargoResult } from "./clippy.ts";
 import { cargoLock } from "./fixtures/cargo-lock.ts";
 
 const MISSING_LOCK = "Cargo.lock is missing; run `cargo generate-lockfile` and commit it";
@@ -20,10 +20,10 @@ afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
 /** A runner that records its calls and returns an empty run with exit `status`. */
 function cargo(status: number, extra: Partial<CargoResult> = {}) {
   const calls: string[] = [];
-  const run: CargoRun = (root) => {
+  function run(root: string): CargoResult {
     calls.push(root);
     return { missing: false, status, stderr: "", stdout: "", ...extra };
-  };
+  }
   return { calls, run };
 }
 

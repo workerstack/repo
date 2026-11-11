@@ -28,21 +28,31 @@ export type OldSource = {
   feats: boolean;
 };
 
-export const noTagYet = (tag: string): string => `no tag ${tag} for the version in package.json; nothing to compare`;
-export const noTarballAt = (tarball: string): string => `no tarball at ${tarball}`;
-export const installFailed = (what: string, why: string): string => `could not install ${what}: ${why}`;
+export function noTagYet(tag: string): string {
+  return `no tag ${tag} for the version in package.json; nothing to compare`;
+}
+export function noTarballAt(tarball: string): string {
+  return `no tarball at ${tarball}`;
+}
+export function installFailed(what: string, why: string): string {
+  return `could not install ${what}: ${why}`;
+}
 
-const where = (change: Change): string =>
-  change.name === null ? `"${change.key}"` : `\`${change.name}\` in "${change.key}"`;
+function where(change: Change): string {
+  return change.name === null ? `"${change.key}"` : `\`${change.name}\` in "${change.key}"`;
+}
 
 /** The refusal for a removed or narrowed change that no breaking commit covers. */
 export function breakingLine(change: Change, label: string, tag: string): string {
   const none = `and no commit since ${tag} is breaking`;
   if (change.kind === "removed") return `${where(change)} was removed since ${label}, ${none}: ${BREAKING_FIX}`;
-  return `${where(change)} narrowed since ${label} (a ${label} value no longer fits it), ${none}: mark it breaking, or keep the old shape`;
+  const lost = `narrowed since ${label} (a ${label} value no longer fits it)`;
+  return `${where(change)} ${lost}, ${none}: mark it breaking, or keep the old shape`;
 }
 
-const plural = (count: number, noun: string): string => `${count} ${noun}${count === 1 ? "" : "s"}`;
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
 
 /** The refusal for added or widened changes that no feat commit covers. */
 export function featLine(changes: readonly Change[], label: string, tag: string): string {
@@ -51,14 +61,18 @@ export function featLine(changes: readonly Change[], label: string, tag: string)
   const named = names.length === 1 ? names.map(where) : [plural(names.length, "name")];
   const items = [...subpaths, ...(names.length === 0 ? [] : named)];
   const verb = changes.length === 1 ? "is" : "are";
-  return `${items.join(AND)} ${verb} new or widened since ${label}, and no commit since ${tag} is a feat: commit them as \`feat\``;
+  const tail = `and no commit since ${tag} is a feat: commit them as \`feat\``;
+  return `${items.join(AND)} ${verb} new or widened since ${label}, ${tail}`;
 }
 
 /** The counts of the ok line. */
 export type Counts = { subpaths: number; added: number; widened: number; breaking: number };
-export const countsPart = ({ subpaths, added, widened, breaking }: Counts): string =>
-  `${plural(subpaths, "code subpath")}${PART_SEPARATOR}${added} added, ${widened} widened, ${breaking} breaking`;
-export const featsPart = (count: number): string => `feat commits: ${count}`;
+export function countsPart({ subpaths, added, widened, breaking }: Counts): string {
+  return `${plural(subpaths, "code subpath")}${PART_SEPARATOR}${added} added, ${widened} widened, ${breaking} breaking`;
+}
+export function featsPart(count: number): string {
+  return `feat commits: ${count}`;
+}
 /** The file whose presence makes this a Rust repo. */
 export const CARGO_MANIFEST: string = "Cargo.toml";
 export const NOTHING_TO_COMPARE: string = "no publishable crate and no public package; nothing to compare";

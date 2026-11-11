@@ -11,11 +11,13 @@ import { packageRoot, publicSurface } from "./public-surface.ts";
 afterEach(removePlanted);
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
 const BUILD = { compilerOptions: { outDir: "dist", rootDir: "src" } };
 const A = "export const a = 1;\n";

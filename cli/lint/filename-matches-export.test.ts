@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { filenameMatchesExport } from "./filename-matches-export.ts";
 
-const messagesOf = (file: string, code: string) =>
-  reportsOf(filenameMatchesExport, { [file]: code }).map((report) => report.message);
+function messagesOf(file: string, code: string) {
+  return reportsOf(filenameMatchesExport, { [file]: code }).map((report) => report.message);
+}
 
 describe("filename-matches-export passes", () => {
   it.each([

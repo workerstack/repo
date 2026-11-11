@@ -5,11 +5,13 @@ import { cleanManifest, CLEAN_FILES, fixtureTarball } from "./fixtures/tarball.t
 import { tarballLint } from "./tarball-lint.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
 const TIMEOUT = 120_000;
 afterEach(removePlanted);
@@ -23,13 +25,16 @@ const BOTH_FILES = {
   "index.cjs": "exports.a = 1;\n",
   "index.d.cts": "export declare const a: number;\n",
 };
-/** An ESM package whose top-level `types` exists but whose `exports` lists no types: untyped under bundler and node16. */
-const attwOnly = (lines: string[]): string[] => lines.filter((line) => line.startsWith("attw: "));
-const untypedExports = () =>
-  fixtureTarball(cleanManifest({ exports: { ".": "./index.js" }, types: "./types/index.d.ts" }), {
+/** An ESM package whose top-level `types` exists but whose `exports` lists no types: untyped under bundler, node16. */
+function attwOnly(lines: string[]): string[] {
+  return lines.filter((line) => line.startsWith("attw: "));
+}
+function untypedExports() {
+  return fixtureTarball(cleanManifest({ exports: { ".": "./index.js" }, types: "./types/index.d.ts" }), {
     "index.js": CLEAN_FILES["index.js"] ?? "",
     "types/index.d.ts": CLEAN_FILES["index.d.ts"] ?? "",
   });
+}
 
 describe("tarballLint", () => {
   it("passes a clean ESM package", { timeout: TIMEOUT }, async () => {
@@ -67,7 +72,7 @@ describe("tarballLint attw", () => {
   });
 
   it("ignores node10 and node16-cjs for an ESM-only package", { timeout: TIMEOUT }, async () => {
-    const exports = { ".": CLEAN_ESM(), "./sub": CLEAN_ESM() };
+    const exports = { ".": cleanEsm(), "./sub": cleanEsm() };
     const got = await tarballLint(fixtureTarball(cleanManifest({ exports }), CLEAN_FILES));
     expect(got).toStrictEqual([]);
   });
@@ -84,6 +89,6 @@ describe("tarballLint attw", () => {
   });
 });
 
-function CLEAN_ESM() {
+function cleanEsm() {
   return conditions("./index.d.ts", "./index.js");
 }

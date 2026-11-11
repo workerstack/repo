@@ -14,11 +14,11 @@ afterEach(() => {
   fs.rmSync(dir, { force: true, recursive: true });
 });
 
-const write = (value: unknown): string => {
+function write(value: unknown): string {
   const file = path.join(dir, "floors.json");
   fs.writeFileSync(file, typeof value === "string" ? value : JSON.stringify(value));
   return file;
-};
+}
 const TS = { branches: 80, functions: 70, lines: 60, statements: 90 };
 const RUST = { functions: 66, lines: 66, regions: 58 };
 

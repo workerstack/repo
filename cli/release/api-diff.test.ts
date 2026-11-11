@@ -7,11 +7,13 @@ import { diffFixtures, JS } from "./fixtures/api-diff-world.ts";
 import { apiWorld } from "./fixtures/api-world.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
 const TIMEOUT = 120_000;
 let changes: Change[] = [];
@@ -23,8 +25,11 @@ beforeAll(() => {
 afterAll(removePlanted);
 
 /** The kind of change of each name of one subpath, by name. */
-const kinds = (key: string): Record<string, string> =>
-  Object.fromEntries(changes.filter((change) => change.key === key).map((change) => [change.name, change.kind]));
+function kinds(key: string): Record<string, string> {
+  return Object.fromEntries(
+    changes.filter((change) => change.key === key).map((change) => [String(change.name), change.kind]),
+  );
+}
 
 describe("apiDiff subpaths", () => {
   it("reports a removed code subpath and an added one, not JSON or wildcard subpaths", () => {
@@ -110,7 +115,7 @@ describe("apiDiff copies", () => {
 
 describe("apiDiff names, all together", () => {
   it("reports nothing else", () => {
-    expect(Object.keys(kinds(".")).sort()).toStrictEqual(
+    expect(Object.keys(kinds(".")).toSorted()).toStrictEqual(
       [
         "removedConst",
         "newConst",
@@ -132,7 +137,7 @@ describe("apiDiff names, all together", () => {
         "useDepB",
         "LosesValue",
         "GainsValue",
-      ].sort(),
+      ].toSorted(),
     );
   });
 });

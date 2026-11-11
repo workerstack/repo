@@ -15,8 +15,12 @@ function messagesOf(code: string): string[] {
   };
   return reportsOf(publicJsdoc, files).map((report) => report.message);
 }
-const about = (label: string, text: string) => `\`${label}\` is public through "." and ${text}`;
-const documented = (head: string, body: string[]): string => `${DOC}${head} {\n${body.join("\n")}\n}`;
+function about(label: string, text: string) {
+  return `\`${label}\` is public through "." and ${text}`;
+}
+function documented(head: string, body: string[]): string {
+  return `${DOC}${head} {\n${body.join("\n")}\n}`;
+}
 
 type Case = { name: string; code: string; messages: string[] };
 const MEMBERS: Case[] = [
@@ -50,6 +54,11 @@ const MEMBERS: Case[] = [
     messages: [about("C.a", MISSING)],
     name: "a parameter property and a literal key",
   },
+  {
+    code: documented("export class C", ["1: string = '';", "2n: string = '';"]),
+    messages: [about("C.1", MISSING), about("C.2", MISSING)],
+    name: "numeric and bigint member keys",
+  },
 ];
 
 it.each(MEMBERS)("reports $name", ({ code, messages }) => {
@@ -62,7 +71,8 @@ const SKIPPED = [
   documented("export class C", [`${DOC}static { init(); }`, `${DOC}[Symbol.iterator](): void {}`]),
   documented("export class C", [`${DOC}get a(): string { return ''; }`, "set a(value: string) {}"]),
   documented("export class C", [`${DOC}m(a: string): void;`, `${DOC}m(a: number): void;`, "m(a: unknown): void {}"]),
-  `${DOC}export function f(a: string): void;\n${DOC}export function f(a: number): void;\nexport function f(a: unknown): void {}`,
+  `${DOC}export function f(a: string): void;\n${DOC}export function f(a: number): void;\n` +
+    "export function f(a: unknown): void {}",
   `${DOC}export type Pick<T> = T extends { a: infer U } ? U : never;`,
 ];
 

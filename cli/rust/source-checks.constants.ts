@@ -27,7 +27,8 @@ export const BLOCK_COMMENT_MESSAGE: string =
   "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 /** The advice that follows the attribute a hit names. */
 export const ATTRIBUTE_ADVICE: string =
-  "sets a lint level in code; lint levels live on the command line, so fix the code or add a lint.skip entry with a reason";
+  "sets a lint level in code; lint levels live on the command line, " +
+  "so fix the code or add a lint.skip entry with a reason";
 /** The tokens an inner attribute puts before its bracket: the hash and the bang. */
 export const INNER_SKIP: number = 2;
 /** From a `cfg_attr`'s bracket to the token after its name, where the arguments open. */

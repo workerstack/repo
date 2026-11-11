@@ -8,10 +8,16 @@ import { declaredNames } from "./names.ts";
 /** Index files collect, declaration files describe, and test files test: none is named after one export. */
 const SKIPPED = /^index\.|\.d\.[cm]?ts$|\.(?:test|spec|e2e)\./;
 
+const NON_ALPHANUMERIC = /[^a-z\d]/g;
+const LOWER_THEN_UPPER = /([a-z\d])([A-Z])/g;
+const ACRONYM_THEN_WORD = /([A-Z]+)([A-Z][a-z])/g;
+const NON_WORD_RUN = /[^A-Za-z\d]+/g;
+
 type Node = ESTree.Node;
 
-const exportedName = (name: ESTree.ModuleExportName): string =>
-  name.type === "Identifier" ? name.name : String(name.value);
+function exportedName(name: ESTree.ModuleExportName): string {
+  return name.type === "Identifier" ? name.name : name.value;
+}
 
 /** The names a statement exports, or null when it re-exports a module's every name; `export default` adds none. */
 function exportsOf(statement: Node): string[] | null {
@@ -22,13 +28,16 @@ function exportsOf(statement: Node): string[] | null {
   return statement.specifiers.map((specifier) => exportedName(specifier.exported));
 }
 
-const letters = (name: string): string => name.toLowerCase().replaceAll(/[^a-z\d]/g, "");
-const kebab = (name: string): string =>
-  name
-    .replaceAll(/([a-z\d])([A-Z])/g, "$1-$2")
-    .replaceAll(/([A-Z]+)([A-Z][a-z])/g, "$1-$2")
-    .replaceAll(/[^A-Za-z\d]+/g, "-")
+function letters(name: string): string {
+  return name.toLowerCase().replaceAll(NON_ALPHANUMERIC, "");
+}
+function kebab(name: string): string {
+  return name
+    .replaceAll(LOWER_THEN_UPPER, "$1-$2")
+    .replaceAll(ACRONYM_THEN_WORD, "$1-$2")
+    .replaceAll(NON_WORD_RUN, "-")
     .toLowerCase();
+}
 
 /** The one name `program` exports, or null when it exports none, several, or an unknown set. */
 function soleExport(program: ESTree.Program): string | null {

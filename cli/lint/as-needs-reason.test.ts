@@ -5,9 +5,15 @@ import { describe, expect, it } from "vitest";
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { asNeedsReason } from "./as-needs-reason.ts";
 
-const needs = (type: string) =>
-  `"as ${type}" needs a reason: write x /* why the type holds */ as ${type}, or narrow with a check or a schema parse`;
-const messagesOf = (code: string) => reportsOf(asNeedsReason, { "a.ts": code }).map((report) => report.message);
+function needs(type: string) {
+  return (
+    `"as ${type}" needs a reason: write x /* why the type holds */ as ${type}, ` +
+    "or narrow with a check or a schema parse"
+  );
+}
+function messagesOf(code: string) {
+  return reportsOf(asNeedsReason, { "a.ts": code }).map((report) => report.message);
+}
 
 describe("as-needs-reason passes", () => {
   it.each([
@@ -46,7 +52,10 @@ describe("as-needs-reason fails", () => {
   });
 });
 
-/** Reports over `code` parsed as oxlint hands it, with no parenthesis nodes: a comment in parentheses follows the expression. */
+/**
+ * Reports over `code` parsed as oxlint hands it, with no parenthesis nodes: a comment in parentheses follows the
+ * expression.
+ */
 function unparenthesized(code: string): string[] {
   const messages: string[] = [];
   const { comments, program } = parseSync("a.ts", code, { preserveParens: false });
@@ -55,12 +64,12 @@ function unparenthesized(code: string): string[] {
     sourceCode: { getAllComments: () => comments, text: code },
   };
   const visitor = asNeedsReason.create(context as unknown /* a partial double of the context */ as Context);
-  const visit = (node: unknown): void => {
+  function visit(node: unknown): void {
     if (typeof node !== "object" || node === null) return;
     if ("type" in node && node.type === "TSAsExpression")
       visitor.TSAsExpression?.(node /* the walk found a cast node */ as never);
     for (const child of Object.values(node)) visit(child);
-  };
+  }
   visit(program);
   return messages;
 }

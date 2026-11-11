@@ -39,7 +39,9 @@ function piecesOf(text: string): Piece[] {
   return Array.from(segmenter.segment(text), ({ index, segment }) => ({ at: index, width: graphemeWidth(segment) }));
 }
 
-const widthOf = (text: string): number => piecesOf(text).reduce((sum, piece) => sum + piece.width, 0);
+function widthOf(text: string): number {
+  return piecesOf(text).reduce((sum, piece) => sum + piece.width, 0);
+}
 
 /** The hint for a node that holds text oxfmt leaves long, or none. */
 function hintOf(node: Found): string | undefined {

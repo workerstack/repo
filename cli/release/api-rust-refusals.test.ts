@@ -7,6 +7,21 @@ import { A, cargo, rustRepo } from "./fixtures/rust-api.ts";
 
 afterEach(removePlanted);
 
+/** A cargo whose metadata refuses a stale lock. */
+function stale(): ReturnType<CargoRun> {
+  return {
+    missing: false,
+    status: 101,
+    stderr: "the lock file needs to be updated but --locked was passed",
+    stdout: "",
+  };
+}
+
+/** A cargo that is missing and fails. */
+function failed(): ReturnType<CargoRun> {
+  return { missing: true, status: 1, stderr: "", stdout: "" };
+}
+
 describe("repo release api with nothing to check in a Rust repo", () => {
   it("says so when no crate publishes and no package is public", async () => {
     const dir = rustRepo({ private: true });
@@ -40,20 +55,10 @@ describe("repo release api refusals in a Rust repo", () => {
   });
 
   it("names a stale lock and a failed cargo metadata", async () => {
-    const stale: CargoRun = () => ({
-      missing: false,
-      status: 101,
-      stderr: "the lock file needs to be updated but --locked was passed",
-      stdout: "",
-    });
-    const failed: CargoRun = () => ({
-      missing: true,
-      status: 1,
-      stderr: "",
-      stdout: "",
-    });
     const lock = "Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it";
-    expect((await api(rustRepo(), [], { cargo: stale })).err).toBe(`${PREFIX}${lock}\n`);
-    expect((await api(rustRepo(), [], { cargo: failed })).code).toBe(1);
+    const staleRun = await api(rustRepo(), [], { cargo: stale });
+    const failedRun = await api(rustRepo(), [], { cargo: failed });
+    expect(staleRun.err).toBe(`${PREFIX}${lock}\n`);
+    expect(failedRun.code).toBe(1);
   });
 });

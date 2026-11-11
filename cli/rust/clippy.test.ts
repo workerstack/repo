@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, expect, it, vi } from "vitest";
 
-import { clippyHits, runCargo, type CargoResult, type CargoRun } from "./clippy.ts";
+import { clippyHits, runCargo, type CargoResult } from "./clippy.ts";
 import { cargoLock } from "./fixtures/cargo-lock.ts";
 
 const MISSING = "Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs";
@@ -22,26 +22,27 @@ afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
 type Span = { file: string; line: number; column: number; primary: boolean };
 
 /** A span as cargo 1.99.1 prints it. */
-const spanJson = (span: Span) => ({
-  byte_end: 20,
-  byte_start: 19,
-  column_end: span.column + 1,
-  column_start: span.column,
-  expansion: null,
-  file_name: span.file,
-  is_primary: span.primary,
-  label: null,
-  line_end: span.line,
-  line_start: span.line,
-  suggested_replacement: null,
-  suggestion_applicability: null,
-  text: [],
-});
+function spanJson(span: Span) {
+  return {
+    byte_end: 20,
+    byte_start: 19,
+    column_end: span.column + 1,
+    column_start: span.column,
+    expansion: null,
+    file_name: span.file,
+    is_primary: span.primary,
+    label: null,
+    line_end: span.line,
+    line_start: span.line,
+    suggested_replacement: null,
+    suggestion_applicability: null,
+    text: [],
+  };
+}
 
 /** A builder of `compiler-message` lines at `level`, shaped as cargo 1.99.1 prints them. */
-const diag =
-  (level: string) =>
-  (code: string | null, text: string, spans: Span[] = []): string =>
+function diag(level: string) {
+  return (code: string | null, text: string, spans: Span[] = []): string =>
     JSON.stringify({
       manifest_path: "/crate/Cargo.toml",
       message: {
@@ -57,36 +58,43 @@ const diag =
       reason: "compiler-message",
       target: { crate_types: ["lib"], edition: "2021", kind: ["lib"], name: "c1", src_path: "/crate/src/lib.rs" },
     });
+}
 const warning = diag("warning");
 const error = diag("error");
 const note = diag("note");
 const failureNote = diag("failure-note");
-const FINISHED = (success: boolean) => JSON.stringify({ reason: "build-finished", success });
+function finished({ success }: { success: boolean }) {
+  return JSON.stringify({ reason: "build-finished", success });
+}
 const ARTIFACT = JSON.stringify({ filenames: [], fresh: false, package_id: "p", reason: "compiler-artifact" });
 /** A primary span, and one that is not. */
-const at = (line: number, column: number, file = "src/lib.rs"): Span => ({ column, file, line, primary: true });
-const aside = (line: number, column: number, file = "src/lib.rs"): Span => ({ column, file, line, primary: false });
+function at(line: number, column: number, file = "src/lib.rs"): Span {
+  return { column, file, line, primary: true };
+}
+function aside(line: number, column: number, file = "src/lib.rs"): Span {
+  return { column, file, line, primary: false };
+}
 
 /** A runner that records its call and returns `lines` as stdout with exit `status`. */
 function cargo(lines: string[], status = 0, extra: Partial<CargoResult> = {}) {
   const calls: { root: string; args: readonly string[] }[] = [];
-  const run: CargoRun = (root, args) => {
+  function run(root: string, args: readonly string[]): CargoResult {
     calls.push({ args, root });
     return { missing: false, status, stderr: "", stdout: lines.join("\n"), ...extra };
-  };
+  }
   return { calls, run };
 }
 
 it("runs cargo clippy with the repo's levels in the root", () => {
-  const { run, calls } = cargo([FINISHED(true)]);
-  expect(clippyHits(ROOT, run)).toEqual({ ok: true, value: [] });
-  expect(calls).toEqual([{ args: ARGS, root: ROOT }]);
+  const { run, calls } = cargo([finished({ success: true })]);
+  expect(clippyHits(ROOT, run)).toStrictEqual({ ok: true, value: [] });
+  expect(calls).toStrictEqual([{ args: ARGS, root: ROOT }]);
 });
 
 it("reports a clippy lint at its primary span as clippy/<name>", () => {
   const text = "used `unwrap()` on a `Result` value";
-  const lines = [ARTIFACT, warning("clippy::unwrap_used", text, [at(3, 27)]), FINISHED(true)];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({
+  const lines = [ARTIFACT, warning("clippy::unwrap_used", text, [at(3, 27)]), finished({ success: true })];
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
     ok: true,
     value: [{ column: 27, file: "src/lib.rs", line: 3, message: text, rule: "clippy/unwrap_used" }],
   });
@@ -94,7 +102,7 @@ it("reports a clippy lint at its primary span as clippy/<name>", () => {
 
 it("reports a rustc lint as rust/<name>", () => {
   const lines = [warning("unreachable_pub", "unreachable `pub` item", [at(1, 13)])];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
     ok: true,
     value: [
       { column: 13, file: "src/lib.rs", line: 1, message: "unreachable `pub` item", rule: "rust/unreachable_pub" },
@@ -134,25 +142,25 @@ it("drops a leading ./ from the file_name", () => {
 
 it("ignores a warning or note without a lint code", () => {
   const lines = [warning(null, "1 warning emitted"), failureNote(null, "explain")];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({ ok: true, value: [] });
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({ ok: true, value: [] });
 });
 
 it("ignores a message that is neither a warning nor an error, and a warning with a compiler error code", () => {
   const lines = [note("dead_code", "n", [at(1, 1)]), warning("E0001", "w", [at(1, 1)])];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({ ok: true, value: [] });
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({ ok: true, value: [] });
 });
 
 it("makes an E0308 error a problem with its place, never a hit", () => {
   const lines = [error("E0308", "mismatched types", [at(1, 21), aside(1, 5)])];
-  expect(clippyHits(ROOT, cargo([...lines, FINISHED(false)], 101).run)).toEqual({
+  expect(clippyHits(ROOT, cargo([...lines, finished({ success: false })], 101).run)).toStrictEqual({
     errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
     ok: false,
   });
 });
 
 it("makes an error without a code a problem", () => {
-  const lines = [error(null, "this file contains an unclosed delimiter"), FINISHED(false)];
-  expect(clippyHits(ROOT, cargo(lines, 101).run)).toEqual({
+  const lines = [error(null, "this file contains an unclosed delimiter"), finished({ success: false })];
+  expect(clippyHits(ROOT, cargo(lines, 101).run)).toStrictEqual({
     errors: ["cargo clippy: error: this file contains an unclosed delimiter"],
     ok: false,
   });
@@ -161,7 +169,7 @@ it("makes an error without a code a problem", () => {
 it("lists a repeated problem once and no hit beside it", () => {
   const failure = error("E0308", "mismatched types", [at(1, 21)]);
   const hit = warning("dead_code", "m", [at(1, 1)]);
-  expect(clippyHits(ROOT, cargo([hit, failure, failure], 101).run)).toEqual({
+  expect(clippyHits(ROOT, cargo([hit, failure, failure], 101).run)).toStrictEqual({
     errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
     ok: false,
   });
@@ -169,22 +177,22 @@ it("lists a repeated problem once and no hit beside it", () => {
 
 it("makes a lint with no primary span a problem", () => {
   const lines = [warning("dead_code", "never used", [aside(1, 1)])];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
     errors: ["cargo clippy: never used has a lint code but no primary span"],
     ok: false,
   });
 });
 
 it("makes a non-zero exit with no error message a problem, with stderr", () => {
-  const run = cargo([FINISHED(false)], 101, { stderr: "error: could not find `Cargo.toml`\n" }).run;
-  expect(clippyHits(ROOT, run)).toEqual({
+  const run = cargo([finished({ success: false })], 101, { stderr: "error: could not find `Cargo.toml`\n" }).run;
+  expect(clippyHits(ROOT, run)).toStrictEqual({
     errors: ["cargo clippy exited 101 and printed no error: error: could not find `Cargo.toml`"],
     ok: false,
   });
 });
 
 it("names the exit alone when cargo printed nothing else", () => {
-  expect(clippyHits(ROOT, cargo([], 2).run)).toEqual({
+  expect(clippyHits(ROOT, cargo([], 2).run)).toStrictEqual({
     errors: ["cargo clippy exited 2 and printed no error"],
     ok: false,
   });
@@ -192,7 +200,7 @@ it("names the exit alone when cargo printed nothing else", () => {
 
 it("makes a line it cannot read a problem", () => {
   const lines = ["not json", JSON.stringify({ message: { level: 1 }, reason: "compiler-message" }), '{"x":1}', ""];
-  expect(clippyHits(ROOT, cargo(lines).run)).toEqual({
+  expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
     errors: [
       "cargo clippy printed a line repo cannot read: not json",
       'cargo clippy printed a line repo cannot read: {"message":{"level":1},"reason":"compiler-message"}',
@@ -203,14 +211,14 @@ it("makes a line it cannot read a problem", () => {
 });
 
 it("cuts a long unreadable line", () => {
-  expect(clippyHits(ROOT, cargo(["x".repeat(200)]).run)).toEqual({
+  expect(clippyHits(ROOT, cargo(["x".repeat(200)]).run)).toStrictEqual({
     errors: [`cargo clippy printed a line repo cannot read: ${"x".repeat(80)}...`],
     ok: false,
   });
 });
 
 it("tells where to get cargo when it is not on PATH", () => {
-  expect(clippyHits(ROOT, cargo([], 1, { missing: true }).run)).toEqual({ errors: [MISSING], ok: false });
+  expect(clippyHits(ROOT, cargo([], 1, { missing: true }).run)).toStrictEqual({ errors: [MISSING], ok: false });
 });
 
 it("the default runner reports a cargo missing from PATH", () => {

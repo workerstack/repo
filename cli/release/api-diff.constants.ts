@@ -12,4 +12,6 @@ export const NOMINAL_MODIFIERS: ts.ModifierFlags = ts.ModifierFlags.Private | ts
 export const NOMINAL_TYPES: ts.TypeFlags = ts.TypeFlags.UniqueESSymbol | ts.TypeFlags.EnumLike;
 export const TEXT_SEPARATOR: string = ";";
 export const OPTIONAL_MARK: string = "?";
-export const noModule = (spec: string): string => `cannot resolve ${spec} to a module`;
+export function noModule(spec: string): string {
+  return `cannot resolve ${spec} to a module`;
+}

@@ -85,7 +85,10 @@ function quoteToken(source: string, at: number): RustToken {
   return { end: at + 1 + ident[0].length, kind: "lifetime", start: at };
 }
 
-/** The token for `word`, the identifier matched at `at`: a raw, byte or c string, a byte char, a raw identifier or an identifier. */
+/**
+ * The token for `word`, the identifier matched at `at`: a raw, byte or c string, a byte char, a raw identifier or an
+ * identifier.
+ */
 function wordToken(source: string, at: number, word: string): RustToken {
   const raw = matchAt(RAW_STRING_OPEN, source, at);
   if (raw !== null)

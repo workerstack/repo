@@ -71,20 +71,24 @@ function mergeBodies(bodies: readonly (readonly string[])[]): string {
       if (lines.length > 0) merged.set(name, [...(merged.get(name) ?? []), ...lines]);
   }
   const known = ["", ...SECTIONS];
-  const rank = (name: string): number => (known.includes(name) ? known.indexOf(name) : known.length);
+  function rank(name: string): number {
+    return known.includes(name) ? known.indexOf(name) : known.length;
+  }
   return [...merged]
-    .sort(([a], [b]) => rank(a) - rank(b))
+    .toSorted(([a], [b]) => rank(a) - rank(b))
     .map(([name, lines]) => (name === "" ? "" : `### ${name}\n\n`) + lines.join("\n"))
     .join("\n\n");
 }
 
 /** Whether `section` is a prerelease of the stable `version`. */
-const prereleaseOf = (section: Section, version: string): boolean =>
-  !version.includes("-") && section.version !== null && section.version.startsWith(`${version}-`);
+function prereleaseOf(section: Section, version: string): boolean {
+  return !version.includes("-") && section.version !== null && section.version.startsWith(`${version}-`);
+}
 
 /** Text of one section as a block: the heading, a blank line, the body. */
-const block = (heading: string, body: readonly string[]): string =>
-  [heading, ...(trimBlank(body).length > 0 ? ["", ...trimBlank(body)] : [])].join("\n");
+function block(heading: string, body: readonly string[]): string {
+  return [heading, ...(trimBlank(body).length > 0 ? ["", ...trimBlank(body)] : [])].join("\n");
+}
 
 /**
  * The changelog with its Unreleased entries moved under `## [version] - date` and an empty Unreleased above it. A

@@ -19,6 +19,7 @@ import {
   TSCONFIG_FILE,
   TYPE_IMPORT,
   TYPES_FILE,
+  UNINDENTED,
 } from "./consumer.constants.ts";
 import { exportSubpaths } from "./exports.ts";
 import type { Subpath } from "./exports.ts";
@@ -54,8 +55,12 @@ export type ConsumerIo = Pick<PackIo, "cwd" | "stdout" | "stderr" | "bun" | "tar
   tsc: string;
 };
 
-const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, "utf8"));
-const failuresSchema = () => z.array(z.object({ key: z.string(), kind: z.string(), message: z.string() }));
+function readJson(file: string): unknown {
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+function failuresSchema() {
+  return z.array(z.object({ key: z.string(), kind: z.string(), message: z.string() }));
+}
 
 /** Every file under `dir`, as paths relative to it with `/`. */
 function walk(dir: string, base = ""): string[] {
@@ -85,13 +90,14 @@ function probeImports({ project, name, present }: Installed, io: ConsumerIo): st
 function checkTypes({ project, name, present }: Installed, io: ConsumerIo): string[] {
   const typed = present.filter((subpath) => subpath.types !== null);
   const imports = typed.map((subpath, index) => TYPE_IMPORT(index, specOf(name, subpath)));
-  fs.writeFileSync(path.join(project, TYPES_FILE), imports.join("") || EMPTY_MODULE);
+  const importLines = imports.join("");
+  fs.writeFileSync(path.join(project, TYPES_FILE), importLines === "" ? EMPTY_MODULE : importLines);
   fs.writeFileSync(path.join(project, TSCONFIG_FILE), TSCONFIG);
   const tsc = io.bun(TSC_ARGS(io.tsc), project);
   if (tsc.code === 0) return [];
   return `${tsc.stdout}${tsc.stderr}`
     .split("\n")
-    .filter((line) => /^\S/.test(line))
+    .filter((line) => UNINDENTED.test(line))
     .map(typeError);
 }
 
@@ -113,15 +119,18 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
   return { problems, summary };
 }
 
-/** `repo release consumer [<tarball>]`: installs the tarball of this checkout (or the one given) in an empty project and tests every export. */
+/**
+ * `repo release consumer [<tarball>]`: installs the tarball of this checkout (or the one given) in an empty project
+ * and tests every export.
+ */
 export async function releaseConsumer(argv: readonly string[], io: ConsumerIo): Promise<number> {
   if (argv.length > 1) return refuse(io, CONSUMER_PREFIX, CONSUMER_ARGS);
   const packDirs: string[] = [];
-  const mkdtemp = (prefix: string): string => {
+  function mkdtemp(prefix: string): string {
     const dir = io.mkdtemp(prefix);
     packDirs.push(dir);
     return dir;
-  };
+  }
   const packIo = { ...io, mkdtemp };
   try {
     return await consumeTarball(argv[0], packIo, io);

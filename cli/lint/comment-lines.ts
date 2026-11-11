@@ -1,6 +1,8 @@
 import { DECORATED_LINE, DECORATION, FIRST_LINE_END, LINE_BREAK, SLASHES } from "./comment-lines.constants.ts";
 
-const indentOf = (line: string): number => line.length - line.trimStart().length;
+function indentOf(line: string): number {
+  return line.length - line.trimStart().length;
+}
 
 /** The indent to remove from the continuation lines: their common minimum, capped at the first line's text column. */
 function dedent(first: string, rest: readonly string[], column: number): number {
@@ -14,8 +16,9 @@ function textLines(value: string, column: number): string[] {
   const rest = lines.slice(1);
   const decorated = rest.every((line) => line.trim() === "" || DECORATED_LINE.test(line));
   const base = decorated ? 0 : dedent(value.slice(0, value.search(FIRST_LINE_END)), rest, column);
-  const strip = (line: string): string =>
-    decorated ? line.replace(DECORATION, "") : line.slice(Math.min(base, indentOf(line)));
+  function strip(line: string): string {
+    return decorated ? line.replace(DECORATION, "") : line.slice(Math.min(base, indentOf(line)));
+  }
   return lines.map((line, index) => (index === 0 ? line.trim() : strip(line).trimEnd()));
 }
 
@@ -32,7 +35,8 @@ function trimmed(lines: readonly string[]): string[] {
 /**
  * The `//` lines (without indent) for a block comment whose text between `/*` and `*\/` is `value` and that starts at
  * `column`: a ` * ` or ` *` decoration goes from each continuation line when every non-blank one has it, else its
- * indent down to the least of the lines' common indent and the first line's text column (a deeper indent stays); blank first and last lines are dropped and an empty line gives `//`.
+ * indent down to the least of the lines' common indent and the first line's text column (a deeper indent stays);
+ * blank first and last lines are dropped and an empty line gives `//`.
  * The caller joins the lines with its own line break and indent.
  */
 export function commentLines(value: string, column: number): string[] {

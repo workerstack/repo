@@ -7,8 +7,12 @@ import { crateLine, type SemverDeps } from "./semver-checks.ts";
 import type { Commit } from "./version.ts";
 
 const MANIFEST = "/repo/a/Cargo.toml";
-const crate = (version: string) => ({ manifest_path: MANIFEST, name: "a", version });
-const row = (vers: string) => JSON.stringify({ deps: [], pubtime: "2026-01-01T00:00:00Z", vers, yanked: false });
+function crate(version: string) {
+  return { manifest_path: MANIFEST, name: "a", version };
+}
+function row(vers: string) {
+  return JSON.stringify({ deps: [], pubtime: "2026-01-01T00:00:00Z", vers, yanked: false });
+}
 const bare = JSON.stringify({ vers: "1.0.2", yanked: false });
 
 type Setup = { index?: Response; commits?: Commit[]; result?: Partial<CargoResult> };
@@ -16,10 +20,10 @@ type Setup = { index?: Response; commits?: Commit[]; result?: Partial<CargoResul
 function deps({ index, commits = [], result = {} }: Setup = {}) {
   const runs: (readonly string[])[] = [];
   const asked: { since: string; dir: string }[] = [];
-  const run: CargoRun = (_root, args) => {
+  function run(_root: string, args: readonly string[]): ReturnType<CargoRun> {
     runs.push(args);
     return { missing: false, status: 0, stderr: "", stdout: "", ...result };
-  };
+  }
   const all: SemverDeps = {
     fetch: () => Promise.resolve(index ?? new Response(row("1.0.2"))),
     git: (after) => {
@@ -30,7 +34,9 @@ function deps({ index, commits = [], result = {} }: Setup = {}) {
   };
   return { all, asked, runs };
 }
-const commit = (subject: string, body = ""): Commit => ({ body, subject });
+function commit(subject: string, body = ""): Commit {
+  return { body, subject };
+}
 const PREFIX = [
   "--locked",
   "semver-checks",
@@ -87,14 +93,16 @@ it("maps commits since the baseline's publish time, in the crate's directory, to
   );
 });
 
+/** The `--release-type` the check of a 0.3.1 crate passes for these commits. */
+async function releaseTypeOf(commits: Commit[]) {
+  const { all, runs } = deps({ commits, index: new Response(row("0.3.1")) });
+  await crateLine("/repo", crate("0.3.1"), all);
+  return runs[0]?.at(-1);
+}
+
 it("maps a 0.y crate's breaking commit to minor and everything else to patch", async () => {
-  const types = async (commits: Commit[]) => {
-    const { all, runs } = deps({ commits, index: new Response(row("0.3.1")) });
-    await crateLine("/repo", crate("0.3.1"), all);
-    return runs[0]?.at(-1);
-  };
-  expect(await types([commit("feat!: drop")])).toBe("minor");
-  expect(await types([commit("feat: add")])).toBe("patch");
+  expect(await releaseTypeOf([commit("feat!: drop")])).toBe("minor");
+  expect(await releaseTypeOf([commit("feat: add")])).toBe("patch");
 });
 
 it("takes patch when the baseline has no publish time", async () => {
@@ -129,7 +137,8 @@ it("fails one line per failed lint with its items, and the release it needs", as
   expect(line).toStrictEqual({
     ok: false,
     text: [
-      `${from}: function adler::adler32_slice; function adler::other (function_missing: pub fn removed or renamed); ${advice}`,
+      `${from}: function adler::adler32_slice; function adler::other ` +
+        `(function_missing: pub fn removed or renamed); ${advice}`,
       `${from}: struct adler::S (struct_missing: pub struct removed); ${advice}`,
     ].join("\n"),
   });
@@ -148,7 +157,9 @@ it("names a release as newer when the tool did not say which", async () => {
   const { all } = deps({ result: { status: 100, stderr: "--- failure f: g ---\nFailed in:\n  fn x" } });
   expect(await crateLine("/repo", crate("1.0.2"), all)).toStrictEqual({
     ok: false,
-    text: "crate a 1.0.2 → this checkout needs a newer release: fn x (f: g); restore it, bump a's version, or mark a commit breaking with `!`",
+    text:
+      "crate a 1.0.2 → this checkout needs a newer release: fn x (f: g); " +
+      "restore it, bump a's version, or mark a commit breaking with `!`",
   });
 });
 

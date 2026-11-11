@@ -43,7 +43,10 @@ import {
 } from "./release.constants.ts";
 import { nextVersion, type Mode } from "./version.ts";
 
-/** What a release will do: which version, and whether it writes a commit (`bump`: new version; `fold`: into a pending one). */
+/**
+ * What a release will do: which version, and whether it writes a commit (`bump`: new version; `fold`: into a pending
+ * one).
+ */
 export type Plan = {
   name: string;
   from: string;
@@ -55,10 +58,10 @@ export type Plan = {
   ahead: number;
 };
 
-const unreleased = (t: Tools): boolean => {
+function unreleased(t: Tools): boolean {
   const file = path.join(t.cwd, CHANGELOG_FILE);
   return fs.existsSync(file) && hasUnreleased(fs.readFileSync(file, "utf8"));
-};
+}
 
 /** The refusal for the config and manifest, or the manifest. */
 async function readRepo(t: Tools): Promise<Manifest | string> {
@@ -90,7 +93,7 @@ function newVersion({ t, manifest: m, lastTag, mode }: Release): { version: stri
   return taken === null ? { version: got.version } : tagExists(taken);
 }
 
-/** Where the checkout stands: the branch to release from, commits not pushed, the pending release commit, the last tag. */
+/** Where the checkout stands: the branch to release from, commits not pushed, the pending commit, the last tag. */
 type State = { branch: string; ahead: number; pending: string | null; lastTag: string | null };
 
 /** The state, or the refusal for a dirty tree, another branch, an origin that differs or a gh that is not logged in. */

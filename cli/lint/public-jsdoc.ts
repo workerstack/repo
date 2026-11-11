@@ -1,5 +1,6 @@
 import type { Context, CreateRule, ESTree } from "@oxlint/plugins";
 
+import { isRecord } from "./manifest.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
@@ -8,8 +9,9 @@ import type { Node } from "./public-surface.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
 /** A node the walk read, as the ESTree node oxlint gave it. */
-const estree = (node: Node): ESTree.Node =>
-  node /* oxlint's own nodes */ as unknown /* the walk only reads them */ as ESTree.Node;
+function estree(node: Node): ESTree.Node {
+  return node /* oxlint's own nodes */ as unknown /* the walk only reads them */ as ESTree.Node;
+}
 
 /** One file being checked: the names a public entry reaches in it, and how to report on a node. */
 type File = {
@@ -42,8 +44,9 @@ function checkDeclaration(file: File, found: Found): void {
   if (isFunction && file.signed.has(name)) return;
   const variable = nodesOf(declaration["declarations"]).find((item) => get(item["id"], "name") === name);
   check(walk, statement, { label: name, name });
-  const untyped = variable !== undefined && !get(variable["id"], "typeAnnotation") && !statesItsType(variable["init"]);
-  if (untyped || (isFunction && !declaration["returnType"])) walk.fail(statement, name, FAULTS.inferred);
+  const annotated = isRecord(get(variable?.["id"], "typeAnnotation"));
+  const untyped = variable !== undefined && !annotated && !statesItsType(variable["init"]);
+  if (untyped || (isFunction && !isRecord(declaration["returnType"]))) walk.fail(statement, name, FAULTS.inferred);
   walkPublic(variable ?? declaration, visitorOf(walk));
 }
 
@@ -59,13 +62,17 @@ function checkFile(file: File, body: Node[]): void {
 }
 
 /** The message for a form the walk could not follow. */
-const unknownMessage = (form: string): string => `cannot follow ${FORMS[form] ?? `\`${form}\``} ${UNKNOWN_FAULT}`;
+function unknownMessage(form: string): string {
+  return `cannot follow ${FORMS[form] ?? `\`${form}\``} ${UNKNOWN_FAULT}`;
+}
 
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */
 function checkProgram(context: Context, surface: Surface, program: ESTree.Program): void {
   const { sourceCode } = context;
   const source: Source = { before: (node) => sourceCode.getCommentsBefore(estree(node)), text: sourceCode.text };
-  const report = (node: Node, message: string): void => context.report({ message, node: estree(node) });
+  function report(node: Node, message: string): void {
+    return context.report({ message, node: estree(node) });
+  }
   for (const found of surface.unknown) {
     if (found.file !== context.filename) continue;
     const at = { column: 0, line: found.line };
@@ -79,13 +86,13 @@ function checkProgram(context: Context, surface: Surface, program: ESTree.Progra
 /** The rule, with the surfaces it has read held in a closure: one read per package per lint run, no module state. */
 function makeRule(): CreateRule {
   const surfaces = new Map<string, Surface>();
-  const surfaceOf = (root: string): Surface => {
+  function surfaceOf(root: string): Surface {
     const known = surfaces.get(root);
     if (known !== undefined) return known;
     const read = publicSurface(root);
     surfaces.set(root, read);
     return read;
-  };
+  }
   return {
     create(context) {
       const root = packageRoot(context.filename);

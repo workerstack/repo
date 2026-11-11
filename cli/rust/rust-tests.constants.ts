@@ -1,4 +1,7 @@
-/** The cargo arguments of the Rust tests without coverage: nextest, locked, over the workspace; a repo with no tests warns. */
+/**
+ * The cargo arguments of the Rust tests without coverage: nextest, locked, over the workspace; a repo with no tests
+ * warns.
+ */
 export const NEXTEST_ARGS: readonly string[] = ["nextest", "run", "--locked", "--workspace", "--no-tests=warn"];
 /** The cargo arguments that list the workspace crates and their targets as JSON, resolved against the lock. */
 export const METADATA_ARGS: readonly string[] = ["metadata", "--no-deps", "--format-version", "1", "--locked"];

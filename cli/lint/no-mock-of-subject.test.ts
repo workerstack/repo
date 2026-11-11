@@ -5,13 +5,21 @@ import { noMockOfSubject } from "./no-mock-of-subject.ts";
 
 // Fixtures are source text the harness parses, never run. Each call is spelled through `call` so this file's own text
 // holds no mock call with a relative path, which `dev/vi-mock-paths.test.ts` refuses.
-const call = (callee: string, arg: string) => `${callee}(${arg}, () => ({}));\n`;
-const bare = (callee: string) => `${callee}();\n`;
-const url = (rel: string) => `new URL("${rel}", import.meta.url).href`;
-const covers = (specifier: string) =>
-  `"${specifier}" is the module this test covers; test it for real and mock what it calls`;
-const messagesOf = (file: string, code: string) =>
-  reportsOf(noMockOfSubject, { [file]: code }).map((report) => report.message);
+function call(callee: string, arg: string) {
+  return `${callee}(${arg}, () => ({}));\n`;
+}
+function bare(callee: string) {
+  return `${callee}();\n`;
+}
+function url(rel: string) {
+  return `new URL("${rel}", import.meta.url).href`;
+}
+function covers(specifier: string) {
+  return `"${specifier}" is the module this test covers; test it for real and mock what it calls`;
+}
+function messagesOf(file: string, code: string) {
+  return reportsOf(noMockOfSubject, { [file]: code }).map((report) => report.message);
+}
 
 describe("no-mock-of-subject passes", () => {
   it.each([

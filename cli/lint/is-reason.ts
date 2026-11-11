@@ -3,4 +3,6 @@ const MIN_WORDS = 3;
 const WORD = /\p{L}+(?:['’-]\p{L}+)*/gu;
 
 /** Whether `text` holds a written reason: at least three words of letters. */
-export const isReason = (text: string): boolean => (text.match(WORD) ?? []).length >= MIN_WORDS;
+export function isReason(text: string): boolean {
+  return (text.match(WORD) ?? []).length >= MIN_WORDS;
+}

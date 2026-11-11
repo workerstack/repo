@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { nextVersion, type Mode } from "./version.ts";
 
-const commit = (subject: string, body = "") => ({ body, subject });
+function commit(subject: string, body = "") {
+  return { body, subject };
+}
 const AUTO: Mode = { kind: "auto" };
 type Options = { mode?: Mode; first?: boolean };
-const next = (current: string, subjects: string[], { mode = AUTO, first = false }: Options = {}) =>
-  nextVersion({ commits: subjects.map((subject) => commit(subject)), current, first, mode });
+function next(current: string, subjects: string[], { mode = AUTO, first = false }: Options = {}) {
+  return nextVersion({ commits: subjects.map((subject) => commit(subject)), current, first, mode });
+}
 
 describe("below 1.0", () => {
   it("makes a breaking commit a minor and everything else a patch", () => {

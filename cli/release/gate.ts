@@ -30,7 +30,9 @@ import {
 import type { ReleaseIo } from "./release.ts";
 import { splitSpec, type Spec } from "./wait.ts";
 
-const branchSchema = () => z.object({ defaultBranchRef: z.object({ name: z.string() }) });
+function branchSchema() {
+  return z.object({ defaultBranchRef: z.object({ name: z.string() }) });
+}
 
 /** The commit the tag names when its package.json, changelog and branch agree with the tag; else the refusal line. */
 function check(t: Tools, tag: string, parts: Spec): string | Target {
@@ -56,7 +58,7 @@ function detailOf(outcome: Exclude<WaitOutcome, { kind: "passed" }>): string {
   return outcome.kind === "nothing" ? outcome.line : "";
 }
 
-/** `repo release gate <name>@<version>`: the tag matches the package and changelog on the default branch, and CI passed. */
+/** `repo release gate <name>@<version>`: the tag matches the package and changelog on the default branch; CI passed. */
 export async function gate(argv: readonly string[], io: ReleaseIo): Promise<number> {
   const tag = argv[0] ?? "";
   const parts = argv.length === 1 ? splitSpec(tag) : null;

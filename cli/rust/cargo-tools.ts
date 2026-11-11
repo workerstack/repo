@@ -11,9 +11,10 @@ import {
   QUOTE_LIMIT,
   SEMVER,
   UNLICENSED_CODES,
+  WHITESPACE,
   type Pin,
 } from "./cargo-tools.constants.ts";
-import { MISSING_CARGO } from "./clippy.constants.ts";
+import { LINE_BREAK, MISSING_CARGO } from "./clippy.constants.ts";
 import type { CargoRun } from "./clippy.ts";
 
 /** The shapes of the tool output this reads, built once per run so the module runs no code. */
@@ -46,7 +47,9 @@ export function quote(text: string): string {
   return trimmed.length > QUOTE_LIMIT ? `${trimmed.slice(0, QUOTE_LIMIT)}...` : trimmed;
 }
 
-const installLine = (pin: Pin): string => `cargo install --locked cargo-${pin.tool}@${pin.version}`;
+function installLine(pin: Pin): string {
+  return `cargo install --locked cargo-${pin.tool}@${pin.version}`;
+}
 
 /**
  * Why the cargo tool `pin.tool` cannot be trusted in `root`: not installed, or not the pinned version. `null` when
@@ -87,7 +90,9 @@ function krateOf(graphs: readonly unknown[] | undefined, schema: Schemas): Krate
 }
 
 /** `b 0.1.0: ` for the crate a diagnostic names, or nothing. */
-const crateOf = (krate: Krate | null): string => (krate === null ? "" : `${krate.name} ${krate.version}: `);
+function crateOf(krate: Krate | null): string {
+  return krate === null ? "" : `${krate.name} ${krate.version}: `;
+}
 
 /** One error diagnostic as a line: section, crate, message and the first label that says something. */
 function diagnosticLine(d: z.infer<Schemas["diagnostic"]>["fields"], krate: Krate | null): string {
@@ -102,11 +107,13 @@ function diagnosticLine(d: z.infer<Schemas["diagnostic"]>["fields"], krate: Krat
 /** The line for an error log: the fetch failure names its URL and what to do, any other shows its first line. */
 function logLine(message: string): string {
   if (!message.startsWith(FETCH_FAILED)) return `cargo deny: ${message.split("\n")[0]}`;
-  const url = message.slice(FETCH_FAILED.length).trim().split(/\s/)[0];
+  const url = message.slice(FETCH_FAILED.length).trim().split(WHITESPACE)[0];
   return `cargo deny: ${FETCH_FAILED} ${url}; check the network and rerun`;
 }
 
-/** An error diagnostic as a line, or a pass when it says a crate in `left` has no license (the crate check owns that). */
+/**
+ * An error diagnostic as a line, or a pass when it says a crate in `left` has no license (the crate check owns that).
+ */
 type Fields = z.infer<Schemas["diagnostic"]>["fields"];
 function denyDiagnostic(fields: Fields, schema: Schemas, left: ReadonlySet<string>): DenyLine {
   const krate = krateOf(fields.graphs, schema);
@@ -143,7 +150,7 @@ export function denyProblems(root: string, run: CargoRun, left: ReadonlySet<stri
   const result = run(root, ["deny", "--locked", "--format", "json", "check"]);
   if (result.missing) return [MISSING_CARGO];
   const schema = schemas();
-  const lines = result.stderr.split(/\r?\n/).filter((text) => text.trim() !== "");
+  const lines = result.stderr.split(LINE_BREAK).filter((text) => text.trim() !== "");
   const reads = lines.map((line) => ({ line, read: readDeny(line, schema, left) }));
   const problems = new Set<string>();
   for (const { line, read } of reads) {

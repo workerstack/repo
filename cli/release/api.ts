@@ -100,7 +100,9 @@ function historyOf(io: ApiIo, since: string | null): History {
   };
 }
 
-const isKind = (change: Change, ...kinds: string[]): boolean => kinds.includes(change.kind);
+function isKind(change: Change, ...kinds: string[]): boolean {
+  return kinds.includes(change.kind);
+}
 
 /** The lines the changes earn: a removed or narrowed one needs a breaking commit, an added or widened one a feat. */
 function refusals(changes: readonly Change[], history: History, source: OldSource): string[] {
@@ -115,7 +117,9 @@ function refusals(changes: readonly Change[], history: History, source: OldSourc
 /** The ok line: the versions, the counts, and the feat commits when the old version is a tag. */
 function okLine(source: OldSource, found: { pair: Pair; changes: readonly Change[]; feats: number }): string {
   const { pair, changes, feats } = found;
-  const count = (...kinds: string[]): number => changes.filter((c) => isKind(c, ...kinds)).length;
+  function count(...kinds: string[]): number {
+    return changes.filter((c) => isKind(c, ...kinds)).length;
+  }
   const counts = {
     added: count("added"),
     breaking: count("removed", "narrowed"),
@@ -172,7 +176,10 @@ function typescriptApi(against: string | undefined, io: ApiIo): number {
   }
 }
 
-/** `repo release api [--against <tarball>]`: the public types against the last release's and the commits since; with a root Cargo.toml, each publishable crate's api too. */
+/**
+ * `repo release api [--against <tarball>]`: the public types against the last release's and the commits since; with a
+ * root Cargo.toml, each publishable crate's api too.
+ */
 export function releaseApi(argv: readonly string[], io: ApiIo): Promise<number> {
   const usage = argv.length === 0 || (argv.length === AGAINST_ARGS && argv[0] === AGAINST_FLAG);
   if (!usage) return Promise.resolve(refuse(io, API_PREFIX, API_ARGS));

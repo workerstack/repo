@@ -12,7 +12,7 @@ import {
 } from "./crates-index.constants.ts";
 import { parseSemver, type Parts } from "./version.ts";
 
-/** What the crates.io index says about a crate: no published version to compare, the baseline, or why it could not tell. */
+/** What the crates.io index says about a crate: no published version to compare, the baseline, or why it failed. */
 export type Baseline =
   | { kind: "absent" }
   | { kind: "found"; version: string; published: string | null }
@@ -39,7 +39,8 @@ export function indexUrl(name: string): string {
 
 /** Negative when `left` is the lower version; a prerelease is below its release, as semver orders them. */
 function compare(left: Parts, right: Parts): number {
-  const numbers = left.major - right.major || left.minor - right.minor || left.patch - right.patch;
+  const gaps = [left.major - right.major, left.minor - right.minor, left.patch - right.patch];
+  const numbers = gaps.find((gap) => gap !== 0) ?? 0;
   if (numbers !== 0) return numbers;
   const release = Number(left.id === undefined) - Number(right.id === undefined);
   if (release !== 0) return release;
@@ -65,7 +66,7 @@ function entriesOf(body: string): { entries: Entry[] } | { bad: string } {
   return { entries };
 }
 
-/** The highest published version that is not yanked and not above `current`; versions repo cannot order are left out. */
+/** The highest published version that is not yanked or above `current`; versions repo cannot order are left out. */
 function highest(entries: Entry[], current: Parts): Entry | null {
   let best: { entry: Entry; parts: Parts } | null = null;
   for (const candidate of entries) {
@@ -76,7 +77,9 @@ function highest(entries: Entry[], current: Parts): Entry | null {
   return best?.entry ?? null;
 }
 
-const failed = (line: string): Baseline => ({ kind: "failed", line });
+function failed(line: string): Baseline {
+  return { kind: "failed", line };
+}
 
 /**
  * The version of `crate` to compare against: the highest non-yanked one at or below the crate's own, with when it was

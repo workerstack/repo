@@ -25,7 +25,9 @@ function hasRequire(exports: unknown): boolean {
 }
 
 /** Whether the package can only be imported: `type` is `module` and no export has a `require` condition. */
-const isEsmOnly = (manifest: Manifest): boolean => manifest.type === MODULE_TYPE && !hasRequire(manifest.exports);
+function isEsmOnly(manifest: Manifest): boolean {
+  return manifest.type === MODULE_TYPE && !hasRequire(manifest.exports);
+}
 
 /**
  * Runs publint (strict, suggestions included) and attw on a packed tarball.
@@ -38,7 +40,7 @@ export async function tarballLint(tarball: string): Promise<string[]> {
   const linted = await publint({ level: PUBLINT_LEVEL, pack: { tarball: bytes.buffer }, strict: true });
   const manifest: Manifest = { ...linted.pkg };
   const ignored = isEsmOnly(manifest) ? ESM_ONLY_IGNORED : [];
-  const analysis = await checkPackage(await createPackageFromTarballData(bytes));
+  const analysis = await checkPackage(createPackageFromTarballData(bytes));
   const problems: Problem[] = "problems" in analysis ? analysis.problems : [];
   return [
     ...linted.messages.map((message) => publintLine(String(formatMessage(message, manifest)))),

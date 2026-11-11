@@ -30,7 +30,10 @@ import { skipOnPlatform } from "./skip-on-platform.ts";
 import { todoNeedsId } from "./todo-needs-id.ts";
 import { typesFile } from "./types-file.ts";
 
-/** The oxlint plugin `repo`, which a generated `.oxlintrc.json` loads from `@workerstack/repo/lint` with every rule on. */
+/**
+ * The oxlint plugin `repo`, which a generated `.oxlintrc.json` loads from `@workerstack/repo/lint` with every rule
+ * on.
+ */
 const plugin: Plugin & {
   /** What oxlint reads to name the plugin's rules. */
   meta: {

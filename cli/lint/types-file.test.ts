@@ -4,8 +4,9 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { typesFile } from "./types-file.ts";
 
 const MESSAGE = "a .types.ts file holds only exported types and interfaces; move this into a module";
-const messagesOf = (code: string, file = "src/user.types.ts") =>
-  reportsOf(typesFile, { [file]: code }).map((report) => report.message);
+function messagesOf(code: string, file = "src/user.types.ts") {
+  return reportsOf(typesFile, { [file]: code }).map((report) => report.message);
+}
 
 describe("types-file passes", () => {
   it("import type, exported type aliases and interfaces, and export type … from", () => {

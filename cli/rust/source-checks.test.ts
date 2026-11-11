@@ -2,17 +2,23 @@ import { expect, it } from "vitest";
 
 import { rustSourceHits } from "./source-checks.ts";
 
-const ATTRIBUTE = (name: string) =>
-  `${name} sets a lint level in code; lint levels live on the command line, so fix the code or add a lint.skip entry with a reason`;
+function attribute(name: string) {
+  return (
+    `${name} sets a lint level in code; lint levels live on the command line, ` +
+    "so fix the code or add a lint.skip entry with a reason"
+  );
+}
 const BLOCK = "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 
 /** A file of `count` one-token code lines. */
-const lines = (count: number, extra = ""): string => `${"x;\n".repeat(count)}${extra}`;
+function lines(count: number, extra = ""): string {
+  return `${"x;\n".repeat(count)}${extra}`;
+}
 
 it("flags the usage crate once per rule at the right place", () => {
   const source = "#[allow(dead_code)]\n/* old */\npub fn f(s: &str) -> u8 { s.parse().unwrap() }\n";
   expect(rustSourceHits("src/lib.rs", source)).toStrictEqual([
-    { column: 1, file: "src/lib.rs", line: 1, message: ATTRIBUTE("#[allow]"), rule: "repo/rust-lint-attribute" },
+    { column: 1, file: "src/lib.rs", line: 1, message: attribute("#[allow]"), rule: "repo/rust-lint-attribute" },
     { column: 1, file: "src/lib.rs", line: 2, message: BLOCK, rule: "repo/rust-block-comment" },
   ]);
 });
@@ -21,8 +27,8 @@ it("flags every lint level at any depth, outer and inner", () => {
   for (const level of ["allow", "expect", "warn", "deny", "forbid"]) {
     const hits = rustSourceHits("a.rs", `mod m {\n    #[${level}(x)]\n    fn f() {}\n}\n#![${level}(y)]\n`);
     expect(hits.map((h) => [h.line, h.column, h.message])).toStrictEqual([
-      [2, 5, ATTRIBUTE(`#[${level}]`)],
-      [5, 1, ATTRIBUTE(`#![${level}]`)],
+      [2, 5, attribute(`#[${level}]`)],
+      [5, 1, attribute(`#![${level}]`)],
     ]);
   }
 });
@@ -30,8 +36,8 @@ it("flags every lint level at any depth, outer and inner", () => {
 it("flags a lint level inside cfg_attr", () => {
   const hits = rustSourceHits("a.rs", "#[cfg_attr(test, allow(x))]\n#![cfg_attr(a, derive(B), deny(y))]\n");
   expect(hits.map((h) => [h.line, h.message])).toStrictEqual([
-    [1, ATTRIBUTE("#[cfg_attr(… allow)]")],
-    [2, ATTRIBUTE("#![cfg_attr(… deny)]")],
+    [1, attribute("#[cfg_attr(… allow)]")],
+    [2, attribute("#![cfg_attr(… deny)]")],
   ]);
 });
 

@@ -30,9 +30,11 @@ export type PackIo = {
 /** A tarball and the name and version its package.json carries. */
 export type Packed = { tarball: string; name: string; version: string };
 
-const pins = () => z.record(z.string(), z.string()).default({});
-const packedSchema = () =>
-  z.object({
+function pins() {
+  return z.record(z.string(), z.string()).default({});
+}
+function packedSchema() {
+  return z.object({
     dependencies: pins(),
     devDependencies: pins(),
     name: z.string(),
@@ -40,6 +42,7 @@ const packedSchema = () =>
     peerDependencies: pins(),
     version: z.string(),
   });
+}
 
 /** Packs the package in `io.cwd` and checks its package.json; the tarball and its manifest, or the refusal line. */
 export function packTarball(

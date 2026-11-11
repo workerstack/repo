@@ -27,7 +27,9 @@ function rootWith(...files: string[]): string {
 const MANIFEST = "Cargo.toml";
 const LOCK = ["Cargo", "lock"].join(".");
 
-const ok = (stdout = "", stderr = ""): CargoResult => ({ missing: false, status: 0, stderr, stdout });
+function ok(stdout = "", stderr = ""): CargoResult {
+  return { missing: false, status: 0, stderr, stdout };
+}
 const META = JSON.stringify({
   packages: [
     { id: "b 0.1.0", manifest_path: "/x/b/Cargo.toml", name: "b", publish: null, rust_version: null, version: "0.1.0" },
@@ -40,7 +42,7 @@ type Script = { meta?: CargoResult; deny?: CargoResult; shear?: CargoResult; den
 /** A cargo that answers each subcommand from `script` and records every call. */
 function fakeCargo(script: Script = {}): { run: CargoRun; calls: string[] } {
   const calls: string[] = [];
-  const run: CargoRun = (_root, args) => {
+  function run(_root: string, args: readonly string[]): CargoResult {
     const line = args.join(" ");
     calls.push(line);
     if (args[0] === "metadata") return script.meta ?? ok(JSON.stringify({ packages: [], workspace_members: [] }));
@@ -48,20 +50,42 @@ function fakeCargo(script: Script = {}): { run: CargoRun; calls: string[] } {
     if (line === "shear --version") return ok("Version: 1.14.0");
     if (args[0] === "deny") return script.deny ?? ok();
     return script.shear ?? ok(JSON.stringify({ findings: [] }));
-  };
+  }
   return { calls, run };
 }
 
-const tracked: GitRun = () => ({ status: 0, stderr: "", stdout: `${LOCK}\0` });
-const untracked: GitRun = () => ({ status: 0, stderr: "", stdout: "" });
+function tracked(): ReturnType<GitRun> {
+  return { status: 0, stderr: "", stdout: `${LOCK}\0` };
+}
+function untracked(): ReturnType<GitRun> {
+  return { status: 0, stderr: "", stdout: "" };
+}
+/** A git that answers with `answer` and records the args of each call in `calls`. */
+function recordingGit(calls: string[][], answer: GitRun): GitRun {
+  return (root, args) => {
+    calls.push([...args]);
+    return answer(root, args);
+  };
+}
+function gitFails(): ReturnType<GitRun> {
+  return { status: 128, stderr: "fatal: not a git repository", stdout: "" };
+}
+function unlicensed(name: string) {
+  return JSON.stringify({
+    fields: {
+      code: "unlicensed",
+      graphs: [{ Krate: { name, version: "0.1.0" } }],
+      message: `${name} = 0.1.0 is unlicensed`,
+      severity: "error",
+    },
+    type: "diagnostic",
+  });
+}
 
 it("returns nothing and spawns nothing without a root manifest", () => {
   const cargo = fakeCargo();
   const gitCalls: string[][] = [];
-  const git: GitRun = (_root, args) => {
-    gitCalls.push([...args]);
-    return tracked(_root, args);
-  };
+  const git = recordingGit(gitCalls, tracked);
   expect(supplyChainAt(rootWith(LOCK), ["standards"], { git, run: cargo.run })).toStrictEqual([]);
   expect(cargo.calls).toStrictEqual([]);
   expect(gitCalls).toStrictEqual([]);
@@ -76,10 +100,7 @@ it("returns nothing and spawns nothing without a lock, which clippy reports", ()
 it("names an untracked lock and asks git for it", () => {
   const cargo = fakeCargo();
   const gitCalls: string[][] = [];
-  const git: GitRun = (_root, args) => {
-    gitCalls.push([...args]);
-    return untracked(_root, args);
-  };
+  const git = recordingGit(gitCalls, untracked);
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { git, run: cargo.run });
   expect(lines).toStrictEqual([UNTRACKED]);
   expect(gitCalls).toStrictEqual([["ls-files", "--cached", "--", LOCK]]);
@@ -87,8 +108,7 @@ it("names an untracked lock and asks git for it", () => {
 });
 
 it("quotes a git that fails", () => {
-  const git: GitRun = () => ({ status: 128, stderr: "fatal: not a git repository", stdout: "" });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { git, run: fakeCargo().run });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { git: gitFails, run: fakeCargo().run });
   expect(lines).toStrictEqual(["git ls-files failed (exit 128): fatal: not a git repository"]);
 });
 
@@ -154,8 +174,9 @@ it("skips only the tool whose pin has a problem", () => {
 
 it("skips shear when its pin is wrong and still runs deny", () => {
   const cargo = fakeCargo({ meta: ok(META) });
-  const run: CargoRun = (root, args) =>
-    args.join(" ") === "shear --version" ? ok("Version: 1.0.0") : cargo.run(root, args);
+  function run(root: string, args: readonly string[]) {
+    return args.join(" ") === "shear --version" ? ok("Version: 1.0.0") : cargo.run(root, args);
+  }
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run });
   expect(lines.filter((line) => line.startsWith("cargo-shear"))).toHaveLength(1);
   expect(cargo.calls).toContain("deny --locked --format json check");
@@ -169,16 +190,6 @@ it("falls back to the real git inside a repository", () => {
 });
 
 it("leaves the no-license deny error of a workspace crate to the crate line, and keeps a dependency's", () => {
-  const unlicensed = (name: string) =>
-    JSON.stringify({
-      fields: {
-        code: "unlicensed",
-        graphs: [{ Krate: { name, version: "0.1.0" } }],
-        message: `${name} = 0.1.0 is unlicensed`,
-        severity: "error",
-      },
-      type: "diagnostic",
-    });
   const deny: CargoResult = {
     missing: false,
     status: 4,

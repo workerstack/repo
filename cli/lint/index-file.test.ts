@@ -4,8 +4,9 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { indexFile } from "./index-file.ts";
 
 const MESSAGE = "an index file only re-exports; move this into its own module and re-export it";
-const messagesOf = (code: string, file = "src/index.ts") =>
-  reportsOf(indexFile, { [file]: code }).map((report) => report.message);
+function messagesOf(code: string, file = "src/index.ts") {
+  return reportsOf(indexFile, { [file]: code }).map((report) => report.message);
+}
 
 describe("index-file passes", () => {
   it.each([

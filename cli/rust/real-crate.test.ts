@@ -1,9 +1,9 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
+import { useTempDirs } from "../fixtures/temp-dirs.ts";
 import { CLIPPY_TOML } from "../sync/rust.constants.ts";
 import { rustHitsAt } from "./rust-hits.ts";
 
@@ -11,15 +11,14 @@ import { rustHitsAt } from "./rust-hits.ts";
 const CARGO_MS = 300_000;
 const FIXTURES = path.join(import.meta.dirname, "fixtures");
 
-const temps: string[] = [];
-afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
-});
+const { tempDir } = useTempDirs("workerstack-rust-crate-");
 
-/** A fresh copy of a fixture crate with the generated clippy.toml at its root; clippy.toml edits do not invalidate cargo's cache, so each run builds anew. */
+/**
+ * A fresh copy of a fixture crate with the generated clippy.toml at its root; clippy.toml edits do not invalidate
+ * cargo's cache, so each run builds anew.
+ */
 function crate(name: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-rust-crate-"));
-  temps.push(root);
+  const root = tempDir();
   fs.cpSync(path.join(FIXTURES, name), root, { recursive: true });
   fs.writeFileSync(path.join(root, "clippy.toml"), CLIPPY_TOML);
   return root;

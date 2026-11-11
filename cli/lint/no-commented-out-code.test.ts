@@ -4,7 +4,9 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
 
 const MESSAGE = "this comment is code; delete it, git keeps the old version";
-const messagesOf = (code: string) => reportsOf(noCommentedOutCode, { "a.ts": code }).map((report) => report.message);
+function messagesOf(code: string) {
+  return reportsOf(noCommentedOutCode, { "a.ts": code }).map((report) => report.message);
+}
 
 describe("no-commented-out-code passes prose and tool comments", () => {
   it.each([

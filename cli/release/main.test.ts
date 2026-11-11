@@ -2,33 +2,32 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { main } from "./main.ts";
 
-const writeErr = process.stderr.write;
-const writeOut = process.stdout.write;
 afterEach(() => {
-  process.stderr.write = writeErr;
-  process.stdout.write = writeOut;
+  vi.restoreAllMocks();
 });
+
+function into(lines: string[]) {
+  return (text: string | Uint8Array): boolean => (lines.push(text.toString()), true);
+}
 
 /** Runs `main` with stdout and stderr captured. */
 async function run(argv: string[]) {
   const out: string[] = [];
   const err: string[] = [];
-  const into =
-    (lines: string[]) =>
-    (text: string): boolean => (lines.push(text), true);
-  process.stdout.write = into(out); /* the code writes strings only */
-  process.stderr.write = into(err); /* the code writes strings only */
+  vi.spyOn(process.stdout, "write").mockImplementation(into(out));
+  vi.spyOn(process.stderr, "write").mockImplementation(into(err));
   const code = await main(argv);
   return { code, err: err.join(""), out: out.join("") };
 }
 
 const TAG_FORMAT = "name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
 const USAGE =
-  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> | consumer [<tarball>] | api [--against <tarball>]\n";
+  "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> " +
+  "| consumer [<tarball>] | api [--against <tarball>]\n";
 
 describe("repo release", () => {
   it("prints the usage for help", async () => {

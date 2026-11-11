@@ -26,16 +26,23 @@ type Installed = { version: string; exports?: unknown; peerDependencies: Record<
 /** Where the old version comes from: a registry (name, version, registry URL) or a tarball on disk. */
 export type OldSpec = { name: string; version: string; registry: string } | { tarball: string };
 
-const installedSchema = (): z.ZodType<Installed> =>
-  z.object({
+function installedSchema(): z.ZodType<Installed> {
+  return z.object({
     exports: z.unknown().optional(),
     peerDependencies: z.record(z.string(), z.string()).default({}),
     version: z.string(),
   });
-const projectSchema = () => z.object({ dependencies: z.record(z.string(), z.string()) });
+}
+function projectSchema() {
+  return z.object({ dependencies: z.record(z.string(), z.string()) });
+}
 
-const readJson = (file: string): unknown => JSON.parse(fs.readFileSync(file, "utf8"));
-const firstLine = (text: string): string => text.trim().split("\n", 1).join("");
+function readJson(file: string): unknown {
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+function firstLine(text: string): string {
+  return text.trim().split("\n", 1).join("");
+}
 
 /** Writes the manifest of an empty project into `project`. */
 export function initProject(project: string): void {
@@ -76,7 +83,9 @@ export function installOld(project: string, spec: OldSpec, io: InstallIo): strin
 }
 
 /** The specifier a package installed as `name` is imported by at one of its subpaths. */
-export const specOf = (name: string, subpath: Subpath): string => `${name}${subpath.key.slice(ROOT_KEY.length)}`;
+export function specOf(name: string, subpath: Subpath): string {
+  return `${name}${subpath.key.slice(ROOT_KEY.length)}`;
+}
 
 /**
  * Names the old copy `old` in its own package.json: TypeScript treats two packages of one name and version as one

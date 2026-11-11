@@ -34,11 +34,13 @@ export function releaseGithub(argv: readonly string[], io: GithubIo): number {
   if (parts === null) return refuse(io, GITHUB_PREFIX, WAIT_USAGE);
   const section = sectionFor(changelogText(io.cwd), parts.version);
   if (section === null) return refuse(io, GITHUB_PREFIX, noNotes(parts.version));
-  const exists = (): boolean => io.gh(GH_RELEASE_VIEW(tag), io.cwd).code === 0;
+  function exists(): boolean {
+    return io.gh(GH_RELEASE_VIEW(tag), io.cwd).code === 0;
+  }
   let line = releaseExists(tag);
   if (!exists()) {
     const notes = trimBlank(section.body).join("\n");
-    const made = io.gh(GH_RELEASE_CREATE(tag, notes, parts.version.includes("-")), io.cwd);
+    const made = io.gh(GH_RELEASE_CREATE(tag, notes, { prerelease: parts.version.includes("-") }), io.cwd);
     if (made.code === 0) line = releaseCreated(tag);
     else if (!exists()) return refuse(io, GITHUB_PREFIX, createFailed(made.stderr.trim()));
   }

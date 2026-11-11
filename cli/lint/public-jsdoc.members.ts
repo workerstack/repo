@@ -1,4 +1,5 @@
 import { docFault } from "./doc-fault.ts";
+import { isRecord } from "./manifest.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import type { Node } from "./public-surface.types.ts";
@@ -10,9 +11,15 @@ export type Source = { text: string; before: (node: Node) => Comment[] };
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
 export type Walk = { source: Source; owner: string; fail: (node: Node, label: string, text: string) => void };
 
-const keyName = (key: unknown): string => String(get(key, "name") ?? get(key, "value") ?? COMPUTED);
-const isUnnameable = (node: Node): boolean =>
-  node["computed"] === true && get(node["key"], "type") === NODE_TYPES.identifier;
+function keyName(key: unknown): string {
+  const label = [get(key, "name"), get(key, "value")].find(
+    (part) => typeof part === "string" || typeof part === "number" || typeof part === "bigint",
+  );
+  return label === undefined ? COMPUTED : String(label);
+}
+function isUnnameable(node: Node): boolean {
+  return node["computed"] === true && get(node["key"], "type") === NODE_TYPES.identifier;
+}
 
 function jsdocOf(source: Source, node: Node): Comment | undefined {
   return source
@@ -36,10 +43,14 @@ export function check(walk: Walk, node: Node, named: { label: string; name: stri
   if (fault !== null) walk.fail(node, label, fault);
 }
 
-const methodKey = (node: Node): string => `${node["static"] === true ? "static " : ""}${keyName(node["key"])}`;
-const isSignature = (node: Node): boolean => get(node["value"], "type") === NODE_TYPES.emptyBody;
+function methodKey(node: Node): string {
+  return `${node["static"] === true ? "static " : ""}${keyName(node["key"])}`;
+}
+function isSignature(node: Node): boolean {
+  return get(node["value"], "type") === NODE_TYPES.emptyBody;
+}
 
-/** A class method that is an overload's implementation, or a setter beside its getter: the other one carries the doc. */
+/** A class method that is an overload's implementation, or a setter beside its getter: the other carries the doc. */
 function isBareClassMember(body: Node[], node: Node): boolean {
   if (node["type"] !== NODE_TYPES.method) return false;
   const siblings = body.filter(
@@ -53,8 +64,8 @@ function checkInferred(walk: Walk, node: Node, label: string): void {
   const isFunction =
     node["type"] === NODE_TYPES.method && node["kind"] !== KIND.constructor && node["kind"] !== KIND.setter;
   const isProperty = node["type"] === NODE_TYPES.propertyDefinition || node["type"] === NODE_TYPES.accessorProperty;
-  const bodyless = isFunction && Boolean(get(node["value"], "body")) && !get(node["value"], "returnType");
-  const untyped = isProperty && !node["typeAnnotation"] && !statesItsType(node["value"]);
+  const bodyless = isFunction && isRecord(get(node["value"], "body")) && !isRecord(get(node["value"], "returnType"));
+  const untyped = isProperty && !isRecord(node["typeAnnotation"]) && !statesItsType(node["value"]);
   if (bodyless || untyped) walk.fail(node, label, FAULTS.inferred);
 }
 
@@ -77,7 +88,7 @@ function checkClassBody(walk: Walk, body: Node, visit: (node: Node) => boolean):
 
 /** The visit that checks every member a consumer can see under a declaration, for `walkPublic`. */
 export function visitorOf(walk: Walk): (node: Node) => boolean {
-  const visit = (node: Node): boolean => {
+  function visit(node: Node): boolean {
     const type = String(node["type"]);
     if (type === NODE_TYPES.classBody) checkClassBody(walk, node, visit);
     if (type === NODE_TYPES.parameterProperty) {
@@ -91,6 +102,6 @@ export function visitorOf(walk: Walk): (node: Node) => boolean {
     if (signature !== undefined) check(walk, node, { label: `${walk.owner}.${signature}`, name: "" });
     if (MEMBERS.includes(type) && !isUnnameable(node)) checkMember(walk, node, []);
     return type !== NODE_TYPES.classBody && type !== NODE_TYPES.conditional && !isUnnameable(node);
-  };
+  }
   return visit;
 }

@@ -10,11 +10,13 @@ import { OLD, removal, SHRUNK, TIMEOUT, withOld } from "./fixtures/api-cases.ts"
 import { api, apiRepo, NAME, PREFIX } from "./fixtures/api-repo.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
-const conditions = (types: string, runtime: string) => ({
-  types,
+function conditions(types: string, runtime: string) {
+  return {
+    types,
 
-  default: runtime,
-});
+    default: runtime,
+  };
+}
 
 afterEach(removePlanted);
 
@@ -22,10 +24,9 @@ const AGAINST = ["--against", "old.tgz"];
 const realBun = spawnRunner("bun");
 /** A bun that fails `bun add` of a spec starting with `prefix` (or any, when empty) and runs the rest. */
 /** A bun whose `add` of a spec `pick` matches fails with `stderr`; every other call runs the real bun. */
-const failing =
-  (pick: (arg: string) => boolean, stderr: string): Runner =>
-  (args, cwd) =>
-    args[0] === "add" && args.some(pick) ? { code: 1, stderr, stdout: "" } : realBun(args, cwd);
+function failing(pick: (arg: string) => boolean, stderr: string): Runner {
+  return (args, cwd) => (args[0] === "add" && args.some(pick) ? { code: 1, stderr, stdout: "" } : realBun(args, cwd));
+}
 
 describe("repo release api usage", () => {
   it.each([["--nope"], ["--against"], ["--against", "a", "b"], ["old.tgz"]])(

@@ -22,7 +22,9 @@ function nearestLessons(start: string): string | null {
   return path.join(dir, LESSONS);
 }
 
-const shown = (cwd: string, to: string): string => path.relative(cwd, to).replaceAll("\\", "/");
+function shown(cwd: string, to: string): string {
+  return path.relative(cwd, to).replaceAll("\\", "/");
+}
 
 /** Where the linted file is, and the dir paths in messages are relative to. */
 type Where = { cwd: string; filename: string };

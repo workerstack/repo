@@ -1,36 +1,46 @@
 import { expect, it } from "vitest";
 
 import { crateProblems } from "./cargo-metadata.ts";
-import type { CargoResult, CargoRun } from "./clippy.ts";
+import type { CargoResult } from "./clippy.ts";
 
 /** One `packages[]` entry as cargo 1.99.1 prints it for a workspace member. */
-const entry = (name: string, fields: Record<string, unknown>, manifest = `/work/${name}/Cargo.toml`) => ({
-  description: null,
-  id: `${name} 0.1.0`,
-  license: null,
-  license_file: null,
-  manifest_path: manifest,
-  name,
-  publish: null,
-  repository: null,
-  rust_version: null,
-  version: "0.1.0",
-  ...fields,
-});
+function entry(name: string, fields: Record<string, unknown>, manifest = `/work/${name}/Cargo.toml`) {
+  return {
+    description: null,
+    id: `${name} 0.1.0`,
+    license: null,
+    license_file: null,
+    manifest_path: manifest,
+    name,
+    publish: null,
+    repository: null,
+    rust_version: null,
+    version: "0.1.0",
+    ...fields,
+  };
+}
 const FULL = { description: "d", license: "MIT", repository: "https://x", rust_version: "1.86" };
 
-/** A runner that records its call and returns `packages` as the metadata, or `result` when given; `members` are the workspace member ids (all of `packages` by default). */
+/**
+ * A runner that records its call and returns `packages` as the metadata, or `result` when given; `members` are the
+ * workspace member ids (all of `packages` by default).
+ */
 function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, members?: string[]) {
   const calls: { root: string; args: readonly string[] }[] = [];
-  const run: CargoRun = (root, args) => {
+  function run(root: string, args: readonly string[]): CargoResult {
     calls.push({ args, root });
     const ids = members ?? packages.map((pkg) => pkg.id);
     const stdout = JSON.stringify({ packages, version: 1, workspace_members: ids, workspace_root: root });
     return { missing: false, status: 0, stderr: "", stdout, ...result };
-  };
+  }
   return { calls, run };
 }
-const problems = (packages: { id: string }[]) => crateProblems("/work", cargo(packages).run);
+function bad(stdout: string) {
+  return crateProblems("/work", cargo([], { stdout }).run);
+}
+function problems(packages: { id: string }[]) {
+  return crateProblems("/work", cargo(packages).run);
+}
 
 it("runs cargo metadata locked, for the members only", () => {
   const { run, calls } = cargo([]);
@@ -50,7 +60,8 @@ it("names each missing field in order, with the manifest root-relative", () => {
   expect(problems([entry("b", {})])).toStrictEqual({
     kind: "checked",
     problems: [
-      "crate b (b/Cargo.toml) is publishable but has no license, description, repository, rust-version; add them or set publish = false",
+      "crate b (b/Cargo.toml) is publishable but has no license, description, repository, rust-version; " +
+        "add them or set publish = false",
     ],
     unlicensed: new Set(["b"]),
   });
@@ -88,7 +99,8 @@ it("makes a Windows manifest path with backslashes root-relative POSIX", () => {
   expect(result).toStrictEqual({
     kind: "checked",
     problems: [
-      "crate c (members/b/Cargo.toml) is publishable but has no license, description, repository, rust-version; add them or set publish = false",
+      "crate c (members/b/Cargo.toml) is publishable but has no license, description, repository, rust-version; " +
+        "add them or set publish = false",
     ],
     unlicensed: new Set(["c"]),
   });
@@ -127,7 +139,6 @@ it("makes a signal a problem", () => {
 });
 
 it("makes unreadable output a problem quoting it", () => {
-  const bad = (stdout: string) => crateProblems("/work", cargo([], { stdout }).run);
   const message = "cargo metadata printed output repo cannot read: ";
   expect(bad("not json")).toStrictEqual({ kind: "failed", problems: [`${message}not json`] });
   expect(bad('{"packages":[{"name":1}]}')).toStrictEqual({

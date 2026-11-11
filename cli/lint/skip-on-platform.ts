@@ -14,15 +14,19 @@ const COMPARISONS = ["===", "!==", "==", "!=", "<", ">", "<=", ">="];
 const JOINS = ["&&", "||"];
 const UNARY = ["!", "-"];
 const NOTHING = "no condition";
-const tail =
-  "a test may skip only on process.platform, process.arch, process.versions or a runtime global, so make it hermetic instead";
+const WHITESPACE = /\s+/g;
+const TAIL =
+  "a test may skip only on process.platform, process.arch, process.versions or a runtime global, " +
+  "so make it hermetic instead";
 
-const nameOf = (node: Node | null | undefined): string | undefined =>
-  node?.type === "Identifier" ? node.name : undefined;
+function nameOf(node: Node | null | undefined): string | undefined {
+  return node?.type === "Identifier" ? node.name : undefined;
+}
 
 /** The plain name of `.name` on a member read, or undefined for `[expr]` and private names. */
-const memberName = (node: ESTree.MemberExpression): string | undefined =>
-  node.computed ? undefined : nameOf(node.property);
+function memberName(node: ESTree.MemberExpression): string | undefined {
+  return node.computed ? undefined : nameOf(node.property);
+}
 
 /** `it`, `test` or `describe`, bare or through `.concurrent` and `.sequential`. */
 function isTestFunction(node: Node): boolean {
@@ -81,8 +85,11 @@ function contextParam(node: Node): string | undefined {
 
 /** Whether `name` is the context parameter of a test callback around `node`: `it("x", (ctx) => { ctx.skip(...) })`. */
 function isTestContext(node: Node, name: string): boolean {
-  for (let at: Node | null | undefined = node.parent; at; at = at.parent) if (contextParam(at) === name) return true;
-
+  let at: Node | null = node.parent;
+  while (at !== null) {
+    if (contextParam(at) === name) return true;
+    at = at.parent;
+  }
   return false;
 }
 
@@ -90,14 +97,16 @@ function isTestContext(node: Node, name: string): boolean {
 export const skipOnPlatform: CreateRule = {
   create(context) {
     const { text } = context.sourceCode;
-    const render = (node: Node): string => text.slice(node.start, node.end).replaceAll(/\s+/g, " ");
-    const check = (node: ESTree.CallExpression, who: string) => {
+    function render(node: Node): string {
+      return text.slice(node.start, node.end).replaceAll(WHITESPACE, " ");
+    }
+    function check(node: ESTree.CallExpression, who: string) {
       const [condition] = node.arguments;
       const leaf = condition === undefined ? undefined : firstLeaf(condition);
       if (condition !== undefined && leaf === undefined) return;
       const what = leaf === undefined ? NOTHING : render(leaf.type === "CallExpression" ? leaf.callee : leaf);
-      context.report({ message: `${who} reads ${what}; ${tail}`, node });
-    };
+      context.report({ message: `${who} reads ${what}; ${TAIL}`, node });
+    }
     return {
       CallExpression(node) {
         const { callee } = node;

@@ -21,7 +21,9 @@ type Wrapper =
   | ESTree.TSNonNullExpression
   | ESTree.TSTypeAssertion;
 
-const isWrapper = (node: Expression): node is Wrapper => WRAPPERS.includes(node.type);
+function isWrapper(node: Expression): node is Wrapper {
+  return WRAPPERS.includes(node.type);
+}
 
 function unwrap(node: Expression | null): Expression | null {
   let current = node;

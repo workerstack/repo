@@ -42,8 +42,17 @@ export const UNLICENSED_CODES: readonly string[] = ["unlicensed", "no-license-fi
 /** The cargo-deny diagnostic codes of each section; a code in none of them prints with no section. */
 export const DENY_SECTIONS: Readonly<Record<string, readonly string[]>> = {
   advisories: [
-    ...["vulnerability", "notice", "unmaintained", "unsound", "yanked", "advisory-ignored", "yanked-ignored"],
-    ...["index-failure", "index-cache-load-failure", "advisory-not-detected", "yanked-not-detected"],
+    "vulnerability",
+    "notice",
+    "unmaintained",
+    "unsound",
+    "yanked",
+    "advisory-ignored",
+    "yanked-ignored",
+    "index-failure",
+    "index-cache-load-failure",
+    "advisory-not-detected",
+    "yanked-not-detected",
     "unknown-advisory",
   ],
   bans: [
@@ -107,3 +116,6 @@ export const DENY_SECTIONS: Readonly<Record<string, readonly string[]>> = {
     "unmatched-organization",
   ],
 };
+
+/** One whitespace character, where the first word of a message ends. */
+export const WHITESPACE: RegExp = /\s/;
