@@ -40,6 +40,22 @@ export default defineConfig({
         reason: "repo sync reads its references/INDEX.md by path for the repo:available section; nothing imports it",
       },
       {
+        dependency: "stylelint-config-standard",
+        reason: "cli/css/stylelint-config.ts names it in the config's extends, which Stylelint resolves by name",
+      },
+      {
+        dependency: "stylelint-config-recess-order",
+        reason: "cli/css/stylelint-config.ts names it in the config's extends, which Stylelint resolves by name",
+      },
+      {
+        dependency: "@dreamsicle.io/stylelint-config-tailwindcss",
+        reason: "cli/css/stylelint-config.ts names it in the extends and imports it by a name held in a variable",
+      },
+      {
+        dependency: "stylelint-order",
+        reason: "the plugin stylelint-config-recess-order loads by name; pinned here so isolated installs hold it",
+      },
+      {
         dependency: "@cloudflare/workers-types",
         reason: "optional peer for consumers: the shipped tsconfig/worker.d.ts references its types for them",
       },
@@ -71,6 +87,11 @@ export default defineConfig({
         ],
         reason:
           "bun runs each file directly; its one module-scope statement is the import.meta.main guard that calls run",
+        rules: ["repo/no-module-side-effects"],
+      },
+      {
+        files: ["cli/css/stylelint-run.ts"],
+        reason: "bun runs this file as the Stylelint child; its one module-scope statement is the main guard",
         rules: ["repo/no-module-side-effects"],
       },
       {

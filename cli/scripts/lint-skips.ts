@@ -9,6 +9,7 @@ import path from "node:path";
 
 import { sourceFiles, type Listed } from "../check-comments.ts";
 import { findRoot, loadConfig, type LintSkip, type ResolvedLint } from "../config.ts";
+import { cssFiles, isLintedCss } from "../css/css-diagnostics.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
@@ -83,12 +84,17 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
   return rules.length === 0 ? null : `skips: ${rules.map((rule) => `${rule} ${counted.get(rule)?.size}`).join(", ")}`;
 }
 
-/** The JS/TS source files and the Rust ones (with a root Cargo.toml they are the repo's), the globs of a skip match. */
+/**
+ * The JS/TS source files, the Rust ones (with a root Cargo.toml they are the repo's) and the stylesheets, the globs of
+ * a skip match.
+ */
 function sourcesOf(root: string): Listed {
   const rust = rustSources(root);
   if (!rust.ok) return rust;
+  const css = cssFiles(root);
+  if (!css.ok) return css;
   const sources = sourceFiles(root);
-  return sources.ok ? { files: [...sources.files, ...rust.files].sort(byKey), ok: true } : sources;
+  return sources.ok ? { files: [...sources.files, ...rust.files, ...css.files].sort(byKey), ok: true } : sources;
 }
 
 /**
@@ -121,7 +127,7 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
   if (!listed.ok) return { problems: listed.errors, report: [] };
   const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.files)), index, skip }));
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
-  const oxlinted = files.filter((file) => !RUST_SOURCE.test(file));
+  const oxlinted = files.filter((file) => !RUST_SOURCE.test(file) && !isLintedCss(file));
   const linted =
     oxlinted.length === 0
       ? { ok: true as const, value: [] }

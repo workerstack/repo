@@ -43,3 +43,16 @@ it("oxlintConfig turns eslint/no-negated-condition off with a reason, as unicorn
     "unicorn/no-negated-condition": "error",
   });
 });
+
+it("oxlintConfig accepts a Stylelint rule's skip and writes no override for it", () => {
+  const skips = [{ files: ["src/legacy.css"], reason: REASON, rules: ["stylelint/no-descending-specificity"] }];
+  expect(configOf(skips).overrides).toStrictEqual(configOf().overrides);
+});
+
+it("oxlintConfig refuses a Stylelint skip name that is not a lowercase rule name", () => {
+  const skips = [{ files: ["src/legacy.css"], reason: REASON, rules: ["stylelint/Bad Name"] }];
+  expect(oxlintConfig(APP, { skip: skips })).toStrictEqual({
+    errors: ['workerstack.config.ts: lint.skip[0].rules: "stylelint/Bad Name" is not a rule the generated config runs'],
+    ok: false,
+  });
+});

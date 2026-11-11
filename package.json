@@ -87,6 +87,7 @@
   "dependencies": {
     "@arethetypeswrong/core": "0.18.5",
     "@clack/prompts": "^0.11.0",
+    "@dreamsicle.io/stylelint-config-tailwindcss": "1.2.2",
     "@oxlint/plugins": "1.92.0",
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/bun": "^1.4.4",
@@ -102,6 +103,10 @@
     "oxlint-tsgolint": "7.0.2006",
     "publint": "0.3.25",
     "smol-toml": "^1.8.0",
+    "stylelint": "17.16.0",
+    "stylelint-config-recess-order": "7.9.0",
+    "stylelint-config-standard": "40.0.0",
+    "stylelint-order": "8.1.2",
     "turbo": "2.11.10",
     "typescript": "^5.9.3",
     "yaml": "2.9.1",
