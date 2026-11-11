@@ -7,13 +7,13 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
-import { plant, useJobEnv } from "./fixtures/job-kit.ts";
+import { plant, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { runFetch, stripHtml } from "./job-fetch.ts";
 import { runJob } from "./job.ts";
 
 useJobEnv();
 
-const serverScript = fileURLToPath(new URL("./fixtures/job-http-server.ts", import.meta.url));
+const serverScript = fileURLToPath(new URL("./__fixtures__/job-http-server.ts", import.meta.url));
 let server: ChildProcess;
 let base = "";
 

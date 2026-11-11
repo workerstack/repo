@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { COMPLETE, MIT, OWNER, lines, without } from "./__fixtures__/public-package.ts";
 import type { Pack } from "./config.ts";
-import { COMPLETE, MIT, OWNER, lines, without } from "./fixtures/public-package.ts";
 
 const RELEASE: Pack[] = ["release"];
 const STANDARDS: Pack[] = ["standards"];

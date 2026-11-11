@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanup, world } from "./fixtures/update-world.ts";
+import { cleanup, world } from "./__fixtures__/update-world.ts";
 import { main } from "./remove.ts";
 
 afterEach(cleanup);

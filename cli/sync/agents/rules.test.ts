@@ -6,14 +6,14 @@ import { expect, it } from "vitest";
 
 import { readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS, type Host } from "../../config.ts";
-import { BASE, renderText, SCOPED, rule, sourcesOf, stockRule } from "../fixtures/rules-kit.ts";
+import { BASE, renderText, SCOPED, rule, sourcesOf, stockRule } from "../__fixtures__/rules-kit.ts";
 import { regionBody } from "../region.ts";
 import { loadSources } from "./load-sources.ts";
 import type { Doc, Sources } from "./sources.types.ts";
 import { renderSubagents } from "./subagents.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
+const FIXTURES = path.join(ROOT, "cli", "sync", "__fixtures__");
 
 function isRulesPath(rel: string) {
   return rel === "AGENTS.md" || /^\.(?:agents|claude|grok)\/rules\//.test(rel);

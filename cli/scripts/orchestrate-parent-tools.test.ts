@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { orchestrateKit, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
-import { VALID_HANDOFF, VALID_IMPL, VALID_LESSON, VALID_PLAN, DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { runHook } from "./fixtures/run-hook.ts";
+import { orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_HANDOFF, VALID_IMPL, VALID_LESSON, VALID_PLAN, DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
+import { runHook } from "./__fixtures__/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
 
 const kit = orchestrateKit();

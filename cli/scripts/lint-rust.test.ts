@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { cargoLock } from "../rust/__fixtures__/cargo-lock.ts";
 import { MISSING_CARGO } from "../rust/clippy.constants.ts";
 import type { CargoRun } from "../rust/clippy.ts";
-import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
-import { cleanTemps, consumer, SLOW } from "./fixtures/baseline-repo.ts";
-import { pathSans } from "./fixtures/job-kit.ts";
+import { cleanTemps, consumer, SLOW } from "./__fixtures__/baseline-repo.ts";
+import { pathSans } from "./__fixtures__/job-kit.ts";
 import { lintMain } from "./lint-main.ts";
 import { fmt } from "./lint.ts";
 

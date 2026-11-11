@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 import { HOSTS, type Host } from "../config.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
-import { RENDER_TIMEOUT, consumer, context, find, linkTarget, render, text } from "./fixtures/trees-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { RENDER_TIMEOUT, consumer, context, find, linkTarget, render, text } from "./__fixtures__/trees-kit.ts";
 import { regionHash } from "./region.ts";
 import { renderTrees } from "./trees.ts";
 

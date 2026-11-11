@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it, vi } from "vitest";
 
+import { read, syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { read, syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 import { MANIFEST_REL, renderManifest } from "./sync/manifest.ts";
 
 useSyncKit();

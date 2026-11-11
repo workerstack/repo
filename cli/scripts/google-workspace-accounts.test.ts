@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   freshToken,
   jsonRes,
@@ -13,7 +13,7 @@ import {
   stubFetchThrowing,
   withIo,
   writeJson,
-} from "./fixtures/google-workspace-kit.ts";
+} from "./__fixtures__/google-workspace-kit.ts";
 import { main } from "./google-workspace.ts";
 
 useTempDirs();

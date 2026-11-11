@@ -2,9 +2,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
-import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { CREATED, NAME_LINE, update } from "./fixtures/persist-roadmap-kit.ts";
+import { DRAFT_ROADMAP, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { read, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
+import { CREATED, NAME_LINE, update } from "./__fixtures__/persist-roadmap-kit.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");

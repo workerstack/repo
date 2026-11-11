@@ -3,9 +3,9 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { put, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { ignoreRepo } from "./fixtures/ignore-kit.ts";
-import { realDir } from "./fixtures/real-dir.ts";
+import { put, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { ignoreRepo } from "./__fixtures__/ignore-kit.ts";
+import { realDir } from "./__fixtures__/real-dir.ts";
 import { redundantIgnoreLines } from "./redundant-ignore-lines.ts";
 
 useTempDirs();

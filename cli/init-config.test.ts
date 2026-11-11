@@ -4,8 +4,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { HOSTS, SKILL_PACKS } from "./config.ts";
-import { BASE_CONFIG } from "./fixtures/base-config.ts";
+import { BASE_CONFIG } from "./__fixtures__/base-config.ts";
 import {
   PACKS_LINE,
   config,
@@ -16,7 +15,8 @@ import {
   stubPkgRoot,
   tmp,
   useInitKit,
-} from "./fixtures/init-kit.ts";
+} from "./__fixtures__/init-kit.ts";
+import { HOSTS, SKILL_PACKS } from "./config.ts";
 import { init, writeConfigIfMissing } from "./init.ts";
 import { standards } from "./sync/standards.ts";
 

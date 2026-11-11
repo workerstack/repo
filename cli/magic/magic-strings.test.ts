@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, COMPARED, COPIES, hit, magicOf, STRING } from "./fixtures/magic-repo.ts";
+import { cleanTemps, COMPARED, COPIES, hit, magicOf, STRING } from "./__fixtures__/magic-repo.ts";
 
 afterEach(cleanTemps);
 

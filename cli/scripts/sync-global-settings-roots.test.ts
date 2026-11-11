@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { CLAUDE, readHostDest, repoRoot, stockCopy, stockWorkspace } from "./fixtures/sync-global-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { CLAUDE, readHostDest, repoRoot, stockCopy, stockWorkspace } from "./__fixtures__/sync-global-kit.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 import type { SyncResult } from "./sync-global-settings.types.ts";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { useTempTree } from "./fixtures/temp-tree.ts";
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { knownFailures } from "./known-failures.ts";
 
 const tempTree = useTempTree("known-failures-");

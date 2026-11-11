@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
+import { context } from "../__fixtures__/release-context.ts";
 import type { Pack } from "../config.ts";
-import { context } from "../fixtures/release-context.ts";
 import type { PackageJson } from "../sync/workspace.ts";
 import { githubFiles } from "./github-files.ts";
 import { hasOwnedHeader, stamp } from "./header.ts";

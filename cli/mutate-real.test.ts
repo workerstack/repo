@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { git, removePlanted, tempDir, write } from "./__fixtures__/planted-repo.ts";
 import { childEnv } from "./env.ts";
-import { git, removePlanted, tempDir, write } from "./fixtures/planted-repo.ts";
 import { realDeps } from "./mutate-real-deps.ts";
 import { runMutate } from "./mutate.ts";
 import { toolEnv } from "./scripts/tool-env.ts";

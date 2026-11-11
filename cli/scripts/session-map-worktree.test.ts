@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { ctxOf, run, worktree } from "./fixtures/session-map-kit.ts";
+import { ctxOf, run, worktree } from "./__fixtures__/session-map-kit.ts";
 import { fallbackNotice, header, sessionContext } from "./session-map.ts";
 
 /** The notice an uninstalled worktree prints when its hooks run the bin of the checkout at `main`. */

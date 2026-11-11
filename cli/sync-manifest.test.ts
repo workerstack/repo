@@ -16,7 +16,7 @@ import {
   syncWith,
   useSyncKit,
   write,
-} from "./fixtures/sync-kit.ts";
+} from "./__fixtures__/sync-kit.ts";
 import { MANIFEST_REL } from "./sync/manifest.ts";
 import { type Output } from "./sync/outputs.ts";
 import { writeOutput } from "./sync/write.ts";

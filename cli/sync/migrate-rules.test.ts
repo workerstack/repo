@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { write } from "./__fixtures__/copied-install.ts";
+import { contents, notes } from "./__fixtures__/mini-install.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { write } from "./fixtures/copied-install.ts";
-import { contents, notes } from "./fixtures/mini-install.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { planRuleUpgrade } from "./migrate-rules.ts";
 
 useTempDirs();

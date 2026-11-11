@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanSkillDirs, skillDir } from "./fixtures/skill-dirs.ts";
+import { cleanSkillDirs, skillDir } from "./__fixtures__/skill-dirs.ts";
 import { findSkillContentConflicts, listSkillDirNames } from "./skill-conflicts.ts";
 
 afterEach(cleanSkillDirs);

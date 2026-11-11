@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { runHook } from "./fixtures/run-hook.ts";
-import { FILLER_PROMPT, parseOut, scrubbedPrompt } from "./fixtures/scrub-kit.ts";
+import { runHook } from "./__fixtures__/run-hook.ts";
+import { FILLER_PROMPT, parseOut, scrubbedPrompt } from "./__fixtures__/scrub-kit.ts";
 import { main as orchMain } from "./orchestrate-parent.ts";
 import { main } from "./scrub-spawn-prompt.ts";
 

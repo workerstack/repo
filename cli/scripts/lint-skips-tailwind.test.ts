@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, git, tempDir, write } from "./fixtures/turn-repo.ts";
+import { cleanTemps, git, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { checkLintSkips } from "./lint-skips.ts";
 import { captureTool } from "./lint.ts";
 

@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { denyReason, inSession, kindWrite } from "./fixtures/hook-payload.ts";
-import { planFile, reviewReason } from "./fixtures/review-plan.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { denyReason, inSession, kindWrite } from "./__fixtures__/hook-payload.ts";
+import { planFile, reviewReason } from "./__fixtures__/review-plan.ts";
 import { isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";

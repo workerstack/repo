@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./fixtures/worktree-repo.ts";
-import { mergedAndDirtyWorktrees } from "./fixtures/worktree-scenarios.ts";
+import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
+import { mergedAndDirtyWorktrees } from "./__fixtures__/worktree-scenarios.ts";
 import { isManaged } from "./worktree-git.ts";
 import { main } from "./worktree.ts";
 

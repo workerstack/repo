@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { pathSans, plant, plantFiles, useJobEnv } from "./fixtures/job-kit.ts";
+import { pathSans, plant, plantFiles, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { runJob } from "./job.ts";
 
 useJobEnv();

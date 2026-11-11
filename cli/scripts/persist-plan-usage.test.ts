@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
-import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
+import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { fencedLineSet, sectionBodies } from "./persist-sections.ts";
 

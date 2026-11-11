@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanBrowser, exec, failure, live, methods, NO_SESSION, nth, tmp } from "./fixtures/browser-kit.ts";
-import type { Calls } from "./fixtures/browser-kit.ts";
+import { cleanBrowser, exec, failure, live, methods, NO_SESSION, nth, tmp } from "./__fixtures__/browser-kit.ts";
+import type { Calls } from "./__fixtures__/browser-kit.ts";
 
 afterEach(cleanBrowser);
 

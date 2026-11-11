@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { KEYWORDS, MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
-import { DENIED, DENIED_LINE, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
-import { EMPTY_SETTINGS, fakeGh, type Settings } from "./fixtures/github-store.ts";
-import { must } from "./fixtures/github-wanted.ts";
+import { KEYWORDS, MANIFEST, githubRepo } from "./__fixtures__/github-repo.ts";
+import { DENIED, DENIED_LINE, cleanGithubTemps, run, settledSettings } from "./__fixtures__/github-run.ts";
+import { EMPTY_SETTINGS, fakeGh, type Settings } from "./__fixtures__/github-store.ts";
+import { must } from "./__fixtures__/github-wanted.ts";
 import { main } from "./github-apply.ts";
 import type { GhFailure } from "./github-gh.ts";
 import { wantedAt } from "./github-wanted-at.ts";

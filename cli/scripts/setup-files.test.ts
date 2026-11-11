@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanSetup, desktopOauth, plant, readJsonAt, readSpeakJson, writeAt } from "./fixtures/setup-kit.ts";
+import { cleanSetup, desktopOauth, plant, readJsonAt, readSpeakJson, writeAt } from "./__fixtures__/setup-kit.ts";
 import { mergeSpeakJson, oauthWritePath, speakJsonPath, stateHome, writeSecretJson } from "./setup-files.ts";
 import { findDownloadedOAuthJson, installOAuthJson, parseDesktopOAuth, workspaceConsoleUrls } from "./setup-oauth.ts";
 

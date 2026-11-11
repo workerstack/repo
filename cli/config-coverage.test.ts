@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { COVERAGE, repo, useConfigKit } from "./__fixtures__/config-kit.ts";
 import { loadConfig } from "./config.ts";
-import { COVERAGE, repo, useConfigKit } from "./fixtures/config-kit.ts";
 
 useConfigKit();
 

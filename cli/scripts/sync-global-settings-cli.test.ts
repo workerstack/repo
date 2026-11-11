@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { HOSTS, runYolo } from "./fixtures/sync-global-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { HOSTS, runYolo } from "./__fixtures__/sync-global-kit.ts";
 
 useTempDirs();
 

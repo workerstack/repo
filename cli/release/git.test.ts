@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { commit, world } from "../fixtures/release-world.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { commit, world } from "../__fixtures__/release-world.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import { commitsAfter, type Tools } from "./git.ts";
 

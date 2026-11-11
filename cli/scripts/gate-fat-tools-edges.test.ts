@@ -5,9 +5,9 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { childEnv } from "../env.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { stubProcessStdio } from "./fixtures/stub-process-stdio.ts";
-import { stdinOf } from "./fixtures/worktree-repo.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { stubProcessStdio } from "./__fixtures__/stub-process-stdio.ts";
+import { stdinOf } from "./__fixtures__/worktree-repo.ts";
 import { main, processFatTools } from "./gate-fat-tools.ts";
 import { fatHookOutput } from "./gate-harness.ts";
 import { stampPlanSave } from "./gate-review.ts";

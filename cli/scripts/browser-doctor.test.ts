@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { cleanBrowser, envFor, run, runOn, tmp, writeFake } from "./__fixtures__/browser-kit.ts";
 import { lookupBins, pickEngine } from "./browser-engine.ts";
-import { cleanBrowser, envFor, run, runOn, tmp, writeFake } from "./fixtures/browser-kit.ts";
 
 afterEach(cleanBrowser);
 

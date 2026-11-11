@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 
-import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./fixtures/speak-kit.ts";
+import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./__fixtures__/speak-kit.ts";
 import { voices, whoami } from "./speak-api.ts";
 import { OPENAI_VOICES } from "./speak.constants.ts";
 import type { FetchFn } from "./speak.types.ts";

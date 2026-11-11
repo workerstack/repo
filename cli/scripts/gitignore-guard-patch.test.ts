@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempTree } from "../fixtures/temp-tree.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { patchIgnoreEdits, projectEdit, writeIgnoreEdits } from "./ignore-edits.ts";
 
 const tree = useTempTree("ignore-patch-");

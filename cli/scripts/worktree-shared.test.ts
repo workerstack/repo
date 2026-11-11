@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { at, cli, scratch, shared, wt } from "./fixtures/worktree-repo.ts";
+import { at, cli, scratch, shared, wt } from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());

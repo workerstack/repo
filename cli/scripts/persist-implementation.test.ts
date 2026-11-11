@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_IMPL, savedOk } from "./fixtures/persist-bodies.ts";
-import { seedOtherPlan } from "./fixtures/persist-save-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { VALID_IMPL, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { seedOtherPlan } from "./__fixtures__/persist-save-kit.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { IMPLEMENTATION_DIR } from "./persist-implementation.constants.ts";
 import { persistImplementation } from "./persist-implementation.ts";

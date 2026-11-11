@@ -2,8 +2,8 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
-import { linkedPair } from "./fixtures/link-two.ts";
-import { NAME, NONE, mod, npmCopy, scene, stateFile, stateOf } from "./fixtures/link-world.ts";
+import { linkedPair } from "./__fixtures__/link-two.ts";
+import { NAME, NONE, mod, npmCopy, scene, stateFile, stateOf } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 it("puts npm back and says which version", async () => {

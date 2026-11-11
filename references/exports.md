@@ -35,7 +35,7 @@ console.log(`${plugin.meta.name}: ${names.length} rules`);
 
 ## Stylelint
 
-Under the `standards` pack, `bun repo lint`, `bun repo check`, `bun repo turn` and `bun repo lint --baseline` also lint every tracked `.css` file outside `fixtures` dirs with Stylelint 17 and three packs: `stylelint-config-standard`, `@dreamsicle.io/stylelint-config-tailwindcss` (Tailwind v4 at-rules and `--alpha()`/`--spacing()`, plus `@config` and `@plugin`) and `stylelint-config-recess-order`. The config lives in this package, so nothing is written to your repo and the packs resolve from its install. Each warning is one `stylelint(<rule>)` hit the baseline counts like any other:
+Under the `standards` pack, `bun repo lint`, `bun repo check`, `bun repo turn` and `bun repo lint --baseline` also lint every tracked `.css` file outside `__fixtures__` dirs with Stylelint 17 and three packs: `stylelint-config-standard`, `@dreamsicle.io/stylelint-config-tailwindcss` (Tailwind v4 at-rules and `--alpha()`/`--spacing()`, plus `@config` and `@plugin`) and `stylelint-config-recess-order`. The config lives in this package, so nothing is written to your repo and the packs resolve from its install. Each warning is one `stylelint(<rule>)` hit the baseline counts like any other:
 
 ```text
 src/bad.css:4:10: error stylelint(color-hex-length): Expected "#ffffff" to be "#fff"
@@ -54,6 +54,16 @@ src/app.tsx:5:20: error tailwindcss(no-duplicate-classes): Duplicate class: "fle
 ```
 
 When two or more sheets import tailwindcss, sync fails and asks for `lint.tailwind.entryPoint`, the repo-relative sheet to check classes against; one that is no file or does not import tailwindcss fails sync too. A `lint.skip` entry may name a `tailwindcss/<rule>` only while an entry turns the rules on.
+
+## Fixture folders
+
+Test data lives in folders named `__fixtures__`, and every skip (lint, typecheck, Stylelint, jscpd, coverage, mutation, knip, sync pruning) leaves exactly that name out. `bun repo check` fails a folder named `fixtures`, `fixture`, `__fixture__`, `test-fixtures`, `test_fixtures` or `testdata`, tracked or untracked and not ignored, outside `__fixtures__`, `vendor` and the dependency dir:
+
+```text
+repo check: fixtures: cli/sync/fixtures is a fixture folder; rename it to cli/sync/__fixtures__ (bun repo fixtures --fix)
+```
+
+`bun repo fixtures` lists each such folder with the references it would rewrite (`cli/sync/fixtures -> cli/sync/__fixtures__ (41 references in 12 files)`), and `bun repo fixtures --fix` renames each with `git mv` and rewrites the path references to it in tracked, writable text files: a `/`-ended path that resolves to the folder (`./fixtures/`, `../fixtures/`, and a bare `<parent>/fixtures/` or `fixtures/` read from the root or from the file), and a quoted `"fixtures"` call argument whose quoted segments before it lead to the folder's parent (`path.join(dir, "fixtures")` beside it, `path.join(root, "<parent>", "fixtures")`). Prose, other quoted words and read-only generated files stay; `bun repo sync` rewrites those from their sources. A folder whose new name is taken is skipped and named.
 
 ## Vitest presets
 

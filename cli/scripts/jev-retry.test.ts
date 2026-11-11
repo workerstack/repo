@@ -11,7 +11,7 @@ import {
   reply,
   scripted,
   sleeper,
-} from "./fixtures/jev-kit.ts";
+} from "./__fixtures__/jev-kit.ts";
 import { MAX_REQUESTS_PER_DAY } from "./jev.constants.ts";
 
 function retry(status: number, header: Record<string, string> | undefined) {

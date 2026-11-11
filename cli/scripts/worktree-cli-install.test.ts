@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { MARK, bunRepo, cli, git, marker, scratch, write, wt } from "./fixtures/worktree-repo.ts";
+import { MARK, bunRepo, cli, git, marker, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 
 /** The Windows command that finds an executable on PATH. */
 const WHERE = "where";

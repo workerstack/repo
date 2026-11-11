@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { must, orchestrateKit, parseJson, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
-import { spawnHook } from "./fixtures/run-hook.ts";
+import { must, orchestrateKit, parseJson, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { spawnHook } from "./__fixtures__/run-hook.ts";
 
 const kit = orchestrateKit();
 const CHILD_MSG = "```js\nconst x = 1;\n```\nwrite file src/x.ts";

@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { fwd } from "../../dev/test-paths";
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { pathIsDenied } from "./gate-paths.ts";
 import { patchOfCommand, rewritePatch, rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { recordWrote, wasWroteThisSession, wroteListPath } from "./gate-wrote.ts";

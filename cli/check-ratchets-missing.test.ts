@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removePlanted, repoOnMain, write } from "./__fixtures__/planted-repo.ts";
 import { ratchetProblems } from "./check-ratchets.ts";
-import { removePlanted, repoOnMain, write } from "./fixtures/planted-repo.ts";
 
 afterEach(removePlanted);
 

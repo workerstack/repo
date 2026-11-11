@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { stubProcessStdio } from "./fixtures/stub-process-stdio.ts";
+import { stubProcessStdio } from "./__fixtures__/stub-process-stdio.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main, processHookPayload, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 

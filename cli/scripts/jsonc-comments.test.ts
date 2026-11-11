@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cleanJsonDirs, jsonDir, readText } from "./fixtures/json-dirs.ts";
+import { cleanJsonDirs, jsonDir, readText } from "./__fixtures__/json-dirs.ts";
 import { convertJsonc, convertText, firstOwnLine } from "./jsonc-comments.ts";
 
 afterEach(cleanJsonDirs);
@@ -53,7 +53,7 @@ describe("convertJsonc", () => {
       "tsconfig.json": TSCONFIG,
       "x.ts": TSCONFIG,
     });
-    const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "fixtures/f.jsonc"];
+    const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "__fixtures__/f.jsonc"];
     expect(convertJsonc(root, files, { check: true })).toStrictEqual([
       { file: "a.jsonc", line: 2 },
       { file: "tsconfig.json", line: 2 },
@@ -66,9 +66,9 @@ describe("convertJsonc", () => {
   });
 
   it("leaves a fixtures file alone", () => {
-    const root = jsonDir({ "fixtures/f.jsonc": TSCONFIG });
+    const root = jsonDir({ "__fixtures__/f.jsonc": TSCONFIG });
     spawnSync("git", ["add", "-A"], { cwd: root });
-    expect(convertJsonc(root, ["fixtures/f.jsonc"], { check: false })).toStrictEqual([]);
-    expect(fs.readFileSync(path.join(root, "fixtures/f.jsonc"), "utf8")).toBe(TSCONFIG);
+    expect(convertJsonc(root, ["__fixtures__/f.jsonc"], { check: false })).toStrictEqual([]);
+    expect(fs.readFileSync(path.join(root, "__fixtures__/f.jsonc"), "utf8")).toBe(TSCONFIG);
   });
 });

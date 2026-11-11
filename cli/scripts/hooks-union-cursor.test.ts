@@ -11,8 +11,8 @@ import {
   writeJson,
   type CursorDoc,
   type FlatEntry,
-} from "./fixtures/hooks-union-kit.ts";
-import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+} from "./__fixtures__/hooks-union-kit.ts";
+import { plantDirs } from "./__fixtures__/mcp-policy-kit.ts";
 import { MAP, rootCmd } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, CURSOR_WRITE_MATCHER, OWNED_HOOKS } from "./hooks-union.constants.ts";
 import { applyUnion, checkUnion } from "./hooks-union.ts";

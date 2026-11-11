@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { cleanTemps, read, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { timesMain, type TimesTable } from "./ci-times.ts";
-import { cleanTemps, read, tempDir, write } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 

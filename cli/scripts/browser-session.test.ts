@@ -14,7 +14,7 @@ import {
   readStored,
   REFS,
   tmp,
-} from "./fixtures/browser-kit.ts";
+} from "./__fixtures__/browser-kit.ts";
 
 afterEach(cleanBrowser);
 

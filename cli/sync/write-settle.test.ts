@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { expectMode, isWritable } from "./fixtures/file-mode.ts";
-import { file, link } from "./fixtures/outputs-kit.ts";
-import { put } from "./fixtures/temp-dirs.ts";
-import { block, hook, seeded, tempRoot, useWriteSuite } from "./fixtures/write-kit.ts";
+import { expectMode, isWritable } from "./__fixtures__/file-mode.ts";
+import { file, link } from "./__fixtures__/outputs-kit.ts";
+import { put } from "./__fixtures__/temp-dirs.ts";
+import { block, hook, seeded, tempRoot, useWriteSuite } from "./__fixtures__/write-kit.ts";
 import { settleModes } from "./write-modes.ts";
 
 useWriteSuite();

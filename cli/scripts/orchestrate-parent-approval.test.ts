@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { claudeHook } from "./fixtures/claude-hook.ts";
-import { closing } from "./fixtures/orchestrate-kit.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { plantFile } from "./fixtures/plant-file.ts";
+import { claudeHook } from "./__fixtures__/claude-hook.ts";
+import { closing } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { plantFile } from "./__fixtures__/plant-file.ts";
 
 const hook = claudeHook();
 

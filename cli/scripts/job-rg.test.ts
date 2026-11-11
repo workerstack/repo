@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
+import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { runSearch } from "./job-search.ts";
 import { descendantsOf, endTreeAfterError, type Runner } from "./job-tree.ts";
 

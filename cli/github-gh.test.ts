@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
+import { removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
 import { applyFailure, ghRunner, skipReason, type GhFailure } from "./github-gh.ts";
 
 afterEach(removePlanted);

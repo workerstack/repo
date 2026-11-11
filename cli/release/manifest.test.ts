@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
 import { isPublicPackage, parseManifest, readManifest } from "./manifest.ts";
 
 afterEach(removePlanted);

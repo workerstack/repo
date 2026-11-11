@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
-import { read, update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { expectNothingSaved } from "./fixtures/persist-save-kit.ts";
+import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { read, update, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
+import { expectNothingSaved } from "./__fixtures__/persist-save-kit.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { persistPlan } from "./persist-plan.ts";

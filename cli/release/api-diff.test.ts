@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { diffFixtures, JS } from "./__fixtures__/api-diff-world.ts";
+import { apiWorld } from "./__fixtures__/api-world.ts";
 import { apiDiff } from "./api-diff.ts";
 import type { Change } from "./api-diff.ts";
-import { diffFixtures, JS } from "./fixtures/api-diff-world.ts";
-import { apiWorld } from "./fixtures/api-world.ts";
 
 /** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
 function conditions(types: string, runtime: string) {

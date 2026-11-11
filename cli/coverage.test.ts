@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
 
+import { useCapturedRun } from "./__fixtures__/captured-run.ts";
 import { main } from "./coverage.ts";
-import { useCapturedRun } from "./fixtures/captured-run.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

@@ -15,8 +15,8 @@ import {
   shipStub,
   writeJson,
   type ClaudeDoc,
-} from "./fixtures/hooks-union-kit.ts";
-import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+} from "./__fixtures__/hooks-union-kit.ts";
+import { plantDirs } from "./__fixtures__/mcp-policy-kit.ts";
 import { TOOLS, eventKey } from "./gate-harness.ts";
 import { hookCommand } from "./hook-command.ts";
 import { applyUnion, checkUnion } from "./hooks-union.ts";

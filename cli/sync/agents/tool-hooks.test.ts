@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { HOSTS } from "../../config.ts";
-import { at, hooksOf, keysAt, parsed } from "../fixtures/hooks-kit.ts";
+import { at, hooksOf, keysAt, parsed } from "../__fixtures__/hooks-kit.ts";
 import { renderHooks } from "./render-hooks.ts";
 
 const CLAUDE_PAIRS: readonly (readonly [string, string])[] = [

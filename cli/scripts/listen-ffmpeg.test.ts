@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Handler } from "./fixtures/listen-env.ts";
+import type { Handler } from "./__fixtures__/listen-env.ts";
 import {
   darwinAudioSpec,
   defaultDevice,

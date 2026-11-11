@@ -1,9 +1,9 @@
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
-import { addOrigin, usePacks, writeConfigs } from "./fixtures/check-repo.ts";
-import { EMPTY_SETTINGS, fakeGh } from "./fixtures/github-store.ts";
-import { useMainCheckRepo } from "./fixtures/main-check-repo.ts";
+const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { addOrigin, usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
+import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
+import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
 
 const { repo, written } = useMainCheckRepo(fakes);

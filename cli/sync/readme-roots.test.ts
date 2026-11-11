@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { context, textOf } from "./fixtures/readme-kit.ts";
+import { context, textOf } from "./__fixtures__/readme-kit.ts";
 import { readme } from "./readme.ts";
 import type { WorkspacePackage } from "./workspace.ts";
 

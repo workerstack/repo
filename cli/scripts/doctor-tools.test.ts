@@ -3,7 +3,6 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { BUN_MIN_FALLBACK } from "./doctor.constants.ts";
 import {
   enablePacks,
   expectStdoutPath,
@@ -16,7 +15,8 @@ import {
   writeBin,
   writeBun,
   writeRequired,
-} from "./fixtures/doctor-kit.ts";
+} from "./__fixtures__/doctor-kit.ts";
+import { BUN_MIN_FALLBACK } from "./doctor.constants.ts";
 
 it("empty PATH → exit 1; all required missing; OS hints; optional gh; no playwright", () => {
   const cwd = tmp("doc-empty-");

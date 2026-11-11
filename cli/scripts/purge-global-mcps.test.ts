@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { plant, plantHomes, readGrok, readJsonDest, seedHome } from "./fixtures/purge-kit.ts";
+import { plant, plantHomes, readGrok, readJsonDest, seedHome } from "./__fixtures__/purge-kit.ts";
 import { purgeGlobalMcps } from "./purge-global-mcps.ts";
 import { claudePluginsPath, cursorMcpPath, grokConfigPath } from "./purge-paths.ts";
 

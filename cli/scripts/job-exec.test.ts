@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
+import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./__fixtures__/job-kit.ts";
 import { outputsOf, runExec } from "./job-exec.ts";
 
 useJobEnv();

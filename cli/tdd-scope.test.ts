@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { useTempTree } from "./fixtures/temp-tree.ts";
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { ownerLookup } from "./tdd-scope.ts";
 
 const tempTree = useTempTree("owners-");

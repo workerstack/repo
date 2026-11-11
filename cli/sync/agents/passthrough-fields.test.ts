@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { Host } from "../../config.ts";
-import { EVERY_FIELD, at, keysAt, renderOne } from "../fixtures/hooks-kit.ts";
+import { EVERY_FIELD, at, keysAt, renderOne } from "../__fixtures__/hooks-kit.ts";
 
 /** The one hook a single-definition render wrote: cursor's flat entry, else the first group's first handler. */
 function firstHook(host: Host, hooks: unknown): unknown {

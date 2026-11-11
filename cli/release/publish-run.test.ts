@@ -2,9 +2,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { publish, type Registry } from "../fixtures/publish-world.ts";
-import { gitIn, NAME, world } from "../fixtures/release-world.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { publish, type Registry } from "../__fixtures__/publish-world.ts";
+import { gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
 

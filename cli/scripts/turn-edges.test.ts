@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, consumer, git, SLOW, tempDir, turn, write } from "./fixtures/turn-repo.ts";
+import { cleanTemps, consumer, git, SLOW, tempDir, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Bins } from "./turn-steps.ts";
 import { main } from "./turn.ts";
 

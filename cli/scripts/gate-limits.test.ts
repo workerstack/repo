@@ -2,9 +2,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { deny } from "./fixtures/checkout-calls.ts";
-import { gated, rewrite } from "./fixtures/gate-answers.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
+import { deny } from "./__fixtures__/checkout-calls.ts";
+import { gated, rewrite } from "./__fixtures__/gate-answers.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";
 import {
   DEFAULT_GREP_HEAD_LIMIT,

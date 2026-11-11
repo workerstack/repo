@@ -13,8 +13,8 @@ import {
   type AgentsDoc,
   type ClaudeDoc,
   type HookGroup,
-} from "./fixtures/hooks-union-kit.ts";
-import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+} from "./__fixtures__/hooks-union-kit.ts";
+import { plantDirs } from "./__fixtures__/mcp-policy-kit.ts";
 import { MAP } from "./hooks-union-commands.ts";
 import { AGY_WRITE_MATCHER, AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
 import { applyUnion } from "./hooks-union.ts";

@@ -3,6 +3,7 @@ import path from "node:path";
 import { CONFIG_FILE } from "../config.constants.ts";
 import type { LintSkip, ResolvedLint } from "../config.ts";
 import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
 import { ERROR_SEVERITY, JSON_INDENT } from "./json.constants.ts";
@@ -19,7 +20,7 @@ export function unskippedConfigPath(pid: number): string {
   return UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));
 }
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
-export const FIXTURES = "**/fixtures/**";
+export const FIXTURES: string = `**/${FIXTURES_DIR}/**`;
 /** Reject files hold code that must not compile, checked by `repo check` and `repo turn` instead of linted. */
 const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];

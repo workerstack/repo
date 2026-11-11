@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
-import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./__fixtures__/persist-bodies.ts";
 import { locationOk } from "./persist-roadmap-shape.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 

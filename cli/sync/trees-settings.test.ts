@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 import { HOSTS } from "../config.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
   consumer,
@@ -13,7 +13,7 @@ import {
   text,
   type ClaudeSettings,
   type McpFile,
-} from "./fixtures/trees-kit.ts";
+} from "./__fixtures__/trees-kit.ts";
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();

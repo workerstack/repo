@@ -1,3 +1,4 @@
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import type { MapConfig } from "./folder-map.types.ts";
 
 /** The default token budget, deepest cap and leaf-dir count that folds. */
@@ -22,8 +23,7 @@ export const DEFAULTS: Readonly<MapConfig> = /* @__PURE__ */ Object.freeze({
     "assets",
     "static",
     "public",
-    "fixtures",
-    "__fixtures__",
+    FIXTURES_DIR,
     "__snapshots__",
     "__mocks__",
     "testdata",

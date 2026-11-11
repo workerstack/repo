@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { spawnHook } from "./fixtures/run-hook.ts";
-import { FILLER_PROMPT, parseOut, scrubbedPrompt } from "./fixtures/scrub-kit.ts";
+import { spawnHook } from "./__fixtures__/run-hook.ts";
+import { FILLER_PROMPT, parseOut, scrubbedPrompt } from "./__fixtures__/scrub-kit.ts";
 import { processHookPayload, rewriteSpawnToolInput } from "./scrub-spawn-prompt.ts";
 
 it("scrubs prompt with intent and preserves other fields", () => {

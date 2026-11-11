@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
-import { docEditor, savedDoc } from "./fixtures/persist-edit-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { VALID_IMPL } from "./__fixtures__/persist-bodies.ts";
+import { docEditor, savedDoc } from "./__fixtures__/persist-edit-kit.ts";
 import { extractH1, slugFromFilename } from "./persist-doc.ts";
 import { filesError, validateImplementation } from "./persist-implementation-validate.ts";
 import {

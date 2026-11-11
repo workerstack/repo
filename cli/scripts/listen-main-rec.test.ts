@@ -13,7 +13,7 @@ import {
   wavThen,
   which,
   cleanupTmp,
-} from "./fixtures/listen-env.ts";
+} from "./__fixtures__/listen-env.ts";
 import { NEED_FFMPEG, NEED_STT } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);

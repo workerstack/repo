@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
+import { SORTED, UNSORTED } from "./__fixtures__/json-dirs.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 
 function text(input: string): string | undefined {

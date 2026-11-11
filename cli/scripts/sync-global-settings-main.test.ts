@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { captureStreams, plant, plantDirs } from "./fixtures/sync-global-kit.ts";
-import { throwOnWrite } from "./fixtures/throw-on-write.ts";
+import { captureStreams, plant, plantDirs } from "./__fixtures__/sync-global-kit.ts";
+import { throwOnWrite } from "./__fixtures__/throw-on-write.ts";
 import { main } from "./sync-global-settings.ts";
 
 const tmp = plantDirs();

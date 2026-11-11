@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { answering, knipRoot, removeKnipRoots, report } from "./fixtures/knip-run.ts";
+import { answering, knipRoot, removeKnipRoots, report } from "./__fixtures__/knip-run.ts";
 import { checkKnip, checkKnipAt } from "./knip-check.ts";
 import { knipConfig } from "./sync/knip-config.ts";
 

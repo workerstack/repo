@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { callAt, jsonRes, sentJson, stubFetch, textRes } from "./fixtures/google-workspace-kit.ts";
-import { runWorkspace, useLoggedInWorkspace } from "./fixtures/use-logged-in-workspace.ts";
+import { callAt, jsonRes, sentJson, stubFetch, textRes } from "./__fixtures__/google-workspace-kit.ts";
+import { runWorkspace, useLoggedInWorkspace } from "./__fixtures__/use-logged-in-workspace.ts";
 import { accountContext } from "./google-workspace-account.ts";
 import { createFile } from "./google-workspace-files.ts";
 

@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
+import { git, lines, put, removeTemps, tempDir } from "./__fixtures__/commit-repo.ts";
 import { main } from "./commit-msg.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { git, lines, put, removeTemps, tempDir } from "./fixtures/commit-repo.ts";
 
 /** `repo commit-msg --range` on planted repos. */
 afterEach(removeTemps);

@@ -4,9 +4,9 @@ import path from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import type { DestShape } from "./fixtures/sync-global-kit.ts";
-import { CLAUDE, HOSTS, readHostDest, repoRoot, writeHostDest } from "./fixtures/sync-global-kit.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import type { DestShape } from "./__fixtures__/sync-global-kit.ts";
+import { CLAUDE, HOSTS, readHostDest, repoRoot, writeHostDest } from "./__fixtures__/sync-global-kit.ts";
 import { isRecord } from "./hook-input.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 

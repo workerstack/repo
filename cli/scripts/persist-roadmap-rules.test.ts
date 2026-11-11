@@ -2,9 +2,9 @@ import fs from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
-import { DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
-import { fenceFirst, openFence } from "./fixtures/persist-plan-rules-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
+import { fenceFirst, openFence } from "./__fixtures__/persist-plan-rules-kit.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 

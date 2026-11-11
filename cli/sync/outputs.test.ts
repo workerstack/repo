@@ -5,7 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import type { Pack } from "../config.ts";
-import { context } from "./fixtures/context-kit.ts";
+import { context } from "./__fixtures__/context-kit.ts";
 import { githubFiles } from "./github-files.ts";
 import { nightly } from "./nightly.ts";
 import { bunfig, GENERATORS, index, lessons, trees } from "./outputs.ts";

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { catalogsOf, readWorkspace } from "./workspace.ts";
 
 useTempDirs();

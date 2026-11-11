@@ -2,11 +2,11 @@ import net from "node:net";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { Calls } from "./__fixtures__/browser-kit.ts";
+import { cleanBrowser, engine, onStop } from "./__fixtures__/browser-kit.ts";
+import { acceptKey, clientFrame, rawClient, request, scripted, trickle } from "./__fixtures__/browser-ws-kit.ts";
 import { connectCdp } from "./browser-cdp.ts";
 import { handleCdp } from "./browser-serve.ts";
-import type { Calls } from "./fixtures/browser-kit.ts";
-import { cleanBrowser, engine, onStop } from "./fixtures/browser-kit.ts";
-import { acceptKey, clientFrame, rawClient, request, scripted, trickle } from "./fixtures/browser-ws-kit.ts";
 
 afterEach(cleanBrowser);
 

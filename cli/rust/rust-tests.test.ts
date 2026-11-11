@@ -4,9 +4,9 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { OK, PASSED, plant } from "../scripts/__fixtures__/ci-run.ts";
+import { cleanTemps } from "../scripts/__fixtures__/turn-repo.ts";
 import { main } from "../scripts/ci.ts";
-import { OK, PASSED, plant } from "../scripts/fixtures/ci-run.ts";
-import { cleanTemps } from "../scripts/fixtures/turn-repo.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustTests } from "./rust-tests.ts";
 

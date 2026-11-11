@@ -3,9 +3,9 @@ import nodePath from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { git, removePlanted } from "./fixtures/planted-repo.ts";
-import { change } from "./fixtures/red-proof-change.ts";
-import { PASS, fakeVitest, plant, plantUnborn, stage, staged } from "./fixtures/red-proof-repo.ts";
+import { git, removePlanted } from "./__fixtures__/planted-repo.ts";
+import { change } from "./__fixtures__/red-proof-change.ts";
+import { PASS, fakeVitest, plant, plantUnborn, stage, staged } from "./__fixtures__/red-proof-repo.ts";
 import { redProof } from "./red-proof.ts";
 
 /** What the HEAD tree holds when vitest runs in it, seen through a stand-in runner on planted repos. */
@@ -29,13 +29,13 @@ function watcher() {
   return { run, seen };
 }
 
-const BASE = { "__snapshots__/a.snap": "old\n", "fixtures/f.ts": "old\n", "gone.ts": "gone\n", "s.ts": "head\n" };
+const BASE = { "__fixtures__/f.ts": "old\n", "__snapshots__/a.snap": "old\n", "gone.ts": "gone\n", "s.ts": "head\n" };
 const STAGED = {
+  "__fixtures__/f.ts": "newer\n",
+  "__fixtures__/helper.ts": "h\n",
   "__snapshots__/a.snap": "newer\n",
   "a.test.ts": PASS,
   "app.config.ts": "cfg\n",
-  "fixtures/f.ts": "newer\n",
-  "fixtures/helper.ts": "h\n",
   "new.ts": "new\n",
   "notes.md": "n\n",
   "s.ts": "staged\n",
@@ -44,14 +44,14 @@ const MIXED = change(
   ["M", "s.ts"],
   ["A", "new.ts"],
   ["D", "gone.ts"],
-  ["M", "fixtures/f.ts"],
-  ["A", "fixtures/helper.ts"],
+  ["M", "__fixtures__/f.ts"],
+  ["A", "__fixtures__/helper.ts"],
   ["M", "__snapshots__/a.snap"],
   ["A", "app.config.ts"],
   ["A", "a.test.ts"],
   ["A", "notes.md"],
 );
-const WATCHED = ["s.ts", "new.ts", "gone.ts", "fixtures/f.ts", "fixtures/helper.ts", "__snapshots__/a.snap"];
+const WATCHED = ["s.ts", "new.ts", "gone.ts", "__fixtures__/f.ts", "__fixtures__/helper.ts", "__snapshots__/a.snap"];
 
 it("puts a changed source file back and removes a new one on the HEAD tree", () => {
   const root = plant(BASE);
@@ -68,10 +68,10 @@ it("keeps fixtures, snapshots, configs and other files as staged", () => {
   const { seen, run } = watcher();
   redProof(root, MIXED, { vitest: run });
   expect(seen).toMatchObject({
+    "__fixtures__/f.ts": "newer\n",
+    "__fixtures__/helper.ts": "h\n",
     "__snapshots__/a.snap": "newer\n",
     "app.config.ts": "cfg\n",
-    "fixtures/f.ts": "newer\n",
-    "fixtures/helper.ts": "h\n",
     "notes.md": "n\n",
   });
   expect(git(root, "status", "--porcelain")).toContain("M  s.ts");

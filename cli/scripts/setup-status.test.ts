@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { readEnv } from "../env.ts";
-import { bare, cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
+import { bare, cleanSetup, desktopOauth, plant, writeAt } from "./__fixtures__/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { mergeSpeakJson } from "./setup-files.ts";
 import { firstMissing, formatStatus, menuOptions } from "./setup-menu.ts";

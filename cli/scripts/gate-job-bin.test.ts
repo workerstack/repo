@@ -4,9 +4,9 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { fwd } from "../../dev/test-paths";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall, commandOf } from "./fixtures/hook-payload.ts";
-import { mainWithOutWorktree } from "./fixtures/worktree-repo.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { camelCall, commandOf } from "./__fixtures__/hook-payload.ts";
+import { mainWithOutWorktree } from "./__fixtures__/worktree-repo.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { isWorkspaceJobScript, jobCommand, repoBin, resolveRepoBin } from "./gate-job.ts";
 

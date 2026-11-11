@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { file, link } from "./fixtures/outputs-kit.ts";
-import { put } from "./fixtures/temp-dirs.ts";
-import { DEPS as deps, MANIFEST, failing, seeded, tree, useWriteSuite } from "./fixtures/write-kit.ts";
+import { file, link } from "./__fixtures__/outputs-kit.ts";
+import { put } from "./__fixtures__/temp-dirs.ts";
+import { DEPS as deps, MANIFEST, failing, seeded, tree, useWriteSuite } from "./__fixtures__/write-kit.ts";
 import { writeAll } from "./write.ts";
 
 useWriteSuite();

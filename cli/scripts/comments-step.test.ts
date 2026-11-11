@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
+import { cleanTemps, consumer, SLOW, tempDir, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Change } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
-import { cleanTemps, consumer, SLOW, tempDir, turn, write } from "./fixtures/turn-repo.ts";
 import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);

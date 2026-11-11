@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ghFor, refused, runGate, tagRelease } from "../fixtures/gate-world.ts";
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { commit, gitIn, NAME, world } from "../fixtures/release-world.ts";
+import { ghFor, refused, runGate, tagRelease } from "../__fixtures__/gate-world.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { commit, gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
 

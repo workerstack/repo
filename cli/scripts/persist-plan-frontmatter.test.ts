@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fenceFirst, openFence, usePlanRules } from "./fixtures/persist-plan-rules-kit.ts";
+import { fenceFirst, openFence, usePlanRules } from "./__fixtures__/persist-plan-rules-kit.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 
 const { errorsFor, saved } = usePlanRules();

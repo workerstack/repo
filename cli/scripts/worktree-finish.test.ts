@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./fixtures/worktree-repo.ts";
-import { expectOnlyMainWorktree } from "./fixtures/worktree-scenarios.ts";
+import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./__fixtures__/worktree-repo.ts";
+import { expectOnlyMainWorktree } from "./__fixtures__/worktree-scenarios.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();

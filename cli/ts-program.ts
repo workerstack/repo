@@ -7,6 +7,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { FIXTURES_DIR } from "./fixtures.constants.ts";
 import type { Result } from "./scripts/lint-baseline.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
@@ -19,7 +20,7 @@ const DECLARATION = /\.d\.[cm]?ts$/;
 const TEST = /\.(?:test|spec|e2e)\./;
 /** Code that must not compile, which `check-rejections.ts` checks instead. */
 const REJECT = /\.reject\.tsx?$/;
-const SKIPPED_DIRS = ["fixtures", "e2e", "vendor", "node_modules"];
+const SKIPPED_DIRS = [FIXTURES_DIR, "e2e", "vendor", "node_modules"];
 /** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
 const DEFAULTS: ts.CompilerOptions = {
   allowImportingTsExtensions: true,

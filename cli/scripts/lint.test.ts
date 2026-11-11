@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { childEnv } from "../env.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { useTempTree } from "../fixtures/temp-tree.ts";
 import { standards } from "../sync/standards.ts";
 import { captureTool, fmt, lint, runTool, type RunTool } from "./lint.ts";
 

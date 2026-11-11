@@ -13,7 +13,7 @@ import {
   outputOf,
   region,
   treeOutputs,
-} from "./fixtures/git-files-kit.ts";
+} from "./__fixtures__/git-files-kit.ts";
 import { untrackedEntries } from "./git-files.ts";
 
 it("lists .mcp.json and every host dir for the untracked trees of all hosts, and never the shared AGENTS.md", () => {

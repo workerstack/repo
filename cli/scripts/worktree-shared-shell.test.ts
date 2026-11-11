@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { NONE, at, cli, git, scratch, shared, wt } from "./fixtures/worktree-repo.ts";
+import { NONE, at, cli, git, scratch, shared, wt } from "./__fixtures__/worktree-repo.ts";
 import { sharedGitReason, worktreeAddReason } from "./worktree-guards.ts";
 import type { ShellAt } from "./worktree.types.ts";
 

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { BIG_RULE_BYTES, WEB, check, inPkg, pkgRule, repo, rule, skill } from "./fixtures/repo-dir-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { BIG_RULE_BYTES, WEB, check, inPkg, pkgRule, repo, rule, skill } from "./__fixtures__/repo-dir-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 
 useTempDirs();
 

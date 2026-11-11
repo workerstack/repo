@@ -1,5 +1,7 @@
 {
   "darwin": {
+    "cli/__fixtures__/docs-fixture.test.ts": 6,
+    "cli/__fixtures__/remove-or-explain.test.ts": 4,
     "cli/actionlint-default.test.ts": 39,
     "cli/actionlint-download.test.ts": 183,
     "cli/actionlint-real.test.ts": 64,
@@ -45,8 +47,6 @@
     "cli/docs-tarball.test.ts": 7,
     "cli/docs.test.ts": 27,
     "cli/env.test.ts": 23,
-    "cli/fixtures/docs-fixture.test.ts": 6,
-    "cli/fixtures/remove-or-explain.test.ts": 4,
     "cli/github-apply.test.ts": 1191,
     "cli/github-check-flag.test.ts": 138,
     "cli/github-check.test.ts": 360,
@@ -579,6 +579,8 @@
     "presets/workers-plugin.test.ts": 4
   },
   "linux": {
+    "cli/__fixtures__/docs-fixture.test.ts": 4,
+    "cli/__fixtures__/remove-or-explain.test.ts": 4,
     "cli/actionlint-default.test.ts": 57,
     "cli/actionlint-download.test.ts": 102,
     "cli/actionlint-real.test.ts": 43,
@@ -624,8 +626,6 @@
     "cli/docs-tarball.test.ts": 6,
     "cli/docs.test.ts": 41,
     "cli/env.test.ts": 22,
-    "cli/fixtures/docs-fixture.test.ts": 4,
-    "cli/fixtures/remove-or-explain.test.ts": 4,
     "cli/github-apply.test.ts": 946,
     "cli/github-check-flag.test.ts": 153,
     "cli/github-check.test.ts": 272,
@@ -1158,6 +1158,8 @@
     "presets/workers-plugin.test.ts": 11
   },
   "win32": {
+    "cli/__fixtures__/docs-fixture.test.ts": 3,
+    "cli/__fixtures__/remove-or-explain.test.ts": 5,
     "cli/actionlint-default.test.ts": 168,
     "cli/actionlint-download.test.ts": 170,
     "cli/actionlint-real.test.ts": 53,
@@ -1203,8 +1205,6 @@
     "cli/docs-tarball.test.ts": 3,
     "cli/docs.test.ts": 87,
     "cli/env.test.ts": 15,
-    "cli/fixtures/docs-fixture.test.ts": 3,
-    "cli/fixtures/remove-or-explain.test.ts": 5,
     "cli/github-apply.test.ts": 3306,
     "cli/github-check-flag.test.ts": 514,
     "cli/github-check.test.ts": 1459,

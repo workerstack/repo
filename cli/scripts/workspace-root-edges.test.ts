@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { realDir as tmpDir } from "./fixtures/real-dir.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { realDir as tmpDir } from "./__fixtures__/real-dir.ts";
 import { canonicalPath, gitRevParse, INSTALL_MARKER, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
 useTempDirs();

@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { spawnHook } from "./__fixtures__/run-hook.ts";
+import { HOOK_ENV, mapOf, run, tmp, tmpBoard, type BoardRow } from "./__fixtures__/session-map-kit.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
-import { spawnHook } from "./fixtures/run-hook.ts";
-import { HOOK_ENV, mapOf, run, tmp, tmpBoard, type BoardRow } from "./fixtures/session-map-kit.ts";
 import { HOOK_CONTEXT_CHARS, main as sessionMain } from "./session-map.ts";
 
 describe("repo hook session-map (spawned)", () => {

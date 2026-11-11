@@ -2,9 +2,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { ctx, doc } from "./__fixtures__/docs-example-root.ts";
+import { exampleTools, fence, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { checkExamples } from "./docs-examples.ts";
-import { ctx, doc } from "./fixtures/docs-example-root.ts";
-import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
 function failing(result: { code: number; stdout?: string; stderr?: string }) {
   return exampleTools((call) => (call.tool === "bun" ? result : {}));

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { HOSTS } from "../../config.ts";
-import { BASE, renderText, SCOPED, sourcesOf } from "../fixtures/rules-kit.ts";
+import { BASE, renderText, SCOPED, sourcesOf } from "../__fixtures__/rules-kit.ts";
 import { renderRules } from "./rules.ts";
 import type { Doc, Sources } from "./sources.types.ts";
 

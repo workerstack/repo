@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
+import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import { clippyHits, type CargoResult } from "./clippy.ts";
-import { cargoLock } from "./fixtures/cargo-lock.ts";
 
 const MISSING_LOCK = "Cargo.lock is missing; run `cargo generate-lockfile` and commit it";
 const STALE_LOCK = "Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it";

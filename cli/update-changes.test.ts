@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanup, world } from "./fixtures/update-world.ts";
+import { cleanup, world } from "./__fixtures__/update-world.ts";
 import { main } from "./update.ts";
 
 afterEach(cleanup);

@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 
 import { CONFIG_FILE } from "./config.constants.ts";
 import { runSync } from "./sync.ts";
-import { put, tempDir, useTempDirs } from "./sync/fixtures/temp-dirs.ts";
+import { put, tempDir, useTempDirs } from "./sync/__fixtures__/temp-dirs.ts";
 
 useTempDirs();
 

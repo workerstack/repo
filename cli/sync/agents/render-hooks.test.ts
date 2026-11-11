@@ -16,8 +16,8 @@ import {
   hooksOf,
   keysAt,
   parsed,
-} from "../fixtures/hooks-kit.ts";
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+} from "../__fixtures__/hooks-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { loadSources } from "./load-sources.ts";
 import { renderHooks } from "./render-hooks.ts";
 

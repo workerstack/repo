@@ -3,12 +3,12 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
-import { useTempTree } from "../fixtures/temp-tree.ts";
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import { standards } from "../sync/standards.ts";
 import type { PackageJson } from "../sync/workspace.ts";
-import { LINT_PLUGIN_EXPECTED } from "./fixtures/lint-plugin-expected.ts";
+import { LINT_PLUGIN_EXPECTED } from "./__fixtures__/lint-plugin-expected.ts";
 import { captureTool, pluginModules } from "./lint.ts";
 
 const SLOW = 60_000;

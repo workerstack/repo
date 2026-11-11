@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { isSelf, isSelfName, stockRoot } from "./stock.ts";
 

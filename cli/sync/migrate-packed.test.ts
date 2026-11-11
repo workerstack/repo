@@ -3,14 +3,14 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { CONFIG, SELF_ROOT, read, write } from "./fixtures/copied-install.ts";
-import { MARKER_FILE, REMOVAL, SIMPLE_CONFIG, fileOutput, planOf, type Mini } from "./fixtures/mini-install.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { CONFIG, SELF_ROOT, read, write } from "./__fixtures__/copied-install.ts";
+import { MARKER_FILE, REMOVAL, SIMPLE_CONFIG, fileOutput, planOf, type Mini } from "./__fixtures__/mini-install.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { planAdoption, type MigrateDeps } from "./migrate.ts";
 
 useTempDirs();
 
-const CONSUMER_STOCK = path.join(SELF_ROOT, "cli", "sync", "fixtures", "consumer-stock");
+const CONSUMER_STOCK = path.join(SELF_ROOT, "cli", "sync", "__fixtures__", "consumer-stock");
 const RULE = "agents/rules/overview.md";
 const SETTINGS = '{ "permissions": { "deny": ["Agent(Explore)"] } }\n';
 const generated = new Map([[".claude/settings.json", SETTINGS]]);

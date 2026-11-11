@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { context, PUBLIC, textOf } from "./fixtures/readme-kit.ts";
+import { context, PUBLIC, textOf } from "./__fixtures__/readme-kit.ts";
 import { GENERATORS } from "./outputs.ts";
 import { readme } from "./readme.ts";
 import type { PackageJson } from "./workspace.ts";

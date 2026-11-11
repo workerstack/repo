@@ -1,8 +1,8 @@
 import { parse } from "smol-toml";
 import { expect, it } from "vitest";
 
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import type { Pack } from "../config.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import type { SyncContext } from "./outputs.ts";
 import { rust } from "./rust.ts";
 

@@ -1,8 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 import { HOSTS } from "../config.ts";
-import { byCodeUnit } from "./by-code-unit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
   consumer,
@@ -14,7 +13,8 @@ import {
   text,
   type McpFile,
   type TasksFile,
-} from "./fixtures/trees-kit.ts";
+} from "./__fixtures__/trees-kit.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });

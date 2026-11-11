@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { MANIFEST_REL, normalizeRel, prunePaths, readManifest, renderManifest } from "./manifest.ts";
 
 useTempDirs();

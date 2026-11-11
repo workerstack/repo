@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { expect, it, vi } from "vitest";
 
-import { doctorCli, tmp, writeBin } from "./fixtures/doctor-kit.ts";
+import { doctorCli, tmp, writeBin } from "./__fixtures__/doctor-kit.ts";
 import {
   ALL_OFFERED,
   checkout,
@@ -13,7 +13,7 @@ import {
   realRow,
   rowOf,
   toml,
-} from "./fixtures/doctor-models-kit.ts";
+} from "./__fixtures__/doctor-models-kit.ts";
 
 it("agent models is ok when every agent model is offered, and never checks Claude agents", async () => {
   const r = await rowOf({ ...ALL_OFFERED, ".claude/agents/scout.md": md("haiku") });

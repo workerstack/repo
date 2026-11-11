@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { fakes, SHA } from "./fixtures/mutate-fakes.ts";
-import { OTHER, plantReports, survivor } from "./fixtures/shard-reports.ts";
+import { fakes, SHA } from "./__fixtures__/mutate-fakes.ts";
+import { OTHER, plantReports, survivor } from "./__fixtures__/shard-reports.ts";
 import type { ShardReport } from "./mutate-report.ts";
 import { runMutate } from "./mutate.ts";
 

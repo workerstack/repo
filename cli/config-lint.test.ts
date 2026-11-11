@@ -1,6 +1,5 @@
 import { expect, it } from "vitest";
 
-import { loadConfig } from "./config.ts";
 import {
   AGENTS,
   CI,
@@ -13,7 +12,8 @@ import {
   refusal,
   repo,
   useConfigKit,
-} from "./fixtures/config-kit.ts";
+} from "./__fixtures__/config-kit.ts";
+import { loadConfig } from "./config.ts";
 
 useConfigKit();
 

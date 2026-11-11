@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
+import { cleanTemps, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import type { Turn } from "./turn-steps.ts";
 

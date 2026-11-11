@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTmp } from "./fixtures/gate-workspace.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import {
   agyCall,
   asChild,
@@ -14,7 +14,7 @@ import {
   inSession,
   patchAdd,
   patchUpdate,
-} from "./fixtures/hook-payload.ts";
+} from "./__fixtures__/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import { rewritePatch, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_REREAD } from "./gate.constants.ts";

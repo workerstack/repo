@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { AGENTS, repo, useConfigKit } from "./__fixtures__/config-kit.ts";
 import { HOSTS, SKILL_PACKS, loadConfig } from "./config.ts";
-import { AGENTS, repo, useConfigKit } from "./fixtures/config-kit.ts";
 
 useConfigKit();
 

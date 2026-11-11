@@ -12,7 +12,7 @@ import {
   run,
   settingsOf,
   treeOutputs,
-} from "./fixtures/git-files-kit.ts";
+} from "./__fixtures__/git-files-kit.ts";
 import { GIT_FILE_PATHS } from "./git-files.ts";
 
 it("sets LF and marks every tracked whole file output, sorted, with no link, untracked or block output", () => {

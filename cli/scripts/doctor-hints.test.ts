@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { tmp } from "./__fixtures__/doctor-kit.ts";
 import { installHints, whichBin } from "./doctor-which.ts";
 import { CHROMIUM_BINS } from "./doctor.constants.ts";
-import { tmp } from "./fixtures/doctor-kit.ts";
 
 it("CHROMIUM_BINS matches browser family names", () => {
   expect(CHROMIUM_BINS).toStrictEqual([

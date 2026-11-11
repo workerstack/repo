@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LOCK_OK, MANIFEST, ROOT, lines, pkg } from "./fixtures/check-workspace-lines.ts";
+import { LOCK_OK, MANIFEST, ROOT, lines, pkg } from "./__fixtures__/check-workspace-lines.ts";
 
 describe("checkWorkspace catalog rules", () => {
   it("gives a clean workspace no lines", () => {

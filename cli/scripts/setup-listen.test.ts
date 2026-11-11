@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { bare, captureIo, cleanSetup, plant, readSpeakJson, spyStd } from "./fixtures/setup-kit.ts";
+import { bare, captureIo, cleanSetup, plant, readSpeakJson, spyStd } from "./__fixtures__/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { setupListen } from "./setup-listen.ts";
 import type { SetupIo } from "./setup.types.ts";

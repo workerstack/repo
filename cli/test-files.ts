@@ -1,7 +1,9 @@
+import { FIXTURES_DIR } from "./fixtures.constants.ts";
+
 const CODE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const TEST_NAME = /\.(test|spec)\.[^/]+$/;
 const E2E_DIR = /(^|\/)e2e\//;
-const NON_SOURCE_DIR = /(^|\/)(fixtures|__snapshots__|__mocks__)\//;
+const NON_SOURCE_DIR: Readonly<RegExp> = /* @__PURE__ */ new RegExp(`(^|/)(${FIXTURES_DIR}|__snapshots__|__mocks__)/`);
 const CONFIG_NAME = /\.config\.[^/]+$/;
 
 /** True when the path is a test: a `*.test.*` or `*.spec.*` file, or a file under an `e2e/` folder. */

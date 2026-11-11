@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
+import { CONFIG, read } from "./__fixtures__/copied-install.ts";
+import { REMOVAL, mini, notes, planOf, yours } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { CONFIG, read } from "./fixtures/copied-install.ts";
-import { REMOVAL, mini, notes, planOf, yours } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { conflictLines, type MigrateDeps } from "./migrate.ts";
 import { hashText } from "./stock-history.ts";
 

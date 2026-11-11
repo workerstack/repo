@@ -15,10 +15,10 @@ import {
   reasonOf,
   SID,
   STASH_REASON,
-} from "./fixtures/checkout-calls.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { agyCall, denyReason, notDenied } from "./fixtures/hook-payload.ts";
-import { reviewReason, startReview } from "./fixtures/review-plan.ts";
+} from "./__fixtures__/checkout-calls.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { agyCall, denyReason, notDenied } from "./__fixtures__/hook-payload.ts";
+import { reviewReason, startReview } from "./__fixtures__/review-plan.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();

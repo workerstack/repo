@@ -10,7 +10,7 @@ import {
   writeRequiredMaps,
   writeSelfPackage,
   writeSkillPair,
-} from "./fixtures/doctor-kit.ts";
+} from "./__fixtures__/doctor-kit.ts";
 
 it("tools ok, not this package → skip maps; exit 0; no INDEX missing", () => {
   const { cwd, bin } = toolsCwd("doc-nomaps-");

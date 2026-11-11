@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
-import { RENDER_TIMEOUT, STOCK_SKILL, consumer, context, find, linkTarget, render } from "./fixtures/trees-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { RENDER_TIMEOUT, STOCK_SKILL, consumer, context, find, linkTarget, render } from "./__fixtures__/trees-kit.ts";
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();

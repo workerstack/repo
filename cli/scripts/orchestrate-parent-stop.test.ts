@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { claudeHook } from "./fixtures/claude-hook.ts";
-import { plantFile } from "./fixtures/plant-file.ts";
+import { claudeHook } from "./__fixtures__/claude-hook.ts";
+import { plantFile } from "./__fixtures__/plant-file.ts";
 import { main } from "./orchestrate-parent.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 

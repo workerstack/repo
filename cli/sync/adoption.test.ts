@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { RULE, STOP, tracked } from "./fixtures/adoption-kit.ts";
-import { SELF_ROOT, exists, plain, read, readJson, snapshot, sync, write } from "./fixtures/copied-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RULE, STOP, tracked } from "./__fixtures__/adoption-kit.ts";
+import { SELF_ROOT, exists, plain, read, readJson, snapshot, sync, write } from "./__fixtures__/copied-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: 120_000 });

@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
-import { USAGE, anyFunction, useStart } from "./fixtures/main-kit.ts";
+const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
+import { USAGE, anyFunction, useStart } from "./__fixtures__/main-kit.ts";
 import { APPLY_GLOBALS_CONFIRM, start } from "./main.ts";
 
 const written = useStart(fakes);

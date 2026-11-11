@@ -3,10 +3,20 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { tmp } from "./__fixtures__/doctor-kit.ts";
+import {
+  ALL_OFFERED,
+  checkout,
+  codexHome,
+  fakeRun,
+  LISTS,
+  md,
+  OK,
+  rowOf,
+  toml,
+} from "./__fixtures__/doctor-models-kit.ts";
+import type { Reply } from "./__fixtures__/doctor-models-kit.ts";
 import { agentModelsLines } from "./agent-models-lines.ts";
-import { tmp } from "./fixtures/doctor-kit.ts";
-import { ALL_OFFERED, checkout, codexHome, fakeRun, LISTS, md, OK, rowOf, toml } from "./fixtures/doctor-models-kit.ts";
-import type { Reply } from "./fixtures/doctor-models-kit.ts";
 
 const DELAY = 1500;
 

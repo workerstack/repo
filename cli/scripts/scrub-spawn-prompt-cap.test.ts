@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { runHook } from "./fixtures/run-hook.ts";
-import { here, parseOut, plansRoot, root } from "./fixtures/scrub-kit.ts";
+import { runHook } from "./__fixtures__/run-hook.ts";
+import { here, parseOut, plansRoot, root } from "./__fixtures__/scrub-kit.ts";
 import { main as orchMain } from "./orchestrate-parent.ts";
 import {
   MAX_PROMPT_CHARS,
@@ -15,7 +15,7 @@ import {
 } from "./scrub-spawn-prompt.ts";
 
 it("strips pasted transcripts and keeps first You are + facts + abs paths", () => {
-  const raw = fs.readFileSync(path.join(here, "fixtures/spawn-transcript.txt"), "utf8");
+  const raw = fs.readFileSync(path.join(here, "__fixtures__/spawn-transcript.txt"), "utf8");
   const out = capSpawnPrompt(raw);
   expect(out).toMatch(/^You are scout subagent\./);
   expect(out).not.toMatch(/^Human:/m);
@@ -31,7 +31,7 @@ it("strips pasted transcripts and keeps first You are + facts + abs paths", () =
 });
 
 it("denies over-cap prompts after scrub without slicing or …[truncated]", () => {
-  const template = fs.readFileSync(path.join(here, "fixtures/spawn-overcap.txt"), "utf8");
+  const template = fs.readFileSync(path.join(here, "__fixtures__/spawn-overcap.txt"), "utf8");
   const raw = template.replace("XXXX_PAD", "x".repeat(MAX_PROMPT_CHARS + 1));
   const out = capSpawnPrompt(raw);
   expect(out.length).toBeGreaterThan(MAX_PROMPT_CHARS);

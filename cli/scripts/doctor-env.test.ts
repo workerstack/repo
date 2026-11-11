@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { expect, it } from "vitest";
 
-import { doctorCli, tmp } from "./fixtures/doctor-kit.ts";
+import { doctorCli, tmp } from "./__fixtures__/doctor-kit.ts";
 import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 
 function baseIn(dir: string): string {

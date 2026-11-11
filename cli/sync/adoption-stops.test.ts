@@ -1,10 +1,10 @@
 import { expect, it, vi } from "vitest";
 
 import { runSync } from "../sync.ts";
-import { STOP, tracked } from "./fixtures/adoption-kit.ts";
-import { plain, read, snapshot, sync, write } from "./fixtures/copied-install.ts";
-import { fileOutput } from "./fixtures/mini-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { STOP, tracked } from "./__fixtures__/adoption-kit.ts";
+import { plain, read, snapshot, sync, write } from "./__fixtures__/copied-install.ts";
+import { fileOutput } from "./__fixtures__/mini-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: 120_000 });

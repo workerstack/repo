@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
-import { file } from "./fixtures/outputs-kit.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { file } from "./__fixtures__/outputs-kit.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { Output } from "./outputs.ts";
 import { validateOutputs } from "./validate-outputs.ts";
 import { OXFMT_CONFIG, OXLINT_CONFIG } from "./validate-schemas.ts";

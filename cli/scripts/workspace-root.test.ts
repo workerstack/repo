@@ -5,8 +5,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { realDir as tmpDir } from "./fixtures/real-dir.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import { realDir as tmpDir } from "./__fixtures__/real-dir.ts";
 import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.ts";
 
 useTempDirs();

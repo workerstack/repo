@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 import { checkScriptsAt } from "../script-diagnostics.ts";
-import { skipIn, spies } from "../scripts/fixtures/lint-scripts-kit.ts";
-import { cleanTemps, git, read, SLOW, staged, turn, write } from "../scripts/fixtures/turn-repo.ts";
+import { skipIn, spies } from "../scripts/__fixtures__/lint-scripts-kit.ts";
+import { cleanTemps, git, read, SLOW, staged, turn, write } from "../scripts/__fixtures__/turn-repo.ts";
 import { checkLintBaseline } from "../scripts/lint-baseline.ts";
 import { lintMain } from "../scripts/lint-main.ts";
 import { checkLintSkipsAt } from "../scripts/lint-skips.ts";
-import { APP_CSS, BAD_CSS, cssKit, FIXED_CSS, UNKNOWN_CSS } from "./fixtures/css-kit.ts";
+import { APP_CSS, BAD_CSS, cssKit, FIXED_CSS, UNKNOWN_CSS } from "./__fixtures__/css-kit.ts";
 
 const saved = process.cwd();
 afterEach(() => {

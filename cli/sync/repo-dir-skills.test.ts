@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { check, repo, skill, sourcesOf } from "./fixtures/repo-dir-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { check, repo, skill, sourcesOf } from "./__fixtures__/repo-dir-kit.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 
 useTempDirs();

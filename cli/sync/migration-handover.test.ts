@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { expectMode } from "./__fixtures__/file-mode.ts";
+import { NONE, PATHLESS, read, rootWith } from "./__fixtures__/handover-kit.ts";
+import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { expectMode } from "./fixtures/file-mode.ts";
-import { NONE, PATHLESS, read, rootWith } from "./fixtures/handover-kit.ts";
-import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
 import { planHandover } from "./migration-handover.ts";
 
 useTempDirs();

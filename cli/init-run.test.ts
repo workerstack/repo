@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { fakeExec, fakeOnPhase, checkoutRoot, readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
+import { fakeExec, fakeOnPhase, checkoutRoot, readPkg, stubPkgRoot, tmp, useInitKit } from "./__fixtures__/init-kit.ts";
 import { init } from "./init.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 

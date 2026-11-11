@@ -5,12 +5,12 @@ import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
+import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { loadConfig } from "../config.ts";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { computeOutputs } from "../sync-outputs.ts";
 import { runSync } from "../sync.ts";
-import { file } from "./fixtures/outputs-kit.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { file } from "./__fixtures__/outputs-kit.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { rust } from "./rust.ts";
 import { validateOutputs } from "./validate-outputs.ts";
 import { readWorkspace } from "./workspace.ts";

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { MANIFEST } from "./fixtures/github-repo.ts";
-import { GITHUB_ACTIONS_ID, RUN, changed, messages, must, served, wantedOf } from "./fixtures/github-wanted.ts";
+import { MANIFEST } from "./__fixtures__/github-repo.ts";
+import { GITHUB_ACTIONS_ID, RUN, changed, messages, must, served, wantedOf } from "./__fixtures__/github-wanted.ts";
 import { driftOf } from "./github.ts";
 import type { CurrentRuleset, Rule, RuleParameters } from "./github.types.ts";
 

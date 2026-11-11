@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
-import { doc, loaded, problems, stock, tree } from "../fixtures/sources-kit.ts";
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
+import { doc, loaded, problems, stock, tree } from "../__fixtures__/sources-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { loadSources } from "./load-sources.ts";
 
 useTempDirs();

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempTree } from "../fixtures/temp-tree.ts";
+import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { activeReview, stampPath, writeStamp } from "./strategy.ts";
 
 const tree = useTempTree("strategy-stamp-");

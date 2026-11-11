@@ -5,11 +5,11 @@
     ".tmp",
     ".worktrees",
     "dist",
-    "**/fixtures/**/ws/**",
+    "**/__fixtures__/**/ws/**",
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/*.e2e.ts",
-    "**/fixtures/**",
+    "**/__fixtures__/**",
     "e2e",
     "*.config.ts"
   ],

@@ -5,9 +5,9 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { plantStub } from "../__fixtures__/stub-bin.ts";
 import { childEnv } from "../env.ts";
-import { plantStub } from "../fixtures/stub-bin.ts";
-import { put, tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { put, tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { workspaceIssues } from "./doctor-workspace.ts";
 import { main, runDoctor } from "./doctor.ts";
 import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";

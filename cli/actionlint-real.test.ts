@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
 import { checkActionlintAt } from "./actionlint.ts";
-import { removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 
 const SLOW = 180_000;
 afterEach(removePlanted);

@@ -1,7 +1,14 @@
 import { afterEach, expect, it } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { jsonRes, plantHome, plantLoggedIn, resetCase, stubFetch, withIo } from "./fixtures/google-workspace-kit.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
+import {
+  jsonRes,
+  plantHome,
+  plantLoggedIn,
+  resetCase,
+  stubFetch,
+  withIo,
+} from "./__fixtures__/google-workspace-kit.ts";
 import { main } from "./google-workspace.ts";
 
 useTempDirs();

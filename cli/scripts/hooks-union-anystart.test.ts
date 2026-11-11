@@ -16,8 +16,8 @@ import {
   touchConsumerScripts,
   writeJson,
   type ClaudeDoc,
-} from "./fixtures/hooks-union-kit.ts";
-import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+} from "./__fixtures__/hooks-union-kit.ts";
+import { plantDirs } from "./__fixtures__/mcp-policy-kit.ts";
 import { HOOK_NAMES, hookCommand } from "./hook-command.ts";
 import { rootCmd } from "./hooks-union-commands.ts";
 import { allCommands } from "./hooks-union-merge.ts";

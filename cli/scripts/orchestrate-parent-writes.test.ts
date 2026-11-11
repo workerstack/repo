@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { must, orchestrateKit, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
-import { DRAFT_ROADMAP, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./fixtures/persist-bodies.ts";
+import { must, orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { DRAFT_ROADMAP, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./__fixtures__/persist-bodies.ts";
 
 const kit = orchestrateKit();
 

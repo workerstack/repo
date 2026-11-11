@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkManifests } from "./check-manifests.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
 const plant = useTempTree("workerstack-manifests-");

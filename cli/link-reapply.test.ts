@@ -14,7 +14,7 @@ import {
   stateOf,
   treeOf,
   versionIn,
-} from "./fixtures/link-world.ts";
+} from "./__fixtures__/link-world.ts";
 import { reapplyAt, reapplyLinks } from "./link-reapply.ts";
 import { main, unlinkMain } from "./link.ts";
 

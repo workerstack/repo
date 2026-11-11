@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { createJevRunner } from "./create-jev-runner.ts";
 import {
   KEY,
   QUESTIONS,
@@ -14,7 +13,8 @@ import {
   readLedgerFile,
   reply,
   scripted,
-} from "./fixtures/jev-kit.ts";
+} from "./__fixtures__/jev-kit.ts";
+import { createJevRunner } from "./create-jev-runner.ts";
 import { main, runJev } from "./jev.ts";
 import type { JevRunOpts } from "./jev.types.ts";
 

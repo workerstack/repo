@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import type { BrowserResult, RunOpts } from "./browser.types.ts";
 import {
   alive,
   cleanBrowser,
@@ -23,7 +22,8 @@ import {
   writeFake,
   writeLauncher,
   writeMjs,
-} from "./fixtures/browser-kit.ts";
+} from "./__fixtures__/browser-kit.ts";
+import type { BrowserResult, RunOpts } from "./browser.types.ts";
 
 afterEach(cleanBrowser);
 

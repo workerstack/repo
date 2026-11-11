@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { captureIo, cleanSetup, desktopOauth, plant, readJsonAt, writeAt } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, desktopOauth, plant, readJsonAt, writeAt } from "./__fixtures__/setup-kit.ts";
 import { oauthWritePath } from "./setup-files.ts";
 import { setupGoogleWorkspace } from "./setup-google-workspace.ts";
 import type { SetupIo } from "./setup.types.ts";

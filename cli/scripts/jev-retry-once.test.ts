@@ -2,8 +2,8 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
+import { choiceBody, counted, ENDPOINT_QUESTIONS, jsonResponse, plantDir, sleeper } from "./__fixtures__/jev-kit.ts";
 import { createJevRunner } from "./create-jev-runner.ts";
-import { choiceBody, counted, ENDPOINT_QUESTIONS, jsonResponse, plantDir, sleeper } from "./fixtures/jev-kit.ts";
 import { estimateTokens, jevUsagePath } from "./jev-key.ts";
 
 const env = { TYPESAFE_API_KEY: "ts_live_test_key" };

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cleanupTmp, tmp } from "./fixtures/listen-env.ts";
+import { cleanupTmp, tmp } from "./__fixtures__/listen-env.ts";
 import { latestPath, pidAlive, sessionPath } from "./listen-session.ts";
 
 afterEach(cleanupTmp);

@@ -1,8 +1,8 @@
 /** The walk ends on a cycle and fails closed on every form it cannot follow, rather than passing it in silence. */
 import { afterEach, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
-import { namesIn, unknownIn, withEntries } from "../fixtures/surface-package.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
+import { namesIn, unknownIn, withEntries } from "../__fixtures__/surface-package.ts";
 
 afterEach(removePlanted);
 

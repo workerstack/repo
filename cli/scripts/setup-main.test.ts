@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { bare, captureIo, cleanSetup, enablePacks, plant, spyStd } from "./fixtures/setup-kit.ts";
+import { bare, captureIo, cleanSetup, enablePacks, plant, spyStd } from "./__fixtures__/setup-kit.ts";
 import { main } from "./setup.ts";
 import type { SetupIo } from "./setup.types.ts";
 

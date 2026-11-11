@@ -6,7 +6,7 @@ import { parse } from "yaml";
 
 import { emitYaml, finalize, parseDoc, type YamlValue } from "./frontmatter.ts";
 
-const GOLDEN = path.join(import.meta.dirname, "..", "fixtures", "golden");
+const GOLDEN = path.join(import.meta.dirname, "..", "__fixtures__", "golden");
 
 it("splits frontmatter from a trimmed LF body", () => {
   expect(parseDoc("a.md", "\uFEFF---\r\nname: x\r\n---\r\n\r\n  body\r\nline two\r\n\r\n")).toStrictEqual({

@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { captureIo, cleanSetup, okJson, plant, readSpeakJson, spyStd } from "./fixtures/setup-kit.ts";
+import { captureIo, cleanSetup, okJson, plant, readSpeakJson, spyStd } from "./__fixtures__/setup-kit.ts";
 import { setupSpeak } from "./setup-speak.ts";
 import { ELEVENLABS_KEY_URL, OPENAI_KEY_URL } from "./setup.constants.ts";
 import type { SetupIo } from "./setup.types.ts";

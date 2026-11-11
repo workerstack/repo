@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 
+import { buildRepo, cleanDirs, exists, planter } from "./__fixtures__/clean-kit.ts";
 import { main } from "./clean.ts";
-import { buildRepo, cleanDirs, exists, planter } from "./fixtures/clean-kit.ts";
 
 const tempDir = cleanDirs();
 function inRepo(root: string) {

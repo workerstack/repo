@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { scratch } from "./fixtures/worktree-repo.ts";
+import { scratch } from "./__fixtures__/worktree-repo.ts";
 import {
   gitAskedWords,
   mainCheckoutWriteReason,

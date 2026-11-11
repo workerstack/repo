@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { linkedPair } from "./fixtures/link-two.ts";
-import { NAME, NONE, USAGE, mod, put, scene, stateFile } from "./fixtures/link-world.ts";
+import { linkedPair } from "./__fixtures__/link-two.ts";
+import { NAME, NONE, USAGE, mod, put, scene, stateFile } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 it("lists each link with its versions and sync time", async () => {

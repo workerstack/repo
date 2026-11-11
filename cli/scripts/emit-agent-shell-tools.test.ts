@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { cleanTemps, tempDir } from "./__fixtures__/turn-repo.ts";
 import {
   CLAUDE_TOOL_LIST,
   GENERIC_TOOL_LIST,
@@ -11,7 +12,6 @@ import {
   splitFrontmatter,
   toClaudeShellBody,
 } from "./emit-agent-shell-tools.ts";
-import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");

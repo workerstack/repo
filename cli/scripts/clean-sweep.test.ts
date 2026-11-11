@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { clean, cleanDirs, DEAD, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./fixtures/clean-kit.ts";
+import { clean, cleanDirs, DEAD, exists, HOUR, LIVE, NOW, planter, sweepRepo } from "./__fixtures__/clean-kit.ts";
 
 const tempDir = cleanDirs();
 

@@ -1,7 +1,17 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
-import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World } from "../fixtures/release-world.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
+import {
+  NAME,
+  commit,
+  fakeGh,
+  feat,
+  gitIn,
+  release,
+  snapshot,
+  world,
+  type World,
+} from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
 

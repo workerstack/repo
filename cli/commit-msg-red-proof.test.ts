@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removePlanted } from "./__fixtures__/planted-repo.ts";
+import { FAIL, plant, stage } from "./__fixtures__/red-proof-repo.ts";
 import { main } from "./commit-msg.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { removePlanted } from "./fixtures/planted-repo.ts";
-import { FAIL, plant, stage } from "./fixtures/red-proof-repo.ts";
 import type { NameStatus, RedProofResult } from "./red-proof.ts";
 
 /** The hook's red-proof step: when it runs, what it refuses, what it prints. */
@@ -88,7 +88,7 @@ describe("commit-msg red-proof in a test-only change", () => {
 
   it("does not count a fixture as source, so a private owner of the tests decides", async () => {
     const root = plant({ ...PLAIN, "package.json": PRIVATE });
-    stage(root, { "fixtures/a.ts": "x\n", "x.test.ts": "t\n" });
+    stage(root, { "__fixtures__/a.ts": "x\n", "x.test.ts": "t\n" });
     expect(await featCalls(root)).toHaveLength(0);
   });
 });

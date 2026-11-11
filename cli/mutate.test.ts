@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { BASE, CLONE, OUT, ROOT, SHA, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
+import { BASE, CLONE, OUT, ROOT, SHA, fakes, rawReport, sim } from "./__fixtures__/mutate-fakes.ts";
 import { runMutate } from "./mutate.ts";
 
 const SHARD = ["--shard", "1/2", "--report", OUT];

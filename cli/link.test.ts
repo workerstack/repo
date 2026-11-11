@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { NAME, mod, put, read, scene, sibling, stateOf, versionIn } from "./fixtures/link-world.ts";
+import { NAME, mod, put, read, scene, sibling, stateOf, versionIn } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
 it("swaps in the packed sibling, warns about a dependency, and says how to undo it", async () => {

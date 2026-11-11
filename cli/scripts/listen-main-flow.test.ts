@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cleanupTmp, plantModel, readSession, repoBin, run, textFetch, tmp, which } from "./fixtures/listen-env.ts";
+import { cleanupTmp, plantModel, readSession, repoBin, run, textFetch, tmp, which } from "./__fixtures__/listen-env.ts";
 import { sessionPath } from "./listen-session.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { GGML_URL } from "./listen.constants.ts";

@@ -6,7 +6,6 @@ import { afterAll, expect, it } from "vitest";
 import { HOSTS, loadConfig } from "../config.ts";
 import { DEFAULT_COVERAGE } from "../coverage-config.ts";
 import { DEFAULT_NIGHTLY } from "../nightly-config.ts";
-import { applyMigration } from "./apply-migration.ts";
 import {
   FINAL,
   FINAL_NO_GIT,
@@ -26,8 +25,9 @@ import {
   stockOf,
   sync,
   write,
-} from "./fixtures/copied-install.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
+} from "./__fixtures__/copied-install.ts";
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { applyMigration } from "./apply-migration.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 import { conflictLines, planMigration } from "./migrate.ts";
 

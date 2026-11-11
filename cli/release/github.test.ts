@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted, tempDir, write } from "../fixtures/planted-repo.ts";
+import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { releaseGithub } from "./github.ts";
 

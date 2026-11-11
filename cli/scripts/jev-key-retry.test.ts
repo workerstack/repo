@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { KEY, plantDir } from "./fixtures/jev-kit.ts";
+import { KEY, plantDir } from "./__fixtures__/jev-kit.ts";
 import { loadJevKey, retryWaitMs } from "./jev-key.ts";
 import { parseArgv } from "./jev.ts";
 

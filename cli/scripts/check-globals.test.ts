@@ -4,8 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
-import { checkGlobals, driftLine } from "./check-globals.ts";
+import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   HINT,
   tmpDir,
@@ -15,7 +14,8 @@ import {
   editJson,
   madeDirs,
   firstDrift,
-} from "./fixtures/check-globals-kit.ts";
+} from "./__fixtures__/check-globals-kit.ts";
+import { checkGlobals, driftLine } from "./check-globals.ts";
 
 useTempDirs();
 

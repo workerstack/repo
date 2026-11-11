@@ -8,7 +8,7 @@ import { expect, it, onTestFinished } from "vitest";
 
 import { fwd } from "../../dev/test-paths.ts";
 import { readEnv } from "../env.ts";
-import { mainWithOutWorktree } from "./fixtures/worktree-repo.ts";
+import { mainWithOutWorktree } from "./__fixtures__/worktree-repo.ts";
 import {
   HOOK_NAMES,
   HOOK_USAGE,

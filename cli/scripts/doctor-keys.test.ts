@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { enablePacks, homeWith, linuxRun, runDoctor, tmp, toolsCwd } from "./fixtures/doctor-kit.ts";
+import { enablePacks, homeWith, linuxRun, runDoctor, tmp, toolsCwd } from "./__fixtures__/doctor-kit.ts";
 
 const ACCOUNT = ".workerstack/workspace/default";
 

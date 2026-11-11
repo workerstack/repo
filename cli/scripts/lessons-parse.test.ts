@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { lesson } from "./fixtures/lessons-kit.ts";
+import { lesson } from "./__fixtures__/lessons-kit.ts";
 import { parseLesson } from "./lesson-file.ts";
 
 function errorsOf(text: string, defaults?: Record<string, string>) {

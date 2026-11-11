@@ -1,8 +1,8 @@
 import { afterEach, expect, it } from "vitest";
 
+import { OK, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps } from "./__fixtures__/turn-repo.ts";
 import { main } from "./ci.ts";
-import { OK, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);

@@ -21,8 +21,8 @@ import {
   snapshot,
   sync,
   write,
-} from "./fixtures/copied-install.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+} from "./__fixtures__/copied-install.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();

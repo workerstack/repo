@@ -4,9 +4,22 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import {
+  GH,
+  GIT,
+  LIST,
+  SHA,
+  BRANCH_LIST,
+  answerer,
+  bad,
+  job,
+  ok,
+  run,
+  view,
+  world,
+} from "./__fixtures__/ci-wait-world.ts";
 import type { RecordFs } from "./ci-wait-record.ts";
 import { waitMain } from "./ci-wait.ts";
-import { GH, GIT, LIST, SHA, BRANCH_LIST, answerer, bad, job, ok, run, view, world } from "./fixtures/ci-wait-world.ts";
 
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
 function tip(branch: string) {

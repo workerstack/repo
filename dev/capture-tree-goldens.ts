@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Captures the agent-tree goldens: `renderTrees` run on the consumer fixture (`cli/sync/fixtures/consumer`, a
- * `.repo/` overlay, all five hosts) over a frozen stock snapshot (`cli/sync/fixtures/consumer-stock`), so a stock
- * edit never moves them. Every generated file except `.vscode/tasks.json` lands under `cli/sync/fixtures/golden/`,
+ * Captures the agent-tree goldens: `renderTrees` run on the consumer fixture (`cli/sync/__fixtures__/consumer`, a
+ * `.repo/` overlay, all five hosts) over a frozen stock snapshot (`cli/sync/__fixtures__/consumer-stock`), so a stock
+ * edit never moves them. Every generated file except `.vscode/tasks.json` lands under `cli/sync/__fixtures__/golden/`,
  * which is wiped first. `cli/sync/golden.test.ts` renders the same fixture through `renderFixtureTrees` and
  * compares byte for byte.
  *

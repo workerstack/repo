@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { fixture, sync, useSyncKit } from "./fixtures/sync-kit.ts";
+import { fixture, sync, useSyncKit } from "./__fixtures__/sync-kit.ts";
 
 useSyncKit();
 function expectOwnedMode(root: string, rel: string): void {

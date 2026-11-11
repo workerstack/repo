@@ -6,7 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { SLOW } from "../scripts/fixtures/turn-repo.ts";
+import { SLOW } from "../scripts/__fixtures__/turn-repo.ts";
 import { exportSubpaths } from "./exports.ts";
 
 const ROOT = path.join(import.meta.dirname, "..", "..");

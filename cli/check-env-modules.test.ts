@@ -1,25 +1,9 @@
-import { execFileSync } from "node:child_process";
-
 import { describe, expect, it } from "vitest";
 
+import { useGitTree } from "./__fixtures__/git-tree.ts";
 import { checkEnvModules } from "./check-env-modules.ts";
-import { useTempTree } from "./fixtures/temp-tree.ts";
 
-const plant = useTempTree("check-env-module-");
-
-/** A temp git repo holding `files` (path → content), none of them added to the index. */
-function untrackedRepo(files: Record<string, string>): string {
-  const dir = plant(files);
-  execFileSync("git", ["init", "-q"], { cwd: dir });
-  return dir;
-}
-
-/** A temp git repo holding `files` (path → content), all added to the index. */
-function repoWith(files: Record<string, string>): string {
-  const dir = untrackedRepo(files);
-  execFileSync("git", ["add", "-A"], { cwd: dir });
-  return dir;
-}
+const { plant, repoWith, untrackedRepo } = useGitTree("check-env-module-");
 
 const PKG = "{}\n";
 const ENV = "export {};\n";

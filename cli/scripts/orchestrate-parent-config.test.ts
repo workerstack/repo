@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { loadSources } from "../sync/agents/load-sources.ts";
 import { renderHooks } from "../sync/agents/render-hooks.ts";
-import { orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
+import { orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
 import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
 const kit = orchestrateKit();

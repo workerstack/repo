@@ -12,7 +12,7 @@ import {
   readLedgerFile,
   reply,
   scripted,
-} from "./fixtures/jev-kit.ts";
+} from "./__fixtures__/jev-kit.ts";
 import { estimateTokens } from "./jev-key.ts";
 import { MAX_INPUT_TOKENS_PER_DAY, MAX_REQUESTS_PER_DAY } from "./jev.constants.ts";
 

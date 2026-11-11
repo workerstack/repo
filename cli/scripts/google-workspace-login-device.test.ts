@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   type Spawned,
   jsonRes,
@@ -14,7 +14,7 @@ import {
   storePath,
   stubFetch,
   withIo,
-} from "./fixtures/google-workspace-kit.ts";
+} from "./__fixtures__/google-workspace-kit.ts";
 import { loginLoopback, openUrl } from "./google-workspace-auth.ts";
 import { main } from "./google-workspace.ts";
 

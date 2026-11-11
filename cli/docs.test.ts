@@ -2,8 +2,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { docsRun, fence, json, packed, publicManifest, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { main } from "./docs.ts";
-import { docsRun, fence, json, packed, publicManifest, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const DEMO = publicManifest("@workerstack/demo", { ".": "./i.ts", "./lint": "./l.ts" }).replace(
   ',"./references/*":"./references/*"',

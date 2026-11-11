@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
+import { probeOf } from "./__fixtures__/board-kit.ts";
 import { tryChmod } from "./board-files.ts";
 import { hostIdentity, parseProcStat, probeProcess, readBootId, rowAlive } from "./board-process.ts";
-import { probeOf } from "./fixtures/board-kit.ts";
 
 // 22 fields after "(comm)": state, ppid, then filler up to field 22 (starttime).
 function stat(comm: string, state: string, ppid: string) {

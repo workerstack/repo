@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -18,7 +19,7 @@ const PACKED_LINE = /^packed\s+\S+\s+(.+?)\s*$/;
 
 const TEXT_FILE = /\.(?:md|ts|json|jsonc|toml)$/;
 const TEST_FILE = /\.test\.ts$/;
-const FIXTURE_DIR = /(?:^|\/)fixtures\//;
+const FIXTURE_DIR = /* @__PURE__ */ new RegExp(`(?:^|/)${FIXTURES_DIR}/`);
 const CHANGELOG = /^CHANGELOG\.md$/;
 const LESSON_BODIES = /^\.repo\/lessons\//;
 const INIT_FILE = /^cli\/init\.ts$/;

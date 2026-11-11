@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
+import { context } from "../__fixtures__/release-context.ts";
 import type { Pack } from "../config.ts";
-import { context } from "../fixtures/release-context.ts";
 import { release } from "./release.ts";
 
 const CACHE = "actions/cache/%@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";

@@ -4,12 +4,12 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { fwd } from "../../dev/test-paths.ts";
-import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./fixtures/turn-repo.ts";
+import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import { dirName, type Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
-import { srcConfig, TSCONFIG } from "./fixtures/turn-repo.ts";
+import { srcConfig, TSCONFIG } from "./__fixtures__/turn-repo.ts";
 const OK: Captured = { code: 0, stderr: "", stdout: "" };
 const PIN = `bun@${Bun.version}`;
 const APP = { main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };

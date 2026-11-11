@@ -137,7 +137,7 @@ describe("boundaries on a public package", () => {
 
   it.each([
     ["packages/pub/src/a.test.ts", "a test"],
-    ["packages/pub/src/fixtures/a.ts", "a fixture"],
+    ["packages/pub/src/__fixtures__/a.ts", "a fixture"],
     ["packages/pub/docs/a.ts", "a file outside files"],
     ["packages/pub/src/skip/a.ts", "a file under a ! entry"],
     ["packages/pub/src/b.gen.ts", "a file matching a ! glob"],

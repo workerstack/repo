@@ -14,9 +14,9 @@ import {
   reasonOf,
   SID,
   STASH_REASON,
-} from "./fixtures/checkout-calls.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { notDenied } from "./fixtures/hook-payload.ts";
+} from "./__fixtures__/checkout-calls.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { notDenied } from "./__fixtures__/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();

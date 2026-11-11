@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 import { expect, it, vi } from "vitest";
 
 import { linkText } from "../dev/test-paths.ts";
+import { read, region, syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
-import { read, region, syncWith, tempDir, useSyncKit, write } from "./fixtures/sync-kit.ts";
 import { gitFiles } from "./sync/git-files.ts";
 
 useSyncKit();

@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { cursorCall, inSession, replyCommand, replyInput } from "./fixtures/hook-payload.ts";
-import { runHook } from "./fixtures/run-hook.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { cursorCall, inSession, replyCommand, replyInput } from "./__fixtures__/hook-payload.ts";
+import { runHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
 import { answerDeny, type HookOutput } from "./gate-harness.ts";
 import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_FILE_SIZE, REASON_REREAD } from "./gate.constants.ts";

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, consumer, FLOAT, MAGIC, NN, nonNull, PARAMS, SLOW, WAIT } from "./fixtures/baseline-repo.ts";
+import { cleanTemps, consumer, FLOAT, MAGIC, NN, nonNull, PARAMS, SLOW, WAIT } from "./__fixtures__/baseline-repo.ts";
 import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import { checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
@@ -119,6 +119,6 @@ it("the check counts the magic hits it is handed beside oxlint's", { timeout: SL
 });
 
 it("a run over only ignored paths lints nothing and reports no problems", { timeout: SLOW }, () => {
-  const root = consumer({ "src/fixtures/a.ts": nonNull(1) });
-  expect(lintReport(root, ["--fix", "src/fixtures/a.ts"])).toStrictEqual({ ok: true, value: [] });
+  const root = consumer({ "src/__fixtures__/a.ts": nonNull(1) });
+  expect(lintReport(root, ["--fix", "src/__fixtures__/a.ts"])).toStrictEqual({ ok: true, value: [] });
 });

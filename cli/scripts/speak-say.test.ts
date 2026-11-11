@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { bytesRes, cfgOf, failRes, fetchReturning, okRes, plantDir } from "./fixtures/speak-kit.ts";
+import { bytesRes, cfgOf, failRes, fetchReturning, okRes, plantDir } from "./__fixtures__/speak-kit.ts";
 import { playPath, say } from "./speak-say.ts";
 import type { FetchFn, FetchResult } from "./speak.types.ts";
 

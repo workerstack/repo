@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { bunMinimum, versionAtLeast } from "./doctor-bun.ts";
 import { installHints, whichBin } from "./doctor-which.ts";
 import { BUN_MIN_FALLBACK } from "./doctor.constants.ts";

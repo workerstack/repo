@@ -7,7 +7,7 @@ import { expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
-import { plant, plantHomes, readGrok, seedHome } from "./fixtures/purge-kit.ts";
+import { plant, plantHomes, readGrok, seedHome } from "./__fixtures__/purge-kit.ts";
 import { grokConfigPath } from "./purge-paths.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));

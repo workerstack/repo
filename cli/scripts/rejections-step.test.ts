@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, consumer, git, SLOW, turn, write } from "./fixtures/turn-repo.ts";
+import { cleanTemps, consumer, git, SLOW, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
 

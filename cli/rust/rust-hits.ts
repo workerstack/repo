@@ -17,7 +17,10 @@ function isRust(rel: string) {
   return RUST_SOURCE.test(rel) && !rel.split("/").some((part) => EXCLUDED_DIRS.includes(part));
 }
 
-/** The tracked and untracked, not ignored, `.rs` files under `root`, outside any `fixtures` or `target` dir, sorted. */
+/**
+ * The tracked and untracked, not ignored, `.rs` files under `root`, outside any `__fixtures__` or `target` dir,
+ * sorted.
+ */
 export function rustFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };

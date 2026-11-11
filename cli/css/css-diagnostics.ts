@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 import type { Listed } from "../check-comments.ts";
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { captureBun } from "../scripts/lint.ts";
@@ -19,7 +20,6 @@ import {
   CSS_SOURCE,
   DEPENDENCY_EXCLUDE,
   FIX_FLAG,
-  FIXTURES_DIR,
   RUNNER_EVAL,
   STYLELINT_PREFIX,
 } from "./stylelint.constants.ts";

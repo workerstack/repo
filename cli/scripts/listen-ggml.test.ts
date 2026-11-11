@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { bytesReply, cfgFor, cleanupTmp, reply, sttFor, tmp, which } from "./fixtures/listen-env.ts";
+import { bytesReply, cfgFor, cleanupTmp, reply, sttFor, tmp, which } from "./__fixtures__/listen-env.ts";
 import { defaultGgmlPath, downloadGgml, ensureStt } from "./listen-whisper.ts";
 import { DEFAULT_MODEL, GGML_URL, NEED_STT } from "./listen.constants.ts";
 

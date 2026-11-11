@@ -4,9 +4,9 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { defineProject } from "../../presets/vitest.ts";
+import { ci, ciConfigured, ciPacked, NO_SKIPS, reportAt, plant } from "./__fixtures__/ci-run.ts";
+import { cleanTemps, tempDir } from "./__fixtures__/turn-repo.ts";
 import { mergeReports, type TurboRun } from "./ci-turbo.ts";
-import { ci, ciConfigured, ciPacked, NO_SKIPS, reportAt, plant } from "./fixtures/ci-run.ts";
-import { cleanTemps, tempDir } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);

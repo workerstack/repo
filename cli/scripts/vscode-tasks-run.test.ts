@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { childEnv } from "../env.ts";
 import { stamp } from "../sync/header.ts";
-import { readTasks, silent, tempRoot, write } from "./fixtures/vscode-tasks-kit.ts";
+import { readTasks, silent, tempRoot, write } from "./__fixtures__/vscode-tasks-kit.ts";
 import { run, type VsTask } from "./vscode-tasks.ts";
 
 const SCRIPT = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));

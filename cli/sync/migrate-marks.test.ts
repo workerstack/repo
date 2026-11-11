@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
+import { linkStock, read, sync, write } from "./__fixtures__/copied-install.ts";
+import { mini, planOf } from "./__fixtures__/mini-install.ts";
+import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { linkStock, read, sync, write } from "./fixtures/copied-install.ts";
-import { mini, planOf } from "./fixtures/mini-install.ts";
-import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
 

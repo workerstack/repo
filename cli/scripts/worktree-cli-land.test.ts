@@ -17,8 +17,8 @@ import {
   subjects,
   write,
   wt,
-} from "./fixtures/worktree-repo.ts";
-import { expectOnlyMainWorktree } from "./fixtures/worktree-scenarios.ts";
+} from "./__fixtures__/worktree-repo.ts";
+import { expectOnlyMainWorktree } from "./__fixtures__/worktree-scenarios.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());

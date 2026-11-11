@@ -14,7 +14,7 @@ import {
   tmp,
   which,
   cleanupTmp,
-} from "./fixtures/listen-env.ts";
+} from "./__fixtures__/listen-env.ts";
 import { sessionPath } from "./listen-session.ts";
 import { NEED_FFMPEG } from "./listen.constants.ts";
 

@@ -2,7 +2,7 @@ import type * as FsModule from "node:fs";
 
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./fixtures/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
+const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
 // Wraps the real readFileSync; the version tests swap one return value.
 const readFileSync = vi.hoisted(() => vi.fn<typeof FsModule.readFileSync>());
 vi.mock("node:fs", async (importOriginal) => {
@@ -10,7 +10,7 @@ vi.mock("node:fs", async (importOriginal) => {
   readFileSync.mockImplementation(actual.readFileSync);
   return { ...actual, default: { ...actual, readFileSync }, readFileSync };
 });
-import { USAGE, anyFunction, pkgVersion, useStart } from "./fixtures/main-kit.ts";
+import { USAGE, anyFunction, pkgVersion, useStart } from "./__fixtures__/main-kit.ts";
 import { start } from "./main.ts";
 
 const written = useStart(fakes);

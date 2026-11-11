@@ -3,10 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { alive, BOOT, plantHome, writeRow } from "./__fixtures__/board-kit.ts";
 import { formatLine } from "./board-line.ts";
 import { digest, lines } from "./board.ts";
 import type { ProcessInfo } from "./board.types.ts";
-import { alive, BOOT, plantHome, writeRow } from "./fixtures/board-kit.ts";
 
 const boot = BOOT;
 

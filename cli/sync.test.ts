@@ -3,7 +3,18 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { BUNFIG, age, fixture, mtimes, read, region, snapshot, sync, useSyncKit, write } from "./fixtures/sync-kit.ts";
+import {
+  BUNFIG,
+  age,
+  fixture,
+  mtimes,
+  read,
+  region,
+  snapshot,
+  sync,
+  useSyncKit,
+  write,
+} from "./__fixtures__/sync-kit.ts";
 
 useSyncKit();
 

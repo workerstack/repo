@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { removePlanted } from "../fixtures/planted-repo.ts";
+import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import {
   addition,
   FEAT_TAIL,
@@ -10,8 +10,8 @@ import {
   REMOVAL_OK,
   TIMEOUT,
   withOld,
-} from "./fixtures/api-cases.ts";
-import { api, apiRepo, PREFIX } from "./fixtures/api-repo.ts";
+} from "./__fixtures__/api-cases.ts";
+import { api, apiRepo, PREFIX } from "./__fixtures__/api-repo.ts";
 
 afterEach(removePlanted);
 

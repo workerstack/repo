@@ -2,10 +2,10 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, expect, it } from "vitest";
 
-import { fakeRunner } from "./css/fixtures/css-kit.ts";
-import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/fixtures/magic-repo.ts";
+import { fakeRunner } from "./css/__fixtures__/css-kit.ts";
+import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
 import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics, scriptLintAt } from "./script-diagnostics.ts";
-import { cleanTemps as cleanRunners } from "./scripts/fixtures/turn-repo.ts";
+import { cleanTemps as cleanRunners } from "./scripts/__fixtures__/turn-repo.ts";
 
 afterEach(() => {
   cleanTemps();

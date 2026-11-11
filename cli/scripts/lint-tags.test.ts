@@ -4,8 +4,8 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { loadConfig } from "../config.ts";
-import { TAGGED_BOUNDARIES, taggedTree } from "../sync/fixtures/tagged-kit.ts";
-import { put, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { TAGGED_BOUNDARIES, taggedTree } from "../sync/__fixtures__/tagged-kit.ts";
+import { put, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { standards } from "../sync/standards.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import { captureTool } from "./lint.ts";

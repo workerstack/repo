@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { ROOT, at, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
+import { ROOT, at, fakes, rawReport, sim } from "./__fixtures__/mutate-fakes.ts";
 import { packageOf, percentOf, tally } from "./mutate-floors.ts";
 import { runMutate } from "./mutate.ts";
 

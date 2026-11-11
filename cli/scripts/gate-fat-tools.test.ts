@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall, replyCommand, replyInput, replyOf } from "./fixtures/hook-payload.ts";
-import { runHook, spawnHook } from "./fixtures/run-hook.ts";
+import { useTmp } from "./__fixtures__/gate-workspace.ts";
+import { camelCall, replyCommand, replyInput, replyOf } from "./__fixtures__/hook-payload.ts";
+import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
 import { answerDeny, answerRewrite } from "./gate-harness.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";

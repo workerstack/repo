@@ -5,8 +5,8 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
+import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { findRoots } from "./find-roots.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import { linkGit } from "./link-git.ts";
 import { linkIo } from "./link-io.ts";
 

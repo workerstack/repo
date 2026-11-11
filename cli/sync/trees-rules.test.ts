@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { HOSTS, type Host } from "../config.ts";
-import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
-import { RENDER_TIMEOUT, consumer, context, render, stagesIn, text } from "./fixtures/trees-kit.ts";
+import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
+import { RENDER_TIMEOUT, consumer, context, render, stagesIn, text } from "./__fixtures__/trees-kit.ts";
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();

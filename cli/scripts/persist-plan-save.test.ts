@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { useTempDirs } from "../fixtures/temp-dirs.ts";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { seedLesson } from "./fixtures/persist-lesson-kit.ts";
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { seedLesson } from "./__fixtures__/persist-lesson-kit.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 
 const { tempDir } = useTempDirs("persist-plan-save-");

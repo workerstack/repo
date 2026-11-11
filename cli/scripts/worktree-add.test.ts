@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { captured, commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
+import { captured, commitIn, git, hasBranch, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 import { worktreeName } from "./worktree-git.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
 

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { mapRepos } from "./fixtures/folder-map-kit.ts";
+import { mapRepos } from "./__fixtures__/folder-map-kit.ts";
 import { folderMap } from "./folder-map.ts";
 
 const { repo, map, track } = mapRepos();
@@ -34,8 +34,8 @@ it("folderMap core skips dot dirs, generated, static, and test-data segments", (
 it("folderMap core maps cli/scripts, skipping its fixtures and dot dirs", () => {
   const text = map({
     ".hidden/other/x.mjs": "",
+    "cli/scripts/__fixtures__/x.mjs": "",
     "cli/scripts/a.mjs": "",
-    "cli/scripts/fixtures/x.mjs": "",
     "src/a.ts": "",
   });
   expect(text).toBe("cli/scripts/\nsrc/\n");

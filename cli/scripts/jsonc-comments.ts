@@ -9,6 +9,7 @@ import path from "node:path";
 
 import { createScanner } from "jsonc-parser";
 
+import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { commentLines } from "../lint/comment-lines.ts";
 import { JSONC_EXTENSIONS } from "./json-keys.constants.ts";
 import {
@@ -17,7 +18,6 @@ import {
   BLOCK_OPEN,
   DOC_OPEN,
   EOF_TOKEN,
-  FIXTURES_DIR,
   LICENSE_OPEN,
 } from "./jsonc-comments.constants.ts";
 

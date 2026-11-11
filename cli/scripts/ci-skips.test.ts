@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from "vitest";
 
+import { cleanTemps, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { skipsMain } from "./ci-skips.ts";
-import { cleanTemps, tempDir, write } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 

@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 
+import { cleanTemps, consumer, read, SLOW, srcConfig, tempDir, TSCONFIG, write } from "./__fixtures__/turn-repo.ts";
 import { main } from "./ci.ts";
-import { cleanTemps, consumer, read, SLOW, srcConfig, tempDir, TSCONFIG, write } from "./fixtures/turn-repo.ts";
 
 afterEach(() => {
   cleanTemps();
