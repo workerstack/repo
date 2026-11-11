@@ -31,13 +31,11 @@ function calls(w: string): HookInput[] {
       "tmp/notes.md",
       path.join(w, "packages/a/.tmp/repo/scratch/s.md"),
     ];
-    for (const target of targets) {
+    for (const target of targets)
       out.push(reviewWrite(kind, { cwd: w, target }), asChild(reviewWrite(kind, { cwd: w, target }), "scout"));
-    }
   }
-  for (const command of COMMANDS) {
-    out.push(sent("Bash", { command }), asChild(sent("Bash", { command }), "scout"));
-  }
+  for (const command of COMMANDS) out.push(sent("Bash", { command }), asChild(sent("Bash", { command }), "scout"));
+
   out.push(sent("Grep", { pattern: "x" }), sent("Read", { file_path: path.join(w, "src/a.ts") }));
   return out;
 }

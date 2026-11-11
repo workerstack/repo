@@ -26,7 +26,7 @@ function unstagedPaths(cwd: string): string[] {
     const y = entry[1];
     // A rename or copy carries its old path in the next field.
     if (x === "R" || x === "C" || y === "R" || y === "C") fields.next();
-    if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(3).replace(/\\/g, "/"));
+    if (y !== " " || entry.startsWith("??")) paths.push(entry.slice(3).replaceAll("\\", "/"));
   }
   return [...new Set(paths)].sort();
 }

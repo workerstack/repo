@@ -14,7 +14,7 @@ import {
 } from "./persist-roadmap.constants.ts";
 
 /** One `Title:` slice of the Order section. */
-export interface Slice {
+export type Slice = {
   title: string;
   goal: string;
   why: string;
@@ -22,14 +22,14 @@ export interface Slice {
   hasGoal: boolean;
   hasWhy: boolean;
   hasLocation: boolean;
-}
+};
 
 /** One line of a pointer roadmap's Order: `N [ ] {title}: {one sentence}`, then an optional Location. */
-export interface PointerSlice {
+export type PointerSlice = {
   n: string;
   ok: boolean;
   location: string | null;
-}
+};
 
 export function sentences(text: unknown): string[] {
   return String(text)

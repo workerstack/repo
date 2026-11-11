@@ -25,7 +25,7 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
     git,
     now: () => clock,
     sleep: (ms) => ((clock += ms), Promise.resolve()),
-    stderr: () => undefined,
+    stderr: () => {},
     stdout: (s) => out.push(s),
     target: { branch, sha: SHA },
   });

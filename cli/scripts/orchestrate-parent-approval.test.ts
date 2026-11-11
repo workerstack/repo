@@ -27,11 +27,11 @@ function plant(ws: string, rel: string, text: string): string {
 }
 
 /** The reply fields these cases read. */
-interface Reply {
+type Reply = {
   hookSpecificOutput: { additionalContext: string; updatedInput: { file_path: string; content: string } };
   decision?: string;
   reason?: string;
-}
+};
 
 /** Runs the hook for one event as Claude Code sends it; the board writes to a temp home. */
 function send(ws: string, payload: Record<string, unknown>): Reply | null {
@@ -131,7 +131,7 @@ describe("a turn that saved reviewed items", () => {
     plant(ws, ".tmp/repo/plans/3-nostrategy.md", item(3, "a line with no key", "status: ready", "reviews: 1"));
     plant(ws, ".tmp/repo/plans/7-ok.md", item(7, ...SETTLED));
     plant(ws, ".tmp/repo/roadmaps/3-r.md", item(3, "status: draft", "reviews: 1", "strategy: default"));
-    plant(ws, `.tmp/repo/sessions/${sid}/approvals.txt`, lines.join("\n") + "\n");
+    plant(ws, `.tmp/repo/sessions/${sid}/approvals.txt`, `${lines.join("\n")}\n`);
   };
 
   it("asks for a closing line over only the items that can be approved", () => {

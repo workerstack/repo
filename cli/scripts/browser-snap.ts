@@ -29,7 +29,7 @@ function parseUrl(url: unknown): URL | null {
 }
 
 /** Whether host `h` is `base` or under it. */
-const onHost = (h: string, base: string): boolean => h === base || h.endsWith("." + base);
+const onHost = (h: string, base: string): boolean => h === base || h.endsWith(`.${base}`);
 
 /** Whether `url` is a page that paints on a canvas, which only Chromium reads. */
 export function isPaintHost(url: unknown): boolean {

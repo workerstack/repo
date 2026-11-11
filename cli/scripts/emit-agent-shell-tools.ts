@@ -8,12 +8,12 @@ import { isRecord } from "./hook-input.ts";
 
 export type Frontmatter = { ok: true; fm: string; body: string } | { ok: false; error: string };
 
-export interface EmitResult {
+export type EmitResult = {
   ok: boolean;
   check: boolean;
   error?: string;
   drift?: string[];
-}
+};
 
 const SSOT_REL = "agents/subagents/scout.md";
 const CLAUDE_SCOUT_REL = ".claude/agents/scout.md";
@@ -85,9 +85,9 @@ export function emitAgentShellTools({
   const pair = scoutPair(path.join(sourceRoot || ws, SSOT_REL), claudeAbs);
   if (!pair.ok) return { check, error: pair.error, ok: false };
   if (check) {
-    if (pair.claudeRaw !== pair.next) {
+    if (pair.claudeRaw !== pair.next)
       return { check: true, drift: [CLAUDE_SCOUT_REL], error: `drift: ${CLAUDE_SCOUT_REL}`, ok: false };
-    }
+
     return { check: true, drift: [], ok: true };
   }
   fs.mkdirSync(path.dirname(claudeAbs), { recursive: true });

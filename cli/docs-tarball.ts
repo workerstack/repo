@@ -15,7 +15,7 @@ const COLOR = /\u001b\[[\d;]*m/g;
 /** The paths in `packed {size} {path}` lines, with POSIX separators. */
 export function packedPaths(output: string): Set<string> {
   const paths = new Set<string>();
-  for (const line of output.replace(COLOR, "").replaceAll("\\", "/").split(/\r?\n/)) {
+  for (const line of output.replaceAll(COLOR, "").replaceAll("\\", "/").split(/\r?\n/)) {
     const match = PACKED.exec(line);
     if (match !== null) paths.add(group(match, 1));
   }

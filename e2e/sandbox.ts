@@ -25,7 +25,7 @@ export class Sandbox {
   constructor(name: string) {
     const runRoot = inject("runRoot");
     const registry = inject("registryUrl");
-    this.root = fs.mkdtempSync(path.join(runRoot, `${name.replace(/\W+/g, "-")}-`));
+    this.root = fs.mkdtempSync(path.join(runRoot, `${name.replaceAll(/\W+/g, "-")}-`));
     this.home = path.join(this.root, "home");
     this.repo = path.join(this.root, "repo");
     const tmp = path.join(this.root, "tmp");
@@ -161,5 +161,5 @@ export function tail(text: string, lines = 80) {
 }
 
 function quoteWin(a: string) {
-  return /[\s"&|<>^]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a;
+  return /[\s"&|<>^]/.test(a) ? `"${a.replaceAll('"', '\\"')}"` : a;
 }

@@ -1,9 +1,9 @@
 /** One rewrite of upstream text; `id` names the miss reported when `re` no longer matches (none: optional). */
-export interface Rule {
+export type Rule = {
   re: RegExp;
   to: string;
   id?: string;
-}
+};
 
 /** Body rewrites by skill name, applied in order. */
 export const BODY_RULES: Partial<Record<string, readonly Rule[]>> = {

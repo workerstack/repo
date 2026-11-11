@@ -21,9 +21,9 @@ function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
   const tsc = (project: string) => turn.bins.tsc(["--noEmit", "-p", project], turn.root);
   const runtime = configRun(path.posix.join(owner, RUNTIME_CONFIG), tsc(dirName(owner)));
   const src = path.posix.join(owner, SRC_CONFIG);
-  if (!fs.existsSync(path.join(turn.root, src))) {
+  if (!fs.existsSync(path.join(turn.root, src)))
     return [runtime, { name: `${src} missing`, ok: false, output: `repo turn: ${missingSrcConfig(dirName(owner))}\n` }];
-  }
+
   return [runtime, configRun(src, tsc(src))];
 }
 

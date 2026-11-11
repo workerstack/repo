@@ -4,10 +4,24 @@
 export const CARGO: string = "cargo";
 /** The cargo arguments: clippy, locked to Cargo.lock, at the repo's levels as `-W` flags, so the build completes and reports every hit. */
 export const CLIPPY_ARGS: readonly string[] = [
-  ...["clippy", "--all-targets", "--all-features", "--locked", "--message-format=json", "--"],
-  ...["-W", "clippy::pedantic", "-W", "clippy::unwrap_used", "-W", "clippy::expect_used"],
-  ...["-W", "clippy::undocumented_unsafe_blocks", "-W", "clippy::unnecessary_safety_comment"],
-  ...["-W", "unreachable_pub"],
+  "clippy",
+  "--all-targets",
+  "--all-features",
+  "--locked",
+  "--message-format=json",
+  "--",
+  "-W",
+  "clippy::pedantic",
+  "-W",
+  "clippy::unwrap_used",
+  "-W",
+  "clippy::expect_used",
+  "-W",
+  "clippy::undocumented_unsafe_blocks",
+  "-W",
+  "clippy::unnecessary_safety_comment",
+  "-W",
+  "unreachable_pub",
 ];
 /** What a repo with a Cargo.toml and no cargo is told. */
 export const MISSING_CARGO: string =

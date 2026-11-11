@@ -16,7 +16,7 @@ import { resolveRoots } from "./workspace-root.ts";
 
 /** The stamp `prefix` in `dir`, for this session or the default one. */
 function stampIn(data: HookInput, dir: string, prefix: string): string {
-  return path.join(resolveRoots(data).root, dir, prefix + "-" + (sessionIdOf(data) || NO_SESSION));
+  return path.join(resolveRoots(data).root, dir, `${prefix}-${sessionIdOf(data) || NO_SESSION}`);
 }
 
 /** The stamp that exists, new dir first; null when neither does. */
@@ -57,7 +57,7 @@ export function sessionGateStampPath(data: HookInput, prefix: string): string | 
   const root = resolveRoots(data).root;
   const sid = sessionIdOf(data);
   if (!root || !isRealSession(sid)) return null;
-  return path.join(root, ORCHESTRATOR_LOGS_DIR, prefix + "-" + sid);
+  return path.join(root, ORCHESTRATOR_LOGS_DIR, `${prefix}-${sid}`);
 }
 
 /** The /ask or /away stamp this session holds, new name and dir first; null when none. */
@@ -65,7 +65,7 @@ export function resolveSessionGateStamp(data: HookInput): string | null {
   for (const prefix of [SESSION_GATE_STAMP, AUTO_ASK_STAMP]) {
     const neu = sessionGateStampPath(data, prefix);
     if (neu && fs.existsSync(neu)) return neu;
-    const old = path.join(resolveRoots(data).root, LEGACY_ORCHESTRATOR_LOGS_DIR, prefix + "-" + sessionIdOf(data));
+    const old = path.join(resolveRoots(data).root, LEGACY_ORCHESTRATOR_LOGS_DIR, `${prefix}-${sessionIdOf(data)}`);
     if (sessionIdOf(data) && fs.existsSync(old)) return old;
   }
   return null;

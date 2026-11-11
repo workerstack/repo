@@ -133,7 +133,7 @@ const VALID: Record<Exclude<Passthrough["kind"], "keyword">, (value: unknown) =>
 };
 const ON_FAILURE_IGNORED = new Set(["stop", "subagentStop", "taskCompleted", "teammateIdle"]);
 
-interface Target {
+type Target = {
   overrideKey: string;
   names: Record<string, string>;
   /** Events whose groups carry no matcher; translation is skipped there too (D:53195, D:53796). */
@@ -148,7 +148,7 @@ interface Target {
   promptModel: boolean;
   /** Whether `name` and `description` are written (codex `passthroughFields`, D:56378). */
   named: boolean;
-}
+};
 
 const CLAUDE: Target = {
   overrideKey: "claudecode",
@@ -202,7 +202,7 @@ const ANTIGRAVITY_NO_MATCHER = new Set(["sessionStart", "preModelInvocation", "p
 const ANTIGRAVITY_FLAT = new Set([...ANTIGRAVITY_NO_MATCHER].map((event) => ANTIGRAVITY_EVENTS[event]));
 const ANTIGRAVITY: Target = {
   matcher: (matcher) =>
-    matcher.replace(MATCHER_TOKEN, (token) =>
+    matcher.replaceAll(MATCHER_TOKEN, (token) =>
       Object.hasOwn(ANTIGRAVITY_TOOLS, token) ? ANTIGRAVITY_TOOLS[token]! : token,
     ),
   named: false,
@@ -218,9 +218,9 @@ const ANTIGRAVITY: Target = {
 export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase: string): Map<string, string> {
   const config = sources.hooks.value;
   const files = new Map<string, string>();
-  if (hosts.includes("claude")) {
+  if (hosts.includes("claude"))
     files.set(".claude/settings.json", text(claudeSettings(claudeBase, toolHooks(config, CLAUDE))));
-  }
+
   if (hosts.includes("codex"))
     files.set(".codex/hooks.json", text({ hooks: filterCodexHandlers(toolHooks(config, CODEX)) }));
   if (hosts.includes("antigravity")) {

@@ -47,9 +47,9 @@ describe("a two-package workspace", () => {
       "packages/web/CLAUDE.md",
       "packages/web/.repo/rules/components.md",
       ".claude/rules/packages/web/components.md",
-    ]) {
+    ])
       expect(sb.exists(gone), gone).toBe(false);
-    }
+
     expect(linkText(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(sb.read("AGENTS.md")).not.toContain("Components live");
     const deps = /<!-- repo:deps [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(

@@ -64,7 +64,7 @@ export function groupsOf(body: readonly string[]): [string, string[]][] {
 
 /** `lines` without the blank lines at either end. */
 export function trimBlank(lines: readonly string[]): string[] {
-  const text = lines.join("\n").replace(/^\n+|\n+$/g, "");
+  const text = lines.join("\n").replaceAll(/^\n+|\n+$/g, "");
   return text === "" ? [] : text.split("\n");
 }
 

@@ -23,7 +23,7 @@ function ciWith(packs: Pack[], docs: Captured) {
       repoCalls.push(args.join(" "));
       return args[0] === "docs" ? docs : OK;
     },
-    stderr: () => undefined,
+    stderr: () => {},
     stdout: (s) => out.push(s),
     turbo: () => OK,
   });

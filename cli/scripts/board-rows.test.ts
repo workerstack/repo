@@ -29,9 +29,9 @@ it("note: writes nothing without a real session, pid or start time", () => {
     { pid: undefined },
     { start: undefined },
     { start: "" },
-  ]) {
+  ])
     expect(note({ ...base, home, ...bad })).toBeNull();
-  }
+
   expect(fs.existsSync(boardDir(home))).toBe(false);
   expect(note()).toBeNull();
 });

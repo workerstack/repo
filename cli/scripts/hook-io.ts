@@ -4,11 +4,11 @@ import fs from "node:fs";
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { HOOK_READ_CHUNK_BYTES, STDIN_FD } from "./hook-io.constants.ts";
 
-export interface HookIo {
+export type HookIo = {
   /** The next bytes of the payload; null once the stream is closed or unreadable. */
   readChunk(): Uint8Array | null;
   write(text: string): void;
-}
+};
 
 /** Reads `fd` (stdin unless a test plants a file) and writes stdout. */
 export function processHookIo(fd: number = STDIN_FD): HookIo {

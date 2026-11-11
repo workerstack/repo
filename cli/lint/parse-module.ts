@@ -12,9 +12,8 @@ function importedName(specifier: Node): string {
 }
 
 function addImports(module: Module, statement: Node): void {
-  for (const specifier of nodesOf(statement["specifiers"])) {
+  for (const specifier of nodesOf(statement["specifiers"]))
     module.imports.set(nameOf(specifier["local"]), { name: importedName(specifier), source: sourceText(statement) });
-  }
 }
 
 function addDefault(module: Module, statement: Node): void {
@@ -28,16 +27,16 @@ function addDefault(module: Module, statement: Node): void {
 function addExports(module: Module, statement: Node): void {
   const source = asNode(statement["source"]) === null ? null : sourceText(statement);
   if (statement["type"] === NODE.exportAll) {
-    if (asNode(statement["exported"]) !== null)
-      module.exports.set(nameOf(statement["exported"]), { name: NAMESPACE, source });
-    else module.stars.push({ at: Number(statement["start"]), source: sourceText(statement) });
+    if (asNode(statement["exported"]) === null)
+      module.stars.push({ at: Number(statement["start"]), source: sourceText(statement) });
+    else module.exports.set(nameOf(statement["exported"]), { name: NAMESPACE, source });
+
     return;
   }
   if (statement["type"] === NODE.exportDefault) return addDefault(module, statement);
   for (const name of declaredNames(statement)) module.exports.set(name, { name, source: null });
-  for (const specifier of nodesOf(statement["specifiers"])) {
+  for (const specifier of nodesOf(statement["specifiers"]))
     module.exports.set(nameOf(specifier["exported"]), { name: nameOf(specifier["local"]), source });
-  }
 }
 
 /** The module `code` of `file` declares. */
@@ -55,9 +54,9 @@ export function parseModule(file: string, code: string): Module {
     const type = String(statement["type"]);
     if (type === NODE.importDeclaration) addImports(module, statement);
     if (type.startsWith("Export")) addExports(module, statement);
-    for (const name of declaredNames(statement)) {
+    for (const name of declaredNames(statement))
       module.locals.set(name, [...(module.locals.get(name) ?? []), statement]);
-    }
+
     const form = unknownForm(statement);
     if (form !== null) module.unknown.push({ at: Number(statement["start"]), form });
   }

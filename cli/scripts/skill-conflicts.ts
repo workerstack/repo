@@ -50,11 +50,11 @@ function readSkillMd(skillsRoot: string, name: string): Buffer | null {
 }
 
 /** Names in both trees whose SKILL.md bytes differ. */
-export interface SkillConflict {
+export type SkillConflict = {
   name: string;
   workspacePath: string;
   packagedPath: string;
-}
+};
 
 export function findSkillContentConflicts({
   workspaceSkillsDir,

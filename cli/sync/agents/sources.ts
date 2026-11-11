@@ -15,7 +15,7 @@ import { type ParsedDoc, parseDoc } from "./frontmatter.ts";
 import { TARGET } from "./subagents.ts";
 
 /** One rule or subagent source file. */
-export interface Doc extends ParsedDoc {
+export type Doc = {
   /** POSIX path from its root, for messages: `agents/rules/overview.md`, `.repo/subagents/x/y.md`. */
   rel: string;
   /** POSIX path inside `rules/` or `subagents/`, which outputs are named after: `overview.md`, `x/y.md`. */
@@ -24,19 +24,19 @@ export interface Doc extends ParsedDoc {
   origin: "stock" | "repo";
   /** `""` for stock and the root `.repo/`; the package dir (`packages/web`) for a package's `.repo/`. */
   scope: string;
-}
+} & ParsedDoc;
 
-interface HooksSource {
+type HooksSource = {
   rel: string;
   value: Record<string, unknown>;
-}
+};
 
-export interface Sources {
+export type Sources = {
   rules: Doc[];
   /** In merge order; subagents.ts re-sorts them shallowest-first as rulesync did. */
   subagents: Doc[];
   hooks: HooksSource;
-}
+};
 
 /** Root-relative directory of each source root: stock first, the consumer overlay second. */
 const STOCK_DIR = "agents";
@@ -46,10 +46,10 @@ const CONSUMER_DIR = ".repo";
  * The docs that loaded and every problem found, each starting with the file it is about. A doc with a problem is left
  * out of `sources`, and so is a hooks file that failed (its `value` is then empty); a load with problems is not to be rendered.
  */
-export interface LoadResult {
+export type LoadResult = {
   sources: Sources;
   problems: string[];
-}
+};
 
 type Kind = "rules" | "subagents";
 
@@ -92,13 +92,13 @@ export function loadSources(roots: {
   return { problems, sources: { hooks, rules, subagents } };
 }
 
-interface DocFile {
+type DocFile = {
   abs: string;
   rel: string;
   file: string;
   origin: Doc["origin"];
   scope: string;
-}
+};
 
 /** `<root>/<dir>/<kind>/**\/*.md` in plain string order of the POSIX path; dot entries skipped, symlinks followed. */
 function listDocs(root: string, dir: string, kind: string, origin: Doc["origin"], scope: string): DocFile[] {
@@ -140,10 +140,11 @@ function mergeDocs(kind: Kind, perRoot: DocFile[][], problems: string[]): Doc[] 
     .map((file) => ({ doc: read(kind, file, problems), file }));
   for (const { file, doc } of parsed) {
     const overrides = doc?.data["overrides"];
-    if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) replaced.add(overrides.toLowerCase());
-    else if (typeof overrides === "string")
+    if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) {
+      replaced.add(overrides.toLowerCase());
+    } else if (typeof overrides === "string") {
       problems.push(`${file.rel}: overrides "${overrides}" but no stock ${singular} has that name`);
-    else if (doc !== null && stockNames.has(nameOf(file.file))) {
+    } else if (doc !== null && stockNames.has(nameOf(file.file))) {
       problems.push(
         `${file.rel}: a stock ${singular} has this name; add \`overrides: ${file.file.replace(/\.md$/, "")}\` or rename it`,
       );
@@ -211,9 +212,8 @@ function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): string | nul
     if (typeof data["description"] !== "string" || data["description"].trim() === "")
       return "invalid frontmatter: description is required";
     const paths = data["paths"];
-    if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string"))) {
+    if (paths !== undefined && !(Array.isArray(paths) && paths.every((path) => typeof path === "string")))
       return "invalid frontmatter: paths must be a list of strings";
-    }
   }
   if (body.trim() === "") return "body is empty; write the instructions below the frontmatter";
   const bytes = Buffer.byteLength(body);

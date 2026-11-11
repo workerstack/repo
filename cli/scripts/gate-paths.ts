@@ -28,12 +28,12 @@ export function isUnder(base: string, abs: string, p: typeof path = path): boole
 export function relInside(base: string, abs: string, p: typeof path = path): string | null {
   const rel = p.relative(base, abs);
   if (!rel || rel.startsWith("..") || p.isAbsolute(rel)) return null;
-  return rel.replace(/\\/g, "/");
+  return rel.replaceAll("\\", "/");
 }
 
 /** The typed path with backslashes swapped and `.`/`..` folded, so `references/../cli` is judged as `cli`. */
 function typedPosix(p: unknown): string {
-  const swapped = String(p).replace(/\\/g, "/").trim();
+  const swapped = String(p).replaceAll("\\", "/").trim();
   return swapped ? path.posix.normalize(swapped) : "";
 }
 
@@ -43,12 +43,12 @@ export function inStockReferences(p: unknown): boolean {
 }
 
 function gitDirIn(s: unknown): boolean {
-  return /(^|[\s/])\.git(\/|$)/.test(String(s).replace(/\\/g, "/"));
+  return /(^|[\s/])\.git(\/|$)/.test(String(s).replaceAll("\\", "/"));
 }
 
 export function pathIsDenied(p: unknown): boolean {
   if (p == null) return false;
-  const raw = String(p).replace(/\\/g, "/").trim();
+  const raw = String(p).replaceAll("\\", "/").trim();
   if (!raw) return false;
   if (DENY_LOCKFILES.has(path.posix.basename(raw)) || gitDirIn(raw)) return true;
   // The match goes out as `/`, so what sat before and after it still reads as separate segments.

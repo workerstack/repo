@@ -90,9 +90,9 @@ function stryker(base: string, run: { files: string[]; bin: string }, deps: Muta
   const raw = path.join(base, RAW_REPORT_NAME);
   deps.fs.write(config, configOf(files, raw));
   const ran = deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone);
-  if (ran.code !== 0) {
+  if (ran.code !== 0)
     return refuse(deps, "the tests failed before any mutant ran; fix them first", ran.stdout + ran.stderr);
-  }
+
   const text = deps.fs.read(raw);
   if (text === null) return refuse(deps, "Stryker wrote no readable report: the report file is missing");
   const json = parseJson(text);

@@ -7,11 +7,11 @@ import { GROK_REL, MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
 type JsonObject = Record<string, unknown>;
 
 /** The parts of a validated policy the emitters read; `servers` are those of the user's `.mcp.json`. */
-export interface Policy {
+export type Policy = {
   allow: string[];
   servers: JsonObject;
   denyPlugins: boolean;
-}
+};
 
 export function stringList(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
@@ -26,9 +26,8 @@ function isMcpToolRule(s: string): boolean {
 
 function pickServers(servers: JsonObject, allow: string[]): JsonObject {
   const out: JsonObject = {};
-  for (const name of allow) {
-    if (Object.hasOwn(servers, name)) out[name] = JSON.parse(JSON.stringify(servers[name]));
-  }
+  for (const name of allow) if (Object.hasOwn(servers, name)) out[name] = JSON.parse(JSON.stringify(servers[name]));
+
   return out;
 }
 
@@ -85,9 +84,9 @@ function grokServers(disk: JsonObject, policy: Policy): JsonObject {
     const prev = leftoverOf(native[name], nested[name]);
     servers[name] = allowSet.has(name) ? { ...prev } : { ...prev, enabled: false };
   }
-  for (const [name, spec] of Object.entries(pickServers(policy.servers, policy.allow))) {
+  for (const [name, spec] of Object.entries(pickServers(policy.servers, policy.allow)))
     servers[name] = isPlainObject(spec) ? { ...spec } : spec;
-  }
+
   return servers;
 }
 
@@ -121,11 +120,9 @@ export function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { a
   const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
   agents.max_depth ??= 1;
   obj.agents = agents;
-  if (!policy.allow.length) {
-    delete obj.mcp_servers;
-  } else {
-    obj.mcp_servers = pickServers(policy.servers, policy.allow);
-  }
+  if (policy.allow.length) obj.mcp_servers = pickServers(policy.servers, policy.allow);
+  else delete obj.mcp_servers;
+
   return { ...obj, agents };
 }
 

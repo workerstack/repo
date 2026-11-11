@@ -99,11 +99,9 @@ function compare(rows: Rows, old: Floors): Comparison {
     const before: Record<string, number | undefined> | undefined = old[rel];
     for (const [key, now] of Object.entries(floor)) {
       const was = before?.[key];
-      if (was !== undefined && now < was) {
+      if (was !== undefined && now < was)
         result.drops.push(`coverage: ${rel} ${key} would drop ${was} → ${now}; restore the tests or keep the floor`);
-      } else if (was !== now) {
-        result.raised.push(`${rel} ${key} ${was ?? "new"} → ${now}`);
-      }
+      else if (was !== now) result.raised.push(`${rel} ${key} ${was ?? "new"} → ${now}`);
     }
   }
   return result;

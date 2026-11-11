@@ -73,11 +73,12 @@ function render(host: Host, doc: Doc, name: string): [string, string] {
   const description = data["description"];
   const own = (key: string) => without(block(data[key]), "name", "description");
   switch (host) {
-    case "claude":
+    case "claude": {
       return [
         `.claude/agents/${doc.file}`,
         markdown(ordered({ description, name, ...own("claudecode") }, CLAUDE_KEYS), body, "claude"),
       ];
+    }
     case "antigravity": {
       const merged = { ...block(data["antigravity-ide"]), ...block(data["antigravity-cli"]) };
       const fm = { description: description ?? `${name} subagent`, name, ...without(merged, "name", "description") };
@@ -144,16 +145,16 @@ function ordered(map: Record<string, unknown>, known: readonly string[]): Record
 
 /** Every string on one line, as the non-claude hosts' dumper wrote them: newline runs become a space, trimmed. */
 function flatten<T>(value: T): T {
-  if (typeof value === "string") return value.replace(/\n+/g, " ").trim() as T;
+  if (typeof value === "string") return value.replaceAll(/\n+/g, " ").trim() as T;
   if (Array.isArray(value)) return value.map(flatten) as T;
-  if (typeof value === "object" && value !== null) {
+  if (typeof value === "object" && value !== null)
     return Object.fromEntries(Object.entries(value as YamlMap).map(([key, item]) => [key, flatten(item)])) as T;
-  }
+
   return value;
 }
 
 /** Fewer path segments first, then plain string order; merged paths are unique, so there is no tie. */
 function shallowestFirst(a: Doc, b: Doc): number {
   const depth = a.file.split("/").length - b.file.split("/").length;
-  return depth !== 0 ? depth : a.file < b.file ? -1 : 1;
+  return depth === 0 ? (a.file < b.file ? -1 : 1) : depth;
 }

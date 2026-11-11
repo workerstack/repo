@@ -103,8 +103,8 @@ it("sits ahead of the review guard: the main checkout reason wins there, a workt
   expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(claudeWrite(r, inWorktree))).toStrictEqual(review);
   expect(processFatTools(codexPatch(r, inWorktree))).toStrictEqual(review);
-  for (const child of ["implementer-fast", "scout"]) {
+  for (const child of ["implementer-fast", "scout"])
     expect(processFatTools(claudeWrite(r, inWorktree, { agent_type: child })), child).toBeNull();
-  }
+
   expect(notDenied(processFatTools(claudeWrite(r, path.join(r, ".tmp/repo/n.md"))))).toBe(true);
 });

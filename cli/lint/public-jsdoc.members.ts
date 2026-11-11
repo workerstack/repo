@@ -84,9 +84,9 @@ export function visitorOf(walk: Walk): (node: Node) => boolean {
       const name = keyName(node["parameter"]);
       check(walk, node, { label: `${walk.owner}.${name}`, name });
     }
-    if (type === NODE_TYPES.conditional) {
+    if (type === NODE_TYPES.conditional)
       for (const part of ["checkType", "trueType", "falseType"]) walkPublic(node[part], visit);
-    }
+
     const signature = SIGNATURES[type];
     if (signature !== undefined) check(walk, node, { label: `${walk.owner}.${signature}`, name: "" });
     if (MEMBERS.includes(type) && !isUnnameable(node)) checkMember(walk, node, []);

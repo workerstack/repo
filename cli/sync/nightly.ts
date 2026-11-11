@@ -72,9 +72,9 @@ const liveJob = (secrets: readonly string[]) =>
 export const nightly: Generator = (ctx: SyncContext) => {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(NIGHTLY_PATH);
-  if (existing !== null && !hasOwnedHeader(existing)) {
+  if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${NIGHTLY_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
-  }
+
   const { shards, secrets } = ctx.config.nightly;
   const live = hasScript(ctx, LIVE_SCRIPT) ? [liveJob(secrets)] : [];
   const { dependencies = {}, devDependencies = {} } = ctx.workspace.manifest;

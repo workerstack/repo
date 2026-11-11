@@ -9,12 +9,12 @@ import { runHook } from "./fixtures/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
 
 /** The reply fields a PreToolUse answer carries. */
-interface Reply {
+type Reply = {
   permissionDecision?: string;
   permissionDecisionReason?: string;
   additionalContext?: string;
   updatedInput?: { file_path: string; path: string };
-}
+};
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -103,9 +103,8 @@ describe("a write under .tmp/repo", () => {
     const ws = temp("tools-");
     const plan = saveAs(ws, ".tmp/repo/plans/x.md", VALID_PLAN);
     const roadmap = saveAs(ws, ".tmp/repo/roadmaps/x.md", DRAFT_ROADMAP);
-    for (const file_path of [plan, roadmap]) {
+    for (const file_path of [plan, roadmap])
       expect(pre(ws, "Edit", { file_path, new_string: "b", old_string: "no such text" }), file_path).toBeNull();
-    }
   });
 });
 

@@ -110,8 +110,9 @@ function publishTag(t: Tools, tag: string): void {
 /** Commits and pushes what the plan needs, waits on CI for HEAD, and tags it when CI passed. */
 async function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
   const steps: string[] = [];
-  if (plan.action === "none") steps.push("already committed");
-  else {
+  if (plan.action === "none") {
+    steps.push("already committed");
+  } else {
     commitRelease(t, io, plan);
     steps.push("committed");
   }

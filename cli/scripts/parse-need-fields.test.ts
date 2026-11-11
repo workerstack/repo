@@ -15,9 +15,8 @@ describe("parseNeed rejections", () => {
   });
 
   it("rejects a row that is not an object", () => {
-    for (const row of [null, "search", 3, [1]]) {
+    for (const row of [null, "search", 3, [1]])
       expect(need([row])).toStrictEqual({ error: "invalid job item", ok: false });
-    }
   });
 
   it("rejects an unknown job, a missing job and a missing query", () => {

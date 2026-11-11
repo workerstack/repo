@@ -150,7 +150,7 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
       spawned.push({ args, cmd, cwd: opts.cwd });
       return reply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
     },
-    stderr: () => undefined,
+    stderr: () => {},
     stdout: (s) => out.push(s),
   });
   return { code, out: out.join(""), root, spawned };
@@ -208,8 +208,7 @@ it("wait <branch> waits on that branch, and wait a b is refused with exit 2", as
   const seen: string[][] = [];
   const err: string[] = [];
   const git = (args: string[]) => (seen.push(args), { code: 1, stderr: "no git", stdout: "" });
-  const run = (argv: string[]) =>
-    main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => undefined });
+  const run = (argv: string[]) => main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => {} });
   expect(await run(["wait", "feat/x"])).toBe(4);
   expect(seen[0]).toStrictEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
   expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");

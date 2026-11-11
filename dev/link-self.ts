@@ -129,9 +129,9 @@ function ensureShim(root: string): Result {
   const current = readBytes(bunx);
   if (current && Buffer.from(wanted).equals(current) && fs.existsSync(exe)) return "current";
   const shim = firstShim(bin);
-  if (shim === undefined) {
+  if (shim === undefined)
     throw new Error(`link-self: no ${K.SHIM_EXE} shim in ${bin} to copy as repo${K.SHIM_EXE}; run bun install first`);
-  }
+
   fs.rmSync(path.join(bin, "repo"), { force: true });
   fs.copyFileSync(path.join(bin, shim), exe);
   fs.writeFileSync(bunx, wanted);

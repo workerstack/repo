@@ -19,9 +19,9 @@ function commitsOf({ base, head }: { base: string; head: string }, io: CommitMsg
   if (base === "" || base === ZERO_SHA) return alone();
   const known = works(io.cwd, "rev-parse", "--verify", `${base}^{commit}`);
   if (!known && !FULL_SHA.test(base)) return null;
-  if (known && works(io.cwd, "merge-base", "--is-ancestor", base, tip)) {
+  if (known && works(io.cwd, "merge-base", "--is-ancestor", base, tip))
     return linesOf(io.cwd, "rev-list", "--reverse", "--no-merges", `${base}..${tip}`);
-  }
+
   io.stderr(
     `commit-msg: ${base.slice(0, SHORT_SHA)} is not an ancestor of HEAD (a force push?); checking HEAD alone\n`,
   );

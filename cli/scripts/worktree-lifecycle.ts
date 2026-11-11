@@ -136,19 +136,22 @@ function finishName(root: string, raw: string | undefined, cwd: string): string 
 /** Throw when the worktree cannot be rebased: mid-rebase, another branch out, or uncommitted changes. */
 function checkReady(f: Finishing, entry: WorktreeEntry): void {
   const { dest, branch } = f;
-  if (rebaseInProgress(dest))
+  if (rebaseInProgress(dest)) {
     throw new Error(
       `${dest} is mid-rebase: finish it with git -C ${dest} rebase --continue (or --abort), then run finish again`,
     );
-  if (entry.branch !== branch)
+  }
+  if (entry.branch !== branch) {
     throw new Error(
       `${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: run git -C ${dest} switch ${branch}, then run finish again`,
     );
+  }
   const dirty = git(dest, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-  if (dirty)
+  if (dirty) {
     throw new Error(
       `${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: commit or drop them, then run finish again`,
     );
+  }
 }
 
 /** True when the branch has commits the default branch lacks. */
@@ -199,10 +202,11 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     retire(root, entry && f.dest, f.branch);
     return { ...done, sha };
   }
-  if (!entry)
+  if (!entry) {
     throw new Error(
       `${f.branch} has commits that ${f.target} lacks and no worktree: run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`,
     );
+  }
   land(f);
   const sha = shortSha(f);
   retire(root, f.dest, f.branch);

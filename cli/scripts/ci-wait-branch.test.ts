@@ -147,14 +147,14 @@ it("a record that cannot be written is said on stderr and does not change the ex
       mkdirSync: () => {
         throw new Error("read-only");
       },
-      rmSync: () => undefined,
+      rmSync: () => {},
     } as unknown /* only the methods a record calls are given */ as RecordFs,
     gh: answerer("gh", { ...GH, "run view 123 --json": view("success", []) }, []),
     git: answerer("git", GIT, []),
     now: () => 0,
     sleep: () => Promise.resolve(),
     stderr: (s) => errs.push(s),
-    stdout: () => undefined,
+    stdout: () => {},
   });
   expect(code).toBe(0);
   expect(errs.join("")).toBe(`repo ci wait: cannot record the outcome for ${SHA}\n`);
@@ -165,7 +165,7 @@ it("with no runners injected it uses the real git, gh, clock and sleep, and outs
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-real-"));
   const err: string[] = [];
   try {
-    const code = await waitMain({ cwd: dir, stderr: (s) => err.push(s), stdout: () => undefined });
+    const code = await waitMain({ cwd: dir, stderr: (s) => err.push(s), stdout: () => {} });
     expect(code).toBe(4);
     expect(err.join("")).toMatch(/^repo ci wait: cannot read HEAD \(.*\); run it inside a git checkout\n$/s);
   } finally {

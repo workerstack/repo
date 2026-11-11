@@ -138,9 +138,8 @@ it("drops an empty servers key of the policy without writing a .mcp.json", async
 });
 
 it("plans nothing for a policy with no servers key or one that is no object", () => {
-  for (const policy of ['{ "allow": [] }', "[1]", "{,"]) {
+  for (const policy of ['{ "allow": [] }', "[1]", "{,"])
     expect(planHandover(rootWith({ ".repo/mcp-policy.jsonc": policy }), NONE)).toStrictEqual([]);
-  }
 });
 
 it("stops with the named error of a bad .mcp.json, a bad .repo/mcp.json or a policy servers that is no object", () => {

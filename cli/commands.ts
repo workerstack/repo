@@ -10,10 +10,10 @@ export type Main = (argv: string[]) => number | Promise<number>;
 
 export type Entry = { readonly summary: string; readonly load: () => Promise<{ readonly main: Main }> };
 
-export interface HookEntry extends Entry {
+export type HookEntry = {
   /** Arguments the hook's `main` gets in front of any the command line adds. */
   readonly argv: readonly string[];
-}
+} & Entry;
 
 export type CommandName =
   | "job"
@@ -189,10 +189,10 @@ export function isCommandName(name: string | undefined): name is CommandName {
 }
 
 /** The tables `dispatch` runs from; tests pass stubs. */
-export interface Registry {
+export type Registry = {
   readonly commands: Readonly<Record<CommandName, Entry>>;
   readonly hooks: Readonly<Record<HookName, HookEntry>>;
-}
+};
 
 const REGISTRY: Registry = { commands: COMMANDS, hooks: HOOKS };
 

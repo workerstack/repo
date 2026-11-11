@@ -5,17 +5,17 @@
 import { parse } from "yaml";
 
 /** A frontmatter document: the YAML mapping with nullish values removed, and the trimmed body. */
-export interface ParsedDoc {
+export type ParsedDoc = {
   data: Record<string, unknown>;
   body: string;
-}
+};
 
 type YamlScalar = string | number | boolean;
 /** `null` and `undefined` are dropped at every level, as rulesync did. */
 export type YamlValue = YamlScalar | readonly (YamlScalar | null | undefined)[] | YamlMap | null | undefined;
-export interface YamlMap {
+export type YamlMap = {
   readonly [key: string]: YamlValue;
-}
+};
 
 /**
  * How strings are quoted. `default` quotes only what YAML would misread. `claude` also quotes any string holding
@@ -27,7 +27,7 @@ export type YamlMode = "default" | "claude";
 const FENCE = "---";
 
 function toLf(text: string): string {
-  return text.replace(/\r\n?/g, "\n");
+  return text.replaceAll(/\r\n?/g, "\n");
 }
 
 /** Parse `text` (the file at repo-relative POSIX `rel`); throws an Error whose message starts with `rel`. */

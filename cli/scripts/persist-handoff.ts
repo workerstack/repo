@@ -62,15 +62,15 @@ function sourceOf(
   { source, name, slug }: { source?: string | undefined; name: string; slug: string },
 ): string {
   const goal = stripFrontmatter(body).match(GOAL_SECTION_RE);
-  return String(source || name || (goal ? String(goal[1]).trim().replace(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
+  return String(source || name || (goal ? String(goal[1]).trim().replaceAll(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
 }
 
-interface SaveInput {
+type SaveInput = {
   workspaceRoot?: string;
   content?: unknown;
   source?: string;
   created?: string;
-}
+};
 
 export function persistHandoff({ workspaceRoot, content, source, created }: SaveInput = {}): HandoffResult {
   const ws = workspaceRoot || resolveRoots().root;

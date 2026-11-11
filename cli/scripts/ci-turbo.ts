@@ -62,9 +62,8 @@ export function mergeReports(reports: readonly unknown[]): Record<string, unknow
   });
   const totals: Record<string, number> = {};
   for (const report of parsed) {
-    for (const [key, value] of Object.entries(report)) {
+    for (const [key, value] of Object.entries(report))
       if (typeof value === "number") totals[key] = (totals[key] ?? 0) + value;
-    }
   }
   return {
     ...totals,
@@ -90,9 +89,9 @@ function packageReports(root: string): unknown[] {
 /** Runs `turbo run typecheck test`, then writes the packages' merged report to `json` when one is asked for. */
 export function packagesGate(options: TurboOptions, run: TurboRun): Gate {
   const result = run([...TURBO_ARGS], options.root, envOf(options));
-  if (options.json !== undefined) {
+  if (options.json !== undefined)
     fs.writeFileSync(options.json, JSON.stringify(mergeReports(packageReports(options.root))));
-  }
+
   if ("missing" in result) return { label: `packages failed: ${result.missing}`, ok: false, output: [], ran: false };
   return gateOf(result, options.shard === undefined ? "" : ` (shard ${options.shard})`);
 }

@@ -93,16 +93,21 @@ function plain(lx: ShellLexer, ch: string): void {
 }
 
 function step(lx: ShellLexer, ch: string): void {
-  if (" \t".includes(ch)) endWord(lx);
-  else if (";&|\n".includes(ch)) endSegment(lx);
-  else if (ch === "'") addText(lx, quoted(lx, ch));
-  else if (ch === '"') {
+  if (" \t".includes(ch)) {
+    endWord(lx);
+  } else if (";&|\n".includes(ch)) {
+    endSegment(lx);
+  } else if (ch === "'") {
+    addText(lx, quoted(lx, ch));
+  } else if (ch === '"') {
     const inner = quoted(lx, ch);
     addText(lx, inner, !/[$`\\]/.test(inner));
   } else if (ch === "\\") {
     addText(lx, lx.s.charAt(lx.i + 1));
     lx.i++;
-  } else plain(lx, ch);
+  } else {
+    plain(lx, ch);
+  }
 }
 
 /** Shell words per command segment; a word holding `$`, a backtick or a leading `~` is not literal. */
@@ -151,10 +156,15 @@ function addArg(out: WorktreeAdd, w: Word, words: Iterator<Word>): void {
   if (ADD_VALUE_FLAGS.includes(w.text)) {
     const value = words.next();
     if (w.text !== REASON_FLAG) out.branch = value.done ? null : value.value.text;
-  } else if (w.text === DETACH_FLAG || w.text === DETACH_SHORT) out.detach = true;
-  else if (w.text.startsWith("-")) return;
-  else if (!out.target) out.target = w;
-  else if (!out.commitish) out.commitish = w.text;
+  } else if (w.text === DETACH_FLAG || w.text === DETACH_SHORT) {
+    out.detach = true;
+  } else if (w.text.startsWith("-")) {
+    return;
+  } else if (!out.target) {
+    out.target = w;
+  } else if (!out.commitish) {
+    out.commitish = w.text;
+  }
 }
 
 /** `{ at, target, branch, commitish, detach }` for a `git … worktree add …` command, else null. */

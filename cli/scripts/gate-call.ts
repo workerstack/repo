@@ -10,7 +10,7 @@ import type { Roots } from "./workspace-root.ts";
 export type GuardResult = GateResult | undefined;
 
 /** One tool call as every guard reads it: who sent it, what it names, and where it runs. */
-export interface GateCall {
+export type GateCall = {
   data: HookInput;
   harness: Harness;
   tool: ToolSpec;
@@ -25,4 +25,4 @@ export interface GateCall {
   /** The child agent type, "" for a parent. */
   sub: string;
   parent: boolean;
-}
+};

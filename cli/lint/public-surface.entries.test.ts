@@ -105,9 +105,8 @@ it("reads exports written as a single path or as a map of conditions", () => {
     },
     { "src/index.ts": A },
   );
-  for (const root of [single, mapped]) {
+  for (const root of [single, mapped])
     expect(publicSurface(root).entries).toStrictEqual(new Map([[".", [path.join(root, "src/index.ts")]]]));
-  }
 });
 
 it("has no surface for a package without exports, a private one, or a manifest that cannot be read", () => {

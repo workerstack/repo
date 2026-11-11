@@ -433,17 +433,16 @@ export function validateOutputs(
     else planned.add(output.path);
   }
   // A planned file also plans every dir above it.
-  for (const rel of [...planned]) {
+  for (const rel of [...planned])
     for (let dir = path.posix.dirname(rel); dir !== "."; dir = path.posix.dirname(dir)) planned.add(dir);
-  }
+
   const lines: string[] = [];
   for (const output of outputs) {
     if (leftAsIs(root, output)) continue;
-    if (output.kind === "file") {
+    if (output.kind === "file")
       lines.push(...fileProblems(output, formats).map((problem) => `${output.path}: ${problem}`));
-    } else if (!resolves(root, output.path, links, planned, new Set([output.path]))) {
+    else if (!resolves(root, output.path, links, planned, new Set([output.path])))
       lines.push(`${output.path}: link target ${output.target} does not exist`);
-    }
   }
   return lines;
 }

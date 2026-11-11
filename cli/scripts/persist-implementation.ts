@@ -100,15 +100,15 @@ function sourceOf(
   { source, name, slug }: { source?: string | undefined; name: string; slug: string },
 ): string {
   const done = stripFrontmatter(body).match(DONE_SECTION_RE);
-  return String(source || name || (done ? String(done[1]).trim().replace(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
+  return String(source || name || (done ? String(done[1]).trim().replaceAll(/\s+/g, " ") : slug)).slice(0, SOURCE_MAX);
 }
 
-interface SaveInput {
+type SaveInput = {
   workspaceRoot?: string;
   content?: unknown;
   source?: string;
   created?: string;
-}
+};
 
 export function persistImplementation({
   workspaceRoot,

@@ -51,9 +51,9 @@ const byKey = (a: Member, b: Member): number => Number(a.key > b.key) - Number(a
 function tokens(text: string): Token[] {
   const scanner = createScanner(text, false);
   const found: Token[] = [];
-  for (let kind = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan()) {
+  for (let kind = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan())
     found.push({ end: scanner.getTokenOffset() + scanner.getTokenLength(), kind, start: scanner.getTokenOffset() });
-  }
+
   return found;
 }
 

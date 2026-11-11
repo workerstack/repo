@@ -20,11 +20,11 @@ export function skill(name: string): (typeof PSTACK_SKILLS)[number] {
   return found;
 }
 
-interface Principle {
+type Principle = {
   name: string;
   files: string[];
   slash: boolean;
-}
+};
 
 /** A principle skill as the port lists it. */
 export function principle(name: string): Principle {
@@ -36,11 +36,11 @@ export function respond(body: string): TextFetch {
   return () => Promise.resolve({ ok: true, status: HTTP_OK, text: () => Promise.resolve(body) });
 }
 
-interface Captured {
+type Captured = {
   out: string[];
   err: string[];
   io: Io;
-}
+};
 
 /** An `Io` that collects what it is given. */
 export function capture(): Captured {

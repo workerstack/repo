@@ -90,9 +90,9 @@ function grokPlugins(obj: JsonObject, next: JsonObject, abs: string): string[] {
   const enabledChanged = nextEnabled.join("\0") !== enabled.join("\0");
   const disabledChanged = nextDisabled.join("\0") !== disabled.join("\0");
   const details: string[] = [];
-  if (enabledChanged) {
+  if (enabledChanged)
     details.push(`remove ${enabled.filter((n) => PLUGIN_IDS.includes(n)).join(", ")} from [plugins].enabled`);
-  }
+
   if (disabledChanged)
     details.push(`add ${PLUGIN_IDS.filter((id) => !disabled.includes(id)).join(", ")} to [plugins].disabled`);
   if (enabledChanged || disabledChanged) {

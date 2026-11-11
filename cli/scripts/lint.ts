@@ -65,9 +65,10 @@ function formatSorted(job: {
     stderr(`repo fmt: ${sorted.error}\n`);
     return 1;
   }
-  if (check)
+  if (check) {
     for (const { file, key } of sorted.found)
       stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
+  }
   const code = run("oxfmt", args, root);
   return code === 0 && (sorted.found.length > 0 || commented.length > 0) && check ? 1 : code;
 }

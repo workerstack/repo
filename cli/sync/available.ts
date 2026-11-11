@@ -13,15 +13,17 @@ function parseEntries(text: string): Entry[] {
   for (const line of lines(text)) {
     // A region marker, hashed or not, read as loosely as sync reads its own: its slash group says it closes.
     const marker = HTML_MARKER.exec(line.trimEnd());
-    if (marker !== null) inSection = marker[1] === undefined;
-    else if (!inSection) {
+    if (marker !== null) {
+      inSection = marker[1] === undefined;
+    } else if (!inSection) {
       const match = ENTRY.exec(line);
-      if (match)
+      if (match) {
         entries.push({
           description: group(match, THIRD_GROUP),
           name: group(match, 1),
           url: group(match, SECOND_GROUP),
         });
+      }
     }
   }
   return entries;

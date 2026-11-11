@@ -4,17 +4,17 @@ import path from "node:path";
 import { vi } from "vitest";
 import { consumer } from "./baseline-repo.ts";
 
-/** A comparison of an untyped string, at line 1 column 48. */
-export const STRING_SOURCE = 'export const a = (m: string): boolean => m === "fast";\n';
-export const STRING_HIT = `src/a.ts:1:48: error repo(magic-string): "fast" is compared to a plain string; type the value as a literal union or brand, or import the string from a *.constants.ts file`;
+/** A comparison of an untyped string, at line 2 column 16. */
+export const STRING_SOURCE = 'export function a(m: string): boolean {\n  return m === "fast";\n}\n';
+export const STRING_HIT = `src/a.ts:2:16: error repo(magic-string): "fast" is compared to a plain string; type the value as a literal union or brand, or import the string from a *.constants.ts file`;
 export const CLEAN_SOURCE = "export const b = 1;\n";
 export const GUARD_SOURCE =
-  "export const isUser = (value: unknown): value is string[] => Array.isArray(value);\n";
+  "export function isUser(value: unknown): value is string[] {\n  return Array.isArray(value);\n}\n";
 export const GUARD_HIT =
-  "src/is-user.ts:1:14: error repo(guard-rejects): isUser is never asserted false; add expect(isUser(<an input it must reject>)).toBe(false) to a test";
+  "src/is-user.ts:1:17: error repo(guard-rejects): isUser is never asserted false; add expect(isUser(<an input it must reject>)).toBe(false) to a test";
 /** A test that imports the guard and only asserts it true, with a typed local `expect` so no vitest is needed. */
 export const GUARD_TEST =
-  'import { isUser } from "./is-user.ts";\n\nconst expect = (value: boolean) => ({ toBe: (want: boolean): boolean => value === want });\n\nexpect(isUser([])).toBe(true);\n';
+  'import { isUser } from "./is-user.ts";\n\nfunction expect(value: boolean) {\n  return { toBe: (want: boolean): boolean => value === want };\n}\n\nexpect(isUser([])).toBe(true);\n';
 
 /** A repo with the magic string in `src/a.ts` and a clean `src/b.ts`. */
 export const planted = (): string => consumer({ "src/a.ts": STRING_SOURCE, "src/b.ts": CLEAN_SOURCE });

@@ -40,7 +40,7 @@ function optionsOf(parsed: ParsedArgs, cwd: string, root: string): JobOptions {
 }
 
 function fallbackExit(): number {
-  process.stdout.write(FALLBACK + "\n");
+  process.stdout.write(`${FALLBACK}\n`);
   return FALLBACK_EXIT;
 }
 

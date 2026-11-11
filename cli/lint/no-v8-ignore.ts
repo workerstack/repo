@@ -9,9 +9,8 @@ export const noV8Ignore: CreateRule = {
   create(context) {
     return {
       Program() {
-        for (const comment of context.sourceCode.getAllComments()) {
+        for (const comment of context.sourceCode.getAllComments())
           if (HINT.test(comment.value)) context.report({ message: MESSAGE, node: comment });
-        }
       },
     };
   },

@@ -50,9 +50,8 @@ it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, and no other 
   const claude = readJson<ClaudeDoc>(REPO_ROOT, ".claude/settings.json");
   expect(claude.hooks.WorktreeCreate).toStrictEqual(group);
   expect(claude.hooks.WorktreeRemove).toStrictEqual(group);
-  for (const rel of [".codex/hooks.json", ".agents/hooks.json"]) {
+  for (const rel of [".codex/hooks.json", ".agents/hooks.json"])
     expect(JSON.stringify(readJson(REPO_ROOT, rel)), rel).not.toContain("hook worktree");
-  }
 });
 
 it("--check needs Claude's worktree hooks only when worktree.ts ships", () => {

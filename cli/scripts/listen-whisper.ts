@@ -28,9 +28,9 @@ import { str } from "./voice-args.ts";
 export function formatHttpError(status: unknown, body: unknown): string {
   const n = Number(status);
   const raw = String(body || "");
-  if (n === UNAUTHORIZED || n === FORBIDDEN || AUTH_RE.test(raw)) {
+  if (n === UNAUTHORIZED || n === FORBIDDEN || AUTH_RE.test(raw))
     return `openai key missing or rejected (${n || status}). setup: ${SETUP}`;
-  }
+
   return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 

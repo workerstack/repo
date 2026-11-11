@@ -60,7 +60,7 @@ export function blocksOf(dir: string, rel: string, text: string): Block[] {
 
 /** Whether any example imports the package `name` or one of its subpaths. */
 export function importsName(blocks: readonly Block[], name: string): boolean {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = name.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const pattern = new RegExp(`["']${escaped}(?:/[^"']*)?["']`);
   return blocks.some((block) => pattern.test(block.code));
 }
@@ -106,11 +106,13 @@ function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured)
   for (const text of lines.filter((one) => one !== "" && !/^\s/.test(one))) {
     const match = TSC_LINE.exec(text);
     const block = match === null ? undefined : blocks.find((one) => `/${group(match, 1)}`.endsWith(`/${fileOf(one)}`));
-    if (match === null || block === undefined) findings.push(typecheckCrash(ctx.dir, text));
-    else
+    if (match === null || block === undefined) {
+      findings.push(typecheckCrash(ctx.dir, text));
+    } else {
       findings.push(
         typeError(`${block.md}:${block.line + Number(group(match, SECOND_GROUP))}`, block.n, group(match, THIRD_GROUP)),
       );
+    }
   }
   return findings.length === 0 ? [typecheckCrash(ctx.dir, NO_OUTPUT)] : findings;
 }

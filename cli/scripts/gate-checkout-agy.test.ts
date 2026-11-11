@@ -23,15 +23,15 @@ const tmp = useTmp();
 
 it("Antigravity: denies a write_file and an edit_file in the main checkout in agy's deny shape, and passes them in a worktree", () => {
   const r = tmp.committed("gate-main-");
-  for (const call of [agyWrite(r, path.join(r, "src/x.ts")), agyEdit(r, path.join(r, "src/x.ts"))]) {
+  for (const call of [agyWrite(r, path.join(r, "src/x.ts")), agyEdit(r, path.join(r, "src/x.ts"))])
     expect(processHookPayload(call)).toStrictEqual({ decision: "deny", reason: reasonOf(r) });
-  }
+
   for (const call of [
     agyWrite(r, path.join(r, ".worktrees/a/src/x.ts")),
     agyEdit(r, path.join(r, ".worktrees/a/src/x.ts")),
-  ]) {
+  ])
     expect(processHookPayload(call)).toBeNull();
-  }
+
   expect(fs.existsSync(path.join(r, "src"))).toBe(false);
 });
 

@@ -38,16 +38,17 @@ function partOf(name: string, removals: readonly Removal[]): string {
 
 /** Removes each name from every dependency field, catalog, override, resolution, trust list and patch entry. */
 export function main(argv: string[], io: UpdateIo = updateIo()): number {
-  if (argv.length === 0 || argv.some((arg) => arg.startsWith(OPTION_PREFIX))) {
+  if (argv.length === 0 || argv.some((arg) => arg.startsWith(OPTION_PREFIX)))
     return fail(io, [said(REMOVE_COMMAND, REMOVE_USAGE)], EXIT_USAGE);
-  }
+
   const root = findRoot(io.cwd) ?? io.cwd;
   const read = readWorkspace(root);
-  if (!read.ok)
+  if (!read.ok) {
     return fail(
       io,
       read.errors.map((error) => said(REMOVE_COMMAND, error)),
     );
+  }
   const removals = removalsOf(root, read.workspace, argv);
   const absent = argv.find((name) => !removals.some((removal) => removal.name === name));
   if (absent !== undefined) return fail(io, [said(REMOVE_COMMAND, nothingDepends(absent))]);
@@ -55,9 +56,9 @@ export function main(argv: string[], io: UpdateIo = updateIo()): number {
     root,
     removals.map((removal) => ({ apply: (raw: unknown) => drop(raw, removal), file: removal.file })),
   );
-  for (const removal of removals) {
+  for (const removal of removals)
     if (removal.patch !== null) fs.rmSync(patchPath(root, removal.patch), { force: true });
-  }
+
   io.out(removedLine(argv.map((name) => partOf(name, removals))));
   return finish({ command: REMOVE_COMMAND, io, root }, files);
 }

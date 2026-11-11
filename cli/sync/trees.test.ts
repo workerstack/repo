@@ -49,9 +49,9 @@ it("generates the committed-shape files the generators and the emit steps own", 
     ".cursor/hooks.json",
     ".grok/config.toml",
     ".grok/agents/scout.md",
-  ]) {
+  ])
     expect(find(outputs, rel)?.kind, rel).toBe("file");
-  }
+
   expect(json<McpFile>(outputs, ".agents/mcp_config.json")).toStrictEqual({ mcpServers: {} });
   expect(text(outputs, ".claude/settings.json")).toContain("repo");
 });

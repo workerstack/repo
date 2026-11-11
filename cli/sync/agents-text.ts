@@ -13,14 +13,14 @@ export function extractUserMarkdown(text: string): string {
   const i = user.indexOf(SENTINEL_BEGIN);
   if (i >= 0) user = user.slice(0, i);
   user = user.replace(cloneRe(ORPHAN_END_RE), "");
-  return user.replace(/\r\n/g, "\n").replace(/\n/g, "") === "" ? "" : user;
+  return user.replaceAll("\r\n", "\n").replaceAll("\n", "") === "" ? "" : user;
 }
 
 /** `##` blocks in `existing` whose titles are not in `incoming`. */
 export function extraH2Sections(existing: string, incoming: string): string {
   // The pattern has one group and it always takes part in a match.
   const incomingTitles = new Set([...incoming.matchAll(/^## (.+)$/gm)].map((m) => m[1]!.trim()));
-  const text = existing.replace(/\r\n/g, "\n");
+  const text = existing.replaceAll("\r\n", "\n");
   const matches = [...text.matchAll(/^## /gm)];
   if (!matches.length) return "";
   const chunks: string[] = [];

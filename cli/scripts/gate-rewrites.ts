@@ -50,7 +50,7 @@ export function rewriteScratchPath(
   const absIn = resolveTyped(roots, raw, p);
   if (isUnder(destRoot, absIn, p)) return null;
   // Inside the root, look below it, so a root that itself sits under some `.tmp/repo` is not matched.
-  const posix = (isUnder(roots.root, absIn, p) ? p.relative(roots.root, absIn) : raw).replace(/\\/g, "/");
+  const posix = (isUnder(roots.root, absIn, p) ? p.relative(roots.root, absIn) : raw).replaceAll("\\", "/");
   const relNorm = scratchRel(posix, p);
   if (relNorm === null) return null;
   const dest = p.resolve(destRoot, relNorm);

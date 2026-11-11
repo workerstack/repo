@@ -104,7 +104,7 @@ describe("validateImplementation frontmatter", () => {
 
   it("reports missing keys, skipping lines that are not keys", () => {
     const text = saved.text
-      .replace(/^(plan|name|created|source):.*\n/gm, "")
+      .replaceAll(/^(plan|name|created|source):.*\n/gm, "")
       .replace("status: in-progress", "status:\nBad Line");
     expect(errorsOf(text)).toStrictEqual(
       expect.arrayContaining(["missing plan", "missing name", "missing status", "missing created", "missing source"]),
@@ -131,7 +131,7 @@ describe("validateImplementation frontmatter", () => {
 
 describe("validateImplementation body", () => {
   it("returns the fence error with the earlier ones when a fence stays open", () => {
-    const errors = errorsOf(edit("status: in-progress", "status: ready") + "\n```md\n");
+    const errors = errorsOf(`${edit("status: in-progress", "status: ready")}\n\`\`\`md\n`);
     expect(errors).toContain("status");
     expect(errors.length).toBeGreaterThan(1);
     expect(errors).not.toContain("heading order");

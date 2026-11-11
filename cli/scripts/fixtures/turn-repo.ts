@@ -37,11 +37,11 @@ export function write(root: string, files: Record<string, string>): void {
 
 export const read = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
 
-/** `count` one-line functions, each with a non-null assertion. */
+/** `count` functions, each with a non-null assertion. */
 export const nonNull = (count: number, stem = "a") =>
   Array.from(
     { length: count },
-    (_, i) => `export const ${stem}${i === 0 ? "" : i} = (xs: string[]): string => xs.find(Boolean)!;\n`,
+    (_, i) => `export function ${stem}${i === 0 ? "" : i}(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n`,
   ).join("");
 
 /** A temp dir, removed by `cleanTemps`. */

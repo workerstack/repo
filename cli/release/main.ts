@@ -61,7 +61,7 @@ export function main(argv: string[]): Promise<number> {
   if (argv[0] === WAIT_COMMAND) return releaseWait(rest, { ...io, fetch });
   if (argv[0] === GATE_COMMAND) return gate(rest, run);
   if (argv[0] === PACK_COMMAND) return Promise.resolve(releasePack(rest, { ...run, ...packTools() }));
-  if (argv[0] === CONSUMER_COMMAND)
+  if (argv[0] === CONSUMER_COMMAND) {
     return Promise.resolve(
       releaseConsumer(rest, {
         ...run,
@@ -70,10 +70,11 @@ export function main(argv: string[]): Promise<number> {
         tsc: tscScript(),
       }),
     );
+  }
   if (argv[0] === API_COMMAND) return apiMain(rest, run);
   if (argv[0] === GITHUB_COMMAND) return Promise.resolve(releaseGithub(rest, run));
-  if (argv[0] === PUBLISH_COMMAND) {
+  if (argv[0] === PUBLISH_COMMAND)
     return releasePublish(rest, { ...run, ...packTools(), ci, fetch, npm: inheritRunner("npm") });
-  }
+
   return releaseMain(argv, run);
 }

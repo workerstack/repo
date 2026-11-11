@@ -22,8 +22,8 @@ export function samePath(a: string, b: string): boolean {
 /** A git-safe directory and branch name, or null when nothing usable is left. */
 export function worktreeName(raw: unknown): string | null {
   const name = String(raw ?? "")
-    .replace(/[^A-Za-z0-9._-]/g, "-")
-    .replace(/-+/g, "-")
+    .replaceAll(/[^A-Za-z0-9._-]/g, "-")
+    .replaceAll(/-+/g, "-")
     .replace(/^[.-]+/, "")
     .replace(/-+$/, "");
   return name || null;

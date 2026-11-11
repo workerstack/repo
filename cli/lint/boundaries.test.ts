@@ -176,7 +176,7 @@ describe("boundaries on an absolute specifier", () => {
     // Forward slashes: a backslash in a string literal is an escape.
     const specifier = fwd(path.join(other, "src/x.ts"));
     const [message] = messagesOf(`import { x } from "${specifier}";`);
-    const literal = specifier.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
+    const literal = specifier.replaceAll(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
     expect(message).toMatch(new RegExp(`^"${literal}" reaches into .+; import it as "@app/other"$`));
   });
 });

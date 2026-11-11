@@ -21,16 +21,16 @@ export function stripHtml(html: unknown): { title: string; text: string } {
   const s = String(html || "");
   const title = /<title[^>]*>(?<title>[\s\S]*?)<\/title>/i.exec(s)?.groups?.title || "";
   const text = s
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
+    .replaceAll(/<script[\s\S]*?<\/script>/gi, " ")
+    .replaceAll(/<style[\s\S]*?<\/style>/gi, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll(/\s+/g, " ")
     .trim();
-  return { text, title: title.replace(/\s+/g, " ").trim() };
+  return { text, title: title.replaceAll(/\s+/g, " ").trim() };
 }
 
 /** The page's title, then its text one sentence a line. */

@@ -29,9 +29,8 @@ it("takes a settings overlay as done only when it holds every key and list item,
     JSON.stringify({ model: "opus", permissions: [] }),
     JSON.stringify({ model: "opus" }),
     "{",
-  ]) {
+  ])
     expect(plan(overlay), overlay).toStrictEqual([SETTINGS_CLASH]);
-  }
 });
 
 it("takes an overlay that already holds the text as done, not as a conflict", () => {

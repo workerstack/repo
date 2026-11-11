@@ -30,9 +30,9 @@ export class MigrationState {
   /** Moves `from` to `to`, or records the conflict when `to` already holds other text. */
   move(from: string, to: string, how: { note: string; except?: readonly string[]; mark?: MoveMark | undefined }): void {
     const except = how.except ?? [];
-    if (clashes(path.join(this.root, from), path.join(this.root, to), except))
+    if (clashes(path.join(this.root, from), path.join(this.root, to), except)) {
       this.steps.push({ from, kind: "conflict", to });
-    else
+    } else {
       this.steps.push({
         kind: "move",
         from,
@@ -41,6 +41,7 @@ export class MigrationState {
         note: how.note,
         ...(how.mark === undefined ? {} : { mark: how.mark }),
       });
+    }
   }
 
   /** The mark for the file at `from` that moves to `to` and replaces a stock `kind`; undefined when it already says so or cannot be read. */
@@ -55,8 +56,8 @@ export class MigrationState {
   write(from: string, to: string, file: { content: string; note: string }): void {
     const existing = this.read(to);
     if (existing === file.content || (existing !== null && alreadyHolds(to, existing, file.content))) return;
-    if (existing !== null) this.steps.push({ from, kind: "conflict", to });
-    else this.steps.push({ content: file.content, kind: "write", note: file.note, path: to });
+    if (existing === null) this.steps.push({ content: file.content, kind: "write", note: file.note, path: to });
+    else this.steps.push({ from, kind: "conflict", to });
   }
 
   /** Whether the file at `rel` is there and is no stock version. */

@@ -33,12 +33,12 @@ const SEARCH_KINDS: readonly ToolSpec["kind"][] = ["read", "grep", "glob"];
 const deny = (reason: string): GuardResult => ({ reason, type: "deny" });
 
 /** A limit field the gate may add or cap: its snake and camel spellings and the value it injects. */
-interface Limit {
+type Limit = {
   input: ToolArgs;
   snake: string;
   camel: string;
   value: number;
-}
+};
 
 function asNumber(v: unknown): number | null {
   if (v == null || v === "") return null;
@@ -114,9 +114,9 @@ function readDeny({ input, roots, sid, harness }: GateCall): GuardResult {
   const size = fileSizeBytes(abs);
   if (size !== null && size > DENY_FILE_BYTES) return deny(REASON_FILE_SIZE);
   const sliced = hasEither(input, "offset", "limit");
-  if (sid && abs && !sliced && wasWroteThisSession(roots, sid, abs)) {
+  if (sid && abs && !sliced && wasWroteThisSession(roots, sid, abs))
     return deny(rereadReasonFor(harness, abs, roots.checkout));
-  }
+
   return undefined;
 }
 

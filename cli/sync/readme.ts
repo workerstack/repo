@@ -89,10 +89,10 @@ function descriptionOf(text: string | null): string {
 /** A GitHub-style anchor: lowercase, punctuation but `-` and `_` dropped, each space a `-`. */
 function slugOf(title: string): string {
   return title
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replaceAll(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .toLowerCase()
-    .replace(/[^\p{L}\p{N}\p{M}_\s-]/gu, "")
-    .replace(/\s/g, "-");
+    .replaceAll(/[^\p{L}\p{N}\p{M}_\s-]/gu, "")
+    .replaceAll(/\s/g, "-");
 }
 
 /** The anchor for `title` not yet in `used`: the slug, then `-1`, `-2`; it joins `used`. */
@@ -107,9 +107,9 @@ function uniqueSlug(used: Set<string>, title: string): string {
 /** The numbers of the lines inside a fenced block, its fences included. */
 function fencedLines(text: string): Set<number> {
   const fenced = new Set<number>();
-  for (const { start, body } of splitMarkdown(text).fences) {
+  for (const { start, body } of splitMarkdown(text).fences)
     for (let line = start; line <= start + body.length + 1; line++) fenced.add(line);
-  }
+
   return fenced;
 }
 
@@ -157,7 +157,7 @@ function renderDoc(doc: Doc, site: Site): string {
 }
 
 function rewriteLinks(text: string, from: Doc, site: Site): string {
-  return text.replace(LINK, (_whole, target: string, title: string | undefined) => {
+  return text.replaceAll(LINK, (_whole, target: string, title: string | undefined) => {
     return `](${linkTarget(target, from, site)}${title ?? ""})`;
   });
 }

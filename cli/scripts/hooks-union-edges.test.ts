@@ -63,9 +63,9 @@ describe("roots", () => {
 
   it("answers a check that finds the union in place", () => {
     const ws = plant();
-    for (const f of [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"]) {
+    for (const f of [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"])
       put(ws, f, { hooks: { PreToolUse: ownedGroups() } });
-    }
+
     expect(applyUnion({ check: true, workspaceRoot: ws })).toStrictEqual({ check: true, failures: [], ok: true });
   });
 

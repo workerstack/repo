@@ -31,9 +31,9 @@ type Entry = z.infer<ReturnType<typeof entry>>;
 export function indexUrl(name: string): string {
   const lower = name.toLowerCase();
   const { length } = lower;
-  if (length > SHORT_NAME_MAX) {
+  if (length > SHORT_NAME_MAX)
     return `${INDEX_BASE}${lower.slice(0, DIR_LENGTH)}/${lower.slice(DIR_LENGTH, SECOND_DIR_END)}/${lower}`;
-  }
+
   return `${INDEX_BASE}${length === SHORT_NAME_MAX ? `${SHORT_NAME_MAX}/${lower[0]}` : length}/${lower}`;
 }
 

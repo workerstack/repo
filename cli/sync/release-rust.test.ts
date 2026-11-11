@@ -56,7 +56,7 @@ it("a Rust repo's test job installs the tools right after bun install, before th
 
 it("a Rust repo's no-node job installs the tools right after bun install, before repo ci", () => {
   const noNode = job(text(true), "no-node", "msrv");
-  expect(noNode).toContain(INSTALL_STEP + TOOLS + "      - run: bun repo ci");
+  expect(noNode).toContain(`${INSTALL_STEP + TOOLS}      - run: bun repo ci`);
 });
 
 it("a Rust repo's ci.yml ends with the msrv job, whose steps are exactly the cargo-hack check", () => {

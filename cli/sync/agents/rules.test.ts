@@ -130,9 +130,8 @@ describe("renderRules", () => {
   });
 
   it("leaves the pointer list out when only claude or antigravity is on", () => {
-    for (const host of ["claude", "antigravity"] as const) {
+    for (const host of ["claude", "antigravity"] as const)
       expect(renderText(sourcesOf([BASE, SCOPED]), [host]).get("AGENTS.md")).toBe("Base body.\n");
-    }
   });
 
   it("leaves the pointer list out when no rule has paths", () => {

@@ -9,26 +9,26 @@ import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./fixture
 
 const tmpDir = plantDirs();
 
-interface ClaudeSettings {
+type ClaudeSettings = {
   enableAllProjectMcpServers: boolean;
   enabledMcpjsonServers: string[];
   permissions: { deny: string[] };
   hooks?: unknown;
-}
-interface McpFile {
+};
+type McpFile = {
   mcpServers: Record<string, unknown>;
-}
-interface GrokFile {
+};
+type GrokFile = {
   plugins?: { enabled?: unknown[]; deny_default?: boolean };
   permission?: { deny?: string[]; allow?: string[] };
   permissions?: unknown;
   mcp?: unknown;
   mcp_servers?: Record<string, { enabled?: boolean; command?: string }>;
-}
-interface CodexFile {
+};
+type CodexFile = {
   agents?: { max_depth?: number };
   mcp_servers?: Record<string, unknown>;
-}
+};
 
 const NO_SERVERS: string[] = [];
 const basePolicy = {
@@ -50,7 +50,7 @@ function seedHostStubs(ws: string): void {
     hooks: { PreToolUse: [{ matcher: "Agent" }] },
     permissions: { deny: ["Agent(Explore)", "Agent(Plan)", "Agent(general-purpose)"] },
   };
-  plant(ws, ".claude/settings.json", JSON.stringify(settings, null, 2) + "\n");
+  plant(ws, ".claude/settings.json", `${JSON.stringify(settings, null, 2)}\n`);
   plant(ws, ".codex/config.toml", "[agents]\nmax_depth = 1\n");
 }
 
@@ -163,7 +163,7 @@ it("--check fails on drift then passes; writes nothing on check", () => {
   expect(emitMcpPolicy({ check: true, workspaceRoot: ws }).ok).toBe(true);
   const mcpPath = path.join(ws, ".agents/mcp_config.json");
   const before = fs.readFileSync(mcpPath, "utf8");
-  fs.writeFileSync(mcpPath, JSON.stringify({ mcpServers: { leaked: {} } }, null, 2) + "\n");
+  fs.writeFileSync(mcpPath, `${JSON.stringify({ mcpServers: { leaked: {} } }, null, 2)}\n`);
   const drifted = emitMcpPolicy({ check: true, workspaceRoot: ws });
   expect(drifted.ok).toBe(false);
   expect(String(drifted.error)).toMatch(/drift/);

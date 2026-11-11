@@ -99,12 +99,12 @@ function shapeClauses(want: Ruleset, cur: Ruleset): string[] {
   if (want.target !== cur.target) clauses.push(`targets "${cur.target}", wanted "${want.target}"`);
   if (want.enforcement !== cur.enforcement) clauses.push(`is "${cur.enforcement}", wanted "${want.enforcement}"`);
   const [wantRefs, curRefs] = [want.conditions.ref_name, cur.conditions.ref_name];
-  if (differ(wantRefs.include, curRefs.include)) {
+  if (differ(wantRefs.include, curRefs.include))
     clauses.push(`applies to ${listed(curRefs.include)}, wanted ${listed(wantRefs.include)}`);
-  }
-  if (differ(wantRefs.exclude, curRefs.exclude)) {
+
+  if (differ(wantRefs.exclude, curRefs.exclude))
     clauses.push(`excludes ${listed(curRefs.exclude)}, wanted ${listed(wantRefs.exclude)}`);
-  }
+
   return clauses;
 }
 
@@ -121,16 +121,16 @@ function ruleClauses(want: Ruleset, cur: Ruleset): string[] {
     wantPr?.required_approving_review_count,
     curPr?.required_approving_review_count,
   ];
-  if (both(RULE_PULL_REQUEST) && wantApprovals !== curApprovals) {
+  if (both(RULE_PULL_REQUEST) && wantApprovals !== curApprovals)
     clauses.push(`requires ${shown(curApprovals)} approvals, wanted ${shown(wantApprovals)}`);
-  }
+
   const [wantStrict, curStrict] = [
     paramsOf(want, RULE_CHECKS)?.strict_required_status_checks_policy,
     paramsOf(cur, RULE_CHECKS)?.strict_required_status_checks_policy,
   ];
-  if (both(RULE_CHECKS) && wantStrict !== curStrict) {
+  if (both(RULE_CHECKS) && wantStrict !== curStrict)
     clauses.push(`has strict status checks ${shown(curStrict)}, wanted ${shown(wantStrict)}`);
-  }
+
   return clauses;
 }
 
@@ -148,9 +148,9 @@ function checkClauses(want: Ruleset, cur: Ruleset): string[] {
       .filter((check) => !wantKeys.includes(check.key) && !wantContexts.includes(check.context))
       .map((check) => `requires "${check.context}", which CI does not report`),
   ];
-  if (differ(bypassOf(want), bypassOf(cur))) {
+  if (differ(bypassOf(want), bypassOf(cur)))
     clauses.push(`lets ${listed(bypassOf(cur))} bypass, wanted ${listed(bypassOf(want))}`);
-  }
+
   return clauses;
 }
 

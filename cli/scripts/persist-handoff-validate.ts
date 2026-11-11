@@ -27,10 +27,10 @@ import {
   STATUS_RE,
 } from "./persist-handoff.constants.ts";
 
-export interface Box {
+export type Box = {
   id: string;
   fresh: boolean;
-}
+};
 
 const HEAD_CHECKS: HeadCheck[] = [
   serialLineCheck,

@@ -22,7 +22,7 @@ const SKIP_WALK = new Set([".git", "node_modules", ".tmp"]);
 const USAGE = "usage: bun repo lessons match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
 
 /** One parsed lesson file. */
-export interface Lesson {
+export type Lesson = {
   name: string;
   paths: string[];
   hits: number;
@@ -32,25 +32,25 @@ export interface Lesson {
   summary: string;
   mistake: string;
   fix: string;
-}
+};
 
 export type ParsedLesson = { ok: true; lesson: Lesson } | { ok: false; errors: string[] };
 
 /** One INDEX.md row. */
-export interface IndexRow {
+export type IndexRow = {
   file: string;
   paths: string[];
   hits: number;
   lastHit: string;
   summary: string;
-}
+};
 
 /** The roots `resolveRoots` returns. */
-export interface Roots {
+export type Roots = {
   root: string;
   checkout: string;
   cwd: string;
-}
+};
 
 export type LessonResult =
   | { ok: true; path: string; content: string; error?: undefined }
@@ -90,26 +90,31 @@ export function globToRegExp(glob: unknown): RegExp {
         re += ".*";
         i += 1;
       }
-    } else if (c === "*") re += "[^/]*";
-    else if (c === "?") re += "[^/]";
-    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+    } else if (c === "*") {
+      re += "[^/]*";
+    } else if (c === "?") {
+      re += "[^/]";
+    } else {
+      re += c.replaceAll(/[.+^${}()|[\]\\]/g, "\\$&");
+    }
   }
   return new RegExp(`^${re}$`);
 }
 
 function readFrontmatter(text: unknown): { map: Record<string, string>; body: string } | null {
   // A Windows checkout with core.autocrlf turns a committed lesson's LF into CRLF.
-  const s = String(text).replace(/^﻿/, "").replace(/\r\n/g, "\n");
+  const s = String(text).replace(/^﻿/, "").replaceAll("\r\n", "\n");
   if (!s.startsWith("---\n")) return null;
   const end = s.indexOf("\n---\n", 4);
   if (end === -1) return null;
   const map: Record<string, string> = {};
   for (const line of s.slice(4, end).split("\n")) {
     const m = line.match(/^([a-z-]+):\s*(.*)$/);
-    if (m)
+    if (m) {
       map[m[1] /* group 1 is set whenever the pattern matches */ as string] = (
         m[2] /* group 2 is set whenever the pattern matches */ as string
       ).trim();
+    }
   }
   return { body: s.slice(end + 5), map };
 }
@@ -132,9 +137,9 @@ function readBody(body: unknown) {
   const title = h1 === -1 ? "" : (lines[h1] /* findIndex returned a valid index */ as string).slice(2).trim();
   const summary = (lines.slice(h1 + 1).find((l) => l.trim() && !l.startsWith("#")) || "").trim();
   const firstH2 = lines.findIndex((l) => l.startsWith("## "));
-  if (!summary || (firstH2 !== -1 && lines.indexOf(summary) > firstH2)) {
+  if (!summary || (firstH2 !== -1 && lines.indexOf(summary) > firstH2))
     errors.push("put a one-line summary under the # title");
-  }
+
   const h2 = lines.map((l, i) => ({ i, l })).filter(({ l }) => l.startsWith("## "));
   const names = h2.map(({ l }) => l.slice(3).trim());
   const sections: Record<string, string> = {};
@@ -148,9 +153,9 @@ function readBody(body: unknown) {
     if (!names.includes(need)) errors.push(`missing ## ${need}`);
     else if (!sections[need]) errors.push(`## ${need} is empty`);
   }
-  if (names.length !== 2 || names[0] !== "Mistake" || names[1] !== "Fix") {
+  if (names.length !== 2 || names[0] !== "Mistake" || names[1] !== "Fix")
     errors.push("use only ## Mistake then ## Fix as section headings");
-  }
+
   return { errors, fix: sections.Fix || "", mistake: sections.Mistake || "", summary, title };
 }
 
@@ -214,9 +219,8 @@ ${l.fix}
 /** Repo-relative files: tracked and untracked-but-not-ignored in git, else a walk. */
 export function repoFiles(ws: string): string[] {
   const git = spawnSync("git", ["ls-files", "-co", "--exclude-standard"], { cwd: ws, encoding: "utf8" });
-  if (git.status === 0) {
-    return git.stdout.split("\n").filter(Boolean);
-  }
+  if (git.status === 0) return git.stdout.split("\n").filter(Boolean);
+
   const out: string[] = [];
   const walk = (dir: string) => {
     for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -233,9 +237,9 @@ export function repoFiles(ws: string): string[] {
 export function validateLesson(filename: string, text: unknown, { files }: { files?: string[] } = {}): string[] {
   const errors: string[] = [];
   const lineCount = String(text).replace(/\n$/, "").split("\n").length;
-  if (lineCount > MAX_LINES) {
+  if (lineCount > MAX_LINES)
     errors.push(`lesson is ${lineCount} lines; the cap is ${MAX_LINES} lines, so cut it or split the mistake`);
-  }
+
   const parsed = parseLesson(text);
   if (!parsed.ok) return [...errors, ...parsed.errors];
   const slug = path.basename(filename, ".md");
@@ -260,7 +264,7 @@ function lessonFiles(ws: string) {
 }
 
 function cell(s: unknown) {
-  return String(s).replace(/\s+/g, " ").replace(/\|/g, "\\|");
+  return String(s).replaceAll(/\s+/g, " ").replaceAll("|", "\\|");
 }
 
 /** `pending` maps a lesson filename to text the host is about to write. */
@@ -300,9 +304,9 @@ function parseIndex(text: unknown): IndexRow[] {
     if (!line.startsWith(`| ${LESSONS_DIR}/`)) continue;
     const cells = line
       .slice(2, -2)
-      .replace(/\\\|/g, "\u0000")
+      .replaceAll("\\|", "\u0000")
       .split(" | ")
-      .map((c) => c.replace(/\u0000/g, "|"));
+      .map((c) => c.replaceAll("\0", "|"));
     if (cells.length !== 5) continue;
     const [file, pathsCell, hits, lastHit, summary] = cells /* five cells checked above */ as [
       string,
@@ -390,9 +394,8 @@ export function matchLessons(
     }
     for (const row of parseIndex(text)) {
       const seen = rows.get(row.file);
-      if (row.paths.some((g) => rels.some((f) => globToRegExp(g).test(f))) && (!seen || seen.hits < row.hits)) {
+      if (row.paths.some((g) => rels.some((f) => globToRegExp(g).test(f))) && (!seen || seen.hits < row.hits))
         rows.set(row.file, row);
-      }
     }
   }
   return [...rows.values()].sort((a, b) => b.hits - a.hits || a.file.localeCompare(b.file)).slice(0, cap);
@@ -428,9 +431,9 @@ export function persistLesson({
   if (refusal) return { error: refusal, ok: false };
   const abs = path.resolve(ws, filePath);
   const name = path.basename(abs);
-  if (path.dirname(abs) !== lessonsDir(ws) || name === INDEX_NAME || !name.endsWith(".md")) {
+  if (path.dirname(abs) !== lessonsDir(ws) || name === INDEX_NAME || !name.endsWith(".md"))
     return { error: `write lessons as ${LESSONS_DIR}/{slug}.md; ${INDEX_NAME} is generated by lessons.ts`, ok: false };
-  }
+
   const slug = name.slice(0, -3);
   if (!SLUG_RE.test(slug)) return { error: `lesson filename must be a lowercase-hyphen slug: ${name}`, ok: false };
   const parsed = parseLesson(content, { defaults: { evidence: "[]", hits: "1", "last-hit": today, name: slug } });
@@ -489,9 +492,8 @@ export function lessonProblems(ws: string): string[] {
   const errors: string[] = [];
   const files = repoFiles(ws);
   for (const name of lessonFiles(ws)) {
-    for (const e of validateLesson(name, fs.readFileSync(path.join(dir, name), "utf8"), { files })) {
+    for (const e of validateLesson(name, fs.readFileSync(path.join(dir, name), "utf8"), { files }))
       errors.push(`${LESSONS_DIR}/${name}: ${e}`);
-    }
   }
   return errors;
 }
@@ -511,9 +513,9 @@ export function checkLessons({ workspaceRoot: ws }: { workspaceRoot: string }): 
   } catch {
     onDisk = null;
   }
-  if (onDisk !== renderLessonsIndex(ws)) {
+  if (onDisk !== renderLessonsIndex(ws))
     errors.push(`${LESSONS_DIR}/${INDEX_NAME} is out of date; run bun repo lessons index inside a worktree`);
-  }
+
   return errors;
 }
 
@@ -527,9 +529,9 @@ function runLessons(argv: string[], roots: Roots): number {
   const [cmd, ...rest] = argv;
   if (cmd === "match") {
     if (!rest.length) return fail(USAGE);
-    for (const r of matchLessons({ files: rest.map((f) => path.resolve(roots.cwd, f)), roots })) {
+    for (const r of matchLessons({ files: rest.map((f) => path.resolve(roots.cwd, f)), roots }))
       process.stdout.write(`${r.file} (hits ${r.hits}): ${r.summary}\n`);
-    }
+
     return 0;
   }
   if (cmd === "hit") {

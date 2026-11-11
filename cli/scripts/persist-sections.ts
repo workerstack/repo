@@ -6,11 +6,11 @@ const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})/;
 const FENCE_CLOSE_RE = /^ {0,3}(`{3,}|~{3,})\s*$/;
 const H2_RE = /^## (.+)$/;
 
-interface OpenFence {
+type OpenFence = {
   char: string;
   length: number;
   line: number;
-}
+};
 
 /** The fence a line opens, or null: a backtick fence whose info text holds a backtick is not one. */
 function openingFence(line: string, at: number): OpenFence | null {
@@ -63,9 +63,8 @@ export function sectionBodies(text: string): Sections {
     offset += line.length + 1;
   });
   const bodies: Record<string, string> = {};
-  for (const [i, cur] of h2.entries()) {
-    bodies[cur.title] = text.slice(cur.end, h2[i + 1]?.index ?? text.length);
-  }
+  for (const [i, cur] of h2.entries()) bodies[cur.title] = text.slice(cur.end, h2[i + 1]?.index ?? text.length);
+
   return { bodies, order: h2.map((h) => h.title) };
 }
 
@@ -83,9 +82,9 @@ export function usageErrors(order: string[], bodies: Record<string, string>, { f
   if (order[at - 1] !== GOAL_H2) errors.push("## Usage must come right after ## Goal");
   const lines = (bodies[USAGE_H2] || "").split("\n");
   const hasFence = fencedLineSet(lines).fenced.size > 0;
-  if (!hasFence && !lines.some((l) => l.startsWith("No visible change:"))) {
+  if (!hasFence && !lines.some((l) => l.startsWith("No visible change:")))
     errors.push('## Usage needs a fenced example or a "No visible change:" line');
-  }
+
   return errors;
 }
 
@@ -114,9 +113,9 @@ function cardLineErrors(label: string, i: number, line: string): string[] {
   const pad = label.padEnd(CARD_PAD);
   const errors: string[] = [];
   if (!new RegExp(`^${label}\\b`).test(line)) errors.push(`card line ${n} must start with ${label}`);
-  else if (!line.startsWith(pad) || !/\S/.test(line.charAt(CARD_PAD))) {
+  else if (!line.startsWith(pad) || !/\S/.test(line.charAt(CARD_PAD)))
     errors.push(`card line ${n} (${label}) needs its text at column ${CARD_PAD + 1}: "${pad}<text>"`);
-  }
+
   const length = [...line].length;
   if (length > CARD_WIDTH) errors.push(`card line ${n} (${label}) is ${length} characters; the limit is ${CARD_WIDTH}`);
   return errors;
@@ -128,9 +127,9 @@ function cardLineErrors(label: string, i: number, line: string): string[] {
  */
 export function cardErrors(body: string): string[] {
   const block = cardBlock(body);
-  if (!block.some((l) => CARD_LABEL_RE.test(l))) {
+  if (!block.some((l) => CARD_LABEL_RE.test(l)))
     return [`start with the 5-line card after the title: ${CARD_LABELS.join(", ")}`];
-  }
+
   const errors = CARD_LABELS.flatMap((label, i) => cardLineErrors(label, i, block[i] ?? ""));
   if (block.length > CARD_LABELS.length) errors.push("the card is 5 lines; end it with a blank line after DONE");
   return errors;

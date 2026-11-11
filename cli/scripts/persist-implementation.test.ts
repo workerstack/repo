@@ -11,9 +11,7 @@ import { persistImplementation } from "./persist-implementation.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -114,7 +112,7 @@ describe("persistImplementation refused plan and headings", () => {
   it("rejects extra headings", () => {
     const ws = tmpWs();
     const r = persistImplementation({
-      content: VALID_IMPL + "\n## Steps\n- nope\n",
+      content: `${VALID_IMPL}\n## Steps\n- nope\n`,
       workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);

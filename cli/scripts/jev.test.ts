@@ -158,17 +158,17 @@ describe("runJev", () => {
     fs.mkdirSync(path.join(blocked, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       jevUsagePath(blocked),
-      JSON.stringify({ day: new Date().toISOString().slice(0, 10), input_tokens: 0, requests: 40 }) + "\n",
+      `${JSON.stringify({ day: new Date().toISOString().slice(0, 10), input_tokens: 0, requests: 40 })}\n`,
     );
     const tokenHome = tmp("jev-tokens-");
     fs.mkdirSync(path.join(tokenHome, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       jevUsagePath(tokenHome),
-      JSON.stringify({
+      `${JSON.stringify({
         day: new Date().toISOString().slice(0, 10),
         input_tokens: 1_000_000,
         requests: 0,
-      }) + "\n",
+      })}\n`,
     );
     const fileKey = tmp("jev-file-");
     const runs = [

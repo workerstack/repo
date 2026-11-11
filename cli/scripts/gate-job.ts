@@ -8,14 +8,14 @@ import { canonicalPath, gitRevParse, resolveTyped, type Roots } from "./workspac
 
 /** POSIX single-quote so `, $, and \ stay literal. */
 export function quoteQuery(q: unknown): string {
-  return `'${String(q).replace(/'/g, "'\\''")}'`;
+  return `'${String(q).replaceAll("'", "'\\''")}'`;
 }
 
-export interface RepoBin {
+export type RepoBin = {
   bin: string;
   /** True when the bin is the main checkout's because the worktree has no install of its own. */
   fallback: boolean;
-}
+};
 
 /** The first of `repo`, `repo.exe` that exists under `dir`'s `node_modules/.bin`. */
 function installedBin(dir: string): string | undefined {
@@ -62,15 +62,15 @@ export function alreadyRtk(command: unknown): boolean {
 }
 
 function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function stripFlagValue(cmd: unknown, flag: string): string {
   const f = escapeRe(flag);
   const val = `(?:"[^"]*"|'[^']*'|\\S+)`;
   return String(cmd || "")
-    .replace(new RegExp(`${f}=${val}`, "g"), `${flag}=_`)
-    .replace(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
+    .replaceAll(new RegExp(`${f}=${val}`, "g"), `${flag}=_`)
+    .replaceAll(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
 }
 
 /** True when `token` is the bare command `name` or a path ending in it, with POSIX or Windows separators. */
@@ -117,11 +117,11 @@ export function isWorkspaceJobScript(
   return jobRest(command, roots, p) != null;
 }
 
-interface ParsedJob {
+type ParsedJob = {
   job: string;
   hasQuery: boolean;
   hasStash: boolean;
-}
+};
 
 /** One job arg as a flag and, for `--flag=value`, its inline value. */
 function splitFlag(arg: string): { flag: string; inline: string | null } {

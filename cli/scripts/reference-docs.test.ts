@@ -18,7 +18,7 @@ function headingErrors(text: string) {
   const { fenced } = fencedLineSet(lines);
   lines.forEach((line, i) => {
     if (fenced.has(i)) return;
-    const bare = line.replace(/`[^`]*`/g, "");
+    const bare = line.replaceAll(/`[^`]*`/g, "");
     const heading = /^(#{1,6}) +(.*\S)\s*$/.exec(bare);
     if (heading) {
       const key = `${heading[1]} ${heading[2]}`;

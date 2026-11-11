@@ -111,9 +111,9 @@ export function skipsMain(dir: string, io: SkipsIo): number {
     byOs.set(report.os, ids);
   }
   const oses = [...byOs.keys()].toSorted();
-  if (oses.length < MIN_REPORTS) {
+  if (oses.length < MIN_REPORTS)
     return fail([`only ${oses.length} report (${oses.join(", ")}); every OS's test job must upload one`]);
-  }
+
   const shared = [...new Set([...byOs.values()].flatMap((ids) => [...ids]))].filter((id) =>
     [...byOs.values()].every((ids) => ids.has(id)),
   );

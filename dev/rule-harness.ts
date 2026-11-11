@@ -102,9 +102,9 @@ export function reportsOf(rule: Pick<CreateRule, "create">, fixture: Fixture): R
       fs.writeFileSync(path.join(dir, file), code);
     }
     const reports: Report[] = [];
-    for (const [file, code] of Object.entries(fixture)) {
+    for (const [file, code] of Object.entries(fixture))
       if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { code, dir, file, reports });
-    }
+
     return reports;
   } finally {
     fs.rmSync(dir, { force: true, recursive: true });

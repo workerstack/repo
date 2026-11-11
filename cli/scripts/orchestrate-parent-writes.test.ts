@@ -69,9 +69,9 @@ it("checks a roadmap Edit against the text it would produce", () => {
   for (const [tool, input] of [
     ["Edit", { file_path: saved, new_string: "1 [x] auth types", old_string: "1 [ ] auth types" }],
     ["search_replace", { file_path: saved, new_string: "3.1 [x]", old_string: "3.1 [ ]" }],
-  ] as const) {
+  ] as const)
     expect(pre(ws, tool, input), tool).toBeNull();
-  }
+
   expect(read(saved)).toBe(before);
 });
 
@@ -109,9 +109,9 @@ it("lets a valid Edit of an existing plan through", () => {
   for (const [tool, input] of [
     ["Edit", { file_path: saved, new_string: "1.1 [x]", old_string: "1.1 [ ]" }],
     ["search_replace", { file_path: saved, new_string: "1.2 [x]", old_string: "1.2 [ ]" }],
-  ] as const) {
+  ] as const)
     expect(pre(ws, tool, input), tool).toBeNull();
-  }
+
   expect(read(saved)).toBe(before);
 });
 

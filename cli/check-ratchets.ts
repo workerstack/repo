@@ -140,9 +140,9 @@ function mutationProblems(root: string, ref: string, file: string): string[] {
   const now = asNumbers(readHere(root, file)) ?? {};
   return Object.entries(was).flatMap(([pkg, floor]) => {
     const has = now[pkg];
-    if (has === undefined) {
+    if (has === undefined)
       return fs.existsSync(path.join(root, pkg)) ? [`${file} drops ${pkg} from ${floor}; floors only rise`] : [];
-    }
+
     return has < floor ? [`${file} lowers ${pkg} from ${floor} to ${has} against main; floors only rise`] : [];
   });
 }
@@ -159,9 +159,9 @@ function listProblems(root: string, ref: string, file: string): string[] {
 /** Per rule, the count summed over every file. */
 function totals(table: Table): Map<string, number> {
   const sums = new Map<string, number>();
-  for (const row of Object.values(table)) {
+  for (const row of Object.values(table))
     for (const [rule, count] of Object.entries(row)) sums.set(rule, (sums.get(rule) ?? 0) + count);
-  }
+
   return sums;
 }
 

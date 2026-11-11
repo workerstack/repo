@@ -56,21 +56,20 @@ export function checkWorkspace(root: string, { manifest, packages }: Workspace):
 
 function rootLines(manifest: PackageJson): string[] {
   const lines: string[] = [];
-  for (const field of ROOT_EMPTY_FIELDS) {
+  for (const field of ROOT_EMPTY_FIELDS)
     for (const name of Object.keys(manifest[field] ?? {})) lines.push(rootField(field, name));
-  }
-  for (const name of Object.keys(manifest.devDependencies ?? {})) {
+
+  for (const name of Object.keys(manifest.devDependencies ?? {}))
     if (name !== ROOT_DEV_DEPENDENCY) lines.push(rootDev(name));
-  }
+
   return lines;
 }
 
 /** The names of the root and the members that are private: without `"private": false` a package is not published. */
 function privateNamesOf(manifests: PackageJson[]): Set<string> {
   const names = new Set<string>();
-  for (const { name, private: isPrivate } of manifests) {
-    if (name !== undefined && isPrivate !== false) names.add(name);
-  }
+  for (const { name, private: isPrivate } of manifests) if (name !== undefined && isPrivate !== false) names.add(name);
+
   return names;
 }
 
@@ -177,8 +176,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** Every name a manifest declares directly, in any dependency field. */
 function declaredNames(manifests: PackageJson[]): Set<string> {
   const names = new Set<string>();
-  for (const manifest of manifests) {
+  for (const manifest of manifests)
     for (const field of DECLARING_FIELDS) for (const name of Object.keys(manifest[field] ?? {})) names.add(name);
-  }
+
   return names;
 }

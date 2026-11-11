@@ -98,9 +98,8 @@ export function judgeRun(run: Judged, deps: MutateDeps): number {
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
   const totals = tally(report.files, deps.packages(config.root));
   const vs = verdicts(totals, floors.value);
-  for (const v of vs) {
-    deps.out(`mutate: ${label(v, false)}, ${plural(v.survivors, "survivor")} in ${shown}${NEWLINE}`);
-  }
+  for (const v of vs) deps.out(`mutate: ${label(v, false)}, ${plural(v.survivors, "survivor")} in ${shown}${NEWLINE}`);
+
   const lines = failures(vs, config.floors, shown);
   return lines.length > 0 ? fail(deps, ...lines) : OK;
 }

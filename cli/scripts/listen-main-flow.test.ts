@@ -92,7 +92,7 @@ describe("main start then stop", () => {
       spawned.push(args);
       return { pid: 4242, unref() {} };
     };
-    const started = await run(["start"], { cwd, home, killFn: () => undefined, spawnFn, whichFn: ffmpegOnly });
+    const started = await run(["start"], { cwd, home, killFn: () => {}, spawnFn, whichFn: ffmpegOnly });
     expect(started.code).toBe(0);
     const sess = readSession(cwd);
     expect(sess.pid).toBe(4242);

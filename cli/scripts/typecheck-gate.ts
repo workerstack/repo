@@ -40,11 +40,12 @@ const tscArgs = (file: string): string[] => [
 /** `tsc --noEmit` on every tsconfig of the root and each package; under the pack only the root's, since turbo typechecks the packages. */
 export function typecheckGate(ctx: GateCtx, rootOnly: boolean): Gate {
   const found = tsconfigs(ctx.root, rootOnly);
-  if (!found.ok)
+  if (!found.ok) {
     return fail(
       "typecheck failed",
       found.errors.map((line) => `${line}\n`),
     );
+  }
   if (found.files.length === 0) return pass("typecheck skipped (no tsconfig.json)", false);
   const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc(tscArgs(file), ctx.root) }));
   const bad = runs.filter(({ run }) => run.code !== 0);

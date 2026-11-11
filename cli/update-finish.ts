@@ -26,9 +26,7 @@ const indented = (result: ToolResult): string[] =>
 
 /** Prints the lines of the install's output that `repo sync` wrote. */
 function syncLines(io: UpdateIo, result: ToolResult): void {
-  for (const line of result.output.split("\n")) {
-    if (line.startsWith(SYNC_PREFIX)) io.out(line.trimEnd());
-  }
+  for (const line of result.output.split("\n")) if (line.startsWith(SYNC_PREFIX)) io.out(line.trimEnd());
 }
 
 /** Installs, prints the `repo sync:` lines it printed, then formats what `repo fmt` would (only when the root has an oxfmt config); a failed step prints why and returns the exit code. */

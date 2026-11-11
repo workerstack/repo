@@ -182,9 +182,8 @@ it(
 
 it("expandHookCommand: expands the short form of a known hook and leaves every other command alone", () => {
   expect(expandHookCommand("repo hook worktree")).toBe(hookCommand("worktree"));
-  for (const other of ["repo hook nope", "repo hook worktree --x", "bun repo hook worktree", hookCommand("worktree")]) {
+  for (const other of ["repo hook nope", "repo hook worktree --x", "bun repo hook worktree", hookCommand("worktree")])
     expect(expandHookCommand(other)).toBe(other);
-  }
 });
 
 it("expandHookCommand: is the only place stock sources get the shell text: they hold the short form", () => {
@@ -199,9 +198,7 @@ it("expandHookCommand: is the only place stock sources get the shell text: they 
     ),
   );
   expect(commands.length).toBeGreaterThan(10);
-  for (const [rel, command] of commands) {
-    expect(command, rel).toMatch(/^repo hook [\w-]+$/);
-  }
+  for (const [rel, command] of commands) expect(command, rel).toMatch(/^repo hook [\w-]+$/);
 });
 
 it.each(HOOK_NAMES)("hookNameOf: reads %s back from its command", (name) => {

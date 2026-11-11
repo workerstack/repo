@@ -37,7 +37,7 @@ it("leaves a nested plan to orchestrate-parent, records it, and writes no target
   });
   const wrote = fs.readFileSync(path.join(ws, ".tmp/repo/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
   expect(wrote).toStrictEqual(
-    [".tmp/repo/plans/x.md", ".tmp/repo/scratch/x.txt"].map((p) => path.join(ws, p).replace(/\\/g, "/")),
+    [".tmp/repo/plans/x.md", ".tmp/repo/scratch/x.txt"].map((p) => path.join(ws, p).replaceAll("\\", "/")),
   );
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
   expect(fs.existsSync(path.join(ws, ".tmp/repo/scratch"))).toBe(false);

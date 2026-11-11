@@ -108,7 +108,9 @@ function parseArgs(args: string[]): { session: string; match: string } | undefin
       const value = args[++i];
       if (value === undefined) return undefined;
       match = value;
-    } else session ??= arg;
+    } else {
+      session ??= arg;
+    }
   }
   return session === undefined ? undefined : { match, session };
 }
@@ -146,8 +148,9 @@ export function run(argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main)
+if (import.meta.main) {
   process.exitCode = run(process.argv.slice(ARGV_START), {
     err: (line) => process.stderr.write(`${line}\n`),
     out: (line) => process.stdout.write(`${line}\n`),
   });
+}

@@ -32,9 +32,9 @@ function plantOpener(): string {
   const bin = fs.mkdtempSync(path.join(os.tmpdir(), "ws-bin-"));
   dirs.push(bin);
   const record = path.join(bin, "opened.txt");
-  for (const name of ["open", "xdg-open"]) {
+  for (const name of ["open", "xdg-open"])
     fs.writeFileSync(path.join(bin, name), `#!/bin/sh\nprintf '%s' "$1" > "${record}"\n`, { mode: 0o755 });
-  }
+
   vi.stubEnv("PATH", bin);
   return record;
 }

@@ -4,12 +4,12 @@ import { parseFrontmatter, slugFromFilename, type FrontmatterMap, type Sections 
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 
 /** A saved doc under validation. */
-export interface Doc {
+export type Doc = {
   filename: string;
   text: string;
   map: FrontmatterMap;
   body: string;
-}
+};
 
 export type HeadCheck = (doc: Doc) => string[];
 export type SectionCheck = (doc: Doc, sections: Sections) => string[];

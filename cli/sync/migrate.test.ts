@@ -71,9 +71,9 @@ function expectOnlyGeneratedLeft(root: string): void {
   expect(exists(root, "AGENTS.md")).toBe(true);
   expect(exists(root, ".claude/settings.json")).toBe(false);
   const tracked = git(root, "ls-files").split("\n");
-  for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"]) {
+  for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"])
     expect(tracked.filter((file) => file.startsWith(dir) || file === dir)).toStrictEqual([]);
-  }
+
   expect(tracked).toContain(".mcp.json");
   expect(tracked).toContain("AGENTS.md");
   expect(tracked).toContain(".vscode/tasks.json");

@@ -41,9 +41,8 @@ export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
 
 function readPolicyFile(p: string): JsonObject {
   const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
-  if (!isPlainObject(policy)) {
-    throw new Error("invalid policy");
-  }
+  if (!isPlainObject(policy)) throw new Error("invalid policy");
+
   return policy;
 }
 

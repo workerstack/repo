@@ -10,7 +10,7 @@ function docText(value: string): string {
 }
 
 const words = (text: string): string[] => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
-const nameWords = (name: string): string[] => words(name.replace(/([\p{Ll}\p{N}])(\p{Lu})/gu, "$1 $2"));
+const nameWords = (name: string): string[] => words(name.replaceAll(/([\p{Ll}\p{N}])(\p{Lu})/gu, "$1 $2"));
 
 /**
  * What is wrong with the JSDoc `value` (undefined for no JSDoc) of `name`, finishing "… and ", or null when it is

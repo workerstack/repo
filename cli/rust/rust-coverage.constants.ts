@@ -1,7 +1,13 @@
 /** The cargo arguments before the report path: nextest under llvm-cov, locked, over the workspace, as a JSON summary. */
 export const COVERAGE_ARGS: readonly string[] = [
-  ...["llvm-cov", "nextest", "--locked", "--workspace", "--no-tests=warn"],
-  ...["--json", "--summary-only", "--output-path"],
+  "llvm-cov",
+  "nextest",
+  "--locked",
+  "--workspace",
+  "--no-tests=warn",
+  "--json",
+  "--summary-only",
+  "--output-path",
 ];
 /** The prefix of the temp directory that holds the report. */
 export const TEMP_PREFIX: string = "repo-llvm-cov-";

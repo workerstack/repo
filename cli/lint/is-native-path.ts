@@ -89,9 +89,9 @@ const isNativeCallee = (callee: Node): boolean =>
 /** `process.cwd()` or a call of a function that returns a native path. */
 function isNativeCall(call: ESTree.CallExpression): boolean {
   const { callee } = call;
-  if (callee.type === "MemberExpression" && callee.object.type === "Identifier") {
+  if (callee.type === "MemberExpression" && callee.object.type === "Identifier")
     if (callee.object.name === PROCESS && memberName(callee) === CWD) return true;
-  }
+
   return isNativeCallee(callee);
 }
 

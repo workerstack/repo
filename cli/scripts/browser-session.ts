@@ -104,7 +104,7 @@ export function liveSession(cwd: string): Session | null {
 
 export function writeSession(cwd: string, session: Session): void {
   fs.mkdirSync(sessionDir(cwd), { recursive: true });
-  fs.writeFileSync(sessionFile(cwd), JSON.stringify(session, null, JSON_INDENT) + "\n");
+  fs.writeFileSync(sessionFile(cwd), `${JSON.stringify(session, null, JSON_INDENT)}\n`);
 }
 
 export function clearSession(cwd: string): void {
@@ -120,12 +120,12 @@ export function ok(stdout: string): BrowserResult {
   return {
     code: 0,
     stderr: "",
-    stdout: stdout.endsWith("\n") ? stdout : stdout + "\n",
+    stdout: stdout.endsWith("\n") ? stdout : `${stdout}\n`,
   };
 }
 
 /** A verb that failed: its message without an `Error:` prefix, ending in one newline. */
 export function fail(stderr: string): BrowserResult {
   const msg = stderr.replace(ERROR_PREFIX, "");
-  return { code: 1, stderr: msg.endsWith("\n") ? msg : msg + "\n", stdout: "" };
+  return { code: 1, stderr: msg.endsWith("\n") ? msg : `${msg}\n`, stdout: "" };
 }

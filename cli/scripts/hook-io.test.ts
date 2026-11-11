@@ -58,7 +58,7 @@ describe("readHookInput", () => {
     const cut = bytes.indexOf(0xc3) + 1;
     const chunks = [bytes.subarray(0, cut), bytes.subarray(cut)];
     let at = 0;
-    const io: HookIo = { readChunk: () => chunks[at++] ?? null, write: () => undefined };
+    const io: HookIo = { readChunk: () => chunks[at++] ?? null, write: () => {} };
     expect(readHookInput(io)).toStrictEqual({ prompt: "é" });
   });
 

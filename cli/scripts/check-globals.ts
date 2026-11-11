@@ -25,26 +25,26 @@ const APPLY_HINT = "run `bun repo yolo`";
 const PROJECT_REL = ".grok/config.toml";
 
 /** One settings key whose payload value is missing or different in the dest. */
-export interface DriftEntry {
+export type DriftEntry = {
   host: string;
   dest: string;
   key: string;
   kind: "missing" | "differs";
-}
+};
 
 /** One host's check outcome: `ok`, drift (`missing`/`differs` entries), or an `unreadable` dest. */
-export interface HostStatus {
+export type HostStatus = {
   id: string;
   dest: string;
   state: "ok" | "drift" | "unreadable";
   drift: DriftEntry[];
-}
+};
 
-export interface CheckResult {
+export type CheckResult = {
   ok: boolean;
   drift?: DriftEntry[];
   error?: string;
-}
+};
 
 type ProjectGrok = { error: string; value?: undefined } | { value: JsonObject; error?: undefined };
 
@@ -67,9 +67,8 @@ function leaves(obj: JsonObject, skipRe: RegExp, prefix: string[] = []): [string
 function valueAt(obj: unknown, keyPath: string[]): { found: false } | { found: true; value: unknown } {
   let cur = obj;
   for (const k of keyPath) {
-    if (!isPlainObject(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) {
-      return { found: false };
-    }
+    if (!isPlainObject(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
+
     cur = cur[k];
   }
   return { found: true, value: cur };
@@ -125,9 +124,8 @@ export function checkHosts({
     const drift: DriftEntry[] = [];
     for (const [keyPath, want] of leaves(payload, skipRe)) {
       const have = valueAt(destValue, keyPath);
-      if (!have.found || !isDeepStrictEqual(have.value, want)) {
+      if (!have.found || !isDeepStrictEqual(have.value, want))
         drift.push({ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" });
-      }
     }
     out.push({ dest: h.dest, drift, id: h.id, state: drift.length ? "drift" : "ok" });
   }
@@ -162,9 +160,9 @@ export function projectConfigError(workspaceRoot: string, home: string): string 
   if (
     Object.prototype.hasOwnProperty.call(project.value, "features") ||
     Object.prototype.hasOwnProperty.call(project.value, "agent")
-  ) {
+  )
     return "project .grok/config.toml must not set [features] or [agent]";
-  }
+
   return null;
 }
 

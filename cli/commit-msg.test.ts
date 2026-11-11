@@ -11,9 +11,8 @@ const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body 
 
 describe("checkCommitMessage", () => {
   it("accepts every listed type", () => {
-    for (const type of ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"]) {
+    for (const type of ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"])
       expect(ok(`${type}: do the thing`)).toStrictEqual([]);
-    }
   });
 
   it("accepts a scope and a breaking marker", () => {

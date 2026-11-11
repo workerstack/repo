@@ -18,9 +18,7 @@ const HINT = "run `bun repo yolo`";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -65,13 +63,13 @@ function runCli(cwd: string, home: string) {
 }
 
 /** The settings keys the cases below edit. */
-interface SettingsJson {
+type SettingsJson = {
   approvalMode?: string;
   permissions: { defaultMode?: string; token?: string };
   extra?: boolean;
   apiKey?: string;
   hooks?: unknown;
-}
+};
 
 function editJson(file: string, edit: (v: SettingsJson) => void) {
   const v = JSON.parse(fs.readFileSync(file, "utf8")) as SettingsJson;

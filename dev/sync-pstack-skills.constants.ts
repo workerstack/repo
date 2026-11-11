@@ -53,11 +53,11 @@ export const PRINCIPLE_SKILL_NAMES: readonly string[] = [
 ];
 
 /** One ported pstack skill: its files, and whether it is a slash command. */
-export interface PstackSkill {
+export type PstackSkill = {
   name: string;
   files: string[];
   slash: boolean;
-}
+};
 
 export const PSTACK_SKILLS: readonly PstackSkill[] = [
   { files: [SKILL_REL], name: "blast-radius", slash: true },

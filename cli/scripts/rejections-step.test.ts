@@ -12,8 +12,13 @@ it(
   "a source change that widens a type fails the owner's reject file; once it rejects again the step is ok",
   { timeout: SLOW },
   async () => {
-    const user =
-      'export type UserId = string & { readonly brand: "UserId" };\nexport const load = (id: UserId): UserId => id;\n';
+    const user = [
+      'export type UserId = string & { readonly brand: "UserId" };',
+      "export function load(id: UserId): UserId {",
+      "  return id;",
+      "}",
+      "",
+    ].join("\n");
     const mark = "Argument of type 'string' is not assignable to parameter of type 'UserId'";
     const reject = `import { load } from "./user.ts";\n\n/* rejects: ${mark} */\nload("u1");\n`;
     const root = consumer({

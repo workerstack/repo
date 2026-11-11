@@ -1,11 +1,11 @@
 /** The Rust source rules' names, limits and message text. */
 
 /** Names a lint-level attribute in code. */
-export const ATTRIBUTE_RULE: "repo/rust-lint-attribute" = "repo/rust-lint-attribute";
+export const ATTRIBUTE_RULE = "repo/rust-lint-attribute" as const;
 /** Names a Rust block comment. */
-export const BLOCK_COMMENT_RULE: "repo/rust-block-comment" = "repo/rust-block-comment";
+export const BLOCK_COMMENT_RULE = "repo/rust-block-comment" as const;
 /** Names a file over the code-line limit. */
-export const MAX_LINES_RULE: "repo/rust-max-lines" = "repo/rust-max-lines";
+export const MAX_LINES_RULE = "repo/rust-max-lines" as const;
 /** The most code lines a Rust file holds. */
 export const MAX_CODE_LINES: number = 200;
 /** The attribute names that set a lint level. */

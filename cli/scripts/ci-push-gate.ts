@@ -125,9 +125,9 @@ function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed:
   if (record && TERMINAL.includes(record.outcome)) return null;
   const short = newest.sha.slice(0, SHA_SHOWN);
   const wait = `\`bun repo ci wait ${branch}\``;
-  if (record?.outcome !== "failed") {
+  if (record?.outcome !== "failed")
     return `Stop: you pushed ${short} to ${branch} and its ci run has no result; run ${wait} in the background and fix it if it fails`;
-  }
+
   const repeated = repeatedJobs(deps, ctx.root, pushed);
   if (repeated.length > 0) {
     const report = `Stop: ${repeated.join(", ")} failed ${FAILED_ROUNDS} times on ${branch} this session; report the failure and its logs to the user, then stop`;

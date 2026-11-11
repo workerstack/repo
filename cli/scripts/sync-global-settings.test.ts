@@ -21,9 +21,7 @@ const skipRe = new RegExp(
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -109,7 +107,7 @@ const HOSTS = [
 const CLAUDE = HOSTS[1];
 
 /** The keys the tests read back from a written dest; each host's file holds only its own. */
-interface DestShape {
+type DestShape = {
   keepMe: unknown;
   approvalMode: string;
   permissions: { defaultMode: string };
@@ -120,7 +118,7 @@ interface DestShape {
   agent: { name: string };
   features: { two_pass_compaction: boolean };
   toolPermission: string;
-}
+};
 
 function readDest(home: string, h: { dest: string; format: string }): DestShape {
   const raw = fs.readFileSync(path.join(home, h.dest), "utf8");

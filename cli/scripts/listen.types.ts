@@ -1,6 +1,6 @@
 import type { Env } from "../env.ts";
 
-export interface ListenCfg {
+export type ListenCfg = {
   filePath: string;
   apiKey: string;
   model: string;
@@ -9,20 +9,20 @@ export interface ListenCfg {
   ffmpegFormat: string;
   whisperModel: string;
   stt: string;
-}
+};
 
 export type Stt = { kind: "local"; bin: string; model: string } | { kind: "openai"; model: string };
 
 export type WhichFn = (name: string, pathEnv?: string, platform?: NodeJS.Platform) => string;
 
 /** The slice of a fetch Response this script reads. */
-export interface FetchResult {
+export type FetchResult = {
   ok?: boolean;
   status?: number;
   text?: () => Promise<string>;
   json?: () => Promise<unknown>;
   arrayBuffer?: () => Promise<ArrayBuffer | Uint8Array>;
-}
+};
 
 /** The fetch this script calls, with the slice of its init it passes. */
 export type FetchFn = (
@@ -35,11 +35,11 @@ export type FetchFn = (
   },
 ) => Promise<FetchResult>;
 
-export interface SpawnSyncResult {
+export type SpawnSyncResult = {
   status: number | null;
   stdout?: string | Buffer | null;
   stderr?: string | Buffer | null;
-}
+};
 
 export type SpawnSyncFn = (
   bin: string,
@@ -48,32 +48,32 @@ export type SpawnSyncFn = (
 ) => SpawnSyncResult;
 
 /** The slice of a ChildProcess this script uses; tests pass partial fakes. */
-export interface ChildLike {
+export type ChildLike = {
   pid?: number | undefined;
   stdin?: { write(chunk: string): unknown; end(): unknown } | null;
   kill?(signal?: NodeJS.Signals): unknown;
   on?(event: string, cb: (arg: unknown, signal?: unknown) => void): unknown;
   unref?(): void;
-}
+};
 
-export interface SpawnOpts {
+export type SpawnOpts = {
   detached?: boolean;
   stdio?: unknown[];
   cwd?: string | undefined;
   env?: Env;
   windowsHide?: boolean;
-}
+};
 
 export type SpawnFn = (bin: string, args: string[], opts: SpawnOpts) => ChildLike;
 
 export type KillFn = (pid: number, signal: string | number) => unknown;
 
-export interface ListenLog {
+export type ListenLog = {
   log(msg: string): void;
   error(msg: string): void;
-}
+};
 
-export interface SttOpts {
+export type SttOpts = {
   cfg: ListenCfg;
   whichFn: WhichFn;
   pathEnv: string | undefined;
@@ -82,21 +82,21 @@ export interface SttOpts {
   cwd: string;
   fetchFn?: FetchFn | undefined;
   log?: ListenLog | undefined;
-}
+};
 
-export interface AudioDevice {
+export type AudioDevice = {
   id: string;
   name: string;
-}
+};
 
-export interface CaptureResult {
+export type CaptureResult = {
   status: number | null;
   signal: string | null;
   stderr: string;
   error: unknown;
-}
+};
 
-export interface ListenMainOpts {
+export type ListenMainOpts = {
   env?: Env;
   home?: string | undefined;
   cwd?: string | undefined;
@@ -110,10 +110,10 @@ export interface ListenMainOpts {
   pathEnv?: string;
   nodeBin?: string;
   waitPid?: (pid: number, killFn: KillFn) => void;
-}
+};
 
 /** What one `repo listen` verb runs in: the parsed argv, the seams and the config, resolved once by `main`. */
-export interface ListenCtx {
+export type ListenCtx = {
   rest: string[];
   flags: Record<string, string>;
   env: Env;
@@ -134,7 +134,7 @@ export interface ListenCtx {
   waitPid: ((pid: number, killFn: KillFn) => void) | undefined;
   /** Runs `main` again with the same options, as `toggle` does for `start` and `stop`. */
   again: (argv: string[]) => Promise<number>;
-}
+};
 
 /** One verb: what it exits with. */
 export type ListenVerb = (ctx: ListenCtx) => number | Promise<number>;

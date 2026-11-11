@@ -23,10 +23,10 @@ import {
 export type FrontmatterMap = Record<string, string>;
 
 /** `## ` heading order and section bodies of a document. */
-export interface Sections {
+export type Sections = {
   order: string[];
   bodies: Record<string, string>;
-}
+};
 
 export type FrontmatterResult =
   | { error: string; map?: undefined; body?: undefined }
@@ -53,10 +53,10 @@ export function captured(match: ArrayLike<string | undefined>, index: number): s
 export function slugify(name: unknown): string {
   const s = String(name || "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const cut = s.length > SLUG_MAX ? s.slice(0, SLUG_MAX).replace(/-+$/g, "") : s;
+    .replaceAll(/[^a-z0-9]+/g, "-")
+    .replaceAll(/-+/g, "-")
+    .replaceAll(/^-+|-+$/g, "");
+  const cut = s.length > SLUG_MAX ? s.slice(0, SLUG_MAX).replaceAll(/-+$/g, "") : s;
   return cut || "unnamed";
 }
 
@@ -69,7 +69,7 @@ export function utcDate(d: Date = new Date()): string {
 }
 
 export function compactCreatedStamp(created: unknown): string {
-  return String(created).replace(/[-:]/g, "");
+  return String(created).replaceAll(/[-:]/g, "");
 }
 
 /** The slug in `{serial}-{slug}-{stamp}.md`; an unstamped name works too. */

@@ -43,9 +43,9 @@ function readShear(result: CargoResult): string[] | null {
 export function shearProblems(root: string, run: CargoRun): string[] {
   const result = run(root, ["shear", "--locked", "--format=json"]);
   if (result.missing) return [MISSING_CARGO];
-  if (result.status === null || result.status > SHEAR_MAX_FINDING_EXIT) {
+  if (result.status === null || result.status > SHEAR_MAX_FINDING_EXIT)
     return [`cargo shear exited ${result.status}${result.stderr.trim() === "" ? "" : `: ${quote(result.stderr)}`}`];
-  }
+
   const lines = readShear(result);
   if (lines === null) return [`cargo shear printed output repo cannot read: ${quote(result.stdout)}`];
   if (lines.length === 0 && result.status !== 0) return [`cargo shear exited ${result.status} and printed no finding`];

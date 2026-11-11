@@ -82,9 +82,9 @@ it("notes a worktree's push under the main checkout", () => {
 it("ignores a delete, a tag, a detached HEAD and an unknown ref", () => {
   const r = rig();
   r.world.tips[r.main] = { branch: "HEAD", sha: A };
-  for (const c of ["push origin :gone", "push origin HEAD:refs/tags/v1", "push origin HEAD", "push origin ghost"]) {
+  for (const c of ["push origin :gone", "push origin HEAD:refs/tags/v1", "push origin HEAD", "push origin ghost"])
     r.note(`git ${c}`);
-  }
+
   expect(r.pushed()).toStrictEqual([]);
 });
 

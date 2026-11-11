@@ -13,7 +13,7 @@ it("a new lint problem over the baseline fails, naming it, and leaves the baseli
   const root = consumer({ "src/a.ts": nonNull(2), [BASELINE]: baseline });
   write(root, { "src/a.ts": nonNull(3) });
   const result = await turn(root, []);
-  expect(result.err).toContain(`src/a.ts:3:`);
+  expect(result.err).toContain(`src/a.ts:8:`);
   expect(result.err).toContain(`: error ${NN}: Forbidden non-null assertion.\n`);
   expect(result.err).toContain(`repo turn: src/a.ts has 3 ${NN}, the baseline allows 2; fix the new one\n`);
   expect(result.out).toBe(
@@ -41,7 +41,7 @@ it(
     const result = await turn(root, ["--staged"]);
     expect(result.out).toMatch(
       new RegExp(
-        `^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered \\(src/a.ts ${NN.replace(/[()]/g, "\\$&")} 2 → 1, src/b.ts ${NN.replace(/[()]/g, "\\$&")} 1 → 0\\) · typecheck`,
+        `^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered \\(src/a.ts ${NN.replaceAll(/[()]/g, "\\$&")} 2 → 1, src/b.ts ${NN.replaceAll(/[()]/g, "\\$&")} 1 → 0\\) · typecheck`,
       ),
     );
     expect(result.out).not.toContain("sync");

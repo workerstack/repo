@@ -12,9 +12,8 @@ export function readManifest(root: string): Manifest {
     const data: unknown = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_REL), "utf8"));
     if (typeof data === "object" && data !== null) {
       const { version, paths } = data as { version?: unknown; paths?: unknown };
-      if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string")) {
+      if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string"))
         return { paths: paths, version: 1 };
-      }
     }
   } catch {
     // falls through to the empty manifest
@@ -34,7 +33,7 @@ export function renderManifest(paths: readonly string[]): string {
  * that is empty, outside `root` or climbs with `..`, so such a path is never matched, written or pruned.
  */
 export function normalizeRel(raw: string, root: string): string | null {
-  const slash = (text: string) => text.replaceAll("\\", "/").replace(/\/+/g, "/");
+  const slash = (text: string) => text.replaceAll("\\", "/").replaceAll(/\/+/g, "/");
   let rel = slash(raw);
   if (/^[A-Za-z]:\//.test(rel) || rel.startsWith("/")) {
     const base = `${slash(root).replace(/\/$/, "")}/`;

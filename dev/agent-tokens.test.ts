@@ -51,7 +51,7 @@ function session(spawns: Spawn[]): string {
     );
     fs.writeFileSync(
       path.join(subagents, `agent-${spawn.id}.jsonl`),
-      spawn.entries.map((entry) => JSON.stringify(entry)).join("\n") + "\n",
+      `${spawn.entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`,
     );
   }
   return dir;
@@ -107,7 +107,7 @@ describe("run", () => {
 
   it("without --match lists every spawn, in the order they started", () => {
     const { lines } = invoke([session([...SPAWNS].reverse())]);
-    expect(lines.slice(1).map((line) => line.split(/\s{2,}/)[0] + "|" + line.split(/\s{2,}/).at(-1))).toStrictEqual([
+    expect(lines.slice(1).map((line) => `${line.split(/\s{2,}/)[0]}|${line.split(/\s{2,}/).at(-1)}`)).toStrictEqual([
       "scout|Other scout",
       "implementer-fast|After implementer-fast",
       "implementer-fast|After implementer-fast again",

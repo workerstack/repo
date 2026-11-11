@@ -44,9 +44,11 @@ function blockEnd(source: string, at: number): number {
   let depth = 1;
   let index = at + COMMENT_MARK_LENGTH;
   while (index < source.length && depth > 0) {
-    if (source.startsWith(BLOCK_OPEN, index)) depth += 1;
-    else if (source.startsWith(BLOCK_CLOSE, index)) depth -= 1;
-    else {
+    if (source.startsWith(BLOCK_OPEN, index)) {
+      depth += 1;
+    } else if (source.startsWith(BLOCK_CLOSE, index)) {
+      depth -= 1;
+    } else {
       index += 1;
       continue;
     }

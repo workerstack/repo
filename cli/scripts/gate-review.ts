@@ -137,9 +137,9 @@ function parentWriteDeny(call: GateCall): GuardResult {
   const targets = writeTargets(call);
   stampReviewPlan(call, targets);
   const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
-  if (review && targets.some((t) => isOutsideRootTmp(t, roots.root))) {
+  if (review && targets.some((t) => isOutsideRootTmp(t, roots.root)))
     return { reason: reviewDenyReason(review), type: "deny" };
-  }
+
   return undefined;
 }
 
@@ -153,9 +153,9 @@ export function reviewGuard(call: GateCall): GuardResult {
   try {
     const { tool, patch, text, sub, sid, parent } = call;
     const implementer = isImplementer(sub);
-    if (implementer && tool.kind === "bash" && GIT_STAGE.test(text)) {
+    if (implementer && tool.kind === "bash" && GIT_STAGE.test(text))
       return { reason: REASON_IMPLEMENTER_GIT, type: "deny" };
-    }
+
     if (tool.kind !== "write" && !patch) return undefined;
     if (implementer) return implementerWriteDeny(call);
     return sid && parent ? parentWriteDeny(call) : undefined;

@@ -25,7 +25,7 @@ function plantSibling(board: string): string {
   const row = { effort: "medium", model: "fable 51", provider: "claude", time: "2026-10-09T12:00:00Z" };
   const work = { cwd: "/home/user/x", session: "other", work: "sibling live work" };
   const owner = { boot: readBootId(), pid: live.pid, start: live.start };
-  fs.writeFileSync(path.join(boardDir, "claude-other.json"), JSON.stringify({ ...row, ...work, ...owner }) + "\n");
+  fs.writeFileSync(path.join(boardDir, "claude-other.json"), `${JSON.stringify({ ...row, ...work, ...owner })}\n`);
   return boardDir;
 }
 

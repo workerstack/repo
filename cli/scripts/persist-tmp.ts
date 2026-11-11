@@ -120,11 +120,11 @@ function nextTmpSerial(dir: string): number {
   return Math.max(1, ...serials.map((n) => n + 1));
 }
 
-export interface PersistTmpOptions {
+export type PersistTmpOptions = {
   workspaceRoot?: string;
   content?: unknown;
   created?: string;
-}
+};
 
 export type PersistTmpResult = PersistResult<{
   path: string;

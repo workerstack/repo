@@ -33,19 +33,19 @@ it(
     const root = consumer({
       "tsconfig.json": TSCONFIG,
       ...srcConfig(),
-      "src/size.ts": "export const size = (s: string): number => s.length;\n",
+      "src/size.ts": "export function size(s: string): number {\n  return s.length;\n}\n",
       // Unannotated too, which the loose tsconfig.json it is checked under allows.
       "src/size.test.ts":
-        'import { expect, it } from "vitest";\nimport { size } from "./size.ts";\n\nexport const twice = (s: string) => size(s + s);\n\nit("sizes", () => {\n  expect(twice("ab")).toBe(4);\n});\n',
+        'import { expect, it } from "vitest";\nimport { size } from "./size.ts";\n\nexport function twice(s: string) {\n  return size(s + s);\n}\n\nit("sizes", () => {\n  expect(twice("ab")).toBe(4);\n});\n',
     });
-    write(root, { "src/size.ts": "export const size = (s: string) => s.length;\n" });
+    write(root, { "src/size.ts": "export function size(s: string) {\n  return s.length;\n}\n" });
     const result = await turn(root, []);
     expect(result.out).toBe(
       "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.src.json) · 1 related test passed\n",
     );
     // tsc ends its lines with the platform's EOL.
     expect(result.err.replaceAll("\r\n", "\n")).toBe(
-      "src/size.ts(1,21): error TS9007: Function must have an explicit return type annotation with --isolatedDeclarations.\n",
+      "src/size.ts(1,17): error TS9007: Function must have an explicit return type annotation with --isolatedDeclarations.\n",
     );
     expect(result.code).toBe(1);
   },

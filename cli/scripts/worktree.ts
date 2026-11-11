@@ -38,9 +38,8 @@ function quiet(): HookResult {
 
 /** Delete `branch` when it is a merged `wt/*` branch. */
 function dropMergedBranch(root: string, branch: string | null): void {
-  if (branch && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch)) {
+  if (branch && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch))
     git(root, ["branch", "-D", branch]);
-  }
 }
 
 /** WorktreeRemove: force-remove the worktree at `worktree_path`, then its branch once merged. */
@@ -63,9 +62,9 @@ function removeHooked(data: HookInput | null): HookResult {
 export function worktreeHook(data: HookInput | null): HookResult {
   const event = data && data.hook_event_name;
   try {
-    if (event === CREATE_EVENT) {
+    if (event === CREATE_EVENT)
       return { code: 0, stderr: "", stdout: `${addWorktree(resolveRoots(data).root, data?.name).path}\n` };
-    }
+
     return event === REMOVE_EVENT ? removeHooked(data) : quiet();
   } catch (e) {
     return { code: 1, stderr: errorMessage(e), stdout: "" };

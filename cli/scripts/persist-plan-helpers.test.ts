@@ -31,9 +31,8 @@ describe("plan name and serial helpers", () => {
   it("finds the next serial in a missing dir, skipping stray names", () => {
     const ws = tmpWs();
     expect(nextSerial(path.join(ws, "none"))).toBe(1);
-    for (const name of ["notes.txt", "readme.md", "7-a.md", "03-b.md"]) {
-      fs.writeFileSync(path.join(ws, name), "");
-    }
+    for (const name of ["notes.txt", "readme.md", "7-a.md", "03-b.md"]) fs.writeFileSync(path.join(ws, name), "");
+
     expect(nextSerial(ws)).toBe(8);
   });
 

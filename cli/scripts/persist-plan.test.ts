@@ -69,7 +69,7 @@ describe("persistPlan stamps and gitignore", () => {
     const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
     const m = text.match(/^created: (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)$/m);
     expect(m).toBeTruthy();
-    expect(r.filename).toBe(`1-add-tmp-ignore-${String(m?.[1]).replace(/[-:]/g, "")}.md`);
+    expect(r.filename).toBe(`1-add-tmp-ignore-${String(m?.[1]).replaceAll(/[-:]/g, "")}.md`);
   });
 });
 
@@ -107,7 +107,7 @@ describe("persistPlan commit subject", () => {
   it("keeps a valid commit subject and allows a plan with no commit", () => {
     const ws = tmpWs();
     const good = persistPlan({
-      content: "commit: feat(plans): record the subject\n" + VALID_PLAN,
+      content: `commit: feat(plans): record the subject\n${VALID_PLAN}`,
       created,
       workspaceRoot: ws,
     });
@@ -129,17 +129,17 @@ describe("persistPlan other commit subjects", () => {
       "docs: document docs/roadmaps",
       "docs: note plans, roadmaps: split",
     ]) {
-      const ok = persistPlan({ content: `commit: ${subject}\n` + VALID_PLAN, created, workspaceRoot: ws });
+      const ok = persistPlan({ content: `commit: ${subject}\n${VALID_PLAN}`, created, workspaceRoot: ws });
       expect(ok.ok, subject).toBe(true);
     }
   });
 
   it("rejects a bad subject", () => {
     const ws = tmpWs();
-    const bad = persistPlan({ content: "commit: Feat: Nope.\n" + VALID_PLAN, created, workspaceRoot: ws });
+    const bad = persistPlan({ content: `commit: Feat: Nope.\n${VALID_PLAN}`, created, workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain("commit");
-    const period = persistPlan({ content: "commit: feat: nope.\n" + VALID_PLAN, created, workspaceRoot: ws });
+    const period = persistPlan({ content: `commit: feat: nope.\n${VALID_PLAN}`, created, workspaceRoot: ws });
     expect(period.ok).toBe(false);
     expect(period.errors).toContain("commit");
   });

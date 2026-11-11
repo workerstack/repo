@@ -28,9 +28,7 @@ const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { force: true, recursive: true });
-  }
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string) {
@@ -39,13 +37,13 @@ function tmp(prefix: string) {
   return dir;
 }
 
-interface PackageJson {
+type PackageJson = {
   name?: string;
   version?: string;
   scripts: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies: Record<string, string>;
-}
+};
 
 function readPkg(dir: string): PackageJson {
   return JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")) as PackageJson;
@@ -362,11 +360,12 @@ describe("workerstack.config.ts", () => {
         root: dest,
         workspace: { manifest: {}, packages: [], root: dest },
       };
-      for (const output of standards(ctx, []).outputs)
+      for (const output of standards(ctx, []).outputs) {
         if (output.kind === "file") {
           fs.mkdirSync(path.dirname(path.join(dest, output.path)), { recursive: true });
           fs.writeFileSync(path.join(dest, output.path), output.content);
         }
+      }
       const pkg = Bun.resolveSync("oxfmt/package.json", import.meta.dirname);
       const bin = path.join(
         path.dirname(pkg),
@@ -411,9 +410,8 @@ describe("init", () => {
       ["bun", ["install"]],
       ["bun", ["repo", "yolo"]],
     ]);
-    for (const call of exec.mock.calls.filter((c) => c[0] === "bun")) {
+    for (const call of exec.mock.calls.filter((c) => c[0] === "bun"))
       expect(call[2]).toEqual({ cwd: dest, stdio: "inherit" });
-    }
   });
 
   it("outside a git work tree runs git init in the dest before the install and says so", () => {

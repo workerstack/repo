@@ -19,7 +19,7 @@ function globRe(glob: string): RegExp {
   const body = String(glob)
     .replace(/\/+$/, "")
     .split("**")
-    .map((part) => part.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^/]*"))
+    .map((part) => part.replaceAll(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*"))
     .join(".*");
   return new RegExp(`^${body}(/|$)`);
 }
@@ -43,9 +43,7 @@ function manifestsOf(files: string[]): Map<string, string> {
   const manifests = new Map<string, string>();
   for (const f of files) {
     const base = path.posix.basename(f);
-    if (MANIFESTS.includes(base) && !manifests.has(path.posix.dirname(f))) {
-      manifests.set(path.posix.dirname(f), base);
-    }
+    if (MANIFESTS.includes(base) && !manifests.has(path.posix.dirname(f))) manifests.set(path.posix.dirname(f), base);
   }
   return manifests;
 }
@@ -121,9 +119,8 @@ export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[
   const leaves = kids.filter((k) => k.kids.size === 0 && k.pkg == null).map((k) => k.name);
   const folded = leaves.length >= o.foldAt ? new Set(leaves) : new Set<string>();
   const rows: Row[] = [];
-  if (folded.size) {
-    rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
-  }
+  if (folded.size) rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
+
   for (const kid of kids) {
     if (folded.has(kid.name)) continue;
     // Collapse pass-through dirs only; a dir with its own code stays a row.
@@ -167,7 +164,7 @@ function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
   const lines: string[] = [];
   const walk = (list: Row[], depth: number, pkgDepth: number): void => {
     for (const row of list) {
-      const rel = row.pkg != null ? 0 : pkgDepth;
+      const rel = row.pkg == null ? pkgDepth : 0;
       const hidden = row.kids.length > 0 && rel >= cap && !holdsPackage(row);
       lines.push(rowText(row, depth, { base, more: hidden }));
       if (!hidden) walk(row.kids, depth + 1, rel + 1);

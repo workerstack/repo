@@ -93,9 +93,9 @@ it(
       pol: { command: "p" },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).toBe('// ours\n{ "allow": ["pol"] }\n');
-    for (const gone of [".repo/mcp.json", ".repo/rules/agents.md", "packages/web/.repo/rules/style.md"]) {
+    for (const gone of [".repo/mcp.json", ".repo/rules/agents.md", "packages/web/.repo/rules/style.md"])
       expect(exists(root, gone), gone).toBe(false);
-    }
+
     expect(exists(root, "packages/web/CLAUDE.md")).toBe(false);
     for (const rel of ["AGENTS.md", ".mcp.json"]) expectMode(root, rel, 0o644);
     expect(lines(read(root, ".gitignore"))).not.toContain("AGENTS.md");

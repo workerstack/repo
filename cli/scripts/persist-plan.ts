@@ -38,13 +38,13 @@ export type PlanResult = PersistResult<{
   filename: string;
 }>;
 
-interface SaveInput {
+type SaveInput = {
   workspaceRoot?: string;
   checkout?: string;
   content?: unknown;
   source?: string;
   created?: string;
-}
+};
 
 const refuse = (errors: string[]): PlanResult => ({ error: errors.join("; "), errors, ok: false });
 
@@ -93,7 +93,7 @@ export function preparePlanUpdate({
 /** The `source:` line: what the caller sent, else the plan name, else the Goal squeezed to one line, else the slug. */
 function sourceOf({ source, planName, body, slug }: { source?: string; planName: string; body: string; slug: string }) {
   const goal = GOAL_SECTION_RE.exec(stripFrontmatter(body));
-  const fromGoal = goal ? captured(goal, 1).trim().replace(/\s+/g, " ") : slug;
+  const fromGoal = goal ? captured(goal, 1).trim().replaceAll(/\s+/g, " ") : slug;
   return String(source || planName || fromGoal).slice(0, SOURCE_MAX);
 }
 
@@ -106,12 +106,12 @@ function allocate(plansDir: string, slug: string, created: string | undefined) {
   return { createdAt, dest: path.join(plansDir, filename), filename, serial };
 }
 
-interface Parts {
+type Parts = {
   serial: number;
   slug: string;
   createdAt: string;
   planName: string;
-}
+};
 
 /** The plan text a save writes: frontmatter on the body, with the keys read from what the caller sent. */
 function draftPlan(raw: string, source: string | undefined, { serial, slug, createdAt, planName }: Parts) {
@@ -142,9 +142,9 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   if (fs.existsSync(dest)) return { error: "serial collision", ok: false };
   const full = draftPlan(raw, input.source, { createdAt, planName, serial, slug });
   const errors = validatePlan(filename, full);
-  for (const r of uncitedLessons(lessonRoots, full)) {
+  for (const r of uncitedLessons(lessonRoots, full))
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
-  }
+
   if (errors.length) return refuse(errors);
   fs.writeFileSync(dest, full);
   return { content: full, filename, ok: true, path: `${PLAN_DIR}/${filename}`, serial, slug };

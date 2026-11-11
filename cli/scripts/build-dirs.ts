@@ -7,11 +7,11 @@ import { childEnv } from "../env.ts";
 import { BUILD_DIRS, LIST_BUFFER, MODULES_DIR, TSBUILDINFO_SUFFIX } from "./build-dirs.constants.ts";
 
 /** One path to remove: a build dir, a tsbuildinfo file or a node_modules dir, with the bytes under it. */
-export interface BuildItem {
+export type BuildItem = {
   path: string;
   kind: "dir" | "info" | "modules";
   bytes: number;
-}
+};
 
 /** What `planBuild` gives back: the items, or why git could not list the ignored paths. */
 export type BuildPlan = { ok: true; items: BuildItem[] } | { ok: false; error: string };
@@ -56,10 +56,10 @@ export function planBuild(root: string, deps: boolean, extra: readonly string[])
 }
 
 /** What `removeBuild` did: the items gone (or that would go), and the ones the delete failed on with its code. */
-export interface BuildResult {
+export type BuildResult = {
   done: BuildItem[];
   skipped: { path: string; code: string | undefined }[];
-}
+};
 
 /** Removes each item unless `dryRun`; a failure is recorded and the rest go on. */
 export function removeBuild(items: readonly BuildItem[], dryRun: boolean, rm: typeof fs.rmSync): BuildResult {

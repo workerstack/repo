@@ -18,13 +18,12 @@ import type { ApiOpts, FetchFn, FetchResult, ProviderOpts, SpeakCfg } from "./sp
 export function formatHttpError(status: unknown, body: unknown, provider: string): string {
   const n = Number(status);
   const raw = String(body || "");
-  if (/missing_permissions/i.test(raw)) {
+  if (/missing_permissions/i.test(raw))
     return `${provider} key present but missing permission (${n || status}). setup: ${SETUP}`;
-  }
+
   const auth = n === UNAUTHORIZED || n === FORBIDDEN || /unauthorized|invalid.?api.?key|authentication/i.test(raw);
-  if (auth) {
-    return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
-  }
+  if (auth) return `${provider} key missing or rejected (${n || status}). setup: ${SETUP}`;
+
   return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 
@@ -87,9 +86,9 @@ async function elevenWhoami(cfg: SpeakCfg, fetchFn: FetchFn | undefined): Promis
     const tier = isRecord(user.subscription) && user.subscription.tier ? String(user.subscription.tier) : "-";
     return `elevenlabs  ${email}  tier=${tier}`;
   } catch (e) {
-    if (/missing permission/i.test(errMessage(e))) {
+    if (/missing permission/i.test(errMessage(e)))
       return "elevenlabs  ok (scoped key; whoami needs user_read). voices/say still work";
-    }
+
     throw e;
   }
 }

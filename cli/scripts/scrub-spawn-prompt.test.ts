@@ -22,11 +22,11 @@ const root = path.resolve(here, "..", "..");
 // Plans live in the main checkout's .tmp even when this suite runs in a worktree.
 const plansRoot = resolveRoots({ workspaceRoot: root }).root;
 
-interface HookOut {
+type HookOut = {
   decision?: string;
   reason?: string;
   hookSpecificOutput?: { hookEventName?: string; updatedInput?: unknown };
-}
+};
 
 function parseOut(stdout: string): HookOut {
   const v: unknown = JSON.parse(stdout);
@@ -280,9 +280,7 @@ describe("capSpawnPrompt transcript + truncate", () => {
       toolInput: { prompt: raw, subagent_type: "scout" },
       workspaceRoot: root,
     });
-    if (payload && payload.decision) {
-      expect(payload.decision).not.toBe("block");
-    }
+    if (payload && payload.decision) expect(payload.decision).not.toBe("block");
   });
 });
 

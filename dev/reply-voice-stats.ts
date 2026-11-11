@@ -26,12 +26,12 @@ type Stats = { replies: number; coldReplies: number; arrows: number; keyValues: 
 
 const prose = (text: string): string => text.replace(FENCED_CODE_RE, " ").replace(INLINE_CODE_RE, " ");
 
-interface TranscriptRecord {
+type TranscriptRecord = {
   type?: unknown;
   isSidechain?: unknown;
   timestamp?: unknown;
   message?: { content?: unknown } | null;
-}
+};
 
 function isObject(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -115,8 +115,9 @@ export function run(argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main)
+if (import.meta.main) {
   process.exitCode = run(process.argv.slice(ARGV_START), {
     err: (line) => process.stderr.write(`${line}\n`),
     out: (line) => process.stdout.write(`${line}\n`),
   });
+}

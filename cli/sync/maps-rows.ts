@@ -9,19 +9,19 @@ import { stockRoot } from "./stock.ts";
 const isYamlObject = (v: unknown): v is YamlObject => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** A reference file: its path and its path relative to the root. */
-interface RefFile {
+type RefFile = {
   abs: string;
   rel: string;
-}
+};
 
 function oneLine(s: unknown): string {
-  const t = String(s).replace(/\s+/g, " ").trim();
+  const t = String(s).replaceAll(/\s+/g, " ").trim();
   if (t.length <= DESC_MAX) return t;
   return `${t.slice(0, Math.max(0, DESC_MAX - 1)).trimEnd()}…`;
 }
 
 function cell(s: unknown): string {
-  return oneLine(s).replace(/\|/g, "\\|");
+  return oneLine(s).replaceAll("|", "\\|");
 }
 
 function mapRefs(parsed: YamlObject): string[] {
@@ -108,7 +108,7 @@ export function skillRow(root: string, dir: string): string {
   const { parsed, body } = parseMarkdown(raw);
   const name = parsed.name != null && parsed.name !== "" ? String(parsed.name) : dir;
   const descSrc = parsed.description != null && parsed.description !== "" ? parsed.description : firstSummary(body);
-  const commandPath = parsed.commandPath != null ? String(parsed.commandPath) : "";
+  const commandPath = parsed.commandPath == null ? "" : String(parsed.commandPath);
   const origin = isFile(path.join(stockRoot(root), STOCK_SKILLS_REL, dir, "SKILL.md")) ? "repo" : "local";
   const cells = [name, origin, descSrc, mapTask(parsed), commandPath, mapRefs(parsed).join(", ")];
   return `| ${cells.map(cell).join(" | ")} |`;

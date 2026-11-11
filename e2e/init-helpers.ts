@@ -7,7 +7,8 @@ import { expect } from "vitest";
 
 import { linkText } from "../dev/test-paths.ts";
 import { isRecord, isStringList, isStringMap } from "./json";
-import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
+import type { Sandbox } from "./sandbox";
+import { BROKEN_RUNTIME, type Run, tail } from "./sandbox";
 
 export function expectClean(sb: Sandbox, r: Run) {
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
@@ -124,8 +125,11 @@ export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): 
     const stat = fs.lstatSync(abs);
     if (stat.isSymbolicLink()) {
       if (keep(rel)) lines.push(`${rel} -> ${linkText(abs)}`);
-    } else if (stat.isDirectory()) lines.push(...hashes(root, keep, rel));
-    else if (keep(rel)) lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
+    } else if (stat.isDirectory()) {
+      lines.push(...hashes(root, keep, rel));
+    } else if (keep(rel)) {
+      lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
+    }
   }
   return lines;
 }

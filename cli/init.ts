@@ -121,14 +121,14 @@ export function samePath(a: string, b: string): boolean {
 }
 
 /** The slice of package.json init reads; other keys pass through. */
-interface PackageJson {
+type PackageJson = {
   name?: string;
   version?: string;
   scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   [key: string]: unknown;
-}
+};
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -165,9 +165,8 @@ export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson): 
     if (fromDev == null) devDeps[PACKAGE_NAME] = fromDep;
     if (Object.keys(deps).length === 0) delete destPkg.dependencies;
   }
-  if (devDeps[PACKAGE_NAME] == null && srcPkg?.name === PACKAGE_NAME && srcPkg.version) {
+  if (devDeps[PACKAGE_NAME] == null && srcPkg?.name === PACKAGE_NAME && srcPkg.version)
     devDeps[PACKAGE_NAME] = srcPkg.version;
-  }
 }
 
 /** The skill packs of a `--packs` list (comma separated, `none` or empty for no packs), once each in `SKILL_PACKS` order; an unknown name throws. */
@@ -178,9 +177,8 @@ export function parsePacksFlag(value: string): string[] {
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean);
-  for (const name of names) {
-    if (!SKILL_PACKS.some((pack) => pack === name)) throw new Error(`unknown pack ${name}`);
-  }
+  for (const name of names) if (!SKILL_PACKS.some((pack) => pack === name)) throw new Error(`unknown pack ${name}`);
+
   return SKILL_PACKS.filter((pack) => names.includes(pack));
 }
 
@@ -217,16 +215,15 @@ function defaultManifestKeys(pkg: PackageJson) {
 export function mergePackageJson(dest: string, pkgRoot: string): void {
   const destPath = path.join(dest, "package.json");
   let destPkg: PackageJson = {};
-  if (fs.existsSync(destPath)) {
-    destPkg = readJsonFile(destPath, isPackageJson);
-  }
+  if (fs.existsSync(destPath)) destPkg = readJsonFile(destPath, isPackageJson);
+
   if (destPkg.name === PACKAGE_NAME) return;
 
   const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), isPackageJson);
   const destScripts: Record<string, string> = { ...destPkg.scripts };
-  for (const [name, value] of Object.entries(destScripts)) {
+  for (const [name, value] of Object.entries(destScripts))
     if (OLD_DEFAULT_SCRIPTS[name]?.includes(value)) delete destScripts[name];
-  }
+
   const postinstall = destScripts.postinstall;
   if (postinstall == null) destScripts.postinstall = SYNC_POSTINSTALL;
   else if (!postinstall.includes("repo sync")) destScripts.postinstall = `${SYNC_POSTINSTALL} && ${postinstall}`;
@@ -253,7 +250,7 @@ function formatManifest(dest: string): void {
   }
 }
 
-export interface InitOptions {
+export type InitOptions = {
   pkgRoot?: string;
   execFileSync?: (cmd: string, args: string[], opts: import("node:child_process").ExecFileSyncOptions) => unknown;
   skipGlobals?: boolean;
@@ -262,7 +259,7 @@ export interface InitOptions {
   packs?: string[];
   /** Where init prints what it wrote; the process's stdout when omitted. */
   stdout?: (s: string) => void;
-}
+};
 
 /** Writes the package.json entries, the config and `.mcp.json` when missing, and runs `git init` outside a work tree. */
 function prepareDir(

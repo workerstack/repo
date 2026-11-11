@@ -48,11 +48,12 @@ export function applyCodex(roots: Roots): void {
   const session = sessionHooks(roots);
   if (session.length) cur.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
-  if (post)
+  if (post) {
     cur.PostToolUse = upsertGroups(
       cur.PostToolUse,
       post.map((g) => ({ hooks: g.hooks })),
     );
+  }
   saveJson(abs, liveHooks === null ? { ...live, ...cur } : { ...live, hooks: cur });
 }
 

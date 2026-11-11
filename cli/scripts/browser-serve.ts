@@ -60,7 +60,7 @@ function navigate(state: FakeCdpState, params: Rec): Rec {
 function resolveNode(_state: FakeCdpState, params: Rec): Rec {
   const id = params.backendNodeId;
   if (typeof id !== "number" || !KNOWN_NODES.has(id)) throw new Error(STALE);
-  return { object: { objectId: "oid-" + id } };
+  return { object: { objectId: `oid-${id}` } };
 }
 
 /** What the fake answers per CDP method; any other method gets `{}`. */

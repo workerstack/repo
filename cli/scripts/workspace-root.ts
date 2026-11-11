@@ -21,25 +21,25 @@ import type { HookInput } from "./hook-input.ts";
 /** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/` dir. */
 export const INSTALL_MARKER = "workerstack.config.ts";
 
-export interface GitFacts {
+export type GitFacts = {
   top: string;
   gitDir: string;
   commonDir: string;
-}
+};
 
 /** Root, checkout and cwd spellings for one hook or script call. */
-export interface Roots {
+export type Roots = {
   root: string;
   checkout: string;
   cwd: string;
-}
+};
 
-interface RootsContext {
+type RootsContext = {
   git: (dir: string) => GitFacts | null;
   p: typeof path;
   exists: (abs: string) => boolean;
   realpath: (abs: string, p?: typeof path) => string;
-}
+};
 
 const revParseMemo = new Map<string, GitFacts | null>();
 
@@ -63,10 +63,10 @@ export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync
 }
 
 /** The filesystem calls `canonicalPath` makes, replaceable by a test. */
-interface CanonicalEdges {
+type CanonicalEdges = {
   exists: (abs: string) => boolean;
   real: (abs: string) => string;
-}
+};
 
 const NATIVE_EDGES: CanonicalEdges = { exists: fs.existsSync, real: fs.realpathSync.native };
 

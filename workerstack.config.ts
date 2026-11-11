@@ -69,6 +69,11 @@ export default defineConfig({
         rules: ["repo/no-module-side-effects"],
       },
       {
+        files: ["e2e/setup.ts"],
+        reason: "vitest's ProvidedContext is augmented through declare module and only an interface merges",
+        rules: ["typescript/consistent-type-definitions"],
+      },
+      {
         files: ["dev/vitest-setup.ts"],
         reason: "the vitest setup file runs once per test process for its effects: it prepares the environment",
         rules: ["repo/env-in-config", "repo/no-module-side-effects"],

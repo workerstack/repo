@@ -58,8 +58,9 @@ export const HOOK_COMMANDS_KEY = ".claude/settings.json#commands";
 export function hookCommands(settings: unknown): string[] {
   const found: string[] = [];
   const walk = (value: unknown): void => {
-    if (Array.isArray(value)) value.forEach(walk);
-    else if (typeof value === "object" && value !== null) {
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+    } else if (typeof value === "object" && value !== null) {
       for (const [key, entry] of Object.entries(value)) {
         if (key === "command" && typeof entry === "string") found.push(entry);
         else walk(entry);

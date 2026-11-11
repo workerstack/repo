@@ -93,9 +93,9 @@ function report(shown: Shown, run: ReturnType<CargoRun>): Line {
   const exit = run.status ?? "by signal";
   if (exit === 0) return { ok: true, text: shown.ok };
   const { blocks, level } = failures(run.stdout, run.stderr);
-  if (exit !== EXIT_BREAKING || blocks.length === 0) {
+  if (exit !== EXIT_BREAKING || blocks.length === 0)
     return { ok: false, text: `cargo semver-checks exited ${exit} for ${shown.name}: ${firstError(run.stderr)}` };
-  }
+
   const lines = blocks.map(({ lint, what, items }) => {
     return `${shown.from} needs a ${level} release: ${items.join("; ")} (${lint}: ${what}); ${shown.advice}`;
   });

@@ -66,8 +66,8 @@ it("passes lines the parents miss, the root file, globs and other shell forms", 
     claude(r, "Write", { content: "*.log\n", file_path: path.join(r, "packages/a/.gitignore") }),
     claude(r, "Bash", { command: "cd packages/a && echo .tmp/ >> .gitignore" }),
   ];
-  for (const [i, out] of outs.entries()) {
+  for (const [i, out] of outs.entries())
     expect(JSON.stringify(out ?? null), String(i)).not.toMatch(/redundant \.gitignore/);
-  }
+
   expect(fs.existsSync(path.join(r, "packages/a/.gitignore"))).toBe(false);
 });

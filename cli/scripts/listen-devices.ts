@@ -34,9 +34,11 @@ function sectionDevices(lines: string[], section: Section): AudioDevice[] {
   const out: AudioDevice[] = [];
   let audio = false;
   for (const line of lines) {
-    if (section.starts(line)) audio = true;
-    else if (section.stops.test(line)) audio = false;
-    else if (audio) {
+    if (section.starts(line)) {
+      audio = true;
+    } else if (section.stops.test(line)) {
+      audio = false;
+    } else if (audio) {
       const d = section.device(line);
       if (d) out.push(d);
     }
@@ -68,12 +70,12 @@ type ListOpts = { platform: NodeJS.Platform; ffmpegBin: string | undefined; spaw
 
 export function listDevicesText({ platform, ffmpegBin, spawnSyncFn }: ListOpts): AudioDevice[] {
   const ffmpeg = needFfmpeg(ffmpegBin);
-  if (platform === "darwin") {
+  if (platform === "darwin")
     return parseDevices(both(spawnSyncFn(ffmpeg, [...AVFOUNDATION_LIST], { encoding: "utf8" })), "darwin");
-  }
-  if (platform === "win32") {
+
+  if (platform === "win32")
     return parseDevices(both(spawnSyncFn(ffmpeg, [...DSHOW_LIST], { encoding: "utf8" })), "win32");
-  }
+
   const pactl = spawnSyncFn("pactl", [...PACTL_LIST], { encoding: "utf8" });
   if (pactl.status === 0 && str(pactl.stdout)) return parseDevices(pactl.stdout, "linux");
   return parseDevices("", "linux");

@@ -111,9 +111,9 @@ export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceRes
 export function catalogsOf(manifest: PackageJson): Catalogs {
   const inner = Array.isArray(manifest.workspaces) ? undefined : manifest.workspaces;
   const named: Catalogs["named"] = {};
-  for (const source of [inner?.catalogs, manifest.catalogs]) {
+  for (const source of [inner?.catalogs, manifest.catalogs])
     for (const [name, entries] of Object.entries(source ?? {})) named[name] = { ...named[name], ...entries };
-  }
+
   return { default: { ...inner?.catalog, ...manifest.catalog }, named };
 }
 

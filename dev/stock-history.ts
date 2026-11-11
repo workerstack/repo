@@ -118,9 +118,9 @@ function settingsCommands(bytes: Buffer): string[] {
 
 function git(cwd: string, args: string[], input?: string): Buffer {
   const result = spawnSync("git", args, { cwd, input, maxBuffer: GIT_MAX_BUFFER });
-  if (result.status !== 0) {
+  if (result.status !== 0)
     throw new Error(`git ${args.slice(0, GIT_ERROR_WORDS).join(" ")} failed: ${result.stderr.toString().trim()}`);
-  }
+
   return result.stdout;
 }
 
@@ -169,8 +169,9 @@ function run(_argv: string[], io: Io): number {
   return 0;
 }
 
-if (import.meta.main)
+if (import.meta.main) {
   process.exitCode = run(process.argv.slice(ARGV_START), {
     err: (line) => process.stderr.write(`${line}\n`),
     out: (line) => process.stdout.write(`${line}\n`),
   });
+}

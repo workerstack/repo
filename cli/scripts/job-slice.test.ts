@@ -35,9 +35,8 @@ it("runSlice takes numbers as well as text, and no range for blanks or words", (
   expect(num.text).toBe("1 line.\n- stash:29 — row 29\n");
   const one = runSlice({ cwd: dir, from: "abc", root: dir, stash: "g7k", to: "2" });
   expect(one.text).toBe("2 lines.\n- stash:1 — row 1\n- stash:2 — row 2\n");
-  for (const range of [{}, { from: null, to: null }, { from: "", to: "" }, { from: "x", to: "y" }]) {
+  for (const range of [{}, { from: null, to: null }, { from: "", to: "" }, { from: "x", to: "y" }])
     expect(runSlice({ stash: "g7k", ...range, cwd: dir, root: dir }).text).toMatch(/^30 lines, 6 shown\. stash=/);
-  }
 });
 
 it("runSlice keeps only the lines that hold the filter", () => {

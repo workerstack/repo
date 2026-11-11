@@ -26,7 +26,7 @@ function run(files: Record<string, string>, vitest: Captured) {
     cwd: plant(files),
     packs: [],
     repo: () => OK,
-    stderr: () => undefined,
+    stderr: () => {},
     stdout: (s) => out.push(s),
   });
   return { calls, code, out: out.join("") };

@@ -31,35 +31,35 @@ import { isRecord } from "./hook-input.ts";
 
 type JsonObject = Record<string, unknown>;
 
-export interface EmitResult {
+export type EmitResult = {
   ok: boolean;
   check: boolean;
   error?: string;
   drift?: string[];
-}
+};
 
 /** The roots and mode of one emit; see `emitMcpPolicy`. */
-interface EmitOptions {
+type EmitOptions = {
   workspaceRoot?: string;
   sourceRoot?: string;
   consumerRoot?: string;
   check?: boolean;
   home?: string;
-}
+};
 
 /** One host file: the text on disk (null when missing), what it holds and what the policy wants there. */
-interface Host<D extends JsonObject = JsonObject> {
+type Host<D extends JsonObject = JsonObject> = {
   raw: string | null;
   disk: JsonObject;
   desired: D;
-}
+};
 
-interface Hosts {
+type Hosts = {
   grok: Host;
   claude: Host;
   codex: Host<JsonObject & { agents: JsonObject }>;
   agents: Host;
-}
+};
 
 function readText(abs: string): string | null {
   try {
@@ -86,7 +86,7 @@ function writeText(abs: string, text: string): void {
   fs.writeFileSync(abs, text);
 }
 
-const jsonOut = (obj: unknown): string => JSON.stringify(obj, null, JSON_INDENT) + "\n";
+const jsonOut = (obj: unknown): string => `${JSON.stringify(obj, null, JSON_INDENT)}\n`;
 
 /** The validated policy with the servers of the consumer's `.mcp.json`, or the error that stops the emit. */
 function policyOf(ws: string, opts: EmitOptions): { ok: true; policy: Policy } | { ok: false; error: string } {

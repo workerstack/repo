@@ -31,11 +31,9 @@ it("oxlintConfig refuses a skip of a rule the base turns off", () => {
 });
 
 it("oxlintConfig refuses a skip of a restriction rule, which no category the base runs lists", () => {
-  const skips = [{ files: ["src/a.ts"], reason: REASON, rules: ["unicorn/no-array-for-each"] }];
+  const skips = [{ files: ["src/a.ts"], reason: REASON, rules: ["eslint/no-plusplus"] }];
   expect(oxlintConfig(APP, skips)).toStrictEqual({
-    errors: [
-      'workerstack.config.ts: lint.skip[0].rules: "unicorn/no-array-for-each" is not a rule the generated config runs',
-    ],
+    errors: ['workerstack.config.ts: lint.skip[0].rules: "eslint/no-plusplus" is not a rule the generated config runs'],
     ok: false,
   });
 });

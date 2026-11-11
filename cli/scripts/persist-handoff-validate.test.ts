@@ -88,7 +88,7 @@ describe("validateHandoff frontmatter", () => {
   });
 
   it("reports each missing key", () => {
-    const text = saved.text.replace(/^(name|status|created|source):.*\n/gm, "");
+    const text = saved.text.replaceAll(/^(name|status|created|source):.*\n/gm, "");
     expect(errorsOf(text)).toStrictEqual(
       expect.arrayContaining(["missing name", "missing status", "missing created", "missing source"]),
     );
@@ -119,7 +119,7 @@ describe("validateHandoff quoted source", () => {
 
 describe("validateHandoff body", () => {
   it("returns the fence error with the earlier ones when a fence stays open", () => {
-    const errors = errorsOf(edit("status: open", "status: bogus") + "\n```md\n");
+    const errors = errorsOf(`${edit("status: open", "status: bogus")}\n\`\`\`md\n`);
     expect(errors).toContain("status");
     expect(errors.length).toBeGreaterThan(1);
     expect(errors).not.toContain("heading order");

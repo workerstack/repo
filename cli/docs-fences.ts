@@ -26,19 +26,23 @@ export function splitMarkdown(text: string): Markdown {
     const line = index + 1;
     if (open === null) {
       const opening = OPEN.exec(raw);
-      if (opening === null) prose.push({ line, text: raw });
-      else
+      if (opening === null) {
+        prose.push({ line, text: raw });
+      } else {
         open = {
           fence: { body: [], info: group(opening, SECOND_GROUP).trim(), start: line },
           ticks: group(opening, 1).length,
         };
+      }
       continue;
     }
     const closing = CLOSE.exec(raw);
     if (closing !== null && group(closing, 1).length >= open.ticks) {
       fences.push(open.fence);
       open = null;
-    } else open.fence.body.push(raw);
+    } else {
+      open.fence.body.push(raw);
+    }
   }
   if (open !== null) fences.push(open.fence);
   return { fences, prose };

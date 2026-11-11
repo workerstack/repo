@@ -11,15 +11,15 @@ export type Bins = {
 };
 
 /** One remembered snapshot ref. */
-export interface RefEntry {
+export type RefEntry = {
   role: string;
   name: string;
   backendNodeId: unknown;
   nodeId: unknown;
-}
+};
 
 /** The live browser session stored in session.json. */
-export interface Session {
+export type Session = {
   engine: Engine;
   pid?: number | undefined;
   port: number;
@@ -27,23 +27,23 @@ export interface Session {
   lastRefs: Record<string, RefEntry>;
   escalated: boolean;
   swapCount: number;
-}
+};
 
 /** What one `repo browser` call prints and exits with. */
-export interface BrowserResult {
+export type BrowserResult = {
   code: number;
   stdout: string;
   stderr: string;
-}
+};
 
 /** A CDP client on one websocket. */
-export interface Cdp {
+export type Cdp = {
   send(method: string, params?: Rec): Promise<Rec>;
   close(): void;
-}
+};
 
 /** What the fake CDP engine serves and records. */
-export interface FakeCdpState {
+export type FakeCdpState = {
   url: string;
   markdown: string;
   failProbe: boolean;
@@ -54,26 +54,26 @@ export interface FakeCdpState {
   replies?: Record<string, Rec | string>;
   /** Every CDP request the fake receives, in order. */
   calls?: { method: string; params: Rec }[];
-}
+};
 
 /** A running fake CDP engine. */
-export interface FakeCdp {
+export type FakeCdp = {
   port: number;
   close(): void;
   state: FakeCdpState;
-}
+};
 
 /** What every verb runs in: the root to find the session under, the env and platform, and the engines. */
-export interface Ctx {
+export type Ctx = {
   cwd: string;
   env: NodeJS.ProcessEnv;
   platform: NodeJS.Platform;
   bins: Bins;
   readyMs: number;
-}
+};
 
 /** What `runBrowser` takes; each field falls back to the process's own. */
-export interface RunOpts {
+export type RunOpts = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
@@ -81,16 +81,16 @@ export interface RunOpts {
   bins?: Bins;
   /** How long a launched engine gets to answer /json/version. */
   readyMs?: number;
-}
+};
 
 /** What `pickEngine` weighs. */
-export interface PickOpts {
+export type PickOpts = {
   platform?: NodeJS.Platform;
   verb?: string;
   url?: string;
   bins?: Partial<Bins> & Record<string, string | undefined>;
   forceChromium?: boolean;
-}
+};
 
 /** The engine `pickEngine` chose, or why none fits. */
 export type Picked = { engine: Engine; error?: undefined } | { engine: null; error: string };
@@ -99,16 +99,16 @@ export type Picked = { engine: Engine; error?: undefined } | { engine: null; err
 export type WsMessage = { type: "close" } | { type: "msg"; data: string };
 
 /** The messages a buffer held and the bytes left of a partial frame. */
-export interface WsDecoded {
+export type WsDecoded = {
   messages: WsMessage[];
   rest: Buffer;
-}
+};
 
 /** A snapshot: the page markdown and one line per ref. */
-export interface Snap {
+export type Snap = {
   markdown: string;
   lines: string[];
-}
+};
 
 /** A verb's handler. */
 export type Verb = (argv: string[], ctx: Ctx) => Promise<BrowserResult>;
@@ -117,9 +117,9 @@ export type Verb = (argv: string[], ctx: Ctx) => Promise<BrowserResult>;
 export type Act = (cdp: Cdp, objectId: unknown, text: string) => Promise<unknown>;
 
 /** A capture verb: the file it writes and the CDP call that renders it. */
-export interface Capture {
+export type Capture = {
   verb: string;
   file: string;
   method: string;
   params: Rec;
-}
+};

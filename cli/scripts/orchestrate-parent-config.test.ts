@@ -41,7 +41,7 @@ it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + User
   expect(ssot).not.toMatch(/"userPromptSubmit"/);
   expect(ssot).toMatch(/hook orchestrate-parent/);
   const jsonc = parseJson<{ hooks: Record<string, { command: string; timeout: number }[] | undefined> }>(
-    ssot.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, ""),
+    ssot.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/\/\/.*$/gm, ""),
   );
   expect(Object.keys(jsonc.hooks)).toStrictEqual(expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]));
   expect(Object.keys(jsonc.hooks)).not.toContain("userPromptSubmit");

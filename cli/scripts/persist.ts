@@ -39,7 +39,7 @@ function saveBody(save: Saver, argv: string[], io: HookIo): number {
     const result = save({ content: readAllText(io), workspaceRoot });
     if (!result.ok) return fail(result.error);
     const { serial, path: saved, filename } = result;
-    io.write(JSON.stringify({ absPath: path.resolve(workspaceRoot, saved), filename, path: saved, serial }) + "\n");
+    io.write(`${JSON.stringify({ absPath: path.resolve(workspaceRoot, saved), filename, path: saved, serial })}\n`);
     return 0;
   } catch (err) {
     return fail(err instanceof Error ? err.message : String(err));

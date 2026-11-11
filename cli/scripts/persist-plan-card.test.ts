@@ -26,7 +26,7 @@ describe("card format", () => {
   });
 
   it("denies a card line over 120 characters and keeps one at 120", () => {
-    const touch = (len: number) => "TOUCH  " + "x".repeat(len - "TOUCH  ".length);
+    const touch = (len: number) => `TOUCH  ${"x".repeat(len - "TOUCH  ".length)}`;
     const long = save(withCard(VALID_PLAN, [CARD[0], CARD[1], CARD[2], touch(121), CARD[4]]));
     expect(long.ok).toBe(false);
     expect(long.errors).toContain("card line 4 (TOUCH) is 121 characters; the limit is 120");

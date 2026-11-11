@@ -13,7 +13,7 @@ import { planClaudePlugins, planCursor, planGrok } from "./purge-plans.ts";
 const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 function writeText(abs: string, body: string): void {
-  const text = body.endsWith("\n") ? body : body + "\n";
+  const text = body.endsWith("\n") ? body : `${body}\n`;
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, text);
 }
@@ -58,20 +58,19 @@ export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
     if (!parsed.ok) {
-      process.stderr.write(parsed.error + "\n");
+      process.stderr.write(`${parsed.error}\n`);
       return 1;
     }
     const result = purgeGlobalMcps({ apply: parsed.apply, home: resolveHome() });
-    for (const row of result.report) {
-      process.stdout.write(row.line + "\n");
-    }
+    for (const row of result.report) process.stdout.write(`${row.line}\n`);
+
     if (!result.ok) {
-      process.stderr.write(result.error + "\n");
+      process.stderr.write(`${result.error}\n`);
       return 1;
     }
     return 0;
   } catch (err) {
-    process.stderr.write(errorText(err) + "\n");
+    process.stderr.write(`${errorText(err)}\n`);
     return 1;
   }
 }

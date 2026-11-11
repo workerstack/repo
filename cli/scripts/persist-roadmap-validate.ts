@@ -21,13 +21,13 @@ import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 import { parseStrategy } from "./strategy.ts";
 
 /** A saved roadmap's frontmatter and the text after it. */
-export interface Split {
+export type Split = {
   body: string;
   map: FrontmatterMap;
-}
+};
 
 /** A roadmap under validation. */
-interface Roadmap {
+type Roadmap = {
   filename: string;
   text: string;
   previous: string | null | undefined;
@@ -37,7 +37,7 @@ interface Roadmap {
   body: string;
   prev: Split | null;
   pointer: boolean;
-}
+};
 
 type HeadCheck = (r: Roadmap) => string[];
 type SectionCheck = (r: Roadmap, sections: Sections) => string[];

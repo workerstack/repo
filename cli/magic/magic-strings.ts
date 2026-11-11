@@ -34,11 +34,12 @@ function isUntyped(type: ts.Type): boolean {
 
 /** Each side of a comparison with the side it is compared to. */
 function comparedPairs(node: ts.Node): [ts.Expression, ts.Expression][] {
-  if (ts.isBinaryExpression(node) && EQUALITY.includes(node.operatorToken.kind))
+  if (ts.isBinaryExpression(node) && EQUALITY.includes(node.operatorToken.kind)) {
     return [
       [node.left, node.right],
       [node.right, node.left],
     ];
+  }
   return ts.isCaseClause(node) ? [[node.expression, node.parent.parent.expression]] : [];
 }
 

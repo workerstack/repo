@@ -42,9 +42,9 @@ export function stripInlineTranscripts(text: string): string {
   const first = s.match(/^\s*You are scout subagent\b[^.]*\.?\s*/);
   const prefix = first ? first[0] : "";
   let rest = first ? s.slice(first[0].length) : s;
-  rest = rest.replace(INLINE_TRANSCRIPT, " ");
-  rest = rest.replace(EXTRA_YOU_ARE, " ");
-  return (prefix + rest).replace(/[ \t]{2,}/g, " ").trim();
+  rest = rest.replaceAll(INLINE_TRANSCRIPT, " ");
+  rest = rest.replaceAll(EXTRA_YOU_ARE, " ");
+  return (prefix + rest).replaceAll(/[ \t]{2,}/g, " ").trim();
 }
 
 export function capSpawnPrompt(prompt: string): string {
@@ -56,9 +56,7 @@ export function capSpawnPrompt(prompt: string): string {
 }
 
 export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknown> | null {
-  if (!isRecord(toolInput)) {
-    return null;
-  }
+  if (!isRecord(toolInput)) return null;
 
   const next: Record<string, unknown> = Object.assign({}, toolInput);
   let changed = false;
@@ -81,9 +79,9 @@ export function processHookPayload(data: HookInput | null | undefined): SpawnAns
   const updated = rewriteSpawnToolInput(toolInput);
   // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
   const prompt = updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);
-  if (typeof prompt === "string" && prompt.length > MAX_PROMPT_CHARS) {
+  if (typeof prompt === "string" && prompt.length > MAX_PROMPT_CHARS)
     return answerDeny(data, spawnCapReason(resolveRoots(data).root));
-  }
+
   return updated ? answerRewrite(data, updated) : null;
 }
 

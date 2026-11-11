@@ -48,8 +48,9 @@ export function pairUp(marks: readonly Marker[]): Found {
     if (!mark.close) {
       if (open !== null) found.opens.push(open);
       open = mark;
-    } else if (open === null) found.closes.push(mark);
-    else {
+    } else if (open === null) {
+      found.closes.push(mark);
+    } else {
       found.pairs.push([open, mark]);
       open = null;
     }

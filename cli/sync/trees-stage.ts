@@ -30,9 +30,9 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 /** `over` onto `base`: objects merge key by key, lists append what they lack, anything else is replaced. */
 function mergeSettings(base: unknown, over: unknown): unknown {
-  if (Array.isArray(base) && Array.isArray(over)) {
+  if (Array.isArray(base) && Array.isArray(over))
     return [...base, ...over.filter((item) => !base.some((have) => isDeepStrictEqual(have, item)))];
-  }
+
   if (isObject(base) && isObject(over)) {
     const merged: Record<string, unknown> = { ...base };
     for (const [key, value] of Object.entries(over))
@@ -63,7 +63,7 @@ function staticFiles(stock: string): Map<string, string> {
       const text = fs.readFileSync(path.join(stock, from, rel), "utf8");
       files.set(
         `${to}/${rel}`,
-        text.replace(
+        text.replaceAll(
           /("command": )("repo hook [\w-]+")/g,
           (_: string, key: string, value: string) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value)))),
         ),
@@ -95,14 +95,11 @@ function emitSteps(ctx: SyncContext, stage: Stage): void {
   const { hosts } = ctx.config.agents;
   const roots = { sourceRoot: stage.stock, workspaceRoot: stage.dir };
   must("mcp policy", emitMcpPolicy({ ...roots, consumerRoot: ctx.root }));
-  if (hosts.includes("claude")) {
-    must("scout tools", emitAgentShellTools(roots));
-  }
+  if (hosts.includes("claude")) must("scout tools", emitAgentShellTools(roots));
+
   must("hooks", applyUnion({ ...roots, consumerRoot: ctx.root }));
 
-  if (hosts.includes("claude")) {
-    mergeOverlay(ctx, path.join(stage.dir, CLAUDE_SETTINGS_REL), CLAUDE_OVERLAY_REL);
-  }
+  if (hosts.includes("claude")) mergeOverlay(ctx, path.join(stage.dir, CLAUDE_SETTINGS_REL), CLAUDE_OVERLAY_REL);
 }
 
 /** Fills the stage: rules, subagents and hooks, the emit steps, the claude overlay and the static files; returns its files. */
