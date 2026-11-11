@@ -9,7 +9,8 @@ import { isPaintHost } from "./browser-snap.ts";
 import { freePort, waitVersion } from "./browser-wait.ts";
 import { CHROMIUM_VERBS, HOST, PROFILE_DIR, TASKKILL_MS } from "./browser.constants.ts";
 import type { Bins, Ctx, Engine, PickOpts, Picked, Session } from "./browser.types.ts";
-import { CHROMIUM_BINS, LIGHTPANDA_REPO, installHints, whichBin } from "./doctor.ts";
+import { installHints, whichBin } from "./doctor-which.ts";
+import { CHROMIUM_BINS, LIGHTPANDA_REPO } from "./doctor.constants.ts";
 
 /** What a verb prints when no engine can run. */
 export const NO_ENGINE: string = `no browser engine; install lightpanda (${LIGHTPANDA_REPO}) or Chromium`;

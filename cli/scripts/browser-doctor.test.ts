@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { lookupBins, pickEngine } from "./browser-engine.ts";
-import { whichBin } from "./doctor.ts";
+import { whichBin } from "./doctor-which.ts";
 import { cleanBrowser, envFor, run, runOn, tmp, writeFake } from "./fixtures/browser-kit.ts";
 
 afterEach(cleanBrowser);

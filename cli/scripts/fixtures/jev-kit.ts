@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, vi } from "vitest";
-import { MODEL, createJevRunner } from "../jev.ts";
-import type { JevFetch, JevResponse, JevRunOpts } from "../jev.ts";
+import { vi } from "vitest";
+import { tempDir, useTempDirs } from "../../sync/fixtures/temp-dirs.ts";
+import { createJevRunner } from "../create-jev-runner.ts";
+import { MODEL } from "../jev.constants.ts";
+import type { JevFetch, JevInit, JevResponse, JevRunOpts } from "../jev.types.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
-});
+useTempDirs();
 
 /** A fresh planted directory, removed after the case. */
 export function plantDir(prefix = "jev-"): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  dirs.push(dir);
-  return dir;
+  return tempDir(prefix);
 }
 
 export const KEY = "ts_live_test_key";
@@ -94,4 +90,54 @@ export function captureStdout(): string[] {
   const writes: string[] = [];
   vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown) => writes.push(String(chunk)) > 0);
   return writes;
+}
+
+/** One choice question about which endpoint the app should call. */
+export const ENDPOINT_QUESTIONS = JSON.stringify({
+  endpoint: {
+    criteria: { other: "a different host", typesafe: "vendor host" },
+    instructions: "Which endpoint should the app call?",
+    type: "choice",
+  },
+});
+
+/** An answer picking `typesafe` with this confidence, charged 120 input tokens. */
+export function choiceBody(confidence = 0.91) {
+  return {
+    answers: {
+      endpoint: {
+        choice: "typesafe",
+        confidence,
+        probabilities: { other: 0.06, typesafe: 0.94 },
+        type: "choice",
+      },
+    },
+    model: MODEL,
+    usage: { input_tokens: 120, output_tokens: 4 },
+  };
+}
+
+export function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): JevResponse {
+  return {
+    headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
+    json: () => Promise.resolve(body),
+    status,
+  };
+}
+
+/** A fetch answering each call from `respond` (given the call's 1-based number), recording every call. */
+export function counted(respond: (n: number, url: string, init: JevInit) => JevResponse) {
+  const calls: { url: string; init: JevInit }[] = [];
+  const fetchImpl: JevFetch = (url, init) => {
+    calls.push({ init, url });
+    return Promise.resolve(respond(calls.length, url, init));
+  };
+  return { calls, fetchImpl };
+}
+
+/** A home whose ledger for today already holds these counts. */
+export function homeAtCap(prefix: string, counts: { input_tokens: number; requests: number }): string {
+  const home = plantDir(prefix);
+  plantLedger(home, `${JSON.stringify({ day: new Date().toISOString().slice(0, 10), ...counts })}\n`);
+  return home;
 }

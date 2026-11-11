@@ -1,18 +1,14 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
 import { readEnv } from "../env.ts";
-import { bare, cleanSetup, plant, writeAt } from "./fixtures/setup-kit.ts";
+import { bare, cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
-import {
-  browserEngineStatus,
-  firstMissing,
-  formatStatus,
-  lookupChromium,
-  menuOptions,
-  targetStatuses,
-} from "./setup.ts";
+import { mergeSpeakJson } from "./setup-files.ts";
+import { firstMissing, formatStatus, menuOptions } from "./setup-menu.ts";
+import { browserEngineStatus, lookupChromium, targetStatuses } from "./setup-status.ts";
 
 afterEach(cleanSetup);
 
@@ -102,4 +98,26 @@ it("firstMissing picks the first target that is not ok, else the first target", 
   expect(firstMissing({ listen: { extra: "", ok: false }, speak: ok }, ["speak", "listen"])).toBe("listen");
   expect(firstMissing(null, ["jev"])).toBe("jev");
   expect(firstMissing({}, [])).toBe("browser");
+});
+
+it("marks speak and workspace from ~/.workerstack files", async () => {
+  const home = plant("setup-st-");
+  mergeSpeakJson(home, { openai: { apiKey: "sk_x" } });
+  fs.mkdirSync(path.join(home, ".workerstack", "workspace", "default"), { recursive: true });
+  fs.writeFileSync(
+    path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"),
+    JSON.stringify(desktopOauth),
+  );
+  const st = await targetStatuses({ env: {}, home, pathEnv: "/none", platform: "linux", whichFn: () => "" });
+  expect(st.speak.ok).toBe(true);
+  expect(st["google-workspace"].ok).toBe(true);
+  expect(st.listen.ok).toBe(true);
+  expect(st.listen.extra).toMatch(/openai/);
+  expect(st.browser.ok).toBe(false);
+  expect(formatStatus(st)).toMatch(/speak  ok/);
+  expect(formatStatus(st)).toMatch(/browser  missing/);
+  expect(firstMissing(st)).toBe("browser");
+  const labels = menuOptions(st).map((o) => o.label);
+  expect(labels[0]).toMatch(/ok/);
+  expect(labels[3]).toMatch(/missing/);
 });

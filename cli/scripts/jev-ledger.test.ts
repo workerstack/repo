@@ -13,7 +13,8 @@ import {
   reply,
   scripted,
 } from "./fixtures/jev-kit.ts";
-import { MAX_INPUT_TOKENS_PER_DAY, MAX_REQUESTS_PER_DAY, estimateTokens } from "./jev.ts";
+import { estimateTokens } from "./jev-key.ts";
+import { MAX_INPUT_TOKENS_PER_DAY, MAX_REQUESTS_PER_DAY } from "./jev.constants.ts";
 
 afterEach(() => vi.restoreAllMocks());
 

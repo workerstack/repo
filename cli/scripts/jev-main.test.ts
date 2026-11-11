@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { createJevRunner } from "./create-jev-runner.ts";
 import {
   KEY,
   QUESTIONS,
@@ -14,8 +15,8 @@ import {
   reply,
   scripted,
 } from "./fixtures/jev-kit.ts";
-import { createJevRunner, main, runJev } from "./jev.ts";
-import type { JevRunOpts } from "./jev.ts";
+import { main, runJev } from "./jev.ts";
+import type { JevRunOpts } from "./jev.types.ts";
 
 afterEach(() => vi.restoreAllMocks());
 

@@ -12,7 +12,7 @@ import {
   scripted,
   sleeper,
 } from "./fixtures/jev-kit.ts";
-import { MAX_REQUESTS_PER_DAY } from "./jev.ts";
+import { MAX_REQUESTS_PER_DAY } from "./jev.constants.ts";
 
 const retry = (status: number, header: Record<string, string> | undefined) =>
   scripted(reply(status, null, header), reply(200, answerBody()));

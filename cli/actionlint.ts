@@ -32,7 +32,7 @@ import {
 import { findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import { type Captured } from "./scripts/lint.ts";
-import { stateHome } from "./scripts/setup.ts";
+import { stateHome } from "./scripts/setup-files.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 
 /** What `repo check` prints of actionlint: problem lines that fail it. */

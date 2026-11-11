@@ -1,7 +1,8 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 import { captureIo, cleanSetup, plant, spyStd } from "./fixtures/setup-kit.ts";
-import { setupBrowser } from "./setup.ts";
+import { setupBrowser } from "./setup-browser.ts";
+import { targetStatuses } from "./setup-status.ts";
 
 afterEach(cleanSetup);
 
@@ -52,4 +53,56 @@ it("setupBrowser with no context reads the process PATH and prints to stdout", a
   const r = await setupBrowser();
   expect(r.ok).toBe(false);
   expect(std.out.join("")).toContain("lightpanda missing");
+});
+
+it("prints install hints when engines are missing", async () => {
+  const io = captureIo();
+  const r = await setupBrowser({ io, pathEnv: "/none", platform: "linux", whichFn: () => "" });
+  expect(r.ok).toBe(false);
+  expect(io.logs.join("\n")).toMatch(/lightpanda missing/);
+  expect(io.logs.join("\n")).toMatch(/chromium missing/);
+  expect(io.logs.join("\n")).toMatch(/\.tmp\/repo\/browser/);
+});
+
+it("chromium-only on linux is not done; advises Lightpanda", async () => {
+  const io = captureIo();
+  const r = await setupBrowser({
+    io,
+    pathEnv: "/none",
+    platform: "linux",
+    whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
+  });
+  expect(r.ok).toBe(false);
+  expect(r.chromium).toBe("/home/ecomet/bin/chromium");
+  expect(io.logs.join("\n")).toMatch(/Install Lightpanda as well/);
+  const st = await targetStatuses({
+    env: {},
+    home: plant("setup-br-st-"),
+    pathEnv: "/none",
+    platform: "linux",
+    whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
+  });
+  expect(st.browser.ok).toBe(false);
+  expect(st.browser.extra).toMatch(/need lightpanda/);
+});
+
+it("re-checks PATH after install confirm", async () => {
+  let n = 0;
+  const io = { ...captureIo(), confirm: () => Promise.resolve(true) };
+  const r = await setupBrowser({
+    interactive: true,
+    io,
+    pathEnv: "/none",
+    platform: "linux",
+    whichFn: (name: string) => {
+      if (name === "lightpanda") {
+        n += 1;
+        return n > 1 ? "/usr/bin/lightpanda" : "";
+      }
+      return "";
+    },
+  });
+  expect(r.lightpanda).toBe("/usr/bin/lightpanda");
+  expect(io.logs.join("\n")).toMatch(/lightpanda ok/);
+  expect(io.logs.join("\n")).toMatch(/chromium still missing/);
 });

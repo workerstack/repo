@@ -2,14 +2,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { vi } from "vitest";
-import type { SetupIo } from "../setup.ts";
+import { tempDir, useTempDirs } from "../../sync/fixtures/temp-dirs.ts";
+import type { SetupIo } from "../setup.types.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 
 /** A planted dir for one case. `home` also stubs HOME and USERPROFILE and os.homedir() answers it, so no default reaches the real home. */
 export function plant(prefix: string, home = false): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  dirs.push(dir);
+  const dir = tempDir(prefix);
   if (home) {
     vi.stubEnv("HOME", dir);
     vi.stubEnv("USERPROFILE", dir);
@@ -18,9 +18,8 @@ export function plant(prefix: string, home = false): string {
   return dir;
 }
 
-/** Removes every planted dir and restores stubbed env and spies. Call from afterEach. */
+/** Restores stubbed env and spies. Call from afterEach. */
 export function cleanSetup(): void {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
 }
@@ -54,6 +53,11 @@ export function writeAt(p: string, body: string, mode = 0o644): string {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, body, { mode });
   return p;
+}
+
+/** A JSON file setup wrote, read as objects of strings. */
+export function readJsonAt(p: string): Record<string, Record<string, string> | undefined> {
+  return JSON.parse(fs.readFileSync(p, "utf8")) as Record<string, Record<string, string> | undefined>;
 }
 
 export function readSpeakJson(home: string): Record<string, Record<string, string>> {

@@ -1,28 +1,18 @@
-import fs from "node:fs";
 import os from "node:os";
-import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { globalsRow, jevDoctorStatus, mapsRow, speakDoctorStatus, workspaceDoctorStatus } from "./doctor.ts";
+import { globalsRow, mapsRow } from "./doctor-rows.ts";
+import { jevDoctorStatus, speakDoctorStatus, workspaceDoctorStatus } from "./doctor-status.ts";
+import { put, realTmp } from "./fixtures/doctor-kit.ts";
 
-const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
-function tmp() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "doc-status-")));
-  dirs.push(dir);
-  return dir;
-}
-
-function put(root: string, rel: string, body: string) {
-  const file = path.join(root, rel);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, body);
+function tmp(): string {
+  return realTmp("doc-status-");
 }
 
 /** A home the status functions read through `os.homedir`, with the env keys they look at cleared. */

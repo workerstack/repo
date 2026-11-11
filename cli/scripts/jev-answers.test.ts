@@ -1,8 +1,9 @@
 import { afterEach, expect, it, vi } from "vitest";
 
+import { createJevRunner } from "./create-jev-runner.ts";
 import { KEY, NOW, QUESTIONS, answerBody, go, plantDir, reply, scripted } from "./fixtures/jev-kit.ts";
 import { isRecord } from "./hook-input.ts";
-import { MAX_QUESTIONS, MAX_STATE_CHARS, MODEL, createJevRunner } from "./jev.ts";
+import { MAX_QUESTIONS, MAX_STATE_CHARS, MODEL } from "./jev.constants.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 

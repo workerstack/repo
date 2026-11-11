@@ -1,7 +1,6 @@
-import fs from "node:fs";
-
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   callAt,
   freshToken,
@@ -14,17 +13,17 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
-import { createFile, main, setAccount } from "./google-workspace.ts";
+import { accountContext } from "./google-workspace-account.ts";
+import { createFile } from "./google-workspace-files.ts";
+import { main } from "./google-workspace.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 
 beforeEach(() => {
-  writeJson(storePath(plantHome(dirs, "ws-create-")), freshToken());
+  writeJson(storePath(plantHome("ws-create-")), freshToken());
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-  setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -72,8 +71,8 @@ it("create: names an untitled file after its kind", async () => {
 
 it("create: uploads a sheet's csv and a doc's body as multipart", async () => {
   const calls = stubFetch(() => jsonRes({ id: "x", name: "n", webViewLink: "l" }));
-  await createFile({ csv: "a,b", kind: "sheet" });
-  await createFile({ body: "hello", kind: "doc", title: "Memo" });
+  await createFile(accountContext(), { csv: "a,b", kind: "sheet" });
+  await createFile(accountContext(), { body: "hello", kind: "doc", title: "Memo" });
   expect(String(callAt(calls, 0).init?.body)).toContain("text/csv");
   expect(String(callAt(calls, 1).init?.body)).toContain("hello");
   expect(String(callAt(calls, 1).init?.body)).toContain('"name":"Memo"');

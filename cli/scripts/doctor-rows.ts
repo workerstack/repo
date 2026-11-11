@@ -1,0 +1,70 @@
+/** One doctor row's layout, and the `globals` and `maps` rows, which read the package and the checkout. */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { INDEX_REL } from "../sync/maps.constants.ts";
+import { sectionBody } from "../sync/maps.ts";
+import { isSelf } from "../sync/stock.ts";
+import { GLOBALS_MANIFEST_REL, MAPS_SECTIONS, ROW_PAD } from "./doctor.constants.ts";
+
+export function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+export function row(name: string, status: string, extra: string = ""): string {
+  const a = String(name).padEnd(ROW_PAD);
+  const b = String(status).padEnd(ROW_PAD);
+  const c = extra ? String(extra).trim() : "";
+  return c ? `${a} ${b} ${c}` : `${a} ${b}`;
+}
+
+/** The package's own root, two levels above `cli/scripts/`: where the stock globals live. */
+export function packageRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+}
+
+/**
+ * One `globals` row from checkGlobals: ok, the first drift line, or the check error. Null when the
+ * repo ships no manifest. check-globals needs smol-toml, which setup.ts (it imports the doctor modules)
+ * must run without, so it loads here on demand instead of at import.
+ */
+export async function globalsRow(
+  cwd: string | undefined,
+  home: string | undefined,
+  sourceRoot: string = packageRoot(),
+): Promise<string | null> {
+  if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
+  let mod: typeof import("./check-globals.ts");
+  try {
+    mod = await import("./check-globals.ts");
+  } catch (err) {
+    return row("globals", "unavailable", `${errorText(err).split("\n")[0]}; run bun install`);
+  }
+  const r = mod.checkGlobals({
+    sourceRoot,
+    ...(home === undefined ? {} : { home }),
+    ...(cwd === undefined ? {} : { workspaceRoot: cwd }),
+  });
+  if (r.ok) return row("globals", "ok");
+  const first = r.drift?.[0]; // drift is only set when non-empty
+  return row("globals", first ? mod.driftLine(first) : (r.error /* a failed check sets drift or error */ as string));
+}
+
+/**
+ * The `maps` row: null outside `@workerstack/repo`; otherwise ok when `references/INDEX.md` has both generated
+ * marker pairs.
+ */
+export function mapsRow(root: string): { line: string; ok: boolean } | null {
+  if (!isSelf(root)) return null;
+  const fix = "run bun repo sync";
+  let text: string;
+  try {
+    text = fs.readFileSync(path.join(root, INDEX_REL), "utf8");
+  } catch {
+    return { line: row("maps", "missing", `${INDEX_REL} is missing; ${fix}`), ok: false };
+  }
+  const absent = MAPS_SECTIONS.find((name) => sectionBody(text, name) == null);
+  if (absent) return { line: row("maps", "missing", `${INDEX_REL} has no repo:${absent} section; ${fix}`), ok: false };
+  return { line: row("maps", "ok", `${INDEX_REL} ${MAPS_SECTIONS.map((n) => `repo:${n}`).join(", ")}`), ok: true };
+}

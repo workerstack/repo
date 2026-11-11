@@ -4,8 +4,8 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { bare, captureIo, cleanSetup, plant, readSpeakJson, spyStd } from "./fixtures/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
-import { setupListen } from "./setup.ts";
-import type { SetupIo } from "./setup.ts";
+import { setupListen } from "./setup-listen.ts";
+import type { SetupIo } from "./setup.types.ts";
 
 afterEach(cleanSetup);
 
@@ -92,4 +92,56 @@ it("setupListen reports stt=none when whisper exists without a model and no key"
   const io = captureIo();
   await setupListen({ flags: { "skip-download": "1" }, home, io, platform: "linux", ...withWhisper });
   expect(io.logs.at(-1)).toBe("stt=none");
+});
+
+it("openai fallback writes speak.json and does not echo the key", async () => {
+  const home = plant("setup-listen-");
+  const io = captureIo();
+  const flags = { "openai-key": "sk_listen", "skip-download": "1" };
+  const r = await setupListen({ env: {}, flags, home, io, pathEnv: "/none", platform: "linux", whichFn: () => "" });
+  expect(r.stt?.kind).toBe("openai");
+  const j = readSpeakJson(home);
+  expect(j.openai?.apiKey).toBe("sk_listen");
+  expect(io.logs.join("\n")).toMatch(/stt=openai/);
+  expect(io.logs.join("\n")).not.toContain("sk_listen");
+  expect(io.logs.join("\n")).toMatch(/ffmpeg missing/);
+});
+
+it("re-checks PATH after install confirm", async () => {
+  const home = plant("setup-listen-re-");
+  const seen = { ffmpeg: 0 };
+  const io = { ...captureIo(), confirm: () => Promise.resolve(true) };
+  await setupListen({
+    env: {},
+    flags: { "openai-key": "sk_re", "skip-download": "1" },
+    home,
+    interactive: true,
+    io,
+    pathEnv: "/none",
+    platform: "linux",
+    whichFn: (name: string) => {
+      if (name === "ffmpeg") {
+        seen.ffmpeg += 1;
+        return seen.ffmpeg > 1 ? "/usr/bin/ffmpeg" : "";
+      }
+      return "";
+    },
+  });
+  expect(seen.ffmpeg).toBeGreaterThan(1);
+  expect(io.logs.join("\n")).toMatch(/ffmpeg ok/);
+});
+
+it("non-interactive without local STT or key fails", async () => {
+  const home = plant("setup-listen-miss-");
+  await expect(
+    setupListen({
+      env: {},
+      flags: { "skip-download": "1" },
+      home,
+      io: captureIo(),
+      pathEnv: "/none",
+      platform: "linux",
+      whichFn: () => "",
+    }),
+  ).rejects.toThrow(/whisper-cli or --openai-key/);
 });

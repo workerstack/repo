@@ -4,7 +4,9 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
-import { loadOAuthInput, normalizeTarget, parseArgv, parseDesktopOAuth, setupTargets } from "./setup.ts";
+import { normalizeTarget, parseArgv } from "./setup-argv.ts";
+import { loadOAuthInput, parseDesktopOAuth } from "./setup-oauth.ts";
+import { setupTargets } from "./setup-status.ts";
 
 afterEach(cleanSetup);
 
@@ -56,4 +58,25 @@ it("loadOAuthInput rejects a directory", () => {
   const dir = plant("setup-oauth-dir-");
   fs.mkdirSync(path.join(dir, "d.json"));
   expect(() => loadOAuthInput(path.join(dir, "d.json"))).toThrow(/not found/);
+});
+
+it("reads target and key flags", () => {
+  expect(parseArgv(["speak", "--elevenlabs-key", "sk_el", "--skip-verify"])).toStrictEqual({
+    _: ["speak"],
+    flags: { "elevenlabs-key": "sk_el", "skip-verify": "1" },
+  });
+});
+
+it("reads --key=value", () => {
+  expect(parseArgv(["speak", "--openai-key=sk-oa"])).toStrictEqual({
+    _: ["speak"],
+    flags: { "openai-key": "sk-oa" },
+  });
+});
+
+it("aliases google targets", () => {
+  expect(normalizeTarget("gw")).toBe("google-workspace");
+  expect(normalizeTarget("google")).toBe("google-workspace");
+  expect(normalizeTarget("speak")).toBe("speak");
+  expect(normalizeTarget("nope")).toBe("");
 });
