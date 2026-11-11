@@ -13,8 +13,22 @@ export const INTERNAL_FAULT = (reference: string): string =>
 export const UNKNOWN_FAULT = "here, so what it exposes goes unchecked: write it as a plain export";
 /** Words a doc may use without adding anything beyond the name. */
 export const STOPWORDS: readonly string[] = [
-  ...["a", "an", "the", "of", "for", "to", "this", "that", "is", "are"],
-  ...["value", "option", "options", "returns", "type", "property"],
+  "a",
+  "an",
+  "the",
+  "of",
+  "for",
+  "to",
+  "this",
+  "that",
+  "is",
+  "are",
+  "value",
+  "option",
+  "options",
+  "returns",
+  "type",
+  "property",
 ];
 /** A reference to this stack's plans, slices, roadmaps or decisions, which a consumer cannot read. */
 export const INTERNAL: RegExp = /\b(?:[Pp]lan|[Ss]lice|[Rr]oadmap) \d+\b|\bD\d+\b/;
@@ -28,11 +42,11 @@ export const SIGNATURES: Readonly<Record<string, string>> = {
 };
 /** How an `unknown` form from the walk reads in a message. */
 export const FORMS: Readonly<Record<string, string>> = {
-  TSExportAssignment: "`export =`",
-  TSModuleDeclaration: "a namespace",
-  TSImportEqualsDeclaration: "an `import x = require()`",
-  ObjectPattern: "a destructured export",
   ArrayPattern: "a destructured export",
+  ObjectPattern: "a destructured export",
+  TSExportAssignment: "`export =`",
+  TSImportEqualsDeclaration: "an `import x = require()`",
+  TSModuleDeclaration: "a namespace",
 };
 /** Node types that are a named member of a class, interface, type literal or enum. */
 export const MEMBERS: readonly string[] = [
@@ -51,22 +65,22 @@ export const ARITHMETIC: readonly string[] = ["BinaryExpression", "Parenthesized
 export const KIND = { constructor: "constructor", getter: "get", setter: "set" } as const;
 /** The ESTree node types the rule reads. */
 export const NODE_TYPES = {
+  accessorProperty: "AccessorProperty",
   arrow: "ArrowFunctionExpression",
+  asExpression: "TSAsExpression",
   binary: "BinaryExpression",
   block: "Block",
   classBody: "ClassBody",
   conditional: "TSConditionalType",
   emptyBody: "TSEmptyBodyFunctionExpression",
-  identifier: "Identifier",
   functionDeclaration: "FunctionDeclaration",
   functionExpression: "FunctionExpression",
+  identifier: "Identifier",
   literal: "Literal",
   method: "MethodDefinition",
   parameterProperty: "TSParameterProperty",
+  propertyDefinition: "PropertyDefinition",
   satisfies: "TSSatisfiesExpression",
-  asExpression: "TSAsExpression",
   signature: "TSDeclareFunction",
   template: "TemplateLiteral",
-  accessorProperty: "AccessorProperty",
-  propertyDefinition: "PropertyDefinition",
 } as const;

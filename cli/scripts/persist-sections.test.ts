@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   capErrors,
   cardErrors,
@@ -116,8 +117,8 @@ describe("capErrors", () => {
   it("stops counting at the mistakes log and skips matching lines outside fences", () => {
     expect(capErrors(`${text(100)}\n## Previous mistakes\n${text(50)}`, { fresh: true })).toStrictEqual([]);
     const skipped = `${text(3)}\n  Location: a\n\`\`\`\n  Location: b\n\`\`\``;
-    expect(capErrors(skipped, { fresh: true, cap: 6, fix: "trim", skip: /^\s+Location:/ })).toStrictEqual([]);
-    expect(capErrors(skipped, { fresh: true, cap: 5, fix: "trim", skip: /^\s+Location:/ })).toStrictEqual([
+    expect(capErrors(skipped, { cap: 6, fix: "trim", fresh: true, skip: /^\s+Location:/ })).toStrictEqual([]);
+    expect(capErrors(skipped, { cap: 5, fix: "trim", fresh: true, skip: /^\s+Location:/ })).toStrictEqual([
       "6 lines above ## Previous mistakes, the cap is 5; trim",
     ]);
   });

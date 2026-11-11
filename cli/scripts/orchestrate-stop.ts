@@ -1,18 +1,8 @@
+import { readEnv } from "../env.ts";
+import { otherLines, recordHook } from "./board.ts";
 /** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
 import { pushHold } from "./ci-push-gate.ts";
 import type { HookInput } from "./hook-input.ts";
-import { otherLines, recordHook } from "./board.ts";
-import {
-  APPROVAL_BLOCK_STAMP,
-  ASK_STOP_REASON,
-  AWAY_STOP_REASON,
-  END_TURN,
-  MAX_STOP,
-  PUSH_BLOCK_STAMP,
-  STOP_BLOCK_STAMP,
-  TURN_START_STAMP,
-} from "./orchestrate.constants.ts";
-import type { HookResult } from "./orchestrate.types.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
 import { interceptNeed, isStopActive } from "./orchestrate-intercept.ts";
 import { applySessionGateSlash, effectiveModeOf, effectiveSessionContext } from "./orchestrate-mode.ts";
@@ -29,7 +19,17 @@ import {
   payloadAssistantMessage,
 } from "./orchestrate-transcript.ts";
 import { writeGitAsked, writeSessionReceipt } from "./orchestrate-writes.ts";
-import { readEnv } from "../env.ts";
+import {
+  APPROVAL_BLOCK_STAMP,
+  ASK_STOP_REASON,
+  AWAY_STOP_REASON,
+  END_TURN,
+  MAX_STOP,
+  PUSH_BLOCK_STAMP,
+  STOP_BLOCK_STAMP,
+  TURN_START_STAMP,
+} from "./orchestrate.constants.ts";
+import type { HookResult } from "./orchestrate.types.ts";
 
 // The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
 function cappedStopBlock(data: HookInput, reason: string): HookResult {
@@ -117,5 +117,5 @@ export function userPromptSubmit(data: HookInput): HookResult {
   }
   applySessionGateSlash(data, prompt);
   const ctx = [effectiveSessionContext(data), approval, boardLines(data)].filter(Boolean).join("\n");
-  return replyWith({ hookSpecificOutput: { hookEventName: "UserPromptSubmit", additionalContext: ctx } });
+  return replyWith({ hookSpecificOutput: { additionalContext: ctx, hookEventName: "UserPromptSubmit" } });
 }

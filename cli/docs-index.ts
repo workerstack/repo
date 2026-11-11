@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { SCOPED_SEGMENTS } from "./docs-fences.constants.ts";
 import { firstGroup, group, splitMarkdown } from "./docs-fences.ts";
 import {
@@ -64,7 +65,7 @@ export function listedFiles(index: IndexFile, exists: Exists): Listed[] {
           ? resolveFrom(indexPath, target)
           : path.posix.join(packageDirOf(indexPath), target.slice(at + own.length));
       if (resolved === indexPath || found.some((one) => one.path === resolved) || !exists(resolved)) continue;
-      found.push({ path: resolved, line });
+      found.push({ line, path: resolved });
     }
   }
   return found;
@@ -102,7 +103,7 @@ function installedPackage(resolved: string): { name: string; dir: string } {
     .split("/")
     .slice(0, rest.startsWith("@") ? SCOPED_SEGMENTS : 1)
     .join("/");
-  return { name, dir: `${resolved.slice(0, at)}${name}` };
+  return { dir: `${resolved.slice(0, at)}${name}`, name };
 }
 
 /** One finding per relative link in `text` (the contents of `file`) whose target does not exist. */

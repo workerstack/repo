@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { DRAFT_ROADMAP, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { CREATED, update } from "./fixtures/persist-roadmap-kit.ts";
@@ -14,7 +16,7 @@ const LOGS = (t: string) => t.replace("strip narrating comments.", "strip narrat
 describe("persistRoadmap", () => {
   it("persists a two-slice pointer draft with no Location at serial 1", () => {
     const ws = tmpWs();
-    const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created: CREATED });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.path).toBe(".tmp/repo/roadmaps/1-auth-program-20261025T180000Z.md");
@@ -27,7 +29,7 @@ describe("persistRoadmap", () => {
 
   it("rejects a one-slice roadmap", () => {
     const ws = tmpWs();
-    const r = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP.replace(SLICE_2, "") });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP.replace(SLICE_2, ""), workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
     expect(fs.existsSync(path.join(ws, ROADMAPS))).toBe(true);
@@ -38,12 +40,12 @@ describe("persistRoadmap", () => {
 describe("persistRoadmap and the ignore file", () => {
   it("never touches .gitignore", () => {
     const ws = tmpWs();
-    persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP });
+    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: ws });
     expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
     const kept = tmpWs();
     fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
-    persistRoadmap({ workspaceRoot: kept, content: DRAFT_ROADMAP });
-    persistRoadmap({ workspaceRoot: kept, content: DRAFT_ROADMAP });
+    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: kept });
+    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: kept });
     expect(read(path.join(kept, ".gitignore"))).toBe("node_modules\n");
   });
 });
@@ -51,7 +53,7 @@ describe("persistRoadmap and the ignore file", () => {
 describe("a rewrite of the same roadmap file", () => {
   it("keeps the serial when the same file is written again", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created: CREATED });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     expect(first.ok).toBe(true);
     const again = update(ws, path.join(ws, savedOk(first).path), LOGS(String(first.content)));
     expect(again.ok).toBe(true);
@@ -65,10 +67,10 @@ describe("a rewrite of the same roadmap file", () => {
 describe("prepareRoadmapUpdate", () => {
   it("validates a rewrite of a saved roadmap without writing it", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created: CREATED });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(first).path);
     const before = read(abs);
-    const r = prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content: LOGS(DRAFT_ROADMAP) });
+    const r = prepareRoadmapUpdate({ content: LOGS(DRAFT_ROADMAP), filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.path).toBe(first.path);
@@ -80,9 +82,9 @@ describe("prepareRoadmapUpdate", () => {
 
   it("denies a rewrite that breaks the heading order", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ workspaceRoot: ws, content: DRAFT_ROADMAP, created: CREATED });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(first).path);
     const content = DRAFT_ROADMAP.replace("## Order", "## Aim");
-    expect(prepareRoadmapUpdate({ workspaceRoot: ws, filePath: abs, content }).ok).toBe(false);
+    expect(prepareRoadmapUpdate({ content, filePath: abs, workspaceRoot: ws }).ok).toBe(false);
   });
 });

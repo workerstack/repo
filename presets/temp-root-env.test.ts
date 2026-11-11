@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { rootEnv, rootPath } from "./temp-root-env.ts";
 
 let dir = "";
@@ -15,7 +17,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("the run root's path", () => {
@@ -30,7 +32,7 @@ describe("the env test processes get", () => {
   it("is the root as every temp variable, and the real compile cache", () => {
     const root = rootPath();
     const cache = path.join(dir, "node-compile-cache");
-    expect(rootEnv()).toStrictEqual({ TMPDIR: root, TEMP: root, TMP: root, NODE_COMPILE_CACHE: cache });
+    expect(rootEnv()).toStrictEqual({ NODE_COMPILE_CACHE: cache, TEMP: root, TMP: root, TMPDIR: root });
   });
 
   it("keeps a compile cache the environment already names", () => {

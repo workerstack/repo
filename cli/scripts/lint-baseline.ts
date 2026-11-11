@@ -7,11 +7,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
-import { captureTool } from "./lint.ts";
 import { REPORT_START } from "./lint.constants.ts";
+import { captureTool } from "./lint.ts";
 
 export const BASELINE_PATH = ".repo/lint-baseline.json";
 /** File → rule → problem count; a file or rule left out counts 0. */
@@ -32,11 +34,11 @@ const baselineSchema = z.record(z.string(), z.record(z.string(), count, { error:
 const reportSchema = z.object({
   diagnostics: z.array(
     z.object({
-      message: z.string(),
       code: z.string().optional(),
-      severity: z.string(),
       filename: z.string(),
-      labels: z.array(z.object({ span: z.object({ line: z.number(), column: z.number() }) })).optional(),
+      labels: z.array(z.object({ span: z.object({ column: z.number(), line: z.number() }) })).optional(),
+      message: z.string(),
+      severity: z.string(),
     }),
   ),
 });
@@ -54,7 +56,7 @@ function overOf(baseline: Counts, actual: Counts, files: readonly string[]): Exc
     Object.keys(actual[file] ?? {}).flatMap((rule) => {
       const has = countOf(actual, file, rule);
       const allows = countOf(baseline, file, rule);
-      return has > allows ? [{ file, rule, has, allows }] : [];
+      return has > allows ? [{ allows, file, has, rule }] : [];
     }),
   );
 }
@@ -93,10 +95,10 @@ export function gate(
     );
     for (const rule of rules) {
       const [from, to] = [countOf(baseline, file, rule), countOf(next, file, rule)];
-      if (to < from) lowered.push({ file, rule, from, to });
+      if (to < from) lowered.push({ file, from, rule, to });
     }
   }
-  return { over: overOf(baseline, actual, files), next: normalized(next), lowered };
+  return { lowered, next: normalized(next), over: overOf(baseline, actual, files) };
 }
 
 /** `repo lint --baseline`: every entry lowered to its real count, a gone file dropped, a rule a file lacks seeded. */
@@ -120,7 +122,7 @@ function drift(baseline: Counts, actual: Counts, exists: (file: string) => boole
       .filter((rule) => countOf(actual, file, rule) < countOf(baseline, file, rule))
       .map((rule) => {
         const allows = countOf(baseline, file, rule);
-        return `${excessText({ file, rule, has: countOf(actual, file, rule), allows })}; ${LOWER} to lower it`;
+        return `${excessText({ allows, file, has: countOf(actual, file, rule), rule })}; ${LOWER} to lower it`;
       });
     return [...over, ...high];
   });
@@ -130,7 +132,7 @@ function drift(baseline: Counts, actual: Counts, exists: (file: string) => boole
 export function readBaseline(root: string): Result<Counts> {
   const file = path.join(root, BASELINE_PATH);
   if (!fs.existsSync(file)) return { ok: true, value: {} };
-  const fail = (lines: string[]): Result<Counts> => ({ ok: false, errors: lines.map((l) => `${BASELINE_PATH}: ${l}`) });
+  const fail = (lines: string[]): Result<Counts> => ({ errors: lines.map((l) => `${BASELINE_PATH}: ${l}`), ok: false });
   let raw: unknown;
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -169,7 +171,7 @@ export function lintReport(
   try {
     raw = JSON.parse(ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
   } catch {
-    return { ok: false, errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`] };
+    return { errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
   }
   const report = reportSchema.parse(raw);
   const diagnostics = report.diagnostics.map((d) => {
@@ -177,7 +179,7 @@ export function lintReport(
     const span = d.labels?.[0]?.span;
     // A diagnostic without a label is placed at its file alone.
     const at = [d.filename, span?.line, span?.column].filter((part) => part !== undefined).join(":");
-    return { file: d.filename, rule, line: `${at}: ${d.severity} ${rule}: ${d.message}` };
+    return { file: d.filename, line: `${at}: ${d.severity} ${rule}: ${d.message}`, rule };
   });
   return { ok: true, value: diagnostics };
 }
@@ -194,7 +196,7 @@ function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baselin
   if (!baseline.ok) return baseline;
   const report = lintReport(root, []);
   if (!report.ok) return report;
-  return { ok: true, value: { baseline: baseline.value, actual: countsOf([...report.value, ...scripts]) } };
+  return { ok: true, value: { actual: countsOf([...report.value, ...scripts]), baseline: baseline.value } };
 }
 
 /**

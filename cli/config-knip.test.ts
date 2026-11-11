@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { CONFIG_FILE, loadConfig } from "./config.ts";
 
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp repo root holding `body` as the default export of workerstack.config.ts. */
@@ -18,10 +20,10 @@ function repo(body: string): string {
   return root;
 }
 
-const refusal = (message: string) => ({ ok: false, errors: [`workerstack.config.ts: ${message}`] });
+const refusal = (message: string) => ({ errors: [`workerstack.config.ts: ${message}`], ok: false });
 
 it("resolves knip.ignore to none when the config omits knip", async () => {
-  expect(await loadConfig(repo("{}"))).toMatchObject({ ok: true, config: { knip: { ignore: [] } } });
+  expect(await loadConfig(repo("{}"))).toMatchObject({ config: { knip: { ignore: [] } }, ok: true });
 });
 
 it("resolves a file, a dependency and a binary ignore", async () => {
@@ -31,7 +33,6 @@ it("resolves a file, a dependency and a binary ignore", async () => {
     { binary: "tsc", reason: "run by a hook" },
   ] } }`;
   expect(await loadConfig(repo(body))).toMatchObject({
-    ok: true,
     config: {
       knip: {
         ignore: [
@@ -41,6 +42,7 @@ it("resolves a file, a dependency and a binary ignore", async () => {
         ],
       },
     },
+    ok: true,
   });
 });
 

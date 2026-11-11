@@ -1,5 +1,5 @@
-import { ONE } from "./github.constants.ts";
 import type { Gh, GhCall, GhFailure } from "./github-gh.ts";
+import { ONE } from "./github.constants.ts";
 import type { Current, Drift, Wanted } from "./github.types.ts";
 
 /** What a run changes: the settings it wanted, the ones it found, and the drift between them. */
@@ -21,9 +21,9 @@ function rulesetWrites({ slug, wanted, current, drifts }: Plan): Write[] {
     .map((want): Write => {
       const found = current.rulesets.find((ruleset) => ruleset.name === want.name);
       if (found === undefined) {
-        return { call: { method: "POST", path: base, body: want }, part: `ruleset ${want.name} created` };
+        return { call: { body: want, method: "POST", path: base }, part: `ruleset ${want.name} created` };
       }
-      return { call: { method: "PUT", path: `${base}/${found.id}`, body: want }, part: `ruleset ${want.name} updated` };
+      return { call: { body: want, method: "PUT", path: `${base}/${found.id}` }, part: `ruleset ${want.name} updated` };
     });
 }
 
@@ -34,11 +34,11 @@ function metadataWrites({ slug, drifts }: Plan): Write[] {
   const writes: Write[] = [];
   if (texts.length > 0) {
     const body = Object.fromEntries(texts.map((drift) => [drift.area, drift.value]));
-    writes.push({ call: { method: "PATCH", path: `repos/${slug}`, body } });
+    writes.push({ call: { body, method: "PATCH", path: `repos/${slug}` } });
   }
   if (Array.isArray(topics)) {
     done.push(noun(topics.length, "topic"));
-    writes.push({ call: { method: "PUT", path: `repos/${slug}/topics`, body: { names: topics } } });
+    writes.push({ call: { body: { names: topics }, method: "PUT", path: `repos/${slug}/topics` } });
   }
   const last = writes.pop();
   return last === undefined ? [] : [...writes, { ...last, part: `${joined(done)} set` }];

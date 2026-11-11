@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { main } from "./commit-msg.ts";
 import { git, removePlanted, tempDir } from "./fixtures/planted-repo.ts";
 import { plant, stage } from "./fixtures/red-proof-repo.ts";
@@ -9,7 +11,7 @@ import { plant, stage } from "./fixtures/red-proof-repo.ts";
 afterEach(removePlanted);
 
 const PLAIN = { "workerstack.config.ts": "export default {}\n" };
-const SRC = { "src/x.ts": "export const x = 1;\n", "src/x.test.ts": "t\n" };
+const SRC = { "src/x.test.ts": "t\n", "src/x.ts": "export const x = 1;\n" };
 const PRIVATE = { ...PLAIN, "package.json": { name: "p", private: true } };
 const MONO = {
   ...PLAIN,
@@ -24,9 +26,9 @@ async function hook(root: string, message: string, range?: string) {
   const file = path.join(tempDir(), "message");
   fs.writeFileSync(file, message);
   const err: string[] = [];
-  const redProof = () => ({ ok: true as const, line: "red-proof: ok" });
+  const redProof = () => ({ line: "red-proof: ok", ok: true as const });
   const argv = range === undefined ? [file] : ["--range", range];
-  const code = await main(argv, { cwd: root, stderr: (text) => err.push(text), redProof });
+  const code = await main(argv, { cwd: root, redProof, stderr: (text) => err.push(text) });
   return { code, stderr: err.join("") };
 }
 
@@ -53,7 +55,7 @@ describe("the commit-msg hook asks for a changelog entry", () => {
 
   it("in the public package that changed, by path", async () => {
     const root = plant(MONO);
-    stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n" });
+    stage(root, { "packages/pub/x.test.ts": "t\n", "packages/pub/x.ts": "x\n" });
     const got = await hook(root, "feat(pub): add x\n");
     expect(got).toStrictEqual({ code: 1, stderr: refusal("a feat", "packages/pub/CHANGELOG.md") });
   });
@@ -62,7 +64,7 @@ describe("the commit-msg hook asks for a changelog entry", () => {
 describe("the commit-msg hook lets a commit through", () => {
   it("once the package's CHANGELOG.md is staged", async () => {
     const root = plant(MONO);
-    stage(root, { "packages/pub/x.ts": "x\n", "packages/pub/x.test.ts": "t\n", "packages/pub/CHANGELOG.md": "# C\n" });
+    stage(root, { "packages/pub/CHANGELOG.md": "# C\n", "packages/pub/x.test.ts": "t\n", "packages/pub/x.ts": "x\n" });
     expect(await hook(root, "feat(pub): add x\n")).toStrictEqual({ code: 0, stderr: "red-proof: ok\n" });
   });
 

@@ -28,9 +28,9 @@ type Options = { command?: readonly string[]; timeoutMs?: number };
 function failureOf(code: number, stderr: string): GhFailure {
   const message = stderr.trim().split("\n")[0] || `gh exited with ${code}`;
   const status = HTTP_STATUS.exec(stderr)?.[1];
-  if (code === GH_AUTH_EXIT) return { ok: false, kind: "auth", message: "gh is not logged in (gh auth status)" };
-  if (status !== undefined) return { ok: false, kind: "http", status: Number(status), message };
-  return { ok: false, kind: "other", message };
+  if (code === GH_AUTH_EXIT) return { kind: "auth", message: "gh is not logged in (gh auth status)", ok: false };
+  if (status !== undefined) return { kind: "http", message, ok: false, status: Number(status) };
+  return { kind: "other", message, ok: false };
 }
 
 /**
@@ -45,10 +45,10 @@ export function ghRunner({ command = ["gh"], timeoutMs = GH_TIMEOUT_MS }: Option
     try {
       const stdin = body === undefined ? "ignore" : new Blob([JSON.stringify(body)]);
       const child = Bun.spawn([...command, "api", ...verb, path, ...input], {
+        signal,
+        stderr: "pipe",
         stdin,
         stdout: "pipe",
-        stderr: "pipe",
-        signal,
       });
       const [stdout, stderr, code] = await Promise.all([
         new Response(child.stdout).text(),
@@ -59,9 +59,9 @@ export function ghRunner({ command = ["gh"], timeoutMs = GH_TIMEOUT_MS }: Option
       return code === 0 ? { ok: true, stdout } : failureOf(code, stderr);
     } catch (error) {
       if (signal.aborted) {
-        return { ok: false, kind: "timeout", message: `gh did not answer within ${timeoutMs / MS_PER_SECOND}s` };
+        return { kind: "timeout", message: `gh did not answer within ${timeoutMs / MS_PER_SECOND}s`, ok: false };
       }
-      return { ok: false, kind: "missing", message: `gh is not installed (${String(error)})` };
+      return { kind: "missing", message: `gh is not installed (${String(error)})`, ok: false };
     }
   };
 }
@@ -73,11 +73,11 @@ export function skipReason(failure: GhFailure): string {
 }
 
 const HINTS: Record<GhFailure["kind"], string> = {
-  http: LOGIN_HINT,
   auth: LOGIN_HINT,
+  http: LOGIN_HINT,
   missing: INSTALL_HINT,
-  timeout: RETRY_HINT,
   other: RETRY_HINT,
+  timeout: RETRY_HINT,
 };
 
 /** The refusal `repo github` prints when a call fails: what failed on `slug` and what to do; `verb` is what it was doing. */

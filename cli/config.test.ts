@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   CONFIG_FILE,
   HOSTS,
@@ -22,7 +24,7 @@ const COMMIT = { maxChangedLines: 1000 };
 const LINT = { skip: [] };
 const KNIP = { ignore: [] };
 const CI = { checks: {} };
-const NIGHTLY = { shards: 1, secrets: [] };
+const NIGHTLY = { secrets: [], shards: 1 };
 const COVERAGE = {
   floors: "coverage-floors.json",
   knownFailures: "known-failures.json",
@@ -31,7 +33,7 @@ const COVERAGE = {
 };
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function tempDir(): string {
@@ -65,69 +67,69 @@ describe("loadConfig", () => {
     );
     linkPackage(root);
     expect(await loadConfig(root)).toEqual({
-      ok: true,
       config: {
-        packs: ["docs", "agents"],
         agents: AGENTS,
-        commit: COMMIT,
-        lint: LINT,
-        knip: KNIP,
         ci: CI,
+        commit: COMMIT,
         coverage: COVERAGE,
+        knip: KNIP,
+        lint: LINT,
         nightly: NIGHTLY,
+        packs: ["docs", "agents"],
         tdd: false,
       },
+      ok: true,
     });
   });
 
   it("keeps an empty pack list as declared", async () => {
     expect(await loadConfig(repo("export default { packs: [] }\n"))).toEqual({
-      ok: true,
       config: {
-        packs: [],
         agents: AGENTS,
-        commit: COMMIT,
-        lint: LINT,
-        knip: KNIP,
         ci: CI,
+        commit: COMMIT,
         coverage: COVERAGE,
+        knip: KNIP,
+        lint: LINT,
         nightly: NIGHTLY,
+        packs: [],
         tdd: false,
       },
+      ok: true,
     });
   });
 
   it("accepts the standards pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toEqual({
-      ok: true,
       config: {
-        packs: ["standards"],
         agents: AGENTS,
-        commit: COMMIT,
-        lint: LINT,
-        knip: KNIP,
         ci: CI,
+        commit: COMMIT,
         coverage: COVERAGE,
+        knip: KNIP,
+        lint: LINT,
         nightly: NIGHTLY,
+        packs: ["standards"],
         tdd: false,
       },
+      ok: true,
     });
   });
 
   it("defaults the packs to agents, standards and docs, with or without workspaces in package.json", async () => {
     const expected = {
-      ok: true,
       config: {
-        packs: ["agents", "standards", "docs"],
         agents: AGENTS,
-        commit: COMMIT,
-        lint: LINT,
-        knip: KNIP,
         ci: CI,
+        commit: COMMIT,
         coverage: COVERAGE,
+        knip: KNIP,
+        lint: LINT,
         nightly: NIGHTLY,
+        packs: ["agents", "standards", "docs"],
         tdd: false,
       },
+      ok: true,
     };
     expect(await loadConfig(repo("export default {}\n"))).toEqual(expected);
     expect(await loadConfig(repo("export default {}\n", { name: "fixture", workspaces: ["packages/*"] }))).toEqual(
@@ -138,34 +140,34 @@ describe("loadConfig", () => {
 
   it.each(["personal"])("rejects the removed pack %s", async (name) => {
     expect(await loadConfig(repo(`export default { packs: ["${name}"] }\n`))).toStrictEqual({
-      ok: false,
       errors: [
         `workerstack.config.ts: packs[0]: "${name}" is not a pack; use agents, standards, docs, release or workspace`,
       ],
+      ok: false,
     });
   });
 
   it("accepts the workspace pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["workspace"] }\n'))).toMatchObject({
-      ok: true,
       config: { packs: ["workspace"] },
+      ok: true,
     });
   });
 
   it("accepts the release pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["release"] }\n'))).toMatchObject({
-      ok: true,
       config: { packs: ["release"] },
+      ok: true,
     });
   });
 
   it.each(['["docs"]', "[]"])("rejects agents without the agents pack (packs %s)", async (list) => {
     expect(await loadConfig(repo(`export default { packs: ${list}, agents: { skills: ["listen"] } }\n`))).toStrictEqual(
       {
-        ok: false,
         errors: [
           'workerstack.config.ts: agents: set only with the agents pack; add "agents" to packs or delete agents',
         ],
+        ok: false,
       },
     );
   });
@@ -174,14 +176,14 @@ describe("loadConfig", () => {
     const limit = { commit: { maxChangedLines: 1500 } };
     expect(
       await loadConfig(repo('export default { packs: ["standards"], commit: { maxChangedLines: 1500 } }\n')),
-    ).toMatchObject({ ok: true, config: limit });
+    ).toMatchObject({ config: limit, ok: true });
     expect(await loadConfig(repo("export default { commit: { maxChangedLines: 1500 } }\n"))).toMatchObject({
-      ok: true,
       config: limit,
+      ok: true,
     });
     expect(await loadConfig(repo('export default { packs: ["standards"], commit: {} }\n'))).toMatchObject({
-      ok: true,
       config: { commit: COMMIT },
+      ok: true,
     });
   });
 
@@ -189,65 +191,65 @@ describe("loadConfig", () => {
     expect(
       await loadConfig(repo(`export default { packs: ${list}, commit: { maxChangedLines: 1500 } }\n`)),
     ).toStrictEqual({
-      ok: false,
       errors: [
         'workerstack.config.ts: commit: set only with the standards pack; add "standards" to packs or delete commit',
       ],
+      ok: false,
     });
   });
 
   it.each(["0", "-5", "10.5", '"1500"'])("rejects a size limit of %s", async (value) => {
     expect(await loadConfig(repo(`export default { commit: { maxChangedLines: ${value} } }\n`))).toStrictEqual({
-      ok: false,
       errors: ["workerstack.config.ts: commit.maxChangedLines: must be a whole number of lines above 0"],
+      ok: false,
     });
   });
 
   it("rejects an unknown key under commit, and a commit that is not an object", async () => {
     expect(await loadConfig(repo("export default { commit: { maxLines: 5 } }\n"))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: commit: unknown key "maxLines"'],
+      ok: false,
     });
     expect(await loadConfig(repo("export default { commit: 5 }\n"))).toStrictEqual({
-      ok: false,
       errors: ["workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }"],
+      ok: false,
     });
   });
 
   it("rejects an unknown key", async () => {
     expect(await loadConfig(repo("export default { pakcs: [] }\n"))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: unknown key "pakcs"'],
+      ok: false,
     });
   });
 
   it("rejects each unknown key alongside a valid one", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs"], a: 1, b: 2 }\n'))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: unknown key "a"', 'workerstack.config.ts: unknown key "b"'],
+      ok: false,
     });
   });
 
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toStrictEqual({
-      ok: false,
       errors: [
         'workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards, docs, release or workspace',
       ],
+      ok: false,
     });
   });
 
   it("rejects a pack listed twice", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "docs"] }\n'))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: packs: "docs" is listed twice'],
+      ok: false,
     });
   });
 
   it("counts a pack listed more than twice", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "agents", "docs", "docs"] }\n'))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: packs: "docs" is listed 3 times'],
+      ok: false,
     });
   });
 
@@ -282,17 +284,17 @@ describe("loadConfig", () => {
 console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const run = spawnSync(process.execPath, ["--no-install", "-e", script], { cwd: root, encoding: "utf8" });
     const installHint = `workerstack.config.ts: @workerstack/repo is not installed in ${root}; run \`bun install\` there`;
-    expect(JSON.parse(run.stdout)).toStrictEqual({ ok: false, errors: [installHint] });
+    expect(JSON.parse(run.stdout)).toStrictEqual({ errors: [installHint], ok: false });
     const missing = () =>
       Promise.reject(new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`));
-    expect(await loadConfig(root, missing)).toStrictEqual({ ok: false, errors: [installHint] });
+    expect(await loadConfig(root, missing)).toStrictEqual({ errors: [installHint], ok: false });
   });
 
   it("keeps the import's own message for any other package the config cannot find", async () => {
     const result = await loadConfig(repo('import x from "left-pad-nope";\n\nexport default x;\n'));
     expect(result).toMatchObject({
-      ok: false,
       errors: [expect.stringMatching(/^workerstack\.config\.ts: failed to load: .*left-pad-nope/)],
+      ok: false,
     });
   });
 
@@ -317,13 +319,13 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const seen: string[] = [];
     const watcher = fs.watch(root, (_event, name) => seen.push(String(name)));
     try {
-      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
-      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["agents"] } });
+      expect(await loadConfig(root)).toMatchObject({ config: { packs: ["agents"] }, ok: true });
+      expect(await loadConfig(root)).toMatchObject({ config: { packs: ["agents"] }, ok: true });
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(seen.filter((name) => name.startsWith(".workerstack.config."))).toStrictEqual([]);
 
       fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
-      expect(await loadConfig(root)).toMatchObject({ ok: true, config: { packs: ["docs"] } });
+      expect(await loadConfig(root)).toMatchObject({ config: { packs: ["docs"] }, ok: true });
       expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
     } finally {
       watcher.close();
@@ -334,21 +336,21 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const root = repo('export default { packs: ["agents"] }\n');
     await loadConfig(root);
     fs.writeFileSync(path.join(root, CONFIG_FILE), 'throw new Error("config exploded")\n');
-    expect(await loadConfig(root)).toMatchObject({ ok: false, errors: [expect.stringMatching(/config exploded/)] });
+    expect(await loadConfig(root)).toMatchObject({ errors: [expect.stringMatching(/config exploded/)], ok: false });
     expect(fs.readdirSync(root).sort()).toStrictEqual(["package.json", CONFIG_FILE]);
   });
 });
 
 const SKIP = {
   files: ["src/cache.ts"],
-  rules: ["repo/no-module-state"],
   reason: "the parsed config cache lives for the process",
+  rules: ["repo/no-module-state"],
 };
 const NO_REASON = "say why the rules are off, in three words or more";
 /** A config with the agents and standards packs, or `packs`, and one `lint.skip` entry. */
 const skipConfig = (skip: unknown, packs = '["agents", "standards"]') =>
   `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;
-const refusal = (...errors: string[]) => ({ ok: false, errors: errors.map((e) => `workerstack.config.ts: ${e}`) });
+const refusal = (...errors: string[]) => ({ errors: errors.map((e) => `workerstack.config.ts: ${e}`), ok: false });
 
 it("lint.skip: Usage's config resolves to its skip entries", async () => {
   const lint = `  lint: {\n    skip: [${JSON.stringify(SKIP)}],\n  },\n`;
@@ -356,23 +358,23 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
   const root = repo(`import { defineConfig } from "@workerstack/repo";\n\n${usage}`);
   linkPackage(root);
   expect(await loadConfig(root)).toEqual({
-    ok: true,
     config: {
-      packs: ["agents", "standards"],
       agents: AGENTS,
-      commit: COMMIT,
-      lint: { skip: [SKIP] },
-      knip: KNIP,
       ci: CI,
+      commit: COMMIT,
       coverage: COVERAGE,
+      knip: KNIP,
+      lint: { skip: [SKIP] },
       nightly: NIGHTLY,
+      packs: ["agents", "standards"],
       tdd: false,
     },
+    ok: true,
   });
 });
 
 it("lint.skip: defaults to no skips, with lint omitted or empty, the default packs included", async () => {
-  const empty = { ok: true, config: { lint: LINT, knip: KNIP, ci: CI, coverage: COVERAGE } };
+  const empty = { config: { ci: CI, coverage: COVERAGE, knip: KNIP, lint: LINT }, ok: true };
   expect(await loadConfig(repo('export default { packs: ["standards"], lint: {} }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo('export default { packs: ["standards"] }\n'))).toMatchObject(empty);
   expect(await loadConfig(repo("export default { lint: { skip: [] } }\n"))).toMatchObject(empty);
@@ -530,29 +532,29 @@ describe("defaultPacks", () => {
 
 describe("coverage", () => {
   it("defaults the floors and known-failures files, with coverage omitted or empty", async () => {
-    const expected = { ok: true, config: { coverage: COVERAGE } };
+    const expected = { config: { coverage: COVERAGE }, ok: true };
     expect(await loadConfig(repo("export default {}\n"))).toMatchObject(expected);
     expect(await loadConfig(repo("export default { coverage: {} }\n"))).toMatchObject(expected);
   });
 
   it("takes each path as given and defaults the other", async () => {
     const floors = await loadConfig(repo('export default { coverage: { floors: "ratchets/floors.json" } }\n'));
-    expect(floors).toMatchObject({ ok: true, config: { coverage: { ...COVERAGE, floors: "ratchets/floors.json" } } });
+    expect(floors).toMatchObject({ config: { coverage: { ...COVERAGE, floors: "ratchets/floors.json" } }, ok: true });
     const failures = await loadConfig(repo('export default { coverage: { knownFailures: "ratchets/kf.json" } }\n'));
     expect(failures).toMatchObject({
-      ok: true,
       config: { coverage: { ...COVERAGE, knownFailures: "ratchets/kf.json" } },
+      ok: true,
     });
   });
 
   it("refuses an unknown key and a path that is not text", async () => {
     expect(await loadConfig(repo("export default { coverage: { floor: 'a.json' } }\n"))).toStrictEqual({
-      ok: false,
       errors: ['workerstack.config.ts: coverage: unknown key "floor"'],
+      ok: false,
     });
     expect(await loadConfig(repo("export default { coverage: { floors: 5 } }\n"))).toStrictEqual({
-      ok: false,
       errors: ["workerstack.config.ts: coverage.floors: must be a file path like coverage-floors.json"],
+      ok: false,
     });
   });
 });
@@ -561,8 +563,8 @@ describe("coverage, mutation", () => {
   it("takes the globs to mutate and the mutation floors path as given", async () => {
     const source = 'export default { coverage: { mutate: ["cli/**/*.ts", "lib/*.ts"], mutationFloors: "m/f.json" } }\n';
     expect(await loadConfig(repo(source))).toMatchObject({
-      ok: true,
       config: { coverage: { ...COVERAGE, mutate: ["cli/**/*.ts", "lib/*.ts"], mutationFloors: "m/f.json" } },
+      ok: true,
     });
   });
 
@@ -602,9 +604,9 @@ describe("enabledSkills", () => {
 
 describe("owner", () => {
   it("resolves to the name and github login, and is left out when omitted", async () => {
-    const owner = { name: "Lovro Žagar", github: "lovrozagar" };
+    const owner = { github: "lovrozagar", name: "Lovro Žagar" };
     const given = await loadConfig(repo(`export default { owner: ${JSON.stringify(owner)} }\n`));
-    expect(given).toMatchObject({ ok: true, config: { owner } });
+    expect(given).toMatchObject({ config: { owner }, ok: true });
     const omitted = await loadConfig(repo("export default {}\n"));
     expect(omitted.ok && omitted.config.owner).toBeUndefined();
   });
@@ -626,14 +628,14 @@ const tasks = (body: string) => `export default { packs: ["workspace"], turbo: {
 
 it("turbo.tasks: parses tasks under the workspace pack", async () => {
   const loaded = await loadConfig(repo(tasks(JSON.stringify({ deploy: DEPLOY }))));
-  expect(loaded).toMatchObject({ ok: true, config: { turbo: { tasks: { deploy: DEPLOY } } } });
+  expect(loaded).toMatchObject({ config: { turbo: { tasks: { deploy: DEPLOY } } }, ok: true });
 });
 
 it("turbo.tasks: resolves an empty turbo section to no tasks, and an omitted one to none", async () => {
   const empty = await loadConfig(repo('export default { packs: ["workspace"], turbo: {} }\n'));
-  expect(empty).toMatchObject({ ok: true, config: { turbo: { tasks: {} } } });
+  expect(empty).toMatchObject({ config: { turbo: { tasks: {} } }, ok: true });
   const omitted = await loadConfig(repo('export default { packs: ["workspace"] }\n'));
-  expect(omitted).toMatchObject({ ok: true, config: { turbo: undefined } });
+  expect(omitted).toMatchObject({ config: { turbo: undefined }, ok: true });
 });
 
 it.each(["typecheck", "test"])("turbo.tasks: refuses a task named %s", async (name) => {
@@ -670,9 +672,9 @@ it("turbo.tasks: refuses an unknown task key, a bad flag, a bad list and a turbo
 it("link: parses a package-to-checkout map, and leaves it out when omitted", async () => {
   const map = { "@workerstack/flare": "../flare-wt" };
   const loaded = await loadConfig(repo(`export default { link: ${JSON.stringify(map)} }\n`));
-  expect(loaded).toMatchObject({ ok: true, config: { link: map } });
+  expect(loaded).toMatchObject({ config: { link: map }, ok: true });
   const omitted = await loadConfig(repo("export default {}\n"));
-  expect(omitted).toMatchObject({ ok: true, config: { link: undefined } });
+  expect(omitted).toMatchObject({ config: { link: undefined }, ok: true });
 });
 
 it("link: refuses a value that is not a path", async () => {
@@ -687,9 +689,9 @@ it("link: refuses a value that is not a path", async () => {
 
 it("clean: parses the extra build dir names, and leaves the section out when omitted", async () => {
   const loaded = await loadConfig(repo('export default { clean: { build: [".flare"] } }\n'));
-  expect(loaded).toMatchObject({ ok: true, config: { clean: { build: [".flare"] } } });
-  expect(await loadConfig(repo("export default { clean: {} }\n"))).toMatchObject({ ok: true, config: { clean: {} } });
-  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ ok: true, config: { clean: undefined } });
+  expect(loaded).toMatchObject({ config: { clean: { build: [".flare"] } }, ok: true });
+  expect(await loadConfig(repo("export default { clean: {} }\n"))).toMatchObject({ config: { clean: {} }, ok: true });
+  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ config: { clean: undefined }, ok: true });
 });
 
 it("clean: refuses a name that is a path, a list that is not names, and a section that is not an object", async () => {
@@ -706,11 +708,11 @@ it("clean: refuses a name that is a path, a list that is not names, and a sectio
 it("ci.checks: parses named argv arrays, and defaults to none", async () => {
   const checks = { "product-tree": ["bun", "scripts/check/product-tree.ts"] };
   const loaded = await loadConfig(repo(`export default { ci: { checks: ${JSON.stringify(checks)} } }\n`));
-  expect(loaded).toMatchObject({ ok: true, config: { ci: { checks } } });
-  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ ok: true, config: { ci: { checks: {} } } });
+  expect(loaded).toMatchObject({ config: { ci: { checks } }, ok: true });
+  expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ config: { ci: { checks: {} } }, ok: true });
   expect(await loadConfig(repo("export default { ci: {} }\n"))).toMatchObject({
-    ok: true,
     config: { ci: { checks: {} } },
+    ok: true,
   });
 });
 

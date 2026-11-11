@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
 import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
 import { addWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
@@ -87,8 +89,8 @@ it("removes only clean managed worktrees whose own commits reached the default b
   outsideOf(r);
   git(r, "branch", "wt/o", "main");
   expect(pruneWorktrees(r)).toStrictEqual([
-    { path: wt(r, "m"), branch: "wt/m" },
-    { path: null, branch: "wt/o" },
+    { branch: "wt/m", path: wt(r, "m") },
+    { branch: "wt/o", path: null },
   ]);
   expect(fs.existsSync(wt(r, "m"))).toBe(false);
   expect([hasBranch(r, "wt/m"), hasBranch(r, "wt/o")]).toStrictEqual([false, false]);

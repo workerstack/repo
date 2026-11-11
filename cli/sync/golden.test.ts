@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
 
 // One render spawns rulesync three times, about 2.5s each on a CI runner.

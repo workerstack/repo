@@ -7,11 +7,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
+
+import { readEnv } from "../cli/env.ts";
 import { isRecord } from "./json";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
-import { readEnv } from "../cli/env.ts";
 
 export const OLD_VERSION = "0.0.0-e2e.0";
 /** The last commit whose init copies the agent trees into a consumer; its build is published as OLD_VERSION. */
@@ -32,9 +34,9 @@ function tarballVersion(tarball: string): string {
   let raw = "";
   tar.t({
     file: tarball,
-    sync: true,
     filter: (p) => p === "package/package.json",
     onReadEntry: (entry) => entry.on("data", (c: Buffer) => (raw += c.toString("utf8"))),
+    sync: true,
   });
   if (!raw) throw new Error(`no package/package.json in ${tarball}`);
   const pkg = JSON.parse(raw);
@@ -74,7 +76,7 @@ function buildOld(work: string): string {
       throw new Error(`${cmd} ${args.join(" ")} failed (is ${OLD_COMMIT} fetched?):\n${r.stderr}${r.stdout}`);
   };
   sh("git", ["archive", "-o", archive, OLD_COMMIT]);
-  tar.x({ file: archive, cwd: src, sync: true });
+  tar.x({ cwd: src, file: archive, sync: true });
   sh("bun", ["install", "--ignore-scripts"]);
   sh("bun", ["run", "build"]);
   return retagTarball(packRepo(src, packDir), OLD_VERSION, work);
@@ -92,7 +94,7 @@ export default async function setup(project: TestProject) {
     try {
       await reg?.close();
     } finally {
-      if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { recursive: true, force: true });
+      if (!readEnv().REPO_E2E_KEEP) fs.rmSync(runRoot, { force: true, recursive: true });
       else process.stdout.write(`kept e2e run root: ${runRoot}\n`);
     }
   };

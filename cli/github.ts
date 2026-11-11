@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { FIX } from "./github.constants.ts";
+
 import { rulesetDrift, wantedRulesets } from "./github-rulesets.ts";
-import { keywordLines } from "./keywords.ts";
+import { FIX } from "./github.constants.ts";
 import type { Current, Drift, GithubManifest, WantedResult, Wanted } from "./github.types.ts";
+import { keywordLines } from "./keywords.ts";
 
 /**
  * What the repository should look like: both rulesets with `checks` as the required status checks, and the
@@ -10,7 +11,7 @@ import type { Current, Drift, GithubManifest, WantedResult, Wanted } from "./git
  */
 export function wantedSettings(manifest: GithubManifest, checks: readonly string[]): WantedResult {
   const errors = manifest.keywords === undefined ? [] : keywordLines(manifest.keywords);
-  if (errors.length > 0) return { ok: false, errors };
+  if (errors.length > 0) return { errors, ok: false };
   const wanted: Wanted = { rulesets: wantedRulesets(checks) };
   if (manifest.description !== undefined) wanted.description = manifest.description;
   if (manifest.homepage !== undefined) wanted.homepage = manifest.homepage;
@@ -23,7 +24,7 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
   const drifts: Drift[] = wanted.rulesets.flatMap((want): Drift[] => {
     const found = current.rulesets.find((ruleset) => ruleset.name === want.name);
     const messages = found === undefined ? [`ruleset ${want.name} is missing: ${FIX}`] : rulesetDrift(want, found);
-    return messages.map((message) => ({ area: "ruleset", name: want.name, message }));
+    return messages.map((message) => ({ area: "ruleset", message, name: want.name }));
   });
   if (!current.reporting) drifts.push({ area: "reporting", message: `private vulnerability reporting is off: ${FIX}` });
   if (!current.alerts) drifts.push({ area: "alerts", message: `Dependabot alerts are off: ${FIX}` });

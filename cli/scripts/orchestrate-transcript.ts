@@ -1,5 +1,6 @@
 /** The assistant's last reply, from the payload or the transcript's tail, and what its lines ask. */
 import fs from "node:fs";
+
 import { isRecord, type HookInput } from "./hook-input.ts";
 import {
   ASSISTANT,

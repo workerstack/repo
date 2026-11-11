@@ -28,24 +28,24 @@ export const NO_SERIAL = -1;
 // How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted silently.
 // clean.test.ts holds POLICY to TMP_RESERVED_DIRS, so a reserved dir without a policy fails the suite.
 export const POLICY: Readonly<Record<string, Policy>> = {
-  plans: "age-done",
-  roadmaps: "age-done",
+  browser: "keep",
   handoffs: "age",
   implementations: "age-done",
-  browser: "keep",
   listen: "keep",
-  speak: "keep",
-  sessions: "per-session",
   "orchestrator-logs": "per-stamp",
+  plans: "age-done",
+  roadmaps: "age-done",
+  sessions: "per-session",
+  speak: "keep",
   stash: "per-receipt",
 };
 
 /** The removed kind of an aged-out file, by its dir. */
 export const OLD_KIND: Readonly<Record<string, string>> = {
+  handoffs: "old handoff",
+  implementations: "old journal",
   plans: "old plan",
   roadmaps: "old roadmap",
-  implementations: "old journal",
-  handoffs: "old handoff",
 };
 export const SERIAL_RE: RegExp = /^([0-9]+)-/;
 export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
@@ -77,24 +77,24 @@ export const REMOVE_ORDER: readonly string[] = [
   "old tmp artifact",
 ];
 export const PLURAL: Readonly<Record<string, string>> = {
-  file: "files",
-  dir: "dirs",
   "dead session": "dead sessions",
-  "stale stamp": "stale stamps",
-  "stash receipt": "stash receipts",
+  dir: "dirs",
+  file: "files",
   "nested dir": "nested dirs",
+  "old handoff": "old handoffs",
+  "old journal": "old journals",
   "old plan": "old plans",
   "old roadmap": "old roadmaps",
-  "old journal": "old journals",
-  "old handoff": "old handoffs",
   "old tmp artifact": "old tmp artifacts",
+  "stale stamp": "stale stamps",
+  "stash receipt": "stash receipts",
 };
 /** The order the report counts kept kinds in past the durable dirs, and their plurals. */
 export const KEEP_ORDER: readonly string[] = ["tmp artifact", "live session", "recent"];
 export const KEEP_PLURAL: Readonly<Record<string, string>> = {
-  "tmp artifact": "tmp artifacts",
   "live session": "live sessions",
   recent: "entries touched recently",
+  "tmp artifact": "tmp artifacts",
 };
 
 /** The build kinds in report order, and each one's [one, many] name. */

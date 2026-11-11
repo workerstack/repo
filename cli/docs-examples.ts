@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Captured } from "./scripts/lint.ts";
-import { group, splitMarkdown } from "./docs-fences.ts";
-import { LAST_INDEX, SECOND_GROUP, THIRD_GROUP } from "./docs-fences.constants.ts";
+
 import {
   BUN_BUILD_ARGS,
   EXAMPLE_LANGS,
@@ -16,6 +14,8 @@ import {
   TSC_LINE,
   TSX_LANG,
 } from "./docs-examples.constants.ts";
+import { LAST_INDEX, SECOND_GROUP, THIRD_GROUP } from "./docs-fences.constants.ts";
+import { group, splitMarkdown } from "./docs-fences.ts";
 import {
   SCRATCH_DIR,
   TSCONFIG_FILE,
@@ -25,6 +25,7 @@ import {
   typecheckCrash,
   under,
 } from "./docs.constants.ts";
+import type { Captured } from "./scripts/lint.ts";
 
 /** The tools an example check runs: `tsc` with its arguments, and `bun`. Each runs in `cwd` and is captured. */
 export type ExampleTools = {
@@ -45,12 +46,12 @@ export function blocksOf(dir: string, rel: string, text: string): Block[] {
     const [lang, ...flags] = fence.info.split(/\s+/);
     if (!EXAMPLE_LANGS.includes(String(lang))) continue;
     blocks.push({
-      md: under(dir, rel),
-      rel,
-      line: fence.start,
-      n: blocks.length + 1,
-      ext: lang === TSX_LANG ? "tsx" : "ts",
       code: fence.body.join("\n"),
+      ext: lang === TSX_LANG ? "tsx" : "ts",
+      line: fence.start,
+      md: under(dir, rel),
+      n: blocks.length + 1,
+      rel,
       run: flags.includes(RUN_WORD),
     });
   }
@@ -81,7 +82,7 @@ function fileOf(block: Block): string {
 function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
   const scratch = path.join(ctx.root, SCRATCH_DIR, ctx.dir);
   const own = path.join(ctx.root, ctx.dir, TSCONFIG_FILE);
-  fs.rmSync(scratch, { recursive: true, force: true });
+  fs.rmSync(scratch, { force: true, recursive: true });
   for (const block of blocks) {
     const file = path.join(scratch, fileOf(block));
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -89,8 +90,8 @@ function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
   }
   const stock = path.join(import.meta.dirname, "..", "tsconfig", STOCK_TSCONFIG);
   const config = {
-    extends: (fs.existsSync(own) ? own : stock).replaceAll("\\", "/"),
     compilerOptions: { noEmit: true },
+    extends: (fs.existsSync(own) ? own : stock).replaceAll("\\", "/"),
     files: blocks.map(fileOf),
     include: [],
   };

@@ -11,10 +11,10 @@ import { readWorkspace } from "./sync/workspace.ts";
 function total(reports: readonly RootReport[]): Parameters<typeof okLine>[0] {
   const sum = (pick: (report: RootReport) => number) => reports.reduce((all, report) => all + pick(report), 0);
   return {
-    references: sum((report) => report.references),
     examples: sum((report) => report.examples),
     exports: sum((report) => report.exports),
     packed: reports.some((report) => report.packed),
+    references: sum((report) => report.references),
   };
 }
 

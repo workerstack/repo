@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { buildTasks, main, run } from "./vscode-tasks.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tempRoot(files: Record<string, string>) {
@@ -31,14 +33,14 @@ describe("vscode-tasks edges", () => {
 
   it("sorts generated tasks by label across root and workspace scripts", () => {
     const root = tempRoot({
-      "package.json": JSON.stringify({ workspaces: ["pkgs/*"], scripts: { zed: "x", alpha: "x" } }),
+      "package.json": JSON.stringify({ scripts: { alpha: "x", zed: "x" }, workspaces: ["pkgs/*"] }),
       "pkgs/a/package.json": JSON.stringify({ name: "mid", scripts: { go: "x" } }),
     });
     expect(buildTasks(root, []).tasks.map((t) => t.label)).toStrictEqual(["alpha", "mid:go", "zed"]);
   });
 
   it("reports the parse error text of a broken tasks.json", () => {
-    const root = tempRoot({ "package.json": "{}", ".vscode/tasks.json": "{ nope" });
+    const root = tempRoot({ ".vscode/tasks.json": "{ nope", "package.json": "{}" });
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(run(root)).toBe(1);
     expect(err.mock.calls[0]?.[0]).toContain(`cannot parse ${path.join(root, ".vscode/tasks.json")}`);

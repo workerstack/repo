@@ -12,8 +12,8 @@ export type Bin = {
 /** The registry, a lazy `cli/main.ts`, and the process's own exit. */
 export const BIN: Readonly<Bin> = {
   dispatch,
-  load: () => import("./main.ts"),
   exit: (code) => process.exit(code),
+  load: () => import("./main.ts"),
 };
 
 /** The exit code of a registry command or hook, or undefined once `cli/main.ts` has run and set its own. */

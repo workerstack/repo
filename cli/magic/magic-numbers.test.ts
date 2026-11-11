@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+
 import {
   BOUND,
   cleanTemps,
@@ -67,9 +68,9 @@ const REFUSED = [
 it("refuses -1, a 2 that does not scale, a local const bound, a string case and a bound off a schema", () => {
   expect(
     magicOf({
+      "src/limits.constants.ts": "export const NAME_MAX = 2048;\n",
       "src/refused.ts": REFUSED,
       "src/schema.ts": SCHEMA,
-      "src/limits.constants.ts": "export const NAME_MAX = 2048;\n",
     }),
   ).toStrictEqual([
     hit("src/refused.ts:8:14", NUMBER, BOUND(".max(LOCAL_MAX)")),

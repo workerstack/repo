@@ -1,9 +1,13 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+
 import { afterEach, describe, expect, it } from "vitest";
+
+import { bunPath } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 import {
   ELEVENLABS_KEY_URL,
   OPENAI_KEY_URL,
@@ -27,8 +31,6 @@ import {
   targetStatuses,
   workspaceConsoleUrls,
 } from "./setup.ts";
-import { bunPath } from "../../dev/test-paths";
-import { childEnv } from "../env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
@@ -36,7 +38,7 @@ const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -59,11 +61,11 @@ function captureIo() {
   const errs: string[] = [];
   const opened: string[] = [];
   return {
-    logs,
-    errs,
-    opened,
-    log: (s: string) => logs.push(String(s)),
     error: (s: string) => errs.push(String(s)),
+    errs,
+    log: (s: string) => logs.push(String(s)),
+    logs,
+    opened,
   };
 }
 
@@ -120,7 +122,7 @@ describe("speak.json / oauth helpers", () => {
     const src = path.join(home, "client_secret_x.json");
     fs.writeFileSync(src, JSON.stringify(desktopOauth));
     const dest = path.join(home, ".workerstack", "workspace", "default", "google-oauth.json");
-    installOAuthJson({ src, dest });
+    installOAuthJson({ dest, src });
     const j = JSON.parse(fs.readFileSync(dest, "utf8")) as { installed: { client_id: string } };
     expect(j.installed.client_id).toBe("cid.apps.googleusercontent.com");
   });
@@ -168,11 +170,11 @@ describe("targetStatuses / menu", () => {
       JSON.stringify(desktopOauth),
     );
     const st = await targetStatuses({
-      home,
       env: {},
-      whichFn: () => "",
+      home,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(st.speak.ok).toBe(true);
     expect(st["google-workspace"].ok).toBe(true);
@@ -227,15 +229,15 @@ describe("setupSpeak", () => {
     const home = tmp("setup-speak-oa-");
     const io = captureIo();
     const r = await setupSpeak({
+      fetchFn: async () => ({
+        json: async () => ({ data: [] }),
+        ok: true,
+        status: 200,
+        text: async () => "",
+      }),
       flags: { "openai-key": "sk-oa", provider: "openai" },
       home,
       io,
-      fetchFn: async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ data: [] }),
-        text: async () => "",
-      }),
     });
     expect(r.verified).toBe(true);
     expect(io.logs.join("\n")).toMatch(/openai ok/);
@@ -246,15 +248,15 @@ describe("setupSpeak", () => {
     const home = tmp("setup-speak-tty-");
     const io = {
       ...captureIo(),
-      select: async () => "elevenlabs",
       password: async () => "sk_from_prompt",
+      select: async () => "elevenlabs",
     };
     const opened: string[] = [];
     await setupSpeak({
       flags: { "skip-verify": "1" },
       home,
-      io,
       interactive: true,
+      io,
       openUrlFn: (u: string) => opened.push(u),
     });
     expect(opened).toStrictEqual([ELEVENLABS_KEY_URL]);
@@ -270,13 +272,13 @@ describe("setupListen", () => {
     const home = tmp("setup-listen-");
     const io = captureIo();
     const r = await setupListen({
+      env: {},
       flags: { "openai-key": "sk_listen", "skip-download": "1" },
       home,
       io,
-      env: {},
-      whichFn: () => "",
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(r.stt?.kind).toBe("openai");
     const j = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "speak.json"), "utf8")) as {
@@ -296,11 +298,13 @@ describe("setupListen", () => {
       confirm: async () => true,
     };
     await setupListen({
+      env: {},
       flags: { "openai-key": "sk_re", "skip-download": "1" },
       home,
-      io,
-      env: {},
       interactive: true,
+      io,
+      pathEnv: "/none",
+      platform: "linux",
       whichFn: (name: string) => {
         if (name === "ffmpeg") {
           seen.ffmpeg += 1;
@@ -308,8 +312,6 @@ describe("setupListen", () => {
         }
         return "";
       },
-      pathEnv: "/none",
-      platform: "linux",
     });
     expect(seen.ffmpeg).toBeGreaterThan(1);
     expect(io.logs.join("\n")).toMatch(/ffmpeg ok/);
@@ -319,13 +321,13 @@ describe("setupListen", () => {
     const home = tmp("setup-listen-miss-");
     await expect(
       setupListen({
+        env: {},
         flags: { "skip-download": "1" },
         home,
         io: captureIo(),
-        env: {},
-        whichFn: () => "",
         pathEnv: "/none",
         platform: "linux",
+        whichFn: () => "",
       }),
     ).rejects.toThrow(/whisper-cli or --openai-key/);
   });
@@ -393,10 +395,10 @@ describe("setupGoogleWorkspace", () => {
     await setupGoogleWorkspace({
       flags: {},
       home,
-      io,
       interactive: true,
-      openUrlFn: (u: string) => opened.push(u),
+      io,
       loginFn: async () => {},
+      openUrlFn: (u: string) => opened.push(u),
     });
     expect(opened[0]).toMatch(/projectcreate/);
     expect(opened.some((u) => u.includes("project=proj-1"))).toBe(true);
@@ -411,8 +413,8 @@ describe("setupBrowser", () => {
     const io = captureIo();
     const r = await setupBrowser({
       io,
-      platform: "linux",
       pathEnv: "/none",
+      platform: "linux",
       whichFn: () => "",
     });
     expect(r.ok).toBe(false);
@@ -425,19 +427,19 @@ describe("setupBrowser", () => {
     const io = captureIo();
     const r = await setupBrowser({
       io,
-      platform: "linux",
       pathEnv: "/none",
+      platform: "linux",
       whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
     });
     expect(r.ok).toBe(false);
     expect(r.chromium).toBe("/home/ecomet/bin/chromium");
     expect(io.logs.join("\n")).toMatch(/Install Lightpanda as well/);
     const st = await targetStatuses({
-      home: tmp("setup-br-st-"),
       env: {},
-      whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
+      home: tmp("setup-br-st-"),
       pathEnv: "/none",
       platform: "linux",
+      whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
     });
     expect(st.browser.ok).toBe(false);
     expect(st.browser.extra).toMatch(/need lightpanda/);
@@ -447,10 +449,10 @@ describe("setupBrowser", () => {
     let n = 0;
     const io = { ...captureIo(), confirm: async () => true };
     const r = await setupBrowser({
-      io,
       interactive: true,
-      platform: "linux",
+      io,
       pathEnv: "/none",
+      platform: "linux",
       whichFn: (name: string) => {
         if (name === "lightpanda") {
           n += 1;
@@ -469,15 +471,15 @@ describe("main", () => {
   it("no target non-interactive prints usage", async () => {
     const io = captureIo();
     const code = await main([], {
-      io,
-      interactive: false,
-      home: tmp("setup-main-"),
-      stdin: { isTTY: false },
-      stdout: { isTTY: false },
       env: { CI: "1" },
-      whichFn: () => "",
+      home: tmp("setup-main-"),
+      interactive: false,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      stdin: { isTTY: false },
+      stdout: { isTTY: false },
+      whichFn: () => "",
     });
     expect(code).toBe(1);
     expect(io.errs.join("\n")).toContain("usage: setup");
@@ -497,14 +499,14 @@ describe("main", () => {
       },
     };
     const code = await main([], {
-      io,
-      interactive: true,
-      home,
       cwd,
       env: { HOME: home },
-      whichFn: () => "",
+      home,
+      interactive: true,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(code).toBe(0);
     expect(io.logs.join("\n")).toMatch(/browser  missing/);
@@ -516,14 +518,14 @@ describe("main", () => {
     mergeSpeakJson(home, { openai: { apiKey: "sk_old" } });
     const io = { ...captureIo(), confirm: async () => false };
     const code = await main(["speak"], {
-      io,
-      interactive: true,
-      home,
       cwd,
       env: { HOME: home },
-      whichFn: () => "",
+      home,
+      interactive: true,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(code).toBe(0);
     expect(io.logs.join("\n")).toMatch(/skip speak/);
@@ -534,14 +536,14 @@ describe("main", () => {
     const cwd = enablePacks(tmp("setup-main-speak-cwd-"), ["speak"]);
     const io = captureIo();
     const code = await main(["speak", "--elevenlabs-key", "sk_m", "--skip-verify"], {
-      io,
-      interactive: false,
-      home,
       cwd,
       env: { HOME: home },
-      whichFn: () => "",
+      home,
+      interactive: false,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(code).toBe(0);
     expect(
@@ -563,13 +565,13 @@ describe("main", () => {
       },
     };
     const code = await main([], {
-      io,
-      interactive: true,
       cwd,
       home: tmp("setup-menu-off-home-"),
-      whichFn: () => "",
+      interactive: true,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(code).toBe(0);
   });
@@ -577,14 +579,14 @@ describe("main", () => {
   it("a disabled pack prints how to enable it", async () => {
     const io = captureIo();
     const code = await main(["listen"], {
-      io,
-      interactive: false,
       cwd: tmp("setup-listen-off-"),
-      home: tmp("setup-listen-off-home-"),
       env: { CI: "1" },
-      whichFn: () => "",
+      home: tmp("setup-listen-off-home-"),
+      interactive: false,
+      io,
       pathEnv: "/none",
       platform: "linux",
+      whichFn: () => "",
     });
     expect(code).toBe(1);
     expect(io.errs.join("\n")).toMatch(/agents\.skills/);

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
 import {
   activeReview,
@@ -20,7 +22,7 @@ import {
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { force: true, recursive: true });
 });
 
 function tmpRoot() {
@@ -40,8 +42,8 @@ function writePlan(root: string, name: string, fm: Record<string, string>) {
 }
 
 const planFm = (strategy: string | null, status = "in-progress") => ({
-  serial: "4",
   name: "x",
+  serial: "4",
   status,
   ...(strategy == null ? {} : { strategy }),
 });

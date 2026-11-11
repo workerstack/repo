@@ -4,7 +4,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { parseSync } from "oxc-parser";
+
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
@@ -44,7 +46,7 @@ function caseOf(node: Node, scope: Scope, source: string): Case {
   const start = Number(get(node, "start"));
   const end = Number(get(get(node, "callee"), "end"));
   const named = title === null || scope.includes(null) ? null : [...scope, title].join(SEPARATOR);
-  return { line: lineOf(source, start), call: source.slice(start, end), title, name: named };
+  return { call: source.slice(start, end), line: lineOf(source, start), name: named, title };
 }
 
 /** The scope inside `node`: a `describe` call adds its title (null when it is no literal). */
@@ -75,7 +77,7 @@ function collect(node: unknown, scope: Scope, walk: Walk): void {
 function casesOf(rel: string, source: string): Case[] {
   if (!source.includes(`.${FAILS}`)) return [];
   const found: Case[] = [];
-  collect(parseSync(rel, source).program, [], { source, out: found });
+  collect(parseSync(rel, source).program, [], { out: found, source });
   return found;
 }
 

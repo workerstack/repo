@@ -38,7 +38,7 @@ function statuses(out: string): Entry[] {
   const parts = out.split("\0").filter((part) => part !== "");
   const entries: Entry[] = [];
   for (let i = 0; i + 1 < parts.length; i += 2)
-    entries.push({ rel: parts[i + 1] as string, deleted: parts[i] === "D" });
+    entries.push({ deleted: parts[i] === "D", rel: parts[i + 1] as string });
   return entries;
 }
 
@@ -56,27 +56,27 @@ function staged(git: Git): Entries {
   const index = statuses(git(["diff", "--cached", ...DIFF]).out);
   const unstaged = new Set(names(git(["diff", "--name-only", "-z"]).out));
   const partial = index.filter((entry) => unstaged.has(entry.rel));
-  if (partial.length === 0) return { ok: true, entries: index };
+  if (partial.length === 0) return { entries: index, ok: true };
   return {
-    ok: false,
     errors: partial.map(
       ({ rel }) => `${rel} has staged and unstaged changes; stage the rest (git add ${rel}) or undo it`,
     ),
+    ok: false,
   };
 }
 
 function tree(git: Git): Entries {
   const tracked = statuses(git(["diff", base(git), ...DIFF]).out);
-  const untracked = names(git(UNTRACKED).out).map((rel) => ({ rel, deleted: false }));
-  return { ok: true, entries: [...tracked, ...untracked] };
+  const untracked = names(git(UNTRACKED).out).map((rel) => ({ deleted: false, rel }));
+  return { entries: [...tracked, ...untracked], ok: true };
 }
 
 /** Every file under `dir`, tracked or untracked; a tracked file missing from disk is a deletion. */
 function whole(git: Git, root: string, dir: string): Entries {
   const listed = names(git(["ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", dir || "."]).out);
   // An unmerged path is listed once per stage.
-  const entries = [...new Set(listed)].map((rel) => ({ rel, deleted: !fs.existsSync(path.join(root, rel)) }));
-  return { ok: true, entries };
+  const entries = [...new Set(listed)].map((rel) => ({ deleted: !fs.existsSync(path.join(root, rel)), rel }));
+  return { entries, ok: true };
 }
 
 /** A submodule or a nested checkout is a directory entry: listed by git, gated by its own repo. */
@@ -92,7 +92,7 @@ function listOf({ git, root }: { git: Git; root: string }, scope: Scope, owner: 
 /** The change set of `scope` under the git repo at `root`, sorted, each file with its owning package. */
 export function changeSet(root: string, scope: Scope, packages: readonly string[]): ChangeSetResult {
   const git = gitIn(root);
-  if (!git(["rev-parse", "--git-dir"]).ok) return { ok: false, errors: [`${root} is not in a git repo`] };
+  if (!git(["rev-parse", "--git-dir"]).ok) return { errors: [`${root} is not in a git repo`], ok: false };
   const scopeOwner = scope.kind === "package" ? ownerOf(scope.rel, packages) : null;
   const listed = listOf({ git, root }, scope, scopeOwner);
   if (!listed.ok) return listed;
@@ -101,5 +101,5 @@ export function changeSet(root: string, scope: Scope, packages: readonly string[
     .map((entry) => ({ ...entry, owner: ownerOf(entry.rel, packages) }))
     .filter((change) => scopeOwner === null || change.owner === scopeOwner)
     .sort((a, b) => Number(a.rel > b.rel) - Number(a.rel < b.rel));
-  return { ok: true, changes };
+  return { changes, ok: true };
 }

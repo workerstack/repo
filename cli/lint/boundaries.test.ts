@@ -1,47 +1,49 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterAll, describe, expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { fwd } from "../../dev/test-paths.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** A repo of real packages: the rule reads each file's nearest package.json from disk. */
 const MANIFESTS: Record<string, string> = {
-  "package.json": JSON.stringify({ name: "@app/root", dependencies: { zod: "4" } }),
-  "packages/web/package.json": JSON.stringify({
-    name: "@app/web",
-    dependencies: { react: "19" },
-    devDependencies: { vitest: "3" },
-    peerDependencies: { "@scope/peer": "1" },
-    optionalDependencies: { opt: "1" },
-  }),
+  "package.json": JSON.stringify({ dependencies: { zod: "4" }, name: "@app/root" }),
+  "packages/anon/package.json": "{}",
   "packages/api/package.json": JSON.stringify({ name: "@app/api" }),
-  "packages/pub/package.json": JSON.stringify({
-    name: "@app/pub",
-    private: false,
-    dependencies: { react: "19" },
-    devDependencies: { zod: "4", both: "1" },
-    peerDependencies: { both: "1" },
-    main: "./lib/main.ts",
-    bin: { pub: "tools/cli.ts" },
-    files: ["src", "!src/skip", "!**/*.gen.ts", "extra/*.ts", "./lib", "tools/cli.ts"],
-  }),
-  "packages/open/package.json": JSON.stringify({
-    name: "@app/open",
-    private: false,
-    devDependencies: { zod: "4" },
-  }),
+  "packages/broken/package.json": "{ not json",
   "packages/closed/package.json": JSON.stringify({
-    name: "@app/closed",
-    private: true,
     devDependencies: { zod: "4" },
     files: ["src"],
+    name: "@app/closed",
+    private: true,
   }),
-  "packages/anon/package.json": "{}",
-  "packages/broken/package.json": "{ not json",
   "packages/null/package.json": "null",
-  "packages/odd/package.json": JSON.stringify({ name: 7, dependencies: "zod", devDependencies: ["zod"] }),
+  "packages/odd/package.json": JSON.stringify({ dependencies: "zod", devDependencies: ["zod"], name: 7 }),
+  "packages/open/package.json": JSON.stringify({
+    devDependencies: { zod: "4" },
+    name: "@app/open",
+    private: false,
+  }),
+  "packages/pub/package.json": JSON.stringify({
+    bin: { pub: "tools/cli.ts" },
+    dependencies: { react: "19" },
+    devDependencies: { both: "1", zod: "4" },
+    files: ["src", "!src/skip", "!**/*.gen.ts", "extra/*.ts", "./lib", "tools/cli.ts"],
+    main: "./lib/main.ts",
+    name: "@app/pub",
+    peerDependencies: { both: "1" },
+    private: false,
+  }),
+  "packages/web/package.json": JSON.stringify({
+    dependencies: { react: "19" },
+    devDependencies: { vitest: "3" },
+    name: "@app/web",
+    optionalDependencies: { opt: "1" },
+    peerDependencies: { "@scope/peer": "1" },
+  }),
 };
 const WEB = "packages/web/src/a.ts";
 
@@ -168,7 +170,7 @@ it("skips a file with no package.json at or above it", () => {
 describe("boundaries on an absolute specifier", () => {
   const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-boundaries-")));
   fs.writeFileSync(path.join(other, "package.json"), JSON.stringify({ name: "@app/other" }));
-  afterAll(() => fs.rmSync(other, { recursive: true, force: true }));
+  afterAll(() => fs.rmSync(other, { force: true, recursive: true }));
 
   it("fails one into another package, naming that package", () => {
     // Forward slashes: a backslash in a string literal is an escape.

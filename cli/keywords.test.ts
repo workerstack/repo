@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { isStringList, keywordLines } from "./keywords.ts";
 
 const P = "package.json: ";

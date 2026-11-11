@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
 import { MANIFEST_REL } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
-import { PERMISSION_BITS, TEMP_NAME_BYTES } from "./write.constants.ts";
 import { ownedMode, unlock } from "./write-modes.ts";
+import { PERMISSION_BITS, TEMP_NAME_BYTES } from "./write.constants.ts";
 
 /** Seams: the platform links are made for, and how one output is written (null on success, else the error text). */
 export type WriteDeps = {
@@ -54,13 +55,13 @@ export function writeAll(
   const refusals = changed.flatMap((output) =>
     output.kind === "link" && isRealDir(path.join(root, output.path)) ? [refusal(output.path)] : [],
   );
-  if (refusals.length > 0) return { ok: false, errors: refusals, refused: true };
+  if (refusals.length > 0) return { errors: refusals, ok: false, refused: true };
 
   const write = deps.writeOutput ?? writeOutput;
   const journal: Entry[] = [];
   const failed = (message: string): WriteResult => ({
-    ok: false,
     errors: [undo(root, journal, message)],
+    ok: false,
     refused: false,
   });
 
@@ -125,7 +126,7 @@ function capture(abs: string): Prior {
   }
   if (stat.isSymbolicLink()) return { kind: "link", target: fs.readlinkSync(abs) };
   if (stat.isDirectory()) return { kind: "dir" };
-  return { kind: "file", bytes: fs.readFileSync(abs), mode: stat.mode };
+  return { bytes: fs.readFileSync(abs), kind: "file", mode: stat.mode };
 }
 
 /** Records `abs`'s prior state, then runs the step; its error text, or null. A path that cannot be recorded is not touched. */
@@ -142,7 +143,7 @@ function step(
   } catch (error) {
     return (error as Error).message;
   }
-  const entry: Entry = { abs, prior, created, done: false, counted };
+  const entry: Entry = { abs, counted, created, done: false, prior };
   journal.push(entry);
   const error = run();
   entry.done = error === null;
@@ -203,7 +204,7 @@ function removePath(root: string, rel: string): string | null {
 function writeLink(abs: string, target: string, platform: NodeJS.Platform): string | null {
   try {
     unlock(abs);
-    fs.rmSync(abs, { recursive: true, force: true });
+    fs.rmSync(abs, { force: true, recursive: true });
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     if (platform === "win32") fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
     else fs.symlinkSync(target, abs, "dir");

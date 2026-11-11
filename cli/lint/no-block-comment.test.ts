@@ -1,8 +1,9 @@
 import type { Context, Fixer } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
-import { noBlockComment } from "./no-block-comment.ts";
+
 import { MESSAGE } from "./no-block-comment.constants.ts";
+import { noBlockComment } from "./no-block-comment.ts";
 
 type Edit = { range: [number, number]; text: string };
 type Reported = { message?: string | null; fix?: (fixer: Fixer) => Edit };
@@ -13,8 +14,8 @@ function run(code: string): { reports: number; fixed: string } {
   const reported: Reported[] = [];
   const comments = parseSync("a.ts", code).comments;
   const context = {
-    sourceCode: { text: code, getAllComments: () => comments },
     report: (r: Reported) => reported.push(r),
+    sourceCode: { getAllComments: () => comments, text: code },
   };
   const visitor = noBlockComment.create(context as unknown /* a partial double of the context */ as Context);
   visitor.Program?.({} /* the rule reads no node */ as never);
@@ -26,7 +27,7 @@ function run(code: string): { reports: number; fixed: string } {
     .toSorted((a, b) => b.range[0] - a.range[0])
     .reduce((acc, { range, text }) => acc.slice(0, range[0]) + text + acc.slice(range[1]), code);
   expect(reported.every((report) => report.message === MESSAGE)).toBe(true);
-  return { reports: reported.length, fixed };
+  return { fixed, reports: reported.length };
 }
 
 const CASES: [string, string, string][] = [
@@ -100,7 +101,7 @@ describe("no-block-comment keeps", () => {
     "// already a line\nexport const a = 1;\n",
     'export const s = "/* not a comment */";\n',
   ])("%j", (code) => {
-    expect(run(code)).toStrictEqual({ reports: 0, fixed: code });
+    expect(run(code)).toStrictEqual({ fixed: code, reports: 0 });
   });
 
   it("reports a banner that is not on the first line", () => {

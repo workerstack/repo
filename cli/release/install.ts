@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
-import type { Subpath } from "./exports.ts";
+
 import type { Runner } from "../scripts/ci-wait.ts";
 import {
   BUN_ADD,
@@ -14,6 +15,7 @@ import {
   ROOT_KEY,
   TARBALL_ALIAS,
 } from "./consumer.constants.ts";
+import type { Subpath } from "./exports.ts";
 
 /** What installing needs: a `bun` that runs in a directory. */
 export type InstallIo = { bun: Runner };
@@ -24,11 +26,11 @@ type Installed = { version: string; exports?: unknown; peerDependencies: Record<
 /** Where the old version comes from: a registry (name, version, registry URL) or a tarball on disk. */
 export type OldSpec = { name: string; version: string; registry: string } | { tarball: string };
 
-const installedSchema = (): z.ZodType<Installed, unknown> =>
+const installedSchema = (): z.ZodType<Installed> =>
   z.object({
-    version: z.string(),
     exports: z.unknown().optional(),
     peerDependencies: z.record(z.string(), z.string()).default({}),
+    version: z.string(),
   });
 const projectSchema = () => z.object({ dependencies: z.record(z.string(), z.string()) });
 
@@ -54,7 +56,7 @@ export function addedName(project: string): string {
 /** The package `name` as installed in `project`, which can hold several. */
 export function installedIn(project: string, name: string): Package {
   const root = path.join(project, INSTALLED_DIR, name);
-  return { name, root, installed: installedSchema().parse(readJson(path.join(root, PROJECT_FILE))) };
+  return { installed: installedSchema().parse(readJson(path.join(root, PROJECT_FILE))), name, root };
 }
 
 /** Adds the peers bun leaves out (the optional ones); bun's stderr when that fails, else null. */

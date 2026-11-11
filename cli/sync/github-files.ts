@@ -41,10 +41,10 @@ export const githubFiles: Generator = (ctx) => {
   const { name, private: isPrivate } = ctx.workspace.manifest;
   const { owner } = ctx.config;
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false || owner === undefined) {
-    return { outputs: [], errors: [] };
+    return { errors: [], outputs: [] };
   }
   const slug = repositorySlug(ctx.read(MANIFEST_PATH));
-  if (slug === null) return { outputs: [], errors: [] };
+  if (slug === null) return { errors: [], outputs: [] };
   const advisories = ADVISORIES_URL.replace("%REPO%", slug);
   const files: [path: string, content: string][] = [
     [SECURITY_PATH, SECURITY.replace("%ADVISORIES%", advisories)],
@@ -60,7 +60,7 @@ export const githubFiles: Generator = (ctx) => {
     const existing = ctx.read(path);
     if (existing !== null && !hasOwnedHeader(existing)) {
       errors.push(`${path} is hand-written; delete it so repo sync can own it`);
-    } else outputs.push({ kind: "file", path, content, tracked: true, managed: "whole" });
+    } else outputs.push({ content, kind: "file", managed: "whole", path, tracked: true });
   }
-  return errors.length > 0 ? { outputs: [], errors } : { outputs, errors: [] };
+  return errors.length > 0 ? { errors, outputs: [] } : { errors: [], outputs };
 };

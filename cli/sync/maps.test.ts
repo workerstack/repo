@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_LESSON } from "../scripts/fixtures/persist-bodies.ts";
-import { index, lessons } from "./outputs.ts";
-import { sectionBody } from "./maps.ts";
 import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./fixtures/maps-kit.ts";
 import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { sectionBody } from "./maps.ts";
+import { index, lessons } from "./outputs.ts";
 
 useTempDirs();
 
@@ -62,7 +64,7 @@ it("writes the lessons index, tracked, from the lesson files", () => {
   expect(result.errors).toStrictEqual([]);
   const content: unknown = expect.stringContaining(".repo/lessons/plan-forks.md");
   expect(result.outputs).toStrictEqual([
-    { kind: "file", path: ".repo/lessons/INDEX.md", content, tracked: true, managed: "whole" },
+    { content, kind: "file", managed: "whole", path: ".repo/lessons/INDEX.md", tracked: true },
   ]);
 });
 
@@ -75,7 +77,7 @@ it("reports a lesson whose paths match nothing, and still writes the index", () 
 });
 
 it("writes nothing in a repo without lessons", () => {
-  expect(lessons(context(copyFixtureWs()))).toStrictEqual({ outputs: [], errors: [] });
+  expect(lessons(context(copyFixtureWs()))).toStrictEqual({ errors: [], outputs: [] });
 });
 
 describe("sectionBody", () => {

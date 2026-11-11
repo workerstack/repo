@@ -1,18 +1,20 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, update, useTmpWs, withEntries } from "./fixtures/persist-plan-kit.ts";
-import { persistPlan } from "./persist-plan.ts";
-import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
+import { PLAN_DIR } from "./persist-plan.constants.ts";
+import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
 const created = "2026-08-26T14:30:00Z";
 const entry = "- feedback: ignore entry lacked the slash → writes `.tmp/`";
 
 function saved(ws: string) {
-  const r = persistPlan({ workspaceRoot: ws, content: VALID_PLAN, created });
+  const r = persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
   return { ...r, abs: path.join(ws, savedOk(r).path) };
 }
@@ -63,8 +65,8 @@ describe("plan updates keeping the saved head", () => {
   it("denies a fresh plan without Previous mistakes and says how to fix it", () => {
     const ws = tmpWs();
     const r = persistPlan({
-      workspaceRoot: ws,
       content: VALID_PLAN.replace(/\n## Previous mistakes\n\(none\)\n$/, "\n"),
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/## Previous mistakes/);
@@ -136,7 +138,7 @@ describe("plan entry kinds", () => {
   it("rejects a roadmap-only slice entry on a plan", () => {
     const ws = tmpWs();
     const body = VALID_PLAN.replace("## Previous mistakes\n(none)", "## Previous mistakes\n- slice: a → b");
-    const r = persistPlan({ workspaceRoot: ws, content: body });
+    const r = persistPlan({ content: body, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/feedback\|verify\|review\|premise\|decision\}/);
   });

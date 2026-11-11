@@ -1,6 +1,7 @@
 /** The folder map's tree: raw folders from file paths, display rows, and their text at a depth that fits. */
 import fs from "node:fs";
 import path from "node:path";
+
 import {
   CHARS_PER_TOKEN,
   DEFAULTS,
@@ -66,10 +67,10 @@ function childOf(node: TreeNode, s: string, place: TreePlace): TreeNode {
   const p = node.path ? `${node.path}/${s}` : s;
   const m = place.manifests.get(p);
   const next: TreeNode = {
-    name: s,
-    path: p,
     kids: new Map<string, TreeNode>(),
+    name: s,
     own: false,
+    path: p,
     pkg: m ? packageName(place.root, p, m) : null,
   };
   node.kids.set(s, next);
@@ -85,12 +86,12 @@ export function buildTree(root: string, files: string[], opts: Partial<MapConfig
   const o = { ...DEFAULTS, ...opts };
   const filter: TreeFilter = {
     code: new RegExp(`\\.(${o.codeExt.join("|")})$`),
-    skip: new Set(o.skip),
-    include: o.include.map(globRe),
     exclude: o.exclude.map(globRe),
+    include: o.include.map(globRe),
+    skip: new Set(o.skip),
   };
-  const place: TreePlace = { root, manifests: manifestsOf(files) };
-  const top: TreeNode = { name: "", path: "", kids: new Map(), own: false, pkg: null };
+  const place: TreePlace = { manifests: manifestsOf(files), root };
+  const top: TreeNode = { kids: new Map(), name: "", own: false, path: "", pkg: null };
   for (const f of files) {
     const segs = keptSegs(f, filter);
     if (segs === null) continue;
@@ -107,7 +108,7 @@ const byName = (a: TreeNode, b: TreeNode): number => Number(a.name > b.name) - N
 function collapsed(k: TreeNode, label: string): { node: TreeNode; label: string } {
   const through = k.kids.size === 1 && k.pkg == null && !k.own;
   for (const only of through ? k.kids.values() : []) return collapsed(only, `${label}/${only.name}`);
-  return { node: k, label };
+  return { label, node: k };
 }
 
 /**
@@ -121,13 +122,13 @@ export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[
   const folded = leaves.length >= o.foldAt ? new Set(leaves) : new Set<string>();
   const rows: Row[] = [];
   if (folded.size) {
-    rows.push({ kind: "fold", label: leaves, path: node.path, pkg: null, kids: [] });
+    rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
   }
   for (const kid of kids) {
     if (folded.has(kid.name)) continue;
     // Collapse pass-through dirs only; a dir with its own code stays a row.
     const { node: k, label } = collapsed(kid, kid.name);
-    rows.push({ kind: "dir", label, path: k.path, pkg: k.pkg, kids: displayRows(k, o) });
+    rows.push({ kids: displayRows(k, o), kind: "dir", label, path: k.path, pkg: k.pkg });
   }
   return rows;
 }
@@ -168,7 +169,7 @@ function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
     for (const row of list) {
       const rel = row.pkg != null ? 0 : pkgDepth;
       const hidden = row.kids.length > 0 && rel >= cap && !holdsPackage(row);
-      lines.push(rowText(row, depth, { more: hidden, base }));
+      lines.push(rowText(row, depth, { base, more: hidden }));
       if (!hidden) walk(row.kids, depth + 1, rel + 1);
     }
   };
@@ -184,5 +185,5 @@ export function renderToFit(rows: Row[], fit: RenderFit): { lines: string[]; dep
     lines = renderAtDepth(rows, depth, fit.base);
     if (lines.join("\n").length + 1 <= fit.limit) break;
   }
-  return { lines, depth: Math.max(depth, 1) };
+  return { depth: Math.max(depth, 1), lines };
 }

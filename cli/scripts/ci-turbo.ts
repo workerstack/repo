@@ -1,8 +1,11 @@
 /** The packages gate of `repo ci` under the workspace pack: turbo runs each package's typecheck and test. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { readWorkspace } from "../sync/workspace.ts";
+import type { Gate } from "./ci-gate.ts";
 import {
   CACHED_LINE,
   COVERAGE_ENV,
@@ -15,7 +18,6 @@ import {
   TASKS_LINE,
   TURBO_ARGS,
 } from "./ci-turbo.constants.ts";
-import type { Gate } from "./ci-gate.ts";
 import type { Captured } from "./lint.ts";
 
 /** Runs turbo with `args` in `cwd` and `env` on top of the process's; `missing` is why there is no binary to run. */
@@ -27,7 +29,7 @@ export type TurboRun = (args: string[], cwd: string, env: Record<string, string>
 export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
 const reportShape = () =>
-  z.looseObject({ testResults: z.array(z.unknown()).default([]), success: z.boolean().optional() });
+  z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
 
 /** The variables the flags ask turbo's tasks to see. */
 function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {

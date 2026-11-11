@@ -1,6 +1,7 @@
 import type { Comment, CreateRule } from "@oxlint/plugins";
-import { BANNER, CONFIG, CRLF, DOC, LF, MESSAGE } from "./no-block-comment.constants.ts";
+
 import { commentLines } from "./comment-lines.ts";
+import { BANNER, CONFIG, CRLF, DOC, LF, MESSAGE } from "./no-block-comment.constants.ts";
 
 /** The text before `comment` on its line when only whitespace stands on both sides of it, else `null`. */
 function indentOf(text: string, comment: Comment): string | null {
@@ -23,7 +24,6 @@ function kept(text: string, comment: Comment): boolean {
  * inside a line, a first-line banner and a config comment stay.
  */
 export const noBlockComment: CreateRule = {
-  meta: { fixable: "whitespace" },
   create(context) {
     return {
       Program() {
@@ -35,12 +35,13 @@ export const noBlockComment: CreateRule = {
           if (indent === null) continue;
           const replacement = commentLines(comment.value, indent.length).join(`${eol}${indent}`);
           context.report({
+            fix: (fixer) => fixer.replaceTextRange([comment.start, comment.end], replacement),
             message: MESSAGE,
             node: comment,
-            fix: (fixer) => fixer.replaceTextRange([comment.start, comment.end], replacement),
           });
         }
       },
     };
   },
+  meta: { fixable: "whitespace" },
 };

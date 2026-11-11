@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { runSync } from "../cli/sync.ts";
+
 import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
+import { runSync } from "../cli/sync.ts";
 import { adaptFile } from "./sync-pstack-adapt.ts";
 import { parseArgv } from "./sync-pstack-args.ts";
 import { fetchText, rawUrl, resolveSkills, type Source, type TextFetch } from "./sync-pstack-fetch.ts";
@@ -79,7 +80,7 @@ async function syncOne({ skill, rel }: Task, plan: Plan, tally: Tally): Promise<
   const status = settle(path.join(plan.root, STOCK_SKILLS_REL, skill.name, rel), adapted.text, plan.check);
   if (status === STATUS_WRITE) tally.wrote += 1;
   if (status === STATUS_DRIFT) tally.drifted += 1;
-  tally.reports.push({ skill: skill.name, rel, status });
+  tally.reports.push({ rel, skill: skill.name, status });
   plan.io.out(`${status} ${skill.name}/${rel}\n`);
   return null;
 }
@@ -93,7 +94,7 @@ async function syncAll(tasks: readonly Task[], plan: Plan, tally: Tally): Promis
 
 /** The trees come from `repo sync`, the one writer of every generated file. */
 async function runRepoSync(root: string, io: Io): Promise<void> {
-  const code = await runSync([], { cwd: root, stdout: io.out, stderr: io.err });
+  const code = await runSync([], { cwd: root, stderr: io.err, stdout: io.out });
   if (code !== 0) throw new Error(`repo sync exited ${code}`);
 }
 
@@ -113,11 +114,11 @@ async function finish(plan: Plan, tally: Tally, run: () => unknown): Promise<Syn
   for (const miss of misses) plan.io.err(`miss ${miss}\n`);
   if (!plan.check && plan.generate && tally.wrote > 0) {
     const error = await regenerate(run);
-    if (error !== null) return { ok: false, error, reports, misses };
+    if (error !== null) return { error, misses, ok: false, reports };
   }
-  if (plan.check && tally.drifted > 0) return { ok: false, error: `${tally.drifted} file(s) drifted`, reports, misses };
-  if (misses.length) return { ok: false, error: `${misses.length} adapter miss(es)`, reports, misses };
-  return { ok: true, reports, wrote: tally.wrote, misses: [] };
+  if (plan.check && tally.drifted > 0) return { error: `${tally.drifted} file(s) drifted`, misses, ok: false, reports };
+  if (misses.length) return { error: `${misses.length} adapter miss(es)`, misses, ok: false, reports };
+  return { misses: [], ok: true, reports, wrote: tally.wrote };
 }
 
 /**
@@ -132,13 +133,13 @@ export async function syncPstackSkills({
   generateFn,
 }: SyncPstackSkillsOptions): Promise<SyncResult> {
   const parsed = parseArgv(argv);
-  if (!parsed.ok) return { ok: false, error: parsed.error };
+  if (!parsed.ok) return { error: parsed.error, ok: false };
   const { check, generate, repo, ref } = parsed;
   const root = path.resolve(workspaceRoot ?? process.cwd());
-  const plan: Plan = { root, check, generate, source: { repo, ref }, fetchImpl, io };
-  const tally: Tally = { reports: [], wrote: 0, drifted: 0, misses: [] };
-  const tasks = resolveSkills(parsed.skills).flatMap((skill) => skill.files.map((rel) => ({ skill, rel })));
+  const plan: Plan = { check, fetchImpl, generate, io, root, source: { ref, repo } };
+  const tally: Tally = { drifted: 0, misses: [], reports: [], wrote: 0 };
+  const tasks = resolveSkills(parsed.skills).flatMap((skill) => skill.files.map((rel) => ({ rel, skill })));
   const failure = await syncAll(tasks, plan, tally);
-  if (failure !== null) return { ok: false, error: failure };
+  if (failure !== null) return { error: failure, ok: false };
   return await finish(plan, tally, generateFn ?? (() => runRepoSync(root, io)));
 }

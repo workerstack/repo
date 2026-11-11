@@ -8,9 +8,11 @@ const FOLD_AT = 12;
 /** The map's knobs when `.repo/map.jsonc` sets none. */
 export const DEFAULTS: Readonly<MapConfig> = /* @__PURE__ */ Object.freeze({
   budget: BUDGET,
-  depthCap: DEPTH_CAP,
-  foldAt: FOLD_AT,
   codeExt: ["ts", "tsx", "js", "jsx", "mjs", "cjs", "py", "go", "rs", "sql", "vue", "svelte", "astro"],
+  depthCap: DEPTH_CAP,
+  exclude: [],
+  foldAt: FOLD_AT,
+  include: [],
   skip: [
     "_gen",
     "gen",
@@ -30,8 +32,6 @@ export const DEFAULTS: Readonly<MapConfig> = /* @__PURE__ */ Object.freeze({
     "locales",
     "i18n",
   ],
-  include: [],
-  exclude: [],
 });
 
 /** Where a repo sets its map knobs. */

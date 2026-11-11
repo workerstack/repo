@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { extraH2Sections, extractUserMarkdown } from "./agents-text.ts";
 
 describe("extractUserMarkdown", () => {

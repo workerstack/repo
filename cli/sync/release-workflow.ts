@@ -43,30 +43,30 @@ const render = (job: Job): string =>
 
 const JOBS: readonly Job[] = [
   {
+    command: "gate",
+    env: GATE_ENV,
     id: "gate",
     minutes: GATE_TIMEOUT_MINUTES,
     permissions: GATE_PERMISSIONS,
-    env: GATE_ENV,
     steps: [CHECKOUT_TAG_FULL_STEP, ...BUN_STEPS],
-    command: "gate",
   },
   {
-    id: "publish",
-    needs: "gate",
-    minutes: PUBLISH_TIMEOUT_MINUTES,
-    permissions: PUBLISH_PERMISSIONS,
-    env: PUBLISH_ENV,
-    steps: [CHECKOUT_TAG_STEP, ...BUN_STEPS, ...NODE_STEPS],
     command: "publish",
+    env: PUBLISH_ENV,
+    id: "publish",
+    minutes: PUBLISH_TIMEOUT_MINUTES,
+    needs: "gate",
+    permissions: PUBLISH_PERMISSIONS,
+    steps: [CHECKOUT_TAG_STEP, ...BUN_STEPS, ...NODE_STEPS],
   },
   {
-    id: "github",
-    needs: "publish",
-    minutes: GITHUB_TIMEOUT_MINUTES,
-    permissions: GITHUB_PERMISSIONS,
-    env: GATE_ENV,
-    steps: [CHECKOUT_TAG_STEP, ...BUN_STEPS],
     command: "github",
+    env: GATE_ENV,
+    id: "github",
+    minutes: GITHUB_TIMEOUT_MINUTES,
+    needs: "publish",
+    permissions: GITHUB_PERMISSIONS,
+    steps: [CHECKOUT_TAG_STEP, ...BUN_STEPS],
   },
 ];
 
@@ -74,12 +74,12 @@ const JOBS: readonly Job[] = [
 export const releaseWorkflow: Generator = (ctx) => {
   const { name, private: isPrivate } = ctx.workspace.manifest;
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false) {
-    return { outputs: [], errors: [] };
+    return { errors: [], outputs: [] };
   }
   const existing = ctx.read(RELEASE_PATH);
   if (existing !== null && !hasOwnedHeader(existing)) {
-    return { outputs: [], errors: [`${RELEASE_PATH} is hand-written; delete it so repo sync can own it`] };
+    return { errors: [`${RELEASE_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
   }
   const content = `${PREAMBLE.replaceAll("%NAME%", name)}\n${JOBS.map(render).join("\n\n")}\n`;
-  return { outputs: [{ kind: "file", path: RELEASE_PATH, content, tracked: true, managed: "whole" }], errors: [] };
+  return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: RELEASE_PATH, tracked: true }] };
 };

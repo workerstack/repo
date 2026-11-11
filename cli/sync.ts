@@ -1,25 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { CONFIG_FILE, findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
-import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
-import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
 import { applyMigration } from "./sync/apply-migration.ts";
+import { gitFiles, ignoreBlockLines, strayIgnoreFiles, untrackedEntries, type PostPass } from "./sync/git-files.ts";
+import { headerStale } from "./sync/header-stale.ts";
+import { stamp } from "./sync/header.ts";
+import { normalizeRel, prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
+import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { planHandover } from "./sync/migration-handover.ts";
-import { readStockHistory } from "./sync/stock-history.ts";
-import { planRuleUpgrade } from "./sync/migrate-rules.ts";
-import { isSelf, stockRoot } from "./sync/stock.ts";
-import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
-import { stamp } from "./sync/header.ts";
-import { headerStale } from "./sync/header-stale.ts";
-import { applyCuts, cutDriftLines, repairLines, splitPrune } from "./sync/prune-shared.ts";
 import { GENERATORS, type Generator, type Output, type SyncContext } from "./sync/outputs.ts";
-import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
-import { isCurrent, writeAll } from "./sync/write.ts";
-import { settleModes } from "./sync/write-modes.ts";
+import { applyCuts, cutDriftLines, repairLines, splitPrune } from "./sync/prune-shared.ts";
+import { type GitRun, markHooksExecutable, standards, syncHooksPath } from "./sync/standards.ts";
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
+import { readStockHistory } from "./sync/stock-history.ts";
+import { isSelf, stockRoot } from "./sync/stock.ts";
+import { type FormatEntry, validateOutputs } from "./sync/validate.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
+import { settleModes } from "./sync/write-modes.ts";
+import { isCurrent, writeAll } from "./sync/write.ts";
 
 /** Where repo sync prints; each call gets whole lines. */
 export type SyncIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
@@ -82,7 +83,7 @@ export function planSync(
     const planned = [...outputs];
     collect(pass.name, () => pass(ctx, planned));
   }
-  return { outputs, errors };
+  return { errors, outputs };
 }
 
 /** The text of the last file output planned at `rel`, or null when none is. */
@@ -103,10 +104,10 @@ export function computeOutputs(
   post?: readonly PostPass[],
 ): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
   const readErrors: string[] = [];
-  const plan = planSync({ root, config, workspace, read: (rel) => readText(root, rel, readErrors) }, generators, post);
+  const plan = planSync({ config, read: (rel) => readText(root, rel, readErrors), root, workspace }, generators, post);
   // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
-  if (readErrors.length > 0) return { ok: false, errors: readErrors };
-  if (plan.errors.length > 0) return { ok: false, errors: plan.errors };
+  if (readErrors.length > 0) return { errors: readErrors, ok: false };
+  if (plan.errors.length > 0) return { errors: plan.errors, ok: false };
   // One spelling per path: outputs and manifest entries are compared only in the normalized form.
   const normalized: Output[] = [];
   const badPaths: string[] = [];
@@ -115,7 +116,7 @@ export function computeOutputs(
     if (rel === null) badPaths.push(`${output.path}: not a path inside the repo`);
     else normalized.push(stamped({ ...output, path: rel }));
   }
-  return badPaths.length > 0 ? { ok: false, errors: badPaths } : { ok: true, outputs: normalized };
+  return badPaths.length > 0 ? { errors: badPaths, ok: false } : { ok: true, outputs: normalized };
 }
 
 /** A whole file output with sync's one header line, in its format's comment syntax; any other output as it is. */
@@ -221,19 +222,19 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   // and again after each block that brought such a source back (a copied install's policy).
   const handover = () => {
     const packages = workspace.workspace.packages.map((pkg) => pkg.dir);
-    return planHandover(root, { packages, history: readStockHistory() });
+    return planHandover(root, { history: readStockHistory(), packages });
   };
   const blocks: StepRun = {
-    check,
-    postinstall,
-    stderr: (s) => io.stderr(s),
-    fail,
-    replan,
     apply: async (steps) => {
       for (const line of await applyMigration(root, steps)) io.stdout(`${line}\n`);
       await upgrade();
       for (const line of await applyMigration(root, handover())) io.stdout(`${line}\n`);
     },
+    check,
+    fail,
+    postinstall,
+    replan,
+    stderr: (s) => io.stderr(s),
   };
   const handed = await stepBlock({ noun: "handover", steps: handover() }, blocks);
   if ("exit" in handed) return handed.exit;
@@ -246,8 +247,8 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   if (!isSelf(root)) {
     const generated = generatedFiles(outputs);
     const ignored = untrackedEntries(resolved.agents.hosts, outputs);
-    const steps = planMigration(root, { stock: stockRoot(root), generated, ignored });
-    const migration = await stepBlock({ noun: "migration", steps, reload: true }, blocks);
+    const steps = planMigration(root, { generated, ignored, stock: stockRoot(root) });
+    const migration = await stepBlock({ noun: "migration", reload: true, steps }, blocks);
     if ("exit" in migration) return migration.exit;
     migrated = migration.applied;
   }
@@ -256,7 +257,7 @@ async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<num
   // The overlay it writes changes what the generators read, so the outputs are planned again.
   if (!isSelf(root) && !migrated) {
     const owned = readManifest(root).paths.flatMap((entry) => normalizeRel(entry, root) ?? []);
-    const steps = planAdoption(root, { stock: stockRoot(root), config: resolved, outputs, manifest: owned });
+    const steps = planAdoption(root, { config: resolved, manifest: owned, outputs, stock: stockRoot(root) });
     const adoption = await stepBlock({ noun: "adoption", steps }, blocks);
     if ("exit" in adoption) return adoption.exit;
   }
@@ -330,10 +331,10 @@ function parseMode(args: string[]): ModeResult {
   for (const arg of args) {
     if (arg === "--check") mode.check = true;
     else if (arg === "--postinstall") mode.postinstall = true;
-    else return { ok: false, error: `unknown flag ${arg}; use --check or --postinstall` };
+    else return { error: `unknown flag ${arg}; use --check or --postinstall`, ok: false };
   }
-  if (mode.check && mode.postinstall) return { ok: false, error: "use --check or --postinstall, not both" };
-  return { ok: true, mode };
+  if (mode.check && mode.postinstall) return { error: "use --check or --postinstall, not both", ok: false };
+  return { mode, ok: true };
 }
 
 /** A root-relative file's text, or null when it is missing; any other failure is recorded in `errors`. */

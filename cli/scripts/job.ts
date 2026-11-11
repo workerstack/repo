@@ -1,13 +1,13 @@
 #!/usr/bin/env bun
-/** Deterministic repo for job: search|exec|test|slice|fetch. Exit 2 + FALLBACK on denylist/HTML-as-exec/unbounded. */
-import { resolveRoots } from "./workspace-root.ts";
-import { FALLBACK, FALLBACK_EXIT, FETCH_JOB, SEARCH_JOB, SLICE_JOB } from "./job.constants.ts";
 import { parseArgv, resolveJobCwd } from "./job-args.ts";
 import { runExec, runSlice } from "./job-exec.ts";
 import { runFetch } from "./job-fetch.ts";
 import { fallbackResult, shouldFallback } from "./job-format.ts";
 import { runSearch } from "./job-search.ts";
+import { FALLBACK, FALLBACK_EXIT, FETCH_JOB, SEARCH_JOB, SLICE_JOB } from "./job.constants.ts";
 import type { JobOptions, JobResult, ParsedArgs } from "./job.types.ts";
+/** Deterministic repo for job: search|exec|test|slice|fetch. Exit 2 + FALLBACK on denylist/HTML-as-exec/unbounded. */
+import { resolveRoots } from "./workspace-root.ts";
 
 /** Runs one job from its options; an unknown flag, job or refused query falls back. */
 export function runJob({
@@ -27,8 +27,8 @@ export function runJob({
   const stashRoot = root || resolveRoots({}, { cwd: at }).root;
   // shouldFallback passed, so a search, fetch or exec job has a non-empty query.
   const q = String(query);
-  if (job === SEARCH_JOB) return runSearch(q, { cwd: at, root: stashRoot, path: searchPath, glob });
-  if (job === SLICE_JOB) return runSlice({ stash, path: searchPath, from, to, cwd: at, root: stashRoot });
+  if (job === SEARCH_JOB) return runSearch(q, { cwd: at, glob, path: searchPath, root: stashRoot });
+  if (job === SLICE_JOB) return runSlice({ cwd: at, from, path: searchPath, root: stashRoot, stash, to });
   if (job === FETCH_JOB) return runFetch(q, { cwd: at, root: stashRoot });
   return runExec(q, { cwd: at, root: stashRoot });
 }
@@ -36,7 +36,7 @@ export function runJob({
 /** The job options of a parsed command line run in `cwd`. */
 function optionsOf(parsed: ParsedArgs, cwd: string, root: string): JobOptions {
   const { job, query, path, glob, stash, from, to } = parsed;
-  return { job, query, cwd, root, path, glob, stash, from, to };
+  return { cwd, from, glob, job, path, query, root, stash, to };
 }
 
 function fallbackExit(): number {

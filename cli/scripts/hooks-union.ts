@@ -22,6 +22,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { hookCommand, hookNameOf, type HookName } from "./hook-command.ts";
 import { applyAgents, applyClaude, applyCodex, applyCursor } from "./hooks-union-apply.ts";
 import { isRootCmd } from "./hooks-union-commands.ts";
@@ -75,17 +76,17 @@ function given(v: unknown): string | undefined {
 }
 
 function resolveRoots(opts: UnionOptions | string): Roots {
-  if (typeof opts === "string") return { ws: opts, src: opts, consumer: opts };
+  if (typeof opts === "string") return { consumer: opts, src: opts, ws: opts };
   const ws = given(opts.workspaceRoot) ?? process.cwd();
-  return { ws, src: given(opts.sourceRoot) ?? ws, consumer: given(opts.consumerRoot) ?? ws };
+  return { consumer: given(opts.consumerRoot) ?? ws, src: given(opts.sourceRoot) ?? ws, ws };
 }
 
 function checked(roots: Roots): UnionResult {
-  const failures = checkUnion({ workspaceRoot: roots.ws, sourceRoot: roots.src, consumerRoot: roots.consumer });
+  const failures = checkUnion({ consumerRoot: roots.consumer, sourceRoot: roots.src, workspaceRoot: roots.ws });
   if (failures.length) {
-    return { ok: false, check: true, error: `drift: ${failures.join("; ")}`, failures };
+    return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
   }
-  return { ok: true, check: true, failures: [] };
+  return { check: true, failures: [], ok: true };
 }
 
 export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
@@ -95,7 +96,7 @@ export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
   applyCodex(roots);
   applyAgents(roots);
   applyCursor(roots);
-  return { ok: true, check: false };
+  return { check: false, ok: true };
 }
 
 /** Why `command` in hook file `id` is not the form sync writes, or null when it is. */
@@ -127,14 +128,14 @@ function fileSpecs(roots: Roots): FileSpec[] {
   const worktree: HookName[] = ships(roots.src, "worktree") ? ["worktree"] : [];
   return [
     {
-      id: "claude",
-      path: CLAUDE_SETTINGS,
       hooks: [...OWNED_HOOKS, ...map, ...worktree],
+      id: "claude",
       needles: [...autorun, ...loadConsumerDeny(roots)],
+      path: CLAUDE_SETTINGS,
     },
-    { id: "codex", path: CODEX_HOOKS, hooks: [...OWNED_HOOKS, ...map], needles: autorun },
-    { id: "agents", path: AGENTS_HOOKS, hooks: OWNED_HOOKS, needles: autorun },
-    { id: "cursor", path: CURSOR_HOOKS, hooks: OWNED_HOOKS, needles: autorun },
+    { hooks: [...OWNED_HOOKS, ...map], id: "codex", needles: autorun, path: CODEX_HOOKS },
+    { hooks: OWNED_HOOKS, id: "agents", needles: autorun, path: AGENTS_HOOKS },
+    { hooks: OWNED_HOOKS, id: "cursor", needles: autorun, path: CURSOR_HOOKS },
   ];
 }
 

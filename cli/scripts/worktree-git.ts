@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
+import { canonicalPath } from "./workspace-root.ts";
 import { HEADS_REF, NO_BRANCH, WORKTREES_DIR } from "./worktree.constants.ts";
 import type { GitRun, WorktreeEntry } from "./worktree.types.ts";
-import { canonicalPath } from "./workspace-root.ts";
 
 export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -11,7 +12,7 @@ export function errorMessage(err: unknown): string {
 
 export function git(cwd: string, args: string[]): GitRun {
   const r = spawnSync("git", args, { cwd, encoding: "utf8" });
-  return { ok: r.status === 0, out: (r.stdout || "").trim(), err: (r.stderr || "").trim() };
+  return { err: (r.stderr || "").trim(), ok: r.status === 0, out: (r.stdout || "").trim() };
 }
 
 export function samePath(a: string, b: string): boolean {
@@ -67,8 +68,8 @@ export function worktreeEntries(root: string): WorktreeEntry[] {
     const wt = block.split("\n", 1).join("");
     const branch = block.split("\n").find((l) => l.startsWith("branch "));
     return {
-      path: canonicalPath(path.resolve(wt.slice("worktree ".length))),
       branch: branch ? branch.slice(`branch ${HEADS_REF}`.length) : null,
+      path: canonicalPath(path.resolve(wt.slice("worktree ".length))),
     };
   });
 }

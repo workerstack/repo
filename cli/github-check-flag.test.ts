@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from "vitest";
-import { DENIED, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
+
 import { MANIFEST, githubRepo } from "./fixtures/github-repo.ts";
+import { DENIED, cleanGithubTemps, run, settledSettings } from "./fixtures/github-run.ts";
 import { EMPTY_SETTINGS, fakeGh, type Settings } from "./fixtures/github-store.ts";
 import { RUN, must } from "./fixtures/github-wanted.ts";
 import type { CurrentRuleset, Rule } from "./github.types.ts";
@@ -22,10 +23,10 @@ it("prints each setting that drifted with how to fix it, and exits 1 without wri
   const settled = await settledSettings(cwd);
   const drifted: Settings = {
     ...settled,
-    rulesets: [withoutConsumer(must(settled.rulesets[0]))],
-    reporting: false,
     alerts: false,
     description: "x",
+    reporting: false,
+    rulesets: [withoutConsumer(must(settled.rulesets[0]))],
     topics: ["lint"],
   };
   const fake = fakeGh(drifted);

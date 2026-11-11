@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { ghFor, runGate, tagRelease } from "../fixtures/gate-world.ts";
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { commit, gitIn, NAME, world } from "../fixtures/release-world.ts";
@@ -13,8 +14,8 @@ describe("repo release gate passes", () => {
     const short = tagRelease(w, { version: "0.2.0" });
     expect(await runGate(w, [`${NAME}@0.2.0`])).toStrictEqual({
       code: 0,
-      out: `repo release gate: ${NAME}@0.2.0 is ${short}, version 0.2.0, changelog ok · waiting for ci on ${short} (run 7)… · passed\n`,
       err: "",
+      out: `repo release gate: ${NAME}@0.2.0 is ${short}, version 0.2.0, changelog ok · waiting for ci on ${short} (run 7)… · passed\n`,
     });
   });
 
@@ -32,7 +33,7 @@ describe("repo release gate passes", () => {
 describe("repo release gate on a ci that did not pass", () => {
   const setup = () => {
     const w = world({}, false);
-    return { w, short: tagRelease(w, { version: "0.2.0" }) };
+    return { short: tagRelease(w, { version: "0.2.0" }), w };
   };
 
   it("prints the failed jobs and tells you to release the next version", async () => {

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_HANDOFF, VALID_IMPL, VALID_LESSON, VALID_PLAN, DRAFT_ROADMAP } from "./fixtures/persist-bodies.ts";
 import { runHook } from "./fixtures/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
@@ -16,7 +18,7 @@ interface Reply {
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function temp(prefix: string): string {
@@ -27,7 +29,7 @@ function temp(prefix: string): string {
 
 /** A PreToolUse caller as Grok sends it; `session` is left out when empty. */
 const inSession = (session?: string) => (ws: string, toolName: string | undefined, toolInput: unknown) => {
-  const payload = { hookEventName: "PreToolUse", toolName, toolInput, workspaceRoot: ws, session_id: session };
+  const payload = { hookEventName: "PreToolUse", session_id: session, toolInput, toolName, workspaceRoot: ws };
   const run = runHook(main, payload, { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws });
   expect(run.status).toBe(0);
   if (!run.stdout) return null;
@@ -37,11 +39,11 @@ const inSession = (session?: string) => (ws: string, toolName: string | undefine
 const pre = inSession();
 
 const saveAs = (ws: string, file: string, content: string) =>
-  pre(ws, "Write", { file_path: file, content })?.updatedInput?.file_path ?? "";
+  pre(ws, "Write", { content, file_path: file })?.updatedInput?.file_path ?? "";
 
 describe("a PreToolUse payload that names no usable target", () => {
   it("passes a payload with no tool name", () => {
-    expect(pre(temp("tools-"), undefined, { file_path: "a.ts", content: "x" })).toBeNull();
+    expect(pre(temp("tools-"), undefined, { content: "x", file_path: "a.ts" })).toBeNull();
   });
 
   it("denies a Write that carries no input", () => {
@@ -78,7 +80,7 @@ describe("a spawn", () => {
     expect(fs.existsSync(record)).toBe(false);
     inSession("sp")(ws, "Task", { prompt: "/review-roadmap 1" });
     inSession("sp")(ws, "Task", { prompt: "/review-plan 1" });
-    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual({ "roadmap 1": 0, "plan 1": 0 });
+    expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual({ "plan 1": 0, "roadmap 1": 0 });
   });
 });
 
@@ -92,7 +94,7 @@ describe("a write under .tmp/repo", () => {
   it("denies an Edit of a file that does not exist yet", () => {
     const ws = temp("tools-");
     for (const dir of ["plans", "implementations"]) {
-      const out = pre(ws, "Edit", { file_path: `.tmp/repo/${dir}/x.md`, old_string: "a", new_string: "b" });
+      const out = pre(ws, "Edit", { file_path: `.tmp/repo/${dir}/x.md`, new_string: "b", old_string: "a" });
       expect(out?.permissionDecision, dir).toBe("deny");
     }
   });
@@ -102,7 +104,7 @@ describe("a write under .tmp/repo", () => {
     const plan = saveAs(ws, ".tmp/repo/plans/x.md", VALID_PLAN);
     const roadmap = saveAs(ws, ".tmp/repo/roadmaps/x.md", DRAFT_ROADMAP);
     for (const file_path of [plan, roadmap]) {
-      expect(pre(ws, "Edit", { file_path, old_string: "no such text", new_string: "b" }), file_path).toBeNull();
+      expect(pre(ws, "Edit", { file_path, new_string: "b", old_string: "no such text" }), file_path).toBeNull();
     }
   });
 });
@@ -115,13 +117,13 @@ describe("a write to a saved journal", () => {
   it("passes an Edit and a Write that is not a full body", () => {
     const ws = temp("tools-");
     const file_path = journal(ws);
-    expect(pre(ws, "Edit", { file_path, old_string: "(none)", new_string: "a" })).toBeNull();
-    expect(pre(ws, "Write", { file_path, content: "a line" })).toBeNull();
+    expect(pre(ws, "Edit", { file_path, new_string: "a", old_string: "(none)" })).toBeNull();
+    expect(pre(ws, "Write", { content: "a line", file_path })).toBeNull();
   });
 
   it("denies a full body that breaks the journal shape", () => {
     const ws = temp("tools-");
-    const out = pre(ws, "Write", { file_path: journal(ws), content: "# Title\n\nno sections here\n" });
+    const out = pre(ws, "Write", { content: "# Title\n\nno sections here\n", file_path: journal(ws) });
     expect(out?.permissionDecision).toBe("deny");
   });
 });
@@ -135,7 +137,7 @@ describe("a lesson notice", () => {
     return ws;
   }
   const edit = (ws: string, session?: string) =>
-    inSession(session)(ws, "Edit", { file_path: "src/a.ts", old_string: "x", new_string: "y" });
+    inSession(session)(ws, "Edit", { file_path: "src/a.ts", new_string: "y", old_string: "x" });
 
   it("shows again on every edit of a session with no id", () => {
     const ws = lessons();

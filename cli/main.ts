@@ -1,13 +1,14 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { COMMANDS, isCommandName, runCommand } from "./commands.ts";
 import { readEnv } from "./env.ts";
 import { init, parsePacksFlag, type InitOptions } from "./init.ts";
 import { confirm, isInteractive, select, spinner } from "./prompt.ts";
-import { runSync } from "./sync.ts";
-import { HOOK_NAMES } from "./scripts/hook-command.ts";
-import { COMMANDS, isCommandName, runCommand } from "./commands.ts";
 import { mapCommand } from "./scripts/folder-map.ts";
+import { HOOK_NAMES } from "./scripts/hook-command.ts";
+import { runSync } from "./sync.ts";
 
 const PKG_ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -36,16 +37,16 @@ Flags:
 `;
 
 const MENU_OPTIONS = [
-  { value: "init", label: "init" },
-  { value: "check", label: "check" },
-  { value: "yolo", label: "yolo" },
-  { value: "purge-mcps", label: "purge-mcps" },
-  { value: "doctor", label: "doctor" },
-  { value: "clean", label: "clean" },
-  { value: "setup", label: "setup" },
-  { value: "tasks", label: "tasks" },
-  { value: "help", label: "help" },
-  { value: "quit", label: "quit" },
+  { label: "init", value: "init" },
+  { label: "check", value: "check" },
+  { label: "yolo", value: "yolo" },
+  { label: "purge-mcps", value: "purge-mcps" },
+  { label: "doctor", value: "doctor" },
+  { label: "clean", value: "clean" },
+  { label: "setup", value: "setup" },
+  { label: "tasks", value: "tasks" },
+  { label: "help", value: "help" },
+  { label: "quit", value: "quit" },
 ];
 
 const YES_FLAGS = new Set(["--yes", "-y", "--non-interactive"]);
@@ -104,11 +105,11 @@ export function parseArgv(argv: string[]): Flags {
     positionals.push(a);
   }
   return {
-    cmd: positionals[0],
     args: positionals.slice(1),
-    skipGlobals,
+    cmd: positionals[0],
     packs,
     packsError,
+    skipGlobals,
   };
 }
 
@@ -139,15 +140,15 @@ async function runInit(cwd: string, { skipGlobals, interactive, packs }: RunInit
     return;
   }
   const applyGlobals = await confirm({
-    message: APPLY_GLOBALS_CONFIRM,
     initialValue: !skipGlobals,
+    message: APPLY_GLOBALS_CONFIRM,
   });
   init(
     cwd,
     initOpts(
       {
-        skipGlobals: !applyGlobals,
         onPhase: bindSpinner(),
+        skipGlobals: !applyGlobals,
       },
       packs,
     ),
@@ -156,8 +157,8 @@ async function runInit(cwd: string, { skipGlobals, interactive, packs }: RunInit
 
 const syncIo = () => ({
   cwd: process.cwd(),
-  stdout: (s: string) => process.stdout.write(s),
   stderr: (s: string) => process.stderr.write(s),
+  stdout: (s: string) => process.stdout.write(s),
 });
 
 /** Floors, known failures and the lint baseline held against main, per the config's `coverage` paths. */
@@ -186,9 +187,9 @@ async function dispatch(cmd: string | undefined, flags: Flags, interactive: bool
   }
   if (!cmd || cmd === "init") {
     await runInit(process.cwd(), {
-      skipGlobals: flags.skipGlobals,
       interactive: interactive && (!cmd || cmd === "init"),
       packs: flags.packs,
+      skipGlobals: flags.skipGlobals,
     });
     return;
   }
@@ -311,9 +312,9 @@ export async function start(): Promise<void> {
   let cmd = flags.cmd;
   if (!cmd && interactive) {
     const choice = await select({
+      initialValue: "init",
       message: "Command",
       options: MENU_OPTIONS,
-      initialValue: "init",
     });
     if (choice === "quit") return;
     cmd = choice;

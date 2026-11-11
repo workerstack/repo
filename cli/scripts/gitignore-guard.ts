@@ -6,8 +6,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { canonicalPath } from "./workspace-root.ts";
+
 import { childEnv } from "../env.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 /** One `.gitignore` write: the file and the literal lines it would add. */
 export interface IgnoreEdit {
@@ -49,7 +50,7 @@ const PROBE_DIR = ".workerstack-probe";
 function runGit(git: string, args: string[], cwd: string) {
   const env = childEnv();
   for (const k of GIT_ENV_DROP) delete env[k];
-  return spawnSync(git, args, { cwd, env, encoding: "utf8" });
+  return spawnSync(git, args, { cwd, encoding: "utf8", env });
 }
 
 function readText(file: string): string {
@@ -73,7 +74,7 @@ function ignoreEdit(file: string, candidates: string[]): IgnoreEdit {
     if (!line || line.startsWith("#") || have.has(line) || added.includes(line)) continue;
     added.push(line);
   }
-  return { file, added };
+  return { added, file };
 }
 
 /** Apply the host's search/replace to `text`; null when an old string is missing (the host then fails the edit). */
@@ -119,7 +120,7 @@ export function patchIgnoreEdits(patch: string, cwd: string): IgnoreEdit[] {
       if (m[1] === "Move to") {
         if (cur) cur.raw = m[2]!.trim(); // group 2 always matches
       } else {
-        cur = m[1] === "Delete File" ? null : { raw: m[2]!.trim(), plus: [] };
+        cur = m[1] === "Delete File" ? null : { plus: [], raw: m[2]!.trim() };
         if (cur) sections.push(cur);
       }
       continue;
@@ -206,7 +207,7 @@ function teeTarget(tokens: ShellToken[]): { file: string; append: boolean } | nu
   const file = t.shift()?.word;
   if (!file) return null;
   if (t.length && !(t.length === 2 && t[0]!.op === ">" && t[1]!.word === "/dev/null")) return null;
-  return { file, append };
+  return { append, file };
 }
 
 /** One shell write of literal text to one file, in the forms D4 names; null for every other command. */
@@ -243,7 +244,7 @@ function shellIgnoreWrite(command: unknown): ShellWrite | null {
   }
   const rest = tokens.slice(redirect);
   if (redirect === -1 || rest.length !== 2 || !rest[1]?.word) return null;
-  return { file: rest[1].word, append: rest[0]?.op === ">>", text };
+  return { append: rest[0]?.op === ">>", file: rest[1].word, text };
 }
 
 /** The edit a simple shell redirect makes to a `.gitignore`; [] for every other command. */
@@ -313,7 +314,7 @@ export function redundantIgnoreLines(
     const hits = new Map<string, { source: string; n: string; pattern: string }>();
     for (const row of r.stdout.split("\n")) {
       const m = /^(.*?):(\d*):(.*)\t(.*)$/.exec(row);
-      if (m && m[1] && !m[3]!.startsWith("!")) hits.set(m[4]!, { source: m[1], n: m[2]!, pattern: m[3]! }); // groups 2-4 always match
+      if (m && m[1] && !m[3]!.startsWith("!")) hits.set(m[4]!, { n: m[2]!, pattern: m[3]!, source: m[1] }); // groups 2-4 always match
     }
     if (!probes.every((ps) => ps.every((q) => hits.has(q)))) return [];
     return lines.map((line, i) => {
@@ -322,7 +323,7 @@ export function redundantIgnoreLines(
       return { line, rule: `${path.join(top, ...h.source.split("/"))}:${h.n} ${h.pattern}` };
     });
   } finally {
-    fs.rmSync(tmp, { recursive: true, force: true });
+    fs.rmSync(tmp, { force: true, recursive: true });
   }
 }
 

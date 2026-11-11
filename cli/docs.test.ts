@@ -1,7 +1,9 @@
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
-import { docsRun, fence, json, packed, publicManifest, tempRoot } from "./fixtures/docs-fixture.ts";
+
 import { main } from "./docs.ts";
+import { docsRun, fence, json, packed, publicManifest, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const DEMO = publicManifest("@workerstack/demo", { ".": "./i.ts", "./lint": "./l.ts" }).replace(
   ',"./references/*":"./references/*"',
@@ -17,8 +19,8 @@ const AUTH = [
 const BROKEN = {
   "package.json": DEMO,
   "references/INDEX.md": '# Index\n- [Auth](auth.md)\n- [Gone](missing.md)\nUse "@workerstack/demo".\n',
-  "references/extra.md": "# Extra\n",
   "references/auth.md": AUTH,
+  "references/extra.md": "# Extra\n",
 };
 const TSC_ERROR = "references\\auth.md-2.ts(1,7): error TS2339: Property 'tokn' does not exist on type 'Session'.\n";
 
@@ -37,9 +39,9 @@ it("prints the ok line when the references hold up", async () => {
 
 it("prints every finding with its line and exits 1", async () => {
   const run = docsRun(tempRoot(BROKEN), {
+    bun: () => ({ code: 1, stderr: "Error: boom\n", stdout: "" }),
     pack: () => packed("references/INDEX.md"),
-    tsc: () => ({ code: 2, stdout: TSC_ERROR, stderr: "" }),
-    bun: () => ({ code: 1, stdout: "", stderr: "Error: boom\n" }),
+    tsc: () => ({ code: 2, stderr: "", stdout: TSC_ERROR }),
   });
   expect(await main(["--check"], run.io)).toBe(1);
   expect(run.err).toStrictEqual([
@@ -57,7 +59,7 @@ it("prints every finding with its line and exits 1", async () => {
 
 it("skips the export and tarball checks of a private manifest", async () => {
   const root = tempRoot({
-    "package.json": json({ name: "app", private: true, exports: { ".": "./i.ts" } }),
+    "package.json": json({ exports: { ".": "./i.ts" }, name: "app", private: true }),
     "references/INDEX.md": "# Index\n- [A](a.md)\n",
     "references/a.md": "# A\n",
   });
@@ -93,10 +95,10 @@ it("prefixes each package's paths with its folder, and checks only the roots wit
 
 it("finds the doc roots from the nearest workerstack.config.ts", async () => {
   const root = tempRoot({
-    "workerstack.config.ts": "",
     "package.json": json({ name: "app", private: true }),
     "references/INDEX.md": "# Index\n",
     "sub/.keep": "",
+    "workerstack.config.ts": "",
   });
   const run = docsRun(`${root}/sub`);
   expect(await main(["--check"], run.io)).toBe(0);

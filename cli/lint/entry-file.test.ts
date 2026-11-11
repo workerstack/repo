@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { entryFile } from "./entry-file.ts";
 
 const MESSAGE = "a bin file holds only imports and one main() call; move this into the module main comes from";
 const MISSING = "a bin file holds only imports and one main() call; import main and call it once";
 const IMPORT = 'import { main } from "../src/main.ts";\n';
-const manifest = (bin: unknown) => JSON.stringify({ name: "app", bin });
+const manifest = (bin: unknown) => JSON.stringify({ bin, name: "app" });
 
 /** What the rule reports for `code` at `file`, under a root package.json whose `bin` is `bin`. */
 const messagesOf = (code: string, bin: unknown = "./bin/app.ts", file = "bin/app.ts") =>
@@ -39,7 +40,7 @@ describe("entry-file passes", () => {
 
   it("skips a file whose manifest is unreadable or missing", () => {
     const code = "export const run = () => 1;\nrun();";
-    expect(reportsOf(entryFile, { "package.json": "{ not json", "bin/app.ts": code })).toStrictEqual([]);
+    expect(reportsOf(entryFile, { "bin/app.ts": code, "package.json": "{ not json" })).toStrictEqual([]);
     expect(reportsOf(entryFile, { "bin/app.ts": code })).toStrictEqual([]);
   });
 });
@@ -60,8 +61,8 @@ describe("entry-file fails", () => {
   it("fails a bin a map names, read from the nearest package.json", () => {
     const fixture = {
       "package.json": manifest("./bin/root.ts"),
-      "packages/cli/package.json": manifest({ cli: "./bin/cli.ts" }),
       "packages/cli/bin/cli.ts": "export const run = 1;",
+      "packages/cli/package.json": manifest({ cli: "./bin/cli.ts" }),
     };
     expect(reportsOf(entryFile, fixture).map((report) => report.message)).toStrictEqual([MESSAGE, MISSING]);
   });

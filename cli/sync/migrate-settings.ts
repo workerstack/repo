@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { isDeepStrictEqual } from "node:util";
+
 import { isRecord } from "../scripts/hook-input.ts";
 import { MD, RULE_FRONTMATTER } from "./migrate.constants.ts";
 
@@ -83,7 +84,7 @@ export function ownHooks(hooks: unknown, known: (command: string) => boolean): O
       if (groups.length > 0) carried[event] = groups;
     }
   }
-  return { hooks: carried, events: Object.entries(carried).map(([event, groups]) => [event, groups.length]) };
+  return { events: Object.entries(carried).map(([event, groups]) => [event, groups.length]), hooks: carried };
 }
 
 /** Whether `have` has every key of `want` (recursively) and every list item of it. */

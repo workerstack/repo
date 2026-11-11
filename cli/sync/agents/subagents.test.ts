@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
-import { stamp } from "../header.ts";
+
 import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
+import { stamp } from "../header.ts";
 import { loadSources } from "./sources.ts";
 import { renderSubagents } from "./subagents.ts";
 
@@ -16,12 +18,12 @@ const isAgentFile = (rel: string) => AGENT_DIRS.some((dir) => rel.startsWith(dir
 /** Frontmatter block (fences included) and the body after it. */
 function split(text: string): { head: string; body: string } {
   const close = text.indexOf("\n---\n", 4);
-  return { head: text.slice(0, close + 5), body: text.slice(close + 5) };
+  return { body: text.slice(close + 5), head: text.slice(0, close + 5) };
 }
 
 describe("renderSubagents", () => {
   it("matches the consumer goldens byte for byte, path set included", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR, packages: [] }).sources;
+    const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
     const out = renderSubagents(sources, HOSTS);
     const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
     expect([...out.keys()].sort()).toStrictEqual([...goldens.keys()].sort());
@@ -38,7 +40,7 @@ describe("renderSubagents", () => {
   });
 
   it("matches this repo's committed agent files on stock alone, as sync stamps them", () => {
-    const out = renderSubagents(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
+    const out = renderSubagents(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
     const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
     expect([...out.keys()].sort()).toStrictEqual(committed.sort());
     for (const rel of committed)
@@ -46,7 +48,7 @@ describe("renderSubagents", () => {
   });
 
   it("emits only the enabled hosts' files", () => {
-    const sources = loadSources({ stockRoot: STOCK_DIR, consumerRoot: CONSUMER_DIR, packages: [] }).sources;
+    const sources = loadSources({ consumerRoot: CONSUMER_DIR, packages: [], stockRoot: STOCK_DIR }).sources;
     expect(renderSubagents(sources, []).size).toBe(0);
     const grok = [...renderSubagents(sources, ["grok"]).keys()];
     expect(grok.length).toBeGreaterThan(0);
@@ -60,26 +62,26 @@ describe("renderSubagents", () => {
 
   it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
     const doc = (rel: string, data: Record<string, unknown>, body: string) => ({
-      rel: `.repo/subagents/${rel}`,
+      body,
+      data,
       file: rel,
       origin: "repo" as const,
+      rel: `.repo/subagents/${rel}`,
       scope: "",
-      data,
-      body,
     });
     const sources = {
-      rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
+      rules: [],
       subagents: [
         doc("x/deep.md", { name: "deep" }, "deep body"),
-        doc("nobody.md", { name: "nobody", codexcli: { nested: { a: 1 } } }, "one\ntwo"),
+        doc("nobody.md", { codexcli: { nested: { a: 1 } }, name: "nobody" }, "one\ntwo"),
         doc(
           "single.md",
           {
-            name: "single",
-            description: "d",
-            "antigravity-ide": { model: "a", x: "1" },
             "antigravity-cli": { model: "b" },
+            "antigravity-ide": { model: "a", x: "1" },
+            description: "d",
+            name: "single",
           },
           "one line",
         ),
@@ -105,16 +107,16 @@ describe("renderSubagents", () => {
 
   it("writes shallowest paths first, honours a scalar target and omits an empty codex body", () => {
     const doc = (file: string, data: Record<string, unknown>) => ({
-      rel: `.repo/subagents/${file}`,
+      body: "",
+      data,
       file,
       origin: "repo" as const,
+      rel: `.repo/subagents/${file}`,
       scope: "",
-      data,
-      body: "",
     });
     const sources = {
-      rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
+      rules: [],
       subagents: [
         doc("z.md", { name: "z" }),
         doc("a/b.md", { name: "b" }),
@@ -132,16 +134,16 @@ describe("renderSubagents", () => {
 
   it("fails on a subagent without a string name", () => {
     const sources = {
-      rules: [],
       hooks: { rel: "agents/hooks.jsonc", value: {} },
+      rules: [],
       subagents: [
         {
-          rel: ".repo/subagents/bad.md",
+          body: "",
+          data: { name: 3 },
           file: "bad.md",
           origin: "repo" as const,
+          rel: ".repo/subagents/bad.md",
           scope: "",
-          data: { name: 3 },
-          body: "",
         },
       ],
     };

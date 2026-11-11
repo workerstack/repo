@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
-import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
 import { parseFlowSeq, parseMarkdown, type YamlObject } from "./maps-yaml.ts";
+import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
 import { stockRoot } from "./stock.ts";
 
 const isYamlObject = (v: unknown): v is YamlObject => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -69,7 +70,7 @@ function firstSummary(body: string): string {
       continue;
     }
     if (!t) continue;
-    if (/^#/.test(t) || /^```/.test(t) || /^<!--/.test(t) || /^---/.test(t)) continue;
+    if (t.startsWith("#") || t.startsWith("```") || t.startsWith("<!--") || t.startsWith("---")) continue;
     return oneLine(t);
   }
   return "";

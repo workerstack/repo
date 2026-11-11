@@ -6,9 +6,8 @@ import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
-import { writeStash } from "./job-stash.ts";
-import { isRecord } from "./hook-input.ts";
+
+import { childEnv } from "../env.ts";
 import {
   CHROMIUM_BINS,
   LIGHTPANDA_REPO as DOCTOR_LP_REPO,
@@ -17,7 +16,9 @@ import {
   runDoctor,
   whichBin,
 } from "./doctor.ts";
-import { childEnv } from "../env.ts";
+import { isRecord } from "./hook-input.ts";
+import { writeStash } from "./job-stash.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export { CHROMIUM_BINS, whichBin };
 
@@ -97,19 +98,19 @@ function toSession(v: unknown): Session | null {
   for (const [id, e] of Object.entries(asRec(v.lastRefs))) {
     if (!isRecord(e)) continue;
     lastRefs[id] = {
-      role: String(e.role ?? ""),
-      name: String(e.name ?? ""),
       backendNodeId: e.backendNodeId,
+      name: String(e.name ?? ""),
       nodeId: e.nodeId,
+      role: String(e.role ?? ""),
     };
   }
   return {
     engine,
+    escalated: v.escalated === true,
+    lastRefs,
+    lastURL: String(v.lastURL ?? ""),
     pid: typeof v.pid === "number" ? v.pid : undefined,
     port,
-    lastURL: String(v.lastURL ?? ""),
-    lastRefs,
-    escalated: v.escalated === true,
     swapCount: Number(v.swapCount) || 0,
   };
 }
@@ -181,7 +182,7 @@ export function lookupBins(pathEnv: string | undefined, platform: NodeJS.Platfor
     chromium = whichBin(n, pathEnv, platform);
     if (chromium) break;
   }
-  return { lightpanda, chromium };
+  return { chromium, lightpanda };
 }
 
 export function doctorHints(platform: NodeJS.Platform = process.platform): string[] {
@@ -284,12 +285,12 @@ function clearSession(cwd: string): void {
 }
 
 function ok(stdout: string): BrowserResult {
-  return { code: 0, stdout: stdout.endsWith("\n") ? stdout : stdout + "\n", stderr: "" };
+  return { code: 0, stderr: "", stdout: stdout.endsWith("\n") ? stdout : stdout + "\n" };
 }
 
 function fail(stderr: string): BrowserResult {
   const msg = stderr.replace(/^Error:\s*/, "");
-  return { code: 1, stdout: "", stderr: msg.endsWith("\n") ? msg : msg + "\n" };
+  return { code: 1, stderr: msg.endsWith("\n") ? msg : msg + "\n", stdout: "" };
 }
 
 async function freePort(): Promise<number> {
@@ -356,15 +357,15 @@ export async function connectCdp(port: number, timeoutMs = 4000): Promise<Cdp> {
     else p.resolve(asRec(msg.result));
   });
   return {
+    close() {
+      ws.close();
+    },
     send(method: string, params: Rec = {}): Promise<Rec> {
       const id = nextId++;
       return new Promise<Rec>((resolve, reject) => {
-        pending.set(id, { resolve, reject });
+        pending.set(id, { reject, resolve });
         ws.send(JSON.stringify({ id, method, params }));
       });
-    },
-    close() {
-      ws.close();
     },
   };
 }
@@ -372,24 +373,24 @@ export async function connectCdp(port: number, timeoutMs = 4000): Promise<Cdp> {
 function defaultAx(url: string): Rec[] {
   return [
     {
+      childIds: ["2", "3"],
+      name: { value: url || "page" },
       nodeId: "1",
       role: { value: "WebArea" },
-      name: { value: url || "page" },
-      childIds: ["2", "3"],
     },
     {
-      nodeId: "2",
-      role: { value: "link" },
-      name: { value: "Home" },
       backendDOMNodeId: 10,
       childIds: [],
+      name: { value: "Home" },
+      nodeId: "2",
+      role: { value: "link" },
     },
     {
-      nodeId: "3",
-      role: { value: "textbox" },
-      name: { value: "Search" },
       backendDOMNodeId: 11,
       childIds: [],
+      name: { value: "Search" },
+      nodeId: "3",
+      role: { value: "textbox" },
     },
   ];
 }
@@ -449,7 +450,7 @@ function decodeWsFrames(buf: Buffer): {
     offset = start + len;
     if (opcode === 0x8) messages.push({ type: "close" });
     else if (opcode === 0x1 || opcode === 0x2) {
-      messages.push({ type: "msg", data: payload.toString("utf8") });
+      messages.push({ data: payload.toString("utf8"), type: "msg" });
     }
   }
   return { messages, rest: buf.subarray(offset) };
@@ -465,10 +466,10 @@ async function handleCdp(state: FakeCdpState, method: string, params: Rec): Prom
   }
   switch (method) {
     case "Browser.getVersion":
-      return { protocolVersion: "1.3", product: state.engine || "lightpanda" };
+      return { product: state.engine || "lightpanda", protocolVersion: "1.3" };
     case "Target.getTargets":
       return {
-        targetInfos: [{ targetId: "t1", type: "page", url: state.url || "about:blank", attached: true }],
+        targetInfos: [{ attached: true, targetId: "t1", type: "page", url: state.url || "about:blank" }],
       };
     case "Page.enable":
     case "Accessibility.enable":
@@ -512,11 +513,11 @@ export async function serveCdp(
   { port = 0 }: { port?: number } = {},
 ): Promise<{ port: number; close(): void; state: FakeCdpState }> {
   const st: FakeCdpState = {
-    url: "about:blank",
-    markdown: "",
-    failProbe: false,
-    thinSnap: false,
     engine: "lightpanda",
+    failProbe: false,
+    markdown: "",
+    thinSnap: false,
+    url: "about:blank",
     ...state,
   };
   let bound = 0;
@@ -576,8 +577,8 @@ export async function serveCdp(
             socket.write(
               encodeWsFrame(
                 JSON.stringify({
-                  id: msg.id,
                   error: { code: -32000, message: errMessage(err) },
+                  id: msg.id,
                 }),
               ),
             );
@@ -591,10 +592,10 @@ export async function serveCdp(
   });
   bound = Number(asRec(server.address()).port);
   return {
-    port: bound,
     close() {
       server.close();
     },
+    port: bound,
     state: st,
   };
 }
@@ -605,7 +606,7 @@ function engineBin(engine: Engine, bins: Bins): string {
 }
 
 function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
-  const opts: SpawnOptions = { detached: true, stdio: ["ignore", "pipe", "pipe"], env: ctx.env, cwd: ctx.cwd };
+  const opts: SpawnOptions = { cwd: ctx.cwd, detached: true, env: ctx.env, stdio: ["ignore", "pipe", "pipe"] };
   if (onWindows(ctx.platform) && /\.(cmd|bat)$/i.test(bin)) {
     const mjs = `${String(bin).replace(/\.(cmd|bat)$/i, "")}.mjs`;
     try {
@@ -653,11 +654,11 @@ async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   }
   return {
     engine,
+    escalated: false,
+    lastRefs: {},
+    lastURL: "",
     pid: child.pid,
     port,
-    lastURL: "",
-    lastRefs: {},
-    escalated: false,
     swapCount: 0,
   };
 }
@@ -697,10 +698,10 @@ function formatRefs(nodes: unknown[]): { lastRefs: Record<string, RefEntry>; lin
     const name = axText(node.name);
     const id = String(n++);
     lastRefs[id] = {
-      role,
-      name,
       backendNodeId: node.backendDOMNodeId ?? node.backendNodeId,
+      name,
       nodeId: node.nodeId,
+      role,
     };
     lines.push(`[${id}] ${role} ${name}`.trim());
   }
@@ -727,7 +728,7 @@ async function snapshot(session: Session): Promise<{ markdown: string; lines: st
     const ax = await cdp.send("Accessibility.getFullAXTree");
     const { lastRefs, lines } = formatRefs(Array.isArray(ax.nodes) ? ax.nodes : []);
     session.lastRefs = lastRefs;
-    return { markdown, lines };
+    return { lines, markdown };
   } finally {
     cdp.close();
   }
@@ -770,14 +771,14 @@ export async function runBrowser(
   const env = opts.env ?? childEnv();
   const platform = opts.platform || process.platform;
   const bins = opts.bins ?? lookupBins(env.PATH, platform);
-  const ctx: Ctx = { cwd, env, platform, bins, readyMs: opts.readyMs ?? 4000 };
+  const ctx: Ctx = { bins, cwd, env, platform, readyMs: opts.readyMs ?? 4000 };
   const verb = String(argv[0] || "").toLowerCase();
   try {
     if (!verb || verb === "help" || verb === "-h" || verb === "--help") {
       return ok("nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure");
     }
     if (verb === "doctor" || verb === "ensure") {
-      return runDoctor({ pathEnv: env.PATH, platform, cwd, globals: await globalsRow(cwd, env.HOME) });
+      return runDoctor({ cwd, globals: await globalsRow(cwd, env.HOME), pathEnv: env.PATH, platform });
     }
     if (verb === "stop") {
       const s = readSession(cwd);
@@ -789,7 +790,7 @@ export async function runBrowser(
     if (verb === "nav") {
       const url = String(argv[1] || "").trim();
       if (!url) return fail("nav <url>");
-      const picked = pickEngine({ platform, verb: "nav", url, bins });
+      const picked = pickEngine({ bins, platform, url, verb: "nav" });
       if (!picked.engine) return fail(picked.error);
       const prev = readSession(cwd);
       if (prev && prev.pid) reap(prev.pid, platform);
@@ -860,8 +861,8 @@ export async function runBrowser(
             const objectId = asRec(resolved.object).objectId;
             if (!objectId) throw new Error("stale");
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               functionDeclaration: "function() { this.scrollIntoView({ block: 'center' }); }",
+              objectId,
             });
             return;
           }
@@ -900,30 +901,30 @@ export async function runBrowser(
           if (!objectId) throw new Error("stale");
           if (verb === "click") {
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               functionDeclaration: "function() { this.click(); }",
+              objectId,
             });
           } else if (verb === "hover") {
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               functionDeclaration: "function() { this.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })); }",
+              objectId,
             });
           } else if (verb === "select") {
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               arguments: [{ value: text }],
               functionDeclaration:
                 "function(v) { this.value = v; this.dispatchEvent(new Event('change', { bubbles: true })); }",
+              objectId,
             });
           } else {
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               functionDeclaration: "function() { this.focus(); this.value = ''; }",
+              objectId,
             });
             await cdp.send("Input.insertText", { text });
             await cdp.send("Runtime.callFunctionOn", {
-              objectId,
               functionDeclaration: "function() { this.dispatchEvent(new Event('input', { bubbles: true })); }",
+              objectId,
             });
           }
         });
@@ -952,7 +953,7 @@ export async function runBrowser(
     if (verb === "shot" || verb === "pdf") {
       let session = readSession(cwd);
       if (!session || !session.lastURL) return fail("no browser session; run nav");
-      const picked = pickEngine({ platform, verb, url: session.lastURL, bins, forceChromium: true });
+      const picked = pickEngine({ bins, forceChromium: true, platform, url: session.lastURL, verb });
       if (!picked.engine) return fail(picked.error);
       if (session.engine !== "chromium") {
         session = await swapToChromium(session, ctx);

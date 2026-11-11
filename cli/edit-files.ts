@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { JSON_INDENT, POSIX } from "./update.constants.ts";
 
 /** One change to a parsed manifest: the root-relative POSIX file and what to do to its parsed JSON, in place. */

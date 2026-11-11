@@ -84,15 +84,15 @@ export type Adapted = { ok: true; text: string; misses: string[] } | { ok: false
 export function adaptFile(skill: PstackSkill, rel: string, raw: string): Adapted {
   const misses: string[] = [];
   if (rel !== SKILL_REL) {
-    const text = adaptBody({ skill, rel }, raw.replace(/\r\n/g, "\n"), misses);
-    return { ok: true, text: text.endsWith("\n") ? text : `${text}\n`, misses };
+    const text = adaptBody({ rel, skill }, raw.replace(/\r\n/g, "\n"), misses);
+    return { misses, ok: true, text: text.endsWith("\n") ? text : `${text}\n` };
   }
   const split = splitFrontmatter(raw);
-  if (!split.ok) return { ok: false, error: split.error, misses };
+  if (!split.ok) return { error: split.error, misses, ok: false };
   const parsed = parseFm(split.fm);
   for (const k of DROP_FM) delete parsed[k];
   const desc = adaptDescription(skill, parsed.description || "", misses);
-  const body = adaptBody({ skill, rel }, split.body.replace(/\r\n/g, "\n"), misses);
+  const body = adaptBody({ rel, skill }, split.body.replace(/\r\n/g, "\n"), misses);
   const text = `---\nname: ${skill.name}\ndescription: ${quoteDesc(desc)}\n---\n${body.replace(/^\n+/, "").replace(/\s+$/, "")}\n`;
-  return { ok: true, text, misses };
+  return { misses, ok: true, text };
 }

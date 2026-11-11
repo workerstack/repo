@@ -1,6 +1,7 @@
 /** The typecheck step of `repo turn`: each owner's tsconfig.json, then its strict tsconfig.src.json. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { missingSrcConfig } from "../check-tsconfig.ts";
 import { RUNTIME_CONFIG, SRC_CONFIG } from "../tsconfig.constants.ts";
 import type { Captured } from "./lint.ts";

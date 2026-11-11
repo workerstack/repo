@@ -1,5 +1,5 @@
-import { conflictLines, type MigrationStep } from "./migrate.ts";
 import { PREFIX } from "./migrate.constants.ts";
+import { conflictLines, type MigrationStep } from "./migrate.ts";
 
 /** One block of steps sync runs before it writes: what the pending line calls them, the steps, and whether the config is read again after. */
 export type StepBlock = { noun: string; steps: readonly MigrationStep[]; reload?: boolean };

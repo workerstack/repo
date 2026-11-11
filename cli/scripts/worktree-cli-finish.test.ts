@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { cli, commitIn, git, hasBranch, scratch, short, subjects, write, wt } from "./fixtures/worktree-repo.ts";
 
 const tmp = scratch();

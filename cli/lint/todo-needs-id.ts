@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { CreateRule } from "@oxlint/plugins";
 
 /** A comment line, past its `//`, `/*` or JSDoc `*`, that starts with the marker, and the `(…)` right after it. */

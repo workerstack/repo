@@ -53,22 +53,22 @@ export const POST_EXTRAS: readonly Extra[] = [
 
 /** Antigravity's flat consumer entries: the script each needs, its name and the entry. */
 export const NAMED_EXTRAS: readonly { script: string; name: string; hook: NamedHook }[] = [
-  { script: PULL_SCRIPT, name: "daily-pull-all", hook: { event: "SessionStart", command: PULL } },
-  { script: RTK_SCRIPT, name: "rtk-check", hook: { event: "SessionStart", command: RTK } },
-  { script: FLEET_SCRIPT, name: "daily-fleet-digest", hook: { event: "SessionStart", command: FLEET } },
+  { hook: { command: PULL, event: "SessionStart" }, name: "daily-pull-all", script: PULL_SCRIPT },
+  { hook: { command: RTK, event: "SessionStart" }, name: "rtk-check", script: RTK_SCRIPT },
+  { hook: { command: FLEET, event: "SessionStart" }, name: "daily-fleet-digest", script: FLEET_SCRIPT },
   {
-    script: BEHIND_SCRIPT,
+    hook: { command: BEHIND, event: "PreToolUse", matcher: AGY_WRITE_MATCHER },
     name: "check-behind",
-    hook: { event: "PreToolUse", matcher: AGY_WRITE_MATCHER, command: BEHIND },
+    script: BEHIND_SCRIPT,
   },
   {
-    script: VALIDATE_SCRIPT,
+    hook: { command: VALIDATE, event: "PostToolUse", matcher: AGY_WRITE_MATCHER },
     name: "validate-artifact",
-    hook: { event: "PostToolUse", matcher: AGY_WRITE_MATCHER, command: VALIDATE },
+    script: VALIDATE_SCRIPT,
   },
   {
-    script: SIM_SCRIPT,
+    hook: { command: SIM, event: "PostToolUse", matcher: AGY_WRITE_MATCHER },
     name: "simulate-artifact",
-    hook: { event: "PostToolUse", matcher: AGY_WRITE_MATCHER, command: SIM },
+    script: SIM_SCRIPT,
   },
 ];

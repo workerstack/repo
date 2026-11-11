@@ -1,3 +1,4 @@
+import { isRecord } from "./manifest.ts";
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
 import {
   BODY,
@@ -13,7 +14,6 @@ import {
   TYPED_INITS,
   VALUE_HOLDERS,
 } from "./public-surface.constants.ts";
-import { isRecord } from "./manifest.ts";
 import type { Node, Reference } from "./public-surface.types.ts";
 
 /** `value` as a node, or null when it is no object. */
@@ -105,11 +105,11 @@ export function referencesOf(statement: Node): Reference[] {
   walkPublic(declarationOf(statement), (node) => {
     if (node["type"] === NODE.typeParameter) shadowed.add(nameOf(node["name"]));
     if (node["type"] === NODE.importType) {
-      references.push({ source: sourceText(node), name: chainOf(node["qualifier"])[0] ?? NAMESPACE });
+      references.push({ name: chainOf(node["qualifier"])[0] ?? NAMESPACE, source: sourceText(node) });
     }
     const key = REFERENCE_KEYS[String(node["type"])];
     const chain = key === undefined ? [] : chainOf(node[key]);
-    if (chain[0] !== undefined) references.push({ source: null, name: chain[0], member: chain[1] ?? null });
+    if (chain[0] !== undefined) references.push({ member: chain[1] ?? null, name: chain[0], source: null });
     return true;
   });
   return references.filter((reference) => reference.source !== null || !shadowed.has(reference.name));

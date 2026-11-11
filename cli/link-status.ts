@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { installedDir, markersIn, readVersion } from "./link-installed.ts";
 import type { LinkContext } from "./link-io.types.ts";
 import { readState } from "./link-state.ts";
@@ -15,8 +16,8 @@ function rowsOf(ctx: LinkContext): Row[] {
   const state = readState(root);
   const kept = Object.entries(state).map(([name, entry]) => ({
     name,
-    source: entry.source,
     npm: entry.npm ?? NPM_NONE,
+    source: entry.source,
     synced: clock(new Date(entry.syncedAt)),
   }));
   const lost = markersIn(root)

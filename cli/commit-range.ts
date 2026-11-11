@@ -48,7 +48,7 @@ export function commitRange(range: string, how: { rules: CommitRules; check: Che
     const { files, changedLines } = commitChange(io.cwd, sha);
     const message = runGit(io.cwd, ["log", "-1", "--format=%B", sha]).stdout;
     const subject = runGit(io.cwd, ["log", "-1", "--format=%s", sha]).stdout.trim();
-    for (const problem of check(message, { ...rules, stagedFiles: files, changedLines })) {
+    for (const problem of check(message, { ...rules, changedLines, stagedFiles: files })) {
       io.stderr(`commit-msg: ${sha.slice(0, SHORT_SHA)} ${subject}: ${problem}\n`);
       failed = true;
     }

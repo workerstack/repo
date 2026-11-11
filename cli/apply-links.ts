@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { depWarnings } from "./dep-warnings.ts";
 import { LinkError } from "./link-error.ts";
 import { npmBefore } from "./link-installed.ts";
 import type { LinkContext, LinkTarget } from "./link-io.types.ts";
-import { syncPackage } from "./sync-package.ts";
 import { readState, writeState } from "./link-state.ts";
 import {
   EXIT_FAIL,
@@ -16,6 +16,7 @@ import {
   siblingNoInstall,
   undoLine,
 } from "./link.constants.ts";
+import { syncPackage } from "./sync-package.ts";
 
 /** Links one package: packs it, swaps it in, records it, and prints what happened. */
 async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
@@ -32,7 +33,7 @@ async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
     return EXIT_FAIL;
   }
   const state = readState(root);
-  state[target.name] = { source: target.dir, npm, syncedAt: ctx.io.now().toISOString() };
+  state[target.name] = { npm, source: target.dir, syncedAt: ctx.io.now().toISOString() };
   writeState(root, state);
   ctx.io.out(`${linkedLine(target.name, manifest.version, target.dir)}${npmHad(npm ?? NPM_NONE)}`);
   for (const warning of depWarnings(root, manifest)) ctx.io.out(warning);

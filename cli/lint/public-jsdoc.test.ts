@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
 
@@ -8,7 +9,7 @@ const MISSING = `has no JSDoc: add a /** */ block that says what a caller needs 
 /** What the rule reports over a package whose "." entry is `src/index.ts` holding `code`, beside `extra` files. */
 function messagesOf(code: string, extra: Record<string, string> = {}, manifest: object = {}): string[] {
   const files = {
-    "package.json": JSON.stringify({ name: "p", exports: { ".": "./src/index.ts" }, ...manifest }),
+    "package.json": JSON.stringify({ exports: { ".": "./src/index.ts" }, name: "p", ...manifest }),
     "src/index.ts": code,
     ...extra,
   };
@@ -19,39 +20,39 @@ const about = (label: string, text: string, entry = ".") => `\`${label}\` is pub
 type Fault = { name: string; code: string; message: string };
 const FAULTS: Fault[] = [
   {
-    name: "a name with no words in its doc",
     code: "/** ... */\nexport const dots: string = '';",
     message: about("dots", `its JSDoc only restates the name: ${ASK}`),
+    name: "a name with no words in its doc",
   },
-  { name: "missing", code: "export const PACKS: string[] = [];", message: about("PACKS", MISSING) },
-  { name: "empty", code: "/** */\nexport const A: string = '';", message: about("A", `its JSDoc is empty: ${ASK}`) },
+  { code: "export const PACKS: string[] = [];", message: about("PACKS", MISSING), name: "missing" },
+  { code: "/** */\nexport const A: string = '';", message: about("A", `its JSDoc is empty: ${ASK}`), name: "empty" },
   {
-    name: "restating the name",
     code: "/** The pack. */\nexport type Pack = string;",
     message: about("Pack", `its JSDoc only restates the name: ${ASK}`),
+    name: "restating the name",
   },
   {
-    name: "restating a camel-case name",
     code: "/** Pack options. */\nexport type PackOptions = string;",
     message: about("PackOptions", `its JSDoc only restates the name: ${ASK}`),
+    name: "restating a camel-case name",
   },
   {
-    name: "inferred const",
     code: "/** Counts what callers hold. */\nexport const total = compute();\ndeclare function compute(): number;",
     message: about("total", "its type is inferred, so its shape goes unchecked: write the type out"),
+    name: "inferred const",
   },
   {
-    name: "inferred function",
     code: "/** Runs every job in order. */\nexport function run() { return 1; }",
     message: about("run", "its type is inferred, so its shape goes unchecked: write the type out"),
+    name: "inferred function",
   },
   {
-    name: "same line as code",
     code: "const x = 1; /** Holds a count. */ export const y: number = x;",
     message: about(
       "y",
       "its JSDoc shares a line with the code before it, so editors do not show it: put it on its own line",
     ),
+    name: "same line as code",
   },
 ];
 
@@ -110,8 +111,8 @@ it("ignores a file outside any package and one whose package has no exports", ()
 
 it("passes over an export list and reports an unknown form once, in the file that has it", () => {
   const extra = {
-    "src/deep.ts": "/** Holds the other jobs count. */\nexport const other: number = 1;",
     "src/bad.ts": "const a = 1;\nexport = a;",
+    "src/deep.ts": "/** Holds the other jobs count. */\nexport const other: number = 1;",
   };
   const own = "/** Holds the count of jobs. */\nexport const count: number = 1;\n";
   const code = `${own}export { other } from "./deep.ts";\nexport * from "./bad.ts";`;

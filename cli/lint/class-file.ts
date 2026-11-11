@@ -1,4 +1,5 @@
 import type { ESTree, CreateRule } from "@oxlint/plugins";
+
 import { declarationOf, movedOf, type Statement } from "./names.ts";
 
 const MESSAGE = "a class file holds one class, its imports and its export";

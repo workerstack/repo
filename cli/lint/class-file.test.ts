@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { classFile } from "./class-file.ts";
 

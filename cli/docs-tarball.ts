@@ -1,6 +1,6 @@
-import type { Captured } from "./scripts/lint.ts";
 import { group } from "./docs-fences.ts";
 import { notPacked, packFailed } from "./docs.constants.ts";
+import type { Captured } from "./scripts/lint.ts";
 
 /** Runs `bun pm pack --dry-run --ignore-scripts` in a package folder, captured. */
 export type Pack = (cwd: string) => Captured;

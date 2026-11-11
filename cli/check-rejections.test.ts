@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, expect, it } from "vitest";
+
 import { rejectionProblems, rejections } from "./check-rejections.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -11,7 +13,7 @@ const SLOW = 60_000;
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp root holding `files`, a value that is not a string written as JSON. */
@@ -30,14 +32,14 @@ function pkg(dir: string, compilerOptions: object = {}): Record<string, object> 
   const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
   return {
     [path.posix.join(dir, "tsconfig.json")]: {
-      extends: path.join(pkgRoot, "tsconfig", "base.json"),
       compilerOptions,
-      include: ["src"],
       exclude,
+      extends: path.join(pkgRoot, "tsconfig", "base.json"),
+      include: ["src"],
     },
     [path.posix.join(dir, "tsconfig.src.json")]: {
-      extends: ["./tsconfig.json", path.join(pkgRoot, "tsconfig", "strict.json")],
       exclude,
+      extends: ["./tsconfig.json", path.join(pkgRoot, "tsconfig", "strict.json")],
     },
   };
 }
@@ -99,7 +101,7 @@ const USER_REJECT = [
 ].join("\n");
 
 it("prints each Usage problem on its statement's line", { timeout: SLOW }, () => {
-  expect(problemsOf({ ...pkg("."), "src/user.ts": WIDE_USER, "src/user.reject.ts": USER_REJECT })).toStrictEqual([
+  expect(problemsOf({ ...pkg("."), "src/user.reject.ts": USER_REJECT, "src/user.ts": WIDE_USER })).toStrictEqual([
     "src/user.reject.ts: line 4 compiles; it must reject: Argument of type 'string' is not assignable to parameter of type 'UserId'",
     "src/user.reject.ts: line 6 fails unmarked: TS2552: Cannot find name 'lod'. Did you mean 'load'?",
     "src/user.reject.ts: line 9's mark quotes an absolute import path, which differs per checkout: mark the text before it",
@@ -121,7 +123,7 @@ it("passes a file that rejects exactly what it marks, under the owner's strict o
     'export const parsed: number = JSON.parse("1");',
     "",
   ].join("\n");
-  expect(problemsOf({ ...pkg("."), "src/user.ts": branded, "src/user.reject.ts": source })).toStrictEqual([]);
+  expect(problemsOf({ ...pkg("."), "src/user.reject.ts": source, "src/user.ts": branded })).toStrictEqual([]);
 });
 
 it("names the errors of a marked line that fails without its text", { timeout: SLOW }, () => {
@@ -179,8 +181,8 @@ it("checks each package's reject files under that package's own options", { time
   const files = {
     ...pkg("packages/strict"),
     ...loose,
-    "packages/strict/src/a.reject.ts": source,
     "packages/loose/src/a.reject.ts": source,
+    "packages/strict/src/a.reject.ts": source,
   };
   expect(problemsOf(files)).toStrictEqual([
     "packages/loose/src/a.reject.ts: line 3 compiles; it must reject: with 'exactOptionalPropertyTypes: true'",
@@ -213,7 +215,7 @@ it("skips a listed reject file that no longer exists", { timeout: SLOW }, () => 
 });
 
 it("names a tsconfig.src.json it cannot read", () => {
-  const files = { "tsconfig.json": "{}", "tsconfig.src.json": '{ "include": ["src"]\n', "src/a.reject.ts": "" };
+  const files = { "src/a.reject.ts": "", "tsconfig.json": "{}", "tsconfig.src.json": '{ "include": ["src"]\n' };
   expect(problemsOf(files)).toStrictEqual(["tsconfig.src.json: '}' expected."]);
 });
 

@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { CONFIG_FILE } from "./config.ts";
 import { runSync } from "./sync.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp workspace with the workspace pack and two packages that each have a vitest.config.ts. */
@@ -33,7 +35,7 @@ it("repo sync under the workspace pack writes the root vitest.config.ts and turb
   const root = workspace();
   const out: string[] = [];
   const err: string[] = [];
-  const io = { cwd: root, stdout: (s: string) => out.push(s), stderr: (s: string) => err.push(s) };
+  const io = { cwd: root, stderr: (s: string) => err.push(s), stdout: (s: string) => out.push(s) };
   expect(await runSync([], io)).toBe(0);
   expect(err.join("")).toBe("");
   expect(fs.readFileSync(path.join(root, "vitest.config.ts"), "utf8")).toContain(

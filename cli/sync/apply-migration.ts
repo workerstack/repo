@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { CONFIG_FILE, loadConfig, type SkillPack } from "../config.ts";
-import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
-import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
+import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
+import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
 
 /** A step that acts: no conflict survives the early return of `applyMigration`. */
 type Acting = Exclude<MigrationStep, { kind: "conflict" }>;
@@ -34,30 +35,30 @@ async function writeStep(root: string, step: StepOf<"write">): Promise<string> {
 }
 
 const ACTIONS: Actions = {
+  handover(run, step) {
+    for (const file of step.writes) writeAtomic(path.join(run.root, file.path), file.content);
+    removeAll(run.root, step.remove);
+    run.lines.push(...step.note.split("\n").map((line) => `${PREFIX}${line}`));
+  },
   move(run, step) {
     if (step.mark !== undefined) writeAtomic(path.join(run.root, step.mark.path), step.mark.content);
     moveTree(path.join(run.root, step.from), path.join(run.root, step.to), step.except ?? []);
     run.lines.push(`${PREFIX}${step.note}`);
     if (step.mark !== undefined) run.lines.push(`${PREFIX}${step.mark.note}`);
   },
-  async write(run, step) {
-    run.lines.push(...(await writeStep(run.root, step)).split("\n").map((line) => `${PREFIX}${line}`));
-  },
   note(run, step) {
     run.lines.push(`${PREFIX}${step.note}`);
-  },
-  untrack(run, step) {
-    untrack(run.root, step.paths);
-    run.untracked = step.paths;
   },
   remove(run, step) {
     removeAll(run.root, step.paths);
     run.removed = true;
   },
-  handover(run, step) {
-    for (const file of step.writes) writeAtomic(path.join(run.root, file.path), file.content);
-    removeAll(run.root, step.remove);
-    run.lines.push(...step.note.split("\n").map((line) => `${PREFIX}${line}`));
+  untrack(run, step) {
+    untrack(run.root, step.paths);
+    run.untracked = step.paths;
+  },
+  async write(run, step) {
+    run.lines.push(...(await writeStep(run.root, step)).split("\n").map((line) => `${PREFIX}${line}`));
   },
 };
 
@@ -82,7 +83,7 @@ export async function applyMigration(
 ): Promise<string[]> {
   const conflicts = conflictLines(steps);
   if (conflicts.length > 0) return conflicts;
-  const run: Run = { root, lines: [], untracked: [], removed: false };
+  const run: Run = { lines: [], removed: false, root, untracked: [] };
   const acting = steps.filter((step): step is Acting => step.kind !== "conflict");
   // In order, one at a time: a crash after step n leaves every later step undone for the next run to plan again.
   for (const [index, step] of acting.entries()) {

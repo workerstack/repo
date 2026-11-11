@@ -16,7 +16,7 @@ export const SOURCE: RegExp = /\.(?:[jt]sx?|[cm][jt]s)$/;
 export const NODE = {
   call: "CallExpression",
   identifier: "Identifier",
-  member: "MemberExpression",
   literal: "Literal",
+  member: "MemberExpression",
   template: "TemplateLiteral",
 } as const;

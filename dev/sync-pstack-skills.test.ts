@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { capture } from "./sync-pstack-fixtures.ts";
 import { main } from "./sync-pstack-skills.ts";
 

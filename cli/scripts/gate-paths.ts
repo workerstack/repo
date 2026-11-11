@@ -1,8 +1,9 @@
 /** Which paths an agent may read or search, and how a typed path is judged. */
 import fs from "node:fs";
 import path from "node:path";
-import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
+
 import type { ToolArgs } from "./gate-harness.ts";
+import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
 export const DENY_PATH_SEGMENTS: ReadonlySet<string> = /* @__PURE__ */ new Set([

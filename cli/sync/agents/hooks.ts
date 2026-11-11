@@ -15,64 +15,64 @@ type Group = { matcher?: string; hooks: Json[] };
 
 /** Canonical event to Claude event, D:6011-6044; also the events Claude supports. */
 const CLAUDE_EVENTS: Record<string, string> = {
-  sessionStart: "SessionStart",
-  sessionEnd: "SessionEnd",
-  preToolUse: "PreToolUse",
-  postToolUse: "PostToolUse",
   beforeSubmitPrompt: "UserPromptSubmit",
-  stop: "Stop",
-  subagentStop: "SubagentStop",
-  preCompact: "PreCompact",
-  permissionRequest: "PermissionRequest",
-  notification: "Notification",
-  setup: "Setup",
-  worktreeCreate: "WorktreeCreate",
-  worktreeRemove: "WorktreeRemove",
-  messageDisplay: "MessageDisplay",
-  instructionsLoaded: "InstructionsLoaded",
-  userPromptExpansion: "UserPromptExpansion",
-  postToolUseFailure: "PostToolUseFailure",
-  postToolBatch: "PostToolBatch",
-  permissionDenied: "PermissionDenied",
-  subagentStart: "SubagentStart",
-  taskCreated: "TaskCreated",
-  taskCompleted: "TaskCompleted",
-  stopFailure: "StopFailure",
-  teammateIdle: "TeammateIdle",
   configChange: "ConfigChange",
   cwdChanged: "CwdChanged",
-  fileChanged: "FileChanged",
   directoryAdded: "DirectoryAdded",
-  postCompact: "PostCompact",
   elicitation: "Elicitation",
   elicitationResult: "ElicitationResult",
-  preModelSwitch: "PreModelSwitch",
+  fileChanged: "FileChanged",
+  instructionsLoaded: "InstructionsLoaded",
+  messageDisplay: "MessageDisplay",
+  notification: "Notification",
+  permissionDenied: "PermissionDenied",
+  permissionRequest: "PermissionRequest",
+  postCompact: "PostCompact",
   postModelSwitch: "PostModelSwitch",
+  postToolBatch: "PostToolBatch",
+  postToolUse: "PostToolUse",
+  postToolUseFailure: "PostToolUseFailure",
+  preCompact: "PreCompact",
+  preModelSwitch: "PreModelSwitch",
+  preToolUse: "PreToolUse",
+  sessionEnd: "SessionEnd",
+  sessionStart: "SessionStart",
+  setup: "Setup",
+  stop: "Stop",
+  stopFailure: "StopFailure",
+  subagentStart: "SubagentStart",
+  subagentStop: "SubagentStop",
+  taskCompleted: "TaskCompleted",
+  taskCreated: "TaskCreated",
+  teammateIdle: "TeammateIdle",
+  userPromptExpansion: "UserPromptExpansion",
+  worktreeCreate: "WorktreeCreate",
+  worktreeRemove: "WorktreeRemove",
 };
 /** D:6525-6540. */
 const CODEX_EVENTS: Record<string, string> = {
-  sessionStart: "SessionStart",
-  sessionEnd: "SessionEnd",
-  preToolUse: "PreToolUse",
-  postToolUse: "PostToolUse",
   beforeSubmitPrompt: "UserPromptSubmit",
+  permissionRequest: "PermissionRequest",
+  postCompact: "PostCompact",
+  postModelInvocation: "PostModelRequest",
+  postToolUse: "PostToolUse",
+  preCompact: "PreCompact",
+  preModelInvocation: "PreModelRequest",
+  preToolUse: "PreToolUse",
+  sessionEnd: "SessionEnd",
+  sessionStart: "SessionStart",
   stop: "Stop",
   stopCancelled: "Interrupt",
-  permissionRequest: "PermissionRequest",
   subagentStart: "SubagentStart",
   subagentStop: "SubagentStop",
-  preCompact: "PreCompact",
-  postCompact: "PostCompact",
-  preModelInvocation: "PreModelRequest",
-  postModelInvocation: "PostModelRequest",
 };
 /** D:6135-6142. */
 const ANTIGRAVITY_EVENTS: Record<string, string> = {
-  sessionStart: "SessionStart",
-  preToolUse: "PreToolUse",
+  postModelInvocation: "PostInvocation",
   postToolUse: "PostToolUse",
   preModelInvocation: "PreInvocation",
-  postModelInvocation: "PostInvocation",
+  preToolUse: "PreToolUse",
+  sessionStart: "SessionStart",
   stop: "Stop",
 };
 /** D:6162-6184: cursor keeps the canonical names. */
@@ -104,10 +104,10 @@ const CURSOR_EVENTS = Object.fromEntries(
 /** Whole matcher tokens Antigravity names differently, D:54345-54351. */
 const ANTIGRAVITY_TOOLS: Record<string, string> = {
   Bash: "run_command",
-  Read: "(?:read_file|view_file)",
-  Write: "(?:write_file|write_to_file)",
   Edit: "(?:edit_file|replace_file_content)",
+  Read: "(?:read_file|view_file)",
   WebSearch: "search_web",
+  Write: "(?:write_file|write_to_file)",
 };
 /** A name token outside escapes and character classes, D:52398. */
 const MATCHER_TOKEN = /\\.|\[(?:\\.|[^\]\\])*\]|(?<=^|[^\w\\]|\\\w)[A-Za-z_]\w*(?!\w)/gs;
@@ -126,10 +126,10 @@ type Passthrough =
   | { key: "onFailure"; kind: "keyword" };
 
 const VALID: Record<Exclude<Passthrough["kind"], "keyword">, (value: unknown) => boolean> = {
+  array: (value) => Array.isArray(value) && value.every((item) => typeof item === "string"),
   boolean: (value) => typeof value === "boolean",
   number: (value) => Number.isFinite(value),
   string: (value) => typeof value === "string" && value !== "",
-  array: (value) => Array.isArray(value) && value.every((item) => typeof item === "string"),
 };
 const ON_FAILURE_IGNORED = new Set(["stop", "subagentStop", "taskCompleted", "teammateIdle"]);
 
@@ -170,14 +170,14 @@ const CLAUDE: Target = {
   // D:55633-55684, in emit order: booleans, keyword, strings, arrays.
   passthrough: [
     { key: "once", kind: "boolean" },
-    { key: "async", kind: "boolean", commandOnly: true },
-    { key: "asyncRewake", kind: "boolean", commandOnly: true },
+    { commandOnly: true, key: "async", kind: "boolean" },
+    { commandOnly: true, key: "asyncRewake", kind: "boolean" },
     { key: "continueOnBlock", kind: "boolean" },
     { key: "onFailure", kind: "keyword" },
     { key: "if", kind: "string" },
     { key: "statusMessage", kind: "string" },
-    { key: "shell", kind: "string", commandOnly: true },
-    { key: "args", kind: "array", commandOnly: true },
+    { commandOnly: true, key: "shell", kind: "string" },
+    { commandOnly: true, key: "args", kind: "array" },
   ],
   promptModel: true,
   named: false,
@@ -189,9 +189,9 @@ const CODEX: Target = {
   types: new Set(["command", "mcp_tool"]),
   // D:56377-56394, in emit order: booleans, numbers, strings.
   passthrough: [
-    { key: "async", kind: "boolean", commandOnly: true },
-    { key: "additionalContextLimit", kind: "number", commandOnly: true },
-    { key: "commandWindows", kind: "string", commandOnly: true },
+    { commandOnly: true, key: "async", kind: "boolean" },
+    { commandOnly: true, key: "additionalContextLimit", kind: "number" },
+    { commandOnly: true, key: "commandWindows", kind: "string" },
     { key: "statusMessage", kind: "string" },
   ],
   promptModel: false,
@@ -201,17 +201,17 @@ const CODEX: Target = {
 const ANTIGRAVITY_NO_MATCHER = new Set(["sessionStart", "preModelInvocation", "postModelInvocation", "stop"]);
 const ANTIGRAVITY_FLAT = new Set([...ANTIGRAVITY_NO_MATCHER].map((event) => ANTIGRAVITY_EVENTS[event]));
 const ANTIGRAVITY: Target = {
-  overrideKey: "antigravity-cli",
-  names: ANTIGRAVITY_EVENTS,
-  noMatcher: ANTIGRAVITY_NO_MATCHER,
-  types: new Set(["command"]),
-  passthrough: [],
   matcher: (matcher) =>
     matcher.replace(MATCHER_TOKEN, (token) =>
       Object.hasOwn(ANTIGRAVITY_TOOLS, token) ? ANTIGRAVITY_TOOLS[token]! : token,
     ),
-  promptModel: false,
   named: false,
+  names: ANTIGRAVITY_EVENTS,
+  noMatcher: ANTIGRAVITY_NO_MATCHER,
+  overrideKey: "antigravity-cli",
+  passthrough: [],
+  promptModel: false,
+  types: new Set(["command"]),
 };
 
 /** Path to text for each enabled host's hook file; `claudeBase` is the stock `agents/settings/claude.json`. */
@@ -231,7 +231,7 @@ export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase
     files.set(".agents/hooks.json", text(flat.length === 0 ? {} : { rulesync: Object.fromEntries(flat) }));
   }
   if (hosts.includes("cursor"))
-    files.set(".cursor/hooks.json", text({ version: config.version ?? 1, hooks: cursorHooks(config) }));
+    files.set(".cursor/hooks.json", text({ hooks: cursorHooks(config), version: config.version ?? 1 }));
   return files;
 }
 
@@ -274,7 +274,7 @@ function toolHooks(config: Json, target: Target): Record<string, Group[]> {
         .filter((def) => target.types.has((def.type as string | undefined) ?? "command"))
         .map((def) => hookObject(def, event, target));
       if (hooks.length === 0) continue;
-      entries.push(matcher === "" || noMatcher ? { hooks } : { matcher, hooks });
+      entries.push(matcher === "" || noMatcher ? { hooks } : { hooks, matcher });
     }
     if (entries.length > 0) out[nameOf(target.names, event)] = entries;
   }
@@ -290,17 +290,17 @@ function hookObject(def: Def, event: string, target: Target): Json {
   const source = typeof def.command === "string" ? expandHookCommand(def.command) : def.command;
   const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
   const payload: Record<string, readonly string[]> = {
+    agent: target.promptModel ? ["model"] : [],
     http: ["url", "headers", "allowedEnvVars"],
     mcp_tool: ["server", "tool", "input"],
     prompt: target.promptModel ? ["model"] : [],
-    agent: target.promptModel ? ["model"] : [],
   };
   const fields = {
     ...passthroughFields(def, type, event, target),
-    type,
     command,
-    timeout: def.timeout,
     prompt: def.prompt,
+    timeout: def.timeout,
+    type,
   } as Json;
   for (const key of [...(payload[type] ?? []), ...(target.named ? ["name", "description"] : [])])
     fields[key] = def[key];
@@ -346,7 +346,7 @@ function codexRejects(hook: Json): boolean {
 
 function containsNull(value: unknown): boolean {
   if (value === null) return true;
-  return typeof value === "object" && Object.values(value as object).some(containsNull);
+  return typeof value === "object" && Object.values(value).some(containsNull);
 }
 
 /** Drops handlers Codex rejects, then emptied groups and events (`filterCodexHandlers`, D:56436-56462). */
@@ -379,14 +379,14 @@ function cursorHooks(config: Json): Json {
       .map((def) => {
         const { type, command, timeout, loop_limit, matcher, prompt, model, failClosed } = def;
         const entry = {
-          type,
           command: typeof command === "string" ? expandHookCommand(command) : command,
-          timeout,
+          failClosed,
           loop_limit,
           matcher,
-          prompt,
           model: type === "prompt" ? model : undefined,
-          failClosed,
+          prompt,
+          timeout,
+          type,
         };
         // `loop_limit` alone is written when null.
         return Object.fromEntries(

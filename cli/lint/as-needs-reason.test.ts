@@ -1,6 +1,7 @@
 import type { Context } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { asNeedsReason } from "./as-needs-reason.ts";
 
@@ -50,8 +51,8 @@ function unparenthesized(code: string): string[] {
   const messages: string[] = [];
   const { comments, program } = parseSync("a.ts", code, { preserveParens: false });
   const context = {
-    sourceCode: { text: code, getAllComments: () => comments },
     report: ({ message }: { message?: string | null }) => messages.push(message ?? ""),
+    sourceCode: { getAllComments: () => comments, text: code },
   };
   const visitor = asNeedsReason.create(context as unknown /* a partial double of the context */ as Context);
   const visit = (node: unknown): void => {

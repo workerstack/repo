@@ -1,8 +1,9 @@
 import { expect, it } from "vitest";
-import { processFatTools } from "./gate-fat-tools.ts";
-import { quoteQuery } from "./gate-job.ts";
+
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { camelCall, commandOf } from "./fixtures/hook-payload.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { quoteQuery } from "./gate-job.ts";
 
 const tmp = useTmp();
 

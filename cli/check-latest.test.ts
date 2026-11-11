@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkLatestAt, latestRegistry } from "./check-latest.ts";
 
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A project directory with `@workerstack/repo` installed at `version`, or not installed at all. */
@@ -24,13 +26,13 @@ function project(version: string | null): string {
 
 const REGISTRY = "https://registry.example/";
 const latestDoc = (latest: string): Response =>
-  new Response(JSON.stringify({ versions: { [latest]: {} }, "dist-tags": { latest } }));
+  new Response(JSON.stringify({ "dist-tags": { latest }, versions: { [latest]: {} } }));
 
 /** Runs the check against a fake fetch answering `answer`; returns the result and the requests it saw. */
 async function check(version: string | null, answer: () => Response | Error, registry = REGISTRY) {
   const calls: { url: string; signal: AbortSignal | undefined | null }[] = [];
   const fetcher = (url: string, init?: { signal?: AbortSignal | null }): Promise<Response> => {
-    calls.push({ url, signal: init?.signal });
+    calls.push({ signal: init?.signal, url });
     const got = answer();
     return got instanceof Response ? Promise.resolve(got) : Promise.reject(got);
   };
@@ -58,7 +60,7 @@ describe("repo check compares the installed @workerstack/repo with npm's latest"
 describe("repo check skips the comparison quietly", () => {
   it("never fetches when the package is not installed", async () => {
     const got = await check(null, () => latestDoc("9.9.9"));
-    expect(got).toStrictEqual({ problems: [], report: [], calls: [] });
+    expect(got).toStrictEqual({ calls: [], problems: [], report: [] });
   });
 
   it.each<[string, () => Response | Error, string]>([
@@ -71,7 +73,7 @@ describe("repo check skips the comparison quietly", () => {
   });
 
   it("skips when the registry lists no latest tag", async () => {
-    const noTag = () => new Response(JSON.stringify({ versions: {}, "dist-tags": {} }));
+    const noTag = () => new Response(JSON.stringify({ "dist-tags": {}, versions: {} }));
     expect(await check("0.1.0", noTag)).toMatchObject({ problems: [], report: [SKIPPED("no latest tag")] });
   });
 });

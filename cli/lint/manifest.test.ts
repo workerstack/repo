@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterAll, describe, expect, it } from "vitest";
+
 import { readManifest } from "./manifest.ts";
 
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-manifest-")));
-afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
+afterAll(() => fs.rmSync(dir, { force: true, recursive: true }));
 
 /** Writes `manifest` as a temp package.json and reads it back. */
 function read(manifest: unknown) {
@@ -24,11 +26,11 @@ const shipped = (manifest: unknown, files: string[]): string[] => {
 describe("readManifest runtime and public", () => {
   it("splits runtime names from dev-only ones", () => {
     const manifest = read({
-      private: false,
       dependencies: { a: "1" },
-      devDependencies: { b: "1", a: "1" },
-      peerDependencies: { c: "1" },
+      devDependencies: { a: "1", b: "1" },
       optionalDependencies: { d: "1" },
+      peerDependencies: { c: "1" },
+      private: false,
     });
     expect(manifest.declared.toSorted()).toStrictEqual(["a", "a", "b", "c", "d"]);
     expect(manifest.devOnly).toStrictEqual(["b"]);
@@ -84,15 +86,15 @@ describe("readManifest ships targets and exclusions", () => {
 
   it("ships main, module, types, bin and export targets that files leaves out", () => {
     const manifest = {
+      bin: { x: "bin/x.ts" },
+      exports: { ".": { default: "./src/a.ts", types: ["./lib/c.ts"] }, "./package.json": "./package.json" },
       files: ["src"],
       main: "./lib/c.ts",
       module: "other/d.ts",
       types: 1,
-      bin: { x: "bin/x.ts" },
-      exports: { ".": { default: "./src/a.ts", types: ["./lib/c.ts"] }, "./package.json": "./package.json" },
     };
     expect(shipped(manifest, FILES)).toStrictEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "other/d.ts"]);
-    expect(shipped({ files: ["src"], bin: "bin/x.ts", exports: "./lib/c.ts" }, FILES)).toStrictEqual([
+    expect(shipped({ bin: "bin/x.ts", exports: "./lib/c.ts", files: ["src"] }, FILES)).toStrictEqual([
       "src/a.ts",
       "src/deep/b.ts",
       "lib/c.ts",

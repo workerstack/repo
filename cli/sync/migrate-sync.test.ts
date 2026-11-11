@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterAll, expect, it } from "vitest";
+
 import { bunPath } from "../../dev/test-paths.ts";
 import { runSync } from "../sync.ts";
-import { COPIED_MARKER } from "./migrate.constants.ts";
 import {
   FINAL,
   HANDOVER,
@@ -22,6 +23,7 @@ import {
   write,
 } from "./fixtures/copied-install.ts";
 import { tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();
 afterAll(dropFixture);
@@ -44,7 +46,7 @@ function addOwnHook(root: string): void {
   const own = readJson<{ hooks: Record<string, unknown[]> }>(root, ".claude/settings.json");
   own.hooks.PostToolUse = [
     ...(own.hooks.PostToolUse ?? []),
-    { matcher: "Write", hooks: [{ type: "command", command: "make post-write", timeout: 5 }] },
+    { hooks: [{ command: "make post-write", timeout: 5, type: "command" }], matcher: "Write" },
   ];
   write(root, ".claude/settings.json", JSON.stringify(own, null, 2));
 }
@@ -56,7 +58,7 @@ function expectUpToDateInNewProcess(root: string): void {
       cwd: root,
       encoding: "utf8",
     });
-    expect({ status: again.status, out: again.stdout }).toStrictEqual({ status: 0, out: "repo sync: up to date\n" });
+    expect({ out: again.stdout, status: again.status }).toStrictEqual({ out: "repo sync: up to date\n", status: 0 });
   }
 }
 
@@ -107,7 +109,7 @@ it(
     expect(JSON.stringify(settings.hooks.PostToolUse)).toContain("make post-write");
     // .mcp.json is the user's: the handover moved the copied policy's one server into it, and sync writes it no more
     expect(readJson<{ mcpServers: unknown }>(root, ".mcp.json").mcpServers).toStrictEqual({
-      docs: { command: "npx", args: ["-y", "docs-mcp"] },
+      docs: { args: ["-y", "docs-mcp"], command: "npx" },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain('"servers"');
     expect(exists(root, ".claude/agents/reviewer.md")).toBe(true);
@@ -125,13 +127,13 @@ it(
     const failing = {
       generators: [
         (ctx: { read: (rel: string) => string | null }) => ({
-          outputs: [],
           errors: ctx.read(COPIED_MARKER) === null ? ["forced failure"] : [],
+          outputs: [],
         }),
       ],
     };
     const err: string[] = [];
-    const code = await runSync([], { cwd: root, stdout: () => {}, stderr: (s) => err.push(s) }, failing);
+    const code = await runSync([], { cwd: root, stderr: (s) => err.push(s), stdout: () => {} }, failing);
     expect(code).toBe(1);
     expect(err).toStrictEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
     expect(exists(root, ".rulesync")).toBe(false);

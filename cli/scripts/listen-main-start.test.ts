@@ -1,8 +1,9 @@
 import fs from "node:fs";
-import { plantProgram } from "../fixtures/stub-bin.ts";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NEED_FFMPEG } from "./listen.ts";
+
+import { plantProgram } from "../fixtures/stub-bin.ts";
 import {
   killTable,
   plantSession,
@@ -14,6 +15,7 @@ import {
   which,
   cleanupTmp,
 } from "./fixtures/listen-env.ts";
+import { NEED_FFMPEG } from "./listen.ts";
 
 afterEach(cleanupTmp);
 
@@ -25,14 +27,14 @@ describe("start", () => {
 
   it("spawns a detached recorder through bin/repo.ts, records its pid and prints it", async () => {
     const rec = recorder();
-    const env = { OPENAI_API_KEY: "k", HOME: "/h" };
-    const r = await run(["start"], { spawnFn: rec.spawnFn, nodeBin: "/custom/bun", env });
+    const env = { HOME: "/h", OPENAI_API_KEY: "k" };
+    const r = await run(["start"], { env, nodeBin: "/custom/bun", spawnFn: rec.spawnFn });
     const call = rec.spawned[0];
     const wav = String(readSession(r.cwd).wav);
     expect(r.code).toBe(0);
     expect(call?.bin).toBe("/custom/bun");
     expect(call?.args).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd", r.cwd]);
-    expect(call?.opts).toMatchObject({ detached: true, cwd: r.cwd, windowsHide: true, env });
+    expect(call?.opts).toMatchObject({ cwd: r.cwd, detached: true, env, windowsHide: true });
     expect(path.dirname(wav)).toBe(path.join(r.cwd, ".tmp/repo/listen"));
     expect(readSession(r.cwd)).toMatchObject({ pid: 5150 });
     expect(rec.unrefs()).toBe(1);
@@ -56,7 +58,7 @@ describe("start device", () => {
 
   it("passes --device from the configuration", async () => {
     const rec = recorder();
-    await run(["start"], { spawnFn: rec.spawnFn, env: { OPENAI_API_KEY: "k", LISTEN_DEVICE: ":9" } });
+    await run(["start"], { env: { LISTEN_DEVICE: ":9", OPENAI_API_KEY: "k" }, spawnFn: rec.spawnFn });
     expect(rec.spawned[0]?.args).toContain(":9");
   });
 
@@ -72,7 +74,7 @@ describe("start session", () => {
     const cwd = tmp("listen-start-alive-");
     plantSession(cwd, { pid: 900 });
     const rec = recorder();
-    const r = await run(["start"], { cwd, spawnFn: rec.spawnFn, killFn: killTable([900]).killFn });
+    const r = await run(["start"], { cwd, killFn: killTable([900]).killFn, spawnFn: rec.spawnFn });
     expect(r.code).toBe(1);
     expect(r.errs).toStrictEqual(["already recording pid=900"]);
     expect(rec.spawned).toStrictEqual([]);
@@ -82,7 +84,7 @@ describe("start session", () => {
     const cwd = tmp("listen-start-stale-");
     plantSession(cwd, { pid: 900 });
     const rec = recorder();
-    const stale = await run(["start"], { cwd, spawnFn: rec.spawnFn, killFn: killTable([]).killFn });
+    const stale = await run(["start"], { cwd, killFn: killTable([]).killFn, spawnFn: rec.spawnFn });
     expect(stale.code).toBe(0);
     plantSession(cwd, { wav: "/x" });
     await run(["start"], { cwd, spawnFn: rec.spawnFn });

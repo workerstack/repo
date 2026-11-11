@@ -1,8 +1,8 @@
 /** The session gate: /auto, /ask and /away stamps, an in-progress item's `mode:`, and the context naming both. */
 import fs from "node:fs";
 import path from "node:path";
+
 import type { HookInput } from "./hook-input.ts";
-import { AUTO_ASK_STAMP, IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 import {
   approvalsFile,
   countsLine,
@@ -14,6 +14,7 @@ import {
   unlinkQuiet,
 } from "./orchestrate-session.ts";
 import { resolveSessionGateStamp, sessionGateStampPath } from "./orchestrate-stamps.ts";
+import { AUTO_ASK_STAMP, IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 import { parseMode, type Mode } from "./strategy.ts";
 
 const SLASHES: readonly (readonly [RegExp, Mode])[] = [

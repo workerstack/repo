@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
-import { OK, docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
+
 import { main } from "./docs.ts";
+import { OK, docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const files = (manifest: unknown, example: string): Record<string, string> => ({
   "package.json": json(manifest),

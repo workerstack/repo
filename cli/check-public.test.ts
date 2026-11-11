@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { COMPLETE, EXPORTS, lines, without } from "./fixtures/public-package.ts";
 
 it.each([
@@ -108,7 +109,7 @@ it("reports a manifest with several defects one line each, in rule order", () =>
 });
 
 it("does not check the keywords of a private package", () => {
-  expect(lines({ name: "x", private: true, keywords: ["Bad Topic"] }, null)).toStrictEqual([]);
+  expect(lines({ keywords: ["Bad Topic"], name: "x", private: true }, null)).toStrictEqual([]);
 });
 
 it("fails a public package whose keywords are not GitHub topics", () => {

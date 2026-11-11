@@ -1,4 +1,6 @@
 import { z } from "zod";
+
+import { WAIT_PREFIX, WAIT_USAGE, notOnNpm, published } from "./release-messages.constants.ts";
 import {
   ENCODED_SLASH,
   NOT_A_DOCUMENT,
@@ -9,7 +11,6 @@ import {
   WAIT_GIVE_UP_MS,
   WAIT_POLL_MS,
 } from "./release.constants.ts";
-import { WAIT_PREFIX, WAIT_USAGE, notOnNpm, published } from "./release-messages.constants.ts";
 
 /** Where `repo release wait` prints and what it reaches the registry, the clock and the sleep through. */
 export type WaitIo = {
@@ -24,7 +25,7 @@ export type WaitIo = {
 type RegistryDoc = { versions: Record<string, unknown>; "dist-tags": Record<string, string> };
 
 const documentSchema = (): z.ZodType<RegistryDoc> =>
-  z.object({ versions: z.record(z.string(), z.unknown()), "dist-tags": z.record(z.string(), z.string()) });
+  z.object({ "dist-tags": z.record(z.string(), z.string()), versions: z.record(z.string(), z.unknown()) });
 
 /** A package name and the version of it a tag or `wait` names. */
 export type Spec = { name: string; version: string };
@@ -52,7 +53,7 @@ export async function registryDoc(
     if (response.status === NOT_FOUND) return { kind: "missing" };
     if (!response.ok) return { kind: "unreachable", why: `HTTP ${response.status}` };
     const parsed = documentSchema().safeParse(await response.json());
-    return parsed.success ? { kind: "found", doc: parsed.data } : { kind: "unreachable", why: NOT_A_DOCUMENT };
+    return parsed.success ? { doc: parsed.data, kind: "found" } : { kind: "unreachable", why: NOT_A_DOCUMENT };
   } catch (error) {
     return {
       kind: "unreachable",

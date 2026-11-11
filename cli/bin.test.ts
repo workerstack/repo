@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { BIN, type Bin, main } from "./bin.ts";
 
 afterEach(() => {
@@ -9,8 +10,8 @@ afterEach(() => {
 function bin(code: number | null, start: () => Promise<void> = async () => {}) {
   return {
     dispatch: vi.fn<Bin["dispatch"]>(() => Promise.resolve(code)),
-    load: vi.fn(() => Promise.resolve({ start })),
     exit: vi.fn<Bin["exit"]>(),
+    load: vi.fn(() => Promise.resolve({ start })),
   };
 }
 

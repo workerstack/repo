@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
+
+import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { GateResult, ToolArgs } from "./gate-harness.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";
 import { bashTargetsDenylist, pathIsDenied } from "./gate-paths.ts";
-import { camelCall, updatedInputOf } from "./fixtures/hook-payload.ts";
 
 describe("pathIsDenied", () => {
   it("denies denylist segments, lockfiles, and .git/", () => {
@@ -49,19 +50,19 @@ const win = (p: string) => `C:\\r\\${p.replace(/\//g, "\\")}`;
 const denied = (r: GateResult) => r?.type === "deny";
 const claude = (toolName: string, toolInput: ToolArgs) => processFatTools(camelCall(toolName, toolInput));
 const cursor = (tool_name: string, tool_input: ToolArgs) =>
-  processFatTools({ cursor_version: "1", tool_name, tool_input });
+  processFatTools({ cursor_version: "1", tool_input, tool_name });
 const shells: [string, Run][] = [
   ["claude", (command) => claude("Bash", { command })],
-  ["codex", (command) => processFatTools({ turn_id: "t", model: "m", tool_name: "bash", tool_input: { command } })],
-  ["antigravity", (CommandLine) => processFatTools({ toolCall: { name: "RunCommand", args: { CommandLine } } })],
+  ["codex", (command) => processFatTools({ model: "m", tool_input: { command }, tool_name: "bash", turn_id: "t" })],
+  ["antigravity", (CommandLine) => processFatTools({ toolCall: { args: { CommandLine }, name: "RunCommand" } })],
   ["cursor", (command) => cursor("shell", { command })],
 ];
 const tools: [string, Run][] = [
   ["claude Read", (p) => claude("Read", { file_path: p })],
-  ["claude Grep", (p) => claude("Grep", { pattern: "x", path: p })],
-  ["claude Glob", (p) => claude("Glob", { pattern: "*", path: p })],
+  ["claude Grep", (p) => claude("Grep", { path: p, pattern: "x" })],
+  ["claude Glob", (p) => claude("Glob", { path: p, pattern: "*" })],
   ["cursor Read", (p) => cursor("read", { target_file: p })],
-  ["cursor Grep", (p) => cursor("grep", { pattern: "x", path: p })],
+  ["cursor Grep", (p) => cursor("grep", { path: p, pattern: "x" })],
 ];
 
 it("stock references: lets Read, Grep and Glob through", () => {
@@ -106,8 +107,8 @@ it("stock references: a match does not hide a deny segment around it", () => {
 it("stock references: injects an ignore list without the dependency dir for a search rooted in them", () => {
   const rest = GLOB_IGNORE.filter((s) => s !== nm);
   const ignored = (tool: string, input: ToolArgs) => updatedInputOf(claude(tool, input));
-  expect(ignored("Glob", { pattern: "*", path: stockDir }).ignore).toStrictEqual(rest);
+  expect(ignored("Glob", { path: stockDir, pattern: "*" }).ignore).toStrictEqual(rest);
   expect(ignored("Glob", { pattern: "*", targetDirectory: stockDir }).ignoreGlobs).toStrictEqual(rest);
-  expect(ignored("Glob", { pattern: "*", path: "src" }).ignore).toStrictEqual(GLOB_IGNORE);
-  expect(JSON.stringify(ignored("Grep", { pattern: "x", path: stockDir }))).not.toContain(`"${nm}"`);
+  expect(ignored("Glob", { path: "src", pattern: "*" }).ignore).toStrictEqual(GLOB_IGNORE);
+  expect(JSON.stringify(ignored("Grep", { path: stockDir, pattern: "x" }))).not.toContain(`"${nm}"`);
 });

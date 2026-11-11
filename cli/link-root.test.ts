@@ -2,16 +2,18 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { findRoots } from "./find-roots.ts";
 import { linkGit } from "./link-git.ts";
 import { linkIo } from "./link-io.ts";
-import { findRoots } from "./find-roots.ts";
 
 const MODULES = "node_modules";
 const temps: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
@@ -32,13 +34,13 @@ function checkouts() {
 it("finds the main checkout and the siblings from a worktree without its own install", () => {
   const { base, main, tree } = checkouts();
   const roots = findRoots({ ...linkIo(), cwd: tree });
-  expect(roots).toStrictEqual({ checkout: tree, main, install: main, siblings: base });
+  expect(roots).toStrictEqual({ checkout: tree, install: main, main, siblings: base });
 });
 
 it("installs into the worktree once it has its own install", () => {
   const { base, main, tree } = checkouts();
   fs.mkdirSync(path.join(tree, MODULES));
-  expect(findRoots({ ...linkIo(), cwd: tree })).toStrictEqual({ checkout: tree, main, install: tree, siblings: base });
+  expect(findRoots({ ...linkIo(), cwd: tree })).toStrictEqual({ checkout: tree, install: tree, main, siblings: base });
 });
 
 it("reads git's answer, and null when git fails", () => {

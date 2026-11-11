@@ -6,14 +6,15 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import type { HookInput } from "./hook-input.ts";
-import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
-import { resolveRoots } from "./workspace-root.ts";
+
+import { readEnv } from "../env.ts";
 import { recordHook } from "./board.ts";
 import { folderMap } from "./folder-map.ts";
 import type { FolderMapResult } from "./folder-map.types.ts";
 import { resolveRepoBin } from "./gate-job.ts";
-import { readEnv } from "../env.ts";
+import type { HookInput } from "./hook-input.ts";
+import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 /** First line of the injected map; `depth` = levels per package, null when nothing was cut. */
 export function header(depth: number | null | undefined): string {
@@ -30,7 +31,7 @@ function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   if (!sid) return;
   const dir = path.join(root, ".tmp", "repo", "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });
-  const size = { rows: out.rows, tokens: out.tokens, depth: out.depth };
+  const size = { depth: out.depth, rows: out.rows, tokens: out.tokens };
   fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);
 }
 
@@ -54,7 +55,7 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
   try {
     const roots = resolveRoots(data);
     const notice = fallbackNotice(roots.checkout);
-    const out = folderMap({ root: roots.checkout, maxChars: HOOK_CONTEXT_CHARS - RESERVE - notice.length });
+    const out = folderMap({ maxChars: HOOK_CONTEXT_CHARS - RESERVE - notice.length, root: roots.checkout });
     const additionalContext = sessionContext(notice, out);
     if (!additionalContext) return 0;
     try {
@@ -62,7 +63,7 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
     } catch {
       // Logging is best-effort; the map still ships.
     }
-    io.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext } }));
+    io.write(JSON.stringify({ hookSpecificOutput: { additionalContext, hookEventName: "SessionStart" } }));
   } catch {
     // Fail open.
   }

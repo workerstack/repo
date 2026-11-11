@@ -1,13 +1,15 @@
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { childEnv } from "../env.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { standards } from "../sync/standards.ts";
 import { captureBun, captureTool, fmt, lint, runTool } from "./lint.ts";
-import { childEnv } from "../env.ts";
 
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
@@ -17,7 +19,7 @@ const SLOW = 60_000;
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function tempDir(prefix: string): string {
@@ -44,7 +46,7 @@ function repo(packs: string, files: Record<string, string> = {}): string {
 /** A PATH holding bun alone, so a tool that needs node fails; it lives as long as the file's tests. */
 const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"));
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
-afterAll(() => fs.rmSync(BUN_ONLY, { recursive: true, force: true }));
+afterAll(() => fs.rmSync(BUN_ONLY, { force: true, recursive: true }));
 
 const NON_NULL = 'export function a(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
 const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
@@ -52,10 +54,10 @@ const FLOATING = "export function start(load: () => Promise<void>): void {\n  lo
 /** A consumer with the standards pack, its two configs as sync writes them, and `files`. */
 function standardsRepo(files: Record<string, string>): string {
   const ctx = {
-    root: "",
-    config: { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG },
-    workspace: { root: "", manifest: {}, packages: [] },
+    config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
     read: () => null,
+    root: "",
+    workspace: { manifest: {}, packages: [], root: "" },
   };
   const configs = Object.fromEntries(
     standards(ctx, []).outputs.map((output) => [output.path, output.kind === "file" ? output.content : ""]),
@@ -66,7 +68,7 @@ function standardsRepo(files: Record<string, string>): string {
 describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
   const env = childEnv({ PATH: BUN_ONLY });
   const repoCmd = (root: string, ...args: string[]) => {
-    const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, env, encoding: "utf8" });
+    const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, encoding: "utf8", env });
     return { code: run.status, out: `${run.stdout}${run.stderr}` };
   };
 
@@ -163,7 +165,7 @@ describe("runTool", () => {
     const root = repo('["docs"]');
     const run = vi.fn(() => 0);
     const io = capture();
-    expect(await runTool(tool, [], { cwd: root, stderr: io.stderr, run })).toBe(1);
+    expect(await runTool(tool, [], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
       `repo ${command}: the standards pack is off; add "standards" to packs in workerstack.config.ts\n`,
     );
@@ -175,7 +177,7 @@ describe("runTool", () => {
     const run = vi.fn(() => 3);
     const io = capture();
     expect(
-      await runTool("oxlint", ["--format", "unix", "src"], { cwd: path.join(root, "src"), stderr: io.stderr, run }),
+      await runTool("oxlint", ["--format", "unix", "src"], { cwd: path.join(root, "src"), run, stderr: io.stderr }),
     ).toBe(3);
     expect(run).toHaveBeenCalledWith("oxlint", ["--format", "unix", "src"], root);
     expect(io.err).toStrictEqual([]);
@@ -185,21 +187,21 @@ describe("runTool", () => {
     const root = repo('["standards"]');
     const run = vi.fn(() => 0);
     const io = capture();
-    expect(await runTool("oxfmt", ["--check"], { cwd: root, stderr: io.stderr, run })).toBe(1);
+    expect(await runTool("oxfmt", ["--check"], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe("repo fmt: no .oxfmtrc.jsonc; run `bun repo sync` to write it\n");
     expect(run).not.toHaveBeenCalled();
   });
 
   it("reports a broken config and a missing one", async () => {
     const io = capture();
-    expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), stderr: io.stderr, run: () => 0 })).toBe(1);
+    expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), run: () => 0, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
       'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; use agents, standards, docs, release or workspace\n',
     );
 
     const bare = tempDir("workerstack-lint-bare-");
     const none = capture();
-    expect(await runTool("oxfmt", [], { cwd: bare, stderr: none.stderr, run: () => 0 })).toBe(1);
+    expect(await runTool("oxfmt", [], { cwd: bare, run: () => 0, stderr: none.stderr })).toBe(1);
     expect(none.err.join("")).toBe(
       `repo fmt: no workerstack.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
     );

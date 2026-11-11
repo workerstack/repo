@@ -2,10 +2,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { childEnv } from "../env.ts";
 import { plantStub } from "../fixtures/stub-bin.ts";
 import { loadOptionalConsumerEnv, main, runDoctor, workspaceIssues } from "./doctor.ts";
-import { childEnv } from "../env.ts";
 
 const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
   process,
@@ -16,7 +18,7 @@ afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {
@@ -56,8 +58,8 @@ describe("runDoctor", () => {
 
   it("reports a bun that is on PATH but does not run", () => {
     const bin = tmp();
-    const planted = plantStub(bin, "bun", { sh: "exit 1\n", cmd: "exit /b 1\n" });
-    const res = runDoctor({ cwd: tmp(), pathEnv: bin, platform: "linux", env: {}, home: tmp() });
+    const planted = plantStub(bin, "bun", { cmd: "exit /b 1\n", sh: "exit 1\n" });
+    const res = runDoctor({ cwd: tmp(), env: {}, home: tmp(), pathEnv: bin, platform: "linux" });
     const escaped = planted.replace(/[.*+?^${}()|[\]\\]/g, (c) => `\\${c}`);
     expect(res.stdout).toMatch(new RegExp(`bun\\s+need ≥\\S+\\s+unknown \\(${escaped}\\)`));
     expect(res.code).toBe(1);
@@ -67,12 +69,12 @@ describe("runDoctor", () => {
     Object.defineProperty(process, "platform", { ...REAL_PLATFORM, value: "win32" });
     const bin = tmp();
     plantBin(bin, "bun.cmd", "#!/bin/sh\necho 9.9.9\n");
-    const res = runDoctor({ cwd: tmp(), pathEnv: `${bin};${tmp()}`, platform: "win32", env: {}, home: tmp() });
+    const res = runDoctor({ cwd: tmp(), env: {}, home: tmp(), pathEnv: `${bin};${tmp()}`, platform: "win32" });
     expect(res.stdout).toContain("9.9.9");
   });
 
   it("prints each missing tool's install hints once", () => {
-    const res = runDoctor({ cwd: tmp(), pathEnv: tmp(), platform: "linux", env: {}, home: tmp() });
+    const res = runDoctor({ cwd: tmp(), env: {}, home: tmp(), pathEnv: tmp(), platform: "linux" });
     const hints = (res.stdout.split("install (print-only; not run):\n")[1] ?? "").split("\n");
     expect(hints).toContain("sudo apt install git");
     expect(new Set(hints.slice(0, 8)).size).toBe(8);
@@ -100,12 +102,12 @@ describe("main and the consumer env", () => {
 
 // Each case builds its own repo; git runs with the pointers a hook leaves behind cleared.
 const gitEnv = childEnv({
+  GIT_AUTHOR_EMAIL: "t@t",
+  GIT_AUTHOR_NAME: "t",
+  GIT_COMMITTER_EMAIL: "t@t",
+  GIT_COMMITTER_NAME: "t",
   GIT_DIR: undefined,
   GIT_INDEX_FILE: undefined,
-  GIT_AUTHOR_NAME: "t",
-  GIT_AUTHOR_EMAIL: "t@t",
-  GIT_COMMITTER_NAME: "t",
-  GIT_COMMITTER_EMAIL: "t@t",
 });
 const git = (cwd: string, ...args: string[]) => spawnSync("git", args, { cwd, encoding: "utf8", env: gitEnv });
 
@@ -124,13 +126,13 @@ describe("workspaceIssues on thin repos", () => {
   it("reports nothing for a repo with no root .gitignore and a comment-only nested one", () => {
     const r = repo();
     put(r, "pkg/.gitignore", "# nothing yet\n\n");
-    expect(workspaceIssues({ root: r, checkout: r })).toStrictEqual([]);
+    expect(workspaceIssues({ checkout: r, root: r })).toStrictEqual([]);
   });
 
   it("reports nothing when git cannot list the files", () => {
     const r = repo();
     fs.writeFileSync(path.join(r, ".git", "index"), "garbage");
-    expect(workspaceIssues({ root: r, checkout: r })).toStrictEqual([]);
+    expect(workspaceIssues({ checkout: r, root: r })).toStrictEqual([]);
   });
 
   it("labels a detached worktree outside .worktrees", () => {
@@ -138,13 +140,13 @@ describe("workspaceIssues on thin repos", () => {
     const outside = `${r}-detached`;
     dirs.push(outside);
     git(r, "worktree", "add", "-q", "--detach", outside);
-    const items = workspaceIssues({ root: r, checkout: r });
+    const items = workspaceIssues({ checkout: r, root: r });
     expect(items).toStrictEqual([
       {
+        clear: `git -C ${r} worktree remove ${fs.realpathSync(outside)}`,
+        detail: "detached",
         kind: "worktree outside .worktrees",
         path: fs.realpathSync(outside),
-        detail: "detached",
-        clear: `git -C ${r} worktree remove ${fs.realpathSync(outside)}`,
       },
     ]);
   });

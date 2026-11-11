@@ -1,19 +1,21 @@
 import fs from "node:fs";
+
 import { expect, it } from "vitest";
-import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
+
 import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
 import { orchestrateKit } from "./fixtures/orchestrate-kit.ts";
+import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 import { closingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];
 // Roots and session come from the payload alone, as in a live session.
-const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "", GROK_HOOK_EVENT: "" };
+const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
 const AWAY =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
-const live = (shape: Shape, ws: string, sid: string): HookSession => hookSession(kit, { ws, sid, shape, env: UNSET });
+const live = (shape: Shape, ws: string, sid: string): HookSession => hookSession(kit, { env: UNSET, shape, sid, ws });
 const setKey = (file: string, key: string, value: string) =>
   fs.writeFileSync(file, fs.readFileSync(file, "utf8").replace(new RegExp(`^${key}: .*$`, "m"), `${key}: ${value}`));
 const withMode = (mode: string) => VALID_PLAN.replace("strategy: default", `strategy: default\nmode: ${mode}`);

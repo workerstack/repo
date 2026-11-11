@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
+
 import { MISSING_CARGO } from "../rust/clippy.constants.ts";
 import type { CargoRun } from "../rust/clippy.ts";
+import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
 import { cleanTemps, consumer, SLOW } from "./fixtures/baseline-repo.ts";
 import { pathSans } from "./fixtures/job-kit.ts";
 import { lintMain } from "./lint-main.ts";
@@ -34,7 +36,7 @@ it(
   "repo lint prints each Rust hit with its message and exits 1; the source rules alone for paths",
   { timeout: CARGO_MS },
   async () => {
-    const root = consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE });
+    const root = consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": USAGE });
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     process.chdir(root);
     expect(await lintMain(["src/lib.rs"])).toBe(1);
@@ -50,13 +52,13 @@ it(
 
 it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CARGO_MS }, async () => {
   const clean = "/// Parses `s`.\n#[must_use]\npub fn f(s: &str) -> Option<u8> {\n    s.parse().ok()\n}\n";
-  const root = consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": clean });
+  const root = consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": clean });
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain([])).toBe(0);
   expect(printed(out)).toStrictEqual([]);
-  const skip = { files: ["src/lib.rs"], rules: ["clippy/unwrap_used"], reason: "the input is checked" };
-  const config = { packs: ["standards"], lint: { skip: [skip] } };
+  const skip = { files: ["src/lib.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
+  const config = { lint: { skip: [skip] }, packs: ["standards"] };
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
   fs.writeFileSync(
     path.join(root, "src/lib.rs"),
@@ -75,21 +77,21 @@ it("repo lint without a Cargo.toml runs no Rust rules", { timeout: SLOW }, async
 
 it("repo lint reaches the .rs sources under a directory argument", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  process.chdir(consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": USAGE }));
   expect(await lintMain(["src"])).toBe(1);
   expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
 });
 
 it("repo lint --quiet runs the Rust source rules on the repo, and no clippy", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  process.chdir(consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": USAGE }));
   expect(await lintMain(["--quiet"])).toBe(1);
   expect(printed(out)).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
 });
 
 it("repo lint of no arguments prints each source hit once beside clippy's", { timeout: CARGO_MS }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  process.chdir(consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": USAGE }));
   expect(await lintMain([])).toBe(1);
   const sources = printed(out).filter((line) => line.includes(" error repo(rust-"));
   expect(sources).toStrictEqual([`${ATTRIBUTE_LINE}\n`, `${BLOCK_LINE}\n`]);
@@ -98,7 +100,7 @@ it("repo lint of no arguments prints each source hit once beside clippy's", { ti
 
 it("repo lint reports a missing cargo as a problem and fails", { timeout: SLOW }, async () => {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  process.chdir(consumer({ "Cargo.toml": CARGO_TOML, "Cargo.lock": cargoLock("app"), "src/lib.rs": USAGE }));
+  process.chdir(consumer({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": USAGE }));
   vi.stubEnv("PATH", pathSans("cargo"));
   expect(await lintMain([])).toBe(1);
   expect(err).toHaveBeenCalledWith(`repo lint: ${MISSING_CARGO}\n`);
@@ -109,8 +111,8 @@ it(
   { timeout: CARGO_MS },
   async () => {
     const root = consumer({
-      "Cargo.toml": CARGO_TOML,
       "Cargo.lock": cargoLock("app"),
+      "Cargo.toml": CARGO_TOML,
       "src/lib.rs": "pub fn f()   {  }\n",
     });
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -128,20 +130,20 @@ it(
 it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips cargo without a Cargo.toml", async () => {
   const err: string[] = [];
   const stderr = (text: string) => err.push(text);
-  const missing: CargoRun = () => ({ status: 1, stdout: "", stderr: "", missing: true });
+  const missing: CargoRun = () => ({ missing: true, status: 1, stderr: "", stdout: "" });
   const root = consumer({ "Cargo.toml": CARGO_TOML });
-  expect(await fmt([], { cwd: root, stderr, cargo: missing })).toBe(1);
+  expect(await fmt([], { cargo: missing, cwd: root, stderr })).toBe(1);
   expect(err).toStrictEqual([`repo fmt: ${MISSING_CARGO}\n`]);
-  const signalled: CargoRun = () => ({ status: null, stdout: "", stderr: "boom\n", missing: false });
-  expect(await fmt([], { cwd: root, stderr, cargo: signalled, stdout: () => undefined })).toBe(1);
+  const signalled: CargoRun = () => ({ missing: false, status: null, stderr: "boom\n", stdout: "" });
+  expect(await fmt([], { cargo: signalled, cwd: root, stderr, stdout: () => undefined })).toBe(1);
   const calls = vi.fn(missing);
   const plain = consumer({ "src/a.ts": "export const a = 1;\n" });
-  expect(await fmt([], { cwd: plain, stderr, cargo: calls })).toBe(0);
+  expect(await fmt([], { cargo: calls, cwd: plain, stderr })).toBe(0);
   expect(calls).not.toHaveBeenCalled();
   const failing = consumer({
-    "Cargo.toml": CARGO_TOML,
     "Cargo.lock": cargoLock("app"),
+    "Cargo.toml": CARGO_TOML,
     "src/a.ts": "export const a = {b:1}\n",
   });
-  expect(await fmt(["--check"], { cwd: failing, stderr, cargo: calls })).toBe(1);
+  expect(await fmt(["--check"], { cargo: calls, cwd: failing, stderr })).toBe(1);
 });

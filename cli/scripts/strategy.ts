@@ -10,6 +10,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { canonicalPath } from "./workspace-root.ts";
 
 type Strategy = "default" | "review-fast" | "review-deep";

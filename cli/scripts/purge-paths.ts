@@ -1,6 +1,7 @@
 /** Where `repo purge-mcps` looks: the home, its flags, and the three global dests under that home. */
 import os from "node:os";
 import path from "node:path";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
 import { APPLY_FLAG } from "./purge-global-mcps.constants.ts";
@@ -20,9 +21,9 @@ export function parseArgv(argv: unknown): ParsedArgv {
       apply = true;
       continue;
     }
-    return { ok: false, error: `unknown flag: ${a}` };
+    return { error: `unknown flag: ${a}`, ok: false };
   }
-  return { ok: true, apply };
+  return { apply, ok: true };
 }
 
 /** The global grok config under `home`. */

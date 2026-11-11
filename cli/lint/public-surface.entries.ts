@@ -1,10 +1,11 @@
 /** The source files a package's code `exports` name. */
 import fs from "node:fs";
 import path from "node:path";
+
+import { isRecord } from "./manifest.ts";
 import { BUILD_CONFIG, BUILT_EXTENSIONS, CODE_TARGET } from "./public-surface.constants.ts";
 import { get } from "./public-surface.syntax.ts";
 import type { Build } from "./public-surface.types.ts";
-import { isRecord } from "./manifest.ts";
 
 /** The JSON at `file`, or null when it is missing or not JSON. */
 export function readJson(file: string): unknown {
@@ -20,7 +21,7 @@ function buildOf(root: string): Build | null {
   const options = get(readJson(path.join(root, BUILD_CONFIG)), "compilerOptions");
   const rootDir = get(options, "rootDir");
   const outDir = get(options, "outDir");
-  return typeof rootDir === "string" && typeof outDir === "string" ? { rootDir, outDir } : null;
+  return typeof rootDir === "string" && typeof outDir === "string" ? { outDir, rootDir } : null;
 }
 
 /** The source file behind `target`: a built file in `outDir` maps to its source in `rootDir`, else `target` itself. */

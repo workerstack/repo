@@ -1,14 +1,14 @@
 /** `repo link` swaps a dependency for a packed sibling checkout; `repo unlink` puts npm back. */
 import fs from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE, loadConfig } from "./config.ts";
+
 import { applyLinks } from "./apply-links.ts";
+import { CONFIG_FILE, loadConfig } from "./config.ts";
 import { dependencyNames } from "./dependency-names.ts";
-import { prePush } from "./pre-push.ts";
+import { findRoots } from "./find-roots.ts";
 import { LinkError } from "./link-error.ts";
 import { linkIo } from "./link-io.ts";
 import type { LinkContext, LinkIo } from "./link-io.types.ts";
-import { findRoots } from "./find-roots.ts";
 import { resolveTargets, type LinkLookup } from "./link-siblings.ts";
 import { linkStatus } from "./link-status.ts";
 import { unlinkScope, type UnlinkScope } from "./link-unlink.ts";
@@ -25,6 +25,7 @@ import {
   USAGE,
   noInstall,
 } from "./link.constants.ts";
+import { prePush } from "./pre-push.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
 /** The config's `link` map and the dependency names of this checkout's package.json files. */
@@ -40,7 +41,7 @@ async function lookupOf(ctx: LinkContext): Promise<LinkLookup> {
   if (!read.ok) throw new LinkError(read.errors.join("\n"));
   const { manifest, packages } = read.workspace;
   const used = new Set([manifest, ...packages.map((pkg) => pkg.manifest)].flatMap(dependencyNames));
-  return { roots: ctx.roots, mapped, used };
+  return { mapped, roots: ctx.roots, used };
 }
 
 async function link(ctx: LinkContext, name: string): Promise<number> {

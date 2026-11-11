@@ -1,18 +1,20 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { linkText } from "../../dev/test-paths.ts";
+import { expectMode, isWritable, modeOf } from "./fixtures/file-mode.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
-import { writeAll, writeOutput } from "./write.ts";
 import { ownedMode, settleModes } from "./write-modes.ts";
-import { expectMode, isWritable, modeOf } from "./fixtures/file-mode.ts";
+import { writeAll, writeOutput } from "./write.ts";
 
 const temps: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function tempRoot(): string {
@@ -29,7 +31,7 @@ function put(root: string, rel: string, text: string): void {
 /** Every path under `root` with its kind, bytes, link text and file mode, so a restore can be compared byte for byte. */
 function tree(root: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const rel of fs.readdirSync(root, { recursive: true, encoding: "utf8" }).sort()) {
+  for (const rel of fs.readdirSync(root, { encoding: "utf8", recursive: true }).sort()) {
     const abs = path.join(root, rel);
     const stat = fs.lstatSync(abs);
     if (stat.isSymbolicLink()) out[rel] = `link ${linkText(abs)}`;
@@ -40,28 +42,28 @@ function tree(root: string): Record<string, string> {
 }
 
 const file = (p: string, content = `${p}\n`): Output => ({
-  kind: "file",
-  path: p,
   content,
-  tracked: true,
+  kind: "file",
   managed: "whole",
+  path: p,
+  tracked: true,
 });
 const link = (p: string, target: string): Output => ({
   kind: "link",
+  managed: "whole",
   path: p,
   target,
   tracked: true,
-  managed: "whole",
 });
 const hook = (content = "#!/bin/sh\n"): Output => ({
-  kind: "file",
-  path: ".githooks/pre-commit",
   content,
-  tracked: true,
-  managed: "whole",
   executable: true,
+  kind: "file",
+  managed: "whole",
+  path: ".githooks/pre-commit",
+  tracked: true,
 });
-const block = (p: string): Output => ({ kind: "file", path: p, content: `${p}\n`, tracked: true, managed: "block" });
+const block = (p: string): Output => ({ content: `${p}\n`, kind: "file", managed: "block", path: p, tracked: true });
 const deps = { platform: process.platform, writeOutput };
 const MANIFEST = renderManifest(["a.txt"]);
 
@@ -118,8 +120,8 @@ describe("writeAll", () => {
     const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2"), file("c.txt")];
     const result = writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, failing("c.txt"));
     expect(result).toStrictEqual({
-      ok: false,
       errors: ["c.txt: cannot write: EACCES: permission denied; restored 3 outputs, nothing changed"],
+      ok: false,
       refused: false,
     });
     expect(tree(root)).toStrictEqual(before);
@@ -147,8 +149,8 @@ describe("writeAll", () => {
     });
     const result = writeAll(root, [file("a.txt", "new\n")], ["gone/deep/x.txt", "gone/other.txt"], MANIFEST, deps);
     expect(result).toStrictEqual({
-      ok: false,
       errors: ["gone/other.txt: cannot remove: EBUSY: resource busy; restored 2 outputs, nothing changed"],
+      ok: false,
       refused: false,
     });
     vi.restoreAllMocks();
@@ -169,8 +171,8 @@ describe("writeAll", () => {
     const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2")];
     const result = writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps);
     expect(result).toStrictEqual({
-      ok: false,
       errors: [`${MANIFEST_REL}: cannot write: EACCES: permission denied, rename; restored 4 outputs, nothing changed`],
+      ok: false,
       refused: false,
     });
     vi.restoreAllMocks();
@@ -196,8 +198,8 @@ describe("writeAll", () => {
     const before = tree(root);
     const changed = [file("a.txt", "new\n"), link(".claude/skills/ask", "../../.agents/skills/ask")];
     expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({
-      ok: false,
       errors: [".claude/skills/ask is a folder where sync puts a link; move it to .repo/skills/ask"],
+      ok: false,
       refused: true,
     });
     expect(tree(root)).toStrictEqual(before);
@@ -216,11 +218,11 @@ describe("writeAll", () => {
       deps,
     );
     expect(result).toStrictEqual({
-      ok: false,
       errors: [
         "tree/real is a folder where sync puts a link; move or delete it",
         ".agents/skills/b is a folder where sync puts a link; move it to .repo/skills/b",
       ],
+      ok: false,
       refused: true,
     });
     expect(tree(root)).toStrictEqual(before);
@@ -260,8 +262,8 @@ describe("writeAll", () => {
     }) as typeof fs.readFileSync);
     const result = writeAll(root, [file("a.txt", "new\n")], [], MANIFEST, deps);
     expect(result).toStrictEqual({
-      ok: false,
       errors: ["a.txt: cannot write: EACCES: permission denied, open; restored 0 outputs, nothing changed"],
+      ok: false,
       refused: false,
     });
     vi.restoreAllMocks();
@@ -279,8 +281,8 @@ describe("writeAll", () => {
     );
     const result = writeAll(root, [file("a.txt", "new a\n"), file("c.txt")], [], MANIFEST, failing("c.txt", "boom"));
     expect(result).toStrictEqual({
-      ok: false,
       errors: ["c.txt: cannot write: boom; could not restore a.txt; run `bun repo sync` again"],
+      ok: false,
       refused: false,
     });
   });

@@ -1,5 +1,7 @@
 import fs from "node:fs";
+
 import { z } from "zod";
+
 import { MAX_PERCENT, REWRITE_HINT, RUST_EXTENSION } from "./floors.constants.ts";
 
 /** The floors of one TypeScript file, each an integer percent. */
@@ -13,8 +15,8 @@ export type Floors = Record<string, TsFloor | RustFloor>;
 function schemas() {
   const percent = z.number().int().min(0).max(MAX_PERCENT);
   return {
-    ts: z.strictObject({ statements: percent, branches: percent, functions: percent, lines: percent }),
-    rust: z.strictObject({ lines: percent, functions: percent, regions: percent }),
+    rust: z.strictObject({ functions: percent, lines: percent, regions: percent }),
+    ts: z.strictObject({ branches: percent, functions: percent, lines: percent, statements: percent }),
   };
 }
 

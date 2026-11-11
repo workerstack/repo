@@ -1,6 +1,7 @@
 import { afterEach, expect, it } from "vitest";
-import { cleanTemps, SLOW, git, write, read, nonNull, consumer, turn, staged } from "./fixtures/turn-repo.ts";
+
 import { cargoLock } from "../rust/fixtures/cargo-lock.ts";
+import { cleanTemps, SLOW, git, write, read, nonNull, consumer, turn, staged } from "./fixtures/turn-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -79,7 +80,7 @@ it("a broken baseline or tool config fails its step with the reason", { timeout:
 
 it("a changed Rust file gets the lexer rules, never clippy, under the baseline", { timeout: SLOW }, async () => {
   const cargo = '[package]\nname = "a"\nversion = "0.1.0"\nedition = "2024"\n';
-  const root = consumer({ "Cargo.toml": cargo, "Cargo.lock": cargoLock("a"), "src/lib.rs": "// ok\npub fn f() {}\n" });
+  const root = consumer({ "Cargo.lock": cargoLock("a"), "Cargo.toml": cargo, "src/lib.rs": "// ok\npub fn f() {}\n" });
   write(root, { "src/lib.rs": "/* old */\npub fn f() {}\n" });
   const result = await turn(root, []);
   expect(result.err).toContain("src/lib.rs:1:1: error repo(rust-block-comment): ");

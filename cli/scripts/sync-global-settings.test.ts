@@ -3,11 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, it } from "vitest";
+
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
+import { afterEach, describe, expect, it } from "vitest";
+
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { deepMerge, parseArgv, resolveDest, shouldSkip, syncGlobals } from "./sync-global-settings.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -20,7 +22,7 @@ const skipRe = new RegExp(
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -32,19 +34,19 @@ function tmpDir(prefix: string) {
 
 describe("parseArgv", () => {
   it("applies by default and reads --dry-run, --check and --host", () => {
-    expect(parseArgv([])).toStrictEqual({ ok: true, dryRun: false, check: false, host: "all" });
-    expect(parseArgv(["--dry-run"])).toMatchObject({ ok: true, dryRun: true });
-    expect(parseArgv(["--check", "--host", "grok"])).toMatchObject({ ok: true, check: true, host: "grok" });
-    expect(parseArgv(["--host=claude"])).toMatchObject({ ok: true, host: "claude" });
+    expect(parseArgv([])).toStrictEqual({ check: false, dryRun: false, host: "all", ok: true });
+    expect(parseArgv(["--dry-run"])).toMatchObject({ dryRun: true, ok: true });
+    expect(parseArgv(["--check", "--host", "grok"])).toMatchObject({ check: true, host: "grok", ok: true });
+    expect(parseArgv(["--host=claude"])).toMatchObject({ host: "claude", ok: true });
   });
 
   it("rejects a bad host or flag, and --check with --dry-run", () => {
-    expect(parseArgv(["--host="])).toStrictEqual({ ok: false, error: "unknown host: " });
-    expect(parseArgv(["--apply"])).toStrictEqual({ ok: false, error: "unknown flag: --apply" });
+    expect(parseArgv(["--host="])).toStrictEqual({ error: "unknown host: ", ok: false });
+    expect(parseArgv(["--apply"])).toStrictEqual({ error: "unknown flag: --apply", ok: false });
     expect(parseArgv(["--host"]).ok).toBe(false);
     expect(parseArgv(["--check", "--dry-run"])).toStrictEqual({
-      ok: false,
       error: "--check and --dry-run do not combine",
+      ok: false,
     });
   });
 });
@@ -65,23 +67,23 @@ describe("deepMerge", () => {
     expect(shouldSkip("apiKey", skipRe)).toBe(true);
     expect(shouldSkip("features", skipRe)).toBe(false);
     const dest = {
-      keepMe: 1,
       apiKey: "dest-secret",
-      mcp: { servers: { old: true } },
       features: {
-        two_pass_compaction: false,
         hooks: "dest-hooks",
+        two_pass_compaction: false,
       },
+      keepMe: 1,
+      mcp: { servers: { old: true } },
     };
     const source = {
-      apiKey: "src-secret",
-      mcp: { servers: { new: true } },
-      hooks: { on: true },
-      features: {
-        two_pass_compaction: true,
-        hooks: "src-hooks",
-      },
       agent: { name: "orchestrator" },
+      apiKey: "src-secret",
+      features: {
+        hooks: "src-hooks",
+        two_pass_compaction: true,
+      },
+      hooks: { on: true },
+      mcp: { servers: { new: true } },
     };
     const merged = deepMerge(dest, source, skipRe) as Record<string, unknown> & {
       features: { two_pass_compaction: boolean; hooks: string };
@@ -97,11 +99,11 @@ describe("deepMerge", () => {
 });
 
 const HOSTS = [
-  { id: "grok", dest: ".grok/config.toml", format: "toml" },
-  { id: "claude", dest: ".claude/settings.json", format: "json" },
-  { id: "codex", dest: ".codex/config.toml", format: "toml" },
-  { id: "antigravity", dest: ".gemini/antigravity-cli/settings.json", format: "json" },
-  { id: "cursor", dest: ".cursor/cli-config.json", format: "json" },
+  { dest: ".grok/config.toml", format: "toml", id: "grok" },
+  { dest: ".claude/settings.json", format: "json", id: "claude" },
+  { dest: ".codex/config.toml", format: "toml", id: "codex" },
+  { dest: ".gemini/antigravity-cli/settings.json", format: "json", id: "antigravity" },
+  { dest: ".cursor/cli-config.json", format: "json", id: "cursor" },
 ] as const;
 
 const CLAUDE = HOSTS[1];
@@ -149,16 +151,16 @@ function tmpWorkspace(payloads: string[]) {
 describe("syncGlobals", () => {
   it("reports `{action} {id} {dest}` per host in manifest order", () => {
     const home = tmpDir("yolo-dry-");
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
+    const r = syncGlobals({ apply: false, home, workspaceRoot: repoRoot });
     expect(r.ok).toBe(true);
     expect(r.report.map((row: { line: string }) => row.line)).toStrictEqual(
       HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`),
     );
     const applied = syncGlobals({
-      workspaceRoot: repoRoot,
-      home: tmpDir("yolo-line-"),
       apply: true,
+      home: tmpDir("yolo-line-"),
       host: "cursor",
+      workspaceRoot: repoRoot,
     });
     expect(applied.report.map((row: { line: string }) => row.line)).toStrictEqual([
       "apply cursor .cursor/cli-config.json",
@@ -167,14 +169,14 @@ describe("syncGlobals", () => {
 
   it("dry-run writes nothing under home", () => {
     const home = tmpDir("yolo-dry-none-");
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
+    const r = syncGlobals({ apply: false, home, workspaceRoot: repoRoot });
     expect(r.ok).toBe(true);
     expect(fs.readdirSync(home)).toStrictEqual([]);
   });
 
   it.each(HOSTS)("$id: apply creates a missing dest from the payload", (h) => {
     const home = tmpDir(`yolo-create-${h.id}-`);
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: h.id });
+    const r = syncGlobals({ apply: true, home, host: h.id, workspaceRoot: repoRoot });
     expect(r.ok).toBe(true);
     const manifest = JSON.parse(
       fs.readFileSync(path.join(repoRoot, "agents/global-settings/manifest.json"), "utf8"),
@@ -187,7 +189,7 @@ describe("syncGlobals", () => {
 
   it("writes the Usage keys for every host", () => {
     const home = tmpDir("yolo-usage-");
-    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, workspaceRoot: repoRoot }).ok).toBe(true);
     const [grok, claude, codex, agy, cursor] = HOSTS.map((h) => readDest(home, h)) as [
       DestShape,
       DestShape,
@@ -208,8 +210,8 @@ describe("syncGlobals", () => {
 
   it.each(HOSTS)("$id: unrelated dest keys survive apply and the payload wins", (h) => {
     const home = tmpDir(`yolo-keep-${h.id}-`);
-    writeDest(home, h, { keepMe: { nested: true }, approvalMode: "ask" });
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: h.id });
+    writeDest(home, h, { approvalMode: "ask", keepMe: { nested: true } });
+    const r = syncGlobals({ apply: true, home, host: h.id, workspaceRoot: repoRoot });
     expect(r.ok).toBe(true);
     const out = readDest(home, h);
     expect(out.keepMe).toEqual({ nested: true });
@@ -219,7 +221,7 @@ describe("syncGlobals", () => {
   it("keeps sibling keys inside a merged table", () => {
     const home = tmpDir("yolo-sibling-");
     writeDest(home, CLAUDE, { permissions: { allow: ["Bash(ls)"], defaultMode: "default" } });
-    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, host: "claude", workspaceRoot: repoRoot }).ok).toBe(true);
     expect(readDest(home, CLAUDE).permissions).toStrictEqual({
       allow: ["Bash(ls)"],
       defaultMode: "bypassPermissions",
@@ -228,15 +230,15 @@ describe("syncGlobals", () => {
 
   it("a repeated apply is idempotent", () => {
     const home = tmpDir("yolo-idem-");
-    syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
+    syncGlobals({ apply: true, home, workspaceRoot: repoRoot });
     const first = HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"));
-    syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
+    syncGlobals({ apply: true, home, workspaceRoot: repoRoot });
     expect(HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"))).toStrictEqual(first);
   });
 
   it("rejects an unknown host", () => {
-    const r = syncGlobals({ workspaceRoot: repoRoot, home: tmpDir("yolo-bad-"), host: "gemini" });
-    expect(r).toMatchObject({ ok: false, error: "unknown host: gemini" });
+    const r = syncGlobals({ home: tmpDir("yolo-bad-"), host: "gemini", workspaceRoot: repoRoot });
+    expect(r).toMatchObject({ error: "unknown host: gemini", ok: false });
   });
 
   it("a deleted payload errors with its repo-relative path and writes nothing", () => {
@@ -247,10 +249,10 @@ describe("syncGlobals", () => {
       "agents/global-settings/antigravity.json",
     ]);
     const home = tmpDir("yolo-missing-");
-    const r = syncGlobals({ workspaceRoot: ws, home, apply: true });
+    const r = syncGlobals({ apply: true, home, workspaceRoot: ws });
     expect(r).toMatchObject({
-      ok: false,
       error: "missing payload: agents/global-settings/cursor.json",
+      ok: false,
     });
     expect(r.report.map((row: { id: string }) => row.id)).toStrictEqual(["grok", "claude", "codex", "antigravity"]);
   });
@@ -264,10 +266,10 @@ describe("syncGlobals", () => {
       "agents/global-settings/cursor.json",
     ]);
     fs.writeFileSync(path.join(ws, "agents/global-settings/claude.json"), "{nope");
-    const r = syncGlobals({ workspaceRoot: ws, home: tmpDir("yolo-badpayload-"), host: "claude" });
+    const r = syncGlobals({ home: tmpDir("yolo-badpayload-"), host: "claude", workspaceRoot: ws });
     expect(r).toMatchObject({
-      ok: false,
       error: "unreadable payload: agents/global-settings/claude.json",
+      ok: false,
     });
   });
 
@@ -277,7 +279,7 @@ describe("syncGlobals", () => {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     const original = "<<<not-toml>>>\nkeep-this\n";
     fs.writeFileSync(dest, original);
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "grok" });
+    const r = syncGlobals({ apply: true, home, host: "grok", workspaceRoot: repoRoot });
     expect(r.ok).toBe(false);
     expect(fs.readFileSync(dest, "utf8")).toBe(original);
   });
@@ -287,8 +289,8 @@ describe("syncGlobals", () => {
     const dest = path.join(home, ".claude/settings.json");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "{broken");
-    const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" });
-    expect(r).toMatchObject({ ok: false, error: "unreadable dest: .claude/settings.json" });
+    const r = syncGlobals({ apply: true, home, host: "claude", workspaceRoot: repoRoot });
+    expect(r).toMatchObject({ error: "unreadable dest: .claude/settings.json", ok: false });
     expect(fs.readFileSync(dest, "utf8")).toBe("{broken");
   });
 
@@ -297,17 +299,17 @@ describe("syncGlobals", () => {
     const dest = path.join(home, ".claude/settings.json");
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, "  \n");
-    expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, host: "claude", workspaceRoot: repoRoot }).ok).toBe(true);
     expect(readDest(home, CLAUDE).permissions.defaultMode).toBe("bypassPermissions");
   });
 });
 
 function runCli(args: string[], home: string, cwd: string = repoRoot) {
   return spawnSync(bunPath(), [repoCli, "yolo", ...args], {
-    encoding: "utf8",
     cwd,
-    timeout: 20_000,
+    encoding: "utf8",
     env: childEnv({ HOME: home }),
+    timeout: 20_000,
   });
 }
 
@@ -433,7 +435,7 @@ describe("sourceRoot", () => {
     });
     const out = tmpDir("sync-out-");
     const home = tmpDir("sync-home-");
-    const r = syncGlobals({ workspaceRoot: out, sourceRoot: stock, home, apply: true });
+    const r = syncGlobals({ apply: true, home, sourceRoot: stock, workspaceRoot: out });
     expect(r.ok).toBe(true);
     expect(r.report.length).toBeGreaterThan(0);
     expect(fs.readdirSync(out)).toStrictEqual([]);
@@ -458,12 +460,12 @@ describe("consumerRoot overlay", () => {
     fs.writeFileSync(path.join(consumer, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
     const home = tmpDir("sync-overlay-home-");
     const r = syncGlobals({
-      workspaceRoot: consumer,
-      sourceRoot: stock,
+      apply: true,
       consumerRoot: consumer,
       home,
-      apply: true,
       host: "claude",
+      sourceRoot: stock,
+      workspaceRoot: consumer,
     });
     expect(r.ok).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"))).toStrictEqual({
@@ -476,12 +478,12 @@ describe("consumerRoot overlay", () => {
     const consumer = tmpDir("sync-overlay-empty-");
     const home = tmpDir("sync-overlay-home-");
     const r = syncGlobals({
-      workspaceRoot: consumer,
-      sourceRoot: stock,
+      apply: true,
       consumerRoot: consumer,
       home,
-      apply: true,
       host: "claude",
+      sourceRoot: stock,
+      workspaceRoot: consumer,
     });
     expect(r.ok).toBe(true);
     const stockPayload = JSON.parse(

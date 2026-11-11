@@ -1,6 +1,6 @@
+import { GOAL_H2, MISTAKES_H2, NOT_FOUND, USAGE_H2 } from "./persist-doc.constants.ts";
 /** Checks on the `## ` sections of a plan or roadmap: fences, section bodies, Usage, the card and the line cap. */
 import { captured, type Sections } from "./persist-doc.ts";
-import { GOAL_H2, MISTAKES_H2, NOT_FOUND, USAGE_H2 } from "./persist-doc.constants.ts";
 
 const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})/;
 const FENCE_CLOSE_RE = /^ {0,3}(`{3,}|~{3,})\s*$/;
@@ -59,14 +59,14 @@ export function sectionBodies(text: string): Sections {
   let offset = 0;
   lines.forEach((line, i) => {
     const m = !fenced.has(i) && H2_RE.exec(line);
-    if (m) h2.push({ title: captured(m, 1).trim(), index: offset, end: offset + line.length + 1 });
+    if (m) h2.push({ end: offset + line.length + 1, index: offset, title: captured(m, 1).trim() });
     offset += line.length + 1;
   });
   const bodies: Record<string, string> = {};
   for (const [i, cur] of h2.entries()) {
     bodies[cur.title] = text.slice(cur.end, h2[i + 1]?.index ?? text.length);
   }
-  return { order: h2.map((h) => h.title), bodies };
+  return { bodies, order: h2.map((h) => h.title) };
 }
 
 const USAGE_MISSING =

@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { runSync } from "../cli/sync.ts";
+
 import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
-import { BRO_LONG, BRO_NO_INVOCATION, BRO_SHORT } from "./sync-pstack-write-fixtures.ts";
+import { runSync } from "../cli/sync.ts";
 import { capture, respond, tmpDir } from "./sync-pstack-fixtures.ts";
+import { BRO_LONG, BRO_NO_INVOCATION, BRO_SHORT } from "./sync-pstack-write-fixtures.ts";
 import { syncPstackSkills } from "./sync-pstack-write.ts";
 
 vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn() }));
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 const BRO_URL = "https://raw.githubusercontent.com/backnotprop/pstack/main/skills/bro/SKILL.md";
@@ -21,7 +23,6 @@ it("writes adapted files and skips generate on --no-generate", async () => {
   let generated = 0;
   const { out, io } = capture();
   const result = await syncPstackSkills({
-    workspaceRoot: root,
     argv: ["--skill", "bro", "--no-generate"],
     fetchImpl: (url) =>
       Promise.resolve(
@@ -33,6 +34,7 @@ it("writes adapted files and skips generate on --no-generate", async () => {
       generated += 1;
     },
     io,
+    workspaceRoot: root,
   });
   expect(result.ok).toBe(true);
   expect(generated).toBe(0);
@@ -48,10 +50,10 @@ it("regenerates through runSync in the workspace, not a package script", async (
   });
   const { out, io } = capture();
   const result = await syncPstackSkills({
-    workspaceRoot: root,
     argv: ["--skill", "bro"],
     fetchImpl: respond(BRO_SHORT),
     io,
+    workspaceRoot: root,
   });
   expect(result.ok).toBe(true);
   expect(runSync).toHaveBeenCalledWith([], expect.objectContaining({ cwd: root }));
@@ -61,25 +63,25 @@ it("regenerates through runSync in the workspace, not a package script", async (
 it("fails when runSync exits non-zero", async () => {
   vi.mocked(runSync).mockResolvedValueOnce(1);
   const result = await syncPstackSkills({
-    workspaceRoot: tmpDir("pstack-gen-fail-", tmpDirs),
     argv: ["--skill", "bro"],
     fetchImpl: respond(BRO_SHORT),
     io: capture().io,
+    workspaceRoot: tmpDir("pstack-gen-fail-", tmpDirs),
   });
-  expect(result).toMatchObject({ ok: false, error: "repo sync exited 1" });
+  expect(result).toMatchObject({ error: "repo sync exited 1", ok: false });
 });
 
 it("fails with the message when generateFn throws", async () => {
   const result = await syncPstackSkills({
-    workspaceRoot: tmpDir("pstack-gen-throw-", tmpDirs),
     argv: ["--skill", "bro"],
     fetchImpl: respond(BRO_SHORT),
     generateFn: () => {
       throw new Error("boom");
     },
     io: capture().io,
+    workspaceRoot: tmpDir("pstack-gen-throw-", tmpDirs),
   });
-  expect(result).toMatchObject({ ok: false, error: "boom" });
+  expect(result).toMatchObject({ error: "boom", ok: false });
 });
 
 it("--check reports drift without writing", async () => {
@@ -88,13 +90,13 @@ it("--check reports drift without writing", async () => {
   fs.mkdirSync(dest, { recursive: true });
   fs.writeFileSync(path.join(dest, "SKILL.md"), "stale\n");
   const result = await syncPstackSkills({
-    workspaceRoot: root,
     argv: ["--skill", "bro", "--check"],
     fetchImpl: respond(BRO_NO_INVOCATION),
     generateFn: () => {
       throw new Error("generate should not run");
     },
     io: capture().io,
+    workspaceRoot: root,
   });
   expect(result.ok).toBe(false);
   expect(fs.readFileSync(path.join(dest, "SKILL.md"), "utf8")).toBe("stale\n");

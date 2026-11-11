@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { ciSchema } from "./ci-schema.ts";
 
 const messages = (input: unknown): string[] => {

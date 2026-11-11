@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { SORTED, UNSORTED } from "./fixtures/json-dirs.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 
@@ -6,10 +7,10 @@ const text = (input: string): string | undefined => sortedJsonText(input)?.text;
 
 it("sorts nested keys, keeps arrays in order and sorts the objects inside them", () => {
   expect(sortedJsonText('{"b":1,"a":{"z":[3,{"y":1,"x":2},1],"c":1}}')).toStrictEqual({
-    text: '{"a":{"c":1,"z":[3,{"x":2,"y":1},1]},"b":1}',
     key: "a",
+    text: '{"a":{"c":1,"z":[3,{"x":2,"y":1},1]},"b":1}',
   });
-  expect(sortedJsonText(UNSORTED)).toStrictEqual({ text: SORTED, key: "hooks" });
+  expect(sortedJsonText(UNSORTED)).toStrictEqual({ key: "hooks", text: SORTED });
 });
 
 it("names the first key out of order by its path, through objects and array indexes", () => {
@@ -57,16 +58,16 @@ it("sorts the Usage tsconfig: comments move with their key and the trailing comm
   const input =
     '{\n  "include": ["src"], // what tsc reads\n  // the base\n  "extends": "./base.json",\n  // kept for later\n}\n';
   expect(sortedJsonText(input)).toStrictEqual({
-    text: '{\n  // the base\n  "extends": "./base.json",\n  "include": ["src"], // what tsc reads\n  // kept for later\n}\n',
     key: "extends",
+    text: '{\n  // the base\n  "extends": "./base.json",\n  "include": ["src"], // what tsc reads\n  // kept for later\n}\n',
   });
 });
 
 it("moves an own-line comment above a nested key with that key", () => {
   const input = '{\n  "a": {\n    "z": 1,\n    // about y\n    "y": 2\n  }\n}\n';
   expect(sortedJsonText(input)).toStrictEqual({
-    text: '{\n  "a": {\n    // about y\n    "y": 2,\n    "z": 1\n  }\n}\n',
     key: "a.y",
+    text: '{\n  "a": {\n    // about y\n    "y": 2,\n    "z": 1\n  }\n}\n',
   });
 });
 
@@ -120,8 +121,8 @@ it("keeps CRLF line endings, also for an added line break", () => {
 it("keeps arrays in order and sorts the objects inside them, comments included", () => {
   const input = '[\n  // first\n  { "b": 1, "a": 2 },\n  { "d": 1, /* c */ "c": 2 }\n]\n';
   expect(sortedJsonText(input)).toStrictEqual({
-    text: '[\n  // first\n  { "a": 2, "b": 1 },\n  { /* c */ "c": 2, "d": 1 }\n]\n',
     key: "0.a",
+    text: '[\n  // first\n  { "a": 2, "b": 1 },\n  { /* c */ "c": 2, "d": 1 }\n]\n',
   });
 });
 

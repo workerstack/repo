@@ -2,11 +2,13 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { expect, it } from "vitest";
-import { grokConfigPath } from "./purge-paths.ts";
-import { plant, plantHomes, readGrok, seedHome } from "./fixtures/purge-kit.ts";
+
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { plant, plantHomes, readGrok, seedHome } from "./fixtures/purge-kit.ts";
+import { grokConfigPath } from "./purge-paths.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..", "..");
@@ -15,7 +17,7 @@ const tmpDir = plantHomes();
 
 /** `repo purge-mcps` with `args`, run from `cwd` under `env`. */
 function purgeCli(args: string[], cwd: string, env: NodeJS.ProcessEnv) {
-  return spawnSync(bunPath(), [repoCli, "purge-mcps", ...args], { encoding: "utf8", cwd, timeout: 20_000, env });
+  return spawnSync(bunPath(), [repoCli, "purge-mcps", ...args], { cwd, encoding: "utf8", env, timeout: 20_000 });
 }
 
 it("purgeGlobalMcps does not touch a fixture project .grok/config.toml", () => {

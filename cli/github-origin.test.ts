@@ -1,10 +1,12 @@
 import fs from "node:fs";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { GITHUB_TEMPS, githubRepo } from "./fixtures/github-repo.ts";
 import { originSlug, parseSlug } from "./github-origin.ts";
 
 afterEach(() => {
-  for (const dir of GITHUB_TEMPS.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of GITHUB_TEMPS.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("parseSlug", () => {

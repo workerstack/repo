@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import type { Pack } from "../config.ts";
 import { context } from "../fixtures/release-context.ts";
 import { release } from "./release.ts";

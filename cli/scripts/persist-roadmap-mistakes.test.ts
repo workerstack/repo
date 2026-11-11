@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { DRAFT_ROADMAP, LEGACY_ROADMAP } from "./fixtures/persist-bodies.ts";
 import { read, useTmpWs, withEntries } from "./fixtures/persist-plan-kit.ts";
 import { NAME_LINE, savedLegacy, savedRoadmap, update } from "./fixtures/persist-roadmap-kit.ts";
@@ -13,7 +14,7 @@ describe("roadmap Previous mistakes section", () => {
   it("is required on a new roadmap, which starts its review count at 0", () => {
     const ws = tmpWs();
     const bare = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "");
-    const r = persistRoadmap({ workspaceRoot: ws, content: bare });
+    const r = persistRoadmap({ content: bare, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/missing ## Previous mistakes; end a new roadmap with it and \(none\)/);
     expect(read(savedRoadmap(ws))).toMatch(/^reviews: 0$/m);
@@ -21,14 +22,14 @@ describe("roadmap Previous mistakes section", () => {
 
   it("rejects an unknown entry kind and a section that is not last", () => {
     const ws = tmpWs();
-    const bad = persistRoadmap({ workspaceRoot: ws, content: withEntries(DRAFT_ROADMAP, "- oops: a → b") });
+    const bad = persistRoadmap({ content: withEntries(DRAFT_ROADMAP, "- oops: a → b"), workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.error).toMatch(/feedback\|verify\|review\|premise\|decision\|slice/);
     const moved = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "").replace(
       "## Verify",
       "## Previous mistakes\n(none)\n\n## Verify",
     );
-    expect(persistRoadmap({ workspaceRoot: ws, content: moved }).error).toMatch(/must be the last heading/);
+    expect(persistRoadmap({ content: moved, workspaceRoot: ws }).error).toMatch(/must be the last heading/);
   });
 });
 

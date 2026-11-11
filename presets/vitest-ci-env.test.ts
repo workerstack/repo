@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import type { UserWorkspaceConfig } from "vitest/config";
+
 import { defineProject } from "./vitest.ts";
 
 /** The `test` options of a config as a plain record, for the root options its type leaves out. */
@@ -15,10 +16,10 @@ it("defineProject: leaves coverage and reporters alone when neither variable is 
 
 it("defineProject: REPO_COVERAGE=1 enables istanbul coverage, and keeps a provider the caller names", () => {
   vi.stubEnv("REPO_COVERAGE", "1");
-  expect(testOf(defineProject({})).coverage).toStrictEqual({ provider: "istanbul", enabled: true });
+  expect(testOf(defineProject({})).coverage).toStrictEqual({ enabled: true, provider: "istanbul" });
   const rootOptions = { coverage: { provider: "v8" } }; // root options the project type leaves out
   const own = { test: { name: "own", ...rootOptions } };
-  expect(testOf(defineProject(own)).coverage).toMatchObject({ provider: "v8", enabled: true });
+  expect(testOf(defineProject(own)).coverage).toMatchObject({ enabled: true, provider: "v8" });
 });
 
 it("defineProject: REPO_COVERAGE=0 turns coverage off, even where the caller's config turns it on", () => {

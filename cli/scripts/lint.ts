@@ -2,18 +2,19 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
+import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
+import { childEnv, readEnv } from "../env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { CARGO_MANIFEST } from "../rust/rust-hits.constants.ts";
-import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
-import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
-import { childEnv, readEnv } from "../env.ts";
-import { repoJson, sortJson } from "./json-keys.ts";
 import { FIX_HINT } from "./json-keys.constants.ts";
-import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
+import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
+import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
 import { CHECK_FLAG } from "./lint.constants.ts";
 import { toolEnv } from "./tool-env.ts";
 
@@ -30,8 +31,8 @@ export type ToolDeps = {
   cargo?: CargoRun;
 };
 
-const COMMAND: Record<Tool, string> = { oxlint: "lint", oxfmt: "fmt" };
-const CONFIG: Record<Tool, string> = { oxlint: OXLINT_CONFIG_PATH, oxfmt: OXFMT_CONFIG_PATH };
+const COMMAND: Record<Tool, string> = { oxfmt: "fmt", oxlint: "lint" };
+const CONFIG: Record<Tool, string> = { oxfmt: OXFMT_CONFIG_PATH, oxlint: OXLINT_CONFIG_PATH };
 
 /** Names each file `--check` found an own-line block comment in. */
 function reportComments(found: readonly OwnLine[], stderr: (s: string) => void): void {
@@ -92,7 +93,7 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
   if (!fs.existsSync(path.join(root, CONFIG[tool])))
     return fail([`no ${CONFIG[tool]}; run \`bun repo sync\` to write it`]);
   if (tool !== "oxfmt") return run(tool, args, root);
-  return withCargoFmt(root, formatSorted({ root, cwd, args, stderr, run }), { ...deps, stderr, args });
+  return withCargoFmt(root, formatSorted({ args, cwd, root, run, stderr }), { ...deps, args, stderr });
 }
 
 /** `code`, the exit of oxfmt, folded with that of `cargo fmt --all` when `root` has a Cargo.toml: the first failure. */
@@ -103,7 +104,7 @@ function withCargoFmt(
 ): number {
   if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return code;
   const { args, stderr, stdout = (s: string) => process.stdout.write(s) } = job;
-  const rust = cargoFmt(root, { check: args.includes(CHECK_FLAG), stdout, stderr, run: job.cargo });
+  const rust = cargoFmt(root, { check: args.includes(CHECK_FLAG), run: job.cargo, stderr, stdout });
   return code === 0 ? rust : code;
 }
 
@@ -149,8 +150,8 @@ function oxlintEnv(): NodeJS.ProcessEnv {
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
   const inherited = readEnv().NODE_PATH;
   return {
-    OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
     NODE_PATH: inherited ? `${modules}${path.delimiter}${inherited}` : modules,
+    OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
   };
 }
 
@@ -164,8 +165,8 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
   const command = commandOf(tool);
   const result = spawnSync(process.execPath, [...command.args, ...args], {
     cwd: root,
-    stdio: "inherit",
     env: toolEnv(command.env),
+    stdio: "inherit",
   });
   return result.status ?? 1;
 }
@@ -177,17 +178,17 @@ function spawnTool(tool: Tool, args: string[], root: string): number {
  */
 export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Captured {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
-  const files = { stdout: path.join(dir, "stdout"), stderr: path.join(dir, "stderr") };
+  const files = { stderr: path.join(dir, "stderr"), stdout: path.join(dir, "stdout") };
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
   try {
     const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
     const read = (file: string) => fs.readFileSync(file, "utf8");
-    return { code: result.status ?? 1, stdout: read(files.stdout), stderr: read(files.stderr) };
+    return { code: result.status ?? 1, stderr: read(files.stderr), stdout: read(files.stdout) };
   } finally {
     fs.closeSync(out);
     fs.closeSync(err);
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 }
 
@@ -201,6 +202,6 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
 export function captureSorted(files: readonly string[], root: string): Captured {
   convertJsonc(root, files, false);
   const sorted = sortJson(root, files, false);
-  if (!sorted.ok) return { code: 1, stdout: "", stderr: `repo turn: ${sorted.error}\n` };
+  if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
   return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);
 }

@@ -112,6 +112,6 @@ function parseBlock(c: Cursor, base: number): YamlObject {
 /** The frontmatter and body of a markdown file; no frontmatter reads as `{}`. */
 export function parseMarkdown(src: string): { parsed: YamlObject; body: string } {
   const split = splitFrontmatter(src);
-  if (!split.ok) return { parsed: {}, body: src };
-  return { parsed: parseBlock({ lines: String(split.fm).split(/\r?\n/), i: 0 }, 0), body: split.body };
+  if (!split.ok) return { body: src, parsed: {} };
+  return { body: split.body, parsed: parseBlock({ i: 0, lines: String(split.fm).split(/\r?\n/) }, 0) };
 }

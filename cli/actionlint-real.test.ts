@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { checkActionlintAt } from "./actionlint.ts";
 
 const SLOW = 180_000;
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A release-pack repo whose one workflow has `jobs` as its job section. */

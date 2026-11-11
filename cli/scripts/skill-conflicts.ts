@@ -2,6 +2,7 @@
 /** Workspace vs packaged repo skill content conflicts (warn-only). */
 import fs from "node:fs";
 import path from "node:path";
+
 import { NOT_FOUND } from "./emit.constants.ts";
 import { isRecord } from "./hook-input.ts";
 
@@ -70,8 +71,8 @@ export function findSkillContentConflicts({
     if (Buffer.compare(ws, pkg) !== 0) {
       conflicts.push({
         name,
-        workspacePath: path.join(workspaceSkillsDir, name, "SKILL.md"),
         packagedPath: path.join(packagedSkillsDir, name, "SKILL.md"),
+        workspacePath: path.join(workspaceSkillsDir, name, "SKILL.md"),
       });
     }
   }

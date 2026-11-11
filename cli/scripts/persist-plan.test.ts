@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { useTmpWs } from "./fixtures/persist-plan-kit.ts";
 import { slugify, utcDateTime } from "./persist-doc.ts";
-import { persistPlan } from "./persist-plan.ts";
-import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
+import { PLAN_DIR } from "./persist-plan.constants.ts";
+import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
 
@@ -28,9 +30,9 @@ describe("persistPlan file", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
     const r = persistPlan({
-      workspaceRoot: ws,
       content: VALID_PLAN,
       created,
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
@@ -50,18 +52,18 @@ describe("persistPlan file", () => {
 describe("persistPlan stamps and gitignore", () => {
   it("never touches .gitignore", () => {
     const ws = tmpWs();
-    persistPlan({ workspaceRoot: ws, content: VALID_PLAN });
+    persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
     expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
     const kept = tmpWs();
     fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
-    persistPlan({ workspaceRoot: kept, content: VALID_PLAN });
-    persistPlan({ workspaceRoot: kept, content: VALID_PLAN });
+    persistPlan({ content: VALID_PLAN, workspaceRoot: kept });
+    persistPlan({ content: VALID_PLAN, workspaceRoot: kept });
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("stamps filename from created when created is omitted", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: VALID_PLAN });
+    const r = persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
     expect(r.ok).toBe(true);
     expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
     const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
@@ -75,9 +77,9 @@ describe("persistPlan serials", () => {
   it("accepts legacy unstamped filename and date-only created", () => {
     const ws = tmpWs();
     const r = persistPlan({
-      workspaceRoot: ws,
       content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(true);
     const legacy = String(r.content).replace(/^created: 2026-08-26T14:30:00Z$/m, "created: 2026-08-26");
@@ -87,11 +89,11 @@ describe("persistPlan serials", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
-    persistPlan({ workspaceRoot: ws, content: VALID_PLAN, created });
+    persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
     const r = persistPlan({
-      workspaceRoot: ws,
       content: VALID_PLAN,
       created,
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(2);
@@ -105,9 +107,9 @@ describe("persistPlan commit subject", () => {
   it("keeps a valid commit subject and allows a plan with no commit", () => {
     const ws = tmpWs();
     const good = persistPlan({
-      workspaceRoot: ws,
       content: "commit: feat(plans): record the subject\n" + VALID_PLAN,
       created,
+      workspaceRoot: ws,
     });
     expect(good.ok).toBe(true);
     const text = fs.readFileSync(path.join(ws, savedOk(good).path), "utf8");
@@ -127,17 +129,17 @@ describe("persistPlan other commit subjects", () => {
       "docs: document docs/roadmaps",
       "docs: note plans, roadmaps: split",
     ]) {
-      const ok = persistPlan({ workspaceRoot: ws, content: `commit: ${subject}\n` + VALID_PLAN, created });
+      const ok = persistPlan({ content: `commit: ${subject}\n` + VALID_PLAN, created, workspaceRoot: ws });
       expect(ok.ok, subject).toBe(true);
     }
   });
 
   it("rejects a bad subject", () => {
     const ws = tmpWs();
-    const bad = persistPlan({ workspaceRoot: ws, content: "commit: Feat: Nope.\n" + VALID_PLAN, created });
+    const bad = persistPlan({ content: "commit: Feat: Nope.\n" + VALID_PLAN, created, workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain("commit");
-    const period = persistPlan({ workspaceRoot: ws, content: "commit: feat: nope.\n" + VALID_PLAN, created });
+    const period = persistPlan({ content: "commit: feat: nope.\n" + VALID_PLAN, created, workspaceRoot: ws });
     expect(period.ok).toBe(false);
     expect(period.errors).toContain("commit");
   });
@@ -147,8 +149,8 @@ describe("persistPlan refusals and location", () => {
   it("rejects an invalid plan and does not write", () => {
     const ws = tmpWs();
     const r = persistPlan({
-      workspaceRoot: ws,
       content: "PLAN_NAME: nope\n\n# nope\n\nnot a plan\n",
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);
     expect(fs.existsSync(path.join(ws, PLAN_DIR))).toBe(true);
@@ -158,9 +160,9 @@ describe("persistPlan refusals and location", () => {
   it("writes under PLAN_DIR", () => {
     const ws = tmpWs();
     const r = persistPlan({
-      workspaceRoot: ws,
       content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(true);
     expect(r.path).toBe(`${PLAN_DIR}/${r.filename}`);

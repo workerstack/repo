@@ -10,8 +10,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
+import { resolveRoots } from "./workspace-root.ts";
+import { branchExists, errorMessage, git, isMerged, samePath, worktreeEntries } from "./worktree-git.ts";
+import { addWorktree, finishWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
+import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import {
   ADD_CMD,
   BRANCH_PREFIX,
@@ -25,14 +30,10 @@ import {
   USAGE_EXIT,
   WORKTREES_DIR,
 } from "./worktree.constants.ts";
-import { branchExists, errorMessage, git, isMerged, samePath, worktreeEntries } from "./worktree-git.ts";
-import { addWorktree, finishWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
-import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import type { FinishResult, HookResult, WorktreeInfo } from "./worktree.types.ts";
-import { resolveRoots } from "./workspace-root.ts";
 
 function quiet(): HookResult {
-  return { code: 0, stdout: "", stderr: "" };
+  return { code: 0, stderr: "", stdout: "" };
 }
 
 /** Delete `branch` when it is a merged `wt/*` branch. */
@@ -52,7 +53,7 @@ function removeHooked(data: HookInput | null): HookResult {
     .find((e) => samePath(e.path, target));
   if (entry) {
     const r = git(root, ["worktree", "remove", "--force", entry.path]);
-    if (!r.ok && fs.existsSync(target)) return { code: 1, stdout: "", stderr: r.err };
+    if (!r.ok && fs.existsSync(target)) return { code: 1, stderr: r.err, stdout: "" };
   }
   dropMergedBranch(root, entry ? entry.branch : BRANCH_PREFIX + path.basename(target));
   return quiet();
@@ -63,11 +64,11 @@ export function worktreeHook(data: HookInput | null): HookResult {
   const event = data && data.hook_event_name;
   try {
     if (event === CREATE_EVENT) {
-      return { code: 0, stdout: `${addWorktree(resolveRoots(data).root, data?.name).path}\n`, stderr: "" };
+      return { code: 0, stderr: "", stdout: `${addWorktree(resolveRoots(data).root, data?.name).path}\n` };
     }
     return event === REMOVE_EVENT ? removeHooked(data) : quiet();
   } catch (e) {
-    return { code: 1, stdout: "", stderr: errorMessage(e) };
+    return { code: 1, stderr: errorMessage(e), stdout: "" };
   }
 }
 

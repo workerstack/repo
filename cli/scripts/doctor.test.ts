@@ -3,8 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { syncGlobals } from "./sync-global-settings.ts";
+
+import { bunPath } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 import {
   BUN_MIN_FALLBACK,
   type ListResult,
@@ -17,8 +20,7 @@ import {
   runDoctor as runDoctorImpl,
   whichBin,
 } from "./doctor.ts";
-import { bunPath } from "../../dev/test-paths";
-import { childEnv } from "../env.ts";
+import { syncGlobals } from "./sync-global-settings.ts";
 
 function runDoctor(opts: Record<string, unknown> = {}) {
   return runDoctorImpl({
@@ -35,7 +37,7 @@ const script = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -292,9 +294,9 @@ describe("runDoctor", () => {
     );
     const oauth = runDoctor({
       cwd,
+      home: oauthHome,
       pathEnv: bin,
       platform: "linux",
-      home: oauthHome,
     });
     expect(oauth.code).toBe(0);
     expect(oauth.stdout).toMatch(/google-workspace\s+ok\s+oauth/);
@@ -307,13 +309,13 @@ describe("runDoctor", () => {
     fs.mkdirSync(path.join(tokHome, ".workerstack", "workspace", "default"), { recursive: true });
     fs.writeFileSync(
       path.join(tokHome, ".workerstack", "workspace", "default", "tokens.json"),
-      JSON.stringify({ refresh_token: refresh, client_id: "tok-cid" }),
+      JSON.stringify({ client_id: "tok-cid", refresh_token: refresh }),
     );
     const tokens = runDoctor({
       cwd,
+      home: tokHome,
       pathEnv: bin,
       platform: "linux",
-      home: tokHome,
     });
     expect(tokens.stdout).toMatch(/google-workspace\s+ok\s+tokens/);
     expect(tokens.stdout).not.toContain(refresh);
@@ -331,9 +333,9 @@ describe("runDoctor", () => {
     );
     const named = runDoctor({
       cwd,
+      home: namedHome,
       pathEnv: bin,
       platform: "linux",
-      home: namedHome,
     });
     expect(named.stdout).toMatch(/google-workspace\s+ok\s+oauth,tokens/);
     expect(named.stdout).not.toContain("work-secret");
@@ -344,13 +346,13 @@ describe("runDoctor", () => {
     fs.mkdirSync(path.join(adcHome, ".config", "gcloud"), { recursive: true });
     fs.writeFileSync(
       path.join(adcHome, ".config", "gcloud", "application_default_credentials.json"),
-      JSON.stringify({ type: "authorized_user", refresh_token: "adc-refresh" }),
+      JSON.stringify({ refresh_token: "adc-refresh", type: "authorized_user" }),
     );
     const adc = runDoctor({
       cwd,
+      home: adcHome,
       pathEnv: bin,
       platform: "linux",
-      home: adcHome,
     });
     expect(adc.stdout).toMatch(/google-workspace\s+ok\s+adc/);
     expect(adc.stdout).not.toContain("adc-refresh");
@@ -362,9 +364,9 @@ describe("runDoctor", () => {
     );
     const clasprc = runDoctor({
       cwd,
+      home: claspHome,
       pathEnv: bin,
       platform: "linux",
-      home: claspHome,
     });
     expect(clasprc.stdout).toMatch(/google-workspace\s+ok\s+clasprc/);
     expect(clasprc.stdout).not.toContain("clasp-refresh");
@@ -378,9 +380,9 @@ describe("runDoctor", () => {
     const secret = "sk_secret_do_not_print";
     const r = runDoctor({
       cwd,
+      env: { ELEVENLABS_API_KEY: secret },
       pathEnv: bin,
       platform: "linux",
-      env: { ELEVENLABS_API_KEY: secret },
     });
     expect(r.code).toBe(0);
     expect(r.stdout).toMatch(/speak\s+ok\s+elevenlabs/);
@@ -401,18 +403,18 @@ describe("runDoctor", () => {
     );
     const oa = runDoctor({
       cwd,
+      env: { OPENAI_API_KEY: "sk_oa_secret" },
       pathEnv: bin,
       platform: "linux",
-      env: { OPENAI_API_KEY: "sk_oa_secret" },
     });
     expect(oa.stdout).toMatch(/speak\s+ok\s+openai/);
     expect(oa.stdout).not.toContain("sk_oa_secret");
     const file = runDoctor({
       cwd,
-      pathEnv: bin,
-      platform: "linux",
       env: {},
       home,
+      pathEnv: bin,
+      platform: "linux",
     });
     expect(file.stdout).toMatch(/speak\s+ok\s+config/);
     expect(file.stdout).not.toContain("sk_file_secret");
@@ -437,9 +439,9 @@ describe("runDoctor", () => {
     const secret = "ts_live_do_not_print";
     const fromEnv = runDoctor({
       cwd,
+      env: { TYPESAFE_API_KEY: secret },
       pathEnv: bin,
       platform: "linux",
-      env: { TYPESAFE_API_KEY: secret },
     });
     expect(fromEnv.code).toBe(0);
     expect(fromEnv.stdout).toMatch(/jev\s+ok\s+env/);
@@ -449,10 +451,10 @@ describe("runDoctor", () => {
     fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: secret }));
     const fromFile = runDoctor({
       cwd,
-      pathEnv: bin,
-      platform: "linux",
       env: {},
       home,
+      pathEnv: bin,
+      platform: "linux",
     });
     expect(fromFile.code).toBe(0);
     expect(fromFile.stdout).toMatch(/jev\s+ok\s+config/);
@@ -627,13 +629,13 @@ describe("globals row", async () => {
     const home = tmp("doc-globals-home-");
     // as main() does: the row is computed first, then printed among the others
     const run = async () =>
-      runDoctor({ cwd, pathEnv: bin, platform: "linux", home, globals: await globalsRow(cwd, home, cwd) });
+      runDoctor({ cwd, globals: await globalsRow(cwd, home, cwd), home, pathEnv: bin, platform: "linux" });
     return { cwd, home, run };
   }
 
   it("is ok once the globals were applied", async () => {
     const { cwd, home, run } = setup();
-    expect(syncGlobals({ workspaceRoot: cwd, home, apply: true }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, workspaceRoot: cwd }).ok).toBe(true);
     const r = await run();
     expect(r.stdout).toMatch(/^globals\s+ok\s*$/m);
     expect(r.code).toBe(0);
@@ -641,7 +643,7 @@ describe("globals row", async () => {
 
   it("shows the first drift line with the apply hint", async () => {
     const { cwd, home, run } = setup();
-    expect(syncGlobals({ workspaceRoot: cwd, home, apply: true }).ok).toBe(true);
+    expect(syncGlobals({ apply: true, home, workspaceRoot: cwd }).ok).toBe(true);
     fs.writeFileSync(path.join(home, ".cursor/cli-config.json"), "{}");
     const r = await run();
     expect(r.stdout).toMatch(/^globals\s+drift: cursor \.cursor\/cli-config\.json approvalMode; run `bun repo yolo`$/m);
@@ -668,10 +670,10 @@ describe("globals row", async () => {
     const other = tmp("doc-work-");
     const ws = runDoctor({
       cwd: other,
+      globals: await globalsRow(other, home, cwd),
+      home,
       pathEnv: bin,
       platform: "linux",
-      home,
-      globals: await globalsRow(other, home, cwd),
     });
     expect(ws.stdout).toMatch(/^globals\s/m);
   });
@@ -743,8 +745,8 @@ describe("doctor cli", () => {
   it("main empty PATH exits 1", () => {
     const cwd = tmp("doc-cli-");
     const r = spawnSync(bunPath(), [script, "doctor"], {
-      encoding: "utf8",
       cwd,
+      encoding: "utf8",
       env: childEnv({ PATH: "/nonexistent-repo-doctor" }),
       timeout: 15_000,
     });
@@ -760,10 +762,10 @@ describe("workspace report", () => {
       cwd,
       encoding: "utf8",
       env: childEnv({
-        GIT_AUTHOR_NAME: "t",
         GIT_AUTHOR_EMAIL: "t@t",
-        GIT_COMMITTER_NAME: "t",
+        GIT_AUTHOR_NAME: "t",
         GIT_COMMITTER_EMAIL: "t@t",
+        GIT_COMMITTER_NAME: "t",
       }),
     });
   function put(root: string, rel: string, body = "x\n") {
@@ -816,7 +818,7 @@ describe("workspace report", () => {
     tmpDirs.push(outside);
     git(r, "worktree", "add", "-q", "-b", "spike", outside);
     const gone = addWorktree(r, "gone").path;
-    fs.rmSync(gone, { recursive: true, force: true });
+    fs.rmSync(gone, { force: true, recursive: true });
     const m = addWorktree(r, "m").path;
     commitIn(m, "m.txt");
     git(r, "merge", "-q", "wt/m");
@@ -856,11 +858,11 @@ describe("workspace report", () => {
       spawnSync("git", ["commit", "-qm", name], {
         cwd: dir,
         env: childEnv({
-          GIT_AUTHOR_NAME: "t",
           GIT_AUTHOR_EMAIL: "t@t",
-          GIT_COMMITTER_NAME: "t",
-          GIT_COMMITTER_EMAIL: "t@t",
+          GIT_AUTHOR_NAME: "t",
           GIT_COMMITTER_DATE: when,
+          GIT_COMMITTER_EMAIL: "t@t",
+          GIT_COMMITTER_NAME: "t",
         }),
       });
     };
@@ -934,14 +936,14 @@ describe("workspace report", () => {
 
 describe("agent models row", () => {
   const LISTS = {
-    grok: "You are logged in with grok.com.\n\nDefault model: grok-4.7\n\nAvailable models:\n  * grok-4.7 (default)\n",
     cursor:
       "Available models\n\nauto - Auto (current, default)\nclaude-sonnet-5-5-medium - Sonnet 5.5\n\nTip: use --model <id> to switch.\n",
+    grok: "You are logged in with grok.com.\n\nDefault model: grok-4.7\n\nAvailable models:\n  * grok-4.7 (default)\n",
   };
   type Reply = { code?: number; stdout?: string; stderr?: string; delay?: number } | "not-installed" | "hang";
   const OK: Record<string, Reply> = {
-    grok: { stdout: LISTS.grok },
     "cursor-agent": { stdout: LISTS.cursor },
+    grok: { stdout: LISTS.grok },
   };
   function fakeRun(replies: Record<string, Reply> = OK) {
     const calls: string[] = [];
@@ -958,12 +960,12 @@ describe("agent models row", () => {
           return;
         }
         setTimeout(
-          () => resolve({ code: reply.code ?? 0, stdout: reply.stdout ?? "", stderr: reply.stderr ?? "" }),
+          () => resolve({ code: reply.code ?? 0, stderr: reply.stderr ?? "", stdout: reply.stdout ?? "" }),
           reply.delay ?? 0,
         );
       });
     };
-    return { run, calls };
+    return { calls, run };
   }
   function put(cwd: string, rel: string, body: string) {
     const file = path.join(cwd, rel);
@@ -988,11 +990,11 @@ describe("agent models row", () => {
   }
   const GOOD_HOME_SLUGS = ["gpt-6-luna", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-reserve"];
   const ALL_OFFERED = {
+    ".agents/agents/scout.md": md("flash_lite"),
     ".codex/agents/scout.toml": toml("gpt-6-luna"),
+    ".cursor/agents/scout.md": md("claude-sonnet-5-5-medium"),
     ".grok/agents/scout.md": md("grok-4.7"),
     ".grok/roles/scout.toml": toml("grok-4.7"),
-    ".agents/agents/scout.md": md("flash_lite"),
-    ".cursor/agents/scout.md": md("claude-sonnet-5-5-medium"),
   };
   async function rowOf(
     files: Record<string, string>,
@@ -1004,8 +1006,8 @@ describe("agent models row", () => {
   ) {
     const cwd = checkout(files);
     const { run, calls } = fakeRun(replies);
-    const lines = await agentModelsLines({ cwd, env: {}, home, run, capMs, sourceRoot: cwd });
-    return { lines, text: lines.join("\n"), calls, cwd };
+    const lines = await agentModelsLines({ capMs, cwd, env: {}, home, run, sourceRoot: cwd });
+    return { calls, cwd, lines, text: lines.join("\n") };
   }
 
   it("is ok when every agent model is offered, and never checks Claude agents", async () => {
@@ -1064,10 +1066,10 @@ describe("agent models row", () => {
 
   it("flags a codex, a grok, an agy and a cursor agent naming a dropped model, with the offered ids", async () => {
     const r = await rowOf({
-      ".codex/agents/scout.toml": toml("gpt-5.4-mini"),
-      ".grok/agents/scout.md": md("grok-4.5"),
       ".agents/agents/scout.md": md("gemini-3.8-flash-low"),
+      ".codex/agents/scout.toml": toml("gpt-5.4-mini"),
       ".cursor/agents/scout.md": md("claude-sonnet-5-thinking-high"),
+      ".grok/agents/scout.md": md("grok-4.5"),
     });
     expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
     expect(r.lines.slice(1)).toStrictEqual([
@@ -1137,7 +1139,7 @@ describe("agent models row", () => {
   it("skips a list that takes over the cap, kills it, and still checks the rest", async () => {
     const r = await rowOf(
       { ...ALL_OFFERED, ".agents/agents/scout.md": md("gemini-3.8-flash-low") },
-      { replies: { ...OK, grok: "hang" }, capMs: 100 },
+      { capMs: 100, replies: { ...OK, grok: "hang" } },
     );
     expect(r.lines[0]).toMatch(/^agent models\s+1 to fix\s+\(skipped: grok models took over 0\.1 s\)$/);
     expect(r.lines[1]).toContain(".agents/agents/scout.md: model gemini-3.8-flash-low is not offered by agy");
@@ -1158,11 +1160,11 @@ describe("agent models row", () => {
 
   it("runs the lists in parallel: two slow lists both finish inside the one cap", async () => {
     const delay = 400;
-    const slow = (stdout: string): Reply => ({ stdout, delay });
+    const slow = (stdout: string): Reply => ({ delay, stdout });
     const started = Date.now();
     const r = await rowOf(ALL_OFFERED, {
-      replies: { grok: slow(LISTS.grok), "cursor-agent": slow(LISTS.cursor) },
       capMs: 1000,
+      replies: { "cursor-agent": slow(LISTS.cursor), grok: slow(LISTS.grok) },
     });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
     // Run one after the other, the two lists take at least 2 * delay; spawn overhead stays under the gap.
@@ -1171,7 +1173,7 @@ describe("agent models row", () => {
 
   it("returns within the cap when two lists never answer", async () => {
     const started = Date.now();
-    const r = await rowOf(ALL_OFFERED, { replies: { ...OK, grok: "hang", "cursor-agent": "hang" }, capMs: 150 });
+    const r = await rowOf(ALL_OFFERED, { capMs: 150, replies: { ...OK, "cursor-agent": "hang", grok: "hang" } });
     expect(Date.now() - started).toBeLessThan(1000);
     expect(r.text).toMatch(/\(skipped: grok models took over 0\.15 s; cursor models took over 0\.15 s\)$/);
   });
@@ -1197,9 +1199,9 @@ describe("agent models row", () => {
     const bin = tmp("doc-models-bin-");
     writeBin(bin, "grok", `#!/bin/sh\nprintf '%s' '${LISTS.grok}'\n`);
     const r = spawnSync(bunPath(), [script, "doctor"], {
-      encoding: "utf8",
       cwd,
-      env: childEnv({ PATH: bin, HOME: fs.realpathSync(tmp("doc-models-h-")) }),
+      encoding: "utf8",
+      env: childEnv({ HOME: fs.realpathSync(tmp("doc-models-h-")), PATH: bin }),
       timeout: 15_000,
     });
     const lines = r.stdout.split("\n");

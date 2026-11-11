@@ -1,26 +1,28 @@
 import fs from "node:fs";
 import nodePath from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { git, removePlanted } from "./fixtures/planted-repo.ts";
 import { PASS, fakeVitest, plant, plantUnborn, stage, staged } from "./fixtures/red-proof-repo.ts";
 import { redProof } from "./red-proof.ts";
 
 /** What the HEAD tree holds when vitest runs in it, seen through a stand-in runner on planted repos. */
 afterEach(removePlanted);
-const change = (...files: [string, string][]) => files.map(([status, file]) => ({ status, path: file }));
+const change = (...files: [string, string][]) => files.map(([status, file]) => ({ path: file, status }));
 const read = (cwd: string, file: string) =>
   fs.existsSync(nodePath.join(cwd, file)) ? fs.readFileSync(nodePath.join(cwd, file), "utf8") : null;
 
-const BASE = { "s.ts": "head\n", "gone.ts": "gone\n", "fixtures/f.ts": "old\n", "__snapshots__/a.snap": "old\n" };
+const BASE = { "__snapshots__/a.snap": "old\n", "fixtures/f.ts": "old\n", "gone.ts": "gone\n", "s.ts": "head\n" };
 const STAGED = {
-  "s.ts": "staged\n",
-  "new.ts": "new\n",
+  "__snapshots__/a.snap": "newer\n",
+  "a.test.ts": PASS,
+  "app.config.ts": "cfg\n",
   "fixtures/f.ts": "newer\n",
   "fixtures/helper.ts": "h\n",
-  "__snapshots__/a.snap": "newer\n",
-  "app.config.ts": "cfg\n",
-  "a.test.ts": PASS,
+  "new.ts": "new\n",
   "notes.md": "n\n",
+  "s.ts": "staged\n",
 };
 const MIXED = change(
   ["M", "s.ts"],
@@ -47,7 +49,7 @@ it("puts a changed source file back and removes a new one on the HEAD tree", () 
     },
   );
   expect(redProof(root, MIXED, { vitest: run })).toMatchObject({ ok: true });
-  expect(seen).toMatchObject({ "s.ts": "head\n", "new.ts": null, "gone.ts": "gone\n" });
+  expect(seen).toMatchObject({ "gone.ts": "gone\n", "new.ts": null, "s.ts": "head\n" });
 });
 
 it("keeps fixtures, snapshots, configs and other files as staged", () => {
@@ -62,10 +64,10 @@ it("keeps fixtures, snapshots, configs and other files as staged", () => {
   );
   redProof(root, MIXED, { vitest: run });
   expect(seen).toMatchObject({
-    "fixtures/f.ts": "newer\n",
-    "fixtures/helper.ts": "h\n",
     "__snapshots__/a.snap": "newer\n",
     "app.config.ts": "cfg\n",
+    "fixtures/f.ts": "newer\n",
+    "fixtures/helper.ts": "h\n",
     "notes.md": "n\n",
   });
   expect(git(root, "status", "--porcelain")).toContain("M  s.ts");
@@ -102,8 +104,8 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
   );
   const files = change(["A", "pkg-a/a.test.ts"], ["A", "pkg-b/b.test.ts"], ["A", "pkg-b/c.test.ts"]);
   expect(redProof(root, files, { vitest: run })).toStrictEqual({
-    ok: true,
     line: "red-proof: 1 of 3 changed test files failed on HEAD",
+    ok: true,
   });
   const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
   expect(calls).toStrictEqual([
@@ -134,8 +136,8 @@ it("removes its dir after a pass and after a throw", () => {
 it("skips with a line when there is no HEAD", () => {
   const root = plantUnborn({ "a.test.ts": PASS });
   expect(redProof(root, change(["A", "a.test.ts"]), { vitest: fakeVitest(() => true) })).toStrictEqual({
-    ok: true,
     line: "red-proof: skipped, no HEAD to run against",
+    ok: true,
   });
   expect(staged(root)).toBe("A\ta.test.ts\n");
 });

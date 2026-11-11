@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import { cleanLessonDirs, git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
 import { LESSONS_DIR, main } from "./lessons.ts";
 import { resolveRoots } from "./workspace-root.ts";

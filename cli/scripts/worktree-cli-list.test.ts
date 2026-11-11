@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
 import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./fixtures/worktree-repo.ts";
 import { isManaged } from "./worktree-git.ts";
@@ -13,7 +15,7 @@ it("lists every linked worktree with its state", () => {
   const r = tmp.repo();
   cli(r, ["add", "auth"]);
   cli(r, ["add", "gone"]);
-  fs.rmSync(wt(r, "gone"), { recursive: true, force: true });
+  fs.rmSync(wt(r, "gone"), { force: true, recursive: true });
   const outside = `${r}-outside`;
   git(r, "worktree", "add", "-q", outside, "-b", "spike");
   write(path.join(outside, "scratch.txt"), "x");
@@ -70,11 +72,11 @@ it("judges managed paths on win32 the way git prints them", () => {
 
 const event = (r: string, data: object) => cli(path.join(r, "packages/a"), ["hook"], { input: JSON.stringify(data) });
 const removing = (r: string, name: string) =>
-  event(r, { hook_event_name: "WorktreeRemove", worktree_path: wt(r, name), cwd: r });
+  event(r, { cwd: r, hook_event_name: "WorktreeRemove", worktree_path: wt(r, name) });
 
 it("creates and removes Claude's worktrees through the hook", () => {
   const r = tmp.repo();
-  const made = event(r, { hook_event_name: "WorktreeCreate", name: "z", cwd: path.join(r, "packages/a") });
+  const made = event(r, { cwd: path.join(r, "packages/a"), hook_event_name: "WorktreeCreate", name: "z" });
   expect(made.status, made.stderr).toBe(0);
   expect(made.stdout).toBe(`${wt(r, "z")}\n`);
   const gone = removing(r, "z");
@@ -82,7 +84,7 @@ it("creates and removes Claude's worktrees through the hook", () => {
   expect(fs.existsSync(wt(r, "z"))).toBe(false);
   expect(hasBranch(r, "wt/z")).toBe(false);
   expect(removing(r, "z").status).toBe(0);
-  const other = event(r, { hook_event_name: "SessionStart", cwd: r });
+  const other = event(r, { cwd: r, hook_event_name: "SessionStart" });
   expect(other.status).toBe(0);
   expect(other.stdout).toBe("");
   const usage = cli(r, ["nope"]);
@@ -92,7 +94,7 @@ it("creates and removes Claude's worktrees through the hook", () => {
 
 it("keeps an unmerged branch the hook removed the worktree of, and drops a merged one", () => {
   const r = tmp.repo();
-  event(r, { hook_event_name: "WorktreeCreate", name: "u", cwd: r });
+  event(r, { cwd: r, hook_event_name: "WorktreeCreate", name: "u" });
   commitIn(wt(r, "u"), "u.txt");
   expect(removing(r, "u").status).toBe(0);
   expect(fs.existsSync(wt(r, "u"))).toBe(false);
@@ -107,13 +109,13 @@ it("keeps an unmerged branch the hook removed the worktree of, and drops a merge
 
 it("adds and lists a worktree in process, has nothing to prune, and prints usage for no command", () => {
   const r = tmp.repo();
-  expect(mainIn(r, ["add", "auth"])).toStrictEqual({ code: 0, stdout: `${wt(r, "auth")}\n`, stderr: "" });
+  expect(mainIn(r, ["add", "auth"])).toStrictEqual({ code: 0, stderr: "", stdout: `${wt(r, "auth")}\n` });
   expect(mainIn(r, ["list"])).toStrictEqual({
     code: 0,
-    stdout: `${wt(r, "auth")}\twt/auth\tclean\tunmerged\n`,
     stderr: "",
+    stdout: `${wt(r, "auth")}\twt/auth\tclean\tunmerged\n`,
   });
-  expect(mainIn(r, ["prune"])).toStrictEqual({ code: 0, stdout: "nothing to prune\n", stderr: "" });
+  expect(mainIn(r, ["prune"])).toStrictEqual({ code: 0, stderr: "", stdout: "nothing to prune\n" });
   // No stdin given: main falls back to the process's own.
   const usage = captured(() => main([]));
   expect(usage.value).toBe(2);

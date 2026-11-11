@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { MAP, rootCmd } from "./hooks-union-commands.ts";
-import { AUTORUN_NEEDLES, CURSOR_WRITE_MATCHER, OWNED_HOOKS } from "./hooks-union.constants.ts";
+
 import {
   ownedFlat,
   readJson,
@@ -14,6 +13,9 @@ import {
   type FlatEntry,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+import { MAP, rootCmd } from "./hooks-union-commands.ts";
+import { AUTORUN_NEEDLES, CURSOR_WRITE_MATCHER, OWNED_HOOKS } from "./hooks-union.constants.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
 const cursorHooks = (ws: string) => readJson<CursorDoc>(ws, ".cursor/hooks.json");
@@ -38,7 +40,7 @@ function expectCursorExtras({ version, hooks }: CursorDoc, mapEntry: FlatEntry):
   ]);
   const behind = hooks.preToolUse.filter((e) => e.command.includes("check-behind.mjs"));
   expect(behind).toStrictEqual([
-    { type: "command", command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER },
+    { command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER, type: "command" },
   ]);
   expect(hooks.postToolUse.map(scriptOf)).toStrictEqual(["validate.mjs", "sim.mjs"]);
   expect(hooks.postToolUse.map((e) => e.matcher)).toStrictEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
@@ -48,7 +50,7 @@ function expectCursorExtras({ version, hooks }: CursorDoc, mapEntry: FlatEntry):
 
 it("appends flat entries under sessionStart, preToolUse and postToolUse, rulesync's kept as written", () => {
   const ws = consumerRepo("union-cursor-");
-  const mapEntry = { type: "command", command: MAP, timeout: 5 };
+  const mapEntry = { command: MAP, timeout: 5, type: "command" };
   const seeded = cursorHooks(ws);
   seeded.hooks.sessionStart = [mapEntry];
   writeJson(ws, ".cursor/hooks.json", seeded);
@@ -103,7 +105,7 @@ it("--check names a cursor command that does not find its script from the repo r
   const ws = consumerRepo("union-cursor-stale-");
   applyUnion({ workspaceRoot: ws });
   const live = cursorHooks(ws);
-  live.hooks.postToolUse.push({ type: "command", command: "node scripts/validate.mjs --hook", matcher: "Write" });
+  live.hooks.postToolUse.push({ command: "node scripts/validate.mjs --hook", matcher: "Write", type: "command" });
   writeJson(ws, ".cursor/hooks.json", live);
   expect(checkUnion({ workspaceRoot: ws })).toContain(
     "cursor: validate.mjs hook command does not find its script from the repo root: run bun repo sync",

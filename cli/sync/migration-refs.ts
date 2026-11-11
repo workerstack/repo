@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import { extraH2Sections } from "./agents-text.ts";
+import { isDir, present } from "./migrate-fs.ts";
 import {
   COPIED_DIR,
   LESSONS_INDEX,
@@ -10,7 +12,6 @@ import {
   REPLACES,
   REPO_DIR,
 } from "./migrate.constants.ts";
-import { isDir, present } from "./migrate-fs.ts";
 import { h1Of, titlesOf } from "./migration-docs.ts";
 import type { MigrationState } from "./migration-state.ts";
 
@@ -30,10 +31,10 @@ function carrySections(state: MigrationState, from: string, stockText: string): 
       ? `${h1Of(stockText) ?? h1Of(state.text(from)) ?? `# ${path.posix.basename(from)}`}\n\n${missing}\n`
       : `${existing.trimEnd()}\n\n${missing}\n`;
   state.steps.push({
-    kind: "write",
-    path: to,
     content,
+    kind: "write",
     note: `moved your sections ${titlesOf(missing)} of ${from} to ${to}`,
+    path: to,
   });
 }
 
@@ -59,7 +60,7 @@ export function planLessons(state: MigrationState): void {
   const names = state.names(from).filter((name) => name !== LESSONS_INDEX);
   if (names.length === 0) return;
   const to = `${REPO_DIR}/lessons`;
-  state.move(from, to, { note: `moved ${from}/ (${names.length}) to ${to}/`, except: [LESSONS_INDEX] });
+  state.move(from, to, { except: [LESSONS_INDEX], note: `moved ${from}/ (${names.length}) to ${to}/` });
 }
 
 /** Hooks, MCP policy, permissions and global settings that differ from stock move to the same path under `.repo/`. */

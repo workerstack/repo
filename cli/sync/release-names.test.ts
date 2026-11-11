@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { context } from "../fixtures/release-context.ts";
 import type { SyncContext } from "./outputs.ts";
 import { ciJobNames, release } from "./release.ts";

@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { applyFailure, ghRunner, skipReason, type GhFailure } from "./github-gh.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A stand-in for `gh` that bun runs: it answers by the API path it is asked for. */
@@ -35,7 +37,7 @@ it("runs `gh api` with the path, and sends no body for a GET", async () => {
 });
 
 it("sends the method and the JSON body on stdin", async () => {
-  const result = await runner()({ method: "PUT", path: "repos/o/r/topics", body: { names: ["a"] } });
+  const result = await runner()({ body: { names: ["a"] }, method: "PUT", path: "repos/o/r/topics" });
   expect(result.ok && JSON.parse(result.stdout)).toStrictEqual({
     args: ["api", "-X", "PUT", "repos/o/r/topics", "--input", "-"],
     stdin: '{"names":["a"]}',
@@ -50,49 +52,49 @@ it("sends no body for a PUT that has none", async () => {
 
 it("reads gh's exit 4 as not logged in", async () => {
   expect(await runner()({ method: "GET", path: "repos/o/auth" })).toStrictEqual({
-    ok: false,
     kind: "auth",
     message: "gh is not logged in (gh auth status)",
+    ok: false,
   });
 });
 
 it("reads the HTTP status of a refusal, with the first line of gh's message", async () => {
   expect(await runner()({ method: "GET", path: "repos/o/denied" })).toStrictEqual({
-    ok: false,
     kind: "http",
-    status: 403,
     message: "gh: Forbidden (HTTP 403)",
+    ok: false,
+    status: 403,
   });
 });
 
 it("names any other failure by its exit code", async () => {
   expect(await runner()({ method: "GET", path: "repos/o/boom" })).toStrictEqual({
-    ok: false,
     kind: "other",
     message: "gh exited with 2",
+    ok: false,
   });
 });
 
 it("gives up on a gh that never answers once its own timeout has passed", async () => {
   const started = Date.now();
   expect(await runner(200)({ method: "GET", path: "repos/o/slow" })).toStrictEqual({
-    ok: false,
     kind: "timeout",
     message: "gh did not answer within 0.2s",
+    ok: false,
   });
   expect(Date.now() - started).toBeLessThan(5000);
 });
 
 it("says gh is not installed when it cannot be started", async () => {
   const result = await ghRunner({ command: ["/no/such/gh"] })({ method: "GET", path: "repos/o/r" });
-  expect(result).toMatchObject({ ok: false, kind: "missing" });
+  expect(result).toMatchObject({ kind: "missing", ok: false });
   expect(!result.ok && result.message).toMatch(/^gh is not installed/);
 });
 
 const failure = (kind: GhFailure["kind"], message: string, status?: number): GhFailure => ({
-  ok: false,
   kind,
   message,
+  ok: false,
   ...(status === undefined ? {} : { status }),
 });
 

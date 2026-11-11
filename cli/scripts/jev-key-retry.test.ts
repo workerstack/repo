@@ -1,9 +1,11 @@
-import os from "node:os";
-import { afterEach, expect, it, vi } from "vitest";
-import { loadJevKey, parseArgv, retryWaitMs } from "./jev.ts";
-import { KEY, plantDir } from "./fixtures/jev-kit.ts";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+
+import { afterEach, expect, it, vi } from "vitest";
+
+import { KEY, plantDir } from "./fixtures/jev-kit.ts";
+import { loadJevKey, parseArgv, retryWaitMs } from "./jev.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -73,12 +75,12 @@ it("parseArgv: reads --name=value, --name value and bare flags", () => {
   expect(
     parseArgv(["--a=1", "--b", "2", "--c", "--d", "--e=x=y", "--=z", 5, "plain", "--empty", ""]).flags,
   ).toStrictEqual({
+    "=z": "5",
     a: "1",
     b: "2",
     c: "1",
     d: "1",
     e: "x=y",
-    "=z": "5",
     empty: "1",
   });
   expect(parseArgv(["--last"]).flags).toStrictEqual({ last: "1" });

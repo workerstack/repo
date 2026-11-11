@@ -8,12 +8,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
+import { stamp } from "../sync/header.ts";
+import { OWNED_MODE } from "../sync/write.constants.ts";
+import { writeOwned } from "../sync/write.ts";
 import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./jsonc.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { stamp } from "../sync/header.ts";
-import { writeOwned } from "../sync/write.ts";
-import { OWNED_MODE } from "../sync/write.constants.ts";
 
 const TASKS_REL = ".vscode/tasks.json";
 const PRESENTATION = { panel: "new", reveal: "always" };
@@ -141,14 +142,14 @@ export function renderTasks(root: string, existing: string | null): RenderedTask
       if (isRecord(parsed) && Array.isArray(parsed.tasks)) tasks = parsed.tasks.filter(isRecord);
     } catch (err) {
       return {
-        ok: false,
         error: `cannot parse ${TASKS_REL}: ${(err /* JSON.parse and stripJsonc throw only Error */ as Error).message}`,
+        ok: false,
       };
     }
   }
   const result = buildTasks(root, tasks);
   const kept = result.tasks.filter((task) => !isGenerated(task)).length;
-  return { ok: true, text: `${JSON.stringify(result, null, 2)}\n`, generated: result.tasks.length - kept, kept };
+  return { generated: result.tasks.length - kept, kept, ok: true, text: `${JSON.stringify(result, null, 2)}\n` };
 }
 
 /** Writes `.vscode/tasks.json` under `root`, stamped and read-only as sync leaves it; prints the count line; returns the exit code. */

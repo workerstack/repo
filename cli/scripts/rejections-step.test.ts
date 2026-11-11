@@ -1,11 +1,12 @@
 import { afterEach, expect, it } from "vitest";
+
 import { cleanTemps, consumer, git, SLOW, turn, write } from "./fixtures/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
 
-const OK: Captured = { code: 0, stdout: "", stderr: "" };
+const OK: Captured = { code: 0, stderr: "", stdout: "" };
 
 it(
   "a source change that widens a type fails the owner's reject file; once it rejects again the step is ok",
@@ -16,9 +17,9 @@ it(
     const mark = "Argument of type 'string' is not assignable to parameter of type 'UserId'";
     const reject = `import { load } from "./user.ts";\n\n/* rejects: ${mark} */\nload("u1");\n`;
     const root = consumer({
-      "src/user.ts": user,
-      "src/user.reject.ts": reject,
       "src/other.ts": "export const a = 1;\n",
+      "src/user.reject.ts": reject,
+      "src/user.ts": user,
     });
     const bins: Bins = { tsc: () => OK, vitest: () => null };
     write(root, { "src/user.ts": user.replace(' & { readonly brand: "UserId" }', "") });

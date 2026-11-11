@@ -53,5 +53,5 @@ export function parseArgv(argv: unknown): ParsedArgv {
   const args: string[] = Array.isArray(argv) ? argv.map(String) : [];
   const out: Draft = { check: false, generate: true, ref: DEFAULT_REF, repo: DEFAULT_REPO, skills: [] };
   const error = fold(args, out);
-  return error === null ? { ok: true, ...out } : { ok: false, error };
+  return error === null ? { ok: true, ...out } : { error, ok: false };
 }

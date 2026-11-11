@@ -5,14 +5,15 @@
  * `check-guards.ts`, which this imports, so neither imports the other.
  */
 import path from "node:path";
+
 import { sourceFiles } from "./check-comments.ts";
-import { guardDiagnostics } from "./guard-diagnostics.ts";
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
-import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
+import { findRoot, loadConfig, type LintSkip } from "./config.ts";
+import { guardDiagnostics } from "./guard-diagnostics.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
-import { findRoot, loadConfig, type LintSkip } from "./config.ts";
+import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
@@ -60,7 +61,7 @@ async function checkoutAt(cwd: string): Promise<Checkout> {
   const rust = rustSources(root);
   const listed = rust.ok ? sourceFiles(root) : rust;
   const files: Result<string[]> = listed.ok ? { ok: true, value: listed.files } : listed;
-  return { root, skips: loaded.config.lint.skip, files, rust: rust.ok ? rust.files : [] };
+  return { files, root, rust: rust.ok ? rust.files : [], skips: loaded.config.lint.skip };
 }
 
 /** `repo check`'s script hits for the repo at `cwd`: none without a config or the standards pack. */
@@ -110,7 +111,7 @@ export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun
   if (checkout === null) return { lines: [], problems: [] };
   if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
   const all = [...checkout.files.value, ...checkout.rust];
-  const files = scope.paths === null ? all : filesUnder({ root: checkout.root, cwd }, scope.paths, all);
+  const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
   const found = lintHits(checkout, files, { clippy: scope.clippy, run });
   if (!found.ok) return { lines: [], problems: found.errors };
   const matched = [...files, ...found.value.map((d) => d.file)];

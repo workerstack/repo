@@ -1,5 +1,6 @@
 /** Reads one source file into the names it exports, imports and declares. */
 import { parseSync } from "oxc-parser";
+
 import { DEFAULT, NAMESPACE, NODE } from "./public-surface.constants.ts";
 import { asNode, declaredNames, get, nameOf, nodesOf, sourceText, unknownForm } from "./public-surface.syntax.ts";
 import type { Module, Node } from "./public-surface.types.ts";
@@ -20,7 +21,7 @@ function addDefault(module: Module, statement: Node): void {
   const declaration = statement["declaration"];
   const identifier = get(declaration, "type") === NODE.identifier ? nameOf(declaration) : null;
   const local = declaredNames(statement)[0] ?? identifier;
-  if (local === null) module.unknown.push({ form: String(get(declaration, "type")), at: Number(statement["start"]) });
+  if (local === null) module.unknown.push({ at: Number(statement["start"]), form: String(get(declaration, "type")) });
   else module.exports.set(DEFAULT, { name: local, source: null });
 }
 
@@ -29,7 +30,7 @@ function addExports(module: Module, statement: Node): void {
   if (statement["type"] === NODE.exportAll) {
     if (asNode(statement["exported"]) !== null)
       module.exports.set(nameOf(statement["exported"]), { name: NAMESPACE, source });
-    else module.stars.push({ source: sourceText(statement), at: Number(statement["start"]) });
+    else module.stars.push({ at: Number(statement["start"]), source: sourceText(statement) });
     return;
   }
   if (statement["type"] === NODE.exportDefault) return addDefault(module, statement);
@@ -42,9 +43,9 @@ function addExports(module: Module, statement: Node): void {
 /** The module `code` of `file` declares. */
 export function parseModule(file: string, code: string): Module {
   const module: Module = {
-    file,
     code,
     exports: new Map(),
+    file,
     imports: new Map(),
     locals: new Map(),
     stars: [],
@@ -58,7 +59,7 @@ export function parseModule(file: string, code: string): Module {
       module.locals.set(name, [...(module.locals.get(name) ?? []), statement]);
     }
     const form = unknownForm(statement);
-    if (form !== null) module.unknown.push({ form, at: Number(statement["start"]) });
+    if (form !== null) module.unknown.push({ at: Number(statement["start"]), form });
   }
   return module;
 }

@@ -1,7 +1,8 @@
 /** Finds and starts turbo's platform binary directly, so a repo with no node on PATH still runs it. */
 import path from "node:path";
-import { spawnSync } from "../spawn.ts";
+
 import { childEnv } from "../env.ts";
+import { spawnSync } from "../spawn.ts";
 import type { TurboRun } from "./ci-turbo.ts";
 import {
   MAX_BUFFER,
@@ -26,7 +27,7 @@ export type TurboBin = { ok: true; path: string } | { ok: false; error: string }
 const resolveFrom: Resolve = (specifier, from) => Bun.resolveSync(specifier, from);
 /** Where turbo is looked up from: this package's own install, as turbo is its dependency and not the consumer's. */
 const OWN_DIR = import.meta.dirname;
-const here: Target = { platform: process.platform, arch: process.arch };
+const here: Target = { arch: process.arch, platform: process.platform };
 
 /** The binary of the platform package of the turbo installed beside `from` (this package's own install by default). */
 export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom, target: Target = here): TurboBin {
@@ -34,7 +35,7 @@ export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom,
   try {
     turboDir = path.dirname(resolve(TURBO_MANIFEST, from));
   } catch {
-    return { ok: false, error: TURBO_MISSING };
+    return { error: TURBO_MISSING, ok: false };
   }
   const os = TURBO_OS[target.platform] ?? target.platform;
   const name = `${TURBO_SCOPE}${os}-${TURBO_ARCH[target.arch] ?? target.arch}`;
@@ -45,7 +46,7 @@ export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom,
       path: path.join(dir, target.platform === WINDOWS_PLATFORM ? TURBO_BINARY_WINDOWS : TURBO_BINARY),
     };
   } catch {
-    return { ok: false, error: platformMissing(name) };
+    return { error: platformMissing(name), ok: false };
   }
 }
 
@@ -55,6 +56,6 @@ export const turboRunner =
   (args, cwd, env) => {
     const bin = locate();
     if (!bin.ok) return { missing: bin.error };
-    const run = spawnSync(bin.path, args, { cwd, env: childEnv(env), encoding: "utf8", maxBuffer: MAX_BUFFER });
-    return { code: run.status ?? 1, stdout: run.stdout, stderr: run.stderr };
+    const run = spawnSync(bin.path, args, { cwd, encoding: "utf8", env: childEnv(env), maxBuffer: MAX_BUFFER });
+    return { code: run.status ?? 1, stderr: run.stderr, stdout: run.stdout };
   };

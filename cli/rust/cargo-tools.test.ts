@@ -1,14 +1,15 @@
 import { expect, it } from "vitest";
-import type { CargoResult, CargoRun } from "./clippy.ts";
+
 import { DENY_PIN, LLVM_COV_PIN, NEXTEST_PIN, SHEAR_PIN } from "./cargo-tools.constants.ts";
-import { shearProblems } from "./shear-problems.ts";
 import { denyProblems, pinProblem } from "./cargo-tools.ts";
+import type { CargoResult, CargoRun } from "./clippy.ts";
+import { shearProblems } from "./shear-problems.ts";
 
 const result = (over: Partial<CargoResult>): CargoResult => ({
-  status: 0,
-  stdout: "",
-  stderr: "",
   missing: false,
+  status: 0,
+  stderr: "",
+  stdout: "",
   ...over,
 });
 const fake =
@@ -98,7 +99,7 @@ it("reports a deny line it cannot read", () => {
 });
 
 it("says so when cargo is missing for deny", () => {
-  const out = denyProblems("/r", fake({ status: 1, missing: true }));
+  const out = denyProblems("/r", fake({ missing: true, status: 1 }));
   expect(out).toHaveLength(1);
   expect(out[0]).toContain("cargo is not on PATH");
 });
@@ -123,12 +124,12 @@ it("runs shear locked with json output", () => {
 it("turns a backslash shear file into a POSIX path and appends the help of other codes", () => {
   const finding = {
     code: "shear/misplaced",
-    severity: "warning",
-    message: "misplaced",
     file: "a\\b\\Cargo.toml",
     help: "move it",
+    message: "misplaced",
+    severity: "warning",
   };
-  const stdout = JSON.stringify({ summary: {}, findings: [finding, { code: "x", severity: "error", message: "m" }] });
+  const stdout = JSON.stringify({ findings: [finding, { code: "x", message: "m", severity: "error" }], summary: {} });
   expect(shearProblems("/r", fake({ status: 1, stdout }))).toStrictEqual([
     "cargo shear: a/b/Cargo.toml: misplaced; move it",
     "cargo shear: m",
@@ -153,14 +154,14 @@ it("reports shear output it cannot read", () => {
 it("reports shear exit 1 with no finding and missing cargo", () => {
   const out = shearProblems("/r", fake({ status: 1, stdout: '{"summary":{},"findings":[]}' }));
   expect(out).toStrictEqual(["cargo shear exited 1 and printed no finding"]);
-  expect(shearProblems("/r", fake({ status: 1, missing: true }))[0]).toContain("cargo is not on PATH");
+  expect(shearProblems("/r", fake({ missing: true, status: 1 }))[0]).toContain("cargo is not on PATH");
 });
 
 it("says a tool is not installed in both forms", () => {
   const want = `cargo-deny is not installed; run \`${INSTALL_DENY}\``;
   const stderr = "error: no such command: `deny`";
   expect(pinProblem("/r", fake({ status: 101, stderr }), DENY_PIN)).toBe(want);
-  expect(pinProblem("/r", fake({ status: 1, missing: true }), DENY_PIN)).toBe(want);
+  expect(pinProblem("/r", fake({ missing: true, status: 1 }), DENY_PIN)).toBe(want);
 });
 
 it("names the installed version when it is not the pin", () => {
@@ -193,7 +194,7 @@ it("tells how to install a missing or wrong nextest or llvm-cov", () => {
 });
 
 it("reports a version output with no version", () => {
-  const out = pinProblem("/r", fake({ stdout: "hello", stderr: "" }), SHEAR_PIN);
+  const out = pinProblem("/r", fake({ stderr: "", stdout: "hello" }), SHEAR_PIN);
   expect(out).toBe("cargo-shear printed a version repo cannot read: hello");
   expect(pinProblem("/r", fake({ status: 2, stderr: "bad" }), SHEAR_PIN)).toBe("cargo-shear --version exited 2: bad");
 });

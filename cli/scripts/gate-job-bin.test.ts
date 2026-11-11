@@ -1,12 +1,14 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { fwd } from "../../dev/test-paths";
-import { processFatTools } from "./gate-fat-tools.ts";
-import { isWorkspaceJobScript, jobCommand, repoBin, resolveRepoBin } from "./gate-job.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { camelCall, commandOf } from "./fixtures/hook-payload.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { isWorkspaceJobScript, jobCommand, repoBin, resolveRepoBin } from "./gate-job.ts";
 
 const tmp = useTmp();
 const JOB = ["--job", "test", "--query", "x"].join(" ");
@@ -39,7 +41,7 @@ it("in a linked worktree: uses the main checkout's bin when the worktree has no 
   expect(resolveRepoBin(wt)).toStrictEqual({ bin: binOf(main), fallback: true });
   expect(repoBin(wt)).toBe(binOf(main));
   expect(jobCommand(wt, "--job exec --query true")).toBe(`${fwd(binOf(main))} job --job exec --query true`);
-  expect(isWorkspaceJobScript(`${fwd(binOf(main))} job ${JOB}`, { root: wt, checkout: wt, cwd: wt })).toBe(true);
+  expect(isWorkspaceJobScript(`${fwd(binOf(main))} job ${JOB}`, { checkout: wt, cwd: wt, root: wt })).toBe(true);
 });
 
 it("in a linked worktree: probes repo.exe at the main checkout", () => {

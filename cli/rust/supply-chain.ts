@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { Pack } from "../config.ts";
 import { runGit, type GitRun } from "../sync/standards.ts";
 import { crateProblems } from "./cargo-metadata.ts";
 import { DENY_PIN, SHEAR_PIN } from "./cargo-tools.constants.ts";
-import { shearProblems } from "./shear-problems.ts";
 import { denyProblems, pinProblem } from "./cargo-tools.ts";
 import { LOCK_FILE, MISSING_CARGO } from "./clippy.constants.ts";
 import { runCargo, type CargoRun } from "./clippy.ts";
+import { shearProblems } from "./shear-problems.ts";
 import { TOOLS_PACK, UNTRACKED_LOCK } from "./supply-chain.constants.ts";
 
 /** The cargo and git runs `supplyChainAt` makes; tests hand it their own. */

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+
 import { rootPath } from "./temp-root-env.ts";
 import { setup } from "./temp-root.ts";
 
@@ -24,7 +26,7 @@ afterEach(() => {
   process.exitCode = exitCode ?? 0;
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  fs.rmSync(parent, { recursive: true, force: true });
+  fs.rmSync(parent, { force: true, recursive: true });
 });
 
 it("lets a run pass that left only bun's node shim dir", () => {

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { applyMigration } from "./apply-migration.ts";
 import { linkStock, read, sync, write } from "./fixtures/copied-install.ts";
 import { mini, planOf } from "./fixtures/mini-install.ts";
@@ -9,12 +10,12 @@ useTempDirs();
 const STOCK_PLAIN = { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } };
 /** Edited copies of a stock rule, subagent and skill, beside an own rule, subagent and skill. */
 const EDITED_AND_OWN = {
-  ".rulesync/rules/plain.md": "---\nroot: false\n---\nedited plain\n",
-  ".rulesync/rules/team.md": "own\n",
-  ".rulesync/subagents/scout.md": "---\nname: scout\n---\nedited scout\n",
-  ".rulesync/subagents/mine.md": "own\n",
   ".agents/skills/ask/SKILL.md": "---\nname: ask\n---\nedited\n",
   ".agents/skills/deploy/SKILL.md": "deploy\n",
+  ".rulesync/rules/plain.md": "---\nroot: false\n---\nedited plain\n",
+  ".rulesync/rules/team.md": "own\n",
+  ".rulesync/subagents/mine.md": "own\n",
+  ".rulesync/subagents/scout.md": "---\nname: scout\n---\nedited scout\n",
 };
 
 it("marks a moved stock rule, subagent and skill, and nothing else", async () => {

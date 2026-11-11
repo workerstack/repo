@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { publish, type Registry } from "../fixtures/publish-world.ts";
+
 import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
+import { publish, type Registry } from "../fixtures/publish-world.ts";
 import { commit, gitIn, NAME, world } from "../fixtures/release-world.ts";
 
 afterEach(removePlanted);
@@ -17,11 +18,11 @@ describe("repo release publish starts from the tag", () => {
     commit(w, "chore: later", { "later.txt": "x\n" });
     const got = await publish(w, [SPEC], LISTED());
     expect(got).toMatchObject({
+      bunCalls: [],
       code: 1,
-      out: "",
       err: `repo release publish: HEAD is not ${SPEC}; check out the tag first\n`,
       npmCalls: [],
-      bunCalls: [],
+      out: "",
     });
   });
 
@@ -32,7 +33,7 @@ describe("repo release publish starts from the tag", () => {
   });
 
   it("refuses outside a git checkout", async () => {
-    const got = await publish({ work: tempDir(), remote: "" }, [SPEC], LISTED());
+    const got = await publish({ remote: "", work: tempDir() }, [SPEC], LISTED());
     expect(got.err).toBe(`repo release publish: HEAD is not ${SPEC}; check out the tag first\n`);
   });
 
@@ -46,18 +47,18 @@ describe("repo release publish skips a version npm serves", () => {
   it("says so and runs nothing", async () => {
     const got = await publish(world(), [SPEC], LISTED());
     expect(got).toMatchObject({
+      bunCalls: [],
       code: 0,
-      out: `repo release publish: ${SPEC} is already on npm; nothing to publish\n`,
       err: "",
       npmCalls: [],
-      bunCalls: [],
+      out: `repo release publish: ${SPEC} is already on npm; nothing to publish\n`,
       urls: ["https://registry.npmjs.org/@acme%2fapp", TARBALL],
     });
   });
 
   it("polls the tarball url every 10 seconds when npm lists the version but does not serve it yet", async () => {
     const got = await publish(world(), [SPEC], LISTED(2));
-    expect(got).toMatchObject({ code: 0, sleeps: [10_000, 10_000], npmCalls: [] });
+    expect(got).toMatchObject({ code: 0, npmCalls: [], sleeps: [10_000, 10_000] });
     expect(got.out).toBe(
       "repo release publish: npm lists 0.1.0 but its tarball is not served yet; waiting…\n" +
         `repo release publish: ${SPEC} is already on npm; nothing to publish\n`,
@@ -88,7 +89,7 @@ describe("repo release publish for a package that is not on npm", () => {
 
   it("prints the bootstrap steps in CI and publishes nothing", async () => {
     const got = await origin("https://github.com/acme/app.git");
-    expect(got).toMatchObject({ code: 1, out: "", err: bootstrap("acme/app"), npmCalls: [], bunCalls: [] });
+    expect(got).toMatchObject({ bunCalls: [], code: 1, err: bootstrap("acme/app"), npmCalls: [], out: "" });
   });
 
   it("names the repository from an ssh remote too", async () => {
@@ -118,9 +119,9 @@ describe("repo release publish when the registry does not answer", () => {
     const got = await publish(world(), [SPEC], { ...GONE, docFails: Number.MAX_SAFE_INTEGER }, { ci: true });
     expect(got).toMatchObject({
       code: 1,
-      out: "",
       err: "repo release publish: registry.npmjs.org did not answer for 15 minutes (HTTP 503); rerun the release job\n",
       npmCalls: [],
+      out: "",
     });
     expect(got.sleeps.reduce((sum, ms) => sum + ms, 0)).toBe(900_000);
   });

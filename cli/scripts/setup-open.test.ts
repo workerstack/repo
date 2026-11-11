@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { openUrl } from "./setup.ts";
+
 import { cleanSetup, plant } from "./fixtures/setup-kit.ts";
+import { openUrl } from "./setup.ts";
 
 afterEach(cleanSetup);
 

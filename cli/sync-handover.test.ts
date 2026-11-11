@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterAll, expect, it } from "vitest";
-import { MANIFEST_REL, renderManifest } from "./sync/manifest.ts";
+
 import {
   HANDOVER,
   copied,
@@ -15,6 +16,7 @@ import {
 } from "./sync/fixtures/copied-install.ts";
 import { expectMode } from "./sync/fixtures/file-mode.ts";
 import { useTempDirs } from "./sync/fixtures/temp-dirs.ts";
+import { MANIFEST_REL, renderManifest } from "./sync/manifest.ts";
 
 useTempDirs();
 afterAll(dropFixture);
@@ -98,7 +100,7 @@ it(
     for (const rel of ["AGENTS.md", ".mcp.json"]) expectMode(root, rel, 0o644);
     expect(lines(read(root, ".gitignore"))).not.toContain("AGENTS.md");
     expect(lines(read(root, ".gitignore"))).not.toContain(".mcp.json");
-    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, err: [], out: ["repo sync: up to date\n"] });
   },
   SLOW,
 );
@@ -148,7 +150,7 @@ it(
     expect(agents).toContain(own);
     expect(agents).not.toContain("en-US default.");
     expect(exists(root, ".repo/rules/overview.md")).toBe(true);
-    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, err: [], out: ["repo sync: up to date\n"] });
   },
   SLOW,
 );
@@ -164,10 +166,10 @@ it(
       "\nOur team notes: ship on Fridays only with a rollback plan.\n\nTeam rule: run `make lint` before every push.\n",
     );
     expect(readJson<Servers>(root, ".mcp.json").mcpServers).toStrictEqual({
-      docs: { command: "npx", args: ["-y", "docs-mcp"] },
+      docs: { args: ["-y", "docs-mcp"], command: "npx" },
     });
     expect(read(root, ".repo/mcp-policy.jsonc")).not.toContain("servers");
-    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, out: ["repo sync: up to date\n"], err: [] });
+    expect(await sync(root, ["--check"], true)).toStrictEqual({ code: 0, err: [], out: ["repo sync: up to date\n"] });
   },
   SLOW,
 );

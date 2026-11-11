@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
 import { runExec } from "./job-exec.ts";
 
 useJobEnv();
 
 const exec = (dir: string, query: string) => runExec(query, { cwd: dir, root: dir });
-const FALLBACK = { fallback: true, text: "FALLBACK\n", code: 2 };
+const FALLBACK = { code: 2, fallback: true, text: "FALLBACK\n" };
 
 /** A planted dir holding the given bun scripts. */
 function withScripts(scripts: Record<string, string>): string {
@@ -18,7 +20,7 @@ function withScripts(scripts: Record<string, string>): string {
 
 it("runExec lists what a command printed", () => {
   const dir = plant();
-  expect(exec(dir, "echo hi")).toStrictEqual({ fallback: false, text: "1 line.\n- hi\n", code: 0 });
+  expect(exec(dir, "echo hi")).toStrictEqual({ code: 0, fallback: false, text: "1 line.\n- hi\n" });
   expect(exec(dir, "  echo  a   b ").text).toBe("1 line.\n- a b\n");
 });
 
@@ -31,7 +33,7 @@ it("runExec takes the cwd from the process when it is given none", () => {
 });
 
 it("runExec reports a failing command with its exit code when it printed nothing", () => {
-  expect(exec(plant(), "false")).toStrictEqual({ fallback: false, text: "Command failed.\n- exit 1\n", code: 0 });
+  expect(exec(plant(), "false")).toStrictEqual({ code: 0, fallback: false, text: "Command failed.\n- exit 1\n" });
 });
 
 it("runExec reports a failing command by its stderr lines", () => {

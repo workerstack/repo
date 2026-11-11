@@ -2,7 +2,9 @@
 /** Purge stubborn global MCP sources under $HOME (dry-run default). Never project MCP. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { stringify as stringifyToml } from "smol-toml";
+
 import { APPLY_ACTION, DRY_RUN_ACTION, JSON_INDENT } from "./purge-global-mcps.constants.ts";
 import type { GrokPlan, JsonPlan, PurgeResult, ReportRow } from "./purge-global-mcps.types.ts";
 import { parseArgv, resolveHome } from "./purge-paths.ts";
@@ -42,12 +44,12 @@ export function purgeGlobalMcps({ home, apply = false }: { home?: string; apply?
     const claude = planClaudePlugins(home);
     if (apply) writePlans(grok, cursor, claude);
     for (const plan of [grok, cursor, claude]) {
-      const row = { action, path: plan.abs, detail: plan.detail };
+      const row = { action, detail: plan.detail, path: plan.abs };
       report.push({ ...row, line: reportLine(row) });
     }
     return { ok: true, report };
   } catch (err) {
-    return { ok: false, report, error: errorText(err) };
+    return { error: errorText(err), ok: false, report };
   }
 }
 
@@ -59,7 +61,7 @@ export function main(argv: string[]): number {
       process.stderr.write(parsed.error + "\n");
       return 1;
     }
-    const result = purgeGlobalMcps({ home: resolveHome(), apply: parsed.apply });
+    const result = purgeGlobalMcps({ apply: parsed.apply, home: resolveHome() });
     for (const row of result.report) {
       process.stdout.write(row.line + "\n");
     }

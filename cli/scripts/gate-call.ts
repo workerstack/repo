@@ -1,6 +1,6 @@
+import type { GateResult, Harness, ToolArgs, ToolSpec } from "./gate-harness.ts";
 /** The shape every guard step reads and answers in. */
 import type { HookInput } from "./hook-input.ts";
-import type { GateResult, Harness, ToolArgs, ToolSpec } from "./gate-harness.ts";
 import type { Roots } from "./workspace-root.ts";
 
 /**

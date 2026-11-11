@@ -12,11 +12,11 @@ import {
 } from "./rust.constants.ts";
 
 const file = (path: string, content: string): Output => ({
-  kind: "file",
-  path,
   content,
-  tracked: false,
+  kind: "file",
   managed: "whole",
+  path,
+  tracked: false,
 });
 
 /**
@@ -24,14 +24,14 @@ const file = (path: string, content: string): Output => ({
  * `clippy.toml` and `deny.toml`, all sync's own. Without the pack or the manifest, nothing.
  */
 export const rust: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("standards") || ctx.read(CARGO_PATH) === null) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("standards") || ctx.read(CARGO_PATH) === null) return { errors: [], outputs: [] };
   return {
+    errors: [],
     outputs: [
       file(TOOLCHAIN_PATH, TOOLCHAIN_TOML),
       file(RUSTFMT_PATH, RUSTFMT_TOML),
       file(CLIPPY_PATH, CLIPPY_TOML),
       file(DENY_PATH, DENY_TOML),
     ],
-    errors: [],
   };
 };

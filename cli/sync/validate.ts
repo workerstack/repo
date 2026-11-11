@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+
 import type { CommentSyntax } from "./header.ts";
 import type { Output } from "./outputs.ts";
 import { isCurrent } from "./write.ts";
@@ -29,37 +31,37 @@ export type FormatEntry = {
 const REGISTER_HINT = "no output format registered; add it to cli/sync/validate.ts";
 
 // Every host schema is loose: a host may add keys, and sync must not reject what the host reads.
-const hookCommand = z.looseObject({ type: z.string(), command: z.string().optional(), timeout: z.number().optional() });
+const hookCommand = z.looseObject({ command: z.string().optional(), timeout: z.number().optional(), type: z.string() });
 /** A claude or codex hook entry: an optional matcher and the handlers it runs. */
-const hookEntry = z.looseObject({ matcher: z.string().optional(), hooks: z.array(hookCommand).optional() });
+const hookEntry = z.looseObject({ hooks: z.array(hookCommand).optional(), matcher: z.string().optional() });
 /** An event name to its entries, the shape of `hooks` in claude's settings and in codex's and grok's hook files. */
 const hooksByEvent = z.record(z.string(), z.array(hookEntry));
 
-const AGENT_FRONTMATTER = z.looseObject({ name: z.string(), description: z.string() });
+const AGENT_FRONTMATTER = z.looseObject({ description: z.string(), name: z.string() });
 const CLAUDE_RULE_FRONTMATTER = z.looseObject({ paths: z.array(z.string()).optional() });
 const CLAUDE_SETTINGS = z.looseObject({
-  permissions: z.looseObject({ deny: z.array(z.string()).optional() }).optional(),
-  hooks: hooksByEvent.optional(),
   enableAllProjectMcpServers: z.boolean().optional(),
   enabledMcpjsonServers: z.array(z.string()).optional(),
+  hooks: hooksByEvent.optional(),
+  permissions: z.looseObject({ deny: z.array(z.string()).optional() }).optional(),
 });
 const MCP_SERVERS = z.looseObject({ mcpServers: z.record(z.string(), z.looseObject({})).optional() });
 const CODEX_HOOKS = z.looseObject({ hooks: hooksByEvent.optional() });
 const CURSOR_HOOKS = z.looseObject({
-  version: z.number().optional(),
   hooks: z
     .record(
       z.string(),
       z.array(
         z.looseObject({
-          type: z.string().optional(),
           command: z.string().optional(),
           matcher: z.string().optional(),
           timeout: z.number().optional(),
+          type: z.string().optional(),
         }),
       ),
     )
     .optional(),
+  version: z.number().optional(),
 });
 /** Antigravity's file nests flat entries (a command) and matcher entries (handlers) under one `rulesync` key. */
 const AGENTS_HOOKS = z.looseObject({
@@ -179,7 +181,7 @@ export const OXLINT_CONFIG: z.ZodObject<
   ignorePatterns: strings.optional(),
   jsPlugins: z.unknown().optional(),
   options: z
-    .looseObject({ typeAware: z.boolean().optional(), respectEslintDisableDirectives: z.boolean().optional() })
+    .looseObject({ respectEslintDisableDirectives: z.boolean().optional(), typeAware: z.boolean().optional() })
     .optional(),
   overrides: z.array(z.looseObject({ files: strings, rules: lintRules.optional() })).optional(),
   plugins: strings.optional(),
@@ -277,53 +279,53 @@ const under = (dir: string, ext: string) => (candidate: string) =>
  * its format here, and its schema when the host has a shape worth checking.
  */
 const OUTPUT_FORMATS: readonly FormatEntry[] = [
-  { match: exact(".claude/settings.json"), format: "json", comment: null, schema: CLAUDE_SETTINGS },
-  { match: exact(".agents/mcp_config.json"), format: "json", comment: null, schema: MCP_SERVERS },
-  { match: exact(".cursor/hooks.json"), format: "json", comment: null, schema: CURSOR_HOOKS },
-  { match: exact(".codex/hooks.json"), format: "json", comment: null, schema: CODEX_HOOKS },
-  { match: exact(".agents/hooks.json"), format: "json", comment: null, schema: AGENTS_HOOKS },
-  { match: inDir(".grok/hooks", ".json"), format: "json", comment: null, schema: CODEX_HOOKS },
-  { match: exact(".vscode/tasks.json"), format: "jsonc", comment: "//" },
-  { match: exact(".vscode/settings.json"), format: "jsonc", comment: null },
-  { match: inDir(".claude/agents", ".md"), format: "markdown", comment: null, schema: AGENT_FRONTMATTER },
-  { match: inDir(".cursor/agents", ".md"), format: "markdown", comment: null, schema: AGENT_FRONTMATTER },
-  { match: inDir(".grok/agents", ".md"), format: "markdown", comment: null, schema: AGENT_FRONTMATTER },
-  { match: inDir(".agents/agents", ".md"), format: "markdown", comment: null, schema: AGENT_FRONTMATTER },
-  { match: under(".agents/rules", ".md"), format: "markdown", comment: null },
-  { match: under(".claude/rules", ".md"), format: "markdown", comment: null, schema: CLAUDE_RULE_FRONTMATTER },
-  { match: named("AGENTS.md"), format: "markdown", comment: "<!--" },
-  { match: named("README.md"), format: "markdown", comment: "<!--" },
-  { match: named("references/INDEX.md"), format: "markdown", comment: null },
-  { match: exact(".repo/lessons/INDEX.md"), format: "markdown", comment: "<!--" },
-  { match: inDir(".codex/agents", ".toml"), format: "toml", comment: "#" },
-  { match: inDir(".grok/roles", ".toml"), format: "toml", comment: "#" },
-  { match: exact(".codex/config.toml"), format: "toml", comment: "#" },
-  { match: exact(".grok/config.toml"), format: "toml", comment: "#" },
-  { match: exact("bunfig.toml"), format: "toml", comment: "#" },
-  { match: exact("rust-toolchain.toml"), format: "toml", comment: "#" },
-  { match: exact("rustfmt.toml"), format: "toml", comment: "#" },
-  { match: exact("clippy.toml"), format: "toml", comment: "#" },
-  { match: exact("deny.toml"), format: "toml", comment: "#" },
-  { match: exact(".oxlintrc.json"), format: "json", comment: null, schema: OXLINT_CONFIG },
-  { match: exact(".oxfmtrc.jsonc"), format: "jsonc", comment: "//", schema: OXFMT_CONFIG },
-  { match: exact("knip.json"), format: "json", comment: null },
-  { match: exact("turbo.json"), format: "json", comment: null, schema: TURBO_CONFIG },
+  { comment: null, format: "json", match: exact(".claude/settings.json"), schema: CLAUDE_SETTINGS },
+  { comment: null, format: "json", match: exact(".agents/mcp_config.json"), schema: MCP_SERVERS },
+  { comment: null, format: "json", match: exact(".cursor/hooks.json"), schema: CURSOR_HOOKS },
+  { comment: null, format: "json", match: exact(".codex/hooks.json"), schema: CODEX_HOOKS },
+  { comment: null, format: "json", match: exact(".agents/hooks.json"), schema: AGENTS_HOOKS },
+  { comment: null, format: "json", match: inDir(".grok/hooks", ".json"), schema: CODEX_HOOKS },
+  { comment: "//", format: "jsonc", match: exact(".vscode/tasks.json") },
+  { comment: null, format: "jsonc", match: exact(".vscode/settings.json") },
+  { comment: null, format: "markdown", match: inDir(".claude/agents", ".md"), schema: AGENT_FRONTMATTER },
+  { comment: null, format: "markdown", match: inDir(".cursor/agents", ".md"), schema: AGENT_FRONTMATTER },
+  { comment: null, format: "markdown", match: inDir(".grok/agents", ".md"), schema: AGENT_FRONTMATTER },
+  { comment: null, format: "markdown", match: inDir(".agents/agents", ".md"), schema: AGENT_FRONTMATTER },
+  { comment: null, format: "markdown", match: under(".agents/rules", ".md") },
+  { comment: null, format: "markdown", match: under(".claude/rules", ".md"), schema: CLAUDE_RULE_FRONTMATTER },
+  { comment: "<!--", format: "markdown", match: named("AGENTS.md") },
+  { comment: "<!--", format: "markdown", match: named("README.md") },
+  { comment: null, format: "markdown", match: named("references/INDEX.md") },
+  { comment: "<!--", format: "markdown", match: exact(".repo/lessons/INDEX.md") },
+  { comment: "#", format: "toml", match: inDir(".codex/agents", ".toml") },
+  { comment: "#", format: "toml", match: inDir(".grok/roles", ".toml") },
+  { comment: "#", format: "toml", match: exact(".codex/config.toml") },
+  { comment: "#", format: "toml", match: exact(".grok/config.toml") },
+  { comment: "#", format: "toml", match: exact("bunfig.toml") },
+  { comment: "#", format: "toml", match: exact("rust-toolchain.toml") },
+  { comment: "#", format: "toml", match: exact("rustfmt.toml") },
+  { comment: "#", format: "toml", match: exact("clippy.toml") },
+  { comment: "#", format: "toml", match: exact("deny.toml") },
+  { comment: null, format: "json", match: exact(".oxlintrc.json"), schema: OXLINT_CONFIG },
+  { comment: "//", format: "jsonc", match: exact(".oxfmtrc.jsonc"), schema: OXFMT_CONFIG },
+  { comment: null, format: "json", match: exact("knip.json") },
+  { comment: null, format: "json", match: exact("turbo.json"), schema: TURBO_CONFIG },
   // No TypeScript parser is registered; the generator writes this file from a template, so it is checked as text.
-  { match: exact("vitest.config.ts"), format: "text", comment: "//" },
-  { match: exact(".gitignore"), format: "text", comment: null },
-  { match: exact(".gitattributes"), format: "text", comment: null },
-  { match: exact(".githooks/pre-commit"), format: "text", comment: "#" },
-  { match: exact(".githooks/commit-msg"), format: "text", comment: "#" },
-  { match: exact(".githooks/pre-push"), format: "text", comment: "#" },
-  { match: exact(".github/workflows/ci.yml"), format: "text", comment: "#" },
-  { match: exact(".github/workflows/nightly.yml"), format: "text", comment: "#" },
-  { match: exact(".github/workflows/release.yml"), format: "text", comment: "#" },
-  { match: exact("SECURITY.md"), format: "markdown", comment: "<!--" },
-  { match: exact("CONTRIBUTING.md"), format: "markdown", comment: "<!--" },
-  { match: exact(".github/PULL_REQUEST_TEMPLATE.md"), format: "markdown", comment: "<!--" },
-  { match: exact(".github/CODEOWNERS"), format: "text", comment: "#" },
-  { match: exact(".github/ISSUE_TEMPLATE/bug_report.yml"), format: "text", comment: "#" },
-  { match: exact(".github/ISSUE_TEMPLATE/config.yml"), format: "text", comment: "#" },
+  { comment: "//", format: "text", match: exact("vitest.config.ts") },
+  { comment: null, format: "text", match: exact(".gitignore") },
+  { comment: null, format: "text", match: exact(".gitattributes") },
+  { comment: "#", format: "text", match: exact(".githooks/pre-commit") },
+  { comment: "#", format: "text", match: exact(".githooks/commit-msg") },
+  { comment: "#", format: "text", match: exact(".githooks/pre-push") },
+  { comment: "#", format: "text", match: exact(".github/workflows/ci.yml") },
+  { comment: "#", format: "text", match: exact(".github/workflows/nightly.yml") },
+  { comment: "#", format: "text", match: exact(".github/workflows/release.yml") },
+  { comment: "<!--", format: "markdown", match: exact("SECURITY.md") },
+  { comment: "<!--", format: "markdown", match: exact("CONTRIBUTING.md") },
+  { comment: "<!--", format: "markdown", match: exact(".github/PULL_REQUEST_TEMPLATE.md") },
+  { comment: "#", format: "text", match: exact(".github/CODEOWNERS") },
+  { comment: "#", format: "text", match: exact(".github/ISSUE_TEMPLATE/bug_report.yml") },
+  { comment: "#", format: "text", match: exact(".github/ISSUE_TEMPLATE/config.yml") },
 ];
 
 /** The registered format of the output at root-relative POSIX path `rel`, or null when none is registered. */

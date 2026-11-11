@@ -1,16 +1,18 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_HANDOFF, savedOk } from "./fixtures/persist-bodies.ts";
-import { persistHandoff } from "./persist-handoff.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { HANDOFF_DIR } from "./persist-handoff.constants.ts";
+import { persistHandoff } from "./persist-handoff.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -24,9 +26,9 @@ describe("persistHandoff", () => {
   it("writes a stamped handoff under .tmp/repo/handoffs", () => {
     const ws = tmpWs();
     const r = persistHandoff({
-      workspaceRoot: ws,
       content: VALID_HANDOFF,
       created: "2026-08-27T14:30:00Z",
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
@@ -44,7 +46,7 @@ describe("persistHandoff", () => {
     const ws = tmpWs();
     fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260827T143000Z.md"), "x");
-    const r = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
+    const r = persistHandoff({ content: VALID_HANDOFF, workspaceRoot: ws });
     expect(r.serial).toBe(1);
   });
 });
@@ -53,8 +55,8 @@ describe("persistHandoff serials and gitignore", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-27T14:30:00Z";
-    const a = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF, created });
-    const b = persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF, created });
+    const a = persistHandoff({ content: VALID_HANDOFF, created, workspaceRoot: ws });
+    const b = persistHandoff({ content: VALID_HANDOFF, created, workspaceRoot: ws });
     expect(a.serial).toBe(1);
     expect(b.serial).toBe(2);
     expect(b.filename).toBe("2-sync-skills-to-hosts-20260827T143000Z.md");
@@ -62,12 +64,12 @@ describe("persistHandoff serials and gitignore", () => {
 
   it("never touches .gitignore", () => {
     const ws = tmpWs();
-    persistHandoff({ workspaceRoot: ws, content: VALID_HANDOFF });
+    persistHandoff({ content: VALID_HANDOFF, workspaceRoot: ws });
     expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
     const kept = tmpWs();
     fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
-    persistHandoff({ workspaceRoot: kept, content: VALID_HANDOFF });
-    persistHandoff({ workspaceRoot: kept, content: VALID_HANDOFF });
+    persistHandoff({ content: VALID_HANDOFF, workspaceRoot: kept });
+    persistHandoff({ content: VALID_HANDOFF, workspaceRoot: kept });
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 });
@@ -76,7 +78,7 @@ describe("persistHandoff refusals", () => {
   it("rejects a handoff with no Next leaf and does not write", () => {
     const ws = tmpWs();
     const bad = VALID_HANDOFF.replace(/1 \[ \] wire generate\n1\.1[^\n]*\n1\.2[^\n]*\n/, "");
-    const r = persistHandoff({ workspaceRoot: ws, content: bad });
+    const r = persistHandoff({ content: bad, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("no N.M leaf");
     expect(fs.existsSync(path.join(ws, HANDOFF_DIR))).toBe(true);
@@ -86,8 +88,8 @@ describe("persistHandoff refusals", () => {
   it("rejects extra or reordered headings", () => {
     const ws = tmpWs();
     const r = persistHandoff({
-      workspaceRoot: ws,
       content: VALID_HANDOFF + "\n## Steps\n- nope\n",
+      workspaceRoot: ws,
     });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("extra h2");
@@ -97,9 +99,9 @@ describe("persistHandoff refusals", () => {
 function persistHandoffText() {
   const ws = tmpWs();
   const r = persistHandoff({
-    workspaceRoot: ws,
     content: VALID_HANDOFF,
     created: "2026-08-27T14:30:00Z",
+    workspaceRoot: ws,
   });
   return { filename: savedOk(r).filename, text: savedOk(r).content };
 }
@@ -139,7 +141,7 @@ describe("handoff fences", () => {
       "- Claude link: /repo/.claude/skills/\n",
       "- Claude link: /repo/.claude/skills/\n\n```md\n## Next\n```\n",
     );
-    const r = persistHandoff({ workspaceRoot: tmpWs(), content });
+    const r = persistHandoff({ content, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
   });
 });

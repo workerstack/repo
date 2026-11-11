@@ -2,7 +2,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { HOSTS, type Host } from "../../config.ts";
 import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
 import { applyUnion } from "../../scripts/hooks-union.ts";
@@ -19,7 +21,7 @@ const BASE_REL = "agents/settings/claude.json";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /**
@@ -33,20 +35,20 @@ function afterStage(files: Map<string, string>, stock: string, consumer: string)
     fs.mkdirSync(path.dirname(path.join(stage, rel)), { recursive: true });
     fs.writeFileSync(path.join(stage, rel), text);
   }
-  expect(emitMcpPolicy({ workspaceRoot: stage, sourceRoot: stock, consumerRoot: consumer }).ok).toBe(true);
-  expect(applyUnion({ workspaceRoot: stage, sourceRoot: stock, consumerRoot: consumer }).ok).toBe(true);
+  expect(emitMcpPolicy({ consumerRoot: consumer, sourceRoot: stock, workspaceRoot: stage }).ok).toBe(true);
+  expect(applyUnion({ consumerRoot: consumer, sourceRoot: stock, workspaceRoot: stage }).ok).toBe(true);
   return new Map(HOOK_FILES.map((rel) => [rel, fs.readFileSync(path.join(stage, rel), "utf8")]));
 }
 
 const cases = [
-  { name: "the consumer fixture over the frozen stock", stock: STOCK, consumer: CONSUMER, expected: GOLDEN },
-  { name: "this repo", stock: ROOT, consumer: ROOT, expected: ROOT },
+  { consumer: CONSUMER, expected: GOLDEN, name: "the consumer fixture over the frozen stock", stock: STOCK },
+  { consumer: ROOT, expected: ROOT, name: "this repo", stock: ROOT },
 ];
 
 describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
   const render = (hosts: readonly Host[] = HOSTS) =>
     renderHooks(
-      loadSources({ stockRoot: stock, consumerRoot: consumer, packages: [] }).sources,
+      loadSources({ consumerRoot: consumer, packages: [], stockRoot: stock }).sources,
       hosts,
       fs.readFileSync(path.join(stock, BASE_REL), "utf8"),
     );
@@ -66,9 +68,9 @@ describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
 });
 
 const sources = (value: Record<string, unknown>): Sources => ({
+  hooks: { rel: ".repo/hooks.jsonc", value },
   rules: [],
   subagents: [],
-  hooks: { rel: ".repo/hooks.jsonc", value },
 });
 const json = (files: Map<string, string>, rel: string) => JSON.parse(files.get(rel)!) as Record<string, any>;
 
@@ -78,9 +80,9 @@ describe("renderHooks", () => {
       sources({
         hooks: {
           preToolUse: [
-            { matcher: "Bash", command: "./a.sh x" },
-            { matcher: "Bash", command: "'./q r.sh'" },
-            { matcher: "Bash", command: "bun ./a.ts" },
+            { command: "./a.sh x", matcher: "Bash" },
+            { command: "'./q r.sh'", matcher: "Bash" },
+            { command: "bun ./a.ts", matcher: "Bash" },
           ],
         },
       }),
@@ -91,12 +93,12 @@ describe("renderHooks", () => {
     expect(Object.keys(claude)).toEqual(["$schema", "hooks"]);
     expect(claude.hooks.PreToolUse).toEqual([
       {
-        matcher: "Bash",
         hooks: [
-          { type: "command", command: '"$CLAUDE_PROJECT_DIR"/a.sh x' },
-          { type: "command", command: `"$CLAUDE_PROJECT_DIR"/'q r.sh'` },
-          { type: "command", command: "bun ./a.ts" },
+          { command: '"$CLAUDE_PROJECT_DIR"/a.sh x', type: "command" },
+          { command: `"$CLAUDE_PROJECT_DIR"/'q r.sh'`, type: "command" },
+          { command: "bun ./a.ts", type: "command" },
         ],
+        matcher: "Bash",
       },
     ]);
     expect(json(files, ".codex/hooks.json").hooks.PreToolUse[0].hooks[0].command).toBe("./a.sh x");
@@ -105,82 +107,82 @@ describe("renderHooks", () => {
   it("replaces a shared event in place with the target override and appends new override events", () => {
     const files = renderHooks(
       sources({
-        hooks: { stop: [{ command: "shared-stop" }], preToolUse: [{ matcher: "Read", command: "r" }] },
-        claudecode: { hooks: { stop: [{ command: "override-stop" }], notification: [{ command: "n" }] } },
+        claudecode: { hooks: { notification: [{ command: "n" }], stop: [{ command: "override-stop" }] } },
+        hooks: { preToolUse: [{ command: "r", matcher: "Read" }], stop: [{ command: "shared-stop" }] },
       }),
       ["claude", "antigravity"],
       '{"hooks":{"Old":[]},"z":1}',
     );
     const claude = json(files, ".claude/settings.json");
     expect(Object.keys(claude)).toEqual(["$schema", "hooks", "z"]);
-    expect(Object.keys(claude.hooks)).toEqual(["Stop", "PreToolUse", "Notification"]);
-    expect(claude.hooks.Stop).toEqual([{ hooks: [{ type: "command", command: "override-stop" }] }]);
+    expect(Object.keys(claude.hooks)).toEqual(["PreToolUse", "Stop", "Notification"]);
+    expect(claude.hooks.Stop).toEqual([{ hooks: [{ command: "override-stop", type: "command" }] }]);
     expect(json(files, ".agents/hooks.json")).toEqual({
       rulesync: {
-        Stop: [{ type: "command", command: "shared-stop" }],
-        PreToolUse: [{ matcher: "(?:read_file|view_file)", hooks: [{ type: "command", command: "r" }] }],
+        PreToolUse: [{ hooks: [{ command: "r", type: "command" }], matcher: "(?:read_file|view_file)" }],
+        Stop: [{ command: "shared-stop", type: "command" }],
       },
     });
   });
 
   it("translates every event of each host's map and skips the events a host lacks", () => {
     const claude = {
-      sessionStart: "SessionStart",
-      sessionEnd: "SessionEnd",
-      preToolUse: "PreToolUse",
-      postToolUse: "PostToolUse",
       beforeSubmitPrompt: "UserPromptSubmit",
-      stop: "Stop",
-      subagentStop: "SubagentStop",
-      preCompact: "PreCompact",
-      permissionRequest: "PermissionRequest",
-      notification: "Notification",
-      setup: "Setup",
-      worktreeCreate: "WorktreeCreate",
-      worktreeRemove: "WorktreeRemove",
-      messageDisplay: "MessageDisplay",
-      instructionsLoaded: "InstructionsLoaded",
-      userPromptExpansion: "UserPromptExpansion",
-      postToolUseFailure: "PostToolUseFailure",
-      postToolBatch: "PostToolBatch",
-      permissionDenied: "PermissionDenied",
-      subagentStart: "SubagentStart",
-      taskCreated: "TaskCreated",
-      taskCompleted: "TaskCompleted",
-      stopFailure: "StopFailure",
-      teammateIdle: "TeammateIdle",
       configChange: "ConfigChange",
       cwdChanged: "CwdChanged",
-      fileChanged: "FileChanged",
       directoryAdded: "DirectoryAdded",
-      postCompact: "PostCompact",
       elicitation: "Elicitation",
       elicitationResult: "ElicitationResult",
-      preModelSwitch: "PreModelSwitch",
-      postModelSwitch: "PostModelSwitch",
-    };
-    const codex = {
-      sessionStart: "SessionStart",
-      sessionEnd: "SessionEnd",
-      preToolUse: "PreToolUse",
-      postToolUse: "PostToolUse",
-      beforeSubmitPrompt: "UserPromptSubmit",
-      stop: "Stop",
-      stopCancelled: "Interrupt",
+      fileChanged: "FileChanged",
+      instructionsLoaded: "InstructionsLoaded",
+      messageDisplay: "MessageDisplay",
+      notification: "Notification",
+      permissionDenied: "PermissionDenied",
       permissionRequest: "PermissionRequest",
+      postCompact: "PostCompact",
+      postModelSwitch: "PostModelSwitch",
+      postToolBatch: "PostToolBatch",
+      postToolUse: "PostToolUse",
+      postToolUseFailure: "PostToolUseFailure",
+      preCompact: "PreCompact",
+      preModelSwitch: "PreModelSwitch",
+      preToolUse: "PreToolUse",
+      sessionEnd: "SessionEnd",
+      sessionStart: "SessionStart",
+      setup: "Setup",
+      stop: "Stop",
+      stopFailure: "StopFailure",
       subagentStart: "SubagentStart",
       subagentStop: "SubagentStop",
-      preCompact: "PreCompact",
+      taskCompleted: "TaskCompleted",
+      taskCreated: "TaskCreated",
+      teammateIdle: "TeammateIdle",
+      userPromptExpansion: "UserPromptExpansion",
+      worktreeCreate: "WorktreeCreate",
+      worktreeRemove: "WorktreeRemove",
+    };
+    const codex = {
+      beforeSubmitPrompt: "UserPromptSubmit",
+      permissionRequest: "PermissionRequest",
       postCompact: "PostCompact",
-      preModelInvocation: "PreModelRequest",
       postModelInvocation: "PostModelRequest",
+      postToolUse: "PostToolUse",
+      preCompact: "PreCompact",
+      preModelInvocation: "PreModelRequest",
+      preToolUse: "PreToolUse",
+      sessionEnd: "SessionEnd",
+      sessionStart: "SessionStart",
+      stop: "Stop",
+      stopCancelled: "Interrupt",
+      subagentStart: "SubagentStart",
+      subagentStop: "SubagentStop",
     };
     const antigravity = {
-      sessionStart: "SessionStart",
-      preToolUse: "PreToolUse",
+      postModelInvocation: "PostInvocation",
       postToolUse: "PostToolUse",
       preModelInvocation: "PreInvocation",
-      postModelInvocation: "PostInvocation",
+      preToolUse: "PreToolUse",
+      sessionStart: "SessionStart",
       stop: "Stop",
     };
     const cursorEvents = [
@@ -238,18 +240,18 @@ describe("renderHooks", () => {
     const files = renderHooks(
       sources({
         hooks: Object.fromEntries(
-          [...noMatcher, "subagentStop"].map((event) => [event, [{ matcher: "x", command: "a" }, { command: "b" }]]),
+          [...noMatcher, "subagentStop"].map((event) => [event, [{ command: "a", matcher: "x" }, { command: "b" }]]),
         ),
       }),
       ["claude"],
       "{}",
     );
     const hooks = json(files, ".claude/settings.json").hooks;
-    const split = [{ hooks: [{ type: "command", command: "a" }] }, { hooks: [{ type: "command", command: "b" }] }];
+    const split = [{ hooks: [{ command: "a", type: "command" }] }, { hooks: [{ command: "b", type: "command" }] }];
     for (const event of Object.keys(hooks).filter((event) => event !== "SubagentStop"))
       expect(hooks[event], event).toEqual(split);
     expect(Object.keys(hooks)).toHaveLength(noMatcher.length + 1);
-    expect(hooks.SubagentStop).toEqual([{ matcher: "x", hooks: [{ type: "command", command: "a" }] }, split[1]]);
+    expect(hooks.SubagentStop).toEqual([{ hooks: [{ command: "a", type: "command" }], matcher: "x" }, split[1]]);
   });
 
   it("writes each claude hook type with its payload, drops other types and keeps an existing $schema", () => {
@@ -257,60 +259,56 @@ describe("renderHooks", () => {
       sources({
         hooks: {
           preToolUse: [
-            { type: "http", url: "u", headers: { a: "b" }, allowedEnvVars: ["E"], timeout: null },
-            { type: "mcp_tool", server: "s", tool: "t", input: { k: 1 } },
-            { type: "prompt", prompt: "p", model: "m", timeout: 9 },
-            { type: "agent", prompt: "q", model: null },
-            { type: "other", command: "dropped" },
+            { allowedEnvVars: ["E"], headers: { a: "b" }, timeout: null, type: "http", url: "u" },
+            { input: { k: 1 }, server: "s", tool: "t", type: "mcp_tool" },
+            { model: "m", prompt: "p", timeout: 9, type: "prompt" },
+            { model: null, prompt: "q", type: "agent" },
+            { command: "dropped", type: "other" },
           ],
-          stop: [{ type: "other", command: "dropped" }],
+          stop: [{ command: "dropped", type: "other" }],
         },
       }),
       ["claude"],
       '{"a":1,"$schema":"own"}',
     );
-    expect(files.get(".claude/settings.json")).toBe(
-      `${JSON.stringify(
-        {
-          a: 1,
-          $schema: "own",
-          hooks: {
-            PreToolUse: [
-              {
-                hooks: [
-                  { type: "http", url: "u", headers: { a: "b" }, allowedEnvVars: ["E"] },
-                  { type: "mcp_tool", server: "s", tool: "t", input: { k: 1 } },
-                  { type: "prompt", timeout: 9, prompt: "p", model: "m" },
-                  { type: "agent", prompt: "q" },
-                ],
-              },
+    // An existing $schema keeps its place.
+    expect(Object.keys(json(files, ".claude/settings.json"))).toStrictEqual(["a", "$schema", "hooks"]);
+    expect(json(files, ".claude/settings.json")).toStrictEqual({
+      $schema: "own",
+      a: 1,
+      hooks: {
+        PreToolUse: [
+          {
+            hooks: [
+              { allowedEnvVars: ["E"], headers: { a: "b" }, type: "http", url: "u" },
+              { input: { k: 1 }, server: "s", tool: "t", type: "mcp_tool" },
+              { model: "m", prompt: "p", timeout: 9, type: "prompt" },
+              { prompt: "q", type: "agent" },
             ],
           },
-        },
-        null,
-        2,
-      )}\n`,
-    );
+        ],
+      },
+    });
   });
 
   it("writes codex name and description last and drops handlers codex refuses", () => {
     const files = renderHooks(
       sources({
+        codexcli: { hooks: { worktreeCreate: [{ command: "w" }] } },
         hooks: {
           preToolUse: [
-            { description: "d", name: "n", command: "c", timeout: 1 },
-            { type: "mcp_tool", server: "s", tool: "t", input: { k: [1] } },
-            { type: "prompt", prompt: "unsupported" },
+            { command: "c", description: "d", name: "n", timeout: 1 },
+            { input: { k: [1] }, server: "s", tool: "t", type: "mcp_tool" },
+            { prompt: "unsupported", type: "prompt" },
             { command: "negative", timeout: -1 },
             { command: "fraction", timeout: 1.5 },
             { command: "text", timeout: "5" },
-            { type: "mcp_tool", tool: "t" },
-            { type: "mcp_tool", server: "s", tool: "" },
-            { type: "mcp_tool", server: "s", tool: "t", input: { k: [null] } },
+            { tool: "t", type: "mcp_tool" },
+            { server: "s", tool: "", type: "mcp_tool" },
+            { input: { k: [null] }, server: "s", tool: "t", type: "mcp_tool" },
           ],
           stop: [{ command: "gone", timeout: -1 }],
         },
-        codexcli: { hooks: { worktreeCreate: [{ command: "w" }] } },
       }),
       ["codex"],
       "{}",
@@ -320,18 +318,18 @@ describe("renderHooks", () => {
         PreToolUse: [
           {
             hooks: [
-              { type: "command", command: "c", timeout: 1, name: "n", description: "d" },
-              { type: "mcp_tool", server: "s", tool: "t", input: { k: [1] } },
+              { command: "c", description: "d", name: "n", timeout: 1, type: "command" },
+              { input: { k: [1] }, server: "s", tool: "t", type: "mcp_tool" },
             ],
           },
         ],
-        worktreeCreate: [{ hooks: [{ type: "command", command: "w" }] }],
+        worktreeCreate: [{ hooks: [{ command: "w", type: "command" }] }],
       },
     });
     expect(Object.keys(json(files, ".codex/hooks.json").hooks.PreToolUse[0].hooks[0])).toEqual([
-      "type",
       "command",
       "timeout",
+      "type",
       "name",
       "description",
     ]);
@@ -341,12 +339,12 @@ describe("renderHooks", () => {
     const files = renderHooks(
       sources({
         hooks: {
-          sessionStart: [{ matcher: "Bash", command: "s" }],
-          preModelInvocation: [{ command: "m" }],
           postToolUse: [
-            { matcher: "Bash|\\bRead|[Edit]|MyBash|Grep", command: "p" },
-            { type: "prompt", prompt: "dropped" },
+            { command: "p", matcher: "Bash|\\bRead|[Edit]|MyBash|Grep" },
+            { prompt: "dropped", type: "prompt" },
           ],
+          preModelInvocation: [{ command: "m" }],
+          sessionStart: [{ command: "s", matcher: "Bash" }],
         },
       }),
       ["antigravity"],
@@ -354,14 +352,14 @@ describe("renderHooks", () => {
     );
     expect(json(files, ".agents/hooks.json")).toEqual({
       rulesync: {
-        SessionStart: [{ type: "command", command: "s" }],
-        PreInvocation: [{ type: "command", command: "m" }],
         PostToolUse: [
           {
+            hooks: [{ command: "p", type: "command" }],
             matcher: "run_command|\\b(?:read_file|view_file)|[Edit]|MyBash|Grep",
-            hooks: [{ type: "command", command: "p" }],
           },
         ],
+        PreInvocation: [{ command: "m", type: "command" }],
+        SessionStart: [{ command: "s", type: "command" }],
       },
     });
   });
@@ -369,60 +367,56 @@ describe("renderHooks", () => {
   it("writes an empty antigravity object and cursor version 1 when there are no hooks", () => {
     const files = renderHooks(sources({}), ["antigravity", "cursor"], "{}");
     expect(files.get(".agents/hooks.json")).toBe("{}\n");
-    expect(json(files, ".cursor/hooks.json")).toEqual({ version: 1, hooks: {} });
+    expect(json(files, ".cursor/hooks.json")).toEqual({ hooks: {}, version: 1 });
   });
 
   it("maps cursor entries flat, keeping command and prompt handlers only", () => {
     const files = renderHooks(
       sources({
-        version: 2,
-        hooks: {
-          stop: [
-            { failClosed: true, matcher: "", loop_limit: 3, command: "a", timeout: null },
-            { type: "prompt", prompt: "p", model: "x", timeout: 3, loop_limit: null },
-            { type: "command", command: "b", model: "ignored" },
-            { type: "agent", command: "dropped" },
-          ],
-          sessionEnd: [{ type: "agent", command: "dropped" }],
-        },
         cursor: { hooks: { customEvent: [{ command: "c" }] } },
+        hooks: {
+          sessionEnd: [{ command: "dropped", type: "agent" }],
+          stop: [
+            { command: "a", failClosed: true, loop_limit: 3, matcher: "", timeout: null },
+            { loop_limit: null, model: "x", prompt: "p", timeout: 3, type: "prompt" },
+            { command: "b", model: "ignored", type: "command" },
+            { command: "dropped", type: "agent" },
+          ],
+        },
+        version: 2,
       }),
       ["cursor"],
       "{}",
     );
-    expect(files.get(".cursor/hooks.json")).toBe(
-      `${JSON.stringify(
-        {
-          version: 2,
-          hooks: {
-            stop: [
-              { command: "a", loop_limit: 3, matcher: "", failClosed: true },
-              { type: "prompt", timeout: 3, loop_limit: null, prompt: "p", model: "x" },
-              { type: "command", command: "b" },
-            ],
-            customEvent: [{ command: "c" }],
-          },
-        },
-        null,
-        2,
-      )}\n`,
-    );
+    // A target override's new event follows the shared ones.
+    expect(files.get(".cursor/hooks.json")).toMatch(/"stop"[\s\S]*"customEvent"/);
+    expect(json(files, ".cursor/hooks.json")).toStrictEqual({
+      hooks: {
+        customEvent: [{ command: "c" }],
+        stop: [
+          { command: "a", failClosed: true, loop_limit: 3, matcher: "" },
+          { loop_limit: null, model: "x", prompt: "p", timeout: 3, type: "prompt" },
+          { command: "b", type: "command" },
+        ],
+      },
+      version: 2,
+    });
   });
 
   describe("passthrough fields", () => {
     const every = {
+      additionalContextLimit: 100,
       args: ["x"],
+      async: false,
+      asyncRewake: false,
+      commandWindows: "c.cmd",
+      continueOnBlock: true,
+      failClosed: true,
+      if: "Bash(git *)",
+      loop_limit: 2,
+      once: true,
       shell: "bash",
       statusMessage: "m",
-      if: "Bash(git *)",
-      continueOnBlock: true,
-      asyncRewake: false,
-      async: false,
-      once: true,
-      failClosed: true,
-      additionalContextLimit: 100,
-      commandWindows: "c.cmd",
-      loop_limit: 2,
       unknown: "u",
     };
     const render = (host: Host, event: string, def: Record<string, unknown>) => {
@@ -444,20 +438,23 @@ describe("renderHooks", () => {
           "statusMessage",
           "shell",
           "args",
-          "type",
           "command",
           "timeout",
+          "type",
         ],
       ],
-      ["codex", ["async", "additionalContextLimit", "commandWindows", "statusMessage", "type", "command", "timeout"]],
-      ["antigravity", ["type", "command", "timeout"]],
-      ["cursor", ["command", "timeout", "loop_limit", "matcher", "failClosed"]],
-    ] as const)("%s keeps each of its fields in rulesync's order", (host, keys) => {
-      const hooks = render(host, "preToolUse", { ...every, matcher: "Bash", command: "c", timeout: 5 });
-      const hook = host === "cursor" ? hooks.preToolUse[0] : Object.values(hooks)[0][0].hooks[0];
-      expect(Object.keys(hook)).toEqual(keys);
-      if (host === "claude") expect(hook.onFailure).toBe("block");
-    });
+      ["codex", ["async", "additionalContextLimit", "commandWindows", "statusMessage", "command", "timeout", "type"]],
+      ["antigravity", ["command", "timeout", "type"]],
+      ["cursor", ["command", "failClosed", "loop_limit", "matcher", "timeout"]],
+    ] as const)(
+      "%s writes its passthrough fields in rulesync's order, then the handler's own fields sorted",
+      (host, keys) => {
+        const hooks = render(host, "preToolUse", { ...every, command: "c", matcher: "Bash", timeout: 5 });
+        const hook = host === "cursor" ? hooks.preToolUse[0] : Object.values(hooks)[0][0].hooks[0];
+        expect(Object.keys(hook)).toEqual(keys);
+        if (host === "claude") expect(hook.onFailure).toBe("block");
+      },
+    );
 
     it("drops command-only fields from other hook types and values of the wrong kind", () => {
       const claude = render("claude", "preToolUse", {
@@ -469,37 +466,37 @@ describe("renderHooks", () => {
       });
       expect(claude.PreToolUse[0].hooks[0]).toEqual({
         continueOnBlock: true,
-        onFailure: "block",
         if: "Bash(git *)",
+        onFailure: "block",
         type: "http",
         url: "u",
       });
-      const codex = render("codex", "preToolUse", { type: "mcp_tool", server: "s", tool: "t", ...every });
-      expect(codex.PreToolUse[0].hooks[0]).toEqual({ statusMessage: "m", type: "mcp_tool", server: "s", tool: "t" });
+      const codex = render("codex", "preToolUse", { server: "s", tool: "t", type: "mcp_tool", ...every });
+      expect(codex.PreToolUse[0].hooks[0]).toEqual({ server: "s", statusMessage: "m", tool: "t", type: "mcp_tool" });
       const invalid = render("codex", "preToolUse", {
-        command: "c",
-        async: "yes",
         additionalContextLimit: Infinity,
         args: [1],
-      });
-      expect(invalid.PreToolUse[0].hooks[0]).toEqual({ type: "command", command: "c" });
-      expect(render("claude", "preToolUse", { command: "c", args: ["a", 1] }).PreToolUse[0].hooks[0]).toEqual({
-        type: "command",
+        async: "yes",
         command: "c",
+      });
+      expect(invalid.PreToolUse[0].hooks[0]).toEqual({ command: "c", type: "command" });
+      expect(render("claude", "preToolUse", { args: ["a", 1], command: "c" }).PreToolUse[0].hooks[0]).toEqual({
+        command: "c",
+        type: "command",
       });
     });
 
     it.each([
       ["a command hook", "preToolUse", { command: "c" }, true],
       ["an http hook", "preToolUse", { type: "http", url: "u" }, true],
-      ["a prompt hook", "preToolUse", { type: "prompt", prompt: "p" }, false],
+      ["a prompt hook", "preToolUse", { prompt: "p", type: "prompt" }, false],
       ["a false value", "preToolUse", { command: "c", failClosed: false }, false],
       ...["stop", "subagentStop", "taskCompleted", "teammateIdle"].map(
         (event) => [`the ${event} event`, event, { command: "c" }, false] as const,
       ),
-      ["an async command hook", "preToolUse", { command: "c", async: true }, false],
-      ["an asyncRewake command hook", "preToolUse", { command: "c", asyncRewake: true }, false],
-      ["an http hook with async set", "preToolUse", { type: "http", url: "u", async: true }, true],
+      ["an async command hook", "preToolUse", { async: true, command: "c" }, false],
+      ["an asyncRewake command hook", "preToolUse", { asyncRewake: true, command: "c" }, false],
+      ["an http hook with async set", "preToolUse", { async: true, type: "http", url: "u" }, true],
     ] as const)("writes claude's onFailure from failClosed on %s: %s", (_, event, def, written) => {
       const hooks = render("claude", event, { failClosed: true, ...def });
       expect(Object.values(hooks)[0][0].hooks[0].onFailure).toBe(written ? "block" : undefined);
@@ -507,7 +504,7 @@ describe("renderHooks", () => {
 
     it("prefixes a leading ./ of an exec-form claude command with the braced project dir, quotes stripped", () => {
       const command = (value: string) =>
-        render("claude", "preToolUse", { command: value, args: [] }).PreToolUse[0].hooks[0].command;
+        render("claude", "preToolUse", { args: [], command: value }).PreToolUse[0].hooks[0].command;
       expect(command("./a.sh")).toBe("${CLAUDE_PROJECT_DIR}/a.sh");
       expect(command("'./q r.sh'")).toBe("${CLAUDE_PROJECT_DIR}/q r.sh");
       expect(command(`"./half`)).toBe("${CLAUDE_PROJECT_DIR}/half");

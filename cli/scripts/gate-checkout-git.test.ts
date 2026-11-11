@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
+
 import {
   agySh,
   ask,
@@ -18,6 +19,7 @@ import {
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { agyCall, denyReason, notDenied } from "./fixtures/hook-payload.ts";
 import { reviewReason, startReview } from "./fixtures/review-plan.ts";
+import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();
 const asked = (words: string[]) => JSON.stringify({ words });
@@ -33,8 +35,8 @@ it("denies a git command that commits or destroys work in the main checkout, in 
   expect(processFatTools(claudeSh(r, "rtk git commit -m x"))).toStrictEqual(deny(commit));
   expect(processFatTools(cursorSh(r, "git stash"))).toStrictEqual(deny(STASH_REASON));
   expect(processHookPayload(cursorSh(r, "git stash"))).toMatchObject({
-    permission: "deny",
     agent_message: STASH_REASON,
+    permission: "deny",
   });
   expect(processFatTools(agySh(r, "git stash"))).toStrictEqual(deny(STASH_REASON));
   expect(processFatTools(claudeSh(r, "git -C .worktrees/a stash"))).toBeNull();
@@ -83,7 +85,7 @@ it("lets a subcommand run once the session's git-asked.json holds it, and nothin
 
 it("treats a missing session id, a missing file and a bad file as no grant", () => {
   const r = tmp.committed("gate-main-");
-  const noSid = { cwd: r, tool_name: "Bash", tool_input: { command: "git stash" } };
+  const noSid = { cwd: r, tool_input: { command: "git stash" }, tool_name: "Bash" };
   expect(processFatTools(noSid)).toMatchObject({ type: "deny" });
   for (const bad of ["{", "null", "[]", '{"words":"stash"}', '{"words":[1,null]}', ""]) {
     ask(r, bad);

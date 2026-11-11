@@ -8,14 +8,14 @@ const MCP_JSON = ".mcp.json";
 const SERVERS_KEY = "mcpServers";
 const FIX = "fix it, nothing written";
 /** Plain JSON: what `claude mcp add --scope project` writes and every host parses. */
-const STRICT = { disallowComments: true, allowTrailingComma: false, allowEmptyContent: false };
+const STRICT = { allowEmptyContent: false, allowTrailingComma: false, disallowComments: true };
 
 type Json = Record<string, unknown>;
 
 const isObject = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const failed = (problem: string) => ({ ok: false as const, error: `${MCP_JSON}: ${problem}; ${FIX}` });
+const failed = (problem: string) => ({ error: `${MCP_JSON}: ${problem}; ${FIX}`, ok: false as const });
 
 /** The servers of `.mcp.json` given its text, none when it is missing (`null`); a named error when it is no JSON object or its `mcpServers` is no object. */
 export function parseMcpJson(text: string | null): { ok: true; servers: Json } | { ok: false; error: string } {

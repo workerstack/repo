@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { CONFIG_FILE } from "./config.ts";
+import { runSync, type SyncDeps } from "./sync.ts";
 import { gitFiles } from "./sync/git-files.ts";
 import { MANIFEST_REL, readManifest, renderManifest } from "./sync/manifest.ts";
 import { bunfig } from "./sync/outputs.ts";
-import { runSync, type SyncDeps } from "./sync.ts";
 
 const WEB = "packages/web/references/INDEX.md";
 const OLD_IGNORE = "tools/.gitignore";
@@ -28,7 +30,7 @@ const WARNING = `repo sync: ${SETTINGS}: not valid JSONC at line 1 (ValueExpecte
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A synced consumer, outside git, whose manifest still names the fixture files no output writes any more. */
@@ -50,8 +52,8 @@ async function consumer(named = [WEB, OLD_IGNORE, ONLY_REGION, OWNED]): Promise<
 async function sync(cwd: string, args: string[] = [], deps: SyncDeps = DEPS) {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runSync(args, { cwd, stdout: (s) => out.push(s), stderr: (s) => err.push(s) }, deps);
-  return { code, stdout: out.join(""), stderr: err.join("") };
+  const code = await runSync(args, { cwd, stderr: (s) => err.push(s), stdout: (s) => out.push(s) }, deps);
+  return { code, stderr: err.join(""), stdout: out.join("") };
 }
 
 const read = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
@@ -64,8 +66,8 @@ describe("runSync over a shared path no output writes", () => {
     const stale = `repo sync: ${OWNED} is stale and would be removed; run \`bun repo sync\`\n`;
     expect(await sync(root, ["--check"])).toEqual({
       code: 1,
-      stdout: "",
       stderr: [WARNING, stale, ...[ONLY_REGION, WEB, OLD_IGNORE].sort().map(drift)].join(""),
+      stdout: "",
     });
     for (const [rel, text] of Object.entries(FILES)) expect(read(root, rel)).toBe(text);
   });
@@ -76,7 +78,6 @@ describe("runSync cutting a shared path no output writes", () => {
     const root = await consumer();
     expect(await sync(root)).toEqual({
       code: 0,
-      stdout: `repo sync: removed ${OWNED}; cut ${[ONLY_REGION, WEB, OLD_IGNORE].sort().join(", ")}\n`,
       stderr: [
         WARNING,
         `repo sync: cut repo:deps from ${ONLY_REGION}\n`,
@@ -84,6 +85,7 @@ describe("runSync cutting a shared path no output writes", () => {
         `repo sync: cut repo:deps from ${WEB}\n`,
         `repo sync: cut the old markers from ${OLD_IGNORE}\n`,
       ].join(""),
+      stdout: `repo sync: removed ${OWNED}; cut ${[ONLY_REGION, WEB, OLD_IGNORE].sort().join(", ")}\n`,
     });
   });
 
@@ -93,7 +95,7 @@ describe("runSync cutting a shared path no output writes", () => {
     expect(read(root, WEB)).toBe("# Web\n\nMy notes.\n");
     expect(read(root, OLD_IGNORE)).toBe("dist/\n");
     expect(exists(root, ONLY_REGION) || exists(root, OWNED)).toBe(false);
-    expect(await sync(root, ["--check"])).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: WARNING });
+    expect(await sync(root, ["--check"])).toEqual({ code: 0, stderr: WARNING, stdout: "repo sync: up to date\n" });
   });
 
   it("never touches a marker-less file an output still names, invalid settings JSONC kept as is", async () => {
@@ -111,8 +113,8 @@ describe("runSync when a cut cannot be written", () => {
     const refuse: SyncDeps["writeOutput"] = (_root, output) => (output.path === WEB ? "disk full" : null);
     expect(await sync(root, [], { ...DEPS, writeOutput: refuse })).toEqual({
       code: 1,
-      stdout: "",
       stderr: `${WARNING}repo sync: ${WEB}: could not cut: disk full\n`,
+      stdout: "",
     });
     expect(read(root, WEB)).toBe(FILES[WEB]);
     expect(exists(root, "bunfig.toml")).toBe(false);
@@ -123,7 +125,7 @@ describe("runSync when a cut cannot be written", () => {
 describe("runSync over a shared path holding only marker-shaped lines sync did not write", () => {
   it("leaves it byte for byte, reports nothing and drops it from the manifest", async () => {
     const root = await consumer([USER_SHAPED]);
-    expect(await sync(root)).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: WARNING });
+    expect(await sync(root)).toEqual({ code: 0, stderr: WARNING, stdout: "repo sync: up to date\n" });
     expect(read(root, USER_SHAPED)).toBe(FILES[USER_SHAPED]);
     expect(readManifest(root).paths).not.toContain(USER_SHAPED);
   });

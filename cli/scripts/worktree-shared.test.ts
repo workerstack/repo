@@ -1,26 +1,28 @@
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { at, cli, scratch, shared, wt } from "./fixtures/worktree-repo.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
 const commitMaking = {
+  am: "git am p.patch",
+  "cherry-pick": "git cherry-pick abc",
   commit: "git commit -m x",
   merge: "git merge wt/a",
-  "cherry-pick": "git cherry-pick abc",
-  revert: "git revert HEAD",
-  am: "git am p.patch",
   pull: "git pull",
+  revert: "git revert HEAD",
 };
 const destructive = {
-  stash: "git stash",
-  reset: "git reset --hard",
   checkout: "git checkout main",
-  switch: "git switch main",
-  restore: "git restore f",
   clean: "git clean -fd",
   rebase: "git rebase main",
+  reset: "git reset --hard",
+  restore: "git restore f",
+  stash: "git stash",
+  switch: "git switch main",
 };
 
 function withWorktrees(): string {

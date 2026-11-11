@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion } from "./hooks-union.ts";
-import { MAP } from "./hooks-union-commands.ts";
-import { AGY_WRITE_MATCHER, AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
+
 import {
   must,
   ownedPre,
@@ -16,6 +15,9 @@ import {
   type HookGroup,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+import { MAP } from "./hooks-union-commands.ts";
+import { AGY_WRITE_MATCHER, AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
+import { applyUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
 const AGY_SCRUB_GATE = [ownedPre[0], { ...ownedPre[1], matcher: "read_file|run_command|write_file|edit_file" }];
@@ -53,7 +55,7 @@ it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
 
 it("appends flat SessionStart entries after rulesync's, the session map first", () => {
   const ws = consumerRepo("union-agy-session-");
-  const mapEntry = { type: "command", command: MAP, timeout: 5 };
+  const mapEntry = { command: MAP, timeout: 5, type: "command" };
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
   agents.rulesync.SessionStart = [mapEntry];
   writeJson(ws, ".agents/hooks.json", agents);

@@ -1,13 +1,15 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { blocksOf, checkExamples, type ExampleRoot } from "./docs-examples.ts";
 import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const ctx = (root: string, extra: Partial<ExampleRoot> = {}): ExampleRoot => ({
-  root,
+  build: false,
   dir: "",
   name: "@ws/a",
-  build: false,
+  root,
   ...extra,
 });
 const doc = (...fences: string[]) => blocksOf("", "references/auth.md", ["# Auth", ...fences].join("\n"));

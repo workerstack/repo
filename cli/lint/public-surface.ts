@@ -5,10 +5,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { isRecord, nearestManifest } from "./manifest.ts";
+import { parseModule } from "./parse-module.ts";
 import { DEFAULT, MANIFEST, NAMESPACE } from "./public-surface.constants.ts";
 import { entryFiles, readJson } from "./public-surface.entries.ts";
-import { parseModule } from "./parse-module.ts";
 import { referencesOf } from "./public-surface.syntax.ts";
 import type {
   Graph,
@@ -99,7 +100,7 @@ function exportNames(graph: Graph, module: Module, seen: Set<Module>): string[] 
     if (target === null) return [];
     const next = moduleOf(graph, target);
     if (next === null) {
-      fail(graph, module, { form: star.source, at: star.at });
+      fail(graph, module, { at: star.at, form: star.source });
       return [];
     }
     return exportNames(graph, next, seen).filter((name) => name !== DEFAULT);
@@ -171,11 +172,11 @@ export function publicSurface(root: string): Surface {
   const manifest = readJson(path.join(root, MANIFEST));
   if (!isRecord(manifest) || manifest["private"] === true) return surface;
   const graph: Graph = {
-    root,
-    modules: new Map(),
-    published: new Set(),
     failed: new Set(),
+    modules: new Map(),
     names: surface.names,
+    published: new Set(),
+    root,
     unknown: surface.unknown,
   };
   surface.entries = entryFiles(root, manifest["exports"]);

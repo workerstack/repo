@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
-import { ciLine } from "./release.ts";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world, type World } from "../fixtures/release-world.ts";
+import { ciLine } from "./release.ts";
 
 afterEach(removePlanted);
 
@@ -27,15 +29,15 @@ async function released() {
   feat(w);
   const seen: { tags: string; pushed: string }[] = [];
   const onWatch = () =>
-    seen.push({ tags: gitIn(w.remote, "tag", "-l"), pushed: gitIn(w.remote, "log", "-1", "--format=%s") });
-  return { w, seen, got: await release(w, [], fakeGh({ onWatch })) };
+    seen.push({ pushed: gitIn(w.remote, "log", "-1", "--format=%s"), tags: gitIn(w.remote, "tag", "-l") });
+  return { got: await release(w, [], fakeGh({ onWatch })), seen, w };
 }
 
 describe("a release", () => {
   it("prints the summary line and exits 0", async () => {
     const { got } = await released();
     const line = `${NAME} 0.1.0 → 0.1.1 · committed · pushed · CI passed · tagged ${TAG}\n`;
-    expect(got).toEqual({ code: 0, out: line, err: "" });
+    expect(got).toEqual({ code: 0, err: "", out: line });
   });
 
   it("commits only the version line and the stamped changelog", async () => {
@@ -49,7 +51,7 @@ describe("a release", () => {
 
   it("pushes the commit and then tags it, the tag annotated and pushed after CI passed", async () => {
     const { w, seen } = await released();
-    expect(seen).toEqual([{ tags: `${NAME}@0.1.0`, pushed: SUBJECT }]);
+    expect(seen).toEqual([{ pushed: SUBJECT, tags: `${NAME}@0.1.0` }]);
     expect(gitIn(w.work, "cat-file", "-t", `refs/tags/${TAG}`)).toBe("tag");
     expect(gitIn(w.work, "rev-parse", `${TAG}^{commit}`)).toBe(head(w));
     expect(gitIn(w.remote, "rev-parse", `${TAG}^{commit}`)).toBe(head(w));
@@ -91,7 +93,7 @@ describe("a release CI does not pass", () => {
     const w = world();
     feat(w);
     const got = await release(w, [], fakeGh(behavior));
-    return { w, got, short: gitIn(w.work, "rev-parse", "--short=7", "HEAD") };
+    return { got, short: gitIn(w.work, "rev-parse", "--short=7", "HEAD"), w };
   };
 
   it("prints the jobs and the failed line, pushes, and leaves no tag", async () => {
@@ -99,7 +101,7 @@ describe("a release CI does not pass", () => {
     expect(got.out).toContain("failed: test; logs below\nboom\n");
     const line = `CI failed on ${short} (jobs above); fix it in a new commit, push, and ${AGAIN}`;
     expect(got).toMatchObject({ code: 1, err: `repo release: ${line}\n` });
-    expect(snapshot(w)).toMatchObject({ tags: `${NAME}@0.1.0`, remoteTags: `${NAME}@0.1.0` });
+    expect(snapshot(w)).toMatchObject({ remoteTags: `${NAME}@0.1.0`, tags: `${NAME}@0.1.0` });
     expect(gitIn(w.remote, "log", "-1", "--format=%s")).toBe(SUBJECT);
   });
 
@@ -112,7 +114,7 @@ describe("a release CI does not pass", () => {
   it("says there was no CI result when no run appears", async () => {
     const { w, got, short } = await failing({ run: false });
     const line = `no CI result for ${short} (no ci run after 120s); it is pushed and untagged; ${AGAIN}`;
-    expect(got).toMatchObject({ code: 1, out: "", err: `repo release: ${line}\n` });
+    expect(got).toMatchObject({ code: 1, err: `repo release: ${line}\n`, out: "" });
     expect(snapshot(w).tags).toBe(`${NAME}@0.1.0`);
   });
 });
@@ -130,7 +132,7 @@ describe("a rerun after red CI", () => {
     const w = await pendingAfterRed();
     const before = head(w);
     const got = await release(w, []);
-    expect(got).toEqual({ code: 0, out: `${NAME} 0.1.1 · already committed · CI passed · tagged ${TAG}\n`, err: "" });
+    expect(got).toEqual({ code: 0, err: "", out: `${NAME} 0.1.1 · already committed · CI passed · tagged ${TAG}\n` });
     expect(head(w)).toBe(before);
     expect(gitIn(w.remote, "rev-parse", `${TAG}^{commit}`)).toBe(before);
   });

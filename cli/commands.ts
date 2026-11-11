@@ -3,8 +3,8 @@ import { DOCS_SUMMARY } from "./docs.constants.ts";
 import { GITHUB_SUMMARY } from "./github.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
-import { UPDATE_SUMMARY } from "./update.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
+import { UPDATE_SUMMARY } from "./update.constants.ts";
 
 export type Main = (argv: string[]) => number | Promise<number>;
 
@@ -48,130 +48,139 @@ export type CommandName =
   | "docs";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
-  job: {
-    summary: "Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)",
-    load: () => import("./scripts/job.ts"),
-  },
-  worktree: {
-    summary: "Managed worktrees: add, list, finish, remove",
-    load: () => import("./scripts/worktree.ts"),
-  },
-  persist: {
-    summary: "Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])",
-    load: () => import("./scripts/persist.ts"),
-  },
-  "phase-files": {
-    summary: "Map a parallel group's unstaged changes to its phases",
-    load: () => import("./scripts/phase-files.ts"),
-  },
-  lessons: { summary: "Match, hit and list lessons", load: () => import("./scripts/lessons.ts") },
-  browser: { summary: "Browse with Lightpanda, Chromium when blocked", load: () => import("./scripts/browser.ts") },
-  "google-workspace": {
-    summary: "Google Sheets, Docs, Slides, Calendar and Gmail",
-    load: () => import("./scripts/google-workspace.ts"),
-  },
-  jev: { summary: "Yes/no or named-option decision on saved text", load: () => import("./scripts/jev.ts") },
-  listen: { summary: "Speech-to-text from the mic", load: () => import("./scripts/listen.ts") },
-  speak: { summary: "Text-to-speech", load: () => import("./scripts/speak.ts") },
-  setup: {
-    summary: "Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)",
-    load: () => import("./scripts/setup.ts"),
-  },
-  doctor: {
-    summary: "Check the tools and versions this repo needs",
-    load: () => import("./scripts/doctor.ts"),
-  },
+  // Key order is the `repo --help` row order: one blank-line group per section, sorted within, so a reader scans
+  // help by what a command is for.
+  // Set up and maintain the machine and the checkout.
   clean: {
+    load: () => import("./scripts/clean.ts"),
     summary:
       "Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; --dry-run lists only)",
-    load: () => import("./scripts/clean.ts"),
   },
-  yolo: {
-    summary: "Turn on full-permission mode on every host (--check, --dry-run, --host <id>)",
-    load: () => import("./scripts/sync-global-settings.ts"),
+  doctor: {
+    load: () => import("./scripts/doctor.ts"),
+    summary: "Check the tools and versions this repo needs",
   },
   "purge-mcps": {
-    summary: "Purge global MCP servers (dry-run; --apply to write)",
     load: () => import("./scripts/purge-global-mcps.ts"),
+    summary: "Purge global MCP servers (dry-run; --apply to write)",
+  },
+  setup: {
+    load: () => import("./scripts/setup.ts"),
+    summary: "Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)",
   },
   tasks: {
-    summary: "Write .vscode/tasks.json from package scripts (VS Code and Cursor)",
     load: () => import("./scripts/vscode-tasks.ts"),
+    summary: "Write .vscode/tasks.json from package scripts (VS Code and Cursor)",
   },
-  lint: {
-    summary:
-      "Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)",
-    load: () => import("./scripts/lint-main.ts").then(({ lintMain }) => ({ main: lintMain })),
+  yolo: {
+    load: () => import("./scripts/sync-global-settings.ts"),
+    summary: "Turn on full-permission mode on every host (--check, --dry-run, --host <id>)",
   },
-  fmt: {
-    summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",
-    load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
+
+  // Tools an agent runs.
+  browser: { load: () => import("./scripts/browser.ts"), summary: "Browse with Lightpanda, Chromium when blocked" },
+  "google-workspace": {
+    load: () => import("./scripts/google-workspace.ts"),
+    summary: "Google Sheets, Docs, Slides, Calendar and Gmail",
   },
-  turn: {
-    summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
-    load: () => import("./scripts/turn.ts"),
+  jev: { load: () => import("./scripts/jev.ts"), summary: "Yes/no or named-option decision on saved text" },
+  job: {
+    load: () => import("./scripts/job.ts"),
+    summary: "Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)",
   },
+  lessons: { load: () => import("./scripts/lessons.ts"), summary: "Match, hit and list lessons" },
+  listen: { load: () => import("./scripts/listen.ts"), summary: "Speech-to-text from the mic" },
+  persist: {
+    load: () => import("./scripts/persist.ts"),
+    summary: "Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])",
+  },
+  "phase-files": {
+    load: () => import("./scripts/phase-files.ts"),
+    summary: "Map a parallel group's unstaged changes to its phases",
+  },
+  speak: { load: () => import("./scripts/speak.ts"), summary: "Text-to-speech" },
+  worktree: {
+    load: () => import("./scripts/worktree.ts"),
+    summary: "Managed worktrees: add, list, finish, remove",
+  },
+
+  // Gates on the code.
   ci: {
-    summary: "Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD",
     load: () => import("./scripts/ci.ts"),
-  },
-  coverage: {
-    summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
-    load: () => import("./coverage.ts"),
-  },
-  mutate: {
-    summary:
-      "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
-    load: () => import("./mutate.ts"),
-  },
-  release: {
-    summary:
-      "Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm",
-    load: () => import("./release/main.ts"),
+    summary: "Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run for HEAD",
   },
   "commit-msg": {
+    load: () => import("./commit-msg.ts"),
     summary:
       "Check a commit message file against the staged change (the commit-msg git hook), or each commit of --range <base>..<head>",
-    load: () => import("./commit-msg.ts"),
   },
-  github: { summary: GITHUB_SUMMARY, load: () => import("./github-apply.ts") },
-  link: { summary: LINK_SUMMARY, load: () => import("./link.ts") },
-  unlink: { summary: UNLINK_SUMMARY, load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })) },
-  update: { summary: UPDATE_SUMMARY, load: () => import("./update.ts") },
-  remove: { summary: REMOVE_SUMMARY, load: () => import("./remove.ts") },
-  docs: { summary: DOCS_SUMMARY, load: () => import("./docs.ts") },
+  coverage: {
+    load: () => import("./coverage.ts"),
+    summary: "run the suite with coverage and raise coverage-floors.json; a drop fails",
+  },
+  docs: { load: () => import("./docs.ts"), summary: DOCS_SUMMARY },
+  fmt: {
+    load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
+    summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",
+  },
+  lint: {
+    load: () => import("./scripts/lint-main.ts").then(({ lintMain }) => ({ main: lintMain })),
+    summary:
+      "Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower .repo/lint-baseline.json)",
+  },
+  mutate: {
+    load: () => import("./mutate.ts"),
+    summary:
+      "mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> [--write]: score reports against mutation-floors.json",
+  },
+  turn: {
+    load: () => import("./scripts/turn.ts"),
+    summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
+  },
+
+  // Dependencies, the GitHub repository and releases.
+  github: { load: () => import("./github-apply.ts"), summary: GITHUB_SUMMARY },
+  link: { load: () => import("./link.ts"), summary: LINK_SUMMARY },
+  release: {
+    load: () => import("./release/main.ts"),
+    summary:
+      "Release the root package: bump from commits, stamp CHANGELOG.md, commit, push, wait on CI, tag ([--stable | --pre <id>]); wait <name>@<version>: poll npm",
+  },
+  remove: { load: () => import("./remove.ts"), summary: REMOVE_SUMMARY },
+  unlink: { load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })), summary: UNLINK_SUMMARY },
+  update: { load: () => import("./update.ts"), summary: UPDATE_SUMMARY },
 };
 
 export const HOOKS: Readonly<Record<HookName, HookEntry>> = {
   "gate-fat-tools": {
-    summary: "Fat-tool gate",
     argv: [],
     load: () => import("./scripts/gate-fat-tools.ts"),
+    summary: "Fat-tool gate",
   },
   "orchestrate-parent": {
-    summary: "Persist, approval and session gate",
     argv: [],
     load: () => import("./scripts/orchestrate-parent.ts"),
+    summary: "Persist, approval and session gate",
   },
   "rtk-grok": {
-    summary: "rtk rewrite for Grok",
     argv: [],
     load: () => import("./scripts/rtk-grok.ts"),
+    summary: "rtk rewrite for Grok",
   },
   "scrub-spawn-prompt": {
-    summary: "Spawn prompt scrub",
     argv: [],
     load: () => import("./scripts/scrub-spawn-prompt.ts"),
+    summary: "Spawn prompt scrub",
   },
   "session-map": {
-    summary: "Session-start folder map",
     argv: [],
     load: () => import("./scripts/session-map.ts"),
+    summary: "Session-start folder map",
   },
   worktree: {
-    summary: "Claude Code worktree create and remove",
     argv: ["hook"],
     load: () => import("./scripts/worktree.ts"),
+    summary: "Claude Code worktree create and remove",
   },
 };
 

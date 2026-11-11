@@ -1,7 +1,8 @@
 import path from "node:path";
+
 import type { ResolvedConfig } from "../config.ts";
-import { COPIED_MARKER, PREFIX } from "./migrate.constants.ts";
 import { gitTracked, present } from "./migrate-fs.ts";
+import { COPIED_MARKER, PREFIX } from "./migrate.constants.ts";
 import { planAdopt, planClaudeSettings } from "./migration-adopt.ts";
 import { planRules, planSkills, planSubagents } from "./migration-docs.ts";
 import { planCopies, planLeftovers, planPacks, planRemove, planUntrack } from "./migration-finish.ts";
@@ -71,7 +72,7 @@ export function planMigration(
 ): MigrationStep[] {
   const { stock, generated } = input;
   if (!present(path.join(root, COPIED_MARKER)) || !present(path.join(stock, "package.json"))) return [];
-  const state = new MigrationState({ root, stock, generated, history: deps.history ?? readStockHistory() });
+  const state = new MigrationState({ generated, history: deps.history ?? readStockHistory(), root, stock });
   planRules(state);
   planSubagents(state);
   planSkills(state);
@@ -106,7 +107,7 @@ export function planAdoption(
 ): MigrationStep[] {
   const { stock, config, outputs } = input;
   const history = deps.history ?? readStockHistory();
-  const state = new MigrationState({ root, stock, generated: generatedFiles(outputs), history });
+  const state = new MigrationState({ generated: generatedFiles(outputs), history, root, stock });
   planAdopt(state, { config, outputs, owned: new Set(input.manifest), tracked: deps.tracked ?? gitTracked });
   return state.steps;
 }

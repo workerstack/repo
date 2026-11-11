@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { LOCK_OK, MANIFEST, ROOT, lines } from "./fixtures/check-workspace-lines.ts";
 
 const sdk = (rest: object, root: object = ROOT): Record<string, object> => ({
@@ -14,8 +15,8 @@ describe("checkWorkspace public edges", () => {
   it("names a private member in each runtime field of a public member, one line each", () => {
     const files = sdk({
       dependencies: { "@acme/core": "workspace:*" },
-      peerDependencies: { "@acme/core": "workspace:*" },
       optionalDependencies: { "@acme/core": "workspace:*" },
+      peerDependencies: { "@acme/core": "workspace:*" },
     });
     expect(lines(files, LOCK_OK)).toStrictEqual([
       edge("packages/sdk/package.json", ["@acme/core", "dependencies", "packages/sdk"]),
@@ -35,7 +36,7 @@ describe("checkWorkspace public edges", () => {
 
 describe("checkWorkspace public root edges", () => {
   it("names a private member a public root depends on", () => {
-    const root = { ...ROOT, name: "@acme/root", private: false, dependencies: { "@acme/core": "workspace:*" } };
+    const root = { ...ROOT, dependencies: { "@acme/core": "workspace:*" }, name: "@acme/root", private: false };
     expect(lines(sdk({}, root), LOCK_OK)).toStrictEqual([
       'package.json: a workspace root has no "dependencies"; move "@acme/core" into the package that uses it',
       edge("package.json", ["@acme/core", "dependencies", "the root package"]),
@@ -46,10 +47,10 @@ describe("checkWorkspace public root edges", () => {
 describe("checkWorkspace public edges that pass", () => {
   it("passes devDependencies, a public member and a private package's own edges", () => {
     const files = sdk({
-      devDependencies: { "@acme/core": "workspace:*" },
       dependencies: { "@acme/open": "workspace:*" },
+      devDependencies: { "@acme/core": "workspace:*" },
     });
-    files["packages/core/package.json"] = { name: "@acme/core", dependencies: { "@acme/open": "workspace:*" } };
+    files["packages/core/package.json"] = { dependencies: { "@acme/open": "workspace:*" }, name: "@acme/core" };
     expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 });

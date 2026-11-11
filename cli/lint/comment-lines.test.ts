@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { commentLines } from "./comment-lines.ts";
 
 it("turns a one-line comment into one // line", () => {

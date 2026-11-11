@@ -1,11 +1,13 @@
 import os from "node:os";
+
 import { describe, expect, it } from "vitest";
+
 import { parseArgv, resolveHome } from "./purge-paths.ts";
 
 describe("parseArgv", () => {
   it("defaults dry-run; --apply writes", () => {
-    expect(parseArgv([])).toStrictEqual({ ok: true, apply: false });
-    expect(parseArgv(["--apply"])).toStrictEqual({ ok: true, apply: true });
+    expect(parseArgv([])).toStrictEqual({ apply: false, ok: true });
+    expect(parseArgv(["--apply"])).toStrictEqual({ apply: true, ok: true });
     expect(parseArgv(["--wat"]).ok).toBe(false);
   });
 });

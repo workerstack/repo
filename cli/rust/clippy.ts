@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { childEnv } from "../env.ts";
-import { toolEnv } from "../scripts/tool-env.ts";
 import type { Result } from "../scripts/lint-baseline.ts";
+import { toolEnv } from "../scripts/tool-env.ts";
 import {
   CARGO,
   CLIPPY_ARGS,
@@ -35,26 +37,26 @@ export const runCargo: CargoRun = (root, args) => {
   const result = spawnSync(CARGO, [...args], options);
   if (result.error) {
     const missing = Reflect.get(result.error, "code") === NOT_FOUND;
-    return { status: 1, stdout: "", stderr: result.error.message, missing };
+    return { missing, status: 1, stderr: result.error.message, stdout: "" };
   }
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr, missing: false };
+  return { missing: false, status: result.status, stderr: result.stderr, stdout: result.stdout };
 };
 
 /** The shapes of the cargo lines this reads, built once per run so the module runs no code. */
 function schemas() {
   const span = z.object({
+    column_start: z.number(),
     file_name: z.string(),
     is_primary: z.boolean(),
     line_start: z.number(),
-    column_start: z.number(),
   });
   const diagnostic = z.object({
+    code: z.object({ code: z.string() }).nullable(),
     level: z.string(),
     message: z.string(),
-    code: z.object({ code: z.string() }).nullable(),
     spans: z.array(span),
   });
-  return { head: z.object({ reason: z.string() }), compilerLine: z.object({ message: diagnostic }) };
+  return { compilerLine: z.object({ message: diagnostic }), head: z.object({ reason: z.string() }) };
 }
 type Schemas = ReturnType<typeof schemas>;
 type Diagnostic = z.infer<Schemas["compilerLine"]>["message"];
@@ -110,7 +112,7 @@ function judge(message: Diagnostic): Judged {
   if (where === undefined) return { problem: `cargo clippy: ${message.message} has a lint code but no primary span` };
   const file = posix(where.file_name);
   return {
-    hit: { file, line: where.line_start, column: where.column_start, rule: ruleOf(code), message: message.message },
+    hit: { column: where.column_start, file, line: where.line_start, message: message.message, rule: ruleOf(code) },
   };
 }
 
@@ -119,7 +121,7 @@ type Found = { hits: Map<string, RustHit>; problems: Set<string>; errored: boole
 
 /** Reads every line of `stdout`; the lib and test targets print a lint twice, so a hit counts once per place and rule. */
 function collect(stdout: string): Found {
-  const found: Found = { hits: new Map(), problems: new Set(), errored: false };
+  const found: Found = { errored: false, hits: new Map(), problems: new Set() };
   const schema = schemas();
   for (const line of stdout.split(/\r?\n/).filter((text) => text.trim() !== "")) {
     const read = readLine(line, schema);
@@ -143,16 +145,16 @@ function collect(stdout: string): Found {
  * problems: the code was not linted, so no hit count would be true.
  */
 export function clippyHits(root: string, run: CargoRun): Result<RustHit[]> {
-  if (!fs.existsSync(path.join(root, LOCK_FILE))) return { ok: false, errors: [MISSING_LOCK] };
+  if (!fs.existsSync(path.join(root, LOCK_FILE))) return { errors: [MISSING_LOCK], ok: false };
   const result = run(root, CLIPPY_ARGS);
-  if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
   if (result.status === STALE_STATUS && result.stderr.includes(STALE_MARKER))
-    return { ok: false, errors: [STALE_LOCK] };
+    return { errors: [STALE_LOCK], ok: false };
   const found = collect(result.stdout);
   const problems = [...found.problems];
   if (result.status !== 0 && !found.errored) {
     const detail = result.stderr.trim();
     problems.push(`cargo clippy exited ${result.status} and printed no error${detail === "" ? "" : `: ${detail}`}`);
   }
-  return problems.length > 0 ? { ok: false, errors: problems } : { ok: true, value: [...found.hits.values()] };
+  return problems.length > 0 ? { errors: problems, ok: false } : { ok: true, value: [...found.hits.values()] };
 }

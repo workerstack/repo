@@ -2,11 +2,13 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
 import { expect, it, vi } from "vitest";
+
+import { bunPath, linkText } from "../../dev/test-paths.ts";
 import { HOSTS } from "../config.ts";
 import { runSync } from "../sync.ts";
-import { renderTrees } from "./trees.ts";
-import { bunPath, linkText } from "../../dev/test-paths.ts";
+import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
   SELF_ROOT,
@@ -16,7 +18,7 @@ import {
   linkTarget,
   stagesIn,
 } from "./fixtures/trees-kit.ts";
-import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { renderTrees } from "./trees.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
@@ -54,14 +56,14 @@ const child = (script: string) =>
 async function sync(root: string, ...args: string[]) {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await runSync(args, { cwd: root, stdout: (s) => out.push(s), stderr: (s) => err.push(s) });
-  return { code, stdout: out.join(""), stderr: err.join("") };
+  const code = await runSync(args, { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+  return { code, stderr: err.join(""), stdout: out.join("") };
 }
 
 it("keeps every output tracked and links skills inside the repo", () => {
   const result = renderTrees({
     ...context(SELF_ROOT, HOSTS, { skills: ["google-workspace", "listen", "speak", "clasp"] }),
-    workspace: { root: SELF_ROOT, manifest: { name: "@workerstack/repo" }, packages: [] },
+    workspace: { manifest: { name: "@workerstack/repo" }, packages: [], root: SELF_ROOT },
   });
   if (!result.ok) throw new Error(result.errors.join("\n"));
   expect(result.outputs.every((output) => output.tracked)).toBe(true);
@@ -78,7 +80,7 @@ it("renders the same files while other processes render the same root", async ()
 
 it("regenerates the committed trees byte for byte", async () => {
   const out: string[] = [];
-  const code = await runSync(["--check"], { cwd: SELF_ROOT, stdout: (s) => out.push(s), stderr: (s) => out.push(s) });
+  const code = await runSync(["--check"], { cwd: SELF_ROOT, stderr: (s) => out.push(s), stdout: (s) => out.push(s) });
   expect(out.join("")).toBe("repo sync: up to date\n");
   expect(code).toBe(0);
 });
@@ -99,7 +101,7 @@ it("replaces a dangling skill link left by a removed node_modules instead of fol
   );
   expect(fs.existsSync(path.join(link, "SKILL.md"))).toBe(true);
   expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
-  expect(await sync(root, "--check")).toStrictEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
+  expect(await sync(root, "--check")).toStrictEqual({ code: 0, stderr: "", stdout: "repo sync: up to date\n" });
 });
 
 it("reports a failed render and leaves no stage behind", async () => {

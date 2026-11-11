@@ -1,7 +1,9 @@
 import path from "node:path";
+
 import { z } from "zod";
+
 import type { Runner } from "../scripts/ci-wait.ts";
-import { BUN_PACK, PACK_DIR_PREFIX, TAR_MANIFEST, TARBALL_EXTENSION, UNPINNED } from "./release.constants.ts";
+import { refuse } from "./refuse.ts";
 import {
   PACKED_UNREADABLE,
   PACK_ARGS,
@@ -10,7 +12,7 @@ import {
   packFailed,
   unpinned,
 } from "./release-messages.constants.ts";
-import { refuse } from "./refuse.ts";
+import { BUN_PACK, PACK_DIR_PREFIX, TAR_MANIFEST, TARBALL_EXTENSION, UNPINNED } from "./release.constants.ts";
 
 /** Where `repo release pack` runs and prints, and the bun, tar and temp directory it works through. */
 export type PackIo = {
@@ -31,12 +33,12 @@ export type Packed = { tarball: string; name: string; version: string };
 const pins = () => z.record(z.string(), z.string()).default({});
 const packedSchema = () =>
   z.object({
-    name: z.string(),
-    version: z.string(),
     dependencies: pins(),
     devDependencies: pins(),
-    peerDependencies: pins(),
+    name: z.string(),
     optionalDependencies: pins(),
+    peerDependencies: pins(),
+    version: z.string(),
   });
 
 /** Packs the package in `io.cwd` and checks its package.json; the tarball and its manifest, or the refusal line. */
@@ -63,7 +65,7 @@ export function packTarball(
     const bad = Object.entries(entries).find(([, spec]) => UNPINNED.test(spec));
     if (bad !== undefined) return unpinned(bad[1], bad[0]);
   }
-  return { tarball, name, version };
+  return { name, tarball, version };
 }
 
 /** `repo release pack`: prints the path of the tarball of this checkout's package, after checking its package.json. */

@@ -1,15 +1,17 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { runHook } from "./fixtures/run-hook.ts";
-import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 import { main } from "./orchestrate-parent.ts";
+import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function temp(prefix = "stop-"): string {
@@ -66,7 +68,7 @@ describe("a Stop that is not the end of a turn", () => {
   it("passes when the host stopped for a reason other than end_turn", () => {
     const ws = temp();
     ask(ws, "a2");
-    expect(stop(ws, "a2", { reason: "max_tokens", last_assistant_message: "Done." })).toBeNull();
+    expect(stop(ws, "a2", { last_assistant_message: "Done.", reason: "max_tokens" })).toBeNull();
   });
 });
 
@@ -112,23 +114,23 @@ describe("a session receipt", () => {
   });
 });
 
-const BEFORE = JSON.stringify({ role: "assistant", content: "before" });
+const BEFORE = JSON.stringify({ content: "before", role: "assistant" });
 const shapes: [string, unknown, string][] = [
   ["a line that is not JSON", "not json{", "before"],
   ["a JSON line that is not an object", 42, "before"],
-  ["a user record", { type: "user", text: "u" }, "before"],
-  ["a record of role user", { role: "user", content: "u" }, "before"],
-  ["a record of role human", { message: { role: "human", content: "u" } }, "before"],
-  ["a tool result record", { type: "tool_result", text: "t" }, "before"],
+  ["a user record", { text: "u", type: "user" }, "before"],
+  ["a record of role user", { content: "u", role: "user" }, "before"],
+  ["a record of role human", { message: { content: "u", role: "human" } }, "before"],
+  ["a tool result record", { text: "t", type: "tool_result" }, "before"],
   ["a record with no type or role", { text: "t" }, "before"],
-  ["an assistant record with empty parts", { type: "assistant", content: [] }, "before"],
-  ["an assistant record with blank content", { type: "assistant", content: "  " }, "before"],
+  ["an assistant record with empty parts", { content: [], type: "assistant" }, "before"],
+  ["an assistant record with blank content", { content: "  ", type: "assistant" }, "before"],
   ["an assistant record with no text at all", { role: "assistant" }, "before"],
-  ["a role set on the message", { message: { role: "assistant", content: "from message" } }, "from message"],
+  ["a role set on the message", { message: { content: "from message", role: "assistant" } }, "from message"],
   ["a text field", { role: "assistant", text: "from text" }, "from text"],
   [
     "parts, skipping tool parts and non-objects",
-    { type: "assistant", content: ["bare", { type: "tool_use", text: "no" }, { type: "text" }, { text: "kept" }] },
+    { content: ["bare", { text: "no", type: "tool_use" }, { type: "text" }, { text: "kept" }], type: "assistant" },
     "kept",
   ],
 ];
@@ -144,12 +146,12 @@ describe("the last assistant message read from a transcript", () => {
 
   it("reads only the tail of a transcript larger than the tail window", () => {
     const ws = temp();
-    const filler = JSON.stringify({ role: "assistant", content: "x".repeat(1000) });
+    const filler = JSON.stringify({ content: "x".repeat(1000), role: "assistant" });
     const lines = Array.from({ length: 700 }, () => filler);
     const file = plant(
       ws,
       "transcript.jsonl",
-      [...lines, JSON.stringify({ role: "assistant", content: "last" })].join("\n"),
+      [...lines, JSON.stringify({ content: "last", role: "assistant" })].join("\n"),
     );
     stop(ws, "t2", { transcriptPath: file });
     expect(receipt(ws, "t2")[0]).toBe("last");
@@ -164,8 +166,8 @@ describe("the last assistant message read from a transcript", () => {
 
 const need = (extra: Record<string, unknown>) => ({
   hook_event_name: "SubagentStop",
-  subagent_type: "scout",
   session_id: "c1",
+  subagent_type: "scout",
   ...extra,
 });
 
@@ -181,8 +183,8 @@ describe("a child agent stop", () => {
     const ws = temp();
     expect(send(ws, need({}))).toBeNull();
     const msg = 'need: [{"job":"search","query":"x"}]';
-    expect(send(ws, need({ stop_hook_active: true, last_assistant_message: msg }))).toBeNull();
-    expect(stop(ws, "c1", { subagentType: "scout", stopHookActive: true, lastAssistantMessage: msg })).toBeNull();
+    expect(send(ws, need({ last_assistant_message: msg, stop_hook_active: true }))).toBeNull();
+    expect(stop(ws, "c1", { lastAssistantMessage: msg, stopHookActive: true, subagentType: "scout" })).toBeNull();
   });
 });
 

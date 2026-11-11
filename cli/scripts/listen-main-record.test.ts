@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
+import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./fixtures/listen-env.ts";
 import { NEED_FFMPEG } from "./listen.ts";
 import type { ChildLike } from "./listen.ts";
-import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./fixtures/listen-env.ts";
 
 afterEach(cleanupTmp);
 
@@ -16,8 +18,8 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
   const on: Record<string, Handler> = {};
   const spawned: Array<{ bin: string; args: string[] }> = [];
   const spawnFn = (bin: string, args: string[]): ChildLike => {
-    spawned.push({ bin, args });
-    return { stdin: spec.stdin ?? null, on: (ev: string, cb: Handler) => void (on[ev] = cb) };
+    spawned.push({ args, bin });
+    return { on: (ev: string, cb: Handler) => void (on[ev] = cb), stdin: spec.stdin ?? null };
   };
   try {
     const pending = run(spec.argv, { spawnFn });
@@ -63,13 +65,13 @@ describe("_record signals", () => {
   it("SIGINT and SIGTERM ask ffmpeg to quit by writing q to its stdin", async () => {
     const writes: string[] = [];
     let ended = 0;
-    const stdin = { write: (c: string) => writes.push(c), end: () => void (ended += 1) };
+    const stdin = { end: () => void (ended += 1), write: (c: string) => writes.push(c) };
     const drive: Drive = ({ on, signal }) => {
       signal("SIGINT");
       signal("SIGTERM");
       on.exit?.(0);
     };
-    const r = await record({ argv, stdin, drive });
+    const r = await record({ argv, drive, stdin });
     expect(r.code).toBe(0);
     expect(writes).toStrictEqual(["q\n", "q\n"]);
     expect(ended).toBe(2);
@@ -98,7 +100,7 @@ describe("_record broken stdin", () => {
       signal("SIGINT");
       on.exit?.(0);
     };
-    expect((await record({ argv, stdin: { write: broken, end: broken }, drive })).code).toBe(0);
+    expect((await record({ argv, drive, stdin: { end: broken, write: broken } })).code).toBe(0);
   });
 });
 

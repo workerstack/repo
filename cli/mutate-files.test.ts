@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { parseArgs } from "./mutate-args.ts";
 import { selectFiles, splitShards } from "./mutate-files.ts";
 
@@ -54,8 +55,8 @@ it("hands one shard everything when there is one, and nothing to a shard past th
 it("defaults to one full run with the default report", () => {
   expect(parseArgs([])).toStrictEqual({
     kind: "run",
-    shard: { index: 1, total: 1 },
     report: undefined,
+    shard: { index: 1, total: 1 },
     tool: "stryker",
   });
 });
@@ -63,8 +64,8 @@ it("defaults to one full run with the default report", () => {
 it("reads --shard and --report, as two words or with =", () => {
   expect(parseArgs(["--shard", "2/8", "--report", "r/m.json"])).toStrictEqual({
     kind: "run",
-    shard: { index: 2, total: 8 },
     report: "r/m.json",
+    shard: { index: 2, total: 8 },
     tool: "stryker",
   });
   expect(parseArgs(["--shard=3/4", "--report=x.json"])).toMatchObject({ shard: { index: 3, total: 4 } });
@@ -80,13 +81,13 @@ it.each(["0/8", "9/8", "a/b", "2", "2/0", "1/2/3", ""])("refuses --shard %j", (v
 it("reads --rust anywhere among the flags as the cargo-mutants tool", () => {
   expect(parseArgs(["--rust"])).toStrictEqual({
     kind: "run",
-    shard: { index: 1, total: 1 },
     report: undefined,
+    shard: { index: 1, total: 1 },
     tool: "cargo-mutants",
   });
   expect(parseArgs(["--shard", "2/4", "--rust", "--report", "r.json"])).toMatchObject({
-    shard: { index: 2, total: 4 },
     report: "r.json",
+    shard: { index: 2, total: 4 },
     tool: "cargo-mutants",
   });
   expect(parseArgs(["--rust=x"])).toStrictEqual({
@@ -101,9 +102,9 @@ it("refuses --shard and --report without a value", () => {
 });
 
 it("reads check <dir> with and without --write", () => {
-  expect(parseArgs(["check", "reports"])).toStrictEqual({ kind: "check", dir: "reports", write: false });
-  expect(parseArgs(["check", "reports", "--write"])).toStrictEqual({ kind: "check", dir: "reports", write: true });
-  expect(parseArgs(["check", "--write", "reports"])).toStrictEqual({ kind: "check", dir: "reports", write: true });
+  expect(parseArgs(["check", "reports"])).toStrictEqual({ dir: "reports", kind: "check", write: false });
+  expect(parseArgs(["check", "reports", "--write"])).toStrictEqual({ dir: "reports", kind: "check", write: true });
+  expect(parseArgs(["check", "--write", "reports"])).toStrictEqual({ dir: "reports", kind: "check", write: true });
 });
 
 it("refuses check without a dir and anything it does not know", () => {

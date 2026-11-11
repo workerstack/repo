@@ -1,6 +1,8 @@
 /** Scores per package and the floors they are held to: the formula, the floors file, and one run's verdict. */
 import path from "node:path";
+
 import { z } from "zod";
+
 import { fail, type MutateConfig, type MutateDeps } from "./mutate-deps.ts";
 import { parseJson, type FileScore, type Parsed, type ShardReport } from "./mutate-report.ts";
 import { ARROW, NEWLINE, OK, PERCENT, PERCENT_DIGITS, ROOT_PACKAGE } from "./mutate.constants.ts";
@@ -54,7 +56,7 @@ export function readFloors(deps: MutateDeps, root: string, file: string): Parsed
 export function verdicts(totals: Map<string, Tally>, floors: Floors): Verdict[] {
   return [...totals]
     .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([pkg, t]) => ({ pkg, percent: percentOf(t), floor: floors[pkg], survivors: t.survivors }));
+    .map(([pkg, t]) => ({ floor: floors[pkg], percent: percentOf(t), pkg, survivors: t.survivors }));
 }
 
 const isBelow = (v: Verdict): boolean => v.floor !== undefined && v.percent < v.floor;

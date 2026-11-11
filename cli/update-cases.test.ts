@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+
 import { NO_LATEST, NOT_FOUND, TIMEOUT, cleanup, world } from "./fixtures/update-world.ts";
 import { main } from "./update.ts";
 
@@ -35,13 +36,13 @@ it("finds default and named catalog entries, top-level and under workspaces, and
 it("keeps catalog users, tags, protocols and peers silent, and never asks about them", async () => {
   const files = manifest({
     dependencies: {
-      u: "catalog:",
-      t: "next",
-      l: "latest",
-      w: "workspace:*",
       f: "file:../f",
       g: "github:a/b",
+      l: "latest",
       n: "npm:x@1",
+      t: "next",
+      u: "catalog:",
+      w: "workspace:*",
     },
     peerDependencies: { p: "^1.0.0" },
   });
@@ -52,15 +53,15 @@ it("keeps catalog users, tags, protocols and peers silent, and never asks about 
 });
 
 it("skips a 404 and a document with no latest, and lists both", async () => {
-  const w = world(manifest({ dependencies: { gone: "^1.0.0", bare: "^1.0.0", ok: "1.0.0" } }), {
-    gone: NOT_FOUND,
+  const w = world(manifest({ dependencies: { bare: "^1.0.0", gone: "^1.0.0", ok: "1.0.0" } }), {
     bare: NO_LATEST,
+    gone: NOT_FOUND,
     ok: "1.0.0",
   });
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out).toEqual([
     "every dependency is on latest (1 checked)",
-    "skipped 2: gone is not on the registry; bare has no latest on the registry",
+    "skipped 2: bare has no latest on the registry; gone is not on the registry",
   ]);
 });
 
@@ -68,8 +69,8 @@ it("bumps a name in one package and lists it skipped as a range in another", asy
   const w = world(
     {
       "package.json": { name: "r", workspaces: ["packages/*"] },
-      "packages/a/package.json": { name: "a", dependencies: { x: "^1.0.0" } },
-      "packages/b/package.json": { name: "b", dependencies: { x: ">=1 <2" } },
+      "packages/a/package.json": { dependencies: { x: "^1.0.0" }, name: "a" },
+      "packages/b/package.json": { dependencies: { x: ">=1 <2" }, name: "b" },
     },
     { x: "1.5.0" },
   );
@@ -101,7 +102,7 @@ it("asks for a scoped name encoded, on the registry the env names", async () => 
   const urls: string[] = [];
   const fetch = (url: string) => {
     urls.push(url);
-    return Promise.resolve(Response.json({ versions: {}, "dist-tags": { latest: "1.0.0" } }));
+    return Promise.resolve(Response.json({ "dist-tags": { latest: "1.0.0" }, versions: {} }));
   };
   const env = { NPM_CONFIG_REGISTRY: "https://mirror.example" };
   expect(await main(["--check"], w.io({ env, fetch }))).toBe(0);
@@ -146,14 +147,14 @@ const scoped = () =>
     {
       "package.json": {
         name: "r",
-        workspaces: { packages: ["packages/*"], catalog: { "@workerstack/repo": "^0.1.0", zod: "^3.0.0" } },
+        workspaces: { catalog: { "@workerstack/repo": "^0.1.0", zod: "^3.0.0" }, packages: ["packages/*"] },
       },
       "packages/a/package.json": {
+        dependencies: { "@other/x": "1.0.0", "@workerstack/references": "^0.1.1", "@workerstack/repo": "catalog:" },
         name: "a",
-        dependencies: { "@workerstack/references": "^0.1.1", "@workerstack/repo": "catalog:", "@other/x": "1.0.0" },
       },
     },
-    { "@workerstack/repo": "0.2.0", "@workerstack/references": "0.1.2", "@other/x": "2.0.0", zod: "4.0.0" },
+    { "@other/x": "2.0.0", "@workerstack/references": "0.1.2", "@workerstack/repo": "0.2.0", zod: "4.0.0" },
   );
 
 it("bumps only the named scope across the catalog and the manifests", async () => {
@@ -161,13 +162,13 @@ it("bumps only the named scope across the catalog and the manifests", async () =
   expect(await main(["@workerstack/*"], w.io())).toBe(0);
   expect(w.out[0]).toMatch(/^updated 2: /);
   expect(w.read("package.json").workspaces).toEqual({
-    packages: ["packages/*"],
     catalog: { "@workerstack/repo": "^0.2.0", zod: "^3.0.0" },
+    packages: ["packages/*"],
   });
   expect(w.read("packages/a/package.json").dependencies).toEqual({
+    "@other/x": "1.0.0",
     "@workerstack/references": "^0.1.2",
     "@workerstack/repo": "catalog:",
-    "@other/x": "1.0.0",
   });
 });
 
@@ -189,8 +190,8 @@ it("a scope nothing depends on exits 1 naming it", async () => {
 it("prints each current scoped name once, though several sources hold it", async () => {
   const w = world(
     {
-      "package.json": { name: "r", workspaces: ["packages/*"], dependencies: { "@s/a": "^1.0.0", "@s/b": "^2.0.0" } },
-      "packages/a/package.json": { name: "a", dependencies: { "@s/a": "^1.0.0" } },
+      "package.json": { dependencies: { "@s/a": "^1.0.0", "@s/b": "^2.0.0" }, name: "r", workspaces: ["packages/*"] },
+      "packages/a/package.json": { dependencies: { "@s/a": "^1.0.0" }, name: "a" },
     },
     { "@s/a": "1.0.0", "@s/b": "2.0.0" },
   );

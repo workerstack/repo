@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
-import { processHookPayload } from "./gate-fat-tools.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { agyCall, asChild, claudeCall, codexCall, inSession } from "./fixtures/hook-payload.ts";
+import { processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();
 const REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
+
 import { readEnv } from "../cli/env.ts";
 import { isRustKey, readFloorsFile, type TsFloor } from "../cli/rust/floors.ts";
 import { rootEnv } from "./temp-root-env.ts";
@@ -41,7 +43,7 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
   const root = rootOf(config);
   const file = wranglerFile(root);
   // Bun module namespaces carry `__esModule`, so vitest's default interop would swap a namespace for its default.
-  const test = { testTimeout: timeout, hookTimeout: timeout, deps: { interopDefault: false } };
+  const test = { deps: { interopDefault: false }, hookTimeout: timeout, testTimeout: timeout };
   if (file === undefined) return { test: { ...test, pool: "forks" } };
   // The Workers pool is the plugin's; a forks default would take the tests back to node.
   const configPath = path.join(root, file);
@@ -60,8 +62,8 @@ function ciEnv(coverage: string | undefined): ViteUserConfig {
       ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
         ? { coverage: { enabled: coverage === COVERAGE_ON } }
         : {}),
-      ...(report ? { reporters: [...REPORT_REPORTERS], outputFile: { json: report } } : {}),
-      ...(shard === undefined || shard === "" ? {} : { shard, passWithNoTests: true }),
+      ...(report ? { outputFile: { json: report }, reporters: [...REPORT_REPORTERS] } : {}),
+      ...(shard === undefined || shard === "" ? {} : { passWithNoTests: true, shard }),
     },
   };
 }
@@ -77,8 +79,9 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
   const provider: ViteUserConfig = coverage === COVERAGE_ON ? { test: { coverage: { provider: "istanbul" } } } : {};
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), provider);
   const merged: ViteUserConfig = mergeConfig(mergeConfig(defaults, config), ciEnv(coverage));
-  // The run's own options sit beside the project ones: a package's run is the root run of its own vitest.
-  return merged /* coverage and reporters are root options the project type leaves out */ as UserWorkspaceConfig;
+  // The run's own options (coverage reporters) sit beside the project ones: a package's run is the root run of its
+  // own vitest so they stay on the project config although the project type leaves them out.
+  return merged;
 }
 
 /** The floors file's TypeScript per-file thresholds, or none when the file is absent; Rust rows are `repo ci`'s. */
@@ -105,7 +108,7 @@ export function defineConfig(
   const thresholds = readFloors(options.floors ?? DEFAULT_FLOORS);
   const coverage = { provider: "istanbul", ...(Object.keys(thresholds).length > 0 ? { thresholds } : {}) } as const;
   // The guard loads cli/env.ts in the runner process, where an external zod loses its named exports.
-  const guard = { globalSetup: [guardPath()], server: { deps: { inline: [INLINED_PACKAGE] } }, coverage };
+  const guard = { coverage, globalSetup: [guardPath()], server: { deps: { inline: [INLINED_PACKAGE] } } };
   // Only test processes get the root: the runner's own tooling (miniflare) makes and removes temp dirs of its own.
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), { test: { ...guard, env: rootEnv() } });
   return mergeConfig(defaults, config);

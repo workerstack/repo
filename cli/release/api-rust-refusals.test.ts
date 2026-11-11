@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { api, PREFIX } from "./fixtures/api-repo.ts";
@@ -24,8 +25,8 @@ describe("repo release api with nothing to check in a Rust repo", () => {
     });
     expect(got).toMatchObject({
       code: 1,
-      out: "",
       err: `${PREFIX}--against compares a package tarball; this repo has no public package\n`,
+      out: "",
     });
   });
 });
@@ -40,16 +41,16 @@ describe("repo release api refusals in a Rust repo", () => {
 
   it("names a stale lock and a failed cargo metadata", async () => {
     const stale: CargoRun = () => ({
-      status: 101,
-      stdout: "",
-      stderr: "the lock file needs to be updated but --locked was passed",
       missing: false,
+      status: 101,
+      stderr: "the lock file needs to be updated but --locked was passed",
+      stdout: "",
     });
     const failed: CargoRun = () => ({
-      status: 1,
-      stdout: "",
-      stderr: "",
       missing: true,
+      status: 1,
+      stderr: "",
+      stdout: "",
     });
     const lock = "Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it";
     expect((await api(rustRepo(), [], { cargo: stale })).err).toBe(`${PREFIX}${lock}\n`);

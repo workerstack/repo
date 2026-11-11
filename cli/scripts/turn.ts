@@ -6,7 +6,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { CONFIG_FILE, findRoot, loadConfig } from "../config.ts";
+import { childEnv } from "../env.ts";
+import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import { changeSet, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
@@ -24,8 +27,6 @@ import {
   type Turn,
 } from "./turn-steps.ts";
 import { typecheckStep } from "./typecheck-step.ts";
-import { childEnv } from "../env.ts";
-import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
@@ -71,14 +72,14 @@ function parseArgs(argv: readonly string[], cwd: string, root: string): Parsed {
   const flags = argv.filter((arg) => arg.startsWith("-"));
   const paths = argv.filter((arg) => !arg.startsWith("-"));
   const unknown = flags.find((flag) => flag !== "--staged");
-  if (unknown !== undefined) return { ok: false, errors: [`unknown flag ${unknown}; ${USE}`] };
-  if (paths.length > 1) return { ok: false, errors: [`one path at most; ${USE}`] };
+  if (unknown !== undefined) return { errors: [`unknown flag ${unknown}; ${USE}`], ok: false };
+  if (paths.length > 1) return { errors: [`one path at most; ${USE}`], ok: false };
   if (flags.length > 0 && paths.length > 0)
-    return { ok: false, errors: ["--staged gates the index, a path gates a package; pass one"] };
+    return { errors: ["--staged gates the index, a path gates a package; pass one"], ok: false };
   if (flags.length > 0) return { ok: true, scope: { kind: "staged" } };
   if (paths[0] === undefined) return { ok: true, scope: { kind: "tree" } };
   const rel = path.relative(root, path.resolve(cwd, paths[0])).split(path.sep).join("/");
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return { ok: false, errors: [`${paths[0]} is outside ${root}`] };
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return { errors: [`${paths[0]} is outside ${root}`], ok: false };
   return { ok: true, scope: { kind: "package", rel } };
 }
 
@@ -89,20 +90,20 @@ async function prepare(
   bins: Bins,
 ): Promise<{ ok: true; turn: Turn; staged: boolean } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
-  if (root === null) return { ok: false, errors: [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``] };
+  if (root === null) return { errors: [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``], ok: false };
   const parsed = parseArgs(argv, cwd, root);
   if (!parsed.ok) return parsed;
   const loaded = await loadConfig(root);
   if (!loaded.ok) return loaded;
   if (!loaded.config.packs.includes("standards"))
-    return { ok: false, errors: [`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`] };
+    return { errors: [`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`], ok: false };
   const workspace = readWorkspace(root);
   if (!workspace.ok) return workspace;
   const packages = workspace.workspace.packages.map((pkg) => pkg.dir);
   const changes = changeSet(root, parsed.scope, packages);
   if (!changes.ok) return changes;
-  const turn = { root, changes: changes.changes, packages, bins, skips: loaded.config.lint.skip };
-  return { ok: true, turn, staged: parsed.scope.kind === "staged" };
+  const turn = { bins, changes: changes.changes, packages, root, skips: loaded.config.lint.skip };
+  return { ok: true, staged: parsed.scope.kind === "staged", turn };
 }
 
 /**
@@ -129,10 +130,10 @@ function runSteps(turn: Turn, stderr: (s: string) => void): StepResult[] {
 /** The deps with the process's own for each one left out. */
 function withDefaults(deps: TurnDeps): Required<TurnDeps> {
   return {
-    cwd: deps.cwd ?? process.cwd(),
-    stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
-    stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
     bins: deps.bins ?? BINS,
+    cwd: deps.cwd ?? process.cwd(),
+    stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
+    stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
   };
 }
 

@@ -1,8 +1,8 @@
-import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { docFault } from "./doc-fault.ts";
-import { statesItsType } from "./states-its-type.ts";
+import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import type { Node } from "./public-surface.types.ts";
+import { statesItsType } from "./states-its-type.ts";
 
 type Comment = { type: string; value: string; start: number };
 /** The file's text and the comments before a node, as oxlint's `SourceCode` gives them. */

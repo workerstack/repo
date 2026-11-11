@@ -1,4 +1,5 @@
 import type { CreateRule } from "@oxlint/plugins";
+
 import type { Statement } from "./names.ts";
 
 const MESSAGE = "a .types.ts file holds only exported types and interfaces; move this into a module";

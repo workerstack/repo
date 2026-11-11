@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { HOOK_READ_CHUNK_BYTES } from "./hook-io.constants.ts";
 import { processHookIo, readAllText, readHookInput, type HookIo } from "./hook-io.ts";
 
@@ -20,7 +22,7 @@ function fakeIo(chunks: string[]): { io: HookIo; written: string[]; reads: () =>
       written.push(text);
     },
   };
-  return { io, written, reads: () => reads };
+  return { io, reads: () => reads, written };
 }
 
 describe("readAllText", () => {
@@ -40,9 +42,9 @@ describe("readAllText", () => {
 
 describe("readHookInput", () => {
   it("parses a payload split over chunks once it is whole", () => {
-    const json = JSON.stringify({ session_id: "s1", cwd: "/repo" });
+    const json = JSON.stringify({ cwd: "/repo", session_id: "s1" });
     const { io } = fakeIo([json.slice(0, 5), json.slice(5, 12), json.slice(12)]);
-    expect(readHookInput(io)).toStrictEqual({ session_id: "s1", cwd: "/repo" });
+    expect(readHookInput(io)).toStrictEqual({ cwd: "/repo", session_id: "s1" });
   });
 
   it("returns the first whole payload without waiting for the stream to close", () => {
@@ -80,7 +82,7 @@ describe("HookIo.write", () => {
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   vi.restoreAllMocks();
 });
 

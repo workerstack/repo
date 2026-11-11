@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { isReason } from "./is-reason.ts";
 
 describe("isReason", () => {

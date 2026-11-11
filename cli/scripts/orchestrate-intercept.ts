@@ -2,11 +2,11 @@
 import type { HookInput } from "./hook-input.ts";
 import { resolveJobCwd } from "./job-args.ts";
 import { runJob } from "./job.ts";
-import { INTERCEPT_JOBS, MAX_INTERCEPT, MAX_NEED_JOBS, NEED_INTERCEPT_STAMP } from "./orchestrate.constants.ts";
-import type { HookResult } from "./orchestrate.types.ts";
 import { PASS, replyWith } from "./orchestrate-reply.ts";
 import { readStampInt, writeStamp } from "./orchestrate-stamps.ts";
 import { payloadAssistantMessage } from "./orchestrate-transcript.ts";
+import { INTERCEPT_JOBS, MAX_INTERCEPT, MAX_NEED_JOBS, NEED_INTERCEPT_STAMP } from "./orchestrate.constants.ts";
+import type { HookResult } from "./orchestrate.types.ts";
 import { parseNeed, type NeedResult } from "./parse-need.ts";
 import { resolveRoots, type Roots } from "./workspace-root.ts";
 
@@ -21,7 +21,7 @@ function runOne(job: NeedJob, roots: Roots): string | null {
     const jobCwd = job.cwd ? resolveJobCwd(job.cwd, roots.cwd) : roots.cwd;
     if (!jobCwd) return null;
     const { query, path, glob, stash, from, to } = job;
-    const result = runJob({ job: job.job, query, cwd: jobCwd, root: roots.root, path, glob, stash, from, to });
+    const result = runJob({ cwd: jobCwd, from, glob, job: job.job, path, query, root: roots.root, stash, to });
     return result.fallback ? null : result.text.trimEnd();
   } catch {
     return null;
@@ -49,5 +49,5 @@ export function interceptNeed(data: HookInput, hookEventName: string): HookResul
   const parts = runJobs(parsed.jobs, roots);
   if (parts === null) return PASS;
   writeStamp(data, NEED_INTERCEPT_STAMP, String(n + 1));
-  return replyWith({ decision: "block", hookSpecificOutput: { hookEventName, additionalContext: parts.join("\n") } });
+  return replyWith({ decision: "block", hookSpecificOutput: { additionalContext: parts.join("\n"), hookEventName } });
 }

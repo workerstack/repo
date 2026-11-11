@@ -1,7 +1,9 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { cleanJsonDirs, jsonDir, readText } from "./fixtures/json-dirs.ts";
 import { convertJsonc, convertText, firstOwnLine } from "./jsonc-comments.ts";
 
@@ -23,7 +25,7 @@ describe("convertText", () => {
       '/*! license */\n{ "a": 1 }\n',
       '{ "a": 1 }\n',
     ];
-    for (const text of same) expect(convertText(text)).toStrictEqual({ text, first: null });
+    for (const text of same) expect(convertText(text)).toStrictEqual({ first: null, text });
   });
 
   it("converts two comments in a row and a comment at the end with no newline", () => {
@@ -47,8 +49,8 @@ describe("convertJsonc", () => {
   it("rewrites the files and reports each first line; check reports without writing", () => {
     const root = jsonDir({
       "a.jsonc": TSCONFIG,
-      "tsconfig.json": TSCONFIG,
       "p.json": '{ "a": 1 }\n',
+      "tsconfig.json": TSCONFIG,
       "x.ts": TSCONFIG,
     });
     const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "fixtures/f.jsonc"];

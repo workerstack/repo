@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { z } from "zod";
+
 import type { Result } from "../scripts/lint-baseline.ts";
 import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
@@ -14,7 +16,7 @@ function schema() {
   const metric = z.object({ percent: z.number() });
   const file = z.object({
     filename: z.string(),
-    summary: z.object({ lines: metric, functions: metric, regions: metric }),
+    summary: z.object({ functions: metric, lines: metric, regions: metric }),
   });
   return z.object({ data: z.tuple([z.object({ files: z.array(file) })]).rest(z.unknown()) });
 }
@@ -41,10 +43,10 @@ function parse(text: string, root: string): Result<Record<string, RustFloor>> {
   try {
     json = JSON.parse(text);
   } catch {
-    return { ok: false, errors: [`cargo llvm-cov wrote a report that is not JSON: ${quote(text)}`] };
+    return { errors: [`cargo llvm-cov wrote a report that is not JSON: ${quote(text)}`], ok: false };
   }
   const report = schema().safeParse(json);
-  if (!report.success) return { ok: false, errors: [`cargo llvm-cov wrote a report repo cannot read: ${quote(text)}`] };
+  if (!report.success) return { errors: [`cargo llvm-cov wrote a report repo cannot read: ${quote(text)}`], ok: false };
   const roots = rootsOf(root);
   const rows: Record<string, RustFloor> = {};
   for (const { filename, summary } of report.data.data[0].files) {
@@ -52,7 +54,9 @@ function parse(text: string, root: string): Result<Record<string, RustFloor>> {
     if (rel === null) continue;
     const floor = (percent: number): number => Math.floor(percent);
     rows[rel] = {
+      // Key order is the report's row order: lines first, as for TypeScript, then the Rust metrics.
       lines: floor(summary.lines.percent),
+
       functions: floor(summary.functions.percent),
       regions: floor(summary.regions.percent),
     };
@@ -70,15 +74,15 @@ export function rustCoverage(root: string, run: CargoRun): Result<Record<string,
   try {
     const output = path.join(dir, REPORT_FILE);
     const result = run(root, [...COVERAGE_ARGS, output]);
-    if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+    if (result.missing) return { errors: [MISSING_CARGO], ok: false };
     if (result.status !== 0) {
       const said = `${result.stdout}${result.stderr}`.trim();
-      return { ok: false, errors: [`cargo llvm-cov exited ${result.status}:\n${said}`] };
+      return { errors: [`cargo llvm-cov exited ${result.status}:\n${said}`], ok: false };
     }
-    if (!fs.existsSync(output)) return { ok: false, errors: ["cargo llvm-cov wrote no report repo can read"] };
+    if (!fs.existsSync(output)) return { errors: ["cargo llvm-cov wrote no report repo can read"], ok: false };
     return parse(fs.readFileSync(output, "utf8"), root);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 }
 

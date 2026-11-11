@@ -1,15 +1,17 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
+
 import type { Host } from "../config.ts";
 import { HOST_TREES } from "./hosts.ts";
-import { syntaxOf, writeRegions } from "./region.ts";
-import type { Output, SyncContext } from "./outputs.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
+import type { Output, SyncContext } from "./outputs.ts";
 import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
-import { isSelfName } from "./stock.ts";
+import { syntaxOf, writeRegions } from "./region.ts";
 import { CARGO_TARGET_DIR, TOOLCHAIN_PATH } from "./rust.constants.ts";
+import { isSelfName } from "./stock.ts";
 import { TURBO_CONFIG_PATH, TURBO_DIR } from "./turbo.constants.ts";
 import type { Workspace } from "./workspace.ts";
 
@@ -27,7 +29,7 @@ export const GIT_FILE_PATHS: readonly string[] = [GITIGNORE_PATH, GITATTRIBUTES_
 const IGNORE_REGION = "ignore";
 const ATTRIBUTES_REGION = "generated";
 const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/", "coverage/"];
-const DEPENDENCY_DIR = `${"node"}_modules/`;
+const DEPENDENCY_DIR = `node_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
 const READONLY_KEY = "files.readonlyInclude";
 
@@ -73,19 +75,19 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
  */
 export const gitFiles: PostPass = (ctx, outputs) => {
   const results = [gitignore(ctx, outputs), gitattributes(ctx, outputs), settings(ctx, outputs)];
-  return { outputs: results.flatMap((result) => result.outputs), errors: results.flatMap((result) => result.errors) };
+  return { errors: results.flatMap((result) => result.errors), outputs: results.flatMap((result) => result.outputs) };
 };
 
 /** A block output in `rel`: sync's region `name` holding `body`, the rest of the file as the user wrote it. */
 function blockFile(ctx: SyncContext, rel: string, [name, body]: readonly [string, string[]]): Result {
-  const region = { name, body: body.join("\n"), place: "bottom" } as const;
+  const region = { body: body.join("\n"), name, place: "bottom" } as const;
   const { text, repairs } = writeRegions(ctx.read(rel) ?? "", syntaxOf(rel), [region]);
-  return { outputs: [blockOutput(rel, text, repairs)], errors: [] };
+  return { errors: [], outputs: [blockOutput(rel, text, repairs)] };
 }
 
 /** The tracked block output at `rel` holding `text`, with the repairs that led to it when there are any. */
 function blockOutput(rel: string, text: string, repairs: readonly string[]): Output {
-  const output: Output = { kind: "file", path: rel, content: text, tracked: true, managed: "block" };
+  const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
   return repairs.length === 0 ? output : { ...output, repairs };
 }
 
@@ -125,7 +127,7 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   const fresh = (existing ?? "").trim() === "";
   const text = fresh ? "{}" : (existing as string);
   const kept = unusable(text);
-  if (kept !== null) return { outputs: [blockOutput(SETTINGS_PATH, text, [kept])], errors: [] };
+  if (kept !== null) return { errors: [], outputs: [blockOutput(SETTINGS_PATH, text, [kept])] };
   const readonly = Object.fromEntries(
     wholeFiles(outputs)
       .map((output) => output.path)
@@ -134,9 +136,9 @@ function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   );
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
   // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would rewrite the last one's.
-  const options = { formattingOptions: { insertSpaces: true, tabSize: 2, eol }, getInsertionIndex: () => 0 };
+  const options = { formattingOptions: { eol, insertSpaces: true, tabSize: 2 }, getInsertionIndex: () => 0 };
   const edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
-  return { outputs: [blockOutput(SETTINGS_PATH, fresh ? `${edited}${eol}` : edited, [])], errors: [] };
+  return { errors: [], outputs: [blockOutput(SETTINGS_PATH, fresh ? `${edited}${eol}` : edited, [])] };
 }
 
 /** Why settings `text` is left as is, naming the line of its first JSONC error; null when it holds an object. */

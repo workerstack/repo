@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it } from "vitest";
+
 import { isRustKey, readFloorsFile } from "./floors.ts";
 
 let dir = "";
@@ -9,7 +11,7 @@ beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "floors-test-"));
 });
 afterEach(() => {
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const write = (value: unknown): string => {
@@ -17,13 +19,13 @@ const write = (value: unknown): string => {
   fs.writeFileSync(file, typeof value === "string" ? value : JSON.stringify(value));
   return file;
 };
-const TS = { statements: 90, branches: 80, functions: 70, lines: 60 };
-const RUST = { lines: 66, functions: 66, regions: 58 };
+const TS = { branches: 80, functions: 70, lines: 60, statements: 90 };
+const RUST = { functions: 66, lines: 66, regions: 58 };
 
 it("reads both row kinds", () => {
-  expect(readFloorsFile(write({ "a/x.ts": TS, "a/src/lib.rs": RUST }))).toStrictEqual({
-    "a/x.ts": TS,
+  expect(readFloorsFile(write({ "a/src/lib.rs": RUST, "a/x.ts": TS }))).toStrictEqual({
     "a/src/lib.rs": RUST,
+    "a/x.ts": TS,
   });
 });
 

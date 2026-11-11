@@ -1,8 +1,10 @@
 import path from "node:path";
+
 import { z } from "zod";
+
+import { METADATA_ARGS, PROBLEM_TAIL, STALE_EXIT } from "./cargo-metadata.constants.ts";
 import { MISSING_CARGO, QUOTE_LIMIT } from "./clippy.constants.ts";
 import type { CargoRun } from "./clippy.ts";
-import { METADATA_ARGS, PROBLEM_TAIL, STALE_EXIT } from "./cargo-metadata.constants.ts";
 import { STALE_MARKER } from "./lock.constants.ts";
 
 /** What the crate check found: its problems and which publishable crates lack a license (cargo-deny need not say so again), a stale lock (the lock check owns that line), or a run it could not read. */
@@ -17,15 +19,15 @@ const text = () => z.string().nullish();
 /** The shape of `cargo metadata --format-version 1` this reads, built once per run. */
 function schema() {
   const crate = z.object({
-    name: z.string(),
-    version: z.string(),
-    manifest_path: z.string(),
-    publish: z.array(z.string()).nullish(),
-    rust_version: text(),
+    description: text(),
     license: text(),
     license_file: text(),
-    description: text(),
+    manifest_path: z.string(),
+    name: z.string(),
+    publish: z.array(z.string()).nullish(),
     repository: text(),
+    rust_version: text(),
+    version: z.string(),
   });
   return z.object({ packages: z.array(crate.extend({ id: z.string() })), workspace_members: z.array(z.string()) });
 }
@@ -91,7 +93,7 @@ function parse(stdout: string): Workspace {
   if (!read.success)
     return { kind: "failed", problems: [`cargo metadata printed output repo cannot read: ${quote(stdout.trim())}`] };
   const members = new Set(read.data.workspace_members);
-  return { kind: "crates", crates: read.data.packages.filter((crate) => members.has(crate.id)) };
+  return { crates: read.data.packages.filter((crate) => members.has(crate.id)), kind: "crates" };
 }
 
 /**

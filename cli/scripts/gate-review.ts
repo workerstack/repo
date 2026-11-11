@@ -1,11 +1,12 @@
 /** What a review strategy and the shared main checkout ask of a write, a patch or a shell command. */
 import fs from "node:fs";
 import path from "node:path";
-import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
-import type { GateCall, GuardResult } from "./gate-call.ts";
+
 import { isImplementer, isParentOrchestrator, sessionIdOf } from "./gate-agents.ts";
+import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, isPlainObject, toolCallOf, type Payload } from "./gate-harness.ts";
 import { writeTargets } from "./gate-rewrites.ts";
+import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
 import {
   ENFORCED_HARNESSES,
   activeReview,
@@ -68,7 +69,7 @@ export function stampPlanSave(data: Payload): void {
     const tool = TOOLS[harness].get(key);
     if (!tool || tool.kind !== "write" || !input) return;
     const roots = resolveRoots(data);
-    stampReviewPlan({ tool, input, roots, sid }, writeTargets({ tool, input, patch: null, roots }));
+    stampReviewPlan({ input, roots, sid, tool }, writeTargets({ input, patch: null, roots, tool }));
   } catch {
     // A stamp error never blocks a save.
   }
@@ -107,13 +108,13 @@ function sharedCheckoutReason(call: GateCall): string | null {
   }
   if (tool.kind !== "bash" || !BASH_GIT.test(text)) return null;
   const asked = harness === "antigravity" ? new Set(gitAskedWords(data.lastUserInput)) : gitAskedBy(roots.root, sid);
-  return sharedGitReason(text, { roots, cwd: shellCwd, asked });
+  return sharedGitReason(text, { asked, cwd: shellCwd, roots });
 }
 
 export function sharedCheckoutGuard(call: GateCall): GuardResult {
   try {
     const reason = sharedCheckoutReason(call);
-    return reason ? { type: "deny", reason } : undefined;
+    return reason ? { reason, type: "deny" } : undefined;
   } catch {
     return undefined;
   }
@@ -127,7 +128,7 @@ function implementerWriteDeny(call: GateCall): GuardResult {
   const { roots } = call;
   const owned = ["plans", "implementations"].map((d) => canonicalPath(path.join(roots.root, ".tmp", "repo", d)));
   const hit = writeTargets(call).some((t) => owned.some((dir) => !isOutside(path, dir, t)));
-  return hit ? { type: "deny", reason: REASON_IMPLEMENTER_WRITE } : undefined;
+  return hit ? { reason: REASON_IMPLEMENTER_WRITE, type: "deny" } : undefined;
 }
 
 /** A parent's write: a plan save stamps the session, and while a review plan runs no write outside `<root>/.tmp`. */
@@ -137,7 +138,7 @@ function parentWriteDeny(call: GateCall): GuardResult {
   stampReviewPlan(call, targets);
   const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
   if (review && targets.some((t) => isOutsideRootTmp(t, roots.root))) {
-    return { type: "deny", reason: reviewDenyReason(review) };
+    return { reason: reviewDenyReason(review), type: "deny" };
   }
   return undefined;
 }
@@ -153,7 +154,7 @@ export function reviewGuard(call: GateCall): GuardResult {
     const { tool, patch, text, sub, sid, parent } = call;
     const implementer = isImplementer(sub);
     if (implementer && tool.kind === "bash" && GIT_STAGE.test(text)) {
-      return { type: "deny", reason: REASON_IMPLEMENTER_GIT };
+      return { reason: REASON_IMPLEMENTER_GIT, type: "deny" };
     }
     if (tool.kind !== "write" && !patch) return undefined;
     if (implementer) return implementerWriteDeny(call);

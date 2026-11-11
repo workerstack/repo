@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { markHooksExecutable } from "./standards.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8" });
@@ -55,7 +57,7 @@ it("does nothing off win32", () => {
 });
 
 type Reply = { status: number | null; stdout: string; stderr: string };
-const reply = (status: number | null, stdout = "", stderr = ""): Reply => ({ status, stdout, stderr });
+const reply = (status: number | null, stdout = "", stderr = ""): Reply => ({ status, stderr, stdout });
 
 /** A git runner answering `answers` by the first argument, recording each call's arguments. */
 function fakeGit(root: string, answers: Record<string, Reply>) {
@@ -64,7 +66,7 @@ function fakeGit(root: string, answers: Record<string, Reply>) {
     calls.push([...args]);
     return answers[args[0] ?? ""] ?? reply(0, `${root}\n`);
   };
-  return { run, calls };
+  return { calls, run };
 }
 
 it("does nothing when git cannot name the top level, names another one, or cannot list the hooks", () => {

@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
+import { useTmp } from "./fixtures/gate-workspace.ts";
+import { camelCall } from "./fixtures/hook-payload.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { isWorkspaceJobScript, jobCommand, parseJobCommand, quoteQuery } from "./gate-job.ts";
 import type { HookInput } from "./hook-input.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
-import { camelCall } from "./fixtures/hook-payload.ts";
 
 const tmp = useTmp();
 const JOB = ["--job", "test", "--query", "x"].join(" ");
@@ -34,19 +36,19 @@ it("jobCommand runs the checkout's installed repo bin", () => {
 });
 
 it("parses bun repo job, bun <bin> job, <bin> job and rtk <bin> job, and refuses other bins and commands (path.posix)", () => {
-  const roots = { root: "/r", checkout: "/r", cwd: "/r/sub" };
+  const roots = { checkout: "/r", cwd: "/r/sub", root: "/r" };
   const ok = (c: string) => isWorkspaceJobScript(c, roots, path.posix);
   for (const c of ACCEPTED) expect(ok(c), c).toBe(true);
   for (const c of REFUSED) expect(ok(c), c).toBe(false);
   expect(parseJobCommand(`bun repo job --job test --query x`, roots)).toStrictEqual({
-    job: "test",
     hasQuery: true,
     hasStash: false,
+    job: "test",
   });
   expect(parseJobCommand(`/r/node_modules/.bin/repo job --job exec --query x`, roots)).toStrictEqual({
-    job: "exec",
     hasQuery: true,
     hasStash: false,
+    job: "exec",
   });
 });
 
@@ -72,7 +74,7 @@ it("matches the bin through a symlinked checkout", () => {
   fs.symlinkSync(path.join("..", "..", "bin", "repo.ts"), path.join(real, "node_modules", ".bin", "repo"));
   const alias = `${real}-alias`;
   fs.symlinkSync(real, alias);
-  const roots = { root: real, checkout: real, cwd: real };
+  const roots = { checkout: real, cwd: real, root: real };
   expect(isWorkspaceJobScript(`${alias}/node_modules/.bin/repo job ${JOB}`, roots)).toBe(true);
   expect(isWorkspaceJobScript(jobCommand(real, JOB), roots)).toBe(true);
   expect(isWorkspaceJobScript(`${real}/bin/repo.ts job ${JOB}`, roots)).toBe(true);
@@ -80,7 +82,7 @@ it("matches the bin through a symlinked checkout", () => {
 });
 
 it("matches the bin in a path.win32 checkout", () => {
-  const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r\\sub" };
+  const roots = { checkout: "C:\\r", cwd: "C:\\r\\sub", root: "C:\\r" };
   const ok = (c: string) => isWorkspaceJobScript(c, roots, path.win32);
   expect(ok(`C:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
   expect(ok(`..\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
@@ -90,8 +92,8 @@ it("matches the bin in a path.win32 checkout", () => {
 });
 
 it("refuses the old job script, under both path flavors", () => {
-  const posix = { root: "/r", checkout: "/r", cwd: "/r/sub" };
-  const win = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
+  const posix = { checkout: "/r", cwd: "/r/sub", root: "/r" };
+  const win = { checkout: "C:\\r", cwd: "C:\\r", root: "C:\\r" };
   expect(isWorkspaceJobScript(`bun /r/cli/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(false);
   expect(isWorkspaceJobScript(`rtk bun ../cli/scripts/job.ts ${JOB}`, posix, path.posix)).toBe(false);
   expect(isWorkspaceJobScript(`bun C:\\r\\cli\\scripts\\job.ts ${JOB}`, win, path.win32)).toBe(false);

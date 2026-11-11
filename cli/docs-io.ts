@@ -1,8 +1,8 @@
-import { runSync } from "./sync.ts";
-import { captureBun } from "./scripts/lint.ts";
-import { BINS } from "./scripts/turn.ts";
 import type { DocsTools } from "./docs-root.ts";
 import { PACK_ARGS } from "./docs.constants.ts";
+import { captureBun } from "./scripts/lint.ts";
+import { BINS } from "./scripts/turn.ts";
+import { runSync } from "./sync.ts";
 
 /** What `repo docs` touches: the folder it runs in, its two streams, the tools and sync. */
 export type DocsIo = {
@@ -16,9 +16,9 @@ export type DocsIo = {
 
 /** tsc from this package's install, bun, and `bun pm pack --dry-run`, each with the tool environment. */
 export const REAL_TOOLS: DocsTools = {
-  tsc: BINS.tsc,
   bun: (args, cwd) => captureBun(args, cwd),
   pack: (cwd) => captureBun([...PACK_ARGS], cwd),
+  tsc: BINS.tsc,
 };
 
 /** The process's own folder and streams, the real tools and `runSync`. */
@@ -27,9 +27,9 @@ export function docsIo(): DocsIo {
   const err = (text: string) => process.stderr.write(text);
   return {
     cwd: process.cwd(),
-    out,
     err,
+    out,
+    sync: (cwd) => runSync([], { cwd, stderr: err, stdout: out }),
     tools: REAL_TOOLS,
-    sync: (cwd) => runSync([], { cwd, stdout: out, stderr: err }),
   };
 }

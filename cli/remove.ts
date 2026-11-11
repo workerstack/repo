@@ -1,15 +1,16 @@
 /** `repo remove <name>…` drops a dependency from every manifest, the catalogs and the root's overrides. */
 import fs from "node:fs";
+
 import { findRoot } from "./config.ts";
 import { editFiles } from "./edit-files.ts";
-import { patchPath, removalsOf } from "./remove-scan.ts";
 import type { Removal } from "./removal.types.ts";
+import { patchPath, removalsOf } from "./remove-scan.ts";
+import { REMOVE_COMMAND, REMOVE_USAGE, namePart, placeNote, removedLine } from "./remove.constants.ts";
 import { readWorkspace } from "./sync/workspace.ts";
+import { fail, finish, said } from "./update-finish.ts";
 import { updateIo } from "./update-io.ts";
 import type { UpdateIo } from "./update-io.types.ts";
-import { fail, finish, said } from "./update-finish.ts";
 import { CATALOG, EXIT_USAGE, OPTION_PREFIX, nothingDepends } from "./update.constants.ts";
-import { REMOVE_COMMAND, REMOVE_USAGE, namePart, placeNote, removedLine } from "./remove.constants.ts";
 
 /** Takes the entry out of its object, or the element out of its array, in place. */
 function drop(raw: unknown, { route }: Removal): void {
@@ -52,11 +53,11 @@ export function main(argv: string[], io: UpdateIo = updateIo()): number {
   if (absent !== undefined) return fail(io, [said(REMOVE_COMMAND, nothingDepends(absent))]);
   const files = editFiles(
     root,
-    removals.map((removal) => ({ file: removal.file, apply: (raw: unknown) => drop(raw, removal) })),
+    removals.map((removal) => ({ apply: (raw: unknown) => drop(raw, removal), file: removal.file })),
   );
   for (const removal of removals) {
     if (removal.patch !== null) fs.rmSync(patchPath(root, removal.patch), { force: true });
   }
   io.out(removedLine(argv.map((name) => partOf(name, removals))));
-  return finish({ io, command: REMOVE_COMMAND, root }, files);
+  return finish({ command: REMOVE_COMMAND, io, root }, files);
 }

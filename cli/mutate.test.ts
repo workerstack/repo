@@ -1,5 +1,7 @@
-import { expect, it } from "vitest";
 import path from "node:path";
+
+import { expect, it } from "vitest";
+
 import { BASE, CLONE, OUT, ROOT, SHA, fakes, rawReport, sim } from "./fixtures/mutate-fakes.ts";
 import { runMutate } from "./mutate.ts";
 
@@ -45,15 +47,15 @@ it("writes a Stryker config with the shard's files and the options this repo nee
   };
   await runMutate(SHARD, f.deps);
   expect(config).toStrictEqual({
-    testRunner: "vitest",
-    mutate: ["src/a.ts"],
-    reporters: ["json"],
     coverageAnalysis: "perTest",
-    inPlace: true,
     disableTypeChecks: false,
     ignoreStatic: true,
-    vitest: { pool: "forks" },
+    inPlace: true,
     jsonReporter: { fileName: path.join(BASE, "stryker-report.json") },
+    mutate: ["src/a.ts"],
+    reporters: ["json"],
+    testRunner: "vitest",
+    vitest: { pool: "forks" },
   });
 });
 
@@ -88,10 +90,10 @@ it("shards the tracked matches by lines, writes the shard report and prints its 
   expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.out.join("")).toBe(`mutate: HEAD ${SHA.slice(0, 7)}\nmutate: 1 file, shard 2/2, 0 survivors in ${OUT}\n`);
   expect(JSON.parse(f.files.get(OUT) ?? "")).toStrictEqual({
-    tool: "stryker",
+    files: { "src/b.ts": { killed: 1, survivors: [] } },
     head: SHA,
     shard: { index: 2, total: 2 },
-    files: { "src/b.ts": { killed: 1, survivors: [] } },
+    tool: "stryker",
   });
 });
 
@@ -106,8 +108,8 @@ it("counts Survived and NoCoverage as survivors, Timeout as killed, and leaves o
       "src/a.ts": {
         killed: 2,
         survivors: [
-          { line: 3, column: 2, mutator: "ArithmeticOperator", status: "Survived" },
-          { line: 4, column: 2, mutator: "ArithmeticOperator", status: "NoCoverage" },
+          { column: 2, line: 3, mutator: "ArithmeticOperator", status: "Survived" },
+          { column: 2, line: 4, mutator: "ArithmeticOperator", status: "NoCoverage" },
         ],
       },
     },
@@ -119,7 +121,7 @@ it("writes an empty report for a shard past the files without installing or runn
   const f = fakes(sim({ tracked: ["src/a.ts"] }));
   expect(await runMutate(["--shard", "2/2", "--report", OUT], f.deps)).toBe(0);
   expect(f.calls.some((c) => c.startsWith("bun"))).toBe(false);
-  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({ shard: { index: 2, total: 2 }, files: {} });
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({ files: {}, shard: { index: 2, total: 2 } });
   expect(f.out.join("")).toContain("0 files, shard 2/2, 0 survivors");
 });
 
@@ -128,7 +130,7 @@ it("refuses a report Stryker did not write, naming why", async () => {
   expect(await runMutate(SHARD, f.deps)).toBe(1);
   expect(f.err.join("")).toMatch(/^repo mutate: Stryker wrote no readable report: .+\n$/);
   const none = fakes();
-  none.deps.run = () => ({ code: 0, stdout: "", stderr: "" });
+  none.deps.run = () => ({ code: 0, stderr: "", stdout: "" });
   expect(await runMutate(SHARD, none.deps)).toBe(1);
   expect(none.err.join("")).toContain("Stryker wrote no readable report: the report file is missing");
 });

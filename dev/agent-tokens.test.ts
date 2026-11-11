@@ -1,39 +1,41 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { run } from "./agent-tokens.ts";
 
 const USAGE = "usage: bun dev/agent-tokens.ts <session dir> [--match <description substring>]";
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 type Spawn = { id: string; agentType: string; description: string; entries: object[] };
 
-const user = { type: "user", timestamp: "2026-01-01T00:00:00.000Z", message: { role: "user", content: "hi" } };
+const user = { message: { content: "hi", role: "user" }, timestamp: "2026-01-01T00:00:00.000Z", type: "user" };
 const instructions = (file: string) => ({
+  attachment: { files: [{ path: file }], type: "instructions" },
   type: "attachment",
-  attachment: { type: "instructions", files: [{ path: file }] },
 });
 const assistant = (
   model: string,
   usage: { input: number; create: number; read: number },
   timestamp = "2026-01-01T00:00:01.000Z",
 ) => ({
-  type: "assistant",
-  timestamp,
   message: {
-    role: "assistant",
     model,
+    role: "assistant",
     usage: {
-      input_tokens: usage.input,
       cache_creation_input_tokens: usage.create,
       cache_read_input_tokens: usage.read,
+      input_tokens: usage.input,
       output_tokens: 4,
     },
   },
+  timestamp,
+  type: "assistant",
 });
 
 /** A session dir holding one meta and one transcript per spawn; returns the dir. */
@@ -58,37 +60,37 @@ function session(spawns: Spawn[]): string {
 function invoke(args: string[]) {
   const lines: string[] = [];
   const errors: string[] = [];
-  const code = run(args, { out: (line) => lines.push(line), err: (line) => errors.push(line) });
+  const code = run(args, { err: (line) => errors.push(line), out: (line) => lines.push(line) });
   return { code, lines };
 }
 
 const SPAWNS: Spawn[] = [
   {
-    id: "a1",
     agentType: "scout",
     description: "Other scout",
-    entries: [user, assistant("claude-haiku-5-5", { input: 1, create: 2, read: 3 }, "2026-01-01T00:00:00.500Z")],
+    entries: [user, assistant("claude-haiku-5-5", { create: 2, input: 1, read: 3 }, "2026-01-01T00:00:00.500Z")],
+    id: "a1",
   },
   {
-    id: "a2",
     agentType: "implementer-fast",
     description: "After implementer-fast",
     entries: [
       { ...user, timestamp: "2026-01-01T00:00:01.000Z" },
       instructions("/repo/AGENTS.md"),
-      assistant("claude-sonnet-5-5", { input: 2, create: 6000, read: 0 }),
+      assistant("claude-sonnet-5-5", { create: 6000, input: 2, read: 0 }),
     ],
+    id: "a2",
   },
   {
-    id: "a3",
     agentType: "implementer-fast",
     description: "After implementer-fast again",
     entries: [
       { ...user, timestamp: "2026-01-01T00:00:02.000Z" },
       instructions("/repo/CLAUDE.md"),
-      assistant("claude-sonnet-5-5", { input: 3, create: 100, read: 5000 }, "2026-01-01T00:00:03.000Z"),
-      assistant("claude-sonnet-5-5", { input: 9, create: 9, read: 9 }, "2026-01-01T00:00:04.000Z"),
+      assistant("claude-sonnet-5-5", { create: 100, input: 3, read: 5000 }, "2026-01-01T00:00:03.000Z"),
+      assistant("claude-sonnet-5-5", { create: 9, input: 9, read: 9 }, "2026-01-01T00:00:04.000Z"),
     ],
+    id: "a3",
   },
 ];
 
@@ -117,10 +119,10 @@ describe("run, on what a spawn did not do", () => {
   it("only counts an AGENTS.md that came in before the first answer", () => {
     const dir = session([
       {
-        id: "b1",
         agentType: "scout",
         description: "late",
-        entries: [user, assistant("m", { input: 1, create: 1, read: 1 }), instructions("/repo/AGENTS.md")],
+        entries: [user, assistant("m", { create: 1, input: 1, read: 1 }), instructions("/repo/AGENTS.md")],
+        id: "b1",
       },
     ]);
     expect(invoke([dir]).lines[1]).toMatch(/\sno\s/);
@@ -128,7 +130,7 @@ describe("run, on what a spawn did not do", () => {
 
   it("shows a dash for a spawn that never answered", () => {
     const dir = session([
-      { id: "c1", agentType: "scout", description: "silent", entries: [user, { type: "attachment" }] },
+      { agentType: "scout", description: "silent", entries: [user, { type: "attachment" }], id: "c1" },
     ]);
     expect(invoke([dir]).lines).toStrictEqual([
       "agent  model  first-turn  agents.md  description",

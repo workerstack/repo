@@ -5,26 +5,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { enabledSkills } from "../config.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
+import { INDEX_REL } from "../sync/maps.constants.ts";
+import { sectionBody } from "../sync/maps.ts";
+import { isSelf } from "../sync/stock.ts";
+import { nestedHolds, nestedTmpDirs } from "./clean-scan.ts";
+import { redundantIgnoreLines } from "./gitignore-guard.ts";
+import { isRecord } from "./hook-input.ts";
 import {
   PACKAGED_SKILLS_REL,
   WORKSPACE_SKILLS_REL,
   findSkillContentConflicts,
   formatSkillConflictWarn,
 } from "./skill-conflicts.ts";
-import { isRecord } from "./hook-input.ts";
-import { INDEX_REL } from "../sync/maps.constants.ts";
-import { sectionBody } from "../sync/maps.ts";
-import { isSelf } from "../sync/stock.ts";
-import { enabledSkills } from "../config.ts";
-import { nestedHolds, nestedTmpDirs } from "./clean-scan.ts";
-import { redundantIgnoreLines } from "./gitignore-guard.ts";
 import { canonicalPath, gitRevParse, resolveRoots } from "./workspace-root.ts";
-import { WORKTREE_CMD } from "./worktree.constants.ts";
 import { defaultBranch } from "./worktree-git.ts";
 import { listWorktrees } from "./worktree-lifecycle.ts";
+import { WORKTREE_CMD } from "./worktree.constants.ts";
 import type { WorktreeInfo } from "./worktree.types.ts";
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
 
 /** One doctor check's outcome; `extra` is the detail printed after the status. */
 export interface DoctorStatus {
@@ -184,9 +185,9 @@ function readVersion(bin: string, flag: string): string {
     return String(
       execFileSync(bin, [flag], {
         encoding: "utf8",
-        timeout: 8000,
-        stdio: ["ignore", "pipe", "pipe"],
         shell: winShim(bin),
+        stdio: ["ignore", "pipe", "pipe"],
+        timeout: 8000,
       }),
     ).trim();
   } catch {
@@ -281,16 +282,16 @@ export function jevDoctorStatus({
   env = readEnv(),
   home = os.homedir(),
 }: { env?: Env; home?: string } = {}): DoctorStatus {
-  if (String(env.TYPESAFE_API_KEY || "").trim()) return { ok: true, extra: "env" };
+  if (String(env.TYPESAFE_API_KEY || "").trim()) return { extra: "env", ok: true };
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
     if (String(isRecord(parsed) && parsed.apiKey ? parsed.apiKey : "").trim()) {
-      return { ok: true, extra: "config" };
+      return { extra: "config", ok: true };
     }
   } catch {
     // absent
   }
-  return { ok: false, extra: "" };
+  return { extra: "", ok: false };
 }
 
 export function speakDoctorStatus({
@@ -301,8 +302,8 @@ export function speakDoctorStatus({
   if (String(env.ELEVENLABS_API_KEY || "").trim()) names.push("elevenlabs");
   if (String(env.OPENAI_API_KEY || "").trim()) names.push("openai");
   const hasFile = isFile(path.join(home, ".workerstack", "speak.json"));
-  if (!names.length && !hasFile) return { ok: false, extra: "" };
-  return { ok: true, extra: names.length ? names.join(",") : "config" };
+  if (!names.length && !hasFile) return { extra: "", ok: false };
+  return { extra: names.length ? names.join(",") : "config", ok: true };
 }
 
 const WORKSPACE_ACCOUNT_RE = /^[a-zA-Z0-9_-]{1,40}$/;
@@ -328,8 +329,8 @@ export function workspaceDoctorStatus({ home = os.homedir() }: { home?: string }
     kinds.add("adc");
   }
   if (isFile(path.join(home, ".clasprc.json"))) kinds.add("clasprc");
-  if (!kinds.size) return { ok: false, extra: "" };
-  return { ok: true, extra: WORKSPACE_KIND_ORDER.filter((k) => kinds.has(k)).join(",") };
+  if (!kinds.size) return { extra: "", ok: false };
+  return { extra: WORKSPACE_KIND_ORDER.filter((k) => kinds.has(k)).join(","), ok: true };
 }
 
 function row(name: string, status: string, extra: string = ""): string {
@@ -428,10 +429,10 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
   if (!facts) return [];
   const top = canonicalPath(path.resolve(facts.top));
   const item = (kind: string, p: string, detail: string, clear: string): WorkspaceIssue => ({
+    clear,
+    detail,
     kind,
     path: p,
-    detail,
-    clear,
   });
 
   const stray = nestedTmpDirs(root).map((dir) => {
@@ -478,7 +479,7 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
   for (const w of worktrees) {
     if (!w.managed || w.state === "missing" || w.merged || !w.branch) continue;
     const days = daysSinceUnmergedCommit(root, w.branch, target);
-    if (days !== null && days >= STALE_DAYS) stale.push({ w, days });
+    if (days !== null && days >= STALE_DAYS) stale.push({ days, w });
   }
   return [
     ...stray.sort(byPath),
@@ -583,12 +584,12 @@ const firstGroups = (out: string, re: RegExp): string[] => out.split(/\r?\n/).fl
 const AGY_AGENT_MODELS = ["inherit", "flash", "pro", "flash_lite"];
 /** Each CLI's list command and how to read ids out of its output. */
 const MODEL_LISTS: Record<ListCli, { bin: string; args: string[]; ids: (out: string) => string[] }> = {
+  cursor: { args: ["--list-models"], bin: "cursor-agent", ids: (out) => firstGroups(out, /^(\S+) - /) },
   grok: {
-    bin: "grok",
     args: ["models"],
+    bin: "grok",
     ids: (out) => firstGroups(out.slice(Math.max(0, out.indexOf("Available models:"))), /^\s+(?:\*\s+)?(\S+)/),
   },
-  cursor: { bin: "cursor-agent", args: ["--list-models"], ids: (out) => firstGroups(out, /^(\S+) - /) },
 };
 
 /** Real list runner: resolves { code, stdout, stderr }; rejects with ENOENT when the CLI is not on PATH, or when the signal aborts it. */
@@ -596,11 +597,11 @@ const spawnList: ListRunner = (bin, args, { signal }) => {
   return new Promise<ListResult>((resolve, reject) => {
     let stdout = "";
     let stderr = "";
-    const child = spawn(bin, args, { signal, stdio: ["ignore", "pipe", "pipe"], shell: winShim(bin) });
+    const child = spawn(bin, args, { shell: winShim(bin), signal, stdio: ["ignore", "pipe", "pipe"] });
     child.stdout.on("data", (d) => (stdout += d));
     child.stderr.on("data", (d) => (stderr += d));
     child.on("error", reject);
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
+    child.on("close", (code) => resolve({ code, stderr, stdout }));
   });
 };
 
@@ -675,7 +676,7 @@ export async function agentModelsLines({
   capMs?: number;
   sourceRoot?: string;
 } = {}): Promise<string[]> {
-  const refs = agentModelRefs(resolveRoots({}, { env, cwd }).checkout, sourceRoot);
+  const refs = agentModelRefs(resolveRoots({}, { cwd, env }).checkout, sourceRoot);
   const clis = MODEL_CLIS.filter((cli) => refs.some((r) => r.cli === cli));
   const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -685,7 +686,7 @@ export async function agentModelsLines({
       abort.abort();
     }, capMs);
   });
-  const ask = { run, signal: abort.signal, capped, capMs };
+  const ask = { capMs, capped, run, signal: abort.signal };
   const lists = await Promise.all(
     clis.map(async (cli): Promise<[ModelCli, Offered]> => [
       cli,
@@ -744,10 +745,10 @@ export function runDoctor({
 
   const found: Record<string, string> = {
     bun,
-    git,
-    rtk,
-    lightpanda,
     chromium,
+    git,
+    lightpanda,
+    rtk,
   };
 
   const lines: string[] = [];
@@ -792,8 +793,8 @@ export function runDoctor({
   if (maps) lines.push(maps.line);
 
   const skillConflicts = findSkillContentConflicts({
-    workspaceSkillsDir: path.join(cwd, WORKSPACE_SKILLS_REL),
     packagedSkillsDir: path.join(cwd, PACKAGED_SKILLS_REL),
+    workspaceSkillsDir: path.join(cwd, WORKSPACE_SKILLS_REL),
   });
   if (skillConflicts.length) {
     lines.push("");
@@ -803,10 +804,10 @@ export function runDoctor({
     }
   }
 
-  lines.push(...workspaceLines(workspaceIssues(resolveRoots({}, { env, cwd }))));
+  lines.push(...workspaceLines(workspaceIssues(resolveRoots({}, { cwd, env }))));
   lines.push(...extraLines);
   const stdout = `${lines.join("\n")}\n`;
-  return { code: missingRequired.length || maps?.ok === false ? 1 : 0, stdout, stderr: "" };
+  return { code: missingRequired.length || maps?.ok === false ? 1 : 0, stderr: "", stdout };
 }
 
 /** Load the consumer's root `scripts/lib/env.mjs` `loadEnv` when it exists (this script is `cli/scripts/doctor.ts`). */

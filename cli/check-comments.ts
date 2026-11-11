@@ -5,7 +5,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { parseSync, type Comment } from "oxc-parser";
+
 import { isReason } from "./lint/is-reason.ts";
 import { runGit } from "./sync/standards.ts";
 
@@ -44,12 +46,12 @@ function disableHit(comment: Comment): Hit | null {
 
 /** The text TypeScript reads a directive from, and where it starts: a block comment's last line, from `/*` or after. */
 function directiveLine(comment: Comment): { text: string; at: number } {
-  if (comment.type === "Line") return { text: `//${comment.value}`, at: comment.start };
+  if (comment.type === "Line") return { at: comment.start, text: `//${comment.value}` };
   const raw = `/*${comment.value}*/`;
   const breaks = [...raw.matchAll(LINE_BREAK)];
   const last = breaks.at(-1);
   const offset = last === undefined ? 0 : last.index + last[0].length;
-  return { text: raw.slice(offset), at: comment.start + offset };
+  return { at: comment.start + offset, text: raw.slice(offset) };
 }
 
 function tsHit(comment: Comment): Hit | null {
@@ -112,8 +114,8 @@ export function commentProblems(root: string, files: readonly string[]): string[
 /** The tracked and untracked, not ignored, source files under `root`, outside any `fixtures` dir, sorted. */
 export function sourceFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
-  if (run.status !== 0) return { ok: false, errors: [`git ls-files failed: ${run.stderr.trim()}`] };
-  return { ok: true, files: [...new Set(run.stdout.split("\0").filter(isSource))].sort() };
+  if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+  return { files: [...new Set(run.stdout.split("\0").filter(isSource))].sort(), ok: true };
 }
 
 /** `commentProblems` over every source file of the checkout at `root`, as `repo check` runs it. */

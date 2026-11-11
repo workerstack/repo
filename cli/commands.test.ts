@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
+
 import { describe, expect, it, vi } from "vitest";
-import { HOOK_NAMES } from "./scripts/hook-command.ts";
+
 import { COMMANDS, HOOKS, dispatch, isCommandName, runCommand, type Registry } from "./commands.ts";
+import { HOOK_NAMES } from "./scripts/hook-command.ts";
 
 describe("registry", () => {
   it.each(Object.keys(COMMANDS))("command %s loads a main", async (name) => {

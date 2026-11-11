@@ -1,29 +1,31 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { folderMap } from "./folder-map.ts";
+
 import { mapRepos } from "./fixtures/folder-map-kit.ts";
+import { folderMap } from "./folder-map.ts";
 
 const { repo, map, track } = mapRepos();
 
 it("folderMap core lists folders that hold code, never files", () => {
   const text = map({
+    "docs/guide.md": "",
     "src/a.ts": "",
     "src/lib/b.ts": "",
-    "docs/guide.md": "",
   });
   expect(text).toBe("src/\n  lib/\n");
 });
 
 it("folderMap core skips dot dirs, generated, static, and test-data segments", () => {
   const text = map({
-    "src/a.ts": "",
     ".github/x.js": "",
-    "src/_gen/x.ts": "",
     "dist/x.js": "",
     "public/x.js": "",
     "src/__fixtures__/x.ts": "",
+    "src/_gen/x.ts": "",
+    "src/a.ts": "",
     "vendor/x.go": "",
   });
   expect(text).toBe("src/\n");
@@ -31,10 +33,10 @@ it("folderMap core skips dot dirs, generated, static, and test-data segments", (
 
 it("folderMap core maps cli/scripts, skipping its fixtures and dot dirs", () => {
   const text = map({
-    "src/a.ts": "",
+    ".hidden/other/x.mjs": "",
     "cli/scripts/a.mjs": "",
     "cli/scripts/fixtures/x.mjs": "",
-    ".hidden/other/x.mjs": "",
+    "src/a.ts": "",
   });
   expect(text).toBe("cli/scripts/\nsrc/\n");
 });
@@ -42,22 +44,22 @@ it("folderMap core maps cli/scripts, skipping its fixtures and dot dirs", () => 
 it("folderMap core drops gitignored folders", () => {
   const text = map({
     ".gitignore": "out/\n",
-    "src/a.ts": "",
     "out/b.ts": "",
+    "src/a.ts": "",
   });
   expect(text).toBe("src/\n");
 });
 
 it("folderMap core collapses single-child chains", () => {
-  expect(map({ "a/b/c/x.ts": "", "a/b/c/d/y.ts": "" })).toBe("a/b/c/\n  d/\n");
+  expect(map({ "a/b/c/d/y.ts": "", "a/b/c/x.ts": "" })).toBe("a/b/c/\n  d/\n");
 });
 
 it("folderMap core anchors package rows with name and full path, and does not collapse through them", () => {
   const text = map({
-    "packages/web/package.json": JSON.stringify({ name: "@x/web" }),
-    "packages/web/src/a.ts": "",
     "packages/api/go.mod": "module example.com/api\n",
     "packages/api/main.go": "",
+    "packages/web/package.json": JSON.stringify({ name: "@x/web" }),
+    "packages/web/src/a.ts": "",
   });
   expect(text).toBe(
     ["packages/", "  api/  # example.com/api  packages/api", "  web/  # @x/web  packages/web", "    src/", ""].join(
@@ -83,7 +85,7 @@ it("folderMap core renders brackets, parens, and spaces verbatim", () => {
 });
 
 it("folderMap core is deterministic", () => {
-  const files = { "b/x.ts": "", "a/y.ts": "", "a/c/z.ts": "" };
+  const files = { "a/c/z.ts": "", "a/y.ts": "", "b/x.ts": "" };
   const root = repo(files);
   expect(folderMap({ root })?.text).toBe(folderMap({ root })?.text);
   expect(folderMap({ root })?.text).toBe("a/\n  c/\nb/\n");
@@ -96,7 +98,7 @@ it("folderMap core scopes to a dir with package paths kept repo-relative", () =>
     "apps/web/src/ui/b.ts": "",
     "libs/x.ts": "",
   });
-  expect(folderMap({ root, dir: "apps" })?.text).toBe("web/  # web  apps/web\n  src/\n    ui/\n");
+  expect(folderMap({ dir: "apps", root })?.text).toBe("web/  # web  apps/web\n  src/\n    ui/\n");
 });
 
 it("folderMap core scopes correctly when root is an alias path git reports differently", () => {
@@ -104,12 +106,12 @@ it("folderMap core scopes correctly when root is an alias path git reports diffe
   const root = repo({ "apps/web/src/a.ts": "", "libs/x.ts": "" });
   const link = path.join(track(fs.mkdtempSync(path.join(os.tmpdir(), "folder-map-link-"))), "repo");
   fs.symlinkSync(root, link, "junction");
-  expect(folderMap({ root: link, dir: "apps" })?.text).toBe("web/src/\n");
+  expect(folderMap({ dir: "apps", root: link })?.text).toBe("web/src/\n");
 });
 
 it("folderMap core returns an empty map for a missing scope dir", () => {
   const root = repo({ "src/a.ts": "" });
-  expect(folderMap({ root, dir: "nope" })).toStrictEqual({ text: "", rows: 0, tokens: 0, depth: 0 });
+  expect(folderMap({ dir: "nope", root })).toStrictEqual({ depth: 0, rows: 0, text: "", tokens: 0 });
 });
 
 it("folderMap core returns null outside a git repo", () => {

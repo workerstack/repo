@@ -1,17 +1,18 @@
 import { z } from "zod";
+
+import { SHEAR_MAX_FINDING_EXIT, UNUSED_DEPENDENCY, UNUSED_HELP } from "./cargo-tools.constants.ts";
+import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
-import { quote } from "./cargo-tools.ts";
-import { SHEAR_MAX_FINDING_EXIT, UNUSED_DEPENDENCY, UNUSED_HELP } from "./cargo-tools.constants.ts";
 
 /** The shape of `cargo shear --format=json` this reads, built once per run so the module runs no code. */
 function schema() {
   const finding = z.object({
     code: z.string(),
-    severity: z.string(),
-    message: z.string(),
     file: z.string().optional(),
     help: z.string().optional(),
+    message: z.string(),
+    severity: z.string(),
   });
   return z.object({ findings: z.array(finding) });
 }

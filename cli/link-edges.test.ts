@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { NAME, mod, npmCopy, put, read, scene, sibling, stateFile, versionIn } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
@@ -22,7 +24,7 @@ it("links into the main checkout's install from a worktree without one, and find
 it("links into the worktree's own install when it has one", async () => {
   const w = scene();
   const tree = path.join(w.base, "repo-wt");
-  put(tree, { "package.json": JSON.stringify({ name: "app", dependencies: { [NAME]: "^0.3.0" } }) });
+  put(tree, { "package.json": JSON.stringify({ dependencies: { [NAME]: "^0.3.0" }, name: "app" }) });
   npmCopy(tree, NAME, "0.3.1");
   await main([NAME], w.io({ cwd: tree, git: gitOf(w.main, tree) }));
   expect(versionIn(tree, NAME)).toBe("0.4.0-dev");
@@ -51,13 +53,13 @@ it("judges required peers only, and ranges only", async () => {
   const w = scene();
   sibling(w.flare, NAME, "0.4.0-dev", {
     dependencies: { local: "file:../local", scoped: "npm:other@1", zod: "^3" },
-    peerDependencies: { react: "^19", optional: "^1", plain: "^2" },
+    peerDependencies: { optional: "^1", plain: "^2", react: "^19" },
     peerDependenciesMeta: { optional: { optional: true }, plain: {} },
   });
   await main([NAME], w.io());
   expect(w.out.slice(1, -1)).toStrictEqual([
-    `warning: ${NAME} needs react ^19, this checkout does not install it`,
     `warning: ${NAME} needs plain ^2, this checkout does not install it`,
+    `warning: ${NAME} needs react ^19, this checkout does not install it`,
   ]);
 });
 

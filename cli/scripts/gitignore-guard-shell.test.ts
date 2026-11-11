@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { shellIgnoreEdits } from "./gitignore-guard.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function root() {
@@ -31,13 +33,13 @@ const reads: [string, string[]][] = [
 describe("shellIgnoreEdits reads literal text", () => {
   it.each(reads)("reads %j", (command, added) => {
     const r = root();
-    expect(shellIgnoreEdits(command, r)).toStrictEqual([{ file: path.join(r, "pkg/.gitignore"), added }]);
+    expect(shellIgnoreEdits(command, r)).toStrictEqual([{ added, file: path.join(r, "pkg/.gitignore") }]);
   });
 
   it("names a target whose directory does not exist yet", () => {
     const r = root();
     expect(shellIgnoreEdits("echo x/ >> deep/new/.gitignore", r)).toStrictEqual([
-      { file: path.join(r, "deep/new/.gitignore"), added: ["x/"] },
+      { added: ["x/"], file: path.join(r, "deep/new/.gitignore") },
     ]);
   });
 });

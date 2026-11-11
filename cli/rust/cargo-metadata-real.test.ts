@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { crateProblems } from "./cargo-metadata.ts";
 import { runCargo } from "./clippy.ts";
 
@@ -10,7 +12,7 @@ const CARGO_MS = 300_000;
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** Writes a no-dependency crate called `name` under `dir`. */

@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted, tempDir } from "../fixtures/planted-repo.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
@@ -22,7 +24,7 @@ describe("repo release consumer", () => {
     spawnRunner("bun")(["pm", "pack", "--destination", dest, "--quiet"], fixture());
     const tarball = path.join(dest, "acme-fx-1.0.0.tgz");
     const got = await consume(tempDir(), [tarball]);
-    expect(got).toMatchObject({ code: 0, out: OK, err: "" });
+    expect(got).toMatchObject({ code: 0, err: "", out: OK });
     expect(got.made).toHaveLength(1);
   });
 
@@ -103,7 +105,7 @@ describe("repo release consumer imports", () => {
       if (args[0] !== PROBE_FILE) return spawnRunner("bun")(args, cwd);
       const failure = [{ key: "./notes", kind: "other", message: "no such file" }];
       fs.writeFileSync(path.join(cwd, PROBE_OUTPUT), JSON.stringify(failure));
-      return { code: 0, stdout: "", stderr: "" };
+      return { code: 0, stderr: "", stdout: "" };
     };
     const got = await consume(fixture({ exports, files: { "notes.md": "# notes\n" } }), [], { bun });
     expect(got.err).toContain(`${PREFIX}./notes does not resolve: no such file\n`);
@@ -147,8 +149,8 @@ describe("repo release consumer refusals", () => {
     const missing = path.join(tempDir(), "pkg-1.0.0.tgz");
     expect(await consume(tempDir(), [missing])).toMatchObject({
       code: 1,
-      out: "",
       err: `${PREFIX}${missing} does not exist\n`,
+      out: "",
     });
   });
 
@@ -164,7 +166,7 @@ describe("repo release consumer peers", () => {
     const bun: Runner = (args, cwd) => {
       if (args[0] !== "add" || !args[1]?.startsWith("peer-")) return spawnRunner("bun")(args, cwd);
       adds.push(args);
-      return { code: 0, stdout: "", stderr: "" };
+      return { code: 0, stderr: "", stdout: "" };
     };
     const files = { "package.json": withPeers({ "peer-a": "^1.0.0", "peer-b": "2" }) };
     const got = await consume(fixture({ files }), [], { bun });
@@ -174,7 +176,7 @@ describe("repo release consumer peers", () => {
 
   it("prints bun's stderr when adding a peer fails", { timeout: TIMEOUT }, async () => {
     const bun: Runner = (args, cwd) =>
-      args[1]?.startsWith("peer-") ? { code: 1, stdout: "", stderr: "no peer\n" } : spawnRunner("bun")(args, cwd);
+      args[1]?.startsWith("peer-") ? { code: 1, stderr: "no peer\n", stdout: "" } : spawnRunner("bun")(args, cwd);
     const files = { "package.json": withPeers({ "peer-a": "^1.0.0" }) };
     const got = await consume(fixture({ files }), [], { bun });
     expect(got).toMatchObject({ code: 1, out: "" });
@@ -186,24 +188,24 @@ describe("repo release consumer tool failures", () => {
   it("prints bun's stderr when bun add fails", async () => {
     const tarball = path.join(tempDir(), "pkg-1.0.0.tgz");
     fs.writeFileSync(tarball, "");
-    const bun: Runner = () => ({ code: 1, stdout: "", stderr: "no such package\n" });
+    const bun: Runner = () => ({ code: 1, stderr: "no such package\n", stdout: "" });
     const got = await consume(tempDir(), [tarball], { bun });
-    expect(got).toMatchObject({ code: 1, out: "", err: `${PREFIX}bun add failed: no such package\n` });
+    expect(got).toMatchObject({ code: 1, err: `${PREFIX}bun add failed: no such package\n`, out: "" });
     expect(fs.readdirSync(got.tmp)).toStrictEqual([]);
   });
 
   it("prints the refusal of a pack that names workspace:^", async () => {
-    const manifest = { name: "@acme/app", version: "1.0.0", dependencies: { "@workerstack/x": "workspace:^" } };
+    const manifest = { dependencies: { "@workerstack/x": "workspace:^" }, name: "@acme/app", version: "1.0.0" };
     const got = await consume(tempDir(), [], {
-      bun: () => ({ code: 0, stdout: "", stderr: "" }),
-      tar: () => ({ code: 0, stdout: JSON.stringify(manifest), stderr: "" }),
-      mkdtemp: (prefix) => `${prefix}x1`,
+      bun: () => ({ code: 0, stderr: "", stdout: "" }),
       list: () => ["acme-app-1.0.0.tgz"],
+      mkdtemp: (prefix) => `${prefix}x1`,
+      tar: () => ({ code: 0, stderr: "", stdout: JSON.stringify(manifest) }),
     });
     expect(got).toMatchObject({
       code: 1,
-      out: "",
       err: `${PREFIX}the packed package.json names workspace:^ for @workerstack/x; pin it before releasing\n`,
+      out: "",
     });
   });
 });

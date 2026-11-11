@@ -7,6 +7,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { childEnv } from "../cli/env.ts";
 import { toolEnv } from "../cli/scripts/tool-env.ts";
 import * as K from "./link-self.constants.ts";
@@ -140,8 +141,8 @@ function ensureShim(root: string): Result {
 /** Link the bin and the package itself into `<root>/node_modules`; `platform` is Windows to write a shim pair. */
 export function linkSelf(root: string, platform: string = process.platform): { bin: Result; pkg: Result } {
   const modules = path.join(root, "node_modules");
-  const binTo = { target: path.join("..", "..", "bin", "repo.ts"), abs: path.join(root, "bin", "repo.ts"), dir: false };
-  const pkgTo = { target: path.join("..", ".."), abs: path.resolve(root), dir: true };
+  const binTo = { abs: path.join(root, "bin", "repo.ts"), dir: false, target: path.join("..", "..", "bin", "repo.ts") };
+  const pkgTo = { abs: path.resolve(root), dir: true, target: path.join("..", "..") };
   return {
     bin: platform === WINDOWS ? ensureShim(root) : ensureLink(path.join(modules, ".bin", "repo"), binTo),
     pkg: ensureLink(path.join(modules, "@workerstack", "repo"), pkgTo),

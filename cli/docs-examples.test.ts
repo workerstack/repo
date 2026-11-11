@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { blocksOf, checkExamples, importsName, type ExampleRoot } from "./docs-examples.ts";
 import { exampleTools, fence, tempRoot } from "./fixtures/docs-fixture.ts";
 
 const ctx = (root: string, extra: Partial<ExampleRoot> = {}): ExampleRoot => ({
-  root,
+  build: false,
   dir: "",
   name: "@ws/a",
-  build: false,
+  root,
   ...extra,
 });
 const doc = (...fences: string[]) => blocksOf("", "references/auth.md", ["# Auth", ...fences].join("\n"));
@@ -24,10 +26,10 @@ it("takes ts, typescript and tsx fences, numbered per file, and ignores the rest
     fence("", "plain"),
   ].join("\n");
   const blocks = blocksOf("packages/a", "references/doc.md", text);
-  expect(blocks.map(({ md, line, n, ext, run }) => ({ md, line, n, ext, run }))).toStrictEqual([
-    { md: "packages/a/references/doc.md", line: 2, n: 1, ext: "ts", run: false },
-    { md: "packages/a/references/doc.md", line: 8, n: 2, ext: "ts", run: true },
-    { md: "packages/a/references/doc.md", line: 11, n: 3, ext: "tsx", run: false },
+  expect(blocks.map(({ md, line, n, ext, run }) => ({ ext, line, md, n, run }))).toStrictEqual([
+    { ext: "ts", line: 2, md: "packages/a/references/doc.md", n: 1, run: false },
+    { ext: "ts", line: 8, md: "packages/a/references/doc.md", n: 2, run: true },
+    { ext: "tsx", line: 11, md: "packages/a/references/doc.md", n: 3, run: false },
   ]);
   expect(blocks.map((block) => block.code)).toStrictEqual(["const a = 1;", "throw 1;", "export const x = <b />;"]);
 });
@@ -58,7 +60,7 @@ it("writes each block with an export and a tsconfig that extends the stock bun o
   expect(config).toContain('"noEmit": true');
   expect(config).toMatch(/"files": \[\s*"references\/auth\.md-1\.ts",\s*"references\/auth\.md-2\.tsx"\s*\]/);
   expect(fake.calls).toStrictEqual([
-    { tool: "tsc", args: ["--pretty", "false", "-p", path.join(scratch, "tsconfig.json")], cwd: scratch },
+    { args: ["--pretty", "false", "-p", path.join(scratch, "tsconfig.json")], cwd: scratch, tool: "tsc" },
   ]);
 });
 
@@ -71,9 +73,9 @@ it("extends the doc root's own tsconfig and runs from the package folder", () =>
   const own = path.join(root, "packages/a/tsconfig.json").replaceAll("\\", "/");
   expect(read(path.join(scratch, "tsconfig.json"))).toContain(`"extends": ${JSON.stringify(own)}`);
   expect(fake.calls[1]).toStrictEqual({
-    tool: "bun",
     args: [path.join(scratch, "references/x.md-1.ts")],
     cwd: path.join(root, "packages/a"),
+    tool: "bun",
   });
 });
 

@@ -1,4 +1,5 @@
 import ts from "typescript";
+
 import { isNominal, typeText } from "./api-diff-nominal.ts";
 import type { Ctx } from "./api-diff-nominal.ts";
 

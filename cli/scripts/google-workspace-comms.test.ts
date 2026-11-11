@@ -1,7 +1,7 @@
 import fs from "node:fs";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { main, setAccount } from "./google-workspace.ts";
-import { isRecord } from "./hook-input.ts";
+
 import {
   callAt,
   freshToken,
@@ -13,6 +13,8 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
+import { main, setAccount } from "./google-workspace.ts";
+import { isRecord } from "./hook-input.ts";
 
 const dirs: string[] = [];
 
@@ -21,7 +23,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -60,14 +62,14 @@ it("mail: lists with a query and count, via ls, and says when there are none", a
 });
 
 it("meeting: starts at --when, ends an hour later and splits --to into attendees", async () => {
-  const calls = stubFetch(() => jsonRes({ id: "e", summary: "meeting", htmlLink: "l" }));
+  const calls = stubFetch(() => jsonRes({ htmlLink: "l", id: "e", summary: "meeting" }));
   const r = await run("event", "create", "--when", "2030-05-05T08:00:00.000Z", "--to", "a@x.y; b@x.y");
   expect(r.code).toBe(0);
   expect(sentJson(calls)).toStrictEqual({
-    summary: "meeting",
-    start: { dateTime: "2030-05-05T08:00:00.000Z" },
-    end: { dateTime: "2030-05-05T09:00:00.000Z" },
     attendees: [{ email: "a@x.y" }, { email: "b@x.y" }],
+    end: { dateTime: "2030-05-05T09:00:00.000Z" },
+    start: { dateTime: "2030-05-05T08:00:00.000Z" },
+    summary: "meeting",
   });
 });
 

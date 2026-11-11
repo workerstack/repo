@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
-import { scrubText } from "./scrub-text-lib.ts";
+
+import { runHook, spawnHook } from "./fixtures/run-hook.ts";
+import { main as orchMain } from "./orchestrate-parent.ts";
 import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
@@ -11,9 +14,8 @@ import {
   processHookPayload,
   rewriteSpawnToolInput,
 } from "./scrub-spawn-prompt.ts";
+import { scrubText } from "./scrub-text-lib.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { main as orchMain } from "./orchestrate-parent.ts";
-import { runHook, spawnHook } from "./fixtures/run-hook.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..", "..");
@@ -38,16 +40,16 @@ const scrubbedPrompt = scrubText(fillerPrompt);
 describe("rewriteSpawnToolInput", () => {
   it("scrubs prompt with intent and preserves other fields", () => {
     const updated = rewriteSpawnToolInput({
-      prompt: fillerPrompt,
       description: "build it",
-      subagent_type: "scout",
       name: "feat",
+      prompt: fillerPrompt,
+      subagent_type: "scout",
     });
     expect(updated).toStrictEqual({
-      prompt: scrubbedPrompt,
       description: "build it",
-      subagent_type: "scout",
       name: "feat",
+      prompt: scrubbedPrompt,
+      subagent_type: "scout",
     });
     expect(updated?.prompt).not.toBe(fillerPrompt);
   });
@@ -94,13 +96,13 @@ describe("repo hook scrub-spawn-prompt (spawned)", () => {
   it("scrubs a spawn prompt through the real entry", () => {
     const result = spawnHook("scrub-spawn-prompt", {
       hookEventName: "PreToolUse",
+      toolInput: { description: "feat work", prompt: fillerPrompt },
       toolName: "spawn_subagent",
-      toolInput: { prompt: fillerPrompt, description: "feat work" },
     });
     expect(result.status, result.stderr).toBe(0);
     expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toStrictEqual({
-      prompt: scrubbedPrompt,
       description: "feat work",
+      prompt: scrubbedPrompt,
     });
   });
 });
@@ -109,13 +111,13 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
   it("rewrites prompt and preserves other fields", () => {
     const result = runHook(main, {
       hookEventName: "PreToolUse",
-      toolName: "spawn_subagent",
       toolInput: {
-        prompt: fillerPrompt,
         description: "feat work",
-        subagent_type: "scout",
+        prompt: fillerPrompt,
         resume_from: "abc",
+        subagent_type: "scout",
       },
+      toolName: "spawn_subagent",
     });
     expect(result.status).toBe(0);
     const out = parseOut(result.stdout);
@@ -123,10 +125,10 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         updatedInput: {
-          prompt: scrubbedPrompt,
           description: "feat work",
-          subagent_type: "scout",
+          prompt: scrubbedPrompt,
           resume_from: "abc",
+          subagent_type: "scout",
         },
       },
     });
@@ -135,17 +137,17 @@ describe("scrub-spawn-prompt adapter (stdin)", () => {
   it("accepts Claude snake_case tool_input", () => {
     const result = runHook(main, {
       hook_event_name: "PreToolUse",
-      tool_name: "Task",
       tool_input: {
-        prompt: fillerPrompt,
         description: "keep me",
+        prompt: fillerPrompt,
         subagent_type: "thinker",
       },
+      tool_name: "Task",
     });
     expect(result.status).toBe(0);
     expect(parseOut(result.stdout).hookSpecificOutput!.updatedInput).toStrictEqual({
-      prompt: scrubbedPrompt,
       description: "keep me",
+      prompt: scrubbedPrompt,
       subagent_type: "thinker",
     });
   });
@@ -179,12 +181,12 @@ describe("orchestrate-parent spawn rewrite", () => {
       orchMain,
       {
         hookEventName: "PreToolUse",
-        toolName: "spawn_subagent",
         toolInput: {
-          prompt: fillerPrompt,
           description: "feat",
           name: "child",
+          prompt: fillerPrompt,
         },
+        toolName: "spawn_subagent",
       },
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
@@ -192,9 +194,9 @@ describe("orchestrate-parent spawn rewrite", () => {
     const out = parseOut(result.stdout);
     expect(out.hookSpecificOutput!.hookEventName).toBe("PreToolUse");
     expect(out.hookSpecificOutput!.updatedInput).toStrictEqual({
-      prompt: scrubbedPrompt,
       description: "feat",
       name: "child",
+      prompt: scrubbedPrompt,
     });
     expect(out.decision).toBeUndefined();
   });
@@ -204,11 +206,11 @@ describe("orchestrate-parent spawn rewrite", () => {
       orchMain,
       {
         hookEventName: "PreToolUse",
-        toolName: "Task",
         toolInput: {
           prompt: fillerPrompt,
           subagent_type: "Explore",
         },
+        toolName: "Task",
       },
       { GROK_HOOK_EVENT: "pre_tool_use" },
     );
@@ -291,15 +293,15 @@ describe("processHookPayload", () => {
         toolInput: { prompt: fillerPrompt, tag: "camel" },
         tool_input: { prompt: fillerPrompt, tag: "snake" },
       }),
-    ).toMatchObject({ hookSpecificOutput: { updatedInput: { tag: "camel", prompt: scrubbedPrompt } } });
+    ).toMatchObject({ hookSpecificOutput: { updatedInput: { prompt: scrubbedPrompt, tag: "camel" } } });
   });
 
   it("answers a Codex spawn rewrite with allow and a Claude one without", () => {
     const codex = processHookPayload({
-      turn_id: "t1",
       model: "m",
-      tool_name: "spawn_agent",
       tool_input: { prompt: fillerPrompt },
+      tool_name: "spawn_agent",
+      turn_id: "t1",
     });
     expect(codex).toStrictEqual({
       hookSpecificOutput: {
@@ -308,9 +310,9 @@ describe("processHookPayload", () => {
         updatedInput: { prompt: scrubbedPrompt },
       },
     });
-    const claude = processHookPayload({ tool_name: "Agent", tool_input: { prompt: fillerPrompt } });
+    const claude = processHookPayload({ tool_input: { prompt: fillerPrompt }, tool_name: "Agent" });
     expect(
-      processHookPayload({ turn_id: "t1", tool_name: "Agent", tool_input: { prompt: fillerPrompt } }),
+      processHookPayload({ tool_input: { prompt: fillerPrompt }, tool_name: "Agent", turn_id: "t1" }),
     ).toStrictEqual(claude);
     expect(claude).toStrictEqual({
       hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: { prompt: scrubbedPrompt } },
@@ -325,8 +327,8 @@ describe("orchestrate-parent spawn cap deny", () => {
       orchMain,
       {
         hookEventName: "PreToolUse",
-        toolName: "spawn_subagent",
         toolInput: { prompt, subagent_type: "scout" },
+        toolName: "spawn_subagent",
         workspaceRoot: root,
       },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },
@@ -345,11 +347,11 @@ describe("orchestrate-parent spawn cap deny", () => {
       orchMain,
       {
         hookEventName: "PreToolUse",
-        toolName: "spawn_subagent",
         toolInput: {
           prompt: "You are scout subagent. ship it",
           subagent_type: "scout",
         },
+        toolName: "spawn_subagent",
         workspaceRoot: root,
       },
       { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },

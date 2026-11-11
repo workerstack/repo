@@ -64,18 +64,18 @@ function expandKey(key: string, value: unknown, files: readonly string[]): Subpa
   const runtime = runtimeOf(value);
   if (runtime === null) return noRuntime(key);
   const types = typesOf(value);
-  if (!key.includes(STAR) || !runtime.includes(STAR)) return [{ key, runtime, types, kind: kindOf(runtime) }];
+  if (!key.includes(STAR) || !runtime.includes(STAR)) return [{ key, kind: kindOf(runtime), runtime, types }];
   const pattern = patternOf(runtime);
   const found = files.flatMap((file) => {
     const captured = pattern.exec(file)?.[1];
-    return captured === undefined ? [] : [{ file, captured }];
+    return captured === undefined ? [] : [{ captured, file }];
   });
   if (found.length === 0) return noMatch(key);
   return found.map(({ file, captured }) => ({
     key: key.replace(STAR, captured),
+    kind: kindOf(file),
     runtime: `${CURRENT_DIR}${file}`,
     types: types?.replace(STAR, captured) ?? null,
-    kind: kindOf(file),
   }));
 }
 
@@ -88,7 +88,7 @@ function keyMap(exports: unknown): Record<string, unknown> | null {
 
 /** Expands an `exports` field against the package's files (paths relative to its root, with `/`). */
 export function exportSubpaths(exports: unknown, files: readonly string[]): Expanded {
-  const out: Expanded = { exports: 0, subpaths: [], errors: [] };
+  const out: Expanded = { errors: [], exports: 0, subpaths: [] };
   const map = keyMap(exports);
   if (map === null) return { ...out, errors: [NO_EXPORTS] };
   for (const [key, value] of Object.entries(map).filter(([, target]) => target !== null)) {

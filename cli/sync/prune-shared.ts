@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { Output } from "./outputs.ts";
-import { YOURS_PATHS } from "./yours-paths.constants.ts";
 import { cutRegions, hasMarkers, syntaxOf } from "./region.ts";
-import { writeOutput } from "./write.ts";
 import { unlock } from "./write-modes.ts";
+import { writeOutput } from "./write.ts";
+import { YOURS_PATHS } from "./yours-paths.constants.ts";
 
 /** A shared file no output writes any more: its text with every region cut, and one line per region cut. */
 export type Cut = { path: string; text: string; repairs: string[] };
@@ -57,7 +58,7 @@ export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): {
   const errors: string[] = [];
   for (const entry of cut) {
     const blank = entry.text.trim() === "";
-    const output: Output = { kind: "file", path: entry.path, content: entry.text, tracked: true, managed: "block" };
+    const output: Output = { content: entry.text, kind: "file", managed: "block", path: entry.path, tracked: true };
     const error = blank
       ? removeFile(path.join(root, entry.path))
       : (write.writeOutput ?? writeOutput)(root, output, write.platform);
@@ -68,7 +69,7 @@ export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): {
     lines.push(...entry.repairs.map((repair) => `${repair} from ${entry.path}`));
     if (blank) lines.push(`removed ${entry.path}: nothing but its regions was in it`);
   }
-  return { lines, errors };
+  return { errors, lines };
 }
 
 /** Removes the file at `abs`, made writable first; null on success, else the error text. */

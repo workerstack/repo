@@ -1,12 +1,10 @@
 /** `validatePlan`: an ordered table of small checks, so the errors keep their order. */
 import path from "node:path";
-import { canonicalPath } from "./workspace-root.ts";
-import { parseStrategy } from "./strategy.ts";
-import { hasKey, parseFrontmatter, slugFromFilename } from "./persist-doc.ts";
+
 import { CREATED_RE, SERIAL_LINE_RE, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
+import { hasKey, parseFrontmatter, slugFromFilename } from "./persist-doc.ts";
 import { modeErrors, strategyError } from "./persist-keys.ts";
 import { reviewErrors } from "./persist-mistakes.ts";
-import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 import { BODY_CHECKS, when, type Doc } from "./persist-plan-body-checks.ts";
 import {
   ABSOLUTE_PATH,
@@ -20,6 +18,9 @@ import {
   STATUS_RE,
   TRAILING_PUNCT_RE,
 } from "./persist-plan.constants.ts";
+import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
+import { parseStrategy } from "./strategy.ts";
+import { canonicalPath } from "./workspace-root.ts";
 
 interface Options {
   fresh?: boolean;
@@ -90,7 +91,7 @@ export function validatePlan(filename: string, text: string, { fresh = true, pre
   const errors: string[] = when(!FILENAME_RE.test(filename), "filename");
   const fm = parseFrontmatter(text);
   if (fm.error !== undefined) return [...errors, fm.error];
-  const doc: Doc = { filename, text, map: fm.map, body: fm.body, fresh, previous };
+  const doc: Doc = { body: fm.body, filename, fresh, map: fm.map, previous, text };
   errors.push(...HEAD_CHECKS.flatMap((check) => check(doc)));
   const fence = unclosedFenceErrors(text);
   if (fence.length) return [...errors, ...fence];

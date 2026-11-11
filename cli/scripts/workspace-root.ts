@@ -13,9 +13,10 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { HookInput } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import type { HookInput } from "./hook-input.ts";
 
 /** The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/` dir. */
 export const INSTALL_MARKER = "workerstack.config.ts";
@@ -53,7 +54,7 @@ export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
     );
     const [top, gitDir, commonDir] = out.split(/\r?\n/);
-    if (top && gitDir && commonDir) facts = { top, gitDir, commonDir };
+    if (top && gitDir && commonDir) facts = { commonDir, gitDir, top };
   } catch {
     facts = null;
   }
@@ -145,7 +146,7 @@ export function resolveRoots(
 ): Roots {
   const data: HookInput = input && typeof input === "object" ? input : {};
   const args = data.toolCall?.args ?? {};
-  const ctx: RootsContext = { git, p, exists, realpath };
+  const ctx: RootsContext = { exists, git, p, realpath };
   const paths = Array.isArray(data.workspacePaths) ? data.workspacePaths : [];
   const given = firstString(data.workspaceRoot, data.workspace_root, paths[0]);
   // A workspace the harness sent beats the hook process cwd as where the agent works.
@@ -153,8 +154,8 @@ export function resolveRoots(
   const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.CLAUDE_PROJECT_DIR);
   const start = candidate ? realpath(p.resolve(cwd, asDir(candidate))) : hookCwd;
   return {
-    root: rootsFor(start, ctx).root,
     checkout: rootsFor(hookCwd, ctx).checkout,
     cwd: hookCwd,
+    root: rootsFor(start, ctx).root,
   };
 }

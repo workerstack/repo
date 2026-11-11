@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
-import { LOCK_STALE_MS } from "./jev.ts";
+
 import { answerBody, go, lockPath, plantDir, plantLock, reply, scripted } from "./fixtures/jev-kit.ts";
+import { LOCK_STALE_MS } from "./jev.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -21,7 +23,7 @@ it("reclaims a stale lock and runs", async () => {
   plantLock(home);
   const old = new Date(Date.now() - 2 * LOCK_STALE_MS);
   fs.utimesSync(lockPath(home), old, old);
-  expect((await go({ home, fetchImpl: ok() })).code).toBe(0);
+  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
   expect(fs.existsSync(lockPath(home))).toBe(false);
 });
 
@@ -32,7 +34,7 @@ it("reclaims a lock that vanishes while it is checked, even when the owner remov
     throw new Error("ENOENT");
   });
   vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
-  expect((await go({ home, fetchImpl: ok() })).code).toBe(0);
+  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
 });
 
 it("reports a busy lock after waiting out the stale window", async () => {
@@ -43,7 +45,7 @@ it("reports a busy lock after waiting out the stale window", async () => {
   let clock = Date.now();
   vi.spyOn(Date, "now").mockImplementation(() => (clock += 6000));
   const fetchImpl = ok();
-  expect(await go({ home, fetchImpl })).toStrictEqual({ code: 2, text: "jev usage lock busy\n" });
+  expect(await go({ fetchImpl, home })).toStrictEqual({ code: 2, text: "jev usage lock busy\n" });
   expect(fetchImpl.calls).toBe(0);
 });
 
@@ -56,13 +58,13 @@ it("waits for a lock that its owner releases", async () => {
     fs.rmdirSync(String(target));
     return seen;
   });
-  expect((await go({ home, fetchImpl: ok() })).code).toBe(0);
+  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
 });
 
 it("lets the lock release fail without failing the call", async () => {
   const home = plantDir();
   vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
-  expect((await go({ home, fetchImpl: ok() })).code).toBe(0);
+  expect((await go({ fetchImpl: ok(), home })).code).toBe(0);
 });
 
 it("rejects when taking the lock fails for another reason", async () => {
@@ -73,5 +75,5 @@ it("rejects when taking the lock fails for another reason", async () => {
     if (String(target) === lockPath(home)) throw Object.assign(new Error("EACCES"), { code: "EACCES" });
     return real(target, options);
   });
-  await expect(go({ home, fetchImpl: ok() })).rejects.toThrow("EACCES");
+  await expect(go({ fetchImpl: ok(), home })).rejects.toThrow("EACCES");
 });

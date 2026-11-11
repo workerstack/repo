@@ -4,11 +4,12 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
-import { loadOptionalConsumerEnv } from "./doctor.ts";
-import { isRecord } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { loadOptionalConsumerEnv } from "./doctor.ts";
+import { isRecord } from "./hook-input.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 export type Provider = "elevenlabs" | "openai";
 
@@ -30,9 +31,9 @@ export interface FetchResult {
 }
 
 export interface FetchInit {
-  method?: string | undefined;
-  headers?: Record<string, string> | undefined;
-  body?: string | undefined;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
 }
 
 export type FetchFn = (url: string, init: FetchInit) => Promise<FetchResult>;
@@ -155,18 +156,18 @@ export function loadCfg({ env = readEnv(), home = os.homedir() }: { env?: Env; h
   const eleven = isRecord(file.elevenlabs) ? file.elevenlabs : {};
   const openai = isRecord(file.openai) ? file.openai : {};
   return {
-    filePath,
-    providerPref: str(env.SPEAK_PROVIDER || file.provider).toLowerCase(),
     elevenlabs: {
       apiKey: str(env.ELEVENLABS_API_KEY || eleven.apiKey || file.apiKey),
-      voiceId: str(env.ELEVENLABS_VOICE_ID || eleven.voiceId || file.voiceId, DEFAULT_ELEVEN_VOICE),
       modelId: str(env.ELEVENLABS_MODEL_ID || eleven.modelId || file.modelId, DEFAULT_ELEVEN_MODEL),
+      voiceId: str(env.ELEVENLABS_VOICE_ID || eleven.voiceId || file.voiceId, DEFAULT_ELEVEN_VOICE),
     },
+    filePath,
     openai: {
       apiKey: str(env.OPENAI_API_KEY || openai.apiKey),
-      voice: str(env.OPENAI_TTS_VOICE || openai.voice, DEFAULT_OPENAI_VOICE),
       model: str(env.OPENAI_TTS_MODEL || openai.model, DEFAULT_OPENAI_MODEL),
+      voice: str(env.OPENAI_TTS_VOICE || openai.voice, DEFAULT_OPENAI_VOICE),
     },
+    providerPref: str(env.SPEAK_PROVIDER || file.provider).toLowerCase(),
   };
 }
 
@@ -200,12 +201,12 @@ async function apiFetch(url: string, opts: ApiOpts & { raw: true }): Promise<Buf
 async function apiFetch(url: string, opts: ApiOpts): Promise<unknown>;
 async function apiFetch(url: string, { method = "GET", headers, body, raw, fetchFn }: ApiOpts): Promise<unknown> {
   // The global fetch returns a full Response, which carries every FetchResult field.
-  const fn: FetchFn | undefined = fetchFn || (globalThis.fetch as FetchFn | undefined);
+  const fn: FetchFn | undefined = fetchFn || globalThis.fetch;
   if (typeof fn !== "function") throw new Error("fetch is not available");
   const res = await fn(url, {
     method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    ...(headers === undefined ? {} : { headers }),
   });
   if (!res || !res.ok) {
     const status = res && res.status != null ? res.status : "err";
@@ -234,8 +235,8 @@ export async function whoami({ provider, cfg, fetchFn }: ProviderOpts): Promise<
   if (p === "elevenlabs") {
     try {
       const u = await apiFetch(`${ELEVEN_API}/user`, {
-        headers: { "xi-api-key": cfg.elevenlabs.apiKey },
         fetchFn,
+        headers: { "xi-api-key": cfg.elevenlabs.apiKey },
       });
       const user = isRecord(u) ? u : {};
       const email = user.email ? String(user.email) : "ok";
@@ -250,8 +251,8 @@ export async function whoami({ provider, cfg, fetchFn }: ProviderOpts): Promise<
     }
   }
   await apiFetch(`${OPENAI_API}/models`, {
-    headers: { Authorization: `Bearer ${cfg.openai.apiKey}` },
     fetchFn,
+    headers: { Authorization: `Bearer ${cfg.openai.apiKey}` },
   });
   return "openai ok";
 }
@@ -260,8 +261,8 @@ export async function voices({ provider, cfg, fetchFn }: ProviderOpts): Promise<
   const p = resolveProvider(cfg, provider);
   if (p === "openai") return OPENAI_VOICES.join("\n");
   const j = await apiFetch(`${ELEVEN_API}/voices`, {
-    headers: { "xi-api-key": cfg.elevenlabs.apiKey },
     fetchFn,
+    headers: { "xi-api-key": cfg.elevenlabs.apiKey },
   });
   const list: unknown[] = isRecord(j) && Array.isArray(j.voices) ? j.voices : [];
   return list.map((v) => (isRecord(v) ? `${v.voice_id}  ${v.name}` : "undefined  undefined")).join("\n");
@@ -298,26 +299,26 @@ export async function say({
   if (p === "elevenlabs") {
     const id = str(voice, cfg.elevenlabs.voiceId);
     buf = await apiFetch(`${ELEVEN_API}/text-to-speech/${encodeURIComponent(id)}?output_format=mp3_44100_128`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": cfg.elevenlabs.apiKey,
-        "Content-Type": "application/json",
-      },
-      body: { text: str(text), model_id: cfg.elevenlabs.modelId },
-      raw: true,
+      body: { model_id: cfg.elevenlabs.modelId, text: str(text) },
       fetchFn,
+      headers: {
+        "Content-Type": "application/json",
+        "xi-api-key": cfg.elevenlabs.apiKey,
+      },
+      method: "POST",
+      raw: true,
     });
   } else {
     const v = str(voice, cfg.openai.voice);
     buf = await apiFetch(`${OPENAI_API}/audio/speech`, {
-      method: "POST",
+      body: { input: str(text), model: cfg.openai.model, voice: v },
+      fetchFn,
       headers: {
         Authorization: `Bearer ${cfg.openai.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: { model: cfg.openai.model, input: str(text), voice: v },
+      method: "POST",
       raw: true,
-      fetchFn,
     });
   }
   const dest = str(out) || path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`);
@@ -333,30 +334,30 @@ export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<nu
   const env = opts.env || readEnv();
   const home = opts.home || os.homedir();
   const cwd = opts.cwd || process.cwd();
-  const fetchFn = opts.fetchFn || (globalThis.fetch as FetchFn | undefined);
+  const fetchFn = opts.fetchFn || globalThis.fetch;
   const log: SpeakLog = opts.log || console;
   const cfg = loadCfg({ env, home });
   const verb = String(_[0] || "").toLowerCase();
   try {
     if (verb === "whoami") {
-      log.log(await whoami({ provider: flags.provider, cfg, fetchFn }));
+      log.log(await whoami({ cfg, fetchFn, provider: flags.provider }));
       return 0;
     }
     if (verb === "voices") {
-      log.log(await voices({ provider: flags.provider, cfg, fetchFn }));
+      log.log(await voices({ cfg, fetchFn, provider: flags.provider }));
       return 0;
     }
     if (verb === "say") {
       const dest = await say({
-        text: flags.text,
-        voice: flags.voice,
-        out: flags.out,
-        play: flags.play,
-        provider: flags.provider,
         cfg,
         cwd,
         fetchFn,
+        out: flags.out,
+        play: flags.play,
+        provider: flags.provider,
         spawn: opts.spawn,
+        text: flags.text,
+        voice: flags.voice,
       });
       log.log(dest);
       return 0;

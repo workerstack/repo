@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { hasChildAgentMarker, isImplementer, isParentOrchestrator, subagentTypeOf } from "./gate-agents.ts";
 
 const CHILD_UUID = "b2c6f0d4-0000-4000-8000-000000000000";

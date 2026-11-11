@@ -1,6 +1,10 @@
+import type { SpawnSyncReturns } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import type { SpawnSyncReturns } from "node:child_process";
+
+import { resolveUnder } from "./job-args.ts";
+import { failedResult, nonEmptyLines, notFound, runCmd } from "./job-exec.ts";
+import { escapeRe, fallbackResult, formatFacts, factsResult, isHtml, verdictFromLines } from "./job-format.ts";
 import {
   FACT_WIDTH,
   GLOBSTAR_DIR,
@@ -14,9 +18,6 @@ import {
   SEARCH_SKIP_DIRS,
   STASH_CAP,
 } from "./job.constants.ts";
-import { resolveUnder } from "./job-args.ts";
-import { failedResult, nonEmptyLines, notFound, runCmd } from "./job-exec.ts";
-import { escapeRe, fallbackResult, formatFacts, factsResult, isHtml, verdictFromLines } from "./job-format.ts";
 import type { JobResult, SearchHits, SearchOptions, SearchScope, SearchState } from "./job.types.ts";
 
 /** A glob as a whole-path pattern: `**` crosses dirs, `*` and `?` stay in one. */
@@ -111,16 +112,16 @@ function patternOf(query: string): RegExp | null {
 
 /** The search rg would do, in node: for a machine with no rg. */
 function nodeSearch(query: string, scope: SearchScope): SearchHits {
-  const st: SearchState = { ...scope, query, re: patternOf(query), facts: [], n: 0, bytes: 0 };
+  const st: SearchState = { ...scope, bytes: 0, facts: [], n: 0, query, re: patternOf(query) };
   let stat: fs.Stats;
   try {
     stat = fs.statSync(scope.start);
   } catch {
-    return { n: 0, facts: [], truncated: false };
+    return { facts: [], n: 0, truncated: false };
   }
   if (stat.isFile()) searchFile(st, scope.start);
   else walk(st, scope.start);
-  return { n: st.n, facts: st.facts, truncated: full(st) };
+  return { facts: st.facts, n: st.n, truncated: full(st) };
 }
 
 /** rg's `file:line:text` hits as facts. */
@@ -140,11 +141,11 @@ function rgVerdict(r: SpawnSyncReturns<string>, query: string, opts: SearchOptio
   const stdout = String(r.stdout || "");
   const stderr = String(r.stderr || "");
   if (isHtml(stdout, stderr)) return fallbackResult();
-  if (r.status === RG_NO_MATCH) return factsResult(formatFacts({ kind: SEARCH_JOB, n: 0, facts: [] }));
+  if (r.status === RG_NO_MATCH) return factsResult(formatFacts({ facts: [], kind: SEARCH_JOB, n: 0 }));
   if (r.status === 0) {
     const { facts, raw } = parseSearchHits(stdout);
     const truncated = facts.length >= MAX_HITS;
-    return verdictFromLines({ kind: SEARCH_JOB, lines: facts, raw, query, cwd: opts.cwd, root: opts.root, truncated });
+    return verdictFromLines({ cwd: opts.cwd, kind: SEARCH_JOB, lines: facts, query, raw, root: opts.root, truncated });
   }
   if (r.status == null) return null;
   const errors = nonEmptyLines(stderr);
@@ -166,7 +167,7 @@ export function runSearch(query: string, { cwd, root, path: searchPath, glob }: 
   const r = runCmd(RG, rgArgs, base);
   const verdict = notFound(r) ? null : rgVerdict(r, query, { cwd: base, root });
   if (verdict) return verdict;
-  const node = nodeSearch(query, { cwd: base, start, glob: globs });
+  const node = nodeSearch(query, { cwd: base, glob: globs, start });
   const { facts, truncated } = node;
-  return verdictFromLines({ kind: SEARCH_JOB, lines: facts, raw: facts.join("\n"), query, cwd: base, root, truncated });
+  return verdictFromLines({ cwd: base, kind: SEARCH_JOB, lines: facts, query, raw: facts.join("\n"), root, truncated });
 }

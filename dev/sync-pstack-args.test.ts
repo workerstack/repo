@@ -1,11 +1,12 @@
 import { expect, it } from "vitest";
+
 import { parseArgv } from "./sync-pstack-args.ts";
 
 it("parseArgv defaults generate on", () => {
   expect(parseArgv([])).toStrictEqual({
-    ok: true,
     check: false,
     generate: true,
+    ok: true,
     ref: "main",
     repo: "backnotprop/pstack",
     skills: [],
@@ -14,9 +15,9 @@ it("parseArgv defaults generate on", () => {
 
 it("parseArgv parses flags", () => {
   expect(parseArgv(["--check", "--no-generate", "--ref", "abc", "--skill", "bro", "--skill", "teach"])).toStrictEqual({
-    ok: true,
     check: true,
     generate: false,
+    ok: true,
     ref: "abc",
     repo: "backnotprop/pstack",
     skills: ["bro", "teach"],
@@ -24,10 +25,10 @@ it("parseArgv parses flags", () => {
 });
 
 it("parseArgv rejects unknown flags", () => {
-  expect(parseArgv(["--wat"])).toStrictEqual({ ok: false, error: "unknown flag: --wat" });
+  expect(parseArgv(["--wat"])).toStrictEqual({ error: "unknown flag: --wat", ok: false });
 });
 
 it("parseArgv rejects a flag with no value", () => {
-  expect(parseArgv(["--ref"])).toStrictEqual({ ok: false, error: "--ref needs a value" });
-  expect(parseArgv(["--skill", "--check"])).toStrictEqual({ ok: false, error: "--skill needs a value" });
+  expect(parseArgv(["--ref"])).toStrictEqual({ error: "--ref needs a value", ok: false });
+  expect(parseArgv(["--skill", "--check"])).toStrictEqual({ error: "--skill needs a value", ok: false });
 });

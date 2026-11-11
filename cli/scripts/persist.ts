@@ -1,5 +1,6 @@
 /** `repo persist <kind> [--workspace dir]`: save the stdin body as a plan, roadmap, handoff, implementation or tmp file. */
 import path from "node:path";
+
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { persistImplementation } from "./persist-implementation.ts";
@@ -12,10 +13,10 @@ type Saved = { ok: true; serial: number; path: string; filename: string } | { ok
 type Saver = (opts: { workspaceRoot: string; content: string }) => Saved;
 
 const SAVERS: Readonly<Record<string, Saver>> = {
-  plan: persistPlan,
-  roadmap: persistRoadmap,
   handoff: persistHandoff,
   implementation: persistImplementation,
+  plan: persistPlan,
+  roadmap: persistRoadmap,
   tmp: persistTmp,
 };
 
@@ -35,10 +36,10 @@ function workspaceOf(argv: string[]): string {
 function saveBody(save: Saver, argv: string[], io: HookIo): number {
   try {
     const workspaceRoot = workspaceOf(argv);
-    const result = save({ workspaceRoot, content: readAllText(io) });
+    const result = save({ content: readAllText(io), workspaceRoot });
     if (!result.ok) return fail(result.error);
     const { serial, path: saved, filename } = result;
-    io.write(JSON.stringify({ serial, path: saved, absPath: path.resolve(workspaceRoot, saved), filename }) + "\n");
+    io.write(JSON.stringify({ absPath: path.resolve(workspaceRoot, saved), filename, path: saved, serial }) + "\n");
     return 0;
   } catch (err) {
     return fail(err instanceof Error ? err.message : String(err));

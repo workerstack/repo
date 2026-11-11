@@ -1,6 +1,6 @@
 ---
-name: researcher
 description: Heavy research worker. Web docs, browser, Playwright. Facts with sources.
+name: researcher
 model: grok-4.7
 maxTurns: 60
 permission_mode: bypassPermissions

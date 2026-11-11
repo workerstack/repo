@@ -1,4 +1,5 @@
 import type { SpawnSyncOptions, SpawnSyncOptionsWithStringEncoding, SpawnSyncReturns } from "node:child_process";
+
 import crossSpawn from "cross-spawn";
 
 /**

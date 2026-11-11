@@ -1,9 +1,13 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { bunPath } from "../../dev/test-paths";
+import { childEnv } from "../env.ts";
 import {
   DEFAULT_MODEL,
   GGML_URL,
@@ -40,8 +44,6 @@ import {
   transcribeLocal,
 } from "./listen.ts";
 import type { ChildLike, FetchFn, FetchResult, ListenCfg, SpawnSyncResult, Stt, SttOpts } from "./listen.ts";
-import { bunPath } from "../../dev/test-paths";
-import { childEnv } from "../env.ts";
 
 function whichMap(map: Record<string, string> = {}) {
   return (name: string) => map[name] || "";
@@ -56,7 +58,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
 });
 
@@ -71,7 +73,7 @@ function gitRepoWithPkg(prefix: string) {
   spawnSync("git", ["init", "-q"], { cwd: r });
   const a = path.join(r, "packages", "a");
   fs.mkdirSync(a, { recursive: true });
-  return { r, a };
+  return { a, r };
 }
 
 const AV_FIXTURE = `
@@ -94,7 +96,7 @@ describe("parseArgv / clampSeconds / devices", () => {
   it("reads verb and flags", () => {
     expect(parseArgv(["rec", "--seconds", "5", "--clip"])).toStrictEqual({
       _: ["rec"],
-      flags: { seconds: "5", clip: "1" },
+      flags: { clip: "1", seconds: "5" },
     });
   });
 
@@ -137,8 +139,8 @@ describe("loadCfg", () => {
     fs.writeFileSync(
       path.join(home, ".workerstack", "speak.json"),
       JSON.stringify({
+        listen: { device: ":1", model: "gpt-4o-mini-transcribe", seconds: 4 },
         openai: { apiKey: "sk_file" },
-        listen: { model: "gpt-4o-mini-transcribe", device: ":1", seconds: 4 },
       }),
     );
     const cfg = loadCfg({ env: {}, home });
@@ -153,10 +155,10 @@ describe("loadCfg", () => {
     fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       path.join(home, ".workerstack", "speak.json"),
-      JSON.stringify({ openai: { apiKey: "file" }, listen: { model: "whisper-1" } }),
+      JSON.stringify({ listen: { model: "whisper-1" }, openai: { apiKey: "file" } }),
     );
     const cfg = loadCfg({
-      env: { OPENAI_API_KEY: "sk_env", LISTEN_MODEL: "whisper-1" },
+      env: { LISTEN_MODEL: "whisper-1", OPENAI_API_KEY: "sk_env" },
       home,
     });
     expect(cfg.apiKey).toBe("sk_env");
@@ -168,16 +170,16 @@ describe("main", () => {
   it("usage on unknown verb", async () => {
     const errs: string[] = [];
     const code = await main(["nope"], {
+      cwd: tmp("listen-uc-"),
       env: {},
       home: tmp("listen-u-"),
-      cwd: tmp("listen-uc-"),
-      whichFn: () => "",
       log: {
-        log() {},
         error(s: string) {
           errs.push(String(s));
         },
+        log() {},
       },
+      whichFn: () => "",
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toContain(USAGE);
@@ -190,18 +192,18 @@ describe("main", () => {
     const errs: string[] = [];
     const logs: string[] = [];
     const code = await main(["file", "--path", wav], {
+      cwd,
       env: {},
       home: tmp("listen-fkh-"),
-      cwd,
-      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
       log: {
-        log(s: string) {
-          logs.push(String(s));
-        },
         error(s: string) {
           errs.push(String(s));
         },
+        log(s: string) {
+          logs.push(String(s));
+        },
       },
+      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
     });
     expect(code).toBe(1);
     const all = `${logs.join("\n")}\n${errs.join("\n")}`;
@@ -217,25 +219,25 @@ describe("main", () => {
     const logs: string[] = [];
     let posted: { url?: string; body?: FormData; headers?: Record<string, string> } = {};
     const code = await main(["file", "--path", wav], {
-      env: { OPENAI_API_KEY: "sk_oa" },
-      home: tmp("listen-fh-"),
       cwd,
-      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
+      env: { OPENAI_API_KEY: "sk_oa" },
       fetchFn: async (url: string, init: { body?: FormData; headers?: Record<string, string> }) => {
-        posted = { url, body: init.body, headers: init.headers };
+        posted = { body: init.body, headers: init.headers, url };
         return {
+          json: async () => ({ text: "hello world" }),
           ok: true,
           status: 200,
-          json: async () => ({ text: "hello world" }),
           text: async () => "",
         };
       },
+      home: tmp("listen-fh-"),
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
+      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
     });
     expect(code).toBe(0);
     expect(posted.url).toMatch(/audio\/transcriptions/);
@@ -251,17 +253,17 @@ describe("main", () => {
     fs.writeFileSync(wav, "RIFFDATA");
     const logs: string[] = [];
     const code = await main(["file", "--path", wav], {
-      env: { OPENAI_API_KEY: "sk_oa" },
-      home: tmp("listen-sub-h-"),
       cwd: a,
-      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
-      fetchFn: async () => ({ ok: true, status: 200, json: async () => ({ text: "sub hello" }), text: async () => "" }),
+      env: { OPENAI_API_KEY: "sk_oa" },
+      fetchFn: async () => ({ json: async () => ({ text: "sub hello" }), ok: true, status: 200, text: async () => "" }),
+      home: tmp("listen-sub-h-"),
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
+      whichFn: whichMap({ ffmpeg: "/bin/ffmpeg" }),
     });
     expect(code).toBe(0);
     const latest = path.join(r, ".tmp/repo/listen/latest.txt");
@@ -273,17 +275,17 @@ describe("main", () => {
   it("rec without ffmpeg fails", async () => {
     const errs: string[] = [];
     const code = await main(["rec"], {
+      cwd: tmp("listen-nff-"),
       env: { OPENAI_API_KEY: "sk_oa" },
       home: tmp("listen-nff-h-"),
-      cwd: tmp("listen-nff-"),
-      whichFn: whichMap(),
-      platform: "darwin",
       log: {
-        log() {},
         error(s: string) {
           errs.push(String(s));
         },
+        log() {},
       },
+      platform: "darwin",
+      whichFn: whichMap(),
     });
     expect(code).toBe(1);
     expect(errs.join("\n")).toMatch(/missing ffmpeg/);
@@ -294,11 +296,22 @@ describe("main", () => {
     const cwd = tmp("listen-rec-");
     const logs: string[] = [];
     const code = await main(["rec", "--seconds", "2"], {
-      env: { OPENAI_API_KEY: "sk_oa" },
-      home: tmp("listen-rech-"),
       cwd,
+      env: { OPENAI_API_KEY: "sk_oa" },
+      fetchFn: async () => ({
+        json: async () => ({ text: "from rec" }),
+        ok: true,
+        status: 200,
+        text: async () => "",
+      }),
+      home: tmp("listen-rech-"),
+      log: {
+        error() {},
+        log(s: string) {
+          logs.push(String(s));
+        },
+      },
       platform: "darwin",
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
       spawnFn: (_bin: string, args: string[], opts?: { detached?: boolean; stdio?: unknown[] }) => {
         expect(args).toContain("-nostdin");
         expect(args).toContain("-t");
@@ -309,26 +322,15 @@ describe("main", () => {
         fs.mkdirSync(path.dirname(out), { recursive: true });
         fs.writeFileSync(out, "RIFF");
         return {
-          pid: 4242,
-          stderr: { on() {} },
+          kill() {},
           on(ev: string, cb: (code: number, signal: null) => void) {
             if (ev === "exit") queueMicrotask(() => cb(0, null));
           },
-          kill() {},
+          pid: 4242,
+          stderr: { on() {} },
         };
       },
-      fetchFn: async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ text: "from rec" }),
-        text: async () => "",
-      }),
-      log: {
-        log(s: string) {
-          logs.push(String(s));
-        },
-        error() {},
-      },
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain("from rec");
@@ -338,16 +340,16 @@ describe("main", () => {
     const cwd = tmp("listen-bin-");
     const spawned: string[][] = [];
     const code = await main(["start"], {
+      cwd,
       env: { OPENAI_API_KEY: "sk_oa" },
       home: tmp("listen-binh-"),
-      cwd,
+      log: { error() {}, log() {} },
       platform: "darwin",
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
       spawnFn: (_bin: string, args: string[]) => {
         spawned.push(args);
         return { pid: 4243, unref() {} };
       },
-      log: { log() {}, error() {} },
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
     });
     expect(code).toBe(0);
     expect(spawned[0]?.slice(0, 4)).toStrictEqual([bin, "listen", "_record", "--out"]);
@@ -359,19 +361,19 @@ describe("main", () => {
     const spawned: string[][] = [];
     const killed: Array<[number, string]> = [];
     const codeStart = await main(["start"], {
+      cwd,
       env: { OPENAI_API_KEY: "sk_oa" },
       home,
-      cwd,
+      killFn: (pid: number, sig: string | number) => {
+        killed.push([pid, String(sig)]);
+      },
+      log: { error() {}, log() {} },
       platform: "darwin",
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
       spawnFn: (_bin: string, args: string[]) => {
         spawned.push(args);
         return { pid: 4242, unref() {} };
       },
-      killFn: (pid: number, sig: string | number) => {
-        killed.push([pid, String(sig)]);
-      },
-      log: { log() {}, error() {} },
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
     });
     expect(codeStart).toBe(0);
     const sess = JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8")) as { pid: number; wav: string };
@@ -380,29 +382,29 @@ describe("main", () => {
     fs.writeFileSync(sess.wav, "RIFF");
     const logs: string[] = [];
     const codeStop = await main(["stop"], {
-      env: { OPENAI_API_KEY: "sk_oa" },
-      home,
       cwd,
-      platform: "darwin",
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
+      env: { OPENAI_API_KEY: "sk_oa" },
+      fetchFn: async () => ({
+        json: async () => ({ text: "from stop" }),
+        ok: true,
+        status: 200,
+        text: async () => "",
+      }),
+      home,
       killFn: (pid: number, sig: string | number) => {
         if (sig === 0) return;
         killed.push([pid, String(sig)]);
         throw new Error("esrch");
       },
-      waitPid: () => {},
-      fetchFn: async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ text: "from stop" }),
-        text: async () => "",
-      }),
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
+      platform: "darwin",
+      waitPid: () => {},
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg" }),
     });
     expect(codeStop).toBe(0);
     expect(logs.join("\n")).toContain("from stop");
@@ -420,34 +422,34 @@ describe("main", () => {
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home });
     const stt = probeStt({
       cfg,
-      whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
+      cwd,
+      home,
       pathEnv: undefined,
       platform: "linux",
-      home,
-      cwd,
+      whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
     });
-    expect(stt).toStrictEqual({ kind: "local", bin: "/usr/bin/whisper-cli", model: path.resolve(model) });
-    expect(findWhisperModel({ cfg, home, cwd })).toBe(path.resolve(model));
+    expect(stt).toStrictEqual({ bin: "/usr/bin/whisper-cli", kind: "local", model: path.resolve(model) });
+    expect(findWhisperModel({ cfg, cwd, home })).toBe(path.resolve(model));
     const logs: string[] = [];
     const code = await main(["file", "--path", wav], {
-      env: { OPENAI_API_KEY: "sk_oa" },
-      home,
       cwd,
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg", "whisper-cli": "/usr/bin/whisper-cli" }),
-      spawnSyncFn: (_bin: string, args: string[]) => {
-        const of = args[args.indexOf("-of") + 1];
-        fs.writeFileSync(`${of}.txt`, "local hello\n");
-        return { status: 0, stdout: "", stderr: "" };
-      },
+      env: { OPENAI_API_KEY: "sk_oa" },
       fetchFn: async () => {
         throw new Error("api should not run");
       },
+      home,
       log: {
+        error() {},
         log(s: string) {
           logs.push(String(s));
         },
-        error() {},
       },
+      spawnSyncFn: (_bin: string, args: string[]) => {
+        const of = args[args.indexOf("-of") + 1];
+        fs.writeFileSync(`${of}.txt`, "local hello\n");
+        return { status: 0, stderr: "", stdout: "" };
+      },
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg", "whisper-cli": "/usr/bin/whisper-cli" }),
     });
     expect(code).toBe(0);
     expect(logs.join("\n")).toContain("local hello");
@@ -458,15 +460,15 @@ describe("main", () => {
     const model = path.join(home, ".workerstack", "whisper", "ggml-base.en.bin");
     fs.mkdirSync(path.dirname(model), { recursive: true });
     fs.writeFileSync(model, "ggml");
-    const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa", LISTEN_STT: "openai" }, home });
+    const cfg = loadCfg({ env: { LISTEN_STT: "openai", OPENAI_API_KEY: "sk_oa" }, home });
     expect(
       probeStt({
         cfg,
-        whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
+        cwd: home,
+        home,
         pathEnv: undefined,
         platform: "linux",
-        home,
-        cwd: home,
+        whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
       }),
     ).toStrictEqual({ kind: "openai", model: DEFAULT_MODEL });
   });
@@ -475,7 +477,7 @@ describe("main", () => {
     const home = tmp("listen-none-");
     const cfg = loadCfg({ env: {}, home });
     expect(() =>
-      resolveStt({ cfg, whichFn: whichMap(), pathEnv: undefined, platform: "linux", home, cwd: home }),
+      resolveStt({ cfg, cwd: home, home, pathEnv: undefined, platform: "linux", whichFn: whichMap() }),
     ).toThrow(/whisper-cli|OPENAI_API_KEY/);
   });
 
@@ -488,31 +490,31 @@ describe("main", () => {
     const logs: string[] = [];
     const errs: string[] = [];
     const code = await main(["file", "--path", wav], {
-      env: {},
-      home,
       cwd,
-      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg", "whisper-cli": "/usr/bin/whisper-cli" }),
+      env: {},
       fetchFn: async (url: string) => {
         fetched = url;
         return {
+          arrayBuffer: async () => Buffer.from("ggml-fake"),
           ok: true,
           status: 200,
-          arrayBuffer: async () => Buffer.from("ggml-fake"),
         };
+      },
+      home,
+      log: {
+        error(s: string) {
+          errs.push(String(s));
+        },
+        log(s: string) {
+          logs.push(String(s));
+        },
       },
       spawnSyncFn: (_bin: string, args: string[]) => {
         const of = args[args.indexOf("-of") + 1];
         fs.writeFileSync(`${of}.txt`, "from local download\n");
-        return { status: 0, stdout: "", stderr: "" };
+        return { status: 0, stderr: "", stdout: "" };
       },
-      log: {
-        log(s: string) {
-          logs.push(String(s));
-        },
-        error(s: string) {
-          errs.push(String(s));
-        },
-      },
+      whichFn: whichMap({ ffmpeg: "/usr/bin/ffmpeg", "whisper-cli": "/usr/bin/whisper-cli" }),
     });
     expect(code).toBe(0);
     expect(fetched).toBe(GGML_URL);
@@ -528,11 +530,11 @@ describe("main", () => {
     fs.writeFileSync(dest, "already");
     let fetches = 0;
     await downloadGgml({
-      home,
       fetchFn: async () => {
         fetches += 1;
-        return { ok: true, arrayBuffer: async () => Buffer.from("nope") };
+        return { arrayBuffer: async () => Buffer.from("nope"), ok: true };
       },
+      home,
       log: undefined,
     });
     expect(fetches).toBe(0);
@@ -544,12 +546,12 @@ describe("main", () => {
     const cfg = loadCfg({ env: { OPENAI_API_KEY: "sk_oa" }, home });
     const stt = await ensureStt({
       cfg,
+      cwd: home,
+      fetchFn: async () => ({ arrayBuffer: async () => new ArrayBuffer(0), ok: false, status: 404 }),
       home,
-      whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
       pathEnv: undefined,
       platform: "linux",
-      cwd: home,
-      fetchFn: async () => ({ ok: false, status: 404, arrayBuffer: async () => new ArrayBuffer(0) }),
+      whichFn: whichMap({ "whisper-cli": "/usr/bin/whisper-cli" }),
     });
     expect(stt).toStrictEqual({ kind: "openai", model: DEFAULT_MODEL });
   });
@@ -573,14 +575,14 @@ describe("listen cli", () => {
     const wav = path.join(cwd, "x.wav");
     fs.writeFileSync(wav, "RIFF");
     const r = spawnSync(bunPath(), [bin, "listen", "file", "--path", wav], {
-      encoding: "utf8",
       cwd,
+      encoding: "utf8",
       env: childEnv({
         HOME: home,
-        USERPROFILE: home,
-        OPENAI_API_KEY: "",
         LISTEN_STT: "openai",
+        OPENAI_API_KEY: "",
         PATH: "/nonexistent-repo-listen",
+        USERPROFILE: home,
       }),
       timeout: 15_000,
     });
@@ -597,7 +599,7 @@ function cfgFor(home: string, env: Record<string, string> = {}): ListenCfg {
 }
 
 function sttFor(home: string, over: Partial<SttOpts> = {}): SttOpts {
-  return { cfg: cfgFor(home), whichFn: whichMap(), pathEnv: undefined, platform: "linux", home, cwd: home, ...over };
+  return { cfg: cfgFor(home), cwd: home, home, pathEnv: undefined, platform: "linux", whichFn: whichMap(), ...over };
 }
 
 function plantModel(file: string) {
@@ -610,11 +612,11 @@ function reply(res: FetchResult): FetchFn {
 }
 
 function jsonReply(body: unknown): FetchFn {
-  return reply({ ok: true, status: 200, json: () => Promise.resolve(body) });
+  return reply({ json: () => Promise.resolve(body), ok: true, status: 200 });
 }
 
 function bytesReply(bytes: number[]): FetchFn {
-  return reply({ ok: true, arrayBuffer: () => Promise.resolve(new Uint8Array(bytes)) });
+  return reply({ arrayBuffer: () => Promise.resolve(new Uint8Array(bytes)), ok: true });
 }
 
 function plantSpeak(home: string, body: unknown) {
@@ -670,22 +672,22 @@ describe("formatHttpError", () => {
 describe("loadCfg from the environment", () => {
   it("reads every field", () => {
     const env = {
-      OPENAI_API_KEY: " sk_e ",
-      LISTEN_MODEL: "m-env",
       LISTEN_DEVICE: "hw:2",
-      LISTEN_SECONDS: "500",
       LISTEN_FFMPEG_FORMAT: "ALSA",
-      WHISPER_MODEL: "/m/a.bin",
+      LISTEN_MODEL: "m-env",
+      LISTEN_SECONDS: "500",
       LISTEN_STT: "LOCAL",
+      OPENAI_API_KEY: " sk_e ",
+      WHISPER_MODEL: "/m/a.bin",
     };
     expect(cfgFor(tmp("listen-cfg-env-"), env)).toMatchObject({
       apiKey: "sk_e",
-      model: "m-env",
       device: "hw:2",
-      seconds: 120,
       ffmpegFormat: "alsa",
-      whisperModel: "/m/a.bin",
+      model: "m-env",
+      seconds: 120,
       stt: "local",
+      whisperModel: "/m/a.bin",
     });
   });
 
@@ -697,15 +699,15 @@ describe("loadCfg from the environment", () => {
 describe("loadCfg from speak.json", () => {
   it("reads the listen fields and defaults the rest", () => {
     const home = tmp("listen-cfg-file-");
-    plantSpeak(home, { listen: { format: "Pulse", whisperModel: "/m/c.bin", stt: "OpenAI" } });
+    plantSpeak(home, { listen: { format: "Pulse", stt: "OpenAI", whisperModel: "/m/c.bin" } });
     expect(cfgFor(home)).toMatchObject({
-      ffmpegFormat: "pulse",
-      whisperModel: "/m/c.bin",
-      stt: "openai",
-      model: DEFAULT_MODEL,
-      seconds: 8,
       apiKey: "",
       device: "",
+      ffmpegFormat: "pulse",
+      model: DEFAULT_MODEL,
+      seconds: 8,
+      stt: "openai",
+      whisperModel: "/m/c.bin",
     });
   });
 
@@ -715,7 +717,7 @@ describe("loadCfg from speak.json", () => {
     expect(cfgFor(home).stt).toBe("auto");
     plantSpeak(home, "{nope");
     expect(cfgFor(home).stt).toBe("auto");
-    plantSpeak(home, { openai: 4, listen: "x" });
+    plantSpeak(home, { listen: "x", openai: 4 });
     expect(cfgFor(home).apiKey).toBe("");
   });
 });
@@ -741,14 +743,14 @@ describe("findWhisperModel", () => {
     const home = tmp("listen-fm-h-");
     const cwd = tmp("listen-fm-c-");
     const cfg = cfgFor(home);
-    expect(findWhisperModel({ cfg, home, cwd })).toBe("");
+    expect(findWhisperModel({ cfg, cwd, home })).toBe("");
     const inCwd = path.join(cwd, "models", "ggml-base.en.bin");
     plantModel(inCwd);
-    expect(findWhisperModel({ cfg, home, cwd })).toBe(inCwd);
-    expect(findWhisperModel({ cfg, home, cwd: "" })).toBe("");
+    expect(findWhisperModel({ cfg, cwd, home })).toBe(inCwd);
+    expect(findWhisperModel({ cfg, cwd: "", home })).toBe("");
     const inHome = path.join(home, "models", "ggml-base.en.bin");
     plantModel(inHome);
-    expect(findWhisperModel({ cfg, home, cwd })).toBe(inHome);
+    expect(findWhisperModel({ cfg, cwd, home })).toBe(inHome);
   });
 
   it("prefers the configured path but never accepts a directory", () => {
@@ -758,8 +760,8 @@ describe("findWhisperModel", () => {
     plantModel(path.join(home, "models", "ggml-base.en.bin"));
     const explicit = path.join(cwd, "custom.bin");
     fs.writeFileSync(explicit, "x");
-    expect(findWhisperModel({ cfg: { ...cfg, whisperModel: explicit }, home, cwd })).toBe(explicit);
-    expect(findWhisperModel({ cfg: { ...cfg, whisperModel: cwd }, home, cwd })).toBe(
+    expect(findWhisperModel({ cfg: { ...cfg, whisperModel: explicit }, cwd, home })).toBe(explicit);
+    expect(findWhisperModel({ cfg: { ...cfg, whisperModel: cwd }, cwd, home })).toBe(
       path.join(home, "models", "ggml-base.en.bin"),
     );
   });
@@ -774,8 +776,8 @@ describe("probeStt", () => {
     expect(probeStt(sttFor(home, { cfg, whichFn: bins }))).toBeNull();
     plantModel(path.join(home, ".workerstack", "whisper", "ggml-base.en.bin"));
     expect(probeStt(sttFor(home, { cfg, whichFn: bins }))).toMatchObject({
-      kind: "local",
       bin: "/usr/bin/whisper-cli",
+      kind: "local",
     });
   });
 
@@ -817,16 +819,16 @@ describe("resolveStt", () => {
 describe("downloadGgml failures", () => {
   it("reports a failed download by status, or err when there is none", async () => {
     const home = tmp("listen-dlerr-");
-    await expect(downloadGgml({ home, fetchFn: reply({ ok: false, status: 500 }) })).rejects.toThrow(/\(500\)/);
-    await expect(downloadGgml({ home, fetchFn: reply({}) })).rejects.toThrow(/\(err\)/);
+    await expect(downloadGgml({ fetchFn: reply({ ok: false, status: 500 }), home })).rejects.toThrow(/\(500\)/);
+    await expect(downloadGgml({ fetchFn: reply({}), home })).rejects.toThrow(/\(err\)/);
     expect(fs.existsSync(defaultGgmlPath(home))).toBe(false);
   });
 
   it("rejects an empty body and a response with no body reader", async () => {
     const home = tmp("listen-dlempty-");
-    const empty = reply({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) });
-    await expect(downloadGgml({ home, fetchFn: empty })).rejects.toThrow("ggml download empty");
-    await expect(downloadGgml({ home, fetchFn: reply({ ok: true }) })).rejects.toThrow("ggml download empty");
+    const empty = reply({ arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)), ok: true });
+    await expect(downloadGgml({ fetchFn: empty, home })).rejects.toThrow("ggml download empty");
+    await expect(downloadGgml({ fetchFn: reply({ ok: true }), home })).rejects.toThrow("ggml download empty");
   });
 });
 
@@ -835,7 +837,7 @@ describe("downloadGgml success", () => {
     const home = tmp("listen-dlok-");
     const errs: string[] = [];
     const log = { error: (m: string) => errs.push(m) };
-    const dest = await downloadGgml({ home, fetchFn: bytesReply([1, 2, 3]), log });
+    const dest = await downloadGgml({ fetchFn: bytesReply([1, 2, 3]), home, log });
     expect([...fs.readFileSync(dest)]).toStrictEqual([1, 2, 3]);
     expect(errs[0]).toContain(dest);
     expect(fs.existsSync(`${dest}.part`)).toBe(false);
@@ -863,14 +865,14 @@ describe("ensureStt", () => {
   it("rethrows a failed download when local is forced or no key exists", async () => {
     const h1 = tmp("listen-ens1-");
     const forced = cfgFor(h1, { LISTEN_STT: "local", OPENAI_API_KEY: "k" });
-    await expect(ensureStt(sttFor(h1, { cfg: forced, whichFn: bins, fetchFn: failing }))).rejects.toThrow(/503/);
+    await expect(ensureStt(sttFor(h1, { cfg: forced, fetchFn: failing, whichFn: bins }))).rejects.toThrow(/503/);
     const h2 = tmp("listen-ens2-");
-    await expect(ensureStt(sttFor(h2, { whichFn: bins, fetchFn: failing }))).rejects.toThrow(/503/);
+    await expect(ensureStt(sttFor(h2, { fetchFn: failing, whichFn: bins }))).rejects.toThrow(/503/);
   });
 
   it("downloads the model and returns the local engine", async () => {
     const h3 = tmp("listen-ens3-");
-    const stt = await ensureStt(sttFor(h3, { whichFn: bins, fetchFn: bytesReply([7]) }));
+    const stt = await ensureStt(sttFor(h3, { fetchFn: bytesReply([7]), whichFn: bins }));
     expect(stt).toMatchObject({ kind: "local", model: defaultGgmlPath(h3) });
   });
 
@@ -878,7 +880,7 @@ describe("ensureStt", () => {
     const h1 = tmp("listen-ensn1-");
     const fetchFn = () => Promise.reject(new Error("must not fetch"));
     const cfg = cfgFor(h1, { LISTEN_STT: "openai", OPENAI_API_KEY: "k" });
-    expect(await ensureStt(sttFor(h1, { cfg, whichFn: bins, fetchFn }))).toMatchObject({ kind: "openai" });
+    expect(await ensureStt(sttFor(h1, { cfg, fetchFn, whichFn: bins }))).toMatchObject({ kind: "openai" });
     await expect(ensureStt(sttFor(h1, { fetchFn }))).rejects.toThrow(NEED_STT);
   });
 });
@@ -907,7 +909,7 @@ describe("ffmpeg arguments", () => {
   });
 
   it("a timed recording carries -t and -nostdin, with the seconds clamped", () => {
-    const base = { platform: "linux", device: "", out: "/o.wav", ffmpegFormat: "" } as const;
+    const base = { device: "", ffmpegFormat: "", out: "/o.wav", platform: "linux" } as const;
     const timed = ffmpegRecordArgs({ ...base, seconds: 999 });
     expect(timed).toContain("-nostdin");
     expect(timed.slice(timed.indexOf("-t"), timed.indexOf("-t") + 2)).toStrictEqual(["-t", "120"]);
@@ -916,11 +918,11 @@ describe("ffmpeg arguments", () => {
 
   it("an open-ended recording carries neither", () => {
     const open = ffmpegRecordArgs({
-      platform: "linux",
       device: "",
-      out: "/o.wav",
-      seconds: undefined,
       ffmpegFormat: "",
+      out: "/o.wav",
+      platform: "linux",
+      seconds: undefined,
     });
     expect(open).not.toContain("-nostdin");
     expect(open).not.toContain("-t");
@@ -938,17 +940,17 @@ type Handler = (a?: unknown, b?: unknown) => void;
 function fakeChild(over: Partial<ChildLike> = {}) {
   const on: Record<string, Handler> = {};
   const child: ChildLike = {
-    pid: 321,
     on(ev: string, cb: Handler) {
       on[ev] = cb;
     },
+    pid: 321,
     ...over,
   };
   return { child, on };
 }
 
 function capture(child: ChildLike, killFn: (pid: number, sig: string | number) => unknown = () => undefined) {
-  return recCapture({ bin: "ffmpeg", args: [], seconds: 5, spawnFn: () => child, killFn, errFd: null });
+  return recCapture({ args: [], bin: "ffmpeg", errFd: null, killFn, seconds: 5, spawnFn: () => child });
 }
 
 describe("recCapture outcome", () => {
@@ -956,15 +958,15 @@ describe("recCapture outcome", () => {
     const a = fakeChild();
     const pa = capture(a.child);
     a.on.exit?.(0, null);
-    expect(await pa).toMatchObject({ status: 0, signal: null, error: null });
+    expect(await pa).toMatchObject({ error: null, signal: null, status: 0 });
     const b = fakeChild();
     const pb = capture(b.child);
     b.on.exit?.(undefined, "SIGTERM");
-    expect(await pb).toMatchObject({ status: null, signal: "SIGTERM" });
+    expect(await pb).toMatchObject({ signal: "SIGTERM", status: null });
     const c = fakeChild();
     const pc = capture(c.child);
     c.on.exit?.(2, 5);
-    expect(await pc).toMatchObject({ status: 2, signal: null });
+    expect(await pc).toMatchObject({ signal: null, status: 2 });
   });
 
   it("reports a spawn error and ignores a later exit", async () => {
@@ -973,11 +975,11 @@ describe("recCapture outcome", () => {
     const err = new Error("ENOENT");
     a.on.error?.(err);
     a.on.exit?.(0, null);
-    expect(await p).toMatchObject({ status: null, error: err });
+    expect(await p).toMatchObject({ error: err, status: null });
   });
 
   it("treats a child with no event API as finished", async () => {
-    expect(await capture({ pid: 1 })).toMatchObject({ status: 0, error: null });
+    expect(await capture({ pid: 1 })).toMatchObject({ error: null, status: 0 });
   });
 });
 
@@ -992,7 +994,7 @@ describe("recCapture timeout", () => {
     const killed: Array<[number, string | number]> = [];
     const p = capture(fakeChild().child, (pid, sig) => killed.push([pid, sig]));
     vi.advanceTimersByTime(7001);
-    expect(await p).toMatchObject({ status: null, signal: "SIGKILL", error: { code: "ETIMEDOUT" } });
+    expect(await p).toMatchObject({ error: { code: "ETIMEDOUT" }, signal: "SIGKILL", status: null });
     expect(killed).toStrictEqual([[-321, "SIGKILL"]]);
   });
 
@@ -1046,7 +1048,7 @@ function wavIn(prefix: string): string {
 
 function localRun(file: string, r: SpawnSyncResult | ((args: string[]) => SpawnSyncResult)) {
   const spawnSyncFn = (_cmd: string, args: string[]) => (typeof r === "function" ? r(args) : r);
-  return transcribeLocal({ file, bin: "whisper-cli", model: "/m.bin", spawnSyncFn });
+  return transcribeLocal({ bin: "whisper-cli", file, model: "/m.bin", spawnSyncFn });
 }
 
 function writeTxt(args: string[], content: string) {
@@ -1098,7 +1100,7 @@ function transcribeWith(over: Partial<Parameters<typeof transcribe>[0]>) {
   };
   const file = wavIn("listen-tr-");
   const stt: Stt = { kind: "openai", model: "m-1" };
-  return transcribe({ file, cfg, stt, fetchFn: jsonReply({}), spawnSyncFn: noSpawn, ...over });
+  return transcribe({ cfg, fetchFn: jsonReply({}), file, spawnSyncFn: noSpawn, stt, ...over });
 }
 
 describe("transcribe request", () => {
@@ -1108,8 +1110,8 @@ describe("transcribe request", () => {
 
   it("routes a local engine to the binary", async () => {
     const out = await transcribeWith({
-      stt: { kind: "local", bin: "w", model: "/m" },
       spawnSyncFn: () => ({ status: 0, stdout: "local text" }),
+      stt: { bin: "w", kind: "local", model: "/m" },
     });
     expect(out).toBe("local text");
   });
@@ -1158,7 +1160,7 @@ type ClipCall = { cmd: string; args: string[]; opts: { input?: string; shell?: b
 function clipRecorder(statuses: Record<string, number>) {
   const calls: ClipCall[] = [];
   const spawnSyncFn = (cmd: string, args: string[], opts: ClipCall["opts"]): SpawnSyncResult => {
-    calls.push({ cmd, args, opts });
+    calls.push({ args, cmd, opts });
     return { status: statuses[cmd] ?? 1 };
   };
   return { calls, spawnSyncFn };
@@ -1175,7 +1177,7 @@ describe("copyClip", () => {
   it("uses clip through a shell on win32", () => {
     const ok = clipRecorder({ clip: 0 });
     copyClip("hello", { platform: "win32", ...ok });
-    expect(ok.calls).toMatchObject([{ cmd: "clip", opts: { shell: true, input: "hello" } }]);
+    expect(ok.calls).toMatchObject([{ cmd: "clip", opts: { input: "hello", shell: true } }]);
     expect(() => copyClip("x", { platform: "win32", ...clipRecorder({}) })).toThrow("clip failed");
   });
 
@@ -1196,13 +1198,13 @@ function devices(platform: NodeJS.Platform, r: SpawnSyncResult) {
     calls.push([cmd, args]);
     return r;
   };
-  return { list: listDevicesText({ platform, ffmpegBin: "/bin/ffmpeg", spawnSyncFn }), calls };
+  return { calls, list: listDevicesText({ ffmpegBin: "/bin/ffmpeg", platform, spawnSyncFn }) };
 }
 
 describe("listDevicesText darwin and win32", () => {
   it("needs ffmpeg", () => {
     const spawnSyncFn = () => ({ status: 0 });
-    expect(() => listDevicesText({ platform: "linux", ffmpegBin: "", spawnSyncFn })).toThrow(NEED_FFMPEG);
+    expect(() => listDevicesText({ ffmpegBin: "", platform: "linux", spawnSyncFn })).toThrow(NEED_FFMPEG);
   });
 
   it("reads avfoundation devices from stderr or stdout", () => {

@@ -8,11 +8,11 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import { childEnv } from "../env.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
-import { sortedJsonText } from "./sorted-json-text.ts";
-import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 import {
   ANCHOR,
   ANY_DEPTH,
@@ -25,6 +25,8 @@ import {
   SYNC_HINT,
   UNDER,
 } from "./json-keys.constants.ts";
+import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
+import { sortedJsonText } from "./sorted-json-text.ts";
 
 /** A file whose keys are out of order, and the path of the first key that is. */
 type Found = { file: string; key: string };
@@ -66,14 +68,14 @@ const gitList: GitLister = (root) =>
  */
 export function repoJson(root: string, paths: readonly string[] | null, list: GitLister = gitList): Listed {
   const run = list(root);
-  if (run.status !== 0) return { ok: true, files: [] };
+  if (run.status !== 0) return { files: [], ok: true };
   const within = (rel: string) =>
     paths === null || paths.some((under) => under === "" || rel === under || rel.startsWith(`${under}/`));
   const files = run.stdout
     .split("\0")
     .filter((rel) => rel !== "" && within(rel) && fs.existsSync(path.join(root, rel)))
     .sort(compare);
-  return { ok: true, files };
+  return { files, ok: true };
 }
 
 /** The `ignorePatterns` of the generated oxfmt config text, or null when it is not a config. */
@@ -104,10 +106,10 @@ function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
  */
 export function sortJson(root: string, files: readonly string[], check: boolean): Sort {
   const config = path.join(root, OXFMT_CONFIG_PATH);
-  if (!fs.existsSync(config)) return { ok: false, error: `${OXFMT_CONFIG_PATH} is missing; ${SYNC_HINT}` };
+  if (!fs.existsSync(config)) return { error: `${OXFMT_CONFIG_PATH} is missing; ${SYNC_HINT}`, ok: false };
   const patterns = ignoresOf(fs.readFileSync(config, "utf8"));
   if (patterns === null)
-    return { ok: false, error: `${OXFMT_CONFIG_PATH} is not a valid oxfmt config; ${SYNC_AGAIN_HINT}` };
+    return { error: `${OXFMT_CONFIG_PATH} is not a valid oxfmt config; ${SYNC_AGAIN_HINT}`, ok: false };
   const globs = ignoreGlobs(patterns);
   const found: Found[] = [];
   for (const rel of files) {
@@ -119,5 +121,5 @@ export function sortJson(root: string, files: readonly string[], check: boolean)
     found.push({ file: rel, key: sorted.key });
     if (!check) fs.writeFileSync(file, sorted.text);
   }
-  return { ok: true, found };
+  return { found, ok: true };
 }

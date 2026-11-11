@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
-import { regionBody } from "../region.ts";
-import { HOSTS, type Host } from "../../config.ts";
+
 import { readGoldens } from "../../../dev/capture-tree-goldens.ts";
+import { HOSTS, type Host } from "../../config.ts";
+import { regionBody } from "../region.ts";
 import { renderRules } from "./rules.ts";
-import { renderSubagents } from "./subagents.ts";
 import { type Doc, type Sources, loadSources } from "./sources.ts";
+import { renderSubagents } from "./subagents.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FIXTURES = path.join(ROOT, "cli", "sync", "fixtures");
@@ -16,25 +18,25 @@ const isRulesPath = (rel: string) => rel === "AGENTS.md" || /^\.(?:agents|claude
 
 function fixtureSources(): Sources {
   return loadSources({
-    stockRoot: path.join(FIXTURES, "consumer-stock"),
     consumerRoot: path.join(FIXTURES, "consumer"),
     packages: [],
+    stockRoot: path.join(FIXTURES, "consumer-stock"),
   }).sources;
 }
 
 function rule(file: string, data: Record<string, unknown>, body: string, dir = ".repo"): Doc {
   return {
-    rel: `${dir}/rules/${file}`,
+    body,
+    data: { description: "d", ...data },
     file,
     origin: dir === "agents" ? "stock" : "repo",
+    rel: `${dir}/rules/${file}`,
     scope: "",
-    data: { description: "d", ...data },
-    body,
   };
 }
 
 function sourcesOf(rules: Doc[]): Sources {
-  return { rules, subagents: [], hooks: { rel: "agents/hooks.jsonc", value: {} } };
+  return { hooks: { rel: "agents/hooks.jsonc", value: {} }, rules, subagents: [] };
 }
 
 /** The text of every file `renderRules` plans for the root scope, or for `scope`. */
@@ -58,7 +60,7 @@ describe("renderRules", () => {
   });
 
   it("renders this repo's committed AGENTS.md from its stock alone, in its repo:rules region", () => {
-    const out = renderText(loadSources({ stockRoot: ROOT, consumerRoot: null, packages: [] }).sources, HOSTS);
+    const out = renderText(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
     expect(out.get("AGENTS.md")).toBe(bodyOf("AGENTS.md", fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8")));
   });
 
@@ -89,7 +91,7 @@ describe("renderRules", () => {
 
   it("renders a path rule for claude with a paths list and nothing else", () => {
     const out = renderText(
-      sourcesOf([BASE, rule("testing.md", { paths: ["src/**", "lib/**"], overrides: "x" }, "Test body.")]),
+      sourcesOf([BASE, rule("testing.md", { overrides: "x", paths: ["src/**", "lib/**"] }, "Test body.")]),
       ["claude"],
     );
     expect(out.get(".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n  - lib/**\n---\nTest body.\n");
@@ -153,12 +155,12 @@ describe("renderRules", () => {
 describe("overrides in rendered output", () => {
   it("is stripped from every host's subagent file", () => {
     const scout: Doc = {
-      rel: ".repo/subagents/scout.md",
+      body: "Body.",
+      data: { description: "Scout.", name: "scout", overrides: "scout" },
       file: "scout.md",
       origin: "repo",
+      rel: ".repo/subagents/scout.md",
       scope: "",
-      data: { name: "scout", description: "Scout.", overrides: "scout" },
-      body: "Body.",
     };
     const out = renderSubagents({ ...sourcesOf([]), subagents: [scout] }, HOSTS);
     expect(out.size).toBe(HOSTS.length);
@@ -169,12 +171,12 @@ describe("overrides in rendered output", () => {
 describe("renderRules for a package scope", () => {
   const WEB = "packages/web";
   const pkgRule = (file: string, data: Record<string, unknown>, body: string): Doc => ({
-    rel: `${WEB}/.repo/rules/${file}`,
+    body,
+    data: { description: "d", ...data },
     file,
     origin: "repo",
+    rel: `${WEB}/.repo/rules/${file}`,
     scope: WEB,
-    data: { description: "d", ...data },
-    body,
   });
   const POINTER = "Start at references/INDEX.md in this package.";
   const COMPONENTS = pkgRule("components.md", {}, "Components live in src/components and use the ui kit.");

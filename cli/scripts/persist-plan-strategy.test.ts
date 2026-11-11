@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { VALID_PLAN, savedOk } from "./fixtures/persist-bodies.ts";
 import { read, update, useTmpWs } from "./fixtures/persist-plan-kit.ts";
-import { persistPlan } from "./persist-plan.ts";
-import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
+import { PLAN_DIR } from "./persist-plan.constants.ts";
+import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs();
 
@@ -18,9 +20,9 @@ describe("plan strategy moves and fences", () => {
   it("moves a body strategy line into the frontmatter after commit and out of the body", () => {
     const ws = tmpWs();
     const r = persistPlan({
-      workspaceRoot: ws,
       content: `commit: feat: add the thing\n${withStrategy(VALID_PLAN, "review-deep")}`,
       created,
+      workspaceRoot: ws,
     });
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
@@ -33,7 +35,7 @@ describe("plan strategy moves and fences", () => {
   it("leaves a strategy line inside a code fence alone", () => {
     const ws = tmpWs();
     const fenced = VALID_PLAN.replace("## Context", "```console\nstrategy: review-fast\n```\n\n## Context");
-    const r = persistPlan({ workspaceRoot: ws, content: fenced, created });
+    const r = persistPlan({ content: fenced, created, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     expect(text).toMatch(/^strategy: default$/m);
@@ -44,7 +46,7 @@ describe("plan strategy moves and fences", () => {
 describe("plan strategy denials", () => {
   it("denies a save without it and says the three values", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: without(VALID_PLAN), created });
+    const r = persistPlan({ content: without(VALID_PLAN), created, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(NO_KEY);
     expect(fs.existsSync(path.join(ws, PLAN_DIR))).toBe(true);
@@ -54,7 +56,7 @@ describe("plan strategy denials", () => {
   it("denies an unknown or empty value", () => {
     const ws = tmpWs();
     for (const v of ["review-medium", "Default", ""]) {
-      const r = persistPlan({ workspaceRoot: ws, content: withStrategy(VALID_PLAN, v), created });
+      const r = persistPlan({ content: withStrategy(VALID_PLAN, v), created, workspaceRoot: ws });
       expect(r.ok, v).toBe(false);
       expect(r.errors, v).toContain(NO_KEY);
     }
@@ -62,7 +64,7 @@ describe("plan strategy denials", () => {
 
   it("denies an update whose frontmatter drops the key", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: withStrategy(VALID_PLAN, "review-fast"), created });
+    const r = persistPlan({ content: withStrategy(VALID_PLAN, "review-fast"), created, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(r).path);
     const u = update(ws, abs, without(read(abs).replace(/^strategy:.*\n/m, "")));
     expect(u.ok).toBe(false);
@@ -73,7 +75,7 @@ describe("plan strategy denials", () => {
 describe("plan strategy updates", () => {
   it("keeps the key on a body-only update and takes a new one from a body line", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: withStrategy(VALID_PLAN, "review-fast"), created });
+    const r = persistPlan({ content: withStrategy(VALID_PLAN, "review-fast"), created, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, without(VALID_PLAN).replace("Existing ignore entries stay.", "Other entries stay."));
     expect(kept.ok, kept.error).toBe(true);
@@ -89,7 +91,7 @@ describe("plan strategy updates", () => {
 
   it("adds the key to a saved head that lacks it only from a body line", () => {
     const ws = tmpWs();
-    const r = persistPlan({ workspaceRoot: ws, content: withStrategy(VALID_PLAN, "default"), created });
+    const r = persistPlan({ content: withStrategy(VALID_PLAN, "default"), created, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(r).path);
     fs.writeFileSync(abs, read(abs).replace(/^strategy:.*\n/m, ""));
     expect(update(ws, abs, without(VALID_PLAN)).errors).toContain(NO_KEY);

@@ -1,5 +1,5 @@
 import type { Runner } from "../scripts/ci-wait.ts";
-import type { Commit } from "./version.ts";
+import { gitFailed } from "./release-messages.constants.ts";
 import {
   BARE_TAG_OF,
   COMMIT_END,
@@ -14,7 +14,7 @@ import {
   ORIGIN_HEAD_PREFIX,
   TAG_OF,
 } from "./release.constants.ts";
-import { gitFailed } from "./release-messages.constants.ts";
+import type { Commit } from "./version.ts";
 
 /** The checkout `repo release` works in, and the git and gh it runs there. */
 export type Tools = { cwd: string; git: Runner; gh: Runner };
@@ -62,7 +62,7 @@ function parseCommits(log: string): Commit[] {
     .filter((entry) => entry !== "")
     .map((entry) => {
       const at = entry.indexOf(COMMIT_SEPARATOR);
-      return { subject: entry.slice(0, at), body: entry.slice(at + 1) };
+      return { body: entry.slice(at + 1), subject: entry.slice(0, at) };
     });
 }
 

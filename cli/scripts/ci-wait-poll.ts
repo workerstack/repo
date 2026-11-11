@@ -1,5 +1,7 @@
 /** The second half of `repo ci wait`: looking at a run until it completes or the wait is out of time, then reporting it. */
 import { z } from "zod";
+
+import type { Runner } from "./ci-wait-run.ts";
 import {
   CONCLUSION_CANCELLED,
   CONCLUSION_SUCCESS,
@@ -12,7 +14,6 @@ import {
   WAIT_BOUND_LABEL,
   WAIT_BOUND_MS,
 } from "./ci-wait.constants.ts";
-import type { Runner } from "./ci-wait-run.ts";
 
 /** What the wait on one run ended as; `error` carries the line `repo ci wait` prints and a shorter `detail`. */
 export type RunOutcome =
@@ -31,12 +32,12 @@ export type PollIo = {
 };
 type View = z.infer<ReturnType<typeof viewSchema>>;
 
-const branchRunsSchema = () => z.array(z.object({ databaseId: z.number(), createdAt: z.string() }));
+const branchRunsSchema = () => z.array(z.object({ createdAt: z.string(), databaseId: z.number() }));
 const viewSchema = () =>
   z.object({
-    status: z.string(),
     conclusion: z.string(),
-    jobs: z.array(z.object({ name: z.string(), conclusion: z.string() })),
+    jobs: z.array(z.object({ conclusion: z.string(), name: z.string() })),
+    status: z.string(),
   });
 
 /** The JSON in a gh run's stdout, parsed against `schema`; null when the run failed or the text is not that. */
@@ -65,7 +66,7 @@ function failure(io: PollIo, run: RunInfo, view: View): RunOutcome {
   io.stdout(`failed: ${jobs.length > 0 ? jobs.join(", ") : `ci ${view.conclusion}`}; logs below\n`);
   const logs = io.gh(GH_LOGS(run.databaseId), io.cwd);
   io.stdout(logs.code === 0 ? logs.stdout : "logs expired\n");
-  return { kind: "failed", jobs };
+  return { jobs, kind: "failed" };
 }
 
 /** Reports a finished run: passed, superseded by a newer run on its branch, or failed. */
@@ -91,7 +92,7 @@ export async function finish(io: PollIo, run: RunInfo, started: number): Promise
   if (io.now() - started >= WAIT_BOUND_MS) {
     const id = run.databaseId;
     const line = `run ${id} still running after ${WAIT_BOUND_LABEL}; check it with \`gh run view ${id}\``;
-    return { kind: "error", line, detail: `run ${id} still running after ${WAIT_BOUND_LABEL}` };
+    return { detail: `run ${id} still running after ${WAIT_BOUND_LABEL}`, kind: "error", line };
   }
   await io.sleep(POLL_MS);
   return finish(io, run, started);

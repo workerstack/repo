@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
+
 import { NAME, NONE, USAGE, mod, put, scene, sibling, stateFile } from "./fixtures/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
 
@@ -51,7 +53,7 @@ it("reports status without an install dir as no links", async () => {
   expect(w.out).toStrictEqual([NONE]);
 });
 
-it.each(["{", JSON.stringify({ version: 2, links: {} })])("refuses a state file that reads %s", async (body) => {
+it.each(["{", JSON.stringify({ links: {}, version: 2 })])("refuses a state file that reads %s", async (body) => {
   const w = scene();
   put(w.main, { ".repo/tmp/links.json": body });
   expect(await main(["status"], w.io())).toBe(1);

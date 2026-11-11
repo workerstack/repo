@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { HEADER, context } from "../fixtures/release-context.ts";
 import { GENERATORS } from "./outputs.ts";
 import { release } from "./release.ts";
@@ -67,7 +68,7 @@ describe("release gates", () => {
   });
 
   it("writes nothing with the pack off", () => {
-    expect(release(context(["agents", "standards", "docs"]))).toStrictEqual({ outputs: [], errors: [] });
+    expect(release(context(["agents", "standards", "docs"]))).toStrictEqual({ errors: [], outputs: [] });
   });
 
   it("rewrites a ci.yml that has the generated header on its first line", () => {
@@ -78,8 +79,8 @@ describe("release gates", () => {
 
   it("refuses a hand-written ci.yml", () => {
     expect(release(context(["release"], {}, { [CI_PATH]: "name: ci\n" }))).toStrictEqual({
-      outputs: [],
       errors: [".github/workflows/ci.yml is hand-written; delete it so repo sync can own it"],
+      outputs: [],
     });
   });
 });

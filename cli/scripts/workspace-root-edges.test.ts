@@ -1,13 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { canonicalPath, gitRevParse, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -61,9 +63,9 @@ describe("gitRevParse", () => {
     const run = (out: string) => (() => out) /* a stand-in for execFileSync */ as never;
     expect(gitRevParse("/edge-short", run("/r\n/r/.git\n"))).toBeNull();
     expect(gitRevParse("/edge-full", run("/r\n/r/.git\n/r/.git\n"))).toStrictEqual({
-      top: "/r",
-      gitDir: "/r/.git",
       commonDir: "/r/.git",
+      gitDir: "/r/.git",
+      top: "/r",
     });
   });
 
@@ -80,19 +82,19 @@ describe("gitRevParse", () => {
 });
 
 describe("resolveRoots", () => {
-  const facts = (top: string) => ({ top, gitDir: `${top}/.git`, commonDir: `${top}/.git` });
+  const facts = (top: string) => ({ commonDir: `${top}/.git`, gitDir: `${top}/.git`, top });
 
   it("falls back to the git top when the start dir is outside it", () => {
     const outside = tmpDir("roots-out-");
     const top = tmpDir("roots-top-");
-    const roots = resolveRoots({ cwd: outside }, { env: {}, cwd: outside, git: () => facts(top) });
-    expect(roots).toStrictEqual({ root: top, checkout: top, cwd: outside });
+    const roots = resolveRoots({ cwd: outside }, { cwd: outside, env: {}, git: () => facts(top) });
+    expect(roots).toStrictEqual({ checkout: top, cwd: outside, root: top });
   });
 
   it("takes an empty call, a null input and a missing options argument from the process defaults", () => {
     const dir = tmpDir("roots-default-");
-    const none = { env: {}, cwd: dir, git: () => null };
-    expect(resolveRoots(undefined, none)).toStrictEqual({ root: dir, checkout: dir, cwd: dir });
+    const none = { cwd: dir, env: {}, git: () => null };
+    expect(resolveRoots(undefined, none)).toStrictEqual({ checkout: dir, cwd: dir, root: dir });
     expect(resolveRoots(null, none).cwd).toBe(dir);
     // The real git runs here; a hook's git variables must not aim it at the repo being committed.
     vi.stubEnv("GIT_DIR", undefined);
@@ -106,7 +108,7 @@ describe("resolveRoots", () => {
     fs.mkdirSync(sub);
     const roots = resolveRoots(
       { toolCall: { args: { Cwd: sub } }, workspacePaths: "nope" /* a malformed hook input */ as never },
-      { env: {}, cwd: dir, git: () => null },
+      { cwd: dir, env: {}, git: () => null },
     );
     expect(roots.cwd).toBe(sub);
   });

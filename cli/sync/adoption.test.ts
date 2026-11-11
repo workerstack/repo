@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
-import { SELF_ROOT, exists, plain, read, readJson, snapshot, sync, write } from "./fixtures/copied-install.ts";
+
 import { RULE, STOP, tracked } from "./fixtures/adoption-kit.ts";
+import { SELF_ROOT, exists, plain, read, readJson, snapshot, sync, write } from "./fixtures/copied-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
@@ -38,8 +40,8 @@ it("adopts nothing that equals what sync would generate, even with the manifest 
 
 it("takes the keys and hooks of a .claude/settings.json it does not generate into .repo/settings/claude.json", async () => {
   const mine = {
+    hooks: { PostToolUse: [{ hooks: [{ command: "make post-write", type: "command" }], matcher: "Write" }] },
     permissions: { allow: ["Bash(make lint:*)"] },
-    hooks: { PostToolUse: [{ matcher: "Write", hooks: [{ type: "command", command: "make post-write" }] }] },
   };
   const root = plain({ ".claude/settings.json": JSON.stringify(mine) });
   const result = await sync(root, [], true);
@@ -82,7 +84,7 @@ it.each([
 });
 
 it("leaves a .mcp.json of the user's own as it is and tracked, with no .repo/mcp.json", async () => {
-  const mcp = JSON.stringify({ mcpServers: { docs: { command: "npx", args: ["-y", "docs-mcp"] } } });
+  const mcp = JSON.stringify({ mcpServers: { docs: { args: ["-y", "docs-mcp"], command: "npx" } } });
   const root = plain({ ".mcp.json": mcp });
   const result = await sync(root, [], true);
   expect(result.err).toStrictEqual([]);
@@ -93,8 +95,8 @@ it("leaves a .mcp.json of the user's own as it is and tracked, with no .repo/mcp
 
 it("moves a real skill dir under .agents/skills or .claude/skills to .repo/skills and links it", async () => {
   const root = plain({
-    ".claude/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\nShip it.\n",
     ".agents/skills/lint/SKILL.md": "---\nname: lint\ndescription: lint\n---\nLint it.\n",
+    ".claude/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\nShip it.\n",
   });
   const result = await sync(root, [], true);
   expect(result.err).toStrictEqual([]);

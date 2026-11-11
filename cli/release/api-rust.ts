@@ -1,6 +1,6 @@
 import { workspaceCrates, onCratesIo } from "../rust/cargo-metadata.ts";
-import { pinProblem } from "../rust/cargo-tools.ts";
 import { SEMVER_CHECKS_PIN } from "../rust/cargo-tools.constants.ts";
+import { pinProblem } from "../rust/cargo-tools.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { STALE_LOCK } from "../rust/lock.constants.ts";
 import { AGAINST_NO_PACKAGE, API_PREFIX, NOTHING_TO_COMPARE } from "./api.constants.ts";
@@ -46,9 +46,9 @@ async function crateChecks(io: RustIo): Promise<number | "none"> {
   const pin = pinProblem(io.cwd, io.cargo, SEMVER_CHECKS_PIN);
   if (pin !== null) return fail(io, [pin]);
   const deps: SemverDeps = {
-    run: io.cargo,
     fetch: io.fetch,
     git: (after) => commitsAfter(io, after),
+    run: io.cargo,
   };
   const lines = await Promise.all(crates.map((crate) => crateLine(io.cwd, crate, deps)));
   for (const line of lines) say(io, line);

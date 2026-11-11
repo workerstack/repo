@@ -6,7 +6,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+
 import { parse as parseToml } from "smol-toml";
+
+import { readEnv } from "../env.ts";
 import { isRecord } from "./hook-input.ts";
 import {
   type JsonObject,
@@ -17,7 +20,6 @@ import {
   resolveDest,
   shouldSkip,
 } from "./sync-global-settings.ts";
-import { readEnv } from "../env.ts";
 
 const APPLY_HINT = "run `bun repo yolo`";
 const PROJECT_REL = ".grok/config.toml";
@@ -117,17 +119,17 @@ export function checkHosts({
     try {
       destValue = readDest(resolveDest(home, h.dest), h.format, h.dest);
     } catch {
-      out.push({ id: h.id, dest: h.dest, state: "unreadable", drift: [] });
+      out.push({ dest: h.dest, drift: [], id: h.id, state: "unreadable" });
       continue;
     }
     const drift: DriftEntry[] = [];
     for (const [keyPath, want] of leaves(payload, skipRe)) {
       const have = valueAt(destValue, keyPath);
       if (!have.found || !isDeepStrictEqual(have.value, want)) {
-        drift.push({ host: h.id, dest: h.dest, key: keyPath.join("."), kind: have.found ? "differs" : "missing" });
+        drift.push({ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" });
       }
     }
-    out.push({ id: h.id, dest: h.dest, state: drift.length ? "drift" : "ok", drift });
+    out.push({ dest: h.dest, drift, id: h.id, state: drift.length ? "drift" : "ok" });
   }
   return out;
 }
@@ -183,17 +185,17 @@ export function checkGlobals({
 } = {}): CheckResult {
   const homeDir = home || readEnv().HOME;
   const ws = workspaceRoot || process.cwd();
-  if (!homeDir) return { ok: false, error: `HOME required; ${APPLY_HINT}` };
+  if (!homeDir) return { error: `HOME required; ${APPLY_HINT}`, ok: false };
   let statuses: HostStatus[];
   try {
-    statuses = checkHosts({ home: homeDir, workspaceRoot: ws, sourceRoot, consumerRoot });
+    statuses = checkHosts({ consumerRoot, home: homeDir, sourceRoot, workspaceRoot: ws });
   } catch (err) {
-    return { ok: false, error: (err /* checkHosts throws only Error values */ as Error).message };
+    return { error: (err /* checkHosts throws only Error values */ as Error).message, ok: false };
   }
   const unreadable = statuses.find((s) => s.state === "unreadable");
-  if (unreadable) return { ok: false, error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}` };
+  if (unreadable) return { error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}`, ok: false };
   const drift = statuses.flatMap((s) => s.drift);
-  if (drift.length) return { ok: false, drift };
+  if (drift.length) return { drift, ok: false };
   const error = projectConfigError(ws, homeDir);
-  return error === null ? { ok: true, drift } : { ok: false, error };
+  return error === null ? { drift, ok: true } : { error, ok: false };
 }

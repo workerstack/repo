@@ -1,4 +1,5 @@
 import type { CreateRule } from "@oxlint/plugins";
+
 import { DEPRECATED, MESSAGE, NEXT_TAG, REPLACEMENT } from "./deprecated-replacement.constants.ts";
 
 /** The text of the deprecation tag in a JSDoc block's `value`, or null when it has none. */

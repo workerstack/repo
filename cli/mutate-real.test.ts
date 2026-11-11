@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { childEnv } from "./env.ts";
 import { git, removePlanted, tempDir, write } from "./fixtures/planted-repo.ts";
-import { runMutate } from "./mutate.ts";
 import { realDeps } from "./mutate-real-deps.ts";
+import { runMutate } from "./mutate.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
 
@@ -39,24 +41,24 @@ const STR_TEST = [
 function plantedRepo(): string {
   const dir = tempDir();
   const manifest = {
+    devDependencies: {
+      "@stryker-mutator/core": TOOL,
+      "@stryker-mutator/vitest-runner": TOOL,
+      vitest: VITEST,
+    },
     name: "planted",
     private: true,
     type: "module",
-    devDependencies: {
-      vitest: VITEST,
-      "@stryker-mutator/core": TOOL,
-      "@stryker-mutator/vitest-runner": TOOL,
-    },
   };
   write(dir, {
-    "package.json": manifest,
     ".gitignore": "node_modules\n.tmp/\n",
-    "workerstack.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
     "mutation-floors.json": { ".": 99 },
-    "src/math.ts": MATH,
+    "package.json": manifest,
     "src/math.test.ts": MATH_TEST,
-    "src/str.ts": STR,
+    "src/math.ts": MATH,
     "src/str.test.ts": STR_TEST,
+    "src/str.ts": STR,
+    "workerstack.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
   });
   const installed = spawnSync(process.execPath, ["install"], { cwd: dir, encoding: "utf8", env: toolEnv(childEnv()) });
   expect(installed.status, installed.stderr).toBe(0);
@@ -78,7 +80,7 @@ it(
     const before = clones();
     const out: string[] = [];
     const err: string[] = [];
-    const deps = { ...realDeps(dir), out: (t: string) => out.push(t), err: (t: string) => err.push(t) };
+    const deps = { ...realDeps(dir), err: (t: string) => err.push(t), out: (t: string) => out.push(t) };
     const code = await runMutate([], deps);
     expect(err.join(""), out.join("")).toMatch(
       /^repo mutate: \. scored \d+\.\d\d%, below its floor of 99 in mutation-floors\.json/,

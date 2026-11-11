@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { apiDiff } from "./api-diff.ts";
 import type { Change } from "./api-diff.ts";
 import { diffFixtures, JS } from "./fixtures/api-diff-world.ts";
 import { apiWorld } from "./fixtures/api-world.ts";
+
+/** An `exports` condition map. Conditions resolve in order, so `types` stays before `default`. */
+const conditions = (types: string, runtime: string) => ({
+  types,
+
+  default: runtime,
+});
 
 const TIMEOUT = 120_000;
 let changes: Change[] = [];
@@ -21,8 +29,8 @@ const kinds = (key: string): Record<string, string> =>
 describe("apiDiff subpaths", () => {
   it("reports a removed code subpath and an added one, not JSON or wildcard subpaths", () => {
     expect(changes.filter((change) => change.name === null)).toStrictEqual([
-      { key: "./fresh", name: null, kind: "added" },
-      { key: "./gone", name: null, kind: "removed" },
+      { key: "./fresh", kind: "added", name: null },
+      { key: "./gone", kind: "removed", name: null },
     ]);
     expect(changes.map((change) => change.key)).not.toContain("./extra");
     expect(changes.map((change) => change.key)).not.toContain("./agents/a.md");
@@ -35,11 +43,11 @@ describe("apiDiff subpaths", () => {
 
 describe("apiDiff functions and names", () => {
   it("reports a removed name and an added one", () => {
-    expect(kinds(".")).toMatchObject({ removedConst: "removed", newConst: "added" });
+    expect(kinds(".")).toMatchObject({ newConst: "added", removedConst: "removed" });
   });
 
   it("widens a parameter and narrows a return or a parameter", () => {
-    expect(kinds(".")).toMatchObject({ widenParam: "widened", widenReturn: "narrowed", narrowParam: "narrowed" });
+    expect(kinds(".")).toMatchObject({ narrowParam: "narrowed", widenParam: "widened", widenReturn: "narrowed" });
   });
 
   it("narrows a method-shorthand parameter, which the checker compares both ways", () => {
@@ -58,7 +66,7 @@ describe("apiDiff declarations", () => {
   });
 
   it("widens a union with a new member and a tuple const with a new literal", () => {
-    expect(kinds(".")).toMatchObject({ U: "widened", PACKS: "widened" });
+    expect(kinds(".")).toMatchObject({ PACKS: "widened", U: "widened" });
     expect(kinds(".")).not.toHaveProperty("ONE");
     expect(kinds(".")).not.toHaveProperty("MIXED");
   });
@@ -97,7 +105,7 @@ describe("apiDiff copies", () => {
   });
 
   it("narrows a name that lost its value and widens one that gained it", () => {
-    expect(kinds(".")).toMatchObject({ LosesValue: "narrowed", GainsValue: "widened" });
+    expect(kinds(".")).toMatchObject({ GainsValue: "widened", LosesValue: "narrowed" });
   });
 });
 
@@ -133,8 +141,10 @@ describe("apiDiff names, all together", () => {
 describe("apiDiff refusals", () => {
   it("names a types file that is not in the package", { timeout: TIMEOUT }, () => {
     const files = { "index.js": JS };
-    const exports = { ".": { types: "./missing.d.ts", default: "./index.js" } };
-    const version = { version: "1.0.0", exports, files };
+    const exports = {
+      ".": conditions("./missing.d.ts", "./index.js"),
+    };
+    const version = { exports, files, version: "1.0.0" };
     const world = apiWorld(version, version);
     expect(() => apiDiff(world.project, world.old, world.next)).toThrow('cannot resolve "old" to a module');
   });

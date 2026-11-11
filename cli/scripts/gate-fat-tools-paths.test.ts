@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { fwd } from "../../dev/test-paths";
 import { pathIsDenied } from "./gate-paths.ts";
 import { patchOfCommand, rewritePatch, rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
@@ -10,13 +12,13 @@ import { recordWrote, wasWroteThisSession, wroteListPath } from "./gate-wrote.ts
 const tmpDirs: string[] = [];
 
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function plant() {
   const ws = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-paths-")));
   tmpDirs.push(ws);
-  return { ws, roots: { root: ws, checkout: ws, cwd: ws } };
+  return { roots: { checkout: ws, cwd: ws, root: ws }, ws };
 }
 
 const STOCK_DIR = ["pkg", "node_modules", "@workerstack", "repo", "references"].join("/");
@@ -43,7 +45,7 @@ describe("scratch rewrites", () => {
   });
 
   it("refuses a scratch path that lands on another drive", () => {
-    const win = { root: "C:\\ws", checkout: "C:\\ws", cwd: "C:\\ws" };
+    const win = { checkout: "C:\\ws", cwd: "C:\\ws", root: "C:\\ws" };
     expect(rewriteScratchPath(".tmp/repo/D:/x", win, path.win32)).toBeNull();
     expect(rewriteScratchPath("sub\\.tmp\\repo\\a.md", win, path.win32)).toBe("C:\\ws\\.tmp\\repo\\a.md");
   });

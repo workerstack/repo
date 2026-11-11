@@ -1,7 +1,8 @@
 import path from "node:path";
+
 import { extraH2Sections } from "./agents-text.ts";
-import { COPIED_DIR, MD, REPO_DIR, RULE_FRONTMATTER } from "./migrate.constants.ts";
 import { filesUnder, isDir, present, stockRel } from "./migrate-fs.ts";
+import { COPIED_DIR, MD, REPO_DIR, RULE_FRONTMATTER } from "./migrate.constants.ts";
 import type { MigrationState } from "./migration-state.ts";
 
 const H2 = "## ";
@@ -30,8 +31,8 @@ function planRule(state: MigrationState, name: string): void {
   const extras = extraH2Sections(own, stockText);
   const base = name.replace(/\.md$/, "");
   if (extras === "") {
-    const mark = state.mark(from, to, { name: base, kind: "rule" });
-    state.move(from, to, { note: `moved your edited ${from} to ${to} (it now replaces the stock rule)`, mark });
+    const mark = state.mark(from, to, { kind: "rule", name: base });
+    state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock rule)` });
     return;
   }
   const heading = h1Of(stockText);
@@ -55,8 +56,8 @@ export function planSubagents(state: MigrationState): void {
     const to = `${REPO_DIR}/subagents/${name}`;
     if (stockText === null || isFolder) state.move(from, to, { note: `moved ${from} to ${to}` });
     else {
-      const mark = state.mark(from, to, { name: name.replace(/\.md$/, ""), kind: "subagent" });
-      state.move(from, to, { note: `moved your edited ${from} to ${to} (it now replaces the stock subagent)`, mark });
+      const mark = state.mark(from, to, { kind: "subagent", name: name.replace(/\.md$/, "") });
+      state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock subagent)` });
     }
   }
 }
@@ -78,8 +79,8 @@ export function planSkills(state: MigrationState): void {
     if (!editedSkill(state, from)) state.drop.push(from);
     else if (!present(path.join(state.stock, stockRel(from)))) state.move(from, to, { note: `moved ${from} to ${to}` });
     else {
-      const mark = state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { name, kind: "skill" });
-      state.move(from, to, { note: `moved your edited ${from} to ${to} (it now replaces the stock skill)`, mark });
+      const mark = state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { kind: "skill", name });
+      state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock skill)` });
     }
   }
 }

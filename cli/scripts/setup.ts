@@ -3,8 +3,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isInteractive as ttyInteractive } from "./interactive.ts";
+
 import { enabledSkills } from "../config.ts";
+import { readEnv } from "../env.ts";
+import type { Env } from "../env.ts";
 import {
   CHROMIUM_BINS,
   installHints,
@@ -13,12 +15,11 @@ import {
   whichBin,
   workspaceDoctorStatus,
 } from "./doctor.ts";
-import { isRecord } from "./hook-input.ts";
 import type { SpawnSyncOpts } from "./google-workspace.ts";
+import { isRecord } from "./hook-input.ts";
+import { isInteractive as ttyInteractive } from "./interactive.ts";
 import type { WhichFn } from "./listen.ts";
 import type { FetchResult } from "./speak.ts";
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
 
 export type Flags = Record<string, string>;
 
@@ -159,7 +160,7 @@ function str(v: unknown, fallback = ""): string {
 
 export function stateHome(home: string = os.homedir()): string {
   const d = path.join(home, ".workerstack");
-  fs.mkdirSync(d, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(d, { mode: 0o700, recursive: true });
   try {
     fs.chmodSync(d, 0o700);
   } catch {
@@ -169,7 +170,7 @@ export function stateHome(home: string = os.homedir()): string {
 }
 
 export function writeSecretJson(p: string, obj: unknown): string {
-  fs.mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 });
+  fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
   fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
   try {
     fs.chmodSync(p, 0o600);
@@ -256,7 +257,7 @@ export function findDownloadedOAuthJson(home: string): string {
       const p = path.join(dir, name);
       try {
         const st = fs.statSync(p);
-        if (st.isFile()) hits.push({ p, m: st.mtimeMs });
+        if (st.isFile()) hits.push({ m: st.mtimeMs, p });
       } catch {
         // skip
       }
@@ -272,16 +273,16 @@ export function workspaceConsoleUrls(
   const p = str(projectId);
   const enc = encodeURIComponent(p);
   return {
-    projectCreate: "https://console.cloud.google.com/projectcreate",
     branding: p
       ? `https://console.cloud.google.com/auth/overview/create?project=${enc}`
       : "https://console.cloud.google.com/auth/overview/create",
-    enableApis: p
-      ? `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=${enc}`
-      : "https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com",
     clientCreate: p
       ? `https://console.cloud.google.com/auth/clients/create?project=${enc}`
       : "https://console.cloud.google.com/auth/clients/create",
+    enableApis: p
+      ? `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=${enc}`
+      : "https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com",
+    projectCreate: "https://console.cloud.google.com/projectcreate",
   };
 }
 
@@ -324,14 +325,14 @@ export function lookupChromium(
 
 export function browserEngineStatus(lp: string, cr: string, platform: NodeJS.Platform = process.platform): Status {
   const have = [lp && "lightpanda", cr && "chromium"].filter((x): x is string => Boolean(x));
-  if (lp && cr) return { ok: true, extra: have.join(",") };
+  if (lp && cr) return { extra: have.join(","), ok: true };
   if (platform === "win32" && cr) {
-    return { ok: true, extra: have.concat(["need lightpanda in WSL"]).join(",") };
+    return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
   }
   const need: string[] = [];
   if (!lp) need.push("need lightpanda");
   if (!cr) need.push("need chromium");
-  return { ok: false, extra: have.concat(need).join(",") };
+  return { extra: have.concat(need).join(","), ok: false };
 }
 
 export function setupTargets(packs: string[] = []): string[] {
@@ -360,31 +361,31 @@ export async function targetStatuses({
   const ws = workspaceDoctorStatus({ home });
   const lp = whichFn("lightpanda", pEnv, platform);
   const cr = lookupChromium(whichFn, pEnv, platform);
-  let listen: Status = { ok: false, extra: "" };
+  let listen: Status = { extra: "", ok: false };
   if (targets.includes("listen")) {
     const { loadCfg, probeStt, findWhisperBin } = await import("./listen.ts");
     const cfg = loadCfg({ env, home });
-    const stt = probeStt({ cfg, whichFn, pathEnv: pEnv, platform, home, cwd: "" });
+    const stt = probeStt({ cfg, cwd: "", home, pathEnv: pEnv, platform, whichFn });
     const ffmpeg = whichFn("ffmpeg", pEnv, platform);
     const whisper = findWhisperBin(whichFn, pEnv, platform);
     const listenBits = [stt && stt.kind, ffmpeg && "ffmpeg", whisper && "whisper"].filter((x): x is string =>
       Boolean(x),
     );
-    listen = { ok: Boolean(stt), extra: listenBits.join(",") };
+    listen = { extra: listenBits.join(","), ok: Boolean(stt) };
   }
   return {
-    speak: { ok: speak.ok, extra: speak.extra },
-    jev: { ok: jev.ok, extra: jev.extra },
-    listen,
-    "google-workspace": { ok: ws.ok, extra: ws.extra },
     browser: browserEngineStatus(lp, cr, platform),
+    "google-workspace": { extra: ws.extra, ok: ws.ok },
+    jev: { extra: jev.extra, ok: jev.ok },
+    listen,
+    speak: { extra: speak.extra, ok: speak.ok },
   };
 }
 
 export function formatStatus(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
   return targets
     .map((t) => {
-      const st = (statuses && statuses[t]) ?? { ok: false, extra: "" };
+      const st = (statuses && statuses[t]) ?? { extra: "", ok: false };
       const b = st.ok ? "ok" : "missing";
       return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
     })
@@ -396,16 +397,16 @@ export function menuOptions(
   targets: string[] = TARGETS,
 ): { value: string; label: string }[] {
   const base = [
-    { value: "speak", label: "speak (ElevenLabs / OpenAI TTS)" },
-    { value: "listen", label: "listen (STT)" },
-    { value: "google-workspace", label: "google-workspace" },
-    { value: "browser", label: "browser (PATH engines)" },
-    { value: "jev", label: "jev (TypeSafe research decision)" },
+    { label: "speak (ElevenLabs / OpenAI TTS)", value: "speak" },
+    { label: "listen (STT)", value: "listen" },
+    { label: "google-workspace", value: "google-workspace" },
+    { label: "browser (PATH engines)", value: "browser" },
+    { label: "jev (TypeSafe research decision)", value: "jev" },
   ].filter((o) => targets.includes(o.value));
   return base.map((o) => {
-    const st = (statuses && statuses[o.value]) ?? { ok: false, extra: "" };
+    const st = (statuses && statuses[o.value]) ?? { extra: "", ok: false };
     const tag = st.ok ? (st.extra ? `ok ${st.extra}` : "ok") : st.extra ? `missing ${st.extra}` : "missing";
-    return { value: o.value, label: `${o.label}  ${tag}` };
+    return { label: `${o.label}  ${tag}`, value: o.value };
   });
 }
 
@@ -440,8 +441,8 @@ export async function reprobeHint({
   for (const h of installHints(id, platform)) logLine(io, h);
   if (interactive && io && typeof io.confirm === "function") {
     const again = await io.confirm({
-      message: `Installed ${id}? Re-check PATH`,
       initialValue: false,
+      message: `Installed ${id}? Re-check PATH`,
     });
     if (again) {
       hit = typeof probe === "function" ? probe() : "";
@@ -466,11 +467,11 @@ async function defaultIo(): Promise<SetupIo> {
   const { confirm, password, select, text } = await import("./prompt.ts");
   return {
     confirm,
+    error: (s: string) => process.stderr.write(`${s}\n`),
+    log: (s: string) => process.stdout.write(`${s}\n`),
     password,
     select,
     text,
-    log: (s: string) => process.stdout.write(`${s}\n`),
-    error: (s: string) => process.stderr.write(`${s}\n`),
   };
 }
 
@@ -497,13 +498,13 @@ export async function setupSpeak({
   if (interactive && io && !elevenKey && !openaiKey) {
     provider = str(
       await io.select!({
+        initialValue: provider === "openai" ? "openai" : "elevenlabs",
         message: "Speak provider",
         options: [
-          { value: "elevenlabs", label: "ElevenLabs" },
-          { value: "openai", label: "OpenAI" },
-          { value: "both", label: "both" },
+          { label: "ElevenLabs", value: "elevenlabs" },
+          { label: "OpenAI", value: "openai" },
+          { label: "both", value: "both" },
         ],
-        initialValue: provider === "openai" ? "openai" : "elevenlabs",
       }),
     );
   }
@@ -514,12 +515,12 @@ export async function setupSpeak({
   if (interactive && io) {
     if (askEleven && !elevenKey) {
       logLine(io, `Open: ${ELEVENLABS_KEY_URL}`);
-      await openUrl(ELEVENLABS_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(ELEVENLABS_KEY_URL, { openUrlFn, platform, spawnSyncFn });
       elevenKey = str(await io.password!({ message: "ElevenLabs API key" }));
     }
     if (askOpenAi && !openaiKey) {
       logLine(io, `Open: ${OPENAI_KEY_URL}`);
-      await openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(OPENAI_KEY_URL, { openUrlFn, platform, spawnSyncFn });
       openaiKey = str(await io.password!({ message: "OpenAI API key" }));
     }
   }
@@ -540,16 +541,16 @@ export async function setupSpeak({
   const dest = mergeSpeakJson(home, patch);
   logLine(io, `wrote ${dest}`);
 
-  if (skipVerify) return { ok: true, dest, verified: false };
+  if (skipVerify) return { dest, ok: true, verified: false };
 
   const cfg = loadSpeakCfg({ env: {}, home });
   const who = await speakWhoami({
-    provider: provider === "both" || !provider ? undefined : provider,
     cfg,
     fetchFn,
+    provider: provider === "both" || !provider ? undefined : provider,
   });
   logLine(io, who);
-  return { ok: true, dest, verified: true, who };
+  return { dest, ok: true, verified: true, who };
 }
 
 export async function setupListen({
@@ -567,20 +568,20 @@ export async function setupListen({
 }: SetupCtx = {}): Promise<{ ok: true; stt: Awaited<ReturnType<typeof import("./listen.ts").probeStt>> }> {
   const { downloadGgml, findWhisperBin, loadCfg: loadListenCfg, probeStt } = await import("./listen.ts");
   const ffmpegBin = await reprobeHint({
-    id: "ffmpeg",
     found: whichFn("ffmpeg", pathEnv, platform),
-    probe: () => whichFn("ffmpeg", pathEnv, platform),
-    platform,
-    io,
+    id: "ffmpeg",
     interactive,
+    io,
+    platform,
+    probe: () => whichFn("ffmpeg", pathEnv, platform),
   });
   const whisperBin = await reprobeHint({
-    id: "whisper-cli",
     found: findWhisperBin(whichFn, pathEnv, platform),
-    probe: () => findWhisperBin(whichFn, pathEnv, platform),
-    platform,
-    io,
+    id: "whisper-cli",
     interactive,
+    io,
+    platform,
+    probe: () => findWhisperBin(whichFn, pathEnv, platform),
   });
 
   const skipDownload = flagOn(flags, "skip-download");
@@ -588,12 +589,12 @@ export async function setupListen({
     let go = true;
     if (interactive && io && typeof io.confirm === "function") {
       go = await io.confirm({
-        message: "Download ggml-base.en.bin (~142MB) into ~/.workerstack/whisper/?",
         initialValue: true,
+        message: "Download ggml-base.en.bin (~142MB) into ~/.workerstack/whisper/?",
       });
     }
     if (go) {
-      const model = await downloadGgml({ home, fetchFn, log: { error: (s: string) => logLine(io, s) } });
+      const model = await downloadGgml({ fetchFn, home, log: { error: (s: string) => logLine(io, s) } });
       logLine(io, `model ${model}`);
     }
   }
@@ -604,7 +605,7 @@ export async function setupListen({
   if (!whisperBin && !cfgNow.apiKey && !openaiKey) {
     if (interactive && io) {
       logLine(io, `Local STT is unavailable. OpenAI Whisper fallback: ${OPENAI_KEY_URL}`);
-      await openUrl(OPENAI_KEY_URL, { platform, spawnSyncFn, openUrlFn });
+      await openUrl(OPENAI_KEY_URL, { openUrlFn, platform, spawnSyncFn });
       openaiKey = str(await io.password!({ message: "OpenAI API key (fallback STT)" }));
     } else {
       throw new Error("need whisper-cli or --openai-key (or TTY: bun repo setup listen)");
@@ -618,8 +619,8 @@ export async function setupListen({
   if (interactive && io && ffmpegBin && !device && typeof io.text === "function") {
     const d = str(
       await io.text({
-        message: "Mic device id (blank = default; Windows needs an id from listen devices)",
         defaultValue: "",
+        message: "Mic device id (blank = default; Windows needs an id from listen devices)",
       }),
     );
     if (d) patch.listen = { ...patch.listen, device: d };
@@ -630,7 +631,7 @@ export async function setupListen({
   }
 
   const cfg = loadListenCfg({ env: {}, home });
-  const stt = probeStt({ cfg, whichFn, pathEnv, platform, home, cwd: "" });
+  const stt = probeStt({ cfg, cwd: "", home, pathEnv, platform, whichFn });
   if (stt && stt.kind === "local") {
     logLine(io, `stt=local  bin=${stt.bin}  model=${stt.model}`);
   } else if (stt && stt.kind === "openai") {
@@ -663,15 +664,15 @@ export async function setupGoogleWorkspace({
     const urls0 = workspaceConsoleUrls(projectId);
     logLine(io, "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.");
     logLine(io, `Open: ${urls0.projectCreate}`);
-    await openUrl(urls0.projectCreate, { platform, spawnSyncFn, openUrlFn });
+    await openUrl(urls0.projectCreate, { openUrlFn, platform, spawnSyncFn });
     if (typeof io.confirm === "function") {
-      await io.confirm({ message: "GCP project created? Continue", initialValue: true });
+      await io.confirm({ initialValue: true, message: "GCP project created? Continue" });
     }
     if (typeof io.text === "function") {
       projectId = str(
         await io.text({
-          message: "Project ID (from the console URL ?project=)",
           initialValue: projectId,
+          message: "Project ID (from the console URL ?project=)",
         }),
         projectId,
       );
@@ -679,35 +680,35 @@ export async function setupGoogleWorkspace({
     const urls = workspaceConsoleUrls(projectId);
     logLine(io, "Consent: Internal on paid Workspace, else Testing + add your email as a test user.");
     logLine(io, `Open: ${urls.branding}`);
-    await openUrl(urls.branding, { platform, spawnSyncFn, openUrlFn });
+    await openUrl(urls.branding, { openUrlFn, platform, spawnSyncFn });
     if (typeof io.confirm === "function") {
-      await io.confirm({ message: "Branding / audience done? Continue", initialValue: true });
+      await io.confirm({ initialValue: true, message: "Branding / audience done? Continue" });
     }
     logLine(io, `Open: ${urls.enableApis}`);
-    await openUrl(urls.enableApis, { platform, spawnSyncFn, openUrlFn });
+    await openUrl(urls.enableApis, { openUrlFn, platform, spawnSyncFn });
     if (typeof io.confirm === "function") {
-      await io.confirm({ message: "APIs enabled? Continue", initialValue: true });
+      await io.confirm({ initialValue: true, message: "APIs enabled? Continue" });
     }
     logLine(io, "Create OAuth client: application type Desktop app → Download JSON.");
     logLine(io, `Open: ${urls.clientCreate}`);
-    await openUrl(urls.clientCreate, { platform, spawnSyncFn, openUrlFn });
+    await openUrl(urls.clientCreate, { openUrlFn, platform, spawnSyncFn });
     if (typeof io.confirm === "function") {
-      await io.confirm({ message: "JSON downloaded? Continue", initialValue: true });
+      await io.confirm({ initialValue: true, message: "JSON downloaded? Continue" });
     }
     const found = findDownloadedOAuthJson(home);
     const src = str(
       typeof io.text === "function"
         ? await io.text({
-            message: "Path to Desktop OAuth JSON (or paste the JSON)",
-            initialValue: found,
             defaultValue: found,
+            initialValue: found,
+            message: "Path to Desktop OAuth JSON (or paste the JSON)",
           })
         : found,
     );
     if (!src) throw new Error("need path to Desktop OAuth JSON");
-    installOAuthJson({ src, dest });
+    installOAuthJson({ dest, src });
   } else if (credsFlag) {
-    installOAuthJson({ src: credsFlag, dest });
+    installOAuthJson({ dest, src: credsFlag });
   } else if (!fs.existsSync(dest)) {
     throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
   }
@@ -717,7 +718,7 @@ export async function setupGoogleWorkspace({
   await login(dest, home);
   const tokens = tokenStorePath(home);
   logLine(io, `tokens ${tokens}`);
-  return { ok: true, dest, tokens };
+  return { dest, ok: true, tokens };
 }
 
 export async function setupBrowser({
@@ -728,20 +729,20 @@ export async function setupBrowser({
   interactive = false,
 }: SetupCtx = {}): Promise<{ ok: boolean; lightpanda: string; chromium: string }> {
   const lp = await reprobeHint({
-    id: "lightpanda",
     found: whichFn("lightpanda", pathEnv, platform),
-    probe: () => whichFn("lightpanda", pathEnv, platform),
-    platform,
-    io,
+    id: "lightpanda",
     interactive,
+    io,
+    platform,
+    probe: () => whichFn("lightpanda", pathEnv, platform),
   });
   const chromium = await reprobeHint({
-    id: "chromium",
     found: lookupChromium(whichFn, pathEnv, platform),
-    probe: () => lookupChromium(whichFn, pathEnv, platform),
-    platform,
-    io,
+    id: "chromium",
     interactive,
+    io,
+    platform,
+    probe: () => lookupChromium(whichFn, pathEnv, platform),
   });
   const st = browserEngineStatus(lp, chromium, platform);
   logLine(io, "session: .tmp/repo/browser/");
@@ -752,7 +753,7 @@ export async function setupBrowser({
   } else if (lp && !chromium) {
     logLine(io, "Lightpanda ok. Install a chromium-family browser as well (shot/pdf/fallback).");
   }
-  return { ok: st.ok, lightpanda: lp, chromium };
+  return { chromium, lightpanda: lp, ok: st.ok };
 }
 
 export async function setupJev({ flags = {}, home = os.homedir(), io, interactive = false }: SetupCtx = {}): Promise<{
@@ -769,7 +770,7 @@ export async function setupJev({ flags = {}, home = os.homedir(), io, interactiv
   }
   const dest = writeSecretJson(path.join(home, ".workerstack", "jev.json"), { apiKey });
   logLine(io, `wrote ${dest}`);
-  return { ok: true, dest };
+  return { dest, ok: true };
 }
 
 async function runTarget(target: string, ctx: SetupCtx): Promise<unknown> {
@@ -797,26 +798,26 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
         });
   const io = opts.io ?? (interactive ? await defaultIo() : null);
   const ctx: SetupCtx = {
-    flags,
     env,
-    home,
-    io,
     fetchFn: opts.fetchFn,
+    flags,
+    home,
+    interactive,
+    io,
+    loginFn: opts.loginFn,
     openUrlFn: opts.openUrlFn,
+    pathEnv: opts.pathEnv || env.PATH || readEnv().PATH,
     platform: opts.platform || process.platform,
     spawnSyncFn: opts.spawnSyncFn,
     whichFn: opts.whichFn,
-    pathEnv: opts.pathEnv || env.PATH || readEnv().PATH,
-    interactive,
-    loginFn: opts.loginFn,
   };
 
   const statusOpts = {
-    home,
     env,
-    whichFn: ctx.whichFn,
+    home,
     pathEnv: ctx.pathEnv,
     platform: ctx.platform,
+    whichFn: ctx.whichFn,
   };
   let statuses: Statuses = await targetStatuses({ ...statusOpts, targets });
   let target = normalizeTarget(_[0]);
@@ -827,9 +828,9 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   if (!target && interactive && io && typeof io.select === "function") {
     target = normalizeTarget(
       await io.select({
+        initialValue: firstMissing(statuses, targets),
         message: "Setup",
         options: menuOptions(statuses, targets),
-        initialValue: firstMissing(statuses, targets),
       }),
     );
   }
@@ -842,8 +843,8 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
     const force = flagOn(flags, "redo");
     if (st?.ok && interactive && !force && io && typeof io.confirm === "function") {
       const again = await io.confirm({
-        message: `${target} already ok (${st.extra}). Redo?`,
         initialValue: false,
+        message: `${target} already ok (${st.extra}). Redo?`,
       });
       if (!again) {
         logLine(io, `skip ${target} (already ok)`);

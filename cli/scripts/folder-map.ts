@@ -12,9 +12,10 @@
  *   bun repo map [dir]
  */
 import path from "node:path";
-import { CHARS_PER_TOKEN } from "./folder-map.constants.ts";
+
 import { listFiles, loadMapConfig, repoPrefix, repoRoot } from "./folder-map-config.ts";
 import { buildTree, displayRows, renderToFit, tokens } from "./folder-map-tree.ts";
+import { CHARS_PER_TOKEN } from "./folder-map.constants.ts";
 import type { FolderMapResult, MapOptions } from "./folder-map.types.ts";
 
 /** The files under `scope`, relative to it; all of them at the top. */
@@ -40,17 +41,17 @@ export function folderMap({
   if (!files) return null;
   const o = { ...loadMapConfig(top), ...opts };
   const scope = dir ? repoPrefix(path.resolve(root, dir)) : "";
-  if (scope == null) return { text: "", rows: 0, tokens: 0, depth: 0 };
+  if (scope == null) return { depth: 0, rows: 0, text: "", tokens: 0 };
   const rows = displayRows(buildTree(scope ? path.join(top, scope) : top, scopedFiles(files, scope), o), o);
   const limit = Math.min(o.budget * CHARS_PER_TOKEN, o.maxChars ?? Infinity);
-  const { lines, depth } = renderToFit(rows, { cap: o.depthCap, limit, base: scope });
+  const { lines, depth } = renderToFit(rows, { base: scope, cap: o.depthCap, limit });
   const text = lines.length ? `${lines.join("\n")}\n` : "";
-  return { text, rows: lines.length, tokens: tokens(text), depth };
+  return { depth, rows: lines.length, text, tokens: tokens(text) };
 }
 
 /** Text for `bun repo map [dir]` run from `cwd`. */
 export function mapCommand(cwd: string, dir = ""): string {
-  const out = folderMap({ root: cwd, dir });
+  const out = folderMap({ dir, root: cwd });
   if (!out) return "repo map: not a git repository\n";
   return out.text || "repo map: no code folders\n";
 }

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import type { Runner } from "../scripts/ci-wait.ts";
 import { sectionFor, trimBlank } from "./changelog-parse.ts";
 import { refuse } from "./refuse.ts";
-import { CHANGELOG_FILE, GH_RELEASE_CREATE, GH_RELEASE_VIEW } from "./release.constants.ts";
 import {
   GITHUB_PREFIX,
   WAIT_USAGE,
@@ -12,6 +12,7 @@ import {
   releaseCreated,
   releaseExists,
 } from "./release-messages.constants.ts";
+import { CHANGELOG_FILE, GH_RELEASE_CREATE, GH_RELEASE_VIEW } from "./release.constants.ts";
 import { splitSpec } from "./wait.ts";
 
 /** Where `repo release github` reads the changelog and prints, and the gh it works through. */

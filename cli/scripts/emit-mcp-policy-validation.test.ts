@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
 import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
 import { DENY_ALL, plant, plantDirs, plantPolicy } from "./fixtures/mcp-policy-kit.ts";
@@ -31,7 +32,7 @@ it.each([
     "agents.researcher.inherit must be false",
   ],
 ])("validatePolicy: rejects a policy that %s", (_name, policy, error) => {
-  expect(validatePolicy(policy)).toStrictEqual({ ok: false, error });
+  expect(validatePolicy(policy)).toStrictEqual({ error, ok: false });
 });
 
 it("validatePolicy: accepts allow names, whose servers are in .mcp.json, and unknown agent ids", () => {
@@ -81,7 +82,7 @@ it("loadPolicy: reads the stock policy from the process cwd when no source root 
   const ws = tmp("mcp-load-");
   plantPolicy(ws, DENY_ALL);
   vi.spyOn(process, "cwd").mockReturnValue(ws);
-  expect(loadPolicy()).toMatchObject({ default: "deny", allow: [] });
+  expect(loadPolicy()).toMatchObject({ allow: [], default: "deny" });
 });
 
 it.each([
@@ -95,12 +96,12 @@ it.each([
 
 it("loadPolicy: merges objects key by key and replaces lists from the consumer policy", () => {
   const ws = tmp("mcp-load-src-");
-  plantPolicy(ws, { ...DENY_ALL, allow: ["a"], agents: { scout: { inherit: false } } });
+  plantPolicy(ws, { ...DENY_ALL, agents: { scout: { inherit: false } }, allow: ["a"] });
   const consumer = tmp("mcp-load-own-");
   plant(consumer, ".repo/mcp-policy.jsonc", `{ "allow": ["b"], "agents": { "orchestrator": { "inherit": false } } }`);
   expect(loadPolicy(ws, consumer)).toMatchObject({
+    agents: { orchestrator: { inherit: false }, scout: { inherit: false } },
     allow: ["b"],
-    agents: { scout: { inherit: false }, orchestrator: { inherit: false } },
     plugins: { denyDefault: true },
   });
 });

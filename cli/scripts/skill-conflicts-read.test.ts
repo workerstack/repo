@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { findSkillContentConflicts, listSkillDirNames } from "./skill-conflicts.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 const tmp = () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sk-read-"));
@@ -33,7 +35,7 @@ it("a packaged skill the workspace cannot read is skipped", () => {
   fs.mkdirSync(path.join(ws, "a", "SKILL.md"), { recursive: true });
   fs.mkdirSync(path.join(pkg, "a"));
   fs.writeFileSync(path.join(pkg, "a", "SKILL.md"), "x");
-  expect(findSkillContentConflicts({ workspaceSkillsDir: ws, packagedSkillsDir: pkg })).toStrictEqual([]);
+  expect(findSkillContentConflicts({ packagedSkillsDir: pkg, workspaceSkillsDir: ws })).toStrictEqual([]);
 });
 
 it("no dirs given means no conflicts", () => {

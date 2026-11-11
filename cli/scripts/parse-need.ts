@@ -25,35 +25,35 @@ export function parseNeed(text: unknown): NeedResult {
   const s = String(text ?? "");
   const m = s.match(/^\s*need:\s*(\[[\s\S]*\])\s*$/m);
   if (!m) {
-    return { ok: false, error: "no json need array" };
+    return { error: "no json need array", ok: false };
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(m[1] /* the pattern has one group, set whenever it matches */ as string);
   } catch {
-    return { ok: false, error: "invalid json" };
+    return { error: "invalid json", ok: false };
   }
   if (!Array.isArray(parsed) || parsed.length < 1) {
-    return { ok: false, error: "need array empty" };
+    return { error: "need array empty", ok: false };
   }
   const jobs: NeedJob[] = [];
   for (const item of parsed) {
     if (!isRecord(item)) {
-      return { ok: false, error: "invalid job item" };
+      return { error: "invalid job item", ok: false };
     }
     const rec = item;
     const job = String(rec.job ?? "").trim();
     const query = String(rec.query ?? "").trim();
     const stash = rec.stash != null ? String(rec.stash).trim() : "";
     if (!NEED_JOBS.has(job)) {
-      return { ok: false, error: "invalid job or query" };
+      return { error: "invalid job or query", ok: false };
     }
     if (job === "slice") {
       if (!stash && !query) {
-        return { ok: false, error: "invalid job or query" };
+        return { error: "invalid job or query", ok: false };
       }
     } else if (!query) {
-      return { ok: false, error: "invalid job or query" };
+      return { error: "invalid job or query", ok: false };
     }
     const row: NeedJob = { job, query };
     if (stash) row.stash = stash;
@@ -77,5 +77,5 @@ export function parseNeed(text: unknown): NeedResult {
     }
     jobs.push(row);
   }
-  return { ok: true, jobs };
+  return { jobs, ok: true };
 }

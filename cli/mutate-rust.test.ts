@@ -1,23 +1,25 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { BASE, CLONE, OUT, ROOT, SHA, at, fakes, sim, type Fakes } from "./fixtures/mutate-fakes.ts";
-import { runMutate } from "./mutate.ts";
 import { mutantsArgs } from "./mutate-rust.ts";
+import { runMutate } from "./mutate.ts";
 import type { CargoResult } from "./rust/clippy.ts";
 
 const OUT_DIR = path.join(BASE, "out");
 const OUTCOMES = path.join(OUT_DIR, "mutants.out", "outcomes.json");
 const REPORT = at(".tmp/repo/mutation/report.json");
 const PACKAGES = ["crates/a", "crates/b"];
-const NO_BINARY: CargoResult = { status: 101, stdout: "", stderr: "error: no such command: `mutants`", missing: false };
+const NO_BINARY: CargoResult = { missing: false, status: 101, stderr: "error: no such command: `mutants`", stdout: "" };
 
 /** One outcomes.json entry, shaped as cargo-mutants 27.1.0 writes it (trimmed of phase results). */
 function mutant(file: string, summary: string, line = 1) {
-  const span = { start: { line, column: 5 }, end: { line, column: 6 } };
+  const span = { end: { column: 6, line }, start: { column: 5, line } };
   const scenario = {
-    Mutant: { name: `${file}:${line}:5: x`, package: "p", file, span, replacement: "-", genre: "FnValue" },
+    Mutant: { file, genre: "FnValue", name: `${file}:${line}:5: x`, package: "p", replacement: "-", span },
   };
-  return { scenario, summary, log_path: "log/x.log", diff_path: null, phase_results: [] };
+  return { diff_path: null, log_path: "log/x.log", phase_results: [], scenario, summary };
 }
 
 const many = (file: string, summary: string, count: number) =>
@@ -38,7 +40,7 @@ type Script = { status?: number | null; stdout?: string; stderr?: string; outcom
 /** A Fakes with a Rust repo whose cargo answers `mutants --version` with 27.1.0 and runs `script`. */
 function rustFakes(
   script: Script = {},
-  version: CargoResult = { status: 0, stdout: "cargo-mutants 27.1.0\n", stderr: "", missing: false },
+  version: CargoResult = { missing: false, status: 0, stderr: "", stdout: "cargo-mutants 27.1.0\n" },
 ) {
   const f: Fakes = fakes(sim(), PACKAGES);
   f.files.set(at("Cargo.toml"), "[workspace]\n");
@@ -48,7 +50,7 @@ function rustFakes(
     if (args[1] === "--version") return version;
     if (outcomes !== null) f.files.set(OUTCOMES, outcomes);
     const { status = 3, stdout = "", stderr = "" } = script;
-    return { status, stdout, stderr, missing: false };
+    return { missing: false, status, stderr, stdout };
   };
   return f;
 }
@@ -79,7 +81,7 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
     head: string;
     files: Record<string, { killed: number; survivors: unknown[] }>;
   };
-  expect(report).toMatchObject({ tool: "cargo-mutants", head: SHA, shard: { index: 1, total: 1 } });
+  expect(report).toMatchObject({ head: SHA, shard: { index: 1, total: 1 }, tool: "cargo-mutants" });
   expect(report.files["crates/a/src/lib.rs"]?.killed).toBe(16);
 });
 
@@ -97,7 +99,7 @@ it("turns the 1-based shard into the tool's 0-based one and skips the floors", a
   expect(await runMutate(["--rust", "--shard", "2/4", "--report", OUT], f.deps)).toBe(0);
   expect(mutantsCall(f)).toContain(" --shard 1/4 ");
   expect(f.out.at(-1)).toBe(`mutate: cargo-mutants, shard 2/4, 7 survivors in ${OUT}\n`);
-  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({ tool: "cargo-mutants", shard: { index: 2, total: 4 } });
+  expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({ shard: { index: 2, total: 4 }, tool: "cargo-mutants" });
 });
 
 it("needs a Cargo.toml at the repo root, before any git call", async () => {
@@ -109,7 +111,7 @@ it("needs a Cargo.toml at the repo root, before any git call", async () => {
 
 it("needs no file under coverage.mutate", async () => {
   const f = rustFakes();
-  f.deps.config = () => Promise.resolve({ root: ROOT, mutate: ["src/**/*.nothing"], floors: "mutation-floors.json" });
+  f.deps.config = () => Promise.resolve({ floors: "mutation-floors.json", mutate: ["src/**/*.nothing"], root: ROOT });
   expect(await runMutate(["--rust"], f.deps)).toBe(0);
 });
 
@@ -121,7 +123,7 @@ it("says so when cargo-mutants is missing or not the pinned version, running not
   );
   expect(mutantsCall(missing)).toBe("");
   expect(missing.calls.at(-1)).toBe(`rm ${BASE}`);
-  const wrong = rustFakes({}, { status: 0, stdout: "cargo-mutants 26.2.0\n", stderr: "", missing: false });
+  const wrong = rustFakes({}, { missing: false, status: 0, stderr: "", stdout: "cargo-mutants 26.2.0\n" });
   expect(await runMutate(["--rust"], wrong.deps)).toBe(1);
   expect(wrong.err.join("")).toBe(
     "repo mutate: cargo-mutants 26.2.0 is installed but repo pins 27.1.0; run `cargo install --locked cargo-mutants@27.1.0`\n",
@@ -135,7 +137,7 @@ it.each([0, 2, 3])("reads the outcomes after exit %i", async (status) => {
 });
 
 it("answers exit 4 with the build-or-tests line and the tool's output", async () => {
-  const f = rustFakes({ status: 4, stdout: "ERROR cargo test failed in an unmutated tree\n", stderr: "boom\n" });
+  const f = rustFakes({ status: 4, stderr: "boom\n", stdout: "ERROR cargo test failed in an unmutated tree\n" });
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
     "repo mutate: the build or tests failed before any mutant ran; fix them first\nERROR cargo test failed in an unmutated tree\nboom\n",
@@ -178,8 +180,8 @@ it("stops and removes the clone when git cannot clone", async () => {
   f.deps.git = (_cwd, args) => {
     f.calls.push(`git ${args.join(" ")}`);
     return args[0] === "clone"
-      ? { code: 128, stdout: "", stderr: "boom\n" }
-      : { code: 0, stdout: `${SHA}\n`, stderr: "" };
+      ? { code: 128, stderr: "boom\n", stdout: "" }
+      : { code: 0, stderr: "", stdout: `${SHA}\n` };
   };
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(`repo mutate: could not clone ${ROOT}: boom\n`);
@@ -197,6 +199,6 @@ it("removes the clone when cargo throws", async () => {
 });
 
 it("shards by the tool's 0-based index", () => {
-  const plan = { root: ROOT, sha: SHA, files: [], shard: { index: 3, total: 3 } };
+  const plan = { files: [], root: ROOT, sha: SHA, shard: { index: 3, total: 3 } };
   expect(mutantsArgs(plan, "o").slice(-2)).toStrictEqual(["--shard", "2/3"]);
 });

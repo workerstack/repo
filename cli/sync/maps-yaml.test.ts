@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
-import { mapSections } from "./maps.ts";
+
 import { selfWs } from "./fixtures/maps-kit.ts";
 import { put, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { mapSections } from "./maps.ts";
 
 useTempDirs();
 

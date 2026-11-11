@@ -56,13 +56,13 @@ export const gateOk = (tag: string, short: string, version: string): string =>
   `${tag} is ${short}, version ${version}, changelog ok`;
 /** The refusal line for a ci wait that did not pass, by how it ended. */
 export const gateCiLines = {
-  failed: (short: string): string =>
-    `CI failed on ${short}; a tag is never moved, so fix it in a new commit and release the next version`,
-  superseded: (short: string): string => `a newer push cancelled CI on ${short}; rerun ci on it, then rerun this job`,
   error: (short: string, detail: string): string =>
     `no CI result for ${short} (${detail}); rerun this job once ci has run`,
+  failed: (short: string): string =>
+    `CI failed on ${short}; a tag is never moved, so fix it in a new commit and release the next version`,
   nothing: (short: string, why: string): string =>
     `no CI will run for ${short} (${why}); release from a branch ci runs on`,
+  superseded: (short: string): string => `a newer push cancelled CI on ${short}; rerun ci on it, then rerun this job`,
 };
 export const PACK_PREFIX = "repo release pack: ";
 export const PACK_ARGS = "takes no arguments; it packs the package in this checkout";

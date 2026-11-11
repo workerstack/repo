@@ -1,5 +1,5 @@
-import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
+import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
@@ -201,10 +201,10 @@ export function ciJobNames(ctx: CiInput): string[] {
 
 /** Under the release pack, the tracked, whole-file `.github/workflows/ci.yml`; a hand-written one is refused. */
 export const release: Generator = (ctx) => {
-  if (!ctx.config.packs.includes("release")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(CI_PATH);
   if (existing !== null && !hasOwnedHeader(existing)) {
-    return { outputs: [], errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`] };
+    return { errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
   }
   const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
@@ -219,5 +219,5 @@ export const release: Generator = (ctx) => {
     ...(rust ? [semverJob(), msrvJob()] : []),
   ];
   const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
-  return { outputs: [{ kind: "file", path: CI_PATH, content, tracked: true, managed: "whole" }], errors: [] };
+  return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: CI_PATH, tracked: true }] };
 };

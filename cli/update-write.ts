@@ -14,8 +14,8 @@ function setAt(value: unknown, route: Route, to: string): void {
 export function updateWrite(root: string, changes: Checked[]): string[] {
   const edits = changes.flatMap((change) =>
     change.paths.map((route) => ({
-      file: change.file,
       apply: (raw: unknown) => setAt(raw, route, `${change.prefix}${change.latest}`),
+      file: change.file,
     })),
   );
   return editFiles(root, edits);

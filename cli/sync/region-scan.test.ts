@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+
 import { cutRegions, type Region, regionBody, regionHash, type RegionSyntax, writeRegions } from "./region.ts";
 
-const ALPHA: Region = { name: "alpha", body: "one\ntwo", place: "bottom" };
+const ALPHA: Region = { body: "one\ntwo", name: "alpha", place: "bottom" };
 const wrap = (syntax: RegionSyntax, words: string) => (syntax === "#" ? `# ${words}` : `<!-- ${words} -->`);
 const open = (syntax: RegionSyntax, name: string, hash: string) => wrap(syntax, `repo:${name} ${hash}`);
 const close = (syntax: RegionSyntax, name: string) => wrap(syntax, `/repo:${name}`);
@@ -18,17 +19,17 @@ describe("a marker-shaped line of a name no region lists", () => {
     ["a pair whose hash is not 8 hex", "<!--", "<!-- repo:gone abc -->\nmine\n<!-- /repo:gone -->\n"],
   ] as const)("is the user's text when it is %s: kept as is, with no repair", (_, syntax, before) => {
     const after = `${before}\n${block(syntax, ALPHA)}\n`;
-    expect(writeRegions(before, syntax, [ALPHA])).toStrictEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, syntax, [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(writeRegions(before, syntax, [ALPHA])).toStrictEqual({ repairs: [], text: after });
+    expect(writeRegions(after, syntax, [ALPHA])).toStrictEqual({ repairs: [], text: after });
   });
 
   it("leaves cutRegions nothing to cut in a file whose only marker-shaped lines sync did not write", () => {
-    expect(cutRegions(VENDORED, "#")).toStrictEqual({ text: VENDORED, repairs: [] });
+    expect(cutRegions(VENDORED, "#")).toStrictEqual({ repairs: [], text: VENDORED });
   });
 
   it("is cut with its body when its open carries a hash sync wrote", () => {
     const before = `${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\nmine/\n`;
-    expect(writeRegions(before, "#", [])).toStrictEqual({ text: "mine/\n", repairs: ["cut repo:gone"] });
+    expect(writeRegions(before, "#", [])).toStrictEqual({ repairs: ["cut repo:gone"], text: "mine/\n" });
   });
 });
 
@@ -40,9 +41,9 @@ describe("fenced code in markdown", () => {
     ["a fence a shorter or other run does not close", `\`\`\`\`\n\`\`\`\n~~~~\n${sample}\n\`\`\`\`\n`],
   ])("reads no marker inside %s", (_, before) => {
     const after = `${before}\n${block("<!--", ALPHA)}\n`;
-    expect(writeRegions(before, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
-    expect(cutRegions(before, "<!--")).toStrictEqual({ text: before, repairs: [] });
+    expect(writeRegions(before, "<!--", [ALPHA])).toStrictEqual({ repairs: [], text: after });
+    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ repairs: [], text: after });
+    expect(cutRegions(before, "<!--")).toStrictEqual({ repairs: [], text: before });
     expect(regionBody(before, "<!--", "alpha")).toBeUndefined();
   });
 
@@ -54,12 +55,12 @@ describe("fenced code in markdown", () => {
   it("reads markers after a fence no line closes, so a region written below it reads back", () => {
     expect(regionBody(`\`\`\`\n${sample}\n`, "<!--", "alpha")).toBe("one\ntwo");
     const after = `\`\`\`\nmine\n\n${block("<!--", ALPHA)}\n`;
-    expect(writeRegions("```\nmine\n", "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
-    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ text: after, repairs: [] });
+    expect(writeRegions("```\nmine\n", "<!--", [ALPHA])).toStrictEqual({ repairs: [], text: after });
+    expect(writeRegions(after, "<!--", [ALPHA])).toStrictEqual({ repairs: [], text: after });
   });
 
   it("is no fence in a hash file, where a backtick line is a pattern", () => {
     const before = `\`\`\`\n${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\n\`\`\`\n`;
-    expect(cutRegions(before, "#")).toStrictEqual({ text: "```\n```\n", repairs: ["cut repo:gone"] });
+    expect(cutRegions(before, "#")).toStrictEqual({ repairs: ["cut repo:gone"], text: "```\n```\n" });
   });
 });

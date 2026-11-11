@@ -1,9 +1,10 @@
-import os from "node:os";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
-import { HTTP_OK, PSTACK_SKILLS } from "./sync-pstack-skills.constants.ts";
+
 import { adaptFile } from "./sync-pstack-adapt.ts";
 import type { TextFetch } from "./sync-pstack-fetch.ts";
+import { HTTP_OK, PSTACK_SKILLS } from "./sync-pstack-skills.constants.ts";
 import type { Io } from "./sync-pstack-write.ts";
 
 /** adaptFile for inputs that must adapt: narrows the result to its ok variant. */
@@ -27,7 +28,7 @@ interface Principle {
 
 /** A principle skill as the port lists it. */
 export function principle(name: string): Principle {
-  return { name, files: ["SKILL.md"], slash: true };
+  return { files: ["SKILL.md"], name, slash: true };
 }
 
 /** A fetch that answers every url with `body`. */
@@ -45,8 +46,8 @@ interface Captured {
 export function capture(): Captured {
   const out: string[] = [];
   const err: string[] = [];
-  const io: Io = { out: (line) => void out.push(line), err: (line) => void err.push(line) };
-  return { out, err, io };
+  const io: Io = { err: (line) => void err.push(line), out: (line) => void out.push(line) };
+  return { err, io, out };
 }
 
 /** Make a temp directory the caller removes with `removeAll`. */

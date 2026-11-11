@@ -1,17 +1,19 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { VALID_LESSON } from "./fixtures/persist-bodies.ts";
+
 import { must, orchestrateKit, plantSource, replyOf, type HookOut } from "./fixtures/orchestrate-kit.ts";
+import { VALID_LESSON } from "./fixtures/persist-bodies.ts";
 
 const kit = orchestrateKit();
 
 /** One PreToolUse in Grok's shape, as session `sid`; the reply's hook output, or null when the hook stays silent. */
 function pre(ws: string, call: { tool: string; input: Record<string, unknown> }, sid = "s1") {
-  const fields = { toolName: call.tool, toolInput: call.input, session_id: sid };
+  const fields = { session_id: sid, toolInput: call.input, toolName: call.tool };
   return replyOf(kit.grok({ ws }, "PreToolUse", fields))?.hookSpecificOutput ?? null;
 }
-const write = (file: string, content: string) => ({ tool: "Write", input: { file_path: file, content } });
+const write = (file: string, content: string) => ({ input: { content, file_path: file }, tool: "Write" });
 
 function withSource(): string {
   const ws = kit.temp();
@@ -45,7 +47,7 @@ it("denies an Edit of a lesson and names the routes that work", () => {
   const ws = withSource();
   saveLesson(ws);
   const file = path.join(ws, ".repo/lessons/plan-forks.md");
-  const out = must(pre(ws, { tool: "Edit", input: { file_path: file, old_string: "hits: 1", new_string: "hits: 2" } }));
+  const out = must(pre(ws, { input: { file_path: file, new_string: "hits: 2", old_string: "hits: 1" }, tool: "Edit" }));
   expect(out.permissionDecision).toBe("deny");
   expect(out.permissionDecisionReason).toMatch(/Write the full lesson/);
   expect(out.permissionDecisionReason).toMatch(/bun repo lessons hit/);
@@ -54,8 +56,8 @@ it("denies an Edit of a lesson and names the routes that work", () => {
 it("tells the session about a matching lesson once", () => {
   const ws = withSource();
   saveLesson(ws);
-  const edit = { file_path: path.join(ws, "src/a.ts"), old_string: "x", new_string: "y" };
-  const first = must(pre(ws, { tool: "Edit", input: edit }));
+  const edit = { file_path: path.join(ws, "src/a.ts"), new_string: "y", old_string: "x" };
+  const first = must(pre(ws, { input: edit, tool: "Edit" }));
   expect(first.additionalContext).toContain(".repo/lessons/plan-forks.md");
   expect(first.additionalContext).toContain("Rewriting a saved plan minted a new serial.");
   expect(pre(ws, write("src/a.ts", "z\n"))).toBeNull();

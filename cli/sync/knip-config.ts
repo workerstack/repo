@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { CONFIG_FILE } from "../config.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { isRecord } from "../lint/manifest.ts";
+import { hasOwnedHeader } from "./header.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
-import { hasOwnedHeader } from "./header.ts";
-import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
 import { PACKAGE_NAME } from "./stock.ts";
+import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */

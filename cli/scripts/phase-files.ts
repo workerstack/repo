@@ -2,6 +2,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { parallelFiles, planBoxes, planPhases } from "./persist-plan-boxes.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
@@ -13,8 +14,8 @@ function unstagedPaths(cwd: string): string[] {
   const raw = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
     cwd,
     encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
     maxBuffer: 1 << 28,
+    stdio: ["ignore", "pipe", "pipe"],
   });
   const fields = raw.split("\0")[Symbol.iterator]();
   const paths: string[] = [];

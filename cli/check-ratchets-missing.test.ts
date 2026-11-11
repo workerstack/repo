@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { ratchetProblems } from "./check-ratchets.ts";
 import { removePlanted, repoOnMain, write } from "./fixtures/planted-repo.ts";
 
@@ -11,7 +13,7 @@ const FAILURES = "known-failures.json";
 const BASELINE = ".repo/lint-baseline.json";
 const HIGH = 61;
 
-const floor = (branches: number) => ({ statements: 80, branches, functions: 90 });
+const floor = (branches: number) => ({ branches, functions: 90, statements: 80 });
 const job = "cli/scripts/job.ts";
 
 describe("ratchetProblems, files gone, unreadable or oddly shaped here", () => {
@@ -40,7 +42,7 @@ describe("ratchetProblems, files gone, unreadable or oddly shaped here", () => {
 
   it("fails a metric that lost its floor, and skips main rows that are no table", () => {
     const dir = repoOnMain({ ...main, [FLOORS]: { [job]: floor(HIGH), "x.ts": 5 } });
-    write(dir, { [FLOORS]: { [job]: { statements: 80, functions: 90 } } });
+    write(dir, { [FLOORS]: { [job]: { functions: 90, statements: 80 } } });
     expect(ratchetProblems(dir)).toStrictEqual([
       `${FLOORS}: ${job} branches has no floor but main has ${HIGH}; restore it`,
     ]);

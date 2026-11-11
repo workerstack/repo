@@ -1,5 +1,6 @@
 /** The union's write for each host's hook file. */
 import path from "node:path";
+
 import { isRecord } from "./hook-input.ts";
 import { consumerNamed, desiredPost, desiredPre, loadConsumerDeny, sessionHooks } from "./hooks-union-desired.ts";
 import { flatEntries, flatSession, loadJson, saveJson, uniq, upsertGroups } from "./hooks-union-merge.ts";
@@ -34,7 +35,7 @@ export function applyClaude(roots: Roots): void {
   if (session.length) hooks.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
   if (post) hooks.PostToolUse = upsertGroups(hooks.PostToolUse, post);
-  saveJson(abs, { ...live, permissions: claudePermissions(live, roots), hooks });
+  saveJson(abs, { ...live, hooks, permissions: claudePermissions(live, roots) });
 }
 
 export function applyCodex(roots: Roots): void {

@@ -24,7 +24,7 @@ const DEPENDENCY_MAPS = [...RUNTIME_MAPS, "devDependencies"];
 const TARGET_FIELDS = ["main", "module", "types", "bin", "exports"];
 const NEGATION = "!";
 const GLOB_TOKEN = /\*\*\/|\*\*|\*|\?|[.+^${}()|[\]\\]/g;
-const GLOB_PARTS: Record<string, string> = { "**/": "(?:.*/)?", "**": ".*", "*": "[^/]*", "?": "[^/]" };
+const GLOB_PARTS: Record<string, string> = { "*": "[^/]*", "**": ".*", "**/": "(?:.*/)?", "?": "[^/]" };
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -94,12 +94,12 @@ export function readManifest(file: string): Manifest | null {
   const runtime = new Set(namesIn(RUNTIME_MAPS));
   const devOnly = namesIn(["devDependencies"]).filter((dep) => !runtime.has(dep));
   return {
-    file,
-    name,
-    declared: namesIn(DEPENDENCY_MAPS),
     bins: binsOf(raw.bin),
+    declared: namesIn(DEPENDENCY_MAPS),
     devOnly,
+    file,
     isPublic: raw.private === false,
+    name,
     ships: shipsOf(raw),
   };
 }

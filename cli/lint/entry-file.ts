@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import type { ESTree, CreateRule } from "@oxlint/plugins";
+
 import { nearestManifest, readManifest } from "./manifest.ts";
 import type { Statement } from "./names.ts";
 

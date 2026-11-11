@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import { z } from "zod";
+
 import { fail, pass, plural, type Gate } from "../scripts/ci-gate.ts";
 import type { Result } from "../scripts/lint-baseline.ts";
 import { LLVM_COV_PIN, NEXTEST_PIN } from "./cargo-tools.constants.ts";
@@ -43,15 +45,15 @@ function measured(root: string, run: CargoRun): Result<Tested> {
     text = outputOf(ran);
     return ran;
   });
-  return result.ok ? { ok: true, value: { text, rows: result.value } } : result;
+  return result.ok ? { ok: true, value: { rows: result.value, text } } : result;
 }
 
 /** The tests under plain nextest. */
 function plain(root: string, run: CargoRun): Result<Tested> {
   const result = run(root, NEXTEST_ARGS);
-  if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
   const text = outputOf(result);
-  return result.status === 0 ? { ok: true, value: { text, rows: null } } : { ok: false, errors: [text.trim()] };
+  return result.status === 0 ? { ok: true, value: { rows: null, text } } : { errors: [text.trim()], ok: false };
 }
 
 /** The shape of `cargo metadata --no-deps` this reads, built once per run so the module runs no code. */
@@ -66,11 +68,11 @@ function schema() {
 /** Whether a workspace member has a target cargo runs doctests of; or why that cannot be told. */
 function hasDoctests(root: string, run: CargoRun): Result<boolean> {
   const result = run(root, METADATA_ARGS);
-  if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
   if (result.status !== 0) {
     return {
-      ok: false,
       errors: [`cargo metadata exited ${result.status}: ${quote(outputOf(result))}`],
+      ok: false,
     };
   }
   let json: unknown;
@@ -82,8 +84,8 @@ function hasDoctests(root: string, run: CargoRun): Result<boolean> {
   const parsed = schema().safeParse(json);
   if (!parsed.success) {
     return {
-      ok: false,
       errors: [`cargo metadata printed output repo cannot read: ${quote(result.stdout)}`],
+      ok: false,
     };
   }
   const members = new Set(parsed.data.workspace_members);
@@ -97,9 +99,9 @@ function doctests(root: string, run: CargoRun): Result<number | null> {
   if (!found.ok) return found;
   if (!found.value) return { ok: true, value: null };
   const result = run(root, DOCTEST_ARGS);
-  if (result.missing) return { ok: false, errors: [MISSING_CARGO] };
+  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
   const text = outputOf(result);
-  if (result.status !== 0) return { ok: false, errors: [text.trim()] };
+  if (result.status !== 0) return { errors: [text.trim()], ok: false };
   const counts = [...text.matchAll(DOCTEST_PASSED)].map((match) => Number(match[1]));
   return { ok: true, value: counts.reduce((sum, count) => sum + count, 0) };
 }

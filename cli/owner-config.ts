@@ -16,8 +16,8 @@ const OBJECT_ERROR = 'must be an object like { name: "Lovro Žagar", github: "lo
 export const ownerSchema = (): z.ZodObject<{ name: z.ZodString; github: z.ZodString }, z.core.$strict> =>
   z.strictObject(
     {
-      name: z.string({ error: NAME_ERROR }).min(1, { error: NAME_ERROR }),
       github: z.string({ error: GITHUB_ERROR }).min(1, { error: GITHUB_ERROR }),
+      name: z.string({ error: NAME_ERROR }).min(1, { error: NAME_ERROR }),
     },
     { error: OBJECT_ERROR },
   );

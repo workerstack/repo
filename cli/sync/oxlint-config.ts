@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
@@ -17,6 +18,7 @@ export const FIXTURES = "**/fixtures/**";
 const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
+const WORKERSTACK_CONFIG = "**/workerstack.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
 /** The categories the base runs whole; the catalog lists their rules. */
 const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
@@ -103,7 +105,7 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
  */
 export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], rust = false): Built {
   const errors = unknownRules(skips, rust);
-  if (errors.length > 0) return { ok: false, errors };
+  if (errors.length > 0) return { errors, ok: false };
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
     // A specifier, not a path: oxlint resolves it from the config's node_modules, or from NODE_PATH (`repo lint`).
@@ -111,13 +113,15 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], r
     categories: Object.fromEntries(
       CATEGORIES.map((category) => [category, ON_CATEGORIES.includes(category) ? "error" : "off"]),
     ),
-    options: { typeAware: true, respectEslintDisableDirectives: false },
+    options: { respectEslintDisableDirectives: false, typeAware: true },
     ignorePatterns: [FIXTURES, REJECT_FILES],
     rules: { ...RULES, ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])) },
     overrides: [
       { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
       // vitest and workerstack configs must default-export, and call their define helper at import.
       { files: [CONFIGS], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
+      // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.
+      { files: [WORKERSTACK_CONFIG], rules: { "eslint/sort-keys": "off" } },
       ...packageOverrides(workspace),
       ...skipOverrides(skips),
     ],

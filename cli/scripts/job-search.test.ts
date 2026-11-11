@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { beforeEach, expect, it, vi } from "vitest";
+
 import { inDir, pathSans, plant, plantFiles, stashDirOf, useJobEnv } from "./fixtures/job-kit.ts";
 import { globMatch, globToRegExp, runSearch } from "./job-search.ts";
 
@@ -33,7 +35,7 @@ it("runSearch lists each matching line with its file and line number", () => {
 it("runSearch says so when nothing matches", () => {
   const dir = plant();
   plantFiles(dir, { "a.txt": "hello\n" });
-  expect(search(dir, "zzz")).toStrictEqual({ fallback: false, text: "No matches.\n", code: 0 });
+  expect(search(dir, "zzz")).toStrictEqual({ code: 0, fallback: false, text: "No matches.\n" });
 });
 
 it("runSearch reads a query that is not a pattern as plain text", () => {
@@ -45,7 +47,7 @@ it("runSearch reads a query that is not a pattern as plain text", () => {
 it("runSearch skips generated dirs, .git, binary files, big files and symlinks", () => {
   const dir = plant();
   const skipped = ["node_modules/x.txt", "dist/x.txt", ".next/x.txt", "build/x.txt", "coverage/x.txt", ".git/x.txt"];
-  plantFiles(dir, { "a.txt": "hello\n", "bin.dat": "hello\0\n", "big.txt": `hello\n${"x".repeat(201 * 1024)}` });
+  plantFiles(dir, { "a.txt": "hello\n", "big.txt": `hello\n${"x".repeat(201 * 1024)}`, "bin.dat": "hello\0\n" });
   plantFiles(dir, Object.fromEntries(skipped.map((rel) => [rel, "hello\n"])));
   if (process.platform !== "win32") fs.symlinkSync(path.join(dir, "a.txt"), path.join(dir, "link.txt"));
   expect(search(dir, "hello").text).toBe("1 match.\n- a.txt:1 — hello\n");
@@ -59,7 +61,7 @@ it("runSearch keeps a file whose size is just under the limit", () => {
 
 it("runSearch limits the files by glob, as a list or as one string", () => {
   const dir = plant();
-  plantFiles(dir, { "a.md": "hit\n", "sub/b.md": "hit\n", "c.txt": "hit\n", "sub/d.txt": "hit\n" });
+  plantFiles(dir, { "a.md": "hit\n", "c.txt": "hit\n", "sub/b.md": "hit\n", "sub/d.txt": "hit\n" });
   expect(facts(search(dir, "hit", { glob: ["*.md"] }).text)).toStrictEqual(["- a.md:1 — hit", "- sub/b.md:1 — hit"]);
   expect(facts(search(dir, "hit", { glob: "sub/*.txt" }).text)).toStrictEqual(["- sub/d.txt:1 — hit"]);
   expect(facts(search(dir, "hit", { glob: ["", "c.txt"] }).text)).toStrictEqual(["- c.txt:1 — hit"]);
@@ -78,7 +80,7 @@ it("runSearch limits the search to a path inside the cwd", () => {
 
 it("runSearch falls back for a path outside the cwd", () => {
   const dir = plant();
-  expect(search(dir, "hit", { path: ".." })).toStrictEqual({ fallback: true, text: "FALLBACK\n", code: 2 });
+  expect(search(dir, "hit", { path: ".." })).toStrictEqual({ code: 2, fallback: true, text: "FALLBACK\n" });
 });
 
 it("runSearch searches the process cwd and the root stash when given no places", () => {
@@ -89,7 +91,7 @@ it("runSearch searches the process cwd and the root stash when given no places",
 
 it.skipIf(process.platform === "win32")("runSearch skips a file or a dir it cannot read", () => {
   const dir = plant();
-  plantFiles(dir, { "a.txt": "hit\n", "locked.txt": "hit\n", "closed/b.txt": "hit\n" });
+  plantFiles(dir, { "a.txt": "hit\n", "closed/b.txt": "hit\n", "locked.txt": "hit\n" });
   fs.chmodSync(path.join(dir, "locked.txt"), 0o000);
   fs.chmodSync(path.join(dir, "closed"), 0o000);
   try {

@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
-import { NEED_FFMPEG, sessionPath } from "./listen.ts";
+
 import {
   AV,
   clipboard,
@@ -14,6 +15,7 @@ import {
   which,
   cleanupTmp,
 } from "./fixtures/listen-env.ts";
+import { NEED_FFMPEG, sessionPath } from "./listen.ts";
 
 afterEach(cleanupTmp);
 

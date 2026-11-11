@@ -1,9 +1,11 @@
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { resolveRoots } from "./workspace-root.ts";
+
 import { childEnv } from "../env.ts";
 import { SHELL_META } from "./gate-harness.ts";
+import { factsResult, fallbackResult, formatFacts, isHtml, squeezLines, verdictFromLines } from "./job-format.ts";
+import { resolveStashFile, stashRef } from "./job-stash.ts";
 import { endTreeAfterError } from "./job-tree.ts";
 import {
   BINARY_STASH,
@@ -18,18 +20,17 @@ import {
   RTK_SUFFIX,
   STASH_CAP,
 } from "./job.constants.ts";
-import { factsResult, fallbackResult, formatFacts, isHtml, squeezLines, verdictFromLines } from "./job-format.ts";
-import { resolveStashFile, stashRef } from "./job-stash.ts";
 import type { JobResult, SliceOptions, StashRoots } from "./job.types.ts";
+import { resolveRoots } from "./workspace-root.ts";
 
 /** Runs `file` with `args` in `cwd`, bounded in time and output; ends its tree after a timeout. */
 export function runCmd(file: string, args: string[], cwd?: string): SpawnSyncReturns<string> {
   const run = spawnSync(file, args, {
-    encoding: "utf8",
     cwd: cwd || process.cwd(),
-    timeout: CMD_TIMEOUT_MS,
-    maxBuffer: STASH_CAP + BUFFER_SLACK,
+    encoding: "utf8",
     env: childEnv(),
+    maxBuffer: STASH_CAP + BUFFER_SLACK,
+    timeout: CMD_TIMEOUT_MS,
   });
   endTreeAfterError(run);
   return run;
@@ -51,7 +52,7 @@ export function nonEmptyLines(text: string): string[] {
 
 /** A failed verdict with these errors and no stash. */
 export function failedResult(kind: string, errors: string[]): JobResult {
-  return factsResult(formatFacts({ kind, failed: true, errors }));
+  return factsResult(formatFacts({ errors, failed: true, kind }));
 }
 
 /** Runs `file` through rtk, or bare when rtk is missing or `file` is rtk already. */
@@ -68,16 +69,16 @@ function failedRun(r: SpawnSyncReturns<string>, query: string, { cwd, root }: St
   if (!errors.length) errors.push(...nonEmptyLines(stdout));
   const raw = [stdout, stderr].filter(Boolean).join("\n");
   const lines = errors.length ? errors : [`exit ${r.status}`];
-  return verdictFromLines({ kind: EXEC_JOB, lines, raw, query, cwd, root, errors: lines });
+  return verdictFromLines({ cwd, errors: lines, kind: EXEC_JOB, lines, query, raw, root });
 }
 
 function doneRun(r: SpawnSyncReturns<string>, query: string, { cwd, root }: StashRoots): JobResult {
   const stdout = String(r.stdout || "");
   const stderr = String(r.stderr || "");
   const lines = nonEmptyLines(stdout);
-  if (!lines.length && !stderr.trim()) return factsResult(formatFacts({ kind: EXEC_JOB, n: 0, facts: [] }));
+  if (!lines.length && !stderr.trim()) return factsResult(formatFacts({ facts: [], kind: EXEC_JOB, n: 0 }));
   const body = lines.length ? lines : [stderr.trim()];
-  return verdictFromLines({ kind: EXEC_JOB, lines: body, raw: stdout || stderr, query, cwd, root });
+  return verdictFromLines({ cwd, kind: EXEC_JOB, lines: body, query, raw: stdout || stderr, root });
 }
 
 /** Runs one shell-free command line and prints its verdict; shell syntax or html output falls back. */
@@ -110,7 +111,7 @@ function bound(value: SliceOptions["from"]): number {
 
 /** The numbered lines of `text` in `from`..`to` that hold `filter`, as facts. */
 function pickLines(text: string, { path: filter, from, to }: SliceOptions): string[] {
-  const numbered = text.split(/\n/).map((l, i) => ({ n: i + 1, l }));
+  const numbered = text.split(/\n/).map((l, i) => ({ l, n: i + 1 }));
   const a = bound(from);
   const b = bound(to);
   let picked = numbered;
@@ -135,9 +136,9 @@ export function runSlice({
   const abs = resolveStashFile({ cwd, root }, stash);
   const read = readStash(abs);
   if ("error" in read) return failedResult(EXEC_JOB, [read.error]);
-  const factLines = pickLines(read.text, { path: filter, from, to });
+  const factLines = pickLines(read.text, { from, path: filter, to });
   const n = factLines.length;
-  if (n <= MAX_FACTS) return factsResult(formatFacts({ kind: EXEC_JOB, n, facts: factLines }));
-  const ref = stashRef({ root, cwd }, path.basename(String(abs)));
-  return factsResult(formatFacts({ kind: EXEC_JOB, n, facts: squeezLines(factLines, filter), stash: ref }));
+  if (n <= MAX_FACTS) return factsResult(formatFacts({ facts: factLines, kind: EXEC_JOB, n }));
+  const ref = stashRef({ cwd, root }, path.basename(String(abs)));
+  return factsResult(formatFacts({ facts: squeezLines(factLines, filter), kind: EXEC_JOB, n, stash: ref }));
 }

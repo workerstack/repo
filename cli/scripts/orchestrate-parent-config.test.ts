@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { expect, it } from "vitest";
-import { orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
-import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
+
 import { renderHooks } from "../sync/agents/hooks.ts";
 import { loadSources } from "../sync/agents/sources.ts";
+import { orchestrateKit, parseJson, replyOf } from "./fixtures/orchestrate-kit.ts";
+import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
 const kit = orchestrateKit();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -16,10 +18,10 @@ it("spawn and read allow without a top-level decision", () => {
   const ws = kit.temp();
   const file = path.join(ws, "small.txt");
   fs.writeFileSync(file, "abc");
-  const spawnInput = { subagent_type: "scout", resume_from: "child-1", prompt: "You are scout subagent. ship it" };
-  const spawn = kit.grok({ ws }, "PreToolUse", { toolName: "spawn_subagent", toolInput: spawnInput });
+  const spawnInput = { prompt: "You are scout subagent. ship it", resume_from: "child-1", subagent_type: "scout" };
+  const spawn = kit.grok({ ws }, "PreToolUse", { toolInput: spawnInput, toolName: "spawn_subagent" });
   expect(replyOf(spawn)?.decision).toBeUndefined();
-  const read = kit.grok({ ws }, "PreToolUse", { toolName: "read_file", toolInput: { target_file: file } });
+  const read = kit.grok({ ws }, "PreToolUse", { toolInput: { target_file: file }, toolName: "read_file" });
   // Allow is empty stdout; a fat rewrite emits hookSpecificOutput only.
   expect(replyOf(read)?.decision).toBeUndefined();
 });
@@ -52,7 +54,7 @@ it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + User
 
 it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
   const files = renderHooks(
-    loadSources({ stockRoot: root, consumerRoot: null, packages: [] }).sources,
+    loadSources({ consumerRoot: null, packages: [], stockRoot: root }).sources,
     ["claude", "codex", "antigravity"],
     fs.readFileSync(path.join(root, "agents/settings/claude.json"), "utf8"),
   );

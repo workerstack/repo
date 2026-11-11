@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { changeSet, ownerOf } from "./change-set.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 function git(cwd: string, ...args: string[]): string {
@@ -34,24 +36,24 @@ function repo(files: Record<string, string>): string {
 
 const PACKAGES = ["packages/api", "packages/api/inner", "packages/web"];
 const BASE = {
+  "packages/api/inner/y.ts": "y\n",
+  "packages/api/src/x.ts": "x\n",
+  "packages/web/z.ts": "z\n",
   "src/a.ts": "a\n",
   "src/b.ts": "b\n",
-  "packages/api/src/x.ts": "x\n",
-  "packages/api/inner/y.ts": "y\n",
-  "packages/web/z.ts": "z\n",
 };
 
 const rels = (result: ReturnType<typeof changeSet>) => (result.ok ? result.changes : result.errors);
 
 it("--staged is the index against HEAD, deletions included, leaving unstaged and untracked files out", () => {
   const root = repo(BASE);
-  write(root, { "src/a.ts": "a2\n", "packages/api/src/new.ts": "n\n", "src/b.ts": "b2\n", "loose.ts": "l\n" });
+  write(root, { "loose.ts": "l\n", "packages/api/src/new.ts": "n\n", "src/a.ts": "a2\n", "src/b.ts": "b2\n" });
   git(root, "add", "src/a.ts", "packages/api/src/new.ts");
   git(root, "rm", "-q", "packages/web/z.ts");
   expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toStrictEqual([
-    { rel: "packages/api/src/new.ts", deleted: false, owner: "packages/api" },
-    { rel: "packages/web/z.ts", deleted: true, owner: "packages/web" },
-    { rel: "src/a.ts", deleted: false, owner: "" },
+    { deleted: false, owner: "packages/api", rel: "packages/api/src/new.ts" },
+    { deleted: true, owner: "packages/web", rel: "packages/web/z.ts" },
+    { deleted: false, owner: "", rel: "src/a.ts" },
   ]);
 });
 
@@ -61,11 +63,11 @@ it("--staged and the working tree work before the first commit", () => {
   git(root, "init", "-q");
   write(root, { "a.ts": "a\n" });
   git(root, "add", "a.ts");
-  expect(rels(changeSet(root, { kind: "staged" }, []))).toStrictEqual([{ rel: "a.ts", deleted: false, owner: "" }]);
+  expect(rels(changeSet(root, { kind: "staged" }, []))).toStrictEqual([{ deleted: false, owner: "", rel: "a.ts" }]);
   write(root, { "b.ts": "b\n" });
   expect(rels(changeSet(root, { kind: "tree" }, []))).toStrictEqual([
-    { rel: "a.ts", deleted: false, owner: "" },
-    { rel: "b.ts", deleted: false, owner: "" },
+    { deleted: false, owner: "", rel: "a.ts" },
+    { deleted: false, owner: "", rel: "b.ts" },
   ]);
 });
 
@@ -82,16 +84,16 @@ it("refuses each file with both staged and unstaged changes, naming the fix", ()
 
 it("the working tree is tracked changes against HEAD, staged or not, plus untracked files git does not ignore", () => {
   const root = repo(BASE);
-  write(root, { "src/a.ts": "a2\n", "src/c.ts": "c\n", "dist/out.js": "o\n", "packages/web/w.ts": "w\n" });
+  write(root, { "dist/out.js": "o\n", "packages/web/w.ts": "w\n", "src/a.ts": "a2\n", "src/c.ts": "c\n" });
   write(root, { "src/b.ts": "b2\n" });
   git(root, "add", "src/b.ts");
   fs.rmSync(path.join(root, "packages/api/inner/y.ts"));
   expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toStrictEqual([
-    { rel: "packages/api/inner/y.ts", deleted: true, owner: "packages/api/inner" },
-    { rel: "packages/web/w.ts", deleted: false, owner: "packages/web" },
-    { rel: "src/a.ts", deleted: false, owner: "" },
-    { rel: "src/b.ts", deleted: false, owner: "" },
-    { rel: "src/c.ts", deleted: false, owner: "" },
+    { deleted: true, owner: "packages/api/inner", rel: "packages/api/inner/y.ts" },
+    { deleted: false, owner: "packages/web", rel: "packages/web/w.ts" },
+    { deleted: false, owner: "", rel: "src/a.ts" },
+    { deleted: false, owner: "", rel: "src/b.ts" },
+    { deleted: false, owner: "", rel: "src/c.ts" },
   ]);
 });
 
@@ -101,20 +103,20 @@ it("a clean tree is an empty change set", () => {
 
 it("a path is every tracked and untracked file of the package owning it, not of a nested package", () => {
   const root = repo(BASE);
-  write(root, { "packages/api/src/new.ts": "n\n", "packages/api/dist/x.js": "x\n" });
+  write(root, { "packages/api/dist/x.js": "x\n", "packages/api/src/new.ts": "n\n" });
   fs.rmSync(path.join(root, "packages/api/src/x.ts"));
   expect(rels(changeSet(root, { kind: "package", rel: "packages/api/src" }, PACKAGES))).toStrictEqual([
-    { rel: "packages/api/src/new.ts", deleted: false, owner: "packages/api" },
-    { rel: "packages/api/src/x.ts", deleted: true, owner: "packages/api" },
+    { deleted: false, owner: "packages/api", rel: "packages/api/src/new.ts" },
+    { deleted: true, owner: "packages/api", rel: "packages/api/src/x.ts" },
   ]);
 });
 
 it("the root's path is every file outside the packages", () => {
   const root = repo(BASE);
   expect(rels(changeSet(root, { kind: "package", rel: "" }, PACKAGES))).toStrictEqual([
-    { rel: ".gitignore", deleted: false, owner: "" },
-    { rel: "src/a.ts", deleted: false, owner: "" },
-    { rel: "src/b.ts", deleted: false, owner: "" },
+    { deleted: false, owner: "", rel: ".gitignore" },
+    { deleted: false, owner: "", rel: "src/a.ts" },
+    { deleted: false, owner: "", rel: "src/b.ts" },
   ]);
 });
 
@@ -128,10 +130,10 @@ it("skips a nested checkout and a submodule, which are directories, not files", 
   git(nested, "commit", "-q", "-m", "n");
   git(root, "-c", "protocol.file.allow=always", "submodule", "add", "-q", nested, "sub");
   expect(rels(changeSet(root, { kind: "tree" }, PACKAGES))).toStrictEqual([
-    { rel: ".gitmodules", deleted: false, owner: "" },
+    { deleted: false, owner: "", rel: ".gitmodules" },
   ]);
   expect(rels(changeSet(root, { kind: "staged" }, PACKAGES))).toStrictEqual([
-    { rel: ".gitmodules", deleted: false, owner: "" },
+    { deleted: false, owner: "", rel: ".gitmodules" },
   ]);
 });
 

@@ -74,44 +74,44 @@ function rawEnd(source: string, from: number, hashes: number): number {
 
 /** The token for a quote at `at`: a char or a lifetime, or a lone quote. */
 function quoteToken(source: string, at: number): RustToken {
-  if (at + 1 >= source.length) return { kind: "punct", start: at, end: at + 1 };
+  if (at + 1 >= source.length) return { end: at + 1, kind: "punct", start: at };
   const width = widthAt(source, at + 1);
   if (source[at + 1] === BACKSLASH || source[at + 1 + width] === SINGLE_QUOTE)
-    return { kind: "char", start: at, end: quotedEnd(source, at, SINGLE_QUOTE) };
+    return { end: quotedEnd(source, at, SINGLE_QUOTE), kind: "char", start: at };
   const ident = matchAt(IDENT, source, at + 1);
-  if (ident === null) return { kind: "punct", start: at, end: at + 1 };
-  return { kind: "lifetime", start: at, end: at + 1 + ident[0].length };
+  if (ident === null) return { end: at + 1, kind: "punct", start: at };
+  return { end: at + 1 + ident[0].length, kind: "lifetime", start: at };
 }
 
 /** The token for `word`, the identifier matched at `at`: a raw, byte or c string, a byte char, a raw identifier or an identifier. */
 function wordToken(source: string, at: number, word: string): RustToken {
   const raw = matchAt(RAW_STRING_OPEN, source, at);
   if (raw !== null)
-    return { kind: "string", start: at, end: rawEnd(source, at + raw[0].length, raw[0].split(HASH).length - 1) };
+    return { end: rawEnd(source, at + raw[0].length, raw[0].split(HASH).length - 1), kind: "string", start: at };
   const next = source[at + 1];
   if (word.length === 1 && STRING_PREFIXES.includes(word) && next === DOUBLE_QUOTE)
-    return { kind: "string", start: at, end: quotedEnd(source, at + 1, DOUBLE_QUOTE) };
+    return { end: quotedEnd(source, at + 1, DOUBLE_QUOTE), kind: "string", start: at };
   if (word === BYTE_PREFIX && next === SINGLE_QUOTE)
-    return { kind: "char", start: at, end: quotedEnd(source, at + 1, SINGLE_QUOTE) };
+    return { end: quotedEnd(source, at + 1, SINGLE_QUOTE), kind: "char", start: at };
   const rawIdent = source.startsWith(RAW_IDENT_OPEN, at) ? matchAt(IDENT, source, at + RAW_IDENT_OPEN.length) : null;
   const end = rawIdent === null ? at + word.length : at + RAW_IDENT_OPEN.length + rawIdent[0].length;
-  return { kind: "ident", start: at, end };
+  return { end, kind: "ident", start: at };
 }
 
 /** The token starting at `at`, which is not whitespace. */
 function tokenAt(source: string, at: number): RustToken {
   if (source.startsWith(LINE_COMMENT, at)) {
     const newline = source.indexOf(NEWLINE, at);
-    return { kind: "line-comment", start: at, end: newline < 0 ? source.length : newline };
+    return { end: newline < 0 ? source.length : newline, kind: "line-comment", start: at };
   }
-  if (source.startsWith(BLOCK_OPEN, at)) return { kind: "block-comment", start: at, end: blockEnd(source, at) };
-  if (source[at] === DOUBLE_QUOTE) return { kind: "string", start: at, end: quotedEnd(source, at, DOUBLE_QUOTE) };
+  if (source.startsWith(BLOCK_OPEN, at)) return { end: blockEnd(source, at), kind: "block-comment", start: at };
+  if (source[at] === DOUBLE_QUOTE) return { end: quotedEnd(source, at, DOUBLE_QUOTE), kind: "string", start: at };
   if (source[at] === SINGLE_QUOTE) return quoteToken(source, at);
   const word = matchAt(IDENT, source, at);
   if (word !== null) return wordToken(source, at, word[0]);
   const number = matchAt(NUMBER, source, at);
-  if (number !== null) return { kind: "other", start: at, end: at + number[0].length };
-  return { kind: "punct", start: at, end: at + widthAt(source, at) };
+  if (number !== null) return { end: at + number[0].length, kind: "other", start: at };
+  return { end: at + widthAt(source, at), kind: "punct", start: at };
 }
 
 /**

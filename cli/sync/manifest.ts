@@ -13,18 +13,18 @@ export function readManifest(root: string): Manifest {
     if (typeof data === "object" && data !== null) {
       const { version, paths } = data as { version?: unknown; paths?: unknown };
       if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string")) {
-        return { version: 1, paths: paths as string[] };
+        return { paths: paths, version: 1 };
       }
     }
   } catch {
     // falls through to the empty manifest
   }
-  return { version: 1, paths: [] };
+  return { paths: [], version: 1 };
 }
 
 /** The manifest file text for `paths`: deduped and sorted, so equal sets give equal bytes. */
 export function renderManifest(paths: readonly string[]): string {
-  const manifest: Manifest = { version: 1, paths: [...new Set(paths)].sort() };
+  const manifest: Manifest = { paths: [...new Set(paths)].sort(), version: 1 };
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import {
   HOOK_COMMANDS_KEY,
   STOCK_HISTORY_FILE,
@@ -13,7 +15,7 @@ import {
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("hashText", () => {
@@ -55,7 +57,7 @@ describe("hookCommands", () => {
     const settings = {
       env: { command: "not a hook" },
       hooks: {
-        A: [{ matcher: "x", hooks: [{ type: "command", command: "one" }, { type: "prompt", command: 5 }, "text"] }],
+        A: [{ hooks: [{ command: "one", type: "command" }, { command: 5, type: "prompt" }, "text"], matcher: "x" }],
         B: [{ hooks: [{ command: "two" }] }],
       },
     };

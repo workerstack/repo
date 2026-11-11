@@ -2,7 +2,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
 import {
   ignoreTarget,
@@ -15,7 +17,7 @@ import {
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
@@ -120,7 +122,7 @@ describe("shellIgnoreEdits", () => {
     const r = repo();
     put(r, "packages/a/.gitignore", "out/\n");
     expect(shellIgnoreEdits(command, r)).toStrictEqual([
-      { file: path.join(r, "packages/a/.gitignore"), added: [".tmp/"] },
+      { added: [".tmp/"], file: path.join(r, "packages/a/.gitignore") },
     ]);
   });
 
@@ -141,25 +143,25 @@ describe("projectEdit", () => {
     expect(
       projectEdit("a\nb\n", {
         edits: [
-          { old_string: "a", new_string: "x" },
-          { oldString: "b", newString: "y" },
+          { new_string: "x", old_string: "a" },
+          { newString: "y", oldString: "b" },
         ],
       }),
     ).toBe("x\ny\n");
     expect(
       projectEdit("a a\nb\n", {
         edits: [
-          { old_string: "a", new_string: "z", replace_all: true },
-          { old_string: "b", new_string: "q" },
+          { new_string: "z", old_string: "a", replace_all: true },
+          { new_string: "q", old_string: "b" },
         ],
       }),
     ).toBe("z z\nq\n");
-    expect(projectEdit("a\n", { old_string: "missing", new_string: "x" })).toBeNull();
+    expect(projectEdit("a\n", { new_string: "x", old_string: "missing" })).toBeNull();
   });
 
   it("applies an Antigravity 1.5.3 edit_file, which names its strings Target and Replacement", () => {
-    expect(projectEdit("a\nb\n", { Path: "/r/.gitignore", Target: "b", Replacement: "b\nc" })).toBe("a\nb\nc\n");
-    expect(projectEdit("a\n", { Target: "missing", Replacement: "x" })).toBeNull();
+    expect(projectEdit("a\nb\n", { Path: "/r/.gitignore", Replacement: "b\nc", Target: "b" })).toBe("a\nb\nc\n");
+    expect(projectEdit("a\n", { Replacement: "x", Target: "missing" })).toBeNull();
   });
 });
 
@@ -170,25 +172,25 @@ describe("writeIgnoreEdits", () => {
     const r = repo();
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
-    expect(writeIgnoreEdits({ Path: file, Content: "out/\n.tmp/\n" }, r, FIELDS)).toStrictEqual([
-      { file, added: [".tmp/"] },
+    expect(writeIgnoreEdits({ Content: "out/\n.tmp/\n", Path: file }, r, FIELDS)).toStrictEqual([
+      { added: [".tmp/"], file },
     ]);
-    expect(writeIgnoreEdits({ Path: file, Target: "out/", Replacement: "out/\n.tmp/" }, r, FIELDS)).toStrictEqual([
-      { file, added: [".tmp/"] },
+    expect(writeIgnoreEdits({ Path: file, Replacement: "out/\n.tmp/", Target: "out/" }, r, FIELDS)).toStrictEqual([
+      { added: [".tmp/"], file },
     ]);
-    expect(writeIgnoreEdits({ Path: file, Target: "missing", Replacement: ".tmp/" }, r, FIELDS)).toStrictEqual([]);
+    expect(writeIgnoreEdits({ Path: file, Replacement: ".tmp/", Target: "missing" }, r, FIELDS)).toStrictEqual([]);
   });
 
   it("still reads Claude's content and old_string/new_string", () => {
     const r = repo();
     const file = path.join(r, "packages/a/.gitignore");
     put(r, "packages/a/.gitignore", "out/\n");
-    expect(writeIgnoreEdits({ file_path: file, content: ".tmp/\n" }, r, FIELDS)).toStrictEqual([
-      { file, added: [".tmp/"] },
+    expect(writeIgnoreEdits({ content: ".tmp/\n", file_path: file }, r, FIELDS)).toStrictEqual([
+      { added: [".tmp/"], file },
     ]);
     expect(
-      writeIgnoreEdits({ file_path: file, old_string: "out/", new_string: "out/\n.tmp/" }, r, FIELDS),
-    ).toStrictEqual([{ file, added: [".tmp/"] }]);
+      writeIgnoreEdits({ file_path: file, new_string: "out/\n.tmp/", old_string: "out/" }, r, FIELDS),
+    ).toStrictEqual([{ added: [".tmp/"], file }]);
   });
 });
 

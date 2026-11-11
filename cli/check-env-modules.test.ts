@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkEnvModules } from "./check-env-modules.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp git repo holding `files` (path → content); `track` adds them all to the index. */
@@ -27,11 +29,11 @@ const PKG = "{}\n";
 const ENV = "export {};\n";
 
 const SIBLINGS = {
+  "packages/a/lib/env.ts": ENV,
   "packages/a/package.json": PKG,
   "packages/a/src/env.ts": ENV,
-  "packages/a/lib/env.ts": ENV,
 };
-const ROOT_PAIR = { "package.json": PKG, "env.ts": ENV, "src/env.ts": ENV };
+const ROOT_PAIR = { "env.ts": ENV, "package.json": PKG, "src/env.ts": ENV };
 const ROOT_LINE = "env: env.ts and src/env.ts are both env.ts in .; keep one";
 
 describe("checkEnvModules", () => {
@@ -44,8 +46,8 @@ describe("checkEnvModules", () => {
 
   it("lists the packages in sorted order", () => {
     const dir = repoWith({
-      "packages/b/package.json": PKG,
       "packages/b/env.ts": ENV,
+      "packages/b/package.json": PKG,
       "packages/b/src/env.ts": ENV,
       ...SIBLINGS,
     });
@@ -59,10 +61,10 @@ describe("checkEnvModules", () => {
 describe("checkEnvModules, other layouts", () => {
   it("passes one env.ts per package", () => {
     const dir = repoWith({
-      "packages/a/package.json": PKG,
       "packages/a/env.ts": ENV,
-      "packages/b/package.json": PKG,
+      "packages/a/package.json": PKG,
       "packages/b/env.ts": ENV,
+      "packages/b/package.json": PKG,
     });
     expect(checkEnvModules(dir)).toStrictEqual([]);
   });
@@ -72,7 +74,7 @@ describe("checkEnvModules, other layouts", () => {
   });
 
   it("skips a gitignored env.ts and counts an untracked one", () => {
-    const files = { ".gitignore": "ignored/\n", "package.json": PKG, "env.ts": ENV, "ignored/env.ts": ENV };
+    const files = { ".gitignore": "ignored/\n", "env.ts": ENV, "ignored/env.ts": ENV, "package.json": PKG };
     expect(checkEnvModules(repoWith(files))).toStrictEqual([]);
     expect(checkEnvModules(repoWith({ ...files, "src/env.ts": ENV }, false))).toStrictEqual([ROOT_LINE]);
   });

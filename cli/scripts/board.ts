@@ -8,10 +8,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { HookInput } from "./hook-input.ts";
-import { isRecord } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import type { HookInput } from "./hook-input.ts";
+import { isRecord } from "./hook-input.ts";
 
 const WORK_CAP = 80;
 const MAX_WALK = 4;
@@ -188,17 +189,17 @@ function readRow(file: string): BoardRow | null {
     if (!isRecord(row)) return null;
     // Fields are re-checked where used (String(...) coercions); a missing one reads as its empty value.
     return {
-      time: String(row.time ?? ""),
-      provider: String(row.provider ?? ""),
-      model: String(row.model ?? ""),
-      effort: String(row.effort ?? ""),
-      session: String(row.session ?? ""),
-      cwd: String(row.cwd ?? ""),
-      work: String(row.work ?? ""),
-      sticky: row.sticky === true,
-      pid: row.pid == null ? NaN : Number(row.pid),
-      start: row.start == null ? "" : String(row.start),
       boot: row.boot == null ? "" : String(row.boot),
+      cwd: String(row.cwd ?? ""),
+      effort: String(row.effort ?? ""),
+      model: String(row.model ?? ""),
+      pid: row.pid == null ? NaN : Number(row.pid),
+      provider: String(row.provider ?? ""),
+      session: String(row.session ?? ""),
+      start: row.start == null ? "" : String(row.start),
+      sticky: row.sticky === true,
+      time: String(row.time ?? ""),
+      work: String(row.work ?? ""),
     };
   } catch {
     return null;
@@ -219,7 +220,7 @@ export function tryChmod(
 }
 
 function ensureDir(dir: string): void {
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(dir, { mode: 0o700, recursive: true });
   tryChmod(dir, 0o700);
 }
 
@@ -256,7 +257,7 @@ export function parseProcStat(text: unknown): ProcStat | null {
   const start = rest[19]!;
   if (!Number.isFinite(ppid)) return null;
   // rest.length >= 20 above, so rest[0] exists.
-  return { comm, state: rest[0]!, ppid, start };
+  return { comm, ppid, start, state: rest[0]! };
 }
 
 export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | null {
@@ -269,7 +270,7 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
     try {
       const parsed = parseProcStat(readFile(`/proc/${n}/stat`, "utf8"));
       if (!parsed || parsed.state === "Z") return null;
-      return { pid: n, start: parsed.start, comm: parsed.comm, ppid: parsed.ppid };
+      return { comm: parsed.comm, pid: n, ppid: parsed.ppid, start: parsed.start };
     } catch {
       return null;
     }
@@ -281,7 +282,7 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
     const m = line.match(/^(\d+)\s+([A-Za-z]{3}\s+[A-Za-z]{3}\s+\d+\s+\d{2}:\d{2}:\d{2}\s+\d{4})\s+(\S+)\s*$/);
     if (!m) return null;
     // The regex has three capture groups, all present on a match.
-    return { pid: n, start: m[2]!, comm: commBase(m[3]), ppid: Number(m[1]) };
+    return { comm: commBase(m[3]), pid: n, ppid: Number(m[1]), start: m[2]! };
   }
   if (platform === "win32") {
     const script = [
@@ -303,7 +304,7 @@ export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | 
     const start = parts[2];
     if (!Number.isFinite(ppid) || !start) return null;
     // parts.length >= 3 above, so parts[1] exists.
-    return { pid: n, start, comm: parts[1]!, ppid };
+    return { comm: parts[1]!, pid: n, ppid, start };
   }
   return null;
 }
@@ -368,11 +369,11 @@ export function sweep({
 
 function nextWork(prev: BoardRow | null, opts: NoteOptions): { work: string; sticky: boolean } {
   const label = workLabel(opts.work);
-  if (opts.forceWork) return { work: label || "-", sticky: true };
-  if (prev?.sticky && prev.work) return { work: String(prev.work), sticky: true };
-  if (label) return { work: label, sticky: false };
-  if (prev?.work) return { work: String(prev.work), sticky: false };
-  return { work: "active", sticky: false };
+  if (opts.forceWork) return { sticky: true, work: label || "-" };
+  if (prev?.sticky && prev.work) return { sticky: true, work: String(prev.work) };
+  if (label) return { sticky: false, work: label };
+  if (prev?.work) return { sticky: false, work: String(prev.work) };
+  return { sticky: false, work: "active" };
 }
 
 export function note(opts: NoteOptions = {}): BoardRow | null {
@@ -387,25 +388,25 @@ export function note(opts: NoteOptions = {}): BoardRow | null {
   const prev = readRow(file);
   const chosen = nextWork(prev, opts);
   const row = {
+    boot: String(opts.boot ?? ""),
+    cwd: oneLine(opts.cwd),
+    effort: opts.effort == null || String(opts.effort).trim() === "" ? "-" : String(opts.effort),
+    model: opts.model == null || String(opts.model).trim() === "" ? "-" : String(opts.model),
+    pid: Number(opts.pid),
+    provider,
+    session,
+    start: String(opts.start),
+    sticky: chosen.sticky,
     time:
       opts.now instanceof Date
         ? opts.now.toISOString().replace(/\.\d{3}Z$/, "Z")
         : opts.now
           ? String(opts.now)
           : new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-    provider,
-    model: opts.model == null || String(opts.model).trim() === "" ? "-" : String(opts.model),
-    effort: opts.effort == null || String(opts.effort).trim() === "" ? "-" : String(opts.effort),
-    session,
-    cwd: oneLine(opts.cwd),
     work: chosen.work,
-    sticky: chosen.sticky,
-    pid: Number(opts.pid),
-    start: String(opts.start),
-    boot: String(opts.boot ?? ""),
   };
   atomicWrite(file, `${JSON.stringify(row)}\n`);
-  sweep({ home, boot: row.boot, probe: opts.probe });
+  sweep({ boot: row.boot, home, probe: opts.probe });
   if (!fs.existsSync(file)) return null;
   return row;
 }
@@ -413,7 +414,7 @@ export function note(opts: NoteOptions = {}): BoardRow | null {
 export function lines(opts: DigestOptions = {}): string[] {
   const home = opts.home ?? boardHome(opts.env);
   const boot = opts.boot ?? readBootId();
-  return sweep({ home, boot, probe: opts.probe }).map(formatLine);
+  return sweep({ boot, home, probe: opts.probe }).map(formatLine);
 }
 
 export function digest(opts: DigestOptions = {}): string {
@@ -421,7 +422,7 @@ export function digest(opts: DigestOptions = {}): string {
   const boot = opts.boot ?? readBootId();
   const selfP = field(opts.provider);
   const selfS = field(opts.session);
-  return sweep({ home, boot, probe: opts.probe })
+  return sweep({ boot, home, probe: opts.probe })
     .filter((row) => !(field(row.provider) === selfP && field(row.session) === selfS))
     .sort((a, b) => String(b.time).localeCompare(String(a.time)))
     .slice(0, opts.cap ?? 8)
@@ -480,19 +481,19 @@ export function recordHook(
     if (!ident) return null;
     const boot = deps.boot || readBootId();
     return note({
-      home: boardHome(env),
-      env,
-      provider: providerOf(data, env),
-      model: modelOf(data),
-      effort: effortOf(data, env),
-      session,
-      cwd: cwdOf(data, env),
-      work: promptOf(data),
-      pid: ident.pid,
-      start: ident.start,
       boot,
+      cwd: cwdOf(data, env),
+      effort: effortOf(data, env),
+      env,
+      home: boardHome(env),
+      model: modelOf(data),
       now: deps.now,
+      pid: ident.pid,
       probe: deps.probe,
+      provider: providerOf(data, env),
+      session,
+      start: ident.start,
+      work: promptOf(data),
     });
   } catch {
     return null;
@@ -506,12 +507,12 @@ export function otherLines(
 ): string {
   try {
     return digest({
-      home: boardHome(env),
+      boot: deps.boot || readBootId(),
       env,
+      home: boardHome(env),
+      probe: deps.probe,
       provider: providerOf(data, env),
       session: sessionOf(data, env),
-      boot: deps.boot || readBootId(),
-      probe: deps.probe,
     });
   } catch {
     return "";

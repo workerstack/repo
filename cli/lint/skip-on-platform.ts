@@ -1,4 +1,5 @@
 import type { CreateRule, ESTree } from "@oxlint/plugins";
+
 import { GLOBAL_OBJECT, PAREN, PROCESS, SKIP, TYPEOF, UNDEFINED, VERSIONS } from "./skip-on-platform.constants.ts";
 
 type Node = ESTree.Node;

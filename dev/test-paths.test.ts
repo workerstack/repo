@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { aliasOf, bunPath, installedBin, linkText, removeAlias, shellForm } from "./test-paths.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) {
     removeAlias(`${dir}-alias`);
-    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(dir, { force: true, recursive: true });
   }
 });
 

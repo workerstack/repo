@@ -26,14 +26,14 @@ type Parts = { name: string; target: string; include: string[]; rules: Rule[] };
 const ADMINS: BypassActor[] = [{ actor_id: ADMIN_ROLE_ID, actor_type: ADMIN_ROLE_TYPE, bypass_mode: BYPASS_ALWAYS }];
 
 const pullRequest = (): Rule => ({
-  type: RULE_PULL_REQUEST,
   parameters: {
-    required_approving_review_count: 0,
     dismiss_stale_reviews_on_push: false,
     require_code_owner_review: false,
     require_last_push_approval: false,
+    required_approving_review_count: 0,
     required_review_thread_resolution: false,
   },
+  type: RULE_PULL_REQUEST,
 });
 
 const statusChecks = (checks: readonly string[]): Rule[] =>
@@ -41,11 +41,11 @@ const statusChecks = (checks: readonly string[]): Rule[] =>
     ? []
     : [
         {
-          type: RULE_CHECKS,
           parameters: {
-            strict_required_status_checks_policy: false,
             required_status_checks: checks.map((context) => ({ context, integration_id: GITHUB_ACTIONS_APP_ID })),
+            strict_required_status_checks_policy: false,
           },
+          type: RULE_CHECKS,
         },
       ];
 
@@ -55,25 +55,25 @@ const statusChecks = (checks: readonly string[]): Rule[] =>
  */
 export function wantedRulesets(checks: readonly string[]): Ruleset[] {
   const ruleset = ({ name, target, include, rules }: Parts): Ruleset => ({
-    name,
-    target,
-    enforcement: ENFORCEMENT_ACTIVE,
-    conditions: { ref_name: { include, exclude: [] } },
-    rules,
     bypass_actors: ADMINS,
+    conditions: { ref_name: { exclude: [], include } },
+    enforcement: ENFORCEMENT_ACTIVE,
+    name,
+    rules,
+    target,
   });
   return [
     ruleset({
-      name: MAIN_RULESET,
-      target: TARGET_BRANCH,
       include: [DEFAULT_BRANCH_REF],
+      name: MAIN_RULESET,
       rules: [{ type: RULE_DELETION }, { type: RULE_NON_FAST_FORWARD }, pullRequest(), ...statusChecks(checks)],
+      target: TARGET_BRANCH,
     }),
     ruleset({
-      name: TAGS_RULESET,
-      target: TARGET_TAG,
       include: [...RELEASE_TAG_REFS],
+      name: TAGS_RULESET,
       rules: [{ type: RULE_CREATION }, { type: RULE_UPDATE }, { type: RULE_DELETION }],
+      target: TARGET_TAG,
     }),
   ];
 }

@@ -1,5 +1,6 @@
 /** The `lint` section of workerstack.config.ts: the sanctioned rule skips. */
 import { z } from "zod";
+
 import { isReason } from "./lint/is-reason.ts";
 
 const REASON_ERROR = "say why the rules are off, in three words or more";
@@ -12,8 +13,8 @@ function skipSchema(): SkipSchema {
   return z.strictObject(
     {
       files: list("must be a list of file globs", "list at least one file glob"),
-      rules: list("must be a list of rule names", 'list at least one rule, like "repo/no-module-state"'),
       reason: z.string({ error: REASON_ERROR }).refine(isReason, { error: REASON_ERROR }),
+      rules: list("must be a list of rule names", 'list at least one rule, like "repo/no-module-state"'),
     },
     { error: 'must be an object like { files: ["src/a.ts"], rules: ["repo/no-module-state"], reason: "why" }' },
   );

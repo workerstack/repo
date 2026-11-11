@@ -1,8 +1,9 @@
 import { expect, it, vi } from "vitest";
+
 import { runSync } from "../sync.ts";
-import { fileOutput } from "./fixtures/mini-install.ts";
-import { plain, read, snapshot, sync, write } from "./fixtures/copied-install.ts";
 import { STOP, tracked } from "./fixtures/adoption-kit.ts";
+import { plain, read, snapshot, sync, write } from "./fixtures/copied-install.ts";
+import { fileOutput } from "./fixtures/mini-install.ts";
 import { useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
@@ -14,8 +15,8 @@ const MINE = { ".claude/settings.json": JSON.stringify({ permissions: { allow: [
 /** Plans a generated .claude/settings.json until the adoption wrote its overlay, then fails saying so. */
 const generator = (ctx: { read: (rel: string) => string | null }) =>
   ctx.read(".repo/settings/claude.json") === null
-    ? { outputs: [fileOutput(".claude/settings.json", "{}\n")], errors: [] }
-    : { outputs: [], errors: ["generator saw the adopted overlay"] };
+    ? { errors: [], outputs: [fileOutput(".claude/settings.json", "{}\n")] }
+    : { errors: ["generator saw the adopted overlay"], outputs: [] };
 
 it("stops, changing nothing, on a file sync would overwrite with other text", async () => {
   const root = plain({});
@@ -29,8 +30,8 @@ it("stops, changing nothing, on a file sync would overwrite with other text", as
 
 it("stops on a tracked file under a host dir that it cannot adopt, one line per file, and only those", async () => {
   const root = plain({
-    ".claude/commands/b.md": "b\n",
     ".claude/commands/a.md": "a\n",
+    ".claude/commands/b.md": "b\n",
     ".cursor/rules/x.mdc": "x\n",
   });
   write(root, ".claude/commands/untracked.md", "u\n");
@@ -104,7 +105,7 @@ it("reports a move that fails while it runs, and a generator error the adoption 
   const err: string[] = [];
   const code = await runSync(
     [],
-    { cwd: root, stdout: (s) => out.push(s), stderr: (s) => err.push(s) },
+    { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) },
     { generators: [generator] },
   );
   expect(code).toBe(1);

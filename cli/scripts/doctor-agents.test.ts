@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { plantStub } from "../fixtures/stub-bin.ts";
 import { agentModelsLines, type ListRunner } from "./doctor.ts";
 
@@ -9,7 +11,7 @@ const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {
@@ -31,7 +33,7 @@ function checkout(files: Record<string, string>) {
 }
 
 const GROK_LIST = "Available models:\n  * grok-4.7 (default)\n";
-const ok: ListRunner = () => Promise.resolve({ code: 0, stdout: GROK_LIST, stderr: "" });
+const ok: ListRunner = () => Promise.resolve({ code: 0, stderr: "", stdout: GROK_LIST });
 
 async function lines(files: Record<string, string>, run: ListRunner = ok, sourceRoot?: string) {
   const cwd = checkout(files);
@@ -42,9 +44,9 @@ async function lines(files: Record<string, string>, run: ListRunner = ok, source
 describe("agent files with odd contents", () => {
   it("reads nothing from an agent file with no frontmatter or no model", async () => {
     const text = await lines({
+      ".codex/agents/c.toml": 'name = "c"\n',
       ".grok/agents/a.md": "no frontmatter here\n",
       ".grok/agents/b.md": "---\nname: b\n---\n",
-      ".codex/agents/c.toml": 'name = "c"\n',
     });
     expect(text).toMatch(/^agent models\s+ok\s*$/);
   });
@@ -98,7 +100,7 @@ describe("list command failures", () => {
   const grokAgent = { ".grok/agents/a.md": "---\nmodel: grok-4.7\n---\n" };
 
   it("reports the exit code when a failed list printed nothing on stderr", async () => {
-    const run: ListRunner = () => Promise.resolve({ code: 3, stdout: "", stderr: "\n" });
+    const run: ListRunner = () => Promise.resolve({ code: 3, stderr: "\n", stdout: "" });
     expect(await lines(grokAgent, run)).toContain("grok models failed: exit 3");
   });
 
@@ -114,8 +116,8 @@ describe("with the real list runner and process defaults", () => {
   it("lists through the CLI on PATH and reads the package globals, cwd and home by default", async () => {
     const bin = tmp();
     plantStub(bin, "grok", {
-      sh: 'echo "oops" >&2\necho "Available models:"\necho "  grok-4.7"\n',
       cmd: "echo oops 1>&2\necho Available models:\necho   grok-4.7\n",
+      sh: 'echo "oops" >&2\necho "Available models:"\necho "  grok-4.7"\n',
     });
     const cwd = tmp();
     vi.stubEnv("PATH", bin);
@@ -128,7 +130,7 @@ describe("with the real list runner and process defaults", () => {
 
   it("keeps the stderr of a failing CLI in the skip note", async () => {
     const bin = tmp();
-    plantStub(bin, "grok", { sh: 'echo "bad login" >&2\nexit 2\n', cmd: "echo bad login 1>&2\nexit /b 2\n" });
+    plantStub(bin, "grok", { cmd: "echo bad login 1>&2\nexit /b 2\n", sh: 'echo "bad login" >&2\nexit 2\n' });
     vi.stubEnv("PATH", bin);
     vi.spyOn(process, "cwd").mockReturnValue(tmp());
     vi.spyOn(os, "homedir").mockReturnValue(tmp());

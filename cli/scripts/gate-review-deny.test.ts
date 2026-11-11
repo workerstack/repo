@@ -1,12 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { aliasOf } from "../../dev/test-paths";
-import { processFatTools } from "./gate-fat-tools.ts";
-import { harnessOf } from "./gate-harness.ts";
-import { isOutsideRootTmp } from "./gate-review.ts";
-import type { HookInput } from "./hook-input.ts";
-import { ENFORCED_HARNESSES, activeReview } from "./strategy.ts";
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import {
   asChild,
@@ -27,9 +24,14 @@ import {
   reviewWrite,
   startReview,
 } from "./fixtures/review-plan.ts";
+import { processFatTools } from "./gate-fat-tools.ts";
+import { harnessOf } from "./gate-harness.ts";
+import { isOutsideRootTmp } from "./gate-review.ts";
+import type { HookInput } from "./hook-input.ts";
+import { ENFORCED_HARNESSES, activeReview } from "./strategy.ts";
 
 const tmp = useTmp();
-const deny = (reason: string) => ({ type: "deny", reason });
+const deny = (reason: string) => ({ reason, type: "deny" });
 const send = (kind: WriteKind, w: string, target: string) => processFatTools(reviewWrite(kind, { cwd: w, target }));
 const sendAs = (kind: WriteKind, w: string, spec: { target: string; type: string }) =>
   processFatTools(asChild(reviewWrite(kind, { cwd: w, target: spec.target }), spec.type));
@@ -181,8 +183,8 @@ it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES",
   const w = tmp.dir("gate-review-");
   startReview(w);
   const run = (extra: HookInput, file = path.join(w, "src/x.ts")) =>
-    grokReply(w, { tool: "Write", input: { file_path: file, content: "x" }, extra });
-  const shape = camelCall("Write", {}, { hookEventName: "PreToolUse", workspaceRoot: w, session_id: REVIEW_SID });
+    grokReply(w, { extra, input: { content: "x", file_path: file }, tool: "Write" });
+  const shape = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
   const parent = run({});
   if (ENFORCED_HARNESSES.has(harnessOf(shape)))
     expect(parent).toMatchObject({ decision: "block", reason: reviewReason("review-fast") });

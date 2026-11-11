@@ -1,5 +1,7 @@
 import { expect, it, vi } from "vitest";
+
 import { HOSTS } from "../config.ts";
+import { useTempDirs } from "./fixtures/temp-dirs.ts";
 import {
   RENDER_TIMEOUT,
   consumer,
@@ -12,7 +14,6 @@ import {
   type McpFile,
   type TasksFile,
 } from "./fixtures/trees-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
@@ -20,8 +21,8 @@ vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 // One render with every host on, shared by the tests below.
 const root = consumer({
   ".vscode/tasks.json": JSON.stringify({
+    tasks: [{ command: "make all", dependsOn: ["x"], label: "mine", type: "shell" }],
     version: "2.0.0",
-    tasks: [{ label: "mine", type: "shell", command: "make all", dependsOn: ["x"] }],
   }),
 });
 const outputs = render(root, HOSTS);
@@ -33,7 +34,7 @@ it("writes every host tree untracked and AGENTS.md as a tracked shared file", ()
   );
   const tracked = new Set([".vscode/tasks.json", "AGENTS.md"]);
   for (const output of outputs.filter((o) => !tracked.has(o.path))) expect(output.tracked).toBe(false);
-  expect(find(outputs, "AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
+  expect(find(outputs, "AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
   expect(text(outputs, "AGENTS.md")).toMatch(/^<!-- repo:rules [\da-f]{8} -->\n[\s\S]*<!-- \/repo:rules -->\n$/);
 });
 

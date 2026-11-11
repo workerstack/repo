@@ -1,3 +1,4 @@
+import type { ShardReport } from "./mutate-report.ts";
 /** The command line of `repo mutate`, parsed at the edge into one of three shapes. */
 import {
   ASSIGN,
@@ -11,7 +12,6 @@ import {
   SHARD_PATTERN,
   WRITE_FLAG,
 } from "./mutate.constants.ts";
-import type { ShardReport } from "./mutate-report.ts";
 
 /** The `index`th of `total` shards, 1-based. */
 export type Shard = { index: number; total: number };
@@ -46,7 +46,7 @@ function expand(argv: string[]): string[] {
 function parseCheck(rest: string[]): Args {
   const dir = rest.find((word) => word !== WRITE_FLAG);
   if (dir === undefined) return fail(`${CHECK_COMMAND} takes the dir of the shard reports`);
-  return { kind: "check", dir, write: rest.includes(WRITE_FLAG) };
+  return { dir, kind: "check", write: rest.includes(WRITE_FLAG) };
 }
 
 type Run = Extract<Args, { kind: "run" }>;
@@ -68,7 +68,7 @@ function apply(run: Run, flag: string | undefined, value: string | undefined): s
 function parseRun(all: string[]): Args {
   const tool = all.includes(RUST_FLAG) ? "cargo-mutants" : "stryker";
   const words = all.filter((word) => word !== RUST_FLAG);
-  const run: Run = { kind: "run", shard: { index: FIRST_SHARD, total: FIRST_SHARD }, report: undefined, tool };
+  const run: Run = { kind: "run", report: undefined, shard: { index: FIRST_SHARD, total: FIRST_SHARD }, tool };
   for (let at = 0; at < words.length; at += FLAG_WORDS) {
     const problem = apply(run, words[at], words[at + 1]);
     if (problem !== null) return fail(problem);

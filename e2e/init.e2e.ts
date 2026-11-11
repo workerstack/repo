@@ -6,14 +6,16 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
 import { parse } from "jsonc-parser";
 import { beforeAll, describe, expect, inject, it } from "vitest";
-import { isRecord, isStringList, isStringMap } from "./json";
-import { PACKAGE_NAME } from "./registry";
-import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
+
 import { readEnv } from "../cli/env.ts";
 import { nodelessPath } from "../dev/nodeless-path.ts";
 import { installedBin, linkText } from "../dev/test-paths.ts";
+import { isRecord, isStringList, isStringMap } from "./json";
+import { PACKAGE_NAME } from "./registry";
+import { BROKEN_RUNTIME, type Run, Sandbox, tail } from "./sandbox";
 
 const version = inject("version");
 const oldVersion = inject("oldVersion");
@@ -42,8 +44,8 @@ async function expectPlantedFails(sb: Sandbox, env: Record<string, string>) {
 const SKIP_REASON = "the lookup result is always present";
 const skipOf = (file: string, rule = "typescript/no-non-null-assertion") => ({
   files: [file],
-  rules: [rule],
   reason: SKIP_REASON,
+  rules: [rule],
 });
 
 /**
@@ -182,7 +184,7 @@ function hookCalls(sb: Sandbox): HookCall[] {
       if (!Array.isArray(groups)) continue;
       for (const g of groups as { matcher?: string; hooks?: { type: string; command: string }[] }[]) {
         for (const h of g.hooks ?? [])
-          if (h.type === "command") calls.push({ file, event, matcher: g.matcher, command: h.command });
+          if (h.type === "command") calls.push({ command: h.command, event, file, matcher: g.matcher });
       }
     }
   }
@@ -198,17 +200,17 @@ function claudeGate(sb: Sandbox) {
 }
 
 const TOOL_CALLS = [
-  { tool_name: "Read", tool_input: { file_path: "src/index.ts" } },
-  { tool_name: "Bash", tool_input: { command: "git status", description: "status" } },
-  { tool_name: "Agent", tool_input: { description: "look", prompt: "List the src folder.", subagent_type: "scout" } },
+  { tool_input: { file_path: "src/index.ts" }, tool_name: "Read" },
+  { tool_input: { command: "git status", description: "status" }, tool_name: "Bash" },
+  { tool_input: { description: "look", prompt: "List the src folder.", subagent_type: "scout" }, tool_name: "Agent" },
 ];
 
 function hookPayloads(sb: Sandbox, call: HookCall) {
   const base = {
-    session_id: "e2e-session",
     cwd: sb.repo,
-    transcript_path: path.join(sb.root, "transcript.jsonl"),
     hook_event_name: call.event,
+    session_id: "e2e-session",
+    transcript_path: path.join(sb.root, "transcript.jsonl"),
   };
   if (call.event === "PreToolUse" || call.event === "PostToolUse") {
     const re = new RegExp(`^(?:${call.matcher || ".*"})$`);
@@ -399,11 +401,11 @@ describe("bunx", () => {
       for (const call of calls) {
         for (const payload of hookPayloads(sb, call)) {
           const r = await sb.run("bash", ["-c", call.command], {
-            input: JSON.stringify(payload),
             env: {
               CLAUDE_PROJECT_DIR: sb.repo,
               ...(call.file.startsWith(".grok") ? { GROK_WORKSPACE_ROOT: sb.repo } : {}),
             },
+            input: JSON.stringify(payload),
           });
           const label = `${call.file} ${call.event} ${(payload as { tool_name?: string }).tool_name ?? ""}: ${call.command}\n${tail(r.out)}`;
           expect(r.out, label).not.toMatch(BROKEN_RUNTIME);
@@ -419,13 +421,13 @@ describe("bunx", () => {
 
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
       const payload = {
-        session_id: "e2e",
         cwd: sb.repo,
         hook_event_name: "PreToolUse",
-        tool_name: "Bash",
+        session_id: "e2e",
         tool_input: { command: "cat src/index.ts" },
+        tool_name: "Bash",
       };
-      const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { input: JSON.stringify(payload), env });
+      const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { env, input: JSON.stringify(payload) });
       expectClean(sb, rewrite);
       const out = JSON.parse(rewrite.stdout) as { hookSpecificOutput?: { updatedInput?: { command?: string } } };
       expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
@@ -433,8 +435,8 @@ describe("bunx", () => {
       );
 
       const map = await sb.run("bash", ["-c", '"$CLAUDE_PROJECT_DIR/node_modules/.bin/repo" hook session-map'], {
-        input: JSON.stringify({ hook_event_name: "SessionStart", session_id: "e2e", cwd: sb.repo, source: "startup" }),
         env,
+        input: JSON.stringify({ cwd: sb.repo, hook_event_name: "SessionStart", session_id: "e2e", source: "startup" }),
       });
       expectClean(sb, map);
       expect(map.stdout).toContain("run `bun repo map <dir>`");
@@ -455,21 +457,21 @@ describe("bunx", () => {
       const env = { CLAUDE_PROJECT_DIR: sb.repo, GROK_WORKSPACE_ROOT: undefined };
       const read = async (rel: string) => {
         const payload = {
-          session_id: "e2e",
           cwd: sb.repo,
           hook_event_name: "PreToolUse",
-          tool_name: "Read",
+          session_id: "e2e",
           tool_input: { file_path: path.join(sb.repo, rel) },
+          tool_name: "Read",
         };
         const started = Date.now();
-        const r = await sb.run("bash", ["-c", gate.command], { input: JSON.stringify(payload), env });
+        const r = await sb.run("bash", ["-c", gate.command], { env, input: JSON.stringify(payload) });
         const ms = Date.now() - started;
         process.stdout.write(`gate latency ${ms}ms for Read ${rel}\n`);
         expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
         expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
         const decision = (JSON.parse(r.stdout || "{}") as { hookSpecificOutput?: { permissionDecision?: string } })
           .hookSpecificOutput?.permissionDecision;
-        return { status: r.status, decision, out: r.out };
+        return { decision, out: r.out, status: r.status };
       };
       const allowed = await read(path.join(stock, "plan-format.md"));
       expect(allowed.decision, allowed.out).not.toBe("deny");
@@ -499,8 +501,8 @@ describe("bunx", () => {
       expect(registryUrl).not.toContain("127.0.0.1:9/");
       const offline = {
         BUN_CONFIG_REGISTRY: "http://127.0.0.1:9/",
-        HTTP_PROXY: "http://127.0.0.1:9",
         HTTPS_PROXY: "http://127.0.0.1:9",
+        HTTP_PROXY: "http://127.0.0.1:9",
       };
       expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: offline }));
       expect(await generatedHashes(sb)).toStrictEqual(before);
@@ -561,8 +563,8 @@ describe("bunx", () => {
       const wrote = ["tsconfig.json", "tsconfig.src.json", "src/main.ts", "vitest.config.ts", "src/a.test.ts"];
       const tsconfig = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
       const srcTsconfig = {
-        extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
         exclude: ["node_modules", "**/*.test.ts"],
+        extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
       };
       try {
         sb.write("tsconfig.json", `${JSON.stringify(tsconfig)}\n`);
@@ -691,13 +693,13 @@ describe("a two-package workspace", () => {
     await sb.scaffold({ workspaces: ["packages/*"] });
     sb.write(
       "packages/api/package.json",
-      `${JSON.stringify({ name: "@acme/api", private: true, sideEffects: false, main: "src/main.ts" })}\n`,
+      `${JSON.stringify({ main: "src/main.ts", name: "@acme/api", private: true, sideEffects: false })}\n`,
     );
     sb.write("packages/api/src/main.ts", "export const main = 1;\n");
     sb.write("packages/api/references/INDEX.md", "# Api\n");
     sb.write(
       "packages/web/package.json",
-      `${JSON.stringify({ name: "@acme/web", private: true, sideEffects: false, dependencies: { "@acme/api": "workspace:*" } })}\n`,
+      `${JSON.stringify({ dependencies: { "@acme/api": "workspace:*" }, name: "@acme/web", private: true, sideEffects: false })}\n`,
     );
     sb.write("packages/web/references/INDEX.md", "# Web\n");
     sb.write("packages/web/src/api/a.ts", "export const a = 1;\n");
@@ -765,7 +767,7 @@ describe("a two-package workspace", () => {
 describe("existing repo content survives init", () => {
   it("keeps user scripts, dependencies, AGENTS.md text and Claude settings keys", async () => {
     const sb = new Sandbox("existing");
-    await sb.scaffold({ scripts: { build: "tsc -p ." }, devDependencies: { typescript: "^5.9.3" } });
+    await sb.scaffold({ devDependencies: { typescript: "^5.9.3" }, scripts: { build: "tsc -p ." } });
     sb.write("AGENTS.md", "# Team rules\n\nAlways run the linter.\n");
     sb.write(".claude/settings.json", `${JSON.stringify({ permissions: { allow: ["Bash(make test)"] } }, null, 2)}\n`);
     await sb.commit("existing content");

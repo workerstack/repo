@@ -1,7 +1,8 @@
 /** Which files `repo mutate` mutates, and how a run splits them into shards. */
 import path from "node:path";
-import { EXCLUDED } from "./mutate.constants.ts";
+
 import type { Shard } from "./mutate-args.ts";
+import { EXCLUDED } from "./mutate.constants.ts";
 
 /** The tracked files matching one of `globs`, minus tests, fixtures and declaration files, sorted. */
 export function selectFiles(tracked: readonly string[], globs: readonly string[]): string[] {

@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { initMcpJson } from "./init-mcp-json.ts";
 
 const dirs: string[] = [];
@@ -12,7 +14,7 @@ const tmp = () => {
 };
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 describe("initMcpJson", () => {

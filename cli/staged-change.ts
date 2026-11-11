@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import { ATTR_SET, ATTR_TOKENS, ATTR_TRUE, ATTR_VALUE_AT, RENAME_PATHS } from "./staged-change.constants.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 
@@ -56,7 +57,7 @@ function summarize(numstat: string, reader: Reader): StagedChange {
     ({ file }) =>
       !UNCOUNTED_NAMES.includes(path.posix.basename(file)) && !UNCOUNTED_PATHS.includes(file) && !generated.has(file),
   );
-  return { files, changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0) };
+  return { changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0), files };
 }
 
 /**
@@ -66,14 +67,14 @@ function summarize(numstat: string, reader: Reader): StagedChange {
 export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
   const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
   return diff.status !== 0
-    ? { files: [], changedLines: 0 }
-    : summarize(diff.stdout, { root, attrArgs: ["--cached"], git });
+    ? { changedLines: 0, files: [] }
+    : summarize(diff.stdout, { attrArgs: ["--cached"], git, root });
 }
 
 /** The change commit `sha` made, counted as `stagedChange` counts, with `.gitattributes` read as of that commit. */
 export function commitChange(root: string, sha: string, git: GitRun = runGit): StagedChange {
   const shown = git(root, ["show", "--numstat", "-z", "--format=", sha]);
   return shown.status !== 0
-    ? { files: [], changedLines: 0 }
-    : summarize(shown.stdout, { root, attrArgs: ["--source", sha], git });
+    ? { changedLines: 0, files: [] }
+    : summarize(shown.stdout, { attrArgs: ["--source", sha], git, root });
 }

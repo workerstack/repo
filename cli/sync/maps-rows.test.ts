@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { mapSections } from "./maps.ts";
+
 import { selfWs } from "./fixtures/maps-kit.ts";
 import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
+import { mapSections } from "./maps.ts";
 
 useTempDirs();
 

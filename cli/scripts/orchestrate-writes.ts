@@ -1,23 +1,24 @@
 /** The parent's writes: saves under .tmp/repo answered with the persisted text, and the session's receipt and git ask. */
 import fs from "node:fs";
 import path from "node:path";
+
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import { projectEdit } from "./gitignore-guard.ts";
 import type { HookInput } from "./hook-input.ts";
 import { holdingCheckout } from "./lessons.ts";
-import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
-import type { Approvable, HookResult, Persist, PersistOutcome, ToolInput, WriteCase } from "./orchestrate.types.ts";
 import { isLessonFile, lessonWrite } from "./orchestrate-lessons.ts";
 import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
 import { firstNonEmptyStripped } from "./orchestrate-transcript.ts";
+import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
+import type { Approvable, HookResult, Persist, PersistOutcome, ToolInput, WriteCase } from "./orchestrate.types.ts";
 import { persistHandoff } from "./persist-handoff.ts";
-import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
-import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
+import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
-import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
+import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
+import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import {
   isUnderHandoffs,
   isUnderImplementations,
@@ -36,8 +37,8 @@ type Prepare = (args: Parameters<Persist>[0] & { filePath: string }) => PersistO
 type Validate = (name: string, text: string, opts: { fresh: boolean; previous: string }) => string[];
 /** How a saved plan or roadmap is checked, updated in place, and saved fresh. */
 const SAVED: Readonly<Record<Approvable["kind"], { validate: Validate; prepare: Prepare; persist: Persist }>> = {
-  plan: { validate: validatePlan, prepare: preparePlanUpdate, persist: persistPlan },
-  roadmap: { validate: validateRoadmap, prepare: prepareRoadmapUpdate, persist: persistRoadmap },
+  plan: { persist: persistPlan, prepare: preparePlanUpdate, validate: validatePlan },
+  roadmap: { persist: persistRoadmap, prepare: prepareRoadmapUpdate, validate: validateRoadmap },
 };
 
 function isFile(abs: string): boolean {
@@ -68,14 +69,14 @@ function savedRoute(write: WriteCase, kind: Approvable["kind"]): Route {
     return { done: denied };
   }
   const persist: Persist = exists ? (args) => saved.prepare({ ...args, filePath: abs }) : saved.persist;
-  return { persist, approvable: true };
+  return { approvable: true, persist };
 }
 
 /** A named implementation is persisted; a full body over a saved one is validated and lands as sent. */
 function implementationRoute(write: WriteCase): Route {
   const abs = path.resolve(write.rawPath);
   const content = contentOf(write.toolInput);
-  if (/^\s*IMPL_NAME:/m.test(content) || !isFile(abs)) return { persist: persistImplementation, approvable: false };
+  if (/^\s*IMPL_NAME:/m.test(content) || !isFile(abs)) return { approvable: false, persist: persistImplementation };
   if (!isFullImplementationBody(content)) return { done: null };
   const errors = validateImplementation(path.basename(abs), content);
   if (errors.length) return { done: denyWith(write.data, errors.join("; ")) };
@@ -87,15 +88,15 @@ function routeWrite(write: WriteCase): Route {
   const ws = write.roots.root;
   if (isUnderPlans(canon, ws)) return savedRoute(write, "plan");
   if (isUnderRoadmaps(canon, ws)) return savedRoute(write, "roadmap");
-  if (isUnderHandoffs(canon, ws)) return { persist: persistHandoff, approvable: false };
+  if (isUnderHandoffs(canon, ws)) return { approvable: false, persist: persistHandoff };
   if (isUnderImplementations(canon, ws)) return implementationRoute(write);
-  if (isUnderTmp(canon, ws)) return { persist: persistTmp, approvable: false };
+  if (isUnderTmp(canon, ws)) return { approvable: false, persist: persistTmp };
   return { done: null };
 }
 
 function persistWrite(write: WriteCase, persist: Persist, approvable: boolean): HookResult {
   const ws = write.roots.root;
-  const result = persist({ workspaceRoot: ws, checkout: write.roots.checkout, content: contentOf(write.toolInput) });
+  const result = persist({ checkout: write.roots.checkout, content: contentOf(write.toolInput), workspaceRoot: ws });
   if (!result.ok) return denyWith(write.data, result.error);
   const saved = path.resolve(ws, result.path);
   if (approvable) recordApproval(write.data, saved);
@@ -110,7 +111,7 @@ export function parentWrite(data: HookInput, toolInput: ToolInput | undefined): 
   if (!typed) return null;
   const rawPath = rewriteScratchPath(typed, roots) || path.resolve(roots.cwd, typed);
   // Classify in the roots' spelling; answers keep the typed spelling, which Claude Code's read-before-write knows.
-  const write: WriteCase = { data, roots, rawPath, canon: canonicalPath(rawPath), toolInput };
+  const write: WriteCase = { canon: canonicalPath(rawPath), data, rawPath, roots, toolInput };
   const holder = holdingCheckout(write.canon, roots);
   if (isLessonFile(write.canon, holder)) return lessonWrite(write, holder);
   const route = routeWrite(write);

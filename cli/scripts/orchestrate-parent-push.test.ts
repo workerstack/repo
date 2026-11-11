@@ -2,13 +2,15 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { runHook } from "./fixtures/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function temp(prefix = "push-"): string {
@@ -62,7 +64,7 @@ function checkout() {
   git("push", "origin", "main");
   plant(ws, "a.txt", "two");
   git("commit", "-am", "two");
-  return { ws, origin, sha: git("rev-parse", "HEAD"), land: () => git("push", "origin", "main"), git };
+  return { git, land: () => git("push", "origin", "main"), origin, sha: git("rev-parse", "HEAD"), ws };
 }
 
 /** The PreToolUse of a Bash `git push origin main`. */
@@ -70,15 +72,15 @@ const push = (ws: string, sid: string, extra: Record<string, unknown> = {}) =>
   send(ws, {
     hook_event_name: "PreToolUse",
     session_id: sid,
-    tool_name: "Bash",
     tool_input: { command: "git push origin main" },
+    tool_name: "Bash",
     ...extra,
   });
 
 const inPush = (command: string) => ({ tool_input: { command } });
 
 const result = (ws: string, sha: string, outcome: string) =>
-  plant(ws, `.tmp/repo/ci/${sha}.json`, JSON.stringify({ branch: "main", outcome, failed: [], at: "t" }));
+  plant(ws, `.tmp/repo/ci/${sha}.json`, JSON.stringify({ at: "t", branch: "main", failed: [], outcome }));
 
 const line = (sha: string) =>
   `Stop: you pushed ${sha.slice(0, 7)} to main and its ci run has no result; run \`bun repo ci wait main\` in the background and fix it if it fails`;
@@ -114,8 +116,8 @@ it("leaves a subagent's Stop to its own check", () => {
   land();
   expect(
     stop(ws, "g4", {
-      subagent_type: "scout",
       last_assistant_message: "Done.",
+      subagent_type: "scout",
     }),
   ).toBeNull();
 });
@@ -126,8 +128,8 @@ it("blocks again while the stop hook is active, unlike the ask and away checks",
   land();
   expect(
     stop(ws, "g5", {
-      stop_hook_active: true,
       last_assistant_message: "Done.",
+      stop_hook_active: true,
     })?.reason,
   ).toBe(line(sha));
 });
@@ -149,8 +151,8 @@ it("lets the stop through after six blocks, and a new prompt clears the count", 
   expect(stop(ws, "g7", { last_assistant_message: "Done." })).toBeNull();
   send(ws, {
     hook_event_name: "UserPromptSubmit",
-    session_id: "g7",
     prompt: "go on",
+    session_id: "g7",
   });
   expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs/push-block-g7"))).toBe(false);
   expect(stop(ws, "g7", { last_assistant_message: "Done." })?.reason).toBe(line(sha));
@@ -177,7 +179,7 @@ it("blocks on the commit a push-then-commit command sent, not the one made after
 it("notes nothing for a tool with no command or a payload with no session", () => {
   const { ws, land } = checkout();
   push(ws, "g10", { tool_input: undefined });
-  send(ws, { hook_event_name: "PreToolUse", tool_name: "Bash", tool_input: { command: "git push origin main" } });
+  send(ws, { hook_event_name: "PreToolUse", tool_input: { command: "git push origin main" }, tool_name: "Bash" });
   land();
   expect(stop(ws, "", { last_assistant_message: "Done." })).toBeNull();
   expect(stop(ws, "g10", { last_assistant_message: "Done." })).toBeNull();

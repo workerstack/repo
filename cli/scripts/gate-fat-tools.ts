@@ -1,6 +1,4 @@
 #!/usr/bin/env bun
-/** PreToolUse: fat Read/Grep/Glob/Bash gate. Fail-open: parse/crash → empty stdout, exit 0. */
-import { PATCH_FIELD, SCOUT_TYPES, GITIGNORE, WORKTREE_WORD } from "./gate.constants.ts";
 import { isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import {
@@ -16,9 +14,11 @@ import {
   type ToolSpec,
 } from "./gate-harness.ts";
 import { limitsGuard, pathGuard } from "./gate-limits.ts";
-import { patchGuard, patchOfCommand, writeGuard } from "./gate-rewrites.ts";
 import { reviewGuard, sharedCheckoutGuard } from "./gate-review.ts";
+import { patchGuard, patchOfCommand, writeGuard } from "./gate-rewrites.ts";
 import { denylistShellGuard, dumpGuard, jobScriptGuard, testRunGuard, treeGuard, webGuard } from "./gate-shell.ts";
+/** PreToolUse: fat Read/Grep/Glob/Bash gate. Fail-open: parse/crash → empty stdout, exit 0. */
+import { PATCH_FIELD, SCOUT_TYPES, GITIGNORE, WORKTREE_WORD } from "./gate.constants.ts";
 import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreEdits } from "./gitignore-guard.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
@@ -55,7 +55,7 @@ function callOf(data: HookInput): GateCall | null {
   const sub = subagentTypeOf(data);
   const patch = patchOf(tool.kind, text);
   const parent = isParentOrchestrator(data);
-  return { data, harness, tool, input, roots, sid: sessionIdOf(data), field, text, patch, shellCwd, sub, parent };
+  return { data, field, harness, input, parent, patch, roots, shellCwd, sid: sessionIdOf(data), sub, text, tool };
 }
 
 /** The ignore edits a call makes: a write's content, a patch's headers, or a shell command that touches `.gitignore`. */
@@ -69,13 +69,13 @@ function ignoreEditsOf(call: GateCall): ReturnType<typeof writeIgnoreEdits> {
 /** Ahead of every early return, so scout subagents are held to it too. */
 function ignoreGuard(call: GateCall): GuardResult {
   const reason = redundantIgnoreReason(ignoreEditsOf(call));
-  return reason ? { type: "deny", reason } : undefined;
+  return reason ? { reason, type: "deny" } : undefined;
 }
 
 function strayWorktreeGuard({ tool, text, roots, shellCwd }: GateCall): GuardResult {
   const reason =
-    tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, { roots, cwd: shellCwd }) : null;
-  return reason ? { type: "deny", reason } : undefined;
+    tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, { cwd: shellCwd, roots }) : null;
+  return reason ? { reason, type: "deny" } : undefined;
 }
 
 /** A patch tool whose command holds no patch has nothing to answer. */

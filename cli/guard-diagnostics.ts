@@ -6,11 +6,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
+
 import { codeOf, GUARD_REJECTS } from "./lint/script-rules.ts";
 import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
-import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 import { isChecked, isTest, ownerOf, posix, setupOf } from "./ts-program.ts";
+import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
 /** An exported guard: its declared name node and the symbol a call resolves to. */
 type Guard = { name: ts.Identifier; symbol: ts.Symbol };
@@ -47,13 +49,13 @@ function isGuard(fn: FunctionLike, checker: ts.TypeChecker): boolean {
 /** The exported function declarations and `const` function values of a statement, with their names. */
 function functionsOf(statement: ts.Statement): { name: ts.Identifier; fn: FunctionLike }[] {
   if (ts.isFunctionDeclaration(statement) && statement.name && isExported(statement))
-    return [{ name: statement.name, fn: statement }];
+    return [{ fn: statement, name: statement.name }];
   if (!ts.isVariableStatement(statement)) return [];
   return statement.declarationList.declarations.flatMap((declaration) => {
     const init = declaration.initializer;
     const isFunction = init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init));
     if (!isFunction || !ts.isIdentifier(declaration.name) || !isExported(declaration)) return [];
-    return [{ name: declaration.name, fn: init }];
+    return [{ fn: init, name: declaration.name }];
   });
 }
 
@@ -152,11 +154,11 @@ function groupGuards(group: Group): Result<Guard[]> {
   const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
   if (!setup.ok) return setup;
   const { options } = setup.value;
-  const first = ts.createProgram({ rootNames: [...group.sources, ...group.tests], options });
+  const first = ts.createProgram({ options, rootNames: [...group.sources, ...group.tests] });
   const targets = targetsOf(group, first);
   if (guardsIn(first, targets).length === 0) return { ok: true, value: [] };
   const tests = [...new Set([...falseTests(group, setup.value.fileNames), ...group.tests])];
-  const program = ts.createProgram({ rootNames: [...targets, ...tests], options, oldProgram: first });
+  const program = ts.createProgram({ oldProgram: first, options, rootNames: [...targets, ...tests] });
   const checker = program.getTypeChecker();
   const testFiles = program.getSourceFiles().filter((file) => tests.includes(file.fileName));
   const asserted = new Set(testFiles.flatMap((file) => assertedFalse(file, checker)));
@@ -167,7 +169,7 @@ function diagnosticOf(root: string, { name }: Guard): Diagnostic {
   const file = name.getSourceFile();
   const rel = path.posix.relative(root, file.fileName);
   const { line, character } = file.getLineAndCharacterOfPosition(name.getStart());
-  return { file: rel, rule: RULE, line: `${rel}:${line + 1}:${character + 1}: error ${RULE}: ${message(name.text)}` };
+  return { file: rel, line: `${rel}:${line + 1}:${character + 1}: error ${RULE}: ${message(name.text)}`, rule: RULE };
 }
 
 /**
@@ -180,7 +182,7 @@ export function guardDiagnostics(root: string, files: readonly string[]): Result
   const groups = new Map<string | null, Group>();
   for (const rel of files.filter((file) => isChecked(file) || isTest(file))) {
     const dir = ownerOf(real, rel);
-    const group = groups.get(dir) ?? { root: real, dir, sources: [], tests: [] };
+    const group = groups.get(dir) ?? { dir, root: real, sources: [], tests: [] };
     (isTest(rel) ? group.tests : group.sources).push(path.posix.join(real, rel));
     groups.set(dir, group);
   }

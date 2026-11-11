@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { context } from "../fixtures/release-context.ts";
 import { type SyncContext } from "./outputs.ts";
 import { release } from "./release.ts";
@@ -177,8 +178,8 @@ const lookup = (ctx: SyncContext) => release(ctx).outputs[0];
 describe("release", () => {
   it("writes the whole tracked ci.yml without an e2e job when the root has no test:e2e script", () => {
     expect(release(context(["release"]))).toStrictEqual({
-      outputs: [{ kind: "file", path: CI_PATH, content: HEAD, tracked: true, managed: "whole" }],
       errors: [],
+      outputs: [{ content: HEAD, kind: "file", managed: "whole", path: CI_PATH, tracked: true }],
     });
   });
 

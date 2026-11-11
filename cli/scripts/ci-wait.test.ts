@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
+
 import { GH, GIT, LIST, SHA, BRANCH_LIST, bad, job, ok, run, view, world } from "./fixtures/ci-wait-world.ts";
 
 it("a green run prints the waiting line and passed, exit 0", async () => {
   const got = await world(GIT, { ...GH, "run view 123 --json": view("success", [job("test", "success")]) });
-  expect(got).toMatchObject({ code: 0, out: "waiting for ci on b3f5e8a (run 123)…\npassed\n", err: "" });
+  expect(got).toMatchObject({ code: 0, err: "", out: "waiting for ci on b3f5e8a (run 123)…\npassed\n" });
   expect(got.calls).toContain(
     `gh run list --commit ${SHA} --workflow ci.yml --json databaseId,status,conclusion,event,headBranch,createdAt`,
   );
@@ -16,9 +17,9 @@ it("a cancelled run with a newer ci run on the branch is superseded, exit 2", as
     "run view 123 --json": view("cancelled", [job("test", "cancelled")]),
     [BRANCH_LIST]: ok(
       JSON.stringify([
-        { databaseId: 123, createdAt: "2026-11-09T10:00:00Z" },
-        { databaseId: 125, createdAt: "2026-11-09T10:05:00Z" },
-        { databaseId: 124, createdAt: "2026-11-09T10:02:00Z" },
+        { createdAt: "2026-11-09T10:00:00Z", databaseId: 123 },
+        { createdAt: "2026-11-09T10:05:00Z", databaseId: 125 },
+        { createdAt: "2026-11-09T10:02:00Z", databaseId: 124 },
       ]),
     ),
   });
@@ -30,7 +31,7 @@ it("a manual cancel, with no newer run, is a failure with the logs", async () =>
   const got = await world(GIT, {
     ...GH,
     "run view 123 --json": view("cancelled", [job("test (ubuntu-latest)", "cancelled"), job("lint", "success")]),
-    [BRANCH_LIST]: ok(JSON.stringify([{ databaseId: 123, createdAt: "2026-11-09T10:00:00Z" }])),
+    [BRANCH_LIST]: ok(JSON.stringify([{ createdAt: "2026-11-09T10:00:00Z", databaseId: 123 }])),
     "run view 123 --log-failed": ok("step log\n"),
   });
   expect(got).toMatchObject({
@@ -90,22 +91,22 @@ it("of several runs it picks the newest on the current branch", async () => {
   expect(got).toMatchObject({ code: 0, out: "waiting for ci on b3f5e8a (run 5)…\npassed\n" });
 });
 
-it("it polls every 10 seconds until the run appears", async () => {
+it("polls every 10 seconds until the run appears", async () => {
   const got = await world(GIT, {
     ...GH,
     [`${LIST} ${SHA}`]: [ok("[]"), ok("garbage"), ok("{}"), ok(JSON.stringify([run(123, "2026-11-09T10:00:00Z")]))],
     "run view 123 --json": view("success", []),
   });
-  expect(got).toMatchObject({ code: 0, clock: 30_000 });
+  expect(got).toMatchObject({ clock: 30_000, code: 0 });
 });
 
 it("no run in 120 seconds is named and fails", async () => {
   const got = await world(GIT, { ...GH, [`${LIST} ${SHA}`]: ok("[]") });
   expect(got).toMatchObject({
-    code: 4,
-    out: "",
-    err: "repo ci wait: no ci run for b3f5e8a after 120s; check the workflow ran\n",
     clock: 120_000,
+    code: 4,
+    err: "repo ci wait: no ci run for b3f5e8a after 120s; check the workflow ran\n",
+    out: "",
   });
 });
 
@@ -113,8 +114,8 @@ it("a HEAD on no remote branch is unpushed, before gh is asked anything", async 
   const got = await world({ ...GIT, [`branch -r --contains ${SHA}`]: ok("\n") }, {});
   expect(got).toMatchObject({
     code: 4,
-    out: "",
     err: "repo ci wait: b3f5e8a is not on any remote branch; push it first\n",
+    out: "",
   });
   expect(got.calls.some((call) => call.startsWith("gh "))).toBe(false);
 });

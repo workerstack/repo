@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
 import { orchestrateKit, parseJson } from "./fixtures/orchestrate-kit.ts";
 import { stampPath } from "./strategy.ts";
 
@@ -12,7 +14,7 @@ const workspace = () => fs.realpathSync(kit.temp());
 
 function submit(ws: string, sid: string, text: string) {
   const out = kit.run(
-    { cwd: ws, hook_event_name: "UserPromptSubmit", session_id: sid, prompt: text },
+    { cwd: ws, hook_event_name: "UserPromptSubmit", prompt: text, session_id: sid },
     { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "" },
   );
   expect(out.status).toBe(0);
@@ -29,7 +31,7 @@ it("records the words a Claude, Codex or Grok prompt names, and the next prompt 
   // Grok spells the payload in camelCase and names the session in its env.
   const grok = kit.run(
     { hookEventName: "UserPromptSubmit", userPrompt: "git checkout main", workspaceRoot: ws },
-    { GROK_HOOK_EVENT: "UserPromptSubmit", GROK_WORKSPACE_ROOT: ws, GROK_SESSION_ID: "gk" },
+    { GROK_HOOK_EVENT: "UserPromptSubmit", GROK_SESSION_ID: "gk", GROK_WORKSPACE_ROOT: ws },
   );
   expect(grok.status).toBe(0);
   expect(words(ws, "gk")).toStrictEqual(["checkout"]);
@@ -43,7 +45,7 @@ it("reads each phrase as one grant or none", () => {
     ["clean up the code", []],
     ["merge to main", []],
     ["the stashed work is in the main checkout", []],
-    ["rebase it and force push", ["rebase", "force"]],
+    ["rebase it and force push", ["force", "rebase"]],
   ];
   for (const [text, expected] of cases) {
     submit(ws, "g2", text);
@@ -55,7 +57,7 @@ it("writes nothing without a session id, and still stamps the prompt gate as bef
   const ws = workspace();
   const out = kit.run(
     { cwd: ws, hook_event_name: "UserPromptSubmit", prompt: "stash it" },
-    { CLAUDE_PROJECT_DIR: ws, GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "" },
+    { CLAUDE_PROJECT_DIR: ws, GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" },
   );
   expect(out.status).toBe(0);
   expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions"))).toBe(false);

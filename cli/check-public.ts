@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import {
   BUGS_FIX,
   GIT_URL_PREFIX,
@@ -19,8 +21,8 @@ import {
   TYPES_CONDITION,
   WHITESPACE,
 } from "./check-public.constants.ts";
-import { keywordLines } from "./keywords.ts";
 import type { ResolvedConfig } from "./config.ts";
+import { keywordLines } from "./keywords.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
 

@@ -2,7 +2,9 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterAll, expect, it } from "vitest";
+
 import type { GitRun } from "../sync/standards.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 import { cargoLock } from "./fixtures/cargo-lock.ts";
@@ -12,7 +14,7 @@ const UNTRACKED = "Cargo.lock is not tracked; commit it (cargo runs with --locke
 const MISSING_CARGO = "Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs";
 const TEMPS: string[] = [];
 afterAll(() => {
-  for (const dir of TEMPS) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of TEMPS) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A temp root holding the named files. */
@@ -25,10 +27,10 @@ function rootWith(...files: string[]): string {
 const MANIFEST = "Cargo.toml";
 const LOCK = ["Cargo", "lock"].join(".");
 
-const ok = (stdout = "", stderr = ""): CargoResult => ({ status: 0, stdout, stderr, missing: false });
+const ok = (stdout = "", stderr = ""): CargoResult => ({ missing: false, status: 0, stderr, stdout });
 const META = JSON.stringify({
   packages: [
-    { id: "b 0.1.0", name: "b", version: "0.1.0", manifest_path: "/x/b/Cargo.toml", publish: null, rust_version: null },
+    { id: "b 0.1.0", manifest_path: "/x/b/Cargo.toml", name: "b", publish: null, rust_version: null, version: "0.1.0" },
   ],
   workspace_members: ["b 0.1.0"],
 });
@@ -47,11 +49,11 @@ function fakeCargo(script: Script = {}): { run: CargoRun; calls: string[] } {
     if (args[0] === "deny") return script.deny ?? ok();
     return script.shear ?? ok(JSON.stringify({ findings: [] }));
   };
-  return { run, calls };
+  return { calls, run };
 }
 
-const tracked: GitRun = () => ({ status: 0, stdout: `${LOCK}\0`, stderr: "" });
-const untracked: GitRun = () => ({ status: 0, stdout: "", stderr: "" });
+const tracked: GitRun = () => ({ status: 0, stderr: "", stdout: `${LOCK}\0` });
+const untracked: GitRun = () => ({ status: 0, stderr: "", stdout: "" });
 
 it("returns nothing and spawns nothing without a root manifest", () => {
   const cargo = fakeCargo();
@@ -60,14 +62,14 @@ it("returns nothing and spawns nothing without a root manifest", () => {
     gitCalls.push([...args]);
     return tracked(_root, args);
   };
-  expect(supplyChainAt(rootWith(LOCK), ["standards"], { run: cargo.run, git })).toStrictEqual([]);
+  expect(supplyChainAt(rootWith(LOCK), ["standards"], { git, run: cargo.run })).toStrictEqual([]);
   expect(cargo.calls).toStrictEqual([]);
   expect(gitCalls).toStrictEqual([]);
 });
 
 it("returns nothing and spawns nothing without a lock, which clippy reports", () => {
   const cargo = fakeCargo();
-  expect(supplyChainAt(rootWith(MANIFEST), ["standards"], { run: cargo.run, git: untracked })).toStrictEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST), ["standards"], { git: untracked, run: cargo.run })).toStrictEqual([]);
   expect(cargo.calls).toStrictEqual([]);
 });
 
@@ -78,44 +80,44 @@ it("names an untracked lock and asks git for it", () => {
     gitCalls.push([...args]);
     return untracked(_root, args);
   };
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { run: cargo.run, git });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { git, run: cargo.run });
   expect(lines).toStrictEqual([UNTRACKED]);
   expect(gitCalls).toStrictEqual([["ls-files", "--cached", "--", LOCK]]);
   expect(cargo.calls).toStrictEqual([]);
 });
 
 it("quotes a git that fails", () => {
-  const git: GitRun = () => ({ status: 128, stdout: "", stderr: "fatal: not a git repository" });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { run: fakeCargo().run, git });
+  const git: GitRun = () => ({ status: 128, stderr: "fatal: not a git repository", stdout: "" });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), [], { git, run: fakeCargo().run });
   expect(lines).toStrictEqual(["git ls-files failed (exit 128): fatal: not a git repository"]);
 });
 
 it("runs no cargo tool without the standards pack", () => {
   const cargo = fakeCargo();
-  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["release"], { run: cargo.run, git: tracked })).toStrictEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["release"], { git: tracked, run: cargo.run })).toStrictEqual([]);
   expect(cargo.calls).toStrictEqual([]);
 });
 
 it("returns what it has on a stale lock and runs nothing more", () => {
-  const stale: CargoResult = { status: 101, stdout: "", stderr: "error: --locked was passed", missing: false };
+  const stale: CargoResult = { missing: false, status: 101, stderr: "error: --locked was passed", stdout: "" };
   const cargo = fakeCargo({ meta: stale });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: untracked });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: untracked, run: cargo.run });
   expect(lines).toStrictEqual([UNTRACKED]);
   expect(cargo.calls).toHaveLength(1);
 });
 
 it("drops the missing cargo line of a failed metadata run and stops", () => {
-  const gone: CargoResult = { status: 1, stdout: "", stderr: "", missing: true };
+  const gone: CargoResult = { missing: true, status: 1, stderr: "", stdout: "" };
   const cargo = fakeCargo({ meta: gone });
-  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked })).toStrictEqual([]);
+  expect(supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run: cargo.run })).toStrictEqual([]);
   expect(MISSING_CARGO).toContain("cargo is not on PATH");
   expect(cargo.calls).toHaveLength(1);
 });
 
 it("keeps the other problems of a failed metadata run and stops", () => {
-  const broken: CargoResult = { status: 1, stdout: "", stderr: "boom", missing: false };
+  const broken: CargoResult = { missing: false, status: 1, stderr: "boom", stdout: "" };
   const cargo = fakeCargo({ meta: broken });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run: cargo.run });
   expect(lines).toStrictEqual(["cargo metadata exited 1: boom"]);
   expect(cargo.calls).toHaveLength(1);
 });
@@ -123,17 +125,17 @@ it("keeps the other problems of a failed metadata run and stops", () => {
 it("lists untracked, crate, pin, deny and shear lines in that order", () => {
   const deny = ok(
     "",
-    JSON.stringify({ type: "diagnostic", fields: { code: "rejected", severity: "error", message: "bad license" } }),
+    JSON.stringify({ fields: { code: "rejected", message: "bad license", severity: "error" }, type: "diagnostic" }),
   );
   const shear: CargoResult = {
-    status: 1,
-    stdout: JSON.stringify({ findings: [{ code: "x", severity: "error", message: "unused dependency `itoa`" }] }),
-    stderr: "",
     missing: false,
+    status: 1,
+    stderr: "",
+    stdout: JSON.stringify({ findings: [{ code: "x", message: "unused dependency `itoa`", severity: "error" }] }),
   };
   const denyFailed = { ...deny, status: 4 };
-  const cargo = fakeCargo({ meta: ok(META), deny: denyFailed, shear });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: untracked });
+  const cargo = fakeCargo({ deny: denyFailed, meta: ok(META), shear });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: untracked, run: cargo.run });
   expect(lines).toHaveLength(4);
   expect(lines[0]).toBe(UNTRACKED);
   expect(lines[1]).toMatch(/^crate b \(.*b\/Cargo\.toml\) is publishable but has no /);
@@ -143,8 +145,8 @@ it("lists untracked, crate, pin, deny and shear lines in that order", () => {
 
 it("skips only the tool whose pin has a problem", () => {
   const old = ok("cargo-deny 0.19.0");
-  const cargo = fakeCargo({ meta: ok(META), denyV: old });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked });
+  const cargo = fakeCargo({ denyV: old, meta: ok(META) });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run: cargo.run });
   expect(lines.filter((line) => line.startsWith("cargo-deny"))).toHaveLength(1);
   expect(cargo.calls).not.toContain("deny --locked --format json check");
   expect(cargo.calls).toContain("shear --locked --format=json");
@@ -154,7 +156,7 @@ it("skips shear when its pin is wrong and still runs deny", () => {
   const cargo = fakeCargo({ meta: ok(META) });
   const run: CargoRun = (root, args) =>
     args.join(" ") === "shear --version" ? ok("Version: 1.0.0") : cargo.run(root, args);
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run, git: tracked });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run });
   expect(lines.filter((line) => line.startsWith("cargo-shear"))).toHaveLength(1);
   expect(cargo.calls).toContain("deny --locked --format json check");
   expect(cargo.calls).not.toContain("shear --locked --format=json");
@@ -169,22 +171,22 @@ it("falls back to the real git inside a repository", () => {
 it("leaves the no-license deny error of a workspace crate to the crate line, and keeps a dependency's", () => {
   const unlicensed = (name: string) =>
     JSON.stringify({
-      type: "diagnostic",
       fields: {
         code: "unlicensed",
-        severity: "error",
-        message: `${name} = 0.1.0 is unlicensed`,
         graphs: [{ Krate: { name, version: "0.1.0" } }],
+        message: `${name} = 0.1.0 is unlicensed`,
+        severity: "error",
       },
+      type: "diagnostic",
     });
   const deny: CargoResult = {
-    status: 4,
-    stdout: "",
-    stderr: `${unlicensed("b")}\n${unlicensed("dep")}\n`,
     missing: false,
+    status: 4,
+    stderr: `${unlicensed("b")}\n${unlicensed("dep")}\n`,
+    stdout: "",
   };
-  const cargo = fakeCargo({ meta: ok(META), deny });
-  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { run: cargo.run, git: tracked });
+  const cargo = fakeCargo({ deny, meta: ok(META) });
+  const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run: cargo.run });
   expect(lines).toHaveLength(2);
   expect(lines[0]).toMatch(/^crate b \(.*\) is publishable but has no license, /);
   expect(lines[1]).toBe("cargo deny: licenses: dep 0.1.0: dep = 0.1.0 is unlicensed");

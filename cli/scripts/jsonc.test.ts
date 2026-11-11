@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { stripJsonc } from "./jsonc.ts";
 
 describe("stripJsonc", () => {
@@ -10,9 +11,9 @@ describe("stripJsonc", () => {
   it("keeps comment markers inside strings", () => {
     const text = '{ "url": "http://localhost:3000", "glob": "src/**/*.ts", "q": "say \\"//hi\\"" } // tail';
     expect(JSON.parse(stripJsonc(text))).toStrictEqual({
-      url: "http://localhost:3000",
       glob: "src/**/*.ts",
       q: 'say "//hi"',
+      url: "http://localhost:3000",
     });
   });
 

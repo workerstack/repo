@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
 
 const globs = z.array(z.string());
@@ -15,42 +16,36 @@ function catalogFields() {
   };
 }
 
-const packageJsonSchema: z.ZodObject<
-  {
-    name: z.ZodOptional<z.ZodString>;
-    private: z.ZodOptional<z.ZodBoolean>;
-    version: z.ZodOptional<z.ZodUnknown>;
-    sideEffects: z.ZodOptional<z.ZodUnknown>;
-    packageManager: z.ZodOptional<z.ZodUnknown>;
-    bin: z.ZodOptional<z.ZodUnknown>;
-    exports: z.ZodOptional<z.ZodUnknown>;
-    scripts: z.ZodOptional<z.ZodUnknown>;
-    workspaces: z.ZodOptional<
-      z.ZodUnion<
-        readonly [
-          z.ZodArray<z.ZodString>,
-          z.ZodObject<
-            {
-              packages: z.ZodOptional<z.ZodArray<z.ZodString>>;
-              catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-              catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
-              overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-            },
-            z.core.$strip
-          >,
-        ]
-      >
-    >;
-    catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
-    overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    dependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    devDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    peerDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-    optionalDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-  },
-  z.core.$strip
-> = z.object(
+const packageJsonSchema: z.ZodObject<{
+  name: z.ZodOptional<z.ZodString>;
+  private: z.ZodOptional<z.ZodBoolean>;
+  version: z.ZodOptional<z.ZodUnknown>;
+  sideEffects: z.ZodOptional<z.ZodUnknown>;
+  packageManager: z.ZodOptional<z.ZodUnknown>;
+  bin: z.ZodOptional<z.ZodUnknown>;
+  exports: z.ZodOptional<z.ZodUnknown>;
+  scripts: z.ZodOptional<z.ZodUnknown>;
+  workspaces: z.ZodOptional<
+    z.ZodUnion<
+      readonly [
+        z.ZodArray<z.ZodString>,
+        z.ZodObject<{
+          packages: z.ZodOptional<z.ZodArray<z.ZodString>>;
+          catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+          catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
+          overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+        }>,
+      ]
+    >
+  >;
+  catalog: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  catalogs: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodRecord<z.ZodString, z.ZodString>>>;
+  overrides: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  dependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  devDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  peerDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+  optionalDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+}> = z.object(
   {
     name: z.string({ error: "must be a string" }).optional(),
     private: z.boolean({ error: "must be true or false" }).optional(),
@@ -97,8 +92,8 @@ export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceRes
   // A root without package.json has no workspaces and no dependencies, as loadConfig reads it.
   const rootManifest: ManifestResult = fs.existsSync(rootFile)
     ? parseManifest("package.json", rootFile)
-    : { ok: true, manifest: {} };
-  if (!rootManifest.ok) return { ok: false, errors: rootManifest.errors };
+    : { manifest: {}, ok: true };
+  if (!rootManifest.ok) return { errors: rootManifest.errors, ok: false };
 
   const errors: string[] = [];
   const packages: WorkspacePackage[] = [];
@@ -108,8 +103,8 @@ export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceRes
     if (manifest.ok) packages.push({ dir, manifest: manifest.manifest });
     else errors.push(...manifest.errors);
   }
-  if (errors.length > 0) return { ok: false, errors };
-  return { ok: true, workspace: { root, manifest: rootManifest.manifest, packages } };
+  if (errors.length > 0) return { errors, ok: false };
+  return { ok: true, workspace: { manifest: rootManifest.manifest, packages, root } };
 }
 
 /** Merges the root's `catalog` and `catalogs` from both places bun reads them. */
@@ -152,15 +147,15 @@ function parseManifest(rel: string, file: string): ManifestResult {
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
-    return { ok: false, errors: [`${rel}: not valid JSON: ${(error as Error).message}`] };
+    return { errors: [`${rel}: not valid JSON: ${(error as Error).message}`], ok: false };
   }
   const parsed = packageJsonSchema.safeParse(raw);
-  if (parsed.success) return { ok: true, manifest: parsed.data };
+  if (parsed.success) return { manifest: parsed.data, ok: true };
   return {
-    ok: false,
     errors: parsed.error.issues.map((issue) => {
       const at = issue.path.join(".");
       return `${rel}: ${at ? `${at}: ` : ""}${issue.message}`;
     }),
+    ok: false,
   };
 }

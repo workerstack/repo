@@ -3,6 +3,7 @@
  * with every rule on. oxlint reads a plugin from its default export.
  */
 import type { Plugin } from "@oxlint/plugins";
+
 import { asNeedsReason } from "./as-needs-reason.ts";
 import { boundaries } from "./boundaries.ts";
 import { classFile } from "./class-file.ts";

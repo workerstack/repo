@@ -4,8 +4,10 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
+
 import { checkTsconfigs } from "./check-tsconfig.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,7 +34,7 @@ const STRICT_FLAGS = [
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string): string {
@@ -86,9 +88,9 @@ function write(dir: string, rel: string, content: string | object): string {
 /** The `tsconfig.src.json` beside `<owner>/tsconfig.json` that Usage asks for, `compilerOptions` over the strict base. */
 function srcConfig(dir: string, owner: string, compilerOptions: object = {}): string {
   return write(dir, path.posix.join(owner, "tsconfig.src.json"), {
-    extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
     compilerOptions,
     exclude: ["node_modules", "**/*.test.ts"],
+    extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
   });
 }
 
@@ -101,8 +103,8 @@ function diagnostics(configFile: string): Diagnostic[] {
   expect(read.error).toBeUndefined();
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, dir, undefined, configFile);
   const program = ts.createProgram({
-    rootNames: parsed.fileNames,
     options: parsed.options,
+    rootNames: parsed.fileNames,
   });
   return [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((d) => ({
     code: d.code,
@@ -316,8 +318,8 @@ describe("checkTsconfigs", () => {
       include: ["src"],
     });
     write(dir, "tsconfig.src.json", {
-      extends: "./tsconfig.json",
       exclude: ["**/*.test.ts"],
+      extends: "./tsconfig.json",
     });
     const missing = STRICT_FLAGS.filter((flag) => flag !== "noUncheckedIndexedAccess").join(", ");
     expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("tsconfig.src.json", missing)]);
@@ -352,13 +354,13 @@ describe("checkTsconfigs", () => {
     ]);
     const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
     write(dir, "tsconfig.json", {
+      exclude,
       extends: "@workerstack/repo/tsconfig/bun",
       include: ["src"],
-      exclude,
     });
     write(dir, "tsconfig.src.json", {
-      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
       exclude: [...exclude, "**/*.test.ts"],
+      extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
     });
     expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });

@@ -1,5 +1,8 @@
 import os from "node:os";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { cfgOf, plantDir, plantSpeakJson } from "./fixtures/speak-kit.ts";
 import {
   DEFAULT_ELEVEN_MODEL,
   DEFAULT_OPENAI_MODEL,
@@ -11,7 +14,6 @@ import {
   parseArgv,
   resolveProvider,
 } from "./speak.ts";
-import { cfgOf, plantDir, plantSpeakJson } from "./fixtures/speak-kit.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -39,7 +41,7 @@ it("formatHttpError: keeps status and the first 200 characters of any other body
 it("parseArgv: collects positionals, flags, bare flags and everything after --", () => {
   expect(parseArgv(["say", "--text", "hi", "--play", "--voice", "v", "--", "--raw", "x"])).toStrictEqual({
     _: ["say", "--raw", "x"],
-    flags: { text: "hi", play: "1", voice: "v" },
+    flags: { play: "1", text: "hi", voice: "v" },
   });
 });
 
@@ -58,39 +60,39 @@ it("loadCfg: fills the defaults when nothing is configured", () => {
 
 it("loadCfg: reads every field from the environment, trimmed", () => {
   const cfg = cfgOf({
-    SPEAK_PROVIDER: " OpenAI ",
     ELEVENLABS_API_KEY: " ek ",
-    ELEVENLABS_VOICE_ID: "ev",
     ELEVENLABS_MODEL_ID: "em",
+    ELEVENLABS_VOICE_ID: "ev",
     OPENAI_API_KEY: "ok",
-    OPENAI_TTS_VOICE: "ov",
     OPENAI_TTS_MODEL: "om",
+    OPENAI_TTS_VOICE: "ov",
+    SPEAK_PROVIDER: " OpenAI ",
   });
   expect(cfg).toMatchObject({
+    elevenlabs: { apiKey: "ek", modelId: "em", voiceId: "ev" },
+    openai: { apiKey: "ok", model: "om", voice: "ov" },
     providerPref: "openai",
-    elevenlabs: { apiKey: "ek", voiceId: "ev", modelId: "em" },
-    openai: { apiKey: "ok", voice: "ov", model: "om" },
   });
 });
 
 it("loadCfg: reads the nested file fields", () => {
   const home = plantDir();
   plantSpeakJson(home, {
+    elevenlabs: { apiKey: "fk", modelId: "fm", voiceId: "fv" },
+    openai: { apiKey: "ok", model: "om", voice: "ov" },
     provider: "ElevenLabs",
-    elevenlabs: { apiKey: "fk", voiceId: "fv", modelId: "fm" },
-    openai: { apiKey: "ok", voice: "ov", model: "om" },
   });
   expect(loadCfg({ env: {}, home })).toMatchObject({
+    elevenlabs: { apiKey: "fk", modelId: "fm", voiceId: "fv" },
+    openai: { apiKey: "ok", model: "om", voice: "ov" },
     providerPref: "elevenlabs",
-    elevenlabs: { apiKey: "fk", voiceId: "fv", modelId: "fm" },
-    openai: { apiKey: "ok", voice: "ov", model: "om" },
   });
 });
 
 it("loadCfg: reads the flat file fields as the elevenlabs fallback", () => {
   const home = plantDir();
-  plantSpeakJson(home, { apiKey: "flat", voiceId: "fv", modelId: "fm" });
-  expect(loadCfg({ env: {}, home }).elevenlabs).toStrictEqual({ apiKey: "flat", voiceId: "fv", modelId: "fm" });
+  plantSpeakJson(home, { apiKey: "flat", modelId: "fm", voiceId: "fv" });
+  expect(loadCfg({ env: {}, home }).elevenlabs).toStrictEqual({ apiKey: "flat", modelId: "fm", voiceId: "fv" });
 });
 
 it("loadCfg: ignores a file that is broken, not an object, or has non-object sections", () => {

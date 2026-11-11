@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NEED_STT, USAGE, main } from "./listen.ts";
-import type { SpawnSyncResult } from "./listen.ts";
+
 import { readEnv } from "../env.ts";
 import { FFMPEG, failFetch, plantSpeakJson, quiet, run, tmp, which, cleanupTmp } from "./fixtures/listen-env.ts";
+import { NEED_STT, USAGE, main } from "./listen.ts";
+import type { SpawnSyncResult } from "./listen.ts";
 
 afterEach(cleanupTmp);
 
@@ -30,11 +32,11 @@ describe("main home and PATH", () => {
   it("takes the home directory from HOME, then USERPROFILE", async () => {
     const homeA = tmp("listen-hm-a-");
     const homeB = tmp("listen-hm-b-");
-    plantSpeakJson(homeA, { openai: { apiKey: "from-home" }, listen: { model: "model-a" } });
-    plantSpeakJson(homeB, { openai: { apiKey: "from-profile" }, listen: { model: "model-b" } });
+    plantSpeakJson(homeA, { listen: { model: "model-a" }, openai: { apiKey: "from-home" } });
+    plantSpeakJson(homeB, { listen: { model: "model-b" }, openai: { apiKey: "from-profile" } });
     const logs: string[] = [];
-    const log = { log: (s: string) => logs.push(s), error: () => {} };
-    const base = { whichFn: which(), platform: "linux" as const, cwd: tmp("listen-hm-c-"), log };
+    const log = { error: () => {}, log: (s: string) => logs.push(s) };
+    const base = { cwd: tmp("listen-hm-c-"), log, platform: "linux" as const, whichFn: which() };
     await main(["whoami"], { ...base, env: { HOME: homeA, USERPROFILE: homeB } });
     await main(["whoami"], { ...base, env: { USERPROFILE: homeB } });
     expect(logs[0]).toContain("model=model-a");
@@ -47,7 +49,7 @@ describe("main home and PATH", () => {
       seen.push(pathEnv);
       return "";
     };
-    const base = { whichFn, platform: "linux" as const, log: quiet };
+    const base = { log: quiet, platform: "linux" as const, whichFn };
     await main(["nope"], { ...base, env: { PATH: "/env" }, pathEnv: "/given" });
     await main(["nope"], { ...base, env: { PATH: "/env" } });
     await main(["nope"], { ...base, env: {} });
@@ -95,7 +97,7 @@ describe("whoami", () => {
 
   it("reports no engine, and a failed model download, with exit 1", async () => {
     const whichFn = which({ "whisper-cli": "/w/whisper-cli" });
-    const r = await run(["whoami"], { env: {}, whichFn, fetchFn: failFetch });
+    const r = await run(["whoami"], { env: {}, fetchFn: failFetch, whichFn });
     expect(r.code).toBe(1);
     expect(r.logs).toStrictEqual(["stt=none  ffmpeg=missing"]);
     expect(r.errs.some((e) => e.startsWith("downloading"))).toBe(true);

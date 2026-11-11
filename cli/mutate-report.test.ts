@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
+
 import { fromCargoMutants, parseReport } from "./mutate-report.ts";
 
 const span = (line: number, column: number) => ({
-  start: { line, column },
-  end: { line, column: column + 1 },
+  end: { column: column + 1, line },
+  start: { column, line },
 });
 
 /** One outcomes.json entry, shaped as cargo-mutants 27.1.0 writes it (trimmed of phase results). */
@@ -12,27 +13,27 @@ function mutant(file: string, summary: string, at: { line?: number; genre?: stri
   const name = `${file}:${line}:5: replace + with - in f`;
   const scenario = {
     Mutant: {
+      file,
+      genre,
       name,
       package: "p",
-      file,
-      span: span(line, 5),
       replacement: "-",
-      genre,
+      span: span(line, 5),
     },
   };
   return {
+    diff_path: "diff/x.diff",
+    log_path: "log/x.log",
+    phase_results: [],
     scenario,
     summary,
-    log_path: "log/x.log",
-    diff_path: "diff/x.diff",
-    phase_results: [],
   };
 }
 const baseline = {
+  diff_path: null,
+  log_path: "log/baseline.log",
   scenario: "Baseline",
   summary: "Success",
-  log_path: "log/baseline.log",
-  diff_path: null,
 };
 const outcomes = (...entries: unknown[]) => ({
   outcomes: entries,
@@ -55,13 +56,13 @@ it("counts caught and timeout mutants as killed, per file", () => {
 });
 
 it("makes a missed mutant a survivor at its span start, named by its genre", () => {
-  const raw = outcomes(mutant("crates/a/src/lib.rs", "MissedMutant", { line: 16, genre: "FnValue" }));
+  const raw = outcomes(mutant("crates/a/src/lib.rs", "MissedMutant", { genre: "FnValue", line: 16 }));
   expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: {
       "crates/a/src/lib.rs": {
         killed: 0,
-        survivors: [{ line: 16, column: 5, mutator: "FnValue", status: "Survived" }],
+        survivors: [{ column: 5, line: 16, mutator: "FnValue", status: "Survived" }],
       },
     },
   });
@@ -71,10 +72,10 @@ it("leaves out unviable mutants, the baseline and a failed baseline", () => {
   const raw = outcomes(
     baseline,
     {
+      diff_path: null,
+      log_path: "log/baseline.log",
       scenario: { Failure: 100 },
       summary: "Failure",
-      log_path: "log/baseline.log",
-      diff_path: null,
     },
     mutant("crates/a/src/lib.rs", "Unviable"),
     mutant("crates/a/src/lib.rs", "CaughtMutant", { line: 3 }),
@@ -103,7 +104,7 @@ it("names a bad shape", () => {
 });
 
 it("requires the tool in a shard report", () => {
-  const base = { head: "abc", shard: { index: 1, total: 1 }, files: {} };
+  const base = { files: {}, head: "abc", shard: { index: 1, total: 1 } };
   expect(parseReport(JSON.stringify(base))).toMatchObject({ ok: false });
   const bad = parseReport(JSON.stringify({ ...base, tool: "jest" }));
   expect(bad.ok).toBe(false);

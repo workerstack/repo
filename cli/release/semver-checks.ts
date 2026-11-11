@@ -1,7 +1,8 @@
 import path from "node:path";
-import type { CargoRun } from "../rust/clippy.ts";
-import { quote } from "../rust/cargo-tools.ts";
+
 import { HEADER, isBreaking } from "../conventional.ts";
+import { quote } from "../rust/cargo-tools.ts";
+import type { CargoRun } from "../rust/clippy.ts";
 import { baselineOf } from "./crates-index.ts";
 import {
   CHECK_ARGS,
@@ -46,9 +47,9 @@ const levelFrom = (summary: Record<string, string | undefined> | undefined, so: 
 
 /** A header's lint and what it says, as a block with no items yet. */
 const blockOf = (header: Record<string, string | undefined>): Block => ({
+  items: [],
   lint: String(header["lint"]),
   what: String(header["what"]),
-  items: [],
 });
 
 /** Adds a non-blank line to the last block's items, without the location the tool appends. */
@@ -66,15 +67,15 @@ function scanLine(scan: Scan, raw: string): Scan {
   if (scan.items && !marker) addItem(blocks, line);
   return {
     blocks,
-    level: levelFrom(summary, scan.level),
     items: !marker && line !== "" && (scan.items || line === FAILED_IN),
+    level: levelFrom(summary, scan.level),
   };
 }
 
 /** The failed lints with the items under each, and the release the summary asks for; the tool writes the blocks to stdout and the summary to either stream. */
 function failures(stdout: string, stderr: string): { blocks: Block[]; level: string } {
   const text = `${stdout}\n\n${stderr}`;
-  const { blocks, level } = text.split("\n").reduce(scanLine, { blocks: [], level: UNSAID_LEVEL, items: false });
+  const { blocks, level } = text.split("\n").reduce(scanLine, { blocks: [], items: false, level: UNSAID_LEVEL });
   return { blocks, level };
 }
 
@@ -113,22 +114,22 @@ export async function crateLine(root: string, crate: SemverCrate, deps: SemverDe
   const level =
     bumped || baseline.published === null
       ? "patch"
-      : levelOf(crate.version, deps.git({ since: baseline.published, dir }));
+      : levelOf(crate.version, deps.git({ dir, since: baseline.published }));
   const args = [...CHECK_ARGS, "--manifest-path", path.join(root, MANIFEST_FILE), "-p", name];
   args.push("--baseline-version", baseline.version, ...(bumped ? [] : ["--release-type", level]));
   const from = `crate ${name} ${baseline.version} → this checkout`;
   const shown: Shown = bumped
     ? {
-        name,
-        from,
-        ok: `crate ${name} ${baseline.version} → this checkout · ${crate.version} in Cargo.toml · ok`,
         advice: `restore it or bump ${name}'s version further`,
+        from,
+        name,
+        ok: `crate ${name} ${baseline.version} → this checkout · ${crate.version} in Cargo.toml · ok`,
       }
     : {
-        name,
-        from,
-        ok: `crate ${name} ${baseline.version} from crates.io → this checkout · ${level} · ok`,
         advice: `restore it, bump ${name}'s version, or mark a commit breaking with \`!\``,
+        from,
+        name,
+        ok: `crate ${name} ${baseline.version} from crates.io → this checkout · ${level} · ok`,
       };
   return report(shown, deps.run(root, args));
 }

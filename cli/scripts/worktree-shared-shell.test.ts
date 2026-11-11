@@ -1,5 +1,7 @@
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { NONE, at, cli, git, scratch, shared, wt } from "./fixtures/worktree-repo.ts";
 import { sharedGitReason, worktreeAddReason } from "./worktree-guards.ts";
 import type { ShellAt } from "./worktree.types.ts";
@@ -73,7 +75,7 @@ it("passes outside a git repo and before the first commit", () => {
 const WIN_ROOT = at("C:\\r");
 const WIN_IN_A = at("C:\\r", "C:\\r\\.worktrees\\a");
 const winShared = (cmd: string, place: ShellAt = WIN_ROOT) =>
-  sharedGitReason(cmd, { ...place, asked: NONE }, { p: path.win32, committed: () => true });
+  sharedGitReason(cmd, { ...place, asked: NONE }, { committed: () => true, p: path.win32 });
 
 it("reads win32 spellings of the root and its worktrees", () => {
   expect(winShared("git commit -m x")).toBe(
@@ -89,7 +91,7 @@ it("reads win32 spellings of the root and its worktrees", () => {
   expect(winShared("git stash", WIN_IN_A)).toBeNull();
   expect(winShared("git -C C:/r commit -m x", WIN_IN_A)).toMatch(/^the main checkout is shared/);
   expect(winShared("git branch -D wt/b", WIN_IN_A)).toBeNull();
-  expect(winShared("git worktree remove 'C:\r\.worktrees\b'", WIN_IN_A)).toBeNull();
+  expect(winShared("git worktree remove 'C:\r.worktrees\b'", WIN_IN_A)).toBeNull();
   expect(winShared("git worktree remove ../b", WIN_IN_A)).toBeNull();
   expect(winShared("git worktree remove 'C:\\r\\.worktrees\\a'", WIN_IN_A)).toBeNull();
   expect(winShared("git push origin +main", WIN_IN_A)).toMatch(/^a force push rewrites shared history/);

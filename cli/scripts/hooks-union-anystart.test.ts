@@ -1,13 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { rootCmd } from "./hooks-union-commands.ts";
-import { AUTORUN_NEEDLES } from "./hooks-union.constants.ts";
-import { allCommands } from "./hooks-union-merge.ts";
-import { HOOK_NAMES, hookCommand } from "./hook-command.ts";
-import { stripJsonc } from "./jsonc.ts";
+
+import { childEnv } from "../env.ts";
 import {
   GATE,
   REPO_ROOT,
@@ -21,7 +18,12 @@ import {
   type ClaudeDoc,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
-import { childEnv } from "../env.ts";
+import { HOOK_NAMES, hookCommand } from "./hook-command.ts";
+import { rootCmd } from "./hooks-union-commands.ts";
+import { allCommands } from "./hooks-union-merge.ts";
+import { AUTORUN_NEEDLES } from "./hooks-union.constants.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
+import { stripJsonc } from "./jsonc.ts";
 
 const tmpDir = plantDirs();
 const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"];
@@ -29,9 +31,9 @@ const OWNED_STUBS = ["cli/scripts/session-map.ts", "cli/scripts/worktree.ts"];
 const STUBS = AUTORUN_NEEDLES.map((n) => `scripts/${n}`);
 const RAN = [...HOOK_NAMES.map((n) => `hook ${n}`), ...STUBS];
 const EVENTS: Record<string, string> = {
+  beforeSubmitPrompt: "UserPromptSubmit",
   preToolUse: "PreToolUse",
   sessionStart: "SessionStart",
-  beforeSubmitPrompt: "UserPromptSubmit",
   stop: "Stop",
   subagentStop: "SubagentStop",
 };
@@ -60,7 +62,7 @@ function writeStub(root: string, rel: string, ran = path.join(root, "ran.txt")):
 function run(command: string, cwd: string, extra: Record<string, string> = {}) {
   const env: Record<string, string | undefined> = childEnv({ ...extra });
   for (const k of PROJECT_VARS) if (!(k in extra)) delete env[k];
-  return spawnSync("bash", ["-c", command], { cwd, env, input: "{}", encoding: "utf8", timeout: 20_000 });
+  return spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env, input: "{}", timeout: 20_000 });
 }
 
 /** The repo's shipped hook sources, plus generated configs shaped like rulesync output of `hooks.jsonc`. */
@@ -76,13 +78,13 @@ function seedShipped(root: string): void {
   for (const [event, entries] of Object.entries(ssotOf(ssot).hooks)) {
     hooks[must(EVENTS[event])] = entries.map((e) => ({
       ...(e.matcher ? { matcher: e.matcher } : {}),
-      hooks: [{ type: "command", command: e.command, timeout: e.timeout }],
+      hooks: [{ command: e.command, timeout: e.timeout, type: "command" }],
     }));
   }
-  writeJson(root, ".claude/settings.json", { permissions: { deny: [] }, hooks });
+  writeJson(root, ".claude/settings.json", { hooks, permissions: { deny: [] } });
   writeJson(root, ".codex/hooks.json", { hooks });
   writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
-  writeJson(root, ".cursor/hooks.json", { version: 1, hooks: ssotOf(ssot).hooks });
+  writeJson(root, ".cursor/hooks.json", { hooks: ssotOf(ssot).hooks, version: 1 });
 }
 
 const shippedFiles = (root: string) => [
@@ -156,13 +158,13 @@ it("--check names each command that does not find its script from the repo root"
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
   must(claude.hooks.PostToolUse).push(
-    { matcher: "Write", hooks: [{ type: "command", command: "node scripts/validate.mjs --hook" }] },
-    { matcher: "Write", hooks: [{ type: "command", command: "node scripts/my-custom-hook.mjs" }] },
+    { hooks: [{ command: "node scripts/validate.mjs --hook", type: "command" }], matcher: "Write" },
+    { hooks: [{ command: "node scripts/my-custom-hook.mjs", type: "command" }], matcher: "Write" },
   );
   writeJson(ws, ".claude/settings.json", claude);
   const rtk = 'bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"';
   writeJson(ws, ".grok/hooks/rtk.json", {
-    hooks: { PreToolUse: [{ matcher: "Bash", hooks: [{ type: "command", command: rtk }] }] },
+    hooks: { PreToolUse: [{ hooks: [{ command: rtk, type: "command" }], matcher: "Bash" }] },
   });
   const failures = checkUnion({ workspaceRoot: ws });
   expect(failures).toContain(

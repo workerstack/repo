@@ -1,14 +1,16 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { persistPlan } from "./persist-plan.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
+import { persistPlan } from "./persist-plan.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -19,7 +21,7 @@ function tmpWs() {
 
 // A plan the saver accepted, as a validator input: mutate its text and read the errors back.
 function saved() {
-  const r = persistPlan({ workspaceRoot: tmpWs(), content: VALID_PLAN, created: "2026-08-26T14:30:00Z" });
+  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
   if (!r.ok) throw new Error(r.error);
   return { filename: r.filename, text: r.content };
 }

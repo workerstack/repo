@@ -7,7 +7,9 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
+
 import {
   ACTIONLINT_FLAGS,
   ACTIONLINT_VERSION,
@@ -30,8 +32,8 @@ import {
 import { findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import { type Captured } from "./scripts/lint.ts";
-import { toolEnv } from "./scripts/tool-env.ts";
 import { stateHome } from "./scripts/setup.ts";
+import { toolEnv } from "./scripts/tool-env.ts";
 
 /** What `repo check` prints of actionlint: problem lines that fail it. */
 export type ActionlintCheck = { problems: string[] };
@@ -56,7 +58,7 @@ type Plan = { name: string; key: string; target: string; platform: string; deps:
 const NONE: ActionlintCheck = { problems: [] };
 const itemsSchema = () =>
   z.array(
-    z.object({ message: z.string(), filepath: z.string(), line: z.number(), column: z.number(), kind: z.string() }),
+    z.object({ column: z.number(), filepath: z.string(), kind: z.string(), line: z.number(), message: z.string() }),
   );
 
 /** The archive at `url`, or a thrown error for a failed request. */
@@ -67,10 +69,10 @@ export async function fetchArchive(url: string): Promise<Uint8Array> {
 }
 
 export const spawnCaptured: Spawn = (command, args, { cwd, env }) => {
-  const result = spawnSync(command, args, { cwd, env, encoding: "utf8", maxBuffer: MAX_OUTPUT_BYTES });
+  const result = spawnSync(command, args, { cwd, encoding: "utf8", env, maxBuffer: MAX_OUTPUT_BYTES });
   // A command that cannot start leaves stdout and stderr unset at runtime, whatever the types say.
-  if (result.error !== undefined) return { code: 1, stdout: "", stderr: `${result.error.message}\n` };
-  return { code: result.status ?? 1, stdout: result.stdout, stderr: result.stderr };
+  if (result.error !== undefined) return { code: 1, stderr: `${result.error.message}\n`, stdout: "" };
+  return { code: result.status ?? 1, stderr: result.stderr, stdout: result.stdout };
 };
 
 /** The workflow files under `root`, relative and sorted; none when the directory is missing. */
@@ -93,7 +95,7 @@ async function download(plan: Plan): Promise<Bytes> {
   }
   const actual = createHash("sha256").update(bytes).digest("hex");
   const expected = deps.hashes[key] ?? "";
-  if (actual === expected) return { ok: true, bytes };
+  if (actual === expected) return { bytes, ok: true };
   const [a, e] = [actual, expected].map((hash) => `${hash.slice(0, SHOWN_HASH)}…`);
   return { ok: false, problem: `${name} has sha256 ${a}, expected ${e}; nothing was cached` };
 }
@@ -124,7 +126,7 @@ async function install(plan: Plan): Promise<Binary> {
     return { ok: true, path: plan.target };
   } finally {
     fs.rmSync(archive, { force: true });
-    fs.rmSync(extracted, { recursive: true, force: true });
+    fs.rmSync(extracted, { force: true, recursive: true });
   }
 }
 
@@ -143,7 +145,7 @@ async function binaryFor(deps: Resolved): Promise<Binary> {
   fs.mkdirSync(cacheDir, { recursive: true });
   const key = `${osName}_${archName}`;
   const name = `actionlint_${ACTIONLINT_VERSION}_${key}${platform === WINDOWS_PLATFORM ? ".zip" : ".tar.gz"}`;
-  return await install({ name, key, target, platform, deps });
+  return await install({ deps, key, name, platform, target });
 }
 
 /** One line per item of actionlint's json, or the failure line when the run or its output is not as expected. */
@@ -170,7 +172,7 @@ export async function checkActionlintAt(cwd: string, deps: ActionlintDeps = {}):
   if (!loaded.ok || !loaded.config.packs.includes("release")) return NONE;
   const files = workflowsOf(root);
   if (files.length === 0) return NONE;
-  const io = { fetch: fetchArchive, spawn: spawnCaptured, hashes: HASHES, ...deps };
+  const io = { fetch: fetchArchive, hashes: HASHES, spawn: spawnCaptured, ...deps };
   const binary = await binaryFor(io);
   if (!binary.ok) return { problems: [`actionlint: ${binary.problem}`] };
   const args = [...ACTIONLINT_FLAGS, ...files];

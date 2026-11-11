@@ -1,6 +1,4 @@
-/** The head of a plan save: `PLAN_NAME:` and `commit:` lines, the frontmatter a new plan gets, and the one a rewrite keeps. */
-import { fencedLineSet } from "./persist-sections.ts";
-import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
+import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
 import {
   captured,
   createdLine,
@@ -10,8 +8,10 @@ import {
   sourceLine,
   stripFrontmatter,
 } from "./persist-doc.ts";
-import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
+import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
 import { COMMIT_LINE_RE, COMMIT_STRIP_RE, PLAN_NAME_RE } from "./persist-plan.constants.ts";
+/** The head of a plan save: `PLAN_NAME:` and `commit:` lines, the frontmatter a new plan gets, and the one a rewrite keeps. */
+import { fencedLineSet } from "./persist-sections.ts";
 
 /** The `PLAN_NAME:` line outside a code fence and above the first `## `, with its index; null when absent. */
 function planNameLine(lines: string[]) {

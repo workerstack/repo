@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { PRINT_WIDTH } from "./max-line-width.constants.ts";
 import { maxLineWidth } from "./max-line-width.ts";

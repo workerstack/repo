@@ -1,5 +1,10 @@
 /** Rewrites of where a write or a patch lands: stray scratch goes under the root's `.tmp/repo`. */
 import path from "node:path";
+
+import type { GateCall, GuardResult } from "./gate-call.ts";
+import { WRITE_PATH_FIELDS } from "./gate-harness.ts";
+import { isUnder, relInside } from "./gate-paths.ts";
+import { recordWrote } from "./gate-wrote.ts";
 import {
   DOT_TMP_DEPTH,
   DOT_TMP_DIR,
@@ -13,10 +18,6 @@ import {
   SCRATCH_ROOT_RE,
   TMP_DIR,
 } from "./gate.constants.ts";
-import type { GateCall, GuardResult } from "./gate-call.ts";
-import { WRITE_PATH_FIELDS } from "./gate-harness.ts";
-import { isUnder, relInside } from "./gate-paths.ts";
-import { recordWrote } from "./gate-wrote.ts";
 import { persistOwner } from "./persist-tmp.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
@@ -151,7 +152,7 @@ function movedPath(call: GateCall, current: string, dest: string): string | null
 /** What one write field is recorded as, and where it moves to (null to stay). */
 function fieldPlan(call: GateCall, current: string): { recorded: string; moved: string | null } {
   const dest = rewriteScratchWrite(current, call.roots);
-  return { recorded: dest ?? current, moved: dest ? movedPath(call, current, dest) : null };
+  return { moved: dest ? movedPath(call, current, dest) : null, recorded: dest ?? current };
 }
 
 /** Records the files a session wrote, when the call has a session. */

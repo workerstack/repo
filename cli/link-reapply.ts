@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { findRoots } from "./find-roots.ts";
 import { npmBefore } from "./link-installed.ts";
 import { linkIo } from "./link-io.ts";
@@ -16,8 +17,8 @@ async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [str
   }
   const npm = npmBefore(root, name, entry.npm);
   try {
-    const manifest = await syncPackage(root, { name, dir: entry.source, checkout: entry.source });
-    state[name] = { source: entry.source, npm, syncedAt: ctx.io.now().toISOString() };
+    const manifest = await syncPackage(root, { checkout: entry.source, dir: entry.source, name });
+    state[name] = { npm, source: entry.source, syncedAt: ctx.io.now().toISOString() };
     writeState(root, state);
     ctx.io.out(relinkedLine(name, manifest.version, entry.source));
   } catch (error) {
@@ -53,5 +54,5 @@ export function reapplyAt(
 ): Promise<number> {
   const out = (line: string): void => writers.stdout(`${line}\n`);
   const err = (line: string): void => writers.stderr(`${line}\n`);
-  return reapplyLinks({ ...linkIo(), cwd, out, err });
+  return reapplyLinks({ ...linkIo(), cwd, err, out });
 }

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { lexRust } from "./lexer.ts";
 
 /** The `kind:text` of each token, so a test reads the source back. */

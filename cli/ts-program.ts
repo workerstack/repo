@@ -4,7 +4,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import ts from "typescript";
+
 import type { Result } from "./scripts/lint-baseline.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
@@ -20,13 +22,13 @@ const REJECT = /\.reject\.tsx?$/;
 const SKIPPED_DIRS = ["fixtures", "e2e", "vendor", "node_modules"];
 /** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
 const DEFAULTS: ts.CompilerOptions = {
-  strict: true,
-  target: ts.ScriptTarget.ESNext,
+  allowImportingTsExtensions: true,
   module: ts.ModuleKind.Preserve,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
-  allowImportingTsExtensions: true,
   noEmit: true,
   skipLibCheck: true,
+  strict: true,
+  target: ts.ScriptTarget.ESNext,
 };
 
 /** Whether a root-relative file is TypeScript outside a fixture, e2e or vendored dir, and not a declaration or reject file. */
@@ -57,13 +59,13 @@ export function ownerOf(root: string, rel: string): string | null {
 
 /** The setup of `config` in the owner `dir` (root-relative), the defaults for no owner, or why it cannot be read. */
 export function setupOf(root: string, dir: string | null, config: string): Result<Setup> {
-  if (dir === null) return { ok: true, value: { options: DEFAULTS, fileNames: [] } };
+  if (dir === null) return { ok: true, value: { fileNames: [], options: DEFAULTS } };
   const file = posix(path.join(root, dir, config));
   const read = ts.readConfigFile(file, ts.sys.readFile);
   if (read.error !== undefined) {
     const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
-    return { ok: false, errors: [`${path.posix.join(dir, config)}: ${message}`] };
+    return { errors: [`${path.posix.join(dir, config)}: ${message}`], ok: false };
   }
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-  return { ok: true, value: { options: { ...parsed.options, noEmit: true }, fileNames: parsed.fileNames } };
+  return { ok: true, value: { fileNames: parsed.fileNames, options: { ...parsed.options, noEmit: true } } };
 }

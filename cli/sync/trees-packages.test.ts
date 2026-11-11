@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it, vi } from "vitest";
+
 import { HOSTS, type Host } from "../config.ts";
+import { useTempDirs } from "./fixtures/temp-dirs.ts";
+import { RENDER_TIMEOUT, consumer, context, find, linkTarget, render, text } from "./fixtures/trees-kit.ts";
 import { regionHash } from "./region.ts";
 import { renderTrees } from "./trees.ts";
-import { RENDER_TIMEOUT, consumer, context, find, linkTarget, render, text } from "./fixtures/trees-kit.ts";
-import { useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
@@ -18,11 +20,11 @@ const START = "Start at references/INDEX.md in this package.\n";
 const rules = (body: string) => `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
 const web = () =>
   consumer({
-    "packages/web/.repo/rules/web.md": pkgRule,
-    "packages/web/.repo/rules/api.md": apiRule,
-    "packages/web/.repo/skills/deploy/SKILL.md": skill,
-    "packages/api/package.json": "{}",
     ".repo/rules/house.md": "---\ndescription: h\n---\nHOUSE\n",
+    "packages/api/package.json": "{}",
+    "packages/web/.repo/rules/api.md": apiRule,
+    "packages/web/.repo/rules/web.md": pkgRule,
+    "packages/web/.repo/skills/deploy/SKILL.md": skill,
   });
 const renderWeb = (hosts: readonly Host[]) => render(web(), hosts, { packages: ["packages/web", "packages/api"] });
 
@@ -33,7 +35,7 @@ it("writes each package's AGENTS.md, tracked and shared, and no CLAUDE.md, and k
     rules(`${START}\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`),
   );
   expect(text(outputs, "packages/api/AGENTS.md")).toBe(rules(START));
-  expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
+  expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
   expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toStrictEqual([]);
 });
 
@@ -52,7 +54,7 @@ it("renders package rules under the host rule dirs and nests the package's skill
   expect(text(outputs, ".agents/rules/packages/web/api.md")).toContain("globs: packages/web/src/api/**");
   expect(linkTarget(outputs, "packages/web/.claude/skills/deploy")).toBe("../../.repo/skills/deploy");
   expect(linkTarget(outputs, "packages/web/.agents/skills/deploy")).toBe("../../.repo/skills/deploy");
-  expect(find(outputs, "packages/web/.claude/skills/deploy")).toMatchObject({ tracked: false, managed: "whole" });
+  expect(find(outputs, "packages/web/.claude/skills/deploy")).toMatchObject({ managed: "whole", tracked: false });
   expect(outputs.filter((o) => o.path.startsWith("packages/api/") && o.kind === "link")).toStrictEqual([]);
 });
 
@@ -73,10 +75,10 @@ it("refuses a root rule and a package rule that render one file, naming both sou
     "x/a.ts": "",
   });
   expect(renderTrees(context(root, ["claude"], { packages: ["packages/web"] }))).toStrictEqual({
-    ok: false,
     errors: [
       ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md and packages/web/.repo/rules/web.md; rename one",
     ],
+    ok: false,
   });
 });
 
@@ -84,9 +86,9 @@ it("refuses a package .repo with a directory sync does not read there", () => {
   const root = consumer({ "packages/web/.repo/lessons/a.md": "x\n" });
   const result = renderTrees(context(root, ["claude"], { packages: ["packages/web"] }));
   expect(result).toStrictEqual({
-    ok: false,
     errors: [
       "packages/web/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo",
     ],
+    ok: false,
   });
 });

@@ -17,7 +17,7 @@ export function parseSemver(version: string): Parts | null {
   const match = SEMVER.exec(version);
   if (match === null) return null;
   const [, major, minor, patch, id, n] = match;
-  return { major: Number(major), minor: Number(minor), patch: Number(patch), id, n: Number(n ?? 0) };
+  return { id, major: Number(major), minor: Number(minor), n: Number(n ?? 0), patch: Number(patch) };
 }
 
 /** The highest bump the commits ask for, as 1.0 and later read them; null when none is releasable. */

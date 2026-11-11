@@ -1,17 +1,18 @@
 import { expect, it } from "vitest";
+
 import { baselineOf, indexUrl } from "./crates-index.ts";
 
 /** A fetch that answers with `status` and `body`, and records the call. */
 function index(status: number, body = "") {
   const calls: { url: string; headers: Record<string, string> }[] = [];
   const fetchIndex = (url: string, init: { headers: Record<string, string> }) => {
-    calls.push({ url, headers: init.headers });
+    calls.push({ headers: init.headers, url });
     return Promise.resolve(new Response(body, { status }));
   };
-  return { fetchIndex, calls };
+  return { calls, fetchIndex };
 }
 const lines = (...rows: object[]) => rows.map((row) => JSON.stringify(row)).join("\n") + "\n";
-const row = (vers: string, extra: object = {}) => ({ vers, yanked: false, pubtime: `t-${vers}`, deps: [], ...extra });
+const row = (vers: string, extra: object = {}) => ({ deps: [], pubtime: `t-${vers}`, vers, yanked: false, ...extra });
 const crate = (version: string) => ({ name: "adler", version });
 
 it.each([
@@ -29,7 +30,7 @@ it("asks the index with a generic user agent", async () => {
   const { fetchIndex, calls } = index(404);
   await baselineOf(crate("1.0.0"), fetchIndex);
   expect(calls).toStrictEqual([
-    { url: "https://index.crates.io/ad/le/adler", headers: { "User-Agent": "@workerstack/repo" } },
+    { headers: { "User-Agent": "@workerstack/repo" }, url: "https://index.crates.io/ad/le/adler" },
   ]);
 });
 
@@ -41,8 +42,8 @@ it("skips yanked versions and takes the highest at or below the crate's", async 
   const body = lines(row("1.0.0"), row("1.0.3", { yanked: true }), row("1.0.2"), row("0.9.9"), row("1.0.4"));
   expect(await baselineOf(crate("1.0.3"), index(200, body).fetchIndex)).toStrictEqual({
     kind: "found",
-    version: "1.0.2",
     published: "t-1.0.2",
+    version: "1.0.2",
   });
 });
 
@@ -77,8 +78,8 @@ it("takes a missing or null pubtime as null", async () => {
   const { pubtime: _gone, ...bare } = row("1.0.0");
   expect(await baselineOf(crate("1.0.0"), index(200, lines(bare)).fetchIndex)).toStrictEqual({
     kind: "found",
-    version: "1.0.0",
     published: null,
+    version: "1.0.0",
   });
   const nulled = lines(row("1.0.0", { pubtime: null }));
   expect(await baselineOf(crate("1.0.0"), index(200, nulled).fetchIndex)).toMatchObject({ published: null });

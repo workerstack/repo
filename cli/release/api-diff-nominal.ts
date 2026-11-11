@@ -1,4 +1,5 @@
 import ts from "typescript";
+
 import {
   NOMINAL_MODIFIERS,
   NOMINAL_TYPES,

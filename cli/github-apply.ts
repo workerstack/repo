@@ -1,6 +1,10 @@
 import { loadConfig } from "./config.ts";
 import { readEnv } from "./env.ts";
-import { driftOf } from "./github.ts";
+import { applyFailure, ghRunner, skipReason, type Gh } from "./github-gh.ts";
+import { originSlug } from "./github-origin.ts";
+import { readCurrent } from "./github-read.ts";
+import { wantedAt } from "./github-wanted-at.ts";
+import { runWrites, writesFor } from "./github-write.ts";
 import {
   CHECK_FLAG,
   CHECK_PREFIX,
@@ -12,11 +16,7 @@ import {
   NO_ORIGIN_LINE,
   UP_TO_DATE,
 } from "./github.constants.ts";
-import { applyFailure, ghRunner, skipReason, type Gh } from "./github-gh.ts";
-import { originSlug } from "./github-origin.ts";
-import { readCurrent } from "./github-read.ts";
-import { wantedAt } from "./github-wanted-at.ts";
-import { runWrites, writesFor } from "./github-write.ts";
+import { driftOf } from "./github.ts";
 import type { Drift, Wanted, Current } from "./github.types.ts";
 
 /** What `repo github` runs with: the checkout, the one door to GitHub, and where its lines go. */
@@ -26,7 +26,7 @@ export type CheckIo = { gh: Gh; ci: boolean };
 /** What `repo check` prints: problems fail it, a report line does not. */
 export type GithubLines = { problems: string[]; report: string[] };
 
-const realCheckIo = (): CheckIo => ({ gh: ghRunner(), ci: Boolean(readEnv().GITHUB_ACTIONS) });
+const realCheckIo = (): CheckIo => ({ ci: Boolean(readEnv().GITHUB_ACTIONS), gh: ghRunner() });
 const say = (text: string) => `${GITHUB_PREFIX} ${text}\n`;
 
 /** Prints each drift as a line and fails; nothing to fix is a pass. */
@@ -43,7 +43,7 @@ type Plan = { slug: string; wanted: Wanted; current: Current };
 
 /** Makes GitHub match what is wanted, changing only what differs; a second run finds nothing to do. */
 async function apply({ slug, wanted, current }: Plan, io: GithubIo): Promise<number> {
-  const writes = writesFor({ slug, wanted, current, drifts: driftOf(wanted, current) });
+  const writes = writesFor({ current, drifts: driftOf(wanted, current), slug, wanted });
   const done = await runWrites(io.gh, writes);
   if (!done.ok) {
     io.stderr(say(applyFailure(slug, done, "change")));
@@ -76,7 +76,7 @@ export async function repoGithub(argv: string[], io: GithubIo): Promise<number> 
     return 1;
   }
   if (check) return reportDrift(slug, driftOf(wanted.wanted, read.current), io);
-  return await apply({ slug, wanted: wanted.wanted, current: read.current }, io);
+  return await apply({ current: read.current, slug, wanted: wanted.wanted }, io);
 }
 
 const skipped = (reason: string): GithubLines => ({ problems: [], report: [`${CHECK_PREFIX} skipped, ${reason}`] });
@@ -107,8 +107,8 @@ export async function main(argv: string[]): Promise<number> {
   const io = {
     cwd: process.cwd(),
     gh: ghRunner(),
-    stdout: process.stdout.write.bind(process.stdout),
     stderr: process.stderr.write.bind(process.stderr),
+    stdout: process.stdout.write.bind(process.stdout),
   };
   return await repoGithub(argv, io);
 }

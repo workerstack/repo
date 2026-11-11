@@ -1,11 +1,13 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+
 import { afterEach, expect, it, vi } from "vitest";
+
+import { bytesRes, collector, failRes, fetchReturning, fetchThrowing, okRes, plantDir } from "./fixtures/speak-kit.ts";
 import { USAGE, main } from "./speak.ts";
 import type { FetchFn } from "./speak.ts";
-import { bytesRes, collector, failRes, fetchReturning, fetchThrowing, okRes, plantDir } from "./fixtures/speak-kit.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -30,7 +32,7 @@ it("matches the verb case-insensitively", async () => {
 it("checks the account", async () => {
   const c = collector();
   const fetchFn = fetchReturning(okRes());
-  expect(await main(["whoami"], { env, home: plantDir(), fetchFn, log: c.log })).toBe(0);
+  expect(await main(["whoami"], { env, fetchFn, home: plantDir(), log: c.log })).toBe(0);
   expect(c.logs).toStrictEqual(["openai ok"]);
 });
 
@@ -39,7 +41,7 @@ it("says text to --out and prints where it went", async () => {
   const out = path.join(dir, "x.mp3");
   const c = collector();
   const argv = ["say", "--text", "hi", "--voice", "nova", "--out", out, "--provider", "openai"];
-  expect(await main(argv, { env, home: dir, fetchFn: audio, log: c.log })).toBe(0);
+  expect(await main(argv, { env, fetchFn: audio, home: dir, log: c.log })).toBe(0);
   expect(c.logs).toStrictEqual([out]);
   expect([...fs.readFileSync(out)]).toStrictEqual([1, 2]);
 });
@@ -50,7 +52,7 @@ it("saves under the working directory's repo root and plays through the injected
   const played: string[] = [];
   const c = collector();
   const spawn = (cmd: string, args: string[]) => void played.push(`${cmd} ${args.at(-1)}`);
-  const opts = { env, home: plantDir(), cwd: root, fetchFn: audio, log: c.log, spawn };
+  const opts = { cwd: root, env, fetchFn: audio, home: plantDir(), log: c.log, spawn };
   expect(await main(["say", "--text", "hi", "--play"], opts)).toBe(0);
   const saved = c.logs[0] ?? "";
   expect(path.dirname(saved)).toBe(path.join(root, ".tmp", "repo", "speak"));
@@ -60,7 +62,7 @@ it("saves under the working directory's repo root and plays through the injected
 it("reports a failure on stderr and exits 1", async () => {
   const c = collector();
   const fetchFn: FetchFn = fetchReturning(failRes(500, "down"));
-  expect(await main(["say", "--text", "hi"], { env, home: plantDir(), fetchFn, log: c.log })).toBe(1);
+  expect(await main(["say", "--text", "hi"], { env, fetchFn, home: plantDir(), log: c.log })).toBe(1);
   expect(c.errs).toStrictEqual(["500 down"]);
 });
 
@@ -69,7 +71,7 @@ it.each([
   ["a thrown bare object", {}, "[object Object]"],
 ])("reports %s", async (_name, thrown, line) => {
   const c = collector();
-  await main(["whoami"], { env, home: plantDir(), fetchFn: fetchThrowing(thrown), log: c.log });
+  await main(["whoami"], { env, fetchFn: fetchThrowing(thrown), home: plantDir(), log: c.log });
   expect(c.errs).toStrictEqual([line]);
 });
 

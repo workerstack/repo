@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { matchesName } from "./matches-name.ts";
 import { compareVersions, parseChangelog } from "./release/changelog-parse.ts";
 import { parseSemver } from "./release/version.ts";
-import type { Checked } from "./update.types.ts";
 import {
   CHANGELOG_FILE,
   CHANGES_SCOPE,
@@ -15,6 +15,7 @@ import {
   noChangelog,
   noSections,
 } from "./update.constants.ts";
+import type { Checked } from "./update.types.ts";
 
 /** A package that moves: the dirs of its bumped manifests, the lowest spec version and the version it moves to. */
 type Moving = { dirs: string[]; low: string; to: string };
@@ -48,7 +49,7 @@ function installedVersion(dir: string, name: string): string | null {
 /** Where a name is installed (the first bumped source's dir that holds it, else the root) and the version the range starts above. */
 function bumpOf(root: string, name: string, moving: Moving): Bump {
   const dir = moving.dirs.find((one) => fs.existsSync(path.join(packageDir(one, name), ROOT_FILE))) ?? root;
-  return { name, dir, from: installedVersion(dir, name) ?? moving.low, to: moving.to };
+  return { dir, from: installedVersion(dir, name) ?? moving.low, name, to: moving.to };
 }
 
 /** The sections of a changelog above `from` up to `to`, in file order, blank lines dropped and every line indented. */

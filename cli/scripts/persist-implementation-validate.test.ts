@@ -1,9 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { VALID_IMPL } from "./fixtures/persist-bodies.ts";
 import { extractH1, slugFromFilename } from "./persist-doc.ts";
+import { filesError, validateImplementation } from "./persist-implementation-validate.ts";
 import {
   extractImplName,
   extractImplPlan,
@@ -12,11 +15,10 @@ import {
   persistImplementation,
   stripImplMeta,
 } from "./persist-implementation.ts";
-import { filesError, validateImplementation } from "./persist-implementation-validate.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -26,7 +28,7 @@ function tmpWs() {
 }
 
 const saved = (() => {
-  const r = persistImplementation({ workspaceRoot: tmpWs(), content: VALID_IMPL, created: "2026-08-26T14:30:00Z" });
+  const r = persistImplementation({ content: VALID_IMPL, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() });
   return { filename: r.filename ?? "", text: r.content ?? "" };
 })();
 
@@ -73,12 +75,12 @@ describe("journal meta readers", () => {
 describe("injectFrontmatter", () => {
   it("writes the plan it is given and the slug as H1", () => {
     const out = injectFrontmatter({
-      serial: 2,
-      slug: "the-slug",
-      source: "src",
       body: "---\nold: 1\n---\n\n# Other\n\nrest\n",
       created: "2026-08-26T14:30:00Z",
       plan: "9",
+      serial: 2,
+      slug: "the-slug",
+      source: "src",
     });
     expect(out).toBe(
       '---\nserial: 2\nplan: 9\nname: the-slug\nstatus: in-progress\ncreated: 2026-08-26T14:30:00Z\nsource: "src"\n---\n\n# the-slug\n\nrest\n',
@@ -86,11 +88,11 @@ describe("injectFrontmatter", () => {
   });
 
   it("defaults the plan to none for a bad value, adds an H1, and stamps now", () => {
-    const out = injectFrontmatter({ serial: 1, slug: "s", body: "text", plan: "07" });
+    const out = injectFrontmatter({ body: "text", plan: "07", serial: 1, slug: "s" });
     expect(out).toMatch(
       /^---\nserial: 1\nplan: none\nname: s\nstatus: in-progress\ncreated: \d{4}-\d\d-\d\dT[\d:]+Z\nsource: ""\n---\n\n# s\n\ntext$/,
     );
-    expect(injectFrontmatter({ serial: 1, slug: "s", body: "---\nopen: 1\n" })).toContain("# s\n\n---\nopen: 1\n");
+    expect(injectFrontmatter({ body: "---\nopen: 1\n", serial: 1, slug: "s" })).toContain("# s\n\n---\nopen: 1\n");
   });
 });
 

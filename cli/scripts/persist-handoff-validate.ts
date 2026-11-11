@@ -60,7 +60,7 @@ export function nextBoxes(next: string | undefined): Box[] {
     .split("\n")
     .map((line) => BOX_RE.exec(line))
     .filter((m) => m !== null)
-    .map((m) => ({ id: String(m.groups?.id), fresh: m.groups?.mark === " " }));
+    .map((m) => ({ fresh: m.groups?.mark === " ", id: String(m.groups?.id) }));
 }
 
 const nextChecks: SectionCheck = (_doc, { bodies }) => {

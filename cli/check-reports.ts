@@ -1,5 +1,6 @@
 /** `repo mutate check <dir>`: merges the shard reports of one run, scores each package and holds it to its floor. */
 import path from "node:path";
+
 import { fail, type MutateConfig, type MutateDeps } from "./mutate-deps.ts";
 import { failures, label, plural, raised, readFloors, tally, verdicts, type Floors } from "./mutate-floors.ts";
 import { mergeFiles, type ShardReport } from "./mutate-report.ts";
@@ -32,5 +33,5 @@ export async function checkReports(dir: string, write: boolean, deps: MutateDeps
   if (typeof reports === "string") return fail(deps, reports);
   const floors = readFloors(deps, config.root, config.floors);
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
-  return settle({ dir, write, config, reports, floors: floors.value }, deps);
+  return settle({ config, dir, floors: floors.value, reports, write }, deps);
 }

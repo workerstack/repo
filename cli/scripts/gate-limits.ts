@@ -1,17 +1,6 @@
 /** Read, Grep and Glob: which calls are denied, and the limits and ignores the gate adds to the rest. */
 import path from "node:path";
-import {
-  CAMEL_INPUT_KEYS,
-  CHILD_GREP_HEAD_LIMIT,
-  CHILD_READ_LIMIT,
-  DEFAULT_GREP_HEAD_LIMIT,
-  DEFAULT_READ_LIMIT,
-  DENY_FILE_BYTES,
-  MAX_REQUEST_LIMIT,
-  NODE_MODULES,
-  REASON_DENYLIST,
-  REASON_FILE_SIZE,
-} from "./gate.constants.ts";
+
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import type { ToolArgs, ToolSpec } from "./gate-harness.ts";
 import {
@@ -24,12 +13,24 @@ import {
   resolveReadPath,
 } from "./gate-paths.ts";
 import { rereadReasonFor, wasWroteThisSession } from "./gate-wrote.ts";
+import {
+  CAMEL_INPUT_KEYS,
+  CHILD_GREP_HEAD_LIMIT,
+  CHILD_READ_LIMIT,
+  DEFAULT_GREP_HEAD_LIMIT,
+  DEFAULT_READ_LIMIT,
+  DENY_FILE_BYTES,
+  MAX_REQUEST_LIMIT,
+  NODE_MODULES,
+  REASON_DENYLIST,
+  REASON_FILE_SIZE,
+} from "./gate.constants.ts";
 import type { Roots } from "./workspace-root.ts";
 
 export const GLOB_IGNORE: string[] = [...DENY_PATH_SEGMENTS, ".git"];
 
 const SEARCH_KINDS: readonly ToolSpec["kind"][] = ["read", "grep", "glob"];
-const deny = (reason: string): GuardResult => ({ type: "deny", reason });
+const deny = (reason: string): GuardResult => ({ reason, type: "deny" });
 
 /** A limit field the gate may add or cap: its snake and camel spellings and the value it injects. */
 interface Limit {
@@ -83,11 +84,11 @@ function applyKind({ tool, input, parent }: GateCall, next: ToolArgs): boolean {
   const limited = tool.limits !== false;
   if (tool.kind === "grep") {
     const value = parent ? DEFAULT_GREP_HEAD_LIMIT : CHILD_GREP_HEAD_LIMIT;
-    return limited && applyLimit(next, { input, snake: "head_limit", camel: "headLimit", value });
+    return limited && applyLimit(next, { camel: "headLimit", input, snake: "head_limit", value });
   }
   if (tool.kind === "read") {
     const value = parent ? DEFAULT_READ_LIMIT : CHILD_READ_LIMIT;
-    return limited && applyLimit(next, { input, snake: "limit", camel: "limit", value });
+    return limited && applyLimit(next, { camel: "limit", input, snake: "limit", value });
   }
   return setMissingIgnore(next, input);
 }

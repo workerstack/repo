@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { lesson } from "./fixtures/lessons-kit.ts";
 import { parseLesson } from "./lessons.ts";
 
@@ -66,7 +67,7 @@ describe("parseLesson keys", () => {
 describe("parseLesson defaults", () => {
   it("fills missing keys from defaults", () => {
     const bare = head().replace("name: a-b\n", "").replace("last-hit: 2026-10-31\n", "");
-    expect(errorsOf(bare + body, { name: "z", "last-hit": "2026-11-01" })).toStrictEqual([]);
+    expect(errorsOf(bare + body, { "last-hit": "2026-11-01", name: "z" })).toStrictEqual([]);
   });
 
   it("round-trips a rendered lesson", () => {

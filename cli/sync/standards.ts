@@ -1,16 +1,17 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
+import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
 import { repoBinLookup } from "../scripts/hook-command.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import { hasOwnedHeader } from "./header.ts";
-import type { Output, SyncContext } from "./outputs.ts";
-import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.constants.ts";
-import { CARGO_PATH } from "./rust.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
+import type { Output, SyncContext } from "./outputs.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
-import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
+import { CARGO_PATH } from "./rust.constants.ts";
+import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.constants.ts";
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
 /** Where the git hooks live; sync points `core.hooksPath` here. */
@@ -24,8 +25,10 @@ const GIT_HOOKS = {
 const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
 
 /**
- * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`), JSONC without trailing commas, and no
- * markdown, fixture or sync output touched; each output path is anchored at the root, so it matches that file alone.
+ * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
+ * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes), JSONC without trailing
+ * commas, and no markdown, fixture or sync output touched; each output path is anchored at the root, so it matches that
+ * file alone.
  */
 function oxfmtConfig(planned: readonly string[]): string {
   const outputs = [
@@ -34,6 +37,8 @@ function oxfmtConfig(planned: readonly string[]): string {
   const config = {
     printWidth: PRINT_WIDTH,
     sortPackageJson: true,
+    sortImports: {},
+    sortTailwindcss: {},
     // Hand-written JSONC (hooks, MCP policy) is read by parsers that refuse a trailing comma.
     overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
     ignorePatterns: ["**/*.md", FIXTURES, ...outputs.sort()],
@@ -56,9 +61,9 @@ function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
       continue;
     }
     const content = `#!/bin/sh\n${repoBinLookup(".")}\n"$r" ${command}\n`;
-    outputs.push({ kind: "file", path: rel, content, tracked: true, managed: "whole", executable: true });
+    outputs.push({ content, executable: true, kind: "file", managed: "whole", path: rel, tracked: true });
   }
-  return errors.length > 0 ? { outputs: [], errors } : { outputs, errors };
+  return errors.length > 0 ? { errors, outputs: [] } : { errors, outputs };
 }
 
 /**
@@ -68,26 +73,26 @@ function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
  * itself and which marks the hooks generated.
  */
 export const standards: PostPass = (ctx, outputs) => {
-  if (!ctx.config.packs.includes("standards")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("standards")) return { errors: [], outputs: [] };
   const file = (target: string, content: string): Output => ({
-    kind: "file",
-    path: target,
     content,
-    tracked: false,
+    kind: "file",
     managed: "whole",
+    path: target,
+    tracked: false,
   });
   const hooks = gitHooks(ctx);
   const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint.skip, ctx.read(CARGO_PATH) !== null);
   const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
-  if (!oxlint.ok || errors.length > 0) return { outputs: [], errors };
+  if (!oxlint.ok || errors.length > 0) return { errors, outputs: [] };
   return {
+    errors: [],
     outputs: [
       file(OXLINT_CONFIG_PATH, oxlint.value),
       file(KNIP_CONFIG_PATH, knipConfig(ctx.workspace, ctx.config.knip.ignore)),
       file(OXFMT_CONFIG_PATH, oxfmtConfig(outputs.map((output) => output.path))),
       ...hooks.outputs,
     ],
-    errors: [],
   };
 };
 
@@ -101,8 +106,8 @@ export type GitRun = (
 /** Runs git at `root`; a git that cannot start is a null status with the reason as its stderr. */
 export const runGit: GitRun = (root, args, input) => {
   const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", input });
-  if (result.error) return { status: null, stdout: "", stderr: result.error.message };
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+  if (result.error) return { status: null, stderr: result.error.message, stdout: "" };
+  return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 };
 
 /** What the hooks path step did, for the summary line, and what it could not do, one line each. */

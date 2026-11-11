@@ -3,9 +3,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { isRecord } from "./hook-input.ts";
+
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { isRecord } from "./hook-input.ts";
 
 export interface JevResult {
   code: number;
@@ -133,14 +134,14 @@ function headerGet(headers: HeadersLike | null | undefined, name: string): unkno
 function readLedger(file: string, day: string): Ledger {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-    if (!isRecord(parsed) || parsed.day !== day) return { day, requests: 0, input_tokens: 0 };
+    if (!isRecord(parsed) || parsed.day !== day) return { day, input_tokens: 0, requests: 0 };
     return {
       day,
-      requests: Number(parsed.requests) || 0,
       input_tokens: Number(parsed.input_tokens) || 0,
+      requests: Number(parsed.requests) || 0,
     };
   } catch {
-    return { day, requests: 0, input_tokens: 0 };
+    return { day, input_tokens: 0, requests: 0 };
   }
 }
 
@@ -155,7 +156,7 @@ function writeLedger(file: string, row: Ledger): void {
 
 function withLock<T>(home: string, fn: () => T): T | { busy: true } {
   const dir = path.join(home, ".workerstack");
-  fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+  fs.mkdirSync(dir, { mode: 0o700, recursive: true });
   const lock = path.join(dir, "jev-usage.lock");
   const start = Date.now();
   for (;;) {
@@ -204,11 +205,11 @@ function beginAttempt(home: string, nowMs: number, estimate: number): Begun | { 
     }
     const next = {
       day,
-      requests: cur.requests + 1,
       input_tokens: cur.input_tokens + estimate,
+      requests: cur.requests + 1,
     };
     writeLedger(file, next);
-    return { ok: true, estimate };
+    return { estimate, ok: true };
   });
 }
 
@@ -218,7 +219,7 @@ function settleTokens(home: string, nowMs: number, estimate: number, actual: num
     const day = new Date(nowMs).toISOString().slice(0, 10);
     const cur = readLedger(file, day);
     const input_tokens = Math.max(0, cur.input_tokens - estimate + actual);
-    writeLedger(file, { day, requests: cur.requests, input_tokens });
+    writeLedger(file, { day, input_tokens, requests: cur.requests });
     return { ok: true };
   });
 }
@@ -260,12 +261,12 @@ async function postOnce(
   questions: Record<string, unknown>,
 ): Promise<PostResult> {
   const response = await fetchImpl(ENDPOINT, {
-    method: "POST",
+    body: JSON.stringify({ model: MODEL, questions, state }),
     headers: {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ model: MODEL, state, questions }),
+    method: "POST",
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   let json: unknown = null;
@@ -274,7 +275,7 @@ async function postOnce(
   } catch {
     json = null;
   }
-  return { status: response.status, json, headers: response.headers };
+  return { headers: response.headers, json, status: response.status };
 }
 
 function stopText(kind: string): string {
@@ -330,7 +331,7 @@ export function createJevRunner(): JevRun {
       } catch {
         return { fail: fail("jev request failed\n") };
       }
-      return { response, nowMs };
+      return { nowMs, response };
     };
 
     const first = await attempt();
@@ -398,13 +399,13 @@ export async function runJev(argv: string[], opts: JevMainOpts = {}): Promise<Je
   }
   const run = opts.run ?? runner;
   return run({
-    home: opts.home,
     env: opts.env,
     fetchImpl: opts.fetchImpl,
-    sleep: opts.sleep,
+    home: opts.home,
     now: opts.now,
-    stateText,
     questionsText,
+    sleep: opts.sleep,
+    stateText,
   });
 }
 

@@ -1,9 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { canonicalPath, resolveRoots } from "./workspace-root.ts";
+
 import { STASH_ALPHABET, STASH_CAP, STASH_EXT, STASH_ID_BYTES, STASH_REL } from "./job.constants.ts";
 import type { StashPlace, StashRoots } from "./job.types.ts";
+import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 
 function stashId(): string {
   let s = "";
@@ -34,7 +35,7 @@ export function writeStash(
   if (buf.length > STASH_CAP) body = buf.subarray(0, STASH_CAP).toString("utf8");
   if (!body.endsWith("\n")) body += "\n";
   fs.writeFileSync(path.join(dir, name), body);
-  return stashRef({ root, cwd }, name);
+  return stashRef({ cwd, root }, name);
 }
 
 /** The path a stash ref names: an absolute path, or `.tmp/repo/stash/<name>` from the root; null for a bare id. */

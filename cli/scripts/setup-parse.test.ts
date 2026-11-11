@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
-import { loadOAuthInput, normalizeTarget, parseArgv, parseDesktopOAuth, setupTargets } from "./setup.ts";
+
 import { cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
+import { loadOAuthInput, normalizeTarget, parseArgv, parseDesktopOAuth, setupTargets } from "./setup.ts";
 
 afterEach(cleanSetup);
 
@@ -12,7 +14,7 @@ it("parseArgv keeps everything after -- as positionals", () => {
 
 it("parseArgv treats a flag at the end or before another flag as on", () => {
   expect(parseArgv(["--redo"]).flags).toStrictEqual({ redo: "1" });
-  expect(parseArgv(["--redo", "--device", "hw:1"]).flags).toStrictEqual({ redo: "1", device: "hw:1" });
+  expect(parseArgv(["--redo", "--device", "hw:1"]).flags).toStrictEqual({ device: "hw:1", redo: "1" });
 });
 
 it("parseArgv stringifies non-string arguments and ignores a non-array argv", () => {

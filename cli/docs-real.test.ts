@@ -1,31 +1,33 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { docsIo, REAL_TOOLS } from "./docs-io.ts";
-import { docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
 import { main } from "./docs.ts";
+import { docsRun, fence, json, tempRoot } from "./fixtures/docs-fixture.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
 const MANIFEST = {
+  exports: { ".": "./index.ts", "./references/*": "./references/*" },
+  files: ["references", "index.ts"],
   name: "@ws/a",
-  version: "1.0.0",
   private: false,
   type: "module",
-  files: ["references", "index.ts"],
-  exports: { ".": "./index.ts", "./references/*": "./references/*" },
+  version: "1.0.0",
 };
 const TSCONFIG = {
   compilerOptions: {
+    allowImportingTsExtensions: true,
     module: "preserve",
     moduleResolution: "bundler",
-    allowImportingTsExtensions: true,
+    noEmit: true,
     strict: true,
     target: "ES2022",
     types: [],
-    noEmit: true,
   },
 };
 
@@ -33,13 +35,13 @@ const TSCONFIG = {
 function workspace(example: string, manifest: unknown = MANIFEST): string {
   const root = tempRoot({
     "package.json": json({ name: "mono", private: true, workspaces: ["packages/*"] }),
-    "packages/a/package.json": json(manifest),
     "packages/a/index.ts": "export const answer = 42;\n",
-    "packages/a/tsconfig.json": json(TSCONFIG),
+    "packages/a/package.json": json(manifest),
     "packages/a/references/INDEX.md": "# A\n- [Use](use.md)\n",
     "packages/a/references/use.md": ["# Use", "", 'Import "@ws/a".', "", fence("ts run", ...example.split("\n"))].join(
       "\n",
     ),
+    "packages/a/tsconfig.json": json(TSCONFIG),
   });
   fs.mkdirSync(path.join(root, "node_modules/@ws"), { recursive: true });
   fs.symlinkSync(path.join(root, "packages/a"), path.join(root, "node_modules/@ws/a"), "junction");

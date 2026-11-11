@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { main } from "./sync-global-settings.ts";
+
 import { captureStreams, plant, plantDirs } from "./fixtures/sync-global-kit.ts";
+import { main } from "./sync-global-settings.ts";
 
 const tmp = plantDirs();
 

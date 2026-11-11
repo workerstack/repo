@@ -1,9 +1,11 @@
 /** The record `repo ci wait` leaves for each commit it waited on: one file per sha, so concurrent sessions never share a writer. */
 import nodeFs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
-import { RECORD_DIR, RECORD_TEMP_SUFFIX } from "./ci-wait.constants.ts";
+
 import type { Runner } from "./ci-wait-run.ts";
+import { RECORD_DIR, RECORD_TEMP_SUFFIX } from "./ci-wait.constants.ts";
 
 const OUTCOMES = ["passed", "failed", "superseded", "nothing", "error"] as const;
 type RecordOutcome = (typeof OUTCOMES)[number];
@@ -14,10 +16,10 @@ export type RecordFs = Pick<typeof nodeFs, "mkdirSync" | "writeFileSync" | "rena
 
 export const recordSchema = (): z.ZodType<WaitRecord> =>
   z.object({
-    branch: z.string(),
-    outcome: z.enum(OUTCOMES),
-    failed: z.array(z.string()),
     at: z.string(),
+    branch: z.string(),
+    failed: z.array(z.string()),
+    outcome: z.enum(OUTCOMES),
   });
 
 const COMMON_DIR = ["rev-parse", "--path-format=absolute", "--git-common-dir"];

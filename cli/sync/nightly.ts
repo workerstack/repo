@@ -1,7 +1,7 @@
+import { STRYKER_CORE, STRYKER_RUNNER } from "../mutate.constants.ts";
 import { MUTATE_RUST_STEPS } from "./ci-rust.constants.ts";
 import { isRust } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
-import type { Generator, SyncContext } from "./outputs.ts";
 import {
   FLOORS_STEPS,
   LIVE_SCRIPT,
@@ -11,8 +11,7 @@ import {
   NIGHTLY_PATH,
   PREAMBLE,
 } from "./nightly.constants.ts";
-import { STRYKER_CORE, STRYKER_RUNNER } from "../mutate.constants.ts";
-import { hasScript } from "./release.ts";
+import type { Generator, SyncContext } from "./outputs.ts";
 import {
   CHECKOUT_STEP,
   INSTALL_STEP,
@@ -20,6 +19,7 @@ import {
   SLOW_TIMEOUT_MINUTES,
   TEST_TIMEOUT_MINUTES,
 } from "./release.constants.ts";
+import { hasScript } from "./release.ts";
 
 const SETUP = [CHECKOUT_STEP, SETUP_BUN_STEP, INSTALL_STEP];
 
@@ -70,10 +70,10 @@ const liveJob = (secrets: readonly string[]) =>
 
 /** Under the release pack, the tracked, whole-file `.github/workflows/nightly.yml`; a hand-written one is refused. */
 export const nightly: Generator = (ctx: SyncContext) => {
-  if (!ctx.config.packs.includes("release")) return { outputs: [], errors: [] };
+  if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(NIGHTLY_PATH);
   if (existing !== null && !hasOwnedHeader(existing)) {
-    return { outputs: [], errors: [`${NIGHTLY_PATH} is hand-written; delete it so repo sync can own it`] };
+    return { errors: [`${NIGHTLY_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
   }
   const { shards, secrets } = ctx.config.nightly;
   const live = hasScript(ctx, LIVE_SCRIPT) ? [liveJob(secrets)] : [];
@@ -86,5 +86,5 @@ export const nightly: Generator = (ctx: SyncContext) => {
   ];
   const jobs = [...mutate.map(({ job }) => job), floorsJob(mutate.map(({ id }) => id)), ...live];
   const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
-  return { outputs: [{ kind: "file", path: NIGHTLY_PATH, content, tracked: true, managed: "whole" }], errors: [] };
+  return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: NIGHTLY_PATH, tracked: true }] };
 };

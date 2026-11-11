@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
+import { plant, plantHomes, readGrok, readJsonDest, seedHome } from "./fixtures/purge-kit.ts";
 import { purgeGlobalMcps } from "./purge-global-mcps.ts";
 import { claudePluginsPath, cursorMcpPath, grokConfigPath } from "./purge-paths.ts";
-import { plant, plantHomes, readGrok, readJsonDest, seedHome } from "./fixtures/purge-kit.ts";
 
 const tmpDir = plantHomes();
 
@@ -12,7 +14,7 @@ it("purgeGlobalMcps dry-run leaves files unchanged", () => {
   const { grok, cursor } = seedHome(home);
   const grokBefore = fs.readFileSync(grok, "utf8");
   const cursorBefore = fs.readFileSync(cursor, "utf8");
-  const r = purgeGlobalMcps({ home, apply: false });
+  const r = purgeGlobalMcps({ apply: false, home });
   expect(r.ok).toBe(true);
   expect(r.report.every((row: { action: string }) => row.action === "dry-run")).toBe(true);
   expect(fs.readFileSync(grok, "utf8")).toBe(grokBefore);
@@ -22,7 +24,7 @@ it("purgeGlobalMcps dry-run leaves files unchanged", () => {
 it("purgeGlobalMcps --apply removes cloudflare from enabled, adds disabled, drops MCP_DOCKER", () => {
   const home = tmpDir("purge-mcp-apply-");
   const { grok, cursor } = seedHome(home);
-  const r = purgeGlobalMcps({ home, apply: true });
+  const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);
   expect(r.report.every((row: { action: string }) => row.action === "apply")).toBe(true);
   const parsed = readGrok(grok);
@@ -44,7 +46,7 @@ it("purgeGlobalMcps missing cursor file: still succeeds only grok side changes",
   const home = tmpDir("purge-mcp-nocursor-");
   const { grok, cursor } = seedHome(home, { cursor: false });
   expect(fs.existsSync(cursor)).toBe(false);
-  const r = purgeGlobalMcps({ home, apply: true });
+  const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);
   expect(fs.existsSync(cursor)).toBe(false);
   const parsed = readGrok(grok);
@@ -57,7 +59,7 @@ it("purgeGlobalMcps unreadable toml fails without write", () => {
   const home = tmpDir("purge-mcp-unread-");
   const original = "<<<not-toml>>>\nkeep-this\n";
   const grok = plant(home, ".grok/config.toml", original);
-  const r = purgeGlobalMcps({ home, apply: true });
+  const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(false);
   expect(fs.readFileSync(grok, "utf8")).toBe(original);
 });
@@ -67,7 +69,7 @@ it("purgeGlobalMcps empties cursor mcpServers to {}", () => {
   plant(home, ".grok/config.toml", `[plugins]\nenabled = ["other"]\n`);
   const servers = JSON.stringify({ mcpServers: { MCP_DOCKER: { command: "docker" } } }, null, 2) + "\n";
   const cursor = plant(home, ".cursor/mcp.json", servers);
-  expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(true);
+  expect(purgeGlobalMcps({ apply: true, home }).ok).toBe(true);
   expect(JSON.parse(fs.readFileSync(cursor, "utf8"))).toStrictEqual({ mcpServers: {} });
   expect(cursor).toBe(cursorMcpPath(home));
 });
@@ -79,7 +81,7 @@ it("purgeGlobalMcps --apply removes stripe from enabled, adds disabled + disable
     ".grok/config.toml",
     `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare", "stripe", "keep"]\ndisabled = ["cloudflare"]\n\ndisabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER"]\n`,
   );
-  const r = purgeGlobalMcps({ home, apply: true });
+  const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);
   const parsed = readGrok(grok);
   expect(parsed.custom?.keep).toBe(true);
@@ -96,17 +98,17 @@ function plantClaude(home: string): { claude: string; cacheDir: string } {
   plant(cacheDir, "marker", "keep");
   const plugins = {
     "keep@claude-plugins-official": [{ scope: "user" }],
-    "stripe@claude-plugins-official": [{ scope: "user", installPath: cacheDir }],
+    "stripe@claude-plugins-official": [{ installPath: cacheDir, scope: "user" }],
   };
-  plant(home, ".claude/plugins/installed_plugins.json", JSON.stringify({ version: 2, plugins }, null, 2) + "\n");
-  return { claude, cacheDir };
+  plant(home, ".claude/plugins/installed_plugins.json", JSON.stringify({ plugins, version: 2 }, null, 2) + "\n");
+  return { cacheDir, claude };
 }
 
 it("purgeGlobalMcps removes stripe@ marketplace key from claude installed_plugins.json; leaves cache", () => {
   const home = tmpDir("purge-mcp-claude-");
   plant(home, ".grok/config.toml", `[plugins]\nenabled = ["other"]\n`);
   const { claude, cacheDir } = plantClaude(home);
-  const r = purgeGlobalMcps({ home, apply: true });
+  const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);
   const parsed = readJsonDest(claude);
   expect(parsed.plugins?.["stripe@claude-plugins-official"]).toBeUndefined();
@@ -119,7 +121,7 @@ it("purgeGlobalMcps claude plugins missing: grok stripe still disabled", () => {
   const home = tmpDir("purge-mcp-noclaude-");
   const grok = plant(home, ".grok/config.toml", `[plugins]\nenabled = ["stripe"]\n`);
   expect(fs.existsSync(claudePluginsPath(home))).toBe(false);
-  expect(purgeGlobalMcps({ home, apply: true }).ok).toBe(true);
+  expect(purgeGlobalMcps({ apply: true, home }).ok).toBe(true);
   const parsed = readGrok(grok);
   expect(parsed.plugins?.enabled ?? []).not.toContain("stripe");
   expect(parsed.plugins?.disabled).toContain("stripe");

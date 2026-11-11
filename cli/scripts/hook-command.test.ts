@@ -3,8 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { expect, it, onTestFinished } from "vitest";
+
 import { fwd } from "../../dev/test-paths.ts";
+import { readEnv } from "../env.ts";
 import {
   HOOK_NAMES,
   HOOK_USAGE,
@@ -14,12 +17,11 @@ import {
   isHookName,
   repoBinLookup,
 } from "./hook-command.ts";
-import { readEnv } from "../env.ts";
 
 /** A temp dir removed when the test ends. */
 function tempDir(prefix: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  onTestFinished(() => fs.rmSync(dir, { recursive: true, force: true }));
+  onTestFinished(() => fs.rmSync(dir, { force: true, recursive: true }));
   return dir;
 }
 
@@ -53,9 +55,9 @@ it("hookCommand: runs the bin in the project dir with the hook's stdin", () => {
   fs.mkdirSync(bin, { recursive: true });
   fs.writeFileSync(path.join(bin, "repo"), '#!/bin/sh\necho "$@"; cat\n', { mode: 0o755 });
   const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
-    env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: dir },
-    input: "payload",
     encoding: "utf8",
+    env: { CLAUDE_PROJECT_DIR: dir, PATH: readEnv().PATH },
+    input: "payload",
   });
   expect(r.status).toBe(0);
   expect(r.stdout).toBe("hook session-map\npayload");
@@ -76,8 +78,8 @@ it("hookCommand: runs the repo.exe a Windows install links when there is no plai
   for (const env of [{ CLAUDE_PROJECT_DIR: root }, { CLAUDE_PROJECT_DIR: pkg }]) {
     const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
       cwd: pkg,
-      env: { PATH: readEnv().PATH, ...env },
       encoding: "utf8",
+      env: { PATH: readEnv().PATH, ...env },
     });
     expect(r.stderr).toBe("");
     expect(r.stdout).toBe("exe hook session-map\n");
@@ -88,8 +90,8 @@ it("hookCommand: says run bun install and exits 1 in a checkout with no install"
   const dir = tempDir("hook-cmd-");
   const r = spawnSync("sh", ["-c", hookCommand("gate-fat-tools")], {
     cwd: dir,
-    env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: dir },
     encoding: "utf8",
+    env: { CLAUDE_PROJECT_DIR: dir, PATH: readEnv().PATH },
   });
   expect(r.status).toBe(1);
   expect(r.stdout).toBe("");
@@ -118,8 +120,8 @@ function setup(mainBin: "repo" | "repo.exe" | null, ownBin: "repo" | "repo.exe" 
 const run = (cwd: string, project: string) =>
   spawnSync("sh", ["-c", hookCommand("session-map")], {
     cwd,
-    env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: project },
     encoding: "utf8",
+    env: { CLAUDE_PROJECT_DIR: project, PATH: readEnv().PATH },
   });
 
 it("hookCommand in a linked worktree: runs the main checkout's bin when the worktree has no install", () => {
@@ -157,8 +159,8 @@ it(
     const lookup = (cwd: string, project: string) =>
       spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
         cwd,
-        env: { PATH: readEnv().PATH, CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project },
         encoding: "utf8",
+        env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: readEnv().PATH },
       }).stdout;
     const installed = setup("repo", "repo");
     expect(lookup(installed.wt, installed.main)).toBe("own turn --staged\n");

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { agentsFile, isAgentsFile } from "./agents-file.ts";
 import type { Output } from "./outputs.ts";
 import { regionHash } from "./region.ts";
@@ -10,17 +11,17 @@ const region = (body: string) => `<!-- repo:rules ${regionHash(body)} -->\n${bod
 const STOCK_COPY = "# Agents\n\nThe stock text a copied install shipped.\n";
 const HISTORY = { "AGENTS.md": [hashText(STOCK_COPY)] };
 
-const run = (text: string | null, rel = "AGENTS.md", body = BODY) => agentsFile(rel, body, { text, history: HISTORY });
+const run = (text: string | null, rel = "AGENTS.md", body = BODY) => agentsFile(rel, body, { history: HISTORY, text });
 const contentOf = (output: Output) => (output.kind === "file" ? output.content : "");
 
 describe("agentsFile", () => {
   it("turns a missing file into a tracked block holding the hashed region alone", () => {
     expect(run(null)).toStrictEqual({
-      kind: "file",
-      path: "AGENTS.md",
       content: region(BODY),
-      tracked: true,
+      kind: "file",
       managed: "block",
+      path: "AGENTS.md",
+      tracked: true,
     });
   });
 

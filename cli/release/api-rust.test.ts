@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+
 import { removePlanted } from "../fixtures/planted-repo.ts";
 import { TIMEOUT } from "./fixtures/api-cases.ts";
 import { api, PREFIX } from "./fixtures/api-repo.ts";
@@ -8,7 +9,7 @@ afterEach(removePlanted);
 
 describe("repo release api in a Rust repo", () => {
   it("checks each crate crates.io can publish and skips one it has not got", async () => {
-    const fake = cargo([A, { name: "b", version: "0.1.0" }, { name: "p", version: "1.0.0", publish: [] }]);
+    const fake = cargo([A, { name: "b", version: "0.1.0" }, { name: "p", publish: [], version: "1.0.0" }]);
     const fetch = (url: string) => (url.endsWith("/a") ? index("1.0.2")() : absent());
     const got = await api(rustRepo(), [], { cargo: fake.run, fetch });
     expect(got).toMatchObject({
@@ -58,8 +59,8 @@ describe("repo release api failures in a Rust repo", () => {
     });
     expect(got).toMatchObject({
       code: 1,
-      out: NO_TAG,
       err: `${PREFIX}cargo semver-checks exited 101 for a: error: boom\n`,
+      out: NO_TAG,
     });
   });
 });

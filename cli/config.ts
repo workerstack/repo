@@ -2,19 +2,21 @@ import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+
 import { z } from "zod";
-import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
-import { coverageOf, coverageSchema } from "./coverage-config.ts";
+
 import { ciOf, ciSchema } from "./ci-schema.ts";
 import { cleanSchema } from "./clean-schema.ts";
-import { knipSchema } from "./knip-schema.ts";
-import { nightlyOf, nightlySchema } from "./nightly-config.ts";
-import { lintSchema } from "./lint-schema.ts";
-import { ownerSchema } from "./owner-config.ts";
-import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
-import { generatedTask } from "./turbo-config.constants.ts";
-import { linkSchema } from "./link-schema.ts";
+import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
+import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { knipSchema } from "./knip-schema.ts";
+import { linkSchema } from "./link-schema.ts";
+import { lintSchema } from "./lint-schema.ts";
+import { nightlyOf, nightlySchema } from "./nightly-config.ts";
+import { ownerSchema } from "./owner-config.ts";
+import { generatedTask } from "./turbo-config.constants.ts";
+import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
@@ -81,8 +83,8 @@ const agentsSchema = z.strictObject(
 
 /** A config section that only means something with its pack on. */
 const needsPack = (key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) => ({
-  path: [key],
   error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
+  path: [key],
 });
 
 /** Whether the config turns `pack` on, by its `packs` or the default ones. */
@@ -92,19 +94,19 @@ const hasPack = (config: { packs?: readonly Pack[] | undefined }, pack: Pack) =>
 const configSchema = z
   .strictObject(
     {
-      packs: uniqueList(packSchema, "must be a list of pack names").optional(),
       agents: agentsSchema.optional(),
-      commit: commitSchema().optional(),
-      lint: lintSchema().optional(),
-      knip: knipSchema().optional(),
-      coverage: coverageSchema.optional(),
-      nightly: nightlySchema.optional(),
-      tdd: z.boolean({ error: "must be true or false" }).optional(),
-      owner: ownerSchema().optional(),
-      turbo: turboSchema.optional(),
-      link: linkSchema().optional(),
-      clean: cleanSchema().optional(),
       ci: ciSchema().optional(),
+      clean: cleanSchema().optional(),
+      commit: commitSchema().optional(),
+      coverage: coverageSchema.optional(),
+      knip: knipSchema().optional(),
+      link: linkSchema().optional(),
+      lint: lintSchema().optional(),
+      nightly: nightlySchema.optional(),
+      owner: ownerSchema().optional(),
+      packs: uniqueList(packSchema, "must be a list of pack names").optional(),
+      tdd: z.boolean({ error: "must be true or false" }).optional(),
+      turbo: turboSchema.optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   )
@@ -161,8 +163,8 @@ export function findRoot(cwd: string): string | null {
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
   const fail = (messages: string[]): LoadResult => ({
-    ok: false,
     errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
+    ok: false,
   });
 
   let loaded: Record<string, unknown>;
@@ -178,7 +180,7 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
 
   const parsed = configSchema.safeParse(loaded.default);
   if (!parsed.success) return fail(parsed.error.issues.flatMap(describeIssue));
-  return { ok: true, config: resolve(parsed.data) };
+  return { config: resolve(parsed.data), ok: true };
 }
 
 /** The agent hosts and skills a config turns on; every host and no skills when omitted. */
@@ -189,16 +191,16 @@ function agentsOf(agents: z.output<typeof agentsSchema> | undefined): ResolvedAg
 /** A parsed config with every omitted value filled in. */
 function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
   return {
-    packs: d.packs ?? defaultPacks(),
     agents: agentsOf(d.agents),
-    commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
-    lint: { skip: d.lint?.skip ?? [] },
-    knip: { ignore: d.knip?.ignore ?? [] },
-    tdd: d.tdd ?? false,
-    owner: d.owner,
-    turbo: turboOf(d.turbo),
-    link: d.link,
     clean: d.clean,
+    commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
+    knip: { ignore: d.knip?.ignore ?? [] },
+    link: d.link,
+    lint: { skip: d.lint?.skip ?? [] },
+    owner: d.owner,
+    packs: d.packs ?? defaultPacks(),
+    tdd: d.tdd ?? false,
+    turbo: turboOf(d.turbo),
     ...ciOf(d),
     ...coverageOf(d),
     ...nightlyOf(d),
@@ -233,7 +235,7 @@ async function importConfig(root: string): Promise<Record<string, unknown>> {
       fs.rmSync(copy, { force: true });
     }
   }
-  loadedConfigs.set(file, { text, module });
+  loadedConfigs.set(file, { module, text });
   return module;
 }
 

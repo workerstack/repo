@@ -1,5 +1,9 @@
 import path from "node:path";
+
 import { expect, it } from "vitest";
+
+import { useTmp } from "./fixtures/gate-workspace.ts";
+import { camelCall } from "./fixtures/hook-payload.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";
@@ -10,31 +14,29 @@ import {
   REASON_DENYLIST,
   REASON_FILE_SIZE,
 } from "./gate.constants.ts";
-import { camelCall } from "./fixtures/hook-payload.ts";
-import { useTmp } from "./fixtures/gate-workspace.ts";
 
 const tmp = useTmp();
 const rewrite = (updatedInput: ToolArgs) => ({ type: "rewrite", updatedInput });
-const deny = (reason: string) => ({ type: "deny", reason });
+const deny = (reason: string) => ({ reason, type: "deny" });
 
 it("injects Grep head_limit when missing", () => {
-  const out = processFatTools(camelCall("grep", { pattern: "foo", path: "src" }));
-  expect(out).toStrictEqual(rewrite({ pattern: "foo", path: "src", head_limit: DEFAULT_GREP_HEAD_LIMIT }));
+  const out = processFatTools(camelCall("grep", { path: "src", pattern: "foo" }));
+  expect(out).toStrictEqual(rewrite({ head_limit: DEFAULT_GREP_HEAD_LIMIT, path: "src", pattern: "foo" }));
 });
 
 it("injects Read limit when missing", () => {
   const file = tmp.file(100, "small.txt");
   const out = processFatTools(camelCall("read_file", { target_file: file }, { workspaceRoot: path.dirname(file) }));
-  expect(out).toStrictEqual(rewrite({ target_file: file, limit: DEFAULT_READ_LIMIT }));
+  expect(out).toStrictEqual(rewrite({ limit: DEFAULT_READ_LIMIT, target_file: file }));
 });
 
 it("keeps an existing small head_limit", () => {
-  expect(processFatTools(camelCall("Grep", { pattern: "x", head_limit: 10 }))).toBeNull();
+  expect(processFatTools(camelCall("Grep", { head_limit: 10, pattern: "x" }))).toBeNull();
 });
 
 it("rewrites head_limit over MAX to the default", () => {
-  const out = processFatTools(camelCall("grep", { pattern: "x", head_limit: 501 }));
-  expect(out).toStrictEqual(rewrite({ pattern: "x", head_limit: DEFAULT_GREP_HEAD_LIMIT }));
+  const out = processFatTools(camelCall("grep", { head_limit: 501, pattern: "x" }));
+  expect(out).toStrictEqual(rewrite({ head_limit: DEFAULT_GREP_HEAD_LIMIT, pattern: "x" }));
 });
 
 it("denies files larger than 200KB even with limit", () => {
@@ -46,7 +48,7 @@ it("denies files larger than 200KB even with limit", () => {
 it("denies denylist Read/Grep/Glob paths", () => {
   const denied = (tool: string, input: ToolArgs) => processFatTools(camelCall(tool, input));
   expect(denied("read_file", { target_file: "node_modules/x/index.js" })).toStrictEqual(deny(REASON_DENYLIST));
-  expect(denied("grep", { pattern: "x", path: "dist" })).toStrictEqual(deny(REASON_DENYLIST));
+  expect(denied("grep", { path: "dist", pattern: "x" })).toStrictEqual(deny(REASON_DENYLIST));
   expect(denied("list_dir", { target_directory: ".git/objects" })).toStrictEqual(deny(REASON_DENYLIST));
   expect(denied("Read", { file_path: "bun.lock" })).toStrictEqual(deny(REASON_DENYLIST));
 });

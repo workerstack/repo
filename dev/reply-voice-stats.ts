@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import {
   ARGV_START,
   ARROW_RE,
@@ -81,7 +82,7 @@ function transcriptFiles(root: string, sinceMs: number): string[] {
 
 export function replyVoiceStats({ root, since }: { root: string; since: string }): Stats {
   const sinceMs = Date.parse(since);
-  const stats: Stats = { replies: 0, coldReplies: 0, arrows: 0, keyValues: 0 };
+  const stats: Stats = { arrows: 0, coldReplies: 0, keyValues: 0, replies: 0 };
   const lines = transcriptFiles(root, sinceMs).flatMap((file) => fs.readFileSync(file, "utf8").split("\n"));
   for (const text of lines.map((line) => replyOf(line, sinceMs))) {
     if (!text.trim()) continue;
@@ -116,6 +117,6 @@ export function run(argv: string[], io: Io): number {
 
 if (import.meta.main)
   process.exitCode = run(process.argv.slice(ARGV_START), {
-    out: (line) => process.stdout.write(`${line}\n`),
     err: (line) => process.stderr.write(`${line}\n`),
+    out: (line) => process.stdout.write(`${line}\n`),
   });

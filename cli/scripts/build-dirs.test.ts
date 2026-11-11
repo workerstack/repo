@@ -2,14 +2,16 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { childEnv } from "../env.ts";
 import { planBuild, removeBuild } from "./build-dirs.ts";
 import { toolEnv } from "./tool-env.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const git = (root: string, ...args: string[]) =>
@@ -17,19 +19,19 @@ const git = (root: string, ...args: string[]) =>
 
 const IGNORE = ".next\n.turbo/\n!keep/.turbo/\n.vite\nnode_modules\n*.tsbuildinfo\n.flare\n.tmp/\ndist\n";
 const FILES: Record<string, string> = {
-  ".gitignore": IGNORE,
-  "src/a.ts": "export {};\n",
-  ".next/cache/a.bin": "12345",
-  "apps/web/.turbo/log.txt": "123",
-  "apps/web/.next/trace": "1",
-  "packages/a/tsconfig.tsbuildinfo": "1234567",
-  "node_modules/x/index.js": "1",
-  "apps/web/node_modules/y/index.js": "12",
-  "keep/.turbo/log.txt": "kept",
   ".flare/state": "f",
-  "dist/out.js": "d",
+  ".gitignore": IGNORE,
+  ".next/cache/a.bin": "12345",
   ".tmp/repo/plans/note.md": "note",
   ".vite/tracked.json": "{}\n",
+  "apps/web/.next/trace": "1",
+  "apps/web/.turbo/log.txt": "123",
+  "apps/web/node_modules/y/index.js": "12",
+  "dist/out.js": "d",
+  "keep/.turbo/log.txt": "kept",
+  "node_modules/x/index.js": "1",
+  "packages/a/tsconfig.tsbuildinfo": "1234567",
+  "src/a.ts": "export {};\n",
 };
 
 /** A git repo with a real .gitignore, caches both ignored and not, and a `.vite` whose file is tracked anyway. */
@@ -106,7 +108,7 @@ it("a second plan after removing finds nothing, and a path that fails is skipped
   const root = repo();
   const busy = ((target: string) => {
     if (target.endsWith(".next")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
-    fs.rmSync(target, { recursive: true, force: true });
+    fs.rmSync(target, { force: true, recursive: true });
   }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
   const plan = planBuild(root, false, []);
   const result = plan.ok ? removeBuild(plan.items, false, busy) : null;
@@ -114,7 +116,7 @@ it("a second plan after removing finds nothing, and a path that fails is skipped
   const clean = planBuild(root, false, []);
   expect(clean.ok ? names(clean, "dir").length : -1).toBe(2);
   if (clean.ok) removeBuild(clean.items, false, fs.rmSync);
-  expect(planBuild(root, false, [])).toStrictEqual({ ok: true, items: [] });
+  expect(planBuild(root, false, [])).toStrictEqual({ items: [], ok: true });
 });
 
 it("says so when the root is not a git repo", () => {

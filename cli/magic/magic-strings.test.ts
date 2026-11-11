@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+
 import { cleanTemps, COMPARED, COPIES, hit, magicOf, STRING } from "./fixtures/magic-repo.ts";
 
 afterEach(cleanTemps);
@@ -19,8 +20,8 @@ it("refuses a string compared to string | undefined, unknown or any, from either
 
 it("reports a const copy once at its declaration, through an import alias, and not one in a constants file", () => {
   const files = {
-    "src/modes.ts": 'export const SLOW = "slow";\nexport const LAZY = ("lazy") as const;\nexport const SEP = "/";\n',
     "src/modes.constants.ts": 'export const QUICK = "quick";\n',
+    "src/modes.ts": 'export const SLOW = "slow";\nexport const LAZY = ("lazy") as const;\nexport const SEP = "/";\n',
     "src/use.ts": [
       'import { LAZY, SEP, SLOW as S } from "./modes.ts";',
       'import { QUICK } from "./modes.constants.ts";',

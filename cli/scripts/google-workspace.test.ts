@@ -1,10 +1,12 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { bunPath } from "../../dev/test-paths";
 import {
   EXTRA_SCOPES,
   accessToken,
@@ -15,7 +17,6 @@ import {
   parseCsv,
   setAccount,
 } from "./google-workspace.ts";
-import { bunPath } from "../../dev/test-paths";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoCli = path.join(here, "..", "..", "bin", "repo.ts");
@@ -26,7 +27,7 @@ const spies: { mockRestore(): void }[] = [];
 afterEach(() => {
   for (const s of spies.splice(0)) s.mockRestore();
   for (const d of tmpDirs.splice(0)) {
-    fs.rmSync(d, { recursive: true, force: true });
+    fs.rmSync(d, { force: true, recursive: true });
   }
   setAccount("default");
   vi.unstubAllGlobals();
@@ -41,25 +42,25 @@ function tmp(prefix: string) {
 function jsonRes(obj: unknown, status = 200) {
   const body = JSON.stringify(obj);
   return {
+    json: async () => obj,
     ok: status >= 200 && status < 300,
     status,
     text: async () => body,
-    json: async () => obj,
   };
 }
 
 function writeJson(p: string, obj: unknown) {
-  fs.mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 });
+  fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
   fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
 }
 
 function freshToken() {
   return {
-    refresh_token: "rt",
+    access_token: "at",
     client_id: "cid",
     client_secret: "cs",
-    access_token: "at",
     expiry_date: Date.now() + 3_600_000,
+    refresh_token: "rt",
   };
 }
 
@@ -80,14 +81,14 @@ async function withIo(fn: () => Promise<number>) {
   });
   spies.push(out, err);
   const code = await fn();
-  return { code, logs: logs.join(""), errs: errs.join("") };
+  return { code, errs: errs.join(""), logs: logs.join("") };
 }
 
 function stubFetch(handler: (url: string, init?: RequestInit) => ReturnType<typeof jsonRes>) {
   const calls: { url: string; init?: RequestInit }[] = [];
   vi.stubGlobal("fetch", async (url: string | URL, init?: RequestInit) => {
     const u = String(url);
-    calls.push({ url: u, init });
+    calls.push({ init, url: u });
     return handler(u, init);
   });
   return calls;
@@ -97,7 +98,7 @@ describe("parseArgv", () => {
   it("reads verb noun and flags", () => {
     expect(parseArgv(["sheet", "create", "--title", "Q3", "--csv", "a,b"])).toStrictEqual({
       _: ["sheet", "create"],
-      flags: { title: "Q3", csv: "a,b" },
+      flags: { csv: "a,b", title: "Q3" },
     });
   });
 
@@ -299,9 +300,9 @@ describe("main / verbs", () => {
           files: [
             {
               id: "did",
+              mimeType: "application/vnd.google-apps.document",
               name: "Note",
               webViewLink: "https://doc/did",
-              mimeType: "application/vnd.google-apps.document",
             },
           ],
         });
@@ -335,9 +336,9 @@ describe("main / verbs", () => {
         expect(body.summary).toBe("Standup");
         expect(body.attendees).toStrictEqual([{ email: "a@b.com" }]);
         return jsonRes({
+          htmlLink: "https://cal/ev",
           id: "ev",
           summary: "Standup",
-          htmlLink: "https://cal/ev",
         });
       }
       return jsonRes({ error: { message: url } }, 404);

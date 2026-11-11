@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { CALL_SEPARATOR, QUOTED_SPAN } from "./check-manifests.constants.ts";
 import type { PackageJson, Workspace } from "./sync/workspace.ts";
 

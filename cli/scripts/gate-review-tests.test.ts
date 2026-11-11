@@ -1,11 +1,13 @@
 import fs from "node:fs";
+
 import { expect, it } from "vitest";
-import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
-import { jobCommand, quoteQuery } from "./gate-job.ts";
-import type { HookInput } from "./hook-input.ts";
+
 import { useTmp } from "./fixtures/gate-workspace.ts";
 import { asChild, claudeCall, codexCall, commandOf, inSession } from "./fixtures/hook-payload.ts";
 import { planFile, planText, REVIEW_SID, startReview } from "./fixtures/review-plan.ts";
+import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
+import { jobCommand, quoteQuery } from "./gate-job.ts";
+import type { HookInput } from "./hook-input.ts";
 import { writeStamp } from "./strategy.ts";
 
 const tmp = useTmp();

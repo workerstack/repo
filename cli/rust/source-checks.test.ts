@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { rustSourceHits } from "./source-checks.ts";
 
 const ATTRIBUTE = (name: string) =>
@@ -11,8 +12,8 @@ const lines = (count: number, extra = ""): string => `${"x;\n".repeat(count)}${e
 it("flags the usage crate once per rule at the right place", () => {
   const source = "#[allow(dead_code)]\n/* old */\npub fn f(s: &str) -> u8 { s.parse().unwrap() }\n";
   expect(rustSourceHits("src/lib.rs", source)).toStrictEqual([
-    { file: "src/lib.rs", line: 1, column: 1, rule: "repo/rust-lint-attribute", message: ATTRIBUTE("#[allow]") },
-    { file: "src/lib.rs", line: 2, column: 1, rule: "repo/rust-block-comment", message: BLOCK },
+    { column: 1, file: "src/lib.rs", line: 1, message: ATTRIBUTE("#[allow]"), rule: "repo/rust-lint-attribute" },
+    { column: 1, file: "src/lib.rs", line: 2, message: BLOCK, rule: "repo/rust-block-comment" },
   ]);
 });
 
@@ -84,11 +85,11 @@ it("passes 200 code lines and fails 201 at the line past the limit", () => {
   expect(rustSourceHits("a.rs", lines(200))).toStrictEqual([]);
   expect(rustSourceHits("a.rs", lines(201))).toStrictEqual([
     {
+      column: 1,
       file: "a.rs",
       line: 201,
-      column: 1,
-      rule: "repo/rust-max-lines",
       message: "this file has 201 code lines over 200; split it into modules",
+      rule: "repo/rust-max-lines",
     },
   ]);
 });

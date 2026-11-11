@@ -1,4 +1,5 @@
 import fs from "node:fs";
+
 import { installedDir, markersIn, readVersion } from "./link-installed.ts";
 import type { LinkContext } from "./link-io.types.ts";
 import { readState, writeState } from "./link-state.ts";

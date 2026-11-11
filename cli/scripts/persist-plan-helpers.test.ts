@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
 import { extractMode, extractStrategy } from "./persist-keys.ts";
 import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
@@ -10,7 +12,7 @@ import { cardErrors, usageErrors } from "./persist-sections.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpWs() {
@@ -56,7 +58,7 @@ describe("plan text helpers", () => {
   });
 
   it("renders frontmatter with an empty source and today's UTC datetime when none is given", () => {
-    const text = injectFrontmatter({ serial: 2, slug: "x", body: "text" });
+    const text = injectFrontmatter({ body: "text", serial: 2, slug: "x" });
     expect(text).toMatch(
       /^---\nserial: 2\nname: x\nstatus: ready\nreviews: 0\ncreated: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\nsource: ""\n---\n\n# x\n\ntext$/,
     );

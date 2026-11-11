@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./fixtures/worktree-repo.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
@@ -23,8 +25,8 @@ it("fast-forwards the default branch to the worktree's commit, then removes work
   const result = finishWorktree(r, "a");
   expect(result).toStrictEqual({
     branch: "wt/a",
-    path: wt(r, "a"),
     defaultBranch: "main",
+    path: wt(r, "a"),
     sha: git(r, "rev-parse", "--short", tip),
   });
   expect(git(r, "rev-parse", "main")).toBe(tip);
@@ -49,8 +51,8 @@ it("removes a worktree with no commits of its own and reports no sha", () => {
   const before = git(r, "rev-parse", "main");
   expect(finishWorktree(r, "empty")).toStrictEqual({
     branch: "wt/empty",
-    path: wt(r, "empty"),
     defaultBranch: "main",
+    path: wt(r, "empty"),
     sha: null,
   });
   expect(git(r, "rev-parse", "main")).toBe(before);

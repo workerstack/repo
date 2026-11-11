@@ -2,16 +2,18 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
-import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
+
 import { processFatTools } from "./gate-fat-tools.ts";
 import { isHookObject, isPlainObject } from "./gate-harness.ts";
 import { relInside } from "./gate-paths.ts";
+import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
 const roots: string[] = [];
 afterEach(() => {
-  for (const dir of roots.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of roots.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 /** A fresh git repo, so the hook's cwd is its own root. */
@@ -23,17 +25,17 @@ function repoRoot(): string {
 }
 
 const claude = (cwd: string, tool: string, input: Record<string, unknown>): HookInput => ({
-  tool_name: tool,
-  tool_input: input,
   cwd,
+  tool_input: input,
+  tool_name: tool,
 });
 const codex = (cwd: string, tool: string, input: Record<string, unknown>): HookInput => ({
   ...claude(cwd, tool, input),
-  turn_id: "t1",
   model: "m",
+  turn_id: "t1",
 });
 const asScout = (data: HookInput): HookInput => ({ ...data, subagent_type: "scout" });
-const deny = (reason: string) => ({ type: "deny", reason });
+const deny = (reason: string) => ({ reason, type: "deny" });
 
 describe("payload guards", () => {
   it("accept an object and reject null, arrays and scalars", () => {
@@ -62,19 +64,19 @@ describe("processFatTools guard table", () => {
 
   it("stops with no answer on null, even where a later guard would answer", () => {
     const cwd = repoRoot();
-    const grep = claude(cwd, "Grep", { pattern: "x", path: "node_modules" });
+    const grep = claude(cwd, "Grep", { path: "node_modules", pattern: "x" });
     expect(processFatTools(grep)).toStrictEqual(deny(REASON_DENYLIST));
     expect(processFatTools(asScout(grep))).toBeNull();
     expect(processFatTools(codex(cwd, "Bash", { command: "cat bun.lock" }))).toStrictEqual(deny(REASON_DENYLIST));
     expect(processFatTools(codex(cwd, "apply_patch", { command: "cat bun.lock" }))).toBeNull();
-    expect(processFatTools(claude(cwd, "Write", { file_path: path.join(cwd, "src.ts"), content: "x" }))).toBeNull();
+    expect(processFatTools(claude(cwd, "Write", { content: "x", file_path: path.join(cwd, "src.ts") }))).toBeNull();
   });
 
   it("answers with the object the first answering guard returns", () => {
     const cwd = repoRoot();
-    expect(processFatTools(claude(cwd, "Grep", { pattern: "x", path: "src" }))).toStrictEqual({
+    expect(processFatTools(claude(cwd, "Grep", { path: "src", pattern: "x" }))).toStrictEqual({
       type: "rewrite",
-      updatedInput: { pattern: "x", path: "src", head_limit: DEFAULT_GREP_HEAD_LIMIT },
+      updatedInput: { head_limit: DEFAULT_GREP_HEAD_LIMIT, path: "src", pattern: "x" },
     });
   });
 

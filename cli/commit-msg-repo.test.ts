@@ -1,11 +1,13 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CONFIG_FILE } from "./config.ts";
-import { NAME_A_SOURCE } from "./commit-range.constants.ts";
+
 import { main } from "./commit-msg.ts";
+import { NAME_A_SOURCE } from "./commit-range.constants.ts";
+import { CONFIG_FILE } from "./config.ts";
 import { commitChange, stagedChange } from "./staged-change.ts";
 
 /** `repo commit-msg` and the staged change it reads, on temp repos. */
@@ -13,7 +15,7 @@ const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body 
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 const git = (cwd: string, ...args: string[]) =>
   execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
@@ -50,7 +52,7 @@ describe("stagedChange", () => {
   it("counts staged insertions and deletions, and lists every staged path", () => {
     const root = repo({ "a.ts": lines(10), "old.ts": lines(3) }, { "a.ts": lines(4), "b.test.ts": lines(5) });
     git(root, "mv", "old.ts", "new.ts");
-    expect(stagedChange(root)).toStrictEqual({ files: ["a.ts", "b.test.ts", "new.ts"], changedLines: 11 });
+    expect(stagedChange(root)).toStrictEqual({ changedLines: 11, files: ["a.ts", "b.test.ts", "new.ts"] });
   });
 
   it("leaves out lockfiles, the lint baseline, binaries and linguist-generated paths", () => {
@@ -71,8 +73,8 @@ describe("stagedChange", () => {
   });
 
   it("finds nothing staged outside a git repo", () => {
-    expect(stagedChange(tempDir())).toStrictEqual({ files: [], changedLines: 0 });
-    expect(commitChange(tempDir(), "HEAD")).toStrictEqual({ files: [], changedLines: 0 });
+    expect(stagedChange(tempDir())).toStrictEqual({ changedLines: 0, files: [] });
+    expect(commitChange(tempDir(), "HEAD")).toStrictEqual({ changedLines: 0, files: [] });
   });
 });
 
@@ -116,7 +118,7 @@ describe("repo commit-msg scopes", () => {
 
 describe("repo commit-msg size and setup", () => {
   it("refuses an oversized commit until its message says why, at the configured limit", async () => {
-    const root = repo({}, { "src/a.ts": lines(1236), "src/a.test.ts": lines(4) });
+    const root = repo({}, { "src/a.test.ts": lines(4), "src/a.ts": lines(1236) });
     expect(await commitMsg(root, "fix: handle y\n")).toStrictEqual(refused(OVER));
     expect(await commitMsg(root, "fix: handle y\n\nReformat from the oxfmt upgrade.\n")).toStrictEqual(PASSED);
     put(root, { [CONFIG_FILE]: "export default { commit: { maxChangedLines: 1500 } }\n" });

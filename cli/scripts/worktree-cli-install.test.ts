@@ -1,7 +1,9 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { MARK, bunRepo, cli, git, marker, scratch, write, wt } from "./fixtures/worktree-repo.ts";
 
 /** The Windows command that finds an executable on PATH. */
@@ -80,7 +82,7 @@ it("reports a missing bun the same way", () => {
 
 it("keeps the WorktreeCreate hook's stdout to the path", () => {
   const r = bunRepo(tmp.repo(), MARK);
-  const made = cli(r, ["hook"], { input: JSON.stringify({ hook_event_name: "WorktreeCreate", name: "hk", cwd: r }) });
+  const made = cli(r, ["hook"], { input: JSON.stringify({ cwd: r, hook_event_name: "WorktreeCreate", name: "hk" }) });
   expect(made.status, made.stderr).toBe(0);
   expect(made.stdout).toBe(`${wt(r, "hk")}\n`);
   expect(marker(wt(r, "hk"))).toBe(true);

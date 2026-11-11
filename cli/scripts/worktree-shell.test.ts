@@ -1,4 +1,5 @@
 import { afterEach, expect, it } from "vitest";
+
 import { scratch } from "./fixtures/worktree-repo.ts";
 import { sharedGitReason } from "./worktree-guards.ts";
 
@@ -10,7 +11,7 @@ const STASH = /^git stash in the main checkout can destroy/;
 
 /** The deny reason for `command` run in the root of a fresh repo, nothing asked for. */
 function reasonFor(command: string, root = tmp.repo()): string | null {
-  return sharedGitReason(command, { roots: { root, cwd: root }, cwd: root, asked: new Set() });
+  return sharedGitReason(command, { asked: new Set(), cwd: root, roots: { cwd: root, root } });
 }
 
 it("reads a command after a here-string, an escaped <<, a quoted <<, or a bare << as a command", () => {

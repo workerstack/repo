@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
-import { BASE_CONFIG } from "../fixtures/base-config.ts";
+
 import type { Pack } from "../config.ts";
+import { BASE_CONFIG } from "../fixtures/base-config.ts";
 import { GENERATORS, type SyncContext } from "./outputs.ts";
 import { readme } from "./readme.ts";
 import type { PackageJson, WorkspacePackage } from "./workspace.ts";
@@ -16,10 +17,10 @@ type Fixture = {
 
 function context({ packs = ["docs"], manifest = PUBLIC, packages = [], files = {} }: Fixture = {}): SyncContext {
   return {
-    root: "/repo",
-    config: { packs, agents: { hosts: [], skills: [] }, ...BASE_CONFIG },
-    workspace: { root: "/repo", manifest, packages },
+    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
     read: (rel) => files[rel] ?? null,
+    root: "/repo",
+    workspace: { manifest, packages, root: "/repo" },
   };
 }
 
@@ -30,7 +31,7 @@ function textOf(result: { outputs: { kind: string; content?: string }[] }): stri
 
 /** The README text a single public root generates; fails when the generator reports an error. */
 function render(files: Record<string, string>, manifest: PackageJson = PUBLIC): string {
-  const result = readme(context({ manifest, files }));
+  const result = readme(context({ files, manifest }));
   expect(result.errors).toStrictEqual([]);
   return textOf(result);
 }
@@ -43,22 +44,22 @@ it("is registered right after index", () => {
 
 it("writes a whole, tracked README.md with line 1 left for the header, then name, description and contents in INDEX order", () => {
   const files = {
+    "package.json": JSON.stringify({ description: "A library.", name: "@acme/lib" }),
     "references/INDEX.md": INDEX,
     "references/auth.md": "# Authentication\n\nLog in.\n",
     "references/hooks.md": "# Hooks\n\nRun them.\n",
-    "package.json": JSON.stringify({ name: "@acme/lib", description: "A library." }),
   };
   expect(readme(context({ files }))).toStrictEqual({
+    errors: [],
     outputs: [
       {
-        kind: "file",
-        path: "README.md",
         content: `\n# @acme/lib\n\nA library.\n\n## Contents\n\n- [Authentication](#authentication)\n- [Hooks](#hooks)\n\n## Authentication\n\nLog in.\n\n## Hooks\n\nRun them.\n`,
-        tracked: true,
+        kind: "file",
         managed: "whole",
+        path: "README.md",
+        tracked: true,
       },
     ],
-    errors: [],
   });
 });
 

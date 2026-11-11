@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { main } from "./main.ts";
 
 const writeErr = process.stderr.write;
@@ -21,7 +23,7 @@ async function run(argv: string[]) {
   process.stdout.write = into(out); /* the code writes strings only */
   process.stderr.write = into(err); /* the code writes strings only */
   const code = await main(argv);
-  return { code, out: out.join(""), err: err.join("") };
+  return { code, err: err.join(""), out: out.join("") };
 }
 
 const TAG_FORMAT = "name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
@@ -30,15 +32,15 @@ const USAGE =
 
 describe("repo release", () => {
   it("prints the usage for help", async () => {
-    expect(await run(["help"])).toStrictEqual({ code: 0, out: USAGE, err: "" });
+    expect(await run(["help"])).toStrictEqual({ code: 0, err: "", out: USAGE });
   });
 
   it("sends `wait` to the npm poll", async () => {
-    expect(await run(["wait"])).toStrictEqual({ code: 1, out: "", err: `repo release wait: ${TAG_FORMAT}` });
+    expect(await run(["wait"])).toStrictEqual({ code: 1, err: `repo release wait: ${TAG_FORMAT}`, out: "" });
   });
 
   it.each(["gate", "publish", "github"])("sends `%s` to its command", async (command) => {
-    expect(await run([command])).toStrictEqual({ code: 1, out: "", err: `repo release ${command}: ${TAG_FORMAT}` });
+    expect(await run([command])).toStrictEqual({ code: 1, err: `repo release ${command}: ${TAG_FORMAT}`, out: "" });
   });
 
   it("sends `pack` to the packer", async () => {
@@ -55,8 +57,8 @@ describe("repo release", () => {
     const got = await run(["consumer", "a.tgz", "b.tgz"]);
     expect(got).toStrictEqual({
       code: 1,
-      out: "",
       err: "repo release consumer: takes at most one argument, the tarball to test\n",
+      out: "",
     });
   });
 });
@@ -71,11 +73,11 @@ describe("repo release consumer", () => {
       expect(got).toMatchObject({ code: 1, out: "" });
       expect(got.err).toMatch(/^repo release consumer: bun add failed: /);
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(dir, { force: true, recursive: true });
     }
   });
 
   it("sends anything else to the release", async () => {
-    expect(await run(["--bogus"])).toStrictEqual({ code: 1, out: "", err: `repo release: ${USAGE}` });
+    expect(await run(["--bogus"])).toStrictEqual({ code: 1, err: `repo release: ${USAGE}`, out: "" });
   });
 });

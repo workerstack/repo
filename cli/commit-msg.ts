@@ -1,16 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
-import { HEADER, isBreaking } from "./conventional.ts";
-import { commitRange } from "./commit-range.ts";
 import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
+import { commitRange } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
+import { HEADER, isBreaking } from "./conventional.ts";
 import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
 import { stagedChange } from "./staged-change.ts";
 import { runGit } from "./sync/standards.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
-import { isTestFile } from "./test-files.ts";
 import { type Owner, ownerLookup, proofApplies } from "./tdd-scope.ts";
+import { isTestFile } from "./test-files.ts";
 
 /** The Conventional Commits types a commit may use. */
 export const TYPES: string[] = ["feat", "fix", "perf", "refactor", "test", "docs", "build", "ci", "chore", "revert"];
@@ -100,7 +101,7 @@ function inspect(message: string, facts: CommitFacts): Inspected {
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
   }
   const body = lines.slice(at + 1);
-  return { problems: [...problems, ...sizeProblems(body, facts)], kind: { type, breaking: isBreaking(header, body) } };
+  return { kind: { breaking: isBreaking(header, body), type }, problems: [...problems, ...sizeProblems(body, facts)] };
 }
 
 /**
@@ -122,13 +123,13 @@ function scopesOf(workspace: Workspace): string[] | undefined {
 async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   const root = findRoot(cwd);
   const owners = ownerLookup(cwd);
-  if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES, tdd: false, owners };
+  if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES, owners, tdd: false };
   const loaded = await loadConfig(root);
   if (!loaded.ok) return loaded.errors;
   const workspace = readWorkspace(root);
   if (!workspace.ok) return workspace.errors;
   const { tdd, commit } = loaded.config;
-  return { maxChangedLines: commit.maxChangedLines, scopes: scopesOf(workspace.workspace), tdd, owners };
+  return { maxChangedLines: commit.maxChangedLines, owners, scopes: scopesOf(workspace.workspace), tdd };
 }
 
 /** The red-proof result for the staged change, or null when it does not apply to it. */
@@ -145,7 +146,7 @@ function judge(
   io: CommitMsgIo,
 ): { problems: string[]; proof: RedProofResult | null } {
   const staged = stagedChange(io.cwd);
-  const facts = { ...rules, stagedFiles: staged.files, changedLines: staged.changedLines };
+  const facts = { ...rules, changedLines: staged.changedLines, stagedFiles: staged.files };
   const { problems, kind } = inspect(message, facts);
   const proof = kind !== undefined && problems.length === 0 && NEEDS_TEST.has(kind.type) ? proveRed(rules, io) : null;
   if (kind !== undefined) problems.push(...changelogProblems(kind, staged.files, rules.owners));
@@ -189,6 +190,6 @@ export async function main(
     return 1;
   }
   return ranged
-    ? commitRange(argv[1] /* the range follows the flag */ as string, { rules, check: checkCommitMessage }, io)
+    ? commitRange(argv[1] /* the range follows the flag */ as string, { check: checkCommitMessage, rules }, io)
     : runCommitMsgHook(file, rules, io);
 }

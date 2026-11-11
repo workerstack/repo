@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { z } from "zod";
-import { refuse } from "./refuse.ts";
-import { addedName, addPeers, addSpecs, initProject, installedIn, specOf } from "./install.ts";
-import type { Package } from "./install.ts";
+
 import {
   CURRENT_DIR,
   EMPTY_MODULE,
@@ -23,9 +22,11 @@ import {
 } from "./consumer.constants.ts";
 import { exportSubpaths } from "./exports.ts";
 import type { Subpath } from "./exports.ts";
+import { addedName, addPeers, addSpecs, initProject, installedIn, specOf } from "./install.ts";
+import type { Package } from "./install.ts";
 import { packTarball } from "./pack.ts";
 import type { PackIo } from "./pack.ts";
-import { tarballLint } from "./tarball-lint.ts";
+import { refuse } from "./refuse.ts";
 import {
   addFailed,
   CONSUMER_ARGS,
@@ -37,6 +38,7 @@ import {
   probeCrashed,
   typeError,
 } from "./release-messages.constants.ts";
+import { tarballLint } from "./tarball-lint.ts";
 
 /** The TypeScript compiler's script from this package's install. */
 export function tscScript(): string {
@@ -100,7 +102,7 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
   const expanded = exportSubpaths(installed.exports, files);
   const missing = expanded.subpaths.filter((subpath) => !files.includes(subpath.runtime.slice(CURRENT_DIR.length)));
   const present = expanded.subpaths.filter((subpath) => !missing.includes(subpath));
-  const target = { project, name, present };
+  const target = { name, present, project };
   const problems = [
     ...expanded.errors,
     ...missing.map((subpath) => notInTarball(subpath.key, subpath.runtime.slice(CURRENT_DIR.length))),
@@ -108,7 +110,7 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
     ...checkTypes(target, io),
   ];
   const summary = consumerOk(`${name}@${installed.version}`, expanded.exports, expanded.subpaths.length);
-  return { summary, problems };
+  return { problems, summary };
 }
 
 /** `repo release consumer [<tarball>]`: installs the tarball of this checkout (or the one given) in an empty project and tests every export. */

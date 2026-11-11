@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
+
 import { recordPush } from "./ci-push-gate.ts";
 import { A, B, C, D, WIN, cleanRigs, rig, row } from "./fixtures/push-gate-rig.ts";
 
@@ -104,7 +106,7 @@ it("looks up only the main checkout for no session or a command that is not a pu
 it("keeps the commit as it was before the command and marks the push pending", () => {
   const r = rig();
   r.note("git push");
-  expect(r.raw()).toStrictEqual([{ ...row("main", A)[0], src: "HEAD", dir: r.main, pending: true }]);
+  expect(r.raw()).toStrictEqual([{ ...row("main", A)[0], dir: r.main, pending: true, src: "HEAD" }]);
 });
 
 it("takes the new commit when it landed, as in commit && push, on the next tool call", () => {

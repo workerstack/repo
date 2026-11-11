@@ -1,6 +1,9 @@
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { readEnv } from "../env.ts";
+import { bare, cleanSetup, plant, writeAt } from "./fixtures/setup-kit.ts";
 import { defaultGgmlPath } from "./listen.ts";
 import {
   browserEngineStatus,
@@ -10,17 +13,16 @@ import {
   menuOptions,
   targetStatuses,
 } from "./setup.ts";
-import { bare, cleanSetup, plant, writeAt } from "./fixtures/setup-kit.ts";
 
 afterEach(cleanSetup);
 
 it("browserEngineStatus reports both, WSL-only, one missing and none", () => {
-  expect(browserEngineStatus("/lp", "/cr", "linux")).toStrictEqual({ ok: true, extra: "lightpanda,chromium" });
-  expect(browserEngineStatus("", "/cr", "win32")).toStrictEqual({ ok: true, extra: "chromium,need lightpanda in WSL" });
-  expect(browserEngineStatus("/lp", "", "linux")).toStrictEqual({ ok: false, extra: "lightpanda,need chromium" });
+  expect(browserEngineStatus("/lp", "/cr", "linux")).toStrictEqual({ extra: "lightpanda,chromium", ok: true });
+  expect(browserEngineStatus("", "/cr", "win32")).toStrictEqual({ extra: "chromium,need lightpanda in WSL", ok: true });
+  expect(browserEngineStatus("/lp", "", "linux")).toStrictEqual({ extra: "lightpanda,need chromium", ok: false });
   expect(browserEngineStatus("", "", process.platform)).toStrictEqual({
-    ok: false,
     extra: "need lightpanda,need chromium",
+    ok: false,
   });
 });
 
@@ -41,24 +43,24 @@ it("lookupChromium finds a chromium on the PATH it is given, and defaults to the
 it("targetStatuses skips the listen probe unless listen is a target", async () => {
   const home = plant("setup-st-nolisten-");
   const st = await targetStatuses({ home, env: {}, ...bare, targets: ["browser", "jev"] });
-  expect(st.listen).toStrictEqual({ ok: false, extra: "" });
+  expect(st.listen).toStrictEqual({ extra: "", ok: false });
 });
 
 it("targetStatuses reports local STT with ffmpeg and whisper when the model is planted", async () => {
   const home = plant("setup-st-local-");
   writeAt(defaultGgmlPath(home), "model");
-  const st = await targetStatuses({ home, env: {}, whichFn: (n) => `/bin/${n}`, pathEnv: "/bin", platform: "linux" });
+  const st = await targetStatuses({ env: {}, home, pathEnv: "/bin", platform: "linux", whichFn: (n) => `/bin/${n}` });
   expect(st.listen.ok).toBe(true);
   expect(st.listen.extra).toMatch(/^local,ffmpeg,/);
-  expect(st.browser).toStrictEqual({ ok: true, extra: "lightpanda,chromium" });
+  expect(st.browser).toStrictEqual({ extra: "lightpanda,chromium", ok: true });
 });
 
 it("targetStatuses takes the PATH from env, then from the process", async () => {
   const home = plant("setup-st-path-");
   const seen: (string | undefined)[] = [];
   const whichFn = (_n: string, p: string | undefined) => (seen.push(p), "");
-  await targetStatuses({ home, env: { PATH: "/from-env" }, whichFn, platform: "linux", targets: [] });
-  await targetStatuses({ home, env: {}, whichFn, platform: "linux", targets: [] });
+  await targetStatuses({ env: { PATH: "/from-env" }, home, platform: "linux", targets: [], whichFn });
+  await targetStatuses({ env: {}, home, platform: "linux", targets: [], whichFn });
   expect(seen[0]).toBe("/from-env");
   expect(seen.at(-1)).toBe(readEnv().PATH);
 });
@@ -74,7 +76,7 @@ it("targetStatuses with no options reads the stubbed home and finds no browser o
 
 it("formatStatus prints missing for unknown targets and null statuses, and appends extras", () => {
   expect(formatStatus(null, ["speak"])).toBe("speak  missing");
-  expect(formatStatus({ speak: { ok: true, extra: "env" }, jev: { ok: false, extra: "" } }, ["speak", "jev"])).toBe(
+  expect(formatStatus({ jev: { extra: "", ok: false }, speak: { extra: "env", ok: true } }, ["speak", "jev"])).toBe(
     "speak  ok  env\njev  missing",
   );
   expect(formatStatus(undefined).split("\n")).toHaveLength(5);
@@ -82,7 +84,7 @@ it("formatStatus prints missing for unknown targets and null statuses, and appen
 
 it("menuOptions tags each target ok or missing with its extra", () => {
   const labels = menuOptions(
-    { speak: { ok: true, extra: "" }, jev: { ok: true, extra: "env" }, browser: { ok: false, extra: "need chromium" } },
+    { browser: { extra: "need chromium", ok: false }, jev: { extra: "env", ok: true }, speak: { extra: "", ok: true } },
     ["speak", "browser", "jev", "listen"],
   ).map((o) => o.label);
   expect(labels).toStrictEqual([
@@ -95,9 +97,9 @@ it("menuOptions tags each target ok or missing with its extra", () => {
 });
 
 it("firstMissing picks the first target that is not ok, else the first target", () => {
-  const ok = { ok: true, extra: "" };
-  expect(firstMissing({ speak: ok, listen: ok }, ["speak", "listen"])).toBe("speak");
-  expect(firstMissing({ speak: ok, listen: { ok: false, extra: "" } }, ["speak", "listen"])).toBe("listen");
+  const ok = { extra: "", ok: true };
+  expect(firstMissing({ listen: ok, speak: ok }, ["speak", "listen"])).toBe("speak");
+  expect(firstMissing({ listen: { extra: "", ok: false }, speak: ok }, ["speak", "listen"])).toBe("listen");
   expect(firstMissing(null, ["jev"])).toBe("jev");
   expect(firstMissing({}, [])).toBe("browser");
 });

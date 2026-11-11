@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { loadConfig } from "../config.ts";
 import { GH_AUTH } from "../scripts/ci-wait.constants.ts";
 import { hasUnreleased } from "./changelog.ts";
@@ -15,18 +16,6 @@ import {
 } from "./git.ts";
 import { readManifest, type Manifest } from "./manifest.ts";
 import {
-  CHANGELOG_FILE,
-  GIT_BRANCH,
-  GIT_FETCH,
-  GIT_HEAD,
-  GIT_STATUS,
-  PREFIX_SEPARATOR,
-  RELEASE_PACK,
-  RELEASE_SUBJECT,
-  TAG_OF,
-  ZERO_VERSION,
-} from "./release.constants.ts";
-import {
   DIRTY,
   EMPTY_UNRELEASED,
   GH_MISSING,
@@ -40,6 +29,18 @@ import {
   stableOnly,
   tagExists,
 } from "./release-messages.constants.ts";
+import {
+  CHANGELOG_FILE,
+  GIT_BRANCH,
+  GIT_FETCH,
+  GIT_HEAD,
+  GIT_STATUS,
+  PREFIX_SEPARATOR,
+  RELEASE_PACK,
+  RELEASE_SUBJECT,
+  TAG_OF,
+  ZERO_VERSION,
+} from "./release.constants.ts";
 import { nextVersion, type Mode } from "./version.ts";
 
 /** What a release will do: which version, and whether it writes a commit (`bump`: new version; `fold`: into a pending one). */
@@ -75,7 +76,7 @@ type Release = { t: Tools; manifest: Manifest; lastTag: string | null; mode: Mod
 /** The new version, or the refusal; checks the changelog and the tag it would make. */
 function newVersion({ t, manifest: m, lastTag, mode }: Release): { version: string } | string {
   const first = lastTag === null && m.version === ZERO_VERSION;
-  const got = nextVersion({ current: m.version, commits: commitsSince(t, lastTag), mode, first });
+  const got = nextVersion({ commits: commitsSince(t, lastTag), current: m.version, first, mode });
   if (!got.ok) {
     const lines = {
       nothing: nothing(lastTag),
@@ -103,7 +104,7 @@ function readState(t: Tools, { name, version }: Manifest): State | string {
   const pending = lastTag === null ? commitWithSubject(t, RELEASE_SUBJECT(TAG_OF(name, version))) : null;
   const { ahead, behind } = divergence(t, branch);
   if (behind > 0 || (ahead > 0 && pending === null)) return differs(branch, behind, ahead);
-  return t.gh(GH_AUTH.slice(), t.cwd).code === 0 ? { branch, ahead, pending, lastTag } : GH_MISSING;
+  return t.gh(GH_AUTH.slice(), t.cwd).code === 0 ? { ahead, branch, lastTag, pending } : GH_MISSING;
 }
 
 /**
@@ -119,9 +120,9 @@ export async function makePlan(t: Tools, mode: Mode): Promise<Plan | string> {
   const { branch, ahead } = state;
   if (state.pending !== null) {
     const action = state.pending !== read(t, GIT_HEAD) && unreleased(t) ? "fold" : "none";
-    return { name, from, version: from, tag: TAG_OF(name, from), branch, ahead, action };
+    return { action, ahead, branch, from, name, tag: TAG_OF(name, from), version: from };
   }
-  const next = newVersion({ t, manifest, lastTag: state.lastTag, mode });
+  const next = newVersion({ lastTag: state.lastTag, manifest, mode, t });
   const tag = typeof next === "string" ? "" : TAG_OF(name, next.version);
-  return typeof next === "string" ? next : { name, from, version: next.version, tag, branch, ahead, action: "bump" };
+  return typeof next === "string" ? next : { action: "bump", ahead, branch, from, name, tag, version: next.version };
 }

@@ -29,8 +29,8 @@ export function splitMarkdown(text: string): Markdown {
       if (opening === null) prose.push({ line, text: raw });
       else
         open = {
+          fence: { body: [], info: group(opening, SECOND_GROUP).trim(), start: line },
           ticks: group(opening, 1).length,
-          fence: { info: group(opening, SECOND_GROUP).trim(), start: line, body: [] },
         };
       continue;
     }
@@ -41,7 +41,7 @@ export function splitMarkdown(text: string): Markdown {
     } else open.fence.body.push(raw);
   }
   if (open !== null) fences.push(open.fence);
-  return { prose, fences };
+  return { fences, prose };
 }
 
 /** The first capture group of an alternation that matched. */

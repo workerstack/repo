@@ -1,10 +1,12 @@
 import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+
 import { alreadyRtk, isWorkspaceJobScript, parseJobCommand, stripFlagValue } from "./gate-job.ts";
 import { bashTargetsDenylist } from "./gate-paths.ts";
 
 const ws = "/planted/ws";
-const roots = { root: ws, checkout: ws, cwd: ws };
+const roots = { checkout: ws, cwd: ws, root: ws };
 const bin = path.join(ws, ["node_modules", ".bin", "repo"].join("/"));
 
 describe("bashTargetsDenylist edges", () => {
@@ -41,24 +43,24 @@ describe("stripFlagValue", () => {
 describe("parseJobCommand", () => {
   it("reads the job, query and stash flags in both spellings", () => {
     expect(parseJobCommand("bun repo job --job exec --query ls --stash s1", roots)).toStrictEqual({
-      job: "exec",
       hasQuery: true,
       hasStash: true,
+      job: "exec",
     });
     expect(parseJobCommand("bun repo job --job=TEST --query=ls --stash=s1", roots)).toStrictEqual({
-      job: "test",
       hasQuery: true,
       hasStash: true,
+      job: "test",
     });
     expect(parseJobCommand("rtk bun repo job --path a --glob b", roots)).toStrictEqual({
-      job: "",
       hasQuery: false,
       hasStash: false,
+      job: "",
     });
   });
 
   it("reads a --job with no value as no job", () => {
-    expect(parseJobCommand("bun repo job --job", roots)).toStrictEqual({ job: "", hasQuery: false, hasStash: false });
+    expect(parseJobCommand("bun repo job --job", roots)).toStrictEqual({ hasQuery: false, hasStash: false, job: "" });
   });
 });
 

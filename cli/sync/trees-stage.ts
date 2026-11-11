@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+
 import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
 import { expandHookCommand } from "../scripts/hook-command.ts";
@@ -49,7 +50,7 @@ function must(step: string, result: { ok: boolean; error?: string }): void {
 /** Every file under `dir`, as POSIX paths relative to it. */
 function filesUnder(dir: string): string[] {
   return fs
-    .readdirSync(dir, { recursive: true, encoding: "utf8" })
+    .readdirSync(dir, { encoding: "utf8", recursive: true })
     .map((rel) => rel.replaceAll("\\", "/"))
     .filter((rel) => fs.statSync(path.join(dir, rel)).isFile());
 }
@@ -80,7 +81,9 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
   try {
     own = JSON.parse(overlay);
   } catch (error) {
-    throw new Error(`${overlayRel}: ${(error /* JSON.parse throws a SyntaxError */ as Error).message}`);
+    throw new Error(`${overlayRel}: ${(error /* JSON.parse throws a SyntaxError */ as Error).message}`, {
+      cause: error,
+    });
   }
   if (!isObject(own)) throw new Error(`${overlayRel}: must be a JSON object`);
   const base: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -90,7 +93,7 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
 /** Runs the emit steps and the claude settings overlay merge on the stage. */
 function emitSteps(ctx: SyncContext, stage: Stage): void {
   const { hosts } = ctx.config.agents;
-  const roots = { workspaceRoot: stage.dir, sourceRoot: stage.stock };
+  const roots = { sourceRoot: stage.stock, workspaceRoot: stage.dir };
   must("mcp policy", emitMcpPolicy({ ...roots, consumerRoot: ctx.root }));
   if (hosts.includes("claude")) {
     must("scout tools", emitAgentShellTools(roots));

@@ -5,7 +5,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+
 import { beforeAll, describe, expect, inject, it } from "vitest";
+
 import { PACKAGE_NAME } from "./registry";
 import { Sandbox, tail } from "./sandbox";
 
@@ -24,7 +26,7 @@ export default defineConfig({
   test: { include: ["src/**/*.test.ts"], coverage: { include: ["src/index.ts"] } },
 });
 `;
-const FLOOR = { statements: 100, branches: 100, functions: 100, lines: 100 };
+const FLOOR = { branches: 100, functions: 100, lines: 100, statements: 100 };
 const WORKER =
   'export default {\n  async fetch(): Promise<Response> {\n    return new Response("hello from the worker");\n  },\n};\n';
 const WORKER_TEST = `import { describe, expect, it } from "vitest";
@@ -63,13 +65,13 @@ it("leaves a directory in the temp root", () => {
 async function consumer(name: string, extra: Record<string, string>): Promise<Sandbox> {
   const sb = new Sandbox(name);
   await sb.scaffold({
-    type: "module",
     devDependencies: {
       [PACKAGE_NAME]: version,
       vitest: VITEST_RANGE,
       "@vitest/coverage-istanbul": VITEST_RANGE,
       ...extra,
     },
+    type: "module",
   });
   sb.write("vitest.config.ts", CONFIG);
   sb.expectOk(await sb.run("bun", ["install"]));

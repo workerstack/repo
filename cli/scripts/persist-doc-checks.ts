@@ -1,6 +1,6 @@
+import { CREATED_RE, SERIAL_LINE_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 /** The ordered check tables handoff and journal validation run: head checks on the frontmatter, then section checks. */
 import { parseFrontmatter, slugFromFilename, type FrontmatterMap, type Sections } from "./persist-doc.ts";
-import { CREATED_RE, SERIAL_LINE_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 
 /** A saved doc under validation. */
@@ -68,7 +68,7 @@ export function validateDoc(
   const errors: string[] = when(!filenameRe.test(filename), "filename");
   const fm = parseFrontmatter(text);
   if (fm.error !== undefined) return [...errors, fm.error];
-  const doc: Doc = { filename, text, map: fm.map, body: fm.body };
+  const doc: Doc = { body: fm.body, filename, map: fm.map, text };
   errors.push(...head.flatMap((check) => check(doc)));
   const fence = unclosedFenceErrors(text);
   if (fence.length) return [...new Set([...errors, ...fence])];

@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { childEnv } from "./env.ts";
+
 import { checkActionlintAt, type Spawn } from "./actionlint.ts";
+import { childEnv } from "./env.ts";
 
 const dirs: string[] = [];
 const temp = (): string => {
@@ -13,7 +15,7 @@ const temp = (): string => {
 };
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 
 const EXE = process.platform === "win32" ? "actionlint.exe" : "actionlint";
@@ -25,8 +27,8 @@ beforeEach(() => {
 const answering =
   (code: number, stdout: string, stderr = ""): Spawn =>
   (command, args, options) => {
-    calls.push({ command, args, ...options });
-    return { code, stdout, stderr };
+    calls.push({ args, command, ...options });
+    return { code, stderr, stdout };
   };
 const failFetch = () => Promise.reject(new Error("the cache should have been used"));
 
@@ -39,24 +41,24 @@ function repo(packs: string, workflows: string[]): { root: string; cacheDir: str
   const flows = path.join(root, ".github", "workflows");
   fs.mkdirSync(flows, { recursive: true });
   for (const name of workflows) fs.writeFileSync(path.join(flows, name), "name: x\n");
-  return { root, cacheDir };
+  return { cacheDir, root };
 }
 
 it("runs nothing without a config, without the release pack or without a workflow", async () => {
   const bare = temp();
   const spawn = answering(0, "");
-  expect(await checkActionlintAt(bare, { spawn, fetch: failFetch })).toStrictEqual({ problems: [] });
+  expect(await checkActionlintAt(bare, { fetch: failFetch, spawn })).toStrictEqual({ problems: [] });
   const off = repo('["standards"]', ["ci.yml"]);
-  expect(await checkActionlintAt(off.root, { spawn, fetch: failFetch, cacheDir: off.cacheDir })).toStrictEqual({
+  expect(await checkActionlintAt(off.root, { cacheDir: off.cacheDir, fetch: failFetch, spawn })).toStrictEqual({
     problems: [],
   });
   const none = repo('["release"]', ["notes.txt"]);
   fs.rmSync(path.join(none.root, ".github", "workflows", "notes.txt"));
-  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toStrictEqual({
+  expect(await checkActionlintAt(none.root, { cacheDir: none.cacheDir, fetch: failFetch, spawn })).toStrictEqual({
     problems: [],
   });
   fs.rmSync(path.join(none.root, ".github"), { recursive: true });
-  expect(await checkActionlintAt(none.root, { spawn, fetch: failFetch, cacheDir: none.cacheDir })).toStrictEqual({
+  expect(await checkActionlintAt(none.root, { cacheDir: none.cacheDir, fetch: failFetch, spawn })).toStrictEqual({
     problems: [],
   });
   expect(calls).toStrictEqual([]);
@@ -65,7 +67,7 @@ it("runs nothing without a config, without the release pack or without a workflo
 it("lints every .yml and .yaml workflow with the cached binary, in the repo root, and nothing else", async () => {
   vi.stubEnv("GIT_DIR", "/elsewhere");
   const { root, cacheDir } = repo('["release"]', ["b.yaml", "a.yml", "notes.txt"]);
-  const out = await checkActionlintAt(root, { spawn: answering(0, "[]"), fetch: failFetch, cacheDir });
+  const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn: answering(0, "[]") });
   expect(out).toStrictEqual({ problems: [] });
   expect(calls).toHaveLength(1);
   const [call] = calls;
@@ -86,11 +88,11 @@ it("lints every .yml and .yaml workflow with the cached binary, in the repo root
 it("prints one line per problem actionlint finds", async () => {
   const { root, cacheDir } = repo('["release"]', ["release.yml"]);
   const items = [
-    { message: 'unexpected key "runs_on" for "job" section', filepath: "release.yml", line: 40, column: 9 },
-    { message: "bad", filepath: "release.yml", line: 2, column: 1, kind: "expression" },
+    { column: 9, filepath: "release.yml", line: 40, message: 'unexpected key "runs_on" for "job" section' },
+    { column: 1, filepath: "release.yml", kind: "expression", line: 2, message: "bad" },
   ];
   const spawn = answering(1, JSON.stringify(items.map((item) => ({ kind: "syntax-check", ...item }))));
-  const out = await checkActionlintAt(root, { spawn, fetch: failFetch, cacheDir });
+  const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn });
   expect(out.problems).toStrictEqual([
     'actionlint: release.yml:40:9: unexpected key "runs_on" for "job" section [syntax-check]',
     "actionlint: release.yml:2:1: bad [expression]",
@@ -98,11 +100,11 @@ it("prints one line per problem actionlint finds", async () => {
 });
 
 it.each([
-  [{ name: "another exit code", code: 2, stdout: "", stderr: "boom\n", line: "actionlint: exited 2: boom" }],
-  [{ name: "unparsable output", code: 1, stdout: "not json", stderr: "oops\n", line: "actionlint: exited 1: oops" }],
-  [{ name: "json of another shape", code: 1, stdout: '{"a":1}', stderr: "", line: "actionlint: exited 1: " }],
+  [{ code: 2, line: "actionlint: exited 2: boom", name: "another exit code", stderr: "boom\n", stdout: "" }],
+  [{ code: 1, line: "actionlint: exited 1: oops", name: "unparsable output", stderr: "oops\n", stdout: "not json" }],
+  [{ code: 1, line: "actionlint: exited 1: ", name: "json of another shape", stderr: "", stdout: '{"a":1}' }],
 ])("reports $name as a failure line", async ({ code, stdout, stderr, line }) => {
   const { root, cacheDir } = repo('["release"]', ["ci.yml"]);
-  const out = await checkActionlintAt(root, { spawn: answering(code, stdout, stderr), fetch: failFetch, cacheDir });
+  const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn: answering(code, stdout, stderr) });
   expect(out.problems).toStrictEqual([line]);
 });

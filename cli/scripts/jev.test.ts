@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
+
 import { ENDPOINT, MODEL, createJevRunner, estimateTokens, jevUsagePath, runJev } from "./jev.ts";
 
 const tmpDirs: string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string) {
@@ -17,32 +19,32 @@ function tmp(prefix: string) {
 
 const QUESTIONS = JSON.stringify({
   endpoint: {
-    type: "choice",
+    criteria: { other: "a different host", typesafe: "vendor host" },
     instructions: "Which endpoint should the app call?",
-    criteria: { typesafe: "vendor host", other: "a different host" },
+    type: "choice",
   },
 });
 
 function choiceBody(confidence = 0.91) {
   return {
-    model: MODEL,
     answers: {
       endpoint: {
-        type: "choice",
         choice: "typesafe",
         confidence,
-        probabilities: { typesafe: 0.94, other: 0.06 },
+        probabilities: { other: 0.06, typesafe: 0.94 },
+        type: "choice",
       },
     },
+    model: MODEL,
     usage: { input_tokens: 120, output_tokens: 4 },
   };
 }
 
 function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}) {
   return {
-    status,
     headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
     json: async () => body,
+    status,
   };
 }
 
@@ -53,16 +55,16 @@ describe("runJev", () => {
     const state = "docs say POST /v1/systemone";
     const calls: unknown[] = [];
     const fetchImpl = async (url: string, init: { body?: string; headers?: Record<string, string> }) => {
-      calls.push({ url, init });
+      calls.push({ init, url });
       return jsonResponse(200, choiceBody());
     };
     const run = createJevRunner();
     const result = await run({
-      home,
       env: { TYPESAFE_API_KEY: key },
       fetchImpl,
-      stateText: state,
+      home,
       questionsText: QUESTIONS,
+      stateText: state,
     });
     expect(result.code).toBe(0);
     expect(result.text).toContain(`${MODEL}. input_tokens=120`);
@@ -89,11 +91,11 @@ describe("runJev", () => {
     expect(ledger.input_tokens).toBe(120);
     expect(ledger.input_tokens).not.toBe(estimateTokens(state, QUESTIONS));
     const again = await run({
-      home,
       env: { TYPESAFE_API_KEY: key },
       fetchImpl,
-      stateText: state,
+      home,
       questionsText: QUESTIONS,
+      stateText: state,
     });
     expect(again.code).toBe(2);
     expect(again.text).toBe("process request cap 1\n");
@@ -105,14 +107,14 @@ describe("runJev", () => {
     let n = 0;
     const run = createJevRunner();
     const result = await run({
-      home,
       env: { TYPESAFE_API_KEY: "ts_live_test_key" },
       fetchImpl: async () => {
         n += 1;
         return jsonResponse(200, choiceBody(0.1));
       },
-      stateText: "page text",
+      home,
       questionsText: QUESTIONS,
+      stateText: "page text",
     });
     expect(result.code).toBe(0);
     expect(result.text).toContain("confidence=0.1");
@@ -124,20 +126,20 @@ describe("runJev", () => {
     let sent = "";
     const run = createJevRunner();
     await run({
-      home,
       env: { TYPESAFE_API_KEY: "ts_live_test_key" },
       fetchImpl: async (_url: string, init: { body: string }) => {
         sent = init.body;
         return jsonResponse(200, {
+          answers: { keep: { noul: 0.2, type: "noul" } },
           model: MODEL,
-          answers: { keep: { type: "noul", noul: 0.2 } },
           usage: { input_tokens: 10 },
         });
       },
-      stateText: '{"page":"privacy"}\n',
+      home,
       questionsText: JSON.stringify({
-        keep: { type: "noul", instructions: "Does this promise zero retention?" },
+        keep: { instructions: "Does this promise zero retention?", type: "noul" },
       }),
+      stateText: '{"page":"privacy"}\n',
     });
     expect((JSON.parse(sent) as { state: unknown }).state).toStrictEqual({ page: "privacy" });
   });
@@ -156,7 +158,7 @@ describe("runJev", () => {
     fs.mkdirSync(path.join(blocked, ".workerstack"), { recursive: true });
     fs.writeFileSync(
       jevUsagePath(blocked),
-      JSON.stringify({ day: new Date().toISOString().slice(0, 10), requests: 40, input_tokens: 0 }) + "\n",
+      JSON.stringify({ day: new Date().toISOString().slice(0, 10), input_tokens: 0, requests: 40 }) + "\n",
     );
     const tokenHome = tmp("jev-tokens-");
     fs.mkdirSync(path.join(tokenHome, ".workerstack"), { recursive: true });
@@ -164,52 +166,52 @@ describe("runJev", () => {
       jevUsagePath(tokenHome),
       JSON.stringify({
         day: new Date().toISOString().slice(0, 10),
-        requests: 0,
         input_tokens: 1_000_000,
+        requests: 0,
       }) + "\n",
     );
     const fileKey = tmp("jev-file-");
     const runs = [
       {
-        label: "missing key",
-        home: tmp("jev-nokey-"),
         env: {},
-        stateText: state,
+        home: tmp("jev-nokey-"),
+        label: "missing key",
         questionsText: questions,
+        stateText: state,
         text: /missing TYPESAFE_API_KEY/,
       },
       {
-        label: "nine questions",
-        home: fileKey,
         env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-        stateText: state,
+        home: fileKey,
+        label: "nine questions",
         questionsText: JSON.stringify(
-          Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { type: "noul", instructions: "x" }])),
+          Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { instructions: "x", type: "noul" }])),
         ),
+        stateText: state,
         text: /questions exceed 8/,
       },
       {
-        label: "huge state",
-        home: fileKey,
         env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-        stateText: "x".repeat(64_001),
+        home: fileKey,
+        label: "huge state",
         questionsText: questions,
+        stateText: "x".repeat(64_001),
         text: /state exceeds 64000/,
       },
       {
-        label: "request cap",
-        home: blocked,
         env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-        stateText: state,
+        home: blocked,
+        label: "request cap",
         questionsText: questions,
+        stateText: state,
         text: /daily request cap 40/,
       },
       {
-        label: "token cap",
-        home: tokenHome,
         env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-        stateText: state,
+        home: tokenHome,
+        label: "token cap",
         questionsText: questions,
+        stateText: state,
         text: /daily input token cap 1000000/,
       },
     ];
@@ -217,14 +219,14 @@ describe("runJev", () => {
       let n = 0;
       const run = createJevRunner();
       const result = await run({
-        home: row.home,
         env: row.env,
         fetchImpl: async () => {
           n += 1;
           return jsonResponse(200, choiceBody());
         },
-        stateText: row.stateText,
+        home: row.home,
         questionsText: row.questionsText,
+        stateText: row.stateText,
       });
       expect(result.code, row.label).toBe(2);
       expect(result.text, row.label).toMatch(row.text);
@@ -240,18 +242,18 @@ describe("runJev", () => {
     let n = 0;
     const run = createJevRunner();
     const result = await run({
-      home,
       env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-      sleep: async (ms: number) => {
-        waits.push(ms);
-      },
       fetchImpl: async () => {
         n += 1;
         if (n === 1) return jsonResponse(429, { error: "slow" }, { "retry-after": "1" });
         return jsonResponse(200, choiceBody());
       },
-      stateText: state,
+      home,
       questionsText: QUESTIONS,
+      sleep: async (ms: number) => {
+        waits.push(ms);
+      },
+      stateText: state,
     });
     expect(result.code).toBe(0);
     expect(waits).toStrictEqual([1000]);
@@ -270,17 +272,17 @@ describe("runJev", () => {
     let tooSlow = 0;
     const slow = createJevRunner();
     const slowResult = await slow({
-      home,
       env: { TYPESAFE_API_KEY: "ts_live_test_key" },
-      sleep: async () => {
-        throw new Error("slept");
-      },
       fetchImpl: async () => {
         tooSlow += 1;
         return jsonResponse(429, { echo: secretState }, { "retry-after": "5" });
       },
-      stateText: secretState,
+      home,
       questionsText: QUESTIONS,
+      sleep: async () => {
+        throw new Error("slept");
+      },
+      stateText: secretState,
     });
     expect(slowResult.code).toBe(2);
     expect(slowResult.text).toBe("jev request failed\n");
@@ -290,14 +292,14 @@ describe("runJev", () => {
     let denied = 0;
     const auth = createJevRunner();
     const authResult = await auth({
-      home: tmp("jev-401-"),
       env: { TYPESAFE_API_KEY: "ts_live_test_key" },
       fetchImpl: async () => {
         denied += 1;
         return jsonResponse(401, { echo: secretState });
       },
-      stateText: secretState,
+      home: tmp("jev-401-"),
       questionsText: QUESTIONS,
+      stateText: secretState,
     });
     expect(authResult.code).toBe(2);
     expect(authResult.text).not.toContain(secretState);

@@ -1,10 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { MAP, rootCmd } from "./hooks-union-commands.ts";
-import { AGY_WRITE_MATCHER, AUTORUN_NEEDLES, OWNED_HOOKS, POST_WRITE_MATCHER } from "./hooks-union.constants.ts";
-import { hookCommand } from "./hook-command.ts";
+
 import {
   EDIT_PLATFORM,
   MCP_DENY,
@@ -24,6 +22,10 @@ import {
   type GrokDoc,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+import { hookCommand } from "./hook-command.ts";
+import { MAP, rootCmd } from "./hooks-union-commands.ts";
+import { AGY_WRITE_MATCHER, AUTORUN_NEEDLES, OWNED_HOOKS, POST_WRITE_MATCHER } from "./hooks-union.constants.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
 
@@ -34,7 +36,7 @@ it("adds session-map SessionStart first on claude/codex (not agents/grok) and ch
   shipStub(ws, "session-map.ts");
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
-  expect(must(claude.hooks.SessionStart?.[0]).hooks[0]).toStrictEqual({ type: "command", command: MAP, timeout: 5 });
+  expect(must(claude.hooks.SessionStart?.[0]).hooks[0]).toStrictEqual({ command: MAP, timeout: 5, type: "command" });
   expect(JSON.stringify(claude.hooks.SessionStart)).toMatch(/daily-pull-check/);
   expect(JSON.stringify(readJson(ws, ".codex/hooks.json"))).toContain("hook session-map");
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
@@ -54,7 +56,7 @@ it("replaces an old-form map with the one repo hook command, and stays put", () 
   shipStub(ws, "session-map.ts");
   const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
   claude.hooks.SessionStart = [
-    { hooks: [{ type: "command", command: rootCmd("cli/scripts/session-map.ts"), timeout: 5 }] },
+    { hooks: [{ command: rootCmd("cli/scripts/session-map.ts"), timeout: 5, type: "command" }] },
   ];
   writeJson(ws, ".claude/settings.json", claude);
   expect(checkUnion({ workspaceRoot: ws })).toContain(

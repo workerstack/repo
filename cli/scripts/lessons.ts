@@ -3,11 +3,12 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+
 import { stamp } from "../sync/header.ts";
-import { writeOwned } from "../sync/write.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
-import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
+import { writeOwned } from "../sync/write.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
+import { mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
 
 export const LESSONS_DIR = ".repo/lessons";
 export const INDEX_NAME = "INDEX.md";
@@ -110,7 +111,7 @@ function readFrontmatter(text: unknown): { map: Record<string, string>; body: st
         m[2] /* group 2 is set whenever the pattern matches */ as string
       ).trim();
   }
-  return { map, body: s.slice(end + 5) };
+  return { body: s.slice(end + 5), map };
 }
 
 function jsonList(raw: string): string[] | null {
@@ -134,7 +135,7 @@ function readBody(body: unknown) {
   if (!summary || (firstH2 !== -1 && lines.indexOf(summary) > firstH2)) {
     errors.push("put a one-line summary under the # title");
   }
-  const h2 = lines.map((l, i) => ({ l, i })).filter(({ l }) => l.startsWith("## "));
+  const h2 = lines.map((l, i) => ({ i, l })).filter(({ l }) => l.startsWith("## "));
   const names = h2.map(({ l }) => l.slice(3).trim());
   const sections: Record<string, string> = {};
   h2.forEach(({ l, i }, k) => {
@@ -150,13 +151,13 @@ function readBody(body: unknown) {
   if (names.length !== 2 || names[0] !== "Mistake" || names[1] !== "Fix") {
     errors.push("use only ## Mistake then ## Fix as section headings");
   }
-  return { title, summary, mistake: sections.Mistake || "", fix: sections.Fix || "", errors };
+  return { errors, fix: sections.Fix || "", mistake: sections.Mistake || "", summary, title };
 }
 
 /** Parse a lesson file. `defaults` fills missing hits and last-hit (a first write). */
 export function parseLesson(text: unknown, { defaults }: { defaults?: Record<string, string> } = {}): ParsedLesson {
   const fm = readFrontmatter(text);
-  if (!fm) return { ok: false, errors: ["start with --- frontmatter (name, paths, hits, last-hit, evidence)"] };
+  if (!fm) return { errors: ["start with --- frontmatter (name, paths, hits, last-hit, evidence)"], ok: false };
   const errors: string[] = [];
   const map: Record<string, string> = { ...defaults, ...fm.map };
   for (const k of Object.keys(fm.map)) if (!KEYS.includes(k)) errors.push(`unknown frontmatter key: ${k}`);
@@ -172,20 +173,20 @@ export function parseLesson(text: unknown, { defaults }: { defaults?: Record<str
   if (!SLUG_RE.test(name)) errors.push("name must be the lowercase-hyphen slug of the filename");
   const body = readBody(fm.body);
   errors.push(...body.errors);
-  if (errors.length || !paths || !evidence) return { ok: false, errors };
+  if (errors.length || !paths || !evidence) return { errors, ok: false };
   return {
-    ok: true,
     lesson: {
-      name,
-      paths,
+      evidence,
+      fix: body.fix,
       hits,
       lastHit,
-      evidence,
-      title: body.title,
-      summary: body.summary,
       mistake: body.mistake,
-      fix: body.fix,
+      name,
+      paths,
+      summary: body.summary,
+      title: body.title,
     },
+    ok: true,
   };
 }
 
@@ -271,7 +272,7 @@ function indexRows(ws: string, pending: Record<string, string> = {}): IndexRow[]
     const parsed = parseLesson(text);
     if (!parsed.ok) continue;
     const l = parsed.lesson;
-    rows.push({ file: `${LESSONS_DIR}/${name}`, paths: l.paths, hits: l.hits, lastHit: l.lastHit, summary: l.summary });
+    rows.push({ file: `${LESSONS_DIR}/${name}`, hits: l.hits, lastHit: l.lastHit, paths: l.paths, summary: l.summary });
   }
   return rows.sort((a, b) => b.hits - a.hits || a.file.localeCompare(b.file));
 }
@@ -312,9 +313,9 @@ function parseIndex(text: unknown): IndexRow[] {
     ];
     rows.push({
       file,
-      paths: pathsCell.split(", ").filter(Boolean),
       hits: Number(hits),
       lastHit,
+      paths: pathsCell.split(", ").filter(Boolean),
       summary,
     });
   }
@@ -347,7 +348,7 @@ export function writeIndex({
 /** `{ root, checkout, cwd }` standing in for the roots of a lone checkout `ws`. */
 function loneRoots(ws: string): Roots {
   const dir = canonicalPath(path.resolve(ws));
-  return { root: dir, checkout: dir, cwd: dir };
+  return { checkout: dir, cwd: dir, root: dir };
 }
 
 /**
@@ -424,21 +425,21 @@ export function persistLesson({
   today?: string;
 }): LessonResult {
   const refusal = mainCheckoutRefusal(ws);
-  if (refusal) return { ok: false, error: refusal };
+  if (refusal) return { error: refusal, ok: false };
   const abs = path.resolve(ws, filePath);
   const name = path.basename(abs);
   if (path.dirname(abs) !== lessonsDir(ws) || name === INDEX_NAME || !name.endsWith(".md")) {
-    return { ok: false, error: `write lessons as ${LESSONS_DIR}/{slug}.md; ${INDEX_NAME} is generated by lessons.ts` };
+    return { error: `write lessons as ${LESSONS_DIR}/{slug}.md; ${INDEX_NAME} is generated by lessons.ts`, ok: false };
   }
   const slug = name.slice(0, -3);
-  if (!SLUG_RE.test(slug)) return { ok: false, error: `lesson filename must be a lowercase-hyphen slug: ${name}` };
-  const parsed = parseLesson(content, { defaults: { name: slug, hits: "1", "last-hit": today, evidence: "[]" } });
-  if (!parsed.ok) return { ok: false, error: parsed.errors.join("; ") };
+  if (!SLUG_RE.test(slug)) return { error: `lesson filename must be a lowercase-hyphen slug: ${name}`, ok: false };
+  const parsed = parseLesson(content, { defaults: { evidence: "[]", hits: "1", "last-hit": today, name: slug } });
+  if (!parsed.ok) return { error: parsed.errors.join("; "), ok: false };
   const text = renderLesson({ ...parsed.lesson, name: slug });
   const errors = validateLesson(name, text, { files: repoFiles(ws) });
-  if (errors.length) return { ok: false, error: errors.join("; ") };
-  writeIndex({ workspaceRoot: ws, pending: { [name]: text } });
-  return { ok: true, path: abs, content: text };
+  if (errors.length) return { error: errors.join("; "), ok: false };
+  writeIndex({ pending: { [name]: text }, workspaceRoot: ws });
+  return { content: text, ok: true, path: abs };
 }
 
 /** Another occurrence. The same evidence twice counts once, so a retried hit converges. */
@@ -454,28 +455,28 @@ export function hitLesson({
   today?: string;
 }): HitResult {
   const refusal = mainCheckoutRefusal(ws);
-  if (refusal) return { ok: false, error: refusal };
+  if (refusal) return { error: refusal, ok: false };
   const file = lessonPath(ws, slug);
-  if (!fs.existsSync(file)) return { ok: false, error: `no lesson ${slug}; write ${LESSONS_DIR}/${slug}.md first` };
+  if (!fs.existsSync(file)) return { error: `no lesson ${slug}; write ${LESSONS_DIR}/${slug}.md first`, ok: false };
   const parsed = parseLesson(fs.readFileSync(file, "utf8"));
-  if (!parsed.ok) return { ok: false, error: parsed.errors.join("; ") };
+  if (!parsed.ok) return { error: parsed.errors.join("; "), ok: false };
   const l = parsed.lesson;
-  if (l.evidence.includes(evidence)) return { ok: true, path: file, hits: l.hits };
+  if (l.evidence.includes(evidence)) return { hits: l.hits, ok: true, path: file };
   const next = {
     ...l,
+    evidence: [...l.evidence, evidence].slice(-MAX_EVIDENCE),
     hits: l.hits + 1,
     lastHit: today,
-    evidence: [...l.evidence, evidence].slice(-MAX_EVIDENCE),
   };
   writeLesson(ws, slug, renderLesson(next));
-  return { ok: true, path: file, hits: next.hits };
+  return { hits: next.hits, ok: true, path: file };
 }
 
 export function removeLesson({ workspaceRoot: ws, slug }: { workspaceRoot: string; slug: string }): RemoveResult {
   const refusal = mainCheckoutRefusal(ws);
-  if (refusal) return { ok: false, error: refusal };
+  if (refusal) return { error: refusal, ok: false };
   const file = lessonPath(ws, slug);
-  if (!fs.existsSync(file)) return { ok: false, error: `no lesson ${slug}` };
+  if (!fs.existsSync(file)) return { error: `no lesson ${slug}`, ok: false };
   fs.rmSync(file);
   writeIndex({ workspaceRoot: ws });
   return { ok: true };
@@ -526,7 +527,7 @@ function runLessons(argv: string[], roots: Roots): number {
   const [cmd, ...rest] = argv;
   if (cmd === "match") {
     if (!rest.length) return fail(USAGE);
-    for (const r of matchLessons({ roots, files: rest.map((f) => path.resolve(roots.cwd, f)) })) {
+    for (const r of matchLessons({ files: rest.map((f) => path.resolve(roots.cwd, f)), roots })) {
       process.stdout.write(`${r.file} (hits ${r.hits}): ${r.summary}\n`);
     }
     return 0;
@@ -536,14 +537,14 @@ function runLessons(argv: string[], roots: Roots): number {
     const slug = rest[0];
     const evidence = at === -1 ? "" : rest[at + 1];
     if (!slug || slug === "--evidence" || !evidence) return fail(USAGE);
-    const r = hitLesson({ workspaceRoot: ws, slug, evidence });
+    const r = hitLesson({ evidence, slug, workspaceRoot: ws });
     if (!r.ok) return fail(r.error);
     process.stdout.write(`${LESSONS_DIR}/${slug}.md hits ${r.hits}\n`);
     return 0;
   }
   if (cmd === "rm") {
     if (!rest[0]) return fail(USAGE);
-    const r = removeLesson({ workspaceRoot: ws, slug: rest[0] });
+    const r = removeLesson({ slug: rest[0], workspaceRoot: ws });
     return r.ok ? 0 : fail(r.error);
   }
   if (cmd === "index" && !rest.length) {

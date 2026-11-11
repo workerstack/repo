@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { main } from "./clean.ts";
+
+import { childEnv } from "../env.ts";
 import { cleanPlan } from "./clean-plan.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedTmpDirs } from "./clean-scan.ts";
-import { childEnv } from "../env.ts";
+import { main } from "./clean.ts";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
 const DAY = 24 * 3600_000;
@@ -16,7 +18,7 @@ const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tempDir() {
@@ -36,7 +38,7 @@ function put(root: string, rel: string, body: string | Buffer) {
 
 function run(root: string, dryRun: boolean, rm?: typeof fs.rmSync) {
   const lines: string[] = [];
-  const code = runClean({ root, now: NOW, liveSessions: new Set(), dryRun, out: (l) => lines.push(l), rm });
+  const code = runClean({ dryRun, liveSessions: new Set(), now: NOW, out: (l) => lines.push(l), rm, root });
   return { code, lines };
 }
 
@@ -72,14 +74,14 @@ describe("cleanPlan", () => {
   it("plans without nested dirs by default", () => {
     const root = tempDir();
     put(root, ".tmp/repo/a.log", "a");
-    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove.map((r) => r.kind)).toStrictEqual(["file"]);
+    expect(cleanPlan({ liveSessions: new Set(), now: NOW, root }).remove.map((r) => r.kind)).toStrictEqual(["file"]);
   });
 
   it("ignores a roadmaps entry that is not a readable file", () => {
     const root = tempDir();
     fs.mkdirSync(path.join(root, ".tmp/repo/roadmaps/odd"), { recursive: true });
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", "---\nstatus: done\n---\n");
-    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove).toStrictEqual([]);
+    expect(cleanPlan({ liveSessions: new Set(), now: NOW, root }).remove).toStrictEqual([]);
   });
 });
 

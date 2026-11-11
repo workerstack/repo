@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+
 import { nextVersion, type Mode } from "./version.ts";
 
-const commit = (subject: string, body = "") => ({ subject, body });
+const commit = (subject: string, body = "") => ({ body, subject });
 const AUTO: Mode = { kind: "auto" };
 type Options = { mode?: Mode; first?: boolean };
 const next = (current: string, subjects: string[], { mode = AUTO, first = false }: Options = {}) =>
-  nextVersion({ current, commits: subjects.map((subject) => commit(subject)), mode, first });
+  nextVersion({ commits: subjects.map((subject) => commit(subject)), current, first, mode });
 
 describe("below 1.0", () => {
   it("makes a breaking commit a minor and everything else a patch", () => {
@@ -19,10 +20,10 @@ describe("below 1.0", () => {
 
   it("reads a BREAKING CHANGE footer as breaking", () => {
     const got = nextVersion({
-      current: "0.4.2",
       commits: [commit("feat: x", "why\n\nBREAKING CHANGE: the flag is gone")],
-      mode: AUTO,
+      current: "0.4.2",
       first: false,
+      mode: AUTO,
     });
     expect(got).toStrictEqual({ ok: true, version: "0.5.0" });
   });
@@ -39,7 +40,7 @@ describe("from 1.0", () => {
 
   it("reads the footer and lets the highest commit win", () => {
     const footer = commit("fix: x", "BREAKING-CHANGE: gone");
-    expect(nextVersion({ current: "1.2.3", commits: [footer], mode: AUTO, first: false })).toStrictEqual({
+    expect(nextVersion({ commits: [footer], current: "1.2.3", first: false, mode: AUTO })).toStrictEqual({
       ok: true,
       version: "2.0.0",
     });
@@ -48,7 +49,7 @@ describe("from 1.0", () => {
 
   it("ignores a body line that only mentions the footer", () => {
     const mention = commit("fix: x", "see BREAKING CHANGE: in the docs");
-    expect(nextVersion({ current: "1.2.3", commits: [mention], mode: AUTO, first: false })).toStrictEqual({
+    expect(nextVersion({ commits: [mention], current: "1.2.3", first: false, mode: AUTO })).toStrictEqual({
       ok: true,
       version: "1.2.4",
     });
@@ -64,11 +65,11 @@ describe("from 1.0", () => {
 describe("first release", () => {
   it("releases 0.1.0 from 0.0.0 with no tag, whatever the commits", () => {
     expect(next("0.0.0", ["chore: x"], { first: true })).toStrictEqual({ ok: true, version: "0.1.0" });
-    expect(next("0.0.0", [], { mode: { kind: "pre", id: "rc" }, first: true })).toStrictEqual({
+    expect(next("0.0.0", [], { first: true, mode: { id: "rc", kind: "pre" } })).toStrictEqual({
       ok: true,
       version: "0.1.0-rc.0",
     });
-    expect(next("0.0.0", [], { mode: { kind: "stable" }, first: true })).toStrictEqual({ ok: true, version: "1.0.0" });
+    expect(next("0.0.0", [], { first: true, mode: { kind: "stable" } })).toStrictEqual({ ok: true, version: "1.0.0" });
   });
 });
 
@@ -85,7 +86,7 @@ describe("--stable", () => {
 });
 
 describe("--pre", () => {
-  const rc: Mode = { kind: "pre", id: "rc" };
+  const rc: Mode = { id: "rc", kind: "pre" };
 
   it("starts a prerelease on the computed version", () => {
     expect(next("1.0.0", ["feat: x"], { mode: rc })).toStrictEqual({ ok: true, version: "1.1.0-rc.0" });
@@ -93,7 +94,7 @@ describe("--pre", () => {
 
   it("counts up on the same base and id, and starts again on a new id", () => {
     expect(next("1.1.0-rc.0", ["fix: x"], { mode: rc })).toStrictEqual({ ok: true, version: "1.1.0-rc.1" });
-    expect(next("1.1.0-rc.1", ["fix: x"], { mode: { kind: "pre", id: "beta" } })).toStrictEqual({
+    expect(next("1.1.0-rc.1", ["fix: x"], { mode: { id: "beta", kind: "pre" } })).toStrictEqual({
       ok: true,
       version: "1.1.0-beta.0",
     });

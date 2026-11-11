@@ -1,16 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
+
 import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
 import { must, orchestrateKit, strategyOf, transcript } from "./fixtures/orchestrate-kit.ts";
+import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 import { closingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];
 // Roots and session come from the payload alone, as in a live session.
-const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "", GROK_SESSION_ID: "", GROK_HOOK_EVENT: "" };
+const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
 const handoffs = (ws: string) => {
   const dir = path.join(ws, ".tmp/repo/handoffs");
@@ -20,9 +22,9 @@ const handoffs = (ws: string) => {
 /** A session in a fresh workspace that saved one reviewed plan. */
 function onePlan(shape: Shape, sid: string): { ws: string; s: HookSession; plan: string } {
   const ws = kit.temp();
-  const s = hookSession(kit, { ws, sid, shape, env: UNSET });
+  const s = hookSession(kit, { env: UNSET, shape, sid, ws });
   s.say("plan it");
-  return { ws, s, plan: s.reviewed("plans", VALID_PLAN) };
+  return { plan: s.reviewed("plans", VALID_PLAN), s, ws };
 }
 
 /** The one handoff written, its serial and its text. */

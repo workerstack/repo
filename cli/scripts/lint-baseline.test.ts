@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, expect, it, vi } from "vitest";
+
 import { cleanTemps, consumer, FLOAT, MAGIC, NN, nonNull, PARAMS, SLOW, WAIT } from "./fixtures/baseline-repo.ts";
 import { BASELINE_PATH, checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline.ts";
 import { lintMain } from "./lint-main.ts";
@@ -35,10 +37,10 @@ it("gate lowers the linted files' entries to their counts, drops zeros, and leav
   expect(result.over).toStrictEqual([]);
   expect(result.next).toStrictEqual({ "src/a.ts": { [NN]: 2 }, "src/other.ts": { [NN]: 5 } });
   expect(result.lowered).toStrictEqual([
-    { file: "src/a.ts", rule: PARAMS, from: 1, to: 0 },
-    { file: "src/a.ts", rule: NN, from: 3, to: 2 },
-    { file: "src/b.ts", rule: NN, from: 1, to: 0 },
-    { file: "src/deleted.ts", rule: FLOAT, from: 2, to: 0 },
+    { file: "src/a.ts", from: 1, rule: PARAMS, to: 0 },
+    { file: "src/a.ts", from: 3, rule: NN, to: 2 },
+    { file: "src/b.ts", from: 1, rule: NN, to: 0 },
+    { file: "src/deleted.ts", from: 2, rule: FLOAT, to: 0 },
   ]);
 });
 
@@ -109,7 +111,7 @@ it("the check counts the magic hits it is handed beside oxlint's", { timeout: SL
     [BASELINE_PATH]: `${JSON.stringify({ "src/wait.ts": { [MAGIC]: 1 } })}\n`,
   });
   const line = "src/wait.ts:1:35: error repo(magic-number): 5000 names nothing; give it a named const";
-  const magic = [{ file: "src/wait.ts", rule: MAGIC, line }];
+  const magic = [{ file: "src/wait.ts", line, rule: MAGIC }];
   expect(await checkLintBaseline(root, [...magic, ...magic])).toStrictEqual([
     `${BASELINE_PATH}: src/wait.ts has 2 ${MAGIC}, the baseline allows 1`,
   ]);

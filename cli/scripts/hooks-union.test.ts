@@ -1,10 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+
 import { expect, it } from "vitest";
-import { applyUnion, checkUnion } from "./hooks-union.ts";
-import { BEHIND, rootCmd } from "./hooks-union-commands.ts";
-import { OWNED_HOOKS } from "./hooks-union.constants.ts";
-import { hookCommand } from "./hook-command.ts";
+
 import {
   EDIT_PLATFORM,
   MCP_DENY,
@@ -20,6 +18,10 @@ import {
   type GrokDoc,
 } from "./fixtures/hooks-union-kit.ts";
 import { plantDirs } from "./fixtures/mcp-policy-kit.ts";
+import { hookCommand } from "./hook-command.ts";
+import { BEHIND, rootCmd } from "./hooks-union-commands.ts";
+import { OWNED_HOOKS } from "./hooks-union.constants.ts";
+import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
 
@@ -35,10 +37,10 @@ function preCommandsAfter(command: string): string[] {
   touchConsumerScripts(ws);
   const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
   claude.hooks.PreToolUse.push(
-    { matcher: "Write|Edit", hooks: [{ type: "command", command }] },
+    { hooks: [{ command, type: "command" }], matcher: "Write|Edit" },
     ...["mine.ts", "mine.mjs", "mine.js"].map((f) => ({
+      hooks: [{ command: `bun scripts/${f}`, type: "command" }],
       matcher: "Bash",
-      hooks: [{ type: "command", command: `bun scripts/${f}` }],
     })),
   );
   writeJson(ws, ".claude/settings.json", claude);
@@ -59,7 +61,7 @@ it("replaces a consumer hook by its script name under / or \\ separators and kee
 /** The failures `--check` gives a Grok rtk hook file holding `command` that mention `needle`. */
 function checkGrok(command: string, needle: string): string[] {
   const ws = tmpDir("union-form-");
-  writeJson(ws, ".grok/hooks/rtk.json", { hooks: { PreToolUse: [{ hooks: [{ type: "command", command }] }] } });
+  writeJson(ws, ".grok/hooks/rtk.json", { hooks: { PreToolUse: [{ hooks: [{ command, type: "command" }] }] } });
   return checkUnion({ workspaceRoot: ws }).filter((f) => f.includes(needle));
 }
 
@@ -126,7 +128,7 @@ it("--check fails when repo needles missing; writes nothing", () => {
   fs.writeFileSync(claudePath, `${JSON.stringify(claude, null, 2)}\n`);
   const failures = checkUnion({ workspaceRoot: ws });
   expect(failures.some((f: string) => f.includes(SCRUB))).toBe(true);
-  expect(applyUnion({ workspaceRoot: ws, check: true }).ok).toBe(false);
+  expect(applyUnion({ check: true, workspaceRoot: ws }).ok).toBe(false);
   expect(fs.readFileSync(claudePath, "utf8")).toContain('"PreToolUse": []');
 });
 
