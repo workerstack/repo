@@ -814,9 +814,6 @@
   "cli/scripts/lint-capture.test.ts": {
     "unicorn(no-array-sort)": 2
   },
-  "cli/scripts/lint-main.test.ts": {
-    "typescript(no-unnecessary-type-assertion)": 2
-  },
   "cli/scripts/lint-rust.test.ts": {
     "unicorn(consistent-function-scoping)": 2,
     "vitest(require-mock-type-parameters)": 1
