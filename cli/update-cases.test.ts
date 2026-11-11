@@ -138,5 +138,70 @@ it("runs on the process streams when no io is given", async () => {
   } finally {
     spy.mockRestore();
   }
-  expect(written).toEqual(["repo update: usage: repo update [--check] [<name>…]\n"]);
+  expect(written).toEqual(["repo update: usage: repo update [--check] [<name>|@scope/*…]\n"]);
+});
+
+const scoped = () =>
+  world(
+    {
+      "package.json": {
+        name: "r",
+        workspaces: { packages: ["packages/*"], catalog: { "@workerstack/repo": "^0.1.0", zod: "^3.0.0" } },
+      },
+      "packages/a/package.json": {
+        name: "a",
+        dependencies: { "@workerstack/references": "^0.1.1", "@workerstack/repo": "catalog:", "@other/x": "1.0.0" },
+      },
+    },
+    { "@workerstack/repo": "0.2.0", "@workerstack/references": "0.1.2", "@other/x": "2.0.0", zod: "4.0.0" },
+  );
+
+it("bumps only the named scope across the catalog and the manifests", async () => {
+  const w = scoped();
+  expect(await main(["@workerstack/*"], w.io())).toBe(0);
+  expect(w.out[0]).toMatch(/^updated 2: /);
+  expect(w.read("package.json").workspaces).toEqual({
+    packages: ["packages/*"],
+    catalog: { "@workerstack/repo": "^0.2.0", zod: "^3.0.0" },
+  });
+  expect(w.read("packages/a/package.json").dependencies).toEqual({
+    "@workerstack/references": "^0.1.2",
+    "@workerstack/repo": "catalog:",
+    "@other/x": "1.0.0",
+  });
+});
+
+it("--check with a scope lists only its rows", async () => {
+  const w = scoped();
+  expect(await main(["--check", "@workerstack/*"], w.io())).toBe(0);
+  expect(w.out[0]).toBe("2 behind of 2 checked:");
+  expect(w.out.join("\n")).not.toMatch(/zod|@other/);
+  expect(w.asked.toSorted()).toEqual(["@workerstack/references", "@workerstack/repo"]);
+});
+
+it("a scope nothing depends on exits 1 naming it", async () => {
+  const w = scoped();
+  expect(await main(["@nope/*"], w.io())).toBe(1);
+  expect(w.err).toEqual(['repo update: nothing here depends on "@nope/*"']);
+  expect(w.installs).toEqual([]);
+});
+
+it("prints each current scoped name once, though several sources hold it", async () => {
+  const w = world(
+    {
+      "package.json": { name: "r", workspaces: ["packages/*"], dependencies: { "@s/a": "^1.0.0", "@s/b": "^2.0.0" } },
+      "packages/a/package.json": { name: "a", dependencies: { "@s/a": "^1.0.0" } },
+    },
+    { "@s/a": "1.0.0", "@s/b": "2.0.0" },
+  );
+  expect(await main(["@s/*"], w.io())).toBe(0);
+  expect(w.out).toEqual(["@s/a is on latest (^1.0.0)", "@s/b is on latest (^2.0.0)"]);
+});
+
+it("a star anywhere but a trailing /* after a scope matches exactly", async () => {
+  const w = scoped();
+  expect(await main(["@workerstack/re*"], w.io())).toBe(1);
+  expect(w.err).toEqual(['repo update: nothing here depends on "@workerstack/re*"']);
+  expect(await main(["*"], w.io())).toBe(1);
+  expect(await main(["@workerstack*/*"], w.io())).toBe(1);
 });

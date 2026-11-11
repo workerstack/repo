@@ -1,6 +1,8 @@
-/** `repo update [--check] [<name>…]` lists and bumps outdated catalog and manifest versions. */
+/** `repo update [--check] [<name>|@scope/*…]` lists and bumps outdated catalog and manifest versions. */
 import { findRoot } from "./config.ts";
 import { readWorkspace } from "./sync/workspace.ts";
+import { matchesName } from "./matches-name.ts";
+import { updateChanges } from "./update-changes.ts";
 import { updateIo } from "./update-io.ts";
 import type { UpdateIo } from "./update-io.types.ts";
 import { latestOf } from "./update-latest.ts";
@@ -28,14 +30,19 @@ function write(io: UpdateIo, root: string, run: { names: readonly string[]; asse
     io.out(allCurrent(checked.length));
     return 0;
   }
-  const current = names.flatMap((name) => checked.filter((source) => source.name === name).slice(0, 1));
-  for (const source of current.filter((one) => !behind.some((other) => other.name === one.name))) {
+  const seen = new Set(behind.map((source) => source.name));
+  for (const source of checked) {
+    if (seen.has(source.name) || !names.some((pattern) => matchesName(pattern, source.name))) continue;
+    seen.add(source.name);
     io.out(onLatest(source.name, source.spec));
   }
   if (behind.length === 0) return 0;
   const files = updateWrite(root, behind);
   io.out(updatedLine(behind));
-  return finish({ io, command: "update", root }, files);
+  const changes = updateChanges(root, behind);
+  const code = finish({ io, command: "update", root }, files);
+  if (code === 0) for (const line of changes()) io.out(line);
+  return code;
 }
 
 /** Lists (`--check`) or writes the versions behind `latest`; names narrow both. */
@@ -47,7 +54,9 @@ export async function main(argv: string[], io: UpdateIo = updateIo()): Promise<n
   const read = readWorkspace(root);
   if (!read.ok) return fail(io, read.errors.map(prefixed));
   const found = candidatesOf(updateSources(read.workspace), names);
-  const absent = names.find((name) => ![...found.plain, ...found.ranges].some((source) => source.name === name));
+  const absent = names.find(
+    (pattern) => ![...found.plain, ...found.ranges].some((source) => matchesName(pattern, source.name)),
+  );
   if (absent !== undefined) return fail(io, [prefixed(nothingDepends(absent))]);
   const answers = await latestOf([...new Set(found.plain.map((source) => source.name))], io);
   if (answers.failure !== null) return fail(io, [answers.failure]);

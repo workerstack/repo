@@ -125,5 +125,22 @@ it("without an .oxfmtrc.jsonc nothing is formatted and the install still runs", 
 it("an unknown flag prints the usage and exits 2", async () => {
   const w = world(BASE, REPLIES);
   expect(await main(["--nope"], w.io())).toBe(2);
-  expect(w.err).toEqual(["repo update: usage: repo update [--check] [<name>…]"]);
+  expect(w.err).toEqual(["repo update: usage: repo update [--check] [<name>|@scope/*…]"]);
+});
+
+const SYNC = "repo sync: wrote AGENTS.md; removed one old skill file";
+
+it("prints the install's repo sync lines right after the updated line, and nothing else it printed", async () => {
+  const w = world(BASE, REPLIES, { output: `bun install v1\n${SYNC}\nrepo sync: cut 1\n 3 packages installed\n` });
+  expect(await main([], w.io())).toBe(0);
+  expect(w.out).toEqual([UPDATED, SYNC, "repo sync: cut 1"]);
+  expect(w.err).toEqual([]);
+});
+
+it("prints no repo sync line when the install fails", async () => {
+  const w = world(BASE, REPLIES);
+  const install = () => ({ code: 1, output: `${SYNC}\nboom\n` });
+  expect(await main([], w.io({ install }))).toBe(1);
+  expect(w.out).toEqual([UPDATED]);
+  expect(w.err.slice(1)).toEqual([`  ${SYNC}`, "  boom"]);
 });

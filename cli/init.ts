@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
+import { initGit } from "./init-git.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { PRINT_WIDTH } from "./sync/standards.ts";
@@ -154,7 +155,7 @@ function readJsonFile<T>(file: string, is: (v: unknown) => v is T): T {
 
 export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson): void {
   const deps = destPkg.dependencies && typeof destPkg.dependencies === "object" ? destPkg.dependencies : null;
-  const devDeps: Record<string, string> = { ...(destPkg.devDependencies || {}) };
+  const devDeps: Record<string, string> = { ...destPkg.devDependencies };
   destPkg.devDependencies = devDeps;
   const fromDep = deps?.[PACKAGE_NAME];
   const fromDev = devDeps[PACKAGE_NAME];
@@ -221,7 +222,7 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
   if (destPkg.name === PACKAGE_NAME) return;
 
   const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), isPackageJson);
-  const destScripts: Record<string, string> = { ...(destPkg.scripts || {}) };
+  const destScripts: Record<string, string> = { ...destPkg.scripts };
   for (const [name, value] of Object.entries(destScripts)) {
     if (OLD_DEFAULT_SCRIPTS[name]?.includes(value)) delete destScripts[name];
   }
@@ -262,6 +263,26 @@ export interface InitOptions {
   stdout?: (s: string) => void;
 }
 
+/** Writes the package.json entries, the config and `.mcp.json` when missing, and runs `git init` outside a work tree. */
+function prepareDir(
+  dest: string,
+  pkgRoot: string,
+  {
+    packs,
+    stdout,
+    exec,
+  }: {
+    packs: string[] | undefined;
+    stdout: ((s: string) => void) | undefined;
+    exec: NonNullable<InitOptions["execFileSync"]>;
+  },
+): void {
+  mergePackageJson(dest, pkgRoot);
+  writeConfigIfMissing(dest, packs);
+  initMcpJson(dest, stdout);
+  initGit(dest, exec, stdout);
+}
+
 /**
  * Write the config and package.json entries a repo needs, install, and apply the global settings. The agent
  * trees are not copied: the postinstall of `bun install` runs `repo sync`, which generates them.
@@ -287,9 +308,7 @@ export function init(
 
   onPhase?.("merge", "start");
   try {
-    mergePackageJson(dest, pkgRoot);
-    writeConfigIfMissing(dest, packs);
-    initMcpJson(dest, stdout);
+    prepareDir(dest, pkgRoot, { packs, stdout, exec });
   } finally {
     onPhase?.("merge", "stop");
   }

@@ -101,7 +101,7 @@ Commands:
   github            apply the repository's rulesets, security settings and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
   unlink            Put a linked dependency back on npm (--all: every link)
-  update            List and bump outdated catalog and manifest versions (--check: list only; names narrow it)
+  update            List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* narrow it)
   remove            Remove a dependency from every manifest, the catalog and the root's overrides
   docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, worktree
@@ -142,10 +142,10 @@ describe("start", () => {
     process.exitCode = 0;
     chunks.length = 0;
     stdoutWrite = process.stdout.write.bind(process.stdout);
-    process.stdout.write = ((buf: string | Uint8Array) => {
+    process.stdout.write = (buf: string | Uint8Array) => {
       chunks.push(String(buf));
       return true;
-    }) as typeof process.stdout.write;
+    };
     init.mockReset();
     runCommand.mockReset();
     runSync.mockClear();
@@ -237,10 +237,10 @@ describe("start", () => {
   it("sync --check forwards its args and io to runSync and keeps its exit code", async () => {
     const errs: string[] = [];
     const stderrWrite = process.stderr.write;
-    process.stderr.write = ((buf: string | Uint8Array) => {
+    process.stderr.write = (buf: string | Uint8Array) => {
       errs.push(String(buf));
       return true;
-    }) as typeof process.stderr.write;
+    };
     runSync.mockReset();
     runSync.mockImplementationOnce(async (_args, io) => {
       io.stdout("out\n");
@@ -291,10 +291,10 @@ describe("start", () => {
     async (cmd) => {
       const errs: string[] = [];
       const stderrWrite = process.stderr.write;
-      process.stderr.write = ((buf: string | Uint8Array) => {
+      process.stderr.write = (buf: string | Uint8Array) => {
         errs.push(String(buf));
         return true;
-      }) as typeof process.stderr.write;
+      };
       process.argv = ["node", "repo", cmd];
       try {
         await start();
@@ -362,9 +362,9 @@ describe("start", () => {
 
   it("TTY cancel exits 0", async () => {
     isInteractive.mockReturnValue(true);
-    const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
-    }) as typeof process.exit);
+    });
     select.mockImplementation(async () => {
       process.exit(0);
     });
@@ -470,10 +470,10 @@ describe("parseArgv --packs", () => {
     const stdoutWrite = process.stdout.write;
     const exitCode = process.exitCode;
     const argv = process.argv.slice();
-    process.stdout.write = ((buf: string | Uint8Array) => {
+    process.stdout.write = (buf: string | Uint8Array) => {
       lines.push(String(buf));
       return true;
-    }) as typeof process.stdout.write;
+    };
     process.exitCode = 0;
     process.argv = ["node", "repo", "init", "--packs", "nope"];
     init.mockClear();
@@ -538,10 +538,10 @@ describe("start check", () => {
     vi.spyOn(process, "cwd").mockReturnValue(dir);
     stderr.length = 0;
     stderrWrite = process.stderr.write;
-    process.stderr.write = ((buf: string | Uint8Array) => {
+    process.stderr.write = (buf: string | Uint8Array) => {
       stderr.push(String(buf));
       return true;
-    }) as typeof process.stderr.write;
+    };
     runSync.mockReset();
     runSync.mockResolvedValue(0);
     isInteractive.mockReset();

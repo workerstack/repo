@@ -27,8 +27,26 @@ function answer(reply: Reply): Response {
   return Response.json({ versions: {}, "dist-tags": {} });
 }
 
+/** Text files by root-relative POSIX path, and what the fake install prints. */
+export type Disk = {
+  /** Files on disk before the command runs, like a package installed earlier. */
+  installed?: Record<string, string>;
+  /** Files the install writes, like the new package it fetched. */
+  writes?: Record<string, string>;
+  /** What the install prints. */
+  output?: string;
+};
+
+function put(root: string, files: Record<string, string>): void {
+  for (const [rel, text] of Object.entries(files)) {
+    const file = path.join(root, ...rel.split("/"));
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, text);
+  }
+}
+
 /** A temp workspace of JSON files (keys are root-relative POSIX paths) with a fake registry and captured streams. */
-export function world(files: Record<string, unknown>, replies: Record<string, Reply>) {
+export function world(files: Record<string, unknown>, replies: Record<string, Reply>, disk: Disk = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "repo-update-"));
   made.push(root);
   for (const [rel, value] of Object.entries(files)) {
@@ -37,6 +55,7 @@ export function world(files: Record<string, unknown>, replies: Record<string, Re
     fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
   }
   fs.writeFileSync(path.join(root, ".oxfmtrc.jsonc"), "{}\n");
+  put(root, disk.installed ?? {});
   const state = {
     root,
     out: [] as string[],
@@ -64,7 +83,8 @@ export function world(files: Record<string, unknown>, replies: Record<string, Re
     fetch: fetcher,
     install: (dir) => {
       state.installs.push(dir);
-      return { code: 0, output: "" };
+      put(dir, disk.writes ?? {});
+      return { code: 0, output: disk.output ?? "" };
     },
     format: (dir, list) => {
       state.formats.push({ root: dir, files: list, seen: list.map((f) => fs.readFileSync(path.join(dir, f), "utf8")) });
