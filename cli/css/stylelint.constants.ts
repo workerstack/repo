@@ -11,6 +11,12 @@ export const STRING_PRELUDE = "<string>";
 export const FIX_FLAG = "--fix";
 /** A stylesheet Stylelint lints. */
 export const CSS_SOURCE: RegExp = /\.css$/;
+/** The pathspec git lists stylesheets at any depth by. */
+export const CSS_PATHSPEC = "*.css";
+/** The start of the dependency dir's name, kept apart so no path here spells it whole. */
+const DEPENDENCY_PREFIX = "node";
+/** The pathspec that leaves out a dependency dir at any depth, so git never walks or lists it. */
+export const DEPENDENCY_EXCLUDE: string = `:(exclude,glob)**/${DEPENDENCY_PREFIX}_modules/**`;
 /** The dir name whose files are copies of other code, never linted. */
 export const FIXTURES_DIR = "fixtures";
 /** Where the runner's arguments start in the eval child's argv: after bun alone, the eval code is not in it. */

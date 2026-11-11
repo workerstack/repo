@@ -15,7 +15,9 @@ import { captureBun } from "../scripts/lint.ts";
 import { runGit } from "../sync/standards.ts";
 import {
   CANNOT_RUN,
+  CSS_PATHSPEC,
   CSS_SOURCE,
+  DEPENDENCY_EXCLUDE,
   FIX_FLAG,
   FIXTURES_DIR,
   RUNNER_EVAL,
@@ -43,7 +45,16 @@ export function isLintedCss(rel: string): boolean {
 
 /** The tracked and untracked, not ignored, stylesheets under `root` that Stylelint lints, sorted. */
 export function cssFiles(root: string): Listed {
-  const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
+  const run = runGit(root, [
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--",
+    CSS_PATHSPEC,
+    DEPENDENCY_EXCLUDE,
+  ]);
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
   return { files: [...new Set(run.stdout.split("\0").filter(isLintedCss))].toSorted(), ok: true };
 }
