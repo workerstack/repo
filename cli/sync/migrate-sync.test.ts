@@ -28,6 +28,11 @@ afterAll(dropFixture);
 
 const SLOW = 180_000;
 const NOTES = "Our team notes: ship on Fridays only with a rollback plan.";
+/** What the first sync over the copied install prints: its old markers converted, an unhashed section hashed. */
+const CONVERTED = [
+  "repo sync: references/INDEX.md: added the hash to repo:stack\n",
+  "repo sync: .gitignore: converted the old markers to repo:ignore\n",
+];
 
 /** The settings keys the full sync after the migration writes. */
 interface MergedSettings {
@@ -92,7 +97,7 @@ it(
     const root = copied();
     addOwnHook(root);
     const result = await sync(root, [], true);
-    expect(result.err).toEqual([]);
+    expect(result.err).toEqual(CONVERTED);
     expect(result.code).toBe(0);
     const agents = read(root, "AGENTS.md");
     expect(agents).toContain("Team rule: run `make lint` before every push.");
@@ -130,7 +135,7 @@ it(
     expect(exists(root, "AGENTS.md")).toBe(false);
 
     const second = await sync(root, [], true);
-    expect(second.err).toEqual([]);
+    expect(second.err).toEqual(CONVERTED);
     expect(second.code).toBe(0);
     expect(read(root, "AGENTS.md").split(NOTES)).toHaveLength(2);
     const allow: unknown = expect.arrayContaining(["Bash(make lint:*)"]);
@@ -147,7 +152,7 @@ it(
     write(root, "AGENTS.md", `<!-- repo:begin -->\nstock\n<!-- repo:end -->\n${NOTES}\n`);
     write(root, ".claude/settings.json", JSON.stringify({ permissions: { allow: ["Bash(make lint:*)"] } }));
     const result = await sync(root, [], true);
-    expect(result.err).toEqual([]);
+    expect(result.err).toEqual(CONVERTED);
     expect(result.code).toBe(0);
     expect(read(root, "AGENTS.md").split("ship on Fridays")).toHaveLength(2);
   },

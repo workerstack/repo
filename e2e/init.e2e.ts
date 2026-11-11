@@ -367,10 +367,7 @@ describe("bunx", () => {
 
     it("writes the gitignore and gitattributes blocks and the editor read-only globs from the planned outputs", () => {
       const block = (text: string) =>
-        /^# >>> @workerstack\/repo.*\n([\s\S]*?)^# <<< @workerstack\/repo$/m
-          .exec(text)?.[1]
-          ?.split("\n")
-          .filter(Boolean);
+        /^# repo:(ignore|generated) [\da-f]{8}\n([\s\S]*?)^# \/repo:\1$/m.exec(text)?.[2]?.split("\n").filter(Boolean);
       expect(block(sb.read(".gitignore"))).toEqual([
         ".tmp/",
         ".worktrees/",
@@ -465,7 +462,7 @@ describe("bunx", () => {
       expect(sb.exists(path.join(stock, "plan-format.md"))).toBe(true);
 
       const index = sb.read("references/INDEX.md");
-      const section = /<!-- repo:stack -->\n([\s\S]*?)<!-- \/repo:stack -->/.exec(index)?.[1] ?? "";
+      const section = /<!-- repo:stack [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:stack -->/.exec(index)?.[1] ?? "";
       const targets = [...section.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1] ?? "");
       expect(targets, section).toContain(`../node_modules/${PACKAGE_NAME}/references/INDEX.md`);
       for (const target of targets) expect(sb.exists(path.join("references", target)), target).toBe(true);
@@ -734,7 +731,7 @@ describe("a two-package workspace", () => {
     ]);
     expect(linkText(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
     expect(sb.read("AGENTS.md")).not.toContain("Components live");
-    const deps = /<!-- repo:deps -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
+    const deps = /<!-- repo:deps [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
       sb.read("packages/web/references/INDEX.md"),
     )?.[1];
     expect(deps).toBe("- [@acme/api](../../api/references/INDEX.md)\n");

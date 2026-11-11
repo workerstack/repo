@@ -540,6 +540,16 @@ describe("runDoctor", () => {
     expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
   });
 
+  it("@workerstack/repo with the hashed markers sync writes → maps ok row, exit 0", () => {
+    const cwd = tmp("doc-maps-hashed-");
+    const bin = path.join(cwd, "bin");
+    writeRequired(bin);
+    writeRequiredMaps(cwd, BOTH_MARKERS.replace(/<!-- repo:(\w+) -->/g, "<!-- repo:$1 e3b0c442 -->"));
+    const r = runDoctor({ cwd, pathEnv: bin, platform: "linux" });
+    expect(r.code).toBe(0);
+    expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
+  });
+
   it.each(["skills", "refs"])("@workerstack/repo missing repo:%s → exit 1 naming it", (name) => {
     const cwd = tmp("doc-map-one-");
     const bin = path.join(cwd, "bin");

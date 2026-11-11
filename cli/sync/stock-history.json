@@ -2321,6 +2321,7 @@
   "cli/scripts/doctor-status.test.ts": ["29e929273f9ecbac"],
   "cli/scripts/doctor-which.test.ts": ["3e1ca731f99806f1"],
   "cli/scripts/doctor.test.ts": [
+    "2eee92ac9c066b9c",
     "4e7ee899f0fca7dd",
     "6f64c5bfef86c24f",
     "73ca36e8421457db",
@@ -2618,6 +2619,8 @@
     "d728947d94557b14",
     "dfe0594bab4d4f0c"
   ],
+  "cli/scripts/lines.test.ts": ["870279fe8fd35ef2"],
+  "cli/scripts/lines.ts": ["5bd26756501de93d"],
   "cli/scripts/lint-baseline.test.ts": [
     "0524cad6c0b0fb26",
     "467aec2392c92fee",
@@ -3034,6 +3037,7 @@
   ],
   "cli/scripts/turn.test.ts": [
     "0b2d94c53a062ee4",
+    "18ff7a311dc12a81",
     "2899d12e38f83c66",
     "35ea85659aebc540",
     "945c05195d9fd5e7",
@@ -3083,6 +3087,7 @@
   ],
   "cli/scripts/worktree.ts": ["39fe708a8275f215", "885c1170d0531d79", "d9d9503985808498"],
   "references/INDEX.md": [
+    "0bdfb9d313ef5858",
     "1b5c605be587f519",
     "2f03845cf48b1834",
     "792a127aa91441be",
@@ -3129,6 +3134,7 @@
     "64321295e7470c58",
     "ac0d0d4c2036f1e6",
     "be99ba4bbf55ee14",
+    "d92570bc93ab6cd8",
     "daaa9c4b325a9b29",
     "db5b66e69e2f4423",
     "e5be038a27b5a09b",

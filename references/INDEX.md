@@ -10,7 +10,9 @@ Do not reuse a repo skill name for a consumer custom skill: a repo-owned skill o
 
 Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun install`: the postinstall sync regenerates every tree from the new package. The first sync in a repo an older `bun repo init` copied moves your own rules, subagents, skills, settings keys, lessons, hooks and references into `.repo/` and `references/`, untracks the generated paths, removes the copied `.rulesync/`, and prints one moved line per move. Commit the result. There is no upgrade command.
 
-<!-- repo:skills -->
+Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.
+
+<!-- repo:skills 1a5006fe -->
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
 | ask | repo | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
@@ -72,7 +74,7 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | write-roadmap | repo | >- |  |  |  |
 <!-- /repo:skills -->
 
-<!-- repo:refs -->
+<!-- repo:refs e93f7edb -->
 | path | title | tags | summary |
 | --- | --- | --- | --- |
 | node_modules/@workerstack/repo/references/browser.md | Browser | browser | Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked. |
@@ -97,11 +99,11 @@ Upgrading is bumping `@workerstack/repo` in `package.json` and running `bun inst
 | node_modules/@workerstack/repo/references/speak.md | Speak | speak | Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `node_modules/@… |
 <!-- /repo:refs -->
 
-<!-- repo:stack -->
+<!-- repo:stack e4fdfa05 -->
 - [@workerstack/references](../node_modules/@workerstack/references/references/INDEX.md)
 <!-- /repo:stack -->
 
-<!-- repo:available -->
+<!-- repo:available 1bb0856d -->
 - [@workerstack/system](https://www.npmjs.com/package/@workerstack/system): Manage every OS dependency, built-in or custom, from one config
 - [@workerstack/database](https://www.npmjs.com/package/@workerstack/database): Schema, queries and migrations for SQLite, D1 and Postgres
 - [@workerstack/testing](https://www.npmjs.com/package/@workerstack/testing): End-to-end matrix testing for APIs, web apps and Workers

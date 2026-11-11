@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import type { CommentSyntax } from "./header.ts";
 import type { Output } from "./outputs.ts";
+import { isCurrent } from "./write.ts";
 
 /**
  * How an output's text is read: `text` is not parsed; `markdown` parses its YAML frontmatter when it has one;
@@ -405,11 +406,20 @@ function resolves(
   return resolves(root, target, links, planned, seen.add(target));
 }
 
+/** Whether `output` is a block file sync plans byte for byte as the user keeps it: theirs to fix, as sync writes nothing. */
+function leftAsIs(root: string, output: Output): boolean {
+  return (
+    output.kind === "file" && output.managed === "block" && isCurrent(path.join(root, output.path), output.content)
+  );
+}
+
 /**
  * Every problem in `outputs` as `path: problem` lines, in output order, so a caller can refuse before it writes
  * anything. A file must parse in its registered format and match that format's schema; a path with no registered
- * format is a problem. A link must resolve, against what is on disk under `root` plus the planned outputs (a link
- * to another planned link, or into the dir of a planned file, resolves). `formats` is a test seam.
+ * format is a problem; a block file planned exactly as it is on disk is not checked, as sync leaves it as the user
+ * wrote it (invalid settings JSONC, say, which the settings pass warns about). A link must resolve, against what is
+ * on disk under `root` plus the planned outputs (a link to another planned link, or into the dir of a planned file,
+ * resolves). `formats` is a test seam.
  */
 export function validateOutputs(
   root: string,
@@ -428,6 +438,7 @@ export function validateOutputs(
   }
   const lines: string[] = [];
   for (const output of outputs) {
+    if (leftAsIs(root, output)) continue;
     if (output.kind === "file") {
       lines.push(...fileProblems(output, formats).map((problem) => `${output.path}: ${problem}`));
     } else if (!resolves(root, output.path, links, planned, new Set([output.path]))) {

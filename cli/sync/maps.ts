@@ -1,8 +1,8 @@
 import path from "node:path";
 import { STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
-import { lines } from "../scripts/managed-text.ts";
-import { NOT_FOUND, REFS_REL } from "./maps.constants.ts";
+import { INDEX_REL, REFS_REL } from "./maps.constants.ts";
 import { refRow, skillRow, table, walkRefMd } from "./maps-rows.ts";
+import { regionBody, syntaxOf } from "./region.ts";
 
 /**
  * The bodies of the `repo:skills` and `repo:refs` sections of references/INDEX.md, from one scan of the skills
@@ -19,11 +19,9 @@ export function mapSections(root: string): { skills: string; refs: string } {
   };
 }
 
-/** The lines between `<!-- repo:<name> -->` and `<!-- /repo:<name> -->`, or null when the pair is missing. */
+/** The trimmed lines of the INDEX region `repo:<name>`, its markers read loosely, or null when the pair is missing. */
 export function sectionBody(text: string, name: string): string[] | null {
-  const all = lines(text);
-  const start = all.findIndex((l) => l.trimEnd() === `<!-- repo:${name} -->`);
-  if (start === NOT_FOUND) return null;
-  const stop = all.findIndex((l, at) => at > start && l.trimEnd() === `<!-- /repo:${name} -->`);
-  return stop === NOT_FOUND ? null : all.slice(start + 1, stop).map((l) => l.trimEnd());
+  const body = regionBody(text, syntaxOf(INDEX_REL), name);
+  if (body === undefined) return null;
+  return body === "" ? [] : body.split("\n").map((l) => l.trimEnd());
 }

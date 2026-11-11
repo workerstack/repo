@@ -749,6 +749,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/lines.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/lint-baseline.ts": {
     "branches": 100,
     "functions": 100,
@@ -774,12 +780,6 @@
     "statements": 100
   },
   "cli/scripts/listen.ts": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100
-  },
-  "cli/scripts/managed-text.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

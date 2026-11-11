@@ -11,5 +11,3 @@ export const HUGE_BYTES: number = 512 * 1024;
 export const SKIP_REF_NAMES: ReadonlySet<string> = /* @__PURE__ */ new Set(["INDEX.md"]);
 /** A quoted scalar has at least its two quotes. */
 export const QUOTED_MIN: number = 2;
-/** What `findIndex` returns for no match. */
-export const NOT_FOUND: number = -1;

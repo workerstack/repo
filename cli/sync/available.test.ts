@@ -35,4 +35,9 @@ describe("available", () => {
     const text = `${REPO}\n<!-- repo:stack -->\n${SYSTEM}\n<!-- /repo:stack -->\n${DATABASE}\r\n`;
     expect(available(reader(text), new Set())).toBe(`${REPO}\n${DATABASE}`);
   });
+
+  it("reads a hashed index, as the published one's sync writes it, the same as an unhashed one", () => {
+    const text = `${REPO}\n<!-- repo:packages 1a2b3c4d -->  \n${SYSTEM}\n<!-- /repo:packages -->\n${DATABASE}\n`;
+    expect(available(reader(text), new Set())).toBe(`${REPO}\n${DATABASE}`);
+  });
 });

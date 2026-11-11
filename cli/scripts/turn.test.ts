@@ -87,7 +87,8 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   write(root, {
     "src/a.ts": "export function a(n: number) {\n  if (n) {\n    return 1;\n  } else {\n    return 0;\n  }\n}\n",
     "package.json": APP_MANIFEST,
-    ".gitattributes": `${attributes}*.bin binary\n`.replace("eol=lf", "eol=crlf"),
+    // A line dropped from the region comes back; one added there would be moved below it.
+    ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
   const result = await turn(root, ["--staged"]);

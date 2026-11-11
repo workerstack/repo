@@ -4,7 +4,7 @@ import { group, splitMarkdown } from "../docs-fences.ts";
 import { SECOND_GROUP } from "../docs-fences.constants.ts";
 import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
-import { lines } from "../scripts/managed-text.ts";
+import { lines } from "../scripts/lines.ts";
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output } from "./outputs.ts";
 import { CONTENTS_TITLE, MAX_HEADING, PACKAGE_FILE, handWritten, readmePath } from "./readme.constants.ts";
