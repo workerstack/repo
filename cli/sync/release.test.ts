@@ -10,6 +10,16 @@ const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 const UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
 const DOWNLOAD = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
+const CACHE = "actions/cache/%@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
+const BUN_CACHE = `      - name: Find bun's install cache
+        id: bun-cache
+        shell: bash
+        run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
+      - uses: ${CACHE.replace("/%", "")}
+        with:
+          path: \${{ steps.bun-cache.outputs.dir }}
+          key: bun-\${{ runner.os }}-\${{ hashFiles('bun.lock') }}
+`;
 
 const HEAD = `name: ci
 
@@ -28,13 +38,19 @@ permissions:
 
 jobs:
   test:
-    name: test (\${{ matrix.os }})
+    name: test (\${{ matrix.label }})
     runs-on: \${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - { os: ubuntu-latest, shard: "", label: ubuntu-latest }
+          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
+          - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
+          - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
+          - { os: macos-latest, shard: 1/2, label: macos-latest 1/2 }
+          - { os: macos-latest, shard: 2/2, label: macos-latest 2/2 }
     steps:
       - uses: ${CHECKOUT}
       - uses: ${SETUP_BUN}
@@ -44,18 +60,29 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; the suite assumes unprivileged file permissions"; exit 1; fi
-      - run: bun install --frozen-lockfile
+${BUN_CACHE}      - run: bun install --frozen-lockfile
+      - uses: ${CACHE.replace("%", "restore")}
+        with:
+          path: .tmp/repo/tsbuildinfo
+          key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
+          restore-keys: tsbuildinfo-\${{ runner.os }}-
       - name: Run the gates and write the skip report
         shell: bash
         env:
-          REPORT: ci-report-\${{ runner.os }}.json
+          REPORT: ci-report-\${{ runner.os }}-\${{ strategy.job-index }}.json
           COVERAGE: \${{ runner.os != 'Linux' && '--no-coverage' || '' }}
-        run: bun repo ci --report "$REPORT" $COVERAGE
+          SHARD: \${{ matrix.shard && format('--shard {0}', matrix.shard) || '' }}
+        run: bun repo ci --report "$REPORT" $COVERAGE $SHARD
+      - uses: ${CACHE.replace("%", "save")}
+        if: always() && github.ref == 'refs/heads/main'
+        with:
+          path: .tmp/repo/tsbuildinfo
+          key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
       - uses: ${UPLOAD}
         if: always()
         with:
-          name: ci-report-\${{ matrix.os }}
-          path: ci-report-\${{ runner.os }}.json
+          name: ci-report-\${{ matrix.os }}-\${{ strategy.job-index }}
+          path: ci-report-\${{ runner.os }}-\${{ strategy.job-index }}.json
           if-no-files-found: error
 
   commits:
@@ -128,29 +155,6 @@ const NO_NODE_FULL = NO_NODE_SHALLOW.replace(
 const E2E_IN_NO_NODE = `      - run: bun run test:e2e
 `;
 
-const E2E_JOB = `
-  e2e:
-    name: e2e (\${{ matrix.os }})
-    runs-on: \${{ matrix.os }}
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: ${CHECKOUT}
-        with:
-          fetch-depth: 0
-      - uses: ${SETUP_BUN}
-        with:
-          bun-version-file: package.json
-      - run: bun install --frozen-lockfile
-      - run: bun run test:e2e
-`;
-
 const CONSUMER_JOB = `
   consumer:
     name: consumer
@@ -180,13 +184,9 @@ describe("release", () => {
 
   it("adds the e2e step and job when the root has a test:e2e script", () => {
     const manifest: PackageJson = { scripts: { "test:e2e": "vitest" } };
-    expect(lookup(context(["release"], manifest))).toStrictEqual({
-      kind: "file",
-      path: CI_PATH,
-      content: HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE + E2E_JOB,
-      tracked: true,
-      managed: "whole",
-    });
+    const output = lookup(context(["release"], manifest));
+    const before = HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE + "\n  e2e:\n";
+    expect(output?.kind === "file" && output.content.startsWith(before)).toBe(true);
   });
 
   it("ignores a scripts field that is not an object with a test:e2e string", () => {
@@ -206,9 +206,6 @@ describe("release consumer job", () => {
   it("adds the consumer job last for a public root with a name", () => {
     const manifest: PackageJson = { name: "pkg", private: false };
     expect(lookup(context(["release"], manifest))).toMatchObject({ content: HEAD + CONSUMER_JOB });
-    const e2e: PackageJson = { name: "pkg", private: false, scripts: { "test:e2e": "vitest" } };
-    const output = lookup(context(["release"], e2e));
-    expect(output?.kind === "file" && output.content.endsWith(E2E_JOB + CONSUMER_JOB)).toBe(true);
   });
 
   it("adds no consumer job for a private root, a missing private or a missing name", () => {

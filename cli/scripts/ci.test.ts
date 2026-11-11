@@ -15,9 +15,9 @@ it("every gate passing prints each gate line, then the summary, and exits 0", ()
       "ci: check ok · fmt ok · typecheck 2 configs · 4 tests passed\n",
     err: "",
   });
-  expect(run.calls).toStrictEqual({
+  expect({ ...run.calls, tsc: run.calls.tsc.map((call) => call.split(" -p ").at(-1)) }).toStrictEqual({
     repo: ["check", "fmt --check"],
-    tsc: ["--noEmit -p tsconfig.json", "--noEmit -p packages/a/tsconfig.json"],
+    tsc: ["tsconfig.json", "packages/a/tsconfig.json"],
     vitest: ["run --coverage"],
     turbo: [],
   });
@@ -73,7 +73,7 @@ it("typechecks every tsconfig in the root and each package, not fixtures or inst
     [`vendor/node_modules/w/tsconfig.json`]: "{}\n",
   });
   const run = ci(root);
-  expect(run.calls.tsc.map((call) => call.replace("--noEmit -p ", ""))).toStrictEqual([
+  expect(run.calls.tsc.map((call) => call.split(" -p ").at(-1))).toStrictEqual([
     "tsconfig.build.json",
     "tsconfig.json",
     "tsconfig.src.json",

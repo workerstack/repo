@@ -39,8 +39,11 @@ it("requires every job the generated ci.yml reports, from GitHub Actions", async
   const rule = must(fake.settings.rulesets[0]).rules.find((r) => r.type === "required_status_checks");
   expect(rule?.parameters?.required_status_checks?.map((check) => check.context)).toStrictEqual([
     "test (ubuntu-latest)",
-    "test (windows-latest)",
-    "test (macos-latest)",
+    "test (windows-latest 1/3)",
+    "test (windows-latest 2/3)",
+    "test (windows-latest 3/3)",
+    "test (macos-latest 1/2)",
+    "test (macos-latest 2/2)",
     "commits",
     "skips",
     "no-node",

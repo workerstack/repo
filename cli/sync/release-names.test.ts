@@ -4,17 +4,18 @@ import type { SyncContext } from "./outputs.ts";
 import { ciJobNames, release } from "./release.ts";
 import type { PackageJson } from "./workspace.ts";
 
-const MATRIX_NAME = "${{ matrix.os }}";
+const MATRIX_NAME = "${{ matrix.label }}";
 
-/** The job names the generated YAML declares, each matrix name expanded over the matrix's own OS list. */
+/** The job names the generated YAML declares, each matrix name expanded over the labels of its own job's include. */
 function yamlNames(ctx: SyncContext): string[] {
   const output = release(ctx).outputs[0];
   const text = output?.kind === "file" ? output.content : "";
-  const oses = (/os: \[(.*)\]/.exec(text)?.[1] ?? "").split(", ");
-  const names = [...text.matchAll(/^ {4}name: (.*)$/gm)].map((match) => match[1] ?? "");
-  return names.flatMap((name) =>
-    name.includes(MATRIX_NAME) ? oses.map((os) => name.replace(MATRIX_NAME, os)) : [name],
-  );
+  return text.split(/^\n/m).flatMap((job) => {
+    const name = /^ {4}name: (.*)$/m.exec(job)?.[1];
+    if (name === undefined) return [];
+    const labels = [...job.matchAll(/label: (.*) \}$/gm)].map((match) => match[1] ?? "");
+    return name.includes(MATRIX_NAME) ? labels.map((label) => name.replace(MATRIX_NAME, label)) : [name];
+  });
 }
 
 const E2E = { "test:e2e": "vitest" };
@@ -24,6 +25,7 @@ const VARIANTS: [string, PackageJson, Record<string, string>][] = [
   ["e2e", { scripts: E2E }, {}],
   ["public", { name: "pkg", private: false }, {}],
   ["public with e2e", { name: "pkg", private: false, scripts: E2E }, {}],
+  ["unsharded e2e", { scripts: { "test:e2e": "tsx e2e.ts" } }, {}],
   ["Rust public with e2e", { name: "pkg", private: false, scripts: E2E }, CARGO],
 ];
 
@@ -32,27 +34,41 @@ it.each(VARIANTS)("ciJobNames equals the generated YAML's job names for a %s roo
   expect(ciJobNames(ctx).toSorted()).toStrictEqual(yamlNames(ctx).toSorted());
 });
 
-it("ciJobNames lists the expanded matrix names, then the single jobs", () => {
+const TEST_NAMES = [
+  "test (ubuntu-latest)",
+  "test (windows-latest 1/3)",
+  "test (windows-latest 2/3)",
+  "test (windows-latest 3/3)",
+  "test (macos-latest 1/2)",
+  "test (macos-latest 2/2)",
+];
+
+it("ciJobNames lists the labelled matrix names, each shard its own, and the single jobs in file order", () => {
   const ctx = context(["release"], { name: "pkg", private: false, scripts: E2E });
   expect(ciJobNames(ctx)).toStrictEqual([
-    "test (ubuntu-latest)",
-    "test (windows-latest)",
-    "test (macos-latest)",
+    ...TEST_NAMES,
     "commits",
     "skips",
     "no-node",
     "e2e (ubuntu-latest)",
-    "e2e (windows-latest)",
+    "e2e (windows-latest 1/2)",
+    "e2e (windows-latest 2/2)",
     "e2e (macos-latest)",
     "consumer",
   ]);
 });
 
+it("ciJobNames lists one e2e name per OS for a script that takes no --shard", () => {
+  expect(ciJobNames(context(["release"], { scripts: { "test:e2e": "tsx e2e.ts" } })).slice(-3)).toStrictEqual([
+    "e2e (ubuntu-latest)",
+    "e2e (windows-latest)",
+    "e2e (macos-latest)",
+  ]);
+});
+
 it("ciJobNames lists semver then msrv last for a Rust repo, as the YAML orders it", () => {
   expect(ciJobNames(context(["release"], {}, CARGO))).toStrictEqual([
-    "test (ubuntu-latest)",
-    "test (windows-latest)",
-    "test (macos-latest)",
+    ...TEST_NAMES,
     "commits",
     "skips",
     "no-node",

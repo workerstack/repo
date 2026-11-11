@@ -2244,17 +2244,25 @@
     "a996d5b99680ca26",
     "b69dbdd0a717c4c3",
     "c4084da6bee231c5",
-    "d0ed89323da7e4f6"
+    "d0ed89323da7e4f6",
+    "e5b8cca8114df050"
   ],
-  "cli/scripts/ci-report.test.ts": ["0da94d9e65597dc3", "5ea1e5d977c5ae5c", "734542af33700be6", "9fb70c9d8140a504"],
+  "cli/scripts/ci-report.test.ts": [
+    "0da94d9e65597dc3",
+    "5ea1e5d977c5ae5c",
+    "734542af33700be6",
+    "9fb70c9d8140a504",
+    "f8244b18ac6bbcd0"
+  ],
   "cli/scripts/ci-rust-only.test.ts": ["95eb56498edf4c39", "ff4a4fa74d17508c"],
+  "cli/scripts/ci-shard.test.ts": ["8a6ee9a08ba2fc6e"],
   "cli/scripts/ci-skips.constants.ts": ["7a8ded2beaf8aa9c"],
-  "cli/scripts/ci-skips.test.ts": ["7212c71ec00ba96d", "b8b9e31f1a5ee3f6"],
-  "cli/scripts/ci-skips.ts": ["089b5fccf2829436"],
-  "cli/scripts/ci-tests.ts": ["2fb132208b9c7c8c"],
-  "cli/scripts/ci-turbo.constants.ts": ["a242c3e069f7ab20"],
-  "cli/scripts/ci-turbo.test.ts": ["0ea51511baefa6d7", "b7c323c6eeb9a534"],
-  "cli/scripts/ci-turbo.ts": ["94ebe515aaaa767b"],
+  "cli/scripts/ci-skips.test.ts": ["1f9a0ba2ee3fcb3e", "7212c71ec00ba96d", "b8b9e31f1a5ee3f6", "d79821c858dad5d8"],
+  "cli/scripts/ci-skips.ts": ["089b5fccf2829436", "f1eea1352d74f50e"],
+  "cli/scripts/ci-tests.ts": ["2fb132208b9c7c8c", "85c143e7af4fe0e3", "c7e04be620c87b3d"],
+  "cli/scripts/ci-turbo.constants.ts": ["407f6ab778d4fe13", "a242c3e069f7ab20"],
+  "cli/scripts/ci-turbo.test.ts": ["0ea51511baefa6d7", "495aeb88795dd531", "b7c323c6eeb9a534"],
+  "cli/scripts/ci-turbo.ts": ["2b6cf92a9901ba10", "42c34546e3536fbe", "94ebe515aaaa767b"],
   "cli/scripts/ci-wait-branch.test.ts": ["cd470b1d013c2640", "f5c599f002ce680f"],
   "cli/scripts/ci-wait-poll.test.ts": ["01370045e28557c2", "d9d82c96b81056d9"],
   "cli/scripts/ci-wait-poll.ts": ["488e98ba85ad7e2f"],
@@ -2272,6 +2280,7 @@
     "6339b324cbf7c603",
     "917fb18a3dc1849b",
     "b8d414521906c8dd",
+    "ba40f475f89802f2",
     "dc31e80b58be106e"
   ],
   "cli/scripts/ci.test.ts": [
@@ -2280,7 +2289,8 @@
     "4a893aee907373f3",
     "5b81a2f1794a1f7e",
     "755584468196fc5d",
-    "88d81a7c28256e41"
+    "88d81a7c28256e41",
+    "d9659161b3890118"
   ],
   "cli/scripts/ci.ts": [
     "1d601e44dd81f823",
@@ -2290,7 +2300,8 @@
     "91de467b3dfc6943",
     "9bffd0e1817aacdc",
     "d79ab4ba150eddd4",
-    "df21e88d1b67cbea"
+    "df21e88d1b67cbea",
+    "ef48d710e3b7df80"
   ],
   "cli/scripts/clean-age.test.ts": ["01a40826445d0819", "d5035c11d22171bc"],
   "cli/scripts/clean-builds.test.ts": ["15908d574467ff49", "b4775e852e730877"],
@@ -2855,6 +2866,7 @@
     "c5afc00f099b6a57",
     "de18cbe5c7a3ae5d"
   ],
+  "cli/scripts/parse-shard.ts": ["295c9e66452f45f4"],
   "cli/scripts/persist-doc-checks.ts": ["446575c23a4b2812"],
   "cli/scripts/persist-doc.constants.ts": ["50bad192d99a8360"],
   "cli/scripts/persist-doc.test.ts": ["4fe8499fd72f7b1b", "baa0a0c0ab565c90"],
@@ -3197,7 +3209,8 @@
     "ac2d859aca6fcb51",
     "ea10ad0dfba620fd"
   ],
-  "cli/scripts/typecheck-gate.ts": ["e537160a334221d3"],
+  "cli/scripts/typecheck-gate.test.ts": ["2d5b95197b4e591e"],
+  "cli/scripts/typecheck-gate.ts": ["e537160a334221d3", "edf445737f94fb8f"],
   "cli/scripts/typecheck-step.test.ts": ["3bd85dd37891a7e8", "508b3072c8c57750", "d4651b697ad5c8bf"],
   "cli/scripts/typecheck-step.ts": ["bdc0d93809758107"],
   "cli/scripts/vscode-tasks-edges.test.ts": ["b5a7afd0e4ee92f6", "c0be666ce16e5e0b"],
