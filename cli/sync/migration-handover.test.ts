@@ -4,6 +4,7 @@ import { expect, it } from "vitest";
 import { applyMigration } from "./apply-migration.ts";
 import { planHandover } from "./migration-handover.ts";
 import { hashText } from "./stock-history.ts";
+import { expectMode } from "./fixtures/file-mode.ts";
 import { put, tempDir, useTempDirs } from "./fixtures/temp-dirs.ts";
 
 useTempDirs();
@@ -25,7 +26,6 @@ function rootWith(files: Record<string, string>): string {
 const OWN = mcp({ a: { command: "x" } });
 
 const read = (root: string, rel: string) => fs.readFileSync(path.join(root, rel), "utf8");
-const modeOf = (root: string, rel: string) => fs.statSync(path.join(root, rel)).mode & 0o777;
 
 it("moves each pathless root rule below the region of AGENTS.md, one step each, and leaves the rest", async () => {
   const root = rootWith({
@@ -87,7 +87,7 @@ it("writes over a read-only AGENTS.md and leaves it writable", async () => {
   fs.chmodSync(path.join(root, ".repo/rules/team.md"), 0o444);
   await applyMigration(root, planHandover(root, NONE));
   expect(read(root, "AGENTS.md")).toBe("Mine.\n\nAlways run the linter.\n");
-  expect(modeOf(root, "AGENTS.md")).toBe(0o644);
+  expectMode(root, "AGENTS.md", 0o644);
 });
 
 it("merges .repo/mcp.json into .mcp.json, keeping its own server on a name in both, and removes it", async () => {
@@ -162,7 +162,8 @@ it.each([
   expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
     "repo sync: made .mcp.json yours: writable, without the generated header",
   ]);
-  expect([read(root, ".mcp.json"), modeOf(root, ".mcp.json")]).toEqual([OWN, 0o644]);
+  expect(read(root, ".mcp.json")).toBe(OWN);
+  expectMode(root, ".mcp.json", 0o644);
   expect(planHandover(root, NONE)).toEqual([]);
 });
 
@@ -172,7 +173,8 @@ it("makes a read-only .mcp.json writable when servers merge into it, even with n
   expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
     "repo sync: moved .repo/mcp.json servers into .mcp.json",
   ]);
-  expect([read(root, ".mcp.json"), modeOf(root, ".mcp.json")]).toEqual([OWN, 0o644]);
+  expect(read(root, ".mcp.json")).toBe(OWN);
+  expectMode(root, ".mcp.json", 0o644);
 });
 
 it("plans one step for a bare header and none for a plain .mcp.json or none at all", () => {
