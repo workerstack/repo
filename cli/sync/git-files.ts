@@ -5,6 +5,7 @@ import path from "node:path";
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 
 import type { Host } from "../config.ts";
+import { GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
 import { HOST_TREES } from "./hosts.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -21,7 +22,6 @@ export type PostPass = (ctx: SyncContext, outputs: readonly Output[]) => { outpu
 type FileOutput = Extract<Output, { kind: "file" }>;
 type Result = { outputs: Output[]; errors: string[] };
 
-const GITIGNORE_PATH = ".gitignore";
 const GITATTRIBUTES_PATH = ".gitattributes";
 const SETTINGS_PATH = ".vscode/settings.json";
 /** Every path the git files pass plans, for a pass that runs before it and must name them. */
@@ -124,8 +124,9 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
  */
 function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   const existing = ctx.read(SETTINGS_PATH);
-  const fresh = (existing ?? "").trim() === "";
-  const text = fresh ? "{}" : (existing as string);
+  const current = existing ?? "";
+  const fresh = current.trim() === "";
+  const text = fresh ? "{}" : current;
   const kept = unusable(text);
   if (kept !== null) return { errors: [], outputs: [blockOutput(SETTINGS_PATH, text, [kept])] };
   const readonly = Object.fromEntries(
@@ -195,9 +196,9 @@ export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: re
   for (const rel of listed) {
     const name = path.posix.basename(rel);
     const nested =
-      name === ".gitignore" && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
-    if ((name === ".npmignore" || nested) && fs.existsSync(path.join(root, rel)))
-      lines.push(`${rel}: ${name === ".npmignore" ? NPM_IGNORE : NESTED_IGNORE}`);
+      name === GITIGNORE_PATH && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
+    if ((name === NPM_IGNORE_FILE || nested) && fs.existsSync(path.join(root, rel)))
+      lines.push(`${rel}: ${name === NPM_IGNORE_FILE ? NPM_IGNORE : NESTED_IGNORE}`);
   }
   return lines;
 }

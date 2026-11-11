@@ -1589,13 +1589,67 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/agents/frontmatter-problem.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/frontmatter.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/agents/frontmatter.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
     "statements": 100
   },
-  "cli/sync/agents/hooks.ts": {
+  "cli/sync/agents/hook-targets.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/hooks.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/list-docs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/load-sources.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/merge-docs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/passthrough-fields.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/read-doc.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/agents/render-hooks.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1607,7 +1661,7 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/sync/agents/sources.ts": {
+  "cli/sync/agents/sources.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1619,7 +1673,25 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/agents/tool-hooks.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/apply-migration.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/entries-of.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/git-files.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1637,6 +1709,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/json.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/knip-config.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -1644,6 +1722,12 @@
     "statements": 100
   },
   "cli/sync/knip-config.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/link-problems.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1763,6 +1847,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/package-name.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/release-workflow.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -1787,13 +1877,31 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/repo-dir.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/repo-dir.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
     "statements": 100
   },
+  "cli/sync/skill-problems.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/sync/standards.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/stock-history.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -1835,13 +1943,37 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/sync/validate.ts": {
+  "cli/sync/validate-formats.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/validate-links.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/validate-outputs.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/validate-schemas.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
     "statements": 100
   },
   "cli/sync/workspace.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/write-journal.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

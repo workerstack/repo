@@ -6,8 +6,8 @@ import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
 import { expandHookCommand } from "../scripts/hook-command.ts";
 import { applyUnion } from "../scripts/hooks-union.ts";
-import { renderHooks } from "./agents/hooks.ts";
-import type { Sources } from "./agents/sources.ts";
+import { renderHooks } from "./agents/render-hooks.ts";
+import type { Sources } from "./agents/sources.types.ts";
 import { renderSubagents } from "./agents/subagents.ts";
 import type { SyncContext } from "./outputs.ts";
 

@@ -3,12 +3,14 @@ import path from "node:path";
 
 import { z } from "zod";
 
-const globs = z.array(z.string());
-const versions = z.record(z.string(), z.string({ error: "must be a version string" }), {
-  error: "must be an object of package versions",
-});
+function versionsSchema() {
+  return z.record(z.string(), z.string({ error: "must be a version string" }), {
+    error: "must be an object of package versions",
+  });
+}
 
 function catalogFields() {
+  const versions = versionsSchema();
   return {
     catalog: versions.optional(),
     catalogs: z.record(z.string(), versions, { error: "must be an object of named catalogs" }).optional(),
@@ -45,32 +47,38 @@ const packageJsonSchema: z.ZodObject<{
   devDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
   peerDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
   optionalDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
-}> = z.object(
-  {
-    name: z.string({ error: "must be a string" }).optional(),
-    private: z.boolean({ error: "must be true or false" }).optional(),
-    // Kept as written: sync accepts any value and only `repo check` judges these.
-    version: z.unknown().optional(),
-    sideEffects: z.unknown().optional(),
-    packageManager: z.unknown().optional(),
-    // Kept for the lint config, which narrows them where it reads them.
-    bin: z.unknown().optional(),
-    exports: z.unknown().optional(),
-    // Kept as written; `repo check` narrows the root's scripts where it reads them.
-    scripts: z.unknown().optional(),
-    workspaces: z
-      .union([globs, z.object({ packages: globs.optional(), ...catalogFields() })], {
-        error: 'must be a list of globs or { "packages": [...] }',
-      })
-      .optional(),
-    ...catalogFields(),
-    dependencies: versions.optional(),
-    devDependencies: versions.optional(),
-    peerDependencies: versions.optional(),
-    optionalDependencies: versions.optional(),
-  },
-  { error: "must be a JSON object" },
-);
+}> = /* @__PURE__ */ buildPackageJsonSchema();
+
+function buildPackageJsonSchema() {
+  const globs = z.array(z.string());
+  const versions = versionsSchema();
+  return z.object(
+    {
+      name: z.string({ error: "must be a string" }).optional(),
+      private: z.boolean({ error: "must be true or false" }).optional(),
+      // Kept as written: sync accepts any value and only `repo check` judges these.
+      version: z.unknown().optional(),
+      sideEffects: z.unknown().optional(),
+      packageManager: z.unknown().optional(),
+      // Kept for the lint config, which narrows them where it reads them.
+      bin: z.unknown().optional(),
+      exports: z.unknown().optional(),
+      // Kept as written; `repo check` narrows the root's scripts where it reads them.
+      scripts: z.unknown().optional(),
+      workspaces: z
+        .union([globs, z.object({ packages: globs.optional(), ...catalogFields() })], {
+          error: 'must be a list of globs or { "packages": [...] }',
+        })
+        .optional(),
+      ...catalogFields(),
+      dependencies: versions.optional(),
+      devDependencies: versions.optional(),
+      peerDependencies: versions.optional(),
+      optionalDependencies: versions.optional(),
+    },
+    { error: "must be a JSON object" },
+  );
+}
 
 /** The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay unjudged `unknown`s; every other field is dropped at parse. */
 export type PackageJson = z.output<typeof packageJsonSchema>;
@@ -147,7 +155,10 @@ function parseManifest(rel: string, file: string): ManifestResult {
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
-    return { errors: [`${rel}: not valid JSON: ${(error as Error).message}`], ok: false };
+    return {
+      errors: [`${rel}: not valid JSON: ${(error /* JSON.parse and fs throw an Error */ as Error).message}`],
+      ok: false,
+    };
   }
   const parsed = packageJsonSchema.safeParse(raw);
   if (parsed.success) return { manifest: parsed.data, ok: true };

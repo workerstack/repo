@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadConfig } from "../cli/config.ts";
 import type { Output } from "../cli/sync/outputs.ts";
-import { PACKAGE_NAME } from "../cli/sync/stock.ts";
+import { PACKAGE_NAME } from "../cli/sync/package-name.constants.ts";
 import { renderTrees } from "../cli/sync/trees.ts";
 import { readWorkspace } from "../cli/sync/workspace.ts";
 import * as K from "./capture-tree-goldens.constants.ts";

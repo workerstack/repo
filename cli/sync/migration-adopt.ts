@@ -23,8 +23,8 @@ import { editedSkill } from "./migration-docs.ts";
 import { planUntrack } from "./migration-finish.ts";
 import type { MigrationState } from "./migration-state.ts";
 import type { Output } from "./outputs.ts";
+import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { HOOK_COMMANDS_KEY, hashText, hookCommands } from "./stock-history.ts";
-import { PACKAGE_NAME } from "./stock.ts";
 
 /** What adoption reads: the config, the outputs sync plans, the paths the last sync wrote and how git is asked. */
 type AdoptInput = {

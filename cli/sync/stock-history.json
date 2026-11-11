@@ -3139,6 +3139,7 @@
     "3fd1529e6af64609",
     "461fe14f20ac45bc",
     "88351a5e74236e4d",
+    "91a32297bf8c2102",
     "a58e6be9bc1fe189",
     "b8031502d9309b27",
     "f0ac886ffd9a9a85",
@@ -3561,7 +3562,12 @@
   ],
   "cli/scripts/orchestrate-parent-away.test.ts": ["3e0b414d3730a74f", "484e2692cc80ca46"],
   "cli/scripts/orchestrate-parent-closing.test.ts": ["270f045fbd3315cf", "5aebebcc9c930dc8"],
-  "cli/scripts/orchestrate-parent-config.test.ts": ["7e5e0a8cfbcb4591", "ae43216da668d4e1", "d0bea5cd5a2b0e74"],
+  "cli/scripts/orchestrate-parent-config.test.ts": [
+    "7e5e0a8cfbcb4591",
+    "ae43216da668d4e1",
+    "d0bea5cd5a2b0e74",
+    "ec7e3df750cc2caf"
+  ],
   "cli/scripts/orchestrate-parent-gate.test.ts": ["23fde34f3223f374", "3c530ea399a45ac6", "70065f19eee432ab"],
   "cli/scripts/orchestrate-parent-git-asked.test.ts": ["312d81d08e5f37b8", "539e634f8c8e0bf4"],
   "cli/scripts/orchestrate-parent-handoff.test.ts": ["bec128c2a6a463a0", "e4fa05ec46d9257a"],
@@ -4381,6 +4387,7 @@
     "5ec9f771966eb2b6",
     "7b468204e1ffda9d",
     "8816d7b0f28a1748",
+    "97b8970430339866",
     "acac21b89edafb2c",
     "d206b3f0ff29c7f7",
     "f2e528eba65b0e50"

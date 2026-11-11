@@ -7,22 +7,25 @@ import { repoBinLookup } from "../scripts/hook-command.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { GIT_FILE_PATHS, type PostPass } from "./git-files.ts";
 import { hasOwnedHeader } from "./header.ts";
+import { JSON_INDENT } from "./json.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 import { CARGO_PATH } from "./rust.constants.ts";
-import { EXECUTABLE_MODE, INDEX_FIELDS, WINDOWS_PLATFORM } from "./standards.constants.ts";
+import { EXECUTABLE_MODE, HOOKS_DIR, INDEX_FIELDS, LOCAL_SCOPE, WINDOWS_PLATFORM } from "./standards.constants.ts";
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
-/** Where the git hooks live; sync points `core.hooksPath` here. */
-const HOOKS_DIR = ".githooks";
 /** Each git hook and the repo command it runs, with the arguments git passes. */
 const GIT_HOOKS = {
   "commit-msg": 'commit-msg "$1"',
   "pre-commit": "turn --staged",
   "pre-push": "link --pre-push",
 } as const;
-const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
+/** The path of each git hook. */
+function hookPaths(): string[] {
+  return Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
+}
+const HOOK_PATHS = /* @__PURE__ */ hookPaths();
 
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
@@ -44,7 +47,7 @@ function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined)
     overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
     ignorePatterns: ["**/*.md", FIXTURES, ...outputs.sort()],
   };
-  return `${JSON.stringify(config, null, 2)}\n`;
+  return `${JSON.stringify(config, null, JSON_INDENT)}\n`;
 }
 
 /**
@@ -137,9 +140,12 @@ export function syncHooksPath(root: string, on: boolean, git: GitRun = runGit): 
   };
   const got = git(root, ["config", "--show-scope", "--get", "core.hooksPath"]);
   if (got.status !== 0) return on ? change(["core.hooksPath", HOOKS_DIR], `set core.hooksPath to ${HOOKS_DIR}`) : none;
-  const [scope, value] = got.stdout.trim().split("\t") as [string, string];
+  const [scope, value] = got.stdout.trim().split("\t") /* git prints a set key as scope, TAB, value */ as [
+    string,
+    string,
+  ];
   if (value !== HOOKS_DIR) return on ? { done: [], warnings: [foreignLine(scope, value)] } : none;
-  return on || scope !== "local" ? none : change(["--unset", "core.hooksPath"], "unset core.hooksPath");
+  return on || scope !== LOCAL_SCOPE ? none : change(["--unset", "core.hooksPath"], "unset core.hooksPath");
 }
 
 /** Whether `git ls-files -s` fields are `mode sha stage path`. */
@@ -189,6 +195,6 @@ export function markHooksExecutable(root: string, platform: string, git: GitRun 
 
 /** The line for a `core.hooksPath` that points elsewhere, with the command that unsets it at its scope. */
 function foreignLine(scope: string, value: string): string {
-  const flag = scope === "local" ? "" : `--${scope} `;
+  const flag = scope === LOCAL_SCOPE ? "" : `--${scope} `;
   return `core.hooksPath is ${value}, so repo's hooks never run; unset it (git config ${flag}--unset core.hooksPath) and sync again`;
 }

@@ -6,3 +6,8 @@ export const EXECUTABLE_MODE = "100755";
 
 /** The fields of a `git ls-files -s` line: mode, blob, stage and path. */
 export const INDEX_FIELDS = 4;
+
+/** The marker of a git config value set in the repo's own config. */
+export const LOCAL_SCOPE = "local";
+/** Where the git hooks live; sync points `core.hooksPath` here. */
+export const HOOKS_DIR = ".githooks";

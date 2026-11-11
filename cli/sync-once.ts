@@ -14,7 +14,7 @@ import type { Output } from "./sync/outputs.ts";
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readStockHistory } from "./sync/stock-history.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
-import { validateOutputs } from "./sync/validate.ts";
+import { validateOutputs } from "./sync/validate-outputs.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 import { writeOutputs } from "./write-outputs.ts";
 

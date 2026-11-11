@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 import { readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
 import { mergePackageJson } from "./init.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
 /** The postinstall a merge leaves when the repo's package.json held `existing`. */

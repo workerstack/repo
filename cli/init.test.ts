@@ -7,7 +7,7 @@ import { expect, it, vi } from "vitest";
 import { aliasOf } from "../dev/test-paths.ts";
 import { fakeExec, hostsList, readPkg, stubPkgRoot, tmp, useInitKit } from "./fixtures/init-kit.ts";
 import { init, parsePacksFlag, samePath } from "./init.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
 

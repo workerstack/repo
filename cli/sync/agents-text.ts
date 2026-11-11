@@ -19,15 +19,14 @@ export function extractUserMarkdown(text: string): string {
 /** `##` blocks in `existing` whose titles are not in `incoming`. */
 export function extraH2Sections(existing: string, incoming: string): string {
   // The pattern has one group and it always takes part in a match.
-  const incomingTitles = new Set([...incoming.matchAll(/^## (.+)$/gm)].map((m) => m[1]!.trim()));
+  const incomingTitles = new Set([...incoming.matchAll(/^## (.+)$/gm)].map((m) => String(m[1]).trim()));
   const text = existing.replaceAll("\r\n", "\n");
   const matches = [...text.matchAll(/^## /gm)];
   if (!matches.length) return "";
   const chunks: string[] = [];
-  for (let i = 0; i < matches.length; i++) {
-    // matchAll results always carry an index, and i is within matches.
-    const start = matches[i]!.index;
-    const end = i + 1 < matches.length ? matches[i + 1]!.index : text.length;
+  for (const [i, match] of matches.entries()) {
+    const start = match.index;
+    const end = matches[i + 1]?.index ?? text.length;
     const block = text.slice(start, end).replace(/(?:\n)+$/, "");
     const title = block.match(/^## (.+)$/m)?.[1]?.trim();
     if (title && !incomingTitles.has(title)) chunks.push(block);

@@ -13,7 +13,7 @@ import { isPackageJson, readJsonFile, type PackageJson } from "./package-json.ts
 import { placeDevDependency } from "./place-dev-dependency.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { execFileSync } from "./spawn.ts";
-import { PACKAGE_NAME } from "./sync/stock.ts";
+import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 /** This package's root, which init reads its version from. */
 function builtInRoot(): string {

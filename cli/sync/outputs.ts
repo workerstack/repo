@@ -79,29 +79,10 @@ export const bunfig: Generator = (ctx) => {
 export const index: Generator = (ctx) => {
   if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
 
-  const errors: string[] = [];
+  const packageIndexes = packageIndexesOf(ctx);
+  const { errors } = packageIndexes;
   const sections: Region[] = [];
-  const packageIndexes: Output[] = [];
-  const { packages } = ctx.workspace;
-  if (packages.length > 0) {
-    const entries: string[] = [];
-    for (const { dir, manifest } of packages) {
-      const rel = `${dir}/${INDEX_PATH}`;
-      const text = ctx.read(rel);
-      if (text === null) {
-        errors.push(`${dir} has no ${INDEX_PATH}; every workspace package needs one`);
-        continue;
-      }
-      const title = lines(text)
-        .map((line) => line.trim())
-        .find((line) => line !== "");
-      const description = title === undefined ? "" : `: ${title.replace(/^# /, "")}`;
-      entries.push(`- [${manifest.name || dir}](../${rel})${description}`);
-      const deps = depsLines(dir, manifest, packages).join("\n");
-      packageIndexes.push(sharedFile(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
-    }
-    sections.push(section("packages", entries.join("\n")));
-  }
+  if (ctx.workspace.packages.length > 0) sections.push(section("packages", packageIndexes.entries.join("\n")));
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
   sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
   if (isSelfName(ctx.workspace.manifest.name)) {
@@ -111,8 +92,36 @@ export const index: Generator = (ctx) => {
 
   if (errors.length > 0) return { errors, outputs: [] };
   const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
-  return { errors: [], outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes] };
+  return { errors: [], outputs: [sharedFile(INDEX_PATH, text), ...packageIndexes.indexes] };
 };
+
+function byKey(a: string, b: string): number {
+  return Number(a > b) - Number(a < b);
+}
+
+/** The repo:packages lines, each package's INDEX with its repo:deps, and a line per package without an INDEX. */
+type PackageIndexes = { entries: string[]; errors: string[]; indexes: Output[] };
+
+function packageIndexesOf(ctx: SyncContext): PackageIndexes {
+  const out: PackageIndexes = { entries: [], errors: [], indexes: [] };
+  const { packages } = ctx.workspace;
+  for (const { dir, manifest } of packages) {
+    const rel = `${dir}/${INDEX_PATH}`;
+    const text = ctx.read(rel);
+    if (text === null) {
+      out.errors.push(`${dir} has no ${INDEX_PATH}; every workspace package needs one`);
+      continue;
+    }
+    const title = lines(text)
+      .map((line) => line.trim())
+      .find((line) => line !== "");
+    const description = title === undefined ? "" : `: ${title.replace(/^# /, "")}`;
+    out.entries.push(`- [${manifest.name || dir}](../${rel})${description}`);
+    const deps = depsLines(dir, manifest, packages).join("\n");
+    out.indexes.push(sharedFile(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
+  }
+  return out;
+}
 
 /** An INDEX region, appended at the bottom when the file has no marker for it. */
 function section(name: string, body: string): Region {
@@ -137,10 +146,10 @@ function depsLines(dir: string, manifest: PackageJson, packages: readonly Worksp
   );
   const link = (name: string, target: string) =>
     `- [${name}](${path.posix.relative(`${dir}/references`, `${target}/${INDEX_PATH}`)})`;
-  const workspace = [...names].filter((name) => inWorkspace.has(name)).sort();
+  const workspace = [...inWorkspace].filter(([name]) => names.has(name)).toSorted(([a], [b]) => byKey(a, b));
   const stack = [...names].filter((name) => !inWorkspace.has(name) && name.startsWith(STACK_SCOPE)).sort();
   return [
-    ...workspace.map((name) => link(name, inWorkspace.get(name) as string)),
+    ...workspace.map(([name, target]) => link(name, target)),
     ...stack.map((name) => link(name, `${DEPENDENCY_DIR}${name}`)),
   ];
 }

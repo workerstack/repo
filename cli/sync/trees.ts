@@ -3,8 +3,9 @@ import path from "node:path";
 
 import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { agentsFile, isAgentsFile } from "./agents-file.ts";
+import { loadSources } from "./agents/load-sources.ts";
 import { renderRules, type RuleFile } from "./agents/rules.ts";
-import { loadSources, type Sources } from "./agents/sources.ts";
+import type { Sources } from "./agents/sources.types.ts";
 import { listedFiles } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import type { Output, SyncContext } from "./outputs.ts";
