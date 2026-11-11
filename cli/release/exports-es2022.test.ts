@@ -6,6 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { SLOW } from "../scripts/fixtures/turn-repo.ts";
 import { exportSubpaths } from "./exports.ts";
 
 const ROOT = path.join(import.meta.dirname, "..", "..");
@@ -43,14 +44,14 @@ function exportedSources(): string[] {
 }
 
 describe("exported source under the consumer's ES2022 lib", () => {
-  it("type-checks every file an export reaches", () => {
+  it("type-checks every file an export reaches", { timeout: SLOW }, () => {
     const sources = exportedSources();
 
     expect(sources).toContain("./cli/lint/index.ts");
     expect(consumerErrors(sources, ROOT)).toStrictEqual([]);
   });
 
-  it("refuses an ES2023 array method", () => {
+  it("refuses an ES2023 array method", { timeout: SLOW }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "es2022-"));
     try {
       fs.writeFileSync(path.join(dir, "late.ts"), "export const last = ([1, 2] as const).toReversed();\n");

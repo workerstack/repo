@@ -38,8 +38,9 @@ it("repo lint fails a Tailwind kit on its four bad classes, with no line for cle
   const env = childEnv({ OXLINT_TAILWINDCSS_CACHE_DIR: tempDir("workerstack-tailwind-cache-") });
   const bin = path.join(PKG_ROOT, "bin/repo.ts");
   const lint = spawnSync(process.execPath, [bin, "lint"], { cwd: root, encoding: "utf8", env });
-  expect(lint.status).toBe(1);
+  const output = `${lint.stdout}${lint.stderr}`;
+  expect(lint.status, output).toBe(1);
   // Only the class lines: the temp kit has no tsconfig, so the type-aware rules say other things of its files.
   const lines = lint.stdout.split("\n").filter((line) => line.includes(" tailwindcss("));
-  expect(lines.toSorted()).toStrictEqual(CLASS_LINES);
+  expect(lines.toSorted(), output).toStrictEqual(CLASS_LINES);
 });
