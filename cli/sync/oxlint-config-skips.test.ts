@@ -11,7 +11,7 @@ const REASON = "the parsed config cache lives for the process";
 const APP: Workspace = { manifest: { bin: "./bin/app.ts", name: "app" }, packages: [], root: "/repo" };
 
 function configOf(skips: readonly LintSkip[] = []): Config {
-  const built = oxlintConfig(APP, skips);
+  const built = oxlintConfig(APP, { skip: skips });
   if (!built.ok) throw new Error(built.errors.join("\n"));
   return JSON.parse(built.value) /* the config sync writes */ as Config;
 }

@@ -1,10 +1,11 @@
 import path from "node:path";
 
-import { CONFIG_FILE, type LintSkip } from "../config.ts";
+import { CONFIG_FILE, type LintSkip, type ResolvedLint } from "../config.ts";
 import { binsOf, isRecord } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
 import { OFF_RULES, RULES, type RuleSetting, TEST_RULES } from "./oxlint-rules.ts";
+import { boundariesSetting, tagErrors } from "./oxlint-tags.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
@@ -54,7 +55,7 @@ function packageOverrides(workspace: Workspace): { files: string[]; rules: Recor
   return overrides.filter((override) => override.files.length > 0);
 }
 
-/** The generated config's text, or why a skip could not be turned into an override. */
+/** The generated config's text, or why a skip or the package tags could not be written. */
 export type Built = { ok: true; value: string } | { ok: false; errors: string[] };
 
 const isOn = (setting: RuleSetting) => (Array.isArray(setting) ? setting[0] : setting) === "error";
@@ -100,11 +101,15 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
 
 /**
  * The oxlint config: the repo plugin and the named rules, type-aware, with eslint-disable comments ignored. Each
- * `lint.skip` entry is an override written last, so it turns off only its rules for only its files. `rust` is whether
- * the root has a Cargo.toml, which is what lets a skip name a Rust rule.
+ * `lint.skip` entry is an override written last, so it turns off only its rules for only its files, and
+ * `lint.boundaries`, checked against the workspace, is the options of `repo/boundaries`. `rust` is whether the root has
+ * a Cargo.toml, which is what lets a skip name a Rust rule.
  */
-export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], rust = false): Built {
-  const errors = unknownRules(skips, rust);
+export function oxlintConfig(workspace: Workspace, lint: ResolvedLint, rust = false): Built {
+  const errors = [
+    ...unknownRules(lint.skip, rust),
+    ...(lint.boundaries === undefined ? [] : tagErrors(workspace, lint.boundaries)),
+  ];
   if (errors.length > 0) return { errors, ok: false };
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
@@ -115,7 +120,11 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], r
     ),
     options: { respectEslintDisableDirectives: false, typeAware: true },
     ignorePatterns: [FIXTURES, REJECT_FILES],
-    rules: { ...RULES, ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])) },
+    rules: {
+      ...RULES,
+      ...boundariesSetting(lint.boundaries),
+      ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])),
+    },
     overrides: [
       { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
       // vitest and workerstack configs must default-export, and call their define helper at import.
@@ -123,7 +132,7 @@ export function oxlintConfig(workspace: Workspace, skips: readonly LintSkip[], r
       // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.
       { files: [WORKERSTACK_CONFIG], rules: { "eslint/sort-keys": "off" } },
       ...packageOverrides(workspace),
-      ...skipOverrides(skips),
+      ...skipOverrides(lint.skip),
     ],
   };
   return { ok: true, value: `${JSON.stringify(config, null, 2)}\n` };

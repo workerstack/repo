@@ -10,7 +10,7 @@ const workspace = (manifest: PackageJson, packages: Workspace["packages"] = []):
   root: "/repo",
 });
 const configOf = (ws: Workspace, skips: readonly LintSkip[] = []): unknown => {
-  const built = oxlintConfig(ws, skips);
+  const built = oxlintConfig(ws, { skip: skips });
   if (!built.ok) throw new Error(built.errors.join("\n"));
   return JSON.parse(built.value);
 };

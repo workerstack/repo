@@ -1,4 +1,4 @@
-import type { Host, LintSkip, Pack, SkillPack } from "./config.ts";
+import type { Host, LintBoundaries, LintSkip, Pack, SkillPack } from "./config.ts";
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
 import type { TurboTask } from "./turbo-config.ts";
 
@@ -60,6 +60,8 @@ export type WorkerstackConfig = {
     | {
         /** The exceptions: each turns named rules off for named files, with a reason. */
         skip?: readonly LintSkip[] | undefined;
+        /** Each package's one tag and the tags each tag may import; `repo/boundaries` fails an import outside them. */
+        boundaries?: LintBoundaries | undefined;
       }
     | undefined;
   /** Sanctioned knip ignores. */

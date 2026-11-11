@@ -82,7 +82,7 @@ export const standards: PostPass = (ctx, outputs) => {
     tracked: false,
   });
   const hooks = gitHooks(ctx);
-  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint.skip, ctx.read(CARGO_PATH) !== null);
+  const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint, ctx.read(CARGO_PATH) !== null);
   const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
   if (!oxlint.ok || errors.length > 0) return { errors, outputs: [] };
   return {

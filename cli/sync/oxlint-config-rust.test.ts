@@ -11,7 +11,11 @@ const refused = (index: number, rule: string) =>
   `workerstack.config.ts: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`;
 
 it("oxlintConfig writes no override for a Rust skip, even beside an oxlint rule", () => {
-  const built = oxlintConfig(APP, [skip(RUST_NAMES), skip(["clippy/pedantic", "repo/no-module-state"])], true);
+  const built = oxlintConfig(
+    APP,
+    { skip: [skip(RUST_NAMES), skip(["clippy/pedantic", "repo/no-module-state"])] },
+    true,
+  );
   if (!built.ok) throw new Error(built.errors.join("\n"));
   const config = JSON.parse(built.value) /* the config sync writes */ as { overrides: { files: string[] }[] };
   const overrides = config.overrides;
@@ -22,7 +26,9 @@ it("oxlintConfig writes no override for a Rust skip, even beside an oxlint rule"
 });
 
 it("oxlintConfig refuses the Rust names without a Cargo.toml, as it refuses any unknown name", () => {
-  expect(oxlintConfig(APP, [skip(["clippy/unwrap_used"]), skip(["repo/rust-block-comment", "foo/x"])])).toStrictEqual({
+  expect(
+    oxlintConfig(APP, { skip: [skip(["clippy/unwrap_used"]), skip(["repo/rust-block-comment", "foo/x"])] }),
+  ).toStrictEqual({
     errors: [refused(0, "clippy/unwrap_used"), refused(1, "repo/rust-block-comment"), refused(1, "foo/x")],
     ok: false,
   });
@@ -30,7 +36,7 @@ it("oxlintConfig refuses the Rust names without a Cargo.toml, as it refuses any 
 
 it("oxlintConfig with a Cargo.toml still refuses a name that is neither a lint in snake_case nor a Rust rule", () => {
   const skips = [skip(["foo/x", "clippy/Unwrap", "clippy/unwrap-used", "repo/rust-nothing", "rust/"])];
-  const built = oxlintConfig(APP, skips, true);
+  const built = oxlintConfig(APP, { skip: skips }, true);
   expect(built.ok ? [] : built.errors).toStrictEqual(
     ["foo/x", "clippy/Unwrap", "clippy/unwrap-used", "repo/rust-nothing", "rust/"].map((rule) => refused(0, rule)),
   );

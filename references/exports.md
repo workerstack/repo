@@ -11,7 +11,13 @@ import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
   packs: ["agents", "standards", "docs", "release"],
-  lint: { skip: [{ files: ["src/legacy/**"], rules: ["max-lines"], reason: "split in #12" }] },
+  lint: {
+    skip: [{ files: ["src/legacy/**"], rules: ["max-lines"], reason: "split in #12" }],
+    boundaries: {
+      tags: { "@app/web": "app", "@app/ui": "ui", "@app/lib": "lib" },
+      allow: { app: ["ui", "lib"], ui: ["lib"], lib: [] },
+    },
+  },
 });
 ```
 

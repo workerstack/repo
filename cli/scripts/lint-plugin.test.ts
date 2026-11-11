@@ -203,7 +203,7 @@ it("loads the plugin when NODE_PATH is already set, the inherited dirs kept afte
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
   const root = consumer({ "src/clean.ts": PLANTED["src/clean.ts"] });
   const skip = { files: ["src/clean.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
-  const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, [skip]);
+  const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, { skip: [skip] });
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
   const run = captureTool("oxlint", ["src/clean.ts"], root);
