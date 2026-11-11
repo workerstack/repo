@@ -15,7 +15,8 @@ import {
   which,
   cleanupTmp,
 } from "./fixtures/listen-env.ts";
-import { NEED_FFMPEG, sessionPath } from "./listen.ts";
+import { sessionPath } from "./listen-session.ts";
+import { NEED_FFMPEG } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);
 

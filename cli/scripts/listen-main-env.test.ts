@@ -5,8 +5,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readEnv } from "../env.ts";
 import { FFMPEG, failFetch, plantSpeakJson, quiet, run, tmp, which, cleanupTmp } from "./fixtures/listen-env.ts";
-import { NEED_STT, USAGE, main } from "./listen.ts";
-import type { SpawnSyncResult } from "./listen.ts";
+import { NEED_STT, USAGE } from "./listen.constants.ts";
+import { main } from "./listen.ts";
+import type { SpawnSyncResult } from "./listen.types.ts";
 
 afterEach(cleanupTmp);
 

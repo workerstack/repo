@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ffmpeg, run, textFetch, tmp, type Seen, wavThen, which, cleanupTmp } from "./fixtures/listen-env.ts";
-import { NEED_FFMPEG, NEED_STT } from "./listen.ts";
+import { NEED_FFMPEG, NEED_STT } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);
 
@@ -39,9 +39,12 @@ describe("rec", () => {
   });
 });
 
-describe("rec timeout", () => {
-  const fakeTimers = () => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+/** Fakes only the timers the rec timeout uses. */
+function fakeTimers() {
+  return vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+}
 
+describe("rec timeout", () => {
   it("kills a hung ffmpeg and reports what it logged", async () => {
     fakeTimers();
     const killed: Array<[number, string | number]> = [];

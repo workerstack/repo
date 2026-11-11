@@ -1,11 +1,12 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
 import { bytesRes, cfgOf, failRes, fetchReturning, okRes, plantDir } from "./fixtures/speak-kit.ts";
-import { playPath, say } from "./speak.ts";
-import type { FetchFn, FetchResult } from "./speak.ts";
+import { playPath, say } from "./speak-say.ts";
+import type { FetchFn, FetchResult } from "./speak.types.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -119,4 +120,44 @@ it("play: uses this platform's player by default", () => {
   const calls: string[] = [];
   playPath("/a.mp3", (cmd) => void calls.push(cmd));
   expect(calls).toStrictEqual([process.platform === "darwin" ? "afplay" : "ffplay"]);
+});
+
+it("say: writes elevenlabs bytes to --out", async () => {
+  const cwd = plantDir("speak-say-");
+  const dest = path.join(cwd, "out.mp3");
+  const buf = Buffer.from("ID3fake");
+  const fetchFn: FetchFn = (url, init) => {
+    expect(String(url)).toMatch(/text-to-speech\/JBFqnCBsd6RMkjVDRZzb/);
+    expect(init.method).toBe("POST");
+    expect(init.headers["xi-api-key"]).toBe("sk_el");
+    return Promise.resolve(bytesRes(buf));
+  };
+  expect(await say({ cfg: eleven(), cwd, fetchFn, out: dest, text: "hello" })).toBe(dest);
+  expect(fs.readFileSync(dest)).toStrictEqual(buf);
+});
+
+it("say: saves under the repo root's .tmp/repo/speak from packages/a", async () => {
+  const r = fs.realpathSync(plantDir("speak-sub-"));
+  spawnSync("git", ["init", "-q"], { cwd: r });
+  const a = path.join(r, "packages", "a");
+  fs.mkdirSync(a, { recursive: true });
+  const dest = await say({ cfg: openai(), cwd: a, fetchFn: fetchReturning(bytesRes(Buffer.from("oa"))), text: "hi" });
+  expect(path.dirname(dest)).toBe(path.join(r, ".tmp/repo/speak"));
+  expect(fs.readFileSync(dest, "utf8")).toBe("oa");
+  expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+});
+
+const openaiSpeechFetch: FetchFn = (url, init) => {
+  expect(String(url)).toMatch(/audio\/speech/);
+  expect(init.headers.Authorization).toBe("Bearer sk_oa");
+  const body: unknown = JSON.parse(init.body || "{}");
+  expect(body).toMatchObject({ input: "hi", voice: "coral" });
+  return Promise.resolve(bytesRes(Buffer.from("oa")));
+};
+
+it("say: posts openai speech", async () => {
+  const cwd = plantDir("speak-oa-");
+  const dest = path.join(cwd, "oa.mp3");
+  await say({ cfg: openai(), cwd, fetchFn: openaiSpeechFetch, out: dest, text: "hi" });
+  expect(fs.readFileSync(dest, "utf8")).toBe("oa");
 });

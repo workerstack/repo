@@ -4,8 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./fixtures/listen-env.ts";
-import { NEED_FFMPEG } from "./listen.ts";
-import type { ChildLike } from "./listen.ts";
+import { NEED_FFMPEG } from "./listen.constants.ts";
+import type { ChildLike } from "./listen.types.ts";
 
 afterEach(cleanupTmp);
 
@@ -28,6 +28,27 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
   } finally {
     for (const name of ["SIGINT", "SIGTERM"] as const) added(name).forEach((l) => process.off(name, l));
   }
+}
+
+/** Sends SIGINT then SIGTERM, then lets ffmpeg exit 0. */
+const bothSignalsThenExit: Drive = ({ on, signal }) => {
+  signal("SIGINT");
+  signal("SIGTERM");
+  on.exit?.(0);
+};
+
+/** Sends SIGINT, then lets ffmpeg exit 0. */
+const sigintThenExit: Drive = ({ on, signal }) => {
+  signal("SIGINT");
+  on.exit?.(0);
+};
+
+/** Fails the ffmpeg spawn. */
+const spawnFails: Drive = ({ on }) => on.error?.(new Error("spawn ffmpeg ENOENT"));
+
+/** A stdin write or end on a closed pipe. */
+function brokenPipe(): never {
+  throw new Error("EPIPE");
 }
 
 describe("_record arguments", () => {
@@ -66,12 +87,7 @@ describe("_record signals", () => {
     const writes: string[] = [];
     let ended = 0;
     const stdin = { end: () => void (ended += 1), write: (c: string) => writes.push(c) };
-    const drive: Drive = ({ on, signal }) => {
-      signal("SIGINT");
-      signal("SIGTERM");
-      on.exit?.(0);
-    };
-    const r = await record({ argv, drive, stdin });
+    const r = await record({ argv, drive: bothSignalsThenExit, stdin });
     expect(r.code).toBe(0);
     expect(writes).toStrictEqual(["q\n", "q\n"]);
     expect(ended).toBe(2);
@@ -93,14 +109,8 @@ describe("_record broken stdin", () => {
   const argv = ["_record", "--out", "/tmp/q.wav"];
 
   it("a broken stdin does not stop the shutdown", async () => {
-    const broken = () => {
-      throw new Error("EPIPE");
-    };
-    const drive: Drive = ({ on, signal }) => {
-      signal("SIGINT");
-      on.exit?.(0);
-    };
-    expect((await record({ argv, drive, stdin: { end: broken, write: broken } })).code).toBe(0);
+    const stdin = { end: brokenPipe, write: brokenPipe };
+    expect((await record({ argv, drive: sigintThenExit, stdin })).code).toBe(0);
   });
 });
 
@@ -119,8 +129,7 @@ describe("_record exit", () => {
   });
 
   it("a spawn error fails the recorder with its message", async () => {
-    const drive: Drive = ({ on }) => on.error?.(new Error("spawn ffmpeg ENOENT"));
-    const r = await record({ argv, drive });
+    const r = await record({ argv, drive: spawnFails });
     expect(r.code).toBe(1);
     expect(r.errs).toStrictEqual(["spawn ffmpeg ENOENT"]);
   });
