@@ -1,3 +1,4 @@
+import type { LintTailwind } from "./config-resolved.types.ts";
 import type { Host, LintBoundaries, LintSkip, Pack, SkillPack } from "./config.ts";
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
 import type { TurboTask } from "./turbo-config.ts";
@@ -62,6 +63,8 @@ export type WorkerstackConfig = {
         skip?: readonly LintSkip[] | undefined;
         /** Each package's one tag and the tags each tag may import; `repo/boundaries` fails an import outside them. */
         boundaries?: LintBoundaries | undefined;
+        /** The sheet importing tailwindcss that oxlint checks classes against, when two or more import it. */
+        tailwind?: LintTailwind | undefined;
       }
     | undefined;
   /** Sanctioned knip ignores. */

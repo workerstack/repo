@@ -79,6 +79,16 @@ export const SHEETS: Record<string, string> = {
   "src/unknown.css": UNKNOWN_CSS,
 };
 
+/** A Tailwind v4 entry with the import alone, so the theme is the tailwindcss package the kit resolves. */
+export const TAILWIND_CSS = '@import "tailwindcss";\n';
+
+/** A duplicate, a conflict, a hard-coded colour and an unknown class, on one attribute whose value starts at 2:25. */
+export const BAD_CLASSES_TSX =
+  'export function App() {\n  return <div className="flex flex p-2 p-4 text-[#ff0000] bg-foo-bar">x</div>;\n}\n';
+
+/** Theme classes only, none repeated or in conflict. */
+export const CLEAN_CLASSES_TSX = 'export function Clean() {\n  return <p className="flex p-4 text-red-500">ok</p>;\n}\n';
+
 /** A committed, synced standards checkout holding `sheets`. */
 export const cssKit = (sheets: Record<string, string> = SHEETS): string => consumer(sheets);
 

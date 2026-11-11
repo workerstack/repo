@@ -13,9 +13,11 @@ function packageNames(workspace: Workspace): Set<string> {
 
 /**
  * One line per tag that names no workspace package, per allowed tag no package carries, per carried tag with no
- * `allow` entry, and per `allow` key no package carries: each would check nothing, or leave a package unjudged.
+ * `allow` entry, and per `allow` key no package carries: each would check nothing, or leave a package unjudged. No
+ * `lint.boundaries`, no line.
  */
-export function tagErrors(workspace: Workspace, boundaries: LintBoundaries): string[] {
+export function tagErrors(workspace: Workspace, boundaries: LintBoundaries | undefined): string[] {
+  if (boundaries === undefined) return [];
   const names = packageNames(workspace);
   const carried = new Set(Object.values(boundaries.tags));
   const gone = Object.keys(boundaries.tags).filter((name) => !names.has(name));

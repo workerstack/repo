@@ -26,11 +26,11 @@ const HOOK_PATHS = Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
 
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
- * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes), JSONC without trailing
- * commas, and no markdown, fixture or sync output touched; each output path is anchored at the root, so it matches that
- * file alone.
+ * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes) against the entry sheet when
+ * there is one, JSONC without trailing commas, and no markdown, fixture or sync output touched; each output path is
+ * anchored at the root, so it matches that file alone.
  */
-function oxfmtConfig(planned: readonly string[]): string {
+function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined): string {
   const outputs = [
     ...new Set([...planned, ...GIT_FILE_PATHS, ...HOOK_PATHS, OXLINT_CONFIG_PATH, OXFMT_CONFIG_PATH, KNIP_CONFIG_PATH]),
   ].map((rel) => `/${rel}`);
@@ -38,7 +38,8 @@ function oxfmtConfig(planned: readonly string[]): string {
     printWidth: PRINT_WIDTH,
     sortPackageJson: true,
     sortImports: {},
-    sortTailwindcss: {},
+    // The class order follows the theme, so the sort loads the sheet oxlint checks classes against.
+    sortTailwindcss: stylesheet === undefined ? {} : { stylesheet },
     // Hand-written JSONC (hooks, MCP policy) is read by parsers that refuse a trailing comma.
     overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
     ignorePatterns: ["**/*.md", FIXTURES, ...outputs.sort()],
@@ -90,7 +91,13 @@ export const standards: PostPass = (ctx, outputs) => {
     outputs: [
       file(OXLINT_CONFIG_PATH, oxlint.value),
       file(KNIP_CONFIG_PATH, knipConfig(ctx.workspace, ctx.config.knip.ignore)),
-      file(OXFMT_CONFIG_PATH, oxfmtConfig(outputs.map((output) => output.path))),
+      file(
+        OXFMT_CONFIG_PATH,
+        oxfmtConfig(
+          outputs.map((output) => output.path),
+          ctx.config.lint.tailwind?.entryPoint,
+        ),
+      ),
       ...hooks.outputs,
     ],
   };

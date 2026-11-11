@@ -33,12 +33,19 @@ export type LintBoundaries = {
   /** Tag to the other tags its packages may import, like `{ app: ["ui"], ui: [] }`; a tag may import its own. */
   readonly allow: Readonly<Record<string, readonly string[]>>;
 };
+/** `lint.tailwind`: the Tailwind v4 entry sheet oxlint checks class names against. */
+export type LintTailwind = {
+  /** The repo-relative `.css` file that imports tailwindcss, like `apps/web/src/app.css`. */
+  readonly entryPoint: string;
+};
 /** What the generated oxlint config and `repo check` read from `lint`. */
 export type ResolvedLint = {
   /** The reasoned exceptions to lint rules; empty when the config lists none. */
   readonly skip: readonly LintSkip[];
   /** The package tags `repo/boundaries` judges imports by; absent when the config sets none. */
   readonly boundaries?: LintBoundaries | undefined;
+  /** The entry sheet the tailwindcss class rules load the theme from; absent when there is none. */
+  readonly tailwind?: LintTailwind | undefined;
 };
 /** A validated workerstack.config.ts with every omitted value filled in, as the `repo` commands read it. */
 export type ResolvedConfig = {

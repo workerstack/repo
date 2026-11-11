@@ -438,6 +438,27 @@ it.each([
   expect(await loadConfig(repo(boundariesConfig(boundaries)))).toStrictEqual(refusal(error));
 });
 
+/** A standards config whose `lint.tailwind.entryPoint` is `entryPoint`. */
+function tailwindConfig(entryPoint: unknown): string {
+  return `export default { packs: ["standards"], lint: { tailwind: { entryPoint: ${JSON.stringify(entryPoint)} } } }\n`;
+}
+
+it("lint.tailwind: Usage's entryPoint resolves as written", async () => {
+  expect(await loadConfig(repo(tailwindConfig("apps/web/src/app.css")))).toMatchObject({
+    config: { lint: { skip: [], tailwind: { entryPoint: "apps/web/src/app.css" } } },
+    ok: true,
+  });
+});
+
+it.each(["/srv/app.css", "../app.css", "src/../../app.css", "src/app.scss", "", 7])(
+  "lint.tailwind.entryPoint: refuses %j",
+  async (entryPoint) => {
+    expect(await loadConfig(repo(tailwindConfig(entryPoint)))).toStrictEqual(
+      refusal("lint.tailwind.entryPoint: must be a repo-relative path to a .css file"),
+    );
+  },
+);
+
 describe("agents", () => {
   const agentsOf = async (source: string) => {
     const result = await loadConfig(repo(source));
