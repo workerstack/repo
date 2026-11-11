@@ -1156,15 +1156,16 @@ describe("agent models row", () => {
   });
 
   it("runs the lists in parallel: two slow lists both finish inside the one cap", async () => {
-    const delay = 400;
+    const delay = 1500;
     const slow = (stdout: string): Reply => ({ delay, stdout });
     const started = Date.now();
     const r = await rowOf(ALL_OFFERED, {
-      capMs: 1000,
+      capMs: 4000,
       replies: { "cursor-agent": slow(LISTS.cursor), grok: slow(LISTS.grok) },
     });
     expect(r.text).toMatch(/^agent models\s+ok\s*$/);
-    // Run one after the other, the two lists take at least 2 * delay; spawn overhead stays under the gap.
+    // In parallel the two lists take about delay plus spawn overhead; one after the other they take at least
+    // 2 * delay. That leaves a delay-sized (1.5 s) margin for spawn overhead on a slow runner.
     expect(Date.now() - started).toBeLessThan(2 * delay);
   });
 
