@@ -38,11 +38,16 @@ it("repo lint fails a Tailwind kit on its four bad classes, with no line for cle
   expect(tailwindFrom(path.join(root, "src"))).toBe(tailwindFrom(PKG_ROOT));
   // oxlint prints to the bin's own stdout, so the command runs as a user runs it; the plugin's theme cache goes to a
   // temp dir the test removes, not the shared temp root. oxlint picks its own format from the environment (GitHub
-  // annotations in Actions, a compact one under an AI agent), so the test names one.
-  const env = childEnv({ OXLINT_TAILWINDCSS_CACHE_DIR: tempDir("workerstack-tailwind-cache-") });
+  // annotations in Actions, a compact one under an AI agent), so the test names one. DEBUG makes oxlint-tailwindcss
+  // log the stylesheet it loaded and the files mapped to it to stderr, which a failure shows with the kit's config.
+  const env = childEnv({
+    DEBUG: "oxlint-tailwindcss",
+    OXLINT_TAILWINDCSS_CACHE_DIR: tempDir("workerstack-tailwind-cache-"),
+  });
   const bin = path.join(PKG_ROOT, "bin/repo.ts");
   const lint = spawnSync(process.execPath, [bin, "lint", "-f", "unix"], { cwd: root, encoding: "utf8", env });
-  const output = `${lint.stdout}${lint.stderr}`;
+  const config = fs.readFileSync(path.join(root, ".oxlintrc.json"), "utf8");
+  const output = [lint.stdout, lint.stderr, config].join("\n");
   expect(lint.status, output).toBe(1);
   // Only the class lines: the temp kit has no tsconfig, so the type-aware rules say other things of its files.
   const lines = lint.stdout.split("\n").filter((line) => line.includes("/tailwindcss("));
