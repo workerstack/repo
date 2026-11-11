@@ -4,7 +4,8 @@ import path from "node:path";
 
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
-import { holdingCheckout, LESSONS_DIR, matchLessons, persistLesson } from "./lessons.ts";
+import { holdingCheckout, matchLessons, persistLesson } from "./lessons-ops.ts";
+import { LESSONS_DIR } from "./lessons.constants.ts";
 import { denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
 import type { HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";

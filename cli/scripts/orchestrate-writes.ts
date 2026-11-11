@@ -3,9 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { rewriteScratchPath } from "./gate-rewrites.ts";
-import { projectEdit } from "./gitignore-guard.ts";
 import type { HookInput } from "./hook-input.ts";
-import { holdingCheckout } from "./lessons.ts";
+import { projectEdit } from "./ignore-edits.ts";
+import { holdingCheckout } from "./lessons-ops.ts";
 import { isLessonFile, lessonWrite } from "./orchestrate-lessons.ts";
 import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";

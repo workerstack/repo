@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { closingLine } from "./closing-line.ts";
 import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
 import { must, orchestrateKit, strategyOf, transcript } from "./fixtures/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
-import { closingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];

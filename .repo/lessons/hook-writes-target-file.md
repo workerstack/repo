@@ -1,6 +1,6 @@
 ---
 name: hook-writes-target-file
-paths: ["cli/scripts/orchestrate*.ts","cli/scripts/persist-*.ts","cli/scripts/lessons.ts"]
+paths: ["cli/scripts/orchestrate*.ts","cli/scripts/persist-*.ts","cli/scripts/lessons*.ts"]
 hits: 1
 last-hit: 2026-11-01
 evidence: ["plan 16"]

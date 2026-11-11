@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { readEnv } from "../env.ts";
-import { recordHook } from "./board.ts";
+import { recordHook } from "./board-hook.ts";
 import { folderMap } from "./folder-map.ts";
 import type { FolderMapResult } from "./folder-map.types.ts";
 import { resolveRepoBin } from "./gate-job.ts";

@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { VALID_LESSON, VALID_PLAN } from "./fixtures/persist-bodies.ts";
-import { persistLesson } from "./lessons.ts";
+import { persistLesson } from "./lessons-ops.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 
 const tmpDirs: string[] = [];

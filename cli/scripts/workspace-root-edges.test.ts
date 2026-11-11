@@ -1,22 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { realDir as tmpDir } from "./fixtures/real-dir.ts";
 import { canonicalPath, gitRevParse, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
-const tmpDirs: string[] = [];
+useTempDirs();
 afterEach(() => {
   vi.unstubAllEnvs();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
-
-function tmpDir(prefix: string) {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
-  tmpDirs.push(dir);
-  return dir;
-}
 
 describe("canonicalPath", () => {
   it("returns a relative path, a non-string and a foreign-path-module path unchanged", () => {

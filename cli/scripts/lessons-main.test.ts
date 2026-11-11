@@ -3,9 +3,13 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { cleanLessonDirs, git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
-import { LESSONS_DIR, main } from "./lessons.ts";
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { git, indexText, lesson, repo, save } from "./fixtures/lessons-kit.ts";
+import { LESSONS_DIR } from "./lessons.constants.ts";
+import { main } from "./lessons.ts";
 import { resolveRoots } from "./workspace-root.ts";
+
+useTempDirs();
 
 let out: string[];
 let err: string[];
@@ -19,7 +23,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  cleanLessonDirs();
 });
 
 /** Runs `main` as `bun repo lessons <argv>` run from `cwd` in the checkout `ws`. */

@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, expect } from "vitest";
 import { VALID_LESSON } from "./persist-bodies.ts";
 import { runHook, type HookRun } from "./run-hook.ts";
-import { persistLesson } from "../lessons.ts";
+import { persistLesson } from "../lessons-ops.ts";
 import { main } from "../orchestrate-parent.ts";
 
 type Env = Record<string, string | undefined>;

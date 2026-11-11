@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { redundantIgnoreLines, redundantIgnoreReason } from "./gitignore-guard.ts";
+import { redundantIgnoreLines, redundantIgnoreReason } from "./redundant-ignore-lines.ts";
 
 const dirs: string[] = [];
 afterEach(() => {

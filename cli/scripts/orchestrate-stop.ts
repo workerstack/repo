@@ -1,5 +1,5 @@
 import { readEnv } from "../env.ts";
-import { otherLines, recordHook } from "./board.ts";
+import { otherLines, recordHook } from "./board-hook.ts";
 /** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
 import { pushHold } from "./ci-push-gate.ts";
 import type { HookInput } from "./hook-input.ts";

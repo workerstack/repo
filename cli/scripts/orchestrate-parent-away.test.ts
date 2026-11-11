@@ -2,11 +2,11 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
+import { closingLine } from "./closing-line.ts";
 import { hookSession, type HookSession, type Shape } from "./fixtures/hook-session.ts";
 import { orchestrateKit } from "./fixtures/orchestrate-kit.ts";
 import { VALID_PLAN } from "./fixtures/persist-bodies.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
-import { closingLine } from "./strategy.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];

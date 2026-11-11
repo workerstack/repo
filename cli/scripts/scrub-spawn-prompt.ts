@@ -72,17 +72,20 @@ export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknow
   return changed ? next : null;
 }
 
-export function processHookPayload(data: HookInput | null | undefined): SpawnAnswer | null {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  let toolInput: unknown = data.toolInput;
-  toolInput ??= data.tool_input;
-  const updated = rewriteSpawnToolInput(toolInput);
+/** The prompt the spawn goes out with: the rewritten one, else the one sent. */
+function sentPrompt(updated: Record<string, unknown> | null, toolInput: unknown): unknown {
   // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
-  const prompt = updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);
+  return updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);
+}
+
+export function processHookPayload(data: HookInput | null | undefined): SpawnAnswer | null {
+  if (!isRecord(data)) return null;
+  const toolInput: unknown = data.toolInput ?? data.tool_input;
+  const updated = rewriteSpawnToolInput(toolInput);
+  const prompt = sentPrompt(updated, toolInput);
   if (typeof prompt === "string" && prompt.length > MAX_PROMPT_CHARS)
     return answerDeny(data, spawnCapReason(resolveRoots(data).root));
-
-  return updated ? answerRewrite(data, updated) : null;
+  return updated === null ? null : answerRewrite(data, updated);
 }
 
 export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {

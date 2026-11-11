@@ -4,7 +4,9 @@ import path from "node:path";
 
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
-import { boardHome, readBootId, sweep } from "./board.ts";
+import { boardHome } from "./board-files.ts";
+import { readBootId } from "./board-process.ts";
+import { sweep } from "./board.ts";
 import { cleanPlan } from "./clean-plan.ts";
 import { nestedTmpDirs, stats } from "./clean-scan.ts";
 import {

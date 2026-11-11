@@ -1,6 +1,7 @@
 /** One closing line asks for approval; a bare `y` approves exactly what it names, and `h` hands it off. */
 import fs from "node:fs";
 
+import { closingLine, parseApproval } from "./closing-line.ts";
 import type { HookInput } from "./hook-input.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
 import {
@@ -29,7 +30,8 @@ import type {
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { isUnderPlans, isUnderRoadmaps } from "./persist-tmp.ts";
-import { closingLine, parseApproval, parseStrategy, STRATEGIES } from "./strategy.ts";
+import { STRATEGIES } from "./strategy.constants.ts";
+import { parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** What every saved item is judged against: the workspace, its running roadmaps and the open reviews. */

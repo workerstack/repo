@@ -3,8 +3,9 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { otherLines, probeProcess, readBootId, recordHook } from "./board.ts";
-import type { BoardInput } from "./board.ts";
+import { otherLines, recordHook } from "./board-hook.ts";
+import { probeProcess, readBootId } from "./board-process.ts";
+import type { BoardInput } from "./board.types.ts";
 import { BOOT, plantHome, probeOf, rowsDir } from "./fixtures/board-kit.ts";
 
 afterEach(() => vi.restoreAllMocks());

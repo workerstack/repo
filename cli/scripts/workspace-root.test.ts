@@ -1,23 +1,15 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { realDir as tmpDir } from "./fixtures/real-dir.ts";
 import { canonicalPath, INSTALL_MARKER, resolveRoots } from "./workspace-root.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) for (const x of [d, `${d}-alias`]) fs.rmSync(x, { force: true, recursive: true });
-});
-
-function tmpDir(prefix: string) {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
-  tmpDirs.push(dir);
-  return dir;
-}
+useTempDirs();
 
 function git(cwd: string, ...args: string[]) {
   execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "-c", "protocol.file.allow=always", ...args], {
