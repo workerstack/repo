@@ -10,6 +10,8 @@ const BODY = "Stock rule.\n\n## Rules by path\n- `src/**`: read `.repo/rules/src
 const region = (body: string) => `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
 const STOCK_COPY = "# Agents\n\nThe stock text a copied install shipped.\n";
 const HISTORY = { "AGENTS.md": [hashText(STOCK_COPY)] };
+const REPLACED = "replaced the old stock rules with repo:rules";
+const POINTER = "Start at references/INDEX.md in this package.\n";
 
 const run = (text: string | null, rel = "AGENTS.md", body = BODY) => agentsFile(rel, body, { history: HISTORY, text });
 const contentOf = (output: Output) => (output.kind === "file" ? output.content : "");
@@ -47,6 +49,40 @@ describe("agentsFile over text no user wrote", () => {
 
   it("keeps a package file that matches the root's stock history, since that history names the root alone", () => {
     expect(contentOf(run(STOCK_COPY, "packages/web/AGENTS.md"))).toBe(`${region(BODY)}\n${STOCK_COPY}`);
+  });
+});
+
+describe("agentsFile over an old file's stock rules", () => {
+  it("puts the region where the stock rules stood, the user's lines above and below kept, and says so", () => {
+    expect(run(`Team note\n${STOCK_COPY}Ship note\n`)).toMatchObject({
+      content: `Team note\n${region(BODY)}Ship note\n`,
+      repairs: [REPLACED],
+    });
+  });
+
+  it("cuts the old repo:begin blocks beside the stock rules and still replaces those", () => {
+    const old = "<!-- repo:begin -->\nOld stock.\n<!-- repo:end -->\n";
+    expect(run(`${old}Team note\n${STOCK_COPY}Ship note\n${old}`)).toMatchObject({
+      content: `Team note\n${region(BODY)}Ship note\n`,
+      repairs: [REPLACED],
+    });
+  });
+
+  it("replaces a package file's old text, which is the body itself", () => {
+    expect(run(`x\n${POINTER}y\n`, "packages/web/AGENTS.md", POINTER)).toMatchObject({
+      content: `x\n${region(POINTER)}y\n`,
+      repairs: [REPLACED],
+    });
+  });
+
+  it("leaves the region alone in an unedited old file, and says so", () => {
+    expect(run(STOCK_COPY)).toMatchObject({ content: region(BODY), repairs: [REPLACED] });
+  });
+
+  it("keeps stock rules the user edited on any line as theirs, below the region on top", () => {
+    const edited = `Team note\n${STOCK_COPY.replace("stock text", "our text")}Ship note\n`;
+    expect(run(edited)).not.toHaveProperty("repairs");
+    expect(contentOf(run(edited))).toBe(`${region(BODY)}\n${edited}`);
   });
 });
 

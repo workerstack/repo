@@ -29,9 +29,13 @@ useTempDirs();
 afterAll(dropFixture);
 
 const SLOW = 180_000;
-/** What the first sync over the copied install prints: its old markers converted, an unhashed section hashed. */
+/**
+ * What the first sync over the copied install prints: its old markers converted, an unhashed section hashed, and the
+ * stock rules the handover left in place in AGENTS.md replaced by the region.
+ */
 const CONVERTED = [
   "repo sync: references/INDEX.md: added the hash to repo:stack\n",
+  "repo sync: AGENTS.md: replaced the old stock rules with repo:rules\n",
   "repo sync: .gitignore: converted the old markers to repo:ignore\n",
 ];
 

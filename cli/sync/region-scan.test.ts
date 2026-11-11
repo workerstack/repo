@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { agentsFile } from "./agents-file.ts";
 import { cutRegions, type Region, regionBody, regionHash, type RegionSyntax, writeRegions } from "./region.ts";
 
 const ALPHA: Region = { body: "one\ntwo", name: "alpha", place: "bottom" };
@@ -62,5 +63,42 @@ describe("fenced code in markdown", () => {
   it("is no fence in a hash file, where a backtick line is a pattern", () => {
     const before = `\`\`\`\n${open("#", "gone", regionHash("x"))}\nx\n${close("#", "gone")}\n\`\`\`\n`;
     expect(cutRegions(before, "#")).toStrictEqual({ repairs: ["cut repo:gone"], text: "```\n```\n" });
+  });
+});
+
+const RULES = "Stock rule.\n";
+const IGNORE: Region = { body: "dist/\nout/", name: "ignore", place: "bottom" };
+/** The `repo:rules` region holding `RULES`, its marker lines ending in `end`. */
+function rules(end = "\n"): string {
+  return `${open("<!--", "rules", regionHash(RULES))}${end}${RULES}${close("<!--", "rules")}${end}`;
+}
+function agents(text: string) {
+  return agentsFile("AGENTS.md", RULES, { history: {}, text });
+}
+function crlf(text: string): string {
+  return text.replaceAll("\n", "\r\n");
+}
+
+describe("a marker line ending in CR", () => {
+  it("is rewritten LF in a file whose other lines are LF, and says so", () => {
+    expect(agents(`Mine.\n\n${rules("\r\n")}`)).toMatchObject({
+      content: `Mine.\n\n${rules()}`,
+      repairs: ["rewrote the markers of repo:rules"],
+    });
+    const disk = `mine/\n${open("#", "ignore", regionHash(IGNORE.body))}\r\ndist/\nout/\n${close("#", "ignore")}\r\n`;
+    expect(writeRegions(disk, "#", [IGNORE])).toStrictEqual({
+      repairs: ["rewrote the markers of repo:ignore"],
+      text: `mine/\n${block("#", IGNORE)}\n`,
+    });
+  });
+
+  it("is no repair in a whole-CRLF file, as a Windows checkout writes every shared file", () => {
+    expect(agents(crlf(`Mine.\n\n${rules()}`))).not.toHaveProperty("repairs");
+    const ignore = `mine/\n\n${block("#", IGNORE)}\n`;
+    expect(writeRegions(crlf(ignore), "#", [IGNORE])).toStrictEqual({ repairs: [], text: ignore });
+  });
+
+  it("is no repair when only a user line ends in CR", () => {
+    expect(agents(`Mine.\r\n\n${rules()}`)).not.toHaveProperty("repairs");
   });
 });
