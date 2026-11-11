@@ -5,6 +5,10 @@ import { reprobeHint } from "./setup-status.ts";
 
 afterEach(cleanSetup);
 
+function probe() {
+  return "/never";
+}
+
 it("reprobeHint reports a binary that is already found", async () => {
   const io = captureIo();
   expect(await reprobeHint({ found: "/bin/ffmpeg", id: "ffmpeg", io })).toBe("/bin/ffmpeg");
@@ -26,7 +30,6 @@ it("reprobeHint writes to stdout when there is no io", async () => {
 
 it("reprobeHint skips the re-check when the user says nothing was installed", async () => {
   const io = { ...captureIo(), confirm: () => Promise.resolve(false) };
-  const probe = () => "/never";
   expect(await reprobeHint({ id: "ffmpeg", interactive: true, io, probe })).toBe("");
   expect(io.logs.join("\n")).not.toContain("still missing");
 });

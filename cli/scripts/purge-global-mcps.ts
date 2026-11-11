@@ -10,7 +10,9 @@ import type { GrokPlan, JsonPlan, PurgeResult, ReportRow } from "./purge-global-
 import { parseArgv, resolveHome } from "./purge-paths.ts";
 import { planClaudePlugins, planCursor, planGrok } from "./purge-plans.ts";
 
-const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 function writeText(abs: string, body: string): void {
   const text = body.endsWith("\n") ? body : `${body}\n`;
@@ -23,12 +25,12 @@ function reportLine(row: { action: string; path: string; detail: string }): stri
 }
 
 function writeJson(plan: JsonPlan): void {
-  if (!plan.skip && plan.json) writeText(plan.abs, JSON.stringify(plan.json, null, JSON_INDENT));
+  if (!plan.skip && plan.json !== null) writeText(plan.abs, JSON.stringify(plan.json, null, JSON_INDENT));
 }
 
 /** Writes every changed dest, grok first; called only once all three planned cleanly. */
 function writePlans(grok: GrokPlan, cursor: JsonPlan, claude: JsonPlan): void {
-  if (!grok.skip && grok.obj) writeText(grok.abs, stringifyToml(grok.obj));
+  if (!grok.skip && grok.obj !== null) writeText(grok.abs, stringifyToml(grok.obj));
   writeJson(cursor);
   writeJson(claude);
 }
@@ -38,7 +40,7 @@ export function purgeGlobalMcps({ home, apply = false }: { home?: string; apply?
   const report: ReportRow[] = [];
   const action = apply ? APPLY_ACTION : DRY_RUN_ACTION;
   try {
-    if (!home) throw new Error("HOME required");
+    if (home === undefined || home === "") throw new Error("HOME required");
     const grok = planGrok(home);
     const cursor = planCursor(home);
     const claude = planClaudePlugins(home);

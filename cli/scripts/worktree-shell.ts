@@ -18,25 +18,28 @@ import type { GitCommand, Heredoc, ShellLexer, Word, WorktreeAdd } from "./workt
 
 const HEREDOC_OP = /<<(?<dash>-?)[ \t]*(?:'(?<sq>[^'\n]*)'|"(?<dq>[^"\n]*)"|\\?(?<bare>[^\s;&|<>()'"\\]+))/y;
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const CR_AT_END = /\r$/;
+const LEADING_TABS = /^\t+/;
+const SHELL_ACTIVE_CHARS = /[$`\\]/;
 const PROXY = /^(?:.*\/)?(?:rtk|env)$/;
 
 /** Push the heredoc the `<<` at `i` opens, if any; the index the scan goes on from. */
 function heredocAt(line: string, i: number, opened: Heredoc[]): number {
   HEREDOC_OP.lastIndex = i;
   const m = HEREDOC_OP.exec(line);
-  if (!m) return i + 1;
+  if (m === null) return i + 1;
   const g = m.groups;
   opened.push({ indented: g?.dash === "-", word: String(g?.sq ?? g?.dq ?? g?.bare) });
   return i + m[0].length - 1;
 }
 
-/** The heredoc delimiters opened on one line, in order: `{ word, indented }`; a quoted `<<` or a `<<<` here-string opens none. */
+/** The heredoc delimiters opened on one line, in order: `{ word, indented }`; a quoted `<<` or a `<<<` opens none. */
 function heredocsOpenedBy(line: string): Heredoc[] {
   const opened: Heredoc[] = [];
   let quote = "";
   for (let i = 0; i < line.length; i++) {
     const ch = line.charAt(i);
-    if (quote) quote = ch === quote ? "" : quote;
+    if (quote !== "") quote = ch === quote ? "" : quote;
     else if (ch === "\\") i++;
     else if (ch === "'" || ch === '"') quote = ch;
     else if (line.startsWith(HERE_STRING, i)) i += HERE_STRING.length - 1;
@@ -51,9 +54,9 @@ function dropHeredocBodies(command: unknown): string {
   let pending: Heredoc[] = [];
   for (const line of String(command).split("\n")) {
     const [open] = pending;
-    if (open) {
-      const bare = line.replace(/\r$/, "");
-      if ((open.indented ? bare.replace(/^\t+/, "") : bare) === open.word) pending.shift();
+    if (open !== undefined) {
+      const bare = line.replace(CR_AT_END, "");
+      if ((open.indented ? bare.replace(LEADING_TABS, "") : bare) === open.word) pending.shift();
       continue;
     }
     kept.push(line);
@@ -63,11 +66,11 @@ function dropHeredocBodies(command: unknown): string {
 }
 
 function endWord(lx: ShellLexer): void {
-  if (lx.word) lx.seg.push(lx.word);
+  if (lx.word !== null) lx.seg.push(lx.word);
   lx.word = null;
 }
 
-function addText(lx: ShellLexer, text: string, literal = true): void {
+function addText(lx: ShellLexer, text: string, { literal = true }: { literal?: boolean } = {}): void {
   lx.word = lx.word ?? { literal: true, text: "" };
   lx.word.text += text;
   if (!literal) lx.word.literal = false;
@@ -83,13 +86,13 @@ function quoted(lx: ShellLexer, q: string): string {
 
 function endSegment(lx: ShellLexer): void {
   endWord(lx);
-  if (!lx.seg.length) return;
+  if (lx.seg.length === 0) return;
   lx.seg = [];
   lx.segments.push(lx.seg);
 }
 
 function plain(lx: ShellLexer, ch: string): void {
-  addText(lx, ch, !(ch === "$" || ch === "`" || (ch === "~" && !lx.word)));
+  addText(lx, ch, { literal: !(ch === "$" || ch === "`" || (ch === "~" && lx.word === null)) });
 }
 
 function step(lx: ShellLexer, ch: string): void {
@@ -101,7 +104,7 @@ function step(lx: ShellLexer, ch: string): void {
     addText(lx, quoted(lx, ch));
   } else if (ch === '"') {
     const inner = quoted(lx, ch);
-    addText(lx, inner, !/[$`\\]/.test(inner));
+    addText(lx, inner, { literal: !SHELL_ACTIVE_CHARS.test(inner) });
   } else if (ch === "\\") {
     addText(lx, lx.s.charAt(lx.i + 1));
     lx.i++;
@@ -116,24 +119,24 @@ function shellSegments(command: unknown): Word[][] {
   const lx: ShellLexer = { i: 0, s: dropHeredocBodies(command), seg, segments: [seg], word: null };
   for (; lx.i < lx.s.length; lx.i++) step(lx, lx.s.charAt(lx.i));
   endWord(lx);
-  return lx.segments.filter((words) => words.length);
+  return lx.segments.filter((words) => words.length > 0);
 }
 
 /** The git command after git's own options; null when none follows or a `-C` dir is not literal. */
 function afterOptions(words: Word[], at: string, p: typeof path): GitCommand | null {
   const [opt, value, ...more] = words;
-  if (!opt) return null;
+  if (opt === undefined) return null;
   if (!opt.text.startsWith("-")) return { at, rest: words.slice(1), sub: opt.text };
-  if (opt.text === DIR_FLAG) return value?.literal ? afterOptions(more, p.resolve(at, value.text), p) : null;
+  if (opt.text === DIR_FLAG) return value?.literal === true ? afterOptions(more, p.resolve(at, value.text), p) : null;
   return afterOptions(opt.text === CONFIG_FLAG ? more : words.slice(1), at, p);
 }
 
-/** `{ at, sub, rest }` for a `[VAR=v] [rtk] [env VAR=v] git [-C dir] [-c k=v] <sub> …` segment; null for any other, or when a `-C` dir is not literal. */
+/** `{ at, sub, rest }` for a `[VAR=v] [rtk] [env VAR=v] git [-C dir] [-c k=v] <sub> …` segment; null for any other. */
 function gitCommandOf(words: Word[], cwd: string, p: typeof path): GitCommand | null {
   // `FOO=1`, `env FOO=1` and the `rtk` proxy all stand before the real command.
   const start = words.findIndex((w) => !ASSIGNMENT.test(w.text) && !PROXY.test(w.text));
   const [bin, ...after] = start < 0 ? [] : words.slice(start);
-  if (!bin || (bin.text !== GIT_BIN && !bin.text.endsWith(`/${GIT_BIN}`))) return null;
+  if (bin === undefined || (bin.text !== GIT_BIN && !bin.text.endsWith(`/${GIT_BIN}`))) return null;
   return afterOptions(after, cwd, p);
 }
 
@@ -142,12 +145,12 @@ export function* gitCommands(command: unknown, cwd: string, p: typeof path): Gen
   let here = cwd;
   for (const words of shellSegments(command)) {
     const [first, dir, extra] = words;
-    if (first?.text === CD_WORD && dir?.literal && !extra) {
+    if (first?.text === CD_WORD && dir?.literal === true && extra === undefined) {
       here = p.resolve(here, dir.text);
       continue;
     }
     const g = gitCommandOf(words, here, p);
-    if (g) yield g;
+    if (g !== null) yield g;
   }
 }
 
@@ -155,14 +158,14 @@ export function* gitCommands(command: unknown, cwd: string, p: typeof path): Gen
 function addArg(out: WorktreeAdd, w: Word, words: Iterator<Word>): void {
   if (ADD_VALUE_FLAGS.includes(w.text)) {
     const value = words.next();
-    if (w.text !== REASON_FLAG) out.branch = value.done ? null : value.value.text;
+    if (w.text !== REASON_FLAG) out.branch = value.done === true ? null : value.value.text;
   } else if (w.text === DETACH_FLAG || w.text === DETACH_SHORT) {
     out.detach = true;
   } else if (w.text.startsWith("-")) {
     return;
-  } else if (!out.target) {
+  } else if (out.target === null) {
     out.target = w;
-  } else if (!out.commitish) {
+  } else if (out.commitish === null || out.commitish === "") {
     out.commitish = w.text;
   }
 }

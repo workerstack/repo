@@ -4,12 +4,15 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./fixtures/worktree-repo.ts";
+import { expectOnlyMainWorktree } from "./fixtures/worktree-scenarios.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
-const subjects = (r: string) => git(r, "log", "--format=%s", "main").split("\n");
+function subjects(r: string) {
+  return git(r, "log", "--format=%s", "main").split("\n");
+}
 
 /** A repo with worktree `name` holding one commit of its own. */
 function withCommit(name = "a"): string {
@@ -79,7 +82,7 @@ it("unregisters a worktree whose dir another session deleted, then finishes the 
   addWorktree(r, "lost");
   fs.rmSync(wt(r, "lost"), { recursive: true });
   expect(finishWorktree(r, "lost").sha).toBeNull();
-  expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
+  expectOnlyMainWorktree(r);
   expect(hasBranch(r, "wt/lost")).toBe(false);
 });
 
@@ -133,5 +136,5 @@ it("finishes when another session removed the worktree right after the fast-forw
   expect(finishWorktree(r, "p").sha).toBe(git(r, "rev-parse", "--short", tip));
   expect(git(r, "rev-parse", "main")).toBe(tip);
   expect(hasBranch(r, "wt/p")).toBe(false);
-  expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
+  expectOnlyMainWorktree(r);
 });

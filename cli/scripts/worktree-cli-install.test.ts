@@ -12,8 +12,9 @@ const WHERE = "where";
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
-const installFailed = (dir: string) =>
-  `could not install dependencies in ${dir}: run bun install --frozen-lockfile there`;
+function installFailed(dir: string) {
+  return `could not install dependencies in ${dir}: run bun install --frozen-lockfile there`;
+}
 
 it("runs bun install --frozen-lockfile in a new worktree only, keeping stdout to the path", () => {
   const r = bunRepo(tmp.repo(), MARK);
@@ -62,7 +63,7 @@ it("reports a failed install in one stderr line and still prints the path", () =
   expect(lines).toStrictEqual([installFailed(wt(r, "bad"))]);
 });
 
-/** A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32, where git.exe needs its install. */
+/** A PATH with git and no bun: a lone git link on posix; git's own cmd dir on win32 (git.exe needs its install). */
 function gitOnlyPath(): string {
   if (process.platform === "win32")
     return path.dirname(execFileSync(WHERE, ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "");

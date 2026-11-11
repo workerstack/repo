@@ -10,11 +10,18 @@ afterEach(cleanSetup);
 
 const quiet = { env: { CI: "1" }, interactive: false, ...bare };
 
+function loginFn() {
+  return Promise.resolve();
+}
+
+function thrown(v: unknown) {
+  return () => Promise.reject(v);
+}
+
 it("main resolves the gw alias and reports the target's failure", async () => {
   const home = plant("setup-m-alias-");
   const cwd = enablePacks(plant("setup-m-alias-cwd-"), ["google-workspace"]);
   const io = captureIo();
-  const loginFn = () => Promise.resolve();
   const code = await main(["gw", "--creds", "{}"], { ...quiet, cwd, home, io, loginFn });
   expect(code).toBe(1);
   expect(io.errs.join("\n")).toMatch(/installed\.client_id/);
@@ -25,7 +32,6 @@ it("main prints a thrown string, or an Error without a message, as text", async 
   const cwd = enablePacks(plant("setup-m-throw-cwd-"), ["google-workspace"]);
   const creds = JSON.stringify({ installed: { client_id: "c" } });
   const argv = ["google-workspace", "--creds", creds];
-  const thrown = (v: unknown) => () => Promise.reject(v);
   const io = captureIo();
   expect(await main(argv, { ...quiet, cwd, home, io, loginFn: thrown("boom") })).toBe(1);
   expect(await main(argv, { ...quiet, cwd, home, io, loginFn: thrown({ message: "" }) })).toBe(1);
@@ -38,7 +44,9 @@ it("main takes home from env HOME, then USERPROFILE, then the stubbed os home", 
   const b = plant("setup-m-home-b-");
   const cwd = plant("setup-m-home-cwd-");
   const c = plant("setup-m-home-c-", true);
-  const run = (env: Record<string, string>) => main(["jev", "--api-key", "k"], { ...quiet, cwd, env, io: captureIo() });
+  function run(env: Record<string, string>) {
+    return main(["jev", "--api-key", "k"], { ...quiet, cwd, env, io: captureIo() });
+  }
   await run({ HOME: a, USERPROFILE: b });
   await run({ USERPROFILE: b });
   await run({});
@@ -58,7 +66,7 @@ it("main defaults cwd, env, platform and PATH from the process", async () => {
 it("main decides interactivity from the given stdin and stdout", async () => {
   const home = plant("setup-m-tty-");
   const cwd = plant("setup-m-tty-cwd-");
-  const select = vi.fn(() => Promise.resolve("jev"));
+  const select = vi.fn<NonNullable<SetupIo["select"]>>(() => Promise.resolve("jev"));
   const io: SetupIo = { ...captureIo(), password: () => Promise.resolve("k"), select };
   const tty = { isTTY: true };
   const opts = { cwd, env: {}, home, io, stdin: tty, stdout: tty, ...bare };
@@ -97,7 +105,7 @@ it("main builds the default prompts and writes through stdout and stderr", async
 it("main asks before redoing a target that is ok, and --redo skips the question", async () => {
   const home = plant("setup-m-redo-");
   const cwd = plant("setup-m-redo-cwd-");
-  const confirm = vi.fn(() => Promise.resolve(false));
+  const confirm = vi.fn<NonNullable<SetupIo["confirm"]>>(() => Promise.resolve(false));
   const io = { ...captureIo(), confirm };
   const opts = { cwd, env: {}, home, interactive: true, io, ...bare };
   await main(["jev", "--api-key", "k1"], opts);

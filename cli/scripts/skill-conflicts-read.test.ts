@@ -1,20 +1,16 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { cleanSkillDirs, skillDir } from "./fixtures/skill-dirs.ts";
 import { findSkillContentConflicts, listSkillDirNames } from "./skill-conflicts.ts";
 
-const dirs: string[] = [];
-afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
-const tmp = () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sk-read-"));
-  dirs.push(dir);
-  return dir;
-};
+afterEach(cleanSkillDirs);
+
+function tmp(): string {
+  return skillDir("sk-read-");
+}
 
 it("a skills root that is not a directory is an error, not an empty list", () => {
   const file = path.join(tmp(), "plain");

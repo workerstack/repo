@@ -37,14 +37,16 @@ it("denies the 13 commit-making and destructive subcommands in the main checkout
   const main = at(r);
   for (const [sub, cmd] of Object.entries(commitMaking)) {
     expect(shared(cmd, main), cmd).toBe(
-      `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun repo worktree finish <name>`,
+      `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, ` +
+        "then run bun repo worktree finish <name>",
     );
     expect(shared(cmd, main, new Set([sub])), `${cmd} asked`).toBeNull();
     expect(shared(cmd, main, new Set(["stash"])), `${cmd} other word`).not.toBeNull();
   }
   for (const [sub, cmd] of Object.entries(destructive)) {
     expect(shared(cmd, main), cmd).toBe(
-      `git ${sub} in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git ${sub}`,
+      `git ${sub} in the main checkout can destroy other sessions' work: do it inside your worktree, ` +
+        `or run it here only when the user's message asks for git ${sub}`,
     );
     expect(shared(cmd, main, new Set([sub])), `${cmd} asked`).toBeNull();
   }
@@ -123,7 +125,9 @@ it("guards the default branch from anywhere unless its subcommand was asked", ()
   const r = withWorktrees();
   const from = at(r, wt(r, "a"));
   for (const [cmd, sub] of DEFAULT_BRANCH_MOVES) {
-    const reason = `main is the shared default branch: move it only with bun repo worktree finish <name>, or when the user's message asks for git ${sub}`;
+    const reason =
+      "main is the shared default branch: move it only with bun repo worktree finish <name>, " +
+      `or when the user's message asks for git ${sub}`;
     expect(shared(cmd, from), cmd).toBe(reason);
     expect(shared(cmd, at(r)), cmd).toBe(reason);
     expect(shared(cmd, from, new Set([sub])), `${cmd} asked`).toBeNull();

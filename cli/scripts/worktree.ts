@@ -38,29 +38,29 @@ function quiet(): HookResult {
 
 /** Delete `branch` when it is a merged `wt/*` branch. */
 function dropMergedBranch(root: string, branch: string | null): void {
-  if (branch && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch))
+  if (branch !== null && branch.startsWith(BRANCH_PREFIX) && branchExists(root, branch) && isMerged(root, branch))
     git(root, ["branch", "-D", branch]);
 }
 
 /** WorktreeRemove: force-remove the worktree at `worktree_path`, then its branch once merged. */
 function removeHooked(data: HookInput | null): HookResult {
-  const target = String(data?.worktree_path || "");
-  if (!target) return quiet();
+  const target = data?.worktree_path ?? "";
+  if (target === "") return quiet();
   const root = resolveRoots(data).root;
   const entry = worktreeEntries(root)
     .slice(1)
     .find((e) => samePath(e.path, target));
-  if (entry) {
+  if (entry !== undefined) {
     const r = git(root, ["worktree", "remove", "--force", entry.path]);
     if (!r.ok && fs.existsSync(target)) return { code: 1, stderr: r.err, stdout: "" };
   }
-  dropMergedBranch(root, entry ? entry.branch : BRANCH_PREFIX + path.basename(target));
+  dropMergedBranch(root, entry === undefined ? BRANCH_PREFIX + path.basename(target) : entry.branch);
   return quiet();
 }
 
 /** Claude Code's WorktreeCreate / WorktreeRemove; other events do nothing. */
 export function worktreeHook(data: HookInput | null): HookResult {
-  const event = data && data.hook_event_name;
+  const event = data?.hook_event_name;
   try {
     if (event === CREATE_EVENT)
       return { code: 0, stderr: "", stdout: `${addWorktree(resolveRoots(data).root, data?.name).path}\n` };
@@ -73,20 +73,24 @@ export function worktreeHook(data: HookInput | null): HookResult {
 
 /** The one-line outcome of `finish`. */
 function finishLine(result: FinishResult, root: string): string {
-  if (!result.sha) return `${result.branch} has no commits of its own; removed ${result.path}`;
-  return `merged ${result.branch} into ${result.defaultBranch} at ${result.sha} and removed ${result.path}; your shell may still be in it: cd ${root}`;
+  if (result.sha === null || result.sha === "")
+    return `${result.branch} has no commits of its own; removed ${result.path}`;
+  return (
+    `merged ${result.branch} into ${result.defaultBranch} at ${result.sha} and removed ${result.path}; ` +
+    `your shell may still be in it: cd ${root}`
+  );
 }
 
 function listRow(w: WorktreeInfo): string {
-  const cols = [w.path, w.branch || "(detached)", w.state, w.merged ? "merged" : "unmerged"];
+  const cols = [w.path, w.branch ?? "(detached)", w.state, w.merged ? "merged" : "unmerged"];
   if (!w.managed) cols.push(`outside ${WORKTREES_DIR}`);
   return cols.join("\t");
 }
 
 function pruneLines(root: string): string[] {
   const removed = pruneWorktrees(root);
-  if (!removed.length) return ["nothing to prune"];
-  return removed.map((r) => (r.path ? `removed ${r.path} (${r.branch})` : `deleted branch ${r.branch}`));
+  if (removed.length === 0) return ["nothing to prune"];
+  return removed.map((r) => (r.path === null ? `deleted branch ${r.branch}` : `removed ${r.path} (${r.branch})`));
 }
 
 function print(lines: string[]): number {
@@ -95,13 +99,14 @@ function print(lines: string[]): number {
 }
 
 function runHook(io: HookIo): number {
-  const raw = readAllText(io) || "{}";
+  const text = readAllText(io);
+  const raw = text === "" ? "{}" : text;
   const data = parseHookInput(raw);
   // A payload that is not JSON still fails the hook with the parse error; any other non-object is a no-op.
-  if (!data) JSON.parse(raw);
+  if (data === null) JSON.parse(raw);
   const res = worktreeHook(data);
-  if (res.stdout) process.stdout.write(res.stdout);
-  if (res.stderr) process.stderr.write(`${res.stderr}\n`);
+  if (res.stdout !== "") process.stdout.write(res.stdout);
+  if (res.stderr !== "") process.stderr.write(`${res.stderr}\n`);
   return res.code;
 }
 

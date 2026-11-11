@@ -1,21 +1,12 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { cleanSkillDirs, skillDir } from "./fixtures/skill-dirs.ts";
 import { findSkillContentConflicts, formatSkillConflictWarn, listSkillDirNames } from "./skill-conflicts.ts";
 
-const tmpDirs: string[] = [];
-afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-});
-
-function tmp(prefix: string) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tmpDirs.push(dir);
-  return dir;
-}
+afterEach(cleanSkillDirs);
 
 function writeSkill(root: string, name: string, body: string) {
   const dir = path.join(root, name);
@@ -24,7 +15,7 @@ function writeSkill(root: string, name: string, body: string) {
 }
 
 it("listSkillDirNames: lists dirs with SKILL.md; skips missing/dot", () => {
-  const root = tmp("sk-list-");
+  const root = skillDir("sk-list-");
   writeSkill(root, "parent", "a");
   writeSkill(root, "solo", "b");
   fs.mkdirSync(path.join(root, "empty"));
@@ -35,8 +26,8 @@ it("listSkillDirNames: lists dirs with SKILL.md; skips missing/dot", () => {
 });
 
 it("findSkillContentConflicts: empty when packaged missing or identical", () => {
-  const ws = tmp("sk-ws-");
-  const pkg = tmp("sk-pkg-");
+  const ws = skillDir("sk-ws-");
+  const pkg = skillDir("sk-pkg-");
   writeSkill(ws, "parent", "same\n");
   writeSkill(pkg, "parent", "same\n");
   expect(findSkillContentConflicts({ packagedSkillsDir: pkg, workspaceSkillsDir: ws })).toStrictEqual([]);
@@ -47,11 +38,13 @@ it("findSkillContentConflicts: empty when packaged missing or identical", () => 
     }),
   ).toStrictEqual([]);
   expect(findSkillContentConflicts({})).toStrictEqual([]);
+  expect(findSkillContentConflicts({ packagedSkillsDir: "", workspaceSkillsDir: ws })).toStrictEqual([]);
+  expect(findSkillContentConflicts({ packagedSkillsDir: pkg, workspaceSkillsDir: "" })).toStrictEqual([]);
 });
 
 it("findSkillContentConflicts: reports name when SKILL.md bytes differ; skips workspace-only", () => {
-  const ws = tmp("sk-ws-diff-");
-  const pkg = tmp("sk-pkg-diff-");
+  const ws = skillDir("sk-ws-diff-");
+  const pkg = skillDir("sk-pkg-diff-");
   writeSkill(ws, "parent", "custom\n");
   writeSkill(pkg, "parent", "repo\n");
   writeSkill(ws, "extra", "keep\n");

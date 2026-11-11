@@ -101,7 +101,7 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     (c) => repoGate("check", ["check"], c),
     ...docsGates(ctx.packs),
     (c) => repoGate("fmt", ["fmt", "--check"], c),
-    (c) => typecheckGate(c, turboOn),
+    (c) => typecheckGate(c, { rootOnly: turboOn }),
     turboOn ? (c) => packagesGate(c, c.turbo) : testsGate,
     ...rustGates(ctx.root),
   ];

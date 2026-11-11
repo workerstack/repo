@@ -18,6 +18,7 @@ import {
   write,
   wt,
 } from "./fixtures/worktree-repo.ts";
+import { expectOnlyMainWorktree } from "./fixtures/worktree-scenarios.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
@@ -25,7 +26,7 @@ afterEach(() => tmp.cleanup());
 /** A repo on `start` with worktree `name` holding one commit; returns the repo and that commit. */
 function oneCommit(name: string, start?: string): { r: string; tip: string } {
   const r = tmp.repo();
-  if (start) git(r, "switch", "-q", "-c", start);
+  if (start !== undefined) git(r, "switch", "-q", "-c", start);
   cli(r, ["add", name]);
   commitIn(wt(r, name), `${name}.txt`);
   return { r, tip: git(wt(r, name), "rev-parse", "HEAD") };
@@ -98,7 +99,7 @@ it("converges when another session's prune removed the worktree right after the 
   expect(out.stdout).toContain(`merged wt/p into main at ${short(r, "main")}`);
   expect(git(r, "rev-parse", "main")).toBe(tip);
   expect(hasBranch(r, "wt/p")).toBe(false);
-  expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
+  expectOnlyMainWorktree(r);
 });
 
 it("reports git's reason when the main checkout's own changes block the fast-forward", () => {

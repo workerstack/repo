@@ -38,7 +38,7 @@ it("lookupChromium finds a chromium on the PATH it is given, and defaults to the
 
 it("targetStatuses skips the listen probe unless listen is a target", async () => {
   const home = plant("setup-st-nolisten-");
-  const st = await targetStatuses({ home, env: {}, ...bare, targets: ["browser", "jev"] });
+  const st = await targetStatuses({ env: {}, home, ...bare, targets: ["browser", "jev"] });
   expect(st.listen).toStrictEqual({ extra: "", ok: false });
 });
 
@@ -54,7 +54,9 @@ it("targetStatuses reports local STT with ffmpeg and whisper when the model is p
 it("targetStatuses takes the PATH from env, then from the process", async () => {
   const home = plant("setup-st-path-");
   const seen: (string | undefined)[] = [];
-  const whichFn = (_n: string, p: string | undefined) => (seen.push(p), "");
+  function whichFn(_n: string, p: string | undefined) {
+    return (seen.push(p), "");
+  }
   await targetStatuses({ env: { PATH: "/from-env" }, home, platform: "linux", targets: [], whichFn });
   await targetStatuses({ env: {}, home, platform: "linux", targets: [], whichFn });
   expect(seen[0]).toBe("/from-env");

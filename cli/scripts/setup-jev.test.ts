@@ -34,7 +34,8 @@ it("writes jev.json mode 0600 and does not echo the key", async () => {
   const r = await setupJev({ flags: { "api-key": secret }, home, io });
   expect(r.ok).toBe(true);
   expect(readJsonAt(r.dest).apiKey).toBe(secret);
-  if (process.platform !== "win32") expect(fs.statSync(r.dest).mode & 0o777).toBe(0o600);
+  const mode = fs.statSync(r.dest).mode & 0o777;
+  expect(mode).toBe(process.platform === "win32" ? mode : 0o600);
 
   expect(io.logs.join("\n")).not.toContain(secret);
   expect(normalizeTarget("jev")).toBe("jev");

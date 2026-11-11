@@ -50,7 +50,8 @@ it("aborts a conflicting rebase, names the file and keeps the worktree", () => {
   expect(out.status).toBe(1);
   expect(out.stdout).toBe("");
   expect(out.stderr).toBe(
-    `rebasing wt/c onto main conflicts in packages/a/index.js: run git -C ${w} rebase main, fix each file, git -C ${w} add <file>, git -C ${w} rebase --continue, rerun the checks, then run finish again\n`,
+    `rebasing wt/c onto main conflicts in packages/a/index.js: run git -C ${w} rebase main, fix each file, ` +
+      `git -C ${w} add <file>, git -C ${w} rebase --continue, rerun the checks, then run finish again\n`,
   );
   expect(git(r, "rev-parse", "main")).toBe(before);
   expect(git(w, "branch", "--show-current")).toBe("wt/c");

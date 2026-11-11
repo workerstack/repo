@@ -119,10 +119,12 @@ describe("recCapture outcome", () => {
   });
 });
 
-const fakeTimers = () => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-const throwing = () => {
+function fakeTimers() {
+  return vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+}
+function throwing() {
   throw new Error("EPERM");
-};
+}
 
 describe("recCapture timeout", () => {
   it("kills the process group and reports ETIMEDOUT", async () => {
@@ -139,7 +141,8 @@ describe("recCapture timeout", () => {
     const signals: unknown[] = [];
     const p = capture(fakeChild({ kill: (sig) => signals.push(sig) }).child, throwing);
     vi.advanceTimersByTime(7001);
-    expect((await p).signal).toBe("SIGKILL");
+    const result = await p;
+    expect(result.signal).toBe("SIGKILL");
     expect(signals).toStrictEqual(["SIGKILL"]);
   });
 
@@ -149,7 +152,8 @@ describe("recCapture timeout", () => {
     const kills: unknown[] = [];
     const noPid = capture(fakeChild({ pid: undefined }).child, (...args) => kills.push(args));
     vi.advanceTimersByTime(7001);
-    expect((await both).error).toMatchObject({ code: "ETIMEDOUT" });
+    const bothResult = await both;
+    expect(bothResult.error).toMatchObject({ code: "ETIMEDOUT" });
     await noPid;
     expect(kills).toStrictEqual([]);
   });

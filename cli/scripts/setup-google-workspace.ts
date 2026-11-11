@@ -29,7 +29,7 @@ async function askOAuthSource(io: SetupIo, home: string): Promise<string> {
         })
       : found,
   );
-  if (!src) throw new Error("need path to Desktop OAuth JSON");
+  if (src === "") throw new Error("need path to Desktop OAuth JSON");
   return src;
 }
 
@@ -57,10 +57,11 @@ async function consoleWalk(io: SetupIo, ctx: SetupCtx, home: string): Promise<st
 
 async function installCreds(ctx: SetupCtx, home: string, dest: string): Promise<void> {
   const flags = ctx.flags ?? {};
-  const credsFlag = str(flags.creds || flags.json);
+  const credsFlag = str(flags.creds, str(flags.json));
   const { io } = ctx;
-  if (!credsFlag && ctx.interactive === true && io) installOAuthJson({ dest, src: await consoleWalk(io, ctx, home) });
-  else if (credsFlag) installOAuthJson({ dest, src: credsFlag });
+  const canAsk = ctx.interactive === true && io !== undefined && io !== null;
+  if (credsFlag === "" && canAsk) installOAuthJson({ dest, src: await consoleWalk(io, ctx, home) });
+  else if (credsFlag !== "") installOAuthJson({ dest, src: credsFlag });
   else if (!fs.existsSync(dest)) throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
 }
 
@@ -74,7 +75,7 @@ export async function setupGoogleWorkspace(ctx: SetupCtx = {}): Promise<{ ok: tr
   await installCreds(ctx, home, dest);
 
   logLine(io, `oauth ${dest}`);
-  await (loginFn ? loginFn(dest, home) : loginLoopback(dest, account));
+  await (loginFn === undefined ? loginLoopback(dest, account) : loginFn(dest, home));
   const tokens = tokenStorePath(account);
   logLine(io, `tokens ${tokens}`);
   return { dest, ok: true, tokens };

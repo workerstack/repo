@@ -3,10 +3,26 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ffmpeg, run, textFetch, tmp, type Seen, wavThen, which, cleanupTmp } from "./fixtures/listen-env.ts";
+import {
+  ffmpeg,
+  run,
+  textFetch,
+  tmp,
+  type FfmpegCtx,
+  type Seen,
+  wavThen,
+  which,
+  cleanupTmp,
+} from "./fixtures/listen-env.ts";
 import { NEED_FFMPEG, NEED_STT } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);
+
+/** A fake ffmpeg that logs an error, then exits 1. */
+function logThenFail({ errFd, on }: FfmpegCtx): void {
+  fs.writeSync(errFd, "Input/output error");
+  on.exit?.(1, null);
+}
 
 describe("rec", () => {
   it("records for the configured seconds, then transcribes", async () => {
@@ -34,8 +50,10 @@ describe("rec", () => {
   });
 
   it("needs ffmpeg and a speech engine", async () => {
-    expect((await run(["rec"], { whichFn: which({}) })).errs).toStrictEqual([NEED_FFMPEG]);
-    expect((await run(["rec"], { env: {} })).errs).toStrictEqual([NEED_STT]);
+    const noFfmpeg = await run(["rec"], { whichFn: which({}) });
+    expect(noFfmpeg.errs).toStrictEqual([NEED_FFMPEG]);
+    const noStt = await run(["rec"], { env: {} });
+    expect(noStt.errs).toStrictEqual([NEED_STT]);
   });
 });
 
@@ -48,7 +66,9 @@ describe("rec timeout", () => {
   it("kills a hung ffmpeg and reports what it logged", async () => {
     fakeTimers();
     const killed: Array<[number, string | number]> = [];
-    const killFn = (pid: number, sig: string | number) => void killed.push([pid, sig]);
+    function killFn(pid: number, sig: string | number) {
+      return void killed.push([pid, sig]);
+    }
     const spawnFn = ffmpeg(({ errFd }) => {
       fs.writeSync(errFd, "Device or resource busy");
       vi.advanceTimersByTime(60_000);
@@ -69,11 +89,8 @@ describe("rec timeout", () => {
 
 describe("rec failures", () => {
   it("reports a failing ffmpeg with its log", async () => {
-    const spawnFn = ffmpeg(({ errFd, on }) => {
-      fs.writeSync(errFd, "Input/output error");
-      on.exit?.(1, null);
-    });
-    expect((await run(["rec"], { spawnFn })).errs.at(-1)).toBe("Input/output error");
+    const r = await run(["rec"], { spawnFn: ffmpeg(logThenFail) });
+    expect(r.errs.at(-1)).toBe("Input/output error");
   });
 
   it("reports a failing ffmpeg with a default when it logged nothing", async () => {

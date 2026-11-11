@@ -60,9 +60,10 @@ export function findSkillContentConflicts({
   workspaceSkillsDir,
   packagedSkillsDir,
 }: { workspaceSkillsDir?: string; packagedSkillsDir?: string } = {}): SkillConflict[] {
-  if (!workspaceSkillsDir || !packagedSkillsDir) return [];
+  if (workspaceSkillsDir === undefined || workspaceSkillsDir === "") return [];
+  if (packagedSkillsDir === undefined || packagedSkillsDir === "") return [];
   const packaged = listSkillDirNames(packagedSkillsDir);
-  if (!packaged.length) return [];
+  if (packaged.length === 0) return [];
   const conflicts: SkillConflict[] = [];
   for (const name of packaged) {
     const ws = readSkillMd(workspaceSkillsDir, name);

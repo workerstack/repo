@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -20,88 +19,41 @@ import {
   worktreeEntries,
   worktreeOf,
 } from "./worktree-git.ts";
+import { copyIncluded, createWorktree, installDependencies } from "./worktree-setup.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import {
   BRANCH_PREFIX,
   HEADS_REF,
-  INSTALL_TIMEOUT_MS,
-  LOCKFILES,
   MAX_FINISH_TRIES,
   NO_BRANCH,
   NOTHING_AHEAD,
-  STDERR_FD,
   WORKTREE_CMD,
   WORKTREES_DIR,
 } from "./worktree.constants.ts";
 import type { FinishResult, Finishing, Pruned, WorktreeEntry, WorktreeInfo } from "./worktree.types.ts";
-
-/** Copy each gitignored file `.worktreeinclude` matches that the worktree lacks; never overwrite. */
-function copyIncluded(root: string, dest: string): void {
-  if (!fs.existsSync(path.join(root, ".worktreeinclude"))) return;
-  const listed = git(root, ["ls-files", "--others", "--ignored", "--exclude-from=.worktreeinclude"]);
-  const candidates = listed.out.split("\n").filter((rel) => rel && !rel.startsWith(`${WORKTREES_DIR}/`));
-  if (!candidates.length) return;
-  const ignored = spawnSync("git", ["check-ignore", "--stdin"], {
-    cwd: root,
-    encoding: "utf8",
-    input: candidates.join("\n"),
-  });
-  for (const rel of (ignored.stdout || "").split("\n").filter(Boolean)) {
-    const to = path.join(dest, rel);
-    if (fs.existsSync(to)) continue;
-    fs.mkdirSync(path.dirname(to), { recursive: true });
-    fs.copyFileSync(path.join(root, rel), to);
-  }
-}
-
-function createWorktree(root: string, dest: string, branch: string): void {
-  if (fs.existsSync(dest))
-    throw new Error(`${dest} exists and is not a worktree of this repo; move it or pick another name`);
-  const args = branchExists(root, branch)
-    ? ["worktree", "add", dest, branch]
-    : ["worktree", "add", "-b", branch, dest, "HEAD"];
-  // git's own output goes to stderr, so stdout carries only the path.
-  if (spawnSync("git", args, { cwd: root, stdio: ["ignore", STDERR_FD, STDERR_FD] }).status !== 0)
-    throw new Error(`git worktree add failed for ${dest}`);
-}
-
-/**
- * A new worktree has no `node_modules`, so tools that look up `<cwd>/node_modules/.bin` fail there.
- * Install from the root's lockfile; the install's output goes to stderr and a failure only warns.
- */
-function installDependencies(root: string, dest: string): void {
-  if (!LOCKFILES.some((f) => fs.existsSync(path.join(root, f)))) return;
-  const r = spawnSync("bun", ["install", "--frozen-lockfile"], {
-    cwd: dest,
-    stdio: ["ignore", STDERR_FD, STDERR_FD],
-    timeout: INSTALL_TIMEOUT_MS,
-  });
-  if (r.status !== 0)
-    process.stderr.write(`could not install dependencies in ${dest}: run bun install --frozen-lockfile there\n`);
-}
 
 /** Make or reuse `<root>/.worktrees/<name>` on `wt/<name>`; throws a one-line message when it cannot. */
 export function addWorktree(root: string, raw: unknown): { path: string; branch: string; created: boolean } {
   const name = requireName(raw);
   const dest = path.join(root, WORKTREES_DIR, name);
   const branch = BRANCH_PREFIX + name;
-  const known = liveEntry(root, dest);
-  if (!known) createWorktree(root, dest, branch);
+  const isNew = liveEntry(root, dest) === undefined;
+  if (isNew) createWorktree(root, dest, branch);
   copyIncluded(root, dest);
-  if (!known) installDependencies(root, dest);
-  return { branch, created: !known, path: canonicalPath(dest) };
+  if (isNew) installDependencies(root, dest);
+  return { branch, created: isNew, path: canonicalPath(dest) };
 }
 
 function stateOf(dir: string): WorktreeInfo["state"] {
   if (!fs.existsSync(dir)) return "missing";
-  return git(dir, ["status", "--porcelain"]).out ? "dirty" : "clean";
+  return git(dir, ["status", "--porcelain"]).out === "" ? "clean" : "dirty";
 }
 
 export function listWorktrees(root: string): WorktreeInfo[] {
   return worktreeEntries(root)
     .slice(1)
     .map((e): WorktreeInfo => {
-      const merged = !!e.branch && hasOwnCommits(root, e.branch) && isMerged(root, e.branch);
+      const merged = e.branch !== null && hasOwnCommits(root, e.branch) && isMerged(root, e.branch);
       return { branch: e.branch, managed: isManaged(e.path, root), merged, path: e.path, state: stateOf(e.path) };
     });
 }
@@ -122,14 +74,15 @@ function removeWorktreeDir(root: string, worktree: string): void {
 
 /** Remove the worktree, if any, then delete the branch once the default branch holds it. */
 function retire(root: string, worktree: string | undefined, branch: string): void {
-  if (worktree) removeWorktreeDir(root, worktree);
+  if (worktree !== undefined) removeWorktreeDir(root, worktree);
   if (isMerged(root, branch)) git(root, ["branch", "-D", branch]);
 }
 
 /** The name `finish` works on: `raw`, or the worktree `cwd` is in when `raw` is undefined. */
 function finishName(root: string, raw: string | undefined, cwd: string): string {
   const name = raw === undefined ? worktreeOf(canonicalPath(path.resolve(cwd)), root, path) : requireName(raw);
-  if (!name) throw new WorktreeUsageError("run finish inside .worktrees/<name> or pass its name");
+  if (name === null || name === "")
+    throw new WorktreeUsageError("run finish inside .worktrees/<name> or pass its name");
   return name;
 }
 
@@ -143,13 +96,15 @@ function checkReady(f: Finishing, entry: WorktreeEntry): void {
   }
   if (entry.branch !== branch) {
     throw new Error(
-      `${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: run git -C ${dest} switch ${branch}, then run finish again`,
+      `${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: ` +
+        `run git -C ${dest} switch ${branch}, then run finish again`,
     );
   }
   const dirty = git(dest, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-  if (dirty) {
+  if (dirty > 0) {
     throw new Error(
-      `${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: commit or drop them, then run finish again`,
+      `${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: ` +
+        "commit or drop them, then run finish again",
     );
   }
 }
@@ -189,22 +144,23 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
   const name = finishName(root, raw, cwd);
   const [dest, branch] = [path.join(root, WORKTREES_DIR, name), BRANCH_PREFIX + name];
   const entry = liveEntry(root, dest);
-  if (!entry && !branchExists(root, branch))
+  if (entry === undefined && !branchExists(root, branch))
     throw new Error(`no worktree or branch named ${name}: ${WORKTREE_CMD} list shows them`);
   const target = defaultBranch(root);
   if (target === NO_BRANCH)
     throw new Error(`${root} has no branch checked out and no origin/HEAD; check out the default branch there`);
   const f: Finishing = { branch, dest, root, target };
-  if (entry) checkReady(f, entry);
+  if (entry !== undefined) checkReady(f, entry);
   const done = { branch: f.branch, defaultBranch: f.target, path: f.dest };
   if (!isAhead(f)) {
     const sha = hasOwnCommits(root, f.branch) ? shortSha(f) : null;
-    retire(root, entry && f.dest, f.branch);
+    retire(root, entry === undefined ? undefined : f.dest, f.branch);
     return { ...done, sha };
   }
-  if (!entry) {
+  if (entry === undefined) {
     throw new Error(
-      `${f.branch} has commits that ${f.target} lacks and no worktree: run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`,
+      `${f.branch} has commits that ${f.target} lacks and no worktree: ` +
+        `run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`,
     );
   }
   land(f);
@@ -213,11 +169,11 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
   return { ...done, sha };
 }
 
-/** Remove clean managed worktrees whose own commits reached the default branch, then merged `wt/*` branches left without one. */
+/** Remove clean managed worktrees whose commits reached the default branch, then merged `wt/*` branches left. */
 export function pruneWorktrees(root: string): Pruned[] {
   const removed: Pruned[] = [];
   for (const w of listWorktrees(root)) {
-    if (!w.managed || w.state !== "clean" || !w.merged || !w.branch) continue;
+    if (!w.managed || w.state !== "clean" || !w.merged || w.branch === null) continue;
     if (!git(root, ["worktree", "remove", w.path]).ok) continue;
     git(root, ["branch", "-D", w.branch]);
     removed.push({ branch: w.branch, path: w.path });
@@ -230,6 +186,6 @@ function pruneBranches(root: string): Pruned[] {
   const held = new Set(worktreeEntries(root).map((e) => e.branch));
   const branches = git(root, ["for-each-ref", "--format=%(refname:short)", HEADS_REF + BRANCH_PREFIX]).out.split("\n");
   return branches
-    .filter((b) => b && !held.has(b) && isMerged(root, b) && git(root, ["branch", "-D", b]).ok)
+    .filter((b) => b !== "" && !held.has(b) && isMerged(root, b) && git(root, ["branch", "-D", b]).ok)
     .map((branch) => ({ branch, path: null }));
 }

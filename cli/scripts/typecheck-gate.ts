@@ -12,8 +12,10 @@ import {
   TSC_PROJECT_FLAG,
 } from "./ci.constants.ts";
 
+type Found = { ok: true; files: string[] } | { ok: false; errors: string[] };
+
 /** The root-relative tsconfigs of the root and each package that is not a fixture or an install. */
-function tsconfigs(root: string, rootOnly: boolean): { ok: true; files: string[] } | { ok: false; errors: string[] } {
+function tsconfigs(root: string, { rootOnly }: { rootOnly: boolean }): Found {
   const workspace = readWorkspace(root);
   if (!workspace.ok) return workspace;
   const dirs = (rootOnly ? [] : workspace.workspace.packages)
@@ -24,22 +26,27 @@ function tsconfigs(root: string, rootOnly: boolean): { ok: true; files: string[]
       .readdirSync(path.join(root, dir), { withFileTypes: true })
       .filter((entry) => entry.isFile() && TSCONFIG_FILE.test(entry.name))
       .map((entry) => path.posix.join(dir, entry.name))
-      .sort(),
+      .toSorted(),
   );
   return { files, ok: true };
 }
 
 /** tsc's args for `file`: incremental, its build info named after its root-relative path with `/` as `-`. */
-const tscArgs = (file: string): string[] => [
-  ...TSC_ARGS,
-  path.posix.join(TSBUILDINFO_DIR, `${file.replaceAll("/", "-")}${TSBUILDINFO_EXTENSION}`),
-  TSC_PROJECT_FLAG,
-  file,
-];
+function tscArgs(file: string): string[] {
+  return [
+    ...TSC_ARGS,
+    path.posix.join(TSBUILDINFO_DIR, `${file.replaceAll("/", "-")}${TSBUILDINFO_EXTENSION}`),
+    TSC_PROJECT_FLAG,
+    file,
+  ];
+}
 
-/** `tsc --noEmit` on every tsconfig of the root and each package; under the pack only the root's, since turbo typechecks the packages. */
-export function typecheckGate(ctx: GateCtx, rootOnly: boolean): Gate {
-  const found = tsconfigs(ctx.root, rootOnly);
+/**
+ * `tsc --noEmit` on every tsconfig of the root and each package; under the pack only the root's, since turbo
+ * typechecks the packages.
+ */
+export function typecheckGate(ctx: GateCtx, { rootOnly }: { rootOnly: boolean }): Gate {
+  const found = tsconfigs(ctx.root, { rootOnly });
   if (!found.ok) {
     return fail(
       "typecheck failed",

@@ -94,7 +94,7 @@ it("makes the worktree when .worktreeinclude names nothing present", () => {
   write(path.join(r, ".worktreeinclude"), ".env\nnotes.txt\n");
   write(path.join(r, "notes.txt"), "loose, not ignored\n");
   expect(addWorktree(r, "plain").created).toBe(true);
-  expect(fs.readdirSync(wt(r, "plain")).sort()).toStrictEqual([".git", ".gitignore", "packages"]);
+  expect(fs.readdirSync(wt(r, "plain")).toSorted()).toStrictEqual([".git", ".gitignore", "packages"]);
 });
 
 it("warns on stderr and still returns the path when the install fails", () => {

@@ -23,7 +23,8 @@ it("main: dry-run prints one line per file and writes nothing", () => {
   const streams = captureStreams();
   expect(main([])).toBe(0);
   expect(streams.out().trim().split("\n")).toStrictEqual([
-    `dry-run ${grok} remove cloudflare from [plugins].enabled; add cloudflare, stripe to [plugins].disabled; add cloudflare-docs, MCP_DOCKER, stripe to disabled_mcp_servers`,
+    `dry-run ${grok} remove cloudflare from [plugins].enabled; add cloudflare, stripe to [plugins].disabled; ` +
+      "add cloudflare-docs, MCP_DOCKER, stripe to disabled_mcp_servers",
     `dry-run ${path.join(home, ".cursor", "mcp.json")} noop (missing)`,
     `dry-run ${path.join(home, ".claude", "plugins", "installed_plugins.json")} noop (missing)`,
   ]);

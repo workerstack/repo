@@ -4,11 +4,17 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
+import { mergedAndDirtyWorktrees } from "./fixtures/worktree-scenarios.ts";
 import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
 import { addWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
+
+/** Orders list rows by their path. */
+function byPath(a: unknown[], b: unknown[]): number {
+  return String(a[0]).localeCompare(String(b[0]));
+}
 
 /** A worktree outside .worktrees on branch `spike`. */
 function outsideOf(r: string): string {
@@ -29,14 +35,13 @@ it("lists each linked worktree with its state, merge status and whether it is ma
   write(path.join(outside, "scratch.txt"), "x");
   git(outside, "switch", "-q", "--detach");
   const rows = listWorktrees(r).map((w) => [w.path, w.branch, w.state, w.merged, w.managed]);
-  const byPath = (a: unknown[], b: unknown[]) => String(a[0]).localeCompare(String(b[0]));
-  expect(rows.sort(byPath)).toStrictEqual(
+  expect(rows.toSorted(byPath)).toStrictEqual(
     [
       [wt(r, "auth"), "wt/auth", "clean", false, true],
       [wt(r, "done"), "wt/done", "clean", true, true],
       [wt(r, "gone"), "wt/gone", "missing", false, true],
       [outside, null, "dirty", false, false],
-    ].sort(byPath),
+    ].toSorted(byPath),
   );
 });
 
@@ -79,13 +84,9 @@ it("tells a branch the default holds, and a fresh branch from one that moved", (
   expect(isMerged(r, "wt/moved")).toBe(true);
 });
 
-it("removes only clean managed worktrees whose own commits reached the default branch, and merged wt/* branches without one", () => {
+it("removes clean managed worktrees whose commits reached the default branch, and merged wt/* branches left", () => {
   const r = tmp.repo();
-  for (const n of ["m", "fresh", "dirty", "un"]) addWorktree(r, n);
-  for (const n of ["m", "dirty", "un"]) commitIn(wt(r, n), `${n}.txt`);
-  git(r, "merge", "-q", "--no-edit", "wt/m");
-  git(r, "merge", "-q", "--no-edit", "wt/dirty");
-  write(path.join(wt(r, "dirty"), "loose.txt"), "x");
+  mergedAndDirtyWorktrees(r, (n) => addWorktree(r, n));
   outsideOf(r);
   git(r, "branch", "wt/o", "main");
   expect(pruneWorktrees(r)).toStrictEqual([

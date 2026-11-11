@@ -17,7 +17,9 @@ function wavIn(prefix: string): string {
 }
 
 function localRun(file: string, r: SpawnSyncResult | ((args: string[]) => SpawnSyncResult)) {
-  const spawnSyncFn = (_cmd: string, args: string[]) => (typeof r === "function" ? r(args) : r);
+  function spawnSyncFn(_cmd: string, args: string[]) {
+    return typeof r === "function" ? r(args) : r;
+  }
   return transcribeLocal({ bin: "whisper-cli", file, model: "/m.bin", spawnSyncFn });
 }
 
@@ -102,10 +104,10 @@ describe("transcribe request", () => {
 
   it("posts the file and the configured model", async () => {
     const bodies: Array<FormData | undefined> = [];
-    const fetchFn: FetchFn = (_url, init) => {
+    function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       bodies.push(init.body);
-      return jsonReply({ text: "t" })(_url, init);
-    };
+      return jsonReply({ text: "t" })(url, init);
+    }
     await transcribeWith({ fetchFn });
     const file = bodies[0]?.get("file");
     expect(bodies[0]?.get("model")).toBe("m-1");

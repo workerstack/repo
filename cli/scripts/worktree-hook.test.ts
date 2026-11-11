@@ -14,11 +14,13 @@ beforeEach(() => {
 afterEach(() => tmp.cleanup());
 
 const ok = { code: 0, stderr: "", stdout: "" };
-const remove = (r: string, name: string): HookInput => ({
-  cwd: r,
-  hook_event_name: "WorktreeRemove",
-  worktree_path: wt(r, name),
-});
+function remove(r: string, name: string): HookInput {
+  return {
+    cwd: r,
+    hook_event_name: "WorktreeRemove",
+    worktree_path: wt(r, name),
+  };
+}
 
 it("does nothing for no payload, another event, or a removal that names no path", () => {
   const r = tmp.repo();

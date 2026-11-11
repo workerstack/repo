@@ -7,9 +7,9 @@ const MISSING: Status = { extra: "", ok: false };
 export function formatStatus(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
   return targets
     .map((t) => {
-      const st = (statuses && statuses[t]) ?? MISSING;
+      const st = statuses?.[t] ?? MISSING;
       const b = st.ok ? "ok" : "missing";
-      return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
+      return st.extra === "" ? `${t}  ${b}` : `${t}  ${b}  ${st.extra}`;
     })
     .join("\n");
 }
@@ -17,7 +17,7 @@ export function formatStatus(statuses: Statuses | null | undefined, targets: str
 /** "ok" or "missing", then the status's extra when it has one. */
 function tagOf(st: Status): string {
   const word = st.ok ? "ok" : "missing";
-  return st.extra ? `${word} ${st.extra}` : word;
+  return st.extra === "" ? word : `${word} ${st.extra}`;
 }
 
 export function menuOptions(
@@ -32,13 +32,14 @@ export function menuOptions(
     { label: "jev (TypeSafe research decision)", value: "jev" },
   ].filter((o) => targets.includes(o.value));
   return base.map((o) => {
-    const st = (statuses && statuses[o.value]) ?? MISSING;
+    const st = statuses?.[o.value] ?? MISSING;
     return { label: `${o.label}  ${tagOf(st)}`, value: o.value };
   });
 }
 
 export function firstMissing(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
-  for (const t of targets) if (!statuses || !statuses[t] || !statuses[t].ok) return t;
+  for (const t of targets) if (statuses?.[t]?.ok !== true) return t;
 
-  return targets[0] || "browser";
+  const [first] = targets;
+  return first === undefined || first === "" ? "browser" : first;
 }

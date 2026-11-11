@@ -24,7 +24,9 @@ export type Target = { platform: string; arch: string };
 /** Where turbo's binary is, or the line that says why it cannot be found. */
 export type TurboBin = { ok: true; path: string } | { ok: false; error: string };
 
-const resolveFrom: Resolve = (specifier, from) => Bun.resolveSync(specifier, from);
+function resolveFrom(specifier: string, from: string): string {
+  return Bun.resolveSync(specifier, from);
+}
 /** Where turbo is looked up from: this package's own install, as turbo is its dependency and not the consumer's. */
 const OWN_DIR = import.meta.dirname;
 const here: Target = { arch: process.arch, platform: process.platform };
@@ -51,11 +53,11 @@ export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom,
 }
 
 /** A runner that starts the binary `locate` finds, in the directory it is given, with `env` over the process's. */
-export const turboRunner =
-  (locate: () => TurboBin = turboBin): TurboRun =>
-  (args, cwd, env) => {
+export function turboRunner(locate: () => TurboBin = turboBin): TurboRun {
+  return (args, cwd, env) => {
     const bin = locate();
     if (!bin.ok) return { missing: bin.error };
     const run = spawnSync(bin.path, args, { cwd, encoding: "utf8", env: childEnv(env), maxBuffer: MAX_BUFFER });
     return { code: run.status ?? 1, stderr: run.stderr, stdout: run.stdout };
   };
+}

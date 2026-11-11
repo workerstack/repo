@@ -12,13 +12,17 @@ import type { SetupIo } from "./setup.types.ts";
 afterEach(cleanSetup);
 
 const body = JSON.stringify(desktopOauth);
-const noLogin = () => Promise.resolve();
+function noLogin() {
+  return Promise.resolve();
+}
 
 it("setupGoogleWorkspace names the account from --account and accepts --json", async () => {
   const home = plant("setup-gw-acct-");
   const src = writeAt(path.join(home, "c.json"), body);
   const logins: string[] = [];
-  const loginFn = (dest: string) => (logins.push(dest), Promise.resolve());
+  function loginFn(dest: string) {
+    return (logins.push(dest), Promise.resolve());
+  }
   const r = await setupGoogleWorkspace({ flags: { account: "work", json: src }, home, io: captureIo(), loginFn });
   expect(r.dest).toBe(oauthWritePath(home, "work"));
   expect(logins).toStrictEqual([r.dest]);
@@ -50,7 +54,7 @@ it("setupGoogleWorkspace with no context fails on the stubbed home", async () =>
   expect(fs.existsSync(path.join(home, ".workerstack"))).toBe(true);
 });
 
-function walker(texts: Record<string, string>, withText = true) {
+function walker(texts: Record<string, string>, { withText = true }: { withText?: boolean } = {}) {
   const asked: string[] = [];
   const io: SetupIo & { logs: string[]; asked: string[] } = { ...captureIo(), asked };
   io.confirm = (o) => (asked.push(o.message), Promise.resolve(true));
@@ -79,25 +83,25 @@ it("setupGoogleWorkspace keeps the typed project id, or the flag when the answer
   expect(typed.filter((u) => u.includes("project=flag-proj")).length).toBe(3);
 });
 
-it("setupGoogleWorkspace uses the newest download when the path prompt takes its default", async () => {
-  const home = plant("setup-gw-found-");
+/** Runs the terminal setup over a home whose Downloads holds a client file; whether the OAuth file was installed. */
+async function installsDownload(prefix: string, makeIo: () => SetupIo): Promise<boolean> {
+  const home = plant(prefix);
   writeAt(path.join(home, "Downloads", "client_secret_1.json"), body);
-  const io = walker({});
-  await setupGoogleWorkspace({ home, interactive: true, io, loginFn: noLogin, openUrlFn: () => 0 });
-  expect(fs.existsSync(oauthWritePath(home, "default"))).toBe(true);
+  await setupGoogleWorkspace({ home, interactive: true, io: makeIo(), loginFn: noLogin, openUrlFn: () => 0 });
+  return fs.existsSync(oauthWritePath(home, "default"));
+}
+
+it("setupGoogleWorkspace uses the newest download when the path prompt takes its default", async () => {
+  expect(await installsDownload("setup-gw-found-", () => walker({}))).toBe(true);
 });
 
 it("setupGoogleWorkspace on an io without confirm or text takes the download", async () => {
-  const home = plant("setup-gw-bare-io-");
-  writeAt(path.join(home, "Downloads", "client_secret_1.json"), body);
-  const io = captureIo();
-  await setupGoogleWorkspace({ home, interactive: true, io, loginFn: noLogin, openUrlFn: () => 0 });
-  expect(fs.existsSync(oauthWritePath(home, "default"))).toBe(true);
+  expect(await installsDownload("setup-gw-bare-io-", captureIo)).toBe(true);
 });
 
 it("setupGoogleWorkspace fails when the terminal walk ends with no JSON", async () => {
   const home = plant("setup-gw-nojson-");
-  const io = walker({}, false);
+  const io = walker({}, { withText: false });
   const ask = setupGoogleWorkspace({ home, interactive: true, io, loginFn: noLogin, openUrlFn: () => 0 });
   await expect(ask).rejects.toThrow("need path to Desktop OAuth JSON");
 });

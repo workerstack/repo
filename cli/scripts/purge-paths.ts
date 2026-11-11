@@ -4,26 +4,28 @@ import path from "node:path";
 
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
+import { firstNonEmpty } from "./first-non-empty.ts";
 import { APPLY_FLAG } from "./purge-global-mcps.constants.ts";
 import type { ParsedArgv } from "./purge-global-mcps.types.ts";
+import { str } from "./voice-args.ts";
 
 /** HOME, else USERPROFILE (Windows / env sim), else os.homedir(). */
 export function resolveHome(env: Env = readEnv()): string {
-  return env.HOME || env.USERPROFILE || os.homedir();
+  return firstNonEmpty(env.HOME, env.USERPROFILE) ?? os.homedir();
 }
 
 /** `--apply` or nothing; any other argument is an unknown flag. */
 export function parseArgv(argv: unknown): ParsedArgv {
   const args: unknown[] = Array.isArray(argv) ? argv : [];
-  let apply = false;
+  let isApply = false;
   for (const a of args) {
     if (a === APPLY_FLAG) {
-      apply = true;
+      isApply = true;
       continue;
     }
-    return { error: `unknown flag: ${a}`, ok: false };
+    return { error: `unknown flag: ${str(a)}`, ok: false };
   }
-  return { apply, ok: true };
+  return { apply: isApply, ok: true };
 }
 
 /** The global grok config under `home`. */
