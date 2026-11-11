@@ -9,6 +9,7 @@ export const SLOW = 60_000;
 export const NUMBER = "repo(magic-number)";
 export const STRING = "repo(magic-string)";
 export const REGEX = "repo(magic-regex)";
+const MAGIC_RULES: readonly string[] = [NUMBER, STRING, REGEX];
 export const NAMES_NOTHING = (text: string) => `${text} names nothing; give it a named const`;
 export const BOUND = (call: string) =>
   `${call} is a schema bound; import it from a *.constants.ts file or a constants package`;
@@ -41,11 +42,12 @@ export const hit = (at: string, rule: string, message: string): Diagnostic => ({
   line: `${at}: error ${rule}: ${message}`,
 });
 
-/** Every hit of the planted `files`, all of them checked. */
+/** The magic rules' hits of the planted `files`, all of them checked; the other script rules' hits left out. */
 export function magicOf(files: Record<string, string>): Diagnostic[] {
-  const found = scriptDiagnostics(plant(files), Object.keys(files));
+  const planted = Object.keys(files);
+  const found = scriptDiagnostics(plant(files), { files: planted, sources: planted });
   if (!found.ok) throw new Error(found.errors.join("\n"));
-  return found.value;
+  return found.value.filter((d) => MAGIC_RULES.includes(d.rule));
 }
 
 /** A schema type: the receiver of a bound has a `parse` method. */

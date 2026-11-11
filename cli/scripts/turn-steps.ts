@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { sourceFiles } from "../check-comments.ts";
 import { withoutSkipped } from "../check-magic.ts";
 import { CONFIG_FILE, type LintSkip } from "../config.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
@@ -102,10 +103,12 @@ function lintFix(root: string, files: readonly string[]): { report: Result<Diagn
 
 /**
  * oxlint's `report` with the script hits of `files` after it, those a `lint.skip` entry turns off left out. The hits
- * include the guards of sources a changed test imports, which may lie outside `files`.
+ * include the guards of sources a changed test imports, which may lie outside `files`; a clone's other side is looked
+ * for in every source of the checkout.
  */
 function withScripts(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
-  const scripts = report.ok ? scriptDiagnostics(turn.root, files) : report;
+  const listed = report.ok ? sourceFiles(turn.root) : report;
+  const scripts = listed.ok ? scriptDiagnostics(turn.root, { files, sources: listed.files }) : listed;
   if (!report.ok || !scripts.ok) return scripts;
   const reported = [...new Set([...files, ...scripts.value.map((d) => d.file)])];
   return { ok: true, value: [...report.value, ...withoutSkipped(scripts.value, turn.skips, reported)] };

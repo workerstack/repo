@@ -1,14 +1,15 @@
 /**
  * The checks run as scripts on the TypeScript compiler API, joined for `repo check`, `repo turn`, `repo lint
- * --baseline` and, on the paths given or the whole repo, plain `repo lint`: the magic literals and the untested guards
- * as lint diagnostics the baseline counts, and the reject files check prints. Apart from `check-magic.ts` and
- * `check-guards.ts`, which this imports, so neither imports the other.
+ * --baseline` and, on the paths given or the whole repo, plain `repo lint`: the magic literals, the untested guards
+ * and jscpd's clones (`repo/duplicate-code`) as lint diagnostics the baseline counts, and the reject files check
+ * prints. Apart from `check-magic.ts` and `check-guards.ts`, which this imports, so neither imports the other.
  */
 import path from "node:path";
 
 import { sourceFiles } from "./check-comments.ts";
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
 import { rejectionProblems } from "./check-rejections.ts";
+import { duplicateDiagnostics, type CloneScope } from "./clones/duplicate-code.ts";
 import { findRoot, loadConfig, type LintSkip } from "./config.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import type { CargoRun } from "./rust/clippy.ts";
@@ -29,25 +30,29 @@ const byPlace = (a: Diagnostic, b: Diagnostic): number =>
   byKey(a.file, b.file) || a.line.localeCompare(b.line, "en", { numeric: true });
 
 /**
- * The magic hits and untested guards of `files` (root-relative POSIX paths), in file then position order; the guards
- * of the sources a test among them imports too; and the Rust source rules (never clippy, which compiles) on the `.rs`
- * files among them, in a repo with a root Cargo.toml. Or why a tsconfig.json could not be read.
+ * The magic hits, untested guards and clone sides of `scope.files` (root-relative POSIX paths), in file then position
+ * order, a clone's other side looked for in every one of `scope.sources`; the guards of the sources a test among the
+ * files imports too; and the Rust source rules (never clippy, which compiles) on the `.rs` files among them, in a repo
+ * with a root Cargo.toml. Or why a tsconfig.json could not be read or jscpd could not run.
  */
-export function scriptDiagnostics(root: string, files: readonly string[]): Result<Diagnostic[]> {
+export function scriptDiagnostics(root: string, scope: CloneScope): Result<Diagnostic[]> {
+  const { files } = scope;
   const magic = magicDiagnostics(root, files);
   if (!magic.ok) return magic;
   const guards = guardDiagnostics(root, files);
   if (!guards.ok) return guards;
+  const clones = duplicateDiagnostics(root, scope);
+  if (!clones.ok) return clones;
   const rust = rustSourceDiagnostics(
     root,
     files.filter((rel) => RUST_SOURCE.test(rel)),
   );
-  return { ok: true, value: [...magic.value, ...guards.value, ...rust].sort(byPlace) };
+  return { ok: true, value: [...magic.value, ...guards.value, ...clones.value, ...rust].sort(byPlace) };
 }
 
 /** The checkout's script diagnostics: those of its JS/TS `files`, then the Rust ones with clippy (a root Cargo.toml). */
 function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
-  const found = scriptDiagnostics(checkout.root, files);
+  const found = scriptDiagnostics(checkout.root, { files, sources: files });
   if (!found.ok) return found;
   const rust = rustHitsAt(checkout.root, checkout.rust, { clippy: true, run });
   return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].sort(byPlace) } : rust;
@@ -86,12 +91,13 @@ function filesUnder(at: { root: string; cwd: string }, paths: readonly string[],
   return all.filter((rel) => given.some((g) => g === "" || rel === g || rel.startsWith(`${g}/`)));
 }
 
-/** The script hits of `files`: magic and guards on the JS/TS ones, the Rust source rules (and clippy) on the `.rs`. */
+/**
+ * The script hits of `files`: magic, guards and clones (against every source of the checkout) on the JS/TS ones, the
+ * Rust source rules (and clippy) on the `.rs`.
+ */
 function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], options: RustOptions) {
-  const found = scriptDiagnostics(
-    checkout.root,
-    files.filter((rel) => !RUST_SOURCE.test(rel)),
-  );
+  const sources = checkout.files.ok ? checkout.files.value : [];
+  const found = scriptDiagnostics(checkout.root, { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources });
   if (!found.ok) return found;
   const rust = rustHitsAt(
     checkout.root,
@@ -102,8 +108,8 @@ function lintHits(checkout: NonNullable<Checkout>, files: readonly string[], opt
 }
 
 /**
- * `repo lint`'s script hits for the repo at `cwd`: the magic literals, untested guards and Rust source rules of the
- * files `scope.paths` names (a directory: every source file under it; null: the whole checkout), and with
+ * `repo lint`'s script hits for the repo at `cwd`: the magic literals, untested guards, clones and Rust source rules of
+ * the files `scope.paths` names (a directory: every source file under it; null: the whole checkout), and with
  * `scope.clippy` clippy's too. Nothing without a config or the standards pack.
  */
 export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun): Promise<ScriptLint> {

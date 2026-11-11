@@ -1,12 +1,14 @@
 /**
  * The checks `repo check`, `repo turn`, `repo lint --baseline` and `repo lint` (on the paths given, or the whole repo)
- * run beside oxlint as scripts on the TypeScript compiler API, by the names `lint.skip` takes. Kept apart from the
- * checks so the oxlint config can accept the names without loading typescript.
+ * run beside oxlint as scripts on the TypeScript compiler API (and jscpd, for `repo/duplicate-code`), by the names
+ * `lint.skip` takes. Kept apart from the checks so the oxlint config can accept the names without loading typescript.
  */
 export const MAGIC_NUMBER = "repo/magic-number";
 export const MAGIC_STRING = "repo/magic-string";
 export const MAGIC_REGEX = "repo/magic-regex";
 export const GUARD_REJECTS = "repo/guard-rejects";
+/** A clone of at least 50 tokens and 5 lines, found by jscpd. */
+export const DUPLICATE_CODE = "repo/duplicate-code";
 /** The Rust source rules, which run only in a repo with a root Cargo.toml. */
 const RUST_LINT_ATTRIBUTE = "repo/rust-lint-attribute";
 const RUST_BLOCK_COMMENT = "repo/rust-block-comment";
@@ -17,6 +19,7 @@ export const SCRIPT_RULES: readonly string[] = [
   MAGIC_STRING,
   MAGIC_REGEX,
   GUARD_REJECTS,
+  DUPLICATE_CODE,
   ...RUST_SOURCE_RULES,
 ];
 
