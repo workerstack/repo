@@ -29,12 +29,13 @@ import {
   persistTmp,
 } from "./persist-tmp.ts";
 import { parseNeed } from "./parse-need.ts";
-import { resolveJobCwd, runJob } from "./job.ts";
+import { resolveJobCwd } from "./job-args.ts";
+import { runJob } from "./job.ts";
 import { otherLines, recordHook } from "./board.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { isRecord, type HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
-import { gitAskedWords, mainCheckoutWriteReason } from "./worktree.ts";
+import { gitAskedWords, mainCheckoutWriteReason } from "./worktree-guards.ts";
 import {
   closingLine,
   parseApproval,

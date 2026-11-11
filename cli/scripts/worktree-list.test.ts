@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { commitIn, git, hasBranch, scratch, write, wt } from "./fixtures/worktree-repo.ts";
-import { addWorktree, defaultBranch, hasOwnCommits, isMerged, listWorktrees, pruneWorktrees } from "./worktree.ts";
+import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
+import { addWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());

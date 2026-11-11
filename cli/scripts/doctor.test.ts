@@ -801,7 +801,7 @@ describe("workspace report", () => {
   }
 
   it("lists each leftover with the command that clears it, groups worktrees, and deletes nothing", async () => {
-    const { addWorktree } = await import("./worktree.ts");
+    const { addWorktree } = await import("./worktree-lifecycle.ts");
     const r = gitRepo("doc-ws-", ".tmp\n.tmp/\n.worktrees/\n");
     expect(doctor(path.join(r, "packages", "a")).code).toBe(0);
     const seeded = [
@@ -847,7 +847,7 @@ describe("workspace report", () => {
   });
 
   it("lists an unmerged managed worktree whose last commit is 7 or more days old, with its finish command", async () => {
-    const { addWorktree } = await import("./worktree.ts");
+    const { addWorktree } = await import("./worktree-lifecycle.ts");
     const r = gitRepo("doc-ws-stale-", ".tmp/\n.worktrees/\n");
     const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
     const commitAt = (dir: string, name: string, when: string) => {
@@ -892,7 +892,7 @@ describe("workspace report", () => {
   });
 
   it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", async () => {
-    const { addWorktree } = await import("./worktree.ts");
+    const { addWorktree } = await import("./worktree-lifecycle.ts");
     const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");
     expect(section(doctor(r).stdout).head).toMatch(/^workspace\s+ok\s*$/);
     put(r, ".tmp/repo/verify/S/.tmp/repo/x");

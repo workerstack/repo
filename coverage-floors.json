@@ -635,6 +635,36 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/clean-builds.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/clean-plan.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/clean-run.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/clean-scan.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/clean.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/clean.ts": {
     "branches": 100,
     "functions": 100,
@@ -660,6 +690,24 @@
     "statements": 100
   },
   "cli/scripts/emit-mcp-policy.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/folder-map-config.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/folder-map-tree.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/folder-map.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -726,6 +774,48 @@
     "statements": 100
   },
   "cli/scripts/jev.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-args.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-exec.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-fetch.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-format.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-search.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job-stash.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/job.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -845,7 +935,25 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/purge-global-mcps.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/purge-global-mcps.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/purge-paths.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/purge-plans.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -936,6 +1044,42 @@
     "statements": 100
   },
   "cli/scripts/workspace-root.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree-git.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree-guards.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree-lifecycle.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree-shell.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree-usage-error.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/scripts/worktree.constants.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

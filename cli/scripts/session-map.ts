@@ -10,7 +10,8 @@ import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { recordHook } from "./board.ts";
-import { folderMap, type FolderMapResult } from "./folder-map.ts";
+import { folderMap } from "./folder-map.ts";
+import type { FolderMapResult } from "./folder-map.types.ts";
 import { resolveRepoBin } from "./gate-job.ts";
 import { readEnv } from "../env.ts";
 

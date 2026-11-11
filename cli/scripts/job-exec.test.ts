@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { pathWith, plant, plantFiles, plantTool, useJobEnv } from "./fixtures/job-kit.ts";
-import { runExec } from "./job.ts";
+import { runExec } from "./job-exec.ts";
 
 useJobEnv();
 

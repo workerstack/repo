@@ -22,7 +22,7 @@ import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { childEnv } from "./env.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.ts";
-import { defaultBranch } from "./scripts/worktree.ts";
+import { defaultBranch } from "./scripts/worktree-git.ts";
 
 /** Where the ratcheted files live, as the config's `coverage` section names them. */
 export type RatchetPaths = { floors?: string; knownFailures?: string; mutationFloors?: string };

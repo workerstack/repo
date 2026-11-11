@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
-import { mainCheckoutWriteReason } from "./worktree.ts";
+import { mainCheckoutWriteReason } from "./worktree-guards.ts";
 import {
   agyEdit,
   claudeSh,
@@ -105,7 +105,7 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
 
 it("reads win32 spellings of the root", () => {
   const roots = { root: "C:\\r", checkout: "C:\\r", cwd: "C:\\r" };
-  const check = (target: string) => mainCheckoutWriteReason(target, roots, path.win32, () => true);
+  const check = (target: string) => mainCheckoutWriteReason(target, roots, { p: path.win32, committed: () => true });
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; only C:\\r\\.tmp\\ is writable here";
   expect(check("C:\\r\\src\\x.ts")).toBe(reason);
@@ -114,5 +114,5 @@ it("reads win32 spellings of the root", () => {
   expect(check("C:\\r\\.tmp\\repo\\n.md")).toBeNull();
   expect(check("c:/R/.worktrees/a/src/x.ts")).toBeNull();
   expect(check("D:\\other\\x.ts")).toBeNull();
-  expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, path.win32, () => false)).toBeNull();
+  expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, { p: path.win32, committed: () => false })).toBeNull();
 });

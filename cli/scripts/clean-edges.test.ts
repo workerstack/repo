@@ -3,7 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { liveSessions, main, nestedTmpDirs, planClean, runClean } from "./clean.ts";
+import { main } from "./clean.ts";
+import { cleanPlan } from "./clean-plan.ts";
+import { liveSessions, runClean } from "./clean-run.ts";
+import { nestedTmpDirs } from "./clean-scan.ts";
 import { childEnv } from "../env.ts";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
@@ -65,18 +68,18 @@ describe("clean report", () => {
   });
 });
 
-describe("planClean", () => {
+describe("cleanPlan", () => {
   it("plans without nested dirs by default", () => {
     const root = tempDir();
     put(root, ".tmp/repo/a.log", "a");
-    expect(planClean({ root, now: NOW, liveSessions: new Set() }).remove.map((r) => r.kind)).toEqual(["file"]);
+    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove.map((r) => r.kind)).toEqual(["file"]);
   });
 
   it("ignores a roadmaps entry that is not a readable file", () => {
     const root = tempDir();
     fs.mkdirSync(path.join(root, ".tmp/repo/roadmaps/odd"), { recursive: true });
     put(root, ".tmp/repo/plans/1-a-20261103T000000Z.md", "---\nstatus: done\n---\n");
-    expect(planClean({ root, now: NOW, liveSessions: new Set() }).remove).toEqual([]);
+    expect(cleanPlan({ root, now: NOW, liveSessions: new Set() }).remove).toEqual([]);
   });
 });
 

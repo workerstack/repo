@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { useJobEnv } from "./fixtures/job-kit.ts";
-import { formatFacts, squeezLines } from "./job.ts";
+import { formatFacts, isHtml, looksHtmlOrUnbounded, shouldFallback, squeezLines } from "./job-format.ts";
+import { MAX_STDOUT } from "./job.constants.ts";
 
 useJobEnv();
 
@@ -85,4 +86,62 @@ it("squeezLines reads a query that is not a pattern as plain text", () => {
 
 it("squeezLines gives a non-matching query no weight", () => {
   expect(squeezLines(numbered(10), "zzz")).toEqual(["l0", "l1", "l2", "l3", "l4", "l9"]);
+});
+
+it("shouldFallback lets bounded jobs through and refuses unknown jobs", () => {
+  expect(shouldFallback("search", "gate-fat-tools")).toBe(false);
+  expect(shouldFallback(" EXEC ", "echo hi")).toBe(false);
+  expect(shouldFallback("web", "x")).toBe(true);
+  expect(shouldFallback(undefined, "x")).toBe(true);
+  expect(shouldFallback("exec", undefined)).toBe(true);
+  expect(shouldFallback("search", "   ")).toBe(true);
+});
+
+it("shouldFallback needs a stash for slice and an http url for fetch", () => {
+  expect(shouldFallback("slice", "", { stash: "g7k" })).toBe(false);
+  expect(shouldFallback("slice", "", { stash: "  " })).toBe(true);
+  expect(shouldFallback("slice", "")).toBe(true);
+  expect(shouldFallback("fetch", " https://example.com/a")).toBe(false);
+  expect(shouldFallback("fetch", "HTTP://example.com")).toBe(false);
+  expect(shouldFallback("fetch", "ftp://example.com")).toBe(true);
+  expect(shouldFallback("fetch", undefined)).toBe(true);
+});
+
+it("shouldFallback refuses downloads, html, lockfiles and .git", () => {
+  const refused = [
+    "curl x",
+    "wget x",
+    "echo <html>",
+    "echo <!DOCTYPE html>",
+    "cat bun.lock",
+    "ls .git/hooks",
+    "ls .git",
+  ];
+  for (const q of refused) expect(shouldFallback("exec", q), q).toBe(true);
+  expect(shouldFallback("exec", "ls src\\.git\\x")).toBe(true);
+  expect(shouldFallback("exec", "git status")).toBe(false);
+  expect(shouldFallback("exec", "ls my.github")).toBe(false);
+});
+
+it("shouldFallback refuses the generated dirs as whole path segments only", () => {
+  const dirs = ["node_modules", "dist", ".next", "build", "coverage"];
+  for (const d of dirs) {
+    expect(shouldFallback("exec", `ls ${d}`), d).toBe(true);
+    expect(shouldFallback("exec", `ls ${d}/x`), d).toBe(true);
+    expect(shouldFallback("exec", `ls a/${d}/x`), d).toBe(true);
+    expect(shouldFallback("exec", `cat '${d}'`), d).toBe(true);
+    expect(shouldFallback("exec", `ls ${d}er`), d).toBe(false);
+    expect(shouldFallback("exec", `ls my${d}`), d).toBe(false);
+  }
+});
+
+it("isHtml and looksHtmlOrUnbounded look at stdout and stderr together", () => {
+  expect(isHtml("<HTML lang=en>", "")).toBe(true);
+  expect(isHtml("", "<!DOCTYPE html>")).toBe(true);
+  expect(isHtml("plain", undefined)).toBe(false);
+  expect(looksHtmlOrUnbounded("x".repeat(MAX_STDOUT + 1), "")).toBe(true);
+  expect(looksHtmlOrUnbounded("x".repeat(MAX_STDOUT), "")).toBe(false);
+  expect(looksHtmlOrUnbounded("<html>", "")).toBe(true);
+  expect(looksHtmlOrUnbounded(undefined, undefined)).toBe(false);
+  expect(looksHtmlOrUnbounded("", "x".repeat(MAX_STDOUT + 1))).toBe(true);
 });

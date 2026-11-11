@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, expect, it, vi } from "vitest";
 import { inDir, pathSans, plant, plantFiles, stashDirOf, useJobEnv } from "./fixtures/job-kit.ts";
-import { runSearch } from "./job.ts";
+import { globMatch, globToRegExp, runSearch } from "./job-search.ts";
 
 useJobEnv();
 // With no rg on PATH the search walks the tree itself; job-rg.test.ts covers the rg arm.
@@ -124,4 +124,26 @@ it("runSearch stops when the facts fill the stash cap, before ten thousand match
   const n = Number(/^(\d+)\+ matches/.exec(search(dir, "hit").text)?.[1]);
   expect(n).toBeGreaterThan(9000);
   expect(n).toBeLessThan(10_000);
+});
+
+it("globMatch matches a bare pattern at any depth and a slashed one from the top", () => {
+  expect(globMatch("a/b/c.md", "*.md")).toBe(true);
+  expect(globMatch("c.md", "*.md")).toBe(true);
+  expect(globMatch("a/b/c.txt", "*.md")).toBe(false);
+  expect(globMatch("sub\\c.md", "sub/*.md")).toBe(true);
+  expect(globMatch("x/sub/c.md", "sub/*.md")).toBe(false);
+  expect(globMatch("a/b/c.md", "")).toBe(false);
+  expect(globMatch(undefined, "*.md")).toBe(false);
+});
+
+it("globToRegExp turns ** * ? and literals into a whole-path pattern", () => {
+  expect(globToRegExp("src/**/x.ts").test("src/x.ts")).toBe(true);
+  expect(globToRegExp("src/**/x.ts").test("src/a/b/x.ts")).toBe(true);
+  expect(globToRegExp("src/**").test("src/a/b.ts")).toBe(true);
+  expect(globToRegExp("src/*").test("src/a/b.ts")).toBe(false);
+  expect(globToRegExp("a?c.ts").test("abc.ts")).toBe(true);
+  expect(globToRegExp("a?c.ts").test("a/c.ts")).toBe(false);
+  expect(globToRegExp("a.b+c").test("aXb+c")).toBe(false);
+  expect(globToRegExp("a\\b").test("a/b")).toBe(true);
+  expect(globToRegExp(undefined).test("")).toBe(true);
 });

@@ -7,7 +7,7 @@ import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import { resolveRoots } from "./workspace-root.ts";
-import { writeStash } from "./job.ts";
+import { writeStash } from "./job-stash.ts";
 import { isRecord } from "./hook-input.ts";
 import {
   CHROMIUM_BINS,

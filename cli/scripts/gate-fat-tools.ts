@@ -23,7 +23,7 @@ import { patchIgnoreEdits, redundantIgnoreReason, shellIgnoreEdits, writeIgnoreE
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
-import { worktreeAddReason } from "./worktree.ts";
+import { worktreeAddReason } from "./worktree-guards.ts";
 
 /** The input field that holds the command; a Codex patch is a write, whether sent as apply_patch or a shell heredoc. */
 function fieldOf(tool: ToolSpec): string {
@@ -73,7 +73,8 @@ function ignoreGuard(call: GateCall): GuardResult {
 }
 
 function strayWorktreeGuard({ tool, text, roots, shellCwd }: GateCall): GuardResult {
-  const reason = tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, roots, shellCwd) : null;
+  const reason =
+    tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, { roots, cwd: shellCwd }) : null;
   return reason ? { type: "deny", reason } : undefined;
 }
 

@@ -7,7 +7,7 @@ import {
   managedLessonsDir,
   sharedGitReason,
   worktreeAddReason,
-} from "./worktree.ts";
+} from "./worktree-guards.ts";
 
 const tmp = scratch();
 afterEach(() => tmp.cleanup());
@@ -17,7 +17,7 @@ const DENIED = /^worktrees live in /;
 it("reads the flags of git worktree add: a missing -b value, -d, a --reason value that is not the target, unknown flags and extra words", () => {
   const r = tmp.repo();
   const roots = { root: r, checkout: r, cwd: r };
-  const deny = (cmd: string) => worktreeAddReason(cmd, roots, r);
+  const deny = (cmd: string) => worktreeAddReason(cmd, { roots, cwd: r });
   expect(deny("git worktree add .worktrees/y -b")).toMatch(DENIED);
   expect(deny("git worktree add -d .worktrees/y")).toMatch(DENIED);
   expect(deny("git worktree add --reason why .worktrees/y wt/y")).toBeNull();
@@ -28,7 +28,7 @@ it("reads the flags of git worktree add: a missing -b value, -d, a --reason valu
 it("suggests a name from the branch or the dir, and a placeholder when neither is usable", () => {
   const r = tmp.repo();
   const roots = { root: r, checkout: r, cwd: r };
-  const suggested = (cmd: string) => worktreeAddReason(cmd, roots, r)?.replace(/^.*run /, "");
+  const suggested = (cmd: string) => worktreeAddReason(cmd, { roots, cwd: r })?.replace(/^.*run /, "");
   expect(suggested("git worktree add ../elsewhere")).toBe("bun repo worktree add elsewhere");
   expect(suggested("git worktree add ../x -b wt/spike")).toBe("bun repo worktree add spike");
   expect(suggested("git worktree add ../x -b ..")).toBe("bun repo worktree add <name>");
@@ -46,7 +46,7 @@ it("resolves a write target against the root when the roots carry no cwd", () =>
 
 it("guards update-ref on the default branch even behind a -m message, and frees other refs", () => {
   const r = tmp.repo();
-  const check = (cmd: string) => sharedGitReason(cmd, { root: r, cwd: r }, r, new Set());
+  const check = (cmd: string) => sharedGitReason(cmd, { roots: { root: r, cwd: r }, cwd: r, asked: new Set() });
   expect(check("git update-ref -m moved refs/heads/main HEAD")).toMatch(/^main is the shared default branch/);
   expect(check("git update-ref -m moved refs/heads/wt/x HEAD")).toBeNull();
   expect(check("git update-ref -m moved")).toBeNull();
