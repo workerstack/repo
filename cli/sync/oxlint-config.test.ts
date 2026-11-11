@@ -194,3 +194,10 @@ it("oxlintConfig writes one override per skip after every other, turning off onl
     }),
   );
 });
+
+it("oxlintConfig accepts a skip of repo/duplicate-code and writes no override for it", () => {
+  const skips = [
+    { files: ["src/generated/**"], reason: "generated per locale from one template", rules: ["repo/duplicate-code"] },
+  ];
+  expect(configOf(APP, skips)).toStrictEqual(configOf(APP));
+});

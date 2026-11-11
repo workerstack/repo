@@ -15,7 +15,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
   const source =
     "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\nexport const n = (): number => 7;\n";
   const root = plant({ "src/a.ts": source });
-  expect(scriptDiagnostics(root, ["src/a.ts"])).toStrictEqual({
+  expect(scriptDiagnostics(root, { files: ["src/a.ts"], sources: ["src/a.ts"] })).toStrictEqual({
     ok: true,
     value: [hit("src/a.ts:1:14", GUARD, UNTESTED("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
   });
@@ -23,7 +23,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
 
 it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file", { timeout: SLOW }, () => {
   const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
-  const found = scriptDiagnostics(root, ["pkg/a.test.ts"]);
+  const found = scriptDiagnostics(root, { files: ["pkg/a.test.ts"], sources: ["pkg/a.test.ts"] });
   expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
