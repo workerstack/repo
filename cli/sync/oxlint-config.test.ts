@@ -35,6 +35,7 @@ const REPO_RULES = {
   "repo/max-line-width": "error",
   "repo/native-path-separator": "error",
   "repo/no-block-comment": "error",
+  "repo/no-boolean-param": "error",
   "repo/no-commented-out-code": "error",
   "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
