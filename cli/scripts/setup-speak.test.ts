@@ -1,8 +1,9 @@
 import { afterEach, expect, it } from "vitest";
 
 import { captureIo, cleanSetup, okJson, plant, readSpeakJson, spyStd } from "./fixtures/setup-kit.ts";
-import { ELEVENLABS_KEY_URL, OPENAI_KEY_URL, setupSpeak } from "./setup.ts";
-import type { SetupIo } from "./setup.ts";
+import { setupSpeak } from "./setup-speak.ts";
+import { ELEVENLABS_KEY_URL, OPENAI_KEY_URL } from "./setup.constants.ts";
+import type { SetupIo } from "./setup.types.ts";
 
 afterEach(cleanSetup);
 
@@ -90,4 +91,49 @@ it("setupSpeak prints to stdout when it has no io and skips verification", async
   const r = await setupSpeak({ flags: { "openai-key": "sk_oa", "skip-verify": "1" }, home });
   expect(r.verified).toBe(false);
   expect(std.out.join("")).toContain(`wrote ${r.dest}`);
+});
+
+it("writes elevenlabs key, verifies, does not echo the secret", async () => {
+  const home = plant("setup-speak-");
+  const io = captureIo();
+  const r = await setupSpeak({ flags: { "elevenlabs-key": "sk_secret_el", "skip-verify": "1" }, home, io });
+  expect(r.ok).toBe(true);
+  const j = readSpeakJson(home);
+  expect(j.elevenlabs?.apiKey).toBe("sk_secret_el");
+  expect(io.logs.join("\n")).toMatch(/speak\.json/);
+  expect(io.logs.join("\n")).not.toContain("sk_secret_el");
+});
+
+it("verifies openai via fetch", async () => {
+  const home = plant("setup-speak-oa-");
+  const io = captureIo();
+  const r = await setupSpeak({
+    fetchFn: () => Promise.resolve(okJson({ data: [] })),
+    flags: { "openai-key": "sk-oa", provider: "openai" },
+    home,
+    io,
+  });
+  expect(r.verified).toBe(true);
+  expect(io.logs.join("\n")).toMatch(/openai ok/);
+  expect(io.logs.join("\n")).not.toContain("sk-oa");
+});
+
+it("interactive elevenlabs opens the key page and takes a password", async () => {
+  const home = plant("setup-speak-tty-");
+  const io = {
+    ...captureIo(),
+    password: () => Promise.resolve("sk_from_prompt"),
+    select: () => Promise.resolve("elevenlabs"),
+  };
+  const opened: string[] = [];
+  await setupSpeak({
+    flags: { "skip-verify": "1" },
+    home,
+    interactive: true,
+    io,
+    openUrlFn: (u: string) => opened.push(u),
+  });
+  expect(opened).toStrictEqual([ELEVENLABS_KEY_URL]);
+  const j = readSpeakJson(home);
+  expect(j.elevenlabs?.apiKey).toBe("sk_from_prompt");
 });

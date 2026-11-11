@@ -7,30 +7,26 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { childEnv } from "../env.ts";
 import { plantStub } from "../fixtures/stub-bin.ts";
-import { loadOptionalConsumerEnv, main, runDoctor, workspaceIssues } from "./doctor.ts";
+import { put, tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { workspaceIssues } from "./doctor-workspace.ts";
+import { main, runDoctor } from "./doctor.ts";
+import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 
 const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
   process,
   "platform",
 ) /* process always has platform */ as PropertyDescriptor;
-const dirs: string[] = [];
+const outsideDirs: string[] = [];
+useTempDirs();
 afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  for (const d of outsideDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "doc-run-")));
-  dirs.push(dir);
-  return dir;
-}
-
-function put(root: string, rel: string, body: string) {
-  const file = path.join(root, rel);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, body);
+  return fs.realpathSync(tempDir("doc-run-"));
 }
 
 function plantBin(dir: string, name: string, body: string) {
@@ -138,7 +134,7 @@ describe("workspaceIssues on thin repos", () => {
   it("labels a detached worktree outside .worktrees", () => {
     const r = repo();
     const outside = `${r}-detached`;
-    dirs.push(outside);
+    outsideDirs.push(outside);
     git(r, "worktree", "add", "-q", "--detach", outside);
     const items = workspaceIssues({ checkout: r, root: r });
     expect(items).toStrictEqual([

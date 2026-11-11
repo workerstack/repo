@@ -1,11 +1,13 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { captureIo, cleanSetup, desktopOauth, plant, writeAt } from "./fixtures/setup-kit.ts";
-import { oauthWritePath, setupGoogleWorkspace } from "./setup.ts";
-import type { SetupIo } from "./setup.ts";
+import { captureIo, cleanSetup, desktopOauth, plant, readJsonAt, writeAt } from "./fixtures/setup-kit.ts";
+import { oauthWritePath } from "./setup-files.ts";
+import { setupGoogleWorkspace } from "./setup-google-workspace.ts";
+import type { SetupIo } from "./setup.types.ts";
 
 afterEach(cleanSetup);
 
@@ -98,4 +100,73 @@ it("setupGoogleWorkspace fails when the terminal walk ends with no JSON", async 
   const io = walker({}, false);
   const ask = setupGoogleWorkspace({ home, interactive: true, io, loginFn: noLogin, openUrlFn: () => 0 });
   await expect(ask).rejects.toThrow("need path to Desktop OAuth JSON");
+});
+
+it("copies --creds and calls login", async () => {
+  const home = plant("setup-gw-");
+  const src = path.join(home, "client_secret.json");
+  fs.writeFileSync(src, JSON.stringify(desktopOauth));
+  const io = captureIo();
+  const logins: string[] = [];
+  const r = await setupGoogleWorkspace({
+    flags: { creds: src },
+    home,
+    io,
+    loginFn: (p: string) => {
+      logins.push(p);
+      return Promise.resolve();
+    },
+  });
+  expect(r.ok).toBe(true);
+  expect(logins).toStrictEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
+  const saved = readJsonAt(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"));
+  expect(saved.installed?.client_id).toContain("cid");
+});
+
+it("lands the tokens under the home it was given and writes nothing under the real home", async () => {
+  const home = plant("setup-gw-home-");
+  const src = path.join(home, "client_secret.json");
+  fs.writeFileSync(src, JSON.stringify(desktopOauth));
+  const realTokens = path.join(os.homedir(), ".workerstack", "workspace", "default", "tokens.json");
+  function mtime(): number | null {
+    return fs.existsSync(realTokens) ? fs.statSync(realTokens).mtimeMs : null;
+  }
+  const before = mtime();
+  const r = await setupGoogleWorkspace({
+    flags: { creds: src },
+    home,
+    io: captureIo(),
+    loginFn: (_dest: string, loginHome: string) => {
+      writeAt(path.join(loginHome, ".workerstack", "workspace", "default", "tokens.json"), "{}");
+      return Promise.resolve();
+    },
+  });
+  expect(r.tokens).toBe(path.join(home, ".workerstack", "workspace", "default", "tokens.json"));
+  expect(fs.existsSync(r.tokens)).toBe(true);
+  expect(mtime()).toBe(before);
+});
+
+it("interactive walk opens console URLs then installs JSON", async () => {
+  const home = plant("setup-gw-tty-");
+  const src = path.join(home, "dl.json");
+  fs.writeFileSync(src, JSON.stringify(desktopOauth));
+  const opened: string[] = [];
+  const io = {
+    ...captureIo(),
+    confirm: () => Promise.resolve(true),
+    text: (opts: { message?: string }) => Promise.resolve((opts.message ?? "").includes("Project ID") ? "proj-1" : src),
+  };
+  await setupGoogleWorkspace({
+    flags: {},
+    home,
+    interactive: true,
+    io,
+    loginFn: noLogin,
+    openUrlFn: (u: string) => opened.push(u),
+  });
+  expect(opened[0]).toMatch(/projectcreate/);
+  expect(opened.some((u) => u.includes("project=proj-1"))).toBe(true);
+  expect(opened.some((u) => u.includes("enableapi"))).toBe(true);
+  expect(opened.some((u) => u.includes("clients/create"))).toBe(true);
+  expect(fs.existsSync(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"))).toBe(true);
 });

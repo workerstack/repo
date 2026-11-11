@@ -1,29 +1,19 @@
-import fs from "node:fs";
 import os from "node:os";
-import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { plantStub } from "../fixtures/stub-bin.ts";
-import { agentModelsLines, type ListRunner } from "./doctor.ts";
+import { agentModelsLines } from "./agent-models-lines.ts";
+import type { ListRunner } from "./doctor.types.ts";
+import { put, realTmp } from "./fixtures/doctor-kit.ts";
 
-const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
-function tmp() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "doc-agents-")));
-  dirs.push(dir);
-  return dir;
-}
-
-function put(root: string, rel: string, body: string) {
-  const file = path.join(root, rel);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, body);
+function tmp(): string {
+  return realTmp("doc-agents-");
 }
 
 function checkout(files: Record<string, string>) {

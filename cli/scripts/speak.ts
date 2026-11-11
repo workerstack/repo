@@ -3,7 +3,7 @@
 import os from "node:os";
 
 import { readEnv } from "../env.ts";
-import { loadOptionalConsumerEnv } from "./doctor.ts";
+import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 import { errMessage, globalFetch, voices, whoami } from "./speak-api.ts";
 import { loadCfg } from "./speak-config.ts";
 import { say } from "./speak-say.ts";

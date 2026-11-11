@@ -3,17 +3,9 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanSetup, desktopOauth, plant, readSpeakJson, writeAt } from "./fixtures/setup-kit.ts";
-import {
-  findDownloadedOAuthJson,
-  installOAuthJson,
-  mergeSpeakJson,
-  oauthWritePath,
-  speakJsonPath,
-  stateHome,
-  workspaceConsoleUrls,
-  writeSecretJson,
-} from "./setup.ts";
+import { cleanSetup, desktopOauth, plant, readJsonAt, readSpeakJson, writeAt } from "./fixtures/setup-kit.ts";
+import { mergeSpeakJson, oauthWritePath, speakJsonPath, stateHome, writeSecretJson } from "./setup-files.ts";
+import { findDownloadedOAuthJson, installOAuthJson, parseDesktopOAuth, workspaceConsoleUrls } from "./setup-oauth.ts";
 
 afterEach(cleanSetup);
 
@@ -106,4 +98,57 @@ it("workspaceConsoleUrls drops the project query when no project is given", () =
   expect(u.branding).toBe("https://console.cloud.google.com/auth/overview/create");
   expect(u.enableApis).not.toContain("project=");
   expect(u.clientCreate).toBe("https://console.cloud.google.com/auth/clients/create");
+});
+
+it("merges providers without dropping the other", () => {
+  const home = plant("setup-merge-");
+  mergeSpeakJson(home, { elevenlabs: { apiKey: "sk_el" } });
+  const dest = mergeSpeakJson(home, { openai: { apiKey: "sk_oa" } });
+  const j = readJsonAt(dest);
+  expect(j.elevenlabs?.apiKey).toBe("sk_el");
+  expect(j.openai?.apiKey).toBe("sk_oa");
+});
+
+it("rejects web OAuth clients", () => {
+  expect(() => parseDesktopOAuth({ web: { client_id: "cid" } })).toThrow(/Desktop client/);
+});
+
+it("installs Desktop JSON to dest", () => {
+  const home = plant("setup-oauth-");
+  const src = path.join(home, "client_secret_x.json");
+  fs.writeFileSync(src, JSON.stringify(desktopOauth));
+  const dest = path.join(home, ".workerstack", "workspace", "default", "google-oauth.json");
+  installOAuthJson({ dest, src });
+  const j = readJsonAt(dest);
+  expect(j.installed?.client_id).toBe("cid.apps.googleusercontent.com");
+});
+
+it("finds newest client_secret in Downloads", () => {
+  const home = plant("setup-dl-");
+  const dir = path.join(home, "Downloads");
+  fs.mkdirSync(dir);
+  const a = path.join(dir, "client_secret_old.json");
+  const b = path.join(dir, "client_secret_new.json");
+  fs.writeFileSync(a, "{}");
+  fs.writeFileSync(b, "{}");
+  const t = Date.now();
+  fs.utimesSync(a, t / 1000, (t - 5000) / 1000);
+  fs.utimesSync(b, t / 1000, t / 1000);
+  expect(findDownloadedOAuthJson(home)).toBe(b);
+});
+
+it("oauth write path is ~/.workerstack/workspace/NAME/google-oauth.json", () => {
+  const home = plant("setup-owp-");
+  expect(oauthWritePath(home, "default")).toBe(
+    path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"),
+  );
+  expect(oauthWritePath(home, "work")).toBe(path.join(home, ".workerstack", "workspace", "work", "google-oauth.json"));
+});
+
+it("workspace URLs include project id", () => {
+  const u = workspaceConsoleUrls("my-proj");
+  expect(u.projectCreate).toMatch(/projectcreate/);
+  expect(u.branding).toContain("project=my-proj");
+  expect(u.enableApis).toContain("gmail.googleapis.com");
+  expect(u.clientCreate).toContain("project=my-proj");
 });

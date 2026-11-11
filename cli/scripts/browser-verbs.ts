@@ -41,7 +41,8 @@ import {
   WAIT_MAX_MS,
 } from "./browser.constants.ts";
 import type { BrowserResult, Capture, Ctx, RunOpts, Session, Verb } from "./browser.types.ts";
-import { globalsRow, runDoctor } from "./doctor.ts";
+import { globalsRow } from "./doctor-rows.ts";
+import { runDoctor } from "./doctor.ts";
 
 async function stop(_argv: string[], ctx: Ctx): Promise<BrowserResult> {
   killPid(readSession(ctx.cwd)?.pid, ctx.platform);

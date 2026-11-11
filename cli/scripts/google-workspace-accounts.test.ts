@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   freshToken,
   jsonRes,
@@ -13,19 +14,17 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
-import { main, setAccount } from "./google-workspace.ts";
+import { main } from "./google-workspace.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 let home = "";
 
 beforeEach(() => {
-  home = plantHome(dirs, "ws-accounts-");
+  home = plantHome("ws-accounts-");
   writeJson(storePath(home), freshToken());
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-  setAccount("default");
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();

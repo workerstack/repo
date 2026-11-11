@@ -3,13 +3,13 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { vi } from "vitest";
-import type { SpawnFn } from "../google-workspace.ts";
+import { tempDir } from "../../sync/fixtures/temp-dirs.ts";
+import type { SpawnFn } from "../google-workspace.types.ts";
 import { isRecord } from "../hook-input.ts";
 
 /** A planted home for one case. Bun's `os.homedir` ignores env changes, so the call is spied; callers restore with `vi.restoreAllMocks()`. */
-export function plantHome(dirs: string[], prefix: string): string {
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  dirs.push(home);
+export function plantHome(prefix: string): string {
+  const home = tempDir(prefix);
   vi.spyOn(os, "homedir").mockReturnValue(home);
   return home;
 }
@@ -36,6 +36,19 @@ export function textRes(body: string, status = 200) {
 export function writeJson(p: string, obj: unknown) {
   fs.mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 });
   fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n", { mode: 0o600 });
+}
+
+/** Undoes its global stubs and spies. */
+export function resetCase(): void {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+}
+
+/** A planted home whose default account holds a fresh token. */
+export function plantLoggedIn(prefix: string): string {
+  const home = plantHome(prefix);
+  writeJson(storePath(home), freshToken());
+  return home;
 }
 
 export function freshToken() {

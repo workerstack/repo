@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
-/** Speech-to-text (input only). Mic/file → local whisper.cpp or OpenAI Whisper. */
-import { loadOptionalConsumerEnv } from "./doctor.ts";
 import { isRecord } from "./hook-input.ts";
 import { contextOf, VERBS } from "./listen-verbs.ts";
 import { USAGE } from "./listen.constants.ts";
 import type { ListenMainOpts } from "./listen.types.ts";
+/** Speech-to-text (input only). Mic/file → local whisper.cpp or OpenAI Whisper. */
+import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 
 function errMessage(e: unknown): string {
   const m = isRecord(e) ? e.message : undefined;

@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import http from "node:http";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   type Spawned,
   jsonRes,
@@ -15,13 +15,13 @@ import {
   stubFetch,
   withIo,
 } from "./fixtures/google-workspace-kit.ts";
-import { type SpawnFn, loginLoopback, main, openUrl, setAccount } from "./google-workspace.ts";
+import { loginLoopback, openUrl } from "./google-workspace-auth.ts";
+import { main } from "./google-workspace.ts";
+import type { SpawnFn } from "./google-workspace.types.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-  setAccount("default");
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -29,8 +29,7 @@ afterEach(() => {
 
 /** A PATH dir whose `open` and `xdg-open` record their argument instead of opening a browser. */
 function plantOpener(): string {
-  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "ws-bin-"));
-  dirs.push(bin);
+  const bin = tempDir("ws-bin-");
   const record = path.join(bin, "opened.txt");
   for (const name of ["open", "xdg-open"])
     fs.writeFileSync(path.join(bin, name), `#!/bin/sh\nprintf '%s' "$1" > "${record}"\n`, { mode: 0o755 });
@@ -53,7 +52,7 @@ it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhe
 });
 
 it("gcloud login: runs the application-default login when there is no OAuth JSON", async () => {
-  plantHome(dirs, "ws-gcloud-");
+  plantHome("ws-gcloud-");
   const seen: Spawned[] = [];
   const spawn: SpawnFn = (cmd, args) => {
     seen.push({ args, cmd });
@@ -68,7 +67,7 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
 });
 
 it("gcloud login: fails when gcloud's login fails", async () => {
-  plantHome(dirs, "ws-gcloud-fail-");
+  plantHome("ws-gcloud-fail-");
   const spawn: SpawnFn = (_cmd, args) => ({ status: args[0] === "--version" ? 0 : 2 });
   const r = await withIo(() => main(["login"], spawn));
   expect(r.code).toBe(1);
@@ -84,7 +83,7 @@ it.skipIf(process.platform === "win32")("platform opener: opens the URL through 
 
 it.skipIf(process.platform === "win32")("platform opener: login defaults its home and spawn", async () => {
   const record = plantOpener();
-  const home = plantHome(dirs, "ws-login-default-");
+  const home = plantHome("ws-login-default-");
   stubFetch(() => jsonRes({ access_token: "at", refresh_token: "rt" }));
   const login = loginLoopback(plantCreds(home));
   await vi.waitFor(() => expect(fs.readFileSync(record, "utf8")).toContain("redirect_uri"));

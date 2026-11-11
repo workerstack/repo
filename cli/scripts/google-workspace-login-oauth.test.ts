@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   type Spawned,
   browser,
@@ -17,20 +18,20 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
-import { loginLoopback, main, setAccount } from "./google-workspace.ts";
+import { accountContext } from "./google-workspace-account.ts";
+import { loginLoopback } from "./google-workspace-auth.ts";
+import { main } from "./google-workspace.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-  setAccount("default");
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 it("oauth login: exchanges the browser's code and stores the tokens", async () => {
-  const home = plantHome(dirs, "ws-login-ok-");
+  const home = plantHome("ws-login-ok-");
   const creds = plantCreds(home);
   const seen: Spawned[] = [];
   const calls = stubFetch(() => jsonRes({ access_token: "at1", expires_in: 100, refresh_token: "rt1" }));
@@ -51,13 +52,13 @@ it("oauth login: exchanges the browser's code and stores the tokens", async () =
 });
 
 it("oauth login: reads a web client and keeps the old refresh token when none is returned", async () => {
-  const home = plantHome(dirs, "ws-login-web-");
+  const home = plantHome("ws-login-web-");
   const creds = path.join(home, "oauth.json");
   writeJson(creds, { web: { client_id: "wid" } });
   writeJson(storePath(home), { ...freshToken(), client_id: "wid", refresh_token: "old-rt" });
   const calls = stubFetch(() => jsonRes({ access_token: "at2" }));
   const before = Date.now();
-  await loginLoopback(creds, home, browser("code=zzz"));
+  await loginLoopback(creds, accountContext("default", home), browser("code=zzz"));
   expect(sentForm(calls).get("client_secret")).toBe("");
   const saved = readObject(storePath(home));
   expect(saved.refresh_token).toBe("old-rt");
@@ -65,7 +66,7 @@ it("oauth login: reads a web client and keeps the old refresh token when none is
 });
 
 it("oauth login: uses the default creds file under the account dir", async () => {
-  const home = plantHome(dirs, "ws-login-def-");
+  const home = plantHome("ws-login-def-");
   const file = path.join(home, ".workerstack", "workspace", "default", "google-oauth.json");
   writeJson(file, { installed: { client_id: "cid" } });
   stubFetch(() => jsonRes({ access_token: "at", refresh_token: "rt" }));
@@ -75,7 +76,7 @@ it("oauth login: uses the default creds file under the account dir", async () =>
 });
 
 it("oauth login: rejects an OAuth JSON without a client id", async () => {
-  const home = plantHome(dirs, "ws-login-noid-");
+  const home = plantHome("ws-login-noid-");
   const creds = path.join(home, "oauth.json");
   writeJson(creds, { installed: {} });
   const r = await withIo(() => main(["login", "--creds", creds], () => ({ status: 1 })));
@@ -84,7 +85,7 @@ it("oauth login: rejects an OAuth JSON without a client id", async () => {
 });
 
 it("oauth login: fails with the denial the browser reports, or a missing code", async () => {
-  const creds = plantCreds(plantHome(dirs, "ws-login-deny-"));
+  const creds = plantCreds(plantHome("ws-login-deny-"));
   const denied = await withIo(() => main(["login", "--creds", creds], browser("error=access_denied")));
   expect(denied.code).toBe(1);
   expect(denied.errs).toContain("access_denied");
@@ -99,7 +100,7 @@ async function exchangeFailing(creds: string, reply: Record<string, unknown>) {
 }
 
 it("oauth login: reports why the token exchange failed and stores nothing", async () => {
-  const home = plantHome(dirs, "ws-login-xchg-");
+  const home = plantHome("ws-login-xchg-");
   const creds = plantCreds(home);
   expect(await exchangeFailing(creds, { error_description: "bad code" })).toContain("bad code");
   expect(await exchangeFailing(creds, { error: "invalid_grant" })).toContain("invalid_grant");
@@ -108,7 +109,7 @@ it("oauth login: reports why the token exchange failed and stores nothing", asyn
 });
 
 it("oauth login: gives up when the browser never answers", async () => {
-  const creds = plantCreds(plantHome(dirs, "ws-login-slow-"));
+  const creds = plantCreds(plantHome("ws-login-slow-"));
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const done = withIo(() => main(["login", "--creds", creds], () => ({ status: 0 })));
   await vi.advanceTimersByTimeAsync(180_000);

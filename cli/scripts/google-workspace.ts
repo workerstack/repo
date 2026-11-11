@@ -1,394 +1,66 @@
 #!/usr/bin/env bun
 /** Google Workspace verbs: sheet/doc/slide/meeting/mail. */
 import { spawnSync } from "node:child_process";
-import crypto from "node:crypto";
 import fs from "node:fs";
-import http from "node:http";
-import type { AddressInfo } from "node:net";
-import os from "node:os";
-import path from "node:path";
 
 import { readEnv } from "../env.ts";
-import { isRecord } from "./hook-input.ts";
+import { accountContext, credsDefaultPath, listAccounts, tokenStorePath } from "./google-workspace-account.ts";
+import {
+  accessToken,
+  apiMessage,
+  errMessage,
+  fail,
+  gfetch,
+  jsonRecord,
+  loginLoopback,
+  ok,
+} from "./google-workspace-auth.ts";
+import {
+  createFile,
+  docAppend,
+  driveList,
+  fileLine,
+  sheetAppend,
+  sheetClear,
+  sheetGet,
+  sheetSet,
+} from "./google-workspace-files.ts";
+import { mailList, mailSend, meetingCreate } from "./google-workspace-meet.ts";
+import {
+  ARG_END,
+  CLOUD_SCOPE,
+  DEFAULT_ACCOUNT,
+  EMAIL_SCOPE,
+  EXTRA_SCOPES,
+  FLAG_PREFIX,
+  FLAG_PREFIX_LEN,
+  FLAG_SET,
+  KIND_DOC,
+  KIND_SHEET,
+  KIND_SLIDE,
+  SPACES_RE,
+  TOKENINFO_URL,
+  USAGE,
+  USERINFO_URL,
+} from "./google-workspace.constants.ts";
+import type { Flags, ParsedArgv, SpawnFn, Verb, VerbCtx, WorkspaceAccount } from "./google-workspace.types.ts";
 
-type Rec = Record<string, unknown>;
-
-/** A stored OAuth refresh token plus where it was read from. */
-export type Token = Rec & {
-  refresh_token: string;
-  client_id: string;
-  _path: string;
-  _clasprc?: true;
-};
-
-export type SpawnSyncOpts = {
-  stdio: "ignore";
-  windowsVerbatimArguments?: boolean;
-};
-
-/** The slice of `spawnSync` this tool uses; `status` is the child's exit code. */
-export type SpawnFn = (
-  cmd: string,
-  args: string[],
-  opts: { stdio?: "ignore" | "inherit"; encoding?: "utf8"; windowsVerbatimArguments?: boolean },
-) => { status: number | null };
-
-export type FileSpec = {
-  kind: string;
-  title?: string | undefined;
-  csv?: string | undefined;
-  body?: string | undefined;
-};
-
-export type MeetingSpec = {
-  title?: string | undefined;
-  start?: string | undefined;
-  end?: string | undefined;
-  when?: string | undefined;
-  attendees?: string | undefined;
-};
-
-type GResult = {
-  status: number;
-  json: Rec;
-  ok: boolean;
-};
-
-function rec(v: unknown): Rec {
-  return isRecord(v) ? v : {};
-}
-
-/** The `error.message` of a Google API reply, or the fallback. */
-function apiMessage(json: unknown, fallback: string): string {
-  const m = rec(rec(json).error).message;
-  return m ? String(m) : fallback;
-}
-
-function errMessage(e: unknown): string {
-  const m = isRecord(e) ? e.message : undefined;
-  return String(m || e);
-}
-
-async function jsonRecord(r: Response): Promise<Rec> {
-  const j: unknown = await r.json();
-  return rec(j);
-}
-
-const DRIVE = "https://www.googleapis.com/drive/v3";
-const DRIVE_UPLOAD = "https://www.googleapis.com/upload/drive/v3";
-const SHEETS = "https://sheets.googleapis.com/v4";
-const DOCS = "https://docs.googleapis.com/v1";
-const CALENDAR = "https://www.googleapis.com/calendar/v3";
-const GMAIL = "https://gmail.googleapis.com/gmail/v1";
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-
-/** Extra clasp login scopes. Clasp's default consent is Apps Script + Drive only. */
-export const EXTRA_SCOPES: string[] = [
-  "https://www.googleapis.com/auth/calendar",
-  "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/gmail.modify",
-  "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/spreadsheets",
-  "https://www.googleapis.com/auth/documents",
-  "https://www.googleapis.com/auth/presentations",
-  "https://www.googleapis.com/auth/forms.body",
-  "https://www.googleapis.com/auth/drive",
-  "https://www.googleapis.com/auth/contacts",
-  "https://www.googleapis.com/auth/tasks",
-];
-const MIME: Record<string, string> = {
-  doc: "application/vnd.google-apps.document",
-  sheet: "application/vnd.google-apps.spreadsheet",
-  slide: "application/vnd.google-apps.presentation",
-};
-
-let accountId = "default";
-
-export function setAccount(id: unknown): string {
-  const s = String(id || "default").trim() || "default";
-  if (!/^[a-zA-Z0-9_-]{1,40}$/.test(s)) throw new Error("bad --account (letters, numbers, _- only)");
-
-  accountId = s;
-  return accountId;
-}
-
-function stateHome(home: string = os.homedir()) {
-  const d = path.join(home, ".workerstack");
-  fs.mkdirSync(d, { mode: 0o700, recursive: true });
-  return d;
-}
-
-function accountDir(home: string = os.homedir()) {
-  return path.join(stateHome(home), "workspace", accountId);
-}
-
-export function tokenStorePath(home: string = os.homedir()): string {
-  return path.join(accountDir(home), "tokens.json");
-}
-
-export function credsDefaultPath(): string {
-  return path.join(accountDir(), "google-oauth.json");
-}
-
-function adcPath(home: string = os.homedir()) {
-  return path.join(home, ".config", "gcloud", "application_default_credentials.json");
-}
-
-function clasprcPath(home: string) {
-  return path.join(home, ".clasprc.json");
-}
-
-function readJson(p: string): unknown {
-  try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-function writeSecretJson(p: string, obj: unknown): void {
-  fs.mkdirSync(path.dirname(p), { mode: 0o700, recursive: true });
-  fs.writeFileSync(p, `${JSON.stringify(obj, null, 2)}\n`, { mode: 0o600 });
-}
-
-function toToken(j: Rec, p: string, extra: { _clasprc?: true } = {}): Token | null {
-  if (typeof j.refresh_token !== "string" || !j.refresh_token) return null;
-  if (typeof j.client_id !== "string" || !j.client_id) return null;
-  return { ...j, _path: p, client_id: j.client_id, refresh_token: j.refresh_token, ...extra };
-}
-
-function tokenFromStore(home: string): Token | null {
-  const p = tokenStorePath(home);
-  const j = rec(readJson(p));
-  return toToken(j, p);
-}
-
-function tokenFromAdc(home: string): Token | null {
-  const p = adcPath(home);
-  const j = rec(readJson(p));
-  if (j.type === "authorized_user") return toToken(j, p);
-  return null;
-}
-
-function tokenFromClasprc(home: string): Token | null {
-  const p = clasprcPath(home);
-  const t = rec(rec(rec(readJson(p)).tokens).default);
-  if (typeof t.refresh_token !== "string" || !t.refresh_token) return null;
-  // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
-  return { ...t, _clasprc: true, _path: p, client_id: String(t.client_id ?? ""), refresh_token: t.refresh_token };
-}
-
-function loadToken(home: string = os.homedir()): Token | null {
-  return (tokenFromStore(home) ?? tokenFromAdc(home)) || tokenFromClasprc(home);
-}
-
-function publicFields(t: Token): Rec {
-  return Object.fromEntries(Object.entries(t).filter(([k]) => k !== "_path" && k !== "_clasprc"));
-}
-
-function persistToken(t: Token, access: unknown, expiry: unknown): void {
-  t.access_token = access;
-  t.expiry_date = expiry;
-  if (t._clasprc) {
-    const raw = rec(readJson(t._path));
-    const tokens = rec(raw.tokens);
-    tokens.default = publicFields(t);
-    raw.tokens = tokens;
-    writeSecretJson(t._path, raw);
-    return;
-  }
-  const dest = t._path === adcPath() ? tokenStorePath() : t._path;
-  writeSecretJson(dest, publicFields(t));
-}
-
-export async function accessToken(): Promise<string> {
-  const t = loadToken();
-  if (!t) throw new Error("not logged in; run bun repo google-workspace login");
-  if (typeof t.access_token === "string" && t.access_token && Number(t.expiry_date) > Date.now() + 60_000)
-    return t.access_token;
-
-  const body = new URLSearchParams({
-    client_id: t.client_id,
-    client_secret: String(t.client_secret || ""),
-    grant_type: "refresh_token",
-    refresh_token: t.refresh_token,
-  });
-  const r = await fetch(TOKEN_URL, {
-    body,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    method: "POST",
-  });
-  const j = await jsonRecord(r);
-  if (typeof j.access_token !== "string" || !j.access_token)
-    throw new Error(String(j.error_description || j.error || "token refresh failed"));
-
-  const expiry = j.expiry_date ? j.expiry_date : Date.now() + Number(j.expires_in || 3600) * 1000;
-  persistToken(t, j.access_token, expiry);
-  return j.access_token;
-}
-
-function whichGcloud(spawn: SpawnFn): boolean {
-  const r = spawn("gcloud", ["--version"], { encoding: "utf8" });
-  return r.status === 0;
-}
-
-export function openUrl(
-  url: string,
-  {
-    platform = process.platform,
-    spawnSyncFn = spawnSync,
-  }: { platform?: NodeJS.Platform; spawnSyncFn?: (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown } = {},
-): void {
-  if (platform === "darwin") {
-    spawnSyncFn("open", [url], { stdio: "ignore" });
-  } else if (platform === "win32") {
-    spawnSyncFn("cmd", ["/c", "start", "", url], {
-      stdio: "ignore",
-      windowsVerbatimArguments: true,
-    });
-  } else {
-    spawnSyncFn("xdg-open", [url], { stdio: "ignore" });
-  }
-}
-
-export async function loginLoopback(
-  credsPath: string,
-  home: string = os.homedir(),
-  spawn: SpawnFn = spawnSync,
-): Promise<void> {
-  const raw = rec(readJson(credsPath));
-  const inst = rec(raw.installed || raw.web);
-  if (!inst.client_id) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
-
-  const clientId = String(inst.client_id);
-  const clientSecret = String(inst.client_secret || "");
-  const verifier = crypto.randomBytes(32).toString("base64url");
-  const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
-  const server = http.createServer();
-  await new Promise<void>((res, rej) => {
-    server.listen(0, "127.0.0.1", res);
-    server.on("error", rej);
-  });
-  const { port } = server.address() /* listening on a TCP port, so never a pipe path or null */ as AddressInfo;
-  const redirect = `http://127.0.0.1:${port}`;
-  const scope = [
-    ...EXTRA_SCOPES,
-    "https://www.googleapis.com/auth/userinfo.email",
-    "https://www.googleapis.com/auth/userinfo.profile",
-    "openid",
-  ].join(" ");
-  const auth = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
-    access_type: "offline",
-    client_id: clientId,
-    code_challenge: challenge,
-    code_challenge_method: "S256",
-    prompt: "consent",
-    redirect_uri: redirect,
-    response_type: "code",
-    scope,
-  }).toString()}`;
-  const code = await new Promise<string>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("login timed out")), 180_000);
-    server.on("request", (req, res) => {
-      const u = new URL(String(req.url), redirect);
-      const c = u.searchParams.get("code");
-      const err = u.searchParams.get("error");
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end(c ? "Logged in. Return to the terminal." : String(err || "missing code"));
-      clearTimeout(timer);
-      if (c) resolve(c);
-      else reject(new Error(err || "missing code"));
-    });
-    openUrl(auth, { spawnSyncFn: spawn });
-  }).finally(() => server.close());
-  const body = new URLSearchParams({
-    client_id: clientId,
-    client_secret: clientSecret,
-    code,
-    code_verifier: verifier,
-    grant_type: "authorization_code",
-    redirect_uri: redirect,
-  });
-  const r = await fetch(TOKEN_URL, {
-    body,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    method: "POST",
-  });
-  const j = await jsonRecord(r);
-  if (!j.access_token) throw new Error(String(j.error_description || j.error || "token exchange failed"));
-  writeSecretJson(tokenStorePath(home), {
-    access_token: j.access_token,
-    client_id: clientId,
-    client_secret: clientSecret,
-    expiry_date: Date.now() + Number(j.expires_in || 3600) * 1000,
-    refresh_token: j.refresh_token || loadToken(home)?.refresh_token,
-    type: "authorized_user",
-  });
-}
-
-function loginGcloud(spawn: SpawnFn): void {
-  const scopes = [
-    "https://www.googleapis.com/auth/cloud-platform",
-    "https://www.googleapis.com/auth/userinfo.email",
-    ...EXTRA_SCOPES,
-  ].join(",");
-  const r = spawn("gcloud", ["auth", "application-default", "login", `--scopes=${scopes}`], { stdio: "inherit" });
-  if (r.status !== 0) throw new Error("gcloud auth application-default login failed");
-}
-
-async function runLogin(flags: Record<string, string>, spawn: SpawnFn): Promise<number> {
-  const creds = flags.creds || credsDefaultPath();
-  if (fs.existsSync(creds)) {
-    await loginLoopback(creds, os.homedir(), spawn);
-    return ok(`logged in\n${tokenStorePath()}`);
-  }
-  if (whichGcloud(spawn)) {
-    loginGcloud(spawn);
-    return ok("logged in via gcloud ADC");
-  }
-  return fail(`missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`);
-}
-
-async function gfetch(
-  url: string,
-  init: { method?: string; body?: string; headers?: Record<string, string> } = {},
-): Promise<GResult> {
-  const token = await accessToken();
-  const r = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      ...(init.body && typeof init.body === "string" ? { "Content-Type": "application/json" } : {}),
-      ...init.headers,
-    },
-  });
-  const text = await r.text();
-  let json: Rec;
-  try {
-    const parsed: unknown = text ? JSON.parse(text) : null;
-    json = rec(parsed);
-  } catch {
-    json = { raw: text.slice(0, 400) };
-  }
-  return { json, ok: r.status >= 200 && r.status < 300, status: r.status };
-}
-
-function parseArgv(argv: string[]): { _: string[]; flags: Record<string, string> } {
-  const out: { _: string[]; flags: Record<string, string> } = { _: [], flags: {} };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!; // i < argv.length
-    if (a === "--") {
-      out._.push(...argv.slice(i + 1));
+export function parseArgv(argv: string[]): ParsedArgv {
+  const out: ParsedArgv = { _: [], flags: {} };
+  const rest = [...argv];
+  for (let a = rest.shift(); a !== undefined; a = rest.shift()) {
+    if (a === ARG_END) {
+      out._.push(...rest);
       break;
     }
-    if (a.startsWith("--")) {
-      const key = a.slice(2);
-      const nxt = argv[i + 1];
-      if (nxt && !nxt.startsWith("--")) {
+    if (a.startsWith(FLAG_PREFIX)) {
+      const key = a.slice(FLAG_PREFIX_LEN);
+      const nxt = rest[0];
+      if (nxt && !nxt.startsWith(FLAG_PREFIX)) {
         out.flags[key] = nxt;
-        i += 1;
+        rest.shift();
       } else {
-        out.flags[key] = "1";
+        out.flags[key] = FLAG_SET;
       }
     } else {
       out._.push(a);
@@ -397,378 +69,119 @@ function parseArgv(argv: string[]): { _: string[]; flags: Record<string, string>
   return out;
 }
 
-function fail(msg: string): number {
-  process.stderr.write(`${msg.trimEnd()}\n`);
-  return 1;
-}
-
-function ok(msg: string): number {
-  process.stdout.write(`${msg.trimEnd()}\n`);
-  return 0;
-}
-
-async function whoami(): Promise<number> {
-  const r = await gfetch("https://www.googleapis.com/oauth2/v2/userinfo");
+export async function whoami(account: WorkspaceAccount): Promise<number> {
+  const r = await gfetch(account, USERINFO_URL);
   if (!r.ok) return fail(apiMessage(r.json, "whoami failed"));
   return ok(String(r.json.email || JSON.stringify(r.json)));
 }
 
-async function createFile({ kind, title, csv, body }: FileSpec): Promise<Rec> {
-  const mime = MIME[kind];
-  if (!mime) throw new Error("unknown kind");
-  const name = title || `repo-${kind}`;
-  if (kind === "sheet" && csv) {
-    const meta = JSON.stringify({ mimeType: mime, name });
-    const boundary = `repo_ws_${Date.now()}`;
-    const blob =
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
-      `--${boundary}\r\nContent-Type: text/csv\r\n\r\n${csv}\r\n` +
-      `--${boundary}--`;
-    const token = await accessToken();
-    const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
-      body: blob,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      method: "POST",
-    });
-    const json = await jsonRecord(r);
-    if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
-    return json;
-  }
-  if (kind === "doc" && body) {
-    const meta = JSON.stringify({ mimeType: mime, name });
-    const boundary = `repo_ws_${Date.now()}`;
-    const blob =
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n` +
-      `--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}\r\n` +
-      `--${boundary}--`;
-    const token = await accessToken();
-    const r = await fetch(`${DRIVE_UPLOAD}/files?uploadType=multipart&fields=id,name,webViewLink`, {
-      body: blob,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      method: "POST",
-    });
-    const json = await jsonRecord(r);
-    if (!r.ok) throw new Error(apiMessage(json, "upload failed"));
-    return json;
-  }
-  const r = await gfetch(`${DRIVE}/files?fields=id,name,webViewLink`, {
-    body: JSON.stringify({ mimeType: mime, name }),
-    method: "POST",
-  });
-  if (!r.ok) throw new Error(apiMessage(r.json, "create failed"));
-  return r.json;
-}
-
-function fileLine(j: Rec): string {
-  return `${j.name}\n${j.webViewLink || j.id}\nid=${j.id}`;
-}
-
-export function parseCsv(text: unknown): string[][] {
-  return String(text || "")
-    .split(/\r?\n/)
-    .map((line) => line.split(",").map((c) => c.trim()))
-    .filter((row) => row.some((c) => c !== ""));
-}
-
-async function sheetGet({ id, range }: { id?: string | undefined; range?: string | undefined }): Promise<number> {
-  if (!id) return fail("sheet get needs --id");
-  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z50")}`);
-  if (!r.ok) return fail(apiMessage(r.json, "sheet get failed"));
-  const rows: unknown[] = Array.isArray(r.json.values) ? r.json.values : [];
-  if (!rows.length) return ok("(empty)");
-  return ok(rows.map((row) => (Array.isArray(row) ? row : []).join("\t")).join("\n"));
-}
-
-async function sheetAppend({
-  id,
-  csv,
-  range,
-}: {
-  id?: string | undefined;
-  csv?: string | undefined;
-  range?: string | undefined;
-}): Promise<number> {
-  if (!id) return fail("sheet append needs --id");
-  const values = parseCsv(csv);
-  if (!values.length) return fail("sheet append needs --csv");
-  const r = await gfetch(
-    `${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1")}:append?valueInputOption=USER_ENTERED`,
-    { body: JSON.stringify({ values }), method: "POST" },
-  );
-  if (!r.ok) return fail(apiMessage(r.json, "sheet append failed"));
-  return ok(`appended ${String(rec(r.json.updates).updatedRows || values.length)}`);
-}
-
-async function sheetClear({ id, range }: { id?: string | undefined; range?: string | undefined }): Promise<number> {
-  if (!id) return fail("sheet clear needs --id");
-  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${encodeURIComponent(range || "A1:Z")}:clear`, {
-    body: "{}",
-    method: "POST",
-  });
-  if (!r.ok) return fail(apiMessage(r.json, "sheet clear failed"));
-  return ok(`cleared ${String((r.json.clearedRange || range) ?? "A1:Z")}`);
-}
-
-async function docAppend({ id, body }: { id?: string | undefined; body?: string | undefined }): Promise<number> {
-  if (!id) return fail("doc append needs --id");
-  const r = await gfetch(`${DOCS}/documents/${id}:batchUpdate`, {
-    body: JSON.stringify({
-      requests: [
-        {
-          insertText: {
-            endOfSegmentLocation: {},
-            text: String(body ?? ""),
-          },
-        },
-      ],
-    }),
-    method: "POST",
-  });
-  if (!r.ok) return fail(apiMessage(r.json, "doc append failed"));
-  return ok(`appended id=${id}`);
-}
-
-async function driveList({ query, n }: { query?: string | undefined; n?: string | undefined }): Promise<number> {
-  const q = new URLSearchParams({
-    fields: "files(id,name,mimeType,webViewLink)",
-    pageSize: String(n || 10),
-  });
-  if (query) q.set("q", query);
-  const r = await gfetch(`${DRIVE}/files?${q}`);
-  if (!r.ok) return fail(apiMessage(r.json, "drive list failed"));
-  const files: unknown[] = Array.isArray(r.json.files) ? r.json.files : [];
-  if (!files.length) return ok("no files");
-  return ok(
-    files
-      .map(rec)
-      .map((f) => `${String(f.name)}\t${String(f.id)}\t${String(f.webViewLink || f.mimeType || "")}`)
-      .join("\n"),
-  );
-}
-
-async function sheetSet({
-  id,
-  cell,
-  value,
-}: {
-  id?: string | undefined;
-  cell?: string | undefined;
-  value?: string | undefined;
-}): Promise<number> {
-  const range = encodeURIComponent(cell || "A1");
-  const r = await gfetch(`${SHEETS}/spreadsheets/${id}/values/${range}?valueInputOption=USER_ENTERED`, {
-    body: JSON.stringify({ values: [[value ?? ""]] }),
-    method: "PUT",
-  });
-  if (r.ok) return ok(`updated ${String(r.json.updatedRange || cell)}`);
-  const msg = apiMessage(r.json, "sheet set failed");
-  return fail(
-    msg.includes("has not been used") || msg.includes("SERVICE_DISABLED")
-      ? `Sheets API is off on this OAuth project. Create the sheet with data instead: workspace sheet create --title … --csv "A1value"`
-      : msg,
-  );
-}
-
-function toGCalStamp(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d
-    .toISOString()
-    .replaceAll(/[-:]/g, "")
-    .replace(/\.\d{3}Z$/, "Z");
-}
-
-export function loginArgs(): string[] {
-  return ["login", "--extra-scopes", EXTRA_SCOPES.join(",")];
-}
-
-async function scopes(): Promise<number> {
-  const token = await accessToken();
-  const r = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(token)}`);
-  const j = await jsonRecord(r);
+async function scopeList(account: WorkspaceAccount): Promise<number> {
+  const token = await accessToken(account);
+  const j = await jsonRecord(await fetch(`${TOKENINFO_URL}?access_token=${encodeURIComponent(token)}`));
   const list = String(j.scope || "")
-    .split(/\s+/)
+    .split(SPACES_RE)
     .filter(Boolean)
-    .sort();
+    .toSorted();
   return ok(list.join("\n") || String(j.error || "no scopes"));
 }
 
-async function mailSend({
-  to,
-  subject,
-  body,
-}: {
-  to?: string | undefined;
-  subject?: string | undefined;
-  body?: string | undefined;
-}): Promise<number> {
-  if (!to) return fail("mail send needs --to");
-  const raw = [
-    `To: ${to}`,
-    `Subject: ${subject || "(no subject)"}`,
-    "Content-Type: text/plain; charset=utf-8",
-    "",
-    body || "",
-  ].join("\r\n");
-  const encoded = Buffer.from(raw).toString("base64").replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-  const r = await gfetch(`${GMAIL}/users/me/messages/send`, {
-    body: JSON.stringify({ raw: encoded }),
-    method: "POST",
-  });
-  if (!r.ok) return fail(apiMessage(r.json, "mail send failed"));
-  return ok(`sent id=${String(r.json.id)}`);
+function loginGcloud(spawn: SpawnFn): void {
+  const list = [CLOUD_SCOPE, EMAIL_SCOPE, ...EXTRA_SCOPES].join(",");
+  const r = spawn("gcloud", ["auth", "application-default", "login", `--scopes=${list}`], { stdio: "inherit" });
+  if (r.status !== 0) throw new Error("gcloud auth application-default login failed");
 }
 
-async function mailList({ query, n }: { query?: string | undefined; n?: string | undefined }): Promise<number> {
-  const q = new URLSearchParams({ maxResults: String(n || 5) });
-  if (query) q.set("q", query);
-  const r = await gfetch(`${GMAIL}/users/me/messages?${q}`);
-  if (!r.ok) return fail(apiMessage(r.json, "mail list failed"));
-  const messages: unknown[] = Array.isArray(r.json.messages) ? r.json.messages : [];
-  const ids = messages.map((m) => rec(m).id);
-  return ok(ids.length ? ids.join("\n") : "no messages");
-}
-
-async function meetingCreate({ title, start, end, when, attendees }: MeetingSpec): Promise<number> {
-  let startIso = start;
-  let endIso = end;
-  if (!startIso && when) startIso = when;
-  if (!startIso) startIso = new Date(Date.now() + 3600_000).toISOString();
-  if (!endIso) endIso = new Date(new Date(startIso).getTime() + 3600_000).toISOString();
-  const event: {
-    summary: string;
-    start: { dateTime: string };
-    end: { dateTime: string };
-    attendees?: { email: string }[];
-  } = {
-    end: { dateTime: endIso },
-    start: { dateTime: startIso },
-    summary: title || "meeting",
-  };
-  const emails = String(attendees || "")
-    .split(/[,;\s]+/)
-    .map((e) => e.trim())
-    .filter(Boolean);
-  if (emails.length) event.attendees = emails.map((email) => ({ email }));
-
-  const r = await gfetch(`${CALENDAR}/calendars/primary/events`, {
-    body: JSON.stringify(event),
-    method: "POST",
-  });
-  if (r.ok) return ok(`${String(r.json.summary)}\n${String(r.json.htmlLink)}\nid=${String(r.json.id)}`);
-
-  const stamp0 = toGCalStamp(startIso);
-  const stamp1 = toGCalStamp(endIso);
-  const template =
-    `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-    `&text=${encodeURIComponent(event.summary)}${stamp0 && stamp1 ? `&dates=${stamp0}/${stamp1}` : ""}`;
-  return fail(`Calendar API blocked (${apiMessage(r.json, String(r.status))}). Open to confirm:\n${template}`);
-}
-
-function listAccounts(): string {
-  const root = path.join(stateHome(), "workspace");
-  const names = new Set<string>();
-  try {
-    for (const ent of fs.readdirSync(root, { withFileTypes: true }))
-      if (ent.isDirectory() && /^[a-zA-Z0-9_-]{1,40}$/.test(ent.name)) names.add(ent.name);
-  } catch {
-    // none
+/** `login`: the loopback flow when the OAuth JSON exists, else gcloud ADC when gcloud is on PATH. */
+async function runLogin({ account, flags, spawn }: VerbCtx): Promise<number> {
+  const creds = flags.creds || credsDefaultPath(account);
+  if (fs.existsSync(creds)) {
+    await loginLoopback(creds, account, spawn);
+    return ok(`logged in\n${tokenStorePath(account)}`);
   }
-  const lines = [...names].sort().map((n) => {
-    setAccount(n);
-    const creds = fs.existsSync(credsDefaultPath()) ? "oauth" : "-";
-    const tok = fs.existsSync(tokenStorePath()) ? "tokens" : "-";
-    return `${n}  ${creds}  ${tok}`;
-  });
-  setAccount("default");
-  return lines.length ? lines.join("\n") : "no accounts";
+  if (spawn("gcloud", ["--version"], { encoding: "utf8" }).status === 0) {
+    loginGcloud(spawn);
+    return ok("logged in via gcloud ADC");
+  }
+  return fail(`missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`);
 }
 
-async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number> {
+async function createKind({ account, flags }: VerbCtx, kind: string): Promise<number> {
+  const j = await createFile(account, { body: flags.body, csv: flags.csv, kind, title: flags.title });
+  return ok(fileLine(j));
+}
+
+function sendMail({ account, flags }: VerbCtx): Promise<number> {
+  return mailSend(account, { body: flags.body, subject: flags.subject, to: flags.to });
+}
+
+function listMail({ account, flags }: VerbCtx): Promise<number> {
+  return mailList(account, { n: flags.n, query: flags.query || flags.q });
+}
+
+function listDrive({ account, flags }: VerbCtx): Promise<number> {
+  return driveList(account, { n: flags.n, query: flags.query || flags.q });
+}
+
+function createMeeting({ account, flags }: VerbCtx): Promise<number> {
+  const { attendees, end, start, title, when } = flags;
+  return meetingCreate(account, { attendees: attendees || flags.to, end, start, title, when });
+}
+
+function range(flags: Flags): string | undefined {
+  return flags.range || flags.cell;
+}
+
+type Table<T> = Readonly<Record<string, T>>;
+
+/** The verbs that ignore the noun. */
+const SOLO: Table<Verb> = {
+  accounts: ({ account }) => Promise.resolve(ok(listAccounts(account.home))),
+  login: runLogin,
+  scopes: ({ account }) => scopeList(account),
+  whoami: ({ account }) => whoami(account),
+};
+
+const SHEET_VERBS: Table<Verb> = {
+  append: ({ account, flags }) => sheetAppend(account, { csv: flags.csv, id: flags.id, range: range(flags) }),
+  clear: ({ account, flags }) => sheetClear(account, { id: flags.id, range: range(flags) }),
+  create: (ctx) => createKind(ctx, KIND_SHEET),
+  get: ({ account, flags }) => sheetGet(account, { id: flags.id, range: range(flags) }),
+  set: ({ account, flags }) =>
+    sheetSet(account, { cell: flags.cell || flags.range, id: flags.id, value: flags.value ?? flags.a1 }),
+};
+const SLIDE_VERBS: Table<Verb> = { create: (ctx) => createKind(ctx, KIND_SLIDE) };
+const MEETING_VERBS: Table<Verb> = { create: createMeeting };
+
+/** The verb-noun pairs; `drive` alone lists. */
+const PAIRS: Table<Table<Verb>> = {
+  doc: {
+    append: ({ account, flags }) => docAppend(account, { body: flags.body, id: flags.id }),
+    create: (ctx) => createKind(ctx, KIND_DOC),
+  },
+  drive: { "": listDrive, list: listDrive, ls: listDrive },
+  event: MEETING_VERBS,
+  mail: { list: listMail, ls: listMail, send: sendMail },
+  meeting: MEETING_VERBS,
+  sheet: SHEET_VERBS,
+  slide: SLIDE_VERBS,
+  slides: SLIDE_VERBS,
+};
+
+/** `table`'s own entry for `key`; inherited names such as `constructor` are not verbs. */
+function own<T>(table: Table<T> | undefined, key: string): T | undefined {
+  return table && Object.hasOwn(table, key) ? table[key] : undefined;
+}
+
+export async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  setAccount(flags.account || readEnv().WORKSPACE_ACCOUNT || "default");
+  const account = accountContext(flags.account || readEnv().WORKSPACE_ACCOUNT || DEFAULT_ACCOUNT);
   const verb = (_[0] || "").toLowerCase();
   const noun = (_[1] || "").toLowerCase();
+  const run = own(SOLO, verb) ?? own(own(PAIRS, verb), noun);
   try {
-    if (verb === "accounts") return ok(listAccounts());
-    if (verb === "whoami") return await whoami();
-    if (verb === "scopes") return await scopes();
-    if (verb === "login") return await runLogin(flags, spawn);
-    if (verb === "mail" && noun === "send") {
-      return await mailSend({
-        body: flags.body,
-        subject: flags.subject,
-        to: flags.to,
-      });
-    }
-    if (verb === "mail" && (noun === "list" || noun === "ls"))
-      return await mailList({ n: flags.n, query: flags.query || flags.q });
-
-    if (verb === "sheet" && noun === "create") {
-      const j = await createFile({
-        csv: flags.csv,
-        kind: "sheet",
-        title: flags.title,
-      });
-      return ok(fileLine(j));
-    }
-    if (verb === "sheet" && noun === "set") {
-      return await sheetSet({
-        cell: flags.cell || flags.range,
-        id: flags.id,
-        value: flags.value ?? flags.a1,
-      });
-    }
-    if (verb === "sheet" && noun === "get") return await sheetGet({ id: flags.id, range: flags.range || flags.cell });
-
-    if (verb === "sheet" && noun === "append") {
-      return await sheetAppend({
-        csv: flags.csv,
-        id: flags.id,
-        range: flags.range || flags.cell,
-      });
-    }
-    if (verb === "sheet" && noun === "clear")
-      return await sheetClear({ id: flags.id, range: flags.range || flags.cell });
-
-    if (verb === "doc" && noun === "append") return await docAppend({ body: flags.body, id: flags.id });
-
-    if (verb === "drive" && (noun === "list" || noun === "ls" || !noun))
-      return await driveList({ n: flags.n, query: flags.query || flags.q });
-
-    if (verb === "doc" && noun === "create") {
-      const j = await createFile({
-        body: flags.body,
-        kind: "doc",
-        title: flags.title,
-      });
-      return ok(fileLine(j));
-    }
-    if ((verb === "slide" || verb === "slides") && noun === "create") {
-      const j = await createFile({ kind: "slide", title: flags.title });
-      return ok(fileLine(j));
-    }
-    if ((verb === "meeting" || verb === "event") && noun === "create") {
-      return await meetingCreate({
-        attendees: flags.attendees || flags.to,
-        end: flags.end,
-        start: flags.start,
-        title: flags.title,
-        when: flags.when,
-      });
-    }
-    return fail(
-      "usage: google-workspace [--account NAME] whoami | scopes | accounts | login | sheet create --title T [--csv csv] | sheet set --id ID --cell A1 --value V | sheet get --id ID [--range A1:B2] | sheet append --id ID --csv csv | sheet clear --id ID [--range A1:Z] | doc create --title T [--body text] | doc append --id ID --body text | drive list [--query Q] | slide create --title T | meeting create --title T [--start ISO --end ISO] [--attendees a@b,c@d] | mail send --to E --subject S --body T | mail list",
-    );
+    if (run) return await run({ account, flags, spawn });
+    return fail(USAGE);
   } catch (e) {
     return fail(errMessage(e));
   }
 }
-
-export { parseArgv, createFile, meetingCreate, whoami, main };

@@ -5,7 +5,8 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { KEY, plantDir } from "./fixtures/jev-kit.ts";
-import { loadJevKey, parseArgv, retryWaitMs } from "./jev.ts";
+import { loadJevKey, retryWaitMs } from "./jev-key.ts";
+import { parseArgv } from "./jev.ts";
 
 afterEach(() => vi.restoreAllMocks());
 

@@ -1,7 +1,6 @@
-import fs from "node:fs";
-
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { useTempDirs } from "../sync/fixtures/temp-dirs.ts";
 import {
   callAt,
   freshToken,
@@ -13,18 +12,16 @@ import {
   withIo,
   writeJson,
 } from "./fixtures/google-workspace-kit.ts";
-import { main, setAccount } from "./google-workspace.ts";
+import { main } from "./google-workspace.ts";
 import { isRecord } from "./hook-input.ts";
 
-const dirs: string[] = [];
+useTempDirs();
 
 beforeEach(() => {
-  writeJson(storePath(plantHome(dirs, "ws-comms-")), freshToken());
+  writeJson(storePath(plantHome("ws-comms-")), freshToken());
 });
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
-  setAccount("default");
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });

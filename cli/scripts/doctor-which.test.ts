@@ -1,26 +1,25 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { bunMinimum, BUN_MIN_FALLBACK, installHints, versionAtLeast, whichBin } from "./doctor.ts";
+import { tempDir, useTempDirs } from "../sync/fixtures/temp-dirs.ts";
+import { bunMinimum, versionAtLeast } from "./doctor-bun.ts";
+import { installHints, whichBin } from "./doctor-which.ts";
+import { BUN_MIN_FALLBACK } from "./doctor.constants.ts";
 
 const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
   process,
   "platform",
 ) /* process always has platform */ as PropertyDescriptor;
-const dirs: string[] = [];
+useTempDirs();
 afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.unstubAllEnvs();
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp() {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "doc-which-")));
-  dirs.push(dir);
-  return dir;
+  return fs.realpathSync(tempDir("doc-which-"));
 }
 
 function hostIs(platform: string) {

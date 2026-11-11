@@ -5,7 +5,7 @@ import os from "node:os";
 
 import { readEnv } from "../env.ts";
 import type { Env } from "../env.ts";
-import { whichBin } from "./doctor.ts";
+import { whichBin } from "./doctor-which.ts";
 import { loadCfg } from "./listen-argv.ts";
 import { finishTranscript } from "./listen-clip.ts";
 import { listDevicesText } from "./listen-devices.ts";
