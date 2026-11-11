@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { spawnSync } from "../spawn.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { normalizeRel } from "./manifest.ts";
 import { COPIED_DIR, COPIED_MARKER, HOST_SKILL_DIRS, TEMP_BYTES } from "./migrate.constants.ts";
 import { unlock } from "./write-modes.ts";
@@ -39,7 +40,7 @@ export function filesUnder(dir: string): string[] {
     .readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((entry) => !entry.isDirectory())
     .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)).replaceAll("\\", "/"))
-    .sort();
+    .toSorted(byCodeUnit);
 }
 
 /**
@@ -85,7 +86,10 @@ export function moveTree(src: string, dst: string, except: readonly string[]): v
   }
 }
 
-/** Writes `content` to `file` through a temp file and a rename; a read-only file there is made writable first, as win32 needs. */
+/**
+ * Writes `content` to `file` through a temp file and a rename; a read-only file there is made writable first, as
+ * win32 needs.
+ */
 export function writeAtomic(file: string, content: string): void {
   const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(TEMP_BYTES).toString("hex")}.tmp`);
   fs.mkdirSync(path.dirname(file), { recursive: true });

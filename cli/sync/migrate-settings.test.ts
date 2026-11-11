@@ -37,7 +37,11 @@ it("carries hook groups and commands that no stock version ran, under the same e
   const deps: MigrateDeps = { history: { [HOOK_COMMANDS_KEY]: [hashText("old stock")] } };
   const steps = planOf(m, CONFIG, deps);
   expect(notes(steps).slice(0, 1)).toStrictEqual([
-    `moved your .claude/settings.json keys permissions to ${TO}\nmoved your .claude/settings.json hooks PostToolUse (1) to ${TO}\nmoved your .claude/settings.json hooks PreToolUse (1) to ${TO}`,
+    [
+      `moved your .claude/settings.json keys permissions to ${TO}`,
+      `moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
+      `moved your .claude/settings.json hooks PreToolUse (1) to ${TO}`,
+    ].join("\n"),
   ]);
   expect(firstWritten(steps)).toStrictEqual({
     hooks: {
@@ -46,7 +50,8 @@ it("carries hook groups and commands that no stock version ran, under the same e
     },
     permissions: { allow: ["X"] },
   });
-  expect((await applyMigration(m.root, steps)).slice(0, 3)).toStrictEqual([
+  const lines = await applyMigration(m.root, steps);
+  expect(lines.slice(0, 3)).toStrictEqual([
     `repo sync: moved your .claude/settings.json keys permissions to ${TO}`,
     `repo sync: moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
     `repo sync: moved your .claude/settings.json hooks PreToolUse (1) to ${TO}`,

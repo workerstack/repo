@@ -47,11 +47,13 @@ async function takeReference(): Promise<Reference> {
 }
 
 /** Throws right after step `crashAfter` ran. */
-const crashing = (crashAfter: number): MigrateDeps => ({
-  afterStep: (index) => {
-    if (index === crashAfter) throw new Error("crash");
-  },
-});
+function crashing(crashAfter: number): MigrateDeps {
+  return {
+    afterStep: (index) => {
+      if (index === crashAfter) throw new Error("crash");
+    },
+  };
+}
 
 it.each(CRASH_POINTS)(
   "is finished by the next run, whichever step it follows, with the marker removed last: crash after step %i",
@@ -61,9 +63,9 @@ it.each(CRASH_POINTS)(
     expect(planned).toHaveLength(STEP_COUNT);
     const root = copied();
     await expect(migrate(root, crashing(crashAfter))).rejects.toThrow("crash");
-    const last = crashAfter === planned.length - 1;
-    expect(exists(root, COPIED_MARKER), `marker after step ${crashAfter} (${planned[crashAfter]?.kind})`).toBe(!last);
-    if (!last) await migrate(root);
+    const isLast = crashAfter === planned.length - 1;
+    expect(exists(root, COPIED_MARKER), `marker after step ${crashAfter} (${planned[crashAfter]?.kind})`).toBe(!isLast);
+    if (!isLast) await migrate(root);
     expect(snapshot(root), `after a crash behind step ${crashAfter}`).toStrictEqual(expected);
     expect(git(root, "ls-files")).toBe(expectedTracked);
   },
@@ -136,12 +138,12 @@ it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an
 it("reports a config that no longer loads after the migration", async () => {
   const root = copied();
   let loads = 0;
-  const load: typeof loadConfig = (dir) => {
+  function load(dir: string): ReturnType<typeof loadConfig> {
     loads += 1;
     return loads === 1
       ? loadConfig(dir)
       : Promise.resolve({ errors: ["workerstack.config.ts: copy refused"], ok: false });
-  };
+  }
   const err: string[] = [];
   const code = await runSync(
     [],

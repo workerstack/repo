@@ -18,6 +18,9 @@ type Step = { rows: string[]; repairs: string[] };
 type Shared = Doc & { cr: ReadonlySet<string> };
 type Insert = { at: number; block: string[] };
 
+/** A line break, LF or CRLF. */
+const LINE_BREAK = /\r?\n/;
+
 /** The first `HASH_LENGTH` hex of the sha256 of `body`, which ends with its last line. */
 export function regionHash(body: string): string {
   return createHash("sha256").update(toLines(body).join("\n")).digest("hex").slice(0, HASH_LENGTH);
@@ -113,12 +116,15 @@ function inspect(doc: Shared, [open, close]: Pair, body: readonly string[]): { m
   return { moved, repairs: [...repairs, `moved ${plural(moved.length, "edited line")} out of repo:${name}`] };
 }
 
-/** Drops every region after the first and each stray marker with its run of new-body lines; `at` is where a stray stood. */
+/**
+ * Drops every region after the first and each stray marker with its run of new-body lines; `at` is where a stray
+ * stood.
+ */
 function dropStrays(rows: readonly string[], found: Found, keep: ReadonlySet<string>) {
   const drop = new Set<number>();
   for (const [open, close] of found.pairs.slice(1)) addRange(drop, open.at, close.at);
   const starts = found.closes.map((close) =>
-    addRange(drop, close.at - leading(rows.slice(0, close.at).reverse(), keep), close.at),
+    addRange(drop, close.at - leading(rows.slice(0, close.at).toReversed(), keep), close.at),
   );
   const opens = found.opens.map((open) => addRange(drop, open.at, open.at + leading(rows.slice(open.at + 1), keep)));
   return { at: opens[0] ?? starts[0], drop };
@@ -173,22 +179,22 @@ function topOf(rows: readonly string[]): number {
 /** `rows` without the dropped lines and with `insert` spliced in; a blank line a cut leaves doubled is dropped too. */
 function emit(rows: readonly string[], drop: ReadonlySet<number>, insert: Insert): string[] {
   const out: string[] = [];
-  let gap = false;
-  let blankBefore = true;
-  rows.forEach((row, at) => {
+  let isGap = false;
+  let isBlankBefore = true;
+  for (const [at, row] of rows.entries()) {
     if (at === insert.at) {
       out.push(...insert.block);
-      blankBefore = false;
+      isBlankBefore = false;
     }
     if (drop.has(at)) {
-      gap = true;
-      return;
+      isGap = true;
+      continue;
     }
-    const blank = row.trim() === "";
-    if (!(gap && blank && blankBefore)) out.push(row);
-    blankBefore = blank;
-    gap = false;
-  });
+    const isBlank = row.trim() === "";
+    if (!(isGap && isBlank && isBlankBefore)) out.push(row);
+    isBlankBefore = isBlank;
+    isGap = false;
+  }
   if (insert.at >= rows.length) out.push(...insert.block);
   return out;
 }
@@ -228,7 +234,7 @@ function crMarked(text: string, doc: Doc): Set<string> {
 /** `text` as lines, the BOM, CRs and trailing blank lines gone. */
 function toLines(text: string): string[] {
   const trimmed = (text.startsWith(BOM) ? text.slice(BOM.length) : text).trimEnd();
-  return trimmed === "" ? [] : trimmed.split(/\r?\n/);
+  return trimmed === "" ? [] : trimmed.split(LINE_BREAK);
 }
 
 /** LF lines ending in one newline; nothing at all when no line is left. */

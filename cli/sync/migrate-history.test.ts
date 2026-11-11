@@ -11,9 +11,11 @@ afterAll(dropFixture);
 
 const OLD_RULE = "---\nroot: false\n---\n# Overview\n\n## Retired section\n\nold stock text\n";
 const OLD_HOOKS = '{ "old": true }\n';
-const hist = (entries: Record<string, string[]>): MigrateDeps => ({
-  history: Object.fromEntries(Object.entries(entries).map(([rel, texts]) => [rel, texts.map(hashText)])),
-});
+function hist(entries: Record<string, string[]>): MigrateDeps {
+  return {
+    history: Object.fromEntries(Object.entries(entries).map(([rel, texts]) => [rel, texts.map(hashText)])),
+  };
+}
 /** Each copied file as one older stock version had it, the consumer's line endings aside. */
 const OLD_COPIES: Record<string, string> = {
   ".agents/skills/ask/SKILL.md": "old ask\n",

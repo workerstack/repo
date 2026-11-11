@@ -14,11 +14,14 @@ import { COPIED_MARKER } from "./migrate.constants.ts";
 useTempDirs();
 
 const CONFIG_FILE = "workerstack.config.ts";
-const packs = (text: string) => ({ ".rulesync/repo.features.jsonc": text });
+function packs(text: string) {
+  return { ".rulesync/repo.features.jsonc": text };
+}
 const MOVED =
   'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts';
 const ASK =
-  'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to workerstack.config.ts; add agents: { skills: ["listen"] } there';
+  'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to workerstack.config.ts; ' +
+  'add agents: { skills: ["listen"] } there';
 const LISTEN = '{ "packs": ["listen"] }';
 
 it("inserts agents.skills for each known pack once, in the config's line endings", async () => {
@@ -28,10 +31,9 @@ it("inserts agents.skills for each known pack once, in the config's line endings
   expect(notes(steps)).toStrictEqual([MOVED]);
   expect(await applyMigration(m.root, steps)).toContain(`repo sync: ${MOVED}`);
   expect(read(m.root, CONFIG_FILE)).toBe(
-    `${DEFINE}export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n  packs: ["agents"],\n})\n`.replaceAll(
-      "\n",
-      "\r\n",
-    ),
+    [DEFINE, 'export default defineConfig({\n  agents: { skills: ["speak", "clasp"] },\n', '  packs: ["agents"],\n})\n']
+      .join("")
+      .replaceAll("\n", "\r\n"),
   );
 });
 
@@ -79,7 +81,8 @@ it("puts the config back and says so when the inserted key does not take effect"
   const steps = planOf(m);
   expect(steps[0]).toMatchObject({ kind: "write", path: CONFIG_FILE });
   expect(await applyMigration(m.root, steps)).toContain(
-    'repo sync: could not add agents.skills ["listen"] to workerstack.config.ts; add agents: { skills: ["listen"] } there',
+    'repo sync: could not add agents.skills ["listen"] to workerstack.config.ts; ' +
+      'add agents: { skills: ["listen"] } there',
   );
   expect(read(m.root, CONFIG_FILE)).toBe(before);
 });

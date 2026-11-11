@@ -6,18 +6,27 @@ import { COPIED_DIR, MD, REPO_DIR, RULE_FRONTMATTER } from "./migrate.constants.
 import type { MigrationState } from "./migration-state.ts";
 
 const H2 = "## ";
+/** The first `# ` heading line. */
+const H1_LINE = /^# .+$/m;
+/** Every `## ` heading line; for `matchAll`. */
+const H2_LINES = /^## .+$/gm;
+/** The `.md` ending of a file name. */
+const MD_END = /\.md$/;
 
 /** The first `# ` heading line of a markdown text, or null. */
 export function h1Of(text: string): string | null {
-  return /^# .+$/m.exec(text)?.[0].trimEnd() ?? null;
+  return H1_LINE.exec(text)?.[0].trimEnd() ?? null;
 }
 
 /** `"A", "B"`: the titles of the `## ` sections in `sections`. */
 export function titlesOf(sections: string): string {
-  return [...sections.matchAll(/^## .+$/gm)].map(([line]) => `"${line.slice(H2.length).trim()}"`).join(", ");
+  return [...sections.matchAll(H2_LINES)].map(([line]) => `"${line.slice(H2.length).trim()}"`).join(", ");
 }
 
-/** A rule of the copied dir: one the stock lacks moves over, a stock one's own `##` sections go to a `-local` sibling. */
+/**
+ * A rule of the copied dir: one the stock lacks moves over, a stock one's own `##` sections go to a `-local`
+ * sibling.
+ */
 function planRule(state: MigrationState, name: string): void {
   const from = `${COPIED_DIR}/rules/${name}`;
   const stockText = state.stockText(from);
@@ -29,7 +38,7 @@ function planRule(state: MigrationState, name: string): void {
     return;
   }
   const extras = extraH2Sections(own, stockText);
-  const base = name.replace(/\.md$/, "");
+  const base = name.replace(MD_END, "");
   if (extras === "") {
     const mark = state.mark(from, to, { kind: "rule", name: base });
     state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock rule)` });
@@ -57,7 +66,7 @@ export function planSubagents(state: MigrationState): void {
     if (stockText === null || isFolder) {
       state.move(from, to, { note: `moved ${from} to ${to}` });
     } else {
-      const mark = state.mark(from, to, { kind: "subagent", name: name.replace(/\.md$/, "") });
+      const mark = state.mark(from, to, { kind: "subagent", name: name.replace(MD_END, "") });
       state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock subagent)` });
     }
   }

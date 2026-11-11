@@ -13,6 +13,7 @@ import { applyEdits, modify, parse } from "jsonc-parser";
 import { AGENTS_FILE } from "./agents-file.constants.ts";
 import { userText } from "./agents-file.ts";
 import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
+import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { PREFIX } from "./migrate.constants.ts";
 import type { MigrationStep } from "./migrate.ts";
@@ -43,17 +44,24 @@ type Failed = { rel: string; error: string };
 type Read = { rel: string; servers: Json; writes: Write[]; remove: string[]; what: { done: string; would: string } };
 type Source = Read | Failed;
 
-/** What the handover reads beside the files: the workspace package dirs, and the stock history `AGENTS.md` is read with. */
+/**
+ * What the handover reads beside the files: the workspace package dirs, and the stock history `AGENTS.md` is read
+ * with.
+ */
 export type HandoverInput = { packages: readonly string[]; history: StockHistory };
 
-/** The handover steps for `root`: the rule moves of each scope, then the server moves; none once nothing is left to move. */
+/**
+ * The handover steps for `root`: the rule moves of each scope, then the server moves; none once nothing is left to
+ * move.
+ */
 export function planHandover(root: string, input: HandoverInput): MigrationStep[] {
   const rules = ["", ...input.packages].flatMap((scope) => ruleSteps(root, scope, input.history));
   return [...rules, ...mcpSteps(root)];
 }
 
-const isObject = (value: unknown): value is Json =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+function isObject(value: unknown): value is Json {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 /** The text of the file at `rel`, null when it is missing or cannot be read. */
 function readOrNull(root: string, rel: string): string | null {
@@ -75,7 +83,9 @@ function step(what: { done: string; would: string }, files: Pick<Handover, "writ
   return handover;
 }
 
-const moved = (what: string) => ({ done: `moved ${what}`, would: `would move ${what}` });
+function moved(what: string) {
+  return { done: `moved ${what}`, would: `would move ${what}` };
+}
 
 /**
  * One step per pathless rule of `scope`, each moving its body to the end of the user text of the scope's `AGENTS.md`:
@@ -105,7 +115,7 @@ function ruleSteps(root: string, scope: string, history: StockHistory): Handover
 function pathlessRules(root: string, dir: string): { rel: string; body: string }[] {
   let names: string[];
   try {
-    names = fs.readdirSync(path.join(root, dir)).sort();
+    names = fs.readdirSync(path.join(root, dir)).toSorted(byCodeUnit);
   } catch {
     return [];
   }
@@ -144,7 +154,10 @@ function withoutParagraph(text: string, body: string): string {
   return rows.join("\n");
 }
 
-/** `text` with `body` as a paragraph of its own at the end; unchanged when it already holds `body`, as after a crash. */
+/**
+ * `text` with `body` as a paragraph of its own at the end; unchanged when it already holds `body`, as after a
+ * crash.
+ */
 function appended(text: string, body: string): string {
   if (text.includes(body)) return text;
   const kept = text.trimEnd();
@@ -166,14 +179,15 @@ function mcpSteps(root: string): MigrationStep[] {
   return mergeSteps({ fix: yours.length > 0, own, servers: parsed.servers }, read);
 }
 
-const conflict = (failed: Failed): MigrationStep => ({
-  from: failed.rel,
-  kind: "conflict",
-  line: `${PREFIX}mcp policy: ${failed.error}`,
-  to: MCP_JSON,
-});
+/** The step that stops the run on a source that could not be read. */
+function conflict(failed: Failed): MigrationStep {
+  return { from: failed.rel, kind: "conflict", line: `${PREFIX}mcp policy: ${failed.error}`, to: MCP_JSON };
+}
 
-/** The step that makes `.mcp.json` the user's when an older sync left it read-only or with its header; none otherwise. */
+/**
+ * The step that makes `.mcp.json` the user's when an older sync left it read-only or with its header; none
+ * otherwise.
+ */
 function madeYours(root: string, disk: string | null): Handover[] {
   if (disk === null) return [];
   const own = withoutHeader(disk);
@@ -186,7 +200,10 @@ function withoutHeader(disk: string): string {
   return hasOwnedHeader(disk) ? disk.split("\n").slice(1).join("\n") : disk;
 }
 
-/** One step per source, each writing `.mcp.json` with the servers so far when it adds one or, first, must make it the user's. */
+/**
+ * One step per source, each writing `.mcp.json` with the servers so far when it adds one or, first, must make it the
+ * user's.
+ */
 function mergeSteps(start: { servers: Json; own: string | null; fix: boolean }, sources: Read[]): Handover[] {
   const whole: Json = start.own === null ? {} : (parse(start.own) /* parseMcpJson found it a JSON object */ as Json);
   let servers = start.servers;
@@ -215,7 +232,9 @@ const EMPTY_POLICY = {
   would: `would remove the empty ${SERVERS_KEY} key of ${POLICY}`,
 };
 
-const movedServers = (rel: string) => moved(`${rel} servers into ${MCP_JSON}`);
+function movedServers(rel: string) {
+  return moved(`${rel} servers into ${MCP_JSON}`);
+}
 
 /** `.repo/mcp.json` as a source, removed once its servers moved; null when there is none. */
 function overlaySource(root: string): Source | null {
@@ -226,7 +245,10 @@ function overlaySource(root: string): Source | null {
   return { rel: OVERLAY, remove: [OVERLAY], servers: parsed.servers, what: movedServers(OVERLAY), writes: [] };
 }
 
-/** The `servers` of `.repo/mcp-policy.jsonc` as a source, the key edited out with its comments kept; null without the key. */
+/**
+ * The `servers` of `.repo/mcp-policy.jsonc` as a source, the key edited out with its comments kept; null without the
+ * key.
+ */
 function policySource(root: string): Source | null {
   const text = readOrNull(root, POLICY);
   const policy: unknown = text === null ? null : parse(text);

@@ -79,7 +79,8 @@ function bare(manifest: string): string {
 it("--check prints the pending count, exits 1 and writes nothing", async () => {
   const root = copied();
   const before = snapshot(root);
-  const count = (await copiedPlan(root)).length;
+  const plan = await copiedPlan(root);
+  const count = plan.length;
   const result = await sync(root, ["--check"], true);
   expect(result.code).toBe(1);
   expect(result.err).toStrictEqual([`repo sync: ${count} migration steps pending; run \`bun repo sync\`\n`]);

@@ -17,13 +17,25 @@ import type { MigrateDeps } from "./migrate.ts";
 import type { MigrationState } from "./migration-state.ts";
 
 const FEATURES = `${COPIED_DIR}/repo.features.jsonc`;
+/** A config `packs: [...]` list: its head up to `[` in group 1, its items in group 2. */
+const PACKS_LIST = /(\bpacks\s*:\s*\[)([^\]]*)\]/;
+/** A quoted "agents" item. */
+const AGENTS_ITEM = /["']agents["']/;
+/** A config `skills: [...]` list, its items in group 1. */
+const SKILLS_LIST = /\bskills\s*:\s*\[([^\]]*)\]/;
+/** The opening of the `defineConfig({` call. */
+const DEFINE_CONFIG_OPEN = /defineConfig\(\s*\{/;
+/** An `agents:` key, quoted or not. */
+const AGENTS_KEY = /["']?\bagents\b["']?\s*:/;
 
 /** A conflict for the user's `rel`: no `.repo/` entry takes it, so it cannot move there. */
 function unread(state: MigrationState, rel: string): void {
   state.steps.push({
     from: rel,
     kind: "conflict",
-    line: `${PREFIX}${rel} is yours and nothing reads it; move it out of ${COPIED_DIR} (to ${REFERENCES_DIR}/ if it explains something) or delete it, then run \`bun repo sync\``,
+    line:
+      `${PREFIX}${rel} is yours and nothing reads it; move it out of ${COPIED_DIR} ` +
+      `(to ${REFERENCES_DIR}/ if it explains something) or delete it, then run \`bun repo sync\``,
     to: "",
   });
 }
@@ -73,8 +85,8 @@ function featurePacks(state: MigrationState): SkillPack[] {
 
 /** The config text with "agents" added to its `packs` list when it has one without it; agents.skills needs the pack. */
 function withAgentsPack(text: string): string {
-  return text.replace(/(\bpacks\s*:\s*\[)([^\]]*)\]/, (whole, head: string, items: string) => {
-    if (/["']agents["']/.test(items)) return whole;
+  return text.replace(PACKS_LIST, (whole, head: string, items: string) => {
+    if (AGENTS_ITEM.test(items)) return whole;
     const kept = items.trimEnd();
     return `${head}${kept}${kept === "" ? "" : ", "}"agents"]`;
   });
@@ -82,7 +94,7 @@ function withAgentsPack(text: string): string {
 
 /** Whether the config text already lists every pack in an `agents.skills` array. */
 function configHasSkills(text: string, packs: readonly string[]): boolean {
-  const list = /\bskills\s*:\s*\[([^\]]*)\]/.exec(text)?.[1];
+  const list = SKILLS_LIST.exec(text)?.[1];
   return list !== undefined && packs.every((pack) => list.includes(`"${pack}"`) || list.includes(`'${pack}'`));
 }
 
@@ -92,9 +104,10 @@ export function planPacks(state: MigrationState): void {
   const text = state.text(CONFIG_FILE);
   if (packs.length === 0 || configHasSkills(text, packs)) return;
   const list = `[${packs.map((pack) => JSON.stringify(pack)).join(", ")}]`;
-  const open = /defineConfig\(\s*\{/.exec(text);
-  if (open === null || /["']?\bagents\b["']?\s*:/.test(text)) {
-    const note = `could not add the packs ${list} of ${FEATURES} to ${CONFIG_FILE}; add agents: { skills: ${list} } there`;
+  const open = DEFINE_CONFIG_OPEN.exec(text);
+  if (open === null || AGENTS_KEY.test(text)) {
+    const hint = `add agents: { skills: ${list} } there`;
+    const note = `could not add the packs ${list} of ${FEATURES} to ${CONFIG_FILE}; ${hint}`;
     state.steps.push({ kind: "note", note });
     return;
   }

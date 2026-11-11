@@ -118,7 +118,8 @@ export function conflictLines(steps: readonly MigrationStep[]): string[] {
     step.kind === "conflict"
       ? [
           step.line ??
-            `${PREFIX}cannot move ${step.from}: ${step.to} already exists and differs; merge them by hand, then run \`bun repo sync\``,
+            `${PREFIX}cannot move ${step.from}: ${step.to} already exists and differs; ` +
+              `merge them by hand, then run \`bun repo sync\``,
         ]
       : [],
   );

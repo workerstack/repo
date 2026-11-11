@@ -37,7 +37,10 @@ export const HANDLED: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "scripts",
   "settings",
 ]);
-/** The files a sync can generate that a hand-written one of does not stop adoption: settings move to `.repo/`, `AGENTS.md` keeps its text. */
+/**
+ * The files a sync can generate that a hand-written one of does not stop adoption: settings move to `.repo/`,
+ * `AGENTS.md` keeps its text.
+ */
 export const ADOPTABLE: ReadonlySet<string> = /* @__PURE__ */ new Set([AGENTS_MD, CLAUDE_SETTINGS]);
 /** Each copied file that overrides stock when it differs, and what its moved line adds. */
 export const OVERRIDES: readonly (readonly [string, string])[] = [
@@ -56,3 +59,5 @@ export const FENCE: string = "---";
 export const NOT_FOUND: number = -1;
 /** The bytes of randomness in a temp file name. */
 export const TEMP_BYTES: number = 6;
+/** A line break, either ending; for `split`. */
+export const LINE_BREAK: RegExp = /\r?\n/;

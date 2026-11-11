@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { byCodeUnit } from "./by-code-unit.ts";
 import { clashes, same, stockRel } from "./migrate-fs.ts";
 import { markNote, markedText } from "./migrate-rules.ts";
 import { alreadyHolds } from "./migrate-settings.ts";
@@ -34,8 +35,8 @@ export class MigrationState {
       this.steps.push({ from, kind: "conflict", to });
     } else {
       this.steps.push({
-        kind: "move",
         from,
+        kind: "move",
         to,
         ...(except.length > 0 ? { except } : {}),
         note: how.note,
@@ -44,7 +45,10 @@ export class MigrationState {
     }
   }
 
-  /** The mark for the file at `from` that moves to `to` and replaces a stock `kind`; undefined when it already says so or cannot be read. */
+  /**
+   * The mark for the file at `from` that moves to `to` and replaces a stock `kind`; undefined when it already says so
+   * or cannot be read.
+   */
   mark(from: string, to: string, of: { name: string; kind: "rule" | "subagent" | "skill" }): MoveMark | undefined {
     const text = this.read(from);
     const content = text === null ? null : markedText(text, of.name);
@@ -79,7 +83,7 @@ export class MigrationState {
   /** The entries of the dir at `rel`, sorted; none when it cannot be read. */
   names(rel: string): string[] {
     try {
-      return fs.readdirSync(path.join(this.root, rel)).sort();
+      return fs.readdirSync(path.join(this.root, rel)).toSorted(byCodeUnit);
     } catch {
       return [];
     }
@@ -99,7 +103,10 @@ export class MigrationState {
     return fs.readFileSync(path.join(this.root, rel), "utf8");
   }
 
-  /** The stock version of the file at `rel`: the text sync generates there, else the package's file; null when neither has one. */
+  /**
+   * The stock version of the file at `rel`: the text sync generates there, else the package's file; null when neither
+   * has one.
+   */
   stockText(rel: string): string | null {
     const generated = this.generated.get(rel);
     if (generated !== undefined) return generated;

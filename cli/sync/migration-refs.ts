@@ -42,7 +42,9 @@ function carrySections(state: MigrationState, from: string, stockText: string): 
 export function planReferences(state: MigrationState): void {
   const dir = `${COPIED_DIR}/reference`;
   const names = state.names(dir).filter((name) => !OLD_GENERATED_REFS.has(name));
-  const stockNamed = (name: string) => name.endsWith(MD) && present(path.join(state.stock, REFERENCES_DIR, name));
+  function stockNamed(name: string) {
+    return name.endsWith(MD) && present(path.join(state.stock, REFERENCES_DIR, name));
+  }
   for (const name of [...names.filter(stockNamed), ...names.filter((n) => !stockNamed(n))]) {
     const from = `${dir}/${name}`;
     const to = `${REFERENCES_DIR}/${name}`;
