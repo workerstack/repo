@@ -384,7 +384,7 @@ export async function targetStatuses({
 export function formatStatus(statuses: Statuses | null | undefined, targets: string[] = TARGETS): string {
   return targets
     .map((t) => {
-      const st = (statuses && statuses[t]) || { ok: false, extra: "" };
+      const st = (statuses && statuses[t]) ?? { ok: false, extra: "" };
       const b = st.ok ? "ok" : "missing";
       return st.extra ? `${t}  ${b}  ${st.extra}` : `${t}  ${b}`;
     })
@@ -403,7 +403,7 @@ export function menuOptions(
     { value: "jev", label: "jev (TypeSafe research decision)" },
   ].filter((o) => targets.includes(o.value));
   return base.map((o) => {
-    const st = (statuses && statuses[o.value]) || { ok: false, extra: "" };
+    const st = (statuses && statuses[o.value]) ?? { ok: false, extra: "" };
     const tag = st.ok ? (st.extra ? `ok ${st.extra}` : "ok") : st.extra ? `missing ${st.extra}` : "missing";
     return { value: o.value, label: `${o.label}  ${tag}` };
   });
@@ -622,7 +622,7 @@ export async function setupListen({
         defaultValue: "",
       }),
     );
-    if (d) patch.listen = { ...(patch.listen || {}), device: d };
+    if (d) patch.listen = { ...patch.listen, device: d };
   }
   if (Object.keys(patch).length) {
     const dest = mergeSpeakJson(home, patch);
@@ -713,7 +713,7 @@ export async function setupGoogleWorkspace({
   }
 
   logLine(io, `oauth ${dest}`);
-  const login = loginFn || loginLoopback;
+  const login = loginFn ?? loginLoopback;
   await login(dest, home);
   const tokens = tokenStorePath(home);
   logLine(io, `tokens ${tokens}`);
@@ -762,7 +762,7 @@ export async function setupJev({ flags = {}, home = os.homedir(), io, interactiv
   let apiKey = str(flags["api-key"] || flags.key);
   if (interactive && io && !apiKey && typeof io.password === "function") {
     logLine(io, "Open: https://console.typesafe.ai/keys");
-    apiKey = str(await io.password!({ message: "TypeSafe API key" }));
+    apiKey = str(await io.password({ message: "TypeSafe API key" }));
   }
   if (!apiKey) {
     throw new Error(interactive ? "need a TypeSafe API key" : "need --api-key (or TTY: bun repo setup jev)");
@@ -782,7 +782,7 @@ async function runTarget(target: string, ctx: SetupCtx): Promise<unknown> {
 
 export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  const env = opts.env || readEnv();
+  const env = opts.env ?? readEnv();
   const home = opts.home || env.HOME || env.USERPROFILE || os.homedir();
   const cwd = opts.cwd || process.cwd();
   const targets = setupTargets([...(await enabledSkills(cwd))]);
@@ -792,10 +792,10 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
       : ttyInteractive({
           argv,
           env,
-          stdin: opts.stdin || process.stdin,
-          stdout: opts.stdout || process.stdout,
+          stdin: opts.stdin ?? process.stdin,
+          stdout: opts.stdout ?? process.stdout,
         });
-  const io = opts.io || (interactive ? await defaultIo() : null);
+  const io = opts.io ?? (interactive ? await defaultIo() : null);
   const ctx: SetupCtx = {
     flags,
     env,

@@ -75,7 +75,7 @@ describe("board", () => {
       boot,
       probe: (pid: number) => (pid === 30 ? { pid: 30, start: "100", comm: "claude", ppid: 1 } : null),
     });
-    expect(printed).toEqual(["2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth"]);
+    expect(printed).toStrictEqual(["2026-10-09T12:00:00Z claude fable-51 medium sid /home/user/x updating auth"]);
     const names = fs.readdirSync(path.join(dir, ".workerstack", "board"));
     expect(names.some((n) => n.includes("other"))).toBe(false);
     expect(names.some((n) => n.includes("sid"))).toBe(true);
@@ -89,8 +89,8 @@ describe("board", () => {
       JSON.stringify({ provider: "claude", session: "ghost", work: "ghost work", boot, time: "t" }) + "\n",
     );
     fs.writeFileSync(path.join(dir, ".workerstack", "board", "bad.json"), "{");
-    expect(lines({ home: dir, boot, probe: () => null })).toEqual([]);
-    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toEqual([]);
+    expect(lines({ home: dir, boot, probe: () => null })).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toStrictEqual([]);
     writeRow(dir, {
       session: "recycled",
       pid: 8,
@@ -105,7 +105,7 @@ describe("board", () => {
         boot,
         probe: () => ({ pid: 8, start: "99", comm: "claude", ppid: 1 }),
       }),
-    ).toEqual([]);
+    ).toStrictEqual([]);
 
     const stat = "10 (node) Z 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12345";
     expect(probeProcess(10, { platform: "linux", readFile: () => stat })).toBeNull();
@@ -122,15 +122,15 @@ describe("board", () => {
   it("deletes a row whose boot id does not match", () => {
     const dir = home();
     writeRow(dir, { boot: "old-boot", work: "stale boot" });
-    expect(lines({ home: dir, boot: "new-boot", probe: alive })).toEqual([]);
-    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toEqual([]);
+    expect(lines({ home: dir, boot: "new-boot", probe: alive })).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(dir, ".workerstack", "board"))).toStrictEqual([]);
   });
 
   it("keeps a set --work label across a later note", () => {
     const dir = home();
     writeRow(dir, { work: "updating auth", forceWork: true });
     writeRow(dir, { work: "write the blog post", now: "2026-10-09T12:05:00Z" });
-    expect(lines({ home: dir, boot, probe: alive })).toEqual([
+    expect(lines({ home: dir, boot, probe: alive })).toStrictEqual([
       "2026-10-09T12:05:00Z claude fable-51 medium sid /home/user/x updating auth",
     ]);
   });
@@ -182,7 +182,7 @@ describe("board", () => {
       boot,
       probe: (pid: number) => (pid === 2 ? { pid: 2, start: "99", comm: "claude", ppid: 1 } : null),
     });
-    expect(printed).toEqual(["2026-10-09T12:09:00Z claude fable-51 medium sid /home/user/x new process"]);
+    expect(printed).toStrictEqual(["2026-10-09T12:09:00Z claude fable-51 medium sid /home/user/x new process"]);
   });
 
   it("walks past a short-lived shell to the host process", () => {
@@ -192,15 +192,15 @@ describe("board", () => {
       if (pid === 30) return { pid: 30, start: "3", comm: "claude", ppid: 1 };
       return null;
     };
-    expect(hostIdentity({ pid: 50, probe })).toEqual({ pid: 30, start: "3" });
-    expect(hostIdentity({ pid: 40, probe })).toEqual({ pid: 30, start: "3" });
+    expect(hostIdentity({ pid: 50, probe })).toStrictEqual({ pid: 30, start: "3" });
+    expect(hostIdentity({ pid: 40, probe })).toStrictEqual({ pid: 30, start: "3" });
   });
 
   it("probes linux, darwin, and windows without process.kill", () => {
     const src = fs.readFileSync(script, "utf8");
     expect(src).not.toMatch(/process\.kill/);
     const live = "10 (my node) S 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12345";
-    expect(probeProcess(10, { platform: "linux", readFile: () => live })).toEqual({
+    expect(probeProcess(10, { platform: "linux", readFile: () => live })).toStrictEqual({
       pid: 10,
       start: "12345",
       comm: "my node",
@@ -211,7 +211,7 @@ describe("board", () => {
       expect(args).toContain("10");
       return { status: 0, stdout: "11 Thu Oct  9 12:00:00 2026 /bin/zsh\n" };
     };
-    expect(probeProcess(10, { platform: "darwin", spawn: ps })).toEqual({
+    expect(probeProcess(10, { platform: "darwin", spawn: ps })).toStrictEqual({
       pid: 10,
       start: "Thu Oct  9 12:00:00 2026",
       comm: "zsh",
@@ -221,7 +221,7 @@ describe("board", () => {
       expect(cmd).toMatch(/powershell/);
       return { status: 0, stdout: "11\ncmd.exe\n2026-10-09T12:00:00.0000000Z\n" };
     };
-    expect(probeProcess(10, { platform: "win32", spawn: pwsh })).toEqual({
+    expect(probeProcess(10, { platform: "win32", spawn: pwsh })).toStrictEqual({
       pid: 10,
       start: "2026-10-09T12:00:00.0000000Z",
       comm: "cmd.exe",

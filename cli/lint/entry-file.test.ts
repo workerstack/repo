@@ -18,7 +18,7 @@ describe("entry-file passes", () => {
     `${IMPORT}void main();`,
     `import type { Argv } from "../src/argv.ts";\nimport { start as main } from "../src/main.ts";\nawait main([] as Argv);`,
   ])("imports and one call of an imported main: %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each([
@@ -26,7 +26,7 @@ describe("entry-file passes", () => {
     ["bin/app.ts", "bin/app.ts"],
     [{ app: "./bin/app.ts", other: "bin/other.ts" }, "bin/other.ts"],
   ])("the bin %j at %s, in either spelling or a map", (bin, file) => {
-    expect(messagesOf(`${IMPORT}await main();`, bin, file)).toEqual([]);
+    expect(messagesOf(`${IMPORT}await main();`, bin, file)).toStrictEqual([]);
   });
 
   it.each([
@@ -34,13 +34,13 @@ describe("entry-file passes", () => {
     ["./bin/app.ts", "bin/other.ts"],
     [7, "bin/app.ts"],
   ])("a file the bin %j does not name: %s", (bin, file) => {
-    expect(messagesOf("export const run = () => 1;\nrun();", bin, file)).toEqual([]);
+    expect(messagesOf("export const run = () => 1;\nrun();", bin, file)).toStrictEqual([]);
   });
 
   it("skips a file whose manifest is unreadable or missing", () => {
     const code = "export const run = () => 1;\nrun();";
-    expect(reportsOf(entryFile, { "package.json": "{ not json", "bin/app.ts": code })).toEqual([]);
-    expect(reportsOf(entryFile, { "bin/app.ts": code })).toEqual([]);
+    expect(reportsOf(entryFile, { "package.json": "{ not json", "bin/app.ts": code })).toStrictEqual([]);
+    expect(reportsOf(entryFile, { "bin/app.ts": code })).toStrictEqual([]);
   });
 });
 
@@ -51,10 +51,10 @@ describe("entry-file fails", () => {
     [`${IMPORT}await main();\nawait main();`, [MESSAGE]],
     ["async function main(): Promise<void> {}\nawait main();", [MESSAGE, MESSAGE, MISSING]],
     [`${IMPORT}export { main };\nawait main();`, [MESSAGE]],
-    [`${IMPORT}`, [MISSING]],
+    [IMPORT, [MISSING]],
     [`${IMPORT}await run();`, [MESSAGE, MISSING]],
   ])("%j", (code, messages) => {
-    expect(messagesOf(code)).toEqual(messages);
+    expect(messagesOf(code)).toStrictEqual(messages);
   });
 
   it("fails a bin a map names, read from the nearest package.json", () => {
@@ -63,6 +63,6 @@ describe("entry-file fails", () => {
       "packages/cli/package.json": manifest({ cli: "./bin/cli.ts" }),
       "packages/cli/bin/cli.ts": "export const run = 1;",
     };
-    expect(reportsOf(entryFile, fixture).map((report) => report.message)).toEqual([MESSAGE, MISSING]);
+    expect(reportsOf(entryFile, fixture).map((report) => report.message)).toStrictEqual([MESSAGE, MISSING]);
   });
 });

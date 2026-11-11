@@ -58,13 +58,13 @@ it("serves a blank lightpanda page when called with no arguments at all", async 
   closers.push(() => s.close());
   expect(s.state).toMatchObject({ url: "about:blank", engine: "lightpanda", failProbe: false, thinSnap: false });
   const cdp = await connect(s.port);
-  expect(await cdp.send("Browser.getVersion")).toEqual({ protocolVersion: "1.3", product: "lightpanda" });
-  expect(await cdp.send("Target.getTargets")).toEqual(target("about:blank"));
+  expect(await cdp.send("Browser.getVersion")).toStrictEqual({ protocolVersion: "1.3", product: "lightpanda" });
+  expect(await cdp.send("Target.getTargets")).toStrictEqual(target("about:blank"));
 });
 
 it("answers /json/version with the engine name and a ws url on its own port, and 404s other paths", async () => {
   const named = await serve({ engine: "chromium" });
-  expect(await getJson(named.port)).toEqual({
+  expect(await getJson(named.port)).toStrictEqual({
     Browser: "chromium",
     "Protocol-Version": "1.3",
     webSocketDebuggerUrl: `ws://127.0.0.1:${named.port}/devtools/browser/repo`,
@@ -77,9 +77,9 @@ it("answers /json/version with the engine name and a ws url on its own port, and
 
 it("tracks navigation and ignores a blank or non-string url", async () => {
   const { s, cdp } = await cdpOf();
-  expect(await cdp.send("Page.navigate", { url: "https://a.test/" })).toEqual({ frameId: "f1" });
-  expect(await cdp.send("LP.getMarkdown")).toEqual({ markdown: "# https://a.test/\n\nhello" });
-  expect(await cdp.send("Target.getTargets")).toEqual(target("https://a.test/"));
+  expect(await cdp.send("Page.navigate", { url: "https://a.test/" })).toStrictEqual({ frameId: "f1" });
+  expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# https://a.test/\n\nhello" });
+  expect(await cdp.send("Target.getTargets")).toStrictEqual(target("https://a.test/"));
   await cdp.send("Page.navigate", { url: "" });
   await cdp.send("Page.navigate", { url: 7 });
   await cdp.send("Page.navigate");
@@ -88,30 +88,32 @@ it("tracks navigation and ignores a blank or non-string url", async () => {
 
 it("falls back to about:blank, a bare heading and a page-named tree when the url is blank", async () => {
   const { cdp } = await cdpOf({ url: "" });
-  expect(await cdp.send("Target.getTargets")).toEqual(target("about:blank"));
-  expect(await cdp.send("LP.getMarkdown")).toEqual({ markdown: "# \n\nhello" });
+  expect(await cdp.send("Target.getTargets")).toStrictEqual(target("about:blank"));
+  expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# \n\nhello" });
   expect(await cdp.send("Accessibility.getFullAXTree")).toMatchObject({ nodes: [{ name: { value: "page" } }, {}, {}] });
-  expect(await (await cdpOf({ url: "", thinSnap: true })).cdp.send("LP.getMarkdown")).toEqual({ markdown: "# \n" });
+  expect(await (await cdpOf({ url: "", thinSnap: true })).cdp.send("LP.getMarkdown")).toStrictEqual({
+    markdown: "# \n",
+  });
 });
 
 it("serves the set markdown, a two-ref default tree, or the given nodes; thin pages are empty", async () => {
   const { cdp } = await cdpOf({ url: "https://b.test/", markdown: "# set\n\nbody" });
-  expect(await cdp.send("LP.getMarkdown")).toEqual({ markdown: "# set\n\nbody" });
+  expect(await cdp.send("LP.getMarkdown")).toStrictEqual({ markdown: "# set\n\nbody" });
   const tree = await cdp.send("Accessibility.getFullAXTree");
   expect(tree).toMatchObject({ nodes: [{ name: { value: "https://b.test/" } }, { name: { value: "Home" } }, {}] });
   expect(tree).toMatchObject({ nodes: [{}, { backendDOMNodeId: 10 }, { backendDOMNodeId: 11 }] });
-  expect(await (await cdpOf({ axNodes: [{ role: "button" }] })).cdp.send("Accessibility.getFullAXTree")).toEqual({
+  expect(await (await cdpOf({ axNodes: [{ role: "button" }] })).cdp.send("Accessibility.getFullAXTree")).toStrictEqual({
     nodes: [{ role: "button" }],
   });
   const thin = (await cdpOf({ url: "https://c.test/", thinSnap: true })).cdp;
-  expect(await thin.send("LP.getMarkdown")).toEqual({ markdown: "# https://c.test/\n" });
-  expect(await thin.send("Accessibility.getFullAXTree")).toEqual({ nodes: [] });
+  expect(await thin.send("LP.getMarkdown")).toStrictEqual({ markdown: "# https://c.test/\n" });
+  expect(await thin.send("Accessibility.getFullAXTree")).toStrictEqual({ nodes: [] });
 });
 
 it("resolves only the two known backend nodes; any other is stale", async () => {
   const { cdp } = await cdpOf();
-  expect(await cdp.send("DOM.resolveNode", { backendNodeId: 10 })).toEqual({ object: { objectId: "oid-10" } });
-  expect(await cdp.send("DOM.resolveNode", { backendNodeId: 11 })).toEqual({ object: { objectId: "oid-11" } });
+  expect(await cdp.send("DOM.resolveNode", { backendNodeId: 10 })).toStrictEqual({ object: { objectId: "oid-10" } });
+  expect(await cdp.send("DOM.resolveNode", { backendNodeId: 11 })).toStrictEqual({ object: { objectId: "oid-11" } });
   await expect(cdp.send("DOM.resolveNode", { backendNodeId: 12 })).rejects.toThrow("stale");
   await expect(cdp.send("DOM.resolveNode", { backendNodeId: "10" })).rejects.toThrow("stale");
 });
@@ -119,21 +121,21 @@ it("resolves only the two known backend nodes; any other is stale", async () => 
 it("acks enables, input and unknown methods; paints a png and a pdf; evaluates to the markdown", async () => {
   const { cdp } = await cdpOf({ markdown: "from state" });
   const acked = ["Page.enable", "Accessibility.enable", "Runtime.enable", "DOM.enable", "Input.insertText", "X.y"];
-  expect(await Promise.all(acked.map((m) => cdp.send(m)))).toEqual(acked.map(() => ({})));
-  expect(await cdp.send("Runtime.callFunctionOn")).toEqual({ result: { type: "undefined" } });
+  expect(await Promise.all(acked.map((m) => cdp.send(m)))).toStrictEqual(acked.map(() => ({})));
+  expect(await cdp.send("Runtime.callFunctionOn")).toStrictEqual({ result: { type: "undefined" } });
   const png = Buffer.from(String((await cdp.send("Page.captureScreenshot")).data), "base64");
   expect(png.subarray(1, 4).toString()).toBe("PNG");
   const pdf = Buffer.from(String((await cdp.send("Page.printToPDF")).data), "base64");
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
-  expect(await cdp.send("Runtime.evaluate")).toEqual(evalOf("from state"));
-  expect(await (await cdpOf()).cdp.send("Runtime.evaluate")).toEqual(evalOf(""));
+  expect(await cdp.send("Runtime.evaluate")).toStrictEqual(evalOf("from state"));
+  expect(await (await cdpOf()).cdp.send("Runtime.evaluate")).toStrictEqual(evalOf(""));
 });
 
 it("failProbe rejects only the probe methods", async () => {
   const { cdp } = await cdpOf({ failProbe: true });
   await expect(cdp.send("Browser.getVersion")).rejects.toThrow("probe failed");
   await expect(cdp.send("Target.getTargets")).rejects.toThrow("probe failed");
-  expect(await cdp.send("Page.enable")).toEqual({});
+  expect(await cdp.send("Page.enable")).toStrictEqual({});
 });
 
 it("scripted replies win (a record is the reply, a string the error) and every call is logged", async () => {
@@ -141,9 +143,9 @@ it("scripted replies win (a record is the reply, a string the error) and every c
   const replies = { "Page.enable": "no page", "DOM.enable": { custom: true } };
   const { cdp } = await cdpOf({ calls, replies });
   await expect(cdp.send("Page.enable")).rejects.toThrow("no page");
-  expect(await cdp.send("DOM.enable", { a: 1 })).toEqual({ custom: true });
-  expect(await cdp.send("Runtime.enable")).toEqual({});
-  expect(calls).toEqual([
+  expect(await cdp.send("DOM.enable", { a: 1 })).toStrictEqual({ custom: true });
+  expect(await cdp.send("Runtime.enable")).toStrictEqual({});
+  expect(calls).toStrictEqual([
     { method: "Page.enable", params: {} },
     { method: "DOM.enable", params: { a: 1 } },
     { method: "Runtime.enable", params: {} },
@@ -172,7 +174,7 @@ it("retries a not-ok version reply, and a port nothing listens on yet, until the
   closers.push(() => s.close());
   const cdp = await pending;
   closers.push(() => cdp.close());
-  expect(await cdp.send("Page.enable")).toEqual({});
+  expect(await cdp.send("Page.enable")).toStrictEqual({});
 });
 
 it("rejects a version reply without a usable websocket url, or one that cannot open", async () => {
@@ -181,7 +183,7 @@ it("rejects a version reply without a usable websocket url, or one that cannot o
   const bodies = [{}, { webSocketDebuggerUrl: "" }, { webSocketDebuggerUrl: 5 }, { webSocketDebuggerUrl: dead }];
   const ports = await Promise.all(bodies.map((b) => listen(reply(b))));
   const results = await Promise.allSettled(ports.map((p) => connectCdp(p)));
-  expect(results.map((r) => r.status)).toEqual(bodies.map(() => "rejected"));
+  expect(results.map((r) => r.status)).toStrictEqual(bodies.map(() => "rejected"));
 });
 
 it("rejects when the upgrade never completes within the time given", async () => {

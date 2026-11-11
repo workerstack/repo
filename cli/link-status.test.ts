@@ -9,7 +9,7 @@ it("lists each link with its versions and sync time", async () => {
   await main([NAME], w.io());
   w.out.length = 0;
   expect(await main(["status"], w.io())).toBe(0);
-  expect(w.out).toEqual([
+  expect(w.out).toStrictEqual([
     `1 link in ${mod(w.main)}`,
     `  ${NAME}  0.4.0-dev  from ${w.flare}  (npm 0.3.2)  synced 08:31`,
   ]);
@@ -18,7 +18,7 @@ it("lists each link with its versions and sync time", async () => {
 it("says every package comes from npm when nothing is linked", async () => {
   const w = scene();
   expect(await main(["status"], w.io())).toBe(0);
-  expect(w.out).toEqual([NONE]);
+  expect(w.out).toStrictEqual([NONE]);
 });
 
 it("pads names, pluralizes, and shows a copy that has no version", async () => {
@@ -48,7 +48,7 @@ it("reports status without an install dir as no links", async () => {
   const w = scene();
   fs.rmSync(mod(w.main), { recursive: true });
   expect(await main(["status"], w.io())).toBe(0);
-  expect(w.out).toEqual([NONE]);
+  expect(w.out).toStrictEqual([NONE]);
 });
 
 it.each(["{", JSON.stringify({ version: 2, links: {} })])("refuses a state file that reads %s", async (body) => {
@@ -61,20 +61,20 @@ it.each(["{", JSON.stringify({ version: 2, links: {} })])("refuses a state file 
 it.each([[[]], [["--bogus"]], [["a", "b"]]])("link %j exits 2 with the usage line", async (argv) => {
   const w = scene();
   expect(await main(argv, w.io())).toBe(2);
-  expect(w.err).toEqual([USAGE]);
-  expect(w.out).toEqual([]);
+  expect(w.err).toStrictEqual([USAGE]);
+  expect(w.out).toStrictEqual([]);
 });
 
 it.each([[[]], [["a", "b"]], [["--none"]]])("unlink %j exits 2 with the usage line", async (argv) => {
   const w = scene();
   expect(await unlinkMain(argv, w.io())).toBe(2);
-  expect(w.err).toEqual([USAGE]);
+  expect(w.err).toStrictEqual([USAGE]);
 });
 
 it("reads the real checkout when no io is given", async () => {
   const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
   expect(await main(["status"])).toBe(0);
-  expect(write).toHaveBeenCalled();
+  expect(write).toHaveBeenCalledWith(expect.any(String));
   expect(await unlinkMain(["--all"])).toBe(0);
   write.mockRestore();
 });

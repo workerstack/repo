@@ -63,7 +63,7 @@ it("meeting: starts at --when, ends an hour later and splits --to into attendees
   const calls = stubFetch(() => jsonRes({ id: "e", summary: "meeting", htmlLink: "l" }));
   const r = await run("event", "create", "--when", "2030-05-05T08:00:00.000Z", "--to", "a@x.y; b@x.y");
   expect(r.code).toBe(0);
-  expect(sentJson(calls)).toEqual({
+  expect(sentJson(calls)).toStrictEqual({
     summary: "meeting",
     start: { dateTime: "2030-05-05T08:00:00.000Z" },
     end: { dateTime: "2030-05-05T09:00:00.000Z" },

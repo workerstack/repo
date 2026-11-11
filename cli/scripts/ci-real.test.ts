@@ -54,7 +54,7 @@ it("runs the real gates on a planted repo and passes", { timeout: SLOW }, async 
   });
   const run = await realCi(root);
   const lines = run.out.split("\n");
-  expect(lines.slice(0, 4).map((line) => line.replace(/ \(\d+\.\ds\)$/, ""))).toEqual([
+  expect(lines.slice(0, 4).map((line) => line.replace(/ \(\d+\.\ds\)$/, ""))).toStrictEqual([
     "ci: check ok",
     "ci: fmt ok",
     "ci: typecheck 2 configs",
@@ -92,7 +92,7 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
   const run = await realCi(root, ["--report", "r.json"]);
   expect(run).toMatchObject({ code: 0, err: "" });
   expect(run.out.split("\n")).toHaveLength(6);
-  expect(JSON.parse(read(root, "r.json"))).toEqual({
+  expect(JSON.parse(read(root, "r.json"))).toStrictEqual({
     os: process.platform,
     skipped: ["src/answer.test.ts > sleeps"],
   });
@@ -100,7 +100,7 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
 
 it("an argument is refused on the real stderr", async () => {
   const run = await realCi(process.cwd(), ["x.test.ts"]);
-  expect(run).toEqual({
+  expect(run).toStrictEqual({
     code: 1,
     out: "",
     err: "repo ci: use repo ci [--no-coverage] [--report <file>], repo ci skips <dir> or repo ci wait [<branch>] (exits 0 passed, 1 failed, 2 superseded, 3 nothing to wait on, 4 error)\n",
@@ -113,7 +113,7 @@ it("skips <dir> prints on the real stdout", async () => {
     "reports/ci-report-a.json": '{"os":"a","skipped":["x > t"]}',
     "reports/ci-report-b.json": '{"os":"b","skipped":[]}',
   });
-  expect(await realCi(root, ["skips", "reports"])).toEqual({
+  expect(await realCi(root, ["skips", "reports"])).toStrictEqual({
     code: 0,
     out: "ci skips: 2 reports (a, b), no test skipped on all of them\n",
     err: "",

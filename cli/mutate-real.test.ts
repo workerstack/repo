@@ -88,9 +88,9 @@ it(
     const text = fs.readFileSync(path.join(dir, REPORT), "utf8");
     const report = JSON.parse(text) /* the shard report this command wrote */ as Report;
     const survivors = (file: string) => report.files[file]?.survivors.map((s) => [s.line, s.mutator]);
-    expect(survivors("src/math.ts")).toEqual([[2, "ArithmeticOperator"]]);
-    expect(survivors("src/str.ts")).toEqual([]);
+    expect(survivors("src/math.ts")).toStrictEqual([[2, "ArithmeticOperator"]]);
+    expect(survivors("src/str.ts")).toStrictEqual([]);
     expect(git(dir, "status", "--porcelain")).toBe("");
-    expect(clones()).toEqual(before);
+    expect(clones()).toStrictEqual(before);
   },
 );

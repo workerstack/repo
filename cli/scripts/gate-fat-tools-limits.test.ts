@@ -34,12 +34,15 @@ function call(toolName: string, toolInput: ToolArgs, cwd = ws) {
 
 describe("glob", () => {
   it("adds the ignore list for a blank or an absolute path", () => {
-    expect(call("Glob", { path: "  " })).toEqual({
+    expect(call("Glob", { path: "  " })).toStrictEqual({
       type: "rewrite",
       updatedInput: { path: "  ", ignore: GLOB_IGNORE },
     });
     const abs = path.join(ws, "src");
-    expect(call("Glob", { path: abs })).toEqual({ type: "rewrite", updatedInput: { path: abs, ignore: GLOB_IGNORE } });
+    expect(call("Glob", { path: abs })).toStrictEqual({
+      type: "rewrite",
+      updatedInput: { path: abs, ignore: GLOB_IGNORE },
+    });
   });
 
   it("leaves a glob that already names its ignore list alone", () => {
@@ -49,18 +52,18 @@ describe("glob", () => {
   it("denies a relative path that resolves into a denied dir", () => {
     const denied = path.join(ws, "dist");
     fs.mkdirSync(denied);
-    expect(call("Glob", { path: "." }, denied)).toEqual({ type: "deny", reason: REASON_DENYLIST });
-    expect(call("Glob", { path: "sub" }, denied)).toEqual({ type: "deny", reason: REASON_DENYLIST });
+    expect(call("Glob", { path: "." }, denied)).toStrictEqual({ type: "deny", reason: REASON_DENYLIST });
+    expect(call("Glob", { path: "sub" }, denied)).toStrictEqual({ type: "deny", reason: REASON_DENYLIST });
   });
 });
 
 describe("grep head_limit", () => {
   it("spells the injected and the capped limit in camelCase for a camelCase call", () => {
-    expect(call("Grep", { pattern: "x", targetDirectory: "src" })).toEqual({
+    expect(call("Grep", { pattern: "x", targetDirectory: "src" })).toStrictEqual({
       type: "rewrite",
       updatedInput: { pattern: "x", targetDirectory: "src", headLimit: DEFAULT_GREP_HEAD_LIMIT },
     });
-    expect(call("Grep", { pattern: "x", headLimit: 900 })).toEqual({
+    expect(call("Grep", { pattern: "x", headLimit: 900 })).toStrictEqual({
       type: "rewrite",
       updatedInput: { pattern: "x", headLimit: DEFAULT_GREP_HEAD_LIMIT },
     });
@@ -77,22 +80,22 @@ describe("read", () => {
   it("caps a limit above the maximum", () => {
     const file = path.join(ws, "a.txt");
     fs.writeFileSync(file, "a\n");
-    expect(call("Read", { file_path: file, limit: 900 })).toEqual({
+    expect(call("Read", { file_path: file, limit: 900 })).toStrictEqual({
       type: "rewrite",
       updatedInput: { file_path: file, limit: DEFAULT_READ_LIMIT },
     });
   });
 
   it("adds a limit when the call names no file", () => {
-    expect(call("Read", {})).toEqual({ type: "rewrite", updatedInput: { limit: DEFAULT_READ_LIMIT } });
+    expect(call("Read", {})).toStrictEqual({ type: "rewrite", updatedInput: { limit: DEFAULT_READ_LIMIT } });
   });
 
   it("reads the file from any of the host spellings", () => {
     const big = path.join(ws, "big.bin");
     fs.writeFileSync(big, Buffer.alloc(DENY_FILE_BYTES + 1));
-    expect(call("Read", { targetFile: big })).toEqual({ type: "deny", reason: REASON_FILE_SIZE });
-    expect(call("Read", { filePath: big })).toEqual({ type: "deny", reason: REASON_FILE_SIZE });
-    expect(call("Read", { target_file: big })).toEqual({ type: "deny", reason: REASON_FILE_SIZE });
+    expect(call("Read", { targetFile: big })).toStrictEqual({ type: "deny", reason: REASON_FILE_SIZE });
+    expect(call("Read", { filePath: big })).toStrictEqual({ type: "deny", reason: REASON_FILE_SIZE });
+    expect(call("Read", { target_file: big })).toStrictEqual({ type: "deny", reason: REASON_FILE_SIZE });
   });
 });
 

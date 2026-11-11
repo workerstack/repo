@@ -23,8 +23,8 @@ it("stops, changing nothing, on a file sync would overwrite with other text", as
   const before = snapshot(root);
   const result = await sync(root, [], true);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual([STOP(".claude/agents/scout.md")]);
-  expect(snapshot(root)).toEqual(before);
+  expect(result.err).toStrictEqual([STOP(".claude/agents/scout.md")]);
+  expect(snapshot(root)).toStrictEqual(before);
 });
 
 it("stops on a tracked file under a host dir that it cannot adopt, one line per file, and only those", async () => {
@@ -37,12 +37,12 @@ it("stops on a tracked file under a host dir that it cannot adopt, one line per 
   const before = snapshot(root);
   const result = await sync(root, [], true);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual([
+  expect(result.err).toStrictEqual([
     STOP(".claude/commands/a.md"),
     STOP(".claude/commands/b.md"),
     STOP(".cursor/rules/x.mdc"),
   ]);
-  expect(snapshot(root)).toEqual(before);
+  expect(snapshot(root)).toStrictEqual(before);
   expect(tracked(root)).toContain(".claude/commands/a.md");
 });
 
@@ -58,7 +58,7 @@ it("reports a stop as exit 0 under --postinstall", async () => {
   const root = plain({ ".claude/commands/a.md": "a\n" });
   const result = await sync(root, ["--postinstall"], true);
   expect(result.code).toBe(0);
-  expect(result.err).toEqual([STOP(".claude/commands/a.md")]);
+  expect(result.err).toStrictEqual([STOP(".claude/commands/a.md")]);
 });
 
 it("--check prints the pending count, exits 1 and writes nothing", async () => {
@@ -66,10 +66,10 @@ it("--check prints the pending count, exits 1 and writes nothing", async () => {
   const before = snapshot(root);
   const result = await sync(root, ["--check"], true);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual(["repo sync: 2 adoption steps pending; run `bun repo sync`\n"]);
-  expect(snapshot(root)).toEqual(before);
+  expect(result.err).toStrictEqual(["repo sync: 2 adoption steps pending; run `bun repo sync`\n"]);
+  expect(snapshot(root)).toStrictEqual(before);
   const one = plain(MINE, { git: false });
-  expect((await sync(one, ["--check"], true)).err).toEqual([
+  expect((await sync(one, ["--check"], true)).err).toStrictEqual([
     "repo sync: 1 adoption step pending; run `bun repo sync`\n",
   ]);
 });
@@ -87,7 +87,7 @@ it("stops on a real file where a skill link belongs", async () => {
   write(root, ".claude/skills/ask", "not a skill dir\n");
   const result = await sync(root, [], true);
   expect(result.code).toBe(1);
-  expect(result.err).toEqual([STOP(".claude/skills/ask")]);
+  expect(result.err).toStrictEqual([STOP(".claude/skills/ask")]);
 });
 
 it("reports a move that fails while it runs, and a generator error the adoption causes", async () => {
@@ -108,6 +108,6 @@ it("reports a move that fails while it runs, and a generator error the adoption 
     { generators: [generator] },
   );
   expect(code).toBe(1);
-  expect(err).toEqual(["repo sync: generator saw the adopted overlay\n", "repo sync: nothing written\n"]);
+  expect(err).toStrictEqual(["repo sync: generator saw the adopted overlay\n", "repo sync: nothing written\n"]);
   expect(read(root, ".repo/settings/claude.json")).toContain("make lint");
 });

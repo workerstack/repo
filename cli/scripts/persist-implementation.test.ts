@@ -106,7 +106,7 @@ describe("persistImplementation refused plan and headings", () => {
     expect(r.ok).toBe(false);
     expect(r.error).toContain("plan");
     expect(fs.existsSync(path.join(ws, IMPLEMENTATION_DIR))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, IMPLEMENTATION_DIR))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, IMPLEMENTATION_DIR))).toStrictEqual([]);
   });
 
   it("rejects extra headings", () => {
@@ -151,7 +151,7 @@ function persistText() {
 describe("validateImplementation", () => {
   it("accepts what persistImplementation wrote", () => {
     const good = persistText();
-    expect(validateImplementation(good.filename, good.text)).toEqual([]);
+    expect(validateImplementation(good.filename, good.text)).toStrictEqual([]);
   });
 
   it("accepts a log with [x] leaf lines and Files bullets", () => {
@@ -160,7 +160,7 @@ describe("validateImplementation", () => {
       .replace("## Done\n(none)", "## Done\n- ignored .tmp/")
       .replace("## Files\n(none)", "## Files\n- .gitignore")
       .replace("## Log\n(none)", "## Log\n1.1 [x] read gitignore\n1.2 [x] appended .tmp/");
-    expect(validateImplementation(good.filename, text)).toEqual([]);
+    expect(validateImplementation(good.filename, text)).toStrictEqual([]);
   });
 
   it("rejects blocked with empty blockers", () => {

@@ -31,12 +31,12 @@ function runner(timeoutMs?: number) {
 
 it("runs `gh api` with the path, and sends no body for a GET", async () => {
   const result = await runner()({ method: "GET", path: "repos/o/r" });
-  expect(result.ok && JSON.parse(result.stdout)).toEqual({ args: ["api", "repos/o/r"], stdin: null });
+  expect(result.ok && JSON.parse(result.stdout)).toStrictEqual({ args: ["api", "repos/o/r"], stdin: null });
 });
 
 it("sends the method and the JSON body on stdin", async () => {
   const result = await runner()({ method: "PUT", path: "repos/o/r/topics", body: { names: ["a"] } });
-  expect(result.ok && JSON.parse(result.stdout)).toEqual({
+  expect(result.ok && JSON.parse(result.stdout)).toStrictEqual({
     args: ["api", "-X", "PUT", "repos/o/r/topics", "--input", "-"],
     stdin: '{"names":["a"]}',
   });
@@ -45,11 +45,11 @@ it("sends the method and the JSON body on stdin", async () => {
 it("sends no body for a PUT that has none", async () => {
   const result = await runner()({ method: "PUT", path: "repos/o/r/vulnerability-alerts" });
   const args = ["api", "-X", "PUT", "repos/o/r/vulnerability-alerts"];
-  expect(result.ok && JSON.parse(result.stdout)).toEqual({ args, stdin: null });
+  expect(result.ok && JSON.parse(result.stdout)).toStrictEqual({ args, stdin: null });
 });
 
 it("reads gh's exit 4 as not logged in", async () => {
-  expect(await runner()({ method: "GET", path: "repos/o/auth" })).toEqual({
+  expect(await runner()({ method: "GET", path: "repos/o/auth" })).toStrictEqual({
     ok: false,
     kind: "auth",
     message: "gh is not logged in (gh auth status)",
@@ -57,7 +57,7 @@ it("reads gh's exit 4 as not logged in", async () => {
 });
 
 it("reads the HTTP status of a refusal, with the first line of gh's message", async () => {
-  expect(await runner()({ method: "GET", path: "repos/o/denied" })).toEqual({
+  expect(await runner()({ method: "GET", path: "repos/o/denied" })).toStrictEqual({
     ok: false,
     kind: "http",
     status: 403,
@@ -66,7 +66,7 @@ it("reads the HTTP status of a refusal, with the first line of gh's message", as
 });
 
 it("names any other failure by its exit code", async () => {
-  expect(await runner()({ method: "GET", path: "repos/o/boom" })).toEqual({
+  expect(await runner()({ method: "GET", path: "repos/o/boom" })).toStrictEqual({
     ok: false,
     kind: "other",
     message: "gh exited with 2",
@@ -75,7 +75,7 @@ it("names any other failure by its exit code", async () => {
 
 it("gives up on a gh that never answers once its own timeout has passed", async () => {
   const started = Date.now();
-  expect(await runner(200)({ method: "GET", path: "repos/o/slow" })).toEqual({
+  expect(await runner(200)({ method: "GET", path: "repos/o/slow" })).toStrictEqual({
     ok: false,
     kind: "timeout",
     message: "gh did not answer within 0.2s",

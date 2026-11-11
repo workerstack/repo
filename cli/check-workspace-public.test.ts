@@ -17,7 +17,7 @@ describe("checkWorkspace public edges", () => {
       peerDependencies: { "@acme/core": "workspace:*" },
       optionalDependencies: { "@acme/core": "workspace:*" },
     });
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       edge("packages/sdk/package.json", ["@acme/core", "dependencies", "packages/sdk"]),
       edge("packages/sdk/package.json", ["@acme/core", "peerDependencies", "packages/sdk"]),
       edge("packages/sdk/package.json", ["@acme/core", "optionalDependencies", "packages/sdk"]),
@@ -27,7 +27,7 @@ describe("checkWorkspace public edges", () => {
   it("treats a member without private as private", () => {
     const files = sdk({ dependencies: { "@acme/nameless": "workspace:*" } });
     files["packages/nameless/package.json"] = { name: "@acme/nameless" };
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       edge("packages/sdk/package.json", ["@acme/nameless", "dependencies", "packages/sdk"]),
     ]);
   });
@@ -36,7 +36,7 @@ describe("checkWorkspace public edges", () => {
 describe("checkWorkspace public root edges", () => {
   it("names a private member a public root depends on", () => {
     const root = { ...ROOT, name: "@acme/root", private: false, dependencies: { "@acme/core": "workspace:*" } };
-    expect(lines(sdk({}, root), LOCK_OK)).toEqual([
+    expect(lines(sdk({}, root), LOCK_OK)).toStrictEqual([
       'package.json: a workspace root has no "dependencies"; move "@acme/core" into the package that uses it',
       edge("package.json", ["@acme/core", "dependencies", "the root package"]),
     ]);
@@ -50,6 +50,6 @@ describe("checkWorkspace public edges that pass", () => {
       dependencies: { "@acme/open": "workspace:*" },
     });
     files["packages/core/package.json"] = { name: "@acme/core", dependencies: { "@acme/open": "workspace:*" } };
-    expect(lines(files, LOCK_OK)).toEqual([]);
+    expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 });

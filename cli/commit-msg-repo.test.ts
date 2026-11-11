@@ -50,7 +50,7 @@ describe("stagedChange", () => {
   it("counts staged insertions and deletions, and lists every staged path", () => {
     const root = repo({ "a.ts": lines(10), "old.ts": lines(3) }, { "a.ts": lines(4), "b.test.ts": lines(5) });
     git(root, "mv", "old.ts", "new.ts");
-    expect(stagedChange(root)).toEqual({ files: ["a.ts", "b.test.ts", "new.ts"], changedLines: 11 });
+    expect(stagedChange(root)).toStrictEqual({ files: ["a.ts", "b.test.ts", "new.ts"], changedLines: 11 });
   });
 
   it("leaves out lockfiles, the lint baseline, binaries and linguist-generated paths", () => {
@@ -71,8 +71,8 @@ describe("stagedChange", () => {
   });
 
   it("finds nothing staged outside a git repo", () => {
-    expect(stagedChange(tempDir())).toEqual({ files: [], changedLines: 0 });
-    expect(commitChange(tempDir(), "HEAD")).toEqual({ files: [], changedLines: 0 });
+    expect(stagedChange(tempDir())).toStrictEqual({ files: [], changedLines: 0 });
+    expect(commitChange(tempDir(), "HEAD")).toStrictEqual({ files: [], changedLines: 0 });
   });
 });
 
@@ -100,27 +100,27 @@ describe("repo commit-msg scopes", () => {
       },
       { "src/x.test.ts": "x\n" },
     );
-    expect(await commitMsg(root, "feat(web): add x\n")).toEqual(
+    expect(await commitMsg(root, "feat(web): add x\n")).toStrictEqual(
       refused('unknown scope "web"; use a workspace package name or one of repo, deps, ci (api, app)'),
     );
-    expect(await commitMsg(root, "feat(api): add x\n")).toEqual(PASSED);
-    expect(await commitMsg(root, "chore(deps): bump\n")).toEqual(PASSED);
+    expect(await commitMsg(root, "feat(api): add x\n")).toStrictEqual(PASSED);
+    expect(await commitMsg(root, "chore(deps): bump\n")).toStrictEqual(PASSED);
   });
 
   it("lets a single-package repo use any kebab scope, and still needs a test for a feat", async () => {
     const root = repo({}, { "src/x.ts": "x\n" });
-    expect(await commitMsg(root, "chore(web): x\n")).toEqual(PASSED);
-    expect(await commitMsg(root, "feat(web): x\n")).toEqual(refused(NEEDS_TEST));
+    expect(await commitMsg(root, "chore(web): x\n")).toStrictEqual(PASSED);
+    expect(await commitMsg(root, "feat(web): x\n")).toStrictEqual(refused(NEEDS_TEST));
   });
 });
 
 describe("repo commit-msg size and setup", () => {
   it("refuses an oversized commit until its message says why, at the configured limit", async () => {
     const root = repo({}, { "src/a.ts": lines(1236), "src/a.test.ts": lines(4) });
-    expect(await commitMsg(root, "fix: handle y\n")).toEqual(refused(OVER));
-    expect(await commitMsg(root, "fix: handle y\n\nReformat from the oxfmt upgrade.\n")).toEqual(PASSED);
+    expect(await commitMsg(root, "fix: handle y\n")).toStrictEqual(refused(OVER));
+    expect(await commitMsg(root, "fix: handle y\n\nReformat from the oxfmt upgrade.\n")).toStrictEqual(PASSED);
     put(root, { [CONFIG_FILE]: "export default { commit: { maxChangedLines: 1500 } }\n" });
-    expect(await commitMsg(root, "fix: handle y\n")).toEqual(PASSED);
+    expect(await commitMsg(root, "fix: handle y\n")).toStrictEqual(PASSED);
   });
 
   it("says how to call it, and refuses on a config it cannot read", async () => {
@@ -130,9 +130,9 @@ describe("repo commit-msg size and setup", () => {
     write.mockRestore();
     const err: string[] = [];
     expect(await main([], { cwd: os.tmpdir(), stderr: (text) => err.push(text) })).toBe(1);
-    expect(err).toEqual([NAME_A_SOURCE]);
+    expect(err).toStrictEqual([NAME_A_SOURCE]);
     const root = repo({}, { [CONFIG_FILE]: "export default { commit: 5 }\n" });
-    expect(await commitMsg(root, "chore: x\n")).toEqual({
+    expect(await commitMsg(root, "chore: x\n")).toStrictEqual({
       code: 1,
       stderr: "repo commit-msg: workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }\n",
     });
@@ -141,7 +141,7 @@ describe("repo commit-msg size and setup", () => {
   it("checks with the defaults where there is no config", async () => {
     const root = repo({}, { "src/a.ts": lines(1240) });
     fs.rmSync(path.join(root, CONFIG_FILE));
-    expect(await commitMsg(root, "chore: x\n")).toEqual(refused(OVER));
+    expect(await commitMsg(root, "chore: x\n")).toStrictEqual(refused(OVER));
   });
 });
 

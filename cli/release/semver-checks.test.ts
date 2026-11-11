@@ -61,9 +61,9 @@ const PROGRESS =
 it("passes a version above the baseline without a release type", async () => {
   const { all, runs, asked } = deps();
   const line = await crateLine("/repo", crate("2.0.0"), all);
-  expect(line).toEqual({ ok: true, text: "crate a 1.0.2 → this checkout · 2.0.0 in Cargo.toml · ok" });
-  expect(runs).toEqual([[...PREFIX, "--baseline-version", "1.0.2"]]);
-  expect(asked).toEqual([]);
+  expect(line).toStrictEqual({ ok: true, text: "crate a 1.0.2 → this checkout · 2.0.0 in Cargo.toml · ok" });
+  expect(runs).toStrictEqual([[...PREFIX, "--baseline-version", "1.0.2"]]);
+  expect(asked).toStrictEqual([]);
 });
 
 it("maps commits since the baseline's publish time, in the crate's directory, to a release type", async () => {
@@ -78,9 +78,9 @@ it("maps commits since the baseline's publish time, in the crate's directory, to
     cases.map(async ([version, commits, type]) => {
       const { all, runs, asked } = deps({ commits });
       const line = await crateLine("/repo", crate(version), all);
-      expect(line).toEqual({ ok: true, text: `crate a 1.0.2 from crates.io → this checkout · ${type} · ok` });
-      expect(runs).toEqual([[...PREFIX, "--baseline-version", "1.0.2", "--release-type", type]]);
-      expect(asked).toEqual([{ since: "2026-01-01T00:00:00Z", dir: "/repo/a" }]);
+      expect(line).toStrictEqual({ ok: true, text: `crate a 1.0.2 from crates.io → this checkout · ${type} · ok` });
+      expect(runs).toStrictEqual([[...PREFIX, "--baseline-version", "1.0.2", "--release-type", type]]);
+      expect(asked).toStrictEqual([{ since: "2026-01-01T00:00:00Z", dir: "/repo/a" }]);
     }),
   );
 });
@@ -99,21 +99,21 @@ it("takes patch when the baseline has no publish time", async () => {
   const { all, runs, asked } = deps({ index: new Response(bare), commits: [commit("feat!: drop")] });
   await crateLine("/repo", crate("1.0.2"), all);
   expect(runs[0]?.at(-1)).toBe("patch");
-  expect(asked).toEqual([]);
+  expect(asked).toStrictEqual([]);
 });
 
 it("skips a crate crates.io does not have", async () => {
   const { all, runs } = deps({ index: new Response("", { status: 404 }) });
-  expect(await crateLine("/repo", crate("0.1.0"), all)).toEqual({
+  expect(await crateLine("/repo", crate("0.1.0"), all)).toStrictEqual({
     ok: true,
     text: "crate a is not on crates.io yet; nothing to compare",
   });
-  expect(runs).toEqual([]);
+  expect(runs).toStrictEqual([]);
 });
 
 it("says why the index could not answer", async () => {
   const { all } = deps({ index: new Response("", { status: 503 }) });
-  expect(await crateLine("/repo", crate("1.0.2"), all)).toEqual({
+  expect(await crateLine("/repo", crate("1.0.2"), all)).toStrictEqual({
     ok: false,
     text: "crates.io index for a answered 503; try again",
   });
@@ -124,7 +124,7 @@ it("fails one line per failed lint with its items, and the release it needs", as
   const line = await crateLine("/repo", crate("1.0.2"), all);
   const from = "crate a 1.0.2 → this checkout needs a major release";
   const advice = "restore it, bump a's version, or mark a commit breaking with `!`";
-  expect(line).toEqual({
+  expect(line).toStrictEqual({
     ok: false,
     text: [
       `${from}: function adler::adler32_slice; function adler::other (function_missing: pub fn removed or renamed); ${advice}`,
@@ -136,7 +136,7 @@ it("fails one line per failed lint with its items, and the release it needs", as
 it("does not suggest a commit mark when the version was already bumped", async () => {
   const stdout = "--- failure f: g ---\nFailed in:\n  fn x\nSummary semver requires new minor version: 1";
   const { all } = deps({ result: { status: 100, stdout } });
-  expect(await crateLine("/repo", crate("1.0.3"), all)).toEqual({
+  expect(await crateLine("/repo", crate("1.0.3"), all)).toStrictEqual({
     ok: false,
     text: "crate a 1.0.2 → this checkout needs a minor release: fn x (f: g); restore it or bump a's version further",
   });
@@ -144,7 +144,7 @@ it("does not suggest a commit mark when the version was already bumped", async (
 
 it("names a release as newer when the tool did not say which", async () => {
   const { all } = deps({ result: { status: 100, stderr: "--- failure f: g ---\nFailed in:\n  fn x" } });
-  expect(await crateLine("/repo", crate("1.0.2"), all)).toEqual({
+  expect(await crateLine("/repo", crate("1.0.2"), all)).toStrictEqual({
     ok: false,
     text: "crate a 1.0.2 → this checkout needs a newer release: fn x (f: g); restore it, bump a's version, or mark a commit breaking with `!`",
   });
@@ -153,7 +153,7 @@ it("names a release as newer when the tool did not say which", async () => {
 it("quotes the error line of any other exit", async () => {
   const stderr = "Updating crates.io index\nerror: failed to retrieve index\nCaused by:\n  x";
   const { all } = deps({ result: { status: 101, stderr } });
-  expect(await crateLine("/repo", crate("1.0.2"), all)).toEqual({
+  expect(await crateLine("/repo", crate("1.0.2"), all)).toStrictEqual({
     ok: false,
     text: "cargo semver-checks exited 101 for a: error: failed to retrieve index",
   });
@@ -172,7 +172,7 @@ it("quotes the first line when no line says error, and reports a signal or an em
 
 it("quotes the output when exit 100 has items but no lint header", async () => {
   const { all } = deps({ result: { status: 100, stderr: "Failed in:\n\n  fn x" } });
-  expect(await crateLine("/repo", crate("1.0.2"), all)).toEqual({
+  expect(await crateLine("/repo", crate("1.0.2"), all)).toStrictEqual({
     ok: false,
     text: "cargo semver-checks exited 100 for a: Failed in:",
   });

@@ -37,7 +37,7 @@ describe("subagent bodies", () => {
     .sort();
 
   it("covers every subagent but the orchestrator, researcher included", () => {
-    expect(files).toEqual(["implementer-deep.md", "implementer-fast.md", "researcher.md", "scout.md"]);
+    expect(files).toStrictEqual(["implementer-deep.md", "implementer-fast.md", "researcher.md", "scout.md"]);
   });
 
   for (const file of files) {

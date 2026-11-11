@@ -65,7 +65,7 @@ describe("script commands by extension", () => {
       const commands = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.flatMap(
         (g: { hooks: { command: string }[] }) => g.hooks.map((h) => h.command),
       );
-      expect(commands.filter((c: string) => c.includes("check-behind"))).toEqual([BEHIND]);
+      expect(commands.filter((c: string) => c.includes("check-behind"))).toStrictEqual([BEHIND]);
       for (const kept of ["mine.ts", "mine.mjs", "mine.js"]) expect(commands).toContain(`bun scripts/${kept}`);
     }
   });
@@ -76,7 +76,7 @@ describe("script commands by extension", () => {
       writeJson(ws, ".grok/hooks/rtk.json", { hooks: { PreToolUse: [{ hooks: [{ type: "command", command }] }] } });
       return checkUnion({ workspaceRoot: ws }).filter((f) => f.includes("rtk-grok"));
     };
-    expect(check(hookCommand("rtk-grok"))).toEqual([]);
+    expect(check(hookCommand("rtk-grok"))).toStrictEqual([]);
     for (const bad of [
       rootCmd("cli/scripts/rtk-grok.ts"),
       'bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"',
@@ -85,7 +85,7 @@ describe("script commands by extension", () => {
       "repo hook rtk-grok",
       hookCommand("rtk-grok").replace('"$r" hook', "bun repo hook"),
     ]) {
-      expect(check(bad), bad).toEqual([
+      expect(check(bad), bad).toStrictEqual([
         "grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync",
       ]);
     }
@@ -97,7 +97,7 @@ describe("script commands by extension", () => {
       writeJson(ws, ".grok/hooks/rtk.json", { hooks: { PreToolUse: [{ hooks: [{ type: "command", command }] }] } });
       return checkUnion({ workspaceRoot: ws }).filter((f) => f.includes("validate.mjs"));
     };
-    expect(check(rootCmd("scripts/validate.mjs", "--hook"))).toEqual([]);
+    expect(check(rootCmd("scripts/validate.mjs", "--hook"))).toStrictEqual([]);
     expect(check("bun scripts/validate.mjs --hook")).toHaveLength(1);
   });
 });
@@ -305,14 +305,14 @@ describe("repo keep-list (no consumer overlay)", () => {
     const next = readJson<ClaudeDoc>(ws, ".claude/settings.json");
     const text = JSON.stringify(next);
     for (const n of OWNED_HOOKS) expect(text).toContain(`hook ${n}`);
-    expect(next.hooks.PreToolUse).toEqual(ownedPre);
+    expect(next.hooks.PreToolUse).toStrictEqual(ownedPre);
     expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);
     expect(JSON.stringify(next.hooks.Stop)).toMatch(PARENT);
     expect(next.permissions.deny).toContain(MCP_DENY);
     expect(next.permissions.deny).not.toContain(EDIT_PLATFORM);
     expect(next.permissions.deny).not.toContain(WRITE_PLATFORM);
     expect(next.hooks.SessionStart).toBeUndefined();
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
   });
 
   it("does not rewrite SoT beforeSubmitPrompt or grok SessionStart", () => {
@@ -357,7 +357,7 @@ describe("repo keep-list (no consumer overlay)", () => {
     expect(deny).not.toContain(EDIT_PLATFORM);
     expect(deny).not.toContain(WRITE_PLATFORM);
     expect(deny.some((x: string) => String(x).startsWith("Write("))).toBe(false);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
   });
 });
 
@@ -370,14 +370,14 @@ describe("session folder map", () => {
     fs.writeFileSync(path.join(ws, "cli", "scripts", "session-map.ts"), "");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const claude = readJson<ClaudeDoc>(ws, ".claude/settings.json");
-    expect(claude.hooks.SessionStart![0]!.hooks[0]).toEqual({ type: "command", command: MAP, timeout: 5 });
+    expect(claude.hooks.SessionStart![0]!.hooks[0]).toStrictEqual({ type: "command", command: MAP, timeout: 5 });
     expect(JSON.stringify(claude.hooks.SessionStart)).toMatch(/daily-pull-check/);
     expect(JSON.stringify(readJson(ws, ".codex/hooks.json"))).toContain("hook session-map");
     const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
     expect(JSON.stringify(agents)).not.toContain("session-map");
     expect(JSON.stringify(agents.rulesync.SessionStart)).toMatch(/daily-pull-check/);
     expect(readJson<GrokDoc>(ws, ".grok/hooks/orchestrate-parent.json").hooks.SessionStart).toBeUndefined();
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 
     claude.hooks.SessionStart = [];
     writeJson(ws, ".claude/settings.json", claude);
@@ -403,8 +403,8 @@ describe("session folder map", () => {
     applyUnion({ workspaceRoot: ws });
     expect(fs.readFileSync(path.join(ws, ".claude/settings.json"), "utf8")).toBe(first);
     const session = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.SessionStart!;
-    expect(session.flatMap((g) => g.hooks.map((h) => h.command))).toEqual([MAP]);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(session.flatMap((g) => g.hooks.map((h) => h.command))).toStrictEqual([MAP]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
   });
 });
 
@@ -422,7 +422,7 @@ describe("consumer overlay keep-list re-apply", () => {
     writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: ownedPre } });
 
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 
     const next = readJson<ClaudeDoc>(ws, ".claude/settings.json");
     const text = JSON.stringify(next);
@@ -466,8 +466,8 @@ describe("consumer overlay keep-list re-apply", () => {
     const second = fs.readFileSync(path.join(ws, ".claude/settings.json"), "utf8");
     expect(second).toBe(first);
     const deny = readJson<ClaudeDoc>(ws, ".claude/settings.json").permissions.deny;
-    expect(deny.filter((x: string) => x === MCP_DENY)).toEqual([MCP_DENY]);
-    expect(deny.filter((x: string) => x === EDIT_PLATFORM)).toEqual([EDIT_PLATFORM]);
+    expect(deny.filter((x: string) => x === MCP_DENY)).toStrictEqual([MCP_DENY]);
+    expect(deny.filter((x: string) => x === EDIT_PLATFORM)).toStrictEqual([EDIT_PLATFORM]);
   });
 });
 
@@ -484,7 +484,7 @@ describe("repo SSOT + CLI", () => {
       hooks: { UserPromptSubmit?: unknown };
     };
     expect(codex.hooks.UserPromptSubmit).toBeDefined();
-    expect(checkUnion({ workspaceRoot: repoRoot })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: repoRoot })).toStrictEqual([]);
   });
 });
 
@@ -594,7 +594,7 @@ describe("hook commands from any start", () => {
         expect(r.status, `${JSON.stringify(extra)} ${c}\n${r.stderr}`).toBe(0);
       }
       const ran = new Set(fs.readFileSync(path.join(root, "ran.txt"), "utf8").split("\n").filter(Boolean));
-      expect([...ran].sort()).toEqual([...RAN].sort());
+      expect([...ran].sort()).toStrictEqual([...RAN].sort());
     }
   }, 30_000);
 
@@ -647,7 +647,7 @@ describe("hook commands from any start", () => {
     expect(failures).toContain(
       "grok: rtk-grok hook command is not the one bun repo sync writes for rtk-grok: run bun repo sync",
     );
-    expect(failures.filter((f) => f.includes("my-custom-hook"))).toEqual([]);
+    expect(failures.filter((f) => f.includes("my-custom-hook"))).toStrictEqual([]);
   });
 });
 
@@ -668,9 +668,9 @@ describe("rulesync-owned groups", () => {
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const groupsOf = (pre: { hooks: { command: string }[] }[]) =>
       pre.filter((g) => g.hooks.some((h) => OWNED_HOOKS.some((n) => h.command.includes(n))));
-    expect(groupsOf(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse)).toEqual(ownedPre);
-    expect(groupsOf(readJson<ClaudeDoc>(ws, ".codex/hooks.json").hooks.PreToolUse)).toEqual(ownedPre);
-    expect(groupsOf(readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.PreToolUse)).toEqual(AGY_SCRUB_GATE);
+    expect(groupsOf(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
+    expect(groupsOf(readJson<ClaudeDoc>(ws, ".codex/hooks.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
+    expect(groupsOf(readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.PreToolUse)).toStrictEqual(AGY_SCRUB_GATE);
   });
 
   it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
@@ -679,7 +679,7 @@ describe("rulesync-owned groups", () => {
     touchConsumerScripts(ws);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const keys = Object.keys(readJson<AgentsDoc>(ws, ".agents/hooks.json"));
-    expect(keys).toEqual(expect.arrayContaining(["daily-pull-all", "check-behind", "validate-artifact"]));
+    expect(keys).toStrictEqual(expect.arrayContaining(["daily-pull-all", "check-behind", "validate-artifact"]));
     expect(keys).not.toContain("scrub-spawn-prompt");
     expect(keys).not.toContain("gate-fat-tools");
   });
@@ -696,15 +696,15 @@ describe("Antigravity consumer extras", () => {
     writeJson(ws, ".agents/hooks.json", agents);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const session = readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.SessionStart;
-    expect(session[0]).toEqual(mapEntry);
-    expect(session.map((e: { command: string }) => AUTORUN_NEEDLES.find((n) => e.command.includes(n)))).toEqual([
+    expect(session[0]).toStrictEqual(mapEntry);
+    expect(session.map((e: { command: string }) => AUTORUN_NEEDLES.find((n) => e.command.includes(n)))).toStrictEqual([
       undefined,
       "daily-pull-check.mjs",
       "rtk-check.mjs",
       "daily-fleet-check.mjs",
     ]);
     for (const e of session)
-      expect(Object.keys(e).sort()).toEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
+      expect(Object.keys(e).sort()).toStrictEqual(e.timeout ? ["command", "timeout", "type"] : ["command", "type"]);
     const first = fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);
@@ -758,25 +758,25 @@ describe("Cursor consumer extras", () => {
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const { version, hooks } = cursorHooks(ws);
     expect(version).toBe(1);
-    expect(hooks.sessionStart[0]).toEqual(mapEntry);
-    expect(hooks.sessionStart.map(scriptOf)).toEqual([
+    expect(hooks.sessionStart[0]).toStrictEqual(mapEntry);
+    expect(hooks.sessionStart.map(scriptOf)).toStrictEqual([
       undefined,
       "daily-pull-check.mjs",
       "rtk-check.mjs",
       "daily-fleet-check.mjs",
     ]);
     const behind = hooks.preToolUse.filter((e: Entry) => e.command.includes("check-behind.mjs"));
-    expect(behind).toEqual([
+    expect(behind).toStrictEqual([
       { type: "command", command: rootCmd("scripts/check-behind.mjs", "--hook"), matcher: CURSOR_WRITE_MATCHER },
     ]);
-    expect(hooks.postToolUse.map(scriptOf)).toEqual(["validate.mjs", "sim.mjs"]);
-    expect(hooks.postToolUse.map((e: Entry) => e.matcher)).toEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
+    expect(hooks.postToolUse.map(scriptOf)).toStrictEqual(["validate.mjs", "sim.mjs"]);
+    expect(hooks.postToolUse.map((e: Entry) => e.matcher)).toStrictEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
     for (const e of [...hooks.sessionStart, ...hooks.preToolUse, ...hooks.postToolUse]) expect(e.hooks).toBeUndefined();
-    expect(hooks.preToolUse.filter((e: Entry) => OWNED_HOOKS.some((n) => e.command.includes(n)))).toEqual(
+    expect(hooks.preToolUse.filter((e: Entry) => OWNED_HOOKS.some((n) => e.command.includes(n)))).toStrictEqual(
       ownedPre.map((g) => ({ ...g.hooks[0], matcher: g.matcher })),
     );
-    expect(hooks.stop).toEqual(seeded.hooks.stop);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(hooks.stop).toStrictEqual(seeded.hooks.stop);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
     const first = fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8")).toBe(first);
@@ -787,8 +787,8 @@ describe("Cursor consumer extras", () => {
     seedOwnedDrivers(ws);
     const before = cursorHooks(ws);
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-    expect(cursorHooks(ws)).toEqual(before);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(cursorHooks(ws)).toStrictEqual(before);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
   });
 
   it("writes the file when rulesync wrote none", () => {
@@ -798,7 +798,7 @@ describe("Cursor consumer extras", () => {
     fs.rmSync(path.join(ws, ".cursor"), { recursive: true });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(cursorHooks(ws).version).toBe(1);
-    expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toEqual([
+    expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toStrictEqual([
       "daily-pull-check.mjs",
       "rtk-check.mjs",
       "daily-fleet-check.mjs",
@@ -813,10 +813,10 @@ describe("Cursor consumer extras", () => {
     const live = cursorHooks(ws);
     live.hooks.sessionStart = live.hooks.sessionStart.filter((e: Entry) => !e.command.includes("daily-pull-check.mjs"));
     writeJson(ws, ".cursor/hooks.json", live);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual(["cursor: missing daily-pull-check.mjs"]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual(["cursor: missing daily-pull-check.mjs"]);
     live.hooks.preToolUse = [];
     writeJson(ws, ".cursor/hooks.json", live);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual(
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual(
       expect.arrayContaining(OWNED_HOOKS.map((n) => `cursor: missing ${n}`)),
     );
     fs.rmSync(path.join(ws, ".cursor/hooks.json"));
@@ -847,13 +847,13 @@ describe("hooks.jsonc matcher coverage", () => {
 
   it("routes every tool the gate answers to the gate", () => {
     const gate = matcherFor(GATE);
-    expect(specs.map(([key]) => key).filter((key) => !gate.has(key))).toEqual([]);
+    expect(specs.map(([key]) => key).filter((key) => !gate.has(key))).toStrictEqual([]);
   });
 
   it("routes every shell tool and every persist-owned write to orchestrate-parent", () => {
     const parent = matcherFor(PARENT);
     const owned = specs.filter(([, spec]) => spec.kind === "bash" || (spec.kind === "write" && spec.persistShared));
-    expect(owned.map(([key]) => key).filter((key) => !parent.has(key))).toEqual([]);
+    expect(owned.map(([key]) => key).filter((key) => !parent.has(key))).toStrictEqual([]);
   });
 });
 
@@ -864,11 +864,11 @@ describe("Claude worktree hooks", () => {
   it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, and no other harness's, to the worktree hook", () => {
     const sot = ssotOf(fs.readFileSync(path.join(repoRoot, "agents/hooks.jsonc"), "utf8"));
     const entry = [{ type: "command", command: WORKTREE, timeout: 60 }];
-    expect(sot.claudecode.hooks).toEqual({ worktreeCreate: entry, worktreeRemove: entry });
+    expect(sot.claudecode.hooks).toStrictEqual({ worktreeCreate: entry, worktreeRemove: entry });
     expect(JSON.stringify(sot.hooks)).not.toContain("hook worktree");
     const claude = readJson<ClaudeDoc>(repoRoot, ".claude/settings.json");
-    expect(claude.hooks.WorktreeCreate).toEqual(group);
-    expect(claude.hooks.WorktreeRemove).toEqual(group);
+    expect(claude.hooks.WorktreeCreate).toStrictEqual(group);
+    expect(claude.hooks.WorktreeRemove).toStrictEqual(group);
     for (const rel of [".codex/hooks.json", ".agents/hooks.json"]) {
       expect(JSON.stringify(readJson(repoRoot, rel)), rel).not.toContain("hook worktree");
     }
@@ -878,7 +878,7 @@ describe("Claude worktree hooks", () => {
     const ws = tmpDir("union-wt-");
     seedOwnedDrivers(ws);
     applyUnion({ workspaceRoot: ws });
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
     fs.mkdirSync(path.join(ws, "cli", "scripts"), { recursive: true });
     fs.writeFileSync(path.join(ws, "cli", "scripts", "worktree.ts"), "");
     expect(checkUnion({ workspaceRoot: ws })).toContain("claude: missing worktree");
@@ -887,8 +887,8 @@ describe("Claude worktree hooks", () => {
     claude.hooks.WorktreeRemove = group;
     writeJson(ws, ".claude/settings.json", claude);
     applyUnion({ workspaceRoot: ws });
-    expect(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.WorktreeCreate).toEqual(group);
-    expect(checkUnion({ workspaceRoot: ws })).toEqual([]);
+    expect(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.WorktreeCreate).toStrictEqual(group);
+    expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
   });
 });
 
@@ -905,8 +905,8 @@ describe("sourceRoot and consumerRoot", () => {
     expect(checkUnion({ workspaceRoot: out })).not.toContain("claude: missing session-map");
     expect(applyUnion({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
     expect(fs.readFileSync(path.join(out, ".claude/settings.json"), "utf8")).toContain("session-map");
-    expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toEqual([]);
-    expect(fs.readdirSync(stock)).toEqual(["cli"]);
+    expect(checkUnion({ workspaceRoot: out, sourceRoot: stock })).toStrictEqual([]);
+    expect(fs.readdirSync(stock)).toStrictEqual(["cli"]);
   });
 
   it("puts a consumer's scripts hook and .repo/permissions.json deny into the hook files under workspaceRoot, and checks its git hooks", () => {
@@ -925,7 +925,7 @@ describe("sourceRoot and consumerRoot", () => {
     expect(text).toContain("check-behind.mjs");
     expect(text).toContain(EDIT_PLATFORM);
     expect(text).not.toContain("ignored/**");
-    expect(checkUnion(roots)).toEqual([
+    expect(checkUnion(roots)).toStrictEqual([
       "git-hook missing: scripts/git-hooks/pre-commit.mjs",
       "git-hook missing: scripts/git-hooks/pre-push",
       "git-hook missing: scripts/git-hooks/pre-push.mjs",

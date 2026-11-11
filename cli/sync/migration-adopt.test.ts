@@ -12,16 +12,16 @@ const SETTINGS_CLASH = clash(".claude/settings.json", ".repo/settings/claude.jso
 const NOT_JSON = ".claude/settings.json is not valid JSON; copy any keys of yours into .repo/settings/claude.json";
 
 it("plans nothing for AGENTS.md: missing, only the guarded block, or text of the user's own", () => {
-  expect(planOf(mini({}))).toEqual([REMOVAL]);
-  expect(planOf(mini({ "AGENTS.md": block }))).toEqual([REMOVAL]);
-  expect(planOf(mini({ "AGENTS.md": `${block}\nours\n` }))).toEqual([REMOVAL]);
+  expect(planOf(mini({}))).toStrictEqual([REMOVAL]);
+  expect(planOf(mini({ "AGENTS.md": block }))).toStrictEqual([REMOVAL]);
+  expect(planOf(mini({ "AGENTS.md": `${block}\nours\n` }))).toStrictEqual([REMOVAL]);
 });
 
 it("takes a settings overlay as done only when it holds every key and list item, and stops otherwise", () => {
   const settings = JSON.stringify({ model: "opus", permissions: { allow: ["Zed"] } });
   const plan = (overlay: string) =>
     conflictLines(planOf(mini({ ".claude/settings.json": settings, ".repo/settings/claude.json": overlay })));
-  expect(plan(JSON.stringify({ model: "opus", other: 1, permissions: { allow: ["Zed", "Y"] } }))).toEqual([]);
+  expect(plan(JSON.stringify({ model: "opus", other: 1, permissions: { allow: ["Zed", "Y"] } }))).toStrictEqual([]);
   for (const overlay of [
     JSON.stringify({ model: "sonnet", permissions: { allow: ["Zed"] } }),
     JSON.stringify({ model: "opus", permissions: { allow: ["Y"] } }),
@@ -29,7 +29,7 @@ it("takes a settings overlay as done only when it holds every key and list item,
     JSON.stringify({ model: "opus" }),
     "{",
   ]) {
-    expect(plan(overlay), overlay).toEqual([SETTINGS_CLASH]);
+    expect(plan(overlay), overlay).toStrictEqual([SETTINGS_CLASH]);
   }
 });
 
@@ -40,14 +40,14 @@ it("takes an overlay that already holds the text as done, not as a conflict", ()
     ".claude/settings.json": JSON.stringify({ permissions: { allow: ["A"] } }),
     ".repo/settings/claude.json": JSON.stringify({ permissions: { allow: ["A", "B"], deny: ["D"] }, model: "x" }),
   });
-  expect(conflictLines(planOf(moved))).toEqual([]);
-  expect(planOf(moved).map((step) => step.kind)).toEqual(["remove"]);
+  expect(conflictLines(planOf(moved))).toStrictEqual([]);
+  expect(planOf(moved).map((step) => step.kind)).toStrictEqual(["remove"]);
 });
 
 it("leaves AGENTS.md where it is, whatever .repo/rules/agents.md holds", () => {
   for (const held of [`${CARRIED}ours\n`, "other\n"]) {
     const m = mini({ "AGENTS.md": `${block}\nours\n`, ".repo/rules/agents.md": held });
-    expect(planOf(m), held).toEqual([REMOVAL]);
+    expect(planOf(m), held).toStrictEqual([REMOVAL]);
   }
 });
 
@@ -65,7 +65,7 @@ it("moves list items, new keys and changed values, and the hooks apart", () => {
     path: ".repo/settings/claude.json",
     note: "moved your .claude/settings.json keys permissions.allow, permissions.deny, env.X, env.Y, model to .repo/settings/claude.json",
   });
-  expect(firstWritten(steps.slice(0, 1))).toEqual({
+  expect(firstWritten(steps.slice(0, 1))).toStrictEqual({
     permissions: { allow: ["B"], deny: ["D"] },
     env: { X: "2", Y: "1" },
     model: "opus",
@@ -73,28 +73,28 @@ it("moves list items, new keys and changed values, and the hooks apart", () => {
 });
 
 it("plans nothing for settings the stock already has, a missing file, an unreadable stock file or none generated", () => {
-  expect(planOf(mini({ ".claude/settings.json": GENERATED_SETTINGS }))).toEqual([REMOVAL]);
-  expect(planOf(mini({}))).toEqual([REMOVAL]);
+  expect(planOf(mini({ ".claude/settings.json": GENERATED_SETTINGS }))).toStrictEqual([REMOVAL]);
+  expect(planOf(mini({}))).toStrictEqual([REMOVAL]);
   const unreadable = mini(
     { ".claude/settings.json": '{ "env": { "Z": "1" } }' },
     { generated: { ".claude/settings.json": "{" } },
   );
-  expect(planOf(unreadable)).toEqual([REMOVAL]);
+  expect(planOf(unreadable)).toStrictEqual([REMOVAL]);
   // a host left out of the config: sync generates no settings to compare with, so the file is left alone
   const ungenerated = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' });
   ungenerated.generated.delete(".claude/settings.json");
-  expect(planOf(ungenerated)).toEqual([REMOVAL]);
-  expect(planOf(mini({ ".claude/settings.json": "[]" }))).toEqual([REMOVAL]);
+  expect(planOf(ungenerated)).toStrictEqual([REMOVAL]);
+  expect(planOf(mini({ ".claude/settings.json": "[]" }))).toStrictEqual([REMOVAL]);
 });
 
 it("asks for the keys by hand when settings.json is not JSON", async () => {
   const m = mini({ ".claude/settings.json": "{" });
   const steps = planOf(m);
-  expect(steps[0]).toEqual({ kind: "note", note: NOT_JSON });
+  expect(steps[0]).toStrictEqual({ kind: "note", note: NOT_JSON });
   expect((await applyMigration(m.root, steps))[0]).toBe(`repo sync: ${NOT_JSON}`);
 });
 
 it("stops when the settings overlay holds other keys", () => {
   const m = mini({ ".claude/settings.json": '{ "model": "opus" }', ".repo/settings/claude.json": "{}\n" });
-  expect(conflictLines(planOf(m))).toEqual([SETTINGS_CLASH]);
+  expect(conflictLines(planOf(m))).toStrictEqual([SETTINGS_CLASH]);
 });

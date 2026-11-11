@@ -15,13 +15,13 @@ describe("parseHookInput", () => {
       }),
     );
     expect(input?.session_id).toBe("s1");
-    expect(input?.tool_input).toEqual({ file_path: "/repo/a.ts" });
+    expect(input?.tool_input).toStrictEqual({ file_path: "/repo/a.ts" });
     expect(input?.agent_type).toBe("scout");
   });
 
   it("reads spawn markers on a nested agent object", () => {
     const input = parseHookInput(JSON.stringify({ agent: { spawnedBy: "p1", spawned_by: "p2", id: 7 } }));
-    expect(input?.agent).toEqual({ spawnedBy: "p1", spawned_by: "p2" });
+    expect(input?.agent).toStrictEqual({ spawnedBy: "p1", spawned_by: "p2" });
   });
 
   it("reads the Claude worktree fields", () => {
@@ -46,7 +46,7 @@ describe("parseHookInput", () => {
     );
     expect(input?.turn_id).toBe("t1");
     expect(input?.model).toBe("gpt");
-    expect(input?.tool_input).toEqual({ command: "ls" });
+    expect(input?.tool_input).toStrictEqual({ command: "ls" });
   });
 
   it("reads a Cursor payload", () => {
@@ -61,7 +61,7 @@ describe("parseHookInput", () => {
     );
     expect(input?.cursor_version).toBe("1.0");
     expect(input?.conversationId).toBe("c1");
-    expect(input?.toolInput).toEqual({ command: "ls", cwd: "/r" });
+    expect(input?.toolInput).toStrictEqual({ command: "ls", cwd: "/r" });
   });
 
   it("reads a Grok payload", () => {
@@ -74,7 +74,7 @@ describe("parseHookInput", () => {
       }),
     );
     expect(input?.sessionId).toBe("g1");
-    expect(input?.agent).toEqual({ type: "scout" });
+    expect(input?.agent).toStrictEqual({ type: "scout" });
     expect(input?.lastAssistantMessage).toBe("done");
   });
 
@@ -84,12 +84,12 @@ describe("parseHookInput", () => {
     );
     expect(input?.workspaceRoot).toBe("/a");
     expect(input?.workspace_root).toBe("/b");
-    expect(input?.workspacePaths).toEqual(["/c", "/d"]);
+    expect(input?.workspacePaths).toStrictEqual(["/c", "/d"]);
   });
 
   it("drops workspace fields of the wrong type", () => {
     const input = parseHookInput(JSON.stringify({ workspaceRoot: 1, workspace_root: {}, workspacePaths: "/x" }));
-    expect(input).toEqual({});
+    expect(input).toStrictEqual({});
   });
 
   it("returns null for invalid JSON", () => {
@@ -117,20 +117,22 @@ describe("parseHookInput", () => {
         extra: "ignored",
       }),
     );
-    expect(input).toEqual({ session_id: "s1", stopHookActive: true });
+    expect(input).toStrictEqual({ session_id: "s1", stopHookActive: true });
   });
 
   it("keeps only well-typed parts of toolCall and agent", () => {
     expect(
       parseHookInput(JSON.stringify({ toolCall: { name: 1, args: [] }, agent: { type: "scout", id: 2, name: "n" } })),
-    ).toEqual({
+    ).toStrictEqual({
       toolCall: {},
       agent: { type: "scout", name: "n" },
     });
-    expect(parseHookInput(JSON.stringify({ toolCall: { name: "Read", args: { a: 1 } }, agent: "scout" }))).toEqual({
+    expect(
+      parseHookInput(JSON.stringify({ toolCall: { name: "Read", args: { a: 1 } }, agent: "scout" })),
+    ).toStrictEqual({
       toolCall: { name: "Read", args: { a: 1 } },
       agent: "scout",
     });
-    expect(parseHookInput(JSON.stringify({ toolCall: "x", agent: 3 }))).toEqual({});
+    expect(parseHookInput(JSON.stringify({ toolCall: "x", agent: 3 }))).toStrictEqual({});
   });
 });

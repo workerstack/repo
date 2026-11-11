@@ -27,14 +27,14 @@ function io(views: string[], out: string[] = []): PollIo & { clock: () => number
 it("looks every 10 seconds until the run completes, then reports it", async () => {
   const out: string[] = [];
   const world = io([JSON.stringify({ status: "queued", conclusion: "", jobs: [] }), done("success")], out);
-  expect(await finish(world, RUN, 0)).toEqual({ kind: "passed" });
+  expect(await finish(world, RUN, 0)).toStrictEqual({ kind: "passed" });
   expect(world.clock()).toBe(10_000);
   expect(out.join("")).toBe("passed\n");
 });
 
 it("past 45 minutes it is an error naming the run and how to look at it", async () => {
   const world = io(["not json"]);
-  expect(await finish(world, RUN, 0)).toEqual({
+  expect(await finish(world, RUN, 0)).toStrictEqual({
     kind: "error",
     line: "run 5 still running after 45m; check it with `gh run view 5`",
     detail: "run 5 still running after 45m",
@@ -43,16 +43,14 @@ it("past 45 minutes it is an error naming the run and how to look at it", async 
 });
 
 it("a failure lists the failed jobs", async () => {
-  expect(await finish(io([done("failure")]), RUN, 0)).toEqual({ kind: "failed", jobs: ["test"] });
+  expect(await finish(io([done("failure")]), RUN, 0)).toStrictEqual({ kind: "failed", jobs: ["test"] });
 });
 
 it("newestFirst orders by creation time and readJson rejects a bad shape or a failed run", () => {
-  expect(newestFirst([{ createdAt: "a" }, { createdAt: "c" }, { createdAt: "b" }]).map((r) => r.createdAt)).toEqual([
-    "c",
-    "b",
-    "a",
-  ]);
+  expect(
+    newestFirst([{ createdAt: "a" }, { createdAt: "c" }, { createdAt: "b" }]).map((r) => r.createdAt),
+  ).toStrictEqual(["c", "b", "a"]);
   expect(readJson({ code: 0, stdout: "[1]" }, z.array(z.string()))).toBeNull();
   expect(readJson({ code: 1, stdout: "[]" }, z.array(z.string()))).toBeNull();
-  expect(readJson({ code: 0, stdout: "[]" }, z.array(z.string()))).toEqual([]);
+  expect(readJson({ code: 0, stdout: "[]" }, z.array(z.string()))).toStrictEqual([]);
 });

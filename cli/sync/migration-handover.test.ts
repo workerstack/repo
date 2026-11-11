@@ -38,7 +38,7 @@ it("moves each pathless root rule below the region of AGENTS.md, one step each, 
     ".repo/rules/notes.txt": "not a rule\n",
     ".repo/rules/folder.md/x": "",
   });
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: moved .repo/rules/team.md into AGENTS.md below repo:rules",
     "repo sync: moved .repo/rules/zeta.md into AGENTS.md below repo:rules",
   ]);
@@ -46,20 +46,20 @@ it("moves each pathless root rule below the region of AGENTS.md, one step each, 
     "<!-- repo:rules 1a2b3c4d -->\nstock\n<!-- /repo:rules -->\n\nMine.\n\nAlways run the linter.\n\nZ rule.\n",
   );
   const left = ["api.md", "broken.md", "folder.md", "notes.txt", "overview.md"];
-  expect(fs.readdirSync(path.join(root, ".repo/rules")).sort()).toEqual(left);
-  expect(planHandover(root, NONE)).toEqual([]);
+  expect(fs.readdirSync(path.join(root, ".repo/rules")).sort()).toStrictEqual(left);
+  expect(planHandover(root, NONE)).toStrictEqual([]);
 });
 
 it("moves a package rule into the package's AGENTS.md and says under --check what it would move", async () => {
   const root = rootWith({ "packages/web/.repo/rules/style.md": PATHLESS });
   const input = { packages: ["packages/web", "packages/api"], history: {} };
   const steps = planHandover(root, input);
-  expect(steps.map((step) => (step.kind === "handover" ? step.pending : step.kind))).toEqual([
+  expect(steps.map((step) => (step.kind === "handover" ? step.pending : step.kind))).toStrictEqual([
     "would move packages/web/.repo/rules/style.md into packages/web/AGENTS.md below repo:rules",
   ]);
   await applyMigration(root, steps);
   expect(read(root, "packages/web/AGENTS.md")).toBe("Always run the linter.\n");
-  expect(planHandover(root, input)).toEqual([]);
+  expect(planHandover(root, input)).toStrictEqual([]);
 });
 
 const STOCK = "stock copy\n";
@@ -95,7 +95,7 @@ it("merges .repo/mcp.json into .mcp.json, keeping its own server on a name in bo
     ".mcp.json": mcp({ docs: { command: "own" }, same: { command: "s" } }, { other: true }),
     ".repo/mcp.json": mcp({ docs: { command: "theirs" }, same: { command: "s" }, extra: { command: "e" } }),
   });
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: moved .repo/mcp.json servers into .mcp.json",
     `repo sync: kept .mcp.json's own "docs" server; dropped the one in .repo/mcp.json`,
   ]);
@@ -103,23 +103,23 @@ it("merges .repo/mcp.json into .mcp.json, keeping its own server on a name in bo
     mcp({ docs: { command: "own" }, same: { command: "s" }, extra: { command: "e" } }, { other: true }),
   );
   expect(fs.existsSync(path.join(root, ".repo/mcp.json"))).toBe(false);
-  expect(planHandover(root, NONE)).toEqual([]);
+  expect(planHandover(root, NONE)).toStrictEqual([]);
 });
 
 it("moves the policy's servers into a new .mcp.json and drops the key, its comments kept", async () => {
   const policy = '// mine\n{\n  "allow": ["a"],\n  "servers": { "a": { "command": "x" } },\n  "default": "deny"\n}\n';
   const root = rootWith({ ".repo/mcp-policy.jsonc": policy });
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: moved .repo/mcp-policy.jsonc servers into .mcp.json",
   ]);
   expect(read(root, ".mcp.json")).toBe(mcp({ a: { command: "x" } }));
   expect(read(root, ".repo/mcp-policy.jsonc")).toBe('// mine\n{\n  "allow": ["a"],\n  "default": "deny"\n}\n');
-  expect(planHandover(root, NONE)).toEqual([]);
+  expect(planHandover(root, NONE)).toStrictEqual([]);
 });
 
 it("drops an empty servers key of the policy without writing a .mcp.json", async () => {
   const root = rootWith({ ".repo/mcp-policy.jsonc": '{ "servers": {}, "allow": [] }' });
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: removed the empty servers key of .repo/mcp-policy.jsonc",
   ]);
   expect(fs.existsSync(path.join(root, ".mcp.json"))).toBe(false);
@@ -128,7 +128,7 @@ it("drops an empty servers key of the policy without writing a .mcp.json", async
 
 it("plans nothing for a policy with no servers key or one that is no object", () => {
   for (const policy of ['{ "allow": [] }', "[1]", "{,"]) {
-    expect(planHandover(rootWith({ ".repo/mcp-policy.jsonc": policy }), NONE)).toEqual([]);
+    expect(planHandover(rootWith({ ".repo/mcp-policy.jsonc": policy }), NONE)).toStrictEqual([]);
   }
 });
 
@@ -137,13 +137,13 @@ it("stops with the named error of a bad .mcp.json, a bad .repo/mcp.json or a pol
     { kind: "conflict", from, to: ".mcp.json", line: `repo sync: mcp policy: ${problem}` },
   ];
   const bad = rootWith({ ".mcp.json": '{\n  "mcpServers": {\n  ,\n}', ".repo/mcp.json": mcp({}) });
-  expect(planHandover(bad, NONE)).toEqual(
+  expect(planHandover(bad, NONE)).toStrictEqual(
     line(".mcp.json: not valid JSON at line 3; fix it, nothing written", ".mcp.json"),
   );
   const overlay = rootWith({ ".repo/mcp.json": "[]" });
-  expect(planHandover(overlay, NONE)).toEqual(line(".repo/mcp.json: not a JSON object; fix it, nothing written"));
+  expect(planHandover(overlay, NONE)).toStrictEqual(line(".repo/mcp.json: not a JSON object; fix it, nothing written"));
   const policy = rootWith({ ".repo/mcp-policy.jsonc": '{ "servers": [] }' });
-  expect(planHandover(policy, NONE)).toEqual([
+  expect(planHandover(policy, NONE)).toStrictEqual([
     {
       kind: "conflict",
       from: ".repo/mcp-policy.jsonc",
@@ -159,18 +159,18 @@ it.each([
 ])("makes a %s .mcp.json writable and headerless", async (_name, spoil) => {
   const root = rootWith({ ".mcp.json": OWN });
   spoil(root);
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: made .mcp.json yours: writable, without the generated header",
   ]);
   expect(read(root, ".mcp.json")).toBe(OWN);
   expectMode(root, ".mcp.json", 0o644);
-  expect(planHandover(root, NONE)).toEqual([]);
+  expect(planHandover(root, NONE)).toStrictEqual([]);
 });
 
 it("makes a read-only .mcp.json writable when servers merge into it, even with none new", async () => {
   const root = rootWith({ ".mcp.json": OWN, ".repo/mcp.json": OWN });
   fs.chmodSync(path.join(root, ".mcp.json"), 0o444);
-  expect(await applyMigration(root, planHandover(root, NONE))).toEqual([
+  expect(await applyMigration(root, planHandover(root, NONE))).toStrictEqual([
     "repo sync: moved .repo/mcp.json servers into .mcp.json",
   ]);
   expect(read(root, ".mcp.json")).toBe(OWN);
@@ -179,6 +179,6 @@ it("makes a read-only .mcp.json writable when servers merge into it, even with n
 
 it("plans one step for a bare header and none for a plain .mcp.json or none at all", () => {
   expect(planHandover(rootWith({ ".mcp.json": "// @generated by @workerstack/repo" }), NONE)).toHaveLength(1);
-  expect(planHandover(rootWith({ ".mcp.json": OWN }), NONE)).toEqual([]);
-  expect(planHandover(rootWith({}), NONE)).toEqual([]);
+  expect(planHandover(rootWith({ ".mcp.json": OWN }), NONE)).toStrictEqual([]);
+  expect(planHandover(rootWith({}), NONE)).toStrictEqual([]);
 });

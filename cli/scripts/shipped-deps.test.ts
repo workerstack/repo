@@ -65,6 +65,6 @@ describe("shipped code dependencies", () => {
         .filter((name) => !pkg.dependencies?.[name])
         .map((name) => `${rel} imports ${name}`),
     );
-    expect(missing).toEqual([]);
+    expect(missing).toStrictEqual([]);
   });
 });

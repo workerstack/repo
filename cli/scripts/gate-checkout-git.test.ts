@@ -26,15 +26,17 @@ it("denies a git command that commits or destroys work in the main checkout, in 
   const r = tmp.committed("gate-main-");
   const a = path.join(r, ".worktrees/a");
   const commit = `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, then run bun repo worktree finish <name>`;
-  expect(processFatTools(claudeSh(r, "git commit -m x"))).toEqual(deny(commit));
-  expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toEqual(deny(commit));
-  expect(processFatTools(claudeSh(r, "rtk git commit -m x"))).toEqual(deny(commit));
-  expect(processFatTools(cursorSh(r, "git stash"))).toEqual(deny(STASH_REASON));
+  expect(processFatTools(claudeSh(r, "git commit -m x"))).toStrictEqual(deny(commit));
+  expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toStrictEqual(
+    deny(commit),
+  );
+  expect(processFatTools(claudeSh(r, "rtk git commit -m x"))).toStrictEqual(deny(commit));
+  expect(processFatTools(cursorSh(r, "git stash"))).toStrictEqual(deny(STASH_REASON));
   expect(processHookPayload(cursorSh(r, "git stash"))).toMatchObject({
     permission: "deny",
     agent_message: STASH_REASON,
   });
-  expect(processFatTools(agySh(r, "git stash"))).toEqual(deny(STASH_REASON));
+  expect(processFatTools(agySh(r, "git stash"))).toStrictEqual(deny(STASH_REASON));
   expect(processFatTools(claudeSh(r, "git -C .worktrees/a stash"))).toBeNull();
   expect(processFatTools(claudeSh(a, "git stash && git reset --hard && git commit --amend"))).toBeNull();
   expect(processFatTools(agyCall(r, "run_command", { CommandLine: "git stash", Cwd: a }))).toBeNull();
@@ -47,7 +49,7 @@ it("denies the shared-ref cases from inside a worktree", () => {
   const r = tmp.committed("gate-main-");
   const a = path.join(r, ".worktrees/a");
   const force = "a force push rewrites shared history: run it only when the user's message asks for a force push";
-  expect(processFatTools(claudeSh(a, "git push --force"))).toEqual(deny(force));
+  expect(processFatTools(claudeSh(a, "git push --force"))).toStrictEqual(deny(force));
   expect(processFatTools(claudeSh(a, "git branch -D wt/other"))).toBeNull();
   const main = processFatTools(claudeSh(a, "git branch -D main"));
   expect(main?.type).toBe("deny");
@@ -75,7 +77,7 @@ it("lets a subcommand run once the session's git-asked.json holds it, and nothin
   // another session's grant does not carry over
   expect(processFatTools(claudeSh(r, "git commit -m x", { session_id: "other" }))).toMatchObject({ type: "deny" });
   // a grant never frees a product write
-  expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toEqual(deny(reasonOf(r)));
+  expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(fs.readFileSync(askedFile(r), "utf8")).toBe(asked(["commit", "force"]));
 });
 
@@ -96,9 +98,9 @@ it("sits ahead of the review guard: the main checkout reason wins there, a workt
   startReview(r, { sid: SID });
   const review = deny(reviewReason("review-fast"));
   const inWorktree = path.join(r, ".worktrees/a/src/x.ts");
-  expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toEqual(deny(reasonOf(r)));
-  expect(processFatTools(claudeWrite(r, inWorktree))).toEqual(review);
-  expect(processFatTools(codexPatch(r, inWorktree))).toEqual(review);
+  expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
+  expect(processFatTools(claudeWrite(r, inWorktree))).toStrictEqual(review);
+  expect(processFatTools(codexPatch(r, inWorktree))).toStrictEqual(review);
   for (const child of ["implementer-fast", "scout"]) {
     expect(processFatTools(claudeWrite(r, inWorktree, { agent_type: child })), child).toBeNull();
   }

@@ -55,10 +55,10 @@ describe("usage section fences", () => {
 
   it("finds sections and fences per CommonMark", () => {
     const text = `## A\n${F}\n## Inside\n${F}\n## B\n`;
-    expect(sectionBodies(text).order).toEqual(["A", "B"]);
+    expect(sectionBodies(text).order).toStrictEqual(["A", "B"]);
     const lines = [`${F}${F.slice(0, 1)}md`, F, "## x", F, `${F}${F.slice(0, 1)}`, "after"];
     const { fenced, unclosed } = fencedLineSet(lines);
-    expect([...fenced].sort()).toEqual([0, 1, 2, 3, 4]);
+    expect([...fenced].sort()).toStrictEqual([0, 1, 2, 3, 4]);
     expect(unclosed).toBeNull();
   });
 });

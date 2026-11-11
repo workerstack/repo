@@ -21,14 +21,14 @@ it("creates both rulesets, turns reporting and alerts on and sets the metadata, 
   const cwd = githubRepo();
   const fake = fakeGh({ ...EMPTY_SETTINGS(), alerts: false });
   const first = await run(cwd, fake);
-  expect(first).toEqual({
+  expect(first).toStrictEqual({
     code: 0,
     err: "",
     out: `${CREATED} · Dependabot alerts on · description, homepage and 5 topics set\n`,
   });
   const wanted = await wantedAt(cwd);
   const stored = fake.settings.rulesets.map(({ id: _id, ...ruleset }) => ruleset);
-  expect(wanted.ok && wanted.wanted.rulesets).toEqual(stored);
+  expect(wanted.ok && wanted.wanted.rulesets).toStrictEqual(stored);
   const { description, homepage } = MANIFEST;
   expect(fake.settings).toMatchObject({ reporting: true, alerts: true, description, homepage, topics: KEYWORDS });
 });
@@ -37,7 +37,7 @@ it("requires every job the generated ci.yml reports, from GitHub Actions", async
   const fake = fakeGh();
   await run(githubRepo(), fake);
   const rule = must(fake.settings.rulesets[0]).rules.find((r) => r.type === "required_status_checks");
-  expect(rule?.parameters?.required_status_checks?.map((check) => check.context)).toEqual([
+  expect(rule?.parameters?.required_status_checks?.map((check) => check.context)).toStrictEqual([
     "test (ubuntu-latest)",
     "test (windows-latest)",
     "test (macos-latest)",
@@ -53,8 +53,8 @@ it("changes nothing on a second run: it says up to date and makes no write call"
   const fake = fakeGh();
   await run(cwd, fake);
   fake.calls.length = 0;
-  expect(await run(cwd, fake)).toEqual({ code: 0, err: "", out: "repo github: workerstack/repo · up to date\n" });
-  expect(fake.writes()).toEqual([]);
+  expect(await run(cwd, fake)).toStrictEqual({ code: 0, err: "", out: "repo github: workerstack/repo · up to date\n" });
+  expect(fake.writes()).toStrictEqual([]);
 });
 
 it("updates an edited ruleset by id and touches nothing else", async () => {
@@ -64,7 +64,7 @@ it("updates an edited ruleset by id and touches nothing else", async () => {
   edited.rules = edited.rules.filter((rule) => rule.type !== "deletion");
   fake.calls.length = 0;
   expect((await run(cwd, fake)).out).toBe("repo github: workerstack/repo · ruleset main updated\n");
-  expect(fake.writes().map((call) => [call.method, call.path])).toEqual([
+  expect(fake.writes().map((call) => [call.method, call.path])).toStrictEqual([
     ["PUT", `repos/workerstack/repo/rulesets/${edited.id}`],
   ]);
   expect(must(fake.settings.rulesets[0]).rules.some((rule) => rule.type === "deletion")).toBe(true);
@@ -92,15 +92,15 @@ it("says 1 topic for a single keyword", async () => {
 
 it("exits 1 with the admin hint when GitHub denies the read, writing nothing", async () => {
   const fake = fakeGh(EMPTY_SETTINGS(), () => DENIED);
-  expect(await run(githubRepo(), fake)).toEqual({ code: 1, out: "", err: DENIED_LINE });
-  expect(fake.writes()).toEqual([]);
+  expect(await run(githubRepo(), fake)).toStrictEqual({ code: 1, out: "", err: DENIED_LINE });
+  expect(fake.writes()).toStrictEqual([]);
 });
 
 it("exits 1 with the admin hint when GitHub denies a write, and a rerun finishes the job", async () => {
   const cwd = githubRepo();
   const fake = fakeGh(EMPTY_SETTINGS(), (call) => (call.method === "PUT" ? DENIED : undefined));
-  expect(await run(cwd, fake)).toEqual({ code: 1, out: "", err: DENIED_LINE });
-  expect(fake.settings.rulesets.map((ruleset) => ruleset.name)).toEqual(["main", "release tags"]);
+  expect(await run(cwd, fake)).toStrictEqual({ code: 1, out: "", err: DENIED_LINE });
+  expect(fake.settings.rulesets.map((ruleset) => ruleset.name)).toStrictEqual(["main", "release tags"]);
   const again = await run(cwd, fakeGh(fake.settings));
   expect(again.out).toBe(
     "repo github: workerstack/repo · private vulnerability reporting on · description, homepage and 5 topics set\n",
@@ -125,15 +125,15 @@ it.each(FAILURES)("names a %j failure and what to do", async (failure, text) => 
 it.each([null, "https://gitlab.com/a/b.git"])("exits 1 without calling gh when origin is %j", async (origin) => {
   const fake = fakeGh();
   const line = "repo github: no GitHub origin; `git remote get-url origin` is not a github.com URL\n";
-  expect(await run(githubRepo({ origin }), fake)).toEqual({ code: 1, out: "", err: line });
-  expect(fake.calls).toEqual([]);
+  expect(await run(githubRepo({ origin }), fake)).toStrictEqual({ code: 1, out: "", err: line });
+  expect(fake.calls).toStrictEqual([]);
 });
 
 it.each([["--nope"], ["--check", "--nope"], ["extra"]])("refuses the arguments %j with the usage", async (...argv) => {
   const fake = fakeGh();
   const usage = "repo github: usage: repo github [--check]\n";
-  expect(await run(githubRepo(), fake, argv)).toEqual({ code: 1, out: "", err: usage });
-  expect(fake.calls).toEqual([]);
+  expect(await run(githubRepo(), fake, argv)).toStrictEqual({ code: 1, out: "", err: usage });
+  expect(fake.calls).toStrictEqual([]);
 });
 
 it("refuses keywords that are not valid topics, with or without --check", async () => {
@@ -141,7 +141,7 @@ it("refuses keywords that are not valid topics, with or without --check", async 
   const cwd = githubRepo({ files: { "package.json": manifest } });
   const refused = 'repo github: package.json: "keywords" are not sorted; write ["agents","lint"]\n';
   const [apply, check] = await Promise.all([run(cwd, fakeGh()), run(cwd, fakeGh(), ["--check"])]);
-  expect([apply, check]).toEqual([
+  expect([apply, check]).toStrictEqual([
     { code: 1, out: "", err: refused },
     { code: 1, out: "", err: refused },
   ]);
@@ -151,20 +151,20 @@ it("refuses a keyword list holding a non-string instead of dropping it", async (
   const manifest = JSON.stringify({ ...MANIFEST, keywords: ["agents", 7] });
   const fake = fakeGh();
   const out = await run(githubRepo({ files: { "package.json": manifest } }), fake);
-  expect(out).toEqual({
+  expect(out).toStrictEqual({
     code: 1,
     out: "",
     err: "repo github: package.json: keyword 2 is 7, not a string; write it as a GitHub topic\n",
   });
-  expect(fake.calls).toEqual([]);
+  expect(fake.calls).toStrictEqual([]);
 });
 
 it("refuses a config or a package.json it cannot read, with the reason", async () => {
   const config = githubRepo({ files: { "workerstack.config.ts": "export default 3;\n" } });
   const manifest = githubRepo({ files: { "package.json": "{" } });
   const [bad, broken] = await Promise.all([run(config, fakeGh()), run(manifest, fakeGh())]);
-  expect([bad.code, bad.err.startsWith("repo github: workerstack.config.ts:")]).toEqual([1, true]);
-  expect([broken.code, broken.err.startsWith("repo github: package.json")]).toEqual([1, true]);
+  expect([bad.code, bad.err.startsWith("repo github: workerstack.config.ts:")]).toStrictEqual([1, true]);
+  expect([broken.code, broken.err.startsWith("repo github: package.json")]).toStrictEqual([1, true]);
 });
 
 it("reads a description or homepage of the wrong type, or no package.json at all, as unset", async () => {
@@ -182,7 +182,7 @@ it("main runs with the real io: a flag it refuses and a checkout with no origin"
   expect(await main(["--nope"])).toBe(1);
   vi.spyOn(process, "cwd").mockReturnValue(githubRepo({ origin: null }));
   expect(await main([])).toBe(1);
-  expect(written.filter((text) => text !== "")).toEqual([
+  expect(written.filter((text) => text !== "")).toStrictEqual([
     "repo github: usage: repo github [--check]\n",
     "repo github: no GitHub origin; `git remote get-url origin` is not a github.com URL\n",
   ]);

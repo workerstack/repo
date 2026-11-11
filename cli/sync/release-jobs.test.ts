@@ -11,17 +11,17 @@ describe("release gates", () => {
   });
 
   it("writes nothing with the pack off", () => {
-    expect(release(context(["agents", "standards", "docs"]))).toEqual({ outputs: [], errors: [] });
+    expect(release(context(["agents", "standards", "docs"]))).toStrictEqual({ outputs: [], errors: [] });
   });
 
   it("rewrites a ci.yml that has the generated header on its first line", () => {
     const result = release(context(["release"], {}, { [CI_PATH]: `${HEADER}\nname: old\n` }));
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toStrictEqual([]);
     expect(result.outputs).toHaveLength(1);
   });
 
   it("refuses a hand-written ci.yml", () => {
-    expect(release(context(["release"], {}, { [CI_PATH]: "name: ci\n" }))).toEqual({
+    expect(release(context(["release"], {}, { [CI_PATH]: "name: ci\n" }))).toStrictEqual({
       outputs: [],
       errors: [".github/workflows/ci.yml is hand-written; delete it so repo sync can own it"],
     });

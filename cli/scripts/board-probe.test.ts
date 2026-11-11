@@ -27,7 +27,7 @@ it("readBootId: reads this machine's boot id by default", () => {
 });
 
 it("parseProcStat: takes the command between the first ( and the last )", () => {
-  expect(parseProcStat(stat("a (b) c", "S", "42"))).toEqual({
+  expect(parseProcStat(stat("a (b) c", "S", "42"))).toStrictEqual({
     comm: "a (b) c",
     state: "S",
     ppid: 42,
@@ -51,7 +51,7 @@ it("probeProcess: answers null for pids that can never be a host", () => {
 
 it("probeProcess: reads linux stat and drops zombies, garbage and unreadable processes", () => {
   const linux = (text: () => string) => probeProcess(10, { platform: "linux", readFile: text });
-  expect(linux(() => stat("node", "S", "4"))).toEqual({ pid: 10, start: "77", comm: "node", ppid: 4 });
+  expect(linux(() => stat("node", "S", "4"))).toStrictEqual({ pid: 10, start: "77", comm: "node", ppid: 4 });
   expect(linux(() => stat("node", "Z", "4"))).toBeNull();
   expect(linux(() => "garbage")).toBeNull();
   expect(
@@ -81,7 +81,7 @@ it("probeProcess: parses mac ps output and rejects failures and odd lines", () =
 it("probeProcess: parses windows output and rejects failures and short or odd output", () => {
   const ps = (stdout: string | undefined, status: number | null = 0) => ({ status, stdout });
   const win = (r: ReturnType<typeof ps> | null) => probeProcess(10, { platform: "win32", spawn: () => r });
-  expect(win(ps("11\r\ncmd.exe\r\n2026-10-09T12:00:00Z\r\n"))).toEqual({
+  expect(win(ps("11\r\ncmd.exe\r\n2026-10-09T12:00:00Z\r\n"))).toStrictEqual({
     pid: 10,
     start: "2026-10-09T12:00:00Z",
     comm: "cmd.exe",
@@ -103,7 +103,7 @@ it("hostIdentity: is the first parent that is not a shell", () => {
     20: { comm: "/bin/Bash", ppid: 30, start: "20s" },
     30: { comm: "claude", ppid: 1, start: "30s" },
   });
-  expect(hostIdentity({ pid: 5, probe })).toEqual({ pid: 30, start: "30s" });
+  expect(hostIdentity({ pid: 5, probe })).toStrictEqual({ pid: 30, start: "30s" });
 });
 
 it("hostIdentity: is null when the chain ends, breaks, loops or never leaves the shells", () => {
@@ -126,7 +126,7 @@ it("hostIdentity: is null when the chain ends, breaks, loops or never leaves the
 });
 
 it("hostIdentity: takes a parent with no command name as the host", () => {
-  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { comm: "", start: "7" } }) })).toEqual({
+  expect(hostIdentity({ pid: 5, probe: probeOf({ 5: { ppid: 20 }, 20: { comm: "", start: "7" } }) })).toStrictEqual({
     pid: 20,
     start: "7",
   });
@@ -173,7 +173,7 @@ it("rowAlive: recognises this very process with the default probe", () => {
 it("tryChmod: applies the mode and swallows a failure", () => {
   const calls: [string, number][] = [];
   tryChmod("/x", 0o600, (target, mode) => calls.push([target, mode]));
-  expect(calls).toEqual([["/x", 0o600]]);
+  expect(calls).toStrictEqual([["/x", 0o600]]);
   expect(() =>
     tryChmod("/x", 0o600, () => {
       throw new Error("EPERM");

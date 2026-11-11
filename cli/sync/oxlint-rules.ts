@@ -1,8 +1,11 @@
 /** Size limits count code only: blank lines and comments are free. */
 const CODE_LINES = { skipBlankLines: true, skipComments: true };
 
+/** A rule's setting: its severity alone, or the severity followed by the rule's options. */
+export type RuleSetting = string | [string, ...unknown[]];
+
 /** Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s. */
-export const RULES: Record<string, string | [string, Record<string, unknown>]> = {
+export const RULES: Record<string, RuleSetting> = {
   "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
   "repo/class-file": "error",
@@ -52,6 +55,12 @@ export const RULES: Record<string, string | [string, Record<string, unknown>]> =
   "typescript/no-unsafe-return": "error",
   "typescript/no-unsafe-call": "error",
   "typescript/switch-exhaustiveness-check": "error",
+  "typescript/strict-boolean-expressions": [
+    "error",
+    { allowString: false, allowNumber: false, allowNullableObject: false },
+  ],
+  "typescript/prefer-nullish-coalescing": "error",
+  "eslint/eqeqeq": ["error", "always", { null: "ignore" }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
 
@@ -59,15 +68,28 @@ export const RULES: Record<string, string | [string, Record<string, unknown>]> =
 export const OFF_RULES: Readonly<Record<string, string>> = {
   "typescript/no-unsafe-type-assertion":
     "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), and disable comments are refused, so this rule would leave no way to write one",
+  "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
+  "eslint/id-length": "It fails `i` and `a` in short callbacks, where a longer name adds nothing.",
+  "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
+  "typescript/explicit-function-return-type":
+    "Inference of the return type is exact, so writing it out only repeats it.",
+  "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",
+  "eslint/no-ternary": "eslint/no-nested-ternary already bounds ternaries, and a single one reads well.",
+  "vitest/prefer-expect-assertions": "vitest/expect-expect already checks that an assertion ran in each test.",
+  "vitest/require-test-timeout": "The vitest config sets the timeout for every test.",
+  "eslint/no-magic-numbers": "repo/magic-number owns magic numbers.",
+  "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
 };
 
 /** Test rules, only in test files, where module-scope setup and printing are allowed. */
-export const TEST_RULES: Record<string, string> = {
+export const TEST_RULES: Record<string, "off" | "error"> = {
   "repo/no-module-state": "off",
   "vitest/expect-expect": "error",
   "vitest/no-conditional-tests": "error",
   "vitest/no-focused-tests": "error",
   "vitest/no-disabled-tests": "error",
   "vitest/warn-todo": "error",
+  "vitest/prefer-strict-equal": "error",
+  "vitest/prefer-called-with": "error",
   "eslint/no-console": "off",
 };

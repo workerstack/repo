@@ -26,8 +26,12 @@ describe("isParentOrchestrator", () => {
 
 describe("isImplementer", () => {
   it("names the implementer-* children only", () => {
-    expect(["implementer-fast", "implementer-deep", "implementer-x"].map(isImplementer)).toEqual([true, true, true]);
-    expect(["", "scout", "implementer", "orchestrator", "my-implementer-fast"].map(isImplementer)).toEqual([
+    expect(["implementer-fast", "implementer-deep", "implementer-x"].map(isImplementer)).toStrictEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(["", "scout", "implementer", "orchestrator", "my-implementer-fast"].map(isImplementer)).toStrictEqual([
       false,
       false,
       false,

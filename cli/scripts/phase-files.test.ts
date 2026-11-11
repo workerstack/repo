@@ -76,7 +76,7 @@ describe("phase-files", () => {
   it("lists each phase's changed files, reading the plan from the root", () => {
     write("src/a.ts", "changed\n");
     write("docs/b.md");
-    expect(run("7", "2,3")).toEqual({
+    expect(run("7", "2,3")).toStrictEqual({
       code: 0,
       out: "phase 2  src/a.ts\nphase 3  docs/b.md\n",
       err: "",
@@ -94,7 +94,7 @@ describe("phase-files", () => {
 
   it("checks one phase of a group alone", () => {
     write("docs/b.md");
-    expect(run("7", "3")).toEqual({ code: 0, out: "phase 3  docs/b.md\n", err: "" });
+    expect(run("7", "3")).toStrictEqual({ code: 0, out: "phase 3  docs/b.md\n", err: "" });
     write("src/a.ts", "changed\n");
     expect(run("7", "3").code).toBe(1);
   });
@@ -107,13 +107,13 @@ describe("phase-files", () => {
   it("takes the new side of an unstaged rename", () => {
     git(wt, "mv", "src/old.ts", "src/ren.ts");
     write("src/ren.ts", "one\ntwo\nthree\nfour\nfive\nsix\n");
-    expect(run("7", "2,3")).toEqual({ code: 0, out: "phase 2  src/ren.ts\nphase 3\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "phase 2  src/ren.ts\nphase 3\n", err: "" });
   });
 
   it("ignores staged changes", () => {
     write("src/a.ts", "changed\n");
     git(wt, "add", "src/a.ts");
-    expect(run("7", "2,3")).toEqual({ code: 0, out: "no unstaged changes\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "no unstaged changes\n", err: "" });
   });
 
   it("matches a path declared with backslashes", () => {
@@ -122,7 +122,7 @@ describe("phase-files", () => {
   });
 
   it("reports nothing changed", () => {
-    expect(run("7", "2,3")).toEqual({ code: 0, out: "no unstaged changes\n", err: "" });
+    expect(run("7", "2,3")).toStrictEqual({ code: 0, out: "no unstaged changes\n", err: "" });
   });
 
   it("accepts a plan path", () => {

@@ -32,7 +32,7 @@ it("sheets: get, append and clear fail without an id", async () => {
   const get = await run("sheet", "get");
   const append = await run("sheet", "append");
   const clear = await run("sheet", "clear");
-  expect([get.code, append.code, clear.code]).toEqual([1, 1, 1]);
+  expect([get.code, append.code, clear.code]).toStrictEqual([1, 1, 1]);
   expect(get.errs).toContain("sheet get needs --id");
   expect(append.errs).toContain("sheet append needs --id");
   expect(clear.errs).toContain("sheet clear needs --id");
@@ -74,10 +74,10 @@ it("sheets: set takes --range and --a1, defaulting to A1 and an empty value", as
   const calls = stubFetch(() => jsonRes({}));
   const r = await run("sheet", "set", "--id", "s", "--range", "C3", "--a1", "v");
   expect(r.logs).toBe("updated C3\n");
-  expect(sentJson(calls)).toEqual({ values: [["v"]] });
+  expect(sentJson(calls)).toStrictEqual({ values: [["v"]] });
   await run("sheet", "set", "--id", "s");
   expect(callAt(calls, 1).url).toContain("/values/A1?");
-  expect(sentJson(calls, 1)).toEqual({ values: [[""]] });
+  expect(sentJson(calls, 1)).toStrictEqual({ values: [[""]] });
 });
 
 it("sheets: set turns a disabled Sheets API into advice", async () => {

@@ -34,7 +34,7 @@ it("merges 8 Stryker and 4 cargo-mutants shards of one head and scores both", as
   const f = fakes(undefined, ["crates/a"]);
   both().forEach((report, i) => f.files.set(at("reports", `mutation-${i + 1}.json`), JSON.stringify(report)));
   expect(await runMutate(["check", "reports"], f.deps)).toBe(0);
-  expect(f.out).toEqual(["mutate: 12 shards of 09ed564; . 90.00% (no floor); crates/a 75.00% (no floor)\n"]);
+  expect(f.out).toStrictEqual(["mutate: 12 shards of 09ed564; . 90.00% (no floor); crates/a 75.00% (no floor)\n"]);
 });
 
 it("names the tool of a missing, repeated or mixed-count shard only when the dir holds both tools", async () => {
@@ -77,5 +77,5 @@ it("sums the score of a file that two cargo-mutants shards both hold, as the uns
   ];
   reports.forEach((report, i) => f.files.set(at("reports", `mutation-${i + 1}.json`), JSON.stringify(report)));
   expect(await runMutate(["check", "reports"], f.deps)).toBe(0);
-  expect(f.out).toEqual(["mutate: 2 shards of 09ed564; crates/a 88.89% (no floor)\n"]);
+  expect(f.out).toStrictEqual(["mutate: 2 shards of 09ed564; crates/a 88.89% (no floor)\n"]);
 });

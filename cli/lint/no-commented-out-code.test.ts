@@ -27,7 +27,7 @@ describe("no-commented-out-code passes prose and tool comments", () => {
     '/// <reference types="node" />\nexport const a = 1;',
     "/* a block note that only says why */\nexport const a = 1;",
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
@@ -45,27 +45,26 @@ describe("no-commented-out-code fails a comment that parses as code", () => {
     "/* const old = load(); */\nexport const a = 1;",
     "export const a = 1; // a = 2;",
   ])("fails %j", (code) => {
-    expect(messagesOf(code)).toEqual([MESSAGE]);
+    expect(messagesOf(code)).toStrictEqual([MESSAGE]);
   });
 
   it("reads consecutive line comments as one group, reported once", () => {
-    expect(messagesOf("// if (ready) {\n//   start();\n// }\nexport const a = 1;")).toEqual([MESSAGE]);
-    expect(messagesOf("// for (const x of xs) {\n//   use(x);\n// }")).toEqual([MESSAGE]);
+    expect(messagesOf("// if (ready) {\n//   start();\n// }\nexport const a = 1;")).toStrictEqual([MESSAGE]);
+    expect(messagesOf("// for (const x of xs) {\n//   use(x);\n// }")).toStrictEqual([MESSAGE]);
   });
 });
 
 describe("no-commented-out-code reads a group of line comments", () => {
   it("fails a group with prose on one line and code on another, reported once", () => {
-    expect(messagesOf("// TODO fix this later\n// const old = load();\nexport const a = 1;")).toEqual([MESSAGE]);
-    expect(messagesOf("// load();\n// the old call, kept for reference\nexport const a = 1;")).toEqual([MESSAGE]);
+    expect(messagesOf("// TODO fix this later\n// const old = load();\nexport const a = 1;")).toStrictEqual([MESSAGE]);
+    expect(messagesOf("// load();\n// the old call, kept for reference\nexport const a = 1;")).toStrictEqual([MESSAGE]);
   });
 
   it("splits groups at a blank line or code, and a directive breaks a group", () => {
-    expect(messagesOf("// load();\n\n// save();")).toEqual([MESSAGE, MESSAGE]);
-    expect(messagesOf("// if (ready) {\nexport const a = 1;\n// }")).toEqual([]);
-    expect(messagesOf("// load();\n// @ts-expect-error: bad\n// save();\nexport const a: number = 'x';")).toEqual([
-      MESSAGE,
-      MESSAGE,
-    ]);
+    expect(messagesOf("// load();\n\n// save();")).toStrictEqual([MESSAGE, MESSAGE]);
+    expect(messagesOf("// if (ready) {\nexport const a = 1;\n// }")).toStrictEqual([]);
+    expect(messagesOf("// load();\n// @ts-expect-error: bad\n// save();\nexport const a: number = 'x';")).toStrictEqual(
+      [MESSAGE, MESSAGE],
+    );
   });
 });

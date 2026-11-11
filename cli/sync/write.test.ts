@@ -95,7 +95,7 @@ describe("writeAll", () => {
       link("tree/lnk", "../s2"),
       link("fresh/lnk", "../s2"),
     ];
-    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({ ok: true });
     expect(linkText(path.join(root, "fresh/lnk"))).toBe("../s2");
     expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new a\n");
     expect(fs.readFileSync(path.join(root, "n/ew/b.txt"), "utf8")).toBe("n/ew/b.txt\n");
@@ -108,7 +108,7 @@ describe("writeAll", () => {
     const root = tempRoot();
     put(root, MANIFEST_REL, MANIFEST);
     const rename = vi.spyOn(fs, "renameSync");
-    expect(writeAll(root, [], [], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, [], [], MANIFEST, deps)).toStrictEqual({ ok: true });
     expect(rename).not.toHaveBeenCalled();
   });
 
@@ -117,12 +117,12 @@ describe("writeAll", () => {
     const before = tree(root);
     const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2"), file("c.txt")];
     const result = writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, failing("c.txt"));
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: ["c.txt: cannot write: EACCES: permission denied; restored 3 outputs, nothing changed"],
       refused: false,
     });
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
     expect(fs.existsSync(path.join(root, "n"))).toBe(false);
   });
 
@@ -146,13 +146,13 @@ describe("writeAll", () => {
       return real(target, options);
     });
     const result = writeAll(root, [file("a.txt", "new\n")], ["gone/deep/x.txt", "gone/other.txt"], MANIFEST, deps);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: ["gone/other.txt: cannot remove: EBUSY: resource busy; restored 2 outputs, nothing changed"],
       refused: false,
     });
     vi.restoreAllMocks();
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("rolls every output and removal back when the manifest write fails", () => {
@@ -168,13 +168,13 @@ describe("writeAll", () => {
     });
     const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2")];
     const result = writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: [`${MANIFEST_REL}: cannot write: EACCES: permission denied, rename; restored 4 outputs, nothing changed`],
       refused: false,
     });
     vi.restoreAllMocks();
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("does not try to remove a dir that is already gone when it undoes a failed manifest write", () => {
@@ -195,12 +195,12 @@ describe("writeAll", () => {
     put(root, ".claude/skills/ask/SKILL.md", "mine\n");
     const before = tree(root);
     const changed = [file("a.txt", "new\n"), link(".claude/skills/ask", "../../.agents/skills/ask")];
-    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({
+    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({
       ok: false,
       errors: [".claude/skills/ask is a folder where sync puts a link; move it to .repo/skills/ask"],
       refused: true,
     });
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("refuses a real dir at any other link path with one fix", () => {
@@ -215,7 +215,7 @@ describe("writeAll", () => {
       MANIFEST,
       deps,
     );
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: [
         "tree/real is a folder where sync puts a link; move or delete it",
@@ -223,20 +223,20 @@ describe("writeAll", () => {
       ],
       refused: true,
     });
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("converges on a rerun after a restore", () => {
     const root = seeded();
     const changed = [file("a.txt", "new a\n"), file("n/ew/b.txt"), link("tree/lnk", "../s2"), file("c.txt")];
     expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, failing("c.txt")).ok).toBe(false);
-    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({ ok: true });
 
     const clean = seeded();
-    expect(writeAll(clean, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(clean, changed, ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({ ok: true });
     const strip = (t: Record<string, string>) =>
       Object.fromEntries(Object.entries(t).filter(([rel]) => !rel.startsWith("..")));
-    expect(strip(tree(root))).toEqual(strip(tree(clean)));
+    expect(strip(tree(root))).toStrictEqual(strip(tree(clean)));
   });
 
   it("leaves a real dir that stands where a file belongs and reports the failed write", () => {
@@ -248,7 +248,7 @@ describe("writeAll", () => {
     expect(result).toMatchObject({
       errors: [expect.stringMatching(/^d: cannot write: .*; restored 1 output, nothing changed$/)],
     });
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("reports a file it cannot read before touching it", () => {
@@ -259,7 +259,7 @@ describe("writeAll", () => {
       return (real as (t: unknown, o?: unknown) => unknown)(target, options);
     }) as typeof fs.readFileSync);
     const result = writeAll(root, [file("a.txt", "new\n")], [], MANIFEST, deps);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: ["a.txt: cannot write: EACCES: permission denied, open; restored 0 outputs, nothing changed"],
       refused: false,
@@ -271,16 +271,14 @@ describe("writeAll", () => {
   it("names what it could not restore and says to rerun", () => {
     const root = seeded();
     const real = fs.writeFileSync;
-    vi.spyOn(fs, "writeFileSync").mockImplementation(((
-      target: fs.PathOrFileDescriptor,
-      data: unknown,
-      options?: unknown,
-    ) => {
-      if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
-      return (real as (t: unknown, d: unknown, o?: unknown) => void)(target, data, options);
-    }) as typeof fs.writeFileSync);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(
+      (target: fs.PathOrFileDescriptor, data: unknown, options?: unknown) => {
+        if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
+        return (real as (t: unknown, d: unknown, o?: unknown) => void)(target, data, options);
+      },
+    );
     const result = writeAll(root, [file("a.txt", "new a\n"), file("c.txt")], [], MANIFEST, failing("c.txt", "boom"));
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       ok: false,
       errors: ["c.txt: cannot write: boom; could not restore a.txt; run `bun repo sync` again"],
       refused: false,
@@ -305,14 +303,14 @@ describe("writeAll", () => {
     expect(result).toMatchObject({
       errors: ["tree/lnk: cannot write: EPERM: operation not permitted, symlink; restored 0 outputs, nothing changed"],
     });
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 
   it("writes the default way, and a link as a junction with an absolute target on win32", () => {
     const root = seeded();
     expect(
       writeAll(root, [file("a.txt", "new\n"), link("tree/lnk", "../s2")], [], MANIFEST, { platform: "win32" }),
-    ).toEqual({ ok: true });
+    ).toStrictEqual({ ok: true });
     expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new\n");
     expect(fs.readlinkSync(path.join(root, "tree/lnk"))).toBe(path.join(root, "s2"));
   });
@@ -374,7 +372,7 @@ describe("ownedMode", () => {
 describe("writeAll modes", () => {
   it("leaves whole outputs read-only, an executable one 0555, and a block output and the manifest writable", () => {
     const root = tempRoot();
-    expect(writeAll(root, [file("a.txt"), hook(), block("b.txt")], [], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, [file("a.txt"), hook(), block("b.txt")], [], MANIFEST, deps)).toStrictEqual({ ok: true });
     expectMode(root, "a.txt", 0o444);
     expectMode(root, ".githooks/pre-commit", 0o555);
     expect(isWritable(root, "b.txt")).toBe(true);
@@ -386,7 +384,7 @@ describe("writeAll modes", () => {
     fs.chmodSync(path.join(root, "a.txt"), 0o444);
     fs.chmodSync(path.join(root, "gone/deep/x.txt"), 0o444);
     lockLikeWin32();
-    expect(writeAll(root, [file("a.txt", "new a\n")], ["gone/deep/x.txt"], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, [file("a.txt", "new a\n")], ["gone/deep/x.txt"], MANIFEST, deps)).toStrictEqual({ ok: true });
     expect(fs.readFileSync(path.join(root, "a.txt"), "utf8")).toBe("new a\n");
     expectMode(root, "a.txt", 0o444);
     expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
@@ -402,7 +400,7 @@ describe("writeAll undo modes", () => {
     const result = writeAll(root, [file("a.txt", "new\n"), file("c.txt")], [], MANIFEST, failing("c.txt"));
     expect(result).toMatchObject({ errors: [expect.stringMatching(/restored 1 output, nothing changed$/)] });
     vi.restoreAllMocks();
-    expect(tree(root)).toEqual(before);
+    expect(tree(root)).toStrictEqual(before);
   });
 });
 
@@ -413,7 +411,7 @@ describe.skipIf(process.platform === "win32")("modes through a file link", () =>
     put(root, "real.txt", "mine\n");
     fs.chmodSync(path.join(root, "real.txt"), 0o444);
     fs.symlinkSync("real.txt", path.join(root, "l.txt"));
-    expect(writeAll(root, [file("l.txt")], [], MANIFEST, deps)).toEqual({ ok: true });
+    expect(writeAll(root, [file("l.txt")], [], MANIFEST, deps)).toStrictEqual({ ok: true });
     expect(fs.lstatSync(path.join(root, "l.txt")).isFile()).toBe(true);
     expectMode(root, "l.txt", 0o444);
     expectMode(root, "real.txt", 0o444);
@@ -424,7 +422,7 @@ describe.skipIf(process.platform === "win32")("modes through a file link", () =>
     put(root, "real.txt", "mine\n");
     const before = modeOf(root, "real.txt");
     fs.symlinkSync("real.txt", path.join(root, "l.txt"));
-    expect(settleModes(root, [file("l.txt")], "linux")).toEqual([]);
+    expect(settleModes(root, [file("l.txt")], "linux")).toStrictEqual([]);
     expect(modeOf(root, "real.txt")).toBe(before);
   });
 });
@@ -436,7 +434,7 @@ describe("settleModes", () => {
     put(root, "s1/f.txt", "f\n");
     put(root, ".githooks/pre-commit", "#!/bin/sh\n");
     const outputs = [file("a.txt"), hook(), block("b.txt"), link("tree/lnk", "../s1"), file("missing.txt")];
-    expect(settleModes(root, outputs, "linux")).toEqual([]);
+    expect(settleModes(root, outputs, "linux")).toStrictEqual([]);
     expectMode(root, "a.txt", 0o444);
     expectMode(root, ".githooks/pre-commit", 0o555);
     expect(isWritable(root, "b.txt")).toBe(true);
@@ -448,8 +446,8 @@ describe("settleModes", () => {
   it("leaves an executable output read-only without execute bits for win32, and is a no-op on a rerun", () => {
     const root = tempRoot();
     put(root, ".githooks/pre-commit", "#!/bin/sh\n");
-    expect(settleModes(root, [hook()], "win32")).toEqual([]);
-    expect(settleModes(root, [hook()], "win32")).toEqual([]);
+    expect(settleModes(root, [hook()], "win32")).toStrictEqual([]);
+    expect(settleModes(root, [hook()], "win32")).toStrictEqual([]);
     expectMode(root, ".githooks/pre-commit", 0o444);
   });
 });
@@ -462,7 +460,7 @@ describe("settleModes warnings", () => {
     vi.spyOn(fs, "chmodSync").mockImplementation(() => {
       throw new Error("EPERM: operation not permitted, chmod");
     });
-    expect(settleModes(root, [file("a.txt"), file("c.txt")], "linux")).toEqual([
+    expect(settleModes(root, [file("a.txt"), file("c.txt")], "linux")).toStrictEqual([
       "cannot make a.txt read-only: EPERM: operation not permitted, chmod",
       "cannot make c.txt read-only: EPERM: operation not permitted, chmod",
     ]);
@@ -476,7 +474,7 @@ describe("settleModes block outputs", () => {
     put(root, "notes.md", "n\n");
     fs.chmodSync(path.join(root, "AGENTS.md"), 0o444);
     fs.chmodSync(path.join(root, "notes.md"), 0o600);
-    expect(settleModes(root, [block("AGENTS.md"), block("notes.md")], "linux")).toEqual([]);
+    expect(settleModes(root, [block("AGENTS.md"), block("notes.md")], "linux")).toStrictEqual([]);
     expectMode(root, "AGENTS.md", 0o644);
     expectMode(root, "notes.md", 0o600);
   });
@@ -488,7 +486,7 @@ describe("settleModes block outputs", () => {
     vi.spyOn(fs, "chmodSync").mockImplementation(() => {
       throw new Error("EPERM: operation not permitted, chmod");
     });
-    expect(settleModes(root, [block("AGENTS.md")], "linux")).toEqual([
+    expect(settleModes(root, [block("AGENTS.md")], "linux")).toStrictEqual([
       "cannot make AGENTS.md writable: EPERM: operation not permitted, chmod",
     ]);
   });

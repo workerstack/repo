@@ -248,7 +248,7 @@ function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObject {
 function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { agents: JsonObject } {
   const obj: JsonObject = { ...disk };
   const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
-  if (agents.max_depth == null) agents.max_depth = 1;
+  agents.max_depth ??= 1;
   obj.agents = agents;
   if (!policy.allow.length) {
     delete obj.mcp_servers;

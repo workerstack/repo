@@ -15,10 +15,10 @@ import { bare, cleanSetup, plant, writeAt } from "./fixtures/setup-kit.ts";
 afterEach(cleanSetup);
 
 it("browserEngineStatus reports both, WSL-only, one missing and none", () => {
-  expect(browserEngineStatus("/lp", "/cr", "linux")).toEqual({ ok: true, extra: "lightpanda,chromium" });
-  expect(browserEngineStatus("", "/cr", "win32")).toEqual({ ok: true, extra: "chromium,need lightpanda in WSL" });
-  expect(browserEngineStatus("/lp", "", "linux")).toEqual({ ok: false, extra: "lightpanda,need chromium" });
-  expect(browserEngineStatus("", "", process.platform)).toEqual({
+  expect(browserEngineStatus("/lp", "/cr", "linux")).toStrictEqual({ ok: true, extra: "lightpanda,chromium" });
+  expect(browserEngineStatus("", "/cr", "win32")).toStrictEqual({ ok: true, extra: "chromium,need lightpanda in WSL" });
+  expect(browserEngineStatus("/lp", "", "linux")).toStrictEqual({ ok: false, extra: "lightpanda,need chromium" });
+  expect(browserEngineStatus("", "", process.platform)).toStrictEqual({
     ok: false,
     extra: "need lightpanda,need chromium",
   });
@@ -41,7 +41,7 @@ it("lookupChromium finds a chromium on the PATH it is given, and defaults to the
 it("targetStatuses skips the listen probe unless listen is a target", async () => {
   const home = plant("setup-st-nolisten-");
   const st = await targetStatuses({ home, env: {}, ...bare, targets: ["browser", "jev"] });
-  expect(st.listen).toEqual({ ok: false, extra: "" });
+  expect(st.listen).toStrictEqual({ ok: false, extra: "" });
 });
 
 it("targetStatuses reports local STT with ffmpeg and whisper when the model is planted", async () => {
@@ -50,7 +50,7 @@ it("targetStatuses reports local STT with ffmpeg and whisper when the model is p
   const st = await targetStatuses({ home, env: {}, whichFn: (n) => `/bin/${n}`, pathEnv: "/bin", platform: "linux" });
   expect(st.listen.ok).toBe(true);
   expect(st.listen.extra).toMatch(/^local,ffmpeg,/);
-  expect(st.browser).toEqual({ ok: true, extra: "lightpanda,chromium" });
+  expect(st.browser).toStrictEqual({ ok: true, extra: "lightpanda,chromium" });
 });
 
 it("targetStatuses takes the PATH from env, then from the process", async () => {
@@ -85,7 +85,7 @@ it("menuOptions tags each target ok or missing with its extra", () => {
     { speak: { ok: true, extra: "" }, jev: { ok: true, extra: "env" }, browser: { ok: false, extra: "need chromium" } },
     ["speak", "browser", "jev", "listen"],
   ).map((o) => o.label);
-  expect(labels).toEqual([
+  expect(labels).toStrictEqual([
     "speak (ElevenLabs / OpenAI TTS)  ok",
     "listen (STT)  missing",
     "browser (PATH engines)  missing need chromium",

@@ -21,7 +21,7 @@ describe("stop", () => {
   it("fails when nothing is recording", async () => {
     const r = await run(["stop"]);
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["not recording"]);
+    expect(r.errs).toStrictEqual(["not recording"]);
   });
 
   it("interrupts a live recorder, waits for it, transcribes and clears the session", async () => {
@@ -32,7 +32,7 @@ describe("stop", () => {
     const r = await run(["stop"], { cwd, killFn: table.killFn, waitPid, fetchFn: textFetch("stopped words") });
     expect(r.code).toBe(0);
     expect(table.sent).toContainEqual([3000, "SIGINT"]);
-    expect(waited).toEqual([3000]);
+    expect(waited).toStrictEqual([3000]);
     expect(r.logs[0]).toBe("stopped words");
     expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   });
@@ -94,21 +94,21 @@ describe("stop failures", () => {
   it("fails when the session has no wav", async () => {
     const { cwd } = recording({ wav: null });
     const r = await run(["stop"], { cwd, killFn: killTable([]).killFn });
-    expect(r.errs).toEqual(["no wav from session"]);
+    expect(r.errs).toStrictEqual(["no wav from session"]);
     expect(fs.existsSync(sessionPath(cwd))).toBe(false);
   });
 
   it("fails when the wav is gone", async () => {
     const { cwd } = recording({ wav: "/nonexistent/rec.wav" });
     const r = await run(["stop"], { cwd, killFn: killTable([]).killFn });
-    expect(r.errs).toEqual(["no wav from session"]);
+    expect(r.errs).toStrictEqual(["no wav from session"]);
   });
 
   it("--clip copies the stopped transcript", async () => {
     const { cwd } = recording();
     const clip = clipboard();
     await run(["stop", "--clip"], { cwd, killFn: killTable([]).killFn, fetchFn: textFetch("to clipboard"), ...clip });
-    expect(clip.inputs).toEqual(["to clipboard"]);
+    expect(clip.inputs).toStrictEqual(["to clipboard"]);
   });
 });
 
@@ -118,7 +118,7 @@ describe("toggle when idle", () => {
     const rec = recorder(8000);
     const r = await run(["toggle", "--device", ":4", "--cwd", dir], { spawnFn: rec.spawnFn, cwd: tmp("listen-tg-o-") });
     expect(r.code).toBe(0);
-    expect(rec.spawned[0]?.args.slice(-4)).toEqual(["--device", ":4", "--cwd", dir]);
+    expect(rec.spawned[0]?.args.slice(-4)).toStrictEqual(["--device", ":4", "--cwd", dir]);
     expect(readSession(dir)).toMatchObject({ pid: 8000 });
   });
 
@@ -140,7 +140,7 @@ describe("toggle when recording", () => {
     const over = { cwd: tmp("listen-tg-o2-"), killFn, waitPid: () => {}, fetchFn: textFetch("toggled"), ...clip };
     const r = await run(["toggle", "--clip", "--cwd", dir], over);
     expect(r.logs[0]).toBe("toggled");
-    expect(clip.inputs).toEqual(["toggled"]);
+    expect(clip.inputs).toStrictEqual(["toggled"]);
     expect(fs.existsSync(sessionPath(dir))).toBe(false);
   });
 
@@ -151,6 +151,6 @@ describe("toggle when recording", () => {
     const killFn = killTable([6001]).killFn;
     const r = await run(["toggle"], { cwd, killFn, waitPid: () => {}, fetchFn: textFetch("plain toggle"), ...clip });
     expect(r.logs[0]).toBe("plain toggle");
-    expect(clip.inputs).toEqual([]);
+    expect(clip.inputs).toStrictEqual([]);
   });
 });

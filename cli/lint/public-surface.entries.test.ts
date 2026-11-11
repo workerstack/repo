@@ -31,19 +31,19 @@ it("maps a dist target of .js and .d.ts back to its source through tsconfig.buil
     },
   );
   const surface = publicSurface(root);
-  expect([...surface.entries].map(([key, files]) => [key, files.map((file) => rel(root, file))])).toEqual([
+  expect([...surface.entries].map(([key, files]) => [key, files.map((file) => rel(root, file))])).toStrictEqual([
     ["./a", ["src/lib/a.ts"]],
     ["./b", ["src/lib/b.mts"]],
     ["./c", ["src/lib/c.mts"]],
     ["./plain", ["other/p.ts"]],
   ]);
-  expect(Object.keys(namesIn(root))).toEqual(["src/lib/a.ts", "src/lib/b.mts", "src/lib/c.mts", "other/p.ts"]);
-  expect(surface.unknown).toEqual([]);
+  expect(Object.keys(namesIn(root))).toStrictEqual(["src/lib/a.ts", "src/lib/b.mts", "src/lib/c.mts", "other/p.ts"]);
+  expect(surface.unknown).toStrictEqual([]);
 });
 
 it("puts a mapped source that is not there in unknown", () => {
   const root = packageOf({ exports: { ".": "./dist/x.js" } }, { "tsconfig.build.json": BUILD });
-  expect(unknownIn(root)).toEqual([{ file: "src/x.ts", form: "src/x.ts", line: 1 }]);
+  expect(unknownIn(root)).toStrictEqual([{ file: "src/x.ts", form: "src/x.ts", line: 1 }]);
 });
 
 it("takes a dist target as written when there is no build config, an unreadable one or one without both dirs", () => {
@@ -51,7 +51,7 @@ it("takes a dist target as written when there is no build config, an unreadable 
   const configs = [undefined, "{ // comment\n", { compilerOptions: { outDir: "dist" } }];
   for (const config of configs) {
     const root = packageOf({ exports: "./dist/x.js" }, { ...files, "tsconfig.build.json": config ?? "" });
-    expect(namesIn(root)).toEqual({ "dist/x.js": ["x"] });
+    expect(namesIn(root)).toStrictEqual({ "dist/x.js": ["x"] });
   }
 });
 
@@ -60,7 +60,7 @@ it("takes a target outside outDir as written", () => {
     { exports: { ".": "./elsewhere/x.js" } },
     { "elsewhere/x.js": "export const x = 1;\n", "tsconfig.build.json": BUILD },
   );
-  expect(namesIn(root)).toEqual({ "elsewhere/x.js": ["x"] });
+  expect(namesIn(root)).toStrictEqual({ "elsewhere/x.js": ["x"] });
 });
 
 const SKIPPED = {
@@ -79,10 +79,13 @@ const SKIPPED = {
 it("skips JSON, wildcard, directory, markdown and ./package.json targets", () => {
   const root = withEntries(SKIPPED, { "src/index.ts": A, "src/other.ts": "export const o = 1;\n", "data.json": "{}" });
   const surface = publicSurface(root);
-  expect([...surface.entries.keys()]).toEqual([".", "./fallback"]);
-  expect(surface.entries.get(".")).toEqual([path.join(root, "src/index.ts")]);
-  expect(surface.entries.get("./fallback")?.map((file) => rel(root, file))).toEqual(["src/index.ts", "src/other.ts"]);
-  expect(namesIn(root)).toEqual({ "src/index.ts": ["a"], "src/other.ts": ["o"] });
+  expect([...surface.entries.keys()]).toStrictEqual([".", "./fallback"]);
+  expect(surface.entries.get(".")).toStrictEqual([path.join(root, "src/index.ts")]);
+  expect(surface.entries.get("./fallback")?.map((file) => rel(root, file))).toStrictEqual([
+    "src/index.ts",
+    "src/other.ts",
+  ]);
+  expect(namesIn(root)).toStrictEqual({ "src/index.ts": ["a"], "src/other.ts": ["o"] });
 });
 
 it("reads exports written as a single path or as a map of conditions", () => {
@@ -92,7 +95,7 @@ it("reads exports written as a single path or as a map of conditions", () => {
     { "src/index.ts": A },
   );
   for (const root of [single, conditions]) {
-    expect(publicSurface(root).entries).toEqual(new Map([[".", [path.join(root, "src/index.ts")]]]));
+    expect(publicSurface(root).entries).toStrictEqual(new Map([[".", [path.join(root, "src/index.ts")]]]));
   }
 });
 
@@ -104,13 +107,13 @@ it("has no surface for a package without exports, a private one, or a manifest t
   const list = tempDir();
   write(broken, { "package.json": "{ not json" });
   write(list, { "package.json": "[]" });
-  for (const root of [none, hidden, missing, broken, list]) expect(publicSurface(root)).toEqual(EMPTY);
+  for (const root of [none, hidden, missing, broken, list]) expect(publicSurface(root)).toStrictEqual(EMPTY);
 });
 
 it("treats a package with no private key and one with private false as public", () => {
   for (const manifest of [{}, { private: false }]) {
     const root = packageOf({ ...manifest, exports: "./src/index.ts" }, { "src/index.ts": A });
-    expect(namesIn(root)).toEqual({ "src/index.ts": ["a"] });
+    expect(namesIn(root)).toStrictEqual({ "src/index.ts": ["a"] });
   }
 });
 
@@ -118,7 +121,7 @@ it("reads the package again on each call and shares nothing between calls", () =
   const root = packageOf({ exports: "./src/index.ts" }, { "src/index.ts": A });
   const first = publicSurface(root);
   fs.writeFileSync(path.join(root, "src/index.ts"), "export const b = 1;\n");
-  expect(namesIn(root)).toEqual({ "src/index.ts": ["b"] });
+  expect(namesIn(root)).toStrictEqual({ "src/index.ts": ["b"] });
   expect(first).not.toBe(publicSurface(root));
 });
 
@@ -135,7 +138,7 @@ it("finds the package of a nested workspace package from its own file", () => {
   const inner = path.join(root, "packages/inner");
   expect(packageRoot(path.join(root, "src/index.ts"))).toBe(root);
   expect(packageRoot(path.join(inner, "src/deep.ts"))).toBe(inner);
-  expect(namesIn(inner)).toEqual({ "lib.ts": ["inner"] });
+  expect(namesIn(inner)).toStrictEqual({ "lib.ts": ["inner"] });
 });
 
 it("finds no package for a file outside any", () => {

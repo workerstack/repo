@@ -36,7 +36,7 @@ it("under the docs pack a passing docs gate follows check and is counted in the 
     "ci: check ok (0.5s)\nci: docs ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\n" +
       "ci: 4 tests passed (0.5s)\nci: check ok · docs ok · fmt ok · typecheck 2 configs · 4 tests passed\n",
   );
-  expect(run.repoCalls).toEqual(["check", "docs --check", "fmt --check"]);
+  expect(run.repoCalls).toStrictEqual(["check", "docs --check", "fmt --check"]);
 });
 
 it("a failing docs gate prints the findings under its line, later gates still run, exit 1", () => {
@@ -55,12 +55,12 @@ it("a failing docs gate shows the command's stderr too", () => {
 it("without the docs pack there is no docs gate and the command is not run", () => {
   const run = ciWith(["agents", "workspace"], bad("never shown\n"));
   expect(run.out).not.toContain("docs");
-  expect(run.repoCalls).toEqual(["check", "fmt --check"]);
+  expect(run.repoCalls).toStrictEqual(["check", "fmt --check"]);
   expect(run.code).toBe(0);
 });
 
 it("docsGates is empty off the pack and holds one gate on it", () => {
-  expect(docsGates([])).toEqual([]);
+  expect(docsGates([])).toStrictEqual([]);
   expect(docsGates(["docs"])).toHaveLength(1);
 });
 
@@ -79,6 +79,6 @@ it("reads the docs pack from the config, so the docs gate runs when the config t
     },
   });
   expect(code).toBe(0);
-  expect(seen).toEqual(["check", "docs --check", "fmt --check"]);
+  expect(seen).toStrictEqual(["check", "docs --check", "fmt --check"]);
   expect(out.join("")).toContain("ci: docs ok (0.0s)\n");
 });

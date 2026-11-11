@@ -27,7 +27,7 @@ function workspace(): string {
 
 it("runJob falls back for no job, an unknown job, unknown flags and jobs missing their input", () => {
   const dir = plant();
-  expect(runJob()).toEqual({ fallback: true, text: FALLBACK, code: 2 });
+  expect(runJob()).toStrictEqual({ fallback: true, text: FALLBACK, code: 2 });
   expect(runJob({ job: "web", query: "x", cwd: dir }).fallback).toBe(true);
   expect(runJob({ job: "search", query: "x", cwd: dir, unknown: true }).fallback).toBe(true);
   expect(runJob({ job: "search", query: "", cwd: dir }).fallback).toBe(true);
@@ -53,11 +53,11 @@ it("runJob finds the root of a cwd that is not given one, and the cwd of the pro
 
 it("main prints the verdict and exits 0, also for a failed command", () => {
   const dir = workspace();
-  expect(runMain(["--job", "search", "--query", "hello", "--path", "pkg"], dir)).toEqual({
+  expect(runMain(["--job", "search", "--query", "hello", "--path", "pkg"], dir)).toStrictEqual({
     code: 0,
     out: "1 match.\n- pkg/b.txt:1 — hello\n",
   });
-  expect(runMain(["--job", "exec", "--query", "bun fail.js"], dir)).toEqual({
+  expect(runMain(["--job", "exec", "--query", "bun fail.js"], dir)).toStrictEqual({
     code: 0,
     out: "Command failed.\n- exit 1\n",
   });
@@ -69,21 +69,21 @@ it("main runs the job in --cwd and reads a stash from the root", () => {
     "1 match.\n- b.txt:1 — hello\n",
   );
   const slice = runMain(["--job=slice", "--stash=g7k", "--from=1", "--to=2"], dir);
-  expect(slice).toEqual({ code: 0, out: "2 lines.\n- stash:1 — row 1\n- stash:2 — row 2\n" });
+  expect(slice).toStrictEqual({ code: 0, out: "2 lines.\n- stash:1 — row 1\n- stash:2 — row 2\n" });
 });
 
 it("main exits 2 with FALLBACK for unknown flags, a --cwd that leaves the workspace and a job to refuse", () => {
   const dir = workspace();
   const refused = { code: 2, out: FALLBACK };
-  expect(runMain(["--job", "search", "--query", "x", "--wat"], dir)).toEqual(refused);
-  expect(runMain(["--job", "exec", "--query", "true", "--cwd", ".."], dir)).toEqual(refused);
-  expect(runMain(["--job", "web", "--query", "https://example.com"], dir)).toEqual(refused);
-  expect(runMain(["--job", "search", "--query", "x node_modules"], dir)).toEqual(refused);
+  expect(runMain(["--job", "search", "--query", "x", "--wat"], dir)).toStrictEqual(refused);
+  expect(runMain(["--job", "exec", "--query", "true", "--cwd", ".."], dir)).toStrictEqual(refused);
+  expect(runMain(["--job", "web", "--query", "https://example.com"], dir)).toStrictEqual(refused);
+  expect(runMain(["--job", "search", "--query", "x node_modules"], dir)).toStrictEqual(refused);
 });
 
 it("main exits 2 with FALLBACK when the job throws", () => {
   const dir = plant();
   fs.writeFileSync(path.join(dir, ".tmp"), "a file where the stash dir should go");
   plantFiles(dir, { "many.js": 'for (let i = 0; i < 20; i++) console.log("row " + i);' });
-  expect(runMain(["--job", "exec", "--query", "bun many.js"], dir)).toEqual({ code: 2, out: FALLBACK });
+  expect(runMain(["--job", "exec", "--query", "bun many.js"], dir)).toStrictEqual({ code: 2, out: FALLBACK });
 });

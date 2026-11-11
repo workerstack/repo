@@ -52,14 +52,14 @@ it("type-checks and runs a package's example that imports its own name, under it
     REAL_TOOLS,
   );
   expect(await main(["--check"], run.io)).toBe(0);
-  expect(run.err).toEqual([]);
-  expect(run.out).toEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
+  expect(run.err).toStrictEqual([]);
+  expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
 });
 
 it("maps a real tsc error and a real thrown error to their markdown lines", async () => {
   const run = docsRun(workspace('import { answer } from "@ws/a";\nanswer.tokn;\nthrow new Error("boom");'), REAL_TOOLS);
   expect(await main(["--check"], run.io)).toBe(1);
-  expect(run.err).toEqual([
+  expect(run.err).toStrictEqual([
     expect.stringMatching(/^packages\/a\/references\/use\.md:7: example 1 fails to type-check: Property 'tokn'/),
     expect.stringMatching(/^packages\/a\/references\/use\.md:5: example 1 fails to run \(exit 1\): .*boom/),
   ]);
@@ -69,7 +69,7 @@ it("names the INDEX the real dry-run tarball lacks, in one line", async () => {
   const lacking = { ...MANIFEST, files: ["index.ts"] };
   const run = docsRun(workspace('import { answer } from "@ws/a";\nvoid answer;', lacking), REAL_TOOLS);
   expect(await main(["--check"], run.io)).toBe(1);
-  expect(run.err).toEqual([
+  expect(run.err).toStrictEqual([
     'packages/a/references/INDEX.md is not in the packed tarball; add "references" to files in packages/a/package.json\n',
   ]);
 });

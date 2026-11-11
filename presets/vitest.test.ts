@@ -44,7 +44,7 @@ describe("defineProject", () => {
     ["linux", 5_000],
   ] as const)("on %s gives %d ms timeouts and the forks pool", (os, ms) => {
     setPlatform(os);
-    expect(defineProject({})).toEqual({
+    expect(defineProject({})).toStrictEqual({
       test: {
         testTimeout: ms,
         hookTimeout: ms,
@@ -63,7 +63,9 @@ describe("defineProject", () => {
   });
 
   it("keeps an include the caller passes", () => {
-    expect(defineProject({ test: { include: ["src/**/*.test.ts"] } }).test?.include).toEqual(["src/**/*.test.ts"]);
+    expect(defineProject({ test: { include: ["src/**/*.test.ts"] } }).test?.include).toStrictEqual([
+      "src/**/*.test.ts",
+    ]);
   });
 });
 
@@ -98,7 +100,7 @@ describe("defineConfig floors", () => {
   it("turns coverage-floors.json in the cwd into per-file thresholds beside the caller's", () => {
     process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR }) }));
     const config = defineConfig({ test: { coverage: { thresholds: { "src/b.ts": { lines: 100 } } } } });
-    expect(thresholds(config)).toEqual({ "src/a.ts": FLOOR, "src/b.ts": { lines: 100 } });
+    expect(thresholds(config)).toStrictEqual({ "src/a.ts": FLOOR, "src/b.ts": { lines: 100 } });
   });
 
   it("adds no thresholds when the cwd has no floors file", () => {
@@ -110,8 +112,8 @@ describe("defineConfig floors", () => {
     const dir = plant({ "coverage-floors.json": "{}", "ratchet.json": JSON.stringify({ "src/c.ts": FLOOR }) });
     process.chdir(dir);
     const given = defineConfig({}, { floors: path.join(dir, "ratchet.json") });
-    expect(thresholds(given)).toEqual({ "src/c.ts": FLOOR });
-    expect(thresholds(defineConfig({}, { floors: "ratchet.json" }))).toEqual({ "src/c.ts": FLOOR });
+    expect(thresholds(given)).toStrictEqual({ "src/c.ts": FLOOR });
+    expect(thresholds(defineConfig({}, { floors: "ratchet.json" }))).toStrictEqual({ "src/c.ts": FLOOR });
   });
 
   it("names a floors file that is not JSON", () => {
@@ -124,7 +126,7 @@ describe("defineConfig floors", () => {
   it("lets the caller's threshold for a file win over its floor", () => {
     process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR }) }));
     const config = defineConfig({ test: { coverage: { thresholds: { "src/a.ts": { lines: 100 } } } } });
-    expect(thresholds(config)).toEqual({ "src/a.ts": { ...FLOOR, lines: 100 } });
+    expect(thresholds(config)).toStrictEqual({ "src/a.ts": { ...FLOOR, lines: 100 } });
   });
 });
 
@@ -132,7 +134,7 @@ describe("defineConfig Rust rows", () => {
   it("keeps only the TypeScript rows as thresholds, leaving the Rust ones to repo ci", () => {
     const rust = { lines: 66, functions: 66, regions: 58 };
     process.chdir(plant({ "coverage-floors.json": JSON.stringify({ "src/a.ts": FLOOR, "a/src/lib.rs": rust }) }));
-    expect(thresholds(defineConfig({}))).toEqual({ "src/a.ts": FLOOR });
+    expect(thresholds(defineConfig({}))).toStrictEqual({ "src/a.ts": FLOOR });
   });
 
   it("adds no thresholds when the floors file holds only Rust rows", () => {
@@ -165,7 +167,7 @@ describe("defineConfig temp root guard", () => {
   it("runs the guard first, then the caller's global setups, and inlines zod for it", () => {
     const config = defineConfig({ test: { globalSetup: ["mine.ts"] } }, NO_FLOORS);
     const [guard, ...rest] = [config.test?.globalSetup].flat();
-    expect(rest).toEqual(["mine.ts"]);
+    expect(rest).toStrictEqual(["mine.ts"]);
     expect(path.basename(String(guard))).toMatch(/^temp-root\.(ts|js)$/);
     expect(fs.existsSync(String(guard))).toBe(true);
     expect(config.test?.server?.deps?.inline).toContain("zod");
@@ -185,9 +187,9 @@ describe.each([
 ] as const)("%s in a Worker package", (_name, define) => {
   it.each(WRANGLER_FILES)("with %s adds a plugin promise and drops the forks pool", async (file) => {
     const config = define({ test: { root: plantWorker(file) } });
-    expect(config.plugins).toEqual([expect.any(Promise)]);
+    expect(config.plugins).toStrictEqual([expect.any(Promise)]);
     expect(config.test?.pool).toBeUndefined();
-    expect(await rejections(config)).toEqual([usage(file)]);
+    expect(await rejections(config)).toStrictEqual([usage(file)]);
   });
 
   it("adds neither without a wrangler file", () => {
@@ -201,18 +203,18 @@ describe.each([
     process.chdir(plant({}));
     const named = [define({ test: { root: dir } }), define({ root: dir })];
     const settled = await Promise.all(named.map(rejections));
-    expect(settled).toEqual([[usage("wrangler.json")], [usage("wrangler.json")]]);
+    expect(settled).toStrictEqual([[usage("wrangler.json")], [usage("wrangler.json")]]);
   });
 
   it("uses the cwd as the root when the config names none", async () => {
     process.chdir(plantWorker("wrangler.toml"));
-    expect(await rejections(define({}))).toEqual([usage("wrangler.toml")]);
+    expect(await rejections(define({}))).toStrictEqual([usage("wrangler.toml")]);
   });
 
   it("keeps the caller's plugins and pool", async () => {
     const test = { root: plantWorker("wrangler.jsonc"), pool: "threads" } as const;
     const config = define({ plugins: [{ name: "mine" }], test });
     expect(config.test?.pool).toBe("threads");
-    expect(await rejections(config)).toEqual([usage("wrangler.jsonc"), "resolved"]);
+    expect(await rejections(config)).toStrictEqual([usage("wrangler.jsonc"), "resolved"]);
   });
 });

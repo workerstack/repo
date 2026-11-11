@@ -54,7 +54,7 @@ describe("a fresh pointer roadmap", () => {
     const r = save(DRAFT_ROADMAP.replace("## Order", `## ${h}\n- one line about ${h}.\n\n## Order`), ws);
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(extra(h));
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
   });
 
   it("is denied without the card", () => {
@@ -101,7 +101,7 @@ describe("the pointer roadmap line cap", () => {
     const over = save(withSlices(n + 1), ws);
     expect(over.ok).toBe(false);
     expect(over.errors).toContain(CAP(61));
-    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toEqual([]);
+    expect(fs.readdirSync(path.join(ws, ROADMAPS))).toStrictEqual([]);
   });
 
   it("does not count Location lines", () => {

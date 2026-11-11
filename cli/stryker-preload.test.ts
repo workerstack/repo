@@ -36,7 +36,7 @@ it("bun still throws on a non-Error that captures a stack; delete cli/stryker-pr
 });
 
 it("the preload clears the native hook, so the same code runs", () => {
-  expect(repro(true)).toEqual({ code: 0, text: "" });
+  expect(repro(true)).toStrictEqual({ code: 0, text: "" });
 });
 
 it("sets prepareStackTrace to undefined when loaded", async () => {

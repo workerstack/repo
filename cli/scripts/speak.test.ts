@@ -56,14 +56,14 @@ function fakeRes({
 
 describe("parseArgv", () => {
   it("reads verb and flags", () => {
-    expect(parseArgv(["say", "--text", "hello", "--provider", "openai"])).toEqual({
+    expect(parseArgv(["say", "--text", "hello", "--provider", "openai"])).toStrictEqual({
       _: ["say"],
       flags: { text: "hello", provider: "openai" },
     });
   });
 
   it("treats bare --play as set", () => {
-    expect(parseArgv(["say", "--text", "hi", "--play"])).toEqual({
+    expect(parseArgv(["say", "--text", "hi", "--play"])).toStrictEqual({
       _: ["say"],
       flags: { text: "hi", play: "1" },
     });
@@ -142,7 +142,7 @@ describe("say / main", () => {
       },
     });
     expect(destPath).toBe(dest);
-    expect(fs.readFileSync(dest)).toEqual(buf);
+    expect(fs.readFileSync(dest)).toStrictEqual(buf);
   });
 
   it("saves under the repo root's .tmp/repo/speak from packages/a", async () => {

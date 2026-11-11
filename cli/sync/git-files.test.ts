@@ -136,9 +136,12 @@ describe("the gitignore block", () => {
     const text = "dist/\n# >>> @workerstack/repo (old label)\n.cache/\n# <<< @workerstack/repo\n\n.env\n";
     const fixture = { files: { ".gitignore": text } };
     expect(gitignoreOf(fixture, [])).toBe(`dist/\n${block()}\n.env\n`);
-    expect(repairsOf(fixture, ".gitignore")).toEqual(["converted the old markers to repo:ignore"]);
+    expect(repairsOf(fixture, ".gitignore")).toStrictEqual(["converted the old markers to repo:ignore"]);
     const again = { files: { ".gitignore": gitignoreOf(fixture, []) } };
-    expect([gitignoreOf(again, []), repairsOf(again, ".gitignore")]).toEqual([gitignoreOf(fixture, []), undefined]);
+    expect([gitignoreOf(again, []), repairsOf(again, ".gitignore")]).toStrictEqual([
+      gitignoreOf(fixture, []),
+      undefined,
+    ]);
   });
 
   it("leaves a current .gitignore byte-identical and does not take a longer marker for the begin marker", () => {
@@ -155,24 +158,24 @@ describe("the gitignore block", () => {
       ".gitattributes": "# repo:generated 0badc0de\n* text=auto eol=lf\n*.png binary\n",
     };
     const result = run({ files }, []);
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toStrictEqual([]);
     expect(outputOf(result.outputs, ".gitignore")).toBe(`dist/\n${block()}`);
     expect(outputOf(result.outputs, ".gitattributes")).toBe(`${attributes()}*.png binary\n`);
-    expect(repairsOf({ files }, ".gitignore")).toEqual(["closed repo:ignore"]);
-    expect(repairsOf({ files }, ".gitattributes")).toEqual(["closed repo:generated"]);
+    expect(repairsOf({ files }, ".gitignore")).toStrictEqual(["closed repo:ignore"]);
+    expect(repairsOf({ files }, ".gitattributes")).toStrictEqual(["closed repo:generated"]);
   });
 });
 
 describe("untrackedEntries", () => {
   it("is what the gitignore block lists for the outputs, without the base lines", () => {
-    expect(untrackedEntries(["claude"], treeOutputs(["claude"], false))).toEqual([".mcp.json", ".claude/"]);
-    expect(untrackedEntries(["claude"], treeOutputs(["claude"], true))).toEqual([]);
-    expect(untrackedEntries([], [file("AGENTS.md", false)])).toEqual(["AGENTS.md"]);
+    expect(untrackedEntries(["claude"], treeOutputs(["claude"], false))).toStrictEqual([".mcp.json", ".claude/"]);
+    expect(untrackedEntries(["claude"], treeOutputs(["claude"], true))).toStrictEqual([]);
+    expect(untrackedEntries([], [file("AGENTS.md", false)])).toStrictEqual(["AGENTS.md"]);
   });
 
   it("adds the pattern of knip's ignore-free copies beside knip.json, sorted among the files", () => {
     const outputs = [file("AGENTS.md", false), file("knip.json", false), file(".oxlintrc.json", false)];
-    expect(untrackedEntries([], outputs)).toEqual([
+    expect(untrackedEntries([], outputs)).toStrictEqual([
       "AGENTS.md",
       "knip.json",
       "knip.unignored-*.json",
@@ -185,14 +188,14 @@ describe("untrackedEntries", () => {
 describe("untrackedEntries in a Rust repo", () => {
   it("adds cargo's target dir beside the toolchain pin, after the files, and not without it", () => {
     const rust = ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"].map((rel) => file(rel, false));
-    expect(untrackedEntries([], rust)).toEqual([
+    expect(untrackedEntries([], rust)).toStrictEqual([
       "clippy.toml",
       "deny.toml",
       "rust-toolchain.toml",
       "rustfmt.toml",
       "target/",
     ]);
-    expect(untrackedEntries([], [file("rustfmt.toml", false), file("deny.toml", false)])).toEqual([
+    expect(untrackedEntries([], [file("rustfmt.toml", false), file("deny.toml", false)])).toStrictEqual([
       "deny.toml",
       "rustfmt.toml",
     ]);
@@ -225,7 +228,7 @@ describe("the gitattributes block", () => {
     expect(gitattributesOf({ files }, [file("bunfig.toml", true)])).toBe(
       `*.png binary\n\n${attributes("bunfig.toml")}\n*.lock -diff\n`,
     );
-    expect(repairsOf({ files }, ".gitattributes")).toEqual(["converted the old markers to repo:generated"]);
+    expect(repairsOf({ files }, ".gitattributes")).toStrictEqual(["converted the old markers to repo:generated"]);
   });
 });
 
@@ -246,7 +249,7 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
       file(".vscode/settings.json", true, "block"),
       file("references/INDEX.md", true, "block"),
     ];
-    expect(readonlyOf(settingsOf({}, outputs))).toEqual([".claude/settings.json", "bunfig.toml"]);
+    expect(readonlyOf(settingsOf({}, outputs))).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
     expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude");
     expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude/mine.md");
   });
@@ -256,7 +259,7 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
     const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
     expect(after.startsWith("// my editor\n{\n")).toBe(true);
     expect(after.endsWith('\n  "editor.tabSize": 4, // wide\n\t/* keep */ "files.autoSave": "off",\n}\n')).toBe(true);
-    expect(readonlyOf(after)).toEqual([".claude/settings.json", "bunfig.toml"]);
+    expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
     expect(parse(after)).toMatchObject({ "editor.tabSize": 4, "files.autoSave": "off" });
   });
 
@@ -264,7 +267,7 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
     const before =
       '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n  "editor.tabSize": 2 /* last */\n}\n';
     const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
-    expect(readonlyOf(after)).toEqual([".claude/settings.json", "bunfig.toml"]);
+    expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
     expect(parse(after)["files.readonlyInclude"]["bunfig.toml"]).toBe(true);
     expect(after.startsWith("{\n  // lock\n  ")).toBe(true);
     expect(after.endsWith('"editor.tabSize": 2 /* last */\n}\n')).toBe(true);
@@ -295,10 +298,10 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
       ['{\r\n  "a": 1,\r\n  "b": \r\n}\r\n', 4],
     ] as const) {
       const result = run({ files: { ".vscode/settings.json": text } }, []);
-      expect(result.errors).toEqual([]);
-      expect(result.outputs.map((output) => output.path)).toEqual(GIT_FILE_PATHS);
+      expect(result.errors).toStrictEqual([]);
+      expect(result.outputs.map((output) => output.path)).toStrictEqual(GIT_FILE_PATHS);
       expect(outputOf(result.outputs, ".vscode/settings.json")).toBe(text);
-      expect(repairsOf({ files: { ".vscode/settings.json": text } }, ".vscode/settings.json")).toEqual([
+      expect(repairsOf({ files: { ".vscode/settings.json": text } }, ".vscode/settings.json")).toStrictEqual([
         `not valid JSONC at line ${line} (ValueExpected); left as is`,
       ]);
     }
@@ -307,8 +310,8 @@ describe("files.readonlyInclude in .vscode/settings.json", () => {
   it("leaves a file that holds no JSON object as is, with the warning, and still plans the rest", () => {
     for (const text of ["[]", "1", "null"]) {
       const result = run({ files: { ".vscode/settings.json": text } }, []);
-      expect([result.errors, outputOf(result.outputs, ".vscode/settings.json")]).toEqual([[], text]);
-      expect(repairsOf({ files: { ".vscode/settings.json": text } }, ".vscode/settings.json")).toEqual([
+      expect([result.errors, outputOf(result.outputs, ".vscode/settings.json")]).toStrictEqual([[], text]);
+      expect(repairsOf({ files: { ".vscode/settings.json": text } }, ".vscode/settings.json")).toStrictEqual([
         "must hold a JSON object; left as is",
       ]);
     }
@@ -326,13 +329,13 @@ describe("the golden fixture's outputs", () => {
   it("are ignored by host dir, read-only by exact path, and marked generated by none (a consumer commits none but AGENTS.md)", () => {
     const fixture = { hosts: [...HOSTS] };
     expect(gitignoreOf(fixture, outputs)).toBe(block(".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"));
-    expect(readonlyOf(settingsOf(fixture, outputs))).toEqual([...owned].sort());
+    expect(readonlyOf(settingsOf(fixture, outputs))).toStrictEqual([...owned].sort());
     expect(gitattributesOf(fixture, outputs)).toBe(attributes());
   });
 
   it("are marked generated one line each when the repo commits them", () => {
     const lines = gitattributesOf({ hosts: [...HOSTS] }, planned(true)).split("\n");
-    expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toEqual(
+    expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toStrictEqual(
       [...owned].sort().map((rel) => `${rel} linguist-generated`),
     );
   });
@@ -348,7 +351,7 @@ describe("listedFiles", () => {
         fs.writeFileSync(path.join(root, rel), "x");
       }
       fs.writeFileSync(path.join(root, ".gitignore"), "*.log\n");
-      expect(listedFiles(root, ["skip/"])).toEqual([".gitignore", "a/x.ts", "b.ts"]);
+      expect(listedFiles(root, ["skip/"])).toStrictEqual([".gitignore", "a/x.ts", "b.ts"]);
       expect(listedFiles(path.join(root, "missing"), [])).toBeNull();
     } finally {
       fs.rmSync(root, { recursive: true, force: true });

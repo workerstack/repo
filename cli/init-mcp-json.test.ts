@@ -23,7 +23,7 @@ describe("initMcpJson", () => {
     expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe(
       `${JSON.stringify({ mcpServers: {} }, null, 2)}\n`,
     );
-    expect(out).toEqual(["repo init: wrote .mcp.json\n"]);
+    expect(out).toStrictEqual(["repo init: wrote .mcp.json\n"]);
   });
 
   it("keeps a .mcp.json the repo has and prints nothing", () => {
@@ -32,7 +32,7 @@ describe("initMcpJson", () => {
     const out: string[] = [];
     initMcpJson(dest, (s) => out.push(s));
     expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe("mine\n");
-    expect(out).toEqual([]);
+    expect(out).toStrictEqual([]);
   });
 
   it("prints to the process's stdout when given no writer", () => {

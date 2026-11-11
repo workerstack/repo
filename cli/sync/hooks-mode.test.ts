@@ -31,11 +31,11 @@ const modes = (root: string) => git(root, "ls-files", "-s", ".githooks").replace
 it("on win32 marks the hooks 100755 in the index, and a later git add -A keeps it", () => {
   const root = windowsLikeRepo();
   const result = markHooksExecutable(root, "win32");
-  expect(result.warnings).toEqual([]);
+  expect(result.warnings).toStrictEqual([]);
   expect(result.done).toHaveLength(1);
   stageAll(root);
   expect(modes(root)).toBe("100755\t.githooks/commit-msg\n100755\t.githooks/pre-commit\n100755\t.githooks/pre-push\n");
-  expect(markHooksExecutable(root, "win32")).toEqual({ done: [], warnings: [] });
+  expect(markHooksExecutable(root, "win32")).toStrictEqual({ done: [], warnings: [] });
 });
 
 it("on win32 fixes a hook already tracked as 100644 without restaging its content", () => {
@@ -50,7 +50,7 @@ it("on win32 fixes a hook already tracked as 100644 without restaging its conten
 
 it("does nothing off win32", () => {
   const root = windowsLikeRepo();
-  expect(markHooksExecutable(root, "linux")).toEqual({ done: [], warnings: [] });
+  expect(markHooksExecutable(root, "linux")).toStrictEqual({ done: [], warnings: [] });
   expect(git(root, "ls-files", ".githooks")).toBe("");
 });
 
@@ -70,11 +70,11 @@ function fakeGit(root: string, answers: Record<string, Reply>) {
 it("does nothing when git cannot name the top level, names another one, or cannot list the hooks", () => {
   const root = windowsLikeRepo();
   const broken = fakeGit(root, { "rev-parse": reply(128, "", "not a repo") });
-  expect(markHooksExecutable(root, "win32", broken.run)).toEqual({ done: [], warnings: [] });
+  expect(markHooksExecutable(root, "win32", broken.run)).toStrictEqual({ done: [], warnings: [] });
   const elsewhere = fakeGit(root, { "rev-parse": reply(0, `${os.tmpdir()}\n`) });
-  expect(markHooksExecutable(root, "win32", elsewhere.run)).toEqual({ done: [], warnings: [] });
+  expect(markHooksExecutable(root, "win32", elsewhere.run)).toStrictEqual({ done: [], warnings: [] });
   const unlisted = fakeGit(root, { "ls-files": reply(1) });
-  expect(markHooksExecutable(root, "win32", unlisted.run)).toEqual({ done: [], warnings: [] });
+  expect(markHooksExecutable(root, "win32", unlisted.run)).toStrictEqual({ done: [], warnings: [] });
   expect(unlisted.calls.some((args) => args[0] === "update-index")).toBe(false);
 });
 
@@ -84,17 +84,17 @@ it("stages a hook the index lacks with --add, one it holds by its staged blob, a
   fs.rmSync(path.join(root, ".githooks", "pre-push"));
   const fake = fakeGit(root, { "ls-files": reply(0, "garbage\n100644 abc123 0\t.githooks/other\n") });
   const first = markHooksExecutable(root, "win32", fake.run);
-  expect(first.done).toEqual(["marked .githooks/commit-msg executable in the index"]);
-  expect(fake.calls.at(-1)).toEqual(["update-index", "--add", "--chmod=+x", "--", ".githooks/commit-msg"]);
+  expect(first.done).toStrictEqual(["marked .githooks/commit-msg executable in the index"]);
+  expect(fake.calls.at(-1)).toStrictEqual(["update-index", "--add", "--chmod=+x", "--", ".githooks/commit-msg"]);
   const tracked = fakeGit(root, { "ls-files": reply(0, "100644 abc123 0\t.githooks/commit-msg\n") });
   markHooksExecutable(root, "win32", tracked.run);
-  expect(tracked.calls.at(-1)).toEqual(["update-index", "--cacheinfo", "100755,abc123,.githooks/commit-msg"]);
+  expect(tracked.calls.at(-1)).toStrictEqual(["update-index", "--cacheinfo", "100755,abc123,.githooks/commit-msg"]);
 });
 
 it("warns with git's reason when it cannot mark a hook", () => {
   const root = windowsLikeRepo();
   const fake = fakeGit(root, { "update-index": reply(128, "", "index.lock exists\n") });
-  expect(markHooksExecutable(root, "win32", fake.run)).toEqual({
+  expect(markHooksExecutable(root, "win32", fake.run)).toStrictEqual({
     done: [],
     warnings: ["cannot mark the git hooks executable: index.lock exists"],
   });

@@ -22,7 +22,7 @@ describe("no-module-side-effects passes", () => {
     "class Empty { static {} static count = 0; static label: string; }",
     "export = {};",
   ])("%j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
@@ -51,6 +51,6 @@ describe("no-module-side-effects fails", () => {
     "export const Box = class { static size = measure(); };",
     "export default class { static size = measure(); }",
   ])("%j once", (code) => {
-    expect(messagesOf(code)).toEqual([MESSAGE]);
+    expect(messagesOf(code)).toStrictEqual([MESSAGE]);
   });
 });

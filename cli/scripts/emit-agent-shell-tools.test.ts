@@ -146,7 +146,7 @@ describe("sourceRoot", () => {
     expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock }).ok).toBe(true);
     expect(emitAgentShellTools({ workspaceRoot: out, sourceRoot: stock, check: true }).ok).toBe(true);
     expect(fs.readFileSync(path.join(out, ".claude/agents/scout.md"), "utf8")).toContain(CLAUDE_TOOL_LIST);
-    expect(fs.readdirSync(stock)).toEqual(["agents"]);
+    expect(fs.readdirSync(stock)).toStrictEqual(["agents"]);
   });
 });
 
@@ -172,7 +172,7 @@ describe("emitAgentShellTools failures", () => {
       ok: false,
       error: "missing agents/subagents/scout.md",
     });
-    expect(emitAgentShellTools({ workspaceRoot: workspace(good, null), check: true })).toEqual({
+    expect(emitAgentShellTools({ workspaceRoot: workspace(good, null), check: true })).toStrictEqual({
       ok: false,
       check: true,
       error: "missing .claude/agents/scout.md",
@@ -208,7 +208,7 @@ describe("emitAgentShellTools output and reads", () => {
   });
 
   it("reads frontmatter from a missing value as none", () => {
-    expect(splitFrontmatter(undefined)).toEqual({ ok: false, error: "missing frontmatter" });
+    expect(splitFrontmatter(undefined)).toStrictEqual({ ok: false, error: "missing frontmatter" });
   });
 });
 
@@ -216,7 +216,7 @@ describe("emitAgentShellTools defaults", () => {
   it("works on the current directory when given no options", () => {
     const ws = workspace("---\nname: scout\n---\nrun_terminal_command\n", "---\nname: scout\n---\nold\n");
     vi.spyOn(process, "cwd").mockReturnValue(ws);
-    expect(emitAgentShellTools()).toEqual({ ok: true, check: false });
+    expect(emitAgentShellTools()).toStrictEqual({ ok: true, check: false });
     expect(fs.readFileSync(path.join(ws, ".claude/agents/scout.md"), "utf8")).toBe("---\nname: scout\n---\nBash\n");
   });
 });

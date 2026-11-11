@@ -40,17 +40,17 @@ describe("stripFlagValue", () => {
 
 describe("parseJobCommand", () => {
   it("reads the job, query and stash flags in both spellings", () => {
-    expect(parseJobCommand("bun repo job --job exec --query ls --stash s1", roots)).toEqual({
+    expect(parseJobCommand("bun repo job --job exec --query ls --stash s1", roots)).toStrictEqual({
       job: "exec",
       hasQuery: true,
       hasStash: true,
     });
-    expect(parseJobCommand("bun repo job --job=TEST --query=ls --stash=s1", roots)).toEqual({
+    expect(parseJobCommand("bun repo job --job=TEST --query=ls --stash=s1", roots)).toStrictEqual({
       job: "test",
       hasQuery: true,
       hasStash: true,
     });
-    expect(parseJobCommand("rtk bun repo job --path a --glob b", roots)).toEqual({
+    expect(parseJobCommand("rtk bun repo job --path a --glob b", roots)).toStrictEqual({
       job: "",
       hasQuery: false,
       hasStash: false,
@@ -58,7 +58,7 @@ describe("parseJobCommand", () => {
   });
 
   it("reads a --job with no value as no job", () => {
-    expect(parseJobCommand("bun repo job --job", roots)).toEqual({ job: "", hasQuery: false, hasStash: false });
+    expect(parseJobCommand("bun repo job --job", roots)).toStrictEqual({ job: "", hasQuery: false, hasStash: false });
   });
 });
 

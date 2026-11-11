@@ -41,7 +41,7 @@ async function closedPort(): Promise<number> {
 
 it("runFetch lists the title and the sentences of a page without its markup", () => {
   const r = fetchIn(plant(), `${base}/page`);
-  expect(r).toEqual({
+  expect(r).toStrictEqual({
     fallback: false,
     text: "4 lines.\n- Demo page\n- Demo page First & second.\n- Third <ok>.\n- Fourth sentence.\n",
     code: 0,
@@ -69,13 +69,13 @@ it("runFetch reports a refused connection as a failure", async () => {
 
 it("runFetch says the fetch failed when the server never answers", () => {
   const r = fetchIn(plant(), `${base}/hang`, 400);
-  expect(r).toEqual({ fallback: false, text: "Command failed.\n- fetch failed\n", code: 0 });
+  expect(r).toStrictEqual({ fallback: false, text: "Command failed.\n- fetch failed\n", code: 0 });
 });
 
 it("runFetch falls back for anything but an http url", () => {
   const fallback = { fallback: true, text: "FALLBACK\n", code: 2 };
-  expect(runFetch("ftp://example.com")).toEqual(fallback);
-  expect(runFetch("")).toEqual(fallback);
+  expect(runFetch("ftp://example.com")).toStrictEqual(fallback);
+  expect(runFetch("")).toStrictEqual(fallback);
 });
 
 it("runFetch fetches from the process cwd when it is given no places", () => {
@@ -89,6 +89,6 @@ it("runJob fetch runs the same fetch for a url query", () => {
 
 it("stripHtml keeps the title and the visible text, without scripts, styles and tags", () => {
   const page = "<title> A\n page </title><style>p{}</style><script>x()</script><p>a&nbsp;&amp;&lt;b&gt;</p>";
-  expect(stripHtml(page)).toEqual({ title: "A page", text: "A page a &<b>" });
-  expect(stripHtml(undefined)).toEqual({ title: "", text: "" });
+  expect(stripHtml(page)).toStrictEqual({ title: "A page", text: "A page a &<b>" });
+  expect(stripHtml(undefined)).toStrictEqual({ title: "", text: "" });
 });

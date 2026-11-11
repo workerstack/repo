@@ -56,12 +56,12 @@ it("fetches the archive, checks its hash, unpacks it, caches the binary and runs
     return ok();
   };
   const deps = { fetch, spawn, cacheDir, platform: "linux", arch: "x64", hashes: hashes("linux_amd64") };
-  expect(await checkActionlintAt(root, deps)).toEqual({ problems: [] });
-  expect(urls).toEqual([`${URL_BASE}actionlint_1.7.12_linux_amd64.tar.gz`]);
-  expect(archives).toEqual(["an archive"]);
+  expect(await checkActionlintAt(root, deps)).toStrictEqual({ problems: [] });
+  expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_linux_amd64.tar.gz`]);
+  expect(archives).toStrictEqual(["an archive"]);
   expect(calls[0]?.command).toBe("tar");
   expect(calls.at(-1)?.command).toBe(path.join(cacheDir, "actionlint"));
-  expect(fs.readdirSync(cacheDir)).toEqual(["actionlint"]);
+  expect(fs.readdirSync(cacheDir)).toStrictEqual(["actionlint"]);
   await checkActionlintAt(root, { ...deps, fetch: () => Promise.reject(new Error("cached")) });
   expect(urls).toHaveLength(1);
 });
@@ -82,7 +82,7 @@ it("names its archive and unpack directory for the process, and removes both", a
     expect(path.dirname(name)).toBe(cacheDir);
     expect(path.basename(name)).toContain(String(process.pid));
   }
-  expect(fs.readdirSync(cacheDir)).toEqual(["actionlint"]);
+  expect(fs.readdirSync(cacheDir)).toStrictEqual(["actionlint"]);
 });
 
 it.each([
@@ -100,10 +100,10 @@ it.each([
   };
   const { calls, spawn } = fakes(exe);
   await checkActionlintAt(root, { fetch, spawn, cacheDir, platform, arch, hashes: hashes(key) });
-  expect(urls).toEqual([`${URL_BASE}actionlint_1.7.12_${archive}`]);
+  expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_${archive}`]);
   const tar = platform === "win32" ? `${childEnv().SystemRoot ?? "C:\\Windows"}\\System32\\tar.exe` : "tar";
   expect(calls[0]?.command).toBe(tar);
-  expect(fs.readdirSync(cacheDir)).toEqual([exe]);
+  expect(fs.readdirSync(cacheDir)).toStrictEqual([exe]);
 });
 
 it("refuses an archive whose hash differs and caches nothing", async () => {
@@ -112,11 +112,11 @@ it("refuses an archive whose hash differs and caches nothing", async () => {
   const wrong = { linux_amd64: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8" };
   const deps = { fetch: ok, spawn, cacheDir, platform: "linux", arch: "x64", hashes: wrong };
   const out = await checkActionlintAt(root, deps);
-  expect(out.problems).toEqual([
+  expect(out.problems).toStrictEqual([
     `actionlint: actionlint_1.7.12_linux_amd64.tar.gz has sha256 ${sha.slice(0, 8)}\u2026, expected 8aca8db9\u2026; nothing was cached`,
   ]);
-  expect(calls).toEqual([]);
-  expect(fs.readdirSync(cacheDir)).toEqual([]);
+  expect(calls).toStrictEqual([]);
+  expect(fs.readdirSync(cacheDir)).toStrictEqual([]);
 });
 
 it.each([
@@ -127,8 +127,10 @@ it.each([
   const { calls, spawn } = fakes("actionlint");
   const fetch = () => Promise.reject(reason);
   const out = await checkActionlintAt(root, { fetch, spawn, cacheDir, platform: "linux", arch: "x64" });
-  expect(out.problems).toEqual([`actionlint: could not fetch 1.7.12 (${text}); connect once so repo can cache it`]);
-  expect(calls).toEqual([]);
+  expect(out.problems).toStrictEqual([
+    `actionlint: could not fetch 1.7.12 (${text}); connect once so repo can cache it`,
+  ]);
+  expect(calls).toStrictEqual([]);
 });
 
 it("reports a tar that fails and removes what it made", async () => {
@@ -136,8 +138,8 @@ it("reports a tar that fails and removes what it made", async () => {
   const { spawn } = fakes("actionlint", 1);
   const deps = { fetch: ok, spawn, cacheDir, platform: "linux", arch: "x64", hashes: hashes("linux_amd64") };
   const out = await checkActionlintAt(root, deps);
-  expect(out.problems).toEqual(["actionlint: could not unpack actionlint_1.7.12_linux_amd64.tar.gz: tar broke"]);
-  expect(fs.readdirSync(cacheDir)).toEqual([]);
+  expect(out.problems).toStrictEqual(["actionlint: could not unpack actionlint_1.7.12_linux_amd64.tar.gz: tar broke"]);
+  expect(fs.readdirSync(cacheDir)).toStrictEqual([]);
 });
 
 it.each([
@@ -147,7 +149,7 @@ it.each([
   const { root, cacheDir } = planted();
   const fetch = () => Promise.reject(new Error("no"));
   const out = await checkActionlintAt(root, { fetch, spawn: fakes("x").spawn, cacheDir, platform, arch });
-  expect(out.problems).toEqual([
+  expect(out.problems).toStrictEqual([
     `actionlint: no 1.7.12 build for ${platform} ${arch}; run repo check on linux, macOS or Windows`,
   ]);
 });
@@ -156,7 +158,7 @@ it("treats a platform with no pinned hash as a mismatch", async () => {
   const { root, cacheDir } = planted();
   const deps = { fetch: ok, spawn: fakes("actionlint").spawn, cacheDir, platform: "linux", arch: "x64", hashes: {} };
   const out = await checkActionlintAt(root, deps);
-  expect(out.problems).toEqual([
+  expect(out.problems).toStrictEqual([
     `actionlint: actionlint_1.7.12_linux_amd64.tar.gz has sha256 ${sha.slice(0, 8)}…, expected …; nothing was cached`,
   ]);
 });

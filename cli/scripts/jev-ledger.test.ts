@@ -19,7 +19,7 @@ it("daily caps: counts a request and settles the real token count", async () => 
   const home = plantDir();
   const out = await go({ home, fetchImpl: scripted(reply(200, answerBody({ usage: { input_tokens: 77 } }))) });
   expect(out.code).toBe(0);
-  expect(readLedgerFile(home)).toEqual({ day: DAY, requests: 1, input_tokens: 77 });
+  expect(readLedgerFile(home)).toStrictEqual({ day: DAY, requests: 1, input_tokens: 77 });
 });
 
 it("daily caps: keeps the estimate when the reply reports no usable token count", async () => {
@@ -35,7 +35,7 @@ it("daily caps: stops at the daily request cap without calling", async () => {
   const home = plantDir();
   plantLedger(home, { day: DAY, requests: MAX_REQUESTS_PER_DAY, input_tokens: 0 });
   const fetchImpl = scripted(reply(200, answerBody()));
-  expect(await go({ home, fetchImpl })).toEqual({ code: 2, text: "daily request cap 40\n" });
+  expect(await go({ home, fetchImpl })).toStrictEqual({ code: 2, text: "daily request cap 40\n" });
   expect(fetchImpl.calls).toBe(0);
 });
 
@@ -50,7 +50,7 @@ it("daily caps: stops when the token cap is spent or the estimate would pass it"
   const fetchImpl = scripted(reply(200, answerBody()));
   const spent = plantDir();
   plantLedger(spent, { day: DAY, requests: 1, input_tokens: MAX_INPUT_TOKENS_PER_DAY });
-  expect(await go({ home: spent, fetchImpl })).toEqual({ code: 2, text: "daily input token cap 1000000\n" });
+  expect(await go({ home: spent, fetchImpl })).toStrictEqual({ code: 2, text: "daily input token cap 1000000\n" });
   const near = plantDir();
   plantLedger(near, { day: DAY, requests: 1, input_tokens: MAX_INPUT_TOKENS_PER_DAY - 1 });
   expect((await go({ home: near, fetchImpl })).text).toBe("daily input token cap 1000000\n");
@@ -67,7 +67,7 @@ it.each([
   plantLedger(home, planted);
   const out = await go({ home, fetchImpl: scripted(reply(200, answerBody({ usage: { input_tokens: 4 } }))) });
   expect(out.code).toBe(0);
-  expect(readLedgerFile(home)).toEqual({ day: DAY, requests: 1, input_tokens: 4 });
+  expect(readLedgerFile(home)).toStrictEqual({ day: DAY, requests: 1, input_tokens: 4 });
 });
 
 it("daily caps: never lets the settled count go below zero", async () => {

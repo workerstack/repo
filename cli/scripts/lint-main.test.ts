@@ -85,8 +85,8 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
-  const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
-  expect(baseline()).toEqual({ "src/wait.ts": { [MAGIC]: 1 }, "src/b.ts": { [MAGIC]: 1 } });
+  const baseline = () => JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  expect(baseline()).toStrictEqual({ "src/wait.ts": { [MAGIC]: 1 }, "src/b.ts": { [MAGIC]: 1 } });
   const skip = { files: ["src/wait.ts"], rules: ["repo/magic-number"], reason: "retry tuning lives here" };
   fs.writeFileSync(
     path.join(root, "workerstack.config.ts"),
@@ -94,7 +94,7 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   );
   fs.rmSync(path.join(root, BASELINE_PATH));
   expect(await lintMain(["--baseline"])).toBe(0);
-  expect(baseline()).toEqual({ "src/b.ts": { [MAGIC]: 1 } });
+  expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 } });
 });
 
 it("lint --baseline reports why the magic check could not run and writes nothing", async () => {
@@ -112,6 +112,6 @@ it("lint --baseline seeds the repo's untested guards beside its magic hits", { t
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
-  const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")) as unknown;
-  expect(baseline).toEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
+  const baseline = JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
+  expect(baseline).toStrictEqual({ "src/is-user.ts": { "repo(guard-rejects)": 1 }, "src/wait.ts": { [MAGIC]: 1 } });
 });

@@ -20,7 +20,7 @@ afterEach(cleanupTmp);
 describe("start", () => {
   it("needs ffmpeg", async () => {
     const r = await run(["start"], { whichFn: which({}) });
-    expect(r.errs).toEqual([NEED_FFMPEG]);
+    expect(r.errs).toStrictEqual([NEED_FFMPEG]);
   });
 
   it("spawns a detached recorder through bin/repo.ts, records its pid and prints it", async () => {
@@ -31,12 +31,12 @@ describe("start", () => {
     const wav = String(readSession(r.cwd).wav);
     expect(r.code).toBe(0);
     expect(call?.bin).toBe("/custom/bun");
-    expect(call?.args).toEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd", r.cwd]);
+    expect(call?.args).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd", r.cwd]);
     expect(call?.opts).toMatchObject({ detached: true, cwd: r.cwd, windowsHide: true, env });
     expect(path.dirname(wav)).toBe(path.join(r.cwd, ".tmp/repo/listen"));
     expect(readSession(r.cwd)).toMatchObject({ pid: 5150 });
     expect(rec.unrefs()).toBe(1);
-    expect(r.logs).toEqual([`recording pid=5150\n${wav}`]);
+    expect(r.logs).toStrictEqual([`recording pid=5150\n${wav}`]);
   });
 
   it("works with a child that cannot be unref'd", async () => {
@@ -51,7 +51,7 @@ describe("start device", () => {
   it("passes --device from the flag", async () => {
     const rec = recorder();
     await run(["start", "--device", ":3"], { spawnFn: rec.spawnFn });
-    expect(rec.spawned[0]?.args.slice(-4, -2)).toEqual(["--device", ":3"]);
+    expect(rec.spawned[0]?.args.slice(-4, -2)).toStrictEqual(["--device", ":3"]);
   });
 
   it("passes --device from the configuration", async () => {
@@ -74,8 +74,8 @@ describe("start session", () => {
     const rec = recorder();
     const r = await run(["start"], { cwd, spawnFn: rec.spawnFn, killFn: killTable([900]).killFn });
     expect(r.code).toBe(1);
-    expect(r.errs).toEqual(["already recording pid=900"]);
-    expect(rec.spawned).toEqual([]);
+    expect(r.errs).toStrictEqual(["already recording pid=900"]);
+    expect(rec.spawned).toStrictEqual([]);
   });
 
   it("replaces a stale or pid-less session", async () => {
@@ -105,6 +105,6 @@ fs.renameSync(${JSON.stringify(`${argsFile}.tmp`)}, ${JSON.stringify(argsFile)})
     await vi.waitFor(() => expect(fs.existsSync(argsFile)).toBe(true), { timeout: 5000 });
     const got = fs.readFileSync(argsFile, "utf8").split("\n").slice(0, 6);
     expect(r.code).toBe(0);
-    expect(got).toEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd"]);
+    expect(got).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd"]);
   }, 60_000);
 });

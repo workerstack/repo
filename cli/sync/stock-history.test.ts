@@ -30,7 +30,7 @@ describe("readStockHistory", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-history-"));
     temps.push(dir);
     fs.writeFileSync(path.join(dir, "h.json"), '{ "a.md": ["0123456789abcdef"] }');
-    expect(readStockHistory(path.join(dir, "h.json"))).toEqual({ "a.md": ["0123456789abcdef"] });
+    expect(readStockHistory(path.join(dir, "h.json"))).toStrictEqual({ "a.md": ["0123456789abcdef"] });
   });
 
   it("ships a sorted table of 16-hex hashes under stock paths", () => {
@@ -38,13 +38,13 @@ describe("readStockHistory", () => {
     expect(STOCK_HISTORY_FILE.split(path.sep).join("/").endsWith("cli/sync/stock-history.json")).toBe(true);
     const paths = Object.keys(table);
     expect(paths.length).toBeGreaterThan(50);
-    expect(paths).toEqual([...paths].sort());
+    expect(paths).toStrictEqual([...paths].sort());
     for (const [rel, hashes] of Object.entries(table)) {
       if (rel === HOOK_COMMANDS_KEY) continue;
       expect(STOCK_PREFIXES.some((prefix) => rel === prefix || (prefix.endsWith("/") && rel.startsWith(prefix)))).toBe(
         true,
       );
-      expect(hashes).toEqual([...hashes].sort());
+      expect(hashes).toStrictEqual([...hashes].sort());
       for (const hash of hashes) expect(hash).toMatch(/^[0-9a-f]{16}$/);
     }
   });
@@ -59,8 +59,8 @@ describe("hookCommands", () => {
         B: [{ hooks: [{ command: "two" }] }],
       },
     };
-    expect(hookCommands(settings)).toEqual(["one", "two"]);
-    expect(hookCommands(null)).toEqual([]);
-    expect(hookCommands({})).toEqual([]);
+    expect(hookCommands(settings)).toStrictEqual(["one", "two"]);
+    expect(hookCommands(null)).toStrictEqual([]);
+    expect(hookCommands({})).toStrictEqual([]);
   });
 });

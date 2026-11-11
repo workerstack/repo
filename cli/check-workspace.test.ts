@@ -8,12 +8,12 @@ describe("checkWorkspace catalog rules", () => {
       devDependencies: { vitest: "catalog:" },
       peerDependencies: { react: "^19.0.0" },
     });
-    expect(lines(files, LOCK_OK)).toEqual([]);
+    expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 
   it("names a dependency written as a range", () => {
     const files = pkg("b", { dependencies: { zod: "3.24.1" }, devDependencies: { vitest: "^4" } });
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       'packages/b/package.json: "zod" is "3.24.1", not from the catalog; add it to the root catalog and write "catalog:"',
       'packages/b/package.json: devDependency "vitest" is "^4", not from the catalog; add it to the root catalog and write "catalog:"',
     ]);
@@ -21,7 +21,7 @@ describe("checkWorkspace catalog rules", () => {
 
   it("names an optionalDependency written as a range", () => {
     const files = pkg("b", { optionalDependencies: { fsevents: "2.0.0" } });
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       'packages/b/package.json: optionalDependency "fsevents" is "2.0.0", not from the catalog; add it to the root catalog and write "catalog:"',
     ]);
   });
@@ -30,7 +30,7 @@ describe("checkWorkspace catalog rules", () => {
 describe("checkWorkspace missing catalog entries", () => {
   it('names a "catalog:" the root catalog does not have', () => {
     const files = pkg("b", { dependencies: { lodash: "catalog:" } });
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       'packages/b/package.json: "lodash" is "catalog:", but the root catalog has no "lodash"; add it there',
     ]);
   });
@@ -38,7 +38,7 @@ describe("checkWorkspace missing catalog entries", () => {
   it("names a named catalog that does not hold the dependency", () => {
     const files = pkg("b", { dependencies: { zod: "catalog:legacy", vitest: "catalog:nope" } });
     files[MANIFEST] = { ...ROOT, catalogs: { legacy: { other: "1.0.0" } } };
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       'packages/b/package.json: "zod" is "catalog:legacy", but there is no catalog "legacy" with "zod"; add it to "catalogs"',
       'packages/b/package.json: "vitest" is "catalog:nope", but there is no catalog "nope" with "vitest"; add it to "catalogs"',
     ]);
@@ -51,7 +51,7 @@ describe("checkWorkspace missing catalog entries", () => {
       workspaces: { packages: ["packages/*"], catalog: { v: "1" }, catalogs: { next: { a: "1" } } },
       catalogs: { legacy: { zod: "^3" } },
     };
-    expect(lines(files, LOCK_OK)).toEqual([]);
+    expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 });
 
@@ -65,7 +65,7 @@ describe("checkWorkspace root rules", () => {
       optionalDependencies: { fsevents: "2" },
       devDependencies: { vitest: "catalog:", "@workerstack/repo": "catalog:" },
     };
-    expect(lines(files, LOCK_OK)).toEqual([
+    expect(lines(files, LOCK_OK)).toStrictEqual([
       'package.json: a workspace root has no "dependencies"; move "lodash" into the package that uses it',
       'package.json: a workspace root has no "peerDependencies"; move "react" into the package that uses it',
       'package.json: a workspace root has no "optionalDependencies"; move "fsevents" into the package that uses it',
@@ -74,7 +74,7 @@ describe("checkWorkspace root rules", () => {
   });
 
   it("asks for workspaces and skips the rest", () => {
-    expect(lines({ [MANIFEST]: { private: true, dependencies: { a: "1" } } })).toEqual([
+    expect(lines({ [MANIFEST]: { private: true, dependencies: { a: "1" } } })).toStrictEqual([
       'the workspace pack needs "workspaces" in package.json; add it, or drop "workspace" from packs',
     ]);
   });
@@ -84,11 +84,11 @@ describe("checkWorkspace lockfile", () => {
   const files = pkg("b", {});
 
   it("asks for a missing bun.lock", () => {
-    expect(lines(files)).toEqual(["bun.lock is missing; run `bun install`"]);
+    expect(lines(files)).toStrictEqual(["bun.lock is missing; run `bun install`"]);
   });
 
   it("asks for a text lockfile when only bun.lockb exists", () => {
-    expect(lines(files, undefined, { "bun.lockb": "binary" })).toEqual([
+    expect(lines(files, undefined, { "bun.lockb": "binary" })).toStrictEqual([
       "bun.lockb is binary; run `bun install --save-text-lockfile` and delete bun.lockb",
     ]);
   });
@@ -103,16 +103,16 @@ describe("checkWorkspace lock reading", () => {
   const files = pkg("b", {});
 
   it("skips a lock entry that is not a package record", () => {
-    expect(lines(files, JSON.stringify({ packages: { odd: "x", bare: ["nover"] } }))).toEqual([]);
+    expect(lines(files, JSON.stringify({ packages: { odd: "x", bare: ["nover"] } }))).toStrictEqual([]);
   });
 
   it("passes a lock without a package table", () => {
-    expect(lines(files, "{}")).toEqual([]);
-    expect(lines(files, "null")).toEqual([]);
+    expect(lines(files, "{}")).toStrictEqual([]);
+    expect(lines(files, "null")).toStrictEqual([]);
   });
 
   it("reads a JSONC lock with comments and trailing commas", () => {
-    expect(lines(files, '{ // c\n "packages": { "zod": ["zod@4.1.12",], }, }')).toEqual([]);
+    expect(lines(files, '{ // c\n "packages": { "zod": ["zod@4.1.12",], }, }')).toStrictEqual([]);
   });
 });
 
@@ -138,7 +138,7 @@ describe("checkWorkspace one version", () => {
         b: ["b@workspace:packages/b"],
       },
     });
-    expect(lines(files, lock)).toEqual([
+    expect(lines(files, lock)).toStrictEqual([
       'zod resolves to 3.24.1 and 4.1.12; b pulls 3.24.1; add "overrides": { "zod": "catalog:" } to the root package.json',
     ]);
   });
@@ -146,7 +146,7 @@ describe("checkWorkspace one version", () => {
   it("names a stray scoped puller and a name outside the catalog, splitting scoped names at the last @", () => {
     const root = { ...ROOT, catalog: { vitest: "^4" } };
     const b = pkg("b", { dependencies: { zod: "workspace:*" }, peerDependencies: { "@x/y": "^1" } });
-    expect(lines({ ...b, [MANIFEST]: root }, SCOPED_LOCK)).toEqual([
+    expect(lines({ ...b, [MANIFEST]: root }, SCOPED_LOCK)).toStrictEqual([
       '@x/y resolves to 1.0.0, 2.0.0 and 3.0.0; a pulls 2.0.0, a/b pulls 3.0.0; add @x/y to the root catalog, then "overrides": { "@x/y": "catalog:" }',
       'zod resolves to 3.24.1 and 4.1.12; @x/y pulls 3.24.1; add zod to the root catalog, then "overrides": { "zod": "catalog:" }',
     ]);
@@ -164,7 +164,7 @@ describe("checkWorkspace transitive duplicates", () => {
         zod: ["zod@4.1.12"],
       },
     });
-    expect(lines(files, lock)).toEqual([]);
+    expect(lines(files, lock)).toStrictEqual([]);
   });
 });
 
@@ -176,20 +176,20 @@ describe("checkWorkspace turbo scripts", () => {
   const extra = { "packages/b/vitest.config.ts": "", "packages/b/tsconfig.json": "{}" };
 
   it("names a package missing the test script and the typecheck script", () => {
-    expect(lines(pkg("b", {}), LOCK_OK, extra)).toEqual([TEST_LINE, TYPECHECK_LINE]);
+    expect(lines(pkg("b", {}), LOCK_OK, extra)).toStrictEqual([TEST_LINE, TYPECHECK_LINE]);
   });
 
   it("gives no line for a package that has both scripts", () => {
     const scripts = { test: "vitest run", typecheck: "tsc --noEmit" };
-    expect(lines(pkg("b", { scripts }), LOCK_OK, extra)).toEqual([]);
+    expect(lines(pkg("b", { scripts }), LOCK_OK, extra)).toStrictEqual([]);
   });
 
   it("names a script that is not a string, or a manifest whose scripts are not an object", () => {
-    expect(lines(pkg("b", { scripts: { test: 1, typecheck: "tsc" } }), LOCK_OK, extra)).toEqual([TEST_LINE]);
-    expect(lines(pkg("b", { scripts: "no" }), LOCK_OK, extra)).toEqual([TEST_LINE, TYPECHECK_LINE]);
+    expect(lines(pkg("b", { scripts: { test: 1, typecheck: "tsc" } }), LOCK_OK, extra)).toStrictEqual([TEST_LINE]);
+    expect(lines(pkg("b", { scripts: "no" }), LOCK_OK, extra)).toStrictEqual([TEST_LINE, TYPECHECK_LINE]);
   });
 
   it("asks for nothing from a package without the config files", () => {
-    expect(lines(pkg("b", {}), LOCK_OK)).toEqual([]);
+    expect(lines(pkg("b", {}), LOCK_OK)).toStrictEqual([]);
   });
 });

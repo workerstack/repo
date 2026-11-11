@@ -42,7 +42,7 @@ const PASS = [
 ].join("\n");
 
 it("passes identity values, scaling 2, named numbers, literal types and typed or punctuation strings", () => {
-  expect(magicOf({ "src/pass.ts": PASS })).toEqual([]);
+  expect(magicOf({ "src/pass.ts": PASS })).toStrictEqual([]);
 });
 
 const REFUSED = [
@@ -71,7 +71,7 @@ it("refuses -1, a 2 that does not scale, a local const bound, a string case and 
       "src/schema.ts": SCHEMA,
       "src/limits.constants.ts": "export const NAME_MAX = 2048;\n",
     }),
-  ).toEqual([
+  ).toStrictEqual([
     hit("src/refused.ts:8:14", NUMBER, BOUND(".max(LOCAL_MAX)")),
     hit("src/refused.ts:10:10", STRING, COMPARED("deep")),
     hit("src/refused.ts:11:18", NUMBER, NAMES_NOTHING("2")),
@@ -92,7 +92,7 @@ it("refuses a bound imported from a module that is not a constants file or packa
     "src/limits.ts": "export const MAX = 64;\n",
     "src/schema.ts": SCHEMA,
   };
-  expect(magicOf(files)).toEqual([
+  expect(magicOf(files)).toStrictEqual([
     hit("src/a.ts:4:39", NUMBER, BOUND(".max(MAX)")),
     hit("src/a.ts:4:48", NUMBER, BOUND(".max(TOP)")),
   ]);

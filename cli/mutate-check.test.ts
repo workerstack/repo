@@ -28,14 +28,14 @@ function planted(reports: ShardReport[], floors?: Record<string, number>): Fakes
 it("merges the shards, scores each package against its floor and passes at or above them", async () => {
   const f = planted(pair(), { ".": 89, "packages/p": 85 });
   expect(await runMutate(["check", "reports"], f.deps)).toBe(0);
-  expect(f.out).toEqual(["mutate: 2 shards of 09ed564; . 90.00% (floor 89); packages/p 90.00% (floor 85)\n"]);
-  expect(f.err).toEqual([]);
+  expect(f.out).toStrictEqual(["mutate: 2 shards of 09ed564; . 90.00% (floor 89); packages/p 90.00% (floor 85)\n"]);
+  expect(f.err).toStrictEqual([]);
 });
 
 it("fails a package below its floor and names the report dir", async () => {
   const f = planted(pair(), { ".": 91 });
   expect(await runMutate(["check", "reports"], f.deps)).toBe(1);
-  expect(f.err).toEqual([
+  expect(f.err).toStrictEqual([
     "repo mutate: . scored 90.00%, below its floor of 91 in mutation-floors.json; see the survivors in reports\n",
   ]);
   expect(f.files.get(at("mutation-floors.json"))).toBe(JSON.stringify({ ".": 91 }));
@@ -99,10 +99,10 @@ it("ignores files in the dir that are not JSON", async () => {
 it("raises a floor to the whole score, adds a package, and never lowers one", async () => {
   const f = planted(pair(), { ".": 85, other: 70 });
   expect(await runMutate(["check", "reports", "--write"], f.deps)).toBe(0);
-  expect(f.out).toEqual([
+  expect(f.out).toStrictEqual([
     "mutate: 2 shards of 09ed564; . 90.00% (floor 85 → 90); packages/p 90.00% (floor new → 90); wrote mutation-floors.json\n",
   ]);
-  expect(JSON.parse(f.files.get(at("mutation-floors.json")) ?? "")).toEqual({
+  expect(JSON.parse(f.files.get(at("mutation-floors.json")) ?? "")).toStrictEqual({
     ".": 90,
     other: 70,
     "packages/p": 90,

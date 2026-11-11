@@ -135,7 +135,7 @@ it(
       .filter((d) => !d.code.startsWith(UNTYPED))
       .map((d) => `${d.filename} ${d.code}: ${d.message}`)
       .toSorted();
-    expect([run.code, lines]).toEqual([1, EXPECTED]);
+    expect([run.code, lines]).toStrictEqual([1, EXPECTED]);
     expect(captureTool("oxlint", ["src/clean.ts"], root).code).toBe(0);
   },
 );
@@ -177,7 +177,7 @@ it("loads the plugin when NODE_PATH is already set, the inherited dirs kept afte
   const root = consumer({ "src/state.ts": PLANTED["src/state.ts"] });
   vi.stubEnv("NODE_PATH", path.join(root, "elsewhere"));
   const run = captureTool("oxlint", ["src/state.ts"], root);
-  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toEqual([1, true]);
+  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toStrictEqual([1, true]);
 });
 
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
@@ -187,7 +187,7 @@ it("runs a config whose skip names only magic rules, which the plugin does not h
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
   const run = captureTool("oxlint", ["src/clean.ts"], root);
-  expect([run.code, run.stderr]).toEqual([0, ""]);
+  expect([run.code, run.stderr]).toStrictEqual([0, ""]);
 });
 
 it.each([

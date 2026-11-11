@@ -172,7 +172,7 @@ const lookup = (ctx: SyncContext) => release(ctx).outputs[0];
 
 describe("release", () => {
   it("writes the whole tracked ci.yml without an e2e job when the root has no test:e2e script", () => {
-    expect(release(context(["release"]))).toEqual({
+    expect(release(context(["release"]))).toStrictEqual({
       outputs: [{ kind: "file", path: CI_PATH, content: HEAD, tracked: true, managed: "whole" }],
       errors: [],
     });
@@ -180,7 +180,7 @@ describe("release", () => {
 
   it("adds the e2e step and job when the root has a test:e2e script", () => {
     const manifest: PackageJson = { scripts: { "test:e2e": "vitest" } };
-    expect(lookup(context(["release"], manifest))).toEqual({
+    expect(lookup(context(["release"], manifest))).toStrictEqual({
       kind: "file",
       path: CI_PATH,
       content: HEAD.replace(NO_NODE_SHALLOW, NO_NODE_FULL) + E2E_IN_NO_NODE + E2E_JOB,

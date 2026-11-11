@@ -67,8 +67,8 @@ describe("subagentTypeOf agent shapes", () => {
 describe("toolCallOf and sessionIdOf", () => {
   it("returns no args when the input is not an object", () => {
     const data: HookInput = { tool_name: "Bash", tool_input: "ls" /* a string where an object belongs */ as never };
-    expect(toolCallOf(data)).toEqual({ harness: "claude", key: "bash", args: null });
-    expect(toolCallOf({ toolName: "Bash", toolInput: { command: "ls" } }).args).toEqual({ command: "ls" });
+    expect(toolCallOf(data)).toStrictEqual({ harness: "claude", key: "bash", args: null });
+    expect(toolCallOf({ toolName: "Bash", toolInput: { command: "ls" } }).args).toStrictEqual({ command: "ls" });
   });
 
   it("reads the session id from any host spelling and drops the default one", () => {

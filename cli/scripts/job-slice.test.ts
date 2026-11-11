@@ -20,7 +20,7 @@ const missing = "Command failed.\n- missing stash\n";
 it("runSlice prints the lines from a start line to an end line", () => {
   const dir = withStash();
   const both = runSlice({ stash: "g7k", from: "5", to: "6", cwd: dir, root: dir });
-  expect(both).toEqual({ fallback: false, text: "2 lines.\n- stash:5 — row 5\n- stash:6 — row 6\n", code: 0 });
+  expect(both).toStrictEqual({ fallback: false, text: "2 lines.\n- stash:5 — row 5\n- stash:6 — row 6\n", code: 0 });
   const upTo = runSlice({ stash: "g7k", to: "2", cwd: dir, root: dir });
   expect(upTo.text).toBe("2 lines.\n- stash:1 — row 1\n- stash:2 — row 2\n");
   const from = runSlice({ stash: "g7k", from: "29", cwd: dir, root: dir });
@@ -83,7 +83,7 @@ it("runSlice finds the stash under the process cwd when it is given no places", 
 it("runSlice reports a missing stash as a failure, never as a fallback", () => {
   const dir = plant();
   const r = runSlice({ stash: "nope", cwd: dir, root: dir });
-  expect(r).toEqual({ fallback: false, text: missing, code: 0 });
+  expect(r).toStrictEqual({ fallback: false, text: missing, code: 0 });
   expect(runSlice({ stash: "../../etc/passwd", cwd: dir, root: dir }).text).toBe(missing);
 });
 

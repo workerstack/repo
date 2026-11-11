@@ -33,7 +33,7 @@ describe("no-mock-of-subject passes", () => {
     ["src/parse.ts", call("vi.mock", url("./parse.ts"))],
     ["src/parse.e2e.ts", call("vi.mock", url("./parse.ts"))],
   ])("passes %s: %j", (file, code) => {
-    expect(messagesOf(file, code)).toEqual([]);
+    expect(messagesOf(file, code)).toStrictEqual([]);
   });
 });
 
@@ -49,6 +49,6 @@ describe("no-mock-of-subject fails", () => {
     ["src/parse.test.tsx", call("vi.mock", url("./parse.tsx")), "./parse.tsx"],
     ["src/test/parse.test.ts", call("vi.mock", url("../test/parse.ts")), "../test/parse.ts"],
   ])("fails %s: %j", (file, code, specifier) => {
-    expect(messagesOf(file, code)).toEqual([covers(specifier)]);
+    expect(messagesOf(file, code)).toStrictEqual([covers(specifier)]);
   });
 });

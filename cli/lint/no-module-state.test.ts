@@ -19,7 +19,7 @@ describe("no-module-state passes", () => {
     "class Cache { items = new Map(); }",
     "declare let injected: string;",
   ])("passes %j", (code) => {
-    expect(messagesOf(code)).toEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 });
 
@@ -43,6 +43,6 @@ describe("no-module-state fails", () => {
     "const LIMIT = 3, cache = new Map();",
     "// per-process-constant: build id\nlet buildId = '';",
   ])("fails %j once", (code) => {
-    expect(messagesOf(code)).toEqual([MESSAGE]);
+    expect(messagesOf(code)).toStrictEqual([MESSAGE]);
   });
 });

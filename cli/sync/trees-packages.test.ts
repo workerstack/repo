@@ -34,7 +34,7 @@ it("writes each package's AGENTS.md, tracked and shared, and no CLAUDE.md, and k
   );
   expect(text(outputs, "packages/api/AGENTS.md")).toBe(rules(START));
   expect(find(outputs, "packages/web/AGENTS.md")).toMatchObject({ tracked: true, managed: "block" });
-  expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toEqual([]);
+  expect(outputs.filter((o) => o.path.endsWith("CLAUDE.md"))).toStrictEqual([]);
 });
 
 it("keeps a package's own AGENTS.md text below the region", () => {
@@ -53,7 +53,7 @@ it("renders package rules under the host rule dirs and nests the package's skill
   expect(linkTarget(outputs, "packages/web/.claude/skills/deploy")).toBe("../../.repo/skills/deploy");
   expect(linkTarget(outputs, "packages/web/.agents/skills/deploy")).toBe("../../.repo/skills/deploy");
   expect(find(outputs, "packages/web/.claude/skills/deploy")).toMatchObject({ tracked: false, managed: "whole" });
-  expect(outputs.filter((o) => o.path.startsWith("packages/api/") && o.kind === "link")).toEqual([]);
+  expect(outputs.filter((o) => o.path.startsWith("packages/api/") && o.kind === "link")).toStrictEqual([]);
 });
 
 it("links package skills only for the hosts that read them", () => {
@@ -72,7 +72,7 @@ it("refuses a root rule and a package rule that render one file, naming both sou
     "packages/web/.repo/rules/web.md": pkgRule,
     "x/a.ts": "",
   });
-  expect(renderTrees(context(root, ["claude"], { packages: ["packages/web"] }))).toEqual({
+  expect(renderTrees(context(root, ["claude"], { packages: ["packages/web"] }))).toStrictEqual({
     ok: false,
     errors: [
       ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md and packages/web/.repo/rules/web.md; rename one",
@@ -83,7 +83,7 @@ it("refuses a root rule and a package rule that render one file, naming both sou
 it("refuses a package .repo with a directory sync does not read there", () => {
   const root = consumer({ "packages/web/.repo/lessons/a.md": "x\n" });
   const result = renderTrees(context(root, ["claude"], { packages: ["packages/web"] }));
-  expect(result).toEqual({
+  expect(result).toStrictEqual({
     ok: false,
     errors: [
       "packages/web/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo",

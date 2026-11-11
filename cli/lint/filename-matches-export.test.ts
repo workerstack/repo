@@ -29,7 +29,7 @@ describe("filename-matches-export passes", () => {
     ["src/files.ts", "export const files = 1;\nexport type files = number;"],
     ["src/phase-files.ts", "export async function main(argv: string[]) {}"],
   ])("passes %s: %j", (file, code) => {
-    expect(messagesOf(file, code)).toEqual([]);
+    expect(messagesOf(file, code)).toStrictEqual([]);
   });
 });
 
@@ -55,11 +55,13 @@ const FAILS = [
 
 describe("filename-matches-export fails", () => {
   it.each(FAILS)("fails %j, which exports only %s", (code, name, renamed) => {
-    expect(messagesOf("src/files.ts", code)).toEqual([`files.ts exports only "${name}"; rename the file ${renamed}`]);
+    expect(messagesOf("src/files.ts", code)).toStrictEqual([
+      `files.ts exports only "${name}"; rename the file ${renamed}`,
+    ]);
   });
 
   it("keeps everything after the first dot in the new name", () => {
-    expect(messagesOf("src/files.config.ts", "export const loadConfig = 1;")).toEqual([
+    expect(messagesOf("src/files.config.ts", "export const loadConfig = 1;")).toStrictEqual([
       'files.config.ts exports only "loadConfig"; rename the file load-config.config.ts',
     ]);
   });

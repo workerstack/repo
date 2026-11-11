@@ -17,7 +17,7 @@ const PATTERNS_UPSTREAM =
 it("adaptFile ports bro", () => {
   const out = adaptOk(skill("bro"), "SKILL.md", BRO_UPSTREAM);
   expect(out.ok).toBe(true);
-  expect(out.misses).toEqual([]);
+  expect(out.misses).toStrictEqual([]);
   expect(out.text).toBe(`---
 name: bro
 description: "Restate the last message in plain human language, with no jargon."
@@ -33,7 +33,7 @@ Slash \`/bro\` only.
 it("adaptFile ports unslop slash-only and keeps rules", () => {
   const out = adaptOk(skill("unslop"), "SKILL.md", UNSLOP_UPSTREAM);
   expect(out.ok).toBe(true);
-  expect(out.misses).toEqual([]);
+  expect(out.misses).toStrictEqual([]);
   expect(out.text).toContain("Use for /unslop.");
   expect(out.text).toContain("Slash `/unslop` only. Not a session flag.");
   expect(out.text).toContain("7. **AI vocabulary.** Additionally, crucial, delve.");
@@ -43,7 +43,7 @@ it("adaptFile ports unslop slash-only and keeps rules", () => {
 it("adaptFile rewrites blast-radius pstack-only steps", () => {
   const out = adaptOk(skill("blast-radius"), "SKILL.md", BLAST_UPSTREAM);
   expect(out.ok).toBe(true);
-  expect(out.misses).toEqual([]);
+  expect(out.misses).toStrictEqual([]);
   expect(out.text).toContain("Use for /blast-radius, 'blast radius of X'");
   expect(out.text).toContain("This is not a walkthrough of what the code does");
   expect(out.text).toContain("`git log` / `git blame`");
@@ -56,7 +56,7 @@ it("adaptFile rewrites blast-radius pstack-only steps", () => {
 it("adaptFile rewrites correct rule table home", () => {
   const out = adaptOk(skill("correct"), "SKILL.md", CORRECT_UPSTREAM);
   expect(out.ok).toBe(true);
-  expect(out.misses).toEqual([]);
+  expect(out.misses).toStrictEqual([]);
   expect(out.text).toContain("`AGENTS.md` (SSOT: `agents/rules/overview.md`)");
   expect(out.text).toContain("Slash `/correct` only.");
 });
@@ -65,7 +65,7 @@ it("adaptFile inlines typescript principles and extra file", () => {
   const ts = skill("typescript-best-practices");
   const out = adaptOk(ts, "SKILL.md", TYPESCRIPT_UPSTREAM);
   expect(out.ok).toBe(true);
-  expect(out.misses).toEqual([]);
+  expect(out.misses).toStrictEqual([]);
   expect(out.text).toContain("Make illegal states unrepresentable.");
   expect(out.text).toContain("or for /typescript-best-practices.");
   expect(out.text).not.toContain("paths:");
@@ -83,7 +83,7 @@ it("adaptFile records a miss when a rewrite target is gone", () => {
 });
 
 it("adaptFile names a file with no frontmatter", () => {
-  expect(adaptFile(skill("bro"), "SKILL.md", "plain\n")).toEqual({
+  expect(adaptFile(skill("bro"), "SKILL.md", "plain\n")).toStrictEqual({
     ok: false,
     error: "missing frontmatter",
     misses: [],

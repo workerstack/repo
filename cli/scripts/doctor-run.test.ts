@@ -124,13 +124,13 @@ describe("workspaceIssues on thin repos", () => {
   it("reports nothing for a repo with no root .gitignore and a comment-only nested one", () => {
     const r = repo();
     put(r, "pkg/.gitignore", "# nothing yet\n\n");
-    expect(workspaceIssues({ root: r, checkout: r })).toEqual([]);
+    expect(workspaceIssues({ root: r, checkout: r })).toStrictEqual([]);
   });
 
   it("reports nothing when git cannot list the files", () => {
     const r = repo();
     fs.writeFileSync(path.join(r, ".git", "index"), "garbage");
-    expect(workspaceIssues({ root: r, checkout: r })).toEqual([]);
+    expect(workspaceIssues({ root: r, checkout: r })).toStrictEqual([]);
   });
 
   it("labels a detached worktree outside .worktrees", () => {
@@ -139,7 +139,7 @@ describe("workspaceIssues on thin repos", () => {
     dirs.push(outside);
     git(r, "worktree", "add", "-q", "--detach", outside);
     const items = workspaceIssues({ root: r, checkout: r });
-    expect(items).toEqual([
+    expect(items).toStrictEqual([
       {
         kind: "worktree outside .worktrees",
         path: fs.realpathSync(outside),

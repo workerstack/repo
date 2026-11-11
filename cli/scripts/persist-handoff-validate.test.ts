@@ -77,17 +77,17 @@ describe("injectFrontmatter", () => {
 
 describe("validateHandoff frontmatter", () => {
   it("accepts a date-only created", () => {
-    expect(errorsOf(edit("created: 2026-08-27T14:30:00Z", "created: 2026-08-27"))).toEqual([]);
+    expect(errorsOf(edit("created: 2026-08-27T14:30:00Z", "created: 2026-08-27"))).toStrictEqual([]);
   });
 
   it("reports a missing or unterminated frontmatter alone", () => {
-    expect(errorsOf("# x\n")).toEqual(["missing frontmatter"]);
-    expect(errorsOf("---\nserial: 1\n")).toEqual(["unterminated frontmatter"]);
+    expect(errorsOf("# x\n")).toStrictEqual(["missing frontmatter"]);
+    expect(errorsOf("---\nserial: 1\n")).toStrictEqual(["unterminated frontmatter"]);
   });
 
   it("reports each missing key", () => {
     const text = saved.text.replace(/^(name|status|created|source):.*\n/gm, "");
-    expect(errorsOf(text)).toEqual(
+    expect(errorsOf(text)).toStrictEqual(
       expect.arrayContaining(["missing name", "missing status", "missing created", "missing source"]),
     );
   });
@@ -101,7 +101,7 @@ describe("validateHandoff frontmatter", () => {
   it("reports a bad created, a long source and a name that differs from the filename", () => {
     expect(errorsOf(edit("created: 2026-08-27T14:30:00Z", "created: yesterday"))).toContain("created");
     expect(errorsOf(edit('source: "sync skills to hosts"', `source: "${"x".repeat(121)}"`))).toContain("source length");
-    expect(errorsOf(edit("name: sync-skills-to-hosts", "name: other"))).toEqual(
+    expect(errorsOf(edit("name: sync-skills-to-hosts", "name: other"))).toStrictEqual(
       expect.arrayContaining(["name/filename slug", "h1 slug"]),
     );
   });
@@ -109,8 +109,8 @@ describe("validateHandoff frontmatter", () => {
 
 describe("validateHandoff quoted source", () => {
   it("reads a quoted source as JSON and falls back to the bare text when the quotes do not parse", () => {
-    expect(errorsOf(edit('source: "sync skills to hosts"', 'source: "a \\"b\\" c"'))).toEqual([]);
-    expect(errorsOf(edit('source: "sync skills to hosts"', 'source: "bad \\q escape"'))).toEqual([]);
+    expect(errorsOf(edit('source: "sync skills to hosts"', 'source: "a \\"b\\" c"'))).toStrictEqual([]);
+    expect(errorsOf(edit('source: "sync skills to hosts"', 'source: "bad \\q escape"'))).toStrictEqual([]);
     expect(errorsOf(edit('source: "sync skills to hosts"', 'source: "'))).toContain("missing source");
   });
 });
@@ -137,12 +137,12 @@ describe("validateHandoff sections", () => {
     expect(errorsOf(edit("Claude links resolve to the source.", "One. Two. Three."))).toContain("goal");
     expect(
       errorsOf(edit("Ship /handoff as a skill on every host. Claude links resolve to the source.", "No stop")),
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 
   it("wants a missing Goal section flagged", () => {
     const text = saved.text.replace(/## Goal\n[^\n]*\n\n/, "");
-    expect(errorsOf(text)).toEqual(expect.arrayContaining(["goal", "heading order"]));
+    expect(errorsOf(text)).toStrictEqual(expect.arrayContaining(["goal", "heading order"]));
   });
 
   it.each(["State", "Context", "Watch-outs"])("wants %s filled with bullets or (none)", (heading) => {
@@ -150,8 +150,8 @@ describe("validateHandoff sections", () => {
       saved.text.replace(new RegExp(`(## ${heading}\\n)[\\s\\S]*?(\\n## |$)`), `$1${section}$2`);
     expect(errorsOf(body("\n"))).toContain(`${heading} empty`);
     expect(errorsOf(body("prose only\n"))).toContain(`${heading} bullets`);
-    expect(errorsOf(body("(none)\n"))).toEqual([]);
-    expect(errorsOf(body("* starred\n"))).toEqual([]);
+    expect(errorsOf(body("(none)\n"))).toStrictEqual([]);
+    expect(errorsOf(body("* starred\n"))).toStrictEqual([]);
   });
 });
 
@@ -159,21 +159,21 @@ describe("validateHandoff Next", () => {
   it("wants a leaf, and a leaf under every phase, in Next", () => {
     expect(
       errorsOf(edit("1.1 [ ] add -f skills to rulesync:generate\n1.2 [ ] add -f skills to rulesync:check\n", "")),
-    ).toEqual(expect.arrayContaining(["no N.M leaf", "phase 1 leaf"]));
-    expect(errorsOf(edit("1 [ ] wire generate", "1 [ ] wire generate\n2 [ ] second\nnot a box"))).toEqual([
+    ).toStrictEqual(expect.arrayContaining(["no N.M leaf", "phase 1 leaf"]));
+    expect(errorsOf(edit("1 [ ] wire generate", "1 [ ] wire generate\n2 [ ] second\nnot a box"))).toStrictEqual([
       "phase 2 leaf",
     ]);
-    expect(errorsOf(edit("1.1 [ ]", "  1.1.1 [ ]"))).toEqual([]);
+    expect(errorsOf(edit("1.1 [ ]", "  1.1.1 [ ]"))).toStrictEqual([]);
   });
 });
 
 describe("nextBoxes", () => {
   it("reads the numbered boxes of Next and whether each is unchecked", () => {
-    expect(nextBoxes("1 [ ] a\n  1.1 [x] b\nnot a box\n2.3 [X] c")).toEqual([
+    expect(nextBoxes("1 [ ] a\n  1.1 [x] b\nnot a box\n2.3 [X] c")).toStrictEqual([
       { id: "1", fresh: true },
       { id: "1.1", fresh: false },
       { id: "2.3", fresh: false },
     ]);
-    expect(nextBoxes(undefined)).toEqual([]);
+    expect(nextBoxes(undefined)).toStrictEqual([]);
   });
 });

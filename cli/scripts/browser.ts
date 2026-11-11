@@ -484,7 +484,7 @@ async function handleCdp(state: FakeCdpState, method: string, params: Rec): Prom
       return { markdown: state.markdown || `# ${state.url || ""}\n\nhello` };
     case "Accessibility.getFullAXTree":
       if (state.thinSnap) return { nodes: [] };
-      return { nodes: state.axNodes || defaultAx(state.url) };
+      return { nodes: state.axNodes ?? defaultAx(state.url) };
     case "DOM.resolveNode": {
       const id = params.backendNodeId;
       const known = new Set([10, 11]);
@@ -767,9 +767,9 @@ export async function runBrowser(
   } = {},
 ): Promise<BrowserResult> {
   const cwd = opts.cwd || process.cwd();
-  const env = opts.env || childEnv();
+  const env = opts.env ?? childEnv();
   const platform = opts.platform || process.platform;
-  const bins = opts.bins || lookupBins(env.PATH, platform);
+  const bins = opts.bins ?? lookupBins(env.PATH, platform);
   const ctx: Ctx = { cwd, env, platform, bins, readyMs: opts.readyMs ?? 4000 };
   const verb = String(argv[0] || "").toLowerCase();
   try {

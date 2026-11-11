@@ -60,7 +60,7 @@ describe("gitRevParse", () => {
   it("is null when git prints fewer than three lines, and reads three as top, git dir and common dir", () => {
     const run = (out: string) => (() => out) /* a stand-in for execFileSync */ as never;
     expect(gitRevParse("/edge-short", run("/r\n/r/.git\n"))).toBeNull();
-    expect(gitRevParse("/edge-full", run("/r\n/r/.git\n/r/.git\n"))).toEqual({
+    expect(gitRevParse("/edge-full", run("/r\n/r/.git\n/r/.git\n"))).toStrictEqual({
       top: "/r",
       gitDir: "/r/.git",
       commonDir: "/r/.git",
@@ -86,13 +86,13 @@ describe("resolveRoots", () => {
     const outside = tmpDir("roots-out-");
     const top = tmpDir("roots-top-");
     const roots = resolveRoots({ cwd: outside }, { env: {}, cwd: outside, git: () => facts(top) });
-    expect(roots).toEqual({ root: top, checkout: top, cwd: outside });
+    expect(roots).toStrictEqual({ root: top, checkout: top, cwd: outside });
   });
 
   it("takes an empty call, a null input and a missing options argument from the process defaults", () => {
     const dir = tmpDir("roots-default-");
     const none = { env: {}, cwd: dir, git: () => null };
-    expect(resolveRoots(undefined, none)).toEqual({ root: dir, checkout: dir, cwd: dir });
+    expect(resolveRoots(undefined, none)).toStrictEqual({ root: dir, checkout: dir, cwd: dir });
     expect(resolveRoots(null, none).cwd).toBe(dir);
     // The real git runs here; a hook's git variables must not aim it at the repo being committed.
     vi.stubEnv("GIT_DIR", undefined);

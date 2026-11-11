@@ -56,7 +56,7 @@ const FAULTS: Fault[] = [
 ];
 
 it.each(FAULTS)("reports $name with its text", ({ code, message }) => {
-  expect(messagesOf(code)).toEqual([message]);
+  expect(messagesOf(code)).toStrictEqual([message]);
 });
 
 const REFERENCES = ["plan 60", "slice 4", "roadmap 12", "D7"];
@@ -64,7 +64,9 @@ const REFERENCES = ["plan 60", "slice 4", "roadmap 12", "D7"];
 it.each(REFERENCES)("reports a doc that cites %s", (reference) => {
   const code = `/** Runs the jobs, see ${reference}. */\nexport const jobs: number = 1;`;
   const tail = "which ships to consumers: say it in their terms";
-  expect(messagesOf(code)).toEqual([about("jobs", `its JSDoc cites an internal reference (${reference}), ${tail}`)]);
+  expect(messagesOf(code)).toStrictEqual([
+    about("jobs", `its JSDoc cites an internal reference (${reference}), ${tail}`),
+  ]);
 });
 
 const UNKNOWN = [
@@ -77,7 +79,7 @@ const UNKNOWN = [
 
 it.each(UNKNOWN)("fails closed on $form", ({ code, form }) => {
   const message = `cannot follow ${form} here, so what it exposes goes unchecked: write it as a plain export`;
-  expect(messagesOf(code)).toEqual([message]);
+  expect(messagesOf(code)).toStrictEqual([message]);
 });
 
 it("passes a documented export, and docs with tags", () => {
@@ -92,18 +94,18 @@ it("passes a documented export, and docs with tags", () => {
     "/** The result of a run, with what failed. */",
     "export interface Result {\n/** Names of the jobs that failed. */\nfailed: string[] }",
   ].join("\n");
-  expect(messagesOf(code)).toEqual([]);
+  expect(messagesOf(code)).toStrictEqual([]);
 });
 
 it("ignores an export no entry reaches, a body-only helper and a private package", () => {
   const extra = { "src/other.ts": "export const loose = 1;\nexport function inferred() { return 1; }" };
-  expect(messagesOf("/** Holds a documented count. */\nexport const a: number = 1;", extra)).toEqual([]);
-  expect(messagesOf("export const a = 1;", {}, { private: true })).toEqual([]);
+  expect(messagesOf("/** Holds a documented count. */\nexport const a: number = 1;", extra)).toStrictEqual([]);
+  expect(messagesOf("export const a = 1;", {}, { private: true })).toStrictEqual([]);
 });
 
 it("ignores a file outside any package and one whose package has no exports", () => {
-  expect(reportsOf(publicJsdoc, { "src/a.ts": "export const a = 1;" })).toEqual([]);
-  expect(messagesOf("export const a = 1;", {}, { exports: undefined })).toEqual([]);
+  expect(reportsOf(publicJsdoc, { "src/a.ts": "export const a = 1;" })).toStrictEqual([]);
+  expect(messagesOf("export const a = 1;", {}, { exports: undefined })).toStrictEqual([]);
 });
 
 it("passes over an export list and reports an unknown form once, in the file that has it", () => {
@@ -114,13 +116,13 @@ it("passes over an export list and reports an unknown form once, in the file tha
   const own = "/** Holds the count of jobs. */\nexport const count: number = 1;\n";
   const code = `${own}export { other } from "./deep.ts";\nexport * from "./bad.ts";`;
   const message = "cannot follow `export =` here, so what it exposes goes unchecked: write it as a plain export";
-  expect(messagesOf(code, extra)).toEqual([message]);
+  expect(messagesOf(code, extra)).toStrictEqual([message]);
 });
 
 it("reports the entry of a declaration reached through a re-export", () => {
   const extra = { "src/deep.ts": "export const deep: number = 1;" };
   const code = 'export { deep } from "./deep.ts";';
-  expect(messagesOf(code, extra)).toEqual([about("deep", MISSING)]);
+  expect(messagesOf(code, extra)).toStrictEqual([about("deep", MISSING)]);
 });
 
 it("accepts a literal, a cast, a satisfies and a typed function as a stated type", () => {
@@ -135,7 +137,7 @@ it("accepts a literal, a cast, a satisfies and a typed function as a stated type
     `${doc}export const f = (): number => 1;`,
     `${doc}export const g = function (): number { return 1; };`,
   ].join("\n");
-  expect(messagesOf(code)).toEqual([]);
+  expect(messagesOf(code)).toStrictEqual([]);
 });
 
 it("reports an inferred const whose initializer is not a stated type", () => {

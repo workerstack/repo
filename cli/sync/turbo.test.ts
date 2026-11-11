@@ -42,7 +42,7 @@ const BASE = {
 const json = (value: object) => `${JSON.stringify(value, null, 2)}\n`;
 
 it("turbo: writes Usage's turbo.json as an ignored whole file", () => {
-  expect(turbo(context(["workspace"]))).toEqual({
+  expect(turbo(context(["workspace"]))).toStrictEqual({
     outputs: [{ kind: "file", path: "turbo.json", content: json(BASE), tracked: false, managed: "whole" }],
     errors: [],
   });
@@ -52,35 +52,35 @@ it("turbo: merges turbo.tasks after the generated tasks", () => {
   const deploy = { cache: false, dependsOn: ["^build"] };
   const { outputs } = turbo(context(["workspace"], {}, { deploy }));
   const expected = { ...BASE, tasks: { ...BASE.tasks, deploy } };
-  expect(outputs).toEqual([
+  expect(outputs).toStrictEqual([
     { kind: "file", path: "turbo.json", content: json(expected), tracked: false, managed: "whole" },
   ]);
 });
 
 it("turbo: gives nothing without the workspace pack", () => {
-  expect(turbo(context(["standards"], { "turbo.json": "{}" }))).toEqual({ outputs: [], errors: [] });
+  expect(turbo(context(["standards"], { "turbo.json": "{}" }))).toStrictEqual({ outputs: [], errors: [] });
 });
 
 it("turbo: refuses a hand-written turbo.json", () => {
-  expect(turbo(context(["workspace"], { "turbo.json": '{ "tasks": {} }\n' }))).toEqual({
+  expect(turbo(context(["workspace"], { "turbo.json": '{ "tasks": {} }\n' }))).toStrictEqual({
     outputs: [],
     errors: ["turbo.json is hand-written; delete it so repo sync can own it, and move its tasks to turbo.tasks"],
   });
 });
 
 it("turbo: owns a turbo.json it would write itself", () => {
-  expect(turbo(context(["workspace"], { "turbo.json": json(BASE) })).errors).toEqual([]);
+  expect(turbo(context(["workspace"], { "turbo.json": json(BASE) })).errors).toStrictEqual([]);
 });
 
 it("turbo: owns a turbo.json the sync manifest lists, and rewrites it", () => {
   const files = { "turbo.json": '{ "tasks": {} }\n', [MANIFEST_REL]: renderManifest(["turbo.json"]) };
   const result = turbo(context(["workspace"], files));
-  expect(result.errors).toEqual([]);
+  expect(result.errors).toStrictEqual([]);
   expect(result.outputs).toHaveLength(1);
 });
 
 it("turbo: ignores .turbo/ along with turbo.json", () => {
   const { outputs } = turbo(context(["workspace"]));
-  expect(untrackedEntries([], outputs)).toEqual(["turbo.json", ".turbo/"]);
-  expect(untrackedEntries([], [])).toEqual([]);
+  expect(untrackedEntries([], outputs)).toStrictEqual(["turbo.json", ".turbo/"]);
+  expect(untrackedEntries([], [])).toStrictEqual([]);
 });

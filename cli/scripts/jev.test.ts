@@ -139,7 +139,7 @@ describe("runJev", () => {
         keep: { type: "noul", instructions: "Does this promise zero retention?" },
       }),
     });
-    expect((JSON.parse(sent) as { state: unknown }).state).toEqual({ page: "privacy" });
+    expect((JSON.parse(sent) as { state: unknown }).state).toStrictEqual({ page: "privacy" });
   });
 
   it("does not fetch when the key, question count, state, or ledger already blocks", async () => {
@@ -254,7 +254,7 @@ describe("runJev", () => {
       questionsText: QUESTIONS,
     });
     expect(result.code).toBe(0);
-    expect(waits).toEqual([1000]);
+    expect(waits).toStrictEqual([1000]);
     expect(n).toBe(2);
     const ledger = JSON.parse(fs.readFileSync(jevUsagePath(home), "utf8")) as {
       requests: number;
@@ -308,12 +308,12 @@ describe("runJev", () => {
 describe("main", () => {
   it("reports key availability without a request or a setup error", async () => {
     const missing = await runJev(["--available"], { env: {}, home: tmp("jev-avail-no-") });
-    expect(missing).toEqual({ code: 0, text: "no\n" });
+    expect(missing).toStrictEqual({ code: 0, text: "no\n" });
     const home = tmp("jev-avail-yes-");
     fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
     fs.writeFileSync(path.join(home, ".workerstack", "jev.json"), JSON.stringify({ apiKey: "ts_live_test_key" }));
     const present = await runJev(["--available"], { env: {}, home });
-    expect(present).toEqual({ code: 0, text: "yes\n" });
+    expect(present).toStrictEqual({ code: 0, text: "yes\n" });
     expect(present.text).not.toContain("ts_live_test_key");
   });
 

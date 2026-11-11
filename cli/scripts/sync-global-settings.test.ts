@@ -32,17 +32,20 @@ function tmpDir(prefix: string) {
 
 describe("parseArgv", () => {
   it("applies by default and reads --dry-run, --check and --host", () => {
-    expect(parseArgv([])).toEqual({ ok: true, dryRun: false, check: false, host: "all" });
+    expect(parseArgv([])).toStrictEqual({ ok: true, dryRun: false, check: false, host: "all" });
     expect(parseArgv(["--dry-run"])).toMatchObject({ ok: true, dryRun: true });
     expect(parseArgv(["--check", "--host", "grok"])).toMatchObject({ ok: true, check: true, host: "grok" });
     expect(parseArgv(["--host=claude"])).toMatchObject({ ok: true, host: "claude" });
   });
 
   it("rejects a bad host or flag, and --check with --dry-run", () => {
-    expect(parseArgv(["--host="])).toEqual({ ok: false, error: "unknown host: " });
-    expect(parseArgv(["--apply"])).toEqual({ ok: false, error: "unknown flag: --apply" });
+    expect(parseArgv(["--host="])).toStrictEqual({ ok: false, error: "unknown host: " });
+    expect(parseArgv(["--apply"])).toStrictEqual({ ok: false, error: "unknown flag: --apply" });
     expect(parseArgv(["--host"]).ok).toBe(false);
-    expect(parseArgv(["--check", "--dry-run"])).toEqual({ ok: false, error: "--check and --dry-run do not combine" });
+    expect(parseArgv(["--check", "--dry-run"])).toStrictEqual({
+      ok: false,
+      error: "--check and --dry-run do not combine",
+    });
   });
 });
 
@@ -85,11 +88,11 @@ describe("deepMerge", () => {
     };
     expect(merged.keepMe).toBe(1);
     expect(merged.apiKey).toBe("dest-secret");
-    expect(merged.mcp).toEqual({ servers: { old: true } });
+    expect(merged.mcp).toStrictEqual({ servers: { old: true } });
     expect(merged.hooks).toBeUndefined();
     expect(merged.features.two_pass_compaction).toBe(true);
     expect(merged.features.hooks).toBe("dest-hooks");
-    expect(merged.agent).toEqual({ name: "orchestrator" });
+    expect(merged.agent).toStrictEqual({ name: "orchestrator" });
   });
 });
 
@@ -125,7 +128,7 @@ function readDest(home: string, h: { dest: string; format: string }): DestShape 
 function writeDest(home: string, h: { dest: string; format: string }, value: object) {
   const abs = path.join(home, h.dest);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, h.format === "json" ? JSON.stringify(value) : stringifyToml(value as never));
+  fs.writeFileSync(abs, h.format === "json" ? JSON.stringify(value) : stringifyToml(value));
 }
 
 /** Workspace with the real manifest and only the payload files named in `payloads`. */
@@ -148,21 +151,25 @@ describe("syncGlobals", () => {
     const home = tmpDir("yolo-dry-");
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
     expect(r.ok).toBe(true);
-    expect(r.report.map((row: { line: string }) => row.line)).toEqual(HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`));
+    expect(r.report.map((row: { line: string }) => row.line)).toStrictEqual(
+      HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`),
+    );
     const applied = syncGlobals({
       workspaceRoot: repoRoot,
       home: tmpDir("yolo-line-"),
       apply: true,
       host: "cursor",
     });
-    expect(applied.report.map((row: { line: string }) => row.line)).toEqual(["apply cursor .cursor/cli-config.json"]);
+    expect(applied.report.map((row: { line: string }) => row.line)).toStrictEqual([
+      "apply cursor .cursor/cli-config.json",
+    ]);
   });
 
   it("dry-run writes nothing under home", () => {
     const home = tmpDir("yolo-dry-none-");
     const r = syncGlobals({ workspaceRoot: repoRoot, home, apply: false });
     expect(r.ok).toBe(true);
-    expect(fs.readdirSync(home)).toEqual([]);
+    expect(fs.readdirSync(home)).toStrictEqual([]);
   });
 
   it.each(HOSTS)("$id: apply creates a missing dest from the payload", (h) => {
@@ -175,7 +182,7 @@ describe("syncGlobals", () => {
     const payloadRel = manifest.hosts.find((x) => x.id === h.id)!.payload; // every HOSTS id is in the manifest
     const raw = fs.readFileSync(path.join(repoRoot, payloadRel), "utf8");
     const payload = h.format === "json" ? JSON.parse(raw) : parseToml(raw);
-    expect(readDest(home, h)).toEqual(payload);
+    expect(readDest(home, h)).toStrictEqual(payload);
   });
 
   it("writes the Usage keys for every host", () => {
@@ -213,7 +220,7 @@ describe("syncGlobals", () => {
     const home = tmpDir("yolo-sibling-");
     writeDest(home, CLAUDE, { permissions: { allow: ["Bash(ls)"], defaultMode: "default" } });
     expect(syncGlobals({ workspaceRoot: repoRoot, home, apply: true, host: "claude" }).ok).toBe(true);
-    expect(readDest(home, CLAUDE).permissions).toEqual({
+    expect(readDest(home, CLAUDE).permissions).toStrictEqual({
       allow: ["Bash(ls)"],
       defaultMode: "bypassPermissions",
     });
@@ -224,7 +231,7 @@ describe("syncGlobals", () => {
     syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
     const first = HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"));
     syncGlobals({ workspaceRoot: repoRoot, home, apply: true });
-    expect(HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"))).toEqual(first);
+    expect(HOSTS.map((h) => fs.readFileSync(path.join(home, h.dest), "utf8"))).toStrictEqual(first);
   });
 
   it("rejects an unknown host", () => {
@@ -245,7 +252,7 @@ describe("syncGlobals", () => {
       ok: false,
       error: "missing payload: agents/global-settings/cursor.json",
     });
-    expect(r.report.map((row: { id: string }) => row.id)).toEqual(["grok", "claude", "codex", "antigravity"]);
+    expect(r.report.map((row: { id: string }) => row.id)).toStrictEqual(["grok", "claude", "codex", "antigravity"]);
   });
 
   it("an unparseable payload errors", () => {
@@ -320,7 +327,7 @@ describe("CLI", () => {
     const home = tmpDir("yolo-cli-");
     const r = runCli([], home, bareCwd());
     expect(r.status).toBe(0);
-    expect(r.stdout.trim().split("\n")).toEqual(HOSTS.map((h) => `apply ${h.id} ${h.dest}`));
+    expect(r.stdout.trim().split("\n")).toStrictEqual(HOSTS.map((h) => `apply ${h.id} ${h.dest}`));
     for (const h of HOSTS) expect(fs.existsSync(path.join(home, h.dest))).toBe(true);
   });
 
@@ -328,8 +335,8 @@ describe("CLI", () => {
     const home = tmpDir("yolo-cli-dry-");
     const r = runCli(["--dry-run"], home);
     expect(r.status).toBe(0);
-    expect(r.stdout.trim().split("\n")).toEqual(HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`));
-    expect(fs.readdirSync(home)).toEqual([]);
+    expect(r.stdout.trim().split("\n")).toStrictEqual(HOSTS.map((h) => `dry-run ${h.id} ${h.dest}`));
+    expect(fs.readdirSync(home)).toStrictEqual([]);
   });
 
   it("--host gemini exits 1 with unknown host", () => {
@@ -354,10 +361,10 @@ describe("CLI", () => {
     const r = runCli(["--check"], tmpDir("yolo-cli-empty-"), bareCwd());
     expect(r.status).toBe(1);
     const [line, hint, ...rest] = r.stdout.trim().split("\n");
-    expect(rest).toEqual([]);
+    expect(rest).toStrictEqual([]);
     expect(hint).toBe(HINT);
     const parts = line!.split(" · ");
-    expect(parts.map((p) => p.split(" ")[0])).toEqual(HOSTS.map((h) => h.id));
+    expect(parts.map((p) => p.split(" ")[0])).toStrictEqual(HOSTS.map((h) => h.id));
     for (const p of parts) expect(p).toMatch(/^\w+ missing [\w.-]+(,[\w.-]+)*$/);
     expect(parts[0]).toContain("ui.permission_mode");
   });
@@ -382,7 +389,7 @@ describe("CLI", () => {
     fs.writeFileSync(file, JSON.stringify(v));
     const r = runCli(["--check"], home, cwd);
     expect(r.status).toBe(1);
-    expect(r.stdout.trim().split("\n")).toEqual([
+    expect(r.stdout.trim().split("\n")).toStrictEqual([
       "grok ok · claude differs permissions.defaultMode · codex ok · antigravity ok · cursor ok",
       HINT,
     ]);
@@ -429,8 +436,8 @@ describe("sourceRoot", () => {
     const r = syncGlobals({ workspaceRoot: out, sourceRoot: stock, home, apply: true });
     expect(r.ok).toBe(true);
     expect(r.report.length).toBeGreaterThan(0);
-    expect(fs.readdirSync(out)).toEqual([]);
-    expect(fs.readdirSync(stock)).toEqual(["agents"]);
+    expect(fs.readdirSync(out)).toStrictEqual([]);
+    expect(fs.readdirSync(stock)).toStrictEqual(["agents"]);
     expect(fs.existsSync(path.join(home, ".grok/config.toml"))).toBe(true);
   });
 });
@@ -459,7 +466,9 @@ describe("consumerRoot overlay", () => {
       host: "claude",
     });
     expect(r.ok).toBe(true);
-    expect(JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"))).toEqual({ customKey: 1 });
+    expect(JSON.parse(fs.readFileSync(path.join(home, ".claude/settings.json"), "utf8"))).toStrictEqual({
+      customKey: 1,
+    });
   });
 
   it("falls back to the stock payload when the overlay lacks that file", () => {
@@ -482,7 +491,7 @@ describe("consumerRoot overlay", () => {
       string,
       unknown
     >;
-    expect(Object.keys(written)).toEqual(
+    expect(Object.keys(written)).toStrictEqual(
       expect.arrayContaining(Object.keys(stockPayload).filter((k) => k !== "hooks")),
     );
     expect(written).not.toHaveProperty("customKey");

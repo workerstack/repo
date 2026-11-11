@@ -48,35 +48,35 @@ const TAGS = {
 };
 
 it("wants the main ruleset: no deletion, no force pushes, a pull request, and every CI check from GitHub Actions", () => {
-  expect(wantedOf().rulesets[0]).toEqual(MAIN);
+  expect(wantedOf().rulesets[0]).toStrictEqual(MAIN);
 });
 
 it("wants the release tags ruleset: only an admin creates, moves or deletes a version tag", () => {
-  expect(wantedOf().rulesets[1]).toEqual(TAGS);
+  expect(wantedOf().rulesets[1]).toStrictEqual(TAGS);
 });
 
 it("lets admins bypass both rulesets, always", () => {
-  expect(wantedOf().rulesets.map((ruleset) => ruleset.bypass_actors)).toEqual([[ADMIN], [ADMIN]]);
+  expect(wantedOf().rulesets.map((ruleset) => ruleset.bypass_actors)).toStrictEqual([[ADMIN], [ADMIN]]);
 });
 
 it("requires exactly the job names the generated ci.yml reports, each from GitHub Actions, without strictness", () => {
   const names = ciJobNames(context(["release"], { name: "pkg", private: false, scripts: { "test:e2e": "vitest" } }));
   const rule = wantedOf(MANIFEST, names).rulesets[0]?.rules.find((r) => r.type === "required_status_checks");
   const checks = names.map((name) => ({ context: name, integration_id: GITHUB_ACTIONS_ID }));
-  expect(rule?.parameters?.required_status_checks).toEqual(checks);
+  expect(rule?.parameters?.required_status_checks).toStrictEqual(checks);
   expect(rule?.parameters?.strict_required_status_checks_policy).toBe(false);
 });
 
 it("asks for no status check rule when CI runs no job", () => {
   const main = must(wantedOf(MANIFEST, []).rulesets[0]);
-  expect(main.rules.map((rule) => rule.type)).toEqual(["deletion", "non_fast_forward", "pull_request"]);
+  expect(main.rules.map((rule) => rule.type)).toStrictEqual(["deletion", "non_fast_forward", "pull_request"]);
 });
 
 it("takes the description and homepage as written, and the keywords as topics in written order", () => {
   const wanted = wantedOf({ ...MANIFEST, keywords: ["agents", "ci"] });
   expect(wanted.description).toBe(MANIFEST.description);
   expect(wanted.homepage).toBe(MANIFEST.homepage);
-  expect(wanted.topics).toEqual(["agents", "ci"]);
+  expect(wanted.topics).toStrictEqual(["agents", "ci"]);
 });
 
 it.each([
@@ -85,14 +85,14 @@ it.each([
   ["x", ['package.json: "keywords" is "x"; list 1 to 20 GitHub topics']],
   [["My Tool!"], [expect.stringContaining('package.json: keyword "My Tool!" is not a GitHub topic')]],
 ])("refuses keywords %j with the keyword lines and applies nothing", (keywords, errors) => {
-  expect(wantedSettings({ keywords }, CHECKS)).toEqual({ ok: false, errors });
+  expect(wantedSettings({ keywords }, CHECKS)).toStrictEqual({ ok: false, errors });
 });
 
 it("leaves what package.json does not say alone", () => {
   const wanted = wantedOf({});
-  expect([wanted.description, wanted.homepage, wanted.topics]).toEqual([undefined, undefined, undefined]);
+  expect([wanted.description, wanted.homepage, wanted.topics]).toStrictEqual([undefined, undefined, undefined]);
   const other = { ...served(wanted), description: "x", homepage: "y", topics: ["z"] };
-  expect(driftOf(wanted, other)).toEqual([]);
+  expect(driftOf(wanted, other)).toStrictEqual([]);
 });
 
 it("wantedAt reads the checkout's Cargo.toml: a Rust repo requires the msrv check, one without does not", async () => {

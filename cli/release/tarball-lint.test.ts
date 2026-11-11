@@ -25,7 +25,7 @@ const untypedExports = () =>
 
 describe("tarballLint", () => {
   it("passes a clean ESM package", { timeout: TIMEOUT }, async () => {
-    expect(await tarballLint(fixtureTarball(cleanManifest()))).toEqual([]);
+    expect(await tarballLint(fixtureTarball(cleanManifest()))).toStrictEqual([]);
   });
 
   it("fails a publint error with its formatted message", { timeout: TIMEOUT }, async () => {
@@ -52,7 +52,7 @@ describe("tarballLint", () => {
 describe("tarballLint attw", () => {
   it("fails an attw problem under bundler and node16 from ESM", { timeout: TIMEOUT }, async () => {
     const got = attwOnly(await tarballLint(untypedExports()));
-    expect(got).toEqual([
+    expect(got).toStrictEqual([
       expect.stringMatching(/^attw: \. under node16 \(from ESM\): .*\(UntypedResolution\)$/),
       expect.stringMatching(/^attw: \. under bundler: .*\(UntypedResolution\)$/),
     ]);
@@ -61,18 +61,18 @@ describe("tarballLint attw", () => {
   it("ignores node10 and node16-cjs for an ESM-only package", { timeout: TIMEOUT }, async () => {
     const exports = { ".": CLEAN_ESM(), "./sub": CLEAN_ESM() };
     const got = await tarballLint(fixtureTarball(cleanManifest({ exports }), CLEAN_FILES));
-    expect(got).toEqual([]);
+    expect(got).toStrictEqual([]);
   });
 
   it("reports node10 problems once an export has require", { timeout: TIMEOUT }, async () => {
     const exports = { ".": BOTH, "./sub": BOTH };
     const got = await tarballLint(fixtureTarball(cleanManifest({ exports }), BOTH_FILES));
-    expect(got).toEqual([expect.stringMatching(/^attw: \.\/sub under node10: .*\(NoResolution\)$/)]);
+    expect(got).toStrictEqual([expect.stringMatching(/^attw: \.\/sub under node10: .*\(NoResolution\)$/)]);
   });
 
   it("reports a problem that names no entrypoint", { timeout: TIMEOUT }, async () => {
     const got = attwOnly(await tarballLint(fixtureTarball(cleanManifest({ type: undefined }), CLEAN_FILES)));
-    expect(got).toEqual([expect.stringMatching(/^attw: package: .*\(UnexpectedModuleSyntax\)$/)]);
+    expect(got).toStrictEqual([expect.stringMatching(/^attw: package: .*\(UnexpectedModuleSyntax\)$/)]);
   });
 });
 

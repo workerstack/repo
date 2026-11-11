@@ -41,7 +41,7 @@ describe("card denials", () => {
     expect(r.ok, r.error).toBe(true);
     expect(r.content).not.toMatch(/^PLAN_NAME:/m);
     expect(r.content).toContain(`${H1}${CARD.join("\n")}\n\n## Goal`);
-    expect(validatePlan(savedOk(r).filename, savedOk(r).content)).toEqual([]);
+    expect(validatePlan(savedOk(r).filename, savedOk(r).content)).toStrictEqual([]);
   });
 
   it("denies a label without its 7-column padding or text", () => {

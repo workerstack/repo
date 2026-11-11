@@ -99,7 +99,7 @@ it("replaces a dangling skill link left by a removed node_modules instead of fol
   );
   expect(fs.existsSync(path.join(link, "SKILL.md"))).toBe(true);
   expect(fs.existsSync(path.join(root, "gone"))).toBe(false);
-  expect(await sync(root, "--check")).toEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
+  expect(await sync(root, "--check")).toStrictEqual({ code: 0, stdout: "repo sync: up to date\n", stderr: "" });
 });
 
 it("reports a failed render and leaves no stage behind", async () => {
@@ -108,7 +108,7 @@ it("reports a failed render and leaves no stage behind", async () => {
   const result = await sync(root);
   expect(result.code).toBe(1);
   expect(result.stderr).toContain(".repo/settings/claude.json");
-  expect(stagesIn(root)).toEqual([]);
+  expect(stagesIn(root)).toStrictEqual([]);
   expect(fs.existsSync(path.join(root, "AGENTS.md"))).toBe(false);
 });
 
