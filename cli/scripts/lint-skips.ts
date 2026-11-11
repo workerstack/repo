@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { sourceFiles, type Listed } from "../check-comments.ts";
-import { findRoot, loadConfig, type LintSkip } from "../config.ts";
+import { findRoot, loadConfig, type LintSkip, type ResolvedLint } from "../config.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
@@ -21,6 +21,8 @@ import { captureTool } from "./lint.ts";
 export type SkipCheck = { report: string[]; problems: string[] };
 /** The script checks' hits, no skip applied, and the oxlint runner (`captureTool` unless a test injects another). */
 export type SkipDeps = { scripts: readonly Diagnostic[]; run?: typeof captureTool };
+/** The files the unskipped run lints, and the oxlint runner it lints them with. */
+type Unskipped = { files: readonly string[]; run: typeof captureTool };
 /** One `lint.skip` entry with the source files its globs match. */
 type Matched = { skip: LintSkip; index: number; files: Set<string> };
 
@@ -89,10 +91,13 @@ function sourcesOf(root: string): Listed {
   return sources.ok ? { files: [...sources.files, ...rust.files].sort(byKey), ok: true } : sources;
 }
 
-/** The diagnostics of `files` under the generated config without skips, written to the root for the run only. */
-function unskippedReport(workspace: Workspace, files: readonly string[], run: typeof captureTool) {
-  // Only an unknown skip rule fails the build, and this one has no skips.
-  const built = oxlintConfig(workspace, []) /* no skips, so the build cannot fail */ as { ok: true; value: string };
+/**
+ * The diagnostics of `files` under the generated config without skips, written to the root for the run only; the
+ * package tags stay, so a skipped tag hit counts. A tag map sync would refuse returns sync's errors.
+ */
+function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run }: Unskipped) {
+  const built = oxlintConfig(workspace, { ...lint, skip: [] });
+  if (!built.ok) return built;
   const rel = unskippedConfigPath(process.pid);
   const file = path.join(workspace.root, rel);
   fs.writeFileSync(file, built.value);
@@ -106,17 +111,21 @@ function unskippedReport(workspace: Workspace, files: readonly string[], run: ty
 /**
  * Every `lint.skip` entry checked against the repo: a report line per rule and glob with its hits and reason, a count
  * per rule, and a problem for a glob that matches no source file and for a rule with no hit in its entry's files. The
- * hits are oxlint's without skips and the script checks' ones `deps` hands over.
+ * hits are oxlint's without skips (`lint.boundaries` kept) and the script checks' ones `deps` hands over.
  */
-export function checkLintSkips(workspace: Workspace, skips: readonly LintSkip[], deps: SkipDeps): SkipCheck {
+export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: SkipDeps): SkipCheck {
   const { scripts, run = captureTool } = deps;
+  const skips = lint.skip;
   if (skips.length === 0) return NONE;
   const listed = sourcesOf(workspace.root);
   if (!listed.ok) return { problems: listed.errors, report: [] };
   const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.files)), index, skip }));
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].sort(byKey);
   const oxlinted = files.filter((file) => !RUST_SOURCE.test(file));
-  const linted = oxlinted.length === 0 ? { ok: true as const, value: [] } : unskippedReport(workspace, oxlinted, run);
+  const linted =
+    oxlinted.length === 0
+      ? { ok: true as const, value: [] }
+      : unskippedReport(workspace, lint, { files: oxlinted, run });
   if (!linted.ok) return { problems: linted.errors, report: [] };
   const diagnostics = [...linted.value, ...scripts];
   const lines = entries.map((entry) => {
@@ -146,5 +155,5 @@ export async function checkLintSkipsAt(cwd: string, scripts: readonly Diagnostic
   if (!loaded.ok || !loaded.config.packs.includes("standards")) return NONE;
   // An unreadable manifest is already reported by sync --check.
   const read = readWorkspace(root);
-  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint.skip, { scripts }) : NONE;
+  return read.ok ? checkLintSkips(read.workspace, loaded.config.lint, { scripts }) : NONE;
 }

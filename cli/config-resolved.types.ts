@@ -26,10 +26,19 @@ export type LintSkip = {
   /** Why the rule cannot hold here; `repo check` fails the entry when it no longer silences anything. */
   reason: string;
 };
+/** `lint.boundaries`: which layer each package sits on, and which layers each may import. */
+export type LintBoundaries = {
+  /** Package name to its one tag, like `{ "@app/web": "app" }`; an untagged package is not judged. */
+  readonly tags: Readonly<Record<string, string>>;
+  /** Tag to the other tags its packages may import, like `{ app: ["ui"], ui: [] }`; a tag may import its own. */
+  readonly allow: Readonly<Record<string, readonly string[]>>;
+};
 /** What the generated oxlint config and `repo check` read from `lint`. */
 export type ResolvedLint = {
   /** The reasoned exceptions to lint rules; empty when the config lists none. */
   readonly skip: readonly LintSkip[];
+  /** The package tags `repo/boundaries` judges imports by; absent when the config sets none. */
+  readonly boundaries?: LintBoundaries | undefined;
 };
 /** A validated workerstack.config.ts with every omitted value filled in, as the `repo` commands read it. */
 export type ResolvedConfig = {

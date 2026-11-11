@@ -12,7 +12,7 @@ import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from 
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
 import { knipSchema } from "./knip-schema.ts";
 import { linkSchema } from "./link-schema.ts";
-import { lintSchema } from "./lint-schema.ts";
+import { lintOf, lintSchema } from "./lint-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { ownerSchema } from "./owner-config.ts";
 import { generatedTask } from "./turbo-config.constants.ts";
@@ -126,6 +126,7 @@ const configSchema = z
 
 export type { WorkerstackConfig };
 export type {
+  LintBoundaries,
   LintSkip,
   LoadResult,
   ResolvedAgents,
@@ -196,7 +197,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
     knip: { ignore: d.knip?.ignore ?? [] },
     link: d.link,
-    lint: { skip: d.lint?.skip ?? [] },
+    lint: lintOf(d.lint),
     owner: d.owner,
     packs: d.packs ?? defaultPacks(),
     tdd: d.tdd ?? false,

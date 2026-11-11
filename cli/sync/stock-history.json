@@ -3093,6 +3093,7 @@
     "23612b6f293de8bd",
     "2563079d8a559123",
     "337e4d3746b4593c",
+    "3cb5ff2fcdf361ce",
     "4932e13e9ca3cee5",
     "712f580080f7900b",
     "776b23b446148ff5",
@@ -3121,16 +3122,23 @@
     "fd1698e37adb39a2"
   ],
   "cli/scripts/lint-skips-manifest.test.ts": ["6e4d30c6733700d8", "7e68217c09cf105d", "982a575df72bd1a8"],
-  "cli/scripts/lint-skips-rust.test.ts": ["02ff349faa708a89", "8d855e38ecd3cbea", "986d209d2ad008e1"],
+  "cli/scripts/lint-skips-rust.test.ts": [
+    "02ff349faa708a89",
+    "3c830ee29ac80883",
+    "8d855e38ecd3cbea",
+    "986d209d2ad008e1"
+  ],
   "cli/scripts/lint-skips.test.ts": [
     "20248a767ba4538b",
     "26e7bba0dc615a26",
     "2a221e3c731b1c87",
     "3dbf1d247a961602",
-    "a666668c9998ec78"
+    "a666668c9998ec78",
+    "f4750ded2d4fe73c"
   ],
   "cli/scripts/lint-skips.ts": [
     "073798bd382c8251",
+    "36d459fcb7ee65d6",
     "896105bd6a1abcc5",
     "9bd9f7b14debb0d9",
     "a80cb47a942f0816",
@@ -3138,6 +3146,7 @@
     "f55dcaba623e33ba"
   ],
   "cli/scripts/lint-spawn.test.ts": ["3d9fdfc18deda4a7", "f66d7acb31733f2f"],
+  "cli/scripts/lint-tags.test.ts": ["8d67023950332c2f"],
   "cli/scripts/lint.constants.ts": ["12e07e19e81df819", "b80b74e52c7ce5d5", "c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
@@ -4000,7 +4009,7 @@
   "references/cascade.md": ["b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
   "references/clasp.md": ["ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29"],
-  "references/exports.md": ["efa00621c5422da6"],
+  "references/exports.md": ["77895c578e57d302", "efa00621c5422da6"],
   "references/google-workspace.md": ["db455dc3b114ef70"],
   "references/hooks.md": [
     "44ba642a2e1cbcb6",

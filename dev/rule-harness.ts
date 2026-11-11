@@ -67,9 +67,9 @@ function visitAll(program: unknown, visitors: Visitors): void {
   );
 }
 
-type Lint = { dir: string; file: string; code: string; reports: Report[] };
+type Lint = { dir: string; file: string; code: string; options: readonly unknown[]; reports: Report[] };
 
-function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }: Lint): void {
+function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, options, reports }: Lint): void {
   const filename = path.join(dir, file);
   const parsed = parseSync(filename, code);
   const comments =
@@ -77,7 +77,7 @@ function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }
   const context = {
     cwd: dir,
     filename,
-    options: [],
+    options,
     report: ({ message }: { message?: string | null }) => reports.push({ file, message: message ?? "" }),
     sourceCode: {
       getAllComments: () => comments,
@@ -93,8 +93,15 @@ function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, reports }
   visitAll(parsed.program, visitors);
 }
 
-/** What `rule` reports over every `.ts` file of `fixture`, in fixture order; the temp dir is gone after. */
-export function reportsOf(rule: Pick<CreateRule, "create">, fixture: Fixture): Report[] {
+/**
+ * What `rule` reports over every `.ts` file of `fixture`, in fixture order; the temp dir is gone after. `options` is
+ * the rule's `context.options`, as oxlint hands over what follows `"error"` in `["error", {…}]`.
+ */
+export function reportsOf(
+  rule: Pick<CreateRule, "create">,
+  fixture: Fixture,
+  options: readonly unknown[] = [],
+): Report[] {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-rule-")));
   try {
     for (const [file, code] of Object.entries(fixture)) {
@@ -103,7 +110,7 @@ export function reportsOf(rule: Pick<CreateRule, "create">, fixture: Fixture): R
     }
     const reports: Report[] = [];
     for (const [file, code] of Object.entries(fixture))
-      if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { code, dir, file, reports });
+      if (/\.[cm]?[jt]sx?$/.test(file)) lintFile(rule, { code, dir, file, options, reports });
 
     return reports;
   } finally {

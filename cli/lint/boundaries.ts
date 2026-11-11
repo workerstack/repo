@@ -3,10 +3,11 @@ import path from "node:path";
 
 import type { ESTree, CreateRule } from "@oxlint/plugins";
 
+import { type Tags, TAGS_SCHEMA, tagProblem, tagsOf } from "./boundaries-tags.ts";
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
 
-/** The file being linted, its package's manifest, and the dir paths in messages are relative to. */
-type Where = { cwd: string; filename: string; own: Manifest };
+/** The file being linted, its package's manifest, the dir paths in messages are relative to, and the package tags. */
+type Where = { cwd: string; filename: string; own: Manifest; tags: Tags };
 type Sourced =
   | ESTree.ImportDeclaration
   | ESTree.ExportNamedDeclaration
@@ -53,7 +54,7 @@ function problemOf(where: Where, specifier: string): string | null {
   if (exempt(specifier) || name === where.own.name) return null;
   const manifest = shown(where.cwd, where.own.file);
   if (!where.own.declared.includes(name)) return `"${name}" is not declared in ${manifest}; add it to its dependencies`;
-  if (!shipsDevOnly(where, name)) return null;
+  if (!shipsDevOnly(where, name)) return tagProblem(where.tags, where.own.name, name);
   return `"${name}" is only in devDependencies of ${manifest}; shipped code needs it in dependencies or peerDependencies`;
 }
 
@@ -61,14 +62,15 @@ function problemOf(where: Where, specifier: string): string | null {
  * Keeps each file to its own package: a path import stays inside its nearest package.json, and a package import is
  * the package itself or one its manifest declares. Type-only imports and `import()` count; a file whose manifest
  * cannot be read is skipped. In a public package a shipped file also needs a runtime name: one only in
- * `devDependencies` is not installed by a consumer.
+ * `devDependencies` is not installed by a consumer. With `lint.boundaries`, which sync writes as its options, a
+ * package import also needs the importer's tag to allow the target's.
  */
 export const boundaries: CreateRule = {
   create(context) {
     const ownFile = nearestManifest(path.dirname(context.filename));
     const own = ownFile === null ? null : readManifest(ownFile);
     if (own === null) return {};
-    const where: Where = { cwd: context.cwd, filename: context.filename, own };
+    const where: Where = { cwd: context.cwd, filename: context.filename, own, tags: tagsOf(context.options) };
     const check = (node: Sourced): void => {
       const { source } = node;
       if (source?.type !== "Literal" || typeof source.value !== "string") return;
@@ -82,4 +84,5 @@ export const boundaries: CreateRule = {
       ImportExpression: check,
     };
   },
+  meta: { schema: TAGS_SCHEMA },
 };
