@@ -7,7 +7,7 @@ import { CONFIG_FILE, HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
 import { initGit } from "./init-git.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
 import { captureTool } from "./scripts/lint.ts";
-import { PRINT_WIDTH } from "./sync/standards.ts";
+import { PRINT_WIDTH } from "./lint/max-line-width.constants.ts";
 import { PACKAGE_NAME } from "./sync/stock.ts";
 
 export { PACKAGE_NAME };

@@ -845,7 +845,7 @@ describe("start check", () => {
     const reason = "the lookup result is always present";
     const skip = (file: string) => ({ files: [file], rules: ["typescript/no-non-null-assertion"], reason });
     const config = { packs: ["standards"], lint: { skip: [skip("src/a.ts"), skip("src/b.ts")] } };
-    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
     fs.mkdirSync(path.join(dir, "src"));
     fs.writeFileSync(path.join(dir, "src/a.ts"), "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
     fs.writeFileSync(path.join(dir, "src/b.ts"), "export const b = 1;\n");
@@ -869,7 +869,7 @@ describe("start check", () => {
     const reason = "retry tuning lives here for now";
     const skip = { files: ["src/retry.ts"], rules: ["repo/magic-number"], reason };
     const config = { packs: ["standards"], lint: { skip: [skip] } };
-    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+    fs.writeFileSync(path.join(dir, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
     const synced = { packs: ["standards" as const], agents: NO_AGENTS, ...BASE_CONFIG };
     const workspace = { root: "", manifest: {}, packages: [] };
     for (const output of standards({ root: "", config: synced, workspace, read: () => null }, []).outputs)
