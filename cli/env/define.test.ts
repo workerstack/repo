@@ -31,7 +31,7 @@ const child = createEnv(
   fakeIo().io,
 );
 
-describe("createEnv merging, as createScriptEnv", () => {
+describe("createEnv merging", () => {
   it("merges global into every scope and carries every ancestor's keys", () => {
     expect(child.dev).toMatchObject({ G: "g", G_DEV: "g-dev", P: "p", P_DEV: "p-dev" });
     expect(child.prod).toMatchObject({ G: "g", P: "p" });

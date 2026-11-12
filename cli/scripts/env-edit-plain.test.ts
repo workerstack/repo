@@ -16,19 +16,19 @@ useEnvRepos();
 describe("env set --plain", () => {
   it("replaces a plain value, needing no key", async () => {
     const w = await envRepo(unkeyed);
-    const got = await run(w, ["set", "APEX_DOMAIN", "--scope", "prod", "--plain"], { stdin: "anyrow.io\n" });
+    const got = await run(w, ["set", "APEX_DOMAIN", "--scope", "prod", "--plain"], { stdin: "acme.io\n" });
     expect(got).toMatchObject({ code: 0, err: "", out: `repo env: wrote prod.APEX_DOMAIN (plain) in ${ENV_REL}\n` });
-    expect(read(w)).toBe(shopEnv([]).replace('APEX_DOMAIN: "anyrow.com"', 'APEX_DOMAIN: "anyrow.io"'));
+    expect(read(w)).toBe(shopEnv([]).replace('APEX_DOMAIN: "acme.com"', 'APEX_DOMAIN: "acme.io"'));
   });
 
   it("writes the global block for --scope global, no sealed import added", async () => {
     const w = await envRepo(unkeyed);
-    const got = await run(w, ["set", "APEX_DOMAIN", "--scope", "global", "--plain"], { stdin: "anyrow.io\n" });
+    const got = await run(w, ["set", "APEX_DOMAIN", "--scope", "global", "--plain"], { stdin: "acme.io\n" });
     expect(got).toMatchObject({ code: 0, err: "", out: `repo env: wrote global.APEX_DOMAIN (plain) in ${ENV_REL}\n` });
     expect(read(w)).toBe(
       shopEnv([]).replace(
         '    CLOUDFLARE_ACCOUNT_ID: "fake-account",\n',
-        '    CLOUDFLARE_ACCOUNT_ID: "fake-account",\n    APEX_DOMAIN: "anyrow.io",\n',
+        '    CLOUDFLARE_ACCOUNT_ID: "fake-account",\n    APEX_DOMAIN: "acme.io",\n',
       ),
     );
   });

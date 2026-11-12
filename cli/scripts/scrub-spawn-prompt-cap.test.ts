@@ -28,7 +28,7 @@ it("strips pasted transcripts and keeps first You are + facts + abs paths", () =
   expect(out).toContain("1 match.");
   expect(out).toContain("- scripts/gate-fat-tools.ts:1 — exists");
   expect(out).not.toContain("verdict: ok");
-  expect(out).toContain("/home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts");
+  expect(out).toContain("/home/dev/Development/repo-test-2/scripts/gate-fat-tools.ts");
 });
 
 it("denies over-cap prompts after scrub without slicing or …[truncated]", () => {
@@ -38,9 +38,9 @@ it("denies over-cap prompts after scrub without slicing or …[truncated]", () =
   expect(out.length).toBeGreaterThan(MAX_PROMPT_CHARS);
   expect(out).not.toContain(TRUNCATE_SUFFIX);
   expect(out).toContain("1 match.");
-  expect(out).toContain("- /home/ecomet/Development/repo-test-2/README.md:1 — keep me");
+  expect(out).toContain("- /home/dev/Development/repo-test-2/README.md:1 — keep me");
   expect(out).not.toContain("verdict: ok");
-  expect(out).toContain("/home/ecomet/Development/repo-test-2/README.md");
+  expect(out).toContain("/home/dev/Development/repo-test-2/README.md");
 
   const rewritten = rewriteSpawnToolInput({
     prompt: raw,

@@ -36,7 +36,7 @@ describe("env run", () => {
     expect(got.spawned).toHaveLength(1);
     const [child] = got.spawned;
     expect(child?.command).toStrictEqual(["wrangler", "deploy", "--env", "prod"]);
-    expect(child?.env).toMatchObject({ APEX_DOMAIN: "anyrow.io", STRIPE_SECRET_KEY: secret });
+    expect(child?.env).toMatchObject({ APEX_DOMAIN: "acme.io", STRIPE_SECRET_KEY: secret });
     expect(`${got.out}${got.err}`).not.toContain(secret);
   });
 });

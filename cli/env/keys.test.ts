@@ -59,18 +59,18 @@ describe("identities", () => {
 });
 
 describe("readKeysFile", () => {
-  const keys = JSON.stringify({ recipient: RECIPIENT, repo: "monorepo" });
+  const keys = JSON.stringify({ recipient: RECIPIENT, repo: "acme" });
 
   it("parses the keys file at cwd", () => {
     const dir = plant({ [KEYS_FILE]: keys });
-    expect(readKeysFile(dir)).toStrictEqual({ recipient: RECIPIENT, repo: "monorepo" });
+    expect(readKeysFile(dir)).toStrictEqual({ recipient: RECIPIENT, repo: "acme" });
   });
 
   it("finds the nearest keys file above cwd", () => {
-    const dir = plant({ [KEYS_FILE]: keys, "projects/anyrow/src/x.ts": "" });
-    expect(readKeysFile(path.join(dir, "projects/anyrow/src"))).toStrictEqual({
+    const dir = plant({ [KEYS_FILE]: keys, "projects/shop/src/x.ts": "" });
+    expect(readKeysFile(path.join(dir, "projects/shop/src"))).toStrictEqual({
       recipient: RECIPIENT,
-      repo: "monorepo",
+      repo: "acme",
     });
   });
 
@@ -80,8 +80,8 @@ describe("readKeysFile", () => {
 
   it.each([
     ["not JSON", "{"],
-    ["no recipient", JSON.stringify({ repo: "monorepo" })],
-    ["a recipient that is not age1", JSON.stringify({ recipient: "ssh-ed25519 AAAA", repo: "monorepo" })],
+    ["no recipient", JSON.stringify({ repo: "acme" })],
+    ["a recipient that is not age1", JSON.stringify({ recipient: "ssh-ed25519 AAAA", repo: "acme" })],
     ["no repo", JSON.stringify({ recipient: RECIPIENT })],
     ["an array", "[]"],
   ])("refuses a keys file with %s, naming the file", (_label, content) => {

@@ -81,7 +81,7 @@ describe("env set, a write that fails", () => {
         fs.renameSync(file, kept);
         fs.mkdirSync(file);
 
-        return Promise.resolve("anyrow.io\n");
+        return Promise.resolve("acme.io\n");
       },
       stdout: print,
     });
@@ -99,10 +99,10 @@ describe("env set usage", () => {
     ["a scope that is none of the four", ["APEX_DOMAIN", "--scope", "staging", "--plain"]],
     ["no scope", ["APEX_DOMAIN", "--plain"]],
     ["no key", ["--scope", "prod", "--plain"]],
-    ["a value in argv", ["APEX_DOMAIN", "anyrow.io", "--scope", "prod", "--plain"]],
+    ["a value in argv", ["APEX_DOMAIN", "acme.io", "--scope", "prod", "--plain"]],
   ])("prints usage for %s, exit 4", async (_label, argv) => {
     const w = await envRepo(unkeyed);
-    const got = await run(w, ["set", ...argv], { stdin: "anyrow.io\n" });
+    const got = await run(w, ["set", ...argv], { stdin: "acme.io\n" });
     expect(got).toMatchObject({ code: 4, err: USAGE, out: "" });
     expect(read(w)).toBe(shopEnv([]));
   });

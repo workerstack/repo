@@ -31,7 +31,7 @@ const CONST_CONFIG = [
   "  local: {},",
   "  dev: {},",
   "  prod: {",
-  '    APEX_DOMAIN: "anyrow.com",',
+  '    APEX_DOMAIN: "acme.com",',
   "  },",
   "} as const;",
   "",
@@ -50,7 +50,7 @@ const OWN_STYLE = [
   "    dev: {},",
   "    prod: {",
   "        // the public site",
-  "        APEX_DOMAIN: 'anyrow.com',",
+  "        APEX_DOMAIN: 'acme.com',",
   "    },",
   "})",
   "",
@@ -71,8 +71,8 @@ describe("env set, the file's own shape", () => {
     const text = read(w);
 
     const want = CONST_CONFIG.replace(IMPORT, IMPORT_SEALED).replace(
-      '    APEX_DOMAIN: "anyrow.com",\n',
-      '    APEX_DOMAIN: "anyrow.com",\n    STRIPE_SECRET_KEY: sealed("CIPHER"),\n',
+      '    APEX_DOMAIN: "acme.com",\n',
+      '    APEX_DOMAIN: "acme.com",\n    STRIPE_SECRET_KEY: sealed("CIPHER"),\n',
     );
 
     expect(withoutCipher(text, "STRIPE_SECRET_KEY")).toBe(want);
@@ -85,8 +85,8 @@ describe("env set, the file's own shape", () => {
     expect(got.code).toBe(0);
 
     const want = OWN_STYLE.replace("import { defineEnv } from", "import { defineEnv, sealed } from").replace(
-      "        APEX_DOMAIN: 'anyrow.com',\n",
-      "        APEX_DOMAIN: 'anyrow.com',\n        STRIPE_SECRET_KEY: sealed(\"CIPHER\"),\n",
+      "        APEX_DOMAIN: 'acme.com',\n",
+      "        APEX_DOMAIN: 'acme.com',\n        STRIPE_SECRET_KEY: sealed(\"CIPHER\"),\n",
     );
 
     expect(withoutCipher(read(w), "STRIPE_SECRET_KEY")).toBe(want);

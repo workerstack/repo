@@ -233,7 +233,7 @@ $ notes export
 ## Context
 - Task type: feature
 - Named checks: failing test before impl; read `principle-test-behavior-not-implementation`
-- `/home/ecomet/Development/example-app/src/cli.ts` parses flags; `/home/ecomet/Development/example-app/src/export.ts` prints the table
+- `/home/dev/Development/example-app/src/cli.ts` parses flags; `/home/dev/Development/example-app/src/export.ts` prints the table
 - Rejected: a separate `notes json` command, which splits one export into two
 
 ## Constraints
@@ -246,11 +246,11 @@ $ notes export
 ## Steps
 1 [ ] Failing test
 1.1 [ ] read `principle-test-behavior-not-implementation`
-1.2 [ ] in `/home/ecomet/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
+1.2 [ ] in `/home/dev/Development/example-app/src/export.test.ts`, `notes export --json` on two notes prints a two-element array with those keys, and on none prints `[]`
 1.3 [ ] run `bun run test export`; the new cases fail on the unknown flag
 2 [ ] Implement
-2.1 [ ] parse `--json` in `/home/ecomet/Development/example-app/src/cli.ts`
-2.2 [ ] in `/home/ecomet/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
+2.1 [ ] parse `--json` in `/home/dev/Development/example-app/src/cli.ts`
+2.2 [ ] in `/home/dev/Development/example-app/src/export.ts`, print `JSON.stringify` of the notes when `--json` is set
 2.3 [ ] run the test from 1.3; all pass
 
 ## Verify

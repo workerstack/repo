@@ -70,7 +70,7 @@ describe("env export", () => {
     const w = await envRepo({
       files: async (key) => ({
         [ENV_REL]: envFile([
-          '  global: { APEX_DOMAIN: "anyrow.io" },',
+          '  global: { APEX_DOMAIN: "acme.io" },',
           "  local: {},",
           `  dev: { ${Object.entries(VALUES)
             .map(([name, value]) => `${name}: ${JSON.stringify(value)}, `)
@@ -83,7 +83,7 @@ describe("env export", () => {
 
     const got = await run(w, EXPORT);
     expect(got).toMatchObject({ code: 0, err: "" });
-    const all = { APEX_DOMAIN: "anyrow.io", ...VALUES, STRIPE_SECRET_KEY: secret };
+    const all = { APEX_DOMAIN: "acme.io", ...VALUES, STRIPE_SECRET_KEY: secret };
     const names = Object.keys(all).toSorted();
     expect([...got.out.matchAll(/^(\w+)=/gmu)].map((match) => match[1])).toStrictEqual(names);
     const hashes = Object.fromEntries(Object.entries(all).map(([name, value]) => [name, digest(value)]));

@@ -1,6 +1,6 @@
-You are scout subagent. Task: /home/ecomet/Development/repo-test-2/README.md
+You are scout subagent. Task: /home/dev/Development/repo-test-2/README.md
 Human: paste
 Assistant: paste
 XXXX_PAD
 1 match.
-- /home/ecomet/Development/repo-test-2/README.md:1 — keep me
+- /home/dev/Development/repo-test-2/README.md:1 — keep me

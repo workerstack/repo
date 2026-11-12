@@ -271,8 +271,9 @@ function sealedKeysOf(block: Block): ReadonlySet<string> {
 }
 
 /**
- * The env of `config` over `io`: merged like createScriptEnv, plain values read as they are, and every sealed value of
- * the tree revealed together on the first sealed read, kept for this instance only. `origin` names the defining file.
+ * The env of `config` over `io`: own global, then the parent's scope view, then own scope merged, plain values read as
+ * they are, and every sealed value of the tree revealed together on the first sealed read, kept for this instance
+ * only. `origin` names the defining file.
  */
 export function createEnv<C extends EnvConfig>(config: C, io: EnvIo, origin: string = UNKNOWN_ORIGIN): EnvInstance<C> {
   refuseWorker();

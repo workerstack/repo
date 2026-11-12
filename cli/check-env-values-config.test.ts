@@ -5,7 +5,7 @@ import { checkEnvValues } from "./check-env-values.ts";
 
 const { repoWith } = useGitTree("check-env-values-config-");
 
-const FILE = "projects/anyrow/env.ts";
+const FILE = "projects/shop/env.ts";
 const IMPORT = 'import { defineEnv } from "@workerstack/repo/env";\n';
 
 /** The fix a plaintext `prod.KEY` line names: the command that seals it in place. */

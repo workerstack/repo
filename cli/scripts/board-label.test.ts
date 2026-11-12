@@ -60,7 +60,7 @@ it("leaves ordinary words, paths, slugs and SHAs intact", () => {
     "bypass the cache",
     "ask the user which flow",
     "fix task-list and disk-usage",
-    "look at /home/lovro/Development/monorepo/projects/anyrow",
+    "look at /home/dev/acme/projects/shop",
     "plan 20-board-drops-pasted-secrets",
     "revert 9fb96064c3a1e2b5d7f8091a2b3c4d5e6f708192",
   ])

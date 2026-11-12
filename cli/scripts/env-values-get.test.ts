@@ -54,7 +54,7 @@ describe("env ls", () => {
     const got = await run(w, ["ls"]);
     expect(got.code).toBe(0);
     expect(got.out).not.toContain(secret);
-    expect(got.out).not.toContain("anyrow.io");
+    expect(got.out).not.toContain("acme.io");
   });
 });
 
@@ -76,7 +76,7 @@ describe("env get", () => {
   it("reads a scope's merged view, global included", async () => {
     const w = await envRepo(shop(fakeSecret()));
     const got = await run(w, ["get", "APEX_DOMAIN", "--scope", "prod", "--reveal"]);
-    expect(got).toMatchObject({ code: 0, err: "", out: "anyrow.io\n" });
+    expect(got).toMatchObject({ code: 0, err: "", out: "acme.io\n" });
   });
 
   it.each([

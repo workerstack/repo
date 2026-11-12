@@ -70,11 +70,11 @@ it("chromium-only on linux is not done; advises Lightpanda", async () => {
     io,
     pathEnv: "/none",
     platform: "linux",
-    whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
+    whichFn: (name: string) => (name === "chromium" ? "/home/dev/bin/chromium" : ""),
   });
 
   expect(r.ok).toBe(false);
-  expect(r.chromium).toBe("/home/ecomet/bin/chromium");
+  expect(r.chromium).toBe("/home/dev/bin/chromium");
   expect(io.logs.join("\n")).toMatch(/Install Lightpanda as well/);
 
   const st = await targetStatuses({
@@ -82,7 +82,7 @@ it("chromium-only on linux is not done; advises Lightpanda", async () => {
     home: plant("setup-br-st-"),
     pathEnv: "/none",
     platform: "linux",
-    whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
+    whichFn: (name: string) => (name === "chromium" ? "/home/dev/bin/chromium" : ""),
   });
 
   expect(st.browser.ok).toBe(false);
