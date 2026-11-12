@@ -7,6 +7,7 @@ import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
 import { BENCH_SUMMARY } from "./scripts/bench.constants.ts";
+import { ENV_SUMMARY } from "./scripts/env-command.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
 import { PUSH_SUMMARY } from "./scripts/push.constants.ts";
 import { UPDATE_SUMMARY } from "./update.constants.ts";
@@ -34,6 +35,7 @@ export type CommandName =
   | "speak"
   | "setup"
   | "doctor"
+  | "env"
   | "clean"
   | "yolo"
   | "purge-mcps"
@@ -84,6 +86,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   // Tools an agent runs.
   bench: { load: () => import("./scripts/bench.ts"), summary: BENCH_SUMMARY },
   browser: { load: () => import("./scripts/browser.ts"), summary: "Browse with Lightpanda, Chromium when blocked" },
+  env: { load: () => import("./scripts/env-command.ts"), summary: ENV_SUMMARY },
   "google-workspace": {
     load: () => import("./scripts/google-workspace.ts"),
     summary: "Google Sheets, Docs, Slides, Calendar and Gmail",

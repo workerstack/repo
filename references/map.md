@@ -62,6 +62,12 @@ Cheap outline. Not a file dump.
 - `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
 - `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
 - `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
+- `cli/scripts/env-command.ts` (+ `.constants.ts`) — `bun repo env` dispatch, usage and exit codes; `env-args.ts` parses the flags; `env-io.ts` is the deps (cwd, stdin, stdout, gh) and the one-line refusal
+- `cli/scripts/env-files.ts` — finds the `defineEnv` files, picks one (`--file`, the one declaring the key, the only one) and lists USED BY
+- `cli/scripts/env-edit.ts` — `env set`: the AST edit that seals or writes a value into the scope block in place
+- `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
+- `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
+- `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ## Tmp

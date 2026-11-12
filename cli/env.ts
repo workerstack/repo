@@ -7,8 +7,9 @@ import {
   DECRYPT_FAILED_EXIT,
   DECRYPT_MODULE,
   DECRYPT_WRONG_KEY_EXIT,
-  ENV_KEY_VARIABLE,
+  KEY_IMPORT_FIX,
   KEYS_DIR,
+  WRONG_KEY_FIX,
 } from "./env.constants.ts";
 import { createEnv, sealedValue } from "./env/define.ts";
 import type { EnvConfig, EnvInstance, EnvIo, Sealed } from "./env/define.ts";
@@ -51,20 +52,16 @@ function childScript(): string {
 function revealInChild(ciphers: readonly string[], key: string): string[] {
   const keys = identities({ home: homeDir(process.env, os.homedir()), source: process.env });
 
-  if (keys.length === 0) {
-    const fix = `save this repo's age key there (0600) or set ${ENV_KEY_VARIABLE}`;
-    throw new Error(`repo env: ${key} is sealed and no key is at ${keyFileLabel()}; ${fix}`);
-  }
+  if (keys.length === 0)
+    throw new Error(`repo env: ${key} is sealed and no key is at ${keyFileLabel()}; ${KEY_IMPORT_FIX}`);
 
   const result = spawnSync(bunRuntime(process.versions, process.execPath), ["-e", childScript()], {
     encoding: "utf8",
     input: JSON.stringify({ ciphers, identities: keys }),
   });
 
-  if (result.status === DECRYPT_WRONG_KEY_EXIT) {
-    const label = keyFileLabel();
-    throw new Error(`repo env: ${key} is sealed for another key than ${label}; save this repo's age key there`);
-  }
+  if (result.status === DECRYPT_WRONG_KEY_EXIT)
+    throw new Error(`repo env: ${key} is sealed for another key than ${keyFileLabel()}; ${WRONG_KEY_FIX}`);
 
   if (result.status !== 0) {
     const reason = (result.error?.message ?? result.stderr).trim();

@@ -74,5 +74,7 @@ export const CREDENTIAL_SHAPE: Readonly<RegExp> = /^\S{16,}$/u;
 /** The reason a value under a credential name is flagged. */
 export const CREDENTIAL_REASON: string = "credential name";
 
-/** The fix a plaintext secret's line names. */
-export const SEAL_HINT: string = 'seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")';
+/** The fix a plaintext secret's line names: the command that seals `key` of `scope` in place. */
+export function sealHint(key: string, scope: string): string {
+  return `run \`bun repo env set ${key} --scope ${scope}\``;
+}

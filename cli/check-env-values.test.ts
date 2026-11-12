@@ -10,7 +10,16 @@ const { repoWith } = useGitTree("check-env-values-");
 
 const FILE = "projects/anyrow/env.ts";
 const IMPORT = 'import { defineEnv, sealed } from "@workerstack/repo/env";\n';
-const SEAL_HINT = 'seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")';
+
+/** The fix a plaintext `<scope>.<key>` line names: the command that seals it in place. */
+function sealHint(key: string, scope: string): string {
+  return `run \`bun repo env set ${key} --scope ${scope}\``;
+}
+
+/** The line for a plain `scope.key` that looks like a secret by `prefix`. */
+function plainSecret(scope: string, key: string, prefix: string): string {
+  return `env: ${FILE} ${scope}.${key} looks like a secret (${prefix} prefix) but is plain; ${sealHint(key, scope)}`;
+}
 
 // A stand-in age cipher: base64 that starts as age's header does.
 const CIPHER = btoa("age-encryption.org/v1 fake cipher");
@@ -40,32 +49,26 @@ describe("checkEnvValues, plaintext secrets", () => {
   it("fails a plain value with a secret prefix, naming the prefix and the fix", () => {
     const stripe = ["sk", "live", "FAKEFAKEFAKE0000"].join("_");
     const blocks = `local: {}, dev: {}, prod: { STRIPE_SECRET_KEY: ${JSON.stringify(stripe)} },`;
-    expect(linesFor(envFile(blocks))).toStrictEqual([
-      `env: ${FILE} prod.STRIPE_SECRET_KEY looks like a secret (sk_ prefix) but is plain; ${SEAL_HINT}`,
-    ]);
+    expect(linesFor(envFile(blocks))).toStrictEqual([plainSecret("prod", "STRIPE_SECRET_KEY", "sk_")]);
   });
 
   it.each(["sk_", "ghp_", "github_pat_", "npm_", "cfat_", "cfk_", "AIza", "whsec_", "sk-ant-", "GOCSPX-"])(
     "fails a plain value that starts %s",
     (prefix) => {
-      expect(linesFor(envFile(prodValue(`${prefix}fakevalue`)))).toStrictEqual([
-        `env: ${FILE} prod.KEY looks like a secret (${prefix} prefix) but is plain; ${SEAL_HINT}`,
-      ]);
+      expect(linesFor(envFile(prodValue(`${prefix}fakevalue`)))).toStrictEqual([plainSecret("prod", "KEY", prefix)]);
     },
   );
 
   it("fails a plain secret in the global block", () => {
     const blocks = `global: { NPM_TOKEN: ${JSON.stringify(`npm_${"fake".repeat(4)}`)} }, local: {}, dev: {}, prod: {},`;
-    expect(linesFor(envFile(blocks))).toStrictEqual([
-      `env: ${FILE} global.NPM_TOKEN looks like a secret (npm_ prefix) but is plain; ${SEAL_HINT}`,
-    ]);
+    expect(linesFor(envFile(blocks))).toStrictEqual([plainSecret("global", "NPM_TOKEN", "npm_")]);
   });
 
   it("fails a plain value of high entropy", () => {
     const random = ["aB3dE5fG", "7hJ9kL2m", "N4pQ6rS8", "tV0wX1yZ"].join("");
     const [line] = linesFor(envFile(prodValue(random)));
     expect(line).toMatch(new RegExp(`^env: ${FILE} prod\\.KEY looks like a secret \\(.+\\) but is plain; `, "u"));
-    expect(line?.endsWith(SEAL_HINT)).toBe(true);
+    expect(line?.endsWith(sealHint("KEY", "prod"))).toBe(true);
   });
 });
 
@@ -210,7 +213,7 @@ function linesForKey(key: string, value: string): string[] {
 
 /** The line a plain `prod.<key>` value flagged for `reason` prints. */
 function secretLine(key: string, reason: string): string {
-  return `env: ${FILE} prod.${key} looks like a secret (${reason}) but is plain; ${SEAL_HINT}`;
+  return `env: ${FILE} prod.${key} looks like a secret (${reason}) but is plain; ${sealHint(key, "prod")}`;
 }
 
 // Shapes measured on real sealed values (3.2); each value here is synthetic.

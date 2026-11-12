@@ -372,21 +372,68 @@ A scope merges like `createScriptEnv`: own `global`, then the parent's scope vie
 
 `sealed("<base64>")` takes the base64 of an age cipher made for the recipient in `.repo/env.keys.json` (`{ "recipient": "age1…", "repo": "<name>" }`); plaintext or an empty string throws at once. Nothing decrypts until a sealed value is read: the first such read decrypts every sealed value of the env and its parents in one `bun` child and keeps the plaintext in that instance only, so a plain read needs no key. The key is `WORKERSTACK_ENV_KEY` (an age identity) when set, else every `~/.workerstack/keys/*.key`; the repo's own is `~/.workerstack/keys/<repo>.key`, saved at 0600.
 
+#### Commands
+
+`bun repo env <verb>` seals, lists, reads and hands out the values of the `defineEnv` files, so no `age` CLI or base64 is needed. A value never enters argv: `set` reads a piped stdin whole (one trailing newline dropped) or, on a TTY, a hidden prompt.
+
+```console
+$ bun repo env init                                # rerun with the same key: repo env: already set up (acme)
+repo env: wrote .repo/env.keys.json (recipient age1qz…) and ~/.workerstack/keys/acme.key (0600); back the key up in a password manager
+$ echo "$v" | bun repo env set STRIPE_SECRET_KEY --scope prod      # --file <env file> picks the file
+repo env: sealed prod.STRIPE_SECRET_KEY in projects/shop/env.ts
+$ echo anyrow.io | bun repo env set APEX_DOMAIN --scope global --plain
+repo env: wrote global.APEX_DOMAIN (plain) in projects/shop/env.ts
+$ bun repo env ls
+KEY                SCOPE   KIND    FILE                   USED BY
+APEX_DOMAIN        global  plain   projects/shop/env.ts   projects/shop/deploy.ts
+STRIPE_SECRET_KEY  prod    sealed  projects/shop/env.ts   projects/shop/deploy.ts, projects/shop/seed.ts
+$ bun repo env get STRIPE_SECRET_KEY --scope prod                  # --reveal prints it whole
+sk_test_51…••••
+$ bun repo env run --scope prod -- wrangler deploy                 # values reach that child's env only
+$ bun repo env export --scope dev --format dotenv
+APEX_DOMAIN='anyrow.io'
+$ pbpaste | bun repo env key import                # rerun: repo env: already set up (acme)
+repo env: saved ~/.workerstack/keys/acme.key (0600); it unlocks .repo/env.keys.json's recipient
+$ bun repo env key ci --dry-run
+repo env: would run: gh secret set WORKERSTACK_ENV_KEY (the key on stdin)
+```
+
+| Verb | Does |
+| --- | --- |
+| `init` | writes `.repo/env.keys.json` and the key `~/.workerstack/keys/<repo>.key` (0600); the repo is named by the main checkout's folder, so a worktree names the same repo; the same key again prints `already set up`, a key file for another recipient is refused |
+| `set KEY --scope s` | seals the value read from stdin into the env file's `s` block in place (or writes it plain with `--plain`; `--scope global` writes `global`), keeps every other byte, adds the `sealed` import when missing, and writes through a temp file and rename |
+| `get KEY --scope s` | prints the value masked (first 10 characters, then `…••••`; `••••` under 12 characters); `--reveal` prints it whole |
+| `ls` | one row per key: `KEY`, `SCOPE`, `KIND` (`plain` or `sealed`), `FILE` and `USED BY` (the tracked files that import the env file and name the key) |
+| `run --scope s -- cmd` | runs `cmd` with the scope's values in its env only and passes its exit code through; `WORKERSTACK_ENV_KEY` is not handed to the child |
+| `export --scope s --format dotenv` | prints the scope's values sorted, one `KEY=value` line each, quoted so dotenv and Bun's `--env-file` read them back: single quotes when the value has no `'`, else double quotes with only `\n` and `\r` escaped, else backticks |
+| `key import` | reads an age identity from stdin, checks it unlocks the recipient in `.repo/env.keys.json` and saves it as `~/.workerstack/keys/<repo>.key` (0600); the same key again prints `already set up` |
+| `key ci [--dry-run]` | sets the `WORKERSTACK_ENV_KEY` secret through `gh`, with the key on gh's stdin; of several keys it picks the one matching the recipient; `--dry-run` prints the line it would run |
+
+The env file is `--file` when given, else the env files that declare the key, else the one env file in the repo. `export` refuses a value that has a `$` (Bun expands it in every quote, dotenv in none) or that no quote holds: `<KEY> has no dotenv quoting that bun and dotenv read back the same; pass it with \`bun repo env run\``. A bad verb or flag prints `usage: bun repo env init | set KEY --scope <global|local|dev|prod> [--plain] [--file f] | get KEY --scope s [--reveal] | ls | run --scope s -- cmd | export --scope s --format dotenv | key import | key ci [--dry-run]` on stderr and exits 4. A refusal is one line, exit 1:
+
+```console
+repo env: no defineEnv file declares STRIPE_SECRET_KEY; pass --file <env file>
+repo env: 2 env files: a/env.ts, b/env.ts; pass --file
+repo env: no .repo/env.keys.json; run `bun repo env init`
+repo env: the pasted key does not unlock age1qz…; paste this repo's key
+repo env: init found ~/.workerstack/keys/acme.key for another recipient; move it aside first
+```
+
 The runtime errors, one line each (`<key>` is the read, `<repo>` the name in `.repo/env.keys.json`):
 
 ```console
 repo env: REPO_ENV is "staging"; set it to local, dev or prod
 repo env: NPM_TOKEN has no prod value in src/env.ts; add it to its prod block
 repo env: process.HOME is required and unset
-repo env: NPM_TOKEN is sealed and no key is at ~/.workerstack/keys/<repo>.key; save this repo's age key there (0600) or set WORKERSTACK_ENV_KEY
-repo env: NPM_TOKEN is sealed for another key than ~/.workerstack/keys/<repo>.key; save this repo's age key there
+repo env: NPM_TOKEN is sealed and no key is at ~/.workerstack/keys/<repo>.key; run `bun repo env key import`
+repo env: NPM_TOKEN is sealed for another key than ~/.workerstack/keys/<repo>.key; run `bun repo env key import` with this repo's key
 repo env: NPM_TOKEN could not be decrypted: <reason>
 ```
 
 `bun repo check` reads every tracked `.ts`, `.tsx` and `.mts` file that calls `defineEnv(` and fails, one line each:
 
 ```console
-env: src/env.ts global.NPM_TOKEN looks like a secret (credential name) but is plain; seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")
+env: src/env.ts global.NPM_TOKEN looks like a secret (credential name) but is plain; run `bun repo env set NPM_TOKEN --scope global`
 env: src/env.ts dev.NPM_TOKEN is missing (prod has it); add it to dev or remove it from prod
 env: src/env.ts reads process.env.HOME but its process block does not declare it; add `HOME: "optional"`
 ```
@@ -1008,6 +1055,12 @@ Cheap outline. Not a file dump.
 - `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
 - `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
 - `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
+- `cli/scripts/env-command.ts` (+ `.constants.ts`) — `bun repo env` dispatch, usage and exit codes; `env-args.ts` parses the flags; `env-io.ts` is the deps (cwd, stdin, stdout, gh) and the one-line refusal
+- `cli/scripts/env-files.ts` — finds the `defineEnv` files, picks one (`--file`, the one declaring the key, the only one) and lists USED BY
+- `cli/scripts/env-edit.ts` — `env set`: the AST edit that seals or writes a value into the scope block in place
+- `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
+- `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
+- `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ### Tmp
