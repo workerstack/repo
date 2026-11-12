@@ -80,6 +80,15 @@ Cheap outline. Not a file dump.
 - `cli/scripts/env-migrate-report.ts` — the `--dry-run` and migrated lines, the `$` keys and the git-history line
 - `cli/__fixtures__/script-env/` — a fake `createScriptEnv` package and tree builders for the `env-migrate*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
+- `cli/check-deps.ts` (+ `.constants.ts`) — the `bun repo check` deps rule per public package: a used dep outside `peerDependencies`, any dep of a library (no `bin`), missing export types, an unreadable surface
+- `cli/type-surface.ts` (+ `.constants.ts`) — the in-memory declaration emit of a package's typed exports over a virtual host, and the packages its declarations use, keyed to the export that reaches each file
+- `cli/type-surface-entries.ts` — the files the types of `exports` start from: exact keys, `*` patterns, `null` exclusions, tsconfig `files`, the `types`/`typings`/`main` fallback, and the keys whose types are missing
+- `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
+- `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
+- `cli/build-outputs.ts` — maps each `tsconfig.build.json` output to its source; none for a missing or unparsable config
+- `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
+- `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
+- `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
 
 ## Tmp
 - `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`

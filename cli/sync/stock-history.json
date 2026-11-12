@@ -5997,6 +5997,7 @@
   "cli/scripts/shipped-deps.test.ts": [
     "09445f870890acda",
     "2fb08251eab10426",
+    "456a99a63d765689",
     "5b50718a35dff2d4",
     "5c3486ce9debbd91",
     "63616848829df843",
@@ -6653,6 +6654,7 @@
   "references/exports.md": [
     "28c733238c8ebeff",
     "2fca3761756a65e1",
+    "390ad786c2624f12",
     "39642b015f6e2370",
     "42173e1ce7d819df",
     "77895c578e57d302",
@@ -6713,6 +6715,7 @@
     "db5b66e69e2f4423",
     "e5be038a27b5a09b",
     "f4c8534b6651102f",
+    "f84ecd892cca03ec",
     "fdab4a0447b8871e"
   ],
   "references/output.md": ["3042f30880b6975e"],

@@ -240,6 +240,24 @@ repo check: fixtures: cli/sync/fixtures is a fixture folder; rename it to cli/sy
 
 `bun repo fixtures` lists each such folder with the references it would rewrite (`cli/sync/fixtures -> cli/sync/__fixtures__ (41 references in 12 files)`), and `bun repo fixtures --fix` renames each with `git mv` and rewrites the path references to it in tracked, writable text files: a `/`-ended path that resolves to the folder (`./fixtures/`, `../fixtures/`, and a bare `<parent>/fixtures/` or `fixtures/` read from the root or from the file), and a quoted `"fixtures"` call argument whose quoted segments before it lead to the folder's parent (`path.join(dir, "fixtures")` beside it, `path.join(root, "<parent>", "fixtures")`). Prose, other quoted words and read-only generated files stay; `bun repo sync` rewrites those from their sources. A folder whose new name is taken is skipped and named.
 
+### Public package deps
+
+`bun repo check` judges where each public package declares the packages it hands consumers. A package is judged when its `package.json` says `"private": false` and has a non-empty `dependencies`, at the root and in every workspace package.
+
+The type surface is what the package's exports give a consumer's compiler. Every typed export goes through an in-memory declaration emit, and nothing is written to disk. A `*` pattern expands over what npm packs: the `files` entries, or without `files` every file but tests, `__fixtures__`, `node_modules` and `.git`. A `null` target, or a conditions key whose every target is `null`, excludes what it matches. An export that points at a tsconfig, as the TypeScript presets do, brings the `.d.ts` files its `files` lists. Without `exports`, the package reads `types`, then `typings`, then `main`. A declaration that is not built yet maps back to its source through `tsconfig.build.json`.
+
+A package counts as used when the surface names it with a bare import or a `/// <reference types>`, or uses a global it declares. A package that no field of the manifest declares, a transitive one, counts for the dep one hop up that brings it in. A package with no `bin` is a library, and every `dependencies` entry of a library fails: bundle it or make it a peer. A package with `bin` keeps the deps only its own code uses, and fails each one its exported types use. A version moves as written, so a workspace `catalog:` still holds. `optionalDependencies` are left alone.
+
+```console
+$ bun repo check
+repo check: package.json: zod is in "dependencies" but the types of "." use it (cli/commit-config.ts); move it to "peerDependencies" and "devDependencies" keeping its version
+repo check: packages/kit/package.json: nanoid is in "dependencies" of a library (no "bin"); bundle it, or move it to "peerDependencies" and "devDependencies"
+repo check: packages/kit/package.json: the types of "./types" (types/index.d.ts) are missing; restore the file or drop the export
+repo check: packages/kit/package.json: the types of "./client" (dist/client.d.ts) are missing and no tsconfig.build.json maps them to a source; build first or point "types" at the source
+repo check: packages/kit/package.json: the types of "./server" (dist/server.d.ts) are missing and no source in tsconfig.build.json emits them; build first or point "types" at the source
+repo check: packages/cli/package.json: could not read the types of its exports (Unexpected token in package.json)
+```
+
 ### Vitest presets
 
 `@workerstack/repo/vitest` gives `defineConfig` for a root `vitest.config.ts` (istanbul coverage with the per-file floors of `coverage-floors.json`) and `defineProject` for a workspace package's.
@@ -1098,6 +1116,15 @@ Cheap outline. Not a file dump.
 - `cli/scripts/env-migrate-report.ts` — the `--dry-run` and migrated lines, the `$` keys and the git-history line
 - `cli/__fixtures__/script-env/` — a fake `createScriptEnv` package and tree builders for the `env-migrate*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
+- `cli/check-deps.ts` (+ `.constants.ts`) — the `bun repo check` deps rule per public package: a used dep outside `peerDependencies`, any dep of a library (no `bin`), missing export types, an unreadable surface
+- `cli/type-surface.ts` (+ `.constants.ts`) — the in-memory declaration emit of a package's typed exports over a virtual host, and the packages its declarations use, keyed to the export that reaches each file
+- `cli/type-surface-entries.ts` — the files the types of `exports` start from: exact keys, `*` patterns, `null` exclusions, tsconfig `files`, the `types`/`typings`/`main` fallback, and the keys whose types are missing
+- `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
+- `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
+- `cli/build-outputs.ts` — maps each `tsconfig.build.json` output to its source; none for a missing or unparsable config
+- `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
+- `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
+- `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
 
 ### Tmp
 - `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`

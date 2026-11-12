@@ -10,9 +10,11 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 
 const pkg = JSON.parse(
   fs.readFileSync(path.join(root, "package.json"), "utf8"),
-) /* the package manifest lists files and may list dependencies */ as {
+) /* the package manifest lists files and may list dependencies and peers */ as {
   files: string[];
   dependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 };
 
 /** Shipped code a launcher (bunx) runs from the package itself, without the consumer's deps. */
@@ -37,10 +39,20 @@ function walk(rel: string): string[] {
   return fs.readdirSync(abs).flatMap((name) => walk(path.posix.join(rel, name)));
 }
 
-/** Each package `rel` imports that package.json does not list under dependencies, as `<rel> imports <name>`. */
+/** Whether `name` is a peer the consumer must install: listed and not marked optional (bun and npm 7+ install it). */
+function isRequiredPeer(name: string): boolean {
+  return pkg.peerDependencies?.[name] !== undefined && pkg.peerDependenciesMeta?.[name]?.optional !== true;
+}
+
+/** Whether a consumer's install brings `name`: a dependency or a required peer. */
+function isInstalled(name: string): boolean {
+  return pkg.dependencies?.[name] !== undefined || isRequiredPeer(name);
+}
+
+/** Each package `rel` imports that no install brings, as `<rel> imports <name>`. */
 function undeclaredImports(rel: string): string[] {
   return packageImports(rel)
-    .filter((name) => pkg.dependencies?.[name] === undefined)
+    .filter((name) => !isInstalled(name))
     .map((name) => `${rel} imports ${name}`);
 }
 
@@ -77,7 +89,16 @@ describe("shipped code dependencies", () => {
     expect(new Set(files.flatMap(packageImports))).toContain("cross-spawn");
   });
 
-  it("declares every package the shipped code imports under dependencies", () => {
+  it("declares every package the shipped code imports under dependencies or a required peer", () => {
     expect(shippedCode().flatMap(undeclaredImports)).toStrictEqual([]);
+  });
+
+  it("accepts a shipped import declared only as a required peer, and never an optional one", () => {
+    expect(new Set(shippedCode().flatMap(packageImports))).toContain("zod");
+    expect(pkg.dependencies?.zod).toBeUndefined();
+    expect(isRequiredPeer("zod")).toBe(true);
+    expect(isInstalled("zod")).toBe(true);
+    expect(pkg.peerDependenciesMeta?.["@cloudflare/vitest-plugin"]?.optional).toBe(true);
+    expect(isInstalled("@cloudflare/vitest-plugin")).toBe(false);
   });
 });
