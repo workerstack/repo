@@ -6,7 +6,8 @@ import path from "node:path";
 import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { findRoot, loadConfig } from "../config.ts";
-import { childEnv, readEnv } from "../env.ts";
+import { childEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { CARGO_MANIFEST } from "../rust/rust-hits.constants.ts";
@@ -154,7 +155,7 @@ export function tsgolintSpecifier(platform: NodeJS.Platform, arch: string): stri
  */
 function oxlintEnv(): NodeJS.ProcessEnv {
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
-  const inherited = readEnv().NODE_PATH;
+  const inherited = repoEnv.process.NODE_PATH;
   return {
     NODE_PATH: inherited !== undefined && inherited !== "" ? `${modules}${path.delimiter}${inherited}` : modules,
     OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),

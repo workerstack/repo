@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 
-import { readEnv } from "../cli/env.ts";
+import { repoEnv } from "../cli/repo-env.ts";
 import { isRecord } from "./json";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 
@@ -94,7 +94,7 @@ function buildOld(work: string): string {
  * (run 42954496882).
  */
 function runParent(): { parent: string; remove: boolean } {
-  const { REPO_E2E_ROOT, RUNNER_TEMP } = readEnv();
+  const { REPO_E2E_ROOT, RUNNER_TEMP } = repoEnv.process;
   if (REPO_E2E_ROOT !== undefined && REPO_E2E_ROOT !== "") return { parent: REPO_E2E_ROOT, remove: true };
   if (RUNNER_TEMP !== undefined && RUNNER_TEMP !== "") return { parent: RUNNER_TEMP, remove: false };
   return { parent: os.tmpdir(), remove: true };
@@ -112,12 +112,12 @@ export async function setup(project: TestProject) {
     try {
       await reg?.close();
     } finally {
-      if ((readEnv().REPO_E2E_KEEP ?? "") !== "") process.stdout.write(`kept e2e run root: ${runRoot}\n`);
+      if ((repoEnv.process.REPO_E2E_KEEP ?? "") !== "") process.stdout.write(`kept e2e run root: ${runRoot}\n`);
       else if (remove) fs.rmSync(runRoot, { force: true, recursive: true });
     }
   }
   try {
-    const given = readEnv().REPO_E2E_TARBALL ?? "";
+    const given = repoEnv.process.REPO_E2E_TARBALL ?? "";
     const tarball = given === "" ? buildAndPack(runRoot) : path.resolve(given);
     const version = tarballVersion(tarball);
 

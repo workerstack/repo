@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
 
-import { readEnv } from "../cli/env.ts";
+import { repoEnv } from "../cli/repo-env.ts";
 import { isRustKey, readFloorsFile, type TsFloor } from "../cli/rust/floors.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootEnv } from "./temp-root-env.ts";
@@ -13,7 +13,6 @@ import {
   COVERAGE_ON,
   DEFAULT_TIMEOUT,
   GUARD_NAME,
-  INLINED_PACKAGE,
   REPORT_REPORTERS,
   WINDOWS_TIMEOUT,
   WRANGLER_FILES,
@@ -59,7 +58,7 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
  * and `REPO_VITEST_SHARD` runs only that `i/n` slice of the test files, passing when the slice holds none.
  */
 function ciEnv(coverage: string | undefined): ViteUserConfig {
-  const { REPO_VITEST_REPORT: report, REPO_VITEST_SHARD: shard } = readEnv();
+  const { REPO_VITEST_REPORT: report, REPO_VITEST_SHARD: shard } = repoEnv.process;
   return {
     test: {
       ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
@@ -80,7 +79,7 @@ function ciEnv(coverage: string | undefined): ViteUserConfig {
  * json report the skip check reads. Without the variables the config is the caller's.
  */
 export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig {
-  const { REPO_COVERAGE: coverage } = readEnv();
+  const { REPO_COVERAGE: coverage } = repoEnv.process;
   const provider: ViteUserConfig = coverage === COVERAGE_ON ? { test: { coverage: { provider: "istanbul" } } } : {};
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), provider);
   const merged: ViteUserConfig = mergeConfig(mergeConfig(defaults, config), ciEnv(coverage));
@@ -112,13 +111,11 @@ export function defineConfig(
 ): ViteUserConfig {
   const thresholds = readFloors(options.floors ?? DEFAULT_FLOORS);
   const coverage = { provider: "istanbul", ...(Object.keys(thresholds).length > 0 ? { thresholds } : {}) } as const;
-  // The guard loads cli/env.ts in the runner process, where an external zod loses its named exports.
   const guard = {
     coverage,
     globalSetup: [guardPath()],
     // Shards split by measured file time, not by hash.
     sequence: { sequencer: ShardSequencer },
-    server: { deps: { inline: [INLINED_PACKAGE] } },
   };
   // Only test processes get the root: the runner's own tooling (miniflare) makes and removes temp dirs of its own.
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), { test: { ...guard, env: rootEnv() } });

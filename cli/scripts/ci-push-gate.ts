@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
 import { recordPath, recordRoot, recordSchema, type WaitRecord } from "./ci-wait-record.ts";
@@ -197,7 +197,7 @@ export function pushStopBlock(
 }
 
 function sessionOf(data: HookInput): string {
-  const ids = [readEnv().GROK_SESSION_ID, data.sessionId, data.session_id];
+  const ids = [repoEnv.process.GROK_SESSION_ID, data.sessionId, data.session_id];
   return ids.find((id) => id !== undefined && id !== "") ?? "";
 }
 

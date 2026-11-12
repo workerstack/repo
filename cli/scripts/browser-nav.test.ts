@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import {
   cleanBrowser,
   expectGone,
@@ -33,7 +33,7 @@ it("lightpanda on PATH → nav uses Lightpanda; session under .tmp/repo/browser/
   expect(s.lastURL).toMatch(/example\.com/);
   expect(s.pid).toBeGreaterThan(0);
   expect(path.normalize(sessionPath(cwd))).toContain(path.join(".tmp", "repo", "browser"));
-  expect(readEnv().REPO_BROWSER).toBeUndefined();
+  expect(repoEnv.process.REPO_BROWSER).toBeUndefined();
 });
 
 it("no lightpanda; Playwright Chromium present → nav uses Chromium", async () => {

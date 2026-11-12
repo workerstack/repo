@@ -3,8 +3,7 @@
 import os from "node:os";
 
 import { enabledSkills } from "../config.ts";
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { isRecord } from "./hook-input.ts";
 import { isInteractive as ttyInteractive } from "./is-interactive.ts";
@@ -52,7 +51,7 @@ function homeOf(opts: SetupMainOpts, env: Env): string {
 }
 
 async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promise<Run> {
-  const env = opts.env ?? readEnv();
+  const env = opts.env ?? repoEnv.process;
   const home = homeOf(opts, env);
   const targets = setupTargets([...(await enabledSkills(firstNonEmpty(opts.cwd) ?? process.cwd()))]);
   const interactive = interactiveOf(argv, env, opts);
@@ -66,7 +65,7 @@ async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promi
     io,
     loginFn: opts.loginFn,
     openUrlFn: opts.openUrlFn,
-    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH, readEnv().PATH),
+    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH, repoEnv.process.PATH),
     platform: opts.platform ?? process.platform,
     spawnSyncFn: opts.spawnSyncFn,
     whichFn: opts.whichFn,

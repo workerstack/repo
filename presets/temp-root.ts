@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { readEnv } from "../cli/env.ts";
+import { repoEnv } from "../cli/repo-env.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { BUN_SHIM_PREFIX, PERMISSION_DENIED } from "./temp-root.constants.ts";
 
@@ -48,7 +48,7 @@ export function leakMessage(names: string[]): string {
 
 /** Ends the run: keeps the root when asked, otherwise removes it and fails when it was not empty. */
 function finish(root: string): void {
-  if ((readEnv().REPO_E2E_KEEP ?? "") !== "") {
+  if ((repoEnv.process.REPO_E2E_KEEP ?? "") !== "") {
     process.stdout.write(`kept temp root: ${root}\n`);
     return;
   }

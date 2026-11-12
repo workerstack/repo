@@ -2,15 +2,14 @@
 import os from "node:os";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { APPLY_FLAG } from "./purge-global-mcps.constants.ts";
 import type { ParsedArgv } from "./purge-global-mcps.types.ts";
 import { str } from "./voice-args.ts";
 
 /** HOME, else USERPROFILE (Windows / env sim), else os.homedir(). */
-export function resolveHome(env: Env = readEnv()): string {
+export function resolveHome(env: Env = repoEnv.process): string {
   return firstNonEmpty(env.HOME, env.USERPROFILE) ?? os.homedir();
 }
 

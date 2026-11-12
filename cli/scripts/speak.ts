@@ -2,7 +2,7 @@
 /** Text-to-speech (output only). Providers: elevenlabs, openai. */
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 import { errMessage, globalFetch, voices, whoami } from "./speak-api.ts";
 import { loadCfg } from "./speak-config.ts";
@@ -53,7 +53,7 @@ function given(value: string | undefined): string | undefined {
 /** What a verb needs, from the injected options or the process. */
 async function ctxOf(flags: Record<string, string>, opts: SpeakMainOpts): Promise<Ctx> {
   if (opts.env === undefined) await loadOptionalConsumerEnv();
-  const env = opts.env ?? readEnv();
+  const env = opts.env ?? repoEnv.process;
   const home = given(opts.home) ?? os.homedir();
   const cwd = given(opts.cwd) ?? process.cwd();
   const fetchFn = opts.fetchFn ?? globalFetch();

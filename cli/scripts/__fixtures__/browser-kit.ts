@@ -15,7 +15,8 @@ import type {
 } from "../browser.types.ts";
 import { bunPath } from "../../../dev/test-paths.ts";
 import { plantStub } from "../../__fixtures__/stub-bin.ts";
-import { childEnv, readEnv } from "../../env.ts";
+import { childEnv } from "../../env.ts";
+import { repoEnv } from "../../repo-env.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const serveScript = path.join(here, "..", "browser-serve.ts");
@@ -118,7 +119,7 @@ function dirHasBrowser(dir: string): boolean {
 }
 
 function mockPath(binDir: string): string {
-  const rest = (readEnv().PATH || "")
+  const rest = (repoEnv.process.PATH || "")
     .split(path.delimiter)
     .filter((dir) => dir && dir !== binDir && !dirHasBrowser(dir));
   return [binDir, ...rest].join(path.delimiter);

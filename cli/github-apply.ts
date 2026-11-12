@@ -1,5 +1,4 @@
 import { loadConfig } from "./config.ts";
-import { readEnv } from "./env.ts";
 import { applyFailure, ghRunner, skipReason, type Gh } from "./github-gh.ts";
 import { originSlug } from "./github-origin.ts";
 import { readCurrent } from "./github-read.ts";
@@ -18,6 +17,7 @@ import {
 } from "./github.constants.ts";
 import { driftOf } from "./github.ts";
 import type { Drift, Wanted, Current } from "./github.types.ts";
+import { repoEnv } from "./repo-env.ts";
 
 /** What `repo github` runs with: the checkout, the one door to GitHub, and where its lines go. */
 export type GithubIo = { cwd: string; gh: Gh; stdout(text: string): void; stderr(text: string): void };
@@ -30,7 +30,7 @@ export type CheckIo = { gh: Gh; ci: boolean };
 export type GithubLines = { problems: string[]; report: string[] };
 
 function realCheckIo(): CheckIo {
-  return { ci: Boolean(readEnv().GITHUB_ACTIONS), gh: ghRunner() };
+  return { ci: Boolean(repoEnv.process.GITHUB_ACTIONS), gh: ghRunner() };
 }
 function say(text: string) {
   return `${GITHUB_PREFIX} ${text}\n`;

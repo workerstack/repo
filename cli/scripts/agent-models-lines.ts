@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { codexOffered, MODEL_LISTS } from "./doctor-lists.ts";
 import { errorText, packageRoot, row } from "./doctor-rows.ts";
@@ -160,7 +160,7 @@ async function offeredLists(clis: ModelCli[], home: string, ask: Pick<Ask, "capM
  */
 export async function agentModelsLines({
   cwd = process.cwd(),
-  env = readEnv(),
+  env = repoEnv.process,
   home = os.homedir(),
   run = spawnList,
   capMs = MODEL_LIST_CAP_MS,

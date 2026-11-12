@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import {
   CHROMIUM_BINS,
   DARWIN,
@@ -36,7 +36,7 @@ function candidateNames(name: string, host: Host): string[] {
   if (!host.winLike || path.extname(name) !== "") return [name];
   const names: string[] = [];
   if (host.hostWin) {
-    const fromEnv = readEnv().PATHEXT ?? "";
+    const fromEnv = repoEnv.process.PATHEXT ?? "";
     const pathext = fromEnv === "" ? PATHEXT_DEFAULT : fromEnv;
     for (const raw of pathext.split(PATH_SEP)) if (raw !== "") names.push(name + raw.toLowerCase(), name + raw);
   }
@@ -63,7 +63,7 @@ function canRun(candidate: string, host: Host): boolean {
 
 export function whichBin(
   name: string,
-  pathEnv: string | undefined = readEnv().PATH,
+  pathEnv: string | undefined = repoEnv.process.PATH,
   platform: string = process.platform,
 ): string {
   if (name === "") return "";

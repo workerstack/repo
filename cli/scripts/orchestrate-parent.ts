@@ -3,7 +3,7 @@
  * PreToolUse fat-gate + persist rewrite. Stop writes session receipt. SubagentStop intercepts need:
  * search|exec|slice|fetch. Fail-open: parse/crash → empty stdout, exit 0.
  */
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { notePush } from "./ci-push-gate.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
@@ -80,7 +80,9 @@ const ROUTES: ReadonlyMap<string, (data: HookInput) => HookResult> = /* @__PURE_
 export function main(_argv?: string[], io: HookIo = processHookIo()): number {
   try {
     const data = readHookInput(io) ?? {};
-    const event = eventKey(firstNonEmpty(readEnv().GROK_HOOK_EVENT, data.hookEventName, data.hook_event_name) ?? "");
+    const event = eventKey(
+      firstNonEmpty(repoEnv.process.GROK_HOOK_EVENT, data.hookEventName, data.hook_event_name) ?? "",
+    );
     const result = ROUTES.get(event)?.(data) ?? PASS;
     if (result.reply !== undefined) io.write(JSON.stringify(result.reply));
     return result.code;

@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { NO_SESSION } from "./orchestrate.constants.ts";
@@ -13,7 +13,7 @@ const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
 const FRONTMATTER_LINE = /^([a-z]+):\s*(.*)$/;
 
 export function sessionIdOf(data: HookInput): string {
-  return firstNonEmpty(readEnv().GROK_SESSION_ID, data.sessionId, data.session_id) ?? "";
+  return firstNonEmpty(repoEnv.process.GROK_SESSION_ID, data.sessionId, data.session_id) ?? "";
 }
 
 /** A session id that names a real session. */

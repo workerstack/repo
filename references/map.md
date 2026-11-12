@@ -60,6 +60,8 @@ Cheap outline. Not a file dump.
 - `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
 - `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
 - `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
+- `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
+- `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ## Tmp

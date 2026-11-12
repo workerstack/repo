@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { readEnv } from "../cli/env.ts";
+import { repoEnv } from "../cli/repo-env.ts";
 import { nodelessPath } from "../dev/nodeless-path.ts";
 import type { GetSandbox } from "./get-sandbox.types";
 import { gitStdout } from "./git-stdout";
@@ -34,7 +34,7 @@ export function nodelessGatesCase(get: GetSandbox) {
       "non-null assertion and floating promise until it is gone",
     async () => {
       const sb = get();
-      const env = { PATH: nodelessPath(sb.root, readEnv().PATH ?? "") };
+      const env = { PATH: nodelessPath(sb.root, repoEnv.process.PATH ?? "") };
       const node = await sb.run("sh", ["-c", "command -v node"], { env });
       expect(node.status).not.toBe(0);
       const fmt = await sb.run("bun", ["repo", "fmt", "--check"], { env });

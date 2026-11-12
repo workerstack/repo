@@ -3,8 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { WORKSPACE_ACCOUNT_RE, WORKSPACE_KIND_ORDER } from "./doctor.constants.ts";
 import type { DoctorStatus } from "./doctor.types.ts";
 import { isRecord } from "./hook-input.ts";
@@ -25,7 +24,7 @@ function isFile(abs: string): boolean {
   }
 }
 
-export function jevDoctorStatus({ env = readEnv(), home = os.homedir() }: KeyOpts = {}): DoctorStatus {
+export function jevDoctorStatus({ env = repoEnv.process, home = os.homedir() }: KeyOpts = {}): DoctorStatus {
   if ((env.TYPESAFE_API_KEY ?? "").trim() !== "") return { extra: "env", ok: true };
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
@@ -37,7 +36,7 @@ export function jevDoctorStatus({ env = readEnv(), home = os.homedir() }: KeyOpt
   return { extra: "", ok: false };
 }
 
-export function speakDoctorStatus({ env = readEnv(), home = os.homedir() }: KeyOpts = {}): DoctorStatus {
+export function speakDoctorStatus({ env = repoEnv.process, home = os.homedir() }: KeyOpts = {}): DoctorStatus {
   const names = SPEAK_KEYS.filter(([key]) => (env[key] ?? "").trim() !== "").map(([, name]) => name);
   const hasFile = isFile(path.join(home, ".workerstack", "speak.json"));
   if (names.length === 0 && !hasFile) return { extra: "", ok: false };

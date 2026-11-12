@@ -350,14 +350,14 @@ export const repoEnv = defineEnv({
 });
 
 repoEnv.current.NPM_TOKEN; // string, decrypted on the first sealed read
-repoEnv.process.HOME; // string; CI is string | undefined
+repoEnv.process.HOME; // string; CI is a key only when set (string | undefined)
 ```
 
 | Field | Takes |
 | --- | --- |
 | `global` | values every scope shares; optional |
 | `local` `dev` `prod` | one block per scope (required, may be `{}`); a string or `sealed(...)` per key |
-| `process` | process variables this env reads → `"required"` (a string; throws when read unset) or `"optional"` (`string \| undefined`) |
+| `process` | process variables this env reads → `"required"` (a string; throws when read unset) or `"optional"` (a key only when set, typed `?: string \| undefined`, so a spread over defaults keeps them) |
 | `parent` | another `defineEnv` result; its values carry into each scope |
 
 A scope merges like `createScriptEnv`: own `global`, then the parent's scope view, then own scope; the later wins. `global` is the parent's `global` then own. The instance holds:
@@ -391,7 +391,7 @@ env: src/env.ts dev.NPM_TOKEN is missing (prod has it); add it to dev or remove 
 env: src/env.ts reads process.env.HOME but its process block does not declare it; add `HOME: "optional"`
 ```
 
-The reason is `sk_ prefix` (or another provider prefix), `high entropy` or `credential name`; `pk_live_` and `pk_test_` values pass. A scope block with a spread or no key takes no part in the missing-key rule.
+The reason is `sk_ prefix` (or another provider prefix), `high entropy` or `credential name`; `pk_live_` and `pk_test_` values pass. A scope block with a spread or no key takes no part in the missing-key rule. The check also reads a config held in a same-file const, through `as const`, `satisfies` or parentheses (`const config = { … } as const; defineEnv(config)`).
 
 ### Agents and references
 
@@ -1006,6 +1006,8 @@ Cheap outline. Not a file dump.
 - `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
 - `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
 - `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
+- `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
+- `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ### Tmp

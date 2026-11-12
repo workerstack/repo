@@ -3,8 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { isRecord } from "./hook-input.ts";
 import { CHARS_PER_TOKEN, MAX_RETRY_WAIT_MS, MS_PER_SECOND } from "./jev.constants.ts";
 
@@ -23,7 +22,7 @@ export function estimateTokens(stateText: unknown, questionsText: unknown): numb
 }
 
 export function loadJevKey({
-  env = readEnv(),
+  env = repoEnv.process,
   home = os.homedir(),
 }: { env?: Env | undefined; home?: string | undefined } = {}): string {
   const fromEnv = (env.TYPESAFE_API_KEY ?? "").trim();

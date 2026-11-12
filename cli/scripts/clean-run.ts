@@ -2,8 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
 import { readBootId } from "./board-process.ts";
 import { sweep } from "./board.ts";
@@ -106,6 +105,6 @@ export function runClean(run: CleanRun): number {
 }
 
 /** Session ids with a live host process on this machine's board. */
-export function liveSessions(env: Env = readEnv()): Set<string> {
+export function liveSessions(env: Env = repoEnv.process): Set<string> {
   return new Set(sweep({ boot: readBootId(), home: boardHome(env) }).map((row) => row.session));
 }

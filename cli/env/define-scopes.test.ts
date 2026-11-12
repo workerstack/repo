@@ -78,6 +78,31 @@ describe("createEnv process", () => {
   });
 });
 
+describe("createEnv process keys", () => {
+  it("lists an unset optional variable only when the source sets it", () => {
+    const env = createEnv(withProcess, fakeIo({ HOME: "/h" }).io);
+    expect(Object.keys(env.process)).toStrictEqual(["HOME"]);
+    expect(Object.keys(env.read({ CI: "1", HOME: "/h" }))).toStrictEqual(["CI", "HOME"]);
+    expect(env.read({ CI: "1", HOME: "/h" }).CI).toBe("1");
+  });
+
+  it("keeps a default under a spread of an unset optional variable", () => {
+    const env = createEnv(withProcess, fakeIo({ HOME: "/h" }).io);
+    expect({ CI: "default", ...env.read({ HOME: "/h" }) }).toStrictEqual({ CI: "default", HOME: "/h" });
+  });
+
+  it("lists an unset required variable, which throws when read", () => {
+    const view = createEnv(withProcess, fakeIo({}).io).read({});
+    expect(Object.keys(view)).toStrictEqual(["HOME"]);
+    expect(() => view.HOME).toThrow(REQUIRED_HOME);
+  });
+
+  it("types an optional variable as an optional key", () => {
+    const env = createEnv(withProcess, fakeIo({ HOME: "/h" }).io);
+    expectTypeOf(env.process).toEqualTypeOf<{ readonly CI?: string | undefined; readonly HOME: string }>();
+  });
+});
+
 /** What `run` returns, run as if inside a runtime with `caches` and the user agent `userAgent`. */
 function asRuntime<T>(userAgent: string, run: () => T): T {
   const original: unknown = Reflect.get(globalThis, "navigator");

@@ -55,8 +55,7 @@ function run(body: string, env: Record<string, string | undefined> = {}): SpawnS
   const config =
     `import { rootEnv } from ${JSON.stringify(ENV_MODULE)};\n` +
     `export default { test: { globals: true, env: rootEnv(), ` +
-    `globalSetup: [${JSON.stringify(GUARD)}, ...(process.env.PROBE ? [process.env.PROBE] : [])], ` +
-    `server: { deps: { inline: ["zod"] } } } };\n`;
+    `globalSetup: [${JSON.stringify(GUARD)}, ...(process.env.PROBE ? [process.env.PROBE] : [])] } };\n`;
   fs.writeFileSync(path.join(project, "vitest.config.mjs"), config);
   fs.writeFileSync(path.join(project, "a.test.mjs"), `${TEST_IMPORTS}it("runs", () => {\n${body}\n});\n`);
   const overrides = {

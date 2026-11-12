@@ -82,8 +82,14 @@ type Unwrap<B> = { readonly [K in keyof B]: B[K] extends Sealed ? string : B[K] 
 type SealedKeyOf<B> = { [K in keyof B]: B[K] extends Sealed ? K : never }[keyof B];
 /** The config's process spec, empty when it declares none. */
 type ProcessOf<C> = C extends { readonly process: infer P extends ProcessSpec } ? P : Empty;
-/** A process spec as it reads: a required variable a string, an optional one maybe undefined. */
-type ProcessView<P> = { readonly [K in keyof P]: P[K] extends "required" ? string : string | undefined };
+/** An intersection as one object type, each key's modifiers kept. */
+type Flat<T> = { [K in keyof T]: T[K] };
+/** The keys of a process spec declared `required`. */
+type RequiredKey<P> = { [K in keyof P]: P[K] extends "required" ? K : never }[keyof P];
+/** A process spec as it reads: a required variable a string, an optional one a key only when set. */
+type ProcessView<P> = Flat<
+  { readonly [K in RequiredKey<P>]: string } & { readonly [K in Exclude<keyof P, RequiredKey<P>>]?: string | undefined }
+>;
 /** Every key any scope has: what `current` may be asked. */
 type CurrentKey<C> = keyof LayersOf<C>["local"] | keyof LayersOf<C>["dev"] | keyof LayersOf<C>["prod"];
 
@@ -208,9 +214,13 @@ function currentOf({ io, layers, origin, plain }: CurrentRead): Record<string, u
   });
 }
 
-/** The process view of `source` per `spec`: an unset required variable throws when read. */
+/**
+ * The process view of `source` per `spec`: a required variable is always a key and throws when read unset; an optional
+ * one is a key only when `source` sets it, so a spread over defaults keeps them.
+ */
 function processView(spec: ProcessSpec, source: Source): Record<string, unknown> {
-  return getters(Object.keys(spec), (name) => {
+  const keys = Object.keys(spec).filter((name) => spec[name] === "required" || source[name] !== undefined);
+  return getters(keys, (name) => {
     const value = source[name];
     if (value === undefined && spec[name] === "required")
       throw new Error(`repo env: process.${name} is required and unset`);

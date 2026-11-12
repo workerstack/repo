@@ -1,4 +1,4 @@
-import type { Env } from "../env.ts";
+import type { Env } from "../repo-env.ts";
 
 export type ListenCfg = {
   filePath: string;

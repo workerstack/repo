@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { plantProgram } from "../__fixtures__/stub-bin.ts";
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./rtk-grok.ts";
@@ -46,7 +46,7 @@ function stubDir(): string {
 }
 
 function withStub(dir: string) {
-  return { PATH: `${dir}${path.delimiter}${readEnv().PATH ?? ""}` };
+  return { PATH: `${dir}${path.delimiter}${repoEnv.process.PATH ?? ""}` };
 }
 function call(command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) {
   return runHook(
@@ -102,7 +102,7 @@ function feedStdin(text: string): void {
 
 describe("rtk-grok hook on the process stdin", () => {
   it("reads the payload from stdin and answers on stdout", () => {
-    vi.stubEnv("PATH", `${stubDir()}${path.delimiter}${readEnv().PATH ?? ""}`);
+    vi.stubEnv("PATH", `${stubDir()}${path.delimiter}${repoEnv.process.PATH ?? ""}`);
     feedStdin(JSON.stringify({ tool_input: { command: "git status" } }));
     const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     expect(main()).toBe(0);
@@ -147,7 +147,7 @@ describe("rtk-grok hook edge cases", () => {
         throw new Error("closed pipe");
       },
     };
-    vi.stubEnv("PATH", `${stubDir()}${path.delimiter}${readEnv().PATH ?? ""}`);
+    vi.stubEnv("PATH", `${stubDir()}${path.delimiter}${repoEnv.process.PATH ?? ""}`);
     expect(main([], io)).toBe(0);
   });
 

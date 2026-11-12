@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { stringify as stringifyToml } from "smol-toml";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { deepMerge } from "./deep-merge.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest } from "./global-settings-files.ts";
@@ -169,7 +169,7 @@ export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
     if (!parsed.ok) return fail(parsed.error);
-    const home = readEnv().HOME;
+    const home = repoEnv.process.HOME;
     if (!isSet(home)) return fail("HOME required");
     return parsed.check ? runCheck(home, parsed.host) : runSync(home, parsed);
   } catch (err) {

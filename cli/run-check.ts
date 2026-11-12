@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { LoadResult } from "./config.ts";
-import { readEnv } from "./env.ts";
+import { repoEnv } from "./repo-env.ts";
 import { runSync, type SyncIo } from "./sync.ts";
 
 /** Prints check's lines: a report on stdout; a problem on stderr, kept so the exit code can count it. */
@@ -81,7 +81,7 @@ async function checkRelease(cwd: string, loaded: LoadResult, print: Printer): Pr
   const { checkChangelog } = await import("./check-changelog.ts");
   print.fail(checkChangelog(cwd));
   const { checkLatestAt, latestRegistry } = await import("./check-latest.ts");
-  const latest = await checkLatestAt(cwd, fetch, latestRegistry(readEnv()));
+  const latest = await checkLatestAt(cwd, fetch, latestRegistry(repoEnv.process));
   print.report(latest.report);
   print.fail(latest.problems);
 }

@@ -1,5 +1,5 @@
-import { readEnv } from "./env.ts";
 import { linkIo } from "./link-io.ts";
+import { repoEnv } from "./repo-env.ts";
 import { captureSorted } from "./scripts/lint.ts";
 import type { ToolResult, UpdateIo } from "./update-io.types.ts";
 
@@ -14,7 +14,7 @@ export function updateIo(): UpdateIo {
   const base = linkIo();
   return {
     cwd: base.cwd,
-    env: readEnv(),
+    env: repoEnv.process,
     err: base.err,
     fetch: globalThis.fetch,
     format: formatFiles,

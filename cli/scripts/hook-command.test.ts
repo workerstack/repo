@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { expect, it, onTestFinished } from "vitest";
 
 import { fwd } from "../../dev/test-paths.ts";
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { mainWithOutWorktree } from "./__fixtures__/worktree-repo.ts";
 import {
   HOOK_NAMES,
@@ -61,7 +61,7 @@ it("hookCommand: runs the bin in the project dir with the hook's stdin", () => {
   fs.writeFileSync(path.join(bin, "repo"), '#!/bin/sh\necho "$@"; cat\n', { mode: 0o755 });
   const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
     encoding: "utf8",
-    env: { CLAUDE_PROJECT_DIR: dir, PATH: readEnv().PATH },
+    env: { CLAUDE_PROJECT_DIR: dir, PATH: repoEnv.process.PATH },
     input: "payload",
   });
   expect(r.status).toBe(0);
@@ -84,7 +84,7 @@ it("hookCommand: runs the repo.exe a Windows install links when there is no plai
     const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
       cwd: pkg,
       encoding: "utf8",
-      env: { PATH: readEnv().PATH, ...env },
+      env: { PATH: repoEnv.process.PATH, ...env },
     });
     expect(r.stderr).toBe("");
     expect(r.stdout).toBe("exe hook session-map\n");
@@ -96,7 +96,7 @@ it("hookCommand: says run bun install and exits 1 in a checkout with no install"
   const r = spawnSync("sh", ["-c", hookCommand("gate-fat-tools")], {
     cwd: dir,
     encoding: "utf8",
-    env: { CLAUDE_PROJECT_DIR: dir, PATH: readEnv().PATH },
+    env: { CLAUDE_PROJECT_DIR: dir, PATH: repoEnv.process.PATH },
   });
   expect(r.status).toBe(1);
   expect(r.stdout).toBe("");
@@ -121,7 +121,7 @@ function run(cwd: string, project: string) {
   return spawnSync("sh", ["-c", hookCommand("session-map")], {
     cwd,
     encoding: "utf8",
-    env: { CLAUDE_PROJECT_DIR: project, PATH: readEnv().PATH },
+    env: { CLAUDE_PROJECT_DIR: project, PATH: repoEnv.process.PATH },
   });
 }
 
@@ -158,7 +158,7 @@ function lookup(cwd: string, project: string) {
   return spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
     cwd,
     encoding: "utf8",
-    env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: readEnv().PATH },
+    env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: repoEnv.process.PATH },
   }).stdout;
 }
 

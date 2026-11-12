@@ -35,6 +35,8 @@
     "dist/cli/env*.d.ts",
     "dist/cli/env/*.js",
     "dist/cli/env/*.d.ts",
+    "dist/cli/repo-env*.js",
+    "dist/cli/repo-env*.d.ts",
     "dist/cli/rust/floors*.js",
     "dist/cli/rust/floors*.d.ts",
     "agents",

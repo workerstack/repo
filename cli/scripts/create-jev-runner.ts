@@ -1,7 +1,7 @@
 /** The jev runner: checks the inputs, reserves the ledger, makes the one call a process may make, and retries once. */
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { isRecord } from "./hook-input.ts";
 import { estimateTokens, loadJevKey, retryWaitMs } from "./jev-key.ts";
 import { beginAttempt, settleTokens } from "./jev-ledger.ts";
@@ -96,7 +96,7 @@ export function createJevRunner(): JevRun {
   return function runOnce(opts: JevRunOpts = {}): Promise<JevResult> {
     if (budget.spent) return Promise.resolve(fail("process request cap 1\n"));
     const home = homeOf(opts);
-    const env = opts.env ?? readEnv();
+    const env = opts.env ?? repoEnv.process;
     const input = readJevInput(opts);
     if ("fail" in input) return Promise.resolve(input.fail);
     const key = loadJevKey({ env, home });

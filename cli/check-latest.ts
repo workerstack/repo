@@ -16,9 +16,9 @@ import {
   behindLine,
   skippedLine,
 } from "./check-latest.constants.ts";
-import type { Env } from "./env.ts";
 import { REGISTRY } from "./release/release.constants.ts";
 import { registryDoc } from "./release/wait.ts";
+import type { Env } from "./repo-env.ts";
 
 /** The problems (fail the check) and report lines (do not) of the latest-version check. */
 export type LatestLines = { problems: string[]; report: string[] };

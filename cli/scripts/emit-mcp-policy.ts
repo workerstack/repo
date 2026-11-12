@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
 import { claudeCheckOk, codexCheckOk, grokCheckOk } from "./emit-mcp-check.ts";
@@ -142,7 +142,7 @@ export function emitMcpPolicy(opts: EmitOptions = {}): EmitResult {
   const resolved = policyOf(ws, opts);
   if (!resolved.ok) return { check, error: resolved.error, ok: false };
   const { policy } = resolved;
-  const target = { keepHomeTables: isHomeGrokConfig(ws, nonEmptyOr(opts.home, readEnv().HOME)), policy };
+  const target = { keepHomeTables: isHomeGrokConfig(ws, nonEmptyOr(opts.home, repoEnv.process.HOME)), policy };
   const hosts = hostsOf(ws, target);
   if (!check) {
     writeHosts(ws, hosts);

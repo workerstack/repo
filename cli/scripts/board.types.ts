@@ -1,5 +1,5 @@
 /** The live agent board's rows, probes and option shapes. */
-import type { Env } from "../env.ts";
+import type { Env } from "../repo-env.ts";
 import type { HookInput } from "./hook-input.ts";
 
 /** One live-session row as stored on disk. */
