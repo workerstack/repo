@@ -45,7 +45,7 @@ export const NO_KEYS_FILE = "repo env: no .repo/env.keys.json; run `bun repo env
 export const USAGE =
   "usage: bun repo env init | set KEY --scope <global|local|dev|prod> [--plain] [--file f] | " +
   "get KEY --scope s [--reveal] | ls | run --scope s -- cmd | export --scope s --format dotenv | " +
-  "key import | key ci [--dry-run] | migrate [--dry-run]\n";
+  "key import | key ci [--dry-run]\n";
 /** The import of an env file that seals nothing. */
 export const IMPORT = 'import { defineEnv } from "@workerstack/repo/env";\n';
 /** The import of an env file that seals. */
@@ -276,7 +276,7 @@ export function shopEnv(prod: string[], head = IMPORT): string {
     "  local: {},",
     "  dev: {},",
     "  prod: {",
-    '    APEX_DOMAIN: "anyrow.com",',
+    '    APEX_DOMAIN: "acme.com",',
     ...prod,
     "  },",
     "});",
@@ -306,7 +306,7 @@ export function shop(secret: string): Plant {
   return {
     files: async (key) => ({
       [ENV_REL]: envFile([
-        '  global: { APEX_DOMAIN: "anyrow.io" },',
+        '  global: { APEX_DOMAIN: "acme.io" },',
         "  local: {},",
         "  dev: {},",
         `  prod: { STRIPE_SECRET_KEY: sealed("${await seal(secret, key.recipient)}") },`,

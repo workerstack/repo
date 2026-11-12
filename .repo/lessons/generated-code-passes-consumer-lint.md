@@ -1,6 +1,6 @@
 ---
 name: generated-code-passes-consumer-lint
-paths: ["cli/scripts/env-edit.ts", "cli/scripts/env-migrate-edit.ts", "cli/fixtures-rename.ts"]
+paths: ["cli/scripts/env-edit.ts", "cli/fixtures-rename.ts"]
 hits: 1
 last-hit: 2026-11-12
 evidence: ["roadmap 7"]
@@ -8,7 +8,7 @@ evidence: ["roadmap 7"]
 
 # Code a command writes into a consumer fails the consumer's own lint
 
-`bun repo env set` and `bun repo env migrate` passed every unit test and every scratch-consumer proof, yet each value they sealed wrote a ~350-column `sealed("…")` line that `repo/max-line-width` refused at the consumer's next commit.
+`bun repo env set` passed every unit test and every scratch-consumer proof, yet each value it sealed wrote a ~350-column `sealed("…")` line that `repo/max-line-width` refused at the consumer's next commit.
 
 ## Mistake
 The plan 130, 135 and 137 proofs installed the packed tarball in a scratch consumer and ran the commands, but never ran `bun repo sync` there, so no pre-commit hook or lint ever saw the written file. The roadmap 7 program Verify synced the consumer and committed, and the hook refused it. oxfmt then moved the cipher onto its own line, which a text exemption would also have missed (plan 145).

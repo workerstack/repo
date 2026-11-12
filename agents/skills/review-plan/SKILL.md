@@ -24,5 +24,6 @@ Scripts already enforce the format, the card's shape, the 100-line cap, reads-on
 8. Compare `## Usage` with Steps. Flag each new or changed command, flag, output, error message, or file a person or agent touches that Usage does not show, a changed one shown without its before, and a `No visible change:` line on a plan that changes one.
 9. Compare the card with Goal and Steps. Flag a `WHAT` or `DONE` that Goal and Verify do not back, a `TOUCH` that misses a file the Steps change, and a `RISK` no leaf or Watch-out covers.
 10. For each `(parallel: …)` phase, flag a path its leaves name that is not in its list.
+11. Flag shipped code, tests or docs that name one consumer's private API, project, path or values; that work belongs in the consumer's repo, and examples use a made-up name.
 
 Reply with at most 10 findings, most severe first, one line each: `{leaf id or section}: {problem}; {fix}`. With nothing to flag, reply `no findings`. No praise and no summary.

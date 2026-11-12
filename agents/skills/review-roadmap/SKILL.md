@@ -22,6 +22,7 @@ Scripts already enforce the format and the append-only `## Previous mistakes`. D
 6. Flag a slice sentence too vague to write a plan from: an open choice, a vague target, or a path that does not exist.
 7. Compare the card with the slices: flag a WHAT or DONE no slice ships, a RISK no slice handles, and a TOUCH that misses what the slices change.
 8. Flag a Verify gate no one can run, and a DONE no Verify gate proves.
+9. Flag a slice that ships code, tests or docs naming one consumer's private API, project, path or values; that work belongs in the consumer's repo, and examples use a made-up name.
 
 A roadmap saved in the old shape (with `## Goal`) keeps the old checks as well: flag a Decision with no rejected alternative, a slice Goal or Why that contradicts a Decision, a slice that walks into a matched lesson with no Watch-out, a program Goal no Verify gate proves, and compare `## Usage` with the slices: each new or changed command, flag, output, error message, or file it does not show, a changed one shown without its before, and a `No visible change:` line on a roadmap that changes one.
 

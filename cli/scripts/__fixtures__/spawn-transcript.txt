@@ -1,4 +1,4 @@
-You are scout subagent. Ship /home/ecomet/Development/repo-test-2/scripts/gate-fat-tools.ts
+You are scout subagent. Ship /home/dev/Development/repo-test-2/scripts/gate-fat-tools.ts
 Human: please do the thing
 Assistant: sure
 [orchestrator]: spawn scout

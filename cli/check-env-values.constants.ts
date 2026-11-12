@@ -54,8 +54,8 @@ export const LETTER: Readonly<RegExp> = /[a-z]/iu;
 export const DIGIT: Readonly<RegExp> = /\d/u;
 
 /**
- * The Shannon entropy, in bits per character, at or above which a mixed-case token counts as random. Set from the
- * monorepo's sealed values: a 22-character base62 code measures 3.97, so 4 missed it.
+ * The Shannon entropy, in bits per character, at or above which a mixed-case token counts as random. A 22-character
+ * base62 code measures 3.97, so 4 missed it.
  */
 export const ENTROPY_BITS: number = 3.5;
 

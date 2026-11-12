@@ -11,7 +11,7 @@ import { canonicalPath } from "./workspace-root.ts";
 const tmp = useTmp();
 
 // A root that does not exist, in the spelling the product compares in (macOS expands /home).
-const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
+const ws = canonicalPath("/home/dev/Development/repo-test-2");
 
 function rootsAt(root: string) {
   return { checkout: root, cwd: root, root };

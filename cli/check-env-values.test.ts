@@ -8,7 +8,7 @@ import { checkEnvValues } from "./check-env-values.ts";
 
 const { repoWith } = useGitTree("check-env-values-");
 
-const FILE = "projects/anyrow/env.ts";
+const FILE = "projects/shop/env.ts";
 const IMPORT = 'import { defineEnv, sealed } from "@workerstack/repo/env";\n';
 
 /** The fix a plaintext `<scope>.<key>` line names: the command that seals it in place. */
@@ -82,7 +82,7 @@ describe("checkEnvValues, plain values that are not secrets", () => {
     ["a hex id", "0123456789abcdef".repeat(2)],
     ["a UUID", "123e4567-e89b-12d3-a456-426614174000"],
     ["a URL", "https://api.example.com/v1/hooks?region=eu"],
-    ["a domain", "anyrow.example.com"],
+    ["a domain", "shop.example.com"],
     ["a short word", "production"],
   ])("passes %s", (_label, value) => {
     expect(linesFor(envFile(prodValue(value)))).toStrictEqual([]);
@@ -142,7 +142,7 @@ describe("checkEnvValues, process reads that pass", () => {
   });
 
   it("passes a read in a file that does not call defineEnv", () => {
-    expect(linesFor("export const token = process.env.TOKEN;\n", "projects/anyrow/other.ts")).toStrictEqual([]);
+    expect(linesFor("export const token = process.env.TOKEN;\n", "projects/shop/other.ts")).toStrictEqual([]);
   });
 });
 
@@ -150,11 +150,11 @@ describe("checkEnvValues, files it skips", () => {
   const leak = envFile(prodValue(`ghp_${"fake".repeat(4)}`));
 
   it("skips a test file", () => {
-    expect(linesFor(leak, "projects/anyrow/env.test.ts")).toStrictEqual([]);
+    expect(linesFor(leak, "projects/shop/env.test.ts")).toStrictEqual([]);
   });
 
   it("skips a file under __fixtures__", () => {
-    expect(linesFor(leak, "projects/anyrow/__fixtures__/env.ts")).toStrictEqual([]);
+    expect(linesFor(leak, "projects/shop/__fixtures__/env.ts")).toStrictEqual([]);
   });
 
   it("skips a listed file deleted from the working tree", () => {
@@ -164,7 +164,7 @@ describe("checkEnvValues, files it skips", () => {
   });
 
   it("scans a defineEnv file of any name", () => {
-    expect(linesFor(leak, "projects/anyrow/repo.script-env.ts")).toHaveLength(1);
+    expect(linesFor(leak, "projects/shop/deploy-settings.ts")).toHaveLength(1);
   });
 });
 
