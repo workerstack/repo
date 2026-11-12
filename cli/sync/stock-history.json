@@ -3940,6 +3940,7 @@
     "f81981b89eecce1d",
     "f8f4994e44205b6b"
   ],
+  "cli/scripts/lint-repo-rules.test.ts": ["9925ae8909d811f1", "fd770525085063be"],
   "cli/scripts/lint-rust.test.ts": [
     "2cfc1e94659b7112",
     "4251e85820cd56ff",

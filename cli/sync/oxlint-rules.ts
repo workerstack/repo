@@ -28,13 +28,17 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/no-mock-of-subject": "error",
   "repo/no-module-side-effects": "error",
   "repo/no-module-state": "error",
+  "repo/no-reflect-apply": "error",
   "repo/no-side-effect-import": "error",
   "repo/no-v8-ignore": "error",
+  "repo/no-widen-then-assert": "error",
   "repo/public-jsdoc": "error",
   "repo/skip-on-platform": "error",
   "repo/todo-needs-id": "error",
   "repo/types-file": "error",
   "unicorn/prefer-node-protocol": "error",
+
+  "oxc/no-accumulating-spread": "error",
 
   "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
   "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],

@@ -44,13 +44,15 @@ export function writeRegions(
   const { text, at } = typeof source === "string" ? { at: undefined, text: source } : source;
   const [first] = regions;
   const base: Doc = { legacy: first === undefined ? LEGACY_NAME : first.name, rows: toLines(text), syntax };
-  let doc: Shared = { ...base, cr: crMarked(text, base) };
+  const start: Shared = { ...base, cr: crMarked(text, base) };
+  let { rows } = start;
   const repairs: string[] = [];
   for (const region of regions) {
-    const step = writeOne(doc, region, at);
-    doc = { ...doc, rows: step.rows };
+    const step = writeOne({ ...start, rows }, region, at);
+    rows = step.rows;
     repairs.push(...step.repairs);
   }
+  const doc: Shared = { ...start, rows };
   const known = new Set(regions.map((region) => region.name));
   const cut = cutNames(doc, (name) => !known.has(name));
   return { repairs: [...repairs, ...cut.repairs], text: finish(cut.rows) };
