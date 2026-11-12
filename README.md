@@ -271,7 +271,7 @@ The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its s
 | a commit over `commit.maxChangedLines` with no body line | one line saying why, even beside a footer |
 | two or more why-lines over the limit | one line |
 
-Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), and, only over the size limit, one why-line. Merge commits pass. The subject takes the types `feat fix docs refactor perf test build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
+Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), and, only over the size limit, one why-line. Merge commits pass. The subject takes the types `feat fix perf refactor test docs build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
 
 ```console
 $ git commit -m "feat: add x" -m "Co-Authored-By: A <a@b.c>"
@@ -297,6 +297,19 @@ A branch with no upstream is pushed with `git push -u origin <branch>`. The push
 ### Agents and references
 
 `@workerstack/repo/agents/*` holds the stock skills, rules, subagents and hooks that `bun repo sync` links into each host tree. `@workerstack/repo/references/*` holds these files, which a repo's own `references/INDEX.md` links in `node_modules`.
+
+A subagent source may carry `variants:`, a list of mappings. One source renders one subagent per entry, each entry deep-merging over the source's frontmatter without `variants`. Every entry needs a `name`, which names its file:
+
+```yaml
+variants:
+  - name: implementer-deep
+    claudecode:
+      model: opus
+  - name: implementer-fast
+    claudecode:
+      model: sonnet
+tier: implementer
+```
 
 ## google-workspace
 

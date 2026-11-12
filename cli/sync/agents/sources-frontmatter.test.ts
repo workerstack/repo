@@ -85,7 +85,7 @@ it("rejects a name on a rule", () => {
 
 it("rejects an unknown subagent key and lists the known ones", () => {
   const [problem] = withConsumer({ ".repo/subagents/x.md": agent("colour: red\n") });
-  const known = "name, description, targets, overrides, tier, exec, antigravity-cli, claudecode, ";
+  const known = "name, description, targets, overrides, tier, exec, variants, antigravity-cli, claudecode, ";
   expect(problem).toMatch(new RegExp(`^\\.repo/subagents/x\\.md: unknown frontmatter key "colour"; use ${known}`));
   expect(problem).toContain("cursor");
 });

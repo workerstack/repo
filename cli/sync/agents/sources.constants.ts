@@ -14,6 +14,16 @@ export const AFTER = 1;
 /** The frontmatter keys a rule may carry. */
 export const RULE_KEYS: readonly string[] = ["description", "paths", "overrides"];
 /** The frontmatter keys a subagent may carry beside one block per host. */
-export const SUBAGENT_BASE_KEYS: readonly string[] = ["name", "description", "targets", "overrides", "tier", "exec"];
+export const SUBAGENT_BASE_KEYS: readonly string[] = [
+  "name",
+  "description",
+  "targets",
+  "overrides",
+  "tier",
+  "exec",
+  "variants",
+];
 /** The most a rule or subagent body may hold; longer detail belongs in a skill or a reference. */
 export const MAX_BODY_BYTES: number = 8 * 1024;
+/** A variant name, which names a file: a letter or digit, then letters, digits, `_`, `.` or `-`. */
+export const VARIANT_NAME: RegExp = /^[A-Za-z0-9][\w.-]*$/;

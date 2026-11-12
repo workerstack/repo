@@ -6,7 +6,7 @@ description: >-
 ---
 # write-roadmap
 
-You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). Copy the shape below. All boxes `[ ]`. Status stays `draft` until the user replies `y`.
+You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
 Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`. Add a bare `mode: {value}` line beside it on the same terms as `/write-plan`: `away` when this session runs `/away`, or the mode the person asked for.
 
@@ -26,41 +26,8 @@ Report the serial, the absolute path, the slice titles in order, the top risk, a
 
 ## Shape
 
+Shape and row rules: `node_modules/@workerstack/repo/references/roadmap-format.md`.
+
 `ROADMAP_NAME:` is 3–6 words. The hook turns it into the slug and the frontmatter. Do not invent `serial`, `created`, or `source`.
 
-````
-strategy: default
-ROADMAP_NAME: auth program
-
-# auth-program
-
-WHAT   auth ships as two slices: reserved types first, then the commit diff pass
-WHY    later slices add skills, so their names must be reserved first
-RISK   init and INDEX drift apart when a name changes
-TOUCH  init reserved names, INDEX, commit skills
-DONE   both slices done; repo init lists auth-types
-
-## Order
-1 [ ] auth types: Reserved names list the new skills.
-2 [ ] commit diff pass: Commit skills strip narrating comments.
-
-## Verify
-3 [ ] Verify
-3.1 [ ] both child plans have finished Verify
-
-## Previous mistakes
-(none)
-````
-
-## Row rules
-
-- The card comes first, as in `/write-plan`: WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
-- Headings, this order only: Order, Verify, Previous mistakes. No other `##`.
-- Each slice is one line: `N [ ] {title, 2–6 words}: {one sentence}`. The sentence is what that slice's plan ships.
-- Decisions, Usage, context and why a slice sits where it does go into that slice's plan, not the roadmap. `/implement-roadmap` writes each plan from its line.
-- At most 60 lines above Previous mistakes. Past that, move detail into the slice plans.
-- Omit `Location` on a draft. `/implement-roadmap` fills it with the absolute plan path.
-- No Type. No Commit. Those go on the child plan.
-- Verify is 1–5 leaves, `N.M [ ]`, same grammar as a plan.
-- Previous mistakes is `(none)` on a new roadmap, then one `- {feedback|verify|review|premise|decision|slice}: {what was wrong} → {what changed}` line per entry (a decision is `- decision: {question} → {choice}, because {why}`), optional ` (lesson: {slug})`. Append-only.
-- A roadmap saved in the old shape, with `## Goal`, keeps it on every revision: `node_modules/@workerstack/repo/references/roadmap-format.md`.
+No Type. No Commit. Those go on the child plan.

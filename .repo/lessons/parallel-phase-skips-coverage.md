@@ -1,9 +1,9 @@
 ---
 name: parallel-phase-skips-coverage
-paths: ["references/review-loop.md","agents/subagents/implementer-fast.md","agents/subagents/implementer-deep.md"]
-hits: 2
-last-hit: 2026-11-11
-evidence: ["plan 20","roadmap 6"]
+paths: ["references/review-loop.md","agents/subagents/implementer.md"]
+hits: 3
+last-hit: 2026-11-12
+evidence: ["plan 20","roadmap 6","plan 126"]
 ---
 
 # Parallel phases pass their tests and still fail the coverage gate

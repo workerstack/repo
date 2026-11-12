@@ -3,6 +3,7 @@
  * A `.repo/` rule or subagent replaces a stock one in place only when its frontmatter says `overrides: <name>`
  * (the stock path without `.md`, case-folded); a same-name file without it, or an `overrides` naming nothing, is a
  * problem. New files follow in path order. `.repo/hooks.jsonc` replaces the stock hooks whole.
+ * A subagent source with `variants:` stands for one file per variant, named after it, before any merging.
  * Every problem is collected, never thrown one by one.
  */
 import fs from "node:fs";
@@ -14,6 +15,7 @@ import { mergeDocs } from "./merge-docs.ts";
 import { readDoc } from "./read-doc.ts";
 import { CONSUMER_DIR, HOOKS_FILE, RULES, STOCK_DIR } from "./sources.constants.ts";
 import type { Doc, HooksSource, Kind, LoadResult } from "./sources.types.ts";
+import { expandVariants } from "./variants.ts";
 
 /** Where the sources live: the stock package, the consumer (none in this repo) and its workspace package dirs. */
 export type SourceRoots = {
@@ -81,7 +83,10 @@ export function loadSources(roots: SourceRoots): LoadResult {
   const tops = [stock, ...consumer];
   const problems: string[] = [];
   function docs(kind: Kind): Doc[] {
-    const perRoot = tops.map((top) => listDocs({ dir: top.dir, kind, origin: top.origin, root: top.root, scope: "" }));
+    const perRoot = tops.map((top) => {
+      const files = listDocs({ dir: top.dir, kind, origin: top.origin, root: top.root, scope: "" });
+      return kind === RULES ? files : expandVariants(files);
+    });
     return mergeDocs({ kind, perRoot, problems });
   }
   // Package rules are read first, so their problems come first.

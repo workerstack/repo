@@ -1,11 +1,12 @@
 /**
  * Frontmatter is user input, so it is checked here, once: a rule needs a `description` and may carry `paths` (a list
- * of strings); `overrides` is a string.
+ * of strings); `overrides` is a string; a subagent's `variants` is a list of mappings, each with a `name`.
  */
 import type { ParsedDoc } from "./frontmatter.ts";
 import { MAX_BODY_BYTES, RULE_KEYS, RULES, SUBAGENT_BASE_KEYS } from "./sources.constants.ts";
 import type { Kind } from "./sources.types.ts";
 import { TARGET } from "./subagents.ts";
+import { isVariantList } from "./variants.ts";
 
 /** The keys a doc of `kind` may carry. */
 function keysOf(kind: Kind): readonly string[] {
@@ -41,6 +42,8 @@ export function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): strin
   if (unknown !== undefined) return `unknown frontmatter key "${unknown}"; use ${keys.join(", ")}`;
   if (data["overrides"] !== undefined && typeof data["overrides"] !== "string")
     return "invalid frontmatter: overrides must be a string";
+  if (data["variants"] !== undefined && !isVariantList(data["variants"]))
+    return "invalid frontmatter: variants must be a list of mappings, each with a name";
   const bad = kind === RULES ? ruleProblem(data) : null;
   return bad ?? bodyProblem(body);
 }

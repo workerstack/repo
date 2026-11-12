@@ -1,4 +1,5 @@
 import type { ParsedDoc } from "./frontmatter.ts";
+import type { Variant } from "./variants.ts";
 
 /** One rule or subagent source file. */
 export type Doc = {
@@ -19,6 +20,8 @@ export type DocFile = {
   file: string;
   origin: Doc["origin"];
   scope: string;
+  /** The `variants:` entry this file stands for, when its source holds several subagents. */
+  variant?: Variant;
 };
 
 /** The two doc kinds a root holds. */

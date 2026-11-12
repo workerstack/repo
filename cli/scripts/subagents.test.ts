@@ -21,9 +21,7 @@ const RULES = [
 
 /** The final lines each subagent ends its return with. */
 const RETURNS: Record<string, string> = {
-  "implementer-deep":
-    "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
-  "implementer-fast":
+  implementer:
     "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
   researcher:
     "facts: <one fact per line, each with its source>\nsources: <urls or repo paths>\nstatus: done|partial|stuck",
@@ -42,7 +40,7 @@ describe("subagent bodies", () => {
     .toSorted(byCodeUnit);
 
   it("covers every subagent but the orchestrator, researcher included", () => {
-    expect(files).toStrictEqual(["implementer-deep.md", "implementer-fast.md", "researcher.md", "scout.md"]);
+    expect(files).toStrictEqual(["implementer.md", "researcher.md", "scout.md"]);
   });
 
   for (const file of files) {

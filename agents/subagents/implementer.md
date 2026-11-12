@@ -1,10 +1,20 @@
 ---
-name: implementer-deep
-description: "Implements one reviewed phase. Writes product code and tests. Harder phases."
+variants:
+  - name: implementer-deep
+    description: "Implements one reviewed phase. Writes product code and tests. Harder phases."
+    claudecode:
+      model: opus
+    antigravity-cli:
+      model: pro
+  - name: implementer-fast
+    description: "Implements one reviewed phase. Writes product code and tests."
+    claudecode:
+      model: sonnet
+    antigravity-cli:
+      model: flash
 tier: implementer
 exec: true
 claudecode:
-  model: opus
   effort: medium
   autoCompactWindow: 350000
   maxTurns: 100
@@ -27,7 +37,6 @@ codexcli:
 cursor:
   model: inherit
 antigravity-cli:
-  model: pro
   subagent: true
   mainAgent: false
   inheritMcp: false
