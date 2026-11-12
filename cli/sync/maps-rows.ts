@@ -2,9 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { group } from "../docs-fences.ts";
-import { isString } from "../json.ts";
+import { isRecord, isString, type Json, type JsonObject } from "../json.ts";
+import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
-import { parseFlowSeq, parseMarkdown, type YamlObject, type YamlValue } from "./maps-yaml.ts";
+import { parseDoc } from "./agents/frontmatter.ts";
 import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
 import { stockRoot } from "./stock.ts";
 
@@ -14,8 +15,28 @@ const H1_TRAILING_HASHES = /\s+#+\s*$/;
 const LINE_BREAK = /\r?\n/;
 const H1_PREFIX = /^#\s+/;
 
-function isYamlObject(v: unknown): v is YamlObject {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+/** A markdown file's frontmatter mapping and the body after it. */
+type ParsedMarkdown = { parsed: JsonObject; body: string };
+
+/** The frontmatter mapping of `src`; `{}` for a block `parseDoc` refuses, which validate-formats reports. */
+function frontmatterOf(rel: string, src: string): JsonObject {
+  try {
+    return parseDoc(rel, src).data;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The frontmatter and body of the markdown file at `rel`; no frontmatter reads as `{}` and keeps the whole text as
+ * the body, and a block that does not parse reads as `{}` and keeps the body after it.
+ */
+function parseMarkdown(rel: string, src: string): ParsedMarkdown {
+  const split = splitFrontmatter(src);
+
+  if (!split.ok) return { body: src, parsed: {} };
+
+  return { body: split.body, parsed: frontmatterOf(rel, src) };
 }
 
 /** A reference file: its path and its path relative to the root. */
@@ -36,48 +57,37 @@ function cell(s: string): string {
   return oneLine(s).replaceAll("|", "\\|");
 }
 
-function mapRefs(parsed: YamlObject): string[] {
-  const dotted = parsed["map.refs"];
+/** A list value's items as text, a non-empty string as its one item, anything else as none. */
+function listText(v: Json | undefined): string[] {
+  if (Array.isArray(v)) return v.map(String);
 
-  if (Array.isArray(dotted)) return dotted.map(String);
+  return isString(v) && v !== "" ? [v] : [];
+}
 
-  if (isString(dotted) && dotted !== "") return [dotted];
+function mapRefs(parsed: JsonObject): string[] {
+  const dotted = listText(parsed["map.refs"]);
+
+  if (dotted.length > 0) return dotted;
   const m = parsed.map;
 
-  if (isYamlObject(m) && Array.isArray(m.refs)) return m.refs.map(String);
-
-  if (isYamlObject(m) && isString(m.refs) && m.refs !== "") return [m.refs];
-
-  return [];
+  return isRecord(m) ? listText(m.refs) : [];
 }
 
-function scalarText(v: YamlValue | undefined): string {
-  return isString(v) && v !== "" ? v : "";
+function scalarText(v: Json | undefined): string {
+  return isString(v) ? v : "";
 }
 
-function mapTask(parsed: YamlObject): string {
+function mapTask(parsed: JsonObject): string {
   const dotted = scalarText(parsed["map.task"]);
 
   if (dotted !== "") return dotted;
   const m = parsed.map;
 
-  if (isYamlObject(m)) return scalarText(m.task);
-
-  return "";
+  return isRecord(m) ? scalarText(m.task) : "";
 }
 
-function tagsOf(parsed: YamlObject): string[] {
-  if (Array.isArray(parsed.tags)) return parsed.tags.map(String);
-
-  if (isString(parsed.tags) && parsed.tags !== "") {
-    const seq = parseFlowSeq(parsed.tags);
-
-    if (seq !== null) return seq.map(String);
-
-    return [parsed.tags];
-  }
-
-  return [];
+function tagsOf(parsed: JsonObject): string[] {
+  return listText(parsed.tags);
 }
 
 function firstH1(body: string): string {
@@ -140,7 +150,7 @@ function isFile(abs: string): boolean {
 /** The row of the skill in `dir` under `root`'s skills: its name, origin, description, task, commandPath and refs. */
 export function skillRow(root: string, dir: string): string {
   const raw = fs.readFileSync(path.join(root, STOCK_SKILLS_REL, dir, "SKILL.md"), "utf8");
-  const { parsed, body } = parseMarkdown(raw);
+  const { parsed, body } = parseMarkdown(`${STOCK_SKILLS_REL}/${dir}/SKILL.md`, raw);
   const named = scalarText(parsed.name);
   const name = named === "" ? dir : named;
   const described = scalarText(parsed.description);
@@ -161,7 +171,7 @@ export function refRow(file: RefFile): string {
   const raw = fs.readFileSync(file.abs, "utf8");
 
   if (raw.includes("\0")) return bare;
-  const { parsed, body } = parseMarkdown(raw);
+  const { parsed, body } = parseMarkdown(file.rel, raw);
   const heading = firstH1(body);
   const title = heading === "" ? fallbackTitle : heading;
   const tags = tagsOf(parsed).join(", ");

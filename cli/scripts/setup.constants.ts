@@ -6,7 +6,10 @@ export const ALWAYS_ON: readonly string[] = ["browser", "jev"];
 /** The names `setup` takes for google-workspace. */
 export const GOOGLE_ALIASES: readonly string[] = ["gw", "google", "workspace", "google-workspace"];
 
-export const USAGE = `usage: setup [speak|listen|google-workspace|browser|jev]
+/** The targets `repo setup` takes. */
+export const SETUP_TARGETS = "[speak|listen|google-workspace|browser|jev]";
+
+export const USAGE: string = `usage: setup ${SETUP_TARGETS}
   speak            --elevenlabs-key KEY | --openai-key KEY [--provider elevenlabs|openai] [--skip-verify]
   listen           [--openai-key KEY] [--device ID] [--skip-download]
   google-workspace [--creds PATH] [--account NAME] [--project ID]

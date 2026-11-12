@@ -135,14 +135,14 @@ it("picks lightpanda, then chromium, and names the missing engine", () => {
   expect(pickLinux({ bins: { lightpanda: "/x/lp" }, platform: "win32" }).error).toMatch(/winget/);
 });
 
-it("lists the verbs for no verb, help, -h and --help, in any case", async () => {
+it("lists the verbs for no verb and help, in any case", async () => {
   const help = {
     code: 0,
     stderr: "",
     stdout: "nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure\n",
   };
 
-  const argvs = [[], [""], ["help"], ["HELP"], ["-h"], ["--help"]];
+  const argvs = [[], [""], ["help"], ["HELP"]];
   expect(await Promise.all(argvs.map((a) => runBrowser(a)))).toStrictEqual(argvs.map(() => help));
 });
 

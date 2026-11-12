@@ -39,8 +39,11 @@ export const UNAUTHORIZED = 401;
 export const FORBIDDEN = 403;
 export const HTTP_BODY_CHARS = 200;
 
-export const USAGE =
-  "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
+/** What `repo speak` takes. */
+export const SPEAK_ARGS: string =
+  "whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
+
+export const USAGE: string = `usage: speak ${SPEAK_ARGS}`;
 
 export const SETUP = "bun repo setup speak";
 export const SPEAK_DIR = ".tmp/repo/speak";

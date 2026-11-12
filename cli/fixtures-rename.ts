@@ -3,10 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { fixtureFolders, type FixtureFolder } from "./check-fixtures.ts";
-import { FIX_FLAG, FIXTURES_DIR, REWRITE_EXCLUDED_PATHS, USAGE_EXIT } from "./fixtures.constants.ts";
+import { FIX_FLAG, FIXTURES_DIR, FIXTURES_USAGE, REWRITE_EXCLUDED_PATHS, USAGE_EXIT } from "./fixtures.constants.ts";
 import { listFiles } from "./list-files.ts";
 
-const USAGE = `usage: repo fixtures [${FIX_FLAG}]`;
 const NONE = "no fixture folders to rename";
 const ROOT = "";
 
@@ -167,7 +166,7 @@ export function renameFixtures(cwd: string, { fix }: { fix: boolean }): string[]
 /** `repo fixtures [--fix]`: prints the plan, or applies it with `--fix`. */
 export function main(argv: string[]): number {
   if (argv.some((arg) => arg !== FIX_FLAG)) {
-    process.stderr.write(`${USAGE}\n`);
+    process.stderr.write(`${FIXTURES_USAGE}\n`);
 
     return USAGE_EXIT;
   }
