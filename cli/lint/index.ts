@@ -29,6 +29,8 @@ import { noObjectParameters } from "./no-object-parameters.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
 import { noReflectGet } from "./no-reflect-get.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
+import { noUnknownReturns } from "./no-unknown-returns.ts";
+import { noUnknownTypeAliases } from "./no-unknown-type-aliases.ts";
 import { noUnsafeDictionaryType } from "./no-unsafe-dictionary-type.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
 import { noWidenThenAssert } from "./no-widen-then-assert.ts";
@@ -79,6 +81,8 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-reflect-get": noReflectGet,
     "no-shape-in-symbol-names": noForbiddenTermInSymbolNames,
     "no-side-effect-import": noSideEffectImport,
+    "no-unknown-returns": noUnknownReturns,
+    "no-unknown-type-aliases": noUnknownTypeAliases,
     "no-unsafe-dictionary-type": noUnsafeDictionaryType,
     "no-v8-ignore": noV8Ignore,
     "no-widen-then-assert": noWidenThenAssert,

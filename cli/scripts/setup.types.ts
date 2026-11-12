@@ -19,8 +19,8 @@ export type TargetStatuses = Record<"speak" | "jev" | "listen" | "google-workspa
  * every interactive io.
  */
 export type SetupIo = {
-  log?(s: string): unknown;
-  error?(s: string): unknown;
+  log?(s: string): void;
+  error?(s: string): void;
   confirm?(opts: { message: string; initialValue?: boolean }): Promise<boolean>;
   select?(opts: {
     message: string;
@@ -41,7 +41,7 @@ export type SetupFetch = (
   },
 ) => Promise<FetchResult>;
 
-export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown;
+export type SetupSpawnSync = (cmd: string, args: string[], opts: SpawnSyncOpts) => void;
 
 export type SetupCtx = {
   flags?: Flags | undefined;
@@ -49,13 +49,13 @@ export type SetupCtx = {
   home?: string | undefined;
   io?: SetupIo | null | undefined;
   fetchFn?: SetupFetch | undefined;
-  openUrlFn?: ((url: string) => unknown) | undefined;
+  openUrlFn?: ((url: string) => void) | undefined;
   platform?: NodeJS.Platform | undefined;
   spawnSyncFn?: SetupSpawnSync | undefined;
   whichFn?: WhichFn | undefined;
   pathEnv?: string | undefined;
   interactive?: boolean | undefined;
-  loginFn?: ((dest: string, home: string) => Promise<unknown>) | undefined;
+  loginFn?: ((dest: string, home: string) => Promise<void>) | undefined;
 };
 
 export type SetupMainOpts = {

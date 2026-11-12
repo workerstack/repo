@@ -22,6 +22,7 @@ import type {
   SpawnOpts,
   SttOpts,
 } from "./listen.types.ts";
+import { parsedFetch } from "./parsed-fetch.ts";
 import { FLAG_ON } from "./voice-args.constants.ts";
 import { parseArgv, str } from "./voice-args.ts";
 
@@ -34,7 +35,7 @@ function seams(opts: ListenMainOpts) {
   const log: ListenLog = opts.log ?? console;
 
   return {
-    fetchFn: opts.fetchFn ?? globalThis.fetch,
+    fetchFn: opts.fetchFn ?? parsedFetch,
     killFn: opts.killFn ?? process.kill.bind(process),
     log,
     nodeBin: firstNonEmpty(opts.nodeBin) ?? process.execPath,

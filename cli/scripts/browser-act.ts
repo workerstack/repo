@@ -54,7 +54,7 @@ async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<string> {
 }
 
 /** Runs `fn` on `session`; the message of what it threw, or null. */
-async function attempt(session: Session, fn: (cdp: Cdp) => Promise<unknown>): Promise<string | null> {
+async function attempt(session: Session, fn: (cdp: Cdp) => Promise<Rec | void>): Promise<string | null> {
   try {
     await withCdp(session, fn);
 

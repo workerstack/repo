@@ -158,11 +158,12 @@ it("stops with git's reason when it cannot remove the worktree, and a rerun stil
   expect(hasBranch(r, "wt/l")).toBe(false);
 });
 
-function captureError(fn: () => unknown): unknown {
+function captureError(fn: () => void): Error | null {
   try {
     fn();
   } catch (e) {
-    return e;
+    if (e instanceof Error) return e;
+    throw e;
   }
 
   return null;

@@ -1,6 +1,6 @@
 import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
-import { asNode, type SyntaxNode } from "../syntax-node.ts";
+import { asNode, type SyntaxNode, textOf } from "../syntax-node.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
@@ -40,7 +40,7 @@ function signedNames(body: SyntaxNode[]): Set<string> {
   for (const statement of body) {
     const declaration = declarationOf(statement);
 
-    if (get(declaration, "type") === NODE_TYPES.signature) signed.add(String(get(get(declaration, "id"), "name")));
+    if (get(declaration, "type") === NODE_TYPES.signature) signed.add(textOf(get(get(declaration, "id"), "name")));
   }
 
   return signed;

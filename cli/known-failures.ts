@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { tryJson } from "./json.ts";
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
-import { asNode, type SyntaxNode } from "./syntax-node.ts";
+import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "./syntax-node.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
 type Case = { line: number; call: string; title: string | null; name: string | null };
@@ -24,17 +24,17 @@ function lineOf(source: string, at: number) {
 }
 
 /** `value[key]`, or undefined when `value` is no node. */
-function get(value: unknown, key: string): unknown {
+function get(value: unknown, key: string): SyntaxValue {
   return asNode(value)?.[key];
 }
 
 /** The items of `value`, which is a list, one value standing for a list of one, or nothing. */
-function itemsOf(value: unknown): unknown[] {
+function itemsOf(value: SyntaxValue): SyntaxValue[] {
   return [value].flat();
 }
 
 /** The first item of `value`, read as `itemsOf` reads it. */
-function firstOf(value: unknown): unknown {
+function firstOf(value: SyntaxValue): SyntaxValue {
   return itemsOf(value)[0];
 }
 
@@ -42,12 +42,12 @@ function firstOf(value: unknown): unknown {
 function chainOf(callee: unknown): string[] | null {
   const type = get(callee, "type");
 
-  if (type === NODE.identifier) return [String(get(callee, "name"))];
+  if (type === NODE.identifier) return [textOf(get(callee, "name"))];
 
   if (type !== NODE.member || get(callee, "computed") === true) return null;
   const head = chainOf(get(callee, "object"));
 
-  return head === null ? null : [...head, String(get(get(callee, "property"), "name"))];
+  return head === null ? null : [...head, textOf(get(get(callee, "property"), "name"))];
 }
 
 /** The text of a string literal or a template without expressions, else null. */
@@ -60,7 +60,7 @@ function titleOf(arg: unknown): string | null {
 
   const bare = get(arg, "type") === NODE.template && itemsOf(get(arg, "expressions")).length === 0;
 
-  return bare ? String(get(get(firstOf(get(arg, "quasis")), "value"), "cooked")) : null;
+  return bare ? textOf(get(get(firstOf(get(arg, "quasis")), "value"), "cooked")) : null;
 }
 
 type Scope = (string | null)[];

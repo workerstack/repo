@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import type { LintSkip } from "../config.ts";
+import { type Json, readJson } from "../json.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
@@ -12,12 +14,12 @@ function workspace(manifest: PackageJson, packages: Workspace["packages"] = []):
   };
 }
 
-function configOf(ws: Workspace, skips: readonly LintSkip[] = []): unknown {
+function configOf(ws: Workspace, skips: readonly LintSkip[] = []): Json {
   const built = oxlintConfig(ws, { skip: skips });
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
 
-  return JSON.parse(built.value);
+  return readJson(z.json(), built.value);
 }
 
 const SIZE = { skipBlankLines: true, skipComments: true };
@@ -36,7 +38,8 @@ const ERROR_RULES = [
   "repo/naming-convention repo/native-path-separator repo/no-block-comment repo/no-boolean-param",
   "repo/no-chained-type-assertions repo/no-commented-out-code repo/no-module-mocking repo/no-module-side-effects",
   "repo/no-module-state repo/no-object-parameters repo/no-reflect-apply repo/no-reflect-get",
-  "repo/no-shape-in-symbol-names repo/no-side-effect-import repo/no-unsafe-dictionary-type repo/no-v8-ignore",
+  "repo/no-shape-in-symbol-names repo/no-side-effect-import repo/no-unknown-returns repo/no-unknown-type-aliases",
+  "repo/no-unsafe-dictionary-type repo/no-v8-ignore",
   "repo/no-widen-then-assert repo/public-jsdoc repo/require-readable-spacing",
   "repo/skip-on-platform repo/todo-needs-id repo/types-file unicorn/prefer-node-protocol oxc/no-accumulating-spread",
   "eslint/no-shadow eslint/no-else-return eslint/no-nested-ternary eslint/no-param-reassign eslint/no-await-in-loop",

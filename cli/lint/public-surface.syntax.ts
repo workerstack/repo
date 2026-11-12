@@ -1,5 +1,5 @@
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
-import { asNode, type SyntaxNode } from "../syntax-node.ts";
+import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import {
   BODY,
   DECLARATION,
@@ -17,7 +17,7 @@ import {
 import type { Reference } from "./public-surface.types.ts";
 
 /** `value[key]`, or undefined when `value` is no node. */
-export function get(value: unknown, key: string): unknown {
+export function get(value: unknown, key: string): SyntaxValue {
   return asNode(value)?.[key];
 }
 
@@ -31,22 +31,22 @@ export function nodesOf(value: unknown): SyntaxNode[] {
 
 /** The name an identifier or a string literal carries. */
 export function nameOf(node: unknown): string {
-  return String(get(node, "name") ?? get(node, "value"));
+  return textOf(get(node, "name") ?? get(node, "value"));
 }
 
 /** The text of the `from "…"` of an import or export statement. */
 export function sourceText(statement: SyntaxNode): string {
-  return String(get(get(statement, "source"), "value"));
+  return textOf(get(get(statement, "source"), "value"));
 }
 
 export function isHiddenMember(node: SyntaxNode): boolean {
-  const access = String(get(node, "accessibility"));
+  const access = textOf(get(node, "accessibility"));
 
   return HIDDEN_ACCESS.includes(access) || get(node["key"], "type") === NODE.privateIdentifier;
 }
 
 function skipsChild(node: SyntaxNode, key: string): boolean {
-  const type = String(get(node, "type"));
+  const type = textOf(get(node, "type"));
 
   if (key === PARENT) return true;
 
@@ -57,7 +57,7 @@ function skipsChild(node: SyntaxNode, key: string): boolean {
   if (!VALUE_HOLDERS.includes(type)) return false;
   const value = type === NODE.declarator ? "init" : "value";
 
-  return key === value && !TYPED_INITS.includes(String(get(node[key], "type")));
+  return key === value && !TYPED_INITS.includes(textOf(get(node[key], "type")));
 }
 
 /** Walks what a declaration shows a consumer: no function body, no private member, no untyped initializer. */
@@ -97,7 +97,7 @@ export function declaredNames(statement: SyntaxNode): string[] {
       .map(nameOf);
   }
 
-  if (!DECLARATION.test(String(get(declaration, "type"))) || declaration["id"] === undefined) return [];
+  if (!DECLARATION.test(textOf(get(declaration, "type"))) || declaration["id"] === undefined) return [];
 
   if (declaration["type"] === NODE.module) return [];
 
@@ -118,7 +118,7 @@ export function unknownForm(statement: SyntaxNode): string | null {
     .map((declarator) => declarator["id"])
     .find((id) => get(id, "type") !== NODE.identifier);
 
-  return odd === undefined ? null : String(get(odd, "type"));
+  return odd === undefined ? null : textOf(get(odd, "type"));
 }
 
 /** The names at the start of a `a.b.c` chain, root first; empty when the chain starts at anything else. */
@@ -143,7 +143,7 @@ export function referencesOf(statement: SyntaxNode): Reference[] {
     if (node["type"] === NODE.importType)
       references.push({ name: chainOf(node["qualifier"])[0] ?? NAMESPACE, source: sourceText(node) });
 
-    const key = REFERENCE_KEYS[String(get(node, "type"))];
+    const key = REFERENCE_KEYS[textOf(get(node, "type"))];
     const chain = key === undefined ? [] : chainOf(node[key]);
 
     if (chain[0] !== undefined) references.push({ member: chain[1] ?? null, name: chain[0], source: null });

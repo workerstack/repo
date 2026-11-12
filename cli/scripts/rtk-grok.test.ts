@@ -7,6 +7,7 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { plantProgram } from "../__fixtures__/stub-bin.ts";
 import { repoEnv } from "../repo-env.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
+import type { HookOutput } from "./gate-harness.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./rtk-grok.ts";
 
@@ -62,7 +63,7 @@ function call(command: unknown, env: Record<string, string | undefined> = withSt
   );
 }
 
-function updated(command: string): unknown {
+function updated(command: string): HookOutput {
   return {
     hookSpecificOutput: {
       hookEventName: "PreToolUse",

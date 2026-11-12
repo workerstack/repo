@@ -3,9 +3,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
 import { useCapturedRun } from "./__fixtures__/captured-run.ts";
 import { main } from "./coverage.ts";
+import { type Json, readJson } from "./json.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const FLOORS = "coverage-floors.json";
@@ -52,8 +54,8 @@ function coverage(root: string, run: CargoRun): Promise<number> {
   return main([], run);
 }
 
-function floorsOf(root: string): unknown {
-  return JSON.parse(fs.readFileSync(path.join(root, FLOORS), "utf8"));
+function floorsOf(root: string): Json {
+  return readJson(z.json(), fs.readFileSync(path.join(root, FLOORS), "utf8"));
 }
 
 function plant(root: string, floors: unknown): void {

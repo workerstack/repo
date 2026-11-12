@@ -125,11 +125,7 @@ describe("main and liveSessions", () => {
     vi.spyOn(process, "cwd").mockReturnValue(root);
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(main(["--dry-run"])).toBe(0);
-    expect(log.mock.calls.map((c): unknown => c[0])).toStrictEqual([
-      ".tmp/repo/a.log",
-      "would remove 1 file (1 B)",
-      "would keep nothing",
-    ]);
+    expect(log.mock.calls).toStrictEqual([[".tmp/repo/a.log"], ["would remove 1 file (1 B)"], ["would keep nothing"]]);
     expect(fs.existsSync(path.join(root, ".tmp/repo/a.log"))).toBe(true);
   });
 

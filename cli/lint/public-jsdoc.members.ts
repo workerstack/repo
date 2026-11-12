@@ -1,6 +1,6 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 
-import { asNode, type SyntaxNode } from "../syntax-node.ts";
+import { asNode, type SyntaxNode, textOf } from "../syntax-node.ts";
 import { docFault } from "./doc-fault.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
@@ -100,7 +100,7 @@ function checkClassBody(walk: Walk, body: SyntaxNode, visit: (node: SyntaxNode) 
   for (const member of members) {
     if (isHiddenMember(member) || isUnnameable(member)) continue;
 
-    if (MEMBERS.includes(String(get(member, "type")))) checkMember(walk, member, members);
+    if (MEMBERS.includes(textOf(get(member, "type")))) checkMember(walk, member, members);
     const inner = member["type"] === NODE_TYPES.method ? member["value"] : member;
     walkPublic(inner, (node) => node === member || visit(node));
   }
@@ -109,7 +109,7 @@ function checkClassBody(walk: Walk, body: SyntaxNode, visit: (node: SyntaxNode) 
 /** The visit that checks every member a consumer can see under a declaration, for `walkPublic`. */
 export function visitorOf(walk: Walk): (node: SyntaxNode) => boolean {
   function visit(node: SyntaxNode): boolean {
-    const type = String(get(node, "type"));
+    const type = textOf(get(node, "type"));
 
     if (type === NODE_TYPES.classBody) checkClassBody(walk, node, visit);
 

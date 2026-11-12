@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { asNode } from "./syntax-node.ts";
+import { asNode, textOf } from "./syntax-node.ts";
 
 describe("asNode", () => {
   it.each([
@@ -17,5 +17,20 @@ describe("asNode", () => {
     ["a string", "Identifier"],
   ])("returns null for %s", (_name, value) => {
     expect(asNode(value)).toBeNull();
+  });
+});
+
+describe("textOf", () => {
+  it.each([
+    ["a string", "Identifier", "Identifier"],
+    ["a number", 1, "1"],
+    ["a bigint", 10n, "10"],
+    ["undefined", undefined, "undefined"],
+    ["null", null, "null"],
+    ["a regex", /a/u, "/a/u"],
+    ["a node", { type: "Identifier" }, ""],
+    ["a list", ["a"], ""],
+  ])("spells %s", (_name, value, text) => {
+    expect(textOf(value)).toBe(text);
   });
 });

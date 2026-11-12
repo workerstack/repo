@@ -111,7 +111,7 @@ async function runRepoSync(sync: typeof runSync, root: string, io: Io): Promise<
 }
 
 /** Run `generate`; returns the failure message, else null. */
-async function regenerate(generate: () => unknown): Promise<string | null> {
+async function regenerate(generate: () => ReturnType<typeof runRepoSync>): Promise<string | null> {
   try {
     await generate();
 
@@ -122,7 +122,7 @@ async function regenerate(generate: () => unknown): Promise<string | null> {
 }
 
 /** The result once every file is settled: regenerate after a write, then judge drift and misses. */
-async function finish(plan: Plan, tally: Tally, run: () => unknown): Promise<SyncResult> {
+async function finish(plan: Plan, tally: Tally, run: () => ReturnType<typeof runRepoSync>): Promise<SyncResult> {
   const { reports, misses } = tally;
 
   for (const miss of misses) plan.io.err(`miss ${miss}\n`);

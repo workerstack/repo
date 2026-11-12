@@ -5,7 +5,7 @@
 import type { ExecFileSyncOptions } from "node:child_process";
 
 /** The `execFileSync` shape init runs its commands through. */
-type Exec = (cmd: string, args: string[], opts: ExecFileSyncOptions) => unknown;
+type Exec = (cmd: string, args: string[], opts: ExecFileSyncOptions) => void;
 
 /**
  * Runs `git init -q` in `dest` and then prints one line saying so to `stdout` (the process's stdout when omitted),

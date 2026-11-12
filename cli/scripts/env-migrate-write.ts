@@ -20,8 +20,8 @@ import { toolEnv } from "./tool-env.ts";
 
 /** What a signal is caught on, and how the process ends after one. */
 export type SignalHost = {
-  on(signal: "SIGINT" | "SIGTERM", listener: () => void): unknown;
-  off(signal: "SIGINT" | "SIGTERM", listener: () => void): unknown;
+  on(signal: "SIGINT" | "SIGTERM", listener: () => void): void;
+  off(signal: "SIGINT" | "SIGTERM", listener: () => void): void;
   exit(code: number): void;
 };
 

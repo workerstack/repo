@@ -1,7 +1,6 @@
 /** Calls the ElevenLabs and OpenAI APIs: the account check, the voice list, and the raw request under both. */
-import { z } from "zod";
-
 import { isRecord, type Json } from "../json.ts";
+import { parsedFetch } from "./parsed-fetch.ts";
 import { resolveProvider } from "./speak-config.ts";
 import {
   ELEVEN_API,
@@ -15,11 +14,6 @@ import {
   UNAUTHORIZED,
 } from "./speak.constants.ts";
 import type { ApiOpts, FetchFn, FetchResult, ProviderOpts, SpeakCfg } from "./speak.types.ts";
-
-/** A reply body as JSON; one that is no JSON value reads as null. */
-function replyJson(value: unknown): Json {
-  return z.json().catch(null).parse(value);
-}
 
 const MISSING_PERMISSIONS = /missing_permissions/i;
 const MISSING_PERMISSION = /missing permission/i;
@@ -67,7 +61,7 @@ export function globalFetch(): FetchFn | undefined {
 
   if (typeof found !== "function") return undefined;
 
-  return (url, { method, headers, body }) => fetch(url, { body: body ?? null, headers, method });
+  return (url, { method, headers, body }) => parsedFetch(url, { body: body ?? null, headers, method });
 }
 
 async function bodyText(res: FetchResult | null): Promise<string> {
@@ -102,8 +96,7 @@ async function apiFetch(url: string, { method = "GET", headers, body, fetchFn }:
 async function apiJson(url: string, opts: ApiOpts): Promise<Json> {
   const res = await apiFetch(url, opts);
 
-  // A reply that is no JSON value reads as null, which every reader treats as an empty reply.
-  return typeof res.json === "function" ? replyJson(await res.json()) : {};
+  return typeof res.json === "function" ? await res.json() : {};
 }
 
 /** The audio bytes of the reply, from its reader or its body. */

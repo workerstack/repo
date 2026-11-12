@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 
+import type { Json } from "../json.ts";
 import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./__fixtures__/speak-kit.ts";
 import { voices, whoami } from "./speak-api.ts";
 import { OPENAI_VOICES } from "./speak.constants.ts";
@@ -13,7 +14,7 @@ function openai() {
   return cfgOf({ OPENAI_API_KEY: "sk_oa" });
 }
 
-function accountOf(value: unknown) {
+function accountOf(value: Json) {
   return whoami({ cfg: eleven(), fetchFn: fetchReturning(jsonRes(value)) });
 }
 

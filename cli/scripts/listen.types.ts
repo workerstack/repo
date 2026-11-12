@@ -1,3 +1,4 @@
+import type { Json } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 
 export type ListenCfg = {
@@ -20,7 +21,7 @@ export type FetchResult = {
   ok?: boolean;
   status?: number;
   text?: () => Promise<string>;
-  json?: () => Promise<unknown>;
+  json?: () => Promise<Json>;
   arrayBuffer?: () => Promise<ArrayBuffer | Uint8Array>;
 };
 
@@ -50,9 +51,9 @@ export type SpawnSyncFn = (
 /** The slice of a ChildProcess this script uses; tests pass partial fakes. */
 export type ChildLike = {
   pid?: number | undefined;
-  stdin?: { write(chunk: string): unknown; end(): unknown } | null;
-  kill?(signal?: NodeJS.Signals): unknown;
-  on?(event: string, cb: (arg: unknown, signal?: unknown) => void): unknown;
+  stdin?: { write(chunk: string): void; end(): void } | null;
+  kill?(signal?: NodeJS.Signals): void;
+  on?(event: string, cb: (arg: unknown, signal?: unknown) => void): void;
   unref?(): void;
 };
 
@@ -66,7 +67,7 @@ export type SpawnOpts = {
 
 export type SpawnFn = (bin: string, args: string[], opts: SpawnOpts) => ChildLike;
 
-export type KillFn = (pid: number, signal: string | number) => unknown;
+export type KillFn = (pid: number, signal: string | number) => void;
 
 export type ListenLog = {
   log(msg: string): void;

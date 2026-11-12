@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { parse as parseToml } from "smol-toml";
 import { expect, it } from "vitest";
+import { z } from "zod";
 
+import { type Json, readJson } from "../json.ts";
 import { plant, plantHomes } from "./__fixtures__/purge-kit.ts";
 import { purgeGlobalMcps } from "./purge-global-mcps.ts";
 import { claudePluginsPath, cursorMcpPath, grokConfigPath, parseArgv } from "./purge-paths.ts";
@@ -19,8 +21,8 @@ const CLEAN_GROK =
   `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
 
 /** `value` as plain objects: smol-toml builds its tables without a prototype, which `toStrictEqual` tells apart. */
-function plain(value: unknown): unknown {
-  return JSON.parse(JSON.stringify(value));
+function plain(value: unknown): Json {
+  return readJson(z.json(), JSON.stringify(value));
 }
 
 function reportOf(home: string, { apply = false }: { apply?: boolean } = {}) {

@@ -27,8 +27,11 @@ function plant(files: Record<string, string>): string {
   return dir;
 }
 
+/** The coverage options of a config's `test`, on whichever provider. */
+type Coverage = NonNullable<NonNullable<ViteUserConfig["test"]>["coverage"]>;
+
 /** The per-file thresholds a config carries for its coverage. */
-function thresholds({ test }: ViteUserConfig): unknown {
+function thresholds({ test }: ViteUserConfig): Coverage["thresholds"] {
   return test?.coverage !== undefined && "thresholds" in test.coverage ? test.coverage.thresholds : undefined;
 }
 

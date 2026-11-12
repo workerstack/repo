@@ -19,7 +19,7 @@ import type { Provider, SpeakCfg } from "./speak.types.ts";
 import { section, str, readObjectFile } from "./voice-args.ts";
 
 /** The first value that is truthy, as a config source of any type. */
-function first(...values: unknown[]): unknown {
+function first<T>(...values: T[]): T | undefined {
   return values.find(Boolean);
 }
 
