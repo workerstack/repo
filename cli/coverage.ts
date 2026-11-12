@@ -109,7 +109,7 @@ function measure(root: string): Measured {
 }
 
 /** The TypeScript summary as floored rows keyed by root-relative POSIX path. */
-function tsRows(root: string, summary: Summary): Rows {
+function tsRows(root: string, summary: Summary) {
   const rows: Rows = {};
 
   for (const [abs, metrics] of Object.entries(summary)) {

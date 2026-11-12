@@ -31,8 +31,11 @@ export function TSC_ARGS(tsc: string): string[] {
 
 export const PROBE_ARGS: string[] = [PROBE_FILE];
 
+/** A tsconfig of the temp project: its compiler options and the files it checks. */
+type Tsconfig = { compilerOptions: Record<string, string | boolean>; files: string[] };
+
 /** The temp project's tsconfig: written for tsc, and read as it is by the API diff. */
-export const TSCONFIG: { compilerOptions: Record<string, string | boolean>; files: string[] } = {
+export const TSCONFIG: Tsconfig = {
   compilerOptions: {
     allowImportingTsExtensions: true,
     module: "preserve",

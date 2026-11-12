@@ -18,7 +18,7 @@ const OLD = "zero";
  * `a>` closes it; `<e-` opens empty with no hash; `<g` `<g-` `g>` are the markers of a region no version writes;
  * `H` is an owned header line. Any other line stands for itself.
  */
-function tokens(syntax: RegionSyntax): Record<string, string> {
+function tokens(syntax: RegionSyntax) {
   return {
     "<a": openMarker(syntax, "alpha", regionHash(ALPHA.body)),
     "<a-": openMarker(syntax, "alpha"),
@@ -37,13 +37,13 @@ function tokens(syntax: RegionSyntax): Record<string, string> {
 }
 
 function text(syntax: RegionSyntax, rows: string): string {
-  const table = tokens(syntax);
+  const table = new Map(Object.entries(tokens(syntax)));
 
   return rows === ""
     ? ""
     : `${rows
         .split("|")
-        .map((row) => table[row] ?? row)
+        .map((row) => table.get(row) ?? row)
         .join("\n")}\n`;
 }
 

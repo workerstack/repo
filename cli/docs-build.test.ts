@@ -4,7 +4,7 @@ import { OK, docsRun, fence, json, tempRoot } from "./__fixtures__/docs-fixture.
 import { main } from "./docs.ts";
 import type { Json } from "./json.ts";
 
-function files(manifest: Json, example: string): Record<string, string> {
+function files(manifest: Json, example: string) {
   return {
     "package.json": json(manifest),
     "references/INDEX.md": "# Index\n- [A](a.md)\n",

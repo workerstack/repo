@@ -43,11 +43,7 @@ function hasBuildScript(manifest: PackageJson): boolean {
 }
 
 /** Index and link findings, and the files each INDEX lists. */
-function indexLines(
-  root: string,
-  { dir, manifest }: DocRoot,
-  texts: ReadonlyMap<string, string>,
-): { lines: string[]; wanted: Wanted[] } {
+function indexLines(root: string, { dir, manifest }: DocRoot, texts: ReadonlyMap<string, string>) {
   function exists(rel: string) {
     return fs.existsSync(path.join(root, rel));
   }

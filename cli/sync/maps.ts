@@ -5,11 +5,14 @@ import { refRow, skillRow, table, walkRefMd } from "./maps-rows.ts";
 import { INDEX_REL, REFS_REL } from "./maps.constants.ts";
 import { regionBody, syntaxOf } from "./region.ts";
 
+/** The `repo:skills` and `repo:refs` section bodies of references/INDEX.md. */
+export type MapSections = { skills: string; refs: string };
+
 /**
  * The bodies of the `repo:skills` and `repo:refs` sections of references/INDEX.md, from one scan of the skills
  * and references under `root`. Only this package keeps them; the hand-written text of the index is never touched.
  */
-export function mapSections(root: string): { skills: string; refs: string } {
+export function mapSections(root: string): MapSections {
   const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL)).map((dir) => skillRow(root, dir));
 
   const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])

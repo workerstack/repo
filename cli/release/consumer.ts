@@ -106,7 +106,7 @@ function checkTypes({ project, name, present }: Installed, io: ConsumerIo): stri
 }
 
 /** The lines a tarball earns once installed in `project`: the problems with its exports, imports and types. */
-function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary: string; problems: string[] } {
+function testInstalled(project: string, pkg: Package, io: ConsumerIo) {
   const { name, root, installed } = pkg;
   const files = walk(root);
   const expanded = exportSubpaths(installed.exports, files);

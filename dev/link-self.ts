@@ -167,8 +167,11 @@ function ensureShim(root: string): Result {
   return "linked";
 }
 
+/** What linking did to the bin and to the package: linked anew, or already current. */
+type LinkResults = { bin: Result; pkg: Result };
+
 /** Link the bin and the package itself into `<root>/node_modules`; `platform` is Windows to write a shim pair. */
-export function linkSelf(root: string, platform: string = process.platform): { bin: Result; pkg: Result } {
+export function linkSelf(root: string, platform: string = process.platform): LinkResults {
   const modules = path.join(root, "node_modules");
   const binTo = { abs: path.join(root, "bin", "repo.ts"), dir: false, target: path.join("..", "..", "bin", "repo.ts") };
   const pkgTo = { abs: path.resolve(root), dir: true, target: path.join("..", "..") };

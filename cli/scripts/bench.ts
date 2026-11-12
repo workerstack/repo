@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { LINE_BREAK, LOCAL_LABELS, NAME } from "../bench/bench.constants.ts";
+import { LINE_BREAK, localLabelOf, NAME } from "../bench/bench.constants.ts";
 import { rssFloorOf, spawnBun, type Spawn } from "../bench/measure.ts";
 import { parseSpec, type Spec } from "../bench/parse-spec.ts";
 import { remoteTarget, runRemote } from "../bench/remote.ts";
@@ -130,7 +130,7 @@ async function loadSpec(cwd: string, rel: string): Promise<Spec | string> {
 
 /** The os label a machine measures under; one no runner has is `<platform>-<arch>`. */
 function labelOf(machine: Machine) {
-  return LOCAL_LABELS[`${machine.platform} ${machine.arch}`] ?? `${machine.platform}-${machine.arch}`;
+  return localLabelOf(machine.platform, machine.arch) ?? `${machine.platform}-${machine.arch}`;
 }
 
 /** This machine with its os label, and HEAD's sha and whether the tree has changes. */

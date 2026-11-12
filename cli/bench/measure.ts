@@ -36,11 +36,14 @@ export function spawnBun(cmd: readonly string[], cwd: string): Spawned {
   }
 }
 
+/** The cpu time in ms and the peak rss in MB one run used. */
+type UsageMetrics = { cpu: number; rss: number };
+
 /**
  * A run's `cpu` in ms (user plus system) and `rss` in MB. Bun 1.4.4 reports `maxRSS` in bytes on every platform: it
  * scales Linux's kilobytes itself, and macOS's `ru_maxrss` and Windows' `PeakWorkingSetSize` are bytes.
  */
-export function usageMetrics(usage: Usage): { cpu: number; rss: number } {
+export function usageMetrics(usage: Usage): UsageMetrics {
   const micros = usage.cpuTime.user + usage.cpuTime.system;
 
   return { cpu: Number(micros) / US_PER_MS, rss: usage.maxRSS / BYTES_PER_MB };

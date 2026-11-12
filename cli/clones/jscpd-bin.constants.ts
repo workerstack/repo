@@ -7,7 +7,7 @@ export const LINUX_PLATFORM = "linux";
 export const WINDOWS_PLATFORM = "win32";
 
 /** The OS part of a platform package's name, where it is not the platform's own. */
-export const JSCPD_OS: Readonly<Record<string, string>> = { win32: "windows" };
+export const JSCPD_OS: Readonly<Record<"win32", string>> = { win32: "windows" };
 
 /** The libc parts of a Linux platform package's name: only the one of the host's libc installs. */
 export const LINUX_LIBCS: readonly string[] = ["-gnu", "-musl"];

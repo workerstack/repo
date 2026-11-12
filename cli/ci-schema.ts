@@ -10,6 +10,7 @@ import {
   KEBAB_NAME,
   notKebab,
 } from "./ci-schema.constants.ts";
+import type { ResolvedConfig } from "./config-resolved.types.ts";
 
 type CiSchema = z.ZodObject<
   { checks: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodReadonly<z.ZodArray<z.ZodString>>>> },
@@ -32,8 +33,6 @@ export function ciSchema(): CiSchema {
 }
 
 /** The resolved `ci` of a parsed config: its checks, none when omitted. */
-export function ciOf(parsed: { ci?: z.output<CiSchema> | undefined }): {
-  ci: { checks: Readonly<Record<string, readonly string[]>> };
-} {
+export function ciOf(parsed: { ci?: z.output<CiSchema> | undefined }): Pick<ResolvedConfig, "ci"> {
   return { ci: { checks: parsed.ci?.checks ?? {} } };
 }

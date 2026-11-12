@@ -117,7 +117,7 @@ function writeOne(doc: Shared, region: Region, at: number | undefined): Step {
 }
 
 /** What replacing the kept region changes: the user's lines to move below it and the repair lines. */
-function inspect(doc: Shared, [open, close]: Pair, body: readonly string[]): { moved: string[]; repairs: string[] } {
+function inspect(doc: Shared, [open, close]: Pair, body: readonly string[]) {
   const { name } = open;
 
   if (open.legacy) return { moved: [], repairs: [`converted the old markers to repo:${name}`] };

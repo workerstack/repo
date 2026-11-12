@@ -24,8 +24,11 @@ import { renderTrees } from "../cli/sync/trees.ts";
 import { readWorkspace } from "../cli/sync/workspace.ts";
 import * as K from "./capture-tree-goldens.constants.ts";
 
+/** The absolute paths of the repo root and the three golden-capture fixture dirs. */
+type FixtureDirs = { root: string; consumer: string; stock: string; golden: string };
+
 /** Where the fixtures live: the repo root, the consumer overlay, its frozen stock snapshot and the goldens. */
-export function fixtureDirs(): { root: string; consumer: string; stock: string; golden: string } {
+export function fixtureDirs(): FixtureDirs {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const fixtures = path.join(root, ...K.FIXTURES);
 

@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 
+import type { ResolvedConfig } from "./config-resolved.types.ts";
 import {
   MAX_SHARDS,
   MIN_SHARDS,
@@ -55,9 +56,9 @@ function buildSchema(): NightlySchema {
 export const nightlySchema: NightlySchema = /* @__PURE__ */ buildSchema();
 
 /** The parsed config's `nightly` section with every omitted key filled in. */
-export function nightlyOf(parsed: { nightly?: z.output<typeof nightlySchema> | undefined }): {
-  nightly: ResolvedNightly;
-} {
+export function nightlyOf(parsed: {
+  nightly?: z.output<typeof nightlySchema> | undefined;
+}): Pick<ResolvedConfig, "nightly"> {
   const { shards, secrets } = parsed.nightly ?? {};
 
   return { nightly: { secrets: secrets ?? DEFAULT_NIGHTLY.secrets, shards: shards ?? DEFAULT_NIGHTLY.shards } };

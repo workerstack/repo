@@ -106,6 +106,11 @@ function checkClassBody(walk: Walk, body: SyntaxNode, visit: (node: SyntaxNode) 
   }
 }
 
+/** Whether `type` is a signature kind `SIGNATURES` labels. */
+function isSignatureKind(type: string): type is keyof typeof SIGNATURES {
+  return Object.hasOwn(SIGNATURES, type);
+}
+
 /** The visit that checks every member a consumer can see under a declaration, for `walkPublic`. */
 export function visitorOf(walk: Walk): (node: SyntaxNode) => boolean {
   function visit(node: SyntaxNode): boolean {
@@ -121,9 +126,7 @@ export function visitorOf(walk: Walk): (node: SyntaxNode) => boolean {
     if (type === NODE_TYPES.conditional)
       for (const part of ["checkType", "trueType", "falseType"]) walkPublic(node[part], visit);
 
-    const signature = SIGNATURES[type];
-
-    if (signature !== undefined) check(walk, node, { label: `${walk.owner}.${signature}`, name: "" });
+    if (isSignatureKind(type)) check(walk, node, { label: `${walk.owner}.${SIGNATURES[type]}`, name: "" });
 
     if (MEMBERS.includes(type) && !isUnnameable(node)) checkMember(walk, node, []);
 

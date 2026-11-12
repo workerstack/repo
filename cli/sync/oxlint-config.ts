@@ -46,12 +46,12 @@ const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 const TAILWIND_PLUGIN = { name: "tailwindcss", specifier: "@workerstack/repo/tailwind" };
 
 /** oxlint-tailwindcss's class rules, at error where the plugin warns on duplicates and colours. */
-const TAILWIND_RULES: Readonly<Record<string, RuleSetting>> = {
+const TAILWIND_RULES = {
   "tailwindcss/no-conflicting-classes": "error",
   "tailwindcss/no-duplicate-classes": "error",
   "tailwindcss/no-hardcoded-colors": "error",
   "tailwindcss/no-unknown-classes": "error",
-};
+} as const satisfies Readonly<Record<string, RuleSetting>>;
 
 /** The exports that name an oxlint plugin entry: ours and the tailwindcss re-export. */
 const PLUGIN_EXPORTS = ["./lint", "./tailwind"];

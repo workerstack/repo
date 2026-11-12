@@ -8,14 +8,14 @@ import path from "node:path";
 import { parseSync } from "oxc-parser";
 import { z } from "zod";
 
-import { tryJson } from "./json.ts";
+import { type Json, tryJson } from "./json.ts";
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
 import { asNode, isSyntaxList, type SyntaxNode, type SyntaxValue, textOf } from "./syntax-node.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
 type Case = { line: number; call: string; title: string | null; name: string | null };
 
-function isString(value: unknown): value is string {
+function isString(value: SyntaxValue | Json): value is string {
   return typeof value === "string";
 }
 
@@ -129,7 +129,7 @@ function readList(file: string): string[] | null {
 
   if (text === null) return null;
 
-  return tryJson(z.array(z.unknown()), text)?.filter(isString) ?? [];
+  return tryJson(z.array(z.json()), text)?.filter(isString) ?? [];
 }
 
 /**

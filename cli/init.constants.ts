@@ -14,7 +14,7 @@ export const JSON_INDENT: number = 2;
  * The `repo:*` scripts older inits copied into a consumer, with every value they wrote: init removes one still equal
  * to one of them.
  */
-export const OLD_DEFAULT_SCRIPTS: Record<string, readonly string[]> = {
+const OLD_DEFAULT_SCRIPTS = {
   "repo:antigravity": ["antigravity --dangerously-skip-permissions"],
   "repo:build": ["tsc -p tsconfig.build.json"],
   "repo:claude": ["claude --dangerously-skip-permissions"],
@@ -109,4 +109,13 @@ rules,subagents --watch`,
   "repo:tasks": ["repo tasks", "bun .rulesync/scripts/vscode-tasks.ts", "node .rulesync/scripts/vscode-tasks.mjs"],
   "repo:test:e2e": ["vitest run -c vitest.e2e.config.ts"],
   "repo:typecheck": ["tsc -p ."],
-};
+} satisfies Readonly<Record<string, readonly string[]>>;
+
+function isOldDefault(name: string): name is keyof typeof OLD_DEFAULT_SCRIPTS {
+  return Object.hasOwn(OLD_DEFAULT_SCRIPTS, name);
+}
+
+/** Whether an older init wrote the script `name` with `value`, so init may remove it. */
+export function isOldDefaultScript(name: string, value: string): boolean {
+  return isOldDefault(name) && OLD_DEFAULT_SCRIPTS[name].includes(value);
+}

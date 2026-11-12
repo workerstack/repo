@@ -1,4 +1,4 @@
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
 /** A top-level statement of a module. */
 export type Statement = TSESTree.ProgramStatement;
@@ -65,6 +65,6 @@ function movedOf(statement: Statement): string {
 }
 
 /** The report of a statement a rule asks to move elsewhere, filling `{{moved}}` in its `move` message. */
-export function moveReport(statement: Statement): { data: { moved: string }; messageId: "move"; node: Statement } {
+export function moveReport(statement: Statement): TSESLint.ReportDescriptor<"move"> {
   return { data: { moved: movedOf(statement) }, messageId: "move", node: statement };
 }

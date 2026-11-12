@@ -9,7 +9,7 @@ import { GIT_FILE_PATHS } from "./git-files.ts";
 import { gitHooks, HOOK_PATHS } from "./git-hooks.ts";
 import { JSON_INDENT } from "./json.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
-import type { Output, SyncContext } from "./outputs.ts";
+import type { Generator, Output, SyncContext } from "./outputs.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 import { CARGO_PATH } from "./rust.constants.ts";
 import { EXECUTABLE_MODE, HOOKS_DIR, INDEX_FIELDS, LOCAL_SCOPE, WINDOWS_PLATFORM } from "./standards.constants.ts";
@@ -56,7 +56,7 @@ function untrackedFile(target: string, content: string): Output {
  * or a skip of a rule the config never runs refuses all. It runs after the generators so oxfmt can ignore every
  * output, and before the git files pass, whose paths it names itself and which marks the hooks generated.
  */
-export function standards(ctx: SyncContext, outputs: readonly Output[]): { outputs: Output[]; errors: string[] } {
+export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnType<Generator> {
   if (!ctx.config.packs.includes("standards")) return { errors: [], outputs: [] };
   const hooks = gitHooks(ctx);
   const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint, { rust: ctx.read(CARGO_PATH) !== null });

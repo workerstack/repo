@@ -43,11 +43,14 @@ function prefixProjectDir(command: string, def: Def): string {
   return `\${CLAUDE_PROJECT_DIR}/${relative.replace(WRAPPED_IN_QUOTES, "$<inner>").replace(LEADING_QUOTE, "")}`;
 }
 
+/** Whether `token` is a tool name antigravity names differently. */
+function isAntigravityTool(token: string): token is keyof typeof ANTIGRAVITY_TOOLS {
+  return Object.hasOwn(ANTIGRAVITY_TOOLS, token);
+}
+
 /** A matcher with each whole tool name antigravity names differently replaced. */
 function antigravityMatcher(matcher: string): string {
-  return matcher.replaceAll(MATCHER_TOKEN, (token) =>
-    Object.hasOwn(ANTIGRAVITY_TOOLS, token) ? (ANTIGRAVITY_TOOLS[token] /* hasOwn proved the key */ as string) : token,
-  );
+  return matcher.replaceAll(MATCHER_TOKEN, (token) => (isAntigravityTool(token) ? ANTIGRAVITY_TOOLS[token] : token));
 }
 
 export const CLAUDE: Readonly<Target> = {

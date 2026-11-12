@@ -216,11 +216,7 @@ function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
 }
 
 /** Every problem with `message` against the staged change, and the red-proof result when it ran. */
-function judge(
-  message: string,
-  rules: CommitRules,
-  io: CommitMsgIo,
-): { problems: string[]; proof: RedProofResult | null } {
+function judge(message: string, rules: CommitRules, io: CommitMsgIo) {
   const staged = stagedChange(io.cwd);
   const facts = { ...rules, changedLines: staged.changedLines, stagedFiles: staged.files };
   const { problems, kind } = inspect(message, facts);

@@ -17,6 +17,7 @@ const REPO_RULES = {
       "repo/config-file": "error",
       "repo/max-line-width": "error",
       "repo/no-chained-type-assertions": "error",
+      "repo/no-known-value-widening": "error",
       "repo/no-object-parameters": "error",
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
@@ -100,6 +101,13 @@ const REPO_RULES = {
     "}",
     "",
   ].join("\n"),
+  // the one planted widening, then a class property, a return, an arrow and a call that each hold a null child
+  "packages/lib/src/known.ts": [
+    'const OS_NAMES: Record<string, string> = { linux: "Linux" };',
+    "class Registry { field; }",
+    "function guard(value) { return; }",
+    "guard(() => OS_NAMES, Registry);\n",
+  ].join("\n\n"),
   // a statement straight after a binding, with no blank line between them
   "packages/lib/src/spacing.ts": "function first() {\n  const a = 1;\n  return a;\n}\n",
   // oxc refuses an index signature without a type before any JS plugin sees it, so it holds no null to crash on
@@ -109,6 +117,14 @@ const REPO_RULES = {
 };
 
 const FLOW = "packages/lib/src/flow.ts";
+
+/** What no-known-value-widening reports for a known value written into the `target` type on `subject`. */
+function widening(target: string, subject: string): string {
+  return (
+    `repo(no-known-value-widening) The explicit ${target} type on ${subject} discards known type evidence. ` +
+    "Keep inference, validate with `satisfies`, or use a named owner contract."
+  );
+}
 
 /** What no-shape-in-symbol-names reports for `shaped`, its declaration and its top-level use; `.shape` passes. */
 const NAME_FINDING =
@@ -122,17 +138,21 @@ const NAME_FINDING =
  * `Raw` hides unknown and only `Load` returns it: `untyped`, `load()` and a bare `Promise` hold a null return type
  * or type arguments, which the unknown-returns rule reads without a plugin error. Only `parse`'s `value` takes
  * unknown: `untyped` holds a null annotation and `parse` a null return type, which the unknown-parameters rule reads
- * without a plugin error, and `cause` is its carve-out.
+ * without a plugin error, and `cause` is its carve-out. The known-value rule reports `widened` and the two assertions
+ * that write `source` into an anonymous object type.
  */
 const FLOW_FINDINGS = [
   `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
     "Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
+  `${FLOW}:11 ${widening("anonymous object", "assertion")}`,
   `${FLOW}:13 repo(no-object-parameters) Parameter \`value\` uses the broad \`object\` type. Accept a named owner ` +
     "type; parse external input at its boundary before calling this function.",
   `${FLOW}:17 ${NAME_FINDING}`,
+  `${FLOW}:2 ${widening("unknown", "binding `widened`")}`,
   `${FLOW}:21 ${NAME_FINDING}`,
   `${FLOW}:23 repo(no-unsafe-dictionary-type) This dictionary's unknown value type gives callers no concrete value ` +
     "contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
+  `${FLOW}:3 ${widening("anonymous object", "assertion")}`,
   `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
     "assertion. Keep the precise type from initialization through use; parse boundary input once.",
   `${FLOW}:35 repo(no-unknown-type-aliases) Type alias \`Raw\` hides \`unknown\`. Keep \`unknown\` explicit at the ` +
@@ -170,6 +190,7 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
     `${index}:7 repo(no-v8-ignore) coverage ignore comments hide untested code; delete the code or add a test ` +
       "that runs it",
     `${index}:8 repo(public-jsdoc) \`bare\` is public through "." and ${missing}`,
+    `packages/lib/src/known.ts:1 ${widening("open dictionary", "binding `OS_NAMES`")}`,
     "packages/lib/src/spacing.ts:3 repo(require-readable-spacing) Expected blank line before this statement.",
     "packages/lib/src/untyped.ts:1 TS(1021) An index signature must have a type annotation.",
     'packages/lib/vite.config.ts:1 repo(config-file) a config file holds only imports and exports; move "plugins" ' +

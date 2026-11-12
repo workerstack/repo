@@ -60,7 +60,7 @@ function real(cwd: string, ...args: string[]) {
 }
 
 /** Every file outside the linked package dir and the repo's own metadata, with its bytes. */
-function tree(root: string, dir = ""): Record<string, string> {
+function tree(root: string, dir = "") {
   const found: Record<string, string> = {};
 
   for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {

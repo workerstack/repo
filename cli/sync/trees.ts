@@ -32,7 +32,7 @@ const TASKS_REL = ".vscode/tasks.json";
  * The rule files of the root and of every workspace package, each scope rendered on its own so no package rule folds
  * into the root `AGENTS.md`, and one problem line for each path two scopes plan.
  */
-function renderScopes(ctx: SyncContext, sources: Sources): { files: Map<string, string>; clashes: string[] } {
+function renderScopes(ctx: SyncContext, sources: Sources) {
   const { hosts } = ctx.config.agents;
   const planned = new Map<string, RuleFile>();
   const clashes: string[] = [];
@@ -50,7 +50,7 @@ function renderScopes(ctx: SyncContext, sources: Sources): { files: Map<string, 
 }
 
 /** The loaded sources and their rule files; throws every problem of the `.repo/` dir and the sources at once. */
-function checkedSources(ctx: SyncContext, render: Render): { sources: Sources; rules: Map<string, string> } {
+function checkedSources(ctx: SyncContext, render: Render) {
   const packages = ctx.workspace.packages.map((pkg) => pkg.dir);
 
   const { sources, problems: loadProblems } = loadSources({

@@ -9,7 +9,7 @@ import { fwd } from "../../dev/test-paths.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** A repo of real packages: the rule reads each file's nearest package.json from disk. */
-const MANIFESTS: Record<string, string> = {
+const MANIFESTS = {
   "package.json": JSON.stringify({ dependencies: { zod: "4" }, name: "@app/root" }),
   "packages/anon/package.json": "{}",
   "packages/api/package.json": JSON.stringify({ name: "@app/api" }),

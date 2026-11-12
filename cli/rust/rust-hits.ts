@@ -55,7 +55,7 @@ function isRustRepo(root: string) {
 }
 
 /** The source rules' hits in those of `files` that exist, and those files. */
-function sourceHitsOf(root: string, files: readonly string[]): { present: string[]; hits: RustHit[] } {
+function sourceHitsOf(root: string, files: readonly string[]) {
   const present = files.filter((rel) => fs.existsSync(path.join(root, rel)));
 
   return {

@@ -1,5 +1,5 @@
 import { hasOwnedHeader } from "./header.ts";
-import type { Output, SyncContext } from "./outputs.ts";
+import type { Generator, SyncContext } from "./outputs.ts";
 import {
   PACKAGE_VITEST_CONFIG,
   VITEST_CONFIG_PATH,
@@ -11,7 +11,7 @@ import {
  * Under the workspace pack, the untracked root `vitest.config.ts` listing each package's `vitest.config.ts` under
  * `projects`, in path order; a hand-written one is refused.
  */
-export function vitestProjects(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
+export function vitestProjects(ctx: SyncContext): ReturnType<Generator> {
   if (!ctx.config.packs.includes("workspace")) return { errors: [], outputs: [] };
   const existing = ctx.read(VITEST_CONFIG_PATH);
 

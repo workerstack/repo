@@ -68,7 +68,7 @@ const PLANTED = {
   "src/commented.ts":
     "// const old = load();\n\n// Prose that says why, and mentions TODO mid-sentence.\nexport const commented = 1;\n",
   "src/effects.ts":
-    "export const effects = /* @__PURE__ */ make();\n\nmake();\n\nfunction make(): object {\n  return {};\n}\n",
+    "export const effects = /* @__PURE__ */ make();\n\nmake();\n\nfunction make(): number {\n  return 1;\n}\n",
   "src/files.ts": "export function readWorkspace(): void {}\n",
   "src/flag.ts":
     "export function run(force: boolean): boolean {\n  return force;\n}\n\n" +

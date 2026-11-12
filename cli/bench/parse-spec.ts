@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import type { ConfigModule } from "../import-config.ts";
 import {
-  BUILT_IN,
+  builtInOf,
   DEFAULT_RUNS,
   DEFAULT_WARMUP,
   LAST,
@@ -68,7 +68,7 @@ function metricSchema() {
 /** A built-in metric takes only a weight: its unit and direction are fixed. */
 function refuseBuiltIn(metrics: Record<string, z.infer<ReturnType<typeof metricSchema>>>, ctx: z.RefinementCtx) {
   for (const [name, metric] of Object.entries(metrics)) {
-    const builtIn = BUILT_IN[name];
+    const builtIn = builtInOf(name);
 
     if (builtIn === undefined) continue;
 
@@ -129,7 +129,7 @@ export function parseSpec(module: ConfigModule): ParsedSpec {
   const scored = Object.entries(metrics).map(([name, { better, unit, weight }]) => ({
     better,
     name,
-    unit: BUILT_IN[name]?.unit ?? unit ?? "",
+    unit: builtInOf(name)?.unit ?? unit ?? "",
     weight,
   }));
 

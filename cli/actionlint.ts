@@ -156,11 +156,21 @@ async function install(plan: Plan): Promise<Binary> {
   }
 }
 
+/** Whether `table` has an entry of its own for `key`. */
+function isOwnKey<Table extends object>(table: Table, key: string): key is Extract<keyof Table, string> {
+  return Object.hasOwn(table, key);
+}
+
+/** The value `table` holds for `key`, or undefined when `key` is none of its own. */
+function ownValue<Table extends object>(table: Table, key: string): Table[Extract<keyof Table, string>] | undefined {
+  return isOwnKey(table, key) ? table[key] : undefined;
+}
+
 /** The cached binary, installing it first when it is missing. */
 async function binaryFor(deps: Resolved): Promise<Binary> {
   const platform = deps.platform ?? process.platform;
   const arch = deps.arch ?? process.arch;
-  const [osName, archName] = [OS_NAMES[platform], ARCH_NAMES[arch]];
+  const [osName, archName] = [ownValue(OS_NAMES, platform), ownValue(ARCH_NAMES, arch)];
 
   if (osName === undefined || archName === undefined) {
     const build = `${ACTIONLINT_VERSION} build for ${platform} ${arch}`;

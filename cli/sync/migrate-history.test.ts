@@ -20,7 +20,7 @@ function hist(entries: Record<string, string[]>): MigrateDeps {
 }
 
 /** Each copied file as one older stock version had it, the consumer's line endings aside. */
-const OLD_COPIES: Record<string, string> = {
+const OLD_COPIES = {
   ".agents/skills/ask/SKILL.md": "old ask\n",
   ".agents/skills/gone/SKILL.md": "old gone\n",
   ".claude/settings.json": '{ "env": { "OLD": "1" } }\n',

@@ -5,20 +5,43 @@ export const OS_LABELS = ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "
 export type OsLabel = (typeof OS_LABELS)[number];
 
 /** The label of the machine `bench` runs on, by `<platform> <arch>`; another machine is `<platform>-<arch>`. */
-export const LOCAL_LABELS: Readonly<Record<string, OsLabel>> = {
+const LOCAL_LABELS = {
   "darwin arm64": "macos-latest",
   "darwin x64": "macos-13",
   "linux arm64": "ubuntu-24.04-arm",
   "linux x64": "ubuntu-latest",
   "win32 x64": "windows-latest",
-};
+} as const satisfies Readonly<Record<string, OsLabel>>;
+
+function isLocalMachine(machine: string): machine is keyof typeof LOCAL_LABELS {
+  return Object.hasOwn(LOCAL_LABELS, machine);
+}
+
+/** The label a machine of `platform` and `arch` measures under, or undefined when no runner has that machine. */
+export function localLabelOf(platform: string, arch: string): OsLabel | undefined {
+  const machine = `${platform} ${arch}`;
+
+  return isLocalMachine(machine) ? LOCAL_LABELS[machine] : undefined;
+}
+
+/** A built-in metric's unit and the floor its median is raised to before scoring. */
+type BuiltInMetric = { unit: string; floor: number };
 
 /** The metrics every run measures, each with its unit and the floor its median is raised to before scoring. */
-export const BUILT_IN: Readonly<Record<string, { unit: string; floor: number }>> = {
+const BUILT_IN = {
   cpu: { floor: 1, unit: "ms" },
   rss: { floor: 1, unit: "MB" },
   wall: { floor: 0.1, unit: "ms" },
-};
+} as const satisfies Readonly<Record<string, BuiltInMetric>>;
+
+function isBuiltInName(name: string): name is keyof typeof BUILT_IN {
+  return Object.hasOwn(BUILT_IN, name);
+}
+
+/** The built-in metric called `name`, or undefined when `name` is a custom metric. */
+export function builtInOf(name: string): BuiltInMetric | undefined {
+  return isBuiltInName(name) ? BUILT_IN[name] : undefined;
+}
 
 /** The floor of a custom metric's median, so a zero never divides. */
 export const CUSTOM_FLOOR = 1e-6;

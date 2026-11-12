@@ -31,7 +31,7 @@ export type ParserOutput =
   | readonly TSESTree.Node[];
 
 /** True for a non-null object that is not an array, which is how parser output holds a node. */
-function isSyntaxNode(value: unknown): value is SyntaxNode {
+function isSyntaxNode(value: SyntaxValue | ParserOutput): value is SyntaxNode {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

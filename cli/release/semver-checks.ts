@@ -90,7 +90,7 @@ function scanLine(scan: Scan, raw: string): Scan {
  * The failed lints with the items under each, and the release the summary asks for; the tool writes the blocks to
  * stdout and the summary to either stream.
  */
-function failures(stdout: string, stderr: string): { blocks: Block[]; level: string } {
+function failures(stdout: string, stderr: string) {
   const text = `${stdout}\n\n${stderr}`;
   let scan: Scan = { blocks: [], items: false, level: UNSAID_LEVEL };
 

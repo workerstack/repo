@@ -83,9 +83,14 @@ function checkFile(file: File, body: SyntaxNode[]): void {
   }
 }
 
+/** Whether `form` is one `FORMS` has words for. */
+function isNamedForm(form: string): form is keyof typeof FORMS {
+  return Object.hasOwn(FORMS, form);
+}
+
 /** How a message names a form the walk could not follow. */
 function formOf(form: string): string {
-  return FORMS[form] ?? `\`${form}\``;
+  return isNamedForm(form) ? FORMS[form] : `\`${form}\``;
 }
 
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */

@@ -13,7 +13,7 @@ useTempDirs();
 function workspace(): string {
   const root = tempDir("workerstack-sync-workspace-");
 
-  const files: Record<string, string> = {
+  const files = {
     [CONFIG_FILE]: 'export default { packs: ["workspace"] }\n',
     "package.json": JSON.stringify({ private: true, workspaces: ["packages/*"] }),
     "packages/a/package.json": JSON.stringify({ name: "a" }),

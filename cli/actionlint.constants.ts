@@ -45,14 +45,26 @@ export const EXIT_PROBLEMS = 1;
 /** The octal mode of the cached binary. */
 export const BINARY_MODE = 0o755;
 
+/** What `process.platform` calls an os that actionlint publishes. */
+type OsKey = "darwin" | "linux" | "win32";
+
+/** What actionlint's archives call an os. */
+type OsName = "darwin" | "linux" | "windows";
+
+/** What `process.arch` calls an architecture that actionlint publishes. */
+type ArchKey = "arm64" | "x64";
+
+/** What actionlint's archives call an architecture. */
+type ArchName = "amd64" | "arm64";
+
 /** What `process.platform` calls an os that actionlint publishes, mapped to the name its archives use. */
-export const OS_NAMES: Record<string, string> = { darwin: "darwin", linux: "linux", win32: "windows" };
+export const OS_NAMES: Readonly<Record<OsKey, OsName>> = { darwin: "darwin", linux: "linux", win32: "windows" };
 
 /** What `process.arch` calls an architecture that actionlint publishes, mapped to the name its archives use. */
-export const ARCH_NAMES: Record<string, string> = { arm64: "arm64", x64: "amd64" };
+export const ARCH_NAMES: Readonly<Record<ArchKey, ArchName>> = { arm64: "arm64", x64: "amd64" };
 
 /** The sha256 of each archive of the release, from its checksums.txt, by `<os>_<arch>`. */
-export const HASHES: Record<string, string> = {
+export const HASHES: Readonly<Record<`${OsName}_${ArchName}`, string>> = {
   darwin_amd64: "5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644",
   darwin_arm64: "aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f",
   linux_amd64: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",

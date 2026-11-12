@@ -42,20 +42,20 @@ export const INTERNAL: RegExp = /\b(?:[Pp]lan|[Ss]lice|[Rr]oadmap) \d+\b|\bD\d+\
 export const COMPUTED = "(computed)";
 
 /** The label of each signature kind, in place of a member name. */
-export const SIGNATURES: Readonly<Record<string, string>> = {
+export const SIGNATURES = {
   TSCallSignatureDeclaration: "(call)",
   TSConstructSignatureDeclaration: "(new)",
   TSIndexSignature: "(index)",
-};
+} as const;
 
 /** How an `unknown` form from the walk reads in a message. */
-export const FORMS: Readonly<Record<string, string>> = {
+export const FORMS = {
   ArrayPattern: "a destructured export",
   ObjectPattern: "a destructured export",
   TSExportAssignment: "`export =`",
   TSImportEqualsDeclaration: "an `import x = require()`",
   TSModuleDeclaration: "a namespace",
-};
+} as const;
 
 /** Node types that are a named member of a class, interface, type literal or enum. */
 export const MEMBERS: readonly string[] = [

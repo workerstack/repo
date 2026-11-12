@@ -232,10 +232,15 @@ export function notInTarball(key: string, target: string): string {
   return `${key} resolves to ${target}, which is not in the tarball`;
 }
 
-const PROBE_VERBS: Record<string, string> = { other: "resolve" };
+const PROBE_VERBS = { other: "resolve" } as const satisfies Readonly<Record<string, string>>;
+
+/** Whether `kind` names a probe with a verb of its own. */
+function isProbeKind(kind: string): kind is keyof typeof PROBE_VERBS {
+  return Object.hasOwn(PROBE_VERBS, kind);
+}
 
 export function failedProbe(key: string, kind: string, why: string): string {
-  return `${key} does not ${PROBE_VERBS[kind] ?? "import"}: ${why}`;
+  return `${key} does not ${isProbeKind(kind) ? PROBE_VERBS[kind] : "import"}: ${why}`;
 }
 
 export function probeCrashed(code: number, why: string): string {

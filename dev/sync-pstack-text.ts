@@ -30,18 +30,17 @@ function unquoteYaml(raw: string): string {
 }
 
 export function parseFm(fm: string): Record<string, string> {
-  const obj: Record<string, string> = {};
-
-  for (const line of fm.split(LINE_SPLIT_RE)) {
-    if (line.trim() === "" || line.trim().startsWith("#")) continue;
+  const fields = fm.split(LINE_SPLIT_RE).flatMap((line): [string, string][] => {
+    if (line.trim() === "" || line.trim().startsWith("#")) return [];
     const km = FM_FIELD_RE.exec(line);
 
-    if (km === null) continue;
+    if (km === null) return [];
     const [, key = "", value = ""] = km;
-    obj[key.trim()] = unquoteYaml(value);
-  }
 
-  return obj;
+    return [[key.trim(), unquoteYaml(value)]];
+  });
+
+  return Object.fromEntries(fields);
 }
 
 export function quoteDesc(s: string): string {

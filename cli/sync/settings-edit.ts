@@ -1,6 +1,7 @@
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 
 import { byCodeUnit } from "./by-code-unit.ts";
+import type { RegionResult } from "./region.ts";
 
 const READONLY_KEY = "files.readonlyInclude";
 
@@ -8,7 +9,7 @@ const READONLY_KEY = "files.readonlyInclude";
  * The `.vscode/settings.json` text with `files.readonlyInclude` set to `paths`, every other key and comment as
  * written, and the repair that explains it when the file is left as is: not valid JSONC, or holding no object.
  */
-export function settingsEdit(existing: string | null, paths: readonly string[]): { repairs: string[]; text: string } {
+export function settingsEdit(existing: string | null, paths: readonly string[]): RegionResult {
   const current = existing ?? "";
   const isFresh = current.trim() === "";
   const text = isFresh ? "{}" : current;

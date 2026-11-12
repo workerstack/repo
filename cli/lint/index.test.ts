@@ -21,6 +21,7 @@ const RULE_NAMES = [
   "no-boolean-param",
   "no-chained-type-assertions",
   "no-commented-out-code",
+  "no-known-value-widening",
   "no-module-mocking",
   "no-module-side-effects",
   "no-module-state",

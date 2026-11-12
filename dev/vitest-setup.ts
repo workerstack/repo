@@ -22,13 +22,12 @@ for (const key of ["CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"]) delete process.
 // Recent git also starts `maintenance run --auto --detach` (and `gc --auto --detach`) after a commit or rebase; that
 // child outlives the test and races the recursive removal of its temp dir. Env config reaches every git a test or a
 // spawned CLI runs, whatever repo it makes; it is appended to any count already present.
-function testEnv(env: NodeJS.ProcessEnv): Record<string, string> {
+function testEnv(env: NodeJS.ProcessEnv) {
   const start = Number(env[GIT_CONFIG_COUNT] ?? 0);
 
-  const out: Record<string, string> = {
-    [BUN_CACHE_VAR]: env[BUN_CACHE_VAR] ?? path.join(os.homedir(), ".bun", "install", "cache", "@t@"),
-    [GIT_CONFIG_COUNT]: String(start + QUIET_GIT.length),
-  };
+  const out: Record<string, string> = {};
+  out[BUN_CACHE_VAR] = env[BUN_CACHE_VAR] ?? path.join(os.homedir(), ".bun", "install", "cache", "@t@");
+  out[GIT_CONFIG_COUNT] = String(start + QUIET_GIT.length);
 
   for (const [i, [key, value]] of QUIET_GIT.entries()) {
     out[`${GIT_CONFIG_KEY}${start + i}`] = key;

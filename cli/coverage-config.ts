@@ -4,6 +4,8 @@
  */
 import { z } from "zod";
 
+import type { ResolvedConfig } from "./config-resolved.types.ts";
+
 /**
  * Where `repo coverage`, `repo mutate` and `repo check` read and write their ratchet files, relative to the repo
  * root.
@@ -59,9 +61,9 @@ function buildSchema(): CoverageSchema {
 export const coverageSchema: CoverageSchema = /* @__PURE__ */ buildSchema();
 
 /** The parsed config's `coverage` section with every omitted key filled in. */
-export function coverageOf(parsed: { coverage?: z.output<typeof coverageSchema> | undefined }): {
-  coverage: ResolvedCoverage;
-} {
+export function coverageOf(parsed: {
+  coverage?: z.output<typeof coverageSchema> | undefined;
+}): Pick<ResolvedConfig, "coverage"> {
   const { floors, knownFailures, mutate, mutationFloors } = parsed.coverage ?? {};
 
   return {

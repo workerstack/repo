@@ -27,7 +27,7 @@ import { keywordLines } from "./keywords.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
 
-function isText(value: unknown): value is string {
+function isText(value: Json | undefined): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 

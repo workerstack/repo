@@ -39,7 +39,7 @@ function real(cwd: string, ...args: string[]) {
 }
 
 /** Every file outside the linked package dir, with its bytes. */
-function files(root: string, dir = ""): Record<string, string> {
+function files(root: string, dir = "") {
   const found: Record<string, string> = {};
 
   for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {

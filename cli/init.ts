@@ -8,7 +8,7 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { HOSTS, SKILL_PACKS, defaultPacks } from "./config.ts";
 import { initGit } from "./init-git.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
-import { JSON_INDENT, NO_PACKS, OLD_DEFAULT_SCRIPTS, SYNC_COMMAND, SYNC_POSTINSTALL } from "./init.constants.ts";
+import { JSON_INDENT, NO_PACKS, isOldDefaultScript, SYNC_COMMAND, SYNC_POSTINSTALL } from "./init.constants.ts";
 import { PRINT_WIDTH } from "./lint/max-line-width.constants.ts";
 import { packageJsonSchema, readJsonFile, type PackageJson } from "./package-json.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
@@ -103,10 +103,10 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
   if (destPkg.name === PACKAGE_NAME) return;
 
   const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), packageJsonSchema);
-  const destScripts: Record<string, string> = { ...destPkg.scripts };
+  const destScripts = { ...destPkg.scripts };
 
   for (const [name, value] of Object.entries(destScripts))
-    if (OLD_DEFAULT_SCRIPTS[name]?.includes(value) === true) delete destScripts[name];
+    if (isOldDefaultScript(name, value)) delete destScripts[name];
 
   const postinstall = destScripts.postinstall;
 

@@ -7,7 +7,7 @@ import { afterAll, expect, it } from "vitest";
 
 import type { GitRun } from "../sync/standards.ts";
 import { cargoLock } from "./__fixtures__/cargo-lock.ts";
-import type { CargoResult, CargoRun } from "./clippy.ts";
+import type { CargoResult } from "./clippy.ts";
 import { supplyChainAt } from "./supply-chain.ts";
 
 const UNTRACKED = "Cargo.lock is not tracked; commit it (cargo runs with --locked)";
@@ -45,7 +45,7 @@ const META = JSON.stringify({
 type Script = { meta?: CargoResult; deny?: CargoResult; shear?: CargoResult; denyV?: CargoResult };
 
 /** A cargo that answers each subcommand from `script` and records every call. */
-function fakeCargo(script: Script = {}): { run: CargoRun; calls: string[] } {
+function fakeCargo(script: Script = {}) {
   const calls: string[] = [];
 
   function run(_root: string, args: readonly string[]): CargoResult {

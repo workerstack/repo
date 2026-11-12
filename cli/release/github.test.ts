@@ -32,7 +32,7 @@ const NOTES = "### Added\n\n- first";
 const FORMAT = "repo release github: name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
 
 /** A gh whose `release view` finds the release, never does, or does only once `create` ran ("after-create"). */
-function fakeGh(exists: "after-create" | "found" | "missing", created = 0): { gh: Runner; calls: string[] } {
+function fakeGh(exists: "after-create" | "found" | "missing", created = 0) {
   const calls: string[] = [];
   let isMade = false;
 

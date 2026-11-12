@@ -54,7 +54,7 @@ function keyOf(args: readonly string[]): string {
   return { "llvm-cov": "llvm-cov run", nextest: "nextest run" }[args[0] ?? ""] ?? args[0] ?? "";
 }
 
-const HEALTHY: Record<string, CargoResult> = {
+const HEALTHY = {
   "llvm-cov --version": ok("cargo-llvm-cov 0.9.1\n"),
   "llvm-cov run": ok("", SUMMARY),
   metadata: ok(metadata(true)),

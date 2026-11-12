@@ -9,6 +9,11 @@ const MESSAGE =
   "{{call}} replaces a module for the whole file; pass the fake through a parameter, an options field or a real " +
   "stream instead";
 
+/** Whether `name` is a test framework object's name, `vi` or `jest`. */
+function isFrameworkName(name: string): name is keyof typeof FRAMEWORK_SOURCES {
+  return Object.hasOwn(FRAMEWORK_SOURCES, name);
+}
+
 /** Whether `definition` imports the framework object `vi` from vitest or `jest` from @jest/globals, renamed or not. */
 function isFrameworkImport(definition: TSESLint.Scope.Definition): boolean {
   if (definition.node.type !== AST_NODE_TYPES.ImportSpecifier) return false;
@@ -16,7 +21,7 @@ function isFrameworkImport(definition: TSESLint.Scope.Definition): boolean {
   const name = imported.type === AST_NODE_TYPES.Identifier ? imported.name : imported.value;
   const source = ESLintUtils.nullThrows(parent.source, "an import specifier's declaration has a source");
 
-  return Object.hasOwn(FRAMEWORK_SOURCES, name) && FRAMEWORK_SOURCES[name] === source.value;
+  return isFrameworkName(name) && FRAMEWORK_SOURCES[name] === source.value;
 }
 
 /** Whether `object` is a test framework object: the global `vi` or `jest`, or one imported from its package. */
@@ -24,7 +29,7 @@ function isFrameworkObject(sourceCode: Readonly<TSESLint.SourceCode>, object: TS
   if (object.type !== AST_NODE_TYPES.Identifier) return false;
   const variable = resolveVariable(sourceCode, object);
 
-  if (variable === null || variable.defs.length === 0) return Object.hasOwn(FRAMEWORK_SOURCES, object.name);
+  if (variable === null || variable.defs.length === 0) return isFrameworkName(object.name);
 
   return variable.defs.some(isFrameworkImport);
 }

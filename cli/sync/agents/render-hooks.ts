@@ -57,7 +57,7 @@ function codexRejects(hook: JsonObject): boolean {
 }
 
 /** Drops handlers Codex rejects, then emptied groups and events (`filterCodexHandlers`, D:56436-56462). */
-function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Group[]> {
+function filterCodexHandlers(hooks: Record<string, Group[]>) {
   const out: Record<string, Group[]> = {};
 
   for (const [event, groups] of Object.entries(hooks)) {
@@ -95,7 +95,7 @@ function isWritten(entry: [string, Json | undefined]): entry is [string, Json] {
 function cursorEntry(def: Def): JsonObject {
   const { type, command, timeout, matcher, prompt, model, failClosed } = def;
 
-  const entry: Record<string, Json | undefined> = {
+  const entry = {
     command: typeof command === "string" ? expandHookCommand(command) : command,
     failClosed,
     loop_limit: def[LOOP_LIMIT],

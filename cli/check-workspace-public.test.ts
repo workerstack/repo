@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { LOCK_OK, MANIFEST, ROOT, lines } from "./__fixtures__/check-workspace-lines.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 
-function sdk(rest: Partial<PackageJson>, root: Partial<PackageJson> = ROOT): Record<string, PackageJson> {
+function sdk(rest: Partial<PackageJson>, root: Partial<PackageJson> = ROOT) {
   return {
     [MANIFEST]: root,
     "packages/core/package.json": { name: "@acme/core" },
@@ -35,8 +35,11 @@ describe("checkWorkspace public edges", () => {
   });
 
   it("treats a member without private as private", () => {
-    const files = sdk({ dependencies: { "@acme/nameless": "workspace:*" } });
-    files["packages/nameless/package.json"] = { name: "@acme/nameless" };
+    const files = {
+      ...sdk({ dependencies: { "@acme/nameless": "workspace:*" } }),
+      "packages/nameless/package.json": { name: "@acme/nameless" },
+    };
+
     expect(lines(files, LOCK_OK)).toStrictEqual([
       edge("packages/sdk/package.json", ["@acme/nameless", "dependencies", "packages/sdk"]),
     ]);
@@ -55,12 +58,11 @@ describe("checkWorkspace public root edges", () => {
 
 describe("checkWorkspace public edges that pass", () => {
   it("passes devDependencies, a public member and a private package's own edges", () => {
-    const files = sdk({
-      dependencies: { "@acme/open": "workspace:*" },
-      devDependencies: { "@acme/core": "workspace:*" },
-    });
+    const files = {
+      ...sdk({ dependencies: { "@acme/open": "workspace:*" }, devDependencies: { "@acme/core": "workspace:*" } }),
+      "packages/core/package.json": { dependencies: { "@acme/open": "workspace:*" }, name: "@acme/core" },
+    };
 
-    files["packages/core/package.json"] = { dependencies: { "@acme/open": "workspace:*" }, name: "@acme/core" };
     expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 });

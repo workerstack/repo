@@ -1,6 +1,6 @@
 /** Scores candidates on their medians and prints the table people read: one row per candidate, best first. */
 import {
-  BUILT_IN,
+  builtInOf,
   BYTES_PER_GB,
   BYTES_PER_MB,
   CUSTOM_FLOOR,
@@ -73,7 +73,7 @@ function valueOf(values: Readonly<Record<string, number>>, name: string) {
 
 /** A median raised to its metric's floor: 0.1 ms wall, 1 ms cpu, 1 MB rss, 1e-6 for a custom metric. */
 function floored(metric: Metric, value: number) {
-  return Math.max(value, BUILT_IN[metric.name]?.floor ?? CUSTOM_FLOOR);
+  return Math.max(value, builtInOf(metric.name)?.floor ?? CUSTOM_FLOOR);
 }
 
 function bestsOf(metrics: readonly Metric[], medians: readonly Readonly<Record<string, number>>[]): Best[] {

@@ -111,7 +111,7 @@ export function unlistedFindings(
 }
 
 /** The package name in a root-relative path through `node_modules/`, and the folder it is installed in. */
-function installedPackage(resolved: string): { name: string; dir: string } {
+function installedPackage(resolved: string) {
   const at = resolved.lastIndexOf(INSTALLED_DIR) + INSTALLED_DIR.length;
   const rest = resolved.slice(at);
 

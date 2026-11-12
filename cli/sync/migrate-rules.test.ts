@@ -19,7 +19,7 @@ const STOCK = {
 };
 
 /** A consumer holding `files` beside a fake stock package. */
-function upgradeRoot(files: Record<string, string>): { root: string; stock: string } {
+function upgradeRoot(files: Record<string, string>) {
   const dir = tempDir("workerstack-migrate-");
   const stock = path.join(dir, "stock");
   const root = path.join(dir, "root");

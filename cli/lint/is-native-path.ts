@@ -74,8 +74,13 @@ function importOf(node: Node, name: string): Import | undefined {
   return undefined;
 }
 
+/** Whether `source` is a module `NATIVE_CALLS` lists. */
+function isNativeModule(source: string): source is keyof typeof NATIVE_CALLS {
+  return Object.hasOwn(NATIVE_CALLS, source);
+}
+
 function isNativeFunction(source: string, name: string): boolean {
-  return (NATIVE_CALLS[source] ?? []).includes(name);
+  return isNativeModule(source) && NATIVE_CALLS[source].includes(name);
 }
 
 /** `join(…)` or `tmpdir()`: a name imported from a module whose function of that name returns a native path. */

@@ -1,3 +1,5 @@
+import type { TurboTask } from "../turbo-config.ts";
+
 export const TURBO_CONFIG_PATH: string = "turbo.json";
 
 /** The directory turbo keeps its cache and the skip report in; git ignores it under the pack. */
@@ -7,13 +9,13 @@ export const TURBO_JSON_INDENT = 2;
 
 /** The files whose change reruns every task. */
 export const GLOBAL_DEPENDENCIES: readonly string[] = ["bun.lock", "package.json", "workerstack.config.ts"];
-export const TYPECHECK_TASK: { outputs: string[] } = { outputs: [] };
+export const TYPECHECK_TASK: TurboTask = { outputs: [] };
 
 /**
  * The test task: coverage and the skip report are its outputs, and the variables that shape them its cache key, the
  * shard among them so one slice never replays another's run.
  */
-export const TEST_TASK: { env: string[]; outputs: string[] } = {
+export const TEST_TASK: TurboTask = {
   env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],
   outputs: ["coverage/**", ".turbo/vitest-report.json"],
 };

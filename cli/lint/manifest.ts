@@ -30,7 +30,12 @@ const NEGATION = "!";
 const LEADING_DOT_SLASH = /^\.\//;
 const TRAILING_SLASHES = /\/+$/;
 const GLOB_TOKEN = /\*\*\/|\*\*|\*|\?|[.+^${}()|[\]\\]/g;
-const GLOB_PARTS: Record<string, string> = { "*": "[^/]*", "**": ".*", "**/": "(?:.*/)?", "?": "[^/]" };
+const GLOB_PARTS = { "*": "[^/]*", "**": ".*", "**/": "(?:.*/)?", "?": "[^/]" } as const;
+
+/** Whether `token` is a glob token `GLOB_PARTS` translates, not a character to escape. */
+function isGlobToken(token: string): token is keyof typeof GLOB_PARTS {
+  return Object.hasOwn(GLOB_PARTS, token);
+}
 
 /** The nearest package.json at or above `start`, or null when none is. */
 export function nearestManifest(start: string): string | null {
@@ -58,7 +63,7 @@ function tidy(entry: string): string {
 
 /** A matcher for a `files` entry, as npm reads it: a path, a directory (all under it) or a `*`, `**`, `?` glob. */
 function entryMatcher(entry: string): (rel: string) => boolean {
-  const body = tidy(entry).replaceAll(GLOB_TOKEN, (token) => GLOB_PARTS[token] ?? `\\${token}`);
+  const body = tidy(entry).replaceAll(GLOB_TOKEN, (token) => (isGlobToken(token) ? GLOB_PARTS[token] : `\\${token}`));
   const pattern = new RegExp(`^${body}(?:/.*)?$`);
 
   return (rel) => pattern.test(rel);

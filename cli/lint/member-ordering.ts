@@ -16,16 +16,20 @@ const ORDER = "order static fields, instance fields, constructor, public methods
 /** Each group's rank in that order. */
 const RANK = { constructor: 2, instance: 1, nonPublic: 4, publicMethod: 3, static: 0 } as const;
 
+/** A group's rank in the order. */
+type Rank = (typeof RANK)[keyof typeof RANK];
+
 /** How a message names a member of a group that comes later in the order than the member it reports. */
-const LATER: Readonly<Record<number, string>> = {
+const LATER = {
+  [RANK.static]: "a static field",
   [RANK.instance]: "an instance field",
   [RANK.constructor]: "the constructor",
   [RANK.publicMethod]: "a public method",
   [RANK.nonPublic]: "a non-public method",
-};
+} as const satisfies Readonly<Record<Rank, string>>;
 
 /** A member's group in the order, and how a message names it. */
-type Placed = { rank: number; label: string };
+type Placed = { rank: Rank; label: string };
 
 /** The name a message gives a member's key, after a space: `x`, `#x` or a string key; empty for a computed one. */
 function keyOf(member: Method | Field): string {
@@ -71,14 +75,16 @@ export const memberOrdering: RepoRule<"order"> = {
   create(context) {
     return {
       ClassBody(body) {
-        let latest: number = RANK.static;
+        let latest: Rank = RANK.static;
 
         for (const member of body.body) {
           const { label, rank } = placeOf(member);
-          const data = { label, later: String(LATER[latest]) };
+
+          const data = { label, later: LATER[latest] };
 
           if (rank < latest) context.report({ data, messageId: "order", node: member });
-          latest = Math.max(latest, rank);
+
+          if (rank > latest) latest = rank;
         }
       },
     };
