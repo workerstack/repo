@@ -1,10 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { ROOT_DIR, manifestFileOf, surfaceUnreadable } from "./check-deps.constants.ts";
 import type { CliDeps } from "./cli-deps.ts";
 import type { LoadResult } from "./config.ts";
 import { repoEnv } from "./repo-env.ts";
 import type { SyncIo } from "./sync.ts";
+import type { Workspace } from "./sync/workspace.ts";
+import type { Surface } from "./type-surface.ts";
 
 /** Prints check's lines: a report on stdout; a problem on stderr, kept so the exit code can count it. */
 type Printer = { report: (lines: readonly string[]) => void; fail: (lines: readonly string[]) => void };
@@ -47,16 +50,45 @@ async function checkStandards(cwd: string, loaded: LoadResult, print: Printer): 
   print.fail([...(read?.ok === true ? checkManifests(read.workspace) : []), ...(on ? checkComments(cwd) : [])]);
 }
 
-/** Public packages, then workspaces under the workspace pack; an unreadable manifest is sync --check's to report. */
+/**
+ * The type surface, by package dir, of the root (as `.`) and of each workspace package with `"private": false` and
+ * any `dependencies`; a package whose types cannot be read prints one line instead.
+ */
+async function publicSurfaces(cwd: string, workspace: Workspace, print: Printer): Promise<Map<string, Surface>> {
+  const { typeSurface } = await import("./type-surface.ts");
+  const { errorMessage } = await import("./sync-errors.ts");
+  const surfaces = new Map<string, Surface>();
+
+  const scanned = [{ dir: ROOT_DIR, manifest: workspace.manifest }, ...workspace.packages].filter(
+    ({ manifest }) => manifest.private === false && Object.keys(manifest.dependencies ?? {}).length > 0,
+  );
+
+  for (const pkg of scanned) {
+    try {
+      surfaces.set(pkg.dir, typeSurface(path.join(cwd, pkg.dir), pkg.manifest));
+    } catch (error) {
+      print.fail([surfaceUnreadable(manifestFileOf(pkg.dir), errorMessage(error))]);
+    }
+  }
+
+  return surfaces;
+}
+
+/**
+ * Public packages and the deps their types expose, then workspaces under the workspace pack; an unreadable manifest
+ * is sync --check's to report.
+ */
 async function checkPackages(cwd: string, loaded: LoadResult, print: Printer): Promise<void> {
   if (!loaded.ok) return;
   const { readWorkspace } = await import("./sync/workspace.ts");
   const { checkPublic } = await import("./check-public.ts");
+  const { checkDeps } = await import("./check-deps.ts");
   const { checkWorkspace } = await import("./check-workspace.ts");
   const read = readWorkspace(cwd);
 
   if (!read.ok) return;
   print.fail(checkPublic(cwd, read.workspace, loaded.config));
+  print.fail(checkDeps(read.workspace, await publicSurfaces(cwd, read.workspace, print)));
   print.fail(loaded.config.packs.includes("workspace") ? checkWorkspace(cwd, read.workspace) : []);
 }
 

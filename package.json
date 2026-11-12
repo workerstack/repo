@@ -106,9 +106,6 @@
     "@arethetypeswrong/core": "0.18.5",
     "@clack/prompts": "^0.11.0",
     "@dreamsicle.io/stylelint-config-tailwindcss": "1.2.2",
-    "@total-typescript/ts-reset": "^0.6.1",
-    "@types/bun": "^1.4.4",
-    "@typescript-eslint/utils": "8.72.2",
     "@workerstack/references": "^0.1.1",
     "age-encryption": "0.3.1",
     "cross-spawn": "^7.0.6",
@@ -119,7 +116,6 @@
     "oxc-parser": "0.157.0",
     "oxfmt": "0.77.0",
     "oxlint": "1.92.0",
-    "oxlint-tailwindcss": "1.17.0",
     "oxlint-tsgolint": "7.0.2006",
     "publint": "0.3.25",
     "smol-toml": "^1.8.0",
@@ -129,28 +125,37 @@
     "stylelint-order": "8.1.2",
     "turbo": "2.11.10",
     "typescript": "^5.9.3",
-    "yaml": "2.9.1",
-    "zod": "^4.6.7"
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
+    "@total-typescript/ts-reset": "^0.6.1",
+    "@types/bun": "^1.4.4",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
     "@typescript-eslint/parser": "8.72.2",
+    "@typescript-eslint/utils": "8.72.2",
     "@vitest/coverage-istanbul": "^5.1.0",
     "eslint": "10.14.0",
+    "oxlint-tailwindcss": "1.17.0",
     "tar": "^7.5.22",
     "verdaccio": "^6.10.5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "@cloudflare/vitest-plugin": "^1.6.0",
     "@cloudflare/workers-types": ">=4",
     "@stryker-mutator/core": "10.1.1",
     "@stryker-mutator/vitest-runner": "10.1.1",
+    "@total-typescript/ts-reset": "^0.6.1",
+    "@types/bun": "^1.4.4",
+    "@typescript-eslint/utils": "8.72.2",
     "@vitest/coverage-istanbul": "^5.1.0",
-    "vitest": "^5.1.0"
+    "oxlint-tailwindcss": "1.17.0",
+    "vitest": "^5.1.0",
+    "zod": "^4.6.7"
   },
   "peerDependenciesMeta": {
     "@cloudflare/vitest-plugin": {
