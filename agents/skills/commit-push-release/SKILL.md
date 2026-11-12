@@ -6,63 +6,11 @@ description: >
   `bun repo release wait <tag>`. Use for /commit-push-release, "commit push
   release", "release". Must push. Never force-push. No bun/npm/gh publish.
 ---
-Inspect `git status` + `git diff` (staged and unstaged) before the message.
-
-Diff pass on the hunks you will stage: delete narrating comments, unused defensive guards or try/catch on trusted paths, `any` casts that only silence types, dead compatibility, and unrelated hunks. Keep a comment only when it states a constraint the code cannot encode. Keep behavior otherwise. Do not spawn a reviewer.
-
-Stage only user intent. Never blind `git add -A` / `git add .`. Split unrelated concerns into multiple commits.
-
-If a unique in-progress file exists under `.tmp/repo/implementations/`, its `## Files` is the default stage set. Still inspect `git status`.
-
-Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
-
-Types: feat fix docs refactor perf test build ci chore revert.
-
-Subject: imperative lowercase no trailing period.
-
-NO body. NO footer. NO `Co-Authored-By`. NO `Generated with`. NO 🤖. NO trailers. No AI attribution. Work belongs to the human.
-
-Must `git push`. Do not load /commit. Ignore never-push.
-
-## Where
-
-Run `git rev-parse --show-toplevel` and `git branch --show-current` first.
-
-- Managed worktree (`<root>/.worktrees/<name>` on `wt/<name>`): commit there, run `cd <root> && bun repo worktree finish <name>` (from the root, not inside the worktree), then push the default branch from the root and skip the Recent rows below. `wt/*` never counts as Recent and is never pushed. If `finish` fails, resolve it as `/commit` says and push nothing.
-- Main checkout: the gate denies a commit there unless the user's message names commit, and this command does. Commit only changes the user made there. Your own changes go through `bun repo worktree add <name>`.
-- Any other linked worktree (T3 Code, Claude Desktop): `finish` cannot land it. Commit and push its branch per Branch.
-
-## Branch
-
-Current: `git rev-parse --abbrev-ref HEAD`
-
-Default: `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` (strip `origin/`). If that fails: ask. Never invent default.
-
-Recent (frozen flags; do not change):
-
-```
-git reflog -n 30
-git for-each-ref --count=8 --sort=-committerdate --format='%(refname:short) %(committerdate:unix)' refs/heads
-```
-
-Recent = unique existing non-default, non-`wt/*` names from those two outputs whose `committerdate` unix is ≤7d (`now - 604800`). Never invent branch names. Unknown/ambiguous names → drop them, do not guess.
-
-| state | action |
-| current is `wt/*` | do not push; follow Where (`finish`, then push the default branch from the root) |
-| current ≠ default AND not `wt/*` | push current |
-| default AND 0 recent | push default |
-| default AND exactly 1 recent exists | push that name (`git push origin <name>`, no checkout: the gate denies `git checkout` in the main checkout) |
-| else | ask; do not push yet |
-
-No upstream (`git rev-parse --abbrev-ref @{upstream}` fails): `git push -u origin <branch>`. Else `git push`.
-
-Never force-push. Never `--force`, `-f`, `--force-with-lease`, `+<branch>`.
+Run `/commit-push`, then:
 
 ## Release
 
-The After push loop (`bun repo ci wait <branch>` in the background) applies to the commits you push; `bun repo release` waits on its own release-commit push itself.
-
-Run `bun repo release` from the main checkout (not a worktree), on the default branch, clean and equal to origin, after the commits are pushed per **Branch**. Do not ask the user for a bump and do not edit `package.json`: the command reads the Conventional Commits since the last tag. Add `--stable` (0.x to 1.0.0) or `--pre <id>` only when the user named them. Every feat, fix, perf or breaking commit in a public package stages its `CHANGELOG.md` entry under `## [Unreleased]`; the hook refuses it otherwise, and the release refuses an empty Unreleased.
+Run `bun repo release` from the main checkout (not a worktree), on the default branch, clean and equal to origin, after `/commit-push` landed the commits. It waits on its own release-commit push itself. Do not ask the user for a bump and do not edit `package.json`: the command reads the Conventional Commits since the last tag. Add `--stable` (0.x to 1.0.0) or `--pre <id>` only when the user named them. Every feat, fix, perf or breaking commit in a public package stages its `CHANGELOG.md` entry under `## [Unreleased]`; the hook refuses it otherwise, and the release refuses an empty Unreleased.
 
 1. `bun repo release` commits `chore: release <name>@<version>` (the version line and CHANGELOG.md only), pushes it, waits on CI for that commit, then tags `<name>@<version>` and pushes the tag. Its last line names the tag. A refusal prints one line that starts with repo release: and has written nothing; fix what it names and run it again.
 2. When CI failed, read the jobs it printed, fix the cause with a failing test first and a CHANGELOG.md entry, push, and run `bun repo release` again. A rerun finishes the same version and never bumps twice. A cancelled or missing CI result is the same: pull if told to, run it again.

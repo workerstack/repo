@@ -2,7 +2,8 @@
 name: commit
 description: >
   Inspect the diff and commit with a Conventional Commits subject line. Use for
-  /commit, "commit this", "commit these changes". Never git push.
+  /commit, "commit this", "commit these changes". /commit alone never pushes;
+  /commit-push and its chains push after it.
 ---
 Inspect `git status` + `git diff` (staged and unstaged) before the message.
 
@@ -14,7 +15,7 @@ If a unique in-progress file exists under `.tmp/repo/implementations/`, its `## 
 
 Message = Conventional Commits **subject only**: `type(scope): subject` (scope optional).
 
-Types: feat fix docs refactor perf test build ci chore revert.
+Types: feat fix perf refactor test docs build ci chore revert.
 
 Subject: imperative lowercase no trailing period.
 
@@ -30,6 +31,6 @@ Run `git rev-parse --show-toplevel` and `git branch --show-current` first.
 - Main checkout: the gate denies a commit there unless the user's message names commit, and `/commit` does. Commit only changes the user made there. Your own changes belong in a worktree: run `bun repo worktree add <name>`, redo the work under `.worktrees/<name>`, and commit there. `bun repo init` and `bun repo sync` also run inside a worktree, so their output is never left in the main checkout.
 - Any other linked worktree (T3 Code, Claude Desktop): commit only. `finish` cannot land it.
 
-Never git push. Never `git push`. This skill never pushes.
+/commit alone never pushes: no `git push`, no `bun repo push`. /commit-push and its chains push after it.
 
 Protocol: `node_modules/@workerstack/repo/references/cascade.md`. Do not paste.

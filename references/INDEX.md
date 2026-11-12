@@ -12,7 +12,7 @@ Upgrading is running `bun repo update '@workerstack/*'`: it bumps every `@worker
 
 Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.
 
-<!-- repo:skills 1a5006fe -->
+<!-- repo:skills 443fcee7 -->
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
 | ask | repo | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
@@ -23,7 +23,6 @@ Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `
 | browser | repo | >- |  |  |  |
 | clasp | repo | >- |  |  |  |
 | commit | repo | Inspect the diff and commit with a Conventional Commits subject line. Use for /commit, "commit this", "commit these cha… |  |  |  |
-| commit-and-push | repo | Alias of commit-push (1-release stub). Use for /commit-and-push, "commit and push", "commit this and push". Must push.… |  |  |  |
 | commit-push | repo | Commit with a Conventional Commits subject, then push. Use for /commit-push, "commit and push", "commit this and push".… |  |  |  |
 | commit-push-deploy | repo | Commit, push, then deploy only if allowlisted infra already exists. Use for /commit-push-deploy, "commit push deploy",… |  |  |  |
 | commit-push-release | repo | Commit, push, and for "release" run `bun repo release` from the main checkout (it bumps, stamps CHANGELOG.md, pushes, w… |  |  |  |
