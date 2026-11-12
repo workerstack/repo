@@ -1,6 +1,8 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 import { parseSync } from "oxc-parser";
 
+import { isSyntaxList, type SyntaxValue } from "../syntax-node.ts";
+import { nodesOf } from "./public-surface.syntax.ts";
 import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 const MESSAGE = "this comment is code; delete it, git keeps the old version";
@@ -78,10 +80,10 @@ function groupsOf(text: string, comments: readonly RuleComment[]): Group[] {
   return groups;
 }
 
-function holdsCode(node: unknown): boolean {
+function holdsCode(node: SyntaxValue): boolean {
   if (typeof node !== "object" || node === null) return false;
 
-  if (Array.isArray(node)) return node.some(holdsCode);
+  if (isSyntaxList(node)) return node.some(holdsCode);
 
   if ("type" in node && typeof node.type === "string" && CODE.includes(node.type)) return true;
 
@@ -93,7 +95,7 @@ function isCode(source: string): boolean {
   for (const text of [source, `async function* comment() {\n${source}\n}`]) {
     const parsed = parseSync("comment.ts", text, { sourceType: "module" });
 
-    if (parsed.errors.length === 0) return holdsCode(parsed.program.body);
+    if (parsed.errors.length === 0) return holdsCode(nodesOf(parsed.program.body));
   }
 
   return false;

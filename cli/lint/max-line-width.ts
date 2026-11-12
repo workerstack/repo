@@ -1,5 +1,6 @@
 import { eastAsianWidth } from "get-east-asian-width";
 
+import { asNode, type SyntaxValue } from "../syntax-node.ts";
 import {
   CALL_EXPRESSION,
   CODE_HINT,
@@ -91,21 +92,24 @@ function cipherOf(node: Found): Span | undefined {
   return { end: argument.range[1], start: argument.range[0] };
 }
 
+/** Notes the sealed cipher `ast` is, or else the hinted range it holds that no cipher already exempts. */
+function note(ast: Found, found: Gathered): void {
+  const cipher = cipherOf(ast);
+  const hint = hintOf(ast);
+
+  if (cipher !== undefined) found.exempt.push(cipher);
+  else if (hint !== undefined && !found.exempt.some((span) => span.start === ast.range[0]))
+    found.ranges.push({ end: ast.range[1], hint, start: ast.range[0] });
+}
+
 /** Every string, template and regex range under `node`, and every sealed cipher, found without the `parent` links. */
-function gather(node: unknown, found: Gathered): void {
-  if (typeof node !== "object" || node === null) return;
+function gather(node: SyntaxValue, found: Gathered): void {
+  if (typeof node !== "object" || node === null || node instanceof RegExp) return;
 
-  if ("type" in node && "range" in node) {
-    const ast = node /* an object with a type and a range is an AST node */ as Found;
-    const cipher = cipherOf(ast);
-    const hint = hintOf(ast);
+  if ("type" in node && "range" in node)
+    note(node /* an object with a type and a range is an AST node */ as Found, found);
 
-    if (cipher !== undefined) found.exempt.push(cipher);
-    else if (hint !== undefined && !found.exempt.some((span) => span.start === ast.range[0]))
-      found.ranges.push({ end: ast.range[1], hint, start: ast.range[0] });
-  }
-
-  for (const [key, value] of Object.entries(node)) if (key !== PARENT_KEY) gather(value, found);
+  for (const [key, value] of Object.entries<SyntaxValue>(node)) if (key !== PARENT_KEY) gather(value, found);
 }
 
 /** `line`, which starts at source offset `lineStart`, with the parts `exempt` covers taken out. */
@@ -170,7 +174,7 @@ export const maxLineWidth: RepoRule<"wide"> = {
     return {
       Program(program) {
         const found: Gathered = { exempt: [], ranges: [] };
-        gather(program, found);
+        gather(asNode(program), found);
         const { exempt, ranges } = found;
 
         for (const comment of context.sourceCode.getAllComments())

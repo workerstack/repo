@@ -58,7 +58,7 @@ function floorsOf(root: string): Json {
   return readJson(z.json(), fs.readFileSync(path.join(root, FLOORS), "utf8"));
 }
 
-function plant(root: string, floors: unknown): void {
+function plant(root: string, floors: Json): void {
   return fs.writeFileSync(path.join(root, FLOORS), JSON.stringify(floors));
 }
 

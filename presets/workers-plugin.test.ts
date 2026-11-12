@@ -13,12 +13,12 @@ function coded(code: string, message: string): Error {
   return Object.assign(new Error(message), { code });
 }
 
-function failing(error: unknown) {
-  return () => Promise.reject(error);
+function failing(cause: unknown) {
+  return () => Promise.reject(cause);
 }
 
 /** A stand-in for the plugin's export: echoes the options it is given. */
-function cloudflareTest(options: unknown) {
+function cloudflareTest(options: { wrangler: { configPath: string } }) {
   return { name: "cloudflare-test", options };
 }
 

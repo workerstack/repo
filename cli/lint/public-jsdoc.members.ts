@@ -1,6 +1,6 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 
-import { asNode, type SyntaxNode, textOf } from "../syntax-node.ts";
+import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { docFault } from "./doc-fault.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
@@ -13,7 +13,7 @@ export type Source = { text: string; before: (node: SyntaxNode) => readonly Rule
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
 export type Walk = { source: Source; owner: string; fail: (node: SyntaxNode, label: string, text: string) => void };
 
-function keyName(key: unknown): string {
+function keyName(key: SyntaxValue): string {
   const label = [get(key, "name"), get(key, "value")].find(
     (part) => typeof part === "string" || typeof part === "number" || typeof part === "bigint",
   );

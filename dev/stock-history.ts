@@ -136,16 +136,9 @@ function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer]
   });
 }
 
-function buildSettingsSchema() {
-  return z.looseObject({ hooks: z.unknown().optional() });
-}
-
-/** The slice of a settings file the history reads: its `hooks`, whatever they hold. */
-const settingsSchema = /* @__PURE__ */ buildSettingsSchema();
-
 /** The hook commands of a settings file's bytes; none when it is not a JSON object. */
 function settingsCommands(bytes: Buffer): string[] {
-  return hookCommands(tryJson(settingsSchema, bytes.toString("utf8")));
+  return hookCommands(tryJson(z.json(), bytes.toString("utf8")));
 }
 
 function git(cwd: string, args: string[], input?: string): Buffer {

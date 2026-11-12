@@ -1,4 +1,4 @@
-import type { JsonObject } from "../../json.ts";
+import type { Json, JsonObject } from "../../json.ts";
 import { BLOCK, COMMAND, HTTP, ON_FAILURE_IGNORED } from "./hooks.constants.ts";
 import type { Def, Passthrough, Target } from "./hooks.types.ts";
 
@@ -10,7 +10,7 @@ export type PassthroughInput = {
   target: Readonly<Target>;
 };
 
-const VALID: Readonly<Record<Exclude<Passthrough["kind"], "keyword">, (value: unknown) => boolean>> = {
+const VALID: Readonly<Record<Exclude<Passthrough["kind"], "keyword">, (value: Json) => boolean>> = {
   array: (value) => Array.isArray(value) && value.every((item) => typeof item === "string"),
   boolean: (value) => typeof value === "boolean",
   number: (value) => Number.isFinite(value),

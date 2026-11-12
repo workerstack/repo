@@ -6,7 +6,7 @@ import { packageJsonSchema } from "../package-json.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 
 /** Whether a package.json `name` is this package's own. */
-export function isSelfName(name: unknown): boolean {
+export function isSelfName(name: string | undefined): boolean {
   return name === PACKAGE_NAME;
 }
 

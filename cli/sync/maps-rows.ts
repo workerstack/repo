@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { group } from "../docs-fences.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
-import { parseFlowSeq, parseMarkdown, type YamlObject } from "./maps-yaml.ts";
+import { parseFlowSeq, parseMarkdown, type YamlObject, type YamlValue } from "./maps-yaml.ts";
 import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
 import { stockRoot } from "./stock.ts";
 
@@ -23,15 +23,15 @@ type RefFile = {
   rel: string;
 };
 
-function oneLine(s: unknown): string {
-  const t = String(s).replaceAll(WHITESPACE_RUN, " ").trim();
+function oneLine(s: string): string {
+  const t = s.replaceAll(WHITESPACE_RUN, " ").trim();
 
   if (t.length <= DESC_MAX) return t;
 
   return `${t.slice(0, Math.max(0, DESC_MAX - 1)).trimEnd()}…`;
 }
 
-function cell(s: unknown): string {
+function cell(s: string): string {
   return oneLine(s).replaceAll("|", "\\|");
 }
 
@@ -50,7 +50,7 @@ function mapRefs(parsed: YamlObject): string[] {
   return [];
 }
 
-function scalarText(v: unknown): string {
+function scalarText(v: YamlValue | undefined): string {
   return typeof v === "string" && v !== "" ? v : "";
 }
 
@@ -142,7 +142,8 @@ export function skillRow(root: string, dir: string): string {
   const { parsed, body } = parseMarkdown(raw);
   const named = scalarText(parsed.name);
   const name = named === "" ? dir : named;
-  const descSrc = parsed.description != null && parsed.description !== "" ? parsed.description : firstSummary(body);
+  const described = scalarText(parsed.description);
+  const descSrc = described === "" ? firstSummary(body) : described;
   const origin = isFile(path.join(stockRoot(root), STOCK_SKILLS_REL, dir, "SKILL.md")) ? "repo" : "local";
   const cells = [name, origin, descSrc, mapTask(parsed), scalarText(parsed.commandPath), mapRefs(parsed).join(", ")];
 

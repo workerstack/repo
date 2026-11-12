@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
+import { isRecord, type Json } from "../json.ts";
 import { readJsonFile } from "../package-json.ts";
 import { COMMAND_KEY, HASH_HEX_DIGITS } from "./stock-history.constants.ts";
 
@@ -62,10 +63,10 @@ export const STOCK_PREFIXES = [
 export const HOOK_COMMANDS_KEY = ".claude/settings.json#commands";
 
 /** Every hook `command` string under the `hooks` of a parsed settings file. */
-export function hookCommands(settings: unknown): string[] {
+export function hookCommands(settings: Json | undefined): string[] {
   const found: string[] = [];
 
-  function walk(value: unknown): void {
+  function walk(value: Json | undefined): void {
     if (Array.isArray(value)) {
       for (const item of value) walk(item);
     } else if (typeof value === "object" && value !== null) {
@@ -76,7 +77,7 @@ export function hookCommands(settings: unknown): string[] {
     }
   }
 
-  walk((settings /* a parsed settings file: an object or null */ as { hooks?: unknown } | null)?.hooks);
+  walk(isRecord(settings) ? settings.hooks : undefined);
 
   return found;
 }

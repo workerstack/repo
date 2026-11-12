@@ -2,8 +2,9 @@ import { expect, it, vi } from "vitest";
 
 import { OK, docsRun, fence, json, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { main } from "./docs.ts";
+import type { Json } from "./json.ts";
 
-function files(manifest: unknown, example: string): Record<string, string> {
+function files(manifest: Json, example: string): Record<string, string> {
   return {
     "package.json": json(manifest),
     "references/INDEX.md": "# Index\n- [A](a.md)\n",
@@ -20,7 +21,7 @@ it("builds a package before checking examples that import its name, when it has 
 });
 
 /** Checks a package with `manifest` and `example`; the exit code and the build runner. */
-async function checked(manifest: unknown, example: string) {
+async function checked(manifest: Json, example: string) {
   const root = tempRoot(files(manifest, example));
   const bun = vi.fn<() => typeof OK>(() => OK);
   const code = await main(["--check"], docsRun(root, { bun }).io);

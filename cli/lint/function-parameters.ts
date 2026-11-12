@@ -1,11 +1,22 @@
 /**
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/shared/function-parameters.ts`. A function parameter's
- * type annotation and the name it binds, through a parameter property, a default and a rest.
+ * type annotation and the name it binds, through a parameter property, a default and a rest, and whether a type is or
+ * holds `unknown`.
  */
 import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
 /** A parameter, or the binding a parameter property, default or rest wraps. */
 type Binding = TSESTree.Parameter | TSESTree.DestructuringPattern;
+
+/**
+ * Whether `type` is `unknown` or a union holding it at any depth. The parser drops parentheses, so `(number | unknown)`
+ * arrives as the inner union.
+ */
+export function containsUnknownType(type: TSESTree.TypeNode): boolean {
+  if (type.type === AST_NODE_TYPES.TSUnknownKeyword) return true;
+
+  return type.type === AST_NODE_TYPES.TSUnionType && type.types.some(containsUnknownType);
+}
 
 /**
  * The annotation on `parameter` or on the binding it wraps; undefined when it has none. The parser puts a rest's

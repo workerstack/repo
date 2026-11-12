@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { asNode, textOf } from "./syntax-node.ts";
+import { asNode, isSyntaxList, textOf } from "./syntax-node.ts";
 
 describe("asNode", () => {
   it.each([
@@ -17,6 +17,19 @@ describe("asNode", () => {
     ["a string", "Identifier"],
   ])("returns null for %s", (_name, value) => {
     expect(asNode(value)).toBeNull();
+  });
+});
+
+describe("isSyntaxList", () => {
+  it("takes a list", () => {
+    expect(isSyntaxList([{ type: "Identifier" }])).toBe(true);
+  });
+
+  it.each([
+    ["a node", { type: "Identifier" }],
+    ["a string", "Identifier"],
+  ])("rejects %s", (_name, value) => {
+    expect(isSyntaxList(value)).toBe(false);
   });
 });
 

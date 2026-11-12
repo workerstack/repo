@@ -14,6 +14,7 @@ import {
   useConfigKit,
 } from "./__fixtures__/config-kit.ts";
 import { loadConfig } from "./config.ts";
+import type { Json } from "./json.ts";
 
 useConfigKit();
 
@@ -26,7 +27,7 @@ const SKIP = {
 const NO_REASON = "say why the rules are off, in three words or more";
 
 /** A config with the agents and standards packs, or `packs`, and one `lint.skip` entry. */
-function skipConfig(skip: unknown, packs = '["agents", "standards"]') {
+function skipConfig(skip: Json, packs = '["agents", "standards"]') {
   return `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;
 }
 
@@ -93,7 +94,7 @@ it.each(['["docs"]', "[]"])("lint.skip: refuses lint without the standards pack 
 });
 
 /** A standards config whose `lint.tailwind.entryPoint` is `entryPoint`. */
-function tailwindConfig(entryPoint: unknown): string {
+function tailwindConfig(entryPoint: Json): string {
   return `export default { packs: ["standards"], lint: { tailwind: { entryPoint: ${JSON.stringify(entryPoint)} } } }\n`;
 }
 

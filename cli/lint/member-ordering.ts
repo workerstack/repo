@@ -1,5 +1,6 @@
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
+import { asNode } from "../syntax-node.ts";
 import { nameOf } from "./public-surface.syntax.ts";
 import type { RepoRule } from "./rule.types.ts";
 
@@ -32,7 +33,7 @@ function keyOf(member: Method | Field): string {
   // A key that is not computed is an identifier, a `#x` or a string or number literal.
   const hash = member.key.type === AST_NODE_TYPES.PrivateIdentifier ? "#" : "";
 
-  return ` \`${hash}${nameOf(member.key)}\``;
+  return ` \`${hash}${nameOf(asNode(member.key))}\``;
 }
 
 /** Where a method goes: the constructor, a public method, or a `protected`, `private` or `#x` one. */

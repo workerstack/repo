@@ -1,3 +1,5 @@
+import type { Json } from "./json.ts";
+
 /** The settings of a rule that `repo github` reads and writes; GitHub's other parameters are left as they are. */
 export type RuleParameters = {
   required_approving_review_count?: number | undefined;
@@ -31,7 +33,7 @@ export type GithubManifest = {
   description?: string | undefined;
   homepage?: string | undefined;
   /** As written; `keywordLines` judges its shape. */
-  keywords?: unknown;
+  keywords?: Json | undefined;
 };
 
 /**

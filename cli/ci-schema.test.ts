@@ -1,8 +1,9 @@
 import { expect, it } from "vitest";
 
 import { ciSchema } from "./ci-schema.ts";
+import type { Json } from "./json.ts";
 
-function messages(input: unknown): string[] {
+function messages(input: Json): string[] {
   const parsed = ciSchema().safeParse(input);
 
   return parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);

@@ -32,9 +32,9 @@ export function reveal(ciphers: readonly string[], identities: readonly string[]
   return Promise.all(ciphers.map((cipher) => decrypter.decrypt(Buffer.from(cipher, "base64"), "text")));
 }
 
-/** Whether `error`, thrown by `reveal`, says a cipher was sealed for a key none of the identities is. */
-export function isWrongKey(error: unknown): boolean {
-  return error instanceof Error && error.message.includes(NO_MATCH);
+/** Whether `cause`, thrown by `reveal`, says a cipher was sealed for a key none of the identities is. */
+export function isWrongKey(cause: unknown): boolean {
+  return cause instanceof Error && cause.message.includes(NO_MATCH);
 }
 
 /**

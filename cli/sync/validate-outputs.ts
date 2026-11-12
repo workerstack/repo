@@ -10,12 +10,8 @@ import { isCurrent } from "./write.ts";
 const REGISTER_HINT = "no output format registered; add it to cli/sync/validate.ts";
 
 /** `dotted.path: message` per zod issue; an issue at the root has no path. */
-function schemaProblems(schema: z.ZodType, value: unknown): string[] {
-  const result = schema.safeParse(value);
-
-  if (result.success) return [];
-
-  return result.error.issues.map((issue) => {
+function issueProblems(issues: readonly z.core.$ZodIssue[]): string[] {
+  return issues.map((issue) => {
     const where = issue.path.map(String).join(".");
 
     return where === "" ? issue.message : `${where}: ${issue.message}`;
@@ -31,7 +27,9 @@ function fileProblems(output: Extract<Output, { kind: "file" }>, formats: readon
 
   if ("problem" in parsed) return [parsed.problem];
 
-  return entry.schema === undefined ? [] : schemaProblems(entry.schema, parsed.value);
+  const result = entry.schema?.safeParse(parsed.value);
+
+  return result === undefined || result.success ? [] : issueProblems(result.error.issues);
 }
 
 /**

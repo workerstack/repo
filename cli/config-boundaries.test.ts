@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import { refusal, repo, useConfigKit } from "./__fixtures__/config-kit.ts";
 import { loadConfig } from "./config.ts";
+import type { Json } from "./json.ts";
 
 useConfigKit();
 
@@ -12,7 +13,7 @@ const BOUNDARIES = {
 };
 
 /** A standards config whose `lint.boundaries` is `boundaries`. */
-function boundariesConfig(boundaries: unknown): string {
+function boundariesConfig(boundaries: Json): string {
   return `export default { packs: ["standards"], lint: { boundaries: ${JSON.stringify(boundaries)} } }\n`;
 }
 

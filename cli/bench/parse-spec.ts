@@ -1,6 +1,7 @@
 /** The edge between a spec file's default export and the runner: one zod parse, one line per bad field. */
 import { z } from "zod";
 
+import type { ConfigModule } from "../import-config.ts";
 import {
   BUILT_IN,
   DEFAULT_RUNS,
@@ -117,9 +118,9 @@ export function byWeight(a: Metric, b: Metric): number {
   return a.weight === b.weight ? a.name.localeCompare(b.name, "en") : b.weight - a.weight;
 }
 
-/** Parses a spec file's default export into a `Spec`, or every line saying what is wrong with it. */
-export function parseSpec(value: unknown): ParsedSpec {
-  const parsed = specSchema().safeParse(value);
+/** Parses a spec file module's default export into a `Spec`, or every line saying what is wrong with it. */
+export function parseSpec(module: ConfigModule): ParsedSpec {
+  const parsed = specSchema().safeParse(module.default);
 
   if (!parsed.success) return { errors: parsed.error.issues.map(line), ok: false };
   const { candidates, metrics, os, runs, warmup } = parsed.data;

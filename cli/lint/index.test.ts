@@ -29,6 +29,7 @@ const RULE_NAMES = [
   "no-reflect-get",
   "no-shape-in-symbol-names",
   "no-side-effect-import",
+  "no-unknown-parameters",
   "no-unknown-returns",
   "no-unknown-type-aliases",
   "no-unsafe-dictionary-type",

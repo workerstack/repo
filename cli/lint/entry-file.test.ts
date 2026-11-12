@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { reportsOf } from "../../dev/rule-harness.ts";
+import type { Json } from "../json.ts";
 import { entryFile } from "./entry-file.ts";
 
 const MESSAGE = "a bin file holds only imports and one main() call; move this into the module main comes from";
@@ -12,12 +13,12 @@ const TYPED_MAIN =
   'import { start as main } from "../src/main.ts";\n' +
   "await main([] as Argv);";
 
-function manifest(bin: unknown) {
+function manifest(bin: Json | undefined) {
   return JSON.stringify({ bin, name: "app" });
 }
 
 /** What the rule reports for `code` at `file`, under a root package.json whose `bin` is `bin`. */
-function messagesOf(code: string, bin: unknown = "./bin/app.ts", file = "bin/app.ts") {
+function messagesOf(code: string, bin: Json | undefined = "./bin/app.ts", file = "bin/app.ts") {
   return reportsOf(entryFile, { [file]: code, "package.json": manifest(bin) }).map((report) => report.message);
 }
 

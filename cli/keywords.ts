@@ -1,3 +1,4 @@
+import type { Json } from "./json.ts";
 import {
   KEYWORD_ENTRY_FIX,
   KEYWORD_PATTERN,
@@ -55,7 +56,7 @@ function orderLines(entries: readonly unknown[]): string[] {
  * The problems of a package's `keywords` as written, one line each with the fix, empty when it holds 1 to 20 unique
  * GitHub topics in code-unit order.
  */
-export function keywordLines(value: unknown): string[] {
+export function keywordLines(value: Json | undefined): string[] {
   if (!Array.isArray(value) || value.length === 0) {
     const state = value === undefined ? "is missing" : `is ${JSON.stringify(value)}`;
 

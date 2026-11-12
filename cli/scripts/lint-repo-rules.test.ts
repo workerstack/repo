@@ -21,6 +21,7 @@ const REPO_RULES = {
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
       "repo/no-shape-in-symbol-names": "error",
+      "repo/no-unknown-parameters": "error",
       "repo/no-unknown-returns": "error",
       "repo/no-unknown-type-aliases": "error",
       "repo/no-unsafe-dictionary-type": "error",
@@ -80,6 +81,8 @@ const REPO_RULES = {
     "",
     "export interface Loader { load(); save(): Promise<string> }",
     "",
+    "export function parse(value: unknown, cause: unknown) { return [value, cause]; }",
+    "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
     'import { b } from "@app/ui";',
@@ -117,7 +120,9 @@ const NAME_FINDING =
  * `Bag` is an unsafe dictionary: the planted plain alias use, mapped type, property and alias use missing a type, an
  * argument or a default hold null children under oxlint, which the dictionary rule reads without a plugin error. Only
  * `Raw` hides unknown and only `Load` returns it: `untyped`, `load()` and a bare `Promise` hold a null return type
- * or type arguments, which the unknown-returns rule reads without a plugin error.
+ * or type arguments, which the unknown-returns rule reads without a plugin error. Only `parse`'s `value` takes
+ * unknown: `untyped` holds a null annotation and `parse` a null return type, which the unknown-parameters rule reads
+ * without a plugin error, and `cause` is its carve-out.
  */
 const FLOW_FINDINGS = [
   `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
@@ -134,6 +139,8 @@ const FLOW_FINDINGS = [
     "parsing boundary or on an allowed `cause` field; otherwise use the parsed owner type.",
   `${FLOW}:37 repo(no-unknown-returns) This function exposes \`unknown\` to its caller. Parse the value at its ` +
     "boundary and return a named domain type.",
+  `${FLOW}:43 repo(no-unknown-parameters) Parameter \`value\` leaves input unparsed. Accept a named domain type; ` +
+    "run the expected schema or parser at the I/O boundary before calling this function.",
   `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
     "behind a named interface.",
   `${FLOW}:9 repo(no-reflect-get) Replace \`Reflect.get\` with typed property access. Parse dynamic input into ` +

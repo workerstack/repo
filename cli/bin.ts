@@ -51,8 +51,8 @@ async function run(argv: readonly string[], deps: Readonly<Bin>): Promise<number
 export async function main(argv: readonly string[], deps: Readonly<Bin> = BIN): Promise<void> {
   await run(argv, deps).then(
     (code) => deps.exit(code),
-    (err: unknown) => {
-      process.stderr.write(`repo: ${err instanceof Error ? err.message : String(err)}\n`);
+    (cause: unknown) => {
+      process.stderr.write(`repo: ${cause instanceof Error ? cause.message : String(cause)}\n`);
 
       return deps.exit(1);
     },

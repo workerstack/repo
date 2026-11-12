@@ -4,14 +4,12 @@
  */
 import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
-import { asNode } from "../syntax-node.ts";
-
 /** The linter's child keys per node type, as `context.sourceCode.visitorKeys` hands them to a rule. */
 export type VisitorKeys = TSESLint.SourceCode.VisitorKeys;
 
 /** Whether a field the visitor keys name holds a node, rather than null or a missing optional child. */
 function isNode(value: unknown): value is TSESTree.Node {
-  return typeof asNode(value)?.["type"] === "string";
+  return typeof value === "object" && value !== null && "type" in value;
 }
 
 /** The child nodes of `node`, read through the fields its visitor keys name; a type with no keys has none. */

@@ -57,8 +57,8 @@ function fold(args: string[], out: Draft): string | null {
   return null;
 }
 
-export function parseArgv(argv: unknown): ParsedArgv {
-  const args: string[] = Array.isArray(argv) ? argv.map(String) : [];
+export function parseArgv(argv: readonly string[]): ParsedArgv {
+  const args = [...argv];
   const out: Draft = { check: false, generate: true, ref: DEFAULT_REF, repo: DEFAULT_REPO, skills: [] };
   const error = fold(args, out);
 
