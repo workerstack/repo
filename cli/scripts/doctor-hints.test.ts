@@ -23,11 +23,13 @@ it("installHints: linux/darwin/win32 print-only strings; no playwright install",
   const linux = installHints("all", "linux").join("\n");
   const darwin = installHints("all", "darwin").join("\n");
   const win = installHints("all", "win32").join("\n");
+
   for (const t of [linux, darwin, win]) {
     expect(t).not.toMatch(/playwright install/);
     expect(t).not.toMatch(/nodejs|node/i);
     expect(t).not.toMatch(/rulesync/);
   }
+
   expect(linux).toMatch(/apt install git|apt install.*git/);
   expect(linux).toMatch(/curl -fsSL https:\/\/raw\.githubusercontent\.com\/rtk-ai\/rtk\/master\/install\.sh \| sh/);
   expect(linux).toMatch(/pkg\.lightpanda\.io\/install\.sh/);

@@ -32,6 +32,7 @@ import { COPIED_MARKER } from "./migrate.constants.ts";
 import { conflictLines, planMigration } from "./migrate.ts";
 
 useTempDirs();
+
 afterAll(dropFixture);
 
 const TEAM_CLASH =
@@ -74,6 +75,7 @@ function expectOnlyGeneratedLeft(root: string): void {
   expect(exists(root, "AGENTS.md")).toBe(true);
   expect(exists(root, ".claude/settings.json")).toBe(false);
   const tracked = git(root, "ls-files").split("\n");
+
   for (const dir of [".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"])
     expect(tracked.filter((file) => file.startsWith(dir) || file === dir)).toStrictEqual([]);
 

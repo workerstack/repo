@@ -50,6 +50,7 @@ async function stop(_argv: string[], ctx: Ctx): Promise<BrowserResult> {
   killPid(readSession(ctx.cwd)?.pid, ctx.platform);
   clearSession(ctx.cwd);
   await sleep(STOP_SETTLE_MS);
+
   return ok(STOPPED);
 }
 
@@ -64,36 +65,47 @@ async function doctor(_argv: string[], { cwd, env, platform }: Ctx): Promise<Bro
 
 async function nav(argv: string[], ctx: Ctx): Promise<BrowserResult> {
   const url = (argv[1] ?? "").trim();
+
   if (url === "") return fail(NAV_USAGE);
+
   const picked = pickEngine({
     bins: ctx.bins,
     platform: ctx.platform,
     url,
     verb: NAV,
   });
+
   if (picked.engine === null) return fail(picked.error);
   killPid(readSession(ctx.cwd)?.pid, ctx.platform);
   const session = await openSession(picked.engine, ctx);
+
   if (session === null) return fail(NO_ENGINE);
+
   try {
     await navigate(session, url);
   } catch (err) {
     killPid(session.pid, ctx.platform); // no session is written, so nothing else would ever stop this engine
     throw err;
   }
+
   writeSession(ctx.cwd, session);
+
   return ok(`engine: ${session.engine}\nurl: ${session.lastURL}`);
 }
 
 async function snap(_argv: string[], ctx: Ctx): Promise<BrowserResult> {
   let session = liveSession(ctx.cwd);
+
   if (session === null) return fail(NO_SESSION);
   let read = await snapshot(session);
+
   if (canSwap(session, ctx.bins) && isBlockedSnap(read.markdown, read.lines)) {
     session = await swapToChromium(session, ctx);
     read = await snapshot(session);
   }
+
   writeSession(ctx.cwd, session);
+
   return ok(snapText(session, read, ctx.cwd));
 }
 
@@ -101,19 +113,23 @@ async function wait(argv: string[], ctx: Ctx): Promise<BrowserResult> {
   if (liveSession(ctx.cwd) === null) return fail(NO_SESSION);
   const ms = Math.min(WAIT_MAX_MS, Math.max(0, numberOf(filled(argv[1]) ?? WAIT_DEFAULT)));
   await sleep(ms);
+
   return ok(`wait: ${ms}`);
 }
 
 /** `session` on a running Chromium: moved there from Lightpanda, or null when its Chromium is gone. */
 async function onChromium(session: Session, ctx: Ctx): Promise<Session | null> {
   if (session.engine === "chromium") return alive(session.pid) ? session : null;
+
   return await swapToChromium(session, ctx);
 }
 
 function capture(spec: Capture): Verb {
   return async (_argv, ctx) => {
     const found = readSession(ctx.cwd);
+
     if (found === null || found.lastURL === "") return fail(NO_SESSION);
+
     const picked = pickEngine({
       bins: ctx.bins,
       forceChromium: true,
@@ -121,8 +137,10 @@ function capture(spec: Capture): Verb {
       url: found.lastURL,
       verb: spec.verb,
     });
+
     if (picked.engine === null) return fail(picked.error);
     const session = await onChromium(found, ctx);
+
     if (session === null) return fail(NO_SESSION);
     const dir = sessionDir(ctx.cwd);
     fs.mkdirSync(dir, { recursive: true });
@@ -131,6 +149,7 @@ function capture(spec: Capture): Verb {
       fs.writeFileSync(path.join(dir, spec.file), Buffer.from(String(r.data), "base64"));
     });
     writeSession(ctx.cwd, session);
+
     return ok(`engine: ${session.engine}\nfile: ${path.join(SESSION_REL, spec.file)}`);
   };
 }
@@ -157,6 +176,7 @@ export function contextOf(opts: RunOpts): Ctx {
   const env = opts.env ?? childEnv();
   const platform = opts.platform ?? process.platform;
   const bins = opts.bins ?? lookupBins(env.PATH, platform);
+
   return {
     bins,
     cwd: filled(opts.cwd) ?? process.cwd(),

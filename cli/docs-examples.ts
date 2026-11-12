@@ -49,8 +49,10 @@ export type ExampleRoot = { root: string; dir: string; name: string; build: bool
 /** The examples in a reference file: `rel` is its path from the doc root, `dir` the doc root's folder. */
 export function blocksOf(dir: string, rel: string, text: string): Block[] {
   const blocks: Block[] = [];
+
   for (const fence of splitMarkdown(text).fences) {
     const [lang, ...flags] = fence.info.split(WHITESPACE_RUN);
+
     if (!EXAMPLE_LANGS.includes(String(lang))) continue;
     blocks.push({
       code: fence.body.join("\n"),
@@ -62,6 +64,7 @@ export function blocksOf(dir: string, rel: string, text: string): Block[] {
       run: flags.includes(RUN_WORD),
     });
   }
+
   return blocks;
 }
 
@@ -69,6 +72,7 @@ export function blocksOf(dir: string, rel: string, text: string): Block[] {
 export function importsName(blocks: readonly Block[], name: string): boolean {
   const escaped = name.replaceAll(REGEX_SPECIALS, "\\$&");
   const pattern = new RegExp(`["']${escaped}(?:/[^"']*)?["']`);
+
   return blocks.some((block) => pattern.test(block.code));
 }
 
@@ -78,6 +82,7 @@ function detailOf({ stdout, stderr }: Captured): string {
     .split(LINE_BREAK)
     .map((line) => line.trim())
     .filter((line) => line !== "");
+
   return lines.find((line) => THROWN_LINE.test(line)) ?? lines.at(LAST_INDEX) ?? NO_OUTPUT;
 }
 
@@ -90,19 +95,24 @@ function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
   const scratch = path.join(ctx.root, SCRATCH_DIR, ctx.dir);
   const own = path.join(ctx.root, ctx.dir, TSCONFIG_FILE);
   fs.rmSync(scratch, { force: true, recursive: true });
+
   for (const block of blocks) {
     const file = path.join(scratch, fileOf(block));
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, `${block.code}\n${TERMINATOR}`);
   }
+
   const stock = path.join(import.meta.dirname, "..", "tsconfig", STOCK_TSCONFIG);
+
   const config = {
     compilerOptions: { noEmit: true },
     extends: (fs.existsSync(own) ? own : stock).replaceAll("\\", "/"),
     files: blocks.map(fileOf),
     include: [],
   };
+
   fs.writeFileSync(path.join(scratch, TSCONFIG_FILE), JSON.stringify(config, null, JSON_INDENT));
+
   return scratch;
 }
 
@@ -110,9 +120,11 @@ function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
 function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured): string[] {
   const findings: string[] = [];
   const lines = `${run.stdout}\n${run.stderr}`.replaceAll("\\", "/").split(LINE_BREAK);
+
   for (const text of lines.filter((one) => one !== "" && !INDENTED.test(one))) {
     const match = TSC_LINE.exec(text);
     const block = match === null ? undefined : blocks.find((one) => `/${group(match, 1)}`.endsWith(`/${fileOf(one)}`));
+
     if (match === null || block === undefined) {
       findings.push(typecheckCrash(ctx.dir, text));
     } else {
@@ -121,6 +133,7 @@ function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured)
       );
     }
   }
+
   return findings.length === 0 ? [typecheckCrash(ctx.dir, NO_OUTPUT)] : findings;
 }
 
@@ -131,17 +144,23 @@ function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured)
 export function checkExamples(ctx: ExampleRoot, blocks: readonly Block[], tools: ExampleTools): string[] {
   if (blocks.length === 0) return [];
   const docRoot = path.join(ctx.root, ctx.dir);
+
   if (ctx.build && importsName(blocks, ctx.name)) {
     const built = tools.bun([...BUN_BUILD_ARGS], docRoot);
+
     if (built.code !== 0) return [buildFailed(ctx.dir, built.code, detailOf(built))];
   }
+
   const scratch = writeScratch(ctx, blocks);
   const typed = tools.tsc([...TSC_ARGS, path.join(scratch, TSCONFIG_FILE)], scratch);
   const findings = typed.code === 0 ? [] : typeFindings(ctx, blocks, typed);
+
   for (const block of blocks.filter((one) => one.run)) {
     const ran = tools.bun([path.join(scratch, fileOf(block))], docRoot);
+
     if (ran.code !== 0)
       findings.push(runError(`${block.md}:${block.line}`, block.n, { code: ran.code, detail: detailOf(ran) }));
   }
+
   return findings;
 }

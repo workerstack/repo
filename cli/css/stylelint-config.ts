@@ -16,11 +16,13 @@ function packSchema() {
     descriptors: z.record(z.string(), z.string()).exactOptional(),
     prelude: z.string().exactOptional(),
   });
+
   const syntax = z.object({
     atRules: z.record(z.string(), atRule),
     properties: z.record(z.string(), z.string()).exactOptional(),
     types: z.record(z.string(), z.string()).exactOptional(),
   });
+
   return z.object({ default: z.object({ languageOptions: z.object({ syntax }) }) });
 }
 
@@ -28,6 +30,7 @@ function packSchema() {
 async function tailwindSyntax(): Promise<Syntax> {
   const name: string = TAILWIND_PACK;
   const pack: unknown = await import(name);
+
   return packSchema().parse(pack).default.languageOptions.syntax;
 }
 
@@ -38,6 +41,7 @@ async function tailwindSyntax(): Promise<Syntax> {
 export async function stylelintConfig(): Promise<Config> {
   const syntax = await tailwindSyntax();
   const added = Object.fromEntries(STRING_AT_RULES.map((name) => [name, { prelude: STRING_PRELUDE }]));
+
   return {
     extends: [...EXTENDS],
     languageOptions: { syntax: { ...syntax, atRules: { ...syntax.atRules, ...added } } },

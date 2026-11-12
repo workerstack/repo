@@ -8,15 +8,18 @@ import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustCoverage, rustFloorProblems } from "./rust-coverage.ts";
 
 const ROOT = "/r";
+
 function metric(percent: number) {
   return { count: 9, covered: 6, percent };
 }
+
 function file(filename: string, [lines, functions, regions]: [number, number, number]) {
   return {
     filename,
     summary: { branches: metric(0), functions: metric(functions), lines: metric(lines), regions: metric(regions) },
   };
 }
+
 function report(...files: unknown[]) {
   return { data: [{ files, totals: {} }], type: "llvm.coverage.json.export" };
 }
@@ -30,6 +33,7 @@ function writing(json: string, over: Partial<CargoResult> = {}, seen: string[][]
   return (_root, args) => {
     seen.push([...args]);
     fs.writeFileSync(args[args.indexOf("--output-path") + 1] ?? "", json);
+
     return { missing: false, status: 0, stderr: "", stdout: "", ...over };
   };
 }
@@ -55,6 +59,7 @@ it("keys rows by root-relative POSIX path with floored percents", () => {
   const json = JSON.stringify(
     report(file("/r/a/src/lib.rs", [66.67, 66.67, 58.33]), file("/r/b/src/main.rs", [0, 0, 0])),
   );
+
   expect(rustCoverage(ROOT, writing(json))).toStrictEqual({
     ok: true,
     value: {
@@ -116,6 +121,7 @@ it("names every metric below its floor", () => {
     "a/src/lib.rs": { functions: 70, lines: 66, regions: 58 },
     "b.rs": { functions: 1, lines: 1, regions: 1 },
   };
+
   const floors = { "a/src/lib.rs": { functions: 70, lines: 80, regions: 60 } };
   expect(rustFloorProblems(rows, floors)).toStrictEqual([
     "rust coverage: a/src/lib.rs lines 66 is below its floor 80; add tests or restore the code",

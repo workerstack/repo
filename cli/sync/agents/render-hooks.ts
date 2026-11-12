@@ -34,15 +34,19 @@ function text(value: unknown): string {
 
 function containsNull(value: unknown): boolean {
   if (value === null) return true;
+
   return typeof value === "object" && Object.values(value).some(containsNull);
 }
 
 /** Why Codex would refuse a handler, or undefined (`describeRejectedHandler`, D:56419-56429). */
 function codexRejects(hook: Json): boolean {
   const { timeout } = hook;
+
   if (timeout !== undefined && !(typeof timeout === "number" && Number.isSafeInteger(timeout) && timeout >= 0))
     return true;
+
   if (hook["type"] !== MCP_TOOL) return false;
+
   return (
     [hook["server"], hook["tool"]].some((value) => typeof value !== "string" || value === "") ||
     containsNull(hook["input"])
@@ -52,18 +56,22 @@ function codexRejects(hook: Json): boolean {
 /** Drops handlers Codex rejects, then emptied groups and events (`filterCodexHandlers`, D:56436-56462). */
 function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Group[]> {
   const out: Record<string, Group[]> = {};
+
   for (const [event, groups] of Object.entries(hooks)) {
     const kept = groups
       .map((group) => ({ ...group, hooks: group.hooks.filter((hook) => !codexRejects(hook)) }))
       .filter((group) => group.hooks.length > 0);
+
     if (kept.length > 0) out[event] = kept;
   }
+
   return out;
 }
 
 /** The stock settings with `hooks` replaced in place (else appended) and `$schema` first when missing. */
 function claudeSettings(base: string, hooks: Json): Json {
   const settings: Json = { ...(JSON.parse(base) /* the stock claude settings file is a JSON object */ as Json), hooks };
+
   return "$schema" in settings ? settings : { $schema: CLAUDE_SCHEMA, ...settings };
 }
 
@@ -73,6 +81,7 @@ function claudeSettings(base: string, hooks: Json): Json {
  */
 function cursorEntry(def: Def): Json {
   const { type, command, timeout, matcher, prompt, model, failClosed } = def;
+
   const entry = {
     command: typeof command === "string" ? expandHookCommand(command) : command,
     failClosed,
@@ -83,6 +92,7 @@ function cursorEntry(def: Def): Json {
     timeout,
     type,
   };
+
   return Object.fromEntries(
     Object.entries(entry).filter(([key, value]) => value !== undefined && (value !== null || key === LOOP_LIMIT)),
   );
@@ -94,10 +104,13 @@ function cursorEntry(def: Def): Json {
  */
 function cursorHooks(config: Json): Json {
   const out: Json = {};
+
   for (const [event, defs] of effectiveEvents(config, CURSOR_KEY, CURSOR_EVENTS)) {
     const mapped = defs.filter((def) => CURSOR_TYPES.has(typeOf(def))).map(cursorEntry);
+
     if (mapped.length > 0) out[nameOf(CURSOR_EVENTS, event)] = mapped;
   }
+
   return out;
 }
 
@@ -107,6 +120,7 @@ function antigravityFile(config: Json): Json {
     event,
     ANTIGRAVITY_FLAT.has(event) ? groups.flatMap((group) => group.hooks) : groups,
   ]);
+
   return flat.length === 0 ? {} : { rulesync: Object.fromEntries(flat) };
 }
 
@@ -114,10 +128,15 @@ function antigravityFile(config: Json): Json {
 export function renderHooks(sources: Sources, hosts: readonly Host[], claudeBase: string): Map<string, string> {
   const config = sources.hooks.value;
   const files = new Map<string, string>();
+
   if (hosts.includes("claude")) files.set(CLAUDE_FILE, text(claudeSettings(claudeBase, toolHooks(config, CLAUDE))));
+
   if (hosts.includes("codex")) files.set(CODEX_FILE, text({ hooks: filterCodexHandlers(toolHooks(config, CODEX)) }));
+
   if (hosts.includes("antigravity")) files.set(ANTIGRAVITY_FILE, text(antigravityFile(config)));
+
   if (hosts.includes("cursor"))
     files.set(CURSOR_FILE, text({ hooks: cursorHooks(config), version: config["version"] ?? CURSOR_VERSION }));
+
   return files;
 }

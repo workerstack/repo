@@ -44,9 +44,11 @@ it("main takes home from env HOME, then USERPROFILE, then the stubbed os home", 
   const b = plant("setup-m-home-b-");
   const cwd = plant("setup-m-home-cwd-");
   const c = plant("setup-m-home-c-", true);
+
   function run(env: Record<string, string>) {
     return main(["jev", "--api-key", "k"], { ...quiet, cwd, env, io: captureIo() });
   }
+
   await run({ HOME: a, USERPROFILE: b });
   await run({ USERPROFILE: b });
   await run({});

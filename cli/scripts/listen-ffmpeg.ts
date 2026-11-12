@@ -22,33 +22,45 @@ const ALSA_HW = "hw:";
 /** The ffmpeg binary, or the error that says how to install it. */
 export function needFfmpeg(bin: string | undefined): string {
   if (bin === undefined || bin === "") throw new Error(NEED_FFMPEG);
+
   return bin;
 }
 
 export function defaultDevice(platform: NodeJS.Platform): string {
   if (platform === DARWIN) return ":0";
+
   if (platform === WIN32) return "";
+
   return "default";
 }
 
 /** An avfoundation audio-only input spec: `:N` for an index or a bare name, `video:audio` as given. */
 export function darwinAudioSpec(device: unknown): string {
   const d = str(device, ":0");
+
   if (NONE_RE.test(d)) return d.replace(NONE_RE, ":");
+
   if (d.startsWith(":")) return d;
+
   if (INDEX_RE.test(d)) return `:${d}`;
+
   return d.includes(":") ? d : `:${d}`;
 }
 
 export function ffmpegInputArgs(platform: NodeJS.Platform, device: unknown, ffmpegFormat: string): string[] {
   const d = str(device, defaultDevice(platform));
+
   if (platform === DARWIN) return ["-f", "avfoundation", "-i", darwinAudioSpec(d)];
+
   if (platform === WIN32) {
     if (d === "") throw new Error(NEED_DEVICE);
+
     return ["-f", "dshow", "-i", d.startsWith(DSHOW_AUDIO) ? d : `${DSHOW_AUDIO}${d}`];
   }
+
   const detected = d.startsWith(ALSA_HW) ? "alsa" : "pulse";
   const fmt = ffmpegFormat === "" ? detected : ffmpegFormat;
+
   return ["-f", fmt, "-i", d];
 }
 
@@ -66,6 +78,7 @@ export function ffmpegRecordArgs({ platform, device, out, seconds, ffmpegFormat 
   const t = isTimed ? ["-t", String(clampSeconds(seconds))] : [];
   const noIn = isTimed ? ["-nostdin"] : [];
   const input = ffmpegInputArgs(platform, device, ffmpegFormat);
+
   return [...FFMPEG_QUIET, ...noIn, ...input, ...FFMPEG_PCM, ...t, "-y", out];
 }
 
@@ -99,8 +112,10 @@ function killHard(child: ChildLike, killFn: KillFn): void {
 function watchChild(child: ChildLike, finish: Finish): void {
   if (typeof child.on !== "function") {
     finish(0, null, null);
+
     return;
   }
+
   child.on("error", (error: unknown) => finish(null, null, error));
   child.on("exit", (code: unknown, signal: unknown) =>
     finish(typeof code === "number" ? code : null, typeof signal === "string" ? signal : null, null),
@@ -119,15 +134,18 @@ type CaptureOpts = {
 /** Runs a detached capture and settles on its exit, its spawn error, or a kill past its length plus a grace. */
 export function recCapture({ bin, args, seconds, spawnFn, killFn, errFd }: CaptureOpts): Promise<CaptureResult> {
   const s = clampSeconds(seconds);
+
   return new Promise<CaptureResult>((resolve) => {
     const child = spawnFn(bin, args, recCaptureOpts(errFd));
     let isDone = false;
+
     function finish(status: number | null, signal: string | null, error: unknown): void {
       if (isDone) return;
       isDone = true;
       clearTimeout(timer);
       resolve({ error, signal, status, stderr: "" });
     }
+
     const timer = setTimeout(
       () => {
         killHard(child, killFn);
@@ -135,6 +153,7 @@ export function recCapture({ bin, args, seconds, spawnFn, killFn, errFd }: Captu
       },
       (s + KILL_GRACE_SECONDS) * MS_PER_SECOND,
     );
+
     watchChild(child, finish);
   });
 }

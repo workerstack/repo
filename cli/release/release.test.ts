@@ -13,21 +13,27 @@ afterEach(removePlanted);
 const TAG = `${NAME}@0.1.1`;
 const SUBJECT = `chore: release ${TAG}`;
 const AGAIN = "run bun repo release again";
+
 const STAMPED =
   "# Changelog\n\n## [Unreleased]\n\n## [0.1.1] - 2026-11-09\n\n### Added\n\n- x\n\n" +
   "## [0.1.0] - 2026-10-01\n\n### Added\n\n- first\n";
+
 const FIXED =
   "# Changelog\n\n## [Unreleased]\n\n## [0.1.1] - 2026-11-09\n\n### Added\n\n- x\n\n### Fixed\n\n- y\n\n" +
   "## [0.1.0] - 2026-10-01\n\n### Added\n\n- first\n";
+
 function text(w: World, file: string) {
   return fs.readFileSync(path.join(w.work, file), "utf8");
 }
+
 function head(w: World) {
   return gitIn(w.work, "rev-parse", "HEAD");
 }
+
 function hookFile(w: World, name: string) {
   return path.join(w.work, ".git", "hooks", name);
 }
+
 /** Makes the checkout's next run of the git hook `name` refuse (for pre-push: only a push of tags). */
 function refuse(w: World, name: string, only = "") {
   return fs.writeFileSync(hookFile(w, name), `#!/bin/sh\n${only}echo no >&2\nexit 1\n`, { mode: 0o755 });
@@ -37,6 +43,7 @@ function refuse(w: World, name: string, only = "") {
 function fed() {
   const w = world();
   feat(w);
+
   return w;
 }
 
@@ -44,9 +51,11 @@ function fed() {
 async function released() {
   const w = fed();
   const seen: { tags: string; pushed: string }[] = [];
+
   function onWatch() {
     return seen.push({ pushed: gitIn(w.remote, "log", "-1", "--format=%s"), tags: gitIn(w.remote, "tag", "-l") });
   }
+
   return { got: await release(w, [], fakeGh({ onWatch })), seen, w };
 }
 
@@ -108,6 +117,7 @@ describe("a release of another kind", () => {
 async function failing(behavior: Parameters<typeof fakeGh>[0]) {
   const w = fed();
   const got = await release(w, [], fakeGh(behavior));
+
   return { got, short: gitIn(w.work, "rev-parse", "--short=7", "HEAD"), w };
 }
 
@@ -139,6 +149,7 @@ describe("a release CI does not pass", () => {
 async function pendingAfterRed() {
   const w = fed();
   await release(w, [], fakeGh({ conclusion: "failure" }));
+
   return w;
 }
 
@@ -181,6 +192,7 @@ async function refusedPush(only?: string) {
   refuse(w, "pre-push", only);
   const refused = await release(w, []);
   expect(refused.err).toMatch(/^repo release: git push failed: .*no/s);
+
   return w;
 }
 
@@ -210,9 +222,11 @@ describe("a release whose commit git refuses", () => {
     const before = snapshot(w);
     const got = await release(w, []);
     expect(got).toMatchObject({ code: 1, out: "" });
+
     const last =
       "repo release: the hooks refused the release commit (output above); " +
       "nothing was changed, so fix it and run bun repo release again\n";
+
     expect(got.err).toMatch(/^no\n/);
     expect(got.err.endsWith(`\n${last}`)).toBe(true);
     expect(snapshot(w)).toStrictEqual(before);

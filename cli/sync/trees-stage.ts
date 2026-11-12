@@ -18,8 +18,10 @@ const CLAUDE_SETTINGS_REL = ".claude/settings.json";
 const CLAUDE_OVERLAY_REL = ".repo/settings/claude.json";
 const CLAUDE_BASE_REL = "agents/settings/claude.json";
 const JSON_INDENT = 2;
+
 /** A hook command the stock settings spell as `repo hook <name>`, split into its key and its quoted value. */
 const HOOK_COMMAND = /("command": )("repo hook [\w-]+")/g;
+
 /** Each stock dir of static grok files, and the tree dir it is copied to. */
 const STATIC_ROOTS = [
   ["agents/grok/roles", ".grok/roles"],
@@ -37,10 +39,13 @@ function mergeSettings(base: unknown, over: unknown): unknown {
 
   if (isObject(base) && isObject(over)) {
     const merged: Record<string, unknown> = { ...base };
+
     for (const [key, value] of Object.entries(over))
       merged[key] = key in base ? mergeSettings(base[key], value) : value;
+
     return merged;
   }
+
   return over;
 }
 
@@ -60,6 +65,7 @@ function filesUnder(dir: string): string[] {
 /** The stock files no generator writes: grok's roles and hook configs. */
 function staticFiles(stock: string): Map<string, string> {
   const files = new Map<string, string>();
+
   for (const [from, to] of STATIC_ROOTS) {
     for (const rel of filesUnder(path.join(stock, from))) {
       const text = fs.readFileSync(path.join(stock, from, rel), "utf8");
@@ -72,14 +78,17 @@ function staticFiles(stock: string): Map<string, string> {
       );
     }
   }
+
   return files;
 }
 
 /** Deep-merges the overlay file `overlayRel` (when it exists) over the staged JSON file `file`. */
 function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void {
   const overlay = ctx.read(overlayRel);
+
   if (overlay === null) return;
   let own: unknown;
+
   try {
     own = JSON.parse(overlay);
   } catch (error) {
@@ -87,6 +96,7 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
       cause: error,
     });
   }
+
   if (!isObject(own)) throw new Error(`${overlayRel}: must be a JSON object`);
   const base: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
   fs.writeFileSync(file, `${JSON.stringify(mergeSettings(base, own), null, JSON_INDENT)}\n`);
@@ -97,6 +107,7 @@ function emitSteps(ctx: SyncContext, stage: Stage): void {
   const { hosts } = ctx.config.agents;
   const roots = { sourceRoot: stage.stock, workspaceRoot: stage.dir };
   must("mcp policy", emitMcpPolicy({ ...roots, consumerRoot: ctx.root }));
+
   if (hosts.includes("claude")) must("scout tools", emitAgentShellTools(roots));
 
   must("hooks", applyUnion({ ...roots, consumerRoot: ctx.root }));
@@ -112,14 +123,19 @@ export function fillStage(ctx: SyncContext, stage: Stage): Map<string, string> {
   const { hosts } = ctx.config.agents;
   const claudeBase = fs.readFileSync(path.join(stage.stock, CLAUDE_BASE_REL), "utf8");
   const generated = [stage.rules, renderSubagents(stage.sources, hosts), renderHooks(stage.sources, hosts, claudeBase)];
+
   for (const [rel, text] of generated.flatMap((files) => [...files])) {
     fs.mkdirSync(path.dirname(path.join(stage.dir, rel)), { recursive: true });
     fs.writeFileSync(path.join(stage.dir, rel), text);
   }
+
   emitSteps(ctx, stage);
 
   const files = new Map<string, string>();
+
   for (const rel of filesUnder(stage.dir)) files.set(rel, fs.readFileSync(path.join(stage.dir, rel), "utf8"));
+
   if (hosts.includes("grok")) for (const [rel, text] of staticFiles(stage.stock)) files.set(rel, text);
+
   return files;
 }

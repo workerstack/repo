@@ -34,11 +34,14 @@ export function linesOf(text: unknown): string[] {
 export function ignoreEdit(file: string, candidates: string[]): IgnoreEdit {
   const have = new Set(linesOf(readText(file)).map((l) => l.trimEnd()));
   const added: string[] = [];
+
   for (const raw of candidates) {
     const line = raw.trimEnd();
+
     if (line === "" || line.startsWith(COMMENT_MARK) || have.has(line) || added.includes(line)) continue;
     added.push(line);
   }
+
   return { added, file };
 }
 
@@ -51,8 +54,10 @@ function applyEdit(text: string, edit: unknown): string | null {
   const e: ToolArgs = isRecord(edit) ? edit : {};
   const oldStr = firstString([e.old_string, e.oldString, e.Target]);
   const newStr = firstString([e.new_string, e.newString, e.Replacement]);
+
   if (oldStr === undefined || newStr === undefined || !text.includes(oldStr)) return null;
   const isAll = Boolean(e.replace_all) || Boolean(e.replaceAll);
+
   return isAll ? text.split(oldStr).join(newStr) : text.replace(oldStr, () => newStr);
 }
 
@@ -60,11 +65,14 @@ function applyEdit(text: string, edit: unknown): string | null {
 export function projectEdit(text: string, args: ToolArgs): string | null {
   const edits: unknown[] = Array.isArray(args.edits) ? args.edits : [args];
   let next = text;
+
   for (const edit of edits) {
     const applied = applyEdit(next, edit);
+
     if (applied === null) return null;
     next = applied;
   }
+
   return next;
 }
 
@@ -72,6 +80,7 @@ export function projectEdit(text: string, args: ToolArgs): string | null {
 export function ignoreTarget(raw: unknown, cwd: string, p: typeof path = path): string | null {
   if (typeof raw !== "string" || raw === "") return null;
   const abs = canonicalPath(p.resolve(cwd, raw), p);
+
   return p.basename(abs) === GITIGNORE ? abs : null;
 }
 
@@ -79,10 +88,13 @@ export function ignoreTarget(raw: unknown, cwd: string, p: typeof path = path): 
 export function writeIgnoreEdits(args: ToolArgs, cwd: string, fields: readonly string[]): IgnoreEdit[] {
   for (const key of fields) {
     const file = ignoreTarget(args[key], cwd);
+
     if (file === null) continue;
     const next = firstString([args.content, args.Content]) ?? projectEdit(readText(file), args);
+
     return next === null ? [] : [ignoreEdit(file, linesOf(next))];
   }
+
   return [];
 }
 
@@ -90,20 +102,27 @@ export function writeIgnoreEdits(args: ToolArgs, cwd: string, fields: readonly s
 function patchSections(patch: string): PatchSection[] {
   const sections: PatchSection[] = [];
   let cur: PatchSection | null = null;
+
   for (const line of linesOf(patch)) {
     const m = PATCH_HEADER_RE.exec(line);
+
     if (m === null) {
       if (cur !== null && line.startsWith(PLUS_MARK)) cur.plus.push(line.slice(PLUS_MARK.length));
       continue;
     }
+
     const [, verb, target] = [...m] /* both groups match whenever the pattern does */ as [string, string, string];
+
     if (verb === MOVE_TO) {
       if (cur !== null) cur.raw = target.trim();
       continue;
     }
+
     cur = verb === DELETE_FILE ? null : { plus: [], raw: target.trim() };
+
     if (cur !== null) sections.push(cur);
   }
+
   return sections;
 }
 
@@ -111,6 +130,7 @@ function patchSections(patch: string): PatchSection[] {
 export function patchIgnoreEdits(patch: string, cwd: string): IgnoreEdit[] {
   return patchSections(patch).flatMap((s) => {
     const file = ignoreTarget(s.raw, cwd);
+
     return file === null ? [] : [ignoreEdit(file, s.plus)];
   });
 }

@@ -41,6 +41,7 @@ describe.each(cases)("hooks of $name", ({ stock, consumer, expected }) => {
     const files = render();
     expect([...files.keys()]).toStrictEqual(HOOK_FILES);
     const staged = afterStage(files, { consumer, stock });
+
     for (const rel of HOOK_FILES) expect(staged.get(rel), rel).toBe(fs.readFileSync(path.join(expected, rel), "utf8"));
   });
 
@@ -57,6 +58,7 @@ it("prefixes only a leading ./ in claude commands with the project dir", () => {
     { command: "'./q r.sh'", matcher: "Bash" },
     { command: "bun ./a.ts", matcher: "Bash" },
   ];
+
   const files = renderHooks(hooksOf({ hooks: { preToolUse } }), ["claude", "codex"], "{}");
   const claude = parsed(files, ".claude/settings.json");
   expect(keysAt(claude)).toStrictEqual(["$schema", "hooks"]);
@@ -82,6 +84,7 @@ it("replaces a shared event in place with the target override and appends new ov
     ["claude", "antigravity"],
     '{"hooks":{"Old":[]},"z":1}',
   );
+
   const claude = parsed(files, ".claude/settings.json");
   expect(keysAt(claude)).toStrictEqual(["$schema", "hooks", "z"]);
   expect(keysAt(claude, "hooks")).toStrictEqual(["PreToolUse", "Stop", "Notification"]);
@@ -107,6 +110,7 @@ it("maps cursor entries flat, keeping command and prompt handlers only", () => {
     { command: "b", model: "ignored", type: "command" },
     { command: "dropped", type: "agent" },
   ];
+
   const files = renderHooks(
     hooksOf({
       cursor: { hooks: { customEvent: [{ command: "c" }] } },
@@ -116,6 +120,7 @@ it("maps cursor entries flat, keeping command and prompt handlers only", () => {
     ["cursor"],
     "{}",
   );
+
   // A target override's new event follows the shared ones.
   expect(files.get(".cursor/hooks.json")).toMatch(/"stop"[\s\S]*"customEvent"/);
   expect(parsed(files, ".cursor/hooks.json")).toStrictEqual({

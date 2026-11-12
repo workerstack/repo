@@ -23,6 +23,7 @@ it("a cancelled run with a newer ci run on the branch is superseded, exit 2", as
     ),
     "run view 123 --json": view("cancelled", [job("test", "cancelled")]),
   });
+
   expect(got).toMatchObject({ code: 2, out: "waiting for ci on b3f5e8a (run 123)…\nsuperseded by run 125 on main\n" });
   expect(got.calls).toContain(`gh ${BRANCH_LIST} --workflow ci.yml --json databaseId,createdAt`);
 });
@@ -34,6 +35,7 @@ it("a manual cancel, with no newer run, is a failure with the logs", async () =>
     "run view 123 --json": view("cancelled", [job("test (ubuntu-latest)", "cancelled"), job("lint", "success")]),
     "run view 123 --log-failed": ok("step log\n"),
   });
+
   expect(got).toMatchObject({
     code: 1,
     out: "waiting for ci on b3f5e8a (run 123)…\nfailed: test (ubuntu-latest); logs below\nstep log\n",
@@ -47,6 +49,7 @@ it("an unreadable list of branch runs is no newer run", async () => {
     "run view 123 --json": view("cancelled", []),
     "run view 123 --log-failed": ok("log\n"),
   });
+
   expect(got.code).toBe(1);
   expect(got.out).toContain("failed: ci cancelled; logs below\nlog\n");
 });
@@ -58,20 +61,24 @@ it("a timeout and a failure list the failed jobs and show the logs, or say they 
     job("commits", "skipped"),
     job("ok", "success"),
   ];
+
   const failed = await world(GIT, {
     ...GH,
     "run view 123 --json": view("failure", jobs),
     "run view 123 --log-failed": ok("boom\n"),
   });
+
   expect(failed).toMatchObject({
     code: 1,
     out: "waiting for ci on b3f5e8a (run 123)…\nfailed: test (windows-latest), skips; logs below\nboom\n",
   });
+
   const expired = await world(GIT, {
     ...GH,
     "run view 123 --json": view("timed_out", jobs),
     "run view 123 --log-failed": bad("HTTP 410"),
   });
+
   expect(expired).toMatchObject({ code: 1 });
   expect(expired.out).toMatch(/failed: test \(windows-latest\), skips; logs below\nlogs expired\n$/);
 });
@@ -83,11 +90,13 @@ it("of several runs it picks the newest on the current branch", async () => {
     run(5, "2026-11-09T10:30:00Z"),
     run(3, "2026-11-09T10:00:00Z"),
   ];
+
   const got = await world(GIT, {
     ...GH,
     [`${LIST} ${SHA}`]: ok(JSON.stringify(runs)),
     "run view 5 --json": view("success", []),
   });
+
   expect(got).toMatchObject({ code: 0, out: "waiting for ci on b3f5e8a (run 5)…\npassed\n" });
 });
 
@@ -97,6 +106,7 @@ it("polls every 10 seconds until the run appears", async () => {
     [`${LIST} ${SHA}`]: [ok("[]"), ok("garbage"), ok("{}"), ok(JSON.stringify([run(123, "2026-11-09T10:00:00Z")]))],
     "run view 123 --json": view("success", []),
   });
+
   expect(got).toMatchObject({ clock: 30_000, code: 0 });
 });
 

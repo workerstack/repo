@@ -15,6 +15,7 @@ import {
 } from "./stock-history.ts";
 
 const temps: string[] = [];
+
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
@@ -42,12 +43,14 @@ describe("readStockHistory", () => {
     const paths = Object.keys(table);
     expect(paths.length).toBeGreaterThan(50);
     expect(paths).toStrictEqual(paths.toSorted(byCodeUnit));
+
     for (const [rel, hashes] of Object.entries(table)) {
       if (rel === HOOK_COMMANDS_KEY) continue;
       expect(STOCK_PREFIXES.some((prefix) => rel === prefix || (prefix.endsWith("/") && rel.startsWith(prefix)))).toBe(
         true,
       );
       expect(hashes).toStrictEqual(hashes.toSorted(byCodeUnit));
+
       for (const hash of hashes) expect(hash).toMatch(/^[0-9a-f]{16}$/);
     }
   });
@@ -62,6 +65,7 @@ describe("hookCommands", () => {
         B: [{ hooks: [{ command: "two" }] }],
       },
     };
+
     expect(hookCommands(settings)).toStrictEqual(["one", "two"]);
     expect(hookCommands(null)).toStrictEqual([]);
     expect(hookCommands({})).toStrictEqual([]);

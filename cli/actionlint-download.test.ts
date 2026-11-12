@@ -13,19 +13,24 @@ afterEach(removePlanted);
 const ARCHIVE = new TextEncoder().encode("an archive");
 const sha = createHash("sha256").update(ARCHIVE).digest("hex");
 const URL_BASE = "https://github.com/rhysd/actionlint/releases/download/v1.7.12/";
+
 type Call = { command: string; args: string[] };
 
 /** A spawn that plays tar (it unpacks a binary named `exe` into the -C dir) and answers actionlint cleanly. */
 function fakes(exe: string, tarCode = 0) {
   const calls: Call[] = [];
   const archives: string[] = [];
+
   function spawn(command: string, args: string[]): ReturnType<Spawn> {
     calls.push({ args, command });
+
     if (args[0] !== "-xf") return { code: 0, stderr: "", stdout: "[]" };
     archives.push(fs.readFileSync(args[1] ?? "", "utf8"));
     fs.writeFileSync(path.join(args[3] ?? "", exe), "binary");
+
     return { code: tarCode, stderr: tarCode === 0 ? "" : "tar broke\n", stdout: "" };
   }
+
   return { archives, calls, spawn };
 }
 
@@ -35,15 +40,18 @@ function planted() {
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), "name: x\n");
+
   return { cacheDir: path.join(tempDir(), "actionlint", "1.7.12"), root };
 }
 
 function hashes(key: string) {
   return { [key]: sha };
 }
+
 function refused() {
   return Promise.reject(new Error("no"));
 }
+
 function ok() {
   return Promise.resolve(ARCHIVE);
 }
@@ -52,10 +60,13 @@ it("fetches the archive, checks its hash, unpacks it, caches the binary and runs
   const { root, cacheDir } = planted();
   const { calls, archives, spawn } = fakes("actionlint");
   const urls: string[] = [];
+
   function fetch(url: string) {
     urls.push(url);
+
     return ok();
   }
+
   const deps = { arch: "x64", cacheDir, fetch, hashes: hashes("linux_amd64"), platform: "linux", spawn };
   expect(await checkActionlintAt(root, deps)).toStrictEqual({ problems: [] });
   expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_linux_amd64.tar.gz`]);
@@ -70,19 +81,24 @@ it("fetches the archive, checks its hash, unpacks it, caches the binary and runs
 it("names its archive and unpack directory for the process, and removes both", async () => {
   const { root, cacheDir } = planted();
   const seen: string[][] = [];
+
   function spawn(_command: string, args: string[]): ReturnType<Spawn> {
     if (args[0] !== "-xf") return { code: 0, stderr: "", stdout: "[]" };
     seen.push([args[1] ?? "", args[3] ?? ""]);
     fs.writeFileSync(path.join(args[3] ?? "", "actionlint"), "binary");
+
     return { code: 0, stderr: "", stdout: "" };
   }
+
   const deps = { arch: "arm64", cacheDir, fetch: ok, hashes: hashes("linux_arm64"), platform: "linux", spawn };
   await checkActionlintAt(root, deps);
   expect(seen).toHaveLength(1);
+
   for (const name of seen[0] ?? []) {
     expect(path.dirname(name)).toBe(cacheDir);
     expect(path.basename(name)).toContain(String(process.pid));
   }
+
   expect(fs.readdirSync(cacheDir)).toStrictEqual(["actionlint"]);
 });
 
@@ -95,10 +111,13 @@ it.each([
   const { root, cacheDir } = planted();
   const key = archive.replace(/\.(tar\.gz|zip)$/, "");
   const urls: string[] = [];
+
   function fetch(url: string) {
     urls.push(url);
+
     return ok();
   }
+
   const { calls, spawn } = fakes(exe);
   await checkActionlintAt(root, { arch, cacheDir, fetch, hashes: hashes(key), platform, spawn });
   expect(urls).toStrictEqual([`${URL_BASE}actionlint_1.7.12_${archive}`]);
@@ -127,9 +146,11 @@ it.each([
 ])("reports a fetch that rejects with %s", async (_name, reason, text) => {
   const { root, cacheDir } = planted();
   const { calls, spawn } = fakes("actionlint");
+
   function fetch() {
     return Promise.reject(reason);
   }
+
   const out = await checkActionlintAt(root, { arch: "x64", cacheDir, fetch, platform: "linux", spawn });
   expect(out.problems).toStrictEqual([
     `actionlint: could not fetch 1.7.12 (${text}); connect once so repo can cache it`,

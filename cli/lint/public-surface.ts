@@ -27,21 +27,26 @@ export type { Surface } from "./public-surface.types.ts";
 
 function moduleOf(graph: Graph, file: string): Module | null {
   const known = graph.modules.get(file);
+
   if (known !== undefined) return known;
   let code: string | null = null;
+
   try {
     code = fs.readFileSync(file, "utf8");
   } catch {
     code = null;
   }
+
   const module = code === null ? null : parseModule(file, code);
   graph.modules.set(file, module);
+
   return module;
 }
 
 /** Records `found` once, however many entries and stars lead to it. */
 function failAt(graph: Graph, found: Unknown): void {
   const key = `${found.file}\0${found.form}\0${found.line}`;
+
   if (graph.failed.has(key)) return;
   graph.failed.add(key);
   graph.unknown.push(found);
@@ -59,35 +64,47 @@ function targetOf(file: string, source: string): string | null {
 
 function resolveImported(query: Query, from: string, link: Import): Resolved {
   const target = targetOf(from, link.source);
+
   if (target === null) return { kind: "external" };
+
   if (link.name !== NAMESPACE) return resolveExport(query, target, link.name);
   const module = moduleOf(query.graph, target);
+
   return module === null ? null : { kind: "module", module };
 }
 
 function resolveLink(query: Query, module: Module, link: Link): Resolved {
   if (link.source !== null) return resolveImported(query, module.file, { name: link.name, source: link.source });
   const statements = module.locals.get(link.name);
+
   if (statements !== undefined) return { kind: "name", module, name: link.name, statements };
   const imported = module.imports.get(link.name);
+
   return imported === undefined ? null : resolveImported(query, module.file, imported);
 }
 
 /** What `name` is in `file`: a declaration, a whole module, outside the walk, or null when nothing declares it. */
 function resolveExport(query: Query, file: string, name: string): Resolved {
   const visit = `${file}\0${name}`;
+
   if (query.seen.has(visit)) return null;
   query.seen.add(visit);
   const module = moduleOf(query.graph, file);
+
   if (module === null) return null;
   const link = module.exports.get(name);
+
   if (link !== undefined) return resolveLink(query, module, link);
+
   if (name === DEFAULT) return null;
+
   for (const star of module.stars) {
     const target = targetOf(file, star.source);
     const resolved = target === null ? null : resolveExport(query, target, name);
+
     if (resolved !== null) return resolved;
   }
+
   return null;
 }
 
@@ -95,43 +112,57 @@ function resolveExport(query: Query, file: string, name: string): Resolved {
 function exportNames(graph: Graph, module: Module, seen: Set<Module>): string[] {
   if (seen.has(module)) return [];
   seen.add(module);
+
   for (const found of module.unknown) fail(graph, module, found);
+
   const stars = module.stars.flatMap((star) => {
     const target = targetOf(module.file, star.source);
+
     if (target === null) return [];
     const next = moduleOf(graph, target);
+
     if (next === null) {
       fail(graph, module, { at: star.at, form: star.source });
+
       return [];
     }
+
     return exportNames(graph, next, seen).filter((name) => name !== DEFAULT);
   });
+
   return [...new Set([...module.exports.keys(), ...stars])];
 }
 
 function resolveReference(graph: Graph, module: Module, reference: Reference): Resolved {
   const query = { graph, seen: new Set<string>() };
+
   if (reference.source !== null)
     return resolveImported(query, module.file, { name: reference.name, source: reference.source });
 
   const statements = module.locals.get(reference.name);
+
   if (statements !== undefined) return { kind: "name", module, name: reference.name, statements };
   const imported = module.imports.get(reference.name);
+
   if (imported === undefined) return null;
   const member = imported.name === NAMESPACE ? reference.member : null;
+
   return resolveImported(query, module.file, { name: member ?? imported.name, source: imported.source });
 }
 
 function publishResolved(graph: Graph, resolved: Resolved, entry: string): void {
   if (resolved?.kind === "module") publishModule(graph, resolved.module, entry);
+
   if (resolved?.kind === "name") publishName(graph, resolved, entry);
 }
 
 function publishName(graph: Graph, found: Extract<Resolved, { kind: "name" }>, entry: string): void {
   const names = graph.names.get(found.module.file) ?? new Map<string, string>();
   graph.names.set(found.module.file, names);
+
   if (names.has(found.name)) return;
   names.set(found.name, entry);
+
   for (const statement of found.statements) {
     for (const reference of referencesOf(statement))
       publishResolved(graph, resolveReference(graph, found.module, reference), entry);
@@ -149,8 +180,10 @@ function failExport(graph: Graph, module: Module, name: string): void {
 function publishModule(graph: Graph, module: Module, entry: string): void {
   if (graph.published.has(module)) return;
   graph.published.add(module);
+
   for (const name of exportNames(graph, module, new Set())) {
     const resolved = resolveExport({ graph, seen: new Set() }, module.file, name);
+
     if (resolved === null) failExport(graph, module, name);
     else publishResolved(graph, resolved, entry);
   }
@@ -158,6 +191,7 @@ function publishModule(graph: Graph, module: Module, entry: string): void {
 
 function publishEntry(graph: Graph, file: string, entry: string): void {
   const module = moduleOf(graph, file);
+
   if (module === null) failAt(graph, { file, form: path.relative(graph.root, file).replaceAll("\\", "/"), line: 1 });
   else publishModule(graph, module, entry);
 }
@@ -169,7 +203,9 @@ function publishEntry(graph: Graph, file: string, entry: string): void {
 export function publicSurface(root: string): Surface {
   const surface: Surface = { entries: new Map(), names: new Map(), unknown: [] };
   const manifest = readJson(path.join(root, MANIFEST));
+
   if (!isRecord(manifest) || manifest["private"] === true) return surface;
+
   const graph: Graph = {
     failed: new Set(),
     modules: new Map(),
@@ -178,7 +214,9 @@ export function publicSurface(root: string): Surface {
     root,
     unknown: surface.unknown,
   };
+
   surface.entries = entryFiles(root, manifest["exports"]);
+
   for (const [entry, files] of surface.entries) for (const file of files) publishEntry(graph, file, entry);
 
   return surface;
@@ -187,5 +225,6 @@ export function publicSurface(root: string): Surface {
 /** The root of the package that holds `file`: the dir of its nearest package.json, as `boundaries` finds it. */
 export function packageRoot(file: string): string | null {
   const manifest = nearestManifest(path.dirname(file));
+
   return manifest === null ? null : path.dirname(manifest);
 }

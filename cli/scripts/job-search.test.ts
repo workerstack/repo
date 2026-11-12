@@ -7,6 +7,7 @@ import { inDir, pathSans, plant, plantFiles, stashDirOf, useJobEnv } from "./__f
 import { globMatch, globToRegExp, runSearch } from "./job-search.ts";
 
 useJobEnv();
+
 // With no rg on PATH the search walks the tree itself; job-rg.test.ts covers the rg arm.
 beforeEach(() => {
   vi.stubEnv("PATH", pathSans("rtk", "rg"));
@@ -50,6 +51,7 @@ it("runSearch skips generated dirs, .git, binary files, big files and symlinks",
   const skipped = ["node_modules/x.txt", "dist/x.txt", ".next/x.txt", "build/x.txt", "coverage/x.txt", ".git/x.txt"];
   plantFiles(dir, { "a.txt": "hello\n", "big.txt": `hello\n${"x".repeat(201 * 1024)}`, "bin.dat": "hello\0\n" });
   plantFiles(dir, Object.fromEntries(skipped.map((rel) => [rel, "hello\n"])));
+
   if (process.platform !== "win32") fs.symlinkSync(path.join(dir, "a.txt"), path.join(dir, "link.txt"));
   expect(search(dir, "hello").text).toBe("1 match.\n- a.txt:1 — hello\n");
 });
@@ -95,6 +97,7 @@ it.skipIf(process.platform === "win32")("runSearch skips a file or a dir it cann
   plantFiles(dir, { "a.txt": "hit\n", "closed/b.txt": "hit\n", "locked.txt": "hit\n" });
   fs.chmodSync(path.join(dir, "locked.txt"), 0o000);
   fs.chmodSync(path.join(dir, "closed"), 0o000);
+
   try {
     expect(search(dir, "hit").text).toBe("1 match.\n- a.txt:1 — hit\n");
   } finally {

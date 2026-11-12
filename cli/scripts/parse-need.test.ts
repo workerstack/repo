@@ -13,6 +13,7 @@ describe("parseNeed", () => {
   it("parses many jobs", () => {
     const text =
       'need: [{"job":"search","query":"foo"},{"job":"exec","query":"true"},{"job":"web","query":"https://example.com"},{"job":"test","query":"bun run test"}]';
+
     expect(parseNeed(text)).toStrictEqual({
       jobs: [
         { job: "search", query: "foo" },

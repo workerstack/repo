@@ -20,6 +20,7 @@ it("takes ts, typescript and tsx fences, numbered per file, and ignores the rest
     fence("tsx", "export const x = <b />;"),
     fence("", "plain"),
   ].join("\n");
+
   const blocks = blocksOf("packages/a", "references/doc.md", text);
   expect(blocks.map(({ md, line, n, ext, run }) => ({ ext, line, md, n, run }))).toStrictEqual([
     { ext: "ts", line: 2, md: "packages/a/references/doc.md", n: 1, run: false },
@@ -83,6 +84,7 @@ it("maps each tsc error, printed with backslashes, to its markdown line", () => 
       "references/auth.md-1.ts(1,1): error TS1002: Unterminated string.",
     ].join("\r\n"),
   }));
+
   const blocks = doc(fence("ts", "const a = 1;"), "", fence("ts", "const s = 1;", "s.tokn;"));
   expect(checkExamples(ctx(tempRoot()), blocks, fake.tools)).toStrictEqual([
     "references/auth.md:8: example 2 fails to type-check: Property 'tokn' does not exist on type 'Session'.",

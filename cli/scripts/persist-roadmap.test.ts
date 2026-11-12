@@ -12,6 +12,7 @@ import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
 const SLICE_2 = "2 [ ] commit diff pass: Commit skills strip narrating comments.\n";
+
 function logs(t: string) {
   return t.replace("strip narrating comments.", "strip narrating comments and logs.");
 }

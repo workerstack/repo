@@ -24,6 +24,7 @@ type Draft = {
 /** The value after a flag, undefined when it is missing or looks like another flag. */
 function valueAfter(args: string[], i: number): string | undefined {
   const value = args[i + 1];
+
   return value == null || value.startsWith("-") ? undefined : value;
 }
 
@@ -37,12 +38,14 @@ function store(out: Draft, flag: string, value: string): void {
 function fold(args: string[], out: Draft): string | null {
   for (let i = 0; i < args.length; i += 1) {
     const flag = args[i] ?? "";
+
     if (flag === CHECK_FLAG) {
       out.check = true;
     } else if (flag === NO_GENERATE_FLAG) {
       out.generate = false;
     } else if (VALUE_FLAGS.includes(flag)) {
       const value = valueAfter(args, i);
+
       if (value === undefined) return `${flag} needs a value`;
       i += 1;
       store(out, flag, value);
@@ -50,6 +53,7 @@ function fold(args: string[], out: Draft): string | null {
       return `unknown flag: ${flag}`;
     }
   }
+
   return null;
 }
 
@@ -57,5 +61,6 @@ export function parseArgv(argv: unknown): ParsedArgv {
   const args: string[] = Array.isArray(argv) ? argv.map(String) : [];
   const out: Draft = { check: false, generate: true, ref: DEFAULT_REF, repo: DEFAULT_REPO, skills: [] };
   const error = fold(args, out);
+
   return error === null ? { ok: true, ...out } : { error, ok: false };
 }

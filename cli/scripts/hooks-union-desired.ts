@@ -27,7 +27,9 @@ export function ships(src: string, name: HookName): boolean {
 /** The consumer's path deny from `.repo/permissions.json`, without write-path rules. */
 export function loadConsumerDeny({ consumer }: Roots): string[] {
   const data = loadJson(path.join(consumer, ".repo", "permissions.json"));
+
   if (!Array.isArray(data.deny)) return [];
+
   return data.deny.filter((x): x is string => typeof x === "string" && !x.startsWith("Write("));
 }
 
@@ -37,7 +39,9 @@ export function presentAutorun(root: string): string[] {
 
 function hookCmd(command: string, timeout?: number): HookEntry {
   const h: HookEntry = { command, type: "command" };
+
   if (timeout != null) h.timeout = timeout;
+
   return h;
 }
 
@@ -53,11 +57,13 @@ export function mapHooks(src: string): HookName[] {
 export function sessionHooks({ src, consumer }: Roots, { map = true }: { map?: boolean } = {}): HookEntry[] {
   const first = map && ships(src, "session-map") ? [hookCmd(MAP, MAP_TIMEOUT_S)] : [];
   const extras = SESSION_EXTRAS.filter(([script]) => hasScript(consumer, script)).map(([, cmd]) => hookCmd(cmd));
+
   return [...first, ...extras];
 }
 
 export function desiredPost(root: string, matcher: string = POST_WRITE_MATCHER): HookGroup[] | null {
   const hooks = POST_EXTRAS.filter(([script]) => hasScript(root, script)).map(([, cmd]) => hookCmd(cmd));
+
   return hooks.length > 0 ? [{ hooks, matcher }] : null;
 }
 

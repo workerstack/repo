@@ -24,6 +24,7 @@ beforeEach(() => {
 function runsDir() {
   return runs;
 }
+
 function roots() {
   return fs.readdirSync(runsDir()).filter((name) => name.startsWith(ROOT_PREFIX));
 }
@@ -49,6 +50,7 @@ function captureRun(): Captured {
     process.exitCode = exitCode ?? 0;
     vi.restoreAllMocks();
   });
+
   return captured;
 }
 
@@ -62,6 +64,7 @@ describe("temp root guard, in process, the root", () => {
   it("makes the run root named by the pid, and leaves this process's temp variables alone", () => {
     const teardown = setup();
     expect(roots()).toStrictEqual([`${ROOT_PREFIX}${process.pid}`]);
+
     for (const name of ["TMPDIR", "TEMP", "TMP"]) expect(envOf(name)).toBe(runsDir());
     teardown();
     expect(roots()).toStrictEqual([]);
@@ -79,6 +82,7 @@ describe("temp root guard, in process, the root", () => {
     // Pid 1 is a root this user cannot signal on posix; Windows has no pid 1, so no run is left to keep there.
     const unsignalable = process.platform === "win32" ? [] : [`${ROOT_PREFIX}1`];
     const names = [`${ROOT_PREFIX}${dead}`, `${ROOT_PREFIX}${process.ppid}`, ...unsignalable, "unrelated"];
+
     for (const name of names) fs.mkdirSync(path.join(runsDir(), name));
     setup()();
     expect(fs.readdirSync(runsDir()).toSorted(byCodeUnit)).toStrictEqual(names.slice(1).toSorted(byCodeUnit));
@@ -108,6 +112,7 @@ describe("temp root guard, in process, the verdict", () => {
 
   it("fails a run that left several entries and lists them sorted under `entries`", () => {
     const teardown = setup();
+
     for (const name of ["b", "a"]) fs.writeFileSync(path.join(rootPath(), name), "");
     teardown();
     expect(process.exitCode).toBe(FAILED);

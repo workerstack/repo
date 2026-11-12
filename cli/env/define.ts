@@ -5,15 +5,19 @@ export type Scope = "local" | "dev" | "prod";
 
 /** The brand of a sealed value: a registered symbol, so a copy of this module loaded twice still knows one. */
 const SEALED: unique symbol = /* @__PURE__ */ Symbol.for("@workerstack/repo/env.sealed");
+
 /** The handle a child env reads its parent's merged layers through. */
 const LAYERS: unique symbol = /* @__PURE__ */ Symbol.for("@workerstack/repo/env.layers");
 
 /** An age cipher, base64, that reads back as its plaintext. Made by `sealed(...)`. */
 export type Sealed = { readonly [SEALED]: string };
+
 /** One value of an env block: plain text, or sealed. */
 export type Value = string | Sealed;
+
 /** What a process variable must be: set, or set or unset. */
 export type ProcessSpec = Readonly<Record<string, "required" | "optional">>;
+
 /** Variables by name, as `process.env` holds them. */
 export type Source = Readonly<Record<string, string | undefined>>;
 
@@ -27,10 +31,13 @@ export type EnvIo = {
 
 /** One block of values by name. */
 type Block = Readonly<Record<string, Value>>;
+
 /** A block with no keys: the layer a missing block or a missing parent adds. */
 type Empty = object;
+
 /** The global block or one scope's. */
 type View = "global" | Scope;
+
 /** Each view's merged values, before any is revealed. */
 type Layers = Readonly<Record<View, Block>>;
 
@@ -55,12 +62,15 @@ export type EnvConfig = {
 
 /** `B` over `A`: the keys of both, each typed by the later layer that has it. */
 type Merge<A, B> = { readonly [K in keyof A | keyof B]: K extends keyof B ? B[K] : K extends keyof A ? A[K] : never };
+
 /** The config's own block `K`, empty when it has none. */
 type Own<C, K extends View> = C extends { readonly [P in K]: infer B extends Block } ? B : Empty;
+
 /** The parent's merged view `K`, empty when there is no parent. */
 type Above<C, K extends View> = C extends { readonly parent: { readonly [LAYERS]: infer L extends Layers } }
   ? L[K]
   : Empty;
+
 /** A scope's layers: own global, then the parent's scope view, then own scope; later wins. */
 type ScopeLayers<C, S extends Scope> = Merge<Merge<Own<C, "global">, Above<C, S>>, Own<C, S>>;
 
@@ -78,18 +88,24 @@ type LayersOf<C> = {
 
 /** A layer as it reads: every sealed value a string. */
 type Unwrap<B> = { readonly [K in keyof B]: B[K] extends Sealed ? string : B[K] };
+
 /** The keys of a layer whose value is sealed. */
 type SealedKeyOf<B> = { [K in keyof B]: B[K] extends Sealed ? K : never }[keyof B];
+
 /** The config's process spec, empty when it declares none. */
 type ProcessOf<C> = C extends { readonly process: infer P extends ProcessSpec } ? P : Empty;
+
 /** An intersection as one object type, each key's modifiers kept. */
 type Flat<T> = { [K in keyof T]: T[K] };
+
 /** The keys of a process spec declared `required`. */
 type RequiredKey<P> = { [K in keyof P]: P[K] extends "required" ? K : never }[keyof P];
+
 /** A process spec as it reads: a required variable a string, an optional one a key only when set. */
 type ProcessView<P> = Flat<
   { readonly [K in RequiredKey<P>]: string } & { readonly [K in Exclude<keyof P, RequiredKey<P>>]?: string | undefined }
 >;
+
 /** Every key any scope has: what `current` may be asked. */
 type CurrentKey<C> = keyof LayersOf<C>["local"] | keyof LayersOf<C>["dev"] | keyof LayersOf<C>["prod"];
 
@@ -121,14 +137,17 @@ const SCOPES: readonly Scope[] = ["local", "dev", "prod"];
 const VIEWS: readonly View[] = ["global", ...SCOPES];
 const DEFAULT_SCOPE: Scope = "local";
 const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/u;
+
 /** What the error line names when the caller's file is unknown. */
 const UNKNOWN_ORIGIN = "its env file";
 
 /** A sealed value from the base64 of an age cipher; refuses one that is empty or not base64. */
 export function sealedValue(cipher: string): Sealed {
   if (cipher === "") throw new Error("repo env: sealed() got an empty cipher; pass the base64 of an age cipher");
+
   if (!BASE64.test(cipher))
     throw new Error("repo env: sealed() got text that is not base64; pass the base64 of an age cipher, not plaintext");
+
   return Object.freeze({ [SEALED]: cipher });
 }
 
@@ -150,6 +169,7 @@ function refuseWorker(): void {
 function layersOf(config: EnvConfig): Layers {
   const own = config.global ?? {};
   const above = config.parent?.[LAYERS] ?? { dev: {}, global: {}, local: {}, prod: {} };
+
   return {
     dev: { ...own, ...above.dev, ...config.dev },
     global: { ...above.global, ...own },
@@ -161,13 +181,16 @@ function layersOf(config: EnvConfig): Layers {
 /** Every distinct cipher across `layers`, the parent's winning values included. */
 function ciphersOf(layers: Layers): string[] {
   const values = VIEWS.flatMap((view) => Object.values(layers[view]));
+
   return [...new Set(values.filter(isSealed).map((value) => value[SEALED]))];
 }
 
 /** An object whose enumerable getter per key returns `read(key)`. */
 function getters(keys: readonly string[], read: (key: string) => string | undefined): Record<string, unknown> {
   const view: Record<string, unknown> = {};
+
   for (const key of keys) Object.defineProperty(view, key, { enumerable: true, get: () => read(key) });
+
   return view;
 }
 
@@ -177,12 +200,16 @@ function getters(keys: readonly string[], read: (key: string) => string | undefi
  */
 function plainOf(layers: Layers, io: EnvIo): Plain {
   const revealed = new Map<string, string>();
+
   return (key, value) => {
     if (!isSealed(value)) return value;
+
     if (revealed.size === 0) {
       const ciphers = ciphersOf(layers);
+
       for (const [index, text] of io.reveal(ciphers, key).entries()) revealed.set(String(ciphers[index]), text);
     }
+
     return revealed.get(value[SEALED]) /* every cipher of the tree was revealed together */ as string;
   };
 }
@@ -195,6 +222,7 @@ function viewOf(block: Block, plain: Plain): Record<string, unknown> {
 /** The scope `REPO_ENV` names in `source`, local when unset. */
 function currentScope(source: Source): Scope {
   const named = source[SCOPE_VARIABLE] ?? DEFAULT_SCOPE;
+
   if (isScope(named)) return named;
   throw new Error(`repo env: REPO_ENV is "${named}"; set it to local, dev or prod`);
 }
@@ -205,11 +233,14 @@ type CurrentRead = { readonly io: EnvIo; readonly layers: Layers; readonly origi
 /** Every scope's keys, each read from the scope `REPO_ENV` names at read time; a key it lacks names `origin`. */
 function currentOf({ io, layers, origin, plain }: CurrentRead): Record<string, unknown> {
   const keys = [...new Set(SCOPES.flatMap((scope) => Object.keys(layers[scope])))];
+
   return getters(keys, (key) => {
     const scope = currentScope(io.source());
     const value = layers[scope][key];
+
     if (value === undefined)
       throw new Error(`repo env: ${key} has no ${scope} value in ${origin}; add it to its ${scope} block`);
+
     return plain(key, value);
   });
 }
@@ -220,10 +251,13 @@ function currentOf({ io, layers, origin, plain }: CurrentRead): Record<string, u
  */
 function processView(spec: ProcessSpec, source: Source): Record<string, unknown> {
   const keys = Object.keys(spec).filter((name) => spec[name] === "required" || source[name] !== undefined);
+
   return getters(keys, (name) => {
     const value = source[name];
+
     if (value === undefined && spec[name] === "required")
       throw new Error(`repo env: process.${name} is required and unset`);
+
     return value;
   });
 }
@@ -242,6 +276,7 @@ export function createEnv<C extends EnvConfig>(config: C, io: EnvIo, origin: str
   const layers = layersOf(config);
   const plain = plainOf(layers, io);
   const spec = config.process ?? {};
+
   const env = {
     current: currentOf({ io, layers, origin, plain }),
     dev: viewOf(layers.dev, plain),
@@ -254,7 +289,9 @@ export function createEnv<C extends EnvConfig>(config: C, io: EnvIo, origin: str
     read: (source: Source) => processView(spec, source),
     sealedKeys: (scope: Scope) => sealedKeysOf(layers[scope]),
   };
+
   Object.defineProperty(env, LAYERS, { value: layers });
+
   // Each view holds a getter per key of the layers its type is computed from.
   return env as unknown /* the views match the layer types */ as EnvInstance<C>;
 }

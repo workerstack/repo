@@ -13,15 +13,18 @@ const encoder = new TextEncoder();
 function fakeIo(chunks: string[]): { io: HookIo; written: string[]; reads: () => number } {
   const written: string[] = [];
   let reads = 0;
+
   const io: HookIo = {
     readChunk: () => {
       const next = chunks[reads++];
+
       return next === undefined ? null : encoder.encode(next);
     },
     write: (text) => {
       written.push(text);
     },
   };
+
   return { io, reads: () => reads, written };
 }
 
@@ -81,6 +84,7 @@ describe("HookIo.write", () => {
 });
 
 const tmpDirs: string[] = [];
+
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
   vi.restoreAllMocks();
@@ -94,10 +98,12 @@ function plantedFd(text: string): number {
   fs.writeFileSync(file, text);
   const fd = fs.openSync(file, "r");
   openFds.push(fd);
+
   return fd;
 }
 
 const openFds: number[] = [];
+
 afterEach(() => {
   for (const fd of openFds.splice(0)) fs.closeSync(fd);
 });

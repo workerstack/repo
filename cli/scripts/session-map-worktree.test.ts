@@ -9,6 +9,7 @@ import { fallbackNotice, header, sessionContext } from "./session-map.ts";
 /** The notice an uninstalled worktree prints when its hooks run the bin of the checkout at `main`. */
 function noticeFor(main: string): string {
   const bin = path.join(main, "node_modules", ".bin", "repo");
+
   return `repo: hooks run ${bin} (this worktree has no install); run \`bun install\` here to use its own code\n`;
 }
 

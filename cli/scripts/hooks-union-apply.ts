@@ -22,6 +22,7 @@ function claudePermissions(live: JsonObject, roots: Roots): JsonObject {
     ...liveDeny.filter((x: unknown) => typeof x !== "string" || !x.startsWith("Write(")),
     ...loadConsumerDeny(roots),
   ]);
+
   return permissions;
 }
 
@@ -32,8 +33,10 @@ export function applyClaude(roots: Roots): void {
   const hooks = isRecord(live.hooks) ? { ...live.hooks } : {};
   hooks.PreToolUse = upsertGroups(hooks.PreToolUse, desiredPre(root));
   const session = sessionHooks(roots);
+
   if (session.length > 0) hooks.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
+
   if (post !== null) hooks.PostToolUse = upsertGroups(hooks.PostToolUse, post);
   saveJson(abs, { ...live, hooks, permissions: claudePermissions(live, roots) });
 }
@@ -46,14 +49,17 @@ export function applyCodex(roots: Roots): void {
   const cur: JsonObject = liveHooks === null ? { ...live } : { ...liveHooks };
   cur.PreToolUse = upsertGroups(cur.PreToolUse, desiredPre(root));
   const session = sessionHooks(roots);
+
   if (session.length > 0) cur.SessionStart = [{ hooks: session }];
   const post = desiredPost(root);
+
   if (post !== null) {
     cur.PostToolUse = upsertGroups(
       cur.PostToolUse,
       post.map((g) => ({ hooks: g.hooks })),
     );
   }
+
   saveJson(abs, liveHooks === null ? { ...live, ...cur } : { ...live, hooks: cur });
 }
 
@@ -64,8 +70,10 @@ export function applyCursor(roots: Roots): void {
   const hooks = isRecord(live.hooks) ? { ...live.hooks } : {};
   hooks.preToolUse = upsertGroups(hooks.preToolUse, flatEntries(desiredPre(root, CURSOR_WRITE_MATCHER)));
   const session = sessionHooks(roots, { map: false });
+
   if (session.length > 0) hooks.sessionStart = flatSession(hooks.sessionStart, session);
   const post = desiredPost(root, CURSOR_WRITE_MATCHER);
+
   if (post !== null) hooks.postToolUse = upsertGroups(hooks.postToolUse, flatEntries(post));
   saveJson(abs, { version: 1, ...live, hooks });
 }
@@ -77,8 +85,10 @@ export function applyAgents(roots: Roots): void {
   const rulesync = isRecord(live.rulesync) ? { ...live.rulesync } : {};
   rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
   const session = sessionHooks(roots, { map: false });
+
   if (session.length > 0) rulesync.SessionStart = flatSession(rulesync.SessionStart, session);
   const post = desiredPost(root, AGY_WRITE_MATCHER);
+
   if (post !== null) rulesync.PostToolUse = post;
   saveJson(abs, { ...live, ...consumerNamed(root), rulesync });
 }

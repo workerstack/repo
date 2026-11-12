@@ -55,6 +55,7 @@ allow-wildcard-paths = true
 unknown-registry = "deny"
 unknown-git = "deny"
 `;
+
 function whole(path: string, content: string) {
   return { content, kind: "file", managed: "whole", path, tracked: false };
 }
@@ -81,10 +82,12 @@ it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untr
 
 it("writes a deny.toml that parses to the supply-chain policy", () => {
   const out = rust(context(["standards"], { "Cargo.toml": "" })).outputs.find((o) => o.path === "deny.toml");
+
   const parsed = parse(out?.kind === "file" ? out.content : "") /* smol-toml returns plain tables */ as Record<
     string,
     Record<string, unknown>
   >;
+
   expect(Object.keys(parsed)).toStrictEqual(["graph", "advisories", "licenses", "bans", "sources"]);
   expect({ ...parsed.advisories }).toStrictEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
   expect(parsed.licenses?.allow).toContain("Apache-2.0 WITH LLVM-exception");

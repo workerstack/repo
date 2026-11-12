@@ -11,6 +11,7 @@ export function listFiles(cwd: string, args: readonly string[] = ["-co", "--excl
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
+
     return [...new Set(out.split("\0").filter((rel) => rel !== ""))];
   } catch {
     return [];

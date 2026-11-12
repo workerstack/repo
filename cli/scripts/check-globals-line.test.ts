@@ -12,6 +12,7 @@ import { syncGlobals } from "./sync-global-settings.ts";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 useTempDirs();
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
@@ -27,12 +28,14 @@ function tmpWorkspace() {
     path.join(ws, ".grok/config.toml"),
     '[plugins]\nenabled = []\n\n[permission]\ndeny = [ "MCPTool" ]\n',
   );
+
   return ws;
 }
 
 function drift(host: string, key: string, kind: "missing" | "differs") {
   return { dest: `${host}.json`, host, key, kind };
 }
+
 function status(id: string, state: HostStatus["state"], entries: HostStatus["drift"] = []): HostStatus {
   return {
     dest: `${id}.json`,
@@ -53,6 +56,7 @@ describe("checkLine", () => {
       ]),
       status("cursor", "unreadable"),
     ];
+
     expect(checkLine(statuses)).toBe("grok ok · claude missing a,c differs b · cursor unreadable");
   });
 
@@ -91,6 +95,7 @@ describe("checkGlobals with every argument defaulted", () => {
     vi.stubEnv("HOME", home);
     const prev = process.cwd();
     process.chdir(ws);
+
     try {
       expect(checkGlobals()).toStrictEqual({ drift: [], ok: true });
     } finally {

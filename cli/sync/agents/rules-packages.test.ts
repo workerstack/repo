@@ -6,6 +6,7 @@ import { renderRules } from "./rules.ts";
 import type { Doc, Sources } from "./sources.types.ts";
 
 const WEB = "packages/web";
+
 function pkgRule(file: string, data: Record<string, unknown>, body: string): Doc {
   return {
     body,
@@ -16,6 +17,7 @@ function pkgRule(file: string, data: Record<string, unknown>, body: string): Doc
     scope: WEB,
   };
 }
+
 const POINTER = "Start at references/INDEX.md in this package.";
 const COMPONENTS = pkgRule("components.md", {}, "Components live in src/components and use the ui kit.");
 const API = pkgRule("api.md", { paths: ["src/api/**"] }, "Api body.");
@@ -36,6 +38,7 @@ it(
     expect(renderText(sources, ["claude"], WEB).get(`${WEB}/AGENTS.md`)).toBe(`${POINTER}\n`);
     expect([...renderText(sources, HOSTS, WEB).keys()].filter((rel) => rel.includes("CLAUDE"))).toStrictEqual([]);
     const root = renderText(sources, HOSTS, "");
+
     for (const [rel, text] of root) expect(`${rel}\n${text}`, rel).not.toMatch(/Components live|packages\/web/);
   },
 );

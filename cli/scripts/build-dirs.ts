@@ -19,7 +19,9 @@ export type BuildPlan = { ok: true; items: BuildItem[] } | { ok: false; error: s
 /** The bytes under `p`; a symlink counts by itself and is never followed. */
 function bytesUnder(p: string): number {
   const st = fs.lstatSync(p);
+
   if (!st.isDirectory()) return st.size;
+
   return fs.readdirSync(p).reduce((sum, name) => sum + bytesUnder(path.join(p, name)), 0);
 }
 
@@ -30,8 +32,11 @@ function kindOf(
 ): BuildItem["kind"] | null {
   const isDir = entry.endsWith("/");
   const base = path.posix.basename(entry);
+
   if (!isDir) return base.endsWith(TSBUILDINFO_SUFFIX) ? "info" : null;
+
   if (deps && base === MODULES_DIR) return "modules";
+
   return names.has(base) ? "dir" : null;
 }
 
@@ -46,15 +51,19 @@ export function planBuild(root: string, { deps, extra }: { deps: boolean; extra:
     env: childEnv(),
     maxBuffer: LIST_BUFFER,
   });
+
   if (listed.status !== 0) return { error: `git ls-files failed: ${listed.stderr.trim()}`, ok: false };
   const names = new Set([...BUILD_DIRS, ...extra]);
   const items: BuildItem[] = [];
+
   for (const entry of listed.stdout.split("\0")) {
     const kind = kindOf(entry, { deps, names });
+
     if (kind === null) continue;
     const abs = path.resolve(root, entry);
     items.push({ bytes: bytesUnder(abs), kind, path: abs });
   }
+
   return { items, ok: true };
 }
 
@@ -70,6 +79,7 @@ export function removeBuild(
   { dryRun, rm }: { dryRun: boolean; rm: typeof fs.rmSync },
 ): BuildResult {
   const result: BuildResult = { done: [], skipped: [] };
+
   for (const item of items) {
     try {
       if (!dryRun) rm(item.path, { force: true, recursive: true });
@@ -81,5 +91,6 @@ export function removeBuild(
       });
     }
   }
+
   return result;
 }

@@ -15,11 +15,14 @@ const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end wit
 export function itemKey(item: ItemRef): string {
   return `${item.kind} ${item.serial}`;
 }
+
 export function queueText(items: Approvable[]): string {
   return items.map(itemKey).join(", then ");
 }
+
 export function reviewsOf(fm: Record<string, string>): number {
   const reviews = Number(fm.reviews);
+
   return Number.isNaN(reviews) ? 0 : reviews;
 }
 
@@ -31,9 +34,12 @@ function reviewsOpenFile(data: HookInput): string | null {
 export function isSliceOf(planPath: string, roadmapText: string, impl: typeof path = path): boolean {
   function norm(p: string): string {
     const n = impl.normalize(impl.resolve(p));
+
     return impl === path.win32 ? n.toLowerCase() : n;
   }
+
   const target = norm(planPath);
+
   for (const [, location] of roadmapText.matchAll(LOCATION_LINE))
     if (norm(location /* the Location group always participates in a match */ as string) === target) return true;
 
@@ -44,31 +50,41 @@ export function isSliceOf(planPath: string, roadmapText: string, impl: typeof pa
 export function inProgressRoadmaps(ws: string): string[] {
   const dir = path.join(ws, ".tmp", "repo", "roadmaps");
   let names: string[] = [];
+
   try {
     names = fs.readdirSync(dir).filter((n) => n.endsWith(".md"));
   } catch {
     return [];
   }
+
   const texts: string[] = [];
+
   for (const name of names) {
     try {
       const text = fs.readFileSync(path.join(dir, name), "utf8");
+
       if (frontmatterOf(text).status === IN_PROGRESS) texts.push(text);
     } catch {
       // skip unreadable
     }
   }
+
   return texts;
 }
 
 export function readReviewsOpen(data: HookInput): ReviewsOpen {
   const file = reviewsOpenFile(data);
+
   if (file === null) return {};
+
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+
     if (!isRecord(parsed)) return {};
     const out: ReviewsOpen = {};
+
     for (const [k, v] of Object.entries(parsed)) if (typeof v === "number") out[k] = v;
+
     return out;
   } catch {
     return {};
@@ -82,11 +98,13 @@ function serialAt(abs: string): number {
 /** True when `abs` reads as holding `serial`; an unreadable file holds none. */
 function holdsSerial(abs: string, serial: number): boolean {
   let isHeld = false;
+
   try {
     isHeld = serialAt(abs) === serial;
   } catch {
     // An unreadable file holds none.
   }
+
   return isHeld;
 }
 
@@ -94,25 +112,32 @@ function holdsSerial(abs: string, serial: number): boolean {
 function itemFile(ws: string, ref: ItemRef): string | null {
   const dir = path.join(ws, ".tmp", "repo", ITEM_DIRS[ref.kind]);
   let names: string[];
+
   try {
     names = fs.readdirSync(dir).filter((n) => n.startsWith(`${ref.serial}-`) && n.endsWith(".md"));
   } catch {
     return null;
   }
+
   const abs = names.map((name) => path.join(dir, name)).find((file) => holdsSerial(file, ref.serial));
+
   return abs ?? null;
 }
 
 export function reviewState(open: ReviewsOpen, ref: ItemRef, reviews: number): ReviewState {
   const atSpawn = open[itemKey(ref)];
+
   if (atSpawn !== undefined) return reviews > atSpawn ? "settled" : "open";
+
   return reviews >= 1 ? "settled" : "unreviewed";
 }
 
 // The review state of the file a ref names; null when no file holds it.
 export function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): ReviewState | null {
   const file = itemFile(ws, ref);
+
   if (file === null) return null;
+
   return reviewState(open, ref, reviewsOf(frontmatterOf(fs.readFileSync(file, "utf8"))));
 }
 
@@ -121,9 +146,11 @@ export function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefi
   try {
     const [, kind, serial] = REVIEW_SPAWN_RE.exec(typeof toolInput?.prompt === "string" ? toolInput.prompt : "") ?? [];
     const file = reviewsOpenFile(data);
+
     if (kind === undefined || file === null) return;
     const ref: ItemRef = { kind: kind === PLAN_KIND ? "plan" : "roadmap", serial: Number(serial) };
     const abs = itemFile(resolveRoots(data).root, ref);
+
     if (abs === null) return;
     const reviews = reviewsOf(frontmatterOf(fs.readFileSync(abs, "utf8")));
     fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -140,11 +167,15 @@ export function closingReviewReason(data: HookInput, named: Approvable[] | null)
   if (named === null) return null;
   const ws = resolveRoots(data).root;
   const open = readReviewsOpen(data);
+
   for (const n of named) {
     const state = reviewStateOf(ws, open, n);
+
     if (state === "unreviewed")
       return `${itemKey(n)} has reviews: 0; run /review-${n.kind} ${n.serial} in a fresh agent first`;
+
     if (state === "open") return `${itemKey(n)}'s review has not settled; wait for it, ${SETTLE_THEN_CLOSE}`;
   }
+
   return null;
 }

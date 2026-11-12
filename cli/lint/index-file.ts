@@ -11,12 +11,14 @@ const MESSAGE = "an index file only re-exports; move this into its own module an
 export const indexFile: RepoRule<"move"> = {
   create(context) {
     if (!INDEX.test(path.basename(context.filename))) return {};
+
     return {
       Program(program) {
         for (const statement of program.body) {
           const reexport =
             statement.type === AST_NODE_TYPES.ExportAllDeclaration ||
             (statement.type === AST_NODE_TYPES.ExportNamedDeclaration && statement.source !== null);
+
           if (!reexport) context.report({ messageId: "move", node: statement });
         }
       },

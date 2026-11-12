@@ -7,6 +7,7 @@ import { fileOutput } from "./__fixtures__/mini-install.ts";
 import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: 120_000 });
 
 /** A .claude/settings.json with a key of the user's own, which adoption moves to the overlay. */
@@ -35,6 +36,7 @@ it("stops on a tracked file under a host dir that it cannot adopt, one line per 
     ".claude/commands/b.md": "b\n",
     ".cursor/rules/x.mdc": "x\n",
   });
+
   write(root, ".claude/commands/untracked.md", "u\n");
   const before = snapshot(root);
   const result = await sync(root, [], true);
@@ -96,6 +98,7 @@ it("reports a move that fails while it runs, and a generator error the adoption 
     ".agents/skills/x/SKILL.md": "---\nname: x\n---\none\n",
     ".claude/skills/x/SKILL.md": "---\nname: x\n---\ntwo\n",
   });
+
   const clashed = await sync(both, [], true);
   expect(clashed.code).toBe(1);
   expect(clashed.err.join("")).toContain("already exists and differs");
@@ -103,11 +106,13 @@ it("reports a move that fails while it runs, and a generator error the adoption 
   const root = plain(MINE, { git: false });
   const out: string[] = [];
   const err: string[] = [];
+
   const code = await runSync(
     [],
     { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) },
     { generators: [generator] },
   );
+
   expect(code).toBe(1);
   expect(err).toStrictEqual(["repo sync: generator saw the adopted overlay\n", "repo sync: nothing written\n"]);
   expect(read(root, ".repo/settings/claude.json")).toContain("make lint");

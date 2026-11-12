@@ -14,6 +14,7 @@ import type { RepoRule } from "../cli/lint/rule.types.ts";
 
 /** Repo-relative path → source; package.json files among them are read by rules that read manifests. */
 export type Fixture = Record<string, string>;
+
 /** One finding: the fixture path it is in and the rule's message. */
 export type Report = { file: string; message: string };
 
@@ -39,18 +40,22 @@ function configOf(rule: AnyRule, options: readonly unknown[]): TSESLint.FlatConf
 /** The rule's findings in `messages`; a file that does not parse throws, so no fixture passes by being skipped. */
 function ownMessages(file: string, messages: readonly TSESLint.Linter.LintMessage[]): TSESLint.Linter.LintMessage[] {
   const fatal = messages.find((message) => message.fatal === true);
+
   if (fatal !== undefined) throw new Error(`${file}:${fatal.line}: ${fatal.message}`);
+
   return messages.filter((message) => message.ruleId === RULE_ID);
 }
 
 /** Calls `lint` with the dir `fixture` is written to; the dir is gone after. */
 function inFixture<T>(fixture: Fixture, lint: (dir: string) => T): T {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-rule-")));
+
   try {
     for (const [file, code] of Object.entries(fixture)) {
       fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
       fs.writeFileSync(path.join(dir, file), code);
     }
+
     return lint(dir);
   } finally {
     fs.rmSync(dir, { force: true, recursive: true });
@@ -65,6 +70,7 @@ export function reportsOf(rule: AnyRule, fixture: Fixture, options: readonly unk
   return inFixture(fixture, (dir) => {
     const linter = new TSESLint.Linter({ cwd: dir });
     const config = configOf(rule, options);
+
     return Object.entries(fixture).flatMap(([file, code]) =>
       ownMessages(file, linter.verify(code, config, path.join(dir, file))).map((message) => ({
         file,
@@ -77,11 +83,14 @@ export function reportsOf(rule: AnyRule, fixture: Fixture, options: readonly unk
 /** `code` as `a.ts` with every fix `rule` reports applied, as `eslint --fix` would leave it. */
 export function fixedOf(rule: AnyRule, code: string): string {
   const file = "a.ts";
+
   return inFixture({ [file]: code }, (dir) => {
     const fixed = new TSESLint.Linter({ cwd: dir }).verifyAndFix(code, configOf(rule, []), {
       filename: path.join(dir, file),
     });
+
     ownMessages(file, fixed.messages);
+
     return fixed.output;
   });
 }

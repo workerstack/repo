@@ -19,6 +19,7 @@ import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 import { writeOutputs } from "./write-outputs.ts";
 
 type Mode = { check: boolean; postinstall: boolean };
+
 type ModeResult = { ok: true; mode: Mode } | { ok: false; error: string };
 
 /** One sync run: where and how it runs, and the config and outputs it last planned. */
@@ -35,12 +36,15 @@ export type Run = Mode & {
 /** `--check`, `--postinstall` or neither; any other flag, or both, is an error. */
 export function parseMode(args: string[]): ModeResult {
   const mode: Mode = { check: false, postinstall: false };
+
   for (const arg of args) {
     if (arg === CHECK_FLAG) mode.check = true;
     else if (arg === POSTINSTALL_FLAG) mode.postinstall = true;
     else return { error: `unknown flag ${arg}; use --check or --postinstall`, ok: false };
   }
+
   if (mode.check && mode.postinstall) return { error: "use --check or --postinstall, not both", ok: false };
+
   return { mode, ok: true };
 }
 
@@ -54,18 +58,24 @@ function refuse(run: Mode & { io: SyncIo }, errors: string[]): number {
 async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Run | number> {
   const early = { ...mode, io };
   const root = findRoot(io.cwd);
+
   if (root === null) return fail(early, [`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
   const load = deps.load ?? loadConfig;
   const config = await load(root);
+
   if (!config.ok) return refuse(early, config.errors);
+
   // Here the trees are the stock source; without the agents pack sync would prune them.
   if (isSelf(root) && !config.config.packs.includes("agents")) {
     return refuse(early, [
       `${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`,
     ]);
   }
+
   const workspace = readWorkspace(root);
+
   if (!workspace.ok) return refuse(early, workspace.errors);
+
   return { ...early, deps, load, outputs: [], resolved: config.config, root, workspace: workspace.workspace };
 }
 
@@ -74,6 +84,7 @@ async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Run | numbe
  */
 async function upgrade(run: Run): Promise<void> {
   const steps = planRuleUpgrade(run.root, stockRoot(run.root));
+
   for (const line of await applyMigration(run.root, steps)) run.io.stdout(`${line}\n`);
 }
 
@@ -83,17 +94,21 @@ async function upgrade(run: Run): Promise<void> {
 async function upgradeRules(run: Run): Promise<number | null> {
   if (isSelf(run.root)) return null;
   const pending = planRuleUpgrade(run.root, stockRoot(run.root)).length;
+
   if (pending > 0 && run.check) {
     run.io.stderr(
       `${SYNC_PREFIX}${pending} migration step${pending === 1 ? "" : "s"} pending; run \`bun repo sync\`\n`,
     );
+
     return 1;
   }
+
   try {
     await upgrade(run);
   } catch (error) {
     return fail(run, [errorMessage(error)]);
   }
+
   return null;
 }
 
@@ -101,10 +116,12 @@ async function upgradeRules(run: Run): Promise<number | null> {
 function invalid(run: Run, planned: Output[]): number | null {
   const hosts = run.resolved.agents.hosts;
   const ignored = ignoreBlockLines(run.workspace.manifest.name, hosts, planned);
+
   const problems = [
     ...strayIgnoreFiles(run.root, run.workspace, ignored),
     ...validateOutputs(run.root, planned, run.deps.formats),
   ];
+
   return problems.length === 0 ? null : refuse(run, problems);
 }
 
@@ -112,16 +129,20 @@ function invalid(run: Run, planned: Output[]): number | null {
 function replan(run: Run): number | null {
   const { root, resolved: config, workspace, deps } = run;
   const planned = computeOutputs({ config, generators: deps.generators, post: deps.post, root, workspace });
+
   if (!planned.ok) return refuse(run, planned.errors);
   run.outputs = planned.outputs;
+
   return invalid(run, run.outputs);
 }
 
 /** Reads the config again, then plans the outputs; the exit code when either fails. */
 async function replanReloaded(run: Run): Promise<number | null> {
   const reloaded = await run.load(run.root);
+
   if (!reloaded.ok) return fail(run, reloaded.errors);
   run.resolved = reloaded.config;
+
   return replan(run);
 }
 
@@ -140,6 +161,7 @@ function blocksOf(run: Run): StepRun {
     apply: async (steps) => {
       for (const line of await applyMigration(run.root, steps)) run.io.stdout(`${line}\n`);
       await upgrade(run);
+
       for (const line of await applyMigration(run.root, handover(run))) run.io.stdout(`${line}\n`);
     },
     check: run.check,
@@ -161,6 +183,7 @@ async function migrate(run: Run, blocks: StepRun): Promise<boolean | number> {
   const ignored = untrackedEntries(run.resolved.agents.hosts, run.outputs);
   const steps = planMigration(run.root, { generated, ignored, stock: stockRoot(run.root) });
   const migration = await stepBlock({ noun: "migration", reload: true, steps }, blocks);
+
   return "exit" in migration ? migration.exit : migration.applied;
 }
 
@@ -173,31 +196,42 @@ async function adopt(run: Run, blocks: StepRun): Promise<number | null> {
   const { root, resolved: config, outputs } = run;
   const steps = planAdoption(root, { config, manifest: owned, outputs, stock: stockRoot(root) });
   const adoption = await stepBlock({ noun: "adoption", steps }, blocks);
+
   return "exit" in adoption ? adoption.exit : null;
 }
 
 /** The rule upgrade, the handover, the first plan, the migration and the adoption; the exit code when one stops. */
 async function prepare(run: Run): Promise<number | null> {
   const upgraded = await upgradeRules(run);
+
   if (upgraded !== null) return upgraded;
   const blocks = blocksOf(run);
   const handed = await stepBlock({ noun: "handover", steps: handover(run) }, blocks);
+
   if ("exit" in handed) return handed.exit;
   const firstPlan = handed.applied ? null : replan(run);
+
   if (firstPlan !== null) return firstPlan;
   const migrated = await migrate(run, blocks);
+
   if (typeof migrated === "number") return migrated;
+
   return isSelf(run.root) || migrated ? null : adopt(run, blocks);
 }
 
 /** One `repo sync` over `args`; the exit code. */
 export async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Promise<number> {
   const parsed = parseMode(args);
+
   if (!parsed.ok) {
     io.stderr(`${SYNC_PREFIX}${parsed.error}\n`);
+
     return 1;
   }
+
   const run = await open(parsed.mode, io, deps);
+
   if (typeof run === "number") return run;
+
   return (await prepare(run)) ?? writeOutputs(run);
 }

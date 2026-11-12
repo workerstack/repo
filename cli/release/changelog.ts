@@ -32,16 +32,21 @@ type Listed = { seen: Set<string>; previous: { version: string; parts: Parts } |
 function versionProblem(text: string, line: number, state: Listed): string | null {
   const where = `${CHANGELOG_FILE}:${line}`;
   const version = VERSION_HEADING.exec(text)?.[1] ?? "";
+
   if (version === UNRELEASED) return null;
   const parts = parseSemver(version);
+
   if (parts === null) return `${where}: "## ${text}" is not a version; write ## [x.y.z] - ${DATE_FORMAT}`;
+
   if (!DATED.test(text)) return `${where}: "## ${text}" needs a date; write ## [${version}] - ${DATE_FORMAT}`;
   const { seen, previous } = state;
   const twice = seen.has(version);
   const newer = previous !== null && compareVersions(parts, previous.parts) > 0 ? previous.version : null;
   seen.add(version);
   state.previous = { parts, version };
+
   if (twice) return `${where}: ${version} is listed twice; merge the sections`;
+
   return newer === null ? null : `${where}: ${version} is below ${newer}; list versions newest first`;
 }
 
@@ -50,13 +55,16 @@ export function changelogFormatProblems(text: string | null): string[] {
   if (text === null) return [`${CHANGELOG_FILE} is missing; add one in the Keep a Changelog format`];
   const state: Listed = { previous: null, seen: new Set() };
   const problems: string[] = [];
+
   for (const { at, kind, text: heading } of headings(linesOf(text))) {
     if (kind === "section" && !SECTIONS.includes(heading))
       problems.push(`${CHANGELOG_FILE}:${at + 1}: "### ${heading}" is not a section; use ${SECTION_LIST}`);
 
     const problem = kind === "version" ? versionProblem(heading, at + 1, state) : null;
+
     if (problem !== null) problems.push(problem);
   }
+
   if (!parseChangelog(text).sections.some(({ version }) => version === UNRELEASED))
     problems.push(`${CHANGELOG_FILE} has no ## [${UNRELEASED}] section; add it above the newest version`);
 
@@ -66,14 +74,18 @@ export function changelogFormatProblems(text: string | null): string[] {
 /** The `###` groups of `bodies` merged by name: loose text, then the Keep a Changelog sections, then other names. */
 function mergeBodies(bodies: readonly (readonly string[])[]): string {
   const merged = new Map<string, string[]>();
+
   for (const body of bodies) {
     for (const [name, lines] of groupsOf(body))
       if (lines.length > 0) merged.set(name, [...(merged.get(name) ?? []), ...lines]);
   }
+
   const known = ["", ...SECTIONS];
+
   function rank(name: string): number {
     return known.includes(name) ? known.indexOf(name) : known.length;
   }
+
   return [...merged]
     .toSorted(([a], [b]) => rank(a) - rank(b))
     .map(([name, lines]) => (name === "" ? "" : `### ${name}\n\n`) + lines.join("\n"))
@@ -105,5 +117,6 @@ export function stampChangelog(text: string, version: string, date: string): str
   const stamped = block(existing?.heading ?? `## [${version}] - ${date}`, mergeBodies(bodies).split("\n"));
   const rest = sections.filter((section) => !taken.has(section)).map(({ heading, body }) => block(heading, body));
   const head = trimBlank(preamble).join("\n");
+
   return `${[head, `## [${UNRELEASED}]`, stamped, ...rest].filter((part) => part !== "").join("\n\n")}\n`;
 }

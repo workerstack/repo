@@ -13,6 +13,7 @@ const BUN_PIN = /^bun@\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
 export function checkManifests({ root, manifest, packages }: Workspace): string[] {
   const lines: string[] = [];
   const isMonorepo = manifest.workspaces !== undefined;
+
   if (fs.existsSync(path.join(root, "package.json"))) {
     lines.push(
       ...privateLines("package.json", manifest),
@@ -21,25 +22,32 @@ export function checkManifests({ root, manifest, packages }: Workspace): string[
       ...chainedScriptLines(manifest),
     );
   }
+
   for (const pkg of packages) {
     const file = `${pkg.dir}/package.json`;
     lines.push(...privateLines(file, pkg.manifest), ...sideEffectsLines(file, pkg.manifest));
   }
+
   return lines;
 }
 
 function privateLines(file: string, manifest: PackageJson): string[] {
   const lines: string[] = [];
+
   if (manifest.private === undefined) lines.push(`${file}: "private" is missing; set true, or false to publish it`);
+
   if (manifest.private === true && manifest.version !== undefined)
     lines.push(`${file}: private packages have no "version"; delete it`);
+
   return lines;
 }
 
 /** A package, unlike a monorepo root, must say it has no side effects. */
 function sideEffectsLines(file: string, { sideEffects }: PackageJson): string[] {
   if (sideEffects === false) return [];
+
   if (sideEffects === undefined) return [`${file}: "sideEffects" is missing; set it to false`];
+
   return [`${file}: "sideEffects" is ${JSON.stringify(sideEffects)}; set it to false and import CSS from an app entry`];
 }
 
@@ -48,6 +56,7 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
     return [`package.json: "packageManager" is missing; set it to "bun@${Bun.version}"`];
 
   if (typeof packageManager === "string" && BUN_PIN.test(packageManager)) return [];
+
   return [
     `package.json: "packageManager" is ${JSON.stringify(packageManager)}; ` +
       `pin an exact version like "bun@${Bun.version}"`,
@@ -57,13 +66,16 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
 function chainedScriptLines({ scripts }: PackageJson): string[] {
   const lines: string[] = [];
   const entries = typeof scripts === "object" && scripts !== null ? Object.entries(scripts) : [];
+
   for (const [name, command] of entries) {
     const calls = typeof command === "string" ? toolCalls(command) : 0;
+
     if (calls <= 1) continue;
     lines.push(
       `package.json: "${name}" chains ${calls} tool calls with "&&" or ";"; make it one call, such as "repo ci"`,
     );
   }
+
   return lines;
 }
 

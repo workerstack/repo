@@ -18,9 +18,11 @@ const TOP = ".";
 const SOURCE = /\.(?:tsx?|mts|cts)$/;
 const DECLARATION = /\.d\.[cm]?ts$/;
 const TEST = /\.(?:test|spec|e2e)\./;
+
 /** Code that must not compile, which `check-rejections.ts` checks instead. */
 const REJECT = /\.reject\.tsx?$/;
 const SKIPPED_DIRS = [FIXTURES_DIR, "e2e", "vendor", "node_modules"];
+
 /** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
 const DEFAULTS: ts.CompilerOptions = {
   allowImportingTsExtensions: true,
@@ -39,6 +41,7 @@ const DEFAULTS: ts.CompilerOptions = {
 function isScripted(rel: string): boolean {
   const dirs = path.posix.dirname(rel).split("/");
   const skipped = DECLARATION.test(rel) || REJECT.test(rel) || dirs.some((dir) => SKIPPED_DIRS.includes(dir));
+
   return SOURCE.test(rel) && !skipped;
 }
 
@@ -63,8 +66,10 @@ export function posix(file: string): string {
 /** The root-relative dir of the tsconfig.json nearest above `rel`, up to the root; null when there is none. */
 export function ownerOf(root: string, rel: string): string | null {
   let dir = path.posix.dirname(rel);
+
   for (;;) {
     if (fs.existsSync(path.join(root, dir, RUNTIME_CONFIG))) return dir;
+
     if (dir === TOP) return null;
     dir = path.posix.dirname(dir);
   }
@@ -75,10 +80,14 @@ export function setupOf(root: string, dir: string | null, config: string): Resul
   if (dir === null) return { ok: true, value: { fileNames: [], options: DEFAULTS } };
   const file = posix(path.join(root, dir, config));
   const read = ts.readConfigFile(file, (name) => ts.sys.readFile(name));
+
   if (read.error !== undefined) {
     const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
+
     return { errors: [`${path.posix.join(dir, config)}: ${message}`], ok: false };
   }
+
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
+
   return { ok: true, value: { fileNames: parsed.fileNames, options: { ...parsed.options, noEmit: true } } };
 }

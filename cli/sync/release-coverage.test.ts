@@ -9,6 +9,7 @@ const DOWNLOAD = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef
 const UPLOAD = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
+
 const BLOB_STEP = `      - uses: ${UPLOAD}
         if: runner.os == 'Linux'
         with:
@@ -16,6 +17,7 @@ const BLOB_STEP = `      - uses: ${UPLOAD}
           path: .tmp/repo/blob/
           if-no-files-found: error
 `;
+
 const COVERAGE_JOB = `  coverage:
     name: coverage
     needs: test
@@ -34,10 +36,13 @@ const COVERAGE_JOB = `  coverage:
           path: blobs
       - run: bun repo ci merge blobs
 `;
+
 const UBUNTU_SHARDED = `          - { os: ubuntu-latest, shard: 1/2, label: ubuntu-latest 1/2 }
           - { os: ubuntu-latest, shard: 2/2, label: ubuntu-latest 2/2 }
 `;
+
 const UBUNTU_WHOLE = '          - { os: ubuntu-latest, shard: "", label: ubuntu-latest }\n';
+
 const NODE_STEPS = `      - name: Remove node
         if: runner.os == 'Linux'
         run: |
@@ -49,6 +54,7 @@ const NODE_STEPS = `      - name: Remove node
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi
 `;
+
 const AFTER_BUN = `          bun-version-file: package.json\n${NODE_STEPS}`;
 
 const VITEST_DEV: PackageJson = { devDependencies: { vitest: "^5.1.0" } };
@@ -57,11 +63,14 @@ const CARGO = { "Cargo.toml": "[package]\n" };
 
 function text(manifest: PackageJson, packs: Pack[] = ["release"], files: Record<string, string> = {}) {
   const [output] = release(context(packs, manifest, files)).outputs;
+
   return output?.kind === "file" ? output.content : "";
 }
+
 function job(ci: string, name: string) {
   const start = ci.indexOf(`  ${name}:`);
   const end = ci.indexOf("\n\n", start);
+
   return ci.slice(start, end === -1 ? undefined : end + 1);
 }
 

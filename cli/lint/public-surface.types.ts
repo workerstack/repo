@@ -13,8 +13,10 @@ export type Surface = {
 
 /** A syntax node read from untrusted parser output: every field is checked before it is used. */
 export type Node = Record<string, unknown>;
+
 /** `name` as `source` exports it, or as this file declares it when `source` is null. */
 export type Link = { name: string; source: string | null };
+
 /** `name` as `source` exports it. */
 export type Import = { name: string; source: string };
 
@@ -51,4 +53,5 @@ export type Graph = {
 
 /** One resolution: the graph and the `file\0name` pairs already visited, which end a cycle. */
 export type Query = { graph: Graph; seen: Set<string> };
+
 export type Build = { rootDir: string; outDir: string };

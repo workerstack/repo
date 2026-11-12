@@ -7,6 +7,7 @@ import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { buildTasks, main, run } from "./vscode-tasks.ts";
 
 const tempRoot = useTempTree("repo-tasks-edges-");
+
 afterEach(() => vi.restoreAllMocks());
 
 describe("vscode-tasks edges", () => {
@@ -23,6 +24,7 @@ describe("vscode-tasks edges", () => {
       "package.json": JSON.stringify({ scripts: { alpha: "x", zed: "x" }, workspaces: ["pkgs/*"] }),
       "pkgs/a/package.json": JSON.stringify({ name: "mid", scripts: { go: "x" } }),
     });
+
     expect(buildTasks(root, []).tasks.map((t) => t.label)).toStrictEqual(["alpha", "mid:go", "zed"]);
   });
 

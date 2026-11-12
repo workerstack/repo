@@ -21,11 +21,13 @@ const FORCE_PREFIX = /^\+/;
  * in.
  */
 export type PushedRef = { branch: string; src: string; sha: string; dir: string };
+
 type Push = { dir: string; refs: string[] };
 
 /** `dir` from `base`, in the spelling of whichever side is a Windows path. */
 function resolveDir(base: string, dir: string): string {
   const flavor = WINDOWS_PATH.test(dir) || WINDOWS_PATH.test(base) ? path.win32 : path;
+
   return flavor.resolve(base, dir);
 }
 
@@ -37,12 +39,15 @@ function wordsOf(text: string): string[] {
 function parsePush(words: string[], base: string): Push | null {
   let dir = base;
   let i = 0;
+
   for (; words[i]?.startsWith("-") === true; i++) {
     if (words[i] === DIR_OPTION) dir = resolveDir(dir, String(words[++i]));
     else if (words[i] === CONFIG_OPTION) i++;
   }
+
   if (words[i] !== PUSH) return null;
   const args = words.slice(i + 1).filter((w) => !w.startsWith("-"));
+
   return { dir, refs: args.slice(1) };
 }
 
@@ -52,9 +57,12 @@ function parsePush(words: string[], base: string): Push | null {
  */
 function parseRepoPush(git: Runner, words: string[], dir: string): Push | null {
   const [bin, verb, named] = words[0] === BUN ? words.slice(1) : words;
+
   if (bin !== REPO || verb !== PUSH) return null;
+
   if (named !== undefined) return { dir, refs: [named] };
   const target = pickTarget(git, dir, Date.now());
+
   return target.kind === "branch" ? { dir, refs: [target.branch] } : null;
 }
 
@@ -64,13 +72,18 @@ function parseRepoPush(git: Runner, words: string[], dir: string): Push | null {
 function pushesIn(git: Runner, command: string, cwd: string): Push[] {
   const found: Push[] = [];
   let here = cwd;
+
   for (const segment of command.split(SEGMENT)) {
     const words = wordsOf(segment);
+
     while (ENV_ASSIGN.test(words[0] ?? "")) words.shift();
+
     if (words[0] === CD && words[1] !== undefined && words[1] !== "") here = resolveDir(here, words[1]);
     const push = words[0] === GIT ? parsePush(words.slice(1), here) : parseRepoPush(git, words, here);
+
     if (push !== null) found.push(push);
   }
+
   return found;
 }
 
@@ -83,6 +96,7 @@ function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   const branch = head.startsWith(HEADS) ? head.slice(HEADS.length) : head;
   const sha = git(["rev-parse", "--verify", src], dir);
   const skip = given === "" || branch === HEAD || branch.startsWith("refs/") || sha.code !== 0;
+
   return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 

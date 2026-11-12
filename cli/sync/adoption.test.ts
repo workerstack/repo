@@ -8,6 +8,7 @@ import { SELF_ROOT, exists, plain, read, readJson, snapshot, sync, write } from 
 import { useTempDirs } from "./__fixtures__/temp-dirs.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: 120_000 });
 
 it("moves no hand-written AGENTS.md text into .repo/rules", async () => {
@@ -46,6 +47,7 @@ it("takes keys and hooks of a .claude/settings.json it does not generate into .r
     hooks: { PostToolUse: [{ hooks: [{ command: "make post-write", type: "command" }], matcher: "Write" }] },
     permissions: { allow: ["Bash(make lint:*)"] },
   };
+
   const root = plain({ ".claude/settings.json": JSON.stringify(mine) });
   const result = await sync(root, [], true);
   expect(result.err).toStrictEqual([]);
@@ -101,6 +103,7 @@ it("moves a real skill dir under .agents/skills or .claude/skills to .repo/skill
     ".agents/skills/lint/SKILL.md": "---\nname: lint\ndescription: lint\n---\nLint it.\n",
     ".claude/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\nShip it.\n",
   });
+
   const result = await sync(root, [], true);
   expect(result.err).toStrictEqual([]);
   expect(result.out).toContain("repo sync: moved .claude/skills/deploy to .repo/skills/deploy\n");

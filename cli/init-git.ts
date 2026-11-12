@@ -14,10 +14,12 @@ type Exec = (cmd: string, args: string[], opts: ExecFileSyncOptions) => unknown;
 export function initGit(dest: string, exec: Exec, stdout: (s: string) => void = (s) => process.stdout.write(s)): void {
   try {
     exec("git", ["rev-parse", "--is-inside-work-tree"], { cwd: dest, stdio: "ignore" });
+
     return;
   } catch {
     // not inside a work tree: start one below
   }
+
   exec("git", ["init", "-q"], { cwd: dest, stdio: "inherit" });
   stdout("repo init: ran git init\n");
 }

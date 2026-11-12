@@ -27,6 +27,7 @@ describe("execFileSync", () => {
     const sync = vi
       .spyOn(crossSpawn, "sync")
       .mockReturnValueOnce({ signal: "SIGTERM", status: null } /* only the fields execFileSync reads */ as never);
+
     expect(() => execFileSync("bun", ["install"], {})).toThrow(/^bun install exited with SIGTERM$/);
     sync.mockRestore();
   });

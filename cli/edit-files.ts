@@ -12,12 +12,15 @@ export type Edit = { file: string; apply: (raw: unknown) => void };
  */
 export function editFiles(root: string, edits: readonly Edit[]): string[] {
   const byFile = Map.groupBy(edits, (edit) => edit.file);
+
   return [...byFile].map(([file, list]) => {
     const parts = file.split(POSIX);
     const full = path.join(root, ...parts);
     const raw: unknown = JSON.parse(fs.readFileSync(full, "utf8"));
+
     for (const edit of list) edit.apply(raw);
     fs.writeFileSync(full, `${JSON.stringify(raw, null, JSON_INDENT)}\n`);
+
     return path.join(...parts);
   });
 }

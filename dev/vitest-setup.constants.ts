@@ -4,6 +4,7 @@ export const QUIET_GIT: ReadonlyArray<readonly [string, string]> = [
   ["gc.auto", "0"],
   ["core.fsmonitor", "false"],
 ];
+
 export const GIT_CONFIG_COUNT = "GIT_CONFIG_COUNT";
 export const GIT_CONFIG_KEY = "GIT_CONFIG_KEY_";
 export const GIT_CONFIG_VALUE = "GIT_CONFIG_VALUE_";

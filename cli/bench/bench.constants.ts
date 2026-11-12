@@ -1,5 +1,6 @@
 /** The runner labels a spec's `os` takes: each is the label a machine of one platform and arch measures under. */
 export const OS_LABELS = ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "macos-13", "windows-latest"] as const;
+
 /** One of `OS_LABELS`. */
 export type OsLabel = (typeof OS_LABELS)[number];
 
@@ -18,18 +19,22 @@ export const BUILT_IN: Readonly<Record<string, { unit: string; floor: number }>>
   rss: { floor: 1, unit: "MB" },
   wall: { floor: 0.1, unit: "ms" },
 };
+
 /** The floor of a custom metric's median, so a zero never divides. */
 export const CUSTOM_FLOOR = 1e-6;
 
 /** A candidate or metric name. */
 export const NAME: RegExp = /^[a-z0-9-]+$/;
+
 /** Fewer runs give no median or CV worth reading. */
 export const MIN_RUNS = 3;
 export const DEFAULT_RUNS = 10;
 export const DEFAULT_WARMUP = 1;
+
 /** A CV over this is flagged as noise. */
 export const CV_LIMIT = 0.1;
 export const PERCENT = 100;
+
 /** An rss median at most this many times the runner's own peak is flagged `~`: it may be the floor, not the child. */
 export const RSS_FLOOR_MARGIN = 1.05;
 
@@ -37,17 +42,22 @@ export const RSS_FLOOR_MARGIN = 1.05;
 export const BYTES_PER_MB: number = 1024 ** 2;
 export const BYTES_PER_GB: number = 1024 ** 3;
 export const US_PER_MS = 1000;
+
 /** Linux /proc status counts memory in kibibytes. */
 export const BYTES_PER_KB = 1024;
+
 /** The one platform whose children's peak RSS starts from the parent's, so the runner's own peak is a floor. */
 export const FLOORED_PLATFORM = "linux";
+
 /** The peak-RSS line of /proc/self/status, its kibibytes captured. */
 export const VM_HWM: RegExp = /^VmHWM:\s+(\d+) kB$/mu;
+
 /** The built-in peak-RSS metric, the one the floor bounds. */
 export const RSS_METRIC = "rss";
 
 /** A `slice` index counting from the end: the last element. */
 export const LAST: number = -1;
+
 /** A line break, LF or CRLF; split only. */
 export const LINE_BREAK: RegExp = /\r?\n/;
 
@@ -56,8 +66,10 @@ export const BENCH_LINE = "bench: ";
 
 /** The `origin/` of `origin/HEAD`'s answer, cut to the branch name. */
 export const ORIGIN_PREFIX: RegExp = /^origin\//;
+
 /** A matrix job's name, `bench (windows-latest)`, its OS captured. */
 export const JOB_OS: RegExp = /^.*\((.+)\)$/;
+
 /**
  * The gh run status that ends the wait, and the conclusions that are no failure. gh's status and conclusion sets
  * grow, so they stay strings and these are compared, not a closed enum a new value would fail to parse.
@@ -71,9 +83,11 @@ export const POLL_MS = 10_000;
 const MS_PER_MINUTE = 60_000;
 export const FIND_MINUTES = 5;
 export const FIND_BOUND_MS: number = FIND_MINUTES * MS_PER_MINUTE;
+
 /** The job's 60-minute timeout plus room for a queued runner. */
 export const WAIT_MINUTES = 90;
 export const WAIT_BOUND_MS: number = WAIT_MINUTES * MS_PER_MINUTE;
+
 /** The workflow `--remote` dispatches, the event its runs carry, and the branch assumed when origin/HEAD is unset. */
 export const WORKFLOW = "bench.yml";
 export const DISPATCH_EVENT = "workflow_dispatch";

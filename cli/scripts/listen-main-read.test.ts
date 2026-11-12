@@ -112,11 +112,13 @@ describe("file --clip", () => {
 
   it("a failing clipboard fails the command but the transcript is saved", async () => {
     const cwd = tmp("listen-file-clipfail-");
+
     const r = await run(["file", "--path", plantWav(cwd), "--clip"], {
       cwd,
       fetchFn: textFetch("kept"),
       ...clipboard(1),
     });
+
     expect(r.code).toBe(1);
     expect(r.errs).toStrictEqual(["pbcopy failed"]);
     expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toBe("kept\n");

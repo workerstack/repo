@@ -16,6 +16,7 @@ function consumer(prefix: string, body: string): string {
   const dir = tmp(prefix);
   fs.mkdirSync(path.join(dir, "scripts", "lib"), { recursive: true });
   fs.writeFileSync(path.join(dir, "scripts", "lib", "env.mjs"), body);
+
   return dir;
 }
 
@@ -26,12 +27,14 @@ it("loadOptionalConsumerEnv no-ops when lib/env.mjs is missing", async () => {
 
 it("loadOptionalConsumerEnv calls loadEnv when present", async () => {
   const marker = path.join(tmp("opt-env-mark-"), "marker.txt");
+
   const dir = consumer(
     "opt-env-hit-",
     `import fs from "node:fs";
 export function loadEnv() { fs.writeFileSync(${JSON.stringify(marker)}, "ok"); }
 `,
   );
+
   expect(await loadOptionalConsumerEnv(baseIn(dir))).toBe(true);
   expect(fs.readFileSync(marker, "utf8")).toBe("ok");
 });

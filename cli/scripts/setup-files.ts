@@ -10,22 +10,26 @@ import { readJson, section, str } from "./voice-args.ts";
 export function stateHome(home: string = os.homedir()): string {
   const d = path.join(home, ".workerstack");
   fs.mkdirSync(d, { mode: SECRET_DIR_MODE, recursive: true });
+
   try {
     fs.chmodSync(d, SECRET_DIR_MODE);
   } catch {
     // win
   }
+
   return d;
 }
 
 export function writeSecretJson(p: string, obj: unknown): string {
   fs.mkdirSync(path.dirname(p), { mode: SECRET_DIR_MODE, recursive: true });
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`, { mode: SECRET_FILE_MODE });
+
   try {
     fs.chmodSync(p, SECRET_FILE_MODE);
   } catch {
     // win
   }
+
   return p;
 }
 
@@ -38,6 +42,7 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   const p = speakJsonPath(home);
   const cur = readJson(p);
   const next: Record<string, unknown> = { ...cur, ...patch };
+
   if (patch.elevenlabs !== undefined) next.elevenlabs = { ...section(cur, "elevenlabs"), ...patch.elevenlabs };
 
   if (patch.openai !== undefined) next.openai = { ...section(cur, "openai"), ...patch.openai };
@@ -45,6 +50,7 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   if (patch.listen !== undefined) next.listen = { ...section(cur, "listen"), ...patch.listen };
 
   writeSecretJson(p, next);
+
   return p;
 }
 

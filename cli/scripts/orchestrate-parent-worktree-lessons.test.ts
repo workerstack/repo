@@ -9,6 +9,7 @@ import { gitRepo, must, orchestrateKit, plantLesson, plantSource, replyOf } from
 import { VALID_LESSON } from "./__fixtures__/persist-bodies.ts";
 
 const kit = orchestrateKit();
+
 function outputOf(run: ReturnType<typeof kit.writeAs>) {
   return must(replyOf(run)).hookSpecificOutput;
 }
@@ -17,9 +18,11 @@ it("notices the lessons of the worktree that holds a file written from the root"
   const { r, w } = gitRepo(kit);
   plantSource(w);
   const lesson = plantLesson(w);
+
   function from(sid: string) {
     return { cwd: r, env: { CLAUDE_PROJECT_DIR: r }, sid };
   }
+
   const ctx = outputOf(kit.writeAs(from("n1"), path.join(w, "src/a.ts"), "y\n")).additionalContext;
   expect(ctx).toContain("Recorded lessons match src/a.ts:");
   expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1)");
@@ -34,6 +37,7 @@ it("denies a lesson Write in the main checkout and writes nothing there", () => 
   const { r } = gitRepo(kit);
   plantSource(r);
   const alias = aliasOf(r);
+
   for (const cwd of [r, alias]) {
     const at = { cwd, env: { CLAUDE_PROJECT_DIR: cwd }, sid: "m1" };
     const res = outputOf(kit.writeAs(at, path.join(cwd, ".repo/lessons/plan-forks.md"), VALID_LESSON));
@@ -44,6 +48,7 @@ it("denies a lesson Write in the main checkout and writes nothing there", () => 
         `only ${path.join(r, ".tmp")}${path.sep} is writable here`,
     );
   }
+
   expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
 });
 

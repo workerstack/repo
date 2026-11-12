@@ -122,6 +122,7 @@ it("hostIdentity: is the first parent that is not a shell", () => {
     30: { comm: "claude", ppid: 1, start: "30s" },
     5: { ppid: 20 },
   });
+
   expect(hostIdentity({ pid: 5, probe })).toStrictEqual({ pid: 30, start: "30s" });
 });
 
@@ -133,6 +134,7 @@ it("hostIdentity: is null when the chain ends, breaks, loops or never leaves the
   expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "claude", pid: 1 }, 5: { ppid: 20 } }) })).toBeNull();
   expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "sh", ppid: 1 }, 5: { ppid: 20 } }) })).toBeNull();
   expect(hostIdentity({ pid: 5, probe: probeOf({ 20: { comm: "sh", ppid: 20 }, 5: { ppid: 20 } }) })).toBeNull();
+
   const shells = probeOf({
     20: { comm: "sh", ppid: 21 },
     21: { comm: "zsh", ppid: 22 },
@@ -141,6 +143,7 @@ it("hostIdentity: is null when the chain ends, breaks, loops or never leaves the
     24: { comm: "claude", ppid: 1 },
     5: { ppid: 20 },
   });
+
   expect(hostIdentity({ pid: 5, probe: shells })).toBeNull();
 });
 

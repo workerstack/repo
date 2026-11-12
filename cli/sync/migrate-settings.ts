@@ -13,6 +13,7 @@ type OwnHooks = { hooks: Record<string, unknown[]>; events: [string, number][] }
 /** The JSON value of `text`: undefined for no text, null when it is not JSON. */
 export function parseJson(text: string | null): unknown {
   if (text === null) return undefined;
+
   try {
     return JSON.parse(text);
   } catch {
@@ -31,17 +32,21 @@ export function readJson(file: string): unknown {
 
 function keep(value: unknown, trail: Trail): unknown {
   trail.paths.push(trail.at);
+
   return value;
 }
 
 /** The keys of `have` that `base` lacks or holds otherwise, as `settingsExtras` finds them; undefined when none. */
 function objectExtras(have: Record<string, unknown>, base: Record<string, unknown>, trail: Trail): unknown {
   const found: Record<string, unknown> = {};
+
   for (const [key, value] of Object.entries(have)) {
     const next = { at: trail.at === "" ? key : `${trail.at}.${key}`, paths: trail.paths };
     const extra = key in base ? settingsExtras(value, base[key], next) : keep(value, next);
+
     if (extra !== undefined) found[key] = extra;
   }
+
   return Object.keys(found).length > 0 ? found : undefined;
 }
 
@@ -53,11 +58,15 @@ function objectExtras(have: Record<string, unknown>, base: Record<string, unknow
 export function settingsExtras(have: unknown, base: unknown, trail: Trail): unknown {
   if (Array.isArray(have) && Array.isArray(base)) {
     const extra = have.filter((item) => !base.some((known) => isDeepStrictEqual(known, item)));
+
     if (extra.length === 0) return undefined;
     trail.paths.push(trail.at);
+
     return extra;
   }
+
   if (isRecord(have) && isRecord(base)) return objectExtras(have, base, trail);
+
   return isDeepStrictEqual(have, base) ? undefined : keep(have, trail);
 }
 
@@ -65,9 +74,11 @@ export function settingsExtras(have: unknown, base: unknown, trail: Trail): unkn
 function ownGroups(value: unknown, known: (command: string) => boolean): unknown[] {
   return (Array.isArray(value) ? value : [value]).flatMap((group: unknown) => {
     if (!isRecord(group) || !Array.isArray(group.hooks)) return [group];
+
     const unknown: unknown[] = group.hooks.filter(
       (hook: unknown) => !(isRecord(hook) && typeof hook.command === "string" && known(hook.command)),
     );
+
     return unknown.length > 0 ? [{ ...group, hooks: unknown }] : [];
   });
 }
@@ -78,12 +89,15 @@ function ownGroups(value: unknown, known: (command: string) => boolean): unknown
  */
 export function ownHooks(hooks: unknown, known: (command: string) => boolean): OwnHooks {
   const carried: Record<string, unknown[]> = {};
+
   if (isRecord(hooks)) {
     for (const [event, value] of Object.entries(hooks)) {
       const groups = ownGroups(value, known);
+
       if (groups.length > 0) carried[event] = groups;
     }
   }
+
   return { events: Object.entries(carried).map(([event, groups]) => [event, groups.length]), hooks: carried };
 }
 
@@ -91,8 +105,10 @@ export function ownHooks(hooks: unknown, known: (command: string) => boolean): O
 function covers(have: unknown, want: unknown): boolean {
   if (Array.isArray(want))
     return Array.isArray(have) && want.every((item) => have.some((known) => isDeepStrictEqual(known, item)));
+
   if (isRecord(want))
     return isRecord(have) && Object.entries(want).every(([key, value]) => key in have && covers(have[key], value));
+
   return isDeepStrictEqual(have, want);
 }
 
@@ -105,6 +121,7 @@ export function alreadyHolds(to: string, existing: string, content: string): boo
     // every markdown file a plan writes is a rule, which starts with the same frontmatter
     return existing.includes(content.slice(RULE_FRONTMATTER.length).trim());
   }
+
   try {
     return covers(JSON.parse(existing), JSON.parse(content));
   } catch {

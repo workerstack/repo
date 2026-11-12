@@ -14,6 +14,7 @@ it("parseHookInput: reads a Claude payload", () => {
       transcript_path: "/t.jsonl",
     }),
   );
+
   expect(input?.session_id).toBe("s1");
   expect(input?.tool_input).toStrictEqual({ file_path: "/repo/a.ts" });
   expect(input?.agent_type).toBe("scout");
@@ -27,9 +28,11 @@ it("parseHookInput: reads spawn markers on a nested agent object", () => {
 it("parseHookInput: reads the Claude worktree fields", () => {
   const create = parseHookInput(JSON.stringify({ cwd: "/repo", hook_event_name: "WorktreeCreate", name: "feat" }));
   expect(create?.name).toBe("feat");
+
   const remove = parseHookInput(
     JSON.stringify({ hook_event_name: "WorktreeRemove", name: 3, worktree_path: "/repo/.worktrees/feat" }),
   );
+
   expect(remove?.worktree_path).toBe("/repo/.worktrees/feat");
   expect(remove?.name).toBeUndefined();
 });
@@ -44,6 +47,7 @@ it("parseHookInput: reads a Codex payload", () => {
       turn_id: "t1",
     }),
   );
+
   expect(input?.turn_id).toBe("t1");
   expect(input?.model).toBe("gpt");
   expect(input?.tool_input).toStrictEqual({ command: "ls" });
@@ -59,6 +63,7 @@ it("parseHookInput: reads a Cursor payload", () => {
       toolName: "Shell",
     }),
   );
+
   expect(input?.cursor_version).toBe("1.0");
   expect(input?.conversationId).toBe("c1");
   expect(input?.toolInput).toStrictEqual({ command: "ls", cwd: "/r" });
@@ -73,6 +78,7 @@ it("parseHookInput: reads a Grok payload", () => {
       stopHookActive: false,
     }),
   );
+
   expect(input?.sessionId).toBe("g1");
   expect(input?.agent).toStrictEqual({ type: "scout" });
   expect(input?.lastAssistantMessage).toBe("done");
@@ -82,6 +88,7 @@ it("parseHookInput: reads the workspace fields and keeps only string paths", () 
   const input = parseHookInput(
     JSON.stringify({ workspacePaths: ["/c", 3, null, "/d"], workspaceRoot: "/a", workspace_root: "/b" }),
   );
+
   expect(input?.workspaceRoot).toBe("/a");
   expect(input?.workspace_root).toBe("/b");
   expect(input?.workspacePaths).toStrictEqual(["/c", "/d"]);
@@ -117,6 +124,7 @@ it("parseHookInput: drops a wrong-typed field and keeps the rest", () => {
       tool_name: 5,
     }),
   );
+
   expect(input).toStrictEqual({ session_id: "s1", stopHookActive: true });
 });
 

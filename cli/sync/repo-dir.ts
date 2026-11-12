@@ -35,6 +35,7 @@ function allowedList(): string {
     ...OTHER_READERS.map(([file, reader]) => `${file} (read by ${reader})`),
   ].join(", ");
 }
+
 const ALLOWED = /* @__PURE__ */ allowedList();
 
 /** Every dir the root `.repo/` may hold but settings/: the ones sync reads and the ones other commands read. */
@@ -59,9 +60,11 @@ export type RepoDirInput = {
 /** One `path: problem; fix` line per fault in `<root>/.repo`, in a stable order. */
 export function repoDirProblems(root: string, { sources, stock, listed, off, packages }: RepoDirInput): string[] {
   const own = sources.rules.filter((doc) => doc.origin === "repo");
+
   function skillsIn(scope: string): string[] {
     return skillProblems({ off, root, scope, stock });
   }
+
   return [
     ...layoutProblems(root),
     ...skillsIn(""),
@@ -79,6 +82,7 @@ function packageLayoutProblems(root: string, dir: string): string[] {
       const dirName = entry.isDirectory();
       const where = dirName && rootDirs().includes(entry.name) ? `; ${entry.name} live in the root .repo` : "";
       const rel = `${dir}/${REPO_DIR}/${entry.name}${dirName ? "/" : ""}`;
+
       return `${rel}: a package .repo holds only rules/ and skills/${where}`;
     });
 }
@@ -93,15 +97,19 @@ function settingsProblems(dir: string): string[] {
 function layoutProblems(root: string): string[] {
   const problems: string[] = [];
   const dir = path.join(root, REPO_DIR);
+
   for (const entry of entriesOf(dir)) {
     const known = entry.isDirectory()
       ? rootDirs().includes(entry.name)
       : [...READ_FILES, ...OTHER_READERS.map(([file]) => file)].includes(entry.name);
+
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
+
     if (entry.name === SETTINGS_DIR && entry.isDirectory()) problems.push(...settingsProblems(dir));
     else if (UNREAD.includes(entry.name)) problems.push(`${rel}: ${DEAD_ENTRY}`);
     else if (!known) problems.push(`${rel}: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`);
   }
+
   return problems;
 }
 
@@ -111,12 +119,14 @@ function layoutProblems(root: string): string[] {
  */
 function globProblems(rules: readonly Doc[], listed: readonly string[] | null): string[] {
   const files = listed?.filter((rel) => !rel.startsWith(`${REPO_DIR}/tmp/`));
+
   return rules.flatMap((doc) =>
     scopeOf(doc).flatMap((glob) => {
       if (doc.scope !== "" && (glob.startsWith("../") || glob.startsWith("/")))
         return [`${doc.rel}: paths "${glob}" leaves the package; scope it inside ${doc.scope}`];
 
       const full = doc.scope === "" ? glob : `${doc.scope}/${glob}`;
+
       return files === undefined || files.some((file) => new Bun.Glob(full).match(file))
         ? []
         : [`${doc.rel}: paths "${glob}" matches no file`];

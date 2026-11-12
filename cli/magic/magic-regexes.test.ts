@@ -12,6 +12,7 @@ it("refuses a regex literal and new RegExp of a literal pattern inside a functio
     "export const build = (text: string) => new RegExp('x').test(text) || RegExp(`y`).test(text);",
     "",
   ].join("\n");
+
   expect(magicOf({ "src/a.ts": source })).toStrictEqual([
     hit("src/a.ts:2:10", REGEX, inlineRegex("/^v\\d+/")),
     hit("src/a.ts:4:40", REGEX, inlineRegex("new RegExp('x')")),
@@ -37,6 +38,7 @@ it("passes a module const, a class field, a dynamic pattern, a RegExp with no pa
       "",
     ].join("\n"),
   };
+
   expect(magicOf(files)).toStrictEqual([]);
 });
 

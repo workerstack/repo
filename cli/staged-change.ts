@@ -11,6 +11,7 @@ const UNCOUNTED_NAMES: readonly string[] = [
   "yarn.lock",
   "pnpm-lock.yaml",
 ];
+
 const UNCOUNTED_PATHS: readonly string[] = [".repo/lint-baseline.json"];
 const NUMSTAT_ENTRY = /^(-|\d+)\t(-|\d+)\t(.*)$/s;
 
@@ -27,16 +28,21 @@ type Numstat = { file: string; lines: number | null };
 function parseNumstat(out: string): Numstat[] {
   const tokens = out.split("\0");
   const entries: Numstat[] = [];
+
   for (let i = 0; i < tokens.length; i++) {
     const match = NUMSTAT_ENTRY.exec(tokens[i] /* i < tokens.length */ as string);
+
     if (match === null) continue;
     const [, added, deleted, named] = match;
+
     const file =
       named === undefined || named === ""
         ? (tokens[(i += RENAME_PATHS)] /* a rename lists both paths */ as string)
         : named;
+
     entries.push({ file, lines: added === "-" ? null : Number(added) + Number(deleted) });
   }
+
   return entries;
 }
 
@@ -48,10 +54,12 @@ function generatedPaths(files: readonly string[], { root, attrArgs, git }: Reade
   const result = git(root, ["check-attr", ...attrArgs, "-z", "--stdin", "linguist-generated"], files.join("\0"));
   const tokens = result.stdout.split("\0");
   const generated = new Set<string>();
+
   for (let i = 0; i + ATTR_VALUE_AT < tokens.length; i += ATTR_TOKENS) {
     if (tokens[i + ATTR_VALUE_AT] === ATTR_SET || tokens[i + ATTR_VALUE_AT] === ATTR_TRUE)
       generated.add(tokens[i] /* i < tokens.length */ as string);
   }
+
   return generated;
 }
 
@@ -63,10 +71,12 @@ function summarize(numstat: string, reader: Reader): StagedChange {
   const entries = parseNumstat(numstat);
   const files = entries.map((entry) => entry.file);
   const generated = generatedPaths(files, reader);
+
   const counted = entries.filter(
     ({ file }) =>
       !UNCOUNTED_NAMES.includes(path.posix.basename(file)) && !UNCOUNTED_PATHS.includes(file) && !generated.has(file),
   );
+
   return { changedLines: counted.reduce((sum, entry) => sum + (entry.lines ?? 0), 0), files };
 }
 
@@ -76,6 +86,7 @@ function summarize(numstat: string, reader: Reader): StagedChange {
  */
 export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
   const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
+
   return diff.status === 0
     ? summarize(diff.stdout, { attrArgs: ["--cached"], git, root })
     : { changedLines: 0, files: [] };
@@ -84,6 +95,7 @@ export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
 /** The change commit `sha` made, counted as `stagedChange` counts, with `.gitattributes` read as of that commit. */
 export function commitChange(root: string, sha: string, git: GitRun = runGit): StagedChange {
   const shown = git(root, ["show", "--numstat", "-z", "--format=", sha]);
+
   return shown.status === 0
     ? summarize(shown.stdout, { attrArgs: ["--source", sha], git, root })
     : { changedLines: 0, files: [] };

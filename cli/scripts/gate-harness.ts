@@ -39,9 +39,11 @@ export type HookOutput = {
 };
 
 const SHELL: ToolSpec = { command: "command", kind: "bash" };
+
 // orchestrate-parent persists these itself, so the gate leaves their persist-owned redirects to it.
 const SHARED_WRITE: ToolSpec = { kind: "write", persistShared: true };
 const WRITE: ToolSpec = { kind: "write" };
+
 // Cursor's Read and Grep take no offset, limit or head_limit, so the gate cannot inject or cap them.
 const CURSOR_NO_LIMITS = { limits: false } as const;
 
@@ -57,16 +59,19 @@ const CLAUDE_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["glob", { kind: "glob" }],
   ["listdir", { kind: "glob" }],
 ];
+
 const CODEX_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["applypatch", { kind: "patch" }],
   ["bash", SHELL],
 ];
+
 const CURSOR_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["shell", { command: "command", cwd: "cwd", kind: "bash" }],
   ["read", { kind: "read", ...CURSOR_NO_LIMITS }],
   ["grep", { kind: "grep", ...CURSOR_NO_LIMITS }],
   ["write", SHARED_WRITE],
 ];
+
 const ANTIGRAVITY_TOOLS: readonly (readonly [string, ToolSpec])[] = [
   ["writefile", WRITE],
   ["editfile", WRITE],
@@ -83,6 +88,7 @@ export const TOOLS: Readonly<Record<Harness, ReadonlyMap<string, ToolSpec>>> = {
   codex: /* @__PURE__ */ new Map(CODEX_TOOLS),
   cursor: /* @__PURE__ */ new Map(CURSOR_TOOLS),
 };
+
 export const WRITE_PATH_FIELDS: readonly string[] = [
   "path",
   "file_path",
@@ -91,7 +97,9 @@ export const WRITE_PATH_FIELDS: readonly string[] = [
   "targetFile",
   "Path",
 ];
+
 export const SHELL_META: RegExp = /[|&;`$(){}<>\n\r]/;
+
 /** Every character an event key drops, for `replaceAll`. */
 const NON_KEY_CHAR_RE = /[^a-z0-9]/g;
 
@@ -112,9 +120,12 @@ export function isHookObject(v: unknown): v is HookInput {
 export function harnessOf(data: HookInput): Harness {
   // Cursor also sends model and session_id, so it is told apart by its version before Codex's check.
   if (typeof data.cursor_version === "string") return "cursor";
+
   if (isPlainObject(data.toolCall)) return "antigravity";
+
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
   if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
+
   return "claude";
 }
 
@@ -124,6 +135,7 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   const call = harness === "antigravity" ? data.toolCall : undefined;
   const name = call === undefined ? [data.toolName, data.tool_name].find(Boolean) : call.name;
   const args: unknown = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
+
   return { args: isPlainObject(args) ? args : null, harness, key: eventKey(name) };
 }
 
@@ -156,6 +168,7 @@ function nestedRewrite(_args: ToolArgs | null, next: ToolArgs): HookOutput {
     hookSpecificOutput: { hookEventName: "PreToolUse", updatedInput: next },
   };
 }
+
 const ANSWERS: Record<Harness, Answers> = {
   antigravity: {
     deny: (reason: string) => ({ decision: "deny", reason }),
@@ -191,5 +204,6 @@ export function answerRewrite(data: HookInput, next: ToolArgs): HookOutput {
 /** The hook answer for a gate result, in the shape the payload's harness takes. */
 export function fatHookOutput(data: HookInput, result: GateResult): HookOutput | null {
   if (result === null) return null;
+
   return result.type === "deny" ? answerDeny(data, result.reason) : answerRewrite(data, result.updatedInput);
 }

@@ -19,10 +19,13 @@ function stripColors(output: string): string {
 /** The paths in `packed {size} {path}` lines, with POSIX separators. */
 export function packedPaths(output: string): Set<string> {
   const paths = new Set<string>();
+
   for (const line of stripColors(output).replaceAll("\\", "/").split(LINE_BREAK)) {
     const match = PACKED.exec(line);
+
     if (match !== null) paths.add(group(match, 1));
   }
+
   return paths;
 }
 
@@ -33,12 +36,14 @@ export function packedPaths(output: string): Set<string> {
  */
 export function tarballFindings(dir: string, wanted: readonly Wanted[], pack: () => Captured): string[] {
   const packed = pack();
+
   if (packed.code !== 0)
     return [packFailed(dir, packed.code, `${packed.stderr}${packed.stdout}`.trim().split(LINE_BREAK, 1).join(""))];
   const held = packedPaths(packed.stdout);
   const prefix = dir === "" ? "" : `${dir}/`;
   const missing = wanted.filter(({ file }) => !held.has(file.slice(prefix.length)));
   const lostIndexes = new Set(missing.filter(({ file, index }) => file === index).map(({ file }) => file));
+
   return missing
     .filter(({ file, index }) => file === index || !lostIndexes.has(index))
     .map(({ file, index }) => notPacked(file, index, dir));

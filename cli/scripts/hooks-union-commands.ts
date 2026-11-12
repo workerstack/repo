@@ -17,6 +17,7 @@ export function rootCmd(rel: string, args?: string): string {
   const cmd =
     `${ROOT_PREFIX}${rel}" ] || ` +
     `d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"; bun "$d/${rel}"`;
+
   return args === undefined || args === "" ? cmd : `${cmd} ${args}`;
 }
 
@@ -25,6 +26,7 @@ export function isRootCmd(command: string): boolean {
   if (!command.startsWith(ROOT_PREFIX)) return false;
   const rel = command.slice(ROOT_PREFIX.length).split('"', 1).join("");
   const exact = rootCmd(rel);
+
   return command === exact || command.startsWith(`${exact} `);
 }
 

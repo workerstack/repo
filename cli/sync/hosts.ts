@@ -19,5 +19,6 @@ export const HOST_TREES: Record<Host, HostTree> = {
  */
 export function isHostOutput(hosts: readonly Host[], rel: string): boolean {
   if (rel === AGENTS_FILE || rel.endsWith(`/${AGENTS_FILE}`)) return hosts.length > 0;
+
   return hosts.some((host) => HOST_TREES[host].owns.some((prefix) => rel.startsWith(prefix)));
 }

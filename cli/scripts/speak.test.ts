@@ -42,6 +42,7 @@ it("main: 401 does not dump JSON", async () => {
 
 it("main: scoped elevenlabs whoami is ok without user_read", async () => {
   const c = collector();
+
   const fetchFn = fetchReturning(
     failRes(
       401,
@@ -49,6 +50,7 @@ it("main: scoped elevenlabs whoami is ok without user_read", async () => {
         '"message":"missing the permission user_read","status":"missing_permissions"}}',
     ),
   );
+
   const opts = { env: { ELEVENLABS_API_KEY: "sk_scoped" }, fetchFn, home: plantDir("speak-scope-"), log: c.log };
   expect(await main(["whoami"], opts)).toBe(0);
   expect(c.logs.join("\n")).toMatch(/elevenlabs\s+ok/);

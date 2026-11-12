@@ -15,6 +15,7 @@ it("finds default and named catalog entries, top-level and under workspaces, and
     catalogs: { next: { b: "^1.0.0" } },
     workspaces: { catalogs: { old: { c: "1.0.0" } } },
   });
+
   const w = world(files, { a: "1.2.0", b: "2.0.0", c: "1.0.1" });
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out.slice(0, 4)).toStrictEqual([
@@ -49,6 +50,7 @@ it("keeps catalog users, tags, protocols and peers silent, and never asks about 
     },
     peerDependencies: { p: "^1.0.0" },
   });
+
   const w = world(files, {});
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out).toStrictEqual(["every dependency is on latest (0 checked)"]);
@@ -61,6 +63,7 @@ it("skips a 404 and a document with no latest, and lists both", async () => {
     gone: NOT_FOUND,
     ok: "1.0.0",
   });
+
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([
     "every dependency is on latest (1 checked)",
@@ -77,6 +80,7 @@ it("bumps a name in one package and lists it skipped as a range in another", asy
     },
     { x: "1.5.0" },
   );
+
   expect(await main(["--check"], w.io())).toBe(0);
   expect(w.out[0]).toBe("1 behind of 1 checked:");
   expect(w.out[2]).toBe('skipped 1: x in packages/b is ">=1 <2", not a plain version');
@@ -103,10 +107,13 @@ it("asks the registry for 8 names at a time", async () => {
 it("asks for a scoped name encoded, on the registry the env names", async () => {
   const w = world(manifest({ dependencies: { "@s/p": "1.0.0" } }), {});
   const urls: string[] = [];
+
   function fetch(url: string) {
     urls.push(url);
+
     return Promise.resolve(Response.json({ "dist-tags": { latest: "1.0.0" }, versions: {} }));
   }
+
   const env = { NPM_CONFIG_REGISTRY: "https://mirror.example" };
   expect(await main(["--check"], w.io({ env, fetch }))).toBe(0);
   expect(urls).toStrictEqual(["https://mirror.example/@s%2fp"]);
@@ -133,15 +140,19 @@ it("reports an unreadable manifest and exits 1", async () => {
 
 it("runs on the process streams when no io is given", async () => {
   const written: string[] = [];
+
   const spy = vi.spyOn(process.stderr, "write").mockImplementation((text) => {
     written.push(String(text));
+
     return true;
   });
+
   try {
     expect(await main(["--nope"])).toBe(2);
   } finally {
     spy.mockRestore();
   }
+
   expect(written).toStrictEqual(["repo update: usage: repo update [--check] [<name>|@scope/*…]\n"]);
 });
 
@@ -199,6 +210,7 @@ it("prints each current scoped name once, though several sources hold it", async
     },
     { "@s/a": "1.0.0", "@s/b": "2.0.0" },
   );
+
   expect(await main(["@s/*"], w.io())).toBe(0);
   expect(w.out).toStrictEqual(["@s/a is on latest (^1.0.0)", "@s/b is on latest (^2.0.0)"]);
 });

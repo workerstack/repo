@@ -18,11 +18,14 @@ function tmp(): string {
 
 function checkout(files: Record<string, string>) {
   const cwd = tmp();
+
   for (const [rel, body] of Object.entries(files)) put(cwd, rel, body);
+
   return cwd;
 }
 
 const GROK_LIST = "Available models:\n  * grok-4.7 (default)\n";
+
 function ok(): ReturnType<ListRunner> {
   return Promise.resolve({ code: 0, stderr: "", stdout: GROK_LIST });
 }
@@ -35,6 +38,7 @@ async function lines(files: Record<string, string>, run: ListRunner = ok, source
   const cwd = checkout(files);
   const home = tmp();
   const out = await agentModelsLines({ cwd, env: {}, home, run, sourceRoot: sourceRoot ?? cwd });
+
   return out.join("\n");
 }
 
@@ -43,6 +47,7 @@ async function codex(cache: string) {
   const home = tmp();
   put(home, ".codex/models_cache.json", cache);
   const out = await agentModelsLines({ cwd, env: {}, home, run: ok, sourceRoot: cwd });
+
   return out.join("\n");
 }
 
@@ -53,6 +58,7 @@ describe("agent files with odd contents", () => {
       ".grok/agents/a.md": "no frontmatter here\n",
       ".grok/agents/b.md": "---\nname: b\n---\n",
     });
+
     expect(text).toMatch(/^agent models\s+ok\s*$/);
   });
 
@@ -66,6 +72,7 @@ describe("agent files with odd contents", () => {
         'ignored = "nope"',
       ].join("\n"),
     });
+
     const text = await lines({}, ok, source);
     expect(text).toMatch(/1 to fix/);
     expect(text).toContain("- agents/global-settings/grok.toml: model grok-gone is not offered by grok");

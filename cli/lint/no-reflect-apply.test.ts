@@ -4,6 +4,7 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
 
 const MESSAGE = "Replace `Reflect.apply` with a typed function call. Model dynamic dispatch behind a named interface.";
+
 function messagesOf(code: string) {
   return reportsOf(noReflectApply, { "a.ts": code }).map((report) => report.message);
 }

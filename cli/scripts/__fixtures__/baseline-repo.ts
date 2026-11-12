@@ -25,7 +25,7 @@ export const nonNull = (count: number, stem = "a") =>
   Array.from(
     { length: count },
     (_, i) => `export function ${stem}${i === 0 ? "" : i}(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n`,
-  ).join("");
+  ).join("\n");
 export const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
 /** The two tool configs as sync writes them for the standards pack. */

@@ -97,6 +97,7 @@ it.each([[["--check"]], [[]]])("a registry that does not answer exits 1 before a
 function failingInstall() {
   return { code: 1, output: "boom\nmore\n" };
 }
+
 function failingFormat() {
   return { code: 1, output: "bad\n" };
 }
@@ -150,9 +151,11 @@ it("prints the install's repo sync lines right after the updated line, and nothi
 
 it("prints no repo sync line when the install fails", async () => {
   const w = world(BASE, REPLIES);
+
   function install() {
     return { code: 1, output: `${SYNC}\nboom\n` };
   }
+
   expect(await main([], w.io({ install }))).toBe(1);
   expect(w.out).toStrictEqual([UPDATED]);
   expect(w.err.slice(1)).toStrictEqual([`  ${SYNC}`, "  boom"]);

@@ -19,6 +19,7 @@ import { byCodeUnit } from "./by-code-unit.ts";
 import { isHostOutput } from "./hosts.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 it("claude alone writes AGENTS.md and .claude, with skills linked straight to stock", () => {

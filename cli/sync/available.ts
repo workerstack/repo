@@ -10,13 +10,16 @@ type Entry = { name: string; url: string; description: string };
 function parseEntries(text: string): Entry[] {
   const entries: Entry[] = [];
   let isInSection = false;
+
   for (const line of lines(text)) {
     // A region marker, hashed or not, read as loosely as sync reads its own: its slash group says it closes.
     const marker = HTML_MARKER.exec(line.trimEnd());
+
     if (marker !== null) {
       isInSection = marker[1] === undefined;
     } else if (!isInSection) {
       const match = ENTRY.exec(line);
+
       if (match !== null) {
         entries.push({
           description: group(match, THIRD_GROUP),
@@ -26,6 +29,7 @@ function parseEntries(text: string): Entry[] {
       }
     }
   }
+
   return entries;
 }
 
@@ -35,7 +39,9 @@ function parseEntries(text: string): Entry[] {
  */
 export function available(read: (rel: string) => string | null, installed: ReadonlySet<string>): string | null {
   const text = read(AVAILABLE_INDEX_PATH);
+
   if (text === null) return null;
+
   return parseEntries(text)
     .filter(({ name }) => !installed.has(name))
     .map(({ name, url, description }) => `- [${name}](${url}): ${description}`)

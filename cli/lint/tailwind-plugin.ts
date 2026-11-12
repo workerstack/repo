@@ -5,4 +5,5 @@
 import tailwindPlugin from "oxlint-tailwindcss";
 
 export { tailwindPlugin };
+
 export default tailwindPlugin;

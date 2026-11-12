@@ -12,10 +12,13 @@ afterEach(removePlanted);
 
 function recording(code: number, stderr = ""): { bun: Runner; calls: string[][] } {
   const calls: string[][] = [];
+
   function bun(args: string[]) {
     calls.push(args);
+
     return { code, stderr, stdout: "" };
   }
+
   return { bun, calls };
 }
 

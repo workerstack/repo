@@ -62,6 +62,7 @@ describe("ffmpeg arguments", () => {
       platform: "linux",
       seconds: undefined,
     });
+
     expect(open).not.toContain("-nostdin");
     expect(open).not.toContain("-t");
   });
@@ -75,6 +76,7 @@ describe("ffmpeg arguments", () => {
 
 function fakeChild(over: Partial<ChildLike> = {}) {
   const on: Record<string, Handler> = {};
+
   const child: ChildLike = {
     on(ev: string, cb: Handler) {
       on[ev] = cb;
@@ -82,6 +84,7 @@ function fakeChild(over: Partial<ChildLike> = {}) {
     pid: 321,
     ...over,
   };
+
   return { child, on };
 }
 
@@ -122,6 +125,7 @@ describe("recCapture outcome", () => {
 function fakeTimers() {
   return vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 }
+
 function throwing() {
   throw new Error("EPERM");
 }

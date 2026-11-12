@@ -11,6 +11,7 @@ const GOOD = "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] -
 function root(files: Record<string, unknown>): string {
   const dir = tempDir();
   write(dir, files);
+
   return dir;
 }
 

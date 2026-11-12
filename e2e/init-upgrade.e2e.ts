@@ -19,6 +19,7 @@ async function emptyDirInits() {
   const init = await sb.launch(PACKAGE_NAME, "init");
   expectClean(sb, init);
   expect(init.out).toContain("repo init: ran git init");
+
   for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
   const hooksPath = await sb.git("config", "core.hooksPath");
   expect(hooksPath.stdout.trim()).toBe(".githooks");
@@ -36,14 +37,18 @@ async function olderInit(sb: Sandbox): Promise<OwnFiles> {
   expect(sb.exists(".rulesync/scripts"), "the older init copies the scripts").toBe(true);
   const own = "Our team notes: ship on Fridays only with a rollback plan.";
   sb.write(".rulesync/rules/team.md", `---\nroot: false\ntargets: ["*"]\n---\n${own}\n`);
+
   const agent =
     "---\nname: release-notes\ndescription: Drafts our release notes.\n---\n" +
     "Write the notes from the merged pull requests.\n";
+
   const skill =
     "---\nname: deploy-notes\ndescription: How we deploy on Fridays.\n---\nAlways attach the rollback plan.\n";
+
   sb.write(".rulesync/subagents/release-notes.md", agent);
   sb.write(".agents/skills/deploy-notes/SKILL.md", skill);
   await sb.commit("older init and own rule");
+
   return { agent, own, skill };
 }
 

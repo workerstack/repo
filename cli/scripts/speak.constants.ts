@@ -8,6 +8,7 @@ export const DEFAULT_ELEVEN_VOICE = "JBFqnCBsd6RMkjVDRZzb";
 export const DEFAULT_ELEVEN_MODEL = "eleven_multilingual_v2";
 export const DEFAULT_OPENAI_VOICE = "coral";
 export const DEFAULT_OPENAI_MODEL = "gpt-4o-mini-tts";
+
 export const OPENAI_VOICES: readonly string[] = [
   "alloy",
   "ash",
@@ -23,6 +24,7 @@ export const OPENAI_VOICES: readonly string[] = [
 
 export const ELEVEN_API = "https://api.elevenlabs.io/v1";
 export const OPENAI_API = "https://api.openai.com/v1";
+
 /** The audio format ElevenLabs is asked for. */
 export const ELEVEN_FORMAT = "mp3_44100_128";
 
@@ -39,11 +41,15 @@ export const HTTP_BODY_CHARS = 200;
 
 export const USAGE =
   "usage: speak whoami | voices | say --text T [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]";
+
 export const SETUP = "bun repo setup speak";
 export const SPEAK_DIR = ".tmp/repo/speak";
+
 export const NEED_KEY =
   "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.workerstack/speak.json). setup: bun repo setup speak";
+
 export const NEED_ELEVEN =
   "missing ELEVENLABS_API_KEY (or ~/.workerstack/speak.json elevenlabs.apiKey). setup: bun repo setup speak";
+
 export const NEED_OPENAI =
   "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun repo setup speak";

@@ -15,6 +15,7 @@ it("folderMap core lists folders that hold code, never files", () => {
     "src/a.ts": "",
     "src/lib/b.ts": "",
   });
+
   expect(text).toBe("src/\n  lib/\n");
 });
 
@@ -28,6 +29,7 @@ it("folderMap core skips dot dirs, generated, static, and test-data segments", (
     "src/a.ts": "",
     "vendor/x.go": "",
   });
+
   expect(text).toBe("src/\n");
 });
 
@@ -38,6 +40,7 @@ it("folderMap core maps cli/scripts, skipping its fixtures and dot dirs", () => 
     "cli/scripts/a.mjs": "",
     "src/a.ts": "",
   });
+
   expect(text).toBe("cli/scripts/\nsrc/\n");
 });
 
@@ -47,6 +50,7 @@ it("folderMap core drops gitignored folders", () => {
     "out/b.ts": "",
     "src/a.ts": "",
   });
+
   expect(text).toBe("src/\n");
 });
 
@@ -61,6 +65,7 @@ it("folderMap core anchors package rows with name and full path, and does not co
     "packages/web/package.json": JSON.stringify({ name: "@x/web" }),
     "packages/web/src/a.ts": "",
   });
+
   expect(text).toBe(
     ["packages/", "  api/  # example.com/api  packages/api", "  web/  # @x/web  packages/web", "    src/", ""].join(
       "\n",
@@ -70,6 +75,7 @@ it("folderMap core anchors package rows with name and full path, and does not co
 
 it("folderMap core folds plain leaf dirs at foldAt without folding structured siblings", () => {
   const files: Record<string, string> = { "src/dtos/core/deep/x.ts": "" };
+
   for (let i = 0; i < 12; i++) files[`src/dtos/t${String(i).padStart(2, "0")}/x.ts`] = "";
   const text = map(files);
   expect(text).toBe(["src/dtos/", "  (12 leaf dirs: t00, t01, t02, t03, t04, t05, …)", "  core/deep/", ""].join("\n"));
@@ -81,6 +87,7 @@ it("folderMap core renders brackets, parens, and spaces verbatim", () => {
     "app/[[...slug]]/page.tsx": "",
     "app/my dir/x.ts": "",
   });
+
   expect(text).toBe("app/\n  (dash)/[orgId]/\n  [[...slug]]/\n  my dir/\n");
 });
 
@@ -98,6 +105,7 @@ it("folderMap core scopes to a dir with package paths kept repo-relative", () =>
     "apps/web/src/ui/b.ts": "",
     "libs/x.ts": "",
   });
+
   expect(folderMap({ dir: "apps", root })?.text).toBe("web/  # web  apps/web\n  src/\n    ui/\n");
 });
 

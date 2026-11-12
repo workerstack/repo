@@ -9,6 +9,7 @@ import { parseMode } from "./strategy.ts";
 function keyLineAt(lines: string[], key: string): number {
   const { fenced } = fencedLineSet(lines);
   const re = new RegExp(`^${key}:`);
+
   return lines.findIndex((l, i) => !fenced.has(i) && re.test(l));
 }
 
@@ -18,12 +19,16 @@ function keyLineAt(lines: string[], key: string): number {
  */
 function extractKey(content: unknown, key: string): string | undefined {
   const text = stripBom(String(content));
+
   if (text.startsWith(FM_OPEN)) {
     const fm = parseFrontmatter(text);
+
     if (fm.error === undefined && hasKey(fm.map, key)) return fm.map[key];
   }
+
   const lines = text.split("\n");
   const at = keyLineAt(lines, key);
+
   return at === NOT_FOUND
     ? undefined
     : String(lines[at])
@@ -35,7 +40,9 @@ function extractKey(content: unknown, key: string): string | undefined {
 function stripKeyLine(content: unknown, key: string): string {
   const lines = String(content).split("\n");
   const at = keyLineAt(lines, key);
+
   if (at !== NOT_FOUND) lines.splice(at, 1);
+
   return lines.join("\n");
 }
 
@@ -67,6 +74,7 @@ function modeError(): string {
 /** Errors for a frontmatter's `mode`: none when absent, the mode error when present and not one of MODES. */
 export function modeErrors(map: FrontmatterMap): string[] {
   if (!hasKey(map, "mode")) return [];
+
   return parseMode(map.mode) === null ? [modeError()] : [];
 }
 

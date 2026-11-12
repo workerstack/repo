@@ -13,17 +13,23 @@ const STALE_LOCK = "Cargo.lock is out of date with Cargo.toml; run `cargo update
 /** A root with a Cargo.lock, and a directory in it with none. */
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-clippy-lock-"));
 const BARE = path.join(ROOT, "bare");
+
 fs.mkdirSync(BARE);
+
 fs.writeFileSync(path.join(ROOT, "Cargo.lock"), cargoLock("app"));
+
 afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
 
 /** A runner that records its calls and returns an empty run with exit `status`. */
 function cargo(status: number, extra: Partial<CargoResult> = {}) {
   const calls: string[] = [];
+
   function run(root: string): CargoResult {
     calls.push(root);
+
     return { missing: false, status, stderr: "", stdout: "", ...extra };
   }
+
   return { calls, run };
 }
 

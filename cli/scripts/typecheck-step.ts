@@ -23,8 +23,10 @@ function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
   function tsc(project: string) {
     return turn.bins.tsc(["--noEmit", "-p", project], turn.root);
   }
+
   const runtime = configRun(path.posix.join(owner, RUNTIME_CONFIG), tsc(dirName(owner)));
   const src = path.posix.join(owner, SRC_CONFIG);
+
   if (!fs.existsSync(path.join(turn.root, src)))
     return [runtime, { name: `${src} missing`, ok: false, output: `repo turn: ${missingSrcConfig(dirName(owner))}\n` }];
 
@@ -37,10 +39,13 @@ function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
  */
 export function typecheckStep(turn: Turn): StepResult | null {
   const checked = owners(turn).filter((owner) => fs.existsSync(path.join(turn.root, owner, RUNTIME_CONFIG)));
+
   if (checked.length === 0) return passed("typecheck skipped (no tsconfig.json)");
   const bad = checked.flatMap((owner) => typecheckOwner(turn, owner)).filter((run) => !run.ok);
+
   if (bad.length === 0) return passed(`typecheck ${checked.map(dirName).join(", ")}`);
   const names = bad.map(({ name }) => name).toSorted();
+
   return failed(
     `typecheck failed (${names.join(", ")})`,
     bad.map(({ output }) => output),

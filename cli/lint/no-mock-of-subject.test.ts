@@ -8,15 +8,19 @@ import { noMockOfSubject } from "./no-mock-of-subject.ts";
 function call(callee: string, arg: string) {
   return `${callee}(${arg}, () => ({}));\n`;
 }
+
 function bare(callee: string) {
   return `${callee}();\n`;
 }
+
 function url(rel: string) {
   return `new URL("${rel}", import.meta.url).href`;
 }
+
 function covers(specifier: string) {
   return `"${specifier}" is the module this test covers; test it for real and mock what it calls`;
 }
+
 function messagesOf(file: string, code: string) {
   return reportsOf(noMockOfSubject, { [file]: code }).map((report) => report.message);
 }

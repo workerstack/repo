@@ -8,9 +8,11 @@ import type { FetchFn } from "./speak.types.ts";
 function eleven() {
   return cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
 }
+
 function openai() {
   return cfgOf({ OPENAI_API_KEY: "sk_oa" });
 }
+
 function accountOf(value: unknown) {
   return whoami({ cfg: eleven(), fetchFn: fetchReturning(jsonRes(value)) });
 }
@@ -40,10 +42,13 @@ it("whoami: rethrows any other elevenlabs failure", async () => {
 
 it("whoami: checks the openai models endpoint with the bearer key", async () => {
   const urls: string[] = [];
+
   function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
     urls.push(`${url} ${init.headers.Authorization}`);
+
     return Promise.resolve(okRes());
   }
+
   expect(await whoami({ cfg: openai(), fetchFn })).toBe("openai ok");
   expect(urls).toStrictEqual(["https://api.openai.com/v1/models Bearer sk_oa"]);
 });

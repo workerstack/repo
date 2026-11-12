@@ -30,18 +30,22 @@ afterEach(() => {
 function plantOpener(): string {
   const bin = tempDir("ws-bin-");
   const record = path.join(bin, "opened.txt");
+
   for (const name of ["open", "xdg-open"])
     fs.writeFileSync(path.join(bin, name), `#!/bin/sh\nprintf '%s' "$1" > "${record}"\n`, { mode: 0o755 });
 
   vi.stubEnv("PATH", bin);
+
   return record;
 }
 
 it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhere", () => {
   const calls: unknown[][] = [];
+
   function spawnSyncFn(...a: unknown[]) {
     return calls.push(a);
   }
+
   openUrl("https://x", { platform: "darwin", spawnSyncFn });
   openUrl("https://x", { platform: "win32", spawnSyncFn });
   openUrl("https://x", { platform: "linux", spawnSyncFn });
@@ -55,10 +59,13 @@ it("openUrl: opens with open on macOS, cmd start on Windows and xdg-open elsewhe
 it("gcloud login: runs the application-default login when there is no OAuth JSON", async () => {
   plantHome("ws-gcloud-");
   const seen: Spawned[] = [];
+
   function spawn(cmd: string, args: string[]): { status: number } {
     seen.push({ args, cmd });
+
     return { status: 0 };
   }
+
   const r = await withIo(() => main(["login"], spawn));
   expect(r.code).toBe(0);
   expect(r.logs).toContain("logged in via gcloud ADC");

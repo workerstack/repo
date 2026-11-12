@@ -14,6 +14,7 @@ import { CATALOG, ROOT_FILE } from "./update.constants.ts";
  */
 function nameOf(field: string, key: string): string {
   const at = key.lastIndexOf(VERSION_AT);
+
   return field === PATCHED && at > 0 ? key.slice(0, at) : key;
 }
 
@@ -22,9 +23,11 @@ function extraRemovals(raw: unknown, names: readonly string[]): Removal[] {
   return EXTRAS.flatMap(({ field, homes }) =>
     homes.flatMap((parent) => {
       const node = atRoute(raw, parent);
+
       const keys = Array.isArray(node)
         ? node.map(String)
         : Object.keys(Object(node) /* an empty object when the home is absent */ as object);
+
       return keys
         .filter((key) => names.includes(nameOf(field, key)))
         .map((key) => ({
@@ -55,6 +58,7 @@ export function removalsOf(root: string, workspace: Workspace, names: readonly s
   const entries = sources.flatMap((source) => source.paths.map((route) => ({ ...source, patch: null, route })));
   const fields = entries.filter((entry) => entry.field !== CATALOG);
   const catalogs = entries.filter((entry) => entry.field === CATALOG);
+
   function pick({ name, said, field, file: where, route, patch }: (typeof entries)[number]): Removal {
     return {
       field,
@@ -65,5 +69,6 @@ export function removalsOf(root: string, workspace: Workspace, names: readonly s
       said,
     };
   }
+
   return [...fields.map(pick), ...catalogs.map(pick), ...extraRemovals(raw, names)];
 }

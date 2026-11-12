@@ -14,9 +14,12 @@ export const GATE = " hook gate-fat-tools";
 export const MAP = " hook session-map";
 
 type Handler = { type?: string; command?: string };
+
 type Group = { matcher?: string; hooks?: Handler[] };
+
 /** Which command hooks to pick: those of `event` whose command ends with `ends`. */
 type HookPick = { event: string; ends: string };
+
 /** How a hook runs: its stdin payload, and the cwd and env the host gives it. */
 type HookRun = { payload: unknown; cwd?: string; env?: NodeJS.ProcessEnv };
 
@@ -29,6 +32,7 @@ export function expectClean(sb: Sandbox, r: Run) {
 function groupsOf(sb: Sandbox, file: string, event: string): Group[] {
   const doc: unknown = JSON.parse(sb.read(file));
   const hooks = isRecord(doc) && isRecord(doc.hooks) ? doc.hooks[event] : undefined;
+
   return Array.isArray(hooks) ? (hooks /* a host's hook file lists matcher groups per event */ as Group[]) : [];
 }
 
@@ -51,25 +55,32 @@ export function stopCommands(sb: Sandbox, file: string): string[] {
 export function only(list: string[], what: string): string {
   expect(list, what).toHaveLength(1);
   const [first] = list;
+
   if (first === undefined) throw new Error(`no ${what}`);
+
   return first;
 }
 
 /** Runs a hook command the way a host does, from `cwd`, with the payload on stdin. */
 export function runHook(sb: Sandbox, command: string, { payload, cwd, env }: HookRun) {
   const run = cwd === undefined || cwd === "" ? command : `cd ${JSON.stringify(cwd)} && ${command}`;
+
   return sb.run("bash", ["-c", run], { env: { ...ROOT_VARS, ...env }, input: JSON.stringify(payload) });
 }
 
 function json(r: Run): Record<string, unknown> {
   const doc: unknown = JSON.parse(r.stdout);
+
   if (!isRecord(doc)) throw new Error(`not a JSON object: ${tail(r.out)}`);
+
   return doc;
 }
 
 export function output(r: Run): Record<string, unknown> {
   const doc = json(r).hookSpecificOutput;
+
   if (!isRecord(doc)) throw new Error(`no hookSpecificOutput: ${tail(r.out)}`);
+
   return doc;
 }
 

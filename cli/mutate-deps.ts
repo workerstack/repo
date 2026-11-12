@@ -41,5 +41,6 @@ export type MutateDeps = {
 /** Prints each line as a `repo mutate:` error and answers with the failing exit code. */
 export function fail(deps: MutateDeps, ...lines: string[]): number {
   for (const line of lines) deps.err(`repo mutate: ${line}${NEWLINE}`);
+
   return FAILED;
 }

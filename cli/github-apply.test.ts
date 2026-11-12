@@ -130,6 +130,7 @@ it.each(FAILURES)("names a %j failure and what to do", async (failure, text) => 
     githubRepo(),
     fakeGh(EMPTY_SETTINGS(), () => failure),
   );
+
   expect(result.code).toBe(1);
   expect(result.err).toContain(text);
 });

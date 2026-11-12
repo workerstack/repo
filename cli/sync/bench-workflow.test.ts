@@ -88,10 +88,13 @@ it("writes the whole bench.yml with the pack on", () => {
 
 it("passes no input straight into a run line, so a crafted spec name cannot inject shell", () => {
   const [output] = benchWorkflow(context(BENCHMARK)).outputs;
+
   const runs = (output?.kind === "file" ? output.content : "")
     .split("\n")
     .filter((line) => /^\s+(?:- )?run:/.test(line));
+
   expect(runs.length).toBeGreaterThan(0);
+
   for (const line of runs) expect(line).not.toContain("${{");
 });
 

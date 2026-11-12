@@ -2,37 +2,52 @@ import type { Pack } from "./config.ts";
 
 /** The pinned actionlint release. */
 export const ACTIONLINT_VERSION: string = "1.7.12";
+
 /** The directory under the state home that caches the binary, then the version. */
 export const CACHE_DIR: string = "actionlint";
+
 /** Where the pinned release's archives are published. */
 export const RELEASE_URL: string = `https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}`;
+
 /** How long the archive download may take. */
 export const FETCH_TIMEOUT_MS = 120_000;
+
 /** The most output a spawned tool may print before it is cut off. */
 export const MAX_OUTPUT_BYTES: number = 64 * 1024 * 1024;
+
 /** The workflow directory, relative to the repo root. */
 export const WORKFLOWS_DIR = ".github/workflows";
+
 /** Packs that generate a workflow (release: ci, nightly, release.yml; benchmark: bench.yml); actionlint runs then. */
 export const WORKFLOW_PACKS: readonly Pack[] = ["release", "benchmark"];
+
 /** The extensions of a workflow file. */
 export const WORKFLOW_EXTENSIONS: readonly string[] = [".yml", ".yaml"];
+
 /** The flags that print json and turn off the tools runners differ in. */
 export const ACTIONLINT_FLAGS: readonly string[] = ["-format", "{{json .}}", "-shellcheck=", "-pyflakes="];
+
 /** The windows system directory when `SystemRoot` is unset. */
 export const DEFAULT_SYSTEM_ROOT = "C:\\Windows";
+
 /** What `process.platform` calls windows. */
 export const WINDOWS_PLATFORM = "win32";
+
 /** The windows tar, under the system root; Git's GNU tar can come first on PATH and cannot read a zip. */
 export const WINDOWS_TAR = "\\System32\\tar.exe";
+
 /** The hash characters a mismatch line shows. */
 export const SHOWN_HASH = 8;
+
 /** The exit code actionlint gives when it found problems. */
 export const EXIT_PROBLEMS = 1;
+
 /** The octal mode of the cached binary. */
 export const BINARY_MODE = 0o755;
 
 /** What `process.platform` calls an os that actionlint publishes, mapped to the name its archives use. */
 export const OS_NAMES: Record<string, string> = { darwin: "darwin", linux: "linux", win32: "windows" };
+
 /** What `process.arch` calls an architecture that actionlint publishes, mapped to the name its archives use. */
 export const ARCH_NAMES: Record<string, string> = { arm64: "arm64", x64: "amd64" };
 

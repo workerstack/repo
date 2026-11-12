@@ -35,18 +35,23 @@ type Locate = (offset: number) => { line: number; column: number };
 function locator(source: string): Locate {
   const starts = [0];
   let at = source.indexOf("\n");
+
   while (at >= 0) {
     starts.push(at + 1);
     at = source.indexOf("\n", at + 1);
   }
+
   return (offset) => {
     let low = 0;
     let high = starts.length - 1;
+
     while (low < high) {
       const middle = (low + high + 1) >> 1;
+
       if ((starts[middle] /* middle lies between low and high, inside starts */ as number) <= offset) low = middle;
       else high = middle - 1;
     }
+
     return { column: Array.from(source.slice(starts[low], offset)).length + 1, line: low + 1 };
   };
 }
@@ -57,18 +62,22 @@ type Scan = { code: RustToken[]; source: string };
 /** The text of the token at `index`, or an empty string past the end. */
 function wordAt(scan: Scan, index: number): string {
   const token = scan.code[index];
+
   return token === undefined ? "" : scan.source.slice(token.start, token.end);
 }
 
 /** The lint level a `cfg_attr` applies, whose brackets open at `open`, or null. */
 function cfgAttrLevel(scan: Scan, open: number): string | null {
   let depth = 1;
+
   for (let index = open + AFTER_NAME; index < scan.code.length && depth > 0; index += 1) {
     const word = wordAt(scan, index);
+
     if (word === OPEN_BRACKET) depth += 1;
     else if (word === CLOSE_BRACKET) depth -= 1;
     else if (LINT_LEVELS.includes(word) && wordAt(scan, index + 1) === OPEN_PAREN) return word;
   }
+
   return null;
 }
 
@@ -76,37 +85,48 @@ function cfgAttrLevel(scan: Scan, open: number): string | null {
 function attributeAt(scan: Scan, index: number): string | null {
   const isInner = wordAt(scan, index + 1) === INNER_MARK;
   const open = index + (isInner ? INNER_SKIP : 1);
+
   if (wordAt(scan, open) !== OPEN_BRACKET) return null;
   const name = wordAt(scan, open + 1);
   const level = name === CFG_ATTR ? cfgAttrLevel(scan, open) : name;
+
   if (level === null || !LINT_LEVELS.includes(level)) return null;
   const written = name === CFG_ATTR ? `${CFG_ATTR}(… ${level})` : level;
+
   return `#${isInner ? INNER_MARK : ""}${OPEN_BRACKET}${written}${CLOSE_BRACKET}`;
 }
 
 /** The attribute hits among the `code` tokens, which hold no comments. */
 function attributeHits(file: string, scan: Scan, locate: Locate): RustHit[] {
   const hits: RustHit[] = [];
+
   for (const [index, token] of scan.code.entries()) {
     if (token.kind !== "punct" || wordAt(scan, index) !== ATTRIBUTE_START) continue;
     const attribute = attributeAt(scan, index);
+
     if (attribute === null) continue;
     hits.push({ file, ...locate(token.start), message: `${attribute} ${ATTRIBUTE_ADVICE}`, rule: ATTRIBUTE_RULE });
   }
+
   return hits;
 }
 
 /** The hit for a file with more than the limit of code lines, at its first line past the limit. */
 function lineHits(file: string, code: RustToken[], locate: Locate): RustHit[] {
   const lines = new Set<number>();
+
   for (const token of code) {
     const last = locate(Math.max(token.start, token.end - 1)).line;
+
     for (let line = locate(token.start).line; line <= last; line += 1) lines.add(line);
   }
+
   if (lines.size <= MAX_CODE_LINES) return [];
   let over = 0;
+
   for (const [index, line] of [...lines].entries()) if (index === MAX_CODE_LINES) over = line;
   const message = `this file has ${lines.size} code lines over ${MAX_CODE_LINES}; split it into modules`;
+
   return [{ column: 1, file, line: over, message, rule: MAX_LINES_RULE }];
 }
 
@@ -118,6 +138,7 @@ export function rustSourceHits(rel: string, source: string): RustHit[] {
   const tokens = lexRust(source);
   const locate = locator(source);
   const code = tokens.filter((token) => token.kind !== "line-comment" && token.kind !== "block-comment");
+
   const comments = tokens
     .filter((token) => token.kind === "block-comment")
     .map((token): RustHit => ({
@@ -126,6 +147,7 @@ export function rustSourceHits(rel: string, source: string): RustHit[] {
       message: BLOCK_COMMENT_MESSAGE,
       rule: BLOCK_COMMENT_RULE,
     }));
+
   return [...attributeHits(rel, { code, source }, locate), ...comments, ...lineHits(rel, code, locate)].toSorted(
     (a, b) => (a.line === b.line ? a.column - b.column : a.line - b.line),
   );

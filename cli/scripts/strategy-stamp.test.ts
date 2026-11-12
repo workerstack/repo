@@ -21,6 +21,7 @@ function stampWith(root: string, sid: string, body: string) {
 describe("activeReview on odd stamps and plans", () => {
   it("is null when the stamp is not an object or names no string plan", () => {
     const root = tmpRoot();
+
     for (const [i, body] of ["5", "null", "{}", '{"plan": 7}'].entries()) {
       stampWith(root, `s${i}`, body);
       expect(activeReview(root, `s${i}`)).toBeNull();

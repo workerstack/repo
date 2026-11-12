@@ -8,6 +8,7 @@ import type { PackageJson } from "./workspace.ts";
 const ROOT_GUARD =
   'if [ "$(id -u)" = "0" ]; then echo "CI must run as a non-root user; ' +
   'the suite assumes unprivileged file permissions"; exit 1; fi';
+
 const CI_PATH = ".github/workflows/ci.yml";
 
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";

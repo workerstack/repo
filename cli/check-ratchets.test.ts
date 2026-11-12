@@ -18,6 +18,7 @@ const LOW = 58;
 function floor(branches: number) {
   return { branches, functions: 90, statements: 80 };
 }
+
 const JOB = "cli/scripts/job.ts";
 
 describe("ratchetProblems, floors", () => {

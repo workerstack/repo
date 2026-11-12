@@ -11,7 +11,9 @@ const { repo } = usePushRepos();
 
 /** How the faked ci run ends: `repo ci wait` exits 0, 1 and 2 on these. */
 type Conclusion = "success" | "failure" | "cancelled";
+
 const BRANCHES = ["main", "feat-a", "feat-b", "old"];
+
 function done(stdout: string) {
   return { code: 0, stderr: "", stdout };
 }
@@ -23,18 +25,24 @@ function done(stdout: string) {
 function fakeGh(conclusion: Conclusion, viewed: string[]): Runner {
   return (args) => {
     const [verb, sub, id, flag] = args;
+
     if (verb === "auth") return done("");
+
     if (sub === "list" && id === "--commit") {
       const runs = BRANCHES.map((headBranch, i) => ({
         createdAt: "2026-11-12T11:00:00Z",
         databaseId: i + 1,
         headBranch,
       }));
+
       return done(JSON.stringify(runs));
     }
+
     if (sub === "list") return done(JSON.stringify([{ createdAt: "2026-11-12T11:30:00Z", databaseId: 99 }]));
+
     if (flag !== "--json") return { code: 1, stderr: "", stdout: "" };
     viewed.push(String(BRANCHES[Number(id) - 1]));
+
     return done(JSON.stringify({ conclusion, jobs: [{ conclusion, name: "test" }], status: "completed" }));
   };
 }
@@ -43,6 +51,7 @@ function fakeGh(conclusion: Conclusion, viewed: string[]): Runner {
 function ignore(): void {
   // A dropped record: nothing is written.
 }
+
 const noRecords = {
   mkdirSync: ignore,
   renameSync: ignore,
@@ -54,6 +63,7 @@ const noRecords = {
 async function push(r: PushRepo, argv: string[] = [], conclusion: Conclusion = "success") {
   const out: string[] = [];
   const waits: string[] = [];
+
   const code = await main(argv, {
     cwd: r.dir,
     fs: noRecords,
@@ -63,6 +73,7 @@ async function push(r: PushRepo, argv: string[] = [], conclusion: Conclusion = "
     stderr: (s) => out.push(s),
     stdout: (s) => out.push(s),
   });
+
   return { code, out: out.join(""), waits };
 }
 
@@ -72,14 +83,17 @@ function twoRecent(): PushRepo {
   r.commitOn("feat-b", 2);
   r.commitOn("feat-a", 1);
   r.git(["checkout", "-q", "main"]);
+
   return r;
 }
 
 const ASK =
   "repo push: main has 2 recent branches (feat-a, feat-b); run `bun repo push <branch>` with the one to push\n";
+
 const WORKTREE =
   "repo push: wt/124-x is a managed worktree; " +
   "run `bun repo worktree finish 124-x` from the root, then `bun repo push` there\n";
+
 const USAGE = "usage: repo push [<branch>]\n";
 
 describe("repo push from the default branch", () => {
@@ -184,6 +198,7 @@ describe("repo push usage", () => {
 
   it("prints usage to the process's stderr when given no deps", async () => {
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
     try {
       expect(await main(["--help"])).toBe(4);
       expect(err.mock.calls.map((c) => String(c[0])).join("")).toBe(USAGE);

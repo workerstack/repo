@@ -12,6 +12,7 @@ export function linkIo(): LinkIo {
     git: linkGit,
     install: (root) => {
       const result = spawnSync("bun", ["install"], { cwd: root, encoding: "utf8" });
+
       return { code: result.status ?? EXIT_FAIL, output: [result.stdout, result.stderr].filter(Boolean).join("") };
     },
     now: () => new Date(),

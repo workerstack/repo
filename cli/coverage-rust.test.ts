@@ -29,6 +29,7 @@ function rustRepo(): string {
   temps.push(root);
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default {};\n");
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
+
   return root;
 }
 
@@ -36,8 +37,10 @@ function rustRepo(): string {
 function cargoReporting(root: string, lines: number): CargoRun {
   const row = { summary: { functions: { percent: 66.7 }, lines: { percent: lines }, regions: { percent: 58.3 } } };
   const report = { data: [{ files: [{ filename: path.join(root, LIB), ...row }] }] };
+
   return (_cwd, args) => {
     fs.writeFileSync(String(args.at(-1)), JSON.stringify(report));
+
     return { missing: false, status: 0, stderr: "", stdout: "" };
   };
 }
@@ -45,12 +48,14 @@ function cargoReporting(root: string, lines: number): CargoRun {
 /** Runs `repo coverage` in `root` with `run` as cargo. */
 function coverage(root: string, run: CargoRun): Promise<number> {
   process.chdir(root);
+
   return main([], run);
 }
 
 function floorsOf(root: string): unknown {
   return JSON.parse(fs.readFileSync(path.join(root, FLOORS), "utf8"));
 }
+
 function plant(root: string, floors: unknown): void {
   return fs.writeFileSync(path.join(root, FLOORS), JSON.stringify(floors));
 }

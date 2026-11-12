@@ -10,6 +10,7 @@ let dir = "";
 
 beforeEach(() => {
   dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "temp-root-env-test-")));
+
   // os.tmpdir() reads TMPDIR on posix and TEMP, then TMP, on Windows.
   for (const name of ["TMPDIR", "TEMP", "TMP"]) vi.stubEnv(name, dir);
   vi.stubEnv("NODE_COMPILE_CACHE", undefined);

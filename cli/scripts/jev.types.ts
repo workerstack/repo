@@ -53,9 +53,11 @@ export type PostResult = {
 
 /** One request's outcome: a refusal, or the response and the clock it was charged at. */
 export type Posted = { response: PostResult; nowMs: number };
+
 export type Attempt = { fail: JevResult } | Posted;
 
 export type StopKind = "requests" | "tokens";
+
 export type Begun = { busy: true } | { stop: StopKind } | { ok: true; estimate: number };
 
 /** One run's checked inputs. */

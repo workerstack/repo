@@ -11,10 +11,12 @@ const kit = orchestrateKit();
 function pre(ws: string, toolName: string, toolInput: Record<string, unknown>): HookOut["hookSpecificOutput"] | null {
   return replyOf(kit.grok({ ws }, "PreToolUse", { toolInput, toolName }))?.hookSpecificOutput ?? null;
 }
+
 /** The path the hook hands back for a Write; the case fails when it hands none. */
 function savedAt(ws: string, save: { file: string; content: string; tool?: string }): string {
   return must(pre(ws, save.tool ?? "write", { content: save.content, file_path: save.file })).updatedInput.file_path;
 }
+
 function read(file: string) {
   return fs.readFileSync(file, "utf8");
 }
@@ -69,6 +71,7 @@ it("checks a roadmap Edit against the text it would produce", () => {
   const broken = must(pre(ws, "Edit", edit));
   expect(broken.permissionDecision).toBe("deny");
   expect(broken.permissionDecisionReason).toContain('slice 2 needs "N [ ] {title, 2–6 words}: {one sentence}"');
+
   for (const [tool, input] of [
     ["Edit", { file_path: saved, new_string: "1 [x] auth types", old_string: "1 [ ] auth types" }],
     ["search_replace", { file_path: saved, new_string: "3.1 [x]", old_string: "3.1 [ ]" }],
@@ -93,10 +96,12 @@ it("rewrites an existing plan in place and hands back its absolute path", () => 
   const ws = kit.temp();
   const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
   const before = read(saved);
+
   const body = before
     .replace("status: ready", "status: in-progress")
     .replace("reviews: 0", "reviews: 1")
     .replace("1.1 [ ]", "1.1 [x]");
+
   const again = must(pre(ws, "Write", { content: body, file_path: path.relative(ws, saved) }));
   expect(again.updatedInput.file_path).toBe(saved);
   expect(again.updatedInput.content).toMatch(/^1\.1 \[x\] /m);
@@ -109,6 +114,7 @@ it("lets a valid Edit of an existing plan through", () => {
   const ws = kit.temp();
   const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
   const before = read(saved);
+
   for (const [tool, input] of [
     ["Edit", { file_path: saved, new_string: "1.1 [x]", old_string: "1.1 [ ]" }],
     ["search_replace", { file_path: saved, new_string: "1.2 [x]", old_string: "1.2 [ ]" }],

@@ -12,6 +12,7 @@ afterEach(() => vi.restoreAllMocks());
 
 const probe = probeOf({ 30: {} });
 const deps = { boot: BOOT, identity: { pid: 30, start: "100" }, now: "T1", probe };
+
 function record(data: BoardInput | null, env: Record<string, string> = {}, extra = {}) {
   return recordHook(data, { REPO_BOARD_HOME: plantHome(), ...env }, { ...deps, ...extra });
 }

@@ -19,6 +19,7 @@ function tty(answers: { select?: string; keys?: string[] }) {
     password: (o) => (io.asked.push(o.message), Promise.resolve(answers.keys?.shift() ?? "")),
     select: (o) => (io.initial.push(o.initialValue), Promise.resolve(answers.select ?? "")),
   };
+
   return io;
 }
 
@@ -110,12 +111,14 @@ it("writes elevenlabs key, verifies, does not echo the secret", async () => {
 it("verifies openai via fetch", async () => {
   const home = plant("setup-speak-oa-");
   const io = captureIo();
+
   const r = await setupSpeak({
     fetchFn: () => Promise.resolve(okJson({ data: [] })),
     flags: { "openai-key": "sk-oa", provider: "openai" },
     home,
     io,
   });
+
   expect(r.verified).toBe(true);
   expect(io.logs.join("\n")).toMatch(/openai ok/);
   expect(io.logs.join("\n")).not.toContain("sk-oa");
@@ -123,11 +126,13 @@ it("verifies openai via fetch", async () => {
 
 it("interactive elevenlabs opens the key page and takes a password", async () => {
   const home = plant("setup-speak-tty-");
+
   const io = {
     ...captureIo(),
     password: () => Promise.resolve("sk_from_prompt"),
     select: () => Promise.resolve("elevenlabs"),
   };
+
   const opened: string[] = [];
   await setupSpeak({
     flags: { "skip-verify": "1" },

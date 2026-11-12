@@ -22,6 +22,7 @@ function rendered(dir: string): string {
 function label(prompt: string): string {
   const dir = plantHome();
   recordHook({ prompt, session_id: "sid" }, env(dir), deps);
+
   return rendered(dir).replace("2026-10-09T12:00:00Z claude - - sid /home/user/x ", "");
 }
 
@@ -36,10 +37,12 @@ it("keeps pasted content out of other sessions' lines", () => {
     env(dir),
     deps,
   );
+
   const text = otherLines({ session_id: "viewer" }, env(dir), {
     boot,
     probe: probeOf({ 30: {}, 31: { start: "101" } }),
   });
+
   expect(text).toContain("check this now");
   expect(text).not.toContain("alice9");
   expect(text).not.toContain("hunter2");
@@ -81,6 +84,7 @@ it("cleans a cut-off row already on disk", () => {
   const dir = plantHome();
   const board = path.join(dir, ".workerstack", "board");
   fs.mkdirSync(board, { recursive: true });
+
   const row = {
     boot,
     cwd: "/home/user/x",
@@ -93,6 +97,7 @@ it("cleans a cut-off row already on disk", () => {
     time: "2026-10-09T12:00:00Z",
     work: '[Image #9] <pasted_content id="c3cb"> Username alice9 Password hunter2',
   };
+
   fs.writeFileSync(path.join(board, "claude-old.json"), `${JSON.stringify(row)}\n`);
   const text = rendered(dir);
   expect(text).toContain("old");

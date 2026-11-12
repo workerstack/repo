@@ -2,8 +2,10 @@
 
 export const MIN_SHARDS = 1;
 export const MAX_SHARDS = 32;
+
 /** A secret name: upper-case letters, digits and underscores, not starting with a digit. */
 export const SECRET_NAME: RegExp = /^[A-Z_][A-Z0-9_]*$/;
+
 /** Names GitHub reserves for itself. */
 export const RESERVED_PREFIX = "GITHUB_";
 export const SHARDS_ERROR: string = `must be a whole number from ${MIN_SHARDS} to ${MAX_SHARDS}`;

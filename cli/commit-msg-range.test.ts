@@ -11,27 +11,35 @@ afterEach(removeTemps);
 function plant() {
   const root = tempDir();
   git(root, "init", "-q", "-b", "main");
+
   function commit(files: Record<string, string | Buffer>, message: string) {
     put(root, files);
     git(root, "add", "-A");
     git(root, "commit", "-q", "--no-verify", "-m", message);
+
     return git(root, "rev-parse", "HEAD").trim();
   }
+
   const base = commit(
     { [CONFIG_FILE]: "export default {}\n", "package.json": JSON.stringify({ name: "app", private: true }) },
     "chore: base",
   );
+
   return { base, commit, root };
 }
+
 async function range(root: string, ...args: string[]) {
   const err: string[] = [];
   const code = await main(args, { cwd: root, stderr: (text) => err.push(text) });
+
   return { code, stderr: err.join("") };
 }
+
 const NEEDS_TEST = "a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)";
 const HEADER = 'the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"';
 const OVER = "the commit changes 1100 lines, over the limit of 1000; add a body line saying why, or split it";
 const FORCE_PUSH = "is not an ancestor of HEAD (a force push?); checking HEAD alone";
+
 const USAGE =
   "repo commit-msg: name the commit message file as git's commit-msg hook does or pass --range <base>..<head>\n";
 

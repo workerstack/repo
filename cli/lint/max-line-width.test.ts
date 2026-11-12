@@ -7,23 +7,28 @@ import { maxLineWidth } from "./max-line-width.ts";
 function messagesOf(code: string) {
   return reportsOf(maxLineWidth, { "a.ts": code }).map((report) => report.message);
 }
+
 /** The message for a line `extra` columns past the width. */
 function over(extra: number, hint: string) {
   return `this line is ${PRINT_WIDTH + extra} columns, over ${PRINT_WIDTH}; ${hint}`;
 }
+
 const STRING_HINT = "split the string with + or a join";
 const COMMENT_HINT = "wrap the comment onto more lines";
 const REGEX_HINT = "build the regex from named parts";
 const CODE_HINT = "extract part into a named const";
 const PREFIX = 'export const a = "';
+
 /** A string that ends its line, so its closing quote is the last column: `width` columns wide. */
 function stringLine(width: number) {
   return `${PREFIX}${"x".repeat(width - PREFIX.length - 1)}"`;
 }
+
 /** A string that ends its line with `count` of `fill` in it, whatever their width. */
 function filled(count: number, fill: string) {
   return `${PREFIX}${fill.repeat(count)}"`;
 }
+
 const FILL_COLUMNS = PRINT_WIDTH - PREFIX.length - 1;
 
 describe("max-line-width", () => {

@@ -17,6 +17,7 @@ useTempDirs();
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const GOLDEN = path.join(ROOT, "cli/sync/__fixtures__/golden");
 const HOOKS = '{ "version": 1, "hooks": {} }\n';
+
 /** A rendered implementer-deep or implementer-fast file of any host. */
 const IMPLEMENTER_FILE = /\/implementer-(?:deep|fast)\./;
 
@@ -25,6 +26,7 @@ function goldens(): Map<string, string> {
   const files = fs.readdirSync(GOLDEN, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile());
   const rels = files.map((entry) => path.relative(GOLDEN, path.join(entry.parentPath, entry.name)).split(path.sep));
   const implementers = rels.filter((parts) => IMPLEMENTER_FILE.test(parts.join("/")));
+
   return new Map(implementers.map((parts) => [parts.join("/"), fs.readFileSync(path.join(GOLDEN, ...parts), "utf8")]));
 }
 
@@ -49,6 +51,7 @@ it("renders one source with two variants as two agents equal to the goldens", ()
   const out = renderSubagents(loaded({ consumerRoot: null, packages: [], stockRoot: variantsStock() }), HOSTS);
   const expected = goldens();
   expect([...out.keys()].toSorted(byCodeUnit)).toStrictEqual([...expected.keys()].toSorted(byCodeUnit));
+
   for (const [rel, text] of expected) expect(out.get(rel), rel).toBe(text);
 });
 
@@ -57,6 +60,7 @@ it("lets a consumer implementer-fast replace the stock variant of that name", ()
     ".repo/subagents/implementer-fast.md":
       "---\nname: implementer-fast\ndescription: mine\noverrides: implementer-fast\n---\nconsumer body\n",
   });
+
   const out = renderSubagents(loaded({ consumerRoot: consumer, packages: [], stockRoot: variantsStock() }), ["claude"]);
   expect(out).toStrictEqual(
     new Map([
@@ -84,6 +88,7 @@ it("names each variant's file after it beside the source, keeping the source's r
     "agents/hooks.jsonc": HOOKS,
     "agents/subagents/team/x.md": "---\nvariants:\n  - name: a\n  - name: b\n    tier: deep\ntier: base\n---\nbody\n",
   });
+
   const { subagents } = loaded({ consumerRoot: null, packages: [], stockRoot });
   expect(subagents.map(({ file, rel, data }) => ({ data, file, rel }))).toStrictEqual([
     { data: { name: "a", tier: "base" }, file: "team/a.md", rel: "agents/subagents/team/x.md" },
@@ -96,6 +101,7 @@ it("reports a variant's unknown key against the source file", () => {
     "agents/hooks.jsonc": HOOKS,
     "agents/subagents/x.md": "---\nvariants:\n  - name: a\n    colour: red\n---\nbody\n",
   });
+
   const [problem] = problems({ consumerRoot: null, packages: [], stockRoot });
   expect(problem).toMatch(/^agents\/subagents\/x\.md: unknown frontmatter key "colour"; /);
   expect(problem).toContain("use name, description, targets, overrides, tier, exec, variants, ");

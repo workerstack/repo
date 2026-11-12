@@ -4,8 +4,10 @@ import { ciSchema } from "./ci-schema.ts";
 
 function messages(input: unknown): string[] {
   const parsed = ciSchema().safeParse(input);
+
   return parsed.success ? [] : parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`);
 }
+
 const ARGV = 'must be a non-empty list of strings like ["bun", "scripts/check.ts"]';
 
 it("takes kebab-case names mapped to argv arrays", () => {

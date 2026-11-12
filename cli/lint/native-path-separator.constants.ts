@@ -7,22 +7,30 @@ export const MATCHING_METHODS: readonly string[] = [
   "indexOf",
   "lastIndexOf",
 ];
+
 /** A forward or back slash in a cooked literal value. */
 export const SEPARATOR: RegExp = /[/\\]/;
+
 /** The name node gives a native working directory, as an identifier or a member. */
 export const CWD = "cwd";
+
 /** Node's own names for the directory of a module. */
 export const MODULE_DIRS: readonly string[] = ["__dirname", "__filename"];
+
 /** The reads of `import.meta` that are native paths. */
 export const META_PATHS: readonly string[] = ["dirname", "filename"];
+
 /** The `path` namespace of the Windows spelling, a native path on every platform. */
 export const WIN32 = "win32";
+
 /** `process.cwd()`: the object and the method. */
 export const PROCESS = "process";
+
 /** The kinds of import specifier that bind a module object, not a name inside it. */
 export const MODULE_SPECIFIERS: readonly string[] = ["ImportDefaultSpecifier", "ImportNamespaceSpecifier"];
 const PATH_CALLS: readonly string[] = ["join", "resolve", "dirname", "normalize", "relative"];
 const FS_CALLS: readonly string[] = ["realpath", "realpathSync", "mkdtemp", "mkdtempSync"];
+
 /** The functions that return a native path, by the module they are imported from. */
 export const NATIVE_CALLS: Readonly<Record<string, readonly string[]>> = {
   fs: FS_CALLS,

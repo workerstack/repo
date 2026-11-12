@@ -12,7 +12,9 @@ export type Runner = (args: string[], cwd: string) => Captured;
 export function spawnRunner(bin: string): Runner {
   return (args, cwd) => {
     const result = spawnSync(bin, args, { cwd, encoding: "utf8", env: toolEnv(childEnv()) });
+
     if (result.error !== undefined) return { code: 1, stderr: result.error.message, stdout: "" };
+
     return { code: result.status ?? 1, stderr: result.stderr, stdout: result.stdout };
   };
 }
@@ -21,7 +23,9 @@ export function spawnRunner(bin: string): Runner {
 export function inheritRunner(bin: string): Runner {
   return (args, cwd) => {
     const result = spawnSync(bin, args, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
+
     if (result.error !== undefined) return { code: 1, stderr: result.error.message, stdout: "" };
+
     return { code: result.status ?? 1, stderr: "", stdout: "" };
   };
 }

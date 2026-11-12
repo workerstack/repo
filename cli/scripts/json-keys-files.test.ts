@@ -21,6 +21,7 @@ function committed(): string {
     "nested/b.json": "{}\n",
     "nested/deep/c.json": "{}\n",
   };
+
   const root = jsonDir({
     ...files,
     "conf/e.jsonc": "{}\n",
@@ -29,6 +30,7 @@ function committed(): string {
     "other/d.json": "{}\n",
     "x.txt": "x\n",
   });
+
   execFileSync("git", ["add", "-A"], { cwd: root });
   execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--no-verify", "-m", "i"], {
     cwd: root,
@@ -36,6 +38,7 @@ function committed(): string {
   fs.rmSync(path.join(root, "gone.json"));
   fs.mkdirSync(path.join(root, "fresh"));
   fs.writeFileSync(path.join(root, "fresh/e.json"), "{}\n");
+
   return root;
 }
 
@@ -77,9 +80,11 @@ const IGNORES = ["/gen.json", "**/__fixtures__/**", "plain.json", "**/*.md"];
 const LEFT = ["package.json", "pkgs/package.json"];
 const COMMENTED = '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n';
 const COMMENTED_SORTED = '{\n  "a": 2,\n  // keep\n  "b": 1\n}\n';
+
 function sortable(tree: Record<string, string>): string[] {
   return Object.keys(tree).filter((f) => f !== ".oxfmtrc.jsonc");
 }
+
 const TREE = {
   ".oxfmtrc.jsonc": ignoreConfig(IGNORES),
   "__fixtures__/f.json": UNSORTED,
@@ -104,9 +109,12 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
   const found = ["data.json", "mypackage.json", "sub/gen.json"].map((file) => ({ file, key: "hooks" }));
   const commented = ["comments.json", "conf/app.jsonc"].map((file) => ({ file, key: "a" }));
   expect(sortJson(root, sortable(TREE), { check: false })).toStrictEqual({ found: [...commented, ...found], ok: true });
+
   for (const file of found.map((entry) => entry.file)) expect(readText(root, file)).toBe(SORTED);
+
   for (const file of commented.map((entry) => entry.file)) expect(readText(root, file)).toBe(COMMENTED_SORTED);
   expect(readText(root, "conf/__fixtures__/app.jsonc")).toBe(COMMENTED);
+
   for (const left of [
     "gen.json",
     "plain.json",
@@ -121,6 +129,7 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
 it("leaves package.json to oxfmt", () => {
   const root = jsonDir(TREE);
   sortJson(root, sortable(TREE), { check: false });
+
   for (const [left, text] of Object.entries(TREE).filter(([file]) => LEFT.includes(file)))
     expect(readText(root, left)).toBe(text);
 });

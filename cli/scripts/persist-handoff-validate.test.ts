@@ -18,6 +18,7 @@ function tmpWs(): string {
 const saved = savedDoc(
   persistHandoff({ content: VALID_HANDOFF, created: "2026-08-27T14:30:00Z", workspaceRoot: tmpWs() }),
 );
+
 /** `edit` gives the saved handoff with `from` replaced by `to`. */
 const { edit, errorsOf } = docEditor(saved, validateHandoff);
 
@@ -64,6 +65,7 @@ describe("injectFrontmatter", () => {
       slug: "the-slug",
       source: "src",
     });
+
     expect(out).toBe(RENAMED.join("\n"));
   });
 
@@ -154,6 +156,7 @@ describe("validateHandoff sections", () => {
     function body(section: string) {
       return saved.text.replace(new RegExp(`(## ${heading}\\n)[\\s\\S]*?(\\n## |$)`), `$1${section}$2`);
     }
+
     expect(errorsOf(body("\n"))).toContain(`${heading} empty`);
     expect(errorsOf(body("prose only\n"))).toContain(`${heading} bullets`);
     expect(errorsOf(body("(none)\n"))).toStrictEqual([]);

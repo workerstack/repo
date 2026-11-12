@@ -7,5 +7,6 @@ import path from "node:path";
  */
 export function linkGit(cwd: string, args: readonly string[]): string | null {
   const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+
   return result.status === 0 ? path.resolve(cwd, result.stdout.trim()) : null;
 }

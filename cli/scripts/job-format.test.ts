@@ -120,6 +120,7 @@ it("shouldFallback refuses downloads, html, lockfiles and .git", () => {
     "ls .git/hooks",
     "ls .git",
   ];
+
   for (const q of refused) expect(shouldFallback("exec", q), q).toBe(true);
   expect(shouldFallback("exec", "ls src\\.git\\x")).toBe(true);
   expect(shouldFallback("exec", "git status")).toBe(false);
@@ -128,6 +129,7 @@ it("shouldFallback refuses downloads, html, lockfiles and .git", () => {
 
 it("shouldFallback refuses the generated dirs as whole path segments only", () => {
   const dirs = ["node_modules", "dist", ".next", "build", "coverage"];
+
   for (const d of dirs) {
     expect(shouldFallback("exec", `ls ${d}`), d).toBe(true);
     expect(shouldFallback("exec", `ls ${d}/x`), d).toBe(true);

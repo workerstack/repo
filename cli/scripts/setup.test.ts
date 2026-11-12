@@ -20,6 +20,7 @@ afterEach(cleanSetup);
 
 it("no target non-interactive prints usage", async () => {
   const io = captureIo();
+
   const code = await main([], {
     env: { CI: "1" },
     home: plant("setup-main-"),
@@ -29,6 +30,7 @@ it("no target non-interactive prints usage", async () => {
     stdout: { isTTY: false },
     ...bareLinux,
   });
+
   expect(code).toBe(1);
   expect(io.errs.join("\n")).toContain("usage: setup");
 });
@@ -37,15 +39,18 @@ it("TTY menu labels include status and prefers first missing", async () => {
   const home = plant("setup-menu-");
   const cwd = enablePacks(plant("setup-menu-cwd-"), ALL_PACKS);
   mergeSpeakJson(home, { elevenlabs: { apiKey: "sk_el" } });
+
   const io = {
     ...captureIo(),
     select: (opts: { options: { value: string; label: string }[]; initialValue: string }) => {
       expect(opts.initialValue).toBe("listen");
       expect(opts.options[0]?.label).toMatch(/ok/);
       expect(opts.options[1]?.label).toMatch(/missing/);
+
       return Promise.resolve("browser");
     },
   };
+
   const code = await main([], { cwd, env: { HOME: home }, home, interactive: true, io, ...bareLinux });
   expect(code).toBe(0);
   expect(io.logs.join("\n")).toMatch(/browser  missing/);
@@ -73,19 +78,23 @@ it("speak flag path through main", async () => {
 
 it("menu without a features file lists browser and jev only", async () => {
   const cwd = plant("setup-menu-off-");
+
   const io = {
     ...captureIo(),
     select: (opts: { options: { value: string }[] }) => {
       expect(opts.options.map((o) => o.value)).toStrictEqual(["browser", "jev"]);
+
       return Promise.resolve("browser");
     },
   };
+
   const code = await main([], { cwd, home: plant("setup-menu-off-home-"), interactive: true, io, ...bareLinux });
   expect(code).toBe(0);
 });
 
 it("a disabled pack prints how to enable it", async () => {
   const io = captureIo();
+
   const code = await main(["listen"], {
     cwd: plant("setup-listen-off-"),
     env: { CI: "1" },
@@ -94,6 +103,7 @@ it("a disabled pack prints how to enable it", async () => {
     io,
     ...bareLinux,
   });
+
   expect(code).toBe(1);
   expect(io.errs.join("\n")).toMatch(/agents\.skills/);
   expect(io.errs.join("\n")).toMatch(/bun repo sync/);
@@ -105,6 +115,7 @@ it("CLI no args exits 1", () => {
     env: childEnv({ CI: "1" }),
     timeout: 15_000,
   });
+
   expect(r.status).toBe(1);
   expect(`${r.stdout}${r.stderr}`).toContain("usage: setup");
   expect(USAGE).toMatch(/speak/);

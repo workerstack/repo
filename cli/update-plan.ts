@@ -16,6 +16,7 @@ export type Assessed = { checked: Checked[]; behind: Checked[]; skipped: string[
  */
 export function candidatesOf(sources: readonly Source[], names: readonly string[]): Candidates {
   const result: Candidates = { plain: [], ranges: [] };
+
   for (const source of sources) {
     if (
       source.field === PEER_FIELD ||
@@ -23,9 +24,11 @@ export function candidatesOf(sources: readonly Source[], names: readonly string[
     )
       continue;
     const parsed = parseSpec(source.spec);
+
     if (parsed.kind === "plain") result.plain.push({ ...source, prefix: parsed.prefix, version: parsed.version });
     else if (parsed.kind === "range") result.ranges.push(source);
   }
+
   return result;
 }
 
@@ -36,12 +39,16 @@ export function candidatesOf(sources: readonly Source[], names: readonly string[
 export function assess(found: Candidates, answers: Latest): Assessed {
   const checked: Checked[] = [];
   const reasons = new Map<string, string>();
+
   for (const source of found.plain) {
     const verdict = answers.verdicts.get(source.name) /* every plain name was asked */ as Verdict;
+
     if ("latest" in verdict) checked.push({ ...source, latest: verdict.latest });
     else reasons.set(source.name, `${source.name} ${verdict.why}`);
   }
+
   const ranges = found.ranges.map((source) => rangeReason(source.name, source.where, source.spec));
+
   return {
     behind: checked.filter((source) => isBehind(source.version, source.latest)),
     checked,

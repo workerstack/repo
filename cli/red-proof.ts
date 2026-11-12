@@ -11,18 +11,23 @@ import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
 
 /** One `git diff --cached --name-status --no-renames -z` entry: a status letter (A, M, D, T) and a path. */
 export type NameStatus = { status: string; path: string };
+
 export type { VitestRun } from "./red-proof-vitest.ts";
+
 export type RedProofDeps = { git?: GitRun; vitest?: VitestRun; timeoutMs?: number };
+
 export type RedProofResult = { ok: true; line: string } | { ok: false; problem: string };
 
 const E2E_PATH = /(^|\/)e2e\//;
 const TIMEOUT_MS = 5 * 60_000;
+
 const NO_FILE =
   "red-proof: no changed vitest test file outside e2e/ to run on HEAD; add one that fails without the change";
 
 /** The entries of `git diff --name-status -z` output. */
 export function parseNameStatus(text: string): NameStatus[] {
   const parts = text.split("\0").filter((part) => part !== "");
+
   return Array.from({ length: parts.length / 2 }, (_, n) => ({
     path: parts[2 * n + 1] /* entries come in status, path pairs */ as string,
     status: parts[2 * n] /* entries come in status, path pairs */ as string,
@@ -37,6 +42,7 @@ function isRunnable(file: string): boolean {
 /** The result's stdout, or a throw naming `what` and git's reason. */
 function must(what: string, result: ReturnType<GitRun>): string {
   if (result.status !== 0) throw new Error(`red-proof: ${what} failed: ${result.stderr.trim()}`);
+
   return result.stdout;
 }
 
@@ -58,6 +64,7 @@ function unpack({ root, tree, git }: Tree): void {
 function putBack({ root, tree, git }: Tree, change: NameStatus[]): void {
   for (const { status, path: file } of change.filter((entry) => isSource(entry.path))) {
     const target = path.join(tree, file);
+
     if (status === STATUS_ADDED) {
       fs.rmSync(target, { force: true });
     } else {
@@ -71,30 +78,38 @@ function putBack({ root, tree, git }: Tree, change: NameStatus[]): void {
 function linkModules({ root, tree, git }: Tree): Set<string> {
   const listed = must("git ls-files", git(root, ["ls-files", "-z", "--", ":(glob)**/package.json"]));
   const dirs = new Set(["."]);
+
   for (const manifest of listed.split("\0").filter((entry) => entry !== "")) dirs.add(path.dirname(manifest));
+
   for (const dir of dirs) {
     const modules = path.join(root, dir, "node_modules");
+
     if (fs.existsSync(modules) && fs.existsSync(path.join(tree, dir)))
       // "junction": no symlink privilege needed on Windows
       fs.symlinkSync(modules, path.join(tree, dir, "node_modules"), "junction");
   }
+
   return dirs;
 }
 
 /** The nearest package dir at or above the file, `.` when none. */
 function ownerOf(file: string, dirs: Set<string>): string {
   let dir = path.dirname(file);
+
   while (dir !== "." && !dirs.has(dir)) dir = path.dirname(dir);
+
   return dir;
 }
 
 /** The test files grouped by owner package dir, each path relative to that dir. */
 function groupByOwner(files: string[], dirs: Set<string>): Map<string, string[]> {
   const groups = new Map<string, string[]>();
+
   for (const file of files) {
     const dir = ownerOf(file, dirs);
     groups.set(dir, [...(groups.get(dir) ?? []), path.posix.relative(dir, file)]);
   }
+
   return groups;
 }
 
@@ -113,6 +128,7 @@ function readReport(file: string): { name: string; status: string }[] | null {
 }
 
 type Ran = { problem: string } | { failed: string[]; passed: string[] };
+
 type Run = (args: string[], cwd: string) => ReturnType<VitestRun>;
 
 /**
@@ -123,22 +139,28 @@ function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ra
   const failed: string[] = [];
   const passed: string[] = [];
   let n = 0;
+
   for (const [dir, files] of groups) {
     const output = path.join(tree, `.red-proof-report-${n++}.json`);
     const args = ["run", ...files, ...NESTED_VITEST_FLAGS, "--reporter=json", `--outputFile=${output}`];
     const ran = vitest(args, path.join(tree, dir));
     const results = readReport(output);
+
     if (results === null) {
       const tail = ran.stderr.trim().split("\n").slice(STDERR_TAIL_LINES).join(" | ");
+
       return { problem: `red-proof: vitest wrote no report in ${dir} (exit ${ran.code}): ${tail}`.trimEnd() };
     }
+
     for (const file of files) {
       const red = results.some(
         (r) => r.status === REPORT_FAILED && r.name.split(path.sep).join("/").endsWith(`/${file}`),
       );
+
       (red ? failed : passed).push(path.posix.join(dir, file));
     }
   }
+
   return { failed, passed };
 }
 
@@ -147,6 +169,7 @@ function verdict(ran: { failed: string[]; passed: string[] }, total: number): Re
   if (ran.failed.length > 0)
     return { line: `red-proof: ${ran.failed.length} of ${total} changed test files failed on HEAD`, ok: true };
   const named = ran.passed.join(", ");
+
   return {
     ok: false,
     problem:
@@ -161,22 +184,28 @@ function verdict(ran: { failed: string[]; passed: string[] }, total: number): Re
  */
 export function redProof(root: string, change: NameStatus[], deps: RedProofDeps = {}): RedProofResult {
   const { git = runGit, vitest = runVitest, timeoutMs = TIMEOUT_MS } = deps;
+
   if (git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]).status !== 0)
     return { line: "red-proof: skipped, no HEAD to run against", ok: true };
   const tests = change.filter((entry) => entry.status !== STATUS_DELETED && isRunnable(entry.path));
+
   if (tests.length === 0) return { ok: false, problem: NO_FILE };
   const tree = path.join(root, ".tmp", "repo", `red-proof-${process.pid}`);
   fs.rmSync(tree, { force: true, recursive: true });
   fs.mkdirSync(tree, { recursive: true });
+
   try {
     const context = { git, root, tree };
     unpack(context);
     putBack(context, change);
+
     const groups = groupByOwner(
       tests.map((entry) => entry.path),
       linkModules(context),
     );
+
     const ran = runGroups(tree, groups, (args, cwd) => vitest(args, cwd, timeoutMs));
+
     return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length);
   } finally {
     fs.rmSync(tree, { force: true, recursive: true });

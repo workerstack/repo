@@ -8,6 +8,7 @@ import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { rejectionProblems, rejections } from "./check-rejections.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
 /** Each program parses the default lib, over a second on a fast machine. */
 const SLOW = 60_000;
 
@@ -19,12 +20,14 @@ function plant(files: Record<string, string | object>): string {
     rel,
     typeof content === "string" ? content : JSON.stringify(content),
   ]);
+
   return fs.realpathSync(tree(Object.fromEntries(texts)));
 }
 
 /** A package at `dir`: a `tsconfig.json` on this checkout's base that excludes reject files, and its strict sibling. */
 function pkg(dir: string, compilerOptions: object = {}): Record<string, object> {
   const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
+
   return {
     [path.posix.join(dir, "tsconfig.json")]: {
       compilerOptions,
@@ -57,6 +60,7 @@ it("applies each mark from the next code line to the end of its block", () => {
     "// rejects: second",
     "const c = 3",
   ].join("\n");
+
   expect(rejections(source)).toStrictEqual([
     { end: 6, line: 4, text: "first" },
     { end: 10, line: 10, text: "second" },
@@ -75,6 +79,7 @@ it("reads a mark written as a block comment and skips block prose", () => {
     "/* rejects: second */",
     "export const b = { }.nope",
   ].join("\n");
+
   expect(rejections(source)).toStrictEqual([
     { end: 5, line: 5, text: "first" },
     { end: 9, line: 9, text: "second" },
@@ -82,6 +87,7 @@ it("reads a mark written as a block comment and skips block prose", () => {
 });
 
 const WIDE_USER = "export type UserId = string;\nexport function load(id: UserId): UserId {\n  return id;\n}\n";
+
 const USER_REJECT = [
   "// src/user.reject.ts — excluded from tsconfig.json and tsconfig.src.json",
   'import { load } from "./user.ts";',
@@ -107,6 +113,7 @@ it("prints each Usage problem on its statement's line", { timeout: SLOW }, () =>
 
 it("passes a file that rejects exactly what it marks, under the owner's strict options", { timeout: SLOW }, () => {
   const branded = WIDE_USER.replace("= string;", '= string & { readonly brand: "UserId" };');
+
   const source = [
     'import { load } from "./user.ts";',
     "/* rejects: Argument of type 'string' is not assignable to parameter of type 'UserId' */",
@@ -120,6 +127,7 @@ it("passes a file that rejects exactly what it marks, under the owner's strict o
     'export const parsed: number = JSON.parse("1");',
     "",
   ].join("\n");
+
   expect(problemsOf({ ...pkg("."), "src/user.reject.ts": source, "src/user.ts": branded })).toStrictEqual([]);
 });
 
@@ -142,6 +150,7 @@ it("covers a statement the formatter wrapped through the line before the next bl
     "export const after: number = 3;",
     "",
   ].join("\n");
+
   expect(problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([]);
 });
 
@@ -156,6 +165,7 @@ it("checks a .tsx reject file with its owner's jsx option and ambient types", { 
   const jsx =
     "declare namespace JSX {\n  interface Element {}\n" +
     "  interface IntrinsicElements {\n    div: { id?: string };\n  }\n}\n";
+
   const source = [
     "/* rejects: Type 'number' is not assignable to type 'string' */",
     "export const el: JSX.Element = <div id={1} />;",
@@ -164,6 +174,7 @@ it("checks a .tsx reject file with its owner's jsx option and ambient types", { 
     'export const ok: JSX.Element = <div id="a" />;',
     "",
   ].join("\n");
+
   const files = { ...pkg(".", { jsx: "preserve" }), "src/jsx.d.ts": jsx, "src/view.reject.tsx": source };
   expect(problemsOf(files)).toStrictEqual(["src/view.reject.tsx: line 5 compiles; it must reject: anything"]);
 });
@@ -175,14 +186,17 @@ it("checks each package's reject files under that package's own options", { time
     "export const opt: Opt = { a: undefined };",
     "",
   ].join("\n");
+
   const loose = pkg("packages/loose");
   loose["packages/loose/tsconfig.src.json"] = { extends: "./tsconfig.json" };
+
   const files = {
     ...pkg("packages/strict"),
     ...loose,
     "packages/loose/src/a.reject.ts": source,
     "packages/strict/src/a.reject.ts": source,
   };
+
   expect(problemsOf(files)).toStrictEqual([
     "packages/loose/src/a.reject.ts: line 3 compiles; it must reject: with 'exactOptionalPropertyTypes: true'",
   ]);
@@ -198,6 +212,7 @@ it(
       "export const opt: Opt = { a: undefined };",
       "",
     ].join("\n");
+
     const runtime = pkg("packages/runtime");
     delete runtime["packages/runtime/tsconfig.src.json"];
     const bare = "/* rejects: Type 'string' is not assignable to type 'number' */\nexport const n: number = 'x';\n";

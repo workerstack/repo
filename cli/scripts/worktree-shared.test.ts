@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import { at, cli, scratch, shared, wt } from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 const commitMaking = {
@@ -15,6 +16,7 @@ const commitMaking = {
   pull: "git pull",
   revert: "git revert HEAD",
 };
+
 const destructive = {
   checkout: "git checkout main",
   clean: "git clean -fd",
@@ -29,12 +31,14 @@ function withWorktrees(): string {
   const r = tmp.repo();
   cli(r, ["add", "a"]);
   cli(r, ["add", "b"]);
+
   return r;
 }
 
 it("denies the 13 commit-making and destructive subcommands in the main checkout, and a named one passes", () => {
   const r = withWorktrees();
   const main = at(r);
+
   for (const [sub, cmd] of Object.entries(commitMaking)) {
     expect(shared(cmd, main), cmd).toBe(
       `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, ` +
@@ -43,6 +47,7 @@ it("denies the 13 commit-making and destructive subcommands in the main checkout
     expect(shared(cmd, main, new Set([sub])), `${cmd} asked`).toBeNull();
     expect(shared(cmd, main, new Set(["stash"])), `${cmd} other word`).not.toBeNull();
   }
+
   for (const [sub, cmd] of Object.entries(destructive)) {
     expect(shared(cmd, main), cmd).toBe(
       `git ${sub} in the main checkout can destroy other sessions' work: do it inside your worktree, ` +
@@ -50,6 +55,7 @@ it("denies the 13 commit-making and destructive subcommands in the main checkout
     );
     expect(shared(cmd, main, new Set([sub])), `${cmd} asked`).toBeNull();
   }
+
   expect(shared("cd packages/a && git stash", main)).not.toBeNull();
   expect(shared("git -C packages/a commit -m x", main)).not.toBeNull();
   expect(shared("git -c core.editor=true commit -m x", main)).not.toBeNull();
@@ -68,11 +74,13 @@ const OWN_WORKTREE = [
 it("lets every git command run inside your own worktree and denies the main checkout from there", () => {
   const r = withWorktrees();
   const a = wt(r, "a");
+
   for (const cmd of OWN_WORKTREE) {
     expect(shared(`cd .worktrees/a && ${cmd}`, at(r)), cmd).toBeNull();
     expect(shared(cmd.replace("git ", "git -C .worktrees/a "), at(r)), cmd).toBeNull();
     expect(shared(cmd, at(r, a)), cmd).toBeNull();
   }
+
   expect(shared("git -C packages/a stash", at(r, a, path.join(a, "packages/a")))).toBeNull();
   expect(shared(`git -C ${r.split(path.sep).join("/")} commit -m x`, at(r, a))).toMatch(
     /^the main checkout is shared: commit inside /,
@@ -107,6 +115,7 @@ const DEFAULT_BRANCH_MOVES: [string, string][] = [
   ["git update-ref refs/heads/main x", "update-ref"],
   ["git update-ref -d refs/heads/main", "update-ref"],
 ];
+
 const FREE_BRANCH_WORK = [
   "git branch -D scratch",
   "git branch -f scratch main",
@@ -124,14 +133,17 @@ const FREE_BRANCH_WORK = [
 it("guards the default branch from anywhere unless its subcommand was asked", () => {
   const r = withWorktrees();
   const from = at(r, wt(r, "a"));
+
   for (const [cmd, sub] of DEFAULT_BRANCH_MOVES) {
     const reason =
       "main is the shared default branch: move it only with bun repo worktree finish <name>, " +
       `or when the user's message asks for git ${sub}`;
+
     expect(shared(cmd, from), cmd).toBe(reason);
     expect(shared(cmd, at(r)), cmd).toBe(reason);
     expect(shared(cmd, from, new Set([sub])), `${cmd} asked`).toBeNull();
   }
+
   for (const cmd of FREE_BRANCH_WORK) expect(shared(cmd, from), cmd).toBeNull();
 });
 
@@ -143,6 +155,7 @@ const FORCED = [
   "git push -fu origin main",
   "git push origin main:main +wt/a",
 ];
+
 const UNFORCED = [
   "git push",
   "git push origin main",
@@ -154,6 +167,7 @@ const UNFORCED = [
 it("denies a force push anywhere in the repo unless force was asked", () => {
   const r = withWorktrees();
   const reason = "a force push rewrites shared history: run it only when the user's message asks for a force push";
+
   for (const cmd of FORCED) {
     for (const place of [at(r), at(r, wt(r, "a"))]) {
       expect(shared(cmd, place), cmd).toBe(reason);
@@ -161,6 +175,7 @@ it("denies a force push anywhere in the repo unless force was asked", () => {
       expect(shared(cmd, place, new Set(["push"])), `${cmd} wrong word`).toBe(reason);
     }
   }
+
   for (const cmd of UNFORCED) expect(shared(cmd, at(r)), cmd).toBeNull();
   expect(shared("git -C /somewhere/else push --force", at(r))).toBeNull();
 });

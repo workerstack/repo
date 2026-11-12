@@ -20,8 +20,11 @@ function firstTruthy(values: unknown[]): unknown {
 
 function providerOf(data: Data, env: Env): string {
   if (isSet(env.REPO_BOARD_PROVIDER)) return env.REPO_BOARD_PROVIDER;
+
   if (firstTruthy([env.GROK_WORKSPACE_ROOT, env.GROK_SESSION_ID, env.GROK_HOOK_EVENT]) !== undefined) return "grok";
+
   if (isSet(env.CLAUDE_PROJECT_DIR)) return "claude";
+
   return isTruthy(data?.model) ? "codex" : NONE;
 }
 
@@ -29,8 +32,10 @@ function effortOf(data: Data, env: Env): string {
   const effort = data?.effort;
   const level = isRecord(effort) ? effort.level : effort;
   const text = str(level);
+
   if (text.trim() !== "") return text;
   const fromEnv = env.CLAUDE_EFFORT ?? "";
+
   return fromEnv.trim() === "" ? NONE : fromEnv;
 }
 
@@ -40,6 +45,7 @@ function sessionOf(data: Data, env: Env): string {
 
 function cwdOf(data: Data, env: Env): unknown {
   const roots = [env.GROK_WORKSPACE_ROOT, data?.workspaceRoot, data?.workspace_root, data?.cwd, env.CLAUDE_PROJECT_DIR];
+
   return firstTruthy(roots) ?? process.cwd();
 }
 
@@ -51,9 +57,12 @@ function promptOf(data: Data): string {
 export function recordHook(data: Data, env: Env = repoEnv.process, deps: RecordDeps = {}): BoardRow | null {
   try {
     const session = sessionOf(data, env);
+
     if (session === "" || session === DEFAULT_SESSION) return null;
     const ident = deps.identity ?? hostIdentity({ probe: deps.probe ?? probeProcess });
+
     if (ident === null) return null;
+
     return note({
       boot: bootOr(deps.boot),
       cwd: cwdOf(data, env),

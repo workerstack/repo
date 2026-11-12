@@ -2,8 +2,11 @@
 import { z } from "zod";
 
 type Severity = z.ZodEnum<{ error: "error"; deny: "deny"; off: "off"; allow: "allow"; warn: "warn" }>;
+
 type LintRules = z.ZodRecord<z.ZodString, z.ZodUnion<readonly [Severity, z.ZodTuple<[Severity], z.ZodUnknown>]>>;
+
 type Strings = z.ZodArray<z.ZodString>;
+
 type Unknown = z.ZodOptional<z.ZodUnknown>;
 
 /** The shape of `.oxlintrc.json`'s schema. */
@@ -88,6 +91,7 @@ function cursorHooks(): z.ZodType {
     timeout: z.number().optional(),
     type: z.string().optional(),
   });
+
   return z.looseObject({ hooks: z.record(z.string(), z.array(entry)).optional(), version: z.number().optional() });
 }
 
@@ -98,10 +102,12 @@ function buildHostSchemas(): HostSchemas {
     timeout: z.number().optional(),
     type: z.string(),
   });
+
   // A claude or codex hook entry: an optional matcher and the handlers it runs.
   const hookEntry = z.looseObject({ hooks: z.array(hookCommand).optional(), matcher: z.string().optional() });
   // An event name to its entries, the shape of `hooks` in claude's settings and in codex's and grok's hook files.
   const hooksByEvent = z.record(z.string(), z.array(hookEntry));
+
   return {
     agentFrontmatter: z.looseObject({ description: z.string(), name: z.string() }),
     // Antigravity's file nests flat entries (a command) and matcher entries (handlers) under one `rulesync` key.
@@ -132,6 +138,7 @@ function buildOxlintConfig(): OxlintConfig {
   const strings = z.array(z.string());
   const severity = z.enum(["off", "allow", "warn", "error", "deny"]);
   const lintRules = z.record(z.string(), z.union([severity, z.tuple([severity], z.unknown())]));
+
   return z.strictObject({
     $schema: z.string().optional(),
     categories: z.record(z.string(), severity).optional(),
@@ -193,7 +200,9 @@ function buildOxfmtConfig(): OxfmtConfig {
 
 /** `.oxlintrc.json`, one key per property of oxlint's shipped `configuration_schema.json`. */
 export const OXLINT_CONFIG: OxlintConfig = /* @__PURE__ */ buildOxlintConfig();
+
 /** `.oxfmtrc.jsonc`, one key per property of oxfmt's shipped `configuration_schema.json`. */
 export const OXFMT_CONFIG: OxfmtConfig = /* @__PURE__ */ buildOxfmtConfig();
+
 /** The host schemas, built once. */
 export const HOST_SCHEMAS: HostSchemas = /* @__PURE__ */ buildHostSchemas();

@@ -16,9 +16,11 @@ const NO_BINARY: CargoResult = { missing: false, status: 101, stderr: "error: no
 /** One outcomes.json entry, shaped as cargo-mutants 27.1.0 writes it (trimmed of phase results). */
 function mutant(file: string, summary: string, line = 1) {
   const span = { end: { column: 6, line }, start: { column: 5, line } };
+
   const scenario = {
     Mutant: { file, genre: "FnValue", name: `${file}:${line}:5: x`, package: "p", replacement: "-", span },
   };
+
   return { diff_path: null, log_path: "log/x.log", phase_results: [], scenario, summary };
 }
 
@@ -48,11 +50,15 @@ function rustFakes(
   const outcomes = script.outcomes === undefined ? JSON.stringify(OUTCOMES_JSON) : script.outcomes;
   f.deps.cargo = (cwd, args) => {
     f.calls.push(`cargo ${args.join(" ")} @${cwd}`);
+
     if (args[1] === "--version") return version;
+
     if (outcomes !== null) f.files.set(OUTCOMES, outcomes);
     const { status = 3, stdout = "", stderr = "" } = script;
+
     return { missing: false, status, stderr, stdout };
   };
+
   return f;
 }
 
@@ -80,11 +86,13 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
     "mutate: crates/a 69.57% (floor 60), 7 survivors in .tmp/repo/mutation/report.json\n",
     "mutate: crates/b 100.00% (no floor), 0 survivors in .tmp/repo/mutation/report.json\n",
   ]);
+
   const report = JSON.parse(f.files.get(REPORT) ?? "") /* the shard report this command wrote */ as {
     tool: string;
     head: string;
     files: Record<string, { killed: number; survivors: unknown[] }>;
   };
+
   expect(report).toMatchObject({ head: SHA, shard: { index: 1, total: 1 }, tool: "cargo-mutants" });
   expect(report.files["crates/a/src/lib.rs"]?.killed).toBe(16);
 });
@@ -186,10 +194,12 @@ it("stops and removes the clone when git cannot clone", async () => {
   const f = rustFakes();
   f.deps.git = (_cwd, args) => {
     f.calls.push(`git ${args.join(" ")}`);
+
     return args[0] === "clone"
       ? { code: 128, stderr: "boom\n", stdout: "" }
       : { code: 0, stderr: "", stdout: `${SHA}\n` };
   };
+
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(`repo mutate: could not clone ${ROOT}: boom\n`);
   expect(f.calls.some((c) => c.startsWith("cargo"))).toBe(false);
@@ -201,6 +211,7 @@ it("removes the clone when cargo throws", async () => {
   f.deps.cargo = () => {
     throw new Error("spawn");
   };
+
   await expect(runMutate(["--rust"], f.deps)).rejects.toThrow("spawn");
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);
 });

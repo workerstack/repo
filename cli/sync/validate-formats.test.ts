@@ -18,6 +18,7 @@ const AGENT = "---\nname: scout\ndescription: Facts only.\n---\nBody\n";
 
 it("accepts well-formed json, toml, markdown and text", () => {
   const root = tmpRoot();
+
   const outputs = [
     file(".vscode/tasks.json", "{}\n"),
     file("knip.json", "{}\n"),
@@ -28,6 +29,7 @@ it("accepts well-formed json, toml, markdown and text", () => {
     file(".claude/agents/scout.md", AGENT),
     file(".claude/agents/crlf.md", "---\r\nname: a\r\ndescription: b\r\n---\r\nBody\r\n"),
   ];
+
   expect(validateOutputs(root, outputs)).toStrictEqual([]);
 });
 

@@ -50,9 +50,12 @@ function readAt(root: string, rel: string): string | null {
  */
 export async function wantedAt(root: string): Promise<WantedAtResult> {
   const loaded = await loadConfig(root);
+
   if (!loaded.ok) return { errors: loaded.errors, ok: false, unreadable: true };
   const read = readWorkspace(root);
+
   if (!read.ok) return { errors: read.errors, ok: false, unreadable: true };
   const checks = ciJobNames({ config: loaded.config, read: (rel) => readAt(root, rel), workspace: read.workspace });
+
   return wantedSettings(manifestOf(root), checks);
 }

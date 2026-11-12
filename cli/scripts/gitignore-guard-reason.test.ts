@@ -8,14 +8,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { redundantIgnoreLines, redundantIgnoreReason } from "./redundant-ignore-lines.ts";
 
 const dirs: string[] = [];
+
 afterEach(() => {
   vi.unstubAllEnvs();
+
   for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmpDir(prefix: string) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
   dirs.push(dir);
+
   return dir;
 }
 
@@ -26,6 +29,7 @@ function repo() {
   execFileSync("git", ["init", "-q"], { cwd: r });
   fs.writeFileSync(path.join(r, ".gitignore"), ".tmp/\n");
   fs.mkdirSync(path.join(r, "pkg"), { recursive: true });
+
   return r;
 }
 
@@ -34,6 +38,7 @@ function fakeGit(failing: string, code: number) {
   const bin = path.join(tmpDir("ignore-fake-git-"), "git");
   const script = `#!/bin/sh\nfor a in "$@"; do [ "$a" = "${failing}" ] && exit ${code}; done\nexec git "$@"\n`;
   fs.writeFileSync(bin, script, { mode: 0o755 });
+
   return bin;
 }
 
@@ -41,11 +46,13 @@ describe("redundantIgnoreReason", () => {
   it("names the first edit whose lines a parent already ignores", () => {
     const r = repo();
     const file = path.join(r, "pkg/.gitignore");
+
     const reason = redundantIgnoreReason([
       { added: [], file: path.join(r, "pkg/empty/.gitignore") },
       { added: ["fresh/"], file: path.join(r, "pkg/x/.gitignore") },
       { added: [".tmp/"], file },
     ]);
+
     expect(reason).toBe(
       `redundant .gitignore lines in ${file}: ".tmp/" (ignored by ${path.join(r, ".gitignore")}:1 .tmp/). ` +
         "Leave them out; the parent rules already ignore them",

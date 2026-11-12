@@ -28,6 +28,7 @@ function repo(base: Record<string, string | Buffer>, staged: Record<string, stri
   git(root, "commit", "-q", "--no-verify", "-m", "base");
   put(root, staged);
   git(root, "add", "-A");
+
   return root;
 }
 
@@ -40,13 +41,16 @@ describe("stagedChange", () => {
 
   it("leaves out lockfiles, the lint baseline, binaries and linguist-generated paths", () => {
     const skipped = ["bun.lock", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "api/bun.lock"];
+
     const staged = Object.fromEntries(
       [...skipped, ".repo/lint-baseline.json", "gen/out.ts"].map((rel) => [rel, lines(50)]),
     );
+
     const root = repo(
       { ".gitattributes": "gen/** linguist-generated\n" },
       { ...staged, "bun.lockb": Buffer.from([0, 1, 2]), "img.bin": Buffer.from([0, 9, 0]), "src/a.ts": lines(7) },
     );
+
     expect(stagedChange(root).changedLines).toBe(7);
   });
 
@@ -66,14 +70,17 @@ async function commitMsg(root: string, message: string) {
   fs.writeFileSync(path.join(root, ".git", "COMMIT_EDITMSG"), message);
   const err: string[] = [];
   const code = await main([".git/COMMIT_EDITMSG"], { cwd: root, stderr: (text) => err.push(text) });
+
   return { code, stderr: err.join("") };
 }
+
 function refused(...problems: string[]) {
   return {
     code: 1,
     stderr: `commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`,
   };
 }
+
 const PASSED = { code: 0, stderr: "" };
 const NEEDS_TEST = "a feat commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)";
 
@@ -87,6 +94,7 @@ describe("repo commit-msg scopes", () => {
       },
       { "src/x.test.ts": "x\n" },
     );
+
     expect(await commitMsg(root, "feat(web): add x\n")).toStrictEqual(
       refused('unknown scope "web"; use a workspace package name or one of repo, deps, ci (api, app)'),
     );

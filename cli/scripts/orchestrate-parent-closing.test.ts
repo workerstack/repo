@@ -11,16 +11,19 @@ import { isSliceOf } from "./orchestrate-reviews.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
+
 /** Session `sid` in `ws`, sent in Claude's shape with the project dir set. */
 function claude(ws: string, sid: string): HookSession {
   return hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
 }
+
 function approvals(ws: string, sid: string) {
   return fs
     .readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "approvals.txt"), "utf8")
     .trim()
     .split("\n");
 }
+
 function dflt(...items: string[]) {
   return items.map((i) => `${i} (strategy: default)`).join(", then ");
 }
@@ -69,6 +72,7 @@ it("blocks once per turn until the reply ends with the closing line naming every
 it("does not take the old closing line for an ask, in any markdown wrapping", () => {
   const s = claude(kit.temp(), "old");
   turn(s, "plan it");
+
   for (const old of ['Reply "y" to run plan 1.', '**Reply "y" to run plan 1.**', '`Reply "y" to run plan 1.`']) {
     expect(parseClosingLine(old)).toBeNull();
     expect(s.stop(`Saved.\n\n${old}`)?.decision).toBe("block");

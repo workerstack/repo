@@ -14,6 +14,7 @@ useTempDirs();
 
 function plant() {
   const ws = fs.realpathSync(tempDir("gate-paths-"));
+
   return { roots: { checkout: ws, cwd: ws, root: ws }, ws };
 }
 

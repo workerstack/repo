@@ -5,6 +5,7 @@ import { noModuleState } from "./no-module-state.ts";
 
 const MESSAGE =
   "module-scope state outlives every caller; move it into a function, or make it a const with a Readonly type";
+
 function messagesOf(code: string) {
   return reportsOf(noModuleState, { "a.ts": code }).map((report) => report.message);
 }

@@ -31,6 +31,7 @@ async function synced(agents: string, stock = { body: BODY, history: STOCK_HISTO
   await applyMigration(root, planHandover(root, { history: stock.history, packages: [] }));
   const handed = read(root, "AGENTS.md");
   const final: Output = agentsFile("AGENTS.md", stock.body, { history: stock.history, text: handed });
+
   return { final, handed };
 }
 
@@ -57,6 +58,7 @@ it("keeps stock rules with no newline after them, the user's lines above", async
 
 const HEAD = "# Agents\n\nThe stock head an old install shipped.\n";
 const TAIL = "## Rules by path\n- `**/*.rs`: read `.repo/rules/rust.md`\n";
+
 /** An old install's stock rules, composed with the pathless rule bodies between their head and their tail. */
 const COMPOSED = { body: `Stock rule.\n\n${TAIL}`, history: { "AGENTS.md": [hashText(`${HEAD}\n${TAIL}`)] } };
 const COMPOSED_REGION = `<!-- repo:rules ${regionHash(COMPOSED.body)} -->\n${COMPOSED.body}<!-- /repo:rules -->\n`;
@@ -66,6 +68,7 @@ it("moves a rule body out of the old stock rules it split, so the region replace
     `USER-ABOVE\n\n${HEAD}\nAlways run the linter.\n\n${TAIL}\nUSER-BELOW\n`,
     COMPOSED,
   );
+
   expect(handed).toBe(`USER-ABOVE\n\n${HEAD}\n${TAIL}\nUSER-BELOW\n\nAlways run the linter.\n`);
   const content = `USER-ABOVE\n\n${COMPOSED_REGION}\nUSER-BELOW\n\nAlways run the linter.\n`;
   expect(final).toMatchObject({ content, repairs: ["replaced the old stock rules with repo:rules"] });
@@ -98,6 +101,7 @@ it.each([
     ".repo/rules/zeta.md": "---\ndescription: Z\n---\nZ rule.\n",
     "AGENTS.md": `${HEAD}\nAlways run the linter.\n\nZ rule.\n\n${TAIL}`,
   };
+
   const input = { history: COMPOSED.history, packages: [] };
   const whole = rootWith(files);
   await applyMigration(whole, planHandover(whole, input));

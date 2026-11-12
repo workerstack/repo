@@ -18,6 +18,7 @@ const EQUALITY = [
   ts.SyntaxKind.EqualsEqualsToken,
   ts.SyntaxKind.ExclamationEqualsToken,
 ];
+
 const NULLISH = ts.TypeFlags.Null | ts.TypeFlags.Undefined;
 const PLAIN = ts.TypeFlags.String | ts.TypeFlags.Any | ts.TypeFlags.Unknown;
 
@@ -27,14 +28,17 @@ function compared(text: string) {
     "type the value as a literal union or brand, or import the string from a *.constants.ts file"
   );
 }
+
 function copies(name: string, text: string) {
   const quoted = JSON.stringify(text);
+
   return `${name} copies ${quoted} locally to compare to a plain string; move it to a *.constants.ts file`;
 }
 
 /** `string`, `any` or `unknown`, alone or in a union beside `null` or `undefined`. */
 function isUntyped(type: ts.Type): boolean {
   if (type.isUnion()) return type.types.some((member) => (member.flags & NULLISH) === 0 && isUntyped(member));
+
   return (type.flags & PLAIN) !== 0;
 }
 
@@ -46,44 +50,57 @@ function comparedPairs(node: ts.Node): [ts.Expression, ts.Expression][] {
       [node.right, node.left],
     ];
   }
+
   return ts.isCaseClause(node) ? [[node.expression, node.parent.parent.expression]] : [];
 }
 
 /** The declaration of the `const` an identifier names, through an import alias; null for anything else. */
 function constOf(id: ts.Identifier, checker: ts.TypeChecker): ts.VariableDeclaration | null {
   const symbol = checker.getSymbolAtLocation(id);
+
   const target =
     symbol !== undefined && (symbol.flags & ts.SymbolFlags.Alias) !== 0 ? checker.getAliasedSymbol(symbol) : symbol;
+
   const declaration = target?.valueDeclaration;
+
   return declaration !== undefined && ts.isVariableDeclaration(declaration) ? declaration : null;
 }
 
 /** The hit at a local `const` string the identifier names, outside a constants file; null when it names none. */
 function copyHit(id: ts.Identifier, { checker, owns }: Context): MagicHit | null {
   const declaration = constOf(id, checker);
+
   if (declaration === null) return null;
   const text = constString(declaration);
   const { fileName } = declaration.getSourceFile();
+
   if (text === null || !owns(fileName) || CONSTANTS_FILE.test(fileName)) return null;
+
   return hitAt(declaration.name, MAGIC_STRING, copies(declaration.name.getText(), text));
 }
 
 /** The hit `side` would make compared to a plain string: a literal at itself, a const copy at its declaration. */
 function sideHit(side: ts.Expression, context: Context): MagicHit | null {
   if (isMeaningful(side)) return hitAt(side, MAGIC_STRING, compared(side.text));
+
   return ts.isIdentifier(side) ? copyHit(side, context) : null;
 }
 
 /** Every magic string of `file`; a copy's hit is at its declaration, which `owns` must own. */
 export function magicStrings(file: ts.SourceFile, context: Context): MagicHit[] {
   const hits: MagicHit[] = [];
+
   function visit(node: ts.Node): void {
     for (const [side, other] of comparedPairs(node)) {
       const found = sideHit(side, context);
+
       if (found !== null && isUntyped(context.checker.getTypeAtLocation(other))) hits.push(found);
     }
+
     ts.forEachChild(node, visit);
   }
+
   visit(file);
+
   return hits;
 }

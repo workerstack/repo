@@ -16,6 +16,7 @@ it("ends on a cycle of types", () => {
       "src/b.ts": 'import type { A } from "./a.ts";\nexport type B = { a: A };\n',
     },
   );
+
   expect(namesIn(root)).toStrictEqual({ "src/a.ts": ["A"], "src/b.ts": ["B"] });
 });
 
@@ -27,6 +28,7 @@ it("ends on a cycle of star re-exports and of namespace re-exports", () => {
       "src/b.ts": 'export * from "./a.ts";\nexport * as self from "./b.ts";\nexport const fromB = 1;\n',
     },
   );
+
   expect(namesIn(root)).toStrictEqual({ "src/a.ts": ["fromA"], "src/b.ts": ["fromB"] });
 });
 
@@ -90,6 +92,7 @@ it.each(CLOSED)("fails closed on $name at an entry", ({ code, form, line }) => {
     "src/star.ts": 'export { ghost } from "./other.ts";\n',
     "src/wide.ts": 'export * from "zod";\n',
   });
+
   expect(unknownIn(root)).toStrictEqual([{ file: "src/index.ts", form, line }]);
 });
 
@@ -101,6 +104,7 @@ it("reports a form once however many entries and stars reach its file", () => {
       "src/index.ts": 'export * from "./bad.ts";\nexport * from "./bad.ts";\n',
     },
   );
+
   expect(unknownIn(root)).toStrictEqual([{ file: "src/bad.ts", form: "TSExportAssignment", line: 2 }]);
 });
 

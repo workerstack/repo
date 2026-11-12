@@ -7,11 +7,13 @@ import { SHA, STARTUP, bench, ok, usageScript, type Script } from "./__fixtures_
 import { realMachine } from "./bench.ts";
 
 useTempDirs();
+
 const RAW = ".repo/tmp/bench/startup/ubuntu-latest.json";
 
 /** The node candidate's script, with measured run `n` (call `n`, after the one warmup) answered by `run`. */
 function nodeWith(n: number, run: ReturnType<Script>): Record<string, Script> {
   const node = usageScript(SAMPLES.node);
+
   return { ...STARTUP, "bun -e 2": (call) => (call === n ? run : node(call)) };
 }
 
@@ -116,6 +118,7 @@ it("stops on a failed setup, exit 1", async () => {
   const got = await bench(["startup"], {
     spawn: { ...STARTUP, "bun -e 0": () => ({ code: 2, stderr: "no x.ts\n" }) },
   });
+
   expect(got).toMatchObject({ code: 1, err: "repo bench: node setup exited 2; stderr tail: no x.ts\n", out: "" });
 });
 

@@ -9,10 +9,12 @@ const GIT_HOOKS = {
   "pre-commit": "turn --staged",
   "pre-push": "link --pre-push",
 } as const;
+
 /** The path of each git hook. */
 function hookPaths(): string[] {
   return Object.keys(GIT_HOOKS).map((name) => `${HOOKS_DIR}/${name}`);
 }
+
 export const HOOK_PATHS: readonly string[] = /* @__PURE__ */ hookPaths();
 
 /**
@@ -22,15 +24,19 @@ export const HOOK_PATHS: readonly string[] = /* @__PURE__ */ hookPaths();
 export function gitHooks(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   const outputs: Output[] = [];
   const errors: string[] = [];
+
   for (const [name, command] of Object.entries(GIT_HOOKS)) {
     const rel = `${HOOKS_DIR}/${name}`;
     const existing = ctx.read(rel);
+
     if (existing !== null && !hasOwnedHeader(existing)) {
       errors.push(`${rel} is hand-written; delete it so repo sync can own it`);
       continue;
     }
+
     const content = `#!/bin/sh\n${repoBinLookup(".")}\n"$r" ${command}\n`;
     outputs.push({ content, executable: true, kind: "file", managed: "whole", path: rel, tracked: true });
   }
+
   return errors.length > 0 ? { errors, outputs: [] } : { errors, outputs };
 }

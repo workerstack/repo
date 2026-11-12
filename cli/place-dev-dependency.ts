@@ -6,9 +6,11 @@ import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 function moveFromDependencies(destPkg: PackageJson, devDeps: Record<string, string>): void {
   const deps = destPkg.dependencies;
   const fromDep = deps?.[PACKAGE_NAME];
+
   if (deps === undefined || fromDep == null) return;
   delete deps[PACKAGE_NAME];
   devDeps[PACKAGE_NAME] ??= fromDep;
+
   if (Object.keys(deps).length === 0) delete destPkg.dependencies;
 }
 
@@ -21,6 +23,8 @@ export function placeDevDependency(destPkg: PackageJson, srcPkg?: PackageJson): 
   destPkg.devDependencies = devDeps;
   moveFromDependencies(destPkg, devDeps);
   const version = srcPkg?.name === PACKAGE_NAME ? srcPkg.version : undefined;
+
   if (devDeps[PACKAGE_NAME] == null && version !== undefined && version !== "") devDeps[PACKAGE_NAME] = version;
+
   return devDeps;
 }

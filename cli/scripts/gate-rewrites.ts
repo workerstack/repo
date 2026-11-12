@@ -31,6 +31,7 @@ function scratchRel(posix: string, p: typeof path): string | null {
   const marker = SCRATCH_MARKER.exec(posix);
   const rel = marker === null ? "" : posix.slice(marker.index + marker[0].length);
   const relNorm = p.posix.normalize(rel);
+
   return rel === "" || rel.startsWith("/") || relNorm === "." || rel.split("/").includes("..") ? null : relNorm;
 }
 
@@ -47,12 +48,15 @@ export function rewriteScratchPath(
   const raw = filePath;
   const destRoot = scratchDir(roots, p);
   const absIn = resolveTyped(roots, raw, p);
+
   if (isUnder(destRoot, absIn, p)) return null;
   // Inside the root, look below it, so a root that itself sits under some `.tmp/repo` is not matched.
   const posix = (isUnder(roots.root, absIn, p) ? p.relative(roots.root, absIn) : raw).replaceAll("\\", "/");
   const relNorm = scratchRel(posix, p);
+
   if (relNorm === null) return null;
   const dest = p.resolve(destRoot, relNorm);
+
   return relInside(destRoot, dest, p) === null ? null : dest;
 }
 
@@ -62,13 +66,16 @@ export function rewriteScratchPath(
  */
 function scratchBelow(rest: string[], scratch: string, p: typeof path): string | null {
   const dest = p.resolve(scratch, ...rest);
+
   return relInside(scratch, dest, p) === null ? null : dest;
 }
 
 /** The segments below a `tmp/` or `.tmp/<name>/` prefix, or null when the path has neither. */
 function strayDirRest(segs: string[]): string[] | null {
   const [first, second] = segs;
+
   if (first === TMP_DIR) return segs.slice(1);
+
   return first === DOT_TMP_DIR && second !== REPO_DIR ? segs.slice(DOT_TMP_DEPTH) : null;
 }
 
@@ -83,13 +90,17 @@ export function rewriteScratchWrite(
 ): string | null {
   if (typeof filePath !== "string" || roots == null) return null;
   const existing = rewriteScratchPath(filePath, roots, p);
+
   if (existing !== null) return existing;
   const rel = relInside(p.resolve(roots.checkout), resolveTyped(roots, filePath, p), p);
+
   if (rel === null) return null;
   const segs = rel.split("/");
   const scratch = scratchDir(roots, p);
   const rest = strayDirRest(segs);
+
   if (rest !== null) return scratchBelow(rest, scratch, p);
+
   return segs.length === 1 && SCRATCH_ROOT_RE.test(rel) ? p.resolve(scratch, rel) : null;
 }
 
@@ -115,13 +126,18 @@ export function rewritePatch(
 ): { patch: string | null; paths: string[] } {
   const paths: string[] = [];
   const moved: string[] = [];
+
   const next = String(patch).replace(PATCH_PATH_RE, (line: string, op: string, target: string) => {
     const dest = createsFile(op) ? rewriteScratchWrite(target, roots, p) : null;
+
     if (op !== PATCH_DELETE) paths.push(dest ?? resolveTyped(roots, target, p));
+
     if (dest === null) return line;
     moved.push(dest);
+
     return `*** ${op}: ${dest}`;
   });
+
   return { patch: moved.length > 0 ? next : null, paths };
 }
 
@@ -134,10 +150,12 @@ export function writeTargets({
 }: Pick<GateCall, "tool" | "input" | "patch" | "roots">): string[] {
   if (tool.kind === "write") {
     const typed = WRITE_PATH_FIELDS.map((k) => input[k]);
+
     return typed.flatMap((v) =>
       typeof v === "string" && v !== "" ? [rewriteScratchWrite(v, roots) ?? resolveTyped(roots, v)] : [],
     );
   }
+
   // Every caller that is not a write holds a patch, and both groups of PATCH_PATH_RE always participate in a match.
   return [...String(patch).matchAll(PATCH_PATH_RE)].map(
     ([, op, target]) =>
@@ -148,17 +166,20 @@ export function writeTargets({
 /** Where a write field lands when the gate moves it: null when it stays or orchestrate-parent persists it itself. */
 function movedPath(call: GateCall, current: string, dest: string): string | null {
   const { tool, roots } = call;
+
   // orchestrate-parent redirects the same `.tmp/repo` path, persists it, and answers the Write itself.
   const isPersisted =
     tool.persistShared === true &&
     dest === rewriteScratchPath(current, roots) &&
     persistOwner(dest, roots.root) !== null;
+
   return isPersisted ? null : dest;
 }
 
 /** What one write field is recorded as, and where it moves to (null to stay). */
 function fieldPlan(call: GateCall, current: string): { recorded: string; moved: string | null } {
   const dest = rewriteScratchWrite(current, call.roots);
+
   return { moved: dest === null ? null : movedPath(call, current, dest), recorded: dest ?? current };
 }
 
@@ -176,16 +197,21 @@ export function writeGuard(call: GateCall): GuardResult {
   const next = { ...call.input };
   const wrote: string[] = [];
   let isChanged = false;
+
   for (const key of WRITE_PATH_FIELDS) {
     const current = next[key];
+
     if (typeof current !== "string" || current === "") continue;
     const { recorded, moved } = fieldPlan(call, current);
     wrote.push(recorded);
+
     if (moved === null) continue;
     next[key] = moved;
     isChanged = true;
   }
+
   recordAll(call, wrote);
+
   return isChanged ? { type: "rewrite", updatedInput: next } : null;
 }
 
@@ -195,10 +221,13 @@ export function writeGuard(call: GateCall): GuardResult {
  */
 export function patchGuard(call: GateCall): GuardResult {
   const { patch, roots, input, text, field } = call;
+
   if (patch === null || patch === "") return undefined;
   const out = rewritePatch(patch, roots);
   recordAll(call, out.paths);
   const rewritten = out.patch;
+
   if (rewritten === null) return null;
+
   return { type: "rewrite", updatedInput: { ...input, [field]: text.replace(patch, () => rewritten) } };
 }

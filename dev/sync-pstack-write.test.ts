@@ -12,6 +12,7 @@ import { syncPstackSkills } from "./sync-pstack-write.ts";
 vi.mock(new URL("../cli/sync.ts", import.meta.url).href, () => ({ runSync: vi.fn<() => Promise<number>>() }));
 
 const tmpDirs: string[] = [];
+
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
@@ -22,6 +23,7 @@ it("writes adapted files and skips generate on --no-generate", async () => {
   const root = tmpDir("pstack-sync-", tmpDirs);
   let generated = 0;
   const { out, io } = capture();
+
   const result = await syncPstackSkills({
     argv: ["--skill", "bro", "--no-generate"],
     fetchImpl: (url) =>
@@ -36,6 +38,7 @@ it("writes adapted files and skips generate on --no-generate", async () => {
     io,
     workspaceRoot: root,
   });
+
   expect(result.ok).toBe(true);
   expect(generated).toBe(0);
   expect(out.join("")).toContain("write bro/SKILL.md");
@@ -46,15 +49,18 @@ it("regenerates through runSync in the workspace, not a package script", async (
   const root = tmpDir("pstack-gen-", tmpDirs);
   vi.mocked(runSync).mockImplementationOnce((_args, io) => {
     io.stdout("repo sync: wrote AGENTS.md\n");
+
     return Promise.resolve(0);
   });
   const { out, io } = capture();
+
   const result = await syncPstackSkills({
     argv: ["--skill", "bro"],
     fetchImpl: respond(BRO_SHORT),
     io,
     workspaceRoot: root,
   });
+
   expect(result.ok).toBe(true);
   expect(runSync).toHaveBeenCalledWith([], expect.objectContaining({ cwd: root }));
   expect(out.join("")).toContain("repo sync: wrote AGENTS.md");
@@ -62,12 +68,14 @@ it("regenerates through runSync in the workspace, not a package script", async (
 
 it("fails when runSync exits non-zero", async () => {
   vi.mocked(runSync).mockResolvedValueOnce(1);
+
   const result = await syncPstackSkills({
     argv: ["--skill", "bro"],
     fetchImpl: respond(BRO_SHORT),
     io: capture().io,
     workspaceRoot: tmpDir("pstack-gen-fail-", tmpDirs),
   });
+
   expect(result).toMatchObject({ error: "repo sync exited 1", ok: false });
 });
 
@@ -81,6 +89,7 @@ it("fails with the message when generateFn throws", async () => {
     io: capture().io,
     workspaceRoot: tmpDir("pstack-gen-throw-", tmpDirs),
   });
+
   expect(result).toMatchObject({ error: "boom", ok: false });
 });
 
@@ -89,6 +98,7 @@ it("--check reports drift without writing", async () => {
   const dest = path.join(root, STOCK_SKILLS_REL, "bro");
   fs.mkdirSync(dest, { recursive: true });
   fs.writeFileSync(path.join(dest, "SKILL.md"), "stale\n");
+
   const result = await syncPstackSkills({
     argv: ["--skill", "bro", "--check"],
     fetchImpl: respond(BRO_NO_INVOCATION),
@@ -98,6 +108,7 @@ it("--check reports drift without writing", async () => {
     io: capture().io,
     workspaceRoot: root,
   });
+
   expect(result.ok).toBe(false);
   expect(fs.readFileSync(path.join(dest, "SKILL.md"), "utf8")).toBe("stale\n");
 });

@@ -32,11 +32,13 @@ describe("persistImplementation", () => {
 describe("persistImplementation file", () => {
   it("writes a stamped journal under .tmp/repo/implementations", () => {
     const ws = tmpWs();
+
     const r = persistImplementation({
       content: VALID_IMPL,
       created: "2026-08-26T14:30:00Z",
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.plan).toBe("6");
@@ -54,10 +56,12 @@ describe("persistImplementation file", () => {
 describe("persistImplementation defaults", () => {
   it("defaults plan to none", () => {
     const ws = tmpWs();
+
     const r = persistImplementation({
       content: VALID_IMPL.replace("IMPL_PLAN: 6\n", ""),
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(true);
     expect(r.plan).toBe("none");
     expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
@@ -75,16 +79,19 @@ describe("persistImplementation serials", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
+
     const a = persistImplementation({
       content: VALID_IMPL,
       created,
       workspaceRoot: ws,
     });
+
     const b = persistImplementation({
       content: VALID_IMPL,
       created,
       workspaceRoot: ws,
     });
+
     expect(a.serial).toBe(1);
     expect(b.serial).toBe(2);
     expect(b.filename).toBe("2-add-tmp-ignore-20260826T143000Z.md");
@@ -94,10 +101,12 @@ describe("persistImplementation serials", () => {
 describe("persistImplementation refused plan and headings", () => {
   it("rejects invalid IMPL_PLAN and does not write", () => {
     const ws = tmpWs();
+
     const r = persistImplementation({
       content: VALID_IMPL.replace("IMPL_PLAN: 6", "IMPL_PLAN: 06"),
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(false);
     expect(r.error).toContain("plan");
     expect(fs.existsSync(path.join(ws, IMPLEMENTATION_DIR))).toBe(true);
@@ -106,10 +115,12 @@ describe("persistImplementation refused plan and headings", () => {
 
   it("rejects extra headings", () => {
     const ws = tmpWs();
+
     const r = persistImplementation({
       content: `${VALID_IMPL}\n## Steps\n- nope\n`,
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(false);
     expect(r.error).toContain("extra h2");
   });
@@ -118,16 +129,20 @@ describe("persistImplementation refused plan and headings", () => {
 describe("persistImplementation refused Files", () => {
   it("rejects abs and .tmp Files paths", () => {
     const ws = tmpWs();
+
     const abs = persistImplementation({
       content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- /etc/passwd"),
       workspaceRoot: ws,
     });
+
     expect(abs.ok).toBe(false);
     expect(abs.error).toContain("Files abs");
+
     const tmp = persistImplementation({
       content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- .tmp/repo/x.md"),
       workspaceRoot: ws,
     });
+
     expect(tmp.ok).toBe(false);
     expect(tmp.error).toContain("Files tmp");
   });
@@ -135,11 +150,13 @@ describe("persistImplementation refused Files", () => {
 
 function persistText() {
   const ws = tmpWs();
+
   const r = persistImplementation({
     content: VALID_IMPL,
     created: "2026-08-26T14:30:00Z",
     workspaceRoot: ws,
   });
+
   return { filename: savedOk(r).filename, text: savedOk(r).content };
 }
 
@@ -151,10 +168,12 @@ describe("validateImplementation", () => {
 
   it("accepts a log with [x] leaf lines and Files bullets", () => {
     const good = persistText();
+
     const text = good.text
       .replace("## Done\n(none)", "## Done\n- ignored .tmp/")
       .replace("## Files\n(none)", "## Files\n- .gitignore")
       .replace("## Log\n(none)", "## Log\n1.1 [x] read gitignore\n1.2 [x] appended .tmp/");
+
     expect(validateImplementation(good.filename, text)).toStrictEqual([]);
   });
 

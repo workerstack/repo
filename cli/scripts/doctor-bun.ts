@@ -19,6 +19,7 @@ export function bunMinimum(file: string = besidePackageJson()): string {
   try {
     const pkg: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
     const range = isRecord(pkg) && isRecord(pkg.engines) ? pkg.engines.bun : undefined;
+
     return VERSION_RE.exec(String(range))?.[0] ?? BUN_MIN_FALLBACK;
   } catch {
     return BUN_MIN_FALLBACK;
@@ -28,12 +29,16 @@ export function bunMinimum(file: string = besidePackageJson()): string {
 /** True when dotted version `have` (an optional leading `v`) is at least `min`; an unreadable `have` is not. */
 export function versionAtLeast(have: string, min: string): boolean {
   const a = DOTTED_RE.exec(have);
+
   if (a === null) return false;
   const b = min.split(".").map(Number);
+
   for (let i = 0; i < VERSION_PARTS; i++) {
     const x = Number(a[i + 1] ?? 0);
     const y = b[i] ?? 0;
+
     if (x !== y) return x > y;
   }
+
   return true;
 }

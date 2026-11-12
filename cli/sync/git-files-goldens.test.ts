@@ -24,11 +24,14 @@ import { listedFiles } from "./git-files.ts";
 import type { Output } from "./outputs.ts";
 
 useTempDirs();
+
 const goldens = [...readGoldens().keys()];
+
 /** Each golden as the trees generator plans it: AGENTS.md a tracked shared file, every other one owned whole. */
 function planned({ tracked }: { tracked: boolean }) {
   return goldens.map((rel) => (rel === "AGENTS.md" ? file(rel, true, "block") : file(rel, tracked)));
 }
+
 const owned = goldens.filter((rel) => rel !== "AGENTS.md");
 const goldenOutputs = planned({ tracked: false });
 
@@ -53,6 +56,7 @@ it("are marked generated one line each when the repo commits them", () => {
 it("lists tracked and untracked files git does not ignore, with extra ignore lines applied, sorted", () => {
   const root = tempDir("workerstack-listed-");
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   for (const rel of ["b.ts", "a/x.ts", "skip/y.ts", "ignored.log"]) put(root, rel, "x");
   put(root, ".gitignore", "*.log\n");
   expect(listedFiles(root, ["skip/"])).toStrictEqual([".gitignore", "a/x.ts", "b.ts"]);

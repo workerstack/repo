@@ -14,6 +14,7 @@ export type ImportConfig = (root: string) => Promise<Record<string, unknown>>;
 /** The module namespace of the file at `file`. */
 async function importFile(file: string): Promise<Record<string, unknown>> {
   const namespace: unknown = await import(/* @vite-ignore */ pathToFileURL(file).href);
+
   return namespace /* an import resolves to its module namespace object */ as Record<string, unknown>;
 }
 
@@ -21,6 +22,7 @@ async function importFile(file: string): Promise<Record<string, unknown>> {
 async function importCopy(root: string, file: string): Promise<Record<string, unknown>> {
   const copy = path.join(root, `.workerstack.config.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
   fs.copyFileSync(file, copy);
+
   try {
     return await importFile(copy);
   } finally {
@@ -36,15 +38,19 @@ async function importCopy(root: string, file: string): Promise<Record<string, un
  */
 function cachedImporter(): ImportConfig {
   const loaded = new Map<string, { text: string; module: Record<string, unknown> }>();
+
   return async (root) => {
     const file = path.join(root, CONFIG_FILE);
     const text = fs.readFileSync(file, "utf8");
     const known = loaded.get(file);
+
     if (known?.text === text) return known.module;
     const module = known === undefined ? await importFile(file) : await importCopy(root, file);
     loaded.set(file, { module, text });
+
     return module;
   };
 }
+
 /** Imports the config module of `root`, `loadConfig`'s default. */
 export const importConfig: ImportConfig = /* @__PURE__ */ cachedImporter();

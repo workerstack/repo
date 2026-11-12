@@ -6,9 +6,11 @@ import type { RepoRule } from "./rule.types.ts";
 /** The text of the deprecation tag in a JSDoc block's `value`, or null when it has none. */
 function deprecatedText(value: string): string | null {
   const tag = DEPRECATED.exec(value);
+
   if (tag === null) return null;
   const rest = value.slice(tag.index + tag[0].length);
   const end = rest.search(NEXT_TAG);
+
   return end < 0 ? rest : rest.slice(0, end);
 }
 
@@ -23,6 +25,7 @@ export const deprecatedReplacement: RepoRule<"replacement"> = {
         for (const comment of context.sourceCode.getAllComments()) {
           if (comment.type !== AST_TOKEN_TYPES.Block || !comment.value.startsWith("*")) continue;
           const text = deprecatedText(comment.value);
+
           if (text !== null && !REPLACEMENT.test(text)) context.report({ messageId: "replacement", node: comment });
         }
       },

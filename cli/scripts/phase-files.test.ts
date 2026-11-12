@@ -50,6 +50,7 @@ function run(...argv: string[]) {
   vi.spyOn(process.stdout, "write").mockImplementation((s) => (out.push(String(s)), true));
   vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
   const code = main(argv, wt);
+
   return { code, err: err.join(""), out: out.join("") };
 }
 
@@ -71,6 +72,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 

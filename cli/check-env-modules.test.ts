@@ -13,6 +13,7 @@ const SIBLINGS = {
   "packages/a/package.json": PKG,
   "packages/a/src/env.ts": ENV,
 };
+
 const ROOT_PAIR = { "env.ts": ENV, "package.json": PKG, "src/env.ts": ENV };
 const ROOT_LINE = "env: env.ts and src/env.ts are both env.ts in .; keep one";
 
@@ -31,6 +32,7 @@ describe("checkEnvModules", () => {
       "packages/b/src/env.ts": ENV,
       ...SIBLINGS,
     });
+
     expect(checkEnvModules(dir).map((line) => line.split(" in ")[1])).toStrictEqual([
       "packages/a; keep one",
       "packages/b; keep one",
@@ -46,6 +48,7 @@ describe("checkEnvModules, other layouts", () => {
       "packages/b/env.ts": ENV,
       "packages/b/package.json": PKG,
     });
+
     expect(checkEnvModules(dir)).toStrictEqual([]);
   });
 

@@ -33,21 +33,27 @@ import { readWorkspace } from "./sync/workspace.ts";
 async function lookupOf(ctx: LinkContext): Promise<LinkLookup> {
   const { checkout } = ctx.roots;
   let mapped = {};
+
   if (fs.existsSync(path.join(checkout, CONFIG_FILE))) {
     const loaded = await loadConfig(checkout);
+
     if (!loaded.ok) throw new LinkError(loaded.errors.join("\n"));
     mapped = loaded.config.link ?? {};
   }
+
   const read = readWorkspace(checkout);
+
   if (!read.ok) throw new LinkError(read.errors.join("\n"));
   const { manifest, packages } = read.workspace;
   const used = new Set([manifest, ...packages.map((pkg) => pkg.manifest)].flatMap(dependencyNames));
+
   return { mapped, roots: ctx.roots, used };
 }
 
 async function link(ctx: LinkContext, name: string): Promise<number> {
   if (!fs.existsSync(path.join(ctx.roots.install, MODULES))) throw new LinkError(noInstall(ctx.roots.install));
   const targets = resolveTargets(name, await lookupOf(ctx));
+
   return applyLinks(ctx, targets);
 }
 
@@ -60,22 +66,26 @@ async function execute(ctx: LinkContext, run: () => Promise<number> | number): P
     return await run();
   } catch (error) {
     ctx.io.err(`repo ${ctx.command}: ${(error /* the steps throw Errors */ as Error).message}`);
+
     return EXIT_FAIL;
   }
 }
 
 function usage(ctx: LinkContext): number {
   ctx.io.err(`repo link: ${USAGE}`);
+
   return EXIT_USAGE;
 }
 
 function status(ctx: LinkContext): number {
   for (const line of linkStatus(ctx)) ctx.io.out(line);
+
   return 0;
 }
 
 function scopeOf(arg: string): UnlinkScope | null {
   if (arg === FLAG_ALL) return { all: true };
+
   return isName(arg) ? { all: false, name: arg } : null;
 }
 
@@ -86,9 +96,13 @@ function scopeOf(arg: string): UnlinkScope | null {
 export function main(argv: string[], io: LinkIo = linkIo()): number | Promise<number> {
   const ctx: LinkContext = { command: CMD_LINK, io, roots: findRoots(io) };
   const [arg, ...rest] = argv;
+
   if (rest.length > 0) return usage(ctx);
+
   if (arg === CMD_STATUS) return execute(ctx, () => status(ctx));
+
   if (arg === FLAG_PRE_PUSH) return execute(ctx, () => prePush(ctx));
+
   return isName(arg) ? execute(ctx, () => link(ctx, arg)) : usage(ctx);
 }
 
@@ -97,5 +111,6 @@ export function unlinkMain(argv: string[], io: LinkIo = linkIo()): number | Prom
   const ctx: LinkContext = { command: CMD_UNLINK, io, roots: findRoots(io) };
   const [arg, ...rest] = argv;
   const scope = rest.length > 0 || arg === undefined ? null : scopeOf(arg);
+
   return scope === null ? usage(ctx) : execute(ctx, () => unlinkScope(ctx, scope));
 }

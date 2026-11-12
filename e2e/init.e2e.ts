@@ -23,6 +23,7 @@ function hookCallsCase(get: GetSandbox) {
     const sb = get();
     const calls = hookCalls(sb);
     expect(calls.length).toBeGreaterThan(5);
+
     for (const call of calls) {
       for (const payload of hookPayloads(sb, call)) {
         const r = await sb.run("bash", ["-c", call.command], {
@@ -32,6 +33,7 @@ function hookCallsCase(get: GetSandbox) {
           },
           input: JSON.stringify(payload),
         });
+
         const tool = (payload /* every payload object may carry a tool name */ as { tool_name?: string }).tool_name;
         const label = `${call.file} ${call.event} ${tool ?? ""}: ${call.command}\n${tail(r.out)}`;
         expect(r.out, label).not.toMatch(BROKEN_RUNTIME);
@@ -48,6 +50,7 @@ function cliCase(get: GetSandbox) {
     expect(await installedVersion(sb)).toBe(inject("version"));
     expect(sb.expectOk(await sb.cli("help")).stdout).toContain("Usage: repo");
     expect(sb.expectOk(await sb.cli("map")).stdout).toContain("src/");
+
     for (const cmd of ["check", "sync", "yolo", "purge-mcps"]) expectClean(sb, await sb.cli(cmd));
 
     for (const cmd of ["generate", "upgrade"]) {
@@ -81,8 +84,10 @@ function freshRepoCases(get: GetSandbox) {
 describe("bunx", () => {
   describe("fresh repo", () => {
     let made: Sandbox | undefined;
+
     function get(): Sandbox {
       if (made === undefined) throw new Error("the fresh sandbox is made in beforeAll");
+
       return made;
     }
 

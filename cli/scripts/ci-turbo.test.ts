@@ -17,10 +17,13 @@ function summary(tasks: number, cached: number) {
     `Cached:    ${cached} cached, ${tasks} total\n  Time:    1s\n`
   );
 }
+
 function done(tasks: number, cached: number): TurboRun {
   return () => ({ code: 0, stderr: "", stdout: summary(tasks, cached) });
 }
+
 const ARGS = ["run", "typecheck", "test", "--cache-dir=.turbo/cache", "--output-logs=errors-only"];
+
 /** The tsconfig a tsc call checks. */
 function projectOf(call: string) {
   return call.split(" -p ").at(-1);
@@ -80,6 +83,7 @@ it("a failing sharded turbo names the slice on the failed line", () => {
 
 it("a package's project, given the env of a sharded turbo run, runs that slice and passes an empty one", () => {
   const run = ciPacked(plant(), ["--shard", "2/3", "--no-coverage"], done(4, 0));
+
   for (const [name, value] of Object.entries(run.calls.turbo[0]?.env ?? {})) vi.stubEnv(name, value);
   expect({ ...defineProject({}).test }).toMatchObject({ passWithNoTests: true, shard: "2/3" });
 });
@@ -112,14 +116,17 @@ function report(name: string, status: string) {
 
 it("merges each package's report into the --report file after turbo", () => {
   const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
+
   function turbo(): Captured {
     for (const pkg of ["a", "b"]) {
       const file = path.join(root, `packages/${pkg}/.turbo/vitest-report.json`);
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, JSON.stringify(report(path.join(root, `packages/${pkg}/x.test.ts`), "todo")));
     }
+
     return { code: 0, stderr: "", stdout: summary(4, 0) };
   }
+
   const run = ciPacked(root, ["--report", "r.json"], turbo);
   expect(run.code).toBe(0);
   expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({

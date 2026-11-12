@@ -23,14 +23,18 @@ function upgradeRoot(files: Record<string, string>): { root: string; stock: stri
   const dir = tempDir("workerstack-migrate-");
   const stock = path.join(dir, "stock");
   const root = path.join(dir, "root");
+
   for (const [rel, text] of Object.entries(STOCK)) write(stock, rel, text);
   fs.mkdirSync(root, { recursive: true });
+
   for (const [rel, text] of Object.entries(files)) write(root, rel, text);
+
   return { root, stock };
 }
 
 function plan(files: Record<string, string>) {
   const { root, stock } = upgradeRoot(files);
+
   return { root, steps: planRuleUpgrade(root, stock), stock };
 }
 
@@ -39,6 +43,7 @@ it("rewrites globs to paths, drops root and targets, and takes the description f
     ".repo/rules/testing.md":
       '---\nroot: false\ntargets: ["*"]\nglobs:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n',
   });
+
   expect(steps).toStrictEqual([
     {
       content: "---\ndescription: Testing rules\npaths:\n  - src/**\n  - lib/**\n---\n# Testing rules\n\nBody.\n",
@@ -64,6 +69,7 @@ it("keeps the other keys and the body byte for byte", () => {
   const { steps } = plan({
     ".repo/rules/x.md": "---\n# a note\nroot: false\ndescription: D\nextra: 'v'\n---\n# H\n\n---\ntext  \n",
   });
+
   expect(contents(steps)).toStrictEqual(["---\n# a note\ndescription: D\nextra: 'v'\n---\n# H\n\n---\ntext  \n"]);
 });
 
@@ -72,6 +78,7 @@ it("marks an old-format rule that bears a stock name, case-folded and nested, in
     ".repo/rules/Overview.md": "---\nroot: true\nglobs: ['**/*']\n---\n# Mine\n",
     ".repo/rules/deep/style.md": "---\nroot: false\n---\nBody\n",
   });
+
   expect(steps).toStrictEqual([
     {
       content: "---\ndescription: Mine\noverrides: Overview\n---\n# Mine\n",
@@ -98,6 +105,7 @@ it("never marks a new-format file, and leaves a new-format rule that lacks a des
     ".repo/rules/style.md": "---\npaths: [a]\n---\nBody\n",
     ".repo/subagents/scout.md": "---\nname: scout\ndescription: mine\n---\nBody\n",
   });
+
   expect(steps).toStrictEqual([]);
 });
 
@@ -110,6 +118,7 @@ it("keeps an overrides that is already there and never doubles it", () => {
   const { steps } = plan({
     ".repo/rules/overview.md": "---\nroot: true\ndescription: D\noverrides: overview\n---\nB\n",
   });
+
   expect(contents(steps)).toStrictEqual(["---\ndescription: D\noverrides: overview\n---\nB\n"]);
   expect(notes(steps)).toStrictEqual(["rewrote .repo/rules/overview.md frontmatter (root dropped)"]);
 });
@@ -119,6 +128,7 @@ it("marks an old-format subagent that bears a stock name and keeps its targets",
     ".repo/subagents/mine.md": "---\nname: mine\ntargets:\n  - claudecode\n---\nBody\n",
     ".repo/subagents/scout.md": "---\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
   });
+
   expect(steps).toStrictEqual([
     {
       content: "---\noverrides: scout\nname: scout\ntargets:\n  - claudecode\n---\nBody\n",
@@ -163,6 +173,7 @@ it("plans nothing on a second run", async () => {
     ".repo/rules/testing.md": "---\nroot: false\nglobs: [src/**]\n---\nBody\n",
     ".repo/subagents/scout.md": "---\nname: scout\ntargets: [claudecode]\n---\nBody\n",
   });
+
   expect(steps).toHaveLength(3);
   const lines = await applyMigration(root, steps);
   expect(lines).toHaveLength(4);

@@ -16,6 +16,7 @@ import { hashText, type StockHistory } from "./stock-history.ts";
  * table.
  */
 export type AgentsDisk = { text: string | null; history: StockHistory };
+
 /**
  * The user's text in a file on disk: the lines above and below the stock rules it held, and those rules' own lines
  * with the newline that followed them ("" when it held none).
@@ -23,6 +24,7 @@ export type AgentsDisk = { text: string | null; history: StockHistory };
 export type UserText = { above: string; below: string; stock: string };
 
 const REPLACED = `replaced the old stock rules with repo:${RULES_REGION}`;
+
 /** The newline that ends a text's last line. */
 const LAST_NEWLINE = /\r?\n$/;
 const NO_TEXT: UserText = { above: "", below: "", stock: "" };
@@ -45,6 +47,7 @@ export function agentsFile(rel: string, body: string, disk: AgentsDisk): Output 
   const { text, repairs } = writeRegions(hasStock ? source : source.text, syntaxOf(rel), [region]);
   const all = [...(hasStock ? [REPLACED] : []), ...repairs, ...budgetRepairs(rel, text)];
   const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
+
   return all.length === 0 ? output : { ...output, repairs: all };
 }
 
@@ -60,10 +63,12 @@ export function userText(rel: string, { text, history }: AgentsDisk, body: strin
   const rows = text.split("\n");
   const hashes = [...(history[rel] ?? []), hashText(body)];
   const block = hasMarkers(text, syntaxOf(rel), RULES_REGION) ? null : stockBlock(rows, hashes);
+
   if (block === null) return { ...NO_TEXT, below: extractUserMarkdown(text) };
   const above = block.at === 0 ? "" : `${rows.slice(0, block.at).join("\n")}\n`;
   const below = rows.slice(block.end).join("\n");
   const stock = `${rows.slice(block.at, block.end).join("\n")}${block.end < rows.length ? "\n" : ""}`;
+
   return { above: extractUserMarkdown(above), below: extractUserMarkdown(below), stock };
 }
 
@@ -75,8 +80,10 @@ function rowCount(text: string): number {
 /** The budget warning for the root file's whole `text`, which every session reads; none for a package file. */
 function budgetRepairs(rel: string, text: string): string[] {
   const kib = Buffer.byteLength(text) / KIB;
+
   if (rel !== AGENTS_FILE || kib <= ALWAYS_ON_BUDGET_KIB) return [];
   const size = kib.toFixed(KIB_DECIMALS);
+
   return [
     `always-on text is ${size} KiB, over the ${ALWAYS_ON_BUDGET_KIB} KiB budget; move some to a path rule or a skill`,
   ];

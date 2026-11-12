@@ -15,6 +15,7 @@ const SKIP_LIST = "must be a list of { files, rules, reason } entries";
 const TAG_NAME = 'must be a tag name like "ui"';
 const ENTRY_POINT = "must be a repo-relative path to a .css file";
 const PARENT = "..";
+
 /** A path separator on any platform. */
 const SEPARATOR = /[\\/]/;
 
@@ -40,6 +41,7 @@ function skipSchema(): SkipSchema {
  */
 function boundariesSchema(): BoundariesSchema {
   const tag = z.string({ error: TAG_NAME }).min(1, { error: TAG_NAME });
+
   return z.strictObject(
     {
       allow: z
@@ -56,6 +58,7 @@ function boundariesSchema(): BoundariesSchema {
 /** Whether `rel` names a `.css` file inside the repo: not absolute on any platform, and never climbing out. */
 function isRepoCss(rel: string): boolean {
   const climbs = rel.split(SEPARATOR).includes(PARENT);
+
   return CSS_SOURCE.test(rel) && !climbs && !path.posix.isAbsolute(rel) && !path.win32.isAbsolute(rel);
 }
 
@@ -68,7 +71,9 @@ function tailwindSchema(): TailwindSchema {
 }
 
 type ListSchema = z.ZodReadonly<z.ZodArray<z.ZodString>>;
+
 type SkipSchema = z.ZodObject<{ files: ListSchema; rules: ListSchema; reason: z.ZodString }, z.core.$strict>;
+
 type BoundariesSchema = z.ZodObject<
   {
     allow: z.ZodReadonly<z.ZodRecord<z.ZodString, ListSchema>>;
@@ -76,7 +81,9 @@ type BoundariesSchema = z.ZodObject<
   },
   z.core.$strict
 >;
+
 type TailwindSchema = z.ZodObject<{ entryPoint: z.ZodString }, z.core.$strict>;
+
 type LintSchema = z.ZodObject<
   {
     boundaries: z.ZodOptional<BoundariesSchema>;

@@ -23,6 +23,7 @@ function opened(ws: WebSocket, timeoutMs: number): Promise<void> {
 function parse(data: unknown): Rec | null {
   try {
     const parsed: unknown = JSON.parse(String(data));
+
     return asRec(parsed);
   } catch {
     return null;
@@ -32,10 +33,13 @@ function parse(data: unknown): Rec | null {
 /** Settles the request a reply answers; a reply that is no JSON or names no pending id is dropped. */
 function settle(pending: Pending, data: unknown): void {
   const msg = parse(data);
+
   if (msg === null || typeof msg.id !== "number") return;
   const p = pending.get(msg.id);
+
   if (p === undefined) return;
   pending.delete(msg.id);
+
   if (msg.error !== undefined && msg.error !== null)
     p.reject(new Error(filled(textOf(asRec(msg.error).message)) ?? "cdp"));
   else p.resolve(asRec(msg.result));
@@ -45,12 +49,14 @@ function client(ws: WebSocket): Cdp {
   let nextId = 1;
   const pending: Pending = new Map();
   ws.addEventListener("message", (ev) => settle(pending, ev.data));
+
   return {
     close() {
       ws.close();
     },
     send(method: string, params: Rec = {}): Promise<Rec> {
       const id = nextId++;
+
       return new Promise<Rec>((resolve, reject) => {
         pending.set(id, { reject, resolve });
         ws.send(JSON.stringify({ id, method, params }));
@@ -63,15 +69,18 @@ function client(ws: WebSocket): Cdp {
 export async function connectCdp(port: number, timeoutMs: number = READY_MS): Promise<Cdp> {
   const version = await waitVersion(port, timeoutMs);
   const wsUrl = version.webSocketDebuggerUrl;
+
   if (typeof wsUrl !== "string" || wsUrl === "") throw new Error(ENGINE_NOT_READY);
   const ws = new WebSocket(wsUrl);
   await opened(ws, timeoutMs);
+
   return client(ws);
 }
 
 /** Runs `fn` on a client of `session`'s engine and closes it after. */
 export async function withCdp<T>(session: Session, fn: (cdp: Cdp) => Promise<T>): Promise<T> {
   const cdp = await connectCdp(session.port);
+
   try {
     return await fn(cdp);
   } finally {

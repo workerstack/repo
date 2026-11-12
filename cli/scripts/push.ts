@@ -23,20 +23,26 @@ function refusal(target: Refusal): [string, number] {
   if (target.kind === "ask") {
     const { base, branches } = target;
     const line = `${base} has ${branches.length} recent branches (${branches.join(", ")})`;
+
     return [`${line}; run \`bun repo push <branch>\` with the one to push`, EXIT_ASK];
   }
+
   if (target.kind === "worktree") {
     const finish = `run \`bun repo worktree finish ${target.name}\` from the root, then \`bun repo push\` there`;
+
     return [`${target.branch} is a managed worktree; ${finish}`, EXIT_REFUSED];
   }
+
   if (target.kind === "detached")
     return ["HEAD is detached; check out the branch to push, or run `bun repo push <branch>`", EXIT_NO_BRANCH];
+
   return ["origin has no default branch; run `git remote set-head origin --auto`", EXIT_NO_BRANCH];
 }
 
 /** The target an explicit branch names: it, or a managed worktree's branch to send to finish. */
 function named(branch: string): PushTarget {
   if (!branch.startsWith(BRANCH_PREFIX)) return { branch, kind: "branch" };
+
   return { branch, kind: "worktree", name: branch.slice(BRANCH_PREFIX.length) };
 }
 
@@ -54,24 +60,33 @@ function filled(deps: PushDeps) {
 export async function main(argv: string[], deps: PushDeps = {}): Promise<number> {
   const io = filled(deps);
   const { cwd, git, stderr } = io;
+
   if (argv.length > 1 || argv.some((arg) => arg.startsWith("-"))) {
     stderr(`${USAGE}\n`);
+
     return EXIT_NO_BRANCH;
   }
+
   const [given] = argv;
   const target = given === undefined ? pickTarget(git, cwd, io.now()) : named(given);
+
   if (target.kind !== "branch") {
     const [line, code] = refusal(target);
     stderr(`repo push: ${line}\n`);
+
     return code;
   }
+
   const { branch } = target;
   const hasUpstream = git(gitUpstream(branch), cwd).code === 0;
   const pushed = inheritRunner("git")(["push", ...(hasUpstream ? [] : ["-u"]), REMOTE, branch], cwd);
+
   if (pushed.code !== 0) {
     const fix = "fix what the pre-push lines above name and run it again";
     stderr(`repo push: git push failed (exit ${pushed.code}); ${fix}\n`);
+
     return EXIT_REFUSED;
   }
+
   return await waitMain({ ...deps, ...io, branch });
 }

@@ -19,6 +19,7 @@ const { save, saved, legacy } = leanKit(tmpWs);
 function capError(n: number) {
   return `${n} lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`;
 }
+
 // Lines the saved frontmatter and the carded body put above Previous mistakes.
 function baseline() {
   return above(read(saved().abs));
@@ -38,8 +39,10 @@ describe("100-line cap", () => {
   it("lets a 438-line legacy plan flip a box but not grow", () => {
     const s = legacy((t) => {
       const bare = stripCard(t);
+
       return pad(bare, 438 - above(bare));
     });
+
     expect(above(read(s.abs))).toBe(438);
     const flipped = read(s.abs).replace("1.1 [ ]", "1.1 [x]");
     const r = update(s.ws, s.abs, flipped);
@@ -53,9 +56,11 @@ describe("100-line cap", () => {
 describe("100-line cap and Previous mistakes", () => {
   it("never counts Previous mistakes", () => {
     const entries = Array.from({ length: 150 }, (_, i) => `- review: miss ${i} → fix ${i}`).join("\n");
+
     const r = save(
       pad(CARDED, 100 - baseline()).replace("## Previous mistakes\n(none)", `## Previous mistakes\n${entries}`),
     );
+
     expect(r.ok, r.error).toBe(true);
   });
 });
@@ -68,6 +73,7 @@ const READS_PHASE = [
   "2.1 [ ] read the gitignore if it exists",
   "2.2 [ ] append .tmp/ when absent",
 ];
+
 const VERIFY = ["3 [ ] Verify", "3.1 [ ] git check-ignore reports ignored"];
 
 describe("principle reads", () => {
@@ -98,6 +104,7 @@ describe("principle reads", () => {
         ["2 [ ] Verify", "2.1 [ ] read `principle-prove-it-works`", "2.2 [ ] git check-ignore reports ignored"],
       ),
     );
+
     expect(r.ok, r.error).toBe(true);
   });
 });
@@ -108,6 +115,7 @@ function phase(n: number, title: string, files?: string) {
     `${n}.1 [ ] do the ${title.toLowerCase()} work`,
   ];
 }
+
 function verify(n: number) {
   return [`${n} [ ] Verify`, `${n}.1 [ ] git check-ignore reports ignored`];
 }
@@ -119,6 +127,7 @@ describe("parallel phases", () => {
       ...phase(2, "Parser", "src/parse.ts, src/parse.test.ts"),
       ...phase(3, "Printer", "src/print.ts, src/print.test.ts"),
     ];
+
     const r = save(withSteps(CARDED, steps, verify(4)));
     expect(r.ok, r.error).toBe(true);
   });
@@ -129,6 +138,7 @@ describe("parallel phases", () => {
       ...phase(2, "Parser", "src/cli.ts, src/parse.ts"),
       ...phase(3, "Printer", "src\\cli.ts, src/print.ts"),
     ];
+
     const r = save(withSteps(CARDED, steps, verify(4)));
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files");
@@ -152,15 +162,18 @@ describe("parallel phases alone", () => {
       ...phase(3, "Wire"),
       ...phase(4, "Printer", "src/print.ts"),
     ];
+
     const r = save(withSteps(CARDED, alone, verify(5)));
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("phase 4 is parallel alone; parallel needs two or more adjacent phases");
+
     const apart = [
       ...phase(1, "Setup"),
       ...phase(2, "Parser", "src/parse.ts"),
       ...phase(3, "Wire"),
       ...phase(4, "Printer", "src/print.ts"),
     ];
+
     const split = save(withSteps(CARDED, apart, verify(5)));
     expect(split.ok).toBe(false);
     expect(split.errors).toContain("phase 2 is parallel alone; parallel needs two or more adjacent phases");

@@ -6,10 +6,12 @@ import { regionHash } from "./region.ts";
 import { hashText } from "./stock-history.ts";
 
 const BODY = "Stock rule.\n\n## Rules by path\n- `src/**`: read `.repo/rules/src.md`\n";
+
 /** The `repo:rules` region holding `body`, as sync writes it. */
 function region(body: string) {
   return `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
 }
+
 const STOCK_COPY = "# Agents\n\nThe stock text a copied install shipped.\n";
 const HISTORY = { "AGENTS.md": [hashText(STOCK_COPY)] };
 const REPLACED = "replaced the old stock rules with repo:rules";
@@ -18,6 +20,7 @@ const POINTER = "Start at references/INDEX.md in this package.\n";
 function run(text: string | null, rel = "AGENTS.md", body = BODY) {
   return agentsFile(rel, body, { history: HISTORY, text });
 }
+
 function contentOf(output: Output) {
   return output.kind === "file" ? output.content : "";
 }

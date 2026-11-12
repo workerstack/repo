@@ -27,12 +27,14 @@ export type PackIo = {
   /** The names in a directory. */
   list: (dir: string) => string[];
 };
+
 /** A tarball and the name and version its package.json carries. */
 export type Packed = { tarball: string; name: string; version: string };
 
 function pins() {
   return z.record(z.string(), z.string()).default({});
 }
+
 function packedSchema() {
   return z.object({
     dependencies: pins(),
@@ -50,24 +52,32 @@ export function packTarball(
 ): Packed | string {
   const dir = io.mkdtemp(path.join(io.tmp, PACK_DIR_PREFIX));
   const packed = io.bun(BUN_PACK(dir), io.cwd);
+
   if (packed.stdout !== "") io.stderr(packed.stdout);
+
   if (packed.code !== 0) return packFailed(packed.stderr.trim());
   const tarballs = io.list(dir).filter((file) => file.endsWith(TARBALL_EXTENSION));
   const [only] = tarballs;
+
   if (only === undefined || tarballs.length > 1) return packCount(tarballs.length, dir);
   const tarball = path.join(dir, only);
   let manifest: z.infer<ReturnType<typeof packedSchema>>;
+
   try {
     // By name from its own dir: GNU tar reads an absolute `C:\\…` as `host:path` and tries to connect to the host `C`.
     manifest = packedSchema().parse(JSON.parse(io.tar(TAR_MANIFEST(only), dir).stdout));
   } catch {
     return PACKED_UNREADABLE;
   }
+
   const { name, version, ...fields } = manifest;
+
   for (const entries of Object.values(fields)) {
     const bad = Object.entries(entries).find(([, spec]) => UNPINNED.test(spec));
+
     if (bad !== undefined) return unpinned(bad[1], bad[0]);
   }
+
   return { name, tarball, version };
 }
 
@@ -75,7 +85,9 @@ export function packTarball(
 export function releasePack(argv: readonly string[], io: PackIo): number {
   if (argv.length > 0) return refuse(io, PACK_PREFIX, PACK_ARGS);
   const got = packTarball(io);
+
   if (typeof got === "string") return refuse(io, PACK_PREFIX, got);
   io.stdout(`${got.tarball}\n`);
+
   return 0;
 }

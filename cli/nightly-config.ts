@@ -40,12 +40,15 @@ function buildSchema(): NightlySchema {
     .string({ error: SECRET_ERROR })
     .regex(SECRET_NAME, { error: SECRET_ERROR })
     .refine((name) => !name.startsWith(RESERVED_PREFIX), { error: SECRET_ERROR });
+
   const secrets = z.array(secret, { error: SECRETS_ERROR }).readonly().superRefine(reportRepeats);
+
   const shards = z
     .number({ error: SHARDS_ERROR })
     .int({ error: SHARDS_ERROR })
     .min(MIN_SHARDS, { error: SHARDS_ERROR })
     .max(MAX_SHARDS, { error: SHARDS_ERROR });
+
   return z.strictObject({ secrets: secrets.optional(), shards: shards.optional() }, { error: SECTION_ERROR });
 }
 
@@ -56,5 +59,6 @@ export function nightlyOf(parsed: { nightly?: z.output<typeof nightlySchema> | u
   nightly: ResolvedNightly;
 } {
   const { shards, secrets } = parsed.nightly ?? {};
+
   return { nightly: { secrets: secrets ?? DEFAULT_NIGHTLY.secrets, shards: shards ?? DEFAULT_NIGHTLY.shards } };
 }

@@ -17,7 +17,9 @@ function onlyPid(pid: number, start: string): (asked: number) => ProcessInfo | n
 /** Pid 30 started at 100, and every pid from 100 up started at 100 more than its pid. */
 function roster(pid: number): ProcessInfo | null {
   if (pid === 30) return { comm: "claude", pid, ppid: 1, start: "100" };
+
   if (pid >= 100) return { comm: "claude", pid, ppid: 1, start: String(100 + pid) };
+
   return null;
 }
 
@@ -93,6 +95,7 @@ it("keeps a set --work label across a later note", () => {
 it("omits the current session from the digest and caps other lines at 8", () => {
   const dir = plantHome();
   writeRow(dir, { now: "2026-10-09T12:00:00Z", probe: roster, session: "self", work: "my work" });
+
   for (let i = 0; i < 9; i++) {
     writeRow(dir, {
       now: `2026-10-09T12:0${i}:00Z`,
@@ -103,6 +106,7 @@ it("omits the current session from the digest and caps other lines at 8", () => 
       work: `other-${i}`,
     });
   }
+
   const text = digest({ boot, home: dir, probe: roster, provider: "claude", session: "self" });
   expect(text).not.toContain("my work");
   expect(text).not.toContain("other-0");

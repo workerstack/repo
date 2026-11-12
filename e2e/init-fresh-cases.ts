@@ -21,8 +21,11 @@ export function installCases(get: GetSandbox) {
     const sb = get();
     expect(sb.exists("workerstack.config.ts")).toBe(true);
     expect(sb.json("package.json", isPackageJson).scripts.postinstall).toBe("repo sync --postinstall");
+
     for (const rel of [".rulesync", "scripts"]) expect(sb.exists(rel), rel).toBe(false);
+
     for (const rel of GENERATED) expect(sb.exists(rel), rel).toBe(true);
+
     for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) expect(sb.exists(rel), rel).toBe(false);
     expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
     const scripts = sb.json("package.json", isPackageJson).scripts;
@@ -53,12 +56,14 @@ export function untrackedCase(get: GetSandbox) {
     expect(tracked).toStrictEqual(expect.arrayContaining(["AGENTS.md", ".mcp.json"]));
     expect(await gitStdout(sb, "status", "--porcelain")).toBe("");
     const ignored = await ignoredFiles(sb);
+
     for (const rel of GENERATED) {
       expect(
         ignored.some((f) => f === rel || f.startsWith(`${rel}/`)),
         rel,
       ).toBe(true);
     }
+
     const check = await sb.run("bun", ["repo", "sync", "--check"]);
     expectClean(sb, check);
     expect(check.stdout).toContain("up to date");

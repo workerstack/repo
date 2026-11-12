@@ -7,6 +7,7 @@ import { afterEach, expect, it } from "vitest";
 import { cli, commitIn, git, hasBranch, scratch, short, subjects, write, wt } from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 it("fast-forwards the default branch with one commit and removes the worktree and branch", () => {

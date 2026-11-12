@@ -1,5 +1,6 @@
 /** knip's exit code for a config it cannot run with. */
 export const EXIT_BAD_CONFIG = 2;
+
 /** How many of knip's last stderr lines a failure problem quotes. */
 export const STDERR_LINES = 3;
 
@@ -8,6 +9,7 @@ export type Wording = { type: string; label: string; fix: string };
 
 /** The issue type of a file nothing imports, which names no export. */
 export const FILES_TYPE = "files";
+
 /** The issue type of a command no manifest provides. */
 export const BINARIES_TYPE = "binaries";
 const DELETE_OR_UNEXPORT = "delete it or stop exporting it";
@@ -42,5 +44,6 @@ export const DEPENDENCY_TYPES: readonly string[] = [
   "optionalPeerDependencies",
   "unlisted",
 ];
+
 /** The manifest fields a dependency can be declared in. */
 export const MANIFEST_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;

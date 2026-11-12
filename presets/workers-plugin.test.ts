@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { workersPlugin } from "./workers-plugin.ts";
 
 const CONFIG_PATH = "/project/wrangler.toml";
+
 const USAGE =
   "@workerstack/repo/vitest: wrangler.toml is here, so tests run in the Workers runtime; " +
   "bun add -d @cloudflare/vitest-plugin";
@@ -50,6 +51,7 @@ describe("workersPlugin, a failed load", () => {
     const error = new Error(
       'Could not resolve "@cloudflare/vitest-plugin" imported by "@workerstack/repo". Is it installed?',
     );
+
     await expect(workersPlugin(CONFIG_PATH, failing(error))).rejects.toThrow(new Error(USAGE));
   });
 

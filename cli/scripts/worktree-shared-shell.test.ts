@@ -7,12 +7,14 @@ import { sharedGitReason, worktreeAddReason } from "./worktree-guards.ts";
 import type { ShellAt } from "./worktree.types.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 function withWorktrees(): string {
   const r = tmp.repo();
   cli(r, ["add", "a"]);
   cli(r, ["add", "b"]);
+
   return r;
 }
 
@@ -28,11 +30,13 @@ const PREFIXED = [
 it("checks a git command behind an rtk or env prefix like the bare one", () => {
   const r = withWorktrees();
   const a = wt(r, "a");
+
   for (const cmd of PREFIXED) {
     expect(shared(cmd, at(r)), cmd).toMatch(/^git stash in the main checkout /);
     expect(shared(cmd, at(r), new Set(["stash"])), `${cmd} asked`).toBeNull();
     expect(shared(cmd, at(r, a)), `${cmd} in own worktree`).toBeNull();
   }
+
   expect(shared("rtk git commit -m x", at(r))).toMatch(/^the main checkout is shared/);
   expect(shared("rtk git push --force", at(r, a))).toMatch(/^a force push/);
   expect(shared("env A=1 git -C .worktrees/a reset --hard", at(r))).toBeNull();
@@ -44,6 +48,7 @@ it("checks a git command behind an rtk or env prefix like the bare one", () => {
 it("does not read a heredoc body as commands, but reads what follows it", () => {
   const r = withWorktrees();
   const main = at(r);
+
   for (const open of ["<<'EOF'", '<<"EOF"', "<<EOF", "<<-EOF", "<< 'EOF'"]) {
     const body = `cat > notes.md ${open}\ngit stash\ngit push --force\ngit worktree add ../x\ngit commit -m x\nEOF`;
     expect(shared(body, main), open).toBeNull();
@@ -53,6 +58,7 @@ it("does not read a heredoc body as commands, but reads what follows it", () => 
       /^git stash in the main checkout /,
     );
   }
+
   expect(shared("cat <<-EOF\n\tgit stash\n\tEOF\ngit commit -m x", main)).toMatch(/^the main checkout is shared/);
   expect(shared("cat <<A <<B\ngit stash\nA\ngit commit -m y\nB\ngit reset --hard", main)).toMatch(
     /^git reset in the main checkout /,
@@ -65,6 +71,7 @@ it("passes outside a git repo and before the first commit", () => {
   const plain = tmp.dir("wt-plain-");
   const unborn = tmp.dir("wt-unborn-");
   git(unborn, "init", "-q", "-b", "main");
+
   for (const dir of [plain, unborn]) {
     for (const cmd of ["git commit -m x", "git stash", "git push --force", "git branch -D main"])
       expect(shared(cmd, at(dir)), `${dir} ${cmd}`).toBeNull();
@@ -73,6 +80,7 @@ it("passes outside a git repo and before the first commit", () => {
 
 const WIN_ROOT = at("C:\\r");
 const WIN_IN_A = at("C:\\r", "C:\\r\\.worktrees\\a");
+
 function winShared(cmd: string, place: ShellAt = WIN_ROOT) {
   return sharedGitReason(cmd, { ...place, asked: NONE }, { committed: () => true, p: path.win32 });
 }
@@ -113,7 +121,9 @@ it("denies worktrees outside .worktrees/<name> on wt/<name>", () => {
   expect(worktreeAddReason("git worktree add ../elsewhere -b spike", main)).toBe(
     `worktrees live in ${path.join(r, ".worktrees", "<name>")} on branch wt/<name>: run bun repo worktree add spike`,
   );
+
   for (const cmd of OFF_PATH_ADDS) expect(worktreeAddReason(cmd, main), cmd).toMatch(/^worktrees live in /);
+
   for (const cmd of [
     "git worktree add .worktrees/y -b wt/y",
     // As typed in bash: an unquoted `\` is an escape there, so a Windows path goes in with `/`.

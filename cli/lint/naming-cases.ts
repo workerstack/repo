@@ -1,11 +1,15 @@
 /** A name in camelCase: a lowercase letter, then letters and digits, as `programTimeout` or `parseUrl`. */
 const CAMEL = /^[a-z][A-Za-z\d]*$/;
+
 /** A name in PascalCase: an uppercase letter, then letters and digits, as `ConfigShape` or `URL`. */
 const PASCAL = /^[A-Z][A-Za-z\d]*$/;
+
 /** A name in UPPER_SNAKE: uppercase words of letters and digits joined by `_`, as `MAGIC_REGEX`. */
 const UPPER_SNAKE = /^[A-Z][A-Z\d]*(?:_[A-Z\d]+)*$/;
+
 /** A boolean's name: is, has, can, should or was, then an uppercase letter, so `island` and `hash` miss. */
 const BOOLEAN_PREFIX = /^(?:is|has|can|should|was)[A-Z]/;
+
 /** One word of a name: an acronym (`HTTP` of `HTTPServer`), a capitalised or lowercase word, or digits. */
 const WORD = /[A-Z]+(?![a-z])\d*|[A-Z]?[a-z]+\d*|\d+/g;
 
@@ -40,18 +44,21 @@ function capitalised(word: string): string {
 /** `name` in PascalCase: "config_shape" → "ConfigShape". */
 export function toPascal(name: string): string {
   const words = wordsOf(name);
+
   return words.length === 0 ? name : words.map(capitalised).join("");
 }
 
 /** `name` in camelCase: "PROGRAM_TIMEOUT" → "programTimeout", "tool_name" → "toolName". */
 export function toCamel(name: string): string {
   const pascal = toPascal(name);
+
   return pascal.charAt(0).toLowerCase() + pascal.slice(1);
 }
 
 /** `name` in UPPER_SNAKE: "tail" → "TAIL", "magicRegex" → "MAGIC_REGEX". */
 export function toUpperSnake(name: string): string {
   const words = wordsOf(name);
+
   return words.length === 0 ? name : words.join("_").toUpperCase();
 }
 

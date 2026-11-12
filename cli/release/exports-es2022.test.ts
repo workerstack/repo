@@ -11,6 +11,7 @@ import { exportSubpaths } from "./exports.ts";
 
 const ROOT = path.join(import.meta.dirname, "..", "..");
 const TSC = Bun.resolveSync("typescript/lib/tsc.js", ROOT);
+
 /** The consumer job's compiler options: target ES2022 with its default lib, so ES2023 methods do not exist. */
 const CONSUMER_FLAGS = [
   "--target",
@@ -24,11 +25,13 @@ const CONSUMER_FLAGS = [
   "--skipLibCheck",
   "--allowImportingTsExtensions",
 ];
+
 const SOURCE_TYPES = /(?<!\.d)\.ts$/u;
 
 /** The tsc error lines for `files` under the consumer's options, run in `cwd`. */
 function consumerErrors(files: readonly string[], cwd: string): string[] {
   const run = spawnSync(process.execPath, [TSC, ...CONSUMER_FLAGS, ...files], { cwd, encoding: "utf8" });
+
   return run.stdout
     .split("\n")
     .map((line) => line.trimEnd())
@@ -40,7 +43,9 @@ function exportedSources(): string[] {
   const manifest = z
     .object({ exports: z.unknown() })
     .parse(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")));
+
   const listed = spawnSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" }).stdout.split("\n");
+
   return exportSubpaths(manifest.exports, listed)
     .subpaths.map((subpath) => subpath.types)
     .filter((types): types is string => types !== null && SOURCE_TYPES.test(types));
@@ -56,6 +61,7 @@ describe("exported source under the consumer's ES2022 lib", () => {
 
   it("refuses an ES2023 array method", { timeout: SLOW }, () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "es2022-"));
+
     try {
       fs.writeFileSync(path.join(dir, "late.ts"), "export const last = ([1, 2] as const).toReversed();\n");
 

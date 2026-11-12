@@ -19,6 +19,7 @@ function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, me
   return () => {
     const ids = packages.slice(0, members).map((pkg) => pkg.id);
     const stdout = JSON.stringify({ packages, workspace_members: ids });
+
     return { missing: false, status: 0, stderr: "", stdout, ...result };
   };
 }

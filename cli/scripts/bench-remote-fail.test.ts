@@ -18,6 +18,7 @@ it("refuses a spec whose os names only this machine's label, exit 4", async () =
     machine: { arch: "arm64", platform: "darwin" },
     specs: ["remote-only"],
   });
+
   expect(got).toMatchObject({
     code: 4,
     err: "repo bench: remote-only's os names no runner but this one; add one or run without --remote\n",
@@ -44,6 +45,7 @@ it("names gh's reason when the dispatch is refused, exit 1", async () => {
   const got = await remote({
     gh: { ...GH, "workflow run": bad("HTTP 422: Workflow does not have 'workflow_dispatch'\n") },
   });
+
   expect(got.code).toBe(1);
   expect(got.err).toBe(
     "repo bench: gh could not dispatch bench.yml: HTTP 422: Workflow does not have 'workflow_dispatch'\n",

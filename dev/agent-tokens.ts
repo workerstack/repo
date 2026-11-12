@@ -40,6 +40,7 @@ function lenient<T extends z.ZodType>(schema: T) {
 function buildMetaSchema() {
   return z.object({ agentType: lenient(z.string()), description: lenient(z.string()) });
 }
+
 function buildEntrySchema() {
   return z.object({
     attachment: lenient(
@@ -58,9 +59,12 @@ function buildEntrySchema() {
     timestamp: lenient(z.string()),
   });
 }
+
 const metaSchema = /* @__PURE__ */ buildMetaSchema();
 const entrySchema = /* @__PURE__ */ buildEntrySchema();
+
 type Entry = z.infer<typeof entrySchema>;
+
 type Row = { start: string; description: string; cells: string[] };
 
 function readEntries(transcript: string): Entry[] {
@@ -97,6 +101,7 @@ function spawnCells(meta: z.infer<typeof metaSchema>, entries: Entry[]): string[
   const first = entries[answer];
   const tokens = first === undefined ? NONE : String(firstTurnTokens(first.message?.usage));
   const agentsMd = agentsMdBefore(entries, answer) ? YES : NO;
+
   return [meta.agentType ?? NONE, first?.message?.model ?? NONE, tokens, agentsMd, meta.description ?? ""];
 }
 
@@ -110,6 +115,7 @@ function spawnRow(meta: z.infer<typeof metaSchema>, entries: Entry[]): Row {
 
 function readSpawn(subagents: string, metaFile: string): Row {
   const meta = metaSchema.parse(JSON.parse(fs.readFileSync(path.join(subagents, metaFile), "utf8")));
+
   return spawnRow(meta, readEntries(path.join(subagents, metaFile.replace(META_SUFFIX_PATTERN, TRANSCRIPT_SUFFIX))));
 }
 
@@ -117,16 +123,20 @@ function readSpawn(subagents: string, metaFile: string): Row {
 function parseArgs(args: string[]): { session: string; match: string } | undefined {
   let session: string | undefined;
   let match = "";
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+
     if (arg === MATCH_FLAG) {
       const value = args[++i];
+
       if (value === undefined) return undefined;
       match = value;
     } else {
       session ??= arg;
     }
   }
+
   return session === undefined ? undefined : { match, session };
 }
 
@@ -134,6 +144,7 @@ function parseArgs(args: string[]): { session: string; match: string } | undefin
 function tableLines(rows: Row[]): string[] {
   const table = [HEADER, ...rows.map((row) => row.cells)];
   const widths = HEADER.map((_, col) => Math.max(...table.map((cells) => (cells[col] ?? "").length)) + COLUMN_GAP);
+
   return table.map((cells) =>
     cells.map((cell, col) => (col === cells.length - 1 ? cell : cell.padEnd(widths[col] ?? 0))).join(""),
   );
@@ -146,22 +157,30 @@ function byStart(a: Row, b: Row): number {
 /** Prints the table through `io` and returns the exit code. */
 export function run(argv: string[], io: Io): number {
   const args = parseArgs(argv);
+
   if (args === undefined) {
     io.out(USAGE);
+
     return 1;
   }
+
   const subagents = path.join(args.session, SUBAGENTS_DIR);
+
   if (!fs.existsSync(subagents)) {
     io.out(`no subagents dir: ${subagents}`);
+
     return 1;
   }
+
   const rows = fs
     .readdirSync(subagents)
     .filter((file) => file.endsWith(META_SUFFIX))
     .map((file) => readSpawn(subagents, file))
     .filter((row) => row.description.includes(args.match))
     .toSorted(byStart);
+
   for (const line of tableLines(rows)) io.out(line);
+
   return 0;
 }
 

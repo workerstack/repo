@@ -13,13 +13,16 @@ afterEach(removePlanted);
 const PLAIN = { "workerstack.config.ts": "export default {}\n" };
 const SRC = { "src/x.test.ts": "t\n", "src/x.ts": "export const x = 1;\n" };
 const PRIVATE = { ...PLAIN, "package.json": { name: "p", private: true } };
+
 const MONO = {
   ...PLAIN,
   "package.json": { name: "mono", private: true, workspaces: ["packages/*"] },
   "packages/pub/package.json": { name: "pub" },
 };
+
 function refusal(what: string, file = "CHANGELOG.md") {
   const add = `add an entry under ## [Unreleased] in ${file} and stage it`;
+
   return `commit-msg: the message was refused\n  - ${what} changes what users see; ${add}\n`;
 }
 
@@ -34,11 +37,13 @@ async function hook(root: string, message: string, range?: string) {
   const err: string[] = [];
   const argv = range === undefined ? [file] : ["--range", range];
   const code = await main(argv, { cwd: root, redProof, stderr: (text) => err.push(text) });
+
   return { code, stderr: err.join("") };
 }
 
 async function codeOf(root: string, message: string) {
   const got = await hook(root, message);
+
   return got.code;
 }
 

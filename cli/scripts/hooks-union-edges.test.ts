@@ -24,7 +24,9 @@ function get(ws: string, rel: string): unknown {
 /** The list at `keys` below the JSON file, or [] when any step is not there. */
 function listAt(ws: string, rel: string, ...keys: string[]): unknown[] {
   let cur = get(ws, rel);
+
   for (const k of keys) cur = typeof cur === "object" && cur !== null ? Reflect.get(cur, k) : undefined;
+
   return Array.isArray(cur) ? cur : [];
 }
 
@@ -53,6 +55,7 @@ describe("roots", () => {
 
   it("answers a check that finds the union in place", () => {
     const ws = plant();
+
     for (const f of [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json", ".cursor/hooks.json"])
       put(ws, f, { hooks: { PreToolUse: ownedGroups() } });
 
@@ -80,6 +83,7 @@ describe("odd files", () => {
   it("keeps odd groups and entries and adds the consumer hooks once", () => {
     const ws = plant();
     consumerScripts(ws);
+
     const odd = [
       "text",
       null,
@@ -88,6 +92,7 @@ describe("odd files", () => {
       { hooks: [1, {}, { command: "echo nested", type: "command" }] },
       { hooks: [{ command: "bun scripts/mine.ts", type: "command" }], matcher: "m" },
     ];
+
     put(ws, ".claude/settings.json", { hooks: { PreToolUse: odd }, permissions: { deny: ["Read(x)", 5, "Write(y)"] } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const pre = listAt(ws, ".claude/settings.json", "hooks", "PreToolUse");

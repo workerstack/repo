@@ -71,6 +71,7 @@ export type CiInput = Pick<SyncContext, "config" | "workspace" | "read">;
 function scriptOf(ctx: CiInput, name: string) {
   const scripts: unknown = ctx.workspace.manifest.scripts;
   const script: unknown = typeof scripts === "object" && scripts !== null ? Reflect.get(scripts, name) : undefined;
+
   return typeof script === "string" ? script : undefined;
 }
 
@@ -196,6 +197,7 @@ function isPublic(ctx: CiInput) {
 export function ciJobNames(ctx: CiInput): string[] {
   if (!ctx.config.packs.includes("release")) return [];
   const e2e = scriptOf(ctx, E2E_SCRIPT);
+
   return [
     ...matrixed(TEST_JOB, testShards({ sharded: shardsCoverage(ctx) })),
     COMMITS_JOB,
@@ -211,6 +213,7 @@ export function ciJobNames(ctx: CiInput): string[] {
 export function release(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(CI_PATH);
+
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
 
@@ -218,6 +221,7 @@ export function release(ctx: SyncContext): { outputs: Output[]; errors: string[]
   const rust = isRust(ctx);
   const blob = shardsCoverage(ctx);
   const tools = rust ? [RUST_TOOL_STEPS] : [];
+
   const jobs = [
     testJob({ blob, rust: tools, turbo: ctx.config.packs.includes("workspace") }),
     commitsJob(),
@@ -227,6 +231,8 @@ export function release(ctx: SyncContext): { outputs: Output[]; errors: string[]
     ...(isPublic(ctx) ? [consumerJob({ rust })] : []),
     ...(rust ? [semverJob(), msrvJob()] : []),
   ];
+
   const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
+
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: CI_PATH, tracked: true }] };
 }

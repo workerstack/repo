@@ -13,6 +13,7 @@ export function settingsEdit(existing: string | null, paths: readonly string[]):
   const isFresh = current.trim() === "";
   const text = isFresh ? "{}" : current;
   const kept = unusable(text);
+
   if (kept !== null) return { repairs: [kept], text };
   const readonly = Object.fromEntries(paths.toSorted(byCodeUnit).map((rel) => [rel, true]));
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
@@ -20,6 +21,7 @@ export function settingsEdit(existing: string | null, paths: readonly string[]):
   // rewrite the last one's.
   const options = { formattingOptions: { eol, insertSpaces: true, tabSize: 2 }, getInsertionIndex: () => 0 };
   const edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
+
   return { repairs: [], text: isFresh ? `${edited}${eol}` : edited };
 }
 
@@ -28,10 +30,14 @@ function unusable(text: string): string | null {
   const problems: ParseError[] = [];
   const value: unknown = parse(text, problems, { allowTrailingComma: true });
   const [problem] = problems;
+
   if (problem !== undefined) {
     const line = text.slice(0, problem.offset).split("\n").length;
+
     return `not valid JSONC at line ${line} (${printParseErrorCode(problem.error)}); left as is`;
   }
+
   const object = typeof value === "object" && value !== null && !Array.isArray(value);
+
   return object ? null : "must hold a JSON object; left as is";
 }

@@ -20,11 +20,14 @@ let base = "";
 // runFetch blocks its caller while it waits, so the server it fetches from runs in its own process.
 beforeAll(async () => {
   server = spawn(bunPath(), [serverScript], { stdio: ["ignore", "pipe", "inherit"] });
+
   const port = await new Promise<string>((resolve) => {
     server.stdout?.once("data", (chunk) => resolve(String(chunk).trim()));
   });
+
   base = `http://127.0.0.1:${port}`;
 });
+
 afterAll(() => {
   server.kill();
 });
@@ -39,6 +42,7 @@ async function closedPort(): Promise<number> {
   await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
   const address = probe.address();
   await new Promise((resolve) => probe.close(resolve));
+
   return typeof address === "object" && address !== null ? address.port : 0;
 }
 

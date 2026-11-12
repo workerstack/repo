@@ -25,6 +25,7 @@ export type MergeIo = SkipsIo & { bins: Bins };
 function blobNames(dir: string): string[] {
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+
     return entries
       .filter((entry) => entry.isFile() && BLOB_ANY_FILE.test(entry.name))
       .map((entry) => entry.name)
@@ -39,6 +40,7 @@ function isWholeSet(names: string[]): boolean {
   const found = names.map((name) => BLOB_FILE.exec(name));
   const counts = new Set(found.map((match) => match?.groups?.["count"]));
   const indexes = found.map((match) => Number(match?.groups?.["index"])).toSorted((a, b) => a - b);
+
   return counts.size === 1 && counts.has(String(names.length)) && indexes.every((index, at) => index === at + 1);
 }
 
@@ -51,22 +53,32 @@ function mergeArgs(dir: string): string[] {
 export function mergeMain(dir: string, io: MergeIo): number {
   function fail(line: string): number {
     io.stderr(`repo ci merge: ${line}\n`);
+
     return 1;
   }
+
   const root = findRoot(io.cwd);
+
   if (root === null) return fail(`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``);
   const at = path.resolve(io.cwd, dir);
   const names = blobNames(at);
+
   if (names.length === 0) return fail(`no blob-*.json in ${dir}`);
+
   if (!isWholeSet(names)) return fail(`${dir} holds ${names.join(", ")}; want blob-1-n … blob-n-n of one n`);
   const run = io.bins.vitest(mergeArgs(at), root);
+
   if (run === null) return fail(`no blob-*.json in ${dir}`);
   io.stdout(textOf(run));
   const blobs = plural(names.length, "blob");
+
   if (run.code !== 0) {
     io.stdout(`repo ci merge: ${blobs}, floors or tests failed (vitest's ERROR lines above)\n`);
+
     return 1;
   }
+
   io.stdout(`repo ci merge: ${blobs}, ${plural(countsOfRun(run).passed, "test")}, every floor met\n`);
+
   return 0;
 }

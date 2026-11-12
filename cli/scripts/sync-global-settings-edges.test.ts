@@ -27,6 +27,7 @@ const HOST: ManifestHost = {
   id: "one",
   payload: "agents/global-settings/one.json",
 };
+
 const MANIFEST = { hosts: [HOST], skipKeyPattern: "^secret$", version: 1 };
 
 function workspace(payload = `{"mode": "yolo"}`) {

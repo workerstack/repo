@@ -33,6 +33,7 @@ export function rewriteTarget({ workspaceRoot, filePath, content }: Rewrite): {
   const { ws, raw } = saveTarget(workspaceRoot, content);
   const abs = path.resolve(ws, filePath);
   const rel = path.relative(ws, abs).split(path.sep).join("/");
+
   return { filename: path.basename(abs), previous: fs.readFileSync(abs, "utf8"), raw, rel };
 }
 
@@ -47,6 +48,7 @@ export function stampedName(
 ): { createdAt: string; free: ReturnType<typeof freeName> } {
   const createdAt = createdAtOf(created);
   const stamp = compactCreatedStamp(createdAt);
+
   return { createdAt, free: freeName(dir, { first, slug, stamp }) };
 }
 
@@ -60,5 +62,6 @@ export function persistSource(
   fallback: string,
 ): string {
   const squeezed = section === null ? fallback : captured(section, 1).trim().replaceAll(SPACES_RE, " ");
+
   return (firstNonEmpty(...named) ?? squeezed).slice(0, SOURCE_MAX);
 }

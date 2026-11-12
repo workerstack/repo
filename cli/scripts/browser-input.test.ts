@@ -167,9 +167,11 @@ it("click reports another engine error as it is on chromium, with no chromium, o
 it("click replays once on chromium when lightpanda fails the action", async () => {
   const t = await live({}, { replies: { "Runtime.callFunctionOn": "boom" } });
   const chromium = writeFake(t.bin, "chromium");
+
   const r = await exec(t.cwd, ["click", "1"], {
     bins: { chromium, lightpanda: "" },
   });
+
   expect(r).toStrictEqual({ code: 0, stderr: "", stdout: "click: 1\n" });
   const s = readStored(t.cwd);
   expect(s).toMatchObject({
@@ -184,19 +186,25 @@ it("click replays once on chromium when lightpanda fails the action", async () =
 it("click reports a stale ref, or the engine's own error, when the chromium replay fails too", async () => {
   const first = { "Runtime.callFunctionOn": "boom" };
   const stale = await live({}, { replies: first });
+
   const staleBin = writeFake(stale.bin, "chromium", {
     state: { replies: { "DOM.resolveNode": "node is stale" } },
   });
+
   const a = await exec(stale.cwd, ["click", "1"], {
     bins: { chromium: staleBin, lightpanda: "" },
   });
+
   expect(a).toStrictEqual(failure("stale ref: 1\n"));
   const other = await live({}, { replies: first });
+
   const otherBin = writeFake(other.bin, "chromium", {
     state: { replies: { "Runtime.callFunctionOn": "boom two" } },
   });
+
   const b = await exec(other.cwd, ["click", "1"], {
     bins: { chromium: otherBin, lightpanda: "" },
   });
+
   expect(b).toStrictEqual(failure("boom two\n"));
 });

@@ -57,6 +57,7 @@ export function nextBoxes(next: string | undefined): Box[] {
 function nextChecks(_doc: Doc, { bodies }: Sections): string[] {
   const boxes = nextBoxes(bodies.Next);
   const phases = boxes.filter((b) => PHASE_ID_RE.test(b.id));
+
   return [
     ...boxes.flatMap((b) => when({ bad: !b.fresh, error: "fresh [x]" })),
     ...when({ bad: !boxes.some((b) => LEAF_ID_RE.test(b.id)), error: "no N.M leaf" }),

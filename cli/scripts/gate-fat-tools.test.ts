@@ -15,9 +15,11 @@ import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 
 const tmp = useTmp();
 const GROK = { GROK_HOOK_EVENT: "pre_tool_use" };
+
 function pre(tool: string, input: Record<string, unknown>, extra: HookInput = {}) {
   return camelCall(tool, input, { hookEventName: "PreToolUse", ...extra });
 }
+
 /** A parent grep of `src` for `foo`, and the input orchestrate-parent rewrites it to. */
 const SRC_GREP = { path: "src", pattern: "foo" };
 const SRC_GREP_LIMITED = { head_limit: DEFAULT_GREP_HEAD_LIMIT, ...SRC_GREP };
@@ -25,6 +27,7 @@ const SRC_GREP_LIMITED = { head_limit: DEFAULT_GREP_HEAD_LIMIT, ...SRC_GREP };
 /** orchestrate-parent's exit status and rewritten input for `payload` under `env`. */
 function orchRewrite(payload: HookInput, env: Record<string, string> = GROK) {
   const result = runHook(orchMain, payload, env);
+
   return { input: replyInput(replyOf(result.stdout)), status: result.status };
 }
 

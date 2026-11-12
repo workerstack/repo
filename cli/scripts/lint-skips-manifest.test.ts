@@ -7,6 +7,7 @@ import { afterEach, expect, it } from "vitest";
 import { checkLintSkipsAt } from "./lint-skips.ts";
 
 const temps: string[] = [];
+
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });

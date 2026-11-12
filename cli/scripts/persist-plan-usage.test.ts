@@ -12,9 +12,11 @@ const tmpWs = useTmpWs();
 
 const F = "```";
 const noUsage = VALID_PLAN.replace(/## Usage\n[\s\S]*?(?=## Context)/, "");
+
 function withUsage(usage: string) {
   return noUsage.replace("## Context", `## Usage\n${usage}\n\n## Context`);
 }
+
 function save(content: string) {
   return persistPlan({ content, workspaceRoot: tmpWs() });
 }

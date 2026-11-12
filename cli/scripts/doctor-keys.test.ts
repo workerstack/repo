@@ -16,9 +16,11 @@ it("google-workspace oauth and tokens are optional ok and do not echo secrets", 
   const { cwd, bin } = toolsCwd("doc-ws-");
   enablePacks(["google-workspace"]);
   const oauthSecret = "oauth-client-secret-do-not-print";
+
   const oauthHome = homeWith("doc-ws-oauth-", {
     [`${ACCOUNT}/google-oauth.json`]: { installed: { client_id: "cid", client_secret: oauthSecret } },
   });
+
   const oauth = linuxRun(cwd, bin, { home: oauthHome });
   expect(oauth.code).toBe(0);
   expect(oauth.stdout).toMatch(/google-workspace\s+ok\s+oauth/);
@@ -27,9 +29,11 @@ it("google-workspace oauth and tokens are optional ok and do not echo secrets", 
   expect(oauth.stdout).not.toMatch(/google-workspace\s+missing/);
 
   const refresh = "refresh-token-secret";
+
   const tokHome = homeWith("doc-ws-tok-", {
     [`${ACCOUNT}/tokens.json`]: { client_id: "tok-cid", refresh_token: refresh },
   });
+
   const tokens = linuxRun(cwd, bin, { home: tokHome });
   expect(tokens.stdout).toMatch(/google-workspace\s+ok\s+tokens/);
   expect(tokens.stdout).not.toContain(refresh);
@@ -39,12 +43,14 @@ it("google-workspace oauth and tokens are optional ok and do not echo secrets", 
 it("google-workspace named account, adc and clasprc are optional ok and do not echo secrets", () => {
   const { cwd, bin } = toolsCwd("doc-ws-");
   enablePacks(["google-workspace"]);
+
   const namedHome = homeWith("doc-ws-named-", {
     ".workerstack/workspace/work/google-oauth.json": {
       installed: { client_id: "work-cid", client_secret: "work-secret" },
     },
     ".workerstack/workspace/work/tokens.json": { refresh_token: "work-refresh" },
   });
+
   const named = linuxRun(cwd, bin, { home: namedHome });
   expect(named.stdout).toMatch(/google-workspace\s+ok\s+oauth,tokens/);
   expect(named.stdout).not.toContain("work-secret");
@@ -54,6 +60,7 @@ it("google-workspace named account, adc and clasprc are optional ok and do not e
   const adcHome = homeWith("doc-ws-adc-", {
     ".config/gcloud/application_default_credentials.json": { refresh_token: "adc-refresh", type: "authorized_user" },
   });
+
   const adc = linuxRun(cwd, bin, { home: adcHome });
   expect(adc.stdout).toMatch(/google-workspace\s+ok\s+adc/);
   expect(adc.stdout).not.toContain("adc-refresh");
@@ -61,6 +68,7 @@ it("google-workspace named account, adc and clasprc are optional ok and do not e
   const claspHome = homeWith("doc-ws-clasprc-", {
     ".clasprc.json": { tokens: { default: { refresh_token: "clasp-refresh" } } },
   });
+
   const clasprc = linuxRun(cwd, bin, { home: claspHome });
   expect(clasprc.stdout).toMatch(/google-workspace\s+ok\s+clasprc/);
   expect(clasprc.stdout).not.toContain("clasp-refresh");

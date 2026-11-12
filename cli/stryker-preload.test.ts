@@ -11,6 +11,7 @@ import { spawnSync } from "./spawn.ts";
 const PRELOAD = path.join(import.meta.dirname, "stryker-preload.ts");
 const REMOVE_WHEN_FIXED = "delete cli/stryker-preload.ts and its --preload once it does not";
 const THROWS = "First argument must be an Error object";
+
 // Babel's stack rewriter wraps the native hook; follow-redirects' CustomError captures a stack on a non-Error.
 const REPRO = `
 const orig = Error.prepareStackTrace;
@@ -19,6 +20,7 @@ function C() { Error.captureStackTrace(this, C); }
 C.prototype = new Error();
 new C();
 `;
+
 let dir = "";
 
 afterEach(() => fs.rmSync(dir, { force: true, recursive: true }));
@@ -29,6 +31,7 @@ function repro({ preload }: { preload: boolean }) {
   fs.writeFileSync(file, REPRO);
   const args = preload ? ["--preload", PRELOAD, file] : [file];
   const run = spawnSync(process.execPath, args, { encoding: "utf8", env: toolEnv(childEnv()) });
+
   return { code: run.status, text: `${run.stdout}${run.stderr}` };
 }
 
@@ -44,6 +47,7 @@ it("the preload clears the native hook, so the same code runs", () => {
 
 it("sets prepareStackTrace to undefined when loaded", async () => {
   const before = Object.getOwnPropertyDescriptor(Error, "prepareStackTrace");
+
   try {
     await import(PRELOAD);
     expect(Error).toHaveProperty("prepareStackTrace", undefined);

@@ -11,6 +11,7 @@ it("writes each claude hook type with its payload, drops other types and keeps a
     { model: null, prompt: "q", type: "agent" },
     { command: "dropped", type: "other" },
   ];
+
   const sources = hooksOf({ hooks: { preToolUse, stop: [{ command: "dropped", type: "other" }] } });
   const claude = parsed(renderHooks(sources, ["claude"], '{"a":1,"$schema":"own"}'), ".claude/settings.json");
   // An existing $schema keeps its place.
@@ -50,6 +51,7 @@ it("writes codex name and description last and drops handlers codex refuses", ()
     codexcli: { hooks: { worktreeCreate: [{ command: "w" }] } },
     hooks: { preToolUse: CODEX_DEFS, stop: [{ command: "gone", timeout: -1 }] },
   });
+
   const codex = parsed(renderHooks(sources, ["codex"], "{}"), ".codex/hooks.json");
   expect(codex).toStrictEqual({
     hooks: {
@@ -84,6 +86,7 @@ it("flattens antigravity's matcher-less events untranslated and translates only 
       sessionStart: [{ command: "s", matcher: "Bash" }],
     },
   });
+
   expect(parsed(renderHooks(sources, ["antigravity"], "{}"), ".agents/hooks.json")).toStrictEqual({
     rulesync: {
       PostToolUse: [

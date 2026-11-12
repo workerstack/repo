@@ -18,6 +18,7 @@ afterEach(removePlanted);
 const USAGE =
   "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> " +
   "| consumer [<tarball>] | api [--against <tarball>]";
+
 /** What a refused release leaves: exit 1, the one line on stderr, nothing on stdout. */
 function refusal(line: string) {
   return { code: 1, err: `repo release: ${line}\n`, out: "", wrote: false };
@@ -27,6 +28,7 @@ function refusal(line: string) {
 async function attempt(w: World, argv: string[] = [], gh = fakeGh()) {
   const before = snapshot(w);
   const got = await release(w, argv, gh);
+
   return { ...got, wrote: JSON.stringify(snapshot(w)) !== JSON.stringify(before) };
 }
 

@@ -17,6 +17,7 @@ function exportKeys(exports: unknown): string[] {
   if (typeof exports !== "object" || exports === null || Array.isArray(exports))
     return exports === undefined ? [] : ["."];
   const keys = Object.keys(exports);
+
   return keys.some((key) => key.startsWith(".")) ? keys : ["."];
 }
 
@@ -29,8 +30,10 @@ export function specifiersOf(name: string, exports: unknown): Specifier[] {
     .filter((key) => !SKIPPED_EXPORTS.includes(key))
     .map((key) => {
       const subpath = key.slice(1);
+
       if (key.endsWith("/*"))
         return { prefix: true, shown: `${name}${subpath}`, text: `${name}${subpath.slice(0, LAST_INDEX)}` };
+
       return { prefix: false, shown: `${name}${subpath}`, text: `${name}${subpath}` };
     });
 }
@@ -48,6 +51,8 @@ export function exportFindings(
 ): { findings: string[]; checked: number } {
   const specifiers = specifiersOf(manifest.name ?? "", manifest.exports);
   const findings = specifiers.filter((one) => !named(references, one)).map((one) => unnamedExport(one.shown, dir));
+
   if (!exportKeys(manifest.exports).includes(REFERENCES_EXPORT)) findings.push(noReferencesExport(dir));
+
   return { checked: specifiers.length, findings };
 }

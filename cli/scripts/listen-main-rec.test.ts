@@ -40,10 +40,12 @@ describe("rec", () => {
   it("--seconds and --out win over the configuration", async () => {
     const out = path.join(tmp("listen-rec-out-"), "mine.wav");
     const env = { LISTEN_SECONDS: "9", OPENAI_API_KEY: "k" };
+
     const spawnFn = ffmpeg((ctx) => {
       fs.writeFileSync(out, "RIFF");
       ctx.on.exit?.(0, null);
     });
+
     const r = await run(["rec", "--seconds", "2", "--out", out], { env, fetchFn: textFetch("mine"), spawnFn });
     expect(r.errs[0]).toBe("recording 2s on :0…");
     expect(r.code).toBe(0);
@@ -66,13 +68,16 @@ describe("rec timeout", () => {
   it("kills a hung ffmpeg and reports what it logged", async () => {
     fakeTimers();
     const killed: Array<[number, string | number]> = [];
+
     function killFn(pid: number, sig: string | number) {
       return void killed.push([pid, sig]);
     }
+
     const spawnFn = ffmpeg(({ errFd }) => {
       fs.writeSync(errFd, "Device or resource busy");
       vi.advanceTimersByTime(60_000);
     });
+
     const r = await run(["rec", "--seconds", "1"], { killFn, spawnFn });
     expect(r.code).toBe(1);
     expect(r.errs.at(-1)).toBe("Device or resource busy");

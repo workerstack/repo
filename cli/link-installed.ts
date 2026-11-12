@@ -14,11 +14,13 @@ export type Manifest = {
   peerDependenciesMeta?: Record<string, { optional?: boolean | undefined }> | undefined;
   version: string;
 };
+
 /** What a `.repo-link` marker records: the package and the directory it was packed from. */
 export type Marker = { name: string; source: string };
 
 function manifestSchema(): z.ZodType<Manifest> {
   const ranges = z.record(z.string(), z.string());
+
   return z.object({
     bin: z.union([z.string(), ranges]).optional(),
     dependencies: ranges.optional(),
@@ -49,6 +51,7 @@ export function installedDir(root: string, name: string): string {
 /** The package.json of the package in `dir`, or null when there is none or it names no package. */
 function readManifest(dir: string): Manifest | null {
   const parsed = manifestSchema().safeParse(readJson(path.join(dir, "package.json")));
+
   return parsed.success ? parsed.data : null;
 }
 
@@ -65,12 +68,14 @@ export function readVersion(dir: string): string | null {
 /** The marker of the swapped copy of `name`, or null for an npm copy. */
 function markerOf(root: string, name: string): Marker | null {
   const parsed = markerSchema().safeParse(readJson(path.join(installedDir(root, name), MARKER_FILE)));
+
   return parsed.success ? parsed.data : null;
 }
 
 function namesIn(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+
   return entries.flatMap((entry) =>
     entry.name.startsWith(SCOPE_PREFIX)
       ? namesIn(path.join(dir, entry.name)).map((name) => `${entry.name}/${name}`)
@@ -81,8 +86,10 @@ function namesIn(dir: string): string[] {
 /** The swapped copies in `root`'s install dir, by package name. */
 export function markersIn(root: string): Marker[] {
   const names = namesIn(path.join(root, MODULES)).toSorted();
+
   return names.flatMap((name) => {
     const marker = markerOf(root, name);
+
     return marker === null ? [] : [{ name, source: marker.source }];
   });
 }

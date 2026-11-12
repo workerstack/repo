@@ -17,7 +17,9 @@ export type SupplyChainDeps = { run?: CargoRun; git?: GitRun };
 /** Why git cannot say whether the lock is tracked, or that it is not; `null` when it is tracked. */
 function untrackedLock(root: string, git: GitRun): string | null {
   const listed = git(root, ["ls-files", "--cached", "--", LOCK_FILE]);
+
   if (listed.status !== 0) return `git ls-files failed (exit ${listed.status}): ${listed.stderr.trim()}`;
+
   return listed.stdout.trim() === "" ? UNTRACKED_LOCK : null;
 }
 
@@ -25,6 +27,7 @@ function untrackedLock(root: string, git: GitRun): string | null {
 function toolProblems(root: string, run: CargoRun, unlicensed: ReadonlySet<string>): string[] {
   const deny = pinProblem(root, run, DENY_PIN);
   const shear = pinProblem(root, run, SHEAR_PIN);
+
   return [
     ...(deny === null ? [] : [deny]),
     ...(shear === null ? [] : [shear]),
@@ -43,10 +46,14 @@ export function supplyChainAt(root: string, packs: readonly Pack[], deps: Supply
   const run = deps.run ?? runCargo;
   const lines: string[] = [];
   const untracked = untrackedLock(root, deps.git ?? runGit);
+
   if (untracked !== null) lines.push(untracked);
+
   if (!packs.includes(TOOLS_PACK)) return lines;
   const crates = crateProblems(root, run);
+
   if (crates.kind === "stale") return lines;
   lines.push(...crates.problems.filter((line) => line !== MISSING_CARGO));
+
   return crates.kind === "failed" ? lines : [...lines, ...toolProblems(root, run, crates.unlicensed)];
 }

@@ -28,11 +28,13 @@ it("refuses a real dir at any other link path with one fix", () => {
   put(root, "tree/real/file.txt", "mine\n");
   put(root, ".agents/skills/b/SKILL.md", "mine\n");
   const before = tree(root);
+
   const result = writeAll(
     root,
     { changed: [link("tree/real", "../s1"), link(".agents/skills/b", "../../s1")], manifest: MANIFEST, prune: [] },
     deps,
   );
+
   expect(result).toStrictEqual({
     errors: [
       "tree/real is a folder where sync puts a link; move or delete it",
@@ -78,6 +80,7 @@ it("reports a file it cannot read before touching it", () => {
   const real = fs.readFileSync;
   vi.spyOn(fs, "readFileSync").mockImplementation(((target: fs.PathOrFileDescriptor, options?: unknown) => {
     if (String(target).endsWith("a.txt")) throw new Error("EACCES: permission denied, open");
+
     return (real /* the real reader takes any path and options */ as (t: unknown, o?: unknown) => unknown)(
       target,
       options,
@@ -99,19 +102,23 @@ it("names what it could not restore and says to rerun", () => {
   vi.spyOn(fs, "writeFileSync").mockImplementation(
     (target: fs.PathOrFileDescriptor, data: unknown, options?: unknown) => {
       if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
+
       const write = real /* the real writer takes any path, data and options */ as (
         t: unknown,
         d: unknown,
         o?: unknown,
       ) => void;
+
       return write(target, data, options);
     },
   );
+
   const result = writeAll(
     root,
     { changed: [file("a.txt", "new a\n"), file("c.txt")], manifest: MANIFEST, prune: [] },
     failing("c.txt", "boom"),
   );
+
   expect(result).toStrictEqual({
     errors: ["c.txt: cannot write: boom; could not restore a.txt; run `bun repo sync` again"],
     ok: false,
@@ -122,11 +129,13 @@ it("names what it could not restore and says to rerun", () => {
 it("restores a replaced link with a symlink call that works on every platform", () => {
   const root = seeded();
   const symlink = vi.spyOn(fs, "symlinkSync");
+
   const result = writeAll(
     root,
     { changed: [link("tree/lnk", "../s2"), file("c.txt")], manifest: MANIFEST, prune: [] },
     failing("c.txt"),
   );
+
   expect(result).toMatchObject({ ok: false });
   expect(symlink).toHaveBeenLastCalledWith(path.normalize("../s1"), path.join(root, "tree/lnk"), "junction");
 });

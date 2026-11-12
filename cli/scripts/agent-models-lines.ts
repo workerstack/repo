@@ -36,6 +36,7 @@ type Ask = { run: ListRunner; signal: AbortSignal; capped: Promise<typeof CAPPED
 
 function frontmatterModel(text: string): string | undefined {
   const fm = FRONTMATTER_RE.exec(text);
+
   return fm?.[1] === undefined ? undefined : FRONTMATTER_MODEL_RE.exec(fm[1])?.[1];
 }
 
@@ -46,10 +47,12 @@ function tomlModel(text: string): string | undefined {
 /** Values of the `[subagents.models]` table, read without a TOML parser (setup imports doctor before smol-toml). */
 function subagentModels(text: string): string[] {
   const at = text.search(SUBAGENT_TABLE_RE);
+
   if (at < 0) return [];
   const table = text.slice(at).split(LINE_RE).slice(1);
   const end = table.findIndex((l) => l.startsWith("["));
   const body = table.slice(0, end > 0 ? end : table.length);
+
   return body.flatMap((l) => TOML_VALUE_RE.exec(l)?.[1] ?? []);
 }
 
@@ -80,18 +83,22 @@ function dirFiles(checkout: string, rel: string, ext: string): string[] {
  */
 function agentModelRefs(checkout: string, sourceRoot: string): ModelRef[] {
   const refs: ModelRef[] = [];
+
   function add(cli: ModelCli, files: string[], models: (text: string) => (string | undefined)[]): void {
     for (const file of files)
       for (const model of models(readAt(checkout, file))) if (model !== undefined) refs.push({ cli, file, model });
   }
+
   add("codex", dirFiles(checkout, ".codex/agents", ".toml"), (t) => [tomlModel(t)]);
   add("grok", dirFiles(checkout, ".grok/agents", ".md"), (t) => [frontmatterModel(t)]);
   add("grok", dirFiles(checkout, ".grok/roles", ".toml"), (t) => [tomlModel(t)]);
+
   for (const model of subagentModels(readAt(sourceRoot, GROK_GLOBALS_REL)))
     refs.push({ cli: "grok", file: GROK_GLOBALS_REL, model });
   add("agy", dirFiles(checkout, ".agents/agents", ".md"), (t) => [frontmatterModel(t)]);
   // `inherit` runs the parent session's model, which the account can always use, so it names nothing to check.
   add("cursor", dirFiles(checkout, ".cursor/agents", ".md"), (t) => [frontmatterModel(t)].filter((m) => m !== INHERIT));
+
   return refs;
 }
 
@@ -114,24 +121,33 @@ function spawnList(bin: string, args: string[], { signal }: { signal: AbortSigna
 /** One CLI's offered ids, or why it is skipped. `capped` settles when the shared cap is over. */
 async function listedModels(cli: ListCli, { run, signal, capped, capMs }: Ask): Promise<Offered> {
   const { bin, args, ids } = MODEL_LISTS[cli];
+
   try {
     const r = await Promise.race([run(bin, args, { signal }), capped]);
+
     if (r === CAPPED) return { skip: `${cli} models took over ${capMs / MS_PER_SECOND} s` };
+
     if (r.code !== 0) {
       const first = r.stderr.split(LINE_RE).find((l) => l.trim() !== "");
+
       return { skip: `${cli} models failed: ${first === undefined ? `exit ${r.code}` : first.trim()}` };
     }
+
     const found = ids(r.stdout);
+
     return found.length > 0 ? { ids: found } : { skip: `${cli} models failed: no models listed` };
   } catch (err) {
     if (isRecord(err) && err.code === ENOENT) return { skip: `${cli} not installed` };
+
     return { skip: `${cli} models failed: ${errorText(err).split("\n")[0]}` };
   }
 }
 
 function offeredBy(cli: ModelCli, home: string, ask: Ask): Promise<Offered> {
   if (cli === "codex") return Promise.resolve(codexOffered(home));
+
   if (cli === "agy") return Promise.resolve({ ids: AGY_AGENT_MODELS });
+
   return listedModels(cli, ask);
 }
 
@@ -139,17 +155,22 @@ function offeredBy(cli: ModelCli, home: string, ask: Ask): Promise<Offered> {
 async function offeredLists(clis: ModelCli[], home: string, ask: Pick<Ask, "capMs" | "run">) {
   const abort = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
+
   const capped = new Promise<typeof CAPPED>((resolve) => {
     timer = setTimeout(() => {
       resolve(CAPPED);
       abort.abort();
     }, ask.capMs);
   });
+
   const full = { ...ask, capped, signal: abort.signal };
+
   const lists = await Promise.all(
     clis.map(async (cli): Promise<[ModelCli, Offered]> => [cli, await offeredBy(cli, home, full)]),
   );
+
   clearTimeout(timer);
+
   return lists;
 }
 
@@ -171,12 +192,17 @@ export async function agentModelsLines({
   const lists = await offeredLists(clis, home, { capMs, run });
   const offered = new Map(lists);
   const skipped = lists.flatMap(([, l]) => l.skip ?? []);
+
   const fixes = refs.flatMap(({ cli, file, model }) => {
     const ids = offered.get(cli)?.ids; // every ref's cli is in clis
+
     if (ids === undefined || ids.includes(model)) return [];
+
     return `- ${file}: model ${model} is not offered by ${cli}; offered: ${ids.slice(0, OFFERED_SHOWN).join(", ")}`;
   });
+
   const note = skipped.length > 0 ? `(skipped: ${skipped.join("; ")})` : "";
+
   return fixes.length > 0
     ? [row("agent models", `${fixes.length} to fix`, note), ...fixes]
     : [row("agent models", "ok", note)];

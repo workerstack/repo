@@ -108,6 +108,7 @@ function asRuntime<T>(userAgent: string, run: () => T): T {
   const original: unknown = Reflect.get(globalThis, "navigator");
   Object.defineProperty(globalThis, "caches", { configurable: true, value: {} });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent } });
+
   try {
     return run();
   } finally {

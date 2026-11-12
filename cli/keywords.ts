@@ -21,12 +21,14 @@ function line(text: string): string {
 /** One line per entry that is not a string or not shaped like a GitHub topic; positions are 1-based. */
 function entryLines(entries: readonly unknown[]): string[] {
   const lines: string[] = [];
+
   for (const [index, entry] of entries.entries()) {
     if (typeof entry !== "string")
       lines.push(line(`keyword ${index + ONE} is ${JSON.stringify(entry)}, not a string; ${KEYWORD_ENTRY_FIX}`));
     else if (!KEYWORD_SHAPE.test(entry))
       lines.push(line(`keyword "${entry}" is not a GitHub topic; ${KEYWORD_SHAPE_FIX}`));
   }
+
   return lines;
 }
 
@@ -34,11 +36,15 @@ function entryLines(entries: readonly unknown[]): string[] {
 function orderLines(entries: readonly unknown[]): string[] {
   const names = entries.filter((entry): entry is string => typeof entry === "string");
   const counts = new Map<string, number>();
+
   for (const name of names) counts.set(name, (counts.get(name) ?? 0) + ONE);
+
   const lines = [...counts]
     .filter(([, count]) => count > ONE)
     .map(([name, count]) => line(`keyword "${name}" is listed ${count} times; keep one`));
+
   const unique = [...counts.keys()];
+
   if (isStringList(entries) && unique.join() !== unique.toSorted().join())
     lines.push(line(`"${KEYWORDS_FIELD}" are not sorted; write ${JSON.stringify(unique.toSorted())}`));
 
@@ -52,11 +58,14 @@ function orderLines(entries: readonly unknown[]): string[] {
 export function keywordLines(value: unknown): string[] {
   if (!Array.isArray(value) || value.length === 0) {
     const state = value === undefined ? "is missing" : `is ${JSON.stringify(value)}`;
+
     return [line(`"${KEYWORDS_FIELD}" ${state}; ${KEYWORDS_FIX}`)];
   }
+
   const count: string[] =
     value.length > KEYWORDS_MAX
       ? [line(`"${KEYWORDS_FIELD}" has ${value.length} entries; keep at most ${KEYWORDS_MAX}, GitHub's topic limit`)]
       : [];
+
   return [...count, ...entryLines(value), ...orderLines(value)];
 }

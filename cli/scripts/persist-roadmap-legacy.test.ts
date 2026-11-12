@@ -23,11 +23,13 @@ function legacyFile() {
   const body = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
   const head = "serial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z";
   fs.writeFileSync(abs, `---\n${head}\nsource: "auth program"\nstrategy: default\n---\n\n${body}`);
+
   return { abs, ws };
 }
 
 function legacyUpdate(edit: (text: string) => string) {
   const { ws, abs } = legacyFile();
+
   return prepareRoadmapUpdate({ content: edit(LEGACY_ROADMAP), filePath: abs, workspaceRoot: ws });
 }
 
@@ -47,6 +49,7 @@ describe("legacy roadmap section rules", () => {
     const errors = legacyUpdate((t) =>
       t.replace("Title: auth types", "Title: auth").replace("Reserved names list the new skills.", "A. B."),
     ).errors;
+
     expect(errors).toContain("title");
     expect(errors).toContain("slice goal");
   });
@@ -57,6 +60,7 @@ describe("legacy roadmap section rules", () => {
         .replace("      Why: Every", "      Location: .tmp/repo/roadmaps/x.md\n      Why: Every")
         .replace("Every later land goes through commit.", "One. Two. Three."),
     ).errors;
+
     expect(errors).toContain("why");
     expect(errors).toContain("location");
   });
@@ -82,9 +86,11 @@ describe("legacy roadmap slice and frontmatter rules", () => {
 
   it("lets the sent frontmatter beat a status and reviews line in the body", () => {
     const legacy = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
+
     const sent =
       "---\nserial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z\n" +
       `source: "auth program"\nstrategy: default\n---\n\nstatus: blocked\nreviews: 3\n${legacy}`;
+
     const { ws, abs } = legacyFile();
     const r = prepareRoadmapUpdate({ content: sent, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);

@@ -27,20 +27,26 @@ export function runJob({
   const stashRoot = root === undefined || root === "" ? resolveRoots({}, { cwd: at }).root : root;
   // shouldFallback passed, so a search, fetch or exec job has a non-empty query.
   const q = String(query);
+
   if (job === SEARCH_JOB) return runSearch(q, { cwd: at, glob, path: searchPath, root: stashRoot });
+
   if (job === SLICE_JOB) return runSlice({ cwd: at, from, path: searchPath, root: stashRoot, stash, to });
+
   if (job === FETCH_JOB) return runFetch(q, { cwd: at, root: stashRoot });
+
   return runExec(q, { cwd: at, root: stashRoot });
 }
 
 /** The job options of a parsed command line run in `cwd`. */
 function optionsOf(parsed: ParsedArgs, cwd: string, root: string): JobOptions {
   const { job, query, path, glob, stash, from, to } = parsed;
+
   return { cwd, from, glob, job, path, query, root, stash, to };
 }
 
 function fallbackExit(): number {
   process.stdout.write(`${FALLBACK}\n`);
+
   return FALLBACK_EXIT;
 }
 
@@ -48,12 +54,15 @@ function fallbackExit(): number {
 export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
+
     if (parsed.unknown) return fallbackExit();
     const roots = resolveRoots();
     const cwd = parsed.cwd === "" ? roots.cwd : resolveJobCwd(parsed.cwd, roots.cwd);
+
     if (cwd === null) return fallbackExit();
     const result = runJob(optionsOf(parsed, cwd, roots.root));
     process.stdout.write(result.text);
+
     return result.code;
   } catch {
     return fallbackExit();

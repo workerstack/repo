@@ -45,6 +45,7 @@ describe("repo release api removals and narrowings", () => {
         false,
       ),
     );
+
     expect(await api(dir, AGAINST)).toMatchObject({ code: 0, out: REMOVAL_OK });
   });
 });

@@ -48,6 +48,7 @@ function expectPackageRules(sb: Sandbox) {
   function unhashed(rel: string) {
     return sb.read(rel).replace(/^<!-- repo:rules [\da-f]{8} -->/, "<!-- repo:rules -->");
   }
+
   const pointer = "<!-- repo:rules -->\nStart at references/INDEX.md in this package.\n";
   expect(unhashed("packages/web/AGENTS.md")).toBe(
     `${pointer}\n## Rules by path\n` +
@@ -55,6 +56,7 @@ function expectPackageRules(sb: Sandbox) {
       "Components live in src/components and use the ui kit.\n",
   );
   expect(unhashed("packages/api/AGENTS.md")).toBe(`${pointer}<!-- /repo:rules -->\n`);
+
   for (const gone of [
     "packages/web/CLAUDE.md",
     "packages/web/.repo/rules/components.md",
@@ -64,9 +66,11 @@ function expectPackageRules(sb: Sandbox) {
 
   expect(linkText(path.join(sb.repo, "packages/web/.claude/skills/deploy"))).toBe("../../.repo/skills/deploy");
   expect(sb.read("AGENTS.md")).not.toContain("Components live");
+
   const deps = /<!-- repo:deps [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(
     sb.read("packages/web/references/INDEX.md"),
   )?.[1];
+
   expect(deps).toBe("- [@acme/api](../../api/references/INDEX.md)\n");
 }
 

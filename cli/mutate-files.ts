@@ -23,16 +23,22 @@ export function splitShards(files: readonly string[], lines: ReadonlyMap<string,
   function size(file: string) {
     return lines.get(file) ?? 0;
   }
+
   const heaviest = files.toSorted((a, b) => {
     const heavier = size(b) - size(a);
+
     return heavier === 0 ? a.localeCompare(b) : heavier;
   });
+
   const shards = Array.from({ length: shard.total }, (_, at): Bin => ({ index: at + 1, load: 0, taken: [] }));
+
   for (const file of heaviest) {
     let lightest: Bin = { index: 0, load: Infinity, taken: [] };
+
     for (const next of shards) if (next.load < lightest.load) lightest = next;
     lightest.load += size(file);
     lightest.taken.push(file);
   }
+
   return shards.flatMap((one) => (one.index === shard.index ? one.taken.toSorted() : []));
 }

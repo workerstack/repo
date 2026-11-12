@@ -13,17 +13,22 @@ import { readWorkspace } from "./sync/workspace.ts";
 export function prePush(ctx: LinkContext): number {
   const root = ctx.roots.install;
   const linked = new Set([...Object.keys(readState(root)), ...markersIn(root).map((marker) => marker.name)]);
+
   if (linked.size === 0) return 0;
   const read = readWorkspace(ctx.roots.checkout);
+
   if (!read.ok) throw new LinkError(read.errors.join("\n"));
   const { manifest, packages } = read.workspace;
   let code = 0;
+
   for (const pkg of [manifest, ...packages.map((entry) => entry.manifest)]) {
     if (pkg.name === undefined || pkg.private === true) continue;
+
     for (const dep of dependencyNames(pkg).filter((name) => linked.has(name))) {
       ctx.io.err(`repo ${ctx.command}: ${refusedPush(pkg.name, dep)}`);
       code = EXIT_FAIL;
     }
   }
+
   return code;
 }

@@ -9,14 +9,17 @@ const { repo, map } = mapRepos();
 function chain(prefix: string, depth: number) {
   const files: Record<string, string> = {};
   let p = prefix;
+
   for (let i = 0; i < depth; i++) {
     p = `${p}/d${i}`;
     files[`${p}/x.ts`] = "";
   }
+
   return files;
 }
 
 const deep: Record<string, string> = { "a/b/x.ts": "", "a/x.ts": "", "z/x.ts": "", "z/y/x.ts": "" };
+
 for (let i = 0; i < 8; i++) deep[`a/b/component-${i}/x.ts`] = "";
 
 it("folderMap depth uses the deepest uniform depth that fits the budget", () => {
@@ -39,6 +42,7 @@ it("folderMap depth caps depth per package, counted from the package root", () =
     "pkgs/p/x.ts": "",
     ...chain("pkgs/p", 4),
   };
+
   expect(map(files, { depthCap: 2 })).toBe(["pkgs/p/  # p  pkgs/p", "  d0/", "    d1/  …", ""].join("\n"));
 });
 
@@ -52,6 +56,7 @@ it("folderMap depth keeps nested packages reachable past the cap", () => {
     "top/other/x.ts": "",
     "top/x.ts": "",
   };
+
   expect(map(files, { depthCap: 1 })).toBe(
     ["top/", "  mid/", "    deep/", "      pkg/  # pkg  top/mid/deep/pkg", "        src/", "  other/  …", ""].join(
       "\n",

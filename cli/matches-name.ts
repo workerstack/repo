@@ -6,5 +6,6 @@ const SCOPE_PATTERN: RegExp = /^(@[^/*]+\/)\*$/;
  */
 export function matchesName(pattern: string, name: string): boolean {
   const scope = SCOPE_PATTERN.exec(pattern)?.[1];
+
   return scope === undefined ? pattern === name : name.startsWith(scope);
 }

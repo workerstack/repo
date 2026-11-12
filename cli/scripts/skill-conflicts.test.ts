@@ -50,10 +50,12 @@ it("findSkillContentConflicts: reports name when SKILL.md bytes differ; skips wo
   writeSkill(ws, "extra", "keep\n");
   writeSkill(pkg, "solo", "only-pkg\n");
   writeSkill(ws, "solo", "only-pkg\n");
+
   const hits = findSkillContentConflicts({
     packagedSkillsDir: pkg,
     workspaceSkillsDir: ws,
   });
+
   expect(hits.map((h) => h.name)).toStrictEqual(["parent"]);
   expect(hits[0]?.workspacePath).toContain(`${path.sep}parent${path.sep}SKILL.md`);
 });

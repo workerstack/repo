@@ -8,6 +8,7 @@ function attribute(name: string) {
     "so fix the code or add a lint.skip entry with a reason"
   );
 }
+
 const BLOCK = "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 
 /** A file of `count` one-token code lines. */
@@ -57,6 +58,7 @@ it("passes other attributes, lint names as values and lint words in strings", ()
     "#![",
     "fn allow() {}",
   ].join("\n");
+
   expect(rustSourceHits("a.rs", source)).toStrictEqual([]);
 });
 

@@ -13,6 +13,7 @@ import { supplyChainAt } from "./supply-chain.ts";
 const UNTRACKED = "Cargo.lock is not tracked; commit it (cargo runs with --locked)";
 const MISSING_CARGO = "Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs";
 const TEMPS: string[] = [];
+
 afterAll(() => {
   for (const dir of TEMPS) fs.rmSync(dir, { force: true, recursive: true });
 });
@@ -21,15 +22,19 @@ afterAll(() => {
 function rootWith(...files: string[]): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-supply-"));
   TEMPS.push(root);
+
   for (const file of files) fs.writeFileSync(path.join(root, file), file.endsWith(".lock") ? cargoLock("app") : "");
+
   return root;
 }
+
 const MANIFEST = "Cargo.toml";
 const LOCK = ["Cargo", "lock"].join(".");
 
 function ok(stdout = "", stderr = ""): CargoResult {
   return { missing: false, status: 0, stderr, stdout };
 }
+
 const META = JSON.stringify({
   packages: [
     { id: "b 0.1.0", manifest_path: "/x/b/Cargo.toml", name: "b", publish: null, rust_version: null, version: "0.1.0" },
@@ -42,34 +47,46 @@ type Script = { meta?: CargoResult; deny?: CargoResult; shear?: CargoResult; den
 /** A cargo that answers each subcommand from `script` and records every call. */
 function fakeCargo(script: Script = {}): { run: CargoRun; calls: string[] } {
   const calls: string[] = [];
+
   function run(_root: string, args: readonly string[]): CargoResult {
     const line = args.join(" ");
     calls.push(line);
+
     if (args[0] === "metadata") return script.meta ?? ok(JSON.stringify({ packages: [], workspace_members: [] }));
+
     if (line === "deny --version") return script.denyV ?? ok("cargo-deny 0.20.2");
+
     if (line === "shear --version") return ok("Version: 1.14.0");
+
     if (args[0] === "deny") return script.deny ?? ok();
+
     return script.shear ?? ok(JSON.stringify({ findings: [] }));
   }
+
   return { calls, run };
 }
 
 function tracked(): ReturnType<GitRun> {
   return { status: 0, stderr: "", stdout: `${LOCK}\0` };
 }
+
 function untracked(): ReturnType<GitRun> {
   return { status: 0, stderr: "", stdout: "" };
 }
+
 /** A git that answers with `answer` and records the args of each call in `calls`. */
 function recordingGit(calls: string[][], answer: GitRun): GitRun {
   return (root, args) => {
     calls.push([...args]);
+
     return answer(root, args);
   };
 }
+
 function gitFails(): ReturnType<GitRun> {
   return { status: 128, stderr: "fatal: not a git repository", stdout: "" };
 }
+
 function unlicensed(name: string) {
   return JSON.stringify({
     fields: {
@@ -147,12 +164,14 @@ it("lists untracked, crate, pin, deny and shear lines in that order", () => {
     "",
     JSON.stringify({ fields: { code: "rejected", message: "bad license", severity: "error" }, type: "diagnostic" }),
   );
+
   const shear: CargoResult = {
     missing: false,
     status: 1,
     stderr: "",
     stdout: JSON.stringify({ findings: [{ code: "x", message: "unused dependency `itoa`", severity: "error" }] }),
   };
+
   const denyFailed = { ...deny, status: 4 };
   const cargo = fakeCargo({ deny: denyFailed, meta: ok(META), shear });
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: untracked, run: cargo.run });
@@ -174,9 +193,11 @@ it("skips only the tool whose pin has a problem", () => {
 
 it("skips shear when its pin is wrong and still runs deny", () => {
   const cargo = fakeCargo({ meta: ok(META) });
+
   function run(root: string, args: readonly string[]) {
     return args.join(" ") === "shear --version" ? ok("Version: 1.0.0") : cargo.run(root, args);
   }
+
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run });
   expect(lines.filter((line) => line.startsWith("cargo-shear"))).toHaveLength(1);
   expect(cargo.calls).toContain("deny --locked --format json check");
@@ -196,6 +217,7 @@ it("leaves the no-license deny error of a workspace crate to the crate line, and
     stderr: `${unlicensed("b")}\n${unlicensed("dep")}\n`,
     stdout: "",
   };
+
   const cargo = fakeCargo({ deny, meta: ok(META) });
   const lines = supplyChainAt(rootWith(MANIFEST, LOCK), ["standards"], { git: tracked, run: cargo.run });
   expect(lines).toHaveLength(2);

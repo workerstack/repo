@@ -18,6 +18,7 @@ describe("shellIgnoreEdits", () => {
     "echo .tmp/ | tee -a packages/a/.gitignore",
     "tee packages/a/.gitignore <<'EOF'\n.tmp/\nEOF",
   ];
+
   it.each(forms)("reads the added lines of %j", (command) => {
     const r = ignoreRepo();
     put(r, "packages/a/.gitignore", "out/\n");
@@ -33,6 +34,7 @@ describe("shellIgnoreEdits", () => {
     "sed -i 's/a/b/' packages/a/.gitignore",
     "cat <<EOF >> packages/a/.gitignore\n$HOME\nEOF",
   ];
+
   it.each(passes)("leaves %j alone", (command) => {
     expect(shellIgnoreEdits(command, ignoreRepo())).toStrictEqual([]);
   });

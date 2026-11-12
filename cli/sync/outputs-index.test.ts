@@ -61,6 +61,7 @@ it("hashes unhashed sections in place in one pass, one line each, and keeps the 
   const text =
     "# Docs\n\nIntro.\n\n<!-- repo:packages -->\n- stale\n<!-- /repo:packages -->\n\nMiddle.\n\n" +
     "<!-- repo:stack -->\n- stale\n<!-- /repo:stack -->\n\nFooter.\n";
+
   const files = { ...PACKAGE_INDEXES, "references/INDEX.md": text };
   const ctx = context({ files, manifest: STACK_ROOT, packages: [WEB, API] });
   const content = `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n`;
@@ -74,11 +75,13 @@ it("hashes unhashed sections in place in one pass, one line each, and keeps the 
       tracked: true,
     },
   ]);
+
   const again = context({
     files: { ...files, "references/INDEX.md": content },
     manifest: STACK_ROOT,
     packages: [WEB, API],
   });
+
   expect([contentOf(index(again).outputs[0]), repairsOf(again, "references/INDEX.md")]).toStrictEqual([
     content,
     undefined,
@@ -91,6 +94,7 @@ it("appends absent sections at the end after a blank line", () => {
     manifest: STACK_ROOT,
     packages: [WEB, API],
   });
+
   expect(index(ctx).outputs.slice(0, 1)).toStrictEqual([
     {
       content: `# Docs\n\nHand-written.\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n`,
@@ -110,6 +114,7 @@ it("describes a package by its first non-empty INDEX line and links it by name, 
       { dir: "libs/heading", manifest: { name: "heading" } },
     ],
   });
+
   expect(contentOf(index(ctx).outputs[0])).toContain(
     section(
       "packages",
@@ -146,6 +151,7 @@ it("lists every @workerstack/* dependency of the root and packages once, sorted"
       },
     ],
   });
+
   const names = ["@workerstack/ai", "@workerstack/lint", "@workerstack/repo", "@workerstack/worker"];
   expect(contentOf(index(ctx).outputs[0])).toContain(section("stack", names.map(link).join("\n")));
 });

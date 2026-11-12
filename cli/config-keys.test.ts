@@ -97,6 +97,7 @@ describe("loadConfig", () => {
   it("rejects packs that are not a list", async () => {
     const result = await loadConfig(repo('export default { packs: "docs" }\n'));
     expect(result.ok).toBe(false);
+
     if (result.ok) return;
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: packs: \S/);

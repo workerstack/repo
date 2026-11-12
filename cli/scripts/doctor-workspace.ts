@@ -27,6 +27,7 @@ const LINE_RE = /\r?\n/;
 
 function gitOut(cwd: string, args: string[]): string | null {
   const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: GIT_MAX_BUFFER });
+
   return r.status === 0 ? r.stdout : null;
 }
 
@@ -45,6 +46,7 @@ function ignoreLines(file: string): string[] {
 function daysSinceUnmergedCommit(root: string, branch: string, target: string): number | null {
   const ahead = Number(gitOut(root, ["rev-list", "--count", `${target}..refs/heads/${branch}`]));
   const last = Number(gitOut(root, ["log", "-1", "--format=%ct", `refs/heads/${branch}`]));
+
   return ahead > 0 && last > 0 ? Math.floor((Date.now() / MS_PER_SECOND - last) / DAY_SECONDS) : null;
 }
 
@@ -56,6 +58,7 @@ function byPath(a: { path: string }, b: { path: string }): number {
 function strayIssues(root: string): WorkspaceIssue[] {
   return nestedTmpDirs(root).map((dir) => {
     const holds = nestedHolds(dir);
+
     return {
       clear: `rm -r ${dir}`,
       detail: holds === null ? "" : `holds ${holds}`,
@@ -68,10 +71,12 @@ function strayIssues(root: string): WorkspaceIssue[] {
 function redundantIssues(top: string): WorkspaceIssue[] {
   const listed = gitOut(top, ["ls-files", "-co", "--exclude-standard", "-z", "--", ":(glob)**/.gitignore"]) ?? "";
   const redundant: WorkspaceIssue[] = [];
+
   for (const rel of new Set(listed.split("\0").filter((r) => r !== "" && r !== GITIGNORE))) {
     const file = path.join(top, ...rel.split("/"));
     const lines = ignoreLines(file).filter((l) => l !== "" && !l.startsWith("#"));
     const hits = lines.length > 0 ? redundantIgnoreLines(file, lines) : [];
+
     if (hits.length === 0) continue;
     const isTracked = gitOut(top, ["ls-files", "--error-unmatch", "--", rel]) !== null;
     const detail = hits.map((h) => `"${h.line}" ignored by ${h.rule}`).join(", ");
@@ -82,6 +87,7 @@ function redundantIssues(top: string): WorkspaceIssue[] {
       path: file,
     });
   }
+
   return redundant;
 }
 
@@ -89,9 +95,11 @@ function duplicateIssues(top: string): WorkspaceIssue[] {
   const rootIgnore = path.join(top, GITIGNORE);
   const lines = ignoreLines(rootIgnore);
   const duplicate: WorkspaceIssue[] = [];
+
   for (const [i, line] of lines.entries()) {
     if (!line.endsWith("/") || line.startsWith("!") || line.length < MIN_DIR_LINE) continue;
     const bare = lines.indexOf(line.slice(0, line.length - 1));
+
     if (bare === NOT_FOUND) continue;
     duplicate.push({
       clear: `delete line ${i + 1} of ${rootIgnore}`,
@@ -100,6 +108,7 @@ function duplicateIssues(top: string): WorkspaceIssue[] {
       path: `${rootIgnore}:${i + 1} "${line}"`,
     });
   }
+
   return duplicate;
 }
 
@@ -110,13 +119,16 @@ function label(w: WorktreeInfo): string {
 function staleIssues(root: string, worktrees: WorktreeInfo[]): WorkspaceIssue[] {
   const target = defaultBranch(root);
   const stale: WorkspaceIssue[] = [];
+
   for (const w of worktrees) {
     if (!w.managed || w.state === "missing" || w.merged || w.branch === null) continue;
     const days = daysSinceUnmergedCommit(root, w.branch, target);
+
     if (days === null || days < STALE_DAYS) continue;
     const clear = `${WORKTREE_CMD} finish ${path.basename(w.path)}`;
     stale.push({ clear, detail: `${w.branch}, last commit ${days} days ago`, kind: "stale worktree", path: w.path });
   }
+
   return stale;
 }
 
@@ -134,6 +146,7 @@ function worktreeIssues(root: string): WorkspaceIssue[] {
   const missing = worktrees.filter((w) => w.state === "missing");
   const outside = worktrees.filter((w) => w.state !== "missing" && !w.managed);
   const merged = worktrees.filter((w) => w.state === "clean" && w.managed && w.merged);
+
   return [
     ...missing.map(issue("missing worktree", () => `git -C ${root} worktree prune`)).toSorted(byPath),
     ...outside
@@ -150,8 +163,10 @@ function worktreeIssues(root: string): WorkspaceIssue[] {
 export function workspaceIssues({ root, checkout }: { root: string; checkout: string }): WorkspaceIssue[] {
   // resolveRoots already asked git about this dir; the memo saves a spawn.
   const facts = gitRevParse(checkout);
+
   if (facts === null) return [];
   const top = canonicalPath(path.resolve(facts.top));
+
   return [
     ...strayIssues(root).toSorted(byPath),
     ...redundantIssues(top).toSorted(byPath),
@@ -162,6 +177,7 @@ export function workspaceIssues({ root, checkout }: { root: string; checkout: st
 
 export function workspaceLines(items: WorkspaceIssue[]): string[] {
   if (items.length === 0) return [row("workspace", "ok")];
+
   return [
     row("workspace", `${items.length} to clear`, "report only; nothing was deleted"),
     ...items.map((i) => `- ${i.kind} ${i.path}${i.detail === "" ? "" : ` (${i.detail})`}: ${i.clear}`),

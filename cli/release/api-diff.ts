@@ -14,6 +14,7 @@ import type { Package } from "./install.ts";
 
 /** One version of the package: the name it is imported by in the project, and its subpaths. */
 export type Side = { name: string; subpaths: Subpath[] };
+
 /** One public name, or a whole subpath when `name` is null, that was added, removed, widened or narrowed. */
 export type Change = { key: string; name: string | null; kind: "added" | "removed" | "widened" | "narrowed" };
 
@@ -45,10 +46,13 @@ function namesOf(checker: ts.TypeChecker, module: ts.Symbol): Names {
 /** The exports of each subpath of one side, by key, read from that side's imports in the entry. */
 function modulesOf(ctx: Ctx, imports: readonly ts.ImportDeclaration[], keys: readonly string[]): Map<string, Names> {
   const modules = keys.flatMap((key, index) => imports.slice(index, index + 1).map((decl) => ({ decl, key })));
+
   return new Map(
     modules.map(({ key, decl }) => {
       const symbol = ctx.checker.getSymbolAtLocation(decl.moduleSpecifier);
+
       if (symbol === undefined) throw new Error(noModule(decl.moduleSpecifier.getText()));
+
       return [key, namesOf(ctx.checker, symbol)];
     }),
   );
@@ -58,11 +62,15 @@ function modulesOf(ctx: Ctx, imports: readonly ts.ImportDeclaration[], keys: rea
 function diffNames(ctx: Ctx, key: string, names: [Names, Names]): Change[] {
   const [old, next] = names;
   const all = [...new Set([...old.keys(), ...next.keys()])].toSorted();
+
   return all.flatMap((name): Change[] => {
     const [before, after] = [old.get(name), next.get(name)];
+
     if (before === undefined) return [{ key, kind: "added", name }];
+
     if (after === undefined) return [{ key, kind: "removed", name }];
     const kind = classify(ctx, before, after);
+
     return kind === null ? [] : [{ key, kind, name }];
   });
 }
@@ -71,16 +79,21 @@ function diffNames(ctx: Ctx, key: string, names: [Names, Names]): Change[] {
 function entryProgram(project: string, specs: readonly string[]): ts.Program {
   const entry = path.join(project, ENTRY_FILE);
   fs.writeFileSync(entry, specs.map((spec, index) => TYPE_IMPORT(index, spec)).join(""));
+
   return ts.createProgram([entry], compilerOptions(project));
 }
 
 /** The changes between the exports of each subpath, a subpath on one side only counting as added or removed. */
 function diffModules(ctx: Ctx, old: Map<string, Names>, next: Map<string, Names>): Change[] {
   const keys = [...new Set([...old.keys(), ...next.keys()])].toSorted();
+
   return keys.flatMap((key): Change[] => {
     const [was, is] = [old.get(key), next.get(key)];
+
     if (was === undefined) return [{ key, kind: "added", name: null }];
+
     if (is === undefined) return [{ key, kind: "removed", name: null }];
+
     return diffNames(ctx, key, [was, is]);
   });
 }
@@ -97,21 +110,25 @@ export function apiDiff(project: string, old: Side, next: Side): Change[] {
   const ctx: Ctx = { checker: program.getTypeChecker(), packages: [old.name, next.name] };
   const entry = program.getSourceFiles().filter((file) => file.fileName.endsWith(ENTRY_FILE));
   const imports = entry.flatMap((file) => file.statements.filter(ts.isImportDeclaration));
+
   const was = modulesOf(
     ctx,
     imports,
     before.map((s) => s.key),
   );
+
   const is = modulesOf(
     ctx,
     imports.slice(before.length),
     after.map((s) => s.key),
   );
+
   return diffModules(ctx, was, is);
 }
 
 /** The side an installed package makes: the name it is imported by and the subpaths its `exports` reach. */
 export function sideOf(pkg: Package): Side {
   const files = fs.readdirSync(pkg.root, { recursive: true }).map(String);
+
   return { name: pkg.name, subpaths: exportSubpaths(pkg.installed.exports, files).subpaths };
 }

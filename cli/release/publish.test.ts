@@ -8,9 +8,11 @@ afterEach(removePlanted);
 
 const SPEC = `${NAME}@0.1.0`;
 const GONE: Registry = { exists: false, listed: false, notServed: 0 };
+
 function listed(notServed = 0): Registry {
   return { exists: true, listed: true, notServed };
 }
+
 const TARBALL = "https://registry.npmjs.org/@acme/app/-/app-0.1.0.tgz";
 const TAG_FORMAT = "repo release publish: name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
 
@@ -18,6 +20,7 @@ const TAG_FORMAT = "repo release publish: name the tag as <name>@<version>, e.g.
 function origin(url: string) {
   const w = world();
   gitIn(w.work, "remote", "set-url", "origin", url);
+
   return publish(w, [SPEC], { ...GONE }, { ci: true });
 }
 

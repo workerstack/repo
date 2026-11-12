@@ -10,7 +10,9 @@ export async function standardsWorkspace(
   cwd: string,
 ): Promise<{ workspace: Workspace; config: ResolvedConfig } | null> {
   const found = await standardsRoot(cwd);
+
   if (found === null) return null;
   const read = readWorkspace(found.root);
+
   return read.ok ? { config: found.config, workspace: read.workspace } : null;
 }

@@ -11,6 +11,7 @@ it("refuses a string compared to string | undefined, unknown or any, from either
     "}",
     "",
   ].join("\n");
+
   expect(magicOf({ "src/kinds.ts": kinds })).toStrictEqual([
     hit("src/kinds.ts:2:16", STRING, COMPARED("on")),
     hit("src/kinds.ts:2:37", STRING, COMPARED("on")),
@@ -32,6 +33,7 @@ it("reports a const copy once at its declaration, through an import alias, and n
       "",
     ].join("\n"),
   };
+
   expect(magicOf(files)).toStrictEqual([
     hit("src/modes.ts:1:14", STRING, COPIES("SLOW", "slow")),
     hit("src/modes.ts:2:14", STRING, COPIES("LAZY", "lazy")),

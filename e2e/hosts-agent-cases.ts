@@ -13,6 +13,7 @@ import { tail } from "./tail";
 function codexCall(sb: Sandbox, command: string) {
   const gate = only(commands(sb, ".codex/hooks.json", { ends: GATE, event: "PreToolUse" }), "codex gate");
   const payload = { ...codexBase(sb), tool_input: { command }, tool_name: "Bash", tool_use_id: "u1" };
+
   return runHook(sb, gate, { cwd: sb.repo, payload });
 }
 
@@ -46,11 +47,13 @@ export function codexGateCases(get: GetSandbox) {
 export function codexSessionCase(get: GetSandbox) {
   it("SessionStart injects the folder map", async () => {
     const sb = get();
+
     const r = await runHook(
       sb,
       only(commands(sb, ".codex/hooks.json", { ends: MAP, event: "SessionStart" }), "codex session-map"),
       { cwd: sb.repo, payload: { ...codexBase(sb), hook_event_name: "SessionStart", source: "startup" } },
     );
+
     expectClean(sb, r);
     expect(output(r).hookEventName).toBe("SessionStart");
     expect(output(r).additionalContext).toContain("src/");
@@ -63,10 +66,12 @@ export function claudeSessionCases(get: GetSandbox) {
     const sb = get();
     const pick = { ends: MAP, event: "SessionStart" };
     const command = only(commands(sb, ".claude/settings.json", pick), "claude session-map");
+
     const r = await runHook(sb, command, {
       env: { CLAUDE_PROJECT_DIR: sb.repo },
       payload: claudePayload(sb, { hook_event_name: "SessionStart", model: "claude-opus", source }),
     });
+
     expectClean(sb, r);
     expect(output(r).hookEventName).toBe("SessionStart");
     expect(output(r).additionalContext).toContain("src/");

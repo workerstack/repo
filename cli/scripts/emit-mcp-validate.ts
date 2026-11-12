@@ -19,29 +19,38 @@ function arraysEqual(a: unknown[], b: unknown[]): boolean {
 
 function objectsEqual(a: JsonObject, b: JsonObject): boolean {
   const ak = Object.keys(a);
+
   return ak.length === Object.keys(b).length && ak.every((k) => Object.hasOwn(b, k) && deepEqual(a[k], b[k]));
 }
 
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
+
   if (typeof a !== typeof b || a == null || b == null) return false;
+
   if (Array.isArray(a)) return Array.isArray(b) && arraysEqual(a, b);
+
   if (typeof a !== "object") return false;
+
   return isPlainObject(a) && isPlainObject(b) && objectsEqual(a, b);
 }
 
 /** desired keys must be present on disk; extra disk keys allowed. */
 export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
   if (Array.isArray(desired)) return deepEqual(disk, desired);
+
   if (desired != null && typeof desired === "object") {
     if (!isPlainObject(disk)) return false;
+
     return Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
   }
+
   return deepEqual(disk, desired);
 }
 
 function readPolicyFile(p: string): JsonObject {
   const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
+
   if (!isPlainObject(policy)) throw new Error("invalid policy");
 
   return policy;
@@ -50,10 +59,12 @@ function readPolicyFile(p: string): JsonObject {
 /** `over` onto `base`: objects merge key by key, anything else (arrays included) is replaced. */
 function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
   const out: JsonObject = { ...base };
+
   for (const [k, v] of Object.entries(over)) {
     const prev = out[k];
     out[k] = isPlainObject(prev) && isPlainObject(v) ? mergePolicy(prev, v) : v;
   }
+
   return out;
 }
 
@@ -63,20 +74,27 @@ function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
  */
 export function loadPolicy(sourceRoot?: string, consumerRoot?: string): JsonObject {
   const stock = readPolicyFile(path.join(nonEmptyOr(sourceRoot, process.cwd()), POLICY_REL));
+
   if (consumerRoot === undefined || consumerRoot === "") return stock;
   const own = path.join(consumerRoot, CONSUMER_POLICY_REL);
+
   return fs.existsSync(own) ? mergePolicy(stock, readPolicyFile(own)) : stock;
 }
 
 /** The first agent row that does not set `inherit: false`, as its error; null when every row does. */
 function agentsError(policy: JsonObject): string | null {
   const agents = policy.agents;
+
   if (agents == null) return null;
+
   if (!isPlainObject(agents)) return "agents must be an object";
+
   const bad = AGENT_IDS.find((id) => {
     const row = agents[id];
+
     return row != null && (!isPlainObject(row) || row.inherit !== false);
   });
+
   return bad === undefined ? null : `agents.${bad}.inherit must be false`;
 }
 
@@ -95,9 +113,12 @@ const CHECKS: readonly ((policy: JsonObject) => string | null)[] = [
 
 export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
   if (!isPlainObject(policy)) return { error: "invalid policy", ok: false };
+
   for (const check of CHECKS) {
     const error = check(policy);
+
     if (error !== null) return { error, ok: false };
   }
+
   return { ok: true };
 }

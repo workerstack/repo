@@ -24,6 +24,7 @@ const OWN_IGNORED = [
   "/.vscode/settings.json",
   "/knip.json",
 ];
+
 /** What the planned outputs of the trees test add to it. */
 const PLANNED_IGNORED = [
   "/.claude/settings.json",
@@ -43,10 +44,12 @@ it("writes the oxlint config of the workspace: the repo plugin, and a package bi
   ctx.workspace.packages.push({ dir: "packages/cli", manifest: { bin: "./bin/cli.ts" } });
   const { outputs, errors } = standards(ctx, []);
   expect(errors).toStrictEqual([]);
+
   const config = contentOf(outputs, ".oxlintrc.json") /* the standards pass writes this config */ as {
     jsPlugins: unknown;
     overrides: unknown[];
   };
+
   expect(config.jsPlugins).toStrictEqual([{ name: "repo", specifier: "@workerstack/repo/lint" }]);
   expect(config.overrides).toContainEqual({
     files: ["packages/cli/bin/cli.ts"],
@@ -59,9 +62,11 @@ it("writes each lint.skip entry as the last override, and refuses a rule the con
   const live = { files: ["src/cache.ts"], reason, rules: ["repo/no-module-state"] };
   const { outputs, errors } = standards(context(["standards"], "app", { skip: [live] }), []);
   expect(errors).toStrictEqual([]);
+
   const config = contentOf(outputs, ".oxlintrc.json") /* the oxlint config always has overrides */ as {
     overrides: unknown[];
   };
+
   expect(config.overrides.at(-1)).toStrictEqual({ files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } });
 
   const typo = { ...live, rules: ["repo/no-modul-state"] };
@@ -103,6 +108,7 @@ it(
       file("packages/api/references/INDEX.md", { managed: "block", tracked: true }),
       link(".claude/skills/deploy", { tracked: true }),
     ];
+
     const { outputs } = standards(context(["agents", "standards"], "@workerstack/repo"), planned);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toMatchObject({
       ignorePatterns: ["**/*.md", "**/__fixtures__/**", ...[...OWN_IGNORED, ...PLANNED_IGNORED].toSorted(byCodeUnit)],
@@ -117,6 +123,7 @@ it("plans both configs as sync's own, untracked files, the hooks as tracked ones
     path: rel,
     tracked,
   }));
+
   expect(shapes).toStrictEqual([
     { kind: "file", managed: "whole", path: ".oxlintrc.json", tracked: false },
     { kind: "file", managed: "whole", path: "knip.json", tracked: false },
@@ -135,8 +142,10 @@ function repo(packs: string): string {
   const root = tempDir("workerstack-standards-");
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "app" }));
   fs.writeFileSync(path.join(root, CONFIG_FILE), `export default { packs: ${packs} }\n`);
+
   return root;
 }
+
 function sync(root: string) {
   return runSync([], { cwd: root, stderr: () => {}, stdout: () => {} }, { generators: [] });
 }
@@ -146,11 +155,13 @@ it("writes both configs and has git ignore them, then prunes them once the pack 
   expect(await sync(root)).toBe(0);
   expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(true);
   expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
+
   for (const hook of ["pre-commit", "commit-msg", "pre-push"]) {
     expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(
       process.platform === "win32" ? 0o444 : 0o555,
     ); // read-only, and no execute bits on win32
   }
+
   expect(gitignoreLines(root)).toStrictEqual(
     expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json", ".oxlintrc.unskipped-*.json"]),
   );

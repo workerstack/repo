@@ -10,10 +10,13 @@ type Survivor = {
   mutator: string;
   status: "Survived" | "NoCoverage";
 };
+
 /** One file's mutants: how many tests killed and the ones that lived. */
 export type FileScore = { killed: number; survivors: Survivor[] };
+
 /** The mutation tool a report came from. */
 type Tool = "stryker" | "cargo-mutants";
+
 /** What one shard run writes: the tool, the commit it mutated, which shard of how many, and its files' scores. */
 export type ShardReport = {
   tool: Tool;
@@ -32,17 +35,20 @@ function strykerSchema() {
     mutatorName: z.string(),
     status: z.string(),
   });
+
   return z.object({ files: z.record(z.string(), z.object({ mutants: z.array(mutant) })) });
 }
 
 function cargoMutantsSchema() {
   const mutant = z.object({ file: z.string(), genre: z.string(), span: z.object({ start: position() }) });
   const scenario = z.union([z.string(), z.object({ Failure: z.number() }), z.object({ Mutant: mutant })]);
+
   return z.object({ outcomes: z.array(z.object({ scenario, summary: z.string() })) });
 }
 
 function reportSchema() {
   const survivor = position().extend({ mutator: z.string(), status: z.enum(["Survived", "NoCoverage"]) });
+
   return z.object({
     files: z.record(z.string(), z.object({ killed: z.number(), survivors: z.array(survivor) })),
     head: z.string(),
@@ -63,6 +69,7 @@ function reasonOf(error: z.ZodError): string {
   return error.issues
     .map((issue) => {
       const where = issue.path.join(".");
+
       return `${where === "" ? "report" : where}: ${issue.message}`;
     })
     .join("; ");
@@ -73,6 +80,7 @@ type Mutant = z.output<typeof schemas.stryker>["files"][string]["mutants"][numbe
 function survivorOf(mutant: Mutant): Survivor[] {
   if (!SURVIVOR_STATUSES.includes(mutant.status)) return [];
   const { line, column } = mutant.location.start;
+
   return [
     {
       column,
@@ -89,7 +97,9 @@ function survivorOf(mutant: Mutant): Survivor[] {
  */
 export function fromStryker(raw: unknown): Parsed<Record<string, FileScore>> {
   const parsed = schemas.stryker.safeParse(raw);
+
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };
+
   const files = Object.entries(parsed.data.files).map(([file, { mutants }]): [string, FileScore] => [
     file,
     {
@@ -97,19 +107,23 @@ export function fromStryker(raw: unknown): Parsed<Record<string, FileScore>> {
       survivors: mutants.flatMap(survivorOf),
     },
   ]);
+
   return { ok: true, value: Object.fromEntries(files) };
 }
 
 type Outcome = z.output<typeof schemas.cargoMutants>["outcomes"][number];
+
 type Found = { file: string; score: FileScore };
 
 function scoreOf(outcome: Outcome): Found[] {
   const { scenario, summary } = outcome;
+
   if (typeof scenario === "string" || !("Mutant" in scenario)) return [];
   const { file, genre, span } = scenario.Mutant;
   const { line, column } = span.start;
   const killed = CARGO_KILLED.includes(summary) ? 1 : 0;
   const survivors: Survivor[] = summary === CARGO_MISSED ? [{ column, line, mutator: genre, status: "Survived" }] : [];
+
   return [{ file, score: { killed, survivors } }];
 }
 
@@ -119,13 +133,16 @@ function scoreOf(outcome: Outcome): Found[] {
  */
 export function fromCargoMutants(raw: unknown): Parsed<Record<string, FileScore>> {
   const parsed = schemas.cargoMutants.safeParse(raw);
+
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };
   const files: Record<string, FileScore> = {};
+
   for (const { file, score } of parsed.data.outcomes.flatMap(scoreOf)) {
     const into = (files[file] ??= { killed: 0, survivors: [] });
     into.killed += score.killed;
     into.survivors.push(...score.survivors);
   }
+
   return { ok: true, value: files };
 }
 
@@ -141,8 +158,10 @@ export function parseJson(text: string): Parsed<unknown> {
 /** A shard report read from JSON text. */
 export function parseReport(text: string): Parsed<ShardReport> {
   const json = parseJson(text);
+
   if (!json.ok) return json;
   const parsed = schemas.report.safeParse(json.value);
+
   return parsed.success ? { ok: true, value: parsed.data } : { ok: false, reason: reasonOf(parsed.error) };
 }
 
@@ -154,6 +173,7 @@ export function survivorCount(files: Record<string, FileScore>): number {
 /** Every shard's files as one map; a file two shards both hold (cargo-mutants splits mutants, not files) sums. */
 export function mergeFiles(reports: readonly ShardReport[]): Record<string, FileScore> {
   const files: Record<string, FileScore> = {};
+
   for (const [file, score] of reports.flatMap((r) => Object.entries(r.files))) {
     const held = files[file];
     files[file] =
@@ -161,5 +181,6 @@ export function mergeFiles(reports: readonly ShardReport[]): Record<string, File
         ? score
         : { killed: held.killed + score.killed, survivors: [...held.survivors, ...score.survivors] };
   }
+
   return files;
 }

@@ -40,11 +40,14 @@ export function samePath(a: string, b: string): boolean {
  */
 export function parsePacksFlag(value: string): string[] {
   const text = value.trim();
+
   if (text === "" || text === NO_PACKS) return [];
+
   const names = text
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean);
+
   for (const name of names) if (!SKILL_PACKS.some((pack) => pack === name)) throw new Error(`unknown pack ${name}`);
 
   return SKILL_PACKS.filter((pack) => names.includes(pack));
@@ -61,12 +64,15 @@ function quoted(names: readonly string[]): string {
  */
 export function writeConfigIfMissing(dest: string, skills: readonly string[] = []): void {
   const configPath = path.join(dest, CONFIG_FILE);
+
   if (fs.existsSync(configPath)) return;
   const keys = [`hosts: [${quoted(HOSTS)}]`, ...(skills.length > 0 ? [`skills: [${quoted(skills)}]`] : [])];
   // Laid out as the standards pack's oxfmt would: one line while it fits the width, else one key per line.
   const inline = `  agents: { ${keys.join(", ")} },`;
+
   const agents =
     inline.length <= PRINT_WIDTH ? inline : `  agents: {\n${keys.map((key) => `    ${key},\n`).join("")}  },`;
+
   fs.writeFileSync(
     configPath,
     `import { defineConfig } from "${PACKAGE_NAME}";\n\nexport default defineConfig({\n\
@@ -77,6 +83,7 @@ export function writeConfigIfMissing(dest: string, skills: readonly string[] = [
 /** The root keys `repo check` requires; a value already there stays, even one check would fail. */
 function defaultManifestKeys(pkg: PackageJson) {
   pkg.private ??= true;
+
   // A root with workspaces is not a package, so `repo check` does not ask it for sideEffects.
   if (pkg.workspaces === undefined) pkg.sideEffects ??= false;
   pkg.packageManager ??= `bun@${Bun.version}`;
@@ -90,16 +97,19 @@ function defaultManifestKeys(pkg: PackageJson) {
 export function mergePackageJson(dest: string, pkgRoot: string): void {
   const destPath = path.join(dest, "package.json");
   let destPkg: PackageJson = {};
+
   if (fs.existsSync(destPath)) destPkg = readJsonFile(destPath, isPackageJson);
 
   if (destPkg.name === PACKAGE_NAME) return;
 
   const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), isPackageJson);
   const destScripts: Record<string, string> = { ...destPkg.scripts };
+
   for (const [name, value] of Object.entries(destScripts))
     if (OLD_DEFAULT_SCRIPTS[name]?.includes(value) === true) delete destScripts[name];
 
   const postinstall = destScripts.postinstall;
+
   if (postinstall == null) destScripts.postinstall = SYNC_POSTINSTALL;
   else if (!postinstall.includes(SYNC_COMMAND)) destScripts.postinstall = `${SYNC_POSTINSTALL} && ${postinstall}`;
   const devDeps = placeDevDependency(destPkg, srcPkg);
@@ -117,6 +127,7 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
  */
 function formatManifest(dest: string): void {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-init-fmt-"));
+
   try {
     const config = path.join(dir, "oxfmt.json");
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
@@ -180,10 +191,12 @@ export function init(
 ): void {
   const dest = path.resolve(target);
   const pkgRoot = path.resolve(pkgRootOpt ?? builtInRoot());
+
   // This package is its own workspace: nothing to write, install or apply.
   if (samePath(dest, pkgRoot)) return;
 
   onPhase?.("merge", "start");
+
   try {
     prepareDir(dest, pkgRoot, { exec, packs, stdout });
   } finally {
@@ -195,6 +208,8 @@ export function init(
     onPhase?.(name, "stop");
     exec("bun", args, { cwd: dest, stdio: "inherit" });
   }
+
   bun("install", ["install"]);
+
   if (!skipGlobals) bun("yolo", ["repo", "yolo"]);
 }

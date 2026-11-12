@@ -7,6 +7,7 @@ function indentOf(line: string): number {
 /** The indent to remove from the continuation lines: their common minimum, capped at the first line's text column. */
 function dedent(first: string, rest: readonly string[], column: number): number {
   const common = Math.min(...rest.filter((line) => line.trim() !== "").map(indentOf));
+
   return first.trim() === "" ? common : Math.min(common, column + SLASHES.length + indentOf(first));
 }
 
@@ -16,19 +17,24 @@ function textLines(value: string, column: number): string[] {
   const rest = lines.slice(1);
   const decorated = rest.every((line) => line.trim() === "" || DECORATED_LINE.test(line));
   const base = decorated ? 0 : dedent(value.slice(0, value.search(FIRST_LINE_END)), rest, column);
+
   function strip(line: string): string {
     return decorated ? line.replace(DECORATION, "") : line.slice(Math.min(base, indentOf(line)));
   }
+
   return lines.map((line, index) => (index === 0 ? line.trim() : strip(line).trimEnd()));
 }
 
 /** `lines` without its blank first and last entries. */
 function trimmed(lines: readonly string[]): string[] {
   const from = lines.findIndex((line) => line !== "");
+
   if (from < 0) return [];
   // `findLastIndex` is ES2023, past the lib a consumer's tsconfig may give the shipped source.
   let to = lines.length;
+
   while (lines[to - 1] === "") to--;
+
   return lines.slice(from, to);
 }
 
@@ -41,5 +47,6 @@ function trimmed(lines: readonly string[]): string[] {
  */
 export function commentLines(value: string, column: number): string[] {
   const lines = trimmed(textLines(value, column)).map((line) => (line === "" ? SLASHES : `${SLASHES} ${line}`));
+
   return lines.length === 0 ? [SLASHES] : lines;
 }

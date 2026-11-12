@@ -10,6 +10,7 @@ export function bailIfCancel<T>(value: T | symbol): T {
     clack.cancel("Aborted");
     process.exit(0);
   }
+
   return value; /* isCancel above exits on the symbol, so only T is left */
 }
 

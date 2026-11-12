@@ -9,12 +9,21 @@ function messageOf(name: string) {
     "Keep the precise type from initialization through use; parse boundary input once."
   );
 }
+
 function messagesOf(code: string) {
   return reportsOf(noWidenThenAssert, { "a.ts": code }).map((report) => report.message);
 }
+
 /** `statements` as one source, after the `Row` and `Other` type aliases. */
 function source(...statements: string[]) {
   return ["type Row = { readonly id: number };", "type Other = { readonly name: string };", ...statements].join("\n");
+}
+
+/** A known `source` widened by a const annotated `annotation`, then asserted to `asserted`. */
+function rewidened(annotation: string, asserted: string) {
+  const widening = `const widened: ${annotation} = source;`;
+
+  return source("const source = { id: 1 };", widening, `const parsed = widened as ${asserted};`);
 }
 
 const VALID = [
@@ -63,6 +72,20 @@ const VALID = [
     "const widened: unknown = source;",
     "const parsed = widened as Record<string, unknown>;",
   ),
+  // nothing declares the asserted binding, or the name it widens
+  source("const parsed = missing as Row;"),
+  source("const widened: unknown = missing;", "const parsed = widened as Row;"),
+  // a parameter, a reassigned const and a call result carry no fixed evidence
+  source("export function read(input: unknown) { return input as Row; }"),
+  source("const source = { id: 1 };", "const widened: unknown = source;", "widened = 2;", "widened as Row;"),
+  source("declare function make(): Row;", "const widened: unknown = make();", "const parsed = widened as Row;"),
+  // the evidence was itself widened by an assertion
+  source("const source = { id: 1 } as unknown;", "const widened: unknown = source;", "const parsed = widened as Row;"),
+  // an index signature whose key is not a broad key does not widen
+  rewidened("{ [...key: string[]]: unknown }", "Row"),
+  // object widening asserted to a qualified name, record widening asserted to a non-record
+  rewidened("object", "Types.Row"),
+  rewidened("Record<string, unknown>", "string"),
 ];
 
 const INVALID = [
@@ -140,6 +163,13 @@ const INVALID = [
     ),
     "widened",
   ],
+  // broad records keyed by a union of keys or by PropertyKey
+  [rewidened("Record<string | number, unknown>", "Record<string, number>"), "widened"],
+  [rewidened("Record<PropertyKey, unknown>", "Record<string, number>"), "widened"],
+  // object widening asserted to an array, an intersection of object literals and a readonly array
+  [rewidened("object", "Row[]"), "widened"],
+  [rewidened("object", "{ id: number } & { name: string }"), "widened"],
+  [rewidened("object", "readonly number[]"), "widened"],
 ] as const;
 
 describe("no-widen-then-assert", () => {

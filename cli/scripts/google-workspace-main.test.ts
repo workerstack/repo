@@ -22,6 +22,7 @@ import { createFile } from "./google-workspace-files.ts";
 import { main } from "./google-workspace.ts";
 
 useTempDirs();
+
 const CALENDAR_EVENTS = "/calendar/v3/calendars/primary/events";
 
 afterEach(() => resetCase());
@@ -45,6 +46,7 @@ it("main / verbs: slide create and meeting create", async () => {
   const slide = await withIo(() => main(["slide", "create", "--title", "Deck"]));
   expect(slide.code).toBe(0);
   expect(slide.logs).toContain("id=sl");
+
   const meet = await withIo(() =>
     main([
       "meeting",
@@ -59,10 +61,12 @@ it("main / verbs: slide create and meeting create", async () => {
       "a@b.com",
     ]),
   );
+
   const body = sentJson(
     calls,
     calls.findIndex((c) => c.url.includes(CALENDAR_EVENTS)),
   );
+
   expect(body.summary).toBe("Standup");
   expect(body.attendees).toStrictEqual([{ email: "a@b.com" }]);
   expect(meet.code).toBe(0);
@@ -72,9 +76,11 @@ it("main / verbs: slide create and meeting create", async () => {
 it("main / verbs: meeting API fail prints a calendar template", async () => {
   loggedIn("ws-meet-fail-");
   stubFetch(() => jsonRes({ error: { message: "Calendar API blocked" } }, 403));
+
   const { code, errs } = await withIo(() =>
     main(["meeting", "create", "--title", "X", "--start", "2030-01-01T10:00:00Z", "--end", "2030-01-01T11:00:00Z"]),
   );
+
   expect(code).toBe(1);
   expect(errs).toMatch(/calendar\/render\?action=TEMPLATE/);
   expect(errs).toMatch(/dates=20300101T100000Z\/20300101T110000Z/);
@@ -140,6 +146,7 @@ it("main / verbs: loads clasprc then ADC when store is empty", async () => {
   });
   stubFetch((url) => {
     if (url.includes("oauth2/v2/userinfo")) return jsonRes({ email: "c@x" });
+
     return jsonRes({ error: { message: url } }, 404);
   });
   const clasp = await withIo(() => main(["whoami"]));
@@ -154,6 +161,7 @@ it("main / verbs: loads clasprc then ADC when store is empty", async () => {
   });
   stubFetch((url) => {
     if (url.includes("oauth2/v2/userinfo")) return jsonRes({ email: "adc@x" });
+
     return jsonRes({ error: { message: url } }, 404);
   });
   const adc = await withIo(() => main(["whoami"]));

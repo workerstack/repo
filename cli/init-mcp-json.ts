@@ -11,6 +11,7 @@ const EMPTY_MCP_JSON = '{\n  "mcpServers": {}\n}\n';
  */
 export function initMcpJson(dest: string, stdout: (s: string) => void = (s) => process.stdout.write(s)): void {
   const file = path.join(dest, MCP_JSON);
+
   if (fs.existsSync(file)) return;
   fs.writeFileSync(file, EMPTY_MCP_JSON);
   stdout(`repo init: wrote ${MCP_JSON}\n`);

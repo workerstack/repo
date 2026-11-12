@@ -38,6 +38,7 @@ function tokens(syntax: RegionSyntax): Record<string, string> {
 
 function text(syntax: RegionSyntax, rows: string): string {
   const table = tokens(syntax);
+
   return rows === ""
     ? ""
     : `${rows
@@ -48,6 +49,7 @@ function text(syntax: RegionSyntax, rows: string): string {
 
 /** The regions a row writes, named after the tokens of their blocks. */
 const [a, ab, e, r, none] = [[ALPHA], [ALPHA, BETA], [EMPTY], [RULES], []] as const;
+
 /** Name, text before, text after, the one repair line or none, the regions written. */
 type Row = readonly [string, string, string, string, readonly Region[]];
 
@@ -102,6 +104,7 @@ const LEGACY =
 /** How many lines of `body` are a marker of `name`, read loosely in either syntax. */
 function markersOf(body: string, name: string): number {
   const marker = new RegExp(`^(#|<!--)\\s*/?\\s*repo\\s*:\\s*${name}\\b`, "i");
+
   return body.split("\n").filter((line) => marker.test(line)).length;
 }
 
@@ -111,6 +114,7 @@ function expectSettled(syntax: RegionSyntax, regions: readonly Region[], after: 
     expect(markersOf(after, region.name)).toBe(2);
     expect(after).toContain(regionBlock(syntax, region));
   }
+
   expect(markersOf(after, "(?!(?:alpha|beta|empty|rules|ignore)\\b)\\w+")).toBe(0);
   expect(writeRegions(after, syntax, regions)).toStrictEqual({ repairs: [], text: after });
 }

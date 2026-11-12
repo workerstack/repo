@@ -7,6 +7,7 @@ import { renderTable, scores } from "./score.ts";
 function lower(name: string, unit: string, weight = 1) {
   return { better: "lower", name, unit, weight } as const;
 }
+
 function higher(name: string, unit: string, weight = 1) {
   return { better: "higher", name, unit, weight } as const;
 }
@@ -24,6 +25,7 @@ it("gives the best candidate 100 and the rest the weighted mean of best/value pe
     bun: { ops: 9120, rss: 48.1, wall: 41.2 },
     node: { ops: 7010, rss: 61.3, wall: 88 },
   });
+
   expect(got.bun).toBe(100);
   // (2 × 41.2/88 + 48.1/61.3 + 7010/9120) / 4 × 100
   expect(got.node).toBeCloseTo(62.2417, 3);
@@ -69,6 +71,7 @@ it("orders rows by score, best first, whatever the declared order", () => {
       { name: "bun", samples: SAMPLES.bun },
     ]),
   );
+
   expect(text).toBe(TABLE);
 });
 
@@ -80,6 +83,7 @@ it("orders metric columns by weight, heaviest first, whatever the order they arr
 it("breaks a score tie by candidate name and a weight tie by metric name", () => {
   const metrics = [lower("wall", "ms"), lower("cpu", "ms")];
   const same = { cpu: [1, 1, 1], wall: [1, 1, 1] };
+
   const text = renderTable(
     result(
       [
@@ -89,6 +93,7 @@ it("breaks a score tie by candidate name and a weight tie by metric name", () =>
       metrics,
     ),
   );
+
   expect(text.split("\n").slice(1, 4)).toStrictEqual([
     "candidate  score  cpu ms (×1)       wall ms (×1)",
     "a            100  1.00 ±0% 1.0–1.0  1.00 ±0% 1.0–1.0",
@@ -108,10 +113,12 @@ it("prints no flag line when every CV is 10% or under, and no unit when a metric
 
 it("shows a clean tree without +dirty and small values with two significant digits for min and max", () => {
   const env = { ...LINUX, dirty: false };
+
   const text = renderTable({
     ...result([{ name: "a", samples: { wall: [0.05, 0.06, 0.07] } }], [lower("wall", "ms")]),
     env,
   });
+
   expect(text).toBe(
     [
       "startup · ubuntu-latest (linux x64) · AMD Ryzen 9 7950X (32) · 64 GB · bun 1.3.2 · 82c0e43 · 10 runs, 1 warmup",
@@ -124,6 +131,7 @@ it("shows a clean tree without +dirty and small values with two significant digi
 });
 
 const FLOOR = 50 * 1024 ** 2;
+
 const FLOOR_LINE =
   "~ bun rss: 50.0 MB is this runner's own peak on linux, which a child's count starts from; " +
   "its real peak is at most that";

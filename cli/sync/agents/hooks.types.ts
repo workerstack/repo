@@ -1,7 +1,9 @@
 /** A parsed JSON object: a hooks.jsonc block, a handler definition or a written hook. */
 export type Json = Record<string, unknown>;
+
 /** One handler definition as hooks.jsonc writes it. */
 export type Def = Json;
+
 /** One matcher group of a host's event: `{matcher, hooks}`, or `{hooks}` when the event takes no matcher. */
 export type Group = { matcher?: string; hooks: Json[] };
 

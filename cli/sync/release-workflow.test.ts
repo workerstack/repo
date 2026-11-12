@@ -99,12 +99,14 @@ jobs:
 
 function generated(): string {
   const output = releaseWorkflow(context(["release"], PUBLIC)).outputs[0];
+
   return output?.kind === "file" ? output.content : "";
 }
 
 /** The text of the job `name`, from its heading to the next job's. */
 function job(name: string): string {
   const rest = generated().split(`\n  ${name}:\n`)[1] ?? "";
+
   return rest.split(/\n  [a-z]+:\n/)[0] ?? "";
 }
 
@@ -175,6 +177,7 @@ describe("release workflow publishing", () => {
   it("pins every action to a 40-character sha", () => {
     const uses = generated().match(/uses: .*/g) ?? [];
     expect(uses).toHaveLength(7);
+
     for (const line of uses) expect(line).toMatch(/^uses: [\w./-]+@[0-9a-f]{40} # v\d/);
   });
 });

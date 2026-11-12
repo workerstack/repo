@@ -16,6 +16,7 @@ it("rewrites prompt and preserves other fields", () => {
     },
     toolName: "spawn_subagent",
   });
+
   expect(result.status).toBe(0);
   const out = parseOut(result.stdout);
   expect(out).toStrictEqual({
@@ -41,6 +42,7 @@ it("accepts Claude snake_case tool_input", () => {
     },
     tool_name: "Task",
   });
+
   expect(result.status).toBe(0);
   expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toStrictEqual({
     description: "keep me",
@@ -53,6 +55,7 @@ it("fail-opens (empty stdout, 0) when prompt is unchanged", () => {
   const result = runHook(main, {
     toolInput: { prompt: scrubbedPrompt, subagent_type: "scout" },
   });
+
   expect(result.status).toBe(0);
   expect(result.stdout).toBe("");
 });
@@ -67,6 +70,7 @@ it("fail-opens when prompt is missing", () => {
   const result = runHook(main, {
     toolInput: { description: "no prompt", subagent_type: "scout" },
   });
+
   expect(result.status).toBe(0);
   expect(result.stdout).toBe("");
 });
@@ -85,6 +89,7 @@ it("scrubs prompt and does not inject a type", () => {
     },
     { GROK_HOOK_EVENT: "pre_tool_use" },
   );
+
   expect(result.status).toBe(0);
   const out = parseOut(result.stdout);
   expect(out.hookSpecificOutput?.hookEventName).toBe("PreToolUse");
@@ -109,6 +114,7 @@ it("keeps Explore and other host types", () => {
     },
     { GROK_HOOK_EVENT: "pre_tool_use" },
   );
+
   expect(result.status).toBe(0);
   expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toStrictEqual({
     prompt: scrubbedPrompt,

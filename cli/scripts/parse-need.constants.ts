@@ -7,7 +7,9 @@ export const NEED_JOBS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "slice",
   "fetch",
 ]);
+
 /** The job that reads a stash, so it may name one in place of a query. */
 export const SLICE_JOB = "slice";
+
 /** A line `need: [ ... ]`; group 1 is the array's JSON. */
 export const NEED_LINE: RegExp = /^\s*need:\s*(\[[\s\S]*\])\s*$/m;

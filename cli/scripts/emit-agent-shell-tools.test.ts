@@ -23,7 +23,9 @@ afterEach(() => {
 
 function mdBody(text: string) {
   const split = splitFrontmatter(text);
+
   if (!split.ok) throw new Error(split.error);
+
   return split.body;
 }
 
@@ -116,10 +118,12 @@ it("repo SSOT + emit: non-Claude repo emit uses run_terminal_command; Claude use
   const claude = mdBody(fs.readFileSync(path.join(repoRoot, ".claude/agents/scout.md"), "utf8"));
   const codex = fs.readFileSync(path.join(repoRoot, ".codex/agents/scout.toml"), "utf8");
   const ssot = mdBody(fs.readFileSync(path.join(repoRoot, "agents/subagents/scout.md"), "utf8"));
+
   for (const body of [grok, agents]) {
     expect(body).toMatch(/isolation facts/);
     expect(body).not.toMatch(/\bBash\b/);
   }
+
   expect(codex).toMatch(/isolation facts|run_terminal_command/);
   expect(claude).toBe(toClaudeShellBody(ssot));
   expect(grok).toBe(ssot);
@@ -143,14 +147,17 @@ const GOOD = "---\nname: scout\n---\nbody\n";
 /** A workspace whose scout files hold the given text; null leaves the file out. */
 function workspace(ssot: string | null, claude: string | null): string {
   const ws = tempDir("emit-shell-fail-");
+
   if (ssot !== null) {
     fs.mkdirSync(path.join(ws, "agents/subagents"), { recursive: true });
     fs.writeFileSync(path.join(ws, "agents/subagents/scout.md"), ssot);
   }
+
   if (claude !== null) {
     fs.mkdirSync(path.join(ws, ".claude/agents"), { recursive: true });
     fs.writeFileSync(path.join(ws, ".claude/agents/scout.md"), claude);
   }
+
   return ws;
 }
 

@@ -16,6 +16,7 @@ import { EXECUTABLE_MODE, HOOKS_DIR, INDEX_FIELDS, LOCAL_SCOPE, WINDOWS_PLATFORM
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
 const INDEX_FIELD_SEPARATOR = /[ \t]/;
+
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
  * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes) against the entry sheet when
@@ -26,6 +27,7 @@ function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined)
   const outputs = [
     ...new Set([...planned, ...GIT_FILE_PATHS, ...HOOK_PATHS, OXLINT_CONFIG_PATH, OXFMT_CONFIG_PATH, KNIP_CONFIG_PATH]),
   ].map((rel) => `/${rel}`);
+
   // Written in this order, not sorted: the consumer's file keeps the order it always had.
   const entries: [string, unknown][] = [
     ["printWidth", PRINT_WIDTH],
@@ -37,7 +39,9 @@ function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined)
     ["overrides", [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }]],
     ["ignorePatterns", ["**/*.md", FIXTURES, ...outputs.toSorted(byCodeUnit)]],
   ];
+
   const config = Object.fromEntries(entries);
+
   return `${JSON.stringify(config, null, JSON_INDENT)}\n`;
 }
 
@@ -57,7 +61,9 @@ export function standards(ctx: SyncContext, outputs: readonly Output[]): { outpu
   const hooks = gitHooks(ctx);
   const oxlint = oxlintConfig(ctx.workspace, ctx.config.lint, { rust: ctx.read(CARGO_PATH) !== null });
   const errors = [...hooks.errors, ...(oxlint.ok ? [] : oxlint.errors)];
+
   if (!oxlint.ok || errors.length > 0) return { errors, outputs: [] };
+
   return {
     errors: [],
     outputs: [
@@ -85,7 +91,9 @@ export type GitRun = (
 /** Runs git at `root`; a git that cannot start is a null status with the reason as its stderr. */
 export function runGit(root: string, args: readonly string[], input?: string): ReturnType<GitRun> {
   const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", input });
+
   if (result.error !== undefined) return { status: null, stderr: result.error.message, stdout: "" };
+
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 }
 
@@ -100,20 +108,28 @@ export type HooksPathResult = { done: string[]; warnings: string[] };
 export function syncHooksPath(root: string, { on }: { on: boolean }, git: GitRun = runGit): HooksPathResult {
   const none: HooksPathResult = { done: [], warnings: [] };
   const top = git(root, ["rev-parse", "--show-toplevel"]);
+
   if (top.status !== 0 || canonicalPath(top.stdout.trim()) !== canonicalPath(root)) return none;
+
   function change(args: string[], what: string): HooksPathResult {
     const result = git(root, ["config", ...args]);
+
     return result.status === 0
       ? { done: [what], warnings: [] }
       : { done: [], warnings: [`cannot ${what}: ${result.stderr.trim()}`] };
   }
+
   const got = git(root, ["config", "--show-scope", "--get", "core.hooksPath"]);
+
   if (got.status !== 0) return on ? change(["core.hooksPath", HOOKS_DIR], `set core.hooksPath to ${HOOKS_DIR}`) : none;
+
   const [scope, value] = got.stdout.trim().split("\t") /* git prints a set key as scope, TAB, value */ as [
     string,
     string,
   ];
+
   if (value !== HOOKS_DIR) return on ? { done: [], warnings: [foreignLine(scope, value)] } : none;
+
   return on || scope !== LOCAL_SCOPE ? none : change(["--unset", "core.hooksPath"], "unset core.hooksPath");
 }
 
@@ -125,12 +141,15 @@ function isIndexRow(fields: string[]): fields is [string, string, string, string
 /** The mode and blob of each path in `git ls-files -s` output, by path; a line of another shape is left out. */
 function indexEntries(listing: string): Map<string, { mode: string; sha: string }> {
   const entries = new Map<string, { mode: string; sha: string }>();
+
   for (const line of listing.split("\n")) {
     const fields = line.split(INDEX_FIELD_SEPARATOR, INDEX_FIELDS);
+
     if (!isIndexRow(fields)) continue;
     const [mode, sha, , rel] = fields;
     entries.set(rel, { mode, sha });
   }
+
   return entries;
 }
 
@@ -141,25 +160,34 @@ function indexEntries(listing: string): Map<string, { mode: string; sha: string 
  */
 export function markHooksExecutable(root: string, platform: string, git: GitRun = runGit): HooksPathResult {
   const none: HooksPathResult = { done: [], warnings: [] };
+
   if (platform !== WINDOWS_PLATFORM) return none;
   const top = git(root, ["rev-parse", "--show-toplevel"]);
+
   if (top.status !== 0 || canonicalPath(top.stdout.trim()) !== canonicalPath(root)) return none;
   const listed = git(root, ["ls-files", "-s", "--", ...HOOK_PATHS]);
+
   if (listed.status !== 0) return none;
   const entries = indexEntries(listed.stdout);
+
   const todo = HOOK_PATHS.filter(
     (rel) => entries.get(rel)?.mode !== EXECUTABLE_MODE && fs.existsSync(path.join(root, rel)),
   );
+
   if (todo.length === 0) return none;
+
   // A tracked hook keeps its staged blob (`--cacheinfo`); `--add` hashes the file as it is now, for one git has not
   // seen.
   const results = todo.map((rel) => {
     const entry = entries.get(rel);
+
     return entry === undefined
       ? git(root, ["update-index", "--add", "--chmod=+x", "--", rel])
       : git(root, ["update-index", "--cacheinfo", `${EXECUTABLE_MODE},${entry.sha},${rel}`]);
   });
+
   const failed = results.find((result) => result.status !== 0);
+
   return failed === undefined
     ? { done: [`marked ${todo.join(", ")} executable in the index`], warnings: [] }
     : { done: [], warnings: [`cannot mark the git hooks executable: ${failed.stderr.trim()}`] };
@@ -168,6 +196,7 @@ export function markHooksExecutable(root: string, platform: string, git: GitRun 
 /** The line for a `core.hooksPath` that points elsewhere, with the command that unsets it at its scope. */
 function foreignLine(scope: string, value: string): string {
   const flag = scope === LOCAL_SCOPE ? "" : `--${scope} `;
+
   return (
     `core.hooksPath is ${value}, so repo's hooks never run; ` +
     `unset it (git config ${flag}--unset core.hooksPath) and sync again`

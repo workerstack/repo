@@ -23,10 +23,13 @@ export function splitMarkdown(text: string): Markdown {
   const prose: Line[] = [];
   const fences: Fence[] = [];
   let open: { ticks: number; fence: Fence } | null = null;
+
   for (const [index, raw] of text.split(LINE_BREAK).entries()) {
     const line = index + 1;
+
     if (open === null) {
       const opening = OPEN.exec(raw);
+
       if (opening === null) {
         prose.push({ line, text: raw });
       } else {
@@ -35,9 +38,12 @@ export function splitMarkdown(text: string): Markdown {
           ticks: group(opening, 1).length,
         };
       }
+
       continue;
     }
+
     const closing = CLOSE.exec(raw);
+
     if (closing !== null && group(closing, 1).length >= open.ticks) {
       fences.push(open.fence);
       open = null;
@@ -45,7 +51,9 @@ export function splitMarkdown(text: string): Markdown {
       open.fence.body.push(raw);
     }
   }
+
   if (open !== null) fences.push(open.fence);
+
   return { fences, prose };
 }
 

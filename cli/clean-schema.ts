@@ -11,6 +11,7 @@ export function cleanSchema(): z.ZodObject<
   const name = z
     .string({ error: CLEAN_NAME_ERROR })
     .refine((value) => value !== "" && !PATH_SEPARATOR.test(value), { error: CLEAN_NAME_ERROR });
+
   return z.strictObject(
     { build: z.array(name, { error: CLEAN_LIST_ERROR }).readonly().optional() },
     { error: CLEAN_OBJECT_ERROR },

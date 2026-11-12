@@ -84,12 +84,14 @@ function strippedConsumer(): string {
   writeJson(ws, ".claude/settings.json", claude);
   writeJson(ws, ".codex/hooks.json", { hooks: { PreToolUse: ownedPre } });
   writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: ownedPre } });
+
   return ws;
 }
 
 function expectClaudeOverlay(ws: string): void {
   const next = readJson<ClaudeDoc>(ws, ".claude/settings.json");
   const text = JSON.stringify(next);
+
   for (const n of [...AUTORUN_NEEDLES, ...OWNED_HOOKS]) expect(text).toContain(n);
   expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);
   expect(next.permissions.deny).toContain(MCP_DENY);

@@ -13,6 +13,7 @@ const hook = claudeHook();
 /** The context lines a UserPromptSubmit reply adds; empty when the hook stays silent. */
 function say(ws: string, sid: string, extra: Record<string, unknown>): string[] {
   const out = hook.send(ws, { hook_event_name: "UserPromptSubmit", session_id: sid, ...extra });
+
   return out === null ? [] : out.hookSpecificOutput.additionalContext.split("\n");
 }
 
@@ -24,20 +25,24 @@ function stop(ws: string, sid: string, msg: string) {
 function item(serial: number, ...lines: string[]) {
   return `---\nserial: ${serial}\n${lines.join("\n")}\n---\n\n# body\n`;
 }
+
 const SETTLED = ["status: ready", "reviews: 1", "strategy: default"];
 
 function transcript(ws: string, text: string): string {
   const rec = JSON.stringify({ message: { content: [{ text, type: "text" }], role: "assistant" }, type: "assistant" });
+
   return plantFile(ws, "transcript.jsonl", `${rec}\n`);
 }
 
 describe("a prompt", () => {
   it("is read from whichever field the host used", () => {
     const ws = hook.temp();
+
     for (const field of ["userPrompt", "user_prompt", "content"]) {
       const sid = `f-${field}`;
       expect(say(ws, sid, { [field]: "/ask" })[0], field).toMatch(/^sessionGate=ask\b/);
     }
+
     expect(say(ws, "f-none", {})[0]).toMatch(/^sessionGate=auto\b/);
   });
 
@@ -92,6 +97,7 @@ describe("a closing line read against the saved items", () => {
 /** A turn that saved one approvable plan, one approvable roadmap and five items that cannot be approved. */
 function stamped(ws: string, sid: string): void {
   say(ws, sid, { prompt: "plan it" });
+
   const lines = [
     path.join(ws, "other.md"),
     path.join(ws, ".tmp/repo/plans/9-missing.md"),
@@ -101,6 +107,7 @@ function stamped(ws: string, sid: string): void {
     path.join(ws, ".tmp/repo/plans/7-ok.md"),
     path.join(ws, ".tmp/repo/roadmaps/3-r.md"),
   ];
+
   plantFile(ws, "other.md", "not an item");
   plantFile(ws, ".tmp/repo/plans/4-bare.md", "no frontmatter at all");
   plantFile(ws, ".tmp/repo/plans/2-nostatus.md", item(2, "reviews: 1", "strategy: default"));
@@ -146,9 +153,11 @@ function reviewedPlan(ws: string, sid: string): string {
     tool_input: { content: VALID_PLAN, file_path: ".tmp/repo/plans/new.md" },
     tool_name: "Write",
   });
+
   const landed = out?.hookSpecificOutput.updatedInput;
   const file = landed?.file_path ?? "";
   fs.writeFileSync(file, (landed?.content ?? "").replace("reviews: 0", "reviews: 1"));
+
   return file;
 }
 

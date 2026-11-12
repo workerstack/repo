@@ -16,12 +16,16 @@ const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
   process,
   "platform",
 ) /* process always has platform */ as PropertyDescriptor;
+
 const outsideDirs: string[] = [];
+
 useTempDirs();
+
 afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+
   for (const d of outsideDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
@@ -37,6 +41,7 @@ function plantBin(dir: string, name: string, body: string) {
 function isolate(cwd = tmp()) {
   vi.spyOn(process, "cwd").mockReturnValue(cwd);
   vi.spyOn(os, "homedir").mockReturnValue(tmp());
+
   for (const key of ["GIT_DIR", "GIT_INDEX_FILE", "CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"])
     vi.stubEnv(key, undefined);
 
@@ -105,6 +110,7 @@ const gitEnv = childEnv({
   GIT_DIR: undefined,
   GIT_INDEX_FILE: undefined,
 });
+
 function git(cwd: string, ...args: string[]) {
   return spawnSync("git", args, { cwd, encoding: "utf8", env: gitEnv });
 }
@@ -117,6 +123,7 @@ function repo() {
   git(r, "commit", "-qm", "init");
   vi.stubEnv("GIT_DIR", undefined);
   vi.stubEnv("GIT_INDEX_FILE", undefined);
+
   return r;
 }
 

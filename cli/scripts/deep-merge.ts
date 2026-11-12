@@ -7,13 +7,17 @@ type MergeAt = { skipRe: RegExp | null | undefined; keyPath: string[] };
 
 function mergeAt(dest: unknown, source: unknown, at: MergeAt): JsonObject {
   const out: JsonObject = isPlainObject(dest) ? { ...dest } : {};
+
   if (!isPlainObject(source)) return out;
+
   for (const [k, v] of Object.entries(source)) {
     const keyPath = [...at.keyPath, k];
+
     if (keyPath.some((seg) => shouldSkip(seg, at.skipRe))) continue;
     const prev = out[k];
     out[k] = isPlainObject(v) && isPlainObject(prev) ? mergeAt(prev, v, { keyPath, skipRe: at.skipRe }) : v;
   }
+
   return out;
 }
 

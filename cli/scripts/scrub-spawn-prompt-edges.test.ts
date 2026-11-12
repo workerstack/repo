@@ -6,10 +6,12 @@ import { main, processHookPayload, rewriteSpawnToolInput, spawnCapReason } from 
 
 function fakeIo(payload: string, write: (text: string) => void): HookIo {
   let wasSent = false;
+
   return {
     readChunk: () => {
       if (wasSent) return null;
       wasSent = true;
+
       return Buffer.from(payload);
     },
     write,
@@ -72,10 +74,12 @@ describe("main", () => {
 
   it("prints the rewrite and exits 0", () => {
     const out: string[] = [];
+
     const code = main(
       [],
       fakeIo(JSON.stringify({ toolInput: { prompt: "please go now" } }), (t) => out.push(t)),
     );
+
     expect(code).toBe(0);
     expect(JSON.parse(out.join(""))).toMatchObject({ hookSpecificOutput: { updatedInput: { prompt: "go now" } } });
   });
@@ -84,6 +88,7 @@ describe("main", () => {
     const io = fakeIo(JSON.stringify({ toolInput: { prompt: "please go now" } }), () => {
       throw new Error("pipe closed");
     });
+
     expect(main([], io)).toBe(0);
   });
 });

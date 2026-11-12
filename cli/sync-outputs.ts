@@ -23,8 +23,10 @@ type Plan = { outputs: Output[]; errors: string[] };
 function plannedText(outputs: readonly Output[], rel: string): string | null {
   const wanted = path.posix.normalize(rel);
   let text: string | null = null;
+
   for (const output of outputs)
     if (output.kind === "file" && path.posix.normalize(output.path) === wanted) text = output.content;
+
   return text;
 }
 
@@ -41,26 +43,34 @@ export function planSync(
 ): Plan {
   const plan: Plan = { errors: [], outputs: [] };
   const planner = new Map<string, string>();
+
   function collect(label: string, run: () => Plan) {
     try {
       const result = run();
+
       for (const output of result.outputs) {
         const first = planner.get(output.path);
+
         if (first === undefined) planner.set(output.path, label);
         else plan.errors.push(`${output.path}: planned by ${first} and ${label}; rename one`);
       }
+
       plan.outputs.push(...result.outputs);
       plan.errors.push(...result.errors);
     } catch (error) {
       plan.errors.push(errorMessage(error));
     }
   }
+
   const view: SyncContext = { ...ctx, read: (rel) => plannedText(plan.outputs, rel) ?? ctx.read(rel) };
+
   for (const generator of generators) collect(generator.name, () => generator(view));
+
   for (const pass of post) {
     const planned = [...plan.outputs];
     collect(pass.name, () => pass(ctx, planned));
   }
+
   return plan;
 }
 
@@ -80,6 +90,7 @@ function readText(root: string, rel: string, errors: string[]): string | null {
   } catch (error) {
     if (errorCode(error) === NOT_FOUND_CODE) return null;
     errors.push(`${rel}: cannot read: ${errorMessage(error)}`);
+
     return null;
   }
 }
@@ -106,26 +117,34 @@ export function computeOutputs({
   const tailwind = config.packs.includes("standards")
     ? withTailwindEntry(root, config.lint)
     : { lint: config.lint, ok: true as const };
+
   if (!tailwind.ok) return { errors: tailwind.errors, ok: false };
   const readErrors: string[] = [];
+
   const ctx = {
     config: { ...config, lint: tailwind.lint },
     read: (rel: string) => readText(root, rel, readErrors),
     root,
     workspace,
   };
+
   const plan = planSync(ctx, generators, post);
+
   // An unreadable file reads as missing to the generators, so its error is the cause of anything they report.
   if (readErrors.length > 0) return { errors: readErrors, ok: false };
+
   if (plan.errors.length > 0) return { errors: plan.errors, ok: false };
   // One spelling per path: outputs and manifest entries are compared only in the normalized form.
   const normalized: Output[] = [];
   const badPaths: string[] = [];
+
   for (const output of plan.outputs) {
     const rel = normalizeRel(output.path, root);
+
     if (rel === null) badPaths.push(`${output.path}: not a path inside the repo`);
     else normalized.push(stamped({ ...output, path: rel }));
   }
+
   return badPaths.length > 0 ? { errors: badPaths, ok: false } : { ok: true, outputs: normalized };
 }
 
@@ -147,14 +166,18 @@ function parentCanonical(abs: string): string {
  */
 export function isCurrentOutput(root: string, output: Output, platform: NodeJS.Platform): boolean {
   const abs = path.join(root, output.path);
+
   if (output.kind === "file") {
     // A hook git cannot run is out of date even with the right bytes; win32 has no execute bit.
     return isCurrent(abs, output.content) && (output.executable !== true || platform === "win32" || isExecutable(abs));
   }
+
   try {
     if (!fs.lstatSync(abs).isSymbolicLink()) return false;
+
     if (platform !== "win32") return fs.readlinkSync(abs) === output.target;
     const here = path.dirname(abs);
+
     return (
       parentCanonical(path.resolve(here, fs.readlinkSync(abs))) === parentCanonical(path.resolve(here, output.target))
     );

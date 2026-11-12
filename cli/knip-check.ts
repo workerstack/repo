@@ -27,21 +27,27 @@ import type { Workspace } from "./sync/workspace.ts";
 
 /** What `repo check` prints of knip: report lines that pass, problem lines that fail it. */
 export type KnipCheck = { report: string[]; problems: string[] };
+
 /** Runs knip with `args` in `cwd`; the default spawns the knip this package installs. */
 export type KnipRun = (args: string[], cwd: string) => Captured;
+
 /** The knip runner `checkKnipAt` uses unless a test injects another. */
 export type KnipDeps = { run?: KnipRun };
+
 /** One knip finding: its file, how its type is worded, name and namespace (an enum's, say). */
 type Issue = { file: string; wording: Wording; name: string; namespace: string | undefined };
 
 const NONE: KnipCheck = { problems: [], report: [] };
 const FIX_CONFIG = "run `bun repo sync` and check knip.json";
+
 function entrySchema() {
   return z.object({ name: z.string(), namespace: z.string().optional() });
 }
+
 function reportSchema() {
   return z.object({ issues: z.array(z.looseObject({ file: z.string() })) });
 }
+
 function manifestSchema() {
   return z.object({ bin: z.object({ knip: z.string() }) });
 }
@@ -54,6 +60,7 @@ function unignoredPath(): string {
 function knipBin(): string {
   const manifest = Bun.resolveSync("knip/package.json", import.meta.dirname);
   const { bin } = manifestSchema().parse(JSON.parse(fs.readFileSync(manifest, "utf8")));
+
   return path.join(path.dirname(manifest), bin.knip);
 }
 
@@ -66,6 +73,7 @@ function runKnip(args: string[], cwd: string): Captured {
 function issuesOf(stdout: string): Issue[] | null {
   try {
     const parsed = reportSchema().parse(JSON.parse(stdout));
+
     return parsed.issues.flatMap((entry) =>
       WORDINGS.flatMap(
         (wording) =>
@@ -85,20 +93,25 @@ function issuesOf(stdout: string): Issue[] | null {
 function lineOf({ file, wording, name, namespace }: Issue): string {
   const { type, label, fix } = wording;
   const subject = type === FILES_TYPE ? label : `${label} "${namespace === undefined ? name : `${namespace}.${name}`}"`;
+
   return `knip: ${file}: ${subject}; ${fix}`;
 }
 
 /** Whether `ignore` covers `issue`. */
 function covers(ignore: KnipIgnore, issue: Issue): boolean {
   if ("file" in ignore) return new Bun.Glob(ignore.file).match(issue.file);
+
   if ("dependency" in ignore) return DEPENDENCY_TYPES.includes(issue.wording.type) && issue.name === ignore.dependency;
+
   return issue.wording.type === BINARIES_TYPE && issue.name === ignore.binary;
 }
 
 /** `file "x"`, `dependency "x"` or `binary "x"`. */
 function kindName(ignore: KnipIgnore): [string, string] {
   if ("file" in ignore) return ["file", ignore.file];
+
   if ("dependency" in ignore) return ["dependency", ignore.dependency];
+
   return ["binary", ignore.binary];
 }
 
@@ -106,13 +119,17 @@ function kindName(ignore: KnipIgnore): [string, string] {
 function staleBefore(workspace: Workspace, ignore: KnipIgnore): string | null {
   if ("file" in ignore) {
     const isFound = fs.globSync(ignore.file, { cwd: workspace.root }).length > 0;
+
     return isFound ? null : `${ignore.file} no longer exists; delete the entry`;
   }
+
   if (!("dependency" in ignore)) return null;
   const manifests = [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)];
+
   const declared = manifests.some((manifest) =>
     MANIFEST_FIELDS.some((f) => manifest[f]?.[ignore.dependency] !== undefined),
   );
+
   return declared ? null : `dependency "${ignore.dependency}" is in no package.json; delete the entry`;
 }
 
@@ -125,8 +142,10 @@ function tail(stderr: string): string {
 function runUnignored(workspace: Workspace, run: KnipRun): Captured {
   const name = unignoredPath();
   const file = path.join(workspace.root, name);
+
   try {
     fs.writeFileSync(file, knipConfig(workspace, []));
+
     return run(["--config", name, "--no-exit-code", "--reporter", "json"], workspace.root);
   } finally {
     fs.rmSync(file, { force: true });
@@ -136,6 +155,7 @@ function runUnignored(workspace: Workspace, run: KnipRun): Captured {
 /** The issues no entry of `ignores` covers, and how many each entry covers (an issue two cover counts for both). */
 function applyIgnores(ignores: readonly KnipIgnore[], issues: readonly Issue[]): { open: Issue[]; hits: number[] } {
   const hits = ignores.map((ignore) => issues.filter((issue) => covers(ignore, issue)).length);
+
   return { hits, open: issues.filter((issue) => !ignores.some((ignore) => covers(ignore, issue))) };
 }
 
@@ -144,11 +164,14 @@ function ignoreLines(ignores: readonly KnipIgnore[], hits: readonly number[], st
   const unused = ignores.flatMap((ignore, i) => {
     const [kind, name] = kindName(ignore);
     const gone = hits[i] === 0 && stale[i] === null;
+
     return gone ? [`knip.ignore[${i}]: ${kind} "${name}" has no knip issue any more; delete the entry`] : [];
   });
+
   const used = ignores.filter((_, i) => hits[i] !== 0);
   const shown = used.map((ignore) => `${kindName(ignore).join(" ")} (${ignore.reason})`);
   const line = `knip: ${used.length} ${used.length === 1 ? "ignore" : "ignores"}: ${shown.join(", ")}`;
+
   return { report: used.length === 0 ? [] : [line], unused };
 }
 
@@ -161,10 +184,12 @@ export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], 
   const stale = before.flatMap((why, i) => (why === null ? [] : [`knip.ignore[${i}]: ${why}`]));
   const ran = runUnignored(workspace, run);
   const issues = issuesOf(ran.stdout);
+
   if (ran.code === EXIT_BAD_CONFIG || issues === null)
     return { problems: [...stale, `knip: exited ${ran.code}: ${tail(ran.stderr)}; ${FIX_CONFIG}`], report: [] };
   const { open, hits } = applyIgnores(ignores, issues);
   const { report, unused } = ignoreLines(ignores, hits, before);
+
   return { problems: [...stale, ...open.map(lineOf), ...unused], report };
 }
 
@@ -174,5 +199,6 @@ export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], 
  */
 export async function checkKnipAt(cwd: string, deps: KnipDeps = {}): Promise<KnipCheck> {
   const found = await standardsWorkspace(cwd);
+
   return found === null ? NONE : checkKnip(found.workspace, found.config.knip.ignore, deps.run ?? runKnip);
 }

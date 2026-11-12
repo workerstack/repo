@@ -10,6 +10,7 @@ import { PROPERTY_KEY, READONLY, RECORD, RECORD_ARITY } from "./widen-types.cons
 export type BroadTypeKind = "top" | "object" | "record";
 
 const KEY_KEYWORDS: readonly string[] = ["TSStringKeyword", "TSNumberKeyword", "TSSymbolKeyword"];
+
 const OBJECT_TYPES: readonly string[] = [
   "TSArrayType",
   "TSConstructorType",
@@ -18,6 +19,7 @@ const OBJECT_TYPES: readonly string[] = [
   "TSObjectKeyword",
   "TSTupleType",
 ];
+
 const WHITESPACE = /\s+/gu;
 
 /** The name of a type reference written as a plain identifier, as `Record` in `Record<K, V>`. */
@@ -37,35 +39,45 @@ function isUnknownOrAny(type: TSESTree.TypeNode | undefined): boolean {
 /** `string`, `number`, `symbol`, `PropertyKey` or a union of them: a key type that admits any key. */
 function isBroadKey(type: TSESTree.TypeNode | undefined): boolean {
   if (type === undefined) return false;
+
   if (KEY_KEYWORDS.includes(type.type)) return true;
+
   if (type.type === AST_NODE_TYPES.TSUnionType) return type.types.every(isBroadKey);
+
   return type.type === AST_NODE_TYPES.TSTypeReference && referenceName(type) === PROPERTY_KEY;
 }
 
 /** `{ [key: K]: unknown }` with K a broad key. */
 function isBroadIndexLiteral(type: TSESTree.TSTypeLiteral): boolean {
   const [member] = type.members;
+
   if (type.members.length !== 1 || member?.type !== AST_NODE_TYPES.TSIndexSignature) return false;
   const [parameter] = member.parameters;
   const key = parameter?.type === AST_NODE_TYPES.Identifier ? parameter.typeAnnotation?.typeAnnotation : undefined;
+
   return member.parameters.length === 1 && isBroadKey(key) && isUnknownOrAny(member.typeAnnotation?.typeAnnotation);
 }
 
 /** `Record<K, unknown>` with K a broad key, an index literal of the same, or either under `Readonly<…>`. */
 function isBroadRecord(type: TSESTree.TypeNode): boolean {
   if (type.type === AST_NODE_TYPES.TSTypeLiteral) return isBroadIndexLiteral(type);
+
   if (type.type !== AST_NODE_TYPES.TSTypeReference) return false;
   const typeArguments = argumentsOf(type);
   const [key, value] = typeArguments;
+
   if (referenceName(type) === READONLY) return key !== undefined && isBroadRecord(key);
   const isRecord = referenceName(type) === RECORD && typeArguments.length === RECORD_ARITY;
+
   return isRecord && isBroadKey(key) && isUnknownOrAny(value);
 }
 
 /** How `type` widens a value, or null when it keeps some evidence of the value's shape. */
 export function broadTypeKind(type: TSESTree.TypeNode): BroadTypeKind | null {
   if (isUnknownOrAny(type)) return "top";
+
   if (type.type === AST_NODE_TYPES.TSObjectKeyword) return "object";
+
   return isBroadRecord(type) ? "record" : null;
 }
 
@@ -86,8 +98,11 @@ export function typesHaveSameSyntax(
 /** Whether every value of `type` is an object: arrays, functions, tuples, mapped and non-empty literal types. */
 export function isDefinitelyObjectType(type: TSESTree.TypeNode): boolean {
   if (OBJECT_TYPES.includes(type.type)) return true;
+
   if (type.type === AST_NODE_TYPES.TSTypeLiteral) return type.members.length > 0;
+
   if (type.type === AST_NODE_TYPES.TSIntersectionType) return type.types.every(isDefinitelyObjectType);
+
   return (
     type.type === AST_NODE_TYPES.TSTypeOperator &&
     type.operator === "readonly" &&
@@ -103,8 +118,11 @@ export function isDefinitelyObjectType(type: TSESTree.TypeNode): boolean {
 export function isDefinitelyNarrowerRecordType(type: TSESTree.TypeNode): boolean {
   if (type.type === AST_NODE_TYPES.TSTypeLiteral)
     return type.members.some((member) => member.type !== AST_NODE_TYPES.TSIndexSignature);
+
   if (type.type !== AST_NODE_TYPES.TSTypeReference) return false;
   const [first, value] = argumentsOf(type);
+
   if (referenceName(type) === READONLY) return first !== undefined && isDefinitelyNarrowerRecordType(first);
+
   return referenceName(type) === RECORD && argumentsOf(type).length === RECORD_ARITY && !isUnknownOrAny(value);
 }

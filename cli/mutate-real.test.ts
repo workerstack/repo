@@ -17,11 +17,13 @@ const SLOW = 120_000;
 const REPORT = ".tmp/repo/mutation/report.json";
 const TOOL = "10.1.1";
 const VITEST = "^5.1.0";
+
 const MATH = [
   "export const add = (a: number, b: number): number => a + b;",
   "export const sub = (a: number, b: number): number => a - b;",
   "",
 ].join("\n");
+
 const MATH_TEST = [
   'import { expect, it } from "vitest";',
   'import { add, sub } from "./math.ts";',
@@ -29,7 +31,9 @@ const MATH_TEST = [
   'it("subtracts, weakly", () => expect(typeof sub(5, 3)).toBe("number"));',
   "",
 ].join("\n");
+
 const STR = "export const shout = (text: string): string => text.toUpperCase();\n";
+
 const STR_TEST = [
   'import { expect, it } from "vitest";',
   'import { shout } from "./str.ts";',
@@ -40,6 +44,7 @@ const STR_TEST = [
 /** Two sources and one weak test, committed with an installed lockfile, so a clone installs frozen from bun's cache. */
 function plantedRepo(): string {
   const dir = tempDir();
+
   const manifest = {
     devDependencies: {
       "@stryker-mutator/core": TOOL,
@@ -50,6 +55,7 @@ function plantedRepo(): string {
     private: true,
     type: "module",
   };
+
   write(dir, {
     ".gitignore": "node_modules\n.tmp/\n",
     "mutation-floors.json": { ".": 99 },
@@ -65,6 +71,7 @@ function plantedRepo(): string {
   git(dir, "init", "-q", "-b", "main");
   git(dir, "add", "-A");
   git(dir, "commit", "-q", "-m", "planted");
+
   return dir;
 }
 
@@ -92,9 +99,11 @@ it(
     expect(out.join("")).toMatch(/mutate: 2 files, shard 1\/1\nmutate: \. \d+\.\d\d% \(floor 99\), 1 survivor in /);
     const text = fs.readFileSync(path.join(dir, REPORT), "utf8");
     const report = JSON.parse(text) /* the shard report this command wrote */ as Report;
+
     function survivors(file: string) {
       return report.files[file]?.survivors.map((s) => [s.line, s.mutator]);
     }
+
     expect(survivors("src/math.ts")).toStrictEqual([[2, "ArithmeticOperator"]]);
     expect(survivors("src/str.ts")).toStrictEqual([]);
     expect(git(dir, "status", "--porcelain")).toBe("");

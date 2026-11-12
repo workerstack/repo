@@ -35,12 +35,14 @@ function everywhere(name: string) {
 
 function patches(root: string): void {
   fs.mkdirSync(path.join(root, "patches"), { recursive: true });
+
   for (const file of ["a.patch", "keep.patch"]) fs.writeFileSync(path.join(root, "patches", file), "diff\n");
 }
 
 function failedInstall() {
   return { code: 1, output: "boom\n" };
 }
+
 function failedFormat() {
   return { code: 1, output: "bad\n" };
 }
@@ -61,9 +63,11 @@ it("removes a name from every field, catalog, override and patch, and says where
   expect(root.overrides).toStrictEqual({ keep: "1.0.0" });
   expect(w.read("packages/api/package.json").dependencies).toStrictEqual({ keep: "1.0.0" });
   expect(w.read("packages/api/package.json").devDependencies).toStrictEqual({});
+
   const raw = JSON.parse(
     fs.readFileSync(path.join(w.root, "package.json"), "utf8"),
   ) /* the root as written */ as Record<string, unknown>;
+
   expect(raw.resolutions).toStrictEqual({});
   expect(raw.trustedDependencies).toStrictEqual(["keep"]);
   expect(raw.patchedDependencies).toStrictEqual({ keep: "patches/keep.patch" });
@@ -88,6 +92,7 @@ it("removes several names at once through one format and one install", () => {
     "package.json": { name: "r", overrides: { b: "1.0.0" }, workspaces: { catalog: { a: "1.0.0" } } },
     "packages/x/package.json": { dependencies: { a: "catalog:" }, name: "x" },
   };
+
   const w = world(
     {
       ...files,
@@ -95,6 +100,7 @@ it("removes several names at once through one format and one install", () => {
     },
     {},
   );
+
   expect(main(["a", "b"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([
     "removed a from packages/x (dependencies) and the catalog; b from package.json (overrides)",
@@ -159,6 +165,7 @@ it("reports an unreadable manifest", () => {
 
 it("runs on the process streams when no io is given", () => {
   const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
   try {
     expect(main(["--nope"])).toBe(2);
     expect(spy.mock.calls).toStrictEqual([["repo remove: usage: repo remove <name>…\n"]]);

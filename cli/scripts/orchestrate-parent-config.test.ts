@@ -11,9 +11,11 @@ import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
 const kit = orchestrateKit();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
 function repoText(rel: string): string {
   return fs.readFileSync(path.join(root, rel), "utf8");
 }
+
 type Hooks = { hooks?: { SessionStart?: unknown; SubagentStop?: unknown } };
 
 it("spawn and read allow without a top-level decision", () => {
@@ -42,9 +44,11 @@ it("claude settings do not deny Agent(orchestrator); hooks.jsonc has Stop + User
   expect(ssot).toMatch(/"beforeSubmitPrompt"/);
   expect(ssot).not.toMatch(/"userPromptSubmit"/);
   expect(ssot).toMatch(/hook orchestrate-parent/);
+
   const jsonc = parseJson<{ hooks: Record<string, { command: string; timeout: number }[] | undefined> }>(
     ssot.replaceAll(/\/\*[\s\S]*?\*\//g, "").replaceAll(/\/\/.*$/gm, ""),
   );
+
   expect(Object.keys(jsonc.hooks)).toStrictEqual(expect.arrayContaining(["preToolUse", "beforeSubmitPrompt", "stop"]));
   expect(Object.keys(jsonc.hooks)).not.toContain("userPromptSubmit");
   expect(jsonc.hooks.beforeSubmitPrompt?.[0]?.command).toMatch(/hook orchestrate-parent/);
@@ -60,9 +64,11 @@ it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
     ["claude", "codex", "antigravity"],
     fs.readFileSync(path.join(root, "agents/settings/claude.json"), "utf8"),
   );
+
   function text(rel: string) {
     return files.get(rel) ?? "";
   }
+
   const claude = parseJson<{ hooks: Record<string, unknown> }>(text(".claude/settings.json")).hooks;
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);
@@ -91,8 +97,10 @@ it("isUnderTmp matches root files and rejects reserved and nested paths", () => 
   expect(TMP_RESERVED_DIRS).toStrictEqual(new Set([...reserved, "sessions", "listen", "speak"]));
   expect(isUnderTmp(".tmp/repo/notes.md", ws)).toBe(true);
   expect(isUnderTmp(path.join(ws, ".tmp/repo/1-x-20260827T143000Z.md"), ws)).toBe(true);
+
   for (const rel of ["tmp/x.md", "browser/x.md", "orchestrator-logs/x.md", "cov/x.md", "plans/x.md", "handoffs/x.md"])
     expect(isUnderTmp(`.tmp/repo/${rel}`, ws), rel).toBe(false);
+
   for (const rel of ["implementations/x.md", "plans", "handoffs", "implementations", "browser", "orchestrator-logs"])
     expect(isUnderTmp(`.tmp/repo/${rel}`, ws), rel).toBe(false);
 });

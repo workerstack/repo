@@ -23,7 +23,9 @@ function apiOn(dir: string, base: string, body = ""): string {
     extends: `@workerstack/repo/tsconfig/${base}`,
     include: ["src"],
   });
+
   write(dir, "packages/api/src/a.ts", `const n: number = JSON.parse("1")\n${body}`);
+
   return config;
 }
 
@@ -31,6 +33,7 @@ function apiOn(dir: string, base: string, body = ""): string {
 function typeErrors(config: string) {
   const found = diagnostics(config);
   expect(found.filter((d) => d.code === 2688)).toStrictEqual([]);
+
   return found;
 }
 

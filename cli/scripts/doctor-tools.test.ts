@@ -24,9 +24,11 @@ it("empty PATH → exit 1; all required missing; OS hints; optional gh; no playw
   const linux = runDoctor({ cwd, pathEnv: "", platform: "linux" });
   const darwin = runDoctor({ cwd, pathEnv: "", platform: "darwin" });
   const win = runDoctor({ cwd, pathEnv: "", platform: "win32" });
+
   for (const r of [linux, darwin, win]) {
     expect(r.code).toBe(1);
     expect(r.stderr).toBe("");
+
     for (const name of REQUIRED) expect(r.stdout).toMatch(new RegExp(`${name}\\s+missing`));
 
     expect(r.stdout).toMatch(/gh\s+missing \(optional\)/);
@@ -38,6 +40,7 @@ it("empty PATH → exit 1; all required missing; OS hints; optional gh; no playw
     expect(r.stdout).toMatch(/install \(print-only; not run\)/);
     expect(r.stdout).not.toMatch(/playwright install/);
   }
+
   expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
   expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser/);
   expect(win.stdout).toMatch(/winget install Google\.Chrome/);
@@ -64,6 +67,7 @@ it.each([
   ["whisper-cli", ["listen"]],
 ])("%s present is ok not a required miss", (name, packs) => {
   const { cwd, bin } = toolsCwd(`doc-${name}-`);
+
   if (packs.length > 0) enablePacks(packs);
   const found = writeBin(bin, name);
   const r = linuxRun(cwd, bin);
@@ -80,9 +84,11 @@ it("prints the bun version and path on the bun row", () => {
 
 it("needs the bun in package.json engines: 1.3.0 fails, a newer bun passes", () => {
   const { cwd, bin } = toolsCwd("doc-bun-old-");
+
   const pkg = JSON.parse(
     fs.readFileSync(path.join(here, "..", "..", "package.json"), "utf8"),
   ) /* the repo's package.json declares engines.bun */ as { engines: { bun: string } };
+
   expect(pkg.engines.bun).toBe(`>=${BUN_MIN_FALLBACK}`);
   writeBun(bin, "1.3.0");
   const old = linuxRun(cwd, bin);

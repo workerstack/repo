@@ -5,21 +5,28 @@ import { baselineOf, indexUrl } from "./crates-index.ts";
 /** A fetch that answers with `status` and `body`, and records the call. */
 function index(status: number, body = "") {
   const calls: { url: string; headers: Record<string, string> }[] = [];
+
   function fetchIndex(url: string, init: { headers: Record<string, string> }) {
     calls.push({ headers: init.headers, url });
+
     return Promise.resolve(new Response(body, { status }));
   }
+
   return { calls, fetchIndex };
 }
+
 function lines(...rows: object[]) {
   return `${rows.map((item) => JSON.stringify(item)).join("\n")}\n`;
 }
+
 function row(vers: string, extra: object = {}) {
   return { deps: [], pubtime: `t-${vers}`, vers, yanked: false, ...extra };
 }
+
 function unreachable() {
   return Promise.reject(new Error("offline"));
 }
+
 function crate(version: string) {
   return { name: "adler", version };
 }
@@ -65,9 +72,11 @@ it("compares versions numerically and a prerelease below its release", async () 
     row("2.0.0-beta.9"),
     row("2.0.0"),
   );
+
   function found(version: string) {
     return baselineOf(crate(version), index(200, body).fetchIndex);
   }
+
   expect(await found("1.0.20")).toMatchObject({ version: "1.0.10" });
   expect(await found("2.0.0")).toMatchObject({ version: "2.0.0" });
   expect(await found("2.0.0-rc.3")).toMatchObject({ version: "2.0.0-rc.2" });

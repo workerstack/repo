@@ -76,12 +76,14 @@ it("purgeGlobalMcps empties cursor mcpServers to {}", () => {
 
 it("purgeGlobalMcps --apply removes stripe from enabled, adds the disabled lists, keeps cloudflare", () => {
   const home = tmpDir("purge-mcp-stripe-");
+
   const grok = plant(
     home,
     ".grok/config.toml",
     `[custom]\nkeep = true\n\n[plugins]\nenabled = ["cloudflare", "stripe", "keep"]\ndisabled = ["cloudflare"]\n\n` +
       `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER"]\n`,
   );
+
   const r = purgeGlobalMcps({ apply: true, home });
   expect(r.ok).toBe(true);
   const parsed = readGrok(grok);
@@ -97,11 +99,14 @@ function plantClaude(home: string): { claude: string; cacheDir: string } {
   const claude = claudePluginsPath(home);
   const cacheDir = path.join(path.dirname(claude), "cache", "claude-plugins-official", "stripe", "0.6.2");
   plant(cacheDir, "marker", "keep");
+
   const plugins = {
     "keep@claude-plugins-official": [{ scope: "user" }],
     "stripe@claude-plugins-official": [{ installPath: cacheDir, scope: "user" }],
   };
+
   plant(home, ".claude/plugins/installed_plugins.json", `${JSON.stringify({ plugins, version: 2 }, null, 2)}\n`);
+
   return { cacheDir, claude };
 }
 

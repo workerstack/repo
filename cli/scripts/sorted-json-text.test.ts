@@ -59,6 +59,7 @@ it("is null for text that does not parse as JSONC", () => {
 it("sorts the Usage tsconfig: comments move with their key and the trailing comma stays last by position", () => {
   const input =
     '{\n  "include": ["src"], // what tsc reads\n  // the base\n  "extends": "./base.json",\n  // kept for later\n}\n';
+
   expect(sortedJsonText(input)).toStrictEqual({
     key: "extends",
     text:

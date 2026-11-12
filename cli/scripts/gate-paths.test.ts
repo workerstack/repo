@@ -36,28 +36,36 @@ describe("bashTargetsDenylist", () => {
 });
 
 type Run = (arg: string) => GateResult;
+
 const nm = ["node", "modules"].join("_");
 const stockDir = `${nm}/@workerstack/repo/references`;
 const stockFile = `${stockDir}/plan-format.md`;
+
 const blocked = [
   `${nm}/rulesync/package.json`,
   `${nm}/@workerstack/repo/cli/main.ts`,
   `${stockDir}/../cli/main.ts`,
   `${stockDir}/x/${nm}/y.md`,
 ];
+
 const dumps = ["cat", "head", "rg x", "find"];
+
 function win(p: string) {
   return `C:\\r\\${p.replaceAll("/", "\\")}`;
 }
+
 function denied(r: GateResult) {
   return r?.type === "deny";
 }
+
 function claude(toolName: string, toolInput: ToolArgs) {
   return processFatTools(camelCall(toolName, toolInput));
 }
+
 function cursor(toolName: string, toolInput: ToolArgs) {
   return processFatTools({ cursor_version: "1", tool_input: toolInput, tool_name: toolName });
 }
+
 const shells: [string, Run][] = [
   ["claude", (command) => claude("Bash", { command })],
   ["codex", (command) => processFatTools({ model: "m", tool_input: { command }, tool_name: "bash", turn_id: "t" })],
@@ -67,6 +75,7 @@ const shells: [string, Run][] = [
   ],
   ["cursor", (command) => cursor("shell", { command })],
 ];
+
 const tools: [string, Run][] = [
   ["claude Read", (p) => claude("Read", { file_path: p })],
   ["claude Grep", (p) => claude("Grep", { path: p, pattern: "x" })],
@@ -95,6 +104,7 @@ it("stock references: lets cat, head, rg and find run in every shell", () => {
 it("stock references: denies every other node_modules path in every tool and shell, in both spellings", () => {
   for (const target of blocked.flatMap((p) => [p, win(p)])) {
     for (const [name, run] of tools) expect(denied(run(target)), `${name} ${target}`).toBe(true);
+
     for (const [name, run] of shells)
       for (const cmd of dumps) expect(denied(run(`${cmd} ${target}`)), `${name} ${cmd} ${target}`).toBe(true);
   }

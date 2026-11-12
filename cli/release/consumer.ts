@@ -58,6 +58,7 @@ export type ConsumerIo = Pick<PackIo, "cwd" | "stdout" | "stderr" | "bun" | "tar
 function readJson(file: string): unknown {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
+
 function failuresSchema() {
   return z.array(z.object({ key: z.string(), kind: z.string(), message: z.string() }));
 }
@@ -66,6 +67,7 @@ function failuresSchema() {
 function walk(dir: string, base = ""): string[] {
   return fs.readdirSync(path.join(dir, base), { withFileTypes: true }).flatMap((entry) => {
     const rel = base === "" ? entry.name : `${base}/${entry.name}`;
+
     return entry.isDirectory() ? walk(dir, rel) : [rel];
   });
 }
@@ -80,7 +82,9 @@ function probeImports({ project, name, present }: Installed, io: ConsumerIo): st
   fs.writeFileSync(path.join(project, PROBE_INPUT), JSON.stringify(items));
   const probe = io.bun(PROBE_ARGS, project);
   const output = path.join(project, PROBE_OUTPUT);
+
   if (!fs.existsSync(output)) return [probeCrashed(probe.code, probe.stderr.trim())];
+
   return failuresSchema()
     .parse(readJson(output))
     .map((failure) => failedProbe(failure.key, failure.kind, failure.message));
@@ -94,7 +98,9 @@ function checkTypes({ project, name, present }: Installed, io: ConsumerIo): stri
   fs.writeFileSync(path.join(project, TYPES_FILE), importLines === "" ? EMPTY_MODULE : importLines);
   fs.writeFileSync(path.join(project, TSCONFIG_FILE), TSCONFIG);
   const tsc = io.bun(TSC_ARGS(io.tsc), project);
+
   if (tsc.code === 0) return [];
+
   return `${tsc.stdout}${tsc.stderr}`
     .split("\n")
     .filter((line) => UNINDENTED.test(line))
@@ -109,13 +115,16 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
   const missing = expanded.subpaths.filter((subpath) => !files.includes(subpath.runtime.slice(CURRENT_DIR.length)));
   const present = expanded.subpaths.filter((subpath) => !missing.includes(subpath));
   const target = { name, present, project };
+
   const problems = [
     ...expanded.errors,
     ...missing.map((subpath) => notInTarball(subpath.key, subpath.runtime.slice(CURRENT_DIR.length))),
     ...probeImports(target, io),
     ...checkTypes(target, io),
   ];
+
   const summary = consumerOk(`${name}@${installed.version}`, expanded.exports, expanded.subpaths.length);
+
   return { problems, summary };
 }
 
@@ -126,12 +135,16 @@ function testInstalled(project: string, pkg: Package, io: ConsumerIo): { summary
 export async function releaseConsumer(argv: readonly string[], io: ConsumerIo): Promise<number> {
   if (argv.length > 1) return refuse(io, CONSUMER_PREFIX, CONSUMER_ARGS);
   const packDirs: string[] = [];
+
   function mkdtemp(prefix: string): string {
     const dir = io.mkdtemp(prefix);
     packDirs.push(dir);
+
     return dir;
   }
+
   const packIo = { ...io, mkdtemp };
+
   try {
     return await consumeTarball(argv[0], packIo, io);
   } finally {
@@ -142,27 +155,37 @@ export async function releaseConsumer(argv: readonly string[], io: ConsumerIo): 
 /** Packs (into a directory the caller removes) or finds the tarball, installs it in a project and tests it. */
 async function consumeTarball(given: string | undefined, packIo: ConsumerIo, io: ConsumerIo): Promise<number> {
   let tarball: string;
+
   if (given === undefined) {
     const packed = packTarball(packIo);
+
     if (typeof packed === "string") return refuse(io, CONSUMER_PREFIX, packed);
     tarball = packed.tarball;
   } else {
     tarball = path.resolve(io.cwd, given);
+
     if (!fs.existsSync(tarball)) return refuse(io, CONSUMER_PREFIX, noTarball(tarball));
   }
+
   const project = io.mkdtemp(path.join(io.tmp, PROJECT_DIR_PREFIX));
+
   try {
     initProject(project);
     const added = addSpecs(project, [tarball], io);
+
     if (added !== null) return refuse(io, CONSUMER_PREFIX, addFailed(added));
     const pkg = installedIn(project, addedName(project));
     const peerFailure = addPeers(project, pkg, io);
+
     if (peerFailure !== null) return refuse(io, CONSUMER_PREFIX, addFailed(peerFailure));
     const tested = testInstalled(project, pkg, io);
     const problems = [...tested.problems, ...(await tarballLint(tarball))];
+
     for (const problem of problems) io.stderr(`${CONSUMER_PREFIX}${problem}\n`);
+
     if (problems.length > 0) return 1;
     io.stdout(`${CONSUMER_PREFIX}${tested.summary}${LINT_OK}\n`);
+
     return 0;
   } finally {
     io.rm(project);

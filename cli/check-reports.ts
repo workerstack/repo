@@ -20,12 +20,15 @@ function settle({ dir, write, config, reports, floors }: Check, deps: MutateDeps
   const next = raised(floors, vs);
   const writes = write && lines.length === 0 && text(next) !== text(floors);
   let lastHead = "";
+
   for (const report of reports) lastHead = report.head;
   const head = `${plural(reports.length, "shard")} of ${shortOf(lastHead)}`;
   const scores = vs.map((v) => label(v, { raise: write })).join(SEPARATOR);
   const wrote = writes ? `${SEPARATOR}wrote ${config.floors}` : "";
   deps.out(`mutate: ${head}${SEPARATOR}${scores}${wrote}${NEWLINE}`);
+
   if (writes) deps.fs.write(path.join(config.root, config.floors), text(next));
+
   return lines.length > 0 ? fail(deps, ...lines) : OK;
 }
 
@@ -35,10 +38,14 @@ export type CheckRun = { dir: string; write: boolean };
 /** Scores the merged `dir` of reports against the floors; with `write`, raises the floors file when none is below. */
 export async function checkReports({ dir, write }: CheckRun, deps: MutateDeps): Promise<number> {
   const config = await deps.config(deps.cwd);
+
   if (Array.isArray(config)) return fail(deps, ...config);
   const reports = loadShards(dir, deps);
+
   if (typeof reports === "string") return fail(deps, reports);
   const floors = readFloors(deps, config.root, config.floors);
+
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
+
   return settle({ config, dir, floors: floors.value, reports, write }, deps);
 }

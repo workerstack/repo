@@ -8,6 +8,7 @@ useConfigKit();
 /** The agents a config resolves to, or the errors loading it. */
 async function agentsOf(source: string) {
   const result = await loadConfig(repo(source));
+
   return result.ok ? result.config.agents : result.errors;
 }
 

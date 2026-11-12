@@ -21,6 +21,7 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 function roadmapFile(ws: string): string {
   const dir = path.join(ws, ".tmp/repo/roadmaps");
   fs.mkdirSync(dir, { recursive: true });
+
   return path.join(dir, FILE);
 }
 

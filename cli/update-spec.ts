@@ -10,9 +10,12 @@ export type Parsed = { kind: "plain"; prefix: string; version: string } | { kind
 export function parseSpec(spec: string): Parsed {
   if (PLAIN.test(spec)) {
     const version = spec.replace(PREFIX, "");
+
     return { kind: "plain", prefix: spec.slice(0, spec.length - version.length), version };
   }
+
   if (PROTOCOL.test(spec) || (TAG.test(spec) && !WILDCARD.test(spec))) return { kind: "silent" };
+
   return { kind: "range" };
 }
 

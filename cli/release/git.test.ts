@@ -18,6 +18,7 @@ function crates() {
   commit(w, "feat!: break a", { "a/src/lib.rs": "pub fn a() {}\n" }, false);
   commit(w, "fix: patch b", { "b/src/lib.rs": "pub fn b() {}\n" }, false);
   const tools: Tools = { cwd: w.work, gh: spawnRunner("gh"), git: spawnRunner("git") };
+
   return { tools, w };
 }
 

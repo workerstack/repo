@@ -21,10 +21,12 @@ import type { Workspace } from "./workspace.ts";
 export type PostPass = (ctx: SyncContext, outputs: readonly Output[]) => { outputs: Output[]; errors: string[] };
 
 type FileOutput = Extract<Output, { kind: "file" }>;
+
 type Result = { outputs: Output[]; errors: string[] };
 
 const GITATTRIBUTES_PATH = ".gitattributes";
 const SETTINGS_PATH = ".vscode/settings.json";
+
 /** Every path the git files pass plans, for a pass that runs before it and must name them. */
 export const GIT_FILE_PATHS: readonly string[] = [GITIGNORE_PATH, GITATTRIBUTES_PATH, SETTINGS_PATH];
 const IGNORE_REGION = "ignore";
@@ -34,6 +36,7 @@ const DEPENDENCY_DIR = `node_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
 
 const LEADING_DOT = /^\./;
+
 /** Sorts a leading dot away, so `AGENTS.md` stays before `.mcp.json` as the gitignore block always listed them. */
 function byName(a: string, b: string) {
   return byCodeUnit(a.replace(LEADING_DOT, ""), b.replace(LEADING_DOT, ""));
@@ -52,19 +55,25 @@ function wholeFiles(outputs: readonly Output[]): FileOutput[] {
 export function untrackedEntries(hosts: readonly Host[], outputs: readonly Output[]): string[] {
   const owned = hosts.flatMap((host) => HOST_TREES[host].owns).toSorted((a, b) => a.length - b.length);
   const entries = new Set<string>();
+
   for (const output of outputs) {
     if (output.tracked || output.managed !== "whole") continue;
     entries.add(owned.find((dir) => output.path.startsWith(dir)) ?? output.path);
   }
+
   // `repo check` writes a skip-free copy beside the oxlint config for one run.
   if (entries.has(OXLINT_CONFIG_PATH)) entries.add(UNSKIPPED_CONFIG_GLOB);
+
   // `repo check` writes an ignore-free copy beside the knip config for one run.
   if (entries.has(KNIP_CONFIG_PATH)) entries.add(KNIP_UNIGNORED_GLOB);
+
   // The pack that writes `turbo.json` runs turbo, whose cache and skip report live in `.turbo/`.
   if (entries.has(TURBO_CONFIG_PATH)) entries.add(TURBO_DIR);
+
   // The pack that writes the toolchain pin runs cargo, whose build dir is `target/`.
   if (entries.has(TOOLCHAIN_PATH)) entries.add(CARGO_TARGET_DIR);
   const all = [...entries];
+
   return [
     ...all.filter((entry) => !entry.endsWith("/")).toSorted(byName),
     ...all.filter((entry) => entry.endsWith("/")).toSorted(byCodeUnit),
@@ -77,12 +86,14 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
  */
 export function gitFiles(ctx: SyncContext, outputs: readonly Output[]): Result {
   const results = [gitignore(ctx, outputs), gitattributes(ctx, outputs), settings(ctx, outputs)];
+
   return { errors: results.flatMap((result) => result.errors), outputs: results.flatMap((result) => result.outputs) };
 }
 
 /** A block output in `rel`: sync's region `name` holding `body`, the rest of the file as the user wrote it. */
 function blockFile(ctx: SyncContext, rel: string, [name, body]: readonly [string, string[]]): Result {
   const region = { body: body.join("\n"), name, place: "bottom" } as const;
+
   return { errors: [], outputs: [blockOutput(rel, writeRegions(ctx.read(rel) ?? "", syntaxOf(rel), [region]))] };
 }
 
@@ -97,11 +108,13 @@ export function ignoreBlockLines(
   outputs: readonly Output[],
 ): string[] {
   const dependencies = isSelfName(name) ? [] : [DEPENDENCY_DIR];
+
   return [...IGNORE_BASE, ...dependencies, ...untrackedEntries(hosts, outputs)];
 }
 
 function gitignore(ctx: SyncContext, outputs: readonly Output[]): Result {
   const lines = ignoreBlockLines(ctx.workspace.manifest.name, ctx.config.agents.hosts, outputs);
+
   return blockFile(ctx, GITIGNORE_PATH, [IGNORE_REGION, lines]);
 }
 
@@ -111,6 +124,7 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
     .map((output) => output.path)
     .toSorted(byCodeUnit)
     .map((rel) => `${rel} linguist-generated`);
+
   return blockFile(ctx, GITATTRIBUTES_PATH, [ATTRIBUTES_REGION, [ATTRIBUTES_BASE, ...generated]]);
 }
 
@@ -120,6 +134,7 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
  */
 function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   const paths = wholeFiles(outputs).map((output) => output.path);
+
   return { errors: [], outputs: [blockOutput(SETTINGS_PATH, settingsEdit(ctx.read(SETTINGS_PATH), paths))] };
 }
 
@@ -139,6 +154,7 @@ export function listedFiles(root: string, extraIgnores: readonly string[]): stri
         stdio: ["ignore", "pipe", "ignore"],
       },
     );
+
     // An unmerged path is listed once per stage.
     return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].toSorted(byCodeUnit);
   } catch {
@@ -158,15 +174,20 @@ const NPM_IGNORE = 'npm reads package.json "files"; delete it';
  */
 export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: readonly string[]): string[] {
   const listed = listedFiles(root, ignored);
+
   if (listed === null) return [];
   const publicRoots = new Set(workspace.packages.filter((pkg) => pkg.manifest.private !== true).map((pkg) => pkg.dir));
   const lines: string[] = [];
+
   for (const rel of listed) {
     const name = path.posix.basename(rel);
+
     const nested =
       name === GITIGNORE_PATH && path.posix.dirname(rel) !== "." && !publicRoots.has(path.posix.dirname(rel));
+
     if ((name === NPM_IGNORE_FILE || nested) && fs.existsSync(path.join(root, rel)))
       lines.push(`${rel}: ${name === NPM_IGNORE_FILE ? NPM_IGNORE : NESTED_IGNORE}`);
   }
+
   return lines;
 }

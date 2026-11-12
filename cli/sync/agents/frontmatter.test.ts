@@ -37,11 +37,13 @@ it("names the file when the frontmatter is missing", () => {
 it("names the file and gives the parser message's first line when the YAML is broken", () => {
   const yaml = "name: [bad";
   let message = "";
+
   try {
     parse(yaml);
   } catch (error) {
     message = error instanceof Error ? error.message : "";
   }
+
   const firstLine = (message.split("\n")[0] ?? "").trim().replace(/:$/, "");
   expect(firstLine).toMatch(/at line 1, column \d+$/);
   expect(() => parseDoc(".repo/subagents/bad.md", `---\n${yaml}\n---\n`)).toThrow(
@@ -78,6 +80,7 @@ it("writes lists and nested maps in block style, in the order given", () => {
       },
     ],
   ];
+
   expect(emitYaml(entries)).toBe("name: x\ntools:\n  - Read\n  - Grep\nnested:\n  b: 1\n  a: true\n");
   roundTrip(entries);
 });
@@ -191,10 +194,12 @@ it.each(agentFiles)("reproduces the frontmatter of golden %s", (rel) => {
   const text = fs.readFileSync(path.join(GOLDEN, rel), "utf8");
   const block = text.slice(4, text.indexOf("\n---\n", 4) + 1);
   const mode = rel.startsWith(".claude/") ? "claude" : "default";
+
   const entries = Object.entries(parseDoc(rel, text).data) /* parsed YAML values are YAML values */ as [
     string,
     YamlValue,
   ][];
+
   expect(emitYaml(entries, mode)).toBe(block);
 });
 

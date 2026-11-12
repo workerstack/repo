@@ -9,46 +9,56 @@ import { ARROW, NEWLINE, OK, PERCENT, PERCENT_DIGITS, ROOT_PACKAGE } from "./mut
 
 /** A package's mutants: how many tests killed and how many lived. */
 export type Tally = { killed: number; survivors: number };
+
 /** The mutation score floors by package dir. */
 export type Floors = Record<string, number>;
+
 /** A package's score against its floor. */
 export type Verdict = { pkg: string; percent: number; floor: number | undefined; survivors: number };
 
 function buildFloorsSchema() {
   return z.record(z.string(), z.number());
 }
+
 const floorsSchema = /* @__PURE__ */ buildFloorsSchema();
 
 /** (killed) / (killed + survivors) as a percent; a package with no scored mutant scores 100. */
 export function percentOf({ killed, survivors }: Tally): number {
   const scored = killed + survivors;
+
   return scored === 0 ? PERCENT : (killed / scored) * PERCENT;
 }
 
 /** The deepest package dir holding `file`, else the root. */
 export function packageOf(file: string, packages: readonly string[]): string {
   const holding = packages.filter((dir) => file.startsWith(`${dir}/`));
+
   return holding.toSorted((a, b) => b.length - a.length)[0] ?? ROOT_PACKAGE;
 }
 
 /** Each package's totals over `files`. */
 export function tally(files: Record<string, FileScore>, packages: readonly string[]): Map<string, Tally> {
   const totals = new Map<string, Tally>();
+
   for (const [file, score] of Object.entries(files)) {
     const pkg = packageOf(file, packages);
     const was = totals.get(pkg) ?? { killed: 0, survivors: 0 };
     totals.set(pkg, { killed: was.killed + score.killed, survivors: was.survivors + score.survivors.length });
   }
+
   return totals;
 }
 
 /** The floors in `file` under `root`: none when it is missing, the reason when it is no table of numbers. */
 export function readFloors(deps: MutateDeps, root: string, file: string): Parsed<Floors> {
   const text = deps.fs.read(path.join(root, file));
+
   if (text === null) return { ok: true, value: {} };
   const json = parseJson(text);
+
   if (!json.ok) return json;
   const parsed = floorsSchema.safeParse(json.value);
+
   return parsed.success
     ? { ok: true, value: parsed.data }
     : { ok: false, reason: parsed.error.issues.map((issue) => issue.message).join("; ") };
@@ -64,9 +74,11 @@ export function verdicts(totals: Map<string, Tally>, floors: Floors): Verdict[] 
 function isBelow(v: Verdict): boolean {
   return v.floor !== undefined && v.percent < v.floor;
 }
+
 function percentText(v: Verdict): string {
   return `${v.percent.toFixed(PERCENT_DIGITS)}%`;
 }
+
 function floorOf(v: Verdict): number {
   return Math.floor(v.percent);
 }
@@ -75,6 +87,7 @@ function floorOf(v: Verdict): number {
 export function label(v: Verdict, { raise }: { raise: boolean }): string {
   const moved = raise && v.floor !== floorOf(v) && !isBelow(v);
   const floor = v.floor === undefined ? "no floor" : `floor ${v.floor}`;
+
   return `${v.pkg} ${percentText(v)} (${moved ? `floor ${v.floor ?? "new"} ${ARROW} ${floorOf(v)}` : floor})`;
 }
 
@@ -105,12 +118,15 @@ export type Judged = { report: ShardReport; config: MutateConfig; shown: string 
 export function judgeRun(run: Judged, deps: MutateDeps): number {
   const { report, config, shown } = run;
   const floors = readFloors(deps, config.root, config.floors);
+
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
   const totals = tally(report.files, deps.packages(config.root));
   const vs = verdicts(totals, floors.value);
+
   for (const v of vs)
     deps.out(`mutate: ${label(v, { raise: false })}, ${plural(v.survivors, "survivor")} in ${shown}${NEWLINE}`);
 
   const lines = failures(vs, config.floors, shown);
+
   return lines.length > 0 ? fail(deps, ...lines) : OK;
 }

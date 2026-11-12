@@ -2,8 +2,10 @@ import { DOWNLOAD, UPLOAD } from "./release.constants.ts";
 
 export const NIGHTLY_PATH: string = ".github/workflows/nightly.yml";
 export const LIVE_SCRIPT: string = "test:live";
+
 /** A mutation shard runs about 30 to 40 minutes on 8 shards; one shard is the whole run. */
 export const MUTATE_TIMEOUT_MINUTES: number = 180;
+
 /** The report a shard writes, named by its number; the floors job downloads them all by the prefix. */
 const REPORT_PREFIX: string = "mutation-";
 const REPORTS_DIR: string = "reports";

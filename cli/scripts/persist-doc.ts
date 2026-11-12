@@ -71,7 +71,9 @@ export function slugify(name: string): string {
     .replaceAll(NON_SLUG_RUN_RE, "-")
     .replaceAll(DASH_RUN_RE, "-")
     .replaceAll(EDGE_DASHES_RE, "");
+
   const cut = s.length > SLUG_MAX ? s.slice(0, SLUG_MAX).replaceAll(TRAILING_DASHES_RE, "") : s;
+
   return firstNonEmpty(cut) ?? "unnamed";
 }
 
@@ -94,6 +96,7 @@ export function slugFromFilename(filename: unknown): string {
 
 export function extractH1(content: unknown): string {
   const m = String(content).match(H1_RE);
+
   return m === null ? "" : captured(m, 1).trim();
 }
 
@@ -101,20 +104,26 @@ export function extractH1(content: unknown): string {
 export function nextSerial(dir: string, suffix = ".md"): number {
   if (!fs.existsSync(dir)) return 1;
   let next = 1;
+
   for (const b of fs.readdirSync(dir)) {
     const m = b.endsWith(suffix) ? SERIAL_PREFIX_RE.exec(b) : null;
+
     if (m !== null) next = Math.max(next, parseInt(captured(m, 1), DECIMAL) + 1);
   }
+
   return next;
 }
 
 /** `key: value` lines of a frontmatter block as strings; a quoted value is JSON-decoded when it parses. */
 export function frontmatterMap(raw: string, lineRe: RegExp = FM_LINE_RE): FrontmatterMap {
   const map: FrontmatterMap = {};
+
   for (const line of raw.split("\n")) {
     const [, key, value = ""] = lineRe.exec(line) ?? [];
+
     if (key === undefined) continue;
     let v = value;
+
     if (v.startsWith('"') && v.endsWith('"')) {
       try {
         v = String(JSON.parse(v));
@@ -122,15 +131,19 @@ export function frontmatterMap(raw: string, lineRe: RegExp = FM_LINE_RE): Frontm
         v = v.slice(1, v.length - 1);
       }
     }
+
     map[key] = v;
   }
+
   return map;
 }
 
 export function parseFrontmatter(text: string): FrontmatterResult {
   if (!text.startsWith(FM_OPEN)) return { error: "missing frontmatter" };
   const end = text.indexOf(FM_CLOSE, FM_OPEN.length);
+
   if (end === NOT_FOUND) return { error: "unterminated frontmatter" };
+
   return { body: text.slice(end + FM_CLOSE.length), map: frontmatterMap(text.slice(FM_OPEN.length, end)) };
 }
 
@@ -143,6 +156,7 @@ export function stripBom(text: string): string {
 export function stripFrontmatter(text: unknown): string {
   const s = stripBom(String(text));
   const end = s.startsWith(FM_OPEN) ? s.indexOf(FM_CLOSE, FM_OPEN.length) : NOT_FOUND;
+
   return end === NOT_FOUND ? s : s.slice(end + FM_CLOSE.length);
 }
 
@@ -167,6 +181,7 @@ export function injectFrontmatter(lines: string[], slug: string, body: string): 
 /** `body` without leading whitespace, its first heading made `# slug` (added on top when it has none). */
 export function retitled(body: string, slug: string): string {
   const trimmed = body.replace(LEADING_SPACE_RE, "");
+
   return trimmed.startsWith("# ") ? trimmed.replace(H1_LINE_RE, `# ${slug}`) : `# ${slug}\n\n${trimmed}`;
 }
 
@@ -187,7 +202,9 @@ export function freeName(
     const serial = first + tried;
     const filename = `${serial}-${slug}-${stamp}.${ext}`;
     const dest = path.join(dir, filename);
+
     if (!fs.existsSync(dest)) return { dest, filename, serial };
   }
+
   return undefined;
 }

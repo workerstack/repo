@@ -55,6 +55,7 @@ function headingChecks(_doc: Doc, { order }: Sections): string[] {
 
 function verifyError(phases: PlanPhase[]): string[] {
   const last = phases[phases.length - 1];
+
   return when({
     bad: last !== undefined && !VERIFY_RE.test(last.text) && last.id !== String(phases.length),
     error: "verify last phase",
@@ -64,6 +65,7 @@ function verifyError(phases: PlanPhase[]): string[] {
 function boxErrors({ text, fresh, previous }: Doc): string[] {
   const boxes = planBoxes(text);
   const phases = planPhases(boxes);
+
   return [
     ...when({ bad: fresh && boxes.some((b) => b.mark !== " "), error: "fresh [x]" }),
     ...when({ bad: !boxes.some((b) => LEAF_ID_RE.test(b.id)), error: "no N.M leaf" }),

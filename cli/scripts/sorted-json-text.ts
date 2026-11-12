@@ -21,8 +21,11 @@ import {
 } from "./sorted-json-text.constants.ts";
 
 type Sorted = { text: string; key: string };
+
 type Ctx = { text: string; eol: string };
+
 type Token = { kind: number; start: number; end: number };
+
 /**
  * The text between two members. `pre` (before the comma) and `post` (the rest of the value's line) move with the member
  * before, `lead` with the member after; `sep` (the comma), `padBefore`, `ws` and `lb` (the line break) stay.
@@ -37,24 +40,30 @@ type Gap = {
   lead: string;
   trailsLineComment: boolean;
 };
+
 type Member = { key: string; lead: string; body: string; pre: string; post: string; trailsLineComment: boolean };
 
 function at<T>(list: readonly T[], index: number): T {
   return list[index] /* the caller's index is in range */ as T;
 }
+
 function children(node: Node): Node[] {
   return node.children /* an object or an array has a list, empty or not */ as Node[];
 }
+
 /** A property node's key and value. */
 function pair(prop: Node): [Node, Node] {
   return children(prop) /* a property has both */ as [Node, Node];
 }
+
 function end(node: Node): number {
   return node.offset + node.length;
 }
+
 function keyOf(prop: Node): string {
   return String(at(children(prop), 0).value);
 }
+
 /** Code-unit order, which `<` on strings is. */
 function byKey(a: Member, b: Member): number {
   return Number(a.key > b.key) - Number(a.key < b.key);
@@ -63,6 +72,7 @@ function byKey(a: Member, b: Member): number {
 function tokens(text: string): Token[] {
   const scanner = createScanner(text, false);
   const found: Token[] = [];
+
   for (let kind: number = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan())
     found.push({ end: scanner.getTokenOffset() + scanner.getTokenLength(), kind, start: scanner.getTokenOffset() });
 
@@ -83,6 +93,7 @@ type Spans = { pre: number; sep: number; cut: number; after: number; lb: Token; 
 /** The first token of `kind` at or after `from`, or an empty one at `none`. */
 function firstOf(list: Token[], find: { kind: number; from: number; none: number }): Token {
   const { kind, from, none } = find;
+
   return list.find((t) => t.kind === kind && t.start >= from) ?? { end: none, kind, start: none };
 }
 
@@ -91,8 +102,10 @@ function spansOf(list: Token[], len: number, { opens }: { opens: boolean }): Spa
   const lb = firstOf(list, { from: comma.end, kind: LINE_BREAK_TOKEN, none: len });
   const hasLb = lb.end > lb.start;
   const trails = !opens && (hasLb || comma.end === 0);
+
   const cut =
     trails || hasLb ? lb.start : firstOf(list, { from: comma.end, kind: BLOCK_COMMENT_TOKEN, none: len }).start;
+
   return { after: hasLb ? lb.end : cut, cut, hasLb, lb, pre: comma.start, sep: comma.end, trails };
 }
 
@@ -115,6 +128,7 @@ function gapOf(text: string, { opens }: { opens: boolean }): Gap {
   const [pre, padBefore] = divide({ moves: hasNote(list, 0, span.pre) }, text.slice(0, span.pre));
   const movesPost = span.trails && hasNote(list, span.sep, span.cut);
   const [post, ws] = divide({ moves: movesPost }, text.slice(span.sep, span.cut));
+
   return {
     lb: text.slice(span.lb.start, span.lb.end),
     lead: text.slice(span.after),
@@ -131,12 +145,15 @@ function gapOf(text: string, { opens }: { opens: boolean }): Gap {
 function gapsOf(node: Node, text: string): Gap[] {
   const props = children(node);
   const starts = [node.offset + 1, ...props.map(end)];
+
   return starts.map((start, i) => gapOf(text.slice(start, props[i]?.offset ?? end(node) - 1), { opens: i === 0 }));
 }
 
 function render(node: Node, ctx: Ctx): string {
   if (node.type === OBJECT_NODE) return renderObject(node, ctx);
+
   if (node.type === ARRAY_NODE) return renderArray(node, ctx);
+
   return ctx.text.slice(node.offset, end(node));
 }
 
@@ -144,10 +161,12 @@ function render(node: Node, ctx: Ctx): string {
 function renderArray(node: Node, ctx: Ctx): string {
   let out = "";
   let from = node.offset;
+
   for (const item of children(node)) {
     out += `${ctx.text.slice(from, item.offset)}${render(item, ctx)}`;
     from = end(item);
   }
+
   return `${out}${ctx.text.slice(from, end(node))}`;
 }
 
@@ -156,6 +175,7 @@ function membersOf(node: Node, gaps: Gap[], ctx: Ctx): Member[] {
     const [, value] = pair(prop);
     const body = `${ctx.text.slice(prop.offset, value.offset)}${render(value, ctx)}`;
     const { pre, post, trailsLineComment } = at(gaps, i + 1);
+
     return { body, key: keyOf(prop), lead: at(gaps, i).lead, post, pre, trailsLineComment };
   });
 }
@@ -163,6 +183,7 @@ function membersOf(node: Node, gaps: Gap[], ctx: Ctx): Member[] {
 /** What goes at one position: a member with the separator, line break and spacing that position had. */
 function place(member: Member, gap: Gap, ctx: Ctx): string {
   const eol = member.trailsLineComment && gap.lb === "" ? ctx.eol : "";
+
   return `${member.lead}${member.body}${member.pre}${gap.padBefore}${gap.sep}${member.post}${eol}${gap.ws}${gap.lb}`;
 }
 
@@ -173,23 +194,29 @@ function renderObject(node: Node, ctx: Ctx): string {
   const open = at(gaps, 0);
   const body = sorted.map((member, i) => place(member, at(gaps, i + 1), ctx)).join("");
   const tail = `${at(gaps, gaps.length - 1).lead}${ctx.text.slice(end(node) - 1, end(node))}`;
+
   return `${ctx.text.slice(node.offset, node.offset + 1)}${open.ws}${open.lb}${body}${tail}`;
 }
 
 /** The path of the first key out of order below `node`, in document order, or null. */
 function firstOutOfOrder(node: Node, parents: readonly string[]): string | null {
   const isObject = node.type === OBJECT_NODE;
+
   if (!isObject && node.type !== ARRAY_NODE) return null;
   const kids = children(node);
   const keys = isObject ? kids.map(keyOf) : [];
   const late = keys.findIndex((key, i) => i > 0 && key < at(keys, i - 1));
+
   if (late > 0) return [...parents, at(keys, late)].join(PATH_SEPARATOR);
+
   for (const [i, kid] of kids.entries()) {
     const found = isObject
       ? firstOutOfOrder(at(children(kid), 1), [...parents, at(keys, i)])
       : firstOutOfOrder(kid, [...parents, String(i)]);
+
     if (found !== null) return found;
   }
+
   return null;
 }
 
@@ -200,9 +227,12 @@ function firstOutOfOrder(node: Node, parents: readonly string[]): string | null 
 export function sortedJsonText(text: string): Sorted | null {
   const errors: ParseError[] = [];
   const root = parseTree(text, errors, { allowTrailingComma: true, disallowComments: false });
+
   if (root === undefined || errors.length > 0) return null;
   const key = firstOutOfOrder(root, []);
+
   if (key === null) return null;
   const ctx = { eol: text.includes(CRLF) ? CRLF : LF, text };
+
   return { key, text: `${text.slice(0, root.offset)}${render(root, ctx)}${text.slice(end(root))}` };
 }

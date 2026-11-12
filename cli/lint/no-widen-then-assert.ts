@@ -22,8 +22,11 @@ function assertionIsNarrower(
   asserted: TSESTree.TypeNode,
 ): boolean {
   if (broadTypeKind(asserted) !== null) return false;
+
   if (widened.broadKind === "top") return true;
+
   if (typesHaveSameSyntax(sourceCode, widened.evidence.type, asserted)) return true;
+
   return widened.broadKind === "object" ? isDefinitelyObjectType(asserted) : isDefinitelyNarrowerRecordType(asserted);
 }
 
@@ -33,11 +36,14 @@ function rewidenedName(
   node: TSESTree.TSAsExpression | TSESTree.TSTypeAssertion,
 ): string | null {
   const { expression } = node;
+
   if (expression.type !== AST_NODE_TYPES.Identifier) return null;
   const variable = resolveVariable(sourceCode, expression);
   const widened = variable === null ? null : widenedBinding(sourceCode, variable);
+
   if (widened === null || node.range[0] <= widened.declaredAt || functionBoundary(node) !== widened.boundary)
     return null;
+
   return assertionIsNarrower(sourceCode, widened, node.typeAnnotation) ? expression.name : null;
 }
 
@@ -46,8 +52,10 @@ export const noWidenThenAssert: RepoRule<"widenThenAssert"> = {
   create(context) {
     function check(node: TSESTree.TSAsExpression | TSESTree.TSTypeAssertion): void {
       const name = rewidenedName(context.sourceCode, node);
+
       if (name !== null) context.report({ data: { name }, messageId: "widenThenAssert", node });
     }
+
     return { TSAsExpression: check, TSTypeAssertion: check };
   },
   defaultOptions: [],

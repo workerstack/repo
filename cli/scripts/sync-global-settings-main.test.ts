@@ -16,6 +16,7 @@ const DESTS = [
   ".gemini/antigravity-cli/settings.json",
   ".cursor/cli-config.json",
 ];
+
 const IDS = ["grok", "claude", "codex", "antigravity", "cursor"];
 
 let home: string;
@@ -37,6 +38,7 @@ it("main apply and dry-run: applies by default, one apply line per host, writing
   expect(main([])).toBe(0);
   expect(streams.out().trim().split("\n")).toStrictEqual(IDS.map((id, i) => `apply ${id} ${DESTS[i]}`));
   expect(streams.err()).toBe("");
+
   for (const dest of DESTS) expect(fs.existsSync(path.join(home, dest))).toBe(true);
 });
 

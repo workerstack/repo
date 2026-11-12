@@ -24,14 +24,18 @@ import type { Generator, Output, SyncContext } from "./outputs.ts";
 function repositorySlug(manifest: string | null): string | null {
   if (manifest === null) return null;
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(manifest);
   } catch {
     return null;
   }
+
   const repository: unknown = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "repository") : null;
+
   const url: unknown =
     typeof repository === "object" && repository !== null ? Reflect.get(repository, "url") : repository;
+
   return typeof url === "string" ? (GITHUB_REPOSITORY.exec(url)?.[1] ?? null) : null;
 }
 
@@ -43,12 +47,15 @@ function repositorySlug(manifest: string | null): string | null {
 export function githubFiles(ctx: SyncContext): ReturnType<Generator> {
   const { name, private: isPrivate } = ctx.workspace.manifest;
   const { owner } = ctx.config;
+
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false || owner === undefined)
     return { errors: [], outputs: [] };
 
   const slug = repositorySlug(ctx.read(MANIFEST_PATH));
+
   if (slug === null) return { errors: [], outputs: [] };
   const advisories = ADVISORIES_URL.replace("%REPO%", slug);
+
   const files: [path: string, content: string][] = [
     [SECURITY_PATH, SECURITY.replace("%ADVISORIES%", advisories)],
     [CONTRIBUTING_PATH, CONTRIBUTING],
@@ -57,13 +64,17 @@ export function githubFiles(ctx: SyncContext): ReturnType<Generator> {
     [BUG_REPORT_PATH, BUG_REPORT],
     [ISSUE_CONFIG_PATH, ISSUE_CONFIG.replace("%ADVISORIES%", advisories)],
   ];
+
   const errors: string[] = [];
   const outputs: Output[] = [];
+
   for (const [path, content] of files) {
     const existing = ctx.read(path);
+
     if (existing !== null && !hasOwnedHeader(existing))
       errors.push(`${path} is hand-written; delete it so repo sync can own it`);
     else outputs.push({ content, kind: "file", managed: "whole", path, tracked: true });
   }
+
   return errors.length > 0 ? { errors, outputs: [] } : { errors: [], outputs };
 }

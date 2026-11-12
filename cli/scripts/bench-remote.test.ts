@@ -6,6 +6,7 @@ import { BENCH_YML, GH, MAC, WIN, remote, view } from "./__fixtures__/bench-remo
 import { REMOTE_GIT, RUN_URL, SHA, bad, bench, ok, rawOn } from "./__fixtures__/bench-world.ts";
 
 useTempDirs();
+
 const DISPATCH = [
   "gh workflow run bench.yml --ref feat -f spec=startup",
   '-f os=["macos-latest","windows-latest"]',
@@ -54,6 +55,7 @@ it("runs nothing locally when the local label is not in the spec's os", async ()
   const wall = { better: "lower", name: "wall", unit: "ms", weight: 1 };
   const raw = { ...rawOn(MAC), metrics: [wall], runs: 3, spec: "remote-only", warmup: 0 };
   const artifacts = { "macos-latest": { ...raw, candidates: [{ name: "bun", samples: { wall: [1, 2, 3] } }] } };
+
   const got = await bench(["remote-only", "--remote"], {
     artifacts,
     files: BENCH_YML,
@@ -61,6 +63,7 @@ it("runs nothing locally when the local label is not in the spec's os", async ()
     git: REMOTE_GIT,
     specs: ["remote-only"],
   });
+
   expect(got.code).toBe(0);
   expect(got.counts.size).toBe(0);
   expect(got.calls).toContain(
@@ -79,6 +82,7 @@ it("names the OS of a failed run and links it, exit 1", async () => {
     ["bench (macos-latest)", "success"],
     ["bench (windows-latest)", "failure"],
   ]);
+
   const got = await remote({ gh: { ...GH, "run view 123": [failed] } });
   expect(got.code).toBe(1);
   expect(got.err).toBe(`repo bench: run 123 failed (windows-latest); see ${RUN_URL}\n`);

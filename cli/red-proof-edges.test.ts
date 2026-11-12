@@ -11,11 +11,14 @@ import { type GitRun, runGit } from "./sync/standards.ts";
 
 /** The real runner's timeout and missing vitest, the outer repo's git env, git failing, and the diff parser. */
 afterEach(removePlanted);
+
 const A_TEST = change(["A", "a.test.ts"]);
 const SLOW = { timeout: 60_000 };
+
 function never(): never {
   throw new Error("vitest must not run");
 }
+
 const ENV_TEST = `import { expect, it } from "vitest";
 const gitKeys = Object.keys(process.env).filter((k) => k.startsWith("GIT_") && !k.startsWith("GIT_CONFIG_"));
 it("e", () => expect(gitKeys).toEqual([]));
@@ -41,9 +44,11 @@ it("refuses with the reason when the package has no vitest", SLOW, () => {
 it("strips GIT_* from the nested run and leaves the committed repo's index alone", SLOW, () => {
   const root = plant({ "s.ts": "head\n" });
   stage(root, { "e.test.ts": ENV_TEST, "s.ts": "new\n" });
+
   function seen() {
     return { index: git(root, "ls-files", "-s"), status: git(root, "status", "--porcelain") };
   }
+
   const before = seen();
   vi.stubEnv("GIT_DIR", nodePath.join(root, ".git"));
   vi.stubEnv("GIT_INDEX_FILE", nodePath.join(root, ".git", "index"));

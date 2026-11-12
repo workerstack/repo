@@ -8,6 +8,7 @@ import { shearProblems } from "./shear-problems.ts";
 function result(over: Partial<CargoResult>): CargoResult {
   return { missing: false, status: 0, stderr: "", stdout: "", ...over };
 }
+
 function fake(out: Partial<CargoResult>): CargoRun {
   return () => result(out);
 }
@@ -18,18 +19,23 @@ const REJECTED =
   '{"column":10,"line":6,"message":"rejected: license is not explicitly allowed",' +
   '"span":"GPL-3.0-only"}],"message":"failed to satisfy license requirements",' +
   '"notes":["GPL-3.0-only - GNU General Public License v3.0 only:"],"severity":"error"},"type":"diagnostic"}';
+
 const SUMMARY = '{"fields":{"advisories":{"errors":0,"helps":0,"notes":0,"warnings":0}},"type":"summary"}';
+
 const WARNING =
   '{"fields":{"code":"license-not-encountered","labels":[],"message":"license was not encountered",' +
   '"severity":"warning"},"type":"diagnostic"}';
+
 const FETCH =
   '{"fields":{"level":"ERROR","message":"failed to fetch advisory database ' +
   "https://github.com/RustSec/advisory-db with cli: failed to clone: [...]" +
   '\\nfatal: unable to access","timestamp":"t"},"type":"log"}';
+
 const SHEAR =
   '{"summary":{"errors":1,"warnings":0,"fixed":0},"findings":[{"code":"shear/unused_dependency",' +
   '"severity":"error","message":"unused dependency `itoa`","file":"a/Cargo.toml","location":{"offset":115,' +
   '"length":4},"help":"remove this dependency","fixable":true}]}';
+
 const INSTALL_DENY = "cargo install --locked cargo-deny@0.20.2";
 
 it("names the rejected license with its crate, section and label", () => {
@@ -42,10 +48,13 @@ it("names the rejected license with its crate, section and label", () => {
 
 it("runs deny locked with json output", () => {
   const seen: string[][] = [];
+
   function run(_root: string, args: readonly string[]): CargoResult {
     seen.push([...args]);
+
     return result({});
   }
+
   denyProblems("/r", run);
   expect(seen).toStrictEqual([["deny", "--locked", "--format", "json", "check"]]);
 });
@@ -74,8 +83,10 @@ it("omits the section of an unknown code and the crate of a graph-less diagnosti
   expect(denyProblems("/r", fake({ status: 2, stderr: odd }))).toStrictEqual(["cargo deny: odd"]);
   const bare = '{"fields":{"message":"bare","severity":"error"},"type":"diagnostic"}';
   expect(denyProblems("/r", fake({ status: 2, stderr: bare }))).toStrictEqual(["cargo deny: bare"]);
+
   const bans =
     '{"fields":{"code":"wildcard","message":"wild","severity":"error","graphs":[{"Other":1}]},"type":"diagnostic"}';
+
   expect(denyProblems("/r", fake({ status: 2, stderr: bans }))).toStrictEqual(["cargo deny: bans: wild"]);
 });
 
@@ -94,6 +105,7 @@ it("reports a deny line it cannot read", () => {
     "/r",
     fake({ stderr: `not json\n{"type":"diagnostic"}\n{"type":"log"}\n{}\n${"y".repeat(90)}\n` }),
   );
+
   expect(out).toStrictEqual([
     "cargo deny printed a line repo cannot read: not json",
     'cargo deny printed a line repo cannot read: {"type":"diagnostic"}',
@@ -119,10 +131,13 @@ it("names an unused dependency with what to do", () => {
 
 it("runs shear locked with json output", () => {
   const seen: string[][] = [];
+
   function run(_root: string, args: readonly string[]): CargoResult {
     seen.push([...args]);
+
     return result({ stdout: '{"summary":{},"findings":[]}' });
   }
+
   expect(shearProblems("/r", run)).toStrictEqual([]);
   expect(seen).toStrictEqual([["shear", "--locked", "--format=json"]]);
 });
@@ -135,6 +150,7 @@ it("turns a backslash shear file into a POSIX path and appends the help of other
     message: "misplaced",
     severity: "warning",
   };
+
   const stdout = JSON.stringify({ findings: [finding, { code: "x", message: "m", severity: "error" }], summary: {} });
   expect(shearProblems("/r", fake({ status: 1, stdout }))).toStrictEqual([
     "cargo shear: a/b/Cargo.toml: misplaced; move it",
@@ -216,6 +232,7 @@ it("leaves out the no-license errors of the crates it is told to, never another 
     line("unlicensed", "dep"),
     line("rejected", "b"),
   ];
+
   const out = denyProblems("/r", fake({ status: 4, stderr: stderr.join("\n") }), new Set(["b"]));
   expect(out).toStrictEqual([
     "cargo deny: licenses: dep 0.1.0: dep is unlicensed",

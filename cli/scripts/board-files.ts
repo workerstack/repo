@@ -11,6 +11,7 @@ import { isRecord } from "./hook-input.ts";
 
 export function boardHome(env: Env = repoEnv.process): string {
   const home = env.REPO_BOARD_HOME;
+
   return home === undefined || home === "" ? os.homedir() : home;
 }
 
@@ -25,7 +26,9 @@ export function rowPath(dir: string, provider: unknown, session: unknown): strin
 export function readRow(file: string): BoardRow | null {
   try {
     const row: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+
     if (!isRecord(row)) return null;
+
     // Fields are re-checked where used (String(...) coercions); a missing one reads as its empty value.
     return {
       boot: str(row.boot),

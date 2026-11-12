@@ -17,10 +17,13 @@ type Found = { ok: true; files: string[] } | { ok: false; errors: string[] };
 /** The root-relative tsconfigs of the root and each package that is not a fixture or an install. */
 function tsconfigs(root: string, { rootOnly }: { rootOnly: boolean }): Found {
   const workspace = readWorkspace(root);
+
   if (!workspace.ok) return workspace;
+
   const dirs = (rootOnly ? [] : workspace.workspace.packages)
     .map((pkg) => pkg.dir)
     .filter((dir) => !dir.split("/").some((segment) => SKIPPED_SEGMENTS.includes(segment)));
+
   const files = [".", ...dirs].flatMap((dir) =>
     fs
       .readdirSync(path.join(root, dir), { withFileTypes: true })
@@ -28,6 +31,7 @@ function tsconfigs(root: string, { rootOnly }: { rootOnly: boolean }): Found {
       .map((entry) => path.posix.join(dir, entry.name))
       .toSorted(),
   );
+
   return { files, ok: true };
 }
 
@@ -47,16 +51,20 @@ function tscArgs(file: string): string[] {
  */
 export function typecheckGate(ctx: GateCtx, { rootOnly }: { rootOnly: boolean }): Gate {
   const found = tsconfigs(ctx.root, { rootOnly });
+
   if (!found.ok) {
     return fail(
       "typecheck failed",
       found.errors.map((line) => `${line}\n`),
     );
   }
+
   if (found.files.length === 0) return skip("typecheck skipped (no tsconfig.json)");
   const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc(tscArgs(file), ctx.root) }));
   const bad = runs.filter(({ run }) => run.code !== 0);
+
   if (bad.length === 0) return pass(`typecheck ${plural(found.files.length, "config")}`);
+
   return fail(
     `typecheck failed (${bad.map(({ file }) => file).join(", ")})`,
     bad.map(({ run }) => textOf(run)),

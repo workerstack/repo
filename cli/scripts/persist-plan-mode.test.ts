@@ -11,6 +11,7 @@ const tmpWs = useTmpWs();
 
 const CREATED = "2026-08-26T14:30:00Z";
 const MODE_KEY = "mode: ask|auto|away";
+
 function withMode(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
 }
@@ -84,6 +85,7 @@ describe("plan decision entries", () => {
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const before = read(abs);
+
     for (const content of [
       withEntries(before, "(none)"),
       withEntries(before, ENTRY.replace("because c", "because d")),
@@ -92,6 +94,7 @@ describe("plan decision entries", () => {
       expect(u.ok).toBe(false);
       expect(u.error).toContain(`keep this entry unchanged: ${ENTRY}`);
     }
+
     expect(read(abs)).toBe(before);
   });
 });

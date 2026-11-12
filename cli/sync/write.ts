@@ -13,13 +13,16 @@ export type WriteDeps = {
   platform: NodeJS.Platform;
   writeOutput?: ((root: string, output: Output, platform: NodeJS.Platform) => string | null) | undefined;
 };
+
 /** `refused` is true when nothing was attempted; otherwise a failed write was undone. */
 export type WriteResult = { ok: true } | { ok: false; errors: string[]; refused: boolean };
 
 /** Writes one output: a file through a temp file and rename, a link replaced by a new one. Null on success. */
 export function writeOutput(root: string, output: Output, platform: NodeJS.Platform): string | null {
   const abs = path.join(root, output.path);
+
   if (output.kind === "link") return writeLink(abs, output.target, platform);
+
   return writeOwned(abs, output.content, ownedMode(output, platform));
 }
 
@@ -47,10 +50,13 @@ export function writeAll(root: string, plan: WritePlan, deps: WriteDeps): WriteR
   const refusals = plan.changed.flatMap((output) =>
     output.kind === "link" && isRealDir(path.join(root, output.path)) ? [refusal(output.path)] : [],
   );
+
   if (refusals.length > 0) return { errors: refusals, ok: false, refused: true };
   const journal: JournalEntry[] = [];
   const message = writeSteps({ deps, journal, plan, root });
+
   if (message === null) return { ok: true };
+
   return { errors: [undoJournal(root, journal, message)], ok: false, refused: false };
 }
 
@@ -58,26 +64,33 @@ export function writeAll(root: string, plan: WritePlan, deps: WriteDeps): WriteR
 function writeSteps(run: Run): string | null {
   const { deps, journal, plan, root } = run;
   const write = deps.writeOutput ?? writeOutput;
+
   for (const output of plan.changed) {
     const abs = path.join(root, output.path);
     const created = missingDirs(path.dirname(abs));
     const error = journalStep(journal, { abs, counted: true, created, run: () => write(root, output, deps.platform) });
+
     if (error !== null) return `${output.path}: cannot write: ${error}`;
   }
+
   for (const rel of plan.prune) {
     const step = { abs: path.join(root, rel), counted: true, created: [], run: () => removePath(root, rel) };
     const error = journalStep(journal, step);
+
     if (error !== null) return `${rel}: cannot remove: ${error}`;
   }
+
   return writeManifest(run);
 }
 
 /** Writes the manifest unless it is current; last, so a run killed before here is redone from the old manifest. */
 function writeManifest({ journal, plan, root }: Run): string | null {
   const abs = path.join(root, MANIFEST_REL);
+
   if (isCurrent(abs, plan.manifest)) return null;
   const created = missingDirs(path.dirname(abs));
   const error = journalStep(journal, { abs, counted: false, created, run: () => writeOwned(abs, plan.manifest, null) });
+
   return error === null ? null : `${MANIFEST_REL}: cannot write: ${error}`;
 }
 
@@ -93,13 +106,16 @@ function isRealDir(abs: string): boolean {
 function refusal(rel: string): string {
   const skill = SKILL_LINK.exec(rel)?.groups?.name;
   const fix = skill === undefined ? "move or delete it" : `move it to .repo/skills/${skill}`;
+
   return `${rel} is a folder where sync puts a link; ${fix}`;
 }
 
 /** The dirs from the first missing one down to `dir`, outermost first: what a mkdir of `dir` would create. */
 function missingDirs(dir: string): string[] {
   const dirs: string[] = [];
+
   for (let at = dir; !fs.existsSync(at); at = path.dirname(at)) dirs.unshift(at);
+
   return dirs;
 }
 
@@ -108,10 +124,12 @@ function removePath(root: string, rel: string): string | null {
   try {
     unlock(path.join(root, rel));
     fs.rmSync(path.join(root, rel), { force: true });
+
     for (let dir = path.dirname(path.join(root, rel)); dir !== root; dir = path.dirname(dir)) {
       if (fs.readdirSync(dir).length > 0) break;
       fs.rmdirSync(dir);
     }
+
     return null;
   } catch (error) {
     return (error /* fs throws an Error */ as Error).message;
@@ -124,8 +142,10 @@ function writeLink(abs: string, target: string, platform: NodeJS.Platform): stri
     unlock(abs);
     fs.rmSync(abs, { force: true, recursive: true });
     fs.mkdirSync(path.dirname(abs), { recursive: true });
+
     if (platform === WINDOWS_PLATFORM) fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
     else fs.symlinkSync(target, abs, "dir");
+
     return null;
   } catch (error) {
     return (error /* fs throws an Error */ as Error).message;
@@ -143,12 +163,15 @@ export function writeOwned(file: string, content: string, mode: number | null): 
     path.dirname(file),
     `.${path.basename(file)}.${randomBytes(TEMP_NAME_BYTES).toString("hex")}.tmp`,
   );
+
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(temp, content);
+
     if (mode !== null) fs.chmodSync(temp, mode);
     unlock(file);
     fs.renameSync(temp, file);
+
     return null;
   } catch (error) {
     try {
@@ -156,6 +179,7 @@ export function writeOwned(file: string, content: string, mode: number | null): 
     } catch {
       // the temp file's dir is unusable, so there is no temp file to remove
     }
+
     return (error /* fs throws an Error */ as Error).message;
   }
 }

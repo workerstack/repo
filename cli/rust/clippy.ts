@@ -32,6 +32,7 @@ import type { RustHit, RustRule } from "./source-checks.ts";
  * cargo was not on PATH.
  */
 export type CargoResult = { status: number | null; stdout: string; stderr: string; missing: boolean };
+
 /** Runs cargo with `args` in `root`; tests hand `clippyHits` their own. */
 export type CargoRun = (root: string, args: readonly string[]) => CargoResult;
 
@@ -39,10 +40,13 @@ export type CargoRun = (root: string, args: readonly string[]) => CargoResult;
 export function runCargo(root: string, args: readonly string[]): CargoResult {
   const options = { cwd: root, encoding: "utf8", env: toolEnv(childEnv()), maxBuffer: MAX_OUTPUT } as const;
   const result = spawnSync(CARGO, [...args], options);
+
   if (result.error !== undefined) {
     const isMissing = Reflect.get(result.error, "code") === NOT_FOUND;
+
     return { missing: isMissing, status: 1, stderr: result.error.message, stdout: "" };
   }
+
   return { missing: false, status: result.status, stderr: result.stderr, stdout: result.stdout };
 }
 
@@ -54,34 +58,44 @@ function schemas() {
     is_primary: z.boolean(),
     line_start: z.number(),
   });
+
   const diagnostic = z.object({
     code: z.object({ code: z.string() }).nullable(),
     level: z.string(),
     message: z.string(),
     spans: z.array(span),
   });
+
   return { compilerLine: z.object({ message: diagnostic }), head: z.object({ reason: z.string() }) };
 }
+
 type Schemas = ReturnType<typeof schemas>;
+
 type Diagnostic = z.infer<Schemas["compilerLine"]>["message"];
 
 /** One output line: a diagnostic, a line to pass over, or one that is not what cargo documents. */
 type Read = { kind: "message"; message: Diagnostic } | { kind: "other" } | { kind: "unreadable" };
+
 const OTHER: Read = { kind: "other" };
 const UNREADABLE: Read = { kind: "unreadable" };
 
 /** The diagnostic `line` carries, parsed at the edge; every other cargo line is passed over. */
 function readLine(line: string, schema: Schemas): Read {
   let json: unknown;
+
   try {
     json = JSON.parse(line);
   } catch {
     return UNREADABLE;
   }
+
   const kind = schema.head.safeParse(json);
+
   if (!kind.success) return UNREADABLE;
+
   if (kind.data.reason !== COMPILER_MESSAGE) return OTHER;
   const body = schema.compilerLine.safeParse(json);
+
   return body.success ? { kind: "message", message: body.data.message } : UNREADABLE;
 }
 
@@ -104,6 +118,7 @@ function problemOf(message: Diagnostic): string {
   const where = primaryOf(message);
   const place = where === undefined ? "" : ` (${posix(where.file_name)}:${where.line_start})`;
   const code = message.code === null ? "" : `[${message.code.code}]`;
+
   return `cargo clippy: error${code}: ${message.message}${place}`;
 }
 
@@ -114,11 +129,15 @@ type Judged = { hit: RustHit } | { problem: string } | null;
 function judge(message: Diagnostic): Judged {
   const isFailed = message.level === ERROR_LEVEL;
   const code = message.code?.code;
+
   if (code === undefined || ERROR_CODE.test(code)) return isFailed ? { problem: problemOf(message) } : null;
+
   if (!isFailed && message.level !== WARNING_LEVEL) return null;
   const where = primaryOf(message);
+
   if (where === undefined) return { problem: `cargo clippy: ${message.message} has a lint code but no primary span` };
   const file = posix(where.file_name);
+
   return {
     hit: { column: where.column_start, file, line: where.line_start, message: message.message, rule: ruleOf(code) },
   };
@@ -133,19 +152,25 @@ type Found = { hits: Map<string, RustHit>; problems: Set<string>; errored: boole
 function collect(stdout: string): Found {
   const found: Found = { errored: false, hits: new Map(), problems: new Set() };
   const schema = schemas();
+
   for (const line of stdout.split(LINE_BREAK).filter((text) => text.trim() !== "")) {
     const read = readLine(line, schema);
+
     if (read.kind === "unreadable") {
       const quoted = line.length > QUOTE_LIMIT ? `${line.slice(0, QUOTE_LIMIT)}...` : line;
       found.problems.add(`cargo clippy printed a line repo cannot read: ${quoted}`);
     }
+
     if (read.kind !== "message") continue;
     found.errored ||= read.message.level === ERROR_LEVEL;
     const judged = judge(read.message);
+
     if (judged === null) continue;
+
     if ("problem" in judged) found.problems.add(judged.problem);
     else found.hits.set(`${judged.hit.file}:${judged.hit.line}:${judged.hit.column}:${judged.hit.rule}`, judged.hit);
   }
+
   return found;
 }
 
@@ -157,14 +182,18 @@ function collect(stdout: string): Found {
 export function clippyHits(root: string, run: CargoRun): Result<RustHit[]> {
   if (!fs.existsSync(path.join(root, LOCK_FILE))) return { errors: [MISSING_LOCK], ok: false };
   const result = run(root, CLIPPY_ARGS);
+
   if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+
   if (result.status === STALE_STATUS && result.stderr.includes(STALE_MARKER))
     return { errors: [STALE_LOCK], ok: false };
   const found = collect(result.stdout);
   const problems = [...found.problems];
+
   if (result.status !== 0 && !found.errored) {
     const detail = result.stderr.trim();
     problems.push(`cargo clippy exited ${result.status} and printed no error${detail === "" ? "" : `: ${detail}`}`);
   }
+
   return problems.length > 0 ? { errors: problems, ok: false } : { ok: true, value: [...found.hits.values()] };
 }

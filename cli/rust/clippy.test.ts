@@ -8,6 +8,7 @@ import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import { clippyHits, runCargo, type CargoResult } from "./clippy.ts";
 
 const MISSING = "Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs";
+
 const ARGS = [
   ..."clippy --all-targets --all-features --locked --message-format=json --".split(" "),
   ..."-W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used".split(" "),
@@ -16,7 +17,9 @@ const ARGS = [
 
 /** A root with a Cargo.lock, and one without. */
 const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-clippy-"));
+
 fs.writeFileSync(path.join(ROOT, "Cargo.lock"), cargoLock("app"));
+
 afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
 
 type Span = { file: string; line: number; column: number; primary: boolean };
@@ -59,18 +62,23 @@ function diag(level: string) {
       target: { crate_types: ["lib"], edition: "2021", kind: ["lib"], name: "c1", src_path: "/crate/src/lib.rs" },
     });
 }
+
 const warning = diag("warning");
 const error = diag("error");
 const note = diag("note");
 const failureNote = diag("failure-note");
+
 function finished({ success }: { success: boolean }) {
   return JSON.stringify({ reason: "build-finished", success });
 }
+
 const ARTIFACT = JSON.stringify({ filenames: [], fresh: false, package_id: "p", reason: "compiler-artifact" });
+
 /** A primary span, and one that is not. */
 function at(line: number, column: number, file = "src/lib.rs"): Span {
   return { column, file, line, primary: true };
 }
+
 function aside(line: number, column: number, file = "src/lib.rs"): Span {
   return { column, file, line, primary: false };
 }
@@ -78,10 +86,13 @@ function aside(line: number, column: number, file = "src/lib.rs"): Span {
 /** A runner that records its call and returns `lines` as stdout with exit `status`. */
 function cargo(lines: string[], status = 0, extra: Partial<CargoResult> = {}) {
   const calls: { root: string; args: readonly string[] }[] = [];
+
   function run(root: string, args: readonly string[]): CargoResult {
     calls.push({ args, root });
+
     return { missing: false, status, stderr: "", stdout: lines.join("\n"), ...extra };
   }
+
   return { calls, run };
 }
 

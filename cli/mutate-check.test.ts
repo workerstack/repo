@@ -22,7 +22,9 @@ function pair(): ShardReport[] {
 function planted(reports: ShardReport[], floors?: Record<string, number>): Fakes {
   const f = fakes(undefined, ["packages/p"]);
   plantReports(f, reports);
+
   if (floors !== undefined) f.files.set(at("mutation-floors.json"), JSON.stringify(floors));
+
   return f;
 }
 

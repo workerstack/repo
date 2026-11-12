@@ -13,16 +13,20 @@ function messagesOf(code: string): string[] {
     "package.json": JSON.stringify({ exports: { ".": "./src/index.ts" }, name: "p" }),
     "src/index.ts": code,
   };
+
   return reportsOf(publicJsdoc, files).map((report) => report.message);
 }
+
 function about(label: string, text: string) {
   return `\`${label}\` is public through "." and ${text}`;
 }
+
 function documented(head: string, body: string[]): string {
   return `${DOC}${head} {\n${body.join("\n")}\n}`;
 }
 
 type Case = { name: string; code: string; messages: string[] };
+
 const MEMBERS: Case[] = [
   {
     code: documented("export class C", ["m(): void {}", "p: string = '';"]),

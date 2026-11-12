@@ -7,6 +7,7 @@ import type { RepoRule } from "./rule.types.ts";
 
 const TEST_FILE = /\.(?:test|spec)(\.[cm]?[jt]sx?)$/;
 const EXTENSION = /\.[cm]?[jt]sx?$/;
+
 /** `vi.mock`, `vi.doMock` and `jest.mock` replace a module for the whole test file. */
 const MOCKS: Readonly<Record<string, readonly string[]>> = { jest: ["mock"], vi: ["mock", "doMock"] };
 
@@ -35,12 +36,14 @@ function urlPath(node: Node): string | null {
   )
     return null;
   const { object } = node;
+
   if (
     object.type !== AST_NODE_TYPES.NewExpression ||
     object.callee.type !== AST_NODE_TYPES.Identifier ||
     object.callee.name !== URL_CLASS
   )
     return null;
+
   return isImportMetaUrl(object.arguments[1]) ? stringOf(object.arguments[0]) : null;
 }
 
@@ -56,8 +59,10 @@ function isMock(callee: Node): boolean {
 /** The relative specifier a mock call names, as a literal or the `import.meta.url` form, or null. */
 function mockedPath(node: TSESTree.CallExpression): string | null {
   const [first] = node.arguments;
+
   if (!isMock(node.callee) || first === undefined) return null;
   const specifier = stringOf(first) ?? urlPath(first);
+
   return specifier?.startsWith(".") === true ? specifier : null;
 }
 
@@ -68,12 +73,16 @@ function mockedPath(node: TSESTree.CallExpression): string | null {
 export const noMockOfSubject: RepoRule<"subject"> = {
   create(context) {
     const { filename } = context;
+
     if (!TEST_FILE.test(filename)) return {};
     const subject = filename.replace(TEST_FILE, "");
+
     return {
       CallExpression(node) {
         const specifier = mockedPath(node);
+
         if (specifier === null) return;
+
         if (path.resolve(path.dirname(filename), specifier).replace(EXTENSION, "") !== subject) return;
         context.report({ data: { specifier }, messageId: "subject", node });
       },

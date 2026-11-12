@@ -15,6 +15,7 @@ it("resolves a file, a dependency and a binary ignore", async () => {
     { dependency: "oxlint", reason: "spawned by path" },
     { binary: "tsc", reason: "run by a hook" },
   ] } }`;
+
   expect(await loadConfig(repo(body))).toMatchObject({
     config: {
       knip: {

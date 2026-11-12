@@ -22,7 +22,9 @@ function insideFunction(text: string): string {
 function isLiteralRegExp(node: ts.Node): node is ts.CallExpression | ts.NewExpression {
   if (!ts.isCallExpression(node) && !ts.isNewExpression(node)) return false;
   const [first] = node.arguments ?? [];
+
   if (!ts.isIdentifier(node.expression) || node.expression.text !== REGEXP_NAME) return false;
+
   return first !== undefined && ts.isStringLiteralLike(first);
 }
 
@@ -30,12 +32,15 @@ function isLiteralRegExp(node: ts.Node): node is ts.CallExpression | ts.NewExpre
 export function magicRegexes(file: ts.SourceFile): MagicHit[] {
   if (CONSTANTS_FILE.test(file.fileName)) return [];
   const hits: MagicHit[] = [];
+
   function visit(node: ts.Node, depth: number): void {
     if ((ts.isRegularExpressionLiteral(node) || isLiteralRegExp(node)) && depth > 0)
       hits.push(hitAt(node, MAGIC_REGEX, insideFunction(node.getText(file))));
     const inner = depth + Number(ts.isFunctionLike(node));
     ts.forEachChild(node, (child) => visit(child, inner));
   }
+
   visit(file, 0);
+
   return hits;
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { finish, newestFirst, readJson, type PollIo } from "./ci-wait-poll.ts";
 
 const RUN = { createdAt: "2026-11-10T10:00:00Z", databaseId: 5, headBranch: "main" };
+
 function done(conclusion: string) {
   return JSON.stringify({ conclusion, jobs: [{ conclusion, name: "test" }], status: "completed" });
 }
@@ -12,12 +13,14 @@ function done(conclusion: string) {
 function io(views: string[], out: string[] = []): PollIo & { clock: () => number } {
   let clock = 0;
   let i = 0;
+
   return {
     clock: () => clock,
     cwd: "/r",
     gh: (args) => {
       if (args.includes("--log-failed")) return { code: 0, stderr: "", stdout: "log\n" };
       const body = views[Math.min(i++, views.length - 1)] ?? "";
+
       return { code: 0, stderr: "", stdout: body };
     },
     now: () => clock,

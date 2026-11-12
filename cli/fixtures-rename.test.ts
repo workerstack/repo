@@ -35,8 +35,10 @@ function repo(extra: Record<string, string> = {}): string {
     "a/w.ts": W_TS,
     "cli/sync/stock-history.json": STOCK_HISTORY,
   });
+
   execFileSync("git", ["init", "-q"], { cwd: dir });
   execFileSync("git", ["add", "-A"], { cwd: dir });
+
   return dir;
 }
 
@@ -165,6 +167,7 @@ function run(dir: string, argv: string[]): { code: number; err: string; out: str
   const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);
   const err = vi.spyOn(process.stderr, "write").mockReturnValue(true);
   const code = main(argv);
+
   return { code, err: err.mock.calls.join(""), out: out.mock.calls.join("") };
 }
 

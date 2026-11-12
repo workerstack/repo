@@ -60,6 +60,7 @@ it("keeps dest-only keys and skips mcp/hooks/apiKey", () => {
     keepMe: 1,
     mcp: { servers: { old: true } },
   };
+
   const source = {
     agent: { name: "orchestrator" },
     apiKey: "src-secret",
@@ -67,6 +68,7 @@ it("keeps dest-only keys and skips mcp/hooks/apiKey", () => {
     hooks: { on: true },
     mcp: { servers: { new: true } },
   };
+
   const merged = deepMerge(dest, source, skipRe) /* both inputs hold features */ as Merged;
   expect(merged.keepMe).toBe(1);
   expect(merged.apiKey).toBe("dest-secret");

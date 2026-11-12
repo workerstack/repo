@@ -21,6 +21,7 @@ type ShardInput = Pick<SyncContext, "config" | "workspace" | "read">;
 /** Whether the root manifest lists `vitest` among its dependencies or devDependencies. */
 function hasVitest(ctx: ShardInput): boolean {
   const { dependencies, devDependencies } = ctx.workspace.manifest;
+
   return [dependencies, devDependencies].some((deps) => deps !== undefined && Object.hasOwn(deps, "vitest"));
 }
 

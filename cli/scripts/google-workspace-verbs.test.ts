@@ -53,6 +53,7 @@ it("main / verbs: accounts lists default when its tokens exist", async () => {
 
 it("main / verbs: sheet create posts a Drive file", async () => {
   loggedIn("ws-sheet-c-");
+
   const calls = stubFetch((url) => {
     if (url.includes("/drive/v3/files?")) {
       return jsonRes({
@@ -61,8 +62,10 @@ it("main / verbs: sheet create posts a Drive file", async () => {
         webViewLink: "https://docs.google.com/spreadsheets/d/sid",
       });
     }
+
     return jsonRes({ error: { message: url } }, 404);
   });
+
   const { code, logs } = await withIo(() => main(["sheet", "create", "--title", "Q3"]));
   expect(code).toBe(0);
   expect(logs).toContain("Q3");
@@ -130,12 +133,14 @@ it("main / verbs: sheet get without --id fails; set SERVICE_DISABLED is rewritte
 
 it("main / verbs: doc create/append and drive list", async () => {
   loggedIn("ws-doc-");
+
   const listed = {
     id: "did",
     mimeType: "application/vnd.google-apps.document",
     name: "Note",
     webViewLink: "https://doc/did",
   };
+
   stubFetch((url) => {
     if (url.includes("uploadType=multipart"))
       return jsonRes({ id: "did", name: "Note", webViewLink: "https://doc/did" });

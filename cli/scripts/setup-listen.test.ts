@@ -10,12 +10,15 @@ import type { SetupIo } from "./setup.types.ts";
 afterEach(cleanSetup);
 
 const withWhisper = { env: {}, pathEnv: "/bin", whichFn: (n: string) => (n === "ffmpeg" ? "" : `/bin/${n}`) };
+
 function password() {
   return Promise.resolve(" sk_fallback ");
 }
+
 function text() {
   return Promise.resolve("hw:7");
 }
+
 function model() {
   return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("ggml")), ok: true, status: 200 });
 }
@@ -45,10 +48,13 @@ it("setupListen skips the download on --skip-download and when the user declines
 it("setupListen asks before downloading on a terminal and downloads on yes", async () => {
   const home = plant("setup-li-yes-");
   const asked: string[] = [];
+
   function confirm(o: { message: string }) {
     asked.push(o.message);
+
     return Promise.resolve(true);
   }
+
   const io = { ...captureIo(), confirm };
   await setupListen({ fetchFn: model, home, interactive: true, io, platform: "linux", ...withWhisper });
   expect(asked.some((m) => m.startsWith("Download ggml-base.en.bin"))).toBe(true);
@@ -59,9 +65,11 @@ it("setupListen prompts for an OpenAI key on a terminal when there is no local S
   const home = plant("setup-li-key-");
   const opened: string[] = [];
   const io = { ...captureIo(), password };
+
   function openUrlFn(u: string) {
     return opened.push(u);
   }
+
   await setupListen({ env: {}, home, interactive: true, io, openUrlFn, ...bare });
   expect(opened).toStrictEqual(["https://platform.openai.com/api-keys"]);
   expect(readSpeakJson(home)).toStrictEqual({ openai: { apiKey: "sk_fallback" } });
@@ -133,8 +141,10 @@ it("re-checks PATH after install confirm", async () => {
     whichFn: (name: string) => {
       if (name === "ffmpeg") {
         seen.ffmpeg += 1;
+
         return seen.ffmpeg > 1 ? "/usr/bin/ffmpeg" : "";
       }
+
       return "";
     },
   });

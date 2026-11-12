@@ -10,5 +10,6 @@ export const SINCE_FLAG = "--since";
 export const DEFAULT_SINCE = "1970-01-01";
 export const DEFAULT_ROOT_PARTS: readonly string[] = [".claude", "projects"];
 export const ROOT_NEEDS_VALUE: string = `${ROOT_FLAG} needs a value`;
+
 /** The arguments after the runtime and the script path. */
 export const ARGV_START = 2;

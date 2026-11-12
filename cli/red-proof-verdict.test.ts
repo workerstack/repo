@@ -7,10 +7,13 @@ import { redProof } from "./red-proof.ts";
 
 /** The verdict on a real vitest run against HEAD's source in a planted repo. */
 const SLOW = { timeout: 60_000 };
+
 afterEach(removePlanted);
+
 function readsV(n: number) {
   return `import { expect, it } from "vitest";\nimport { v } from "./v.ts";\nit("v", () => expect(v).toBe(${n}));\n`;
 }
+
 function red(failed: number, total: number) {
   return {
     line: `red-proof: ${failed} of ${total} changed test files failed on HEAD`,

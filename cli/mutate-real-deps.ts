@@ -18,6 +18,7 @@ import { readWorkspace } from "./sync/workspace.ts";
 /** `git <args>` in `cwd`, run without any `GIT_*` variable a hook set, which would aim it at another repo. */
 function git(cwd: string, args: string[]): Captured {
   const run = spawnSync("git", args, { cwd, encoding: "utf8", env: toolEnv(childEnv()) });
+
   return { code: run.status ?? 1, stderr: run.error?.message ?? run.stderr, stdout: run.stdout };
 }
 
@@ -35,9 +36,12 @@ export const realFs: MutateFs = {
 /** The root and the `coverage` keys of the repo holding `cwd`, or the lines that say why there is none. */
 async function config(cwd: string): ReturnType<MutateDeps["config"]> {
   const root = findRoot(cwd);
+
   if (root === null) return [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``];
   const loaded = await loadConfig(root);
+
   if (!loaded.ok) return loaded.errors;
+
   return { floors: loaded.config.coverage.mutationFloors, mutate: loaded.config.coverage.mutate, root };
 }
 
@@ -48,10 +52,13 @@ async function config(cwd: string): ReturnType<MutateDeps["config"]> {
 function crateDirs(root: string, cargo: CargoRun): string[] {
   if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return [];
   const found = workspaceCrates(root, cargo);
+
   if (found.kind !== "crates") return [];
   const dirs = found.crates.map((crate) => path.relative(root, path.dirname(crate.manifest_path)));
+
   return dirs.map((dir) => {
     const slashed = dir.split(path.sep).join("/");
+
     return slashed === "" ? ROOT_PACKAGE : slashed;
   });
 }
@@ -64,6 +71,7 @@ export function packagesWith(cargo: CargoRun): MutateDeps["packages"] {
   return (root) => {
     const read = readWorkspace(root);
     const node = read.ok ? read.workspace.packages.map((pkg) => pkg.dir) : [];
+
     return [...node, ...crateDirs(root, cargo)];
   };
 }

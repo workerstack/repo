@@ -16,16 +16,21 @@ type InputTexts = { stateText: string; questionsText: string };
 export function parseArgv(argv: unknown): { flags: Record<string, string> } {
   const flags: Record<string, string> = {};
   const args: unknown[] = Array.isArray(argv) ? argv : [];
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+
     if (typeof arg !== "string" || !arg.startsWith(FLAG_PREFIX)) continue;
     const eq = arg.indexOf("=");
+
     if (eq > FLAG_PREFIX.length) {
       flags[arg.slice(FLAG_PREFIX.length, eq)] = arg.slice(eq + 1);
       continue;
     }
+
     const name = arg.slice(FLAG_PREFIX.length);
     const next = args[i + 1];
+
     if (Boolean(next) && !String(next).startsWith(FLAG_PREFIX)) {
       flags[name] = String(next);
       i += 1;
@@ -33,6 +38,7 @@ export function parseArgv(argv: unknown): { flags: Record<string, string> } {
       flags[name] = FLAG_ON;
     }
   }
+
   return { flags };
 }
 
@@ -42,7 +48,9 @@ const runner = /* @__PURE__ */ createJevRunner();
 /** The two input files' texts, or the usage or missing-file failure. */
 function readInputs(flags: Record<string, string>): InputTexts | JevResult {
   const { state = "", questions = "" } = flags;
+
   if (state === "" || questions === "") return fail(USAGE);
+
   try {
     return {
       questionsText: fs.readFileSync(questions, "utf8"),
@@ -55,14 +63,19 @@ function readInputs(flags: Record<string, string>): InputTexts | JevResult {
 
 export function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResult> {
   const { flags } = parseArgv(argv);
+
   if ((flags.available ?? "") !== "") {
     const home = opts.home === undefined || opts.home === "" ? os.homedir() : opts.home;
     const isPresent = loadJevKey({ env: opts.env ?? repoEnv.process, home }) !== "";
+
     return Promise.resolve({ code: 0, text: isPresent ? "yes\n" : "no\n" });
   }
+
   const texts = readInputs(flags);
+
   if ("code" in texts) return Promise.resolve(texts);
   const run = opts.run ?? runner;
+
   return run({
     env: opts.env,
     fetchImpl: opts.fetchImpl,
@@ -78,9 +91,11 @@ export async function main(argv: string[]): Promise<number> {
   try {
     const result = await runJev(argv);
     process.stdout.write(result.text);
+
     return result.code;
   } catch {
     process.stdout.write(REQUEST_FAILED);
+
     return FAIL_CODE;
   }
 }

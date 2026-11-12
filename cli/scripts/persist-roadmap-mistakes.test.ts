@@ -8,6 +8,7 @@ import { persistRoadmap } from "./persist-roadmap.ts";
 const tmpWs = useTmpWs("persist-roadmap-");
 const ENTRY = "- slice: plan 22 found lifecycle hooks must be async → D2 now says async and slice 3 waits on it";
 const SECOND = "- review: slice 2 had no runnable gate → Verify 3.1 runs the suite";
+
 function withKeys(keys: string) {
   return DRAFT_ROADMAP.replace(NAME_LINE, `${keys}${NAME_LINE}`);
 }
@@ -27,10 +28,12 @@ describe("roadmap Previous mistakes section", () => {
     const bad = persistRoadmap({ content: withEntries(DRAFT_ROADMAP, "- oops: a → b"), workspaceRoot: ws });
     expect(bad.ok).toBe(false);
     expect(bad.error).toMatch(/feedback\|verify\|review\|premise\|decision\|slice/);
+
     const moved = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "").replace(
       "## Verify",
       "## Previous mistakes\n(none)\n\n## Verify",
     );
+
     expect(persistRoadmap({ content: moved, workspaceRoot: ws }).error).toMatch(/must be the last heading/);
   });
 });
@@ -50,6 +53,7 @@ describe("roadmap Previous mistakes entries", () => {
     const ws = tmpWs();
     const decision = "- decision: a → b because c";
     const abs = savedRoadmap(ws, withEntries(DRAFT_ROADMAP, decision));
+
     for (const content of [
       withEntries(DRAFT_ROADMAP, "(none)"),
       withEntries(DRAFT_ROADMAP, decision.replace("because c", "because d")),

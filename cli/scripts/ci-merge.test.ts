@@ -13,6 +13,7 @@ afterEach(cleanTemps);
 function blobs(...names: string[]): Record<string, string> {
   return Object.fromEntries(names.map((name) => [`blobs/${name}`, "[]"]));
 }
+
 const MERGED: Captured = { code: 0, stderr: "", stdout: " Tests  6649 passed (6649)\n" };
 
 function merge(files: Record<string, string>, result: Captured | null = MERGED, dir = "blobs") {
@@ -20,11 +21,13 @@ function merge(files: Record<string, string>, result: Captured | null = MERGED, 
   const calls: { args: string[]; cwd: string }[] = [];
   const out: string[] = [];
   const err: string[] = [];
+
   const code = mergeMain(dir, {
     bins: {
       tsc: () => MERGED,
       vitest: (args, cwd) => {
         calls.push({ args, cwd });
+
         return result;
       },
     },
@@ -32,6 +35,7 @@ function merge(files: Record<string, string>, result: Captured | null = MERGED, 
     stderr: (s) => err.push(s),
     stdout: (s) => out.push(s),
   });
+
   return { calls, code, err: err.join(""), out: out.join(""), root };
 }
 
@@ -91,12 +95,14 @@ it.each([
 
 it("is refused outside a repo", () => {
   const err: string[] = [];
+
   const code = mergeMain("blobs", {
     bins: { tsc: () => MERGED, vitest: () => MERGED },
     cwd: "/",
     stderr: (s) => err.push(s),
     stdout: (s) => err.push(s),
   });
+
   expect(code).toBe(1);
   expect(err.join("")).toMatch(/^repo ci merge: no workerstack\.config\.ts in \//);
 });

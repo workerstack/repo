@@ -13,6 +13,7 @@ const ROOT: Workspace = {
   packages: [],
   root: "/repo",
 };
+
 const ENTRY: ResolvedLint = { skip: [], tailwind: { entryPoint: "src/app.css" } };
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 
@@ -21,7 +22,9 @@ type Written = { jsPlugins: unknown; overrides: unknown[]; rules: Record<string,
 /** The config sync writes for `lint`, parsed; a refusal throws. */
 function written(lint: ResolvedLint): Written {
   const built = oxlintConfig(ROOT, lint);
+
   if (!built.ok) throw new Error(built.errors.join("\n"));
+
   return JSON.parse(built.value) /* the config sync writes */ as Written;
 }
 
@@ -64,6 +67,7 @@ it("a skip may name a tailwindcss rule only when an entry turns the rules on", (
     reason: "the old palette predates the theme",
     rules: ["tailwindcss/no-hardcoded-colors"],
   };
+
   expect(written({ ...ENTRY, skip: [skip] }).overrides.at(-1)).toStrictEqual({
     files: ["src/legacy.tsx"],
     rules: { "tailwindcss/no-hardcoded-colors": "off" },

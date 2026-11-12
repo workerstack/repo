@@ -33,20 +33,25 @@ function rewriteSpawn(
 ): { deny: object } | { updated: ToolInput | null } {
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt = promptOf(updated) ?? promptOf(toolInput) ?? "";
+
   if (prompt.length > MAX_PROMPT_CHARS) return { deny: answerDeny(data, spawnCapReason(resolveRoots(data).root)) };
+
   return { updated };
 }
 
 function spawnUse(data: HookInput, toolInput: ToolInput | undefined): HookResult {
   const verdict = rewriteSpawn(toolInput, data);
+
   if ("deny" in verdict) return replyWith(verdict.deny);
   recordReviewSpawn(data, toolInput);
+
   return verdict.updated === null ? PASS : replyWith(answerRewrite(data, verdict.updated));
 }
 
 function writeUse(data: HookInput, toolInput: ToolInput | undefined): HookResult | null {
   // A full-content plan Write is answered below, before the gate sees it, so the stamp is written here.
   if (typeof toolInput?.content === "string") stampPlanSave(data);
+
   return parentWrite(data, toolInput);
 }
 
@@ -54,17 +59,21 @@ function writeUse(data: HookInput, toolInput: ToolInput | undefined): HookResult
 function gateUse(data: HookInput, toolInput: ToolInput | undefined, { writes }: { writes: boolean }): HookResult {
   notePush(data, toolInput);
   const fat = fatHookOutput(data, processFatTools(data));
+
   if (fat !== null) return replyWith(fat);
   const notice = toolInput !== undefined && writes ? lessonNotice(data, toolInput) : null;
+
   return notice === null ? PASS : replyWith(notice);
 }
 
 function preToolUse(data: HookInput): HookResult {
   const toolKey = eventKey(firstNonEmpty(data.toolName, data.tool_name) ?? "");
   const toolInput = data.toolInput ?? data.tool_input;
+
   if (SPAWN_TOOLS.has(toolKey)) return spawnUse(data, toolInput);
   const writes = WRITE_TOOLS.has(toolKey);
   const persisted = writes ? writeUse(data, toolInput) : null;
+
   return persisted ?? gateUse(data, toolInput, { writes });
 }
 
@@ -80,11 +89,15 @@ const ROUTES: ReadonlyMap<string, (data: HookInput) => HookResult> = /* @__PURE_
 export function main(_argv?: string[], io: HookIo = processHookIo()): number {
   try {
     const data = readHookInput(io) ?? {};
+
     const event = eventKey(
       firstNonEmpty(repoEnv.process.GROK_HOOK_EVENT, data.hookEventName, data.hook_event_name) ?? "",
     );
+
     const result = ROUTES.get(event)?.(data) ?? PASS;
+
     if (result.reply !== undefined) io.write(JSON.stringify(result.reply));
+
     return result.code;
   } catch {
     return 0;

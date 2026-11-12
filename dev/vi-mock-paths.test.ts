@@ -15,10 +15,13 @@ const URL_FORM = /^new URL\(\s*["'](?:\.\.?\/)[^"']+["']\s*,\s*import\.meta\.url
 /** `line` of every mock call in `text` whose first argument is not a bare/`node:` specifier or the URL form. */
 function badMockPaths(text: string): number[] {
   const lines: number[] = [];
+
   for (const m of text.matchAll(MOCK_CALL)) {
     const rest = text.slice(m.index + m[0].length);
+
     if (!SPECIFIER.test(rest) && !URL_FORM.test(rest)) lines.push(text.slice(0, m.index).split("\n").length);
   }
+
   return lines;
 }
 
@@ -59,11 +62,14 @@ describe("badMockPaths", () => {
 
 it("no tracked test spells a mock path another way", () => {
   const root = path.join(import.meta.dirname, "..");
+
   const files = execFileSync("git", ["ls-files", "*.test.ts"], { cwd: root, encoding: "utf8" })
     .split("\n")
     .filter(Boolean);
+
   const hits = files.flatMap((file) =>
     badMockPaths(fs.readFileSync(path.join(root, file), "utf8")).map((line) => `${file}:${line}`),
   );
+
   expect(hits).toStrictEqual([]);
 });

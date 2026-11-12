@@ -15,6 +15,7 @@ afterEach(removePlanted);
 function packedFixture(): string {
   const dest = tempDir();
   spawnRunner("bun")(["pm", "pack", "--destination", dest, "--quiet"], fixture());
+
   return path.join(dest, "acme-fx-1.0.0.tgz");
 }
 
@@ -23,12 +24,14 @@ function probeFailsOnNotes(args: string[], cwd: string): ReturnType<Runner> {
   if (args[0] !== PROBE_FILE) return spawnRunner("bun")(args, cwd);
   const failure = [{ key: "./notes", kind: "other", message: "no such file" }];
   fs.writeFileSync(path.join(cwd, PROBE_OUTPUT), JSON.stringify(failure));
+
   return { code: 0, stderr: "", stdout: "" };
 }
 
 /** A bun that fails every call naming a `peer-` package and runs the rest for real. */
 function peerAddFails(args: string[], cwd: string): ReturnType<Runner> {
   if (args[1]?.startsWith("peer-") === true) return { code: 1, stderr: "no peer\n", stdout: "" };
+
   return spawnRunner("bun")(args, cwd);
 }
 
@@ -54,10 +57,13 @@ describe("repo release consumer", () => {
 
   it("installs into a project that holds nothing but its manifest, with no repo.ts", { timeout: TIMEOUT }, async () => {
     const seen: string[][] = [];
+
     function bun(args: string[], cwd: string) {
       seen.push(fs.readdirSync(cwd));
+
       return spawnRunner("bun")(args, cwd);
     }
+
     const got = await consume(fixture(), [], { bun });
     expect(got.code).toBe(0);
     expect(seen[1]).toStrictEqual(["package.json"]);
@@ -71,6 +77,7 @@ describe("repo release consumer cleanup", () => {
     expect(passed.code).toBe(0);
     const failed = await consume(fixture({ exports: { ...EXPORTS, "./gone": "./gone.js" } }));
     expect(failed.code).toBe(1);
+
     for (const got of [passed, failed]) expect(got.made.filter((dir) => fs.existsSync(dir))).toStrictEqual([]);
   });
 
@@ -111,6 +118,7 @@ describe("repo release consumer imports", () => {
     const got = await consume(
       fixture({ exports: { ...EXPORTS, "./boom": "./boom.js" }, files: { "boom.js": 'throw new Error("boom");\n' } }),
     );
+
     expect(got.code).toBe(1);
     expect(got.err).toContain(`${PREFIX}./boom does not import: boom\n`);
   });
@@ -180,11 +188,14 @@ describe("repo release consumer refusals", () => {
 describe("repo release consumer peers", () => {
   it("adds the peers of the package, which bun leaves out when they are optional", { timeout: TIMEOUT }, async () => {
     const adds: string[][] = [];
+
     function bun(args: string[], cwd: string) {
       if (args[0] !== "add" || args[1]?.startsWith("peer-") !== true) return spawnRunner("bun")(args, cwd);
       adds.push(args);
+
       return { code: 0, stderr: "", stdout: "" };
     }
+
     const files = { "package.json": withPeers({ "peer-a": "^1.0.0", "peer-b": "2" }) };
     const got = await consume(fixture({ files }), [], { bun });
     expect(got.code).toBe(0);
@@ -210,12 +221,14 @@ describe("repo release consumer tool failures", () => {
 
   it("prints the refusal of a pack that names workspace:^", async () => {
     const manifest = { dependencies: { "@workerstack/x": "workspace:^" }, name: "@acme/app", version: "1.0.0" };
+
     const got = await consume(tempDir(), [], {
       bun: () => ({ code: 0, stderr: "", stdout: "" }),
       list: () => ["acme-app-1.0.0.tgz"],
       mkdtemp: (prefix) => `${prefix}x1`,
       tar: () => ({ code: 0, stderr: "", stdout: JSON.stringify(manifest) }),
     });
+
     expect(got).toMatchObject({
       code: 1,
       err: `${PREFIX}the packed package.json names workspace:^ for @workerstack/x; pin it before releasing\n`,

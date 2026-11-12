@@ -31,8 +31,11 @@ function repoWith(files: Record<string, string>, { git = true } = {}): string {
   const root = fixture();
   write(root, "packages/web/package.json", JSON.stringify({ name: "web", private: true }));
   write(root, "packages/web/references/INDEX.md", "# Web\n");
+
   for (const [rel, text] of Object.entries(files)) write(root, rel, text);
+
   if (git) execFileSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
 
@@ -85,6 +88,7 @@ it("does not scan what git ignores, such as dependencies and an ignored dir", as
     [`${DEPS}/pkg/.npmignore`]: "a\n",
     "ignored/.gitignore": "x\n",
   });
+
   const { code } = await sync(root);
   expect(code).toBe(0);
 });
@@ -95,6 +99,7 @@ it("scans the repo as git sees it once sync wrote the .gitignore block, so a new
     ".worktrees/w/.gitignore": "x\n",
     [`${DEPS}/x/.npmignore`]: "a\n",
   });
+
   expect(fs.existsSync(path.join(root, ".gitignore"))).toBe(false);
   const { code } = await sync(root);
   expect(code).toBe(0);
@@ -131,10 +136,12 @@ it("--postinstall prints the lines and exits 0, writing nothing", async () => {
 
 it("lists a stray file before an invalid output's problem", async () => {
   const root = repoWith({ "src/.gitignore": "x\n" });
+
   const bad = {
     formats: [{ comment: null, format: "json" as const, match: () => true }],
     generators: generating(file("bad.json")),
   };
+
   const result = await syncWith(root, bad);
   expect(result.code).toBe(1);
   expect(result.stderr.split("\n").slice(0, 2)).toStrictEqual([

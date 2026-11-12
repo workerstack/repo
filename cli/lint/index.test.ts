@@ -28,12 +28,13 @@ const RULE_NAMES = [
   "no-v8-ignore",
   "no-widen-then-assert",
   "public-jsdoc",
+  "require-readable-spacing",
   "skip-on-platform",
   "todo-needs-id",
   "types-file",
 ];
 
-it("is the plugin `repo` with the twenty-seven rules the generated config turns on", () => {
-  expect(plugin.meta?.name).toBe("repo");
-  expect(Object.keys(plugin.rules ?? {}).toSorted()).toStrictEqual(RULE_NAMES);
+it("is the plugin `repo` with the twenty-eight rules the generated config turns on", () => {
+  expect(plugin.meta.name).toBe("repo");
+  expect(Object.keys(plugin.rules).toSorted()).toStrictEqual(RULE_NAMES);
 });

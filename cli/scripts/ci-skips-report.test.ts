@@ -19,6 +19,7 @@ it(
     "full name, for tests that did not run, sorted and unique",
   () => {
     const root = "/work/app";
+
     const json = JSON.parse(
       vitestJson("/work/app/cli/b.test.ts", [
         ["z skipped", "skipped"],
@@ -29,6 +30,7 @@ it(
         ["broke", "failed"],
       ]),
     );
+
     expect(skippedIds(json, root)).toStrictEqual([
       "cli/b.test.ts > a pending",
       "cli/b.test.ts > m todo",
@@ -78,9 +80,11 @@ it("writeReport adds the whole ms of endTime - startTime per file, by posix path
     }),
   });
   writeReport(path.join(dir, "out.json"), path.join(dir, "v.json"), dir);
+
   const written = JSON.parse(read(dir, "out.json")) /* writeReport wrote durations as numbers */ as {
     durations: Record<string, number>;
   };
+
   expect(written.durations).toStrictEqual({ "a.test.ts": 11_851, "cli/z.test.ts": 500 });
   expect(Object.keys(written.durations)).toStrictEqual(["a.test.ts", "cli/z.test.ts"]);
 });

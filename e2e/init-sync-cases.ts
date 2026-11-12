@@ -20,6 +20,7 @@ export function regenerateCases(get: GetSandbox) {
       before.some((l) => l.includes(" -> ")),
       "links",
     ).toBe(true);
+
     for (const rel of await ignoredFiles(sb)) removeGenerated(path.join(sb.repo, rel));
     expect(await generatedHashes(sb)).toHaveLength(0);
     expectClean(sb, await sb.run("bun", ["install"]));
@@ -33,11 +34,13 @@ export function regenerateCases(get: GetSandbox) {
     fs.rmSync(path.join(sb.repo, ".claude", "settings.json"));
     fs.rmSync(path.join(sb.repo, "AGENTS.md"));
     expect(inject("registryUrl")).not.toContain("127.0.0.1:9/");
+
     const offline = {
       BUN_CONFIG_REGISTRY: "http://127.0.0.1:9/",
       HTTPS_PROXY: "http://127.0.0.1:9",
       HTTP_PROXY: "http://127.0.0.1:9",
     };
+
     expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: offline }));
     expect(await generatedHashes(sb)).toStrictEqual(before);
   });
@@ -53,6 +56,7 @@ export function unknownKeyCase(get: GetSandbox) {
     const sb = get();
     const original = sb.read("workerstack.config.ts");
     sb.write("workerstack.config.ts", original.replace("agents:", "bogusKey: true,\n  agents:"));
+
     try {
       const before = hashes(sb.repo, keepAll);
       const sync = await sb.run("bun", ["repo", "sync"]);
@@ -65,6 +69,7 @@ export function unknownKeyCase(get: GetSandbox) {
     } finally {
       sb.write("workerstack.config.ts", original);
     }
+
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   });
 }
@@ -75,16 +80,20 @@ export function hostsCase(get: GetSandbox) {
     const sb = get();
     const before = await generatedHashes(sb);
     const original = sb.read("workerstack.config.ts");
+
     try {
       setHosts(sb, ["claude"]);
       expectClean(sb, await sb.run("bun", ["repo", "sync"]));
+
       for (const rel of [".codex", ".agents", ".grok", ".cursor"]) expect(sb.exists(rel), rel).toBe(false);
+
       for (const rel of ["AGENTS.md", ".mcp.json", ".claude/settings.json"]) expect(sb.exists(rel), rel).toBe(true);
       expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
     } finally {
       sb.write("workerstack.config.ts", original);
       await sb.run("bun", ["repo", "sync"]);
     }
+
     expect(await generatedHashes(sb)).toStrictEqual(before);
   });
 }

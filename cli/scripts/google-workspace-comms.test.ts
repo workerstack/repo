@@ -5,7 +5,9 @@ import { runWorkspace, useLoggedInWorkspace } from "./__fixtures__/use-logged-in
 import { isRecord } from "./hook-input.ts";
 
 useLoggedInWorkspace("ws-comms-");
+
 const HOUR = 3_600_000;
+
 function dateTimeOf(v: unknown) {
   return isRecord(v) ? String(v.dateTime) : "";
 }
@@ -66,6 +68,7 @@ it("meeting: defaults to an hour from now and sends no attendees", async () => {
 
 it("meeting: falls back to a calendar link without dates when the start is not a date", async () => {
   stubFetch(() => jsonRes({}, 403));
+
   const r = await runWorkspace(
     "meeting",
     "create",
@@ -76,6 +79,7 @@ it("meeting: falls back to a calendar link without dates when the start is not a
     "--end",
     "2030-01-01T00:00:00Z",
   );
+
   expect(r.code).toBe(1);
   expect(r.errs).toContain("Calendar API blocked (403)");
   expect(r.errs).toContain("&text=A%20B");

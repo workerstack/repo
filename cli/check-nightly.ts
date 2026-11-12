@@ -16,13 +16,16 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   if (!config.packs.includes("release")) return [];
   const lines: string[] = [];
   const { dependencies = {}, devDependencies = {} } = workspace.manifest;
+
   function installed(name: string) {
     return name in dependencies || name in devDependencies;
   }
+
   const stryker = [STRYKER_CORE, STRYKER_RUNNER].every(installed);
   const globs = config.coverage.mutate;
   const hasMatches = selectFiles(tracked, globs).length > 0;
   const rustOnly = tracked.includes("Cargo.toml") && !stryker;
+
   if (!stryker && (hasMatches || !rustOnly))
     lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
 
@@ -31,6 +34,7 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
       `coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in workerstack.config.ts`,
     );
   }
+
   return lines;
 }
 
@@ -42,7 +46,9 @@ export async function checkNightlyAt(root: string): Promise<string[]> {
   const loaded = await loadConfig(root);
   const read = readWorkspace(root);
   const listed = runGit(root, ["ls-files", "-z", "--cached"]);
+
   if (!loaded.ok || !read.ok || listed.status !== 0) return [];
   const tracked = listed.stdout.split("\0").filter((file) => file !== "");
+
   return nightlyProblems({ config: loaded.config, tracked, workspace: read.workspace });
 }

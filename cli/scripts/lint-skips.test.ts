@@ -25,12 +25,14 @@ function nonNull(count: number) {
     (_, i) => `export const f${i} = (xs: string[]): string => xs.find(Boolean)!;\n`,
   ).join("");
 }
+
 const CLEAN = "export const clean = 1;\n";
 
 /** A git checkout holding `files` and a manifest, as its workspace. */
 function checkout(files: Record<string, string>): Workspace {
   const root = fs.realpathSync(tree({ "package.json": '{ "name": "app", "type": "module" }\n', ...files }));
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   return { manifest: { name: "app" }, packages: [], root };
 }
 
@@ -42,6 +44,7 @@ function failing() {
 function skip(files: string[], rules: string[] = [NN], reason = REASON): LintSkip {
   return { files, reason, rules };
 }
+
 function leftovers(root: string) {
   return fs.readdirSync(root).filter((name) => name.startsWith(".oxlintrc.unskipped-"));
 }
@@ -62,6 +65,7 @@ it(
 it("checkLintSkips sums two entries on one rule and counts each rule apart, in rule order", { timeout: SLOW }, () => {
   const params =
     "export function p(a: number, b: number, c: number, d: number): number {\n  return a + b + c + d;\n}\n";
+
   const ws = checkout({ "lib/b.ts": `${nonNull(1)}${params}`, "src/a.ts": nonNull(2) });
   const skips = [skip(["src/*.ts"]), skip(["lib/b.ts"], [NN, PARAMS])];
   expect(checkLintSkips(ws, { skip: skips }, { scripts: [] })).toStrictEqual({
@@ -105,11 +109,13 @@ it("checkLintSkips lints with the skip-free config at the root and drops it afte
   const ws = checkout({ "src/a.ts": nonNull(1) });
   const unskipped = oxlintConfig(ws, { skip: [] });
   const seen: string[] = [];
+
   function throwing(_tool: "oxlint" | "oxfmt", args: string[], root: string): never {
     const config = args[args.indexOf("-c") + 1] ?? "";
     seen.push(fs.readFileSync(path.join(root, config), "utf8"));
     throw new Error("oxlint was killed");
   }
+
   expect(() => checkLintSkips(ws, { skip: [skip(["src/a.ts"])] }, { run: throwing, scripts: [] })).toThrow(
     "oxlint was killed",
   );
@@ -166,9 +172,12 @@ function tagged(): Workspace {
     "packages/lib/src/lib.ts": 'export type { Ui } from "@app/ui";\n',
     "packages/ui/package.json": '{ "name": "@app/ui" }\n',
   });
+
   const names = ["@app/lib", "@app/ui"];
+
   return { ...ws, packages: names.map((name) => ({ dir: `packages/${name.slice(5)}`, manifest: { name } })) };
 }
+
 const LIB_SKIP = skip(["packages/lib/src/lib.ts"], ["repo/boundaries"]);
 
 it("checkLintSkips counts a skipped tag hit, the tags kept in its skip-free config", { timeout: SLOW }, () => {
@@ -195,15 +204,19 @@ describe("skipFiles agrees with oxlint's override matching", () => {
   it.each(["src/**/*.ts", "*.ts", "src/*.ts", "./*.ts", "a.ts", "*/a.ts"])("%s", { timeout: SLOW }, (glob) => {
     const ws = checkout(Object.fromEntries(files.map((rel) => [rel, nonNull(1)])));
     const built = oxlintConfig(ws, { skip: [skip([glob])] });
+
     if (!built.ok) throw new Error(built.errors.join("\n"));
     fs.writeFileSync(path.join(ws.root, ".oxlintrc.json"), built.value);
     const out = captureTool("oxlint", ["-f", "json"], ws.root).stdout;
+
     const report = JSON.parse(out) /* oxlint's json report, as lintReport reads it */ as {
       diagnostics: { filename: string; code?: string }[];
     };
+
     const hit = new Set(
       report.diagnostics.filter((d) => d.code === "typescript(no-non-null-assertion)").map((d) => d.filename),
     );
+
     expect(skipFiles([glob], files)).toStrictEqual(files.filter((rel) => !hit.has(rel)));
   });
 });

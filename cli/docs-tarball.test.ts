@@ -33,6 +33,7 @@ it("names a missing INDEX, and compares paths from the package folder", () => {
     { file: "packages/a/references/INDEX.md", index: "packages/a/references/INDEX.md" },
     { file: "packages/a/references/x.md", index: "packages/a/references/INDEX.md" },
   ];
+
   expect(tarballFindings("packages/a", inPackage, packing("packed 1KB references/x.md\n"))).toStrictEqual([
     'packages/a/references/INDEX.md is not in the packed tarball; add "references" to files in packages/a/package.json',
   ]);

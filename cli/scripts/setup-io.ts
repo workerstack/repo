@@ -16,6 +16,7 @@ export function errLine(io: SetupIo | null | undefined, s: string): void {
 /** The terminal prompts, writing through stdout and stderr. */
 export async function defaultIo(): Promise<SetupIo> {
   const { confirm, password, select, text } = await import("./prompt.ts");
+
   return {
     confirm,
     error: (s: string) => process.stderr.write(`${s}\n`),
@@ -30,5 +31,6 @@ export async function defaultIo(): Promise<SetupIo> {
 export async function askKey(io: SetupIo, ctx: SetupCtx, ask: KeyAsk): Promise<string> {
   logLine(io, ask.line);
   await openUrl(ask.url, ctx);
+
   return str(await io.password?.({ message: ask.message }));
 }

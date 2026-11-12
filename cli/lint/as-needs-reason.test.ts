@@ -9,6 +9,7 @@ function needs(type: string) {
     "or narrow with a check or a schema parse"
   );
 }
+
 function messagesOf(code: string) {
   return reportsOf(asNeedsReason, { "a.ts": code }).map((report) => report.message);
 }

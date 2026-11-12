@@ -19,10 +19,13 @@ import type { Subpath } from "./exports.ts";
 
 /** What installing needs: a `bun` that runs in a directory. */
 export type InstallIo = { bun: Runner };
+
 /** A package installed in a project: the name it is imported by, its directory and its package.json as installed. */
 export type Package = { name: string; root: string; installed: Installed };
+
 /** The fields of an installed package.json the checks read. */
 type Installed = { version: string; exports?: unknown; peerDependencies: Record<string, string> };
+
 /** Where the old version comes from: a registry (name, version, registry URL) or a tarball on disk. */
 export type OldSpec = { name: string; version: string; registry: string } | { tarball: string };
 
@@ -33,6 +36,7 @@ function installedSchema(): z.ZodType<Installed> {
     version: z.string(),
   });
 }
+
 function projectSchema() {
   return z.object({ dependencies: z.record(z.string(), z.string()) });
 }
@@ -40,6 +44,7 @@ function projectSchema() {
 function readJson(file: string): unknown {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
+
 function firstLine(text: string): string {
   return text.trim().split("\n", 1).join("");
 }
@@ -52,6 +57,7 @@ export function initProject(project: string): void {
 /** Runs `bun add` of `specs` in `project`; bun's stderr when it fails, else null. */
 export function addSpecs(project: string, specs: readonly string[], io: InstallIo): string | null {
   const added = io.bun(BUN_ADD(...specs), project);
+
   return added.code === 0 ? null : added.stderr.trim();
 }
 
@@ -63,12 +69,14 @@ export function addedName(project: string): string {
 /** The package `name` as installed in `project`, which can hold several. */
 export function installedIn(project: string, name: string): Package {
   const root = path.join(project, INSTALLED_DIR, name);
+
   return { installed: installedSchema().parse(readJson(path.join(root, PROJECT_FILE))), name, root };
 }
 
 /** Adds the peers bun leaves out (the optional ones); bun's stderr when that fails, else null. */
 export function addPeers(project: string, pkg: Package, io: InstallIo): string | null {
   const peers = Object.entries(pkg.installed.peerDependencies).map(([peer, range]) => `${peer}@${range}`);
+
   return peers.length === 0 ? null : addSpecs(project, peers, io);
 }
 
@@ -78,7 +86,9 @@ export function installOld(project: string, spec: OldSpec, io: InstallIo): strin
     "tarball" in spec
       ? BUN_ADD(TARBALL_ALIAS(spec.tarball))
       : BUN_ADD_FROM(spec.registry, NPM_ALIAS(spec.name, spec.version));
+
   const added = io.bun(args, project);
+
   return added.code === 0 ? null : firstLine(added.stderr);
 }
 

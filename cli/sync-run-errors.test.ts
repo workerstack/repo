@@ -17,6 +17,7 @@ async function refused(root: string): Promise<string> {
   expect(result.code).toBe(1);
   expect(result.stdout).toBe("");
   expect(snapshot(root)).toStrictEqual(before);
+
   return result.stderr;
 }
 
@@ -68,6 +69,7 @@ it("reports a file it cannot read instead of treating it as missing", async () =
 
 it("reports a failed write, removes its temp file and exits 1", async () => {
   const root = fixture();
+
   const rename = vi.spyOn(fs, "renameSync").mockImplementationOnce(() => {
     throw Object.assign(new Error("EACCES: permission denied, rename"), { code: "EACCES" });
   });
@@ -96,9 +98,11 @@ it("--postinstall reapplies the links from the root, and no other mode does", as
   const root = tempDir();
   write(root, CONFIG_FILE, "export default {};\n");
   const calls: string[] = [];
+
   function reapply(cwd: string) {
     return void calls.push(cwd);
   }
+
   await syncWith(root, { generators: [], reapply }, "--postinstall");
   await syncWith(root, { generators: [], reapply });
   await syncWith(root, { generators: [], reapply }, "--check");

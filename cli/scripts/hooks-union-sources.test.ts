@@ -27,8 +27,10 @@ const group = [{ hooks: [{ command: WORKTREE, timeout: 60, type: "command" }] }]
 
 function matcherFor(name: string): Set<string> {
   const entry = must(repoSsot().hooks.preToolUse?.find((e) => e.command.endsWith(` hook ${name}`)));
+
   return new Set(must(entry.matcher).split("|").map(eventKey));
 }
+
 const specs = Object.values(TOOLS).flatMap((m) => [...m]);
 
 it("routes every tool the gate answers to the gate", () => {
@@ -38,9 +40,11 @@ it("routes every tool the gate answers to the gate", () => {
 
 it("routes every shell tool and every persist-owned write to orchestrate-parent", () => {
   const parent = matcherFor(PARENT);
+
   const owned = specs.filter(
     ([, spec]) => spec.kind === "bash" || (spec.kind === "write" && spec.persistShared === true),
   );
+
   expect(owned.map(([key]) => key).filter((key) => !parent.has(key))).toStrictEqual([]);
 });
 
@@ -52,6 +56,7 @@ it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, no other harn
   const claude = readJson<ClaudeDoc>(REPO_ROOT, ".claude/settings.json");
   expect(claude.hooks.WorktreeCreate).toStrictEqual(group);
   expect(claude.hooks.WorktreeRemove).toStrictEqual(group);
+
   for (const rel of [".codex/hooks.json", ".agents/hooks.json"])
     expect(JSON.stringify(readJson(REPO_ROOT, rel)), rel).not.toContain("hook worktree");
 });

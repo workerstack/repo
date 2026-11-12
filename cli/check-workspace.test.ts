@@ -9,6 +9,7 @@ describe("checkWorkspace catalog rules", () => {
       devDependencies: { vitest: "catalog:" },
       peerDependencies: { react: "^19.0.0" },
     });
+
     expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });
 
@@ -144,6 +145,7 @@ describe("checkWorkspace one version", () => {
         zod: ["zod@4.1.12"],
       },
     });
+
     expect(lines(files, lock)).toStrictEqual([
       "zod resolves to 3.24.1 and 4.1.12; b pulls 3.24.1; " +
         'add "overrides": { "zod": "catalog:" } to the root package.json',
@@ -173,6 +175,7 @@ describe("checkWorkspace transitive duplicates", () => {
         zod: ["zod@4.1.12"],
       },
     });
+
     expect(lines(files, lock)).toStrictEqual([]);
   });
 });
@@ -180,9 +183,11 @@ describe("checkWorkspace transitive duplicates", () => {
 describe("checkWorkspace turbo scripts", () => {
   const testLine =
     'packages/b/package.json: packages/b has a vitest.config.ts but no "test" script; add "test": "vitest run"';
+
   const typecheckLine =
     'packages/b/package.json: packages/b has a tsconfig.json but no "typecheck" script; ' +
     'add "typecheck": "tsc --noEmit"';
+
   const extra = { "packages/b/tsconfig.json": "{}", "packages/b/vitest.config.ts": "" };
 
   it("names a package missing the test script and the typecheck script", () => {

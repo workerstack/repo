@@ -46,10 +46,13 @@ describe("main home and PATH", () => {
 
   it("looks ffmpeg up on the given PATH, else the env PATH, else the process PATH", async () => {
     const seen: Array<string | undefined> = [];
+
     function whichFn(_name: string, pathEnv?: string) {
       seen.push(pathEnv);
+
       return "";
     }
+
     const base = { log: quiet, platform: "linux" as const, whichFn };
     await main(["nope"], { ...base, env: { PATH: "/env" }, pathEnv: "/given" });
     await main(["nope"], { ...base, env: { PATH: "/env" } });
@@ -75,6 +78,7 @@ describe("main options", () => {
     function spawnSyncFn(): SpawnSyncResult {
       throw thrown;
     }
+
     const r = await run(["devices"], { spawnSyncFn });
     expect(r.errs).toStrictEqual([want]);
   });

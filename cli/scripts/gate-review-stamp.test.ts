@@ -20,13 +20,17 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import { activeReview, stampPath } from "./strategy.ts";
 
 const tmp = useTmp();
+
 function put(kind: WriteKind, w: string, write: { target: string; content?: string }) {
   return processFatTools(reviewWrite(kind, { cwd: w, ...write }));
 }
+
 /** Every stamp under the workspace's sessions, whatever the session id. */
 function stampFiles(w: string) {
   const sessions = path.join(w, ".tmp/repo/sessions");
+
   if (!fs.existsSync(sessions)) return [];
+
   return fs.readdirSync(sessions).filter((d) => fs.existsSync(path.join(sessions, d, "strategy.json")));
 }
 
@@ -62,6 +66,7 @@ it.each(WRITE_KINDS)("%s: writes no stamp for a default plan, without a session 
   const rev = planFile(w, "review-fast");
   processFatTools(inSession(reviewWrite(kind, { content: rev.text, cwd: w, target: rev.file }), null));
   expect(stampFiles(w)).toStrictEqual([]);
+
   for (const child of ["scout", "implementer-fast"]) {
     processFatTools(asChild(reviewWrite(kind, { content: rev.text, cwd: w, target: rev.file }), child));
     expect(stamped(w), child).toBe(false);
@@ -78,6 +83,7 @@ it.each(WRITE_KINDS)(
     expect(stamped(w)).toBe(false);
     put(kind, w, { content: text, target: file });
     expect(activeReview(w, REVIEW_SID)?.strategy).toBe("review-fast");
+
     for (const status of ["done", "blocked", "ready"]) {
       fs.writeFileSync(file, planText("review-fast", status));
       expect(stamped(w), status).toBe(true);
@@ -111,15 +117,18 @@ it("stamps an alias spelling of the plan as the canonical path, once", () => {
   const { file, text } = planFile(w, "review-fast");
   const alias = aliasOf(w);
   const plan = "3-review-plan-20261107T181901Z.md";
+
   const spelled = [
     path.join(alias, ".tmp/repo/plans", plan),
     path.join(w, "agents/../.tmp/repo/plans", plan),
     path.join(w, "./.tmp/repo/plans/../plans", plan),
   ];
+
   for (const target of spelled) {
     put("claudeWrite", target.startsWith(alias) ? alias : w, { content: text, target });
     expect(stampContent(w), target).toStrictEqual({ plan: file });
   }
+
   const left = fs.readdirSync(path.dirname(stampPath(w, REVIEW_SID))).filter((f) => f !== "wrote.txt");
   expect(left).toStrictEqual(["strategy.json"]);
   expect(activeReview(alias, REVIEW_SID)?.plan).toBe(file);
@@ -141,8 +150,10 @@ function savedPlan(w: string, strategy: string) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const content = String(saved?.hookSpecificOutput?.updatedInput?.content);
   fs.writeFileSync(filePath, content);
+
   return { content, file_path: filePath };
 }
+
 function tick(file: string) {
   return { file_path: file, new_string: "1.1 [x]", old_string: "1.1 [ ]" };
 }

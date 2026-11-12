@@ -6,6 +6,7 @@ import { BASE, CLONE, OUT, ROOT, SHA, fakes, rawReport, sim } from "./__fixtures
 import { runMutate } from "./mutate.ts";
 
 const SHARD = ["--shard", "1/2", "--report", OUT];
+
 const INSTALL =
   "repo mutate: install the mutation tool first: bun add -d @stryker-mutator/core@10.1.1 " +
   "@stryker-mutator/vitest-runner@10.1.1\n";
@@ -46,6 +47,7 @@ it("writes a Stryker config with the shard's files and the options this repo nee
     if (file.endsWith("stryker.json")) config = JSON.parse(text);
     write(file, text);
   };
+
   await runMutate(SHARD, f.deps);
   expect(config).toStrictEqual({
     coverageAnalysis: "perTest",
@@ -72,6 +74,7 @@ it("removes the clone when Stryker fails, when git fails and when a step throws"
   thrown.deps.run = () => {
     throw new Error("spawn died");
   };
+
   await expect(runMutate(SHARD, thrown.deps)).rejects.toThrow("spawn died");
   expect(thrown.calls.at(-1)).toBe(`rm ${BASE}`);
 });
@@ -102,6 +105,7 @@ it("counts Survived and NoCoverage as survivors, Timeout as killed, and leaves o
   const report = rawReport({
     "src/a.ts": ["Killed", "Timeout", "Survived", "NoCoverage", "CompileError", "Ignored"],
   });
+
   const f = fakes(sim({ stryker: { code: 0, output: "", report } }));
   await runMutate(["--shard", "1/2", "--report", OUT], f.deps);
   expect(JSON.parse(f.files.get(OUT) ?? "")).toMatchObject({

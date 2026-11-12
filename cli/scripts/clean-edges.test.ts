@@ -15,15 +15,18 @@ const NOW = Date.parse("2026-11-03T12:00:00Z");
 const DAY = 24 * 3600_000;
 
 const dirs: string[] = [];
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+
   for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tempDir() {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "repo-clean-edges-")));
   dirs.push(dir);
+
   return dir;
 }
 
@@ -33,12 +36,14 @@ function put(root: string, rel: string, body: string | Buffer) {
   fs.writeFileSync(file, body);
   const t = new Date(NOW - 2 * DAY);
   fs.utimesSync(file, t, t);
+
   return file;
 }
 
 function run(root: string, { dryRun, rm }: { dryRun: boolean; rm?: typeof fs.rmSync }) {
   const lines: string[] = [];
   const code = runClean({ dryRun, liveSessions: new Set(), now: NOW, out: (l) => lines.push(l), rm, root });
+
   return { code, lines };
 }
 
@@ -57,10 +62,12 @@ describe("clean report", () => {
     const root = tempDir();
     put(root, ".tmp/repo/a.log", "a");
     put(root, ".tmp/repo/b.log", "b");
+
     const rm = ((p: string) => {
       if (p.endsWith("a.log")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
       fs.rmSync(p, { force: true });
     }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
+
     const { code, lines } = run(root, { dryRun: false, rm });
     expect(code).toBe(1);
     expect(lines).toContain("skipped .tmp/repo/a.log: EBUSY");

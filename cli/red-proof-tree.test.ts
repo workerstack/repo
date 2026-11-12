@@ -10,6 +10,7 @@ import { redProof } from "./red-proof.ts";
 
 /** What the HEAD tree holds when vitest runs in it, seen through a stand-in runner on planted repos. */
 afterEach(removePlanted);
+
 function read(cwd: string, file: string) {
   return fs.existsSync(nodePath.join(cwd, file)) ? fs.readFileSync(nodePath.join(cwd, file), "utf8") : null;
 }
@@ -17,19 +18,23 @@ function read(cwd: string, file: string) {
 function boom(): never {
   throw new Error("boom");
 }
+
 /** A stand-in vitest that records, per watched file, what the HEAD tree held when it ran. */
 function watcher() {
   const seen: Record<string, string | null> = {};
+
   const run = fakeVitest(
     () => true,
     (cwd) => {
       for (const file of [...WATCHED, "app.config.ts", "notes.md"]) seen[file] = read(cwd, file);
     },
   );
+
   return { run, seen };
 }
 
 const BASE = { "__fixtures__/f.ts": "old\n", "__snapshots__/a.snap": "old\n", "gone.ts": "gone\n", "s.ts": "head\n" };
+
 const STAGED = {
   "__fixtures__/f.ts": "newer\n",
   "__fixtures__/helper.ts": "h\n",
@@ -40,6 +45,7 @@ const STAGED = {
   "notes.md": "n\n",
   "s.ts": "staged\n",
 };
+
 const MIXED = change(
   ["M", "s.ts"],
   ["A", "new.ts"],
@@ -51,6 +57,7 @@ const MIXED = change(
   ["A", "a.test.ts"],
   ["A", "notes.md"],
 );
+
 const WATCHED = ["s.ts", "new.ts", "gone.ts", "__fixtures__/f.ts", "__fixtures__/helper.ts", "__snapshots__/a.snap"];
 
 it("puts a changed source file back and removes a new one on the HEAD tree", () => {
@@ -82,10 +89,12 @@ it("puts a renamed file's old path back", () => {
   git(root, "mv", "old.ts", "new.ts");
   stage(root, { "a.test.ts": PASS });
   const seen: (string | null)[] = [];
+
   const run = fakeVitest(
     () => true,
     (cwd) => seen.push(read(cwd, "old.ts"), read(cwd, "new.ts")),
   );
+
   const files = change(["D", "old.ts"], ["A", "new.ts"], ["A", "a.test.ts"]);
   expect(redProof(root, files, { vitest: run }).ok).toBe(true);
   expect(seen).toStrictEqual(["old\n", null]);
@@ -96,6 +105,7 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
   fs.mkdirSync(nodePath.join(root, "pkg-a", "node_modules"));
   stage(root, { "pkg-a/a.test.ts": PASS, "pkg-b/b.test.ts": PASS, "pkg-b/c.test.ts": PASS });
   const calls: unknown[] = [];
+
   const run = fakeVitest(
     (file) => file === "a.test.ts",
     (cwd, args) =>
@@ -106,6 +116,7 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
         rootLinked: fs.existsSync(nodePath.join(cwd, "..", "node_modules")),
       }),
   );
+
   const files = change(["A", "pkg-a/a.test.ts"], ["A", "pkg-b/b.test.ts"], ["A", "pkg-b/c.test.ts"]);
   expect(redProof(root, files, { vitest: run })).toStrictEqual({
     line: "red-proof: 1 of 3 changed test files failed on HEAD",
@@ -123,10 +134,12 @@ it("removes its dir after a pass and after a throw", () => {
   stage(root, { "a.test.ts": PASS });
   const tree = nodePath.join(root, ".tmp", "repo", `red-proof-${process.pid}`);
   const seen: boolean[] = [];
+
   const run = fakeVitest(
     () => true,
     () => seen.push(fs.existsSync(tree)),
   );
+
   redProof(root, change(["A", "a.test.ts"]), { vitest: run });
   expect(seen).toStrictEqual([true]);
   expect(fs.existsSync(tree)).toBe(false);
@@ -147,10 +160,12 @@ it("owns a nested test by the nearest package dir above it", () => {
   const root = plant({ "cli/package.json": { name: "c" } });
   stage(root, { "cli/sub/deep/a.test.ts": PASS, "top/b.test.ts": PASS });
   const calls: unknown[] = [];
+
   const run = fakeVitest(
     () => false,
     (cwd, args) => calls.push([nodePath.relative(root, cwd), args[1]]),
   );
+
   redProof(root, change(["A", "cli/sub/deep/a.test.ts"], ["A", "top/b.test.ts"]), { vitest: run });
   const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
   expect(calls).toStrictEqual([

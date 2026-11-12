@@ -14,10 +14,13 @@ useTempDirs();
 function writePlan(root: string, name: string, fm: Record<string, string>): string {
   const abs = path.join(root, ".tmp", "repo", "plans", name);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
+
   const head = Object.entries(fm)
     .map(([k, v]) => `${k}: ${v}`)
     .join("\n");
+
   fs.writeFileSync(abs, `---\n${head}\n---\n\n# plan\n`);
+
   return abs;
 }
 
@@ -28,7 +31,9 @@ function planFm(strategy: string | null, status = "in-progress"): Record<string,
 
 it("accepts exactly the three values", () => {
   expect(STRATEGIES).toStrictEqual(["default", "review-fast", "review-deep"]);
+
   for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
+
   for (const bad of ["review-medium", "Default", " default", "", undefined, null, 3, ["default"]])
     expect(parseStrategy(bad)).toBeNull();
 });
@@ -42,7 +47,9 @@ it("review-fast starts fast then goes deep; review-deep is deep both times", () 
 
 it("accepts exactly ask, auto and away", () => {
   expect(MODES).toStrictEqual(["ask", "auto", "away"]);
+
   for (const m of MODES) expect(parseMode(m)).toBe(m);
+
   for (const bad of ["Away", " ask", "", "review", undefined, null, 1, ["auto"]]) expect(parseMode(bad)).toBeNull();
 });
 
@@ -63,6 +70,7 @@ it("writeStamp then activeReview returns an in-progress review-fast plan", () =>
 
 it("is null for ready, done, blocked, default, a missing key, a missing plan and an unstamped session", () => {
   const root = realDir("strategy-");
+
   for (const [fm, label] of [
     [planFm("review-fast", "ready"), "ready"],
     [planFm("review-fast", "done"), "done"],
@@ -74,6 +82,7 @@ it("is null for ready, done, blocked, default, a missing key, a missing plan and
     writeStamp(root, label, plan);
     expect(activeReview(root, label)).toBeNull();
   }
+
   writeStamp(root, "gone", path.join(root, ".tmp", "repo", "plans", "9-gone-20261107T181901Z.md"));
   expect(activeReview(root, "gone")).toBeNull();
   expect(activeReview(root, "never-stamped")).toBeNull();

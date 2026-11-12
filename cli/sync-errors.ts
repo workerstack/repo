@@ -16,5 +16,6 @@ export function errorMessage(error: unknown): string {
 /** Prints each error as a sync line; the exit code, which `--postinstall` keeps at 0. */
 export function fail(run: FailIo, errors: readonly string[]): number {
   for (const error of errors) run.io.stderr(`${SYNC_PREFIX}${error}\n`);
+
   return run.postinstall ? 0 : 1;
 }

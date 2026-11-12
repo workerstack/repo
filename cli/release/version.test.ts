@@ -5,8 +5,11 @@ import { nextVersion, type Mode } from "./version.ts";
 function commit(subject: string, body = "") {
   return { body, subject };
 }
+
 const AUTO: Mode = { kind: "auto" };
+
 type Options = { mode?: Mode; first?: boolean };
+
 function next(current: string, subjects: string[], { mode = AUTO, first = false }: Options = {}) {
   return nextVersion({ commits: subjects.map((subject) => commit(subject)), current, first, mode });
 }
@@ -28,6 +31,7 @@ describe("below 1.0", () => {
       first: false,
       mode: AUTO,
     });
+
     expect(got).toStrictEqual({ ok: true, version: "0.5.0" });
   });
 });

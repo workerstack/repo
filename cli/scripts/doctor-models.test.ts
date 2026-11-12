@@ -54,6 +54,7 @@ it("flags a codex, a grok, an agy and a cursor agent naming a dropped model, wit
     ".cursor/agents/scout.md": md("claude-sonnet-5-thinking-high"),
     ".grok/agents/scout.md": md("grok-4.5"),
   });
+
   expect(r.lines[0]).toMatch(/^agent models\s+4 to fix\s*$/);
   expect(r.lines.slice(1)).toStrictEqual([
     "- .codex/agents/scout.toml: model gpt-5.4-mini is not offered by codex; " +
@@ -73,6 +74,7 @@ it("checks agy agents against the fixed set without running any command", async 
     ".agents/agents/c.md": md("pro"),
     ".agents/agents/d.md": md("flash_lite"),
   });
+
   expect(r.text).toMatch(/^agent models\s+ok\s*$/);
   expect(r.lines).toHaveLength(1);
   expect(r.calls).toStrictEqual([]);
@@ -93,6 +95,7 @@ it("flags grok-4.5 in the grok role file and in the global settings [subagents.m
       '[ui]\nmodel = "not-a-subagent"\n\n[subagents.toggle]\nexplore = true\n\n' +
       '[subagents.models]\nexplore = "grok-4.5"\nscout = "grok-4.7"\n\n[memory]\nenabled = false\n',
   });
+
   expect(r.lines[0]).toMatch(/^agent models\s+2 to fix\s*$/);
   expect(r.lines.slice(1)).toStrictEqual([
     "- .grok/roles/scout.toml: model grok-4.5 is not offered by grok; offered: grok-4.7",

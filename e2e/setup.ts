@@ -16,6 +16,7 @@ import { isRecord } from "./json";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 
 export const OLD_VERSION = "0.0.0-e2e.0";
+
 /** The last commit whose init copies the agent trees into a consumer; its build is published as OLD_VERSION. */
 export const OLD_COMMIT = "e7d680e";
 
@@ -41,9 +42,12 @@ function tarballVersion(tarball: string): string {
     onReadEntry: (entry) => entry.on("data", (c: Buffer) => (raw += c.toString("utf8"))),
     sync: true,
   });
+
   if (raw === "") throw new Error(`no package/package.json in ${tarball}`);
   const pkg = JSON.parse(raw);
+
   if (!isRecord(pkg) || typeof pkg.version !== "string") throw new Error(`no version in ${tarball}'s package.json`);
+
   return pkg.version;
 }
 
@@ -57,8 +61,10 @@ function buildAndPack(dest: string): string {
     encoding: "utf8",
     shell: process.platform === "win32",
   });
+
   // tsc prints its diagnostics on stdout.
   if (r.status !== 0) throw new Error(`bun run build failed:\n${r.stderr}${r.stdout}`);
+
   return packRepo(repoRoot(), dest);
 }
 
@@ -72,19 +78,23 @@ function buildOld(work: string): string {
   const packDir = path.join(work, "old-pack");
   fs.mkdirSync(src, { recursive: true });
   fs.mkdirSync(packDir, { recursive: true });
+
   function sh(cmd: string, args: string[]) {
     const r = spawnSync(cmd, args, {
       cwd: cmd === "git" ? repoRoot() : src,
       encoding: "utf8",
       shell: process.platform === "win32",
     });
+
     if (r.status !== 0)
       throw new Error(`${cmd} ${args.join(" ")} failed (is ${OLD_COMMIT} fetched?):\n${r.stderr}${r.stdout}`);
   }
+
   sh("git", ["archive", "-o", archive, OLD_COMMIT]);
   tar.x({ cwd: src, file: archive, sync: true });
   sh("bun", ["install", "--ignore-scripts"]);
   sh("bun", ["run", "build"]);
+
   return retagTarball(packRepo(src, packDir), OLD_VERSION, work);
 }
 
@@ -95,8 +105,11 @@ function buildOld(work: string): string {
  */
 function runParent(): { parent: string; remove: boolean } {
   const { REPO_E2E_ROOT, RUNNER_TEMP } = repoEnv.process;
+
   if (REPO_E2E_ROOT !== undefined && REPO_E2E_ROOT !== "") return { parent: REPO_E2E_ROOT, remove: true };
+
   if (RUNNER_TEMP !== undefined && RUNNER_TEMP !== "") return { parent: RUNNER_TEMP, remove: false };
+
   return { parent: os.tmpdir(), remove: true };
 }
 
@@ -107,6 +120,7 @@ export async function setup(project: TestProject) {
   // two module paths to the nested vitest and its test files, which fails "find the current suite".
   const runRoot = fs.realpathSync.native(fs.mkdtempSync(path.join(parent, "repo-e2e-")));
   let reg: Registry | undefined;
+
   // One cleanup for the teardown and for a failed setup: stop the registry, then drop the run root.
   async function cleanup() {
     try {
@@ -116,6 +130,7 @@ export async function setup(project: TestProject) {
       else if (remove) fs.rmSync(runRoot, { force: true, recursive: true });
     }
   }
+
   try {
     const given = repoEnv.process.REPO_E2E_TARBALL ?? "";
     const tarball = given === "" ? buildAndPack(runRoot) : path.resolve(given);
@@ -133,5 +148,6 @@ export async function setup(project: TestProject) {
     await cleanup();
     throw err;
   }
+
   return cleanup;
 }

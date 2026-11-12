@@ -78,6 +78,7 @@ function liveJob(secrets: readonly string[]) {
 export function nightly(ctx: SyncContext): ReturnType<Generator> {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(NIGHTLY_PATH);
+
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${NIGHTLY_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
 
@@ -86,11 +87,14 @@ export function nightly(ctx: SyncContext): ReturnType<Generator> {
   const { dependencies = {}, devDependencies = {} } = ctx.workspace.manifest;
   const stryker = [STRYKER_CORE, STRYKER_RUNNER].every((name) => name in dependencies || name in devDependencies);
   const rust = isRust(ctx);
+
   const mutate = [
     ...(stryker || !rust ? [{ id: "mutate", job: mutateJob(shards) }] : []),
     ...(rust ? [{ id: "mutate-rust", job: mutateRustJob(shards) }] : []),
   ];
+
   const jobs = [...mutate.map(({ job }) => job), floorsJob(mutate.map(({ id }) => id)), ...live];
   const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
+
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: NIGHTLY_PATH, tracked: true }] };
 }

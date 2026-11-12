@@ -1,5 +1,6 @@
 export const DOCS_SUMMARY =
   "Check references: index, links, exports, examples, tarball (--check: only check; else sync first)";
+
 export const DOCS_USAGE = "usage: repo docs [--check]";
 export const FLAG_CHECK = "--check";
 export const EXIT_FAILED = 1;
@@ -8,16 +9,22 @@ export const EXIT_USAGE = 2;
 export const REFERENCES_DIR = "references";
 export const INDEX_FILE = "INDEX.md";
 export const MARKDOWN_EXT = ".md";
+
 /** One line break, Windows or not. */
 export const LINE_BREAK: RegExp = /\r?\n/;
+
 /** A run of whitespace. */
 export const WHITESPACE_RUN: RegExp = /\s+/;
+
 /** One whitespace character. */
 export const WHITESPACE: RegExp = /\s/;
+
 /** A line that starts with whitespace. */
 export const INDENTED: RegExp = /^\s/;
+
 /** A link's `#fragment` or `?query`, to the end. */
 export const LINK_TAIL: RegExp = /[#?].*$/;
+
 /** Every character that means something in a regex, to escape. */
 export const REGEX_SPECIALS: RegExp = /[.*+?^${}()|[\]\\]/g;
 export const INSTALLED_DIR = "node_modules/";
@@ -59,11 +66,13 @@ export function unnamedExport(specifier: string, dir: string): string {
 
 export function noReferencesExport(dir: string): string {
   const quoted = `"${REFERENCES_EXPORT}"`;
+
   return `${under(dir, MANIFEST_FILE)} has no ${quoted} export; add ${quoted}: ${quoted}`;
 }
 
 export function notPacked(file: string, index: string, dir: string): string {
   const fix = `add "references" to files in ${under(dir, MANIFEST_FILE)}`;
+
   return file === index
     ? `${file} is not in the packed tarball; ${fix}`
     : `${file} is listed in ${index} but not in the packed tarball; ${fix}`;
@@ -91,5 +100,6 @@ export function runError(at: string, example: number, exit: { code: number; deta
 
 export function okLine(counts: { references: number; examples: number; exports: number; packed: boolean }): string {
   const tail = counts.packed ? ", tarball holds references/" : "";
+
   return `docs ok: ${counts.references} references, ${counts.examples} examples, ${counts.exports} exports${tail}`;
 }

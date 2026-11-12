@@ -28,7 +28,9 @@ function isPublic(file: string): boolean {
 export function ownerLookup(root: string): (file: string) => Owner {
   return (file) => {
     let dir = path.dirname(file);
+
     while (dir !== "." && !fs.existsSync(path.join(root, dir, "package.json"))) dir = path.dirname(dir);
+
     return { dir, public: isPublic(path.join(root, dir, "package.json")) };
   };
 }
@@ -44,5 +46,6 @@ export function proofApplies(
   if (tdd) return true;
   const sources = change.filter((entry) => isSource(entry.path));
   const files = sources.length > 0 ? sources : change.filter((entry) => isTestFile(entry.path));
+
   return files.some((entry) => owners(entry.path).public);
 }

@@ -12,9 +12,12 @@ const REGISTER_HINT = "no output format registered; add it to cli/sync/validate.
 /** `dotted.path: message` per zod issue; an issue at the root has no path. */
 function schemaProblems(schema: z.ZodType, value: unknown): string[] {
   const result = schema.safeParse(value);
+
   if (result.success) return [];
+
   return result.error.issues.map((issue) => {
     const where = issue.path.map(String).join(".");
+
     return where === "" ? issue.message : `${where}: ${issue.message}`;
   });
 }
@@ -22,9 +25,12 @@ function schemaProblems(schema: z.ZodType, value: unknown): string[] {
 /** The problems of one file output: its parse error, its schema misses, or the missing registration. */
 function fileProblems(output: Extract<Output, { kind: "file" }>, formats: readonly FormatEntry[]): string[] {
   const entry = formats.find((candidate) => candidate.match(output.path));
+
   if (entry === undefined) return [REGISTER_HINT];
   const parsed = parseContent(entry.format, output.content);
+
   if ("problem" in parsed) return [parsed.problem];
+
   return entry.schema === undefined ? [] : schemaProblems(entry.schema, parsed.value);
 }
 
@@ -53,14 +59,19 @@ export function validateOutputs(
 ): string[] {
   const plan = planLinks(outputs);
   const lines: string[] = [];
+
   for (const output of outputs) {
     if (leftAsIs(root, output)) continue;
+
     if (output.kind === "file") {
       lines.push(...fileProblems(output, formats).map((problem) => `${output.path}: ${problem}`));
       continue;
     }
+
     const problem = linkProblem(root, output, plan);
+
     if (problem !== null) lines.push(problem);
   }
+
   return lines;
 }

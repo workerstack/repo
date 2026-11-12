@@ -10,6 +10,7 @@ export type DocsCtx = { root: string; repo: (args: string[], cwd: string) => Cap
 /** `repo docs --check` as the gate `docs`. */
 function docsGate(ctx: DocsCtx): Gate {
   const run = ctx.repo([...DOCS_ARGS], ctx.root);
+
   return run.code === 0 ? pass(`${DOCS_GATE} ok`) : fail(`${DOCS_GATE} failed`, [textOf(run)]);
 }
 

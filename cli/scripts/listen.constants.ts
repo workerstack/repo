@@ -7,6 +7,7 @@ export const WHISPER_BINS: readonly string[] = ["whisper-cli", "whisper-cpp"];
 export const GGML_URL: string = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin";
 export const TRANSCRIBE_URL: string = "https://api.openai.com/v1/audio/transcriptions";
 export const USER_AGENT: string = "repo-listen";
+
 /** The private mode of the dir the ggml model downloads into. */
 export const GGML_DIR_MODE: number = 0o700;
 
@@ -41,39 +42,49 @@ export const FLAG_TRUE: string = "true";
 export const USAGE: string =
   "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] " +
   "| toggle [--clip] | status | file --path P [--clip] | latest";
+
 export const SETUP: string = "bun repo setup listen";
 export const LISTEN_DIR: string = ".tmp/repo/listen";
 export const SESSION_FILE: string = "session.json";
 export const JSON_INDENT: number = 2;
 export const LATEST_FILE: string = "latest.txt";
 export const FFMPEG_LOG: string = "ffmpeg.log";
+
 export const NEED_STT: string =
   "missing whisper-cli (mac: brew install whisper-cpp) or OPENAI_API_KEY / ~/.workerstack/speak.json openai.apiKey. " +
   "setup: bun repo setup listen";
+
 export const NEED_FFMPEG: string =
   "missing ffmpeg. mac: brew install ffmpeg · linux: sudo apt install ffmpeg · win: winget install Gyan.FFmpeg. " +
   "setup: bun repo setup listen";
+
 export const NEED_OPENAI: string =
   "missing OPENAI_API_KEY (or ~/.workerstack/speak.json openai.apiKey). setup: bun repo setup listen";
+
 export const NEED_GGML: string =
   "whisper-cli found but no ggml model (auto-download failed). set WHISPER_MODEL or retry. " +
   "setup: bun repo setup listen";
+
 export const NEED_DEVICE: string =
   "missing --device or LISTEN_DEVICE. run: bun repo listen devices. setup: bun repo setup listen";
+
 export const NEED_AUDIO: string = "transcribe needs an audio file";
 
 /** The ffmpeg arguments around the input: quiet logs first, then 16 kHz mono 16-bit PCM. */
 export const FFMPEG_QUIET: readonly string[] = ["-hide_banner", "-loglevel", "warning"];
 export const FFMPEG_PCM: readonly string[] = ["-ac", "1", "-ar", "16000", "-c:a", "pcm_s16le"];
+
 /** The ffmpeg arguments that list each platform's capture devices. */
 export const AVFOUNDATION_LIST: readonly string[] = ["-f", "avfoundation", "-list_devices", "true", "-i", ""];
 export const DSHOW_LIST: readonly string[] = ["-list_devices", "true", "-f", "dshow", "-i", "dummy"];
 export const PACTL_LIST: readonly string[] = ["list", "short", "sources"];
+
 /** The linux clipboard sinks, tried in order. */
 export const CLIP_SINKS: readonly (readonly [string, readonly string[]])[] = [
   ["wl-copy", []],
   ["xclip", ["-selection", "clipboard"]],
   ["xsel", ["--clipboard", "--input"]],
 ];
+
 /** The fallback when pactl lists no source. */
 export const PULSE_DEFAULT: Readonly<AudioDevice> = { id: "default", name: "pulse default" };

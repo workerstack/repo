@@ -4,10 +4,13 @@ import { BENCH_LINE, BYTES_PER_KB, BYTES_PER_MB, FLOORED_PLATFORM, US_PER_MS, VM
 
 /** The part of Bun's `ResourceUsage` a run reads: peak RSS in bytes and CPU time in microseconds. */
 export type Usage = { maxRSS: number; cpuTime: { user: bigint; system: bigint } };
+
 /** A finished run: its exit code, its output and its resource usage. */
 export type Spawned = { code: number; stdout: string; stderr: string; usage: Usage };
+
 /** Runs a command to completion in `cwd`. */
 export type Spawn = (cmd: readonly string[], cwd: string) => Spawned;
+
 /** A run's custom metrics by name, or the first declared one it did not print. */
 export type Custom = { ok: true; values: Record<string, number> } | { ok: false; missing: string };
 
@@ -23,6 +26,7 @@ export function spawnBun(cmd: readonly string[], cwd: string): Spawned {
     const run = Bun.spawnSync([...cmd], { cwd, env: childEnv(), stderr: "pipe", stdout: "pipe" });
     const { cpuTime, maxRSS } = run.resourceUsage;
     const usage = { cpuTime, maxRSS };
+
     return { code: run.exitCode, stderr: run.stderr.toString(), stdout: run.stdout.toString(), usage };
   } catch (error) {
     return { code: 1, stderr: String(error), stdout: "", usage: NO_USAGE };
@@ -35,6 +39,7 @@ export function spawnBun(cmd: readonly string[], cwd: string): Spawned {
  */
 export function usageMetrics(usage: Usage): { cpu: number; rss: number } {
   const micros = usage.cpuTime.user + usage.cpuTime.system;
+
   return { cpu: Number(micros) / US_PER_MS, rss: usage.maxRSS / BYTES_PER_MB };
 }
 
@@ -42,10 +47,14 @@ export function usageMetrics(usage: Usage): { cpu: number; rss: number } {
 function benchObject(stdout: string): Record<string, unknown> | null {
   const output = stdout.trimEnd();
   const last = output.slice(output.lastIndexOf("\n") + 1);
+
   if (!last.startsWith(BENCH_LINE)) return null;
+
   try {
     const value: unknown = JSON.parse(last.slice(BENCH_LINE.length));
+
     if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+
     return value /* JSON.parse's object, its values unread */ as Record<string, unknown>;
   } catch {
     return null;
@@ -56,11 +65,14 @@ function benchObject(stdout: string): Record<string, unknown> | null {
 export function readCustom(stdout: string, names: readonly string[]): Custom {
   const values: Record<string, number> = {};
   const object = names.length === 0 ? {} : benchObject(stdout);
+
   for (const name of names) {
     const value = object?.[name];
+
     if (typeof value !== "number" || !Number.isFinite(value)) return { missing: name, ok: false };
     values[name] = value;
   }
+
   return { ok: true, values };
 }
 
@@ -72,5 +84,6 @@ export function readCustom(stdout: string, names: readonly string[]): Custom {
 export function rssFloorOf(platform: string, status: () => string): number | null {
   if (platform !== FLOORED_PLATFORM) return null;
   const kb = VM_HWM.exec(status())?.[1];
+
   return kb === undefined ? null : Number(kb) * BYTES_PER_KB;
 }

@@ -37,6 +37,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** git's stdout, or null when it failed; run without any `GIT_*` variable a hook set. */
 function git(root: string, args: string[]): string | null {
   const run = spawnSync("git", args, { cwd: root, encoding: "utf8", env: toolEnv(childEnv()) });
+
   return run.status === 0 ? run.stdout : null;
 }
 
@@ -47,6 +48,7 @@ function hasRef(root: string, ref: string) {
 /** The branches a clone without a local main may still have as `origin/<name>`. */
 function originNames(root: string): string[] {
   const head = git(root, ["symbolic-ref", "--short", `refs/remotes/${ORIGIN}/HEAD`]);
+
   return [head?.trim().replace(`${ORIGIN}/`, "") ?? "", ...COMMON_BRANCHES].filter(Boolean);
 }
 
@@ -57,8 +59,10 @@ function originNames(root: string): string[] {
 function mainRef(root: string): string | null {
   const name = defaultBranch(root);
   const current = git(root, ["symbolic-ref", "--short", "HEAD"])?.trim();
+
   if (name !== DETACHED && name !== current && hasRef(root, name)) return name;
   const remote = [name, ...originNames(root)].map((n) => `${ORIGIN}/${n}`);
+
   return remote.find((ref) => hasRef(root, ref)) ?? null;
 }
 
@@ -73,18 +77,22 @@ function parse(text: string | null): unknown {
 function readMain(root: string, ref: string, rel: string): unknown {
   return parse(git(root, ["show", `${ref}:${rel}`]));
 }
+
 function readHere(root: string, rel: string): unknown {
   const file = path.join(root, rel);
+
   return parse(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 }
 
 function asTable(value: unknown): Table | undefined {
   if (!isRecord(value)) return undefined;
   const table: Table = {};
+
   for (const [key, row] of Object.entries(value)) {
     if (!isRecord(row)) continue;
     table[key] = Object.fromEntries(Object.entries(row).filter((e): e is [string, number] => typeof e[1] === "number"));
   }
+
   return table;
 }
 
@@ -96,6 +104,7 @@ function asList(value: unknown): string[] | undefined {
 function renames(root: string, ref: string): Map<string, string> {
   // A failed diff reads as the text "null", which holds no rename.
   const out = String(git(root, ["diff", "-M", "--name-status", ref]));
+
   const pairs = out
     .split(NEWLINE)
     .map((line) => line.split(TAB))
@@ -103,6 +112,7 @@ function renames(root: string, ref: string): Map<string, string> {
       (cols): cols is [string, string, string] =>
         cols.length === RENAME_COLUMNS && cols[0]?.startsWith(RENAME) === true,
     );
+
   return new Map(pairs.map(([, from, to]) => [from, to]));
 }
 
@@ -111,22 +121,29 @@ type Row = { rel: string; key: string; file: string };
 
 function fileFloors({ rel, key, file }: Row, was: Record<string, number>, now: Record<string, number>): string[] {
   const note = key === rel ? "" : ` (renamed from ${rel})`;
+
   return Object.entries(was).flatMap(([metric, floor]) => {
     const has = now[metric];
+
     if (has === undefined) return [`${file}: ${key} ${metric} has no floor but main has ${floor}${note}; restore it`];
+
     return has < floor ? [`${file}: ${key} ${metric} ${has} is below main's ${floor}${note}; floors only rise`] : [];
   });
 }
 
 function floorProblems(root: string, ref: string, file: string): string[] {
   const was = asTable(readMain(root, ref, file));
+
   if (was === undefined) return [];
   const now = asTable(readHere(root, file)) ?? {};
   const moved = renames(root, ref);
+
   return Object.entries(was).flatMap(([rel, metrics]) => {
     const key = rel in now ? rel : (moved.get(rel) ?? rel);
     const row = now[key];
+
     if (row !== undefined) return fileFloors({ file, key, rel }, metrics, row);
+
     return fs.existsSync(path.join(root, key))
       ? [`${file}: ${key} has no floor but main has one and the file exists; restore it`]
       : [];
@@ -142,10 +159,13 @@ function asNumbers(value: unknown): Record<string, number> | undefined {
 /** A mutation floor lowered, or dropped while its package dir exists; a package dir that is gone takes its floor. */
 function mutationProblems(root: string, ref: string, file: string): string[] {
   const was = asNumbers(readMain(root, ref, file));
+
   if (was === undefined) return [];
   const now = asNumbers(readHere(root, file)) ?? {};
+
   return Object.entries(was).flatMap(([pkg, floor]) => {
     const has = now[pkg];
+
     if (has === undefined)
       return fs.existsSync(path.join(root, pkg)) ? [`${file} drops ${pkg} from ${floor}; floors only rise`] : [];
 
@@ -155,8 +175,10 @@ function mutationProblems(root: string, ref: string, file: string): string[] {
 
 function listProblems(root: string, ref: string, file: string): string[] {
   const was = asList(readMain(root, ref, file));
+
   if (was === undefined) return [];
   const now = asList(readHere(root, file)) ?? [];
+
   return now
     .filter((entry) => !was.includes(entry))
     .map((entry) => `${file}: "${entry}" is not on main's list; fix the case instead of listing it`);
@@ -165,6 +187,7 @@ function listProblems(root: string, ref: string, file: string): string[] {
 /** Per rule, the count summed over every file. */
 function totals(table: Table): Map<string, number> {
   const sums = new Map<string, number>();
+
   for (const row of Object.values(table))
     for (const [rule, count] of Object.entries(row)) sums.set(rule, (sums.get(rule) ?? 0) + count);
 
@@ -173,10 +196,13 @@ function totals(table: Table): Map<string, number> {
 
 function baselineProblems(root: string, ref: string): string[] {
   const was = asTable(readMain(root, ref, BASELINE_PATH));
+
   if (was === undefined) return [];
   const now = totals(asTable(readHere(root, BASELINE_PATH)) ?? {});
+
   return [...totals(was)].flatMap(([rule, before]) => {
     const after = now.get(rule) ?? 0;
+
     return after > before
       ? [`${BASELINE_PATH}: ${rule} totals ${after}, main has ${before}; fix the new hit instead of baselining it`]
       : [];
@@ -190,7 +216,9 @@ function baselineProblems(root: string, ref: string): string[] {
  */
 export function ratchetProblems(root: string, paths: RatchetPaths = {}): string[] {
   const ref = mainRef(root);
+
   if (ref === null) return [];
+
   return [
     ...floorProblems(root, ref, paths.floors ?? DEFAULT_FLOORS),
     ...listProblems(root, ref, paths.knownFailures ?? DEFAULT_LIST),

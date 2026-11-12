@@ -48,6 +48,7 @@ it("leaves a plain output, and any output written for win32, which has no modes,
   expect(writeOutput(root, hook("#!/bin/sh\n"), "win32")).toBeNull();
   expect(mode(root, ".githooks/pre-commit") & 0o111).toBe(0);
 });
+
 it("is 0444 for a whole file, 0555 for an executable one off win32, and default for a block output or a link", () => {
   expect(ownedMode(file("a.txt"), "linux")).toBe(0o444);
   expect(ownedMode(hook(), "darwin")).toBe(0o555);
@@ -85,11 +86,13 @@ it("puts a read-only output back read-only when a later write fails", () => {
   fs.chmodSync(path.join(root, "a.txt"), 0o444);
   const before = tree(root);
   lockLikeWin32();
+
   const result = writeAll(
     root,
     { changed: [file("a.txt", "new\n"), file("c.txt")], manifest: MANIFEST, prune: [] },
     failing("c.txt"),
   );
+
   expect(result).toMatchObject({ errors: [expect.stringMatching(/restored 1 output, nothing changed$/)] });
   vi.restoreAllMocks();
   expect(tree(root)).toStrictEqual(before);

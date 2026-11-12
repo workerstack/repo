@@ -34,6 +34,7 @@ function catalogSources(manifest: PackageJson, scope: string | null, entries: Re
 function fieldSources(manifest: PackageJson, dir: string): Source[] {
   const file = dir === "" ? ROOT_FILE : `${dir}/${ROOT_FILE}`;
   const where = dir === "" ? ROOT_FILE : dir;
+
   return FIELDS.flatMap((field) =>
     Object.entries(manifest[field] ?? {}).map(([name, spec]) => ({
       field,
@@ -51,6 +52,7 @@ function fieldSources(manifest: PackageJson, dir: string): Source[] {
 export function updateSources(workspace: Workspace): Source[] {
   const { manifest, packages } = workspace;
   const catalogs = catalogsOf(manifest);
+
   return [
     ...catalogSources(manifest, null, catalogs.default),
     ...Object.entries(catalogs.named).flatMap(([scope, entries]) => catalogSources(manifest, scope, entries)),

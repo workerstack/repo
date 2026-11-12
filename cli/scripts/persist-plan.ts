@@ -51,8 +51,10 @@ type SaveInput = {
 /** Lessons matching files a new plan names, held by the checkout of each file, that Watch-outs does not cite. */
 function uncitedLessons(roots: Roots, text: string) {
   const files = [...new Set([roots.root, roots.checkout].flatMap((top) => workspacePaths(top, text)))];
+
   if (files.length === 0) return [];
   const watch = sectionBodies(stripFrontmatter(text)).bodies[WATCH_OUTS_H2] ?? "";
+
   return matchLessons({ files, roots }).filter((r) => !watch.includes(r.file));
 }
 
@@ -65,10 +67,13 @@ export function preparePlanUpdate(input: Rewrite): PlanResult {
   const { raw, previous, filename, rel } = rewriteTarget(input);
   const text = stripBom(raw);
   const fence = unclosedFenceErrors(text);
+
   if (fence.length > 0) return refused(fence);
   const full = text.startsWith(FM_OPEN) ? text : withSavedFrontmatter(previous, text);
   const errors = validatePlan(filename, full, { fresh: false, previous });
+
   if (errors.length > 0) return refused(errors);
+
   return {
     content: full,
     filename,
@@ -86,6 +91,7 @@ function allocate(plansDir: string, slug: string, created: string | undefined) {
   const createdAt = createdAtOf(created);
   const serial = nextSerial(plansDir);
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
+
   return { createdAt, dest: path.join(plansDir, filename), filename, serial };
 }
 
@@ -99,6 +105,7 @@ type Parts = {
 /** The plan text a save writes: frontmatter on the body, with the keys read from what the caller sent. */
 function draftPlan(raw: string, source: string | undefined, { serial, slug, createdAt, planName }: Parts) {
   const body = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
+
   return injectFrontmatter({
     body,
     commit: extractCommit(raw),
@@ -118,17 +125,21 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   const lessonRoots = { checkout: firstNonEmpty(input.checkout) ?? ws, cwd: ws, root: ws };
   // Line numbers in this deny count from what the caller sent.
   const fence = unclosedFenceErrors(raw);
+
   if (fence.length > 0) return refused(fence);
   const planName = firstNonEmpty(extractPlanName(raw)) ?? extractH1(stripFrontmatter(stripPlanName(raw)));
   const slug = slugify(planName);
   const { createdAt, serial, filename, dest } = allocate(path.join(ws, PLAN_DIR), slug, input.created);
+
   if (fs.existsSync(dest)) return { error: "serial collision", ok: false };
   const full = draftPlan(raw, input.source, { createdAt, planName, serial, slug });
   const errors = validatePlan(filename, full);
+
   for (const r of uncitedLessons(lessonRoots, full))
     errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
 
   if (errors.length > 0) return refused(errors);
   fs.writeFileSync(dest, full);
+
   return { content: full, filename, ok: true, path: `${PLAN_DIR}/${filename}`, serial, slug };
 }

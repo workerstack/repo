@@ -14,9 +14,11 @@ const GUARD = path.join(HERE, "temp-root.ts");
 const ENV_MODULE = path.join(HERE, "temp-root-env.ts");
 const VITEST = path.join(HERE, "..", "node_modules", "vitest", "vitest.mjs");
 const ROOT_PREFIX = "repo-test-";
+
 const CHILD =
   `spawnSync("bun", ["-e", 'require("fs").writeFileSync(` +
   `require("path").join(require("os").tmpdir(), "child-leak"), "")']);`;
+
 const FAILED = 1;
 const LEAK_LINE = /Error: tests left 1 entry in the run's temp root: leaked-dir; remove each in the test that made it/;
 
@@ -37,6 +39,7 @@ afterEach(() => {
 function runsDir() {
   return path.join(parent, "tmp");
 }
+
 function roots() {
   return fs.readdirSync(runsDir()).filter((name) => name.startsWith(ROOT_PREFIX));
 }
@@ -56,8 +59,10 @@ function run(body: string, env: Record<string, string | undefined> = {}): SpawnS
     `import { rootEnv } from ${JSON.stringify(ENV_MODULE)};\n` +
     `export default { test: { globals: true, env: rootEnv(), ` +
     `globalSetup: [${JSON.stringify(GUARD)}, ...(process.env.PROBE ? [process.env.PROBE] : [])] } };\n`;
+
   fs.writeFileSync(path.join(project, "vitest.config.mjs"), config);
   fs.writeFileSync(path.join(project, "a.test.mjs"), `${TEST_IMPORTS}it("runs", () => {\n${body}\n});\n`);
+
   const overrides = {
     FORCE_COLOR: undefined,
     NO_COLOR: "1",
@@ -67,6 +72,7 @@ function run(body: string, env: Record<string, string | undefined> = {}): SpawnS
     TMPDIR: runsDir(),
     ...env,
   };
+
   return spawnSync("bun", ["--bun", VITEST, "run"], { cwd: project, encoding: "utf8", env: childEnv(overrides) });
 }
 
@@ -121,8 +127,10 @@ describe("temp root guard, who gets the root", () => {
 describe("temp root guard, the root", () => {
   it("gives a worker the run root as os.tmpdir()", () => {
     const pattern = `^${ROOT_PREFIX}\\d+$`;
+
     const body = `expect(path.dirname(fs.realpathSync(os.tmpdir()))).toBe(${JSON.stringify(runsDir())});
 expect(path.basename(os.tmpdir())).toMatch(new RegExp(${JSON.stringify(pattern)}));`;
+
     const r = run(body);
     expect(r.stdout + r.stderr).not.toMatch(/AssertionError/);
     expect(r.status).toBe(0);
@@ -132,6 +140,7 @@ expect(path.basename(os.tmpdir())).toMatch(new RegExp(${JSON.stringify(pattern)}
     const dead = spawnSync("bun", ["-e", ""]).pid;
     const stale = path.join(runsDir(), `${ROOT_PREFIX}${dead}`);
     const live = path.join(runsDir(), `${ROOT_PREFIX}${process.pid}`);
+
     for (const dir of [stale, live]) fs.mkdirSync(path.join(dir, "inner"), { recursive: true });
     const r = run(CLEAN);
     expect(r.status).toBe(0);

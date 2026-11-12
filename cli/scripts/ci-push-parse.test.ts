@@ -12,8 +12,10 @@ const { repo } = usePushRepos();
 /** A repo on main, made in the folder `x`, with feat-b (2 days old) and feat-a (1 day old), or feat-a alone. */
 function onMain(branches: string[], sub?: string): PushRepo {
   const r = repo({ now: Date.now(), sub });
+
   for (const [i, branch] of branches.entries()) r.commitOn(branch, branches.length - i);
   r.git(["checkout", "-q", "main"]);
+
   return r;
 }
 

@@ -9,12 +9,14 @@ import { placeDevDependency } from "./place-dev-dependency.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
+
 /** The postinstall a merge leaves when the repo's package.json held `existing`. */
 function postinstallAfterMerge(existing?: string) {
   const dest = tmp("pj-postinstall-");
   const scripts = existing == null ? {} : { postinstall: existing };
   fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", scripts }));
   mergePackageJson(dest, stubPkgRoot());
+
   return readPkg(dest).scripts.postinstall;
 }
 
@@ -86,6 +88,7 @@ it("placeDevDependency is a no-op when src is not repo", () => {
   const destPkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {
     dependencies: { lodash: "4" },
   };
+
   placeDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
   expect(destPkg.dependencies).toStrictEqual({ lodash: "4" });
   expect(destPkg.devDependencies?.[PACKAGE_NAME]).toBeUndefined();

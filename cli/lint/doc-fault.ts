@@ -18,6 +18,7 @@ function docText(value: string): string {
 function words(text: string): string[] {
   return [...text.toLowerCase().matchAll(WORDS)].map((match) => match[0]);
 }
+
 function nameWords(name: string): string[] {
   return words(name.replaceAll(CAMEL_JOIN, "$1 $2"));
 }
@@ -30,9 +31,12 @@ export function docFault(value: string | undefined, name: string): string | null
   if (value === undefined) return FAULTS.missing;
   const text = docText(value);
   const prose = text.split(TAG_LINE, 1).join("").trim();
+
   if (prose === "") return FAULTS.empty;
   const internal = INTERNAL.exec(text);
+
   if (internal !== null) return INTERNAL_FAULT(internal[0]);
   const own = [...nameWords(name), ...words(name)];
+
   return words(prose).every((word) => own.includes(word) || STOPWORDS.includes(word)) ? FAULTS.restates : null;
 }

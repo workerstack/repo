@@ -9,6 +9,7 @@ import { worktreeName } from "./worktree-git.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 it("makes .worktrees/<name> on wt/<name> from HEAD, then reuses it", () => {
@@ -26,6 +27,7 @@ it("cleans a name into a git-safe one and refuses a name with nothing usable", (
   expect(worktreeName("--.a..b--")).toBe("a..b");
   expect(worktreeName(null)).toBeNull();
   expect(worktreeName(undefined)).toBeNull();
+
   for (const raw of ["..", "", undefined])
     expect(() => addWorktree(r, raw)).toThrow(/has no usable characters; use letters, digits/);
 
@@ -112,12 +114,14 @@ it("warns on stderr and still returns the path when the install fails", () => {
 it("installs from the lockfile in a new worktree only, and says nothing when it works", () => {
   const r = tmp.repo();
   const mark = `node -e "require('fs').writeFileSync('installed.marker','1')"`;
+
   const pkg = {
     dependencies: { dep: "file:./vendor/dep" },
     name: "f",
     scripts: { postinstall: mark },
     version: "1.0.0",
   };
+
   write(path.join(r, "vendor/dep/package.json"), `${JSON.stringify({ name: "dep", version: "1.0.0" })}\n`);
   write(path.join(r, "package.json"), `${JSON.stringify(pkg)}\n`);
   write(path.join(r, ".gitignore"), ".worktrees/\nnode_modules/\ninstalled.marker\n");

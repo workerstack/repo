@@ -36,34 +36,42 @@ function renderScopes(ctx: SyncContext, sources: Sources): { files: Map<string, 
   const { hosts } = ctx.config.agents;
   const planned = new Map<string, RuleFile>();
   const clashes: string[] = [];
+
   for (const scope of ["", ...ctx.workspace.packages.map((pkg) => pkg.dir)]) {
     for (const [rel, file] of renderRules(sources.rules, hosts, scope)) {
       const first = planned.get(rel);
+
       if (first === undefined) planned.set(rel, file);
       else clashes.push(`${rel}: planned by ${first.source} and ${file.source}; rename one`);
     }
   }
+
   return { clashes, files: new Map([...planned].map(([rel, file]) => [rel, file.text])) };
 }
 
 /** The loaded sources and their rule files; throws every problem of the `.repo/` dir and the sources at once. */
 function checkedSources(ctx: SyncContext, render: Render): { sources: Sources; rules: Map<string, string> } {
   const packages = ctx.workspace.packages.map((pkg) => pkg.dir);
+
   const { sources, problems: loadProblems } = loadSources({
     consumerRoot: render.self ? null : ctx.root,
     packages,
     stockRoot: render.stock,
   });
+
   // The checks run on the docs that loaded, so one bad file does not hide the problems of the others.
   const rules = renderScopes(ctx, sources);
   const listed = listedFiles(ctx.root, []);
   const off = offSkills(ctx.config);
+
   const problems = [
     ...repoDirProblems(ctx.root, { listed, off, packages, sources, stock: render.stock }),
     ...loadProblems,
     ...rules.clashes,
   ];
+
   if (problems.length > 0) throw new TreesProblems(problems);
+
   return { rules: rules.files, sources };
 }
 
@@ -77,15 +85,20 @@ function assemble(ctx: SyncContext, render: Render): Output[] {
   const outputs: Output[] = [];
   const files = fillStage(ctx, { dir: render.stage, stock: render.stock, ...checkedSources(ctx, render) });
   const history = readStockHistory();
+
   for (const [rel, content] of files) {
     if (!isHostOutput(hosts, rel)) continue;
+
     if (isAgentsFile(rel)) outputs.push(agentsFile(rel, content, { history, text: ctx.read(rel) }));
     else outputs.push({ content, kind: "file", managed: "whole", path: rel, tracked: self });
   }
+
   outputs.push(...skillLinks(ctx, render.stock, { self }), ...packageSkillLinks(ctx, { self }));
   const tasks = renderTasks(ctx.root, ctx.read(TASKS_REL));
+
   if (!tasks.ok) throw new Error(tasks.error);
   outputs.push({ content: tasks.text, kind: "file", managed: "whole", path: TASKS_REL, tracked: true });
+
   return outputs.toSorted((a, b) => byCodeUnit(a.path, b.path));
 }
 
@@ -98,9 +111,11 @@ function assemble(ctx: SyncContext, render: Render): Output[] {
  */
 export function renderTrees(ctx: SyncContext): TreesResult {
   const { hosts } = ctx.config.agents;
+
   if (hosts.length === 0) return { ok: true, outputs: [] };
   const self = isSelfName(ctx.workspace.manifest.name);
   const stock = self ? ctx.root : stockRoot(ctx.root);
+
   if (!fs.existsSync(path.join(stock, "agents"))) {
     return {
       errors: [`${path.relative(ctx.root, stock).split(path.sep).join("/")} is missing; run \`bun install\``],
@@ -113,13 +128,17 @@ export function renderTrees(ctx: SyncContext): TreesResult {
   fs.mkdirSync(path.join(ctx.root, STAGE_DIR_REL), { recursive: true });
   const stage = fs.mkdtempSync(path.join(ctx.root, STAGE_DIR_REL, STAGE_PREFIX));
   let result: TreesResult;
+
   try {
     result = { ok: true, outputs: assemble(ctx, { self, stage, stock }) };
   } catch (error) {
     const errors =
       error instanceof TreesProblems ? error.problems : [(error /* every step throws an Error */ as Error).message];
+
     result = { errors, ok: false };
   }
+
   fs.rmSync(stage, { force: true, recursive: true });
+
   return result;
 }

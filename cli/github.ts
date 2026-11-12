@@ -12,11 +12,16 @@ import { keywordLines } from "./keywords.ts";
  */
 export function wantedSettings(manifest: GithubManifest, checks: readonly string[]): WantedResult {
   const errors = manifest.keywords === undefined ? [] : keywordLines(manifest.keywords);
+
   if (errors.length > 0) return { errors, ok: false };
   const wanted: Wanted = { rulesets: wantedRulesets(checks) };
+
   if (manifest.description !== undefined) wanted.description = manifest.description;
+
   if (manifest.homepage !== undefined) wanted.homepage = manifest.homepage;
+
   if (manifest.keywords !== undefined) wanted.topics = z.array(z.string()).parse(manifest.keywords);
+
   return { ok: true, wanted };
 }
 
@@ -25,16 +30,23 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
   const drifts: Drift[] = wanted.rulesets.flatMap((want): Drift[] => {
     const found = current.rulesets.find((ruleset) => ruleset.name === want.name);
     const messages = found === undefined ? [`ruleset ${want.name} is missing: ${FIX}`] : rulesetDrift(want, found);
+
     return messages.map((message) => ({ area: "ruleset", message, name: want.name }));
   });
+
   if (!current.reporting) drifts.push({ area: "reporting", message: `private vulnerability reporting is off: ${FIX}` });
+
   if (!current.alerts) drifts.push({ area: "alerts", message: `Dependabot alerts are off: ${FIX}` });
+
   for (const area of ["description", "homepage"] as const) {
     const want = wanted[area];
+
     if (want !== undefined && want !== current[area])
       drifts.push({ area, message: `${area} is "${current[area]}", package.json says "${want}": ${FIX}`, value: want });
   }
+
   const { topics } = wanted;
+
   if (topics !== undefined && topics.toSorted().join() !== current.topics.toSorted().join()) {
     const [now, wants] = [current.topics.join(", "), topics.join(", ")];
     drifts.push({
@@ -43,5 +55,6 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
       value: topics,
     });
   }
+
   return drifts;
 }

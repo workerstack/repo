@@ -12,6 +12,7 @@ import {
 
 /** One GitHub API request: `path` is relative to the API root, `body` is sent as JSON. */
 export type GhCall = { method: "GET" | "POST" | "PUT" | "PATCH"; path: string; body?: unknown };
+
 /**
  * Why a call did not succeed; `message` reads as a sentence about gh, and `status` is the HTTP status when GitHub
  * answered.
@@ -22,7 +23,9 @@ export type GhFailure = {
   status?: number;
   message: string;
 };
+
 export type GhResult = { ok: true; stdout: string } | GhFailure;
+
 /** The one place GitHub is reached through; tests inject a fake that answers from a settings store. */
 export type Gh = (call: GhCall) => Promise<GhResult>;
 
@@ -32,8 +35,11 @@ function failureOf(code: number, stderr: string): GhFailure {
   const first = stderr.trim().split("\n")[0];
   const message = first === undefined || first === "" ? `gh exited with ${code}` : first;
   const status = HTTP_STATUS.exec(stderr)?.[1];
+
   if (code === GH_AUTH_EXIT) return { kind: "auth", message: "gh is not logged in (gh auth status)", ok: false };
+
   if (status !== undefined) return { kind: "http", message, ok: false, status: Number(status) };
+
   return { kind: "other", message, ok: false };
 }
 
@@ -46,20 +52,25 @@ export function ghRunner({ command = ["gh"], timeoutMs = GH_TIMEOUT_MS }: Option
     const verb = method === "GET" ? [] : ["-X", method];
     const input = body === undefined ? [] : ["--input", "-"];
     const signal = AbortSignal.timeout(timeoutMs);
+
     try {
       const stdin = body === undefined ? "ignore" : new Blob([JSON.stringify(body)]);
+
       const child = Bun.spawn([...command, "api", ...verb, path, ...input], {
         signal,
         stderr: "pipe",
         stdin,
         stdout: "pipe",
       });
+
       const [stdout, stderr, code] = await Promise.all([
         new Response(child.stdout).text(),
         new Response(child.stderr).text(),
         child.exited,
       ]);
+
       if (signal.aborted) throw signal.reason;
+
       return code === 0 ? { ok: true, stdout } : failureOf(code, stderr);
     } catch (error) {
       if (signal.aborted)
@@ -73,6 +84,7 @@ export function ghRunner({ command = ["gh"], timeoutMs = GH_TIMEOUT_MS }: Option
 /** The sentence after `skipped, ` when `repo check` cannot read the settings. */
 export function skipReason(failure: GhFailure): string {
   const denied = failure.status !== undefined && DENIED_STATUSES.includes(failure.status);
+
   return denied ? CI_SKIP : failure.message;
 }
 
@@ -91,5 +103,6 @@ const HINTS: Record<GhFailure["kind"], string> = {
 export function applyFailure(slug: string, failure: GhFailure, verb: "change" | "read"): string {
   const why = failure.kind === "auth" ? "not logged in" : failure.message;
   const cause = failure.status === undefined ? why : `HTTP ${failure.status}`;
+
   return `gh cannot ${verb} ${slug}'s settings (${cause}): ${HINTS[failure.kind]}`;
 }

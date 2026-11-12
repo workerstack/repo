@@ -20,12 +20,14 @@ type CiSchema = z.ZodObject<
 export function ciSchema(): CiSchema {
   const word = z.string({ error: CI_ARGV_ERROR }).min(1, { error: CI_ARGV_ERROR });
   const argv = z.array(word, { error: CI_ARGV_ERROR }).min(1, { error: CI_ARGV_ERROR }).readonly();
+
   const checks = z.record(z.string(), argv, { error: CI_CHECKS_ERROR }).superRefine((map, ctx) => {
     for (const name of Object.keys(map)) {
       if (BUILT_IN_LABELS.includes(name)) ctx.addIssue({ code: "custom", message: builtIn(name) });
       else if (!KEBAB_NAME.test(name)) ctx.addIssue({ code: "custom", message: notKebab(name) });
     }
   });
+
   return z.strictObject({ checks: checks.optional() }, { error: CI_OBJECT_ERROR });
 }
 

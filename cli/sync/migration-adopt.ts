@@ -48,6 +48,7 @@ type Adoption = {
 /** Whether a command is one the stock settings or a past stock version ran. */
 function knownCommand(state: MigrationState, base: Record<string, unknown>): (command: string) => boolean {
   const stockCommands = new Set(hookCommands(base));
+
   return (command) =>
     stockCommands.has(command) || state.history[HOOK_COMMANDS_KEY]?.includes(hashText(command)) === true;
 }
@@ -58,17 +59,21 @@ function carrySettings(state: MigrationState, have: Record<string, unknown>, bas
   const paths: string[] = [];
   const extras = settingsExtras(mine, base, { at: "", paths });
   const own = ownHooks(hooks, knownCommand(state, base));
+
   if (extras === undefined && own.events.length === 0) return;
+
   const content = {
     ...(extras /* the extras of two objects are an object or undefined */ as Record<string, unknown> | undefined),
     ...(own.events.length > 0 ? { hooks: own.hooks } : {}),
   };
+
   const lines = [
     ...(paths.length > 0 ? [`moved your ${CLAUDE_SETTINGS} keys ${paths.join(", ")} to ${CLAUDE_OVERLAY}`] : []),
     ...own.events.map(
       ([event, count]) => `moved your ${CLAUDE_SETTINGS} hooks ${event} (${count}) to ${CLAUDE_OVERLAY}`,
     ),
   ];
+
   state.write(CLAUDE_SETTINGS, CLAUDE_OVERLAY, { content: sortedJsonValue(content), note: lines.join("\n") });
   state.drop.push(CLAUDE_SETTINGS);
 }
@@ -76,14 +81,19 @@ function carrySettings(state: MigrationState, have: Record<string, unknown>, bas
 /** `.claude/settings.json` keys the stock's own settings lack go to the overlay; `hooks` come from hooks.jsonc. */
 export function planClaudeSettings(state: MigrationState): void {
   const raw = state.read(CLAUDE_SETTINGS);
+
   if (raw !== null && state.unedited(CLAUDE_SETTINGS, raw, state.stockText(CLAUDE_SETTINGS))) return;
   const have = readJson(path.join(state.root, CLAUDE_SETTINGS));
+
   if (have === null) {
     const note = `${CLAUDE_SETTINGS} is not valid JSON; copy any keys of yours into ${CLAUDE_OVERLAY}`;
     state.steps.push({ kind: "note", note });
+
     return;
   }
+
   const base = parseJson(state.stockText(CLAUDE_SETTINGS));
+
   if (isRecord(have) && isRecord(base)) carrySettings(state, have, base);
 }
 
@@ -93,11 +103,13 @@ export function planClaudeSettings(state: MigrationState): void {
  */
 function adoptSettings(run: Adoption, text: string): void {
   let have: unknown;
+
   try {
     have = JSON.parse(text);
   } catch {
     have = null;
   }
+
   if (isRecord(have)) planClaudeSettings(run.state);
   else run.stops.add(CLAUDE_SETTINGS);
 }
@@ -105,11 +117,14 @@ function adoptSettings(run: Adoption, text: string): void {
 /** The real skill dirs of the host skill dirs sync does not own; an edited one moves to `.repo/skills`. */
 function adoptSkillDirs(state: MigrationState, hosts: readonly Host[], owned: ReadonlySet<string>): string[] {
   const skillDirs: string[] = [];
+
   for (const dir of SKILL_ROOTS.filter((root) => isHostOutput(hosts, `${root}/x`))) {
     for (const name of state.names(dir)) {
       const from = `${dir}/${name}`;
+
       if (owned.has(from) || !isRealDir(path.join(state.root, from))) continue;
       skillDirs.push(from);
+
       if (!editedSkill(state, from)) continue;
       const to = `${REPO_DIR}/skills/${name}`;
       const stocked = present(path.join(state.stock, stockRel(from)));
@@ -117,6 +132,7 @@ function adoptSkillDirs(state: MigrationState, hosts: readonly Host[], owned: Re
       state.move(from, to, { mark, note: `moved ${from} to ${to}` });
     }
   }
+
   return skillDirs;
 }
 
@@ -126,7 +142,9 @@ function adoptSkillDirs(state: MigrationState, hosts: readonly Host[], owned: Re
  */
 function adoptText(run: Adoption, rel: string, content: string): void {
   const text = run.state.text(rel);
+
   if (same(text, content) || run.state.unedited(rel, text, run.state.stockText(rel))) return;
+
   if (!ADOPTABLE.has(rel) && !isAgentsFile(rel)) run.stops.add(rel);
   else if (rel === CLAUDE_SETTINGS) adoptSettings(run, text);
 }
@@ -135,7 +153,9 @@ function adoptText(run: Adoption, rel: string, content: string): void {
 function adoptOutput(run: Adoption, output: Output): void {
   if (run.owned.has(output.path) || !isHostOutput(run.hosts, output.path)) return;
   const found = fs.lstatSync(path.join(run.state.root, output.path), { throwIfNoEntry: false });
+
   if (found === undefined || found.isSymbolicLink() || run.skillDirs.includes(output.path)) return;
+
   if (output.kind === "link" || found.isDirectory()) run.stops.add(output.path);
   else adoptText(run, output.path, output.content);
 }
@@ -146,6 +166,7 @@ function adoptOutput(run: Adoption, output: Output): void {
  */
 function skipsTracked(run: Adoption, rel: string): boolean {
   if (run.owned.has(rel) || run.planned.has(rel) || ADOPTABLE.has(rel)) return true;
+
   return run.skillDirs.some((dir) => rel.startsWith(`${dir}/`)) || !isHostOutput(run.hosts, rel);
 }
 
@@ -153,7 +174,9 @@ function skipsTracked(run: Adoption, rel: string): boolean {
 function stopTracked(run: Adoption, rel: string): void {
   if (skipsTracked(run, rel)) return;
   const found = fs.lstatSync(path.join(run.state.root, rel), { throwIfNoEntry: false });
+
   if (found === undefined || found.isSymbolicLink()) return;
+
   if (!run.state.unedited(rel, run.state.text(rel), run.state.stockText(rel))) run.stops.add(rel);
 }
 
@@ -167,13 +190,18 @@ export function planAdopt(state: MigrationState, input: AdoptInput): void {
   const skillDirs = adoptSkillDirs(state, hosts, input.owned);
   const planned = new Set(input.outputs.map((output) => output.path));
   const run: Adoption = { hosts, owned: input.owned, planned, skillDirs, state, stops: new Set() };
+
   for (const output of input.outputs) adoptOutput(run, output);
+
   for (const rel of trackedRels(input.tracked(state.root, [...ignored]) ?? [], state.root)) stopTracked(run, rel);
+
   for (const rel of [...run.stops].toSorted(byCodeUnit)) {
     const line =
       `${PREFIX}${rel} is yours and would be ignored; move it under ${REPO_DIR}/ ` +
       `(see node_modules/${PACKAGE_NAME}/${REFERENCES_DIR}/map.md) or delete it, then run \`bun repo sync\``;
+
     state.steps.push({ from: rel, kind: "conflict", line, to: "" });
   }
+
   if (run.stops.size === 0 && state.steps.length > 0) planUntrack(state, ignored, input.tracked);
 }

@@ -38,11 +38,13 @@ const RUNNERS: Readonly<Record<string, Runner>> = {
 
 function errMessage(e: unknown): string {
   const m = isRecord(e) ? e.message : undefined;
+
   return typeof m === "string" && m !== "" ? m : String(e);
 }
 
 function interactiveOf(argv: string[], env: Env, opts: SetupMainOpts): boolean {
   if (opts.interactive !== undefined) return opts.interactive;
+
   return ttyInteractive({ argv, env, stdin: opts.stdin ?? process.stdin, stdout: opts.stdout ?? process.stdout });
 }
 
@@ -56,6 +58,7 @@ async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promi
   const targets = setupTargets([...(await enabledSkills(firstNonEmpty(opts.cwd) ?? process.cwd()))]);
   const interactive = interactiveOf(argv, env, opts);
   const io = opts.io ?? (interactive ? await defaultIo() : null);
+
   const ctx = {
     env,
     fetchFn: opts.fetchFn,
@@ -70,11 +73,13 @@ async function prepare(argv: string[], flags: Flags, opts: SetupMainOpts): Promi
     spawnSyncFn: opts.spawnSyncFn,
     whichFn: opts.whichFn,
   };
+
   return { ctx, targets };
 }
 
 function statusesOf({ ctx, targets }: Run): Promise<Statuses> {
   const { env, home, pathEnv, platform, whichFn } = ctx;
+
   return targetStatuses({ env, home, pathEnv, platform, targets, whichFn });
 }
 
@@ -82,17 +87,22 @@ function statusesOf({ ctx, targets }: Run): Promise<Statuses> {
 async function pickTarget({ ctx, targets }: Run, raw: unknown, statuses: Statuses): Promise<string> {
   const { io } = ctx;
   let target = normalizeTarget(raw);
+
   if (target !== "" && !targets.includes(target)) {
     errLine(io, `${target} is off. Add it to agents.skills in workerstack.config.ts, then run \`bun repo sync\`.`);
+
     return "";
   }
+
   if (target === "" && ctx.interactive && typeof io?.select === "function") {
     const options = menuOptions(statuses, targets);
     target = normalizeTarget(
       await io.select({ initialValue: firstMissing(statuses, targets), message: "Setup", options }),
     );
   }
+
   if (target === "") errLine(io, USAGE.trimEnd());
+
   return target;
 }
 
@@ -100,12 +110,16 @@ async function pickTarget({ ctx, targets }: Run, raw: unknown, statuses: Statuse
 async function keepsOk({ ctx, targets }: Run, target: string, statuses: Statuses): Promise<boolean> {
   const st = statuses[target];
   const { io } = ctx;
+
   if (st?.ok !== true || !ctx.interactive || flagOn(ctx.flags, "redo")) return false;
+
   if (typeof io?.confirm !== "function") return false;
   const again = await io.confirm({ initialValue: false, message: `${target} already ok (${st.extra}). Redo?` });
+
   if (again) return false;
   logLine(io, `skip ${target} (already ok)`);
   logLine(io, formatStatus(statuses, targets));
+
   return true;
 }
 
@@ -114,16 +128,20 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   const run = await prepare(argv, flags, opts);
   const statuses = await statusesOf(run);
   const target = await pickTarget(run, _[0], statuses);
+
   if (target === "") return 1;
   const { io } = run.ctx;
+
   try {
     if (await keepsOk(run, target, statuses)) return 0;
     const runner = RUNNERS[target] /* normalizeTarget returns only TARGETS, and RUNNERS has each */ as Runner;
     await runner(run.ctx);
     logLine(io, formatStatus(await statusesOf(run), run.targets));
+
     return 0;
   } catch (e) {
     errLine(io, errMessage(e));
+
     return 1;
   }
 }

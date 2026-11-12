@@ -17,6 +17,7 @@ import {
 import { main } from "./google-workspace.ts";
 
 useTempDirs();
+
 let home = "";
 
 beforeEach(() => {
@@ -56,6 +57,7 @@ it("accounts: selects one by flag or WORKSPACE_ACCOUNT", async () => {
   const seen: string[] = [];
   stubFetch((_url, init) => {
     seen.push(JSON.stringify(init?.headers));
+
     return jsonRes({ email: "x" });
   });
   await run("--account", "work", "whoami");

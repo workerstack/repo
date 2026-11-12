@@ -20,6 +20,7 @@ afterEach(() => vi.restoreAllMocks());
 function setup(policy: unknown = DENY_ALL) {
   const ws = tmp("mcp-emit-ws-");
   plantPolicy(ws, policy);
+
   return { home: tmp("mcp-emit-home-"), ws };
 }
 
@@ -151,6 +152,7 @@ it("emitMcpPolicy grok plugins: treats a policy without a plugins table as not d
 });
 
 const allowB = { ...DENY_ALL, allow: ["b"] };
+
 /** The `.mcp.json` servers the grok rows read. */
 const SERVERS = JSON.stringify({ mcpServers: { b: { url: "mcp-json" }, s: "stdio" } });
 

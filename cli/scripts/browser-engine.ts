@@ -21,8 +21,10 @@ const SHIM_EXT = /\.(cmd|bat)$/i;
 function firstChromium(pathEnv: string | undefined, platform: NodeJS.Platform): string {
   for (const name of CHROMIUM_BINS) {
     const bin = whichBin(name, pathEnv, platform);
+
     if (bin !== "") return bin;
   }
+
   return "";
 }
 
@@ -43,14 +45,18 @@ export function installHint(platform: NodeJS.Platform = process.platform): strin
 
 function wantsChromium(opts: PickOpts, platform: NodeJS.Platform): boolean {
   if (opts.forceChromium === true || platform === "win32") return true;
+
   return CHROMIUM_VERBS.has(opts.verb ?? "") || isPaintHost(opts.url ?? "");
 }
 
 export function pickEngine(opts: PickOpts = {}): Picked {
   const platform = opts.platform ?? process.platform;
   const bins = opts.bins ?? {};
+
   if (filled(bins.lightpanda) !== undefined && !wantsChromium(opts, platform)) return { engine: "lightpanda" };
+
   if (filled(bins.chromium) !== undefined) return { engine: "chromium" };
+
   return { engine: null, error: installHint(platform) };
 }
 
@@ -73,6 +79,7 @@ function tryKill(pid: number, signal?: NodeJS.Signals): void {
 /** Stops the engine `pid` and, off Windows, its process group. */
 export function killPid(pid: number | undefined, platform: NodeJS.Platform): void {
   if (pid === undefined || pid === 0) return;
+
   if (onWindows(platform)) {
     // The tree first: a shell shim's child outlives the shell once that is killed, and holds the profile dir open.
     spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
@@ -81,8 +88,10 @@ export function killPid(pid: number | undefined, platform: NodeJS.Platform): voi
       windowsHide: true,
     });
     tryKill(pid);
+
     return;
   }
+
   tryKill(-pid, "SIGTERM");
   tryKill(pid, "SIGTERM");
 }
@@ -94,10 +103,13 @@ function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
     env: ctx.env,
     stdio: ["ignore", "pipe", "pipe"],
   };
+
   if (!onWindows(ctx.platform) || !SHIM_EXT.test(bin)) return spawn(bin, args, opts);
   const mjs = `${bin.replace(SHIM_EXT, "")}.mjs`;
+
   try {
     fs.accessSync(mjs, fs.constants.F_OK);
+
     return spawn(process.execPath, [mjs, ...args], opts);
   } catch {
     return spawn(bin, args, { ...opts, shell: true });
@@ -106,6 +118,7 @@ function spawnEngine(bin: string, args: string[], ctx: Ctx): ChildProcess {
 
 function spawnArgs(engine: Engine, port: number, profile: string): string[] {
   if (engine === "lightpanda") return ["serve", "--host", HOST, "--port", String(port)];
+
   return [
     "--headless=new",
     "--disable-gpu",
@@ -130,17 +143,20 @@ async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   child.once("error", (err) => {
     spawnError = new Error(`engine failed to start: ${err.message}`);
   });
+
   try {
     await waitVersion(port, ctx.readyMs, () => spawnError);
   } catch (err) {
     killPid(child.pid, ctx.platform);
     throw err;
   }
+
   return newSession(engine, child.pid, port);
 }
 
 async function probe(session: Session): Promise<void> {
   const cdp = await connectCdp(session.port);
+
   try {
     await cdp.send("Browser.getVersion");
   } finally {
@@ -151,21 +167,27 @@ async function probe(session: Session): Promise<void> {
 /** A session on `engine`, or on Chromium when Lightpanda starts but fails its probe; null when none starts. */
 export async function openSession(engine: Engine, ctx: Ctx): Promise<Session | null> {
   const session = await launchEngine(engine, ctx).catch(() => null);
+
   if (session === null || engine !== "lightpanda") return session;
+
   const probed = await probe(session).then(
     () => true,
     () => false,
   );
+
   if (probed) return session;
   killPid(session.pid, ctx.platform);
+
   if (ctx.bins.chromium === "") return null;
   const next = await launchEngine("chromium", ctx);
+
   return { ...next, escalated: true, swapCount: 1 };
 }
 
 /** Opens `url` in `session`'s engine. */
 export async function navigate(session: Session, url: string): Promise<void> {
   const cdp = await connectCdp(session.port);
+
   try {
     await cdp.send("Page.enable").catch(() => {});
     await cdp.send("Page.navigate", { url });
@@ -189,6 +211,8 @@ export async function swapToChromium(session: Session, ctx: Ctx): Promise<Sessio
   next.lastRefs = session.lastRefs;
   next.escalated = true;
   next.swapCount = session.swapCount + 1;
+
   if (url !== "") await navigate(next, url);
+
   return next;
 }

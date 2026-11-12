@@ -12,7 +12,9 @@ const PIN = `bun@${Bun.version}`;
 function problems(files: Record<string, object>): string[] {
   const texts = Object.entries(files).map(([rel, content]): [string, string] => [rel, JSON.stringify(content)]);
   const result = readWorkspace(plant(Object.fromEntries(texts)));
+
   if (!result.ok) throw new Error(result.errors.join("\n"));
+
   return checkManifests(result.workspace);
 }
 
@@ -50,6 +52,7 @@ describe("checkManifests missing fields", () => {
       "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/web/package.json": { name: "web", private: true },
     };
+
     expect(problems(files)).toStrictEqual(['packages/web/package.json: "sideEffects" is missing; set it to false']);
   });
 
@@ -62,6 +65,7 @@ describe("checkManifests missing fields", () => {
       "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/ui/package.json": { private: true, sideEffects: value },
     };
+
     expect(problems(files)).toStrictEqual([
       `packages/ui/package.json: "sideEffects" is ${shown}; set it to false and import CSS from an app entry`,
     ]);
@@ -74,6 +78,7 @@ describe("checkManifests versions and packageManager", () => {
       "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/api/package.json": { private: true, sideEffects: false, version: "1.0.0" },
     };
+
     expect(problems(files)).toStrictEqual(['packages/api/package.json: private packages have no "version"; delete it']);
   });
 
@@ -82,6 +87,7 @@ describe("checkManifests versions and packageManager", () => {
       "package.json": { packageManager: PIN, private: true, workspaces: ["packages/*"] },
       "packages/api/package.json": { private: false, sideEffects: false, version: "1.0.0" },
     };
+
     expect(problems(files)).toStrictEqual([]);
   });
 
@@ -133,6 +139,7 @@ describe("checkManifests workspaces", () => {
       "packages/api/package.json": { private: true, sideEffects: false },
       "packages/web/package.json": { private: true, sideEffects: false },
     };
+
     expect(problems(files)).toStrictEqual([]);
   });
 
@@ -142,6 +149,7 @@ describe("checkManifests workspaces", () => {
       "packages/api/package.json": {},
       "packages/web/package.json": {},
     };
+
     expect(problems(files)).toStrictEqual([
       'package.json: "private" is missing; set true, or false to publish it',
       `package.json: "packageManager" is missing; set it to "${PIN}"`,
@@ -163,6 +171,7 @@ function chain(name: string, n: number) {
 
 describe("checkManifests chained root scripts", () => {
   const root = { packageManager: "bun@1.4.4", private: true, sideEffects: false };
+
   function withScripts(scripts: Record<string, string>) {
     return problems({ "package.json": { ...root, scripts } });
   }
@@ -203,6 +212,7 @@ describe("checkManifests script shapes", () => {
       "package.json": { packageManager: "bun@1.4.4", private: true, workspaces: ["packages/*"] },
       "packages/a/package.json": { private: true, scripts: { test: "a && b" }, sideEffects: false },
     };
+
     expect(problems(files)).toStrictEqual([]);
   });
 });

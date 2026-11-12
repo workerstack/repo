@@ -28,22 +28,29 @@ export const MODEL_LISTS: Record<ListCli, { bin: string; args: string[]; ids: (o
 export function codexOffered(home: string): Offered {
   const file = path.join(home, ".codex", "models_cache.json");
   let text: string;
+
   try {
     text = fs.readFileSync(file, "utf8");
   } catch {
     return { skip: `codex models cache missing at ${file}` };
   }
+
   try {
     const parsed: unknown = JSON.parse(text);
+
     if (!isRecord(parsed) || !Array.isArray(parsed.models)) throw new Error("malformed");
     const ids: string[] = [];
+
     for (const m of parsed.models) {
       if (!isRecord(m)) throw new Error("malformed");
+
       if (typeof m.slug === "string" && m.slug !== "") ids.push(m.slug);
     }
+
     if (ids.length > 0) return { ids };
   } catch {
     // malformed
   }
+
   return { skip: `codex models cache malformed at ${file}` };
 }

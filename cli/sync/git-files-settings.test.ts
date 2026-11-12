@@ -25,6 +25,7 @@ it("sets LF and marks every tracked whole file output, sorted, with no link, unt
     file("references/INDEX.md", true, "block"),
     file(".gitignore", true, "block"),
   ];
+
   expect(gitattributesOf({}, outputs)).toBe(
     attributes(".agents/agents/implementer-deep.md", "AGENTS.md", "bunfig.toml"),
   );
@@ -59,6 +60,7 @@ it("leaves out block outputs and does not lock a user file inside a generated di
     file(".vscode/settings.json", true, "block"),
     file("references/INDEX.md", true, "block"),
   ];
+
   expect(readonlyOf(settingsOf({}, outputs))).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
   expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude");
   expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude/mine.md");
@@ -77,6 +79,7 @@ it("replaces a map of the user's own, and keeps the keys around it as written", 
   const before =
     '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n' +
     '  "editor.tabSize": 2 /* last */\n}\n';
+
   const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
   expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
   const settings: unknown = parse(after);
@@ -88,10 +91,12 @@ it("replaces a map of the user's own, and keeps the keys around it as written", 
 it("is stable: a second pass over its own output changes nothing", () => {
   const first = settingsOf({ files: { ".vscode/settings.json": '{\n  // c\n  "a": 1\n}\n' } }, OUTPUTS);
   expect(settingsOf({ files: { ".vscode/settings.json": first } }, OUTPUTS)).toBe(first);
+
   const replaced = settingsOf(
     { files: { ".vscode/settings.json": '{"files.readonlyInclude": {"x": true}}' } },
     OUTPUTS,
   );
+
   expect(settingsOf({ files: { ".vscode/settings.json": replaced } }, OUTPUTS)).toBe(replaced);
 });
 

@@ -26,6 +26,7 @@ it("skips external links, anchors, absolute paths and code", () => {
     "[g](nope.md)",
     "```",
   ].join("\n");
+
   expect(check(repo(), [rule("r", body)])).toStrictEqual([]);
 });
 
@@ -38,5 +39,6 @@ it("does not check a stock rule", () => {
     rel: "agents/rules/s.md",
     scope: "",
   };
+
   expect(check(repo(), [stock])).toStrictEqual([]);
 });

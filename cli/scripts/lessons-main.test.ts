@@ -20,6 +20,7 @@ beforeEach(() => {
   vi.spyOn(process.stdout, "write").mockImplementation((s) => out.push(String(s)) > 0);
   vi.spyOn(process.stderr, "write").mockImplementation((s) => err.push(String(s)) > 0);
 });
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
@@ -99,6 +100,7 @@ it("checks quietly when the lessons are sound and lists each problem when not", 
 
 it("prints usage for a missing or incomplete command", () => {
   const ws = repo();
+
   const bad = [
     [],
     ["nope"],
@@ -111,6 +113,7 @@ it("prints usage for a missing or incomplete command", () => {
     ["index", "extra"],
     ["check", "extra"],
   ];
+
   for (const argv of bad) {
     err.length = 0;
     expect(run(ws, argv), argv.join(" ")).toBe(1);

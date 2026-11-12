@@ -8,7 +8,9 @@ export type RuleParameters = {
   strict_required_status_checks_policy?: boolean | undefined;
   required_status_checks?: { context: string; integration_id?: number | undefined }[] | undefined;
 };
+
 export type Rule = { type: string; parameters?: RuleParameters | undefined };
+
 export type BypassActor = { actor_id: number; actor_type: string; bypass_mode: string };
 
 /** A ruleset as the API takes it in a POST or PUT body. */
@@ -20,6 +22,7 @@ export type Ruleset = {
   rules: Rule[];
   bypass_actors: BypassActor[];
 };
+
 /** A ruleset as it is on GitHub: the body plus the id a PUT addresses. */
 export type CurrentRuleset = Ruleset & { id: number };
 
@@ -41,6 +44,7 @@ export type Wanted = {
   homepage?: string;
   topics?: string[];
 };
+
 export type WantedResult = { ok: true; wanted: Wanted } | { ok: false; errors: string[] };
 
 /** What the repository looks like now. */

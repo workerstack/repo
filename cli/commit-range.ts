@@ -10,6 +10,7 @@ type Check = (message: string, facts: CommitFacts) => string[];
 function works(cwd: string, ...args: string[]): boolean {
   return runGit(cwd, args).status === 0;
 }
+
 /** The non-empty lines git prints at `cwd` with `args`; none when it fails. */
 function linesOf(cwd: string, ...args: string[]): string[] {
   return runGit(cwd, args).stdout.split("\n").filter(Boolean);
@@ -21,19 +22,25 @@ function linesOf(cwd: string, ...args: string[]): string[] {
  */
 function commitsOf({ base, head }: { base: string; head: string }, io: CommitMsgIo): string[] | null {
   const tip = head === "" ? "HEAD" : head;
+
   if (!works(io.cwd, "rev-parse", "--verify", `${tip}^{commit}`)) return null;
+
   function alone() {
     return linesOf(io.cwd, "rev-list", "--no-merges", "-n1", tip);
   }
+
   if (base === "" || base === ZERO_SHA) return alone();
   const known = works(io.cwd, "rev-parse", "--verify", `${base}^{commit}`);
+
   if (!known && !FULL_SHA.test(base)) return null;
+
   if (known && works(io.cwd, "merge-base", "--is-ancestor", base, tip))
     return linesOf(io.cwd, "rev-list", "--reverse", "--no-merges", `${base}..${tip}`);
 
   io.stderr(
     `commit-msg: ${base.slice(0, SHORT_SHA)} is not an ancestor of HEAD (a force push?); checking HEAD alone\n`,
   );
+
   return alone();
 }
 
@@ -48,19 +55,25 @@ export function commitRange(range: string, how: { rules: CommitRules; check: Che
   // two sides are read only when the range has exactly two
   const [base, head] = sides /* two sides, or unused */ as [string, string];
   const shas = sides.length === RANGE_SIDES ? commitsOf({ base, head }, io) : null;
+
   if (shas === null) {
     io.stderr(`repo commit-msg: no commit range "${range}"; use <base>..<head>\n`);
+
     return 1;
   }
+
   let isFailed = false;
+
   for (const sha of shas) {
     const { files, changedLines } = commitChange(io.cwd, sha);
     const message = runGit(io.cwd, ["log", "-1", "--format=%B", sha]).stdout;
     const subject = runGit(io.cwd, ["log", "-1", "--format=%s", sha]).stdout.trim();
+
     for (const problem of check(message, { ...rules, changedLines, stagedFiles: files })) {
       io.stderr(`commit-msg: ${sha.slice(0, SHORT_SHA)} ${subject}: ${problem}\n`);
       isFailed = true;
     }
   }
+
   return isFailed ? 1 : 0;
 }

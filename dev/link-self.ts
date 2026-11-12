@@ -24,15 +24,18 @@ function ensureLink(link: string, { target, abs, dir }: LinkTo): Result {
   const win = process.platform === WINDOWS && dir;
   const want = win ? abs : target;
   let current: string | null = null;
+
   try {
     current = fs.readlinkSync(link);
   } catch {
     current = null;
   }
+
   if (current !== null && path.normalize(current) === path.normalize(want)) return "current";
   fs.mkdirSync(path.dirname(link), { recursive: true });
   fs.rmSync(link, { force: true, recursive: true });
   fs.symlinkSync(want, link, win ? "junction" : undefined);
+
   return "linked";
 }
 
@@ -43,11 +46,16 @@ export type Shebang = { launcher: string; nodeOrBun: boolean };
 function launcherFromPath(binPath: string): Shebang | null {
   const name = binPath.slice(Math.max(binPath.lastIndexOf("\\"), binPath.lastIndexOf("/")) + 1);
   const dot = name.lastIndexOf(".");
+
   if (dot <= 0) return null;
   const ext = name.slice(dot);
+
   if (K.RUN_WITH_BUN.includes(ext)) return { launcher: K.BUN_LAUNCHER, nodeOrBun: true };
+
   if (K.RUN_WITH_CMD.includes(ext.toLowerCase())) return { launcher: K.CMD_LAUNCHER, nodeOrBun: false };
+
   if (ext === K.POWERSHELL_EXTENSION) return { launcher: K.POWERSHELL_LAUNCHER, nodeOrBun: false };
+
   return null;
 }
 
@@ -58,16 +66,22 @@ function launcherFromPath(binPath: string): Shebang | null {
 export function shebangOf(contents: string, binPath: string): Shebang | null {
   const head = contents.slice(0, K.MAX_SHEBANG_INPUT);
   const newline = head.indexOf("\n");
+
   if (!head.startsWith(K.SHEBANG_MARK) || newline < 0) return launcherFromPath(binPath);
   const end = head[newline - 1] === "\r" ? newline - 1 : newline;
   const line = head.slice(K.SHEBANG_MARK.length, end);
   const [first = ""] = line.trimStart().split(" ");
+
   if (first === "") return launcherFromPath(binPath);
+
   if (!K.ENV_PROGRAMS.includes(first)) return { launcher: line, nodeOrBun: false };
   let rest = line.trimStart().slice(first.length).trimStart();
+
   if (rest.startsWith(K.SPLIT_STRING_FLAG)) rest = rest.slice(K.SPLIT_STRING_FLAG.length).trimStart();
   const [program = ""] = rest.split(" ");
+
   if (program === "") return launcherFromPath(binPath);
+
   return { launcher: rest, nodeOrBun: K.BUN_PROGRAMS.includes(program) };
 }
 
@@ -86,20 +100,26 @@ export function encodeBunx(
   const text = `${binPath}"\0${launcher}`;
   const lengths = shebang === null ? 0 : K.LENGTH_FIELDS_BYTES;
   const out = new DataView(new ArrayBuffer(text.length * K.UTF16_BYTES + lengths + K.FLAGS_BYTES));
+
   for (let i = 0; i < text.length; i++) out.setUint16(i * K.UTF16_BYTES, text.charCodeAt(i), true);
   let at = text.length * K.UTF16_BYTES;
   let flags = K.SHIM_VERSION << K.VERSION_SHIFT;
+
   if (shebang !== null) {
     out.setUint32(at, binPath.length * K.UTF16_BYTES, true);
     out.setUint32(at + K.U32_BYTES, launcher.length * K.UTF16_BYTES, true);
     at += lengths;
+
     const isNode =
       shebang.launcher.startsWith(K.NODE) &&
       (shebang.launcher.length === K.NODE.length || shebang.launcher[K.NODE.length] === " ");
+
     flags |= K.FLAG_SHEBANG | (shebang.nodeOrBun ? K.FLAG_NODE_OR_BUN : 0) | (isNode ? K.FLAG_NODE : 0);
   }
+
   if (isAbsolute) flags |= K.FLAG_ABSOLUTE;
   out.setUint16(at, flags, true);
+
   return new Uint8Array(out.buffer);
 }
 
@@ -115,6 +135,7 @@ function readBytes(file: string): Buffer | null {
 /** The first `.exe` shim bun left in `.bin` other than ours, by name; undefined when there is none. */
 function firstShim(bin: string): string | undefined {
   const names = fs.existsSync(bin) ? fs.readdirSync(bin) : [];
+
   return names.filter((name) => name.endsWith(K.SHIM_EXE) && name !== `repo${K.SHIM_EXE}`).toSorted(byCodeUnit)[0];
 }
 
@@ -132,14 +153,17 @@ function ensureShim(root: string): Result {
   const exe = path.join(bin, `repo${K.SHIM_EXE}`);
   const bunx = path.join(bin, `repo${K.BUNX}`);
   const current = readBytes(bunx);
+
   if (current !== null && Buffer.from(wanted).equals(current) && fs.existsSync(exe)) return "current";
   const shim = firstShim(bin);
+
   if (shim === undefined)
     throw new Error(`link-self: no ${K.SHIM_EXE} shim in ${bin} to copy as repo${K.SHIM_EXE}; run bun install first`);
 
   fs.rmSync(path.join(bin, "repo"), { force: true });
   fs.copyFileSync(path.join(bin, shim), exe);
   fs.writeFileSync(bunx, wanted);
+
   return "linked";
 }
 
@@ -148,6 +172,7 @@ export function linkSelf(root: string, platform: string = process.platform): { b
   const modules = path.join(root, "node_modules");
   const binTo = { abs: path.join(root, "bin", "repo.ts"), dir: false, target: path.join("..", "..", "bin", "repo.ts") };
   const pkgTo = { abs: path.resolve(root), dir: true, target: path.join("..", "..") };
+
   return {
     bin: platform === WINDOWS ? ensureShim(root) : ensureLink(path.join(modules, ".bin", "repo"), binTo),
     pkg: ensureLink(path.join(modules, "@workerstack", "repo"), pkgTo),
@@ -157,12 +182,14 @@ export function linkSelf(root: string, platform: string = process.platform): { b
 /** Runs `repo sync --postinstall` in `cwd` with the terminal inherited; returns its exit code. */
 function runSync(cwd: string): number {
   const result = spawnSync(process.execPath, SYNC_ARGS, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
+
   return result.status ?? 1;
 }
 
 /** Link the bin and the package, then sync; returns the sync's exit code. */
 export function linkAndSync(root: string, sync: (cwd: string) => number = runSync): number {
   linkSelf(root);
+
   return sync(root);
 }
 

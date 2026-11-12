@@ -5,6 +5,7 @@ import { hashText } from "./stock-history.ts";
 
 const STOCK = "# Agents\n\nRead the rules.\n- one\n- two\n";
 const SHORT = "# Agents\n\nRead the rules.\n";
+
 function rowsOf(text: string): string[] {
   return text.split("\n");
 }

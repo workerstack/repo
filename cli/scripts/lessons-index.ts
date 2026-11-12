@@ -29,7 +29,9 @@ export function lessonsDir(ws: string): string {
 /** The lesson filenames under `ws`, sorted; [] without a lessons dir. */
 export function lessonFiles(ws: string): string[] {
   const dir = lessonsDir(ws);
+
   if (!fs.existsSync(dir)) return [];
+
   return fs
     .readdirSync(dir)
     .filter((n) => n.endsWith(MD_EXT) && n !== INDEX_NAME)
@@ -39,6 +41,7 @@ export function lessonFiles(ws: string): string[] {
 /** Most hits first, then by file; rows whose hits are not numbers sort by file. */
 export function byHitsThenFile(a: IndexRow, b: IndexRow): number {
   const diff = b.hits - a.hits;
+
   return diff === 0 || Number.isNaN(diff) ? a.file.localeCompare(b.file) : diff;
 }
 
@@ -49,12 +52,16 @@ function cell(s: unknown): string {
 /** One row per valid lesson file, and per `pending` text the host is about to write. */
 function indexRows(ws: string, pending: Record<string, string> = {}): IndexRow[] {
   const names = [...new Set([...lessonFiles(ws), ...Object.keys(pending)])].toSorted();
+
   const rows = names.flatMap((name): IndexRow[] => {
     const parsed = parseLesson(pending[name] ?? fs.readFileSync(path.join(lessonsDir(ws), name), "utf8"));
+
     if (!parsed.ok) return [];
     const l = parsed.lesson;
+
     return [{ file: `${LESSONS_DIR}/${name}`, hits: l.hits, lastHit: l.lastHit, paths: l.paths, summary: l.summary }];
   });
+
   return rows.toSorted(byHitsThenFile);
 }
 
@@ -63,6 +70,7 @@ function renderIndex(rows: IndexRow[]): string {
   const body = rows.map(
     (r) => `| ${r.file} | ${cell(r.paths.join(PATHS_SEP))} | ${r.hits} | ${r.lastHit} | ${cell(r.summary)} |`,
   );
+
   const text = [
     "",
     "# Lessons",
@@ -72,6 +80,7 @@ function renderIndex(rows: IndexRow[]): string {
     ...body,
     "",
   ].join("\n");
+
   return stamp(`${LESSONS_DIR}/${INDEX_NAME}`, text);
 }
 
@@ -86,7 +95,9 @@ export function parseIndex(text: unknown): IndexRow[] {
         .replaceAll(ESCAPED_PIPE, NUL)
         .split(CELL_SEP)
         .map((c) => c.replaceAll(NUL, PIPE));
+
       if (cells.length !== INDEX_CELLS) return [];
+
       const [file, pathsCell, hits, lastHit, summary] = cells /* five cells checked above */ as [
         string,
         string,
@@ -94,6 +105,7 @@ export function parseIndex(text: unknown): IndexRow[] {
         string,
         string,
       ];
+
       return [{ file, hits: Number(hits), lastHit, paths: pathsCell.split(PATHS_SEP).filter(Boolean), summary }];
     });
 }
@@ -108,7 +120,9 @@ export function writeIndex({ workspaceRoot: ws, pending }: IndexInput): { ok: bo
   const text = renderIndex(indexRows(ws, pending));
   const dest = path.join(dir, INDEX_NAME);
   const error = writeOwned(dest, text, OWNED_MODE);
+
   if (error !== null) throw new Error(`cannot write ${dest}: ${error}`);
+
   return { ok: true, path: dest };
 }
 

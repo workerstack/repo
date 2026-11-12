@@ -45,6 +45,7 @@ describe("exitWhenFlushed", () => {
   it("exits with the code only after every stream's end callback has run", async () => {
     const events: string[] = [];
     const callbacks: (() => void)[] = [];
+
     function stream(name: string) {
       return {
         end: (cb: () => void) => {
@@ -56,9 +57,11 @@ describe("exitWhenFlushed", () => {
         },
       };
     }
+
     const exit = vi.fn<(code?: number) => void>((code) => {
       events.push(`exit ${code}`);
     });
+
     const done = exitWhenFlushed([stream("out"), stream("err")], exit, 2);
     await Promise.resolve();
     expect([events, exit.mock.calls.length]).toStrictEqual([["end out", "end err"], 0]);
@@ -75,10 +78,13 @@ describe("BIN", () => {
   it("is what main runs by default: the registry's code goes to the process's exit", async () => {
     const end = vi.spyOn(process.stdout, "end").mockImplementation(((cb: () => void) => {
       cb();
+
       return process.stdout;
     }) /* a spy standing in for a stream's end, which returns the stream */ as never);
+
     vi.spyOn(process.stderr, "end").mockImplementation(((cb: () => void) => {
       cb();
+
       return process.stderr;
     }) /* a spy standing in for a stream's end, which returns the stream */ as never);
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);

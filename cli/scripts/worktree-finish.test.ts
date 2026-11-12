@@ -8,6 +8,7 @@ import { expectOnlyMainWorktree } from "./__fixtures__/worktree-scenarios.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 function subjects(r: string) {
@@ -19,6 +20,7 @@ function withCommit(name = "a"): string {
   const r = tmp.repo();
   addWorktree(r, name);
   commitIn(wt(r, name), `${name}.txt`);
+
   return r;
 }
 

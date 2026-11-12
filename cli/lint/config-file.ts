@@ -23,6 +23,7 @@ function allowed(statement: Statement): boolean {
 export const configFile: RepoRule<"move"> = {
   create(context) {
     if (!CONFIG.test(path.basename(context.filename))) return {};
+
     return {
       Program(program) {
         for (const statement of program.body) {

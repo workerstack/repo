@@ -14,6 +14,7 @@ function handoffLeaf(i: ApprovalItem): string {
 // One handoff for the whole queue line, in its order; Watch-outs stay empty because the files carry their own.
 function handoffBody(sid: string, queue: HandoffEntry[]): string {
   const name = `run ${queue.map((q) => itemKey(q.item)).join(" then ")}`;
+
   return [
     `HANDOFF_NAME: ${name}`,
     "",
@@ -43,12 +44,17 @@ export function orchestrateHandoff(data: HookInput, ws: string, queue: HandoffEn
   const shown = queue
     .map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`)
     .join(", then ");
+
   const result = persistHandoff({ content: handoffBody(sessionIdOf(data), queue), workspaceRoot: ws });
+
   if (!result.ok) {
     const items = queueText(queue.map((q) => q.item));
+
     return `h did not hand off ${items}: the handoff could not be written (${result.error})`;
   }
+
   const abs = path.resolve(ws, result.path);
+
   return (
     `h handed off ${shown} to ${abs}; ` +
     `tell the person to run /pickup ${result.serial} in a fresh session, and do no work here`

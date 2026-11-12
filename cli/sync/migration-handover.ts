@@ -22,6 +22,7 @@ import type { StockHistory } from "./stock-history.ts";
 import { OWNER_WRITE } from "./write.constants.ts";
 
 const RULES_DIR = ".repo/rules";
+
 /** The one row of the blank line that sets a paragraph apart. */
 const BLANK_LINE = 1;
 const MCP_JSON = ".mcp.json";
@@ -30,18 +31,24 @@ const POLICY = ".repo/mcp-policy.jsonc";
 const SERVERS_KEY = "servers";
 const JSON_INDENT = 2;
 const FIX = "fix it, nothing written";
+
 const MADE_YOURS = {
   done: "made .mcp.json yours: writable, without the generated header",
   would: "would make .mcp.json yours: writable, without the generated header",
 };
 
 type Json = Record<string, unknown>;
+
 type Handover = Extract<MigrationStep, { kind: "handover" }>;
+
 type Write = Handover["writes"][number];
+
 /** A source that could not be read, and why. */
 type Failed = { rel: string; error: string };
+
 /** A file whose servers go into `.mcp.json`: what else is written and removed with them, and what its step says. */
 type Read = { rel: string; servers: Json; writes: Write[]; remove: string[]; what: { done: string; would: string } };
+
 type Source = Read | Failed;
 
 /**
@@ -56,6 +63,7 @@ export type HandoverInput = { packages: readonly string[]; history: StockHistory
  */
 export function planHandover(root: string, input: HandoverInput): MigrationStep[] {
   const rules = ["", ...input.packages].flatMap((scope) => ruleSteps(root, scope, input.history));
+
   return [...rules, ...mcpSteps(root)];
 }
 
@@ -80,6 +88,7 @@ function step(what: { done: string; would: string }, files: Pick<Handover, "writ
     note: [what.done, ...notes].join("\n"),
     pending: what.would,
   };
+
   return handover;
 }
 
@@ -96,14 +105,17 @@ function ruleSteps(root: string, scope: string, history: StockHistory): Handover
   const rules = pathlessRules(root, path.posix.join(scope, RULES_DIR));
   const disk = readOrNull(root, agents);
   let cut = disk;
+
   for (const { body } of rules) cut = cut === null ? null : withoutParagraph(cut, body);
   // The body is rendered after the handover, so the history alone finds the stock rules. They stay where they stood,
   // for the sync that renders the region to put it in their place.
   const user = userText(agents, { history, text: cut }, "");
   let text = `${user.above}${user.stock}${user.below}`;
+
   return rules.map(({ rel, body }) => {
     text = appended(text, body);
     const files = { remove: [rel], writes: [{ content: text, path: agents }] };
+
     return step(moved(`${rel} into ${agents} below repo:rules`), files);
   });
 }
@@ -114,15 +126,18 @@ function ruleSteps(root: string, scope: string, history: StockHistory): Handover
  */
 function pathlessRules(root: string, dir: string): { rel: string; body: string }[] {
   let names: string[];
+
   try {
     names = fs.readdirSync(path.join(root, dir)).toSorted(byCodeUnit);
   } catch {
     return [];
   }
+
   return names.flatMap((name) => {
     const rel = `${dir}/${name}`;
     const doc = name.endsWith(".md") ? docOf(rel, readOrNull(root, rel)) : null;
     const kept = doc === null || doc.data["paths"] !== undefined || doc.data["overrides"] !== undefined;
+
     return kept ? [] : [{ body: doc.body, rel }];
   });
 }
@@ -143,14 +158,17 @@ function withoutParagraph(text: string, body: string): string {
   if (body.trim() === "") return text;
   const want = body.trimEnd().split("\n");
   const rows = text.split("\n");
+
   const at = rows.findIndex(
     (_row, index) =>
       (rows[index - 1] ?? "") === "" &&
       want.every((line, offset) => rows[index + offset] === line) &&
       (rows[index + want.length] ?? "") === "",
   );
+
   if (at < 0) return text;
   rows.splice(at, want.length + BLANK_LINE);
+
   return rows.join("\n");
 }
 
@@ -161,6 +179,7 @@ function withoutParagraph(text: string, body: string): string {
 function appended(text: string, body: string): string {
   if (text.includes(body)) return text;
   const kept = text.trimEnd();
+
   return `${kept}${kept === "" ? "" : "\n\n"}${body}\n`;
 }
 
@@ -169,13 +188,17 @@ function mcpSteps(root: string): MigrationStep[] {
   const disk = readOrNull(root, MCP_JSON);
   const yours = madeYours(root, disk);
   const sources = [overlaySource(root), policySource(root)].flatMap((source) => source ?? []);
+
   if (sources.length === 0) return yours;
   const own = disk === null ? null : withoutHeader(disk);
   const parsed = parseMcpJson(own);
+
   if (!parsed.ok) return [conflict({ error: parsed.error, rel: MCP_JSON })];
   const failed = sources.find((source): source is Failed => "error" in source);
+
   if (failed !== undefined) return [conflict(failed)];
   const read = sources.filter((source): source is Read => !("error" in source));
+
   return mergeSteps({ fix: yours.length > 0, own, servers: parsed.servers }, read);
 }
 
@@ -192,6 +215,7 @@ function madeYours(root: string, disk: string | null): Handover[] {
   if (disk === null) return [];
   const own = withoutHeader(disk);
   const files = { remove: [], writes: [{ content: own, path: MCP_JSON }] };
+
   return own !== disk || locked(root, MCP_JSON) ? [step(MADE_YOURS, files)] : [];
 }
 
@@ -207,18 +231,23 @@ function withoutHeader(disk: string): string {
 function mergeSteps(start: { servers: Json; own: string | null; fix: boolean }, sources: Read[]): Handover[] {
   const whole: Json = start.own === null ? {} : (parse(start.own) /* parseMcpJson found it a JSON object */ as Json);
   let servers = start.servers;
+
   return sources.map((source, index) => {
     const notes: string[] = [];
+
     const added = Object.entries(source.servers).filter(([name, spec]) => {
       if (!Object.hasOwn(servers, name)) return true;
+
       if (!isDeepStrictEqual(servers[name], spec))
         notes.push(`kept .mcp.json's own "${name}" server; dropped the one in ${source.rel}`);
 
       return false;
     });
+
     servers = { ...servers, ...Object.fromEntries(added) };
     const content = `${JSON.stringify({ ...whole, mcpServers: servers }, null, JSON_INDENT)}\n`;
     const write = added.length > 0 || (start.fix && index === 0);
+
     return step(
       source.what,
       { remove: source.remove, writes: write ? [{ content, path: MCP_JSON }, ...source.writes] : source.writes },
@@ -239,9 +268,12 @@ function movedServers(rel: string) {
 /** `.repo/mcp.json` as a source, removed once its servers moved; null when there is none. */
 function overlaySource(root: string): Source | null {
   const text = readOrNull(root, OVERLAY);
+
   if (text === null) return null;
   const parsed = parseMcpJson(text);
+
   if (!parsed.ok) return { error: parsed.error.replace(MCP_JSON, OVERLAY), rel: OVERLAY };
+
   return { rel: OVERLAY, remove: [OVERLAY], servers: parsed.servers, what: movedServers(OVERLAY), writes: [] };
 }
 
@@ -252,11 +284,14 @@ function overlaySource(root: string): Source | null {
 function policySource(root: string): Source | null {
   const text = readOrNull(root, POLICY);
   const policy: unknown = text === null ? null : parse(text);
+
   if (text === null || !isObject(policy) || !Object.hasOwn(policy, SERVERS_KEY)) return null;
   const servers = policy[SERVERS_KEY];
+
   if (!isObject(servers)) return { error: `${POLICY}: ${SERVERS_KEY} is not an object; ${FIX}`, rel: POLICY };
   const content = applyEdits(text, modify(text, [SERVERS_KEY], undefined, {}));
   const what = Object.keys(servers).length === 0 ? EMPTY_POLICY : movedServers(POLICY);
+
   return { rel: POLICY, remove: [], servers, what, writes: [{ content, path: POLICY }] };
 }
 

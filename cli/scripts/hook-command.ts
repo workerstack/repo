@@ -29,6 +29,7 @@ export const HOOK_NAMES: HookName[] = /* @__PURE__ */ sortedNames();
 /** `use a, b or c` over `names`. */
 function usageOf(names: readonly string[]): string {
   const last = names.length - 1;
+
   return `use ${names.slice(0, last).join(", ")} or ${names.at(last)}`;
 }
 
@@ -66,6 +67,7 @@ const VIA_BIN = /(?:\$r"|[\s"'/]repo"?|^repo)\s+hook\s+([\w-]+)\s*$/;
 /** `hookCommand(name)` for a `repo hook <name>` source command; any other command comes back unchanged. */
 export function expandHookCommand(command: string): string {
   const name = SHORT_FORM.exec(command)?.[1];
+
   return isHookName(name) ? hookCommand(name) : command;
 }
 
@@ -75,7 +77,9 @@ export function expandHookCommand(command: string): string {
  */
 export function hookNameOf(command: string): HookName | null {
   const viaBin = VIA_BIN.exec(command);
+
   if (viaBin !== null) return isHookName(viaBin[1]) ? viaBin[1] : null;
+
   for (const name of HOOK_NAMES)
     if (new RegExp(`[\\\\/"'\\s]${HOOK_SCRIPTS[name].replace(".", "\\.")}(?:["'\\s]|$)`).test(command)) return name;
 

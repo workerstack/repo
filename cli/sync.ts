@@ -48,6 +48,8 @@ export async function runSync(args: string[], io: SyncIo, deps: SyncDeps = {}): 
   const code = await syncOnce(args, io, deps);
   // An install replaced the swapped packages with npm's copies; whatever sync said, they go back.
   const parsed = parseMode(args);
+
   if (parsed.ok && parsed.mode.postinstall) await (deps.reapply ?? reapplyLinks)(io.cwd, io);
+
   return code;
 }

@@ -6,6 +6,7 @@ import { expect, it, vi } from "vitest";
 import { fixture, sync, useSyncKit } from "./__fixtures__/sync-kit.ts";
 
 useSyncKit();
+
 function expectOwnedMode(root: string, rel: string): void {
   const mode = fs.statSync(path.join(root, rel)).mode & 0o777;
   const [mask, want] = process.platform === "win32" ? [0o222, 0] : [0o777, 0o444];

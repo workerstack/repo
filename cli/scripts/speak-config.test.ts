@@ -54,6 +54,7 @@ it("loadCfg: reads every field from the environment, trimmed", () => {
     OPENAI_TTS_VOICE: "ov",
     SPEAK_PROVIDER: " OpenAI ",
   });
+
   expect(cfg).toMatchObject({
     elevenlabs: { apiKey: "ek", modelId: "em", voiceId: "ev" },
     openai: { apiKey: "ok", model: "om", voice: "ov" },

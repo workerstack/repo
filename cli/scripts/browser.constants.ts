@@ -11,6 +11,7 @@ export const ENGINES: readonly Engine[] = ["lightpanda", "chromium"];
 export const USAGE = "nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure";
 export const HELP_VERBS: ReadonlySet<string> = /* @__PURE__ */ new Set(["", "help", "-h", "--help"]);
 export const NAV = "nav";
+
 /** Verbs only Chromium can serve. */
 export const CHROMIUM_VERBS: ReadonlySet<string> = /* @__PURE__ */ new Set(["shot", "pdf", "trace"]);
 
@@ -24,11 +25,13 @@ export const ENGINE_NOT_READY = "engine not ready";
 export const STALE = "stale";
 export const STALE_RE: RegExp = /stale|missing/i;
 export const ERROR_PREFIX: RegExp = /^Error:\s*/;
+
 /** The usage a ref verb that takes text prints without it. */
 export const TEXT_USAGE: Readonly<Record<string, string>> = {
   fill: "fill <ref> <text>",
   select: "select <ref> <value>",
 };
+
 /** Where a ref verb's text starts in argv. */
 export const TEXT_ARG = 2;
 
@@ -56,13 +59,17 @@ export const MAX_HEADINGS = 6;
 export const MAX_REFS = 24;
 export const HEADING_RE: RegExp = /^#{1,6}\s/;
 export const TITLE_LINE_RE: RegExp = /^#\s+\S+\s*$/m;
+
 /** A snapshot body shorter than this, with no refs, is a page that did not render. */
 export const THIN_BODY = 80;
+
 /** What a block or bot-check page shows instead of its content, as regex alternatives. */
 const BLOCK_PHRASES =
   "enable javascript|javascript (is )?(required|disabled)|checking your browser|just a moment|captcha|" +
   "access denied|sorry.*robot|continue shopping|attention required|cf-browser-verification|verify you are a human";
+
 export const BLOCKED_SNAP_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(BLOCK_PHRASES, "i");
+
 /** The accessibility roles a snapshot numbers as refs. */
 export const REF_ROLES: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "link",
@@ -86,6 +93,7 @@ export const PAINT_HOSTS: readonly string[] = [
   "mail.google.com",
   "earth.google.com",
 ];
+
 export const GOOGLE = "google.com";
 export const EARTH_PATH = "/earth";
 export const AMAZON_RE: RegExp = /(^|\.)amazon\./;
@@ -105,6 +113,7 @@ export const SHOT: Readonly<Capture> = {
   params: { format: "png" },
   verb: "shot",
 };
+
 export const PDF: Readonly<Capture> = {
   file: "page.pdf",
   method: "Page.printToPDF",
@@ -137,14 +146,17 @@ export const FAKE_STATE: Readonly<FakeCdpState> = {
   thinSnap: false,
   url: "about:blank",
 };
+
 export const CDP_ERROR = -32_000;
 export const NOT_FOUND_STATUS = 404;
 export const PROBE_METHODS: ReadonlySet<string> = /* @__PURE__ */ new Set(["Browser.getVersion", "Target.getTargets"]);
 export const HOME_NODE = 10;
 export const SEARCH_NODE = 11;
 export const KNOWN_NODES: ReadonlySet<number> = /* @__PURE__ */ new Set([HOME_NODE, SEARCH_NODE]);
+
 export const PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
 export const PDF_B64: string =
   "JVBERi0xLjAKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMy" +
   "AwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDMgM10vUGFyZW50IDIgMCBSL1Jlc291cmNl" +

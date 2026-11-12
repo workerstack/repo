@@ -39,8 +39,10 @@ const TASK_NOTIFICATION = /task[-_ ]?notification/i;
 // The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
 function cappedStopBlock(data: HookInput, reason: string): HookResult {
   const n = readStampInt(data, STOP_BLOCK_STAMP);
+
   if (n >= MAX_STOP) return PASS;
   writeStamp(data, STOP_BLOCK_STAMP, String(n + 1));
+
   return blockWith(reason);
 }
 
@@ -48,37 +50,50 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
 function replyVerdict(data: HookInput, msg: string): HookResult {
   const named = closingLineOf(msg);
   const reviewReason = closingReviewReason(data, named);
+
   if (reviewReason !== null) return blockWith(reviewReason);
   const approvalReason = approvalBlockReason(data, msg);
+
   if (approvalReason !== null) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");
+
     return blockWith(approvalReason);
   }
+
   const mode = effectiveModeOf(data);
+
   if (mode === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
+
   if (mode === "ask" && !hasStepAsk(msg)) return cappedStopBlock(data, ASK_STOP_REASON);
+
   return PASS;
 }
 
 /** True for a plain end of turn: no stop hook already blocked it, and no other stop reason. */
 function endsTurn(data: HookInput): boolean {
   const reason = data.reason ?? "";
+
   return !isStopActive(data) && (reason === "" || reason === END_TURN);
 }
 
 function lastReply(data: HookInput): string {
   const fromPayload = payloadAssistantMessage(data);
+
   if (fromPayload !== "") return fromPayload;
+
   return lastAssistantFromTranscript(firstNonEmpty(data.transcript_path, data.transcriptPath) ?? "");
 }
 
 export function stop(data: HookInput): HookResult {
   if (firstNonEmpty(data.subagentType, data.subagent_type) !== undefined) return interceptNeed(data, "Stop");
   const held = pushHold(data);
+
   if (held !== null) return blockWith(held);
+
   if (!endsTurn(data)) return PASS;
   const msg = lastReply(data);
   writeSessionReceipt(data, msg);
+
   return isWaitScoutExact(msg) ? PASS : replyVerdict(data, msg);
 }
 
@@ -93,33 +108,40 @@ function isHostStopBanner(prompt: string): boolean {
 // Cursor's beforeSubmitPrompt does only this: no /ask stamp, board line, approval or reply.
 export function beforeSubmitPrompt(data: HookInput): HookResult {
   writeGitAsked(data, userPromptOf(data));
+
   return PASS;
 }
 
 /** This session's line on the board and the other sessions' lines; "" when the board cannot be read. */
 function boardLines(data: HookInput): string {
   let others = "";
+
   try {
     recordHook(data, repoEnv.process);
     others = otherLines(data, repoEnv.process);
   } catch {
     // Board is best-effort. The session receipt still ships.
   }
+
   return others;
 }
 
 export function userPromptSubmit(data: HookInput): HookResult {
   const prompt = userPromptOf(data);
+
   if (isHostStopBanner(prompt)) return PASS;
   writeGitAsked(data, prompt);
   unlinkStamp(data, STOP_BLOCK_STAMP);
   unlinkStamp(data, PUSH_BLOCK_STAMP);
   const approval = approvalContext(data, prompt);
+
   if (approvalsFile(data) !== null) {
     writeStamp(data, TURN_START_STAMP, String(Date.now()));
     unlinkStamp(data, APPROVAL_BLOCK_STAMP);
   }
+
   applySessionGateSlash(data, prompt);
   const ctx = [effectiveSessionContext(data), approval, boardLines(data)].filter(Boolean).join("\n");
+
   return replyWith({ hookSpecificOutput: { additionalContext: ctx, hookEventName: "UserPromptSubmit" } });
 }

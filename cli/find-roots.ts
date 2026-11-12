@@ -17,5 +17,6 @@ export function findRoots(io: LinkIo): LinkRoots {
   const common = io.git(io.cwd, COMMON_DIR);
   const main = common === null ? checkout : path.dirname(common);
   const install = fs.existsSync(path.join(checkout, MODULES)) ? checkout : main;
+
   return { checkout, install, main, siblings: path.dirname(main) };
 }

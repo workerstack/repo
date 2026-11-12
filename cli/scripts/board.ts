@@ -19,27 +19,38 @@ type Work = { work: string; sticky: boolean };
 /** The rows whose process is alive, oldest first; every other row file is deleted. */
 export function sweep({ home, boot, probe = probeProcess }: SweepOptions): BoardRow[] {
   const dir = boardDir(home);
+
   if (!fs.existsSync(dir)) return [];
   const kept: BoardRow[] = [];
+
   for (const name of fs.readdirSync(dir)) {
     const file = path.join(dir, name);
+
     if (!name.endsWith(ROW_EXT)) continue;
     const row = readRow(file);
+
     if (row === null || !rowAlive(row, { boot, probe })) {
       fs.rmSync(file, { force: true });
       continue;
     }
+
     kept.push(row);
   }
+
   return kept.toSorted((a, b) => a.time.localeCompare(b.time));
 }
 
 function nextWork(prev: BoardRow | null, opts: NoteOptions): Work {
   const label = workLabel(opts.work);
+
   if (opts.forceWork === true) return { sticky: true, work: orNone(label) };
+
   if (prev?.sticky === true && prev.work !== "") return { sticky: true, work: prev.work };
+
   if (label !== "") return { sticky: false, work: label };
+
   if (prev !== null && prev.work !== "") return { sticky: false, work: prev.work };
+
   return { sticky: false, work: ACTIVE };
 }
 
@@ -49,6 +60,7 @@ function isoTime(date: Date): string {
 
 function stamp(now: NoteOptions["now"]): string {
   if (now instanceof Date) return isoTime(now);
+
   return isTruthy(now) ? String(now) : isoTime(new Date());
 }
 
@@ -75,6 +87,7 @@ function rowOf(opts: NoteOptions, key: { provider: string; session: string }, wo
 /** Writes this session's row, then sweeps; the row, or null when there is no session or it did not survive. */
 export function note(opts: NoteOptions = {}): BoardRow | null {
   const session = str(opts.session).trim();
+
   if (session === "" || session === DEFAULT_SESSION || !hasProcess(opts)) return null;
   const home = opts.home ?? boardHome(opts.env);
   const dir = boardDir(home);
@@ -84,12 +97,14 @@ export function note(opts: NoteOptions = {}): BoardRow | null {
   const row = rowOf(opts, { provider, session }, nextWork(readRow(file), opts));
   atomicWrite(file, `${JSON.stringify(row)}\n`);
   sweep({ boot: row.boot, home, probe: opts.probe });
+
   return fs.existsSync(file) ? row : null;
 }
 
 export function lines(opts: DigestOptions = {}): string[] {
   const home = opts.home ?? boardHome(opts.env);
   const boot = opts.boot ?? readBootId();
+
   return sweep({ boot, home, probe: opts.probe }).map(formatLine);
 }
 
@@ -99,6 +114,7 @@ export function digest(opts: DigestOptions = {}): string {
   const boot = opts.boot ?? readBootId();
   const selfP = field(opts.provider);
   const selfS = field(opts.session);
+
   return sweep({ boot, home, probe: opts.probe })
     .filter((row) => !(field(row.provider) === selfP && field(row.session) === selfS))
     .toSorted((a, b) => b.time.localeCompare(a.time))

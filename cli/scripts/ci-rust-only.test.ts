@@ -14,11 +14,13 @@ const NO_FILES_FAILED: Captured = { code: 1, stderr: "", stdout: "No test files 
 function run(files: Record<string, string>, vitest: Captured) {
   const calls: string[] = [];
   const out: string[] = [];
+
   const code = main([], {
     bins: {
       tsc: () => OK,
       vitest: (args) => {
         calls.push(args.join(" "));
+
         return vitest;
       },
     },
@@ -29,6 +31,7 @@ function run(files: Record<string, string>, vitest: Captured) {
     stderr: () => {},
     stdout: (s) => out.push(s),
   });
+
   return { calls, code, out: out.join("") };
 }
 

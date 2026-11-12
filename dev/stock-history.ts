@@ -54,13 +54,18 @@ export function collectHistory(
   source: CurrentSource = "tree",
 ): StockHistory {
   const found = new Map<string, Set<string>>();
+
   function addFile(rel: string, bytes: Buffer) {
     addHash(found, rel, hashText(bytes));
+
     if (rel === SETTINGS)
       for (const command of settingsCommands(bytes)) addHash(found, HOOK_COMMANDS_KEY, hashText(command));
   }
+
   for (const [rel, bytes] of loggedFiles(repoRoot, refs)) addFile(rel, bytes);
+
   for (const [rel, bytes] of currentFiles(repoRoot, source)) addFile(rel, bytes);
+
   return Object.fromEntries(
     [...found].toSorted(([a], [b]) => byCodeUnit(a, b)).map(([rel, hashes]) => [rel, [...hashes].toSorted(byCodeUnit)]),
   );
@@ -78,19 +83,26 @@ function isRegular(mode: string | undefined): boolean {
 /** Every added or modified regular-file blob of a stock path in the history of `refs`, merges included, by path. */
 function loggedFiles(repoRoot: string, refs: readonly string[]): [string, Buffer][] {
   const log = git(repoRoot, ["log", ...refs, ...LOG_ARGS, "--", ...STOCK_PREFIXES]);
+
   const tokens = log
     .toString("utf8")
     .split("\0")
     .filter((token) => token !== "");
+
   const paths = new Map<string, string[]>();
+
   for (let i = 0; i + 1 < tokens.length; i += LOG_TOKENS_PER_ENTRY) {
     const [, mode, , blob] = (tokens[i] ?? "").split(" ");
     const rel = tokens[i + 1];
+
     if (isRegular(mode) && blob !== undefined && rel !== undefined) paths.set(blob, [...(paths.get(blob) ?? []), rel]);
   }
+
   const contents = readBlobs(repoRoot, [...paths.keys()]);
+
   return [...paths].flatMap(([blob, rels]) => {
     const bytes = contents.get(blob);
+
     return bytes === undefined ? [] : rels.map((rel): [string, Buffer] => [rel, bytes]);
   });
 }
@@ -101,16 +113,22 @@ type CurrentSource = "tree" | "index";
 /** Every regular stock file as `[path, bytes]`, from the working tree or the index. */
 function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer][] {
   if (source === "tree") return workingFiles(repoRoot).map((rel) => [rel, fs.readFileSync(path.join(repoRoot, rel))]);
+
   const listed = git(repoRoot, [...LS_FILES_ARGS, "--", ...STOCK_PREFIXES])
     .toString("utf8")
     .split("\0");
+
   const entries = listed.flatMap((entry) => {
     const [mode = "", blob = "", , rel = ""] = entry.split(FIELD_SEP);
+
     return isRegular(mode) ? [{ blob, rel }] : [];
   });
+
   const blobs = readBlobs(repoRoot, [...new Set(entries.map((entry) => entry.blob))]);
+
   return entries.flatMap(({ blob, rel }) => {
     const bytes = blobs.get(blob);
+
     return bytes === undefined ? [] : [[rel, bytes]];
   });
 }
@@ -126,6 +144,7 @@ function settingsCommands(bytes: Buffer): string[] {
 
 function git(cwd: string, args: string[], input?: string): Buffer {
   const result = spawnSync("git", args, { cwd, input, maxBuffer: GIT_MAX_BUFFER });
+
   if (result.status !== 0)
     throw new Error(`git ${args.slice(0, GIT_ERROR_WORDS).join(" ")} failed: ${result.stderr.toString().trim()}`);
 
@@ -137,6 +156,7 @@ function readBlobs(repoRoot: string, ids: string[]): Map<string, Buffer> {
   const out = git(repoRoot, [...CAT_FILE_ARGS], ids.map((id) => `${id}\n`).join(""));
   const result = new Map<string, Buffer>();
   let at = 0;
+
   while (at < out.length) {
     const eol = out.indexOf("\n", at);
     const [id = "", , size = ""] = out.toString("utf8", at, eol).split(" ");
@@ -144,19 +164,24 @@ function readBlobs(repoRoot: string, ids: string[]): Map<string, Buffer> {
     result.set(id, out.subarray(start, start + Number(size)));
     at = start + Number(size) + 1;
   }
+
   return result;
 }
 
 /** Every file in the working tree under a stock prefix. */
 function workingFiles(repoRoot: string): string[] {
   const files: string[] = [];
+
   function walk(rel: string) {
     const stat = fs.statSync(path.join(repoRoot, rel), { throwIfNoEntry: false });
+
     if (stat?.isDirectory() === true)
       for (const name of fs.readdirSync(path.join(repoRoot, rel))) walk(`${rel}/${name}`);
     else if (stat?.isFile() === true) files.push(rel);
   }
+
   for (const prefix of STOCK_PREFIXES) walk(prefix.replace(TRAILING_SLASH, ""));
+
   return files;
 }
 
@@ -170,13 +195,16 @@ function run(_argv: string[], io: Io): number {
   const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
   const history = collectHistory(root);
   fs.writeFileSync(STOCK_HISTORY_FILE, historyText(history));
+
   // The repo's formatter owns the layout, so `repo fmt --check` and this script agree on the bytes.
   const fmt = spawnSync(process.execPath, [path.join(root, REPO_BIN), ...FMT_ARGS, STOCK_HISTORY_FILE], {
     cwd: root,
     stdio: "inherit",
   });
+
   if (fmt.status !== 0) throw new Error(`repo fmt failed on ${STOCK_HISTORY_FILE}`);
   io.out(`wrote ${path.relative(root, STOCK_HISTORY_FILE)}: ${Object.keys(history).length} paths`);
+
   return 0;
 }
 

@@ -15,6 +15,7 @@ function withLesson(): string {
   const ws = copyFixtureWs();
   put(ws, "src/a.ts", "x\n");
   put(ws, ".repo/lessons/plan-forks.md", VALID_LESSON);
+
   return ws;
 }
 

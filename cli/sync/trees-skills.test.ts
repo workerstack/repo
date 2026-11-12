@@ -5,15 +5,18 @@ import { RENDER_TIMEOUT, STOCK_SKILL, consumer, context, find, linkTarget, rende
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const OWN_ASK = "---\nname: ask\ndescription: mine\n---\n";
+
 const NAMED_LIKE_STOCK =
   ".repo/skills/ask: a stock skill has this name; add `overrides: ask` to its SKILL.md or rename it";
 
 /** The errors of a claude render over a consumer holding `files`. */
 function failures(files: Record<string, string>): string[] {
   const result = renderTrees(context(consumer(files), ["claude"]));
+
   return result.ok ? [] : result.errors;
 }
 
@@ -40,6 +43,7 @@ it("lets a .repo/skills skill win over the stock one and add its own", () => {
     ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\noverrides: ask\n---\n",
     ".repo/skills/deploy/SKILL.md": "---\nname: deploy\ndescription: ship\n---\n",
   });
+
   const claude = render(root, ["claude"]);
   expect(linkTarget(claude, ".claude/skills/ask")).toBe("../../.repo/skills/ask");
   expect(linkTarget(claude, ".claude/skills/deploy")).toBe("../../.repo/skills/deploy");

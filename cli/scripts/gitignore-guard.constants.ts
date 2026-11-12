@@ -6,9 +6,11 @@ export const GIT_ENV_DROP: readonly string[] = [
   "GIT_COMMON_DIR",
   "GIT_CEILING_DIRECTORIES",
 ];
+
 /** An unanchored line is checked one level deeper too, where a top-anchored parent rule stops matching. */
 export const PROBE_DIR = ".workerstack-probe";
 export const GITIGNORE = ".gitignore";
+
 /** What `indexOf` and `findIndex` return for no match. */
 export const NOT_FOUND = -1;
 export const LINE_BREAK_RE: RegExp = /\r?\n/;
@@ -23,14 +25,17 @@ export const PLUS_MARK = "+";
 
 /** A char a plain shell parse cannot read literally outside quotes. */
 export const UNSAFE_CHAR: RegExp = /[;&$`(){}<*?[\]\\#~!]/;
+
 /** Text in double quotes, or in an unquoted heredoc, that the shell would expand. */
 export const EXPANDS_RE: RegExp = /[$`\\]/;
 export const ESCAPE_RE: RegExp = /\\(.)/g;
+
 /** The escapes `printf` and `echo -e` turn into a char; any other escaped char stands for itself. */
 export const ESCAPES: ReadonlyMap<string, string> = /* @__PURE__ */ new Map([
   ["n", "\n"],
   ["t", "\t"],
 ]);
+
 export const ECHO_FLAGS_RE: RegExp = /^-[neE]+$/;
 export const PERCENT_ESCAPE = "%%";
 export const HEREDOC_RE: RegExp = /<<(-?)\s*(['"]?)(\w+)\2/;
@@ -45,6 +50,7 @@ export const DEV_NULL = "/dev/null";
 export const WRITE_OP = ">";
 export const APPEND_OP = ">>";
 export const PIPE_OP = "|";
+
 /** A redirect and its target: the last two tokens of a redirected write. */
 export const REDIRECT_TOKENS = 2;
 
@@ -52,5 +58,6 @@ export const REDIRECT_TOKENS = 2;
 export const GLOB_CHAR_RE: RegExp = /[*?[\\]/;
 export const TRAILING_SLASH_RE: RegExp = /\/$/;
 export const LEADING_SLASH_RE: RegExp = /^\//;
+
 /** One `git check-ignore -v --non-matching` row: source, line number, pattern, then the path after a tab. */
 export const CHECK_IGNORE_ROW_RE: RegExp = /^(.*?):(\d*):(.*)\t(.*)$/;

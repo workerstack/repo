@@ -49,6 +49,7 @@ function under(dir: string, ext: string) {
 function hostFormats(): FormatEntry[] {
   const { agentFrontmatter, agentsHooks, claudeRuleFrontmatter, claudeSettings, codexHooks, cursorHooks, mcpServers } =
     HOST_SCHEMAS;
+
   return [
     { comment: null, format: "json", match: exact(".claude/settings.json"), schema: claudeSettings },
     { comment: null, format: "json", match: exact(".agents/mcp_config.json"), schema: mcpServers },
@@ -139,8 +140,10 @@ const FRONTMATTER_BLOCK = /^---\r?\n(?:(?<yaml>[\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n
 function parseFrontmatter(content: string): Parsed {
   if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) return { value: {} };
   const closed = FRONTMATTER_BLOCK.exec(content);
+
   if (closed === null) return { problem: "invalid frontmatter: no closing ---" };
   let data: unknown;
+
   try {
     data = parseYaml(closed.groups?.yaml ?? "") ?? {};
   } catch (error) {
@@ -148,7 +151,9 @@ function parseFrontmatter(content: string): Parsed {
       problem: `invalid frontmatter: ${(error /* yaml throws a YAMLParseError */ as Error).message.split("\n")[0]}`,
     };
   }
+
   if (typeof data !== "object" || Array.isArray(data)) return { problem: "invalid frontmatter: must be a mapping" };
+
   return { value: data };
 }
 
@@ -157,6 +162,7 @@ function parseJsoncContent(content: string): Parsed {
   const errors: ParseError[] = [];
   const value: unknown = parseJsonc(content, errors, { allowTrailingComma: true });
   const [first] = errors;
+
   return first === undefined
     ? { value }
     : { problem: `invalid JSONC: ${printParseErrorCode(first.error)} at offset ${first.offset}` };
@@ -166,11 +172,15 @@ function parseJsoncContent(content: string): Parsed {
 export function parseContent(format: OutputFormat, content: string): Parsed {
   try {
     if (format === "json") return { value: JSON.parse(content) };
+
     if (format === "toml") return { value: parseToml(content) };
   } catch (error) {
     const message = (error /* JSON.parse and smol-toml throw an Error */ as Error).message;
+
     return { problem: `invalid ${format === "json" ? "JSON" : "TOML"}: ${message}` };
   }
+
   if (format === "jsonc") return parseJsoncContent(content);
+
   return format === "markdown" ? parseFrontmatter(content) : { value: undefined };
 }

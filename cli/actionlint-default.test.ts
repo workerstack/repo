@@ -11,6 +11,7 @@ it("fetches the bytes of an archive over http and refuses a failing status", asy
       new URL(request.url).pathname === "/ok" ? new Response("an archive") : new Response("gone", { status: 404 }),
     port: 0,
   });
+
   try {
     const base = `http://127.0.0.1:${server.port}`;
     expect(new TextDecoder().decode(await fetchArchive(`${base}/ok`))).toBe("an archive");
@@ -22,10 +23,12 @@ it("fetches the bytes of an archive over http and refuses a failing status", asy
 
 it("captures the output and exit code of a command, and a spawn error as stderr", () => {
   const cwd = path.join(import.meta.dirname);
+
   const run = spawnCaptured(process.execPath, ["-e", 'console.log("out"); console.error("err"); process.exit(3)'], {
     cwd,
     env: childEnv(),
   });
+
   expect(run).toStrictEqual({ code: 3, stderr: "err\n", stdout: "out\n" });
   const missing = spawnCaptured(path.join(cwd, "no-such-binary"), [], { cwd, env: childEnv() });
   expect(missing.code).toBe(1);

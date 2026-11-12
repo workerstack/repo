@@ -36,6 +36,7 @@ export const CLAUDE_EVENTS: Readonly<Record<string, string>> = {
   worktreeCreate: "WorktreeCreate",
   worktreeRemove: "WorktreeRemove",
 };
+
 /** D:6525-6540. */
 export const CODEX_EVENTS: Readonly<Record<string, string>> = {
   beforeSubmitPrompt: "UserPromptSubmit",
@@ -53,6 +54,7 @@ export const CODEX_EVENTS: Readonly<Record<string, string>> = {
   subagentStart: "SubagentStart",
   subagentStop: "SubagentStop",
 };
+
 /** D:6135-6142. */
 export const ANTIGRAVITY_EVENTS: Readonly<Record<string, string>> = {
   postModelInvocation: "PostInvocation",
@@ -62,6 +64,7 @@ export const ANTIGRAVITY_EVENTS: Readonly<Record<string, string>> = {
   sessionStart: "SessionStart",
   stop: "Stop",
 };
+
 /** D:6162-6184: the events cursor supports, in its order. */
 const CURSOR_EVENT_NAMES: readonly string[] = [
   "sessionStart",
@@ -86,10 +89,12 @@ const CURSOR_EVENT_NAMES: readonly string[] = [
   "afterTabFileEdit",
   "workspaceOpen",
 ];
+
 /** Cursor keeps the canonical names. */
 export const CURSOR_EVENTS: Readonly<Record<string, string>> = /* @__PURE__ */ Object.fromEntries(
   /* @__PURE__ */ CURSOR_EVENT_NAMES.map((event) => [event, event]),
 );
+
 /** Whole matcher tokens Antigravity names differently, D:54345-54351. */
 export const ANTIGRAVITY_TOOLS: Readonly<Record<string, string>> = {
   Bash: "run_command",
@@ -98,12 +103,16 @@ export const ANTIGRAVITY_TOOLS: Readonly<Record<string, string>> = {
   WebSearch: "search_web",
   Write: "(?:write_file|write_to_file)",
 };
+
 /** A name token outside escapes and character classes, D:52398. */
 export const MATCHER_TOKEN: RegExp = /\\.|\[(?:\\.|[^\]\\])*\]|(?<=^|[^\w\\]|\\\w)[A-Za-z_]\w*(?!\w)/gs;
+
 /** A command that starts with `./`, optionally quoted: the quote, then the rest after `./`. */
 export const LEADING_DOT_SLASH: RegExp = /^(?<quote>['"]?)\.\/(?<rest>.*)$/s;
+
 /** A path wrapped whole in one kind of quote. */
 export const WRAPPED_IN_QUOTES: RegExp = /^(?<quote>["'])(?<inner>.*)\k<quote>$/;
+
 /** A leading quote left over from a half-quoted path. */
 export const LEADING_QUOTE: RegExp = /^["']/;
 
@@ -113,14 +122,19 @@ export const HTTP = "http";
 export const MCP_TOOL = "mcp_tool";
 export const PROMPT = "prompt";
 export const AGENT = "agent";
+
 /** Cursor's loop limit field, written even when null. */
 export const LOOP_LIMIT = "loop_limit";
+
 /** The payload field only some targets emit. */
 export const MODEL = "model";
+
 /** The indent of every written hook file. */
 export const JSON_INDENT = 2;
+
 /** The keyword claude writes for `failClosed: true`. */
 export const BLOCK = "block";
+
 /** The version cursor's hook file gets when the source names none. */
 export const CURSOR_VERSION = 1;
 
@@ -129,6 +143,7 @@ export const CLAUDE_FILE = ".claude/settings.json";
 export const CODEX_FILE = ".codex/hooks.json";
 export const ANTIGRAVITY_FILE = ".agents/hooks.json";
 export const CURSOR_FILE = ".cursor/hooks.json";
+
 /** The override block of each host in hooks.jsonc. */
 export const CLAUDE_KEY = "claudecode";
 export const CODEX_KEY = "codexcli";
@@ -137,6 +152,7 @@ export const CURSOR_KEY = "cursor";
 
 export const CURSOR_TYPES: ReadonlySet<string> = /* @__PURE__ */ new Set([COMMAND, PROMPT]);
 export const CLAUDE_SCHEMA = "https://json.schemastore.org/claude-code-settings.json";
+
 /** The events claude ignores `onFailure` on. */
 export const ON_FAILURE_IGNORED: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "stop",
@@ -144,6 +160,7 @@ export const ON_FAILURE_IGNORED: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "taskCompleted",
   "teammateIdle",
 ]);
+
 /** D:54322-54327; these events are also written as bare handler lists (D:54405-54410), under their host names. */
 export const ANTIGRAVITY_NO_MATCHER: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "sessionStart",
@@ -151,12 +168,14 @@ export const ANTIGRAVITY_NO_MATCHER: ReadonlySet<string> = /* @__PURE__ */ new S
   "postModelInvocation",
   "stop",
 ]);
+
 export const ANTIGRAVITY_FLAT: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "SessionStart",
   "PreInvocation",
   "PostInvocation",
   "Stop",
 ]);
+
 /** Claude's events whose groups carry no matcher. */
 export const CLAUDE_NO_MATCHER: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "worktreeCreate",

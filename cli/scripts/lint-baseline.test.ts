@@ -10,6 +10,7 @@ import { checkLintBaseline, excessText, gate, lintReport } from "./lint-baseline
 import { lintMain } from "./lint-main.ts";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   vi.restoreAllMocks();
@@ -34,6 +35,7 @@ it("gate lowers the linted files' entries to their counts, drops zeros, and leav
     "src/deleted.ts": { [FLOAT]: 2 },
     "src/other.ts": { [NN]: 5 },
   };
+
   const result = gate(baseline, { "src/a.ts": { [NN]: 2 } }, ["src/a.ts", "src/b.ts", "src/deleted.ts"]);
   expect(result.over).toStrictEqual([]);
   expect(result.next).toStrictEqual({ "src/a.ts": { [NN]: 2 }, "src/other.ts": { [NN]: 5 } });
@@ -50,11 +52,13 @@ it(
   { timeout: SLOW },
   async () => {
     const baseline = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [NN]: 3 }, "src/gone.ts": { [NN]: 1 } };
+
     const root = consumer({
       [BASELINE_PATH]: `${JSON.stringify(baseline, null, 2)}\n`,
       "src/a.ts": nonNull(2),
       "src/b.ts": nonNull(1, "b"),
     });
+
     expect(await checkLintBaseline(root, [])).toStrictEqual([
       `${BASELINE_PATH}: src/a.ts has 2 ${NN}, the baseline allows 1`,
       `${BASELINE_PATH}: src/b.ts has 1 ${NN}, the baseline allows 3; run \`bun repo lint --baseline\` to lower it`,
@@ -110,6 +114,7 @@ it("the check counts the magic hits it is handed beside oxlint's", { timeout: SL
     [BASELINE_PATH]: `${JSON.stringify({ "src/wait.ts": { [MAGIC]: 1 } })}\n`,
     "src/wait.ts": WAIT,
   });
+
   const line = "src/wait.ts:1:35: error repo(magic-number): 5000 names nothing; give it a named const";
   const magic = [{ file: "src/wait.ts", line, rule: MAGIC }];
   expect(await checkLintBaseline(root, [...magic, ...magic])).toStrictEqual([

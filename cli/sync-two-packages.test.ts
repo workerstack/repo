@@ -11,12 +11,14 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { gitFiles } from "./sync/git-files.ts";
 
 useSyncKit();
+
 vi.setConfig({ testTimeout: 120_000 });
 
 const MODULES_DIR = ["node", "modules"].join("_");
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const UI_INDEX = ["..", "..", "..", MODULES_DIR, "@workerstack/ui/references/INDEX.md"].join("/");
 const TICK = "`";
+
 const HANDED_OVER = new RegExp(
   [
     String.raw`^<!-- repo:rules [\da-f]{8} -->\nStart at references\/INDEX\.md in this package\.\n\n`,
@@ -25,6 +27,7 @@ const HANDED_OVER = new RegExp(
     String.raw`<!-- \/repo:rules -->\n\nComponents live in src\/components and use the ui kit\.\n$`,
   ].join(""),
 );
+
 function rule(extra: string, body: string) {
   return `---\ndescription: d\n${extra}---\n${body}\n`;
 }
@@ -61,10 +64,13 @@ function workspace(extra: Record<string, string> = {}): string {
   write(root, "packages/api/references/INDEX.md", "# Api\n");
   write(root, "packages/web/src/api/a.ts", "export {}\n");
   writeWebRepo(root);
+
   for (const [rel, text] of Object.entries(extra)) write(root, rel, text);
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
+
 function real(cwd: string, ...args: string[]) {
   return syncWith(cwd, { post: [gitFiles] }, ...args);
 }
@@ -84,6 +90,7 @@ it("writes the package files, links and deps, ignores them, and is then clean", 
   expect(read(root, "packages/web/references/INDEX.md")).toBe(
     `# Web\n\n${region("<!-- ", " -->", ["deps", `${deps}- [@workerstack/ui](${UI_INDEX})`])}`,
   );
+
   const ignored = execFileSync(
     "git",
     [
@@ -95,6 +102,7 @@ it("writes the package files, links and deps, ignores them, and is then clean", 
     ],
     { cwd: root, encoding: "utf8" },
   );
+
   expect(ignored).toBe("packages/web/.claude/skills/deploy\npackages/web/.agents/skills/deploy\n");
   const upToDate = { code: 0, stderr: "", stdout: "repo sync: up to date\n" };
   expect(await real(root, "--check")).toStrictEqual(upToDate);
@@ -108,6 +116,7 @@ it("prints every package refusal in one go with nothing written", async () => {
     "packages/web/.repo/rules/x.md": rule('paths:\n  - "../api/**"\n', "X."),
     "packages/web/.repo/rules/y.md": rule("overrides: overview\n", "Y."),
   });
+
   expect(await real(root)).toStrictEqual({
     code: 1,
     stderr:

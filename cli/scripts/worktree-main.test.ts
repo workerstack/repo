@@ -6,12 +6,14 @@ import { afterEach, expect, it } from "vitest";
 import { commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 const USAGE = "usage: bun repo worktree add <name> | finish [<name>] | list | prune | hook\n";
 
 it("prints usage and exits 2 for no command, an unknown one, or add without a name", () => {
   const r = tmp.repo();
+
   for (const args of [[], ["nope"], ["add"]])
     expect(mainIn(r, args), args.join(" ")).toStrictEqual({ code: 2, stderr: USAGE, stdout: "" });
 });

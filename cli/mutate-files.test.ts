@@ -15,6 +15,7 @@ it("keeps the tracked files matching a glob, minus tests, fixtures and declarati
     "lib/x.ts",
     "docs/y.ts",
   ];
+
   expect(selectFiles(tracked, ["src/**/*.ts", "lib/*.ts"])).toStrictEqual(["lib/x.ts", "src/a.ts", "src/z.ts"]);
 });
 

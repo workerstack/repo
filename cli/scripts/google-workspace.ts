@@ -40,14 +40,17 @@ import type { Flags, ParsedArgv, SpawnFn, Verb, VerbCtx, WorkspaceAccount } from
 export function parseArgv(argv: string[]): ParsedArgv {
   const out: ParsedArgv = { _: [], flags: {} };
   const rest = [...argv];
+
   for (let a = rest.shift(); a !== undefined; a = rest.shift()) {
     if (a === ARG_END) {
       out._.push(...rest);
       break;
     }
+
     if (a.startsWith(FLAG_PREFIX)) {
       const key = a.slice(FLAG_PREFIX_LEN);
       const nxt = rest[0];
+
       if (nxt !== undefined && nxt !== "" && !nxt.startsWith(FLAG_PREFIX)) {
         out.flags[key] = nxt;
         rest.shift();
@@ -58,12 +61,15 @@ export function parseArgv(argv: string[]): ParsedArgv {
       out._.push(a);
     }
   }
+
   return out;
 }
 
 export async function whoami(account: WorkspaceAccount): Promise<number> {
   const r = await gfetch(account, USERINFO_URL);
+
   if (!r.ok) return fail(apiMessage(r.json, "whoami failed"));
+
   return ok(filled(r.json.email) ?? JSON.stringify(r.json));
 }
 
@@ -71,35 +77,44 @@ async function scopeList(account: WorkspaceAccount): Promise<number> {
   const token = await accessToken(account);
   const reply = await fetch(`${TOKENINFO_URL}?access_token=${encodeURIComponent(token)}`);
   const j = await jsonRecord(reply);
+
   const list = (filled(j.scope) ?? "")
     .split(SPACES_RE)
     .filter((scope) => scope !== "")
     .toSorted();
+
   return ok(filled(list.join("\n")) ?? filled(j.error) ?? "no scopes");
 }
 
 function loginGcloud(spawn: SpawnFn): void {
   const list = [CLOUD_SCOPE, EMAIL_SCOPE, ...EXTRA_SCOPES].join(",");
   const r = spawn("gcloud", ["auth", "application-default", "login", `--scopes=${list}`], { stdio: "inherit" });
+
   if (r.status !== 0) throw new Error("gcloud auth application-default login failed");
 }
 
 /** `login`: the loopback flow when the OAuth JSON exists, else gcloud ADC when gcloud is on PATH. */
 async function runLogin({ account, flags, spawn }: VerbCtx): Promise<number> {
   const creds = filled(flags.creds) ?? credsDefaultPath(account);
+
   if (fs.existsSync(creds)) {
     await loginLoopback(creds, account, spawn);
+
     return ok(`logged in\n${tokenStorePath(account)}`);
   }
+
   if (spawn("gcloud", ["--version"], { encoding: "utf8" }).status === 0) {
     loginGcloud(spawn);
+
     return ok("logged in via gcloud ADC");
   }
+
   return fail(`missing Desktop OAuth JSON (${creds}). setup: bun repo setup google-workspace`);
 }
 
 async function createKind({ account, flags }: VerbCtx, kind: string): Promise<number> {
   const j = await createFile(account, { body: flags.body, csv: flags.csv, kind, title: flags.title });
+
   return ok(fileLine(j));
 }
 
@@ -117,6 +132,7 @@ function listDrive({ account, flags }: VerbCtx): Promise<number> {
 
 function createMeeting({ account, flags }: VerbCtx): Promise<number> {
   const { attendees, end, start, title, when } = flags;
+
   return meetingCreate(account, { attendees: filled(attendees) ?? flags.to, end, start, title, when });
 }
 
@@ -142,6 +158,7 @@ const SHEET_VERBS: Table<Verb> = {
   set: ({ account, flags }) =>
     sheetSet(account, { cell: filled(flags.cell) ?? flags.range, id: flags.id, value: flags.value ?? flags.a1 }),
 };
+
 const SLIDE_VERBS: Table<Verb> = { create: (ctx) => createKind(ctx, KIND_SLIDE) };
 const MEETING_VERBS: Table<Verb> = { create: createMeeting };
 
@@ -171,8 +188,10 @@ export async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<
   const verb = (_[0] ?? "").toLowerCase();
   const noun = (_[1] ?? "").toLowerCase();
   const run = own(SOLO, verb) ?? own(own(PAIRS, verb), noun);
+
   try {
     if (run !== undefined) return await run({ account, flags, spawn });
+
     return fail(USAGE);
   } catch (e) {
     return fail(errMessage(e));

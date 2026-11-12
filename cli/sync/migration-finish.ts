@@ -17,14 +17,19 @@ import type { MigrateDeps } from "./migrate.ts";
 import type { MigrationState } from "./migration-state.ts";
 
 const FEATURES = `${COPIED_DIR}/repo.features.jsonc`;
+
 /** A config `packs: [...]` list: its head up to `[` in group 1, its items in group 2. */
 const PACKS_LIST = /(\bpacks\s*:\s*\[)([^\]]*)\]/;
+
 /** A quoted "agents" item. */
 const AGENTS_ITEM = /["']agents["']/;
+
 /** A config `skills: [...]` list, its items in group 1. */
 const SKILLS_LIST = /\bskills\s*:\s*\[([^\]]*)\]/;
+
 /** The opening of the `defineConfig({` call. */
 const DEFINE_CONFIG_OPEN = /defineConfig\(\s*\{/;
+
 /** An `agents:` key, quoted or not. */
 const AGENTS_KEY = /["']?\bagents\b["']?\s*:/;
 
@@ -48,14 +53,18 @@ function unread(state: MigrationState, rel: string): void {
 export function planCopies(state: MigrationState): void {
   for (const base of [`${COPIED_DIR}/scripts`, `${COPIED_DIR}/settings`]) {
     const files = isDir(path.join(state.root, base)) ? filesUnder(path.join(state.root, base)) : [];
+
     for (const from of files.map((file) => `${base}/${file}`)) {
       if (from === COPIED_MARKER || state.unedited(from, state.text(from), state.stockText(from))) continue;
+
       if (from === COPIED_CLAUDE_SETTINGS)
         state.move(from, CLAUDE_OVERLAY, { note: `moved your ${from} to ${CLAUDE_OVERLAY}` });
       else unread(state, from);
     }
   }
+
   const pipeline = `${COPIED_DIR}/repo.pipeline.jsonc`;
+
   if (state.differs(pipeline, state.stockText(pipeline))) unread(state, pipeline);
 }
 
@@ -68,6 +77,7 @@ export function planLeftovers(state: MigrationState): void {
 /** The known packs `repo.features.jsonc` lists, each once; none when it is missing or no JSON. */
 function featurePacks(state: MigrationState): SkillPack[] {
   let packs: unknown;
+
   try {
     ({ packs } = JSON.parse(
       stripJsonc(state.read(FEATURES) ?? ""),
@@ -77,9 +87,11 @@ function featurePacks(state: MigrationState): SkillPack[] {
   } catch {
     return [];
   }
+
   const known = (Array.isArray(packs) ? packs : []).filter((pack): pack is SkillPack =>
     SKILL_PACKS.some((name) => name === pack),
   );
+
   return [...new Set(known)];
 }
 
@@ -88,6 +100,7 @@ function withAgentsPack(text: string): string {
   return text.replace(PACKS_LIST, (whole, head: string, items: string) => {
     if (AGENTS_ITEM.test(items)) return whole;
     const kept = items.trimEnd();
+
     return `${head}${kept}${kept === "" ? "" : ", "}"agents"]`;
   });
 }
@@ -95,6 +108,7 @@ function withAgentsPack(text: string): string {
 /** Whether the config text already lists every pack in an `agents.skills` array. */
 function configHasSkills(text: string, packs: readonly string[]): boolean {
   const list = SKILLS_LIST.exec(text)?.[1];
+
   return list !== undefined && packs.every((pack) => list.includes(`"${pack}"`) || list.includes(`'${pack}'`));
 }
 
@@ -102,15 +116,19 @@ function configHasSkills(text: string, packs: readonly string[]): boolean {
 export function planPacks(state: MigrationState): void {
   const packs = featurePacks(state);
   const text = state.text(CONFIG_FILE);
+
   if (packs.length === 0 || configHasSkills(text, packs)) return;
   const list = `[${packs.map((pack) => JSON.stringify(pack)).join(", ")}]`;
   const open = DEFINE_CONFIG_OPEN.exec(text);
+
   if (open === null || AGENTS_KEY.test(text)) {
     const hint = `add agents: { skills: ${list} } there`;
     const note = `could not add the packs ${list} of ${FEATURES} to ${CONFIG_FILE}; ${hint}`;
     state.steps.push({ kind: "note", note });
+
     return;
   }
+
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
   const at = open.index + open[0].length;
   const inserted = `${text.slice(0, at)}${eol}  agents: { skills: ${list} },${text.slice(at)}`;
@@ -125,11 +143,14 @@ export function planUntrack(
   tracked: NonNullable<MigrateDeps["tracked"]>,
 ): void {
   const raw = tracked(state.root, [...candidates]);
+
   if (raw === null) return;
   const rels = trackedRels(raw, state.root);
+
   const paths = candidates.filter((entry) =>
     rels.some((rel) => (entry.endsWith("/") ? rel.startsWith(entry) : rel === entry)),
   );
+
   if (paths.length > 0) state.steps.push({ kind: "untrack", paths });
 }
 

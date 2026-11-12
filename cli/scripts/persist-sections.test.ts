@@ -73,6 +73,7 @@ describe("usageErrors", () => {
 function body(...rows: string[]) {
   return `# t\n\n${rows.join("\n")}\n\n## Goal`;
 }
+
 function numbered(n: number) {
   return Array.from({ length: n }, (_, i) => `line ${i}`).join("\n");
 }

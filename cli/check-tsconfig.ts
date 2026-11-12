@@ -9,12 +9,15 @@ import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
 const PACKAGE_FILE = "package.json";
+
 /** `-p x`, `--project x` and `--project=x` in a script; the value is the first capture. */
 const PROJECT_FLAG = /(?:^|\s)(?:-p|--project)(?:=|\s+)(\S+)/g;
 const QUOTES = /^["']|["']$/g;
 const REJECT_FILE = /\.reject\.tsx?$/;
+
 /** The configs that type-check a package's code, which a reject file must stay out of. */
 const CHECKING_CONFIGS: readonly string[] = [RUNTIME_CONFIG, SRC_CONFIG];
+
 /** The flags `tsconfig/strict.json` turns on, which a `tsconfig.src.json` must resolve with. */
 const STRICT_FLAGS = [
   "isolatedDeclarations",
@@ -27,6 +30,7 @@ const STRICT_FLAGS = [
 /** Tracked and untracked, non-ignored tsconfigs under `cwd`, posix and relative to it; none outside a git repo. */
 function listTsconfigs(cwd: string): string[] {
   let out: string;
+
   try {
     out = execFileSync("git", ["ls-files", "-z", "-co", "--exclude-standard"], {
       cwd,
@@ -36,8 +40,10 @@ function listTsconfigs(cwd: string): string[] {
   } catch {
     return [];
   }
+
   // An unmerged path is listed once per stage, and a deleted tracked one stays in the index.
   const rels = new Set(out.split("\0").filter((rel) => TSCONFIG_NAME.test(path.posix.basename(rel))));
+
   return [...rels].filter((rel) => fs.existsSync(path.join(cwd, rel)));
 }
 
@@ -76,21 +82,26 @@ function tsPath(cwd: string, rel: string): string {
 function readTsconfig(cwd: string, rel: string): Read {
   const file = tsPath(cwd, rel);
   const read = ts.readConfigFile(file, readText);
+
   if (read.error !== undefined) {
     return {
       line: `tsconfig: ${rel}: ${ts.flattenDiagnosticMessageText(read.error.messageText, " ")}`,
       ok: false,
     };
   }
+
   const config: unknown = read.config;
+
   const raw = config /* without a read error, typescript has parsed the root as a JSON object */ as {
     files?: unknown;
     references?: unknown;
   };
+
   // Read before parsing, which writes the inherited "files" into the raw object.
   const hasFiles = raw.files !== undefined;
   const solution = Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined;
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
+
   return { hasFiles, ok: true, parsed, solution };
 }
 
@@ -100,14 +111,18 @@ function resetProblem(rel: string, read: Read & { ok: true }, reset: string): st
 
   const names = read.parsed.fileNames;
   const keepsReset = names.some((name) => path.basename(name) === RESET && canonicalPath(name) === reset);
+
   if (keepsReset) return undefined;
+
   return `tsconfig: ${rel} does not extend a base. Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
 }
 
 /** A `tsconfig.src.json` that resolves with any strict flag off. */
 function weakProblem(rel: string, options: ts.CompilerOptions): string | undefined {
   const off = STRICT_FLAGS.filter((flag) => options[flag] !== true);
+
   if (off.length === 0) return undefined;
+
   return (
     `tsconfig: ${rel} resolves without ${off.join(", ")}; ` +
     `extend "@workerstack/repo/tsconfig/strict" and drop the override`
@@ -118,8 +133,10 @@ function weakProblem(rel: string, options: ts.CompilerOptions): string | undefin
 function rejectProblems(cwd: string, rel: string, fileNames: readonly string[]): string[] {
   if (!CHECKING_CONFIGS.includes(path.posix.basename(rel))) return [];
   const included = fileNames.filter((name) => REJECT_FILE.test(name));
+
   return included.map((name) => {
     const file = path.relative(cwd, name).split(path.sep).join("/");
+
     return `tsconfig: ${rel} includes ${file}; add "**/*.reject.ts" and "**/*.reject.tsx" to its exclude`;
   });
 }
@@ -129,13 +146,18 @@ type Scan = { cwd: string; listed: ReadonlySet<string>; reset: string };
 
 function problems({ cwd, listed, reset }: Scan, rel: string): string[] {
   const read = readTsconfig(cwd, rel);
+
   if (!read.ok) return [read.line];
+
   if (read.solution) return [];
   const name = path.posix.basename(rel);
   const dir = path.posix.dirname(rel);
   const lines = [resetProblem(rel, read, reset)];
+
   if (name === SRC_CONFIG) lines.push(weakProblem(rel, read.parsed.options));
+
   if (name === RUNTIME_CONFIG && !listed.has(path.posix.join(dir, SRC_CONFIG))) lines.push(missingSrcConfig(dir));
+
   return [...lines.filter((line) => line !== undefined), ...rejectProblems(cwd, rel, read.parsed.fileNames)];
 }
 
@@ -153,12 +175,14 @@ function isRawConfig(value: unknown): value is RawConfig {
 /** The raw JSON object at `cwd`/`rel`, empty when it is missing or unreadable. */
 function readRaw(cwd: string, rel: string): RawConfig {
   const read = ts.readConfigFile(tsPath(cwd, rel), readText);
+
   return read.error === undefined && isRawConfig(read.config) ? read.config : {};
 }
 
 /** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
 function projectFile(dir: string, spec: string): string {
   const target = path.posix.join(dir, spec.replaceAll(QUOTES, ""));
+
   return target.endsWith(".json") ? target : path.posix.join(target, RUNTIME_CONFIG);
 }
 
@@ -166,17 +190,21 @@ function projectFile(dir: string, spec: string): string {
 function scriptTargets(cwd: string, dir: string): string[] {
   const scripts = readRaw(cwd, path.posix.join(dir, PACKAGE_FILE)).scripts;
   const commands = typeof scripts === "object" && scripts !== null ? Object.values(scripts) : [];
+
   const flags = commands
     .filter((command) => typeof command === "string")
     .flatMap((command) => [...command.matchAll(PROJECT_FLAG)]);
+
   return flags.flatMap((flag) => flag.slice(1).map((spec) => projectFile(dir, spec)));
 }
 
 /** The folders from `rel`'s own up to `cwd` that hold a package.json. */
 function packageDirs(cwd: string, rel: string): string[] {
   const dirs: string[] = [];
+
   for (let dir = path.posix.dirname(rel); ; dir = path.posix.dirname(dir)) {
     if (fs.existsSync(path.join(cwd, dir, PACKAGE_FILE))) dirs.push(dir);
+
     if (dir === ".") return dirs;
   }
 }
@@ -185,14 +213,18 @@ function packageDirs(cwd: string, rel: string): string[] {
 function linkedConfigs(cwd: string, rel: string): string[] {
   const raw = readRaw(cwd, rel);
   const dir = path.posix.dirname(rel);
+
   const parents = [raw.extends]
     .flat()
     .flatMap((spec) => (typeof spec === "string" && spec.startsWith(".") ? [spec] : []));
+
   const refs = Array.isArray(raw.references) ? raw.references : [];
   const extended = parents.map((spec) => path.posix.join(dir, spec.endsWith(".json") ? spec : `${spec}.json`));
+
   const referenced = refs.flatMap((ref) =>
     isObject(ref) && typeof ref.path === "string" ? [projectFile(dir, ref.path)] : [],
   );
+
   return [...extended, ...referenced];
 }
 
@@ -202,16 +234,19 @@ function runConfigs(cwd: string, rels: readonly string[]): Set<string> {
   const scripted = [...new Set(rels.flatMap((rel) => packageDirs(cwd, rel)))].flatMap((dir) => scriptTargets(cwd, dir));
   const queue = [...named, ...scripted];
   const seen = new Set<string>();
+
   for (const rel of queue) {
     if (seen.has(rel)) continue;
     seen.add(rel);
     queue.push(...linkedConfigs(cwd, rel));
   }
+
   return seen;
 }
 
 function unrunProblem(rel: string, run: ReadonlySet<string>): string[] {
   if (run.has(rel)) return [];
+
   return [`tsconfig: ${rel} is run by no gate; delete it, or run it from a package.json script with tsc -p ${rel}`];
 }
 
@@ -228,5 +263,6 @@ export function checkTsconfigs(cwd: string, pkgRoot: string): string[] {
   const rels = listTsconfigs(cwd);
   const scan: Scan = { cwd, listed: new Set(rels), reset };
   const run = runConfigs(cwd, rels);
+
   return rels.flatMap((rel) => [...problems(scan, rel), ...unrunProblem(rel, run)]);
 }

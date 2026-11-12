@@ -30,7 +30,9 @@ function counted(
   plural: Readonly<Record<string, string>>,
 ): string[] {
   const counts = new Map<string, number>();
+
   for (const item of items) counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+
   return order
     .filter((k) => counts.has(k))
     .map(
@@ -42,14 +44,18 @@ function counted(
 /** `bytes` as B, KB, MB or GB with one decimal. */
 export function size(bytes: number): string {
   if (bytes >= GB) return `${(bytes / GB).toFixed(1)} GB`;
+
   if (bytes >= MB) return `${(bytes / MB).toFixed(1)} MB`;
+
   if (bytes >= KB) return `${(bytes / KB).toFixed(1)} KB`;
+
   return `${bytes} B`;
 }
 
 function keptLine(keep: KeepItem[]): string {
   const durable = DURABLE.filter((d) => keep.some((k) => k.kind === d));
   const kept = [...durable, ...counted(keep, KEEP_ORDER, KEEP_PLURAL)];
+
   return kept.length > 0 ? kept.join(", ") : "nothing";
 }
 
@@ -63,8 +69,10 @@ function removeAll(
   const done: RemoveItem[] = [];
   let failed = 0;
   let bytes = 0;
+
   for (const item of remove) {
     const b = stats(item.path).bytes;
+
     if (dryRun) {
       out(relOf(item.path));
     } else {
@@ -77,18 +85,22 @@ function removeAll(
         continue;
       }
     }
+
     done.push(item);
     bytes += b;
   }
+
   return { bytes, done, failed };
 }
 
 /** Plan, delete unless dryRun, report through `out`; returns the exit code. */
 export function runClean(run: CleanRun): number {
   const { root, now, dryRun, out } = run;
+
   function relOf(p: string): string {
     return path.relative(root, p).split(path.sep).join("/");
   }
+
   const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedTmpDirs(root), now, root });
   const { done, bytes, failed } = removeAll(run, remove, relOf);
   const verb = dryRun ? "would remove" : "removed";
@@ -99,8 +111,10 @@ export function runClean(run: CleanRun): number {
       : `${verb} 0 entries from ${relOf(path.join(root, TMP_DIR))}`,
   );
   out(`${dryRun ? "would keep" : "kept"} ${keptLine(keep)}`);
+
   for (const item of keep.filter((k) => k.kind === NESTED_KIND))
     out(`kept nested ${relOf(item.path)}: holds ${item.holds}`);
+
   return failed > 0 ? 1 : 0;
 }
 

@@ -32,10 +32,13 @@ it("the fake carries short, mid-size and 70000 byte payloads in both directions"
   const e = await engine({ markdown: "s".repeat(10) });
   const cdp = await connectCdp(e.port);
   onStop(() => cdp.close());
+
   async function value(expression: string) {
     const reply = await cdp.send("Runtime.evaluate", { expression });
+
     return reply.result;
   }
+
   expect(await value("x".repeat(200))).toStrictEqual({
     type: "string",
     value: "s".repeat(10),
@@ -95,7 +98,9 @@ it("the fake answers a request with no params and no method name", async () => {
 it("connectCdp matches replies to requests by id and ignores everything else", async () => {
   const port = await scripted((id) => {
     if (id === 2) return [JSON.stringify({ error: { message: "bad" }, id: 2 })];
+
     if (id === 3) return [JSON.stringify({ id: 3 })];
+
     return [
       "not json",
       JSON.stringify({ method: "Page.loadEventFired" }),
@@ -103,6 +108,7 @@ it("connectCdp matches replies to requests by id and ignores everything else", a
       '{"id":1,"error":{}}',
     ];
   });
+
   const cdp = await connectCdp(port);
   onStop(() => cdp.close());
   await expect(cdp.send("A")).rejects.toThrow("cdp");
@@ -121,6 +127,7 @@ it("connectCdp close() twice is harmless", async () => {
 
 it("handleCdp logs each call, answers an unknown method with {} and throws a scripted error", () => {
   const calls: Calls = [];
+
   const state = {
     calls,
     engine: "",
@@ -130,6 +137,7 @@ it("handleCdp logs each call, answers an unknown method with {} and throws a scr
     thinSnap: false,
     url: "",
   };
+
   expect(handleCdp(state, "X.unknown", {})).toStrictEqual({});
   expect(() => handleCdp(state, "X.no", { a: 1 })).toThrow("nope");
   expect(calls).toStrictEqual([

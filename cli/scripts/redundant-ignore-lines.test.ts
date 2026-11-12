@@ -13,6 +13,7 @@ useTempDirs();
 function slashPath(dir: string, rel: string): string {
   return path.join(dir, rel).split(path.sep).join("/");
 }
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });

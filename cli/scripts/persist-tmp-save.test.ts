@@ -34,6 +34,7 @@ describe("persistTmp serials", () => {
   it("gives up with a serial collision once five names in a row are taken", () => {
     const ws = tmpWs();
     const dir = path.join(ws, TMP_DIR);
+
     for (let n = 1; n <= 6; n++) fs.mkdirSync(path.join(dir, `${n}-bank-email-draft-${STAMP}.md`), { recursive: true });
     const r = persistTmp({ content: VALID_TMP, created: CREATED, workspaceRoot: ws });
     expect(r).toStrictEqual({ error: "serial collision", ok: false });

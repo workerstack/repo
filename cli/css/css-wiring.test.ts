@@ -9,6 +9,7 @@ import { checkLintSkipsAt } from "../scripts/lint-skips.ts";
 import { APP_CSS, BAD_CSS, cssKit, FIXED_CSS, UNKNOWN_CSS } from "./__fixtures__/css-kit.ts";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   vi.restoreAllMocks();
@@ -16,9 +17,12 @@ afterEach(() => {
 });
 
 const HEX_LINE = 'src/bad.css:4:10: error stylelint(color-hex-length): Expected "#ffffff" to be "#fff"';
+
 const ORDER_LINE =
   'src/bad.css:9:3: error stylelint(order/properties-order): Expected "display" to come before "color"';
+
 const UNKNOWN_LINE = 'src/unknown.css:2:3: error stylelint(property-no-unknown): Unknown property "colr"';
+
 function lines(texts: string[]): string[] {
   return texts.map((text) => text.trimEnd());
 }
@@ -26,6 +30,7 @@ function lines(texts: string[]): string[] {
 /** What `repo check` says of the baseline in `root`, given the script hits no skip turns off. */
 async function baselineLines(root: string): Promise<string[]> {
   const scripts = await checkScriptsAt(root);
+
   return checkLintBaseline(root, scripts.kept);
 }
 

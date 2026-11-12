@@ -24,6 +24,7 @@ async function checked(manifest: unknown, example: string) {
   const root = tempRoot(files(manifest, example));
   const bun = vi.fn<() => typeof OK>(() => OK);
   const code = await main(["--check"], docsRun(root, { bun }).io);
+
   return { bun, code };
 }
 

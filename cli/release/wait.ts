@@ -34,6 +34,7 @@ export type Spec = { name: string; version: string };
 /** `<name>@<version>` split at its last `@` (a scope's `@` leads the name); null when there is no version. */
 export function splitSpec(spec: string): Spec | null {
   const at = spec.lastIndexOf("@");
+
   return at > 0 && at < spec.length - 1 ? { name: spec.slice(0, at), version: spec.slice(at + 1) } : null;
 }
 
@@ -51,9 +52,12 @@ export async function registryDoc(
 ): Promise<RegistryAnswer> {
   try {
     const response = await fetcher(`${registry}${name.replace(SCOPE_SLASH, ENCODED_SLASH)}`);
+
     if (response.status === NOT_FOUND) return { kind: "missing" };
+
     if (!response.ok) return { kind: "unreachable", why: `HTTP ${response.status}` };
     const parsed = documentSchema().safeParse(await response.json());
+
     return parsed.success ? { doc: parsed.data, kind: "found" } : { kind: "unreachable", why: NOT_A_DOCUMENT };
   } catch (error) {
     return {
@@ -67,6 +71,7 @@ export async function registryDoc(
 export function listing(answer: RegistryAnswer, version: string): { tag?: string } | null {
   if (answer.kind !== "found" || !(version in answer.doc.versions)) return null;
   const tag = Object.entries(answer.doc["dist-tags"]).find(([, pointed]) => pointed === version)?.[0];
+
   return tag === undefined ? {} : { tag };
 }
 
@@ -79,9 +84,12 @@ export type PollIo = Pick<WaitIo, "now" | "sleep">;
  */
 export async function poll<T>(io: PollIo, probe: () => Promise<T | null>, started: number): Promise<T | null> {
   const found = await probe();
+
   if (found !== null) return found;
+
   if (io.now() - started >= WAIT_GIVE_UP_MS) return null;
   await io.sleep(WAIT_POLL_MS);
+
   return poll(io, probe, started);
 }
 
@@ -89,19 +97,28 @@ export async function poll<T>(io: PollIo, probe: () => Promise<T | null>, starte
 export async function releaseWait(argv: readonly string[], io: WaitIo): Promise<number> {
   const spec = argv[0] ?? "";
   const parts = argv.length === 1 ? splitSpec(spec) : null;
+
   if (parts === null) {
     io.stderr(`${WAIT_PREFIX}${WAIT_USAGE}\n`);
+
     return 1;
   }
+
   const { name, version } = parts;
+
   async function probe() {
     return listing(await registryDoc(io.fetch, name), version);
   }
+
   const found = await poll(io, probe, io.now());
+
   if (found === null) {
     io.stderr(`${WAIT_PREFIX}${notOnNpm(spec, WAIT_GIVE_UP_MINUTES)}\n`);
+
     return 1;
   }
+
   io.stdout(`${published(parts.version, found.tag)}\n`);
+
   return 0;
 }

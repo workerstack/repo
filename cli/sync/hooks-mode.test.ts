@@ -13,6 +13,7 @@ useTempDirs();
 function git(cwd: string, ...args: string[]) {
   return execFileSync("git", args, { cwd, encoding: "utf8" });
 }
+
 /** What the user's own `git add -A` does to the temp repo. */
 function stageAll(root: string) {
   return git(root, "add", "-A");
@@ -24,8 +25,10 @@ function windowsLikeRepo(): string {
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "core.fileMode", "false");
   fs.mkdirSync(path.join(root, ".githooks"));
+
   for (const name of ["commit-msg", "pre-commit", "pre-push"])
     fs.writeFileSync(path.join(root, ".githooks", name), "#!/bin/sh\n");
+
   return root;
 }
 
@@ -60,6 +63,7 @@ it("does nothing off win32", () => {
 });
 
 type Reply = { status: number | null; stdout: string; stderr: string };
+
 function reply(status: number | null, stdout = "", stderr = ""): Reply {
   return { status, stderr, stdout };
 }
@@ -67,10 +71,13 @@ function reply(status: number | null, stdout = "", stderr = ""): Reply {
 /** A git runner answering `answers` by the first argument, recording each call's arguments. */
 function fakeGit(root: string, answers: Record<string, Reply>) {
   const calls: string[][] = [];
+
   function run(_cwd: string, args: readonly string[]): Reply {
     calls.push([...args]);
+
     return answers[args[0] ?? ""] ?? reply(0, `${root}\n`);
   }
+
   return { calls, run };
 }
 

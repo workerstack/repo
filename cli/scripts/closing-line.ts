@@ -28,6 +28,7 @@ function itemText(i: Approvable): string {
 
 function handoffStrategy(w: string): Strategy | null {
   if (w === FAST) return REVIEW_FAST;
+
   return w === DEEP ? REVIEW_DEEP : null;
 }
 
@@ -39,19 +40,24 @@ export function closingLine(items: Approvable[]): string {
   if (items.length === 0) throw new Error("closingLine needs at least one item");
   const others = STRATEGIES.filter((s) => !items.every((i) => i.strategy === s));
   const run = items.map(itemText).join(ITEM_SEP);
+
   return `Reply "y" to run ${run}, or ${others.map((s) => `"y ${s}"`).join(" / ")}, or ${HANDOFFS}.`;
 }
 
 function itemOf(part: string): Approvable | null {
   const it = ITEM_RE.exec(part) /* CLOSING_RE matched, so every part is an item */ as RegExpExecArray;
+
   const [, kind, serial, word] = [...it] /* all three groups match whenever the pattern does */ as [
     string,
     string,
     string,
     string,
   ];
+
   const strategy = parseStrategy(word);
+
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
+
   return { kind, serial: Number(serial), strategy };
 }
 
@@ -62,13 +68,17 @@ function itemOf(part: string): Approvable | null {
 export function parseClosingLine(line: string): Approvable[] | null {
   const text = line.replace(LEAD_MARKS_RE, "").replace(TRAIL_MARKS_RE, "");
   const m = CLOSING_RE.exec(text);
+
   if (m === null) return null;
   const items: Approvable[] = [];
+
   for (const part of (m[1] /* group 1 is not optional in CLOSING_RE */ as string).split(ITEM_SEP)) {
     const item = itemOf(part);
+
     if (item === null) return null;
     items.push(item);
   }
+
   return closingLine(items) === text ? items : null;
 }
 
@@ -78,10 +88,13 @@ export function parseClosingLine(line: string): Approvable[] | null {
  */
 export function parseApproval(prompt: string): Approval | null {
   const m = APPROVAL_RE.exec(prompt.trim());
+
   if (m === null) return null;
   const [, letter, word] = m;
   const kind = letter?.toLowerCase() === HANDOFF_LETTER ? "handoff" : "approve";
+
   if (word === undefined) return { kind, strategy: null };
   const strategy = kind === "handoff" ? handoffStrategy(word.toLowerCase()) : parseStrategy(word.toLowerCase());
+
   return strategy === null ? { kind: "unknown", word } : { kind, strategy };
 }

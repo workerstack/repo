@@ -7,6 +7,7 @@ import { NAME, mod, put, scene, stateFile } from "./__fixtures__/link-world.ts";
 import { main } from "./link.ts";
 
 const PUBLIC = { dependencies: { [NAME]: "^0.3.0" }, name: "@acme/app" };
+
 function refusal(pkg: string) {
   return `repo link: ${pkg} is public and depends on linked ${NAME}; \`bun repo unlink ${NAME}\` before pushing`;
 }
@@ -54,9 +55,11 @@ it("refuses from a worktree without an install while main is linked", async () =
   await main([NAME], w.io());
   const tree = path.join(w.base, "repo-wt");
   put(tree, { "package.json": JSON.stringify(PUBLIC) });
+
   function git(_cwd: string, args: readonly string[]) {
     return args.includes("--git-common-dir") ? path.join(w.main, ".git") : tree;
   }
+
   expect(await main(["--pre-push"], w.io({ cwd: tree, git }))).toBe(1);
   expect(w.err).toStrictEqual([refusal("@acme/app")]);
 });

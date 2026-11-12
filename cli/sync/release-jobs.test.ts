@@ -9,16 +9,20 @@ const CI_PATH = ".github/workflows/ci.yml";
 const CHECKOUT = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1";
 const SETUP_BUN = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 const INSTALL = "      - run: bun install --frozen-lockfile\n";
+
 const E2E_MATRIX_SHARDED = `          - { os: windows-latest, shard: 1/3, label: windows-latest 1/3 }
           - { os: windows-latest, shard: 2/3, label: windows-latest 2/3 }
           - { os: windows-latest, shard: 3/3, label: windows-latest 3/3 }
 `;
+
 const E2E_RUN_SHARDED = `      - name: Run the e2e tests
         env:
           SHARD: \${{ matrix.shard && format('--shard={0} --passWithNoTests', matrix.shard) || '' }}
         run: bun run test:e2e $SHARD
 `;
+
 const PLAYWRIGHT_RUN_SHARDED = E2E_RUN_SHARDED.replace("--passWithNoTests", "--pass-with-no-tests");
+
 const NODE_STEPS = `      - name: Remove node
         if: runner.os == 'Linux'
         run: |
@@ -30,6 +34,7 @@ const NODE_STEPS = `      - name: Remove node
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi
 `;
+
 const E2E_JOB = `  e2e:
     name: e2e (\${{ matrix.label }})
     runs-on: \${{ matrix.os }}
@@ -51,6 +56,7 @@ ${E2E_MATRIX_SHARDED}          - { os: macos-latest, shard: "", label: macos-lat
         with:
           bun-version-file: package.json
 ${NODE_STEPS}${INSTALL}${E2E_RUN_SHARDED}`;
+
 const UNSHARDED_JOB = E2E_JOB.replace(
   E2E_MATRIX_SHARDED,
   '          - { os: windows-latest, shard: "", label: windows-latest }\n',
@@ -58,11 +64,14 @@ const UNSHARDED_JOB = E2E_JOB.replace(
 
 function yaml(manifest: PackageJson = {}) {
   const [output] = release(context(["release"], manifest)).outputs;
+
   return output?.kind === "file" ? output.content : "";
 }
+
 function e2e(script: string) {
   return yaml({ scripts: { "test:e2e": script } });
 }
+
 function job(ci: string, name: string, next: string) {
   return ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
 }
@@ -132,9 +141,11 @@ describe("release caches", () => {
     const test = job(yaml(), "test", "commits");
     const gates = test.indexOf("bun repo ci --report");
     const restore = test.indexOf("restore-keys: tsbuildinfo-${{ runner.os }}-\n");
+
     const save = test.indexOf(
       "if: always() && github.ref == 'refs/heads/main'\n        with:\n          path: .tmp/repo",
     );
+
     expect([restore > test.indexOf("bun install"), restore < gates, save > gates]).toStrictEqual([true, true, true]);
     expect(yaml().split(".tmp/repo/tsbuildinfo")).toHaveLength(3);
   });

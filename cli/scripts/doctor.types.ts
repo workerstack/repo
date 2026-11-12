@@ -24,6 +24,7 @@ export type DoctorResult = {
 export type InstallHints = { darwin?: readonly string[]; other: readonly string[]; win32?: readonly string[] };
 
 export type ModelCli = "codex" | "grok" | "agy" | "cursor";
+
 export type ListCli = Exclude<ModelCli, "codex" | "agy">;
 
 /** A model named in a generated agent file, with the CLI that has to offer it. */

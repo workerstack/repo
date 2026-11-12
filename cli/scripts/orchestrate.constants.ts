@@ -2,17 +2,23 @@ import type { Approvable } from "./orchestrate.types.ts";
 
 /** Where the parent hook keeps its per-session stamps. */
 export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
+
 /** One-release dual-read; drop next release. */
 export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
+
 /** The deny a write with no tool input gets. */
 export const DENY_REASON = "denied";
+
 /** The stamp holding this session's /ask or /away. */
 export const SESSION_GATE_STAMP = "session-gate";
+
 /** One-release dual-read of 0.5 leftover stamp. */
 export const AUTO_ASK_STAMP = "auto-ask";
 export const ASK_STOP_REASON = "ask after this step";
+
 export const AWAY_STOP_REASON =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
+
 /** The stamps a turn counts or marks with. */
 export const TURN_START_STAMP = "turn-start";
 export const APPROVAL_BLOCK_STAMP = "approval-block";
@@ -22,23 +28,30 @@ export const NEED_INTERCEPT_STAMP = "need-intercept";
 
 /** The session id stamps fall back to; it names no session of its own. */
 export const NO_SESSION = "default";
+
 /** The status of a running plan or roadmap. */
 export const IN_PROGRESS = "in-progress";
+
 /** The only stop reason a stop hook judges. */
 export const END_TURN = "end_turn";
+
 /** The whole reply that waits on a scout without asking. */
 export const WAIT_SCOUT = "[orchestrator]: wait scout";
 
 /** How much of a transcript's end is read for the last assistant reply. */
 export const TRANSCRIPT_TAIL_BYTES: number = 512 * 1024;
+
 /** Caps: need intercepts and ask/away stop blocks per turn, and jobs per need. */
 export const MAX_INTERCEPT = 3;
 export const MAX_STOP = 3;
 export const MAX_NEED_JOBS = 4;
+
 /** The receipt keeps this much of the reply's first line. */
 export const RECEIPT_HEAD_CHARS = 200;
+
 /** The index `at` reads the last element through. */
 export const LAST_INDEX = -1;
+
 /** A stamp count is read in base ten. */
 export const DECIMAL = 10;
 
@@ -49,7 +62,9 @@ export const SPAWN_TOOLS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "agent",
   "spawnagent",
 ]);
+
 export const WRITE_TOOLS: ReadonlySet<string> = /* @__PURE__ */ new Set(["write", "edit", "searchreplace"]);
+
 /** The need jobs a SubagentStop answers in place. */
 export const INTERCEPT_JOBS: ReadonlySet<string> = /* @__PURE__ */ new Set(["search", "exec", "slice", "fetch"]);
 
@@ -60,7 +75,9 @@ export const NON_ASSISTANT_TYPES: ReadonlySet<string> = /* @__PURE__ */ new Set(
   "tool",
   "tool_result",
 ]);
+
 export const ASSISTANT = "assistant";
+
 /** Content parts that carry a tool call or result, not reply text. */
 export const TOOL_PARTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["tool_use", "tool_result", "function_call"]);
 
@@ -69,7 +86,9 @@ export const APPROVABLE_STATUS: Readonly<Record<Approvable["kind"], ReadonlySet<
   plan: /* @__PURE__ */ new Set(["ready"]),
   roadmap: /* @__PURE__ */ new Set(["draft", "locked"]),
 };
+
 /** The .tmp/repo dir each approvable kind is saved in. */
 export const ITEM_DIRS: Readonly<Record<Approvable["kind"], string>> = { plan: "plans", roadmap: "roadmaps" };
+
 /** The kind a `/review-plan N` or `/review-roadmap N` spawn names. */
 export const PLAN_KIND = "plan";

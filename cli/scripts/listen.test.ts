@@ -47,10 +47,13 @@ describe("main file", () => {
     const wav = path.join(cwd, "clip.wav");
     fs.writeFileSync(wav, "RIFFDATA");
     let posted: { url?: string; body?: FormData; headers?: Record<string, string> } = {};
+
     function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       posted = { body: init.body, headers: init.headers, url };
+
       return Promise.resolve({ json: () => Promise.resolve({ text: "hello world" }), ok: true, status: 200 });
     }
+
     const r = await run(["file", "--path", wav], { cwd, fetchFn, whichFn: ffmpegOnly });
     expect(r.code).toBe(0);
     expect(posted.url).toMatch(/audio\/transcriptions/);
@@ -86,6 +89,7 @@ describe("listen cli", () => {
       env: childEnv({ OPENAI_API_KEY: "" }),
       timeout: 15_000,
     });
+
     expect(r.status).toBe(1);
     expect(r.stderr).toContain("usage: listen");
   });
@@ -96,12 +100,14 @@ describe("listen cli", () => {
     const wav = path.join(cwd, "x.wav");
     fs.writeFileSync(wav, "RIFF");
     const env = { HOME: home, LISTEN_STT: "openai", OPENAI_API_KEY: "", USERPROFILE: home };
+
     const r = spawnSync(bunPath(), [bin, "listen", "file", "--path", wav], {
       cwd,
       encoding: "utf8",
       env: childEnv({ ...env, PATH: "/nonexistent-repo-listen" }),
       timeout: 15_000,
     });
+
     expect(r.status).not.toBe(0);
     const out = `${r.stdout}${r.stderr}`;
     expect(out).not.toMatch(/sk_/);

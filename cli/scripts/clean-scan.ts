@@ -30,45 +30,58 @@ export function list(dir: string): string[] {
 export function newest(p: string): number {
   const st = fs.lstatSync(p);
   let t = st.mtimeMs;
+
   if (st.isDirectory()) for (const name of list(p)) t = Math.max(t, newest(path.join(p, name)));
+
   return t;
 }
 
 /** The bytes under `p` and whether it is a dir; a symlink counts by its own size. */
 export function stats(p: string): { bytes: number; dir: boolean } {
   const st = fs.lstatSync(p);
+
   if (!st.isDirectory()) return { bytes: st.size, dir: false };
   let bytes = 0;
+
   for (const name of list(p)) bytes += stats(path.join(p, name)).bytes;
+
   return { bytes, dir: true };
 }
 
 function holdsFile(p: string): boolean {
   let st: fs.Stats;
+
   try {
     st = fs.lstatSync(p);
   } catch {
     return false;
   }
+
   if (!st.isDirectory()) return true;
+
   return list(p).some((name) => holdsFile(path.join(p, name)));
 }
 
 /** The .tmp/repo dir one git ignored-dir entry names, else null. */
 function nestedRel(entry: string): string | null {
   const e = entry.replace(TRAILING_SLASHES_RE, "");
+
   if (e.endsWith("/.tmp")) return `${e}/repo`;
+
   if (e.endsWith("/.tmp/repo")) return e;
+
   return null;
 }
 
 function isDir(abs: string): boolean {
   let isDirectory = false;
+
   try {
     isDirectory = fs.lstatSync(abs).isDirectory();
   } catch {
     // no repo dir under this .tmp
   }
+
   return isDirectory;
 }
 
@@ -79,20 +92,26 @@ export function nestedTmpDirs(root: string): string[] {
     encoding: "utf8",
     maxBuffer: GIT_MAX_BUFFER,
   });
+
   if (r.status !== 0) return [];
   const out = new Set<string>();
+
   for (const entry of r.stdout.split("\0")) {
     const rel = nestedRel(entry);
+
     if (rel === null) continue;
     const abs = path.join(root, rel);
+
     if (isDir(abs)) out.add(abs);
   }
+
   return [...out];
 }
 
 /** The serial `name` starts with, else null. */
 export function leadingSerial(name: string): number | null {
   const m = SERIAL_RE.exec(name);
+
   return m === null ? null : Number(m[1]);
 }
 
@@ -102,6 +121,7 @@ export function leadingSerial(name: string): number | null {
  */
 export function serialOf(dir: string, name: string): number | null {
   if (dir !== ROADMAPS_DIR && !name.endsWith(MD_EXT)) return null;
+
   return leadingSerial(name);
 }
 
@@ -110,6 +130,7 @@ export function statusOf(file: string): string | null {
   try {
     const m = FRONTMATTER_RE.exec(fs.readFileSync(file, "utf8"));
     const s = m?.[1] === undefined ? null : STATUS_RE.exec(m[1]);
+
     return s?.[1] ?? null;
   } catch {
     return null;
@@ -128,13 +149,18 @@ function readText(file: string): string | null {
 export function roadmapLocations(tmp: string): Set<string> {
   const dir = path.join(tmp, ROADMAPS_DIR);
   const out = new Set<string>();
+
   for (const name of list(dir)) {
     const file = path.join(dir, name);
+
     if (statusOf(file) === DONE_STATUS) continue;
     const text = readText(file);
+
     if (text === null) continue;
+
     for (const m of text.matchAll(LOCATION_RE)) out.add(path.resolve(String(m[1]))); // group 1 is unconditional
   }
+
   return out;
 }
 
@@ -142,10 +168,13 @@ export function roadmapLocations(tmp: string): Set<string> {
 export function keeperOf(names: string[], pick: (name: string) => number | null): string | null {
   let best: string | null = null;
   let top = NO_SERIAL;
+
   for (const n of names) {
     const s = pick(n);
+
     if (s !== null && s > top) [best, top] = [n, s];
   }
+
   return best;
 }
 

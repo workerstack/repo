@@ -10,14 +10,18 @@ export function copyIncluded(root: string, dest: string): void {
   if (!fs.existsSync(path.join(root, ".worktreeinclude"))) return;
   const listed = git(root, ["ls-files", "--others", "--ignored", "--exclude-from=.worktreeinclude"]);
   const candidates = listed.out.split("\n").filter((rel) => rel !== "" && !rel.startsWith(`${WORKTREES_DIR}/`));
+
   if (candidates.length === 0) return;
+
   const ignored = spawnSync("git", ["check-ignore", "--stdin"], {
     cwd: root,
     encoding: "utf8",
     input: candidates.join("\n"),
   });
+
   for (const rel of ignored.stdout.split("\n").filter(Boolean)) {
     const to = path.join(dest, rel);
+
     if (fs.existsSync(to)) continue;
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.copyFileSync(path.join(root, rel), to);
@@ -27,9 +31,11 @@ export function copyIncluded(root: string, dest: string): void {
 export function createWorktree(root: string, dest: string, branch: string): void {
   if (fs.existsSync(dest))
     throw new Error(`${dest} exists and is not a worktree of this repo; move it or pick another name`);
+
   const args = branchExists(root, branch)
     ? ["worktree", "add", dest, branch]
     : ["worktree", "add", "-b", branch, dest, "HEAD"];
+
   // git's own output goes to stderr, so stdout carries only the path.
   if (spawnSync("git", args, { cwd: root, stdio: ["ignore", STDERR_FD, STDERR_FD] }).status !== 0)
     throw new Error(`git worktree add failed for ${dest}`);
@@ -41,11 +47,13 @@ export function createWorktree(root: string, dest: string, branch: string): void
  */
 export function installDependencies(root: string, dest: string): void {
   if (!LOCKFILES.some((f) => fs.existsSync(path.join(root, f)))) return;
+
   const r = spawnSync("bun", ["install", "--frozen-lockfile"], {
     cwd: dest,
     stdio: ["ignore", STDERR_FD, STDERR_FD],
     timeout: INSTALL_TIMEOUT_MS,
   });
+
   if (r.status !== 0)
     process.stderr.write(`could not install dependencies in ${dest}: run bun install --frozen-lockfile there\n`);
 }

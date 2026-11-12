@@ -65,7 +65,9 @@ function isOpaqueToken(token: string): boolean {
  */
 export function workLabel(text: unknown): string {
   let s = str(text);
+
   for (const re of STRIP_BLOCKS) s = s.replace(re, " ");
+
   for (const re of SECRET_AFTER_KEY)
     s = s.replace(re, (_: string, key: string, sep: string) => `${key}${sep}${REDACTED}`);
   s = s.replaceAll(SECRET_PREFIX_RE, REDACTED);
@@ -73,6 +75,7 @@ export function workLabel(text: unknown): string {
     .split(SPACE_SPLIT_RE)
     .map((token) => (isOpaqueToken(token) ? REDACTED : token))
     .join(" ");
+
   return s.replaceAll(SPACES_RE, " ").trim().slice(0, WORK_CAP).trim();
 }
 
@@ -91,5 +94,6 @@ export function formatLine(row: LooseRow): string {
 /** `value` as text, or a dash when it is missing or blank. */
 export function valueOrNone(value: unknown): string {
   const text = str(value);
+
   return text.trim() === "" ? NONE : text;
 }

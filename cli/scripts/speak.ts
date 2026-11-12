@@ -25,9 +25,11 @@ function verbOf(verb: string): ((ctx: Ctx) => Promise<string>) | undefined {
     case VERB_WHOAMI: {
       return ({ flags, cfg, fetchFn }) => whoami({ cfg, fetchFn, provider: flags.provider });
     }
+
     case VERB_VOICES: {
       return ({ flags, cfg, fetchFn }) => voices({ cfg, fetchFn, provider: flags.provider });
     }
+
     case VERB_SAY: {
       return ({ flags, ...rest }) =>
         say({
@@ -39,6 +41,7 @@ function verbOf(verb: string): ((ctx: Ctx) => Promise<string>) | undefined {
           voice: flags.voice,
         });
     }
+
     default: {
       return undefined;
     }
@@ -57,6 +60,7 @@ async function ctxOf(flags: Record<string, string>, opts: SpeakMainOpts): Promis
   const home = given(opts.home) ?? os.homedir();
   const cwd = given(opts.cwd) ?? process.cwd();
   const fetchFn = opts.fetchFn ?? globalFetch();
+
   return { cfg: loadCfg({ env, home }), cwd, fetchFn, flags, spawn: opts.spawn };
 }
 
@@ -65,15 +69,20 @@ export async function main(argv: string[], opts: SpeakMainOpts = {}): Promise<nu
   const ctx = await ctxOf(flags, opts);
   const log = opts.log ?? console;
   const run = verbOf((_[0] ?? "").toLowerCase());
+
   if (run === undefined) {
     log.error(USAGE);
+
     return 1;
   }
+
   try {
     log.log(await run(ctx));
+
     return 0;
   } catch (e) {
     log.error(errMessage(e));
+
     return 1;
   }
 }

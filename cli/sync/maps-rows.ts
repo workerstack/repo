@@ -25,7 +25,9 @@ type RefFile = {
 
 function oneLine(s: unknown): string {
   const t = String(s).replaceAll(WHITESPACE_RUN, " ").trim();
+
   if (t.length <= DESC_MAX) return t;
+
   return `${t.slice(0, Math.max(0, DESC_MAX - 1)).trimEnd()}…`;
 }
 
@@ -35,11 +37,16 @@ function cell(s: unknown): string {
 
 function mapRefs(parsed: YamlObject): string[] {
   const dotted = parsed["map.refs"];
+
   if (Array.isArray(dotted)) return dotted.map(String);
+
   if (typeof dotted === "string" && dotted !== "") return [dotted];
   const m = parsed.map;
+
   if (isYamlObject(m) && Array.isArray(m.refs)) return m.refs.map(String);
+
   if (isYamlObject(m) && typeof m.refs === "string" && m.refs !== "") return [m.refs];
+
   return [];
 }
 
@@ -49,57 +56,75 @@ function scalarText(v: unknown): string {
 
 function mapTask(parsed: YamlObject): string {
   const dotted = scalarText(parsed["map.task"]);
+
   if (dotted !== "") return dotted;
   const m = parsed.map;
+
   if (isYamlObject(m)) return scalarText(m.task);
+
   return "";
 }
 
 function tagsOf(parsed: YamlObject): string[] {
   if (Array.isArray(parsed.tags)) return parsed.tags.map(String);
+
   if (typeof parsed.tags === "string" && parsed.tags !== "") {
     const seq = parseFlowSeq(parsed.tags);
+
     if (seq !== null) return seq.map(String);
+
     return [parsed.tags];
   }
+
   return [];
 }
 
 function firstH1(body: string): string {
   const m = H1_LINE.exec(body);
+
   return m === null ? "" : group(m, 1).replace(H1_TRAILING_HASHES, "").trim();
 }
 
 function firstSummary(body: string): string {
   let isPastH1 = false;
+
   for (const line of body.split(LINE_BREAK)) {
     const t = line.trim();
+
     if (!isPastH1) {
       if (H1_PREFIX.test(t)) isPastH1 = true;
       continue;
     }
+
     if (t === "") continue;
+
     if (t.startsWith("#") || t.startsWith("```") || t.startsWith("<!--") || t.startsWith("---")) continue;
+
     return oneLine(t);
   }
+
   return "";
 }
 
 /** The `.md` files under `dir`, dot entries and skipped names left out, appended to `acc` with `relBase` paths. */
 export function walkRefMd(dir: string, relBase: string, acc: RefFile[]): RefFile[] {
   let entries: fs.Dirent[];
+
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
   } catch {
     return acc;
   }
+
   for (const ent of entries) {
     if (ent.name.startsWith(".")) continue;
     const abs = path.join(dir, ent.name);
     const rel = `${relBase}/${ent.name}`;
+
     if (ent.isDirectory()) walkRefMd(abs, rel, acc);
     else if (ent.isFile() && ent.name.endsWith(".md") && !SKIP_REF_NAMES.has(ent.name)) acc.push({ abs, rel });
   }
+
   return acc;
 }
 
@@ -120,6 +145,7 @@ export function skillRow(root: string, dir: string): string {
   const descSrc = parsed.description != null && parsed.description !== "" ? parsed.description : firstSummary(body);
   const origin = isFile(path.join(stockRoot(root), STOCK_SKILLS_REL, dir, "SKILL.md")) ? "repo" : "local";
   const cells = [name, origin, descSrc, mapTask(parsed), scalarText(parsed.commandPath), mapRefs(parsed).join(", ")];
+
   return `| ${cells.map(cell).join(" | ")} |`;
 }
 
@@ -128,14 +154,17 @@ export function refRow(file: RefFile): string {
   const shown = `${STOCK_REFS_PREFIX}${file.rel.slice(REFS_REL.length + 1)}`;
   const fallbackTitle = path.basename(file.rel, ".md");
   const bare = `| ${cell(shown)} | ${cell(fallbackTitle)} |  |  |`;
+
   if (fs.statSync(file.abs).size > HUGE_BYTES) return bare;
   const raw = fs.readFileSync(file.abs, "utf8");
+
   if (raw.includes("\0")) return bare;
   const { parsed, body } = parseMarkdown(raw);
   const heading = firstH1(body);
   const title = heading === "" ? fallbackTitle : heading;
   const tags = tagsOf(parsed).join(", ");
   const summary = firstSummary(body);
+
   return `| ${cell(shown)} | ${cell(title)} | ${cell(tags)} | ${cell(summary)} |`;
 }
 

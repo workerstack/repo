@@ -14,14 +14,18 @@ import { COPIED_MARKER } from "./migrate.constants.ts";
 useTempDirs();
 
 const CONFIG_FILE = "workerstack.config.ts";
+
 function packs(text: string) {
   return { ".rulesync/repo.features.jsonc": text };
 }
+
 const MOVED =
   'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts';
+
 const ASK =
   'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to workerstack.config.ts; ' +
   'add agents: { skills: ["listen"] } there';
+
 const LISTEN = '{ "packs": ["listen"] }';
 
 it("inserts agents.skills for each known pack once, in the config's line endings", async () => {
@@ -98,6 +102,7 @@ it("lists only the generated paths of the enabled hosts that git tracks, and nev
     },
     { git: true },
   );
+
   const claudeOnly: ResolvedConfig = { agents: { hosts: ["claude"], skills: [] }, packs: ["agents"], ...BASE_CONFIG };
   expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toStrictEqual({
     kind: "untrack",

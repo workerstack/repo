@@ -13,6 +13,7 @@ afterEach(cleanupTmp);
 function wavIn(prefix: string): string {
   const wav = path.join(tmp(prefix), "a.wav");
   fs.writeFileSync(wav, "RIFF");
+
   return wav;
 }
 
@@ -20,6 +21,7 @@ function localRun(file: string, r: SpawnSyncResult | ((args: string[]) => SpawnS
   function spawnSyncFn(_cmd: string, args: string[]) {
     return typeof r === "function" ? r(args) : r;
   }
+
   return transcribeLocal({ bin: "whisper-cli", file, model: "/m.bin", spawnSyncFn });
 }
 
@@ -36,11 +38,14 @@ describe("transcribeLocal output", () => {
   it("reads and removes the .txt the binary wrote, passing the model and file", () => {
     const wav = wavIn("listen-tl1-");
     let argv: string[] = [];
+
     const text = localRun(wav, (args) => {
       argv = args;
       writeTxt(args, "  hi there \n");
+
       return { status: 0 };
     });
+
     expect(text).toBe("hi there");
     expect(argv.slice(0, 4)).toStrictEqual(["-m", "/m.bin", "-f", wav]);
     expect(fs.readdirSync(path.dirname(wav))).toStrictEqual(["a.wav"]);
@@ -64,6 +69,7 @@ describe("transcribeLocal fallbacks", () => {
 /** A whisper run that writes a blank .txt and prints to stdout. */
 function blank(args: string[]): SpawnSyncResult {
   writeTxt(args, "  \n");
+
   return { status: 0, stdout: " from stdout " };
 }
 
@@ -81,6 +87,7 @@ function transcribeWith(over: Partial<Parameters<typeof transcribe>[0]>) {
   const cfg = { ...cfgFor(tmp("listen-tr-h-"), { OPENAI_API_KEY: "sk" }), model: "m-1" };
   const file = wavIn("listen-tr-");
   const stt: Stt = { kind: "openai", model: "m-1" };
+
   return transcribe({ cfg, fetchFn: jsonReply({}), file, spawnSyncFn: noSpawn, stt, ...over });
 }
 
@@ -94,6 +101,7 @@ describe("transcribe request", () => {
       spawnSyncFn: () => ({ status: 0, stdout: "local text" }),
       stt: { bin: "w", kind: "local", model: "/m" },
     });
+
     expect(out).toBe("local text");
   });
 
@@ -104,10 +112,13 @@ describe("transcribe request", () => {
 
   it("posts the file and the configured model", async () => {
     const bodies: Array<FormData | undefined> = [];
+
     function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       bodies.push(init.body);
+
       return jsonReply({ text: "t" })(url, init);
     }
+
     await transcribeWith({ fetchFn });
     const file = bodies[0]?.get("file");
     expect(bodies[0]?.get("model")).toBe("m-1");

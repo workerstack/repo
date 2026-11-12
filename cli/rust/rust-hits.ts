@@ -23,7 +23,9 @@ function isRust(rel: string) {
  */
 export function rustFiles(root: string): Listed {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
+
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+
   return { files: [...new Set(run.stdout.split("\0").filter(isRust))].toSorted(byCodeUnit), ok: true };
 }
 
@@ -37,12 +39,14 @@ export function rustSources(root: string): Listed {
 
 function byPlace(a: RustHit, b: RustHit) {
   if (a.file !== b.file) return byCodeUnit(a.file, b.file);
+
   return a.line === b.line ? a.column - b.column : a.line - b.line;
 }
 
 /** A hit as the diagnostic `repo lint` prints: `file:line:col: error rule: message`. */
 function diagnosticOf(hit: RustHit): Diagnostic {
   const rule = codeOf(hit.rule);
+
   return { file: hit.file, line: `${hit.file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}`, rule };
 }
 
@@ -53,6 +57,7 @@ function isRustRepo(root: string) {
 /** The source rules' hits in those of `files` that exist, and those files. */
 function sourceHitsOf(root: string, files: readonly string[]): { present: string[]; hits: RustHit[] } {
   const present = files.filter((rel) => fs.existsSync(path.join(root, rel)));
+
   return {
     hits: present.flatMap((rel) => rustSourceHits(rel, fs.readFileSync(path.join(root, rel), "utf8"))),
     present,
@@ -74,11 +79,14 @@ export function rustSourceDiagnostics(root: string, files: readonly string[]): D
 export function rustHitsAt(root: string, files: readonly string[], options: RustOptions): Result<Diagnostic[]> {
   if (!isRustRepo(root)) return { ok: true, value: [] };
   const { present, hits } = sourceHitsOf(root, files);
+
   if (options.clippy) {
     const linted = clippyHits(root, options.run ?? runCargo);
+
     if (!linted.ok) return linted;
     const known = new Set(present);
     hits.push(...linted.value.filter((hit) => known.has(hit.file)));
   }
+
   return { ok: true, value: hits.toSorted(byPlace).map(diagnosticOf) };
 }

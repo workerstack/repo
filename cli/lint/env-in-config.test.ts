@@ -5,6 +5,7 @@ import { envInConfig } from "./env-in-config.ts";
 
 const TAIL_HEAD = "is read outside env.ts; add the variable to this package's env.ts schema";
 const TAIL = `${TAIL_HEAD} and read it through that module`;
+
 function messagesOf(code: string, file = "a.ts") {
   return reportsOf(envInConfig, { [file]: code }).map((report) => report.message);
 }

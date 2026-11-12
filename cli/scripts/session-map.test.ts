@@ -13,11 +13,13 @@ describe("repo hook session-map (spawned)", () => {
     const root = tmp(true);
     fs.mkdirSync(path.join(root, "src"), { recursive: true });
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
+
     const r = spawnHook(
       "session-map",
       { cwd: root, session_id: "s-spawn" },
       { cwd: root, env: { ...HOOK_ENV, REPO_BOARD_HOME: tmpBoard() } },
     );
+
     expect(r.status, r.stderr).toBe(0);
     expect(r.stdout).toContain("SessionStart");
     expect(r.stdout).toContain("src/");
@@ -62,6 +64,7 @@ describe("session-map hook", () => {
 describe("session-map hook", () => {
   it("keeps additionalContext under the 10,000-char hook cap even with a 5k config budget", () => {
     const root = tmp(true);
+
     for (let a = 0; a < 40; a++) {
       for (let b = 0; b < 10; b++) {
         const dir = path.join(root, `area-${a}-long-segment-name`, `module-${b}-long-segment-name`);
@@ -69,12 +72,14 @@ describe("session-map hook", () => {
         fs.writeFileSync(path.join(dir, "x.ts"), "");
       }
     }
+
     fs.mkdirSync(path.join(root, ".repo"), { recursive: true });
     fs.writeFileSync(path.join(root, ".repo/map.jsonc"), '{ "budget": 5000 }');
     const r = run(root, JSON.stringify({ cwd: root, session_id: "s2" }));
     const ctx = mapOf(r.stdout).hookSpecificOutput.additionalContext;
     // Depth 2 would be ~11k chars, so every area stops at depth 1, marked `…`.
     expect(ctx.length).toBeLessThan(HOOK_CONTEXT_CHARS);
+
     for (let a = 0; a < 40; a++) expect(ctx).toContain(`area-${a}-long-segment-name/  …\n`);
   });
 });

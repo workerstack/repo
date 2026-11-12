@@ -30,11 +30,14 @@ function byKey(a: string, b: string) {
 /** The names of the `const` strings `file` declares, which a comparison in another file could make copies. */
 function copyNames(file: ts.SourceFile): string[] {
   const names: string[] = [];
+
   function visit(node: ts.Node): void {
     if (ts.isVariableDeclaration(node) && constString(node) !== null) names.push(node.name.getText());
     ts.forEachChild(node, visit);
   }
+
   visit(file);
+
   return names;
 }
 
@@ -48,15 +51,20 @@ type Group = { root: string; dir: string | null; targets: readonly string[] };
 function extrasOf(group: Group, setup: Setup, program: ts.Program): string[] {
   // The checker binds the files, which sets the parent links a declaration's const flag is read through.
   program.getTypeChecker();
+
   const names = program
     .getSourceFiles()
     .filter((file) => group.targets.includes(file.fileName))
     .flatMap(copyNames);
+
   if (names.length === 0) return [];
+
   return setup.fileNames.filter((fileName) => {
     const rel = path.posix.relative(group.root, fileName);
+
     if (group.targets.includes(fileName) || !isChecked(rel) || ownerOf(group.root, rel) !== group.dir) return false;
     const text = fs.readFileSync(fileName, "utf8");
+
     return names.some((name) => text.includes(name));
   });
 }
@@ -64,30 +72,37 @@ function extrasOf(group: Group, setup: Setup, program: ts.Program): string[] {
 /** Every hit in one group's targets, from one program over them and the files that may compare to their copies. */
 function groupHits(group: Group): Result<MagicHit[]> {
   const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
+
   if (!setup.ok) return setup;
   const { options } = setup.value;
   const first = ts.createProgram({ options, rootNames: group.targets });
   const extras = extrasOf(group, setup.value, first);
   const roots = [...group.targets, ...extras];
   const program = extras.length === 0 ? first : ts.createProgram({ oldProgram: first, options, rootNames: roots });
+
   function owns(fileName: string) {
     return isChecked(path.posix.relative(group.root, fileName));
   }
+
   const context = { checker: program.getTypeChecker(), owns };
   // The root config file holds values by definition, as a constants file does.
   const rootConfig = path.posix.join(group.root, CONFIG_FILE);
   const walked = program.getSourceFiles().filter((file) => roots.includes(file.fileName));
+
   const hits = walked.flatMap((file) => {
     const target = group.targets.includes(file.fileName) && file.fileName !== rootConfig;
     const own = target ? [...magicNumbers(file, context.checker), ...magicRegexes(file)] : [];
+
     return [...own, ...magicStrings(file, context)];
   });
+
   return { ok: true, value: hits.filter((hit) => group.targets.includes(hit.fileName)) };
 }
 
 /** File order, then position within a file. */
 function byFileThenAt(a: MagicHit, b: MagicHit): number {
   const byFile = byKey(a.fileName, b.fileName);
+
   return byFile === 0 ? a.at - b.at : byFile;
 }
 
@@ -95,9 +110,11 @@ function byFileThenAt(a: MagicHit, b: MagicHit): number {
 function diagnosticsOf(root: string, hits: readonly MagicHit[]): Diagnostic[] {
   const unique = new Map(hits.map((hit) => [`${hit.fileName}:${hit.at}:${hit.rule}`, hit]));
   const sorted = [...unique.values()].toSorted(byFileThenAt);
+
   return sorted.map((hit) => {
     const file = path.posix.relative(root, hit.fileName);
     const rule = codeOf(hit.rule);
+
     return { file, line: `${file}:${hit.line}:${hit.column}: error ${rule}: ${hit.message}`, rule };
   });
 }
@@ -109,16 +126,21 @@ function diagnosticsOf(root: string, hits: readonly MagicHit[]): Diagnostic[] {
 export function magicDiagnostics(root: string, files: readonly string[]): Result<Diagnostic[]> {
   const real = posix(fs.realpathSync(root));
   const groups = new Map<string | null, string[]>();
+
   for (const rel of files.filter(isChecked)) {
     const dir = ownerOf(real, rel);
     groups.set(dir, [...(groups.get(dir) ?? []), path.posix.join(real, rel)]);
   }
+
   const hits: MagicHit[] = [];
+
   for (const [dir, targets] of groups) {
     const found = groupHits({ dir, root: real, targets });
+
     if (!found.ok) return found;
     hits.push(...found.value);
   }
+
   return { ok: true, value: diagnosticsOf(real, hits) };
 }
 
@@ -130,7 +152,9 @@ export function withoutSkipped(
 ): Diagnostic[] {
   const off = skips.flatMap((skip) => {
     const matched = skipFiles(skip.files, files);
+
     return skip.rules.flatMap((rule) => matched.map((file) => `${file} ${codeOf(rule)}`));
   });
+
   return diagnostics.filter((d) => !off.includes(`${d.file} ${d.rule}`));
 }

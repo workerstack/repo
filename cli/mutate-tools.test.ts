@@ -6,6 +6,7 @@ import type { ShardReport } from "./mutate-report.ts";
 import { runMutate } from "./mutate.ts";
 
 type Kind = { tool: ShardReport["tool"]; total: number };
+
 const STRYKER: Kind = { tool: "stryker", total: 8 };
 
 function shard(index: number, kind: Kind, files: ShardReport["files"] = {}): ShardReport {
@@ -13,6 +14,7 @@ function shard(index: number, kind: Kind, files: ShardReport["files"] = {}): Sha
 }
 
 const RUST: Kind = { tool: "cargo-mutants", total: 4 };
+
 function rust(index: number, files: ShardReport["files"] = {}) {
   return shard(index, RUST, files);
 }
@@ -22,11 +24,13 @@ function both(): ShardReport[] {
   const stryker = Array.from({ length: 8 }, (_, i) =>
     shard(i + 1, STRYKER, { [`src/f${i}.ts`]: { killed: 9, survivors: [survivor] } }),
   );
+
   const cargo = [1, 2, 3, 4].map((i) =>
     rust(i, {
       [`crates/a/src/f${i}.rs`]: { killed: 3, survivors: [survivor] },
     }),
   );
+
   return [...stryker, ...cargo];
 }
 
@@ -42,6 +46,7 @@ async function errorOf(reports: ShardReport[]): Promise<string> {
   const f = fakes(undefined, ["crates/a"]);
   plantReports(f, reports);
   await runMutate(["check", "reports"], f.deps);
+
   return f.err.join("");
 }
 
@@ -73,10 +78,12 @@ it("refuses reports of two tools whose heads differ", async () => {
 it("sums the score of a file that two cargo-mutants shards both hold, as the unsharded run scores it", async () => {
   const f = fakes(undefined, ["crates/a"]);
   const file = "crates/a/src/lib.rs";
+
   const reports = [
     { ...rust(1, { [file]: { killed: 4, survivors: [] } }), shard: { index: 1, total: 2 } },
     { ...rust(2, { [file]: { killed: 4, survivors: [survivor] } }), shard: { index: 2, total: 2 } },
   ];
+
   plantReports(f, reports);
   expect(await runMutate(["check", "reports"], f.deps)).toBe(0);
   expect(f.out).toStrictEqual(["mutate: 2 shards of 09ed564; crates/a 88.89% (no floor)\n"]);

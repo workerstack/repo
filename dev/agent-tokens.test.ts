@@ -8,6 +8,7 @@ import { run } from "./agent-tokens.ts";
 
 const USAGE = "usage: bun dev/agent-tokens.ts <session dir> [--match <description substring>]";
 const temps: string[] = [];
+
 afterEach(() => {
   for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
@@ -15,12 +16,14 @@ afterEach(() => {
 type Spawn = { id: string; agentType: string; description: string; entries: object[] };
 
 const user = { message: { content: "hi", role: "user" }, timestamp: "2026-01-01T00:00:00.000Z", type: "user" };
+
 function instructions(file: string) {
   return {
     attachment: { files: [{ path: file }], type: "instructions" },
     type: "attachment",
   };
 }
+
 function assistant(
   model: string,
   usage: { input: number; create: number; read: number },
@@ -48,6 +51,7 @@ function session(spawns: Spawn[]): string {
   temps.push(dir);
   const subagents = path.join(dir, "subagents");
   fs.mkdirSync(subagents);
+
   for (const spawn of spawns) {
     fs.writeFileSync(
       path.join(subagents, `agent-${spawn.id}.meta.json`),
@@ -58,6 +62,7 @@ function session(spawns: Spawn[]): string {
       `${spawn.entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`,
     );
   }
+
   return dir;
 }
 
@@ -65,6 +70,7 @@ function invoke(args: string[]) {
   const lines: string[] = [];
   const errors: string[] = [];
   const code = run(args, { err: (line) => errors.push(line), out: (line) => lines.push(line) });
+
   return { code, lines };
 }
 
@@ -129,6 +135,7 @@ describe("run, on what a spawn did not do", () => {
         id: "b1",
       },
     ]);
+
     expect(invoke([dir]).lines[1]).toMatch(/\sno\s/);
   });
 
@@ -136,6 +143,7 @@ describe("run, on what a spawn did not do", () => {
     const dir = session([
       { agentType: "scout", description: "silent", entries: [user, { type: "attachment" }], id: "c1" },
     ]);
+
     expect(invoke([dir]).lines).toStrictEqual([
       "agent  model  first-turn  agents.md  description",
       "scout  -      -           no         silent",

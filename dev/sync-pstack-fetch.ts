@@ -20,7 +20,9 @@ export function rawUrl({ repo, ref }: Source, skillName: string, rel: string): s
  */
 export async function fetchText(url: string, fetchImpl: TextFetch = fetch): Promise<string> {
   const res = await fetchImpl(url);
+
   if (!res.ok) throw new Error(`${res.status} ${url}`);
+
   return await res.text();
 }
 
@@ -28,9 +30,12 @@ export async function fetchText(url: string, fetchImpl: TextFetch = fetch): Prom
 export function resolveSkills(names: string[]): readonly PstackSkill[] {
   if (names.length === 0) return PSTACK_SKILLS;
   const byName = new Map(PSTACK_SKILLS.map((s) => [s.name, s]));
+
   return names.map((name) => {
     const skill = byName.get(name);
+
     if (skill === undefined) throw new Error(`unknown pstack skill: ${name}`);
+
     return skill;
   });
 }

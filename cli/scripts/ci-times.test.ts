@@ -18,6 +18,7 @@ function times(files: Record<string, string>, dirName = "reports", { config = tr
   const out: string[] = [];
   const err: string[] = [];
   const code = timesMain(dirName, { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+
   return { code, err: err.join(""), out: out.join(""), root };
 }
 
@@ -28,6 +29,7 @@ it("merges the reports per os, the largest duration winning, and writes the sort
     "reports/ci-report-win32-1.json": report("win32", { "a.test.ts": 100, "b.test.ts": 300 }),
     "reports/ci-report-win32-2.json": report("win32", { "a.test.ts": 250, "c.test.ts": 5 }),
   });
+
   expect(run).toMatchObject({
     code: 0,
     err: "",
@@ -64,6 +66,7 @@ it("a report that is not one is named with the shape it needs, one line each", (
     "x/ci-report-Linux-1.json": "{ nope",
     "x/ci-report-Linux-2.json": report("linux", { "a.test.ts": 1 }),
   };
+
   const run = times(files, "x");
   expect(run).toMatchObject({
     code: 1,
@@ -79,6 +82,7 @@ it("outside a repo there is no root to write the table to", () => {
   const run = times({ "reports/ci-report-linux.json": report("linux", { "a.test.ts": 1 }) }, "reports", {
     config: false,
   });
+
   expect(run.code).toBe(1);
   expect(run.err).toMatch(/^repo ci times: no workerstack\.config\.ts in .+ or any parent; run `bun repo init`\n$/);
   expect(run.out).toBe("");

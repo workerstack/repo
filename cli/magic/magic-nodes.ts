@@ -5,8 +5,10 @@ import type { MagicHit } from "./magic-hit.ts";
 
 /** A `*.constants.ts` file (or its `.js`, `.mts`… spelling), as a path or an import specifier with or without one. */
 export const CONSTANTS_FILE: RegExp = /\.constants(?:\.[cm]?[jt]sx?)?$/;
+
 /** A package, scoped or not, whose name ends in `constants`, or a subpath of one. */
 const CONSTANTS_PACKAGE = /^(?:@[^/]+\/)?[^/]*constants(?:\/|$)/;
+
 /** A string with a letter or digit in it; one of punctuation or nothing says nothing a name could. */
 const MEANINGFUL = /[\p{L}\p{N}]/u;
 
@@ -22,8 +24,10 @@ export function isConstDeclaration(declaration: ts.VariableDeclaration): boolean
 /** `node` without the parentheses, `as` and `satisfies` around it, which change a type and never a value. */
 function unwrapped(node: ts.Expression): ts.Expression {
   let bare = node;
+
   while (ts.isParenthesizedExpression(bare) || ts.isAsExpression(bare) || ts.isSatisfiesExpression(bare))
     bare = bare.expression;
+
   return bare;
 }
 
@@ -36,6 +40,7 @@ export function isMeaningful(node: ts.Expression): node is ts.StringLiteralLike 
 export function constString(declaration: ts.VariableDeclaration): string | null {
   if (declaration.initializer === undefined || !isConstDeclaration(declaration)) return null;
   const value = unwrapped(declaration.initializer);
+
   return isMeaningful(value) ? value.text : null;
 }
 
@@ -44,5 +49,6 @@ export function hitAt(node: ts.Node, rule: string, message: string): MagicHit {
   const file = node.getSourceFile();
   const at = node.getStart(file);
   const { line, character } = file.getLineAndCharacterOfPosition(at);
+
   return { at, column: character + 1, fileName: file.fileName, line: line + 1, message, rule };
 }

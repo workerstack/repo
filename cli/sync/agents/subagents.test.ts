@@ -15,6 +15,7 @@ import { renderSubagents } from "./subagents.ts";
 const { consumer: consumerDir, stock: stockDir } = fixtureDirs();
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const AGENT_DIRS = [".claude/agents/", ".codex/agents/", ".agents/agents/", ".grok/agents/", ".cursor/agents/"];
+
 function isAgentFile(rel: string) {
   return AGENT_DIRS.some((dir) => rel.startsWith(dir));
 }
@@ -22,6 +23,7 @@ function isAgentFile(rel: string) {
 /** Frontmatter block (fences included) and the body after it. */
 function split(text: string): { head: string; body: string } {
   const close = text.indexOf("\n---\n", 4);
+
   return { body: text.slice(close + 5), head: text.slice(0, close + 5) };
 }
 
@@ -30,12 +32,14 @@ it("matches the consumer goldens byte for byte, path set included", () => {
   const out = renderSubagents(sources, HOSTS);
   const goldens = new Map([...readGoldens()].filter(([rel]) => isAgentFile(rel)));
   expect([...out.keys()].toSorted(byCodeUnit)).toStrictEqual([...goldens.keys()].toSorted(byCodeUnit));
+
   for (const [rel, text] of goldens) {
     // emitAgentShellTools later swaps the claude scout body for the stock one; ours is the pre-emit text:
     // the overlay frontmatter (equal to the golden's) plus the overlay body.
     if (rel === ".claude/agents/scout.md") continue;
     expect(out.get(rel), rel).toBe(text);
   }
+
   const scout = split(out.get(".claude/agents/scout.md") ?? "");
   expect(scout.head).toBe(split(goldens.get(".claude/agents/scout.md") ?? "").head);
   const overlay = split(fs.readFileSync(path.join(consumerDir, ".repo/subagents/scout.md"), "utf8"));
@@ -46,6 +50,7 @@ it("matches this repo's committed agent files on stock alone, as sync stamps the
   const out = renderSubagents(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
   const committed = AGENT_DIRS.flatMap((dir) => fs.readdirSync(path.join(ROOT, dir)).map((name) => `${dir}${name}`));
   expect([...out.keys()].toSorted(byCodeUnit)).toStrictEqual(committed.toSorted(byCodeUnit));
+
   for (const rel of committed)
     expect(stamp(rel, out.get(rel) ?? ""), rel).toBe(fs.readFileSync(path.join(ROOT, rel), "utf8"));
 });
@@ -86,6 +91,7 @@ const EDGE_SOURCES = {
     ),
   ],
 };
+
 it("covers the edge shapes: nested paths, default descriptions, codex quirks", () => {
   const out = renderSubagents(EDGE_SOURCES, HOSTS);
   expect(out.get(".claude/agents/x/deep.md")).toBe("---\nname: deep\n---\ndeep body\n");
@@ -114,6 +120,7 @@ it("writes shallowest paths first, honours a scalar target and omits an empty co
       agentDoc("c.md", { name: "c" }),
     ],
   };
+
   expect([...renderSubagents(sources, ["claude"]).keys()]).toStrictEqual([
     ".claude/agents/c.md",
     ".claude/agents/z.md",
@@ -137,6 +144,7 @@ it("fails on a subagent without a string name", () => {
       },
     ],
   };
+
   expect(() => renderSubagents(sources, ["claude"])).toThrow(
     ".repo/subagents/bad.md: invalid frontmatter: name must be a string",
   );

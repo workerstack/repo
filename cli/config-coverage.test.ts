@@ -8,6 +8,7 @@ useConfigKit();
 /** The errors of a config whose `coverage` section is `body`; none when it loads. */
 async function errors(body: string): Promise<readonly string[]> {
   const loaded = await loadConfig(repo(`export default { coverage: { ${body} } }\n`));
+
   return loaded.ok ? [] : loaded.errors;
 }
 

@@ -11,6 +11,7 @@ it("scrubs prompt with intent and preserves other fields", () => {
     prompt: FILLER_PROMPT,
     subagent_type: "scout",
   });
+
   expect(updated).toStrictEqual({
     description: "build it",
     name: "feat",
@@ -63,6 +64,7 @@ it("scrubs a spawn prompt through the real entry", () => {
     toolInput: { description: "feat work", prompt: FILLER_PROMPT },
     toolName: "spawn_subagent",
   });
+
   expect(result.status, result.stderr).toBe(0);
   expect(parseOut(result.stdout).hookSpecificOutput?.updatedInput).toStrictEqual({
     description: "feat work",
@@ -86,6 +88,7 @@ it("answers a Codex spawn rewrite with allow and a Claude one without", () => {
     tool_name: "spawn_agent",
     turn_id: "t1",
   });
+
   expect(codex).toStrictEqual({
     hookSpecificOutput: {
       hookEventName: "PreToolUse",

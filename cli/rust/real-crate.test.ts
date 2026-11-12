@@ -21,6 +21,7 @@ function crate(name: string): string {
   const root = tempDir();
   fs.cpSync(path.join(FIXTURES, name), root, { recursive: true });
   fs.writeFileSync(path.join(root, "clippy.toml"), CLIPPY_TOML);
+
   return root;
 }
 

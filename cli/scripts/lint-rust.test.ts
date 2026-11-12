@@ -15,15 +15,19 @@ import { fmt } from "./lint.ts";
 const CARGO_MS = 300_000;
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
 const USAGE = "#[allow(dead_code)]\n/* old */\npub fn f(s: &str) -> u8 { s.parse().unwrap() }\n";
+
 const ATTRIBUTE_LINE =
   "src/lib.rs:1:1: error repo(rust-lint-attribute): #[allow] sets a lint level in code; lint levels live on the " +
   "command line, so fix the code or add a lint.skip entry with a reason";
+
 const BLOCK_LINE =
   "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form (//, ///, //!); " +
   "rewrite this /* */ as // lines";
+
 const UNWRAP_LINE = "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   vi.restoreAllMocks();
@@ -120,6 +124,7 @@ it(
       "Cargo.toml": CARGO_TOML,
       "src/lib.rs": "pub fn f()   {  }\n",
     });
+
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const here = { cwd: root };
@@ -144,9 +149,11 @@ function signalledCargo(): ReturnType<CargoRun> {
 
 it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips cargo without a Cargo.toml", async () => {
   const err: string[] = [];
+
   function stderr(text: string) {
     return err.push(text);
   }
+
   const root = consumer({ "Cargo.toml": CARGO_TOML });
   expect(await fmt([], { cargo: missingCargo, cwd: root, stderr })).toBe(1);
   expect(err).toStrictEqual([`repo fmt: ${MISSING_CARGO}\n`]);
@@ -155,10 +162,12 @@ it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips carg
   const plain = consumer({ "src/a.ts": "export const a = 1;\n" });
   expect(await fmt([], { cargo: calls, cwd: plain, stderr })).toBe(0);
   expect(calls).not.toHaveBeenCalled();
+
   const failing = consumer({
     "Cargo.lock": cargoLock("app"),
     "Cargo.toml": CARGO_TOML,
     "src/a.ts": "export const a = {b:1}\n",
   });
+
   expect(await fmt(["--check"], { cargo: calls, cwd: failing, stderr })).toBe(1);
 });

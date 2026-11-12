@@ -29,20 +29,24 @@ export function read(t: Tools, args: readonly string[]): string {
 /** Runs git with `args` and throws a line naming the failure; the flow's boundary prints it. */
 export function must(t: Tools, args: readonly string[]): string {
   const got = t.git([...args], t.cwd);
+
   if (got.code !== 0)
     throw new Error(gitFailed(args[0] /* every git call here names a subcommand */ as string, got.stderr.trim()));
+
   return got.stdout.trim();
 }
 
 /** The default branch: what origin's HEAD names, else main. */
 export function defaultBranch(t: Tools): string {
   const ref = read(t, GIT_ORIGIN_HEAD);
+
   return ref.startsWith(ORIGIN_HEAD_PREFIX) ? ref.slice(ORIGIN_HEAD_PREFIX.length) : MAIN_FALLBACK;
 }
 
 /** How many commits `branch` is ahead of and behind origin's. */
 export function divergence(t: Tools, branch: string): { ahead: number; behind: number } {
   const [ahead, behind] = read(t, GIT_AHEAD_BEHIND(branch)).split(WHITESPACE);
+
   return { ahead: Number(ahead), behind: Number(behind) };
 }
 
@@ -55,6 +59,7 @@ export function releaseTag(t: Tools, name: string, version: string): string | nu
 export function commitWithSubject(t: Tools, subject: string): string | null {
   const lines = read(t, GIT_RELEASE_LOG(subject)).split("\n");
   const hit = lines.map((line) => line.split("\t")).find(([, found]) => found === subject);
+
   return hit?.[0] ?? null;
 }
 
@@ -66,6 +71,7 @@ function parseCommits(log: string): Commit[] {
     .filter((entry) => entry !== "")
     .map((entry) => {
       const at = entry.indexOf(COMMIT_SEPARATOR);
+
       return { body: entry.slice(at + 1), subject: entry.slice(0, at) };
     });
 }

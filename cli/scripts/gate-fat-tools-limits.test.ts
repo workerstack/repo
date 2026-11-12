@@ -27,6 +27,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
@@ -111,6 +112,7 @@ describe("codex apply_patch", () => {
       turn_id: "t1",
       workspaceRoot: ws,
     };
+
     expect(processFatTools(payload)).toBeNull();
   });
 });

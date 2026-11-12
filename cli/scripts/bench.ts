@@ -44,17 +44,21 @@ export type BenchDeps = {
   gh?: Runner;
   spawn?: Spawn;
 };
+
 type Io = Required<BenchDeps>;
 
 /** This machine: platform, arch, first CPU's model and core count, memory, Bun version and, on Linux, own peak RSS. */
 export function realMachine(): Machine {
   const cpus = os.cpus();
+
   const cpu = cpus
     .slice(0, 1)
     .map((core) => core.model.trim())
     .join("");
+
   const { arch, platform } = process;
   const rssFloorBytes = rssFloorOf(platform, () => fs.readFileSync("/proc/self/status", "utf8"));
+
   return { arch, bun: Bun.version, cores: cpus.length, cpu, memoryBytes: os.totalmem(), platform, rssFloorBytes };
 }
 
@@ -77,19 +81,23 @@ function realIo(): Io {
 function parseArgs(argv: readonly string[]): { name: string; remote: boolean } | null {
   const names = argv.filter((arg) => arg !== REMOTE_FLAG);
   const [name] = names;
+
   if (name === undefined || names.length > 1 || !NAME.test(name)) return null;
+
   return { name, remote: argv.includes(REMOTE_FLAG) };
 }
 
 /** The spec names under `.repo/bench`, sorted, or `none`. */
 function haveList(cwd: string) {
   const dir = path.join(cwd, SPEC_DIR);
+
   const names = fs.existsSync(dir)
     ? fs
         .readdirSync(dir)
         .filter((file) => file.endsWith(SPEC_SUFFIX))
         .map((file) => file.slice(0, -SPEC_SUFFIX.length))
     : [];
+
   return names.length === 0 ? "none" : names.toSorted().join(", ");
 }
 
@@ -105,11 +113,14 @@ function oneLine(message: string) {
 /** The parsed spec at `rel`, or the line saying why it cannot be run. */
 async function loadSpec(cwd: string, rel: string): Promise<Spec | string> {
   const file = path.join(cwd, rel);
+
   if (!fs.existsSync(file)) return `${rel} not found; have: ${haveList(cwd)}`;
+
   try {
     const url = pathToFileURL(file).href;
     const loaded = (await import(url)) /* a module namespace is an object */ as Record<string, unknown>;
     const parsed = parseSpec(loaded["default"]);
+
     return parsed.ok ? parsed.spec : parsed.errors.map((error) => `${rel}: ${error}`).join(`\n${PREFIX}`);
   } catch (error) {
     return `${rel}: ${oneLine(String(error))}`;
@@ -127,6 +138,7 @@ function localEnv(io: Io): Env {
   const label = labelOf(machine);
   const sha = io.git([...GIT_HEAD], io.cwd).stdout.trim();
   const isDirty = io.git([...GIT_STATUS], io.cwd).stdout.trim() !== "";
+
   return { ...machine, dirty: isDirty, label, sha };
 }
 
@@ -136,21 +148,26 @@ function writeRaw(cwd: string, result: BenchResult) {
   const file = path.join(cwd, rel);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `${JSON.stringify(result, null, JSON_INDENT)}\n`);
+
   return rel;
 }
 
 /** Runs `spec` here, prints its table and raw path, and returns the exit code. */
 function runLocal(io: Io, name: string, spec: Spec): number {
   const outcome = runSpec(spec, io);
+
   if (!outcome.ok) {
     io.stderr(`${PREFIX}${outcome.line}\n`);
+
     return EXIT_FAILED;
   }
+
   const { candidates } = outcome;
   const { metrics, runs, warmup } = spec;
   const result = { candidates, env: localEnv(io), metrics, runs, spec: name, warmup };
   const rel = writeRaw(io.cwd, result);
   io.stdout(`${renderTable(result)}raw: ${rel}\n`);
+
   return EXIT_OK;
 }
 
@@ -158,37 +175,52 @@ function runLocal(io: Io, name: string, spec: Spec): number {
 async function runEverywhere(io: Io, name: string, spec: Spec): Promise<number> {
   const label = labelOf(io.machine());
   const remoteIo = { ...io, say: (line: string) => io.stdout(`${PREFIX}${line}\n`) };
+
   const target = remoteTarget(
     remoteIo,
     name,
     spec.os.filter((runner) => runner !== label),
   );
+
   if (typeof target === "string") {
     io.stderr(`${PREFIX}${target}\n`);
+
     return EXIT_USAGE;
   }
+
   const local = spec.os.length > target.os.length ? runLocal(io, name, spec) : EXIT_OK;
+
   if (local !== EXIT_OK) return local;
   const remote = await runRemote(remoteIo, target);
+
   if (!remote.ok) {
     io.stderr(`${PREFIX}${remote.line}\n`);
+
     return EXIT_FAILED;
   }
+
   for (const result of remote.results) io.stdout(`${renderTable(result)}raw: ${writeRaw(io.cwd, result)}\n`);
+
   return EXIT_OK;
 }
 
 export async function main(argv: string[], deps?: BenchDeps): Promise<number> {
   const io: Io = { ...realIo(), ...deps };
   const args = parseArgs(argv);
+
   if (args === null) {
     io.stderr(`${PREFIX}${USAGE}\n`);
+
     return EXIT_USAGE;
   }
+
   const spec = await loadSpec(io.cwd, `${SPEC_DIR}/${args.name}${SPEC_SUFFIX}`);
+
   if (typeof spec === "string") {
     io.stderr(`${PREFIX}${spec}\n`);
+
     return EXIT_USAGE;
   }
+
   return args.remote ? runEverywhere(io, args.name, spec) : runLocal(io, args.name, spec);
 }

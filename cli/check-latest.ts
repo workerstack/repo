@@ -38,9 +38,12 @@ export function latestRegistry(env: Env): string {
 /** The version of `@workerstack/repo` installed under `cwd`; null when it is absent or unreadable. */
 function installedVersion(cwd: string): string | null {
   const file = path.join(cwd, ...INSTALLED_MANIFEST);
+
   if (!fs.existsSync(file)) return null;
+
   try {
     const parsed = manifestSchema().safeParse(JSON.parse(fs.readFileSync(file, "utf8")));
+
     return parsed.success ? parsed.data.version : null;
   } catch {
     return null;
@@ -57,16 +60,23 @@ function skipped(why: string): LatestLines {
  */
 export async function checkLatestAt(cwd: string, fetcher: LatestFetch, registry: string): Promise<LatestLines> {
   const installed = installedVersion(cwd);
+
   if (installed === null) return { problems: [], report: [] };
   const base = registry.replace(TRAILING_SLASH, SLASH);
+
   function ask(url: string) {
     return fetcher(url, { signal: AbortSignal.timeout(LATEST_TIMEOUT_MS) });
   }
+
   const answer = await registryDoc(ask, PACKAGE_NAME, base);
+
   if (answer.kind === "missing") return skipped(NOT_FOUND_WHY);
+
   if (answer.kind === "unreachable") return skipped(answer.why);
   const latest = answer.doc["dist-tags"][LATEST_TAG];
+
   if (latest === undefined) return skipped(NO_LATEST_WHY);
   const isBehind = Bun.semver.order(installed, latest) < 0;
+
   return { problems: isBehind ? [behindLine(installed, latest)] : [], report: [] };
 }

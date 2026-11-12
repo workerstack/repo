@@ -4,6 +4,7 @@ import { scratch } from "./__fixtures__/worktree-repo.ts";
 import { sharedGitReason } from "./worktree-guards.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 const COMMIT = /^the main checkout is shared: commit inside /;
@@ -16,6 +17,7 @@ function reasonFor(command: string, root = tmp.repo()): string | null {
 
 it("reads a command after a here-string, an escaped <<, a quoted <<, or a bare << as a command", () => {
   const r = tmp.repo();
+
   for (const opener of ['cat <<< "x"', "echo \\<<EOF", 'echo "<<EOF"', "echo '<<EOF'", "cat <<"])
     expect(reasonFor(`${opener}\ngit commit -m y`, r), opener).toMatch(COMMIT);
 });
@@ -31,6 +33,7 @@ it("skips the body of every heredoc form up to its terminator, and reads what fo
 
 it("reads quoted, escaped and unterminated words the way the shell does", () => {
   const r = tmp.repo();
+
   for (const command of [
     "git commit -m 'unterminated",
     'git commit -m "unterminated',

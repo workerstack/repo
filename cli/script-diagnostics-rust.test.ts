@@ -12,9 +12,11 @@ import { SLOW } from "./scripts/__fixtures__/baseline-repo.ts";
 afterEach(cleanTemps);
 
 const UNWRAP_LINE = "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value";
+
 const BLOCK_LINE =
   "src/lib.rs:2:1: error repo(rust-block-comment): " +
   "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
+
 const LIB = "pub fn f() {}\n/* old */\npub fn g(s: &str) -> u8 { s.parse().unwrap() }\n";
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
 const SKIP = { files: ["**/*.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
@@ -36,9 +38,11 @@ function unwrap(): ReturnType<CargoRun> {
     })}\n`,
   };
 }
+
 function noCargo(): ReturnType<CargoRun> {
   return { missing: true, status: 1, stderr: "", stdout: "" };
 }
+
 function lines(found: { all: { line: string }[] }) {
   return found.all.map((d) => d.line);
 }
@@ -48,6 +52,7 @@ function checkout(files: Record<string, string>, skip: object[] = []): string {
   const config = { lint: { skip }, packs: ["standards"] };
   const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
 
@@ -79,6 +84,7 @@ it("checkScriptsAt reports why the Rust files could not be listed", async () => 
     "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
+
   const checked = await checkScriptsAt(root, noCargo);
   expect(checked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
@@ -109,6 +115,7 @@ it("scriptLintAt reports why the files could not be listed", { timeout: SLOW }, 
     "Cargo.toml": CARGO_TOML,
     "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
+
   const linted = await scriptLintAt(root, WHOLE, noCargo);
   expect(linted.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
@@ -123,6 +130,7 @@ it(
       "src/a.ts": "export const a = 1;\n",
       "src/lib.rs": LIB,
     };
+
     const root = checkout(files, [SKIP]);
     expect(await scriptLintAt(root, WHOLE, unwrap)).toStrictEqual({ lines: [BLOCK_LINE], problems: [] });
     const open = checkout(files);

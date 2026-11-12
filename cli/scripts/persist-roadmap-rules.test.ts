@@ -20,7 +20,9 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 // A freshly saved roadmap as a validator input: mutate its text and read the errors back.
 function saved() {
   const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: tmpWs() });
+
   if (!r.ok) throw new Error(r.error);
+
   return r.content;
 }
 
@@ -47,6 +49,7 @@ describe("validateRoadmap frontmatter rules", () => {
     const errors = errorsFor((t) =>
       t.replace("name: auth-program", "name: other").replace("# auth-program", "# other"),
     );
+
     expect(errors).toContain("name");
     expect(errors).toContain("h1");
   });

@@ -51,10 +51,12 @@ describe("loadCfg", () => {
   it("env overrides file", () => {
     const home = tmp("listen-ov-");
     plantSpeakJson(home, { listen: { model: "whisper-1" }, openai: { apiKey: "file" } });
+
     const cfg = loadCfg({
       env: { LISTEN_MODEL: "whisper-1", OPENAI_API_KEY: "sk_env" },
       home,
     });
+
     expect(cfg.apiKey).toBe("sk_env");
     expect(cfg.model).toBe(DEFAULT_MODEL);
   });
@@ -71,6 +73,7 @@ describe("loadCfg from the environment", () => {
       OPENAI_API_KEY: " sk_e ",
       WHISPER_MODEL: "/m/a.bin",
     };
+
     expect(cfgFor(tmp("listen-cfg-env-"), env)).toMatchObject({
       apiKey: "sk_e",
       device: "hw:2",

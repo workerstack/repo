@@ -19,6 +19,7 @@ function git(cwd: string, ...args: string[]): void {
     ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false", ...args],
     { cwd, encoding: "utf8" },
   );
+
   if (run.status !== 0) throw new Error(run.stderr);
 }
 
@@ -31,6 +32,7 @@ function put(root: string, rel: string, text: string): void {
 function initRepo(): string {
   const root = tempDir();
   git(root, "init", "-q", "-b", "main");
+
   return root;
 }
 
@@ -38,12 +40,14 @@ function initRepo(): string {
 function initDefaultBranchRepo(): string {
   const root = tempDir();
   git(root, "init", "-q");
+
   return root;
 }
 
 /** Each of `rel`'s `hashes` that `table` lacks, as `rel@hash`. */
 function unlisted(table: StockHistory, rel: string, hashes: readonly string[]): string[] {
   const listed = table[rel] ?? [];
+
   return hashes.filter((hash) => !listed.includes(hash)).map((hash) => `${rel}@${hash}`);
 }
 

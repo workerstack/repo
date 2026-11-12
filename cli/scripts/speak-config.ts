@@ -30,6 +30,7 @@ function isSet(key: string | undefined): key is string {
 /** The ElevenLabs fields; the file's flat fields are the fallback for its section. */
 function elevenOf(env: Env, file: Record<string, unknown>): SpeakCfg["elevenlabs"] {
   const eleven = section(file, ELEVENLABS);
+
   return {
     apiKey: str(first(env.ELEVENLABS_API_KEY, eleven.apiKey, file.apiKey)),
     modelId: str(first(env.ELEVENLABS_MODEL_ID, eleven.modelId, file.modelId), DEFAULT_ELEVEN_MODEL),
@@ -39,6 +40,7 @@ function elevenOf(env: Env, file: Record<string, unknown>): SpeakCfg["elevenlabs
 
 function openaiOf(env: Env, file: Record<string, unknown>): SpeakCfg["openai"] {
   const openai = section(file, OPENAI);
+
   return {
     apiKey: str(first(env.OPENAI_API_KEY, openai.apiKey)),
     model: str(first(env.OPENAI_TTS_MODEL, openai.model), DEFAULT_OPENAI_MODEL),
@@ -49,6 +51,7 @@ function openaiOf(env: Env, file: Record<string, unknown>): SpeakCfg["openai"] {
 export function loadCfg({ env = repoEnv.process, home = os.homedir() }: { env?: Env; home?: string } = {}): SpeakCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
+
   return {
     elevenlabs: elevenOf(env, file),
     filePath,
@@ -60,12 +63,14 @@ export function loadCfg({ env = repoEnv.process, home = os.homedir() }: { env?: 
 /** `provider` when `key` is set, else the error that names the missing key. */
 function keyed(key: string | undefined, provider: Provider, need: string): Provider {
   if (!isSet(key)) throw new Error(need);
+
   return provider;
 }
 
 /** The first provider with a key, ElevenLabs before OpenAI. */
 function firstKeyed(cfg: SpeakCfg | null | undefined): Provider {
   if (isSet(cfg?.elevenlabs.apiKey)) return ELEVENLABS;
+
   if (isSet(cfg?.openai.apiKey)) return OPENAI;
   throw new Error(NEED_KEY);
 }
@@ -73,8 +78,11 @@ function firstKeyed(cfg: SpeakCfg | null | undefined): Provider {
 /** The flag's provider, else the configured one, else the first with a key. */
 export function resolveProvider(cfg: SpeakCfg | null | undefined, flagProvider?: string): Provider {
   const want = str(first(flagProvider, cfg?.providerPref)).toLowerCase();
+
   if (want === "") return firstKeyed(cfg);
+
   if (want === ELEVENLABS) return keyed(cfg?.elevenlabs.apiKey, ELEVENLABS, NEED_ELEVEN);
+
   if (want === OPENAI) return keyed(cfg?.openai.apiKey, OPENAI, NEED_OPENAI);
   throw new Error("provider must be elevenlabs or openai");
 }

@@ -6,6 +6,7 @@ import type { Samples } from "./score.ts";
 
 /** Where the candidates run, the runner, and the clock in milliseconds a run's wall time is read from. */
 export type RunIo = { cwd: string; spawn: Spawn; now: () => number };
+
 /** Each candidate's samples by metric, or the line naming the run that failed. */
 export type RunOutcome = { ok: true; candidates: Samples[] } | { ok: false; line: string };
 
@@ -18,6 +19,7 @@ function exited(code: number, stderr: string) {
     .filter((text) => text.trim() !== "")
     .slice(-TAIL_LINES)
     .join(" | ");
+
   return `exited ${code}; ${tail === "" ? "no stderr" : `stderr tail: ${tail}`}`;
 }
 
@@ -26,8 +28,10 @@ function setUp(spec: Spec, io: RunIo): string | null {
   for (const { name, setup } of spec.candidates) {
     if (setup === null) continue;
     const got = io.spawn(setup, io.cwd);
+
     if (got.code !== 0) return `${name} setup ${exited(got.code, got.stderr)}`;
   }
+
   return null;
 }
 
@@ -40,10 +44,13 @@ function measure(spec: Spec, io: RunIo, { candidate, label }: Measuring): Record
   const started = io.now();
   const got = io.spawn(candidate.run, io.cwd);
   const wall = io.now() - started;
+
   if (got.code !== 0) return `${label} ${exited(got.code, got.stderr)}`;
   const read = readCustom(got.stdout, custom);
+
   if (!read.ok) return `${label} printed no \`bench:\` line with ${JSON.stringify(read.missing)}`;
   const measured = Object.entries({ ...usageMetrics(got.usage), wall, ...read.values });
+
   return Object.fromEntries(measured.filter(([name]) => names.has(name)));
 }
 
@@ -62,6 +69,7 @@ function samplesOf(spec: Spec, kept: readonly Kept[]): Samples[] {
   return spec.candidates.map(({ name }) => {
     const mine = kept.filter((run) => run.name === name);
     const samples: [string, number[]][] = spec.metrics.map((metric) => [metric.name, valuesOf(mine, metric.name)]);
+
     return { name, samples: Object.fromEntries(samples) };
   });
 }
@@ -69,16 +77,22 @@ function samplesOf(spec: Spec, kept: readonly Kept[]): Samples[] {
 /** Runs every candidate `warmup + runs` times, round-robin so drift in the machine's load spreads over all of them. */
 export function runSpec(spec: Spec, io: RunIo): RunOutcome {
   const failedSetup = setUp(spec, io);
+
   if (failedSetup !== null) return { line: failedSetup, ok: false };
   const kept: Kept[] = [];
+
   for (let at = 0; at < spec.warmup + spec.runs; at += 1) {
     const isWarm = at < spec.warmup;
+
     for (const candidate of spec.candidates) {
       const label = `${candidate.name} ${isWarm ? `warmup ${at + 1}` : `run ${at - spec.warmup + 1}`}`;
       const got = measure(spec, io, { candidate, label });
+
       if (typeof got === "string") return { line: got, ok: false };
+
       if (!isWarm) kept.push({ name: candidate.name, values: got });
     }
   }
+
   return { candidates: samplesOf(spec, kept), ok: true };
 }

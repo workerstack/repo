@@ -16,8 +16,10 @@ import {
 
 /** The platform and architecture to find the binary for. */
 export type Target = { platform: string; arch: string };
+
 /** Where jscpd's binary is, or the line that says why it cannot be found. */
 export type JscpdBin = { ok: true; path: string } | { ok: false; error: string };
+
 /** A platform package that could hold the binary, and the binary's path inside it. */
 type Candidate = { name: string; binary: string };
 
@@ -36,9 +38,12 @@ function resolved(specifier: string, from: string): string | null {
 /** The platform packages that could hold the binary for `target`, the likeliest first. */
 function candidates(target: Target): Candidate[] {
   const name = `${JSCPD_PREFIX}${JSCPD_OS[target.platform] ?? target.platform}-${target.arch}`;
+
   if (target.platform === LINUX_PLATFORM)
     return LINUX_LIBCS.map((libc) => ({ binary: JSCPD_BINARY, name: `${name}${libc}` }));
+
   if (target.platform === WINDOWS_PLATFORM) return [{ binary: JSCPD_BINARY_WINDOWS, name: `${name}${WINDOWS_SUFFIX}` }];
+
   return [{ binary: JSCPD_BINARY, name }];
 }
 
@@ -49,9 +54,12 @@ function candidates(target: Target): Candidate[] {
 export function jscpdBin(target: Target = here): JscpdBin {
   const from = path.dirname(Bun.resolveSync(JSCPD_MANIFEST, import.meta.dirname));
   const names = candidates(target);
+
   for (const { name, binary } of names) {
     const found = resolved(`${name}/package.json`, from);
+
     if (found !== null) return { ok: true, path: path.join(path.dirname(found), binary) };
   }
+
   return { error: platformMissing(names.map(({ name }) => name).join(" or ")), ok: false };
 }

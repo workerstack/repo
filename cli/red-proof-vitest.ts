@@ -19,15 +19,19 @@ export type VitestRun = (args: string[], cwd: string, timeoutMs: number) => { co
  */
 export function runVitest(args: string[], cwd: string, timeoutMs: number): ReturnType<VitestRun> {
   let manifest: string;
+
   try {
     manifest = Bun.resolveSync("vitest/package.json", cwd);
   } catch {
     return { code: 1, stderr: `cannot resolve vitest from ${cwd}` };
   }
+
   const { bin } = JSON.parse(fs.readFileSync(manifest, "utf8")) /* vitest's manifest has a bin map */ as {
     bin: Record<string, string>;
   };
+
   const script = path.join(path.dirname(manifest), bin["vitest"] /* vitest declares its bin */ as string);
+
   const result = spawnSync(process.execPath, ["--bun", script, ...args], {
     cwd,
     encoding: "utf8",
@@ -35,13 +39,17 @@ export function runVitest(args: string[], cwd: string, timeoutMs: number): Retur
     maxBuffer: MAX_BUFFER,
     timeout: timeoutMs,
   });
+
   const { error } = result;
+
   if (error !== undefined) return { code: 1, stderr: `vitest did not finish within ${timeoutMs}ms (${error.message})` };
+
   return { code: result.status /* null only when result.error is set */ as number, stderr: result.stderr };
 }
 
 /** Unpacks a tar file into `cwd`; shaped like a git runner so a failure reads the same. */
 export function untar(cwd: string, args: readonly string[]): ReturnType<GitRun> {
   const result = spawnSync("tar", [...args], { cwd, encoding: "utf8" });
+
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 }

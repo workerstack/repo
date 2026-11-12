@@ -21,6 +21,7 @@ it("checks agent frontmatter against its schema", () => {
     file(".cursor/agents/a.md", "---\nname: a\n---\nBody\n"),
     file(".grok/agents/b.md", "No frontmatter at all\n"),
   ]);
+
   expect(lines).toStrictEqual([
     ".cursor/agents/a.md: description: Invalid input: expected string, received undefined",
     ".grok/agents/b.md: description: Invalid input: expected string, received undefined",
@@ -54,6 +55,7 @@ it("accepts keys the host may add", () => {
     hooks: { Stop: [{ future: 1, hooks: [{ extra: true, prompt: "x", timeout: 5, type: "prompt" }] }] },
     other: 1,
   };
+
   const outputs = [
     file(".claude/settings.json", JSON.stringify({ ...hooks, permissions: { allow: [], deny: ["x"] } })),
     file(".codex/hooks.json", JSON.stringify(hooks)),
@@ -68,6 +70,7 @@ it("accepts keys the host may add", () => {
     file(".agents/mcp_config.json", JSON.stringify({ mcpServers: { a: { command: "x" } } })),
     file(".grok/hooks/rtk.json", JSON.stringify(hooks)),
   ];
+
   expect(validateOutputs(tmpRoot(), outputs)).toStrictEqual([]);
 });
 
@@ -77,6 +80,7 @@ it("accepts the empty hook files the generators emit", () => {
     file(".grok/hooks/rulesync.json", '{"hooks":{}}'),
     file(".agents/mcp_config.json", '{"mcpServers":{}}'),
   ];
+
   expect(validateOutputs(tmpRoot(), outputs)).toStrictEqual([]);
 });
 
@@ -100,6 +104,7 @@ function shippedKeys(tool: "oxlint" | "oxfmt"): string[] {
   const dir = path.dirname(Bun.resolveSync(`${tool}/package.json`, import.meta.dirname));
   const text = fs.readFileSync(path.join(dir, "configuration_schema.json"), "utf8");
   const { properties } = z.object({ properties: z.record(z.string(), z.unknown()) }).parse(JSON.parse(text));
+
   return Object.keys(properties).toSorted();
 }
 
@@ -113,6 +118,7 @@ it("accepts a commented oxfmt config and a plain oxlint config", () => {
     file(".oxlintrc.json", JSON.stringify({ plugins: ["eslint"], rules: { "eslint/no-console": ["error", {}] } })),
     file(".oxfmtrc.jsonc", '// generated\n{ "printWidth": 120, "ignorePatterns": ["/a"], }\n'),
   ];
+
   expect(validateOutputs(tmpRoot(), outputs)).toStrictEqual([]);
 });
 
@@ -121,6 +127,7 @@ it("refuses a key neither tool knows", () => {
     file(".oxlintrc.json", '{ "rulez": {} }'),
     file(".oxfmtrc.jsonc", '{ "width": 120 }'),
   ]);
+
   expect(lines).toHaveLength(2);
   expect(lines[0]).toMatch(/^\.oxlintrc\.json: .*"rulez"/);
   expect(lines[1]).toMatch(/^\.oxfmtrc\.jsonc: .*"width"/);

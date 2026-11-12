@@ -13,10 +13,12 @@ export type HookIo = {
 /** Reads `fd` (stdin unless a test plants a file) and writes stdout. */
 export function processHookIo(fd: number = STDIN_FD): HookIo {
   const chunk = Buffer.alloc(HOOK_READ_CHUNK_BYTES);
+
   return {
     readChunk: () => {
       try {
         const n = fs.readSync(fd, chunk, 0, chunk.length, null);
+
         return n === 0 ? null : chunk.subarray(0, n);
       } catch {
         return null;
@@ -34,17 +36,22 @@ export function processHookIo(fd: number = STDIN_FD): HookIo {
  */
 export function readHookInput(io: HookIo): HookInput | null {
   let buf = Buffer.alloc(0);
+
   for (let chunk = io.readChunk(); chunk !== null; chunk = io.readChunk()) {
     buf = Buffer.concat([buf, chunk]);
     const parsed = parseHookInput(buf.toString("utf8"));
+
     if (parsed !== null) return parsed;
   }
+
   return null;
 }
 
 /** Read to EOF and decode as utf8, for a body such as markdown that is never one JSON object. */
 export function readAllText(io: HookIo): string {
   const chunks: Uint8Array[] = [];
+
   for (let chunk = io.readChunk(); chunk !== null; chunk = io.readChunk()) chunks.push(Uint8Array.from(chunk));
+
   return Buffer.concat(chunks).toString("utf8");
 }

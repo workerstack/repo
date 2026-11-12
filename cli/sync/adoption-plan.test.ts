@@ -23,12 +23,15 @@ import type { Output } from "./outputs.ts";
 import { hashText } from "./stock-history.ts";
 
 useTempDirs();
+
 afterAll(dropFixture);
 
 const SETTINGS = ".claude/settings.json";
 const BAD = '{"hooks":{"PreToolUse":"x"}}\n';
+
 const SCHEMA_LINE =
   "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
+
 /** Plans a valid settings file until `made` exists, then an invalid one. */
 function settingsOnceMade(made: string) {
   return {
@@ -40,9 +43,11 @@ function settingsOnceMade(made: string) {
     ],
   };
 }
+
 async function run(root: string, deps: Parameters<typeof runSync>[2]) {
   const err: string[] = [];
   const code = await runSync([], { cwd: root, stderr: (s) => err.push(s), stdout: () => {} }, deps);
+
   return { code, err };
 }
 

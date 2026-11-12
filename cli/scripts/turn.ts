@@ -31,6 +31,7 @@ import {
 import { typecheckStep } from "./typecheck-step.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
+
 type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
 
 const STEPS: readonly Step[] = [
@@ -43,6 +44,7 @@ const STEPS: readonly Step[] = [
   syncStep,
   checkStep,
 ];
+
 const USE = "use repo turn [--staged] [<path>]";
 
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
@@ -51,11 +53,13 @@ export const BINS: Bins = {
     captureBun([packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
   vitest: (args, cwd) => {
     let manifest: string;
+
     try {
       manifest = Bun.resolveSync("vitest/package.json", cwd);
     } catch {
       return null;
     }
+
     return captureBun(
       ["--bun", packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args],
       cwd,
@@ -68,14 +72,21 @@ function parseArgs(argv: readonly string[], cwd: string, root: string): Parsed {
   const flags = argv.filter((arg) => arg.startsWith("-"));
   const paths = argv.filter((arg) => !arg.startsWith("-"));
   const unknown = flags.find((flag) => flag !== STAGED_FLAG);
+
   if (unknown !== undefined) return { errors: [`unknown flag ${unknown}; ${USE}`], ok: false };
+
   if (paths.length > 1) return { errors: [`one path at most; ${USE}`], ok: false };
+
   if (flags.length > 0 && paths.length > 0)
     return { errors: ["--staged gates the index, a path gates a package; pass one"], ok: false };
+
   if (flags.length > 0) return { ok: true, scope: { kind: "staged" } };
+
   if (paths[0] === undefined) return { ok: true, scope: { kind: "tree" } };
   const rel = path.relative(root, path.resolve(cwd, paths[0])).split(path.sep).join("/");
+
   if (rel.startsWith("..") || path.isAbsolute(rel)) return { errors: [`${paths[0]} is outside ${root}`], ok: false };
+
   return { ok: true, scope: { kind: "package", rel } };
 }
 
@@ -86,19 +97,26 @@ async function prepare(
   bins: Bins,
 ): Promise<{ ok: true; turn: Turn; staged: boolean } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
+
   if (root === null) return { errors: [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``], ok: false };
   const parsed = parseArgs(argv, cwd, root);
+
   if (!parsed.ok) return parsed;
   const loaded = await loadConfig(root);
+
   if (!loaded.ok) return loaded;
+
   if (!loaded.config.packs.includes("standards"))
     return { errors: [`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`], ok: false };
   const workspace = readWorkspace(root);
+
   if (!workspace.ok) return workspace;
   const packages = workspace.workspace.packages.map((pkg) => pkg.dir);
   const changes = changeSet(root, parsed.scope, packages);
+
   if (!changes.ok) return changes;
   const turn = { bins, changes: changes.changes, packages, root, skips: loaded.config.lint.skip };
+
   return { ok: true, staged: parsed.scope.kind === "staged", turn };
 }
 
@@ -108,8 +126,10 @@ async function prepare(
  */
 function restage(root: string, touched: readonly string[], stderr: (s: string) => void): boolean {
   if (touched.length === 0) return true;
+
   if (spawnSync("git", ["add", "-A", "--", ...touched], { cwd: root }).status === 0) return true;
   stderr(`repo turn: git add failed for ${touched.join(" ")}; stage it yourself and commit again\n`);
+
   return false;
 }
 
@@ -117,8 +137,11 @@ function restage(root: string, touched: readonly string[], stderr: (s: string) =
 function runSteps(turn: Turn, stderr: (s: string) => void): StepResult[] {
   return STEPS.flatMap((step) => {
     const result = step(turn);
+
     if (result === null) return [];
+
     for (const chunk of result.output) stderr(chunk);
+
     return [result];
   });
 }
@@ -136,19 +159,26 @@ function withDefaults(deps: TurnDeps): Required<TurnDeps> {
 export async function main(argv: string[], deps: TurnDeps = {}): Promise<number> {
   const { cwd, stdout, stderr, bins } = withDefaults(deps);
   const prepared = await prepare(argv, cwd, bins);
+
   if (!prepared.ok) {
     for (const line of prepared.errors) stderr(`repo turn: ${line}\n`);
+
     return 1;
   }
+
   const { turn, staged } = prepared;
+
   if (turn.changes.length === 0) {
     stdout("turn: no changes\n");
+
     return 0;
   }
+
   const results = runSteps(turn, stderr);
   const touched = [...new Set(results.flatMap((result) => result.touched))];
   const restaged = !staged || restage(turn.root, touched, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
   stdout(`turn: ${files} · ${results.map((result) => result.label).join(" · ")}\n`);
+
   return restaged && results.every((result) => result.ok) ? 0 : 1;
 }

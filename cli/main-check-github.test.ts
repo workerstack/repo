@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+
 import { addOrigin, usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
@@ -14,11 +15,13 @@ async function startWithFakeGh(): Promise<ReturnType<typeof fakeGh>> {
   const fake = fakeGh(EMPTY_SETTINGS());
   const { gh } = fakes.githubIo;
   fakes.githubIo.gh = fake.gh;
+
   try {
     await start();
   } finally {
     fakes.githubIo.gh = gh;
   }
+
   return fake;
 }
 

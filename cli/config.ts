@@ -21,11 +21,14 @@ import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
 import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
+
 export { CONFIG_FILE } from "./config.constants.ts";
+
 export type { ImportConfig } from "./import-config.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release", "workspace", "benchmark"] as const;
+
 /** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
 
@@ -35,11 +38,13 @@ const MISSING_SELF = /Cannot find (?:package|module) '@workerstack\/repo'/;
 
 /** Agent hosts repo sync can lay a tree out for. */
 export const HOSTS = ["claude", "codex", "antigravity", "grok", "cursor"] as const;
+
 /** One of `HOSTS`: a name `agents.hosts` takes. */
 export type Host = (typeof HOSTS)[number];
 
 /** Optional skill packs a repo can ship to its agents. */
 export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as const;
+
 /** One of `SKILL_PACKS`: a name `agents.skills` takes. */
 export type SkillPack = (typeof SKILL_PACKS)[number];
 
@@ -51,6 +56,7 @@ export function offSkills(config: Pick<ResolvedConfig, "agents" | "packs">): str
   const packSkills = Object.entries(PACK_SKILLS)
     .filter(([pack]) => !config.packs.some((on) => on === pack))
     .flatMap(([, names]) => names);
+
   return [...SKILL_PACKS.filter((pack) => !config.agents.skills.includes(pack)), ...packSkills];
 }
 
@@ -61,9 +67,11 @@ function listOf(names: readonly string[]) {
 const packSchema = /* @__PURE__ */ z.enum(PACKS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${listOf(PACKS)}`,
 });
+
 const hostSchema = /* @__PURE__ */ z.enum(HOSTS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a host; use ${listOf(HOSTS)}`,
 });
+
 const skillSchema = /* @__PURE__ */ z.enum(SKILL_PACKS, {
   error: (issue) => `${JSON.stringify(issue.input)} is not a skill pack; use ${listOf(SKILL_PACKS)}`,
 });
@@ -84,6 +92,7 @@ function buildAgentsSchema() {
     { error: "must be an object like { hosts: [...], skills: [...] }" },
   );
 }
+
 const agentsSchema = /* @__PURE__ */ buildAgentsSchema();
 
 /** A config section that only means something with its pack on. */
@@ -138,9 +147,11 @@ function buildConfigSchema() {
       needsPack("tdd", "standards"),
     ) satisfies z.ZodType<unknown, WorkerstackConfig>;
 }
+
 const configSchema = /* @__PURE__ */ buildConfigSchema();
 
 export type { WorkerstackConfig };
+
 export type {
   LintBoundaries,
   LintSkip,
@@ -150,6 +161,7 @@ export type {
   ResolvedConfig,
   ResolvedLint,
 } from "./config-resolved.types.ts";
+
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
 
@@ -166,9 +178,11 @@ export function defaultPacks(): Pack[] {
 /** The nearest directory at or above `cwd` that holds workerstack.config.ts, or null. */
 export function findRoot(cwd: string): string | null {
   let dir = path.resolve(cwd);
+
   for (;;) {
     if (fs.existsSync(path.join(dir, CONFIG_FILE))) return dir;
     const parent = path.dirname(dir);
+
     if (parent === dir) return null;
     dir = parent;
   }
@@ -187,18 +201,24 @@ function fail(messages: string[]): LoadResult {
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
   let loaded: Record<string, unknown>;
+
   try {
     loaded = await importModule(root);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
+
     // A linked worktree without its own install fails here; the fix is an install, not an edit to the config.
     if (MISSING_SELF.test(message)) return fail([`${SELF} is not installed in ${root}; run \`bun install\` there`]);
+
     return fail([`failed to load: ${message}`]);
   }
+
   if (!("default" in loaded)) return fail(["no default export; add `export default defineConfig({ ... })`"]);
 
   const parsed = configSchema.safeParse(loaded.default);
+
   if (!parsed.success) return fail(parsed.error.issues.flatMap(describeIssue));
+
   return { config: resolve(parsed.data), ok: true };
 }
 
@@ -232,8 +252,10 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
  */
 export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> {
   const root = findRoot(cwd);
+
   if (root === null) return [];
   const loaded = await loadConfig(root);
+
   return loaded.ok ? loaded.config.agents.skills : [];
 }
 
@@ -246,7 +268,10 @@ function describeIssue(issue: z.core.$ZodIssue): string[] {
     .map((key) => (typeof key === "number" ? `[${key}]` : `.${String(key)}`))
     .join("")
     .replace(LEADING_DOT, "");
+
   const prefix = at === "" ? "" : `${at}: `;
+
   if (issue.code === "unrecognized_keys") return issue.keys.map((key) => `${prefix}unknown key ${JSON.stringify(key)}`);
+
   return [`${prefix}${issue.message}`];
 }

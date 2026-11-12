@@ -7,6 +7,7 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import type { HookInput } from "./hook-input.ts";
 
 const tmp = useTmp();
+
 const STAGING = [
   "git add src/x.ts",
   "git add -A",
@@ -20,11 +21,14 @@ const STAGING = [
 it("an implementer's git add and git commit are denied under every strategy; reads and a parent's git pass", () => {
   for (const state of ["none", "default", "review-fast"]) {
     const w = tmp.dir("gate-review-");
+
     if (state !== "none") startReview(w, { strategy: state });
     const base = inSession(claudeCall(w, "Bash", { command: "" }), REVIEW_SID);
+
     function sh(command: string, extra: HookInput = {}) {
       return processFatTools({ ...base, agent_type: "implementer-fast", tool_input: { command }, ...extra });
     }
+
     for (const command of STAGING)
       expect(sh(command), `${state} ${command}`).toStrictEqual({ reason: IMPLEMENTER_GIT, type: "deny" });
 
@@ -33,10 +37,12 @@ it("an implementer's git add and git commit are denied under every strategy; rea
 
     expect(sh("git add x", { agent_type: "scout" })).toBeNull();
     expect(sh("git commit -m x", { agent_type: undefined })).toBeNull();
+
     const codex = asChild(
       inSession(codexCall(w, "Bash", { command: "git commit -m x" }), REVIEW_SID),
       "implementer-deep",
     );
+
     expect(processFatTools(codex)).toStrictEqual({ reason: IMPLEMENTER_GIT, type: "deny" });
   }
 });

@@ -17,11 +17,14 @@ export const LEGACY_HEADERS: readonly string[] = [
 /** What opens a script's interpreter line; the header then goes on line 2. */
 export const SHEBANG = "#!";
 export const BOM = "﻿";
+
 /** The comment marker that opens a markdown or HTML comment, and the one that closes it. */
 export const HTML_OPEN = "<!--";
 export const HTML_CLOSE = "-->";
+
 /** `OWNED_TOKEN` in any header syntax, read loosely: any case, any spacing inside, trailing space. */
 export const OWNED_LOOSE: RegExp =
   /^(?:(?:#|\/\/)\s*@generated\s+by\s+@workerstack\/repo|<!--\s*@generated\s+by\s+@workerstack\/repo\s*-->)\s*$/i;
+
 /** A markdown file that opens with YAML frontmatter, which a host reads before any comment. */
 export const FRONTMATTER: RegExp = /^﻿?---\r?\n/;

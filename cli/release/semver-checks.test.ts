@@ -7,36 +7,47 @@ import { crateLine, type SemverDeps } from "./semver-checks.ts";
 import type { Commit } from "./version.ts";
 
 const MANIFEST = "/repo/a/Cargo.toml";
+
 function crate(version: string) {
   return { manifest_path: MANIFEST, name: "a", version };
 }
+
 function row(vers: string) {
   return JSON.stringify({ deps: [], pubtime: "2026-01-01T00:00:00Z", vers, yanked: false });
 }
+
 const bare = JSON.stringify({ vers: "1.0.2", yanked: false });
 
 type Setup = { index?: Response; commits?: Commit[]; result?: Partial<CargoResult> };
+
 /** The injected edges: an index answer, the crate's commits, a cargo result; and what they were asked. */
 function deps({ index, commits = [], result = {} }: Setup = {}) {
   const runs: (readonly string[])[] = [];
   const asked: { since: string; dir: string }[] = [];
+
   function run(_root: string, args: readonly string[]): ReturnType<CargoRun> {
     runs.push(args);
+
     return { missing: false, status: 0, stderr: "", stdout: "", ...result };
   }
+
   const all: SemverDeps = {
     fetch: () => Promise.resolve(index ?? new Response(row("1.0.2"))),
     git: (after) => {
       asked.push(after);
+
       return commits;
     },
     run,
   };
+
   return { all, asked, runs };
 }
+
 function commit(subject: string, body = ""): Commit {
   return { body, subject };
 }
+
 const PREFIX = [
   "--locked",
   "semver-checks",
@@ -63,6 +74,7 @@ const BREAKING = [
   "Failed in:",
   "  struct adler::S, previously in file /home/x/src/lib.rs:1",
 ].join("\n");
+
 const PROGRESS =
   "    Finished [ 0.690s] a\n     Summary semver requires new major version: 2 major and 0 minor checks failed";
 
@@ -82,6 +94,7 @@ it("maps commits since the baseline's publish time, in the crate's directory, to
     ["1.0.2", [commit("fix: x"), commit("docs: y")], "patch"],
     ["1.0.2", [], "patch"],
   ];
+
   await Promise.all(
     cases.map(async ([version, commits, type]) => {
       const { all, runs, asked } = deps({ commits });
@@ -97,6 +110,7 @@ it("maps commits since the baseline's publish time, in the crate's directory, to
 async function releaseTypeOf(commits: Commit[]) {
   const { all, runs } = deps({ commits, index: new Response(row("0.3.1")) });
   await crateLine("/repo", crate("0.3.1"), all);
+
   return runs[0]?.at(-1);
 }
 

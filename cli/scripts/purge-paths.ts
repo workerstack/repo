@@ -17,13 +17,16 @@ export function resolveHome(env: Env = repoEnv.process): string {
 export function parseArgv(argv: unknown): ParsedArgv {
   const args: unknown[] = Array.isArray(argv) ? argv : [];
   let isApply = false;
+
   for (const a of args) {
     if (a === APPLY_FLAG) {
       isApply = true;
       continue;
     }
+
     return { error: `unknown flag: ${str(a)}`, ok: false };
   }
+
   return { apply: isApply, ok: true };
 }
 

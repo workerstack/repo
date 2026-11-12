@@ -30,6 +30,7 @@ it("moves a rule the stock lacks, and keeps stock rules live by writing extra se
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
     ".rulesync/rules/team.md": "own\n",
   });
+
   expect(planOf(m).slice(0, 3)).toStrictEqual([
     {
       content: `${CARRIED}# Overview\n\n## Ours\n\nlocal text\n\n## Also\n\nmore\n`,
@@ -58,6 +59,7 @@ it("leaves a stock rule with no extra sections to the removal, and a -local sibl
     ".rulesync/rules/overview.md": "---\nroot: true\n---\n# Overview\n\n## Stock\n\nbody\n",
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
   });
+
   expect(planOf(m)).toStrictEqual([REMOVAL]);
 });
 
@@ -66,6 +68,7 @@ it("stops on a -local sibling that holds other text", () => {
     ".repo/rules/plain-local.md": "other\n",
     ".rulesync/rules/plain.md": "---\nroot: false\n---\n## Extra\n\nhere\n",
   });
+
   expect(conflictLines(planOf(m))).toStrictEqual([clash(".rulesync/rules/plain.md", ".repo/rules/plain-local.md")]);
 });
 
@@ -74,6 +77,7 @@ it("moves an edited stock subagent whole as an override, and leaves an identical
     ".rulesync/subagents/orchestrator.md": "own\n",
     ".rulesync/subagents/scout.md": "edited scout\n",
   });
+
   expect(notes(planOf(m))).toStrictEqual([
     "moved .rulesync/subagents/orchestrator.md to .repo/subagents/orchestrator.md",
     "moved your edited .rulesync/subagents/scout.md to .repo/subagents/scout.md (it now replaces the stock subagent)",
@@ -87,6 +91,7 @@ const SKILL_COPIES = {
   ".agents/skills/bro/SKILL.md": "bro\n",
   ".agents/skills/deploy/SKILL.md": "deploy\n",
 };
+
 const ASK_MARK = {
   content: "---\noverrides: ask\n---\nedited\n",
   note: "marked .repo/skills/ask/SKILL.md with overrides: ask (it replaces the stock skill)",

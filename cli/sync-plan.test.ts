@@ -18,8 +18,11 @@ import { type PostPass } from "./sync/git-files.ts";
 import { type Generator, type SyncContext } from "./sync/outputs.ts";
 
 useSyncKit();
+
 const NO_AGENTS = { hosts: [], skills: [] };
+
 type Planned = ReturnType<Generator>;
+
 const UP_TO_DATE = { code: 0, stderr: "", stdout: "repo sync: up to date\n" };
 
 /** A planning context over a docs-only config, reading nothing from disk unless `read` says so. */
@@ -31,18 +34,23 @@ function context(readFile: SyncContext["read"] = () => null): SyncContext {
     workspace: { manifest: {}, packages: [], root: "/repo" },
   };
 }
+
 function ok(): Planned {
   return { errors: [], outputs: [file("a.txt")] };
 }
+
 function boom(): never {
   throw new Error("EACCES: cannot read x");
 }
+
 function first(): Planned {
   return { errors: [], outputs: [file("a.txt"), file("b.txt")] };
 }
+
 function second(): Planned {
   return { errors: [], outputs: [file("a.txt", "other\n")] };
 }
+
 function hosts(ctx: SyncContext): Planned {
   return { errors: [], outputs: [file("hosts.txt", ctx.config.agents.hosts.join(","))] };
 }
@@ -52,6 +60,7 @@ it("runs every generator in order and concatenates outputs and errors", () => {
     ".gitignore": "# >>> @workerstack/repo\n",
     "bunfig.toml": "[test]\n",
   };
+
   const plan = planSync(context((rel) => files[rel] ?? null));
   // The git files pass runs after the generators, over what they produced, even when one of them failed.
   expect(plan.outputs.map((output) => output.path)).toStrictEqual([
@@ -67,12 +76,15 @@ it("runs every generator in order and concatenates outputs and errors", () => {
 it("runs the given post-passes in order, each over the outputs planned before it, and reports one that throws", () => {
   const ctx = context();
   const seen: string[][] = [];
+
   function adding(rel: string): PostPass {
     return (_ctx, outputs) => {
       seen.push(outputs.map((output) => output.path));
+
       return { errors: [], outputs: [file(rel)] };
     };
   }
+
   expect(planSync(ctx, [ok], [adding("b.txt"), adding("c.txt")]).outputs.map((output) => output.path)).toStrictEqual([
     "a.txt",
     "b.txt",

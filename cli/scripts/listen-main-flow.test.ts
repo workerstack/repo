@@ -18,6 +18,7 @@ const local = which({ ffmpeg: "/usr/bin/ffmpeg", "whisper-cli": "/usr/bin/whispe
 function whisperWrites(text: string) {
   return (_bin: string, args: string[]): SpawnSyncResult => {
     fs.writeFileSync(`${args[args.indexOf("-of") + 1]}.txt`, text);
+
     return { status: 0, stderr: "", stdout: "" };
   };
 }
@@ -37,6 +38,7 @@ function fakeFfmpeg(_bin: string, args: string[], opts: SpawnOpts) {
   const out = args.at(-1) ?? ""; // the output path is the last ffmpeg arg
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, "RIFF");
+
   return { kill() {}, on: exitSoon, pid: 4242 };
 }
 
@@ -65,6 +67,7 @@ describe("main rec", () => {
       spawnFn: fakeFfmpeg,
       whichFn: ffmpegOnly,
     });
+
     expect(r.code).toBe(0);
     expect(r.logs.join("\n")).toContain("from rec");
   });
@@ -73,10 +76,13 @@ describe("main rec", () => {
 describe("main start and stop", () => {
   it("start respawns the recorder through bin/repo.ts listen _record", async () => {
     const spawned: string[][] = [];
+
     function spawnFn(_bin: string, args: string[]) {
       spawned.push(args);
+
       return { pid: 4243, unref() {} };
     }
+
     const r = await run(["start"], { spawnFn, whichFn: ffmpegOnly });
     expect(r.code).toBe(0);
     expect(spawned[0]?.slice(0, 4)).toStrictEqual([repoBin(), "listen", "_record", "--out"]);
@@ -88,16 +94,20 @@ describe("main start then stop", () => {
     const cwd = tmp("listen-ss-");
     const home = tmp("listen-ssh-");
     const spawned: string[][] = [];
+
     function spawnFn(_bin: string, args: string[]) {
       spawned.push(args);
+
       return { pid: 4242, unref() {} };
     }
+
     const started = await run(["start"], { cwd, home, killFn: () => {}, spawnFn, whichFn: ffmpegOnly });
     expect(started.code).toBe(0);
     const sess = readSession(cwd);
     expect(sess.pid).toBe(4242);
     expect(spawned[0]?.[2]).toBe("_record");
     fs.writeFileSync(String(sess.wav), "RIFF");
+
     const over = {
       cwd,
       fetchFn: textFetch("from stop"),
@@ -106,6 +116,7 @@ describe("main start then stop", () => {
       waitPid: () => {},
       whichFn: ffmpegOnly,
     };
+
     const stopped = await run(["stop"], over);
     expect(stopped.code).toBe(0);
     expect(stopped.logs.join("\n")).toContain("from stop");
@@ -133,10 +144,13 @@ describe("main ggml download", () => {
     const wav = path.join(cwd, "clip.wav");
     fs.writeFileSync(wav, "RIFF");
     let fetched = "";
+
     function fetchFn(url: string) {
       fetched = url;
+
       return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("ggml-fake")), ok: true, status: 200 });
     }
+
     const spawnSyncFn = whisperWrites("from local download\n");
     const r = await run(["file", "--path", wav], { cwd, env: {}, fetchFn, spawnSyncFn, whichFn: local });
     expect(r.code).toBe(0);

@@ -20,25 +20,31 @@ import type { Commit } from "./version.ts";
 
 /** One line of the report: whether the crate passed, and what to tell the person. */
 export type Line = { ok: boolean; text: string };
+
 /** A published crate as `cargo metadata` names it, as far as the check reads it. */
 export type SemverCrate = { name: string; version: string; manifest_path: string };
+
 /** What the check calls out: cargo, the crates.io index, and the crate directory's commits since a time. */
 export type SemverDeps = {
   run: CargoRun;
   fetch: Parameters<typeof baselineOf>[1];
   git: (after: { since: string; dir: string }) => Commit[];
 };
+
 type Level = "major" | "minor" | "patch";
 
 /** The release the crate's commits ask for: breaking is major from 1.0, minor before it; a feat is minor from 1.0. */
 function levelOf(version: string, commits: readonly Commit[]): Level {
   const isStable = !version.startsWith("0.");
+
   if (commits.some(({ subject, body }) => isBreaking(subject, body.split("\n")))) return isStable ? "major" : "minor";
   const feat = commits.some(({ subject }) => HEADER.exec(subject)?.groups?.["type"] === FEAT_TYPE);
+
   return isStable && feat ? "minor" : "patch";
 }
 
 type Block = { lint: string; what: string; items: string[] };
+
 type Scan = { blocks: Block[]; level: string; items: boolean };
 
 /** The release a summary line names, else the one so far. */
@@ -70,7 +76,9 @@ function scanLine(scan: Scan, raw: string): Scan {
   const summary = SUMMARY.exec(line)?.groups;
   const marker = header !== undefined || summary !== undefined;
   const blocks = header === undefined ? scan.blocks : [...scan.blocks, blockOf(header)];
+
   if (scan.items && !marker) addItem(blocks, line);
+
   return {
     blocks,
     items: !marker && line !== "" && (scan.items || line === FAILED_IN),
@@ -85,13 +93,16 @@ function scanLine(scan: Scan, raw: string): Scan {
 function failures(stdout: string, stderr: string): { blocks: Block[]; level: string } {
   const text = `${stdout}\n\n${stderr}`;
   let scan: Scan = { blocks: [], items: false, level: UNSAID_LEVEL };
+
   for (const line of text.split("\n")) scan = scanLine(scan, line);
+
   return { blocks: scan.blocks, level: scan.level };
 }
 
 /** The first line of stderr that says `error`, else its first line, quoted. */
 function firstError(stderr: string): string {
   const lines = stderr.split("\n").filter((line) => line.trim() !== "");
+
   return quote(lines.find((line) => line.startsWith("error")) ?? lines[0] ?? "no output");
 }
 
@@ -101,14 +112,17 @@ type Shown = { name: string; from: string; ok: string; advice: string };
 /** The line for a run: ok, one line per failed lint, or the quoted error. */
 function report(shown: Shown, run: ReturnType<CargoRun>): Line {
   const exit = run.status ?? "by signal";
+
   if (exit === 0) return { ok: true, text: shown.ok };
   const { blocks, level } = failures(run.stdout, run.stderr);
+
   if (exit !== EXIT_BREAKING || blocks.length === 0)
     return { ok: false, text: `cargo semver-checks exited ${exit} for ${shown.name}: ${firstError(run.stderr)}` };
 
   const lines = blocks.map(({ lint, what, items }) => {
     return `${shown.from} needs a ${level} release: ${items.join("; ")} (${lint}: ${what}); ${shown.advice}`;
   });
+
   return { ok: false, text: lines.join("\n") };
 }
 
@@ -116,18 +130,23 @@ function report(shown: Shown, run: ReturnType<CargoRun>): Line {
 export async function crateLine(root: string, crate: SemverCrate, deps: SemverDeps): Promise<Line> {
   const { name } = crate;
   const baseline = await baselineOf(crate, deps.fetch);
+
   if (baseline.kind === "absent")
     return { ok: true, text: `crate ${name} is not on crates.io yet; nothing to compare` };
+
   if (baseline.kind === "failed") return { ok: false, text: baseline.line };
   const isBumped = baseline.version !== crate.version;
   const dir = path.dirname(crate.manifest_path);
+
   const level =
     isBumped || baseline.published === null
       ? "patch"
       : levelOf(crate.version, deps.git({ dir, since: baseline.published }));
+
   const args = [...CHECK_ARGS, "--manifest-path", path.join(root, MANIFEST_FILE), "-p", name];
   args.push("--baseline-version", baseline.version, ...(isBumped ? [] : ["--release-type", level]));
   const from = `crate ${name} ${baseline.version} → this checkout`;
+
   const shown: Shown = isBumped
     ? {
         advice: `restore it or bump ${name}'s version further`,
@@ -141,5 +160,6 @@ export async function crateLine(root: string, crate: SemverCrate, deps: SemverDe
         name,
         ok: `crate ${name} ${baseline.version} from crates.io → this checkout · ${level} · ok`,
       };
+
   return report(shown, deps.run(root, args));
 }

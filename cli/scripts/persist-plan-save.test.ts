@@ -19,6 +19,7 @@ function envWorkspace() {
   const ws = tmpWs();
   vi.stubEnv("CLAUDE_PROJECT_DIR", ws);
   vi.stubEnv("GROK_WORKSPACE_ROOT", ws);
+
   return ws;
 }
 
@@ -40,6 +41,7 @@ describe("persistPlan names", () => {
       source: "typed by hand",
       workspaceRoot: tmpWs(),
     });
+
     expect(named.content).toContain('source: "typed by hand"');
     const byName = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: tmpWs() });
     expect(byName.content).toContain('source: "add tmp ignore"');
@@ -47,8 +49,10 @@ describe("persistPlan names", () => {
     const byGoal = persistPlan({ content: unnamed, created: CREATED, workspaceRoot: tmpWs() });
     expect(byGoal.ok, byGoal.error).toBe(true);
     expect(byGoal.filename).toBe("1-unnamed-20260826T143000Z.md");
+
     const goal =
       "Repo .gitignore ignores .tmp/ so files under .tmp/repo/plans/ stay untracked. Existing ignore entries stay.";
+
     expect(byGoal.content).toContain(`source: ${JSON.stringify(goal)}`);
   });
 });
@@ -115,6 +119,7 @@ describe("persistPlan without a workspace argument", () => {
 
 function savedPlan(ws: string): string {
   const r = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+
   return path.join(ws, String(r.path));
 }
 
@@ -144,10 +149,12 @@ describe("lesson citations without a Watch-outs section", () => {
   it("denies a plan naming a matched file when it has no Watch-outs to cite in", () => {
     const ws = tmpWs();
     seedLesson(ws);
+
     const content = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", "1.1 [ ] edit src/a.ts").replace(
       /## Watch-outs\n[\s\S]*?\n\n/,
       "",
     );
+
     const r = persistPlan({ content, workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("cite this matched lesson in Watch-outs: .repo/lessons/plan-forks.md");

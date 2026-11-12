@@ -48,8 +48,10 @@ export function jobScriptGuard(call: GateCall): GuardResult {
  */
 export function testRunGuard(call: GateCall): GuardResult {
   const { text, sub, parent, sid, roots } = call;
+
   if (!TEST_CMD.test(text) || SHELL_META.test(text)) return undefined;
   const isReviewing = parent && sid !== "" && activeReview(roots.root, sid) !== null;
+
   return isImplementer(sub) || isReviewing ? withCommand(call, jobFor(call, "test", text.trim())) : undefined;
 }
 
@@ -57,19 +59,23 @@ export function testRunGuard(call: GateCall): GuardResult {
 export function webGuard(call: GateCall): GuardResult {
   if (!BASH_WEB.test(call.text)) return undefined;
   const url = BASH_URL.exec(call.text)?.[0];
+
   return url === undefined ? { reason: REASON_DENYLIST, type: "deny" } : withCommand(call, jobFor(call, "fetch", url));
 }
 
 /** A plain dump or search runs as `job exec` or `job search`. */
 export function dumpGuard(call: GateCall): GuardResult {
   const { text } = call;
+
   if (!BASH_DUMP_CMDS.test(text) || !takesJob(text)) return undefined;
   const query = text.replace(LEADING_RTK_RE, "").trim();
+
   return withCommand(call, jobFor(call, BASH_SEARCH.test(text) ? "search" : "exec", query));
 }
 
 /** A plain `ls` or `tree` runs behind rtk. */
 export function treeGuard(call: GateCall): GuardResult {
   const { text } = call;
+
   return BASH_TREE.test(text) && takesJob(text) ? withCommand(call, `rtk ${text.trim()}`) : undefined;
 }

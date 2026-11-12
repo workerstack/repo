@@ -22,6 +22,7 @@ it("drops old generated files and stock copies, writes extra sections, moves eve
     ".rulesync/reference/nested/more.md": "# More\n",
     ".rulesync/reference/notes.txt": "not markdown\n",
   });
+
   const steps = planOf(m);
   expect(notes(steps)).toStrictEqual([
     'moved your sections "C" of .rulesync/reference/bare.md to references/bare.md',
@@ -41,6 +42,7 @@ it("takes the heading from the consumer's copy when the stock has none, then fro
     },
     { stock: { "references/a.md": "stock\n\n## S\n\nx\n", "references/b.md": "stock\n\n## S\n\nx\n" } },
   );
+
   expect(contents(planOf(m))).toStrictEqual(["# Mine\n\n## Own\n\ny\n", "# b.md\n\n## Own\n\ny\n"]);
 });
 
@@ -62,6 +64,7 @@ it("stops on a moved file whose destination holds other text, and on a dir again
     "references/deploy.md": "# Other\n",
     "references/guide": "a file\n",
   });
+
   expect(conflictLines(planOf(m))).toStrictEqual([
     clash(".rulesync/reference/deploy.md", "references/deploy.md"),
     clash(".rulesync/reference/guide", "references/guide"),
@@ -78,6 +81,7 @@ it("moves lessons into an existing .repo/lessons, leaves INDEX.md, and drops an 
     ".rulesync/lessons/b.md": "b\n",
     ".rulesync/lessons/sub/c.md": "c\n",
   });
+
   const steps = planOf(m);
   expect(notes(steps)).toStrictEqual(["moved .rulesync/lessons/ (3) to .repo/lessons/"]);
   await applyMigration(m.root, steps);
@@ -106,6 +110,7 @@ it("moves permissions.json and each global-settings file that differs from stock
     },
     { stock: { "agents/global-settings/grok.toml": "y = 2\n" } },
   );
+
   expect(notes(planOf(m))).toStrictEqual([
     "moved your .rulesync/permissions.json to .repo/permissions.json",
     "moved your .rulesync/global-settings/codex.toml to .repo/global-settings/codex.toml",

@@ -10,5 +10,6 @@ function lastSegment(name: string): string {
 export function scopesOf(workspace: Workspace): string[] | undefined {
   if (workspace.packages.length === 0) return undefined;
   const names = workspace.packages.map(({ dir, manifest }) => lastSegment(manifest.name ?? dir));
+
   return [...new Set(names)].toSorted();
 }

@@ -4,19 +4,24 @@ import { FIXTURES_DIR } from "./fixtures.constants.ts";
 
 /** Prefix of the temp dir holding a run's clone, Stryker config and raw report. */
 export const TEMP_PREFIX = "workerstack-mutate-";
+
 /** The clone's dir inside the temp dir, so the config and the raw report stay outside it. */
 export const CLONE_DIR = "repo";
 export const CONFIG_NAME = "stryker.json";
 export const RAW_REPORT_NAME = "stryker-report.json";
+
 /** Where an unsharded run writes its report, relative to the repo root. */
 export const DEFAULT_REPORT = ".tmp/repo/mutation/report.json";
+
 /** The spaces a written JSON file is indented with. */
 export const JSON_INDENT = 2;
 export const OK = 0;
 export const FAILED = 1;
 export const SHORT_SHA = 7;
+
 /** The manifest a Rust workspace root holds. */
 export const CARGO_MANIFEST = "Cargo.toml";
+
 /** The words a flag and its value take. */
 export const FLAG_WORDS = 2;
 export const FIRST_SHARD = 1;
@@ -36,11 +41,13 @@ export const SHARD_PATTERN: RegExp = /^(\d+)\/(\d+)$/;
 export const STRYKER_CORE = "@stryker-mutator/core";
 export const STRYKER_RUNNER = "@stryker-mutator/vitest-runner";
 export const MANIFEST = "package.json";
+
 /** The dir `bun install` fills. */
 export const INSTALLED_DIR = "node_modules";
 export const INSTALL_HINT: string = `bun add -d ${STRYKER_CORE}@10.1.1 ${STRYKER_RUNNER}@10.1.1`;
 export const INSTALL_ARGS: readonly string[] = ["install", "--frozen-lockfile"];
 export const INSTALL_COMMAND = "bun install --frozen-lockfile";
+
 /** The bun flags that run Stryker's node bin under bun with the preload. */
 export const BUN_FLAGS: readonly string[] = ["--bun", "--preload"];
 export const STRYKER_BIN_NAME = "stryker";
@@ -67,6 +74,7 @@ export const STRYKER_OPTIONS = {
 /** Stryker statuses that count as a kill, a survivor, and the rest, which no score counts. */
 export const KILLED_STATUSES: readonly string[] = ["Killed", "Timeout"];
 export const SURVIVOR_STATUSES: readonly string[] = ["Survived", "NoCoverage"];
+
 /** cargo-mutants outcome summaries that count as a kill and as a survivor; Unviable counts for nothing. */
 export const CARGO_KILLED: readonly string[] = ["CaughtMutant", "Timeout"];
 export const CARGO_MISSED = "MissedMutant";

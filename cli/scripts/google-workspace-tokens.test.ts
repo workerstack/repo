@@ -20,6 +20,7 @@ import { accessToken } from "./google-workspace-auth.ts";
 import { main } from "./google-workspace.ts";
 
 useTempDirs();
+
 const ADC = [".config", "gcloud", "application_default_credentials.json"];
 
 afterEach(() => {
@@ -29,6 +30,7 @@ afterEach(() => {
 
 async function whoamiErrors() {
   const { code, errs } = await withIo(() => main(["whoami"]));
+
   return `${code}:${errs}`;
 }
 

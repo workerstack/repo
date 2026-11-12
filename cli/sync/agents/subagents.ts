@@ -38,6 +38,7 @@ const CLAUDE_KEYS = [
   "mcpServers",
   "hooks",
 ];
+
 const ANTIGRAVITY_KEYS = [
   "name",
   "description",
@@ -56,21 +57,26 @@ const ANTIGRAVITY_KEYS = [
 /** Path to text for every subagent file the enabled `hosts` get; nested sources (`x/y.md`) reach claude only. */
 export function renderSubagents(sources: Sources, hosts: readonly Host[]): Map<string, string> {
   const out = new Map<string, string>();
+
   for (const doc of sources.subagents.toSorted(shallowestFirst)) {
     const name = doc.data["name"];
+
     if (typeof name !== "string") throw new Error(`${doc.rel}: invalid frontmatter: name must be a string`);
     const nested = doc.file.includes("/");
+
     for (const host of hosts) {
       if (!targets(doc, TARGET[host]) || (nested && host !== "claude")) continue;
       const [rel, text] = RENDER[host]({ doc, name });
       out.set(rel, finalize(text));
     }
   }
+
   return out;
 }
 
 /** One subagent being rendered: its source and the name its frontmatter gives. */
 type Agent = { doc: Doc; name: string };
+
 type Rendered = [string, string];
 
 function own(data: Doc["data"], key: string): Record<string, unknown> {
@@ -79,6 +85,7 @@ function own(data: Doc["data"], key: string): Record<string, unknown> {
 
 function claudeAgent({ doc, name }: Agent): Rendered {
   const fm = ordered({ description: doc.data["description"], name, ...own(doc.data, "claudecode") }, CLAUDE_KEYS);
+
   return [`.claude/agents/${doc.file}`, markdown(fm, doc.body, "claude")];
 }
 
@@ -86,11 +93,13 @@ function antigravityAgent({ doc, name }: Agent): Rendered {
   const merged = { ...block(doc.data["antigravity-ide"]), ...block(doc.data["antigravity-cli"]) };
   const description = doc.data["description"] ?? `${name} subagent`;
   const fm = { description, name, ...without(merged, "name", "description") };
+
   return [`.agents/agents/${doc.file}`, markdown(flatten(ordered(fm, ANTIGRAVITY_KEYS)), doc.body, "default")];
 }
 
 function flatAgent(dir: string, key: string, { doc, name }: Agent): Rendered {
   const fm = flatten({ description: doc.data["description"], name, ...block(doc.data[key]) });
+
   return [`${dir}/agents/${doc.file}`, markdown(fm, doc.body, "default")];
 }
 
@@ -101,6 +110,7 @@ function codexAgent({ doc, name }: Agent): Rendered {
     rest,
     without(block(doc.data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
   );
+
   return [`.codex/agents/${doc.file.replace(MD_SUFFIX, ".toml")}`, codexToml(rest, doc.body)];
 }
 
@@ -123,21 +133,27 @@ const RENDER: Readonly<Record<Host, (agent: Agent) => Rendered>> = {
  */
 function codexToml(rest: Record<string, unknown>, body: string): string {
   const head = `${stringify(rest).trimEnd()}\n`;
+
   if (body === "") return head;
+
   if (body.includes("\n") && !body.includes("'''")) return `${head}developer_instructions = '''\n${body}\n'''\n`;
+
   return `${head}${stringify({ developer_instructions: body })}`;
 }
 
 /** Gray-matter layout: fences around the YAML, then the body. */
 function markdown(fm: Record<string, unknown>, body: string, mode: YamlMode): string {
   const entries = Object.entries(fm) /* frontmatter values come from parsed YAML */ as [string, YamlValue][];
+
   return `---\n${emitYaml(entries, mode)}---\n${body}\n`;
 }
 
 function targets(doc: Doc, target: string): boolean {
   const list = doc.data["targets"];
+
   if (list === undefined) return true;
   const names = Array.isArray(list) ? list : [list];
+
   return names.includes("*") || names.includes(target);
 }
 
@@ -159,9 +175,12 @@ function without(map: Record<string, unknown>, ...keys: string[]): Record<string
 /** `known` keys first in that order, then the rest in source order; nullish values dropped. */
 function ordered(map: Record<string, unknown>, known: readonly string[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+
   for (const key of known) if (map[key] !== undefined && map[key] !== null) out[key] = map[key];
+
   for (const [key, value] of Object.entries(map))
     if (!(key in out) && value !== undefined && value !== null) out[key] = value;
+
   return out;
 }
 
@@ -172,14 +191,19 @@ function flatten<T>(value: T): T {
 
 function flattened(value: unknown): unknown {
   if (typeof value === "string") return value.replaceAll(NEWLINE_RUNS, " ").trim();
+
   if (Array.isArray(value)) return value.map(flattened);
+
   if (isRecord(value)) return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, flattened(item)]));
+
   return value;
 }
 
 /** Fewer path segments first, then plain string order; merged paths are unique, so there is no tie. */
 function shallowestFirst(a: Doc, b: Doc): number {
   const depth = a.file.split("/").length - b.file.split("/").length;
+
   if (depth !== 0) return depth;
+
   return a.file < b.file ? BEFORE : AFTER;
 }

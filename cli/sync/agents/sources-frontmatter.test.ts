@@ -13,6 +13,7 @@ it("collects every problem across files, rules and hooks instead of stopping at 
     ".repo/rules/nofm.md": "no fence\n",
     ".repo/rules/x.md": doc("x", "overrides: nope\n"),
   });
+
   expect(problems({ consumerRoot: consumer, packages: [], stockRoot: stock() })).toStrictEqual([
     ".repo/rules/nofm.md: missing frontmatter (start the file with a --- block)",
     ".repo/rules/Foo.md: a stock rule has this name; add `overrides: Foo` or rename it",
@@ -58,15 +59,18 @@ it("does not parse a stock file the consumer replaces", () => {
     packages: [],
     stockRoot: stock({ "agents/rules/broken.md": "no fence\n" }),
   });
+
   expect(sources.rules[0]?.rel).toBe(".repo/rules/BROKEN.md");
 });
 
 function rule(extra = "", body = "body\n") {
   return `---\ndescription: d\n${extra}---\n${body}`;
 }
+
 function agent(extra = "", body = "body\n") {
   return `---\ndescription: d\n${extra}---\n${body}`;
 }
+
 function withConsumer(files: Record<string, string>) {
   return problems({ consumerRoot: tree(files), packages: [], stockRoot: stock() });
 }
@@ -120,11 +124,13 @@ it.each([
   expect(withConsumer({ [rel]: rule("", `${"a".repeat(8193)}\n`) })).toStrictEqual([
     `${rel}: body is 8193 bytes, over the 8 KiB (8192 byte) limit; move detail into a skill or a reference`,
   ]);
+
   const ok = loaded({
     consumerRoot: tree({ [rel]: rule("", "a".repeat(8192)) }),
     packages: [],
     stockRoot: stock(),
   });
+
   expect(ok.rules.length + ok.subagents.length).toBeGreaterThan(0);
 });
 
@@ -137,6 +143,7 @@ it(
       ".repo/rules/bad.md": "---\ncolour: red\n---\nbody\n",
       ".repo/rules/good.md": doc("good"),
     });
+
     const result = loadSources({ consumerRoot: consumer, packages: [], stockRoot: stock() });
     expect(result.sources.rules.map((d) => d.file)).toStrictEqual(["foo.md", "overview.md", "good.md"]);
     expect(result.sources.hooks).toStrictEqual({ rel: ".repo/hooks.jsonc", value: {} });

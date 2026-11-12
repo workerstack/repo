@@ -38,6 +38,7 @@ it("repo SSOT allow is empty and not cloudflare/docker", () => {
 it("every subagent has an inherit:false row, and validation holds implementers to it", () => {
   const policy = loadPolicy(repoRoot);
   const agents = isPlainObject(policy.agents) ? policy.agents : {};
+
   for (const id of ["orchestrator", "scout", "researcher", "implementer-fast", "implementer-deep"]) {
     expect(agents[id]).toStrictEqual({ inherit: false });
     const bad = { ...policy, agents: { ...agents, [id]: { inherit: true } } };

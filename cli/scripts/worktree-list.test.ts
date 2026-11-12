@@ -9,6 +9,7 @@ import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
 import { addWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 /** Orders list rows by their path. */
@@ -20,6 +21,7 @@ function byPath(a: unknown[], b: unknown[]): number {
 function outsideOf(r: string): string {
   const outside = `${r}-outside`;
   git(r, "worktree", "add", "-q", outside, "-b", "spike");
+
   return outside;
 }
 
@@ -95,6 +97,7 @@ it("removes clean managed worktrees whose commits reached the default branch, an
   ]);
   expect(fs.existsSync(wt(r, "m"))).toBe(false);
   expect([hasBranch(r, "wt/m"), hasBranch(r, "wt/o")]).toStrictEqual([false, false]);
+
   for (const n of ["fresh", "dirty", "un"]) expect(fs.existsSync(wt(r, n)), n).toBe(true);
   expect(pruneWorktrees(r)).toStrictEqual([]);
 });

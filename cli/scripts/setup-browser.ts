@@ -10,10 +10,14 @@ import { WIN32 } from "./win32.constants.ts";
 function browserAdvice(lp: string, chromium: string, platform: NodeJS.Platform): string {
   const hasLp = lp !== "";
   const hasChromium = chromium !== "";
+
   if (hasLp && hasChromium) return "browser ok  lightpanda (default) + chromium (fallback)";
+
   if (!hasLp && hasChromium && platform !== WIN32)
     return "Chromium is the fallback only. Install Lightpanda as well (default engine).";
+
   if (hasLp && !hasChromium) return "Lightpanda ok. Install a chromium-family browser as well (shot/pdf/fallback).";
+
   return "";
 }
 
@@ -25,17 +29,21 @@ export async function setupBrowser(ctx: SetupCtx = {}): Promise<{ ok: boolean; l
     whichFn = whichBin,
     interactive = false,
   } = ctx;
+
   function findLp(): string {
     return whichFn("lightpanda", pathEnv, platform);
   }
+
   function findCr(): string {
     return lookupChromium(whichFn, pathEnv, platform);
   }
+
   const lp = await reprobeHint({ found: findLp(), id: "lightpanda", interactive, io, platform, probe: findLp });
   const chromium = await reprobeHint({ found: findCr(), id: "chromium", interactive, io, platform, probe: findCr });
   const st = browserEngineStatus(lp, chromium, platform);
   logLine(io, "session: .tmp/repo/browser/");
   const advice = browserAdvice(lp, chromium, platform);
+
   if (advice !== "") logLine(io, advice);
 
   return { chromium, lightpanda: lp, ok: st.ok };

@@ -48,6 +48,7 @@ function tokenError(j: Rec, fallback: string): Error {
 /** When a token the server just issued expires, `expires_in` seconds (an hour by default) from now. */
 function expiryFromNow(j: Rec): number {
   const seconds = Number(j.expires_in);
+
   return Date.now() + (seconds > 0 ? seconds : DEFAULT_LIFETIME_S) * MS_PER_SECOND;
 }
 
@@ -58,14 +59,17 @@ function expiryOf(j: Rec): number {
 
 function cachedAccess(t: Token): string | undefined {
   const isFresh = Number(t.expiry_date) > Date.now() + EXPIRY_SLACK_MS;
+
   return isFresh ? filled(t.access_token) : undefined;
 }
 
 /** A fresh access token for the account, refreshed and saved back when the cached one is near expiry. */
 export async function accessToken(account: WorkspaceAccount = accountContext()): Promise<string> {
   const t = loadToken(account);
+
   if (t === null) throw new Error("not logged in; run bun repo google-workspace login");
   const cached = cachedAccess(t);
+
   if (cached !== undefined) return cached;
 
   const form = { client_id: t.client_id, client_secret: filled(t.client_secret) ?? "" };
@@ -73,11 +77,13 @@ export async function accessToken(account: WorkspaceAccount = accountContext()):
   const reply = await postForm(new URLSearchParams(grant));
   const j = await jsonRecord(reply);
   const access = filled(j.access_token);
+
   if (access === undefined) throw tokenError(j, "token refresh failed");
 
   t.access_token = access;
   t.expiry_date = expiryOf(j);
   persistToken(account, t);
+
   return access;
 }
 
@@ -108,11 +114,13 @@ async function listenLoopback(): Promise<{ server: http.Server; redirect: string
     server.on("error", rej);
   });
   const { port } = server.address() /* listening on a TCP port, so never a pipe path or null */ as AddressInfo;
+
   return { redirect: `http://127.0.0.1:${port}`, server };
 }
 
 function consentUrl(clientId: string, challenge: string, redirect: string): string {
   const scope = [...EXTRA_SCOPES, EMAIL_SCOPE, PROFILE_SCOPE, "openid"].join(" ");
+
   return `${AUTH_URL}?${new URLSearchParams({
     access_type: "offline",
     client_id: clientId,
@@ -128,6 +136,7 @@ function consentUrl(clientId: string, challenge: string, redirect: string): stri
 /** Opens the consent page and waits for the browser to hit the loopback with a code; always closes the server. */
 function awaitCode(loop: { server: http.Server; redirect: string }, auth: string, spawn: SpawnFn): Promise<string> {
   const { server, redirect } = loop;
+
   return new Promise<string>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error("login timed out")), LOGIN_TIMEOUT_MS);
     server.on("request", (req, res) => {
@@ -139,6 +148,7 @@ function awaitCode(loop: { server: http.Server; redirect: string }, auth: string
       const code = filled(c);
       res.end(code === undefined ? why : "Logged in. Return to the terminal.");
       clearTimeout(timer);
+
       if (code === undefined) reject(new Error(why));
       else resolve(code);
     });
@@ -151,7 +161,9 @@ function readClient(credsPath: string): { clientId: string; clientSecret: string
   const raw = rec(readJson(credsPath));
   const inst = rec(raw.installed ?? raw.web);
   const clientId = filled(inst.client_id);
+
   if (clientId === undefined) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+
   return { clientId, clientSecret: filled(inst.client_secret) ?? "" };
 }
 
@@ -167,11 +179,14 @@ export async function loginLoopback(
   const { redirect } = loop;
   const code = await awaitCode(loop, consentUrl(clientId, challenge, redirect), spawn);
   const grant = { client_id: clientId, client_secret: clientSecret, code, code_verifier: verifier };
+
   const reply = await postForm(
     new URLSearchParams({ ...grant, grant_type: "authorization_code", redirect_uri: redirect }),
   );
+
   const j = await jsonRecord(reply);
   const access = filled(j.access_token);
+
   if (access === undefined) throw tokenError(j, "token exchange failed");
   writeSecretJson(tokenStorePath(account), {
     access_token: access,
@@ -190,6 +205,7 @@ export function loginArgs(): string[] {
 function parseReply(text: string): Rec {
   try {
     const parsed: unknown = text === "" ? null : JSON.parse(text);
+
     return rec(parsed);
   } catch {
     return { raw: text.slice(0, RAW_REPLY_CHARS) };
@@ -203,6 +219,7 @@ export async function gfetch(
   init: { method?: string; body?: string; headers?: Record<string, string> } = {},
 ): Promise<GResult> {
   const token = await accessToken(account);
+
   const r = await fetch(url, {
     ...init,
     headers: {
@@ -211,7 +228,9 @@ export async function gfetch(
       ...init.headers,
     },
   });
+
   const text = await r.text();
   const json = parseReply(text);
+
   return { json, ok: r.status >= HTTP_OK && r.status < HTTP_MULTIPLE, status: r.status };
 }

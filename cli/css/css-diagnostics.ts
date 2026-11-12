@@ -31,6 +31,7 @@ import {
 export type CssOptions = { fix: boolean; runner?: string };
 
 type Warning = { column: number; line: number; rule: string; severity: string; text: string };
+
 type FileResult = { invalid: { text: string }[]; source: string; warnings: Warning[] };
 
 /** The runner module, beside this file. */
@@ -55,7 +56,9 @@ export function cssFiles(root: string): Listed {
     CSS_PATHSPEC,
     DEPENDENCY_EXCLUDE,
   ]);
+
   if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+
   return { files: [...new Set(run.stdout.split("\0").filter(isLintedCss))].toSorted(), ok: true };
 }
 
@@ -68,7 +71,9 @@ function resultsSchema(): z.ZodType<FileResult[]> {
     severity: z.string(),
     text: z.string(),
   });
+
   const invalid = z.array(z.object({ text: z.string() }));
+
   return z.array(z.object({ invalid, source: z.string(), warnings: z.array(warning) }));
 }
 
@@ -84,12 +89,15 @@ function firstLine(text: string): string {
 /** The runner's results read from its `stdout`, or why they could not be. */
 function parsedResults(stdout: string): Result<FileResult[]> {
   let raw: unknown;
+
   try {
     raw = JSON.parse(stdout);
   } catch (error) {
     return cannotRun(String(error));
   }
+
   const parsed = resultsSchema().safeParse(raw);
+
   return parsed.success ? { ok: true, value: parsed.data } : cannotRun(firstLine(z.prettifyError(parsed.error)));
 }
 
@@ -97,12 +105,14 @@ function parsedResults(stdout: string): Result<FileResult[]> {
 function diagnosticOf(rel: string, warning: Warning): Diagnostic {
   const rule = codeOf(`${STYLELINT_PREFIX}${warning.rule}`);
   const message = warning.text.replace(` (${warning.rule})`, "");
+
   return { file: rel, line: `${rel}:${warning.line}:${warning.column}: ${warning.severity} ${rule}: ${message}`, rule };
 }
 
 /** File order, then line and column, read as numbers. */
 function byPlace(a: Diagnostic, b: Diagnostic): number {
   const byFile = Number(a.file > b.file) - Number(a.file < b.file);
+
   return byFile === 0 ? a.line.localeCompare(b.line, "en", { numeric: true }) : byFile;
 }
 
@@ -113,17 +123,24 @@ function byPlace(a: Diagnostic, b: Diagnostic): number {
  */
 export function cssDiagnostics(root: string, files: readonly string[], options: CssOptions): Result<Diagnostic[]> {
   const sheets = files.filter(isLintedCss);
+
   if (sheets.length === 0) return { ok: true, value: [] };
   const runner = pathToFileURL(options.runner ?? runnerPath()).href;
   const run = captureBun(["--eval", RUNNER_EVAL, runner, ...(options.fix ? [FIX_FLAG] : []), ...sheets], root);
+
   if (run.code !== 0) return cannotRun(firstLine(run.stderr));
   const results = parsedResults(run.stdout);
+
   if (!results.ok) return results;
   const invalid = results.value.flatMap((result) => result.invalid);
+
   if (invalid.length > 0) return { errors: invalid.map(({ text }) => `${CANNOT_RUN}: ${text}`), ok: false };
+
   const value = results.value.flatMap((result) => {
     const rel = path.relative(root, result.source).split(path.sep).join("/");
+
     return result.warnings.map((warning) => diagnosticOf(rel, warning));
   });
+
   return { ok: true, value: value.toSorted(byPlace) };
 }

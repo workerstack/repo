@@ -51,6 +51,7 @@ it("writes the Usage keys for every host", () => {
   const home = tempDir("yolo-usage-");
   expect(syncGlobals({ apply: true, home, workspaceRoot: repoRoot }).ok).toBe(true);
   const dests = HOSTS.map((h) => readHostDest(home, h));
+
   const [grok, claude, codex, agy, cursor] = dests /* one per HOSTS entry */ as [
     DestShape,
     DestShape,
@@ -58,6 +59,7 @@ it("writes the Usage keys for every host", () => {
     DestShape,
     DestShape,
   ];
+
   expect(claude.permissions.defaultMode).toBe("bypassPermissions");
   expect(claude.skipDangerousModePermissionPrompt).toBe(true);
   expect(codex.approval_policy).toBe("never");

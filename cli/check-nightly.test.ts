@@ -16,7 +16,9 @@ const plant = useTempTree("check-nightly-");
 const STRYKER: PackageJson = {
   devDependencies: { "@stryker-mutator/core": "10.1.1", "@stryker-mutator/vitest-runner": "10.1.1" },
 };
+
 const INSTALL_LINE = `the release pack runs mutation tests nightly; ${INSTALL_HINT}`;
+
 const NO_FILE_LINE =
   "coverage.mutate (src/**/*.ts) matches no tracked file; set coverage.mutate in workerstack.config.ts";
 
@@ -76,6 +78,7 @@ function repo(files: Record<string, string>): string {
   const root = plant(files);
   execFileSync("git", ["init", "-q"], { cwd: root });
   execFileSync("git", ["add", "."], { cwd: root });
+
   return root;
 }
 

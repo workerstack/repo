@@ -58,6 +58,7 @@ globals`, () => {
     ["bun", ["install"]],
     ["bun", ["repo", "yolo"]],
   ]);
+
   for (const call of exec.mock.calls.filter((c) => c[0] === "bun"))
     expect(call[2]).toStrictEqual({ cwd: dest, stdio: "inherit" });
 });
@@ -65,9 +66,11 @@ globals`, () => {
 it("outside a git work tree runs git init in the dest before the install and says so", () => {
   const dest = tmp("repo-dest-");
   const out: string[] = [];
+
   const exec = fakeExec((cmd, args) => {
     if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
   });
+
   init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
   expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
@@ -93,9 +96,11 @@ it("inside a git work tree does not run git init or print it", () => {
 it("prints that it ran git init on the process's stdout when given no stdout", () => {
   const dest = tmp("repo-git-stdout-");
   const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+
   const exec = fakeExec((cmd, args) => {
     if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
   });
+
   init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
   expect(write.mock.calls.map(([chunk]) => String(chunk))).toContain("repo init: ran git init\n");
   write.mockRestore();

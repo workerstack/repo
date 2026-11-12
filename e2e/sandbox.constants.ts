@@ -9,7 +9,9 @@ export const NATIVE_EXES: ReadonlySet<string> = /* @__PURE__ */ new Set([process
 
 /** Errors a module that fails to resolve or load prints. */
 const LOAD_ERRORS = "ERR_MODULE_NOT_FOUND|Cannot find (?:module|package)|ERR_REQUIRE_ESM|ERR_UNKNOWN_FILE_EXTENSION";
+
 /** Errors code that loaded but is broken prints. */
 const CODE_ERRORS = "SyntaxError|ReferenceError|TypeError: .* is not a function";
+
 /** Output that shows the installed package failed to load or run. */
 export const BROKEN_RUNTIME: Readonly<RegExp> = /* @__PURE__ */ new RegExp(`${LOAD_ERRORS}|${CODE_ERRORS}`);

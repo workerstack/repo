@@ -1,4 +1,4 @@
-import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
 import { isRecord } from "./manifest.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
@@ -10,11 +10,17 @@ import type { RepoRule } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
 type MessageId = "fault" | "unknown";
+
 type Context = TSESLint.RuleContext<MessageId, []>;
 
 /** Whether a node the walk read is one the linter built, as every node under the program it hands a rule is. */
 function isLinted(node: Node): node is Node & TSESTree.Node {
   return Array.isArray(node["range"]);
+}
+
+/** The node as the linter built it, as every node the walk reads is; throws on one that is not, a broken invariant. */
+function linted(node: Node): TSESTree.Node {
+  return ESLintUtils.nullThrows([node].find(isLinted), "the walk reads only nodes the linter built");
 }
 
 /** One file being checked: the names a public entry reaches in it, and how to report a fault on a node. */
@@ -24,32 +30,40 @@ type File = {
   signed: Set<string>;
   report: (node: Node, data: { label: string; entry: string; fault: string }) => void;
 };
+
 /** A reached declaration: its `statement`, the `declaration` inside it and its `name` and `entry`. */
 type Found = { statement: Node; declaration: Node; name: string; entry: string };
 
 /** The names declared as overload signatures (`function f(): void;`), whose implementation carries no doc. */
 function signedNames(body: Node[]): Set<string> {
   const signed = new Set<string>();
+
   for (const statement of body) {
     const declaration = declarationOf(statement);
+
     if (get(declaration, "type") === NODE_TYPES.signature) signed.add(String(get(get(declaration, "id"), "name")));
   }
+
   return signed;
 }
 
 function checkDeclaration(file: File, found: Found): void {
   const { statement, declaration, name, entry } = found;
+
   const walk: Walk = {
     fail: (node, label, fault) => file.report(node, { entry, fault, label }),
     owner: name,
     source: file.source,
   };
+
   const isFunction = declaration["type"] === NODE_TYPES.functionDeclaration;
+
   if (isFunction && file.signed.has(name)) return;
   const variable = nodesOf(declaration["declarations"]).find((item) => get(item["id"], "name") === name);
   check(walk, statement, { label: name, name });
   const annotated = isRecord(get(variable?.["id"], "typeAnnotation"));
   const untyped = variable !== undefined && !annotated && !statesItsType(variable["init"]);
+
   if (untyped || (isFunction && !isRecord(declaration["returnType"]))) walk.fail(statement, name, FAULTS.inferred);
   walkPublic(variable ?? declaration, visitorOf(walk));
 }
@@ -57,9 +71,12 @@ function checkDeclaration(file: File, found: Found): void {
 function checkFile(file: File, body: Node[]): void {
   for (const statement of body) {
     const declaration = declarationOf(statement);
+
     if (declaration === null) continue;
+
     for (const name of declaredNames(statement)) {
       const entry = file.names.get(name);
+
       if (entry !== undefined) checkDeclaration(file, { declaration, entry, name, statement });
     }
   }
@@ -73,38 +90,49 @@ function formOf(form: string): string {
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */
 function checkProgram(context: Context, surface: Surface, program: TSESTree.Program): void {
   const { sourceCode } = context;
+
   const source: Source = {
-    before: (node) => (isLinted(node) ? sourceCode.getCommentsBefore(node) : []),
+    before: (node) => sourceCode.getCommentsBefore(linted(node)),
     text: sourceCode.text,
   };
+
   function report(node: Node, data: Parameters<File["report"]>[1]): void {
-    if (isLinted(node)) context.report({ data, messageId: "fault", node });
+    context.report({ data, messageId: "fault", node: linted(node) });
   }
+
   for (const found of surface.unknown) {
     if (found.file !== context.filename) continue;
     const at = { column: 0, line: found.line };
     context.report({ data: { form: formOf(found.form) }, loc: { end: at, start: at }, messageId: "unknown" });
   }
+
   const names = surface.names.get(context.filename);
   const body = nodesOf(program.body);
+
   if (names !== undefined) checkFile({ names, report, signed: signedNames(body), source }, body);
 }
 
 /** The rule, with the surfaces it has read held in a closure: one read per package per lint run, no module state. */
 function makeRule(): RepoRule<MessageId> {
   const surfaces = new Map<string, Surface>();
+
   function surfaceOf(root: string): Surface {
     const known = surfaces.get(root);
+
     if (known !== undefined) return known;
     const read = publicSurface(root);
     surfaces.set(root, read);
+
     return read;
   }
+
   return {
     create(context) {
       const root = packageRoot(context.filename);
+
       if (root === null) return {};
       const surface = surfaceOf(root);
+
       return { Program: (program) => checkProgram(context, surface, program) };
     },
     defaultOptions: [],
