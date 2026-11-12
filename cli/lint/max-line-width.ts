@@ -84,7 +84,7 @@ function cipherOf(node: Found): Span | undefined {
   if (node.type !== CALL_EXPRESSION || node.callee?.type !== IDENTIFIER || node.callee.name !== SEALED_CALLEE)
     return undefined;
 
-  const [argument, ...rest] = node.arguments ?? [];
+  const [argument, ...rest] = [node.arguments].flat();
 
   if (argument?.type !== LITERAL || typeof argument.value !== "string" || rest.length > 0) return undefined;
 
