@@ -7,7 +7,6 @@ import ts from "typescript";
 
 import { DEFINE_ENV, DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
-import { isRecord } from "../json.ts";
 import { listFiles } from "../list-files.ts";
 import { isTestFile } from "../test-files.ts";
 import { LAST, LAYERS_SYMBOL, SCOPES, SEALED_NAME, SEALED_SYMBOL } from "./env-command.constants.ts";
@@ -215,7 +214,8 @@ export async function loadLayers(root: string, rel: string): Promise<Layers> {
   const parents = parentsOf(configsOf(sourceOf(rel, fs.readFileSync(file, "utf8"))));
 
   const envs = Object.entries(loaded).filter(
-    (entry): entry is [string, LoadedEnv] => isRecord(entry[1]) && LAYERS in entry[1] && !parents.has(entry[0]),
+    (entry): entry is [string, LoadedEnv] =>
+      typeof entry[1] === "object" && entry[1] !== null && LAYERS in entry[1] && !parents.has(entry[0]),
   );
 
   const [, env] = envs.at(LAST) ?? refuse(`${rel} exports no defineEnv env`);

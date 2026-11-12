@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import type { JsonObject } from "../json.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
 import type { HookInput } from "./hook-input.ts";
@@ -67,10 +69,13 @@ export function capSpawnPrompt(prompt: string): string {
   return s.trim();
 }
 
-export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknown> | null {
-  if (!isRecord(toolInput)) return null;
+export function rewriteSpawnToolInput(toolInput: unknown): JsonObject | null {
+  // The tool input is a JSON value of the hook payload; one that is no object has no prompt to rewrite.
+  const input = z.record(z.string(), z.json()).nullable().catch(null).parse(toolInput);
 
-  const next: Record<string, unknown> = Object.assign({}, toolInput);
+  if (input === null) return null;
+
+  const next: JsonObject = Object.assign({}, input);
   let isChanged = false;
 
   if (typeof next.prompt === "string") {
@@ -86,14 +91,14 @@ export function rewriteSpawnToolInput(toolInput: unknown): Record<string, unknow
 }
 
 /** The prompt the spawn goes out with: the rewritten one, else the one sent. */
-function sentPrompt(updated: Record<string, unknown> | null, toolInput: unknown): unknown {
+function sentPrompt(updated: Record<string, unknown> | null, toolInput: Record<string, unknown> | undefined): unknown {
   // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
-  return updated?.prompt ?? (isRecord(toolInput) ? toolInput.prompt : undefined);
+  return updated?.prompt ?? toolInput?.prompt;
 }
 
 export function processHookPayload(data: HookInput | null | undefined): SpawnAnswer | null {
-  if (!isRecord(data)) return null;
-  const toolInput: unknown = data.toolInput ?? data.tool_input;
+  if (data == null) return null;
+  const toolInput = data.toolInput ?? data.tool_input;
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt = sentPrompt(updated, toolInput);
 

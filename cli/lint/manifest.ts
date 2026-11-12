@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
 import { isSource } from "../test-files.ts";
 
 /**
@@ -45,7 +45,7 @@ export function nearestManifest(start: string): string | null {
 }
 
 /** A manifest's bin scripts: `bin` as one path or a map of them; anything else names none. */
-export function binsOf(bin: unknown): string[] {
+export function binsOf(bin: Json | undefined): string[] {
   const all = isRecord(bin) ? Object.values(bin) : [bin];
 
   return all.filter((file) => typeof file === "string");
@@ -65,7 +65,7 @@ function entryMatcher(entry: string): (rel: string) => boolean {
 }
 
 /** Every string under a `bin`, `exports` or other target value. */
-function stringsIn(value: unknown): string[] {
+function stringsIn(value: Json | undefined): string[] {
   if (typeof value === "string") return [value];
 
   if (Array.isArray(value)) return value.flatMap(stringsIn);
@@ -74,7 +74,7 @@ function stringsIn(value: unknown): string[] {
 }
 
 /** Whether npm packs a source file: `files` (a path, directory or glob, minus `!` entries) or a target it names. */
-function shipsOf(raw: Record<string, unknown>): (rel: string) => boolean {
+function shipsOf(raw: JsonObject): (rel: string) => boolean {
   const entries = Array.isArray(raw.files) ? raw.files.filter((entry) => typeof entry === "string") : null;
   const targets = TARGET_FIELDS.flatMap((key) => stringsIn(raw[key])).map(entryMatcher);
 
@@ -96,9 +96,11 @@ function shipsOf(raw: Record<string, unknown>): (rel: string) => boolean {
 }
 
 /** The manifest object at `file`, its name null unless a string; undefined when it is unreadable or no JSON object. */
-function rawManifest(file: string): { name: string | null; [key: string]: unknown } | undefined {
+function rawManifest(file: string): { name: string | null; [key: string]: Json } | undefined {
   try {
-    return tryJson(z.looseObject({ name: z.string().nullable().catch(null) }), fs.readFileSync(file, "utf8"));
+    const schema = z.object({ name: z.string().nullable().catch(null) }).catchall(z.json());
+
+    return tryJson(schema, fs.readFileSync(file, "utf8"));
   } catch {
     return undefined;
   }

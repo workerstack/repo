@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect } from "vitest";
 import { z } from "zod";
 
-import { isRecord, readJson, tryJson } from "../cli/json.ts";
+import { isRecord, type JsonObject, readJson, tryJson } from "../cli/json.ts";
 import { hookConfigSchema } from "./init-helpers";
 import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
@@ -65,15 +65,15 @@ export function runHook(sb: Sandbox, command: string, { payload, cwd, env }: Hoo
   return sb.run("bash", ["-c", run], { env: { ...ROOT_VARS, ...env }, input: JSON.stringify(payload) });
 }
 
-function json(r: Run): Record<string, unknown> {
-  const doc = tryJson(z.record(z.string(), z.unknown()), r.stdout);
+function json(r: Run): JsonObject {
+  const doc = tryJson(z.record(z.string(), z.json()), r.stdout);
 
   if (doc === undefined) throw new Error(`not a JSON object: ${tail(r.out)}`);
 
   return doc;
 }
 
-export function output(r: Run): Record<string, unknown> {
+export function output(r: Run): JsonObject {
   const doc = json(r).hookSpecificOutput;
 
   if (!isRecord(doc)) throw new Error(`no hookSpecificOutput: ${tail(r.out)}`);

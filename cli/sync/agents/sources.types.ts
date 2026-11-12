@@ -1,3 +1,4 @@
+import type { JsonObject } from "../../json.ts";
 import type { ParsedDoc } from "./frontmatter.ts";
 import type { Variant } from "./variants.ts";
 
@@ -30,7 +31,7 @@ export type Kind = "rules" | "subagents";
 /** The hooks file that won, root-relative, and its parsed object. */
 export type HooksSource = {
   rel: string;
-  value: Record<string, unknown>;
+  value: JsonObject;
 };
 
 /** The merged inputs every agent generator reads. */

@@ -1,3 +1,5 @@
+import type { SyntaxNode } from "../syntax-node.ts";
+
 /** A form the walk could not follow, in `file` at `line`: what a rule reports instead of passing it. */
 export type Unknown = { file: string; form: string; line: number };
 
@@ -11,9 +13,6 @@ export type Surface = {
   unknown: Unknown[];
 };
 
-/** A syntax node read from untrusted parser output: every field is checked before it is used. */
-export type Node = Record<string, unknown>;
-
 /** `name` as `source` exports it, or as this file declares it when `source` is null. */
 export type Link = { name: string; source: string | null };
 
@@ -26,7 +25,7 @@ export type Module = {
   code: string;
   exports: Map<string, Link>;
   imports: Map<string, Import>;
-  locals: Map<string, Node[]>;
+  locals: Map<string, SyntaxNode[]>;
   stars: { source: string; at: number }[];
   unknown: { form: string; at: number }[];
 };
@@ -35,7 +34,7 @@ export type Module = {
 export type Resolved =
   | { kind: "external" }
   | { kind: "module"; module: Module }
-  | { kind: "name"; module: Module; name: string; statements: Node[] }
+  | { kind: "name"; module: Module; name: string; statements: SyntaxNode[] }
   | null;
 
 /** A name a declaration's type mentions: through an `import()` type, or by a local name and its first member. */

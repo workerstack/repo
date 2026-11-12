@@ -1,4 +1,5 @@
 /** Drive files, Sheets values and Docs text: the create, read and write verbs. */
+import type { Json } from "../json.ts";
 import { filled, rec } from "./google-workspace-account.ts";
 import { accessToken, gfetch } from "./google-workspace-auth.ts";
 import { apiMessage, fail, jsonRecord, ok } from "./google-workspace-reply.ts";
@@ -16,6 +17,7 @@ import {
   TEXT_TYPE,
 } from "./google-workspace.constants.ts";
 import type { FileSpec, Rec, WorkspaceAccount } from "./google-workspace.types.ts";
+import { jsonText } from "./json-text.ts";
 
 type Opt = string | undefined;
 
@@ -76,7 +78,7 @@ export async function createFile(account: WorkspaceAccount, { kind, title, csv, 
 }
 
 export function fileLine(j: Rec): string {
-  return `${String(j.name)}\n${filled(j.webViewLink) ?? String(j.id)}\nid=${String(j.id)}`;
+  return `${jsonText(j.name)}\n${filled(j.webViewLink) ?? jsonText(j.id)}\nid=${jsonText(j.id)}`;
 }
 
 export function parseCsv(text: string | undefined): string[][] {
@@ -182,14 +184,14 @@ export async function driveList(account: WorkspaceAccount, { query, n }: { query
   const r = await gfetch(account, `${DRIVE}/files?${q.toString()}`);
 
   if (!r.ok) return fail(apiMessage(r.json, "drive list failed"));
-  const files: unknown[] = Array.isArray(r.json.files) ? r.json.files : [];
+  const files: Json[] = Array.isArray(r.json.files) ? r.json.files : [];
 
   if (files.length === 0) return ok("no files");
 
   return ok(
     files
       .map(rec)
-      .map((f) => `${String(f.name)}\t${String(f.id)}\t${filled(f.webViewLink) ?? filled(f.mimeType) ?? ""}`)
+      .map((f) => `${jsonText(f.name)}\t${jsonText(f.id)}\t${filled(f.webViewLink) ?? filled(f.mimeType) ?? ""}`)
       .join("\n"),
   );
 }

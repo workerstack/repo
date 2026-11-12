@@ -3,8 +3,9 @@
  * emitting covers the shapes agent files use: scalars, scalar lists as block sequences and nested maps.
  */
 import { parse } from "yaml";
+import { z } from "zod";
 
-import { isRecord } from "../../json.ts";
+import { isRecord, type Json, type JsonObject } from "../../json.ts";
 import {
   CLAUDE_ANYWHERE,
   CLAUDE_FIRST,
@@ -24,7 +25,7 @@ import {
 
 /** A frontmatter document: the YAML mapping with nullish values removed, and the trimmed body. */
 export type ParsedDoc = {
-  data: Record<string, unknown>;
+  data: JsonObject;
   body: string;
 };
 
@@ -51,24 +52,24 @@ function toLf(text: string): string {
 }
 
 /** A value with its nullish entries dropped: list items, and map values at every level. */
-function cleaned(value: unknown): unknown {
-  if (Array.isArray(value)) return value.filter((item) => item !== null && item !== undefined);
+function cleaned(value: Json): Json {
+  if (Array.isArray(value)) return value.filter((item) => item !== null);
 
   return isRecord(value) ? dropNullish(value) : value;
 }
 
-function dropNullish(map: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+function dropNullish(map: JsonObject): JsonObject {
+  const out: JsonObject = {};
 
-  for (const [key, value] of Object.entries(map)) if (value !== null && value !== undefined) out[key] = cleaned(value);
+  for (const [key, value] of Object.entries(map)) if (value !== null) out[key] = cleaned(value);
 
   return out;
 }
 
 /** The YAML between the fences, parsed; throws an Error naming `rel` and the first line of the YAML error. */
-function parseYaml(rel: string, yaml: string): unknown {
+function parseYaml(rel: string, yaml: string): Json {
   try {
-    return parse(yaml);
+    return z.json().parse(parse(yaml));
   } catch (error) {
     // The first line already names the line and column; the rest is a source excerpt that would split the message.
     const failure = error /* yaml's parse throws only Error subclasses */ as Error;

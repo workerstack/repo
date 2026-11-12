@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import type { Json } from "../json.ts";
 import { readJsonFile } from "../package-json.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import {
@@ -25,14 +26,14 @@ export type InstallIo = { bun: Runner };
 export type Package = { name: string; root: string; installed: Installed };
 
 /** The fields of an installed package.json the checks read. */
-type Installed = { version: string; exports?: unknown; peerDependencies: Record<string, string> };
+type Installed = { version: string; exports?: Json | undefined; peerDependencies: Record<string, string> };
 
 /** Where the old version comes from: a registry (name, version, registry URL) or a tarball on disk. */
 export type OldSpec = { name: string; version: string; registry: string } | { tarball: string };
 
 function installedSchema(): z.ZodType<Installed> {
   return z.object({
-    exports: z.unknown().optional(),
+    exports: z.json().optional(),
     peerDependencies: z.record(z.string(), z.string()).default({}),
     version: z.string(),
   });

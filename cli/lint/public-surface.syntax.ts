@@ -1,5 +1,5 @@
-import { isRecord } from "../json.ts";
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
+import { asNode, type SyntaxNode } from "../syntax-node.ts";
 import {
   BODY,
   DECLARATION,
@@ -14,12 +14,7 @@ import {
   TYPED_INITS,
   VALUE_HOLDERS,
 } from "./public-surface.constants.ts";
-import type { Node, Reference } from "./public-surface.types.ts";
-
-/** `value` as a node, or null when it is no object. */
-export function asNode(value: unknown): Node | null {
-  return isRecord(value) ? value : null;
-}
+import type { Reference } from "./public-surface.types.ts";
 
 /** `value[key]`, or undefined when `value` is no node. */
 export function get(value: unknown, key: string): unknown {
@@ -27,8 +22,11 @@ export function get(value: unknown, key: string): unknown {
 }
 
 /** The nodes in `value`, which is one node, a list of them, or nothing. */
-export function nodesOf(value: unknown): Node[] {
-  return [value].flat().filter(isRecord);
+export function nodesOf(value: unknown): SyntaxNode[] {
+  return [value]
+    .flat()
+    .map(asNode)
+    .filter((node) => node !== null);
 }
 
 /** The name an identifier or a string literal carries. */
@@ -37,16 +35,18 @@ export function nameOf(node: unknown): string {
 }
 
 /** The text of the `from "…"` of an import or export statement. */
-export function sourceText(statement: Node): string {
+export function sourceText(statement: SyntaxNode): string {
   return String(get(get(statement, "source"), "value"));
 }
 
-export function isHiddenMember(node: Node): boolean {
-  return HIDDEN_ACCESS.includes(String(node["accessibility"])) || get(node["key"], "type") === NODE.privateIdentifier;
+export function isHiddenMember(node: SyntaxNode): boolean {
+  const access = String(get(node, "accessibility"));
+
+  return HIDDEN_ACCESS.includes(access) || get(node["key"], "type") === NODE.privateIdentifier;
 }
 
-function skipsChild(node: Node, key: string): boolean {
-  const type = String(node["type"]);
+function skipsChild(node: SyntaxNode, key: string): boolean {
+  const type = String(get(node, "type"));
 
   if (key === PARENT) return true;
 
@@ -61,7 +61,7 @@ function skipsChild(node: Node, key: string): boolean {
 }
 
 /** Walks what a declaration shows a consumer: no function body, no private member, no untyped initializer. */
-export function walkPublic(node: unknown, visit: (node: Node) => boolean): void {
+export function walkPublic(node: unknown, visit: (node: SyntaxNode) => boolean): void {
   if (Array.isArray(node)) {
     for (const child of node) walkPublic(child, visit);
 
@@ -78,14 +78,14 @@ export function walkPublic(node: unknown, visit: (node: Node) => boolean): void 
 }
 
 /** The declaration an export statement carries (null for one that carries none), or the statement itself. */
-export function declarationOf(statement: Node): Node | null {
+export function declarationOf(statement: SyntaxNode): SyntaxNode | null {
   if (statement["type"] !== NODE.exportNamed && statement["type"] !== NODE.exportDefault) return statement;
 
   return asNode(statement["declaration"]);
 }
 
 /** The top-level names a statement declares; an anonymous default declaration declares `default`. */
-export function declaredNames(statement: Node): string[] {
+export function declaredNames(statement: SyntaxNode): string[] {
   const declaration = declarationOf(statement);
 
   if (declaration === null) return [];
@@ -97,7 +97,7 @@ export function declaredNames(statement: Node): string[] {
       .map(nameOf);
   }
 
-  if (!DECLARATION.test(String(declaration["type"])) || declaration["id"] === undefined) return [];
+  if (!DECLARATION.test(String(get(declaration, "type"))) || declaration["id"] === undefined) return [];
 
   if (declaration["type"] === NODE.module) return [];
 
@@ -105,7 +105,7 @@ export function declaredNames(statement: Node): string[] {
 }
 
 /** The node type of the form in `statement` the walk cannot follow, or null when it can follow it. */
-export function unknownForm(statement: Node): string | null {
+export function unknownForm(statement: SyntaxNode): string | null {
   if (statement["type"] === NODE.exportAssignment) return NODE.exportAssignment;
   const declaration = statement["type"] === NODE.exportNamed ? declarationOf(statement) : null;
   const type = get(declaration, "type");
@@ -134,7 +134,7 @@ function chainOf(node: unknown): string[] {
 }
 
 /** The names the type of `statement`'s declaration mentions, minus any a type parameter of its own shadows. */
-export function referencesOf(statement: Node): Reference[] {
+export function referencesOf(statement: SyntaxNode): Reference[] {
   const references: Reference[] = [];
   const shadowed = new Set<string>();
   walkPublic(declarationOf(statement), (node) => {
@@ -143,7 +143,7 @@ export function referencesOf(statement: Node): Reference[] {
     if (node["type"] === NODE.importType)
       references.push({ name: chainOf(node["qualifier"])[0] ?? NAMESPACE, source: sourceText(node) });
 
-    const key = REFERENCE_KEYS[String(node["type"])];
+    const key = REFERENCE_KEYS[String(get(node, "type"))];
     const chain = key === undefined ? [] : chainOf(node[key]);
 
     if (chain[0] !== undefined) references.push({ member: chain[1] ?? null, name: chain[0], source: null });

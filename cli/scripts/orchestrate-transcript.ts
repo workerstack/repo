@@ -3,7 +3,7 @@ import fs from "node:fs";
 
 import { z } from "zod";
 
-import { isRecord, tryJson, type JsonObject } from "../json.ts";
+import { isRecord, type Json, tryJson, type JsonObject } from "../json.ts";
 import { parseClosingLine } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -88,7 +88,7 @@ function isAssistantRecord(obj: JsonObject): boolean {
 }
 
 /** The text parts of a content array, tool calls and results left out; null when none has text. */
-function partsText(content: unknown[]): string | null {
+function partsText(content: Json[]): string | null {
   const texts: string[] = [];
 
   for (const part of content) {
@@ -143,7 +143,7 @@ export function lastAssistantFromTranscript(filePath: string): string {
 
     for (const line of tailLines(filePath)) {
       const t = line.trim();
-      const extracted = t === "" ? null : assistantTextFromRecord(tryJson(z.record(z.string(), z.unknown()), t));
+      const extracted = t === "" ? null : assistantTextFromRecord(tryJson(z.record(z.string(), z.json()), t));
 
       if (extracted !== null) last = extracted;
     }

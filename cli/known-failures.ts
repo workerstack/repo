@@ -10,15 +10,10 @@ import { z } from "zod";
 
 import { tryJson } from "./json.ts";
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
+import { asNode, type SyntaxNode } from "./syntax-node.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
 type Case = { line: number; call: string; title: string | null; name: string | null };
-
-type Node = Record<string, unknown>;
-
-function isNode(value: unknown): value is Node {
-  return typeof value === "object" && value !== null;
-}
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -30,7 +25,17 @@ function lineOf(source: string, at: number) {
 
 /** `value[key]`, or undefined when `value` is no node. */
 function get(value: unknown, key: string): unknown {
-  return isNode(value) ? value[key] : undefined;
+  return asNode(value)?.[key];
+}
+
+/** The items of `value`, which is a list, one value standing for a list of one, or nothing. */
+function itemsOf(value: unknown): unknown[] {
+  return [value].flat();
+}
+
+/** The first item of `value`, read as `itemsOf` reads it. */
+function firstOf(value: unknown): unknown {
+  return itemsOf(value)[0];
 }
 
 /** The identifiers of a callee chain `a.b.c`, root first; null when the chain holds anything else. */
@@ -53,15 +58,15 @@ function titleOf(arg: unknown): string | null {
     return isString(value) ? value : null;
   }
 
-  const bare = get(arg, "type") === NODE.template && get(get(arg, "expressions"), "length") === 0;
+  const bare = get(arg, "type") === NODE.template && itemsOf(get(arg, "expressions")).length === 0;
 
-  return bare ? String(get(get(get(get(arg, "quasis"), "0"), "value"), "cooked")) : null;
+  return bare ? String(get(get(firstOf(get(arg, "quasis")), "value"), "cooked")) : null;
 }
 
 type Scope = (string | null)[];
 
-function caseOf(node: Node, scope: Scope, source: string): Case {
-  const title = titleOf(get(get(node, "arguments"), "0"));
+function caseOf(node: SyntaxNode, scope: Scope, source: string): Case {
+  const title = titleOf(firstOf(get(node, "arguments")));
   const start = Number(get(node, "start"));
   const end = Number(get(get(node, "callee"), "end"));
   const named = title === null || scope.includes(null) ? null : [...scope, title].join(SEPARATOR);
@@ -70,10 +75,10 @@ function caseOf(node: Node, scope: Scope, source: string): Case {
 }
 
 /** The scope inside `node`: a `describe` call adds its title (null when it is no literal). */
-function scopeOf(node: Node, chain: string[] | null, scope: Scope): Scope {
+function scopeOf(node: SyntaxNode, chain: string[] | null, scope: Scope): Scope {
   if (chain?.[0] !== DESCRIBE) return scope;
 
-  return [...scope, titleOf(get(get(node, "arguments"), "0"))];
+  return [...scope, titleOf(firstOf(get(node, "arguments")))];
 }
 
 function isFailsCall(chain: string[] | null): chain is string[] {
@@ -91,13 +96,15 @@ function collect(node: unknown, scope: Scope, walk: Walk): void {
     return;
   }
 
-  if (!isNode(node)) return;
-  const chain = node["type"] === NODE.call ? chainOf(node["callee"]) : null;
+  const found = asNode(node);
 
-  if (isFailsCall(chain)) walk.out.push(caseOf(node, scope, walk.source));
-  const inner = scopeOf(node, chain, scope);
+  if (found === null) return;
+  const chain = found["type"] === NODE.call ? chainOf(found["callee"]) : null;
 
-  for (const child of Object.values(node)) collect(child, inner, walk);
+  if (isFailsCall(chain)) walk.out.push(caseOf(found, scope, walk.source));
+  const inner = scopeOf(found, chain, scope);
+
+  for (const child of Object.values(found)) collect(child, inner, walk);
 }
 
 function casesOf(rel: string, source: string): Case[] {

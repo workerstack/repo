@@ -9,6 +9,7 @@ import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
 import { applyEdits, modify, parse } from "jsonc-parser";
+import { z } from "zod";
 
 import { isRecord, type JsonObject } from "../json.ts";
 import { AGENTS_FILE } from "./agents-file.constants.ts";
@@ -286,7 +287,11 @@ function overlaySource(root: string): Source | null {
  */
 function policySource(root: string): Source | null {
   const text = readOrNull(root, POLICY);
-  const policy: unknown = text === null ? null : parse(text);
+
+  const policy = z
+    .json()
+    .catch(null)
+    .parse(text === null ? null : parse(text));
 
   if (text === null || !isRecord(policy) || !Object.hasOwn(policy, SERVERS_KEY)) return null;
   const servers = policy[SERVERS_KEY];

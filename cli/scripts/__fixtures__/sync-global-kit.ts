@@ -10,6 +10,7 @@ import { afterEach, vi } from "vitest";
 import { bunPath } from "../../../dev/test-paths";
 import { childEnv } from "../../env.ts";
 import { tempDir } from "../../sync/__fixtures__/temp-dirs.ts";
+import type { SettingsValue } from "../settings-table.ts";
 
 /** Planted dirs under the OS temp dir, removed after each case; nothing here touches the real home. */
 export function plantDirs(): (prefix: string) => string {
@@ -82,7 +83,7 @@ export const CLAUDE = HOSTS[1];
 
 /** The keys the tests read back from a written dest; each host's file holds only its own. */
 export type DestKeys = {
-  keepMe: unknown;
+  keepMe: SettingsValue;
   approvalMode: string;
   permissions: { defaultMode: string };
   skipDangerousModePermissionPrompt: boolean;

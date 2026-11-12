@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { HOSTS } from "../../config.ts";
+import type { Json } from "../../json.ts";
 import { at, hooksOf, keysAt, parsed } from "../__fixtures__/hooks-kit.ts";
 import { renderHooks } from "./render-hooks.ts";
 
@@ -106,7 +107,10 @@ it("drops the matcher on claude's matcher-less events but keeps each matcher's g
   const files = renderHooks(
     hooksOf({
       hooks: Object.fromEntries(
-        [...noMatcher, "subagentStop"].map((event) => [event, [{ command: "a", matcher: "x" }, { command: "b" }]]),
+        [...noMatcher, "subagentStop"].map((event): [string, Json] => [
+          event,
+          [{ command: "a", matcher: "x" }, { command: "b" }],
+        ]),
       ),
     }),
     ["claude"],

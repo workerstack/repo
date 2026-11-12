@@ -1,9 +1,10 @@
 /** What `repo purge-mcps` would change in each global dest, planned without writing. */
 import fs from "node:fs";
 
-import { parse as parseToml } from "smol-toml";
+import { parse as parseToml, type TomlTable } from "smol-toml";
 import { z } from "zod";
 
+import { isTomlTable } from "../is-toml-table.ts";
 import { isRecord, tryJson, type JsonObject } from "../json.ts";
 import {
   ALREADY_CLEAN,
@@ -52,20 +53,20 @@ function readDest(abs: string): string | null {
   try {
     return fs.readFileSync(abs, "utf8");
   } catch (err) {
-    if (isRecord(err) && err.code === NOT_FOUND) return null;
+    if (err instanceof Error && "code" in err && err.code === NOT_FOUND) return null;
     throw unreadable(abs);
   }
 }
 
 function parseJsonObject(raw: string, abs: string): JsonObject {
-  const parsed = tryJson(z.record(z.string(), z.unknown()), raw);
+  const parsed = tryJson(z.record(z.string(), z.json()), raw);
 
   if (parsed === undefined) throw unreadable(abs);
 
   return parsed;
 }
 
-function parseTomlObject(raw: string, abs: string): JsonObject {
+function parseTomlObject(raw: string, abs: string): TomlTable {
   try {
     return parseToml(raw);
   } catch {
@@ -74,8 +75,8 @@ function parseTomlObject(raw: string, abs: string): JsonObject {
 }
 
 /** A copy of the config's [plugins] table, {} when it has none; a [plugins] that is no table is unreadable. */
-function pluginsOf(obj: JsonObject, abs: string): JsonObject {
-  if (isRecord(obj.plugins)) return { ...obj.plugins };
+function pluginsOf(obj: TomlTable, abs: string): TomlTable {
+  if (isTomlTable(obj.plugins)) return { ...obj.plugins };
 
   if (obj.plugins != null) throw unreadable(abs);
 
@@ -83,7 +84,7 @@ function pluginsOf(obj: JsonObject, abs: string): JsonObject {
 }
 
 /** Moves PLUGIN_IDS from [plugins].enabled to [plugins].disabled on `next`; returns what changed. */
-function grokPlugins(obj: JsonObject, next: JsonObject, abs: string): string[] {
+function grokPlugins(obj: TomlTable, next: TomlTable, abs: string): string[] {
   const plugins = pluginsOf(obj, abs);
   const enabled = strList(plugins.enabled, abs);
   const disabled = strList(plugins.disabled, abs);
@@ -109,7 +110,7 @@ function grokPlugins(obj: JsonObject, next: JsonObject, abs: string): string[] {
 }
 
 /** Adds DISABLE_MCP to a list (or missing) disabled_mcp_servers on `next`; returns what changed. */
-function grokMcp(next: JsonObject, abs: string): string[] {
+function grokMcp(next: TomlTable, abs: string): string[] {
   const current = next[MCP_KEY];
 
   if (current != null && !Array.isArray(current)) return [];

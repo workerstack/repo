@@ -4,13 +4,13 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, tryJson } from "../json.ts";
 import { ENGINES, ERROR_PREFIX, JSON_INDENT, SESSION_FILE, SESSION_REL } from "./browser.constants.ts";
 import type { BrowserResult, Engine, Rec, RefEntry, Session } from "./browser.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** `v` when it is a record, else an empty one. */
-export function asRec(v: unknown): Rec {
+export function asRec(v: Json | undefined): Rec {
   return isRecord(v) ? v : {};
 }
 
@@ -33,9 +33,14 @@ export function filled(s: string | undefined): string | undefined {
   return s === "" ? undefined : s;
 }
 
+/** The port a server listening on TCP is bound to; `server.address()` is a pipe path or null only off TCP. */
+export function boundPort(address: unknown): number {
+  return z.object({ port: z.number() }).parse(address).port;
+}
+
 /** The message of a thrown value. */
 export function errMessage(e: unknown): string {
-  return String(asRec(e).message);
+  return e instanceof Error ? e.message : String(e);
 }
 
 /** The session dir under the root `cwd` sits in. */
@@ -55,7 +60,7 @@ function sessionSchema() {
   const text = z.union([z.string(), z.number(), z.boolean()]).transform(String).catch("");
 
   const ref = z
-    .object({ backendNodeId: z.unknown().optional(), name: text, nodeId: z.unknown().optional(), role: text })
+    .object({ backendNodeId: z.json().optional(), name: text, nodeId: z.json().optional(), role: text })
     .transform((e): RefEntry => ({ backendNodeId: e.backendNodeId, name: e.name, nodeId: e.nodeId, role: e.role }));
 
   return z.object({

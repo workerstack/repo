@@ -21,6 +21,7 @@ import {
   writeFake,
 } from "./__fixtures__/browser-kit.ts";
 import { navigated } from "./__fixtures__/browser-nav-kit.ts";
+import { jsonText } from "./json-text.ts";
 
 afterEach(cleanBrowser);
 
@@ -112,7 +113,7 @@ it("click and hover act on the resolved node", async () => {
     objectId: "oid-10",
   });
   expect(nth(callParams(t.calls), 1)).toMatchObject({ objectId: "oid-11" });
-  expect(String(nth(callParams(t.calls), 1).functionDeclaration)).toContain("mouseover");
+  expect(jsonText(nth(callParams(t.calls), 1).functionDeclaration)).toContain("mouseover");
 });
 
 it("fill focuses, clears, inserts the joined words, then fires input", async () => {
@@ -126,8 +127,8 @@ it("fill focuses, clears, inserts the joined words, then fires input", async () 
     "Runtime.callFunctionOn",
   ]);
   expect(nth(t.calls, 2).params).toStrictEqual({ text: "hello big world" });
-  expect(String(nth(callParams(t.calls), 0).functionDeclaration)).toContain("this.focus()");
-  expect(String(nth(callParams(t.calls), 1).functionDeclaration)).toContain("'input'");
+  expect(jsonText(nth(callParams(t.calls), 0).functionDeclaration)).toContain("this.focus()");
+  expect(jsonText(nth(callParams(t.calls), 1).functionDeclaration)).toContain("'input'");
 });
 
 it("select sets the value and fires change", async () => {
@@ -139,7 +140,7 @@ it("select sets the value and fires change", async () => {
     arguments: [{ value: "opt a" }],
     objectId: "oid-11",
   });
-  expect(String(call.functionDeclaration)).toContain("'change'");
+  expect(jsonText(call.functionDeclaration)).toContain("'change'");
 });
 
 it("click calls a ref stale when it does not resolve to an object", async () => {

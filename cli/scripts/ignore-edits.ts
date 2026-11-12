@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
 import {
   COMMENT_MARK,
   DELETE_FILE,
@@ -51,7 +52,8 @@ function firstString(values: unknown[]): string | undefined {
 
 /** `text` after one search/replace, or null when its old string is missing. */
 function applyEdit(text: string, edit: unknown): string | null {
-  const e: ToolArgs = isRecord(edit) ? edit : {};
+  // Each edit is a JSON value of the hook payload; one that is no object has no strings.
+  const e = z.record(z.string(), z.json()).catch({}).parse(edit);
   const oldStr = firstString([e.old_string, e.oldString, e.Target]);
   const newStr = firstString([e.new_string, e.newString, e.Replacement]);
 

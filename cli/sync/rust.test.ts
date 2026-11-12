@@ -1,8 +1,9 @@
-import { parse } from "smol-toml";
+import { parse, type TomlTable } from "smol-toml";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import type { Pack } from "../config.ts";
+import { isTomlTable } from "../is-toml-table.ts";
 import type { SyncContext } from "./outputs.ts";
 import { rust } from "./rust.ts";
 
@@ -14,6 +15,13 @@ function context(packs: Pack[], files: Record<string, string>): SyncContext {
     root: "/work",
     workspace: { manifest: {}, packages: [], root: "/work" },
   };
+}
+
+/** The table at `key` in `parsed`, or an empty one when `key` holds no table. */
+function tableAt(parsed: TomlTable, key: string): TomlTable {
+  const table = parsed[key];
+
+  return isTomlTable(table) ? table : {};
 }
 
 const DENY = `[graph]
@@ -83,21 +91,19 @@ it("writes the toolchain pin, the rustfmt defaults and the clippy limits as untr
 it("writes a deny.toml that parses to the supply-chain policy", () => {
   const out = rust(context(["standards"], { "Cargo.toml": "" })).outputs.find((o) => o.path === "deny.toml");
 
-  const parsed = parse(out?.kind === "file" ? out.content : "") /* smol-toml returns plain tables */ as Record<
-    string,
-    Record<string, unknown>
-  >;
+  const parsed = parse(out?.kind === "file" ? out.content : "");
+  const licenses = tableAt(parsed, "licenses");
 
   expect(Object.keys(parsed)).toStrictEqual(["graph", "advisories", "licenses", "bans", "sources"]);
-  expect({ ...parsed.advisories }).toStrictEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
-  expect(parsed.licenses?.allow).toContain("Apache-2.0 WITH LLVM-exception");
-  expect(JSON.stringify(parsed.licenses?.private)).toBe(JSON.stringify({ ignore: true }));
-  expect({ ...parsed.bans }).toStrictEqual({
+  expect({ ...tableAt(parsed, "advisories") }).toStrictEqual({ unmaintained: "all", unsound: "all", yanked: "deny" });
+  expect(licenses["allow"]).toContain("Apache-2.0 WITH LLVM-exception");
+  expect(JSON.stringify(licenses["private"])).toBe(JSON.stringify({ ignore: true }));
+  expect({ ...tableAt(parsed, "bans") }).toStrictEqual({
     "allow-wildcard-paths": true,
     "multiple-versions": "warn",
     wildcards: "deny",
   });
-  expect({ ...parsed.sources }).toStrictEqual({ "unknown-git": "deny", "unknown-registry": "deny" });
+  expect({ ...tableAt(parsed, "sources") }).toStrictEqual({ "unknown-git": "deny", "unknown-registry": "deny" });
 });
 
 it("writes nothing without a root Cargo.toml", () => {

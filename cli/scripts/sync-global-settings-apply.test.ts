@@ -4,10 +4,10 @@ import path from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { expect, it } from "vitest";
 
-import { isRecord } from "../json.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import type { DestKeys } from "./__fixtures__/sync-global-kit.ts";
 import { CLAUDE, HOSTS, readHostDest, repoRoot, writeHostDest } from "./__fixtures__/sync-global-kit.ts";
+import { isSettingsTable } from "./settings-table.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
 useTempDirs();
@@ -78,7 +78,7 @@ it.each(HOSTS)("$id: unrelated dest keys survive apply", (h) => {
   expect(r.ok).toBe(true);
   // A TOML table parses with no prototype; spread it into a plain object so only its keys and values are compared.
   const { keepMe } = readHostDest(home, h);
-  expect(isRecord(keepMe) ? { ...keepMe } : keepMe).toStrictEqual({ nested: true });
+  expect(isSettingsTable(keepMe) ? { ...keepMe } : keepMe).toStrictEqual({ nested: true });
 });
 
 it("cursor: the payload wins over a dest key", () => {

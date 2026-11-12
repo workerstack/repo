@@ -1,3 +1,4 @@
+import type { Json } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 
 export type JevResult = {
@@ -47,7 +48,7 @@ export type Ledger = {
 
 export type PostResult = {
   status: number;
-  json: unknown;
+  json: Json;
   headers: HeadersLike | null | undefined;
 };
 

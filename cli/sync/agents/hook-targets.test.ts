@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 
+import type { Json } from "../../json.ts";
 import { hooksOf, keysAt, parsed } from "../__fixtures__/hooks-kit.ts";
 import { renderHooks } from "./render-hooks.ts";
 
 it("writes each claude hook type with its payload, drops other types and keeps an existing $schema", () => {
-  const preToolUse = [
+  const preToolUse: Json[] = [
     { allowedEnvVars: ["E"], headers: { a: "b" }, timeout: null, type: "http", url: "u" },
     { input: { k: 1 }, server: "s", tool: "t", type: "mcp_tool" },
     { model: "m", prompt: "p", timeout: 9, type: "prompt" },
@@ -34,7 +35,7 @@ it("writes each claude hook type with its payload, drops other types and keeps a
   });
 });
 
-const CODEX_DEFS = [
+const CODEX_DEFS: Json[] = [
   { command: "c", description: "d", name: "n", timeout: 1 },
   { input: { k: [1] }, server: "s", tool: "t", type: "mcp_tool" },
   { prompt: "unsupported", type: "prompt" },

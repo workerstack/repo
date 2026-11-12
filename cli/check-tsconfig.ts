@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import ts from "typescript";
+import { z } from "zod";
 
 import { isRecord } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
@@ -163,17 +164,18 @@ function problems({ cwd, listed, reset }: Scan, rel: string): string[] {
 }
 
 /** The keys of a package.json or tsconfig this check reads; typescript parses a JSON file's root as an object. */
-type RawConfig = { scripts?: unknown; extends?: unknown; references?: unknown };
-
-function isRawConfig(value: unknown): value is RawConfig {
-  return value instanceof Object;
+/** The fields a config or package.json is read for, each any JSON or absent; another top-level shape reads as `{}`. */
+function rawConfigSchema() {
+  return z
+    .object({ extends: z.json().optional(), references: z.json().optional(), scripts: z.json().optional() })
+    .catch({});
 }
 
 /** The raw JSON object at `cwd`/`rel`, empty when it is missing or unreadable. */
-function readRaw(cwd: string, rel: string): RawConfig {
+function readRaw(cwd: string, rel: string): z.output<ReturnType<typeof rawConfigSchema>> {
   const read = ts.readConfigFile(tsPath(cwd, rel), readText);
 
-  return read.error === undefined && isRawConfig(read.config) ? read.config : {};
+  return read.error === undefined ? rawConfigSchema().parse(read.config) : {};
 }
 
 /** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */

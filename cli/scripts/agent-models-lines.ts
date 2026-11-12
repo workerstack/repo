@@ -4,7 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { codexOffered, MODEL_LISTS } from "./doctor-lists.ts";
@@ -137,7 +136,7 @@ async function listedModels(cli: ListCli, { run, signal, capped, capMs }: Ask): 
 
     return found.length > 0 ? { ids: found } : { skip: `${cli} models failed: no models listed` };
   } catch (err) {
-    if (isRecord(err) && err.code === ENOENT) return { skip: `${cli} not installed` };
+    if (err instanceof Error && "code" in err && err.code === ENOENT) return { skip: `${cli} not installed` };
 
     return { skip: `${cli} models failed: ${errorText(err).split("\n")[0]}` };
   }

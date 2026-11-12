@@ -148,3 +148,11 @@ it("still maps a build config with an unknown option or an extends it cannot res
     expect(uses).toStrictEqual({ kit: ["src/client.ts"] });
   }
 });
+
+it("finds no entry and no missing key for a package with no exports, types, typings or main", () => {
+  const { uses, keys, missing } = surfaceOf({ files: { "index.d.ts": KIT_TYPE }, installed: KIT, manifest: BASE });
+
+  expect(uses).toStrictEqual({});
+  expect(keys).toStrictEqual({});
+  expect(missing).toStrictEqual([]);
+});

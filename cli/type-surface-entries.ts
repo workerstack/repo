@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { buildOutputs } from "./build-outputs.ts";
-import { isRecord } from "./json.ts";
+import { isRecord, type Json, type JsonObject } from "./json.ts";
 import { packedUnder } from "./packed-under.ts";
 import { CURRENT_DIR, JSON_FILE, ROOT_KEY, STAR, TYPES_CONDITION } from "./release/consumer.constants.ts";
 import { exportSubpaths } from "./release/exports.ts";
@@ -46,7 +46,7 @@ type Target = { pattern: string; mode: Mode | null };
 type Context = {
   dir: string;
   build: Map<string, string> | undefined;
-  files: unknown;
+  files: Json | undefined;
   keys: string[];
   entries: Entries;
 };
@@ -55,10 +55,10 @@ type Context = {
 type Matches = { isMatched: boolean; matches: (readonly [string, string])[] };
 
 /** The `exports` field as a map of keys; a string, array or condition object stands for the root key. */
-function keyMapOf(exports: unknown): Record<string, unknown> {
+function keyMapOf(exports: Json | undefined): JsonObject {
   if (isRecord(exports) && Object.keys(exports).every((key) => key.startsWith(ROOT_KEY))) return exports;
 
-  return { [ROOT_KEY]: exports };
+  return { [ROOT_KEY]: exports ?? null };
 }
 
 function modeOf(file: string): Mode | null {
@@ -69,7 +69,7 @@ function modeOf(file: string): Mode | null {
   return SCRIPT.test(file) ? "sibling" : null;
 }
 
-function targetOf(value: unknown): Target | null {
+function targetOf(value: Json): Target | null {
   const [subpath] = exportSubpaths({ [ROOT_KEY]: value }, []).subpaths;
 
   if (subpath === undefined) {

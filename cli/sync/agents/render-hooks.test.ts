@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { HOSTS, type Host } from "../../config.ts";
+import type { Json } from "../../json.ts";
 import {
   BASE_REL,
   CONSUMER,
@@ -104,7 +105,7 @@ it("writes an empty antigravity object and cursor version 1 when there are no ho
 });
 
 it("maps cursor entries flat, keeping command and prompt handlers only", () => {
-  const stop = [
+  const stop: Json[] = [
     { command: "a", failClosed: true, loop_limit: 3, matcher: "", timeout: null },
     { loop_limit: null, model: "x", prompt: "p", timeout: 3, type: "prompt" },
     { command: "b", model: "ignored", type: "command" },

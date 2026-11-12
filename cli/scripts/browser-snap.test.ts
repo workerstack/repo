@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import type { Json, JsonObject } from "../json.ts";
 import {
   cleanBrowser,
   deadPid,
@@ -31,7 +32,7 @@ it("snap fails without a session or with a dead pid", async () => {
 });
 
 it("snap numbers the ref-bearing nodes in either ax shape, spells number and boolean names, keeps them", async () => {
-  const axNodes = [
+  const axNodes: Json[] = [
     { backendNodeId: 5, name: "Go", nodeId: "a", role: "button" },
     { backendDOMNodeId: 6, name: { value: "" }, role: { value: "LINK" } },
     { name: { value: "H" }, role: { value: "heading" } },
@@ -65,7 +66,7 @@ it("snap ends a ref-less page without doubling the newline", async () => {
 });
 
 it("snap falls back to a bare url heading when the markdown call fails or answers oddly", async () => {
-  const replies = ["boom", {}, { markdown: 5 }, { markdown: "" }];
+  const replies: (string | JsonObject)[] = ["boom", {}, { markdown: 5 }, { markdown: "" }];
 
   const outs = await Promise.all(
     replies.map(async (reply) => {

@@ -8,7 +8,7 @@
 import { z } from "zod";
 
 import type { Host } from "../../config.ts";
-import { readJson, type JsonObject } from "../../json.ts";
+import { type Json, type JsonObject, readJson } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { ANTIGRAVITY, CLAUDE, CODEX } from "./hook-targets.ts";
 import {
@@ -74,11 +74,18 @@ function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Gro
 /** The stock settings with `hooks` replaced in place (else appended) and `$schema` first when missing. */
 function claudeSettings(base: string, hooks: JsonObject): JsonObject {
   const settings: JsonObject = {
-    ...readJson(z.record(z.string(), z.unknown()), base),
+    ...readJson(z.record(z.string(), z.json()), base),
     hooks,
   };
 
   return "$schema" in settings ? settings : { $schema: CLAUDE_SCHEMA, ...settings };
+}
+
+/** Whether a cursor field is written: set, and not null unless it is `loop_limit`. */
+function isWritten(entry: [string, Json | undefined]): entry is [string, Json] {
+  const [key, value] = entry;
+
+  return value !== undefined && (value !== null || key === LOOP_LIMIT);
 }
 
 /**
@@ -88,7 +95,7 @@ function claudeSettings(base: string, hooks: JsonObject): JsonObject {
 function cursorEntry(def: Def): JsonObject {
   const { type, command, timeout, matcher, prompt, model, failClosed } = def;
 
-  const entry = {
+  const entry: Record<string, Json | undefined> = {
     command: typeof command === "string" ? expandHookCommand(command) : command,
     failClosed,
     loop_limit: def[LOOP_LIMIT],
@@ -99,9 +106,7 @@ function cursorEntry(def: Def): JsonObject {
     type,
   };
 
-  return Object.fromEntries(
-    Object.entries(entry).filter(([key, value]) => value !== undefined && (value !== null || key === LOOP_LIMIT)),
-  );
+  return Object.fromEntries(Object.entries(entry).filter(isWritten));
 }
 
 /**
@@ -122,7 +127,7 @@ function cursorHooks(config: JsonObject): JsonObject {
 
 /** Antigravity's file: its flat events as bare handler lists, `{}` when no event is left. */
 function antigravityFile(config: JsonObject): JsonObject {
-  const flat = Object.entries(toolHooks(config, ANTIGRAVITY)).map(([event, groups]) => [
+  const flat = Object.entries(toolHooks(config, ANTIGRAVITY)).map(([event, groups]): [string, Json] => [
     event,
     ANTIGRAVITY_FLAT.has(event) ? groups.flatMap((group) => group.hooks) : groups,
   ]);

@@ -46,7 +46,7 @@ export function parseArgv(argv: unknown): ParsedArgv {
 /** The JSON object at `p`, or an empty one when it is missing, broken or not an object. */
 export function readObjectFile(p: string): JsonObject {
   try {
-    return tryJson(z.record(z.string(), z.unknown()), fs.readFileSync(p, "utf8")) ?? {};
+    return tryJson(z.record(z.string(), z.json()), fs.readFileSync(p, "utf8")) ?? {};
   } catch {
     return {};
   }

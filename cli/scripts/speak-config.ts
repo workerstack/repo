@@ -2,6 +2,7 @@
 import os from "node:os";
 import path from "node:path";
 
+import type { JsonObject } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import {
   DEFAULT_ELEVEN_MODEL,
@@ -28,7 +29,7 @@ function isSet(key: string | undefined): key is string {
 }
 
 /** The ElevenLabs fields; the file's flat fields are the fallback for its section. */
-function elevenOf(env: Env, file: Record<string, unknown>): SpeakCfg["elevenlabs"] {
+function elevenOf(env: Env, file: JsonObject): SpeakCfg["elevenlabs"] {
   const eleven = section(file, ELEVENLABS);
 
   return {
@@ -38,7 +39,7 @@ function elevenOf(env: Env, file: Record<string, unknown>): SpeakCfg["elevenlabs
   };
 }
 
-function openaiOf(env: Env, file: Record<string, unknown>): SpeakCfg["openai"] {
+function openaiOf(env: Env, file: JsonObject): SpeakCfg["openai"] {
   const openai = section(file, OPENAI);
 
   return {

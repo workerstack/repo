@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
 import { childEnv } from "../env.ts";
 import {
@@ -110,9 +111,11 @@ function shippedFiles(root: string) {
 
 /** Every command in the generated hook files and the stock source under `root`. */
 function commandsOf(root: string): Set<string> {
+  const hooksSource = fs.readFileSync(path.join(root, "agents/hooks.jsonc"), "utf8");
+
   return new Set([
     ...shippedFiles(root).flatMap((f) => allCommands(readJson(root, f))),
-    ...allCommands(JSON.parse(stripJsonc(fs.readFileSync(path.join(root, "agents/hooks.jsonc"), "utf8")))),
+    ...allCommands(z.json().parse(JSON.parse(stripJsonc(hooksSource)))),
   ]);
 }
 

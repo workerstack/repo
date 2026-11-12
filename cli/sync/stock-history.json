@@ -2208,7 +2208,7 @@
   "cli/scripts/__fixtures__/bench/remote-only.bench.ts": ["417060a952f1bc79"],
   "cli/scripts/__fixtures__/bench/startup.bench.ts": ["f8ebacc525169da3"],
   "cli/scripts/__fixtures__/board-kit.ts": ["28cc65f3b7765fa9"],
-  "cli/scripts/__fixtures__/browser-kit.ts": ["5f6f16668ff571ef", "724c8a9721086640"],
+  "cli/scripts/__fixtures__/browser-kit.ts": ["0f2297eeb3ee7fb6", "5f6f16668ff571ef", "724c8a9721086640"],
   "cli/scripts/__fixtures__/browser-nav-kit.ts": ["36d304033bb7065f"],
   "cli/scripts/__fixtures__/browser-ws-kit.ts": ["75a00a1328938a60"],
   "cli/scripts/__fixtures__/check-globals-kit.ts": ["1dd2b666f08695b2"],
@@ -2224,7 +2224,12 @@
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
   "cli/scripts/__fixtures__/gate-workspace.ts": ["fe6b45a1b4405eac"],
-  "cli/scripts/__fixtures__/google-workspace-kit.ts": ["5bfb0752c4cc4320", "8e8fa59fd7e8b8fd", "a402920a54b138ab"],
+  "cli/scripts/__fixtures__/google-workspace-kit.ts": [
+    "5bfb0752c4cc4320",
+    "8e8fa59fd7e8b8fd",
+    "a402920a54b138ab",
+    "c7b8918a421721b4"
+  ],
   "cli/scripts/__fixtures__/hook-payload.ts": ["665d3d2e20a4edbd"],
   "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d", "abffba7aed8b4a74"],
   "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
@@ -2237,7 +2242,7 @@
   "cli/scripts/__fixtures__/lessons-kit.ts": ["d4f284c6eb69d05b"],
   "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
   "cli/scripts/__fixtures__/lint-scripts-kit.ts": ["6d3a41ab5cb8d68b"],
-  "cli/scripts/__fixtures__/listen-env.ts": ["0aa69c297b2cecb0", "215dd279c1180218"],
+  "cli/scripts/__fixtures__/listen-env.ts": ["0aa69c297b2cecb0", "16fd1c18f718d137", "215dd279c1180218"],
   "cli/scripts/__fixtures__/mcp-base-policy.ts": ["4c75b546d03187b2"],
   "cli/scripts/__fixtures__/mcp-policy-kit.ts": ["e3b71c080e827a67"],
   "cli/scripts/__fixtures__/orchestrate-kit.ts": ["7eaf3bd728256df0"],
@@ -2253,7 +2258,7 @@
   "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c"],
   "cli/scripts/__fixtures__/push-repo.ts": ["3c3b3cda1721dbfa"],
   "cli/scripts/__fixtures__/real-dir.ts": ["a060c156a3eee345"],
-  "cli/scripts/__fixtures__/review-plan.ts": ["9aba6d098a569a99", "d6318a681e3eecb7"],
+  "cli/scripts/__fixtures__/review-plan.ts": ["8d882adc88cfe399", "9aba6d098a569a99", "d6318a681e3eecb7"],
   "cli/scripts/__fixtures__/run-hook.ts": ["9d4322ef51dfba86"],
   "cli/scripts/__fixtures__/run-persist-cli.ts": ["51360b04801d42cb"],
   "cli/scripts/__fixtures__/scrub-kit.ts": ["cf6cc15b999f422d"],
@@ -2264,7 +2269,7 @@
   "cli/scripts/__fixtures__/spawn-transcript.txt": ["79d64e832f5c1eff"],
   "cli/scripts/__fixtures__/speak-kit.ts": ["cd0e91c7f9ebf198"],
   "cli/scripts/__fixtures__/stub-process-stdio.ts": ["03b54bfc63a58f8b"],
-  "cli/scripts/__fixtures__/sync-global-kit.ts": ["d63287bd4d60ec6c", "e826278ff2cfea8a"],
+  "cli/scripts/__fixtures__/sync-global-kit.ts": ["8397de75caeda08c", "d63287bd4d60ec6c", "e826278ff2cfea8a"],
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
   "cli/scripts/__fixtures__/turn-repo.ts": ["674678a101b27cd8", "a41ab18e37a943f4"],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
@@ -2272,6 +2277,7 @@
   "cli/scripts/__fixtures__/worktree-repo.ts": ["ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": [
+    "1531dd871777c4bb",
     "37168a84b44b2f75",
     "6acb8d09ff8de4a7",
     "a6c16720c2a1eb27",
@@ -2352,17 +2358,24 @@
     "d4f3a633044cd382",
     "e570782980951363"
   ],
-  "cli/scripts/board.types.ts": ["24c1bbd631189cfc", "959b28973c4e9acc"],
-  "cli/scripts/browser-act.ts": ["72343fc6e8b164f7", "aee78935f31b0c0a", "e3331ee44fc1dbd9"],
+  "cli/scripts/board.types.ts": ["24c1bbd631189cfc", "959b28973c4e9acc", "e61a65f9531e61a4"],
+  "cli/scripts/browser-act.ts": ["6af14a2a7859fc84", "72343fc6e8b164f7", "aee78935f31b0c0a", "e3331ee44fc1dbd9"],
   "cli/scripts/browser-cdp.test.ts": [
     "0bebe9beae3b3916",
+    "13543bfdbccd3496",
     "18156810ef17dfec",
     "1ede78c8d089dec3",
     "3e0bd81e44322cf6",
     "58827b18846cb1db",
     "97d91b5d131af396"
   ],
-  "cli/scripts/browser-cdp.ts": ["2bef980c99a1e288", "6963c1e873d3ccdc", "8ec68d78ed43ce76", "ac695858789e1cb6"],
+  "cli/scripts/browser-cdp.ts": [
+    "2bef980c99a1e288",
+    "36818b16ef06ec8f",
+    "6963c1e873d3ccdc",
+    "8ec68d78ed43ce76",
+    "ac695858789e1cb6"
+  ],
   "cli/scripts/browser-doctor.test.ts": [
     "1b42610d034e327e",
     "3ccba974cb42bd89",
@@ -2371,7 +2384,13 @@
     "d8670aa90c94bc54"
   ],
   "cli/scripts/browser-engine.ts": ["1649dd40961c5077", "5e9d199e9aab7080", "96b5555d79999c9e", "caec6a2f3abbfe03"],
-  "cli/scripts/browser-input.test.ts": ["499efade503f6568", "4a974b2329bfd135", "9528300cd5cabec3", "bbbdccb6e99e88ef"],
+  "cli/scripts/browser-input.test.ts": [
+    "499efade503f6568",
+    "4a974b2329bfd135",
+    "9528300cd5cabec3",
+    "bbbdccb6e99e88ef",
+    "f51ff32bb3fca066"
+  ],
   "cli/scripts/browser-launch.test.ts": [
     "812110c31b8bbb61",
     "93c36d0c809d0fee",
@@ -2382,25 +2401,32 @@
   "cli/scripts/browser-scroll.test.ts": [
     "093f3967a201e208",
     "683dbcd542fdb219",
+    "70795afc38cdb2aa",
+    "bdb267088a43613b",
     "e0ffa483b87e2f7b",
     "fcaa087ce975070c"
   ],
   "cli/scripts/browser-serve.ts": [
     "2c2e9526892b3eea",
+    "8923d4801b405040",
     "a6ff3b59586e7579",
     "c1fd0ea3e10318c8",
     "e8b661e99280b1bc",
-    "f0c9ab145bef3a72"
+    "f0c9ab145bef3a72",
+    "f1ab72f50901aee1"
   ],
   "cli/scripts/browser-session.test.ts": [
     "26d02b2fc9c8e91a",
     "76f5ff2d3d349985",
     "892bc7381e3159e1",
+    "b928526175226b29",
     "f8a7f6885d640566"
   ],
   "cli/scripts/browser-session.ts": [
     "033a0632bd668cb1",
     "26e15e3dfcb226b5",
+    "78cd239e54fc2e5c",
+    "b5e3ba358dd9e3d0",
     "ba6ef8177deece3e",
     "dade9ab82819cf74",
     "e3f282a2288c816c",
@@ -2412,6 +2438,7 @@
     "97c4fe18bc4fad58",
     "be0e5a48cc0badf0",
     "cf6885d250c84e89",
+    "e42f54db899a6af1",
     "ff41db8691c86d92"
   ],
   "cli/scripts/browser-snap.ts": [
@@ -2419,10 +2446,23 @@
     "8f0ab081b89573df",
     "9a37a6fe28995081",
     "b2d8369c2b52f0f8",
-    "be2784997ef96c56"
+    "be2784997ef96c56",
+    "dc09e3a87e038300"
   ],
-  "cli/scripts/browser-verbs.ts": ["15eb70d49f8c34f5", "617013a36c83d5f5", "80bfaeccb4e76fc9", "a71b4a772bd67c6d"],
-  "cli/scripts/browser-wait.ts": ["3b30536bd468a810", "6f824dbd0199f387", "f0be2da0af57052f"],
+  "cli/scripts/browser-verbs.ts": [
+    "15eb70d49f8c34f5",
+    "617013a36c83d5f5",
+    "80bfaeccb4e76fc9",
+    "a71b4a772bd67c6d",
+    "c27d4f29a1bbc8e8"
+  ],
+  "cli/scripts/browser-wait.ts": [
+    "22a511d9f9cf82e7",
+    "3b30536bd468a810",
+    "6f824dbd0199f387",
+    "89f66a1792345a51",
+    "f0be2da0af57052f"
+  ],
   "cli/scripts/browser-ws.test.ts": ["47bac442a93623eb", "6f8ae536c1e025ea", "a83f19fdecd46db4", "e887a45b5d7ea521"],
   "cli/scripts/browser-ws.ts": ["1a95333c60c385c7", "2098a0dbb4bd6179", "29487c83fe8b84e5", "4e268c55d01d866b"],
   "cli/scripts/browser.constants.ts": ["9f1da252f69ab811", "a7729c0cdcccd05f", "f79f7476c1298940"],
@@ -2457,7 +2497,7 @@
     "f9db21c54ab9f429",
     "fab5d5f99e697b68"
   ],
-  "cli/scripts/browser.types.ts": ["1f154af051817d70", "442d7b44c09620a2"],
+  "cli/scripts/browser.types.ts": ["1f154af051817d70", "442d7b44c09620a2", "a364545ed0165621"],
   "cli/scripts/build-dirs.constants.ts": ["13b8eae08476b803", "5e77fa52bbf05748"],
   "cli/scripts/build-dirs.test.ts": [
     "10708aaa2dd8afd7",
@@ -2521,6 +2561,7 @@
     "35c8a0d1d90f28e9",
     "3fde874b2358d4f5",
     "5208db8bade0f7eb",
+    "54ef373996e654d3",
     "74af45313b40889c",
     "8287287262c9b0f4",
     "ae16886d68ee3380",
@@ -2921,7 +2962,7 @@
     "e8c5d2226d4f4ddf"
   ],
   "cli/scripts/darwin.constants.ts": ["5b710e5a49509376"],
-  "cli/scripts/deep-merge.ts": ["874a7716db59df9f", "bd8628f517483c93", "c27449ba25f67b70"],
+  "cli/scripts/deep-merge.ts": ["20b090800381fecc", "874a7716db59df9f", "bd8628f517483c93", "c27449ba25f67b70"],
   "cli/scripts/doctor-agents.test.ts": [
     "591d62f3eb068eae",
     "9bf2430d789f8aea",
@@ -3055,10 +3096,11 @@
     "f80756bbad90cfad",
     "fdcfa7bd85d30775"
   ],
-  "cli/scripts/emit-inputs.ts": ["cf1f54e0bf1eedef", "da1168560083d1b3"],
+  "cli/scripts/emit-inputs.ts": ["55ceb7420903adfc", "cf1f54e0bf1eedef", "da1168560083d1b3"],
   "cli/scripts/emit-mcp-check.ts": [
     "1524baa5b7ac47cc",
     "4b6f495ad870e154",
+    "a9dd1c5f32702973",
     "cbae37b04c313d9e",
     "de944554783b3c7d",
     "f6a2b1e908615058"
@@ -3067,6 +3109,7 @@
     "0f399492297abebb",
     "93f39683612e8f51",
     "98bdf58f9858713d",
+    "b852120f174a0c63",
     "b93c1380bb4156bf",
     "bf4642e05225d12b",
     "dac4435e928d4a9b",
@@ -3097,6 +3140,7 @@
     "33606843ad0e6043",
     "42d5bc099a1e5863",
     "4c3c2583b33bbfa6",
+    "6fcba8bd93107dc8",
     "a14d1e4846276af5",
     "e1eedfdc0ed0c4ea"
   ],
@@ -3118,6 +3162,7 @@
     "0755974488be653d",
     "2af9b29421bc2543",
     "384866425eb8aca1",
+    "632030b0ab054de1",
     "6645662890c46e50",
     "689f9f2dcc8fe733",
     "74f644e5afa65789",
@@ -3139,10 +3184,12 @@
     "7fccc0d2cb55c9cd",
     "91f8b99c0df0aafe",
     "a8a11f216ec1d1fb",
+    "e24d9e789ea57525",
     "e51d16396880520c"
   ],
   "cli/scripts/emit-mcp-validate.ts": [
     "14e085e633e23645",
+    "34ec0665d4168205",
     "402b31d449379fc2",
     "527ce470d91d518a",
     "7707ea23fc4e122a",
@@ -3163,7 +3210,7 @@
   "cli/scripts/env-edit-refusals.test.ts": ["f03e44fac4910b0f"],
   "cli/scripts/env-edit-sealed.test.ts": ["a1f79b776bed85de"],
   "cli/scripts/env-edit.ts": ["51a180c5b8c13072", "c6eb90774455afea"],
-  "cli/scripts/env-files.ts": ["9313804ba34c7ab3", "96cd6cd59c726895"],
+  "cli/scripts/env-files.ts": ["83836697c99f4e49", "9313804ba34c7ab3", "96cd6cd59c726895"],
   "cli/scripts/env-io.test.ts": ["ae3d16899d507e34"],
   "cli/scripts/env-io.ts": ["2a23e48ea83f85bd"],
   "cli/scripts/env-keys-ci.test.ts": ["e1a1b64977c57ec3"],
@@ -3500,6 +3547,7 @@
     "496b1eb782689894",
     "5ce58c429ff10784",
     "814d0d2a35fdd8e5",
+    "a3b9856ddda4924f",
     "add0169040e5f6ff",
     "b7002d8341bfc164",
     "c866bda4764495c1"
@@ -3733,13 +3781,15 @@
     "215360a68a2a08ec",
     "4e4e57cfe6943e53",
     "6ff94d9f0bae2788",
-    "d70b4f6929d90fd8"
+    "d70b4f6929d90fd8",
+    "f1172060a13447d9"
   ],
   "cli/scripts/google-workspace-account.ts": [
     "644871d92f96def8",
     "7662d7745a1f6757",
     "7c5842ec8e72cf25",
     "7f6afd9e0d6c7e32",
+    "9804edb6496fd9df",
     "ebc38ce9545927ba"
   ],
   "cli/scripts/google-workspace-accounts.test.ts": [
@@ -3755,6 +3805,7 @@
     "49abac8230dc312f",
     "7cd623ee7eb0128a",
     "915b64c54d34ce25",
+    "92beed32882758d7",
     "fcc616458d4d13e4"
   ],
   "cli/scripts/google-workspace-comms.test.ts": [
@@ -3766,6 +3817,7 @@
     "83b0331293e5fd80",
     "8a0578b68070f729",
     "8a5abbb0ed4cadaa",
+    "b47e46c332354035",
     "cb93b76f0714e22a"
   ],
   "cli/scripts/google-workspace-files-create.test.ts": [
@@ -3791,7 +3843,12 @@
     "bef2d852bf7f0ddf",
     "fac9ca3481f3ad56"
   ],
-  "cli/scripts/google-workspace-files.ts": ["3546a13158383849", "61fdec350fa77b55", "67cb7f68fe6a58d3"],
+  "cli/scripts/google-workspace-files.ts": [
+    "3546a13158383849",
+    "61fdec350fa77b55",
+    "67cb7f68fe6a58d3",
+    "eecfc4c3d5bdbc7e"
+  ],
   "cli/scripts/google-workspace-login-device.test.ts": [
     "181dc0929efc8ad3",
     "1d06bfee38bf1af8",
@@ -3811,8 +3868,18 @@
     "decf068b2e63eb17"
   ],
   "cli/scripts/google-workspace-main.test.ts": ["0a1c6da9384f3f0f", "26661659e9d24aa6", "52d4d106be3de7bb"],
-  "cli/scripts/google-workspace-meet.ts": ["01199886929e8c1a", "afb796673f1a5cfe", "b36d0c0fd7c69537"],
-  "cli/scripts/google-workspace-reply.ts": ["03c211c8801ed9dd", "ab64c95d0b1ad038", "d27b4f47895c21eb"],
+  "cli/scripts/google-workspace-meet.ts": [
+    "01199886929e8c1a",
+    "afb796673f1a5cfe",
+    "b36d0c0fd7c69537",
+    "cfe2ed0e210e1e86"
+  ],
+  "cli/scripts/google-workspace-reply.ts": [
+    "03c211c8801ed9dd",
+    "5511f99b80f3d3ae",
+    "ab64c95d0b1ad038",
+    "d27b4f47895c21eb"
+  ],
   "cli/scripts/google-workspace-tokens.test.ts": [
     "04b5930685b0fc3d",
     "1ba7fa23e61f77b1",
@@ -3848,7 +3915,7 @@
     "c15fd3bc2c4bc9b3",
     "c1d8c4d545b73e97"
   ],
-  "cli/scripts/google-workspace.types.ts": ["00e7168111f4db9c", "5484a91c369c02b6"],
+  "cli/scripts/google-workspace.types.ts": ["00e7168111f4db9c", "0c8d3200211dc472", "5484a91c369c02b6"],
   "cli/scripts/hook-command.test.ts": [
     "08697f5972d9a4c5",
     "099e124a3c9394e1",
@@ -3889,6 +3956,7 @@
     "0b3dff57d269c47c",
     "5ca7c36a109fc4fa",
     "6c6fc3bb3dcf2133",
+    "7ca4bacda9ed5a01",
     "903b5971dd2f4720",
     "9793a94ce5cf739a",
     "9c0184e9fea78476",
@@ -3921,6 +3989,7 @@
     "9d75ff899fbd040b"
   ],
   "cli/scripts/hooks-union-anystart.test.ts": [
+    "06877c02177dbde7",
     "29d2c3beff059e74",
     "339543daa1163d5f",
     "7ab91ead168a58c4",
@@ -3934,7 +4003,8 @@
     "54d2c056f1eb31df",
     "7c397e6ad8031842",
     "93676fe863fa0ba1",
-    "9bf335c1cb38e2e3"
+    "9bf335c1cb38e2e3",
+    "e4f57bc2983c6d61"
   ],
   "cli/scripts/hooks-union-commands.ts": [
     "0a9693ac4cfcf028",
@@ -3958,6 +4028,7 @@
   "cli/scripts/hooks-union-edges.test.ts": [
     "04d4524b89214158",
     "061eff471ff9dfae",
+    "1b1e9a9725fc8292",
     "2d252bbeb55ac93b",
     "542474d613116b9e",
     "6487ed764eb54c74",
@@ -3980,7 +4051,8 @@
     "be8647747a5d6b08",
     "bef9b5356a101fe4",
     "c8e92faf869bd0db",
-    "d2e21b8dba287938"
+    "d2e21b8dba287938",
+    "ee502b96e2099fbc"
   ],
   "cli/scripts/hooks-union-sources.test.ts": [
     "0d3eebf59b9c9762",
@@ -4023,7 +4095,7 @@
   ],
   "cli/scripts/hooks-union.types.ts": ["079871fa03262022", "28ecf6cb67d4f2da", "c27a14a235b3da15"],
   "cli/scripts/ignore-edits.test.ts": ["07e722c09c83f766", "b0fe1d5081f12602"],
-  "cli/scripts/ignore-edits.ts": ["76f8328a25946c39", "a179c25c4d2c1486", "e7334dc137add28d"],
+  "cli/scripts/ignore-edits.ts": ["76f8328a25946c39", "786a4c99de337a7d", "a179c25c4d2c1486", "e7334dc137add28d"],
   "cli/scripts/interactive.test.ts": ["12f618e5574d542c", "8121e2d74cbd60f2"],
   "cli/scripts/interactive.ts": ["2297befde6cbb190", "649fcc09a9963bae", "77a5453588251e23", "f24385027c4f9442"],
   "cli/scripts/is-interactive.test.ts": ["ecb7c6e61376e003"],
@@ -4035,6 +4107,7 @@
     "92cf3c570e809f60",
     "a2cce01fc6296362",
     "a9c1adc442902ca0",
+    "bf497979bb7861ca",
     "c1c96c30251238b0",
     "d07d2d1b6c254cbe"
   ],
@@ -4092,6 +4165,7 @@
   "cli/scripts/jev-post.ts": [
     "3643153dac561fb7",
     "587b9435acccf36f",
+    "6610b5cd1aad599d",
     "78438d33d6956ad2",
     "9713caa0ced99d68",
     "ae28d6f7b443420e"
@@ -4135,7 +4209,7 @@
     "f407bb471d1f365e",
     "f435453679f359c1"
   ],
-  "cli/scripts/jev.types.ts": ["49993178078a37e1", "4c443606364798ed", "d2b85e4d371ae6ec"],
+  "cli/scripts/jev.types.ts": ["49993178078a37e1", "4c443606364798ed", "5a652587f926b5ba", "d2b85e4d371ae6ec"],
   "cli/scripts/job-args.test.ts": [
     "1fe6a21dfc504fd4",
     "57968d0f2f75f589",
@@ -4308,6 +4382,8 @@
     "ae766a1791d62ed9",
     "f470cdcbfb9d0dbd"
   ],
+  "cli/scripts/json-text.test.ts": ["5b67b56063733705"],
+  "cli/scripts/json-text.ts": ["81a2464fd8ce38c6"],
   "cli/scripts/jsonc-comments.constants.ts": [
     "14069ea3cddf86ff",
     "71a9bcecbe387368",
@@ -4660,6 +4736,7 @@
     "1513faee18943d01",
     "557a867d3e9309c3",
     "720fddc2e588cc79",
+    "8640d326d133120a",
     "b83c109a2ffa1708",
     "cac61f557ed0753a"
   ],
@@ -4693,6 +4770,7 @@
   "cli/scripts/listen-main-start.test.ts": [
     "0a0d63d6eee4aa53",
     "1ef4d0e732ce6c4d",
+    "4d19cefb2f9c6a2e",
     "51e1bca1c997af10",
     "74764c458a44a521",
     "920d082332c8ff4f",
@@ -4708,7 +4786,13 @@
     "a86fe17f69b033d1",
     "b434eaabd4b4df57"
   ],
-  "cli/scripts/listen-rec.ts": ["0d806008de7fc438", "2f6650f05617cbd8", "94b2f785a2baa325", "9c9823b9898583ad"],
+  "cli/scripts/listen-rec.ts": [
+    "0d806008de7fc438",
+    "2f6650f05617cbd8",
+    "42dff981ac300988",
+    "94b2f785a2baa325",
+    "9c9823b9898583ad"
+  ],
   "cli/scripts/listen-session.test.ts": [
     "6663c125bffffdb9",
     "682067dfb0a96d57",
@@ -4737,6 +4821,7 @@
   ],
   "cli/scripts/listen-whisper.ts": [
     "1146c42e412aa509",
+    "22930f9fc628d16d",
     "2c1ffb6bd9139797",
     "578716eb1fb06e30",
     "5ac6f9bb47b2658f",
@@ -4766,6 +4851,7 @@
     "965a2645144b9e4a",
     "a6c40a1fce9f2703",
     "ab430bae45483b5f",
+    "c1005be93f0700e3",
     "c72bdf8955b00ffa",
     "e24318e27fb566ff",
     "ed24a8a4b3fb8d6a",
@@ -5019,6 +5105,7 @@
   "cli/scripts/orchestrate-transcript.ts": [
     "148126e5a5899029",
     "2be87cad8a4d93d9",
+    "544ff2d77234cd86",
     "6488ca64f77c166c",
     "6f4edc6ff72eb32c",
     "80edb30febba63cc",
@@ -5660,7 +5747,12 @@
     "e0685c54916bc38f",
     "e29458656f6392b5"
   ],
-  "cli/scripts/purge-global-mcps.types.ts": ["4439aaf2fb93a92d", "99e45c9b7422356d", "e4ce23d4f6fc3ee6"],
+  "cli/scripts/purge-global-mcps.types.ts": [
+    "17adf286e0798f53",
+    "4439aaf2fb93a92d",
+    "99e45c9b7422356d",
+    "e4ce23d4f6fc3ee6"
+  ],
   "cli/scripts/purge-paths.test.ts": ["361cb9b7d19fa41f", "c5ce62d3030e866c", "eb98e2016f02481b"],
   "cli/scripts/purge-paths.ts": [
     "3e0661a1d311088c",
@@ -5673,6 +5765,7 @@
     "01279e975acdade7",
     "1363fc422296cfc4",
     "1e8989462865cce3",
+    "1f41cf29d44ee6ec",
     "20593c7c194f6983",
     "2f3c1d467d7ca763",
     "5c5d13e36773a31b",
@@ -5745,7 +5838,12 @@
     "be1aa6a891fb80d4",
     "e06e4dafc480f7c4"
   ],
-  "cli/scripts/scrub-spawn-prompt-cap.test.ts": ["5a318896e83ddc90", "6cef2ddc781297c4", "d3146cc1933d4c79"],
+  "cli/scripts/scrub-spawn-prompt-cap.test.ts": [
+    "5a318896e83ddc90",
+    "6cef2ddc781297c4",
+    "854cf86b4451f601",
+    "d3146cc1933d4c79"
+  ],
   "cli/scripts/scrub-spawn-prompt-edges.test.ts": [
     "56e380c240ecd7f9",
     "7dba5ac3516a26a6",
@@ -5773,6 +5871,7 @@
     "1176f8276e51638e",
     "29c074ba24b7c536",
     "2a478b47702a396a",
+    "349de16fc3b06350",
     "497fc5cbbc17c4fb",
     "6ca0aee852af3349",
     "6fb60652a121c729",
@@ -5832,6 +5931,8 @@
     "db5166ba530a4d45",
     "e94925d451a395b9"
   ],
+  "cli/scripts/settings-table.test.ts": ["3ffc375b2614003b"],
+  "cli/scripts/settings-table.ts": ["2f255d4f3897e8ef"],
   "cli/scripts/setup-argv.ts": ["7d1274d68413d49b", "84c465ef2fa5cbe5", "a0f4ded796364462"],
   "cli/scripts/setup-browser.test.ts": [
     "44fbfa2d2292b37a",
@@ -5982,6 +6083,7 @@
     "48379a6ae22a95e6",
     "54cb3bd9c7d8a7d0",
     "69abe874ba584bae",
+    "7c30f61466037df4",
     "8613f7bf95fad942",
     "9563fe270a142fe0",
     "9bdc855fd1764ea6",
@@ -6026,6 +6128,7 @@
   "cli/scripts/skill-conflicts.ts": [
     "0b270075f7579a01",
     "19164c2c717a0445",
+    "40342cfae307aaa8",
     "47ba67249f883cf2",
     "655606ed1df63456",
     "7d794c90acad9a47",
@@ -6064,6 +6167,7 @@
     "01be47dd73352b68",
     "1918508bb409e686",
     "1ef79517083e723b",
+    "7c6f007c89075c82",
     "d8680e101ebfb2ba",
     "de06e7cebd0e6b64"
   ],
@@ -6076,6 +6180,7 @@
     "d2532a7d1ddfafb2"
   ],
   "cli/scripts/speak-config.ts": [
+    "1849ad895abf0974",
     "1f7df36e3fbfd609",
     "3801cbaa58b6c556",
     "68ae0423ee2b5b3c",
@@ -6186,6 +6291,7 @@
     "9a7a03d0c7d0b7af",
     "b40bc4627fef8fdb",
     "fb79415a45498c40",
+    "fcb9e7cee5f620a2",
     "fd34697f1c720176"
   ],
   "cli/scripts/sync-global-settings-args.test.ts": ["307ceeb1356c984f", "4945f6a7bbf14561", "a568c8e57f2a07b9"],
@@ -6230,7 +6336,8 @@
     "bf3d6ed7ead0fc30",
     "d0aa8b564586ae8e",
     "dd88e1898af400aa",
-    "e3e3515a0d36fce4"
+    "e3e3515a0d36fce4",
+    "ff99e0c3c1328f60"
   ],
   "cli/scripts/sync-global-settings.types.ts": ["414c6a5f5293271a", "7d9fdbe4d76b1367", "dfa6c3432a65af40"],
   "cli/scripts/tests-step.ts": ["0db8ddc117fe748d", "ec5fed3643669bfa"],
@@ -6362,6 +6469,7 @@
   "cli/scripts/voice-args.test.ts": ["2353a015a0531159", "a09e516dc4e3b6cc", "d1e984fca08336e7"],
   "cli/scripts/voice-args.ts": [
     "3261033488bc895a",
+    "516b409a83c355cd",
     "c70d4b7420077b19",
     "ce95aa32ae384382",
     "f325f0cc86fc2cb3",
@@ -6403,7 +6511,7 @@
     "f0462f753a8b7100"
   ],
   "cli/scripts/win32.constants.ts": ["2a8df9fca6786625"],
-  "cli/scripts/with-lock.ts": ["70e756eea3ddb92c", "9166fc675e9591e4", "965b9dfe6ac165bc"],
+  "cli/scripts/with-lock.ts": ["70e756eea3ddb92c", "9166fc675e9591e4", "965b9dfe6ac165bc", "f32ae9bde987d8c3"],
   "cli/scripts/workspace-root-edges.test.ts": [
     "17ade122a0a186ac",
     "1c8bdf5c99b6a305",

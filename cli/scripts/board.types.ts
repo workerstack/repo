@@ -1,4 +1,5 @@
 /** The live agent board's rows, probes and option shapes. */
+import type { Json } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 import type { HookInput } from "./hook-input.ts";
 
@@ -80,7 +81,7 @@ export type DigestOptions = {
 };
 
 /** Hook payload plus the effort level some harnesses send. */
-export type BoardInput = HookInput & { effort?: unknown };
+export type BoardInput = HookInput & { effort?: Json };
 
 export type RecordDeps = {
   identity?: HostIdentity | null;

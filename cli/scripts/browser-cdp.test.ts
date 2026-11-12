@@ -6,7 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { connectCdp } from "./browser-cdp.ts";
 import { serveCdp } from "./browser-serve.ts";
 import { main } from "./browser.ts";
-import type { Cdp } from "./browser.types.ts";
+import type { Cdp, Rec } from "./browser.types.ts";
+import { jsonText } from "./json-text.ts";
 
 const closers: (() => void)[] = [];
 
@@ -142,10 +143,10 @@ it("acks enables, input and unknown methods; paints a png and a pdf; evaluates t
   expect(await Promise.all(acked.map((m) => cdp.send(m)))).toStrictEqual(acked.map(() => ({})));
   expect(await cdp.send("Runtime.callFunctionOn")).toStrictEqual({ result: { type: "undefined" } });
   const shot = await cdp.send("Page.captureScreenshot");
-  const png = Buffer.from(String(shot.data), "base64");
+  const png = Buffer.from(jsonText(shot.data), "base64");
   expect(png.subarray(1, 4).toString()).toBe("PNG");
   const printed = await cdp.send("Page.printToPDF");
-  const pdf = Buffer.from(String(printed.data), "base64");
+  const pdf = Buffer.from(jsonText(printed.data), "base64");
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
   expect(await cdp.send("Runtime.evaluate")).toStrictEqual(evalOf("from state"));
   const blank = await cdpOf();
@@ -160,7 +161,7 @@ it("failProbe rejects only the probe methods", async () => {
 });
 
 it("scripted replies win (a record is the reply, a string the error) and every call is logged", async () => {
-  const calls: { method: string; params: Record<string, unknown> }[] = [];
+  const calls: { method: string; params: Rec }[] = [];
   const replies = { "DOM.enable": { custom: true }, "Page.enable": "no page" };
   const { cdp } = await cdpOf({ calls, replies });
   await expect(cdp.send("Page.enable")).rejects.toThrow("no page");

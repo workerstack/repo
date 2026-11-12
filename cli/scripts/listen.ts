@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import { isRecord } from "../json.ts";
 import { contextOf, VERBS } from "./listen-verbs.ts";
 import { USAGE } from "./listen.constants.ts";
 import type { ListenMainOpts } from "./listen.types.ts";
@@ -8,7 +7,7 @@ import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 import { str } from "./voice-args.ts";
 
 function errMessage(e: unknown): string {
-  const message = isRecord(e) ? e.message : undefined;
+  const message = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
 
   if (typeof message === "string" && message !== "") return message;
 

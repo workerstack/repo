@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { Host, ResolvedConfig } from "../config.ts";
-import { tryJson } from "../json.ts";
+import { isRecord, type JsonObject, tryJson } from "../json.ts";
 import { sortedJsonValue } from "../scripts/json-keys.ts";
 import { isAgentsFile } from "./agents-file.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
@@ -46,7 +46,7 @@ type Adoption = {
 };
 
 /** Whether a command is one the stock settings or a past stock version ran. */
-function knownCommand(state: MigrationState, base: Record<string, unknown>): (command: string) => boolean {
+function knownCommand(state: MigrationState, base: JsonObject): (command: string) => boolean {
   const stockCommands = new Set(hookCommands(base));
 
   return (command) =>
@@ -54,7 +54,7 @@ function knownCommand(state: MigrationState, base: Record<string, unknown>): (co
 }
 
 /** The keys and hooks of the user's settings that the stock's own lack, written to the overlay. */
-function carrySettings(state: MigrationState, have: Record<string, unknown>, base: Record<string, unknown>): void {
+function carrySettings(state: MigrationState, have: JsonObject, base: JsonObject): void {
   const { hooks, ...mine } = have;
   const paths: string[] = [];
   const extras = settingsExtras(mine, base, { at: "", paths });
@@ -63,7 +63,7 @@ function carrySettings(state: MigrationState, have: Record<string, unknown>, bas
   if (extras === undefined && own.events.length === 0) return;
 
   const content = {
-    ...(extras /* the extras of two objects are an object or undefined */ as Record<string, unknown> | undefined),
+    ...(isRecord(extras) ? extras : {}),
     ...(own.events.length > 0 ? { hooks: own.hooks } : {}),
   };
 

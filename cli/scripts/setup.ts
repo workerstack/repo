@@ -3,7 +3,6 @@
 import os from "node:os";
 
 import { enabledSkills } from "../config.ts";
-import { isRecord } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { isInteractive as ttyInteractive } from "./is-interactive.ts";
@@ -37,7 +36,7 @@ const RUNNERS: Readonly<Record<string, Runner>> = {
 };
 
 function errMessage(e: unknown): string {
-  const m = isRecord(e) ? e.message : undefined;
+  const m = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
 
   return typeof m === "string" && m !== "" ? m : String(e);
 }

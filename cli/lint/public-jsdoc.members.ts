@@ -1,18 +1,17 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 
-import { isRecord } from "../json.ts";
+import { asNode, type SyntaxNode } from "../syntax-node.ts";
 import { docFault } from "./doc-fault.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
-import type { Node } from "./public-surface.types.ts";
 import type { RuleComment } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
 /** The file's text and the comments before a node, as the linter's `SourceCode` gives them. */
-export type Source = { text: string; before: (node: Node) => readonly RuleComment[] };
+export type Source = { text: string; before: (node: SyntaxNode) => readonly RuleComment[] };
 
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
-export type Walk = { source: Source; owner: string; fail: (node: Node, label: string, text: string) => void };
+export type Walk = { source: Source; owner: string; fail: (node: SyntaxNode, label: string, text: string) => void };
 
 function keyName(key: unknown): string {
   const label = [get(key, "name"), get(key, "value")].find(
@@ -23,11 +22,11 @@ function keyName(key: unknown): string {
 }
 
 /** A `[name]` key; the key is read first, as an enum member has none and its `computed` getter is deprecated. */
-function isUnnameable(node: Node): boolean {
+function isUnnameable(node: SyntaxNode): boolean {
   return get(node["key"], "type") === NODE_TYPES.identifier && node["computed"] === true;
 }
 
-function jsdocOf(source: Source, node: Node): RuleComment | undefined {
+function jsdocOf(source: Source, node: SyntaxNode): RuleComment | undefined {
   return source
     .before(node)
     .filter((comment) => comment.type === AST_TOKEN_TYPES.Block && comment.value.startsWith("*"))
@@ -42,7 +41,7 @@ function sharesLine(source: Source, comment: RuleComment): boolean {
 }
 
 /** Reports the fault in the JSDoc before `node`, if any; `name` is the part a doc may not merely restate. */
-export function check(walk: Walk, node: Node, named: { label: string; name: string }): void {
+export function check(walk: Walk, node: SyntaxNode, named: { label: string; name: string }): void {
   const { label, name } = named;
   const comment = jsdocOf(walk.source, node);
 
@@ -54,16 +53,16 @@ export function check(walk: Walk, node: Node, named: { label: string; name: stri
   if (fault !== null) walk.fail(node, label, fault);
 }
 
-function methodKey(node: Node): string {
+function methodKey(node: SyntaxNode): string {
   return `${node["static"] === true ? "static " : ""}${keyName(node["key"])}`;
 }
 
-function isSignature(node: Node): boolean {
+function isSignature(node: SyntaxNode): boolean {
   return get(node["value"], "type") === NODE_TYPES.emptyBody;
 }
 
 /** A class method that is an overload's implementation, or a setter beside its getter: the other carries the doc. */
-function isBareClassMember(body: Node[], node: Node): boolean {
+function isBareClassMember(body: SyntaxNode[], node: SyntaxNode): boolean {
   if (node["type"] !== NODE_TYPES.method) return false;
 
   const siblings = body.filter(
@@ -75,18 +74,19 @@ function isBareClassMember(body: Node[], node: Node): boolean {
   return siblings.some(isSignature) && !isSignature(node);
 }
 
-function checkInferred(walk: Walk, node: Node, label: string): void {
+function checkInferred(walk: Walk, node: SyntaxNode, label: string): void {
   const isFunction =
     node["type"] === NODE_TYPES.method && node["kind"] !== KIND.constructor && node["kind"] !== KIND.setter;
 
   const isProperty = node["type"] === NODE_TYPES.propertyDefinition || node["type"] === NODE_TYPES.accessorProperty;
-  const bodyless = isFunction && isRecord(get(node["value"], "body")) && !isRecord(get(node["value"], "returnType"));
-  const untyped = isProperty && !isRecord(node["typeAnnotation"]) && !statesItsType(node["value"]);
+  const hasBody = asNode(get(node["value"], "body")) !== null;
+  const bodyless = isFunction && hasBody && asNode(get(node["value"], "returnType")) === null;
+  const untyped = isProperty && asNode(node["typeAnnotation"]) === null && !statesItsType(node["value"]);
 
   if (bodyless || untyped) walk.fail(node, label, FAULTS.inferred);
 }
 
-function checkMember(walk: Walk, node: Node, siblings: Node[]): void {
+function checkMember(walk: Walk, node: SyntaxNode, siblings: SyntaxNode[]): void {
   const name = keyName(node["id"] ?? node["key"]);
 
   if (isBareClassMember(siblings, node)) return;
@@ -94,22 +94,22 @@ function checkMember(walk: Walk, node: Node, siblings: Node[]): void {
   checkInferred(walk, node, `${walk.owner}.${name}`);
 }
 
-function checkClassBody(walk: Walk, body: Node, visit: (node: Node) => boolean): void {
+function checkClassBody(walk: Walk, body: SyntaxNode, visit: (node: SyntaxNode) => boolean): void {
   const members = nodesOf(body["body"]);
 
   for (const member of members) {
     if (isHiddenMember(member) || isUnnameable(member)) continue;
 
-    if (MEMBERS.includes(String(member["type"]))) checkMember(walk, member, members);
+    if (MEMBERS.includes(String(get(member, "type")))) checkMember(walk, member, members);
     const inner = member["type"] === NODE_TYPES.method ? member["value"] : member;
     walkPublic(inner, (node) => node === member || visit(node));
   }
 }
 
 /** The visit that checks every member a consumer can see under a declaration, for `walkPublic`. */
-export function visitorOf(walk: Walk): (node: Node) => boolean {
-  function visit(node: Node): boolean {
-    const type = String(node["type"]);
+export function visitorOf(walk: Walk): (node: SyntaxNode) => boolean {
+  function visit(node: SyntaxNode): boolean {
+    const type = String(get(node, "type"));
 
     if (type === NODE_TYPES.classBody) checkClassBody(walk, node, visit);
 

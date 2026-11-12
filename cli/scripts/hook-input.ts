@@ -5,7 +5,7 @@
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
 
 /** Antigravity's tool call: the tool name and its arguments. */
 type HookToolCall = {
@@ -136,10 +136,10 @@ const BOOLEAN_FIELDS = ["stop_hook_active", "stopHookActive"] as const;
 const TOOL_INPUT_FIELDS = ["tool_input", "toolInput"] as const;
 
 /** Copies each key of `keys` whose value in `from` passes `keep`. */
-function copyWhere<K extends string, V>(
-  from: Record<string, unknown>,
+function copyWhere<K extends string, V extends Json>(
+  from: JsonObject,
   keys: readonly K[],
-  keep: (v: unknown) => v is V,
+  keep: (v: Json | undefined) => v is V,
 ): Partial<Record<K, V>> {
   const out: Partial<Record<K, V>> = {};
 
@@ -164,7 +164,7 @@ function isBoolean(v: unknown): v is boolean {
  * The string fields, the workspace paths, the boolean flags and the tool inputs that hold their type,
  * in that order.
  */
-function flatFields(value: Record<string, unknown>): HookInput {
+function flatFields(value: JsonObject): HookInput {
   const paths = value.workspacePaths;
 
   return {
@@ -176,7 +176,7 @@ function flatFields(value: Record<string, unknown>): HookInput {
 }
 
 /** Antigravity's call with its string name and record args kept. */
-function toolCallOf(call: Record<string, unknown>): HookToolCall {
+function toolCallOf(call: JsonObject): HookToolCall {
   const toolCall: HookToolCall = {};
 
   if (isString(call.name)) toolCall.name = call.name;
@@ -187,7 +187,7 @@ function toolCallOf(call: Record<string, unknown>): HookToolCall {
 }
 
 /** The agent as a name string, or the nested object with its string fields kept. */
-function agentOf(agent: unknown): string | HookAgent | undefined {
+function agentOf(agent: Json | undefined): string | HookAgent | undefined {
   if (isString(agent)) return agent;
 
   if (!isRecord(agent)) return undefined;
@@ -200,7 +200,7 @@ function agentOf(agent: unknown): string | HookAgent | undefined {
  * A field whose type is wrong is dropped; the rest are kept.
  */
 export function parseHookInput(raw: string): HookInput | null {
-  const value = tryJson(z.record(z.string(), z.unknown()), raw);
+  const value = tryJson(z.record(z.string(), z.json()), raw);
 
   if (value === undefined) return null;
   const out = flatFields(value);

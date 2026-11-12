@@ -16,7 +16,8 @@ import type {
   SpawnSyncResult,
   SttOpts,
 } from "../listen.types.ts";
-import { isRecord } from "../../json.ts";
+import { z } from "zod";
+import { isRecord, type JsonObject, readJson } from "../../json.ts";
 
 export type Handler = (a?: unknown, b?: unknown) => void;
 
@@ -79,8 +80,8 @@ export function plantSession(cwd: string, session: Record<string, unknown>) {
   fs.writeFileSync(sessionPath(cwd), JSON.stringify(session));
 }
 
-export function readSession(cwd: string): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(fs.readFileSync(sessionPath(cwd), "utf8"));
+export function readSession(cwd: string): JsonObject {
+  const parsed = readJson(z.json(), fs.readFileSync(sessionPath(cwd), "utf8"));
   return isRecord(parsed) ? parsed : {};
 }
 

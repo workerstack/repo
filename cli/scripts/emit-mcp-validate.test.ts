@@ -7,6 +7,7 @@ import { isRecord } from "../json.ts";
 import { BASE_POLICY } from "./__fixtures__/mcp-base-policy.ts";
 import { plantDirs, readJsonAs } from "./__fixtures__/mcp-policy-kit.ts";
 import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
+import { jsonText } from "./json-text.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 
 const tmpDir = plantDirs();
@@ -28,7 +29,7 @@ it("repo SSOT allow is empty and not cloudflare/docker", () => {
   const policy = loadPolicy(repoRoot);
   expect(validatePolicy(policy).ok).toBe(true);
   expect(policy.allow).toStrictEqual([]);
-  const names = (Array.isArray(policy.allow) ? policy.allow : []).map((n) => String(n).toLowerCase());
+  const names = (Array.isArray(policy.allow) ? policy.allow : []).map((n) => jsonText(n).toLowerCase());
   expect(names).not.toContain("cloudflare");
   expect(names).not.toContain("docker");
   expect(stripJsonc(fs.readFileSync(path.join(repoRoot, "agents/mcp-policy.jsonc"), "utf8"))).toMatch(

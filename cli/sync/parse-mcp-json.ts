@@ -3,6 +3,7 @@
  * its `mcpServers`. It is user input, so it is checked here, at the boundary, and nowhere after.
  */
 import { parse, type ParseError } from "jsonc-parser";
+import { z } from "zod";
 
 import { isRecord, type JsonObject } from "../json.ts";
 
@@ -24,10 +25,12 @@ function failed(problem: string) {
 export function parseMcpJson(text: string | null): { ok: true; servers: JsonObject } | { ok: false; error: string } {
   if (text === null) return { ok: true, servers: {} };
   const errors: ParseError[] = [];
-  const value: unknown = parse(text, errors, STRICT);
+  const raw: unknown = parse(text, errors, STRICT);
   const [first] = errors;
 
   if (first !== undefined) return failed(`not valid JSON at line ${text.slice(0, first.offset).split("\n").length}`);
+  // Text that parses with no error is JSON; the schema only types it.
+  const value = z.json().catch(null).parse(raw);
 
   if (!isRecord(value)) return failed("not a JSON object");
   const servers = Object.hasOwn(value, SERVERS_KEY) ? value[SERVERS_KEY] : {};

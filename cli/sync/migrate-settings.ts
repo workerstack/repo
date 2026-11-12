@@ -2,29 +2,29 @@ import { isDeepStrictEqual } from "node:util";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
 import { MD, RULE_FRONTMATTER } from "./migrate.constants.ts";
 
 /** Where `settingsExtras` is in the value it walks, and the dotted paths of the pieces it found so far. */
 type Trail = { at: string; paths: string[] };
 
 /** The hooks a settings file carries over, and each carried event with its group count. */
-type OwnHooks = { hooks: Record<string, unknown[]>; events: [string, number][] };
+type OwnHooks = { hooks: Record<string, Json[]>; events: [string, number][] };
 
-/** A settings file as an object whose values are not yet checked. */
-export function settingsSchema(): z.ZodRecord<z.ZodString, z.ZodUnknown> {
-  return z.record(z.string(), z.unknown());
+/** A settings file as an object of JSON values. */
+export function settingsSchema(): z.ZodRecord<z.ZodString, z.ZodJSONSchema> {
+  return z.record(z.string(), z.json());
 }
 
-function keep(value: unknown, trail: Trail): unknown {
+function keep(value: Json, trail: Trail): Json {
   trail.paths.push(trail.at);
 
   return value;
 }
 
 /** The keys of `have` that `base` lacks or holds otherwise, as `settingsExtras` finds them; undefined when none. */
-function objectExtras(have: Record<string, unknown>, base: Record<string, unknown>, trail: Trail): unknown {
-  const found: Record<string, unknown> = {};
+function objectExtras(have: JsonObject, base: JsonObject, trail: Trail): JsonObject | undefined {
+  const found: JsonObject = {};
 
   for (const [key, value] of Object.entries(have)) {
     const next = { at: trail.at === "" ? key : `${trail.at}.${key}`, paths: trail.paths };
@@ -41,7 +41,7 @@ function objectExtras(have: Record<string, unknown>, base: Record<string, unknow
  * piece in the trail's `paths`: new keys whole, list items `base` lacks, scalars that differ. Undefined when there
  * is none.
  */
-export function settingsExtras(have: unknown, base: unknown, trail: Trail): unknown {
+export function settingsExtras(have: Json, base: Json | undefined, trail: Trail): Json | undefined {
   if (Array.isArray(have) && Array.isArray(base)) {
     const extra = have.filter((item) => !base.some((known) => isDeepStrictEqual(known, item)));
 
@@ -57,12 +57,12 @@ export function settingsExtras(have: unknown, base: unknown, trail: Trail): unkn
 }
 
 /** The groups of one event's value cut down to the hooks that run a command `known` does not. */
-function ownGroups(value: unknown, known: (command: string) => boolean): unknown[] {
-  return (Array.isArray(value) ? value : [value]).flatMap((group: unknown) => {
+function ownGroups(value: Json, known: (command: string) => boolean): Json[] {
+  return (Array.isArray(value) ? value : [value]).flatMap((group) => {
     if (!isRecord(group) || !Array.isArray(group.hooks)) return [group];
 
-    const unknown: unknown[] = group.hooks.filter(
-      (hook: unknown) => !(isRecord(hook) && typeof hook.command === "string" && known(hook.command)),
+    const unknown = group.hooks.filter(
+      (hook) => !(isRecord(hook) && typeof hook.command === "string" && known(hook.command)),
     );
 
     return unknown.length > 0 ? [{ ...group, hooks: unknown }] : [];
@@ -73,8 +73,8 @@ function ownGroups(value: unknown, known: (command: string) => boolean): unknown
  * The hooks of `hooks` (a settings file's `hooks` value) that run a command `known` does not: per event, the groups
  * cut down to their unknown hooks. `events` lists each carried event with its group count.
  */
-export function ownHooks(hooks: unknown, known: (command: string) => boolean): OwnHooks {
-  const carried: Record<string, unknown[]> = {};
+export function ownHooks(hooks: Json | undefined, known: (command: string) => boolean): OwnHooks {
+  const carried: Record<string, Json[]> = {};
 
   if (isRecord(hooks)) {
     for (const [event, value] of Object.entries(hooks)) {
@@ -88,7 +88,7 @@ export function ownHooks(hooks: unknown, known: (command: string) => boolean): O
 }
 
 /** Whether `have` has every key of `want` (recursively) and every list item of it. */
-function covers(have: unknown, want: unknown): boolean {
+function covers(have: Json | undefined, want: Json): boolean {
   if (Array.isArray(want))
     return Array.isArray(have) && want.every((item) => have.some((known) => isDeepStrictEqual(known, item)));
 

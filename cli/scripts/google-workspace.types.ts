@@ -1,5 +1,7 @@
-/** A loose JSON object, as Google's replies and the token files are read. */
-export type Rec = Record<string, unknown>;
+import type { JsonObject } from "../json.ts";
+
+/** A parsed JSON object, as Google's replies and the token files are read. */
+export type Rec = JsonObject;
 
 /** A stored OAuth refresh token plus where it was read from. */
 export type Token = Rec & {

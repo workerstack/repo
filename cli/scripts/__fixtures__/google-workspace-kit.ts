@@ -5,7 +5,8 @@ import path from "node:path";
 import { vi } from "vitest";
 import { tempDir } from "../../sync/__fixtures__/temp-dirs.ts";
 import type { SpawnFn } from "../google-workspace.types.ts";
-import { isRecord } from "../../json.ts";
+import { z } from "zod";
+import { isRecord, type JsonObject, readJson } from "../../json.ts";
 
 /** A planted home for one case. Bun's `os.homedir` ignores env changes, so the call is spied; callers restore with `vi.restoreAllMocks()`. */
 export function plantHome(prefix: string): string {
@@ -99,8 +100,8 @@ export function stubFetch(handler: (url: string, init?: RequestInit) => Reply | 
 }
 
 /** The planted file's JSON object. */
-export function readObject(p: string): Record<string, unknown> {
-  const v: unknown = JSON.parse(fs.readFileSync(p, "utf8"));
+export function readObject(p: string): JsonObject {
+  const v = readJson(z.json(), fs.readFileSync(p, "utf8"));
   if (!isRecord(v)) throw new Error(`${p} is not a JSON object`);
   return v;
 }
@@ -115,8 +116,8 @@ export function callAt(calls: Call[], i: number): Call {
 }
 
 /** The i-th call's request body as a JSON object. */
-export function sentJson(calls: Call[], i = 0): Record<string, unknown> {
-  const v: unknown = JSON.parse(String(callAt(calls, i).init?.body));
+export function sentJson(calls: Call[], i = 0): JsonObject {
+  const v = readJson(z.json(), String(callAt(calls, i).init?.body));
   if (!isRecord(v)) throw new Error("request body is not a JSON object");
   return v;
 }
@@ -130,7 +131,6 @@ export function sentForm(calls: Call[], i = 0): URLSearchParams {
 export function stubFetchThrowing(reason: unknown) {
   vi.stubGlobal("fetch", () => Promise.reject(reason));
 }
-
 
 export interface Spawned {
   cmd: string;

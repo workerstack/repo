@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, tryJson } from "../json.ts";
 import {
   ACCOUNT_RE,
   ADC_USER,
@@ -17,7 +17,7 @@ import {
 } from "./google-workspace.constants.ts";
 import type { Rec, Token, WorkspaceAccount } from "./google-workspace.types.ts";
 
-export function rec(v: unknown): Rec {
+export function rec(v: Json | undefined): Rec {
   return isRecord(v) ? v : {};
 }
 

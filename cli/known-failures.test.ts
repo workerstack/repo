@@ -90,6 +90,15 @@ describe("knownFailures, titles and files", () => {
 
     expect(problems).toStrictEqual([]);
   });
+
+  it("reads a literal title from the call's arguments and a bare template's text from its quasis", () => {
+    const problems = run({ "a.test.ts": 'describe("dates", () => { it.fails(`plain`, () => {}); });\n' });
+
+    expect(problems).toStrictEqual(['a.test.ts:1: it.fails("plain") is not in known-failures.json; list it or fix it']);
+    const listed = list("a.test.ts > dates > plain");
+    const source = 'describe("dates", () => { it.fails(`plain`, () => {}); });\n';
+    expect(run({ "a.test.ts": source, "known-failures.json": listed })).toStrictEqual([]);
+  });
 });
 
 describe("knownFailures, what it leaves alone", () => {

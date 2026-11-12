@@ -102,7 +102,7 @@ export class ShardSequencer extends BaseSequencer {
   private static readRow(root: string): Record<string, number> | undefined {
     try {
       const text = fs.readFileSync(path.join(root, ".repo", "test-times.json"), "utf8");
-      const row = tryJson(z.record(z.string(), z.unknown()), text)?.[process.platform];
+      const row = tryJson(z.record(z.string(), z.json()), text)?.[process.platform];
 
       if (!isRecord(row)) return undefined;
 

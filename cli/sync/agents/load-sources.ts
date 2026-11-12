@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, readJson } from "../../json.ts";
+import { isRecord, type Json, readJson } from "../../json.ts";
 import { stripJsonc } from "../../scripts/strip-jsonc.ts";
 import { errorMessage } from "../../sync-errors.ts";
 import { listDocs } from "./list-docs.ts";
@@ -42,7 +42,7 @@ function loadHooks(stock: Top, tops: readonly Top[], problems: string[]): HooksS
 
   const rel = `${top.dir}/${HOOKS_FILE}`;
   const text = fs.readFileSync(path.join(top.root, rel), "utf8");
-  let value: unknown;
+  let value: Json;
 
   try {
     // Any JSON here; a value that is not an object earns its own problem below.

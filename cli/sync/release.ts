@@ -70,7 +70,7 @@ export type CiInput = Pick<SyncContext, "config" | "workspace" | "read">;
 
 /** The root manifest's `scripts` entry `name` when it is a string. */
 function scriptOf(ctx: CiInput, name: string) {
-  const scripts: unknown = ctx.workspace.manifest.scripts;
+  const { scripts } = ctx.workspace.manifest;
   const script = isRecord(scripts) ? scripts[name] : undefined;
 
   return typeof script === "string" ? script : undefined;

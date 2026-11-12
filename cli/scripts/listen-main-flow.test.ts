@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { cleanupTmp, plantModel, readSession, repoBin, run, textFetch, tmp, which } from "./__fixtures__/listen-env.ts";
+import { jsonText } from "./json-text.ts";
 import { sessionPath } from "./listen-session.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { GGML_URL } from "./listen.constants.ts";
@@ -106,7 +107,7 @@ describe("main start then stop", () => {
     const sess = readSession(cwd);
     expect(sess.pid).toBe(4242);
     expect(spawned[0]?.[2]).toBe("_record");
-    fs.writeFileSync(String(sess.wav), "RIFF");
+    fs.writeFileSync(jsonText(sess.wav), "RIFF");
 
     const over = {
       cwd,

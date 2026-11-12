@@ -6,6 +6,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { readJson } from "../json.ts";
 import { SLOW } from "../scripts/__fixtures__/turn-repo.ts";
 import { exportSubpaths } from "./exports.ts";
 
@@ -40,9 +41,10 @@ function consumerErrors(files: readonly string[], cwd: string): string[] {
 
 /** The `.ts` source each `package.json` export types with: what a consumer's tsc reads from the tarball. */
 function exportedSources(): string[] {
-  const manifest = z
-    .object({ exports: z.unknown() })
-    .parse(JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")));
+  const manifest = readJson(
+    z.object({ exports: z.json().optional() }),
+    fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+  );
 
   const listed = spawnSync("git", ["ls-files"], { cwd: ROOT, encoding: "utf8" }).stdout.split("\n");
 

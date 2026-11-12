@@ -1,4 +1,4 @@
-import { isRecord } from "../json.ts";
+import { asNode } from "../syntax-node.ts";
 import { ARITHMETIC, NODE_TYPES } from "./public-jsdoc.constants.ts";
 import { get, nodesOf } from "./public-surface.syntax.ts";
 
@@ -26,5 +26,5 @@ export function statesItsType(init: unknown): boolean {
   if (isLiteral(init) || type === NODE_TYPES.asExpression) return true;
   const isFunction = type === NODE_TYPES.arrow || type === NODE_TYPES.functionExpression;
 
-  return isFunction && isRecord(get(init, "returnType"));
+  return isFunction && asNode(get(init, "returnType")) !== null;
 }

@@ -22,7 +22,7 @@ import {
   WHITESPACE,
 } from "./check-public.constants.ts";
 import type { ResolvedConfig } from "./config.ts";
-import { isRecord, readJson, type JsonObject } from "./json.ts";
+import { isRecord, type Json, type JsonObject, readJson } from "./json.ts";
 import { keywordLines } from "./keywords.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
@@ -46,10 +46,10 @@ function problem(field: string, value: unknown, fix: string): string {
 
 /** `package.json` as written; the workspace read has already shown it is a JSON object. */
 function readManifest(root: string): JsonObject {
-  return readJson(z.looseObject({}), fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
+  return readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
 }
 
-function authorLines(author: unknown, owner: ResolvedOwner): string[] {
+function authorLines(author: Json | undefined, owner: ResolvedOwner): string[] {
   const name = isRecord(author) ? author.name : author;
 
   if (name === owner.name) return [];
@@ -69,7 +69,7 @@ function urlLines(url: unknown): string[] {
   return [`${MANIFEST_FILE}: "repository.url" is ${url}; set it to ${fix}`];
 }
 
-function repositoryLines(repository: unknown): string[] {
+function repositoryLines(repository: Json | undefined): string[] {
   if (!isRecord(repository)) return [problem("repository", repository, REPOSITORY_FIX)];
 
   const type =
@@ -81,7 +81,7 @@ function repositoryLines(repository: unknown): string[] {
 }
 
 /** One line per condition object under `subpath` that lists a later key before `types`. */
-function orderLines(subpath: string, target: unknown): string[] {
+function orderLines(subpath: string, target: Json | undefined): string[] {
   if (!isRecord(target)) return [];
   const keys = Object.keys(target);
   const lines: string[] = [];
@@ -98,7 +98,7 @@ function orderLines(subpath: string, target: unknown): string[] {
   return lines;
 }
 
-function exportLines(exported: unknown): string[] {
+function exportLines(exported: Json | undefined): string[] {
   if (exported === undefined) return [problem("exports", exported, `list the entry points and "${MANIFEST_EXPORT}"`)];
 
   const subpaths =
@@ -116,7 +116,7 @@ function exportLines(exported: unknown): string[] {
   return lines;
 }
 
-function publishLines(publishConfig: unknown): string[] {
+function publishLines(publishConfig: Json | undefined): string[] {
   const set = isRecord(publishConfig) ? publishConfig : {};
 
   if (set.access === PUBLISH_ACCESS) return [];
