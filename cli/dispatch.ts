@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { COMMANDS, isCommandName, runCommand } from "./commands.ts";
+import { cliDeps, type CliDeps } from "./cli-deps.ts";
+import { COMMANDS, isCommandName } from "./commands.ts";
 import {
   HELP_COMMANDS,
   HELP_PAD,
@@ -14,11 +11,10 @@ import {
 } from "./main.constants.ts";
 import type { Flags } from "./parse-argv.ts";
 import { runCheck } from "./run-check.ts";
-import { mapCommand } from "./scripts/folder-map.ts";
 import { HOOK_NAMES } from "./scripts/hook-command.ts";
-import { runSync, type SyncIo } from "./sync.ts";
+import type { SyncIo } from "./sync.ts";
 
-type Handler = (flags: Flags) => Promise<void> | void;
+type Handler = (flags: Flags, deps: CliDeps) => Promise<void> | void;
 
 function row([name, summary]: readonly [string, string]): string {
   return `  ${name.padEnd(HELP_PAD)}${summary}\n`;
@@ -36,9 +32,8 @@ export function usage(): string {
   return `${USAGE_HEAD}\nCommands:\n${rows.join("")}\n${USAGE_FLAGS}`;
 }
 
-function pkgVersion(): string {
-  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-  const pkg: unknown = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+function pkgVersion(packageJson: string): string {
+  const pkg: unknown = JSON.parse(packageJson);
 
   if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string")
     throw new Error("package.json has no version");
@@ -56,17 +51,17 @@ function syncIo(): SyncIo {
 
 /** The commands this file runs itself, by name; help and version go by any of their spellings. */
 const BUILTINS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, Handler>([
-  ["check", () => runCheck(syncIo())],
+  ["check", (_flags, deps) => runCheck(syncIo(), deps)],
   [
     "sync",
-    async (flags) => {
-      process.exitCode = await runSync(flags.args, syncIo());
+    async (flags, deps) => {
+      process.exitCode = await deps.runSync(flags.args, syncIo());
     },
   ],
   [
     "map",
-    (flags) => {
-      process.stdout.write(mapCommand(process.cwd(), flags.args[0] ?? ""));
+    (flags, deps) => {
+      process.stdout.write(deps.mapCommand(process.cwd(), flags.args[0] ?? ""));
     },
   ],
 ]);
@@ -75,8 +70,8 @@ function writeUsage(): void {
   process.stdout.write(usage());
 }
 
-function writeVersion(): void {
-  process.stdout.write(`${pkgVersion()}\n`);
+function writeVersion(_flags: Flags, deps: CliDeps): void {
+  process.stdout.write(`${pkgVersion(deps.packageJson())}\n`);
 }
 
 function handlerOf(cmd: string): Handler | undefined {
@@ -88,13 +83,13 @@ function handlerOf(cmd: string): Handler | undefined {
 }
 
 /** Runs every command but init: a built-in, then a registry command in-process, else an unknown command fails. */
-export async function dispatch(cmd: string, flags: Flags): Promise<void> {
+export async function dispatch(cmd: string, flags: Flags, deps: CliDeps = cliDeps()): Promise<void> {
   const handler = handlerOf(cmd);
 
-  if (handler !== undefined) return handler(flags);
+  if (handler !== undefined) return handler(flags, deps);
 
   if (isCommandName(cmd)) {
-    process.exitCode = await runCommand(cmd, flags.args);
+    process.exitCode = await deps.runCommand(cmd, flags.args);
 
     return;
   }

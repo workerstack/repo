@@ -87,7 +87,7 @@ export function useCheckRepo(fakes: MainFakes, written: Written): CheckRepo {
     fs.mkdirSync(path.join(dir, "node_modules", "@workerstack"), { recursive: true });
     fs.symlinkSync(pkgRoot(), path.join(dir, "node_modules", "@workerstack", "repo"), "junction");
     vi.spyOn(process, "cwd").mockReturnValue(dir);
-    fakes.isInteractive.mockReturnValue(false);
+    fakes.prompts.isInteractive.mockReturnValue(false);
     process.argv = ["node", "repo", "check"];
     // The version check asks npm; the tests answer for it, with the latest the installed copy is.
     vi.stubGlobal("fetch", latestFetch(pkgVersion()));

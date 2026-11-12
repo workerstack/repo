@@ -1,35 +1,42 @@
-// Shared fakes and setup for the suites that drive `start`: each suite makes its fakes in `vi.hoisted` with
-// `mainFakes`, hands them to its `vi.mock` factories, and resets them before each test with `useStart`.
+// Shared fakes and setup for the suites that drive `start`: each suite makes its fakes with `mainFakes`, passes them
+// to `start`, and resets them before each test with `useStart`.
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, expect, vi } from "vitest";
+import type { CliDeps } from "../cli-deps.ts";
 import type { GhCall, GhResult } from "../github-gh.ts";
-import type { InitOptions } from "../init.ts";
-import type { SyncIo } from "../sync.ts";
 
-/** What `start` passes the TTY menu. */
-export type SelectOpts = { message: string; options: { value: string }[]; initialValue: string };
-/** What `start` asks before applying the global settings. */
-export type ConfirmOpts = { message: string; initialValue: boolean };
-type Spin = { start: (name: string) => void; stop: (name: string) => void };
+type Prompts = CliDeps["prompts"];
+type Spin = ReturnType<Prompts["spinner"]>;
 
-/** The fakes the suites mock init, the prompts, sync, the registry, the folder map and GitHub with. */
+/** A spinner whose every call is a fake. */
+function fakeSpin(): Spin {
+  return { message: vi.fn<Spin["message"]>(), start: vi.fn<Spin["start"]>(), stop: vi.fn<Spin["stop"]>() };
+}
+
+/** This checkout's package.json text, what the real deps read. */
+function packageJsonText(): string {
+  return fs.readFileSync(path.join(pkgRoot(), "package.json"), "utf8");
+}
+
+/** The deps `start` runs on, every one a fake; GitHub is a logged-out gh, outside CI, which a test may swap. */
 export function mainFakes() {
   const gh = (_call: GhCall): Promise<GhResult> =>
     Promise.resolve({ ok: false, kind: "auth", message: "gh is not logged in (gh auth status)" });
   return {
-    init: vi.fn<(dest: string, opts: InitOptions) => void>(),
-    isInteractive: vi.fn<() => boolean>(() => false),
-    select: vi.fn<(opts: SelectOpts) => Promise<string>>(),
-    confirm: vi.fn<(opts: ConfirmOpts) => Promise<boolean>>(),
-    spinner: vi.fn<() => Spin>(() => ({ start: vi.fn<Spin["start"]>(), stop: vi.fn<Spin["stop"]>() })),
-    bailIfCancel: vi.fn(<T>(v: T) => v),
-    mapCommand: vi.fn<(cwd: string, dir: string) => string>((_cwd, dir) => `map:${dir}\n`),
-    runSync: vi.fn<(args: string[], io: SyncIo) => Promise<number>>(() => Promise.resolve(0)),
-    runCommand: vi.fn<(name: string, argv: string[]) => Promise<number>>(() => Promise.resolve(0)),
-    // The check side reaches GitHub through this holder's gh, never the real one; a test swaps in a fake over a store.
-    githubIo: { gh },
-  };
+    init: vi.fn<CliDeps["init"]>(),
+    prompts: {
+      isInteractive: vi.fn<Prompts["isInteractive"]>(() => false),
+      select: vi.fn<Prompts["select"]>(),
+      confirm: vi.fn<Prompts["confirm"]>(),
+      spinner: vi.fn<Prompts["spinner"]>(fakeSpin),
+    },
+    mapCommand: vi.fn<CliDeps["mapCommand"]>((_cwd, dir) => `map:${dir}\n`),
+    runSync: vi.fn<CliDeps["runSync"]>(() => Promise.resolve(0)),
+    runCommand: vi.fn<CliDeps["runCommand"]>(() => Promise.resolve(0)),
+    checkIo: { ci: false, gh },
+    packageJson: vi.fn<CliDeps["packageJson"]>(packageJsonText),
+  } satisfies CliDeps;
 }
 
 export type MainFakes = ReturnType<typeof mainFakes>;
@@ -46,7 +53,7 @@ export function pkgRoot(): string {
 
 /** This checkout's package version. */
 export function pkgVersion(): string {
-  const pkg: unknown = JSON.parse(fs.readFileSync(path.join(pkgRoot(), "package.json"), "utf8"));
+  const pkg: unknown = JSON.parse(packageJsonText());
   if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string") {
     throw new Error("package.json has no version");
   }
@@ -83,20 +90,21 @@ export function useStart(fakes: MainFakes): Written {
 }
 
 function resetFakes(fakes: MainFakes): void {
+  const { prompts } = fakes;
   fakes.init.mockReset();
   fakes.runCommand.mockReset();
   fakes.runCommand.mockResolvedValue(0);
   fakes.runSync.mockReset();
   fakes.runSync.mockResolvedValue(0);
   fakes.mapCommand.mockClear();
-  fakes.isInteractive.mockReset();
-  fakes.isInteractive.mockReturnValue(false);
-  fakes.select.mockReset();
-  fakes.confirm.mockReset();
-  fakes.spinner.mockReset();
-  fakes.spinner.mockImplementation(() => ({ start: vi.fn<Spin["start"]>(), stop: vi.fn<Spin["stop"]>() }));
-  fakes.bailIfCancel.mockReset();
-  fakes.bailIfCancel.mockImplementation((v) => v);
+  fakes.packageJson.mockReset();
+  fakes.packageJson.mockImplementation(packageJsonText);
+  prompts.isInteractive.mockReset();
+  prompts.isInteractive.mockReturnValue(false);
+  prompts.select.mockReset();
+  prompts.confirm.mockReset();
+  prompts.spinner.mockReset();
+  prompts.spinner.mockImplementation(fakeSpin);
 }
 
 /** The help text `repo help` prints. */

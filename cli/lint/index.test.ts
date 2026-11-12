@@ -20,7 +20,7 @@ const RULE_NAMES = [
   "no-block-comment",
   "no-boolean-param",
   "no-commented-out-code",
-  "no-mock-of-subject",
+  "no-module-mocking",
   "no-module-side-effects",
   "no-module-state",
   "no-reflect-apply",

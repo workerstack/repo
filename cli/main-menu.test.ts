@@ -1,12 +1,12 @@
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
-
-import { USAGE, anyFunction, useStart } from "./__fixtures__/main-kit.ts";
+import { USAGE, anyFunction, mainFakes, useStart } from "./__fixtures__/main-kit.ts";
 import { APPLY_GLOBALS_CONFIRM, start } from "./main.ts";
 
+const fakes = mainFakes();
 const written = useStart(fakes);
-const { confirm, init, isInteractive, runCommand, select, spinner } = fakes;
+const { init, runCommand } = fakes;
+const { confirm, isInteractive, select, spinner } = fakes.prompts;
 
 const MENU = ["init", "check", "yolo", "purge-mcps", "doctor", "clean", "setup", "tasks", "help", "quit"];
 
@@ -14,7 +14,7 @@ const MENU = ["init", "check", "yolo", "purge-mcps", "doctor", "clean", "setup",
 async function startTty(...args: string[]): Promise<void> {
   isInteractive.mockReturnValue(true);
   process.argv = ["node", "repo", ...args];
-  await start();
+  await start(fakes);
 }
 
 it("TTY menu runs a registry command in-process", async () => {
@@ -61,13 +61,18 @@ it("TTY cancel exits 0", async () => {
 });
 
 it("TTY init confirms globals; spinner onPhase stop before inherit", async () => {
-  const spin = { start: vi.fn<(name: string) => void>(), stop: vi.fn<(name: string) => void>() };
+  const spin = {
+    message: vi.fn<(name?: string) => void>(),
+    start: vi.fn<(name?: string) => void>(),
+    stop: vi.fn<(name?: string) => void>(),
+  };
+
   spinner.mockReturnValue(spin);
   confirm.mockResolvedValue(true);
   init.mockImplementation((_dest, opts) => {
     for (const name of ["merge", "install"]) {
-      opts.onPhase?.(name, "start");
-      opts.onPhase?.(name, "stop");
+      opts?.onPhase?.(name, "start");
+      opts?.onPhase?.(name, "stop");
     }
   });
   await startTty("init");

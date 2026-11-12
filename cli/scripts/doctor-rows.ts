@@ -29,18 +29,22 @@ export function packageRoot(): string {
 /**
  * One `globals` row from checkGlobals: ok, the first drift line, or the check error. Null when the
  * repo ships no manifest. check-globals needs smol-toml, which setup.ts (it imports the doctor modules)
- * must run without, so it loads here on demand instead of at import.
+ * must run without, so the `load` option brings it in on demand instead of at import; a test passes a loader
+ * that rejects.
  */
 export async function globalsRow(
   cwd: string | undefined,
   home: string | undefined,
-  sourceRoot: string = packageRoot(),
+  {
+    sourceRoot = packageRoot(),
+    load = () => import("./check-globals.ts"),
+  }: { sourceRoot?: string; load?: () => Promise<typeof checkGlobalsModule> } = {},
 ): Promise<string | null> {
   if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
   let mod: typeof checkGlobalsModule;
 
   try {
-    mod = await import("./check-globals.ts");
+    mod = await load();
   } catch (err) {
     return row("globals", "unavailable", `${errorText(err).split("\n")[0]}; run bun install`);
   }
@@ -51,6 +55,11 @@ export async function globalsRow(
     ...(cwd === undefined ? {} : { workspaceRoot: cwd }),
   });
 
+  return checkedRow(mod, r);
+}
+
+/** The `globals` row of a finished check: ok, its first drift line, or its error. */
+function checkedRow(mod: typeof checkGlobalsModule, r: checkGlobalsModule.CheckResult): string {
   if (r.ok) return row("globals", "ok");
   const first = r.drift?.[0]; // drift is only set when non-empty
 

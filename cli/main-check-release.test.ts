@@ -1,19 +1,17 @@
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
-
 import { usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
 
-const { repo, written } = useMainCheckRepo(fakes);
+const { fakes, repo, written } = useMainCheckRepo();
 
 vi.setConfig({ testTimeout: 60_000 });
 
 it("with the release pack on, prints the Stryker install and the empty coverage.mutate and exits 1", async () => {
   writeConfigs(repo);
   usePacks(repo, "release");
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toContain(
     [
       `repo check: the release pack runs mutation tests nightly; \
@@ -33,7 +31,7 @@ it("with the release pack and a public root, prints each missing metadata field 
     "workerstack.config.ts",
     'export default { packs: ["release"], owner: { name: "Ann Lee", github: "ann" } };\n',
   );
-  await start();
+  await start(fakes);
   const printed = repo.besidesKnip();
   expect(printed).toContain(
     'repo check: package.json: "author" is "workerstack"; set it to "Ann Lee", the owner in workerstack.config.ts\n',
@@ -47,7 +45,7 @@ it("with the release pack and a public root without an owner, asks for the owner
   writeConfigs(repo);
   repo.write("package.json", { name: "app", private: false });
   usePacks(repo, "release");
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toContain(
     "repo check: workerstack.config.ts: the release pack with a public package needs owner: { name, github }\n",
   );
@@ -62,7 +60,7 @@ it(
     usePacks(repo, "release");
     const job = "  build:\n    runs_on: ubuntu-latest\n    steps:\n      - run: echo hi\n";
     repo.put(".github/workflows/other.yml", `name: x\non: push\njobs:\n${job}`);
-    await start();
+    await start(fakes);
     const line = 'repo check: actionlint: .github/workflows/other.yml:5:5: unexpected key "runs_on" for "job" section';
     expect(written.err.some((text) => text.startsWith(line) && text.endsWith("[syntax-check]\n"))).toBe(true);
     expect(process.exitCode).toBe(1);

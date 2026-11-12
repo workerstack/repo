@@ -36,7 +36,8 @@ type SyncPstackSkillsOptions = {
   workspaceRoot?: string;
   argv?: string[];
   fetchImpl?: TextFetch;
-  generateFn?: () => unknown;
+  /** `repo sync`, which regenerates the trees after a write; a test passes a fake. */
+  runSync?: typeof runSync;
 };
 
 /** What one sync run shares across its files. */
@@ -103,8 +104,8 @@ async function syncAll(tasks: readonly Task[], plan: Plan, tally: Tally): Promis
 }
 
 /** The trees come from `repo sync`, the one writer of every generated file. */
-async function runRepoSync(root: string, io: Io): Promise<void> {
-  const code = await runSync([], { cwd: root, stderr: io.err, stdout: io.out });
+async function runRepoSync(sync: typeof runSync, root: string, io: Io): Promise<void> {
+  const code = await sync([], { cwd: root, stderr: io.err, stdout: io.out });
 
   if (code !== 0) throw new Error(`repo sync exited ${code}`);
 }
@@ -148,7 +149,7 @@ export async function syncPstackSkills({
   workspaceRoot,
   argv = [],
   fetchImpl = fetch,
-  generateFn,
+  runSync: sync = runSync,
 }: SyncPstackSkillsOptions): Promise<SyncResult> {
   const parsed = parseArgv(argv);
 
@@ -162,5 +163,5 @@ export async function syncPstackSkills({
 
   if (failure !== null) return { error: failure, ok: false };
 
-  return await finish(plan, tally, generateFn ?? (() => runRepoSync(root, io)));
+  return await finish(plan, tally, () => runRepoSync(sync, root, io));
 }

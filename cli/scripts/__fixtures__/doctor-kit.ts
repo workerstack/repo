@@ -154,7 +154,7 @@ export function globalsSetup() {
   const home = tmp("doc-globals-home-");
   // as main() does: the row is computed first, then printed among the others
   const run = async () =>
-    runDoctor({ cwd, globals: await globalsRow(cwd, home, cwd), home, pathEnv: bin, platform: "linux" });
+    runDoctor({ cwd, globals: await globalsRow(cwd, home, { sourceRoot: cwd }), home, pathEnv: bin, platform: "linux" });
   return { cwd, home, run };
 }
 

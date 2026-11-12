@@ -287,12 +287,6 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/lint/no-mock-of-subject.ts": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100
-  },
   "cli/lint/no-module-side-effects.ts": {
     "branches": 100,
     "functions": 100,

@@ -25,7 +25,7 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/no-block-comment": "error",
   "repo/no-boolean-param": "error",
   "repo/no-commented-out-code": "error",
-  "repo/no-mock-of-subject": "error",
+  "repo/no-module-mocking": "error",
   "repo/no-module-side-effects": "error",
   "repo/no-module-state": "error",
   "repo/no-reflect-apply": "error",

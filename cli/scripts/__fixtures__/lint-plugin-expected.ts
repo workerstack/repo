@@ -32,8 +32,10 @@ export const LINT_PLUGIN_EXPECTED: readonly string[] = [
     "{@link newName}",
   "src/order.ts repo(member-ordering): the constructor comes after a public method; " +
     "order static fields, instance fields, constructor, public methods, non-public methods",
-  'src/parse.test.ts repo(no-mock-of-subject): "./parse.ts" is the module this test covers; test it for real and ' +
-    "mock what it calls",
+  "src/parse.test.ts repo(no-module-mocking): vi.mock replaces a module for the whole file; pass the fake through " +
+    "a parameter, an options field or a real stream instead",
+  "src/parse.test.ts repo(no-module-mocking): vi.mock replaces a module for the whole file; pass the fake through " +
+    "a parameter, an options field or a real stream instead",
   "src/protocol.ts unicorn(prefer-node-protocol): Prefer using the `node:` protocol when importing Node.js built-in " +
     "modules.",
   'src/public.ts repo(public-jsdoc): `PUBLIC` is public through "." and has no JSDoc: add a /** */ block that says ' +

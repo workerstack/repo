@@ -50,7 +50,7 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
 
 /**
  * One planted file per rule, each named after its export where it has one; the forms that pass (a pure call, a
- * Readonly const, a cast with a reason, an ID'd TODO, a prose comment, a mock of another module) sit beside.
+ * Readonly const, a cast with a reason, an ID'd TODO, a prose comment) sit beside; both module mocks report.
  */
 const PLANTED = {
   ".repo/lessons/known-lesson.md": "# A lesson\n",

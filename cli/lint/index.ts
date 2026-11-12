@@ -20,7 +20,7 @@ import { nativePathSeparator } from "./native-path-separator.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 import { noBooleanParam } from "./no-boolean-param.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
-import { noMockOfSubject } from "./no-mock-of-subject.ts";
+import { noModuleMocking } from "./no-module-mocking.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
@@ -65,7 +65,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-block-comment": noBlockComment,
     "no-boolean-param": noBooleanParam,
     "no-commented-out-code": noCommentedOutCode,
-    "no-mock-of-subject": noMockOfSubject,
+    "no-module-mocking": noModuleMocking,
     "no-module-side-effects": noModuleSideEffects,
     "no-module-state": noModuleState,
     "no-reflect-apply": noReflectApply,

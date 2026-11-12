@@ -34,7 +34,7 @@ const ERROR_RULES = [
   "repo/as-needs-reason repo/boundaries repo/class-file repo/config-file repo/deprecated-replacement repo/entry-file",
   "repo/env-in-config repo/filename-matches-export repo/index-file repo/max-line-width repo/member-ordering",
   "repo/naming-convention repo/native-path-separator repo/no-block-comment repo/no-boolean-param",
-  "repo/no-commented-out-code repo/no-mock-of-subject repo/no-module-side-effects repo/no-module-state",
+  "repo/no-commented-out-code repo/no-module-mocking repo/no-module-side-effects repo/no-module-state",
   "repo/no-reflect-apply repo/no-side-effect-import repo/no-v8-ignore repo/no-widen-then-assert repo/public-jsdoc",
   "repo/require-readable-spacing",
   "repo/skip-on-platform repo/todo-needs-id repo/types-file unicorn/prefer-node-protocol oxc/no-accumulating-spread",

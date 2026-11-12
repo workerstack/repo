@@ -1,9 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import type { CliDeps } from "./cli-deps.ts";
 import type { LoadResult } from "./config.ts";
 import { repoEnv } from "./repo-env.ts";
-import { runSync, type SyncIo } from "./sync.ts";
+import type { SyncIo } from "./sync.ts";
 
 /** Prints check's lines: a report on stdout; a problem on stderr, kept so the exit code can count it. */
 type Printer = { report: (lines: readonly string[]) => void; fail: (lines: readonly string[]) => void };
@@ -112,14 +113,14 @@ async function checkTools(cwd: string, print: Printer): Promise<void> {
 }
 
 /** `repo check`: every check in order, then exit 1 on any problem, else sync --check's code. */
-export async function runCheck(io: SyncIo): Promise<void> {
+export async function runCheck(io: SyncIo, deps: Pick<CliDeps, "runSync" | "checkIo">): Promise<void> {
   const { cwd } = io;
   // Started first: the GitHub calls overlap the other checks, which never wait on them.
-  const githubPending = import("./github-apply.ts").then(({ checkGithubAt }) => checkGithubAt(cwd));
+  const githubPending = import("./github-apply.ts").then(({ checkGithubAt }) => checkGithubAt(cwd, deps.checkIo));
   const failing: string[] = [];
   const print = printer(failing);
   await checkSources(cwd, print);
-  const synced = await runSync(["--check"], io);
+  const synced = await deps.runSync(["--check"], io);
   const { loadConfig } = await import("./config.ts");
   const loaded = await loadConfig(cwd);
   await checkStandards(cwd, loaded, print);
