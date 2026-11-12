@@ -2,6 +2,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { posix } from "./ts-program.ts";
 import { BUILD_CONFIG, DECLARATION } from "./type-surface.constants.ts";
 
 /** The diagnostic codes of JSON syntax errors; an option, extends or no-inputs error leaves the config readable. */
@@ -18,7 +19,7 @@ function isSyntaxError({ code }: ts.Diagnostic): boolean {
  */
 export function buildOutputs(dir: string): Map<string, string> | undefined {
   const host = { ...ts.sys, onUnRecoverableConfigFileDiagnostic: () => {} };
-  const parsed = ts.getParsedCommandLineOfConfigFile(path.join(dir, BUILD_CONFIG), {}, host);
+  const parsed = ts.getParsedCommandLineOfConfigFile(posix(path.join(dir, BUILD_CONFIG)), {}, host);
 
   if (parsed === undefined || parsed.errors.some(isSyntaxError)) return undefined;
   const options = { ...parsed.options, declaration: true, emitDeclarationOnly: false, noEmit: false };
