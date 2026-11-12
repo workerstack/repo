@@ -186,7 +186,7 @@ function oxlintEnv(): NodeJS.ProcessEnv {
 }
 
 /** The bun command line and environment that run `tool`. */
-function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
+function commandOf(tool: Tool) {
   return { args: [binOf(tool)], env: childEnv(tool === "oxlint" ? oxlintEnv() : {}) };
 }
 

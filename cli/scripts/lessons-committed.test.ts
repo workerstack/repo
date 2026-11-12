@@ -18,7 +18,7 @@ useTempDirs();
 const REFUSAL = "the main checkout is shared: run bun repo worktree add <name>";
 
 /** A failed result whose error holds the main-checkout refusal. */
-function refused(): { error: string; ok: false } {
+function refused() {
   return {
     error: expect.stringContaining(REFUSAL) /* a matcher, which toStrictEqual compares as the error text */ as string,
     ok: false,

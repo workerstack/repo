@@ -25,7 +25,10 @@ export type Counts = Record<string, Record<string, number>>;
 export type Excess = { file: string; rule: string; has: number; allows: number };
 
 /** One entry `repo turn` lowered; `to` 0 drops it. */
-export type Lowered = { file: string; rule: string; from: number; to: number };
+type Lowered = { file: string; rule: string; from: number; to: number };
+
+/** What is over the baseline, the baseline with the gated files lowered, and what was lowered. */
+export type Gated = { over: Excess[]; next: Counts; lowered: Lowered[] };
 
 export type Diagnostic = { file: string; rule: string; line: string };
 
@@ -103,16 +106,8 @@ function normalized(counts: Counts): Counts {
  * The baseline gate over `files` (linted or deleted): what is over, the baseline with each of their entries lowered
  * to the real count, and what was lowered. Other files' entries stay as they are.
  */
-export function gate(
-  baseline: Counts,
-  actual: Counts,
-  files: readonly string[],
-): {
-  over: Excess[];
-  next: Counts;
-  lowered: Lowered[];
-} {
-  const next: Counts = { ...baseline };
+export function gate(baseline: Counts, actual: Counts, files: readonly string[]): Gated {
+  const next = { ...baseline };
   const lowered: Lowered[] = [];
 
   for (const file of files.toSorted(byKey)) {
@@ -236,11 +231,14 @@ export function lintReport(
 }
 
 export function countsOf(diagnostics: readonly Diagnostic[]): Counts {
-  const counts: Counts = {};
+  const counts = new Map<string, Record<string, number>>();
 
-  for (const { file, rule } of diagnostics) counts[file] = { ...counts[file], [rule]: countOf(counts, file, rule) + 1 };
+  for (const { file, rule } of diagnostics) {
+    const rules = counts.get(file);
+    counts.set(file, { ...rules, [rule]: (rules?.[rule] ?? 0) + 1 });
+  }
 
-  return counts;
+  return Object.fromEntries(counts);
 }
 
 /** The whole tree's counts, oxlint's and the `scripts` hits no skip turns off, and the baseline under `root`. */

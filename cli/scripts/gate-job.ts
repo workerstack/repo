@@ -141,7 +141,7 @@ type ParsedJob = {
 };
 
 /** One job arg as a flag and, for `--flag=value`, its inline value. */
-function splitFlag(arg: string): { flag: string; inline: string | null } {
+function splitFlag(arg: string) {
   if (!arg.startsWith("--") || !arg.includes("=")) return { flag: arg, inline: null };
   const eq = arg.indexOf("=");
 

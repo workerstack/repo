@@ -8,11 +8,11 @@ import {
   CHROMIUM_BINS,
   DARWIN,
   HINT_ALL,
-  INSTALL_HINTS,
   PATHEXT_DEFAULT,
   REQUIRED,
   VERSION_TIMEOUT_MS,
   WIN32,
+  installHintsOf,
 } from "./doctor.constants.ts";
 import type { InstallHints } from "./doctor.types.ts";
 
@@ -131,7 +131,7 @@ function platformHints(hints: InstallHints, platform: string): readonly string[]
 
 export function installHints(id: string, platform: string = process.platform): string[] {
   if (id === HINT_ALL) return REQUIRED.flatMap((k) => installHints(k, platform));
-  const byOs = Object.hasOwn(INSTALL_HINTS, id) ? INSTALL_HINTS[id] : undefined;
+  const byOs = installHintsOf(id);
 
   if (byOs === undefined) return [];
 

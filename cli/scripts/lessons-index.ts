@@ -110,11 +110,14 @@ export function parseIndex(text: string): IndexRow[] {
     });
 }
 
+/** Whether the index was written, and where. */
+export type IndexWritten = { ok: boolean; path: string };
+
 /**
  * Derived from the lesson files only, so any writer rerunning it converges; temp file then rename, left read-only
  * as sync leaves the files it owns. Throws, naming the index, when it cannot be written.
  */
-export function writeIndex({ workspaceRoot: ws, pending }: IndexInput): { ok: boolean; path: string } {
+export function writeIndex({ workspaceRoot: ws, pending }: IndexInput): IndexWritten {
   const dir = lessonsDir(ws);
   fs.mkdirSync(dir, { recursive: true });
   const text = renderIndex(indexRows(ws, pending));

@@ -26,8 +26,11 @@ const SPACES = /\s+/g;
 /** The space after a full stop, where the page text breaks into lines. */
 const SENTENCE_BREAK = /(?<=\.)\s+/;
 
+/** A page's title and its visible text. */
+export type PageText = { title: string; text: string };
+
 /** A page's title and its visible text on one line. */
-export function stripHtml(html: string | undefined): { title: string; text: string } {
+export function stripHtml(html: string | undefined): PageText {
   const s = html ?? "";
   const title = TITLE.exec(s)?.groups?.title ?? "";
 

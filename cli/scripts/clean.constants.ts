@@ -38,7 +38,7 @@ export const TRAILING_SLASHES_RE: RegExp = /\/+$/;
 // How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted
 // silently.
 // clean.test.ts holds POLICY to TMP_RESERVED_DIRS, so a reserved dir without a policy fails the suite.
-export const POLICY: Readonly<Record<string, Policy>> = {
+const POLICY = {
   browser: "keep",
   handoffs: "age",
   implementations: "age-done",
@@ -49,15 +49,33 @@ export const POLICY: Readonly<Record<string, Policy>> = {
   sessions: "per-session",
   speak: "keep",
   stash: "per-receipt",
-};
+} as const satisfies Readonly<Record<string, Policy>>;
+
+function hasPolicy(dir: string): dir is keyof typeof POLICY {
+  return Object.hasOwn(POLICY, dir);
+}
+
+/** How the repo-owned dir `dir` is cleaned, or undefined when it has no policy. */
+export function policyOf(dir: string): Policy | undefined {
+  return hasPolicy(dir) ? POLICY[dir] : undefined;
+}
 
 /** The removed kind of an aged-out file, by its dir. */
-export const OLD_KIND: Readonly<Record<string, string>> = {
+const OLD_KIND = {
   handoffs: "old handoff",
   implementations: "old journal",
   plans: "old plan",
   roadmaps: "old roadmap",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+function ages(dir: string): dir is keyof typeof OLD_KIND {
+  return Object.hasOwn(OLD_KIND, dir);
+}
+
+/** The removed kind of an aged-out file of the dir `dir`, or undefined when that dir does not age. */
+export function oldKindOf(dir: string): string | undefined {
+  return ages(dir) ? OLD_KIND[dir] : undefined;
+}
 
 export const SERIAL_RE: RegExp = /^([0-9]+)-/;
 export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
@@ -91,7 +109,7 @@ export const REMOVE_ORDER: readonly string[] = [
   "old tmp artifact",
 ];
 
-export const PLURAL: Readonly<Record<string, string>> = {
+export const PLURAL = {
   "dead session": "dead sessions",
   dir: "dirs",
   file: "files",
@@ -103,16 +121,16 @@ export const PLURAL: Readonly<Record<string, string>> = {
   "old tmp artifact": "old tmp artifacts",
   "stale stamp": "stale stamps",
   "stash receipt": "stash receipts",
-};
+} as const;
 
 /** The order the report counts kept kinds in past the durable dirs, and their plurals. */
 export const KEEP_ORDER: readonly string[] = ["tmp artifact", "live session", "recent"];
 
-export const KEEP_PLURAL: Readonly<Record<string, string>> = {
+export const KEEP_PLURAL = {
   "live session": "live sessions",
   recent: "entries touched recently",
   "tmp artifact": "tmp artifacts",
-};
+} as const;
 
 /** The build kinds in report order, and each one's [one, many] name. */
 export const BUILD_KINDS: readonly BuildItem["kind"][] = ["dir", "info", "modules"];

@@ -20,7 +20,7 @@ function git(root: string, ...args: string[]) {
 
 const IGNORE = ".next\n.turbo/\n!keep/.turbo/\n.vite\nnode_modules\n*.tsbuildinfo\n.flare\n.tmp/\ndist\n";
 
-const FILES: Record<string, string> = {
+const FILES = {
   ".flare/state": "f",
   ".gitignore": IGNORE,
   ".next/cache/a.bin": "12345",

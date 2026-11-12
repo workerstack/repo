@@ -60,7 +60,7 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
   plantHome("ws-gcloud-");
   const seen: Spawned[] = [];
 
-  function spawn(cmd: string, args: string[]): { status: number } {
+  function spawn(cmd: string, args: string[]) {
     seen.push({ args, cmd });
 
     return { status: 0 };
@@ -75,7 +75,7 @@ it("gcloud login: runs the application-default login when there is no OAuth JSON
 });
 
 /** A gcloud that answers `--version` but fails the login itself. */
-function gcloudLoginFails(_cmd: string, args: string[]): { status: number } {
+function gcloudLoginFails(_cmd: string, args: string[]) {
   return { status: args[0] === "--version" ? 0 : 2 };
 }
 

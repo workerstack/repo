@@ -11,10 +11,14 @@ useTempDirs();
 const RAW = ".repo/tmp/bench/startup/ubuntu-latest.json";
 
 /** The node candidate's script, with measured run `n` (call `n`, after the one warmup) answered by `run`. */
-function nodeWith(n: number, run: ReturnType<Script>): Record<string, Script> {
+function nodeWith(n: number, run: ReturnType<Script>) {
   const node = usageScript(SAMPLES.node);
 
-  return { ...STARTUP, "bun -e 2": (call) => (call === n ? run : node(call)) };
+  function measured(call: number): ReturnType<Script> {
+    return call === n ? run : node(call);
+  }
+
+  return { ...STARTUP, "bun -e 2": measured };
 }
 
 it("prints the Usage table and the raw path, exit 0", async () => {

@@ -40,7 +40,7 @@ function statusRow(name: string, status: DoctorStatus): string {
 }
 
 /** The `bun` row, and the bun path when it meets the floor ("" otherwise). */
-function bunRow(pathEnv: string | undefined, platform: string): { bun: string; line: string } {
+function bunRow(pathEnv: string | undefined, platform: string) {
   const bunBin = whichBin("bun", pathEnv, platform);
   const bunVer = bunBin === "" ? "" : readVersion(bunBin, "--version");
   const bunMin = bunMinimum();
@@ -53,7 +53,7 @@ function bunRow(pathEnv: string | undefined, platform: string): { bun: string; l
 }
 
 /** The required tools' rows, and where each was found ("" when missing). */
-function toolRows({ cwd, pathEnv, platform }: Resolved): { found: Record<string, string>; lines: string[] } {
+function toolRows({ cwd, pathEnv, platform }: Resolved) {
   const bun = bunRow(pathEnv, platform);
 
   const found: Record<(typeof TOOL_ROWS)[number] | "bun", string> = {

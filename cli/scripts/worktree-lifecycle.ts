@@ -32,8 +32,11 @@ import {
 } from "./worktree.constants.ts";
 import type { FinishResult, Finishing, Pruned, WorktreeEntry, WorktreeInfo } from "./worktree.types.ts";
 
+/** The worktree `addWorktree` made or reused, its branch, and whether it is new. */
+export type WorktreeMade = { path: string; branch: string; created: boolean };
+
 /** Make or reuse `<root>/.worktrees/<name>` on `wt/<name>`; throws a one-line message when it cannot. */
-export function addWorktree(root: string, raw: string | undefined): { path: string; branch: string; created: boolean } {
+export function addWorktree(root: string, raw: string | undefined): WorktreeMade {
   const name = requireName(raw);
   const dest = path.join(root, WORKTREES_DIR, name);
   const branch = BRANCH_PREFIX + name;

@@ -8,6 +8,7 @@ import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
 import { extractMode, extractStrategy } from "./persist-keys.ts";
 import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
 import { extractCommit, injectFrontmatter } from "./persist-plan-head.ts";
+import { reviewsToEnter } from "./persist-plan.constants.ts";
 import { cardErrors, usageErrors } from "./persist-sections.ts";
 
 const NOW_RE = /\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ/;
@@ -85,8 +86,8 @@ describe("plan list helpers", () => {
   });
 
   it("lets a map with no status enter no gated status", () => {
-    expect(
-      reviewErrors({ reviews: "0" }, null, { gates: { "in-progress": 1 }, review: "/review-plan {n}" }),
-    ).toStrictEqual([]);
+    expect(reviewErrors({ reviews: "0" }, null, { gates: reviewsToEnter, review: "/review-plan {n}" })).toStrictEqual(
+      [],
+    );
   });
 });

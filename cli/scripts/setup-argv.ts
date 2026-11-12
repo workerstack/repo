@@ -26,8 +26,11 @@ function takeFlag(flags: Flags, a: string, next: string | undefined): boolean {
   return false;
 }
 
-export function parseArgv(argv: readonly string[]): { _: string[]; flags: Flags } {
-  const out: { _: string[]; flags: Flags } = { _: [], flags: {} };
+/** The positionals and flags of `repo setup` argv. */
+export type SetupArgv = { _: string[]; flags: Flags };
+
+export function parseArgv(argv: readonly string[]): SetupArgv {
+  const out: SetupArgv = { _: [], flags: {} };
   let isValue = false;
 
   for (const [i, a] of argv.entries()) {

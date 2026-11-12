@@ -28,7 +28,18 @@ export const BULLET_H2: readonly string[] = ["Context", "Constraints", "Watch-ou
 export const BULLETS_RE: RegExp = /^(?:[-*] |\(none\))/m;
 
 /** Statuses a plan may enter only after that many settled `/review-plan` rounds. */
-export const REVIEWS_TO_ENTER: Readonly<Record<string, number>> = { "in-progress": 1 };
+const REVIEWS_TO_ENTER = { "in-progress": 1 } as const satisfies Readonly<Record<string, number>>;
+
+/** The rounds `gates` asks before `status`, or undefined when `status` has no gate of its own. */
+export function gateOf(gates: Readonly<Record<string, number>>, status: string): number | undefined {
+  return Object.hasOwn(gates, status) ? gates[status] : undefined;
+}
+
+/** The settled `/review-plan` rounds a plan needs to enter `status`, or undefined when it needs none. */
+export function reviewsToEnter(status: string): number | undefined {
+  return gateOf(REVIEWS_TO_ENTER, status);
+}
+
 export const REVIEW_COMMAND = "/review-plan {n}";
 
 /** The Goal is one to this many sentences. */

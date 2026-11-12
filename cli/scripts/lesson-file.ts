@@ -101,7 +101,7 @@ function sectionText(lines: string[], at: number, end: number): string {
 }
 
 /** Each `## ` heading in order, and the trimmed text under each. */
-function sectionsOf(lines: string[]): { names: string[]; sections: Map<string, string> } {
+function sectionsOf(lines: string[]) {
   const h2 = lines.flatMap((l, i): { i: number; name: string }[] =>
     l.startsWith(H2_PREFIX) ? [{ i, name: l.slice(H2_PREFIX.length).trim() }] : [],
   );

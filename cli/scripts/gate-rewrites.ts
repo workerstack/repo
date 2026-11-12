@@ -114,16 +114,15 @@ function createsFile(op: string): boolean {
   return op === PATCH_ADD || op === PATCH_MOVE;
 }
 
+/** A patch after the scratch rewrite: its new text (null when nothing moved) and every final path. */
+export type PatchRewrite = { patch: string | null; paths: string[] };
+
 /**
  * Add and Move headers whose path is scratch get the root scratch path, the same rule a Write gets.
  * Update and Delete headers stay, since they act on a file that exists where it is.
  * Returns the rewritten patch (null when nothing moved) and every final path.
  */
-export function rewritePatch(
-  patch: string,
-  roots: Roots,
-  p: typeof path = path,
-): { patch: string | null; paths: string[] } {
+export function rewritePatch(patch: string, roots: Roots, p: typeof path = path): PatchRewrite {
   const paths: string[] = [];
   const moved: string[] = [];
 
@@ -178,7 +177,7 @@ function movedPath(call: GateCall, current: string, dest: string): string | null
 }
 
 /** What one write field is recorded as, and where it moves to (null to stay). */
-function fieldPlan(call: GateCall, current: string): { recorded: string; moved: string | null } {
+function fieldPlan(call: GateCall, current: string) {
   const dest = rewriteScratchWrite(current, call.roots);
 
   return { moved: dest === null ? null : movedPath(call, current, dest), recorded: dest ?? current };

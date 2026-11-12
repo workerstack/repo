@@ -149,7 +149,7 @@ function checkoutIn(dir: string, facts: GitFacts | null, { p, exists, realpath }
   }
 }
 
-function rootsFor(start: string, ctx: RootsContext): { checkout: string; root: string } {
+function rootsFor(start: string, ctx: RootsContext) {
   const facts = ctx.git(start);
   const checkout = checkoutIn(start, facts, ctx);
 

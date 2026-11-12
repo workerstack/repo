@@ -150,7 +150,7 @@ function nodeSearch(query: string, scope: SearchScope): SearchHits {
 }
 
 /** rg's `file:line:text` hits as facts. */
-function parseSearchHits(stdout: string): { facts: string[]; raw: string } {
+function parseSearchHits(stdout: string) {
   const hits = nonEmptyLines(stdout);
 
   const facts = hits.map((line) => {

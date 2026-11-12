@@ -18,7 +18,7 @@ import {
   STALE,
   STALE_RE,
   TEXT_ARG,
-  TEXT_USAGE,
+  textUsageOf,
 } from "./browser.constants.ts";
 import type { Act, BrowserResult, Cdp, Ctx, Rec, RefEntry, Session, Verb } from "./browser.types.ts";
 
@@ -115,7 +115,7 @@ function targetOf(
 
   if (rec === undefined) return `missing ref: ${refId}`;
   const text = argv.slice(TEXT_ARG).join(" ");
-  const usage = TEXT_USAGE[verb];
+  const usage = textUsageOf(verb);
 
   if (usage !== undefined && usage !== "" && text === "") return usage;
 

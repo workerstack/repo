@@ -27,10 +27,19 @@ export const STALE_RE: RegExp = /stale|missing/i;
 export const ERROR_PREFIX: RegExp = /^Error:\s*/;
 
 /** The usage a ref verb that takes text prints without it. */
-export const TEXT_USAGE: Readonly<Record<string, string>> = {
+const TEXT_USAGE = {
   fill: "fill <ref> <text>",
   select: "select <ref> <value>",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+function takesText(verb: string): verb is keyof typeof TEXT_USAGE {
+  return Object.hasOwn(TEXT_USAGE, verb);
+}
+
+/** The usage the ref verb `verb` prints without its text, or undefined when it takes none. */
+export function textUsageOf(verb: string): string | undefined {
+  return takesText(verb) ? TEXT_USAGE[verb] : undefined;
+}
 
 /** Where a ref verb's text starts in argv. */
 export const TEXT_ARG = 2;

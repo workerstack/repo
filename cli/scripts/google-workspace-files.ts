@@ -12,9 +12,9 @@ import {
   KIND_DOC,
   KIND_SHEET,
   LINE_RE,
-  MIME,
   SHEETS,
   TEXT_TYPE,
+  mimeOf,
 } from "./google-workspace.constants.ts";
 import type { FileSpec, Rec, WorkspaceAccount } from "./google-workspace.types.ts";
 import { jsonText } from "./json-text.ts";
@@ -56,7 +56,7 @@ async function uploadFile(
 
 /** A new Drive doc, sheet or slide deck; a sheet with `csv` or a doc with `body` is uploaded with that content. */
 export async function createFile(account: WorkspaceAccount, { kind, title, csv, body }: FileSpec): Promise<Rec> {
-  const mime = MIME[kind];
+  const mime = mimeOf(kind);
 
   if (mime === undefined) throw new Error("unknown kind");
   const file = { mime, name: filled(title) ?? `repo-${kind}` };

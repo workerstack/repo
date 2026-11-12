@@ -83,16 +83,15 @@ export function recordApproval(data: HookInput, abs: string): void {
 
 /** The `key: value` lines of a file's leading frontmatter block. */
 export function frontmatterOf(text: string): Record<string, string> {
-  const out: Record<string, string> = {};
   const [, body = ""] = FRONTMATTER.exec(text) ?? [];
 
-  for (const line of body.split(LINE_BREAK)) {
-    const [, key, value = ""] = FRONTMATTER_LINE.exec(line) ?? [];
+  return Object.fromEntries(
+    body.split(LINE_BREAK).flatMap((line) => {
+      const [, key, value = ""] = FRONTMATTER_LINE.exec(line) ?? [];
 
-    if (key !== undefined) out[key] = value.trim();
-  }
-
-  return out;
+      return key === undefined ? [] : [[key, value.trim()]];
+    }),
+  );
 }
 
 export function unlinkQuiet(p: string): void {

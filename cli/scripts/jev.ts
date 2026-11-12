@@ -13,7 +13,10 @@ import type { JevMainOpts, JevResult } from "./jev.types.ts";
 /** The `--state` and `--questions` files' texts. */
 type InputTexts = { stateText: string; questionsText: string };
 
-export function parseArgv(argv: readonly string[]): { flags: Record<string, string> } {
+/** The `--name value` flags argv carries, by name. */
+export type JevArgv = { flags: Record<string, string> };
+
+export function parseArgv(argv: readonly string[]): JevArgv {
   const flags: Record<string, string> = {};
   let isValue = false;
 

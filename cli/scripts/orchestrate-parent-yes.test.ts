@@ -37,7 +37,7 @@ function plan1Line(ws: string) {
 }
 
 /** A session in a fresh workspace that saved one reviewed plan with `body`. */
-function onePlan(sid: string, body = VALID_PLAN): { ws: string; s: HookSession; plan: string } {
+function onePlan(sid: string, body = VALID_PLAN) {
   const ws = kit.temp();
   const s = claude(ws, sid);
   s.say("plan it");

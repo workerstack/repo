@@ -58,7 +58,7 @@ function appendTo(text: string, block: ts.ObjectLiteralExpression, entry: string
 }
 
 /** The local name `sealed` goes by in `source`, and the edit that imports it beside defineEnv when it is missing. */
-function sealedImport(source: ts.SourceFile): { name: string; edits: Edit[] } {
+function sealedImport(source: ts.SourceFile) {
   const imports = source.statements.filter(ts.isImportDeclaration).flatMap((statement) => {
     const bindings = statement.importClause?.namedBindings;
 

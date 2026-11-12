@@ -143,27 +143,27 @@ function range(flags: Flags): string | undefined {
 type Table<T> = Readonly<Record<string, T>>;
 
 /** The verbs that ignore the noun. */
-const SOLO: Table<Verb> = {
+const SOLO = {
   accounts: ({ account }) => Promise.resolve(ok(listAccounts(account.home))),
   login: runLogin,
   scopes: ({ account }) => scopeList(account),
   whoami: ({ account }) => whoami(account),
-};
+} as const satisfies Table<Verb>;
 
-const SHEET_VERBS: Table<Verb> = {
+const SHEET_VERBS = {
   append: ({ account, flags }) => sheetAppend(account, { csv: flags.csv, id: flags.id, range: range(flags) }),
   clear: ({ account, flags }) => sheetClear(account, { id: flags.id, range: range(flags) }),
   create: (ctx) => createKind(ctx, KIND_SHEET),
   get: ({ account, flags }) => sheetGet(account, { id: flags.id, range: range(flags) }),
   set: ({ account, flags }) =>
     sheetSet(account, { cell: filled(flags.cell) ?? flags.range, id: flags.id, value: flags.value ?? flags.a1 }),
-};
+} as const satisfies Table<Verb>;
 
-const SLIDE_VERBS: Table<Verb> = { create: (ctx) => createKind(ctx, KIND_SLIDE) };
-const MEETING_VERBS: Table<Verb> = { create: createMeeting };
+const SLIDE_VERBS = { create: (ctx) => createKind(ctx, KIND_SLIDE) } as const satisfies Table<Verb>;
+const MEETING_VERBS = { create: createMeeting } as const satisfies Table<Verb>;
 
 /** The verb-noun pairs; `drive` alone lists. */
-const PAIRS: Table<Table<Verb>> = {
+const PAIRS = {
   doc: {
     append: ({ account, flags }) => docAppend(account, { body: flags.body, id: flags.id }),
     create: (ctx) => createKind(ctx, KIND_DOC),
@@ -175,7 +175,7 @@ const PAIRS: Table<Table<Verb>> = {
   sheet: SHEET_VERBS,
   slide: SLIDE_VERBS,
   slides: SLIDE_VERBS,
-};
+} as const satisfies Table<Table<Verb>>;
 
 /** `table`'s own entry for `key`; inherited names such as `constructor` are not verbs. */
 function own<T>(table: Table<T> | undefined, key: string): T | undefined {

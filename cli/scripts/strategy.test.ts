@@ -25,7 +25,7 @@ function writePlan(root: string, name: string, fm: Record<string, string>): stri
 }
 
 /** A plan's frontmatter with `strategy` (left out when null) and `status`. */
-function planFm(strategy: string | null, status = "in-progress"): Record<string, string> {
+function planFm(strategy: string | null, status = "in-progress") {
   return { name: "x", serial: "4", status, ...(strategy == null ? {} : { strategy }) };
 }
 

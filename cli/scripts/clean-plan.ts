@@ -13,7 +13,7 @@ import {
   stats,
   statusOf,
 } from "./clean-scan.ts";
-import { AGE, DAY, DONE_STATUS, HOUR, NESTED_KIND, OLD_KIND, PLANS_DIR, POLICY } from "./clean.constants.ts";
+import { AGE, DAY, DONE_STATUS, HOUR, NESTED_KIND, oldKindOf, PLANS_DIR, policyOf } from "./clean.constants.ts";
 import type { AgedEntry, CleanPlan, Decision, PlanInput, PlanState, Policy } from "./clean.types.ts";
 import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
 
@@ -43,7 +43,7 @@ function keepDir(state: PlanState, name: string, p: string): void {
 function agedOut(state: PlanState, a: AgedEntry): boolean {
   if (a.entry === a.keeper || serialOf(a.name, a.entry) === null || !old(state, a.child)) return false;
 
-  if (POLICY[a.name] === "age-done" && statusOf(a.child) !== DONE_STATUS) return false;
+  if (policyOf(a.name) === "age-done" && statusOf(a.child) !== DONE_STATUS) return false;
 
   return !(a.name === PLANS_DIR && state.pinned.has(path.resolve(a.child)));
 }
@@ -52,13 +52,14 @@ function ageEntries(state: PlanState, name: string, p: string): void {
   const entries = list(p);
   const keeper = keeperOf(entries, (n) => serialOf(name, n));
   state.keep.push({ kind: name, path: p });
+  // only plans, roadmaps, handoffs and implementations reach age policies, and each has an old kind
+  const kind = oldKindOf(name);
 
   for (const entry of entries) {
     const child = path.join(p, entry);
 
-    if (!agedOut(state, { child, entry, keeper, name })) continue;
-    // only plans, roadmaps, handoffs and implementations reach age policies
-    state.remove.push({ kind: OLD_KIND[name] /* every aged dir has an old kind */ as string, path: child });
+    if (kind === undefined || !agedOut(state, { child, entry, keeper, name })) continue;
+    state.remove.push({ kind, path: child });
   }
 }
 
@@ -111,7 +112,7 @@ function looseEntry(state: PlanState, name: string, p: string): void {
 }
 
 function plannerOf(name: string): Planner {
-  const policy = TMP_RESERVED_DIRS.has(name) ? POLICY[name] : undefined;
+  const policy = TMP_RESERVED_DIRS.has(name) ? policyOf(name) : undefined;
 
   return policy === undefined ? looseEntry : PLANNERS[policy];
 }

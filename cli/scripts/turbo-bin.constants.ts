@@ -4,11 +4,30 @@ export const TURBO_MANIFEST = "turbo/package.json";
 /** The scope of turbo's platform packages, one per OS and architecture. */
 export const TURBO_SCOPE = "@turbo/";
 
-/** The platform package names turbo uses for an OS. */
-export const TURBO_OS: Readonly<Record<string, string>> = { win32: "windows" };
+/** The platform package names turbo uses for an OS that it does not name as node does. */
+const TURBO_OS = { win32: "windows" } as const satisfies Readonly<Record<string, string>>;
 
-/** The platform package names turbo uses for an architecture. */
-export const TURBO_ARCH: Readonly<Record<string, string>> = { x64: "64" };
+/** The platform package names turbo uses for an architecture that it does not name as node does. */
+const TURBO_ARCH = { x64: "64" } as const satisfies Readonly<Record<string, string>>;
+
+function isTurboOs(platform: string): platform is keyof typeof TURBO_OS {
+  return Object.hasOwn(TURBO_OS, platform);
+}
+
+function isTurboArch(arch: string): arch is keyof typeof TURBO_ARCH {
+  return Object.hasOwn(TURBO_ARCH, arch);
+}
+
+/** The name turbo's platform packages give node's `platform`. */
+export function turboOs(platform: string): string {
+  return isTurboOs(platform) ? TURBO_OS[platform] : platform;
+}
+
+/** The name turbo's platform packages give node's `arch`. */
+export function turboArch(arch: string): string {
+  return isTurboArch(arch) ? TURBO_ARCH[arch] : arch;
+}
+
 export const WINDOWS_PLATFORM = "win32";
 
 /** The binary inside a platform package. */

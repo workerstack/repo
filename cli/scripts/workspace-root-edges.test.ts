@@ -155,14 +155,13 @@ describe("resolveRoots", () => {
 
 describe("resolveRoots", () => {
   it("maps Windows git output with path.win32", () => {
-    const facts: Record<string, { top: string; gitDir: string; commonDir: string }> = {
-      "C:\\r\\.worktrees\\w\\src": {
-        commonDir: "C:/r/.git",
-        gitDir: "C:/r/.git/worktrees/w",
-        top: "C:/r/.worktrees/w",
-      },
-      "C:\\r\\src": { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" },
-    };
+    const facts = new Map([
+      [
+        "C:\\r\\.worktrees\\w\\src",
+        { commonDir: "C:/r/.git", gitDir: "C:/r/.git/worktrees/w", top: "C:/r/.worktrees/w" },
+      ],
+      ["C:\\r\\src", { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" }],
+    ]);
 
     const opts = {
       cwd: "C:\\r",
@@ -170,7 +169,7 @@ describe("resolveRoots", () => {
       exists: (abs: string) =>
         abs === path.win32.join("C:\\r", INSTALL_MARKER) ||
         abs === path.win32.join("C:\\r\\.worktrees\\w", INSTALL_MARKER),
-      git: (dir: string) => facts[dir] ?? null,
+      git: (dir: string) => facts.get(dir) ?? null,
       p: path.win32,
       realpath: (abs: string) => abs,
     };

@@ -152,11 +152,11 @@ function copyWhere<K extends string, V extends Json>(
   return out;
 }
 
-function isString(v: unknown): v is string {
+function isString(v: Json | undefined): v is string {
   return typeof v === "string";
 }
 
-function isBoolean(v: unknown): v is boolean {
+function isBoolean(v: Json | undefined): v is boolean {
   return typeof v === "boolean";
 }
 

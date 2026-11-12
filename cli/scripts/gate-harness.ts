@@ -128,8 +128,11 @@ export function harnessOf(data: HookInput): Harness {
   return "claude";
 }
 
+/** One call in the shape every harness shares: its harness, tool key and args (null when absent or not an object). */
+export type ToolCall = { harness: Harness; key: string; args: ToolArgs | null };
+
 /** The call in one shape for every harness: its tool key and args (null when absent or not an object). */
-export function toolCallOf(data: HookInput): { harness: Harness; key: string; args: ToolArgs | null } {
+export function toolCallOf(data: HookInput): ToolCall {
   const harness = harnessOf(data);
   const call = harness === "antigravity" ? data.toolCall : undefined;
   const name = call === undefined ? [data.toolName, data.tool_name].find(Boolean) : call.name;

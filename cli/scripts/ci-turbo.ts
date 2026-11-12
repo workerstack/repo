@@ -43,7 +43,7 @@ function reportSchema(): ReportSchema {
 export type PackageReport = z.output<ReportSchema>;
 
 /** The variables the flags ask turbo's tasks to see. */
-function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {
+function envOf({ coverage, json, shard }: TurboOptions) {
   return {
     [COVERAGE_ENV]: coverage ? COVERAGE_ON : COVERAGE_OFF,
     ...(json === undefined ? {} : { [REPORT_ENV]: REPORT_RELATIVE }),

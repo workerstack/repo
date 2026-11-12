@@ -26,8 +26,11 @@ import { resolveRoots } from "./workspace-root.ts";
 
 const WHITESPACE = /\s+/;
 
+/** A run's stdout and stderr as text. */
+export type Outputs = { stdout: string; stderr: string };
+
 /** A run's stdout and stderr as text; a run that never started has neither. */
-export function outputsOf(run: { stdout?: string | null; stderr?: string | null }): { stdout: string; stderr: string } {
+export function outputsOf(run: { stdout?: string | null; stderr?: string | null }): Outputs {
   return { stderr: run.stderr ?? "", stdout: run.stdout ?? "" };
 }
 

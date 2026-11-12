@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { age, clean, cleanDirs, DAY, exists, gitInit, planter } from "./__fixtures__/clean-kit.ts";
+import { oldKindOf, policyOf } from "./clean.constants.ts";
 import { nextSerial } from "./persist-doc.ts";
 
 const tempDir = cleanDirs();
@@ -98,4 +99,11 @@ it("age-out --dry-run lists exactly the aged-out files and deletes nothing", () 
   );
 
   for (const p of GONE) expect(exists(root)(p), p).toBe(true);
+});
+
+it("names a policy and an old kind only for a dir that has one", () => {
+  expect(oldKindOf("plans")).toBe("old plan");
+  expect(oldKindOf("browser")).toBeUndefined();
+  expect(policyOf("plans")).toBe("age-done");
+  expect(policyOf("constructor")).toBeUndefined();
 });

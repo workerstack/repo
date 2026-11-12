@@ -19,12 +19,15 @@ export type Command =
   | { kind: "wait-many" }
   | { kind: "usage"; error?: string };
 
+/** The flags a gates run takes, before its shard is parsed. */
+type GateFlags = { coverage: boolean; report?: string; shard?: string };
+
 /**
  * The gates run that `--no-coverage`, `--report <file>` and `--shard <i>/<n>`, in any order, ask for; refused for a
  * bad slice, and null for anything else.
  */
 function gateFlags(argv: string[]): Command | null {
-  const flags: { coverage: boolean; report?: string; shard?: string } = { coverage: true };
+  const flags: GateFlags = { coverage: true };
 
   for (let i = 0; i < argv.length; i++) {
     const [flag, next] = [argv[i], argv[i + 1]];
