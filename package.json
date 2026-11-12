@@ -33,6 +33,8 @@
     "dist/presets/*.d.ts",
     "dist/cli/env*.js",
     "dist/cli/env*.d.ts",
+    "dist/cli/env/*.js",
+    "dist/cli/env/*.d.ts",
     "dist/cli/rust/floors*.js",
     "dist/cli/rust/floors*.d.ts",
     "agents",
@@ -54,6 +56,10 @@
     "./bench": {
       "types": "./cli/bench/spec.ts",
       "default": "./cli/bench/spec.ts"
+    },
+    "./env": {
+      "types": "./cli/env/index.ts",
+      "default": "./cli/env/index.ts"
     },
     "./lint": "./cli/lint/index.ts",
     "./tailwind": "./cli/lint/tailwind-plugin.ts",
@@ -94,6 +100,7 @@
     "@total-typescript/ts-reset": "^0.6.1",
     "@types/bun": "^1.4.4",
     "@workerstack/references": "^0.1.1",
+    "age-encryption": "0.3.1",
     "cross-spawn": "^7.0.6",
     "get-east-asian-width": "^1.7.0",
     "jscpd": "5.4.2",

@@ -22,6 +22,7 @@ export const CLAUDE_SETTINGS_FILE = "claude.json";
  * to, and the test times `repo ci times` writes for the shard sequencer.
  */
 export const OTHER_READERS: ReadonlyArray<readonly [string, string]> = [
+  ["env.keys.json", "@workerstack/repo/env (the public key sealed values are locked to)"],
   ["lint-baseline.json", "repo turn and repo check"],
   ["test-times.json", "the vitest shard sequencer written by `bun repo ci times`"],
 ];

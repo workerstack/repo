@@ -24,14 +24,15 @@ function printer(failing: string[]): Printer {
   };
 }
 
-/** Tsconfig bases and env modules, printed before sync's own lines. */
+/** Tsconfig bases, env modules, fixture folders and defineEnv values, printed before sync's own lines. */
 async function checkSources(cwd: string, print: Printer): Promise<void> {
   // Loaded here so other commands never load typescript.
   const { checkTsconfigs } = await import("./check-tsconfig.ts");
   const { checkEnvModules } = await import("./check-env-modules.ts");
   const { checkFixtures } = await import("./check-fixtures.ts");
+  const { checkEnvValues } = await import("./check-env-values.ts");
   const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-  print.fail([...checkTsconfigs(cwd, pkgRoot), ...checkEnvModules(cwd), ...checkFixtures(cwd)]);
+  print.fail([...checkTsconfigs(cwd, pkgRoot), ...checkEnvModules(cwd), ...checkFixtures(cwd), ...checkEnvValues(cwd)]);
 }
 
 /** Manifests and disable comments, under the standards pack. */
