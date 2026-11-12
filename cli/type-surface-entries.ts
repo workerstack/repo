@@ -14,6 +14,7 @@ import { packedUnder } from "./packed-under.ts";
 import { CURRENT_DIR, JSON_FILE, ROOT_KEY, STAR, TYPES_CONDITION } from "./release/consumer.constants.ts";
 import { exportSubpaths } from "./release/exports.ts";
 import type { PackageJson } from "./sync/workspace.ts";
+import { posix } from "./ts-program.ts";
 import { fieldsOf } from "./type-surface-blame.ts";
 import {
   DECLARATION,
@@ -117,7 +118,7 @@ function matchesOf(context: Context, key: string, pattern: string): Matches {
   const { dir, build, files } = context;
   const relative = pattern.slice(CURRENT_DIR.length);
   const staticDir = path.posix.dirname(relative.slice(0, relative.indexOf(STAR)) + NAME_STAND_IN);
-  const built = [...(build?.keys() ?? [])].map((file) => path.relative(dir, file));
+  const built = [...(build?.keys() ?? [])].map((file) => posix(path.relative(dir, file)));
 
   const found = packedUnder(dir, staticDir, { extra: built, files }).flatMap(({ file, isPacked }) => {
     const captured = captureOf(relative, file);
@@ -138,7 +139,7 @@ function shippedDeclarations(file: string): string[] {
 
   return names
     .filter((name): name is string => typeof name === "string" && DECLARATION.test(name))
-    .map((name) => path.resolve(path.dirname(file), name))
+    .map((name) => posix(path.resolve(path.dirname(file), name)))
     .filter((name) => fs.existsSync(name));
 }
 
@@ -151,13 +152,13 @@ function causeOf({ build }: Context, target: string): MissingTypes["cause"] {
 /** Adds a key's types file as a root: its built source, a source, or a declaration; or as missing. */
 function place(context: Context, key: string, types: string): void {
   const { dir, build, entries } = context;
-  const target = path.join(dir, types);
+  const target = posix(path.join(dir, types));
   const source = DECLARATION.test(target) ? build?.get(target) : target;
 
   if (source !== undefined && TYPESCRIPT.test(source) && fs.existsSync(source))
     entries.roots.push({ compile: true, file: source, key });
   else if (fs.existsSync(target)) entries.roots.push({ compile: false, file: target, key });
-  else entries.missing.push({ cause: causeOf(context, target), key, types: path.relative(dir, target) });
+  else entries.missing.push({ cause: causeOf(context, target), key, types: posix(path.relative(dir, target)) });
 }
 
 /** Adds one matched file of a key, read in its mode; a script's sibling declaration only when it exists. */

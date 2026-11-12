@@ -9,6 +9,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { posix } from "./ts-program.ts";
 import { fieldsOf } from "./type-surface-blame.ts";
 import { INSTALLED_SEGMENT, MANIFEST, PACKAGE_DIR } from "./type-surface.constants.ts";
 
@@ -65,7 +66,8 @@ function nameOf({ names }: Lookups, manifest: string | undefined): string | null
 }
 
 /** The locator for the package at `dir`, whose own declarations are held under `virtual`. */
-export function packageLocator(dir: string, virtual: string): Locator {
+export function packageLocator(native: string, virtual: string): Locator {
+  const dir = posix(native);
   const own = path.join(dir, MANIFEST);
   const lookups: Lookups = { dir, manifests: new Map(), names: new Map(), own, virtual };
 
@@ -75,7 +77,7 @@ export function packageLocator(dir: string, virtual: string): Locator {
 
       if (manifestOf(lookups, file) !== own) return null;
 
-      return path.relative(file.startsWith(`${virtual}/`) ? virtual : dir, file);
+      return posix(path.relative(file.startsWith(`${virtual}/`) ? virtual : dir, file));
     },
     packageOf: (file) => {
       const installed = PACKAGE_DIR.exec(file)?.[1];

@@ -17,6 +17,7 @@ import {
   keyFileIn,
   KEYS_JSON,
   keysFileFor,
+  KEY_FILE_MODE,
   modeOf,
   short,
   SPAWN,
@@ -48,7 +49,7 @@ describe("env init", () => {
         "back the key up in a password manager\n",
     });
     const keyFile = path.join(w.home, KEY_REL);
-    expect(modeOf(keyFile)).toBe(0o600);
+    expect(modeOf(keyFile)).toBe(KEY_FILE_MODE);
     expect(await unlocks(fs.readFileSync(keyFile, "utf8").trim(), recipient)).toBe(true);
   });
 

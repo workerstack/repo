@@ -11,7 +11,7 @@ import ts from "typescript";
 
 import { packageLocator } from "./package-locator.ts";
 import type { PackageJson } from "./sync/workspace.ts";
-import { ownerOf, setupOf } from "./ts-program.ts";
+import { ownerOf, posix, setupOf } from "./ts-program.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 import { blame } from "./type-surface-blame.ts";
 import { entriesOf, type MissingTypes } from "./type-surface-entries.ts";
@@ -49,7 +49,7 @@ function emitOptions({ dir, virtual }: Place): ts.CompilerOptions {
 
 /** The virtual name of an own source file: its path under the virtual dir, its own extension kept. */
 function virtualOf({ dir, virtual }: Place, file: string): string {
-  return path.join(virtual, path.relative(dir, file));
+  return posix(path.join(virtual, path.relative(dir, file)));
 }
 
 /**
@@ -117,7 +117,7 @@ function virtualHost(place: Place, options: ts.CompilerOptions, emitted: Map<str
 /** The packages the types of `dir`'s `exports` use, and the keys whose types file is absent. */
 export function typeSurface(dir: string, manifest: PackageJson): Surface {
   const { roots, missing } = entriesOf(dir, manifest);
-  const place: Place = { dir, virtual: path.join(dir, VIRTUAL_DIR) };
+  const place: Place = { dir, virtual: posix(path.join(dir, VIRTUAL_DIR)) };
   const options = emitOptions(place);
   const sources = roots.filter((root) => root.compile).map((root) => root.file);
   const emitted = emitDeclarations(place, sources, options);
@@ -128,7 +128,7 @@ export function typeSurface(dir: string, manifest: PackageJson): Surface {
 
   const keys = keysOf(
     links,
-    roots.map(({ file, key }) => [path.relative(dir, file), key] as const),
+    roots.map(({ file, key }) => [posix(path.relative(dir, file)), key] as const),
   );
 
   return { keys, missing, uses: blame(used, dir, manifest) };
