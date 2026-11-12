@@ -1,4 +1,4 @@
-import type { Json } from "../json.ts";
+import { isBoolean, isNumber, isString, type Json } from "../json.ts";
 /** One board line: its fields flattened to words, and a work label with pasted blocks and secrets taken out. */
 import {
   DIGIT_RE,
@@ -25,7 +25,7 @@ export function isTruthy(value: Json | undefined): boolean {
 
 /** `value` as text; null, undefined, objects and arrays read as "". */
 export function str(value: Json | undefined): string {
-  return value === undefined || typeof value === "object" ? "" : String(value);
+  return isString(value) || isNumber(value) || isBoolean(value) ? String(value) : "";
 }
 
 /** `s`, or a dash when it is empty. */

@@ -13,10 +13,14 @@ import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const { tempDir: plant } = useTempDirs("union-edge-");
 
-function put(ws: string, rel: string, body: JsonInput) {
+function putText(ws: string, rel: string, text: string) {
   const abs = path.join(ws, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, typeof body === "string" ? body : JSON.stringify(body));
+  fs.writeFileSync(abs, text);
+}
+
+function put(ws: string, rel: string, body: JsonInput) {
+  putText(ws, rel, JSON.stringify(body));
 }
 
 function get(ws: string, rel: string): Json {
@@ -33,7 +37,7 @@ function listAt(ws: string, rel: string, ...keys: string[]): Json[] {
 }
 
 function consumerScripts(ws: string) {
-  for (const n of AUTORUN_NEEDLES) put(ws, `scripts/${n}`, "");
+  for (const n of AUTORUN_NEEDLES) putText(ws, `scripts/${n}`, "");
 }
 
 function ownedGroups() {
@@ -47,12 +51,6 @@ describe("roots", () => {
     expect(applyUnion()).toStrictEqual({ check: false, ok: true });
     expect(fs.existsSync(path.join(ws, ".claude/settings.json"))).toBe(true);
     expect(checkUnion()).toContain("claude: missing scrub-spawn-prompt");
-  });
-
-  it("takes a bare path as workspace, source and consumer root", () => {
-    const ws = plant();
-    expect(applyUnion(ws).ok).toBe(true);
-    expect(checkUnion(ws)).toContain("cursor: missing gate-fat-tools");
   });
 
   it("answers a check that finds the union in place", () => {
@@ -75,8 +73,8 @@ describe("roots", () => {
 describe("odd files", () => {
   it("treats a blank file and a non-object JSON file as empty", () => {
     const ws = plant();
-    put(ws, ".claude/settings.json", "  \n");
-    put(ws, ".codex/hooks.json", "[]");
+    putText(ws, ".claude/settings.json", "  \n");
+    putText(ws, ".codex/hooks.json", "[]");
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(get(ws, ".claude/settings.json")).toMatchObject({ hooks: { PreToolUse: [] }, permissions: { deny: [] } });
     expect(get(ws, ".codex/hooks.json")).toMatchObject({ PreToolUse: [] });

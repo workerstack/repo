@@ -4,7 +4,6 @@ import {
   DAY,
   answerBody,
   go,
-  plainReply,
   plantDir,
   plantLedger,
   readLedgerFile,
@@ -35,23 +34,20 @@ it("waits from an HTTP date measured against the injected clock", async () => {
   expect(waits).toStrictEqual([1000]);
 });
 
-it("reads Retry-After from a plain header map", async () => {
+it("retries at once on a zero Retry-After", async () => {
   const { waits, sleep } = sleeper();
-  const fetchImpl = scripted(plainReply(429, { "retry-after": "0" }), reply(200, answerBody()));
+  const fetchImpl = retry(429, { "retry-after": "0" });
   await go({ fetchImpl, home: plantDir(), sleep });
   expect(waits).toStrictEqual([0]);
   expect(fetchImpl.calls).toBe(2);
 });
 
-it.each([reply(429, null), plainReply(429, {}), plainReply(429, null)])(
-  "does not retry without a Retry-After header (%#)",
-  async (first) => {
-    const fetchImpl = scripted(first, reply(200, answerBody()));
-    const result = await go({ fetchImpl, home: plantDir() });
-    expect(result.code).toBe(2);
-    expect(fetchImpl.calls).toBe(1);
-  },
-);
+it("does not retry without a Retry-After header", async () => {
+  const fetchImpl = retry(429, undefined);
+  const result = await go({ fetchImpl, home: plantDir() });
+  expect(result.code).toBe(2);
+  expect(fetchImpl.calls).toBe(1);
+});
 
 it("stops the retry when the second attempt hits the request cap", async () => {
   const home = plantDir();

@@ -39,10 +39,13 @@ function hasRunner(target: string): target is keyof typeof RUNNERS {
   return Object.hasOwn(RUNNERS, target);
 }
 
-function errMessage(cause: unknown): string {
-  const m = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
+/** True for a thrown value that carries a text message. */
+function hasMessage(cause: unknown): cause is { message: string } {
+  return typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string";
+}
 
-  return typeof m === "string" && m !== "" ? m : String(cause);
+function errMessage(cause: unknown): string {
+  return hasMessage(cause) && cause.message !== "" ? cause.message : String(cause);
 }
 
 function interactiveOf(argv: string[], env: Env, opts: SetupMainOpts): boolean {
@@ -97,7 +100,7 @@ async function pickTarget({ ctx, targets }: Run, raw: string | undefined, status
     return "";
   }
 
-  if (target === "" && ctx.interactive && typeof io?.select === "function") {
+  if (target === "" && ctx.interactive && io?.select !== undefined) {
     const options = menuOptions(statuses, targets);
     target = normalizeTarget(
       await io.select({ initialValue: firstMissing(statuses, targets), message: "Setup", options }),
@@ -116,7 +119,7 @@ async function keepsOk({ ctx, targets }: Run, target: string, statuses: Statuses
 
   if (st?.ok !== true || !ctx.interactive || flagOn(ctx.flags, "redo")) return false;
 
-  if (typeof io?.confirm !== "function") return false;
+  if (io?.confirm === undefined) return false;
   const again = await io.confirm({ initialValue: false, message: `${target} already ok (${st.extra}). Redo?` });
 
   if (again) return false;

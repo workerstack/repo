@@ -46,7 +46,7 @@ export function createdCheck(doc: Doc): string[] {
 }
 
 export function sourceLengthCheck({ map }: Doc): string[] {
-  return when({ bad: typeof map.source === "string" && map.source.length > SOURCE_MAX, error: "source length" });
+  return when({ bad: map.source !== undefined && map.source.length > SOURCE_MAX, error: "source length" });
 }
 
 export function slugCheck({ filename, map }: Doc): string[] {

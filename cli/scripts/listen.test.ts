@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
+import { fetchResult } from "./__fixtures__/fetch-result.ts";
 import { cleanupTmp, repoBin, run, tmp, which } from "./__fixtures__/listen-env.ts";
 import { USAGE } from "./listen.constants.ts";
 import type { FetchFn } from "./listen.types.ts";
@@ -19,9 +20,14 @@ const bin = repoBin();
 const root = path.dirname(path.dirname(bin));
 const ffmpegOnly = which({ ffmpeg: "/bin/ffmpeg" });
 
+/** An openai reply body with the transcript `hello world`. */
+function helloWorld() {
+  return Promise.resolve({ text: "hello world" });
+}
+
 /** An openai reply with the transcript `sub hello`. */
 function subHello() {
-  return Promise.resolve({ json: () => Promise.resolve({ text: "sub hello" }), ok: true, status: 200 });
+  return Promise.resolve(fetchResult({ json: () => Promise.resolve({ text: "sub hello" }), ok: true, status: 200 }));
 }
 
 describe("main usage and keys", () => {
@@ -54,7 +60,7 @@ describe("main file", () => {
     function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       posted = { body: init.body, headers: init.headers, url };
 
-      return Promise.resolve({ json: () => Promise.resolve({ text: "hello world" }), ok: true, status: 200 });
+      return Promise.resolve(fetchResult({ json: helloWorld, ok: true, status: 200 }));
     }
 
     const r = await run(["file", "--path", wav], { cwd, fetchFn, whichFn: ffmpegOnly });

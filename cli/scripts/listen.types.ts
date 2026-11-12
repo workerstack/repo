@@ -16,13 +16,13 @@ export type Stt = { kind: "local"; bin: string; model: string } | { kind: "opena
 
 export type WhichFn = (name: string, pathEnv?: string, platform?: NodeJS.Platform) => string;
 
-/** The slice of a fetch Response this script reads. */
+/** The slice of a fetch Response this script reads; a reply carries every body reader. */
 export type FetchResult = {
   ok?: boolean;
   status?: number;
-  text?: () => Promise<string>;
-  json?: () => Promise<Json>;
-  arrayBuffer?: () => Promise<ArrayBuffer | Uint8Array>;
+  text: () => Promise<string>;
+  json: () => Promise<Json>;
+  arrayBuffer: () => Promise<ArrayBuffer | Uint8Array>;
 };
 
 /** The fetch this script calls, with the slice of its init it passes. */

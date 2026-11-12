@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { isString } from "../json.ts";
 import { isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import {
@@ -43,7 +44,7 @@ function patchOf(kind: ToolSpec["kind"], text: string): string | null {
 function shellCwdOf(tool: ToolSpec, input: ToolArgs, roots: Roots): string {
   const typed = tool.cwd === undefined || tool.cwd === "" ? undefined : input[tool.cwd];
 
-  return typeof typed === "string" ? resolveTyped(roots, typed) : roots.cwd;
+  return isString(typed) ? resolveTyped(roots, typed) : roots.cwd;
 }
 
 /** The call in the one shape every guard reads, or null when the tool is not one the harness's gate handles. */
@@ -55,7 +56,7 @@ function callOf(data: HookInput): GateCall | null {
   const roots = resolveRoots(data);
   const field = fieldOf(tool);
   const typed = field === "" ? undefined : input[field];
-  const text = typeof typed === "string" ? typed : "";
+  const text = isString(typed) ? typed : "";
   const shellCwd = shellCwdOf(tool, input, roots);
   const sub = subagentTypeOf(data);
   const patch = patchOf(tool.kind, text);

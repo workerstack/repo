@@ -10,10 +10,13 @@ export function apiMessage(json: Json | undefined, fallback: string): string {
   return filled(rec(rec(json).error).message) ?? fallback;
 }
 
-export function errMessage(cause: unknown): string {
-  const message = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
+/** True for a thrown value carrying a string `message`, as an Error does. */
+function hasMessage(cause: unknown): cause is { message: string } {
+  return typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string";
+}
 
-  return (typeof message === "string" ? filled(message) : undefined) ?? String(cause);
+export function errMessage(cause: unknown): string {
+  return (hasMessage(cause) ? filled(cause.message) : undefined) ?? String(cause);
 }
 
 export async function jsonRecord(r: Response): Promise<Rec> {

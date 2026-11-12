@@ -1,6 +1,7 @@
 /** Reads `repo listen`'s argv and its config (env over ~/.workerstack/speak.json) into typed values. */
 import path from "node:path";
 
+import { isNumber, isString } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DEFAULT_MODEL, DEFAULT_SECONDS, MAX_SECONDS, STT_AUTO } from "./listen.constants.ts";
@@ -21,7 +22,7 @@ export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const openai = section(file, "openai");
   const listen = section(file, "listen");
   const { seconds } = listen;
-  const fileSeconds = typeof seconds === "number" || typeof seconds === "string" ? seconds : undefined;
+  const fileSeconds = isNumber(seconds) || isString(seconds) ? seconds : undefined;
 
   return {
     apiKey: str(firstNonEmpty(env.OPENAI_API_KEY) ?? openai.apiKey),

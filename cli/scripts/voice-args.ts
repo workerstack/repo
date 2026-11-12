@@ -3,7 +3,7 @@ import fs from "node:fs";
 
 import { z } from "zod";
 
-import { isRecord, type Json, tryJson, type JsonObject } from "../json.ts";
+import { isBoolean, isNumber, isRecord, isString, type Json, tryJson, type JsonObject } from "../json.ts";
 import type { ParsedArgv } from "./parsed-argv.types.ts";
 import { FLAG_ON, FLAG_PREFIX } from "./voice-args.constants.ts";
 
@@ -53,7 +53,7 @@ export function readObjectFile(p: string): JsonObject {
 
 /** `v` as a trimmed string, or `fallback` when that is empty; null, objects and arrays read as empty. */
 export function str(v: Json | undefined, fallback = ""): string {
-  const s = v === undefined || typeof v === "object" ? "" : String(v).trim();
+  const s = isString(v) || isNumber(v) || isBoolean(v) ? String(v).trim() : "";
 
   return s === "" ? fallback : s;
 }

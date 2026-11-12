@@ -129,7 +129,7 @@ export async function targetStatuses(opts: StatusOpts = {}): Promise<TargetStatu
 
 /** After an install confirm, looks again and reports what it found. */
 async function recheck({ id, io, probe }: Hint): Promise<string> {
-  if (typeof io?.confirm !== "function") return "";
+  if (io?.confirm === undefined) return "";
 
   const again = await io.confirm({
     initialValue: false,
@@ -137,7 +137,7 @@ async function recheck({ id, io, probe }: Hint): Promise<string> {
   });
 
   if (!again) return "";
-  const hit = typeof probe === "function" ? probe() : "";
+  const hit = probe?.() ?? "";
   logLine(io, hit === "" ? `${id} still missing` : `${id} ok  ${hit}`);
 
   return hit;

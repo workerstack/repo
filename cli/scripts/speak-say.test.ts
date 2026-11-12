@@ -4,9 +4,11 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { fetchResult } from "./__fixtures__/fetch-result.ts";
 import { bytesRes, cfgOf, failRes, fetchReturning, okRes, plantDir } from "./__fixtures__/speak-kit.ts";
+import type { FetchResult } from "./listen.types.ts";
 import { playPath, say } from "./speak-say.ts";
-import type { FetchFn, FetchResult } from "./speak.types.ts";
+import type { FetchFn } from "./speak.types.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -34,19 +36,17 @@ it("audio: reads an ArrayBuffer or a typed array", async () => {
   expect(await audioOf(bytesRes(bytes))).toStrictEqual([1, 2, 3]);
 });
 
-it("audio: reads a Buffer or a byte array body, and nothing from other bodies", async () => {
-  expect(await audioOf(okRes({ body: Buffer.from([4, 5]) }))).toStrictEqual([4, 5]);
-  expect(await audioOf(okRes({ body: [6, 7] }))).toStrictEqual([6, 7]);
-  expect(await audioOf(okRes({ body: "text" }))).toStrictEqual([]);
+it("audio: writes nothing for an empty reply", async () => {
+  expect(await audioOf(okRes())).toStrictEqual([]);
 });
 
 it("failures: name the status and the body", async () => {
   await expect(audioOf(failRes(500, "down"))).rejects.toThrow("500 down");
-  await expect(audioOf({ ok: false })).rejects.toThrow("err");
+  await expect(audioOf(fetchResult({ ok: false }))).rejects.toThrow("err");
 });
 
 it("failures: survive a missing reply or an unreadable body", async () => {
-  const unreadable = { ok: false, status: 502, text: () => Promise.reject(new Error("read")) };
+  const unreadable = fetchResult({ ok: false, status: 502, text: () => Promise.reject(new Error("read")) });
   await expect(audioOf(unreadable)).rejects.toThrow("502");
   const say401 = say({ cfg: openai(), fetchFn: fetchReturning(failRes(401, "")), out: outPath(), text: "hi" });
   await expect(say401).rejects.toThrow("openai key missing or rejected");

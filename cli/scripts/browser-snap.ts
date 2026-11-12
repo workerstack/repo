@@ -1,5 +1,5 @@
 /** Reading a page: its markdown and numbered refs, what that read shows, and which pages Lightpanda cannot read. */
-import { isRecord, type Json } from "../json.ts";
+import { isRecord, isString, type Json } from "../json.ts";
 import { withCdp } from "./browser-cdp.ts";
 import { asRec, textOf } from "./browser-session.ts";
 import {
@@ -91,7 +91,7 @@ async function lpMarkdown(cdp: Cdp): Promise<string> {
     const r = await cdp.send("LP.getMarkdown");
     const v = [r.markdown, r.result].find(Boolean);
 
-    return typeof v === "string" ? v : "";
+    return isString(v) ? v : "";
   } catch {
     return "";
   }

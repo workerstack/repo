@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import type { JsonObject } from "../json.ts";
+import { isString, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 /** Grok PreToolUse: rewrite Bash/run_terminal_command through `rtk rewrite`.
 
@@ -25,7 +25,7 @@ function commandOf(data: HookInput | null): Command | null {
   if (toolInput === undefined) return null;
   const cmdRaw = toolInput.command;
 
-  if (typeof cmdRaw !== "string") return null;
+  if (!isString(cmdRaw)) return null;
   const cmd = cmdRaw.trim();
 
   return cmd === "" ? null : { cmd, toolInput };

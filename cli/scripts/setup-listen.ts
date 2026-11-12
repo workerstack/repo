@@ -66,7 +66,7 @@ async function ensureWhisperModel(run: ListenRun, whisperBin: string): Promise<v
   const { io } = run;
   let shouldDownload = true;
 
-  if (run.interactive && typeof io?.confirm === "function") {
+  if (run.interactive && io?.confirm !== undefined) {
     shouldDownload = await io.confirm({
       initialValue: true,
       message: "Download ggml-base.en.bin (~142MB) into ~/.workerstack/whisper/?",
@@ -109,7 +109,7 @@ async function saveListenKey(run: ListenRun, ffmpegBin: string, openaiKey: strin
   if (device !== "") patch.listen = { device };
   const { io } = run;
 
-  if (run.interactive && ffmpegBin !== "" && device === "" && typeof io?.text === "function") {
+  if (run.interactive && ffmpegBin !== "" && device === "" && io?.text !== undefined) {
     const d = str(
       await io.text({
         defaultValue: "",

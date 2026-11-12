@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonInput, tryJson } from "../json.ts";
+import { isRecord, isString, type Json, type JsonInput, tryJson } from "../json.ts";
 import {
   ACCOUNT_RE,
   ADC_USER,
@@ -23,7 +23,7 @@ export function rec(v: Json | undefined): Rec {
 
 /** `v` when it is a non-empty string, else undefined; a blank flag or JSON field reads as absent. */
 export function filled(v: Json | undefined): string | undefined {
-  return typeof v === "string" && v !== "" ? v : undefined;
+  return isString(v) && v !== "" ? v : undefined;
 }
 
 /** The account named `id` (blank is the default) under `home`; throws on a name that is not a plain id. */

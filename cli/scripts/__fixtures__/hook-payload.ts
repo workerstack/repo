@@ -129,8 +129,3 @@ export function replyCommand(out: HookOutput | null): string {
 export function replyOf(stdout: string): HookOutput | null {
   return stdout ? (JSON.parse(stdout) /* the gate prints only HookOutput objects */ as HookOutput) : null;
 }
-
-/** A payload parsed from JSON, for the shapes the wire type forbids (a number where a string belongs). */
-export function parsedPayload(json: string): HookInput {
-  return JSON.parse(json) /* the test states the shape in its JSON */ as HookInput;
-}

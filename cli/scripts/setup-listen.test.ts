@@ -2,6 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { fetchResult } from "./__fixtures__/fetch-result.ts";
 import { bare, captureIo, cleanSetup, plant, readSpeakJson, spyStd } from "./__fixtures__/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { setupListen } from "./setup-listen.ts";
@@ -19,8 +20,12 @@ function text() {
   return Promise.resolve("hw:7");
 }
 
+function ggml() {
+  return Promise.resolve(Buffer.from("ggml"));
+}
+
 function model() {
-  return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("ggml")), ok: true, status: 200 });
+  return Promise.resolve(fetchResult({ arrayBuffer: ggml, ok: true, status: 200 }));
 }
 
 it("setupListen downloads the model when whisper is found, and reports local STT", async () => {

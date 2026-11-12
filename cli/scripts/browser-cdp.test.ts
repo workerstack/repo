@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { connectCdp } from "./browser-cdp.ts";
 import { serveCdp } from "./browser-serve.ts";
+import { boundPort } from "./browser-session.ts";
 import { main } from "./browser.ts";
 import type { Cdp, Rec } from "./browser.types.ts";
 import { jsonText } from "./json-text.ts";
@@ -17,11 +18,7 @@ afterEach(() => {
 });
 
 function portOf(server: net.Server): number {
-  const a = server.address();
-
-  if (a === null || typeof a === "string") throw new Error("not listening");
-
-  return a.port;
+  return boundPort(server.address());
 }
 
 async function listen(server: net.Server): Promise<number> {

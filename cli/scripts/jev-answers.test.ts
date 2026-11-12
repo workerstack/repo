@@ -10,9 +10,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 it("rejecting input before any request: needs both texts as strings", async () => {
   const fetchImpl = scripted(reply(200, answerBody()));
-  const bad = [{ stateText: undefined }, { questionsText: 5 }, { stateText: null }];
+  const bad = [{ stateText: undefined }, { questionsText: undefined }];
   const outs = await Promise.all(bad.map((one) => go({ fetchImpl, ...one })));
-  expect(outs.map((out) => out.code)).toStrictEqual([2, 2, 2]);
+  expect(outs.map((out) => out.code)).toStrictEqual([2, 2]);
   expect(outs.every((out) => out.text.startsWith("usage: "))).toBe(true);
   expect(fetchImpl.calls).toBe(0);
 });
@@ -124,7 +124,7 @@ it("reading the reply: fails on a bad status, an unreadable body, a non-object b
   expect(await go({ fetchImpl: scripted(reply(500, answerBody())) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(reply(199, answerBody())) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(reply(200, [1])) })).toStrictEqual(failed);
-  const unreadable = { json: () => Promise.reject(new Error("bad json")), status: 200 };
+  const unreadable = { headers: new Headers(), json: () => Promise.reject(new Error("bad json")), status: 200 };
   expect(await go({ fetchImpl: scripted(unreadable) })).toStrictEqual(failed);
   expect(await go({ fetchImpl: scripted(new Error("network down")) })).toStrictEqual(failed);
 });

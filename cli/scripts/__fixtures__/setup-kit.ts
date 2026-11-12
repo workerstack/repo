@@ -4,7 +4,9 @@ import path from "node:path";
 import { vi } from "vitest";
 import type { Json } from "../../json.ts";
 import { tempDir, useTempDirs } from "../../sync/__fixtures__/temp-dirs.ts";
+import type { FetchResult } from "../listen.types.ts";
 import type { SetupIo } from "../setup.types.ts";
+import { fetchResult } from "./fetch-result.ts";
 
 useTempDirs();
 
@@ -69,6 +71,6 @@ export function readSpeakJson(home: string): Record<string, Record<string, strin
 /** No binary on any PATH: setup sees a bare machine. */
 export const bare = { whichFn: () => "", pathEnv: "/none", platform: "linux" as const };
 
-export function okJson(body: Json) {
-  return { ok: true, status: 200, json: () => Promise.resolve(body), text: () => Promise.resolve("") };
+export function okJson(body: Json): FetchResult {
+  return fetchResult({ ok: true, status: 200, json: () => Promise.resolve(body) });
 }

@@ -7,7 +7,7 @@ import { isRecord, tryJson } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { estimateTokens, loadJevKey, retryWaitMs } from "./jev-key.ts";
 import { beginAttempt, settleTokens } from "./jev-ledger.ts";
-import { fail, formatAnswers, headerGet, parseState, postOnce, stopText } from "./jev-post.ts";
+import { fail, formatAnswers, parseState, postOnce, stopText } from "./jev-post.ts";
 import {
   HTTP_OK_END,
   HTTP_OK_MIN,
@@ -28,7 +28,7 @@ function sleepMs(ms: number): Promise<void> {
 
 /** The run's state and questions texts, checked: a string each, the state in size, 1 to 8 questions in an object. */
 function readJevInput({ stateText, questionsText }: JevRunOpts): JevInput | { fail: JevResult } {
-  if (typeof stateText !== "string" || typeof questionsText !== "string") return { fail: fail(USAGE) };
+  if (stateText === undefined || questionsText === undefined) return { fail: fail(USAGE) };
 
   if (stateText.length > MAX_STATE_CHARS) return { fail: fail("state exceeds 64000 characters\n") };
   const questions = tryJson(z.record(z.string(), z.json()), questionsText);
@@ -66,7 +66,7 @@ async function attempt(call: JevCall): Promise<Attempt> {
 /** A rate-limited first answer with a short enough retry-after is asked once more, after the wait. */
 async function retried(call: JevCall, first: Posted): Promise<Attempt> {
   if (!RETRY_STATUSES.includes(first.response.status)) return first;
-  const wait = retryWaitMs(headerGet(first.response.headers, "retry-after"), first.nowMs);
+  const wait = retryWaitMs(first.response.headers.get("retry-after"), first.nowMs);
 
   if (wait == null) return first;
   await call.sleep(wait);
@@ -120,14 +120,13 @@ export function createJevRunner(): JevRun {
     const key = loadJevKey({ env, home });
 
     if (key === "") return Promise.resolve(fail(MISSING_KEY));
-    const nowOpt = opts.now;
 
     return callJev({
       estimate: estimateTokens(input.stateText, input.questionsText),
       fetchImpl: opts.fetchImpl ?? parsedFetch,
       home,
       key,
-      nowFn: typeof nowOpt === "function" ? nowOpt : () => nowOpt ?? Date.now(),
+      nowFn: opts.now ?? (() => Date.now()),
       questions: input.questions,
       sleep: opts.sleep ?? sleepMs,
       spend: () => {

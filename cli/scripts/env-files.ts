@@ -203,12 +203,17 @@ function namespaceSchema() {
   return z.record(z.string(), z.custom<LoadedEnv>(isLoadedEnv).nullable().catch(null));
 }
 
+/** True for a plain string value, false for a sealed brand. */
+function isText(value: LoadedValue): value is string {
+  return typeof value === "string";
+}
+
 /** A merged block's values: a string as text, a sealed brand as its cipher. */
 function blockValues(block: Readonly<Record<string, LoadedValue>> | undefined): Map<string, Value> {
   const values = new Map<string, Value>();
 
   for (const [key, value] of Object.entries({ ...block }))
-    values.set(key, typeof value === "string" ? { text: value } : { cipher: value[SEALED] });
+    values.set(key, isText(value) ? { text: value } : { cipher: value[SEALED] });
 
   return values;
 }

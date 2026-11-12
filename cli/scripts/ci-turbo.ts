@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { type JsonObject, tryJson } from "../json.ts";
+import { isNumber, type JsonObject, tryJson } from "../json.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import type { Gate } from "./ci-gate.ts";
 import {
@@ -73,10 +73,8 @@ function gateOf(run: Captured, named: string): Gate {
 export function mergeReports(reports: readonly PackageReport[]): JsonObject {
   const totals: Record<string, number> = {};
 
-  for (const report of reports) {
-    for (const [key, value] of Object.entries(report))
-      if (typeof value === "number") totals[key] = (totals[key] ?? 0) + value;
-  }
+  for (const report of reports)
+    for (const [key, value] of Object.entries(report)) if (isNumber(value)) totals[key] = (totals[key] ?? 0) + value;
 
   return {
     ...totals,

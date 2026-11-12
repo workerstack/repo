@@ -5,7 +5,7 @@ import type { Duplex } from "node:stream";
 
 import { z } from "zod";
 
-import { type Json, tryJson } from "../json.ts";
+import { isNumber, isString, type Json, tryJson } from "../json.ts";
 import { asRec, boundPort, errMessage, filled } from "./browser-session.ts";
 import { decodeWsFrames, encodeWsFrame } from "./browser-ws.ts";
 import {
@@ -58,7 +58,7 @@ function defaultAx(url: string): Rec[] {
 }
 
 function navigate(state: FakeCdpState, params: Rec): Rec {
-  state.url = typeof params.url === "string" && params.url !== "" ? params.url : state.url;
+  state.url = isString(params.url) && params.url !== "" ? params.url : state.url;
   state.markdown = `# ${state.url}\n\nhello`;
 
   return { frameId: "f1" };
@@ -67,7 +67,7 @@ function navigate(state: FakeCdpState, params: Rec): Rec {
 function resolveNode(_state: FakeCdpState, params: Rec): Rec {
   const id = params.backendNodeId;
 
-  if (typeof id !== "number" || !KNOWN_NODES.has(id)) throw new Error(STALE);
+  if (!isNumber(id) || !KNOWN_NODES.has(id)) throw new Error(STALE);
 
   return { object: { objectId: `oid-${id}` } };
 }
@@ -113,7 +113,7 @@ export function handleCdp(state: FakeCdpState, method: string, params: Rec): Rec
   state.calls?.push({ method, params });
   const scripted = state.replies?.[method];
 
-  if (typeof scripted === "string") throw new Error(scripted);
+  if (isString(scripted)) throw new Error(scripted);
 
   if (scripted !== undefined) return scripted;
 
@@ -154,7 +154,7 @@ function serveFrames(socket: Duplex, state: FakeCdpState, messages: WsMessage[])
 function upgrade(req: http.IncomingMessage, socket: Duplex, state: FakeCdpState): void {
   const key = req.headers["sec-websocket-key"];
 
-  if (typeof key !== "string" || key === "") {
+  if (key === undefined || key === "") {
     socket.destroy();
 
     return;

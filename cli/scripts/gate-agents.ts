@@ -35,11 +35,16 @@ function nonEmptyChildId(raw: string | undefined): boolean {
   return raw !== undefined && raw.trim() !== "";
 }
 
-/** The nested agent object of a payload, or null when it sends a name string, an array or nothing. */
+/** True when a payload names its agent with a string rather than a nested object. */
+function isAgentName(agent: HookInput["agent"]): agent is string {
+  return typeof agent === "string";
+}
+
+/** The nested agent object of a payload, or null when it sends a name string or nothing. */
 function agentObjectOf(data: HookInput): HookAgent | null {
   const { agent } = data;
 
-  return typeof agent === "object" && !Array.isArray(agent) ? agent : null;
+  return agent === undefined || isAgentName(agent) ? null : agent;
 }
 
 /** True when PreToolUse names a child session (UUID ok). Not a fat-gate type. */
@@ -84,7 +89,7 @@ export function subagentTypeOf(data: Payload): string {
 
   if (agent !== null) return firstType(agent, AGENT_TYPE_KEYS);
 
-  return typeof data.agent === "string" ? coerceChildType(data.agent) : "";
+  return isAgentName(data.agent) ? coerceChildType(data.agent) : "";
 }
 
 export function isParentOrchestrator(data: Payload): boolean {

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { isRecord, type Json } from "../json.ts";
+import { isRecord, isString, type Json } from "../json.ts";
 import { callAt, jsonRes, sentJson, stubFetch } from "./__fixtures__/google-workspace-kit.ts";
 import { runWorkspace, useLoggedInWorkspace } from "./__fixtures__/use-logged-in-workspace.ts";
 import { jsonText } from "./json-text.ts";
@@ -12,7 +12,7 @@ const HOUR = 3_600_000;
 function dateTimeOf(v: Json | undefined): string {
   const dateTime = isRecord(v) ? v.dateTime : undefined;
 
-  return typeof dateTime === "string" ? dateTime : "";
+  return isString(dateTime) ? dateTime : "";
 }
 
 it("mail: sends with a placeholder subject and an empty body", async () => {

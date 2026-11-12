@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import type { Json } from "../json.ts";
+import { isString, type Json } from "../json.ts";
 import { cfgFor, cleanupTmp, plantSpeakJson, tmp } from "./__fixtures__/listen-env.ts";
 import { clampSeconds, loadCfg } from "./listen-argv.ts";
 import { DEFAULT_MODEL } from "./listen.constants.ts";
@@ -13,10 +13,7 @@ afterEach(cleanupTmp);
 /** Writes speak.json as given: a string verbatim, anything else as JSON. */
 function plantSpeak(home: string, body: Json) {
   fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
-  fs.writeFileSync(
-    path.join(home, ".workerstack", "speak.json"),
-    typeof body === "string" ? body : JSON.stringify(body),
-  );
+  fs.writeFileSync(path.join(home, ".workerstack", "speak.json"), isString(body) ? body : JSON.stringify(body));
 }
 
 describe("clampSeconds", () => {

@@ -109,7 +109,7 @@ function killHard(child: ChildLike, killFn: KillFn): void {
 }
 
 function watchChild(child: ChildLike, finish: Finish): void {
-  if (typeof child.on !== "function") {
+  if (child.on === undefined) {
     finish(0, null, null);
 
     return;

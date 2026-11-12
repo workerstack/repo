@@ -3,6 +3,7 @@
  * PreToolUse fat-gate + persist rewrite. Stop writes session receipt. SubagentStop intercepts need:
  * search|exec|slice|fetch. Fail-open: parse/crash → empty stdout, exit 0.
  */
+import { isString } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { notePush } from "./ci-push-gate.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
@@ -23,7 +24,9 @@ import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub
 import { resolveRoots } from "./workspace-root.ts";
 
 function promptOf(input: ToolArgs | null | undefined): string | null {
-  return typeof input?.prompt === "string" ? input.prompt : null;
+  const prompt = input?.prompt;
+
+  return isString(prompt) ? prompt : null;
 }
 
 /** A spawn over the prompt cap is denied; otherwise the scrubbed input, or null when nothing changed. */
@@ -50,7 +53,7 @@ function spawnUse(data: HookInput, toolInput: ToolArgs | undefined): HookResult 
 
 function writeUse(data: HookInput, toolInput: ToolArgs | undefined): HookResult | null {
   // A full-content plan Write is answered below, before the gate sees it, so the stamp is written here.
-  if (typeof toolInput?.content === "string") stampPlanSave(data);
+  if (isString(toolInput?.content)) stampPlanSave(data);
 
   return parentWrite(data, toolInput);
 }

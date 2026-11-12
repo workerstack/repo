@@ -16,6 +16,7 @@ import { remoteTarget, runRemote } from "../bench/remote.ts";
 import { runSpec } from "../bench/run.ts";
 import { renderTable, type BenchResult, type Env, type Machine } from "../bench/score.ts";
 import type { ConfigModule } from "../import-config.ts";
+import type { Result } from "../result.ts";
 import {
   EXIT_FAILED,
   EXIT_OK,
@@ -112,19 +113,21 @@ function oneLine(message: string) {
 }
 
 /** The parsed spec at `rel`, or the line saying why it cannot be run. */
-async function loadSpec(cwd: string, rel: string): Promise<Spec | string> {
+async function loadSpec(cwd: string, rel: string): Promise<Result<Spec, string>> {
   const file = path.join(cwd, rel);
 
-  if (!fs.existsSync(file)) return `${rel} not found; have: ${haveList(cwd)}`;
+  if (!fs.existsSync(file)) return { error: `${rel} not found; have: ${haveList(cwd)}`, ok: false };
 
   try {
     const url = pathToFileURL(file).href;
     const loaded = (await import(url)) /* an import resolves to its module namespace object */ as ConfigModule;
     const parsed = parseSpec(loaded);
 
-    return parsed.ok ? parsed.spec : parsed.errors.map((error) => `${rel}: ${error}`).join(`\n${PREFIX}`);
+    if (parsed.ok) return { ok: true, value: parsed.spec };
+
+    return { error: parsed.errors.map((error) => `${rel}: ${error}`).join(`\n${PREFIX}`), ok: false };
   } catch (error) {
-    return `${rel}: ${oneLine(String(error))}`;
+    return { error: `${rel}: ${oneLine(String(error))}`, ok: false };
   }
 }
 
@@ -183,16 +186,16 @@ async function runEverywhere(io: Io, name: string, spec: Spec): Promise<number> 
     spec.os.filter((runner) => runner !== label),
   );
 
-  if (typeof target === "string") {
-    io.stderr(`${PREFIX}${target}\n`);
+  if (!target.ok) {
+    io.stderr(`${PREFIX}${target.error}\n`);
 
     return EXIT_USAGE;
   }
 
-  const local = spec.os.length > target.os.length ? runLocal(io, name, spec) : EXIT_OK;
+  const local = spec.os.length > target.value.os.length ? runLocal(io, name, spec) : EXIT_OK;
 
   if (local !== EXIT_OK) return local;
-  const remote = await runRemote(remoteIo, target);
+  const remote = await runRemote(remoteIo, target.value);
 
   if (!remote.ok) {
     io.stderr(`${PREFIX}${remote.line}\n`);
@@ -217,11 +220,11 @@ export async function main(argv: string[], deps?: BenchDeps): Promise<number> {
 
   const spec = await loadSpec(io.cwd, `${SPEC_DIR}/${args.name}${SPEC_SUFFIX}`);
 
-  if (typeof spec === "string") {
-    io.stderr(`${PREFIX}${spec}\n`);
+  if (!spec.ok) {
+    io.stderr(`${PREFIX}${spec.error}\n`);
 
     return EXIT_USAGE;
   }
 
-  return args.remote ? runEverywhere(io, args.name, spec) : runLocal(io, args.name, spec);
+  return args.remote ? runEverywhere(io, args.name, spec.value) : runLocal(io, args.name, spec.value);
 }

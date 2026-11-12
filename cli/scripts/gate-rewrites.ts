@@ -1,6 +1,7 @@
 /** Rewrites of where a write or a patch lands: stray scratch goes under the root's `.tmp/repo`. */
 import path from "node:path";
 
+import { isString } from "../json.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import { WRITE_PATH_FIELDS } from "./gate-harness.ts";
 import { isUnder, relInside } from "./gate-paths.ts";
@@ -151,7 +152,7 @@ export function writeTargets({
     const typed = WRITE_PATH_FIELDS.map((k) => input[k]);
 
     return typed.flatMap((v) =>
-      typeof v === "string" && v !== "" ? [rewriteScratchWrite(v, roots) ?? resolveTyped(roots, v)] : [],
+      isString(v) && v !== "" ? [rewriteScratchWrite(v, roots) ?? resolveTyped(roots, v)] : [],
     );
   }
 
@@ -201,7 +202,7 @@ export function writeGuard(call: GateCall): GuardResult {
   for (const key of WRITE_PATH_FIELDS) {
     const current = next[key];
 
-    if (typeof current !== "string" || current === "") continue;
+    if (!isString(current) || current === "") continue;
     const { recorded, moved } = fieldPlan(call, current);
     wrote.push(recorded);
 

@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { type JsonObject, tryJson } from "../json.ts";
+import { isString, type JsonObject, tryJson } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
@@ -230,7 +230,7 @@ function sessionOf(data: HookInput): string {
 export function notePush(data: HookInput, toolInput: JsonObject | undefined, deps: GateDeps = realDeps()): void {
   const command = toolInput?.command;
   const session = sessionOf(data);
-  recordPush({ command: typeof command === "string" ? command : "", cwd: resolveRoots(data).cwd, session }, deps);
+  recordPush({ command: isString(command) ? command : "", cwd: resolveRoots(data).cwd, session }, deps);
 }
 
 /** The block text for a parent's Stop from the hook payload; null to let the stop go on. */

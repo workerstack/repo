@@ -120,19 +120,21 @@ it("preToolUse Shell dump and Write redirect answer in the nested form", () => {
   expect(fs.existsSync(saved)).toBe(true);
 });
 
-/** A native deny's permission and the types of its two messages. */
-function nativeDeny(reply: HookOut | null) {
-  return [reply?.permission, typeof reply?.user_message, typeof reply?.agent_message];
+/** Expects a native deny: its permission, and a string in each of its two messages. */
+function expectNativeDeny(reply: HookOut | null): void {
+  expect(reply?.permission).toBe("deny");
+  expect(reply?.user_message).toBeTypeOf("string");
+  expect(reply?.agent_message).toBeTypeOf("string");
 }
 
 it("preToolUse denies in Cursor's native shape and passes plain calls through", () => {
   const r = repo();
   const toolInput = { content: "not a plan", file_path: ".tmp/repo/plans/x.md" };
   const bad = cursor(r, "preToolUse", { tool_input: toolInput, tool_name: "Write" });
-  expect(nativeDeny(bad)).toStrictEqual(["deny", "string", "string"]);
+  expectNativeDeny(bad);
   expect(bad?.hookSpecificOutput).toBeUndefined();
   const lock = cursor(r, "preToolUse", { tool_input: { command: "cat bun.lock" }, tool_name: "Shell" });
-  expect(nativeDeny(lock)).toStrictEqual(["deny", "string", "string"]);
+  expectNativeDeny(lock);
   expect(Object.keys(must(lock)).toSorted()).toStrictEqual(["agent_message", "permission", "user_message"]);
   expect(cursor(r, "preToolUse", { tool_input: { file_path: "big.log" }, tool_name: "Read" })).toBeNull();
   expect(cursor(r, "preToolUse", { tool_input: { command: "git status" }, tool_name: "Shell" })).toBeNull();

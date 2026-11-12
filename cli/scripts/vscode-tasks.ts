@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { type Json, readJson, tryJson } from "../json.ts";
 import { packageJsonSchema } from "../package-json.ts";
+import type { Result } from "../result.ts";
 import { errorMessage } from "../sync-errors.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { stamp } from "../sync/header.ts";
@@ -216,30 +217,30 @@ const PROCESS_IO: TasksIo = {
 export function run(root: string, io: TasksIo = PROCESS_IO): number {
   const written = writeTasks(root, path.join(root, TASKS_REL));
 
-  if (typeof written === "string") {
-    io.stderr(`tasks: ${written}`);
+  if (!written.ok) {
+    io.stderr(`tasks: ${written.error}`);
 
     return 1;
   }
 
-  const { generated, kept } = written;
+  const { generated, kept } = written.value;
   io.stdout(`Wrote ${generated + kept} tasks to ${TASKS_REL} (${generated} generated, ${kept} kept)`);
 
   return 0;
 }
 
 /** Renders the tasks file at `file` and writes it; the task counts, or the error line. */
-function writeTasks(root: string, file: string): { generated: number; kept: number } | string {
+function writeTasks(root: string, file: string): Result<{ generated: number; kept: number }, string> {
   const pkgFile = path.join(root, "package.json");
   const current = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
   const rendered = renderTasks(root, current);
 
-  if (!rendered.ok) return rendered.error.replace(TASKS_REL, file);
+  if (!rendered.ok) return { error: rendered.error.replace(TASKS_REL, file), ok: false };
 
-  if (readPackage(pkgFile) === null) return `cannot read ${pkgFile}`;
+  if (readPackage(pkgFile) === null) return { error: `cannot read ${pkgFile}`, ok: false };
   const error = writeOwned(file, stamp(TASKS_REL, rendered.text), OWNED_MODE);
 
-  return error === null ? rendered : `cannot write ${file}: ${error}`;
+  return error === null ? { ok: true, value: rendered } : { error: `cannot write ${file}: ${error}`, ok: false };
 }
 
 export function main(): number {

@@ -1,4 +1,5 @@
 /** The replies the parent hook's handlers return, and the write target they answer about. */
+import { isString } from "../json.ts";
 import { answerDeny, answerRewrite, type ToolArgs, WRITE_PATH_FIELDS } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { HookResult, HostReply } from "./orchestrate.types.ts";
@@ -24,7 +25,7 @@ export function writeTarget(toolInput: ToolArgs): string {
   for (const key of ["file_path", "filePath", "path", "target_file"]) {
     const v = toolInput[key];
 
-    if (typeof v === "string" && v !== "") return v;
+    if (isString(v) && v !== "") return v;
   }
 
   return "";
@@ -32,13 +33,13 @@ export function writeTarget(toolInput: ToolArgs): string {
 
 /** The full content a Write sent; "" for an Edit. */
 export function contentOf(toolInput: ToolArgs): string {
-  return typeof toolInput.content === "string" ? toolInput.content : "";
+  return isString(toolInput.content) ? toolInput.content : "";
 }
 
 // Hosts name the target differently; point every key the host sent at the absolute file.
 function withPath(toolInput: ToolArgs, abs: string): ToolArgs {
   const next: ToolArgs = Object.assign({}, toolInput);
-  const keys: string[] = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key] !== "");
+  const keys: string[] = WRITE_PATH_FIELDS.filter((key) => isString(next[key]) && next[key] !== "");
 
   for (const key of keys) next[key] = abs;
 

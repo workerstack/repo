@@ -5,7 +5,7 @@ import path from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { z } from "zod";
 
-import { isRecord, type Json, readJson } from "../json.ts";
+import { isRecord, isString, type Json, readJson } from "../json.ts";
 import type { SettingsTable } from "./settings-table.ts";
 import {
   ALL_HOSTS,
@@ -37,11 +37,10 @@ export function shouldSkip(segment: string, skipRe: RegExp | null | undefined): 
 }
 
 function checkedHost(h: Json): ManifestHost {
-  if (!isRecord(h) || typeof h.id !== "string" || (h.format !== JSON_FORMAT && h.format !== TOML_FORMAT))
+  if (!isRecord(h) || !isString(h.id) || (h.format !== JSON_FORMAT && h.format !== TOML_FORMAT))
     throw new Error("manifest host needs id and format json|toml");
 
-  if (typeof h.payload !== "string" || typeof h.dest !== "string")
-    throw new Error(`manifest host ${h.id} needs payload and dest`);
+  if (!isString(h.payload) || !isString(h.dest)) throw new Error(`manifest host ${h.id} needs payload and dest`);
 
   return { ...h, dest: h.dest, format: h.format, id: h.id, payload: h.payload };
 }
@@ -59,7 +58,7 @@ export function loadManifest(workspaceRoot: string): Manifest {
   if (manifest === null) throw new Error("invalid manifest");
   const { skipKeyPattern, hosts } = manifest;
 
-  if (typeof skipKeyPattern !== "string") throw new Error("manifest skipKeyPattern required");
+  if (!isString(skipKeyPattern)) throw new Error("manifest skipKeyPattern required");
 
   if (!Array.isArray(hosts)) throw new Error("manifest hosts required");
 

@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isString, type Json } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { GIT_DIR_NAME } from "./git-dir-name.constants.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -119,8 +120,8 @@ export function resolveTyped(roots: { cwd: string }, raw: string, p: typeof path
   return canonicalPath(p.resolve(roots.cwd, raw), p);
 }
 
-function firstString(...values: unknown[]): string {
-  for (const v of values) if (typeof v === "string" && v.trim() !== "") return v.trim();
+function firstString(...values: (Json | undefined)[]): string {
+  for (const v of values) if (isString(v) && v.trim() !== "") return v.trim();
 
   return "";
 }
@@ -188,7 +189,7 @@ function sentWorkspace(data: HookInput): string {
 
 /** Resolves roots from a hook input; reads workspaceRoot, workspace_root, workspacePaths, cwd and toolCall.args.Cwd. */
 export function resolveRoots(input: HookInput | null = {}, options: RootsOptions = {}): Roots {
-  const data: HookInput = input !== null && typeof input === "object" ? input : {};
+  const data: HookInput = input ?? {};
   const { env, cwd, ...ctx } = contextOf(options);
   const { p, realpath } = ctx;
   const args = data.toolCall?.args ?? {};

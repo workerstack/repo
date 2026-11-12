@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { isRecord, isString } from "../json.ts";
 import {
   AUTH_RE,
   DEFAULT_GGML,
@@ -114,12 +114,6 @@ type GgmlOpts = {
   log?: { error(msg: string): void } | undefined;
 };
 
-async function bodyBytes(res: FetchResult): Promise<Buffer> {
-  if (typeof res.arrayBuffer !== "function") return Buffer.alloc(0);
-
-  return Buffer.from(new Uint8Array(await res.arrayBuffer()));
-}
-
 /** Downloads the default ggml model once, through a `.part` file, and returns its path. */
 export async function downloadGgml({ home, fetchFn = parsedFetch, log }: GgmlOpts): Promise<string> {
   const dest = defaultGgmlPath(home);
@@ -131,7 +125,7 @@ export async function downloadGgml({ home, fetchFn = parsedFetch, log }: GgmlOpt
   const res = await fetchFn(GGML_URL, { headers: { "User-Agent": USER_AGENT }, redirect: "follow" });
 
   if (res.ok !== true) throw new Error(`could not download ggml model (${statusOf(res)}). setup: ${SETUP}`);
-  const buf = await bodyBytes(res);
+  const buf = Buffer.from(new Uint8Array(await res.arrayBuffer()));
 
   if (buf.length === 0) throw new Error("ggml download empty");
   fs.writeFileSync(part, buf);
@@ -184,7 +178,7 @@ export function transcribeLocal({ file, bin, model, spawnSyncFn }: LocalOpts): s
 
 async function bodyText(res: FetchResult): Promise<string> {
   try {
-    return typeof res.text === "function" ? await res.text() : "";
+    return await res.text();
   } catch {
     return "";
   }
@@ -202,9 +196,9 @@ async function transcribeOpenai(file: string, cfg: ListenCfg, fetchFn: FetchFn):
   });
 
   if (res.ok !== true) throw new Error(formatHttpError(statusOf(res), await bodyText(res)));
-  const j = typeof res.json === "function" ? await res.json() : {};
+  const j = await res.json();
 
-  return str(isRecord(j) ? j.text : undefined, typeof j === "string" ? j : "");
+  return str(isRecord(j) ? j.text : undefined, isString(j) ? j : "");
 }
 
 type TranscribeOpts = { file: string; cfg: ListenCfg; stt: Stt; fetchFn: FetchFn; spawnSyncFn: SpawnSyncFn };

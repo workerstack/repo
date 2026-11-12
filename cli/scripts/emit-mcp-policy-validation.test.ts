@@ -67,6 +67,9 @@ it("requiredDeepMatch: matches nested lists, objects and nulls inside lists", ()
 
 it("requiredDeepMatch: does not treat dates as plain objects", () => {
   expect(requiredDeepMatch([new TomlDate(new Date(1))], [new TomlDate(new Date(2))])).toBe(false);
+  const date = new TomlDate(new Date(1));
+  expect(requiredDeepMatch(date, date)).toBe(true);
+  expect(requiredDeepMatch({ a: 1 }, date)).toBe(false);
 });
 
 it("requiredDeepMatch: requires an object on disk when the desired value is an object", () => {

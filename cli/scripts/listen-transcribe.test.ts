@@ -17,12 +17,17 @@ function wavIn(prefix: string): string {
   return wav;
 }
 
-function localRun(file: string, r: SpawnSyncResult | ((args: string[]) => SpawnSyncResult)) {
+function localRun(file: string, run: (args: string[]) => SpawnSyncResult) {
   function spawnSyncFn(_cmd: string, args: string[]) {
-    return typeof r === "function" ? r(args) : r;
+    return run(args);
   }
 
   return transcribeLocal({ bin: "whisper-cli", file, model: "/m.bin", spawnSyncFn });
+}
+
+/** A whisper run that ends with `r` whatever it was passed. */
+function ran(r: SpawnSyncResult): () => SpawnSyncResult {
+  return () => r;
 }
 
 function writeTxt(args: string[], content: string) {
@@ -32,7 +37,7 @@ function writeTxt(args: string[], content: string) {
 describe("transcribeLocal output", () => {
   it("rejects a missing file", () => {
     const missing = path.join(tmp("listen-tl0-"), "none.wav");
-    expect(() => localRun(missing, { status: 0 })).toThrow("transcribe needs an audio file");
+    expect(() => localRun(missing, ran({ status: 0 }))).toThrow("transcribe needs an audio file");
   });
 
   it("reads and removes the .txt the binary wrote, passing the model and file", () => {
@@ -56,13 +61,13 @@ describe("transcribeLocal fallbacks", () => {
   it("falls back to stdout when the .txt is empty or absent", () => {
     const wav = wavIn("listen-tl2-");
     expect(localRun(wav, blank)).toBe("from stdout");
-    expect(localRun(wav, { status: 0, stdout: Buffer.from("buf out") })).toBe("buf out");
+    expect(localRun(wav, ran({ status: 0, stdout: Buffer.from("buf out") }))).toBe("buf out");
   });
 
   it("throws the binary's stderr, or a default, when there is no text", () => {
     const wav = wavIn("listen-tl3-");
-    expect(() => localRun(wav, { status: 1, stderr: "model corrupt" })).toThrow("model corrupt");
-    expect(() => localRun(wav, { status: 1 })).toThrow("whisper-cli failed");
+    expect(() => localRun(wav, ran({ status: 1, stderr: "model corrupt" }))).toThrow("model corrupt");
+    expect(() => localRun(wav, ran({ status: 1 }))).toThrow("whisper-cli failed");
   });
 });
 
