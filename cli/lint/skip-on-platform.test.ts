@@ -53,7 +53,7 @@ describe("skip-on-platform, conditions it passes", () => {
 });
 
 const FAILING = [
-  ['it.skipIf(readEnv().CI)("x", () => {});', "skipIf", "readEnv().CI"],
+  ['it.skipIf(repoEnv.process.CI)("x", () => {});', "skipIf", "repoEnv.process.CI"],
   ['it.skipIf(globalThis.process.env.CI)("x", () => {});', "skipIf", "globalThis.process.env.CI"],
   ['it.skipIf(!fs.existsSync("/x"))("x", () => {});', "skipIf", "fs.existsSync"],
   ['test.runIf(check())("x", () => {});', "runIf", "check"],
@@ -78,8 +78,8 @@ describe("skip-on-platform, conditions it fails", () => {
   });
 
   it("names a multi-line condition on one line", () => {
-    const code = 'it.skipIf(\n  readEnv()\n    .CI,\n)("x", () => {});';
-    expect(messagesOf(code)).toStrictEqual([`skipIf reads readEnv() .CI; ${TAIL}`]);
+    const code = 'it.skipIf(\n  repoEnv.process\n    .CI,\n)("x", () => {});';
+    expect(messagesOf(code)).toStrictEqual([`skipIf reads repoEnv.process .CI; ${TAIL}`]);
   });
 
   it("reads a callback handed straight to skipIf as a test callback too", () => {

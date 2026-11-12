@@ -5,7 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { tempDir as makeTempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { Output, SyncContext } from "./outputs.ts";
 import { runGit, standards } from "./standards.ts";
@@ -42,7 +42,7 @@ function runHook(name: string, ...args: string[]) {
   const hook = hooks(context(["standards"])).find((output) => output.path === `.githooks/${name}`);
   if (hook?.kind !== "file") throw new Error(`no hook ${name}`);
   fs.writeFileSync(path.join(root, "hook"), hook.content);
-  const env = { CLAUDE_PROJECT_DIR: "/nowhere", PATH: readEnv().PATH };
+  const env = { CLAUDE_PROJECT_DIR: "/nowhere", PATH: repoEnv.process.PATH };
   return spawnSync("sh", ["hook", ...args], { cwd: root, encoding: "utf8", env });
 }
 

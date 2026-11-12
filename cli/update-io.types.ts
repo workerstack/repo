@@ -1,5 +1,5 @@
 import type { LatestFetch } from "./check-latest.ts";
-import type { Env } from "./env.ts";
+import type { Env } from "./repo-env.ts";
 
 /** What a tool run reports: its exit code and everything it printed. */
 export type ToolResult = { code: number; output: string };

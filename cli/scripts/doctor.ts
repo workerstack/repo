@@ -4,8 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { enabledSkills } from "../config.ts";
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { agentModelsLines } from "./agent-models-lines.ts";
 import { bunMinimum, versionAtLeast } from "./doctor-bun.ts";
 import { globalsRow, mapsRow, row } from "./doctor-rows.ts";
@@ -111,9 +110,9 @@ function resolveOpts(opts: DoctorOpts): Resolved {
   return {
     cwd: opts.cwd ?? process.cwd(),
     enabled: new Set<string>(opts.skills ?? []),
-    env: opts.env ?? readEnv(),
+    env: opts.env ?? repoEnv.process,
     home: opts.home ?? os.homedir(),
-    pathEnv: opts.pathEnv ?? readEnv().PATH,
+    pathEnv: opts.pathEnv ?? repoEnv.process.PATH,
     platform: opts.platform ?? process.platform,
   };
 }

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { cleanBrowser, exec, failure, tmp } from "./__fixtures__/browser-kit.ts";
 import { doctorHints, installHint, lookupBins, pickEngine } from "./browser-engine.ts";
 import { sessionDir } from "./browser-session.ts";
@@ -93,7 +93,7 @@ it("looks up lightpanda and the first chromium name on the given PATH", () => {
   expect(lookupBins(dir, "linux").chromium).toBe(second);
   const [first, lp] = [put("chromium"), put("lightpanda")];
   expect(lookupBins(dir, "linux")).toStrictEqual({ chromium: first, lightpanda: lp });
-  expect(lookupBins(undefined, "linux")).toStrictEqual(lookupBins(readEnv().PATH));
+  expect(lookupBins(undefined, "linux")).toStrictEqual(lookupBins(repoEnv.process.PATH));
 });
 
 it("hints per platform, defaulting to this one", () => {

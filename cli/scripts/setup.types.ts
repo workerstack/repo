@@ -1,4 +1,4 @@
-import type { Env } from "../env.ts";
+import type { Env } from "../repo-env.ts";
 import type { SpawnSyncOpts } from "./google-workspace.types.ts";
 import type { WhichFn } from "./listen.types.ts";
 import type { FetchResult } from "./speak.types.ts";

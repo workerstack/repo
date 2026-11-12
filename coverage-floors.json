@@ -563,6 +563,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/repo-env.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/script-diagnostics.ts": {
     "branches": 100,
     "functions": 100,
@@ -1740,6 +1746,12 @@
     "statements": 100
   },
   "cli/scripts/worktree.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/secret-reason.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

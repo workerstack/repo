@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { FFMPEG, failFetch, plantSpeakJson, quiet, run, tmp, which, cleanupTmp } from "./__fixtures__/listen-env.ts";
 import { NEED_STT, USAGE } from "./listen.constants.ts";
 import { main } from "./listen.ts";
@@ -54,7 +54,7 @@ describe("main home and PATH", () => {
     await main(["nope"], { ...base, env: { PATH: "/env" }, pathEnv: "/given" });
     await main(["nope"], { ...base, env: { PATH: "/env" } });
     await main(["nope"], { ...base, env: {} });
-    expect(seen).toStrictEqual(["/given", "/env", readEnv().PATH]);
+    expect(seen).toStrictEqual(["/given", "/env", repoEnv.process.PATH]);
   });
 });
 

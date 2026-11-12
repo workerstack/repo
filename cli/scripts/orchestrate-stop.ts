@@ -1,5 +1,5 @@
 /** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { otherLines, recordHook } from "./board-hook.ts";
 import { pushHold } from "./ci-push-gate.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
@@ -100,8 +100,8 @@ export function beforeSubmitPrompt(data: HookInput): HookResult {
 function boardLines(data: HookInput): string {
   let others = "";
   try {
-    recordHook(data, readEnv());
-    others = otherLines(data, readEnv());
+    recordHook(data, repoEnv.process);
+    others = otherLines(data, repoEnv.process);
   } catch {
     // Board is best-effort. The session receipt still ships.
   }

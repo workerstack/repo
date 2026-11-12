@@ -1,6 +1,5 @@
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
 import { ARGV_START, YES_FLAGS } from "../main.constants.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { CI_OFF_VALUES } from "./ci-off-values.constants.ts";
 /** TTY / CI / --yes probe. Copied into consumers; no clack. */
 
@@ -23,7 +22,7 @@ function isCi(ci: string | undefined): boolean {
  */
 export function isInteractive({
   argv = process.argv.slice(ARGV_START),
-  env = readEnv(),
+  env = repoEnv.process,
   stdin = process.stdin,
   stdout = process.stdout,
 }: InteractiveOptions = {}): boolean {

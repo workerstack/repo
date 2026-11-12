@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { bare, cleanSetup, desktopOauth, plant, writeAt } from "./__fixtures__/setup-kit.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
 import { mergeSpeakJson } from "./setup-files.ts";
@@ -60,7 +60,7 @@ it("targetStatuses takes the PATH from env, then from the process", async () => 
   await targetStatuses({ env: { PATH: "/from-env" }, home, platform: "linux", targets: [], whichFn });
   await targetStatuses({ env: {}, home, platform: "linux", targets: [], whichFn });
   expect(seen[0]).toBe("/from-env");
-  expect(seen.at(-1)).toBe(readEnv().PATH);
+  expect(seen.at(-1)).toBe(repoEnv.process.PATH);
 });
 
 it("targetStatuses with no options reads the stubbed home and finds no browser on an empty PATH", async () => {

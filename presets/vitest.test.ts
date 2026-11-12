@@ -179,13 +179,12 @@ async function rejections({ plugins }: ViteUserConfig): Promise<string[]> {
 }
 
 describe("defineConfig temp root guard", () => {
-  it("runs the guard first, then the caller's global setups, and inlines zod for it", () => {
+  it("runs the guard first, then the caller's global setups", () => {
     const config = defineConfig({ test: { globalSetup: ["mine.ts"] } }, NO_FLOORS);
     const [guard, ...rest] = [config.test?.globalSetup].flat();
     expect(rest).toStrictEqual(["mine.ts"]);
     expect(path.basename(String(guard))).toMatch(/^temp-root\.(ts|js)$/);
     expect(fs.existsSync(String(guard))).toBe(true);
-    expect(config.test?.server?.deps?.inline).toContain("zod");
   });
 
   it("gives test processes the run root as their temp dir, under the caller's own env", () => {

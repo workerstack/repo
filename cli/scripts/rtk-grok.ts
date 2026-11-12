@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 /** Grok PreToolUse: rewrite Bash/run_terminal_command through `rtk rewrite`.
 
 Fail-open: parse error, missing rtk, timeout, no rewrite → empty stdout, exit 0.
@@ -67,7 +67,7 @@ function injectUltra(rewritten: string): string {
 
 function rewrite(cmd: string): string | null {
   // Bun.which caches the PATH it started with, so pass the current one.
-  const rtk = Bun.which(RTK_BIN, { PATH: readEnv().PATH ?? "" });
+  const rtk = Bun.which(RTK_BIN, { PATH: repoEnv.process.PATH ?? "" });
   if (rtk === null) return null;
   try {
     const proc = spawnSync(rtk, ["rewrite", ULTRA_FLAG, cmd], {

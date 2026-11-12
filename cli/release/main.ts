@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 
 import { latestRegistry } from "../check-latest.ts";
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { runCargo } from "../rust/clippy.ts";
 import { inheritRunner, realSleep, spawnRunner } from "../scripts/ci-wait-run.ts";
 import { releaseApi } from "./api.ts";
@@ -46,7 +46,7 @@ function apiMain(
   argv: string[],
   run: Tools & { stdout: (text: string) => void; stderr: (text: string) => void },
 ): Promise<number> {
-  const registry = latestRegistry(readEnv());
+  const registry = latestRegistry(repoEnv.process);
   return releaseApi(argv, { ...run, ...packTools(), cargo: runCargo, fetch, registry, rm: removeDir });
 }
 
@@ -63,7 +63,7 @@ export function main(argv: string[]): Promise<number> {
   };
   const run = { ...io, cwd: process.cwd(), gh: spawnRunner("gh"), git: spawnRunner("git") };
   const rest = argv.slice(1);
-  const isCi = readEnv().GITHUB_ACTIONS === GITHUB_ACTIONS_ON;
+  const isCi = repoEnv.process.GITHUB_ACTIONS === GITHUB_ACTIONS_ON;
   if (argv[0] === HELP_COMMAND) return (io.stdout(`${USAGE}\n`), Promise.resolve(0));
   if (argv[0] === WAIT_COMMAND) return releaseWait(rest, { ...io, fetch });
   if (argv[0] === GATE_COMMAND) return gate(rest, run);

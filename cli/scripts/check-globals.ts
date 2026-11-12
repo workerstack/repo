@@ -9,7 +9,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import { parse as parseToml } from "smol-toml";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
@@ -177,7 +177,7 @@ export function checkGlobals({
   sourceRoot?: string | undefined;
   consumerRoot?: string | undefined;
 } = {}): CheckResult {
-  const homeDir = nonEmptyOr(home, nonEmptyOr(readEnv().HOME, ""));
+  const homeDir = nonEmptyOr(home, nonEmptyOr(repoEnv.process.HOME, ""));
   const ws = nonEmptyOr(workspaceRoot, process.cwd());
   if (homeDir === "") return { error: `HOME required; ${APPLY_HINT}`, ok: false };
   let statuses: HostStatus[];

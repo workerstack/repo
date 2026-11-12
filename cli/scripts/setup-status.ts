@@ -1,8 +1,7 @@
 /** Each setup target's ok or missing status, and the print-only install hint for a missing binary. */
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { jevDoctorStatus, speakDoctorStatus, workspaceDoctorStatus } from "./doctor-status.ts";
 import { installHints, whichBin } from "./doctor-which.ts";
 import { CHROMIUM_BINS } from "./doctor.constants.ts";
@@ -36,7 +35,7 @@ type Hint = {
 
 export function lookupChromium(
   whichFn: WhichFn = whichBin,
-  pathEnv: string | undefined = readEnv().PATH,
+  pathEnv: string | undefined = repoEnv.process.PATH,
   platform: NodeJS.Platform = process.platform,
 ): string {
   for (const n of CHROMIUM_BINS) {
@@ -68,8 +67,8 @@ export function setupTargets(packs: string[] = []): string[] {
 
 function statusProbe(opts: StatusOpts): { env: Env; home: string; probe: Probe } {
   const home = opts.home ?? os.homedir();
-  const env = opts.env ?? readEnv();
-  const pathEnv = firstNonEmpty(opts.pathEnv, env.PATH, readEnv().PATH);
+  const env = opts.env ?? repoEnv.process;
+  const pathEnv = firstNonEmpty(opts.pathEnv, env.PATH, repoEnv.process.PATH);
   return {
     env,
     home,

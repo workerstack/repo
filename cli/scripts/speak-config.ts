@@ -2,8 +2,7 @@
 import os from "node:os";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import {
   DEFAULT_ELEVEN_MODEL,
   DEFAULT_ELEVEN_VOICE,
@@ -47,7 +46,7 @@ function openaiOf(env: Env, file: Record<string, unknown>): SpeakCfg["openai"] {
   };
 }
 
-export function loadCfg({ env = readEnv(), home = os.homedir() }: { env?: Env; home?: string } = {}): SpeakCfg {
+export function loadCfg({ env = repoEnv.process, home = os.homedir() }: { env?: Env; home?: string } = {}): SpeakCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
   const file = readJson(filePath);
   return {

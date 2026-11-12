@@ -3,7 +3,7 @@
 import fs from "node:fs";
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { createJevRunner } from "./create-jev-runner.ts";
 import { loadJevKey } from "./jev-key.ts";
 import { fail } from "./jev-post.ts";
@@ -57,7 +57,7 @@ export function runJev(argv: string[], opts: JevMainOpts = {}): Promise<JevResul
   const { flags } = parseArgv(argv);
   if ((flags.available ?? "") !== "") {
     const home = opts.home === undefined || opts.home === "" ? os.homedir() : opts.home;
-    const isPresent = loadJevKey({ env: opts.env ?? readEnv(), home }) !== "";
+    const isPresent = loadJevKey({ env: opts.env ?? repoEnv.process, home }) !== "";
     return Promise.resolve({ code: 0, text: isPresent ? "yes\n" : "no\n" });
   }
   const texts = readInputs(flags);

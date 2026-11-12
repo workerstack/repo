@@ -3,7 +3,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { accountContext, credsDefaultPath, filled, listAccounts, tokenStorePath } from "./google-workspace-account.ts";
 import { accessToken, gfetch, loginLoopback } from "./google-workspace-auth.ts";
 import {
@@ -167,7 +167,7 @@ function own<T>(table: Table<T> | undefined, key: string): T | undefined {
 
 export async function main(argv: string[], spawn: SpawnFn = spawnSync): Promise<number> {
   const { _, flags } = parseArgv(argv);
-  const account = accountContext(filled(flags.account) ?? filled(readEnv().WORKSPACE_ACCOUNT) ?? DEFAULT_ACCOUNT);
+  const account = accountContext(filled(flags.account) ?? filled(repoEnv.process.WORKSPACE_ACCOUNT) ?? DEFAULT_ACCOUNT);
   const verb = (_[0] ?? "").toLowerCase();
   const noun = (_[1] ?? "").toLowerCase();
   const run = own(SOLO, verb) ?? own(own(PAIRS, verb), noun);

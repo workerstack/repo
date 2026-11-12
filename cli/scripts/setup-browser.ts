@@ -1,5 +1,5 @@
 /** `repo setup browser`: prints install hints for Lightpanda and a chromium-family browser; no secrets. */
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { whichBin } from "./doctor-which.ts";
 import { logLine } from "./setup-io.ts";
 import { browserEngineStatus, lookupChromium, reprobeHint } from "./setup-status.ts";
@@ -18,7 +18,13 @@ function browserAdvice(lp: string, chromium: string, platform: NodeJS.Platform):
 }
 
 export async function setupBrowser(ctx: SetupCtx = {}): Promise<{ ok: boolean; lightpanda: string; chromium: string }> {
-  const { io, platform = process.platform, pathEnv = readEnv().PATH, whichFn = whichBin, interactive = false } = ctx;
+  const {
+    io,
+    platform = process.platform,
+    pathEnv = repoEnv.process.PATH,
+    whichFn = whichBin,
+    interactive = false,
+  } = ctx;
   function findLp(): string {
     return whichFn("lightpanda", pathEnv, platform);
   }

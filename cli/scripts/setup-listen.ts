@@ -1,8 +1,7 @@
 /** `repo setup listen`: finds ffmpeg and whisper-cli, fetches the model, and saves the OpenAI fallback key. */
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { whichBin } from "./doctor-which.ts";
 import type { Stt, WhichFn } from "./listen.types.ts";
 import { flagOn } from "./setup-argv.ts";
@@ -26,11 +25,11 @@ type ListenRun = SetupCtx & {
 function listenRun(ctx: SetupCtx): ListenRun {
   return {
     ...ctx,
-    env: ctx.env ?? readEnv(),
+    env: ctx.env ?? repoEnv.process,
     flags: ctx.flags ?? {},
     home: ctx.home ?? os.homedir(),
     interactive: ctx.interactive ?? false,
-    pathEnv: ctx.pathEnv ?? readEnv().PATH,
+    pathEnv: ctx.pathEnv ?? repoEnv.process.PATH,
     platform: ctx.platform ?? process.platform,
     whichFn: ctx.whichFn ?? whichBin,
   };

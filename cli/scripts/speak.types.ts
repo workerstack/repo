@@ -1,4 +1,4 @@
-import type { Env } from "../env.ts";
+import type { Env } from "../repo-env.ts";
 import type { FetchResult as ListenFetchResult } from "./listen.types.ts";
 
 export type Provider = "elevenlabs" | "openai";

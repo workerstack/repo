@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { readEnv } from "../env.ts";
+import { repoEnv } from "../repo-env.ts";
 import { recordHook } from "./board-hook.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { folderMap } from "./folder-map.ts";
@@ -61,7 +61,7 @@ export function sessionContext(notice: string, out: FolderMapResult | null): str
 
 export function main(_argv: string[] = [], io: HookIo = processHookIo()): number {
   const data = readHookInput(io) ?? {};
-  recordHook(data, readEnv());
+  recordHook(data, repoEnv.process);
   try {
     const roots = resolveRoots(data);
     const notice = fallbackNotice(roots.checkout);

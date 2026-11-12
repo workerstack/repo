@@ -6,28 +6,16 @@ import ts from "typescript";
 import {
   DEFINE_ENV,
   DEFINE_ENV_CALL,
-  CREDENTIAL_NAME,
-  CREDENTIAL_REASON,
-  CREDENTIAL_SHAPE,
-  DIGIT,
-  ENTROPY_BITS,
-  ENTROPY_REASON,
-  LETTER,
-  LOWER,
   PROCESS_BLOCK,
-  PUBLIC_PREFIXES,
   SCANNED_EXTENSIONS,
   SCOPE_BLOCKS,
   SEAL_HINT,
-  SECRET_PREFIXES,
-  TOKEN_SHAPE,
-  UPPER,
-  URL_MARK,
   VALUE_BLOCKS,
 } from "./check-env-values.constants.ts";
 import { ENV_PROPERTY } from "./env.constants.ts";
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
 import { listFiles } from "./list-files.ts";
+import { secretReason } from "./secret-reason.ts";
 import { isTestFile } from "./test-files.ts";
 
 /** Modules whose `env` export is the process environment, as env-in-config reads them. */
@@ -40,38 +28,6 @@ type Blocks = ReadonlyMap<string | undefined, ts.ObjectLiteralExpression>;
 
 /** A block of a defineEnv call: its literal keys in order, and whether a spread hides more. */
 type Block = { readonly keys: readonly string[]; readonly hasSpread: boolean };
-
-/** The Shannon entropy of `text`, in bits per character. */
-function entropyOf(text: string): number {
-  const counts = new Map<string, number>();
-  for (const char of text) counts.set(char, (counts.get(char) ?? 0) + 1);
-  const shares = [...counts.values()].map((count) => count / text.length);
-  return shares.reduce((bits, share) => bits - share * Math.log2(share), 0);
-}
-
-/** A mixed-case token of high entropy: no hex id, UUID, domain or slug mixes both cases. */
-function isRandomToken(value: string): boolean {
-  return TOKEN_SHAPE.test(value) && UPPER.test(value) && LOWER.test(value) && entropyOf(value) >= ENTROPY_BITS;
-}
-
-/** A long value of letters and digits, no space, under a key named for a credential. */
-function isNamedCredential(key: string, value: string): boolean {
-  return CREDENTIAL_NAME.test(key) && CREDENTIAL_SHAPE.test(value) && LETTER.test(value);
-}
-
-/**
- * Why the value of `key` looks like a secret (`sk_ prefix`, `high entropy`, `credential name`), or null when it does
- * not: a provider prefix; a mixed-case token with digits of high entropy; or a long letter-and-digit value under a key
- * named for a credential. A URL and a Stripe publishable key are never secrets.
- */
-function secretReason(key: string, value: string): string | null {
-  if (PUBLIC_PREFIXES.some((head) => value.startsWith(head))) return null;
-  const prefix = SECRET_PREFIXES.find((head) => value.startsWith(head));
-  if (prefix !== undefined) return `${prefix} prefix`;
-  if (value.includes(URL_MARK) || !DIGIT.test(value)) return null;
-  if (isRandomToken(value)) return ENTROPY_REASON;
-  return isNamedCredential(key, value) ? CREDENTIAL_REASON : null;
-}
 
 /** The plain name of a key or binding, or undefined for a computed key or a pattern. */
 function keyName(name: ts.Node): string | undefined {
@@ -88,10 +44,31 @@ function isCallOf(node: ts.Node, name: string): node is ts.CallExpression {
   return ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === name;
 }
 
+/** `node` with every `as`, `satisfies` and pair of parentheses around it taken off. */
+function unwrapped(node: ts.Expression): ts.Expression {
+  const isWrapper = ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node);
+  return isWrapper ? unwrapped(node.expression) : node;
+}
+
+/** The initializer of the top-level `const <name>` of the file, or `name` itself when no such const holds one. */
+function constValue(file: ts.SourceFile, name: ts.Identifier): ts.Expression {
+  const declarations = file.statements
+    .filter(ts.isVariableStatement)
+    .filter((statement) => (statement.declarationList.flags & ts.NodeFlags.Const) !== 0)
+    .flatMap((statement) => statement.declarationList.declarations);
+  return declarations.find((declaration) => keyName(declaration.name) === name.text)?.initializer ?? name;
+}
+
+/** The config a defineEnv call is given, inline or by the name of a same-file const, unwrapped. */
+function configOf(file: ts.SourceFile, argument: ts.Expression): ts.Expression {
+  return unwrapped(ts.isIdentifier(argument) ? constValue(file, argument) : argument);
+}
+
 /** The object literal blocks of a defineEnv call, by block name; a block held in a variable is not read. */
-function blocksOf(call: ts.CallExpression): Map<string | undefined, ts.ObjectLiteralExpression> {
+function blocksOf(file: ts.SourceFile, call: ts.CallExpression): Map<string | undefined, ts.ObjectLiteralExpression> {
   const members = call.arguments
     .slice(0, 1)
+    .map((argument) => configOf(file, argument))
     .filter(ts.isObjectLiteralExpression)
     .flatMap((config) => config.properties.filter(ts.isPropertyAssignment));
   const blocks = new Map<string | undefined, ts.ObjectLiteralExpression>();
@@ -227,7 +204,7 @@ function fileLines(rel: string, text: string): string[] {
   const declared = new Set<string>();
   const lines: string[] = [];
   for (const call of defineCalls(file)) {
-    const blocks = blocksOf(call);
+    const blocks = blocksOf(file, call);
     lines.push(...secretLines(rel, blocks), ...missingLines(rel, blocks));
     const processBlock = blocks.get(PROCESS_BLOCK);
     for (const key of processBlock === undefined ? [] : blockOf(processBlock).keys) declared.add(key);

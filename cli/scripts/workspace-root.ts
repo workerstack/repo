@@ -14,8 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { GIT_DIR_NAME } from "./git-dir-name.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
@@ -155,7 +154,7 @@ type RootsOptions = Partial<RootsContext> & { env?: Env; cwd?: string };
 function contextOf(options: RootsOptions): RootsContext & { env: Env; cwd: string } {
   return {
     cwd: options.cwd ?? process.cwd(),
-    env: options.env ?? readEnv(),
+    env: options.env ?? repoEnv.process,
     exists: options.exists ?? fs.existsSync,
     git: options.git ?? gitRevParse,
     p: options.p ?? path,

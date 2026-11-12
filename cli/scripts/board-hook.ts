@@ -1,6 +1,5 @@
 /** The board's hook side: a row from a hook payload, and the other sessions' lines for this one. */
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
 import { isTruthy, str, valueOrNone } from "./board-line.ts";
 import { bootOr, hostIdentity, probeProcess } from "./board-process.ts";
@@ -49,7 +48,7 @@ function promptOf(data: Data): string {
 }
 
 /** Writes the row a hook payload describes; null when there is no session, no host process, or any error. */
-export function recordHook(data: Data, env: Env = readEnv(), deps: RecordDeps = {}): BoardRow | null {
+export function recordHook(data: Data, env: Env = repoEnv.process, deps: RecordDeps = {}): BoardRow | null {
   try {
     const session = sessionOf(data, env);
     if (session === "" || session === DEFAULT_SESSION) return null;
@@ -78,7 +77,7 @@ export function recordHook(data: Data, env: Env = readEnv(), deps: RecordDeps = 
 /** The digest of every session but this one; "" on any error. */
 export function otherLines(
   data: Data,
-  env: Env = readEnv(),
+  env: Env = repoEnv.process,
   deps: { boot?: string | undefined; probe?: Probe | undefined } = {},
 ): string {
   try {

@@ -1,7 +1,7 @@
 /** Reads `repo listen`'s argv and its config (env over ~/.workerstack/speak.json) into typed values. */
 import path from "node:path";
 
-import type { Env } from "../env.ts";
+import type { Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DEFAULT_MODEL, DEFAULT_SECONDS, MAX_SECONDS, STT_AUTO } from "./listen.constants.ts";
 import type { ListenCfg } from "./listen.types.ts";

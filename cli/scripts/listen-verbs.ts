@@ -3,8 +3,7 @@ import { spawn, spawnSync, type SpawnOptions } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 
-import { readEnv } from "../env.ts";
-import type { Env } from "../env.ts";
+import { repoEnv, type Env } from "../repo-env.ts";
 import { whichBin } from "./doctor-which.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { loadCfg } from "./listen-argv.ts";
@@ -51,7 +50,7 @@ function places({ flags, opts, env }: PlaceIn) {
   return {
     cwd: str(firstNonEmpty(flags.cwd, opts.cwd), process.cwd()),
     home: firstNonEmpty(opts.home) ?? str(firstNonEmpty(env.HOME, env.USERPROFILE), os.homedir()),
-    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH) ?? readEnv().PATH,
+    pathEnv: firstNonEmpty(opts.pathEnv, env.PATH) ?? repoEnv.process.PATH,
     platform: opts.platform ?? process.platform,
   };
 }
@@ -62,7 +61,7 @@ function places({ flags, opts, env }: PlaceIn) {
  */
 export function contextOf(argv: string[], opts: ListenMainOpts, again: (argv: string[]) => Promise<number>): ListenCtx {
   const { _: rest, flags } = parseArgv(argv);
-  const env = opts.env ?? readEnv();
+  const env = opts.env ?? repoEnv.process;
   const { home, cwd, platform, pathEnv } = places({ env, flags, opts });
   const { whichFn, ...io } = seams(opts);
   const ffmpegBin = whichFn("ffmpeg", pathEnv, platform);
