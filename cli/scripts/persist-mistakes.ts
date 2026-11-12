@@ -5,12 +5,15 @@ import { hasKey, type FrontmatterMap, type Sections } from "./persist-doc.ts";
 /** Entry kinds a plan logs. A roadmap adds its own. */
 export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise", "decision"];
 
-export type MistakeEntry = {
+type MistakeEntry = {
   source: string;
   text: string;
   lesson: string | undefined;
   line: string;
 };
+
+/** A parsed log: its entries in order, and an error per line that is not one. */
+export type MistakeLog = { entries: MistakeEntry[]; errors: string[] };
 
 const REVIEWS_RE = /^(0|[1-9][0-9]*)$/;
 
@@ -26,12 +29,12 @@ function keptCountErrors(map: FrontmatterMap, prev: FrontmatterMap | null, count
 
 /**
  * `reviews` counts settled review rounds: well-formed, never removed or lowered, and gating entry to
- * a status. `gates` maps a status to the rounds it needs; `review` is the command the deny names.
+ * a status. `gates` gives the rounds a status needs, undefined for none; `review` is the command the deny names.
  */
 export function reviewErrors(
   map: FrontmatterMap,
   prev: FrontmatterMap | null,
-  { gates, review }: { gates: Record<string, number>; review: string },
+  { gates, review }: { gates: (status: string) => number | undefined; review: string },
 ): string[] {
   const sent = hasKey(map, "reviews");
 
@@ -40,7 +43,7 @@ export function reviewErrors(
 
   const count = sent ? Number(map.reviews) : 0;
   const errors = keptCountErrors(map, prev, count);
-  const need = map.status === undefined ? undefined : gates[map.status];
+  const need = map.status === undefined ? undefined : gates(map.status);
 
   if (need !== undefined && (prev === null || prev.status !== map.status) && count < need) {
     errors.push(
@@ -53,10 +56,7 @@ export function reviewErrors(
 }
 
 /** `(none)` or one `- {source}: {what was wrong} → {what changed}` line per entry. */
-export function parseMistakes(
-  sectionText: string | undefined,
-  sources: readonly string[],
-): { entries: MistakeEntry[]; errors: string[] } {
+export function parseMistakes(sectionText: string | undefined, sources: readonly string[]): MistakeLog {
   const re = new RegExp(`^- (${sources.join("|")}): (.+?) → (.+?)(?: \\(lesson: ([a-z0-9]+(?:-[a-z0-9]+)*)\\))?$`);
 
   const lines = (sectionText ?? "")

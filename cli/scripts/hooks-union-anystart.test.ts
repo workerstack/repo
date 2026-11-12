@@ -32,13 +32,17 @@ const OWNED_STUBS = ["cli/scripts/session-map.ts", "cli/scripts/worktree.ts"];
 const STUBS = AUTORUN_NEEDLES.map((n) => `scripts/${n}`);
 const RAN = [...HOOK_NAMES.map((n) => `hook ${n}`), ...STUBS];
 
-const EVENTS: Record<string, string> = {
+const EVENTS = {
   beforeSubmitPrompt: "UserPromptSubmit",
   preToolUse: "PreToolUse",
   sessionStart: "SessionStart",
   stop: "Stop",
   subagentStop: "SubagentStop",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+function isEvent(event: string): event is keyof typeof EVENTS {
+  return Object.hasOwn(EVENTS, event);
+}
 
 function gitRepo(prefix: string): string {
   const root = fs.realpathSync(tmpDir(prefix));
@@ -84,7 +88,7 @@ function seedShipped(root: string): void {
   const hooks: Record<string, unknown[]> = {};
 
   for (const [event, entries] of Object.entries(ssotOf(ssot).hooks)) {
-    hooks[must(EVENTS[event])] = entries.map((e) => ({
+    hooks[must(isEvent(event) ? EVENTS[event] : undefined)] = entries.map((e) => ({
       ...(e.matcher === undefined || e.matcher === "" ? {} : { matcher: e.matcher }),
       hooks: [{ command: e.command, timeout: e.timeout, type: "command" }],
     }));

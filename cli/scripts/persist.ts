@@ -16,13 +16,17 @@ type Saved = { ok: true; serial: number; path: string; filename: string } | { ok
 
 type Saver = (opts: { workspaceRoot: string; content: string }) => Saved;
 
-const SAVERS: Readonly<Record<string, Saver>> = {
+const SAVERS = {
   handoff: persistHandoff,
   implementation: persistImplementation,
   plan: persistPlan,
   roadmap: persistRoadmap,
   tmp: persistTmp,
-};
+} as const satisfies Readonly<Record<string, Saver>>;
+
+function isKind(kind: string): kind is keyof typeof SAVERS {
+  return Object.hasOwn(SAVERS, kind);
+}
 
 const KINDS = "use plan, roadmap, handoff, implementation or tmp";
 
@@ -58,7 +62,7 @@ export function main(argv: string[] = [], io: HookIo = processHookIo()): number 
   const kind = argv[0];
 
   if (kind === undefined) return fail(`repo persist: missing kind; ${KINDS}`);
-  const save = Object.hasOwn(SAVERS, kind) ? SAVERS[kind] : undefined;
+  const save = isKind(kind) ? SAVERS[kind] : undefined;
 
   if (save === undefined) return fail(`repo persist: unknown kind "${kind}"; ${KINDS}`);
 

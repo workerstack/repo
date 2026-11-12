@@ -30,12 +30,15 @@ function closesFence(line: string, open: OpenFence): boolean {
   return fence[0] === open.char && fence.length >= open.length;
 }
 
+/** The 0-based lines inside code fences, and the 1-based line of a fence that never closes (null when none). */
+export type FencedLines = { fenced: Set<number>; unclosed: number | null };
+
 /**
  * Lines inside CommonMark code fences, fence lines included. A fence closes only on the same
  * character, at least as long, with nothing after it. `unclosed` is the 1-based line of a fence
  * that never closes, else null.
  */
-export function fencedLineSet(lines: string[]): { fenced: Set<number>; unclosed: number | null } {
+export function fencedLineSet(lines: string[]): FencedLines {
   const fenced = new Set<number>();
   let open: OpenFence | null = null;
 

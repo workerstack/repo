@@ -16,7 +16,7 @@ const RTK_DOCS = "https://www.rtk-ai.app/docs/getting-started/installation/";
 const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
 const WHISPER_REPO = "https://github.com/ggml-org/whisper.cpp";
 const BUN_SITE = "https://bun.sh";
-export const REQUIRED: string[] = ["bun", "git", "rtk", "lightpanda", "chromium"];
+export const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"] as const;
 export const MAPS_SECTIONS: string[] = ["skills", "refs"];
 
 /** The platforms the hints and PATH lookup tell apart. */
@@ -27,7 +27,7 @@ export const DARWIN = "darwin";
 export const HINT_ALL = "all";
 
 /** Print-only install lines per tool: per platform, else `other`. */
-export const INSTALL_HINTS: Record<string, InstallHints> = {
+const INSTALL_HINTS = {
   bun: {
     other: ["curl -fsSL https://bun.sh/install | bash", BUN_SITE],
     win32: ['powershell -c "irm bun.sh/install.ps1 | iex"', BUN_SITE],
@@ -68,7 +68,16 @@ export const INSTALL_HINTS: Record<string, InstallHints> = {
     other: [WHISPER_REPO],
     win32: ["whisper.cpp release: whisper-cli.exe on PATH", WHISPER_REPO],
   },
-};
+} as const satisfies Readonly<Record<string, InstallHints>>;
+
+function hasHints(id: string): id is keyof typeof INSTALL_HINTS {
+  return Object.hasOwn(INSTALL_HINTS, id);
+}
+
+/** The install lines of the tool `id`, or undefined when it has none. */
+export function installHintsOf(id: string): InstallHints | undefined {
+  return hasHints(id) ? INSTALL_HINTS[id] : undefined;
+}
 
 /** The executable suffixes Windows tries when PATHEXT is unset. */
 export const PATHEXT_DEFAULT = ".EXE;.CMD;.BAT;.COM";

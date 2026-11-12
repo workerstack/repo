@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
+import { hookSession, type Casing } from "./__fixtures__/hook-session.ts";
 import { must, orchestrateKit, strategyOf, transcript } from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { closingLine } from "./closing-line.ts";
@@ -23,7 +23,7 @@ function handoffs(ws: string) {
 }
 
 /** A session in a fresh workspace that saved one reviewed plan. */
-function onePlan(casing: Casing, sid: string): { ws: string; s: HookSession; plan: string } {
+function onePlan(casing: Casing, sid: string) {
   const ws = kit.temp();
   const s = hookSession(kit, { casing, env: UNSET, sid, ws });
   s.say("plan it");
@@ -32,7 +32,7 @@ function onePlan(casing: Casing, sid: string): { ws: string; s: HookSession; pla
 }
 
 /** The one handoff written, its serial and its text. */
-function theHandoff(ws: string): { file: string; serial: number; text: string } {
+function theHandoff(ws: string) {
   const files = handoffs(ws);
   expect(files).toHaveLength(1);
   const file = must(files[0]);

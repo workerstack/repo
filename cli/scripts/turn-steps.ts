@@ -131,7 +131,7 @@ function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[])
  * Stylelint's fix on the stylesheets, `lint --fix -f json` on the lintable files until a pass rewrites none, then
  * oxfmt on what a fix rewrote.
  */
-function lintFix(root: string, files: readonly string[]): { report: Result<Diagnostic[]>; fixed: string[] } {
+function lintFix(root: string, files: readonly string[]) {
   const rewritten = watch(root, files);
   cssDiagnostics(root, files, { fix: true });
   const lintable = files.filter((rel) => LINTABLE.test(rel));
@@ -276,7 +276,7 @@ function dirty(root: string): Map<string, string | null> {
 }
 
 /** `repo sync` in the root, and the files it changed that git would stage. */
-function sync(root: string): { run: Captured; touched: string[] } {
+function sync(root: string) {
   const before = dirty(root);
   const run = captureBun([BIN, "sync"], root);
   const after = dirty(root);

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { MISTAKES_H2 } from "./persist-doc.constants.ts";
 import { mistakeLogErrors, parseMistakes, PLAN_MISTAKE_SOURCES, reviewErrors } from "./persist-mistakes.ts";
+import { reviewsToEnter } from "./persist-plan.constants.ts";
 
-const GATES = { "in-progress": 1 };
-const OPTS = { gates: GATES, review: "/review-plan {n}" };
+const OPTS = { gates: reviewsToEnter, review: "/review-plan {n}" };
 const ENTRY = "- review: slow → fast";
 
 const ENTRY_FORMAT =

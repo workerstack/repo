@@ -54,7 +54,7 @@ function readBack(dir: string, dotenv: string, names: string[]): Record<string, 
 }
 
 /** The dev values each quoting is picked for. */
-const VALUES: Record<string, string> = {
+const VALUES = {
   BACKSLASH: "C:\\dir\\new",
   BOTH: `it's "quoted"`,
   CR: "one\rtwo",

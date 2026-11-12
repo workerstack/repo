@@ -20,13 +20,17 @@ const RULES = [
 ].join("\n");
 
 /** The final lines each subagent ends its return with. */
-const RETURNS: Record<string, string> = {
-  implementer:
+const RETURNS = new Map([
+  [
+    "implementer",
     "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
-  researcher:
+  ],
+  [
+    "researcher",
     "facts: <one fact per line, each with its source>\nsources: <urls or repo paths>\nstatus: done|partial|stuck",
-  scout: "facts: <one fact per line>\nstatus: done|partial|stuck",
-};
+  ],
+  ["scout", "facts: <one fact per line>\nstatus: done|partial|stuck"],
+]);
 
 function body(file: string): string {
   const text = fs.readFileSync(path.join(dir, file), "utf8").replaceAll("\r\n", "\n");
@@ -49,7 +53,7 @@ describe("subagent bodies", () => {
     it(`${name} holds the rules block and ends in its return block`, () => {
       const text = body(file).trimEnd();
       expect(text).toContain(RULES);
-      expect(text.endsWith(String(RETURNS[name]))).toBe(true);
+      expect(text.endsWith(String(RETURNS.get(name)))).toBe(true);
     });
   }
 });

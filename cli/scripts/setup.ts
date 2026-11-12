@@ -27,13 +27,17 @@ type Run = {
 /** One target's setup step; each resolves to whether it set its target up, which main does not read. */
 type Runner = (ctx: SetupCtx) => Promise<{ ok: boolean }>;
 
-const RUNNERS: Readonly<Record<string, Runner>> = {
+const RUNNERS = {
   browser: setupBrowser,
   "google-workspace": setupGoogleWorkspace,
   jev: setupJev,
   listen: setupListen,
   speak: setupSpeak,
-};
+} as const satisfies Readonly<Record<string, Runner>>;
+
+function hasRunner(target: string): target is keyof typeof RUNNERS {
+  return Object.hasOwn(RUNNERS, target);
+}
 
 function errMessage(cause: unknown): string {
   const m = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
@@ -128,13 +132,13 @@ export async function main(argv: string[], opts: SetupMainOpts = {}): Promise<nu
   const statuses = await statusesOf(run);
   const target = await pickTarget(run, _[0], statuses);
 
-  if (target === "") return 1;
+  if (!hasRunner(target)) return 1;
   const { io } = run.ctx;
 
   try {
     if (await keepsOk(run, target, statuses)) return 0;
-    const runner = RUNNERS[target] /* normalizeTarget returns only TARGETS, and RUNNERS has each */ as Runner;
-    await runner(run.ctx);
+
+    await RUNNERS[target](run.ctx);
     logLine(io, formatStatus(await statusesOf(run), run.targets));
 
     return 0;

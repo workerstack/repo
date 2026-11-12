@@ -75,7 +75,7 @@ export function setupTargets(packs: string[] = []): string[] {
   return TARGETS.filter((target) => ALWAYS_ON.includes(target) || on.has(target));
 }
 
-function statusProbe(opts: StatusOpts): { env: Env; home: string; probe: Probe } {
+function statusProbe(opts: StatusOpts) {
   const home = opts.home ?? os.homedir();
   const env = opts.env ?? repoEnv.process;
   const pathEnv = firstNonEmpty(opts.pathEnv, env.PATH, repoEnv.process.PATH);

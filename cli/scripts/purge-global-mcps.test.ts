@@ -95,7 +95,7 @@ it("purgeGlobalMcps --apply removes stripe from enabled, adds the disabled lists
 });
 
 /** A claude plugin list holding `keep@…` and `stripe@…`, the stripe one with a cache dir holding a marker. */
-function plantClaude(home: string): { claude: string; cacheDir: string } {
+function plantClaude(home: string) {
   const claude = claudePluginsPath(home);
   const cacheDir = path.join(path.dirname(claude), "cache", "claude-plugins-official", "stripe", "0.6.2");
   plant(cacheDir, "marker", "keep");

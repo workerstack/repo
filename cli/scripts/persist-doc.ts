@@ -119,7 +119,7 @@ export function nextSerial(dir: string, suffix = ".md"): number {
 
 /** `key: value` lines of a frontmatter block as strings; a quoted value is JSON-decoded when it parses. */
 export function frontmatterMap(raw: string, lineRe: RegExp = FM_LINE_RE): FrontmatterMap {
-  const map: FrontmatterMap = {};
+  const entries: [string, string][] = [];
 
   for (const line of raw.split("\n")) {
     const [, key, value = ""] = lineRe.exec(line) ?? [];
@@ -129,10 +129,10 @@ export function frontmatterMap(raw: string, lineRe: RegExp = FM_LINE_RE): Frontm
 
     if (v.startsWith('"') && v.endsWith('"')) v = tryJson(z.string(), v) ?? v.slice(1, v.length - 1);
 
-    map[key] = v;
+    entries.push([key, v]);
   }
 
-  return map;
+  return Object.fromEntries(entries);
 }
 
 export function parseFrontmatter(text: string): FrontmatterResult {

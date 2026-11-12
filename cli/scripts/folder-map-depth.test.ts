@@ -18,9 +18,11 @@ function chain(prefix: string, depth: number) {
   return files;
 }
 
-const deep: Record<string, string> = { "a/b/x.ts": "", "a/x.ts": "", "z/x.ts": "", "z/y/x.ts": "" };
-
-for (let i = 0; i < 8; i++) deep[`a/b/component-${i}/x.ts`] = "";
+const deep = Object.fromEntries(
+  ["a/b/x.ts", "a/x.ts", "z/x.ts", "z/y/x.ts", ...Array.from({ length: 8 }, (_, i) => `a/b/component-${i}/x.ts`)].map(
+    (rel) => [rel, ""],
+  ),
+);
 
 it("folderMap depth uses the deepest uniform depth that fits the budget", () => {
   expect(map(deep)).toContain("    component-7/\n");

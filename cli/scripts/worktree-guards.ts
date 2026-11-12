@@ -178,7 +178,7 @@ function updateRefReason(g: GitCommand, c: GitContext): string | null {
   return ref.text === HEADS_REF + c.defaultBranch() ? defaultBranchReason(c.defaultBranch(), "update-ref") : null;
 }
 
-const SHARED_GIT: Readonly<Record<string, SharedRule>> = {
+const SHARED_GIT = {
   am: commitReason,
   branch: branchReason,
   checkout: destroyReason,
@@ -195,11 +195,15 @@ const SHARED_GIT: Readonly<Record<string, SharedRule>> = {
   stash: destroyReason,
   switch: destroyReason,
   "update-ref": updateRefReason,
-};
+} as const satisfies Readonly<Record<string, SharedRule>>;
+
+function isSharedSub(sub: string): sub is keyof typeof SHARED_GIT {
+  return Object.hasOwn(SHARED_GIT, sub);
+}
 
 /** The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. */
 function ruleReason(g: GitCommand, at: SharedAt, c: Omit<GitContext, "inMain">): string | null {
-  const rule = Object.hasOwn(SHARED_GIT, g.sub) ? SHARED_GIT[g.sub] : undefined;
+  const rule = isSharedSub(g.sub) ? SHARED_GIT[g.sub] : undefined;
 
   if (rule === undefined || at.asked.has(g.sub === PUSH_SUB ? FORCE_GRANT : g.sub)) return null;
   const dir = canonicalPath(g.at, c.p);

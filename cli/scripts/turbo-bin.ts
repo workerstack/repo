@@ -6,15 +6,15 @@ import { spawnSync } from "../spawn.ts";
 import type { TurboRun } from "./ci-turbo.ts";
 import {
   MAX_BUFFER,
-  TURBO_ARCH,
   TURBO_BINARY,
   TURBO_BINARY_WINDOWS,
   TURBO_MANIFEST,
   TURBO_MISSING,
-  TURBO_OS,
   TURBO_SCOPE,
   WINDOWS_PLATFORM,
   platformMissing,
+  turboArch,
+  turboOs,
 } from "./turbo-bin.constants.ts";
 
 /** Resolves a module specifier from a directory to a file path, throwing when it cannot. */
@@ -44,8 +44,7 @@ export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom,
     return { error: TURBO_MISSING, ok: false };
   }
 
-  const os = TURBO_OS[target.platform] ?? target.platform;
-  const name = `${TURBO_SCOPE}${os}-${TURBO_ARCH[target.arch] ?? target.arch}`;
+  const name = `${TURBO_SCOPE}${turboOs(target.platform)}-${turboArch(target.arch)}`;
 
   try {
     const dir = path.dirname(resolve(`${name}/package.json`, turboDir));

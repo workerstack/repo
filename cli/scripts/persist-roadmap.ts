@@ -57,7 +57,7 @@ type RenderInput = {
 };
 
 /** A leading `key: value` line taken out of text: its value, and the text without the line. */
-function takeLine(text: string, key: string): { value: string | undefined; text: string } {
+function takeLine(text: string, key: string) {
   const found = text.match(new RegExp(`^${key}:\\s*(\\S+)\\s*$`, "m"));
   const rest = found === null ? text : text.replace(new RegExp(`^${key}:\\s*\\S+\\s*\\n`, "m"), "");
 

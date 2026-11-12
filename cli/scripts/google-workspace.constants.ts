@@ -33,11 +33,21 @@ export const KIND_DOC = "doc";
 export const KIND_SHEET = "sheet";
 export const KIND_SLIDE = "slide";
 
-export const MIME: Record<string, string> = {
+/** The Drive type each file kind is made as. */
+const MIME = {
   [KIND_DOC]: "application/vnd.google-apps.document",
   [KIND_SHEET]: "application/vnd.google-apps.spreadsheet",
   [KIND_SLIDE]: "application/vnd.google-apps.presentation",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+function isKind(kind: string): kind is keyof typeof MIME {
+  return Object.hasOwn(MIME, kind);
+}
+
+/** The Drive type a file of `kind` is made as, or undefined when `kind` is none of doc, sheet and slide. */
+export function mimeOf(kind: string): string | undefined {
+  return isKind(kind) ? MIME[kind] : undefined;
+}
 
 export const CSV_TYPE = "text/csv";
 export const TEXT_TYPE = "text/plain; charset=UTF-8";

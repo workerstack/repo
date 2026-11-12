@@ -158,8 +158,11 @@ export function keysOrRefuse(root: string): KeysFile {
   return keysAt(root) ?? refuse(`no ${KEYS_FILE}; run \`bun repo env init\``);
 }
 
+/** A key file's path, and how a line names it. */
+export type KeyFile = { file: string; label: string };
+
 /** The key file of `repo` under `home`, and how a line names it. */
-export function keyFileOf(home: string, repo: string): { file: string; label: string } {
+export function keyFileOf(home: string, repo: string): KeyFile {
   const name = `${repo}${KEY_EXTENSION}`;
 
   return { file: path.join(home, KEYS_DIR, name), label: `~/${KEYS_DIR}/${name}` };

@@ -24,9 +24,9 @@ import {
   RELATIVE_PATH,
   REQUIRED_KEYS,
   REVIEW_COMMAND,
-  REVIEWS_TO_ENTER,
   STATUS_RE,
   TRAILING_PUNCT_RE,
+  reviewsToEnter,
 } from "./persist-plan.constants.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 import { parseStrategy } from "./strategy.ts";
@@ -61,7 +61,7 @@ function modeChecks({ map }: Doc): string[] {
 
 function reviewChecks({ map, previous }: Doc): string[] {
   return reviewErrors(map, (previous == null ? null : parseFrontmatter(previous))?.map ?? null, {
-    gates: REVIEWS_TO_ENTER,
+    gates: reviewsToEnter,
     review: REVIEW_COMMAND,
   });
 }

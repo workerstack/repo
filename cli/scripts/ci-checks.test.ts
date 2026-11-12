@@ -10,7 +10,7 @@ import { checkGate, defaultSpawn, type CiSpawn } from "./ci-checks.ts";
 
 afterEach(cleanTemps);
 
-function run(over: Partial<SpawnSyncReturns<string>>): { root: string; spawn: CiSpawn } {
+function run(over: Partial<SpawnSyncReturns<string>>) {
   return {
     root: "/r",
     spawn: () => spawnReply(over),

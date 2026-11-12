@@ -36,8 +36,11 @@ export function newest(p: string): number {
   return t;
 }
 
+/** The bytes under a path and whether it is a dir. */
+export type PathStats = { bytes: number; dir: boolean };
+
 /** The bytes under `p` and whether it is a dir; a symlink counts by its own size. */
-export function stats(p: string): { bytes: number; dir: boolean } {
+export function stats(p: string): PathStats {
   const st = fs.lstatSync(p);
 
   if (!st.isDirectory()) return { bytes: st.size, dir: false };

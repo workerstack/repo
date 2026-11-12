@@ -5,7 +5,7 @@ import type { Captured } from "./lint.ts";
 
 const SHA = "3f2a1c90123456789abcdef0123456789abcdef0";
 
-function ok(stdout = ""): { code: number; stdout: string; stderr: string } {
+function ok(stdout = "") {
   return { code: 0, stderr: "", stdout };
 }
 

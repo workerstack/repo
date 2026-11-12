@@ -1,5 +1,6 @@
 /** Names, patterns and limits the roadmap saver and its validator share. */
 import { PLAN_MISTAKE_SOURCES } from "./persist-mistakes.ts";
+import { gateOf } from "./persist-plan.constants.ts";
 
 export const ROADMAP_DIR = ".tmp/repo/roadmaps";
 export const ROADMAP_FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
@@ -15,7 +16,13 @@ export const BULLETS_RE: RegExp = /^(?:[-*] |\(none\))/m;
 export const ROADMAP_MISTAKE_SOURCES: readonly string[] = [...PLAN_MISTAKE_SOURCES, "slice"];
 
 /** Statuses a roadmap may enter only after that many settled `/review-roadmap` rounds. */
-export const REVIEWS_TO_ENTER: Record<string, number> = { locked: 1 };
+const REVIEWS_TO_ENTER = { locked: 1 } as const satisfies Readonly<Record<string, number>>;
+
+/** The settled `/review-roadmap` rounds a roadmap needs to enter `status`, or undefined when it needs none. */
+export function reviewsToEnter(status: string): number | undefined {
+  return gateOf(REVIEWS_TO_ENTER, status);
+}
+
 export const REVIEW_COMMAND = "/review-roadmap {n}";
 
 /** The keys a legacy slice carries under its `Title:` line. */

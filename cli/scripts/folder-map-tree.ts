@@ -133,8 +133,11 @@ function byName(a: TreeNode, b: TreeNode): number {
   return Number(a.name > b.name) - Number(a.name < b.name);
 }
 
+/** A node and the label its collapsed path reads as. */
+type Collapsed = { node: TreeNode; label: string };
+
 /** `k` with its pass-through dirs collapsed: one kid, no package and no code of its own. */
-function collapsed(k: TreeNode, label: string): { node: TreeNode; label: string } {
+function collapsed(k: TreeNode, label: string): Collapsed {
   const through = k.kids.size === 1 && k.pkg == null && !k.own;
 
   for (const only of through ? k.kids.values() : []) return collapsed(only, `${label}/${only.name}`);
@@ -219,8 +222,11 @@ function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
   return lines;
 }
 
+/** The lines a map renders to, and the depth they were cut at. */
+export type Fitted = { lines: string[]; depth: number };
+
 /** The lines at the deepest cap (from `fit.cap` down to 1) whose text fits the limit, and that depth. */
-export function renderToFit(rows: Row[], fit: RenderFit): { lines: string[]; depth: number } {
+export function renderToFit(rows: Row[], fit: RenderFit): Fitted {
   let lines: string[] = [];
   let depth = fit.cap;
 

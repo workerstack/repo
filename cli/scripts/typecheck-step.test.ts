@@ -5,7 +5,6 @@ import { afterEach, expect, it } from "vitest";
 
 import { cleanTemps, consumer, SLOW, srcConfig, TSCONFIG, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
-import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
 
@@ -63,7 +62,7 @@ function twoOwners(): string {
 }
 
 /** Bins whose tsc fails the configs in `failing`, by the `-p` argument it got, and records every tsc call. */
-function fakeTsc(failing: readonly string[]): { bins: Bins; projects: string[] } {
+function fakeTsc(failing: readonly string[]) {
   const projects: string[] = [];
 
   function tsc(args: string[]): Captured {

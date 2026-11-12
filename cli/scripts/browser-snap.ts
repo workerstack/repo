@@ -62,10 +62,7 @@ function axText(v: Json | undefined): string {
   return textOf(isRecord(v) ? v.value : v);
 }
 
-function formatRefs(nodes: Json[]): {
-  lastRefs: Record<string, RefEntry>;
-  lines: string[];
-} {
+function formatRefs(nodes: Json[]) {
   const lastRefs: Record<string, RefEntry> = {};
   const lines: string[] = [];
   let n = 1;

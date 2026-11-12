@@ -169,7 +169,7 @@ function credsSchema() {
 }
 
 /** The Desktop client in the OAuth JSON at `credsPath`; throws when it names no client id. */
-function readClient(credsPath: string): { clientId: string; clientSecret: string } {
+function readClient(credsPath: string) {
   const creds = readSecretJson(credsPath, credsSchema());
   const inst = creds?.installed ?? creds?.web;
 

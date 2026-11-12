@@ -74,9 +74,13 @@ it("folderMap core anchors package rows with name and full path, and does not co
 });
 
 it("folderMap core folds plain leaf dirs at foldAt without folding structured siblings", () => {
-  const files: Record<string, string> = { "src/dtos/core/deep/x.ts": "" };
+  const files = Object.fromEntries(
+    [
+      "src/dtos/core/deep/x.ts",
+      ...Array.from({ length: 12 }, (_, i) => `src/dtos/t${String(i).padStart(2, "0")}/x.ts`),
+    ].map((rel) => [rel, ""]),
+  );
 
-  for (let i = 0; i < 12; i++) files[`src/dtos/t${String(i).padStart(2, "0")}/x.ts`] = "";
   const text = map(files);
   expect(text).toBe(["src/dtos/", "  (12 leaf dirs: t00, t01, t02, t03, t04, t05, …)", "  core/deep/", ""].join("\n"));
 });

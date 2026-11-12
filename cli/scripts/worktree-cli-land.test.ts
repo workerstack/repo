@@ -25,7 +25,7 @@ const tmp = scratch();
 afterEach(() => tmp.cleanup());
 
 /** A repo on `start` with worktree `name` holding one commit; returns the repo and that commit. */
-function oneCommit(name: string, start?: string): { r: string; tip: string } {
+function oneCommit(name: string, start?: string) {
   const r = tmp.repo();
 
   if (start !== undefined) git(r, "switch", "-q", "-c", start);

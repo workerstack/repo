@@ -12,10 +12,10 @@ import {
   LEAVES_MAX,
   REQUIRED_KEYS,
   REVIEW_COMMAND,
-  REVIEWS_TO_ENTER,
   ROADMAP_FILENAME_RE,
   ROADMAP_MISTAKE_SOURCES,
   STATUS_RE,
+  reviewsToEnter,
 } from "./persist-roadmap.constants.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 import { parseStrategy } from "./strategy.ts";
@@ -60,7 +60,7 @@ const HEAD_CHECKS: HeadCheck[] = [
   ({ map }) => when({ bad: parseStrategy(map.strategy) === null, error: strategyError() }),
   ({ map }) => modeErrors(map),
   ({ map, prev }) =>
-    reviewErrors(map, prev === null ? null : prev.map, { gates: REVIEWS_TO_ENTER, review: REVIEW_COMMAND }),
+    reviewErrors(map, prev === null ? null : prev.map, { gates: reviewsToEnter, review: REVIEW_COMMAND }),
   ({ map, slug }) => when({ bad: (map.name ?? "") !== "" && map.name !== slug, error: "name" }),
   ({ body, slug }) => when({ bad: !body.trim().startsWith(`# ${slug}`), error: "h1" }),
 ];

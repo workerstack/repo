@@ -10,7 +10,7 @@ import { processHookIo, readAllText, readHookInput, type HookIo } from "./hook-i
 const encoder = new TextEncoder();
 
 /** An io that hands out `chunks` in order, then reports the stream closed; `written` collects the replies. */
-function fakeIo(chunks: string[]): { io: HookIo; written: string[]; reads: () => number } {
+function fakeIo(chunks: string[]) {
   const written: string[] = [];
   let reads = 0;
 

@@ -118,7 +118,7 @@ function reportFiles(dir: string): string[] {
 }
 
 /** The report in `file`, or null with why it is not one. */
-function readReport(file: string): { report: Report | null; reason: string } {
+function readReport(file: string) {
   let json: unknown;
 
   try {

@@ -10,6 +10,9 @@ import { cleanupTmp, repoBin, run, tmp, which } from "./__fixtures__/listen-env.
 import { USAGE } from "./listen.constants.ts";
 import type { FetchFn } from "./listen.types.ts";
 
+/** What the fake fetch was posted. */
+type Posted = { url?: string; body?: FormData; headers?: Record<string, string> };
+
 afterEach(cleanupTmp);
 
 const bin = repoBin();
@@ -46,7 +49,7 @@ describe("main file", () => {
     const cwd = tmp("listen-file-");
     const wav = path.join(cwd, "clip.wav");
     fs.writeFileSync(wav, "RIFFDATA");
-    let posted: { url?: string; body?: FormData; headers?: Record<string, string> } = {};
+    let posted: Posted = {};
 
     function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
       posted = { body: init.body, headers: init.headers, url };

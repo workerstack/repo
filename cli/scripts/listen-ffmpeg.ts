@@ -82,11 +82,10 @@ export function ffmpegRecordArgs({ platform, device, out, seconds, ffmpegFormat 
   return [...FFMPEG_QUIET, ...noIn, ...input, ...FFMPEG_PCM, ...t, "-y", out];
 }
 
-export function recCaptureOpts(errFd?: number | null): {
-  detached: true;
-  stdio: (string | number)[];
-  windowsHide: true;
-} {
+/** The options a detached recording starts under. */
+export type DetachedOpts = { detached: true; stdio: (string | number)[]; windowsHide: true };
+
+export function recCaptureOpts(errFd?: number | null): DetachedOpts {
   return {
     detached: true,
     stdio: ["ignore", "ignore", errFd ?? "ignore"],

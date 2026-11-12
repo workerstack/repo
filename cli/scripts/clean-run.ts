@@ -60,11 +60,7 @@ function keptLine(keep: KeepItem[]): string {
 }
 
 /** Removes each planned path unless a dry run; returns what went, its bytes and how many failed. */
-function removeAll(
-  run: CleanRun,
-  remove: RemoveItem[],
-  relOf: (p: string) => string,
-): { done: RemoveItem[]; bytes: number; failed: number } {
+function removeAll(run: CleanRun, remove: RemoveItem[], relOf: (p: string) => string) {
   const { dryRun, out, rm = fs.rmSync } = run;
   const done: RemoveItem[] = [];
   let failed = 0;
