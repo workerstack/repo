@@ -130,7 +130,7 @@ main
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)
   browser           Browse with Lightpanda, Chromium when blocked
-  env               Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key)
+  env               Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key, migrate)
   google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail
   jev               Yes/no or named-option decision on saved text
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)

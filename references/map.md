@@ -68,6 +68,17 @@ Cheap outline. Not a file dump.
 - `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
 - `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
 - `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
+- `cli/scripts/env-migrate.ts` — `env migrate [--dry-run]`: scans, refuses, rewrites, proves parity and prints the report
+- `cli/scripts/env-migrate-scan.ts` — the tracked files that mention `createScriptEnv` or a helper, the skips and why, and the nearest tsconfig's `isolatedDeclarations`
+- `cli/scripts/env-migrate-source.ts` — the shared AST reads: old-package specifiers, imported names, call blocks and the binding a call initializes
+- `cli/scripts/env-migrate-facts.ts` — per old file, before any write: call count, exported names parity hashes, parents' modules, `$` keys, and the calls it refuses
+- `cli/scripts/env-migrate-edit.ts` — the pure text-to-text rewrite: `secret()` and flagged literals sealed, helpers swapped, `unwrapSecrets` dropped
+- `cli/scripts/env-migrate-call.ts` — how one `createScriptEnv` call becomes `defineEnv(`, split in two under `isolatedDeclarations`
+- `cli/scripts/env-migrate-imports.ts` — the import rewrite: old names dropped, the `@workerstack/repo/env` import added
+- `cli/scripts/env-migrate-parity.ts` — the `bun` child that prints sha256 hashes of every env value, before and after
+- `cli/scripts/env-migrate-write.ts` — the write phase: refuses uncommitted files, writes parents first, restores every original on a difference, failure or signal
+- `cli/scripts/env-migrate-report.ts` — the `--dry-run` and migrated lines, the `$` keys and the git-history line
+- `cli/__fixtures__/script-env/` — a fake `createScriptEnv` package and tree builders for the `env-migrate*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ## Tmp

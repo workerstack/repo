@@ -408,8 +408,33 @@ repo env: would run: gh secret set WORKERSTACK_ENV_KEY (the key on stdin)
 | `export --scope s --format dotenv` | prints the scope's values sorted, one `KEY=value` line each, quoted so dotenv and Bun's `--env-file` read them back: single quotes when the value has no `'`, else double quotes with only `\n` and `\r` escaped, else backticks |
 | `key import` | reads an age identity from stdin, checks it unlocks the recipient in `.repo/env.keys.json` and saves it as `~/.workerstack/keys/<repo>.key` (0600); the same key again prints `already set up` |
 | `key ci [--dry-run]` | sets the `WORKERSTACK_ENV_KEY` secret through `gh`, with the key on gh's stdin; of several keys it picks the one matching the recipient; `--dry-run` prints the line it would run |
+| `migrate [--dry-run]` | rewrites the tracked files that call `createScriptEnv(` to `defineEnv(` and seals their secrets; `--dry-run` reports and writes nothing |
 
-The env file is `--file` when given, else the env files that declare the key, else the one env file in the repo. `export` refuses a value that has a `$` (Bun expands it in every quote, dotenv in none) or that no quote holds: `<KEY> has no dotenv quoting that bun and dotenv read back the same; pass it with \`bun repo env run\``. A bad verb or flag prints `usage: bun repo env init | set KEY --scope <global|local|dev|prod> [--plain] [--file f] | get KEY --scope s [--reveal] | ls | run --scope s -- cmd | export --scope s --format dotenv | key import | key ci [--dry-run]` on stderr and exits 4. A refusal is one line, exit 1:
+The env file is `--file` when given, else the env files that declare the key, else the one env file in the repo. `export` refuses a value that has a `$` (Bun expands it in every quote, dotenv in none) or that no quote holds: `<KEY> has no dotenv quoting that bun and dotenv read back the same; pass it with \`bun repo env run\``. A bad verb or flag prints `usage: bun repo env init | set KEY --scope <global|local|dev|prod> [--plain] [--file f] | get KEY --scope s [--reveal] | ls | run --scope s -- cmd | export --scope s --format dotenv | key import | key ci [--dry-run] | migrate [--dry-run]` on stderr and exits 4. A refusal is one line, exit 1:
+
+##### Migrate
+
+`bun repo env migrate` moves a repo off `createScriptEnv`. Each tracked file that calls it (the call may carry type arguments, an `as const` or `satisfies`, and come from the package, a subpath or a relative path into it) becomes a `defineEnv(` file, and every other byte stays. A `secret("v")` and a plain literal that `bun repo check` flags as a secret (`sk_` prefix, high entropy, credential name) become `sealed("<cipher>")` for the recipient in `.repo/env.keys.json`, so a flagged key moves from var to secret in a deploy. The helper sites follow: `secretKeysOf(x, "prod")` and `secretKeysOf(x.prod)` become `x.sealedKeys("prod")` (without it a defineEnv instance has no secret keys and every sealed key would deploy as a plain var), and `unwrapSecrets(x)` is dropped to `x`. The imports change to match. Files that define `createScriptEnv`, test files and `__fixtures__` files are skipped and named. Files write parents first.
+
+```console
+$ bun repo env migrate --dry-run
+repo env: would migrate 2 files and 1 helper sites (nothing written):
+  src/app.env.ts: 6 values; seal 3 secret() and 1 plain credential (MAIL_API_KEY); keep 2 plain
+  src/deploy.ts:12 secretKeysOf → sealedKeys
+$ bun repo env migrate
+repo env: migrated 2 files and 1 helper sites; global, local, dev and prod values match createScriptEnv
+repo env: the 4 sealed values are still in git history; rotate them
+$ bun repo env migrate                             # rerun
+repo env: nothing to migrate
+```
+
+Parity is proved before the change is kept: a child Bun process imports each old file and prints only the sha256 of every global and scope value, a fresh child does the same for the new files, and any difference or failure restores every original from memory. A SIGINT or SIGTERM restores them too. It writes nothing and exits 1 when there is no `.repo/env.keys.json`, when a file to write has uncommitted changes (so `git restore <files>` always recovers), when a call is bound to no exported `const` that parity can reach, for a `secret(<non-literal>)`, for a spread in a file whose tsconfig sets `isolatedDeclarations`, and when an old file cannot load. Where `isolatedDeclarations` is set, the output is `const appConfig = {…} as const;` and `export const app: EnvInstance<typeof appConfig> = defineEnv(appConfig)`. A value with a `$` is listed by key, because `export` refuses it. The sealed values stay in git history, so the report ends with a line to rotate them.
+
+```text
+repo env: src/app.env.ts prod.KEY differs after migrate; restored 2 files
+repo env: no .repo/env.keys.json; run `bun repo env init`
+repo env: src/app.env.ts global.K is secret(<non-literal>); seal it by hand with `bun repo env set`
+```
 
 ```console
 repo env: no defineEnv file declares STRIPE_SECRET_KEY; pass --file <env file>
@@ -1061,6 +1086,17 @@ Cheap outline. Not a file dump.
 - `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
 - `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
 - `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
+- `cli/scripts/env-migrate.ts` — `env migrate [--dry-run]`: scans, refuses, rewrites, proves parity and prints the report
+- `cli/scripts/env-migrate-scan.ts` — the tracked files that mention `createScriptEnv` or a helper, the skips and why, and the nearest tsconfig's `isolatedDeclarations`
+- `cli/scripts/env-migrate-source.ts` — the shared AST reads: old-package specifiers, imported names, call blocks and the binding a call initializes
+- `cli/scripts/env-migrate-facts.ts` — per old file, before any write: call count, exported names parity hashes, parents' modules, `$` keys, and the calls it refuses
+- `cli/scripts/env-migrate-edit.ts` — the pure text-to-text rewrite: `secret()` and flagged literals sealed, helpers swapped, `unwrapSecrets` dropped
+- `cli/scripts/env-migrate-call.ts` — how one `createScriptEnv` call becomes `defineEnv(`, split in two under `isolatedDeclarations`
+- `cli/scripts/env-migrate-imports.ts` — the import rewrite: old names dropped, the `@workerstack/repo/env` import added
+- `cli/scripts/env-migrate-parity.ts` — the `bun` child that prints sha256 hashes of every env value, before and after
+- `cli/scripts/env-migrate-write.ts` — the write phase: refuses uncommitted files, writes parents first, restores every original on a difference, failure or signal
+- `cli/scripts/env-migrate-report.ts` — the `--dry-run` and migrated lines, the `$` keys and the git-history line
+- `cli/__fixtures__/script-env/` — a fake `createScriptEnv` package and tree builders for the `env-migrate*.test.ts` files
 - `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ### Tmp

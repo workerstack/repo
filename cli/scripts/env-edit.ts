@@ -115,7 +115,7 @@ function edited(place: Place, written: Written): string {
 }
 
 /** Writes `text` over `file` through a temp file beside it and a rename, refusing a result that does not parse. */
-function writeAtomic(rel: string, file: string, text: string): void {
+export function writeAtomic(rel: string, file: string, text: string): void {
   const { diagnostics } = ts.transpileModule(text, { fileName: rel, reportDiagnostics: true });
 
   if (Number(diagnostics?.length) > 0) refuse(`${rel} would not parse after the edit; nothing was written`);
