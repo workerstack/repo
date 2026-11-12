@@ -1,10 +1,10 @@
 import { expect, it, vi } from "vitest";
-import type { UserWorkspaceConfig } from "vitest/config";
+import type { UserWorkspaceConfig, ViteUserConfig } from "vitest/config";
 
 import { defineProject } from "./vitest.ts";
 
-/** The `test` options of a config as a plain record, for the root options its type leaves out. */
-function testOf(config: UserWorkspaceConfig): Record<string, unknown> {
+/** The `test` options of a config as the root config types them, for the run options the project type leaves out. */
+function testOf(config: UserWorkspaceConfig): NonNullable<ViteUserConfig["test"]> {
   return { ...config.test };
 }
 

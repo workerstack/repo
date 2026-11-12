@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkManifests } from "./check-manifests.ts";
+import type { JsonObject } from "./json.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
 const plant = useTempTree("workerstack-manifests-");
@@ -9,7 +10,7 @@ const plant = useTempTree("workerstack-manifests-");
 const PIN = `bun@${Bun.version}`;
 
 /** Writes each manifest into a temp repo, reads it as `repo check` does and returns the problem lines. */
-function problems(files: Record<string, object>): string[] {
+function problems(files: Record<string, JsonObject>): string[] {
   const texts = Object.entries(files).map(([rel, content]): [string, string] => [rel, JSON.stringify(content)]);
   const result = readWorkspace(plant(Object.fromEntries(texts)));
 

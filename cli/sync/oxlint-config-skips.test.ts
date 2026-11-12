@@ -1,11 +1,12 @@
 import { expect, it } from "vitest";
 
 import type { LintSkip } from "../config.ts";
+import type { JsonObject } from "../json.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import { OFF_RULES } from "./oxlint-rules.ts";
 import type { Workspace } from "./workspace.ts";
 
-type Config = { overrides: unknown[]; rules: Record<string, unknown> };
+type Config = { overrides: unknown[]; rules: JsonObject };
 
 const REASON = "the parsed config cache lives for the process";
 const APP: Workspace = { manifest: { bin: "./bin/app.ts", name: "app" }, packages: [], root: "/repo" };

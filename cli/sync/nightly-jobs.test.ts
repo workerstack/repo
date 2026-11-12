@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { context } from "../__fixtures__/release-context.ts";
 import { nightly } from "./nightly.ts";
 import type { SyncContext } from "./outputs.ts";
+import type { PackageJson } from "./workspace.ts";
 
 /** The nightly.yml text for `shards`, `secrets` and a root manifest with or without `test:live`. */
 function render(shards: number, secrets: string[] = [], { live = false }: { live?: boolean } = {}): string {
@@ -73,7 +74,7 @@ const STRYKER = {
 };
 
 /** The nightly.yml text for a repo with `manifest` and, when `rust`, a root Cargo.toml. */
-function renderRepo({ rust }: { rust: boolean }, manifest: Record<string, unknown> = {}, shards = 2): string {
+function renderRepo({ rust }: { rust: boolean }, manifest: PackageJson = {}, shards = 2): string {
   const base = context(["release"], manifest, rust ? { "Cargo.toml": "[workspace]\n" } : {});
   const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets: [], shards } } };
   const [output] = nightly(ctx).outputs;

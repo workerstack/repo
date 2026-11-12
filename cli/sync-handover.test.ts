@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
+import type { JsonObject } from "./json.ts";
 import {
   HANDOVER,
   copied,
@@ -29,7 +30,7 @@ function rule(text: string) {
   return `---\ndescription: Team\n---\n${text}\n`;
 }
 
-function mcp(servers: Record<string, unknown>) {
+function mcp(servers: JsonObject) {
   return `${JSON.stringify({ mcpServers: servers }, null, 2)}\n`;
 }
 
@@ -43,7 +44,7 @@ const MOVES = [
   ".repo/mcp-policy.jsonc servers into .mcp.json",
 ];
 
-type Servers = { mcpServers: Record<string, unknown> };
+type Servers = { mcpServers: JsonObject };
 
 function lines(text: string) {
   return text.split("\n");

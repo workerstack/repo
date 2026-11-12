@@ -1,11 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
 
 import { NO_LATEST, NOT_FOUND, TIMEOUT, cleanup, world } from "./__fixtures__/update-world.ts";
+import type { JsonObject } from "./json.ts";
 import { main } from "./update.ts";
 
 afterEach(cleanup);
 
-function manifest(extra: Record<string, unknown>) {
+function manifest(extra: JsonObject) {
   return { "package.json": { name: "r", ...extra } };
 }
 

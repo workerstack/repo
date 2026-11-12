@@ -21,6 +21,7 @@ const REPO_RULES = {
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
       "repo/no-shape-in-symbol-names": "error",
+      "repo/no-unsafe-dictionary-type": "error",
       "repo/no-v8-ignore": "error",
       "repo/no-widen-then-assert": "error",
       "repo/public-jsdoc": "error",
@@ -57,6 +58,18 @@ const REPO_RULES = {
     "",
     "shaped;",
     "",
+    "export type Bag = Record<string, unknown>;",
+    "",
+    "export const bag: Bag = {};",
+    "",
+    "export type Mapped = { [K in string] };",
+    "",
+    "export type Index<T> = Record<string, T>;",
+    "",
+    "export type Bare = Index;",
+    "",
+    "export type Branded = Record<string, { brand? }>;",
+    "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
     'import { b } from "@app/ui";',
@@ -76,6 +89,8 @@ const REPO_RULES = {
   ].join("\n"),
   // a statement straight after a binding, with no blank line between them
   "packages/lib/src/spacing.ts": "function first() {\n  const a = 1;\n  return a;\n}\n",
+  // oxc refuses an index signature without a type before any JS plugin sees it, so it holds no null to crash on
+  "packages/lib/src/untyped.ts": "export type Untyped = { [key: string] };\n",
   "packages/lib/vite.config.ts": "const plugins = [];\n\nexport default { plugins };\n",
   "packages/ui/package.json": JSON.stringify({ name: "@app/ui" }),
 };
@@ -87,7 +102,11 @@ const NAME_FINDING =
   'repo(no-shape-in-symbol-names) Rename symbol "shaped" for its domain role; "shape" describes structure rather ' +
   "than ownership.";
 
-/** What the widen, Reflect, assertion, parameter and symbol-name rules report in flow.ts. */
+/**
+ * What the widen, Reflect, assertion, parameter, symbol-name and dictionary rules report in flow.ts. Only `Bag` is an
+ * unsafe dictionary: the planted plain alias use, mapped type, property and alias use missing a type, an argument or
+ * a default hold null children under oxlint, which the dictionary rule reads without a plugin error.
+ */
 const FLOW_FINDINGS = [
   `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
     "Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
@@ -95,6 +114,8 @@ const FLOW_FINDINGS = [
     "type; parse external input at its boundary before calling this function.",
   `${FLOW}:17 ${NAME_FINDING}`,
   `${FLOW}:21 ${NAME_FINDING}`,
+  `${FLOW}:23 repo(no-unsafe-dictionary-type) This dictionary's unknown value type gives callers no concrete value ` +
+    "contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
   `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
     "assertion. Keep the precise type from initialization through use; parse boundary input once.",
   `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
@@ -127,6 +148,7 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
       "that runs it",
     `${index}:8 repo(public-jsdoc) \`bare\` is public through "." and ${missing}`,
     "packages/lib/src/spacing.ts:3 repo(require-readable-spacing) Expected blank line before this statement.",
+    "packages/lib/src/untyped.ts:1 TS(1021) An index signature must have a type annotation.",
     'packages/lib/vite.config.ts:1 repo(config-file) a config file holds only imports and exports; move "plugins" ' +
       "into a module it imports",
   ]);

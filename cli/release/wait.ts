@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { Json } from "../json.ts";
 import { WAIT_PREFIX, WAIT_USAGE, notOnNpm, published } from "./release-messages.constants.ts";
 import {
   ENCODED_SLASH,
@@ -22,10 +23,10 @@ export type WaitIo = {
 };
 
 /** The part of the registry's document for a package that a release reads. */
-type RegistryDoc = { versions: Record<string, unknown>; "dist-tags": Record<string, string> };
+type RegistryDoc = { versions: Record<string, Json>; "dist-tags": Record<string, string> };
 
 function documentSchema(): z.ZodType<RegistryDoc> {
-  return z.object({ "dist-tags": z.record(z.string(), z.string()), versions: z.record(z.string(), z.unknown()) });
+  return z.object({ "dist-tags": z.record(z.string(), z.string()), versions: z.record(z.string(), z.json()) });
 }
 
 /** A package name and the version of it a tag or `wait` names. */

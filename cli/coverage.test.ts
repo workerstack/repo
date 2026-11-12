@@ -4,9 +4,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
 import { useCapturedRun } from "./__fixtures__/captured-run.ts";
 import { main } from "./coverage.ts";
+import { type JsonObject, readJson } from "./json.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -72,8 +74,8 @@ export default defineConfig({ test: { include: ["src/**/*.test.ts"], coverage: {
   return root;
 }
 
-function floorsOf(root: string, file = FLOORS): unknown {
-  return JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
+function floorsOf(root: string, file = FLOORS): JsonObject {
+  return readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(root, file), "utf8"));
 }
 
 /** Runs `repo coverage` in `root`; `run` stands in for cargo. */
@@ -97,7 +99,7 @@ it("repo coverage: floors every file the suite measures, sorted by path", { time
   fs.writeFileSync(path.join(root, "src/b.ts"), SECOND_SOURCE);
   fs.writeFileSync(path.join(root, "src/b.test.ts"), SECOND_TEST);
   expect(await coverage(root)).toBe(0);
-  const written = floorsOf(root) /* the command wrote an object */ as Record<string, unknown>;
+  const written = floorsOf(root);
   expect(Object.keys(written)).toStrictEqual(["src/a.ts", "src/b.ts"]);
   expect(written["src/b.ts"]).toStrictEqual({ branches: 100, functions: 100, lines: 100, statements: 100 });
 });

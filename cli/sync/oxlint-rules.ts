@@ -34,6 +34,7 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/no-reflect-get": "error",
   "repo/no-shape-in-symbol-names": "error",
   "repo/no-side-effect-import": "error",
+  "repo/no-unsafe-dictionary-type": "error",
   "repo/no-v8-ignore": "error",
   "repo/no-widen-then-assert": "error",
   "repo/public-jsdoc": "error",

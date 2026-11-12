@@ -94,7 +94,7 @@ export function codexBase(sb: Sandbox) {
 }
 
 /** The claude payload every claude case starts from, with `extra` on top. */
-export function claudePayload(sb: Sandbox, extra: Record<string, unknown>) {
+export function claudePayload(sb: Sandbox, extra: JsonObject) {
   return {
     cwd: sb.repo,
     session_id: "claude-e2e",

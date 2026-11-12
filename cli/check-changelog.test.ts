@@ -2,13 +2,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { removePlanted, tempDir, write } from "./__fixtures__/planted-repo.ts";
 import { checkChangelog } from "./check-changelog.ts";
+import type { JsonObject } from "./json.ts";
 
 afterEach(removePlanted);
 
 const BAD = "# Changelog\n\n## [Unreleased]\n\n### Improved\n\n- x\n\n## [0.2.0]\n";
 const GOOD = "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] - 2026-11-01\n";
 
-function root(files: Record<string, unknown>): string {
+function root(files: JsonObject): string {
   const dir = tempDir();
   write(dir, files);
 

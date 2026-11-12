@@ -4,12 +4,13 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { answering, knipRoot, removeKnipRoots, report } from "./__fixtures__/knip-run.ts";
+import type { JsonObject } from "./json.ts";
 import { checkKnip, checkKnipAt } from "./knip-check.ts";
 import { knipConfig } from "./sync/knip-config.ts";
 
 afterEach(removeKnipRoots);
 
-function run(issues: Record<string, unknown>[]) {
+function run(issues: JsonObject[]) {
   return checkKnip(knipRoot({}), [], answering(report(...issues)));
 }
 

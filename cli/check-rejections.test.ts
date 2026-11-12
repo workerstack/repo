@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript";
 import { expect, it } from "vitest";
 
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { rejectionProblems, rejections } from "./check-rejections.ts";
+import type { JsonObject } from "./json.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -16,7 +16,7 @@ const SLOW = 60_000;
 const tree = useTempTree("check-rejections-");
 
 /** A temp root holding `files`, a value that is not a string written as JSON. */
-function plant(files: Record<string, string | object>): string {
+function plant(files: Record<string, string | JsonObject>): string {
   const texts = Object.entries(files).map(([rel, content]): [string, string] => [
     rel,
     typeof content === "string" ? content : JSON.stringify(content),
@@ -26,7 +26,7 @@ function plant(files: Record<string, string | object>): string {
 }
 
 /** A package at `dir`: a `tsconfig.json` on this checkout's base that excludes reject files, and its strict sibling. */
-function pkg(dir: string, compilerOptions: ts.server.protocol.CompilerOptions = {}): Record<string, object> {
+function pkg(dir: string, compilerOptions: JsonObject = {}): Record<string, JsonObject> {
   const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
 
   return {
@@ -44,7 +44,7 @@ function pkg(dir: string, compilerOptions: ts.server.protocol.CompilerOptions = 
 }
 
 /** The problems of every planted file. */
-function problemsOf(files: Record<string, string | object>): string[] {
+function problemsOf(files: Record<string, string | JsonObject>): string[] {
   return rejectionProblems(plant(files), Object.keys(files));
 }
 
@@ -176,7 +176,7 @@ it("checks a .tsx reject file with its owner's jsx option and ambient types", { 
     "",
   ].join("\n");
 
-  const owner = pkg(".", { jsx: ts.server.protocol.JsxEmit.Preserve });
+  const owner = pkg(".", { jsx: "preserve" });
   const files = { ...owner, "src/jsx.d.ts": jsx, "src/view.reject.tsx": source };
   expect(problemsOf(files)).toStrictEqual(["src/view.reject.tsx: line 5 compiles; it must reject: anything"]);
 });

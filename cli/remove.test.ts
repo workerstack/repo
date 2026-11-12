@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { cleanup, world } from "./__fixtures__/update-world.ts";
+import { readJson } from "./json.ts";
 import { main } from "./remove.ts";
 
 afterEach(cleanup);
@@ -64,9 +66,7 @@ it("removes a name from every field, catalog, override and patch, and says where
   expect(w.read("packages/api/package.json").dependencies).toStrictEqual({ keep: "1.0.0" });
   expect(w.read("packages/api/package.json").devDependencies).toStrictEqual({});
 
-  const raw = JSON.parse(
-    fs.readFileSync(path.join(w.root, "package.json"), "utf8"),
-  ) /* the root as written */ as Record<string, unknown>;
+  const raw = readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(w.root, "package.json"), "utf8"));
 
   expect(raw.resolutions).toStrictEqual({});
   expect(raw.trustedDependencies).toStrictEqual(["keep"]);
@@ -183,4 +183,15 @@ it("prints the install's repo sync lines right after the removed line, and none 
   const bad = world(files, {});
   expect(main(["a"], bad.io({ install: () => ({ code: 1, output }) }))).toBe(1);
   expect(bad.out).toStrictEqual(["removed a from package.json (dependencies)"]);
+});
+
+it("drops a patchedDependencies entry that is not a path and removes no patch file for it", () => {
+  const patched = { "a@1.0.0": 5, keep: "patches/a.patch" };
+  const w = world({ "package.json": { name: "r", patchedDependencies: patched } }, {});
+  patches(w.root);
+  expect(main(["a"], w.io())).toBe(0);
+
+  const root = readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(w.root, "package.json"), "utf8"));
+  expect(root["patchedDependencies"]).toStrictEqual({ keep: "patches/a.patch" });
+  expect(fs.existsSync(path.join(w.root, "patches", "a.patch"))).toBe(true);
 });

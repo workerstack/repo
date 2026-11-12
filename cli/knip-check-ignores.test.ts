@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { answering, knipRoot, removeKnipRoots, report } from "./__fixtures__/knip-run.ts";
+import type { JsonObject } from "./json.ts";
 import { checkKnip } from "./knip-check.ts";
 import type { KnipIgnore } from "./knip-schema.ts";
 
@@ -13,7 +14,7 @@ function dep(reason = "spawned by path"): KnipIgnore {
 }
 
 /** Checks `ignores` against `issues` in a root with `files` and a manifest depending on oxlint. */
-function check(ignores: KnipIgnore[], issues: Record<string, unknown>[], files: Record<string, string> = {}) {
+function check(ignores: KnipIgnore[], issues: JsonObject[], files: Record<string, string> = {}) {
   return checkKnip(knipRoot(files, { oxlint: "1" }), ignores, answering(report(...issues)));
 }
 
@@ -24,7 +25,7 @@ describe("an ignore matched by issues", () => {
   });
 
   it("a dependency entry takes the unused, dev, optional peer and unlisted issues of that name only", () => {
-    const issues = [
+    const issues: JsonObject[] = [
       { dependencies: [item], devDependencies: [item], file: "package.json", optionalPeerDependencies: [item] },
       { binaries: [item], file: "a.ts", unlisted: [item, { ...item, name: "other" }] },
     ];
@@ -51,7 +52,7 @@ describe("an ignore matched by issues", () => {
 
 describe("an ignore matched by files and several entries", () => {
   it("a file entry takes every issue of the files its path or glob matches", () => {
-    const issues = [
+    const issues: JsonObject[] = [
       { exports: [item], file: "src/old.ts", files: [{ name: "src/old.ts" }] },
       { exports: [item], file: "src/new.ts" },
     ];
@@ -62,7 +63,7 @@ describe("an ignore matched by files and several entries", () => {
   });
 
   it("several entries make one line, plural", () => {
-    const issues = [
+    const issues: JsonObject[] = [
       { dependencies: [item], file: "package.json" },
       { binaries: [item], file: "b.ts" },
     ];

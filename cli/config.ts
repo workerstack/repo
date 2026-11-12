@@ -9,7 +9,7 @@ import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
 import { CONFIG_FILE, LAST } from "./config.constants.ts";
 import { coverageOf, coverageSchema } from "./coverage-config.ts";
-import { importConfig, type ImportConfig } from "./import-config.ts";
+import { type ConfigModule, importConfig, type ImportConfig } from "./import-config.ts";
 import { knipSchema } from "./knip-schema.ts";
 import { linkSchema } from "./link-schema.ts";
 import { lintOf, lintSchema } from "./lint-schema.ts";
@@ -24,7 +24,7 @@ export { DEFAULT_MAX_CHANGED_LINES };
 
 export { CONFIG_FILE } from "./config.constants.ts";
 
-export type { ImportConfig } from "./import-config.ts";
+export type { ConfigModule, ImportConfig } from "./import-config.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release", "workspace", "benchmark"] as const;
@@ -200,7 +200,7 @@ function fail(messages: string[]): LoadResult {
  * every host and no skills, an omitted commit limit with the default, and omitted lint skips with none.
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {
-  let loaded: Record<string, unknown>;
+  let loaded: ConfigModule;
 
   try {
     loaded = await importModule(root);

@@ -3,13 +3,14 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { catalogsOf, readWorkspace } from "./workspace.ts";
 
 useTempDirs();
 
 /** A temp root holding each `files` entry, objects written as JSON. */
-function repo(files: Record<string, object | string>): string {
+function repo(files: Record<string, JsonObject | string>): string {
   const root = tempDir("workerstack-workspace-");
 
   for (const [rel, content] of Object.entries(files)) {

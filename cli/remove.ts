@@ -1,8 +1,10 @@
 /** `repo remove <name>…` drops a dependency from every manifest, the catalogs and the root's overrides. */
 import fs from "node:fs";
 
+import { atRoute, branchAt } from "./at-route.ts";
 import { findRoot } from "./config.ts";
 import { editFiles } from "./edit-files.ts";
+import type { Json } from "./json.ts";
 import type { Removal } from "./removal.types.ts";
 import { patchPath, removalsOf } from "./remove-scan.ts";
 import { REMOVE_COMMAND, REMOVE_USAGE, namePart, placeNote, removedLine } from "./remove.constants.ts";
@@ -13,14 +15,11 @@ import type { UpdateIo } from "./update-io.types.ts";
 import { CATALOG, EXIT_USAGE, OPTION_PREFIX, nothingDepends } from "./update.constants.ts";
 
 /** Takes the entry out of its object, or the element out of its array, in place. */
-function drop(raw: unknown, { route }: Removal): void {
-  let parent = raw;
-
-  for (const key of route.parent)
-    parent = (parent /* a JSON object on a route this run read */ as Record<string, unknown>)[key];
+function drop(raw: Json, { route }: Removal): void {
+  const parent = atRoute(raw, route.parent);
 
   if (Array.isArray(parent)) parent.splice(0, parent.length, ...parent.filter((item) => item !== route.key));
-  else delete (parent /* the object that holds the entry */ as Record<string, unknown>)[route.key];
+  else delete branchAt(raw, route.parent)[route.key];
 }
 
 /** One `name from place (fields) and place` part of the line, places in the order they were found. */
@@ -62,7 +61,7 @@ export function main(argv: string[], io: UpdateIo = updateIo()): number {
 
   const files = editFiles(
     root,
-    removals.map((removal) => ({ apply: (raw: unknown) => drop(raw, removal), file: removal.file })),
+    removals.map((removal) => ({ apply: (raw: Json) => drop(raw, removal), file: removal.file })),
   );
 
   for (const removal of removals)

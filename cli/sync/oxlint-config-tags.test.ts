@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 
 import type { ResolvedLint } from "../config.ts";
+import type { JsonObject } from "../json.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import type { Workspace } from "./workspace.ts";
 
-type Config = { rules: Record<string, unknown> };
+type Config = { rules: JsonObject };
 
 /** A root and three packages, as `readWorkspace` reads them. */
 const APP: Workspace = {

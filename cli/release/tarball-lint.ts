@@ -5,6 +5,7 @@ import { problemKindInfo } from "@arethetypeswrong/core/problems";
 import { publint } from "publint";
 import { formatMessage } from "publint/utils";
 
+import type { JsonObject } from "../json.ts";
 import {
   attwLine,
   ESM_ONLY_IGNORED,
@@ -14,7 +15,7 @@ import {
   REQUIRE_CONDITION,
 } from "./tarball-lint.constants.ts";
 
-type Manifest = Record<string, unknown>;
+type Manifest = JsonObject;
 
 /** The parts every attw problem shares; the kinds without an entrypoint or a resolution kind leave them out. */
 type Problem = { kind: keyof typeof problemKindInfo; entrypoint?: string; resolutionKind?: string };

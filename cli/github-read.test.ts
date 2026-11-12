@@ -4,11 +4,12 @@ import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
 import { must, wantedOf } from "./__fixtures__/github-wanted.ts";
 import type { Gh, GhFailure } from "./github-gh.ts";
 import { readCurrent } from "./github-read.ts";
+import type { JsonObject } from "./json.ts";
 
 const BASE = "repos/o/r";
 const ALERTS = `${BASE}/vulnerability-alerts`;
 
-const GOOD: Record<string, unknown> = {
+const GOOD: JsonObject = {
   [ALERTS]: "",
   [BASE]: { description: null, homepage: null, topics: [] },
   [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
@@ -25,7 +26,7 @@ function failure(kind: GhFailure["kind"], status?: number): GhFailure {
 }
 
 /** A gh that answers each path from `json`, as text or JSON, unless `fails` has a failure for it. */
-function canned(json: Record<string, unknown>, fails: Record<string, GhFailure> = {}): Gh {
+function canned(json: JsonObject, fails: Record<string, GhFailure> = {}): Gh {
   return ({ path }) => {
     const failed = fails[path];
 

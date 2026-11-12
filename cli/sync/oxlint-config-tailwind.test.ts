@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { ResolvedLint } from "../config.ts";
+import type { JsonObject } from "../json.ts";
 import { oxlintConfig } from "./oxlint-config.ts";
 import type { Workspace } from "./workspace.ts";
 
@@ -17,7 +18,7 @@ const ROOT: Workspace = {
 const ENTRY: ResolvedLint = { skip: [], tailwind: { entryPoint: "src/app.css" } };
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 
-type Written = { jsPlugins: unknown; overrides: unknown[]; rules: Record<string, unknown>; settings?: unknown };
+type Written = { jsPlugins: unknown; overrides: unknown[]; rules: JsonObject; settings?: unknown };
 
 /** The config sync writes for `lint`, parsed; a refusal throws. */
 function written(lint: ResolvedLint): Written {
@@ -28,7 +29,7 @@ function written(lint: ResolvedLint): Written {
   return JSON.parse(built.value) /* the config sync writes */ as Written;
 }
 
-function tailwindRules(config: Written): Record<string, unknown> {
+function tailwindRules(config: Written): JsonObject {
   return Object.fromEntries(Object.entries(config.rules).filter(([rule]) => rule.startsWith("tailwindcss/")));
 }
 

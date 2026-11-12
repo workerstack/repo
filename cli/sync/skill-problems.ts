@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
-import { parseDoc } from "./agents/frontmatter.ts";
+import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
 import { entriesOf } from "./entries-of.ts";
 import { linkProblems } from "./link-problems.ts";
 import { MAX_DESCRIPTION_CHARS, SKILLS_DIR } from "./repo-dir.constants.ts";
@@ -83,7 +83,7 @@ function entryProblems(context: SkillContext, entry: fs.Dirent): string[] {
   if (!fs.existsSync(path.join(context.root, file)))
     return [`${folder}: SKILL.md is missing; add it or delete the folder`];
   const text = fs.readFileSync(path.join(context.root, file), "utf8");
-  let data: Record<string, unknown>;
+  let data: ParsedDoc["data"];
 
   try {
     data = parseDoc(file, text).data;

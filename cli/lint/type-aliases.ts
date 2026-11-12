@@ -142,11 +142,22 @@ function nearestTypeBindings(name: string, use: TSESTree.Node, environment: Type
 }
 
 /** The alias `name` names at `use`, or null when a binder or another declaration shadows it, or none is visible. */
-function visibleTypeAlias(name: string, use: TSESTree.Node, environment: TypeAliasEnvironment): Alias | null {
+export function visibleTypeAlias(name: string, use: TSESTree.Node, environment: TypeAliasEnvironment): Alias | null {
   if (lexicalTypeParameterNames(use, environment.visitorKeys).has(name)) return null;
   const [only, ...rest] = nearestTypeBindings(name, use, environment);
 
   return only !== undefined && rest.length === 0 ? only.alias : null;
+}
+
+/**
+ * Whether a type parameter, mapped key, `infer` binder or local declaration binds `name` at `use`, so a built-in type
+ * of that name, as `Record`, is shadowed there.
+ */
+export function hasVisibleTypeBinding(name: string, use: TSESTree.Node, environment: TypeAliasEnvironment): boolean {
+  return (
+    lexicalTypeParameterNames(use, environment.visitorKeys).has(name) ||
+    nearestTypeBindings(name, use, environment).length > 0
+  );
 }
 
 /** The substitutions in force inside `alias` as `reference` instantiates it, or null when an argument is missing. */
