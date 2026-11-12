@@ -1,9 +1,9 @@
 ---
 name: oxlint-ast-null-children
 paths: ["cli/lint/function-parameters.ts","cli/lint/type-aliases.ts","cli/scripts/lint-repo-rules.test.ts"]
-hits: 1
+hits: 2
 last-hit: 2026-11-12
-evidence: ["plan 141"]
+evidence: ["plan 141","roadmap 8"]
 ---
 
 # oxlint's AST holds null where typescript-eslint's holds undefined
