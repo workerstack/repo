@@ -50,6 +50,12 @@ describe("start", () => {
   });
 });
 
+it("start records no pid for a recorder that reports none", async () => {
+  const r = await run(["start"], { spawnFn: () => ({}) });
+  expect(r.code).toBe(0);
+  expect(Object.keys(readSession(r.cwd))).toStrictEqual(["started", "wav"]);
+});
+
 describe("start device", () => {
   it("passes --device from the flag", async () => {
     const rec = recorder();

@@ -6,11 +6,9 @@ import { expect, it } from "vitest";
 import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { agyCall, asChild, claudeCall, codexCall, inSession } from "./__fixtures__/hook-payload.ts";
 import { processHookPayload } from "./gate-fat-tools.ts";
-import type { HookOutput } from "./gate-harness.ts";
+import type { HookOutput, ToolArgs } from "./gate-harness.ts";
 
 const tmp = useTmp();
-
-type Input = Record<string, unknown>;
 
 const addC = { new_string: "dist-local/\n.tmp/\n", old_string: "dist-local/\n" };
 const APPEND_A = "cat <<'EOF' >> packages/a/.gitignore\n.tmp/\nEOF";
@@ -29,19 +27,19 @@ function repo() {
   return r;
 }
 
-function claudeSent(r: string, tool: string, input: Input) {
+function claudeSent(r: string, tool: string, input: ToolArgs) {
   return inSession(claudeCall(r, tool, input), "ig");
 }
 
-function claude(r: string, tool: string, input: Input) {
+function claude(r: string, tool: string, input: ToolArgs) {
   return processHookPayload(claudeSent(r, tool, input));
 }
 
-function codex(r: string, tool: string, input: Input) {
+function codex(r: string, tool: string, input: ToolArgs) {
   return processHookPayload(inSession(codexCall(r, tool, input), "ig"));
 }
 
-function antigravity(r: string, name: string, args: Input) {
+function antigravity(r: string, name: string, args: ToolArgs) {
   return processHookPayload(inSession(agyCall(r, name, args), "ig"));
 }
 

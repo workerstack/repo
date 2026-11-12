@@ -10,7 +10,7 @@ const tmp = plantDirs();
 const NOT_OBJECT = ".mcp.json: mcpServers is not an object; fix it, nothing written";
 
 /** The TOML file as plain objects: the parser's null-prototype tables would fail a strict compare. */
-function plainToml(root: string, rel: string): Record<string, unknown> {
+function plainToml(root: string, rel: string) {
   return structuredClone(readToml(root, rel));
 }
 

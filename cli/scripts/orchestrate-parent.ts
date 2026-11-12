@@ -7,7 +7,7 @@ import { repoEnv } from "../repo-env.ts";
 import { notePush } from "./ci-push-gate.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
-import { answerDeny, answerRewrite, eventKey, fatHookOutput, type HookOutput } from "./gate-harness.ts";
+import { answerDeny, answerRewrite, eventKey, fatHookOutput, type HookOutput, type ToolArgs } from "./gate-harness.ts";
 import { stampPlanSave } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
@@ -18,19 +18,19 @@ import { recordReviewSpawn } from "./orchestrate-reviews.ts";
 import { beforeSubmitPrompt, stop, userPromptSubmit } from "./orchestrate-stop.ts";
 import { parentWrite } from "./orchestrate-writes.ts";
 import { SPAWN_TOOLS, WRITE_TOOLS } from "./orchestrate.constants.ts";
-import type { HookResult, ToolInput } from "./orchestrate.types.ts";
+import type { HookResult } from "./orchestrate.types.ts";
 import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
-function promptOf(input: ToolInput | null | undefined): string | null {
+function promptOf(input: ToolArgs | null | undefined): string | null {
   return typeof input?.prompt === "string" ? input.prompt : null;
 }
 
 /** A spawn over the prompt cap is denied; otherwise the scrubbed input, or null when nothing changed. */
 function rewriteSpawn(
-  toolInput: ToolInput | undefined,
+  toolInput: ToolArgs | undefined,
   data: HookInput,
-): { deny: HookOutput } | { updated: ToolInput | null } {
+): { deny: HookOutput } | { updated: ToolArgs | null } {
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt = promptOf(updated) ?? promptOf(toolInput) ?? "";
 
@@ -39,7 +39,7 @@ function rewriteSpawn(
   return { updated };
 }
 
-function spawnUse(data: HookInput, toolInput: ToolInput | undefined): HookResult {
+function spawnUse(data: HookInput, toolInput: ToolArgs | undefined): HookResult {
   const verdict = rewriteSpawn(toolInput, data);
 
   if ("deny" in verdict) return replyWith(verdict.deny);
@@ -48,7 +48,7 @@ function spawnUse(data: HookInput, toolInput: ToolInput | undefined): HookResult
   return verdict.updated === null ? PASS : replyWith(answerRewrite(data, verdict.updated));
 }
 
-function writeUse(data: HookInput, toolInput: ToolInput | undefined): HookResult | null {
+function writeUse(data: HookInput, toolInput: ToolArgs | undefined): HookResult | null {
   // A full-content plan Write is answered below, before the gate sees it, so the stamp is written here.
   if (typeof toolInput?.content === "string") stampPlanSave(data);
 
@@ -56,7 +56,7 @@ function writeUse(data: HookInput, toolInput: ToolInput | undefined): HookResult
 }
 
 /** Every other tool call, and a write the parent leaves to the host: the fat gate, then a lessons notice. */
-function gateUse(data: HookInput, toolInput: ToolInput | undefined, { writes }: { writes: boolean }): HookResult {
+function gateUse(data: HookInput, toolInput: ToolArgs | undefined, { writes }: { writes: boolean }): HookResult {
   notePush(data, toolInput);
   const fat = fatHookOutput(data, processFatTools(data));
 

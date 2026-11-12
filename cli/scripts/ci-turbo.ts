@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { type JsonObject, tryJson } from "../json.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import type { Gate } from "./ci-gate.ts";
 import {
@@ -31,12 +31,12 @@ export type TurboRun = (args: string[], cwd: string, env: Record<string, string>
 export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
 type ReportSchema = z.ZodObject<
-  { success: z.ZodOptional<z.ZodBoolean>; testResults: z.ZodDefault<z.ZodArray<z.ZodUnknown>> },
-  z.core.$loose
+  { success: z.ZodOptional<z.ZodBoolean>; testResults: z.ZodDefault<z.ZodArray<z.ZodJSONSchema>> },
+  z.core.$catchall<z.ZodJSONSchema>
 >;
 
 function reportSchema(): ReportSchema {
-  return z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
+  return z.object({ success: z.boolean().optional(), testResults: z.array(z.json()).default([]) }).catchall(z.json());
 }
 
 /** One package's vitest report, as far as the merge reads it. */
@@ -70,7 +70,7 @@ function gateOf(run: Captured, named: string): Gate {
 }
 
 /** One report from all of them: the test files together, the counts summed and `success` only if every one had it. */
-export function mergeReports(reports: readonly PackageReport[]): Record<string, unknown> {
+export function mergeReports(reports: readonly PackageReport[]): JsonObject {
   const totals: Record<string, number> = {};
 
   for (const report of reports) {

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import type { JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 /** Grok PreToolUse: rewrite Bash/run_terminal_command through `rtk rewrite`.
 
@@ -14,7 +15,7 @@ import { RTK_BIN, RTK_CALL, RTK_TIMEOUT_MS, ULTRA_FLAG, ULTRA_SUBS, WORD_END } f
 type RtkCall = RegExpExecArray & { groups: { bin: string; sub: string; rest?: string } };
 
 /** The tool input a hook call carries, and its command trimmed. */
-type Command = { toolInput: Record<string, unknown>; cmd: string };
+type Command = { toolInput: JsonObject; cmd: string };
 
 /** The tool input and its trimmed command; null when the input carries no command text. */
 function commandOf(data: HookInput | null): Command | null {

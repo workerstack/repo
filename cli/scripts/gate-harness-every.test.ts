@@ -125,7 +125,7 @@ it("counts a write made through an alias of the repo for the re-read deny in eit
 it("Antigravity: overwrites only the changed args, denies with decision, and skips its read tools", () => {
   const { r, a, scratch } = repo();
 
-  function agy(name: string, args: Record<string, unknown>) {
+  function agy(name: string, args: ToolArgs) {
     return processHookPayload(agyCall(r, name, args));
   }
 

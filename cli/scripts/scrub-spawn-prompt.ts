@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { z } from "zod";
 
-import type { JsonObject } from "../json.ts";
+import type { Json, JsonObject } from "../json.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
 import type { HookInput } from "./hook-input.ts";
@@ -91,7 +91,7 @@ export function rewriteSpawnToolInput(toolInput: unknown): JsonObject | null {
 }
 
 /** The prompt the spawn goes out with: the rewritten one, else the one sent. */
-function sentPrompt(updated: Record<string, unknown> | null, toolInput: Record<string, unknown> | undefined): unknown {
+function sentPrompt(updated: JsonObject | null, toolInput: JsonObject | undefined): Json | undefined {
   // A rewrite only happens for a string prompt, so `updated.prompt` is that string.
   return updated?.prompt ?? toolInput?.prompt;
 }

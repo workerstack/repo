@@ -7,7 +7,7 @@ import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { camelCall, replyCommand, replyInput, replyOf } from "./__fixtures__/hook-payload.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
-import { answerDeny, answerRewrite } from "./gate-harness.ts";
+import { answerDeny, answerRewrite, type ToolArgs } from "./gate-harness.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 import { main as orchMain } from "./orchestrate-parent.ts";
@@ -16,7 +16,7 @@ import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 const tmp = useTmp();
 const GROK = { GROK_HOOK_EVENT: "pre_tool_use" };
 
-function pre(tool: string, input: Record<string, unknown>, extra: HookInput = {}) {
+function pre(tool: string, input: ToolArgs, extra: HookInput = {}) {
   return camelCall(tool, input, { hookEventName: "PreToolUse", ...extra });
 }
 

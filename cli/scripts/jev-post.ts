@@ -23,7 +23,7 @@ function replyJson(value: unknown): Json {
 }
 
 /** The request body's parts besides the model. */
-type Ask = { questions: Record<string, unknown>; state: unknown };
+type Ask = { questions: JsonObject; state: unknown };
 
 export function fail(text: string): JevResult {
   return { code: FAIL_CODE, text };

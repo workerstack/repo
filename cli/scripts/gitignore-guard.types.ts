@@ -4,9 +4,6 @@ export type IgnoreEdit = {
   added: string[];
 };
 
-/** A tool call's argument bag; the shape varies per host and tool, so every field is read with a guard. */
-export type ToolArgs = Record<string, unknown>;
-
 /** A shell write of literal text to one file. */
 export type ShellWrite = {
   file: string;

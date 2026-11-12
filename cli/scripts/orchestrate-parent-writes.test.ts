@@ -5,10 +5,11 @@ import { expect, it } from "vitest";
 
 import { must, orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./__fixtures__/persist-bodies.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 
 const kit = orchestrateKit();
 
-function pre(ws: string, toolName: string, toolInput: Record<string, unknown>): HookOut["hookSpecificOutput"] | null {
+function pre(ws: string, toolName: string, toolInput: ToolArgs): HookOut["hookSpecificOutput"] | null {
   return replyOf(kit.grok({ ws }, "PreToolUse", { toolInput, toolName }))?.hookSpecificOutput ?? null;
 }
 

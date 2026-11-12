@@ -8,13 +8,14 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
 import { holdingCheckout, matchLessons, persistLesson } from "./lessons-ops.ts";
 import { LESSONS_DIR } from "./lessons.constants.ts";
 import { denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
-import type { ContextReply, HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";
+import type { ContextReply, HookResult, WriteCase } from "./orchestrate.types.ts";
 import { isUnderDir } from "./persist-tmp.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { mainCheckoutWriteReason } from "./worktree-guards.ts";
@@ -48,7 +49,7 @@ function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow
   return fresh;
 }
 
-function noticeFor(data: HookInput, toolInput: ToolInput): ContextReply | null {
+function noticeFor(data: HookInput, toolInput: ToolArgs): ContextReply | null {
   const roots = resolveRoots(data);
   const target = writeTarget(toolInput);
 
@@ -77,7 +78,7 @@ function noticeFor(data: HookInput, toolInput: ToolInput): ContextReply | null {
 }
 
 // Lessons that match a file this session edits, each shown once per session. Fails open.
-export function lessonNotice(data: HookInput, toolInput: ToolInput): ContextReply | null {
+export function lessonNotice(data: HookInput, toolInput: ToolArgs): ContextReply | null {
   try {
     return noticeFor(data, toolInput);
   } catch {

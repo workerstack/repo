@@ -15,6 +15,7 @@ import { parseSpec, type Spec } from "../bench/parse-spec.ts";
 import { remoteTarget, runRemote } from "../bench/remote.ts";
 import { runSpec } from "../bench/run.ts";
 import { renderTable, type BenchResult, type Env, type Machine } from "../bench/score.ts";
+import type { ConfigModule } from "../import-config.ts";
 import {
   EXIT_FAILED,
   EXIT_OK,
@@ -118,8 +119,8 @@ async function loadSpec(cwd: string, rel: string): Promise<Spec | string> {
 
   try {
     const url = pathToFileURL(file).href;
-    const loaded = (await import(url)) /* a module namespace is an object */ as Record<string, unknown>;
-    const parsed = parseSpec(loaded["default"]);
+    const loaded = (await import(url)) /* an import resolves to its module namespace object */ as ConfigModule;
+    const parsed = parseSpec(loaded.default);
 
     return parsed.ok ? parsed.spec : parsed.errors.map((error) => `${rel}: ${error}`).join(`\n${PREFIX}`);
   } catch (error) {

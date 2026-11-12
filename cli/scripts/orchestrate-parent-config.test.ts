@@ -3,7 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
+import { readJson } from "../json.ts";
 import { loadSources } from "../sync/agents/load-sources.ts";
 import { renderHooks } from "../sync/agents/render-hooks.ts";
 import { orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
@@ -14,6 +16,11 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 
 function repoText(rel: string): string {
   return fs.readFileSync(path.join(root, rel), "utf8");
+}
+
+/** A generated hooks file as far as the test reads it: its table of hooks. */
+function hooksFile() {
+  return z.object({ hooks: z.record(z.string(), z.json()) });
 }
 
 type Hooks = { hooks?: { SessionStart?: unknown; SubagentStop?: unknown } };
@@ -69,16 +76,16 @@ it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
     return files.get(rel) ?? "";
   }
 
-  const claude = parseJson<{ hooks: Record<string, unknown> }>(text(".claude/settings.json")).hooks;
+  const claude = readJson(hooksFile(), text(".claude/settings.json")).hooks;
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(claude.PreToolUse)).toMatch(/gate-fat-tools/);
   expect(JSON.stringify(claude.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
   expect(JSON.stringify(claude.Stop ?? claude.stop)).toMatch(/hook orchestrate-parent/);
-  const codex = parseJson<{ hooks: Record<string, unknown> }>(text(".codex/hooks.json")).hooks;
+  const codex = readJson(hooksFile(), text(".codex/hooks.json")).hooks;
   expect(JSON.stringify(codex.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
   expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/hook orchestrate-parent/);
-  const ag = parseJson<{ rulesync: Record<string, unknown> }>(text(".agents/hooks.json")).rulesync;
+  const ag = readJson(z.object({ rulesync: z.record(z.string(), z.json()) }), text(".agents/hooks.json")).rulesync;
   expect(JSON.stringify(ag.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(ag.PreToolUse)).toMatch(/gate-fat-tools/);
   expect([ag.UserPromptSubmit, ag.beforeSubmitPrompt, ag.userPromptSubmit]).toStrictEqual([

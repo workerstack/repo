@@ -6,6 +6,7 @@ import { expect, it } from "vitest";
 
 import { claudeHook } from "./__fixtures__/claude-hook.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
+import type { HookInput } from "./hook-input.ts";
 
 const hook = claudeHook();
 
@@ -44,7 +45,7 @@ function checkout() {
 }
 
 /** The PreToolUse of a Bash `git push origin main`. */
-function push(ws: string, sid: string, extra: Record<string, unknown> = {}) {
+function push(ws: string, sid: string, extra: HookInput = {}) {
   return hook.send(ws, {
     hook_event_name: "PreToolUse",
     session_id: sid,

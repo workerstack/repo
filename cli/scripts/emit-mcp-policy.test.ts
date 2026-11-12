@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { TomlTable } from "smol-toml";
 import { expect, it } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { BASE_POLICY } from "./__fixtures__/mcp-base-policy.ts";
 import { plant, plantDirs, plantPolicy, readJsonAs, readTomlAs } from "./__fixtures__/mcp-policy-kit.ts";
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
@@ -18,7 +20,7 @@ type ClaudeSettings = {
 };
 
 type McpFile = {
-  mcpServers: Record<string, unknown>;
+  mcpServers: JsonObject;
 };
 
 type GrokFile = {
@@ -31,11 +33,11 @@ type GrokFile = {
 
 type CodexFile = {
   agents?: { max_depth?: number };
-  mcp_servers?: Record<string, unknown>;
+  mcp_servers?: TomlTable;
 };
 
 /** Writes `<root>/.mcp.json` holding `servers`, as the user keeps it. */
-function writeMcpJson(root: string, servers: Record<string, unknown>): string {
+function writeMcpJson(root: string, servers: JsonObject): string {
   const text = `${JSON.stringify({ mcpServers: servers }, null, 2)}\n`;
   plant(root, ".mcp.json", text);
 

@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
+import { type JsonObject, readJson } from "../json.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { CLAUDE, readHostDest, repoRoot, stockCopy, stockWorkspace } from "./__fixtures__/sync-global-kit.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
@@ -22,8 +24,8 @@ function overlaySync(stock: string, consumer: string, home: string): SyncResult 
   });
 }
 
-function readJson(file: string): Record<string, unknown> {
-  return JSON.parse(fs.readFileSync(file, "utf8")) /* settings files hold one object */ as Record<string, unknown>;
+function settingsAt(file: string): JsonObject {
+  return readJson(z.record(z.string(), z.json()), fs.readFileSync(file, "utf8"));
 }
 
 it("a deleted payload errors with its repo-relative path and writes nothing", () => {
@@ -102,15 +104,15 @@ it("a payload under .repo/global-settings replaces the stock one whole", () => {
   fs.writeFileSync(path.join(consumer, ".repo/global-settings/claude.json"), JSON.stringify({ customKey: 1 }));
   const home = tempDir("sync-overlay-home-");
   expect(overlaySync(stock, consumer, home).ok).toBe(true);
-  expect(readJson(path.join(home, ".claude/settings.json"))).toStrictEqual({ customKey: 1 });
+  expect(settingsAt(path.join(home, ".claude/settings.json"))).toStrictEqual({ customKey: 1 });
 });
 
 it("falls back to the stock payload when the overlay lacks that file", () => {
   const stock = stockCopy("sync-overlay-stock-");
   const home = tempDir("sync-overlay-home-");
   expect(overlaySync(stock, tempDir("sync-overlay-empty-"), home).ok).toBe(true);
-  const stockPayload = readJson(path.join(stock, "agents/global-settings/claude.json"));
-  const written = readJson(path.join(home, ".claude/settings.json"));
+  const stockPayload = settingsAt(path.join(stock, "agents/global-settings/claude.json"));
+  const written = settingsAt(path.join(home, ".claude/settings.json"));
   expect(Object.keys(written)).toStrictEqual(
     expect.arrayContaining(Object.keys(stockPayload).filter((k) => k !== "hooks")),
   );

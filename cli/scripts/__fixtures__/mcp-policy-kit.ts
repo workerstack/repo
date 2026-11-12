@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { parse as parseToml, stringify as stringifyToml, type TomlTable } from "smol-toml";
 
 /** Planted dirs under the OS temp dir, removed after each case; nothing here touches the real home. */
 export function plantDirs(): (prefix: string) => string {
@@ -40,7 +40,7 @@ export function readJson(root: string, rel: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(root, rel), "utf8")) as Record<string, unknown>;
 }
 
-export function readToml(root: string, rel: string): Record<string, unknown> {
+export function readToml(root: string, rel: string): TomlTable {
   return parseToml(fs.readFileSync(path.join(root, rel), "utf8"));
 }
 

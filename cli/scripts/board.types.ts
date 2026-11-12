@@ -18,8 +18,8 @@ export type BoardRow = {
   boot: string;
 };
 
-/** A row as a caller hands it in: any field may be missing or of any type. */
-export type LooseRow = Partial<Record<keyof BoardRow, unknown>>;
+/** A row as a caller hands it in: any field may be missing or hold any JSON value. */
+export type LooseRow = Partial<Record<keyof BoardRow, Json>>;
 
 /** What a probe learns about one process. */
 export type ProcessInfo = {

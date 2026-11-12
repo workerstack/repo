@@ -12,9 +12,6 @@ const skipRe = new RegExp(
   "i",
 );
 
-/** The keys the merge test reads back. */
-type Merged = Record<string, unknown> & { features: { two_pass_compaction: boolean; hooks: string } };
-
 it("applies by default and reads --dry-run, --check and --host", () => {
   expect(parseArgv([])).toStrictEqual({ check: false, dryRun: false, host: "all", ok: true });
   expect(parseArgv(["--dry-run"])).toMatchObject({ dryRun: true, ok: true });
@@ -62,12 +59,11 @@ it("keeps dest-only keys and skips mcp/hooks/apiKey", () => {
     mcp: { servers: { new: true } },
   };
 
-  const merged = deepMerge(dest, source, skipRe) /* both inputs hold features */ as Merged;
+  const merged = deepMerge(dest, source, skipRe);
   expect(merged.keepMe).toBe(1);
   expect(merged.apiKey).toBe("dest-secret");
   expect(merged.mcp).toStrictEqual({ servers: { old: true } });
   expect(merged.hooks).toBeUndefined();
-  expect(merged.features.two_pass_compaction).toBe(true);
-  expect(merged.features.hooks).toBe("dest-hooks");
+  expect(merged.features).toStrictEqual({ hooks: "dest-hooks", two_pass_compaction: true });
   expect(merged.agent).toStrictEqual({ name: "orchestrator" });
 });

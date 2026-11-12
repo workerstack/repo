@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { readJson } from "../json.ts";
+import { type JsonObject, readJson } from "../json.ts";
 import { writeSecretJson } from "./setup-files.ts";
 import { OAUTH_FILE } from "./setup.constants.ts";
 import type { SetupSpawnSync } from "./setup.types.ts";
@@ -16,15 +16,16 @@ const CLIENT_SECRET_JSON = /client_secret.*\.json$/i;
 /** An OAuth client JSON: its installed or web client when that names a client id, its other keys kept. */
 function oauthSchema() {
   const client = z
-    .looseObject({ client_id: z.string().min(1) })
+    .object({ client_id: z.string().min(1) })
+    .catchall(z.json())
     .optional()
     .catch(undefined);
 
-  return z.looseObject({ installed: client, web: client }).catch({});
+  return z.object({ installed: client, web: client }).catchall(z.json()).catch({});
 }
 
 /** The OAuth client JSON `text`; throws unless it is a Desktop client with a client id. */
-export function parseDesktopOAuth(text: string): Record<string, unknown> {
+export function parseDesktopOAuth(text: string): JsonObject {
   const j = readJson(oauthSchema(), text);
 
   if (j.installed === undefined && j.web === undefined)
@@ -35,7 +36,7 @@ export function parseDesktopOAuth(text: string): Record<string, unknown> {
   return j;
 }
 
-export function loadOAuthInput(s: unknown): Record<string, unknown> {
+export function loadOAuthInput(s: unknown): JsonObject {
   const t = str(s);
 
   if (t === "") throw new Error("OAuth JSON path or JSON body required");

@@ -1,3 +1,4 @@
+import type { JsonObject } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 import type { FetchResult as ListenFetchResult } from "./listen.types.ts";
 
@@ -27,7 +28,7 @@ export type FetchFn = (
 export type ApiOpts = {
   method?: string | undefined;
   headers: Record<string, string>;
-  body?: Record<string, unknown> | undefined;
+  body?: JsonObject | undefined;
   fetchFn?: FetchFn | undefined;
 };
 
