@@ -129,7 +129,7 @@ function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[])
 
 /**
  * Stylelint's fix on the stylesheets, `lint --fix -f json` on the lintable files until a pass rewrites none, then
- * oxfmt on what a fix rewrote.
+ * bun fmt on what a fix rewrote.
  */
 function lintFix(root: string, files: readonly string[]) {
   const rewritten = watch(root, files);
@@ -143,7 +143,7 @@ function lintFix(root: string, files: readonly string[]) {
 
   const fixed = rewritten();
 
-  if (fixed.length > 0) captureTool("oxfmt", fixed, root);
+  if (fixed.length > 0) captureTool("bun fmt", fixed, root);
 
   return { fixed, report };
 }

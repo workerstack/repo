@@ -157,7 +157,7 @@ function buildOxlintConfig(): OxlintConfig {
   });
 }
 
-/** Oxfmt's keys from `arrowParens` to `objectWrap`, in its schema's order. */
+/** The oxfmt config's keys from `arrowParens` to `objectWrap`, in its schema's order. */
 function oxfmtLayoutKeys() {
   return {
     arrowParens: z.unknown().optional(),

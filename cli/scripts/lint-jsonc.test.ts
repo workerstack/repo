@@ -49,7 +49,7 @@ it("fmt rewrites it before the tool runs, and keeps inline, string and fixture c
   expect([readText(root, "a.jsonc"), readText(root, "tsconfig.json")]).toStrictEqual([DONE, DONE]);
   expect(readText(root, "inline.jsonc")).toContain("/* kept */");
   expect(readText(root, "__fixtures__/f.jsonc")).toBe(WITH);
-  expect(calls).toStrictEqual([["oxfmt", [], root]]);
+  expect(calls).toStrictEqual([["bun fmt", [], root]]);
 });
 
 it("fmt --check names the file and line, exits 1 and writes nothing", async () => {

@@ -6,14 +6,10 @@ import { fileURLToPath } from "node:url";
 
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { standardsFiles } from "../__fixtures__/standards-files.ts";
 import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { childEnv } from "../env.ts";
-import { standards } from "../sync/standards.ts";
 import { captureTool, fmt, lint, runTool, type RunTool } from "./lint.ts";
-
-/** A resolved config's agents with no host and no skill. */
-const NO_AGENTS = { hosts: [], skills: [] };
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/repo.ts");
 const SLOW = 60_000;
@@ -41,18 +37,7 @@ const FLOATING = "export function start(load: () => Promise<void>): void {\n  lo
 
 /** A consumer with the standards pack, its two configs as sync writes them, and `files`. */
 function standardsRepo(files: Record<string, string>): string {
-  const ctx = {
-    config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
-    read: () => null,
-    root: "",
-    workspace: { manifest: {}, packages: [], root: "" },
-  };
-
-  const configs = Object.fromEntries(
-    standards(ctx, []).outputs.map((output) => [output.path, output.kind === "file" ? output.content : ""]),
-  );
-
-  return repo('["standards"]', { ...configs, ...files });
+  return repo('["standards"]', { ...standardsFiles(), ...files });
 }
 
 /** The env of a spawned repo command: bun alone on PATH. */
@@ -164,7 +149,7 @@ describe("the lint and fmt mains in process, with the real tools and node off PA
 describe("runTool", () => {
   it.each([
     ["oxlint", "lint"],
-    ["oxfmt", "fmt"],
+    ["bun fmt", "fmt"],
   ] as const)("refuses %s while the standards pack is off, and runs nothing", async (tool, command) => {
     const root = repo('["docs"]');
     const run = vi.fn<RunTool>(() => 0);
@@ -193,7 +178,7 @@ describe("runTool", () => {
     const root = repo('["standards"]');
     const run = vi.fn<RunTool>(() => 0);
     const io = capture();
-    expect(await runTool("oxfmt", ["--check"], { cwd: root, run, stderr: io.stderr })).toBe(1);
+    expect(await runTool("bun fmt", ["--check"], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe("repo fmt: no .oxfmtrc.jsonc; run `bun repo sync` to write it\n");
     expect(run).not.toHaveBeenCalled();
   });
@@ -208,7 +193,7 @@ describe("runTool", () => {
 
     const bare = tree({});
     const none = capture();
-    expect(await runTool("oxfmt", [], { cwd: bare, run: () => 0, stderr: none.stderr })).toBe(1);
+    expect(await runTool("bun fmt", [], { cwd: bare, run: () => 0, stderr: none.stderr })).toBe(1);
     expect(none.err.join("")).toBe(
       `repo fmt: no workerstack.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
     );

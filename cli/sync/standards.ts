@@ -53,8 +53,8 @@ function untrackedFile(target: string, content: string): Output {
 /**
  * Under the standards pack, `.oxlintrc.json` (with an override per `lint.skip` entry), `knip.json` (with the
  * `knip.ignore` entries) and `.oxfmtrc.jsonc`, all untracked and sync's own, and the git hooks; a hand-written hook
- * or a skip of a rule the config never runs refuses all. It runs after the generators so oxfmt can ignore every
- * output, and before the git files pass, whose paths it names itself and which marks the hooks generated.
+ * or a skip of a rule the config never runs refuses all. It runs after the generators so the oxfmt config can ignore
+ * every output, and before the git files pass, whose paths it names itself and which marks the hooks generated.
  */
 export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnType<Generator> {
   if (!ctx.config.packs.includes("standards")) return { errors: [], outputs: [] };

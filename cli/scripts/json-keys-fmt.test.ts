@@ -51,7 +51,7 @@ it("fmt --check names the first key out of order and exits 1 whatever the tool s
   const out = io();
   expect(await fmt(["--check"], { cwd: root, run, stderr: out.stderr })).toBe(1);
   expect(out.err).toStrictEqual([`repo fmt: ${CLAUDE} has keys out of order, first "hooks"; run \`bun repo fmt\`\n`]);
-  expect(run).toHaveBeenCalledWith("oxfmt", ["--check"], root);
+  expect(run).toHaveBeenCalledWith("bun fmt", ["--check"], root);
   expect(readText(root, CLAUDE)).toBe(UNSORTED);
 });
 
@@ -102,7 +102,7 @@ it("fmt lists nothing outside a git repo, so no jsonc is converted or sorted", a
   expect(readText(root, "a.jsonc")).toContain("/* x */");
 });
 
-it("fmt leaves a git-ignored and an oxfmt-ignored jsonc untouched", async () => {
+it("fmt leaves a jsonc that git or the oxfmt config ignores untouched", async () => {
   const commented = '{\n  "b": 1,\n  "a": 2\n}\n';
   const root = formatRepo({ ".gitignore": "git.jsonc\n", "__fixtures__/f.jsonc": commented, "git.jsonc": commented });
   expect(await fmt([], { cwd: root, run: () => 0, stderr: () => {} })).toBe(0);
@@ -126,7 +126,7 @@ it("fmt sorts the files and runs the tool; a path argument narrows the sort, fro
     UNSORTED,
     UNSORTED,
   ]);
-  expect(run).toHaveBeenCalledWith("oxfmt", ["b.json"], root);
+  expect(run).toHaveBeenCalledWith("bun fmt", ["b.json"], root);
   expect(await fmt([], { cwd: root, run, stderr: () => {} })).toBe(0);
   expect([readText(root, "a.json"), readText(root, "dir/c.json")]).toStrictEqual([SORTED, SORTED]);
 });
@@ -137,7 +137,7 @@ it("fmt in a root with no git skips the key sort and runs the tool as before", a
   const out = io();
   expect(await fmt(["--check"], { cwd: root, run, stderr: out.stderr })).toBe(3);
   expect(out.err).toStrictEqual([]);
-  expect(run).toHaveBeenCalledWith("oxfmt", ["--check"], root);
+  expect(run).toHaveBeenCalledWith("bun fmt", ["--check"], root);
   expect(readText(root, "a.json")).toBe(UNSORTED);
 });
 

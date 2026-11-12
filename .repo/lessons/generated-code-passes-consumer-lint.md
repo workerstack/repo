@@ -16,6 +16,6 @@ The plan 130, 135 and 137 proofs installed the packed tarball in a scratch consu
 ## Fix
 A plan whose command writes or rewrites source in a consumer proves the output on a synced consumer:
 - Install the packed tarball, set `sideEffects` and `packageManager`, and run `bun repo sync` so the hooks and lint config are the consumer's.
-- Run the command, run `bunx oxfmt` on what it wrote, then `bun repo lint` on those files and assert no line from a rule the output itself trips.
+- Run the command, run `bun repo fmt` on what it wrote, then `bun repo lint` on those files and assert no line from a rule the output itself trips.
 - Commit through the synced hooks, not with `core.hooksPath=/dev/null`.
 Turn each hit into a failing test of the rule or the writer before the fix.

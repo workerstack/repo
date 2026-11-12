@@ -98,7 +98,7 @@ describe("the commit size limit", () => {
   it("refuses a commit over the limit with no body, and takes a body line as the reason", () => {
     expect(sized("chore: x", 1000)).toStrictEqual([]);
     expect(sized("chore: x", 1240)).toStrictEqual([OVER]);
-    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.", 1240)).toStrictEqual([]);
+    expect(sized("chore: x\n\nReformat from the bun fmt upgrade.", 1240)).toStrictEqual([]);
   });
 
   it("does not take a comment or git's verbose diff as the reason", () => {
@@ -152,7 +152,7 @@ describe("the commit body rules: bodies by size", () => {
   });
 
   it("refuses two why-lines over the size limit", () => {
-    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.\nAnd a second reason.\n", 1240)).toStrictEqual([
+    expect(sized("chore: x\n\nReformat from the bun fmt upgrade.\nAnd a second reason.\n", 1240)).toStrictEqual([
       "keep the why to one line",
     ]);
   });
@@ -171,8 +171,8 @@ describe("the commit body rules: what passes", () => {
   });
 
   it("accepts one why-line over the size limit, beside a footer too", () => {
-    expect(sized("chore: x\n\nReformat from the oxfmt upgrade.\n", 1240)).toStrictEqual([]);
-    expect(sized("chore!: x\n\nReformat from the oxfmt upgrade.\n\nBREAKING CHANGE: drops z\n", 1240)).toStrictEqual(
+    expect(sized("chore: x\n\nReformat from the bun fmt upgrade.\n", 1240)).toStrictEqual([]);
+    expect(sized("chore!: x\n\nReformat from the bun fmt upgrade.\n\nBREAKING CHANGE: drops z\n", 1240)).toStrictEqual(
       [],
     );
   });

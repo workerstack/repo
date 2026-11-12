@@ -41,7 +41,7 @@ export const CI_USAGE: string =
 
 export const COMMIT_MSG_USAGE: string = "usage: repo commit-msg <file> | --range <base>..<head> | --pre-push <remote>";
 export const COVERAGE_USAGE: string = "usage: repo coverage";
-export const FMT_USAGE: string = "usage: repo fmt [--check] [<oxfmt args>…]";
+export const FMT_USAGE: string = "usage: repo fmt [--check] [<bun fmt args>…]";
 export const LINT_USAGE: string = "usage: repo lint [<oxlint args>…] | --baseline";
 
 export const MUTATE_USAGE: string =

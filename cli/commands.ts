@@ -144,7 +144,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   fixtures: { load: () => import("./fixtures-rename.ts"), summary: FIXTURES_SUMMARY, usage: FIXTURES_USAGE },
   fmt: {
     load: () => import("./scripts/lint.ts").then(({ fmt }) => ({ main: fmt })),
-    summary: "Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)",
+    summary: "Format with the standards pack's oxfmt config (--check: report only; args go to bun fmt)",
     usage: FMT_USAGE,
   },
   lint: {

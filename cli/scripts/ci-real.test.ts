@@ -12,7 +12,7 @@ const PIN = `bun@${Bun.version}`;
 
 const MANIFEST = `${JSON.stringify(
   {
-    // Fields in the order oxfmt's sortPackageJson writes them, so the planted repo passes fmt.
+    // Fields in the order bun fmt's sortPackageJson writes them, so the planted repo passes fmt.
     name: "app",
     private: true,
     type: "module",

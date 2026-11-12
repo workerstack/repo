@@ -7,7 +7,7 @@ export const SYNC_POSTINSTALL: string = "repo sync --postinstall";
 /** A postinstall already holding this runs sync, so init leaves it alone. */
 export const SYNC_COMMAND: string = "repo sync";
 
-/** The indent init writes package.json with, before oxfmt lays it out. */
+/** The indent init writes package.json with, before bun fmt lays it out. */
 export const JSON_INDENT: number = 2;
 
 /**

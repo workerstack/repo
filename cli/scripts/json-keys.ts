@@ -2,7 +2,7 @@
  * The key order of JSON files. `repo fmt` and turn's fmt step sort the keys of every `.json` and `.jsonc` file by code
  * unit, deep, with arrays left in order, and `repo fmt --check` names the first key out of order. A member keeps its
  * own text and the separators stay where they were, so a file's layout does not change; a file that does not parse as
- * JSON with comments is left alone. `package.json` is oxfmt's (`sortPackageJson`), and so is every file the generated
+ * JSON with comments is left alone. `package.json` is bun fmt's (`sortPackageJson`), and so is every file the generated
  * oxfmt config ignores.
  */
 import { spawnSync } from "node:child_process";
@@ -115,9 +115,9 @@ function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
 }
 
 /**
- * Sorts the keys of the json files among `files` (paths relative to `root`, `/`-separated) that the generated oxfmt
- * config does not ignore and that are not `package.json`; under `check` it only reports them. A file that is gone or
- * does not parse as JSON with comments is skipped.
+ * Sorts the keys of the json files among `files` (paths relative to `root`, `/`-separated) that the generated
+ * oxfmt config does not ignore and that are not `package.json`; under `check` it only reports them. A file that is
+ * gone or does not parse as JSON with comments is skipped.
  */
 export function sortJson(root: string, files: readonly string[], { check }: { check: boolean }): Sort {
   const config = path.join(root, OXFMT_CONFIG_PATH);

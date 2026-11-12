@@ -113,7 +113,7 @@ export function computeOutputs({
   generators,
   post,
 }: ComputeOpts): { ok: true; outputs: Output[] } | { ok: false; errors: string[] } {
-  // The tailwind entry is found once, here, so the standards pass gives oxlint and oxfmt the same sheet.
+  // The tailwind entry is found once, here, so the standards pass gives oxlint and the oxfmt config the same sheet.
   const tailwind = config.packs.includes("standards")
     ? withTailwindEntry(root, config.lint)
     : { lint: config.lint, ok: true as const };

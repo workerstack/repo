@@ -147,7 +147,7 @@ function signalledCargo(): ReturnType<CargoRun> {
   return { missing: false, status: null, stderr: "boom\n", stdout: "" };
 }
 
-it("repo fmt names the missing cargo, keeps a failing oxfmt code, and skips cargo without a Cargo.toml", async () => {
+it("repo fmt names the missing cargo, keeps a failing bun fmt code, and skips cargo without a Cargo.toml", async () => {
   const err: string[] = [];
 
   function stderr(text: string) {

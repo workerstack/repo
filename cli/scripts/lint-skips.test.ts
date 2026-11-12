@@ -110,7 +110,7 @@ it("checkLintSkips lints with the skip-free config at the root and drops it afte
   const unskipped = oxlintConfig(ws, { skip: [] });
   const seen: string[] = [];
 
-  function throwing(_tool: "oxlint" | "oxfmt", args: string[], root: string): never {
+  function throwing(_tool: "oxlint" | "bun fmt", args: string[], root: string): never {
     const config = args[args.indexOf("-c") + 1] ?? "";
     seen.push(fs.readFileSync(path.join(root, config), "utf8"));
     throw new Error("oxlint was killed");

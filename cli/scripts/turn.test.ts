@@ -150,7 +150,7 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
   expect(result.code).toBe(1);
 });
 
-// The fields in the order oxfmt's sortPackageJson writes them, so the planted package passes fmt.
+// The fields in the order bun fmt's sortPackageJson writes them, so the planted package passes fmt.
 const WORKSPACE_ROOT = { main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module" };
 
 const API_MANIFEST =

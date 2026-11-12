@@ -23,7 +23,7 @@ const INTERACTING = {
   "src/a.ts": "export function a(n: number) {\n  if (n > 0) {\n    return n;\n  } else {\n    return 0;\n  }\n}\n",
 };
 
-/** Both fixes, the indent oxlint leaves as it was: oxfmt, which `repo turn` runs after, sets it. */
+/** Both fixes, the indent oxlint leaves as it was: bun fmt, which `repo turn` runs after, sets it. */
 const FIXED = "export function a(n: number) {\n  if (n > 0) {\n    return n;\n  }\n\n    return 0;\n  \n}\n";
 
 function read(root: string): string {

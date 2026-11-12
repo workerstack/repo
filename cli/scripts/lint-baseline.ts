@@ -191,7 +191,7 @@ export function readBaseline(root: string): Result<Counts> {
 }
 
 /**
- * Writes `counts` sorted, as `JSON.stringify` indents it, which oxfmt leaves alone; through a rename, so no reader
+ * Writes `counts` sorted, as `JSON.stringify` indents it, which bun fmt leaves alone; through a rename, so no reader
  * sees half.
  */
 export function writeBaseline(root: string, counts: Counts): void {

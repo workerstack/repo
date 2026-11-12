@@ -126,7 +126,7 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
     expect(readText(root, left)).toBe(UNSORTED);
 });
 
-it("leaves package.json to oxfmt", () => {
+it("leaves package.json to bun fmt", () => {
   const root = jsonDir(TREE);
   sortJson(root, sortable(TREE), { check: false });
 

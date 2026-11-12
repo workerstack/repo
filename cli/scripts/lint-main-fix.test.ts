@@ -26,7 +26,7 @@ const INTERACTING_RC = JSON.stringify({
 const ELSE_RETURN =
   "export function a(n: number) {\n  if (n > 0) {\n    return n;\n  } else {\n    return 0;\n  }\n}\n";
 
-/** Both fixes applied; oxlint leaves the indent as it was, for oxfmt to set. */
+/** Both fixes applied; oxlint leaves the indent as it was, for bun fmt to set. */
 const BOTH_FIXED = "export function a(n: number) {\n  if (n > 0) {\n    return n;\n  }\n\n    return 0;\n  \n}\n";
 
 /** The first pass alone: the `else` dropped, the blank line before the return not yet in. */

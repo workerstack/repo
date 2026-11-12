@@ -15,3 +15,12 @@ export const MODULES_DIR = "node_modules";
 
 /** The spawn error code of a bin that is not on PATH. */
 export const NOT_FOUND = "ENOENT";
+
+/** bun fmt's flag that writes a `[fmt]` section into bunfig.toml, which `repo fmt` refuses. */
+export const INIT_FLAG = "--init";
+
+/** Why `repo fmt --init` is refused: sync owns bunfig.toml, and the layout lives in the oxfmt config. */
+export const INIT_REFUSAL = "--init writes bunfig.toml, which repo sync owns; edit .oxfmtrc.jsonc";
+
+/** The bun arguments that run its formatter, never a package.json `fmt` script of the same name. */
+export const BUN_FMT_ARGS: readonly string[] = ["fmt", "--no-script"];

@@ -42,7 +42,7 @@ src/bad.css:4:10: error stylelint(color-hex-length): Expected "#ffffff" to be "#
 src/bad.css:9:3: error stylelint(order/properties-order): Expected "display" to come before "color"
 ```
 
-`bun repo lint --fix` and `bun repo turn` run Stylelint's fix first (property order, hex length), then oxfmt on the sheets it rewrote, and `--staged` restages them. `bun repo lint src/a.css` runs Stylelint alone. A `lint.skip` entry takes `stylelint/<rule>` (`rules: ["stylelint/no-descending-specificity"]`); a misspelled one fails `bun repo check` as `has no hit`. A checkout with no CSS runs no Stylelint.
+`bun repo lint --fix` and `bun repo turn` run Stylelint's fix first (property order, hex length), then bun fmt on the sheets it rewrote, and `--staged` restages them. `bun repo lint src/a.css` runs Stylelint alone. A `lint.skip` entry takes `stylelint/<rule>` (`rules: ["stylelint/no-descending-specificity"]`); a misspelled one fails `bun repo check` as `has no hit`. A checkout with no CSS runs no Stylelint.
 
 ## Tailwind classes
 
