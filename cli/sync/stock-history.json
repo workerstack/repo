@@ -5314,6 +5314,7 @@
     "bd13bdb0892fac4d",
     "f7f095d24a461ce1"
   ],
+  "cli/scripts/turn-links.test.ts": ["74d3128b4655e5f1"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61"],
   "cli/scripts/turn-steps.test.ts": ["1185b24a2a30bcd3", "13127ab245837357", "6a271617c14e7eaa", "c89acccabc45f07c"],
   "cli/scripts/turn-steps.ts": [
@@ -5324,6 +5325,7 @@
     "741d37cf75ecc707",
     "7ed1ce0ff6d9a650",
     "92db5ec7d0e5b0c9",
+    "aa660528fab1472e",
     "aae0d4c430ea5890",
     "bdcfe41619301dac",
     "dbe3b2a645f7a49a",
