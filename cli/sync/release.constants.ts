@@ -6,6 +6,7 @@ const CHECKOUT: string = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba9
 export const UPLOAD: string = "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2";
 export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2";
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
+export const SETUP_NODE: string = "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0";
 
 export const UBUNTU: string = "ubuntu-latest";
 
@@ -91,7 +92,7 @@ export const MATRIX: string = `    runs-on: \${{ matrix.os }}
         include:`;
 
 /** The test and e2e jobs' steps right after setup-bun: Linux runs without node, which a Linux-only test relies on. */
-export const NO_NODE_STEPS: string = `      - name: Remove node
+const NO_NODE_STEPS: string = `      - name: Remove node
         if: runner.os == 'Linux'
         run: |
           sudo rm -f $(which -a node nodejs)
@@ -101,6 +102,18 @@ export const NO_NODE_STEPS: string = `      - name: Remove node
         if: runner.os == 'Linux'
         run: |
           if command -v node; then echo "node is still on PATH"; exit 1; fi`;
+
+/** The step after setup-bun in a job that runs the tests, when the packages declare `range` as engines.node. */
+export function setupNodeStep(range: string): string {
+  return `      - uses: ${SETUP_NODE}
+        with:
+          node-version: ${JSON.stringify(range)}`;
+}
+
+/** The steps right after setup-bun in the test and e2e jobs: node set up to the declared range, else removed. */
+export function nodeSteps(range: string | undefined): string {
+  return range === undefined ? NO_NODE_STEPS : setupNodeStep(range);
+}
 
 /** The test job's gates step: it runs the row's shard of the tests and writes that shard's skip report. */
 export const GATES_STEP: string = `      - name: Run the gates and write the skip report

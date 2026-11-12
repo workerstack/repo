@@ -10,10 +10,12 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import { findRoot, loadConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
 import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
+import type { Result } from "../result.ts";
+import { nodeRange } from "../sync/node-range.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import { changeSet, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
-import { captureBun } from "./lint.ts";
+import { capture, captureBun } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { STAGED_FLAG } from "./staged-flag.constants.ts";
@@ -47,11 +49,12 @@ const STEPS: readonly Step[] = [
 
 const USE = "use repo turn [--staged] [<path>]";
 
-/** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
-export const BINS: Bins = {
-  tsc: (args, cwd) =>
-    captureBun([packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
-  vitest: (args, cwd) => {
+/**
+ * Vitest from the package being tested, as its own tests would run: on node when the packages declare `range` as
+ * engines.node (failing with an install hint when node is not on PATH), else on bun.
+ */
+export function vitestBin(range: string | undefined): Bins["vitest"] {
+  return (args, cwd) => {
     let manifest: string;
 
     try {
@@ -60,11 +63,36 @@ export const BINS: Bins = {
       return null;
     }
 
-    return captureBun(
-      ["--bun", packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args],
-      cwd,
-      childEnv({ NO_COLOR: "1" }),
-    );
+    const command = [packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args];
+    const env = childEnv({ NO_COLOR: "1" });
+
+    if (range === undefined) return captureBun(["--bun", ...command], cwd, env);
+    const missing = `repo ci: engines.node is set (${range}) but node is not on PATH; install node ${range}`;
+
+    return capture("node", command, { cwd, env, missing });
+  };
+}
+
+/**
+ * The engines.node range of the workspace holding `cwd` (its repo root, else `cwd` itself), so a package dir sees a
+ * range its root or a sibling declares; a workspace that cannot be read or declares two ranges fails as sync would.
+ */
+function rangeAt(cwd: string): Result<string | undefined, string> {
+  const read = readWorkspace(findRoot(cwd) ?? cwd);
+
+  return read.ok ? nodeRange(read.workspace) : { error: read.errors.join("; "), ok: false };
+}
+
+/** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
+export const BINS: Bins = {
+  tsc: (args, cwd) =>
+    captureBun([packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
+  vitest: (args, cwd) => {
+    const range = rangeAt(cwd);
+
+    if (!range.ok) return { code: 1, stderr: `repo ci: ${range.error}\n`, stdout: "" };
+
+    return vitestBin(range.value)(args, cwd);
   },
 };
 

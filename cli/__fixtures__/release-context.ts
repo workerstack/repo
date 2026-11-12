@@ -13,3 +13,11 @@ export function context(packs: Pack[], manifest: PackageJson = {}, files: Record
     read: (rel) => files[rel] ?? null,
   };
 }
+
+/** The `name` job of the synced ci.yml `ci`, through the blank line that ends it. */
+export function job(ci: string, name: string): string {
+  const start = ci.indexOf(`  ${name}:`);
+  const end = ci.indexOf("\n\n", start);
+
+  return ci.slice(start, end === -1 ? undefined : end + 1);
+}

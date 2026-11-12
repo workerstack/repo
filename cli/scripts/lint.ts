@@ -17,7 +17,7 @@ import { FIX_HINT } from "./json-keys.constants.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
-import { CHECK_FLAG, MODULES_DIR } from "./lint.constants.ts";
+import { CHECK_FLAG, MODULES_DIR, NOT_FOUND } from "./lint.constants.ts";
 import { packageBin } from "./package-bin.ts";
 import { toolEnv } from "./tool-env.ts";
 
@@ -207,19 +207,25 @@ function readUtf8(file: string): string {
   return fs.readFileSync(file, "utf8");
 }
 
+/** Where `capture` runs a command: its dir, its environment, and the line it fails with when the bin is not found. */
+type CaptureOptions = { cwd: string; env: NodeJS.ProcessEnv; missing?: string };
+
 /**
- * Runs bun with `args` in `cwd`, its output captured instead of printed, with no `GIT_*` variable (`toolEnv`). The
- * output goes to files, not pipes: a node script that exits right after writing (oxlint's json report) loses what a
- * pipe had not yet taken.
+ * Runs `bin` with `args` in `cwd`, its output captured instead of printed, with no `GIT_*` variable (`toolEnv`); a
+ * `bin` not on PATH fails with the `missing` line. The output goes to files, not pipes: a node script that exits right
+ * after writing (oxlint's json report) loses what a pipe had not yet taken.
  */
-export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Captured {
+export function capture(bin: string, args: string[], options: CaptureOptions): Captured {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
   const files = { stderr: path.join(dir, "stderr"), stdout: path.join(dir, "stdout") };
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
+  const { cwd, env, missing } = options;
 
   try {
-    const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
+    const result = spawnSync(bin, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
+
+    if (missing !== undefined && isMissing(result.error)) return { code: 1, stderr: `${missing}\n`, stdout: "" };
 
     return { code: result.status ?? 1, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
   } finally {
@@ -227,6 +233,16 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
     fs.closeSync(err);
     fs.rmSync(dir, { force: true, recursive: true });
   }
+}
+
+/** Whether a spawn failed because its bin is not on PATH. */
+function isMissing(error: Error | undefined): boolean {
+  return error !== undefined && "code" in error && error.code === NOT_FOUND;
+}
+
+/** Runs bun with `args` in `cwd` as `capture` does. */
+export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Captured {
+  return capture(process.execPath, args, { cwd, env });
 }
 
 /** The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed. */

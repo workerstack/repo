@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { context } from "../__fixtures__/release-context.ts";
+import { context, job } from "../__fixtures__/release-context.ts";
 import type { Pack } from "../config.ts";
 import { ciJobNames, release } from "./release.ts";
 import type { PackageJson } from "./workspace.ts";
@@ -65,13 +65,6 @@ function text(manifest: PackageJson, packs: Pack[] = ["release"], files: Record<
   const [output] = release(context(packs, manifest, files)).outputs;
 
   return output?.kind === "file" ? output.content : "";
-}
-
-function job(ci: string, name: string) {
-  const start = ci.indexOf(`  ${name}:`);
-  const end = ci.indexOf("\n\n", start);
-
-  return ci.slice(start, end === -1 ? undefined : end + 1);
 }
 
 const NAMES = [

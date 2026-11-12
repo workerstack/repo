@@ -1,9 +1,6 @@
-import { CHECKOUT_STEP, INSTALL_STEP, SETUP_BUN_STEP } from "./release.constants.ts";
+import { CHECKOUT_STEP, INSTALL_STEP, SETUP_BUN_STEP, SETUP_NODE } from "./release.constants.ts";
 
 export const RELEASE_PATH: string = ".github/workflows/release.yml";
-
-/** Action pin, a full commit SHA with its release as the comment. */
-const SETUP_NODE: string = "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0";
 
 /** Trusted publishing needs npm 11.5.1 and Node 22.14; dist-tags under it need npm 11.21. */
 const NPM_VERSION: string = "12.2.2";

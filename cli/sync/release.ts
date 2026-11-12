@@ -2,6 +2,7 @@ import { isRecord, isString } from "../json.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
+import { nodeRange } from "./node-range.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import { type Shards, coverageJob, shardsCoverage, testShards } from "./release-shards.ts";
 import {
@@ -27,7 +28,7 @@ import {
   MATRIX,
   MATRIX_LABEL,
   NON_ROOT_STEP,
-  NO_NODE_STEPS,
+  nodeSteps,
   PREAMBLE,
   GATES_STEP,
   SETUP_BUN_STEP,
@@ -96,14 +97,14 @@ function e2eMatrix(script: string): Shards {
   return shardable(script) ? E2E_SHARDS : E2E_SHARDS.map(([os]) => [os, 1]);
 }
 
-/** What the test job adds: the Rust tool steps, the turbo cache and the blob upload. */
-type TestOptions = { blob: boolean; rust: string[]; turbo: boolean };
+/** What the test job adds: the node steps, the Rust tool steps, the turbo cache and the blob upload. */
+type TestOptions = { blob: boolean; node: string; rust: string[]; turbo: boolean };
 
 /**
  * The test job, one row per shard; the tsbuildinfo, and under the workspace pack the turbo cache, are restored before
  * the gates and saved after them.
  */
-function testJob({ blob, rust, turbo }: TestOptions) {
+function testJob({ blob, node, rust, turbo }: TestOptions) {
   return [
     "  test:",
     `    name: ${TEST_JOB} (${MATRIX_LABEL})`,
@@ -111,7 +112,7 @@ function testJob({ blob, rust, turbo }: TestOptions) {
     "    steps:",
     CHECKOUT_STEP,
     SETUP_BUN_STEP,
-    NO_NODE_STEPS,
+    node,
     NON_ROOT_STEP,
     INSTALL_STEP,
     ...rust,
@@ -154,7 +155,7 @@ function skipsJob() {
   ].join("\n");
 }
 
-function e2eJob(script: string) {
+function e2eJob(script: string, node: string) {
   return [
     "  e2e:",
     `    name: ${E2E_JOB} (${MATRIX_LABEL})`,
@@ -165,7 +166,7 @@ function e2eJob(script: string) {
     "    steps:",
     CHECKOUT_FULL_STEP,
     SETUP_BUN_STEP,
-    NO_NODE_STEPS,
+    node,
     INSTALL_STEP,
     shardable(script) ? shardStep(script) : `      - run: bun run ${E2E_SCRIPT}`,
   ].join("\n");
@@ -218,17 +219,21 @@ export function release(ctx: SyncContext): ReturnType<Generator> {
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
 
+  const range = nodeRange(ctx.workspace);
+
+  if (!range.ok) return { errors: [range.error], outputs: [] };
+  const node = nodeSteps(range.value);
   const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
   const blob = shardsCoverage(ctx);
   const tools = rust ? [RUST_TOOL_STEPS] : [];
 
   const jobs = [
-    testJob({ blob, rust: tools, turbo: ctx.config.packs.includes("workspace") }),
+    testJob({ blob, node, rust: tools, turbo: ctx.config.packs.includes("workspace") }),
     commitsJob(),
     skipsJob(),
-    ...(blob ? [coverageJob()] : []),
-    ...(e2e === undefined ? [] : [e2eJob(e2e)]),
+    ...(blob ? [coverageJob(range.value)] : []),
+    ...(e2e === undefined ? [] : [e2eJob(e2e, node)]),
     ...(isPublic(ctx) ? [consumerJob({ rust })] : []),
     ...(rust ? [semverJob(), msrvJob()] : []),
   ];

@@ -30,6 +30,7 @@ const packageJsonSchema: z.ZodObject<{
   sideEffects: z.ZodOptional<z.ZodJSONSchema>;
   packageManager: z.ZodOptional<z.ZodJSONSchema>;
   bin: z.ZodOptional<z.ZodJSONSchema>;
+  engines: z.ZodOptional<z.ZodObject<{ node: z.ZodOptional<z.ZodString> }>>;
   exports: z.ZodOptional<z.ZodJSONSchema>;
   scripts: z.ZodOptional<z.ZodJSONSchema>;
   workspaces: z.ZodOptional<
@@ -62,6 +63,10 @@ function buildPackageJsonSchema() {
     {
       // Kept for the lint config, which narrows them where it reads them.
       bin: z.json().optional(),
+      // Only engines.node: one range across the packages sets up node in the synced ci.yml.
+      engines: z
+        .object({ node: z.string({ error: "must be a version range" }).optional() }, { error: "must be an object" })
+        .optional(),
       exports: z.json().optional(),
       name: z.string({ error: "must be a string" }).optional(),
       // Kept as written: sync accepts any value and only `repo check` judges these.
@@ -88,7 +93,7 @@ function buildPackageJsonSchema() {
 
 /**
  * The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay
- * unjudged JSON; every other field is dropped at parse.
+ * unjudged JSON; `engines` keeps only `node`; every other field is dropped at parse.
  */
 export type PackageJson = z.output<typeof packageJsonSchema>;
 
