@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
+import { isRecord, isString, type Json, type JsonObject, tryJson } from "../json.ts";
 import { isSource } from "../test-files.ts";
 
 /**
@@ -53,7 +53,7 @@ export function nearestManifest(start: string): string | null {
 export function binsOf(bin: Json | undefined): string[] {
   const all = isRecord(bin) ? Object.values(bin) : [bin];
 
-  return all.filter((file) => typeof file === "string");
+  return all.filter(isString);
 }
 
 /** `./src/` → `src`: the form a `files` entry or a target is matched in. */
@@ -71,7 +71,7 @@ function entryMatcher(entry: string): (rel: string) => boolean {
 
 /** Every string under a `bin`, `exports` or other target value. */
 function stringsIn(value: Json | undefined): string[] {
-  if (typeof value === "string") return [value];
+  if (isString(value)) return [value];
 
   if (Array.isArray(value)) return value.flatMap(stringsIn);
 
@@ -80,7 +80,7 @@ function stringsIn(value: Json | undefined): string[] {
 
 /** Whether npm packs a source file: `files` (a path, directory or glob, minus `!` entries) or a target it names. */
 function shipsOf(raw: JsonObject): (rel: string) => boolean {
-  const entries = Array.isArray(raw.files) ? raw.files.filter((entry) => typeof entry === "string") : null;
+  const entries = Array.isArray(raw.files) ? raw.files.filter(isString) : null;
   const targets = TARGET_FIELDS.flatMap((key) => stringsIn(raw[key])).map(entryMatcher);
 
   function listed(entry: string) {

@@ -10,7 +10,8 @@ import path from "node:path";
 import ts from "typescript";
 
 import { codeOf, GUARD_REJECTS } from "./lint/script-rules.ts";
-import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
+import type { Result } from "./result.ts";
+import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { isChecked, isTest, ownerOf, posix, setupOf } from "./ts-program.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 

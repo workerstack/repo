@@ -5,7 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
-import type { Result } from "../scripts/lint-baseline.ts";
+import type { Result } from "../result.ts";
 import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
 import type { CargoRun } from "./clippy.ts";
@@ -52,10 +52,10 @@ function parse(text: string, root: string): Result<Record<string, RustFloor>> {
   const json = tryJson(z.json(), text);
 
   if (json === undefined)
-    return { errors: [`cargo llvm-cov wrote a report that is not JSON: ${quote(text)}`], ok: false };
+    return { error: [`cargo llvm-cov wrote a report that is not JSON: ${quote(text)}`], ok: false };
   const report = schema().safeParse(json);
 
-  if (!report.success) return { errors: [`cargo llvm-cov wrote a report repo cannot read: ${quote(text)}`], ok: false };
+  if (!report.success) return { error: [`cargo llvm-cov wrote a report repo cannot read: ${quote(text)}`], ok: false };
   const roots = rootsOf(root);
   const rows: Record<string, RustFloor> = {};
 
@@ -87,15 +87,15 @@ export function rustCoverage(root: string, run: CargoRun): Result<Record<string,
     const output = path.join(dir, REPORT_FILE);
     const result = run(root, [...COVERAGE_ARGS, output]);
 
-    if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+    if (result.missing) return { error: [MISSING_CARGO], ok: false };
 
     if (result.status !== 0) {
       const said = `${result.stdout}${result.stderr}`.trim();
 
-      return { errors: [`cargo llvm-cov exited ${result.status}:\n${said}`], ok: false };
+      return { error: [`cargo llvm-cov exited ${result.status}:\n${said}`], ok: false };
     }
 
-    if (!fs.existsSync(output)) return { errors: ["cargo llvm-cov wrote no report repo can read"], ok: false };
+    if (!fs.existsSync(output)) return { error: ["cargo llvm-cov wrote no report repo can read"], ok: false };
 
     return parse(fs.readFileSync(output, "utf8"), root);
   } finally {

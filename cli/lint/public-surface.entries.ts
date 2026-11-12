@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, tryJson } from "../json.ts";
+import { isRecord, isString, type Json, tryJson } from "../json.ts";
 import { BUILD_CONFIG, BUILT_EXTENSIONS, CODE_TARGET } from "./public-surface.constants.ts";
 import type { Build } from "./public-surface.types.ts";
 
@@ -43,7 +43,7 @@ function sourceOf(root: string, build: Build | null, target: string): string {
 
 /** Every string in an `exports` value, whether it is a path, a list of them or a map of conditions. */
 function targetsOf(value: Json | undefined): string[] {
-  if (typeof value === "string") return [value];
+  if (isString(value)) return [value];
 
   if (Array.isArray(value)) return value.flatMap(targetsOf);
 

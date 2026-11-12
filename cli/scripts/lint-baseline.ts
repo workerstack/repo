@@ -11,6 +11,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson, tryJson } from "../json.ts";
+import type { Result } from "../result.ts";
 import { standardsRoot } from "../standards-root.ts";
 import { errorMessage } from "../sync-errors.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
@@ -31,8 +32,6 @@ type Lowered = { file: string; rule: string; from: number; to: number };
 export type Gated = { over: Excess[]; next: Counts; lowered: Lowered[] };
 
 export type Diagnostic = { file: string; rule: string; line: string };
-
-export type Result<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
 const LOWER = "run `bun repo lint --baseline`";
 const PARSE_ERROR = "parse-error";
@@ -163,7 +162,7 @@ function drift(baseline: Counts, actual: Counts, exists: (file: string) => boole
 
 /** A failed read of the baseline, each line prefixed with its path. */
 function fail(lines: string[]): Result<Counts> {
-  return { errors: lines.map((l) => `${BASELINE_PATH}: ${l}`), ok: false };
+  return { error: lines.map((l) => `${BASELINE_PATH}: ${l}`), ok: false };
 }
 
 /** The baseline under `root`, empty when the file is absent. */
@@ -216,7 +215,7 @@ export function lintReport(
   const report = tryJson(reportSchema(), ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
 
   if (report === undefined)
-    return { errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
+    return { error: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
 
   const diagnostics = report.diagnostics.map((d) => {
     const rule = d.code ?? PARSE_ERROR;
@@ -261,7 +260,7 @@ export function seedBaseline(root: string, scripts: readonly Diagnostic[]): numb
   const measured = measure(root, scripts);
 
   if (!measured.ok) {
-    for (const line of measured.errors) process.stderr.write(`repo lint: ${line}\n`);
+    for (const line of measured.error) process.stderr.write(`repo lint: ${line}\n`);
 
     return 1;
   }
@@ -289,7 +288,7 @@ export async function checkLintBaseline(cwd: string, scripts: readonly Diagnosti
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
   const measured = measure(root, scripts);
 
-  if (!measured.ok) return measured.errors;
+  if (!measured.ok) return measured.error;
   const top = root;
 
   function exists(file: string) {

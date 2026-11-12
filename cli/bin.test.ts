@@ -95,6 +95,6 @@ describe("BIN", () => {
 
   it("loads cli/main.ts lazily, its start among its exports", async () => {
     const loaded = await BIN.load();
-    expect(typeof loaded.start).toBe("function");
+    expect(loaded.start).toBeTypeOf("function");
   });
 });

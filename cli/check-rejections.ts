@@ -163,7 +163,7 @@ function configOf(root: string, dir: string): string {
 function groupProblems(root: string, dir: string | null, targets: readonly string[]): string[] {
   const setup = setupOf(root, dir, dir === null ? SRC_CONFIG : configOf(root, dir));
 
-  if (!setup.ok) return setup.errors;
+  if (!setup.ok) return setup.error;
   const ambient = setup.value.fileNames.filter((fileName) => DECLARATION.test(fileName));
   const program = ts.createProgram({ options: setup.value.options, rootNames: [...ambient, ...targets] });
   // A reject file deleted since it was listed is not in the program, and has nothing left to check.

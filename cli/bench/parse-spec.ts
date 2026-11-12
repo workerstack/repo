@@ -102,11 +102,16 @@ function specSchema() {
   });
 }
 
+/** True for an object key in a zod issue path, false for an array index or a symbol. */
+function isFieldKey(part: PropertyKey): part is string {
+  return typeof part === "string";
+}
+
 /** One line per issue: its field path (array indexes and a bad record key dropped) and what to do. */
 function line(issue: z.core.$ZodIssue): string {
   const isKeyed = issue.code === "invalid_key";
   const message = isKeyed ? issue.issues.map((inner) => inner.message).join("; ") : issue.message;
-  const segments = (isKeyed ? issue.path.slice(0, LAST) : issue.path).filter((part) => typeof part === "string");
+  const segments = (isKeyed ? issue.path.slice(0, LAST) : issue.path).filter(isFieldKey);
 
   if (segments.length > 0) return `${segments.join(".")}: ${message}`;
 

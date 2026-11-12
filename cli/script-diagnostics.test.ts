@@ -34,7 +34,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
 it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file", { timeout: SLOW }, () => {
   const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
   const found = scriptDiagnostics(root, { files: ["pkg/a.test.ts"], sources: ["pkg/a.test.ts"] });
-  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 it("scriptDiagnostics returns jscpd's missing binary for a platform it ships none for", () => {
@@ -49,7 +49,7 @@ it("scriptDiagnostics returns jscpd's missing binary for a platform it ships non
     },
   );
 
-  expect(found.ok ? [] : found.errors).toStrictEqual([
+  expect(found.ok ? [] : found.error).toStrictEqual([
     expect.stringMatching(/^jscpd has no binary .+jscpd-freebsd-x64/),
   ]);
 });
@@ -58,7 +58,7 @@ it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
   const runner = fakeRunner({ code: 1, stderr: "Error: no config\n    at load\n", stdout: "" });
   const root = plant({ "src/a.ts": "export const a = 1;\n" });
   const found = scriptDiagnostics(root, { files: ["src/a.css"], sources: [] }, { fix: false, runner });
-  expect(found).toStrictEqual({ errors: ["stylelint could not run: Error: no config"], ok: false });
+  expect(found).toStrictEqual({ error: ["stylelint could not run: Error: no config"], ok: false });
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */

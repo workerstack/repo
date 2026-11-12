@@ -6,7 +6,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../cli/json.ts";
+import { isRecord, isString, tryJson } from "../cli/json.ts";
 import { processIo } from "./process-io.ts";
 import {
   ARGV_START,
@@ -72,7 +72,7 @@ function replyOf(line: string, sinceMs: number): string {
   const record = parseRecord(line);
   const timestamp = record?.timestamp;
 
-  if (record === undefined || typeof timestamp !== "string" || !(Date.parse(timestamp) >= sinceMs)) return "";
+  if (record === undefined || !isString(timestamp) || !(Date.parse(timestamp) >= sinceMs)) return "";
 
   return replyText(record);
 }

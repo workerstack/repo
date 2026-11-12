@@ -92,28 +92,28 @@ it("carries the output of a run that exits nonzero", () => {
   const run = writing("", { status: 100, stderr: "1 test run: 0 passed\n", stdout: "FAIL tests::adds\n" });
   const got = rustCoverage(ROOT, run);
   expect(got).toStrictEqual({
-    errors: ["cargo llvm-cov exited 100:\nFAIL tests::adds\n1 test run: 0 passed"],
+    error: ["cargo llvm-cov exited 100:\nFAIL tests::adds\n1 test run: 0 passed"],
     ok: false,
   });
 });
 
 it("says cargo is missing", () => {
   const got = rustCoverage(ROOT, () => ({ missing: true, status: 1, stderr: "", stdout: "" }));
-  expect(got.ok ? "" : got.errors[0]).toContain("cargo is not on PATH");
+  expect(got.ok ? "" : got.error[0]).toContain("cargo is not on PATH");
 });
 
 it("says a signal ended the run", () => {
   const got = rustCoverage(ROOT, writing("", { status: null }));
-  expect(got.ok ? "" : got.errors[0]).toContain("cargo llvm-cov exited null");
+  expect(got.ok ? "" : got.error[0]).toContain("cargo llvm-cov exited null");
 });
 
 it("quotes a report that is not there, not JSON or not the shape", () => {
   const absent = rustCoverage(ROOT, none);
-  expect(absent.ok ? "" : absent.errors[0]).toContain("cargo llvm-cov wrote no report repo can read");
+  expect(absent.ok ? "" : absent.error[0]).toContain("cargo llvm-cov wrote no report repo can read");
   const text = rustCoverage(ROOT, writing("not json at all"));
-  expect(text.ok ? "" : text.errors[0]).toContain("not json at all");
+  expect(text.ok ? "" : text.error[0]).toContain("not json at all");
   const noData = rustCoverage(ROOT, writing('{"data":[]}'));
-  expect(noData.ok ? "" : noData.errors[0]).toContain('{"data":[]}');
+  expect(noData.ok ? "" : noData.error[0]).toContain('{"data":[]}');
 });
 
 it("names every metric below its floor", () => {

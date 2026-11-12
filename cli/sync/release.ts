@@ -1,4 +1,4 @@
-import { isRecord } from "../json.ts";
+import { isRecord, isString } from "../json.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -73,7 +73,7 @@ function scriptOf(ctx: CiInput, name: string) {
   const { scripts } = ctx.workspace.manifest;
   const script = isRecord(scripts) ? scripts[name] : undefined;
 
-  return typeof script === "string" ? script : undefined;
+  return isString(script) ? script : undefined;
 }
 
 /** Whether the root manifest's `scripts` has a string `name`. */

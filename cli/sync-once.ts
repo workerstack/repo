@@ -1,5 +1,6 @@
 import { CONFIG_FILE } from "./config.constants.ts";
 import { findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
+import type { Result } from "./result.ts";
 import { errorMessage, fail } from "./sync-errors.ts";
 import { computeOutputs } from "./sync-outputs.ts";
 import { CHECK_FLAG, POSTINSTALL_FLAG, SYNC_PREFIX } from "./sync.constants.ts";
@@ -55,28 +56,30 @@ function refuse(run: Mode & { io: SyncIo }, errors: string[]): number {
 }
 
 /** The run for the repo above `io.cwd`, with its config and workspace read; the exit code when one cannot be. */
-async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Run | number> {
+async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Result<Run, number>> {
   const early = { ...mode, io };
   const root = findRoot(io.cwd);
+  const missing = `no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``;
 
-  if (root === null) return fail(early, [`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
+  if (root === null) return { error: fail(early, [missing]), ok: false };
   const load = deps.load ?? loadConfig;
   const config = await load(root);
 
-  if (!config.ok) return refuse(early, config.errors);
+  if (!config.ok) return { error: refuse(early, config.errors), ok: false };
 
   // Here the trees are the stock source; without the agents pack sync would prune them.
   if (isSelf(root) && !config.config.packs.includes("agents")) {
-    return refuse(early, [
-      `${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`,
-    ]);
+    const line = `${CONFIG_FILE}: this repo ships the agent trees as its stock source; keep "agents" in packs`;
+
+    return { error: refuse(early, [line]), ok: false };
   }
 
   const workspace = readWorkspace(root);
 
-  if (!workspace.ok) return refuse(early, workspace.errors);
+  if (!workspace.ok) return { error: refuse(early, workspace.errors), ok: false };
+  const run = { ...early, deps, load, outputs: [], resolved: config.config, root, workspace: workspace.workspace };
 
-  return { ...early, deps, load, outputs: [], resolved: config.config, root, workspace: workspace.workspace };
+  return { ok: true, value: run };
 }
 
 /**
@@ -177,14 +180,14 @@ function blocksOf(run: Run): StepRun {
  * has no overlay yet, so what sync plans now is the stock's own generated text, the base its copies are compared
  * with. Whether it migrated; the exit code when it stops.
  */
-async function migrate(run: Run, blocks: StepRun): Promise<boolean | number> {
-  if (isSelf(run.root)) return false;
+async function migrate(run: Run, blocks: StepRun): Promise<Result<boolean, number>> {
+  if (isSelf(run.root)) return { ok: true, value: false };
   const generated = generatedFiles(run.outputs);
   const ignored = untrackedEntries(run.resolved.agents.hosts, run.outputs);
   const steps = planMigration(run.root, { generated, ignored, stock: stockRoot(run.root) });
   const migration = await stepBlock({ noun: "migration", reload: true, steps }, blocks);
 
-  return "exit" in migration ? migration.exit : migration.applied;
+  return "exit" in migration ? { error: migration.exit, ok: false } : { ok: true, value: migration.applied };
 }
 
 /**
@@ -214,9 +217,9 @@ async function prepare(run: Run): Promise<number | null> {
   if (firstPlan !== null) return firstPlan;
   const migrated = await migrate(run, blocks);
 
-  if (typeof migrated === "number") return migrated;
+  if (!migrated.ok) return migrated.error;
 
-  return isSelf(run.root) || migrated ? null : adopt(run, blocks);
+  return isSelf(run.root) || migrated.value ? null : adopt(run, blocks);
 }
 
 /** One `repo sync` over `args`; the exit code. */
@@ -231,7 +234,7 @@ export async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Prom
 
   const run = await open(parsed.mode, io, deps);
 
-  if (typeof run === "number") return run;
+  if (!run.ok) return run.error;
 
-  return (await prepare(run)) ?? writeOutputs(run);
+  return (await prepare(run.value)) ?? writeOutputs(run.value);
 }

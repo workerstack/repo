@@ -8,7 +8,7 @@ import path from "node:path";
 import ts from "typescript";
 
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
-import type { Result } from "./scripts/lint-baseline.ts";
+import type { Result } from "./result.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
 /** A program's options, and the files its tsconfig includes, as program paths. */
@@ -84,7 +84,7 @@ export function setupOf(root: string, dir: string | null, config: string): Resul
   if (read.error !== undefined) {
     const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
 
-    return { errors: [`${path.posix.join(dir, config)}: ${message}`], ok: false };
+    return { error: [`${path.posix.join(dir, config)}: ${message}`], ok: false };
   }
 
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);

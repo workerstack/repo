@@ -8,11 +8,11 @@ import { pathToFileURL } from "node:url";
 
 import { z } from "zod";
 
-import type { Listed } from "../check-comments.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { readJson } from "../json.ts";
 import { codeOf } from "../lint/script-rules.ts";
-import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
+import type { Result } from "../result.ts";
+import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { captureBun } from "../scripts/lint.ts";
 import { runGit } from "../sync/standards.ts";
 import {
@@ -46,7 +46,7 @@ export function isLintedCss(rel: string): boolean {
 }
 
 /** The tracked and untracked, not ignored, stylesheets under `root` that Stylelint lints, sorted. */
-export function cssFiles(root: string): Listed {
+export function cssFiles(root: string): Result<string[]> {
   const run = runGit(root, [
     "ls-files",
     "-z",
@@ -58,9 +58,9 @@ export function cssFiles(root: string): Listed {
     DEPENDENCY_EXCLUDE,
   ]);
 
-  if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+  if (run.status !== 0) return { error: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
 
-  return { files: [...new Set(run.stdout.split("\0").filter(isLintedCss))].toSorted(), ok: true };
+  return { ok: true, value: [...new Set(run.stdout.split("\0").filter(isLintedCss))].toSorted() };
 }
 
 /** The runner's json output. */
@@ -79,7 +79,7 @@ function resultsSchema(): z.ZodType<FileResult[]> {
 }
 
 function cannotRun(why: string): Result<never> {
-  return { errors: [`${CANNOT_RUN}: ${why}`], ok: false };
+  return { error: [`${CANNOT_RUN}: ${why}`], ok: false };
 }
 
 /** The first line of `text`, trimmed. */
@@ -135,7 +135,7 @@ export function cssDiagnostics(root: string, files: readonly string[], options: 
   if (!results.ok) return results;
   const invalid = results.value.flatMap((result) => result.invalid);
 
-  if (invalid.length > 0) return { errors: invalid.map(({ text }) => `${CANNOT_RUN}: ${text}`), ok: false };
+  if (invalid.length > 0) return { error: invalid.map(({ text }) => `${CANNOT_RUN}: ${text}`), ok: false };
 
   const value = results.value.flatMap((result) => {
     const rel = path.relative(root, result.source).split(path.sep).join("/");

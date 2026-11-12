@@ -55,7 +55,7 @@ it("makes a crate that does not compile a problem, never a hit", { timeout: CARG
   const root = crate("lib-crate");
   fs.writeFileSync(path.join(root, "src/lib.rs"), 'pub fn f() -> u8 { "a" }\n');
   const result = rustHitsAt(root, ["src/lib.rs"], { clippy: true });
-  expect(result).toStrictEqual({ errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"], ok: false });
+  expect(result).toStrictEqual({ error: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"], ok: false });
 });
 
 it("names the stale lock when Cargo.toml gains a dependency the lock does not list", { timeout: CARGO_MS }, () => {
@@ -66,7 +66,7 @@ it("names the stale lock when Cargo.toml gains a dependency the lock does not li
   const manifest = path.join(root, "Cargo.toml");
   fs.appendFileSync(manifest, '\n[dependencies]\ndep = { path = "dep" }\n');
   expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true })).toStrictEqual({
-    errors: ["Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it"],
+    error: ["Cargo.lock is out of date with Cargo.toml; run `cargo update --workspace` and commit it"],
     ok: false,
   });
 });

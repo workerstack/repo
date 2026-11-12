@@ -1,6 +1,6 @@
 import { eastAsianWidth } from "get-east-asian-width";
 
-import { asNode, type SyntaxValue } from "../syntax-node.ts";
+import { asNode, isSyntaxList, isSyntaxString, type SyntaxValue } from "../syntax-node.ts";
 import {
   CALL_EXPRESSION,
   CODE_HINT,
@@ -30,7 +30,7 @@ type Found = {
   type: string;
   range: readonly [number, number];
   regex?: unknown;
-  value?: unknown;
+  value?: SyntaxValue;
   name?: unknown;
   callee?: Found;
   arguments?: readonly Found[];
@@ -77,7 +77,7 @@ function hintOf(node: Found): string | undefined {
 
   if (node.regex !== undefined) return REGEX_HINT;
 
-  return typeof node.value === "string" ? STRING_HINT : undefined;
+  return isSyntaxString(node.value) ? STRING_HINT : undefined;
 }
 
 /** The range of the cipher a `sealed("…")` call takes as its one string argument, or none for any other node. */
@@ -87,7 +87,7 @@ function cipherOf(node: Found): Span | undefined {
 
   const [argument, ...rest] = [node.arguments].flat();
 
-  if (argument?.type !== LITERAL || typeof argument.value !== "string" || rest.length > 0) return undefined;
+  if (argument?.type !== LITERAL || !isSyntaxString(argument.value) || rest.length > 0) return undefined;
 
   return { end: argument.range[1], start: argument.range[0] };
 }
@@ -103,13 +103,21 @@ function note(ast: Found, found: Gathered): void {
 }
 
 /** Every string, template and regex range under `node`, and every sealed cipher, found without the `parent` links. */
-function gather(node: SyntaxValue, found: Gathered): void {
-  if (typeof node !== "object" || node === null || node instanceof RegExp) return;
+function gather(value: SyntaxValue, found: Gathered): void {
+  if (isSyntaxList(value)) {
+    for (const item of value) gather(item, found);
+
+    return;
+  }
+
+  const node = asNode(value);
+
+  if (node === null || node instanceof RegExp) return;
 
   if ("type" in node && "range" in node)
     note(node /* an object with a type and a range is an AST node */ as Found, found);
 
-  for (const [key, value] of Object.entries<SyntaxValue>(node)) if (key !== PARENT_KEY) gather(value, found);
+  for (const [key, child] of Object.entries(node)) if (key !== PARENT_KEY) gather(child, found);
 }
 
 /** `line`, which starts at source offset `lineStart`, with the parts `exempt` covers taken out. */

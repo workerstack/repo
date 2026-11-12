@@ -4,7 +4,7 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import type { LintSkip, ResolvedLint } from "../config.ts";
 import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
-import { isRecord } from "../json.ts";
+import { isRecord, isString, type Json } from "../json.ts";
 import { binsOf } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
 import { ERROR_SEVERITY, JSON_INDENT } from "./json.constants.ts";
@@ -62,7 +62,7 @@ function isStylelintRule(rule: string): boolean {
 }
 
 /** The files a manifest's plugin exports (`./lint`, `./tailwind`) name, as a path or as their `default` condition. */
-function lintExportOf(manifest: PackageJson): unknown[] {
+function lintExportOf(manifest: PackageJson): (Json | undefined)[] {
   const { exports } = manifest;
 
   return PLUGIN_EXPORTS.map((key) => {
@@ -73,11 +73,11 @@ function lintExportOf(manifest: PackageJson): unknown[] {
 }
 
 /** Every string `pick` finds in the root's and each package's manifest, as a root-relative POSIX path, sorted. */
-function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => unknown[]): string[] {
+function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => (Json | undefined)[]): string[] {
   const all = [{ dir: "", manifest: workspace.manifest }, ...workspace.packages];
 
   const files = all.flatMap(({ dir, manifest }) =>
-    pick(manifest).flatMap((file) => (typeof file === "string" ? [path.posix.join(dir, file)] : [])),
+    pick(manifest).flatMap((file) => (isString(file) ? [path.posix.join(dir, file)] : [])),
   );
 
   return [...new Set(files)].toSorted();

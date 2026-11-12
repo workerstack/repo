@@ -1,6 +1,7 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-module-mocking.ts`. */
 import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
+import { isStringLiteral } from "../syntax-node.ts";
 import { FRAMEWORK_SOURCES, MODULE_MOCK_METHODS } from "./no-module-mocking.constants.ts";
 import { resolveVariable } from "./resolve-variable.ts";
 import type { RepoRule } from "./rule.types.ts";
@@ -40,7 +41,7 @@ function methodOf(callee: TSESTree.MemberExpression): string | null {
 
   if (!callee.computed) return property.type === AST_NODE_TYPES.Identifier ? property.name : null;
 
-  return property.type === AST_NODE_TYPES.Literal && typeof property.value === "string" ? property.value : null;
+  return property.type === AST_NODE_TYPES.Literal && isStringLiteral(property) ? property.value : null;
 }
 
 /** Whether `callee` is a module mock: `mock`, `doMock` or `unstable_mockModule` on a test framework object. */

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Listed } from "../check-comments.ts";
 import { codeOf } from "../lint/script-rules.ts";
-import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
+import type { Result } from "../result.ts";
+import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { runGit } from "../sync/standards.ts";
 import { clippyHits, runCargo, type CargoRun } from "./clippy.ts";
@@ -21,20 +21,20 @@ function isRust(rel: string) {
  * The tracked and untracked, not ignored, `.rs` files under `root`, outside any `__fixtures__` or `target` dir,
  * sorted.
  */
-export function rustFiles(root: string): Listed {
+export function rustFiles(root: string): Result<string[]> {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
 
-  if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+  if (run.status !== 0) return { error: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
 
-  return { files: [...new Set(run.stdout.split("\0").filter(isRust))].toSorted(byCodeUnit), ok: true };
+  return { ok: true, value: [...new Set(run.stdout.split("\0").filter(isRust))].toSorted(byCodeUnit) };
 }
 
 /**
  * `rustFiles`, or none when `root` has no Cargo.toml: the checks list Rust only for a Rust repo, and spawn no git for
  * another.
  */
-export function rustSources(root: string): Listed {
-  return fs.existsSync(path.join(root, CARGO_MANIFEST)) ? rustFiles(root) : { files: [], ok: true };
+export function rustSources(root: string): Result<string[]> {
+  return fs.existsSync(path.join(root, CARGO_MANIFEST)) ? rustFiles(root) : { ok: true, value: [] };
 }
 
 function byPlace(a: RustHit, b: RustHit) {

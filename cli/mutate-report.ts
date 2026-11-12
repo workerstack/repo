@@ -42,7 +42,9 @@ function strykerSchema() {
 
 function cargoMutantsSchema() {
   const mutant = z.object({ file: z.string(), genre: z.string(), span: z.object({ start: position() }) });
-  const scenario = z.union([z.string(), z.object({ Failure: z.number() }), z.object({ Mutant: mutant })]);
+  const other = z.union([z.string(), z.object({ Failure: z.number() })]).transform(() => ({ kind: "other" as const }));
+  const found = z.object({ Mutant: mutant }).transform(({ Mutant }) => ({ kind: "mutant" as const, mutant: Mutant }));
+  const scenario = z.union([other, found]);
 
   return z.object({ outcomes: z.array(z.object({ scenario, summary: z.string() })) });
 }
@@ -119,8 +121,8 @@ type Found = { file: string; score: FileScore };
 function scoreOf(outcome: Outcome): Found[] {
   const { scenario, summary } = outcome;
 
-  if (typeof scenario === "string" || !("Mutant" in scenario)) return [];
-  const { file, genre, span } = scenario.Mutant;
+  if (scenario.kind === "other") return [];
+  const { file, genre, span } = scenario.mutant;
   const { line, column } = span.start;
   const killed = CARGO_KILLED.includes(summary) ? 1 : 0;
   const survivors: Survivor[] = summary === CARGO_MISSED ? [{ column, line, mutator: genre, status: "Survived" }] : [];

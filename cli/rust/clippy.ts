@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { childEnv } from "../env.ts";
 import { tryJson } from "../json.ts";
-import type { Result } from "../scripts/lint-baseline.ts";
+import type { Result } from "../result.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
 import {
   CARGO,
@@ -174,13 +174,12 @@ function collect(stdout: string): Found {
  * problems: the code was not linted, so no hit count would be true.
  */
 export function clippyHits(root: string, run: CargoRun): Result<RustHit[]> {
-  if (!fs.existsSync(path.join(root, LOCK_FILE))) return { errors: [MISSING_LOCK], ok: false };
+  if (!fs.existsSync(path.join(root, LOCK_FILE))) return { error: [MISSING_LOCK], ok: false };
   const result = run(root, CLIPPY_ARGS);
 
-  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+  if (result.missing) return { error: [MISSING_CARGO], ok: false };
 
-  if (result.status === STALE_STATUS && result.stderr.includes(STALE_MARKER))
-    return { errors: [STALE_LOCK], ok: false };
+  if (result.status === STALE_STATUS && result.stderr.includes(STALE_MARKER)) return { error: [STALE_LOCK], ok: false };
   const found = collect(result.stdout);
   const problems = [...found.problems];
 
@@ -189,5 +188,5 @@ export function clippyHits(root: string, run: CargoRun): Result<RustHit[]> {
     problems.push(`cargo clippy exited ${result.status} and printed no error${detail === "" ? "" : `: ${detail}`}`);
   }
 
-  return problems.length > 0 ? { errors: problems, ok: false } : { ok: true, value: [...found.hits.values()] };
+  return problems.length > 0 ? { error: problems, ok: false } : { ok: true, value: [...found.hits.values()] };
 }

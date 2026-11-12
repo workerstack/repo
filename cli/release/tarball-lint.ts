@@ -5,7 +5,7 @@ import { problemKindInfo } from "@arethetypeswrong/core/problems";
 import { publint } from "publint";
 import { formatMessage } from "publint/utils";
 
-import type { Json, JsonObject } from "../json.ts";
+import { isRecord, type Json, type JsonObject } from "../json.ts";
 import {
   attwLine,
   ESM_ONLY_IGNORED,
@@ -22,7 +22,7 @@ type Problem = { kind: keyof typeof problemKindInfo; entrypoint?: string; resolu
 
 /** Whether any condition object in `exports` has a `require` key. */
 function hasRequire(exports: Json | undefined): boolean {
-  if (typeof exports !== "object" || exports === null) return false;
+  if (!isRecord(exports) && !Array.isArray(exports)) return false;
 
   return Object.entries(exports).some(([key, value]) => key === REQUIRE_CONDITION || hasRequire(value));
 }

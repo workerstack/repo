@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { group } from "../docs-fences.ts";
+import { isString } from "../json.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
 import { parseFlowSeq, parseMarkdown, type YamlObject, type YamlValue } from "./maps-yaml.ts";
 import { DESC_MAX, HUGE_BYTES, REFS_REL, SKIP_REF_NAMES, STOCK_REFS_PREFIX } from "./maps.constants.ts";
@@ -40,18 +41,18 @@ function mapRefs(parsed: YamlObject): string[] {
 
   if (Array.isArray(dotted)) return dotted.map(String);
 
-  if (typeof dotted === "string" && dotted !== "") return [dotted];
+  if (isString(dotted) && dotted !== "") return [dotted];
   const m = parsed.map;
 
   if (isYamlObject(m) && Array.isArray(m.refs)) return m.refs.map(String);
 
-  if (isYamlObject(m) && typeof m.refs === "string" && m.refs !== "") return [m.refs];
+  if (isYamlObject(m) && isString(m.refs) && m.refs !== "") return [m.refs];
 
   return [];
 }
 
 function scalarText(v: YamlValue | undefined): string {
-  return typeof v === "string" && v !== "" ? v : "";
+  return isString(v) && v !== "" ? v : "";
 }
 
 function mapTask(parsed: YamlObject): string {
@@ -68,7 +69,7 @@ function mapTask(parsed: YamlObject): string {
 function tagsOf(parsed: YamlObject): string[] {
   if (Array.isArray(parsed.tags)) return parsed.tags.map(String);
 
-  if (typeof parsed.tags === "string" && parsed.tags !== "") {
+  if (isString(parsed.tags) && parsed.tags !== "") {
     const seq = parseFlowSeq(parsed.tags);
 
     if (seq !== null) return seq.map(String);

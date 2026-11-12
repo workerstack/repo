@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
-import { isRecord, type Json } from "../json.ts";
+import { isRecord, isString, type Json } from "../json.ts";
 import { readJsonFile } from "../package-json.ts";
 import { COMMAND_KEY, HASH_HEX_DIGITS } from "./stock-history.constants.ts";
 
@@ -69,9 +69,9 @@ export function hookCommands(settings: Json | undefined): string[] {
   function walk(value: Json | undefined): void {
     if (Array.isArray(value)) {
       for (const item of value) walk(item);
-    } else if (typeof value === "object" && value !== null) {
+    } else if (isRecord(value)) {
       for (const [key, entry] of Object.entries(value)) {
-        if (key === COMMAND_KEY && typeof entry === "string") found.push(entry);
+        if (key === COMMAND_KEY && isString(entry)) found.push(entry);
         else walk(entry);
       }
     }
@@ -93,7 +93,7 @@ export const STOCK_HISTORY_FILE: string = /* @__PURE__ */ stockHistoryFile();
  * alike.
  */
 export function hashText(bytes: Buffer | string): string {
-  const text = typeof bytes === "string" ? bytes : bytes.toString("utf8");
+  const text = String(bytes);
 
   return createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex").slice(0, HASH_HEX_DIGITS);
 }

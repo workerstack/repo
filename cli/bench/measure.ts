@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
-import { type JsonObject, tryJson } from "../json.ts";
+import { isNumber, type JsonObject, tryJson } from "../json.ts";
 import { BENCH_LINE, BYTES_PER_KB, BYTES_PER_MB, FLOORED_PLATFORM, US_PER_MS, VM_HWM } from "./bench.constants.ts";
 
 /** The part of Bun's `ResourceUsage` a run reads: peak RSS in bytes and CPU time in microseconds. */
@@ -67,7 +67,7 @@ export function readCustom(stdout: string, names: readonly string[]): Custom {
   for (const name of names) {
     const value = object?.[name];
 
-    if (typeof value !== "number" || !Number.isFinite(value)) return { missing: name, ok: false };
+    if (!isNumber(value) || !Number.isFinite(value)) return { missing: name, ok: false };
     values[name] = value;
   }
 

@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { ROOT, at, fakes, rawReport, sim } from "./__fixtures__/mutate-fakes.ts";
+import { isString } from "./json.ts";
 import { packageOf, percentOf, tally } from "./mutate-floors.ts";
 import { runMutate } from "./mutate.ts";
 
@@ -48,7 +49,7 @@ function unsharded(floors: Record<string, number> | string | null) {
     "packages/a",
   ]);
 
-  if (floors !== null) f.files.set(at("mf.json"), typeof floors === "string" ? floors : JSON.stringify(floors));
+  if (floors !== null) f.files.set(at("mf.json"), isString(floors) ? floors : JSON.stringify(floors));
 
   return f;
 }

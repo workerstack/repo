@@ -67,7 +67,7 @@ it("fixes the sheet clean, which oxfmt then leaves as it is", { timeout: SLOW },
 it("returns a runner that fails as the problem line with its stderr's first line", () => {
   const runner = fakeRunner({ code: 1, stderr: "Error: no config\n    at load\n", stdout: "" });
   expect(cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
-    errors: ["stylelint could not run: Error: no config"],
+    error: ["stylelint could not run: Error: no config"],
     ok: false,
   });
 });
@@ -75,13 +75,13 @@ it("returns a runner that fails as the problem line with its stderr's first line
 it("returns output that is not the results as a problem line", () => {
   const runner = fakeRunner({ code: 0, stderr: "", stdout: '{"results":1}' });
   const found = cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner });
-  expect(found.ok ? [] : found.errors.map((line) => line.split(":")[0])).toStrictEqual(["stylelint could not run"]);
+  expect(found.ok ? [] : found.error.map((line) => line.split(":")[0])).toStrictEqual(["stylelint could not run"]);
 });
 
 it("returns output that is no json as a problem line with the parse error", () => {
   const runner = fakeRunner({ code: 0, stderr: "", stdout: "Done in 3 ms" });
   expect(cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
-    errors: [expect.stringMatching(/^stylelint could not run: SyntaxError: /)],
+    error: [expect.stringMatching(/^stylelint could not run: SyntaxError: /)],
     ok: false,
   });
 });
@@ -100,7 +100,7 @@ it("returns each invalid option the config holds as a problem line, and no warni
 
   const runner = fakeRunner({ code: 0, stderr: "", stdout: JSON.stringify(results) });
   expect(cssDiagnostics(path.dirname(runner), ["src/a.css", "src/b.css"], { fix: false, runner })).toStrictEqual({
-    errors: [
+    error: [
       'stylelint could not run: Invalid option value "sometimes" for rule "color-named"',
       'stylelint could not run: Invalid option name "max" for rule "order/order"',
     ],
@@ -140,9 +140,9 @@ it("cssFiles lists the sheets Stylelint lints, tracked or not, and reports a dir
   gitIn(root, "init", "-q");
   write(root, { ".gitignore": "out/\n", "out/x.css": BAD_CSS, "src/a.ts": "export {};\n", ...SHEETS });
   gitIn(root, "add", "src/bad.css");
-  expect(cssFiles(root)).toStrictEqual({ files: ["src/app.css", "src/bad.css", "src/unknown.css"], ok: true });
+  expect(cssFiles(root)).toStrictEqual({ ok: true, value: ["src/app.css", "src/bad.css", "src/unknown.css"] });
   expect(cssFiles(tempDir("workerstack-css-nogit-"))).toStrictEqual({
-    errors: [expect.stringMatching(/^git ls-files failed: /)],
+    error: [expect.stringMatching(/^git ls-files failed: /)],
     ok: false,
   });
 });
@@ -151,5 +151,5 @@ it("cssFiles never lists a sheet under a dependency dir, even before .gitignore 
   const root = tempDir("workerstack-css-deps-");
   gitIn(root, "init", "-q");
   write(root, { "src/a.css": BAD_CSS, [["node", "_modules/pkg/x.css"].join("")]: BAD_CSS });
-  expect(cssFiles(root)).toStrictEqual({ files: ["src/a.css"], ok: true });
+  expect(cssFiles(root)).toStrictEqual({ ok: true, value: ["src/a.css"] });
 });

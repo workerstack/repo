@@ -262,10 +262,15 @@ export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> 
 /** The dot a config path starts with once its keys are joined. */
 const LEADING_DOT = /^\./;
 
+/** True for an array index in a zod issue path, false for an object key. */
+function isIndex(key: PropertyKey): key is number {
+  return typeof key === "number";
+}
+
 function describeIssue(issue: z.core.$ZodIssue): string[] {
   // ["packs", 1] reads packs[1]; a config path always starts at a top-level key.
   const at = issue.path
-    .map((key) => (typeof key === "number" ? `[${key}]` : `.${String(key)}`))
+    .map((key) => (isIndex(key) ? `[${key}]` : `.${String(key)}`))
     .join("")
     .replace(LEADING_DOT, "");
 

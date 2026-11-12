@@ -1,5 +1,5 @@
 /** A matcher-group host's hooks from the merged hooks.jsonc. `D:<n>` cites rulesync 43.7.0's bundled import code. */
-import type { Json, JsonObject } from "../../json.ts";
+import { isString, type Json, type JsonObject } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { AGENT, COMMAND, HTTP, MCP_TOOL, MODEL, PROMPT } from "./hooks.constants.ts";
 import type { Def, Group, Target } from "./hooks.types.ts";
@@ -62,8 +62,8 @@ function isSet(entry: [string, Json | undefined]): entry is [string, Json] {
  */
 function hookObject(def: Def, event: string, target: Readonly<Target>): JsonObject {
   const type = typeOf(def);
-  const source = typeof def["command"] === "string" ? expandHookCommand(def["command"]) : def["command"];
-  const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
+  const source = isString(def["command"]) ? expandHookCommand(def["command"]) : def["command"];
+  const command = isString(source) && target.command !== undefined ? target.command(source, def) : source;
 
   const payload = (hasPayload(type) ? PAYLOAD[type] : []).filter((key) => key !== MODEL || target.promptModel);
   const extra = [...payload, ...(target.named ? NAMED : [])].map((key): [string, Json | undefined] => [key, def[key]]);

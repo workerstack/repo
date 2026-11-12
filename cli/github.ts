@@ -3,7 +3,7 @@ import { z } from "zod";
 import { rulesetDrift, wantedRulesets } from "./github-rulesets.ts";
 import { FIX } from "./github.constants.ts";
 import type { Current, Drift, GithubManifest, WantedResult, Wanted } from "./github.types.ts";
-import { keywordLines } from "./keywords.ts";
+import { keywordLines } from "./keyword-lines.ts";
 
 /**
  * What the repository should look like: both rulesets with `checks` as the required status checks, and the

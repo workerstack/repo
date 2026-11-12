@@ -27,6 +27,7 @@ import {
   OK,
   SHORT_SHA,
 } from "./mutate.constants.ts";
+import type { Result } from "./result.ts";
 
 const NOTE = "(uncommitted changes are not mutated)";
 const NO_CARGO = `${RUST_FLAG} needs a Cargo.toml at the repo root`;
@@ -40,34 +41,38 @@ type Run = Extract<Args, { kind: "run" }>;
 type Found = { sha: string; files: string[] };
 
 /** The commit to mutate and the tracked files, after saying the commit; or the failing exit code. */
-function headOf(config: MutateConfig, deps: MutateDeps): { sha: string; tracked: string[] } | number {
+function headOf(config: MutateConfig, deps: MutateDeps): Result<{ sha: string; tracked: string[] }, number> {
   const head = deps.git(config.root, ["rev-parse", "HEAD"]);
 
-  if (head.code !== 0) return fail(deps, `${config.root} has no commit to mutate: ${head.stderr.trim()}`);
+  const none = `${config.root} has no commit to mutate: ${head.stderr.trim()}`;
+
+  if (head.code !== 0) return { error: fail(deps, none), ok: false };
   const sha = head.stdout.trim();
   const isDirty = deps.git(config.root, ["status", "--porcelain"]).stdout.trim() !== "";
   deps.out(`mutate: HEAD ${sha.slice(0, SHORT_SHA)}${isDirty ? ` ${NOTE}` : ""}${NEWLINE}`);
   const tracked = deps.git(config.root, ["ls-tree", "-r", "--name-only", "HEAD"]).stdout.split(NEWLINE);
 
-  return { sha, tracked };
+  return { ok: true, value: { sha, tracked } };
 }
 
 /**
  * The commit to mutate and the tracked files matching `coverage.mutate`, none needed for cargo-mutants; or the
  * failing exit code.
  */
-function target(config: MutateConfig, run: Run, deps: MutateDeps): Found | number {
+function target(config: MutateConfig, run: Run, deps: MutateDeps): Result<Found, number> {
   const head = headOf(config, deps);
 
-  if (typeof head === "number") return head;
+  if (!head.ok) return head;
+  const { sha, tracked } = head.value;
 
-  if (run.tool === "cargo-mutants") return { files: [], sha: head.sha };
-  const files = selectFiles(head.tracked, config.mutate);
+  if (run.tool === "cargo-mutants") return { ok: true, value: { files: [], sha } };
+  const files = selectFiles(tracked, config.mutate);
 
-  if (files.length > 0) return { files, sha: head.sha };
+  if (files.length > 0) return { ok: true, value: { files, sha } };
   const globs = config.mutate.join(", ");
+  const line = `no tracked file matches coverage.mutate (${globs}); set coverage.mutate in workerstack.config.ts`;
 
-  return fail(deps, `no tracked file matches coverage.mutate (${globs}); set coverage.mutate in workerstack.config.ts`);
+  return { error: fail(deps, line), ok: false };
 }
 
 /** The line after a shard: what it took, its survivors and where they are. */
@@ -121,7 +126,7 @@ async function runShard(run: Run, deps: MutateDeps): Promise<number> {
 
   const found = target(config, run, deps);
 
-  return typeof found === "number" ? found : execute(run, { config, found }, deps);
+  return found.ok ? execute(run, { config, found: found.value }, deps) : found.error;
 }
 
 /** `repo mutate` with its collaborators injected; the exit code. */

@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { rejectionProblems, rejections } from "./check-rejections.ts";
-import type { JsonObject } from "./json.ts";
+import { isString, type JsonObject } from "./json.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -19,7 +19,7 @@ const tree = useTempTree("check-rejections-");
 function plant(files: Record<string, string | JsonObject>): string {
   const texts = Object.entries(files).map(([rel, content]): [string, string] => [
     rel,
-    typeof content === "string" ? content : JSON.stringify(content),
+    isString(content) ? content : JSON.stringify(content),
   ]);
 
   return fs.realpathSync(tree(Object.fromEntries(texts)));

@@ -83,9 +83,10 @@ function ownerRepo(io: PublishIo): string {
 
 /** Packs and publishes the tag's package; the exit code. */
 async function publishNew(io: PublishIo, parts: Spec, tag: string): Promise<number> {
-  const packed = packTarball(io);
+  const got = packTarball(io);
 
-  if (typeof packed === "string") return refuse(io, PUBLISH_PREFIX, packed);
+  if (!got.ok) return refuse(io, PUBLISH_PREFIX, got.error);
+  const packed = got.value;
 
   if (packed.name !== parts.name || packed.version !== parts.version)
     return refuse(io, PUBLISH_PREFIX, tarballDiffers(`${packed.name}@${packed.version}`, tag));

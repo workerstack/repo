@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
+import { isRecord, isString, type Json, type JsonObject, tryJson } from "../json.ts";
 import { MD, RULE_FRONTMATTER } from "./migrate.constants.ts";
 
 /** Where `settingsExtras` is in the value it walks, and the dotted paths of the pieces it found so far. */
@@ -61,9 +61,7 @@ function ownGroups(value: Json, known: (command: string) => boolean): Json[] {
   return (Array.isArray(value) ? value : [value]).flatMap((group) => {
     if (!isRecord(group) || !Array.isArray(group.hooks)) return [group];
 
-    const unknown = group.hooks.filter(
-      (hook) => !(isRecord(hook) && typeof hook.command === "string" && known(hook.command)),
-    );
+    const unknown = group.hooks.filter((hook) => !(isRecord(hook) && isString(hook.command) && known(hook.command)));
 
     return unknown.length > 0 ? [{ ...group, hooks: unknown }] : [];
   });

@@ -12,8 +12,8 @@ it("formats files and reports the tool's code and output", () => {
   try {
     fs.writeFileSync(path.join(root, "a.json"), '{"b":1,"a":2}');
     const result = formatFiles(root, ["a.json"]);
-    expect(typeof result.code).toBe("number");
-    expect(typeof result.output).toBe("string");
+    expect(result.code).toBeTypeOf("number");
+    expect(result.output).toBeTypeOf("string");
   } finally {
     fs.rmSync(root, { force: true, recursive: true });
   }

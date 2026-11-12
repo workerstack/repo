@@ -1,4 +1,4 @@
-import type { Json } from "./json.ts";
+import { isString, isStringList, type Json } from "./json.ts";
 import {
   KEYWORD_ENTRY_FIX,
   KEYWORD_PATTERN,
@@ -10,21 +10,16 @@ import {
   ONE,
 } from "./keywords.constants.ts";
 
-/** Whether every entry of a list is a string. */
-export function isStringList(entries: readonly unknown[]): entries is string[] {
-  return entries.every((entry) => typeof entry === "string");
-}
-
 function line(text: string): string {
   return `${KEYWORDS_FILE}: ${text}`;
 }
 
 /** One line per entry that is not a string or not shaped like a GitHub topic; positions are 1-based. */
-function entryLines(entries: readonly unknown[]): string[] {
+function entryLines(entries: Json[]): string[] {
   const lines: string[] = [];
 
   for (const [index, entry] of entries.entries()) {
-    if (typeof entry !== "string")
+    if (!isString(entry))
       lines.push(line(`keyword ${index + ONE} is ${JSON.stringify(entry)}, not a string; ${KEYWORD_ENTRY_FIX}`));
     else if (!KEYWORD_PATTERN.test(entry))
       lines.push(line(`keyword "${entry}" is not a GitHub topic; ${KEYWORD_PATTERN_FIX}`));
@@ -34,8 +29,8 @@ function entryLines(entries: readonly unknown[]): string[] {
 }
 
 /** One line per string listed more than once, and, when every entry is a string, one if they are out of order. */
-function orderLines(entries: readonly unknown[]): string[] {
-  const names = entries.filter((entry): entry is string => typeof entry === "string");
+function orderLines(entries: Json[]): string[] {
+  const names = entries.filter(isString);
   const counts = new Map<string, number>();
 
   for (const name of names) counts.set(name, (counts.get(name) ?? 0) + ONE);

@@ -15,10 +15,11 @@ import type { Target } from "./clones/jscpd-bin.ts";
 import type { LintSkip } from "./config.ts";
 import { cssDiagnostics, cssFiles, type CssOptions } from "./css/css-diagnostics.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
+import type { Result } from "./result.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
 import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
-import type { Diagnostic, Result } from "./scripts/lint-baseline.ts";
+import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { standardsRoot } from "./standards-root.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
@@ -110,9 +111,8 @@ async function checkoutAt(cwd: string): Promise<Checkout> {
   const { root, config } = found;
   const rust = rustSources(root);
   const css = rust.ok ? cssFiles(root) : rust;
-  const listed = css.ok ? sourceFiles(root) : css;
-  const files: Result<string[]> = listed.ok ? { ok: true, value: listed.files } : listed;
-  const lists = { css: css.ok ? css.files : [], rust: rust.ok ? rust.files : [] };
+  const files = css.ok ? sourceFiles(root) : css;
+  const lists = { css: css.ok ? css.value : [], rust: rust.ok ? rust.value : [] };
 
   return { files, root, ...lists, skips: config.lint.skip };
 }
@@ -123,10 +123,10 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
 
   if (checkout === null) return NONE;
 
-  if (!checkout.files.ok) return { ...NONE, problems: checkout.files.errors };
+  if (!checkout.files.ok) return { ...NONE, problems: checkout.files.error };
   const found = allDiagnostics(checkout, checkout.files.value, run);
 
-  if (!found.ok) return { ...NONE, problems: found.errors };
+  if (!found.ok) return { ...NONE, problems: found.error };
   const matched = [...checkout.files.value, ...checkout.rust, ...checkout.css];
 
   return { all: found.value, kept: withoutSkipped(found.value, checkout.skips, matched), problems: [] };
@@ -178,13 +178,13 @@ export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun
 
   if (checkout === null) return { lines: [], problems: [] };
 
-  if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
+  if (!checkout.files.ok) return { lines: [], problems: checkout.files.error };
   const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
   const sources = checkout.files.value;
   const found = lintHits(checkout.root, { files, sources }, { clippy: scope.clippy, fix: scope.fix === true, run });
 
-  if (!found.ok) return { lines: [], problems: found.errors };
+  if (!found.ok) return { lines: [], problems: found.error };
   const matched = [...files, ...found.value.map((d) => d.file)];
 
   return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };
@@ -196,5 +196,5 @@ export async function checkRejectionsAt(cwd: string): Promise<string[]> {
 
   if (checkout === null) return [];
 
-  return checkout.files.ok ? rejectionProblems(checkout.root, checkout.files.value) : checkout.files.errors;
+  return checkout.files.ok ? rejectionProblems(checkout.root, checkout.files.value) : checkout.files.error;
 }

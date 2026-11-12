@@ -157,8 +157,8 @@ async function consumeTarball(given: string | undefined, packIo: ConsumerIo, io:
   if (given === undefined) {
     const packed = packTarball(packIo);
 
-    if (typeof packed === "string") return refuse(io, CONSUMER_PREFIX, packed);
-    tarball = packed.tarball;
+    if (!packed.ok) return refuse(io, CONSUMER_PREFIX, packed.error);
+    tarball = packed.value.tarball;
   } else {
     tarball = path.resolve(io.cwd, given);
 

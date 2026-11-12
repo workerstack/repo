@@ -5,7 +5,7 @@
 import { parse } from "yaml";
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonObject } from "../../json.ts";
+import { isBoolean, isNumber, isRecord, type Json, type JsonObject } from "../../json.ts";
 import {
   CLAUDE_ANYWHERE,
   CLAUDE_FIRST,
@@ -108,8 +108,15 @@ export function emitYaml(entries: Iterable<readonly [string, YamlValue]>, mode: 
 /** Where an entry is written: its `key:` head, the indent it sits at and the quoting mode. */
 type EntryAt = { head: string; indent: string; mode: YamlMode };
 
+/** True for a list or a map, false for a scalar. */
+function isNested(value: YamlScalar | YamlList | YamlMap): value is YamlList | YamlMap {
+  return typeof value === "object";
+}
+
 /** One entry's lines: a list as a block sequence, a map nested a level deeper, a scalar inline. */
 function emitEntry(value: YamlScalar | YamlList | YamlMap, { head, indent, mode }: EntryAt): string {
+  if (!isNested(value)) return `${head} ${scalar(value, mode)}\n`;
+
   if (Array.isArray(value)) {
     const list = value /* Array.isArray narrows a YamlValue only to a list */ as YamlList;
     const items = list.filter((item) => item !== null && item !== undefined);
@@ -119,14 +126,10 @@ function emitEntry(value: YamlScalar | YamlList | YamlMap, { head, indent, mode 
     return `${head}\n${items.map((item) => `${indent}${INDENT}- ${scalar(item, mode)}\n`).join("")}`;
   }
 
-  if (typeof value === "object") {
-    const map = value /* an object YamlValue that is not a list is a map */ as YamlMap;
-    const body = emitMap(Object.entries(map), mode, `${indent}${INDENT}`);
+  const map = value /* a nested YamlValue that is not a list is a map */ as YamlMap;
+  const body = emitMap(Object.entries(map), mode, `${indent}${INDENT}`);
 
-    return body === "" ? `${head} {}\n` : `${head}\n${body}`;
-  }
-
-  return `${head} ${scalar(value, mode)}\n`;
+  return body === "" ? `${head} {}\n` : `${head}\n${body}`;
 }
 
 function emitMap(entries: Iterable<readonly [string, YamlValue]>, mode: YamlMode, indent: string): string {
@@ -141,9 +144,9 @@ function emitMap(entries: Iterable<readonly [string, YamlValue]>, mode: YamlMode
 }
 
 function scalar(value: YamlScalar, mode: YamlMode): string {
-  if (typeof value === "boolean") return String(value);
+  if (isBoolean(value)) return String(value);
 
-  if (typeof value === "number") {
+  if (isNumber(value)) {
     if (Number.isNaN(value)) return ".nan";
 
     if (!Number.isFinite(value)) return value > 0 ? ".inf" : "-.inf";

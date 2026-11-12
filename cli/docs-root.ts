@@ -7,6 +7,7 @@ import { exportFindings, isPublic } from "./docs-exports.ts";
 import { linkFindings, listedFiles, unlistedFindings } from "./docs-index.ts";
 import { tarballFindings, type Pack, type Wanted } from "./docs-tarball.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "./docs.constants.ts";
+import { isRecord } from "./json.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 
 /** A folder with a `references/INDEX.md`: `dir` is root-relative with POSIX separators, "" for the repo root. */
@@ -39,7 +40,7 @@ function readReferences(root: string, dir: string): Map<string, string> {
 function hasBuildScript(manifest: PackageJson): boolean {
   const { scripts } = manifest;
 
-  return typeof scripts === "object" && scripts !== null && BUILD_SCRIPT in scripts;
+  return isRecord(scripts) && BUILD_SCRIPT in scripts;
 }
 
 /** Index and link findings, and the files each INDEX lists. */

@@ -1,7 +1,7 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 import { parseSync } from "oxc-parser";
 
-import { isSyntaxList, type SyntaxValue } from "../syntax-node.ts";
+import { asNode, isSyntaxList, isSyntaxString, type SyntaxValue } from "../syntax-node.ts";
 import { nodesOf } from "./public-surface.syntax.ts";
 import type { RepoRule, RuleComment } from "./rule.types.ts";
 
@@ -81,13 +81,15 @@ function groupsOf(text: string, comments: readonly RuleComment[]): Group[] {
 }
 
 function holdsCode(node: SyntaxValue): boolean {
-  if (typeof node !== "object" || node === null) return false;
-
   if (isSyntaxList(node)) return node.some(holdsCode);
+  const found = asNode(node);
 
-  if ("type" in node && typeof node.type === "string" && CODE.includes(node.type)) return true;
+  if (found === null) return false;
+  const type = found["type"];
 
-  return Object.values(node).some(holdsCode);
+  if (isSyntaxString(type) && CODE.includes(type)) return true;
+
+  return Object.values(found).some(holdsCode);
 }
 
 /** Whether `source` parses as TypeScript with no error, at module scope or in a function body, and holds code. */

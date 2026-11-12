@@ -15,7 +15,8 @@ import { childEnv } from "../env.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { readJson } from "../json.ts";
 import { codeOf, DUPLICATE_CODE } from "../lint/script-rules.ts";
-import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
+import type { Result } from "../result.ts";
+import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
 import { jscpdBin, type Target } from "./jscpd-bin.ts";
 
@@ -149,7 +150,7 @@ export function duplicateDiagnostics(root: string, scope: CloneScope, target?: T
   if (sources.length === 0) return { ok: true, value: [] };
   const bin = jscpdBin(target);
 
-  if (!bin.ok) return { errors: [bin.error], ok: false };
+  if (!bin.ok) return { error: [bin.error], ok: false };
   const found = scan(bin.path, root, sources);
   const checked = new Set(scope.files.filter(isScanned));
 

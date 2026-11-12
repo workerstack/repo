@@ -3,6 +3,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import type { Result } from "../result.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { refuse } from "./refuse.ts";
 import {
@@ -50,17 +51,17 @@ function packedSchema() {
 /** Packs the package in `io.cwd` and checks its package.json; the tarball and its manifest, or the refusal line. */
 export function packTarball(
   io: Pick<PackIo, "cwd" | "stderr" | "bun" | "tar" | "tmp" | "mkdtemp" | "list">,
-): Packed | string {
+): Result<Packed, string> {
   const dir = io.mkdtemp(path.join(io.tmp, PACK_DIR_PREFIX));
   const packed = io.bun(BUN_PACK(dir), io.cwd);
 
   if (packed.stdout !== "") io.stderr(packed.stdout);
 
-  if (packed.code !== 0) return packFailed(packed.stderr.trim());
+  if (packed.code !== 0) return { error: packFailed(packed.stderr.trim()), ok: false };
   const tarballs = io.list(dir).filter((file) => file.endsWith(TARBALL_EXTENSION));
   const [only] = tarballs;
 
-  if (only === undefined || tarballs.length > 1) return packCount(tarballs.length, dir);
+  if (only === undefined || tarballs.length > 1) return { error: packCount(tarballs.length, dir), ok: false };
   const tarball = path.join(dir, only);
   let manifest: z.infer<ReturnType<typeof packedSchema>>;
 
@@ -68,7 +69,7 @@ export function packTarball(
     // By name from its own dir: GNU tar reads an absolute `C:\\…` as `host:path` and tries to connect to the host `C`.
     manifest = readJson(packedSchema(), io.tar(TAR_MANIFEST(only), dir).stdout);
   } catch {
-    return PACKED_UNREADABLE;
+    return { error: PACKED_UNREADABLE, ok: false };
   }
 
   const { name, version, ...fields } = manifest;
@@ -76,10 +77,10 @@ export function packTarball(
   for (const entries of Object.values(fields)) {
     const bad = Object.entries(entries).find(([, spec]) => UNPINNED.test(spec));
 
-    if (bad !== undefined) return unpinned(bad[1], bad[0]);
+    if (bad !== undefined) return { error: unpinned(bad[1], bad[0]), ok: false };
   }
 
-  return { name, tarball, version };
+  return { ok: true, value: { name, tarball, version } };
 }
 
 /** `repo release pack`: prints the path of the tarball of this checkout's package, after checking its package.json. */
@@ -87,8 +88,8 @@ export function releasePack(argv: readonly string[], io: PackIo): number {
   if (argv.length > 0) return refuse(io, PACK_PREFIX, PACK_ARGS);
   const got = packTarball(io);
 
-  if (typeof got === "string") return refuse(io, PACK_PREFIX, got);
-  io.stdout(`${got.tarball}\n`);
+  if (!got.ok) return refuse(io, PACK_PREFIX, got.error);
+  io.stdout(`${got.value.tarball}\n`);
 
   return 0;
 }

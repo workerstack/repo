@@ -3,6 +3,7 @@ import path from "node:path";
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
 import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
+import { isStringLiteral } from "../syntax-node.ts";
 import type { RepoRule } from "./rule.types.ts";
 
 /** Modules whose `env` export is the process environment. */
@@ -17,7 +18,7 @@ const TAIL = `${TAIL_HEAD} and read it through that module`;
 function propertyName(node: TSESTree.MemberExpression): string | undefined {
   if (!node.computed) return node.property.type === AST_NODE_TYPES.Identifier ? node.property.name : undefined;
 
-  return node.property.type === AST_NODE_TYPES.Literal && typeof node.property.value === "string"
+  return node.property.type === AST_NODE_TYPES.Literal && isStringLiteral(node.property)
     ? node.property.value
     : undefined;
 }

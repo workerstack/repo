@@ -117,8 +117,8 @@ describe("githubFiles issue forms", () => {
     const form = FORM_SCHEMA.parse(parseYaml(contentOf(githubFiles(make()).outputs, FORM)));
 
     for (const item of form.body.filter((entry) => entry.type !== "markdown")) {
-      expect(typeof item.id).toBe("string");
-      expect(typeof item.attributes.label).toBe("string");
+      expect(item.id).toBeTypeOf("string");
+      expect(item.attributes.label).toBeTypeOf("string");
     }
 
     const ids = form.body.flatMap((item) => (item.id === undefined ? [] : [item.id]));

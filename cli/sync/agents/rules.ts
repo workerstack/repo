@@ -7,6 +7,7 @@
  * source file. `description` and `overrides` never render.
  */
 import type { Host } from "../../config.ts";
+import { isString } from "../../json.ts";
 import { PACKAGE_NAME } from "../package-name.constants.ts";
 import { emitYaml, finalize } from "./frontmatter.ts";
 import type { Doc } from "./sources.types.ts";
@@ -49,7 +50,7 @@ function agentsText(own: readonly Doc[], { scope, hosts }: Scoped): string {
 
   const sections = own
     .filter((doc) => scopeOf(doc).length === 0)
-    .filter((doc) => doc.origin !== "repo" || typeof doc.data["overrides"] === "string")
+    .filter((doc) => doc.origin !== "repo" || isString(doc.data["overrides"]))
     .map((doc) => doc.body.trim())
     .filter((body) => body !== "");
 

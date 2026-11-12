@@ -61,13 +61,13 @@ it("lists the rust files git knows, tracked or not, outside fixtures and target 
 
   git(root, "init", "-q");
   git(root, "add", "src/lib.rs");
-  expect(rustFiles(root)).toStrictEqual({ files: ["src/a.rs", "src/lib.rs", "src/target.rs"], ok: true });
+  expect(rustFiles(root)).toStrictEqual({ ok: true, value: ["src/a.rs", "src/lib.rs", "src/target.rs"] });
 });
 
 it("says git failed when the root is not a checkout", () => {
   const listed = rustFiles(path.join(plant({ "a.rs": "" }), "missing"));
   expect(listed.ok).toBe(false);
-  expect(!listed.ok && listed.errors[0]).toMatch(/^git ls-files failed: /);
+  expect(!listed.ok && listed.error[0]).toMatch(/^git ls-files failed: /);
 });
 
 it("has no diagnostic without a root Cargo.toml", () => {
@@ -131,7 +131,7 @@ it("orders hits across files by path then place", () => {
 it("returns the clippy problems alone when the run failed", () => {
   const root = plant({ "Cargo.lock": cargoLock("app"), "Cargo.toml": "", "src/lib.rs": USAGE });
   expect(rustHitsAt(root, ["src/lib.rs"], { clippy: true, run: missing })).toStrictEqual({
-    errors: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
+    error: ["Cargo.toml is here but cargo is not on PATH; install rustup from https://rustup.rs"],
     ok: false,
   });
 });

@@ -9,7 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { buildOutputs } from "./build-outputs.ts";
-import { isRecord, type Json, type JsonObject } from "./json.ts";
+import { isRecord, isString, type Json, type JsonObject } from "./json.ts";
 import { packedUnder } from "./packed-under.ts";
 import { CURRENT_DIR, JSON_FILE, ROOT_KEY, STAR, TYPES_CONDITION } from "./release/consumer.constants.ts";
 import { exportSubpaths } from "./release/exports.ts";
@@ -76,7 +76,7 @@ function targetOf(value: Json): Target | null {
   if (subpath === undefined) {
     const types = isRecord(value) ? value[TYPES_CONDITION] : null;
 
-    return typeof types === "string" ? { mode: "types", pattern: types } : null;
+    return isString(types) ? { mode: "types", pattern: types } : null;
   }
 
   if (subpath.types !== null) return { mode: "types", pattern: subpath.types };

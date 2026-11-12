@@ -1,6 +1,6 @@
 import { LAST_INDEX } from "./docs-fences.constants.ts";
 import { SKIPPED_EXPORTS, noReferencesExport, REFERENCES_EXPORT, unnamedExport } from "./docs.constants.ts";
-import type { Json } from "./json.ts";
+import { isRecord, type Json } from "./json.ts";
 
 /**
  * A public entry point: the text a reference must hold quoted, whether it is a prefix (`./x/*`), and how to print
@@ -15,8 +15,7 @@ export function isPublic(manifest: { private?: boolean | undefined }): boolean {
 
 /** The keys of `exports`; a string or a bare condition map is the `.` entry. */
 function exportKeys(exports: Json | undefined): string[] {
-  if (typeof exports !== "object" || exports === null || Array.isArray(exports))
-    return exports === undefined ? [] : ["."];
+  if (!isRecord(exports)) return exports === undefined ? [] : ["."];
   const keys = Object.keys(exports);
 
   return keys.some((key) => key.startsWith(".")) ? keys : ["."];

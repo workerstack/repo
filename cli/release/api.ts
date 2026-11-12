@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { HEADER, isBreaking } from "../conventional.ts";
+import type { Result } from "../result.ts";
 import { apiDiff, sideOf } from "./api-diff.ts";
 import type { Change, Side } from "./api-diff.ts";
 import { rustApi } from "./api-rust.ts";
@@ -82,22 +83,22 @@ function sourceOf(against: string | undefined, io: ApiIo): Source {
 }
 
 /** Installs the new tarball and the old version into a project; the pair of sides, or the failure line. */
-function installPair(project: string, tarball: string, old: Old): Pair | string {
+function installPair(project: string, tarball: string, old: Old): Result<Pair, string> {
   const { io } = old;
   initProject(project);
   const added = addSpecs(project, [tarball], io);
 
-  if (added !== null) return addFailed(added);
+  if (added !== null) return { error: addFailed(added), ok: false };
   const next = installedIn(project, addedName(project));
   const peers = addPeers(project, next, io);
 
-  if (peers !== null) return addFailed(peers);
+  if (peers !== null) return { error: addFailed(peers), ok: false };
   const failed = installOld(project, old.spec, io);
 
-  if (failed !== null) return installFailed(old.what, failed);
+  if (failed !== null) return { error: installFailed(old.what, failed), ok: false };
   renameOld(project);
 
-  return { next: sideOf(next), old: sideOf(installedIn(project, OLD_ALIAS)) };
+  return { ok: true, value: { next: sideOf(next), old: sideOf(installedIn(project, OLD_ALIAS)) } };
 }
 
 /** What the commits since the last tag say: whether one is breaking, and how many are feats. */
@@ -177,13 +178,13 @@ function runApi(against: string | undefined, io: ApiIo): number {
   if ("done" in found) return found.done;
   const packed = packTarball({ ...io, stderr: () => {} });
 
-  if (typeof packed === "string") return refuse(io, API_PREFIX, packed);
+  if (!packed.ok) return refuse(io, API_PREFIX, packed.error);
   const project = io.mkdtemp(path.join(io.tmp, PROJECT_DIR_PREFIX));
-  const pair = installPair(project, packed.tarball, { io, spec: found.spec, what: found.source.what });
+  const pair = installPair(project, packed.value.tarball, { io, spec: found.spec, what: found.source.what });
 
-  if (typeof pair === "string") return refuse(io, API_PREFIX, pair);
+  if (!pair.ok) return refuse(io, API_PREFIX, pair.error);
 
-  return report(found.source, { ...pair, project }, io);
+  return report(found.source, { ...pair.value, project }, io);
 }
 
 /** The TypeScript check, with the temp directories it made removed afterwards. */

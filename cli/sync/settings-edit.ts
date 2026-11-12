@@ -1,4 +1,5 @@
 import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
+import { z } from "zod";
 
 import { byCodeUnit } from "./by-code-unit.ts";
 import type { RegionResult } from "./region.ts";
@@ -38,7 +39,7 @@ function unusable(text: string): string | null {
     return `not valid JSONC at line ${line} (${printParseErrorCode(problem.error)}); left as is`;
   }
 
-  const object = typeof value === "object" && value !== null && !Array.isArray(value);
+  const object = z.record(z.string(), z.unknown()).safeParse(value).success;
 
   return object ? null : "must hold a JSON object; left as is";
 }

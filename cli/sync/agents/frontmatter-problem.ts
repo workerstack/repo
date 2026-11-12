@@ -2,6 +2,7 @@
  * Frontmatter is user input, so it is checked here, once: a rule needs a `description` and may carry `paths` (a list
  * of strings); `overrides` is a string; a subagent's `variants` is a list of mappings, each with a `name`.
  */
+import { isString, isStringList } from "../../json.ts";
 import type { ParsedDoc } from "./frontmatter.ts";
 import { MAX_BODY_BYTES, RULE_KEYS, RULES, SUBAGENT_BASE_KEYS } from "./sources.constants.ts";
 import type { Kind } from "./sources.types.ts";
@@ -17,12 +18,10 @@ function keysOf(kind: Kind): readonly string[] {
 function ruleProblem(data: ParsedDoc["data"]): string | null {
   const description = data["description"];
 
-  if (typeof description !== "string" || description.trim() === "")
-    return "invalid frontmatter: description is required";
+  if (!isString(description) || description.trim() === "") return "invalid frontmatter: description is required";
   const paths = data["paths"];
 
-  if (paths !== undefined && !(Array.isArray(paths) && paths.every((glob) => typeof glob === "string")))
-    return "invalid frontmatter: paths must be a list of strings";
+  if (paths !== undefined && !isStringList(paths)) return "invalid frontmatter: paths must be a list of strings";
 
   return null;
 }
@@ -47,7 +46,7 @@ export function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): strin
 
   if (unknown !== undefined) return `unknown frontmatter key "${unknown}"; use ${keys.join(", ")}`;
 
-  if (data["overrides"] !== undefined && typeof data["overrides"] !== "string")
+  if (data["overrides"] !== undefined && !isString(data["overrides"]))
     return "invalid frontmatter: overrides must be a string";
 
   if (data["variants"] !== undefined && !isVariantList(data["variants"]))

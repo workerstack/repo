@@ -177,7 +177,7 @@ function rustRows(root: string, run: CargoRun): Rows | null {
   const measured = rustCoverage(fs.realpathSync(root), run);
 
   if (measured.ok) return measured.value;
-  write(process.stderr, [...measured.errors, "coverage: the Rust tests failed; fix them before raising floors"]);
+  write(process.stderr, [...measured.error, "coverage: the Rust tests failed; fix them before raising floors"]);
 
   return null;
 }

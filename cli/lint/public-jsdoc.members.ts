@@ -13,10 +13,13 @@ export type Source = { text: string; before: (node: SyntaxNode) => readonly Rule
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
 export type Walk = { source: Source; owner: string; fail: (node: SyntaxNode, label: string, text: string) => void };
 
+/** True for a key part spelled as written: a name or string, a number or a bigint; false for null, regex or node. */
+function isKeyPart(part: SyntaxValue): part is string | number | bigint {
+  return typeof part === "string" || typeof part === "number" || typeof part === "bigint";
+}
+
 function keyName(key: SyntaxValue): string {
-  const label = [get(key, "name"), get(key, "value")].find(
-    (part) => typeof part === "string" || typeof part === "number" || typeof part === "bigint",
-  );
+  const label = [get(key, "name"), get(key, "value")].find(isKeyPart);
 
   return label === undefined ? COMPUTED : String(label);
 }

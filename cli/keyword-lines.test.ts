@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { isStringList, keywordLines } from "./keywords.ts";
+import { keywordLines } from "./keyword-lines.ts";
 
 const P = "package.json: ";
 
@@ -65,9 +65,4 @@ it("reports every problem at once, one line each, and skips the order when a non
   expect(keywordLines(["lint", "agents", 7])).toStrictEqual([
     `${P}keyword 3 is 7, not a string; write it as a GitHub topic`,
   ]);
-});
-
-it("tells a list of strings from one holding anything else", () => {
-  expect(isStringList(["a", "b"])).toBe(true);
-  expect(isStringList(["a", 7])).toBe(false);
 });

@@ -8,7 +8,7 @@ import { stockBlock } from "./agents-stock.ts";
 import { extractUserMarkdown } from "./agents-text.ts";
 import { hasOwnedHeader } from "./header.ts";
 import type { Output } from "./outputs.ts";
-import { hasMarkers, syntaxOf, writeRegions } from "./region.ts";
+import { hasMarkers, syntaxOf, writePlaced } from "./region.ts";
 import { hashText, type StockHistory } from "./stock-history.ts";
 
 /**
@@ -42,9 +42,9 @@ export function isAgentsFile(rel: string): boolean {
 export function agentsFile(rel: string, body: string, disk: AgentsDisk): Output {
   const region = { body, name: RULES_REGION, place: "top" } as const;
   const user = userText(rel, disk, body);
-  const source = { at: rowCount(user.above), text: `${user.above}${user.below}` };
   const hasStock = user.stock !== "";
-  const { text, repairs } = writeRegions(hasStock ? source : source.text, syntaxOf(rel), [region]);
+  const at = hasStock ? rowCount(user.above) : undefined;
+  const { text, repairs } = writePlaced({ at, text: `${user.above}${user.below}` }, syntaxOf(rel), [region]);
   const all = [...(hasStock ? [REPLACED] : []), ...repairs, ...budgetRepairs(rel, text)];
   const output: Output = { content: text, kind: "file", managed: "block", path: rel, tracked: true };
 

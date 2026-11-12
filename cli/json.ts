@@ -1,4 +1,4 @@
-/** The parsed JSON and YAML value type, its one record guard, and the schema-first JSON readers. */
+/** The parsed JSON and YAML value type, its guards, and the schema-first JSON readers. */
 import { z } from "zod";
 
 /** A value JSON.parse or a YAML parse returns: a primitive, an array of Json or an object of Json. */
@@ -22,6 +22,26 @@ export type JsonObject = { [key: string]: Json };
 /** True for a parsed object, false for an array, a primitive, null and a missing value. */
 export function isRecord(value: Json | undefined): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** True for a parsed string, false for any other parsed value and a missing one. */
+export function isString(value: Json | undefined): value is string {
+  return typeof value === "string";
+}
+
+/** True for a parsed number, false for any other parsed value and a missing one. */
+export function isNumber(value: Json | undefined): value is number {
+  return typeof value === "number";
+}
+
+/** True for a parsed boolean, false for any other parsed value and a missing one. */
+export function isBoolean(value: Json | undefined): value is boolean {
+  return typeof value === "boolean";
+}
+
+/** True for a parsed array whose every entry is a string, the empty array included; false for anything else. */
+export function isStringList(value: Json | undefined): value is string[] {
+  return Array.isArray(value) && value.every(isString);
 }
 
 /**
