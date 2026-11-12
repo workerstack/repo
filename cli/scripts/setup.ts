@@ -35,10 +35,10 @@ const RUNNERS: Readonly<Record<string, Runner>> = {
   speak: setupSpeak,
 };
 
-function errMessage(e: unknown): string {
-  const m = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
+function errMessage(cause: unknown): string {
+  const m = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
 
-  return typeof m === "string" && m !== "" ? m : String(e);
+  return typeof m === "string" && m !== "" ? m : String(cause);
 }
 
 function interactiveOf(argv: string[], env: Env, opts: SetupMainOpts): boolean {
@@ -83,7 +83,7 @@ function statusesOf({ ctx, targets }: Run): Promise<Statuses> {
 }
 
 /** The target from argv or the terminal menu; "" after printing why there is none. */
-async function pickTarget({ ctx, targets }: Run, raw: unknown, statuses: Statuses): Promise<string> {
+async function pickTarget({ ctx, targets }: Run, raw: string | undefined, statuses: Statuses): Promise<string> {
   const { io } = ctx;
   let target = normalizeTarget(raw);
 

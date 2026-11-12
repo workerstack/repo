@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { parse as parseToml } from "smol-toml";
+import { parse as parseToml, type TomlValue } from "smol-toml";
 import { expect, it } from "vitest";
 import { z } from "zod";
 
 import { type Json, readJson } from "../json.ts";
 import { plant, plantHomes } from "./__fixtures__/purge-kit.ts";
 import { purgeGlobalMcps } from "./purge-global-mcps.ts";
-import { claudePluginsPath, cursorMcpPath, grokConfigPath, parseArgv } from "./purge-paths.ts";
+import { claudePluginsPath, cursorMcpPath, grokConfigPath } from "./purge-paths.ts";
 
 const tmpHome = plantHomes();
 
@@ -21,7 +21,7 @@ const CLEAN_GROK =
   `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
 
 /** `value` as plain objects: smol-toml builds its tables without a prototype, which `toStrictEqual` tells apart. */
-function plain(value: unknown): Json {
+function plain(value: TomlValue | undefined): Json {
   return readJson(z.json(), JSON.stringify(value));
 }
 
@@ -34,10 +34,6 @@ function reportOf(home: string, { apply = false }: { apply?: boolean } = {}) {
 it("purgeGlobalMcps argument edges: fails without a home and reports no rows", () => {
   expect(purgeGlobalMcps({})).toStrictEqual({ error: "HOME required", ok: false, report: [] });
   expect(purgeGlobalMcps()).toStrictEqual({ error: "HOME required", ok: false, report: [] });
-});
-
-it("purgeGlobalMcps argument edges: parseArgv treats a non-list argv as no flags", () => {
-  expect(parseArgv("--apply")).toStrictEqual({ apply: false, ok: true });
 });
 
 it("purgeGlobalMcps grok config: reports a missing file as noop and skips the write on apply", () => {
@@ -135,6 +131,7 @@ it("purgeGlobalMcps grok config: completes a partial disabled_mcp_servers list w
 it.each([
   ["plugins is a scalar", `plugins = "x"\n`],
   ["plugins.enabled is not a list", `[plugins]\nenabled = "x"\n`],
+  ["plugins.enabled holds a table", `[plugins]\nenabled = [{ id = "x" }]\n`],
   ["the toml does not parse", `[plugins\n`],
 ])("purgeGlobalMcps grok config: fails as unreadable dest when %s", (_name, body) => {
   const home = tmpHome("purge-grok-bad-");

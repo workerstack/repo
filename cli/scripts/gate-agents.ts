@@ -92,8 +92,8 @@ export function isParentOrchestrator(data: Payload): boolean {
 }
 
 /** True for a child spawned from an implementer-* agent. */
-export function isImplementer(sub: unknown): boolean {
-  return String(sub).startsWith(IMPLEMENTER_PREFIX);
+export function isImplementer(sub: string): boolean {
+  return sub.startsWith(IMPLEMENTER_PREFIX);
 }
 
 // Antigravity sends its session id only as `conversationId` (phase 6 probe).

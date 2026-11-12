@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { Json } from "../json.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { BOOT, plantHome, plantRowFile, probeOf, rowsDir } from "./__fixtures__/board-kit.ts";
 import { boardDir, boardHome } from "./board-files.ts";
@@ -74,7 +75,7 @@ it("note: stamps the time from a Date, a number or the clock", () => {
 it("note: chooses the work label: forced, sticky, typed, remembered, else active", () => {
   const home = plantHome();
 
-  function work(w: unknown, extra: NoteOptions = {}) {
+  function work(w: Json | undefined, extra: NoteOptions = {}) {
     return note({ ...base, home, work: w, ...extra })?.work;
   }
 

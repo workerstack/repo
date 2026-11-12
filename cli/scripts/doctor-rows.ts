@@ -9,8 +9,8 @@ import { isSelf } from "../sync/stock.ts";
 import type * as checkGlobalsModule from "./check-globals.ts";
 import { GLOBALS_MANIFEST_REL, MAPS_SECTIONS, ROW_PAD } from "./doctor.constants.ts";
 
-export function errorText(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+export function errorText(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 export function row(name: string, status: string, extra: string = ""): string {

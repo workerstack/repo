@@ -64,7 +64,7 @@ export type MatchOptions = (
 };
 
 /** A lesson Write: the checkout, the file it names and the text, dated `today`. */
-export type PersistInput = { workspaceRoot: string; filePath: string; content: unknown; today?: string };
+export type PersistInput = { workspaceRoot: string; filePath: string; content: string; today?: string };
 
 /** Another occurrence of lesson `slug`, with its evidence, dated `today`. */
 export type HitInput = { workspaceRoot: string; slug: string; evidence: string; today?: string };

@@ -74,12 +74,11 @@ it("knows the paint hosts, their subdomains, and the google earth path", () => {
     "https://x.test/amazon",
   ];
 
-  expect([...other, "", "not a url", undefined, null].filter((u) => isPaintHost(u))).toStrictEqual([]);
+  expect([...other, "", "not a url"].filter((u) => isPaintHost(u))).toStrictEqual([]);
 });
 
 it("calls a page blocked when it asks for javascript, or is empty with no refs", () => {
-  expect(isBlockedSnap(null, null)).toBe(true);
-  expect(isBlockedSnap(undefined, "not a list")).toBe(true);
+  expect(isBlockedSnap("", [])).toBe(true);
   expect(isBlockedSnap("x".repeat(100), [])).toBe(false);
   expect(isBlockedSnap("# https://x/\n\nshort", ["[1] link a"])).toBe(false);
   expect(isBlockedSnap("Just a moment...", ["[1] link a"])).toBe(true);

@@ -106,7 +106,7 @@ export function managedLessonsDir(target: string, roots: WorktreeRoots, p: typeo
 }
 
 /** The grant words in `prompt`, in `GIT_ASKED` order. */
-export function gitAskedWords(prompt: unknown): string[] {
+export function gitAskedWords(prompt: string | undefined): string[] {
   const text = textOf(prompt);
 
   return Object.entries(GIT_ASKED)

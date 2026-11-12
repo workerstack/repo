@@ -30,7 +30,7 @@ function quit(child: ChildLike): void {
 function exitOf(child: ChildLike): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     child.on?.("error", reject);
-    child.on?.("exit", (c: unknown) => resolve(typeof c === "number" ? c : 0));
+    child.on?.("exit", (code: number | null) => resolve(code ?? 0));
   });
 }
 

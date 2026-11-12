@@ -8,7 +8,7 @@ import path from "node:path";
 import { parse as parseToml, stringify as stringifyToml, type TomlTable } from "smol-toml";
 import { z } from "zod";
 
-import { isRecord, readJson, type JsonObject } from "../json.ts";
+import { isRecord, type JsonInput, readJson, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
@@ -64,7 +64,7 @@ type Hosts = {
   grok: Host;
   claude: Host<JsonObject, JsonObject>;
   codex: Host<CodexConfig>;
-  agents: Host;
+  agents: Host<JsonObject, JsonObject>;
 };
 
 /** The object a host's JSON file holds; empty when there is none or it holds another value. Throws for bad JSON. */
@@ -85,7 +85,7 @@ function writeText(abs: string, text: string): void {
   fs.writeFileSync(abs, text);
 }
 
-function jsonOut(obj: unknown): string {
+function jsonOut(obj: JsonInput): string {
   return `${JSON.stringify(obj, null, JSON_INDENT)}\n`;
 }
 

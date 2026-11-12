@@ -202,13 +202,13 @@ it("retries a not-ok version reply, and a port nothing listens on yet, until the
 });
 
 /** A server that answers every request with `body` as JSON. */
-function replyServer(body: unknown) {
+function replyServer(body: Rec) {
   return http.createServer((_req, res) => res.end(JSON.stringify(body)));
 }
 
 it("rejects a version reply without a usable websocket url, or one that cannot open", async () => {
   const dead = `ws://127.0.0.1:${await deadPort()}/x`;
-  const bodies = [{}, { webSocketDebuggerUrl: "" }, { webSocketDebuggerUrl: 5 }, { webSocketDebuggerUrl: dead }];
+  const bodies: Rec[] = [{}, ...["", 5, dead].map((webSocketDebuggerUrl) => ({ webSocketDebuggerUrl }))];
   const ports = await Promise.all(bodies.map((b) => listen(replyServer(b))));
   const results = await Promise.allSettled(ports.map((p) => connectCdp(p)));
   expect(results.map((r) => r.status)).toStrictEqual(bodies.map(() => "rejected"));

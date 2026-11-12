@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { plantProgram } from "../__fixtures__/stub-bin.ts";
+import type { Json } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import type { HookOutput } from "./gate-harness.ts";
@@ -55,7 +56,7 @@ function withStub(dir: string) {
   return { PATH: `${dir}${path.delimiter}${repoEnv.process.PATH ?? ""}` };
 }
 
-function call(command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) {
+function call(command: Json, env: Record<string, string | undefined> = withStub(stubDir())) {
   return runHook(
     main,
     { hookEventName: "PreToolUse", tool_input: { command, description: "d" }, tool_name: "Bash" },

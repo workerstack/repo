@@ -41,8 +41,11 @@ import type {
 /** The flags read so far. */
 type ArgState = { dryRun: boolean; check: boolean; host: string };
 
-/** One flag read: the index of the last arg it used and the flags after it. */
-type ArgStep = { at: number; state: ArgState };
+/** One flag read: whether it used the arg after it, and the flags after it. */
+type ArgStep = { tookNext: boolean; state: ArgState };
+
+/** A host value, and whether it came from the arg after the flag. */
+type HostArg = { tookNext: boolean; value: string | undefined };
 
 /** What one host's sync needs: the roots, the dest home, the skip pattern and whether to write. */
 type HostSync = { ws: string; consumer: string; home: string | undefined; skipRe: RegExp; apply: boolean };
@@ -52,8 +55,8 @@ function packageRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 }
 
-function errorText(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+function errorText(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** Prints `text` on stderr; exit code 1. */
@@ -63,34 +66,38 @@ function fail(text: string | undefined): number {
   return 1;
 }
 
-function hostStep(state: ArgState, value: unknown, at: number): ArgStep | string {
-  return typeof value !== "string" || value === "" ? UNKNOWN_HOST : { at, state: { ...state, host: value } };
+/** The step that sets the host to `value`, which came from the next arg when `tookNext`. */
+function hostStep(state: ArgState, { tookNext, value }: HostArg): ArgStep | string {
+  return value === undefined || value === "" ? UNKNOWN_HOST : { state: { ...state, host: value }, tookNext };
 }
 
-/** Reads the flag at `i`; the step, or the error text. */
-function flagStep(args: unknown[], i: number, state: ArgState): ArgStep | string {
-  const a = args[i];
+/** Reads the flag `a`, with `next` after it; the step, or the error text. */
+function flagStep(state: ArgState, a: string, next: string | undefined): ArgStep | string {
+  if (a === DRY_RUN_FLAG) return { state: { ...state, dryRun: true }, tookNext: false };
 
-  if (a === DRY_RUN_FLAG) return { at: i, state: { ...state, dryRun: true } };
+  if (a === CHECK_FLAG) return { state: { ...state, check: true }, tookNext: false };
 
-  if (a === CHECK_FLAG) return { at: i, state: { ...state, check: true } };
+  if (a === HOST_FLAG) return hostStep(state, { tookNext: true, value: next });
 
-  if (a === HOST_FLAG) return hostStep(state, args[i + 1], i + 1);
+  if (a.startsWith(HOST_PREFIX)) return hostStep(state, { tookNext: false, value: a.slice(HOST_PREFIX.length) });
 
-  if (typeof a === "string" && a.startsWith(HOST_PREFIX)) return hostStep(state, a.slice(HOST_PREFIX.length), i);
-
-  return `unknown flag: ${String(a)}`;
+  return `unknown flag: ${a}`;
 }
 
-export function parseArgv(argv: unknown): ParsedArgv {
-  const args: unknown[] = Array.isArray(argv) ? argv : [];
+export function parseArgv(argv: readonly string[]): ParsedArgv {
   let state: ArgState = { check: false, dryRun: false, host: ALL_HOSTS };
+  let isTaken = false;
 
-  for (let i = 0; i < args.length; i++) {
-    const step = flagStep(args, i, state);
+  for (const [i, a] of argv.entries()) {
+    if (isTaken) {
+      isTaken = false;
+      continue;
+    }
+
+    const step = flagStep(state, a, argv[i + 1]);
 
     if (typeof step === "string") return { error: step, ok: false };
-    ({ at: i, state } = step);
+    ({ state, tookNext: isTaken } = step);
   }
 
   if (state.check && state.dryRun) return { error: "--check and --dry-run do not combine", ok: false };

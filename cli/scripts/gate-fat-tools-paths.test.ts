@@ -36,7 +36,6 @@ describe("scratch rewrites", () => {
     expect(rewriteScratchPath(null, roots)).toBeNull();
     expect(rewriteScratchPath("", roots)).toBeNull();
     expect(rewriteScratchPath(".tmp/repo/a.md", null)).toBeNull();
-    expect(rewriteScratchWrite(5, roots)).toBeNull();
     expect(rewriteScratchWrite("notes.md", null)).toBeNull();
     expect(rewriteScratchWrite("notes.md", undefined)).toBeNull();
   });

@@ -7,7 +7,7 @@ import { DEFAULT_MODEL, DEFAULT_SECONDS, MAX_SECONDS, STT_AUTO } from "./listen.
 import type { ListenCfg } from "./listen.types.ts";
 import { readObjectFile, section, str } from "./voice-args.ts";
 
-export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): number {
+export function clampSeconds(v: string | number | undefined, fallback: number = DEFAULT_SECONDS): number {
   const n = Number(v);
 
   if (!Number.isFinite(n) || n <= 0) return fallback;
@@ -20,6 +20,8 @@ export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const file = readObjectFile(filePath);
   const openai = section(file, "openai");
   const listen = section(file, "listen");
+  const { seconds } = listen;
+  const fileSeconds = typeof seconds === "number" || typeof seconds === "string" ? seconds : undefined;
 
   return {
     apiKey: str(firstNonEmpty(env.OPENAI_API_KEY) ?? openai.apiKey),
@@ -27,7 +29,7 @@ export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
     ffmpegFormat: str(firstNonEmpty(env.LISTEN_FFMPEG_FORMAT) ?? listen.format).toLowerCase(),
     filePath,
     model: str(firstNonEmpty(env.LISTEN_MODEL) ?? listen.model, DEFAULT_MODEL),
-    seconds: clampSeconds(firstNonEmpty(env.LISTEN_SECONDS) ?? listen.seconds, DEFAULT_SECONDS),
+    seconds: clampSeconds(firstNonEmpty(env.LISTEN_SECONDS) ?? fileSeconds, DEFAULT_SECONDS),
     stt: str(firstNonEmpty(env.LISTEN_STT) ?? listen.stt, STT_AUTO).toLowerCase(),
     whisperModel: str(firstNonEmpty(env.WHISPER_MODEL, env.LISTEN_WHISPER_MODEL) ?? listen.whisperModel),
   };

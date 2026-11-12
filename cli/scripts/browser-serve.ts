@@ -136,7 +136,7 @@ function reply(socket: Duplex, state: FakeCdpState, data: string): void {
   Promise.resolve()
     .then(() => handleCdp(state, jsonText(msg.method), asRec(msg.params)))
     .then((result) => send({ id: msg.id, result }))
-    .catch((err: unknown) => send({ error: { code: CDP_ERROR, message: errMessage(err) }, id: msg.id }));
+    .catch((cause: unknown) => send({ error: { code: CDP_ERROR, message: errMessage(cause) }, id: msg.id }));
 }
 
 function serveFrames(socket: Duplex, state: FakeCdpState, messages: WsMessage[]): void {

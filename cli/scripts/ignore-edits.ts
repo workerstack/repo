@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import type { Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import {
   COMMENT_MARK,
@@ -28,8 +29,8 @@ function readText(file: string): string {
   }
 }
 
-export function linesOf(text: unknown): string[] {
-  return String(text).split(LINE_BREAK_RE);
+export function linesOf(text: string): string[] {
+  return text.split(LINE_BREAK_RE);
 }
 
 /** @returns the candidate lines the file does not hold yet, minus blanks and comments */
@@ -52,7 +53,7 @@ function firstString(values: unknown[]): string | undefined {
 }
 
 /** `text` after one search/replace, or null when its old string is missing. */
-function applyEdit(text: string, edit: unknown): string | null {
+function applyEdit(text: string, edit: Json): string | null {
   // Each edit is a JSON value of the hook payload; one that is no object has no strings.
   const e = z.record(z.string(), z.json()).catch({}).parse(edit);
   const oldStr = firstString([e.old_string, e.oldString, e.Target]);
@@ -66,7 +67,7 @@ function applyEdit(text: string, edit: unknown): string | null {
 
 /** Apply the host's search/replace to `text`; null when an old string is missing (the host then fails the edit). */
 export function projectEdit(text: string, args: ToolArgs): string | null {
-  const edits: unknown[] = Array.isArray(args.edits) ? args.edits : [args];
+  const edits: Json[] = Array.isArray(args.edits) ? args.edits : [args];
   let next = text;
 
   for (const edit of edits) {
@@ -80,8 +81,8 @@ export function projectEdit(text: string, args: ToolArgs): string | null {
 }
 
 /** The absolute target when `raw` names a `.gitignore`, else null. */
-export function ignoreTarget(raw: unknown, cwd: string, p: typeof path = path): string | null {
-  if (typeof raw !== "string" || raw === "") return null;
+export function ignoreTarget(raw: string, cwd: string, p: typeof path = path): string | null {
+  if (raw === "") return null;
   const abs = canonicalPath(p.resolve(cwd, raw), p);
 
   return p.basename(abs) === GITIGNORE ? abs : null;
@@ -90,7 +91,8 @@ export function ignoreTarget(raw: unknown, cwd: string, p: typeof path = path): 
 /** The edit a Write or search/replace call makes to a `.gitignore` named in one of `fields`. */
 export function writeIgnoreEdits(args: ToolArgs, cwd: string, fields: readonly string[]): IgnoreEdit[] {
   for (const key of fields) {
-    const file = ignoreTarget(args[key], cwd);
+    const raw = args[key];
+    const file = typeof raw === "string" ? ignoreTarget(raw, cwd) : null;
 
     if (file === null) continue;
     const next = firstString([args.content, args.Content]) ?? projectEdit(readText(file), args);

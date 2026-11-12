@@ -102,7 +102,7 @@ export function readFilePath(input: ToolArgs): Json {
   return [input.target_file, input.file_path, input.targetFile, input.filePath].find(Boolean) ?? "";
 }
 
-export function resolveReadPath(filePath: unknown, roots: Roots): string | null {
+export function resolveReadPath(filePath: Json, roots: Roots): string | null {
   if (typeof filePath !== "string" || filePath === "") return null;
 
   return resolveTyped(roots, filePath);

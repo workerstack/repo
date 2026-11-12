@@ -23,12 +23,12 @@ function opened(ws: WebSocket, timeoutMs: number): Promise<void> {
   });
 }
 
-function parse(data: unknown): Rec | null {
-  return tryJson(z.record(z.string(), z.json()), String(data)) ?? null;
+function parse(data: string): Rec | null {
+  return tryJson(z.record(z.string(), z.json()), data) ?? null;
 }
 
 /** Settles the request a reply answers; a reply that is no JSON or names no pending id is dropped. */
-function settle(pending: Pending, data: unknown): void {
+function settle(pending: Pending, data: string): void {
   const msg = parse(data);
 
   if (msg === null || typeof msg.id !== "number") return;
@@ -45,7 +45,8 @@ function settle(pending: Pending, data: unknown): void {
 function client(ws: WebSocket): Cdp {
   let nextId = 1;
   const pending: Pending = new Map();
-  ws.addEventListener("message", (ev) => settle(pending, ev.data));
+  // A frame is text or a Buffer; String spells either as the JSON it carries.
+  ws.addEventListener("message", (ev) => settle(pending, String(ev.data)));
 
   return {
     close() {

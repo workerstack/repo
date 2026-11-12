@@ -32,14 +32,14 @@ import { unclosedFenceErrors } from "./persist-sections.ts";
 
 const LINE_BREAK_RE = /\r?\n/;
 
-export function extractImplName(content: unknown): string {
-  const m = String(content).match(NAME_RE);
+export function extractImplName(content: string): string {
+  const m = content.match(NAME_RE);
 
   return m === null ? "" : String(m[1]).trim();
 }
 
-export function extractImplPlan(content: unknown): string {
-  const m = String(content).match(PLAN_RE);
+export function extractImplPlan(content: string): string {
+  const m = content.match(PLAN_RE);
 
   if (m === null) return NO_PLAN;
   const v = String(m[1]).trim().toLowerCase();
@@ -49,8 +49,8 @@ export function extractImplPlan(content: unknown): string {
   return PLAN_NUMBER_RE.test(v) ? v : "";
 }
 
-export function stripImplMeta(content: unknown): string {
-  return stripBom(String(content))
+export function stripImplMeta(content: string): string {
+  return stripBom(content)
     .split(LINE_BREAK_RE)
     .filter((line) => !META_LINE_RE.test(line))
     .join("\n");

@@ -2,7 +2,7 @@
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 import { z } from "zod";
 
-import { type JsonObject, tryJson } from "../json.ts";
+import { type Json, type JsonObject, tryJson } from "../json.ts";
 import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
 /** One validated job row. */
@@ -23,19 +23,19 @@ export type NeedResult = { ok: true; jobs: NeedJob[] } | { ok: false; error: str
 type TextField = "path" | "cwd" | "from" | "to";
 
 /** `value` as text when it is a JSON scalar (string, number, boolean); "" for null, undefined, objects and arrays. */
-function scalarText(value: unknown): string {
+function scalarText(value: Json | undefined): string {
   if (typeof value === "string") return value;
 
   return typeof value === "number" || typeof value === "boolean" ? String(value) : "";
 }
 
 /** `value` as trimmed text; "" for anything but a scalar. */
-function text(value: unknown): string {
+function text(value: Json | undefined): string {
   return scalarText(value).trim();
 }
 
 /** `value` as a list of globs: each item of an array, else the one value; undefined for null, undefined and "". */
-function globOf(value: unknown): string[] | undefined {
+function globOf(value: Json | undefined): string[] | undefined {
   if (value == null || value === "") return undefined;
 
   return Array.isArray(value) ? value.map(scalarText) : [scalarText(value)];

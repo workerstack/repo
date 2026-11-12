@@ -17,8 +17,8 @@ function keyLineAt(lines: string[], key: string): number {
  * The `{key}:` value a save sends, in its frontmatter or as a body line outside a code fence; undefined when
  * absent.
  */
-function extractKey(content: unknown, key: string): string | undefined {
-  const text = stripBom(String(content));
+function extractKey(content: string, key: string): string | undefined {
+  const text = stripBom(content);
 
   if (text.startsWith(FM_OPEN)) {
     const fm = parseFrontmatter(text);
@@ -37,8 +37,8 @@ function extractKey(content: unknown, key: string): string | undefined {
 }
 
 /** `content` without its first `{key}:` line outside a code fence. */
-function stripKeyLine(content: unknown, key: string): string {
-  const lines = String(content).split("\n");
+function stripKeyLine(content: string, key: string): string {
+  const lines = content.split("\n");
   const at = keyLineAt(lines, key);
 
   if (at !== NOT_FOUND) lines.splice(at, 1);
@@ -47,22 +47,22 @@ function stripKeyLine(content: unknown, key: string): string {
 }
 
 /** The `strategy:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
-export function extractStrategy(content: unknown): string | undefined {
+export function extractStrategy(content: string): string | undefined {
   return extractKey(content, "strategy");
 }
 
 /** `content` without its first `strategy:` line outside a code fence. */
-export function stripStrategyLine(content: unknown): string {
+export function stripStrategyLine(content: string): string {
   return stripKeyLine(content, "strategy");
 }
 
 /** The `mode:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
-export function extractMode(content: unknown): string | undefined {
+export function extractMode(content: string): string | undefined {
   return extractKey(content, "mode");
 }
 
 /** `content` without its first `mode:` line outside a code fence. */
-export function stripModeLine(content: unknown): string {
+export function stripModeLine(content: string): string {
   return stripKeyLine(content, "mode");
 }
 

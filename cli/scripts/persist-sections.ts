@@ -55,8 +55,8 @@ export function fencedLineSet(lines: string[]): { fenced: Set<number>; unclosed:
   return { fenced, unclosed: open === null ? null : open.line };
 }
 
-export function unclosedFenceErrors(text: unknown): string[] {
-  const { unclosed } = fencedLineSet(String(text).split("\n"));
+export function unclosedFenceErrors(text: string): string[] {
+  const { unclosed } = fencedLineSet(text.split("\n"));
 
   return unclosed === null ? [] : [`unclosed code fence at line ${unclosed}: close it with the same fence`];
 }

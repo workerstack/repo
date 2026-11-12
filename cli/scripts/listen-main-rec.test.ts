@@ -103,7 +103,7 @@ describe("rec failures", () => {
     expect(r.errs.at(-1)).toBe("ffmpeg rec failed");
   });
 
-  it.each([[Object.assign(new Error("ENOENT"), { code: "ENOENT" })], ["plain failure"]])(
+  it.each([[Object.assign(new Error("ENOENT"), { code: "ENOENT" })], [new Error("plain failure")]])(
     "treats a spawn error (%s) like a failed ffmpeg",
     async (err) => {
       const r = await run(["rec"], { spawnFn: ffmpeg(({ on }) => on.error?.(err)) });

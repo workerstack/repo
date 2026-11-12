@@ -51,8 +51,8 @@ function commBase(comm: string): string {
 }
 
 /** Linux /proc/pid/stat. Field 22 is starttime. comm sits between the first "(" and the last ")". */
-export function parseProcStat(text: unknown): ProcStat | null {
-  const s = str(text);
+export function parseProcStat(text: string | Buffer): ProcStat | null {
+  const s = String(text);
   const end = s.lastIndexOf(")");
   const open = s.indexOf("(");
 
@@ -138,14 +138,12 @@ function platformProbe(platform: string): PlatformProbe | null {
   return platform === WIN32 ? win32Probe : null;
 }
 
-export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | null {
-  const n = Number(pid);
-
-  if (!Number.isInteger(n) || n <= 1) return null;
+export function probeProcess(pid: number, deps: ProbeDeps = {}): ProcessInfo | null {
+  if (!Number.isInteger(pid) || pid <= 1) return null;
   const probe = platformProbe(deps.platform ?? process.platform);
   const spawn: Deps["spawn"] = deps.spawn ?? spawnSync;
 
-  return probe === null ? null : probe(n, { ...deps, spawn });
+  return probe === null ? null : probe(pid, { ...deps, spawn });
 }
 
 /** The host when `info` is not a shell, the parent to walk to when it is, or null when the walk must stop. */

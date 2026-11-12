@@ -1,4 +1,4 @@
-import { isRecord } from "../json.ts";
+import { isRecord, type Json } from "../json.ts";
 /** The board's hook side: a row from a hook payload, and the other sessions' lines for this one. */
 import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
@@ -14,7 +14,7 @@ function isSet(value: string | undefined): value is string {
   return value !== undefined && value !== "";
 }
 
-function firstTruthy<T>(values: T[]): T | undefined {
+function firstTruthy<T extends Json | undefined>(values: T[]): T | undefined {
   return values.find(isTruthy);
 }
 

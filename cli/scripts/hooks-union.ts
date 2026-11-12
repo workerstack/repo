@@ -75,8 +75,8 @@ type FileSpec = {
   needles: readonly string[];
 };
 
-function given(v: unknown): string | undefined {
-  return typeof v === "string" && v !== "" ? v : undefined;
+function given(v: string | undefined): string | undefined {
+  return v === "" ? undefined : v;
 }
 
 function resolveRoots(opts: UnionOptions | string): Roots {

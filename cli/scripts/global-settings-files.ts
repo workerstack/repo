@@ -30,10 +30,10 @@ export function resolveDest(home: string | null | undefined, dest: string | null
   return resolved;
 }
 
-export function shouldSkip(segment: unknown, skipRe: RegExp | null | undefined): boolean {
+export function shouldSkip(segment: string, skipRe: RegExp | null | undefined): boolean {
   if (skipRe == null) return false;
 
-  return skipRe.test(String(segment));
+  return skipRe.test(segment);
 }
 
 function checkedHost(h: Json): ManifestHost {
@@ -82,8 +82,8 @@ export function parseText(raw: string | null | undefined, format: SettingsFormat
   return v;
 }
 
-function isMissing(err: unknown): boolean {
-  return err instanceof Error && "code" in err && err.code === ENOENT;
+function isMissing(cause: unknown): boolean {
+  return cause instanceof Error && "code" in cause && cause.code === ENOENT;
 }
 
 /** Read a dest file; a missing file is `{}`, anything unreadable throws `unreadable dest: <label>`. */

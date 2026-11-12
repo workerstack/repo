@@ -65,11 +65,10 @@ it("parseProcStat: rejects text that is not a stat line", () => {
   expect(parseProcStat(") before (")).toBeNull();
   expect(parseProcStat("7 (short) S 1 2 3")).toBeNull();
   expect(parseProcStat(stat("x", "S", "not-a-number"))).toBeNull();
-  expect(parseProcStat(undefined)).toBeNull();
 });
 
 it("probeProcess: answers null for pids that can never be a host", () => {
-  for (const pid of [0, 1, -4, 2.5, "x", undefined])
+  for (const pid of [0, 1, -4, 2.5, Number.NaN])
     expect(probeProcess(pid, { platform: "linux", readFile: () => stat("x", "S", "1") })).toBeNull();
 });
 

@@ -4,8 +4,8 @@ import path from "node:path";
 
 import { EEXIST, INT32_BYTES, LOCK_POLL_MS, LOCK_STALE_MS, SECRET_DIR_MODE } from "./jev.constants.ts";
 
-function isErrno(err: unknown, code: string): boolean {
-  return err instanceof Error && "code" in err && err.code === code;
+function isErrno(cause: unknown, code: string): boolean {
+  return cause instanceof Error && "code" in cause && cause.code === code;
 }
 
 /** True when the lock was taken; false when another process holds it. */

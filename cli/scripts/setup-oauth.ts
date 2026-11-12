@@ -36,7 +36,7 @@ export function parseDesktopOAuth(text: string): JsonObject {
   return j;
 }
 
-export function loadOAuthInput(s: unknown): JsonObject {
+export function loadOAuthInput(s: string): JsonObject {
   const t = str(s);
 
   if (t === "") throw new Error("OAuth JSON path or JSON body required");
@@ -89,7 +89,7 @@ export function findDownloadedOAuthJson(home: string): string {
 }
 
 export function workspaceConsoleUrls(
-  projectId: unknown,
+  projectId: string,
 ): Record<"projectCreate" | "branding" | "enableApis" | "clientCreate", string> {
   const p = str(projectId);
   const enc = encodeURIComponent(p);

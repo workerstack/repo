@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { Json } from "../json.ts";
 import { plant, plantDirs, plantWorkspace } from "./__fixtures__/sync-global-kit.ts";
 import { deepMerge } from "./deep-merge.ts";
 import {
@@ -14,7 +15,7 @@ import {
   resolveDest,
   shouldSkip,
 } from "./global-settings-files.ts";
-import { parseArgv, syncGlobals } from "./sync-global-settings.ts";
+import { syncGlobals } from "./sync-global-settings.ts";
 import type { ManifestHost } from "./sync-global-settings.types.ts";
 
 const tmp = plantDirs();
@@ -33,10 +34,6 @@ const MANIFEST = { hosts: [HOST], skipKeyPattern: "^secret$", version: 1 };
 function workspace(payload = `{"mode": "yolo"}`) {
   return plantWorkspace(tmp, MANIFEST, { [HOST.payload]: payload });
 }
-
-it("parseArgv: treats a non-list argv as no flags", () => {
-  expect(parseArgv("--check")).toStrictEqual({ check: false, dryRun: false, host: "all", ok: true });
-});
 
 it("resolveDest: needs a home and a dest", () => {
   expect(() => resolveDest(null, "a")).toThrow("home required");
@@ -74,7 +71,7 @@ it("parseText: rejects json that is not an object", () => {
   expect(() => parseText("[]", "json")).toThrow("not an object");
 });
 
-function load(manifest: unknown) {
+function load(manifest: Json) {
   return () => loadManifest(plantWorkspace(tmp, manifest));
 }
 

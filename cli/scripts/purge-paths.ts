@@ -6,7 +6,6 @@ import { repoEnv, type Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { APPLY_FLAG } from "./purge-global-mcps.constants.ts";
 import type { ParsedArgv } from "./purge-global-mcps.types.ts";
-import { str } from "./voice-args.ts";
 
 /** HOME, else USERPROFILE (Windows / env sim), else os.homedir(). */
 export function resolveHome(env: Env = repoEnv.process): string {
@@ -14,17 +13,16 @@ export function resolveHome(env: Env = repoEnv.process): string {
 }
 
 /** `--apply` or nothing; any other argument is an unknown flag. */
-export function parseArgv(argv: unknown): ParsedArgv {
-  const args: unknown[] = Array.isArray(argv) ? argv : [];
+export function parseArgv(argv: readonly string[]): ParsedArgv {
   let isApply = false;
 
-  for (const a of args) {
+  for (const a of argv) {
     if (a === APPLY_FLAG) {
       isApply = true;
       continue;
     }
 
-    return { error: `unknown flag: ${str(a)}`, ok: false };
+    return { error: `unknown flag: ${a}`, ok: false };
   }
 
   return { apply: isApply, ok: true };

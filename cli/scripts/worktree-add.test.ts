@@ -25,7 +25,6 @@ it("cleans a name into a git-safe one and refuses a name with nothing usable", (
   const r = tmp.repo();
   expect(addWorktree(r, "feature/x y").path).toBe(wt(r, "feature-x-y"));
   expect(worktreeName("--.a..b--")).toBe("a..b");
-  expect(worktreeName(null)).toBeNull();
   expect(worktreeName(undefined)).toBeNull();
 
   for (const raw of ["..", "", undefined])

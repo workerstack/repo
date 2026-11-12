@@ -31,9 +31,11 @@ export const DENY_ALL = {
   plugins: { denyDefault: true },
 };
 
-/** Write `policy` as `<root>/agents/mcp-policy.jsonc`. */
-export function plantPolicy(root: string, policy: unknown): void {
+/** Write `policy` as `<root>/agents/mcp-policy.jsonc`; `root`. */
+export function plantPolicy(root: string, policy: unknown): string {
   plant(root, "agents/mcp-policy.jsonc", `// fixture\n${JSON.stringify(policy, null, 2)}\n`);
+
+  return root;
 }
 
 export function readJson(root: string, rel: string): Record<string, unknown> {

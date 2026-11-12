@@ -3,13 +3,22 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { FFMPEG, readSession, run, tmp, type Handler, which, cleanupTmp } from "./__fixtures__/listen-env.ts";
+import {
+  FFMPEG,
+  readSession,
+  run,
+  tmp,
+  type Handlers,
+  recordOn,
+  which,
+  cleanupTmp,
+} from "./__fixtures__/listen-env.ts";
 import { NEED_FFMPEG } from "./listen.constants.ts";
 import type { ChildLike } from "./listen.types.ts";
 
 afterEach(cleanupTmp);
 
-type DriveCtx = { on: Record<string, Handler>; signal: (name: "SIGINT" | "SIGTERM") => void };
+type DriveCtx = { on: Handlers; signal: (name: "SIGINT" | "SIGTERM") => void };
 
 type Drive = (ctx: DriveCtx) => void;
 
@@ -25,13 +34,13 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
     for (const listener of added(name)) process.off(name, listener);
   }
 
-  const on: Record<string, Handler> = {};
+  const on: Handlers = {};
   const spawned: Array<{ bin: string; args: string[] }> = [];
 
   function spawnFn(bin: string, args: string[]): ChildLike {
     spawned.push({ args, bin });
 
-    return { on: (ev: string, cb: Handler) => void (on[ev] = cb), stdin: spec.stdin ?? null };
+    return { on: recordOn(on), stdin: spec.stdin ?? null };
   }
 
   try {
@@ -53,13 +62,13 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
 function bothSignalsThenExit({ on, signal }: DriveCtx): void {
   signal("SIGINT");
   signal("SIGTERM");
-  on.exit?.(0);
+  on.exit?.(0, null);
 }
 
 /** Sends SIGINT, then lets ffmpeg exit 0. */
 function sigintThenExit({ on, signal }: DriveCtx): void {
   signal("SIGINT");
-  on.exit?.(0);
+  on.exit?.(0, null);
 }
 
 /** Fails the ffmpeg spawn. */
@@ -82,7 +91,7 @@ describe("_record arguments", () => {
 
   it("--seconds bounds the recording", async () => {
     const argv = ["_record", "--out", "/tmp/never-written.wav", "--seconds", "500"];
-    const r = await record({ argv, drive: ({ on }) => on.exit?.(0) });
+    const r = await record({ argv, drive: ({ on }) => on.exit?.(0, null) });
     const args = r.spawned[0]?.args ?? [];
     expect(args[args.indexOf("-t") + 1]).toBe("120");
   });
@@ -92,7 +101,7 @@ describe("_record session", () => {
   it("records until ffmpeg exits, leaving a session for stop", async () => {
     const out = path.join(tmp("listen-rec-o-"), "nested", "r.wav");
     const argv = ["_record", "--out", out, "--device", ":1"];
-    const r = await record({ argv, drive: ({ on }) => on.exit?.(0) });
+    const r = await record({ argv, drive: ({ on }) => on.exit?.(0, null) });
     expect(r.code).toBe(0);
     expect(r.spawned[0]?.bin).toBe(FFMPEG);
     expect(r.spawned[0]?.args).toContain(":1");
@@ -120,7 +129,7 @@ describe("_record signals", () => {
       argv,
       drive: ({ on, signal }) => {
         signal("SIGTERM");
-        on.exit?.(0);
+        on.exit?.(0, null);
       },
     });
 
@@ -144,11 +153,11 @@ describe("_record exit", () => {
   it.each([
     [0, 0],
     [255, 0],
-    [undefined, 0],
+    [null, 0],
     [1, 1],
     [69, 1],
   ])("ffmpeg exit %s makes the recorder exit %s", async (exit, want) => {
-    const r = await record({ argv, drive: ({ on }) => on.exit?.(exit) });
+    const r = await record({ argv, drive: ({ on }) => on.exit?.(exit, null) });
     expect(r.code).toBe(want);
   });
 

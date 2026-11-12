@@ -36,13 +36,13 @@ function planNameLine(lines: string[]) {
   return null;
 }
 
-export function extractPlanName(content: unknown): string {
-  return planNameLine(String(content).split("\n"))?.name ?? "";
+export function extractPlanName(content: string): string {
+  return planNameLine(content.split("\n"))?.name ?? "";
 }
 
 /** `content` without its `PLAN_NAME:` line and the blank lines after it, wherever it sits above the first `## `. */
-export function stripPlanName(content: unknown): string {
-  const lines = String(content).split("\n");
+export function stripPlanName(content: string): string {
+  const lines = content.split("\n");
   const found = planNameLine(lines);
 
   if (found === null) return lines.join("\n");
@@ -53,8 +53,8 @@ export function stripPlanName(content: unknown): string {
   return lines.join("\n");
 }
 
-export function extractCommit(content: unknown): string | undefined {
-  const text = stripBom(String(content));
+export function extractCommit(content: string): string | undefined {
+  const text = stripBom(content);
 
   if (text.startsWith(FM_OPEN)) {
     const fm = parseFrontmatter(text);
@@ -67,8 +67,8 @@ export function extractCommit(content: unknown): string | undefined {
   return m === null ? undefined : m[1];
 }
 
-export function stripCommitLine(content: unknown): string {
-  return String(content).replace(COMMIT_STRIP_RE, "");
+export function stripCommitLine(content: string): string {
+  return content.replace(COMMIT_STRIP_RE, "");
 }
 
 export type FrontmatterInput = {

@@ -20,9 +20,9 @@ import {
 import type { Cdp, RefEntry, Session, Snap } from "./browser.types.ts";
 import { writeStash } from "./job-stash.ts";
 
-function parseUrl(url: unknown): URL | null {
+function parseUrl(url: string): URL | null {
   try {
-    return new URL(textOf(url));
+    return new URL(url);
   } catch {
     return null;
   }
@@ -34,7 +34,7 @@ function onHost(h: string, base: string): boolean {
 }
 
 /** Whether `url` is a page that paints on a canvas, which only Chromium reads. */
-export function isPaintHost(url: unknown): boolean {
+export function isPaintHost(url: string): boolean {
   const u = parseUrl(url);
 
   if (u === null) return false;
@@ -48,9 +48,9 @@ export function isPaintHost(url: unknown): boolean {
 }
 
 /** Whether a snapshot is a block page, or so thin the page did not render. */
-export function isBlockedSnap(markdown: unknown, lines: unknown): boolean {
-  const refs = Array.isArray(lines) ? lines.length : 0;
-  const md = textOf(markdown).trim();
+export function isBlockedSnap(markdown: string, lines: readonly string[]): boolean {
+  const refs = lines.length;
+  const md = markdown.trim();
 
   if (BLOCKED_SNAP_RE.test(md)) return true;
   const body = md.replace(TITLE_LINE_RE, "").trim();

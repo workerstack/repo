@@ -31,11 +31,11 @@ import {
 import type { ActiveReview, Mode, ReviewStrategy, Strategy } from "./strategy.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
-export function parseMode(v: unknown): Mode | null {
+export function parseMode(v: string | undefined): Mode | null {
   return MODES.find((m) => m === v) ?? null;
 }
 
-export function parseStrategy(v: unknown): Strategy | null {
+export function parseStrategy(v: string | undefined): Strategy | null {
   return STRATEGIES.find((s) => s === v) ?? null;
 }
 

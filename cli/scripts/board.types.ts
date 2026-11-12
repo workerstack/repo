@@ -54,16 +54,16 @@ export type HostIdentity = {
 };
 
 export type NoteOptions = {
-  session?: unknown;
-  pid?: unknown;
-  start?: unknown;
+  session?: Json | undefined;
+  pid?: number | undefined;
+  start?: string | undefined;
   home?: string | undefined;
   env?: Env | undefined;
-  provider?: unknown;
-  model?: unknown;
-  effort?: unknown;
-  cwd?: unknown;
-  work?: unknown;
+  provider?: Json | undefined;
+  model?: Json | undefined;
+  effort?: Json | undefined;
+  cwd?: Json | undefined;
+  work?: Json | undefined;
   forceWork?: boolean | undefined;
   boot?: string | undefined;
   now?: Date | string | number | undefined;
@@ -75,8 +75,8 @@ export type DigestOptions = {
   env?: Env | undefined;
   boot?: string | undefined;
   probe?: Probe | undefined;
-  provider?: unknown;
-  session?: unknown;
+  provider?: Json | undefined;
+  session?: Json | undefined;
   cap?: number | undefined;
 };
 

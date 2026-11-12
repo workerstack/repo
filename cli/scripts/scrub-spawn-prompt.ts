@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import { z } from "zod";
 
 import type { Json, JsonObject } from "../json.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
@@ -69,13 +68,10 @@ export function capSpawnPrompt(prompt: string): string {
   return s.trim();
 }
 
-export function rewriteSpawnToolInput(toolInput: unknown): JsonObject | null {
-  // The tool input is a JSON value of the hook payload; one that is no object has no prompt to rewrite.
-  const input = z.record(z.string(), z.json()).nullable().catch(null).parse(toolInput);
+export function rewriteSpawnToolInput(toolInput: JsonObject | undefined): JsonObject | null {
+  if (toolInput === undefined) return null;
 
-  if (input === null) return null;
-
-  const next: JsonObject = Object.assign({}, input);
+  const next: JsonObject = Object.assign({}, toolInput);
   let isChanged = false;
 
   if (typeof next.prompt === "string") {

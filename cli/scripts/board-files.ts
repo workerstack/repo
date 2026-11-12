@@ -21,7 +21,7 @@ export function boardDir(home: string): string {
   return path.join(home, ...BOARD_PARTS);
 }
 
-export function rowPath(dir: string, provider: unknown, session: unknown): string {
+export function rowPath(dir: string, provider: string, session: string): string {
   return path.join(dir, `${safe(provider)}-${safe(session)}${ROW_EXT}`);
 }
 

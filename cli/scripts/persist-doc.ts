@@ -88,17 +88,17 @@ export function utcDate(d: Date = new Date()): string {
   return utcDateTime(d).slice(0, DATE_LENGTH);
 }
 
-export function compactCreatedStamp(created: unknown): string {
-  return String(created).replaceAll(STAMP_PUNCT_RE, "");
+export function compactCreatedStamp(created: string): string {
+  return created.replaceAll(STAMP_PUNCT_RE, "");
 }
 
 /** The slug in `{serial}-{slug}-{stamp}.md`; an unstamped name works too. */
-export function slugFromFilename(filename: unknown): string {
-  return String(filename).replace(MD_EXT_RE, "").replace(SERIAL_DASH_RE, "").replace(FILENAME_STAMP_RE, "");
+export function slugFromFilename(filename: string): string {
+  return filename.replace(MD_EXT_RE, "").replace(SERIAL_DASH_RE, "").replace(FILENAME_STAMP_RE, "");
 }
 
-export function extractH1(content: unknown): string {
-  const m = String(content).match(H1_RE);
+export function extractH1(content: string): string {
+  const m = content.match(H1_RE);
 
   return m === null ? "" : captured(m, 1).trim();
 }
@@ -150,8 +150,8 @@ export function stripBom(text: string): string {
 }
 
 /** `text` without a leading byte-order mark and frontmatter block. */
-export function stripFrontmatter(text: unknown): string {
-  const s = stripBom(String(text));
+export function stripFrontmatter(text: string): string {
+  const s = stripBom(text);
   const end = s.startsWith(FM_OPEN) ? s.indexOf(FM_CLOSE, FM_OPEN.length) : NOT_FOUND;
 
   return end === NOT_FOUND ? s : s.slice(end + FM_CLOSE.length);

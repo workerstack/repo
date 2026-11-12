@@ -35,7 +35,7 @@ export function defaultDevice(platform: NodeJS.Platform): string {
 }
 
 /** An avfoundation audio-only input spec: `:N` for an index or a bare name, `video:audio` as given. */
-export function darwinAudioSpec(device: unknown): string {
+export function darwinAudioSpec(device: string): string {
   const d = str(device, ":0");
 
   if (NONE_RE.test(d)) return d.replace(NONE_RE, ":");
@@ -47,7 +47,7 @@ export function darwinAudioSpec(device: unknown): string {
   return d.includes(":") ? d : `:${d}`;
 }
 
-export function ffmpegInputArgs(platform: NodeJS.Platform, device: unknown, ffmpegFormat: string): string[] {
+export function ffmpegInputArgs(platform: NodeJS.Platform, device: string, ffmpegFormat: string): string[] {
   const d = str(device, defaultDevice(platform));
 
   if (platform === DARWIN) return ["-f", "avfoundation", "-i", darwinAudioSpec(d)];
@@ -66,7 +66,7 @@ export function ffmpegInputArgs(platform: NodeJS.Platform, device: unknown, ffmp
 
 type RecordArgsOpts = {
   platform: NodeJS.Platform;
-  device: unknown;
+  device: string;
   out: string;
   seconds: number | undefined;
   ffmpegFormat: string;
@@ -94,7 +94,7 @@ export function recCaptureOpts(errFd?: number | null): {
   };
 }
 
-type Finish = (status: number | null, signal: string | null, error: unknown) => void;
+type Finish = (status: number | null, signal: string | null, cause: unknown) => void;
 
 /** Kills the capture's process group, or the child alone when that fails. */
 function killHard(child: ChildLike, killFn: KillFn): void {
@@ -116,16 +116,14 @@ function watchChild(child: ChildLike, finish: Finish): void {
     return;
   }
 
-  child.on("error", (error: unknown) => finish(null, null, error));
-  child.on("exit", (code: unknown, signal: unknown) =>
-    finish(typeof code === "number" ? code : null, typeof signal === "string" ? signal : null, null),
-  );
+  child.on("error", (cause: Error) => finish(null, null, cause));
+  child.on("exit", (code: number | null, signal: NodeJS.Signals | null) => finish(code, signal, null));
 }
 
 type CaptureOpts = {
   bin: string;
   args: string[];
-  seconds: unknown;
+  seconds: number;
   spawnFn: SpawnFn;
   killFn: KillFn;
   errFd: number | null;
@@ -139,11 +137,11 @@ export function recCapture({ bin, args, seconds, spawnFn, killFn, errFd }: Captu
     const child = spawnFn(bin, args, recCaptureOpts(errFd));
     let isDone = false;
 
-    function finish(status: number | null, signal: string | null, error: unknown): void {
+    function finish(status: number | null, signal: string | null, cause: unknown): void {
       if (isDone) return;
       isDone = true;
       clearTimeout(timer);
-      resolve({ error, signal, status, stderr: "" });
+      resolve({ error: cause, signal, status, stderr: "" });
     }
 
     const timer = setTimeout(

@@ -20,22 +20,22 @@ const MISSING_PERMISSION = /missing permission/i;
 const REJECTED_KEY = /unauthorized|invalid.?api.?key|authentication/i;
 
 /** A status or label as text; anything else is blank. */
-function plain(value: unknown): string {
+function plain(value: Json | undefined): string {
   return typeof value === "string" || typeof value === "number" ? String(value) : "";
 }
 
 /** A label as text, or `fallback` when it is blank. */
-function plainOr(value: unknown, fallback: string): string {
+function plainOr(value: Json | undefined, fallback: string): string {
   const text = plain(value);
 
   return text === "" ? fallback : text;
 }
 
 /** A one-line error for a failed reply: a missing permission, a rejected key, or the status and body head. */
-export function formatHttpError(status: unknown, body: unknown, provider: string): string {
+export function formatHttpError(status: number | string, body: string | undefined, provider: string): string {
   const n = Number(status);
-  const raw = plain(body);
-  const code = Number.isNaN(n) || n === 0 ? plain(status) : String(n);
+  const raw = body ?? "";
+  const code = Number.isNaN(n) || n === 0 ? String(status) : String(n);
 
   if (MISSING_PERMISSIONS.test(raw)) return `${provider} key present but missing permission (${code}). setup: ${SETUP}`;
 
@@ -43,16 +43,18 @@ export function formatHttpError(status: unknown, body: unknown, provider: string
 
   if (auth) return `${provider} key missing or rejected (${code}). setup: ${SETUP}`;
 
-  return `${plain(status)} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
+  return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 
 /** The message of a thrown value, or the value itself as text. */
-export function errMessage(e: unknown): string {
-  const m = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
+export function errMessage(cause: unknown): string {
+  const m = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
 
   if (typeof m === "string" && m !== "") return m;
 
-  return typeof e === "object" ? Object.prototype.toString.call(e) : plain(e);
+  if (typeof cause === "string" || typeof cause === "number") return String(cause);
+
+  return typeof cause === "object" ? Object.prototype.toString.call(cause) : "";
 }
 
 /** The platform's fetch, or undefined when it has none. */

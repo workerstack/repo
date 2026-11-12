@@ -30,8 +30,8 @@ import {
 import type { Frontmatter, Lesson, LessonBody, LessonFields, ParsedLesson } from "./lessons.types.ts";
 
 /** Glob to an anchored RegExp over repo-relative posix paths. `**` spans dirs; `*` and `?` stay in one segment. */
-export function globToRegExp(glob: unknown): RegExp {
-  const g = String(glob);
+export function globToRegExp(glob: string): RegExp {
+  const g = glob;
   let re = "";
   let i = 0;
 
@@ -50,9 +50,9 @@ export function globToRegExp(glob: unknown): RegExp {
   return new RegExp(`^${re}$`);
 }
 
-function readFrontmatter(text: unknown): Frontmatter | null {
+function readFrontmatter(text: string): Frontmatter | null {
   // A Windows checkout with core.autocrlf turns a committed lesson's LF into CRLF.
-  const s = String(text).replace(BOM_RE, "").replaceAll("\r\n", "\n");
+  const s = text.replace(BOM_RE, "").replaceAll("\r\n", "\n");
 
   if (!s.startsWith(FM_OPEN)) return null;
   const end = s.indexOf(FM_CLOSE, FM_OPEN.length);
@@ -160,7 +160,7 @@ function fieldErrors(f: LessonFields): string[] {
 }
 
 /** Parse a lesson file. `defaults` fills missing hits and last-hit (a first write). */
-export function parseLesson(text: unknown, { defaults }: { defaults?: Record<string, string> } = {}): ParsedLesson {
+export function parseLesson(text: string, { defaults }: { defaults?: Record<string, string> } = {}): ParsedLesson {
   const fm = readFrontmatter(text);
 
   if (fm === null) return { errors: [FM_MISSING], ok: false };
@@ -211,8 +211,8 @@ ${l.fix}
 }
 
 /** What is wrong with lesson `filename` holding `text`; with `files`, each glob must match one of them. */
-export function validateLesson(filename: string, text: unknown, { files }: { files?: string[] } = {}): string[] {
-  const lineCount = String(text).replace(TRAILING_NL_RE, "").split("\n").length;
+export function validateLesson(filename: string, text: string, { files }: { files?: string[] } = {}): string[] {
+  const lineCount = text.replace(TRAILING_NL_RE, "").split("\n").length;
 
   const errors: string[] =
     lineCount > MAX_LINES

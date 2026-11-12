@@ -2,7 +2,7 @@ import { expect, it, vi } from "vitest";
 
 import type { Json } from "../json.ts";
 import { cfgOf, failRes, fetchReturning, jsonRes, okRes } from "./__fixtures__/speak-kit.ts";
-import { voices, whoami } from "./speak-api.ts";
+import { errMessage, voices, whoami } from "./speak-api.ts";
 import { OPENAI_VOICES } from "./speak.constants.ts";
 import type { FetchFn } from "./speak.types.ts";
 
@@ -76,4 +76,12 @@ it.each([{ voices: "no" }, null])("voices: lists nothing for an odd reply (%j)",
 
 it("voices: lists nothing when the reply has no body reader", async () => {
   expect(await voices({ cfg: eleven(), fetchFn: fetchReturning(okRes()) })).toBe("");
+});
+
+it("errMessage: a thrown message, else the value as text, else blank", () => {
+  expect(errMessage(new Error("boom"))).toBe("boom");
+  expect(errMessage("plain")).toBe("plain");
+  expect(errMessage(7)).toBe("7");
+  expect(errMessage({})).toBe("[object Object]");
+  expect(errMessage(undefined)).toBe("");
 });

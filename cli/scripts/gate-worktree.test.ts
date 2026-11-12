@@ -7,6 +7,7 @@ import { aliasOf } from "../../dev/test-paths";
 import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { agyCall, asChild, claudeCall, codexCall, inSession } from "./__fixtures__/hook-payload.ts";
 import { processHookPayload } from "./gate-fat-tools.ts";
+import type { HookOutput } from "./gate-harness.ts";
 
 const tmp = useTmp();
 const REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
@@ -16,7 +17,7 @@ function claude(cwd: string, command: string) {
   return inSession(claudeCall(cwd, "Bash", { command }), "w");
 }
 
-function hasReason(out: unknown) {
+function hasReason(out: HookOutput | null) {
   return /worktrees live in/.test(JSON.stringify(out ?? null));
 }
 

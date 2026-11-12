@@ -19,9 +19,8 @@ it("parseArgv treats a flag at the end or before another flag as on", () => {
   expect(parseArgv(["--redo", "--device", "hw:1"]).flags).toStrictEqual({ device: "hw:1", redo: "1" });
 });
 
-it("parseArgv stringifies non-string arguments and ignores a non-array argv", () => {
-  expect(parseArgv([7, "jev"])._).toStrictEqual(["7", "jev"]);
-  expect(parseArgv("speak")).toStrictEqual({ _: [], flags: {} });
+it("parseArgv keeps positionals and reads --flag=value", () => {
+  expect(parseArgv(["7", "--device=hw:1", "jev"])).toStrictEqual({ _: ["7", "jev"], flags: { device: "hw:1" } });
 });
 
 it("normalizeTarget maps aliases and rejects the rest", () => {
@@ -50,7 +49,6 @@ it("loadOAuthInput reads inline JSON and a file, and rejects empty or missing in
   expect(loadOAuthInput(JSON.stringify(desktopOauth))).toStrictEqual(desktopOauth);
   expect(loadOAuthInput(` ${file} `)).toStrictEqual(desktopOauth);
   expect(() => loadOAuthInput("")).toThrow(/required/);
-  expect(() => loadOAuthInput(undefined)).toThrow(/required/);
   expect(() => loadOAuthInput(path.join(dir, "nope.json"))).toThrow(/not found/);
 });
 

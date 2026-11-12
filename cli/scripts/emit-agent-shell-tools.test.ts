@@ -207,10 +207,6 @@ it(
   },
 );
 
-it("emitAgentShellTools output and reads: reads frontmatter from a missing value as none", () => {
-  expect(splitFrontmatter(undefined)).toStrictEqual({ error: "missing frontmatter", ok: false });
-});
-
 it("emitAgentShellTools defaults: works on the current directory when given no options", () => {
   const ws = workspace("---\nname: scout\n---\nrun_terminal_command\n", "---\nname: scout\n---\nold\n");
   vi.spyOn(process, "cwd").mockReturnValue(ws);

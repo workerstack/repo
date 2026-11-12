@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_HANDOFF, VALID_IMPL, VALID_LESSON, VALID_PLAN, DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
@@ -12,7 +13,11 @@ const kit = orchestrateKit();
 
 /** A PreToolUse caller as Grok sends it; `session` is left out when empty. */
 function inSession(session?: string) {
-  return (ws: string, toolName: string | undefined, toolInput: unknown): HookOut["hookSpecificOutput"] | null => {
+  return (
+    ws: string,
+    toolName: string | undefined,
+    toolInput: Json | undefined,
+  ): HookOut["hookSpecificOutput"] | null => {
     const payload = { hookEventName: "PreToolUse", session_id: session, toolInput, toolName, workspaceRoot: ws };
     const out = replyOf(runHook(main, payload, { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws }));
 

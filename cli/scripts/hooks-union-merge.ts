@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, readJson, type JsonObject } from "../json.ts";
+import { isRecord, type Json, type JsonInput, readJson, type JsonObject } from "../json.ts";
 import { hookNameOf } from "./hook-command.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";
 import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
@@ -66,7 +66,7 @@ export function loadJson(p: string): JsonObject {
   return readJson(z.record(z.string(), z.json()).catch({}), raw);
 }
 
-export function saveJson(p: string, obj: unknown): void {
+export function saveJson(p: string, obj: JsonInput): void {
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`);
 }
