@@ -92,7 +92,7 @@ function generated(root: string, rel: string): Json {
   return z.json().parse(parse(fs.readFileSync(path.join(root, rel), "utf8")));
 }
 
-it("repo sync gives oxlint and oxfmt the one entry, and refuses a second", async () => {
+it("repo sync gives oxlint and the oxfmt config the one entry, and refuses a second", async () => {
   const config = 'export default { packs: ["standards"] };\n';
 
   const root = checkout({

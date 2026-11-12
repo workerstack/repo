@@ -44,7 +44,7 @@ type Kept = { text: string; parts: readonly { from: number; at: number }[] };
 
 type Piece = { at: number; width: number };
 
-/** The columns one grapheme takes the way oxfmt counts: an emoji 2, marks 0, wide and fullwidth 2, the rest 1. */
+/** The columns one grapheme takes the way bun fmt counts: an emoji 2, marks 0, wide and fullwidth 2, the rest 1. */
 function graphemeWidth(grapheme: string): number {
   if (EMOJI.test(grapheme)) return EMOJI_WIDTH;
   let width = 0;
@@ -69,7 +69,7 @@ function widthOf(text: string): number {
   return piecesOf(text).reduce((sum, piece) => sum + piece.width, 0);
 }
 
-/** The hint for a node that holds text oxfmt leaves long, or none. */
+/** The hint for a node that holds text bun fmt leaves long, or none. */
 function hintOf(node: Found): string | undefined {
   if (node.type === TEMPLATE_ELEMENT) return STRING_HINT;
 
@@ -176,7 +176,7 @@ function overflowAt(line: string): number | undefined {
   return undefined;
 }
 
-/** Fails each line wider than `PRINT_WIDTH` columns as oxfmt counts them, reported at column 121. */
+/** Fails each line wider than `PRINT_WIDTH` columns as bun fmt counts them, reported at column 121. */
 export const maxLineWidth: RepoRule<"wide"> = {
   create(context) {
     return {

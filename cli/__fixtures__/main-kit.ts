@@ -149,7 +149,7 @@ for HEAD
   docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   fixtures          Rename fixture folders to __fixtures__ and rewrite their path references (--fix: apply; else \
 list)
-  fmt               Format with the standards pack's oxfmt config (--check: report only; args go to oxfmt)
+  fmt               Format with the standards pack's oxfmt config (--check: report only; args go to bun fmt)
   lint              Lint with the standards pack's oxlint config (args go to oxlint; --baseline: lower \
 .repo/lint-baseline.json)
   mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> \

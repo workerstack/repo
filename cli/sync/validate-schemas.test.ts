@@ -99,18 +99,26 @@ it("reports every problem, in output order", () => {
   expect(lines.map((line) => line.split(":")[0])).toStrictEqual(["b.yaml", ".vscode/tasks.json", "a.yaml"]);
 });
 
-/** The top-level keys the pinned tool's shipped JSON schema allows. */
-function shippedKeys(tool: "oxlint" | "oxfmt"): string[] {
-  const dir = path.dirname(Bun.resolveSync(`${tool}/package.json`, import.meta.dirname));
-  const text = fs.readFileSync(path.join(dir, "configuration_schema.json"), "utf8");
+/** The top-level keys the JSON schema at `schema` allows. */
+function schemaKeys(schema: string): string[] {
+  const text = fs.readFileSync(schema, "utf8");
   const { properties } = z.object({ properties: z.record(z.string(), z.unknown()) }).parse(JSON.parse(text));
 
   return Object.keys(properties).toSorted();
 }
 
+/** The schema oxlint ships with the pinned package. */
+const OXLINT_SCHEMA = path.join(
+  path.dirname(Bun.resolveSync("oxlint/package.json", import.meta.dirname)),
+  "configuration_schema.json",
+);
+
+/** The oxfmt config schema 0.77.0 shipped, vendored: bun fmt reads the same config and installs no schema. */
+const OXFMT_SCHEMA = path.join(import.meta.dirname, "__fixtures__", "oxfmt-configuration-schema.json");
+
 it("checks each config against every top-level key its tool allows, and only those", () => {
-  expect(Object.keys(OXLINT_CONFIG.shape).toSorted()).toStrictEqual(shippedKeys("oxlint"));
-  expect(Object.keys(OXFMT_CONFIG.shape).toSorted()).toStrictEqual(shippedKeys("oxfmt"));
+  expect(Object.keys(OXLINT_CONFIG.shape).toSorted()).toStrictEqual(schemaKeys(OXLINT_SCHEMA));
+  expect(Object.keys(OXFMT_CONFIG.shape).toSorted()).toStrictEqual(schemaKeys(OXFMT_SCHEMA));
 });
 
 it("accepts a commented oxfmt config and a plain oxlint config", () => {

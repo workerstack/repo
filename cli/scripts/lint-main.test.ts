@@ -37,7 +37,7 @@ afterEach(() => {
 });
 
 it(
-  "lint --baseline seeds rules a file has no entry for, never raises one, drops gone files, and oxfmt keeps the file",
+  "lint --baseline seeds rules a file has no entry for, never raises one, drops gone files, and bun fmt keeps the file",
   { timeout: SLOW },
   async () => {
     const seeded = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [PARAMS]: 1 }, "src/gone.ts": { [NN]: 4 } };
@@ -55,7 +55,7 @@ it(
     expect(out).toHaveBeenCalledWith("repo lint: baseline written: 3 files, 4 problems\n");
     const written = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [FLOAT]: 1, [NN]: 1 }, "src/c.ts": { [NN]: 1 } };
     expect(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8")).toBe(`${JSON.stringify(written, null, 2)}\n`);
-    expect(captureTool("oxfmt", ["--check", BASELINE_PATH], root).code).toBe(0);
+    expect(captureTool("bun fmt", ["--check", BASELINE_PATH], root).code).toBe(0);
   },
 );
 

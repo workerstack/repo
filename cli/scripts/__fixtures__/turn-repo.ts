@@ -89,7 +89,7 @@ export const unstaged = (root: string) => git(root, "diff", "--name-only").split
 export const TSCONFIG = `{\n  "extends": ${JSON.stringify(path.join(PKG_ROOT, "tsconfig/bun.json"))},\n  "include": ["src"]\n}\n`;
 /**
  * A folder's tsconfig.src.json, and the strict.json it extends that points at this checkout's strict base, so the
- * src config's text, which oxfmt keeps as is, does not depend on how long the checkout's path is.
+ * src config's text, which bun fmt keeps as is, does not depend on how long the checkout's path is.
  */
 export const srcConfig = (dir = ""): Record<string, string> => ({
   [path.posix.join(dir, "strict.json")]:

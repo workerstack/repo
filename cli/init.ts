@@ -15,6 +15,7 @@ import { placeDevDependency } from "./place-dev-dependency.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { execFileSync } from "./spawn.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
+import { OXFMT_CONFIG_PATH } from "./sync/standards.ts";
 
 /** This package's root, which init reads its version from. */
 function builtInRoot(): string {
@@ -59,7 +60,7 @@ function quoted(names: readonly string[]): string {
 }
 
 /**
- * Write `workerstack.config.ts`, formatted as oxfmt would, with the default packs (agents, standards and docs),
+ * Write `workerstack.config.ts`, formatted as bun fmt would, with the default packs (agents, standards and docs),
  * every host and the chosen skill packs, only when the repo has no config.
  */
 export function writeConfigIfMissing(dest: string, skills: readonly string[] = []): void {
@@ -67,7 +68,7 @@ export function writeConfigIfMissing(dest: string, skills: readonly string[] = [
 
   if (fs.existsSync(configPath)) return;
   const keys = [`hosts: [${quoted(HOSTS)}]`, ...(skills.length > 0 ? [`skills: [${quoted(skills)}]`] : [])];
-  // Laid out as the standards pack's oxfmt would: one line while it fits the width, else one key per line.
+  // Laid out as bun fmt would under the standards config: one line while it fits the width, else one key per line.
   const inline = `  agents: { ${keys.join(", ")} },`;
 
   const agents =
@@ -121,17 +122,18 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
 }
 
 /**
- * Has oxfmt order and lay out the manifest in `dest` as the standards config does (`sortPackageJson`, the print
- * width), so a new repo's first `repo fmt --check` leaves it alone. A failure leaves the file as written; `repo fmt`
- * fixes it.
+ * Has bun fmt order and lay out the manifest in `dest` as the standards config does (`sortPackageJson`, the print
+ * width), so a new repo's first `repo fmt --check` leaves it alone. The temp config takes the oxfmt config's name:
+ * bun fmt reads any other `--config` file as its own format and drops `sortPackageJson`. A failure leaves the file as
+ * written; `repo fmt` fixes it.
  */
 function formatManifest(dest: string): void {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-init-fmt-"));
 
   try {
-    const config = path.join(dir, "oxfmt.json");
+    const config = path.join(dir, OXFMT_CONFIG_PATH);
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
-    captureTool("oxfmt", ["--config", config, "package.json"], dest);
+    captureTool("bun fmt", ["--config", config, "package.json"], dest);
   } finally {
     fs.rmSync(dir, { force: true, recursive: true });
   }

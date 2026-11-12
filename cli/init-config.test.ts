@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -11,13 +10,13 @@ import {
   defaultBody,
   fakeExec,
   hostsList,
-  oxfmtBin,
   stubPkgRoot,
   tmp,
   useInitKit,
 } from "./__fixtures__/init-kit.ts";
 import { HOSTS, SKILL_PACKS } from "./config.ts";
 import { init, writeConfigIfMissing } from "./init.ts";
+import { captureTool } from "./scripts/lint.ts";
 import { standards } from "./sync/standards.ts";
 
 useInitKit();
@@ -73,7 +72,7 @@ it("breaks agents over lines when one line would pass 120 columns", () => {
 });
 
 it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
-  "writes files the pinned oxfmt finds formatted under the standards config (skills %j)",
+  "writes files bun fmt finds formatted under the standards config (skills %j)",
   (skills) => {
     const dest = tmp("repo-config-fmt-");
     fs.writeFileSync(
@@ -96,9 +95,9 @@ it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
       }
     }
 
-    const run = spawnSync(process.execPath, [oxfmtBin(), "--check"], { cwd: dest, encoding: "utf8" });
+    const run = captureTool("bun fmt", ["--check"], dest);
     expect(run.stdout + run.stderr).toContain("All matched files use the correct format");
-    expect(run.status).toBe(0);
+    expect(run.code).toBe(0);
   },
 );
 

@@ -113,7 +113,7 @@ describe("repo commit-msg size and setup", () => {
   it("refuses an oversized commit until its message says why, at the configured limit", async () => {
     const root = repo({}, { "src/a.test.ts": lines(4), "src/a.ts": lines(1236) });
     expect(await commitMsg(root, "fix: handle y\n")).toStrictEqual(refused(OVER));
-    expect(await commitMsg(root, "fix: handle y\n\nReformat from the oxfmt upgrade.\n")).toStrictEqual(PASSED);
+    expect(await commitMsg(root, "fix: handle y\n\nReformat from the bun fmt upgrade.\n")).toStrictEqual(PASSED);
     put(root, { [CONFIG_FILE]: "export default { commit: { maxChangedLines: 1500 } }\n" });
     expect(await commitMsg(root, "fix: handle y\n")).toStrictEqual(PASSED);
   });

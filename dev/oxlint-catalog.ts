@@ -37,7 +37,7 @@ function run(root: string): number {
   if (listing.code !== 0) return listing.code;
   fs.writeFileSync(path.join(root, CATALOG), JSON.stringify(oxlintCatalog(listing.stdout)));
 
-  return captureTool("oxfmt", [CATALOG], root).code;
+  return captureTool("bun fmt", [CATALOG], root).code;
 }
 
 if (import.meta.main) process.exitCode = run(ROOT);

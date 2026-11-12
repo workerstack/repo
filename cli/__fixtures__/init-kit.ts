@@ -71,14 +71,3 @@ export const PACKS_LINE: string = `  packs: ["agents", "standards", "docs"],\n`;
 export function defaultBody(): string {
   return `${PACKS_LINE}  agents: { hosts: [${hostsList()}] },\n`;
 }
-
-/** The pinned oxfmt's bin script, from its package.json. */
-export function oxfmtBin(): string {
-  const pkg = Bun.resolveSync("oxfmt/package.json", import.meta.dirname);
-  const manifest: unknown = JSON.parse(fs.readFileSync(pkg, "utf8"));
-  if (typeof manifest !== "object" || manifest === null || !("bin" in manifest)) throw new Error(`${pkg} has no bin`);
-  const { bin } = manifest;
-  if (typeof bin !== "object" || bin === null || !("oxfmt" in bin) || typeof bin.oxfmt !== "string")
-    throw new Error(`${pkg} has no oxfmt bin`);
-  return path.join(path.dirname(pkg), bin.oxfmt);
-}

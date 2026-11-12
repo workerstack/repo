@@ -1,4 +1,4 @@
-/** The line width oxfmt formats to, and the width `repo/max-line-width` allows. */
+/** The line width bun fmt formats to, and the width `repo/max-line-width` allows. */
 export const PRINT_WIDTH = 120;
 
 /** A URL cannot wrap, so a line that is long only by one is left alone. */
@@ -13,13 +13,13 @@ export const TRAILING_CR: RegExp = /\r$/;
 /** The key every node holds its parent under; a walk of the children skips it. */
 export const PARENT_KEY = "parent";
 
-/** An emoji grapheme: oxfmt counts the whole cluster as 2 columns. Built from a string for the `v` flag. */
+/** An emoji grapheme: bun fmt counts the whole cluster as 2 columns. Built from a string for the `v` flag. */
 export const EMOJI: Readonly<RegExp> = /* @__PURE__ */ new RegExp("^\\p{RGI_Emoji}$", "v");
 
-/** The columns oxfmt gives an emoji grapheme. */
+/** The columns bun fmt gives an emoji grapheme. */
 export const EMOJI_WIDTH = 2;
 
-/** The node types whose text oxfmt never splits: a string or regex literal, and a template's text. */
+/** The node types whose text bun fmt never splits: a string or regex literal, and a template's text. */
 export const LITERAL = "Literal";
 export const TEMPLATE_ELEMENT = "TemplateElement";
 

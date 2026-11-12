@@ -147,7 +147,7 @@ export function writeFloors(root: string, file: string, floors: Rows): boolean {
   const full = path.join(root, file);
   fs.mkdirSync(path.dirname(full), { recursive: true });
   fs.writeFileSync(full, sortedJsonValue(floors, JSON_INDENT));
-  const formatted = captureTool("oxfmt", [file], root);
+  const formatted = captureTool("bun fmt", [file], root);
 
   if (formatted.code === PASSED) return true;
   process.stderr.write(formatted.stdout + formatted.stderr);

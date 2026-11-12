@@ -17,12 +17,12 @@ import { FIX_HINT } from "./json-keys.constants.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
-import { CHECK_FLAG, MODULES_DIR, NOT_FOUND } from "./lint.constants.ts";
+import { BUN_FMT_ARGS, CHECK_FLAG, INIT_FLAG, INIT_REFUSAL, MODULES_DIR, NOT_FOUND } from "./lint.constants.ts";
 import { packageBin } from "./package-bin.ts";
 import { toolEnv } from "./tool-env.ts";
 
-/** The pinned tools the standards pack runs. */
-export type Tool = "oxlint" | "oxfmt";
+/** The tools the standards pack runs: the pinned oxlint, and the formatter of the bun running this. */
+export type Tool = "oxlint" | "bun fmt";
 
 /** Runs `tool` with `args` in `root` and returns its exit code. */
 export type RunTool = (tool: Tool, args: string[], root: string) => number;
@@ -36,8 +36,8 @@ export type ToolDeps = {
   cargo?: CargoRun;
 };
 
-const COMMAND: Record<Tool, string> = { oxfmt: "fmt", oxlint: "lint" };
-const CONFIG: Record<Tool, string> = { oxfmt: OXFMT_CONFIG_PATH, oxlint: OXLINT_CONFIG_PATH };
+const COMMAND: Record<Tool, string> = { "bun fmt": "fmt", oxlint: "lint" };
+const CONFIG: Record<Tool, string> = { "bun fmt": OXFMT_CONFIG_PATH, oxlint: OXLINT_CONFIG_PATH };
 
 /** Names each file `--check` found an own-line block comment in. */
 function reportComments(found: readonly OwnLine[], stderr: (s: string) => void): void {
@@ -82,19 +82,24 @@ function formatSorted(job: {
       stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
   }
 
-  const code = run("oxfmt", args, root);
+  const code = run("bun fmt", args, root);
 
   return code === 0 && (sorted.found.length > 0 || commented.length > 0) && check ? 1 : code;
+}
+
+/** Writes `s` to this process's stderr. */
+function writeStderr(s: string): void {
+  process.stderr.write(s);
 }
 
 /**
  * `repo lint` and `repo fmt`: the pinned tool, run in the repo root with the arguments given, once the config
  * loads with the standards pack on and sync has written the tool's config. Its exit code is returned as is, except
  * that `repo fmt --check` also fails on a json key out of order. `repo fmt` in a repo with a root Cargo.toml then runs
- * `cargo fmt --all` (with `--check` when given), and fails on its exit code when oxfmt passed.
+ * `cargo fmt --all` (with `--check` when given), and fails on its exit code when bun fmt passed.
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
-  const { cwd = process.cwd(), stderr = (s: string) => process.stderr.write(s), run = spawnTool } = deps;
+  const { cwd = process.cwd(), stderr = writeStderr, run = spawnTool } = deps;
 
   function fail(lines: string[]): number {
     for (const line of lines) stderr(`repo ${COMMAND[tool]}: ${line}\n`);
@@ -115,12 +120,15 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
   if (!fs.existsSync(path.join(root, CONFIG[tool])))
     return fail([`no ${CONFIG[tool]}; run \`bun repo sync\` to write it`]);
 
-  if (tool !== "oxfmt") return run(tool, args, root);
+  if (tool !== "bun fmt") return run(tool, args, root);
 
   return withCargoFmt(root, formatSorted({ args, cwd, root, run, stderr }), { ...deps, args, stderr });
 }
 
-/** `code`, the exit of oxfmt, folded with that of `cargo fmt --all` when `root` has a Cargo.toml: the first failure. */
+/**
+ * `code`, the exit of bun fmt, folded with that of `cargo fmt --all` when `root` has a Cargo.toml: the first
+ * failure.
+ */
 function withCargoFmt(
   root: string,
   code: number,
@@ -137,8 +145,12 @@ export function lint(argv: string[]): Promise<number> {
   return runTool("oxlint", argv);
 }
 
+/** `repo fmt`: bun fmt through `runTool`, refusing `--init`, which would write a `[fmt]` section sync then reverts. */
 export function fmt(argv: string[], deps: ToolDeps = {}): Promise<number> {
-  return runTool("oxfmt", argv, deps);
+  if (!argv.includes(INIT_FLAG)) return runTool("bun fmt", argv, deps);
+  (deps.stderr ?? writeStderr)(`repo fmt: ${INIT_REFUSAL}\n`);
+
+  return Promise.resolve(1);
 }
 
 /** The file a package export resolves to, from this package's install. */
@@ -147,9 +159,9 @@ function resolved(specifier: string): string {
   return Bun.resolveSync(specifier, import.meta.dirname);
 }
 
-/** The tool's bin script, read from its package.json; it is a node shim, so bun runs it. */
-function binOf(tool: Tool): string {
-  return packageBin(resolved(`${tool}/package.json`), tool);
+/** oxlint's bin script, read from its package.json; it is a node shim, so bun runs it. */
+function oxlintBin(): string {
+  return packageBin(resolved("oxlint/package.json"), "oxlint");
 }
 
 /** What a captured run printed and its exit code. */
@@ -185,12 +197,14 @@ function oxlintEnv(): NodeJS.ProcessEnv {
   };
 }
 
-/** The bun command line and environment that run `tool`. */
+/** The bun command line and environment that run `tool`: oxlint's bin, or bun's own formatter past any `fmt` script. */
 function commandOf(tool: Tool) {
-  return { args: [binOf(tool)], env: childEnv(tool === "oxlint" ? oxlintEnv() : {}) };
+  if (tool === "bun fmt") return { args: [...BUN_FMT_ARGS], env: childEnv() };
+
+  return { args: [oxlintBin()], env: childEnv(oxlintEnv()) };
 }
 
-/** Spawns bun on the tool's bin, output straight to the terminal. */
+/** Spawns bun on the tool's command line, output straight to the terminal. */
 function spawnTool(tool: Tool, args: string[], root: string): number {
   const command = commandOf(tool);
 
@@ -253,7 +267,7 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
 }
 
 /**
- * The comment conversion, the sort of json keys, then oxfmt, on `files` as `repo turn` runs them; a refusal to sort
+ * The comment conversion, the sort of json keys, then bun fmt, on `files` as `repo turn` runs them; a refusal to sort
  * fails.
  */
 export function captureSorted(files: readonly string[], root: string): Captured {
@@ -262,5 +276,5 @@ export function captureSorted(files: readonly string[], root: string): Captured 
 
   if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
 
-  return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);
+  return captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], root);
 }

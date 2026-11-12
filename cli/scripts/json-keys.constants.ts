@@ -1,7 +1,7 @@
 /** The extensions of the files the sorter and the comment conversion read. */
 export const JSONC_EXTENSIONS: readonly string[] = [".json", ".jsonc"];
 
-/** The manifest oxfmt sorts itself (`sortPackageJson`), so the sorter leaves it alone. */
+/** The manifest bun fmt sorts itself (`sortPackageJson`), so the sorter leaves it alone. */
 export const MANIFEST_NAME = "package.json";
 
 /** The git pathspecs listing every json file with room for comments, at any depth. */

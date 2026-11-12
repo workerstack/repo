@@ -98,7 +98,7 @@ it(
 );
 
 it(
-  "has oxfmt ignore every planned output of a repo that commits its trees, tracked or not, " +
+  "has the oxfmt config ignore every planned output of a repo that commits its trees, tracked or not, " +
     "whole or block, anchored at the root",
   () => {
     const planned = [

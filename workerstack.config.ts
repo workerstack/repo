@@ -22,10 +22,6 @@ export default defineConfig({
         reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
       },
       {
-        dependency: "oxfmt",
-        reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
-      },
-      {
         dependency: "jscpd",
         reason:
           "cli/clones/jscpd-bin.ts resolves its platform package with Bun.resolveSync and spawns the binary by path",
@@ -98,7 +94,6 @@ export default defineConfig({
         files: [
           "dev/agent-tokens.ts",
           "dev/capture-tree-goldens.ts",
-          "dev/fmt-parity.ts",
           "dev/link-self.ts",
           "dev/oxlint-catalog.ts",
           "dev/reply-voice-stats.ts",

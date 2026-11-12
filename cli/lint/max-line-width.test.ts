@@ -103,7 +103,7 @@ describe("max-line-width exemptions", () => {
 });
 
 describe("max-line-width sealed ciphers", () => {
-  it("passes a line long only by the cipher sealed() takes, beside it or alone where oxfmt moves it", () => {
+  it("passes a line long only by the cipher sealed() takes, beside it or alone where bun fmt moves it", () => {
     expect(messagesOf(`export const env = defineEnv({ prod: { KEY: sealed("${CIPHER}") } });`)).toStrictEqual([]);
 
     const formatted = [
