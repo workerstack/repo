@@ -130,3 +130,20 @@ describe("max-line-width sealed ciphers", () => {
     expect(messagesOf(`x(sealed("${CIPHER}"), "${"😀".repeat(60)}x");`)).toStrictEqual([over(17, STRING_HINT)]);
   });
 });
+
+describe("max-line-width sealed cipher edges", () => {
+  it("exempts only a call of one string literal, failing sealed() with no, a non-string, or several arguments", () => {
+    expect(messagesOf(`x(sealed(), "${"x".repeat(121)}");`)).toHaveLength(1);
+    expect(messagesOf(`x(sealed(${CIPHER}), "${"x".repeat(121)}");`)).toHaveLength(1);
+    expect(messagesOf(`x(sealed(1, "${CIPHER}"), 2);`)).toHaveLength(1);
+    expect(messagesOf(`x(sealed(1), "${"x".repeat(121)}");`)).toHaveLength(1);
+    expect(messagesOf(`x(sealed("${CIPHER}", "${CIPHER}"));`)).toHaveLength(1);
+  });
+
+  it("reports the column in the text before a cipher when the line is already over the width there", () => {
+    const code = `x("${"x".repeat(125)}", sealed("${CIPHER}"));`;
+    const [report] = reportsOf(maxLineWidth, { "a.ts": code });
+
+    expect(report?.message).toBe(over(21, STRING_HINT));
+  });
+});
