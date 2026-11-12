@@ -10,8 +10,8 @@ import type { GrokPlan, JsonPlan, PurgeResult, ReportRow } from "./purge-global-
 import { parseArgv, resolveHome } from "./purge-paths.ts";
 import { planClaudePlugins, planCursor, planGrok } from "./purge-plans.ts";
 
-function errorText(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
+function errorText(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 function writeText(abs: string, body: string): void {

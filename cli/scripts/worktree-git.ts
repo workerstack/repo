@@ -13,11 +13,10 @@ const TRAILING_DASHES = /-+$/;
 const BLANK_LINE_RUN = /\n\n+/;
 const ORIGIN_PREFIX = /^origin\//;
 const LEADING_SPACE = /^\s/;
-const NOTHING: readonly unknown[] = [undefined, null];
 
-/** `String(raw)`, or "" for undefined and null. */
-export function textOf(raw: unknown): string {
-  return NOTHING.includes(raw) ? "" : String(raw);
+/** `raw`, or "" when there is none. */
+export function textOf(raw: string | undefined): string {
+  return raw ?? "";
 }
 
 /** A spawn stream trimmed; empty when the spawn left none. */
@@ -36,7 +35,7 @@ export function samePath(a: string, b: string): boolean {
 }
 
 /** A git-safe directory and branch name, or null when nothing usable is left. */
-export function worktreeName(raw: unknown): string | null {
+export function worktreeName(raw: string | undefined): string | null {
   const name = textOf(raw)
     .replaceAll(UNSAFE_NAME_CHARS, "-")
     .replaceAll(DASH_RUNS, "-")
@@ -47,7 +46,7 @@ export function worktreeName(raw: unknown): string | null {
 }
 
 /** `worktreeName(raw)`, or a throw naming the characters a name may use. */
-export function requireName(raw: unknown): string {
+export function requireName(raw: string | undefined): string {
   const name = worktreeName(raw);
   const problem = `has no usable characters; use letters, digits, ".", "_" or "-"`;
 

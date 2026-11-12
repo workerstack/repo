@@ -4,14 +4,13 @@ import { USAGE } from "./listen.constants.ts";
 import type { ListenMainOpts } from "./listen.types.ts";
 /** Speech-to-text (input only). Mic/file → local whisper.cpp or OpenAI Whisper. */
 import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
-import { str } from "./voice-args.ts";
 
-function errMessage(e: unknown): string {
-  const message = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
+function errMessage(cause: unknown): string {
+  const message = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
 
   if (typeof message === "string" && message !== "") return message;
 
-  return e instanceof Error ? String(e) : str(e);
+  return String(cause).trim();
 }
 
 /** Runs one `repo listen` verb and returns its exit code; an unknown verb prints the usage. */

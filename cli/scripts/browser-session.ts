@@ -1,5 +1,6 @@
 /** The browser session on disk: where it lives, its JSON, and whether its engine still runs. */
 import fs from "node:fs";
+import type { AddressInfo } from "node:net";
 import path from "node:path";
 
 import { z } from "zod";
@@ -15,14 +16,14 @@ export function asRec(v: Json | undefined): Rec {
 }
 
 /** `v` as text: a string as is, a number or boolean spelled out, anything else empty. */
-export function textOf(v: unknown): string {
+export function textOf(v: Json | undefined): string {
   if (typeof v === "string") return v;
 
   return typeof v === "number" || typeof v === "boolean" ? String(v) : "";
 }
 
 /** `v` as a number; 0 when it is not one. */
-export function numberOf(v: unknown): number {
+export function numberOf(v: string): number {
   const n = Number(v);
 
   return Number.isNaN(n) ? 0 : n;
@@ -34,13 +35,13 @@ export function filled(s: string | undefined): string | undefined {
 }
 
 /** The port a server listening on TCP is bound to; `server.address()` is a pipe path or null only off TCP. */
-export function boundPort(address: unknown): number {
+export function boundPort(address: string | AddressInfo | null): number {
   return z.object({ port: z.number() }).parse(address).port;
 }
 
 /** The message of a thrown value. */
-export function errMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
+export function errMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** The session dir under the root `cwd` sits in. */

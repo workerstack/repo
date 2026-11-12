@@ -34,8 +34,7 @@ it("accepts exactly the three values", () => {
 
   for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
 
-  for (const bad of ["review-medium", "Default", " default", "", undefined, null, 3, ["default"]])
-    expect(parseStrategy(bad)).toBeNull();
+  for (const bad of ["review-medium", "Default", " default", "", undefined]) expect(parseStrategy(bad)).toBeNull();
 });
 
 it("review-fast starts fast then goes deep; review-deep is deep both times", () => {
@@ -50,7 +49,7 @@ it("accepts exactly ask, auto and away", () => {
 
   for (const m of MODES) expect(parseMode(m)).toBe(m);
 
-  for (const bad of ["Away", " ask", "", "review", undefined, null, 1, ["auto"]]) expect(parseMode(bad)).toBeNull();
+  for (const bad of ["Away", " ask", "", "review", undefined]) expect(parseMode(bad)).toBeNull();
 });
 
 it("stampPath keeps the sid inside the sessions dir", () => {

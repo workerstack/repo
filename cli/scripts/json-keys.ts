@@ -12,7 +12,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
-import { tryJson } from "../json.ts";
+import { type JsonInput, tryJson } from "../json.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
 import {
   ANCHOR,
@@ -42,7 +42,7 @@ function compare(a: string, b: string): number {
 }
 
 /** `value` as indented JSON ending in a newline, every key sorted by code unit, deep: how a repo writer emits JSON. */
-export function sortedJsonValue(data: unknown, indent: number = INDENT): string {
+export function sortedJsonValue(data: JsonInput, indent: number = INDENT): string {
   const text = `${JSON.stringify(data, null, indent)}\n`;
 
   return sortedJsonText(text)?.text ?? text;

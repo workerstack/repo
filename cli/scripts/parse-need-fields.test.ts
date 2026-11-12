@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { parseNeed } from "./parse-need.ts";
 
-function need(rows: unknown) {
+function need(rows: Json) {
   return parseNeed(`need: ${JSON.stringify(rows)}`);
 }
 

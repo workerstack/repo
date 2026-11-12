@@ -15,7 +15,7 @@ export type Policy = {
 /** The codex config the policy wants: its `[agents]` table always sets `max_depth`. */
 export type CodexConfig = SettingsTable & { agents: SettingsTable & { max_depth: SettingsValue } };
 
-export function stringList(v: unknown): string[] {
+export function stringList(v: SettingsValue | undefined): string[] {
   return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 }
 

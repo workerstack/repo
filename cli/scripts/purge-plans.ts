@@ -1,7 +1,7 @@
 /** What `repo purge-mcps` would change in each global dest, planned without writing. */
 import fs from "node:fs";
 
-import { parse as parseToml, type TomlTable } from "smol-toml";
+import { parse as parseToml, type TomlTable, type TomlValue } from "smol-toml";
 import { z } from "zod";
 
 import { isTomlTable } from "../is-toml-table.ts";
@@ -23,16 +23,20 @@ function unreadable(abs: string): Error {
   return new Error(`unreadable dest: ${abs}`);
 }
 
-function isStripePluginKey(k: unknown): boolean {
-  return String(k).split("@")[0] === STRIPE_PLUGIN;
+function isStripePluginKey(k: string): boolean {
+  return k.split("@")[0] === STRIPE_PLUGIN;
 }
 
-function strList(v: unknown, label: string): string[] {
+function strList(v: TomlValue | undefined, label: string): string[] {
   if (v == null) return [];
 
   if (!Array.isArray(v)) throw unreadable(label);
 
-  return v.map((x) => String(x));
+  return v.map((x) => {
+    if (typeof x === "object") throw unreadable(label);
+
+    return String(x);
+  });
 }
 
 function dedupe(list: string[]): string[] {

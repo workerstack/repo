@@ -8,6 +8,8 @@ import { loadCfg } from "../listen-argv.ts";
 import { sessionPath } from "../listen-session.ts";
 import type {
   ChildLike,
+  ErrorListener,
+  ExitListener,
   FetchFn,
   FetchResult,
   ListenCfg,
@@ -19,7 +21,19 @@ import type {
 import { z } from "zod";
 import { isRecord, type Json, type JsonObject, readJson } from "../../json.ts";
 
-export type Handler = (a?: unknown, b?: unknown) => void;
+/** The listeners a fake child was handed, by event. */
+export type Handlers = { error?: ErrorListener; exit?: ExitListener };
+
+/** A fake child's `on`: it records each listener under its event in `handlers`. */
+export function recordOn(handlers: Handlers): NonNullable<ChildLike["on"]> {
+  function on(event: "error", cb: ErrorListener): void;
+  function on(event: "exit", cb: ExitListener): void;
+  function on(event: keyof Handlers, cb: ErrorListener | ExitListener): void {
+    Object.assign(handlers, { [event]: cb });
+  }
+
+  return on;
+}
 
 const tmpDirs: string[] = [];
 
@@ -136,16 +150,16 @@ export function recording(opts: { wav?: string | null; pid?: number } = {}) {
   return { cwd, wav };
 }
 
-export type FfmpegCtx = { out: string; errFd: number; on: Record<string, Handler> };
+export type FfmpegCtx = { out: string; errFd: number; on: Handlers };
 export type Seen = { args: string[] };
 
 /** A spawnFn for a fake ffmpeg: its script can write the wav and the log fd, then exit or fail. */
 export function ffmpeg(script: (ctx: FfmpegCtx) => void, seen: Seen[] = []) {
   return (_bin: string, args: string[], opts: SpawnOpts): ChildLike => {
-    const on: Record<string, Handler> = {};
+    const on: Handlers = {};
     seen.push({ args });
     queueMicrotask(() => script({ out: args.at(-1) ?? "", errFd: Number(opts.stdio?.[2]), on }));
-    return { pid: 777, on: (ev: string, cb: Handler) => void (on[ev] = cb) };
+    return { on: recordOn(on), pid: 777 };
   };
 }
 

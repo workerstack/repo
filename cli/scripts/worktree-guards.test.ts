@@ -69,6 +69,5 @@ it("guards update-ref on the default branch even behind a -m message, and frees 
 
 it("finds no grant words in no prompt", () => {
   expect(gitAskedWords(undefined)).toStrictEqual([]);
-  expect(gitAskedWords(null)).toStrictEqual([]);
   expect(gitAskedWords("please git commit and git stash")).toStrictEqual(["commit", "stash"]);
 });

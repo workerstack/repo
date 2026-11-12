@@ -54,11 +54,11 @@ function heredocsOpenedBy(line: string): Heredoc[] {
 }
 
 /** `command` without heredoc bodies and their terminator lines: they are data, not commands. */
-function dropHeredocBodies(command: unknown): string {
+function dropHeredocBodies(command: string): string {
   const kept: string[] = [];
   let pending: Heredoc[] = [];
 
-  for (const line of String(command).split("\n")) {
+  for (const line of command.split("\n")) {
     const [open] = pending;
 
     if (open !== undefined) {
@@ -127,7 +127,7 @@ function step(lx: ShellLexer, ch: string): void {
 }
 
 /** Shell words per command segment; a word holding `$`, a backtick or a leading `~` is not literal. */
-function shellSegments(command: unknown): Word[][] {
+function shellSegments(command: string): Word[][] {
   const seg: Word[] = [];
   const lx: ShellLexer = { i: 0, s: dropHeredocBodies(command), seg, segments: [seg], word: null };
 
@@ -162,7 +162,7 @@ function gitCommandOf(words: Word[], cwd: string, p: typeof path): GitCommand | 
 }
 
 /** Each git command of a shell line with the dir it runs in, following `cd <literal>` between segments. */
-export function* gitCommands(command: unknown, cwd: string, p: typeof path): Generator<GitCommand> {
+export function* gitCommands(command: string, cwd: string, p: typeof path): Generator<GitCommand> {
   let here = cwd;
 
   for (const words of shellSegments(command)) {

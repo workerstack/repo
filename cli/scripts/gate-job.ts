@@ -18,14 +18,9 @@ const REGEX_META_RE = /[.*+?^${}()|[\]\\]/g;
 /** A Windows `.exe` suffix. */
 const EXE_SUFFIX_RE = /\.exe$/;
 
-/** The command a hook got, or "" when it is not a string. */
-function commandText(command: unknown): string {
-  return typeof command === "string" ? command : "";
-}
-
 /** POSIX single-quote so `, $, and \ stay literal. */
-export function quoteQuery(q: unknown): string {
-  return `'${String(q).replaceAll("'", "'\\''")}'`;
+export function quoteQuery(q: string): string {
+  return `'${q.replaceAll("'", "'\\''")}'`;
 }
 
 export type RepoBin = {
@@ -74,8 +69,8 @@ export function jobCommand(workspaceRoot: string, args: string): string {
   return `${shellPath(repoBin(workspaceRoot))} ${JOB_WORD} ${args}`;
 }
 
-export function alreadyRtk(command: unknown): boolean {
-  const first = commandText(command).trim().replace(AFTER_FIRST_WORD_RE, "");
+export function alreadyRtk(command: string): boolean {
+  const first = command.trim().replace(AFTER_FIRST_WORD_RE, "");
 
   return first === RTK || first.endsWith(`/${RTK}`);
 }
@@ -84,11 +79,11 @@ function escapeRe(s: string): string {
   return s.replaceAll(REGEX_META_RE, "\\$&");
 }
 
-export function stripFlagValue(cmd: unknown, flag: string): string {
+export function stripFlagValue(cmd: string, flag: string): string {
   const f = escapeRe(flag);
   const val = `(?:"[^"]*"|'[^']*'|\\S+)`;
 
-  return commandText(cmd)
+  return cmd
     .replaceAll(new RegExp(`${f}=${val}`, "g"), `${flag}=_`)
     .replaceAll(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
 }
@@ -117,8 +112,8 @@ function isRepoBin(target: string, roots: Roots, p: typeof path): boolean {
  * Args after the job command, optionally behind `rtk`: `bun repo job` or `[bun] <checkout>/node_modules/.bin/repo job`.
  * A relative path resolves against the hook cwd, and both sides compare in their canonical spelling.
  */
-function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof path = path): string[] | null {
-  const cmd = commandText(command).trim();
+function jobRest(command: string, roots: Roots | null | undefined, p: typeof path = path): string[] | null {
+  const cmd = command.trim();
 
   if (cmd === "" || roots == null) return null;
   const parts = cmd.split(BLANKS_RE).filter(Boolean);
@@ -135,11 +130,7 @@ function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof pa
 }
 
 /** True when argv runs the workspace's job command (flags may be messy). */
-export function isWorkspaceJobScript(
-  command: unknown,
-  roots: Roots | null | undefined,
-  p: typeof path = path,
-): boolean {
+export function isWorkspaceJobScript(command: string, roots: Roots | null | undefined, p: typeof path = path): boolean {
   return jobRest(command, roots, p) != null;
 }
 
@@ -179,8 +170,8 @@ function scanJobArgs(rest: string[]): ParsedJob | null {
   return found;
 }
 
-export function parseJobCommand(command: unknown, roots: Roots | null | undefined): ParsedJob | null {
-  const cmd = commandText(command).trim();
+export function parseJobCommand(command: string, roots: Roots | null | undefined): ParsedJob | null {
+  const cmd = command.trim();
 
   if (cmd === "" || roots == null) return null;
 

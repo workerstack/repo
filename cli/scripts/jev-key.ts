@@ -23,8 +23,8 @@ export function jevUsagePath(home: string): string {
   return path.join(home, ".workerstack", "jev-usage.json");
 }
 
-export function estimateTokens(stateText: unknown, questionsText: unknown): number {
-  return Math.ceil((String(stateText).length + String(questionsText).length) / CHARS_PER_TOKEN);
+export function estimateTokens(stateText: string, questionsText: string): number {
+  return Math.ceil((stateText.length + questionsText.length) / CHARS_PER_TOKEN);
 }
 
 export function loadJevKey({

@@ -82,7 +82,7 @@ function proseErrors(bodies: Record<string, string>, rules: ProseRules): string[
 }
 
 /** A section check holding a doc's prose to `rules`. */
-export function proseCheck(rules: ProseRules): (doc: unknown, sections: Sections) => string[] {
+export function proseCheck(rules: ProseRules): SectionCheck {
   return (_doc, { bodies }) => proseErrors(bodies, rules);
 }
 

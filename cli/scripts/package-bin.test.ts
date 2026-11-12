@@ -2,13 +2,14 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { put, tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { packageBin } from "./package-bin.ts";
 
 useTempDirs();
 
 /** A package dir whose package.json holds `manifest`; the manifest's path. */
-function manifestOf(manifest: unknown): string {
+function manifestOf(manifest: Json): string {
   const dir = tempDir("workerstack-package-bin-");
   put(dir, "package.json", JSON.stringify(manifest));
 

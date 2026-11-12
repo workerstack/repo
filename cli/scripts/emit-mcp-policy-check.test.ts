@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { DENY_ALL, changeJson, changeToml, plant, plantDirs, plantPolicy } from "./__fixtures__/mcp-policy-kit.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
 
@@ -17,7 +18,7 @@ const AGENTS = ".agents/mcp_config.json";
 const ALLOW_A = { ...DENY_ALL, allow: ["a"] };
 
 /** A workspace emitted from `policy`, with the home passed so no real dotfile is consulted. */
-function emitted(policy: unknown = DENY_ALL) {
+function emitted(policy: Json = DENY_ALL) {
   const ws = tmp("mcp-check-ws-");
   const home = tmp("mcp-check-home-");
   plantPolicy(ws, policy);

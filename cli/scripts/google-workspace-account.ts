@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, tryJson } from "../json.ts";
+import { isRecord, type Json, type JsonInput, tryJson } from "../json.ts";
 import {
   ACCOUNT_RE,
   ADC_USER,
@@ -22,12 +22,12 @@ export function rec(v: Json | undefined): Rec {
 }
 
 /** `v` when it is a non-empty string, else undefined; a blank flag or JSON field reads as absent. */
-export function filled(v: unknown): string | undefined {
+export function filled(v: Json | undefined): string | undefined {
   return typeof v === "string" && v !== "" ? v : undefined;
 }
 
 /** The account named `id` (blank is the default) under `home`; throws on a name that is not a plain id. */
-export function accountContext(id?: unknown, home: string = os.homedir()): WorkspaceAccount {
+export function accountContext(id?: string, home: string = os.homedir()): WorkspaceAccount {
   const s = filled(filled(id)?.trim()) ?? DEFAULT_ACCOUNT;
 
   if (!ACCOUNT_RE.test(s)) throw new Error("bad --account (letters, numbers, _- only)");
@@ -67,7 +67,7 @@ export function readSecretJson<S extends z.ZodType>(p: string, schema: S): z.out
   }
 }
 
-export function writeSecretJson(p: string, obj: unknown): void {
+export function writeSecretJson(p: string, obj: JsonInput): void {
   fs.mkdirSync(path.dirname(p), { mode: SECRET_DIR_MODE, recursive: true });
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`, { mode: SECRET_FILE_MODE });
 }
@@ -117,10 +117,8 @@ function publicFields(t: Token): Rec {
 /** Saves a refreshed token where it came from; an ADC token goes to the account store, not gcloud's file. */
 export function persistToken(account: WorkspaceAccount, t: Token): void {
   if (t.isClasprc === true) {
-    const raw = readSecretJson(t.sourcePath, z.looseObject({ tokens: z.record(z.string(), z.unknown()).catch({}) }));
-    const tokens = raw?.tokens ?? {};
-    tokens.default = publicFields(t);
-    writeSecretJson(t.sourcePath, { ...raw, tokens });
+    const raw = readSecretJson(t.sourcePath, z.record(z.string(), z.json())) ?? {};
+    writeSecretJson(t.sourcePath, { ...raw, tokens: { ...rec(raw.tokens), default: publicFields(t) } });
 
     return;
   }

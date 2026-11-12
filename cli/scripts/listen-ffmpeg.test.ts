@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Handler } from "./__fixtures__/listen-env.ts";
+import { type Handlers, recordOn } from "./__fixtures__/listen-env.ts";
 import {
   darwinAudioSpec,
   defaultDevice,
@@ -75,12 +75,10 @@ describe("ffmpeg arguments", () => {
 });
 
 function fakeChild(over: Partial<ChildLike> = {}) {
-  const on: Record<string, Handler> = {};
+  const on: Handlers = {};
 
   const child: ChildLike = {
-    on(ev: string, cb: Handler) {
-      on[ev] = cb;
-    },
+    on: recordOn(on),
     pid: 321,
     ...over,
   };
@@ -100,11 +98,11 @@ describe("recCapture outcome", () => {
     expect(await pa).toMatchObject({ error: null, signal: null, status: 0 });
     const b = fakeChild();
     const pb = capture(b.child);
-    b.on.exit?.(undefined, "SIGTERM");
+    b.on.exit?.(null, "SIGTERM");
     expect(await pb).toMatchObject({ signal: "SIGTERM", status: null });
     const c = fakeChild();
     const pc = capture(c.child);
-    c.on.exit?.(2, 5);
+    c.on.exit?.(2, null);
     expect(await pc).toMatchObject({ signal: null, status: 2 });
   });
 

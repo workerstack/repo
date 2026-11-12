@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { cfgFor, cleanupTmp, plantSpeakJson, tmp } from "./__fixtures__/listen-env.ts";
 import { clampSeconds, loadCfg } from "./listen-argv.ts";
 import { DEFAULT_MODEL } from "./listen.constants.ts";
@@ -10,7 +11,7 @@ import { DEFAULT_MODEL } from "./listen.constants.ts";
 afterEach(cleanupTmp);
 
 /** Writes speak.json as given: a string verbatim, anything else as JSON. */
-function plantSpeak(home: string, body: unknown) {
+function plantSpeak(home: string, body: Json) {
   fs.mkdirSync(path.join(home, ".workerstack"), { recursive: true });
   fs.writeFileSync(
     path.join(home, ".workerstack", "speak.json"),
@@ -113,5 +114,15 @@ describe("loadCfg from speak.json", () => {
     expect(cfgFor(home).stt).toBe("auto");
     plantSpeak(home, { listen: "x", openai: 4 });
     expect(cfgFor(home).apiKey).toBe("");
+  });
+});
+
+describe("loadCfg seconds from speak.json", () => {
+  it("reads seconds written as text and drops seconds of another kind", () => {
+    const home = tmp("listen-cfg-secs-");
+    plantSpeak(home, { listen: { seconds: "6" } });
+    expect(cfgFor(home).seconds).toBe(6);
+    plantSpeak(home, { listen: { seconds: true } });
+    expect(cfgFor(home).seconds).toBe(8);
   });
 });

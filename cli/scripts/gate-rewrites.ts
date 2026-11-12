@@ -84,11 +84,11 @@ function strayDirRest(segs: string[]): string[] | null {
  * (README.md, `src/`, `cli/`) match neither rule and stay where they are.
  */
 export function rewriteScratchWrite(
-  filePath: unknown,
+  filePath: string,
   roots: Roots | null | undefined,
   p: typeof path = path,
 ): string | null {
-  if (typeof filePath !== "string" || roots == null) return null;
+  if (roots == null) return null;
   const existing = rewriteScratchPath(filePath, roots, p);
 
   if (existing !== null) return existing;
@@ -120,14 +120,14 @@ function createsFile(op: string): boolean {
  * Returns the rewritten patch (null when nothing moved) and every final path.
  */
 export function rewritePatch(
-  patch: unknown,
+  patch: string,
   roots: Roots,
   p: typeof path = path,
 ): { patch: string | null; paths: string[] } {
   const paths: string[] = [];
   const moved: string[] = [];
 
-  const next = String(patch).replace(PATCH_PATH_RE, (line: string, op: string, target: string) => {
+  const next = patch.replace(PATCH_PATH_RE, (line: string, op: string, target: string) => {
     const dest = createsFile(op) ? rewriteScratchWrite(target, roots, p) : null;
 
     if (op !== PATCH_DELETE) paths.push(dest ?? resolveTyped(roots, target, p));
@@ -157,10 +157,11 @@ export function writeTargets({
   }
 
   // Every caller that is not a write holds a patch, and both groups of PATCH_PATH_RE always participate in a match.
-  return [...String(patch).matchAll(PATCH_PATH_RE)].map(
-    ([, op, target]) =>
-      (createsFile(String(op)) ? rewriteScratchWrite(target, roots) : null) ?? resolveTyped(roots, String(target)),
-  );
+  return [...String(patch).matchAll(PATCH_PATH_RE)].map(([, op, target]) => {
+    const file = String(target);
+
+    return (createsFile(String(op)) ? rewriteScratchWrite(file, roots) : null) ?? resolveTyped(roots, file);
+  });
 }
 
 /** Where a write field lands when the gate moves it: null when it stays or orchestrate-parent persists it itself. */

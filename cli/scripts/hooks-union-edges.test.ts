@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
-import { isRecord, type Json, readJson } from "../json.ts";
+import { isRecord, type Json, type JsonInput, readJson } from "../json.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
@@ -13,7 +13,7 @@ import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const { tempDir: plant } = useTempDirs("union-edge-");
 
-function put(ws: string, rel: string, body: unknown) {
+function put(ws: string, rel: string, body: JsonInput) {
   const abs = path.join(ws, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, typeof body === "string" ? body : JSON.stringify(body));

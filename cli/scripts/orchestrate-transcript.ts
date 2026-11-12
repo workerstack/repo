@@ -21,7 +21,7 @@ const LEAD = /^[\s`*_>]+/;
 const TRAIL = /[\s`*_]+$/;
 
 /** A JSON field as text: the string itself, anything else empty. */
-function textOf(value: unknown): string {
+function textOf(value: Json | undefined): string {
   return typeof value === "string" ? value : "";
 }
 

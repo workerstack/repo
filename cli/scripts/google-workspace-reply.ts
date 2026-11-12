@@ -10,10 +10,10 @@ export function apiMessage(json: Json | undefined, fallback: string): string {
   return filled(rec(rec(json).error).message) ?? fallback;
 }
 
-export function errMessage(e: unknown): string {
-  const m = typeof e === "object" && e !== null && "message" in e ? filled(e.message) : undefined;
+export function errMessage(cause: unknown): string {
+  const message = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
 
-  return m ?? String(e);
+  return (typeof message === "string" ? filled(message) : undefined) ?? String(cause);
 }
 
 export async function jsonRecord(r: Response): Promise<Rec> {

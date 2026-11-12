@@ -19,8 +19,8 @@ function fakeIo(payload: string, write: (text: string) => void): HookIo {
 }
 
 describe("rewriteSpawnToolInput shapes", () => {
-  it.each([null, undefined, "prompt", 7, ["please go"]])("leaves %j alone", (toolInput) => {
-    expect(rewriteSpawnToolInput(toolInput)).toBeNull();
+  it("leaves a missing tool input alone", () => {
+    expect(rewriteSpawnToolInput(undefined)).toBeNull();
   });
 
   it("leaves a record whose prompt is not a string alone", () => {

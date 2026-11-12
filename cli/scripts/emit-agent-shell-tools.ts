@@ -34,11 +34,9 @@ const OPEN_BREAK = /^\r?\n/;
 /** The closing fence on its own line. */
 const CLOSE_FENCE = /\r?\n---\s*(?:\r?\n|$)/;
 
-export function splitFrontmatter(text: unknown): Frontmatter {
-  const src = typeof text === "string" ? text : "";
-
-  if (!src.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
-  const rest = src.slice(FENCE.length).replace(OPEN_BREAK, "");
+export function splitFrontmatter(text: string): Frontmatter {
+  if (!text.startsWith(FENCE)) return { error: "missing frontmatter", ok: false };
+  const rest = text.slice(FENCE.length).replace(OPEN_BREAK, "");
   const m = CLOSE_FENCE.exec(rest);
 
   if (m === null) return { error: "missing frontmatter close", ok: false };
@@ -46,8 +44,8 @@ export function splitFrontmatter(text: unknown): Frontmatter {
   return { body: rest.slice(m.index + m[0].length), fm: rest.slice(0, m.index), ok: true };
 }
 
-export function toClaudeShellBody(body: unknown): string {
-  return String(body)
+export function toClaudeShellBody(body: string): string {
+  return body
     .split(GENERIC_TOOL_LIST)
     .join(CLAUDE_TOOL_LIST)
     .split("web_search/web_fetch")

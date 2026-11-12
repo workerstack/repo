@@ -110,20 +110,20 @@ export function persistOwner(
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`; stamp required. */
 export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.[a-z0-9]+$/;
 
-export function extractTmpName(content: unknown): string {
-  const m = String(content).match(NAME_RE);
+export function extractTmpName(content: string): string {
+  const m = content.match(NAME_RE);
 
   return m === null ? "" : String(m[1]).trim();
 }
 
-export function extractTmpExt(content: unknown): string {
-  const m = String(content).match(EXT_RE);
+export function extractTmpExt(content: string): string {
+  const m = content.match(EXT_RE);
 
   return m === null ? "" : String(m[1]).trim();
 }
 
-export function stripTmpMeta(content: unknown): string {
-  return stripBom(String(content))
+export function stripTmpMeta(content: string): string {
+  return stripBom(content)
     .split(LINE_BREAK_RE)
     .filter((line) => !META_LINE_RE.test(line))
     .join("\n");

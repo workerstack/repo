@@ -1,3 +1,4 @@
+import type { Json } from "../json.ts";
 /** One board line: its fields flattened to words, and a work label with pasted blocks and secrets taken out. */
 import {
   DIGIT_RE,
@@ -17,16 +18,14 @@ import {
 } from "./board.constants.ts";
 import type { LooseRow } from "./board.types.ts";
 
-const NOTHING: readonly unknown[] = [undefined, null];
-
 /** Whether `value` is truthy, for values of any type. */
-export function isTruthy(value: unknown): boolean {
+export function isTruthy(value: Json | undefined): boolean {
   return Boolean(value);
 }
 
-/** `value` as text; null and undefined read as "". */
-export function str(value: unknown): string {
-  return NOTHING.includes(value) ? "" : String(value);
+/** `value` as text; null, undefined, objects and arrays read as "". */
+export function str(value: Json | undefined): string {
+  return value === undefined || typeof value === "object" ? "" : String(value);
 }
 
 /** `s`, or a dash when it is empty. */
@@ -35,17 +34,17 @@ export function orNone(s: string): string {
 }
 
 /** One word: whitespace runs become dashes. */
-export function field(value: unknown): string {
+export function field(value: Json | undefined): string {
   return orNone(str(value).replaceAll(SPACES_RE, "-").trim());
 }
 
 /** One line: whitespace runs become one space. */
-export function oneLine(value: unknown): string {
+export function oneLine(value: Json | undefined): string {
   return orNone(str(value).replaceAll(SPACES_RE, " ").trim());
 }
 
 /** A file-name-safe form of a field. */
-export function safe(value: unknown): string {
+export function safe(value: Json | undefined): string {
   return field(value).replaceAll(UNSAFE_NAME_RE, "_");
 }
 
@@ -63,7 +62,7 @@ function isOpaqueToken(token: string): boolean {
  * The user's own words from a prompt or label: pasted blocks stripped, secrets redacted, capped.
  * "" when nothing is left.
  */
-export function workLabel(text: unknown): string {
+export function workLabel(text: Json | undefined): string {
   let s = str(text);
 
   for (const re of STRIP_BLOCKS) s = s.replace(re, " ");
@@ -92,7 +91,7 @@ export function formatLine(row: LooseRow): string {
 }
 
 /** `value` as text, or a dash when it is missing or blank. */
-export function valueOrNone(value: unknown): string {
+export function valueOrNone(value: Json | undefined): string {
   const text = str(value);
 
   return text.trim() === "" ? NONE : text;

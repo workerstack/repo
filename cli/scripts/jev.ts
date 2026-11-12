@@ -13,14 +13,16 @@ import type { JevMainOpts, JevResult } from "./jev.types.ts";
 /** The `--state` and `--questions` files' texts. */
 type InputTexts = { stateText: string; questionsText: string };
 
-export function parseArgv(argv: unknown): { flags: Record<string, string> } {
+export function parseArgv(argv: readonly string[]): { flags: Record<string, string> } {
   const flags: Record<string, string> = {};
-  const args: unknown[] = Array.isArray(argv) ? argv : [];
+  let isValue = false;
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
+  for (const [i, arg] of argv.entries()) {
+    if (isValue || !arg.startsWith(FLAG_PREFIX)) {
+      isValue = false;
+      continue;
+    }
 
-    if (typeof arg !== "string" || !arg.startsWith(FLAG_PREFIX)) continue;
     const eq = arg.indexOf("=");
 
     if (eq > FLAG_PREFIX.length) {
@@ -29,11 +31,11 @@ export function parseArgv(argv: unknown): { flags: Record<string, string> } {
     }
 
     const name = arg.slice(FLAG_PREFIX.length);
-    const next = args[i + 1];
+    const next = argv[i + 1];
 
-    if (Boolean(next) && !String(next).startsWith(FLAG_PREFIX)) {
-      flags[name] = String(next);
-      i += 1;
+    if (next !== undefined && next !== "" && !next.startsWith(FLAG_PREFIX)) {
+      flags[name] = next;
+      isValue = true;
     } else {
       flags[name] = FLAG_ON;
     }

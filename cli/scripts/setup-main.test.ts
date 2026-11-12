@@ -14,8 +14,8 @@ function loginFn() {
   return Promise.resolve();
 }
 
-function thrown(v: unknown) {
-  return () => Promise.reject(v);
+function thrown(cause: unknown) {
+  return () => Promise.reject(cause);
 }
 
 it("main resolves the gw alias and reports the target's failure", async () => {

@@ -31,8 +31,8 @@ export type PointerSlice = {
   location: string | null;
 };
 
-export function sentences(text: unknown): string[] {
-  return String(text)
+export function sentences(text: string): string[] {
+  return text
     .trim()
     .split(SENTENCE_SPLIT_RE)
     .filter((s) => s.trim() !== "");
@@ -53,10 +53,10 @@ function setKey(slice: Slice, name: string, value: string): void {
   else Object.assign(slice, { hasLocation: true, location: value });
 }
 
-export function parseSlices(orderBody: unknown): Slice[] {
+export function parseSlices(orderBody: string): Slice[] {
   const slices: Slice[] = [];
 
-  for (const line of String(orderBody).split("\n")) {
+  for (const line of orderBody.split("\n")) {
     const head = line.match(SLICE_RE);
 
     if (head !== null) {
@@ -81,7 +81,7 @@ function pointerHead(head: RegExpMatchArray): PointerSlice {
     text !== null &&
     words >= TITLE_WORDS_MIN &&
     words <= TITLE_WORDS_MAX &&
-    sentences(text.groups?.sentence).length === 1;
+    sentences(String(text.groups?.sentence)).length === 1;
 
   return { location: null, n: String(head.groups?.n), ok };
 }

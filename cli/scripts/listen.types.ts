@@ -48,12 +48,19 @@ export type SpawnSyncFn = (
   opts: { encoding?: "utf8"; input?: string; shell?: boolean; timeout?: number },
 ) => SpawnSyncResult;
 
+/** A child's `error` listener: Node hands it the spawn or kill failure. */
+export type ErrorListener = (cause: Error) => void;
+
+/** A child's `exit` listener: the exit code, or the signal that ended it. */
+export type ExitListener = (code: number | null, signal: NodeJS.Signals | null) => void;
+
 /** The slice of a ChildProcess this script uses; tests pass partial fakes. */
 export type ChildLike = {
   pid?: number | undefined;
   stdin?: { write(chunk: string): void; end(): void } | null;
   kill?(signal?: NodeJS.Signals): void;
-  on?(event: string, cb: (arg: unknown, signal?: unknown) => void): void;
+  on?(event: "error", cb: ErrorListener): void;
+  on?(event: "exit", cb: ExitListener): void;
   unref?(): void;
 };
 

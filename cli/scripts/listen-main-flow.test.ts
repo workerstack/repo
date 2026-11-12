@@ -3,7 +3,18 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cleanupTmp, plantModel, readSession, repoBin, run, textFetch, tmp, which } from "./__fixtures__/listen-env.ts";
+import {
+  cleanupTmp,
+  type Handlers,
+  plantModel,
+  readSession,
+  recordOn,
+  repoBin,
+  run,
+  textFetch,
+  tmp,
+  which,
+} from "./__fixtures__/listen-env.ts";
 import { jsonText } from "./json-text.ts";
 import { sessionPath } from "./listen-session.ts";
 import { defaultGgmlPath } from "./listen-whisper.ts";
@@ -24,11 +35,6 @@ function whisperWrites(text: string) {
   };
 }
 
-/** Exits 0 on the next microtask when asked for `exit`. */
-function exitSoon(ev: string, cb: (code: number, signal: null) => void): void {
-  if (ev === "exit") queueMicrotask(() => cb(0, null));
-}
-
 /** An ffmpeg spawn that checks its args and writes the wav it was asked for. */
 function fakeFfmpeg(_bin: string, args: string[], opts: SpawnOpts) {
   expect(args).toContain("-nostdin");
@@ -40,7 +46,10 @@ function fakeFfmpeg(_bin: string, args: string[], opts: SpawnOpts) {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, "RIFF");
 
-  return { kill() {}, on: exitSoon, pid: 4242 };
+  const on: Handlers = {};
+  queueMicrotask(() => on.exit?.(0, null));
+
+  return { kill() {}, on: recordOn(on), pid: 4242 };
 }
 
 /** A kill that answers the signal-0 probe and throws on a real signal. */

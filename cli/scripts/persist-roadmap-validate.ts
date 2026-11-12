@@ -44,8 +44,8 @@ type HeadCheck = (r: Roadmap) => string[];
 type SectionCheck = (r: Roadmap, sections: Sections) => string[];
 
 /** The roadmap's own loose frontmatter reader: no frontmatter is an empty map, not an error. */
-export function splitFrontmatter(text: unknown): Split {
-  const s = stripBom(String(text));
+export function splitFrontmatter(text: string): Split {
+  const s = stripBom(text);
   const end = s.startsWith(FM_OPEN) ? s.indexOf(FM_CLOSE, FM_OPEN.length) : NOT_FOUND;
 
   if (end === NOT_FOUND) return { body: s, map: {} };

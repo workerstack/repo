@@ -27,7 +27,6 @@ describe("alreadyRtk", () => {
     expect(alreadyRtk("rtk ls")).toBe(true);
     expect(alreadyRtk("/usr/bin/rtk ls")).toBe(true);
     expect(alreadyRtk("ls rtk")).toBe(false);
-    expect(alreadyRtk(undefined)).toBe(false);
     expect(alreadyRtk("")).toBe(false);
   });
 });
@@ -36,7 +35,6 @@ describe("stripFlagValue", () => {
   it("replaces a flag's value in either spelling and reads a missing command as empty", () => {
     expect(stripFlagValue("job --query 'a b' --x", "--query")).toBe("job --query _ --x");
     expect(stripFlagValue('job --query="a b"', "--query")).toBe("job --query=_");
-    expect(stripFlagValue(undefined, "--query")).toBe("");
   });
 });
 
@@ -67,7 +65,6 @@ describe("parseJobCommand", () => {
 describe("parseJobCommand refusals", () => {
   it("refuses an empty command, missing roots, an unknown flag and shell syntax outside the query", () => {
     expect(parseJobCommand("", roots)).toBeNull();
-    expect(parseJobCommand(undefined, roots)).toBeNull();
     expect(parseJobCommand("bun repo job --job exec", null)).toBeNull();
     expect(parseJobCommand("bun repo job --bogus x", roots)).toBeNull();
     expect(parseJobCommand("bun repo job --job exec; ls", roots)).toBeNull();
@@ -93,7 +90,6 @@ describe("isWorkspaceJobScript", () => {
 
   it("rejects an empty command and missing roots", () => {
     expect(isWorkspaceJobScript("  ", roots)).toBe(false);
-    expect(isWorkspaceJobScript(undefined, roots)).toBe(false);
     expect(isWorkspaceJobScript(`${bin} job`, null)).toBe(false);
   });
 });

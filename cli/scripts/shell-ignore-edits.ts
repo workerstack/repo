@@ -172,8 +172,8 @@ function heredocParts(head: string, rest: string[], doc: RegExpExecArray): Shell
 }
 
 /** A one-line command, or a command whose further lines are its heredoc; null for any other multi-line command. */
-function shellParts(command: unknown): ShellParts | null {
-  const [head, ...rest] = String(command).replace(TRAILING_SPACE_RE, "").split("\n") /* split yields one or more */ as [
+function shellParts(command: string): ShellParts | null {
+  const [head, ...rest] = command.replace(TRAILING_SPACE_RE, "").split("\n") /* split yields one or more */ as [
     string,
     ...string[],
   ];
@@ -216,7 +216,7 @@ function teeWrite(tokens: ShellToken[], text: string | null): ShellWrite | null 
 }
 
 /** One shell write of literal text to one file, in the forms D4 names; null for every other command. */
-function shellIgnoreWrite(command: unknown): ShellWrite | null {
+function shellIgnoreWrite(command: string): ShellWrite | null {
   const parts = shellParts(command);
   const tokens = parts === null ? null : shellTokens(parts.head);
 
@@ -237,7 +237,7 @@ function shellIgnoreWrite(command: unknown): ShellWrite | null {
 }
 
 /** The edit a simple shell redirect makes to a `.gitignore`; [] for every other command. */
-export function shellIgnoreEdits(command: unknown, cwd: string): IgnoreEdit[] {
+export function shellIgnoreEdits(command: string, cwd: string): IgnoreEdit[] {
   const w = shellIgnoreWrite(command);
   const file = w === null ? null : ignoreTarget(w.file, cwd);
 

@@ -47,12 +47,6 @@ describe("parseArgv separators and filtering", () => {
     expect(parseArgv(["rec", "--", "--seconds", "5"])).toStrictEqual({ _: ["rec", "--seconds", "5"], flags: {} });
   });
 
-  it("keeps only strings, and treats a non-array as no arguments", () => {
-    expect(parseArgv("rec")).toStrictEqual({ _: [], flags: {} });
-    expect(parseArgv(["rec", 5, null, "x"])).toStrictEqual({ _: ["rec", "x"], flags: {} });
-    expect(parseArgv([1, "a", null])).toStrictEqual({ _: ["a"], flags: {} });
-  });
-
   it("a flag followed by a flag or nothing is a boolean", () => {
     expect(parseArgv(["--a", "--b", "--c"]).flags).toStrictEqual({ a: "1", b: "1", c: "1" });
     expect(parseArgv(["--a", ""]).flags).toStrictEqual({ a: "1" });

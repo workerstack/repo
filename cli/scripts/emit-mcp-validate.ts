@@ -98,7 +98,7 @@ function agentsError(policy: JsonObject): string | null {
   return bad === undefined ? null : `agents.${bad}.inherit must be false`;
 }
 
-function nonEmptyStrings(v: unknown): boolean {
+function nonEmptyStrings(v: Json | undefined): boolean {
   return Array.isArray(v) && v.every((name) => typeof name === "string" && name !== "");
 }
 

@@ -61,28 +61,24 @@ describe("stampPlanSave", () => {
   });
 });
 
+/** An Antigravity `git stash` call run in `dir`, which is also its one workspace. */
+function stashCall(dir: string): HookInput {
+  return {
+    conversationId: "c1",
+    lastUserInput: "",
+    toolCall: { args: { CommandLine: "git stash", Cwd: dir }, name: "run_command" },
+    workspacePaths: [dir],
+  };
+}
+
 describe("a failure inside the shared-checkout check", () => {
   it("lets the call through instead of blocking it", () => {
     const repo = committedRepo();
 
-    function call(lastUserInput: unknown): HookInput {
-      return {
-        conversationId: "c1",
-        lastUserInput: lastUserInput /* a prompt whose text cannot be read */ as never,
-        toolCall: { args: { CommandLine: "git stash", Cwd: repo }, name: "run_command" },
-        workspacePaths: [repo],
-      };
-    }
+    expect(processFatTools(stashCall(repo))).toMatchObject({ type: "deny" });
 
-    expect(processFatTools(call(""))).toMatchObject({ type: "deny" });
-
-    const unreadable = {
-      toString: () => {
-        throw new Error("no text");
-      },
-    };
-
-    expect(processFatTools(call(unreadable))).toBeNull();
+    // A NUL byte in the working directory is valid JSON, but git cannot be spawned in such a directory and throws.
+    expect(processFatTools(stashCall(`${repo}\0`))).toBeNull();
   });
 });
 

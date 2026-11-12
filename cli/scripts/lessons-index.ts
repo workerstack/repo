@@ -45,8 +45,8 @@ export function byHitsThenFile(a: IndexRow, b: IndexRow): number {
   return diff === 0 || Number.isNaN(diff) ? a.file.localeCompare(b.file) : diff;
 }
 
-function cell(s: unknown): string {
-  return String(s).replaceAll(SPACES_RE, " ").replaceAll(PIPE, ESCAPED_PIPE);
+function cell(s: string): string {
+  return s.replaceAll(SPACES_RE, " ").replaceAll(PIPE, ESCAPED_PIPE);
 }
 
 /** One row per valid lesson file, and per `pending` text the host is about to write. */
@@ -85,8 +85,8 @@ function renderIndex(rows: IndexRow[]): string {
 }
 
 /** The rows of an index text; a line that is not a five-cell lesson row is skipped. */
-export function parseIndex(text: unknown): IndexRow[] {
-  return String(text)
+export function parseIndex(text: string): IndexRow[] {
+  return text
     .split("\n")
     .filter((line) => line.startsWith(ROW_PREFIX))
     .flatMap((line): IndexRow[] => {

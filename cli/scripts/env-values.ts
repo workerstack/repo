@@ -53,9 +53,9 @@ async function opened(
   const plain = await reveal(
     sealed.map(([, value]) => String(value.cipher)),
     keys,
-  ).catch((error: unknown) => {
-    if (isWrongKey(error)) refuse(`${first[0]} is sealed for another key than ${label}; ${WRONG_KEY_FIX}`);
-    throw error;
+  ).catch((cause: unknown) => {
+    if (isWrongKey(cause)) refuse(`${first[0]} is sealed for another key than ${label}; ${WRONG_KEY_FIX}`);
+    throw cause;
   });
 
   for (const [index, [key]] of sealed.entries()) texts.set(key, String(plain[index]));

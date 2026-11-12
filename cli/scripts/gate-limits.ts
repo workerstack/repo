@@ -1,6 +1,7 @@
 /** Read, Grep and Glob: which calls are denied, and the limits and ignores the gate adds to the rest. */
 import path from "node:path";
 
+import type { Json } from "../json.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import type { ToolArgs, ToolSpec } from "./gate-harness.ts";
 import {
@@ -43,7 +44,7 @@ type Limit = {
   value: number;
 };
 
-function asNumber(v: unknown): number | null {
+function asNumber(v: Json | undefined): number | null {
   if (v == null || v === "") return null;
   const n = Number(v);
 

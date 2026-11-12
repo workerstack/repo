@@ -95,7 +95,7 @@ it.skipIf(process.platform !== "linux")("findDownloadedOAuthJson reads the lower
 });
 
 it("workspaceConsoleUrls drops the project query when no project is given", () => {
-  const u = workspaceConsoleUrls(undefined);
+  const u = workspaceConsoleUrls("");
   expect(u.branding).toBe("https://console.cloud.google.com/auth/overview/create");
   expect(u.enableApis).not.toContain("project=");
   expect(u.clientCreate).toBe("https://console.cloud.google.com/auth/clients/create");

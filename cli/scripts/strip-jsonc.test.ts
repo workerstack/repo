@@ -20,9 +20,4 @@ describe("stripJsonc", () => {
   it("keeps the newline that ends a line comment", () => {
     expect(stripJsonc("1 // x\n2")).toBe("1 \n2");
   });
-
-  it("treats null and undefined as empty text", () => {
-    expect(stripJsonc(null)).toBe("");
-    expect(stripJsonc(undefined)).toBe("");
-  });
 });

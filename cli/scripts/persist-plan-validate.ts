@@ -123,7 +123,7 @@ function allMatches(pattern: RegExp, text: string): string[] {
  * spelling of `ws`: a symlink, an 8.3 name), then repo-relative ones resolved against `ws`. Paths under
  * `<ws>/.worktrees/<name>/` count like any other. A sibling dir that shares the prefix does not.
  */
-export function workspacePaths(ws: string, text: unknown, p: path.PlatformPath = path): string[] {
+export function workspacePaths(ws: string, text: string, p: path.PlatformPath = path): string[] {
   const top = canonicalPath(p.resolve(ws), p);
 
   function under(abs: string) {
@@ -132,10 +132,9 @@ export function workspacePaths(ws: string, text: unknown, p: path.PlatformPath =
     return rel !== "" && !rel.startsWith("..") && !p.isAbsolute(rel);
   }
 
-  const source = String(text);
-  const absolute = allMatches(ABSOLUTE_PATH, source).map(trim).filter(under);
+  const absolute = allMatches(ABSOLUTE_PATH, text).map(trim).filter(under);
 
-  const relative = allMatches(RELATIVE_PATH, source)
+  const relative = allMatches(RELATIVE_PATH, text)
     .map(trim)
     .filter((m) => EXTENSION_RE.test(m))
     .map((m) => p.resolve(top, m))

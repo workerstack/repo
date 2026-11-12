@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { Json } from "../json.ts";
 import { DENY_ALL, plant, plantDirs, plantPolicy, readJson, readToml } from "./__fixtures__/mcp-policy-kit.ts";
 import { emitMcpPolicy } from "./emit-mcp-policy.ts";
 
@@ -17,9 +18,8 @@ function plainToml(root: string, rel: string) {
 afterEach(() => vi.restoreAllMocks());
 
 /** A workspace holding `policy`, and the planted home to pass so no real dotfile is consulted. */
-function setup(policy: unknown = DENY_ALL) {
-  const ws = tmp("mcp-emit-ws-");
-  plantPolicy(ws, policy);
+function setup(policy: Json = DENY_ALL) {
+  const ws = plantPolicy(tmp("mcp-emit-ws-"), policy);
 
   return { home: tmp("mcp-emit-home-"), ws };
 }

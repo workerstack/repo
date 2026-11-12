@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { JsonObject } from "../json.ts";
+import type { Json, JsonObject } from "../json.ts";
 import {
   JSON_INDENT,
   LATEST_FILE,
@@ -45,7 +45,7 @@ export function clearSession(cwd: string): void {
 }
 
 /** Whether `pid` answers signal 0; a non-positive or non-numeric pid is never probed. */
-export function pidAlive(pid: unknown, killFn: KillFn): boolean {
+export function pidAlive(pid: Json | undefined, killFn: KillFn): boolean {
   const n = Number(pid);
 
   if (!Number.isFinite(n) || n <= 0) return false;

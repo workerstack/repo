@@ -19,14 +19,14 @@ import { GOAL_SECTION_RE, HANDOFF_DIR, NAME_LINE_RE, NAME_STRIP_RE } from "./per
 import { persistSource, refused, saveTarget, stampedName } from "./persist-save.ts";
 import { unclosedFenceErrors } from "./persist-sections.ts";
 
-export function extractHandoffName(content: unknown): string {
-  const m = String(content).match(NAME_LINE_RE);
+export function extractHandoffName(content: string): string {
+  const m = content.match(NAME_LINE_RE);
 
   return m === null ? "" : String(m[1]).trim();
 }
 
-export function stripHandoffName(content: unknown): string {
-  return String(content).replace(NAME_STRIP_RE, "");
+export function stripHandoffName(content: string): string {
+  return content.replace(NAME_STRIP_RE, "");
 }
 
 export function injectFrontmatter({

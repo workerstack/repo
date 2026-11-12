@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { JsonObject } from "../json.ts";
+import type { JsonInput, JsonObject } from "../json.ts";
 import { JSON_INDENT, OAUTH_FILE, SECRET_DIR_MODE, SECRET_FILE_MODE } from "./setup.constants.ts";
 import type { SpeakPatch } from "./setup.types.ts";
 import { readObjectFile, section, str } from "./voice-args.ts";
@@ -21,7 +21,7 @@ export function stateHome(home: string = os.homedir()): string {
   return d;
 }
 
-export function writeSecretJson(p: string, obj: unknown): string {
+export function writeSecretJson(p: string, obj: JsonInput): string {
   fs.mkdirSync(path.dirname(p), { mode: SECRET_DIR_MODE, recursive: true });
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`, { mode: SECRET_FILE_MODE });
 
@@ -55,6 +55,6 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   return p;
 }
 
-export function oauthWritePath(home: string, account: unknown): string {
+export function oauthWritePath(home: string, account: string): string {
   return path.join(home, ".workerstack", "workspace", str(account, "default"), OAUTH_FILE);
 }

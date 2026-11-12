@@ -67,6 +67,7 @@ it("appends flat entries under sessionStart, preToolUse and postToolUse, rulesyn
   expectCursorExtras(next, mapEntry);
   expect(next.hooks.stop).toStrictEqual(seeded.hooks.stop);
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
+  expect(checkUnion({ consumerRoot: "", sourceRoot: "", workspaceRoot: ws })).toStrictEqual([]);
   const first = fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8");
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8")).toBe(first);
