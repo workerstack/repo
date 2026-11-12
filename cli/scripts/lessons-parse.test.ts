@@ -5,9 +5,12 @@ import { parseLesson } from "./lesson-file.ts";
 
 function errorsOf(text: string, defaults?: Record<string, string>) {
   const r = parseLesson(text, defaults === undefined ? undefined : { defaults });
+
   return r.ok ? [] : r.errors;
 }
+
 const BODY = "# T\n\nSummary.\n\n## Mistake\nm\n\n## Fix\nf\n";
+
 function head(extra = "") {
   return `---\nname: a-b\npaths: ["src/**"]\nhits: 1\nlast-hit: 2026-10-31\nevidence: []\n${extra}---\n\n`;
 }
@@ -35,6 +38,7 @@ describe("parseLesson frontmatter", () => {
 describe("parseLesson keys", () => {
   it("rejects paths that are missing, not a list, not strings or not JSON", () => {
     const noPaths = head().replace('paths: ["src/**"]\n', "");
+
     for (const paths of [
       noPaths,
       head().replace('["src/**"]', '"src"'),

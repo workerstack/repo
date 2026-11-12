@@ -29,12 +29,14 @@ function codexStopCase(get: GetSandbox) {
   it("Stop runs every hook without blocking", async () => {
     const sb = get();
     expect(stopCommands(sb, ".codex/hooks.json").length).toBeGreaterThan(0);
+
     const payload = {
       ...codexBase(sb),
       hook_event_name: "Stop",
       last_assistant_message: "done",
       stop_hook_active: false,
     };
+
     await stopsPass(sb, ".codex/hooks.json", (command) => runHook(sb, command, { cwd: sb.repo, payload }));
   });
 }
@@ -52,8 +54,10 @@ function claudeStopCases(get: GetSandbox) {
 
 describe("hosts", () => {
   let made: Sandbox | undefined;
+
   function get(): Sandbox {
     if (made === undefined) throw new Error("the hosts sandbox is made in beforeAll");
+
     return made;
   }
 

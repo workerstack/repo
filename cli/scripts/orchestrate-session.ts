@@ -29,6 +29,7 @@ export function sessionDir(data: HookInput, sid: string): string {
 /** A file in this session's dir; null when the payload names no real session. */
 export function sessionFile(data: HookInput, name: string): string | null {
   const sid = sessionIdOf(data);
+
   return isRealSession(sid) ? path.join(sessionDir(data, sid), name) : null;
 }
 
@@ -69,7 +70,9 @@ export function countsLine(dir: string): string {
 
 export function recordApproval(data: HookInput, abs: string): void {
   const file = approvalsFile(data);
+
   if (file === null || readLines(file).includes(abs)) return;
+
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.appendFileSync(file, `${abs}\n`);
@@ -82,10 +85,13 @@ export function recordApproval(data: HookInput, abs: string): void {
 export function frontmatterOf(text: string): Record<string, string> {
   const out: Record<string, string> = {};
   const [, body = ""] = FRONTMATTER.exec(text) ?? [];
+
   for (const line of body.split(LINE_BREAK)) {
     const [, key, value = ""] = FRONTMATTER_LINE.exec(line) ?? [];
+
     if (key !== undefined) out[key] = value.trim();
   }
+
   return out;
 }
 

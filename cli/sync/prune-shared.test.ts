@@ -38,6 +38,7 @@ describe("repairLines", () => {
       { kind: "link", managed: "whole", path: ".claude/skills/ask", target: "elsewhere", tracked: false },
       shared("references/INDEX.md", ["closed repo:stack", "moved 1 edited line out of repo:packages"]),
     ];
+
     expect(repairLines(outputs)).toStrictEqual([
       ".gitignore: converted the old markers to repo:ignore",
       "references/INDEX.md: closed repo:stack",
@@ -59,6 +60,7 @@ describe("splitPrune", () => {
       "plain.md": "<!-- not a region -->\n",
       "web/references/INDEX.md": `# Web\n\n${DEPS}`,
     });
+
     fs.mkdirSync(path.join(root, "dir"));
     const split = splitPrune(root, ["old.yml", "web/references/INDEX.md", "b/.gitignore", "a/.gitignore", "old.yml"]);
     expect(split.cut).toStrictEqual([
@@ -117,10 +119,12 @@ describe("applyCuts that fail", () => {
   it("gives the error of a cut the writer refused or a removal that failed, and no line for either", () => {
     const root = rootWith({ "x.md": DEPS });
     fs.mkdirSync(path.join(root, "dir.md"));
+
     const cut = [
       { path: "x.md", repairs: ["cut repo:deps"], text: "kept\n" },
       { path: "dir.md", repairs: ["cut repo:deps"], text: "\n" },
     ];
+
     const result = applyCuts(root, cut, { platform: process.platform, writeOutput: () => "disk full" });
     expect(result.lines).toStrictEqual([]);
     expect(result.errors).toStrictEqual([

@@ -32,7 +32,9 @@ import {
 } from "./ci-wait.constants.ts";
 
 export { readJson } from "./ci-wait-poll.ts";
+
 export type { Runner } from "./ci-wait-run.ts";
+
 export type WaitDeps = {
   cwd: string;
   stdout: (s: string) => void;
@@ -49,16 +51,21 @@ export type WaitDeps = {
   /** The commit and branch to wait on; skips the HEAD, branch and remote checks and keeps the gh login check. */
   target?: Target;
 };
+
 /** How the wait for HEAD's run ended: `error` carries the line `repo ci wait` prints and a shorter `detail`. */
 export type WaitOutcome = RunOutcome | { kind: "nothing"; line: string };
+
 type Ended = WaitOutcome;
+
 type Io = Required<Omit<WaitDeps, "target" | "branch" | "fs">> & { fs?: RecordFs | undefined };
+
 /** A commit and the branch whose `ci` run for it is waited on. */
 export type Target = { sha: string; branch: string };
 
 function runsSchema() {
   return z.array(z.object({ createdAt: z.string(), databaseId: z.number(), headBranch: z.string() }));
 }
+
 function prsSchema() {
   return z.array(z.object({ number: z.number() }));
 }
@@ -68,7 +75,9 @@ const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 /** The commit of `branch` on origin, as last fetched, and the branch; or why it cannot be waited on. */
 function remoteTip(io: Io, branch: string): Target | { error: string } {
   const tip = io.git(GIT_REMOTE_TIP(branch), io.cwd).stdout.trim();
+
   if (tip === "") return { error: `${branch} is not on origin; push it first` };
+
   return io.gh(GH_AUTH.slice(), io.cwd).code === 0 ? { branch, sha: tip } : { error: GH_LOGIN };
 }
 
@@ -76,6 +85,7 @@ function remoteTip(io: Io, branch: string): Target | { error: string } {
 function headTip(io: Io): Target | { error: string } {
   const head = io.git(GIT_REV(HEAD_REF), io.cwd);
   const sha = head.stdout.trim();
+
   if (head.code !== 0 || sha === "")
     return { error: `cannot read ${HEAD_REF} (${head.stderr.trim()}); run it inside a git checkout` };
 
@@ -83,6 +93,7 @@ function headTip(io: Io): Target | { error: string } {
     return { error: `${sha.slice(0, SHA_SHOWN)} is not on any remote branch; push it first` };
 
   if (io.gh(GH_AUTH.slice(), io.cwd).code !== 0) return { error: GH_LOGIN };
+
   return { branch: io.git(GIT_BRANCH.slice(), io.cwd).stdout.trim(), sha };
 }
 
@@ -100,16 +111,20 @@ function givenTarget(io: Io, target: Target): Target | { error: string } {
 function noTrigger(io: Io, branch: string): string | null {
   const named = io.git(GIT_DEFAULT_BRANCH.slice(), io.cwd);
   const main = named.code === 0 ? named.stdout.trim().replace(REMOTE_PREFIX, "") : "";
+
   if (branch === main) return null;
   const prs = readJson(io.gh(GH_OPEN_PRS(branch), io.cwd), prsSchema());
+
   if (prs === null || prs.length > 0) return null;
   const pushes = main === "" ? "the default branch" : main;
+
   return `nothing to wait on: ci runs on pushes to ${pushes} and on pull requests, and ${branch} has neither`;
 }
 
 /** The newest run of the target's commit on its branch, if there is one. */
 function lookup(io: Io, target: Target): RunInfo | undefined {
   const runs = readJson(io.gh(GH_LIST_COMMIT(target.sha), io.cwd), runsSchema()) ?? [];
+
   return newestFirst(runs.filter((run) => run.headBranch === target.branch))[0];
 }
 
@@ -117,7 +132,9 @@ function lookup(io: Io, target: Target): RunInfo | undefined {
 async function poll(io: Io, target: Target, started: number): Promise<RunInfo | null> {
   await io.sleep(POLL_MS);
   const found = lookup(io, target);
+
   if (found !== undefined) return found;
+
   return io.now() - started >= GIVE_UP_MS ? null : poll(io, target, started);
 }
 
@@ -125,17 +142,23 @@ async function poll(io: Io, target: Target, started: number): Promise<RunInfo | 
 async function wait(io: Io, target: Target): Promise<Ended> {
   const started = io.now();
   let run = lookup(io, target);
+
   if (run === undefined) {
     const line = noTrigger(io, target.branch);
+
     if (line !== null) return { kind: "nothing", line };
     run = (await poll(io, target, started)) ?? undefined;
   }
+
   if (run === undefined) {
     const waited = `${GIVE_UP_MS / MS_PER_SECOND}s`;
     const line = `no ci run for ${target.sha.slice(0, SHA_SHOWN)} after ${waited}; check the workflow ran`;
+
     return { detail: `no ci run after ${waited}`, kind: "error", line };
   }
+
   io.stdout(`waiting for ci on ${target.sha.slice(0, SHA_SHOWN)} (run ${run.databaseId})…\n`);
+
   return finish(io, run, started);
 }
 
@@ -155,7 +178,9 @@ function ioOf(deps: WaitDeps): Io {
 /** The target of a wait, and how it ended; no target when there was nothing to find one with. */
 async function execute(io: Io, deps: WaitDeps): Promise<{ target?: Target; ended: Ended }> {
   const target = deps.target === undefined ? locate(io, deps.branch) : givenTarget(io, deps.target);
+
   if ("error" in target) return { ended: { detail: target.error, kind: "error", line: target.error } };
+
   return { ended: await wait(io, target), target };
 }
 
@@ -166,6 +191,7 @@ async function execute(io: Io, deps: WaitDeps): Promise<{ target?: Target; ended
  */
 export async function waitFor(deps: WaitDeps): Promise<WaitOutcome> {
   const executed = await execute(ioOf(deps), deps);
+
   return executed.ended;
 }
 
@@ -182,6 +208,7 @@ function record(io: Io, target: Target, ended: Ended): void {
   const failed = ended.kind === "failed" ? ended.jobs : [];
   const entry = { at: new Date(io.now()).toISOString(), branch: target.branch, failed, outcome: ended.kind };
   const where = { root: recordRoot(io.git, io.cwd), sha: target.sha };
+
   if (!writeRecord(where, entry, io.fs)) io.stderr(`repo ci wait: cannot record the outcome for ${target.sha}\n`);
 }
 
@@ -189,8 +216,12 @@ function record(io: Io, target: Target, ended: Ended): void {
 export async function waitMain(deps: WaitDeps): Promise<number> {
   const io = ioOf(deps);
   const { target, ended } = await execute(io, deps);
+
   if (ended.kind === "error") io.stderr(`repo ci wait: ${ended.line}\n`);
+
   if (ended.kind === "nothing") io.stdout(`${ended.line}\n`);
+
   if (target !== undefined) record(io, target, ended);
+
   return EXIT_OF[ended.kind];
 }

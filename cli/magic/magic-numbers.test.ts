@@ -93,6 +93,7 @@ it("refuses a bound imported from a module that is not a constants file or packa
     "src/limits.ts": "export const MAX = 64;\n",
     "src/schema.ts": SCHEMA,
   };
+
   expect(magicOf(files)).toStrictEqual([
     hit("src/a.ts:4:39", NUMBER, BOUND(".max(MAX)")),
     hit("src/a.ts:4:48", NUMBER, BOUND(".max(TOP)")),

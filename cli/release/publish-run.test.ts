@@ -9,13 +9,16 @@ import { gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 afterEach(removePlanted);
 
 const SPEC = `${NAME}@0.1.0`;
+
 function newVersion(notServed = 0, offline = 0): Registry {
   return { exists: true, listed: false, notServed, offline };
 }
+
 /** A bun whose pack fails with "boom". */
 function failingBun() {
   return { code: 1, stderr: "boom\n", stdout: "" };
 }
+
 const PACK_DIR = path.normalize("/tmp/repo-pack-x1");
 const TGZ = path.join(PACK_DIR, "acme-app-0.1.0.tgz");
 

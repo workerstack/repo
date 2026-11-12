@@ -42,6 +42,7 @@ it("passes every entry sync reads, the bench specs `repo bench` reads, and ignor
     ".repo/test-times.json": "{}",
     ".repo/tmp/anything/at/all.bin": "x",
   });
+
   expect(check(root)).toStrictEqual([]);
 });
 
@@ -64,6 +65,7 @@ it("says nothing reads scripts/ or a settings file but claude.json, and names an
     ".repo/scripts/x.ts": "x",
     ".repo/settings/codex.json": "{}",
   });
+
   expect(check(root)).toStrictEqual([
     `.repo/repo.pipeline.jsonc: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
     ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",
@@ -99,13 +101,16 @@ it("skips the check outside git", () => {
 function fixtureProblems({ withSrc }: { withSrc: boolean }): string[] {
   const root = repo();
   fs.cpSync(fixtureDirs().consumer, root, { recursive: true });
+
   const listed = fs
     .readdirSync(root, { encoding: "utf8", recursive: true })
     .map((rel) => rel.replaceAll("\\", "/"))
     .filter((rel) => fs.statSync(path.join(root, rel)).isFile());
+
   const loaded = loadSources({ consumerRoot: root, packages: [], stockRoot: fixtureDirs().stock });
   expect(loaded.problems).toStrictEqual([]);
   expect(fs.existsSync(path.join(root, "src"))).toBe(true);
+
   return repoDirProblems(root, {
     listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
     off: [],

@@ -17,6 +17,7 @@ import {
 import { byCodeUnit } from "./by-code-unit.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 // One render with every host on, shared by the tests below.
@@ -26,6 +27,7 @@ const root = consumer({
     version: "2.0.0",
   }),
 });
+
 const outputs = render(root, HOSTS);
 
 it("writes every host tree untracked and AGENTS.md as a tracked shared file", () => {
@@ -34,6 +36,7 @@ it("writes every host tree untracked and AGENTS.md as a tracked shared file", ()
     [".agents", ".claude", ".codex", ".cursor", ".grok", ".vscode", "AGENTS.md"].toSorted(byCodeUnit),
   );
   const tracked = new Set([".vscode/tasks.json", "AGENTS.md"]);
+
   for (const output of outputs.filter((o) => !tracked.has(o.path))) expect(output.tracked).toBe(false);
   expect(find(outputs, "AGENTS.md")).toMatchObject({ managed: "block", tracked: true });
   expect(text(outputs, "AGENTS.md")).toMatch(/^<!-- repo:rules [\da-f]{8} -->\n[\s\S]*<!-- \/repo:rules -->\n$/);

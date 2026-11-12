@@ -56,6 +56,7 @@ it("runJev posts one pinned choice and stores the real input token count", async
 
 it("runJev prints a low-confidence choice and does not call again", async () => {
   const { calls, fetchImpl } = counted(() => jsonResponse(200, choiceBody(0.1)));
+
   const result = await createJevRunner()({
     env: { TYPESAFE_API_KEY: KEY },
     fetchImpl,
@@ -63,6 +64,7 @@ it("runJev prints a low-confidence choice and does not call again", async () => 
     questionsText: ENDPOINT_QUESTIONS,
     stateText: "page text",
   });
+
   expect(result.code).toBe(0);
   expect(result.text).toContain("confidence=0.1");
   expect(calls).toHaveLength(1);
@@ -72,6 +74,7 @@ it("runJev sends a JSON state object", async () => {
   const { calls, fetchImpl } = counted(() =>
     jsonResponse(200, { answers: { keep: { noul: 0.2, type: "noul" } }, model: MODEL, usage: { input_tokens: 10 } }),
   );
+
   await createJevRunner()({
     env: { TYPESAFE_API_KEY: KEY },
     fetchImpl,

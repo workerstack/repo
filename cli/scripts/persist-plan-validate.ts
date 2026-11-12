@@ -69,6 +69,7 @@ function reviewChecks({ map, previous }: Doc): string[] {
 function serialNameError({ filename, map }: Doc): string[] {
   const fileSerial = SERIAL_PREFIX_RE.exec(filename)?.[1];
   const named = fileSerial !== undefined && map.serial !== undefined && map.serial !== "";
+
   return when({ bad: named && Number(map.serial) !== Number(fileSerial), error: "serial/filename" });
 }
 
@@ -95,13 +96,16 @@ const HEAD_CHECKS: Check[] = [
 export function validatePlan(filename: string, text: string, { fresh = true, previous }: Options = {}): string[] {
   const errors: string[] = when({ bad: !FILENAME_RE.test(filename), error: "filename" });
   const fm = parseFrontmatter(text);
+
   if (fm.error !== undefined) return [...errors, fm.error];
   const doc: Doc = { body: fm.body, filename, fresh, map: fm.map, previous, text };
   errors.push(...HEAD_CHECKS.flatMap((check) => check(doc)));
   const fence = unclosedFenceErrors(text);
+
   if (fence.length > 0) return [...errors, ...fence];
   const sections = sectionBodies(fm.body);
   errors.push(...BODY_CHECKS.flatMap((check) => check(doc, sections)));
+
   return [...new Set(errors)];
 }
 
@@ -121,16 +125,21 @@ function allMatches(pattern: RegExp, text: string): string[] {
  */
 export function workspacePaths(ws: string, text: unknown, p: path.PlatformPath = path): string[] {
   const top = canonicalPath(p.resolve(ws), p);
+
   function under(abs: string) {
     const rel = p.relative(top, canonicalPath(abs, p));
+
     return rel !== "" && !rel.startsWith("..") && !p.isAbsolute(rel);
   }
+
   const source = String(text);
   const absolute = allMatches(ABSOLUTE_PATH, source).map(trim).filter(under);
+
   const relative = allMatches(RELATIVE_PATH, source)
     .map(trim)
     .filter((m) => EXTENSION_RE.test(m))
     .map((m) => p.resolve(top, m))
     .filter(under);
+
   return [...new Set([...absolute, ...relative])];
 }

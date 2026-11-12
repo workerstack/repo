@@ -12,6 +12,7 @@ afterEach(removeKnipRoots);
 function run(issues: Record<string, unknown>[]) {
   return checkKnip(knipRoot({}), [], answering(report(...issues)));
 }
+
 const item = { col: 1, line: 1, name: "x", pos: 0 };
 
 describe("one problem line per issue type", () => {
@@ -52,6 +53,7 @@ it("reports each issue of each file in order, and nothing for a clean run", () =
 function boom(): never {
   throw new Error("spawn failed");
 }
+
 function pack(root: string, body: string) {
   return fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${body};\n`);
 }
@@ -76,12 +78,15 @@ describe("the unignored config", () => {
     const ws = knipRoot({});
     const name = `knip.unignored-${process.pid}.json`;
     let seen = "";
+
     const out = checkKnip(ws, [{ file: "gone.ts", reason: "r" }], (args, cwd) => {
       seen = fs.readFileSync(path.join(ws.root, name), "utf8");
       expect(args.slice(-5)).toStrictEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
       expect(cwd).toBe(ws.root);
+
       return { code: 0, stderr: "", stdout: report() };
     });
+
     expect(seen).toBe(knipConfig(ws, []));
     expect(fs.existsSync(path.join(ws.root, name))).toBe(false);
     expect(out.problems).toHaveLength(1);

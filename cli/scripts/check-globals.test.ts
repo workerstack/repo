@@ -176,6 +176,7 @@ describe("checkGlobals", () => {
   it("does not write real HOME", () => {
     const tmpRoot = fs.realpathSync(os.tmpdir());
     const home = fs.realpathSync(os.homedir());
+
     for (const dir of madeDirs()) {
       const real = path.join(fs.realpathSync(path.dirname(dir)), path.basename(dir));
       expect(real.startsWith(tmpRoot + path.sep)).toBe(true);

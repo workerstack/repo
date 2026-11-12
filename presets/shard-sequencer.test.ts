@@ -116,10 +116,12 @@ function specsOf(root: string, names: string[]): TestSpecification[] {
 /** A temp root holding `.repo/test-times.json` with `body` when it is given. */
 function rootWith(body?: string): string {
   const root = tempDir();
+
   if (body !== undefined) {
     fs.mkdirSync(path.join(root, ".repo"));
     fs.writeFileSync(path.join(root, ".repo", "test-times.json"), body);
   }
+
   return root;
 }
 

@@ -35,12 +35,14 @@ function fieldOf(tool: ToolSpec): string {
 /** The patch a call carries: the whole command of the patch tool, or the heredoc of a shell command. */
 function patchOf(kind: ToolSpec["kind"], text: string): string | null {
   if (kind === "patch") return text;
+
   return kind === "bash" ? patchOfCommand(text) : null;
 }
 
 /** Where a shell command runs: the cwd its tool names, else the hook's. */
 function shellCwdOf(tool: ToolSpec, input: ToolArgs, roots: Roots): string {
   const typed = tool.cwd === undefined || tool.cwd === "" ? undefined : input[tool.cwd];
+
   return typeof typed === "string" ? resolveTyped(roots, typed) : roots.cwd;
 }
 
@@ -48,6 +50,7 @@ function shellCwdOf(tool: ToolSpec, input: ToolArgs, roots: Roots): string {
 function callOf(data: HookInput): GateCall | null {
   const { harness, key, args: input } = toolCallOf(data);
   const tool = TOOLS[harness].get(key);
+
   if (tool === undefined || input === null) return null;
   const roots = resolveRoots(data);
   const field = fieldOf(tool);
@@ -57,6 +60,7 @@ function callOf(data: HookInput): GateCall | null {
   const sub = subagentTypeOf(data);
   const patch = patchOf(tool.kind, text);
   const parent = isParentOrchestrator(data);
+
   return { data, field, harness, input, parent, patch, roots, shellCwd, sid: sessionIdOf(data), sub, text, tool };
 }
 
@@ -66,8 +70,11 @@ function callOf(data: HookInput): GateCall | null {
  */
 function ignoreEditsOf(call: GateCall): ReturnType<typeof writeIgnoreEdits> {
   const { tool, input, roots, patch, text, shellCwd } = call;
+
   if (tool.kind === "write") return writeIgnoreEdits(input, roots.cwd, WRITE_PATH_FIELDS);
+
   if (patch !== null && patch !== "") return patchIgnoreEdits(patch, shellCwd);
+
   return tool.kind === "bash" && text.includes(GITIGNORE) ? shellIgnoreEdits(text, shellCwd) : [];
 }
 
@@ -84,6 +91,7 @@ function ignoreGuard(call: GateCall): GuardResult {
 function strayWorktreeGuard({ tool, text, roots, shellCwd }: GateCall): GuardResult {
   const reason =
     tool.kind === "bash" && text.includes(WORKTREE_WORD) ? worktreeAddReason(text, { cwd: shellCwd, roots }) : null;
+
   return denyFor(reason);
 }
 
@@ -126,16 +134,21 @@ const GUARDS: readonly Guard[] = [
 export function processFatTools(data: Payload): GateResult {
   if (!isHookObject(data)) return null;
   const call = callOf(data);
+
   if (call === null) return null;
+
   for (const guard of GUARDS) {
     const answer = guard(call);
+
     if (answer !== undefined) return answer;
   }
+
   return null;
 }
 
 export function processHookPayload(data: Payload): HookOutput | null {
   const result = processFatTools(data);
+
   return data == null || result === null ? null : fatHookOutput(data, result);
 }
 
@@ -143,8 +156,10 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
   try {
     const data = readHookInput(io);
     const out = processHookPayload(data);
+
     if (out === null) return 0;
     io.write(JSON.stringify(out));
+
     return 0;
   } catch {
     return 0;

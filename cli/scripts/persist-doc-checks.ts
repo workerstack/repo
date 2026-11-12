@@ -15,6 +15,7 @@ export type Doc = {
 };
 
 export type HeadCheck = (doc: Doc) => string[];
+
 export type SectionCheck = (doc: Doc, sections: Sections) => string[];
 
 /** `[error]` when `bad`, else none. */
@@ -24,6 +25,7 @@ export function when({ bad, error }: { bad: boolean; error: string }): string[] 
 
 export function serialLineCheck({ text }: Doc): string[] {
   const line = text.split("\n").find((l) => l.startsWith("serial:"));
+
   return when({ bad: line === undefined || !SERIAL_LINE_RE.test(line), error: "serial line" });
 }
 
@@ -35,6 +37,7 @@ export function missingErrors({ map }: Doc, keys: readonly string[]): string[] {
 /** The key's name as the error when `key` is set and does not match `pattern`. */
 export function patternErrors({ map }: Doc, key: string, pattern: RegExp): string[] {
   const value = map[key];
+
   return when({ bad: value !== undefined && value !== "" && !pattern.test(value), error: key });
 }
 
@@ -48,6 +51,7 @@ export function sourceLengthCheck({ map }: Doc): string[] {
 
 export function slugCheck({ filename, map }: Doc): string[] {
   const named = map.name !== undefined && map.name !== "";
+
   return when({ bad: named && slugFromFilename(filename) !== map.name, error: "name/filename slug" });
 }
 
@@ -62,6 +66,7 @@ export type ProseRules = { headings: readonly string[]; bullets: RegExp; split: 
 function goalErrors(goal: string | undefined, { split, max }: ProseRules): string[] {
   const text = (goal ?? "").trim();
   const sentences = text.split(split).filter((s) => s.trim() !== "");
+
   return when({ bad: text === "" || sentences.length < 1 || sentences.length > max, error: "goal" });
 }
 
@@ -69,8 +74,10 @@ function goalErrors(goal: string | undefined, { split, max }: ProseRules): strin
 function proseErrors(bodies: Record<string, string>, rules: ProseRules): string[] {
   const bullets = rules.headings.flatMap((h) => {
     const b = (bodies[h] ?? "").trim();
+
     return b === "" ? [`${h} empty`] : when({ bad: !rules.bullets.test(b), error: `${h} bullets` });
   });
+
   return [...goalErrors(bodies.Goal, rules), ...bullets];
 }
 
@@ -82,6 +89,7 @@ export function proseCheck(rules: ProseRules): (doc: unknown, sections: Sections
 /** `heading order` unless the first H2s are `required`, then `extra h2` for any other. */
 export function headingErrors({ order }: Pick<Sections, "order">, required: readonly string[]): string[] {
   const first = order.slice(0, required.length);
+
   return [
     ...when({ bad: required.some((h, i) => first[i] !== h), error: "heading order" }),
     ...when({ bad: order.some((h) => !required.includes(h)), error: "extra h2" }),
@@ -98,12 +106,15 @@ export function validateDoc(
 ): string[] {
   const errors: string[] = when({ bad: !filenameRe.test(filename), error: "filename" });
   const fm = parseFrontmatter(text);
+
   if (fm.error !== undefined) return [...errors, fm.error];
   const doc: Doc = { body: fm.body, filename, map: fm.map, text };
   errors.push(...head.flatMap((check) => check(doc)));
   const fence = unclosedFenceErrors(text);
+
   if (fence.length > 0) return [...new Set([...errors, ...fence])];
   const parsed = sectionBodies(fm.body);
   errors.push(...sections.flatMap((check) => check(doc, parsed)));
+
   return [...new Set(errors)];
 }

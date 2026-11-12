@@ -33,6 +33,7 @@ function clearGitEnv() {
 it("a root git cannot list fails the step with git's reason", () => {
   clearGitEnv();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "rej-nogit-"));
+
   try {
     const result = rejectionsStep(turnOf(root, [], ""));
     expect(result?.ok).toBe(false);

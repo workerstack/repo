@@ -17,6 +17,7 @@ import {
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const SETTINGS = ".claude/settings.json";
@@ -29,6 +30,7 @@ it("merges .repo/settings/claude.json into .claude/settings.json", () => {
       permissions: { allow: ["Bash(ls:*)"], deny: ["Agent(Explore)", "Read(./secret)"] },
     }),
   });
+
   const settings = json<ClaudeSettings>(render(root, ["claude"]), SETTINGS);
   expect(settings.env).toStrictEqual({ MINE: "1" });
   expect(settings.permissions.allow).toContain("Bash(ls:*)");
@@ -42,9 +44,11 @@ it("appends .repo hooks after the generated ones and never repeats a stock hook"
   const plain = json<ClaudeSettings>(render(consumer(), ["claude"]), SETTINGS);
   const stockGroup = plain.hooks.PreToolUse[0];
   const mine = { hooks: [{ command: "make post-write", timeout: 5, type: "command" }], matcher: "Write" };
+
   const root = consumer({
     ".repo/settings/claude.json": JSON.stringify({ hooks: { PostToolUse: [mine], PreToolUse: [stockGroup] } }),
   });
+
   const settings = json<ClaudeSettings>(render(root, ["claude"]), SETTINGS);
   expect(settings.hooks.PreToolUse).toStrictEqual(plain.hooks.PreToolUse);
   expect(settings.hooks.PostToolUse).toStrictEqual([...(plain.hooks.PostToolUse ?? []), mine]);
@@ -95,6 +99,7 @@ it("keeps a consumer scripts/ hook and a .repo/permissions.json deny in the hook
     ".repo/permissions.json": JSON.stringify({ deny: ["Edit(./vendor/**)"] }),
     "scripts/daily-pull-check.mjs": "// pull\n",
   });
+
   const outputs = render(root, ["claude", "codex"]);
   expect(text(outputs, SETTINGS)).toContain("daily-pull-check.mjs");
   expect(text(outputs, SETTINGS)).toContain("Edit(./vendor/**)");
@@ -106,6 +111,7 @@ it("merges a .repo/mcp-policy.jsonc over the stock policy, its allow list pickin
     ".mcp.json": JSON.stringify({ mcpServers: { mine: { command: "x" }, off: { command: "y" } } }),
     ".repo/mcp-policy.jsonc": '{ "allow": ["mine"] }',
   });
+
   const mcp = json<McpFile>(render(root, ["antigravity"]), ".agents/mcp_config.json");
   expect(mcp.mcpServers).toStrictEqual({ mine: { command: "x" } });
 });

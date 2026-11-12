@@ -14,30 +14,37 @@ function root(): string {
   fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "bin\n");
   fs.mkdirSync(path.join(dir, "references"));
   fs.writeFileSync(path.join(dir, "references", "x.md"), "ref\n");
+
   return dir;
 }
 
 /** A root as `bun install` leaves it: on win32 bun has put its generic shim in `.bin`, which the self-link copies. */
 function installedRoot(): string {
   const dir = root();
+
   if (process.platform === "win32") {
     fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
     fs.writeFileSync(path.join(dir, "node_modules", ".bin", "alpha.exe"), "ALPHA");
   }
+
   return dir;
 }
 
 function binOf(dir: string) {
   return path.join(dir, "node_modules", ".bin", "repo");
 }
+
 function pkgOf(dir: string) {
   return path.join(dir, "node_modules", "@workerstack", "repo");
 }
+
 /** What the linked bin runs: the link's target text, or on win32 "bin\n" once the `.bunx` beside the shim exists. */
 function boundText(dir: string): string {
   if (process.platform !== "win32") return fs.readFileSync(binOf(dir), "utf8");
+
   return fs.existsSync(path.join(path.dirname(binOf(dir)), "repo.bunx")) ? "bin\n" : "no bunx";
 }
+
 function refOf(dir: string) {
   return fs.readFileSync(path.join(pkgOf(dir), "references", "x.md"), "utf8");
 }
@@ -88,10 +95,13 @@ describe("linkAndSync", () => {
   it("links, then runs the postinstall sync in the root and passes its exit code on", () => {
     const dir = installedRoot();
     const calls: string[] = [];
+
     function run(cwd: string) {
       calls.push(cwd, boundText(dir));
+
       return 1;
     }
+
     expect(linkAndSync(dir, run)).toBe(1);
     expect(calls).toStrictEqual([dir, "bin\n"]);
     expect(linkAndSync(dir, () => 0)).toBe(0);
@@ -105,12 +115,15 @@ describe("linkAndSync", () => {
 function units(text: string): number[] {
   return Array.from({ length: text.length }, (_, i) => text.charCodeAt(i));
 }
+
 function u16(n: number): number[] {
   return [n & 0xff, n >> 8];
 }
+
 function u32(n: number): number[] {
   return [...u16(n & 0xffff), ...u16(n >>> 16)];
 }
+
 function wide(list: number[]): number[] {
   return list.flatMap(u16);
 }
@@ -176,6 +189,7 @@ function withShim(): string {
   fs.writeFileSync(path.join(bin, "zeta.exe"), "ZETA");
   fs.writeFileSync(path.join(bin, "alpha.exe"), "ALPHA");
   fs.writeFileSync(path.join(dir, "bin", "repo.ts"), "#!/usr/bin/env bun\nx\n");
+
   return dir;
 }
 

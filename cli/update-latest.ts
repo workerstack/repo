@@ -14,13 +14,17 @@ export type Latest = { verdicts: Map<string, Verdict>; failure: string | null };
 async function pool<T, R>(items: readonly T[], size: number, run: (item: T) => Promise<R>): Promise<R[]> {
   const queue = [...items.entries()];
   const results: R[] = [];
+
   async function worker(): Promise<void> {
     const next = queue.shift();
+
     if (next === undefined) return;
     results[next[0]] = await run(next[1]);
     await worker();
   }
+
   await Promise.all(Array.from({ length: Math.min(size, items.length) }, worker));
+
   return results;
 }
 
@@ -28,6 +32,7 @@ async function pool<T, R>(items: readonly T[], size: number, run: (item: T) => P
 function verdictOf(answer: Exclude<RegistryAnswer, { kind: "unreachable" }>): Verdict {
   if (answer.kind === "missing") return { why: NOT_ON_REGISTRY };
   const latest = answer.doc["dist-tags"][LATEST_TAG];
+
   return latest === undefined ? { why: NO_LATEST } : { latest };
 }
 
@@ -37,18 +42,23 @@ function verdictOf(answer: Exclude<RegistryAnswer, { kind: "unreachable" }>): Ve
  */
 export async function latestOf(names: readonly string[], io: UpdateIo): Promise<Latest> {
   const base = latestRegistry(io.env).replace(TRAILING_SLASH, SLASH);
+
   function ask(url: string) {
     return io.fetch(url, { signal: AbortSignal.timeout(LATEST_TIMEOUT_MS) });
   }
+
   const answers = await pool(names, CONCURRENCY, async (name) => ({
     answer: await registryDoc(ask, name, base),
     name,
   }));
+
   const verdicts = new Map<string, Verdict>();
   let failure: string | null = null;
+
   for (const { name, answer } of answers) {
     if (answer.kind === "unreachable") failure ??= prefixed(noAnswer(new URL(base).host, name, answer.why));
     else verdicts.set(name, verdictOf(answer));
   }
+
   return { failure, verdicts };
 }

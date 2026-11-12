@@ -48,10 +48,12 @@ it("reports unreadable frontmatter once", () => {
 
 it("flags a dead link, resolved from the skill's folder", () => {
   const body = "See [steps](./steps.md#top) and [more](refs/more.md).\n";
+
   const root = repo({
     ".repo/skills/deploy/SKILL.md": skill("deploy", "d", body),
     ".repo/skills/deploy/refs/more.md": "x",
   });
+
   expect(check(root)).toStrictEqual([".repo/skills/deploy/SKILL.md: link ./steps.md does not exist"]);
   fs.writeFileSync(path.join(root, ".repo/skills/deploy/steps.md"), "x");
   expect(check(root)).toStrictEqual([]);

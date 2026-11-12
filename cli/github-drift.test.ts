@@ -20,9 +20,12 @@ it("ignores the order of rules, checks and topics and parameters it does not man
       ...p,
       required_status_checks: (p.required_status_checks ?? []).toReversed(),
     }));
+
     const merged = withParameters(swapped, "pull_request", (p) => ({ ...p, allowed_merge_methods: ["squash"] }));
+
     return { ...ruleset, rules: merged.toReversed() };
   });
+
   expect(driftOf(wantedOf(), { ...reordered, topics: reordered.topics.toReversed() })).toStrictEqual([]);
 });
 
@@ -49,6 +52,7 @@ it("names a required check the ruleset lacks, one from another app, and one CI n
       ],
     })),
   }));
+
   expect(messages(current)).toStrictEqual([
     `ruleset main is missing the required check "test (ubuntu-latest)": ${RUN}`,
     `ruleset main is missing the required check "consumer": ${RUN}`,
@@ -61,6 +65,7 @@ it("names a missing and an unwanted rule", () => {
     ...ruleset,
     rules: [{ type: "creation" }, { type: "update" }, { type: "required_linear_history" }],
   }));
+
   expect(messages(current)).toStrictEqual([
     `ruleset release tags is missing the rule "deletion": ${RUN}`,
     `ruleset release tags has the unwanted rule "required_linear_history": ${RUN}`,
@@ -81,12 +86,15 @@ function moved(ruleset: CurrentRuleset) {
 it("names a changed target, enforcement, refs, approval count, strictness and bypass list", () => {
   const current = changed("main", (ruleset) => {
     const approvals = withParameters(ruleset.rules, "pull_request", () => ({ required_approving_review_count: 1 }));
+
     const strict = withParameters(approvals, "required_status_checks", (p) => ({
       ...p,
       strict_required_status_checks_policy: true,
     }));
+
     return { ...moved(ruleset), rules: strict };
   });
+
   expect(messages(current)).toStrictEqual([
     `ruleset main targets "tag", wanted "branch": ${RUN}`,
     `ruleset main is "disabled", wanted "active": ${RUN}`,

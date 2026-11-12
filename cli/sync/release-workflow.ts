@@ -77,13 +77,16 @@ const JOBS: readonly Job[] = [
  */
 export function releaseWorkflow(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   const { name, private: isPrivate } = ctx.workspace.manifest;
+
   if (!ctx.config.packs.includes("release") || name === undefined || isPrivate !== false)
     return { errors: [], outputs: [] };
 
   const existing = ctx.read(RELEASE_PATH);
+
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${RELEASE_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
 
   const content = `${PREAMBLE.replaceAll("%NAME%", name)}\n${JOBS.map(render).join("\n\n")}\n`;
+
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: RELEASE_PATH, tracked: true }] };
 }

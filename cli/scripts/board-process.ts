@@ -31,6 +31,7 @@ type PlatformProbe = (n: number, deps: Deps) => ProcessInfo | null;
 
 export function readBootId({ readFile = fs.readFileSync, platform = process.platform }: ProbeDeps = {}): string {
   if (platform !== LINUX) return NONE;
+
   try {
     return orNone(String(readFile(BOOT_ID_FILE, "utf8")).trim());
   } catch {
@@ -53,24 +54,32 @@ export function parseProcStat(text: unknown): ProcStat | null {
   const s = str(text);
   const end = s.lastIndexOf(")");
   const open = s.indexOf("(");
+
   if (open < 0 || end < open) return null;
   const comm = s.slice(open + 1, end);
+
   const rest = s
     .slice(end + 1)
     .trim()
     .split(SPACE_SPLIT_RE);
+
   if (rest.length < STAT_FIELDS) return null;
   const [state, ppidText] = rest /* STAT_FIELDS fields at least, checked above */ as [string, string];
   const ppid = Number(ppidText);
+
   if (!Number.isFinite(ppid)) return null;
+
   return { comm, ppid, start: rest[STAT_START] /* STAT_FIELDS fields at least */ as string, state };
 }
 
 function linuxProbe(n: number, deps: Deps): ProcessInfo | null {
   const readFile = deps.readFile ?? fs.readFileSync;
+
   try {
     const parsed = parseProcStat(readFile(`/proc/${n}/stat`, "utf8"));
+
     if (parsed === null || parsed.state === ZOMBIE) return null;
+
     return { comm: parsed.comm, pid: n, ppid: parsed.ppid, start: parsed.start };
   } catch {
     return null;
@@ -80,14 +89,17 @@ function linuxProbe(n: number, deps: Deps): ProcessInfo | null {
 /** The stdout of `cmd`, or null when it fails. */
 function spawnOut(deps: Deps, cmd: string, args: string[]): string | null {
   const r = deps.spawn(cmd, args, { encoding: "utf8" });
+
   return r?.status === 0 ? String(r.stdout ?? "") : null;
 }
 
 function darwinProbe(n: number, deps: Deps): ProcessInfo | null {
   const out = spawnOut(deps, "ps", ["-o", "ppid=,lstart=,comm=", "-p", String(n)]);
   const m = out === null ? null : PS_LINE_RE.exec(out.trim());
+
   if (m === null) return null;
   const [, ppid, start, comm] = [...m] /* three groups, all present on a match */ as [string, string, string, string];
+
   return { comm: commBase(comm), pid: n, ppid: Number(ppid), start };
 }
 
@@ -99,37 +111,48 @@ function win32Probe(n: number, deps: Deps): ProcessInfo | null {
     "$p.Name",
     "$p.CreationDate.ToUniversalTime().ToString('o')",
   ].join("; ");
+
   const out = spawnOut(deps, "powershell.exe", ["-NoProfile", "-Command", script]);
+
   if (out === null) return null;
+
   const parts = out
     .trim()
     .split(LINE_BREAK_RE)
     .map((s) => s.trim())
     .filter((s) => s !== "");
+
   if (parts.length < WIN_FIELDS) return null;
   const [ppidText, comm, start] = parts /* WIN_FIELDS lines at least, checked above */ as [string, string, string];
   const ppid = Number(ppidText);
+
   return Number.isFinite(ppid) ? { comm, pid: n, ppid, start } : null;
 }
 
 function platformProbe(platform: string): PlatformProbe | null {
   if (platform === LINUX) return linuxProbe;
+
   if (platform === DARWIN) return darwinProbe;
+
   return platform === WIN32 ? win32Probe : null;
 }
 
 export function probeProcess(pid: unknown, deps: ProbeDeps = {}): ProcessInfo | null {
   const n = Number(pid);
+
   if (!Number.isInteger(n) || n <= 1) return null;
   const probe = platformProbe(deps.platform ?? process.platform);
   const spawn: Deps["spawn"] = deps.spawn ?? spawnSync;
+
   return probe === null ? null : probe(n, { ...deps, spawn });
 }
 
 /** The host when `info` is not a shell, the parent to walk to when it is, or null when the walk must stop. */
 function walkStep(info: ProcessInfo | null, current: number): HostIdentity | number | null {
   if (info == null || !(info.pid > 1) || info.start == null || info.start === "") return null;
+
   if (!SHELLS.has(commBase(info.comm))) return { pid: info.pid, start: info.start };
+
   return !(info.ppid > 1) || info.ppid === current ? null : info.ppid;
 }
 
@@ -138,11 +161,14 @@ export function hostIdentity({
   probe = probeProcess,
 }: { pid?: number; probe?: Probe | undefined } = {}): HostIdentity | null {
   let current = probe(pid)?.ppid;
+
   for (let i = 0; i < MAX_WALK && current !== undefined && current > 1; i++) {
     const step = walkStep(probe(current), current);
+
     if (typeof step !== "number") return step;
     current = step;
   }
+
   return null;
 }
 
@@ -156,11 +182,14 @@ export function rowAlive(
 ): boolean {
   if (!hasIdentity(row) || str(row.boot) !== str(boot)) return false;
   let info: ProcessInfo | null;
+
   try {
     info = probe(Number(row.pid));
   } catch {
     return false;
   }
+
   if (info == null || info.start == null || info.start === "") return false;
+
   return info.start === String(row.start);
 }

@@ -7,6 +7,7 @@ import { removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
 import { checkActionlintAt } from "./actionlint.ts";
 
 const SLOW = 180_000;
+
 afterEach(removePlanted);
 
 /** A release-pack repo whose one workflow has `jobs` as its job section. */
@@ -16,6 +17,7 @@ function planted(jobs: string): string {
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   const body = `name: x\non: push\njobs:\n  build:\n${jobs}\n    steps:\n      - run: echo hi\n`;
   fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), body);
+
   return root;
 }
 

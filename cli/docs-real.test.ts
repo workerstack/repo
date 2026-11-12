@@ -19,6 +19,7 @@ const MANIFEST = {
   type: "module",
   version: "1.0.0",
 };
+
 const TSCONFIG = {
   compilerOptions: {
     allowImportingTsExtensions: true,
@@ -43,8 +44,10 @@ function workspace(example: string, manifest: unknown = MANIFEST): string {
     ),
     "packages/a/tsconfig.json": json(TSCONFIG),
   });
+
   fs.mkdirSync(path.join(root, "node_modules/@ws"), { recursive: true });
   fs.symlinkSync(path.join(root, "packages/a"), path.join(root, "node_modules/@ws/a"), "junction");
+
   return root;
 }
 
@@ -53,6 +56,7 @@ it("type-checks and runs a package's example that imports its own name, under it
     workspace('import { answer } from "@ws/a";\nif (answer !== 42) throw new Error("bad");'),
     REAL_TOOLS,
   );
+
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.err).toStrictEqual([]);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);

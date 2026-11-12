@@ -1,15 +1,21 @@
 /** What a job prints when the caller should run the plain command instead. */
 export const FALLBACK = "FALLBACK";
+
 /** The exit code that goes with `FALLBACK`. */
 export const FALLBACK_EXIT = 2;
+
 /** The most fact lines a verdict shows. */
 export const MAX_FACTS = 6;
+
 /** Output past this many bytes goes to a stash. */
 export const MAX_STDOUT: number = 32 * 1024;
+
 /** The most bytes a stash holds. */
 export const STASH_CAP: number = 2 * 1024 * 1024;
+
 /** The most hits a search collects. */
 export const MAX_HITS = 10_000;
+
 /** Where stashes live, relative to the root. */
 export const STASH_REL = ".tmp/repo/stash";
 
@@ -30,6 +36,7 @@ export const CWD_FLAG = "--cwd";
 export const STASH_FLAG = "--stash";
 export const FROM_FLAG = "--from";
 export const TO_FLAG = "--to";
+
 export const KNOWN_FLAGS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   JOB_FLAG,
   QUERY_FLAG,
@@ -61,9 +68,11 @@ export const PASS_SCORE = 0;
 /** The most error lines a failed verdict shows, and the most lines any verdict prints. */
 export const MAX_ERRORS = 3;
 export const MAX_TEXT_LINES = 8;
+
 /** How much of one line a fact keeps, and of a line that is no `file:line:text` hit. */
 export const FACT_WIDTH = 120;
 export const LINE_WIDTH = 160;
+
 /** The units a verdict counts in: [one, many]. */
 export const MATCH_UNITS: readonly [string, string] = ["match", "matches"];
 export const LINE_UNITS: readonly [string, string] = ["line", "lines"];
@@ -84,6 +93,7 @@ export const STASH_EXT = ".txt";
 export const CMD_TIMEOUT_MS = 20_000;
 export const FETCH_TIMEOUT_MS = 20_000;
 export const BUFFER_SLACK = 4096;
+
 /** The error code of a binary that is not on PATH. */
 export const NOT_FOUND = "ENOENT";
 export const RTK = "rtk";
@@ -92,11 +102,14 @@ export const RTK_SUFFIX = "/rtk";
 /** What the node search skips: these dirs, files past this size. */
 export const SEARCH_SKIP_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([...DENY_SEGS, ".git"]);
 export const SEARCH_MAX_FILE: number = 200 * 1024;
+
 /** A glob part that matches any number of whole dirs, none included. */
 export const GLOBSTAR_DIR = "**/";
 export const RG = "rg";
+
 /** rg exits 1 when nothing matched. */
 export const RG_NO_MATCH = 1;
+
 // --hidden: .repo/ (lessons, overlay) and the generated host trees (.claude, .agents, .grok, .codex) are dot dirs;
 // .gitignore still applies.
 export const RG_ARGS: readonly string[] = [
@@ -134,4 +147,5 @@ export const FETCH_SCRIPT: string = `
         process.exit(1);
       });
   `;
+
 export const FETCH_FAILED = "fetch failed";

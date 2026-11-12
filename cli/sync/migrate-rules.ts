@@ -8,10 +8,13 @@ import type { MigrationStep } from "./migrate.ts";
 
 /** The `.repo/` docs the upgrade reads. */
 type DocKind = "rules" | "subagents";
+
 /** One old-format doc: its text, its name without `.md`, its kind and whether a stock doc bears that name. */
 type OldDoc = { text: string; name: string; kind: DocKind; stocked: boolean };
+
 /** The upgraded text and the lines to print for it. */
 type Upgrade = { content: string; notes: string[] };
+
 /** The new top keys of an upgraded doc, the notes they make and the old keys they carry on in a new form. */
 type NewKeys = { top: [string, string | string[]][]; parts: string[]; converted: string[] };
 
@@ -19,14 +22,19 @@ type NewKeys = { top: [string, string | string[]][]; parts: string[]; converted:
 const OLD_KEYS = ["root", "targets", "globs"] as const;
 const KINDS: readonly DocKind[] = ["rules", "subagents"];
 const EVERY_FILE: readonly string[] = ["**/*", "*"];
+
 /** A `slice` bound that counts the last item off. */
 const LAST = -1;
+
 /** A rule body's first `#` heading, its text in group 1. */
 const HEADING = /^#\s+(.+?)\s*#*\s*$/m;
+
 /** A top frontmatter key line, the key in group 1. */
 const KEY_LINE = /^([A-Za-z_]+)\s*:/;
+
 /** An indented line, nested under the key above it. */
 const INDENTED = /^\s/;
+
 /** A list item line at column 0, nested under the key above it. */
 const LIST_ITEM = /^-(\s|$)/;
 
@@ -48,6 +56,7 @@ export function markedText(text: string, name: string): string | null {
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
   const lines = text.split(LINE_BREAK);
   const fenced = lines[0]?.trimEnd() === FENCE && fenceClose(lines) !== NOT_FOUND;
+
   if (fenced) {
     try {
       if (parseDoc("", text).data["overrides"] !== undefined) return null;
@@ -55,13 +64,16 @@ export function markedText(text: string, name: string): string | null {
       return null;
     }
   }
+
   const line = emitYaml([["overrides", name]]).trimEnd();
+
   return fenced ? [...lines.slice(0, 1), line, ...lines.slice(1)].join(eol) : [FENCE, line, FENCE, ...lines].join(eol);
 }
 
 /** `a`, `a and b` or `a, b and c`. */
 function joinAnd(items: readonly string[]): string {
   const head = items.slice(0, LAST);
+
   return head.length === 0 ? items.join("") : `${head.join(", ")} and ${items.slice(LAST).join("")}`;
 }
 
@@ -69,13 +81,16 @@ function joinAnd(items: readonly string[]): string {
 function stockNames(stock: string, kind: DocKind): Set<string> {
   const dir = path.join(stock, "agents", kind);
   const files = isDir(dir) ? filesUnder(dir).filter((file) => file.endsWith(MD)) : [];
+
   return new Set(files.map((file) => file.slice(0, -MD.length).toLowerCase()));
 }
 
 /** The `.md` files under `<root>/.repo/<kind>`, POSIX paths relative to it, dot entries skipped, in string order. */
 function ownDocs(root: string, kind: DocKind): string[] {
   const base = path.join(root, REPO_DIR, kind);
+
   if (!isDir(base)) return [];
+
   return filesUnder(base).filter((file) => file.endsWith(MD) && !file.split("/").some((part) => part.startsWith(".")));
 }
 
@@ -83,6 +98,7 @@ function ownDocs(root: string, kind: DocKind): string[] {
 function globList(value: unknown): string[] {
   const listed = typeof value === "string" ? value.split(",") : [];
   const items = Array.isArray(value) ? value.map(String) : listed;
+
   return items.map((item) => item.trim()).filter((item) => item !== "");
 }
 
@@ -93,18 +109,22 @@ function globList(value: unknown): string[] {
 function ruleKeys(data: Record<string, unknown>, body: string, doc: OldDoc): NewKeys {
   const keys: NewKeys = { converted: [], parts: [], top: [] };
   const description = data["description"];
+
   if (typeof description !== "string" || description.trim() === "") {
     const heading = HEADING.exec(body)?.[1];
     keys.top.push(["description", (heading ?? path.posix.basename(doc.name)).trim()]);
     keys.parts.push("description added");
   }
+
   const globs = globList(data["globs"]);
   const everywhere = globs.some((glob) => EVERY_FILE.includes(glob));
+
   if (data["paths"] === undefined && globs.length > 0 && !everywhere) {
     keys.top.push(["paths", globs]);
     keys.parts.push("globs → paths");
     keys.converted.push("globs");
   }
+
   return keys;
 }
 
@@ -112,8 +132,10 @@ function ruleKeys(data: Record<string, unknown>, body: string, doc: OldDoc): New
 function keptLines(lines: readonly string[], removed: readonly string[]): string[] {
   const kept: string[] = [];
   let isSkipping = false;
+
   for (const line of lines) {
     const key = KEY_LINE.exec(line)?.[1];
+
     if (key !== undefined && removed.includes(key)) {
       isSkipping = true;
     } else if (!isSkipping || !(INDENTED.test(line) || LIST_ITEM.test(line))) {
@@ -121,6 +143,7 @@ function keptLines(lines: readonly string[], removed: readonly string[]): string
       kept.push(line);
     }
   }
+
   return kept;
 }
 
@@ -129,9 +152,11 @@ function rewritten(text: string, top: NewKeys["top"], removed: readonly string[]
   const eol = text.includes("\r\n") ? "\r\n" : "\n";
   const lines = text.split(LINE_BREAK);
   const close = fenceClose(lines);
+
   const head = emitYaml(top)
     .split("\n")
     .filter((line) => line !== "");
+
   return [...lines.slice(0, 1), ...head, ...keptLines(lines.slice(1, close), removed), ...lines.slice(close)].join(eol);
 }
 
@@ -155,18 +180,23 @@ function parsedDoc(text: string): ReturnType<typeof parseDoc> | null {
 /** The new text of an old-format rule or subagent and the lines to print for it; null when it needs nothing. */
 function upgradeText(doc: OldDoc): Upgrade | null {
   const parsed = parsedDoc(doc.text);
+
   if (parsed === null) return null;
   const { data, body } = parsed;
   const carried = OLD_KEYS.filter((key) => key in data);
+
   if (carried.length === 0) return null;
   const isRule = doc.kind === "rules";
   const removed = carried.filter((key) => isRule || key !== "targets");
   const keys: NewKeys = isRule ? ruleKeys(data, body, doc) : { converted: [], parts: [], top: [] };
   const dropped = removed.filter((key) => !keys.converted.includes(key));
   const mark = doc.stocked && data["overrides"] === undefined;
+
   if (mark) keys.top.push(["overrides", doc.name]);
+
   if (dropped.length > 0) keys.parts.push(`${joinAnd(dropped)} dropped`);
   const notes = notesOf(keys, doc, { mark });
+
   return notes.length === 0 ? null : { content: rewritten(doc.text, keys.top, removed), notes };
 }
 
@@ -182,13 +212,16 @@ function upgradeText(doc: OldDoc): Upgrade | null {
 export function planRuleUpgrade(root: string, stock: string): MigrationStep[] {
   return KINDS.flatMap((kind) => {
     const stocked = stockNames(stock, kind);
+
     return ownDocs(root, kind).flatMap((file): MigrationStep[] => {
       const rel = `${REPO_DIR}/${kind}/${file}`;
       const name = file.slice(0, -MD.length);
       const text = fs.readFileSync(path.join(root, rel), "utf8");
       const upgraded = upgradeText({ kind, name, stocked: stocked.has(name.toLowerCase()), text });
+
       if (upgraded === null) return [];
       const note = upgraded.notes.map((line) => line.replace("@", rel)).join("\n");
+
       return [{ content: upgraded.content, kind: "write", note, path: rel }];
     });
   });

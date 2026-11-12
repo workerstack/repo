@@ -10,6 +10,7 @@ function sdk(rest: object, root: object = ROOT): Record<string, object> {
     "packages/sdk/package.json": { name: "@acme/sdk", private: false, ...rest },
   };
 }
+
 function edge(file: string, [name, field, where]: [string, string, string]) {
   return (
     `${file}: "${name}" in ${field} is private in this workspace; a consumer cannot install it, ` +
@@ -24,6 +25,7 @@ describe("checkWorkspace public edges", () => {
       optionalDependencies: { "@acme/core": "workspace:*" },
       peerDependencies: { "@acme/core": "workspace:*" },
     });
+
     expect(lines(files, LOCK_OK)).toStrictEqual([
       edge("packages/sdk/package.json", ["@acme/core", "dependencies", "packages/sdk"]),
       edge("packages/sdk/package.json", ["@acme/core", "peerDependencies", "packages/sdk"]),
@@ -56,6 +58,7 @@ describe("checkWorkspace public edges that pass", () => {
       dependencies: { "@acme/open": "workspace:*" },
       devDependencies: { "@acme/core": "workspace:*" },
     });
+
     files["packages/core/package.json"] = { dependencies: { "@acme/open": "workspace:*" }, name: "@acme/core" };
     expect(lines(files, LOCK_OK)).toStrictEqual([]);
   });

@@ -6,11 +6,13 @@ import { nativePathSeparator } from "./native-path-separator.ts";
 function messagesOf(code: string): string[] {
   return reportsOf(nativePathSeparator, { "a.ts": code }).map((report) => report.message);
 }
+
 const PATH = 'import path from "node:path";\n';
 
 const FIX =
   'which uses \\ on Windows, so `.%METHOD%("/…")` misses there; use path.basename, path.dirname, path.relative or ' +
   'split(path.sep), or convert it with .replaceAll(path.sep, "/") first';
+
 function messageFor(receiver: string, method: string): string {
   return `\`${receiver}\` is a native path, ${FIX.replace("%METHOD%", method)}`;
 }

@@ -123,13 +123,16 @@ it.each(["{", "[]", "null", '{"version":2,"paths":[]}', '{"version":1,"paths":[1
 it("writes the manifest after every output and prune, and not at all when a write fails", async () => {
   const root = fixture();
   const order: string[] = [];
+
   const deps = {
     ...only(file("a.txt"), file("b.txt")),
     writeOutput: (r: string, output: Output, platform: NodeJS.Platform) => {
       order.push(`${output.path}:${exists(root, MANIFEST_REL)}`);
+
       return writeOutput(r, output, platform);
     },
   };
+
   await syncWith(root, deps);
   expect(order).toStrictEqual(["a.txt:false", "b.txt:false"]);
   expect(exists(root, MANIFEST_REL)).toBe(true);
@@ -148,11 +151,13 @@ it("restores every earlier output when a later write fails, and converges on the
   const before = snapshot(root);
   const next = only(file("a.txt"), file("b.txt"), file("c/d.txt"));
   let calls = 0;
+
   const crashing = {
     ...next,
     writeOutput: (r: string, output: Output, platform: NodeJS.Platform) =>
       ++calls === 3 ? "EACCES: permission denied" : writeOutput(r, output, platform),
   };
+
   expect(await syncWith(root, crashing)).toStrictEqual({
     code: 1,
     stderr: "repo sync: c/d.txt: cannot write: EACCES: permission denied; restored 2 outputs, nothing changed\n",
@@ -175,9 +180,11 @@ it("restores every earlier output when a later write fails, and converges on the
 it("matches a manifest's backslash and absolute spellings to outputs and never prunes a foreign path", async () => {
   const root = fixture();
   const winRoot = root.replaceAll("/", "\\");
+
   // A drive path is a plain file name inside the repo on posix and a real path outside it on win32.
   const foreign =
     process.platform === "win32" ? path.join(`${root}-foreign`, "a", "foreign.txt") : "C:\\other\\a\\foreign.txt";
+
   const foreignAbs = process.platform === "win32" ? foreign : path.join(root, foreign);
   removeAfter(`${root}-foreign`);
   write(root, "a/keep.txt", "keep\n");

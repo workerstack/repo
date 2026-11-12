@@ -12,6 +12,7 @@ import { linkIo } from "./link-io.ts";
 
 const MODULES = "node_modules";
 const { tempDir } = useTempDirs("link-root-");
+
 function git(cwd: string, ...args: string[]) {
   return execFileSync("git", ["-c", "user.email=a@b", "-c", "user.name=a", ...args], { cwd, encoding: "utf8" });
 }
@@ -25,6 +26,7 @@ function checkouts() {
   git(main, "commit", "-q", "--allow-empty", "-m", "base");
   const tree = path.join(base, "repo-wt");
   git(main, "worktree", "add", "-q", tree);
+
   return { base, main, tree };
 }
 

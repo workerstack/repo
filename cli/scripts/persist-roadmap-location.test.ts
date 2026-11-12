@@ -9,6 +9,7 @@ import { persistRoadmap } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
 const SLICE_1 = "1 [ ] auth types: Reserved names list the new skills.\n";
+
 function withLocation(location: string) {
   return DRAFT_ROADMAP.replace(SLICE_1, `${SLICE_1}      Location: ${location}\n`);
 }

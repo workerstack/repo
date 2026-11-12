@@ -15,6 +15,7 @@ it("finds the nearest package.json up to the root, and whether it is private", (
     "packages/a/package.json": '{ "private": true }',
     "packages/b/package.json": '{ "private": false }',
   });
+
   expect(owner("packages/a/src/x.ts")).toStrictEqual({ dir: "packages/a", public: false });
   expect(owner("packages/b/x.ts")).toStrictEqual({ dir: "packages/b", public: true });
   expect(owner("cli/x.ts")).toStrictEqual({ dir: ".", public: true });

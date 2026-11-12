@@ -15,8 +15,11 @@ const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "board-pr
 /** Node 50 under shell 40 under the claude host 30. */
 function chain(pid: number): ProcessInfo | null {
   if (pid === 50) return { comm: "node", pid: 50, ppid: 40, start: "1" };
+
   if (pid === 40) return { comm: "sh", pid: 40, ppid: 30, start: "2" };
+
   if (pid === 30) return { comm: "claude", pid: 30, ppid: 1, start: "3" };
+
   return null;
 }
 
@@ -49,10 +52,13 @@ it("probes linux without process.kill, and reads a zombie or an unreadable stat 
 
 it("probes darwin through ps", () => {
   const seen: string[][] = [];
+
   function ps(cmd: string, args: string[]) {
     seen.push([cmd, ...args]);
+
     return { status: 0, stdout: "11 Thu Oct  9 12:00:00 2026 /bin/zsh\n" };
   }
+
   expect(probeProcess(10, { platform: "darwin", spawn: ps })).toStrictEqual({
     comm: "zsh",
     pid: 10,
@@ -65,10 +71,13 @@ it("probes darwin through ps", () => {
 
 it("probes windows through powershell", () => {
   const seen: string[] = [];
+
   function pwsh(cmd: string) {
     seen.push(cmd);
+
     return { status: 0, stdout: "11\ncmd.exe\n2026-10-09T12:00:00.0000000Z\n" };
   }
+
   expect(probeProcess(10, { platform: "win32", spawn: pwsh })).toStrictEqual({
     comm: "cmd.exe",
     pid: 10,
@@ -85,6 +94,7 @@ it("recordHook writes the row and otherLines skips that session", () => {
   const deps = { boot, identity: { pid: 30, start: "100" }, now: "2026-10-09T12:00:00Z", probe: alive };
   expect(recordHook({ session_id: "" }, env, deps)).toBeNull();
   expect(recordHook({ session_id: "default" }, env, deps)).toBeNull();
+
   const data = {
     cwd: "/home/user/x",
     effort: { level: "medium" },
@@ -92,6 +102,7 @@ it("recordHook writes the row and otherLines skips that session", () => {
     prompt: "updating auth",
     session_id: "sid",
   };
+
   expect(recordHook(data, env, deps)?.work).toBe("updating auth");
   const both = probeOf({ 30: {}, 31: { start: "101" } });
   writeRow(dir, { pid: 31, probe: both, session: "other", start: "101", work: "other work" });

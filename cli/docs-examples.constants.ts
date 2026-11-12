@@ -6,6 +6,7 @@ export const STOCK_TSCONFIG = "bun.json";
 export const TSC_ARGS: readonly string[] = ["--pretty", "false", "-p"];
 export const BUN_BUILD_ARGS: readonly string[] = ["run", "build"];
 export const NO_OUTPUT = "no output";
+
 /** `path(line,col): error TS1234: message`, as `tsc --pretty false` prints it. */
 export const TSC_LINE: RegExp = /^(.+?)\((\d+),\d+\): error TS\d+: (.*)$/;
 export const THROWN_LINE: RegExp = /^(?:\w*Error|error)\b/;

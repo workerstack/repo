@@ -13,6 +13,7 @@ const ROOT = path.join(path.sep, "main");
 function fakeFs({ fail = false } = {}) {
   const ops: string[] = [];
   const files = new Map<string, string>();
+
   const memory = {
     mkdirSync: (dir: string) => ops.push(`mkdir ${dir}`),
     renameSync: (from: string, to: string) => {
@@ -23,10 +24,12 @@ function fakeFs({ fail = false } = {}) {
     rmSync: (file: string) => ops.push(`rm ${file}`),
     writeFileSync: (file: string, data: string) => {
       ops.push(`write ${file}`);
+
       if (fail) throw new Error("disk full");
       files.set(file, data);
     },
   } as unknown /* only the methods a record calls are given */ as RecordFs;
+
   return { files, fs: memory, ops };
 }
 
@@ -73,6 +76,7 @@ it("a failed write leaves no final file, removes the temp and says so", () => {
 
 it("writes with node's fs when none is given", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-record-"));
+
   try {
     expect(writeRecord({ root: dir, sha: SHA }, record("nothing"))).toBe(true);
     expect(fs.readdirSync(path.join(dir, ".tmp", "repo", "ci"))).toStrictEqual([`${SHA}.json`]);
@@ -84,9 +88,11 @@ it("writes with node's fs when none is given", () => {
 it("the root is the parent of the common git dir, so a worktree and the root meet; cwd outside git", () => {
   const common = path.join(ROOT, ".git");
   const args: string[][] = [];
+
   function git(a: string[]) {
     return (args.push(a), { code: 0, stderr: "", stdout: `${common}\n` });
   }
+
   expect(recordRoot(git, path.join(ROOT, ".worktrees", "x"))).toBe(ROOT);
   expect(args[0]).toStrictEqual(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   expect(recordRoot(() => ({ code: 128, stderr: "fatal", stdout: "" }), "/elsewhere")).toBe("/elsewhere");

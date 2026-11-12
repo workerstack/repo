@@ -71,6 +71,7 @@ describe("nextSerial", () => {
 
   it("is one past the highest numbered markdown file", () => {
     const dir = tmp();
+
     for (const f of ["2-a.md", "7-b.md", "9-c.txt", "notes.md"]) fs.writeFileSync(path.join(dir, f), "");
     expect(nextSerial(dir)).toBe(8);
     expect(nextSerial(dir, "")).toBe(10);
@@ -155,6 +156,7 @@ describe("freeName", () => {
 
   it("gives up after five taken serials past the first", () => {
     const dir = tmp();
+
     for (let n = 3; n <= 8; n += 1) fs.writeFileSync(path.join(dir, `${n}-s-20260102T030405Z.md`), "");
     expect(freeName(dir, parts)).toBeUndefined();
     fs.rmSync(path.join(dir, "8-s-20260102T030405Z.md"));

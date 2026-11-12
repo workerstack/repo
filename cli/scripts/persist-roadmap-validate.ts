@@ -40,13 +40,16 @@ type Roadmap = {
 };
 
 type HeadCheck = (r: Roadmap) => string[];
+
 type SectionCheck = (r: Roadmap, sections: Sections) => string[];
 
 /** The roadmap's own loose frontmatter reader: no frontmatter is an empty map, not an error. */
 export function splitFrontmatter(text: unknown): Split {
   const s = stripBom(String(text));
   const end = s.startsWith(FM_OPEN) ? s.indexOf(FM_CLOSE, FM_OPEN.length) : NOT_FOUND;
+
   if (end === NOT_FOUND) return { body: s, map: {} };
+
   return { body: s.slice(end + FM_CLOSE.length), map: frontmatterMap(s.slice(FM_OPEN.length, end), FM_LINE_LOOSE_RE) };
 }
 
@@ -66,6 +69,7 @@ const HEAD_CHECKS: HeadCheck[] = [
 function boxes(section: string | undefined): { id: string; fresh: boolean }[] {
   return (section ?? "").split("\n").flatMap((line) => {
     const m = line.match(BOX_RE);
+
     return m === null ? [] : [{ fresh: m.groups?.mark === " ", id: String(m.groups?.id) }];
   });
 }
@@ -89,6 +93,7 @@ const SECTION_CHECKS: SectionCheck[] = [
   ({ fresh }, { bodies }) => when({ bad: fresh && boxes(bodies.Verify).some((b) => !b.fresh), error: "fresh [x]" }),
   (_r, { bodies }) => {
     const leaves = boxes(bodies.Verify).filter((b) => LEAF_RE.test(b.id));
+
     return when({ bad: leaves.length < 1 || leaves.length > LEAVES_MAX, error: "verify" });
   },
 ];
@@ -103,6 +108,7 @@ function load(
   // A new roadmap is always a pointer roadmap. An update keeps the saved file's shape, so deleting
   // ## Goal cannot move an old roadmap under other rules; with no saved file the text decides.
   const pointer = fresh || !sectionBodies((prev ?? { body }).body).order.includes(GOAL_H2);
+
   return { body, filename, fresh, map, pointer, prev, previous, slug: slugFromFilename(filename), text };
 }
 
@@ -114,7 +120,9 @@ export function validateRoadmap(
   const roadmap = load(filename, text, { fresh, previous });
   const errors = HEAD_CHECKS.flatMap((check) => check(roadmap));
   const fence = unclosedFenceErrors(text);
+
   if (fence.length > 0) return [...new Set([...errors, ...fence])];
   const sections = sectionBodies(roadmap.body);
+
   return [...new Set([...errors, ...SECTION_CHECKS.flatMap((check) => check(roadmap, sections))])];
 }

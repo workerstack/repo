@@ -10,6 +10,7 @@ import type { GhFailure } from "./github-gh.ts";
 afterEach(cleanGithubTemps);
 
 const SKIP = "github: skipped, ";
+
 function check(cwd: string, fake: FakeGh, { ci = false }: { ci?: boolean } = {}) {
   return checkGithubAt(cwd, { ci, gh: fake.gh });
 }
@@ -55,6 +56,7 @@ it.each(CASES)("skips with the reason when %s", async (_, failure, reason) => {
     githubRepo(),
     fakeGh(EMPTY_SETTINGS(), () => failure),
   );
+
   expect(result).toStrictEqual({ problems: [], report: [SKIP + reason] });
 });
 

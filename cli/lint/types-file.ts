@@ -9,9 +9,13 @@ const TYPES = ["TSTypeAliasDeclaration", "TSInterfaceDeclaration"];
 /** `import type`, an exported type alias or interface, or `export type … from`. */
 function typeOnly(statement: Statement): boolean {
   if (statement.type === AST_NODE_TYPES.ImportDeclaration) return statement.importKind === "type";
+
   if (statement.type === AST_NODE_TYPES.ExportAllDeclaration) return statement.exportKind === "type";
+
   if (statement.type !== AST_NODE_TYPES.ExportNamedDeclaration) return false;
+
   if (statement.declaration !== null) return TYPES.includes(statement.declaration.type);
+
   return statement.source !== null && statement.exportKind === "type";
 }
 
@@ -19,6 +23,7 @@ function typeOnly(statement: Statement): boolean {
 export const typesFile: RepoRule<"move"> = {
   create(context) {
     if (!context.filename.endsWith(".types.ts")) return {};
+
     return {
       Program(program) {
         for (const statement of program.body)

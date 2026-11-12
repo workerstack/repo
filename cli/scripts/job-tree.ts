@@ -29,6 +29,7 @@ function parsePairs(text: string): [number, number][] {
 export function descendantsOf(root: number, pairs: [number, number][]): number[] {
   const found = new Set<number>();
   const queue = [root];
+
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
     for (const [pid, parent] of pairs) {
       if (parent === next && pid !== root && !found.has(pid)) {
@@ -37,6 +38,7 @@ export function descendantsOf(root: number, pairs: [number, number][]): number[]
       }
     }
   }
+
   return [...found];
 }
 
@@ -52,10 +54,12 @@ export function endTreeAfterError(
   runner: Runner = spawnSync,
 ): boolean {
   const { error, pid: rootPid } = run;
+
   if (error === undefined || platform !== WINDOWS_PLATFORM || rootPid === undefined || rootPid === 0) return false;
   const listed = runner(POWERSHELL, POWERSHELL_ARGS, { encoding: "utf8", timeout: LIST_TIMEOUT_MS, windowsHide: true });
   const pids = [rootPid, ...descendantsOf(rootPid, parsePairs(listed.stdout ?? ""))];
   const targets = pids.flatMap((pid) => [PID_FLAG, String(pid)]);
   runner(TASKKILL, [...TASKKILL_FLAGS, ...targets], { encoding: "utf8", stdio: "ignore", windowsHide: true });
+
   return true;
 }

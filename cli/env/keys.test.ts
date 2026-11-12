@@ -49,6 +49,7 @@ describe("identities", () => {
       [`${KEYS_DIR}/b.key`]: keyFile(BETA),
       [`${KEYS_DIR}/notes.txt`]: keyFile(FROM_ENV),
     });
+
     expect(identities({ home, source: {} })).toStrictEqual([ALPHA, BETA]);
   });
 
@@ -96,6 +97,7 @@ describe("packageRoot", () => {
       "pkg/dist/package.json": manifest("other"),
       "pkg/package.json": manifest("@workerstack/repo"),
     });
+
     const from = pathToFileURL(path.join(dir, "pkg/dist/cli/env/keys.js")).href;
     expect(packageRoot(from)).toBe(path.join(dir, "pkg"));
   });
@@ -110,6 +112,7 @@ describe("packageRoot", () => {
       "pkg/x/package.json": "{}",
       "pkg/x/y.js": "",
     });
+
     expect(packageRoot(pathToFileURL(path.join(dir, "pkg/x/y.js")).href)).toBe(path.join(dir, "pkg"));
   });
 

@@ -46,13 +46,16 @@ function bunRow(pathEnv: string | undefined, platform: string): { bun: string; l
   const bunMin = bunMinimum();
   const bunOk = bunBin !== "" && versionAtLeast(bunVer, bunMin);
   const shownVer = bunVer === "" ? "unknown" : bunVer;
+
   if (bunBin !== "" && !bunOk) return { bun: "", line: row("bun", `need ≥${bunMin}`, `${shownVer} (${bunBin})`) };
+
   return { bun: bunOk ? bunBin : "", line: bunOk ? row("bun", "ok", `${bunVer} (${bunBin})`) : row("bun", "missing") };
 }
 
 /** The required tools' rows, and where each was found ("" when missing). */
 function toolRows({ cwd, pathEnv, platform }: Resolved): { found: Record<string, string>; lines: string[] } {
   const bun = bunRow(pathEnv, platform);
+
   const found: Record<(typeof TOOL_ROWS)[number] | "bun", string> = {
     bun: bun.bun,
     chromium: lookupChromium(pathEnv, platform),
@@ -60,7 +63,9 @@ function toolRows({ cwd, pathEnv, platform }: Resolved): { found: Record<string,
     lightpanda: whichBin("lightpanda", pathEnv, platform),
     rtk: whichBin("rtk", withNmBin(cwd, pathEnv, platform), platform),
   };
+
   const lines = TOOL_ROWS.map((k) => (found[k] === "" ? row(k, "missing") : row(k, "ok", found[k])));
+
   return { found, lines: [bun.line, ...lines] };
 }
 
@@ -69,22 +74,29 @@ function setupRows({ enabled, env, home, pathEnv, platform }: Resolved): string[
   function which(name: string): string {
     return whichBin(name, pathEnv, platform);
   }
+
   const lines = [optionalRow("gh", which("gh"))];
+
   if (enabled.has("clasp")) lines.push(optionalRow("clasp", which("clasp")));
+
   if (enabled.has("google-workspace")) lines.push(statusRow("google-workspace", workspaceDoctorStatus({ home })));
+
   if (enabled.has("listen")) {
     lines.push(optionalRow("ffmpeg", which("ffmpeg")));
     const whisperCli = which("whisper-cli");
     lines.push(optionalRow("whisper-cli", whisperCli === "" ? which("whisper-cpp") : whisperCli));
   }
+
   if (enabled.has("speak")) lines.push(statusRow("speak", speakDoctorStatus({ env, home })));
   lines.push(statusRow("jev", jevDoctorStatus({ env, home })));
+
   return lines;
 }
 
 /** The print-only install block for the missing required tools. No two tools share a hint line, so none repeats. */
 function hintLines(missing: string[], platform: string): string[] {
   if (missing.length === 0) return [];
+
   return ["", "install (print-only; not run):", ...missing.flatMap((k) => installHints(k, platform))];
 }
 
@@ -94,6 +106,7 @@ function repoRows({ cwd, env }: Resolved): string[] {
     packagedSkillsDir: path.join(cwd, PACKAGED_SKILLS_REL),
     workspaceSkillsDir: path.join(cwd, WORKSPACE_SKILLS_REL),
   });
+
   const warn =
     conflicts.length > 0
       ? [
@@ -102,6 +115,7 @@ function repoRows({ cwd, env }: Resolved): string[] {
           ...conflicts.map((c) => formatSkillConflictWarn(c.name)),
         ]
       : [];
+
   return [...warn, ...workspaceLines(workspaceIssues(resolveRoots({}, { cwd, env })))];
 }
 
@@ -124,6 +138,7 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
   const setup = setupRows(o);
   const missingRequired = REQUIRED.filter((k) => tools.found[k] === "");
   const maps = mapsRow(cwd);
+
   const lines = [
     ...tools.lines,
     ...setup,
@@ -133,6 +148,7 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
     ...repoRows(o),
     ...(opts.extraLines ?? []),
   ];
+
   return {
     code: missingRequired.length > 0 || maps?.ok === false ? 1 : 0,
     stderr: "",
@@ -142,11 +158,14 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
 
 export async function main(): Promise<number> {
   await loadOptionalConsumerEnv();
+
   const r = runDoctor({
     extraLines: await agentModelsLines(),
     globals: await globalsRow(process.cwd(), os.homedir()),
     skills: await enabledSkills(process.cwd()),
   });
+
   process.stdout.write(r.stdout); // runDoctor reports on stdout only
+
   return r.code;
 }

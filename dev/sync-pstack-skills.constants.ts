@@ -15,11 +15,13 @@ export const TYPESCRIPT_SKILL = "typescript-best-practices";
 export const BRO_SKILL = "bro";
 export const PRINCIPLE_PREFIX = "principle-";
 export const TEACH_NOT_EXPLAIN = " Not `/explain` (that is a longer recap of this session's work).";
+
 /** Frontmatter keys upstream sets that this repo does not keep. */
 export const DROP_FM: readonly string[] = ["disable-model-invocation", "paths"];
 
 /** What a synced file did: matched the SSOT, differs under `--check`, or was written. */
 export type Status = "ok" | "drift" | "write";
+
 export const STATUS_OK: Status = "ok";
 export const STATUS_DRIFT: Status = "drift";
 export const STATUS_WRITE: Status = "write";
@@ -70,7 +72,9 @@ export const PSTACK_SKILLS: readonly PstackSkill[] = [
 
 /** The status of a successful fetch response. */
 export const HTTP_OK = 200;
+
 /** Where the first argument is on a script's command line, after the runtime and the script. */
 export const ARGV_START = 2;
+
 /** The slice end that drops the last character of a quoted scalar. */
 export const QUOTE_END = -1;

@@ -1,5 +1,6 @@
 /** The help column: each command name is padded to this width before its summary. */
 export const HELP_PAD: number = 18;
+
 /** Where the user's arguments start in `process.argv`, after the runtime and the script. */
 export const ARGV_START: number = 2;
 
@@ -8,8 +9,10 @@ export const QUIT_CHOICE: string = "quit";
 export const SKIP_GLOBALS_FLAG: string = "--skip-globals";
 export const PACKS_FLAG: string = "--packs";
 export const PACKS_PREFIX: string = "--packs=";
+
 /** A value after `--packs` that starts with this is the next flag, not the list. */
 export const FLAG_PREFIX: string = "--";
+
 /** The flags that turn the prompts off; init never asks without a TTY either. */
 export const YES_FLAGS: ReadonlySet<string> = /* @__PURE__ */ new Set(["--yes", "-y", "--non-interactive"]);
 export const HELP_COMMANDS: readonly string[] = ["help", "--help", "-h"];
@@ -28,6 +31,7 @@ export const MENU_OPTIONS: readonly { value: string; label: string }[] = [
   { label: "help", value: "help" },
   { label: "quit", value: "quit" },
 ];
+
 export const MENU_MESSAGE: string = "Command";
 
 /** The help text's head; the command list follows it. */

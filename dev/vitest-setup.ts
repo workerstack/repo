@@ -24,16 +24,20 @@ for (const key of ["CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"]) delete process.
 // spawned CLI runs, whatever repo it makes; it is appended to any count already present.
 function testEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   const start = Number(env[GIT_CONFIG_COUNT] ?? 0);
+
   const out: Record<string, string> = {
     [BUN_CACHE_VAR]: env[BUN_CACHE_VAR] ?? path.join(os.homedir(), ".bun", "install", "cache", "@t@"),
     [GIT_CONFIG_COUNT]: String(start + QUIET_GIT.length),
   };
+
   for (const [i, [key, value]] of QUIET_GIT.entries()) {
     out[`${GIT_CONFIG_KEY}${start + i}`] = key;
     out[`${GIT_CONFIG_VALUE}${start + i}`] = value;
   }
+
   return out;
 }
+
 Object.assign(process.env, testEnv(process.env));
 
 // git prints long names, and `os.tmpdir()` may be an 8.3 short name (C:\Users\RUNNER~1); temp roots built by

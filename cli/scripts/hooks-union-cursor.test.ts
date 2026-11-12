@@ -18,9 +18,11 @@ import { AUTORUN_NEEDLES, CURSOR_WRITE_MATCHER, OWNED_HOOKS } from "./hooks-unio
 import { applyUnion, checkUnion } from "./hooks-union.ts";
 
 const tmpDir = plantDirs();
+
 function cursorHooks(ws: string) {
   return readJson<CursorDoc>(ws, ".cursor/hooks.json");
 }
+
 function scriptOf(e: FlatEntry) {
   return AUTORUN_NEEDLES.find((n) => e.command.includes(n));
 }
@@ -30,6 +32,7 @@ function consumerRepo(prefix: string): string {
   const ws = tmpDir(prefix);
   seedOwnedDrivers(ws);
   touchConsumerScripts(ws);
+
   return ws;
 }
 
@@ -48,6 +51,7 @@ function expectCursorExtras({ version, hooks }: CursorDoc, mapEntry: FlatEntry):
   ]);
   expect(hooks.postToolUse.map(scriptOf)).toStrictEqual(["validate.mjs", "sim.mjs"]);
   expect(hooks.postToolUse.map((e) => e.matcher)).toStrictEqual([CURSOR_WRITE_MATCHER, CURSOR_WRITE_MATCHER]);
+
   for (const e of [...hooks.sessionStart, ...hooks.preToolUse, ...hooks.postToolUse]) expect(e.hooks).toBeUndefined();
   expect(hooks.preToolUse.filter((e) => OWNED_HOOKS.some((n) => e.command.includes(n)))).toStrictEqual(ownedFlat);
 }

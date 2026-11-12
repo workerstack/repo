@@ -50,21 +50,26 @@ export function filesUnder(dir: string): string[] {
  */
 export function stockRel(rel: string): string {
   if (rel.startsWith(`${COPIED_DIR}${SCRIPTS}`)) return `cli/scripts/${rel.slice(COPIED_DIR.length + SCRIPTS.length)}`;
+
   if (rel.startsWith(`${COPIED_DIR}/`)) return `agents/${rel.slice(COPIED_DIR.length + 1)}`;
   const skills = HOST_SKILL_DIRS.find((dir) => rel.startsWith(dir));
+
   return skills === undefined ? rel : `agents/skills/${rel.slice(skills.length)}`;
 }
 
 /** Whether moving `src` to `dst` would overwrite other text; children named in `except` do not move. */
 export function clashes(src: string, dst: string, except: readonly string[]): boolean {
   if (!present(dst)) return false;
+
   if (isDir(src) && isDir(dst)) {
     return fs
       .readdirSync(src)
       .filter((name) => !except.includes(name))
       .some((name) => clashes(path.join(src, name), path.join(dst, name), []));
   }
+
   if (isDir(src) || isDir(dst)) return true;
+
   return !same(fs.readFileSync(src, "utf8"), fs.readFileSync(dst, "utf8"));
 }
 
@@ -75,6 +80,7 @@ export function moveTree(src: string, dst: string, except: readonly string[]): v
     fs.renameSync(src, dst);
   } else if (isDir(src)) {
     fs.mkdirSync(dst, { recursive: true });
+
     for (const name of fs.readdirSync(src).filter((entry) => !except.includes(entry)))
       moveTree(path.join(src, name), path.join(dst, name), []);
 
@@ -107,12 +113,14 @@ export function trackedRels(raw: readonly string[], root: string): string[] {
 export function gitTracked(root: string, paths: string[]): string[] | null {
   if (!present(path.join(root, ".git"))) return null;
   const result = spawnSync("git", ["ls-files", "-z", "--", ...paths], { cwd: root, encoding: "utf8" });
+
   return result.status === 0 ? result.stdout.split("\0").filter((entry) => entry !== "") : null;
 }
 
 /** Takes `paths` out of the index and leaves the files, so sync can regenerate them as ignored. */
 export function untrack(root: string, paths: readonly string[]): void {
   const result = spawnSync("git", ["rm", "-r", "--cached", "-q", "--", ...paths], { cwd: root, encoding: "utf8" });
+
   if (result.status !== 0) throw new Error(`git rm --cached failed: ${result.stderr.trim()}`);
 }
 
@@ -124,10 +132,12 @@ export function removeAll(root: string, paths: readonly string[]): void {
   for (const rel of paths) {
     const abs = path.join(root, rel);
     unlock(abs);
+
     if (rel === COPIED_DIR) {
       for (const file of filesUnder(abs).filter((entry) => `${COPIED_DIR}/${entry}` !== COPIED_MARKER))
         fs.rmSync(path.join(abs, file), { force: true });
     }
+
     fs.rmSync(abs, { force: true, recursive: true });
   }
 }

@@ -12,6 +12,7 @@ import type { SetupIo } from "./setup.types.ts";
 afterEach(cleanSetup);
 
 const body = JSON.stringify(desktopOauth);
+
 function noLogin() {
   return Promise.resolve();
 }
@@ -20,9 +21,11 @@ it("setupGoogleWorkspace names the account from --account and accepts --json", a
   const home = plant("setup-gw-acct-");
   const src = writeAt(path.join(home, "c.json"), body);
   const logins: string[] = [];
+
   function loginFn(dest: string) {
     return (logins.push(dest), Promise.resolve());
   }
+
   const r = await setupGoogleWorkspace({ flags: { account: "work", json: src }, home, io: captureIo(), loginFn });
   expect(r.dest).toBe(oauthWritePath(home, "work"));
   expect(logins).toStrictEqual([r.dest]);
@@ -58,12 +61,14 @@ function walker(texts: Record<string, string>, { withText = true }: { withText?:
   const asked: string[] = [];
   const io: SetupIo & { logs: string[]; asked: string[] } = { ...captureIo(), asked };
   io.confirm = (o) => (asked.push(o.message), Promise.resolve(true));
+
   if (withText) {
     io.text = (o) => (
       asked.push(o.message),
       Promise.resolve(texts[o.message.split(" ")[0] ?? ""] ?? o.defaultValue ?? "")
     );
   }
+
   return io;
 }
 
@@ -88,6 +93,7 @@ async function installsDownload(prefix: string, makeIo: () => SetupIo): Promise<
   const home = plant(prefix);
   writeAt(path.join(home, "Downloads", "client_secret_1.json"), body);
   await setupGoogleWorkspace({ home, interactive: true, io: makeIo(), loginFn: noLogin, openUrlFn: () => 0 });
+
   return fs.existsSync(oauthWritePath(home, "default"));
 }
 
@@ -112,15 +118,18 @@ it("copies --creds and calls login", async () => {
   fs.writeFileSync(src, JSON.stringify(desktopOauth));
   const io = captureIo();
   const logins: string[] = [];
+
   const r = await setupGoogleWorkspace({
     flags: { creds: src },
     home,
     io,
     loginFn: (p: string) => {
       logins.push(p);
+
       return Promise.resolve();
     },
   });
+
   expect(r.ok).toBe(true);
   expect(logins).toStrictEqual([path.join(home, ".workerstack", "workspace", "default", "google-oauth.json")]);
   const saved = readJsonAt(path.join(home, ".workerstack", "workspace", "default", "google-oauth.json"));
@@ -132,19 +141,24 @@ it("lands the tokens under the home it was given and writes nothing under the re
   const src = path.join(home, "client_secret.json");
   fs.writeFileSync(src, JSON.stringify(desktopOauth));
   const realTokens = path.join(os.homedir(), ".workerstack", "workspace", "default", "tokens.json");
+
   function mtime(): number | null {
     return fs.existsSync(realTokens) ? fs.statSync(realTokens).mtimeMs : null;
   }
+
   const before = mtime();
+
   const r = await setupGoogleWorkspace({
     flags: { creds: src },
     home,
     io: captureIo(),
     loginFn: (_dest: string, loginHome: string) => {
       writeAt(path.join(loginHome, ".workerstack", "workspace", "default", "tokens.json"), "{}");
+
       return Promise.resolve();
     },
   });
+
   expect(r.tokens).toBe(path.join(home, ".workerstack", "workspace", "default", "tokens.json"));
   expect(fs.existsSync(r.tokens)).toBe(true);
   expect(mtime()).toBe(before);
@@ -155,11 +169,13 @@ it("interactive walk opens console URLs then installs JSON", async () => {
   const src = path.join(home, "dl.json");
   fs.writeFileSync(src, JSON.stringify(desktopOauth));
   const opened: string[] = [];
+
   const io = {
     ...captureIo(),
     confirm: () => Promise.resolve(true),
     text: (opts: { message?: string }) => Promise.resolve((opts.message ?? "").includes("Project ID") ? "proj-1" : src),
   };
+
   await setupGoogleWorkspace({
     flags: {},
     home,

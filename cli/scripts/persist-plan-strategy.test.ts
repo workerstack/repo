@@ -14,9 +14,11 @@ const tmpWs = useTmpWs();
 
 const CREATED = "2026-08-26T14:30:00Z";
 const NO_KEY = "strategy: default|review-fast|review-deep";
+
 function without(body: string) {
   return body.replace(/^strategy:.*\n/m, "");
 }
+
 function withStrategy(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, `strategy: ${value}`);
 }
@@ -24,11 +26,13 @@ function withStrategy(body: string, value: string) {
 describe("plan strategy moves and fences", () => {
   it("moves a body strategy line into the frontmatter after commit and out of the body", () => {
     const ws = tmpWs();
+
     const r = persistPlan({
       content: `commit: feat: add the thing\n${withStrategy(VALID_PLAN, "review-deep")}`,
       created: CREATED,
       workspaceRoot: ws,
     });
+
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     const [head, ...body] = text.split("\n---\n");
@@ -59,6 +63,7 @@ describe("plan strategy denials", () => {
 
   it("denies an unknown or empty value", () => {
     const ws = tmpWs();
+
     for (const v of ["review-medium", "Default", ""]) {
       const r = persistPlan({ content: withStrategy(VALID_PLAN, v), created: CREATED, workspaceRoot: ws });
       expect(r.ok, v).toBe(false);

@@ -11,11 +11,15 @@ import { syncPackage } from "./sync-package.ts";
 
 async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [string, LinkEntry]): Promise<void> {
   const root = ctx.roots.install;
+
   if (!fs.existsSync(entry.source)) {
     ctx.io.err(goneLine(name, entry.source));
+
     return;
   }
+
   const npm = npmBefore(root, name, entry.npm);
+
   try {
     const manifest = await syncPackage(root, { checkout: entry.source, dir: entry.source, name });
     state[name] = { npm, source: entry.source, syncedAt: ctx.io.now().toISOString() };
@@ -36,6 +40,7 @@ async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [str
 /** Relinks `entries` one at a time, in order, stopping at the first failure. */
 async function relinkFrom(ctx: LinkContext, state: LinkState, entries: [string, LinkEntry][]): Promise<void> {
   const [first, ...rest] = entries;
+
   if (first === undefined) return;
   await relinkOne(ctx, state, first);
   await relinkFrom(ctx, state, rest);
@@ -43,7 +48,9 @@ async function relinkFrom(ctx: LinkContext, state: LinkState, entries: [string, 
 
 export async function reapplyLinks(io: LinkIo): Promise<number> {
   const ctx: LinkContext = { command: "link", io, roots: findRoots(io) };
+
   if (!fs.existsSync(path.join(ctx.roots.install, MODULES))) return 0;
+
   try {
     const state = readState(ctx.roots.install);
     const named = Object.entries(state).toSorted(([a], [b]) => a.localeCompare(b));
@@ -52,6 +59,7 @@ export async function reapplyLinks(io: LinkIo): Promise<number> {
   } catch (error) {
     io.err(`${WARNING_PREFIX}${(error /* reading the state throws Errors */ as Error).message}`);
   }
+
   return 0;
 }
 
@@ -63,8 +71,10 @@ export function reapplyAt(
   function out(line: string): void {
     return writers.stdout(`${line}\n`);
   }
+
   function err(line: string): void {
     return writers.stderr(`${line}\n`);
   }
+
   return reapplyLinks({ ...linkIo(), cwd, err, out });
 }

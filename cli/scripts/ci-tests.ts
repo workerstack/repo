@@ -40,6 +40,7 @@ function blobArgs(ctx: TestsCtx, shard: string): string[] {
   const [i, n] = shard.split("/");
   const blob = path.join(ctx.root, BLOB_DIR, `blob-${i}-${n}.json`);
   const kept = ctx.json === undefined ? [DEFAULT_REPORTER_FLAG] : [];
+
   return [...kept, BLOB_REPORTER_FLAG, `${BLOB_OUTPUT_FLAG}${blob}`, NO_THRESHOLDS_FLAG];
 }
 
@@ -53,12 +54,14 @@ function vitestArgs(ctx: TestsCtx, { rustRepo }: { rustRepo: boolean }): string[
   const slice = ctx.shard === undefined ? [] : [`${VITEST_SHARD_FLAG}${ctx.shard}`];
   const lenient = rustRepo || ctx.shard !== undefined ? [PASS_WITH_NO_TESTS_FLAG] : [];
   const blob = ctx.coverage && ctx.shard !== undefined ? blobArgs(ctx, ctx.shard) : [];
+
   return [...base, ...slice, ...lenient, ...reporting, ...blob];
 }
 
 /** The tests line's note on the slice, and on the floors a coverage slice leaves to the merge. */
 function shardNote(ctx: TestsCtx): string {
   if (ctx.shard === undefined) return "";
+
   return ctx.coverage ? ` (shard ${ctx.shard}, ${SHARD_WITH_FLOORS_NOTE})` : ` (shard ${ctx.shard})`;
 }
 
@@ -66,11 +69,15 @@ function shardNote(ctx: TestsCtx): string {
 export function testsGate(ctx: TestsCtx): Gate {
   const rustRepo = fs.existsSync(path.join(ctx.root, RUST_MANIFEST));
   const run = ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root);
+
   if (run === null) return skip("tests skipped (no vitest in .)");
   const counts = countsOfRun(run);
   const named = shardNote(ctx);
+
   if (run.code === 0 && rustRepo && counts.total === 0) return pass(`${NO_TEST_FILES_LABEL}${named}`);
+
   if (run.code === 0) return pass(`${plural(counts.passed, "test")} passed${named}`);
   const detail = counts.failed > 0 ? ` (${counts.failed} failed, ${counts.passed} passed)` : "";
+
   return fail(`tests failed${detail}${named}`, [textOf(run)]);
 }

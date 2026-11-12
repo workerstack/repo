@@ -45,22 +45,29 @@ function dropMergedBranch(root: string, branch: string | null): void {
 /** WorktreeRemove: force-remove the worktree at `worktree_path`, then its branch once merged. */
 function removeHooked(data: HookInput | null): HookResult {
   const target = data?.worktree_path ?? "";
+
   if (target === "") return quiet();
   const root = resolveRoots(data).root;
+
   const entry = worktreeEntries(root)
     .slice(1)
     .find((e) => samePath(e.path, target));
+
   if (entry !== undefined) {
     const r = git(root, ["worktree", "remove", "--force", entry.path]);
+
     if (!r.ok && fs.existsSync(target)) return { code: 1, stderr: r.err, stdout: "" };
   }
+
   dropMergedBranch(root, entry === undefined ? BRANCH_PREFIX + path.basename(target) : entry.branch);
+
   return quiet();
 }
 
 /** Claude Code's WorktreeCreate / WorktreeRemove; other events do nothing. */
 export function worktreeHook(data: HookInput | null): HookResult {
   const event = data?.hook_event_name;
+
   try {
     if (event === CREATE_EVENT)
       return { code: 0, stderr: "", stdout: `${addWorktree(resolveRoots(data).root, data?.name).path}\n` };
@@ -75,6 +82,7 @@ export function worktreeHook(data: HookInput | null): HookResult {
 function finishLine(result: FinishResult, root: string): string {
   if (result.sha === null || result.sha === "")
     return `${result.branch} has no commits of its own; removed ${result.path}`;
+
   return (
     `merged ${result.branch} into ${result.defaultBranch} at ${result.sha} and removed ${result.path}; ` +
     `your shell may still be in it: cd ${root}`
@@ -83,18 +91,23 @@ function finishLine(result: FinishResult, root: string): string {
 
 function listRow(w: WorktreeInfo): string {
   const cols = [w.path, w.branch ?? "(detached)", w.state, w.merged ? "merged" : "unmerged"];
+
   if (!w.managed) cols.push(`outside ${WORKTREES_DIR}`);
+
   return cols.join("\t");
 }
 
 function pruneLines(root: string): string[] {
   const removed = pruneWorktrees(root);
+
   if (removed.length === 0) return ["nothing to prune"];
+
   return removed.map((r) => (r.path === null ? `deleted branch ${r.branch}` : `removed ${r.path} (${r.branch})`));
 }
 
 function print(lines: string[]): number {
   for (const line of lines) process.stdout.write(`${line}\n`);
+
   return 0;
 }
 
@@ -102,38 +115,53 @@ function runHook(io: HookIo): number {
   const text = readAllText(io);
   const raw = text === "" ? "{}" : text;
   const data = parseHookInput(raw);
+
   // A payload that is not JSON still fails the hook with the parse error; any other non-object is a no-op.
   if (data === null) JSON.parse(raw);
   const res = worktreeHook(data);
+
   if (res.stdout !== "") process.stdout.write(res.stdout);
+
   if (res.stderr !== "") process.stderr.write(`${res.stderr}\n`);
+
   return res.code;
 }
 
 function finish(arg: string | undefined): number {
   const roots = resolveRoots({});
+
   return print([finishLine(finishWorktree(roots.root, arg, roots.cwd), roots.root)]);
 }
 
 /** Run one subcommand; null when `cmd` is none of them. */
 function dispatch(cmd: string | undefined, arg: string | undefined, io: HookIo): number | null {
   if (cmd === ADD_CMD && arg !== undefined) return print([addWorktree(resolveRoots({}).root, arg).path]);
+
   if (cmd === FINISH_CMD) return finish(arg);
+
   if (cmd === LIST_CMD) return print(listWorktrees(resolveRoots({}).root).map(listRow));
+
   if (cmd === PRUNE_CMD) return print(pruneLines(resolveRoots({}).root));
+
   if (cmd === HOOK_CMD) return runHook(io);
+
   return null;
 }
 
 export function main(argv: string[], io: HookIo = processHookIo()): number {
   const [cmd, arg] = argv;
+
   try {
     const code = dispatch(cmd, arg, io);
+
     if (code !== null) return code;
   } catch (e) {
     process.stderr.write(`${errorMessage(e)}\n`);
+
     return e instanceof WorktreeUsageError ? USAGE_EXIT : 1;
   }
+
   process.stderr.write(`${USAGE}\n`);
+
   return USAGE_EXIT;
 }

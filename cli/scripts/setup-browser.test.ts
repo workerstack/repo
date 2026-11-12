@@ -65,15 +65,18 @@ it("prints install hints when engines are missing", async () => {
 
 it("chromium-only on linux is not done; advises Lightpanda", async () => {
   const io = captureIo();
+
   const r = await setupBrowser({
     io,
     pathEnv: "/none",
     platform: "linux",
     whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
   });
+
   expect(r.ok).toBe(false);
   expect(r.chromium).toBe("/home/ecomet/bin/chromium");
   expect(io.logs.join("\n")).toMatch(/Install Lightpanda as well/);
+
   const st = await targetStatuses({
     env: {},
     home: plant("setup-br-st-"),
@@ -81,6 +84,7 @@ it("chromium-only on linux is not done; advises Lightpanda", async () => {
     platform: "linux",
     whichFn: (name: string) => (name === "chromium" ? "/home/ecomet/bin/chromium" : ""),
   });
+
   expect(st.browser.ok).toBe(false);
   expect(st.browser.extra).toMatch(/need lightpanda/);
 });
@@ -88,6 +92,7 @@ it("chromium-only on linux is not done; advises Lightpanda", async () => {
 it("re-checks PATH after install confirm", async () => {
   let n = 0;
   const io = { ...captureIo(), confirm: () => Promise.resolve(true) };
+
   const r = await setupBrowser({
     interactive: true,
     io,
@@ -96,11 +101,14 @@ it("re-checks PATH after install confirm", async () => {
     whichFn: (name: string) => {
       if (name === "lightpanda") {
         n += 1;
+
         return n > 1 ? "/usr/bin/lightpanda" : "";
       }
+
       return "";
     },
   });
+
   expect(r.lightpanda).toBe("/usr/bin/lightpanda");
   expect(io.logs.join("\n")).toMatch(/lightpanda ok/);
   expect(io.logs.join("\n")).toMatch(/chromium still missing/);

@@ -5,6 +5,7 @@ import { agentsFile } from "./agents-file.ts";
 import { cutRegions, type Region, regionBody, regionHash, writeRegions } from "./region.ts";
 
 const ALPHA: Region = { body: "one\ntwo", name: "alpha", place: "bottom" };
+
 /** A user's own `.gitignore` lines that look like a region: no hash, so sync never wrote them. */
 const VENDORED = "# repo: vendored\nvendor/\n# /repo:vendored\nmine/\n";
 
@@ -63,13 +64,16 @@ describe("fenced code in markdown", () => {
 
 const RULES = "Stock rule.\n";
 const IGNORE: Region = { body: "dist/\nout/", name: "ignore", place: "bottom" };
+
 /** The `repo:rules` region holding `RULES`, its marker lines ending in `end`. */
 function rules(end = "\n"): string {
   return `${openMarker("<!--", "rules", regionHash(RULES))}${end}${RULES}${closeMarker("<!--", "rules")}${end}`;
 }
+
 function agents(text: string) {
   return agentsFile("AGENTS.md", RULES, { history: {}, text });
 }
+
 function crlf(text: string): string {
   return text.replaceAll("\n", "\r\n");
 }

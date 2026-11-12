@@ -15,6 +15,7 @@ function project(version: string | null): string {
 }
 
 const REGISTRY = "https://registry.example/";
+
 function latestDoc(latest: string): Response {
   return new Response(JSON.stringify({ "dist-tags": { latest }, versions: { [latest]: {} } }));
 }
@@ -22,12 +23,16 @@ function latestDoc(latest: string): Response {
 /** Runs the check against a fake fetch answering `answer`; returns the result and the requests it saw. */
 async function check(version: string | null, answer: () => Response | Error, registry = REGISTRY) {
   const calls: { url: string; signal: AbortSignal | undefined | null }[] = [];
+
   function fetcher(url: string, init?: { signal?: AbortSignal | null }): Promise<Response> {
     calls.push({ signal: init?.signal, url });
     const got = answer();
+
     return got instanceof Response ? Promise.resolve(got) : Promise.reject(got);
   }
+
   const result = await checkLatestAt(project(version), fetcher, registry);
+
   return { ...result, calls };
 }
 

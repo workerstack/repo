@@ -45,8 +45,11 @@ async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<unknown> {
   const resolved = await cdp.send("DOM.resolveNode", {
     backendNodeId: rec.backendNodeId,
   });
+
   const objectId = asRec(resolved.object).objectId;
+
   if (typeof objectId !== "string" || objectId === "") throw new Error(STALE);
+
   return objectId;
 }
 
@@ -54,6 +57,7 @@ async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<unknown> {
 async function attempt(session: Session, fn: (cdp: Cdp) => Promise<unknown>): Promise<string | null> {
   try {
     await withCdp(session, fn);
+
     return null;
   } catch (err) {
     return errMessage(err);
@@ -74,22 +78,28 @@ export function hoverAct(cdp: Cdp, objectId: unknown): Promise<Rec> {
 
 function scrollDelta(arg: string): number {
   if (arg === SCROLL_UP) return -SCROLL_STEP;
+
   return SCROLL_BY_RE.test(arg) ? Number(arg) : SCROLL_STEP;
 }
 
 export async function scroll(argv: string[], ctx: Ctx): Promise<BrowserResult> {
   const session = liveSession(ctx.cwd);
+
   if (session === null) return fail(NO_SESSION);
   const arg = filled(argv[1]) ?? SCROLL_DOWN;
   const rec = session.lastRefs[arg];
+
   const error = await attempt(session, async (cdp) => {
     if (rec !== undefined) return callOn(cdp, await resolveRef(cdp, rec), SCROLL_INTO_FN);
+
     return cdp.send("Runtime.evaluate", {
       expression: `window.scrollBy(0, ${scrollDelta(arg)})`,
     });
   });
+
   if (error !== null) return refFail(error, arg);
   writeSession(ctx.cwd, session);
+
   return ok(`scroll: ${arg}`);
 }
 
@@ -102,10 +112,13 @@ function targetOf(
   if (Object.keys(session.lastRefs).length === 0) return NO_REFS;
   const refId = argv[1] ?? "";
   const rec = session.lastRefs[refId];
+
   if (rec === undefined) return `missing ref: ${refId}`;
   const text = argv.slice(TEXT_ARG).join(" ");
   const usage = TEXT_USAGE[verb];
+
   if (usage !== undefined && usage !== "" && text === "") return usage;
+
   return { rec, refId, text };
 }
 
@@ -113,21 +126,28 @@ function targetOf(
 export function refVerb(verb: string, act: Act): Verb {
   return async (argv, ctx) => {
     let session = liveSession(ctx.cwd);
+
     if (session === null) return fail(NO_SESSION);
     const target = targetOf(verb, argv, session);
+
     if (typeof target === "string") return fail(target);
     const { refId, rec, text } = target;
+
     async function run(cdp: Cdp) {
       return act(cdp, await resolveRef(cdp, rec), text);
     }
+
     let error = await attempt(session, run);
+
     if (error !== null && !STALE_RE.test(error) && canSwap(session, ctx.bins)) {
       session = await swapToChromium(session, ctx);
       writeSession(ctx.cwd, session);
       error = await attempt(session, run);
     }
+
     if (error !== null) return refFail(error, refId);
     writeSession(ctx.cwd, session);
+
     return ok(`${verb}: ${refId}`);
   };
 }

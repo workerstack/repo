@@ -35,9 +35,11 @@ export const BIN: Readonly<Bin> = {
 /** The exit code of a registry command or hook, or undefined once `cli/main.ts` has run and set its own. */
 async function run(argv: readonly string[], deps: Readonly<Bin>): Promise<number | undefined> {
   const code = await deps.dispatch(argv);
+
   if (code !== null) return code;
   const loaded = await deps.load();
   await loaded.start();
+
   return undefined;
 }
 
@@ -51,6 +53,7 @@ export async function main(argv: readonly string[], deps: Readonly<Bin> = BIN): 
     (code) => deps.exit(code),
     (err: unknown) => {
       process.stderr.write(`repo: ${err instanceof Error ? err.message : String(err)}\n`);
+
       return deps.exit(1);
     },
   );

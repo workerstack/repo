@@ -24,6 +24,7 @@ export type Args =
 function fail(line: string): Args {
   return { kind: "error", line };
 }
+
 const SHARD_USAGE = `${SHARD_FLAG} takes i/n with 1 <= i <= n, such as 2/8`;
 const REPORT_USAGE = `${REPORT_FLAG} takes a file path`;
 const UNKNOWN = `use ${SHARD_FLAG} i/n, ${REPORT_FLAG} <file>, ${RUST_FLAG} or ${CHECK_COMMAND} <dir>`;
@@ -34,6 +35,7 @@ function shardOf(text: string): Shard | null {
   const [, first, second] = match ?? [];
   const index = Number(first);
   const total = Number(second);
+
   return match !== null && index >= FIRST_SHARD && index <= total ? { index, total } : null;
 }
 
@@ -41,13 +43,16 @@ function shardOf(text: string): Shard | null {
 function expand(argv: string[]): string[] {
   return argv.flatMap((word) => {
     const at = word.indexOf(ASSIGN);
+
     return word.startsWith(FLAG_PREFIX) && at > 0 ? [word.slice(0, at), word.slice(at + 1)] : [word];
   });
 }
 
 function parseCheck(rest: string[]): Args {
   const dir = rest.find((word) => word !== WRITE_FLAG);
+
   if (dir === undefined) return fail(`${CHECK_COMMAND} takes the dir of the shard reports`);
+
   return { dir, kind: "check", write: rest.includes(WRITE_FLAG) };
 }
 
@@ -57,13 +62,18 @@ type Run = Extract<Args, { kind: "run" }>;
 function apply(run: Run, flag: string | undefined, value: string | undefined): string | null {
   if (flag === SHARD_FLAG) {
     const shard = shardOf(value ?? "");
+
     if (shard === null) return SHARD_USAGE;
     run.shard = shard;
+
     return null;
   }
+
   if (flag !== REPORT_FLAG) return `unknown argument "${String(flag)}"; ${UNKNOWN}`;
+
   if (value === undefined || value === "" || value.startsWith(FLAG_PREFIX)) return REPORT_USAGE;
   run.report = value;
+
   return null;
 }
 
@@ -71,15 +81,19 @@ function parseRun(all: string[]): Args {
   const tool = all.includes(RUST_FLAG) ? "cargo-mutants" : "stryker";
   const words = all.filter((word) => word !== RUST_FLAG);
   const run: Run = { kind: "run", report: undefined, shard: { index: FIRST_SHARD, total: FIRST_SHARD }, tool };
+
   for (let at = 0; at < words.length; at += FLAG_WORDS) {
     const problem = apply(run, words[at], words[at + 1]);
+
     if (problem !== null) return fail(problem);
   }
+
   return run;
 }
 
 /** The run `argv` asks for, or the line that says what is wrong with it. */
 export function parseArgs(argv: string[]): Args {
   const words = expand(argv);
+
   return words[0] === CHECK_COMMAND ? parseCheck(words.slice(1)) : parseRun(words);
 }

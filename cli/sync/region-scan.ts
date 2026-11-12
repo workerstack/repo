@@ -12,12 +12,17 @@ import type { RegionSyntax } from "./region.ts";
 
 /** One marker line: where it is, the region it names, and the hash an open carries. */
 export type Marker = { at: number; name: string; close: boolean; hash: string | null; legacy: boolean; line: string };
+
 export type Pair = readonly [Marker, Marker];
+
 export type Found = { pairs: Pair[]; opens: Marker[]; closes: Marker[] };
+
 /** A file's lines, its syntax and the region name its legacy pair converts to. */
 export type Doc = { rows: string[]; syntax: RegionSyntax; legacy: string };
+
 /** A marker match: the line, the slash of a close, the name, the hash. */
 type Groups = RegExpExecArray & [string, string | undefined, string, string | undefined];
+
 /** A fence match: the line, the run of backticks or tildes, the rest of the line. */
 type FenceGroups = RegExpExecArray & [string, string, string];
 
@@ -28,10 +33,13 @@ type FenceGroups = RegExpExecArray & [string, string, string];
 export function scan(doc: Doc): Marker[] {
   const skip = doc.syntax === HTML_OPEN ? fenced(doc.rows) : new Set<number>();
   const found: Marker[] = [];
+
   for (const [at, row] of doc.rows.entries()) {
     const marker = skip.has(at) ? null : parse(row.trimEnd(), doc.syntax);
+
     if (marker !== null) found.push({ ...marker, at, name: marker.legacy ? doc.legacy : marker.name });
   }
+
   return found;
 }
 
@@ -47,6 +55,7 @@ export function isOurs(mark: Marker): boolean {
 export function pairUp(marks: readonly Marker[]): Found {
   const found: Found = { closes: [], opens: [], pairs: [] };
   let open: Marker | null = null;
+
   for (const mark of marks) {
     if (!mark.close) {
       if (open !== null) found.opens.push(open);
@@ -58,19 +67,26 @@ export function pairUp(marks: readonly Marker[]): Found {
       open = null;
     }
   }
+
   if (open !== null) found.opens.push(open);
+
   return found;
 }
 
 function parse(line: string, syntax: RegionSyntax): Omit<Marker, "at"> | null {
   const match = (syntax === HTML_OPEN ? HTML_MARKER : HASH_MARKER).exec(line);
+
   if (match !== null) {
     const [, slash, name, hash] = match /* the name group always takes part */ as Groups;
     const isClose = slash !== undefined;
+
     return { close: isClose, hash: hash?.toLowerCase() ?? null, legacy: false, line, name: name.toLowerCase() };
   }
+
   const isClose = syntax !== HTML_OPEN && LEGACY_CLOSE.test(line);
+
   if (!isClose && (syntax === HTML_OPEN || !LEGACY_OPEN.test(line))) return null;
+
   return { close: isClose, hash: null, legacy: true, line, name: LEGACY_NAME };
 }
 
@@ -84,10 +100,13 @@ function fenced(rows: readonly string[]): Set<number> {
   const inside = new Set<number>();
   let start: number | null = null;
   let fence = "";
+
   for (const [at, row] of rows.entries()) {
     const match = CODE_FENCE.exec(row);
+
     if (match === null) continue;
     const [, run, rest] = match /* both groups always take part */ as FenceGroups;
+
     if (start === null) {
       if (run.startsWith("`") && rest.includes("`")) continue;
       [start, fence] = [at, run];
@@ -96,5 +115,6 @@ function fenced(rows: readonly string[]): Set<number> {
       start = null;
     }
   }
+
   return inside;
 }

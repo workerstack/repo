@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+
 import { latestFetch, usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { pkgVersion } from "./__fixtures__/main-kit.ts";
@@ -18,10 +19,12 @@ function setsFiles(rel: string) {
     `under "include".`
   );
 }
+
 function noBase(rel: string) {
   return `repo check: tsconfig: ${rel} does not extend a base. \
 Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
 }
+
 function noSrc(dir: string) {
   return `repo check: tsconfig: ${dir} has no tsconfig.src.json; \
 add one with "extends": ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"] \

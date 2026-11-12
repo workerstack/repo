@@ -8,10 +8,13 @@ import { canonicalPath, gitRevParse, resolveTyped, type Roots } from "./workspac
 
 /** Blank runs that split a command into words. */
 const BLANKS_RE = /\s+/;
+
 /** The first blank of a command and everything after it, which leaves its first word. */
 const AFTER_FIRST_WORD_RE = /\s[\s\S]*$/;
+
 /** Every regex metacharacter, for `replaceAll` to escape. */
 const REGEX_META_RE = /[.*+?^${}()|[\]\\]/g;
+
 /** A Windows `.exe` suffix. */
 const EXE_SUFFIX_RE = /\.exe$/;
 
@@ -34,6 +37,7 @@ export type RepoBin = {
 /** The first of `repo`, `repo.exe` that exists under `dir`'s `node_modules/.bin`. */
 function installedBin(dir: string): string | undefined {
   const plain = path.join(dir, "node_modules", ".bin", REPO_WORD);
+
   return [plain, `${plain}.exe`].find((c) => fs.existsSync(c));
 }
 
@@ -44,12 +48,15 @@ function installedBin(dir: string): string | undefined {
  */
 export function resolveRepoBin(checkout: string, p: typeof path = path): RepoBin {
   const own = p.join(checkout, "node_modules", ".bin", REPO_WORD);
+
   // A foreign path flavor (a `path.win32` test on Linux) names no folder git or the disk can answer for.
   if (p !== path) return { bin: own, fallback: false };
   const facts = gitRevParse(checkout);
   const found = installedBin(checkout) ?? (facts === null ? undefined : installedBin(facts.top));
+
   if (found !== undefined) return { bin: found, fallback: false };
   const mainBin = facts === null ? undefined : installedBin(path.dirname(facts.commonDir));
+
   return mainBin === undefined ? { bin: own, fallback: false } : { bin: mainBin, fallback: true };
 }
 
@@ -69,6 +76,7 @@ export function jobCommand(workspaceRoot: string, args: string): string {
 
 export function alreadyRtk(command: unknown): boolean {
   const first = commandText(command).trim().replace(AFTER_FIRST_WORD_RE, "");
+
   return first === RTK || first.endsWith(`/${RTK}`);
 }
 
@@ -79,6 +87,7 @@ function escapeRe(s: string): string {
 export function stripFlagValue(cmd: unknown, flag: string): string {
   const f = escapeRe(flag);
   const val = `(?:"[^"]*"|'[^']*'|\\S+)`;
+
   return commandText(cmd)
     .replaceAll(new RegExp(`${f}=${val}`, "g"), `${flag}=_`)
     .replaceAll(new RegExp(`${f}\\s+${val}`, "g"), `${flag} _`);
@@ -92,6 +101,7 @@ function isBin(token: string | undefined, name: string): boolean {
 /** The args after `job` when `parts[at]` is it, else null. */
 function afterJob(parts: string[], at: number): string[] | null {
   const [word, ...rest] = parts.slice(at);
+
   return word === JOB_WORD ? rest : null;
 }
 
@@ -99,6 +109,7 @@ function afterJob(parts: string[], at: number): string[] | null {
 function isRepoBin(target: string, roots: Roots, p: typeof path): boolean {
   const abs = resolveTyped(roots, target, p);
   const bin = canonicalPath(repoBin(roots.checkout, p), p).replace(EXE_SUFFIX_RE, "");
+
   return abs === bin || abs === `${bin}.exe`;
 }
 
@@ -108,14 +119,18 @@ function isRepoBin(target: string, roots: Roots, p: typeof path): boolean {
  */
 function jobRest(command: unknown, roots: Roots | null | undefined, p: typeof path = path): string[] | null {
   const cmd = commandText(command).trim();
+
   if (cmd === "" || roots == null) return null;
   const parts = cmd.split(BLANKS_RE).filter(Boolean);
   const behindRtk = Number(isBin(parts[0], RTK));
   const viaBun = isBin(parts[behindRtk], BUN);
   const at = behindRtk + Number(viaBun);
   const target = parts[at];
+
   if (target === undefined) return null;
+
   if (viaBun && target === REPO_WORD) return afterJob(parts, at + 1);
+
   return isRepoBin(target, roots, p) ? afterJob(parts, at + 1) : null;
 }
 
@@ -138,6 +153,7 @@ type ParsedJob = {
 function splitFlag(arg: string): { flag: string; inline: string | null } {
   if (!arg.startsWith("--") || !arg.includes("=")) return { flag: arg, inline: null };
   const eq = arg.indexOf("=");
+
   return { flag: arg.slice(0, eq), inline: arg.slice(eq + 1) };
 }
 
@@ -147,21 +163,29 @@ function splitFlag(arg: string): { flag: string; inline: string | null } {
  */
 function scanJobArgs(rest: string[]): ParsedJob | null {
   const found: ParsedJob = { hasQuery: false, hasStash: false, job: "" };
+
   for (let j = 0; j < rest.length; j++) {
     const { flag, inline } = splitFlag(String(rest[j]));
+
     if (!JOB_FLAGS.includes(flag)) return null;
+
     if (inline === null) j += 1;
+
     if (flag === JOB_FLAG) found.job = (inline ?? rest[j] ?? "").toLowerCase();
     found.hasQuery ||= flag === QUERY_FLAG;
     found.hasStash ||= flag === STASH_FLAG;
   }
+
   return found;
 }
 
 export function parseJobCommand(command: unknown, roots: Roots | null | undefined): ParsedJob | null {
   const cmd = commandText(command).trim();
+
   if (cmd === "" || roots == null) return null;
+
   if (SHELL_META.test(stripFlagValue(cmd, QUERY_FLAG))) return null;
   const rest = jobRest(cmd, roots);
+
   return rest === null ? null : scanJobArgs(rest);
 }

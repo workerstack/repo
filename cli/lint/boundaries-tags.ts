@@ -7,6 +7,7 @@ import type { RepoRule } from "./rule.types.ts";
 
 /** Each package name's one tag, and per tag the other tags its packages may import. */
 export type Tags = { tags: Readonly<Record<string, string>>; allow: Readonly<Record<string, readonly string[]>> };
+
 /** The rule's options: the tags sync writes, or none. */
 export type TagsOptions = [Tags?];
 
@@ -14,8 +15,10 @@ export type TagsOptions = [Tags?];
 type RuleSchema = RepoRule["meta"]["schema"];
 
 const CONFIG_FILE = "workerstack.config.ts";
+
 /** A tag read with "an" before it: `app`, `infra`; `ui` and `lib` take "a". */
 const AN_TAG = /^[aeio]/i;
+
 /** British English: "app, ui or lib", no serial comma. */
 const LIST_LOCALE = "en-GB";
 
@@ -63,9 +66,12 @@ export const TAG_MESSAGE: string =
 export function tagProblem({ tags, allow }: Tags, from: string | null, to: string): Record<string, string> | null {
   const own = from === null ? undefined : tags[from];
   const target = tags[to];
+
   if (own === undefined || target === undefined || own === target) return null;
   const allowed = allow[own] ?? [];
+
   if (allowed.includes(target)) return null;
   const may = listOf([own, ...allowed.filter((tag) => tag !== own)]);
+
   return { may, own, ownKind: articled(own), target, targetKind: articled(target), to };
 }

@@ -17,11 +17,16 @@ export function aliasOf(dir: string): string {
       encoding: "utf8",
       windowsVerbatimArguments: true,
     };
+
     const short = execFileSync("cmd", ["/d", "/s", "/c", `"for %I in ("${dir}") do @echo %~sI"`], opts).trim();
+
     if (short !== "" && short.toLowerCase() !== dir.toLowerCase()) return short;
   }
+
   const link = `${dir}-alias`;
+
   if (!fs.existsSync(link)) fs.symlinkSync(dir, link, "junction");
+
   return link;
 }
 
@@ -53,10 +58,12 @@ export function installedBin(root: string): string {
  */
 export function linkText(link: string): string {
   const held = fs.readlinkSync(link);
+
   // A relative target is already relative to the link's dir, in whatever spelling the dir has.
   if (!path.isAbsolute(held)) return path.normalize(held).split(path.sep).join("/");
   const dir = canonicalPath(path.dirname(link));
   const resolved = path.join(canonicalPath(path.dirname(held)), path.basename(held));
+
   return path.relative(dir, resolved).split(path.sep).join("/");
 }
 
@@ -68,6 +75,7 @@ const found: { bun?: string } = {};
  */
 export function bunPath(): string {
   found.bun ??= execFileSync("bun", ["-e", "process.stdout.write(process.execPath)"], { encoding: "utf8" });
+
   return found.bun;
 }
 

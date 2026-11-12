@@ -8,6 +8,7 @@ import { spawnHook } from "./__fixtures__/run-hook.ts";
 
 const kit = orchestrateKit();
 const CHILD_MSG = "```js\nconst x = 1;\n```\nwrite file src/x.ts";
+
 function scout(msg: string) {
   return { lastAssistantMessage: msg, subagentType: "scout" };
 }
@@ -15,6 +16,7 @@ function scout(msg: string) {
 it("answers a SubagentStop need through the real entry", () => {
   const ws = kit.temp();
   fs.writeFileSync(path.join(ws, "hit.txt"), "spawned-entry-token\n");
+
   const out = spawnHook(
     "orchestrate-parent",
     {
@@ -25,6 +27,7 @@ it("answers a SubagentStop need through the real entry", () => {
     },
     { env: { GROK_HOOK_EVENT: "subagent_stop", GROK_WORKSPACE_ROOT: ws, REPO_BOARD_HOME: kit.temp() } },
   );
+
   expect(out.status, out.stderr).toBe(0);
   const json = parseJson<HookOut>(out.stdout);
   expect(json.decision).toBe("block");
@@ -36,6 +39,7 @@ it("child Stop without need: still no-ops", () => {
     { hookEventName: "Stop", reason: "end_turn", ...scout(CHILD_MSG) },
     { GROK_HOOK_EVENT: "stop" },
   );
+
   expect(result.status).toBe(0);
   expect(result.stdout).toBe("");
 });
@@ -44,6 +48,7 @@ it("SubagentStop and Stop+subagentType with a search need: blocks and contains f
   const ws = kit.temp();
   fs.writeFileSync(path.join(ws, "hit.txt"), "unique-intercept-token-xyz\n");
   const need = 'need: [{"job":"search","query":"unique-intercept-token-xyz"}]';
+
   for (const event of ["SubagentStop", "Stop"]) {
     const result = kit.grok({ sid: `i-${event}`, ws }, event, { reason: "end_turn", ...scout(need) });
     expect(result.status).toBe(0);
@@ -58,16 +63,20 @@ it("SubagentStop and Stop+subagentType with a search need: blocks and contains f
 
 it("need path glob cwd not dropped", () => {
   const ws = kit.temp();
+
   for (const dir of ["keep", "skip"]) {
     fs.mkdirSync(path.join(ws, dir));
     fs.writeFileSync(path.join(ws, dir, "hit.txt"), "extra-token-zzz\n");
   }
+
   fs.writeFileSync(path.join(ws, "keep", "hit.md"), "extra-token-zzz\n");
+
   const result = kit.grok(
     { sid: "extras", ws },
     "SubagentStop",
     scout('need: [{"job":"search","query":"extra-token-zzz","path":"keep","glob":"*.txt","cwd":"."}]'),
   );
+
   expect(result.status).toBe(0);
   expect(result.stdout).toContain("keep/hit.txt");
   expect(result.stdout).not.toContain("skip/hit.txt");

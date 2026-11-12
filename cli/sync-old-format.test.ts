@@ -9,6 +9,7 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { MANIFEST_REL, renderManifest } from "./sync/manifest.ts";
 
 useSyncKit();
+
 vi.setConfig({ testTimeout: 120_000 });
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -29,6 +30,7 @@ function oldConsumer(): string {
   write(root, ".repo/rules/testing.md", TESTING);
   write(root, ".grok/rules/testing.md", "Run the tests.\n");
   write(root, MANIFEST_REL, renderManifest([".grok/rules/testing.md"]));
+
   return root;
 }
 
@@ -39,13 +41,17 @@ function real(cwd: string, ...args: string[]) {
 /** Every file outside the linked package dir, with its bytes. */
 function files(root: string, dir = ""): Record<string, string> {
   const found: Record<string, string> = {};
+
   for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
     const rel = dir === "" ? entry.name : `${dir}/${entry.name}`;
+
     if (rel === "node_modules") continue;
+
     if (entry.isSymbolicLink()) found[rel] = `-> ${fs.readlinkSync(path.join(root, rel))}`;
     else if (entry.isDirectory()) Object.assign(found, files(root, rel));
     else found[rel] = fs.readFileSync(path.join(root, rel), "utf8");
   }
+
   return found;
 }
 

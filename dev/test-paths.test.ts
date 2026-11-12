@@ -7,6 +7,7 @@ import { afterEach, expect, it } from "vitest";
 import { aliasOf, bunPath, installedBin, linkText, removeAlias, shellForm } from "./test-paths.ts";
 
 const dirs: string[] = [];
+
 afterEach(() => {
   for (const dir of dirs.splice(0)) {
     removeAlias(`${dir}-alias`);
@@ -17,6 +18,7 @@ afterEach(() => {
 function temp(): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "test-paths-")));
   dirs.push(dir);
+
   return dir;
 }
 
@@ -26,6 +28,7 @@ function linkedTree(): string {
   fs.mkdirSync(path.join(dir, "store/a"), { recursive: true });
   fs.mkdirSync(path.join(dir, "tree"));
   fs.symlinkSync(path.join(dir, "store/a"), path.join(dir, "tree/skill"), "junction");
+
   return dir;
 }
 

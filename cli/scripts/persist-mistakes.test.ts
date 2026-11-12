@@ -49,6 +49,7 @@ describe("reviewErrors", () => {
     const want =
       "status in-progress needs reviews: 1 or more; " +
       "run /review-plan {n}, settle its findings, and bump reviews in that save";
+
     expect(reviewErrors({ reviews: "0", status: "in-progress" }, null, OPTS)).toStrictEqual([want]);
     expect(reviewErrors({ status: "in-progress" }, { status: "ready" }, OPTS)).toStrictEqual([want]);
     expect(reviewErrors({ reviews: "0", status: "in-progress" }, { status: "in-progress" }, OPTS)).toStrictEqual([]);
@@ -79,9 +80,11 @@ describe("mistakeLogErrors", () => {
 
   it("keeps saved entries unchanged and in order", () => {
     const previous = { bodies: { [MISTAKES_H2]: `${ENTRY}\n- verify: a → b` }, order: [MISTAKES_H2] };
+
     function run(log: string) {
       return mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: log }, { ...opts, previous });
     }
+
     expect(run(`${ENTRY}\n- verify: a → b\n- decision: c → d`)).toStrictEqual([]);
     expect(run(`${ENTRY}\n- verify: a → changed`)).toStrictEqual([
       "Previous mistakes is append-only; keep this entry unchanged: - verify: a → b",

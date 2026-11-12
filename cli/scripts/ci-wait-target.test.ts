@@ -4,9 +4,11 @@ import { waitFor } from "./ci-wait.ts";
 import type { Captured } from "./lint.ts";
 
 const SHA = "3f2a1c90123456789abcdef0123456789abcdef0";
+
 function ok(stdout = ""): { code: number; stdout: string; stderr: string } {
   return { code: 0, stderr: "", stdout };
 }
+
 const bad = { code: 1, stderr: "no", stdout: "" };
 const RUN = { createdAt: "2026-11-09T10:00:00Z", databaseId: 42, headBranch: "main" };
 
@@ -15,16 +17,21 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
   const calls: string[] = [];
   const out: string[] = [];
   let clock = 0;
+
   function git(args: string[]): Captured {
     calls.push(`git ${args.join(" ")}`);
+
     return bad;
   }
+
   function runGh(args: string[]): Captured {
     const key = args.join(" ");
     calls.push(`gh ${key}`);
     const hit = Object.entries(gh).find(([prefix]) => key.startsWith(prefix));
+
     return hit?.[1] ?? bad;
   }
+
   const outcome = await waitFor({
     cwd: "/repo",
     gh: runGh,
@@ -35,6 +42,7 @@ async function target(gh: Record<string, ReturnType<typeof ok>>, branch = "main"
     stdout: (s) => out.push(s),
     target: { branch, sha: SHA },
   });
+
   return { calls, out: out.join(""), outcome };
 }
 
@@ -50,6 +58,7 @@ describe("waitFor with a target", () => {
       "run view 42 --json": VIEW,
       "run watch": ok(),
     });
+
     expect(got.outcome).toStrictEqual({ kind: "passed" });
     expect(got.out).toBe("waiting for ci on 3f2a1c9 (run 42)…\npassed\n");
     expect(got.calls.filter((call) => call.startsWith("git"))).toStrictEqual([]);

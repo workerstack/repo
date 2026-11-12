@@ -31,6 +31,7 @@ describe("persistImplementation naming", () => {
       created: CREATED,
       workspaceRoot: tmpWs(),
     });
+
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("add-tmp-ignore");
   });
@@ -39,6 +40,7 @@ describe("persistImplementation naming", () => {
     const content = withoutName
       .replace("# add-tmp-ignore\n\n", "")
       .replace("## Done\n(none)", "## Done\n- wrote\n- the ignore");
+
     const r = persistImplementation({ content, created: CREATED, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("unnamed");
@@ -55,7 +57,9 @@ const KIT = {
   slug: "add-tmp-ignore",
   tmpWs,
 };
+
 describeSourceAndRefusals(KIT);
+
 describeSerialLimits(KIT);
 
 describe("persistImplementation root", () => {

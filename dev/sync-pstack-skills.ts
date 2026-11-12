@@ -12,13 +12,17 @@ import { syncPstackSkills, type Io } from "./sync-pstack-write.ts";
 export async function main(argv: string[], io: Io): Promise<number> {
   try {
     const result = await syncPstackSkills({ argv, io });
+
     if (!result.ok) {
       io.err(`${result.error}\n`);
+
       return 1;
     }
+
     return 0;
   } catch (err) {
     io.err(`${err instanceof Error && err.message !== "" ? err.message : String(err)}\n`);
+
     return 1;
   }
 }

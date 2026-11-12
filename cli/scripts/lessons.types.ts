@@ -32,9 +32,11 @@ export type Roots = {
 export type LessonResult =
   | { ok: true; path: string; content: string; error?: undefined }
   | { ok: false; error: string; path?: undefined; content?: undefined };
+
 export type HitResult =
   | { ok: true; path: string; hits: number; error?: undefined }
   | { ok: false; error: string; path?: undefined; hits?: undefined };
+
 export type RemoveResult = { ok: true; error?: undefined } | { ok: false; error: string };
 
 /** A lesson file's frontmatter keys and the body after it. */

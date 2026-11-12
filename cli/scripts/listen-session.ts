@@ -19,6 +19,7 @@ import { resolveRoots } from "./workspace-root.ts";
 export function listenDir(cwd: string): string {
   const d = path.join(resolveRoots({}, { cwd }).root, LISTEN_DIR);
   fs.mkdirSync(d, { recursive: true });
+
   return d;
 }
 
@@ -45,9 +46,12 @@ export function clearSession(cwd: string): void {
 /** Whether `pid` answers signal 0; a non-positive or non-numeric pid is never probed. */
 export function pidAlive(pid: unknown, killFn: KillFn): boolean {
   const n = Number(pid);
+
   if (!Number.isFinite(n) || n <= 0) return false;
+
   try {
     killFn(n, 0);
+
     return true;
   } catch {
     return false;
@@ -57,6 +61,7 @@ export function pidAlive(pid: unknown, killFn: KillFn): boolean {
 /** Blocks until `pid` exits or eight seconds pass. */
 export function waitPidExit(pid: number, killFn: KillFn): void {
   const start = Date.now();
+
   while (Date.now() - start < STOP_WAIT_MS) {
     if (!pidAlive(pid, killFn)) return;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(SLEEP_CELL_BYTES)), 0, 0, STOP_POLL_MS);

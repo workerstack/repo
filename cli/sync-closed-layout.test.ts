@@ -9,9 +9,11 @@ import { syncWith, tempDir, useSyncKit, write } from "./__fixtures__/sync-kit.ts
 import { CONFIG_FILE } from "./config.constants.ts";
 
 useSyncKit();
+
 vi.setConfig({ testTimeout: 120_000 });
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
 const ALLOWED =
   "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, bench/ (read by repo bench), " +
   "settings/claude.json, hooks.jsonc, " +
@@ -19,8 +21,10 @@ const ALLOWED =
   "env.keys.json (read by @workerstack/repo/env (the public key sealed values are locked to)), " +
   "lint-baseline.json (read by repo turn and repo check)" +
   ", test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
+
 const MODULES_DIR = ["node", "modules"].join("_");
 const GIT_DIR = ["", "git"].join(".");
+
 const LINES = [
   `.repo/notes.md: not part of .repo; allowed: ${ALLOWED}; explanations go in references/`,
   ".repo/scripts/: nothing reads it; move what you need out of .repo and delete it",
@@ -31,6 +35,7 @@ const LINES = [
 ]
   .map((line) => `repo sync: ${line}\n`)
   .join("");
+
 const NOTHING = "repo sync: nothing written\n";
 
 function broken(): string {
@@ -46,20 +51,27 @@ function broken(): string {
   write(root, ".repo/rules/api.md", '---\ndescription: d\npaths: ["srv/**"]\n---\nApi.\n');
   write(root, ".repo/rules/x.md", '---\ndescription: d\npaths: ["package.json"]\ncolour: red\n---\nX.\n');
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
+
 function real(cwd: string, ...args: string[]) {
   return syncWith(cwd, {}, ...args);
 }
+
 /** Every file outside the linked package dir and the repo's own metadata, with its bytes. */
 function tree(root: string, dir = ""): Record<string, string> {
   const found: Record<string, string> = {};
+
   for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
     const rel = dir === "" ? entry.name : `${dir}/${entry.name}`;
+
     if (rel === MODULES_DIR || rel === GIT_DIR) continue;
+
     if (entry.isDirectory()) Object.assign(found, tree(root, rel));
     else found[rel] = fs.readFileSync(path.join(root, rel), "utf8");
   }
+
   return found;
 }
 

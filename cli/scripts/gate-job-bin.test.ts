@@ -12,6 +12,7 @@ import { isWorkspaceJobScript, jobCommand, repoBin, resolveRepoBin } from "./gat
 
 const tmp = useTmp();
 const JOB = ["--job", "test", "--query", "x"].join(" ");
+
 function binOf(dir: string, name = "repo") {
   return path.join(dir, "node_modules", ".bin", name);
 }
@@ -20,6 +21,7 @@ function binOf(dir: string, name = "repo") {
 function worktree(bins: { main: string | null; own?: string | null }) {
   const base = tmp.dir("gate-wt-");
   const { main, wt } = mainWithOutWorktree(base);
+
   for (const [dir, bin] of [
     [main, bins.main],
     [wt, bins.own ?? null],
@@ -28,6 +30,7 @@ function worktree(bins: { main: string | null; own?: string | null }) {
     fs.mkdirSync(path.join(dir, "node_modules", ".bin"), { recursive: true });
     fs.writeFileSync(path.join(dir, "node_modules", ".bin", bin), "");
   }
+
   return { main, wt };
 }
 

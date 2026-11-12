@@ -4,6 +4,7 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { noBooleanParam } from "./no-boolean-param.ts";
 
 const REPEATED = "export function run(force: boolean): void";
+
 const FAILS = [
   `${REPEATED} {}`,
   "export function run(force?: boolean): void {}",
@@ -24,6 +25,7 @@ const FAILS = [
   "export const run = (force: boolean): void => {};",
   "export const run = function (force: boolean): void {};",
 ];
+
 const PASSES = [
   "[1].map((flag: boolean) => flag);",
   "export const handlers = { run(force: boolean): void {} };",

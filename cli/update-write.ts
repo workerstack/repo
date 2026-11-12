@@ -9,6 +9,7 @@ function child(node: unknown, key: string): unknown {
 /** Sets the value at a path of a parsed JSON value, in place. */
 function setAt(value: unknown, route: Route, to: string): void {
   let parent = value;
+
   for (const key of route.parent) parent = child(parent, key);
   (parent /* the object that holds the entry */ as Record<string, string>)[route.key] = to;
 }
@@ -21,5 +22,6 @@ export function updateWrite(root: string, changes: Checked[]): string[] {
       file: change.file,
     })),
   );
+
   return editFiles(root, edits);
 }

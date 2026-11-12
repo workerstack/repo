@@ -10,6 +10,7 @@ it("passes rules and skills, a pathless rule, and a path rule that matches a fil
     [`${WEB}/.repo/rules/api.md`]: "x",
     [`${WEB}/.repo/skills/deploy/SKILL.md`]: skill("deploy", "ships it"),
   });
+
   const rules = [pkgRule("api", "Api.", { paths: ["src/api/**"] }), pkgRule("all", "All.")];
   expect(check(root, rules, { listed: [`${WEB}/src/api/a.ts`], packages: [WEB] })).toStrictEqual([]);
 });
@@ -22,6 +23,7 @@ it("refuses every entry but rules/ and skills/, subagents, lessons and bench wit
     [`${WEB}/.repo/hooks.jsonc`]: "{}",
     [`${WEB}/.repo/rules/ok.md`]: "x",
   });
+
   expect(check(root, [], { packages: [WEB] })).toStrictEqual([
     `${WEB}/.repo/bench/: a package .repo holds only rules/ and skills/; bench live in the root .repo`,
     `${WEB}/.repo/hooks.jsonc: a package .repo holds only rules/ and skills/`,
@@ -32,10 +34,12 @@ it("refuses every entry but rules/ and skills/, subagents, lessons and bench wit
 
 it("refuses a path that leaves the package, with or without git", () => {
   const rules = [pkgRule("x", "X.", { paths: ["../api/**"] }), pkgRule("abs", "A.", { paths: ["/etc/**"] })];
+
   const expected = [
     `${WEB}/.repo/rules/x.md: paths "../api/**" leaves the package; scope it inside ${WEB}`,
     `${WEB}/.repo/rules/abs.md: paths "/etc/**" leaves the package; scope it inside ${WEB}`,
   ];
+
   expect(inPkg(rules)).toStrictEqual(expected);
   expect(inPkg(rules, [`${WEB}/a.ts`])).toStrictEqual(expected);
 });
@@ -54,6 +58,7 @@ it("checks a package skill like a root one but refuses overrides", () => {
     [`${WEB}/.repo/skills/ov/SKILL.md`]: `---\nname: ov\ndescription: d\noverrides: ov\n---\n`,
     [`${WEB}/.repo/skills/linky/SKILL.md`]: skill("linky", "d", "[x](nope.md)"),
   };
+
   expect(inPkg([], null, files)).toStrictEqual([
     `${WEB}/.repo/skills/bad/SKILL.md: name "other" must equal the folder name "bad"`,
     `${WEB}/.repo/skills/linky/SKILL.md: link nope.md does not exist`,

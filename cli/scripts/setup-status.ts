@@ -40,8 +40,10 @@ export function lookupChromium(
 ): string {
   for (const n of CHROMIUM_BINS) {
     const hit = whichFn(n, pathEnv, platform);
+
     if (hit !== "") return hit;
   }
+
   return "";
 }
 
@@ -49,19 +51,27 @@ export function browserEngineStatus(lp: string, cr: string, platform: NodeJS.Pla
   const hasLp = lp !== "";
   const hasCr = cr !== "";
   const have: string[] = [];
+
   if (hasLp) have.push("lightpanda");
+
   if (hasCr) have.push("chromium");
+
   if (hasLp && hasCr) return { extra: have.join(","), ok: true };
+
   if (platform === WIN32 && hasCr) return { extra: have.concat(["need lightpanda in WSL"]).join(","), ok: true };
 
   const need: string[] = [];
+
   if (!hasLp) need.push("need lightpanda");
+
   if (!hasCr) need.push("need chromium");
+
   return { extra: have.concat(need).join(","), ok: false };
 }
 
 export function setupTargets(packs: string[] = []): string[] {
   const on = new Set(packs);
+
   return TARGETS.filter((target) => ALWAYS_ON.includes(target) || on.has(target));
 }
 
@@ -69,6 +79,7 @@ function statusProbe(opts: StatusOpts): { env: Env; home: string; probe: Probe }
   const home = opts.home ?? os.homedir();
   const env = opts.env ?? repoEnv.process;
   const pathEnv = firstNonEmpty(opts.pathEnv, env.PATH, repoEnv.process.PATH);
+
   return {
     env,
     home,
@@ -84,9 +95,13 @@ async function listenStatus(env: Env, home: string, { whichFn, pathEnv, platform
   const ffmpeg = whichFn("ffmpeg", pathEnv, platform);
   const whisper = findWhisperBin(whichFn, pathEnv, platform);
   const listenBits: string[] = [];
+
   if (stt !== null) listenBits.push(stt.kind);
+
   if (ffmpeg !== "") listenBits.push("ffmpeg");
+
   if (whisper !== "") listenBits.push("whisper");
+
   return { extra: listenBits.join(","), ok: stt !== null };
 }
 
@@ -98,9 +113,11 @@ export async function targetStatuses(opts: StatusOpts = {}): Promise<TargetStatu
   const ws = workspaceDoctorStatus({ home });
   const lp = whichFn("lightpanda", pathEnv, platform);
   const cr = lookupChromium(whichFn, pathEnv, platform);
+
   const listen = (opts.targets ?? TARGETS).includes("listen")
     ? await listenStatus(env, home, probe)
     : { extra: "", ok: false };
+
   return {
     browser: browserEngineStatus(lp, cr, platform),
     "google-workspace": { extra: ws.extra, ok: ws.ok },
@@ -113,24 +130,32 @@ export async function targetStatuses(opts: StatusOpts = {}): Promise<TargetStatu
 /** After an install confirm, looks again and reports what it found. */
 async function recheck({ id, io, probe }: Hint): Promise<string> {
   if (typeof io?.confirm !== "function") return "";
+
   const again = await io.confirm({
     initialValue: false,
     message: `Installed ${id}? Re-check PATH`,
   });
+
   if (!again) return "";
   const hit = typeof probe === "function" ? probe() : "";
   logLine(io, hit === "" ? `${id} still missing` : `${id} ok  ${hit}`);
+
   return hit;
 }
 
 export async function reprobeHint(hint: Hint): Promise<string> {
   const { id, io, platform = process.platform } = hint;
   const hit = hint.found ?? "";
+
   if (hit !== "") {
     logLine(io, `${id} ok  ${hit}`);
+
     return hit;
   }
+
   logLine(io, `${id} missing. print-only; not installed:`);
+
   for (const h of installHints(id, platform)) logLine(io, h);
+
   return hint.interactive === true ? await recheck(hint) : hit;
 }

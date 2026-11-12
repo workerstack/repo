@@ -26,6 +26,7 @@ export const IMPLEMENTER_DEEP = "implementer-deep";
 export const PLAN = "plan";
 export const ROADMAP = "roadmap";
 export const HANDOFFS = '"h" / "h fast" / "h deep" for a fresh session';
+
 /** The words after `h` that pick a review strategy for the fresh session. */
 export const FAST = "fast";
 export const DEEP = "deep";
@@ -34,10 +35,13 @@ export const ITEM_SEP = ", then ";
 
 /** One closing-line item: `plan 4 (strategy: review-fast)`. */
 const ITEM_SRC = "(?:plan|roadmap) \\d+ \\(strategy: [a-z-]+\\)";
+
 export const CLOSING_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(
   `^Reply "y" to run (${ITEM_SRC}(?:, then ${ITEM_SRC})*), or `,
 );
+
 export const ITEM_RE: RegExp = /^(plan|roadmap) (\d+) \(strategy: ([a-z-]+)\)$/;
+
 /** Markdown around a closing line: bold, backticks, a quote marker. */
 export const LEAD_MARKS_RE: RegExp = /^[\s`*_>]+/;
 export const TRAIL_MARKS_RE: RegExp = /[\s`*_]+$/;

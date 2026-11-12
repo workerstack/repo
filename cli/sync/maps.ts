@@ -11,9 +11,11 @@ import { regionBody, syntaxOf } from "./region.ts";
  */
 export function mapSections(root: string): { skills: string; refs: string } {
   const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL)).map((dir) => skillRow(root, dir));
+
   const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])
     .toSorted((a, b) => a.rel.localeCompare(b.rel))
     .map(refRow);
+
   return {
     refs: table(["path", "title", "tags", "summary"], refs),
     skills: table(["name", "origin", "description", "task", "commandPath", "refs"], skills),
@@ -23,6 +25,8 @@ export function mapSections(root: string): { skills: string; refs: string } {
 /** The trimmed lines of the INDEX region `repo:<name>`, its markers read loosely, or null when the pair is missing. */
 export function sectionBody(text: string, name: string): string[] | null {
   const body = regionBody(text, syntaxOf(INDEX_REL), name);
+
   if (body === undefined) return null;
+
   return body === "" ? [] : body.split("\n").map((l) => l.trimEnd());
 }

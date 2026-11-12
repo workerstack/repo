@@ -35,6 +35,7 @@ describe("repo release gate passes", () => {
 
 function setup() {
   const w = world({}, false);
+
   return { short: tagRelease(w, { version: "0.2.0" }), w };
 }
 

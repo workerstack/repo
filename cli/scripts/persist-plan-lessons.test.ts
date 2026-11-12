@@ -14,6 +14,7 @@ const tmpWs = useTmpWs();
 function wsWithLesson() {
   const ws = tmpWs();
   seedLesson(ws);
+
   return ws;
 }
 
@@ -21,6 +22,7 @@ function wsWithLesson() {
 function git(cwd: string, ...args: string[]) {
   return spawnSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" });
 }
+
 function committedWithLesson() {
   const ws = fs.realpathSync(tmpWs());
   git(ws, "init", "-q");
@@ -28,10 +30,13 @@ function committedWithLesson() {
   git(ws, "add", "-A");
   git(ws, "commit", "-qm", "init");
   git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
+
   return { w: path.join(ws, ".worktrees/w"), ws };
 }
+
 function naming(file: string, { cite = false } = {}) {
   const leaf = VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${file}`);
+
   return cite
     ? leaf.replace("## Watch-outs\n", "## Watch-outs\n- .repo/lessons/plan-forks.md: keep the saved serial\n")
     : leaf;

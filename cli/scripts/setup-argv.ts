@@ -6,20 +6,26 @@ import { str } from "./voice-args.ts";
 export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
   const out: { _: string[]; flags: Flags } = { _: [], flags: {} };
   const args: unknown[] = Array.isArray(argv) ? argv : [];
+
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
+
     if (a === FLAG_PREFIX) {
       out._.push(...args.slice(i + 1).map(String));
       break;
     }
+
     if (typeof a === "string" && a.startsWith(FLAG_PREFIX)) {
       const eq = a.indexOf("=");
+
       if (eq > FLAG_PREFIX.length) {
         out.flags[a.slice(FLAG_PREFIX.length, eq)] = a.slice(eq + 1);
         continue;
       }
+
       const key = a.slice(FLAG_PREFIX.length);
       const nxt = args[i + 1];
+
       if (typeof nxt === "string" && nxt !== "" && !nxt.startsWith(FLAG_PREFIX)) {
         out.flags[key] = nxt;
         i += 1;
@@ -30,20 +36,25 @@ export function parseArgv(argv: unknown): { _: string[]; flags: Flags } {
       out._.push(String(a));
     }
   }
+
   return out;
 }
 
 export function normalizeTarget(raw: unknown): string {
   const s = str(raw).toLowerCase();
+
   if (s === "") return "";
+
   if (GOOGLE_ALIASES.includes(s)) return "google-workspace";
 
   if (TARGETS.includes(s)) return s;
+
   return "";
 }
 
 /** Whether `flags[key]` is set to "1" or "true". */
 export function flagOn(flags: Flags | undefined, key: string): boolean {
   const v = flags?.[key];
+
   return v !== undefined && FLAG_TRUE.includes(v);
 }

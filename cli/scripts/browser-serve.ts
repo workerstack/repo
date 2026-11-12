@@ -56,12 +56,15 @@ function defaultAx(url: string): Rec[] {
 function navigate(state: FakeCdpState, params: Rec): Rec {
   state.url = typeof params.url === "string" && params.url !== "" ? params.url : state.url;
   state.markdown = `# ${state.url}\n\nhello`;
+
   return { frameId: "f1" };
 }
 
 function resolveNode(_state: FakeCdpState, params: Rec): Rec {
   const id = params.backendNodeId;
+
   if (typeof id !== "number" || !KNOWN_NODES.has(id)) throw new Error(STALE);
+
   return { object: { objectId: `oid-${id}` } };
 }
 
@@ -105,23 +108,31 @@ const HANDLERS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, H
 export function handleCdp(state: FakeCdpState, method: string, params: Rec): Rec {
   state.calls?.push({ method, params });
   const scripted = state.replies?.[method];
+
   if (typeof scripted === "string") throw new Error(scripted);
+
   if (scripted !== undefined) return scripted;
+
   if (state.failProbe && PROBE_METHODS.has(method)) throw new Error("probe failed");
+
   return (HANDLERS.get(method) ?? empty)(state, params);
 }
 
 function reply(socket: Duplex, state: FakeCdpState, data: string): void {
   let parsed: unknown;
+
   try {
     parsed = JSON.parse(data);
   } catch {
     return;
   }
+
   const msg = asRec(parsed);
+
   function send(body: Rec) {
     return socket.write(encodeWsFrame(JSON.stringify(body)));
   }
+
   Promise.resolve()
     .then(() => handleCdp(state, String(msg.method), asRec(msg.params)))
     .then((result) => send({ id: msg.id, result }))
@@ -132,22 +143,28 @@ function serveFrames(socket: Duplex, state: FakeCdpState, messages: WsMessage[])
   for (const m of messages) {
     if (m.type === "close") {
       socket.end();
+
       return;
     }
+
     reply(socket, state, m.data);
   }
 }
 
 function upgrade(req: http.IncomingMessage, socket: Duplex, state: FakeCdpState): void {
   const key = req.headers["sec-websocket-key"];
+
   if (typeof key !== "string" || key === "") {
     socket.destroy();
+
     return;
   }
+
   const accept = crypto
     .createHash("sha1")
     .update(key + WS_GUID)
     .digest("base64");
+
   socket.write(
     "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n" +
       `Sec-WebSocket-Accept: ${accept}\r\n\r\n`,
@@ -164,8 +181,10 @@ function answer(req: http.IncomingMessage, res: http.ServerResponse, body: () =>
   if (req.url?.startsWith(VERSION_PATH) === true) {
     res.setHeader("content-type", "application/json");
     res.end(body());
+
     return;
   }
+
   res.statusCode = NOT_FOUND_STATUS;
   res.end();
 }
@@ -177,6 +196,7 @@ export async function serveCdp(
 ): Promise<FakeCdp> {
   const st: FakeCdpState = { ...FAKE_STATE, ...state };
   let bound = 0;
+
   function version() {
     return JSON.stringify({
       Browser: filled(st.engine) ?? "Lightpanda",
@@ -184,6 +204,7 @@ export async function serveCdp(
       webSocketDebuggerUrl: `ws://${HOST}:${bound}/devtools/browser/repo`,
     });
   }
+
   const server = http.createServer((req, res) => answer(req, res, version));
   server.on("upgrade", (req: http.IncomingMessage, socket: Duplex) => upgrade(req, socket, st));
   await new Promise<void>((resolve, reject) => {
@@ -191,5 +212,6 @@ export async function serveCdp(
     server.listen(port, HOST, resolve);
   });
   bound = Number(asRec(server.address()).port);
+
   return { close: () => server.close(), port: bound, state: st };
 }

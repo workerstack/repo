@@ -38,9 +38,11 @@ describe("validatePlan step and log rules", () => {
     expect(errorsFor((t) => t.replace("\n## Previous mistakes", "3 [ ] lonely\n\n## Previous mistakes"))).toContain(
       "phase 3 leaf",
     );
+
     const errors = errorsFor((t) =>
       t.replace("\n## Previous mistakes", "9 [ ] other\n9.1 [ ] step\n\n## Previous mistakes"),
     );
+
     expect(errors).toContain("verify last phase");
   });
 

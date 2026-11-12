@@ -27,6 +27,7 @@ function file(path: string, content: string): Output {
  */
 export function rust(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   if (!ctx.config.packs.includes("standards") || ctx.read(CARGO_PATH) === null) return { errors: [], outputs: [] };
+
   return {
     errors: [],
     outputs: [

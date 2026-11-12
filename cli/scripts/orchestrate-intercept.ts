@@ -21,9 +21,11 @@ export function isStopActive(data: HookInput): boolean {
 function runOne(job: NeedJob, roots: Roots): string | null {
   try {
     const jobCwd = job.cwd === undefined ? roots.cwd : resolveJobCwd(job.cwd, roots.cwd);
+
     if (jobCwd === null) return null;
     const { query, path, glob, stash, from, to } = job;
     const result = runJob({ cwd: jobCwd, from, glob, job: job.job, path, query, root: roots.root, stash, to });
+
     return result.fallback ? null : result.text.trimEnd();
   } catch {
     return null;
@@ -32,24 +34,32 @@ function runOne(job: NeedJob, roots: Roots): string | null {
 
 function runJobs(jobs: NeedJob[], roots: Roots): string[] | null {
   const parts: string[] = [];
+
   for (const job of jobs) {
     const text = runOne(job, roots);
+
     if (text === null) return null;
     parts.push(text);
   }
+
   return parts;
 }
 
 export function interceptNeed(data: HookInput, hookEventName: string): HookResult {
   const roots = resolveRoots(data);
+
   if (isStopActive(data)) return PASS;
   const parsed = parseNeed(payloadAssistantMessage(data));
+
   if (!parsed.ok || parsed.jobs.length > MAX_NEED_JOBS || !parsed.jobs.every((j) => INTERCEPT_JOBS.has(j.job)))
     return PASS;
   const n = readStampInt(data, NEED_INTERCEPT_STAMP);
+
   if (n >= MAX_INTERCEPT) return PASS;
   const parts = runJobs(parsed.jobs, roots);
+
   if (parts === null) return PASS;
   writeStamp(data, NEED_INTERCEPT_STAMP, String(n + 1));
+
   return replyWith({ decision: "block", hookSpecificOutput: { additionalContext: parts.join("\n"), hookEventName } });
 }

@@ -19,6 +19,7 @@ const VALID: Readonly<Record<Exclude<Passthrough["kind"], "keyword">, (value: un
 /** Whether claude writes `onFailure` here: command and http hooks off the ignored events, never an async command. */
 function onFailureApplies({ def, type, event }: PassthroughInput): boolean {
   const blocked = type === COMMAND && (def["async"] === true || def["asyncRewake"] === true);
+
   return (type === COMMAND || type === HTTP) && !ON_FAILURE_IGNORED.has(event) && !blocked;
 }
 
@@ -26,6 +27,7 @@ function onFailureApplies({ def, type, event }: PassthroughInput): boolean {
 export function passthroughFields(input: PassthroughInput): Json {
   const { def, type, target } = input;
   const out: Json = {};
+
   for (const field of target.passthrough) {
     if (field.kind === "keyword") {
       if (def["failClosed"] === true && onFailureApplies(input)) out["onFailure"] = BLOCK;
@@ -33,5 +35,6 @@ export function passthroughFields(input: PassthroughInput): Json {
       out[field.key] = def[field.key];
     }
   }
+
   return out;
 }

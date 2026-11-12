@@ -13,6 +13,7 @@ const tmpHome = plantHomes();
 const GROK = ".grok/config.toml";
 const CURSOR = ".cursor/mcp.json";
 const CLAUDE = ".claude/plugins/installed_plugins.json";
+
 const CLEAN_GROK =
   `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n\n` +
   `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`;
@@ -24,6 +25,7 @@ function plain(value: unknown): unknown {
 
 function reportOf(home: string, { apply = false }: { apply?: boolean } = {}) {
   const r = purgeGlobalMcps({ apply, home });
+
   return { ...r, details: r.report.map((row) => row.detail) };
 }
 
@@ -75,12 +77,14 @@ it("purgeGlobalMcps grok config: a config without [plugins] gets only the disabl
 
 it("purgeGlobalMcps grok config: only drops from enabled when disabled already holds both ids", () => {
   const home = tmpHome("purge-grok-enabled-only-");
+
   const abs = plant(
     home,
     GROK,
     `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n` +
       `[plugins]\nenabled = ["stripe", "keep"]\ndisabled = ["cloudflare", "stripe"]\n`,
   );
+
   const r = reportOf(home, { apply: true });
   expect(r.details[0]).toBe("remove stripe from [plugins].enabled");
   expect(parseToml(fs.readFileSync(abs, "utf8"))).toMatchObject({
@@ -90,11 +94,13 @@ it("purgeGlobalMcps grok config: only drops from enabled when disabled already h
 
 it("purgeGlobalMcps grok config: leaves a plugins table without enabled free of an enabled key", () => {
   const home = tmpHome("purge-grok-no-enabled-");
+
   const abs = plant(
     home,
     GROK,
     `disabled_mcp_servers = ["cloudflare-docs", "MCP_DOCKER", "stripe"]\n[plugins]\ndisabled = []\n`,
   );
+
   reportOf(home, { apply: true });
   expect(plain(parseToml(fs.readFileSync(abs, "utf8")).plugins)).toStrictEqual({ disabled: ["cloudflare", "stripe"] });
 });
@@ -107,12 +113,14 @@ it("purgeGlobalMcps grok config: skips disabled_mcp_servers when it is not a lis
 
 it("purgeGlobalMcps grok config: completes a partial disabled_mcp_servers list without duplicates", () => {
   const home = tmpHome("purge-grok-mcp-partial-");
+
   const abs = plant(
     home,
     GROK,
     `disabled_mcp_servers = ["stripe", "stripe", "mine"]\n` +
       `[plugins]\nenabled = []\ndisabled = ["cloudflare", "stripe"]\n`,
   );
+
   expect(reportOf(home, { apply: true }).details[0]).toBe("add cloudflare-docs, MCP_DOCKER to disabled_mcp_servers");
   expect(parseToml(fs.readFileSync(abs, "utf8")).disabled_mcp_servers).toStrictEqual([
     "stripe",

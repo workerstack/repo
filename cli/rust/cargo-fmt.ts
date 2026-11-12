@@ -16,11 +16,15 @@ export type FmtJob = {
 export function cargoFmt(root: string, job: FmtJob): number {
   const { check, stdout, stderr, run = runCargo } = job;
   const result = run(root, check ? ["fmt", "--all", "--check"] : ["fmt", "--all"]);
+
   if (result.missing) {
     stderr(`repo fmt: ${MISSING_CARGO}\n`);
+
     return 1;
   }
+
   stdout(result.stdout);
   stderr(result.stderr);
+
   return result.status ?? 1;
 }

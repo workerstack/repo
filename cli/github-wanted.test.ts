@@ -98,9 +98,11 @@ it("leaves what package.json does not say alone", () => {
 
 async function requiredChecks(files: Record<string, string>) {
   const wanted = await wantedAt(githubRepo({ files }));
+
   const rule = wanted.ok
     ? wanted.wanted.rulesets[0]?.rules.find((r) => r.type === "required_status_checks")
     : undefined;
+
   return rule?.parameters?.required_status_checks?.map((check) => check.context) ?? [];
 }
 

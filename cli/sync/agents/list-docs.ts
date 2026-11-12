@@ -17,17 +17,21 @@ export type DocsAt = {
 export function listDocs({ root, dir, kind, origin, scope }: DocsAt): DocFile[] {
   const base = path.join(root, dir, kind);
   const found: DocFile[] = [];
+
   function walk(abs: string, file: string): void {
     for (const name of fs.readdirSync(abs)) {
       if (name.startsWith(".")) continue;
       const child = path.join(abs, name);
       const childFile = file === "" ? name : `${file}/${name}`;
+
       if (fs.statSync(child).isDirectory()) walk(child, childFile);
       else if (name.endsWith(MD))
         found.push({ abs: child, file: childFile, origin, rel: `${dir}/${kind}/${childFile}`, scope });
     }
   }
+
   if (fs.existsSync(base)) walk(base, "");
+
   // Paths in one root are unique, so the comparator never sees a tie.
   return found.toSorted((a, b) => (a.file < b.file ? BEFORE : AFTER));
 }

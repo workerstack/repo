@@ -79,11 +79,13 @@ function given(v: unknown): string | undefined {
 function resolveRoots(opts: UnionOptions | string): Roots {
   if (typeof opts === "string") return { consumer: opts, src: opts, ws: opts };
   const ws = given(opts.workspaceRoot) ?? process.cwd();
+
   return { consumer: given(opts.consumerRoot) ?? ws, src: given(opts.sourceRoot) ?? ws, ws };
 }
 
 function checked(roots: Roots): UnionResult {
   const failures = checkUnion({ consumerRoot: roots.consumer, sourceRoot: roots.src, workspaceRoot: roots.ws });
+
   if (failures.length > 0) return { check: true, error: `drift: ${failures.join("; ")}`, failures, ok: false };
 
   return { check: true, failures: [], ok: true };
@@ -91,33 +93,43 @@ function checked(roots: Roots): UnionResult {
 
 export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
   const roots = resolveRoots(opts);
+
   if (typeof opts === "object" && opts.check === true) return checked(roots);
   applyClaude(roots);
   applyCodex(roots);
   applyAgents(roots);
   applyCursor(roots);
+
   return { check: false, ok: true };
 }
 
 /** Why `command` in hook file `id` is not the form sync writes, or null when it is. */
 function staleOf(id: string, command: string): string | null {
   const hook = hookNameOf(command);
+
   if (hook !== null) {
     // The stock source may hold the short form, which sync expands; every generated file holds the expanded text.
     const short = id === RULESYNC_ID && command === `repo hook ${hook}`;
+
     if (command === hookCommand(hook) || short) return null;
+
     return `${id}: ${hook} hook command is not the one bun repo sync writes for ${hook}: run bun repo sync`;
   }
+
   const script = AUTORUN_NEEDLES.find((n) => command.includes(n));
+
   if (script === undefined || isRootCmd(command)) return null;
+
   return `${id}: ${script} hook command does not find its script from the repo root: run bun repo sync`;
 }
 
 function staleCommands(root: string): string[] {
   return COMMAND_FILES.flatMap(([id, rel]) => {
     const p = path.join(root, rel);
+
     if (!fs.existsSync(p)) return [];
     const data: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
+
     return allCommands(data).flatMap((command) => staleOf(id, command) ?? []);
   });
 }
@@ -126,6 +138,7 @@ function fileSpecs(roots: Roots): FileSpec[] {
   const autorun = presentAutorun(roots.consumer);
   const map = mapHooks(roots.src);
   const worktree: HookName[] = ships(roots.src, "worktree") ? ["worktree"] : [];
+
   return [
     {
       hooks: [...OWNED_HOOKS, ...map, ...worktree],
@@ -141,9 +154,11 @@ function fileSpecs(roots: Roots): FileSpec[] {
 
 function specFailures(root: string, spec: FileSpec): string[] {
   const p = path.join(root, spec.path);
+
   if (!fs.existsSync(p)) return [`${spec.id}: missing ${spec.path}`];
   const text = fs.readFileSync(p, "utf8");
   const present = new Set(allCommands(JSON.parse(text)).map(hookNameOf));
+
   return [
     ...spec.hooks.filter((h) => !present.has(h)).map((h) => `${spec.id}: missing ${h}`),
     ...spec.needles.filter((n) => !text.includes(n)).map((n) => `${spec.id}: missing ${n}`),
@@ -152,12 +167,14 @@ function specFailures(root: string, spec: FileSpec): string[] {
 
 function gitHookFailures(consumer: string): string[] {
   if (!fs.existsSync(path.join(consumer, GIT_HOOKS_DIR))) return [];
+
   return GIT_HOOKS.filter((rel) => !fs.existsSync(path.join(consumer, rel))).map((rel) => `git-hook missing: ${rel}`);
 }
 
 export function checkUnion(opts: UnionOptions | string = {}): string[] {
   const roots = resolveRoots(opts);
   const specs = fileSpecs(roots);
+
   return [
     ...staleCommands(roots.ws),
     ...specs.flatMap((spec) => specFailures(roots.ws, spec)),

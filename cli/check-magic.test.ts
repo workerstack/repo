@@ -58,6 +58,7 @@ it(
       },
       include: ["src"],
     };
+
     const root = plant({
       "packages/api/src/modes.ts": 'export type Mode = "fast" | "slow";\nexport declare const current: Mode;\n',
       "packages/api/src/use.ts": 'import { current } from "#modes";\nexport const fast = () => current === "fast";\n',
@@ -65,6 +66,7 @@ it(
       "src/root.ts": 'import { current } from "#modes";\nexport const fast = () => current === "fast";\n',
       "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
+
     const found = magicDiagnostics(root, ["src/root.ts", "packages/api/src/use.ts", "packages/api/src/modes.ts"]);
     expect(found).toStrictEqual({ ok: true, value: [hit("src/root.ts:2:39", STRING, COMPARED("fast"))] });
   },
@@ -81,6 +83,7 @@ it(
       "src/use.ts": 'import { SLOW } from "./modes.ts";\nexport const is = (m: string) => m === SLOW;\n',
       "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
+
     expect(magicDiagnostics(root, ["src/modes.ts"])).toStrictEqual({
       ok: true,
       value: [hit("src/modes.ts:1:14", STRING, COPIES("SLOW", "slow"))],
@@ -92,6 +95,7 @@ it(
 
 it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2e or vendored code", () => {
   const body = "export const f = () => 5000;\n";
+
   const skipped = [
     "src/a.test.ts",
     "src/a.spec.tsx",
@@ -105,6 +109,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
     "src/a.js",
     "README.md",
   ];
+
   const checked = ["src/a.ts", "src/b.tsx", "src/c.mts", "src/d.cts"];
   const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, body]));
   expect(magicOf(files).map((d) => d.file)).toStrictEqual(checked);
@@ -122,6 +127,7 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
     hit("src/a.ts:2:1", STRING, COMPARED("x")),
     hit("lib/b.ts:1:1", NUMBER, NAMES_NOTHING("5")),
   ];
+
   const skips = [{ files: ["src/*.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] }];
   expect(withoutSkipped(diagnostics, skips, ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics.slice(1));
   expect(withoutSkipped(diagnostics, [], ["src/a.ts", "lib/b.ts"])).toStrictEqual(diagnostics);

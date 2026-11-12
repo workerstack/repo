@@ -31,6 +31,7 @@ export class MigrationState {
   /** Moves `from` to `to`, or records the conflict when `to` already holds other text. */
   move(from: string, to: string, how: { note: string; except?: readonly string[]; mark?: MoveMark | undefined }): void {
     const except = how.except ?? [];
+
     if (clashes(path.join(this.root, from), path.join(this.root, to), except)) {
       this.steps.push({ from, kind: "conflict", to });
     } else {
@@ -52,14 +53,18 @@ export class MigrationState {
   mark(from: string, to: string, of: { name: string; kind: "rule" | "subagent" | "skill" }): MoveMark | undefined {
     const text = this.read(from);
     const content = text === null ? null : markedText(text, of.name);
+
     if (content === null) return undefined;
+
     return { content, note: markNote(to, of.name, of.kind), path: from };
   }
 
   /** Writes `content` to `to` for text taken from `from`; nothing to do when it is already there. */
   write(from: string, to: string, file: { content: string; note: string }): void {
     const existing = this.read(to);
+
     if (existing === file.content || (existing !== null && alreadyHolds(to, existing, file.content))) return;
+
     if (existing === null) this.steps.push({ content: file.content, kind: "write", note: file.note, path: to });
     else this.steps.push({ from, kind: "conflict", to });
   }
@@ -67,6 +72,7 @@ export class MigrationState {
   /** Whether the file at `rel` is there and is no stock version. */
   differs(rel: string, stockText: string | null): boolean {
     const own = this.read(rel);
+
     return own !== null && !this.unedited(rel, own, stockText);
   }
 
@@ -77,6 +83,7 @@ export class MigrationState {
   unedited(keys: string | readonly string[], text: string, stockText: string | null): boolean {
     if (stockText !== null && same(text, stockText)) return true;
     const hash = hashText(text);
+
     return [keys].flat().some((key) => this.history[key]?.includes(hash) === true);
   }
 
@@ -109,7 +116,9 @@ export class MigrationState {
    */
   stockText(rel: string): string | null {
     const generated = this.generated.get(rel);
+
     if (generated !== undefined) return generated;
+
     try {
       return fs.readFileSync(path.join(this.stock, stockRel(rel)), "utf8");
     } catch {

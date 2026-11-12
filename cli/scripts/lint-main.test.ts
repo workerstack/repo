@@ -29,6 +29,7 @@ import { lintMain } from "./lint-main.ts";
 import { captureTool } from "./lint.ts";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   vi.restoreAllMocks();
@@ -40,12 +41,14 @@ it(
   { timeout: SLOW },
   async () => {
     const seeded = { "src/a.ts": { [NN]: 1 }, "src/b.ts": { [PARAMS]: 1 }, "src/gone.ts": { [NN]: 4 } };
+
     const root = consumer({
       [BASELINE_PATH]: `${JSON.stringify(seeded)}\n`,
       "src/a.ts": nonNull(2),
-      "src/b.ts": `${nonNull(1, "b")}${FLOATING}`,
+      "src/b.ts": `${nonNull(1, "b")}\n${FLOATING}`,
       "src/c.ts": nonNull(1, "c"),
     });
+
     const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     process.chdir(root);
     expect(await lintMain(["--baseline"])).toBe(0);
@@ -85,6 +88,7 @@ async function failingBaseline(root: string) {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(1);
+
   return err;
 }
 
@@ -102,9 +106,11 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain(["--baseline"])).toBe(0);
+
   function baseline() {
     return JSON.parse(fs.readFileSync(path.join(root, BASELINE_PATH), "utf8"));
   }
+
   expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 }, "src/wait.ts": { [MAGIC]: 1 } });
   const skip = { files: ["src/wait.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
   fs.writeFileSync(
@@ -170,6 +176,7 @@ it("lint keeps a skipped guard of an imported source out, and prints it unskippe
     "src/is-user.test.ts": GUARD_TEST,
     "src/is-user.ts": GUARD_SOURCE,
   });
+
   const { stdout, clear } = spies();
   process.chdir(root);
   expect(await lintMain(["src/is-user.test.ts"])).toBe(1);

@@ -21,6 +21,7 @@ import {
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const CLAUDE_CONFIG = 'export default { agents: { hosts: ["claude"] } }\n';
@@ -28,6 +29,7 @@ const CLAUDE_CONFIG = 'export default { agents: { hosts: ["claude"] } }\n';
 /** A bun script that renders this repo six times and prints each distinct path list it saw. */
 function renderSixTimes(): string {
   const trees = pathToFileURL(path.join(SELF_ROOT, "cli", "sync", "trees.ts")).href;
+
   return `
       const { renderTrees } = await import(${JSON.stringify(trees)});
       const seen = new Set();
@@ -58,6 +60,7 @@ async function sync(root: string, ...args: string[]) {
   const out: string[] = [];
   const err: string[] = [];
   const code = await runSync(args, { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+
   return { code, stderr: err.join(""), stdout: out.join("") };
 }
 
@@ -66,6 +69,7 @@ it("keeps every output tracked and links skills inside the repo", () => {
     ...context(SELF_ROOT, HOSTS, { skills: ["google-workspace", "listen", "speak", "clasp"] }),
     workspace: { manifest: { name: "@workerstack/repo" }, packages: [], root: SELF_ROOT },
   });
+
   if (!result.ok) throw new Error(result.errors.join("\n"));
   expect(result.outputs.every((output) => output.tracked)).toBe(true);
   expect(linkTarget(result.outputs, ".claude/skills/ask")).toBe("../../agents/skills/ask");

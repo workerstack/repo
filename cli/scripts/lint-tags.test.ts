@@ -11,6 +11,7 @@ import { readWorkspace } from "../sync/workspace.ts";
 import { captureTool } from "./lint.ts";
 
 const SLOW = 60_000;
+
 /** The consumer is untyped (no install), so only the rule under test is read from oxlint's report. */
 const RULE = "[Error/repo(boundaries)]";
 
@@ -23,10 +24,13 @@ useTempDirs();
 async function syncStandards(root: string): Promise<string[]> {
   const loaded = await loadConfig(root);
   const read = readWorkspace(root);
+
   if (!loaded.ok || !read.ok) throw new Error("the tagged tree did not load");
   const ctx = { config: loaded.config, read: () => null, root, workspace: read.workspace };
   const result = standards(ctx, []);
+
   for (const output of result.outputs) if (output.kind === "file") put(root, output.path, output.content);
+
   return result.errors;
 }
 

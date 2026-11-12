@@ -27,6 +27,7 @@ function consumerRepo(prefix: string): string {
   const ws = tmpDir(prefix);
   seedOwnedDrivers(ws);
   touchConsumerScripts(ws);
+
   return ws;
 }
 
@@ -72,10 +73,12 @@ it("appends flat SessionStart entries after rulesync's, the session map first", 
     "rtk-check.mjs",
     "daily-fleet-check.mjs",
   ]);
+
   for (const e of session) {
     const keys = e.timeout === undefined ? ["command", "type"] : ["command", "timeout", "type"];
     expect(Object.keys(e).toSorted()).toStrictEqual(keys);
   }
+
   const first = fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8");
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);
@@ -97,6 +100,7 @@ it("matches writes by Antigravity tool names, not Claude's", () => {
   expect(behindGroup(agents.rulesync.PreToolUse).matcher).toBe(AGY_WRITE_MATCHER);
   expect(agents["check-behind"].matcher).toBe(AGY_WRITE_MATCHER);
   expect(must(agents.rulesync.PostToolUse[0]).matcher).toBe(AGY_WRITE_MATCHER);
+
   for (const k of ["validate-artifact", "simulate-artifact"] as const)
     expect(agents[k].matcher).toBe(AGY_WRITE_MATCHER);
   const claudePre = readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse;

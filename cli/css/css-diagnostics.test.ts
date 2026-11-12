@@ -10,6 +10,7 @@ import { cssDiagnostics, cssFiles } from "./css-diagnostics.ts";
 import { stylelintRun } from "./stylelint-run.ts";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   cleanTemps();
@@ -18,6 +19,7 @@ afterEach(() => {
 const HEX = "stylelint(color-hex-length)";
 const ORDER = "stylelint(order/properties-order)";
 const UNKNOWN = "stylelint(property-no-unknown)";
+
 const EXPECTED = [
   {
     file: "src/bad.css",
@@ -31,7 +33,9 @@ const EXPECTED = [
   },
   { file: "src/unknown.css", line: `src/unknown.css:2:3: error ${UNKNOWN}: Unknown property "colr"`, rule: UNKNOWN },
 ];
+
 const ALL = Object.keys(SHEETS);
+
 function git(...args: string[]): string {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
@@ -84,6 +88,7 @@ it("returns output that is no json as a problem line with the parse error", () =
 
 it("returns each invalid option the config holds as a problem line, and no warning", () => {
   const warning = { column: 1, line: 1, rule: "color-named", severity: "error", text: "x (color-named)" };
+
   const results = [
     {
       invalid: [{ text: 'Invalid option value "sometimes" for rule "color-named"' }],
@@ -92,6 +97,7 @@ it("returns each invalid option the config holds as a problem line, and no warni
     },
     { invalid: [{ text: 'Invalid option name "max" for rule "order/order"' }], source: "/r/b.css", warnings: [] },
   ];
+
   const runner = fakeRunner({ code: 0, stderr: "", stdout: JSON.stringify(results) });
   expect(cssDiagnostics(path.dirname(runner), ["src/a.css", "src/b.css"], { fix: false, runner })).toStrictEqual({
     errors: [

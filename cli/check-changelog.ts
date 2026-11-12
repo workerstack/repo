@@ -9,5 +9,6 @@ import { ownerLookup } from "./tdd-scope.ts";
 export function checkChangelog(root: string): string[] {
   if (!ownerLookup(root)("package.json").public) return [];
   const file = path.join(root, CHANGELOG_FILE);
+
   return changelogFormatProblems(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 }

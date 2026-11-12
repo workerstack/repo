@@ -76,6 +76,7 @@ it("resolveJobCwd resolves against the workspace and sees through a symlinked sp
   const dir = plant();
   plantFiles(dir, { "pkg/a.txt": "x" });
   const alias = aliasOf(dir);
+
   try {
     expect(resolveJobCwd(path.join(alias, "pkg"), dir)).toBe(path.join(dir, "pkg"));
     expect(resolveJobCwd("pkg", alias)).toBe(path.join(dir, "pkg"));

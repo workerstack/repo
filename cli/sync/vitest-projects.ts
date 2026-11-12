@@ -14,12 +14,16 @@ import {
 export function vitestProjects(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
   if (!ctx.config.packs.includes("workspace")) return { errors: [], outputs: [] };
   const existing = ctx.read(VITEST_CONFIG_PATH);
+
   if (existing !== null && !hasOwnedHeader(existing)) return { errors: [VITEST_REFUSAL], outputs: [] };
+
   const projects = ctx.workspace.packages
     .map((pkg) => `${pkg.dir}/${PACKAGE_VITEST_CONFIG}`)
     .filter((rel) => ctx.read(rel) !== null);
+
   const body = `export default defineConfig({ test: { projects: ${JSON.stringify(projects)} } });`;
   const content = `${VITEST_IMPORT}\n${body}\n`;
+
   return {
     errors: [],
     outputs: [{ content, kind: "file", managed: "whole", path: VITEST_CONFIG_PATH, tracked: false }],

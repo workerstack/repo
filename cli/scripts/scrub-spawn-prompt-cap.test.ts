@@ -40,17 +40,21 @@ it("denies over-cap prompts after scrub without slicing or …[truncated]", () =
   expect(out).toContain("- /home/ecomet/Development/repo-test-2/README.md:1 — keep me");
   expect(out).not.toContain("verdict: ok");
   expect(out).toContain("/home/ecomet/Development/repo-test-2/README.md");
+
   const rewritten = rewriteSpawnToolInput({
     prompt: raw,
     subagent_type: "scout",
   });
+
   expect(rewritten?.prompt).not.toContain(TRUNCATE_SUFFIX);
   expect(String(rewritten?.prompt).length).toBeGreaterThan(MAX_PROMPT_CHARS);
   const ws = root;
+
   const denied = processHookPayload({
     toolInput: { prompt: raw, subagent_type: "scout" },
     workspaceRoot: ws,
   });
+
   expect(denied).toMatchObject({ decision: "block" });
   expect(denied?.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
   expect(denied?.reason).toMatch(/re-spawn/i);
@@ -65,15 +69,18 @@ it("allows prompts at the cap after scrub", () => {
   const out = capSpawnPrompt(raw);
   expect(out.length).toBeLessThanOrEqual(MAX_PROMPT_CHARS);
   expect(out).not.toContain(TRUNCATE_SUFFIX);
+
   const payload = processHookPayload({
     toolInput: { prompt: raw, subagent_type: "scout" },
     workspaceRoot: root,
   });
+
   expect(payload?.decision).not.toBe("block");
 });
 
 it("denies Grok spawn over cap without updatedInput slice", () => {
   const prompt = "x".repeat(MAX_PROMPT_CHARS + 1);
+
   const result = runHook(
     orchMain,
     {
@@ -84,6 +91,7 @@ it("denies Grok spawn over cap without updatedInput slice", () => {
     },
     { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },
   );
+
   expect(result.status).toBe(0);
   const json = parseOut(result.stdout);
   expect(json.decision).toBe("block");
@@ -107,6 +115,7 @@ it("allows Grok spawn under cap", () => {
     },
     { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: root },
   );
+
   expect(result.status).toBe(0);
   expect(result.stdout === "" ? undefined : parseOut(result.stdout).decision).not.toBe("block");
 });

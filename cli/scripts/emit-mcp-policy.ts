@@ -68,11 +68,13 @@ type Hosts = {
 function parseJsonFile(raw: string | null): JsonObject {
   if (raw === null || raw.trim() === "") return {};
   const v: unknown = JSON.parse(raw);
+
   return isPlainObject(v) ? v : {};
 }
 
 function parseTomlFile(raw: string | null): JsonObject {
   if (raw === null || raw.trim() === "") return {};
+
   return parseToml(raw);
 }
 
@@ -89,10 +91,13 @@ function jsonOut(obj: unknown): string {
 function policyOf(ws: string, opts: EmitOptions): { ok: true; policy: Policy } | { ok: false; error: string } {
   const rawPolicy = loadPolicy(nonEmptyOr(opts.sourceRoot, ws), opts.consumerRoot);
   const valid = validatePolicy(rawPolicy);
+
   if (!valid.ok) return valid;
   const mcpJson = parseMcpJson(readTextOrNull(path.join(nonEmptyOr(opts.consumerRoot, ws), MCP_JSON_REL)));
+
   if (!mcpJson.ok) return { error: mcpJson.error, ok: false };
   const denyPlugins = isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true;
+
   return { ok: true, policy: { allow: stringList(rawPolicy.allow), denyPlugins, servers: mcpJson.servers } };
 }
 
@@ -105,6 +110,7 @@ function hostsOf(ws: string, { keepHomeTables, policy }: Target): Hosts {
   const grokDisk = parseTomlFile(grokRaw);
   const claudeDisk = parseJsonFile(claudeRaw);
   const codexDisk = parseTomlFile(codexRaw);
+
   return {
     agents: { desired: desiredAgentsMcp(policy), disk: parseJsonFile(agentsRaw), raw: agentsRaw },
     claude: { desired: desiredClaudeSettings(claudeDisk, policy), disk: claudeDisk, raw: claudeRaw },
@@ -121,6 +127,7 @@ function driftOf({ grok, claude, codex, agents }: Hosts, { keepHomeTables, polic
     [CODEX_REL, codex.raw != null && codexCheckOk(codex.disk, codex.desired, policy.allow)],
     [AGENTS_MCP_REL, agents.raw != null && deepEqual(agents.disk, agents.desired)],
   ];
+
   return held.filter(([, ok]) => !ok).map(([rel]) => rel);
 }
 
@@ -140,15 +147,21 @@ export function emitMcpPolicy(opts: EmitOptions = {}): EmitResult {
   const check = opts.check ?? false;
   const ws = nonEmptyOr(opts.workspaceRoot, process.cwd());
   const resolved = policyOf(ws, opts);
+
   if (!resolved.ok) return { check, error: resolved.error, ok: false };
   const { policy } = resolved;
   const target = { keepHomeTables: isHomeGrokConfig(ws, nonEmptyOr(opts.home, repoEnv.process.HOME)), policy };
   const hosts = hostsOf(ws, target);
+
   if (!check) {
     writeHosts(ws, hosts);
+
     return { check: false, ok: true };
   }
+
   const drift = driftOf(hosts, target);
+
   if (drift.length > 0) return { check: true, drift, error: `drift: ${drift.join(", ")}`, ok: false };
+
   return { check: true, drift: [], ok: true };
 }

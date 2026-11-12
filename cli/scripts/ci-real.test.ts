@@ -9,6 +9,7 @@ afterEach(() => {
 });
 
 const PIN = `bun@${Bun.version}`;
+
 const MANIFEST = `${JSON.stringify(
   {
     // Fields in the order oxfmt's sortPackageJson writes them, so the planted repo passes fmt.
@@ -24,13 +25,16 @@ const MANIFEST = `${JSON.stringify(
   null,
   2,
 )}\n`;
+
 /** The two lint findings a test that skips itself at runtime has, which the baseline allows. */
 const SKIP_FINDINGS = { "repo(skip-on-platform)": 1, "vitest(expect-expect)": 1 };
 const BASELINE = `${JSON.stringify({ "src/answer.test.ts": SKIP_FINDINGS }, null, 2)}\n`;
 const ANSWER = "export const answer = 42;\n";
+
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\n\nimport { answer } from "./answer.ts";\n\n' +
   'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';
+
 const VITEST_CONFIG = 'export default { test: { coverage: { include: ["src/**"], provider: "istanbul" } } };\n';
 
 /** Runs `repo ci` in `root` with the process's own writers and real tools, collecting what it wrote. */
@@ -41,8 +45,10 @@ async function realCi(root: string, argv: string[] = []) {
   vi.spyOn(process.stderr, "write").mockImplementation((chunk) => err.push(String(chunk)) > 0);
   const cwd = process.cwd();
   process.chdir(root);
+
   try {
     const code = await main(argv);
+
     return { code, err: err.join(""), out: out.join("") };
   } finally {
     process.chdir(cwd);
@@ -58,6 +64,7 @@ it("runs the real gates on a planted repo and passes", { timeout: SLOW }, async 
     "src/answer.ts": ANSWER,
     "vitest.config.ts": VITEST_CONFIG,
   });
+
   const run = await realCi(root);
   const lines = run.out.split("\n");
   expect(lines.slice(0, 4).map((line) => line.replace(/ \(\d+\.\ds\)$/, ""))).toStrictEqual([
@@ -80,6 +87,7 @@ it("a failing test fails the run and shows vitest's output", { timeout: SLOW }, 
     },
     { deps: true },
   );
+
   const run = await realCi(root);
   expect(run.code).toBe(1);
   expect(run.out).toMatch(/ci: tests failed \(1 failed, 0 passed\) \(\d+\.\ds\)\n[\s\S]*AssertionError/);
@@ -95,6 +103,7 @@ it("--report writes the skipped ids of one real vitest run", { timeout: SLOW }, 
     "src/answer.ts": ANSWER,
     "vitest.config.ts": VITEST_CONFIG,
   });
+
   const run = await realCi(root, ["--report", "r.json"]);
   expect(run).toMatchObject({ code: 0, err: "" });
   expect(run.out.split("\n")).toHaveLength(6);
@@ -134,10 +143,12 @@ it("wait in a checkout whose HEAD is on no remote says so on the real stderr", a
   vi.spyOn(process.stderr, "write").mockImplementation((chunk) => err.push(String(chunk)) > 0);
   const cwd = process.cwd();
   process.chdir(root);
+
   try {
     expect(await main(["wait"])).toBe(4);
   } finally {
     process.chdir(cwd);
   }
+
   expect(err.join("")).toMatch(/^repo ci wait: [0-9a-f]{7} is not on any remote branch; push it first\n$/);
 });

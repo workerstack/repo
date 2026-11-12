@@ -9,7 +9,9 @@ import { readJson, section, str } from "./voice-args.ts";
 
 export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): number {
   const n = Number(v);
+
   if (!Number.isFinite(n) || n <= 0) return fallback;
+
   return Math.min(MAX_SECONDS, Math.max(1, Math.round(n)));
 }
 
@@ -18,6 +20,7 @@ export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const file = readJson(filePath);
   const openai = section(file, "openai");
   const listen = section(file, "listen");
+
   return {
     apiKey: str(firstNonEmpty(env.OPENAI_API_KEY) ?? openai.apiKey),
     device: str(firstNonEmpty(env.LISTEN_DEVICE) ?? listen.device),

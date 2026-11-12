@@ -33,6 +33,7 @@ it("a deleted payload errors with its repo-relative path and writes nothing", ()
     "agents/global-settings/grok.toml",
     "agents/global-settings/antigravity.json",
   ]);
+
   const r = syncGlobals({ apply: true, home: tempDir("yolo-missing-"), workspaceRoot: ws });
   expect(r).toMatchObject({ error: "missing payload: agents/global-settings/cursor.json", ok: false });
   expect(r.report.map((row: { id: string }) => row.id)).toStrictEqual(["grok", "claude", "codex", "antigravity"]);
@@ -46,6 +47,7 @@ it("an unparseable payload errors", () => {
     "agents/global-settings/antigravity.json",
     "agents/global-settings/cursor.json",
   ]);
+
   fs.writeFileSync(path.join(ws, "agents/global-settings/claude.json"), "{nope");
   const r = syncGlobals({ home: tempDir("yolo-badpayload-"), host: "claude", workspaceRoot: ws });
   expect(r).toMatchObject({ error: "unreadable payload: agents/global-settings/claude.json", ok: false });

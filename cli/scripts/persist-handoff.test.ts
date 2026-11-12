@@ -19,11 +19,13 @@ function tmpWs(): string {
 describe("persistHandoff", () => {
   it("writes a stamped handoff under .tmp/repo/handoffs", () => {
     const ws = tmpWs();
+
     const r = persistHandoff({
       content: VALID_HANDOFF,
       created: "2026-08-27T14:30:00Z",
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-sync-skills-to-hosts-20260827T143000Z.md");
@@ -80,10 +82,12 @@ describe("persistHandoff refusals", () => {
 
   it("rejects extra or reordered headings", () => {
     const ws = tmpWs();
+
     const r = persistHandoff({
       content: `${VALID_HANDOFF}\n## Steps\n- nope\n`,
       workspaceRoot: ws,
     });
+
     expect(r.ok).toBe(false);
     expect(r.error).toContain("extra h2");
   });
@@ -91,11 +95,13 @@ describe("persistHandoff refusals", () => {
 
 function persistHandoffText() {
   const ws = tmpWs();
+
   const r = persistHandoff({
     content: VALID_HANDOFF,
     created: "2026-08-27T14:30:00Z",
     workspaceRoot: ws,
   });
+
   return { filename: savedOk(r).filename, text: savedOk(r).content };
 }
 
@@ -134,6 +140,7 @@ describe("handoff fences", () => {
       "- Claude link: /repo/.claude/skills/\n",
       "- Claude link: /repo/.claude/skills/\n\n```md\n## Next\n```\n",
     );
+
     const r = persistHandoff({ content, workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
   });

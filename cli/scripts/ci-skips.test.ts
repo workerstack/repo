@@ -15,9 +15,11 @@ function skips(files: Record<string, string>, dirName = "reports") {
   const out: string[] = [];
   const err: string[] = [];
   const code = skipsMain(dirName, { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+
   function shown(s: string) {
     return s.replaceAll(`${root}/`, "").replaceAll(root, ".");
   }
+
   return { code, err: shown(err.join("")), out: shown(out.join("")) };
 }
 
@@ -27,6 +29,7 @@ it("a test skipped in every report fails, naming the OSes", () => {
     "reports/ci-report-linux.json": report("linux", ["cli/a.test.ts > reads a symlink", "x > only linux"]),
     "reports/ci-report-win32.json": report("win32", ["cli/a.test.ts > reads a symlink"]),
   });
+
   expect(run).toStrictEqual({
     code: 1,
     err:
@@ -42,6 +45,7 @@ it("a test that ran on one OS passes, and the line counts the reports", () => {
     "reports/ci-report-win32.json": report("win32", []),
     "reports/ignored.json": "{",
   });
+
   expect(run).toStrictEqual({
     code: 0,
     err: "",
@@ -55,6 +59,7 @@ it("reports one level down, as download-artifact nests them, are read", () => {
     "reports/ci-report-win32/ci-report-win32.json": report("win32", ["a > t"]),
     "reports/ci-report-win32/deeper/ci-report-x.json": "{",
   });
+
   expect(run.code).toBe(1);
   expect(run.err).toContain("a > t is skipped on every OS (linux, win32)");
 });
@@ -94,6 +99,7 @@ it("shards of one OS count once: two win32 shards and a linux report are 2 OSes,
     "reports/ci-report-win32-1.json": report("win32", ["a > t"]),
     "reports/ci-report-win32-2.json": report("win32", ["b > u"]),
   });
+
   expect(run).toStrictEqual({
     code: 0,
     err: "",
@@ -107,6 +113,7 @@ it("a test skipped in one win32 shard and on linux fails, though the other shard
     "reports/ci-report-win32-1.json": report("win32", ["a > t"]),
     "reports/ci-report-win32-2.json": report("win32", []),
   });
+
   expect(run).toStrictEqual({
     code: 1,
     err: "repo ci skips: a > t is skipped on every OS (linux, win32); make it run on one or delete it\n",
@@ -120,6 +127,7 @@ it("three win32 shard reports alone are one OS and fail", () => {
     "reports/ci-report-win32-2.json": report("win32", []),
     "reports/ci-report-win32-3.json": report("win32", []),
   });
+
   expect(run).toStrictEqual({
     code: 1,
     err: "repo ci skips: only 1 report (win32); every OS's test job must upload one\n",
@@ -129,10 +137,12 @@ it("three win32 shard reports alone are one OS and fail", () => {
 
 it("reports with and without durations are both read", () => {
   const timedReport = JSON.stringify({ durations: { "a.test.ts": 5 }, os: "linux", skipped: [] });
+
   const run = skips({
     "reports/ci-report-linux.json": timedReport,
     "reports/ci-report-win32.json": report("win32", []),
   });
+
   expect(run).toStrictEqual({
     code: 0,
     err: "",
@@ -142,10 +152,12 @@ it("reports with and without durations are both read", () => {
 
 it("a report whose durations are not numbers is not a ci report", () => {
   const badReport = JSON.stringify({ durations: { "a.test.ts": "5" }, os: "linux", skipped: [] });
+
   const run = skips({
     "reports/ci-report-linux.json": badReport,
     "reports/ci-report-win32.json": report("win32", []),
   });
+
   expect(run.code).toBe(1);
   expect(run.err).toContain("reports/ci-report-linux.json is not a ci report");
 });

@@ -11,7 +11,9 @@ const { tempDir } = useTempDirs("workerstack-stock-");
 
 function withPackage(text: string | null): string {
   const root = tempDir();
+
   if (text !== null) fs.writeFileSync(path.join(root, "package.json"), text);
+
   return root;
 }
 

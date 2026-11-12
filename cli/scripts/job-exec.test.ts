@@ -11,12 +11,14 @@ useJobEnv();
 function exec(dir: string, query: string) {
   return runExec(query, { cwd: dir, root: dir });
 }
+
 const FALLBACK = { code: 2, fallback: true, text: "FALLBACK\n" };
 
 /** A planted dir holding the given bun scripts. */
 function withScripts(scripts: Record<string, string>): string {
   const dir = plant();
   plantFiles(dir, scripts);
+
   return dir;
 }
 

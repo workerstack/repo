@@ -10,16 +10,19 @@ import { regionHash } from "./region.ts";
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const PKG_RULE = "---\ndescription: Web rule\n---\nWEB PACKAGE RULE\n";
 const SKILL = "---\nname: deploy\ndescription: Ships the package.\n---\nDeploy.\n";
 const API_RULE = "---\ndescription: Api\npaths:\n  - src/api/**\n---\nAPI RULE\n";
 const START = "Start at references/INDEX.md in this package.\n";
+
 /** `body` in the hashed `repo:rules` region, as sync writes it into a package's AGENTS.md. */
 function rules(body: string) {
   return `<!-- repo:rules ${regionHash(body)} -->\n${body}<!-- /repo:rules -->\n`;
 }
+
 function web() {
   return consumer({
     ".repo/rules/house.md": "---\ndescription: h\n---\nHOUSE\n",
@@ -29,6 +32,7 @@ function web() {
     "packages/web/.repo/skills/deploy/SKILL.md": SKILL,
   });
 }
+
 function renderWeb(hosts: readonly Host[]) {
   return render(web(), hosts, { packages: ["packages/web", "packages/api"] });
 }
@@ -83,6 +87,7 @@ it("refuses a root rule and a package rule that render one file, naming both sou
     "packages/web/.repo/rules/web.md": PKG_RULE,
     "x/a.ts": "",
   });
+
   expect(renderTrees(context(root, ["claude"], { packages: ["packages/web"] }))).toStrictEqual({
     errors: [
       ".claude/rules/packages/web/web.md: planned by .repo/rules/packages/web/web.md " +

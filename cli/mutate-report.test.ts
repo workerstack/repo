@@ -13,6 +13,7 @@ function span(line: number, column: number) {
 function mutant(file: string, summary: string, at: { line?: number; genre?: string } = {}) {
   const { line = 1, genre = "BinaryOperator" } = at;
   const name = `${file}:${line}:5: replace + with - in f`;
+
   const scenario = {
     Mutant: {
       file,
@@ -23,6 +24,7 @@ function mutant(file: string, summary: string, at: { line?: number; genre?: stri
       span: span(line, 5),
     },
   };
+
   return {
     diff_path: "diff/x.diff",
     log_path: "log/x.log",
@@ -31,12 +33,14 @@ function mutant(file: string, summary: string, at: { line?: number; genre?: stri
     summary,
   };
 }
+
 const baseline = {
   diff_path: null,
   log_path: "log/baseline.log",
   scenario: "Baseline",
   summary: "Success",
 };
+
 function outcomes(...entries: unknown[]) {
   return {
     outcomes: entries,
@@ -50,6 +54,7 @@ it("counts caught and timeout mutants as killed, per file", () => {
     mutant("crates/a/src/lib.rs", "Timeout", { line: 2 }),
     mutant("crates/b/src/lib.rs", "CaughtMutant"),
   );
+
   expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: {
@@ -84,6 +89,7 @@ it("leaves out unviable mutants, the baseline and a failed baseline", () => {
     mutant("crates/a/src/lib.rs", "Unviable"),
     mutant("crates/a/src/lib.rs", "CaughtMutant", { line: 3 }),
   );
+
   expect(fromCargoMutants(raw)).toStrictEqual({
     ok: true,
     value: { "crates/a/src/lib.rs": { killed: 1, survivors: [] } },
@@ -98,12 +104,14 @@ it("names a bad shape", () => {
   const none = fromCargoMutants({ files: {} });
   expect(none).toMatchObject({ ok: false });
   expect(!none.ok && none.reason).toContain("outcomes");
+
   const entry = fromCargoMutants(
     outcomes({
       scenario: { Mutant: { file: "a.rs" } },
       summary: "CaughtMutant",
     }),
   );
+
   expect(entry.ok).toBe(false);
 });
 
@@ -112,11 +120,13 @@ it("requires the tool in a shard report", () => {
   expect(parseReport(JSON.stringify(base))).toMatchObject({ ok: false });
   const bad = parseReport(JSON.stringify({ ...base, tool: "jest" }));
   expect(bad.ok).toBe(false);
+
   for (const tool of ["stryker", "cargo-mutants"]) {
     expect(parseReport(JSON.stringify({ ...base, tool }))).toStrictEqual({
       ok: true,
       value: { ...base, tool },
     });
   }
+
   expect(parseReport("{")).toMatchObject({ ok: false });
 });

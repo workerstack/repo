@@ -34,6 +34,7 @@ const COMMAND_SCRIPTS = [
   "job|worktree|lessons|browser|google-workspace|jev|listen|speak|setup|doctor",
   "clean|sync-global-settings|purge-global-mcps|vscode-tasks|folder-map",
 ].join("|");
+
 const BY_PATH = new RegExp(`\\b(?:bun|node)\\s+(?:\\./)?(?:[^\\s\`'"()]*/)?cli/scripts/(?:${COMMAND_SCRIPTS})\\.ts\\b`);
 
 /** One regex matching any of `parts`. */
@@ -62,19 +63,24 @@ function headingErrors(text: string) {
   const seen = new Map<string, number>();
   const lines = text.split("\n");
   const { fenced } = fencedLineSet(lines);
+
   for (const [i, line] of lines.entries()) {
     if (fenced.has(i)) continue;
     const bare = line.replaceAll(INLINE_CODE, "");
     const heading = HEADING.exec(bare);
+
     if (heading !== null) {
       const key = `${heading[1]} ${heading[2]}`;
       const first = seen.get(key);
+
       if (first === undefined) seen.set(key, i + 1);
       else errors.push(`line ${i + 1}: repeated heading "${key}" (first at line ${first}): remove or rename it`);
     }
+
     if (GLUED_HEADING.test(bare))
       errors.push(`line ${i + 1}: heading markup mid-line: put the heading on its own line`);
   }
+
   return errors;
 }
 
@@ -97,10 +103,13 @@ function hitLine(file: string, index: number, line: string): string {
 /** A hit for each line of `files` that `matches`. */
 function lineHits(files: string[], matches: (line: string, file: string) => boolean): string[] {
   const hits: string[] = [];
+
   for (const f of files) {
     const lines = fs.readFileSync(path.join(repoRoot, f), "utf8").split("\n");
+
     for (const [i, line] of lines.entries()) if (matches(line, f)) hits.push(hitLine(f, i, line));
   }
+
   return hits;
 }
 
@@ -126,12 +135,14 @@ describe("references in the package", () => {
       cwd: path.join(here, "..", ".."),
       encoding: "utf8",
     });
+
     const packed = new Set(
       out
         .split("\n")
         .map((line) => PACKED_LINE.exec(line)?.[1])
         .filter((p): p is string => p !== undefined && p !== ""),
     );
+
     const names = fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"));
     expect(names).toContain("INDEX.md");
     expect(names.filter((n) => !packed.has(`references/${n}`))).toStrictEqual([]);
@@ -141,6 +152,7 @@ describe("references in the package", () => {
 describe("repo commands in tracked text", () => {
   // `cli/init.ts` lists the script values older inits wrote, to remove them from a consumer.
   const exempt = anyOf(TEST_FILE, FIXTURE_DIR, CHANGELOG, LESSON_BODIES, INIT_FILE);
+
   const tracked = execFileSync("git", ["ls-files"], { cwd: repoRoot, encoding: "utf8" })
     .split("\n")
     .filter((f) => TEXT_FILE.test(f) && !exempt.test(f));
@@ -148,8 +160,10 @@ describe("repo commands in tracked text", () => {
   it("say bun repo <cmd>: no script path, no bunx repo, no bare `repo <cmd>`", () => {
     const hits = lineHits(tracked, (line, f) => {
       const bare = f.endsWith(".md") ? MD_BARE_REPO : TS_BARE_REPO;
+
       return BY_PATH.test(line) || BUNX_REPO.test(line) || bare.test(line);
     });
+
     expect(hits).toStrictEqual([]);
   });
 });
@@ -162,14 +176,18 @@ describe("paths in references", () => {
   it("none names a ../../ path into .rulesync/, agents/ or cli/scripts/ outside fenced code", () => {
     const stockDirs = ["../../.rulesync/", "../../agents/", "../../cli/scripts/"];
     const hits: string[] = [];
+
     for (const name of fs.readdirSync(referenceDir).filter((n) => n.endsWith(".md"))) {
       const lines = fs.readFileSync(path.join(referenceDir, name), "utf8").split("\n");
       const { fenced } = fencedLineSet(lines);
+
       for (const [i, line] of lines.entries()) {
         if (fenced.has(i)) continue;
+
         if (stockDirs.some((dir) => line.includes(dir))) hits.push(hitLine(name, i, line));
       }
     }
+
     expect(hits).toStrictEqual([]);
   });
 });

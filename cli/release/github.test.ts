@@ -26,6 +26,7 @@ const CHANGELOG = `# Changelog
 
 - first
 `;
+
 const TAG = "@acme/app@0.1.0";
 const NOTES = "### Added\n\n- first";
 const FORMAT = "repo release github: name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
@@ -34,24 +35,32 @@ const FORMAT = "repo release github: name the tag as <name>@<version>, e.g. @wor
 function fakeGh(exists: "after-create" | "found" | "missing", created = 0): { gh: Runner; calls: string[] } {
   const calls: string[] = [];
   let isMade = false;
+
   function gh(args: string[]): ReturnType<Runner> {
     calls.push(args.join(" "));
+
     if (args[1] === "view") {
       const found = exists === "found" || (exists === "after-create" && isMade);
+
       return { code: found ? 0 : 1, stderr: "", stdout: "" };
     }
+
     isMade = true;
+
     return { code: created, stderr: created === 0 ? "" : "denied", stdout: "" };
   }
+
   return { calls, gh };
 }
 
 function github(argv: string[], gh: Runner, changelog: string | null = CHANGELOG) {
   const dir = tempDir();
+
   if (changelog !== null) write(dir, { "CHANGELOG.md": changelog });
   const out: string[] = [];
   const err: string[] = [];
   const code = releaseGithub(argv, { cwd: dir, gh, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+
   return { code, err: err.join(""), out: out.join("") };
 }
 

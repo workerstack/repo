@@ -35,13 +35,16 @@ it("scroll needs a session", async () => {
 
 it("scroll goes 600 down, -600 up, a number of pixels, and 600 for anything else", async () => {
   const args: (string | undefined)[] = [undefined, "down", "up", "250", "-40", "sideways"];
+
   const done = await Promise.all(
     args.map(async (arg) => {
       const t = await live();
       const r = await exec(t.cwd, arg === undefined ? ["scroll"] : ["scroll", arg]);
+
       return [r.stdout, scrolls(t.calls)];
     }),
   );
+
   expect(done).toStrictEqual([
     ["scroll: down\n", ["window.scrollBy(0, 600)"]],
     ["scroll: down\n", ["window.scrollBy(0, 600)"]],

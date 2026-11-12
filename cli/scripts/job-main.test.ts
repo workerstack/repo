@@ -7,6 +7,7 @@ import { inDir, pathSans, plant, plantFiles, runMain, stashDirOf, useJobEnv } fr
 import { runJob } from "./job.ts";
 
 useJobEnv();
+
 // Without rg the search prints plain file names, the same on every machine.
 beforeEach(() => {
   vi.stubEnv("PATH", pathSans("rtk", "rg"));
@@ -24,6 +25,7 @@ function workspace(): string {
     "pkg/b.txt": "hello\n",
   });
   plantFiles(stashDirOf(dir), { "search-g7k.txt": Array.from({ length: 30 }, (_, i) => `row ${i + 1}`).join("\n") });
+
   return dir;
 }
 

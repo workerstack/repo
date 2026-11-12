@@ -8,10 +8,12 @@ const ROOT = ".";
 /** The folder of the nearest `package.json` at or above `rel`'s folder, `.` for the root or none. */
 function packageOf(rel: string, manifests: ReadonlySet<string>): string {
   let dir = path.posix.dirname(rel);
+
   while (dir !== ROOT) {
     if (manifests.has(dir)) return dir;
     dir = path.posix.dirname(dir);
   }
+
   return ROOT;
 }
 
@@ -19,6 +21,7 @@ function packageOf(rel: string, manifests: ReadonlySet<string>): string {
 function listOf(items: readonly string[]): string {
   const rest = [...items];
   const last = rest.pop();
+
   return `${rest.join(", ")} and ${last}`;
 }
 
@@ -28,14 +31,18 @@ function listOf(items: readonly string[]): string {
  */
 export function checkEnvModules(cwd: string): string[] {
   const files = listFiles(cwd);
+
   const manifests = new Set(
     files.filter((rel) => path.posix.basename(rel) === MANIFEST).map((rel) => path.posix.dirname(rel)),
   );
+
   const byPackage = new Map<string, string[]>();
+
   for (const rel of files.filter((file) => path.posix.basename(file) === ENV_FILE)) {
     const pkg = packageOf(rel, manifests);
     byPackage.set(pkg, [...(byPackage.get(pkg) ?? []), rel]);
   }
+
   return [...byPackage]
     .filter(([, found]) => found.length > 1)
     .toSorted(([a], [b]) => a.localeCompare(b, "en"))

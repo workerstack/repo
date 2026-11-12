@@ -13,8 +13,10 @@ const SCRIPT_FILE = /([\w.-]+\.(?:ts|mjs|js)\b)/;
 function commandsIn(group: unknown): string[] {
   if (!isRecord(group)) return [];
   const out: string[] = [];
+
   if (typeof group.command === "string") out.push(group.command);
   const hooks = Array.isArray(group.hooks) ? group.hooks : [];
+
   for (const h of hooks) if (isRecord(h) && typeof h.command === "string") out.push(h.command);
 
   return out;
@@ -23,13 +25,18 @@ function commandsIn(group: unknown): string[] {
 /** What makes two groups the same hook: the repo hook name in either command form, else the script file name. */
 function needleOf(group: unknown): string {
   const commands = commandsIn(group);
+
   for (const c of commands) {
     const name = hookNameOf(c);
+
     if (name !== null) return `hook:${name}`;
     const file = SCRIPT_FILE.exec(c)?.[1];
+
     if (file !== undefined) return file;
   }
+
   const [first] = commands;
+
   return first === undefined || first === "" ? JSON.stringify(group) : first;
 }
 
@@ -38,6 +45,7 @@ export function upsertGroups(existing: unknown, desired: unknown[]): unknown[] {
   const prev = Array.isArray(existing) ? existing : [];
   const desiredNeedles = new Set(desired.map(needleOf));
   const extras = prev.filter((g) => !desiredNeedles.has(needleOf(g)));
+
   return [...desired, ...extras];
 }
 
@@ -50,8 +58,10 @@ export function uniq<T>(arr: T[]): T[] {
 export function loadJson(p: string): JsonObject {
   if (!fs.existsSync(p)) return {};
   const raw = fs.readFileSync(p, "utf8");
+
   if (raw.trim() === "") return {};
   const v: unknown = JSON.parse(raw);
+
   return isRecord(v) ? v : {};
 }
 
@@ -67,7 +77,9 @@ export function flatSession(existing: unknown, extra: HookEntry[]): unknown[] {
   const prev = (Array.isArray(existing) ? existing : []).flatMap((e: unknown): unknown[] =>
     isRecord(e) && Array.isArray(e.hooks) ? e.hooks : [e],
   );
+
   const added = new Set(extra.map((h) => h.command));
+
   return [...prev.filter((e) => !(isRecord(e) && typeof e.command === "string" && added.has(e.command))), ...extra];
 }
 
@@ -86,5 +98,6 @@ export function allCommands(value: unknown, out: string[] = []): string[] {
       else allCommands(v, out);
     }
   }
+
   return out;
 }

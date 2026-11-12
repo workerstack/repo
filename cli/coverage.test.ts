@@ -23,6 +23,7 @@ export function unused(): number {
   return 1;
 }
 `;
+
 const PASSING = `import { expect, it } from "vitest";
 import { sign } from "./a.ts";
 
@@ -30,8 +31,10 @@ it("signs a positive number", () => {
   expect(sign(1)).toBe("pos");
 });
 `;
+
 const FAILING = PASSING.replace('"pos"', '"neg"');
 const SECOND_SOURCE = "export const answer = (): number => 42;\n";
+
 const SECOND_TEST = `import { expect, it } from "vitest";
 import { answer } from "./b.ts";
 
@@ -39,6 +42,7 @@ it("answers", () => {
   expect(answer()).toBe(42);
 });
 `;
+
 /** What `SOURCE` measures with `PASSING`: lines are 2 of 3 (66.67), so the floor is 66, not 67. */
 const MEASURED = { branches: 50, functions: 50, lines: 66, statements: 50 };
 
@@ -48,19 +52,23 @@ function project(config = "export default {};\n"): string {
   temps.push(root);
   fs.symlinkSync(path.join(REPO_ROOT, "node_modules"), path.join(root, "node_modules"), "junction");
   const preset = JSON.stringify(path.join(REPO_ROOT, "presets", "vitest.ts"));
+
   const vitest = `import { defineConfig } from ${preset};
 export default defineConfig({ test: { include: ["src/**/*.test.ts"], coverage: { include: ["src/**"] } } });
 `;
+
   const files = {
     "src/a.test.ts": PASSING,
     "src/a.ts": SOURCE,
     "vitest.config.ts": vitest,
     "workerstack.config.ts": config,
   };
+
   for (const [name, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
     fs.writeFileSync(path.join(root, name), text);
   }
+
   return root;
 }
 
@@ -71,6 +79,7 @@ function floorsOf(root: string, file = FLOORS): unknown {
 /** Runs `repo coverage` in `root`; `run` stands in for cargo. */
 function coverage(root: string, run?: CargoRun): Promise<number> {
   process.chdir(root);
+
   return main([], run);
 }
 
@@ -123,6 +132,7 @@ it(
     fs.mkdirSync(cache, { recursive: true });
     const sentinel = path.join(cache, `sentinel-${process.pid}`);
     fs.writeFileSync(sentinel, "");
+
     try {
       expect(await coverage(project())).toBe(0);
       expect(fs.existsSync(sentinel)).toBe(true);
@@ -190,10 +200,13 @@ it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RU
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
   const row = { summary: { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } } };
   const files = [{ filename: path.join(root, "a/src/lib.rs"), ...row }];
+
   function run(_cwd: string, args: readonly string[]): ReturnType<CargoRun> {
     fs.writeFileSync(String(args.at(-1)), JSON.stringify({ data: [{ files }] }));
+
     return { missing: false, status: 0, stderr: "", stdout: "" };
   }
+
   expect(await coverage(root, run)).toBe(0);
   const rust = { functions: 66, lines: 66, regions: 58 };
   expect(floorsOf(root)).toStrictEqual({ "a/src/lib.rs": rust, "src/a.ts": MEASURED });

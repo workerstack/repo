@@ -9,6 +9,7 @@ import { captureTool, runTool, tsgolintSpecifier } from "./lint.ts";
 const SLOW = 60_000;
 
 const { tempDir } = useTempDirs("workerstack-lint-spawn-");
+
 afterEach(() => vi.unstubAllEnvs());
 
 describe("the oxlint environment", () => {

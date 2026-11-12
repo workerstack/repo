@@ -42,7 +42,9 @@ function keepDir(state: PlanState, name: string, p: string): void {
  */
 function agedOut(state: PlanState, a: AgedEntry): boolean {
   if (a.entry === a.keeper || serialOf(a.name, a.entry) === null || !old(state, a.child)) return false;
+
   if (POLICY[a.name] === "age-done" && statusOf(a.child) !== DONE_STATUS) return false;
+
   return !(a.name === PLANS_DIR && state.pinned.has(path.resolve(a.child)));
 }
 
@@ -50,8 +52,10 @@ function ageEntries(state: PlanState, name: string, p: string): void {
   const entries = list(p);
   const keeper = keeperOf(entries, (n) => serialOf(name, n));
   state.keep.push({ kind: name, path: p });
+
   for (const entry of entries) {
     const child = path.join(p, entry);
+
     if (!agedOut(state, { child, entry, keeper, name })) continue;
     // only plans, roadmaps, handoffs and implementations reach age policies
     state.remove.push({ kind: OLD_KIND[name] /* every aged dir has an old kind */ as string, path: child });
@@ -108,6 +112,7 @@ function looseEntry(state: PlanState, name: string, p: string): void {
 
 function plannerOf(name: string): Planner {
   const policy = TMP_RESERVED_DIRS.has(name) ? POLICY[name] : undefined;
+
   return policy === undefined ? looseEntry : PLANNERS[policy];
 }
 
@@ -119,11 +124,15 @@ export function cleanPlan({ root, now, liveSessions, nested = [] }: PlanInput): 
   // names were filtered by FILENAME_RE, which starts with the serial
   const artifactKeeper = keeperOf(artifacts, leadingSerial);
   const state: PlanState = { artifactKeeper, keep: [], liveSessions, now, pinned: roadmapLocations(tmp), remove: [] };
+
   for (const name of names) plannerOf(name)(state, name, path.join(tmp, name));
+
   for (const dir of nested) {
     const held = nestedHolds(dir);
+
     if (held === null) state.remove.push({ kind: "nested dir", path: dir });
     else state.keep.push({ holds: held, kind: NESTED_KIND, path: dir });
   }
+
   return { keep: state.keep, remove: state.remove };
 }

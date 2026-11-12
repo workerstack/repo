@@ -31,7 +31,9 @@ function repo(packs: string, files: Record<string, string> = {}): string {
 
 /** A PATH holding bun alone, so a tool that needs node fails; it lives as long as the file's tests. */
 const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"));
+
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
+
 afterAll(() => fs.rmSync(BUN_ONLY, { force: true, recursive: true }));
 
 const NON_NULL = 'export function a(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
@@ -45,9 +47,11 @@ function standardsRepo(files: Record<string, string>): string {
     root: "",
     workspace: { manifest: {}, packages: [], root: "" },
   };
+
   const configs = Object.fromEntries(
     standards(ctx, []).outputs.map((output) => [output.path, output.kind === "file" ? output.content : ""]),
   );
+
   return repo('["standards"]', { ...configs, ...files });
 }
 
@@ -57,6 +61,7 @@ const env = childEnv({ PATH: BUN_ONLY });
 /** Runs `bun repo <args>` in `root` with bun alone on PATH; its exit code and its stdout then stderr. */
 function repoCmd(root: string, ...args: string[]) {
   const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, encoding: "utf8", env });
+
   return { code: run.status, out: `${run.stdout}${run.stderr}` };
 }
 
@@ -72,12 +77,14 @@ function useBunOnlyPath(): void {
 /** Runs the lint main in `root`. */
 function lintIn(root: string) {
   process.chdir(root);
+
   return lint([]);
 }
 
 /** A stderr that keeps what is written to it. */
 function capture() {
   const err: string[] = [];
+
   return { err, stderr: (s: string) => err.push(s) };
 }
 
@@ -211,9 +218,11 @@ describe("runTool", () => {
 it("captureTool returns oxlint's json report and exit code instead of printing them", { timeout: SLOW }, () => {
   const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const ok = 1;\n" });
   const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
+
   const report = JSON.parse(failing.stdout) /* oxlint -f json prints one report object */ as {
     diagnostics: { filename: string; code: string }[];
   };
+
   expect([failing.code, report.diagnostics.map(({ filename, code }) => `${filename} ${code}`)]).toStrictEqual([
     1,
     ["src/a.ts typescript(no-non-null-assertion)"],

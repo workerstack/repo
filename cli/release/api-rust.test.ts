@@ -29,6 +29,7 @@ describe("repo release api in a Rust repo", () => {
       cargo: cargo([A]).run,
       fetch: index("1.0.2"),
     });
+
     expect(got).toMatchObject({ code: 0, err: "", out: `${OK_A}${NO_TAG}` });
   });
 
@@ -37,6 +38,7 @@ describe("repo release api in a Rust repo", () => {
       cargo: cargo([A]).run,
       fetch: index("1.0.2"),
     });
+
     expect(got).toMatchObject({ code: 0, err: "", out: OK_A });
   });
 });
@@ -44,10 +46,12 @@ describe("repo release api in a Rust repo", () => {
 describe("repo release api failures in a Rust repo", () => {
   it("exits 1 for a crate that broke its api, each line prefixed", async () => {
     const fake = cargo([A], {}, { status: 100, stderr: `${BROKEN}\n` });
+
     const got = await api(rustRepo(), [], {
       cargo: fake.run,
       fetch: index("1.0.2"),
     });
+
     expect(got.code).toBe(1);
     expect(got.out).toBe("");
     expect(got.err).toBe(
@@ -59,10 +63,12 @@ describe("repo release api failures in a Rust repo", () => {
 
   it("still runs the TypeScript check after a failed crate", { timeout: TIMEOUT }, async () => {
     const fake = cargo([A], {}, { status: 101, stderr: "error: boom\n" });
+
     const got = await api(rustRepo({ private: false }), [], {
       cargo: fake.run,
       fetch: index("1.0.2"),
     });
+
     expect(got).toMatchObject({
       code: 1,
       err: `${PREFIX}cargo semver-checks exited 101 for a: error: boom\n`,
@@ -81,10 +87,12 @@ describe("repo release api pins in a Rust repo", () => {
     ],
   ])("refuses a tool that %s, before any crate", async (_name, pin, start) => {
     const fake = cargo([A], { status: 1, ...pin });
+
     const got = await api(rustRepo(), [], {
       cargo: fake.run,
       fetch: index("1.0.2"),
     });
+
     expect(got.code).toBe(1);
     expect(got.err.startsWith(`${PREFIX}${start}; run \`cargo install --locked cargo-semver-checks@0.51.0\``)).toBe(
       true,

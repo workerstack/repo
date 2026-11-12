@@ -27,15 +27,20 @@ const SLASHES: readonly (readonly [RegExp, Mode])[] = [
 /** A prompt of exactly /auto, /ask or /away sets this session's gate; /auto clears the stamp. */
 export function applySessionGateSlash(data: HookInput, prompt: string): void {
   const slash = SLASHES.find(([re]) => re.test(prompt))?.[1];
+
   if (slash === undefined) return;
   const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
   const legacy = sessionGateStampPath(data, AUTO_ASK_STAMP);
+
   if (p === null || legacy === null) return;
   unlinkQuiet(legacy);
+
   if (slash === "auto") {
     unlinkQuiet(p);
+
     return;
   }
+
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, slash);
 }
@@ -43,26 +48,31 @@ export function applySessionGateSlash(data: HookInput, prompt: string): void {
 /** The `mode:` of the newest in-progress plan or roadmap this session saved; null when none holds a valid one. */
 function itemMode(data: HookInput): Mode | null {
   const file = approvalsFile(data);
+
   for (const abs of file === null ? [] : readLines(file).toReversed()) {
     try {
       const fm = frontmatterOf(fs.readFileSync(abs, "utf8"));
       const mode = parseMode(fm.mode);
+
       if (fm.status === IN_PROGRESS && mode !== null) return mode;
     } catch {
       // skip unreadable
     }
   }
+
   return null;
 }
 
 function stampedMode(data: HookInput): Mode | null {
   let mode: Mode | null = null;
+
   try {
     const p = resolveSessionGateStamp(data);
     mode = p === null ? null : parseMode(fs.readFileSync(p, "utf8").trim());
   } catch {
     // An unreadable stamp names no mode.
   }
+
   return mode;
 }
 
@@ -76,14 +86,18 @@ export function effectiveModeOf(data: HookInput): Mode {
 
 function sessionReceiptContext(data: HookInput): string {
   const sid = sessionIdOf(data);
+
   if (!isRealSession(sid)) return "";
   const dir = sessionDir(data, sid);
+
   if (!fs.existsSync(dir)) return "";
+
   return `${countsLine(dir)} session=.tmp/repo/sessions/${sid}/`;
 }
 
 export function effectiveSessionContext(data: HookInput): string {
   const gate = effectiveModeOf(data);
   const receipt = sessionReceiptContext(data);
+
   return receipt === "" ? `sessionGate=${gate}` : `sessionGate=${gate}. ${receipt}`;
 }

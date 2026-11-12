@@ -8,22 +8,27 @@ export const DOWNLOAD: string = "actions/download-artifact@9000827ccba6bdab643e8
 const SETUP_BUN: string = "oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0";
 
 export const UBUNTU: string = "ubuntu-latest";
+
 /** Each OS the test job runs on, in matrix order, and its shard count; one shard runs them whole. */
 export const TEST_SHARDS: readonly (readonly [string, number])[] = [
   [UBUNTU, 1],
   ["windows-latest", 6],
   ["macos-latest", 3],
 ];
+
 /** Ubuntu's shard count when it shards coverage: its blobs merge in the `coverage` job. */
 export const UBUNTU_COVERAGE_SHARDS: number = 2;
+
 /** The e2e job's OSes and shards when the `test:e2e` script takes `--shard`; otherwise each OS runs it whole. */
 export const E2E_SHARDS: readonly (readonly [string, number])[] = [
   ["ubuntu-latest", 1],
   ["windows-latest", 3],
   ["macos-latest", 1],
 ];
+
 /** A `test:e2e` script whose command takes `--shard=i/n`: vitest, after `bun --bun` or `bunx`, or `playwright test`. */
 export const E2E_SHARDABLE: RegExp = /^(?:(?:bun --bun|bunx)\s+)?(?:vitest|playwright\s+test)(?:\s|$)/;
+
 /** The matrix jobs' name template, which GitHub expands once per row to the OS and its shard. */
 export const MATRIX_LABEL: string = "${{ matrix.label }}";
 
@@ -64,10 +69,13 @@ jobs:`;
 export const SETUP_BUN_STEP: string = `      - uses: ${SETUP_BUN}
         with:
           bun-version-file: package.json`;
+
 export const CHECKOUT_STEP: string = `      - uses: ${CHECKOUT}`;
+
 export const CHECKOUT_FULL_STEP: string = `      - uses: ${CHECKOUT}
         with:
           fetch-depth: 0`;
+
 export const INSTALL_STEP: string = "      - run: bun install --frozen-lockfile";
 
 export const NON_ROOT_STEP: string = `      - name: Refuse to run as root
@@ -113,6 +121,7 @@ export const UPLOAD_STEP: string = `      - uses: ${UPLOAD}
 
 /** Vitest's flag that lets a shard handed no test file pass; without it vitest throws on more shards than files. */
 const VITEST_NO_TESTS: string = "--passWithNoTests";
+
 /**
  * The sharded e2e job's run under vitest: a shard row passes `--shard=i/n` and the no-tests flag, the others
  * nothing.
@@ -121,11 +130,13 @@ export const E2E_SHARD_STEP: string = `      - name: Run the e2e tests
         env:
           SHARD: \${{ matrix.shard && format('--shard={0} ${VITEST_NO_TESTS}', matrix.shard) || '' }}
         run: bun run ${E2E_SCRIPT} $SHARD`;
+
 /** The same run under `playwright test`, whose no-tests flag is `--pass-with-no-tests`. */
 export const E2E_PLAYWRIGHT_SHARD_STEP: string = /* @__PURE__ */ E2E_SHARD_STEP.replace(
   VITEST_NO_TESTS,
   "--pass-with-no-tests",
 );
+
 /** A shardable `test:e2e` script that runs `playwright test` rather than vitest. */
 export const E2E_PLAYWRIGHT: RegExp = /^(?:(?:bun --bun|bunx)\s+)?playwright\s/;
 

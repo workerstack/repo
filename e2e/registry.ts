@@ -38,6 +38,7 @@ function writeConfig(root: string): string {
       uplinks: { npmjs: { max_fails: 5, timeout: "60s", url: "https://registry.npmjs.org/" } },
     }),
   );
+
   return config;
 }
 
@@ -46,6 +47,7 @@ function spawnVerdaccio(root: string, config: string, port: number): ChildProces
   const require = createRequire(import.meta.url);
   const verdaccio = require.resolve("verdaccio/package.json");
   const log = path.join(root, "verdaccio.log");
+
   // A child process, so no spawnSync in this process can stall the registry.
   return spawn(
     process.execPath,
@@ -60,9 +62,12 @@ function closerOf(child: ChildProcess): () => Promise<void> {
   function killChild() {
     if (child.exitCode == null) child.kill();
   }
+
   process.once("exit", killChild);
+
   return async () => {
     process.removeListener("exit", killChild);
+
     if (child.exitCode != null) return;
     const exited = new Promise((resolve) => child.once("exit", resolve));
     child.kill();
@@ -77,8 +82,10 @@ async function addUser(url: string): Promise<string> {
     headers: { "content-type": "application/json" },
     method: "PUT",
   });
+
   if (!res.ok) throw new Error(`verdaccio adduser failed: ${res.status} ${await res.text()}`);
   const { token } = (await res.json()) /* Verdaccio answers adduser with the new token */ as { token: string };
+
   return token;
 }
 
@@ -88,9 +95,11 @@ export async function startRegistry(root: string): Promise<Registry> {
   const url = `http://127.0.0.1:${port}/`;
   const child = spawnVerdaccio(root, config, port);
   const close = closerOf(child);
+
   try {
     await waitForPing(url, child);
     const token = await addUser(url);
+
     return { close, token, url };
   } catch (err) {
     await close();
@@ -111,14 +120,19 @@ function freePort(): Promise<number> {
 
 async function waitForPing(url: string, child: ChildProcess) {
   const deadline = Date.now() + 60_000;
+
   while (Date.now() < deadline) {
     if (child.exitCode != null) throw new Error(`verdaccio exited with ${child.exitCode}`);
+
     try {
       const ping = await fetch(`${url}-/ping`);
+
       if (ping.ok) return;
     } catch {}
+
     await new Promise((r) => setTimeout(r, 200));
   }
+
   throw new Error("verdaccio did not answer /-/ping within 60s");
 }
 
@@ -129,8 +143,10 @@ export function packRepo(repoRoot: string, dest: string): string {
     encoding: "utf8",
     shell: process.platform === "win32",
   });
+
   if (r.status !== 0) throw new Error(`bun pm pack failed:\n${r.stderr}`);
   const filename = r.stdout.trim().split("\n").pop() ?? "";
+
   return path.join(dest, path.basename(filename));
 }
 
@@ -142,9 +158,11 @@ export function retagTarball(tarball: string, version: string, work: string): st
   tar.x({ cwd: dir, file: tarball, sync: true });
   const pkgPath = path.join(dir, "package", "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+
   if (!isRecord(pkg)) throw new Error(`${pkgPath} is not a JSON object`);
   pkg.version = version;
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+
   return packRepo(path.join(dir, "package"), dir);
 }
 
@@ -158,5 +176,6 @@ function run(cmd: string, args: string[], env: NodeJS.ProcessEnv = {}) {
     env: childEnv(env),
     shell: process.platform === "win32",
   });
+
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} failed:\n${r.stdout}\n${r.stderr}`);
 }

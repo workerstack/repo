@@ -17,6 +17,7 @@ function turboText(ctx: SyncContext): string {
     globalDependencies: GLOBAL_DEPENDENCIES,
     tasks: { test: TEST_TASK, typecheck: TYPECHECK_TASK, ...ctx.config.turbo?.tasks },
   };
+
   return `${JSON.stringify(config, null, TURBO_JSON_INDENT)}\n`;
 }
 
@@ -30,7 +31,9 @@ export function turbo(ctx: SyncContext): ReturnType<Generator> {
   const content = turboText(ctx);
   const existing = ctx.read(TURBO_CONFIG_PATH);
   const ours = existing === content || readManifest(ctx.root).paths.includes(TURBO_CONFIG_PATH);
+
   if (existing !== null && !ours) return { errors: [TURBO_REFUSAL], outputs: [] };
+
   return {
     errors: [],
     outputs: [{ content, kind: "file", managed: "whole", path: TURBO_CONFIG_PATH, tracked: false }],

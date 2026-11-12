@@ -13,13 +13,16 @@ function messagesOf(code: string, extra: Record<string, string> = {}, manifest: 
     "src/index.ts": code,
     ...extra,
   };
+
   return reportsOf(publicJsdoc, files).map((report) => report.message);
 }
+
 function about(label: string, text: string, entry = ".") {
   return `\`${label}\` is public through "${entry}" and ${text}`;
 }
 
 type Fault = { name: string; code: string; message: string };
+
 const FAULTS: Fault[] = [
   {
     code: "/** ... */\nexport const dots: string = '';",
@@ -97,6 +100,7 @@ it("passes a documented export, and docs with tags", () => {
     "/** The result of a run, with what failed. */",
     "export interface Result {\n/** Names of the jobs that failed. */\nfailed: string[] }",
   ].join("\n");
+
   expect(messagesOf(code)).toStrictEqual([]);
 });
 
@@ -116,6 +120,7 @@ it("passes over an export list and reports an unknown form once, in the file tha
     "src/bad.ts": "const a = 1;\nexport = a;",
     "src/deep.ts": "/** Holds the other jobs count. */\nexport const other: number = 1;",
   };
+
   const own = "/** Holds the count of jobs. */\nexport const count: number = 1;\n";
   const code = `${own}export { other } from "./deep.ts";\nexport * from "./bad.ts";`;
   const message = "cannot follow `export =` here, so what it exposes goes unchecked: write it as a plain export";
@@ -130,6 +135,7 @@ it("reports the entry of a declaration reached through a re-export", () => {
 
 it("accepts a literal, a cast, a satisfies and a typed function as a stated type", () => {
   const doc = "/** Holds a value callers read. */\n";
+
   const code = [
     `${doc}export const a = 1;`,
     `${doc}export const b = -1 + 2;`,
@@ -140,16 +146,19 @@ it("accepts a literal, a cast, a satisfies and a typed function as a stated type
     `${doc}export const f = (): number => 1;`,
     `${doc}export const g = function (): number { return 1; };`,
   ].join("\n");
+
   expect(messagesOf(code)).toStrictEqual([]);
 });
 
 it("reports an inferred const whose initializer is not a stated type", () => {
   const doc = "/** Holds a value callers read. */\n";
+
   const code = [
     `${doc}export const a = \`x\${1}\`;`,
     `${doc}export const b = (c) => c;`,
     `${doc}export const d = 1 + e;`,
   ];
+
   const messages = messagesOf(code.join("\ndeclare const e: number;\n"));
   expect(messages.length).toBe(3);
 });

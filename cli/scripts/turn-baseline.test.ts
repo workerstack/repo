@@ -13,7 +13,7 @@ it("a new lint problem over the baseline fails, naming it, and leaves the baseli
   const root = consumer({ [BASELINE]: baseline, "src/a.ts": nonNull(2) });
   write(root, { "src/a.ts": nonNull(3) });
   const result = await turn(root, []);
-  expect(result.err).toContain(`src/a.ts:8:`);
+  expect(result.err).toContain(`src/a.ts:10:`);
   expect(result.err).toContain(`: error ${NN}: Forbidden non-null assertion.\n`);
   expect(result.err).toContain(`repo turn: src/a.ts has 3 ${NN}, the baseline allows 2; fix the new one\n`);
   expect(result.out).toBe(
@@ -32,11 +32,13 @@ it(
   { timeout: SLOW },
   async () => {
     const baseline = { "src/a.ts": { [NN]: 2 }, "src/b.ts": { [NN]: 1 } };
+
     const root = consumer({
       [BASELINE]: `${JSON.stringify(baseline, null, 2)}\n`,
       "src/a.ts": nonNull(2),
       "src/b.ts": nonNull(1, "b"),
     });
+
     write(root, { "src/a.ts": nonNull(1) });
     git(root, "rm", "-q", "src/b.ts");
     git(root, "add", "src/a.ts");
@@ -58,6 +60,7 @@ it("the default mode lowers the baseline on disk and stages nothing", { timeout:
     [BASELINE]: `${JSON.stringify({ "src/a.ts": { [NN]: 2 } }, null, 2)}\n`,
     "src/a.ts": nonNull(2),
   });
+
   write(root, { "src/a.ts": nonNull(1) });
   const result = await turn(root, []);
   expect(result.out).toContain(`lint ok, baseline lowered (src/a.ts ${NN} 2 → 1)`);

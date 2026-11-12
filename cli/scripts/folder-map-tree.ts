@@ -16,10 +16,13 @@ import { isRecord } from "./hook-input.ts";
 
 /** Trailing slashes a glob may end in. */
 const TRAILING_SLASHES_RE = /\/+$/;
+
 /** The regex metacharacters a glob part escapes, for `replaceAll`; `*` stays a wildcard. */
 const GLOB_LITERAL_RE = /[.+^${}()|[\]\\]/g;
+
 /** A `go.mod` module line; group 1 is the module path. */
 const GO_MODULE_RE = /^module\s+(\S+)/m;
+
 /** A TOML `name = "…"` line; group 1 is the name. */
 const TOML_NAME_RE = /^name\s*=\s*"([^"]+)"/m;
 
@@ -30,16 +33,20 @@ function globRe(glob: string): RegExp {
     .split("**")
     .map((part) => part.replaceAll(GLOB_LITERAL_RE, "\\$&").replaceAll("*", "[^/]*"))
     .join(".*");
+
   return new RegExp(`^${body}(/|$)`);
 }
 
 function packageName(root: string, dir: string, manifest: string): string {
   try {
     const text = fs.readFileSync(path.join(root, dir, manifest), "utf8");
+
     if (manifest === PACKAGE_JSON) {
       const pkg: unknown = JSON.parse(text);
+
       return isRecord(pkg) && typeof pkg.name === "string" ? pkg.name : "";
     }
+
     return (manifest === GO_MOD ? GO_MODULE_RE : TOML_NAME_RE).exec(text)?.[1] ?? "";
   } catch {
     return "";
@@ -49,29 +56,38 @@ function packageName(root: string, dir: string, manifest: string): string {
 /** The manifest each package dir holds, the first one listed winning. */
 function manifestsOf(files: string[]): Map<string, string> {
   const manifests = new Map<string, string>();
+
   for (const f of files) {
     const base = path.posix.basename(f);
+
     if (MANIFESTS.includes(base) && !manifests.has(path.posix.dirname(f))) manifests.set(path.posix.dirname(f), base);
   }
+
   return manifests;
 }
 
 /** The dir segments of a kept file, or null when the filter drops it. */
 function keptSegs(f: string, filter: TreeFilter): string[] | null {
   const dir = path.posix.dirname(f);
+
   if (dir === TOP_DIR || filter.exclude.some((re) => re.test(dir))) return null;
   const segs = dir.split("/");
+
   if (filter.include.some((re) => re.test(dir))) return segs;
+
   if (!filter.code.test(f) || segs.some((s) => s.startsWith(".") || filter.skip.has(s))) return null;
+
   return segs;
 }
 
 /** The kid `s` of `node`, added with its package name when it is new. */
 function childOf(node: TreeNode, s: string, place: TreePlace): TreeNode {
   const known = node.kids.get(s);
+
   if (known !== undefined) return known;
   const p = node.path === "" ? s : `${node.path}/${s}`;
   const m = place.manifests.get(p);
+
   const next: TreeNode = {
     kids: new Map<string, TreeNode>(),
     name: s,
@@ -79,7 +95,9 @@ function childOf(node: TreeNode, s: string, place: TreePlace): TreeNode {
     path: p,
     pkg: m === undefined ? null : packageName(place.root, p, m),
   };
+
   node.kids.set(s, next);
+
   return next;
 }
 
@@ -90,21 +108,27 @@ function childOf(node: TreeNode, s: string, place: TreePlace): TreeNode {
  */
 export function buildTree(root: string, files: string[], opts: Partial<MapConfig> = {}): TreeNode {
   const o = { ...DEFAULTS, ...opts };
+
   const filter: TreeFilter = {
     code: new RegExp(`\\.(${o.codeExt.join("|")})$`),
     exclude: o.exclude.map(globRe),
     include: o.include.map(globRe),
     skip: new Set(o.skip),
   };
+
   const place: TreePlace = { manifests: manifestsOf(files), root };
   const top: TreeNode = { kids: new Map(), name: "", own: false, path: "", pkg: null };
+
   for (const f of files) {
     const segs = keptSegs(f, filter);
+
     if (segs === null) continue;
     let node = top;
+
     for (const s of segs) node = childOf(node, s, place);
     node.own = true;
   }
+
   return top;
 }
 
@@ -115,7 +139,9 @@ function byName(a: TreeNode, b: TreeNode): number {
 /** `k` with its pass-through dirs collapsed: one kid, no package and no code of its own. */
 function collapsed(k: TreeNode, label: string): { node: TreeNode; label: string } {
   const through = k.kids.size === 1 && k.pkg == null && !k.own;
+
   for (const only of through ? k.kids.values() : []) return collapsed(only, `${label}/${only.name}`);
+
   return { label, node: k };
 }
 
@@ -129,6 +155,7 @@ export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[
   const leaves = kids.filter((k) => k.kids.size === 0 && k.pkg == null).map((k) => k.name);
   const folded = leaves.length >= o.foldAt ? new Set(leaves) : new Set<string>();
   const rows: Row[] = [];
+
   if (folded.size > 0) rows.push({ kids: [], kind: "fold", label: leaves, path: node.path, pkg: null });
 
   for (const kid of kids) {
@@ -137,20 +164,27 @@ export function displayRows(node: TreeNode, opts: Partial<MapConfig> = {}): Row[
     const { node: k, label } = collapsed(kid, kid.name);
     rows.push({ kids: displayRows(k, o), kind: "dir", label, path: k.path, pkg: k.pkg });
   }
+
   return rows;
 }
 
 /** One row's line at `depth`: a fold names its first leaf dirs, a package row its name and full path. */
 export function rowText(row: Row, depth: number, { more = false, base = "" }: RowTextOptions = {}): string {
   const pad = "  ".repeat(depth);
+
   if (row.kind === "fold") {
     const shown = row.label.slice(0, FOLD_SHOWN).join(", ");
+
     return `${pad}(${row.label.length} leaf dirs: ${shown}${row.label.length > FOLD_SHOWN ? ", …" : ""})`;
   }
+
   const full = base === "" ? row.path : `${base}/${row.path}`;
   let line = `${pad}${row.label}/`;
+
   if (row.pkg != null) line += row.pkg === "" ? `  # ${full}` : `  # ${row.pkg}  ${full}`;
+
   if (more) line += "  …";
+
   return line;
 }
 
@@ -172,15 +206,19 @@ function holdsPackage(row: Row): boolean {
  */
 function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
   const lines: string[] = [];
+
   function walk(list: Row[], depth: number, pkgDepth: number): void {
     for (const row of list) {
       const rel = row.pkg == null ? pkgDepth : 0;
       const hidden = row.kids.length > 0 && rel >= cap && !holdsPackage(row);
       lines.push(rowText(row, depth, { base, more: hidden }));
+
       if (!hidden) walk(row.kids, depth + 1, rel + 1);
     }
   }
+
   walk(rows, 0, 1);
+
   return lines;
 }
 
@@ -188,9 +226,12 @@ function renderAtDepth(rows: Row[], cap: number, base: string): string[] {
 export function renderToFit(rows: Row[], fit: RenderFit): { lines: string[]; depth: number } {
   let lines: string[] = [];
   let depth = fit.cap;
+
   for (; depth >= 1; depth--) {
     lines = renderAtDepth(rows, depth, fit.base);
+
     if (lines.join("\n").length + 1 <= fit.limit) break;
   }
+
   return { depth: Math.max(depth, 1), lines };
 }

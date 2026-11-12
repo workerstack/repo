@@ -30,6 +30,7 @@ it("loadJevKey: falls back to the trimmed file key", () => {
 it("loadJevKey: is empty for a missing, broken, non-object or keyless file", () => {
   const home = plantDir();
   expect(loadJevKey({ env: {}, home })).toBe("");
+
   for (const text of ["{broken", "[1]", "{}", JSON.stringify({ apiKey: "" })]) {
     plantKeyFile(home, text);
     expect(loadJevKey({ env: {}, home })).toBe("");

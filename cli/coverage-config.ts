@@ -31,6 +31,7 @@ const PATH_ERROR = `must be a file path like ${DEFAULT_COVERAGE.floors}`;
 const GLOBS_ERROR = 'must be a non-empty list of globs like ["src/**/*.ts"]';
 
 type FileSchema = z.ZodOptional<z.ZodString>;
+
 type CoverageSchema = z.ZodObject<
   {
     floors: FileSchema;
@@ -43,10 +44,12 @@ type CoverageSchema = z.ZodObject<
 
 function buildSchema(): CoverageSchema {
   const file = z.string({ error: PATH_ERROR }).min(1, { error: PATH_ERROR }).optional();
+
   const globs = z
     .array(z.string({ error: GLOBS_ERROR }).min(1, { error: GLOBS_ERROR }), { error: GLOBS_ERROR })
     .min(1, { error: GLOBS_ERROR })
     .optional();
+
   return z.strictObject(
     { floors: file, knownFailures: file, mutate: globs, mutationFloors: file },
     { error: `must be an object like { floors: "${DEFAULT_COVERAGE.floors}" }` },
@@ -60,6 +63,7 @@ export function coverageOf(parsed: { coverage?: z.output<typeof coverageSchema> 
   coverage: ResolvedCoverage;
 } {
   const { floors, knownFailures, mutate, mutationFloors } = parsed.coverage ?? {};
+
   return {
     coverage: {
       floors: floors ?? DEFAULT_COVERAGE.floors,

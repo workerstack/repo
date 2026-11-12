@@ -22,6 +22,7 @@ const tmpDirs: string[] = [];
 function plant(): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-edge-")));
   tmpDirs.push(dir);
+
   return dir;
 }
 
@@ -29,11 +30,13 @@ function capture() {
   const err: string[] = [];
   vi.spyOn(process.stdout, "write").mockReturnValue(true);
   vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
+
   return err;
 }
 
 afterEach(() => {
   vi.restoreAllMocks();
+
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 

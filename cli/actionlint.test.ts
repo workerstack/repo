@@ -13,17 +13,23 @@ afterEach(() => {
 });
 
 const EXE = process.platform === "win32" ? "actionlint.exe" : "actionlint";
+
 type Call = { command: string; args: string[]; cwd: string; env: NodeJS.ProcessEnv };
+
 let calls: Call[] = [];
+
 beforeEach(() => {
   calls = [];
 });
+
 function answering(code: number, stdout: string, stderr = ""): Spawn {
   return (command, args, options) => {
     calls.push({ args, command, ...options });
+
     return { code, stderr, stdout };
   };
 }
+
 function failFetch() {
   return Promise.reject(new Error("the cache should have been used"));
 }
@@ -36,7 +42,9 @@ function repo(packs: string, workflows: string[]): { root: string; cacheDir: str
   fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default { packs: ${packs} };\n`);
   const flows = path.join(root, ".github", "workflows");
   fs.mkdirSync(flows, { recursive: true });
+
   for (const name of workflows) fs.writeFileSync(path.join(flows, name), "name: x\n");
+
   return { cacheDir, root };
 }
 
@@ -87,12 +95,15 @@ it("lints the workflows under the benchmark pack alone, which generates bench.ym
   expect(out).toStrictEqual({ problems: [] });
   expect(calls.map((call) => call.args.at(-1))).toStrictEqual([".github/workflows/bench.yml"]);
 });
+
 it("prints one line per problem actionlint finds", async () => {
   const { root, cacheDir } = repo('["release"]', ["release.yml"]);
+
   const items = [
     { column: 9, filepath: "release.yml", line: 40, message: 'unexpected key "runs_on" for "job" section' },
     { column: 1, filepath: "release.yml", kind: "expression", line: 2, message: "bad" },
   ];
+
   const spawn = answering(1, JSON.stringify(items.map((item) => ({ kind: "syntax-check", ...item }))));
   const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn });
   expect(out.problems).toStrictEqual([

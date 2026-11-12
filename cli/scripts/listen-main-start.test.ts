@@ -96,11 +96,13 @@ describe("start with the default spawn", () => {
   it("launches the recorder for real and it receives the right argv", async () => {
     const dir = tmp("listen-start-real-");
     const argsFile = path.join(dir, "args.txt");
+
     // Started by its path with no shell, so on win32 it is a compiled program, not a script.
     const js = `import fs from "node:fs";
 fs.writeFileSync(${JSON.stringify(`${argsFile}.tmp`)}, process.argv.slice(2).join("\\n") + "\\n");
 fs.renameSync(${JSON.stringify(`${argsFile}.tmp`)}, ${JSON.stringify(argsFile)});
 `;
+
     const stub = plantProgram(dir, "stub-bun", js);
     const r = await run(["start"], { nodeBin: stub });
     const wav = String(readSession(r.cwd).wav);

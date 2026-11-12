@@ -23,6 +23,7 @@ type Speech = { url: string; init: ApiOpts };
 function elevenSpeech({ voice, cfg }: SayOpts, text: string): Speech {
   const id = str(voice, cfg.elevenlabs.voiceId);
   const headers = { "Content-Type": "application/json", "xi-api-key": cfg.elevenlabs.apiKey };
+
   return {
     init: { body: { model_id: cfg.elevenlabs.modelId, text }, headers, method: "POST" },
     url: `${ELEVEN_API}/text-to-speech/${encodeURIComponent(id)}?output_format=${ELEVEN_FORMAT}`,
@@ -31,6 +32,7 @@ function elevenSpeech({ voice, cfg }: SayOpts, text: string): Speech {
 
 function openaiSpeech({ voice, cfg }: SayOpts, text: string): Speech {
   const headers = { Authorization: `Bearer ${cfg.openai.apiKey}`, "Content-Type": "application/json" };
+
   return {
     init: {
       body: { input: text, model: cfg.openai.model, voice: str(voice, cfg.openai.voice) },
@@ -44,11 +46,13 @@ function openaiSpeech({ voice, cfg }: SayOpts, text: string): Speech {
 /** `--out`, else a fresh mp3 under the speak dir of the repo root around `cwd`. */
 function destOf(out: string | undefined, cwd: string): string {
   const given = str(out);
+
   return given === "" ? path.join(resolveRoots({}, { cwd }).root, SPEAK_DIR, `say-${Date.now()}.mp3`) : given;
 }
 
 export async function say(opts: SayOpts): Promise<string> {
   const text = str(opts.text);
+
   if (text === "") throw new Error("say needs --text");
   const p = resolveProvider(opts.cfg, opts.provider);
   const { url, init } = p === ELEVENLABS ? elevenSpeech(opts, text) : openaiSpeech(opts, text);
@@ -57,6 +61,8 @@ export async function say(opts: SayOpts): Promise<string> {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.writeFileSync(dest, buf);
   const { play, spawn = spawnSync } = opts;
+
   if (play === true || play === FLAG_TRUE || play === FLAG_ON) playPath(dest, spawn);
+
   return dest;
 }

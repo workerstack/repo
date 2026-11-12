@@ -12,6 +12,7 @@ import { tail } from "./tail";
 
 /** The consumer tsconfig that extends the shipped bun base. */
 const TSCONFIG = { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] };
+
 /** The files the case writes, removed again when it ends. */
 const WROTE = ["tsconfig.json", "tsconfig.src.json", "src/main.ts", "vitest.config.ts", "src/a.test.ts"];
 
@@ -21,6 +22,7 @@ async function expectResetTypes(sb: Sandbox) {
     exclude: ["node_modules", "**/*.test.ts"],
     extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
   };
+
   sb.write("tsconfig.json", `${JSON.stringify(TSCONFIG)}\n`);
   sb.write("tsconfig.src.json", `${JSON.stringify(srcTsconfig)}\n`);
   // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
@@ -59,6 +61,7 @@ async function vitestPresetRun(sb: Sandbox) {
   );
   const vitest = await sb.run("bunx", ["vitest", "run"], { env: { NO_COLOR: "1" } });
   expectClean(sb, vitest);
+
   return vitest;
 }
 
@@ -68,6 +71,7 @@ export function presetsCase(get: GetSandbox) {
     const sb = get();
     const pkgBefore = sb.read("package.json");
     const lockBefore = sb.read("bun.lock");
+
     try {
       await expectResetTypes(sb);
       await expectFilesRefused(sb);

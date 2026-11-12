@@ -30,9 +30,11 @@ describe("stop", () => {
     const { cwd } = recording();
     const table = killTable([3000]);
     const waited: number[] = [];
+
     function waitPid(pid: number) {
       return void waited.push(pid);
     }
+
     const r = await run(["stop"], { cwd, fetchFn: textFetch("stopped words"), killFn: table.killFn, waitPid });
     expect(r.code).toBe(0);
     expect(table.sent).toContainEqual([3000, "SIGINT"]);
@@ -54,12 +56,16 @@ describe("stop waiting", () => {
   it("still waits and transcribes when the interrupt itself throws", async () => {
     const { cwd } = recording();
     let probes = 0;
+
     function killFn(_pid: number, sig: string | number) {
       if (sig !== 0) throw new Error("EPERM");
       probes += 1;
+
       if (probes > 1) throw new Error("ESRCH");
+
       return true;
     }
+
     const r = await run(["stop"], { cwd, fetchFn: textFetch("after eperm"), killFn });
     expect(r.code).toBe(0);
     expect(r.logs[0]).toBe("after eperm");
@@ -68,10 +74,13 @@ describe("stop waiting", () => {
   it("polls the recorder until it exits when no waiter is injected", async () => {
     const { cwd } = recording();
     let probes = 0;
+
     function killFn(_pid: number, sig: string | number) {
       if (sig === 0 && ++probes > 3) throw new Error("ESRCH");
+
       return true;
     }
+
     const r = await run(["stop"], { cwd, fetchFn: textFetch("polled"), killFn });
     expect(r.code).toBe(0);
     expect(probes).toBe(4);
@@ -83,11 +92,15 @@ describe("stop timeout", () => {
     const { cwd } = recording();
     vi.useFakeTimers({ toFake: ["Date"] });
     let isInterrupted = false;
+
     function killFn(_pid: number, sig: string | number) {
       isInterrupted ||= sig === "SIGINT";
+
       if (isInterrupted && sig === 0) vi.setSystemTime(Date.now() + 9000);
+
       return true;
     }
+
     const r = await run(["stop"], { cwd, fetchFn: textFetch("late"), killFn });
     expect(r.code).toBe(0);
     expect(r.logs[0]).toBe("late");

@@ -16,13 +16,16 @@ const MANIFESTS: Record<string, string> = {
   "packages/ui/package.json": JSON.stringify({ dependencies: { "@app/lib": "*", "@app/web": "*" }, name: "@app/ui" }),
   "packages/web/package.json": JSON.stringify({ dependencies: { "@app/lib": "*", "@app/ui": "*" }, name: "@app/web" }),
 };
+
 /** Usage's tags, with a second lib package for the same-tag case; `@app/tools` carries none. */
 const TAGS = {
   allow: { app: ["ui", "lib"], lib: [], ui: ["lib"] },
   tags: { "@app/core": "lib", "@app/lib": "lib", "@app/ui": "ui", "@app/web": "app" },
 };
+
 const OPTIONS = [TAGS];
 const LIB = "packages/lib/src/lib.ts";
+
 const LIB_TO_UI =
   '"@app/ui" is a ui package, and a lib package may import only lib; move what it needs into a package lib may ' +
   'import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts';
@@ -75,6 +78,7 @@ it("a package with no name is not judged by tag", () => {
     "packages/anon/a.ts": 'import { b } from "@app/ui";',
     "packages/anon/package.json": JSON.stringify({ dependencies: { "@app/ui": "*" } }),
   };
+
   expect(reportsOf(boundaries, { ...MANIFESTS, ...anon }, OPTIONS)).toStrictEqual([]);
 });
 

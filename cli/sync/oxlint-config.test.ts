@@ -11,19 +11,24 @@ function workspace(manifest: PackageJson, packages: Workspace["packages"] = []):
     root: "/repo",
   };
 }
+
 function configOf(ws: Workspace, skips: readonly LintSkip[] = []): unknown {
   const built = oxlintConfig(ws, { skip: skips });
+
   if (!built.ok) throw new Error(built.errors.join("\n"));
+
   return JSON.parse(built.value);
 }
 
 const SIZE = { skipBlankLines: true, skipComments: true };
+
 const CATEGORIES = Object.fromEntries(
   ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"].map((name) => [
     name,
     name === "correctness" || name === "suspicious" ? "error" : "off",
   ]),
 );
+
 /** Every rule the base sets to a bare "error". */
 const ERROR_RULES = [
   "repo/as-needs-reason repo/boundaries repo/class-file repo/config-file repo/deprecated-replacement repo/entry-file",
@@ -31,6 +36,7 @@ const ERROR_RULES = [
   "repo/naming-convention repo/native-path-separator repo/no-block-comment repo/no-boolean-param",
   "repo/no-commented-out-code repo/no-mock-of-subject repo/no-module-side-effects repo/no-module-state",
   "repo/no-reflect-apply repo/no-side-effect-import repo/no-v8-ignore repo/no-widen-then-assert repo/public-jsdoc",
+  "repo/require-readable-spacing",
   "repo/skip-on-platform repo/todo-needs-id repo/types-file unicorn/prefer-node-protocol oxc/no-accumulating-spread",
   "eslint/no-shadow eslint/no-else-return eslint/no-nested-ternary eslint/no-param-reassign eslint/no-await-in-loop",
   "eslint/require-await eslint/no-console import/no-cycle import/no-default-export typescript/no-explicit-any",
@@ -44,6 +50,7 @@ const ERROR_RULES = [
 ]
   .join(" ")
   .split(" ");
+
 /** The rules the base opts out of, which the config writes as "off". */
 const REJECTED = [
   "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types",
@@ -53,6 +60,7 @@ const REJECTED = [
 ]
   .join(" ")
   .split(" ");
+
 /** The rules the base sets with options. */
 const OPTION_RULES = {
   "eslint/complexity": ["error", { max: 10 }],
@@ -74,11 +82,13 @@ const OPTION_RULES = {
   "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
+
 const BASE_RULES = {
   ...Object.fromEntries(ERROR_RULES.map((rule) => [rule, "error"])),
   ...OPTION_RULES,
   ...Object.fromEntries(REJECTED.map((rule) => [rule, "off"])),
 };
+
 const TEST_OVERRIDE = {
   files: ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"],
   rules: {
@@ -94,10 +104,12 @@ const TEST_OVERRIDE = {
     "vitest/warn-todo": "error",
   },
 };
+
 const CONFIG_OVERRIDE = {
   files: ["**/*.config.ts"],
   rules: { "import/no-default-export": "off", "repo/no-module-side-effects": "off" },
 };
+
 /** `ci.checks` run in key order, so the workerstack config keeps its keys where the consumer put them. */
 const WORKERSTACK_OVERRIDE = { files: ["**/workerstack.config.ts"], rules: { "eslint/sort-keys": "off" } };
 const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, WORKERSTACK_OVERRIDE];
@@ -156,6 +168,7 @@ describe("oxlintConfig per package", () => {
       { dir: "b", manifest: { bin: ["./bin/b.ts"], exports: { "./lint": 3 } } },
       { dir: "c", manifest: { bin: null, exports: null } },
     ]);
+
     expect(configOf(ws)).toHaveProperty("overrides", BASE_OVERRIDES);
   });
 });
@@ -171,6 +184,7 @@ it(
       { files: ["src/cache.ts"], reason: REASON, rules: ["repo/no-module-state"] },
       { files: ["src/**/*.ts", "lib/*.ts"], reason: REASON, rules: ["eslint/max-lines", "vitest/no-disabled-tests"] },
     ];
+
     expect(configOf(APP, skips)).toStrictEqual(
       expect.objectContaining({
         overrides: [
@@ -192,5 +206,6 @@ it("oxlintConfig accepts a skip of repo/duplicate-code and writes no override fo
   const skips = [
     { files: ["src/generated/**"], reason: "generated per locale from one template", rules: ["repo/duplicate-code"] },
   ];
+
   expect(configOf(APP, skips)).toStrictEqual(configOf(APP));
 });

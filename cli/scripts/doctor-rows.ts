@@ -17,6 +17,7 @@ export function row(name: string, status: string, extra: string = ""): string {
   const a = name.padEnd(ROW_PAD);
   const b = status.padEnd(ROW_PAD);
   const c = extra.trim();
+
   return c === "" ? `${a} ${b}` : `${a} ${b} ${c}`;
 }
 
@@ -37,18 +38,22 @@ export async function globalsRow(
 ): Promise<string | null> {
   if (!fs.existsSync(path.join(sourceRoot, GLOBALS_MANIFEST_REL))) return null;
   let mod: typeof checkGlobalsModule;
+
   try {
     mod = await import("./check-globals.ts");
   } catch (err) {
     return row("globals", "unavailable", `${errorText(err).split("\n")[0]}; run bun install`);
   }
+
   const r = mod.checkGlobals({
     sourceRoot,
     ...(home === undefined ? {} : { home }),
     ...(cwd === undefined ? {} : { workspaceRoot: cwd }),
   });
+
   if (r.ok) return row("globals", "ok");
   const first = r.drift?.[0]; // drift is only set when non-empty
+
   return row(
     "globals",
     first === undefined ? (r.error /* a failed check sets drift or error */ as string) : mod.driftLine(first),
@@ -63,13 +68,17 @@ export function mapsRow(root: string): { line: string; ok: boolean } | null {
   if (!isSelf(root)) return null;
   const fix = "run bun repo sync";
   let text: string;
+
   try {
     text = fs.readFileSync(path.join(root, INDEX_REL), "utf8");
   } catch {
     return { line: row("maps", "missing", `${INDEX_REL} is missing; ${fix}`), ok: false };
   }
+
   const absent = MAPS_SECTIONS.find((name) => sectionBody(text, name) == null);
+
   if (absent !== undefined)
     return { line: row("maps", "missing", `${INDEX_REL} has no repo:${absent} section; ${fix}`), ok: false };
+
   return { line: row("maps", "ok", `${INDEX_REL} ${MAPS_SECTIONS.map((n) => `repo:${n}`).join(", ")}`), ok: true };
 }

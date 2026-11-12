@@ -27,31 +27,41 @@ function say(io: RustIo, line: Line): void {
     .split("\n")
     .map((part) => `${API_PREFIX}${part}\n`)
     .join("");
+
   (line.ok ? io.stdout : io.stderr)(text);
 }
 
 /** Prints the failure lines; the exit code 1. */
 function fail(io: RustIo, lines: readonly string[]): number {
   for (const text of lines) say(io, { ok: false, text });
+
   return 1;
 }
 
 /** The semver check of every crate crates.io may publish: the exit code, or `none` when there is no such crate. */
 async function crateChecks(io: RustIo): Promise<number | "none"> {
   const found = workspaceCrates(io.cwd, io.cargo);
+
   if (found.kind === "stale") return fail(io, [STALE_LOCK]);
+
   if (found.kind === "failed") return fail(io, found.problems);
   const crates = found.crates.filter(onCratesIo);
+
   if (crates.length === 0) return "none";
   const pin = pinProblem(io.cwd, io.cargo, SEMVER_CHECKS_PIN);
+
   if (pin !== null) return fail(io, [pin]);
+
   const deps: SemverDeps = {
     fetch: io.fetch,
     git: (after) => commitsAfter(io, after),
     run: io.cargo,
   };
+
   const lines = await Promise.all(crates.map((crate) => crateLine(io.cwd, crate, deps)));
+
   for (const line of lines) say(io, line);
+
   return lines.every((line) => line.ok) ? 0 : 1;
 }
 
@@ -65,9 +75,12 @@ export async function rustApi(
   typescript: (against: string | undefined) => number,
 ): Promise<number> {
   const published = isPublicPackage(io.cwd);
+
   if (against !== undefined && !published) return refuse(io, API_PREFIX, AGAINST_NO_PACKAGE);
   const crates = await crateChecks(io);
+
   if (crates === "none" && !published) return (io.stdout(`${API_PREFIX}${NOTHING_TO_COMPARE}\n`), 0);
   const ts = published ? typescript(against) : 0;
+
   return crates === 1 || ts !== 0 ? 1 : 0;
 }

@@ -24,18 +24,25 @@ import {
 import type { RepoRule } from "./rule.types.ts";
 
 type Node = TSESTree.Node;
+
 type Func = TSESTree.FunctionLike;
+
 type Declaration = TSESTree.VariableDeclaration;
+
 type Declarator = TSESTree.VariableDeclarator;
+
 type Named =
   | TSESTree.ClassDeclaration
   | TSESTree.ClassExpression
   | TSESTree.TSInterfaceDeclaration
   | TSESTree.TSTypeAliasDeclaration
   | TSESTree.TSEnumDeclaration;
+
 type MessageId = "boolean" | "camel" | "literal" | "pascal";
+
 /** What is wrong with a name: which message, and the parts it fills in. */
 type Fault = { messageId: MessageId; data: Record<string, string> };
+
 /** What a check of one file needs: its name, the locals an `export { … }` names, and the report. */
 type Check = { filename: string; exported: Set<string>; fail: (node: Node, fault: Fault) => void };
 
@@ -63,7 +70,9 @@ function isExported(check: Check, node: Node, name: string): boolean {
 /** The kind a camelCase message names a variable by. */
 function variableKind(declaration: Declaration, init: TSESTree.Expression | null): string {
   if (isFunctionValue(init)) return "a function";
+
   if (!isModuleLevel(declaration)) return "a local";
+
   return declaration.kind === "const" ? "a module-level const" : "a module-level variable";
 }
 
@@ -71,6 +80,7 @@ function variableKind(declaration: Declaration, init: TSESTree.Expression | null
 function moduleConstFault(declarator: Declarator, name: string): Fault | null | undefined {
   if (isLiteral(declarator.init))
     return isUpperSnake(name) ? null : { data: { fix: toUpperSnake(name), name }, messageId: "literal" };
+
   return isUpperSnake(name) ? null : undefined;
 }
 
@@ -78,6 +88,7 @@ function moduleConstFault(declarator: Declarator, name: string): Fault | null | 
 function localFault(declaration: Declaration, declarator: Declarator, name: string): Fault | null {
   if (holdsBoolean(declarator) && !isBooleanName(name))
     return { data: { fix: toBooleanName(name), name }, messageId: "boolean" };
+
   return isCamel(name) ? null : camelFault(name, variableKind(declaration, declarator.init));
 }
 
@@ -91,10 +102,14 @@ function variableFault(check: Check, declaration: Declaration, declarator: Decla
   if (declarator.id.type !== AST_NODE_TYPES.Identifier) return null;
   const { name } = declarator.id;
   const isComponentName = isPascal(name) && isComponent(declarator.init, check.filename);
+
   if (isExported(check, declaration, name)) return exportFault(name, { isComponentName });
+
   const moduleFault =
     isModuleLevel(declaration) && declaration.kind === "const" ? moduleConstFault(declarator, name) : undefined;
+
   if (moduleFault !== undefined) return moduleFault;
+
   return isComponentName ? null : localFault(declaration, declarator, name);
 }
 
@@ -106,14 +121,18 @@ function isCamelOrUnused(name: string): boolean {
 /** Checks the names a destructuring binds by the code's choice; their values are not known, so only casing. */
 function checkPattern(check: Check, declaration: Declaration, pattern: TSESTree.BindingName): void {
   const kind = variableKind(declaration, null);
+
   for (const id of chosenIdentifiers(pattern)) if (!isCamelOrUnused(id.name)) check.fail(id, camelFault(id.name, kind));
 }
 
 function checkDeclaration(check: Check, declaration: Declaration): void {
   if (isAmbient(declaration)) return;
+
   for (const declarator of declaration.declarations) {
     const fault = variableFault(check, declaration, declarator);
+
     if (fault !== null) check.fail(declarator.id, fault);
+
     if (declarator.id.type !== AST_NODE_TYPES.Identifier) checkPattern(check, declaration, declarator.id);
   }
 }
@@ -121,8 +140,10 @@ function checkDeclaration(check: Check, declaration: Declaration): void {
 function checkParams(check: Check, node: Func): void {
   for (const param of node.params) {
     if (param.type === AST_NODE_TYPES.TSParameterProperty) continue;
+
     const identifiers =
       param.type === AST_NODE_TYPES.RestElement ? chosenIdentifiers(param.argument) : chosenIdentifiers(param);
+
     for (const id of identifiers) if (!isCamelOrUnused(id.name)) check.fail(id, camelFault(id.name, "a parameter"));
   }
 }
@@ -132,6 +153,7 @@ function checkFunctionName(check: Check, node: TSESTree.FunctionDeclaration): vo
   const { name } = node.id;
   const exported = isExported(check, node, name);
   const isComponentName = isPascal(name) && isComponent(node, check.filename);
+
   if (isCamel(name) || (exported && isUpperSnake(name)) || isComponentName) return;
   check.fail(node.id, camelFault(name, exported ? "an export" : "a function"));
 }
@@ -139,10 +161,13 @@ function checkFunctionName(check: Check, node: TSESTree.FunctionDeclaration): vo
 function checkPascal(check: Check, node: Named | TSESTree.TSEnumMember): void {
   if (node.type === AST_NODE_TYPES.TSEnumMember) {
     const { id } = node;
+
     if (id.type === AST_NODE_TYPES.Identifier && !isPascal(id.name))
       check.fail(id, pascalFault("enum member", id.name));
+
     return;
   }
+
   if (node.id !== null && !isPascal(node.id.name) && !isAmbient(node))
     check.fail(node.id, pascalFault(PASCAL_KINDS[node.type], node.id.name));
 }
@@ -162,9 +187,11 @@ export const namingConvention: RepoRule<MessageId> = {
       fail: (node, fault) => context.report({ ...fault, node }),
       filename: context.filename,
     };
+
     function pascal(node: Named | TSESTree.TSEnumMember): void {
       checkPascal(check, node);
     }
+
     return {
       ArrowFunctionExpression: (node) => checkParams(check, node),
       ClassDeclaration: pascal,

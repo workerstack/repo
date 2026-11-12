@@ -44,6 +44,7 @@ describe("subagentTypeOf", () => {
   it("lowercases a type and skips values that are not a type", () => {
     expect(subagentTypeOf({ subagent_type: "Scout" })).toBe("scout");
     const skipped = ["   ", "12345", "0a1b2c3d-0a1b-0a1b-0a1b-0a1b2c3d4e5f", "a/b", "a\\b", "x".repeat(65)];
+
     for (const value of skipped) expect(subagentTypeOf({ subagent_type: value })).toBe("");
     expect(subagentTypeOf({ subagent_type: "x".repeat(64) })).toBe("x".repeat(64));
   });

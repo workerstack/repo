@@ -18,6 +18,7 @@ function repo(dir = ""): string {
   spawnSync("git", ["init", "-q"], { cwd: r });
   fs.mkdirSync(path.join(r, dir), { recursive: true });
   fs.writeFileSync(path.join(r, dir, "big.log"), "x\n".repeat(10));
+
   return r;
 }
 
@@ -41,6 +42,7 @@ it("denies a Grok git worktree add outside .worktrees", () => {
 it("leaves Antigravity calls to the gate", () => {
   const r = repo("packages/a");
   const a = path.join(r, "packages/a");
+
   for (const toolCall of [
     { args: { CommandLine: "cat big.log", Cwd: a }, name: "run_command" },
     { args: { Path: path.join(a, ".tmp/repo/scratch/x.md"), Replacement: "b", Target: "a" }, name: "edit_file" },
@@ -49,6 +51,7 @@ it("leaves Antigravity calls to the gate", () => {
     expect(runHook(gateMain, payload).stdout, toolCall.name).not.toBe("");
     expect(kit.run(payload).stdout, toolCall.name).toBe("");
   }
+
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
 });
 
@@ -62,10 +65,12 @@ function cursor(cwd: string, event: string, extra: object = {}): HookOut | null 
     ),
   );
 }
+
 function nested(reply: HookOut): void {
   expect(Object.keys(reply)).toStrictEqual(["hookSpecificOutput"]);
   expect(reply.hookSpecificOutput.permissionDecision).toBeUndefined();
 }
+
 function askedOf(r: string) {
   return JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"));
 }

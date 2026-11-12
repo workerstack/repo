@@ -52,6 +52,7 @@ export function writeStamp(root: string, sid: string, planAbs: string): void {
   const dest = stampPath(root, sid);
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   const tmp = `${dest}.${process.pid}.tmp`;
+
   try {
     fs.writeFileSync(tmp, `${JSON.stringify({ plan: canonicalPath(path.resolve(planAbs)) })}\n`);
     fs.renameSync(tmp, dest);
@@ -65,20 +66,25 @@ export function writeStamp(root: string, sid: string, planAbs: string): void {
 function stampedPlan(root: string, sid: string): string | null {
   const stamp: unknown = JSON.parse(fs.readFileSync(stampPath(root, sid), "utf8"));
   const plan = typeof stamp === "object" && stamp !== null && "plan" in stamp ? stamp.plan : null;
+
   return typeof plan === "string" ? plan : null;
 }
 
 /** The `key: value` lines of a file's frontmatter, or null when it has none. */
 function frontmatter(text: string): Record<string, string> | null {
   const m = FRONTMATTER_RE.exec(text);
+
   if (m === null) return null;
   const fm: Record<string, string> = {};
+
   for (const line of (m[1] /* group 1 is not optional in the frontmatter regex */ as string).split(LINE_BREAK_RE)) {
     const kv = FM_LINE_RE.exec(line);
+
     if (kv === null) continue;
     const [, key, value] = [...kv] /* both groups always match */ as [string, string, string];
     fm[key] = value.trim();
   }
+
   return fm;
 }
 
@@ -87,9 +93,12 @@ export function activeReview(root: string, sid: string): ActiveReview | null {
   try {
     const plan = stampedPlan(root, sid);
     const fm = plan === null ? null : frontmatter(fs.readFileSync(plan, "utf8"));
+
     if (plan === null || fm === null) return null;
     const strategy = parseStrategy(fm.strategy);
+
     if (fm.status !== IN_PROGRESS || strategy === null || strategy === DEFAULT_STRATEGY) return null;
+
     return { plan, serial: Number(fm.serial), strategy };
   } catch {
     return null;

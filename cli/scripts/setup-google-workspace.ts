@@ -15,11 +15,13 @@ async function step(io: SetupIo, ctx: SetupCtx, s: Step): Promise<void> {
   for (const line of s.lines) logLine(io, line);
   logLine(io, `Open: ${s.url}`);
   await openUrl(s.url, ctx);
+
   if (typeof io.confirm === "function") await io.confirm({ initialValue: true, message: s.confirm });
 }
 
 async function askOAuthSource(io: SetupIo, home: string): Promise<string> {
   const found = findDownloadedOAuthJson(home);
+
   const src = str(
     typeof io.text === "function"
       ? await io.text({
@@ -29,7 +31,9 @@ async function askOAuthSource(io: SetupIo, home: string): Promise<string> {
         })
       : found,
   );
+
   if (src === "") throw new Error("need path to Desktop OAuth JSON");
+
   return src;
 }
 
@@ -39,6 +43,7 @@ async function consoleWalk(io: SetupIo, ctx: SetupCtx, home: string): Promise<st
   const share = "Each person uses their own GCP Desktop OAuth client. Do not share JSON or tokens.";
   const created = "GCP project created? Continue";
   await step(io, ctx, { confirm: created, lines: [share], url: workspaceConsoleUrls(flagProject).projectCreate });
+
   const projectId =
     typeof io.text === "function"
       ? str(
@@ -46,12 +51,14 @@ async function consoleWalk(io: SetupIo, ctx: SetupCtx, home: string): Promise<st
           flagProject,
         )
       : flagProject;
+
   const urls = workspaceConsoleUrls(projectId);
   const consent = "Consent: Internal on paid Workspace, else Testing + add your email as a test user.";
   await step(io, ctx, { confirm: "Branding / audience done? Continue", lines: [consent], url: urls.branding });
   await step(io, ctx, { confirm: "APIs enabled? Continue", lines: [], url: urls.enableApis });
   const client = "Create OAuth client: application type Desktop app → Download JSON.";
   await step(io, ctx, { confirm: "JSON downloaded? Continue", lines: [client], url: urls.clientCreate });
+
   return askOAuthSource(io, home);
 }
 
@@ -60,6 +67,7 @@ async function installCreds(ctx: SetupCtx, home: string, dest: string): Promise<
   const credsFlag = str(flags.creds, str(flags.json));
   const { io } = ctx;
   const canAsk = ctx.interactive === true && io !== undefined && io !== null;
+
   if (credsFlag === "" && canAsk) installOAuthJson({ dest, src: await consoleWalk(io, ctx, home) });
   else if (credsFlag !== "") installOAuthJson({ dest, src: credsFlag });
   else if (!fs.existsSync(dest)) throw new Error(`need --creds PATH (or TTY: bun repo setup google-workspace)`);
@@ -78,5 +86,6 @@ export async function setupGoogleWorkspace(ctx: SetupCtx = {}): Promise<{ ok: tr
   await (loginFn === undefined ? loginLoopback(dest, account) : loginFn(dest, home));
   const tokens = tokenStorePath(account);
   logLine(io, `tokens ${tokens}`);
+
   return { dest, ok: true, tokens };
 }

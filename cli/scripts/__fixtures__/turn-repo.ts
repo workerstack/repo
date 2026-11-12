@@ -42,7 +42,7 @@ export const nonNull = (count: number, stem = "a") =>
   Array.from(
     { length: count },
     (_, i) => `export function ${stem}${i === 0 ? "" : i}(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n`,
-  ).join("");
+  ).join("\n");
 
 /** A temp dir, removed by `cleanTemps`. */
 export function tempDir(prefix: string): string {

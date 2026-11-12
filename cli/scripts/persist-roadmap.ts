@@ -60,12 +60,14 @@ type RenderInput = {
 function takeLine(text: string, key: string): { value: string | undefined; text: string } {
   const found = text.match(new RegExp(`^${key}:\\s*(\\S+)\\s*$`, "m"));
   const rest = found === null ? text : text.replace(new RegExp(`^${key}:\\s*\\S+\\s*\\n`, "m"), "");
+
   return { text: rest, value: found === null ? undefined : captured(found, 1) };
 }
 
 /** The `ROADMAP_NAME:` line's value, else the first heading's. */
 function nameOf(named: string, body: string): string {
   const found = named.match(ROADMAP_NAME_RE) ?? body.match(H1_RE);
+
   return found === null ? "" : captured(found, 1).trim();
 }
 
@@ -78,6 +80,7 @@ function preamble(raw: string): Preamble {
   const unstrategized = stripStrategyLine(reviews.text);
   const mode = stripped.map.mode ?? extractMode(unstrategized);
   const body = stripModeLine(unstrategized);
+
   return {
     body,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
@@ -101,6 +104,7 @@ function render({ serial, slug, status, reviews, created, source, strategy, mode
     ...(firstNonEmpty(strategy) === undefined ? [] : [`strategy: ${strategy}`]),
     ...(mode === undefined ? [] : [`mode: ${mode}`]),
   ];
+
   return injectFrontmatter(head, slug, body);
 }
 
@@ -109,6 +113,7 @@ function keptKeys(pre: Preamble, prev: FrontmatterMap): Pick<RenderInput, "revie
   function keep(sent: string | undefined, saved: string | undefined) {
     return sent ?? (pre.fullFrontmatter ? undefined : saved);
   }
+
   return {
     mode: keep(pre.mode, prev.mode),
     reviews: keep(pre.reviews, prev.reviews),
@@ -125,6 +130,7 @@ function updatedFile(filename: string, content: string, previous: string): strin
   const pre = preamble(content);
   const prev = splitFrontmatter(previous).map;
   const slug = slugFromFilename(filename);
+
   return render({
     ...keptKeys(pre, prev),
     body: pre.body,
@@ -144,10 +150,13 @@ function updatedFile(filename: string, content: string, previous: string): strin
 export function prepareRoadmapUpdate(input: Rewrite): RoadmapResult {
   const { raw, previous, filename, rel } = rewriteTarget(input);
   const fence = unclosedFenceErrors(raw);
+
   if (fence.length > 0) return refused(fence);
   const full = updatedFile(filename, raw, previous);
   const errors = validateRoadmap(filename, full, { fresh: false, previous });
+
   if (errors.length > 0) return refused(errors);
+
   return { content: full, filename, ok: true, path: rel, serial: serialOf(filename) };
 }
 
@@ -157,6 +166,7 @@ function newFile(dir: string, pre: Preamble, created: string | undefined) {
   const createdAt = createdAtOf(created);
   const serial = nextSerial(dir, "");
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
+
   const full = render({
     body: pre.body,
     created: createdAt,
@@ -168,6 +178,7 @@ function newFile(dir: string, pre: Preamble, created: string | undefined) {
     status: firstNonEmpty(pre.status) ?? DRAFT_STATUS,
     strategy: pre.strategy,
   });
+
   return { filename, full, serial };
 }
 
@@ -180,10 +191,13 @@ export function persistRoadmap({
   const dir = path.join(ws, ROADMAP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const fence = unclosedFenceErrors(raw);
+
   if (fence.length > 0) return refused(fence);
   const { serial, filename, full } = newFile(dir, preamble(raw), created);
   const errors = validateRoadmap(filename, full, { fresh: true });
+
   if (errors.length > 0) return refused(errors);
   fs.writeFileSync(path.join(dir, filename), full);
+
   return { content: full, filename, ok: true, path: `${ROADMAP_DIR}/${filename}`, serial };
 }

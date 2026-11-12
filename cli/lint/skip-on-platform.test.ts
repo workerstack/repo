@@ -6,9 +6,11 @@ import { skipOnPlatform } from "./skip-on-platform.ts";
 const TAIL =
   "a test may skip only on process.platform, process.arch, process.versions or a runtime global, " +
   "so make it hermetic instead";
+
 function messagesOf(code: string) {
   return reportsOf(skipOnPlatform, { "a.test.ts": code }).map((report) => report.message);
 }
+
 function inTest(body: string) {
   return `it("x", (ctx) => {\n  ${body}\n});`;
 }
@@ -44,6 +46,7 @@ describe("skip-on-platform, conditions it passes", () => {
       'it.skipIf(process.platform !== "win32")("CLI spawn: chromium on PATH, no env knobs", () => {});',
       'it.skipIf(process.platform === "win32")(\n  "rewrites a link whose text differs",\n  async () => {},\n);',
     ];
+
     expect(messagesOf(repoSkips.join("\n"))).toStrictEqual([]);
   });
 

@@ -13,6 +13,7 @@ function plant(content: string): string {
   dirs.push(dir);
   const file = path.join(dir, "x.json");
   fs.writeFileSync(file, content);
+
   return file;
 }
 

@@ -40,6 +40,7 @@ it("matches against the checkout's lessons from a subdir and from a worktree", (
 
 it("exits non-zero on bad args", () => {
   const ws = repo();
+
   for (const args of [[], ["nope"], ["hit", "plan-forks"], ["match"], ["rm"]]) {
     const r = runLessons(ws, ...args);
     expect(r.status, args.join(" ")).not.toBe(0);

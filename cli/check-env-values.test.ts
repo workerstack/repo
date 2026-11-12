@@ -11,6 +11,7 @@ const { repoWith } = useGitTree("check-env-values-");
 const FILE = "projects/anyrow/env.ts";
 const IMPORT = 'import { defineEnv, sealed } from "@workerstack/repo/env";\n';
 const SEAL_HINT = 'seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")';
+
 // A stand-in age cipher: base64 that starts as age's header does.
 const CIPHER = btoa("age-encryption.org/v1 fake cipher");
 
@@ -197,6 +198,7 @@ describe("checkEnvValues, the read forms it reads", () => {
       "export const used = [proc, all, argv, config.env.TOKEN];",
       "",
     ].join("\n");
+
     expect(linesFor(envFile(PROCESS_BLOCKS, around))).toStrictEqual([]);
   });
 });

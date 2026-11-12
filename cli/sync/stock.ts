@@ -17,6 +17,7 @@ export function stockRoot(root: string): string {
 export function isSelf(root: string): boolean {
   try {
     const pkg: unknown = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+
     return typeof pkg === "object" && pkg !== null && isSelfName(Reflect.get(pkg, "name"));
   } catch {
     return false;

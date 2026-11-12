@@ -10,20 +10,24 @@ export function apiMessage(json: unknown, fallback: string): string {
 
 export function errMessage(e: unknown): string {
   const m = isRecord(e) ? filled(e.message) : undefined;
+
   return m ?? String(e);
 }
 
 export async function jsonRecord(r: Response): Promise<Rec> {
   const j: unknown = await r.json();
+
   return rec(j);
 }
 
 export function fail(msg: string): number {
   process.stderr.write(`${msg.trimEnd()}\n`);
+
   return 1;
 }
 
 export function ok(msg: string): number {
   process.stdout.write(`${msg.trimEnd()}\n`);
+
   return 0;
 }

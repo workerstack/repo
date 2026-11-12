@@ -43,8 +43,10 @@ function nonEmptyLines(body: string): string[] {
 /** The first problem with a section that holds bullets, `(none)`, or in the Log a numbered box. */
 function bulletsOrNone(body: string | undefined, label: string): string {
   const b = (body ?? "").trim();
+
   if (b === "") return `${label} empty`;
   const bad = b === NONE_LINE ? undefined : nonEmptyLines(b).find((l) => !isBulletLine(l, label));
+
   return bad === undefined ? "" : `${label} bullets`;
 }
 
@@ -55,16 +57,20 @@ function isBulletLine(line: string, label: string): boolean {
 /** The first problem with the Files list: a non-bullet, an absolute path or a `.tmp` path. */
 export function filesError(body: string | undefined): string {
   const b = (body ?? "").trim();
+
   if (b === "") return "Files empty";
   const paths = b === NONE_LINE ? [] : nonEmptyLines(b).filter((l) => l !== NONE_LINE);
   const bad = paths.map(fileLineError).find(Boolean);
+
   return bad ?? "";
 }
 
 function fileLineError(line: string): string {
   if (!BULLET_RE.test(line)) return "Files bullets";
   const p = line.replace(BULLET_RE, "").trim();
+
   if (p.startsWith("/") || WINDOWS_DRIVE_RE.test(p)) return "Files abs";
+
   return p.startsWith(TMP_SEGMENT) || p.includes(`/${TMP_SEGMENT}`) ? "Files tmp" : "";
 }
 

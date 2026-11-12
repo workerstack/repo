@@ -41,11 +41,13 @@ it("refuses to save, hit or remove a lesson in the main checkout and changes not
 
 it("refuses hit, rm and index on the command line from the main checkout with exit 1", () => {
   const { ws } = committed();
+
   for (const args of [["hit", "plan-forks", "--evidence", "plan 4"], ["rm", "plan-forks"], ["index"]]) {
     const r = runLessons(ws, ...args);
     expect(r.status, args.join(" ")).toBe(1);
     expect(r.stderr, args.join(" ")).toContain(REFUSAL);
   }
+
   expect(fs.existsSync(path.join(ws, LESSONS_DIR, "plan-forks.md"))).toBe(true);
   expect(runLessons(ws, "match", "src/a.ts").status).toBe(0);
   expect(runLessons(ws, "check").status).toBe(0);

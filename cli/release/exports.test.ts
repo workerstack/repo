@@ -48,6 +48,7 @@ describe("exportSubpaths conditions", () => {
       },
       [],
     );
+
     expect(got.subpaths).toStrictEqual([
       { key: "./a", kind: "code", runtime: "./a.mjs", types: "./a.d.mts" },
       { key: "./b", kind: "code", runtime: "./b.cjs", types: null },
@@ -82,12 +83,14 @@ describe("exportSubpaths kinds", () => {
 describe("exportSubpaths patterns", () => {
   it("expands a * key to every matching file, in the types target too", () => {
     const files = ["cfg/a.json", "cfg/b.json", "cfg/c.txt", "cfg/sub/d.json", "t/a.d.ts"];
+
     const got = exportSubpaths(
       {
         "./cfg/*": conditions("./t/*.d.ts", "./cfg/*.json"),
       },
       files,
     );
+
     expect(got.subpaths.map((s) => [s.key, s.runtime, s.types])).toStrictEqual([
       ["./cfg/a", "./cfg/a.json", "./t/a.d.ts"],
       ["./cfg/b", "./cfg/b.json", "./t/b.d.ts"],

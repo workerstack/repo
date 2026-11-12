@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { isStringList, keywordLines } from "./keywords.ts";
 
 const P = "package.json: ";
+
 function names(count: number): string[] {
   return Array.from({ length: count }, (_, i) => `k${String(i).padStart(2, "0")}`);
 }

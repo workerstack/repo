@@ -16,6 +16,7 @@ import type { PackageJson, WorkspacePackage } from "./workspace.ts";
 function entry(name: string, text: string) {
   return `- [${name}](https://www.npmjs.com/package/${name}): ${text}`;
 }
+
 const INDEX_TEXT = [
   entry("@workerstack/repo", "Workflows"),
   entry("@workerstack/system", "OS"),
@@ -24,6 +25,7 @@ const INDEX_TEXT = [
   entry("@workerstack/root", "Root"),
   entry("@workerstack/database", "DB"),
 ].join("\n");
+
 const availableFiles = { [AVAILABLE_INDEX_PATH]: `${INDEX_TEXT}\n` };
 
 it("lists the uninstalled packages after repo:stack, minus every installed, root and workspace name", () => {
@@ -32,6 +34,7 @@ it("lists the uninstalled packages after repo:stack, minus every installed, root
     manifest: { devDependencies: { "@workerstack/repo": "^1.0.0" }, name: "@workerstack/root" },
     packages: [{ ...API, manifest: { ...API.manifest, dependencies: { "@workerstack/testing": "^1.0.0" } } }],
   });
+
   const entries = `${entry("@workerstack/system", "OS")}\n${entry("@workerstack/database", "DB")}`;
   expect(contentOf(index(ctx).outputs[0])).toContain(`<!-- /repo:stack -->\n\n${section("available", entries)}\n`);
 });
@@ -50,26 +53,31 @@ function pkg(dir: string, name: string, deps: Partial<PackageJson> = {}): Worksp
     manifest: { name, ...deps },
   };
 }
+
 const WEB_PKG = pkg("packages/web", "@acme/web", {
   dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0", react: "19.0.0" },
   devDependencies: { "@acme/core": "1.0.0", "@workerstack/lint": "1.0.0", "@workerstack/shared": "1.0.0" },
   optionalDependencies: { "@workerstack/ai": "1.0.0" },
   peerDependencies: { "@acme/api": "1.0.0" },
 });
+
 const files = {
   "packages/api/references/INDEX.md": "# Api\n",
   "packages/core/references/INDEX.md": "# Core\n",
   "packages/shared/references/INDEX.md": "# Shared\n",
   "packages/web/references/INDEX.md": "# Web\n",
 };
+
 const packages = [
   WEB_PKG,
   pkg("packages/api", "@acme/api"),
   pkg("packages/core", "@acme/core"),
   pkg("packages/shared", "@workerstack/shared"),
 ];
+
 function depsOf(rel: string, ctx = context({ files, packages })) {
   const content = contentOf(index(ctx).outputs.find((o) => o.path === rel));
+
   return /<!-- repo:deps [\da-f]+ -->\n([\s\S]*?)<!-- \/repo:deps -->/.exec(content ?? "")?.[1];
 }
 
@@ -86,13 +94,16 @@ it("links the INDEX of each workspace dependency first, then each other @workers
 
 it("gives a package with no such dependency an empty section, and replaces a stale one in place", () => {
   expect(depsOf("packages/api/references/INDEX.md")).toBe("");
+
   const stale = {
     ...files,
     "packages/web/references/INDEX.md": "# Web\n\n<!-- repo:deps -->\n- stale\n<!-- /repo:deps -->\n\nTail.\n",
   };
+
   const content = contentOf(
     index(context({ files: stale, packages })).outputs.find((o) => o.path === "packages/web/references/INDEX.md"),
   );
+
   expect(content).toMatch(/^# Web\n\n<!-- repo:deps [\da-f]{8} -->\n- \[@acme\/api\]/);
   expect(content).toMatch(/<!-- \/repo:deps -->\n\nTail\.\n$/);
   expect(content).not.toContain("stale");

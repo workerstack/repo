@@ -39,16 +39,20 @@ function writePlans(grok: GrokPlan, cursor: JsonPlan, claude: JsonPlan): void {
 export function purgeGlobalMcps({ home, apply = false }: { home?: string; apply?: boolean } = {}): PurgeResult {
   const report: ReportRow[] = [];
   const action = apply ? APPLY_ACTION : DRY_RUN_ACTION;
+
   try {
     if (home === undefined || home === "") throw new Error("HOME required");
     const grok = planGrok(home);
     const cursor = planCursor(home);
     const claude = planClaudePlugins(home);
+
     if (apply) writePlans(grok, cursor, claude);
+
     for (const plan of [grok, cursor, claude]) {
       const row = { action, detail: plan.detail, path: plan.abs };
       report.push({ ...row, line: reportLine(row) });
     }
+
     return { ok: true, report };
   } catch (err) {
     return { error: errorText(err), ok: false, report };
@@ -59,20 +63,27 @@ export function purgeGlobalMcps({ home, apply = false }: { home?: string; apply?
 export function main(argv: string[]): number {
   try {
     const parsed = parseArgv(argv);
+
     if (!parsed.ok) {
       process.stderr.write(`${parsed.error}\n`);
+
       return 1;
     }
+
     const result = purgeGlobalMcps({ apply: parsed.apply, home: resolveHome() });
+
     for (const row of result.report) process.stdout.write(`${row.line}\n`);
 
     if (!result.ok) {
       process.stderr.write(`${result.error}\n`);
+
       return 1;
     }
+
     return 0;
   } catch (err) {
     process.stderr.write(`${errorText(err)}\n`);
+
     return 1;
   }
 }

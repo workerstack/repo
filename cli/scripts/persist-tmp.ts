@@ -21,6 +21,7 @@ const LINE_BREAK_RE = /\r?\n/;
 const LEADING_DOT_RE = /^\./;
 
 export const TMP_DIR = ".tmp/repo";
+
 /** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
 export const TMP_RESERVED_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "plans",
@@ -34,6 +35,7 @@ export const TMP_RESERVED_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "listen",
   "speak",
 ]);
+
 /** Whether `s` names no path: missing or empty. */
 function isBlank(s: string | null | undefined): s is null | undefined | "" {
   return s == null || s === "";
@@ -48,6 +50,7 @@ export function isUnderDir(
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const dir = path.resolve(workspaceRoot, ...segments);
   const rel = path.relative(dir, abs);
+
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
@@ -80,7 +83,9 @@ export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: s
   if (isBlank(filePath) || isBlank(workspaceRoot)) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
   const root = path.resolve(workspaceRoot, ".tmp", "repo");
+
   if (path.dirname(abs) !== root) return false;
+
   return !TMP_RESERVED_DIRS.has(path.basename(abs));
 }
 
@@ -90,10 +95,15 @@ export function persistOwner(
   root: string,
 ): "plans" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
   if (isUnderPlans(absPath, root)) return "plans";
+
   if (isUnderRoadmaps(absPath, root)) return "roadmaps";
+
   if (isUnderHandoffs(absPath, root)) return "handoffs";
+
   if (isUnderImplementations(absPath, root)) return "implementations";
+
   if (isUnderTmp(absPath, root)) return "tmp";
+
   return null;
 }
 
@@ -102,11 +112,13 @@ export const FILENAME_RE: RegExp = /^[1-9][0-9]*-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d
 
 export function extractTmpName(content: unknown): string {
   const m = String(content).match(NAME_RE);
+
   return m === null ? "" : String(m[1]).trim();
 }
 
 export function extractTmpExt(content: unknown): string {
   const m = String(content).match(EXT_RE);
+
   return m === null ? "" : String(m[1]).trim();
 }
 
@@ -119,6 +131,7 @@ export function stripTmpMeta(content: unknown): string {
 
 export function normalizeTmpExt(raw: string): string {
   const e = raw.trim().toLowerCase().replace(LEADING_DOT_RE, "");
+
   return EXT_RE_OK.test(e) && e.length <= EXT_MAX ? e : "";
 }
 
@@ -130,6 +143,7 @@ function nextTmpSerial(dir: string): number {
     .map((ent) => SERIAL_PREFIX_RE.exec(ent.name))
     .filter((m) => m !== null)
     .map((m) => parseInt(captured(m, 1), DECIMAL));
+
   return Math.max(1, ...serials.map((n) => n + 1));
 }
 
@@ -154,15 +168,18 @@ type Parsed = { error: string; name?: undefined } | { error?: undefined; name: s
 function parseTmp(raw: string): Parsed {
   if (raw.includes("\0")) return { error: "binary" };
   const name = extractTmpName(raw);
+
   if (name === "") return { error: "missing TMP_NAME" };
   const extRaw = extractTmpExt(raw);
   const ext = extRaw === "" ? DEFAULT_EXT : normalizeTmpExt(extRaw);
+
   return ext === "" ? { error: "ext" } : { body: stripTmpMeta(raw), ext, name };
 }
 
 export function persistTmp({ workspaceRoot, content, created }: PersistTmpOptions = {}): PersistTmpResult {
   const ws = firstNonEmpty(workspaceRoot) ?? resolveRoots().root;
   const parsed = parseTmp(content ?? "");
+
   if (parsed.error !== undefined) return { error: parsed.error, ok: false };
   const { name, ext, body } = parsed;
   const slug = slugify(name);
@@ -170,9 +187,12 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
   fs.mkdirSync(dir, { recursive: true });
   const stamp = compactCreatedStamp(createdAtOf(created));
   const free = freeName(dir, { ext, first: nextTmpSerial(dir), slug, stamp });
+
   if (free === undefined) return { error: "serial collision", ok: false };
   const { serial, filename, dest } = free;
+
   if (!FILENAME_RE.test(filename)) return { error: "filename", ok: false };
   fs.writeFileSync(dest, body);
+
   return { content: body, ext, filename, ok: true, path: `${TMP_DIR}/${filename}`, serial, slug };
 }

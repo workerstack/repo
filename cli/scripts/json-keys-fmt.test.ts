@@ -26,16 +26,22 @@ function formatRepo(files: Record<string, string>, { repo = true }: { repo?: boo
     root: "",
     workspace: { manifest: {}, packages: [], root: "" },
   };
+
   const configs = standards(ctx, []).outputs.flatMap((out): [string, string][] =>
     out.kind === "file" ? [[out.path, out.content]] : [],
   );
+
   const manifest = { "package.json": '{ "name": "app", "type": "module" }\n', "workerstack.config.ts": CONFIG };
+
   return jsonDir({ ...manifest, ...Object.fromEntries(configs), ...files }, repo);
 }
+
 const CONFIG = 'export default { packs: ["standards"] };\n';
 const CLAUDE = "agents/settings/claude.json";
+
 function io() {
   const err: string[] = [];
+
   return { err, stderr: (s: string) => err.push(s) };
 }
 
@@ -69,12 +75,14 @@ it("fmt --check names the first key of an unsorted jsonc and of a json with comm
 
 it("fmt converts own-line block comments in the same listing, skips fixtures dirs, narrows to paths", async () => {
   const block = '{\n  /* base */\n  "extends": "x"\n}\n';
+
   const root = formatRepo({
     "__fixtures__/c.jsonc": block,
     "a.jsonc": block,
     "dir/__fixtures__/d.json": block,
     "dir/b.json": block,
   });
+
   const out = io();
   expect(await fmt(["--check", "dir"], { cwd: root, run: () => 0, stderr: out.stderr })).toBe(1);
   expect(out.err.join("")).toMatch(/dir\/b\.json has an own-line/);
@@ -150,9 +158,11 @@ it(
     const out = io();
     expect(await fmt([], { cwd: root, stderr: out.stderr })).toBe(0);
     expect(readText(root, "data.json")).toBe(SORTED);
+
     function state() {
       return spawnSync("git", ["status", "--short"], { cwd: root, encoding: "utf8" }).stdout;
     }
+
     const snapshot = [state(), readText(root, "data.json"), readText(root, "package.json")];
     expect(await fmt(["--check"], { cwd: root, stderr: out.stderr })).toBe(0);
     expect(await fmt([], { cwd: root, stderr: out.stderr })).toBe(0);

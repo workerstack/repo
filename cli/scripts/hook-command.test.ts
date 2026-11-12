@@ -23,11 +23,13 @@ import {
 function tempDir(prefix: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   onTestFinished(() => fs.rmSync(dir, { force: true, recursive: true }));
+
   return dir;
 }
 
 function oldForm(rel: string) {
   const top = `d="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || echo "$d")"`;
+
   return `d="\${GROK_WORKSPACE_ROOT:-\${CLAUDE_PROJECT_DIR:-.}}"; [ -e "$d/${rel}" ] || ${top}; bun "$d/${rel}"`;
 }
 
@@ -59,11 +61,13 @@ it("hookCommand: runs the bin in the project dir with the hook's stdin", () => {
   const bin = path.join(dir, "node_modules", ".bin");
   fs.mkdirSync(bin, { recursive: true });
   fs.writeFileSync(path.join(bin, "repo"), '#!/bin/sh\necho "$@"; cat\n', { mode: 0o755 });
+
   const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
     encoding: "utf8",
     env: { CLAUDE_PROJECT_DIR: dir, PATH: repoEnv.process.PATH },
     input: "payload",
   });
+
   expect(r.status).toBe(0);
   expect(r.stdout).toBe("hook session-map\npayload");
 });
@@ -80,12 +84,14 @@ it("hookCommand: runs the repo.exe a Windows install links when there is no plai
   const bin = path.join(root, "node_modules", ".bin");
   fs.mkdirSync(bin, { recursive: true });
   fs.writeFileSync(path.join(bin, "repo.exe"), '#!/bin/sh\necho "exe $@"\n', { mode: 0o755 });
+
   for (const env of [{ CLAUDE_PROJECT_DIR: root }, { CLAUDE_PROJECT_DIR: pkg }]) {
     const r = spawnSync("sh", ["-c", hookCommand("session-map")], {
       cwd: pkg,
       encoding: "utf8",
       env: { PATH: repoEnv.process.PATH, ...env },
     });
+
     expect(r.stderr).toBe("");
     expect(r.stdout).toBe("exe hook session-map\n");
   }
@@ -93,11 +99,13 @@ it("hookCommand: runs the repo.exe a Windows install links when there is no plai
 
 it("hookCommand: says run bun install and exits 1 in a checkout with no install", () => {
   const dir = tempDir("hook-cmd-");
+
   const r = spawnSync("sh", ["-c", hookCommand("gate-fat-tools")], {
     cwd: dir,
     encoding: "utf8",
     env: { CLAUDE_PROJECT_DIR: dir, PATH: repoEnv.process.PATH },
   });
+
   expect(r.status).toBe(1);
   expect(r.stdout).toBe("");
   expect(r.stderr).toBe(`repo: ${dir}/node_modules/.bin/repo is missing; run bun install\n`);
@@ -115,8 +123,10 @@ function setup(mainBin: "repo" | "repo.exe" | null, ownBin: "repo" | "repo.exe" 
   const { main, wt } = mainWithOutWorktree(base);
   put(main, mainBin, "main");
   put(wt, ownBin, "own");
+
   return { base, main, wt };
 }
+
 function run(cwd: string, project: string) {
   return spawnSync("sh", ["-c", hookCommand("session-map")], {
     cwd,
@@ -186,22 +196,27 @@ it(
 
 it("expandHookCommand: expands the short form of a known hook and leaves every other command alone", () => {
   expect(expandHookCommand("repo hook worktree")).toBe(hookCommand("worktree"));
+
   for (const other of ["repo hook nope", "repo hook worktree --x", "bun repo hook worktree", hookCommand("worktree")])
     expect(expandHookCommand(other)).toBe(other);
 });
 
 it("expandHookCommand: is the only place stock sources get the shell text: they hold the short form", () => {
   const stock = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "agents");
+
   const files = [
     "hooks.jsonc",
     ...fs.readdirSync(path.join(stock, "grok", "hooks")).map((f) => path.join("grok", "hooks", f)),
   ];
+
   const commands = files.flatMap((rel) =>
     [...fs.readFileSync(path.join(stock, rel), "utf8").matchAll(/"command":\s*"((?:[^"\\]|\\.)*)"/g)].map(
       (m) => [rel, m[1] ?? ""] as const,
     ),
   );
+
   expect(commands.length).toBeGreaterThan(10);
+
   for (const [rel, command] of commands) expect(command, rel).toMatch(/^repo hook [\w-]+$/);
 });
 

@@ -10,20 +10,26 @@ import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];
+
 // Roots and session come from the payload alone, as in a live session.
 const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
+
 const AWAY =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
+
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
+
 function live(shape: Shape, ws: string, sid: string): HookSession {
   return hookSession(kit, { env: UNSET, shape, sid, ws });
 }
+
 function setKey(file: string, key: string, value: string) {
   return fs.writeFileSync(
     file,
     fs.readFileSync(file, "utf8").replace(new RegExp(`^${key}: .*$`, "m"), `${key}: ${value}`),
   );
 }
+
 function withMode(mode: string) {
   return VALID_PLAN.replace("strategy: default", `strategy: default\nmode: ${mode}`);
 }
@@ -79,9 +85,11 @@ it.each(SHAPES)("a review spawn holds the closing line until the plan's reviews 
   s.say("plan it");
   const plan = s.reviewed("plans", VALID_PLAN);
   s.spawnReview("/review-plan 1\n\nReview it.");
+
   const reason =
     "plan 1's review has not settled; wait for it, " +
     "settle its findings with reviews bumped, then end with the closing line";
+
   expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({ decision: "block", reason });
   setKey(plan, "reviews", "2");
   expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();

@@ -7,13 +7,17 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { initMcpJson } from "./init-mcp-json.ts";
 
 const dirs: string[] = [];
+
 function tmp() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "init-mcp-json-"));
   dirs.push(dir);
+
   return dir;
 }
+
 afterEach(() => {
   vi.restoreAllMocks();
+
   for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
 

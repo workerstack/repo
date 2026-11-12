@@ -12,21 +12,25 @@ export type Manifest = { version: 1; paths: string[] };
 export function readManifest(root: string): Manifest {
   try {
     const data: unknown = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_REL), "utf8"));
+
     if (typeof data === "object" && data !== null) {
       const version: unknown = Reflect.get(data, "version");
       const paths: unknown = Reflect.get(data, "paths");
+
       if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string"))
         return { paths: paths, version: 1 };
     }
   } catch {
     // falls through to the empty manifest
   }
+
   return { paths: [], version: 1 };
 }
 
 /** The manifest file text for `paths`: deduped and sorted, so equal sets give equal bytes. */
 export function renderManifest(paths: readonly string[]): string {
   const manifest: Manifest = { paths: [...new Set(paths)].toSorted(), version: 1 };
+
   return `${JSON.stringify(manifest, null, JSON_INDENT)}\n`;
 }
 
@@ -46,15 +50,20 @@ function slash(text: string): string {
  */
 export function normalizeRel(raw: string, root: string): string | null {
   let rel = slash(raw);
+
   if (DRIVE_SLASH.test(rel) || rel.startsWith("/")) {
     const base = `${slash(root).replace(TRAILING_SLASH, "")}/`;
     const drive = DRIVE.test(base);
     const head = rel.slice(0, base.length);
+
     if (drive ? head.toLowerCase() !== base.toLowerCase() : head !== base) return null;
     rel = rel.slice(base.length);
   }
+
   const parts = rel.split("/").filter((part) => part !== "" && part !== ".");
+
   if (parts.length === 0 || parts.includes("..")) return null;
+
   return parts.join("/");
 }
 
@@ -62,9 +71,12 @@ export function normalizeRel(raw: string, root: string): string | null {
 export function prunePaths(prev: Manifest, outputPaths: Iterable<string>, root: string): string[] {
   const keep = new Set(outputPaths);
   const stale = new Set<string>();
+
   for (const raw of prev.paths) {
     const rel = normalizeRel(raw, root);
+
     if (rel !== null && !keep.has(rel)) stale.add(rel);
   }
+
   return [...stale].toSorted();
 }

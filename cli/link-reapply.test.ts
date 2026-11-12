@@ -116,9 +116,11 @@ it("reapplies into the main checkout's install from a worktree without one", asy
   installAgain(w.main, "0.3.3");
   const tree = path.join(w.base, "repo-wt");
   fs.mkdirSync(tree);
+
   function git(_cwd: string, args: readonly string[]) {
     return args.includes("--git-common-dir") ? path.join(w.main, ".git") : tree;
   }
+
   await reapplyLinks(w.io({ cwd: tree, git }));
   expect(versionIn(w.main, NAME)).toBe("0.4.0-dev");
 });
@@ -128,10 +130,12 @@ it("reapplies from a directory and prints a line each through the given writers"
   await main([NAME], w.io());
   installAgain(w.main, "0.3.3");
   const lines: string[] = [];
+
   const writers = {
     stderr: (text: string) => lines.push(`err ${text}`),
     stdout: (text: string) => lines.push(`out ${text}`),
   };
+
   await reapplyAt(w.main, writers);
   fs.rmSync(w.flare, { recursive: true });
   await reapplyAt(w.main, writers);

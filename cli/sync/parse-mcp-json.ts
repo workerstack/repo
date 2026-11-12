@@ -7,6 +7,7 @@ import { parse, type ParseError } from "jsonc-parser";
 const MCP_JSON = ".mcp.json";
 const SERVERS_KEY = "mcpServers";
 const FIX = "fix it, nothing written";
+
 /** Plain JSON: what `claude mcp add --scope project` writes and every host parses. */
 const STRICT = { allowEmptyContent: false, allowTrailingComma: false, disallowComments: true };
 
@@ -29,8 +30,11 @@ export function parseMcpJson(text: string | null): { ok: true; servers: Json } |
   const errors: ParseError[] = [];
   const value: unknown = parse(text, errors, STRICT);
   const [first] = errors;
+
   if (first !== undefined) return failed(`not valid JSON at line ${text.slice(0, first.offset).split("\n").length}`);
+
   if (!isObject(value)) return failed("not a JSON object");
   const servers = Object.hasOwn(value, SERVERS_KEY) ? value[SERVERS_KEY] : {};
+
   return isObject(servers) ? { ok: true, servers } : failed(`${SERVERS_KEY} is not an object`);
 }

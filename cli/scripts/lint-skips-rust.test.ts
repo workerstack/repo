@@ -11,6 +11,7 @@ import { checkLintSkips } from "./lint-skips.ts";
 const REASON = "the crate unwraps a value its caller checked";
 const UNWRAP = "src/lib.rs:3:27: error clippy(unwrap_used): used `unwrap()` on a `Result` value";
 const HIT = { file: "src/lib.rs", line: UNWRAP, rule: "clippy(unwrap_used)" };
+
 const SCRIPT_HIT = {
   file: "src/lib.rs",
   line: "src/lib.rs:2:1: error repo(rust-block-comment): Rust comments use the line form",
@@ -28,12 +29,14 @@ function untracked(files: Record<string, string>): Workspace {
 function checkout(files: Record<string, string>): Workspace {
   const ws = untracked(files);
   execFileSync("git", ["init", "-q"], { cwd: ws.root });
+
   return ws;
 }
 
 function skip(files: string[], rules: string[]): LintSkip {
   return { files, reason: REASON, rules };
 }
+
 const CRATE = { "Cargo.toml": "[package]\n", "src/lib.rs": "pub fn f() {}\n", "src/main.rs": "fn main() {}\n" };
 
 it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hits it turns off", () => {

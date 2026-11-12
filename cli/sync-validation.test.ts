@@ -21,9 +21,12 @@ import { failManifestRename } from "./sync/__fixtures__/write-kit.ts";
 import { type Generator } from "./sync/outputs.ts";
 
 useSyncKit();
+
 const BAD_OVERLAY = JSON.stringify({ hooks: { PreToolUse: "x" } });
+
 const SCHEMA_LINE =
   "repo sync: .claude/settings.json: hooks.PreToolUse: Invalid input: expected array, received string\n";
+
 function settings(text: string): Generator[] {
   return generating({ content: text, kind: "file", managed: "whole", path: ".claude/settings.json", tracked: false });
 }
@@ -31,9 +34,11 @@ function settings(text: string): Generator[] {
 it("names a schema miss with its dotted path, writes nothing and exits 1", async () => {
   const root = fixture();
   const before = snapshot(root);
+
   const result = await syncWith(root, {
     generators: [...generating(file("bunfig.toml", BUNFIG)), ...settings(BAD_OVERLAY)],
   });
+
   expect(result).toStrictEqual({ code: 1, stderr: `${SCHEMA_LINE}repo sync: nothing written\n`, stdout: "" });
   expect(snapshot(root)).toStrictEqual(before);
 });
@@ -74,9 +79,11 @@ it("accepts a valid overlay result", async () => {
 
 it("refuses a link that points nowhere", async () => {
   const root = fixture();
+
   const result = await syncWith(root, {
     generators: generating(link(".claude/skills/ask", "../../.agents/skills/ask")),
   });
+
   expect(result.stderr).toBe(
     "repo sync: .claude/skills/ask: link target ../../.agents/skills/ask does not exist\nrepo sync: nothing written\n",
   );

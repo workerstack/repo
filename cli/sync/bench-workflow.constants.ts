@@ -1,6 +1,7 @@
 import { UPLOAD } from "./release.constants.ts";
 
 export const BENCH_PATH: string = ".github/workflows/bench.yml";
+
 /** One OS runs a spec's warmup and runs in minutes; an hour leaves room for a slow candidate and a cold runner. */
 const BENCH_TIMEOUT_MINUTES: number = 60;
 

@@ -54,6 +54,7 @@ it("refuses overrides in a package rule and leaves that rule out", () => {
     "packages/web/.repo/rules/y.md": doc("y", "overrides: foo\n"),
     "packages/web/.repo/rules/z.md": doc("z"),
   });
+
   const result = loadSources({ consumerRoot: consumer, packages: ["packages/web"], stockRoot: stock() });
   expect(result.problems).toStrictEqual([
     "packages/web/.repo/rules/y.md: overrides has no meaning in a package rule; remove it",

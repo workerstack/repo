@@ -27,13 +27,16 @@ export function filled(v: unknown): string | undefined {
 /** The account named `id` (blank is the default) under `home`; throws on a name that is not a plain id. */
 export function accountContext(id?: unknown, home: string = os.homedir()): WorkspaceAccount {
   const s = filled(filled(id)?.trim()) ?? DEFAULT_ACCOUNT;
+
   if (!ACCOUNT_RE.test(s)) throw new Error("bad --account (letters, numbers, _- only)");
+
   return { home, id: s };
 }
 
 function stateHome(home: string): string {
   const d = path.join(home, ".workerstack");
   fs.mkdirSync(d, { mode: SECRET_DIR_MODE, recursive: true });
+
   return d;
 }
 
@@ -69,20 +72,25 @@ export function writeSecretJson(p: string, obj: unknown): void {
 function toToken(j: Rec, p: string): Token | null {
   const refreshToken = filled(j.refresh_token);
   const clientId = filled(j.client_id);
+
   if (refreshToken === undefined || clientId === undefined) return null;
+
   return { ...j, client_id: clientId, refresh_token: refreshToken, sourcePath: p };
 }
 
 function tokenFromStore(account: WorkspaceAccount): Token | null {
   const p = tokenStorePath(account);
   const j = rec(readJson(p));
+
   return toToken(j, p);
 }
 
 function tokenFromAdc(home: string): Token | null {
   const p = adcPath(home);
   const j = rec(readJson(p));
+
   if (j.type === ADC_USER) return toToken(j, p);
+
   return null;
 }
 
@@ -90,9 +98,11 @@ function tokenFromClasprc(home: string): Token | null {
   const p = path.join(home, ".clasprc.json");
   const t = rec(rec(rec(readJson(p)).tokens).default);
   const refreshToken = filled(t.refresh_token);
+
   if (refreshToken === undefined) return null;
   // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
   const clientId = typeof t.client_id === "string" ? t.client_id : "";
+
   return { ...t, client_id: clientId, isClasprc: true, refresh_token: refreshToken, sourcePath: p };
 }
 
@@ -113,8 +123,10 @@ export function persistToken(account: WorkspaceAccount, t: Token): void {
     tokens.default = publicFields(t);
     raw.tokens = tokens;
     writeSecretJson(t.sourcePath, raw);
+
     return;
   }
+
   const dest = t.sourcePath === adcPath(account.home) ? tokenStorePath(account) : t.sourcePath;
   writeSecretJson(dest, publicFields(t));
 }
@@ -123,17 +135,21 @@ export function persistToken(account: WorkspaceAccount, t: Token): void {
 export function listAccounts(home: string): string {
   const root = path.join(stateHome(home), "workspace");
   const names = new Set<string>();
+
   try {
     for (const ent of fs.readdirSync(root, { withFileTypes: true }))
       if (ent.isDirectory() && ACCOUNT_RE.test(ent.name)) names.add(ent.name);
   } catch {
     // none
   }
+
   const lines = [...names].toSorted().map((n) => {
     const account = accountContext(n, home);
     const creds = fs.existsSync(credsDefaultPath(account)) ? "oauth" : "-";
     const tok = fs.existsSync(tokenStorePath(account)) ? "tokens" : "-";
+
     return `${n}  ${creds}  ${tok}`;
   });
+
   return lines.length > 0 ? lines.join("\n") : "no accounts";
 }

@@ -44,12 +44,14 @@ const binSchema = /* @__PURE__ */ buildBinSchema();
 /** A failed command's own words: its stderr, else its stdout. */
 function detail(run: Captured): string {
   const stderr = run.stderr.trim();
+
   return stderr === "" ? run.stdout.trim() : stderr;
 }
 
 /** Prints a refusal and returns null, the failure every step answers with. */
 export function refuse(deps: MutateDeps, line: string, extra = ""): null {
   deps.err(`repo mutate: ${line}${NEWLINE}${extra}`);
+
   return null;
 }
 
@@ -58,9 +60,11 @@ export function checkout(clone: string, plan: Plan, deps: MutateDeps): boolean {
   const cloned = deps.git(plan.root, ["clone", "-q", "--shared", plan.root, clone]);
   const detach = ["-C", clone, "checkout", "-q", "--detach", plan.sha];
   const last = cloned.code === 0 ? deps.git(plan.root, detach) : cloned;
+
   if (last.code === 0) return true;
   const what = cloned.code === 0 ? `check out ${plan.sha.slice(0, SHORT_SHA)} in the clone` : `clone ${plan.root}`;
   refuse(deps, `could not ${what}: ${detail(last)}`);
+
   return false;
 }
 
@@ -73,13 +77,16 @@ function strykerBin(clone: string, deps: MutateDeps): string | null {
   const parsed = manifest?.ok === true ? binSchema.safeParse(manifest.value) : null;
   const bin = parsed?.success === true ? parsed.data.bin : undefined;
   const relative = typeof bin === "string" ? bin : bin?.[STRYKER_BIN_NAME];
+
   if (relative === undefined) return refuse(deps, `install the mutation tool first: ${INSTALL_HINT}`);
+
   return path.join(modules, STRYKER_CORE, relative);
 }
 
 /** The Stryker config for `files`, written beside the clone with its raw report path. */
 function configOf(files: string[], rawReport: string): string {
   const config = { ...STRYKER_OPTIONS, jsonReporter: { fileName: rawReport }, mutate: files };
+
   return JSON.stringify(config, null, JSON_INDENT);
 }
 
@@ -87,6 +94,7 @@ function lineCounts(clone: string, files: string[], deps: MutateDeps): Map<strin
   function count(file: string) {
     return (deps.fs.read(path.join(clone, file)) ?? "").split(NEWLINE).length;
   }
+
   return new Map(files.map((file) => [file, count(file)]));
 }
 
@@ -98,13 +106,16 @@ function stryker(base: string, run: { files: string[]; bin: string }, deps: Muta
   const raw = path.join(base, RAW_REPORT_NAME);
   deps.fs.write(config, configOf(files, raw));
   const ran = deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone);
+
   if (ran.code !== 0)
     return refuse(deps, "the tests failed before any mutant ran; fix them first", ran.stdout + ran.stderr);
 
   const text = deps.fs.read(raw);
+
   if (text === null) return refuse(deps, "Stryker wrote no readable report: the report file is missing");
   const json = parseJson(text);
   const scores = json.ok ? fromStryker(json.value) : json;
+
   return scores.ok ? scores.value : refuse(deps, `Stryker wrote no readable report: ${scores.reason}`);
 }
 
@@ -113,19 +124,24 @@ export type Ran = { report: ShardReport; files: number };
 
 function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
   const clone = path.join(base, CLONE_DIR);
+
   if (!checkout(clone, plan, deps)) return null;
   const mine = splitShards(plan.files, lineCounts(clone, plan.files, deps), plan.shard);
+
   function ran(files: ShardReport["files"]): Ran {
     return {
       files: mine.length,
       report: { files, head: plan.sha, shard: plan.shard, tool: "stryker" },
     };
   }
+
   if (mine.length === 0) return ran({});
   const installed = deps.run([...INSTALL_ARGS], clone);
+
   if (installed.code !== 0) return refuse(deps, `${INSTALL_COMMAND} failed in the clone: ${detail(installed)}`);
   const bin = strykerBin(clone, deps);
   const scores = bin === null ? null : stryker(base, { bin, files: mine }, deps);
+
   return scores === null ? null : ran(scores);
 }
 
@@ -136,6 +152,7 @@ export function inTempDir(
   mutate: (base: string, plan: Plan, deps: MutateDeps) => Ran | null,
 ): Ran | null {
   const base = deps.fs.mkdtemp(TEMP_PREFIX);
+
   try {
     return mutate(base, plan, deps);
   } finally {

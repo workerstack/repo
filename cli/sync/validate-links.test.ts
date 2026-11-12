@@ -16,10 +16,12 @@ function tmpRoot(): string {
 it("accepts a link to a path on disk, relative or absolute", () => {
   const root = tmpRoot();
   fs.mkdirSync(path.join(root, "agents/skills/ask"), { recursive: true });
+
   const outputs = [
     link(".agents/skills/ask", "../../agents/skills/ask"),
     link(".agents/skills/abs", path.join(root, "agents/skills/ask")),
   ];
+
   expect(validateOutputs(root, outputs)).toStrictEqual([]);
 });
 
@@ -37,10 +39,12 @@ it("reports a link that leaves the repo for a missing path", () => {
 it("follows a link whose target is another planned link into an existing dir", () => {
   const root = tmpRoot();
   fs.mkdirSync(path.join(root, ".repo/skills/x"), { recursive: true });
+
   const outputs = [
     link(".claude/skills/x", "../../.agents/skills/x"),
     link(".agents/skills/x", "../../.repo/skills/x"),
   ];
+
   expect(validateOutputs(root, outputs)).toStrictEqual([]);
   expect(validateOutputs(root, outputs.toReversed())).toStrictEqual([]);
 });
@@ -50,6 +54,7 @@ it("reports a chain of planned links that ends in nothing", () => {
     link(".claude/skills/x", "../../.agents/skills/x"),
     link(".agents/skills/x", "../../.repo/skills/x"),
   ];
+
   expect(validateOutputs(tmpRoot(), outputs)).toStrictEqual([
     ".claude/skills/x: link target ../../.agents/skills/x does not exist",
     ".agents/skills/x: link target ../../.repo/skills/x does not exist",

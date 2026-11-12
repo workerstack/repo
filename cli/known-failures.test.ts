@@ -8,14 +8,17 @@ const tempTree = useTempTree("known-failures-");
 /** A temp project holding `files` (path → content); the test files are those ending in `.test.ts`. */
 function project(files: Record<string, string>): { root: string; tests: string[] } {
   const root = tempTree(files);
+
   return { root, tests: Object.keys(files).filter((rel) => rel.endsWith(".test.ts")) };
 }
 
 function list(...entries: string[]) {
   return JSON.stringify(entries);
 }
+
 function run(files: Record<string, string>) {
   const { root, tests } = project(files);
+
   return knownFailures(root, tests);
 }
 
@@ -44,6 +47,7 @@ describe("knownFailures, matching the list", () => {
         'test.fails("top", () => {});\n',
       "known-failures.json": list("a.test.ts > dates > utc > parses", "a.test.ts > top"),
     });
+
     expect(problems).toStrictEqual([]);
   });
 
@@ -52,6 +56,7 @@ describe("knownFailures, matching the list", () => {
       "a.test.ts": 'describe("dates", () => { it.fails("parses", () => {}); });\n',
       "known-failures.json": list("a.test.ts > parses"),
     });
+
     expect(problems).toStrictEqual([
       'a.test.ts:1: it.fails("parses") is not in known-failures.json; list it or fix it',
       'known-failures.json lists "a.test.ts > parses", which has no it.fails; remove it from the list',
@@ -72,6 +77,7 @@ describe("knownFailures, titles and files", () => {
       "a.test.ts": 'const name = "x";\nit.fails("fine", () => {});\nit.fails(name, () => {});\n',
       "known-failures.json": list("a.test.ts > fine"),
     });
+
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(/^a\.test\.ts:3: it\.fails\(\) title is not a string literal/);
   });
@@ -81,6 +87,7 @@ describe("knownFailures, titles and files", () => {
       "a.test.ts": "it.fails(`plain`, () => {});\n",
       "known-failures.json": list("a.test.ts > plain"),
     });
+
     expect(problems).toStrictEqual([]);
   });
 });
@@ -100,6 +107,7 @@ describe("knownFailures, what it leaves alone", () => {
       "a.test.ts": 'it.fails("x", () => {});\n',
       "lists/kf.json": list("a.test.ts > x"),
     });
+
     expect(knownFailures(root, tests, "lists/kf.json")).toStrictEqual([]);
   });
 });
@@ -111,6 +119,7 @@ describe("knownFailures, odd shapes", () => {
         "it.fails(`a ${1}`, () => {});\nit.fails(5, () => {});\n" +
         'describe(name, () => { it.fails("x", () => {}); });\nit.fails();\n',
     });
+
     expect(problems.map((line) => line.slice(0, "a.test.ts:N".length))).toStrictEqual([
       "a.test.ts:1",
       "a.test.ts:2",
@@ -123,6 +132,7 @@ describe("knownFailures, odd shapes", () => {
     const problems = run({
       "a.test.ts": 'it["fails"]("x", () => {});\nmake()("y");\nmake().fails("z");\nthis.fails("w");\nit.fails;\n',
     });
+
     expect(problems).toStrictEqual([]);
   });
 

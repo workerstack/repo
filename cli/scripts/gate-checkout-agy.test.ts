@@ -26,6 +26,7 @@ it(
     "and passes them in a worktree",
   () => {
     const r = tmp.committed("gate-main-");
+
     for (const call of [agyWrite(r, path.join(r, "src/x.ts")), agyEdit(r, path.join(r, "src/x.ts"))])
       expect(processHookPayload(call)).toStrictEqual({ decision: "deny", reason: reasonOf(r) });
 
@@ -60,9 +61,11 @@ it("Antigravity: redirects a root-level scratch write_file under .tmp/repo, over
 
 it("Antigravity: grants a git subcommand from the prompt text in lastUserInput, and nothing else", () => {
   const r = tmp.committed("gate-main-");
+
   function sh(command: string, extra: Record<string, string>) {
     return processFatTools(agySh(r, command, extra));
   }
+
   expect(processHookPayload(agySh(r, "git stash"))).toStrictEqual({ decision: "deny", reason: STASH_REASON });
   expect(notDenied(sh("git stash", { lastUserInput: "run git stash in the main checkout" }))).toBe(true);
   expect(sh("git clean -fd", { lastUserInput: "clean up the code" })).toMatchObject({ type: "deny" });

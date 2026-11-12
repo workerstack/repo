@@ -4,6 +4,7 @@ import { buildRepo, cleanDirs, exists, planter } from "./__fixtures__/clean-kit.
 import { main } from "./clean.ts";
 
 const tempDir = cleanDirs();
+
 function inRepo(root: string) {
   return vi.spyOn(process, "cwd").mockReturnValue(root);
 }

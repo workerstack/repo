@@ -17,13 +17,16 @@ afterEach(() => {
 
 function portOf(server: net.Server): number {
   const a = server.address();
+
   if (a === null || typeof a === "string") throw new Error("not listening");
+
   return a.port;
 }
 
 async function listen(server: net.Server): Promise<number> {
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   closers.push(() => server.close());
+
   return portOf(server);
 }
 
@@ -31,34 +34,40 @@ async function deadPort(): Promise<number> {
   const s = net.createServer();
   const port = await listen(s);
   await new Promise<void>((r) => s.close(() => r()));
+
   return port;
 }
 
 async function serve(state: Parameters<typeof serveCdp>[0] = {}) {
   const s = await serveCdp(state);
   closers.push(() => s.close());
+
   return s;
 }
 
 async function connect(port: number): Promise<Cdp> {
   const cdp = await connectCdp(port);
   closers.push(() => cdp.close());
+
   return cdp;
 }
 
 async function cdpOf(state: Parameters<typeof serveCdp>[0] = {}) {
   const s = await serve(state);
+
   return { cdp: await connect(s.port), s };
 }
 
 async function getJson(port: number, route = "/json/version") {
   const res = await fetch(`http://127.0.0.1:${port}${route}`);
+
   return res.json();
 }
 
 function target(url: string) {
   return { targetInfos: [{ attached: true, targetId: "t1", type: "page", url }] };
 }
+
 function evalOf(value: string) {
   return { result: { type: "string", value } };
 }
@@ -173,10 +182,12 @@ it("stops answering new connections after close()", async () => {
 
 it("retries a not-ok version reply, and a port nothing listens on yet, until the engine answers", async () => {
   let hits = 0;
+
   const flaky = http.createServer((_req, res) => {
     res.statusCode = ++hits < 3 ? 503 : 200;
     res.end(JSON.stringify({ webSocketDebuggerUrl: "ws://127.0.0.1:1/x" }));
   });
+
   await expect(connectCdp(await listen(flaky), 2000)).rejects.toThrow("engine not ready");
   expect(hits).toBe(3);
   const port = await deadPort();
@@ -204,9 +215,11 @@ it("rejects a version reply without a usable websocket url, or one that cannot o
 
 it("rejects when the upgrade never completes within the time given", async () => {
   const sockets: { destroy(): void }[] = [];
+
   const server = http.createServer((_req, res) =>
     res.end(JSON.stringify({ webSocketDebuggerUrl: `ws://127.0.0.1:${portOf(server)}/x` })),
   );
+
   server.on("upgrade", (_req, socket) => sockets.push(socket));
   closers.push(() => {
     for (const s of sockets) s.destroy();

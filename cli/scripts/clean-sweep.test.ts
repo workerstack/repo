@@ -15,6 +15,7 @@ const GONE = [
   ".tmp/repo/orchestrator-logs/ask-stop-default",
   ".tmp/repo/stash/old.txt",
 ];
+
 const KEPT = [
   ".tmp/repo/plans/1-a-20261103T000000Z.md",
   ".tmp/repo/roadmaps/1-r-20261103T000000Z.md",
@@ -33,7 +34,9 @@ it("repo clean removes agent scratch, dead sessions, stale stamps and old stash;
   const has = exists(root);
   const { code, lines } = clean(root);
   expect(code).toBe(0);
+
   for (const gone of GONE) expect(has(gone), gone).toBe(false);
+
   for (const kept of KEPT) expect(has(kept), kept).toBe(true);
   expect(lines.some((l) => l.startsWith("removed "))).toBe(true);
   expect(lines.some((l) => l.startsWith("kept "))).toBe(true);

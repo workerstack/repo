@@ -39,6 +39,7 @@ it("win32 → chromium even if lightpanda present", () => {
     url: "https://example.com/",
     verb: "nav",
   });
+
   expect(r.engine).toBe("chromium");
 });
 
@@ -65,12 +66,14 @@ it("knows the paint hosts, their subdomains, and the google earth path", () => {
     "https://www.amazon.de/",
   );
   expect(urls.filter((u) => !isPaintHost(u))).toStrictEqual([]);
+
   const other = [
     "https://google.com/maps",
     "https://www.google.com/",
     "https://notfigma.com/",
     "https://x.test/amazon",
   ];
+
   expect([...other, "", "not a url", undefined, null].filter((u) => isPaintHost(u))).toStrictEqual([]);
 });
 
@@ -84,10 +87,13 @@ it("calls a page blocked when it asks for javascript, or is empty with no refs",
 
 it("looks up lightpanda and the first chromium name on the given PATH", () => {
   const dir = tmp("bins-");
+
   function put(name: string) {
     fs.writeFileSync(path.join(dir, name), "#!/bin/sh\n", { mode: 0o755 });
+
     return path.join(dir, name);
   }
+
   expect(lookupBins(dir, "linux")).toStrictEqual({ chromium: "", lightpanda: "" });
   const second = put("chromium-browser");
   expect(lookupBins(dir, "linux").chromium).toBe(second);
@@ -136,6 +142,7 @@ it("lists the verbs for no verb, help, -h and --help, in any case", async () => 
     stderr: "",
     stdout: "nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure\n",
   };
+
   const argvs = [[], [""], ["help"], ["HELP"], ["-h"], ["--help"]];
   expect(await Promise.all(argvs.map((a) => runBrowser(a)))).toStrictEqual(argvs.map(() => help));
 });

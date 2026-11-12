@@ -24,14 +24,18 @@ function exportedName(name: TSESTree.Identifier | TSESTree.StringLiteral): strin
 function exportsOf(statement: Node): string[] | null {
   if (statement.type === AST_NODE_TYPES.ExportAllDeclaration)
     return statement.exported === null ? null : [exportedName(statement.exported)];
+
   if (statement.type !== AST_NODE_TYPES.ExportNamedDeclaration) return [];
+
   if (statement.declaration !== null) return declaredNames(statement.declaration);
+
   return statement.specifiers.map((specifier) => exportedName(specifier.exported));
 }
 
 function letters(name: string): string {
   return name.toLowerCase().replaceAll(NON_ALPHANUMERIC, "");
 }
+
 function kebab(name: string): string {
   return name
     .replaceAll(LOWER_THEN_UPPER, "$1-$2")
@@ -43,11 +47,15 @@ function kebab(name: string): string {
 /** The one name `program` exports, or null when it exports none, several, or an unknown set. */
 function soleExport(program: TSESTree.Program): string | null {
   const names = new Set<string>();
+
   for (const statement of program.body) {
     const found = exportsOf(statement);
+
     if (found === null) return null;
+
     for (const name of found) names.add(name);
   }
+
   return names.size === 1 ? [...names].join("") : null;
 }
 
@@ -58,12 +66,15 @@ function soleExport(program: TSESTree.Program): string | null {
 export const filenameMatchesExport: RepoRule<"rename"> = {
   create(context) {
     const base = path.basename(context.filename);
+
     if (SKIPPED.test(base)) return {};
     // oxlint lints only files with an extension, so the name has a dot.
     const stem = base.slice(0, base.indexOf("."));
+
     return {
       Program(program) {
         const name = soleExport(program);
+
         if (name === null || name === ENTRY_EXPORT || letters(name) === letters(stem)) return;
         const renamed = `${kebab(name)}${base.slice(stem.length)}`;
         context.report({ data: { base, name, renamed }, messageId: "rename", node: program });

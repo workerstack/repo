@@ -12,11 +12,13 @@ export type ResolvedAgents = {
   /** The optional skill packs shipped to the agents: none unless the config lists some. */
   readonly skills: readonly SkillPack[];
 };
+
 /** What the commit-msg hook checks a commit against. */
 export type ResolvedCommit = {
   /** The most lines one commit may change before the commit-msg hook refuses it. */
   readonly maxChangedLines: number;
 };
+
 /** One `lint.skip` entry: the rules (oxlint keys) it turns off, for the files its globs match, and why. */
 export type LintSkip = {
   /** Globs of the files the exception covers, relative to the repo root. */
@@ -26,6 +28,7 @@ export type LintSkip = {
   /** Why the rule cannot hold here; `repo check` fails the entry when it no longer silences anything. */
   reason: string;
 };
+
 /** `lint.boundaries`: which layer each package sits on, and which layers each may import. */
 export type LintBoundaries = {
   /** Package name to its one tag, like `{ "@app/web": "app" }`; an untagged package is not judged. */
@@ -33,11 +36,13 @@ export type LintBoundaries = {
   /** Tag to the other tags its packages may import, like `{ app: ["ui"], ui: [] }`; a tag may import its own. */
   readonly allow: Readonly<Record<string, readonly string[]>>;
 };
+
 /** `lint.tailwind`: the Tailwind v4 entry sheet oxlint checks class names against. */
 export type LintTailwind = {
   /** The repo-relative `.css` file that imports tailwindcss, like `apps/web/src/app.css`. */
   readonly entryPoint: string;
 };
+
 /** What the generated oxlint config and `repo check` read from `lint`. */
 export type ResolvedLint = {
   /** The reasoned exceptions to lint rules; empty when the config lists none. */
@@ -47,6 +52,7 @@ export type ResolvedLint = {
   /** The entry sheet the tailwindcss class rules load the theme from; absent when there is none. */
   readonly tailwind?: LintTailwind | undefined;
 };
+
 /** A validated workerstack.config.ts with every omitted value filled in, as the `repo` commands read it. */
 export type ResolvedConfig = {
   /** The packs that are on: the defaults when the config omits `packs`. */
@@ -90,6 +96,7 @@ export type ResolvedConfig = {
     readonly checks: Readonly<Record<string, readonly string[]>>;
   };
 };
+
 /** What loading a config gives back: the resolved config, or every problem found, each starting with the file name. */
 export type LoadResult =
   | {

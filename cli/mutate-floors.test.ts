@@ -10,6 +10,7 @@ it("scores killed over killed plus survivors, so errors, ignored and compile err
   const files = {
     "a.ts": { killed: 8, survivors: [survivor, { ...survivor, status: "NoCoverage" as const }] },
   };
+
   const [score] = [...tally(files, []).values()];
   expect(percentOf(score ?? { killed: 0, survivors: 0 })).toBe(80);
 });
@@ -40,11 +41,15 @@ function unsharded(floors: Record<string, number> | string | null) {
     "packages/a/src/x.ts": ["Killed", "Killed", "Timeout", "Survived", "CompileError"],
     "src/y.ts": ["Killed", "NoCoverage"],
   });
+
   const config = { floors: "mf.json", mutate: ["**/src/*.ts"], root: ROOT };
+
   const f = fakes(sim({ config, sources: FILES, stryker: { code: 0, output: "", report }, tracked: TRACKED }), [
     "packages/a",
   ]);
+
   if (floors !== null) f.files.set(at("mf.json"), typeof floors === "string" ? floors : JSON.stringify(floors));
+
   return f;
 }
 

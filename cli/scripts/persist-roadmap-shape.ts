@@ -28,10 +28,13 @@ import { capErrors, cardErrors, usageErrors } from "./persist-sections.ts";
  */
 export function locationOk(loc: string, p: path.PlatformPath = path): boolean {
   const norm = loc.replaceAll("\\", "/");
+
   if (p.isAbsolute(loc) || DRIVE_RE.test(loc)) return true;
   const prefix = `${PLAN_DIR}/`;
+
   if (!norm.startsWith(prefix)) return false;
   const base = norm.slice(prefix.length);
+
   return !base.includes("/") && FILENAME_RE.test(base);
 }
 
@@ -50,6 +53,7 @@ export function pointerErrors({ text, body, order: allOrder, bodies, fresh, prev
   const order = allOrder.filter((h) => h !== MISTAKES_H2);
   const kept = order.filter((h) => POINTER_H2.includes(h));
   const slices = parsePointerSlices(bodies.Order ?? "");
+
   return [
     ...(fresh ? cardErrors(body) : []),
     ...order
@@ -73,6 +77,7 @@ export function pointerErrors({ text, body, order: allOrder, bodies, fresh, prev
 function bulletErrors(bodies: Record<string, string>): string[] {
   return BULLET_H2.flatMap((h) => {
     const b = (bodies[h] ?? "").trim();
+
     return when({ bad: b === "" || !BULLETS_RE.test(b), error: `${h.toLowerCase()} bullets` });
   });
 }
@@ -80,6 +85,7 @@ function bulletErrors(bodies: Record<string, string>): string[] {
 function sliceErrors(slice: Slice): string[] {
   const words = wordsOf(slice.title).length;
   const why = sentences(slice.why).length;
+
   return [
     ...when({ bad: words < TITLE_WORDS_MIN || words > TITLE_WORDS_MAX, error: "title" }),
     ...when({ bad: !slice.hasGoal || sentences(slice.goal).length !== 1, error: "slice goal" }),
@@ -100,6 +106,7 @@ export function legacyErrors(
   const order = allOrder.filter((h) => h !== MISTAKES_H2 && h !== USAGE_H2);
   const goal = sentences(bodies.Goal ?? "").length;
   const slices = parseSlices(bodies.Order ?? "");
+
   return [
     ...usageErrors(allOrder, bodies, { fresh }),
     ...when({ bad: REQUIRED_H2.some((h, i) => order[i] !== h), error: "heading order" }),

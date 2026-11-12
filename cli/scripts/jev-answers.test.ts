@@ -45,11 +45,14 @@ it("rejecting input before any request: names the setup step when there is no ke
 
 it("what is sent: sends non-JSON state as text and JSON-looking state as data", async () => {
   const sent: unknown[] = [];
+
   function fetchImpl(_url: string, init: { body: string }) {
     const body: unknown = JSON.parse(init.body);
     sent.push(isRecord(body) ? body.state : undefined);
+
     return Promise.resolve(reply(200, answerBody()));
   }
+
   await go({ fetchImpl, stateText: "plain words" });
   await go({ fetchImpl, stateText: ' {"a":1}' });
   await go({ fetchImpl, stateText: "[1,2]" });
@@ -65,6 +68,7 @@ it("what is sent: uses the clock when no time is injected, and waits on the real
     questionsText: QUESTIONS,
     stateText: "s",
   });
+
   expect(out.code).toBe(0);
 });
 
@@ -83,6 +87,7 @@ it("reading the reply: prints each answer type and skips malformed ones", async 
       e: "not a record",
     },
   });
+
   const out = await go({ fetchImpl: scripted(reply(200, body)) });
   expect(out).toStrictEqual({
     code: 0,
@@ -92,10 +97,12 @@ it("reading the reply: prints each answer type and skips malformed ones", async 
 
 it("reading the reply: prints at most eight lines", async () => {
   const answers = Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`k${i}`, { noul: i, type: "noul" }]));
+
   const out = await go({
     fetchImpl: scripted(reply(200, answerBody({ answers }))),
     questionsText: JSON.stringify(Object.fromEntries(Object.keys(answers).map((k) => [k, {}]))),
   });
+
   expect(out.text.trimEnd().split("\n")).toHaveLength(8);
 });
 
@@ -125,6 +132,7 @@ it("reading the reply: uses the global fetch when none is injected", async () =>
   const calls: string[] = [];
   vi.stubGlobal("fetch", (url: string) => {
     calls.push(url);
+
     return Promise.resolve(new Response(JSON.stringify(answerBody()), { status: 200 }));
   });
   const out = await go({});

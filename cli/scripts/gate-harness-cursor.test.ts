@@ -15,12 +15,15 @@ const deniedPath = ["node", "modules/x/package.json"].join("_");
 const JOB_EXEC = /node_modules\/\.bin\/repo job --job exec --query /;
 const WORKTREE_REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
 const ENV = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" };
+
 function payload(cwd: string, tool: string, input: Record<string, unknown>) {
   return inSession(cursorCall(cwd, tool, input), "cu1");
 }
+
 function cursor(cwd: string, tool: string, input: Record<string, unknown>) {
   return processHookPayload(payload(cwd, tool, input));
 }
+
 function denial(reason: string) {
   return { agent_message: reason, permission: "deny", user_message: reason };
 }
@@ -38,6 +41,7 @@ function repo() {
   fs.mkdirSync(a, { recursive: true });
   fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
   fs.writeFileSync(path.join(a, "small.md"), "x\n");
+
   return { a, r, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
 }
 
@@ -50,20 +54,24 @@ it("denies a Shell dump of a denylisted path in Cursor's reply shape", () => {
 
 it("rewrites a Shell dump, a web fetch and ls in the nested form, never with permission", () => {
   const { a } = repo();
+
   function shell(command: string) {
     return cursor(a, "Shell", { command });
   }
+
   expect(shell("cat small.md")?.hookSpecificOutput?.hookEventName).toBe("PreToolUse");
   expect(replyCommand(shell("cat small.md"))).toMatch(JOB_EXEC);
   expect(replyCommand(shell("curl https://example.com/x"))).toMatch(
     /node_modules\/\.bin\/repo job --job fetch --query /,
   );
   expect(replyInput(shell("ls src"))).toStrictEqual({ command: "rtk ls src" });
+
   for (const command of ["cat small.md", "ls src"]) {
     const out = shell(command);
     expect(Object.keys(out ?? {})).toStrictEqual(["hookSpecificOutput"]);
     expect(out?.hookSpecificOutput?.permissionDecision).toBeUndefined();
   }
+
   expect(shell("git status")).toBeNull();
 });
 
@@ -115,6 +123,7 @@ it("holds every deny guard for Cursor payloads", () => {
   fs.mkdirSync(path.join(r, "packages/c"), { recursive: true });
   const nested = path.join(a, ".gitignore");
   const rule = `${path.join(r, ".gitignore")}:1 .tmp/`;
+
   for (const out of [
     cursor(a, "Write", { content: ".tmp/\n", file_path: nested }),
     cursor(a, "Shell", { command: "echo .tmp/ > .gitignore", cwd: a }),
@@ -122,6 +131,7 @@ it("holds every deny guard for Cursor payloads", () => {
     expect(out?.permission).toBe("deny");
     expect(out?.agent_message).toContain(rule);
   }
+
   expectDenial(cursor(r, "Shell", { command: "git worktree add ../elsewhere" }), WORKTREE_REASON);
   expect(cursor(r, "Shell", { command: "git worktree add .worktrees/y -b wt/y" })).toBeNull();
   expect(fs.existsSync(nested)).toBe(false);
@@ -129,6 +139,7 @@ it("holds every deny guard for Cursor payloads", () => {
 
 it("skips tools it does not answer", () => {
   const { a } = repo();
+
   for (const name of ["List", "Delete", "Glob", "Bash"])
     expect(cursor(a, name, { file_path: "node_modules" })).toBeNull();
 });

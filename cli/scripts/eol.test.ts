@@ -20,7 +20,9 @@ describe("lf endings", () => {
       ...listJs(path.join(root, "bin")),
       ...listJs(path.join(root, "dev")),
     ];
+
     expect(files.length).toBeGreaterThan(0);
+
     for (const abs of files) {
       const buf = fs.readFileSync(abs);
       expect(buf.includes(0x0d), path.relative(root, abs)).toBe(false);

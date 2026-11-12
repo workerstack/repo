@@ -20,13 +20,16 @@ function flagOf(a: string): string | null {
   if (!a.startsWith(FLAG_PREFIX)) return null;
   const eq = a.indexOf("=");
   const prefix = eq < 0 ? a : a.slice(0, eq);
+
   return KNOWN_FLAGS.has(prefix) ? prefix : null;
 }
 
 /** The value of the flag at `i`: after its `=`, or the next word, which the scan then skips. */
 function takeValue(argv: string[], i: number, flag: string): FlagValue {
   const a = String(argv[i]);
+
   if (a === flag) return { next: i + 1, value: argv[i + 1] ?? "" };
+
   return { next: i, value: a.slice(flag.length + 1) };
 }
 
@@ -34,6 +37,7 @@ function toParsed(values: Map<string, string>, glob: string[]): Omit<ParsedArgs,
   function get(flag: string): string {
     return values.get(flag) ?? "";
   }
+
   return {
     cwd: get(CWD_FLAG),
     from: get(FROM_FLAG).trim(),
@@ -51,17 +55,22 @@ export function parseArgv(argv: string[]): ParsedArgs {
   const values = new Map<string, string>();
   const glob: string[] = [];
   let isUnknown = false;
+
   for (let i = 0; i < argv.length; i++) {
     const flag = flagOf(String(argv[i]));
+
     if (flag === null) {
       isUnknown = true;
       continue;
     }
+
     const taken = takeValue(argv, i, flag);
     i = taken.next;
+
     if (flag !== GLOB_FLAG) values.set(flag, taken.value);
     else if (taken.value !== "") glob.push(taken.value);
   }
+
   return { ...toParsed(values, glob), unknown: isUnknown };
 }
 
@@ -73,10 +82,13 @@ export function dirOrCwd(dir: string | undefined): string {
 /** `rel` resolved under `root` (the process cwd when unset), canonical; null when it leaves the root. */
 export function resolveUnder(root: string | undefined, rel?: string | null): string | null {
   const base = canonicalPath(path.resolve(dirOrCwd(root)));
+
   if (rel == null || rel === "") return base;
   const abs = canonicalPath(path.resolve(base, rel));
   const prefix = base.endsWith(path.sep) ? base : base + path.sep;
+
   if (abs !== base && !abs.startsWith(prefix)) return null;
+
   return abs;
 }
 

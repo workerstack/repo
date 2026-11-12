@@ -41,11 +41,14 @@ it("orders candidates by name and metrics by weight then name, whatever the key 
     ["cpu", { weight: 1 }],
     ["wall", { weight: 2 }],
   ]);
+
   const node = { run: ["node", "x.mjs"], setup: ["bun", "build", "x.ts"] };
+
   const candidates = Object.fromEntries<{ run: string[]; setup?: string[] }>([
     ["node", node],
     ["bun", { run: ["bun", "x.ts"] }],
   ]);
+
   const parsed = parseSpec({ candidates, metrics, os: ["macos-latest", "ubuntu-latest"], runs: 7, warmup: 2 });
   expect(parsed).toStrictEqual({ ok: true, spec: PARSED });
 });

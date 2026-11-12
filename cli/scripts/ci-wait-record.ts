@@ -11,9 +11,12 @@ import type { Runner } from "./ci-wait-run.ts";
 import { RECORD_DIR, RECORD_TEMP_SUFFIX } from "./ci-wait.constants.ts";
 
 const OUTCOMES = ["passed", "failed", "superseded", "nothing", "error"] as const;
+
 type RecordOutcome = (typeof OUTCOMES)[number];
+
 /** What happened to the `ci` run of a commit, and when it was known. */
 export type WaitRecord = { branch: string; outcome: RecordOutcome; failed: string[]; at: string };
+
 /** The file operations a record needs; node's by default. */
 export type RecordFs = Pick<typeof nodeFs, "mkdirSync" | "writeFileSync" | "renameSync" | "rmSync">;
 
@@ -32,6 +35,7 @@ const COMMON_DIR = ["rev-parse", "--path-format=absolute", "--git-common-dir"];
 export function recordRoot(git: Runner, cwd: string): string {
   const got = git(COMMON_DIR, cwd);
   const common = got.stdout.trim();
+
   return got.code === 0 && common !== "" ? path.dirname(common) : cwd;
 }
 
@@ -47,13 +51,16 @@ export function recordPath(root: string, sha: string): string {
 export function writeRecord(target: { root: string; sha: string }, record: WaitRecord, fs: RecordFs = nodeFs): boolean {
   const file = recordPath(target.root, target.sha);
   const temp = `${file}.${process.pid}${RECORD_TEMP_SUFFIX}`;
+
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(temp, `${JSON.stringify(record)}\n`);
     fs.renameSync(temp, file);
+
     return true;
   } catch {
     fs.rmSync(temp, { force: true });
+
     return false;
   }
 }

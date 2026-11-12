@@ -7,12 +7,14 @@ import { readCurrent } from "./github-read.ts";
 
 const BASE = "repos/o/r";
 const ALERTS = `${BASE}/vulnerability-alerts`;
+
 const GOOD: Record<string, unknown> = {
   [ALERTS]: "",
   [BASE]: { description: null, homepage: null, topics: [] },
   [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
   [`${BASE}/rulesets`]: [],
 };
+
 function failure(kind: GhFailure["kind"], status?: number): GhFailure {
   return {
     kind,
@@ -26,8 +28,10 @@ function failure(kind: GhFailure["kind"], status?: number): GhFailure {
 function canned(json: Record<string, unknown>, fails: Record<string, GhFailure> = {}): Gh {
   return ({ path }) => {
     const failed = fails[path];
+
     if (failed !== undefined) return Promise.resolve(failed);
     const answer = json[path];
+
     return Promise.resolve({ ok: true, stdout: typeof answer === "string" ? answer : JSON.stringify(answer ?? {}) });
   };
 }
@@ -61,6 +65,7 @@ it("reads an actor with no id as 0", async () => {
     rules: [{ type: "deletion" }],
     target: "branch",
   };
+
   const json = { ...GOOD, [`${BASE}/rulesets`]: [{ id: 1, name: "main" }], [`${BASE}/rulesets/1`]: ruleset };
   const result = await readCurrent(canned(json), "o/r");
   expect(result.ok && result.current.rulesets[0]?.bypass_actors).toStrictEqual([
@@ -77,9 +82,11 @@ it.each(PATHS)("fails with the failure of %s when that call fails", async (path)
 
 it("fails when a managed ruleset cannot be read by id", async () => {
   const stored = { ...must(wantedOf().rulesets[0]), id: 1 };
+
   const fake = fakeGh({ ...EMPTY_SETTINGS(), rulesets: [stored] }, (call) =>
     call.path.endsWith("/rulesets/1") ? failure("timeout") : undefined,
   );
+
   expect(await readCurrent(fake.gh, "o/r")).toStrictEqual(failure("timeout"));
 });
 

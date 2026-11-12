@@ -17,6 +17,7 @@ function bareCwd(): string {
   const cwd = tempDir("yolo-cwd-");
   fs.mkdirSync(path.join(cwd, ".grok"));
   fs.writeFileSync(path.join(cwd, ".grok/config.toml"), "[plugins]\nenabled = []\n");
+
   return cwd;
 }
 
@@ -24,6 +25,7 @@ function bareCwd(): string {
 function appliedHome(prefix: string, cwd: string): string {
   const home = tempDir(prefix);
   runYolo([], home, cwd);
+
   return home;
 }
 
@@ -32,6 +34,7 @@ it("applies by default and prints one apply line per host", () => {
   const r = runYolo([], home, bareCwd());
   expect(r.status).toBe(0);
   expect(r.stdout.trim().split("\n")).toStrictEqual(HOSTS.map((h) => `apply ${h.id} ${h.dest}`));
+
   for (const h of HOSTS) expect(fs.existsSync(path.join(home, h.dest))).toBe(true);
 });
 
@@ -49,6 +52,7 @@ it("--host gemini, --apply, and --check with --dry-run exit 1 with their error",
     [["--apply"], "unknown flag: --apply"],
     [["--check", "--dry-run"], "--check and --dry-run do not combine"],
   ];
+
   for (const [args, error] of cases) {
     const r = runYolo(args, tempDir("yolo-cli-bad-"));
     expect(r.status).toBe(1);
@@ -64,6 +68,7 @@ it("--check on an empty home lists every host missing, then the hint, and exits 
   expect(hint).toBe(HINT);
   const parts = line.split(" · ");
   expect(parts.map((p) => p.split(" ")[0])).toStrictEqual(HOSTS.map((h) => h.id));
+
   for (const p of parts) expect(p).toMatch(HOST_STATE_RE);
   expect(parts[0]).toContain("ui.permission_mode");
 });
@@ -80,9 +85,11 @@ it("--check names a changed key as differs", () => {
   const cwd = bareCwd();
   const home = appliedHome("yolo-cli-differs-", cwd);
   const file = path.join(home, ".claude/settings.json");
+
   const v = JSON.parse(fs.readFileSync(file, "utf8")) /* the claude payload's shape */ as {
     permissions: { defaultMode: string };
   };
+
   v.permissions.defaultMode = "default";
   fs.writeFileSync(file, JSON.stringify(v));
   const r = runYolo(["--check"], home, cwd);

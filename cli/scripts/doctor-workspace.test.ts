@@ -27,7 +27,9 @@ it("lists each leftover with the command that clears it, groups worktrees, and d
   expect(head).toMatch(/^workspace\s+8 to clear\s+report only; nothing was deleted$/);
   const want = leftoverPatterns(r, outside);
   expect(items.length, res.stdout).toBe(want.length);
+
   for (const [i, re] of want.entries()) expect(items[i]).toMatch(new RegExp(re));
+
   for (const f of seeded) expect(fs.existsSync(f), f).toBe(true);
   expect(fs.existsSync(outside)).toBe(true);
   expect(fs.existsSync(m)).toBe(true);
@@ -39,10 +41,13 @@ it("lists an unmerged managed worktree whose last commit is 7 or more days old, 
   const { old } = seedStale(r);
   const res = doctor(path.join(r, "packages", "a"));
   const { head, items } = section(res.stdout);
+
   function line(name: string, days: number): string {
     const at = path.join(r, ".worktrees", name);
+
     return `- stale worktree ${at} (wt/${name}, last commit ${days} days ago): bun repo worktree finish ${name}`;
   }
+
   expect(items, res.stdout).toStrictEqual([
     `- merged worktree ${path.join(r, ".worktrees", "landed")} (wt/landed): bun repo worktree prune`,
     line("dirty", 12),

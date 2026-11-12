@@ -12,6 +12,7 @@ useTempDirs();
 /** A temp workspace with the workspace pack and two packages that each have a vitest.config.ts. */
 function workspace(): string {
   const root = tempDir("workerstack-sync-workspace-");
+
   const files: Record<string, string> = {
     [CONFIG_FILE]: 'export default { packs: ["workspace"] }\n',
     "package.json": JSON.stringify({ private: true, workspaces: ["packages/*"] }),
@@ -20,7 +21,9 @@ function workspace(): string {
     "packages/b/package.json": JSON.stringify({ name: "b" }),
     "packages/b/vitest.config.ts": "export default {};\n",
   };
+
   for (const [rel, text] of Object.entries(files)) put(root, rel, text);
+
   return root;
 }
 

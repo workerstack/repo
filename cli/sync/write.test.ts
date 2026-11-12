@@ -57,11 +57,13 @@ it("restores earlier files, links and created dirs byte for byte when a later ou
 
 it("says restored 1 output in the singular", () => {
   const root = seeded();
+
   const result = writeAll(
     root,
     { changed: [file("a.txt", "new\n"), file("c.txt")], manifest: MANIFEST, prune: [] },
     failing("c.txt", "boom"),
   );
+
   expect(result).toMatchObject({ errors: ["c.txt: cannot write: boom; restored 1 output, nothing changed"] });
 });
 
@@ -76,13 +78,16 @@ it("restores outputs, removals and the dirs a removal emptied when a removal fai
       hasFailed = true;
       throw new Error("EBUSY: resource busy");
     }
+
     return real(target, options);
   });
+
   const result = writeAll(
     root,
     { changed: [file("a.txt", "new\n")], manifest: MANIFEST, prune: ["gone/deep/x.txt", "gone/other.txt"] },
     deps,
   );
+
   expect(result).toStrictEqual({
     errors: ["gone/other.txt: cannot remove: EBUSY: resource busy; restored 2 outputs, nothing changed"],
     ok: false,

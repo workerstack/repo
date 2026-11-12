@@ -25,6 +25,7 @@ const DEFAULT_FLOORS = "coverage-floors.json";
 /** The temp root guard beside this module, with this module's own extension: `.ts` from source, `.js` from dist. */
 function guardPath(): string {
   const self = fileURLToPath(import.meta.url);
+
   return path.join(path.dirname(self), `${GUARD_NAME}${path.extname(self)}`);
 }
 
@@ -46,9 +47,11 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
   const file = wranglerFile(root);
   // Bun module namespaces carry `__esModule`, so vitest's default interop would swap a namespace for its default.
   const test = { deps: { interopDefault: false }, hookTimeout: timeout, testTimeout: timeout };
+
   if (file === undefined) return { test: { ...test, pool: "forks" } };
   // The Workers pool is the plugin's; a forks default would take the tests back to node.
   const configPath = path.join(root, file);
+
   return { plugins: [workersPlugin(configPath)], test };
 }
 
@@ -59,6 +62,7 @@ function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
  */
 function ciEnv(coverage: string | undefined): ViteUserConfig {
   const { REPO_VITEST_REPORT: report, REPO_VITEST_SHARD: shard } = repoEnv.process;
+
   return {
     test: {
       ...(coverage === COVERAGE_ON || coverage === COVERAGE_OFF
@@ -83,6 +87,7 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
   const provider: ViteUserConfig = coverage === COVERAGE_ON ? { test: { coverage: { provider: "istanbul" } } } : {};
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), provider);
   const merged: ViteUserConfig = mergeConfig(mergeConfig(defaults, config), ciEnv(coverage));
+
   // The run's own options (coverage reporters) sit beside the project ones: a package's run is the root run of its
   // own vitest so they stay on the project config although the project type leaves them out.
   return merged;
@@ -91,6 +96,7 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
 /** The floors file's TypeScript per-file thresholds, or none when the file is absent; Rust rows are `repo ci`'s. */
 function readFloors(file: string): Record<string, TsFloor> {
   const thresholds: Record<string, TsFloor> = {};
+
   for (const [rel, row] of Object.entries(readFloorsFile(path.resolve(file))))
     if (!isRustKey(rel)) thresholds[rel] = row /* a key that is no .rs file holds a TypeScript row */ as TsFloor;
 
@@ -111,13 +117,16 @@ export function defineConfig(
 ): ViteUserConfig {
   const thresholds = readFloors(options.floors ?? DEFAULT_FLOORS);
   const coverage = { provider: "istanbul", ...(Object.keys(thresholds).length > 0 ? { thresholds } : {}) } as const;
+
   const guard = {
     coverage,
     globalSetup: [guardPath()],
     // Shards split by measured file time, not by hash.
     sequence: { sequencer: ShardSequencer },
   };
+
   // Only test processes get the root: the runner's own tooling (miniflare) makes and removes temp dirs of its own.
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), { test: { ...guard, env: rootEnv() } });
+
   return mergeConfig(defaults, config);
 }

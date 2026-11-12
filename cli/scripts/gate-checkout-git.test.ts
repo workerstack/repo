@@ -22,6 +22,7 @@ import { reviewReason, startReview } from "./__fixtures__/review-plan.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 
 const tmp = useTmp();
+
 function asked(words: string[]) {
   return JSON.stringify({ words });
 }
@@ -29,9 +30,11 @@ function asked(words: string[]) {
 it("denies a git command that commits or destroys work in the main checkout, in every harness's shell", () => {
   const r = tmp.committed("gate-main-");
   const a = path.join(r, ".worktrees/a");
+
   const commit =
     `the main checkout is shared: commit inside ${path.join(r, ".worktrees", "<name>")}, ` +
     "then run bun repo worktree finish <name>";
+
   expect(processFatTools(claudeSh(r, "git commit -m x"))).toStrictEqual(deny(commit));
   expect(processFatTools(claudeSh(r, "git add -A && git commit -m x", { agent_type: "scout" }))).toStrictEqual(
     deny(commit),
@@ -68,6 +71,7 @@ it("lets a subcommand run once the session's git-asked.json holds it, and nothin
   expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
   expect(fs.existsSync(askedFile(r))).toBe(false);
   ask(r, asked(["stash"]));
+
   for (const send of [
     (c: string) => claudeSh(r, c),
     (c: string) => cursorSh(r, c),
@@ -76,6 +80,7 @@ it("lets a subcommand run once the session's git-asked.json holds it, and nothin
     expect(processFatTools(send("git stash")), "stash asked").toBeNull();
     expect(processFatTools(send("git commit -m x")), "commit still denied").toMatchObject({ type: "deny" });
   }
+
   ask(r, asked(["commit", "force"]));
   expect(processFatTools(claudeSh(r, "git commit -m x"))).toBeNull();
   expect(processFatTools(claudeSh(r, "git push --force"))).toBeNull();
@@ -91,10 +96,12 @@ it("treats a missing session id, a missing file and a bad file as no grant", () 
   const r = tmp.committed("gate-main-");
   const noSid = { cwd: r, tool_input: { command: "git stash" }, tool_name: "Bash" };
   expect(processFatTools(noSid)).toMatchObject({ type: "deny" });
+
   for (const bad of ["{", "null", "[]", '{"words":"stash"}', '{"words":[1,null]}', ""]) {
     ask(r, bad);
     expect(processFatTools(claudeSh(r, "git stash")), bad).toMatchObject({ type: "deny" });
   }
+
   fs.rmSync(askedFile(r));
   expect(processFatTools(claudeSh(r, "git stash"))).toMatchObject({ type: "deny" });
 });
@@ -107,6 +114,7 @@ it("sits ahead of the review guard: the main checkout reason wins there, a workt
   expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(claudeWrite(r, inWorktree))).toStrictEqual(review);
   expect(processFatTools(codexPatch(r, inWorktree))).toStrictEqual(review);
+
   for (const child of ["implementer-fast", "scout"])
     expect(processFatTools(claudeWrite(r, inWorktree, { agent_type: child })), child).toBeNull();
 

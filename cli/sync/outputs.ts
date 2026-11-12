@@ -45,7 +45,9 @@ export type Output =
       repairs?: readonly string[];
     }
   | { kind: "link"; path: string; target: string; tracked: boolean; managed: Managed };
+
 export type Managed = "whole" | "block";
+
 /** What a generator sees; `read` returns a root-relative file's text, or null when it is missing. */
 export type SyncContext = {
   root: string;
@@ -53,11 +55,14 @@ export type SyncContext = {
   workspace: Workspace;
   read: (rel: string) => string | null;
 };
+
 /** Computes outputs from the context alone; it never writes, so sync can validate everything first. */
 type GeneratorResult = { outputs: Output[]; errors: string[] };
+
 export type Generator = (ctx: SyncContext) => GeneratorResult;
 
 const BUNFIG_PATH = "bunfig.toml";
+
 // auto = "disable": with no node_modules above a script, bun would fetch a missing import from the registry.
 const BUNFIG = `[install]\nlinker = "hoisted"\nauto = "disable"\n`;
 
@@ -68,6 +73,7 @@ const HEADING_MARK = /^# /;
 /** bunfig.toml, refusing to replace one that lacks sync's header. */
 export function bunfig(ctx: SyncContext): GeneratorResult {
   const existing = ctx.read(BUNFIG_PATH);
+
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
 
@@ -88,9 +94,11 @@ export function index(ctx: SyncContext): GeneratorResult {
   const packageIndexes = packageIndexesOf(ctx);
   const { errors } = packageIndexes;
   const sections: Region[] = [];
+
   if (ctx.workspace.packages.length > 0) sections.push(section("packages", packageIndexes.entries.join("\n")));
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
   sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
+
   if (isSelfName(ctx.workspace.manifest.name)) {
     const maps = mapSections(ctx.root);
     sections.push(section("skills", maps.skills), section("refs", maps.refs));
@@ -98,6 +106,7 @@ export function index(ctx: SyncContext): GeneratorResult {
 
   if (errors.length > 0) return { errors, outputs: [] };
   const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
+
   return { errors: [], outputs: [blockOutput(INDEX_PATH, text), ...packageIndexes.indexes] };
 }
 
@@ -107,22 +116,27 @@ type PackageIndexes = { entries: string[]; errors: string[]; indexes: Output[] }
 function packageIndexesOf(ctx: SyncContext): PackageIndexes {
   const out: PackageIndexes = { entries: [], errors: [], indexes: [] };
   const { packages } = ctx.workspace;
+
   for (const { dir, manifest } of packages) {
     const rel = `${dir}/${INDEX_PATH}`;
     const text = ctx.read(rel);
+
     if (text === null) {
       out.errors.push(`${dir} has no ${INDEX_PATH}; every workspace package needs one`);
       continue;
     }
+
     const title = lines(text)
       .map((line) => line.trim())
       .find((line) => line !== "");
+
     const description = title === undefined ? "" : `: ${title.replace(HEADING_MARK, "")}`;
     const label = manifest.name === undefined || manifest.name === "" ? dir : manifest.name;
     out.entries.push(`- [${label}](../${rel})${description}`);
     const deps = depsLines(dir, manifest, packages).join("\n");
     out.indexes.push(blockOutput(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
   }
+
   return out;
 }
 
@@ -138,7 +152,9 @@ function section(name: string, body: string): Region {
 export function lessons(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const errors = lessonProblems(ctx.root);
+
   if (!fs.existsSync(path.join(ctx.root, LESSONS_DIR))) return { errors, outputs: [] };
+
   const output: Output = {
     content: renderLessonsIndex(ctx.root),
     kind: "file",
@@ -146,6 +162,7 @@ export function lessons(ctx: SyncContext): GeneratorResult {
     path: `${LESSONS_DIR}/${INDEX_NAME}`,
     tracked: true,
   };
+
   return { errors, outputs: [output] };
 }
 
@@ -153,6 +170,7 @@ export function lessons(ctx: SyncContext): GeneratorResult {
 export function trees(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
   const result = renderTrees(ctx);
+
   return result.ok ? { errors: [], outputs: result.outputs } : { errors: result.errors, outputs: [] };
 }
 
@@ -176,11 +194,13 @@ export const GENERATORS: readonly Generator[] = [
 /** The repo:available section, or none when the references index is not installed. */
 function availableSections(ctx: SyncContext): Region[] {
   const body = available(ctx.read, installedNames(ctx.workspace));
+
   return body === null ? [] : [section("available", body)];
 }
 
 /** Every name the workspace has: the stack dependencies, the root and each package. */
 function installedNames(workspace: Workspace): Set<string> {
   const own = [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)].flatMap((m) => m.name ?? []);
+
   return new Set([...stackNames(workspace), ...own]);
 }

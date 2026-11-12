@@ -10,6 +10,7 @@ import { OWNED_EXECUTABLE_MODE, OWNED_MODE, OWNER_WRITE, PERMISSION_BITS, WRITAB
  */
 export function ownedMode(output: Output, platform: NodeJS.Platform): number | null {
   if (output.kind === "link" || output.managed === "block") return null;
+
   return output.executable === true && platform !== "win32" ? OWNED_EXECUTABLE_MODE : OWNED_MODE;
 }
 
@@ -23,12 +24,16 @@ export function settleModes(root: string, outputs: readonly Output[], platform: 
   return outputs.flatMap((output) => {
     const abs = path.join(root, output.path);
     const mode = ownedMode(output, platform) ?? sharedMode(output, abs);
+
     if (mode === null || !isFileAtOtherMode(abs, mode)) return [];
+
     try {
       fs.chmodSync(abs, mode);
+
       return [];
     } catch (error) {
       const goal = mode === WRITABLE_MODE ? "writable" : "read-only";
+
       return [`cannot make ${output.path} ${goal}: ${(error /* fs throws only Error */ as Error).message}`];
     }
   });
@@ -38,6 +43,7 @@ export function settleModes(root: string, outputs: readonly Output[], platform: 
 function sharedMode(output: Output, abs: string): number | null {
   if (output.kind === "link" || output.managed !== "block") return null;
   const stat = lstatOrNull(abs);
+
   return stat !== null && stat.isFile() && (stat.mode & OWNER_WRITE) === 0 ? WRITABLE_MODE : null;
 }
 
@@ -53,6 +59,7 @@ function lstatOrNull(abs: string): fs.Stats | null {
 /** Whether `abs` is a regular file, not a link, whose permission bits are not `mode`. */
 function isFileAtOtherMode(abs: string, mode: number): boolean {
   const stat = lstatOrNull(abs);
+
   return stat !== null && stat.isFile() && (stat.mode & PERMISSION_BITS) !== mode;
 }
 
@@ -62,5 +69,6 @@ function isFileAtOtherMode(abs: string, mode: number): boolean {
  */
 export function unlock(abs: string): void {
   const stat = lstatOrNull(abs);
+
   if (stat !== null && stat.isFile() && (stat.mode & OWNER_WRITE) === 0) fs.chmodSync(abs, WRITABLE_MODE);
 }

@@ -22,6 +22,7 @@ afterEach(removePlanted);
 
 const AGAINST = ["--against", "old.tgz"];
 const realBun = spawnRunner("bun");
+
 /** A bun that fails `bun add` of a spec starting with `prefix` (or any, when empty) and runs the rest. */
 /** A bun whose `add` of a spec `pick` matches fails with `stderr`; every other call runs the real bun. */
 function failing(pick: (arg: string) => boolean, stderr: string): Runner {
@@ -79,6 +80,7 @@ describe("repo release api failed adds", () => {
     const got = await api(withOld(apiRepo(SHRUNK, [])), AGAINST, {
       bun: failing((arg) => path.isAbsolute(arg), "boom\n"),
     });
+
     expect(got.err).toBe(`${PREFIX}bun add failed: boom\n`);
   });
 
@@ -112,6 +114,7 @@ describe("repo release api cleanup", () => {
     const passed = await api(removal("refactor!: drop them"), AGAINST);
     const refused = await api(removal("refactor: drop them"), AGAINST);
     expect([passed.code, refused.code]).toStrictEqual([0, 1]);
+
     for (const got of [passed, refused]) {
       expect(got.made.length).toBeGreaterThanOrEqual(2);
       expect(got.made.filter((dir) => fs.existsSync(dir))).toStrictEqual([]);

@@ -18,6 +18,7 @@ import type { GitRun } from "./standards.ts";
  */
 function ownGit(root: string, args: readonly string[], input?: string): ReturnType<GitRun> {
   const result = spawnSync("git", [...args], { cwd: root, encoding: "utf8", env: toolEnv(childEnv()), input });
+
   return { status: result.status, stderr: result.stderr, stdout: result.stdout };
 }
 
@@ -29,11 +30,15 @@ function ownGit(root: string, args: readonly string[], input?: string): ReturnTy
 export function headerStale(root: string, outputs: readonly Output[], git: GitRun = ownGit): string[] {
   const patterns = [OWNED_TOKEN, ...LEGACY_HEADERS].flatMap((line) => ["-e", line]);
   const result = git(root, [...GREP_ARGS, ...patterns]);
+
   if (result.status !== 0) return [];
   const named = new Set(outputs.map((output) => output.path));
+
   return result.stdout.split(NUL).flatMap((raw) => {
     const rel = normalizeRel(raw, root);
+
     if (rel === null || named.has(rel) || rel.split("/").includes(FIXTURES_DIR)) return [];
+
     return isOwned(path.join(root, rel)) ? [rel] : [];
   });
 }

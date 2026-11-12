@@ -15,10 +15,12 @@ function context(packs: Pack[], dirs: string[], files: Record<string, string> = 
 
 it("vitestProjects: lists the packages that have a vitest.config.ts, in path order, as an ignored whole file", () => {
   const files = { "packages/a/vitest.config.ts": "", "packages/b/vitest.config.ts": "" };
+
   const content =
     `import { defineConfig } from "vitest/config";\n` +
     "export default defineConfig({ test: { projects: " +
     '["packages/a/vitest.config.ts","packages/b/vitest.config.ts"] } });\n';
+
   expect(vitestProjects(context(["workspace"], ["packages/a", "packages/b", "packages/c"], files))).toStrictEqual({
     errors: [],
     outputs: [{ content, kind: "file", managed: "whole", path: "vitest.config.ts", tracked: false }],

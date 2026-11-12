@@ -9,9 +9,11 @@ import { nextSerial } from "./persist-doc.ts";
 const tempDir = cleanDirs();
 const OLD = 40 * DAY;
 const T = ".tmp/repo";
+
 function fm(status: string) {
   return `---\nserial: 1\nstatus: ${status}\n---\n\n# x\n`;
 }
+
 function plan(n: number) {
   return `${T}/plans/${n}-p${n}-20260901T000000Z.md`;
 }
@@ -43,8 +45,10 @@ function aged(): string {
   put(`${T}/handoffs/2-h2-20260901T000000Z.md`, OLD, fm("done"));
   put(`${T}/1-a-20260901T000000Z.md`, OLD);
   put(`${T}/2-b-20260901T000000Z.md`, OLD);
+
   for (const d of ["plans", "roadmaps", "implementations", "handoffs"]) age(path.join(root, T, d), OLD);
   age(path.join(root, plan(4)), DAY);
+
   return root;
 }
 
@@ -92,5 +96,6 @@ it("age-out --dry-run lists exactly the aged-out files and deletes nothing", () 
   expect(lines[summary]).toMatch(
     /^would remove 1 old plan, 1 old roadmap, 1 old journal, 1 old handoff, 1 old tmp artifact \(/,
   );
+
   for (const p of GONE) expect(exists(root)(p), p).toBe(true);
 });

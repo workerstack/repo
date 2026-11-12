@@ -10,24 +10,30 @@ const output = release({
   root: "/repo",
   workspace: { manifest: {}, packages: [], root: "/repo" },
 }).outputs[0];
+
 const yaml = output?.kind === "file" ? output.content : "";
+
 function value(key: string) {
   return new RegExp(`^\\s+(?:- )?${key}: (.+)$`, "m").exec(yaml)?.[1] ?? "";
 }
+
 function glob(pattern: string) {
   return new RegExp(`^${pattern.replaceAll("*", ".*")}$`);
 }
 
 const INDEX = "${{ strategy.job-index }}";
+
 const RUNNER_OS: Record<string, string> = {
   "macos-latest": "macOS",
   "ubuntu-latest": "Linux",
   "windows-latest": "Windows",
 };
+
 /** Each test matrix row's OS in include order; a row's index is its `strategy.job-index`. */
 const rows = [...yaml.slice(0, yaml.indexOf("  commits:")).matchAll(/- \{ os: ([^,]+),/g)].map(
   (match) => match[1] ?? "",
 );
+
 function expand(template: string, os: string, index: number) {
   return template
     .replace("${{ runner.os }}", RUNNER_OS[os] ?? "")
@@ -39,6 +45,7 @@ it("each shard's report file name is its own, and one the skips check reads", ()
   const files = rows.map((os, index) => expand(value("REPORT"), os, index));
   expect(rows).toHaveLength(10);
   expect(new Set(files).size).toBe(rows.length);
+
   for (const file of files) expect(file).toMatch(REPORT_FILE);
 });
 
@@ -47,6 +54,7 @@ it("the uploaded path is the report the gates wrote, and each shard's artifact i
   const artifact = /name: (ci-report-.*)$/m.exec(yaml)?.[1] ?? "";
   const names = rows.map((os, index) => expand(artifact, os, index));
   expect(new Set(names).size).toBe(rows.length);
+
   for (const name of names) expect(name).toMatch(glob(value("pattern")));
   expect(yaml).toContain("merge-multiple: true");
 });

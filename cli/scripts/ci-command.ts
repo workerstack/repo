@@ -25,8 +25,10 @@ export type Command =
  */
 function gateFlags(argv: string[]): Command | null {
   const flags: { coverage: boolean; report?: string; shard?: string } = { coverage: true };
+
   for (let i = 0; i < argv.length; i++) {
     const [flag, next] = [argv[i], argv[i + 1]];
+
     if (flag === NO_COVERAGE_FLAG) {
       flags.coverage = false;
     } else if ((flag === REPORT_FLAG || flag === SHARD_FLAG) && next !== undefined) {
@@ -36,22 +38,29 @@ function gateFlags(argv: string[]): Command | null {
       return null;
     }
   }
+
   const shard = flags.shard === undefined ? { shard: undefined } : parseShard(flags.shard);
+
   return "error" in shard ? { error: shard.error, kind: "usage" } : { kind: "gates", ...flags, ...shard };
 }
 
 /** `repo ci wait` with the branch after it, if any; more than one branch is refused. */
 function waitOf(branch: string | undefined, more: string[]): Command {
   if (more.length > 0) return { kind: "wait-many" };
+
   return branch === undefined ? { kind: "wait" } : { branch, kind: "wait" };
 }
 
 /** `skips`, `times` or `merge` with exactly one directory after it; null for anything else. */
 function dirCommand(argv: string[]): Command | null {
   const [first, dir, ...rest] = argv;
+
   if (dir === undefined || rest.length > 0) return null;
+
   if (first === SKIPS_COMMAND) return { dir, kind: "skips" };
+
   if (first === TIMES_COMMAND) return { dir, kind: "times" };
+
   return first === MERGE_COMMAND ? { dir, kind: "merge" } : null;
 }
 
@@ -59,7 +68,10 @@ function dirCommand(argv: string[]): Command | null {
 export function ciCommand(argv: string[]): Command {
   const [first, second, ...rest] = argv;
   const dirs = dirCommand(argv);
+
   if (dirs !== null) return dirs;
+
   if (first === WAIT_COMMAND) return waitOf(second, rest);
+
   return gateFlags(argv) ?? { kind: "usage" };
 }

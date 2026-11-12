@@ -8,6 +8,7 @@ import { formatFiles, updateIo } from "./update-io.ts";
 
 it("formats files and reports the tool's code and output", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "repo-update-io-"));
+
   try {
     fs.writeFileSync(path.join(root, "a.json"), '{"b":1,"a":2}');
     const result = formatFiles(root, ["a.json"]);

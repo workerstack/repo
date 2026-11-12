@@ -25,6 +25,7 @@ it("boardHome: prefers REPO_BOARD_HOME and falls back to the user's home", () =>
 
 it("note: writes nothing without a real session, pid or start time", () => {
   const home = plantHome();
+
   for (const bad of [
     { session: "" },
     { session: "default" },
@@ -71,9 +72,11 @@ it("note: stamps the time from a Date, a number or the clock", () => {
 
 it("note: chooses the work label: forced, sticky, typed, remembered, else active", () => {
   const home = plantHome();
+
   function work(w: unknown, extra: Record<string, unknown> = {}) {
     return note({ ...base, home, work: w, ...extra })?.work;
   }
+
   expect(work("")).toBe("active");
   expect(work("typed one")).toBe("typed one");
   expect(work("")).toBe("typed one");
@@ -94,6 +97,7 @@ it("note: returns null when the sweep finds its own process gone", () => {
 it("note: finds the home from env and checks this very process by default", () => {
   const home = plantHome();
   const self = probeProcess(process.pid);
+
   const row = note({
     boot: readBootId(),
     env: { REPO_BOARD_HOME: home },
@@ -101,6 +105,7 @@ it("note: finds the home from env and checks this very process by default", () =
     session: "mine",
     start: self?.start,
   });
+
   expect(row?.session).toBe("mine");
   expect(lines({ env: { REPO_BOARD_HOME: home } })).toHaveLength(1);
 });
@@ -164,6 +169,7 @@ it("lines and digest: lists live rows through the env home with the machine boot
 
 it("lines and digest: shows the newest rows first and honours a cap", () => {
   const home = plantHome();
+
   for (const [i, session] of ["a", "b", "c"].entries()) note({ ...base, boot: BOOT, home, now: `T${i}`, session });
   const opts = { boot: BOOT, home, probe, provider: "claude", session: "zzz" };
   expect(

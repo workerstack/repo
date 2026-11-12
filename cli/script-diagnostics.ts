@@ -23,6 +23,7 @@ import { standardsRoot } from "./standards-root.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
 export type ScriptCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
+
 /** A standards checkout's root, `lint.skip`, source files, Rust sources and stylesheets; null without the pack. */
 type Checkout = {
   root: string;
@@ -31,8 +32,10 @@ type Checkout = {
   rust: string[];
   css: string[];
 } | null;
+
 /** Whether Stylelint fixes the stylesheets before it reports what is left. */
 type CssFix = { fix: boolean };
+
 /** Stylelint's fix and runner, and the platform jscpd's binary is looked for (this host by default). */
 type ScriptOptions = CssOptions & { target?: Target };
 
@@ -41,9 +44,11 @@ const NONE: ScriptCheck = { all: [], kept: [], problems: [] };
 function byKey(a: string, b: string) {
   return Number(a > b) - Number(a < b);
 }
+
 /** File order, then line and column: within one file the lines differ from the position on, read as numbers. */
 function byPlace(a: Diagnostic, b: Diagnostic): number {
   const byFile = byKey(a.file, b.file);
+
   return byFile === 0 ? a.line.localeCompare(b.line, "en", { numeric: true }) : byFile;
 }
 
@@ -62,17 +67,23 @@ export function scriptDiagnostics(
   const { files } = scope;
   const { target, ...css } = options;
   const magic = magicDiagnostics(root, files);
+
   if (!magic.ok) return magic;
   const guards = guardDiagnostics(root, files);
+
   if (!guards.ok) return guards;
   const clones = duplicateDiagnostics(root, scope, target);
+
   if (!clones.ok) return clones;
   const sheets = cssDiagnostics(root, files, css);
+
   if (!sheets.ok) return sheets;
+
   const rust = rustSourceDiagnostics(
     root,
     files.filter((rel) => RUST_SOURCE.test(rel)),
   );
+
   return {
     ok: true,
     value: [...magic.value, ...guards.value, ...clones.value, ...sheets.value, ...rust].toSorted(byPlace),
@@ -85,13 +96,16 @@ export function scriptDiagnostics(
  */
 function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
   const found = scriptDiagnostics(checkout.root, { files: [...files, ...checkout.css], sources: files });
+
   if (!found.ok) return found;
   const rust = rustHitsAt(checkout.root, checkout.rust, { clippy: true, run });
+
   return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].toSorted(byPlace) } : rust;
 }
 
 async function checkoutAt(cwd: string): Promise<Checkout> {
   const found = await standardsRoot(cwd);
+
   if (found === null) return null;
   const { root, config } = found;
   const rust = rustSources(root);
@@ -99,17 +113,22 @@ async function checkoutAt(cwd: string): Promise<Checkout> {
   const listed = css.ok ? sourceFiles(root) : css;
   const files: Result<string[]> = listed.ok ? { ok: true, value: listed.files } : listed;
   const lists = { css: css.ok ? css.files : [], rust: rust.ok ? rust.files : [] };
+
   return { files, root, ...lists, skips: config.lint.skip };
 }
 
 /** `repo check`'s script hits for the repo at `cwd`: none without a config or the standards pack. */
 export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<ScriptCheck> {
   const checkout = await checkoutAt(cwd);
+
   if (checkout === null) return NONE;
+
   if (!checkout.files.ok) return { ...NONE, problems: checkout.files.errors };
   const found = allDiagnostics(checkout, checkout.files.value, run);
+
   if (!found.ok) return { ...NONE, problems: found.errors };
   const matched = [...checkout.files.value, ...checkout.rust, ...checkout.css];
+
   return { all: found.value, kept: withoutSkipped(found.value, checkout.skips, matched), problems: [] };
 }
 
@@ -118,12 +137,14 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
  * Stylelint fixes the stylesheets first (not by default).
  */
 export type LintScope = { paths: readonly string[] | null; clippy: boolean; fix?: boolean };
+
 /** What `repo lint` prints of the script checks: the hit lines no skip turns off, and why it could not check. */
 export type ScriptLint = { lines: string[]; problems: string[] };
 
 /** The `all` files that equal one of `paths` (given at `cwd`, root-relative to `root`) or lie under one. */
 function filesUnder(at: { root: string; cwd: string }, paths: readonly string[], all: readonly string[]): string[] {
   const given = paths.map((p) => path.relative(at.root, path.resolve(at.cwd, p)).split(path.sep).join("/"));
+
   return all.filter((rel) => given.some((g) => g === "" || rel === g || rel.startsWith(`${g}/`)));
 }
 
@@ -135,12 +156,15 @@ function filesUnder(at: { root: string; cwd: string }, paths: readonly string[],
 function lintHits(root: string, scope: CloneScope, options: RustOptions & CssFix) {
   const { files, sources } = scope;
   const found = scriptDiagnostics(root, { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources }, options);
+
   if (!found.ok) return found;
+
   const rust = rustHitsAt(
     root,
     files.filter((rel) => RUST_SOURCE.test(rel)),
     options,
   );
+
   return rust.ok ? { ok: true as const, value: [...found.value, ...rust.value].toSorted(byPlace) } : rust;
 }
 
@@ -151,20 +175,26 @@ function lintHits(root: string, scope: CloneScope, options: RustOptions & CssFix
  */
 export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun): Promise<ScriptLint> {
   const checkout = await checkoutAt(cwd);
+
   if (checkout === null) return { lines: [], problems: [] };
+
   if (!checkout.files.ok) return { lines: [], problems: checkout.files.errors };
   const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
   const sources = checkout.files.value;
   const found = lintHits(checkout.root, { files, sources }, { clippy: scope.clippy, fix: scope.fix === true, run });
+
   if (!found.ok) return { lines: [], problems: found.errors };
   const matched = [...files, ...found.value.map((d) => d.file)];
+
   return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };
 }
 
 /** `repo check`'s reject file problems for the repo at `cwd`: none without a config or the standards pack. */
 export async function checkRejectionsAt(cwd: string): Promise<string[]> {
   const checkout = await checkoutAt(cwd);
+
   if (checkout === null) return [];
+
   return checkout.files.ok ? rejectionProblems(checkout.root, checkout.files.value) : checkout.files.errors;
 }

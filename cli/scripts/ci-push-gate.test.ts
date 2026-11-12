@@ -82,6 +82,7 @@ it("notes a worktree's push under the main checkout", () => {
 it("ignores a delete, a tag, a detached HEAD and an unknown ref", () => {
   const r = rig();
   r.world.tips[r.main] = { branch: "HEAD", sha: A };
+
   for (const c of ["push origin :gone", "push origin HEAD:refs/tags/v1", "push origin HEAD", "push origin ghost"])
     r.note(`git ${c}`);
 
@@ -98,6 +99,7 @@ it("notes a push past an option it does not use and an empty chain segment", () 
 it("looks up only the main checkout for no session or a command that is not a push", () => {
   const r = rig();
   r.note("git push", r.main, "");
+
   for (const c of ["git status", "ls && echo push", "cd sub", "git -C push", "git -C", "git", ""]) r.note(c);
   expect(r.asked.filter((a) => !a.includes("--git-common-dir"))).toStrictEqual([]);
   expect(r.pushed()).toStrictEqual([]);
@@ -136,6 +138,7 @@ it("keeps the old commit when the directory is gone, and settles the push at the
 it("writes the file back only when a push was pending", () => {
   const r = rig();
   const writes: string[] = [];
+
   const spy = {
     ...fs,
     writeFileSync: (...args: Parameters<typeof fs.writeFileSync>) => {
@@ -143,7 +146,9 @@ it("writes the file back only when a push was pending", () => {
       fs.writeFileSync(...args);
     },
   };
+
   const deps = { ...r.deps, fs: spy };
+
   for (const command of ["git push", "ls", "git push", "ls", "ls"])
     recordPush({ command, cwd: r.main, session: "s1" }, deps);
   expect(writes).toHaveLength(4);
@@ -151,12 +156,14 @@ it("writes the file back only when a push was pending", () => {
 
 it("never throws when the file cannot be written, and writes nothing", () => {
   const r = rig();
+
   const deny = {
     ...fs,
     writeFileSync: () => {
       throw new Error("disk full");
     },
   };
+
   const input = { command: "git push", cwd: r.main, session: "s1" };
   expect(() => recordPush(input, { ...r.deps, fs: deny })).not.toThrow();
   expect(r.pushed()).toStrictEqual([]);

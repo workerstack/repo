@@ -28,9 +28,11 @@ describe("paths", () => {
 describe("pidAlive", () => {
   it("is false for a non-positive or non-numeric pid without probing", () => {
     const probed: unknown[] = [];
+
     function kill(p: number) {
       return probed.push(p);
     }
+
     expect(pidAlive("abc", kill)).toBe(false);
     expect(pidAlive(0, kill)).toBe(false);
     expect(pidAlive(-4, kill)).toBe(false);

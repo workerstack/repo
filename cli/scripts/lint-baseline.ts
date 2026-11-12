@@ -18,18 +18,24 @@ import { captureTool } from "./lint.ts";
 
 /** File → rule → problem count; a file or rule left out counts 0. */
 export type Counts = Record<string, Record<string, number>>;
+
 /** One rule of one file over its baseline entry. */
 export type Excess = { file: string; rule: string; has: number; allows: number };
+
 /** One entry `repo turn` lowered; `to` 0 drops it. */
 export type Lowered = { file: string; rule: string; from: number; to: number };
+
 export type Diagnostic = { file: string; rule: string; line: string };
+
 export type Result<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
 const LOWER = "run `bun repo lint --baseline`";
 const PARSE_ERROR = "parse-error";
+
 /** The baseline's shape: file → rule → a count above 0. */
 function baselineSchema() {
   const count = z.number().int().positive({ error: "must be a whole number above 0" });
+
   return z.record(z.string(), z.record(z.string(), count, { error: "must be an object" }), {
     error: "must be an object",
   });
@@ -53,9 +59,11 @@ function reportSchema() {
 function byKey(a: string, b: string) {
   return Number(a > b) - Number(a < b);
 }
+
 function plural(n: number, noun: string) {
   return `${n} ${noun}${n === 1 ? "" : "s"}`;
 }
+
 function countOf(counts: Counts, file: string, rule: string) {
   return counts[file]?.[rule] ?? 0;
 }
@@ -70,6 +78,7 @@ function overOf(baseline: Counts, actual: Counts, files: readonly string[]): Exc
     Object.keys(actual[file] ?? {}).flatMap((rule) => {
       const has = countOf(actual, file, rule);
       const allows = countOf(baseline, file, rule);
+
       return has > allows ? [{ allows, file, has, rule }] : [];
     }),
   );
@@ -79,9 +88,12 @@ function overOf(baseline: Counts, actual: Counts, files: readonly string[]): Exc
 function normalized(counts: Counts): Counts {
   const entries = Object.entries(counts).map(([file, rules]) => {
     const kept = Object.entries(rules).filter(([, value]) => value > 0);
+
     return [file, Object.fromEntries(kept.toSorted(([a], [b]) => byKey(a, b)))] as const;
   });
+
   const sorted = entries.toSorted(([a], [b]) => byKey(a, b));
+
   return Object.fromEntries(sorted.filter(([, rules]) => Object.keys(rules).length > 0));
 }
 
@@ -100,43 +112,54 @@ export function gate(
 } {
   const next: Counts = { ...baseline };
   const lowered: Lowered[] = [];
+
   for (const file of files.toSorted(byKey)) {
     const entry = baseline[file];
+
     if (entry === undefined) continue;
     const rules = Object.keys(entry).toSorted(byKey);
     next[file] = Object.fromEntries(
       Object.entries(entry).map(([rule, allows]) => [rule, Math.min(allows, countOf(actual, file, rule))]),
     );
+
     for (const rule of rules) {
       const [from, to] = [countOf(baseline, file, rule), countOf(next, file, rule)];
+
       if (to < from) lowered.push({ file, from, rule, to });
     }
   }
+
   return { lowered, next: normalized(next), over: overOf(baseline, actual, files) };
 }
 
 /** `repo lint --baseline`: every entry lowered to its real count, a gone file dropped, a rule a file lacks seeded. */
 function reseeded(baseline: Counts, actual: Counts): Counts {
   const next: Counts = gate(baseline, actual, Object.keys(baseline)).next;
+
   for (const [file, rules] of Object.entries(actual)) {
     for (const [rule, value] of Object.entries(rules))
       if (baseline[file]?.[rule] === undefined) next[file] = { ...next[file], [rule]: value };
   }
+
   return normalized(next);
 }
 
 /** What `repo check` reports: a count over its entry, an entry over its count, an entry for a file that is gone. */
 function drift(baseline: Counts, actual: Counts, exists: (file: string) => boolean): string[] {
   const files = [...new Set([...Object.keys(baseline), ...Object.keys(actual)])].toSorted(byKey);
+
   return files.flatMap((file) => {
     if (!exists(file)) return [`${file} is gone; ${LOWER}`];
     const over = overOf(baseline, actual, [file]).map(excessText);
+
     const high = Object.keys(baseline[file] ?? {})
       .filter((rule) => countOf(actual, file, rule) < countOf(baseline, file, rule))
       .map((rule) => {
         const allows = countOf(baseline, file, rule);
+
         return `${excessText({ allows, file, has: countOf(actual, file, rule), rule })}; ${LOWER} to lower it`;
       });
+
     return [...over, ...high];
   });
 }
@@ -149,16 +172,22 @@ function fail(lines: string[]): Result<Counts> {
 /** The baseline under `root`, empty when the file is absent. */
 export function readBaseline(root: string): Result<Counts> {
   const file = path.join(root, BASELINE_PATH);
+
   if (!fs.existsSync(file)) return { ok: true, value: {} };
   let raw: unknown;
+
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
     const { message } = error /* JSON.parse throws only a SyntaxError */ as Error;
+
     return fail([`not valid JSON: ${message}; fix it, or delete it and ${LOWER}`]);
   }
+
   const parsed = baselineSchema().safeParse(raw);
+
   if (parsed.success) return { ok: true, value: parsed.data };
+
   return fail(
     parsed.error.issues.map(
       (issue) => `${[...issue.path, ""].join(": ")}${issue.message}; fix it, or delete it and ${LOWER}`,
@@ -189,34 +218,44 @@ export function lintReport(
 ): Result<Diagnostic[]> {
   const ran = run("oxlint", ["-f", "json", ...args], root);
   let raw: unknown;
+
   try {
     raw = JSON.parse(ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
   } catch {
     return { errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
   }
+
   const report = reportSchema().parse(raw);
+
   const diagnostics = report.diagnostics.map((d) => {
     const rule = d.code ?? PARSE_ERROR;
     const span = d.labels?.[0]?.span;
     // A diagnostic without a label is placed at its file alone.
     const at = [d.filename, span?.line, span?.column].filter((part) => part !== undefined).join(":");
+
     return { file: d.filename, line: `${at}: ${d.severity} ${rule}: ${d.message}`, rule };
   });
+
   return { ok: true, value: diagnostics };
 }
 
 export function countsOf(diagnostics: readonly Diagnostic[]): Counts {
   const counts: Counts = {};
+
   for (const { file, rule } of diagnostics) counts[file] = { ...counts[file], [rule]: countOf(counts, file, rule) + 1 };
+
   return counts;
 }
 
 /** The whole tree's counts, oxlint's and the `scripts` hits no skip turns off, and the baseline under `root`. */
 function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baseline: Counts; actual: Counts }> {
   const baseline = readBaseline(root);
+
   if (!baseline.ok) return baseline;
   const report = lintReport(root, []);
+
   if (!report.ok) return report;
+
   return { ok: true, value: { actual: countsOf([...report.value, ...scripts]), baseline: baseline.value } };
 }
 
@@ -226,15 +265,19 @@ function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baselin
  */
 export function seedBaseline(root: string, scripts: readonly Diagnostic[]): number {
   const measured = measure(root, scripts);
+
   if (!measured.ok) {
     for (const line of measured.errors) process.stderr.write(`repo lint: ${line}\n`);
+
     return 1;
   }
+
   const next = reseeded(measured.value.baseline, measured.value.actual);
   writeBaseline(root, next);
   const problems = Object.values(next).reduce((sum, rules) => sum + Object.values(rules).reduce((a, b) => a + b, 0), 0);
   const counted = `${plural(Object.keys(next).length, "file")}, ${plural(problems, "problem")}`;
   process.stdout.write(`repo lint: baseline written: ${counted}\n`);
+
   return 0;
 }
 
@@ -245,14 +288,19 @@ export function seedBaseline(root: string, scripts: readonly Diagnostic[]): numb
  */
 export async function checkLintBaseline(cwd: string, scripts: readonly Diagnostic[]): Promise<string[]> {
   const found = await standardsRoot(cwd);
+
   if (found === null) return [];
   const { root } = found;
+
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
   const measured = measure(root, scripts);
+
   if (!measured.ok) return measured.errors;
   const top = root;
+
   function exists(file: string) {
     return fs.existsSync(path.join(top, file));
   }
+
   return drift(measured.value.baseline, measured.value.actual, exists).map((line) => `${BASELINE_PATH}: ${line}`);
 }

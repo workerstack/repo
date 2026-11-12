@@ -88,8 +88,10 @@ it("turns a failed render into one error", () => {
 /** A real root with a lessons dir, so the pack alone decides whether the index is written. */
 function withLessonsDir(packs: Pack[]) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lessons-"));
+
   try {
     fs.mkdirSync(path.join(root, ".repo", "lessons"), { recursive: true });
+
     return lessons({ ...context({ packs }), root });
   } finally {
     fs.rmSync(root, { force: true, recursive: true });

@@ -14,6 +14,7 @@ import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
 export const KNIP_CONFIG_PATH = "knip.json";
+
 /** The ignore-free copies `repo check` writes beside it for one run, each named for its process. */
 export const KNIP_UNIGNORED_GLOB = "knip.unignored-*.json";
 const ROOT = ".";
@@ -43,7 +44,9 @@ const RULES = [
 /** The command names a manifest's `bin` makes: its keys, or the unscoped package name when `bin` is one path. */
 function binNames(manifest: PackageJson): string[] {
   if (isRecord(manifest.bin)) return Object.keys(manifest.bin);
+
   if (typeof manifest.bin !== "string" || manifest.name === undefined) return [];
+
   return [path.posix.basename(manifest.name)];
 }
 
@@ -82,6 +85,7 @@ type WorkspaceConfig = {
 function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: string[]): WorkspaceConfig {
   const { dir, manifest } = pkg;
   const configs = vitestConfigs(root, dir);
+
   return {
     entry: [...DEFAULT_ENTRIES, ...extraEntry, ...configs],
     ...(configs.length > 0 ? { vitest: { config: configs } } : {}),
@@ -96,6 +100,7 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): Works
   const files = ignores.flatMap((ignore) => ("file" in ignore ? [ignore.file] : []));
   const dependencies = ignores.flatMap((ignore) => ("dependency" in ignore ? [ignore.dependency] : []));
   const binaries = ignores.flatMap((ignore) => ("binary" in ignore ? [ignore.binary] : []));
+
   return {
     ...base,
     ignoreBinaries: [...base.ignoreBinaries, ...binaries],
@@ -120,5 +125,6 @@ export function knipConfig(workspace: Workspace, ignores: readonly KnipIgnore[])
       ...Object.fromEntries(workspace.packages.map((pkg) => [pkg.dir, workspaceConfig(workspace.root, pkg, [])])),
     },
   };
+
   return `${JSON.stringify(config, null, KNIP_JSON_INDENT)}\n`;
 }

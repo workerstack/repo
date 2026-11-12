@@ -8,6 +8,7 @@ import { realDir as tmpDir } from "./__fixtures__/real-dir.ts";
 import { canonicalPath, gitRevParse, INSTALL_MARKER, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
 useTempDirs();
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
@@ -74,10 +75,12 @@ describe("gitRevParse", () => {
 
   it("is null when git fails, and remembers the answer for the dir", () => {
     let calls = 0;
+
     const run = (() => {
       calls += 1;
       throw new Error("not a repo");
     }) /* a stand-in for execFileSync */ as never;
+
     expect(gitRevParse("/edge-fail", run)).toBeNull();
     expect(gitRevParse("/edge-fail", run)).toBeNull();
     expect(calls).toBe(1);
@@ -107,10 +110,12 @@ describe("resolveRoots", () => {
     const dir = tmpDir("roots-args-");
     const sub = path.join(dir, "sub");
     fs.mkdirSync(sub);
+
     const roots = resolveRoots(
       { toolCall: { args: { Cwd: sub } }, workspacePaths: "nope" /* a malformed hook input */ as never },
       { cwd: dir, env: {}, git: () => null },
     );
+
     expect(roots.cwd).toBe(sub);
   });
 });
@@ -118,6 +123,7 @@ describe("resolveRoots", () => {
 describe("resolveRoots", () => {
   it("takes the first set candidate in D1 order", () => {
     const dirs = Array.from({ length: 7 }, (_, i) => tmpDir(`roots-order-${i}-`));
+
     const [ws, paths, grok, claude, cwd, agCwd, proc] = dirs /* Array.from made seven dirs */ as [
       string,
       string,
@@ -127,11 +133,14 @@ describe("resolveRoots", () => {
       string,
       string,
     ];
+
     const input = { cwd, toolCall: { args: { Cwd: agCwd } }, workspacePaths: [paths], workspaceRoot: ws };
     const env = { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok };
+
     function rootOf(i: object, e: Partial<typeof env>) {
       return resolveRoots(i, { cwd: proc, env: e }).root;
     }
+
     expect(rootOf(input, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined, workspace_root: ws }, env)).toBe(ws);
     expect(rootOf({ ...input, workspaceRoot: undefined }, env)).toBe(paths);
@@ -156,6 +165,7 @@ describe("resolveRoots", () => {
       },
       "C:\\r\\src": { commonDir: "C:/r/.git", gitDir: "C:/r/.git", top: "C:/r" },
     };
+
     const opts = {
       cwd: "C:\\r",
       env: {},
@@ -166,6 +176,7 @@ describe("resolveRoots", () => {
       p: path.win32,
       realpath: (abs: string) => abs,
     };
+
     expect(resolveRoots({ cwd: "C:\\r\\.worktrees\\w\\src" }, opts)).toStrictEqual({
       checkout: "C:\\r\\.worktrees\\w",
       cwd: "C:\\r\\.worktrees\\w\\src",

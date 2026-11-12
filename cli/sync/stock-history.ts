@@ -62,6 +62,7 @@ export const HOOK_COMMANDS_KEY = ".claude/settings.json#commands";
 /** Every hook `command` string under the `hooks` of a parsed settings file. */
 export function hookCommands(settings: unknown): string[] {
   const found: string[] = [];
+
   function walk(value: unknown): void {
     if (Array.isArray(value)) {
       for (const item of value) walk(item);
@@ -72,13 +73,16 @@ export function hookCommands(settings: unknown): string[] {
       }
     }
   }
+
   walk((settings /* a parsed settings file: an object or null */ as { hooks?: unknown } | null)?.hooks);
+
   return found;
 }
 
 function stockHistoryFile(): string {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), "stock-history.json");
 }
+
 export const STOCK_HISTORY_FILE: string = /* @__PURE__ */ stockHistoryFile();
 
 /**
@@ -87,6 +91,7 @@ export const STOCK_HISTORY_FILE: string = /* @__PURE__ */ stockHistoryFile();
  */
 export function hashText(bytes: Buffer | string): string {
   const text = typeof bytes === "string" ? bytes : bytes.toString("utf8");
+
   return createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex").slice(0, HASH_HEX_DIGITS);
 }
 

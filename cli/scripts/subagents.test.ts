@@ -30,6 +30,7 @@ const RETURNS: Record<string, string> = {
 
 function body(file: string): string {
   const text = fs.readFileSync(path.join(dir, file), "utf8").replaceAll("\r\n", "\n");
+
   return text.slice(text.indexOf("\n---\n", 3) + 5);
 }
 

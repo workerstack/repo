@@ -11,6 +11,7 @@ import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustTests } from "./rust-tests.ts";
 
 const dirs: string[] = [];
+
 afterEach(() => {
   for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
   cleanTemps();
@@ -19,21 +20,28 @@ afterEach(() => {
 function ok(stdout = "", stderr = ""): CargoResult {
   return { missing: false, status: 0, stderr, stdout };
 }
+
 function bad(status: number, stderr: string): CargoResult {
   return { missing: false, status, stderr, stdout: "" };
 }
+
 const GONE: CargoResult = { missing: true, status: 1, stderr: "", stdout: "" };
 const SUMMARY = "     Summary [   0.002s] 1 test run: 1 passed, 0 skipped\n";
 const DOCTEST_SUMMARY = "test result: ok. 1 passed; 0 failed; 0 ignored\n";
+
 function metadata(...doctests: boolean[]) {
   const targets = doctests.map((doctest) => ({ doctest, kind: ["lib"] }));
+
   const packages = [
     { id: "a 0.1.0", targets },
     { id: "dep 1.0.0", targets: [{ doctest: true, kind: ["lib"] }] },
   ];
+
   return JSON.stringify({ packages, workspace_members: ["a 0.1.0"] });
 }
+
 const row = { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } };
+
 function reportAt(root: string) {
   return { data: [{ files: [{ filename: `${root}/a/src/lib.rs`, summary: row }] }] };
 }
@@ -41,6 +49,7 @@ function reportAt(root: string) {
 /** The answer key of a cargo call: its version probe by tool, else the subcommand. */
 function keyOf(args: readonly string[]): string {
   if (args[1] === "--version") return args.slice(0, 2).join(" ");
+
   return { "llvm-cov": "llvm-cov run", nextest: "nextest run" }[args[0] ?? ""] ?? args[0] ?? "";
 }
 
@@ -59,6 +68,7 @@ function floorsFile(rows: unknown): string {
   dirs.push(dir);
   const file = path.join(dir, "floors.json");
   fs.writeFileSync(file, JSON.stringify(rows));
+
   return file;
 }
 
@@ -66,7 +76,9 @@ function floorsFile(rows: unknown): string {
 function fakeCargo(root: string, answers: Record<string, CargoResult>, seen: string[]): CargoRun {
   return (_dir, args) => {
     seen.push(args.join(" "));
+
     if (keyOf(args) === "llvm-cov run") fs.writeFileSync(args.at(-1) ?? "", JSON.stringify(reportAt(root)));
+
     return { ...HEALTHY, ...answers }[keyOf(args)] ?? ok();
   };
 }
@@ -77,6 +89,7 @@ type GateOptions = { coverage: boolean; floors?: string };
 function gate(answers: Record<string, CargoResult>, { coverage, floors = "/nowhere/floors.json" }: GateOptions) {
   const seen: string[] = [];
   const run = fakeCargo("/r", answers, seen);
+
   return { ...rustTests("/r", { coverage, floors, run }), seen };
 }
 
@@ -113,6 +126,7 @@ it("pluralizes both counts and sums the doctest results of every crate", () => {
     "nextest run": ok("", "     Summary [   0.5s] 3 tests run: 3 passed, 0 skipped\n"),
     test: ok(`${DOCTEST_SUMMARY}test result: ok. 2 passed; 0 failed\n`),
   };
+
   expect(gate(answers, { coverage: false }).label).toBe("rust tests ok (3 tests, 3 doctests)");
 });
 
@@ -192,6 +206,7 @@ it("rows at or above their floors pass, and a floors file that cannot be read fa
 async function ciWith(files: Record<string, string>) {
   const root = plant(files);
   const [out, seen]: [string[], string[]] = [[], []];
+
   const code = await main([], {
     bins: { tsc: () => OK, vitest: () => PASSED },
     cargo: fakeCargo(root, {}, seen),
@@ -200,6 +215,7 @@ async function ciWith(files: Record<string, string>) {
     repo: () => OK,
     stdout: (text) => out.push(text),
   });
+
   return { code, out: out.join(""), seen };
 }
 
@@ -213,11 +229,13 @@ it("repo ci runs the rust tests gate after the tests only in a repo with a root 
 
 it("repo ci holds the rust floors of the file the config names", async () => {
   const rows = { "a/src/lib.rs": { functions: 66, lines: 80, regions: 58 } };
+
   const run = await ciWith({
     "Cargo.toml": "[workspace]\n",
     "ratchets/floors.json": JSON.stringify(rows),
     "workerstack.config.ts": 'export default { coverage: { floors: "ratchets/floors.json" } };\n',
   });
+
   expect(run.code).toBe(1);
   expect(run.out).toContain(
     "ci: rust tests failed (0.0s)\nrust coverage: a/src/lib.rs lines 66 is below its floor 80;",

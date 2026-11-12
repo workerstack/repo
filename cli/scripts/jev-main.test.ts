@@ -25,6 +25,7 @@ function plantInputs(dir: string) {
   const questions = path.join(dir, "questions.json");
   fs.writeFileSync(state, "state text");
   fs.writeFileSync(questions, QUESTIONS);
+
   return { questions, state };
 }
 
@@ -37,11 +38,13 @@ it("the runner with defaults: reads the process environment and the user's home"
   const home = plantDir();
   vi.spyOn(os, "homedir").mockReturnValue(home);
   vi.stubEnv("TYPESAFE_API_KEY", KEY);
+
   const opts: JevRunOpts = {
     fetchImpl: scripted(reply(200, answerBody())),
     questionsText: QUESTIONS,
     stateText: "s",
   };
+
   const result = await createJevRunner()(opts);
   expect(result.code).toBe(0);
   expect(readLedgerFile(home).requests).toBe(1);
@@ -73,15 +76,18 @@ it("runJev: hands the file contents and its options to the runner", async () => 
   const dir = plantDir();
   const { state, questions } = plantInputs(dir);
   const seen: JevRunOpts[] = [];
+
   const out = await runJev(["--state", state, `--questions=${questions}`], {
     env: { TYPESAFE_API_KEY: KEY },
     home: dir,
     now: 5,
     run: (opts) => {
       seen.push(opts ?? {});
+
       return Promise.resolve({ code: 0, text: "ok\n" });
     },
   });
+
   expect(out).toStrictEqual({ code: 0, text: "ok\n" });
   expect(seen[0]).toMatchObject({
     env: { TYPESAFE_API_KEY: KEY },

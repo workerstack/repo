@@ -19,11 +19,13 @@ it(
     const darwin = await runOn("darwin")(cwd, ["doctor"], bin);
     const win = await runOn("win32")(cwd, ["doctor"], bin);
     const ensure = await runOn("linux")(cwd, ["ensure"], bin);
+
     for (const r of [linux, darwin, win, ensure]) {
       expect(r.code).toBe(1);
       expect(r.stdout).toMatch(/lightpanda-io\/browser/);
       expect(`${r.stdout}${r.stderr}`).not.toMatch(/playwright install/);
     }
+
     expect(linux.stdout).toMatch(/curl -fsSL https:\/\/pkg\.lightpanda\.io\/install\.sh \| bash/);
     expect(darwin.stdout).toMatch(/brew tap lightpanda-io\/browser|brew install lightpanda-io\/browser\/lightpanda/);
     expect(win.stdout).toMatch(/winget/);
@@ -64,12 +66,14 @@ it("playwright-only PATH is NOT treated as Chromium engine", async () => {
   const looked = lookupBins(envFor(bin).PATH, "linux");
   expect(looked.chromium).toBeFalsy();
   expect(looked).not.toHaveProperty("playwright");
+
   const picked = pickEngine({
     bins: { playwright: path.join(bin, "playwright") },
     platform: "linux",
     url: "https://example.com/",
     verb: "nav",
   });
+
   expect(picked.engine).toBeNull();
   const r = await run(cwd, ["nav", "https://example.com/"], bin);
   expect(r.code).not.toBe(0);

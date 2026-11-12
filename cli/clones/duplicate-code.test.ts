@@ -6,6 +6,7 @@ import { duplicateDiagnostics } from "./duplicate-code.ts";
 afterEach(cleanTemps);
 
 const RULE = "repo(duplicate-code)";
+
 /** The 9-line function the clones share: 69 tokens as jscpd counts them. */
 const TOTAL = [
   "export function total(items: readonly { price: number; count: number }[]): number {",
@@ -19,7 +20,9 @@ const TOTAL = [
   "}",
   "",
 ].join("\n");
+
 const TOKENS = 69;
+
 /** A 4-line function of far more than 50 tokens: too few lines to count as a clone. */
 const SPREAD = [
   "export function spread(a: number, b: number, c: number, d: number): number[] {",
@@ -28,11 +31,13 @@ const SPREAD = [
   "}",
   "",
 ].join("\n");
+
 const PAIR = { "src/a.ts": TOTAL, "src/b.ts": `export const NAME = "b";\n\n${TOTAL}` };
 
 /** The diagnostic of the clone side at `at` (`<file>:<line>:<column>`): `clone.lines` repeat `clone.other`. */
 function side(at: string, clone: { lines: string; other: string; tokens?: number }) {
   const { lines, other, tokens = TOKENS } = clone;
+
   return {
     file: at.slice(0, at.indexOf(":")),
     line:
@@ -73,6 +78,11 @@ it("reports a clone with both sides in one file twice there, each naming the oth
 
 it("reports no copy under 5 lines, however many tokens it has", () => {
   expect(clonesOf({ "src/d.ts": SPREAD, "src/e.ts": SPREAD })).toStrictEqual({ ok: true, value: [] });
+});
+
+it("reports no copy under 5 code lines, however many blank lines spread it", () => {
+  const spaced = SPREAD.split("\n").join("\n\n");
+  expect(clonesOf({ "src/d.ts": spaced, "src/e.ts": spaced })).toStrictEqual({ ok: true, value: [] });
 });
 
 it("neither scans nor reports a file under a fixtures dir", () => {
@@ -143,9 +153,11 @@ it("needs no binary when no JS or TS source outside a fixtures dir is left to sc
 
 it("looks for Windows' msvc package, and for both Linux libcs of an arch not installed", () => {
   const scope = { files: Object.keys(PAIR), sources: Object.keys(PAIR) };
+
   function at(platform: string) {
     return duplicateDiagnostics(plant(PAIR), scope, { arch: "riscv64", platform });
   }
+
   expect(at("win32")).toStrictEqual({ errors: [missing("jscpd-windows-riscv64-msvc")], ok: false });
   expect(at("linux")).toStrictEqual({
     errors: [missing("jscpd-linux-riscv64-gnu or jscpd-linux-riscv64-musl")],

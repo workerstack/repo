@@ -12,7 +12,9 @@ const REAL_PLATFORM = Object.getOwnPropertyDescriptor(
   process,
   "platform",
 ) /* process always has platform */ as PropertyDescriptor;
+
 useTempDirs();
+
 afterEach(() => {
   Object.defineProperty(process, "platform", REAL_PLATFORM);
   vi.unstubAllEnvs();
@@ -29,6 +31,7 @@ function hostIs(platform: string) {
 function plant(dir: string, name: string, mode: number) {
   const file = path.join(dir, name);
   fs.writeFileSync(file, "#!/bin/sh\nexit 0\n", { mode });
+
   return file;
 }
 

@@ -5,6 +5,7 @@ import { linkFindings, listedFiles, unlistedFindings } from "./docs-index.ts";
 function everything() {
   return true;
 }
+
 function only(...present: string[]) {
   return (rel: string) => present.includes(rel);
 }
@@ -24,6 +25,7 @@ const INDEX = [
   "```",
   "[self](INDEX.md) `see notes.md` [code](auth.ts) [query](?page=2)",
 ].join("\n");
+
 const PRESENT = ["auth", "hooks", "output", "lessons", "sub/INDEX", "fenced", "INDEX"].map((n) => `references/${n}.md`);
 
 it("lists the existing files in INDEX order with their lines, once each", () => {
@@ -54,6 +56,7 @@ it("resolves a subfolder INDEX from its own folder", () => {
 });
 
 const TOP = "references/INDEX.md";
+
 const LISTED_BY = new Map([
   [TOP, new Set(["references/a.md", "references/sub/INDEX.md"])],
   ["references/sub/INDEX.md", new Set(["references/sub/b.md"])],
@@ -76,6 +79,7 @@ it("names a subfolder INDEX its parent does not list", () => {
     [TOP, new Set<string>()],
     ["references/sub/INDEX.md", new Set(["references/sub/b.md"])],
   ]);
+
   expect(unlistedFindings([TOP, "references/sub/INDEX.md"], TOP, parent)).toStrictEqual([
     "references/sub/INDEX.md is not listed in references/INDEX.md; add a line that links it",
   ]);

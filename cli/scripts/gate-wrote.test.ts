@@ -26,11 +26,13 @@ it("denies full Read of a path this session wrote; allows offset", () => {
 it("leaves a nested plan to orchestrate-parent, records it, and writes no target", () => {
   const ws = tmp.dir("gate-nested-");
   const a = path.join(ws, "packages/a");
+
   function call(file: string) {
     return processFatTools(
       camelCall("Write", { content: "x", file_path: file }, { cwd: a, sessionId: "sid9", workspaceRoot: ws }),
     );
   }
+
   expect(call(path.join(a, ".tmp/repo/plans/x.md"))).toBeNull();
   expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toStrictEqual({
     type: "rewrite",

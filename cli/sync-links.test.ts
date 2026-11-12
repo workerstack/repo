@@ -70,6 +70,7 @@ it.skipIf(process.platform === "win32")(
     const store = path.join(root, "store");
     fs.mkdirSync(store);
     const alias = aliasOf(store);
+
     try {
       const { code } = await syncWith(root, only(link("tree/skill", alias)));
       expect(code).toBe(0);
@@ -90,11 +91,13 @@ it("on win32 treats a target whose parent dirs are spelled another way as the sa
   const store = path.join(root, "store");
   fs.mkdirSync(store);
   const alias = aliasOf(root);
+
   try {
     const { code } = await syncWith(root, {
       ...only(link("tree/skill", path.join(alias, "store"))),
       platform: "win32",
     });
+
     expect(code).toBe(0);
     const symlink = vi.spyOn(fs, "symlinkSync");
     expect(await syncWith(root, { ...only(link("tree/skill", store)), platform: "win32" })).toStrictEqual({
@@ -110,6 +113,7 @@ it("on win32 treats a target whose parent dirs are spelled another way as the sa
 
 // A posix symlink on win32 needs a privilege the junction does not, so win32 runs only its own platform.
 const platforms = process.platform === "win32" ? (["win32"] as const) : (["linux", "win32"] as const);
+
 it.each(platforms)(
   "on %s rewrites a link that reaches the target only through another generated link, leaving none dangling",
   async (platform) => {

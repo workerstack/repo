@@ -15,6 +15,7 @@ import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason } from "./workt
 
 /** A plan's frontmatter block; group 1 is its body. */
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
+
 /** The `strategy:` line of a frontmatter body; group 1 is its value. */
 const STRATEGY_LINE_RE = /^strategy:[ \t]*(\S+)/m;
 
@@ -26,6 +27,7 @@ function holdsPatch(patch: string | null): boolean {
 /** True when `target` is not inside `dir`; both in the roots' spelling. */
 function isOutside(p: typeof path, dir: string, target: string): boolean {
   const rel = p.relative(dir, target);
+
   return rel === ".." || rel.startsWith(`..${p.sep}`) || p.isAbsolute(rel);
 }
 
@@ -39,6 +41,7 @@ function isReviewPlanText(text: string): boolean {
   const front = FRONTMATTER_RE.exec(text);
   const line = STRATEGY_LINE_RE.exec(front?.[1] ?? "");
   const strategy = parseStrategy(line?.[1]);
+
   return strategy !== null && strategy !== "default";
 }
 
@@ -50,6 +53,7 @@ function savesReviewPlan({ tool, input }: StampSite, target: string): boolean {
   const given = [input.content, input.Content, input.contents, input.file_text].find(
     (v): v is string => typeof v === "string",
   );
+
   return isReviewPlanText(tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8"));
 }
 
@@ -57,6 +61,7 @@ function savesReviewPlan({ tool, input }: StampSite, target: string): boolean {
 function stampReviewPlan(site: StampSite, targets: string[]): void {
   const plans = canonicalPath(path.join(site.roots.root, ".tmp", "repo", "plans"));
   const plan = targets.find((t) => path.dirname(t) === plans && path.extname(t) === MD_EXT && savesReviewPlan(site, t));
+
   if (plan !== undefined) writeStamp(site.roots.root, site.sid, plan);
 }
 
@@ -68,9 +73,11 @@ export function stampPlanSave(data: Payload): void {
   try {
     if (!isHookObject(data)) return;
     const sid = sessionIdOf(data);
+
     if (sid === "" || !isParentOrchestrator(data)) return;
     const { harness, key, args: input } = toolCallOf(data);
     const tool = TOOLS[harness].get(key);
+
     if (tool === undefined || tool.kind !== "write" || input === null) return;
     const roots = resolveRoots(data);
     stampReviewPlan({ input, roots, sid, tool }, writeTargets({ input, patch: null, roots, tool }));
@@ -86,12 +93,15 @@ export function stampPlanSave(data: Payload): void {
 function gitAskedBy(root: string, sid: string): Set<string> {
   try {
     if (sid === "") return new Set();
+
     const parsed: unknown = JSON.parse(
       fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8"),
     );
+
     // A file that is not an object throws in the destructure the gate always used, which lands in the catch below.
     if (!isPlainObject(parsed)) return new Set();
     const words = parsed.words;
+
     return new Set(Array.isArray(words) ? words.filter((w): w is string => typeof w === "string") : []);
   } catch {
     return new Set();
@@ -108,20 +118,25 @@ function gitAskedBy(root: string, sid: string): Set<string> {
  */
 function sharedCheckoutReason(call: GateCall): string | null {
   const { tool, patch, text, roots, shellCwd, sid, harness, data } = call;
+
   if (tool.kind === "write" || holdsPatch(patch)) {
     for (const target of writeTargets(call)) {
       const reason = mainCheckoutWriteReason(target, roots);
+
       if ((reason ?? "") !== "") return reason;
     }
   }
+
   if (tool.kind !== "bash" || !BASH_GIT.test(text)) return null;
   const asked = harness === "antigravity" ? new Set(gitAskedWords(data.lastUserInput)) : gitAskedBy(roots.root, sid);
+
   return sharedGitReason(text, { asked, cwd: shellCwd, roots });
 }
 
 export function sharedCheckoutGuard(call: GateCall): GuardResult {
   try {
     const reason = sharedCheckoutReason(call);
+
     return reason === null || reason === "" ? undefined : { reason, type: "deny" };
   } catch {
     return undefined;
@@ -140,6 +155,7 @@ function implementerWriteDeny(call: GateCall): GuardResult {
   const { roots } = call;
   const owned = ["plans", "implementations"].map((d) => canonicalPath(path.join(roots.root, ".tmp", "repo", d)));
   const hit = writeTargets(call).some((t) => owned.some((dir) => !isOutside(path, dir, t)));
+
   return hit ? { reason: REASON_IMPLEMENTER_WRITE, type: "deny" } : undefined;
 }
 
@@ -149,6 +165,7 @@ function parentWriteDeny(call: GateCall): GuardResult {
   const targets = writeTargets(call);
   stampReviewPlan(call, targets);
   const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
+
   if (review !== null && targets.some((t) => isOutsideRootTmp(t, roots.root)))
     return { reason: reviewDenyReason(review), type: "deny" };
 
@@ -165,11 +182,14 @@ export function reviewGuard(call: GateCall): GuardResult {
   try {
     const { tool, patch, text, sub, sid, parent } = call;
     const implementer = isImplementer(sub);
+
     if (implementer && tool.kind === "bash" && GIT_STAGE.test(text))
       return { reason: REASON_IMPLEMENTER_GIT, type: "deny" };
 
     if (tool.kind !== "write" && !holdsPatch(patch)) return undefined;
+
     if (implementer) return implementerWriteDeny(call);
+
     return sid !== "" && parent ? parentWriteDeny(call) : undefined;
   } catch {
     return undefined;

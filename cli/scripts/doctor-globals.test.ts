@@ -44,6 +44,7 @@ it("globals row reads the manifest from the package root, not from the workspace
   const empty = tmp("doc-empty-pkg-");
   expect(await globalsRow(cwd, home, empty)).toBeNull();
   const other = tmp("doc-work-");
+
   const ws = runDoctor({
     cwd: other,
     globals: await globalsRow(other, home, cwd),
@@ -51,6 +52,7 @@ it("globals row reads the manifest from the package root, not from the workspace
     pathEnv: bin,
     platform: "linux",
   });
+
   expect(ws.stdout).toMatch(/^globals\s/m);
 });
 
@@ -59,12 +61,14 @@ it("globals row says unavailable with the install hint when check-globals cannot
   vi.doMock(new URL("./check-globals.ts", import.meta.url).href, () => {
     throw new Error("Cannot find package 'smol-toml'");
   });
+
   try {
     // vitest wraps the factory's error; the row keeps the first line of whatever the load threw
     expect(await globalsRow(cwd, home, cwd)).toMatch(/^globals\s+unavailable\s+[^\n]+; run bun install$/);
   } finally {
     vi.doUnmock(new URL("./check-globals.ts", import.meta.url).href);
   }
+
   expect(await globalsRow(cwd, home, cwd)).toMatch(/^globals\s+drift/);
 });
 

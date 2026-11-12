@@ -25,9 +25,12 @@ function setPacks(state: State, value: string): void {
 function readPacksPair(next: string | undefined, state: State): boolean {
   if (next === undefined || next.startsWith(FLAG_PREFIX)) {
     state.packsError = true;
+
     return false;
   }
+
   setPacks(state, next);
+
   return true;
 }
 
@@ -37,14 +40,17 @@ function readArg(arg: string, next: string | undefined, state: State): boolean {
   else if (arg === PACKS_FLAG) return readPacksPair(next, state);
   else if (arg.startsWith(PACKS_PREFIX)) setPacks(state, arg.slice(PACKS_PREFIX.length));
   else if (!YES_FLAGS.has(arg)) state.positionals.push(arg);
+
   return false;
 }
 
 export function parseArgv(argv: readonly string[]): Flags {
   const state: State = { packs: undefined, packsError: false, positionals: [], skipGlobals: false };
   let isTaken = false;
+
   for (const [i, arg] of argv.entries()) isTaken = isTaken ? false : readArg(arg, argv[i + 1], state);
 
   const { skipGlobals, packs, packsError, positionals } = state;
+
   return { args: positionals.slice(1), cmd: positionals[0], packs, packsError, skipGlobals };
 }

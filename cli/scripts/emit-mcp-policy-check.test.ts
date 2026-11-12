@@ -23,6 +23,7 @@ function emitted(policy: unknown = DENY_ALL) {
   plantPolicy(ws, policy);
   plant(ws, MCP, JSON.stringify({ mcpServers: { a: { url: "u" } } }));
   expect(emitMcpPolicy({ home, workspaceRoot: ws }).ok).toBe(true);
+
   return { check: () => emitMcpPolicy({ check: true, home, workspaceRoot: ws }), ws };
 }
 

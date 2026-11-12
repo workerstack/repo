@@ -14,6 +14,7 @@ it(
     const root = buildRepo(tempDir);
     expect(build(root)).toStrictEqual({ code: 0, lines: ["removed 2 build dirs and 1 tsbuildinfo file (6 B)"] });
     expect(exists(root)(".next")).toBe(false);
+
     for (const kept of ["node_modules/m/i", ".flare/s", ".tmp/repo/old.log", "src/a.ts"])
       expect(exists(root)(kept)).toBe(true);
   },
@@ -28,6 +29,7 @@ it("repo clean --build says why a path it cannot remove was skipped, and exits 1
   const busy = (() => {
     throw Object.assign(new Error("busy"), { code: "EBUSY" });
   }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
+
   const second = build(buildRepo(tempDir), { rm: busy });
   expect(second.code).toBe(1);
   expect(second.lines).toContain("skipped .next: EBUSY");

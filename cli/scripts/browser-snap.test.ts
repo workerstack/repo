@@ -40,6 +40,7 @@ it("snap numbers the ref-bearing nodes in either ax shape and remembers them", a
     { name: {}, role: "link" },
     { role: {} },
   ];
+
   const t = await live({ lastRefs: {} }, { axNodes, markdown: "# T\n\nsome page body text" });
   const r = await exec(t.cwd, ["snap"]);
   const lines = "[1] button Go\n[2] link\n[3] textbox\n[4] link\n";
@@ -61,13 +62,16 @@ it("snap ends a ref-less page without doubling the newline", async () => {
 
 it("snap falls back to a bare url heading when the markdown call fails or answers oddly", async () => {
   const replies = ["boom", {}, { markdown: 5 }, { markdown: "" }];
+
   const outs = await Promise.all(
     replies.map(async (reply) => {
       const t = await live({}, { replies: { "LP.getMarkdown": reply } });
       const r = await exec(t.cwd, ["snap"]);
+
       return r.stdout;
     }),
   );
+
   expect(outs).toStrictEqual(
     replies.map(() => `engine: lightpanda\nurl: ${URL_X}\n\n# ${URL_X}\n\n${HOME_AND_SEARCH}`),
   );
@@ -94,6 +98,7 @@ it("snap goes on when accessibility cannot be enabled, and reads no refs from a 
     "Accessibility.enable": "nope",
     "Accessibility.getFullAXTree": { nodes: "x" },
   };
+
   const t = await live({}, { markdown: `# T\n\n${"w ".repeat(60)}`, replies });
   const r = await exec(t.cwd, ["snap"]);
   expect(r.code).toBe(0);
@@ -106,6 +111,7 @@ it("snap stashes a long ref list and shows the headings and the first refs", asy
     name: `B${i + 1}`,
     role: "button",
   }));
+
   const t = await live({}, { axNodes, markdown: "# One\n\nbody\n\n## Two\n" });
   const r = await exec(t.cwd, ["snap"]);
   const lines = r.stdout.split("\n");

@@ -70,6 +70,7 @@ it("google-workspace cli: no args prints usage and exits 1", () => {
     encoding: "utf8",
     timeout: 15_000,
   });
+
   expect(r.status).toBe(1);
   expect(r.stderr).toContain("usage: google-workspace");
 });

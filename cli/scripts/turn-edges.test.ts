@@ -38,10 +38,12 @@ it(
 it("vitest failing without a test count fails the related tests", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" }, NO_DEPS);
   write(root, { "src/a.ts": "export const a = 2;\n" });
+
   const bins: Bins = {
     tsc: () => ({ code: 0, stderr: "", stdout: "" }),
     vitest: () => ({ code: 1, stderr: "Error: no config\n", stdout: "" }),
   };
+
   expect(await turn(root, [], bins)).toStrictEqual({
     code: 1,
     err: "Error: no config\n",
@@ -53,9 +55,11 @@ it("vitest failing without a test count fails the related tests", { timeout: SLO
 
 it("refuses two paths, a path outside the repo, no config, a broken config and a broken manifest", async () => {
   const root = consumer({}, NO_DEPS);
+
   async function refusal(argv: string[], cwd = root) {
     return (await main(argv, { cwd, stderr: (s) => errs.push(s) }), errs.pop());
   }
+
   const errs: string[] = [];
   expect(await refusal(["a", "b"])).toBe("repo turn: one path at most; use repo turn [--staged] [<path>]\n");
   expect(await refusal(["../elsewhere"])).toBe(`repo turn: ../elsewhere is outside ${root}\n`);

@@ -9,6 +9,7 @@ describe("changelogFormatProblems headings", () => {
     const text =
       `${HEAD}## [Unreleased]\n\n### Added\n\n- x\n\n## [0.2.0] - 2026-11-01\n\n### Fixed\n` +
       `\n- y\n\n## [0.1.0] - 2026-10-01\n\n### Added\n\n- z\n`;
+
     expect(changelogFormatProblems(text)).toStrictEqual([]);
   });
 
@@ -44,12 +45,15 @@ describe("changelogFormatProblems order", () => {
     const text =
       `${HEAD}## [Unreleased]\n\n## [0.2.0] - 2026-11-01\n` +
       `\n## [0.3.0] - 2026-11-02\n\n## [0.3.0-rc.0] - 2026-11-01\n`;
+
     expect(changelogFormatProblems(text)).toStrictEqual([
       "CHANGELOG.md:9: 0.3.0 is below 0.2.0; list versions newest first",
     ]);
+
     const ok =
       `${HEAD}## [Unreleased]\n\n## [1.0.0] - 2026-11-02\n` +
       `\n## [1.0.0-rc.1] - 2026-11-01\n\n## [1.0.0-rc.0] - 2026-10-30\n`;
+
     expect(changelogFormatProblems(ok)).toStrictEqual([]);
   });
 });
@@ -116,6 +120,7 @@ describe("stampChangelog", () => {
     const text =
       `${HEAD}## [Unreleased]\n\n### Security\n\n- s\n\n### Added\n\n- new\n\n## [0.1.1] - 2026-11-08\n` +
       `\n### Fixed\n\n- f\n\n### Added\n\n- old\n\n## [0.1.0] - 2026-10-01\n`;
+
     expect(stampChangelog(text, "0.1.1", "2026-11-09")).toBe(
       `${HEAD}## [Unreleased]\n\n## [0.1.1] - 2026-11-08\n\n### Added\n\n- new\n- old\n\n### Fixed\n` +
         `\n- f\n\n### Security\n\n- s\n\n## [0.1.0] - 2026-10-01\n`,

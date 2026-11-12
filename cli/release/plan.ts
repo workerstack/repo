@@ -60,16 +60,21 @@ export type Plan = {
 
 function unreleased(t: Tools): boolean {
   const file = path.join(t.cwd, CHANGELOG_FILE);
+
   return fs.existsSync(file) && hasUnreleased(fs.readFileSync(file, "utf8"));
 }
 
 /** The refusal for the config and manifest, or the manifest. */
 async function readRepo(t: Tools): Promise<Manifest | string> {
   const manifest = readManifest(t.cwd);
+
   if (manifest === null) return NO_MANIFEST;
   const loaded = await loadConfig(t.cwd);
+
   if (!loaded.ok) return loaded.errors.join(PREFIX_SEPARATOR);
+
   if (!loaded.config.packs.includes(RELEASE_PACK)) return PACK_OFF;
+
   return manifest.private ? isPrivate(manifest.name) : manifest;
 }
 
@@ -80,16 +85,20 @@ type Release = { t: Tools; manifest: Manifest; lastTag: string | null; mode: Mod
 function newVersion({ t, manifest: m, lastTag, mode }: Release): { version: string } | string {
   const first = lastTag === null && m.version === ZERO_VERSION;
   const got = nextVersion({ commits: commitsSince(t, lastTag), current: m.version, first, mode });
+
   if (!got.ok) {
     const lines = {
       nothing: nothing(lastTag),
       stable: stableOnly(m.name, m.version),
       version: notSemver(m.name, m.version),
     };
+
     return lines[got.reason];
   }
+
   if (!unreleased(t)) return EMPTY_UNRELEASED;
   const taken = releaseTag(t, m.name, got.version);
+
   return taken === null ? { version: got.version } : tagExists(taken);
 }
 
@@ -101,12 +110,15 @@ function readState(t: Tools, { name, version }: Manifest): State | string {
   if (read(t, GIT_STATUS) !== "") return DIRTY;
   const branch = defaultBranch(t);
   const current = read(t, GIT_BRANCH);
+
   if (current !== branch) return notMain(branch, current);
   must(t, GIT_FETCH);
   const lastTag = releaseTag(t, name, version);
   const pending = lastTag === null ? commitWithSubject(t, RELEASE_SUBJECT(TAG_OF(name, version))) : null;
   const { ahead, behind } = divergence(t, branch);
+
   if (behind > 0 || (ahead > 0 && pending === null)) return differs(branch, behind, ahead);
+
   return t.gh(GH_AUTH.slice(), t.cwd).code === 0 ? { ahead, branch, lastTag, pending } : GH_MISSING;
 }
 
@@ -116,16 +128,22 @@ function readState(t: Tools, { name, version }: Manifest): State | string {
  */
 export async function makePlan(t: Tools, mode: Mode): Promise<Plan | string> {
   const manifest = await readRepo(t);
+
   if (typeof manifest === "string") return manifest;
   const state = readState(t, manifest);
+
   if (typeof state === "string") return state;
   const { name, version: from } = manifest;
   const { branch, ahead } = state;
+
   if (state.pending !== null) {
     const action = state.pending !== read(t, GIT_HEAD) && unreleased(t) ? "fold" : "none";
+
     return { action, ahead, branch, from, name, tag: TAG_OF(name, from), version: from };
   }
+
   const next = newVersion({ lastTag: state.lastTag, manifest, mode, t });
   const tag = typeof next === "string" ? "" : TAG_OF(name, next.version);
+
   return typeof next === "string" ? next : { action: "bump", ahead, branch, from, name, tag, version: next.version };
 }

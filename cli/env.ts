@@ -17,6 +17,7 @@ import { bunRuntime, homeDir, identities, packageRoot, readKeysFile, readPlainte
 /** A copy of the environment with `overrides` applied and every undefined value dropped, for spawn. */
 export function childEnv(overrides: Record<string, string | undefined> = {}): Record<string, string> {
   const merged = { ...process.env, ...overrides };
+
   return Object.fromEntries(
     Object.entries(merged).filter((entry): entry is [string, string] => entry[1] !== undefined),
   );
@@ -25,6 +26,7 @@ export function childEnv(overrides: Record<string, string | undefined> = {}): Re
 /** Where this repo's age key goes, as the error lines name it: `<repo>` when no keys file names the repo. */
 function keyFileLabel(): string {
   const repo = readKeysFile(process.cwd())?.repo ?? "<repo>";
+
   return `~/${KEYS_DIR}/${repo}.key`;
 }
 
@@ -34,6 +36,7 @@ function keyFileLabel(): string {
  */
 function childScript(): string {
   const module = JSON.stringify(pathToFileURL(path.join(packageRoot(import.meta.url), DECRYPT_MODULE)).href);
+
   return [
     `const { decryptChild, isWrongKey } = await import(${module});`,
     "try { process.stdout.write(await decryptChild(await Bun.stdin.text())); } catch (error) {",
@@ -47,22 +50,27 @@ function childScript(): string {
 /** Every cipher's plaintext from the decrypt child, a bun process given the identities on stdin; `key` is the read. */
 function revealInChild(ciphers: readonly string[], key: string): string[] {
   const keys = identities({ home: homeDir(process.env, os.homedir()), source: process.env });
+
   if (keys.length === 0) {
     const fix = `save this repo's age key there (0600) or set ${ENV_KEY_VARIABLE}`;
     throw new Error(`repo env: ${key} is sealed and no key is at ${keyFileLabel()}; ${fix}`);
   }
+
   const result = spawnSync(bunRuntime(process.versions, process.execPath), ["-e", childScript()], {
     encoding: "utf8",
     input: JSON.stringify({ ciphers, identities: keys }),
   });
+
   if (result.status === DECRYPT_WRONG_KEY_EXIT) {
     const label = keyFileLabel();
     throw new Error(`repo env: ${key} is sealed for another key than ${label}; save this repo's age key there`);
   }
+
   if (result.status !== 0) {
     const reason = (result.error?.message ?? result.stderr).trim();
     throw new Error(`repo env: ${key} could not be decrypted: ${reason}`);
   }
+
   return readPlaintexts(result.stdout, ciphers.length);
 }
 
@@ -74,6 +82,7 @@ export function defineEnv<C extends EnvConfig>(config: C): EnvInstance<C> {
   const io: EnvIo = { reveal: revealInChild, source: () => process.env };
   const site: { stack?: string } = {};
   Error.captureStackTrace(site, defineEnv);
+
   return createEnv(config, io, stackFile(String(site.stack), process.cwd()));
 }
 

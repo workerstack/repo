@@ -14,21 +14,25 @@ function conditions(types: string, runtime: string) {
 }
 
 const TIMEOUT = 120_000;
+
 afterEach(removePlanted);
 
 const BOTH = {
   import: conditions("./index.d.ts", "./index.js"),
   require: conditions("./index.d.cts", "./index.cjs"),
 };
+
 const BOTH_FILES = {
   ...CLEAN_FILES,
   "index.cjs": "exports.a = 1;\n",
   "index.d.cts": "export declare const a: number;\n",
 };
+
 /** An ESM package whose top-level `types` exists but whose `exports` lists no types: untyped under bundler, node16. */
 function attwOnly(lines: string[]): string[] {
   return lines.filter((line) => line.startsWith("attw: "));
 }
+
 function untypedExports() {
   return fixtureTarball(cleanManifest({ exports: { ".": "./index.js" }, types: "./types/index.d.ts" }), {
     "index.js": CLEAN_FILES["index.js"] ?? "",

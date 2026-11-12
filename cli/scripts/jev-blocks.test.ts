@@ -15,6 +15,7 @@ function blockedRuns() {
   const fileKey = plantDir("jev-file-");
   const nine = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`q${i}`, { instructions: "x", type: "noul" }]));
   const withKey = { env: { TYPESAFE_API_KEY: KEY }, questionsText: ENDPOINT_QUESTIONS, stateText: STATE };
+
   return [
     { ...withKey, env: {}, home: plantDir("jev-nokey-"), label: "missing key", text: /missing TYPESAFE_API_KEY/ },
     {
@@ -44,9 +45,11 @@ it("runJev does not fetch when the key, question count, state, or ledger already
   const outcomes = await Promise.all(
     blockedRuns().map(async ({ label, text, ...row }) => {
       const { calls, fetchImpl } = counted(() => jsonResponse(200, choiceBody()));
+
       return { calls, label, result: await createJevRunner()({ ...row, fetchImpl }), text };
     }),
   );
+
   for (const { calls, label, result, text } of outcomes) {
     expect(result.code, label).toBe(2);
     expect(result.text, label).toMatch(text);

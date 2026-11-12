@@ -7,6 +7,7 @@ import { commitIn, git, hasBranch, plantHook, scratch, shPath, write, wt } from 
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 /** A repo with worktree `name` holding one commit of its own. */
@@ -14,6 +15,7 @@ function withCommit(name = "c", file = `${name}.txt`, text = file): string {
   const r = tmp.repo();
   addWorktree(r, name);
   commitIn(wt(r, name), file, text);
+
   return r;
 }
 
@@ -40,9 +42,11 @@ it("aborts a conflicting rebase, names the file and keeps the worktree untouched
   commitIn(r, f, "main\n");
   const before = git(r, "rev-parse", "main");
   const w = wt(r, "c");
+
   const message =
     `rebasing wt/c onto main conflicts in ${f}: run git -C ${w} rebase main, fix each file, ` +
     `git -C ${w} add <file>, git -C ${w} rebase --continue, rerun the checks, then run finish again`;
+
   expect(() => finishWorktree(r, "c")).toThrow(message);
   expect(git(r, "rev-parse", "main")).toBe(before);
   expect([git(w, "branch", "--show-current"), git(w, "status", "--porcelain")]).toStrictEqual(["wt/c", ""]);
@@ -160,5 +164,6 @@ function captureError(fn: () => unknown): unknown {
   } catch (e) {
     return e;
   }
+
   return null;
 }

@@ -5,6 +5,7 @@ import type { Def, Group, Json, Target } from "./hooks.types.ts";
 import { passthroughFields } from "./passthrough-fields.ts";
 
 type DefsByEvent = Record<string, Def[]>;
+
 type EventNames = Readonly<Record<string, string>>;
 
 /** The payload fields each handler kind carries after its common ones; `model` only where the target emits it. */
@@ -14,6 +15,7 @@ const PAYLOAD: Readonly<Record<string, readonly string[]>> = {
   [MCP_TOOL]: ["server", "tool", "input"],
   [PROMPT]: [MODEL],
 };
+
 const NAMED: readonly string[] = ["name", "description"];
 
 /**
@@ -27,6 +29,7 @@ export function nameOf(names: EventNames, event: string): string {
 /** A definition's handler kind; a definition without one is a command. */
 export function typeOf(def: Def): string {
   const type = def["type"] /* hooks.jsonc types are strings; another value matches no kind */ as string | undefined;
+
   return type ?? COMMAND;
 }
 
@@ -38,6 +41,7 @@ export function effectiveEvents(config: Json, overrideKey: string, names: EventN
   const hooks = config["hooks"] /* hooks.jsonc's hooks map events to definition lists */ as DefsByEvent | undefined;
   const shared = Object.entries(hooks ?? {}).filter(([event]) => Object.hasOwn(names, event));
   const block = config[overrideKey] /* an override block holds a hooks map */ as { hooks?: DefsByEvent } | undefined;
+
   return Object.entries({ ...Object.fromEntries(shared), ...block?.hooks });
 }
 
@@ -49,6 +53,7 @@ function hookObject(def: Def, event: string, target: Readonly<Target>): Json {
   const type = typeOf(def);
   const source = typeof def["command"] === "string" ? expandHookCommand(def["command"]) : def["command"];
   const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
+
   const fields: Json = {
     ...passthroughFields({ def, event, target, type }),
     command,
@@ -56,20 +61,27 @@ function hookObject(def: Def, event: string, target: Readonly<Target>): Json {
     timeout: def["timeout"],
     type,
   };
+
   const payload = (PAYLOAD[type] ?? []).filter((key) => key !== MODEL || target.promptModel);
+
   for (const key of [...payload, ...(target.named ? NAMED : [])]) fields[key] = def[key];
+
   return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined && value !== null));
 }
 
 /** The definitions of one event grouped by (translated) matcher, in first-appearance order. */
 function byMatcher(defs: readonly Def[], event: string, target: Readonly<Target>): Map<string, Def[]> {
   const groups = new Map<string, Def[]>();
+
   for (const def of defs) {
     const raw = (def["matcher"] /* hooks.jsonc matchers are strings */ as string | undefined) ?? "";
+
     const matcher =
       raw === "" || target.noMatcher.has(event) || target.matcher === undefined ? raw : target.matcher(raw);
+
     groups.set(matcher, [...(groups.get(matcher) ?? []), def]);
   }
+
   return groups;
 }
 
@@ -80,15 +92,20 @@ function byMatcher(defs: readonly Def[], event: string, target: Readonly<Target>
  */
 export function toolHooks(config: Json, target: Readonly<Target>): Record<string, Group[]> {
   const out: Record<string, Group[]> = {};
+
   for (const [event, defs] of effectiveEvents(config, target.overrideKey, target.names)) {
     const noMatcher = target.noMatcher.has(event);
     const entries: Group[] = [];
+
     for (const [matcher, group] of byMatcher(defs, event, target)) {
       const hooks = group.filter((def) => target.types.has(typeOf(def))).map((def) => hookObject(def, event, target));
+
       if (hooks.length === 0) continue;
       entries.push(matcher === "" || noMatcher ? { hooks } : { hooks, matcher });
     }
+
     if (entries.length > 0) out[nameOf(target.names, event)] = entries;
   }
+
   return out;
 }

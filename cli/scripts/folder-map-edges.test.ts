@@ -9,6 +9,7 @@ import { buildTree, displayRows, rowText } from "./folder-map-tree.ts";
 import { folderMap, mapCommand } from "./folder-map.ts";
 
 const tmp = useTmp();
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -16,10 +17,12 @@ afterEach(() => {
 /** A temp dir holding `files`, a git repo unless `init` is false. */
 function plant(files: Record<string, string>, { init = true }: { init?: boolean } = {}) {
   const root = init ? tmp.repo("folder-map-edge-") : tmp.dir("folder-map-edge-");
+
   for (const [rel, body] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), body);
   }
+
   return root;
 }
 
@@ -55,6 +58,7 @@ describe("git edges", () => {
 
 function nameOf(files: Record<string, string>, dir: string) {
   const root = plant(files, { init: false });
+
   return buildTree(root, Object.keys(files)).kids.get(dir)?.pkg;
 }
 

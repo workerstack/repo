@@ -27,6 +27,7 @@ it("reports an engine that answers without a websocket as a failure, not a stack
 
 it("treats a missing, unreadable or malformed session as no session", async () => {
   const pid = holder();
+
   const bad = [
     "{",
     "[]",
@@ -37,13 +38,16 @@ it("treats a missing, unreadable or malformed session as no session", async () =
     JSON.stringify({ engine: "lightpanda", pid: String(pid), port: 1 }),
     JSON.stringify({ engine: "lightpanda", port: 1 }),
   ];
+
   const stderrs = await Promise.all(
     bad.map((raw) => {
       const cwd = tmp("browser-bad-");
       plant(cwd, raw);
+
       return exec(cwd, ["snap"]).then((r) => r.stderr);
     }),
   );
+
   expect(stderrs).toStrictEqual(bad.map(() => NO_SESSION));
   const none = await exec(tmp("browser-bad-none-"), ["snap"]);
   expect(none.stderr).toBe(NO_SESSION);
@@ -51,12 +55,14 @@ it("treats a missing, unreadable or malformed session as no session", async () =
 
 it("fills in defaults for missing fields and drops junk refs when it rewrites the session", async () => {
   const t = await live();
+
   const lastRefs = {
     "1": { backendNodeId: 10 },
     "2": "junk",
     "3": null,
     "4": [1],
   };
+
   plant(t.cwd, { engine: "chromium", lastRefs, pid: holder(), port: t.port });
   const hovered = await exec(t.cwd, ["hover", "1"]);
   expect(hovered.stdout).toBe("hover: 1\n");
@@ -90,10 +96,12 @@ it("keeps escalated and a numeric swapCount, and reads a numeric string as a num
 
 it("spells out a number or boolean ref field and empties any other junk when it rewrites the session", async () => {
   const t = await live();
+
   const lastRefs = {
     "1": { backendNodeId: 10, name: true, role: 5 },
     "2": { backendNodeId: 11, name: {}, role: "link" },
   };
+
   plant(t.cwd, { engine: "chromium", lastRefs, lastURL: {}, pid: holder(), port: t.port });
   await exec(t.cwd, ["hover", "1"]);
   expect(readStored(t.cwd)).toMatchObject({

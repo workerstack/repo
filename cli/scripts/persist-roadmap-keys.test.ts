@@ -13,15 +13,19 @@ import { persistRoadmap } from "./persist-roadmap.ts";
 const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
 const NO_KEY = "strategy: default|review-fast|review-deep";
 const MODE_KEY = "mode: ask|auto|away";
+
 function without(body: string) {
   return body.replace(/^strategy:.*\n/m, "");
 }
+
 function withStrategy(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, `strategy: ${value}`);
 }
+
 function withMode(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
 }
+
 function save(content: string, ws = tmpWs()) {
   return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
 }

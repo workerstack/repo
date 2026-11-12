@@ -23,6 +23,7 @@ describe("validateLesson", () => {
       ["other-name.md", lesson(), /other-name/],
       ["plan-forks.md", lesson({ paths: ["lib/**"] }), /lib\/\*\* matches no file/],
     ];
+
     for (const [file, text, reason] of cases)
       expect(validateLesson(file, text, { files }).join("; "), String(reason)).toMatch(reason);
   });

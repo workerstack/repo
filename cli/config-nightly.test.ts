@@ -8,7 +8,9 @@ const { refusal, repo } = useBodyRepo("nightly");
 function withRelease(nightly: string) {
   return repo(`{ packs: ["release"], nightly: ${nightly} }`);
 }
+
 const SHARDS_ERROR = "nightly.shards: must be a whole number from 1 to 32";
+
 function secretError(at: number) {
   return `nightly.secrets[${at}]: must be a secret name like CLOUDFLARE_API_TOKEN, not starting with GITHUB_`;
 }

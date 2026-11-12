@@ -11,6 +11,7 @@ describe("agent trees of the consumer fixture over the frozen stock", { timeout:
     const rendered = await renderFixtureTrees();
     const goldens = readGoldens();
     expect([...rendered.keys()]).toStrictEqual([...goldens.keys()]);
+
     for (const [rel, content] of goldens) expect(rendered.get(rel), rel).toBe(content);
   });
 });

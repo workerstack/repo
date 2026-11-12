@@ -23,26 +23,35 @@ async function hook(root: string, message: string, result: RedProofResult = { li
   fs.writeFileSync(path.join(root, ".git", "COMMIT_EDITMSG"), message);
   const calls: { root: string; change: NameStatus[] }[] = [];
   const err: string[] = [];
+
   function redProof(at: string, change: NameStatus[]) {
     return (calls.push({ change, root: at }), result);
   }
+
   const code = await main([".git/COMMIT_EDITMSG"], { cwd: root, redProof, stderr: (text) => err.push(text) });
+
   return { calls, code, stderr: err.join("") };
 }
+
 async function callsOf(root: string, message: string) {
   const result = await hook(root, message);
+
   return result.calls;
 }
+
 function featCalls(root: string) {
   return callsOf(root, "feat: add x\n");
 }
+
 /** How often red-proof ran for a feat while the root package was private, then once it was public. */
 async function callCountsAcrossPublic(root: string) {
   const before = await featCalls(root);
   fs.writeFileSync(path.join(root, "package.json"), '{ "name": "p" }\n');
   const after = await featCalls(root);
+
   return { after: after.length, before: before.length };
 }
+
 function mono() {
   return plant({
     ...PLAIN,
@@ -51,6 +60,7 @@ function mono() {
     "packages/pub/package.json": { name: "pub" },
   });
 }
+
 const SRC_AND_TEST = { "CHANGELOG.md": "# Changelog\n", "src/x.test.ts": "t\n", "src/x.ts": "export const x = 1;\n" };
 
 describe("commit-msg red-proof in a public package", () => {

@@ -46,6 +46,7 @@ function readonlyGlobs(sb: Sandbox): Record<string, boolean> {
   const settings = parse(sb.read(".vscode/settings.json")) /* sync writes each read-only glob mapped to true */ as {
     "files.readonlyInclude": Record<string, boolean>;
   };
+
   return settings["files.readonlyInclude"];
 }
 
@@ -66,6 +67,7 @@ export function blocksCase(get: GetSandbox) {
     ).toStrictEqual([]);
     const readonly = readonlyGlobs(sb);
     expect(readonly).toMatchObject({ ".claude/settings.json": true, "bunfig.toml": true });
+
     for (const yours of [".gitignore", "AGENTS.md", ".mcp.json"]) expect(Object.keys(readonly)).not.toContain(yours);
   });
 }
@@ -79,6 +81,7 @@ export function installedBinCase(get: GetSandbox) {
     expect(job.stdout).toContain("hi");
 
     const env = claudeEnv(sb);
+
     const payload = {
       cwd: sb.repo,
       hook_event_name: "PreToolUse",
@@ -86,9 +89,12 @@ export function installedBinCase(get: GetSandbox) {
       tool_input: { command: "cat src/index.ts" },
       tool_name: "Bash",
     };
+
     const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { env, input: JSON.stringify(payload) });
     expectClean(sb, rewrite);
+
     type Rewrite = { hookSpecificOutput?: { updatedInput?: { command?: string } } };
+
     const out = JSON.parse(rewrite.stdout) /* the gate answers a rewrite with its updated input */ as Rewrite;
     expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
       new RegExp(`^${installedBin(sb.repo).replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
@@ -98,6 +104,7 @@ export function installedBinCase(get: GetSandbox) {
       env,
       input: JSON.stringify({ cwd: sb.repo, hook_event_name: "SessionStart", session_id: "e2e", source: "startup" }),
     });
+
     expectClean(sb, map);
     expect(map.stdout).toContain("run `bun repo map <dir>`");
     expect(map.stdout).toContain("src/");
@@ -107,6 +114,7 @@ export function installedBinCase(get: GetSandbox) {
 /** The claude gate's decision on a Read of `rel`, timed; logs the latency and expects it under 5s. */
 async function gateRead(sb: Sandbox, command: string, rel: string) {
   const env = claudeEnv(sb);
+
   const payload = {
     cwd: sb.repo,
     hook_event_name: "PreToolUse",
@@ -114,15 +122,19 @@ async function gateRead(sb: Sandbox, command: string, rel: string) {
     tool_input: { file_path: path.join(sb.repo, rel) },
     tool_name: "Read",
   };
+
   const started = Date.now();
   const r = await sb.run("bash", ["-c", command], { env, input: JSON.stringify(payload) });
   const ms = Date.now() - started;
   process.stdout.write(`gate latency ${ms}ms for Read ${rel}\n`);
   expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
+
   type Decision = { hookSpecificOutput?: { permissionDecision?: string } };
+
   const decided = r.stdout === "" ? "{}" : r.stdout;
   const answer = JSON.parse(decided) /* the gate answers with a decision, or nothing */ as Decision;
+
   return { decision: answer.hookSpecificOutput?.permissionDecision, out: r.out, status: r.status };
 }
 
@@ -137,6 +149,7 @@ export function gateLatencyCase(get: GetSandbox) {
     const section = /<!-- repo:stack [\da-f]{8} -->\n([\s\S]*?)<!-- \/repo:stack -->/.exec(index)?.[1] ?? "";
     const targets = [...section.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1] ?? "");
     expect(targets, section).toContain(`../node_modules/${PACKAGE_NAME}/references/INDEX.md`);
+
     for (const target of targets) expect(sb.exists(path.join("references", target)), target).toBe(true);
 
     const gate = claudeGate(sb);

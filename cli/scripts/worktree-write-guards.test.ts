@@ -7,23 +7,28 @@ import { git, scratch, wt } from "./__fixtures__/worktree-repo.ts";
 import { gitAskedWords, mainCheckoutWriteReason, managedLessonsDir } from "./worktree-guards.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 function rootsOf(r: string) {
   return { checkout: r, cwd: r, root: r };
 }
+
 const WIN_ROOTS = rootsOf("C:\\r");
 
 it("denies a write into the main checkout and frees .tmp, worktrees and anything outside", () => {
   const r = tmp.repo();
   const roots = rootsOf(r);
+
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under " +
     `${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+
   expect(mainCheckoutWriteReason(path.join(r, "src/x.ts"), roots)).toBe(reason);
   expect(mainCheckoutWriteReason(path.join(r, ".repo/lessons/l.md"), roots)).toBe(reason);
   expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
   expect(mainCheckoutWriteReason(path.join(aliasOf(r), "src/x.ts"), roots)).toBe(reason);
+
   for (const free of [".tmp/repo/n.md", ".tmp", ".worktrees/a/src/x.ts", ".worktrees/a"])
     expect(mainCheckoutWriteReason(path.join(r, free), roots), free).toBeNull();
 
@@ -34,6 +39,7 @@ it("lets any write through outside a git repo and before the first commit", () =
   const plain = tmp.dir("wt-plain-");
   const unborn = tmp.dir("wt-unborn-");
   git(unborn, "init", "-q", "-b", "main");
+
   for (const dir of [plain, unborn])
     expect(mainCheckoutWriteReason(path.join(dir, "src/x.ts"), rootsOf(dir))).toBeNull();
 });
@@ -50,6 +56,7 @@ it("reads win32 spellings of a write", () => {
   );
   expect(check("c:/R/src/x.ts")).toMatch(/^the main checkout is shared/);
   expect(check("src\\x.ts")).toMatch(/^the main checkout is shared/);
+
   for (const free of ["C:\\r\\.tmp\\repo\\n.md", "C:/r/.worktrees/a/src/x.ts", "D:\\other\\x.ts", "C:\\rr\\x.ts"])
     expect(check(free), free).toBeNull();
 });
@@ -70,7 +77,9 @@ it("finds whole words the user named, and nothing from everyday phrases", () => 
     expect.arrayContaining(["rebase", "cherry-pick"]),
   );
   expect(gitAskedWords("rebase onto main, then cherry-pick abc")).toHaveLength(2);
+
   for (const sub of GIT_PREFIXED) expect(gitAskedWords(`please run git ${sub} now`), sub).toStrictEqual([sub]);
+
   for (const phrase of FORCE_PHRASES) expect(gitAskedWords(phrase), phrase).toContain("force");
   expect(gitAskedWords("push it to origin")).toStrictEqual([]);
   expect(gitAskedWords("")).toStrictEqual([]);

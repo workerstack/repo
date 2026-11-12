@@ -45,6 +45,7 @@ function preCommandsAfter(command: string): string[] {
   );
   writeJson(ws, ".claude/settings.json", claude);
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
+
   return readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse.flatMap((g) =>
     g.hooks.map((h) => h.command),
   );
@@ -54,6 +55,7 @@ it("replaces a consumer hook by its script name under / or \\ separators and kee
   for (const command of ['bun "C:\\r\\scripts\\check-behind.mjs" --hook', "bun /r/scripts/check-behind.mjs --old"]) {
     const commands = preCommandsAfter(command);
     expect(commands.filter((c) => c.includes("check-behind"))).toStrictEqual([BEHIND]);
+
     for (const kept of ["mine.ts", "mine.mjs", "mine.js"]) expect(commands).toContain(`bun scripts/${kept}`);
   }
 });
@@ -62,11 +64,13 @@ it("replaces a consumer hook by its script name under / or \\ separators and kee
 function checkGrok(command: string, needle: string): string[] {
   const ws = tmpDir("union-form-");
   writeJson(ws, ".grok/hooks/rtk.json", { hooks: { PreToolUse: [{ hooks: [{ command, type: "command" }] }] } });
+
   return checkUnion({ workspaceRoot: ws }).filter((f) => f.includes(needle));
 }
 
 it("--check accepts hookCommand for a repo hook and rejects every other form", () => {
   expect(checkGrok(hookCommand("rtk-grok"), "rtk-grok")).toStrictEqual([]);
+
   for (const bad of [
     rootCmd("cli/scripts/rtk-grok.ts"),
     'bun "$GROK_WORKSPACE_ROOT/cli/scripts/rtk-grok.ts"',
@@ -93,6 +97,7 @@ it("keeps rulesync's scrub/gate groups, UPS/Stop and the mcp deny", () => {
   expect(r.ok).toBe(true);
   const next = readJson<ClaudeDoc>(ws, ".claude/settings.json");
   const text = JSON.stringify(next);
+
   for (const n of OWNED_HOOKS) expect(text).toContain(`hook ${n}`);
   expect(next.hooks.PreToolUse).toStrictEqual(ownedPre);
   expect(JSON.stringify(next.hooks.UserPromptSubmit)).toMatch(PARENT);

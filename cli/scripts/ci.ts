@@ -64,8 +64,10 @@ export type CiDeps = {
   /** The coverage floors file, relative to the root; read from the config when omitted. */
   floors?: string;
 } & Pick<WaitDeps, "git" | "gh" | "sleep" | "fs">;
+
 /** Where `repo ci` runs and writes. */
 type Io = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
+
 type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" | "cargo" | "floors">> & {
   root: string;
   json: string | undefined;
@@ -73,6 +75,7 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
   shard: string | undefined;
   packs: readonly Pack[];
 };
+
 /** `repo <args>` run by this checkout's bin. */
 function runRepo(args: string[], cwd: string): Captured {
   return captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
@@ -81,6 +84,7 @@ function runRepo(args: string[], cwd: string): Captured {
 /** `repo <args>` as the gate `name`. */
 function repoGate(name: string, args: string[], ctx: Ctx): Gate {
   const run = ctx.repo(args, ctx.root);
+
   return run.code === 0 ? pass(`${name} ok`) : fail(`${name} failed`, [textOf(run)]);
 }
 
@@ -97,6 +101,7 @@ function rustGates(root: string): ((ctx: Ctx) => Gate)[] {
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
 function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gate[] {
   const turboOn = ctx.packs.includes("workspace");
+
   const gates: ((ctx: Ctx) => Gate)[] = [
     (c) => repoGate("check", ["check"], c),
     ...docsGates(ctx.packs),
@@ -105,17 +110,21 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
     turboOn ? (c) => packagesGate(c, c.turbo) : testsGate,
     ...rustGates(ctx.root),
   ];
+
   const checks = Object.entries(ctx.checks).map(
     ([name, argv]) =>
       (c: Ctx): Gate =>
         checkGate(name, argv, c),
   );
+
   return [...gates, ...checks].map((run) => {
     const started = now();
     const gate = run(ctx);
     const seconds = ((now() - started) / MS_PER_SECOND).toFixed(1);
     stdout(`ci: ${gate.label}${gate.ran ? ` (${seconds}s)` : ""}\n`);
+
     for (const chunk of gate.output) stdout(chunk.endsWith("\n") ? chunk : `${chunk}\n`);
+
     return gate;
   });
 }
@@ -134,12 +143,15 @@ function prepare(
   run: Pick<Ctx, "json" | "coverage" | "shard" | "packs">,
 ): { ctx: Ctx } | { error: string } {
   const [refusal] = shardRefusal(run);
+
   if (refusal !== undefined) return refusal;
   const root = findRoot(cwd);
+
   if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
   const [cargo, floors] = [deps.cargo ?? runCargo, deps.floors ?? DEFAULT_FLOORS];
+
   return { ctx: { root, ...run, bins, cargo, checks, floors, repo, spawn, turbo } };
 }
 
@@ -152,15 +164,21 @@ function gatesMain(
   const { packs, deps } = run;
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
+
   try {
     const prepared = prepare(io.cwd, deps, { coverage, json, packs, shard });
+
     if ("error" in prepared) {
       io.stderr(`repo ci: ${prepared.error}\n`);
+
       return 1;
     }
+
     const gates = runGates(prepared.ctx, deps.now ?? Date.now, io.stdout);
     io.stdout(`ci: ${gates.map((gate) => gate.label).join(SUMMARY_SEPARATOR)}\n`);
+
     if (report !== undefined && json !== undefined && !writeTo({ json, report, root: prepared.ctx.root }, io)) return 1;
+
     return gates.every((gate) => gate.ok) ? 0 : 1;
   } finally {
     if (temp !== undefined) fs.rmSync(temp, { force: true, recursive: true });
@@ -171,10 +189,12 @@ function gatesMain(
 function writeTo({ report, json, root }: { report: string; json: string; root: string }, io: Io): boolean {
   try {
     writeReport(path.resolve(io.cwd, report), json, root);
+
     return true;
   } catch (error) {
     const { message } = error /* writeFileSync throws Errors, with a message */ as Error;
     io.stderr(`repo ci: cannot write ${report}: ${message}\n`);
+
     return false;
   }
 }
@@ -182,6 +202,7 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
 /** Runs the gates once the packs and checks are known: injected, else read from the config. */
 function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
   if (deps.packs !== undefined) return gatesMain(command, { deps, packs: deps.packs }, io);
+
   return configOf(io.cwd).then(({ packs, checks, floors }) =>
     gatesMain(command, { deps: { checks, floors, ...deps }, packs }, io),
   );
@@ -198,8 +219,10 @@ async function configOf(cwd: string): Promise<{
 }> {
   const root = findRoot(cwd);
   const loaded = root === null ? null : await loadConfig(root);
+
   if (loaded === null || !loaded.ok) return { checks: {}, floors: DEFAULT_FLOORS, packs: [] };
   const { packs, ci, coverage } = loaded.config;
+
   return { checks: ci.checks, floors: coverage.floors, packs };
 }
 
@@ -210,24 +233,33 @@ function lightMain(
   io: Io,
 ): number | Promise<number> {
   if (command.kind === "skips") return skipsMain(command.dir, io);
+
   if (command.kind === "times") return timesMain(command.dir, io);
+
   if (command.kind === "merge") return mergeMain(command.dir, { ...io, bins: deps.bins ?? BINS });
+
   if (command.kind === "wait") return waitMain({ ...deps, ...io, branch: command.branch });
   io.stderr(`repo ci: ${WAIT_MANY}\n`);
+
   return EXIT_WAIT_MANY;
 }
 
 export function main(argv: string[], deps: CiDeps = {}): number | Promise<number> {
   const command = ciCommand(argv);
+
   const io: Io = {
     cwd: deps.cwd ?? process.cwd(),
     stderr: deps.stderr ?? ((s: string) => process.stderr.write(s)),
     stdout: deps.stdout ?? ((s: string) => process.stdout.write(s)),
   };
+
   if (command.kind === "usage") {
     io.stderr(`repo ci: ${command.error ?? USAGE}\n`);
+
     return 1;
   }
+
   if (command.kind === "gates") return withPacks(command, deps, io);
+
   return lightMain(command, deps, io);
 }

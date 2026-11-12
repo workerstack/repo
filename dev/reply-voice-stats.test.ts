@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { replyVoiceStats, run } from "./reply-voice-stats.ts";
 
 const tmpDirs: string[] = [];
+
 afterEach(() => {
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
@@ -26,6 +27,7 @@ function transcriptRoot(lines: string[]) {
   tmpDirs.push(root);
   fs.mkdirSync(path.join(root, "proj"));
   fs.writeFileSync(path.join(root, "proj", "s.jsonl"), `${lines.join("\n")}\n`);
+
   return root;
 }
 
@@ -46,6 +48,7 @@ describe("replyVoiceStats", () => {
       reply("old → reply", "2026-10-01T10:00:00Z"),
       "not json",
     ]);
+
     expect(replyVoiceStats({ root, since: "2026-10-15" })).toStrictEqual({
       arrows: 1,
       coldReplies: 1,
@@ -59,10 +62,12 @@ describe("run", () => {
   it("prints one JSON line with the root, the since flag and the stats, and exits 0", () => {
     const root = transcriptRoot([reply("a -> b k=v", "2026-11-01T10:00:00Z"), reply("plain", "2026-11-01T10:01:00Z")]);
     const lines: string[] = [];
+
     const code = run(["--root", root, "--since", "2026-10-15"], {
       err: () => {},
       out: (line) => lines.push(line),
     });
+
     expect(code).toBe(0);
     expect(lines).toStrictEqual([
       JSON.stringify({

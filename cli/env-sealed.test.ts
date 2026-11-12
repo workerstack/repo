@@ -10,6 +10,7 @@ import { newIdentity, seal } from "./env/age.ts";
 const plant = useTempTree("env-sealed-");
 
 const KEY_FILE = ".workerstack/keys/test.key";
+
 // The real child spawns bun and decrypts with age.
 const SPAWN = { timeout: 30_000 };
 const NO_KEY = "repo env: WEBHOOK_KEY is sealed and no key is at ~/.workerstack/keys/";
@@ -21,18 +22,21 @@ function homeWith(identity: string): string {
   vi.stubEnv("HOME", home);
   vi.stubEnv("WORKERSTACK_ENV_KEY", undefined);
   vi.stubEnv("REPO_ENV", undefined);
+
   return home;
 }
 
 describe("defineEnv with sealed values", () => {
   it("decrypts two sealed values in a real child, once per env instance", SPAWN, async () => {
     const { identity, recipient } = await newIdentity();
+
     const config = {
       dev: {},
       global: { API_TOKEN: sealed(await seal("token-one", recipient)) },
       local: { WEBHOOK_KEY: sealed(await seal("webhook-two", recipient)) },
       prod: {},
     };
+
     const home = homeWith(identity);
     const env = defineEnv(config);
     expect(env.current.API_TOKEN).toBe("token-one");

@@ -17,6 +17,7 @@ export const BUGS_FIX = 'set it to { "url": "…/issues" }';
 
 /** The `owner` fields a public release-pack root must set. */
 const OWNER_FIELDS = "owner: { name, github }";
+
 /** The line `repo check` prints when a public release-pack root has no `owner`. */
 export const OWNER_MISSING: string = `${CONFIG_NAME}: the release pack with a public package needs ${OWNER_FIELDS}`;
 
@@ -33,5 +34,6 @@ export const MIT_BODY: string =
   "IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER " +
   "LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN " +
   "CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.";
+
 /** Runs of whitespace, which a LICENSE may wrap or indent any way. */
 export const WHITESPACE: RegExp = /\s+/g;

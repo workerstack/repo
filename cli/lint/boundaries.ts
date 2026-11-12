@@ -10,12 +10,15 @@ import type { RepoRule } from "./rule.types.ts";
 
 /** The file being linted, its package's manifest, the dir paths in messages are relative to, and the package tags. */
 type Where = { cwd: string; filename: string; own: Manifest; tags: Tags };
+
 type Sourced =
   | TSESTree.ImportDeclaration
   | TSESTree.ExportNamedDeclaration
   | TSESTree.ExportAllDeclaration
   | TSESTree.ImportExpression;
+
 type MessageId = "devOnly" | "reach" | "reachNameless" | "tag" | "undeclared";
+
 /** A report: which message, and the parts it fills in. */
 type Problem = { messageId: MessageId; data: Record<string, string> };
 
@@ -25,6 +28,7 @@ const SCHEME = /^[a-z][a-z\d+.-]*:/i;
 /** `@scope/pkg/sub` → `@scope/pkg`; `pkg/sub` → `pkg`. */
 function packageName(specifier: string): string {
   const parts = specifier.split("/");
+
   return parts.slice(0, specifier.startsWith("@") ? SCOPED_PARTS : 1).join("/");
 }
 
@@ -44,10 +48,12 @@ function shown(cwd: string, to: string): string {
 /** The problem of a path specifier whose target belongs to another package, or null when it stays home. */
 function reachProblem(where: Where, specifier: string): Problem | null {
   const file = nearestManifest(path.resolve(path.dirname(where.filename), specifier));
+
   if (file === null || file === where.own.file) return null;
   const shownDir = shown(where.cwd, path.dirname(file));
   const dir = shownDir === "" ? "the root package" : shownDir;
   const name = readManifest(file)?.name ?? null;
+
   return name === null
     ? { data: { dir, manifest: shown(where.cwd, file), specifier }, messageId: "reachNameless" }
     : { data: { dir, name, specifier }, messageId: "reach" };
@@ -56,17 +62,22 @@ function reachProblem(where: Where, specifier: string): Problem | null {
 /** True when `name` is only a devDependency and the file is shipped code of a public package. */
 function shipsDevOnly({ own, filename }: Where, name: string): boolean {
   if (!own.isPublic || !own.devOnly.includes(name)) return false;
+
   return own.ships(path.relative(path.dirname(own.file), filename).replaceAll("\\", "/"));
 }
 
 function problemOf(where: Where, specifier: string): Problem | null {
   if (specifier.startsWith(".") || path.isAbsolute(specifier)) return reachProblem(where, specifier);
   const name = packageName(specifier);
+
   if (exempt(specifier) || name === where.own.name) return null;
   const manifest = shown(where.cwd, where.own.file);
+
   if (!where.own.declared.includes(name)) return { data: { manifest, name }, messageId: "undeclared" };
+
   if (shipsDevOnly(where, name)) return { data: { manifest, name }, messageId: "devOnly" };
   const data = tagProblem(where.tags, where.own.name, name);
+
   return data === null ? null : { data, messageId: "tag" };
 }
 
@@ -81,14 +92,19 @@ export const boundaries: RepoRule<MessageId, TagsOptions> = {
   create(context) {
     const ownFile = nearestManifest(path.dirname(context.filename));
     const own = ownFile === null ? null : readManifest(ownFile);
+
     if (own === null) return {};
     const where: Where = { cwd: context.cwd, filename: context.filename, own, tags: tagsOf(context.options) };
+
     function check(node: Sourced): void {
       const { source } = node;
+
       if (source?.type !== AST_NODE_TYPES.Literal || typeof source.value !== "string") return;
       const problem = problemOf(where, source.value);
+
       if (problem !== null) context.report({ ...problem, node });
     }
+
     return {
       ExportAllDeclaration: check,
       ExportNamedDeclaration: check,

@@ -41,6 +41,7 @@ it("maps a dist target of .js and .d.ts back to its source through tsconfig.buil
       "tsconfig.build.json": BUILD,
     },
   );
+
   const surface = publicSurface(root);
   expect([...surface.entries].map(([key, files]) => [key, files.map((file) => rel(root, file))])).toStrictEqual([
     ["./a", ["src/lib/a.ts"]],
@@ -60,6 +61,7 @@ it("puts a mapped source that is not there in unknown", () => {
 it("takes a dist target as written when there is no build config, an unreadable one or one without both dirs", () => {
   const files = { "dist/x.js": "export const x = 1;\n" };
   const configs = [undefined, "{ // comment\n", { compilerOptions: { outDir: "dist" } }];
+
   for (const config of configs) {
     const root = packageOf({ exports: "./dist/x.js" }, { ...files, "tsconfig.build.json": config ?? "" });
     expect(namesIn(root)).toStrictEqual({ "dist/x.js": ["x"] });
@@ -71,6 +73,7 @@ it("takes a target outside outDir as written", () => {
     { exports: { ".": "./elsewhere/x.js" } },
     { "elsewhere/x.js": "export const x = 1;\n", "tsconfig.build.json": BUILD },
   );
+
   expect(namesIn(root)).toStrictEqual({ "elsewhere/x.js": ["x"] });
 });
 
@@ -101,12 +104,14 @@ it("skips JSON, wildcard, directory, markdown and ./package.json targets", () =>
 
 it("reads exports written as a single path or as a map of conditions", () => {
   const single = packageOf({ exports: "./src/index.ts" }, { "src/index.ts": A });
+
   const mapped = packageOf(
     {
       exports: conditions("./src/index.ts", "./src/index.ts"),
     },
     { "src/index.ts": A },
   );
+
   for (const root of [single, mapped])
     expect(publicSurface(root).entries).toStrictEqual(new Map([[".", [path.join(root, "src/index.ts")]]]));
 });
@@ -119,6 +124,7 @@ it("has no surface for a package without exports, a private one, or a manifest t
   const list = tempDir();
   write(broken, { "package.json": "{ not json" });
   write(list, { "package.json": "[]" });
+
   for (const root of [none, hidden, missing, broken, list]) expect(publicSurface(root)).toStrictEqual(EMPTY);
 });
 
@@ -147,6 +153,7 @@ it("finds the package of a nested workspace package from its own file", () => {
       "src/index.ts": "export {};\n",
     },
   );
+
   const inner = path.join(root, "packages/inner");
   expect(packageRoot(path.join(root, "src/index.ts"))).toBe(root);
   expect(packageRoot(path.join(inner, "src/deep.ts"))).toBe(inner);

@@ -19,6 +19,7 @@ function git(root: string, ...args: string[]) {
 }
 
 const IGNORE = ".next\n.turbo/\n!keep/.turbo/\n.vite\nnode_modules\n*.tsbuildinfo\n.flare\n.tmp/\ndist\n";
+
 const FILES: Record<string, string> = {
   ".flare/state": "f",
   ".gitignore": IGNORE,
@@ -39,21 +40,26 @@ const FILES: Record<string, string> = {
 function repo(): string {
   const root = fs.realpathSync(tempDir("workerstack-build-dirs-"));
   git(root, "init", "-q", "-b", "main");
+
   for (const [rel, text] of Object.entries(FILES)) {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), text);
   }
+
   git(root, "add", "-f", ".gitignore", "src/a.ts", ".vite/tracked.json");
   git(root, "commit", "-q", "--no-verify", "-m", "init");
+
   return root;
 }
 
 function at(root: string, ...rels: string[]) {
   return rels.map((rel) => path.join(root, rel));
 }
+
 function names(plan: ReturnType<typeof planBuild>, kind: string) {
   return plan.ok ? plan.items.filter((item) => item.kind === kind).map((item) => item.path) : [];
 }
+
 const BUILT = ["src/a.ts", "keep/.turbo/log.txt", ".vite/tracked.json", ".tmp/repo/plans/note.md"];
 
 it("plans the ignored build dirs and tsbuildinfo files at any depth, and no tracked or unignored path", () => {
@@ -65,6 +71,7 @@ it("plans the ignored build dirs and tsbuildinfo files at any depth, and no trac
   expect(names(plan, "info")).toStrictEqual(at(root, "packages/a/tsconfig.tsbuildinfo"));
   expect(names(plan, "modules")).toStrictEqual([]);
   const everything = plan.ok ? plan.items.map((item) => item.path) : [];
+
   for (const kept of at(root, ".vite", "keep/.turbo", "dist", ".flare", "node_modules"))
     expect(everything).not.toContain(kept);
 });
@@ -95,8 +102,10 @@ it("removes what was planned and nothing else, the tracked .vite and the unignor
   const result = plan.ok ? removeBuild(plan.items, { dryRun: false, rm: fs.rmSync }) : null;
   expect(result?.skipped).toStrictEqual([]);
   expect(result?.done).toHaveLength(plan.ok ? plan.items.length : -1);
+
   for (const gone of at(root, ".next", "apps/web/.turbo", "node_modules", "packages/a/tsconfig.tsbuildinfo"))
     expect(fs.existsSync(gone)).toBe(false);
+
   for (const kept of [...BUILT, "dist/out.js", ".flare/state"]) expect(fs.existsSync(path.join(root, kept))).toBe(true);
 });
 
@@ -111,15 +120,18 @@ it("removes nothing on a dry run, and lists the same items", () => {
 
 it("a second plan after removing finds nothing, and a path that fails is skipped with its code", () => {
   const root = repo();
+
   const busy = ((target: string) => {
     if (target.endsWith(".next")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
     fs.rmSync(target, { force: true, recursive: true });
   }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
+
   const plan = planBuild(root, { deps: false, extra: [] });
   const result = plan.ok ? removeBuild(plan.items, { dryRun: false, rm: busy }) : null;
   expect(result?.skipped.map((entry) => entry.code)).toStrictEqual(["EBUSY", "EBUSY"]);
   const clean = planBuild(root, { deps: false, extra: [] });
   expect(clean.ok ? names(clean, "dir").length : -1).toBe(2);
+
   if (clean.ok) removeBuild(clean.items, { dryRun: false, rm: fs.rmSync });
   expect(planBuild(root, { deps: false, extra: [] })).toStrictEqual({ items: [], ok: true });
 });

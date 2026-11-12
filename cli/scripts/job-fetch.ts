@@ -22,6 +22,7 @@ const SCRIPTS = /<script[\s\S]*?<\/script>/gi;
 const STYLES = /<style[\s\S]*?<\/style>/gi;
 const TAGS = /<[^>]+>/g;
 const SPACES = /\s+/g;
+
 /** The space after a full stop, where the page text breaks into lines. */
 const SENTENCE_BREAK = /(?<=\.)\s+/;
 
@@ -29,6 +30,7 @@ const SENTENCE_BREAK = /(?<=\.)\s+/;
 export function stripHtml(html: string | undefined): { title: string; text: string } {
   const s = html ?? "";
   const title = TITLE.exec(s)?.groups?.title ?? "";
+
   const text = s
     .replaceAll(SCRIPTS, " ")
     .replaceAll(STYLES, " ")
@@ -39,6 +41,7 @@ export function stripHtml(html: string | undefined): { title: string; text: stri
     .replaceAll("&gt;", ">")
     .replaceAll(SPACES, " ")
     .trim();
+
   return { text, title: title.replaceAll(SPACES, " ").trim() };
 }
 
@@ -46,18 +49,24 @@ export function stripHtml(html: string | undefined): { title: string; text: stri
 function pageLines(raw: string): string[] {
   const { title, text } = stripHtml(raw);
   const lines: string[] = [];
+
   if (title !== "") lines.push(title);
+
   for (const part of text.split(SENTENCE_BREAK)) {
     const p = part.trim();
+
     if (p !== "") lines.push(p.slice(0, LINE_WIDTH));
   }
+
   return lines.length > 0 ? lines : [EMPTY_PAGE];
 }
 
 /** Fetches an http url in a child and prints the page as text facts; any other query falls back. */
 export function runFetch(query: string, { cwd, root, timeoutMs = FETCH_TIMEOUT_MS }: FetchOptions = {}): JobResult {
   const url = query.trim();
+
   if (!HTTP_URL.test(url)) return fallbackResult();
+
   const r = spawnSync(process.execPath, ["-e", FETCH_SCRIPT, url], {
     cwd: dirOrCwd(cwd),
     encoding: "utf8",
@@ -65,9 +74,12 @@ export function runFetch(query: string, { cwd, root, timeoutMs = FETCH_TIMEOUT_M
     maxBuffer: STASH_CAP + BUFFER_SLACK,
     timeout: timeoutMs,
   });
+
   const { stdout: raw, stderr } = outputsOf(r);
+
   if (r.status !== 0) return failedResult(EXEC_JOB, nonEmptyLines(stderr === "" ? FETCH_FAILED : stderr));
   const isTruncated = Buffer.byteLength(raw, "utf8") >= STASH_CAP;
   const lines = pageLines(raw);
+
   return verdictFromLines({ cwd, kind: EXEC_JOB, lines, query: url, raw, root, truncated: isTruncated });
 }

@@ -22,6 +22,7 @@ it("folderMap config applies jsonc overrides", () => {
         "budget": 900
       }`,
   });
+
   expect(loadMapConfig(root).budget).toBe(900);
   expect(folderMap({ root })?.text).toBe("docs/\nsrc/\n");
 });
@@ -38,6 +39,7 @@ it("folderMap config ignores each key with a bad value, warning by name, and kee
     ...files,
     ".repo/map.jsonc": '{ "budget": -1, "exclude": [1], "include": ["docs"], "other": 1 }',
   });
+
   const warn: string[] = [];
   expect(loadMapConfig(root, (m: string) => warn.push(m))).toStrictEqual({ ...DEFAULTS, include: ["docs"] });
   expect(warn).toStrictEqual([

@@ -19,6 +19,7 @@ function checkout(files: Record<string, string>): string {
   const root = tempDir("workerstack-tailwind-");
   git(root, "init", "-q");
   write(root, files);
+
   return root;
 }
 
@@ -27,6 +28,7 @@ function entryOf(files: Record<string, string>, entryPoint?: string): string | s
   const root = checkout(files);
   const lint: ResolvedLint = entryPoint === undefined ? { skip: [] } : { skip: [], tailwind: { entryPoint } };
   const resolved = withTailwindEntry(root, lint);
+
   return resolved.ok ? resolved.lint.tailwind?.entryPoint : resolved.errors;
 }
 
@@ -90,11 +92,13 @@ function generated(root: string, rel: string): unknown {
 
 it("repo sync gives oxlint and oxfmt the one entry, and refuses a second", async () => {
   const config = 'export default { packs: ["standards"] };\n';
+
   const root = checkout({
     "package.json": '{ "name": "app" }\n',
     "src/app.css": IMPORT,
     "workerstack.config.ts": config,
   });
+
   const err: string[] = [];
   const io = { cwd: root, stderr: (text: string) => err.push(text), stdout: () => true };
   expect(await runSync([], io, { generators: [] })).toBe(0);

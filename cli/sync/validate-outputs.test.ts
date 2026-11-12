@@ -35,8 +35,10 @@ it("accepts every output of the golden consumer fixture", { timeout: SLOW }, asy
 it("accepts every output this repo plans", { timeout: SLOW }, async () => {
   const config = await loadConfig(REPO_ROOT);
   const workspace = readWorkspace(REPO_ROOT);
+
   if (!config.ok || !workspace.ok) throw new Error("this repo's config or workspace did not load");
   const planned = computeOutputs({ config: config.config, root: REPO_ROOT, workspace: workspace.workspace });
+
   if (!planned.ok) throw new Error(planned.errors.join("\n"));
   expect(planned.outputs.length).toBeGreaterThan(100);
   expect(validateOutputs(REPO_ROOT, planned.outputs)).toStrictEqual([]);
@@ -50,13 +52,16 @@ it("validates all four through a real sync of a root with a Cargo.toml and the s
   const config = { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG };
   const err: string[] = [];
   const io = { cwd: root, stderr: (s: string) => err.push(s), stdout: () => {} };
+
   const code = await runSync([], io, {
     generators: [rust],
     load: () => Promise.resolve({ config, ok: true as const }),
     post: [],
   });
+
   expect(err).toStrictEqual([]);
   expect(code).toBe(0);
+
   for (const rel of ["rust-toolchain.toml", "rustfmt.toml", "clippy.toml", "deny.toml"])
     expect(fs.existsSync(path.join(root, rel))).toBe(true);
 });

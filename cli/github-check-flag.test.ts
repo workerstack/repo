@@ -13,14 +13,17 @@ function withoutConsumer(main: CurrentRuleset): CurrentRuleset {
   const rules = main.rules.map((rule): Rule => {
     if (rule.type !== "required_status_checks") return rule;
     const checks = rule.parameters?.required_status_checks?.filter((check) => check.context !== "consumer");
+
     return { ...rule, parameters: { ...rule.parameters, required_status_checks: checks } };
   });
+
   return { ...main, rules };
 }
 
 it("prints each setting that drifted with how to fix it, and exits 1 without writing", async () => {
   const cwd = githubRepo();
   const settled = await settledSettings(cwd);
+
   const drifted: Settings = {
     ...settled,
     alerts: false,
@@ -29,6 +32,7 @@ it("prints each setting that drifted with how to fix it, and exits 1 without wri
     rulesets: [withoutConsumer(must(settled.rulesets[0]))],
     topics: ["lint"],
   };
+
   const fake = fakeGh(drifted);
   const result = await run(cwd, fake, ["--check"]);
   expect([result.code, result.out]).toStrictEqual([1, ""]);
@@ -60,6 +64,7 @@ it("names a denied read as a read", async () => {
     fakeGh(EMPTY_SETTINGS(), () => DENIED),
     ["--check"],
   );
+
   expect(result.err).toBe(
     "repo github: gh cannot read workerstack/repo's settings (HTTP 403): log in as an admin with `gh auth login`\n",
   );

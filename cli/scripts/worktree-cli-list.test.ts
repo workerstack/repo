@@ -10,6 +10,7 @@ import { isManaged } from "./worktree-git.ts";
 import { main } from "./worktree.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 it("lists every linked worktree with its state", () => {
@@ -43,6 +44,7 @@ it("removes only clean managed worktrees whose own commits reached the default b
   expect(fs.existsSync(wt(r, "m"))).toBe(false);
   expect(hasBranch(r, "wt/m")).toBe(false);
   expect(hasBranch(r, "wt/o")).toBe(false);
+
   for (const n of ["fresh", "dirty", "un"]) expect(fs.existsSync(wt(r, n)), n).toBe(true);
   expect(fs.existsSync(outside)).toBe(true);
   expect(cli(r, ["prune"]).stdout).toBe("nothing to prune\n");
@@ -70,6 +72,7 @@ it("judges managed paths on win32 the way git prints them", () => {
 function event(r: string, data: object) {
   return cli(path.join(r, "packages/a"), ["hook"], { input: JSON.stringify(data) });
 }
+
 function removing(r: string, name: string) {
   return event(r, { cwd: r, hook_event_name: "WorktreeRemove", worktree_path: wt(r, name) });
 }

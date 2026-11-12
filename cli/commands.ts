@@ -200,6 +200,7 @@ export async function runCommand(
   { commands }: Registry = REGISTRY,
 ): Promise<number> {
   const { main } = await commands[name].load();
+
   return await main(args);
 }
 
@@ -210,16 +211,22 @@ export async function runCommand(
  */
 export async function dispatch(argv: readonly string[], registry: Registry = REGISTRY): Promise<number | null> {
   const [head, ...rest] = argv;
+
   if (head === HOOK_COMMAND) {
     const [name, ...args] = rest;
+
     if (!isHookName(name)) {
       const named = name === undefined ? "name a hook" : `unknown hook "${name}"`;
       process.stderr.write(`repo hook: ${named}; ${HOOK_USAGE}\n`);
+
       return 1;
     }
+
     const hook = registry.hooks[name];
     const { main } = await hook.load();
+
     return await main([...hook.argv, ...args]);
   }
+
   return isCommandName(head) ? await runCommand(head, rest, registry) : null;
 }

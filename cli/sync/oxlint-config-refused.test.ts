@@ -11,6 +11,7 @@ it("oxlintConfig refuses a rule the generated config does not run, naming the en
     { files: ["src/b.ts"], reason: REASON, rules: ["eslint/no-console", "repo/no-modul-state"] },
     { files: ["src/c.ts"], reason: REASON, rules: ["no-module-state"] },
   ];
+
   expect(oxlintConfig(APP, { skip: skips })).toStrictEqual({
     errors: [
       'workerstack.config.ts: lint.skip[1].rules: "repo/no-modul-state" is not a rule the generated config runs',

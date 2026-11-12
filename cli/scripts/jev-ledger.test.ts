@@ -77,10 +77,13 @@ it.each([
 
 it("daily caps: never lets the settled count go below zero", async () => {
   const home = plantDir();
+
   function fetchImpl() {
     plantLedger(home, { day: DAY, input_tokens: 0, requests: 1 });
+
     return Promise.resolve(reply(200, answerBody({ usage: { input_tokens: 1 } })));
   }
+
   await go({ fetchImpl, home });
   expect(readLedgerFile(home).input_tokens).toBe(0);
 });

@@ -6,9 +6,11 @@ export const BUG_REPORT_PATH: string = ".github/ISSUE_TEMPLATE/bug_report.yml";
 export const ISSUE_CONFIG_PATH: string = ".github/ISSUE_TEMPLATE/config.yml";
 
 export const MANIFEST_PATH: string = "package.json";
+
 /** A GitHub repository in `repository.url` or the string form: `git+https://github.com/o/r.git`, `github:o/r` or `o/r`. */
 export const GITHUB_REPOSITORY: RegExp =
   /^(?:git\+)?(?:https:\/\/github\.com\/|github:)?([\w.-]+\/[\w.-]+?)(?:\.git)?$/;
+
 export const ADVISORIES_URL: string = "https://github.com/%REPO%/security/advisories/new";
 
 export const SECURITY: string = `# Security

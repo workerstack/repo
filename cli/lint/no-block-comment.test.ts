@@ -8,6 +8,7 @@ import { noBlockComment } from "./no-block-comment.ts";
 function run(code: string): { reports: number; fixed: string } {
   const messages = reportsOf(noBlockComment, { "a.ts": code }).map((report) => report.message);
   expect(messages.every((message) => message === MESSAGE)).toBe(true);
+
   return { fixed: fixedOf(noBlockComment, code), reports: messages.length };
 }
 

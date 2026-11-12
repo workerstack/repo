@@ -145,9 +145,11 @@ describe("apiDiff names, all together", () => {
 describe("apiDiff refusals", () => {
   it("names a types file that is not in the package", { timeout: TIMEOUT }, () => {
     const files = { "index.js": JS };
+
     const exports = {
       ".": conditions("./missing.d.ts", "./index.js"),
     };
+
     const version = { exports, files, version: "1.0.0" };
     const world = apiWorld(version, version);
     expect(() => apiDiff(world.project, world.old, world.next)).toThrow('cannot resolve "old" to a module');

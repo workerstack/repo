@@ -10,23 +10,30 @@ import type { ChildLike } from "./listen.types.ts";
 afterEach(cleanupTmp);
 
 type DriveCtx = { on: Record<string, Handler>; signal: (name: "SIGINT" | "SIGTERM") => void };
+
 type Drive = (ctx: DriveCtx) => void;
 
 /** Runs `_record` with a fake ffmpeg, calls `drive`, and removes every signal listener main added. */
 async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive: Drive }) {
   const before = { SIGINT: process.listeners("SIGINT"), SIGTERM: process.listeners("SIGTERM") };
+
   function added(name: "SIGINT" | "SIGTERM") {
     return process.listeners(name).filter((l) => !before[name].includes(l));
   }
+
   function removeAdded(name: "SIGINT" | "SIGTERM"): void {
     for (const listener of added(name)) process.off(name, listener);
   }
+
   const on: Record<string, Handler> = {};
   const spawned: Array<{ bin: string; args: string[] }> = [];
+
   function spawnFn(bin: string, args: string[]): ChildLike {
     spawned.push({ args, bin });
+
     return { on: (ev: string, cb: Handler) => void (on[ev] = cb), stdin: spec.stdin ?? null };
   }
+
   try {
     const pending = run(spec.argv, { spawnFn });
     spec.drive({
@@ -35,6 +42,7 @@ async function record(spec: { argv: string[]; stdin?: ChildLike["stdin"]; drive:
         for (const listener of added(name)) listener(name);
       },
     });
+
     return { ...(await pending), spawned };
   } finally {
     for (const name of ["SIGINT", "SIGTERM"] as const) removeAdded(name);
@@ -115,6 +123,7 @@ describe("_record signals", () => {
         on.exit?.(0);
       },
     });
+
     expect(r.code).toBe(0);
   });
 });

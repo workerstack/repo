@@ -10,6 +10,7 @@ const LINE_BEFORE_AS = /^[\s)]*as\b/;
 /** `as const` and `as unknown` claim nothing a reader must trust. */
 function claimsNothing(type: TSESTree.TypeNode): boolean {
   if (type.type === AST_NODE_TYPES.TSUnknownKeyword) return true;
+
   return (
     type.type === AST_NODE_TYPES.TSTypeReference &&
     type.typeName.type === AST_NODE_TYPES.Identifier &&
@@ -28,13 +29,18 @@ function endsReason(text: string, comment: RuleComment): boolean {
 /** Whether a comment of a reason lies after the expression and before the `as` keyword. */
 function hasReason(text: string, comments: readonly RuleComment[], node: TSESTree.TSAsExpression): boolean {
   let edge = node.expression.range[1];
+
   for (const comment of comments) {
     const [start, end] = comment.range;
+
     if (start < edge || end > node.typeAnnotation.range[0]) continue;
+
     if (AS_KEYWORD.test(text.slice(edge, start))) return false;
+
     if (isReason(comment.value) && endsReason(text, comment)) return true;
     edge = end;
   }
+
   return false;
 }
 
@@ -48,6 +54,7 @@ export const asNeedsReason: RepoRule<"reason"> = {
       TSAsExpression(node) {
         if (claimsNothing(node.typeAnnotation)) return;
         const { text } = context.sourceCode;
+
         if (hasReason(text, context.sourceCode.getAllComments(), node)) return;
         const type = text.slice(...node.typeAnnotation.range);
         context.report({ data: { type }, messageId: "reason", node });

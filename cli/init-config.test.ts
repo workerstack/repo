@@ -21,6 +21,7 @@ import { init, writeConfigIfMissing } from "./init.ts";
 import { standards } from "./sync/standards.ts";
 
 useInitKit();
+
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { hosts: [], skills: [] };
 
@@ -80,18 +81,21 @@ it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
       JSON.stringify({ name: "app", scripts: { build: "tsc" }, workspaces: ["packages/*"] }),
     );
     init(dest, { execFileSync: fakeExec(), packs: skills, pkgRoot: stubPkgRoot() });
+
     const ctx = {
       config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
       read: () => null,
       root: dest,
       workspace: { manifest: {}, packages: [], root: dest },
     };
+
     for (const output of standards(ctx, []).outputs) {
       if (output.kind === "file") {
         fs.mkdirSync(path.dirname(path.join(dest, output.path)), { recursive: true });
         fs.writeFileSync(path.join(dest, output.path), output.content);
       }
     }
+
     const run = spawnSync(process.execPath, [oxfmtBin(), "--check"], { cwd: dest, encoding: "utf8" });
     expect(run.stdout + run.stderr).toContain("All matched files use the correct format");
     expect(run.status).toBe(0);

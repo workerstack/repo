@@ -9,12 +9,15 @@ import type { Captured } from "./lint.ts";
 import { dirName, type Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
+
 import { srcConfig, TSCONFIG } from "./__fixtures__/turn-repo.ts";
+
 const OK: Captured = { code: 0, stderr: "", stdout: "" };
 const PIN = `bun@${Bun.version}`;
 const APP = { main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
 const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
 const ANSWER = "export const answer = 42;\n";
+
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\n' +
   'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';
@@ -33,6 +36,7 @@ it(
       "src/answer.test.ts": ANSWER_TEST,
       "src/answer.ts": ANSWER,
     });
+
     write(root, {
       "src/answer.ts": "export const answer: number = 40+2\n",
       "src/other.ts": "export const other = 1;\n",
@@ -93,7 +97,7 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
     ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
     "package.json": APP_MANIFEST,
     "src/a.ts": [
-      "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n",
+      "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n",
       "  } else {\n    return 0;\n  }\n}\n",
     ].join(""),
   });
@@ -101,7 +105,8 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   const result = await turn(root, ["--staged"]);
   expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
   expect(git(root, "show", ":src/a.ts")).toBe(
-    "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n    return next;\n  }\n  return 0;\n}\n",
+    "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
+      "  }\n\n  return 0;\n}\n",
   );
   expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
   expect(unstaged(root)).toStrictEqual([]);
@@ -112,11 +117,13 @@ it(
   { timeout: SLOW },
   async () => {
     const skip = { files: ["src/retry.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
+
     const root = consumer({
       "src/retry.ts": "export const retry = 1;\n",
       "src/wait.ts": "export const wait = 1;\n",
       "workerstack.config.ts": `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] })};\n`,
     });
+
     write(root, {
       "src/retry.ts": "export function retry(): number {\n  return 3;\n}\n",
       "src/wait.ts": "export function wait(): number {\n  return 5000;\n}\n",
@@ -145,6 +152,7 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
 
 // The fields in the order oxfmt's sortPackageJson writes them, so the planted package passes fmt.
 const WORKSPACE_ROOT = { main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module" };
+
 const API_MANIFEST =
   '{\n  "name": "api",\n  "private": true,\n  "type": "module",\n  "sideEffects": false,\n' +
   '  "exports": {\n    "./a": "./src/a.ts",\n    "./b": "./src/b.ts"\n  }\n}\n';
@@ -159,14 +167,18 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
     "packages/api/src/b.ts": "export const b = 42;\n",
     "src/root.ts": "export const root = 42;\n",
   });
+
   const calls: string[] = [];
+
   function called(bin: string, args: string[], cwd: string) {
     return calls.push(`${bin} ${dirName(fwd(path.relative(root, cwd)))} ${args.join(" ")}`);
   }
+
   const bins: Bins = {
     tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
     vitest: (args, cwd) => (called("vitest", args, cwd), null),
   };
+
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
     "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · " +
@@ -182,11 +194,13 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
 it("a failing typecheck and failing tests print their output and fail the turn", { timeout: SLOW }, async () => {
   const root = consumer({ "tsconfig.json": TSCONFIG, ...srcConfig(), "src/a.ts": "export const a = 42;\n" });
   write(root, { "src/a.ts": "export const a = 41;\n" });
+
   const bins: Bins = {
     tsc: (args): Captured =>
       args.includes("tsconfig.src.json") ? OK : { code: 2, stderr: "", stdout: "src/a.ts(1,7): error TS2322: no.\n" },
     vitest: (): Captured => ({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
   };
+
   const result = await turn(root, [], bins);
   expect(result.out).toBe(
     "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · 4 related tests, 1 failed\n",

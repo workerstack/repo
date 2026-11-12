@@ -6,10 +6,13 @@ import { COPIED_DIR, MD, REPO_DIR, RULE_FRONTMATTER } from "./migrate.constants.
 import type { MigrationState } from "./migration-state.ts";
 
 const H2 = "## ";
+
 /** The first `# ` heading line. */
 const H1_LINE = /^# .+$/m;
+
 /** Every `## ` heading line; for `matchAll`. */
 const H2_LINES = /^## .+$/gm;
+
 /** The `.md` ending of a file name. */
 const MD_END = /\.md$/;
 
@@ -31,19 +34,26 @@ function planRule(state: MigrationState, name: string): void {
   const from = `${COPIED_DIR}/rules/${name}`;
   const stockText = state.stockText(from);
   const own = isDir(path.join(state.root, from)) ? null : state.text(from);
+
   if (own !== null && state.unedited(from, own, stockText)) return;
   const to = `${REPO_DIR}/rules/${name}`;
+
   if (own === null || stockText === null) {
     state.move(from, to, { note: `moved ${from} to ${to}` });
+
     return;
   }
+
   const extras = extraH2Sections(own, stockText);
   const base = name.replace(MD_END, "");
+
   if (extras === "") {
     const mark = state.mark(from, to, { kind: "rule", name: base });
     state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock rule)` });
+
     return;
   }
+
   const heading = h1Of(stockText);
   const local = `${REPO_DIR}/rules/${base}-local${MD}`;
   const content = `${RULE_FRONTMATTER}${heading === null ? "" : `${heading}\n\n`}${extras}\n`;
@@ -61,8 +71,10 @@ export function planSubagents(state: MigrationState): void {
     const from = `${COPIED_DIR}/subagents/${name}`;
     const stockText = state.stockText(from);
     const isFolder = isDir(path.join(state.root, from));
+
     if (!isFolder && state.unedited(from, state.text(from), stockText)) continue;
     const to = `${REPO_DIR}/subagents/${name}`;
+
     if (stockText === null || isFolder) {
       state.move(from, to, { note: `moved ${from} to ${to}` });
     } else {
@@ -76,6 +88,7 @@ export function planSubagents(state: MigrationState): void {
 export function editedSkill(state: MigrationState, from: string): boolean {
   return filesUnder(path.join(state.root, from)).some((file) => {
     const rel = `${from}/${file}`;
+
     return !state.unedited(rel, state.text(rel), state.stockText(rel));
   });
 }
@@ -84,8 +97,10 @@ export function editedSkill(state: MigrationState, from: string): boolean {
 export function planSkills(state: MigrationState): void {
   for (const name of state.names(".agents/skills")) {
     const from = `.agents/skills/${name}`;
+
     if (!isDir(path.join(state.root, from))) continue;
     const to = `${REPO_DIR}/skills/${name}`;
+
     if (!editedSkill(state, from)) {
       state.drop.push(from);
     } else if (present(path.join(state.stock, stockRel(from)))) {

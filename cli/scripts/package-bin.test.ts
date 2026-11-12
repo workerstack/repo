@@ -11,6 +11,7 @@ useTempDirs();
 function manifestOf(manifest: unknown): string {
   const dir = tempDir("workerstack-package-bin-");
   put(dir, "package.json", JSON.stringify(manifest));
+
   return path.join(dir, "package.json");
 }
 

@@ -21,6 +21,7 @@ export type KnipIgnore =
       /** Why knip cannot see the binary's use. */
       reason: string;
     };
+
 /** A `knip.ignore` entry as written: the schema refuses any that does not name exactly one of the three. */
 export type KnipIgnoreEntry = {
   /** Why knip cannot see the use; the check fails the entry once knip would report nothing. */
@@ -32,6 +33,7 @@ export type KnipIgnoreEntry = {
   /** The binary knip is not to report as unlisted. */
   binary?: string | undefined;
 };
+
 /** What the generated knip config and `repo check` read from `knip`. */
 export type ResolvedKnip = {
   /** The sanctioned ignores; empty when the config lists none. */
@@ -58,6 +60,7 @@ type EntrySchema = z.ZodPipe<
   >,
   z.ZodTransform<KnipIgnore, KnipIgnoreEntry>
 >;
+
 type KnipSchema = z.ZodObject<{ ignore: z.ZodOptional<z.ZodReadonly<z.ZodArray<EntrySchema>>> }, z.core.$strict>;
 
 /** One ignore: exactly one of `file`, `dependency` or `binary`, and why knip cannot see the use. */
@@ -74,10 +77,14 @@ function entrySchema(): EntrySchema {
     )
     .transform((entry, ctx): KnipIgnore => {
       const { file, dependency, binary, reason } = entry;
+
       if (file !== undefined && dependency === undefined && binary === undefined) return { file, reason };
+
       if (dependency !== undefined && file === undefined && binary === undefined) return { dependency, reason };
+
       if (binary !== undefined && file === undefined && dependency === undefined) return { binary, reason };
       ctx.issues.push({ code: "custom", input: entry, message: ONE_KEY_ERROR });
+
       return z.NEVER;
     });
 }

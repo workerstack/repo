@@ -22,17 +22,20 @@ function fakeIo(body: string) {
   const bytes = Buffer.from(body, "utf8");
   let at = 0;
   const out: string[] = [];
+
   const io: HookIo = {
     readChunk: () => {
       if (at >= bytes.length) return null;
       const chunk = bytes.subarray(at, at + 100);
       at += 100;
+
       return chunk;
     },
     write: (text) => {
       out.push(text);
     },
   };
+
   return { io, out };
 }
 
@@ -42,6 +45,7 @@ function run(argv: string[], body = "") {
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   const code = main(argv, io);
   const stderr = err.mock.calls.map((c) => String(c[0])).join("");
+
   return { code, stderr, stdout: out.join("") };
 }
 
@@ -115,6 +119,7 @@ describe("repo persist errors", () => {
       },
       write: () => {},
     };
+
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     expect(main(["tmp"], io)).toBe(1);
     expect(err).toHaveBeenCalledWith("stdin gone\n");
@@ -170,9 +175,11 @@ describe("repo persist spawned", () => {
     const json = r.json ?? { absPath: "", path: "" };
     expect(json.absPath).toBe(path.join(r.ws, json.path));
     expect(fs.existsSync(json.absPath)).toBe(true);
+
     const bad = spawnSync("bun", [path.join(import.meta.dirname, "../../bin/repo.ts"), "persist", "nope"], {
       encoding: "utf8",
     });
+
     expect(bad.status).toBe(1);
     expect(bad.stderr).toContain('unknown kind "nope"');
   });

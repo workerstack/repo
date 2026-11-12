@@ -25,9 +25,11 @@ function gitIn(cwd: string, ...args: string[]) {
 function checkout() {
   const origin = fs.realpathSync(hook.temp("origin-"));
   const ws = fs.realpathSync(hook.temp("clone-"));
+
   function git(...args: string[]) {
     return gitIn(ws, ...args);
   }
+
   gitIn(origin, "init", "--bare", "-b", "main");
   git("init", "-b", "main");
   git("remote", "add", "origin", origin);
@@ -37,6 +39,7 @@ function checkout() {
   git("push", "origin", "main");
   plantFile(ws, "a.txt", "two");
   git("commit", "-am", "two");
+
   return { git, land: () => git("push", "origin", "main"), origin, sha: git("rev-parse", "HEAD"), ws };
 }
 
@@ -128,6 +131,7 @@ it("lets the stop through after six blocks, and a new prompt clears the count", 
   const { ws, sha, land } = checkout();
   push(ws, "g7");
   land();
+
   for (let i = 0; i < 6; i++) expect(hook.stop(ws, "g7", { last_assistant_message: "Done." })?.reason).toBe(line(sha));
   expect(hook.stop(ws, "g7", { last_assistant_message: "Done." })).toBeNull();
   hook.send(ws, {

@@ -11,6 +11,7 @@ import type { HookInput } from "./hook-input.ts";
 import { stampPath, writeStamp } from "./strategy.ts";
 
 const tmp = useTmp();
+
 const COMMANDS = [
   "bun run test x.test.ts",
   "bun run test && echo ok",
@@ -25,7 +26,9 @@ function calls(w: string): HookInput[] {
   function sent(tool: string, input: Record<string, unknown>) {
     return inSession(claudeCall(w, tool, input), REVIEW_SID);
   }
+
   const out: HookInput[] = [];
+
   for (const kind of WRITE_KINDS) {
     const targets = [
       path.join(w, "src/x.ts"),
@@ -33,12 +36,15 @@ function calls(w: string): HookInput[] {
       "tmp/notes.md",
       path.join(w, "packages/a/.tmp/repo/scratch/s.md"),
     ];
+
     for (const target of targets)
       out.push(reviewWrite(kind, { cwd: w, target }), asChild(reviewWrite(kind, { cwd: w, target }), "scout"));
   }
+
   for (const command of COMMANDS) out.push(sent("Bash", { command }), asChild(sent("Bash", { command }), "scout"));
 
   out.push(sent("Grep", { pattern: "x" }), sent("Read", { file_path: path.join(w, "src/a.ts") }));
+
   return out;
 }
 
@@ -48,9 +54,12 @@ function answers(w: string): string[] {
   fs.writeFileSync(path.join(w, "src/a.ts"), "x\n");
   // JSON doubles a win32 path's backslashes and shell commands spell it with slashes; both become <ws>.
   const spellings = [JSON.stringify(w).slice(1, -1), w.split(path.sep).join("/")];
+
   return calls(w).map((c) => {
     let text = JSON.stringify(processFatTools(c));
+
     for (const ws of spellings) text = text.split(ws).join("<ws>");
+
     return text;
   });
 }
@@ -78,6 +87,7 @@ it(
     const base = answers(tmp.dir("gate-review-"));
     expect(base.filter((r) => r.includes('"deny"'))).toStrictEqual([]);
     expect(base.filter((r) => r === "null").length).toBeGreaterThan(30);
+
     for (const [name, arm] of states) {
       const w = tmp.dir("gate-review-");
       arm(w);

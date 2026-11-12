@@ -35,6 +35,7 @@ import type {
 /** The `<name>` to suggest: the requested branch without `wt/`, else the target's basename. */
 function suggestedName(branch: string | null, abs: string, p: typeof path): string {
   const wanted = branch === null || branch === "" ? p.basename(abs) : branch.replace(WT_BRANCH_PREFIX, "");
+
   return worktreeName(wanted) ?? "<name>";
 }
 
@@ -44,8 +45,10 @@ function addReason(add: WorktreeAdd, root: string, p: typeof path): string | nul
   const abs = canonicalPath(p.resolve(add.at, add.target.text), p);
   const name = isManaged(abs, root, p) ? p.basename(abs) : null;
   const branch = add.branch ?? (add.detach ? null : add.commitish);
+
   if (name !== null && branch === BRANCH_PREFIX + name) return null;
   const suggest = suggestedName(add.branch, abs, p);
+
   return (
     `worktrees live in ${p.join(root, WORKTREES_DIR, "<name>")} on branch wt/<name>: ` +
     `run ${WORKTREE_CMD} add ${suggest}`
@@ -57,8 +60,10 @@ export function worktreeAddReason(command: string, at: ShellAt, p: typeof path =
   for (const g of gitCommands(command, at.cwd, p)) {
     const add = worktreeAddOf(g);
     const reason = add === null ? null : addReason(add, at.roots.root, p);
+
     if (reason !== null) return reason;
   }
+
   return null;
 }
 
@@ -76,9 +81,13 @@ export function mainCheckoutWriteReason(target: string, roots: WorktreeRoots, gu
   const { p = path, committed = hasCommit } = guard;
   const root = canonicalPath(roots.root, p);
   const abs = canonicalPath(p.resolve(cwdOr(roots, root), target), p);
+
   if (relIn(abs, root, p) === null) return null;
+
   if ([".tmp", WORKTREES_DIR].some((free) => relIn(abs, p.join(root, free), p) !== null)) return null;
+
   if (!committed(root)) return null;
+
   return (
     `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ` +
     `${p.join(root, WORKTREES_DIR, "<name>")}; only ${p.join(root, ".tmp")}${p.sep} is writable here`
@@ -89,14 +98,17 @@ export function mainCheckoutWriteReason(target: string, roots: WorktreeRoots, gu
 export function managedLessonsDir(target: string, roots: WorktreeRoots, p: typeof path = path): string | null {
   const root = canonicalPath(roots.root, p);
   const abs = canonicalPath(p.resolve(cwdOr(roots, root), target), p);
+
   if (relIn(abs, root, p) === null) return null;
   const name = worktreeOf(abs, root, p);
+
   return p.join(name === null ? root : p.join(root, WORKTREES_DIR, name), ".repo", "lessons");
 }
 
 /** The grant words in `prompt`, in `GIT_ASKED` order. */
 export function gitAskedWords(prompt: unknown): string[] {
   const text = textOf(prompt);
+
   return Object.entries(GIT_ASKED)
     .filter(([, re]) => re.test(text))
     .map(([word]) => word);
@@ -125,6 +137,7 @@ function destroyReason(g: GitCommand, c: GitContext): string | null {
 
 function forcePushReason(g: GitCommand): string | null {
   const forced = g.rest.some((w) => FORCE_OR_LONG_FORCE.test(w.text) || PLUS_REFSPEC.test(w.text));
+
   return forced
     ? "a force push rewrites shared history: run it only when the user's message asks for a force push"
     : null;
@@ -134,9 +147,11 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
   const flags = g.rest.filter((w) => w.text.startsWith("-")).map((w) => w.text);
   const moves = flags.some((f) => BRANCH_MOVE_FLAG.test(f));
   const forces = flags.some((f) => BRANCH_FORCE_FLAG.test(f));
+
   if (!moves && !forces) return null;
   const names = g.rest.filter((w) => !w.text.startsWith("-") && w.literal).map((w) => w.text);
   const touched = moves ? names : names.slice(0, 1);
+
   return touched.length > 0 && touched.includes(c.defaultBranch())
     ? defaultBranchReason(c.defaultBranch(), "branch")
     : null;
@@ -146,16 +161,20 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
 function refsOf(rest: Word[]): Word[] {
   const refs: Word[] = [];
   const words = rest[Symbol.iterator]();
+
   for (const w of words) {
     if (w.text === MESSAGE_FLAG) words.next();
     else if (!w.text.startsWith("-")) refs.push(w);
   }
+
   return refs;
 }
 
 function updateRefReason(g: GitCommand, c: GitContext): string | null {
   const [ref] = refsOf(g.rest);
+
   if (ref?.literal !== true || !ref.text.startsWith(HEADS_REF)) return null;
+
   return ref.text === HEADS_REF + c.defaultBranch() ? defaultBranchReason(c.defaultBranch(), "update-ref") : null;
 }
 
@@ -181,9 +200,12 @@ const SHARED_GIT: Readonly<Record<string, SharedRule>> = {
 /** The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. */
 function ruleReason(g: GitCommand, at: SharedAt, c: Omit<GitContext, "inMain">): string | null {
   const rule = Object.hasOwn(SHARED_GIT, g.sub) ? SHARED_GIT[g.sub] : undefined;
+
   if (rule === undefined || at.asked.has(g.sub === PUSH_SUB ? FORCE_GRANT : g.sub)) return null;
   const dir = canonicalPath(g.at, c.p);
+
   if (relIn(dir, c.root, c.p) === null) return null;
+
   return rule(g, { ...c, inMain: worktreeOf(dir, c.root, c.p) === null });
 }
 
@@ -199,9 +221,12 @@ export function sharedGitReason(command: string, at: SharedAt, guard: GuardEnv =
   const root = canonicalPath(at.roots.root, p);
   let defaultName: string | undefined;
   const c = { defaultBranch: (): string => (defaultName ??= defaultBranch(root)), p, root };
+
   for (const g of gitCommands(command, at.cwd, p)) {
     const reason = ruleReason(g, at, c);
+
     if (reason !== null && committed(root)) return reason;
   }
+
   return null;
 }

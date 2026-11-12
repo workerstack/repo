@@ -11,9 +11,12 @@ export type UnlinkScope = { all: true } | { all: false; name: string };
 /** Runs install; on failure prints the reason and what install printed to stderr, and returns false. */
 function installed(ctx: LinkContext, root: string): boolean {
   const result = ctx.io.install(root);
+
   if (result.code === 0) return true;
   ctx.io.err(`repo ${ctx.command}: ${installFailed(result.code)}`);
+
   for (const line of result.output.trimEnd().split("\n").filter(Boolean)) ctx.io.err(line);
+
   return false;
 }
 
@@ -28,16 +31,23 @@ export function unlinkScope(ctx: LinkContext, scope: UnlinkScope): number {
   const marked = new Set(markersIn(root).map((marker) => marker.name));
   const known = [...new Set([...Object.keys(state), ...marked])].toSorted();
   const names = scope.all ? known : known.filter((name) => name === scope.name);
+
   if (names.length === 0) {
     ctx.io.out(NO_LINKS);
+
     return 0;
   }
+
   const npm = new Map(names.map((name) => [name, state[name]?.npm ?? null]));
   const removed = names.filter((name) => marked.has(name));
+
   for (const name of names) delete state[name];
   writeState(root, state);
+
   for (const name of removed) fs.rmSync(installedDir(root, name), { force: true, recursive: true });
+
   if (removed.length > 0 && !installed(ctx, root)) return EXIT_FAIL;
+
   for (const name of names)
     ctx.io.out(unlinkedLine(name, readVersion(installedDir(root, name)) ?? npm.get(name) ?? NOT_INSTALLED));
 

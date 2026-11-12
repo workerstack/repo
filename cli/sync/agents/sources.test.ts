@@ -25,6 +25,7 @@ it("replaces a stock file in place when it says overrides, case-folded, and appe
     ".repo/rules/zeta.md": doc("zeta"),
     ".repo/subagents/scout.md": doc("consumer-scout", "overrides: scout\n"),
   });
+
   const sources = loaded({ consumerRoot: consumer, packages: [], stockRoot: stock() });
   expect(sources.rules.map((d) => [d.rel, d.file, d.body])).toStrictEqual([
     [".repo/rules/Foo.md", "Foo.md", "consumer-foo body"],
@@ -44,6 +45,7 @@ it("fails a same-name rule or subagent that does not say overrides", () => {
     ".repo/rules/fresh.md": doc("fresh"),
     ".repo/subagents/worker.md": doc("b"),
   });
+
   expect(problems({ consumerRoot: consumer, packages: [], stockRoot: stock() })).toStrictEqual([
     ".repo/rules/Foo.md: a stock rule has this name; add `overrides: Foo` or rename it",
     ".repo/subagents/worker.md: a stock subagent has this name; add `overrides: worker` or rename it",
@@ -56,6 +58,7 @@ it("names the nested path in the same-name error", () => {
     packages: [],
     stockRoot: stock({ "agents/rules/a/b.md": doc("ab") }),
   };
+
   expect(problems(roots)).toStrictEqual([
     ".repo/rules/a/b.md: a stock rule has this name; add `overrides: a/b` or rename it",
   ]);
@@ -66,6 +69,7 @@ it("fails an overrides that names nothing", () => {
     ".repo/rules/x.md": doc("x", "overrides: nope\n"),
     ".repo/subagents/y.md": doc("y", "overrides: nada\n"),
   });
+
   expect(problems({ consumerRoot: consumer, packages: [], stockRoot: stock() })).toStrictEqual([
     '.repo/rules/x.md: overrides "nope" but no stock rule has that name',
     '.repo/subagents/y.md: overrides "nada" but no stock subagent has that name',
@@ -85,8 +89,10 @@ it("keeps nested paths POSIX and sorts them as plain strings", () => {
     packages: [],
     stockRoot: stock({ "agents/rules/a.md": doc("a"), "agents/rules/a/b.md": doc("ab") }),
   });
+
   expect(sources.rules.map((d) => d.file)).toStrictEqual(["a.md", "a/b.md", "foo.md", "overview.md"]);
   expect(sources.subagents.at(-1)).toMatchObject({ file: "team/lead.md", rel: ".repo/subagents/team/lead.md" });
+
   for (const d of [...sources.rules, ...sources.subagents]) expect(d.rel).not.toContain("\\");
 });
 
@@ -96,6 +102,7 @@ it("skips non-markdown files and dot entries", () => {
     packages: [],
     stockRoot: stock({ "agents/rules/.curated/c.md": doc("c"), "agents/rules/notes.txt": "x" }),
   });
+
   expect(sources.rules.map((d) => d.file)).toStrictEqual(["foo.md", "overview.md"]);
 });
 

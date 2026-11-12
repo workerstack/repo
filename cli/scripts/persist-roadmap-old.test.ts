@@ -7,11 +7,13 @@ import { extra, savedLegacy, update } from "./__fixtures__/persist-roadmap-kit.t
 const tmpWs = useTmpWs("persist-roadmap-");
 const GOAL = "## Goal\nShip auth as two plans. The second plan waits on the first. Names stay reserved.\n";
 const WHY = "      Why: Later slices add skills. This slot keeps init and INDEX together.\n";
+
 // Pads Context with bullets so the saved legacy roadmap runs past the pointer cap, like roadmap 4.
 const long = LEGACY_ROADMAP.replace(
   "## Context\n",
   `## Context\n${Array.from({ length: 40 }, (_, i) => `- context fact ${i + 1}`).join("\n")}\n`,
 );
+
 function linesAbove(text: string) {
   return text.split("\n").indexOf("## Previous mistakes");
 }

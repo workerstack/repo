@@ -28,9 +28,12 @@ export type ParsedDoc = {
 };
 
 type YamlScalar = string | number | boolean;
+
 type YamlList = readonly (YamlScalar | null | undefined)[];
+
 /** `null` and `undefined` are dropped at every level, as rulesync did. */
 export type YamlValue = YamlScalar | YamlList | YamlMap | null | undefined;
+
 type YamlMap = {
   readonly [key: string]: YamlValue;
 };
@@ -53,12 +56,15 @@ function isMap(value: unknown): value is Record<string, unknown> {
 /** A value with its nullish entries dropped: list items, and map values at every level. */
 function cleaned(value: unknown): unknown {
   if (Array.isArray(value)) return value.filter((item) => item !== null && item !== undefined);
+
   return isMap(value) ? dropNullish(value) : value;
 }
 
 function dropNullish(map: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
+
   for (const [key, value] of Object.entries(map)) if (value !== null && value !== undefined) out[key] = cleaned(value);
+
   return out;
 }
 
@@ -78,11 +84,15 @@ function parseYaml(rel: string, yaml: string): unknown {
 /** Parse `text` (the file at repo-relative POSIX `rel`); throws an Error whose message starts with `rel`. */
 export function parseDoc(rel: string, text: string): ParsedDoc {
   const lines = toLf(text).replace(LEADING_BOM, "").split("\n");
+
   if (lines[0]?.trimEnd() !== FENCE) throw new Error(`${rel}: missing frontmatter (start the file with a --- block)`);
   const close = lines.findIndex((line, i) => i > 0 && line.trimEnd() === FENCE);
+
   if (close === NOT_FOUND) throw new Error(`${rel}: invalid frontmatter: no closing --- line`);
   const raw = parseYaml(rel, lines.slice(1, close).join("\n"));
+
   if (raw !== null && !isMap(raw)) throw new Error(`${rel}: invalid frontmatter: expected a mapping`);
+
   return {
     body: lines
       .slice(close + 1)
@@ -105,48 +115,64 @@ function emitEntry(value: YamlScalar | YamlList | YamlMap, { head, indent, mode 
   if (Array.isArray(value)) {
     const list = value /* Array.isArray narrows a YamlValue only to a list */ as YamlList;
     const items = list.filter((item) => item !== null && item !== undefined);
+
     if (items.length === 0) return `${head} []\n`;
+
     return `${head}\n${items.map((item) => `${indent}${INDENT}- ${scalar(item, mode)}\n`).join("")}`;
   }
+
   if (typeof value === "object") {
     const map = value /* an object YamlValue that is not a list is a map */ as YamlMap;
     const body = emitMap(Object.entries(map), mode, `${indent}${INDENT}`);
+
     return body === "" ? `${head} {}\n` : `${head}\n${body}`;
   }
+
   return `${head} ${scalar(value, mode)}\n`;
 }
 
 function emitMap(entries: Iterable<readonly [string, YamlValue]>, mode: YamlMode, indent: string): string {
   let out = "";
+
   for (const [key, value] of entries) {
     if (value === null || value === undefined) continue;
     out += emitEntry(value, { head: `${indent}${scalar(key, mode)}:`, indent, mode });
   }
+
   return out;
 }
 
 function scalar(value: YamlScalar, mode: YamlMode): string {
   if (typeof value === "boolean") return String(value);
+
   if (typeof value === "number") {
     if (Number.isNaN(value)) return ".nan";
+
     if (!Number.isFinite(value)) return value > 0 ? ".inf" : "-.inf";
+
     return String(value);
   }
+
   // Newlines and control characters need escapes; a JSON string is a valid YAML double-quoted scalar.
   if (NEEDS_ESCAPES.test(value)) return JSON.stringify(value);
+
   return needsQuotes(value, mode) ? `'${value.replaceAll("'", "''")}'` : value;
 }
 
 /** Whether YAML would misread `value` by its indicators, its `: ` or its ` #`. */
 function hasIndicator(value: string): boolean {
   if (INDICATOR_FIRST.test(value) || INDICATOR_SPACED.test(value)) return true;
+
   return COLON_SPACE.test(value) || SPACE_HASH.test(value);
 }
 
 function needsQuotes(value: string, mode: YamlMode): boolean {
   if (value === "" || value !== value.trim() || hasIndicator(value)) return true;
+
   if (mode === "claude" && (CLAUDE_ANYWHERE.test(value) || CLAUDE_FIRST.test(value))) return true;
+
   if (YAML_11_TYPED.test(value)) return true;
+
   return readsAsSomethingElse(value);
 }
 

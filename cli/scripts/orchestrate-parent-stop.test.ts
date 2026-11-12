@@ -9,6 +9,7 @@ import { main } from "./orchestrate-parent.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const hook = claudeHook();
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -32,6 +33,7 @@ describe("a Stop that is not the end of a turn", () => {
   it("passes while a stop hook is already active", () => {
     const ws = hook.temp();
     ask(ws, "a1");
+
     for (const flag of ["stopHookActive", "stop_hook_active"])
       expect(hook.stop(ws, "a1", { [flag]: true, last_assistant_message: "Done." }), flag).toBeNull();
   });
@@ -86,6 +88,7 @@ describe("a session receipt", () => {
 });
 
 const BEFORE = JSON.stringify({ content: "before", role: "assistant" });
+
 const shapes: [string, unknown, string][] = [
   ["a line that is not JSON", "not json{", "before"],
   ["a JSON line that is not an object", 42, "before"],
@@ -119,11 +122,13 @@ describe("the last assistant message read from a transcript", () => {
     const ws = hook.temp();
     const filler = JSON.stringify({ content: "x".repeat(1000), role: "assistant" });
     const lines = Array.from({ length: 700 }, () => filler);
+
     const file = plantFile(
       ws,
       "transcript.jsonl",
       [...lines, JSON.stringify({ content: "last", role: "assistant" })].join("\n"),
     );
+
     hook.stop(ws, "t2", { transcriptPath: file });
     expect(receipt(ws, "t2")[0]).toBe("last");
   });

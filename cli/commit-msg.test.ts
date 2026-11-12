@@ -6,9 +6,11 @@ import { isTestFile } from "./test-files.ts";
 function ok(message: string, stagedFiles: string[] = ["src/a.test.ts"], scopes?: string[]) {
   return checkCommitMessage(message, { changedLines: 0, maxChangedLines: 1000, scopes, stagedFiles });
 }
+
 function sized(message: string, changedLines: number) {
   return checkCommitMessage(message, { changedLines, maxChangedLines: 1000, stagedFiles: [] });
 }
+
 const OVER = "the commit changes 1240 lines, over the limit of 1000; add a body line saying why, or split it";
 
 describe("checkCommitMessage", () => {
@@ -110,10 +112,12 @@ describe("the commit size limit", () => {
 function trailer(line: string): string {
   return `remove "${line}"; commits carry no Key: value lines (write a why as a plain sentence)`;
 }
+
 /** The refusal of an attribution line. */
 function attribution(line: string): string {
   return `remove the attribution "${line}"; the work is the author's`;
 }
+
 const BODY =
   "remove the body; keep the subject, plus at most a BREAKING CHANGE: footer, " +
   'a revert\'s "This reverts commit <sha>." line, or one line saying why when over the size limit';

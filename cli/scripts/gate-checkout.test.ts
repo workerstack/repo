@@ -33,11 +33,13 @@ const tmp = useTmp();
 it("denies a product write in the main checkout from a parent, a scout child and an implementer", () => {
   const r = tmp.committed("gate-main-");
   const file = path.join(r, "src/x.ts");
+
   for (const extra of [{}, { agent_type: "scout" }, { agent_type: "implementer-fast" }]) {
     expect(processFatTools(claudeWrite(r, file, extra)), JSON.stringify(extra)).toStrictEqual(deny(reasonOf(r)));
     const relative = processFatTools(claudeWrite(r, "src/x.ts", extra));
     expect(relative, `relative ${JSON.stringify(extra)}`).toStrictEqual(deny(reasonOf(r)));
   }
+
   const edit = inSession(claudeCall(r, "Edit", { file_path: file, new_string: "b", old_string: "a" }), SID);
   expect(processFatTools(edit)).toStrictEqual(deny(reasonOf(r)));
 });
@@ -63,6 +65,7 @@ it("denies a Codex apply_patch (tool and shell heredoc), a Cursor Write and an A
 it("lets .tmp, a worktree, scratch redirects and paths outside the root through", () => {
   const r = tmp.committed("gate-main-");
   const outside = path.join(os.tmpdir(), "gate-main-elsewhere", "x.ts");
+
   for (const file of [
     path.join(r, ".tmp/repo/n.md"),
     path.join(r, ".tmp/x.txt"),
@@ -76,6 +79,7 @@ it("lets .tmp, a worktree, scratch redirects and paths outside the root through"
     expect(notDenied(processFatTools(cursorWrite(r, file))), `cursor ${file}`).toBe(true);
     expect(notDenied(processFatTools(claudeWrite(r, file, { agent_type: "scout" }))), `scout ${file}`).toBe(true);
   }
+
   // A shell run in a worktree can write there too: the guard reads the write tools, not the cwd.
   expect(notDenied(processFatTools(claudeWrite(path.join(r, ".worktrees/a"), "src/x.ts")))).toBe(true);
 });
@@ -94,11 +98,13 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
   const plain = tmp.dir("gate-plain-");
   const unborn = tmp.dir("gate-unborn-");
   spawnSync("git", ["init", "-q", "-b", "main"], { cwd: unborn });
+
   for (const dir of [plain, unborn]) {
     expect(processFatTools(claudeWrite(dir, path.join(dir, "src/x.ts"))), dir).toBeNull();
     expect(processFatTools(claudeSh(dir, "git commit -m x")), dir).toBeNull();
     expect(processFatTools(claudeSh(dir, "git push --force")), dir).toBeNull();
   }
+
   const identity = ["-c", "user.email=t@t", "-c", "user.name=t"];
   spawnSync("git", [...identity, "commit", "-q", "--allow-empty", "-m", "i"], { cwd: unborn });
   expect(processFatTools(claudeWrite(unborn, path.join(unborn, "src/x.ts")))).toStrictEqual(deny(reasonOf(unborn)));
@@ -107,12 +113,15 @@ it("passes a non-git dir and a repo with no commit yet, then denies once it has 
 
 it("reads win32 spellings of the root", () => {
   const roots = { checkout: "C:\\r", cwd: "C:\\r", root: "C:\\r" };
+
   function check(target: string) {
     return mainCheckoutWriteReason(target, roots, { committed: () => true, p: path.win32 });
   }
+
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; " +
     "only C:\\r\\.tmp\\ is writable here";
+
   expect(check("C:\\r\\src\\x.ts")).toBe(reason);
   expect(check("c:/R/src/x.ts")).toBe(reason);
   expect(check("src\\x.ts")).toBe(reason);

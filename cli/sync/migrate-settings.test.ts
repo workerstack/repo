@@ -14,6 +14,7 @@ const stockSettings = JSON.stringify({ hooks: { PreToolUse: [stockGroup] } });
 const opts = { generated: { ".claude/settings.json": stockSettings } };
 const TO = ".repo/settings/claude.json";
 const mine = { hooks: [{ command: "mine", type: "command" }], matcher: "Edit" };
+
 /** A Bash group holding the stock command and one of the consumer's own. */
 const mixed = {
   hooks: [
@@ -22,6 +23,7 @@ const mixed = {
   ],
   matcher: "Bash",
 };
+
 /** Settings with an own key, the stock group, a mixed group, an own group and a hook only an older stock ran. */
 const OWN_SETTINGS = JSON.stringify({
   hooks: {
@@ -60,10 +62,12 @@ it("carries hook groups and commands that no stock version ran, under the same e
 
 it("carries only hooks when nothing else is new, and plans nothing when every command is stock", () => {
   const own = { command: "mine", type: "command" };
+
   const only = mini(
     { ".claude/settings.json": JSON.stringify({ hooks: { PostToolUse: [{ hooks: [own], matcher: "x" }] } }) },
     opts,
   );
+
   expect(notes(planOf(only, CONFIG, { history: {} }))).toStrictEqual([
     `moved your .claude/settings.json hooks PostToolUse (1) to ${TO}`,
   ]);
@@ -80,6 +84,7 @@ it("carries a group or an event value it cannot read as it is, and a hook with n
     },
     opts,
   );
+
   expect(firstWritten(planOf(m, CONFIG, { history: {} }))).toStrictEqual({
     hooks: { A: ["text"], B: ["odd"], C: [{ hooks: [{ type: "prompt" }], matcher: "m" }], D: [{ matcher: "m" }] },
   });

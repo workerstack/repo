@@ -1,9 +1,12 @@
 /** `--packs none` or an empty list: no skill packs. */
 export const NO_PACKS: string = "none";
+
 /** The postinstall init writes, so `bun install` generates the agent trees. */
 export const SYNC_POSTINSTALL: string = "repo sync --postinstall";
+
 /** A postinstall already holding this runs sync, so init leaves it alone. */
 export const SYNC_COMMAND: string = "repo sync";
+
 /** The indent init writes package.json with, before oxfmt lays it out. */
 export const JSON_INDENT: number = 2;
 

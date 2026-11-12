@@ -8,6 +8,7 @@ import { applyMigration } from "./apply-migration.ts";
 useTempDirs();
 
 const STOCK_PLAIN = { stock: { "agents/rules/plain.md": "---\nroot: false\n---\nstock plain\n" } };
+
 /** Edited copies of a stock rule, subagent and skill, beside an own rule, subagent and skill. */
 const EDITED_AND_OWN = {
   ".agents/skills/ask/SKILL.md": "---\nname: ask\n---\nedited\n",
@@ -76,6 +77,7 @@ it("keeps CRLF line endings when it marks, and frames a frontmatter that never c
     },
     STOCK_PLAIN,
   );
+
   await applyMigration(m.root, planOf(m));
   expect(read(m.root, ".repo/rules/plain.md")).toBe("---\r\noverrides: plain\r\nroot: false\r\n---\r\nedited\r\n");
   expect(read(m.root, ".repo/subagents/scout.md")).toBe("---\noverrides: scout\n---\n---\nname: scout\nunclosed\n");

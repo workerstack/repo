@@ -9,12 +9,15 @@ import { CONFIG_FILE } from "./config.constants.ts";
 import { standards } from "./sync/standards.ts";
 
 useSyncKit();
+
 function hooksGit(cwd: string, ...args: string[]) {
   return spawnSync("git", args, { cwd, encoding: "utf8" });
 }
+
 function hooksPath(root: string) {
   return hooksGit(root, "config", "--local", "--get", "core.hooksPath").stdout.trim();
 }
+
 /**
  * A temp git repo with `packs`, its git kept from the user's global config by an empty one of its own, which
  * `global` writes to.
@@ -27,17 +30,21 @@ function hooksRepo(packs = '["standards"]') {
   hooksGit(root, "init", "-q");
   write(root, "package.json", JSON.stringify({ name: "app" }));
   write(root, CONFIG_FILE, `export default { packs: ${packs} }\n`);
+
   return { global: (text: string) => fs.writeFileSync(globalConfig, text), root };
 }
+
 function syncHooks(root: string, ...args: string[]) {
   return syncWith(root, { generators: [], post: [standards] }, ...args);
 }
+
 function foreign(value: string, scope = "") {
   return (
     `repo sync: core.hooksPath is ${value}, so repo's hooks never run; ` +
     `unset it (git config ${scope}--unset core.hooksPath) and sync again\n`
   );
 }
+
 const UP_TO_DATE = { code: 0, stderr: "", stdout: "repo sync: up to date\n" };
 
 it("points core.hooksPath at the hooks when it is unset, then leaves it", async () => {
@@ -106,11 +113,15 @@ it("names the scope that holds a foreign value", async () => {
 
 it("says when git cannot set it, and tries again on the next run", async () => {
   const { root } = hooksRepo();
+
   function fake(_root: string, args: readonly string[]) {
     if (args[0] === "rev-parse") return { status: 0, stderr: "", stdout: `${root}\n` };
+
     if (args.includes("--get")) return { status: 1, stderr: "", stdout: "" };
+
     return { status: 255, stderr: "error: could not lock config file\n", stdout: "" };
   }
+
   const result = await syncWith(root, { generators: [], git: fake, post: [standards] });
   expect(result).toMatchObject({
     code: 0,

@@ -47,6 +47,7 @@ function apiMain(
   run: Tools & { stdout: (text: string) => void; stderr: (text: string) => void },
 ): Promise<number> {
   const registry = latestRegistry(repoEnv.process);
+
   return releaseApi(argv, { ...run, ...packTools(), cargo: runCargo, fetch, registry, rm: removeDir });
 }
 
@@ -61,13 +62,19 @@ export function main(argv: string[]): Promise<number> {
     stderr: process.stderr.write.bind(process.stderr),
     stdout: process.stdout.write.bind(process.stdout),
   };
+
   const run = { ...io, cwd: process.cwd(), gh: spawnRunner("gh"), git: spawnRunner("git") };
   const rest = argv.slice(1);
   const isCi = repoEnv.process.GITHUB_ACTIONS === GITHUB_ACTIONS_ON;
+
   if (argv[0] === HELP_COMMAND) return (io.stdout(`${USAGE}\n`), Promise.resolve(0));
+
   if (argv[0] === WAIT_COMMAND) return releaseWait(rest, { ...io, fetch });
+
   if (argv[0] === GATE_COMMAND) return gate(rest, run);
+
   if (argv[0] === PACK_COMMAND) return Promise.resolve(releasePack(rest, { ...run, ...packTools() }));
+
   if (argv[0] === CONSUMER_COMMAND) {
     return Promise.resolve(
       releaseConsumer(rest, {
@@ -78,8 +85,11 @@ export function main(argv: string[]): Promise<number> {
       }),
     );
   }
+
   if (argv[0] === API_COMMAND) return apiMain(rest, run);
+
   if (argv[0] === GITHUB_COMMAND) return Promise.resolve(releaseGithub(rest, run));
+
   if (argv[0] === PUBLISH_COMMAND)
     return releasePublish(rest, { ...run, ...packTools(), ci: isCi, fetch, npm: inheritRunner("npm") });
 

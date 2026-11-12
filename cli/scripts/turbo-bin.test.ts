@@ -11,13 +11,17 @@ const TURBO_DIR = path.resolve("/repo/node_modules/turbo");
 /** A resolver that finds turbo from the root, and the platform packages in `installed` from turbo's dir. */
 function resolver(installed: string[]) {
   const calls: [string, string][] = [];
+
   function resolve(specifier: string, from: string): string {
     calls.push([specifier, from]);
+
     if (specifier === "turbo/package.json" && from === ROOT) return path.join(TURBO_DIR, "package.json");
+
     if (installed.includes(specifier))
       return path.resolve(`/repo/node_modules/${path.dirname(specifier)}/package.json`);
     throw new Error(`cannot find ${specifier}`);
   }
+
   return { calls, resolve };
 }
 
@@ -69,9 +73,11 @@ it("an arch turbo does not ship is refused with the same line", () => {
 
 it("turboRunner runs the located binary in the directory with the process's env plus its own, capturing both", () => {
   const script = "console.log(process.env.P66_VAR, process.cwd()); console.error('err'); process.exit(3)";
+
   const run = turboRunner(() => ({ ok: true, path: process.execPath }))(["-e", script], process.cwd(), {
     P66_VAR: "x",
   });
+
   expect(run).toStrictEqual({ code: 3, stderr: "err\n", stdout: `x ${process.cwd()}\n` });
 });
 
@@ -97,5 +103,6 @@ it("turboRunner counts a binary killed by a signal as a failure", () => {
     ROOT,
     {},
   );
+
   expect(run).toMatchObject({ code: 1 });
 });

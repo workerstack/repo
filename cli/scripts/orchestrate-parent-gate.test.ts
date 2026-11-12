@@ -9,13 +9,16 @@ import { hasStepAsk } from "./orchestrate-transcript.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
+
 function stampAbs(ws: string, sid: string) {
   return path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
 }
+
 /** The context a Grok prompt gets in `ws` as session `sid`. */
 function say(ws: string, sid: string, prompt: string) {
   return must(replyOf(kit.grok({ sid, ws }, "UserPromptSubmit", { prompt }))).hookSpecificOutput.additionalContext;
 }
+
 function stop(ws: string, sid: string, msg: string) {
   return kit.grok({ sid, ws }, "Stop", { lastAssistantMessage: msg, reason: "end_turn" });
 }
@@ -29,6 +32,7 @@ function plantSibling(board: string): string {
   const work = { cwd: "/home/user/x", session: "other", work: "sibling live work" };
   const owner = { boot: readBootId(), pid: live.pid, start: live.start };
   fs.writeFileSync(path.join(boardDir, "claude-other.json"), `${JSON.stringify({ ...row, ...work, ...owner })}\n`);
+
   return boardDir;
 }
 
@@ -49,9 +53,11 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   expect(ctx).toMatch(/sessionGate=auto/);
   expect(ctx).toContain("sibling live work");
   expect(ctx).not.toContain("ship the auth fix");
+
   const self = parseJson<{ work: string; session: string }>(
     fs.readFileSync(path.join(boardDir, "claude-self.json"), "utf8"),
   );
+
   expect(self.work).toBe("ship the auth fix");
   expect(self.session).toBe("self");
   expect(fs.existsSync(path.join(boardDir, "claude-other.json"))).toBe(true);

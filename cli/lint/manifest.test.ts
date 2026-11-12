@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { isRecord, readManifest } from "./manifest.ts";
 
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-manifest-")));
+
 afterAll(() => fs.rmSync(dir, { force: true, recursive: true }));
 
 /** Writes `manifest` as a temp package.json and reads it back. */
@@ -14,12 +15,15 @@ function read(manifest: unknown) {
   const file = path.join(dir, `${fs.readdirSync(dir).length}.json`);
   fs.writeFileSync(file, JSON.stringify(manifest));
   const result = readManifest(file);
+
   if (result === null) throw new Error("manifest unreadable");
+
   return result;
 }
 
 function shipped(manifest: unknown, files: string[]): string[] {
   const { ships } = read(manifest);
+
   return files.filter(ships);
 }
 
@@ -32,6 +36,7 @@ describe("readManifest runtime and public", () => {
       peerDependencies: { c: "1" },
       private: false,
     });
+
     expect(manifest.declared.toSorted()).toStrictEqual(["a", "a", "b", "c", "d"]);
     expect(manifest.devOnly).toStrictEqual(["b"]);
     expect(manifest.isPublic).toBe(true);
@@ -93,6 +98,7 @@ describe("readManifest ships targets and exclusions", () => {
       module: "other/d.ts",
       types: 1,
     };
+
     expect(shipped(manifest, tree)).toStrictEqual(["src/a.ts", "src/deep/b.ts", "lib/c.ts", "bin/x.ts", "other/d.ts"]);
     expect(shipped({ bin: "bin/x.ts", exports: "./lib/c.ts", files: ["src"] }, tree)).toStrictEqual([
       "src/a.ts",

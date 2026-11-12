@@ -21,6 +21,7 @@ function readsAgentsDir(hosts: readonly string[]): boolean {
 function skillNames(ctx: SyncContext, stock: string, own: readonly string[]): string[] {
   const optional = new Set<string>(offSkills(ctx.config));
   const stockNames = listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)).filter((name) => !optional.has(name));
+
   return [...new Set([...stockNames, ...own])].toSorted(byCodeUnit);
 }
 
@@ -28,27 +29,34 @@ function skillNames(ctx: SyncContext, stock: string, own: readonly string[]): st
 export function skillLinks(ctx: SyncContext, stock: string, { self }: { self: boolean }): Output[] {
   const { hosts } = ctx.config.agents;
   const own = self ? [] : listSkillDirNames(path.join(ctx.root, OVERLAY_SKILLS_REL));
+
   function sourceOf(name: string) {
     return own.includes(name)
       ? path.join(ctx.root, OVERLAY_SKILLS_REL, name)
       : path.join(stock, STOCK_SKILLS_REL, name);
   }
+
   const agentsDir = readsAgentsDir(hosts);
   const links: Output[] = [];
+
   function add(dir: string, name: string, target: string) {
     return links.push({ kind: "link", managed: "whole", path: `${dir}/${name}`, target, tracked: self });
   }
+
   for (const name of skillNames(ctx, stock, own)) {
     if (agentsDir)
       add(WORKSPACE_SKILLS_REL, name, posix(path.relative(path.join(ctx.root, WORKSPACE_SKILLS_REL), sourceOf(name))));
+
     if (hosts.includes("claude")) {
       const target =
         agentsDir && !self
           ? `../../${WORKSPACE_SKILLS_REL}/${name}`
           : posix(path.relative(path.join(ctx.root, CLAUDE_SKILLS_REL), sourceOf(name)));
+
       add(CLAUDE_SKILLS_REL, name, target);
     }
   }
+
   return links;
 }
 
@@ -59,10 +67,12 @@ export function skillLinks(ctx: SyncContext, stock: string, { self }: { self: bo
  */
 export function packageSkillLinks(ctx: SyncContext, { self }: { self: boolean }): Output[] {
   const { hosts } = ctx.config.agents;
+
   const dirs = [
     ...(hosts.includes("claude") ? [CLAUDE_SKILLS_REL] : []),
     ...(readsAgentsDir(hosts) ? [".agents/skills"] : []),
   ];
+
   return ctx.workspace.packages.flatMap(({ dir }) =>
     listSkillDirNames(path.join(ctx.root, dir, OVERLAY_SKILLS_REL)).flatMap((name): Output[] =>
       dirs.map((host) => ({

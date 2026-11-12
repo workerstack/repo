@@ -28,6 +28,7 @@ import { noSideEffectImport } from "./no-side-effect-import.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
 import { noWidenThenAssert } from "./no-widen-then-assert.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
+import { requireReadableSpacing } from "./require-readable-spacing.ts";
 import { skipOnPlatform } from "./skip-on-platform.ts";
 import { todoNeedsId } from "./todo-needs-id.ts";
 import { typesFile } from "./types-file.ts";
@@ -36,7 +37,16 @@ import { typesFile } from "./types-file.ts";
  * The oxlint plugin `repo`, which a generated `.oxlintrc.json` loads from `@workerstack/repo/lint` with every rule
  * on.
  */
-const plugin: TSESLint.FlatConfig.Plugin = {
+const plugin: TSESLint.FlatConfig.Plugin & {
+  /** Always set: oxlint prefixes each rule with this name, as in `repo/boundaries`. */
+  meta: {
+    /** The plugin name, `repo`. */
+    name: string;
+  };
+
+  /** Every repo rule, keyed by its name without the `repo/` prefix. */
+  rules: Record<string, TSESLint.LooseRuleDefinition>;
+} = {
   meta: { name: "repo" },
   rules: {
     "as-needs-reason": asNeedsReason,
@@ -63,6 +73,7 @@ const plugin: TSESLint.FlatConfig.Plugin = {
     "no-v8-ignore": noV8Ignore,
     "no-widen-then-assert": noWidenThenAssert,
     "public-jsdoc": publicJsdoc,
+    "require-readable-spacing": requireReadableSpacing,
     "skip-on-platform": skipOnPlatform,
     "todo-needs-id": todoNeedsId,
     "types-file": typesFile,

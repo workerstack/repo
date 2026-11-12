@@ -1,6 +1,7 @@
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
+
 import { USAGE, anyFunction, useStart } from "./__fixtures__/main-kit.ts";
 import { APPLY_GLOBALS_CONFIRM, start } from "./main.ts";
 
@@ -52,6 +53,7 @@ it("TTY cancel exits 0", async () => {
   const exit = vi.spyOn(process, "exit").mockImplementation(() => {
     throw new Error("EXIT");
   });
+
   select.mockImplementation(() => process.exit(0));
   await expect(startTty()).rejects.toThrow("EXIT");
   expect(exit).toHaveBeenCalledWith(0);
@@ -77,6 +79,7 @@ it("TTY init confirms globals; spinner onPhase stop before inherit", async () =>
     expect.objectContaining({ onPhase: anyFunction(), skipGlobals: false }),
   );
   expect(isInteractive).toHaveBeenCalledOnce();
+
   for (const name of ["merge", "install"]) {
     expect(spin.start).toHaveBeenCalledWith(name);
     expect(spin.stop).toHaveBeenCalledWith(name);

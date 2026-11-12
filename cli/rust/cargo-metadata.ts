@@ -34,8 +34,10 @@ function schema() {
     rust_version: text(),
     version: z.string(),
   });
+
   return z.object({ packages: z.array(crate.extend({ id: z.string() })), workspace_members: z.array(z.string()) });
 }
+
 /** A workspace member as `cargo metadata` names it, with the manifest fields the publish check reads. */
 type WorkspaceCrate = {
   name: string;
@@ -48,7 +50,9 @@ type WorkspaceCrate = {
   description?: string | null | undefined;
   repository?: string | null | undefined;
 };
+
 type Crate = WorkspaceCrate;
+
 /** The workspace members, or a stale lock or failed run as `crateProblems` reports them. */
 type Workspace =
   | { kind: "crates"; crates: WorkspaceCrate[] }
@@ -58,6 +62,7 @@ type Workspace =
 function blank(value: string | null | undefined) {
   return value === undefined || value === null || value.trim() === "";
 }
+
 /** A crate is private when `publish = false` (an empty list); unset or a registry list is publishable. */
 function publishable(crate: Crate) {
   return crate.publish === undefined || crate.publish === null || crate.publish.length > 0;
@@ -71,6 +76,7 @@ function missingOf(crate: Crate): string[] {
     ["repository", blank(crate.repository)],
     ["rust-version", blank(crate.rust_version)],
   ];
+
   return lacks.filter(([, lacking]) => lacking).map(([field]) => field);
 }
 
@@ -87,8 +93,10 @@ function relative(root: string, file: string): string {
 /** The problem line of `crate`, or none when it is private or complete. */
 function problemOf(root: string, crate: Crate): string | null {
   const missing = publishable(crate) ? missingOf(crate) : [];
+
   if (missing.length === 0) return null;
   const where = relative(root, crate.manifest_path);
+
   return `crate ${crate.name} (${where}) is publishable but has no ${missing.join(", ")}; ${PROBLEM_TAIL}`;
 }
 
@@ -99,15 +107,19 @@ function quote(value: string) {
 /** `cargo metadata` output, parsed at the edge: the member crates, or the quoted output that was not that. */
 function parse(stdout: string): Workspace {
   let json: unknown;
+
   try {
     json = JSON.parse(stdout);
   } catch {
     json = null;
   }
+
   const read = schema().safeParse(json);
+
   if (!read.success)
     return { kind: "failed", problems: [`cargo metadata printed output repo cannot read: ${quote(stdout.trim())}`] };
   const members = new Set(read.data.workspace_members);
+
   return { crates: read.data.packages.filter((crate) => members.has(crate.id)), kind: "crates" };
 }
 
@@ -117,12 +129,17 @@ function parse(stdout: string): Workspace {
  */
 export function workspaceCrates(root: string, run: CargoRun): Workspace {
   const result = run(root, METADATA_ARGS);
+
   if (result.missing) return { kind: "failed", problems: [MISSING_CARGO] };
+
   if (result.status === STALE_EXIT && result.stderr.includes(STALE_MARKER)) return { kind: "stale" };
+
   if (result.status !== 0) {
     const detail = quote(result.stderr.trim());
+
     return { kind: "failed", problems: [`cargo metadata exited ${result.status ?? "by signal"}: ${detail}`] };
   }
+
   return parse(result.stdout);
 }
 
@@ -140,10 +157,12 @@ export function onCratesIo(crate: Pick<Crate, "publish">): boolean {
  */
 export function crateProblems(root: string, run: CargoRun): CrateCheck {
   const found = workspaceCrates(root, run);
+
   if (found.kind !== "crates") return found;
   const { crates } = found;
   const problems = crates.map((crate) => problemOf(root, crate));
   const unlicensed = crates.filter((crate) => publishable(crate) && missingOf(crate).includes("license"));
+
   return {
     kind: "checked",
     problems: problems.filter((line) => line !== null),

@@ -4,6 +4,7 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { deprecatedReplacement } from "./deprecated-replacement.ts";
 
 const MESSAGE = '`@deprecated` names no replacement: write "use `newName` instead" or {@link newName}';
+
 function messagesOf(code: string) {
   return reportsOf(deprecatedReplacement, { "a.ts": code }).map((report) => report.message);
 }
@@ -30,6 +31,7 @@ it("passes a block without the tag, a plain block comment and a line comment", (
   const code =
     "/** Fine. @deprecated mid-line is no tag. */\nexport const a = 1;\n" +
     "/* @deprecated */\n// @deprecated\nexport const b = 2;";
+
   expect(messagesOf(code)).toStrictEqual([]);
 });
 

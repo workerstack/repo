@@ -22,7 +22,9 @@ const SKIP = {
   reason: "the parsed config cache lives for the process",
   rules: ["repo/no-module-state"],
 };
+
 const NO_REASON = "say why the rules are off, in three words or more";
+
 /** A config with the agents and standards packs, or `packs`, and one `lint.skip` entry. */
 function skipConfig(skip: unknown, packs = '["agents", "standards"]') {
   return `export default { packs: ${packs}, lint: { skip: [${JSON.stringify(skip)}] } }\n`;

@@ -14,20 +14,24 @@ function plantRg(body: string): string {
   const record =
     `require("node:fs").writeFileSync(` +
     `require("node:path").join(__dirname, "args.json"), JSON.stringify(process.argv.slice(2)));\n`;
+
   const dir = plantTool("rg", record + body);
   pathWith(dir);
+
   return dir;
 }
 
 /** The arguments the planted rg last ran with. */
 function recorded(tool: string): string[] {
   const args: unknown = JSON.parse(fs.readFileSync(path.join(tool, "args.json"), "utf8"));
+
   return Array.isArray(args) ? args.map(String) : [];
 }
 
 function out(text: string, code = 0) {
   return `process.stdout.write(${JSON.stringify(text)}); process.exit(${code});`;
 }
+
 function search(dir: string, extra: { path?: string; glob?: string[] } = {}) {
   return runSearch("hit", { cwd: dir, root: dir, ...extra });
 }
@@ -114,10 +118,13 @@ it("runSearch walks the tree itself when rg prints more than the buffer holds", 
 
 function recordingRunner(listing: string) {
   const calls: { file: string; args: string[] }[] = [];
+
   function runner(file: string, args: string[]): ReturnType<Runner> {
     calls.push({ args, file });
+
     return { stdout: file === "powershell" ? listing : null };
   }
+
   return { calls, runner };
 }
 
@@ -133,6 +140,7 @@ it("endTreeAfterError ends the dead root and every descendant by parent pid, onl
   const silent = vi.fn<Runner>(() => ({}));
   expect(endTreeAfterError(failed, "win32", silent)).toBe(true);
   expect(silent).toHaveBeenCalledTimes(2);
+
   for (const platform of ["linux", "darwin"] as const) expect(endTreeAfterError(failed, platform, silent)).toBe(false);
 
   expect(endTreeAfterError({ pid: failed.pid }, "win32", silent)).toBe(false);
@@ -162,5 +170,6 @@ it.runIf(process.platform === "win32")("runSearch leaves no stub of an overflowi
   search(dir);
   const pids = fs.readFileSync(path.join(tool, "pids.txt"), "utf8").split("\n").filter(Boolean).map(Number);
   expect(pids.length).toBeGreaterThan(0);
+
   for (const pid of pids) expect(() => process.kill(pid, 0)).toThrow("ESRCH");
 });

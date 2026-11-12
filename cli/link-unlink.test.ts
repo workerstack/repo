@@ -10,11 +10,14 @@ it("puts npm back and says which version", async () => {
   const w = scene();
   await main([NAME], w.io());
   w.out.length = 0;
+
   function install(root: string) {
     w.installs.push(root);
     npmCopy(root, NAME, "0.3.2");
+
     return { code: 0, output: "" };
   }
+
   expect(await unlinkMain([NAME], w.io({ install }))).toBe(0);
   expect(w.out).toStrictEqual([`unlinked ${NAME}: back on npm 0.3.2`]);
   expect(w.installs).toStrictEqual([w.main]);
@@ -27,10 +30,13 @@ it("drops the state entry before it calls install", async () => {
   const w = scene();
   await main([NAME], w.io());
   const seen: unknown[] = [];
+
   function install(root: string) {
     seen.push(stateOf(root).links, fs.existsSync(mod(root, NAME)));
+
     return { code: 0, output: "" };
   }
+
   await unlinkMain([NAME], w.io({ install }));
   expect(seen).toStrictEqual([{}, false]);
 });

@@ -1,5 +1,6 @@
 /** GitHub Actions' app id: a required check from any other app does not satisfy a ruleset. */
 export const GITHUB_ACTIONS_APP_ID: number = 15368;
+
 /** The `RepositoryRole` id of an admin. */
 export const ADMIN_ROLE_ID: number = 5;
 export const ADMIN_ROLE_TYPE: string = "RepositoryRole";

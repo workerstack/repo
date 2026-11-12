@@ -16,7 +16,9 @@ function noSrc(dir: string): string {
     "and adds the tests\n"
   );
 }
+
 const OK: Captured = { code: 0, stderr: "", stdout: "" };
+
 const WORKSPACE = `${JSON.stringify({
   name: "app",
   packageManager: `bun@${Bun.version}`,
@@ -24,6 +26,7 @@ const WORKSPACE = `${JSON.stringify({
   type: "module",
   workspaces: ["packages/*"],
 })}\n`;
+
 const API_MANIFEST = `${JSON.stringify({ name: "api", private: true, sideEffects: false, type: "module" }, null, 2)}\n`;
 
 const UNANNOTATED_TEST = [
@@ -62,11 +65,14 @@ function twoOwners(): string {
 /** Bins whose tsc fails the configs in `failing`, by the `-p` argument it got, and records every tsc call. */
 function fakeTsc(failing: readonly string[]): { bins: Bins; projects: string[] } {
   const projects: string[] = [];
+
   function tsc(args: string[]): Captured {
     const project = args.at(-1) ?? "";
     projects.push(project);
+
     return failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK;
   }
+
   return { bins: { tsc, vitest: () => null }, projects };
 }
 
@@ -81,6 +87,7 @@ it(
       "src/size.test.ts": UNANNOTATED_TEST,
       "src/size.ts": "export function size(s: string): number {\n  return s.length;\n}\n",
     });
+
     write(root, { "src/size.ts": "export function size(s: string) {\n  return s.length;\n}\n" });
     const result = await turn(root, []);
     expect(result.out).toBe(
@@ -102,6 +109,7 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
     "packages/api/src/a.ts": "export const a = 42;\n",
     "packages/api/tsconfig.json": TSCONFIG,
   });
+
   write(root, { "packages/api/src/a.ts": "export const a = 41;\n" });
   const { bins, projects } = fakeTsc([]);
   const result = await turn(root, [], bins);

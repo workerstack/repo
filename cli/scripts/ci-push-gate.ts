@@ -31,6 +31,7 @@ export type GateDeps = {
   fs: Pick<typeof nodeFs, "readFileSync" | "writeFileSync" | "mkdirSync">;
   now: () => Date;
 };
+
 function realDeps(): GateDeps {
   return {
     fs: nodeFs,
@@ -51,6 +52,7 @@ function pushedSchema() {
     }),
   );
 }
+
 type Pushed = z.infer<ReturnType<typeof pushedSchema>>[number];
 
 function sessionFile(root: string, session: string): string {
@@ -79,6 +81,7 @@ function settleEntry(deps: GateDeps, row: Pushed): Pushed {
   const now = deps.git(["rev-parse", "--verify", String(row.src)], dir);
   const sha = now.stdout.trim();
   const isLanded = deps.git(["merge-base", "--is-ancestor", sha, `origin/${row.branch}`], dir).code === 0;
+
   return { at: row.at, branch: row.branch, sha: now.code === 0 && isLanded ? sha : row.sha };
 }
 
@@ -88,9 +91,11 @@ function settleEntry(deps: GateDeps, row: Pushed): Pushed {
  */
 function loadPushed(deps: GateDeps, file: string): Pushed[] {
   const rows = parsePushed(deps, file);
+
   if (!rows.some((r) => r.pending === true)) return rows;
   const settled = rows.map((r) => (r.pending === true ? settleEntry(deps, r) : r));
   save(deps, file, settled);
+
   return settled;
 }
 
@@ -100,11 +105,13 @@ function loadPushed(deps: GateDeps, file: string): Pushed[] {
  */
 export function recordPush(input: { command: string; cwd: string; session: string }, deps: GateDeps): void {
   if (input.session === "") return;
+
   try {
     const file = sessionFile(recordRoot(deps.git, input.cwd), input.session);
     const rows = loadPushed(deps, file);
     const at = deps.now().toISOString();
     const noted = pushedRefs(deps.git, input.command, input.cwd).map((r) => ({ ...r, at, pending: true }));
+
     if (noted.length > 0) save(deps, file, [...rows, ...noted]);
   } catch {
     // The check at Stop still sees the push land; a failed note must not stop the command.
@@ -114,6 +121,7 @@ export function recordPush(input: { command: string; cwd: string; session: strin
 function readRecord(deps: GateDeps, root: string, sha: string): WaitRecord | null {
   try {
     const parsed = recordSchema().safeParse(JSON.parse(deps.fs.readFileSync(recordPath(root, sha), "utf8")));
+
     return parsed.success ? parsed.data : null;
   } catch {
     return null;
@@ -123,25 +131,33 @@ function readRecord(deps: GateDeps, root: string, sha: string): WaitRecord | nul
 /** The jobs that failed in three or more of the branch's pushed commits. */
 function repeatedJobs(deps: GateDeps, root: string, pushed: Pushed[]): string[] {
   const counts = new Map<string, number>();
+
   for (const sha of new Set(pushed.map((p) => p.sha))) {
     const record = readRecord(deps, root, sha);
+
     for (const job of record?.outcome === "failed" ? record.failed : []) counts.set(job, (counts.get(job) ?? 0) + 1);
   }
+
   return [...counts].filter(([, n]) => n >= FAILED_ROUNDS).map(([job]) => job);
 }
 
 /** The Stop line for one branch's pushes, or null when its newest landed commit is settled. */
 function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed: Pushed[]): string | null {
   const branch = String(pushed[0]?.branch);
+
   const landed = pushed.filter(
     (p) => deps.git(["merge-base", "--is-ancestor", p.sha, `origin/${branch}`], ctx.root).code === 0,
   );
+
   const newest = landed[landed.length - 1];
+
   if (newest === undefined) return null;
   const record = readRecord(deps, ctx.root, newest.sha);
+
   if (record !== null && TERMINAL.includes(record.outcome)) return null;
   const short = newest.sha.slice(0, SHA_SHOWN);
   const wait = `\`bun repo ci wait ${branch}\``;
+
   if (record?.outcome !== "failed") {
     return (
       `Stop: you pushed ${short} to ${branch} and its ci run has no result; ` +
@@ -150,12 +166,15 @@ function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed:
   }
 
   const repeated = repeatedJobs(deps, ctx.root, pushed);
+
   if (repeated.length > 0) {
     const report =
       `Stop: ${repeated.join(", ")} failed ${FAILED_ROUNDS} times on ${branch} this session; ` +
       "report the failure and its logs to the user, then stop";
+
     return ctx.active ? null : report;
   }
+
   return (
     `Stop: ci failed on ${short} on ${branch} (${record.failed.join(", ")}); ` +
     `fix it in a new worktree, push, and run ${wait} in the background`
@@ -165,6 +184,7 @@ function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed:
 function readCount(deps: GateDeps, stamp: string): number {
   try {
     const n = parseInt(deps.fs.readFileSync(stamp, "utf8"), DECIMAL);
+
     return Number.isFinite(n) && n > 0 ? n : 0;
   } catch {
     return 0;
@@ -186,18 +206,22 @@ export function pushStopBlock(
   const lines = [...byBranch.values()].flatMap((rows) => lineFor(deps, { active: input.active, root }, rows) ?? []);
   const stamp = path.join(input.root, LOGS_DIR, `${PUSH_BLOCK_STAMP}-${input.session}`);
   const n = readCount(deps, stamp);
+
   if (lines.length === 0 || n >= MAX_PUSH_BLOCK) return null;
+
   try {
     deps.fs.mkdirSync(path.dirname(stamp), { recursive: true });
     deps.fs.writeFileSync(stamp, String(n + 1));
   } catch {
     // An unwritable stamp costs the cap, not the block.
   }
+
   return lines.join("\n");
 }
 
 function sessionOf(data: HookInput): string {
   const ids = [repoEnv.process.GROK_SESSION_ID, data.sessionId, data.session_id];
+
   return ids.find((id) => id !== undefined && id !== "") ?? "";
 }
 
@@ -218,5 +242,6 @@ export function notePush(
 export function pushHold(data: HookInput, deps: GateDeps = realDeps()): string | null {
   const { root, cwd } = resolveRoots(data);
   const active = data.stopHookActive === true || data.stop_hook_active === true;
+
   return pushStopBlock({ active, cwd, root, session: sessionOf(data) }, deps);
 }

@@ -25,8 +25,10 @@ function tmpWs(): string {
 const saved = savedDoc(
   persistImplementation({ content: VALID_IMPL, created: "2026-08-26T14:30:00Z", workspaceRoot: tmpWs() }),
 );
+
 /** `edit` gives the saved journal with `from` replaced by `to`. */
 const { edit, errorsOf } = docEditor(saved, validateImplementation);
+
 function section(heading: string, body: string) {
   return edit(`## ${heading}\n(none)`, `## ${heading}\n${body}`);
 }
@@ -89,6 +91,7 @@ describe("injectFrontmatter", () => {
       slug: "the-slug",
       source: "src",
     });
+
     expect(out).toBe(RENAMED.join("\n"));
   });
 
@@ -111,6 +114,7 @@ describe("validateImplementation frontmatter", () => {
     const text = saved.text
       .replaceAll(/^(plan|name|created|source):.*\n/gm, "")
       .replace("status: in-progress", "status:\nBad Line");
+
     expect(errorsOf(text)).toStrictEqual(
       expect.arrayContaining(["missing plan", "missing name", "missing status", "missing created", "missing source"]),
     );

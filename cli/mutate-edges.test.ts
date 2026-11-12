@@ -83,6 +83,7 @@ function manifestOf(root: string, dir: string) {
 function metadata(root: string, dirs: string[], result: { status?: number; stderr?: string } = {}): CargoRun {
   const packages = dirs.map((dir) => ({ id: dir, manifest_path: manifestOf(root, dir), name: dir, version: "0.1.0" }));
   const stdout = JSON.stringify({ packages, version: 1, workspace_members: dirs, workspace_root: root });
+
   return () => ({ missing: false, status: 0, stderr: "", stdout, ...result });
 }
 
@@ -100,10 +101,13 @@ it("lists the Cargo member dirs, root-relative with forward slashes and the root
 it("lists no Cargo dir without a root Cargo.toml or when cargo cannot say", () => {
   const root = tempDir();
   let wasAsked = false;
+
   function spy(): ReturnType<CargoRun> {
     wasAsked = true;
+
     return { missing: false, status: 1, stderr: "", stdout: "" };
   }
+
   expect(packagesWith(spy)(root)).toStrictEqual([]);
   expect(wasAsked).toBe(false);
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\n");
@@ -135,8 +139,10 @@ it("refuses a raw report that is no JSON", async () => {
   const f = fakes(sim());
   f.deps.run = (a) => {
     if (a[0] !== "install") f.deps.fs.write(path.join(BASE, "stryker-report.json"), "{");
+
     return { code: 0, stderr: "", stdout: "" };
   };
+
   expect(await runMutate(args, f.deps)).toBe(1);
   expect(f.err.join("")).toMatch(/Stryker wrote no readable report: .*JSON/);
 });
@@ -157,6 +163,7 @@ it("counts a tracked file the clone lacks as one empty line", async () => {
 it("writes through the process streams, and main runs in the current directory", async () => {
   const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
   const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
   try {
     const deps = realDeps("/");
     deps.out("to stdout\n");

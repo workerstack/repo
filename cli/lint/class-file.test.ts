@@ -6,6 +6,7 @@ import { classFile } from "./class-file.ts";
 function move(what: string) {
   return `a class file holds one class, its imports and its export; move ${what} to its own file`;
 }
+
 function messagesOf(code: string) {
   return reportsOf(classFile, { "src/store.ts": code }).map((report) => report.message);
 }

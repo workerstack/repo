@@ -19,14 +19,17 @@ import {
 
 /** Resolves a module specifier from a directory to a file path, throwing when it cannot. */
 export type Resolve = (specifier: string, from: string) => string;
+
 /** The platform and architecture to find the binary for. */
 export type Target = { platform: string; arch: string };
+
 /** Where turbo's binary is, or the line that says why it cannot be found. */
 export type TurboBin = { ok: true; path: string } | { ok: false; error: string };
 
 function resolveFrom(specifier: string, from: string): string {
   return Bun.resolveSync(specifier, from);
 }
+
 /** Where turbo is looked up from: this package's own install, as turbo is its dependency and not the consumer's. */
 const OWN_DIR = import.meta.dirname;
 const here: Target = { arch: process.arch, platform: process.platform };
@@ -34,15 +37,19 @@ const here: Target = { arch: process.arch, platform: process.platform };
 /** The binary of the platform package of the turbo installed beside `from` (this package's own install by default). */
 export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom, target: Target = here): TurboBin {
   let turboDir: string;
+
   try {
     turboDir = path.dirname(resolve(TURBO_MANIFEST, from));
   } catch {
     return { error: TURBO_MISSING, ok: false };
   }
+
   const os = TURBO_OS[target.platform] ?? target.platform;
   const name = `${TURBO_SCOPE}${os}-${TURBO_ARCH[target.arch] ?? target.arch}`;
+
   try {
     const dir = path.dirname(resolve(`${name}/package.json`, turboDir));
+
     return {
       ok: true,
       path: path.join(dir, target.platform === WINDOWS_PLATFORM ? TURBO_BINARY_WINDOWS : TURBO_BINARY),
@@ -56,8 +63,10 @@ export function turboBin(from: string = OWN_DIR, resolve: Resolve = resolveFrom,
 export function turboRunner(locate: () => TurboBin = turboBin): TurboRun {
   return (args, cwd, env) => {
     const bin = locate();
+
     if (!bin.ok) return { missing: bin.error };
     const run = spawnSync(bin.path, args, { cwd, encoding: "utf8", env: childEnv(env), maxBuffer: MAX_BUFFER });
+
     return { code: run.status ?? 1, stderr: run.stderr, stdout: run.stdout };
   };
 }

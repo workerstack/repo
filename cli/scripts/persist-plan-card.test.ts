@@ -78,6 +78,7 @@ describe("card PLAN_NAME", () => {
     const under = save(
       CARDED.replace("PLAN_NAME: add tmp ignore\n", "").replace(H1, `${H1}PLAN_NAME: add tmp ignore\n\n`),
     );
+
     expect(under.ok, under.error).toBe(true);
     expect(under.content).not.toMatch(/^PLAN_NAME:/m);
     expect(under.filename).toMatch(/^1-add-tmp-ignore-/);

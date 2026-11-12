@@ -7,9 +7,11 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { isRustKey, readFloorsFile } from "./floors.ts";
 
 let dir = "";
+
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "floors-test-"));
 });
+
 afterEach(() => {
   fs.rmSync(dir, { force: true, recursive: true });
 });
@@ -17,8 +19,10 @@ afterEach(() => {
 function write(value: unknown): string {
   const file = path.join(dir, "floors.json");
   fs.writeFileSync(file, typeof value === "string" ? value : JSON.stringify(value));
+
   return file;
 }
+
 const TS = { branches: 80, functions: 70, lines: 60, statements: 90 };
 const RUST = { functions: 66, lines: 66, regions: 58 };
 

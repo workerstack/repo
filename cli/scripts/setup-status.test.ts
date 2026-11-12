@@ -54,9 +54,11 @@ it("targetStatuses reports local STT with ffmpeg and whisper when the model is p
 it("targetStatuses takes the PATH from env, then from the process", async () => {
   const home = plant("setup-st-path-");
   const seen: (string | undefined)[] = [];
+
   function whichFn(_n: string, p: string | undefined) {
     return (seen.push(p), "");
   }
+
   await targetStatuses({ env: { PATH: "/from-env" }, home, platform: "linux", targets: [], whichFn });
   await targetStatuses({ env: {}, home, platform: "linux", targets: [], whichFn });
   expect(seen[0]).toBe("/from-env");
@@ -85,6 +87,7 @@ it("menuOptions tags each target ok or missing with its extra", () => {
     { browser: { extra: "need chromium", ok: false }, jev: { extra: "env", ok: true }, speak: { extra: "", ok: true } },
     ["speak", "browser", "jev", "listen"],
   ).map((o) => o.label);
+
   expect(labels).toStrictEqual([
     "speak (ElevenLabs / OpenAI TTS)  ok",
     "listen (STT)  missing",

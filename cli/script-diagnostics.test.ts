@@ -13,6 +13,7 @@ afterEach(() => {
 });
 
 const GUARD = "repo(guard-rejects)";
+
 function untested(name: string) {
   return `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
 }
@@ -21,6 +22,7 @@ it("scriptDiagnostics joins the magic hits and the untested guards, in file and 
   const source =
     "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\n" +
     "export const n = (): number => 7;\n";
+
   const root = plant({ "src/a.ts": source });
   expect(scriptDiagnostics(root, { files: ["src/a.ts"], sources: ["src/a.ts"] })).toStrictEqual({
     ok: true,
@@ -36,6 +38,7 @@ it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a 
 
 it("scriptDiagnostics returns jscpd's missing binary for a platform it ships none for", () => {
   const root = plant({ "src/a.ts": "export const a = 1;\n" });
+
   const found = scriptDiagnostics(
     root,
     { files: ["src/a.ts"], sources: ["src/a.ts"] },
@@ -44,6 +47,7 @@ it("scriptDiagnostics returns jscpd's missing binary for a platform it ships non
       target: { arch: "x64", platform: "freebsd" },
     },
   );
+
   expect(found.ok ? [] : found.errors).toStrictEqual([
     expect.stringMatching(/^jscpd has no binary .+jscpd-freebsd-x64/),
   ]);
@@ -60,15 +64,18 @@ it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
 function checkout(files: Record<string, string>, config: object): string {
   const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
 
 it("checkScriptsAt gives every hit of the checkout and those its skips leave", async () => {
   const skip = { files: ["src/a.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] };
+
   const root = checkout(
     { "src/a.ts": "export const f = () => 5000;\n", "src/b.ts": "export const g = () => 7;\n" },
     { lint: { skip: [skip] }, packs: ["standards"] },
   );
+
   const a = hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"));
   const b = hit("src/b.ts:1:24", NUMBER, NAMES_NOTHING("7"));
   expect(await checkScriptsAt(root)).toStrictEqual({ all: [a, b], kept: [b], problems: [] });
@@ -79,10 +86,12 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
   expect(await checkScriptsAt(plant({ "src/a.ts": "export const f = () => 5;\n" }))).toStrictEqual(none);
   const docs = checkout({ "src/a.ts": "export const f = () => 5;\n" }, { packs: ["docs"] });
   expect(await checkScriptsAt(docs)).toStrictEqual(none);
+
   const broken = checkout(
     { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
     { packs: ["standards"] },
   );
+
   const brokenChecked = await checkScriptsAt(broken);
   expect(brokenChecked.problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
   const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
@@ -95,6 +104,7 @@ it("scriptLintAt prints no line when the script checks cannot run, only what sto
     { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
     { packs: ["standards"] },
   );
+
   expect(await scriptLintAt(broken, { clippy: false, paths: null })).toStrictEqual({
     lines: [],
     problems: [expect.stringMatching(/^pkg\/tsconfig\.json: .+/)],
@@ -109,6 +119,7 @@ it(
       "src/a.reject.ts": "export const a: number = 'x';\n",
       "src/b.ts": "export const b: number = 'x';\n",
     };
+
     expect(await checkRejectionsAt(checkout(files, { packs: ["standards"] }))).toStrictEqual([
       "src/a.reject.ts: line 1 fails unmarked: TS2322: Type 'string' is not assignable to type 'number'.",
     ]);

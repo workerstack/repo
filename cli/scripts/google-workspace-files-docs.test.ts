@@ -24,6 +24,7 @@ it("drive: lists files with the link, the mime type or nothing", async () => {
     { id: "2", mimeType: "text/x", name: "b" },
     { id: "3", name: "c" },
   ];
+
   const calls = stubFetch(() => jsonRes({ files }));
   const r = await runWorkspace("drive", "--q", "name='a'", "--n", "3");
   expect(r.logs).toBe("a\t1\tlink\nb\t2\ttext/x\nc\t3\n");

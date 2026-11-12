@@ -13,6 +13,7 @@ function versionsSchema() {
 
 function catalogFields() {
   const versions = versionsSchema();
+
   return {
     catalog: versions.optional(),
     catalogs: z.record(z.string(), versions, { error: "must be an object of named catalogs" }).optional(),
@@ -54,6 +55,7 @@ const packageJsonSchema: z.ZodObject<{
 function buildPackageJsonSchema() {
   const globs = z.array(z.string());
   const versions = versionsSchema();
+
   return z.object(
     {
       // Kept for the lint config, which narrows them where it reads them.
@@ -87,10 +89,14 @@ function buildPackageJsonSchema() {
  * unjudged `unknown`s; every other field is dropped at parse.
  */
 export type PackageJson = z.output<typeof packageJsonSchema>;
+
 export type WorkspacePackage = { dir: string; manifest: PackageJson };
+
 /** A repo root and its workspace packages; `dir` is root-relative with POSIX separators. */
 export type Workspace = { root: string; manifest: PackageJson; packages: WorkspacePackage[] };
+
 export type WorkspaceResult = { ok: true; workspace: Workspace } | { ok: false; errors: string[] };
+
 /**
  * The catalogs a root declares: `default` for `catalog:` and `named` for `catalog:<name>`; bun reads both top-level
  * and under `workspaces`, the top level winning an entry named in both.
@@ -107,21 +113,27 @@ function globSync(pattern: string, cwd: string): string[] {
 /** Reads the root package.json and every workspace package it declares, sorted by dir. */
 export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceResult {
   const rootFile = path.join(root, "package.json");
+
   // A root without package.json has no workspaces and no dependencies, as loadConfig reads it.
   const rootManifest: ManifestResult = fs.existsSync(rootFile)
     ? parseManifest("package.json", rootFile)
     : { manifest: {}, ok: true };
+
   if (!rootManifest.ok) return { errors: rootManifest.errors, ok: false };
 
   const errors: string[] = [];
   const packages: WorkspacePackage[] = [];
+
   for (const dir of expandWorkspaces(root, rootManifest.manifest, glob)) {
     const rel = `${dir}/package.json`;
     const manifest = parseManifest(rel, path.join(root, rel));
+
     if (manifest.ok) packages.push({ dir, manifest: manifest.manifest });
     else errors.push(...manifest.errors);
   }
+
   if (errors.length > 0) return { errors, ok: false };
+
   return { ok: true, workspace: { manifest: rootManifest.manifest, packages, root } };
 }
 
@@ -129,6 +141,7 @@ export function readWorkspace(root: string, glob: Glob = globSync): WorkspaceRes
 export function catalogsOf(manifest: PackageJson): Catalogs {
   const inner = Array.isArray(manifest.workspaces) ? undefined : manifest.workspaces;
   const named: Catalogs["named"] = {};
+
   for (const source of [inner?.catalogs, manifest.catalogs])
     for (const [name, entries] of Object.entries(source ?? {})) named[name] = { ...named[name], ...entries };
 
@@ -141,11 +154,14 @@ function expandWorkspaces(root: string, manifest: PackageJson, glob: Glob): stri
   const patterns = (Array.isArray(workspaces) ? workspaces : workspaces?.packages) ?? [];
   const included = new Set<string>();
   const excluded = new Set<string>();
+
   for (const pattern of patterns) {
     const negated = pattern.startsWith("!");
     const target = negated ? excluded : included;
+
     for (const match of glob(negated ? pattern.slice(1) : pattern, root)) target.add(toPosixDir(match));
   }
+
   return [...included]
     .filter((dir) => !excluded.has(dir))
     .filter((dir) => !dir.split("/").includes("node_modules"))
@@ -164,6 +180,7 @@ type ManifestResult = { ok: true; manifest: PackageJson } | { ok: false; errors:
 
 function parseManifest(rel: string, file: string): ManifestResult {
   let raw: unknown;
+
   try {
     raw = JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (error) {
@@ -172,11 +189,15 @@ function parseManifest(rel: string, file: string): ManifestResult {
       ok: false,
     };
   }
+
   const parsed = packageJsonSchema.safeParse(raw);
+
   if (parsed.success) return { manifest: parsed.data, ok: true };
+
   return {
     errors: parsed.error.issues.map((issue) => {
       const at = issue.path.join(".");
+
       return `${rel}: ${at === "" ? "" : `${at}: `}${issue.message}`;
     }),
     ok: false,

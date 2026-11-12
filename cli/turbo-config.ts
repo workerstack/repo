@@ -30,6 +30,7 @@ export type TurboTask = {
   /** Whether the task never exits, like a dev server. */
   persistent?: boolean | undefined;
 };
+
 /** What the generated `turbo.json` reads. */
 export type ResolvedTurbo = {
   /** The extra tasks, by name; empty when the config lists none. */
@@ -48,6 +49,7 @@ type TaskSchema = z.ZodObject<
   },
   z.core.$strict
 >;
+
 type TurboSchema = z.ZodObject<{ tasks: z.ZodOptional<z.ZodRecord<z.ZodString, TaskSchema>> }, z.core.$strict>;
 
 function buildSchema(): TurboSchema {
@@ -55,7 +57,9 @@ function buildSchema(): TurboSchema {
     .array(z.string({ error: LIST_ERROR }), { error: LIST_ERROR })
     .readonly()
     .optional();
+
   const flag = z.boolean({ error: FLAG_ERROR }).optional();
+
   const task = z.strictObject(
     {
       cache: flag,
@@ -68,6 +72,7 @@ function buildSchema(): TurboSchema {
     },
     { error: TASK_ERROR },
   );
+
   return z.strictObject(
     { tasks: z.record(z.string(), task, { error: TASKS_ERROR }).optional() },
     { error: SECTION_ERROR },

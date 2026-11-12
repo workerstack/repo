@@ -8,6 +8,7 @@ export type Verdict = "widened" | "narrowed" | null;
 
 /** One side of a name: its declared type, or the type of its value. */
 type Facet = { mask: ts.SymbolFlags; value: boolean };
+
 const TYPE_FACET: Facet = { mask: ts.SymbolFlags.Type, value: false };
 const VALUE_FACET: Facet = { mask: ts.SymbolFlags.Value, value: true };
 
@@ -33,6 +34,7 @@ function isMemberType(type: ts.Type): boolean {
 /** Whether not being assignable both ways loses something: a value that no longer fits, a member or a field gone. */
 function lost(facet: Facet, types: [ts.Type, ts.Type], fits: { a: boolean; b: boolean }): boolean {
   if (facet.value) return !fits.a;
+
   return types.some(isMemberType) ? !fits.b : true;
 }
 
@@ -44,17 +46,22 @@ function byAssignability(ctx: Ctx, facet: Facet, types: [ts.Type, ts.Type]): Ver
   const [old, next] = types;
   const fits = { a: ctx.checker.isTypeAssignableTo(next, old), b: ctx.checker.isTypeAssignableTo(old, next) };
   const isSame = typeText(ctx, old) === typeText(ctx, next);
+
   if (fits.a && fits.b) return isSame ? null : "widened";
+
   if (isSame && isNominal(ctx, old) && isNominal(ctx, next)) return null;
+
   return lost(facet, types, fits) ? "narrowed" : "widened";
 }
 
 /** Whether a method's parameters differ in some overload: shorthand methods are bivariant, assignability misses it. */
 function parametersDiffer(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): boolean {
   const [before, after] = both([old, next], (method) => ctx.checker.getTypeOfSymbol(method).getCallSignatures());
+
   function typeOf(parameter: ts.Symbol): ts.Type {
     return ctx.checker.getTypeOfSymbol(parameter);
   }
+
   return pairs(before, after).some(([first, second]) =>
     pairs(first.getParameters(), second.getParameters()).some(
       ([x, y]) => byAssignability(ctx, TYPE_FACET, [typeOf(x), typeOf(y)]) !== null,
@@ -65,8 +72,10 @@ function parametersDiffer(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): boolean {
 /** Whether a method of the old type has a parameter the new one's method does not take both ways. */
 function methodsNarrowed(ctx: Ctx, old: ts.Type, next: ts.Type): boolean {
   const methods = ctx.checker.getPropertiesOfType(old).filter((prop) => (prop.flags & ts.SymbolFlags.Method) !== 0);
+
   return methods.some((method) => {
     const other = ctx.checker.getPropertyOfType(next, method.name);
+
     return [other]
       .filter(defined)
       .some((twin) => (twin.flags & ts.SymbolFlags.Method) !== 0 && parametersDiffer(ctx, method, twin));
@@ -99,20 +108,25 @@ function isLiterals(element: ts.Type): boolean {
 /** The element union of a tuple of literals; an empty list for any other type. */
 function literalElements(ctx: Ctx, type: ts.Type): ts.Type[] {
   if (!ctx.checker.isTupleType(type)) return [];
+
   return [type.getNumberIndexType()].filter(defined).filter(isLiterals);
 }
 
 /** The verdict of the value of a name: a tuple of literals counts as the union of its elements. */
 function valueVerdict(ctx: Ctx, old: ts.Type, next: ts.Type): Verdict {
   const [first, second] = [literalElements(ctx, old)[0], literalElements(ctx, next)[0]];
+
   if (first !== undefined && second !== undefined) return byAssignability(ctx, TYPE_FACET, [first, second]);
+
   return typeVerdict(ctx, VALUE_FACET, [old, next]);
 }
 
 /** The verdict of the declared type of a name; a generic one compares by its text. */
 function declaredVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
   const [before, after] = both([old, next], (symbol) => ctx.checker.getDeclaredTypeOfSymbol(symbol));
+
   if (!isGeneric(old) && !isGeneric(next)) return typeVerdict(ctx, TYPE_FACET, [before, after]);
+
   return typeText(ctx, before) === typeText(ctx, after) ? null : "narrowed";
 }
 
@@ -120,9 +134,13 @@ function declaredVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
 function facetVerdict(ctx: Ctx, facet: Facet, symbols: [ts.Symbol, ts.Symbol]): Verdict {
   const [old, next] = symbols;
   const [had, has] = both([old, next], (symbol) => (symbol.flags & facet.mask) !== 0);
+
   if (!had) return has ? "widened" : null;
+
   if (!has) return "narrowed";
+
   if (!facet.value) return declaredVerdict(ctx, old, next);
+
   return valueVerdict(ctx, ctx.checker.getTypeOfSymbol(old), ctx.checker.getTypeOfSymbol(next));
 }
 
@@ -135,7 +153,9 @@ function enumVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
   const [was, is] = both([old, next], (symbol) =>
     ctx.checker.getPropertiesOfType(ctx.checker.getTypeOfSymbol(symbol)).map((member) => member.name),
   );
+
   if (was.some((name) => !is.includes(name))) return "narrowed";
+
   return is.length > was.length ? "widened" : null;
 }
 
@@ -143,6 +163,8 @@ function enumVerdict(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
 export function classify(ctx: Ctx, old: ts.Symbol, next: ts.Symbol): Verdict {
   if (isEnum(old) && isEnum(next)) return enumVerdict(ctx, old, next);
   const verdicts = [TYPE_FACET, VALUE_FACET].map((facet) => facetVerdict(ctx, facet, [old, next]));
+
   if (verdicts.includes("narrowed")) return "narrowed";
+
   return verdicts.includes("widened") ? "widened" : null;
 }

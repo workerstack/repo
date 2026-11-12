@@ -13,9 +13,12 @@ import type { BrowserResult, RunOpts } from "./browser.types.ts";
 export async function runBrowser(argv: string[], opts: RunOpts = {}): Promise<BrowserResult> {
   const ctx = contextOf(opts);
   const verb = (argv[0] ?? "").toLowerCase();
+
   if (HELP_VERBS.has(verb)) return ok(USAGE);
   const handler = VERBS.get(verb);
+
   if (handler === undefined) return fail(UNKNOWN_VERB);
+
   try {
     return await handler(argv, ctx);
   } catch (err) {
@@ -29,7 +32,10 @@ export async function main(argv: string[]): Promise<number> {
     env: childEnv(),
     platform: process.platform,
   });
+
   if (r.stdout !== "") process.stdout.write(r.stdout);
+
   if (r.stderr !== "") process.stderr.write(r.stderr);
+
   return r.code;
 }

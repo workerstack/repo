@@ -27,5 +27,6 @@ export function isInteractive({
   stdout = process.stdout,
 }: InteractiveOptions = {}): boolean {
   if (stdin.isTTY !== true || stdout.isTTY !== true) return false;
+
   return !isCi(env.CI) && !argv.some((arg) => YES_FLAGS.has(arg));
 }

@@ -12,6 +12,7 @@ import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
 const roots: string[] = [];
+
 afterEach(() => {
   for (const dir of roots.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
 });
@@ -21,6 +22,7 @@ function repoRoot(): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "gate-guards-")));
   roots.push(dir);
   spawnSync("git", ["init", "-q"], { cwd: dir });
+
   return dir;
 }
 
@@ -31,6 +33,7 @@ function claude(cwd: string, tool: string, input: Record<string, unknown>): Hook
     tool_name: tool,
   };
 }
+
 function codex(cwd: string, tool: string, input: Record<string, unknown>): HookInput {
   return {
     ...claude(cwd, tool, input),
@@ -38,9 +41,11 @@ function codex(cwd: string, tool: string, input: Record<string, unknown>): HookI
     turn_id: "t1",
   };
 }
+
 function asScout(data: HookInput): HookInput {
   return { ...data, subagent_type: "scout" };
 }
+
 function deny(reason: string) {
   return { reason, type: "deny" };
 }
@@ -49,7 +54,9 @@ describe("payload guards", () => {
   it("accept an object and reject null, arrays and scalars", () => {
     expect(isPlainObject({})).toBe(true);
     expect(isHookObject({})).toBe(true);
+
     for (const value of [null, undefined, [], "text", 7]) expect(isPlainObject(value)).toBe(false);
+
     for (const value of [null, undefined, [], "text"]) expect(isHookObject(value)).toBe(false);
   });
 });

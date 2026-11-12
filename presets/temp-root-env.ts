@@ -19,5 +19,6 @@ export function rootPath(pid: number = process.pid): string {
 export function rootEnv(root: string = rootPath()): Record<string, string> {
   // Node's compile cache defaults to <tmpdir>/node-compile-cache; a worker would put it in the root.
   const cache = process.env.NODE_COMPILE_CACHE ?? path.join(path.dirname(root), "node-compile-cache");
+
   return { NODE_COMPILE_CACHE: cache, TEMP: root, TMP: root, TMPDIR: root };
 }

@@ -18,10 +18,12 @@ const FLOOR = { branches: 70, functions: 90, lines: 85, statements: 80 };
 /** A temp dir holding `files` (name to text), removed after the test. */
 function plant(files: Record<string, string>): string {
   const dir = tempDir();
+
   for (const [name, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
     fs.writeFileSync(path.join(dir, name), text);
   }
+
   return dir;
 }
 
@@ -85,10 +87,12 @@ describe("defineConfig", () => {
 
   it("keeps the caller's include and coverage settings", () => {
     setPlatform("win32");
+
     const config = defineConfig(
       { test: { coverage: { include: ["src/**"] }, include: ["src/**/*.test.ts"] } },
       NO_FLOORS,
     );
+
     expect(config.test).toMatchObject({
       coverage: { include: ["src/**"], provider: "istanbul" },
       include: ["src/**/*.test.ts"],
@@ -100,7 +104,9 @@ describe("defineConfig", () => {
 describe("defineConfig sequencer", () => {
   it("shards by measured time, and lets the caller's sequencer win", () => {
     expect(defineConfig({}, NO_FLOORS).test?.sequence?.sequencer).toBe(ShardSequencer);
+
     class Mine extends ShardSequencer {}
+
     expect(defineConfig({ test: { sequence: { sequencer: Mine } } }, NO_FLOORS).test?.sequence?.sequencer).toBe(Mine);
   });
 });
@@ -161,6 +167,7 @@ describe("defineConfig Rust rows", () => {
 
 const WRANGLER_FILES = ["wrangler.jsonc", "wrangler.json", "wrangler.toml"] as const;
 const USAGE_TAIL = "is here, so tests run in the Workers runtime; bun add -d @cloudflare/vitest-plugin";
+
 function usage(file: string) {
   return `@workerstack/repo/vitest: ${file} ${USAGE_TAIL}`;
 }
@@ -173,6 +180,7 @@ function plantWorker(file: string) {
 /** The messages the config's plugin promises reject with; this repo does not install the plugin. */
 async function rejections({ plugins }: ViteUserConfig): Promise<string[]> {
   const settled = await Promise.allSettled((plugins ?? []).map((plugin) => Promise.resolve(plugin)));
+
   return settled.map((result) =>
     result.status === "rejected" && result.reason instanceof Error ? result.reason.message : "resolved",
   );

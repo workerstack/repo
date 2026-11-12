@@ -6,6 +6,7 @@ import { configFile } from "./config-file.ts";
 function move(what: string) {
   return `a config file holds only imports and exports; move ${what} into a module it imports`;
 }
+
 function messagesOf(code: string, file = "vite.config.ts") {
   return reportsOf(configFile, { [file]: code }).map((report) => report.message);
 }

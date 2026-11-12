@@ -10,6 +10,7 @@ import { MARK, bunRepo, cli, git, marker, scratch, write, wt } from "./__fixture
 const WHERE = "where";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 function installFailed(dir: string) {
@@ -69,6 +70,7 @@ function gitOnlyPath(): string {
     return path.dirname(execFileSync(WHERE, ["git"], { encoding: "utf8" }).split(/\r?\n/)[0] ?? "");
   const bin = tmp.dir("wt-bin-");
   fs.symlinkSync(execFileSync("which", ["git"], { encoding: "utf8" }).trim(), path.join(bin, "git"));
+
   return bin;
 }
 

@@ -53,6 +53,7 @@ async function checkPackages(cwd: string, loaded: LoadResult, print: Printer): P
   const { checkPublic } = await import("./check-public.ts");
   const { checkWorkspace } = await import("./check-workspace.ts");
   const read = readWorkspace(cwd);
+
   if (!read.ok) return;
   print.fail(checkPublic(cwd, read.workspace, loaded.config));
   print.fail(loaded.config.packs.includes("workspace") ? checkWorkspace(cwd, read.workspace) : []);
@@ -131,5 +132,6 @@ export async function runCheck(io: SyncIo): Promise<void> {
   print.report(github.report);
   print.fail(github.problems);
   const code = failing.length > 0 ? 1 : synced;
+
   if (code !== 0) process.exitCode = code;
 }

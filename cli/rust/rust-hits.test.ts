@@ -32,6 +32,7 @@ function lints(): CargoResult {
     line("src/lib.rs", "used `unwrap()` on a `Result` value", "clippy::unwrap_used"),
     line("src/gone.rs", "elsewhere", "dead_code"),
   ].join("\n");
+
   return { missing: false, status: 0, stderr: "", stdout };
 }
 
@@ -57,6 +58,7 @@ it("lists the rust files git knows, tracked or not, outside fixtures and target 
     "target/debug/build.rs": "",
     "tests/__fixtures__/x.rs": "",
   });
+
   git(root, "init", "-q");
   git(root, "add", "src/lib.rs");
   expect(rustFiles(root)).toStrictEqual({ files: ["src/a.rs", "src/lib.rs", "src/target.rs"], ok: true });
@@ -117,6 +119,7 @@ it("orders hits across files by path then place", () => {
     "a.rs": "\n/* c */\n",
     "b.rs": "/* a */ /* b */\n",
   });
+
   const result = rustHitsAt(root, ["b.rs", "a.rs"], { clippy: false });
   expect(result.ok && result.value.map((d) => d.line.split(": error ")[0])).toStrictEqual([
     "a.rs:2:1",

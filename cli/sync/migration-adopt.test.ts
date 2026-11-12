@@ -20,10 +20,13 @@ it("plans nothing for AGENTS.md: missing, only the guarded block, or text of the
 
 it("takes a settings overlay as done only when it holds every key and list item, and stops otherwise", () => {
   const settings = JSON.stringify({ model: "opus", permissions: { allow: ["Zed"] } });
+
   function plan(overlay: string) {
     return conflictLines(planOf(mini({ ".claude/settings.json": settings, ".repo/settings/claude.json": overlay })));
   }
+
   expect(plan(JSON.stringify({ model: "opus", other: 1, permissions: { allow: ["Zed", "Y"] } }))).toStrictEqual([]);
+
   for (const overlay of [
     JSON.stringify({ model: "sonnet", permissions: { allow: ["Zed"] } }),
     JSON.stringify({ model: "opus", permissions: { allow: ["Y"] } }),
@@ -41,6 +44,7 @@ it("takes an overlay that already holds the text as done, not as a conflict", ()
     ".repo/settings/claude.json": JSON.stringify({ model: "x", permissions: { allow: ["A", "B"], deny: ["D"] } }),
     "AGENTS.md": `${BLOCK}\nours\n`,
   });
+
   expect(conflictLines(planOf(moved))).toStrictEqual([]);
   expect(planOf(moved).map((step) => step.kind)).toStrictEqual(["remove"]);
 });
@@ -60,6 +64,7 @@ it("moves list items, new keys and changed values, and the hooks apart", () => {
       permissions: { allow: ["A", "B"], deny: ["D"] },
     }),
   });
+
   const steps = planOf(m);
   expect(steps[0]).toMatchObject({
     kind: "write",
@@ -78,10 +83,12 @@ it("moves list items, new keys and changed values, and the hooks apart", () => {
 it("plans nothing for settings the stock has, a missing file, an unreadable stock file or none generated", () => {
   expect(planOf(mini({ ".claude/settings.json": GENERATED_SETTINGS }))).toStrictEqual([REMOVAL]);
   expect(planOf(mini({}))).toStrictEqual([REMOVAL]);
+
   const unreadable = mini(
     { ".claude/settings.json": '{ "env": { "Z": "1" } }' },
     { generated: { ".claude/settings.json": "{" } },
   );
+
   expect(planOf(unreadable)).toStrictEqual([REMOVAL]);
   // a host left out of the config: sync generates no settings to compare with, so the file is left alone
   const ungenerated = mini({ ".claude/settings.json": '{ "env": { "Z": "1" } }' });

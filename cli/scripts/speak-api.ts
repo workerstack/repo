@@ -26,6 +26,7 @@ function plain(value: unknown): string {
 /** A label as text, or `fallback` when it is blank. */
 function plainOr(value: unknown, fallback: string): string {
   const text = plain(value);
+
   return text === "" ? fallback : text;
 }
 
@@ -34,9 +35,11 @@ export function formatHttpError(status: unknown, body: unknown, provider: string
   const n = Number(status);
   const raw = plain(body);
   const code = Number.isNaN(n) || n === 0 ? plain(status) : String(n);
+
   if (MISSING_PERMISSIONS.test(raw)) return `${provider} key present but missing permission (${code}). setup: ${SETUP}`;
 
   const auth = n === UNAUTHORIZED || n === FORBIDDEN || REJECTED_KEY.test(raw);
+
   if (auth) return `${provider} key missing or rejected (${code}). setup: ${SETUP}`;
 
   return `${plain(status)} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
@@ -45,14 +48,18 @@ export function formatHttpError(status: unknown, body: unknown, provider: string
 /** The message of a thrown value, or the value itself as text. */
 export function errMessage(e: unknown): string {
   const m = isRecord(e) ? e.message : undefined;
+
   if (typeof m === "string" && m !== "") return m;
+
   return typeof e === "object" ? Object.prototype.toString.call(e) : plain(e);
 }
 
 /** The platform's fetch, or undefined when it has none. */
 export function globalFetch(): FetchFn | undefined {
   const found: unknown = globalThis.fetch;
+
   if (typeof found !== "function") return undefined;
+
   return (url, { method, headers, body }) => fetch(url, { body: body ?? null, headers, method });
 }
 
@@ -68,29 +75,37 @@ async function failure(url: string, res: FetchResult | null): Promise<Error> {
   const status = res?.status ?? "err";
   const text = await bodyText(res);
   const provider = url.includes(ELEVENLABS) ? ELEVENLABS : OPENAI;
+
   return new Error(formatHttpError(status, text, provider));
 }
 
 /** The ok reply to one request, or the formatted error of a failed one. */
 async function apiFetch(url: string, { method = "GET", headers, body, fetchFn }: ApiOpts): Promise<FetchResult> {
   const fn = fetchFn ?? globalFetch();
+
   if (fn === undefined) throw new Error("fetch is not available");
   const res = await fn(url, { body: body === undefined ? undefined : JSON.stringify(body), headers, method });
+
   if (res?.ok !== true) throw await failure(url, res);
+
   return res;
 }
 
 /** The parsed JSON body of the reply, or an empty object when it has no reader. */
 async function apiJson(url: string, opts: ApiOpts): Promise<unknown> {
   const res = await apiFetch(url, opts);
+
   return typeof res.json === "function" ? res.json() : {};
 }
 
 /** The audio bytes of the reply, from its reader or its body. */
 export async function apiBytes(url: string, opts: ApiOpts): Promise<Buffer> {
   const res = await apiFetch(url, opts);
+
   if (typeof res.arrayBuffer === "function") return Buffer.from(new Uint8Array(await res.arrayBuffer()));
+
   if (Buffer.isBuffer(res.body)) return res.body;
+
   return Buffer.from(Array.isArray(res.body) ? res.body.map(Number) : []);
 }
 
@@ -100,6 +115,7 @@ async function elevenWhoami(cfg: SpeakCfg, fetchFn: FetchFn | undefined): Promis
     const user = isRecord(u) ? u : {};
     const email = plainOr(user.email, "ok");
     const tier = plainOr(isRecord(user.subscription) ? user.subscription.tier : undefined, "-");
+
     return `elevenlabs  ${email}  tier=${tier}`;
   } catch (e) {
     if (MISSING_PERMISSION.test(errMessage(e)))
@@ -112,11 +128,13 @@ async function elevenWhoami(cfg: SpeakCfg, fetchFn: FetchFn | undefined): Promis
 export async function whoami({ provider, cfg, fetchFn }: ProviderOpts): Promise<string> {
   if (resolveProvider(cfg, provider) === ELEVENLABS) return elevenWhoami(cfg, fetchFn);
   await apiJson(`${OPENAI_API}/models`, { fetchFn, headers: { Authorization: `Bearer ${cfg.openai.apiKey}` } });
+
   return "openai ok";
 }
 
 function voiceLine(v: unknown): string {
   if (!isRecord(v)) return "undefined  undefined";
+
   return `${plainOr(v.voice_id, "undefined")}  ${plainOr(v.name, "undefined")}`;
 }
 
@@ -124,5 +142,6 @@ export async function voices({ provider, cfg, fetchFn }: ProviderOpts): Promise<
   if (resolveProvider(cfg, provider) === OPENAI) return OPENAI_VOICES.join("\n");
   const j = await apiJson(`${ELEVEN_API}/voices`, { fetchFn, headers: { "xi-api-key": cfg.elevenlabs.apiKey } });
   const list: unknown[] = isRecord(j) && Array.isArray(j.voices) ? j.voices : [];
+
   return list.map(voiceLine).join("\n");
 }

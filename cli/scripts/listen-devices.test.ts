@@ -22,10 +22,13 @@ const DSHOW_FIXTURE = `
 
 function devices(platform: NodeJS.Platform, r: SpawnSyncResult) {
   const calls: Array<[string, string[]]> = [];
+
   function spawnSyncFn(cmd: string, args: string[]): SpawnSyncResult {
     calls.push([cmd, args]);
+
     return r;
   }
+
   return { calls, list: listDevicesText({ ffmpegBin: "/bin/ffmpeg", platform, spawnSyncFn }) };
 }
 

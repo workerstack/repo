@@ -7,7 +7,9 @@ useTempDirs();
 
 function rootWith(manifest: string | null): string {
   const root = tempDir("workerstack-manifest-");
+
   if (manifest !== null) put(root, MANIFEST_REL, manifest);
+
   return root;
 }
 
@@ -68,6 +70,7 @@ describe("prunePaths", () => {
       paths: ["b", ".\\a\\x", "C:\\repo\\a\\y", "C:\\repo\\keep", "keep", "../out", "C:\\else\\z"],
       version: 1 as const,
     };
+
     expect(prunePaths(prev, ["keep"], "C:\\repo")).toStrictEqual(["a/x", "a/y", "b"]);
   });
 });

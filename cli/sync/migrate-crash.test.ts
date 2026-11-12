@@ -24,6 +24,7 @@ import { COPIED_MARKER } from "./migrate.constants.ts";
 import type { MigrateDeps, MigrationStep } from "./migrate.ts";
 
 useTempDirs();
+
 afterAll(dropFixture);
 
 /** The steps of the recorded install's migration: one per printed line, then the untrack and the removal. */
@@ -43,6 +44,7 @@ async function takeReference(): Promise<Reference> {
   const reference = copied();
   const planned = await copiedPlan(reference);
   await migrate(reference);
+
   return { expected: snapshot(reference), expectedTracked: git(reference, "ls-files"), planned };
 }
 
@@ -65,6 +67,7 @@ it.each(CRASH_POINTS)(
     await expect(migrate(root, crashing(crashAfter))).rejects.toThrow("crash");
     const isLast = crashAfter === planned.length - 1;
     expect(exists(root, COPIED_MARKER), `marker after step ${crashAfter} (${planned[crashAfter]?.kind})`).toBe(!isLast);
+
     if (!isLast) await migrate(root);
     expect(snapshot(root), `after a crash behind step ${crashAfter}`).toStrictEqual(expected);
     expect(git(root, "ls-files")).toBe(expectedTracked);
@@ -106,6 +109,7 @@ it("reads tracked paths with backslashes or a drive prefix as root-relative posi
 it("plans the same untrack paths from git output in either spelling", async () => {
   const root = copied();
   const posix = await copiedPlan(root);
+
   const spelled = await copiedPlan(root, {
     tracked: () => [
       "AGENTS.md",
@@ -117,6 +121,7 @@ it("plans the same untrack paths from git output in either spelling", async () =
       ".grok\\config.toml",
     ],
   });
+
   expect(spelled).toStrictEqual(posix);
 });
 
@@ -138,18 +143,23 @@ it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an
 it("reports a config that no longer loads after the migration", async () => {
   const root = copied();
   let loads = 0;
+
   function load(dir: string): ReturnType<typeof loadConfig> {
     loads += 1;
+
     return loads === 1
       ? loadConfig(dir)
       : Promise.resolve({ errors: ["workerstack.config.ts: copy refused"], ok: false });
   }
+
   const err: string[] = [];
+
   const code = await runSync(
     [],
     { cwd: root, stderr: (s) => err.push(s), stdout: () => {} },
     { generators: [], load, post: [] },
   );
+
   expect(code).toBe(1);
   expect(err.join("")).toContain("copy refused");
   expect(exists(root, COPIED_MARKER)).toBe(false);

@@ -4,11 +4,14 @@ import { parseSync } from "oxc-parser";
 import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 const MESSAGE = "this comment is code; delete it, git keeps the old version";
+
 /** Comments a tool reads: type and lint directives, pure marks, and coverage hints. */
 const TOOL = /^\s*(?:@ts-|oxlint-|eslint-|[@#]__PURE__|(?:v8|c8|istanbul)\s+ignore\b)/;
+
 /** Two line comments on adjacent lines, with nothing but spaces between them. */
 const ADJACENT = /^[ \t]*\r?\n[ \t]*$/;
 const BLOCK_STAR = /^[ \t]*\*[ \t]?/gm;
+
 /** What only code holds: a parsed expression or a label alone can be prose like `workspace` or `note: see a.b`. */
 const CODE = [
   "AssignmentExpression",
@@ -39,7 +42,9 @@ const CODE = [
 /** JSDoc documents, a triple-slash comment directs the compiler, and a tool comment is read by its tool. */
 function skipped(comment: RuleComment): boolean {
   if (comment.type === AST_TOKEN_TYPES.Block && comment.value.startsWith("*")) return true;
+
   if (comment.type === AST_TOKEN_TYPES.Line && comment.value.startsWith("/")) return true;
+
   return TOOL.test(comment.value);
 }
 
@@ -57,6 +62,7 @@ type Group = [RuleComment, ...RuleComment[]];
 function groupsOf(text: string, comments: readonly RuleComment[]): Group[] {
   const groups: Group[] = [];
   let open: { group: Group; last: RuleComment } | null = null;
+
   for (const comment of comments) {
     if (skipped(comment)) {
       open = null;
@@ -68,13 +74,17 @@ function groupsOf(text: string, comments: readonly RuleComment[]): Group[] {
       groups.push(open.group);
     }
   }
+
   return groups;
 }
 
 function holdsCode(node: unknown): boolean {
   if (typeof node !== "object" || node === null) return false;
+
   if (Array.isArray(node)) return node.some(holdsCode);
+
   if ("type" in node && typeof node.type === "string" && CODE.includes(node.type)) return true;
+
   return Object.values(node).some(holdsCode);
 }
 
@@ -82,8 +92,10 @@ function holdsCode(node: unknown): boolean {
 function isCode(source: string): boolean {
   for (const text of [source, `async function* comment() {\n${source}\n}`]) {
     const parsed = parseSync("comment.ts", text, { sourceType: "module" });
+
     if (parsed.errors.length === 0) return holdsCode(parsed.program.body);
   }
+
   return false;
 }
 

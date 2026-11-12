@@ -71,6 +71,7 @@ export function planMigration(
   deps: MigrateDeps = {},
 ): MigrationStep[] {
   const { stock, generated } = input;
+
   if (!present(path.join(root, COPIED_MARKER)) || !present(path.join(stock, "package.json"))) return [];
   const state = new MigrationState({ generated, history: deps.history ?? readStockHistory(), root, stock });
   planRules(state);
@@ -85,6 +86,7 @@ export function planMigration(
   planPacks(state);
   planUntrack(state, input.ignored, deps.tracked ?? gitTracked);
   planRemove(state);
+
   return state.steps;
 }
 
@@ -109,6 +111,7 @@ export function planAdoption(
   const history = deps.history ?? readStockHistory();
   const state = new MigrationState({ generated: generatedFiles(outputs), history, root, stock });
   planAdopt(state, { config, outputs, owned: new Set(input.manifest), tracked: deps.tracked ?? gitTracked });
+
   return state.steps;
 }
 

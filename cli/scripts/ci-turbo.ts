@@ -22,6 +22,7 @@ import type { Captured } from "./lint.ts";
 
 /** Runs turbo with `args` in `cwd` and `env` on top of the process's; `missing` is why there is no binary to run. */
 export type TurboRun = (args: string[], cwd: string, env: Record<string, string>) => Captured | { missing: string };
+
 /**
  * What the packages gate runs with: the repo root, whether coverage is on, the merged report's path if asked and the
  * `i/n` slice of each package's test files, if only one.
@@ -44,14 +45,18 @@ function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> 
 /** The gate for a turbo run: the task and cached counts, or the failed tasks and turbo's output; `named` ends it. */
 function gateOf(run: Captured, named: string): Gate {
   const text = `${run.stdout}${run.stderr}`;
+
   if (run.code === 0) {
     const tasks = TASKS_LINE.exec(text)?.[1];
     const cached = CACHED_LINE.exec(text)?.[1];
     const label = tasks === undefined || cached === undefined ? "ok" : `${tasks} tasks, ${cached} cached`;
+
     return { label: `packages ${label}${named}`, ok: true, output: [], ran: true };
   }
+
   const failed = FAILED_LINE.exec(text)?.[1]?.trim();
   const label = `packages failed${failed === undefined ? "" : ` (${failed})`}${named}`;
+
   return { label, ok: false, output: [text], ran: true };
 }
 
@@ -59,13 +64,17 @@ function gateOf(run: Captured, named: string): Gate {
 export function mergeReports(reports: readonly unknown[]): Record<string, unknown> {
   const parsed = reports.flatMap((report) => {
     const result = reportShape().safeParse(report);
+
     return result.success ? [result.data] : [];
   });
+
   const totals: Record<string, number> = {};
+
   for (const report of parsed) {
     for (const [key, value] of Object.entries(report))
       if (typeof value === "number") totals[key] = (totals[key] ?? 0) + value;
   }
+
   return {
     ...totals,
     success: parsed.every((report) => report.success !== false),
@@ -77,9 +86,11 @@ export function mergeReports(reports: readonly unknown[]): Record<string, unknow
 function packageReports(root: string): unknown[] {
   const workspace = readWorkspace(root);
   const dirs = workspace.ok ? workspace.workspace.packages.map((pkg) => pkg.dir) : [];
+
   return dirs.flatMap((dir) => {
     try {
       const report: unknown = JSON.parse(fs.readFileSync(path.join(root, dir, REPORT_RELATIVE), "utf8"));
+
       return [report];
     } catch {
       return [];
@@ -90,9 +101,11 @@ function packageReports(root: string): unknown[] {
 /** Runs `turbo run typecheck test`, then writes the packages' merged report to `json` when one is asked for. */
 export function packagesGate(options: TurboOptions, run: TurboRun): Gate {
   const result = run([...TURBO_ARGS], options.root, envOf(options));
+
   if (options.json !== undefined)
     fs.writeFileSync(options.json, JSON.stringify(mergeReports(packageReports(options.root))));
 
   if ("missing" in result) return { label: `packages failed: ${result.missing}`, ok: false, output: [], ran: false };
+
   return gateOf(result, options.shard === undefined ? "" : ` (shard ${options.shard})`);
 }

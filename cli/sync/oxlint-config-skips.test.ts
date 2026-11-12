@@ -12,7 +12,9 @@ const APP: Workspace = { manifest: { bin: "./bin/app.ts", name: "app" }, package
 
 function configOf(skips: readonly LintSkip[] = []): Config {
   const built = oxlintConfig(APP, { skip: skips });
+
   if (!built.ok) throw new Error(built.errors.join("\n"));
+
   return JSON.parse(built.value) /* the config sync writes */ as Config;
 }
 
@@ -22,6 +24,7 @@ it("oxlintConfig leaves script rules out of a skip's override, writing none for 
     { files: ["src/user.ts"], reason: REASON, rules: ["repo/guard-rejects"] },
     { files: ["src/cache.ts"], reason: REASON, rules: ["repo/magic-number", "repo/no-module-state"] },
   ];
+
   expect(configOf(skips).overrides).toStrictEqual([
     ...configOf().overrides,
     { files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } },

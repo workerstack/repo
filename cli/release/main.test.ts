@@ -21,10 +21,12 @@ async function run(argv: string[]) {
   vi.spyOn(process.stdout, "write").mockImplementation(into(out));
   vi.spyOn(process.stderr, "write").mockImplementation(into(err));
   const code = await main(argv);
+
   return { code, err: err.join(""), out: out.join("") };
 }
 
 const TAG_FORMAT = "name the tag as <name>@<version>, e.g. @workerstack/repo@1.0.0\n";
+
 const USAGE =
   "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> " +
   "| consumer [<tarball>] | api [--against <tarball>]\n";
@@ -65,6 +67,7 @@ describe("repo release", () => {
 describe("repo release consumer", () => {
   it("removes the project of a consumer test whose install fails", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "release-consumer-"));
+
     try {
       const tarball = path.join(dir, "not-a-package.tgz");
       fs.writeFileSync(tarball, "not a tarball");

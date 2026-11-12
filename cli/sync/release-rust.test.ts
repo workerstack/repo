@@ -5,11 +5,13 @@ import { release } from "./release.ts";
 
 const RUST_CACHE = "Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3";
 const INSTALL = "taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3";
+
 const TOOLS = `      - uses: ${RUST_CACHE}
       - uses: ${INSTALL}
         with:
           tool: cargo-deny@0.20.2,cargo-shear@1.14.0,cargo-nextest@0.9.151,cargo-llvm-cov@0.9.1
 `;
+
 const MSRV = `  msrv:
     name: msrv
     runs-on: ubuntu-latest
@@ -30,6 +32,7 @@ const MSRV = `  msrv:
             echo "no publishable crate"
           fi
 `;
+
 const SEMVER_JOB = `  semver:
     name: semver
     runs-on: ubuntu-latest
@@ -39,12 +42,15 @@ const SEMVER_JOB = `  semver:
         with:
           fetch-depth: 0
 `;
+
 const INSTALL_STEP = "      - run: bun install --frozen-lockfile\n";
 
 function text({ rust }: { rust: boolean }, packs: ("release" | "workspace")[] = ["release"]) {
   const [output] = release(context(packs, {}, rust ? { "Cargo.toml": "[package]\n" } : {})).outputs;
+
   return output?.kind === "file" ? output.content : "";
 }
+
 function job(ci: string, name: string, next: string) {
   return ci.slice(ci.indexOf(`  ${name}:`), ci.indexOf(`  ${next}:`));
 }

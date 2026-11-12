@@ -11,8 +11,10 @@ const kit = orchestrateKit();
 /** One PreToolUse in Grok's shape, as session `sid`; the reply's hook output, or null when the hook stays silent. */
 function pre(ws: string, call: { tool: string; input: Record<string, unknown> }, sid = "s1") {
   const fields = { session_id: sid, toolInput: call.input, toolName: call.tool };
+
   return replyOf(kit.grok({ ws }, "PreToolUse", fields))?.hookSpecificOutput ?? null;
 }
+
 function write(file: string, content: string) {
   return { input: { content, file_path: file }, tool: "Write" };
 }
@@ -21,6 +23,7 @@ function withSource(): string {
   const ws = kit.temp();
   plantSource(ws);
   fs.writeFileSync(path.join(ws, "other.ts"), "x\n");
+
   return ws;
 }
 

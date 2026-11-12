@@ -11,13 +11,16 @@ function indentOf(text: string, comment: RuleComment): string | null {
   const found = text.indexOf(LF, end);
   const lineEnd = found < 0 ? text.length : found;
   const before = text.slice(lineStart, start);
+
   if (before.trim() !== "" || text.slice(end, lineEnd).trim() !== "") return null;
+
   return before;
 }
 
 /** Whether the rule leaves `comment` as a block: a doc, a first-line banner, or a config comment. */
 function kept(text: string, comment: RuleComment): boolean {
   if (comment.value.startsWith(DOC) || CONFIG.test(comment.value)) return true;
+
   return comment.value.startsWith(BANNER) && !text.slice(0, comment.range[0]).includes(LF);
 }
 
@@ -31,9 +34,11 @@ export const noBlockComment: RepoRule<"line"> = {
       Program() {
         const { text } = context.sourceCode;
         const eol = text.includes(CRLF) ? CRLF : LF;
+
         for (const comment of context.sourceCode.getAllComments()) {
           if (comment.type !== AST_TOKEN_TYPES.Block || kept(text, comment)) continue;
           const indent = indentOf(text, comment);
+
           if (indent === null) continue;
           const replacement = commentLines(comment.value, indent.length).join(`${eol}${indent}`);
           context.report({

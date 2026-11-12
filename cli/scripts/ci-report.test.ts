@@ -39,9 +39,11 @@ it("--report to a directory that does not exist fails with the file named", () =
 
 it("--report writes the file after the gates, and the stdout is still the gate lines", () => {
   const root = plant();
+
   const json = JSON.stringify({
     testResults: [{ assertionResults: [{ fullName: "t", status: "todo" }], name: path.join(root, "src/a.test.ts") }],
   });
+
   const run = ci(root, ["--report", "r.json"], { json: { code: 0, stderr: "", stdout: json } });
   expect(run.code).toBe(0);
   expect(run.out.split("\n")).toHaveLength(6);
@@ -67,6 +69,7 @@ it("skips <dir> reads the reports in the directory relative to the working direc
     "reports/ci-report-a.json": '{"os":"a","skipped":["x > t"]}',
     "reports/ci-report-b.json": '{"os":"b","skipped":["x > t"]}',
   });
+
   const run = ci(root, ["skips", "reports"]);
   expect(run).toMatchObject({
     calls: { repo: [], tsc: [], vitest: [] },
@@ -79,12 +82,14 @@ it("skips <dir> reads the reports in the directory relative to the working direc
 it("wait is routed to the wait command with the injected runners", async () => {
   const out: string[] = [];
   const err: string[] = [];
+
   const code = await main(["wait"], {
     cwd: "/repo",
     git: () => ({ code: 1, stderr: "no git", stdout: "" }),
     stderr: (s) => err.push(s),
     stdout: (s) => out.push(s),
   });
+
   expect(code).toBe(4);
   expect(err.join("")).toBe("repo ci wait: cannot read HEAD (no git); run it inside a git checkout\n");
 });

@@ -48,6 +48,7 @@ it("searches with no rg on PATH and scopes by path and glob", () => {
 
 it("exits 2 and prints FALLBACK for what a plain command should run instead", () => {
   const dir = plant();
+
   const cases = [
     ["--job", "search", "--query", "foo node_modules"],
     ["--job", "exec", "--query", "printf '<html>x</html>'"],
@@ -55,6 +56,7 @@ it("exits 2 and prints FALLBACK for what a plain command should run instead", ()
     ["--job", "search", "--query", "x", "--wat"],
     ["--job", "exec", "--query", "true", "--cwd", ".."],
   ];
+
   for (const args of cases) {
     const r = runCli(args, dir);
     expect([args.join(" "), r.status, r.stdout]).toStrictEqual([args.join(" "), 2, "FALLBACK\n"]);

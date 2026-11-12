@@ -36,10 +36,14 @@ function onHost(h: string, base: string): boolean {
 /** Whether `url` is a page that paints on a canvas, which only Chromium reads. */
 export function isPaintHost(url: unknown): boolean {
   const u = parseUrl(url);
+
   if (u === null) return false;
   const h = u.hostname.toLowerCase();
+
   if (PAINT_HOSTS.some((base) => onHost(h, base))) return true;
+
   if (onHost(h, GOOGLE) && u.pathname.startsWith(EARTH_PATH)) return true;
+
   return AMAZON_RE.test(h);
 }
 
@@ -47,8 +51,10 @@ export function isPaintHost(url: unknown): boolean {
 export function isBlockedSnap(markdown: unknown, lines: unknown): boolean {
   const refs = Array.isArray(lines) ? lines.length : 0;
   const md = textOf(markdown).trim();
+
   if (BLOCKED_SNAP_RE.test(md)) return true;
   const body = md.replace(TITLE_LINE_RE, "").trim();
+
   return refs === 0 && body.length < THIN_BODY;
 }
 
@@ -63,9 +69,11 @@ function formatRefs(nodes: unknown[]): {
   const lastRefs: Record<string, RefEntry> = {};
   const lines: string[] = [];
   let n = 1;
+
   for (const raw of nodes) {
     const node = asRec(raw);
     const role = axText(node.role).toLowerCase();
+
     if (!REF_ROLES.has(role)) continue;
     const name = axText(node.name);
     const id = String(n++);
@@ -77,6 +85,7 @@ function formatRefs(nodes: unknown[]): {
     };
     lines.push(`[${id}] ${role} ${name}`.trim());
   }
+
   return { lastRefs, lines };
 }
 
@@ -84,6 +93,7 @@ async function lpMarkdown(cdp: Cdp): Promise<string> {
   try {
     const r = await cdp.send("LP.getMarkdown");
     const v = [r.markdown, r.result].find(Boolean);
+
     return typeof v === "string" ? v : "";
   } catch {
     return "";
@@ -99,6 +109,7 @@ export function snapshot(session: Session): Promise<Snap> {
     const ax = await cdp.send("Accessibility.getFullAXTree");
     const { lastRefs, lines } = formatRefs(Array.isArray(ax.nodes) ? ax.nodes : []);
     session.lastRefs = lastRefs;
+
     return { lines, markdown };
   });
 }
@@ -108,12 +119,16 @@ export function snapText(session: Session, snap: Snap, cwd: string): string {
   const { markdown, lines } = snap;
   const head = `engine: ${session.engine}\nurl: ${session.lastURL}\n`;
   const raw = [markdown.trim(), "", ...lines].join("\n");
+
   if (raw.length > SNAP_STASH_BYTES || lines.length > MAX_INLINE_REFS) {
     const headings = markdown.split("\n").filter((l) => HEADING_RE.test(l));
     const shown = [...headings.slice(0, MAX_HEADINGS), ...lines.slice(0, MAX_REFS)];
     const stash = writeStash({ cwd }, "snap", raw);
+
     return `${head}${shown.length} shown. stash=${stash}\n${shown.join("\n")}`;
   }
+
   const body = [markdown.trim(), "", ...lines].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+
   return `${head}\n${body}`;
 }

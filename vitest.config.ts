@@ -8,7 +8,7 @@ export default defineConfig({
     coverage: {
       // Fixtures are copies of other repos' files, read by tests and never run.
       exclude: [...coverageConfigDefaults.exclude, "**/__fixtures__/**"],
-      include: ["cli/**", "presets/**"],
+      include: ["cli/**/*.ts", "presets/**/*.ts"],
       // json-summary feeds `bun repo coverage`.
       reporter: [coverageConfigDefaults.reporter, "json-summary"].flat(),
       // The preset adds the per-file floors of coverage-floors.json, which `bun repo coverage` raises and never

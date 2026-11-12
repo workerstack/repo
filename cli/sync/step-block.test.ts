@@ -11,24 +11,29 @@ function fakeRun(over: Partial<StepRun> = {}) {
   const err: string[] = [];
   const applied: (readonly MigrationStep[])[] = [];
   const replanned: boolean[] = [];
+
   const run: StepRun = {
     apply: (steps) => {
       applied.push(steps);
+
       return Promise.resolve();
     },
     check: false,
     fail: (errors) => {
       err.push(...errors.map((error) => `failed: ${error}`));
+
       return 1;
     },
     postinstall: false,
     replan: (reload) => {
       replanned.push(reload);
+
       return Promise.resolve(null);
     },
     stderr: (s) => err.push(s),
     ...over,
   };
+
   return { applied, err, replanned, run };
 }
 
@@ -62,6 +67,7 @@ describe("stepBlock under --check", () => {
 
   it("names each pending step that says what it would do, before the count", async () => {
     const { run, err } = fakeRun({ check: true });
+
     const move: MigrationStep = {
       kind: "handover",
       note: "moved a",
@@ -69,6 +75,7 @@ describe("stepBlock under --check", () => {
       remove: ["a"],
       writes: [],
     };
+
     expect(await stepBlock({ noun: "handover", steps: [move, NOTE] }, run)).toStrictEqual({ exit: 1 });
     expect(err).toStrictEqual([
       "repo sync: would move a\n",

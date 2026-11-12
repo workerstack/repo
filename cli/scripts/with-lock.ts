@@ -13,9 +13,11 @@ function isErrno(err: unknown, code: string): boolean {
 function tryTake(lock: string): boolean {
   try {
     fs.mkdirSync(lock);
+
     return true;
   } catch (err) {
     if (!isErrno(err, EEXIST)) throw err;
+
     return false;
   }
 }
@@ -40,12 +42,15 @@ function release(lock: string): void {
 /** Waits for the lock, breaking a stale one; false when it stays held past the stale window. */
 function acquire(lock: string): boolean {
   const start = Date.now();
+
   for (;;) {
     if (tryTake(lock)) return true;
+
     if (isStale(lock)) {
       release(lock);
       continue;
     }
+
     if (Date.now() - start > LOCK_STALE_MS) return false;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(INT32_BYTES)), 0, 0, LOCK_POLL_MS);
   }
@@ -56,7 +61,9 @@ export function withLock<T>(home: string, fn: () => T): T | { busy: true } {
   const dir = path.join(home, ".workerstack");
   fs.mkdirSync(dir, { mode: SECRET_DIR_MODE, recursive: true });
   const lock = path.join(dir, "jev-usage.lock");
+
   if (!acquire(lock)) return { busy: true };
+
   try {
     return fn();
   } finally {

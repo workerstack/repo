@@ -28,13 +28,18 @@ import type { Def, Target } from "./hooks.types.ts";
  */
 function prefixProjectDir(command: string, def: Def): string {
   const lead = LEADING_DOT_SLASH.exec(command);
+
   if (lead?.groups === undefined) return command;
+
   const { quote, rest } = lead.groups /* both named groups always take part in a match */ as {
     quote: string;
     rest: string;
   };
+
   const relative = `${quote}${rest}`;
+
   if (!Array.isArray(def["args"])) return `"$CLAUDE_PROJECT_DIR"/${relative}`;
+
   return `\${CLAUDE_PROJECT_DIR}/${relative.replace(WRAPPED_IN_QUOTES, "$<inner>").replace(LEADING_QUOTE, "")}`;
 }
 
@@ -66,6 +71,7 @@ export const CLAUDE: Readonly<Target> = {
   promptModel: true,
   types: /* @__PURE__ */ new Set([COMMAND, PROMPT, HTTP, MCP_TOOL, AGENT]),
 };
+
 export const CODEX: Readonly<Target> = {
   named: true,
   names: CODEX_EVENTS,
@@ -81,6 +87,7 @@ export const CODEX: Readonly<Target> = {
   promptModel: false,
   types: /* @__PURE__ */ new Set([COMMAND, MCP_TOOL]),
 };
+
 export const ANTIGRAVITY: Readonly<Target> = {
   matcher: antigravityMatcher,
   named: false,

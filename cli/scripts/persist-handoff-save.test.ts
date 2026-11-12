@@ -31,6 +31,7 @@ describe("persistHandoff naming", () => {
       created: CREATED,
       workspaceRoot: tmpWs(),
     });
+
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("sync-skills-to-hosts");
   });
@@ -55,7 +56,9 @@ const KIT = {
   slug: "sync-skills-to-hosts",
   tmpWs,
 };
+
 describeSourceAndRefusals(KIT);
+
 describeSerialLimits(KIT);
 
 describe("persistHandoff empty body", () => {

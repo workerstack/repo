@@ -81,6 +81,7 @@ it("gives every token an increasing, non-empty range", () => {
   const source = "fn f<'a>(x: &'a str) -> u8 { /* c */ r#\"q\"#; 'x'; b\"y\" } // end";
   const tokens = lexRust(source);
   let previousEnd = 0;
+
   for (const token of tokens) {
     expect(token.end).toBeGreaterThan(token.start);
     expect(token.start).toBeGreaterThanOrEqual(previousEnd);

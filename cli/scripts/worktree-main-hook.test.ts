@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import { git, hasBranch, mainIn, scratch, wt } from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
+
 afterEach(() => tmp.cleanup());
 
 it("hook creates the worktree named on stdin and prints only its path", () => {
@@ -32,6 +33,7 @@ it("hook prints the failure on stderr and exits 1", () => {
 
 it("hook does nothing for an empty payload, another event, or JSON that is not an object", () => {
   const r = tmp.repo();
+
   for (const body of ["", "[1]", "5", JSON.stringify({ cwd: r, hook_event_name: "SessionStart" })])
     expect(mainIn(r, ["hook"], body), body).toStrictEqual({ code: 0, stderr: "", stdout: "" });
 });

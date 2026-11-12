@@ -16,12 +16,15 @@ const APP: Workspace = {
   ],
   root: "/repo",
 };
+
 const TAGS = { "@app/lib": "lib", "@app/ui": "ui", "@app/web": "app" };
 const ALLOW = { app: ["ui", "lib"], lib: [], ui: ["lib"] };
 
 function configOf(lint: ResolvedLint): Config {
   const built = oxlintConfig(APP, lint);
+
   if (!built.ok) throw new Error(built.errors.join("\n"));
+
   return JSON.parse(built.value) /* the config sync writes */ as Config;
 }
 

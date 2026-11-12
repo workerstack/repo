@@ -39,31 +39,40 @@ function loadHooks(stock: Top, tops: readonly Top[], problems: string[]): HooksS
   const top = tops.findLast(
     (t) => t === stock || fs.existsSync(path.join(t.root, t.dir, HOOKS_FILE)),
   ) /* stock always matches */ as Top;
+
   const rel = `${top.dir}/${HOOKS_FILE}`;
   const text = fs.readFileSync(path.join(top.root, rel), "utf8");
   let value: unknown;
+
   try {
     value = JSON.parse(stripJsonc(text));
   } catch (error) {
     problems.push(`${rel}: invalid JSONC: ${(error /* JSON.parse throws only SyntaxError */ as Error).message}`);
+
     return { rel, value: {} };
   }
+
   if (isObject(value)) return { rel, value };
   problems.push(`${rel}: invalid JSONC: expected an object`);
+
   return { rel, value: {} };
 }
 
 /** Each package's `.repo/rules`, in package order; `overrides` there is a problem and leaves the rule out. */
 function packageRules(roots: SourceRoots, problems: string[]): Doc[] {
   const packageRoot = roots.consumerRoot ?? roots.stockRoot;
+
   const lists = roots.packages.map((dir) =>
     listDocs({ dir: `${dir}/${CONSUMER_DIR}`, kind: RULES, origin: "repo", root: packageRoot, scope: dir }),
   );
+
   return lists.flatMap((files) =>
     files.flatMap((file) => {
       const doc = readDoc(RULES, file, problems);
+
       if (doc?.data["overrides"] === undefined) return doc === null ? [] : [doc];
       problems.push(`${file.rel}: overrides has no meaning in a package rule; remove it`);
+
       return [];
     }),
   );
@@ -78,21 +87,28 @@ function packageRules(roots: SourceRoots, problems: string[]): Doc[] {
  */
 export function loadSources(roots: SourceRoots): LoadResult {
   const stock: Top = { dir: STOCK_DIR, origin: "stock", root: roots.stockRoot };
+
   const consumer: Top[] =
     roots.consumerRoot === null ? [] : [{ dir: CONSUMER_DIR, origin: "repo", root: roots.consumerRoot }];
+
   const tops = [stock, ...consumer];
   const problems: string[] = [];
+
   function docs(kind: Kind): Doc[] {
     const perRoot = tops.map((top) => {
       const files = listDocs({ dir: top.dir, kind, origin: top.origin, root: top.root, scope: "" });
+
       return kind === RULES ? files : expandVariants(files);
     });
+
     return mergeDocs({ kind, perRoot, problems });
   }
+
   // Package rules are read first, so their problems come first.
   const ownRules = packageRules(roots, problems);
   const rules = [...docs(RULES), ...ownRules];
   const subagents = docs("subagents");
   const hooks = loadHooks(stock, tops, problems);
+
   return { problems, sources: { hooks, rules, subagents } };
 }

@@ -44,6 +44,7 @@ const WAIT_THEN_CLOSE = "wait for it, then end with the closing line again";
 
 function kindAt(abs: string, ws: string): Approvable["kind"] | null {
   if (isUnderPlans(abs, ws)) return "plan";
+
   return isUnderRoadmaps(abs, ws) ? "roadmap" : null;
 }
 
@@ -59,22 +60,28 @@ function readItem(abs: string): { text: string; mtime: number } | null {
 function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   const kind = kindAt(abs, scan.ws);
   const read = kind === null ? null : readItem(abs);
+
   if (kind === null || read === null) return null;
   const fm = frontmatterOf(read.text);
   const ref = { kind, serial: Number(fm.serial) };
+
   if (!APPROVABLE_STATUS[kind].has(fm.status ?? "") || reviewState(scan.open, ref, reviewsOf(fm)) !== "settled")
     return null;
+
   if (kind === "plan" && scan.running.some((t) => isSliceOf(abs, t))) return null;
   const strategy = parseStrategy(fm.strategy);
+
   return strategy === null ? null : { ...ref, mtime: read.mtime, path: abs, strategy };
 }
 
 // Reviewed plans and roadmaps this session saved that still wait for a `y`, in first-save order.
 function approvableItems(data: HookInput): ApprovalItem[] {
   const file = approvalsFile(data);
+
   if (file === null) return [];
   const ws = resolveRoots(data).root;
   const scan: Scan = { open: readReviewsOpen(data), running: inProgressRoadmaps(ws), ws };
+
   return readLines(file).flatMap((abs) => approvalItemAt(scan, abs) ?? []);
 }
 
@@ -82,10 +89,12 @@ function approvableItems(data: HookInput): ApprovalItem[] {
 function covers(named: Approvable[] | null, items: ApprovalItem[], pending: ApprovalItem[]): boolean {
   if (named === null) return false;
   const known = new Set(items.map(itemKey));
+
   // The strategy a line shows must be the one the file holds, so a bare `y` never runs one the person did not see.
   function shownTruly(n: Approvable): boolean {
     return items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
   }
+
   return (
     pending.every((p) => named.some((n) => itemKey(n) === itemKey(p))) &&
     named.every((n) => known.has(itemKey(n)) && shownTruly(n))
@@ -96,10 +105,13 @@ function covers(named: Approvable[] | null, items: ApprovalItem[], pending: Appr
 export function approvalBlockReason(data: HookInput, msg: string): string | null {
   if (approvalsFile(data) === null || resolveStamp(data, APPROVAL_BLOCK_STAMP) !== null) return null;
   const turnStart = stampMtime(data, TURN_START_STAMP);
+
   if (turnStart == null) return null;
   const items = approvableItems(data);
   const pending = items.filter((i) => i.mtime >= turnStart);
+
   if (pending.length === 0) return null;
+
   return covers(closingLineOf(msg), items, pending) ? null : `end with: ${closingLine(items)}`;
 }
 
@@ -108,9 +120,11 @@ function runOf(i: ApprovalItem): string {
     ? `run /implement-plan ${i.serial} (${i.path})`
     : `set status locked, then run /implement-roadmap ${i.serial} (${i.path})`;
 }
+
 function approveStep(i: ApprovalItem): string {
   return `${itemKey(i)}: ${runOf(i)}`;
 }
+
 function strategyStep(i: ApprovalItem, strategy: Strategy): string {
   return `${itemKey(i)}: strategy ${strategy} was written to its frontmatter; re-read the ${i.kind}, then ${runOf(i)}`;
 }
@@ -120,12 +134,16 @@ function strategyStep(i: ApprovalItem, strategy: Strategy): string {
 function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): StrategyWrite {
   const previous = fs.readFileSync(item.path, "utf8");
   const m = FRONTMATTER_BLOCK.exec(previous);
+
   if (m === null) return { error: "no frontmatter", ok: false };
   const next = m[0].replace(STRATEGY_LINE, `strategy: ${strategy}`) + previous.slice(m[0].length);
+
   if (next === previous) return { content: null, ok: true };
   const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
   const result = prepare({ content: next, filePath: item.path, workspaceRoot: ws });
+
   if (!result.ok) return { error: result.error, ok: false };
+
   return { content: result.content, ok: true };
 }
 
@@ -133,24 +151,31 @@ function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): Stra
 function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | null): ApprovalItem[] | null {
   const items = approvableItems(data);
   const resolved: ApprovalItem[] = [];
+
   for (const n of named) {
     const hit = items.find((i) => itemKey(i) === itemKey(n));
+
     if (hit === undefined) return null;
     resolved.push(hit);
   }
+
   // A bare reply runs the strategy each file holds, so it must be the one the line showed.
   if (wanted === null && resolved.some((i, k) => i.strategy !== named[k]?.strategy)) return null;
+
   return resolved;
 }
 
 /** Each item's strategy change; the failure, as `kind N: why`, when one cannot be written. */
 function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | null): StrategyChange[] | string {
   const writes: StrategyChange[] = [];
+
   for (const i of resolved) {
     const w: StrategyWrite = wanted === null ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
+
     if (!w.ok) return `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`;
     writes.push({ content: w.content, item: i });
   }
+
   return writes;
 }
 
@@ -158,6 +183,7 @@ function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | nul
 function applyWrites(writes: StrategyChange[]): string | null {
   try {
     for (const w of writes) if (w.content !== null) fs.writeFileSync(w.item.path, w.content);
+
     return null;
   } catch (err) {
     return String(err);
@@ -168,6 +194,7 @@ function applyWrites(writes: StrategyChange[]): string | null {
 function firstUnsettled(ws: string, open: ReviewsOpen, named: Approvable[]): Approvable | undefined {
   return named.find((n) => {
     const state = reviewStateOf(ws, open, n);
+
     return state !== null && state !== "settled";
   });
 }
@@ -176,26 +203,34 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
   const refused = reply.kind === "handoff" ? "h did not hand off" : "y did not approve";
   const ws = resolveRoots(data).root;
   const unsettled = firstUnsettled(ws, readReviewsOpen(data), named);
+
   if (unsettled !== undefined)
     return `${refused} ${itemKey(unsettled)}: its review has not settled; ${WAIT_THEN_CLOSE}`;
   const wanted = reply.strategy;
   const resolved = resolveNamed(data, named, wanted);
+
   if (resolved === null) return "";
   const writes = planWrites(ws, resolved, wanted);
+
   if (typeof writes === "string") return `${refused} ${writes}`;
   const failed = applyWrites(writes);
+
   if (failed !== null) return `${refused} ${queueText(named)}: strategy ${wanted} could not be written (${failed})`;
+
   if (reply.kind === "handoff") {
     const queue = writes.map((w) => ({
       item: w.item,
       strategy: wanted ?? w.item.strategy,
       written: w.content !== null,
     }));
+
     return orchestrateHandoff(data, ws, queue);
   }
+
   const steps = writes.map((w) =>
     w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted),
   );
+
   return `y approves ${queueText(named)}: ${steps.join("; ")}`;
 }
 
@@ -203,12 +238,17 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
 export function approvalContext(data: HookInput, prompt: string): string {
   const reply = parseApproval(prompt);
   const tp = firstNonEmpty(data.transcript_path, data.transcriptPath);
+
   if (reply === null || tp === undefined) return "";
   const named = closingLineOf(lastAssistantFromTranscript(tp));
+
   if (named === null) return "";
+
   if (reply.kind !== "unknown") return settledReply(data, reply, named);
+
   const choices = STRATEGIES.map((s) => `y ${s}`)
     .slice(0, LAST_INDEX)
     .join(", ");
+
   return `unknown strategy "${reply.word}"; use y, ${choices} or y ${STRATEGIES.at(LAST_INDEX)}`;
 }

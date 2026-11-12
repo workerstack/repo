@@ -15,12 +15,14 @@ import {
 } from "./tarball-lint.constants.ts";
 
 type Manifest = Record<string, unknown>;
+
 /** The parts every attw problem shares; the kinds without an entrypoint or a resolution kind leave them out. */
 type Problem = { kind: keyof typeof problemKindInfo; entrypoint?: string; resolutionKind?: string };
 
 /** Whether any condition object in `exports` has a `require` key. */
 function hasRequire(exports: unknown): boolean {
   if (typeof exports !== "object" || exports === null) return false;
+
   return Object.entries(exports).some(([key, value]) => key === REQUIRE_CONDITION || hasRequire(value));
 }
 
@@ -42,6 +44,7 @@ export async function tarballLint(tarball: string): Promise<string[]> {
   const ignored = isEsmOnly(manifest) ? ESM_ONLY_IGNORED : [];
   const analysis = await checkPackage(createPackageFromTarballData(bytes));
   const problems: Problem[] = "problems" in analysis ? analysis.problems : [];
+
   return [
     ...linted.messages.map((message) => publintLine(String(formatMessage(message, manifest)))),
     ...problems

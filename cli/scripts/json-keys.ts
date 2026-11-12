@@ -30,7 +30,9 @@ import { sortedJsonText } from "./sorted-json-text.ts";
 
 /** A file whose keys are out of order, and the path of the first key that is. */
 type Found = { file: string; key: string };
+
 type Listed = { ok: true; files: string[] };
+
 type Sort = { ok: true; found: Found[] } | { ok: false; error: string };
 
 /** Code-unit order, which `<` on strings is. */
@@ -41,6 +43,7 @@ function compare(a: string, b: string): number {
 /** `value` as indented JSON ending in a newline, every key sorted by code unit, deep: how a repo writer emits JSON. */
 export function sortedJsonValue(data: unknown, indent: number = INDENT): string {
   const text = `${JSON.stringify(data, null, indent)}\n`;
+
   return sortedJsonText(text)?.text ?? text;
 }
 
@@ -55,6 +58,7 @@ function gitEnv(): Record<string, string> {
 
 /** What listing the json files gives back: git's exit status (null when it did not run) and its output. */
 type GitListing = { status: number | null; stdout: string };
+
 /** Runs `git ls-files` at `root`; `repoJson` takes another in tests. */
 export type GitLister = (root: string) => GitListing;
 
@@ -74,14 +78,18 @@ function gitList(root: string): GitListing {
  */
 export function repoJson(root: string, paths: readonly string[] | null, list: GitLister = gitList): Listed {
   const run = list(root);
+
   if (run.status !== 0) return { files: [], ok: true };
+
   function within(rel: string) {
     return paths === null || paths.some((under) => under === "" || rel === under || rel.startsWith(`${under}/`));
   }
+
   const files = run.stdout
     .split("\0")
     .filter((rel) => rel !== "" && within(rel) && fs.existsSync(path.join(root, rel)))
     .toSorted(compare);
+
   return { files, ok: true };
 }
 
@@ -91,6 +99,7 @@ function ignoresOf(text: string): string[] | null {
     const parsed = z
       .object({ ignorePatterns: z.array(z.string()).optional() })
       .safeParse(JSON.parse(text.replace(COMMENT_LINE, "")));
+
     return parsed.success ? (parsed.data.ignorePatterns ?? []) : null;
   } catch {
     return null;
@@ -105,6 +114,7 @@ function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
   return patterns.flatMap((pattern) => {
     const deep = pattern.startsWith(ANY_DEPTH) ? pattern : `${ANY_DEPTH}${pattern}`;
     const base = pattern.startsWith(ANCHOR) ? pattern.slice(ANCHOR.length) : deep;
+
     return [new Bun.Glob(base), new Bun.Glob(`${base}${UNDER}`)];
   });
 }
@@ -116,20 +126,27 @@ function ignoreGlobs(patterns: readonly string[]): Bun.Glob[] {
  */
 export function sortJson(root: string, files: readonly string[], { check }: { check: boolean }): Sort {
   const config = path.join(root, OXFMT_CONFIG_PATH);
+
   if (!fs.existsSync(config)) return { error: `${OXFMT_CONFIG_PATH} is missing; ${SYNC_HINT}`, ok: false };
   const patterns = ignoresOf(fs.readFileSync(config, "utf8"));
+
   if (patterns === null)
     return { error: `${OXFMT_CONFIG_PATH} is not a valid oxfmt config; ${SYNC_AGAIN_HINT}`, ok: false };
   const globs = ignoreGlobs(patterns);
   const found: Found[] = [];
+
   for (const rel of files) {
     const skipped = !JSONC_EXTENSIONS.some((ext) => rel.endsWith(ext)) || path.posix.basename(rel) === MANIFEST_NAME;
     const file = path.join(root, rel);
+
     if (skipped || globs.some((glob) => glob.match(rel)) || !fs.existsSync(file)) continue;
     const sorted = sortedJsonText(fs.readFileSync(file, "utf8"));
+
     if (sorted === null) continue;
     found.push({ file: rel, key: sorted.key });
+
     if (!check) fs.writeFileSync(file, sorted.text);
   }
+
   return { found, ok: true };
 }

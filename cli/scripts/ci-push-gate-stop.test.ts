@@ -11,21 +11,25 @@ afterEach(cleanRigs);
 function wait(branch: string) {
   return `\`bun repo ci wait ${branch}\``;
 }
+
 function noResult(sha: string, branch = "main") {
   return (
     `Stop: you pushed ${sha.slice(0, 7)} to ${branch} and its ci run has no result; ` +
     `run ${wait(branch)} in the background and fix it if it fails`
   );
 }
+
 const REPORT =
   "Stop: test (windows-latest) failed 3 times on main this session; " +
   "report the failure and its logs to the user, then stop";
+
 const TEST = ["test (windows-latest)"];
 
 /** A rig where the session pushed each of `rows`. */
 function pushed(rows: [string, string][], over = {}) {
   const r = rig(over);
   r.plant("s1", rows);
+
   return r;
 }
 
@@ -55,6 +59,7 @@ it("passes when a superseded push was followed by a passed one", () => {
     ["main", A],
     ["main", B],
   ]);
+
   r.result(A, "superseded");
   r.result(B, "passed");
   expect(r.gate()).toBeNull();
@@ -65,6 +70,7 @@ it("settles an older failed push by a newer passed one", () => {
     ["main", A],
     ["main", B],
   ]);
+
   r.result(A, "failed", ["test"]);
   r.result(B, "passed");
   expect(r.gate()).toBeNull();
@@ -78,6 +84,7 @@ it("drops a rejected push and settles on the newest one that landed", () => {
     ],
     { landed: { main: [A] } },
   );
+
   r.result(A, "passed");
   expect(r.gate()).toBeNull();
   expect(pushed([["main", A]], { landed: {} }).gate()).toBeNull();
@@ -88,6 +95,7 @@ it("holds each branch to its own newest push and joins the lines", () => {
     ["main", A],
     ["x", C],
   ]);
+
   expect(r.gate()).toBe(`${noResult(A)}\n${noResult(C, "x")}`);
   r.result(A, "passed");
   expect(r.gate()).toBe(noResult(C, "x"));
@@ -105,6 +113,7 @@ it("asks a failed push to be fixed and pushed again before the third failed roun
     ["main", A],
     ["main", B],
   ]);
+
   r.result(B, "failed", TEST);
   expect(r.gate()).toBe(
     `Stop: ci failed on ${B.slice(0, 7)} on main (test (windows-latest)); ` +
@@ -118,9 +127,11 @@ function threeRounds() {
     ["main", B],
     ["main", C],
   ]);
+
   r.result(A, "failed", [...TEST, "lint"]);
   r.result(B, "failed", TEST);
   r.result(C, "failed", [...TEST, "build"]);
+
   return r;
 }
 
@@ -138,6 +149,7 @@ it("counts a sha pushed twice once", () => {
     ["main", A],
     ["main", B],
   ]);
+
   r.result(A, "failed", ["test"]);
   r.result(B, "failed", ["test"]);
   expect(r.gate()).not.toContain("failed 3 times");
@@ -149,6 +161,7 @@ it("does not count failures that share no job", () => {
     ["main", B],
     ["main", C],
   ]);
+
   r.result(A, "failed", ["lint"]);
   r.result(B, "failed", ["test"]);
   r.result(C, "failed", ["build"]);
@@ -160,7 +173,9 @@ it("does not count records of another session's pushes", () => {
     ["main", A],
     ["main", B],
   ]);
+
   r.plant("s2", [["main", C]]);
+
   for (const sha of [A, B, C]) r.result(sha, "failed", ["test"]);
   expect(r.gate("s1")).not.toContain("failed 3 times");
   expect(r.gate("s2")).not.toContain("failed 3 times");
@@ -168,6 +183,7 @@ it("does not count records of another session's pushes", () => {
 
 it("lets the stop through after six blocks, counted on its own stamp", () => {
   const r = pushed([["main", A]]);
+
   for (let i = 0; i < MAX_PUSH_BLOCK; i++) expect(r.gate()).toBe(noResult(A));
   expect(r.gate()).toBeNull();
   expect(fs.readFileSync(r.stamp(), "utf8")).toBe(String(MAX_PUSH_BLOCK));
@@ -193,12 +209,14 @@ it("starts from zero when the stamp holds no number", () => {
 
 it("blocks without counting when the stamp cannot be written", () => {
   const r = pushed([["main", A]]);
+
   const deny = {
     ...fs,
     writeFileSync: () => {
       throw new Error("disk full");
     },
   };
+
   const input = { active: false, cwd: r.main, root: r.main, session: "s1" };
   expect(pushStopBlock(input, { ...r.deps, fs: deny })).toBe(noResult(A));
 });

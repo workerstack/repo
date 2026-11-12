@@ -83,6 +83,7 @@ function registry(main: Main): Registry {
       Object.entries(table).map(([k, v]) => [k, { ...v, load: () => Promise.resolve({ main }) }]),
     ) /* the same keys, each entry with only its load replaced */ as T;
   }
+
   return { commands: stub(COMMANDS), hooks: stub(HOOKS) };
 }
 
@@ -124,12 +125,14 @@ describe("dispatch", () => {
   ])("hook %j prints the hook list and exits 1", async (args, message) => {
     const main = vi.fn<Main>(() => 0);
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
     try {
       expect(await dispatch(["hook", ...args], registry(main))).toBe(1);
       expect(err.mock.calls.map((c) => String(c[0])).join("")).toBe(message);
     } finally {
       err.mockRestore();
     }
+
     expect(main).not.toHaveBeenCalled();
   });
 });
@@ -150,6 +153,7 @@ describe("dispatch", () => {
 
   it("runCommand runs the real registry entry by default", async () => {
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
     try {
       expect(await runCommand("lessons", [])).toBe(1);
     } finally {

@@ -39,10 +39,13 @@ function planned(sb: Sandbox): Output[] {
     const abs = path.join(sb.repo, rel);
     const stat = fs.lstatSync(abs, { throwIfNoEntry: false });
     expect(stat, `${rel} was planned but is missing`).toBeDefined();
+
     if (stat?.isSymbolicLink() === true)
       return [{ kind: "link", managed: "whole", path: rel, target: fs.readlinkSync(abs), tracked: false }];
+
     if (stat?.isFile() === true)
       return [{ content: fs.readFileSync(abs, "utf8"), kind: "file", managed: "whole", path: rel, tracked: false }];
+
     return [];
   });
 }
@@ -55,13 +58,16 @@ export function generatedHostCases(get: GetSandbox) {
       const sb = get();
       const config = sb.read("workerstack.config.ts");
       sb.write("workerstack.config.ts", config.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify([host])}`));
+
       try {
         expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: ROOT_VARS }));
         const outputs = planned(sb);
         const own = outputs.filter((o) => o.path.startsWith(owns));
         expect(own.length, `${host} planned files`).toBeGreaterThan(0);
+
         for (const rel of expected)
           expect(sb.exists(rel) || own.some((o) => o.path.startsWith(`${rel}/`)), rel).toBe(true);
+
         for (const rel of others) expect(sb.exists(rel), rel).toBe(false);
         expect(validateOutputs(sb.repo, outputs)).toStrictEqual([]);
         expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"], { env: ROOT_VARS }));
@@ -78,15 +84,18 @@ function worktreeSessionCase(get: GetSandbox, tree: Tree) {
   it("SessionStart says which bin runs, once, and still gives the map", async () => {
     const sb = get();
     const { main, wt } = tree;
+
     const command = only(
       commands(sb, ".claude/settings.json", { ends: MAP, event: "SessionStart" }),
       "claude session-map",
     );
+
     const r = await runHook(sb, command, {
       cwd: wt,
       env: { CLAUDE_PROJECT_DIR: wt },
       payload: { cwd: wt, hook_event_name: "SessionStart", session_id: "wt-e2e", source: "startup" },
     });
+
     expectClean(sb, r);
     const context = String(output(r).additionalContext);
     expect(
@@ -107,6 +116,7 @@ function worktreeGateCase(get: GetSandbox, tree: Tree) {
     const sb = get();
     const { main, wt } = tree;
     const command = only(commands(sb, ".claude/settings.json", { ends: GATE, event: "PreToolUse" }), "claude gate");
+
     const r = await runHook(sb, command, {
       cwd: wt,
       env: { CLAUDE_PROJECT_DIR: wt },
@@ -118,6 +128,7 @@ function worktreeGateCase(get: GetSandbox, tree: Tree) {
         tool_name: "Bash",
       },
     });
+
     expectClean(sb, r);
     const updated = output(r).updatedInput;
     const rewritten = String(isRecord(updated) ? updated.command : "");
@@ -132,15 +143,18 @@ function noInstallCase(get: GetSandbox) {
   it("a hook with no install anywhere still says to run bun install", async () => {
     const sb = get();
     const bare = fs.mkdtempSync(path.join(inject("runRoot"), "bare-"));
+
     const command = only(
       commands(sb, ".claude/settings.json", { ends: MAP, event: "SessionStart" }),
       "claude session-map",
     );
+
     const r = await runHook(sb, command, {
       cwd: bare,
       env: { CLAUDE_PROJECT_DIR: bare },
       payload: { cwd: bare, session_id: "x" },
     });
+
     expect(r.status).toBe(1);
     expect(r.stderr).toContain(`repo: ${fs.realpathSync(bare)}/node_modules/.bin/repo is missing; run bun install`);
   });

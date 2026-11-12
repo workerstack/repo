@@ -22,6 +22,7 @@ it(
       "src/lib.ts": "export const used = 1;\nexport const unused = 2;\n",
       "src/old.ts": "export const old = 1;\n",
     };
+
     const ws = knipRoot(files, { "left-pad": "1.0.0" });
     fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
     fs.writeFileSync(path.join(ws.root, "package.json"), JSON.stringify({ ...ws.manifest, main: "src/index.ts" }));
@@ -48,6 +49,7 @@ it(
       "src/answer.ts": "export const answer = 42;\n",
       "src/index.ts": 'import { answer } from "./answer.ts";\nconsole.log(answer);\n',
     };
+
     const ws = knipRoot(files, {});
     fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
     fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');

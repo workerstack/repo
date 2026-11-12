@@ -21,6 +21,7 @@ function pack(cwd: string, tools: Tools = {}, argv: string[] = []) {
   const out: string[] = [];
   const err: string[] = [];
   const tmp = tempDir();
+
   const code = releasePack(argv, {
     bun: tools.bun ?? spawnRunner("bun"),
     cwd,
@@ -31,6 +32,7 @@ function pack(cwd: string, tools: Tools = {}, argv: string[] = []) {
     tar: tools.tar ?? spawnRunner("tar"),
     tmp,
   });
+
   return { code, err: err.join(""), out: out.join(""), tmp };
 }
 

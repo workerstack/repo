@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
 const pkg = JSON.parse(
   fs.readFileSync(path.join(root, "package.json"), "utf8"),
 ) /* the package manifest lists files and may list dependencies */ as {
@@ -18,6 +19,7 @@ const pkg = JSON.parse(
 const CODE_ROOTS = ["bin", "cli"];
 const CODE_FILE = /\.(?:ts|mjs|cjs|js)$/;
 const SPECIFIER = String.raw`["']((?:@[\w.-]+\/)?[\w.-]+(?:\/[\w./-]+)?|node:[\w/]+)["']`;
+
 const IMPORT = new RegExp(
   [
     String.raw`^\s*(?:import|export)\s+(?:[\w*{}\s,$]+?\s+from\s+)?${SPECIFIER}`,
@@ -29,7 +31,9 @@ const IMPORT = new RegExp(
 /** Package-relative POSIX paths, the same form as package.json "files", on every OS. */
 function walk(rel: string): string[] {
   const abs = path.join(root, rel);
+
   if (!fs.statSync(abs).isDirectory()) return [rel];
+
   return fs.readdirSync(abs).flatMap((name) => walk(path.posix.join(rel, name)));
 }
 
@@ -49,11 +53,13 @@ function shippedCode(): string[] {
 
 function packageName(specifier: string): string {
   const parts = specifier.split("/");
+
   return specifier.startsWith("@") ? parts.slice(0, 2).join("/") : (parts[0] ?? ""); // split always yields one part
 }
 
 function packageImports(rel: string): string[] {
   const source = fs.readFileSync(path.join(root, rel), "utf8");
+
   return (
     [...source.matchAll(IMPORT)]
       // One of the two groups matches in every hit.

@@ -24,6 +24,7 @@ export const REAL_TOOLS: DocsTools = {
 function out(text: string) {
   return process.stdout.write(text);
 }
+
 function err(text: string) {
   return process.stderr.write(text);
 }

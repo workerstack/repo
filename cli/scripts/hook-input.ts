@@ -142,16 +142,20 @@ function copyWhere<K extends string, V>(
   keep: (v: unknown) => v is V,
 ): Partial<Record<K, V>> {
   const out: Partial<Record<K, V>> = {};
+
   for (const key of keys) {
     const v = from[key];
+
     if (keep(v)) out[key] = v;
   }
+
   return out;
 }
 
 function isString(v: unknown): v is string {
   return typeof v === "string";
 }
+
 function isBoolean(v: unknown): v is boolean {
   return typeof v === "boolean";
 }
@@ -162,6 +166,7 @@ function isBoolean(v: unknown): v is boolean {
  */
 function flatFields(value: Record<string, unknown>): HookInput {
   const paths = value.workspacePaths;
+
   return {
     ...copyWhere(value, STRING_FIELDS, isString),
     ...(Array.isArray(paths) ? { workspacePaths: paths.filter(isString) } : {}),
@@ -173,15 +178,20 @@ function flatFields(value: Record<string, unknown>): HookInput {
 /** Antigravity's call with its string name and record args kept. */
 function toolCallOf(call: Record<string, unknown>): HookToolCall {
   const toolCall: HookToolCall = {};
+
   if (isString(call.name)) toolCall.name = call.name;
+
   if (isRecord(call.args)) toolCall.args = call.args;
+
   return toolCall;
 }
 
 /** The agent as a name string, or the nested object with its string fields kept. */
 function agentOf(agent: unknown): string | HookAgent | undefined {
   if (isString(agent)) return agent;
+
   if (!isRecord(agent)) return undefined;
+
   return copyWhere(agent, AGENT_FIELDS, isString);
 }
 
@@ -200,10 +210,14 @@ function parseJson(raw: string): unknown {
  */
 export function parseHookInput(raw: string): HookInput | null {
   const value = parseJson(raw);
+
   if (!isRecord(value)) return null;
   const out = flatFields(value);
+
   if (isRecord(value.toolCall)) out.toolCall = toolCallOf(value.toolCall);
   const agent = agentOf(value.agent);
+
   if (agent !== undefined) out.agent = agent;
+
   return out;
 }

@@ -25,6 +25,7 @@ describe("convertText", () => {
       '/*! license */\n{ "a": 1 }\n',
       '{ "a": 1 }\n',
     ];
+
     for (const text of same) expect(convertText(text)).toStrictEqual({ first: null, text });
   });
 
@@ -53,6 +54,7 @@ describe("convertJsonc", () => {
       "tsconfig.json": TSCONFIG,
       "x.ts": TSCONFIG,
     });
+
     const files = ["a.jsonc", "tsconfig.json", "p.json", "x.ts", "gone.json", "__fixtures__/f.jsonc"];
     expect(convertJsonc(root, files, { check: true })).toStrictEqual([
       { file: "a.jsonc", line: 2 },

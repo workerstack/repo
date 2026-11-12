@@ -30,8 +30,11 @@ function whyNot(error: Error, cmd: string): string {
 export function checkGate(name: string, argv: readonly string[], run: { root: string; spawn: CiSpawn }): Gate {
   const cmd = argv[0] /* the config schema refuses an empty argv */ as string;
   const done = run.spawn(cmd, argv.slice(1), { cwd: run.root, encoding: "utf8" });
+
   if (done.error !== undefined) return failToStart(`${name} failed (${whyNot(done.error, cmd)})`);
+
   if (done.status === 0) return pass(`${name} ok`);
   const output = textOf({ code: done.status ?? 1, stderr: done.stderr, stdout: done.stdout });
+
   return fail(`${name} failed (exit ${done.status ?? done.signal})`, [output]);
 }

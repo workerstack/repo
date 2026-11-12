@@ -8,6 +8,7 @@ import { resolveVariable } from "./resolve-variable.ts";
 function isGlobalReflect(sourceCode: Readonly<TSESLint.SourceCode>, expression: TSESTree.Expression): boolean {
   if (expression.type !== AST_NODE_TYPES.Identifier || expression.name !== REFLECT) return false;
   const variable = resolveVariable(sourceCode, expression);
+
   return variable === null || variable.defs.length === 0;
 }
 
@@ -19,6 +20,7 @@ export function isGlobalReflectMethodCall(
 ): boolean {
   if (callee.type !== AST_NODE_TYPES.MemberExpression || !isGlobalReflect(sourceCode, callee.object)) return false;
   const { property } = callee;
+
   return callee.computed
     ? property.type === AST_NODE_TYPES.Literal && property.value === methodName
     : property.type === AST_NODE_TYPES.Identifier && property.name === methodName;

@@ -14,6 +14,7 @@ const errors: string[] = [];
 
 beforeEach(() => {
   parent = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "temp-root-shim-")));
+
   for (const name of ["TMPDIR", "TEMP", "TMP"]) vi.stubEnv(name, parent);
   vi.stubEnv("REPO_E2E_KEEP", undefined);
   exitCode = process.exitCode;

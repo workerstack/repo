@@ -17,6 +17,7 @@ function schema() {
 export function parseManifest(text: string): Manifest | null {
   try {
     const parsed = schema().safeParse(JSON.parse(text));
+
     return parsed.success ? { ...parsed.data, private: parsed.data.private === true } : null;
   } catch {
     return null;
@@ -36,6 +37,7 @@ export function readManifest(root: string): Manifest | null {
 export function isPublicPackage(root: string): boolean {
   try {
     const parsed = schema().safeParse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
+
     return parsed.success && isPublic(parsed.data);
   } catch {
     return false;

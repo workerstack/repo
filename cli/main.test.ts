@@ -3,13 +3,17 @@ import type * as FsModule from "node:fs";
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedMainFakes()));
+
 // Wraps the real readFileSync; the version tests swap one return value.
 const readFileSync = vi.hoisted(() => vi.fn<typeof FsModule.readFileSync>());
+
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof FsModule>();
   readFileSync.mockImplementation(actual.readFileSync);
+
   return { ...actual, default: { ...actual, readFileSync }, readFileSync };
 });
+
 import { USAGE, anyFunction, pkgVersion, useStart } from "./__fixtures__/main-kit.ts";
 import { start } from "./main.ts";
 
@@ -69,6 +73,7 @@ it("sync --check forwards its args and io to runSync and keeps its exit code", a
   runSync.mockImplementationOnce((_args, io) => {
     io.stdout("out\n");
     io.stderr("err\n");
+
     return Promise.resolve(1);
   });
   process.argv = ["node", "repo", "sync", "--check"];

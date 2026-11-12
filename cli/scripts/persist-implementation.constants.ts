@@ -1,6 +1,7 @@
 /** Names, patterns and limits the journal saver and its validator share. */
 
 export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
+
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 export const STATUS_RE: RegExp = /^(in-progress|done|blocked)$/;
@@ -9,8 +10,10 @@ export const PLAN_NUMBER_RE: RegExp = /^[1-9][0-9]*$/;
 export const NO_PLAN = "none";
 export const REQUIRED_KEYS: readonly string[] = ["serial", "plan", "name", "status", "created", "source"];
 export const REQUIRED_H2: readonly string[] = ["Done", "Issue", "Files", "Log", "Blockers", "Notes"];
+
 /** Sections that hold bullets or `(none)`, in report order. */
 export const BULLET_H2: readonly string[] = ["Done", "Issue", "Log", "Blockers", "Notes"];
+
 /** The `N.M [ ]` line a Log may hold in place of a bullet. */
 export const LOG_BOX_RE: RegExp = /^\d+\.\d+(?:\.\d+)? \[[ xX]\] /;
 export const BULLET_RE: RegExp = /^[-*] /;

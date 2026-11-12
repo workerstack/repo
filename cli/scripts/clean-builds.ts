@@ -18,16 +18,21 @@ function buildParts(items: readonly BuildItem[]): string {
   }))
     .filter(({ count }) => count > 0)
     .map(({ count, names }) => `${count} ${names[Number(count !== 1)]}`);
+
   const last = parts.pop();
+
   if (last === undefined) return "0 build dirs";
+
   return [parts.join(", "), last].filter(Boolean).join(" and ");
 }
 
 /** The line `repo clean --build` and `--deps` end on: what was (or would be) removed, its size and the next step. */
 function buildSummary(done: readonly BuildItem[], { deps, dryRun }: Pick<BuildRun, "deps" | "dryRun">): string {
   const verb = dryRun ? "would remove" : "removed";
+
   if (done.length === 0) return `${verb} ${buildParts(done)}`;
   const total = size(done.reduce((sum, item) => sum + item.bytes, 0));
+
   return `${verb} ${buildParts(done)} (${total})${deps ? AFTER_DEPS : ""}`;
 }
 
@@ -38,17 +43,24 @@ function buildSummary(done: readonly BuildItem[], { deps, dryRun }: Pick<BuildRu
 export function cleanBuilds(run: BuildRun): number {
   const { root, deps, dryRun, names, out, rm = fs.rmSync } = run;
   const plan = planBuild(root, { deps, extra: names });
+
   if (!plan.ok) {
     out(`${CLEAN_PREFIX}${plan.error}`);
+
     return 1;
   }
+
   function relOf(p: string): string {
     return path.relative(root, p).split(path.sep).join("/");
   }
+
   const { done, skipped } = removeBuild(plan.items, { dryRun, rm });
+
   if (dryRun) for (const item of done) out(relOf(item.path));
+
   for (const entry of skipped) out(`skipped ${relOf(entry.path)}: ${entry.code}`);
   out(buildSummary(done, { deps, dryRun }));
+
   return Math.min(skipped.length, 1);
 }
 
@@ -56,5 +68,6 @@ export function cleanBuilds(run: BuildRun): number {
 export async function configuredNames(root: string): Promise<{ names: readonly string[] } | { errors: string[] }> {
   if (!fs.existsSync(path.join(root, CONFIG_FILE))) return { names: [] };
   const loaded = await loadConfig(root);
+
   return loaded.ok ? { names: loaded.config.clean?.build ?? [] } : { errors: loaded.errors };
 }

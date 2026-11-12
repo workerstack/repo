@@ -8,7 +8,10 @@ import { SHARD_PATTERN } from "./ci.constants.ts";
 export function parseShard(text: string): { shard: string | undefined } | { error: string } {
   const [, index = "", count = ""] = SHARD_PATTERN.exec(text) ?? [];
   const [i, n] = [Number(index), Number(count)];
+
   if (!(i >= 1 && i <= n)) return { error: `--shard takes i/n with 1 ≤ i ≤ n, got "${text}"` };
+
   if (n === 1) return { shard: undefined };
+
   return { shard: `${i}/${n}` };
 }

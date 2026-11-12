@@ -10,13 +10,17 @@ import type { Io } from "./sync-pstack-write.ts";
 /** adaptFile for inputs that must adapt: narrows the result to its ok variant. */
 export function adaptOk(...args: Parameters<typeof adaptFile>): Extract<ReturnType<typeof adaptFile>, { ok: true }> {
   const out = adaptFile(...args);
+
   if (!out.ok) throw new Error(out.error);
+
   return out;
 }
 
 export function skill(name: string): (typeof PSTACK_SKILLS)[number] {
   const found = PSTACK_SKILLS.find((s) => s.name === name);
+
   if (found === undefined) throw new Error(`no pstack skill ${name}`);
+
   return found;
 }
 
@@ -47,6 +51,7 @@ export function capture(): Captured {
   const out: string[] = [];
   const err: string[] = [];
   const io: Io = { err: (line) => void err.push(line), out: (line) => void out.push(line) };
+
   return { err, io, out };
 }
 
@@ -54,6 +59,7 @@ export function capture(): Captured {
 export function tmpDir(prefix: string, made: string[]): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   made.push(dir);
+
   return dir;
 }
 

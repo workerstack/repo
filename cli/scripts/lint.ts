@@ -23,8 +23,10 @@ import { toolEnv } from "./tool-env.ts";
 
 /** The pinned tools the standards pack runs. */
 export type Tool = "oxlint" | "oxfmt";
+
 /** Runs `tool` with `args` in `root` and returns its exit code. */
 export type RunTool = (tool: Tool, args: string[], root: string) => number;
+
 /** `cargo` runs `cargo fmt`; tests hand their own, and `stdout` receives its diff. */
 export type ToolDeps = {
   cwd?: string;
@@ -56,24 +58,32 @@ function formatSorted(job: {
   run: RunTool;
 }): number {
   const { root, cwd, args, stderr, run } = job;
+
   const paths = args
     .filter((arg) => !arg.startsWith("-"))
     .map((arg) => path.relative(root, path.resolve(cwd, arg)).split(path.sep).join("/"));
+
   const scope = paths.length === 0 ? null : paths;
   const listed = repoJson(root, scope);
   const check = args.includes(CHECK_FLAG);
   const commented = convertJsonc(root, listed.files, { check });
+
   if (check) reportComments(commented, stderr);
   const sorted = sortJson(root, listed.files, { check });
+
   if (!sorted.ok) {
     stderr(`repo fmt: ${sorted.error}\n`);
+
     return 1;
   }
+
   if (check) {
     for (const { file, key } of sorted.found)
       stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
   }
+
   const code = run("oxfmt", args, root);
+
   return code === 0 && (sorted.found.length > 0 || commented.length > 0) && check ? 1 : code;
 }
 
@@ -85,19 +95,28 @@ function formatSorted(job: {
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
   const { cwd = process.cwd(), stderr = (s: string) => process.stderr.write(s), run = spawnTool } = deps;
+
   function fail(lines: string[]): number {
     for (const line of lines) stderr(`repo ${COMMAND[tool]}: ${line}\n`);
+
     return 1;
   }
+
   const root = findRoot(cwd);
+
   if (root === null) return fail([`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``]);
   const loaded = await loadConfig(root);
+
   if (!loaded.ok) return fail(loaded.errors);
+
   if (!loaded.config.packs.includes("standards"))
     return fail([`the standards pack is off; add "standards" to packs in ${CONFIG_FILE}`]);
+
   if (!fs.existsSync(path.join(root, CONFIG[tool])))
     return fail([`no ${CONFIG[tool]}; run \`bun repo sync\` to write it`]);
+
   if (tool !== "oxfmt") return run(tool, args, root);
+
   return withCargoFmt(root, formatSorted({ args, cwd, root, run, stderr }), { ...deps, args, stderr });
 }
 
@@ -110,12 +129,14 @@ function withCargoFmt(
   if (!fs.existsSync(path.join(root, CARGO_MANIFEST))) return code;
   const { args, stderr, stdout = (s: string) => process.stdout.write(s) } = job;
   const rust = cargoFmt(root, { check: args.includes(CHECK_FLAG), run: job.cargo, stderr, stdout });
+
   return code === 0 ? rust : code;
 }
 
 export function lint(argv: string[]): Promise<number> {
   return runTool("oxlint", argv);
 }
+
 export function fmt(argv: string[], deps: ToolDeps = {}): Promise<number> {
   return runTool("oxfmt", argv, deps);
 }
@@ -140,6 +161,7 @@ export type Captured = { code: number; stdout: string; stderr: string };
  */
 export function pluginModules(packageRoot: string): string {
   const modules = path.dirname(path.dirname(packageRoot));
+
   return path.basename(modules) === MODULES_DIR ? modules : path.join(packageRoot, MODULES_DIR);
 }
 
@@ -156,6 +178,7 @@ export function tsgolintSpecifier(platform: NodeJS.Platform, arch: string): stri
 function oxlintEnv(): NodeJS.ProcessEnv {
   const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
   const inherited = repoEnv.process.NODE_PATH;
+
   return {
     NODE_PATH: inherited !== undefined && inherited !== "" ? `${modules}${path.delimiter}${inherited}` : modules,
     OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
@@ -170,11 +193,13 @@ function commandOf(tool: Tool): { args: string[]; env: NodeJS.ProcessEnv } {
 /** Spawns bun on the tool's bin, output straight to the terminal. */
 function spawnTool(tool: Tool, args: string[], root: string): number {
   const command = commandOf(tool);
+
   const result = spawnSync(process.execPath, [...command.args, ...args], {
     cwd: root,
     env: toolEnv(command.env),
     stdio: "inherit",
   });
+
   return result.status ?? 1;
 }
 
@@ -192,8 +217,10 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
   const files = { stderr: path.join(dir, "stderr"), stdout: path.join(dir, "stdout") };
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
+
   try {
     const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
+
     return { code: result.status ?? 1, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
   } finally {
     fs.closeSync(out);
@@ -205,6 +232,7 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
 /** The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed. */
 export function captureTool(tool: Tool, args: string[], root: string): Captured {
   const command = commandOf(tool);
+
   return captureBun([...command.args, ...args], root, command.env);
 }
 
@@ -215,6 +243,8 @@ export function captureTool(tool: Tool, args: string[], root: string): Captured 
 export function captureSorted(files: readonly string[], root: string): Captured {
   convertJsonc(root, files, { check: false });
   const sorted = sortJson(root, files, { check: false });
+
   if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
+
   return captureTool("oxfmt", ["--no-error-on-unmatched-pattern", ...files], root);
 }

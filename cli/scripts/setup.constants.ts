@@ -1,6 +1,8 @@
 export const TARGETS: string[] = ["speak", "listen", "google-workspace", "browser", "jev"];
+
 /** The targets every repo gets; the rest follow `agents.skills`. */
 export const ALWAYS_ON: readonly string[] = ["browser", "jev"];
+
 /** The names `setup` takes for google-workspace. */
 export const GOOGLE_ALIASES: readonly string[] = ["gw", "google", "workspace", "google-workspace"];
 

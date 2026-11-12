@@ -9,6 +9,7 @@ const DEMO = publicManifest("@workerstack/demo", { ".": "./i.ts", "./lint": "./l
   ',"./references/*":"./references/*"',
   "",
 );
+
 const AUTH = [
   "# Auth",
   "[dep](../node_modules/@workerstack/backend/references/INDEX.md)",
@@ -16,12 +17,14 @@ const AUTH = [
   fence("ts run", "const s = { tokn: 1 };"),
   fence("json", "{}"),
 ].join("\n");
+
 const BROKEN = {
   "package.json": DEMO,
   "references/INDEX.md": '# Index\n- [Auth](auth.md)\n- [Gone](missing.md)\nUse "@workerstack/demo".\n',
   "references/auth.md": AUTH,
   "references/extra.md": "# Extra\n",
 };
+
 const TSC_ERROR = "references\\auth.md-2.ts(1,7): error TS2339: Property 'tokn' does not exist on type 'Session'.\n";
 
 it("prints the ok line when the references hold up", async () => {
@@ -30,6 +33,7 @@ it("prints the ok line when the references hold up", async () => {
     "references/INDEX.md": "# Index\n- [Auth](auth.md)\n",
     "references/auth.md": ["# Auth", 'Use "@workerstack/demo".', fence("ts", "const a = 1;")].join("\n"),
   });
+
   const run = docsRun(root, { pack: () => packed("references/INDEX.md", "references/auth.md") });
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
@@ -43,6 +47,7 @@ it("prints every finding with its line and exits 1", async () => {
     pack: () => packed("references/INDEX.md"),
     tsc: () => ({ code: 2, stderr: "", stdout: TSC_ERROR }),
   });
+
   expect(await main(["--check"], run.io)).toBe(1);
   expect(run.err).toStrictEqual([
     "references/extra.md is not listed in references/INDEX.md; add a line that links it\n",
@@ -65,6 +70,7 @@ it("skips the export and tarball checks of a private manifest", async () => {
     "references/INDEX.md": "# Index\n- [A](a.md)\n",
     "references/a.md": "# A\n",
   });
+
   const pack = vi.fn<() => ReturnType<typeof packed>>(() => packed());
   const run = docsRun(root, { pack });
   expect(await main(["--check"], run.io)).toBe(0);
@@ -83,9 +89,11 @@ it("prefixes each package's paths with its folder, and checks only the roots wit
     "packages/b/references/y.md": "# Y\n",
     "packages/c/package.json": json({ name: "@ws/c", private: false }),
   });
+
   const run = docsRun(root, {
     pack: (cwd) => packed("references/INDEX.md", path.basename(cwd) === "a" ? "references/x.md" : ""),
   });
+
   expect(await main(["--check"], run.io)).toBe(1);
   expect(run.err).toStrictEqual([
     "packages/a/references/x.md:3: links nope.md, which does not exist\n",
@@ -102,6 +110,7 @@ it("finds the doc roots from the nearest workerstack.config.ts", async () => {
     "sub/.keep": "",
     "workerstack.config.ts": "",
   });
+
   const run = docsRun(`${root}/sub`);
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.out).toStrictEqual(["docs ok: 1 references, 0 examples, 0 exports\n"]);

@@ -31,6 +31,7 @@ describe("checkGlobals", () => {
     const home = syncedHome(ws);
     const prev = process.cwd();
     process.chdir(ws);
+
     try {
       expect(checkGlobals({ home }).ok).toBe(true);
     } finally {
@@ -102,10 +103,12 @@ describe("consumerRoot overlay", () => {
     expect(syncGlobals({ apply: true, consumerRoot: ws, home, sourceRoot: stock, workspaceRoot: ws }).ok).toBe(true);
     expect(checkGlobals({ home, sourceRoot: stock, workspaceRoot: ws })).toMatchObject({ ok: true });
     const settings = path.join(home, ".claude/settings.json");
+
     const written = JSON.parse(fs.readFileSync(settings, "utf8")) /* sync wrote a JSON object */ as Record<
       string,
       unknown
     >;
+
     delete written.customKey;
     fs.writeFileSync(settings, JSON.stringify(written));
     expect(checkGlobals({ home, sourceRoot: stock, workspaceRoot: ws })).toMatchObject({

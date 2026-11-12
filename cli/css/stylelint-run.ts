@@ -25,11 +25,13 @@ export async function stylelintRun(argv: readonly string[]): Promise<string> {
     files: argv.filter((arg) => arg !== FIX_FLAG),
     fix: argv.includes(FIX_FLAG),
   });
+
   const results = linted.results.map((result) => ({
     invalid: result.invalidOptionWarnings,
     source: result.source,
     warnings: result.warnings.map(({ column, line, rule, severity, text }) => ({ column, line, rule, severity, text })),
   }));
+
   return JSON.stringify(results);
 }
 
@@ -37,9 +39,11 @@ export async function stylelintRun(argv: readonly string[]): Promise<string> {
 export async function main(argv: readonly string[], out: Write, err: Write): Promise<number> {
   try {
     out(await stylelintRun(argv));
+
     return 0;
   } catch (error) {
     err(`${String(error)}\n`);
+
     return 1;
   }
 }

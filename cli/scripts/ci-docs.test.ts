@@ -15,6 +15,7 @@ function ciWith(packs: Pack[], docs: Captured) {
   const out: string[] = [];
   const repoCalls: string[] = [];
   let clock = 0;
+
   const code = main([], {
     bins: { tsc: () => OK, vitest: () => PASSED },
     cwd: plant(),
@@ -22,12 +23,14 @@ function ciWith(packs: Pack[], docs: Captured) {
     packs,
     repo: (args) => {
       repoCalls.push(args.join(" "));
+
       return args[0] === "docs" ? docs : OK;
     },
     stderr: () => {},
     stdout: (s) => out.push(s),
     turbo: () => OK,
   });
+
   return { code, out: out.join(""), repoCalls };
 }
 
@@ -69,12 +72,15 @@ it("docsGates is empty off the pack and holds one gate on it", () => {
 it("reads the docs pack from the config, so the docs gate runs when the config turns it on", async () => {
   const root = plant({ "workerstack.config.ts": 'export default { packs: ["docs"] };\n' });
   const seen: string[] = [];
+
   const { code, out } = await ciFromConfig(root, {
     repo: (args) => {
       seen.push(args.join(" "));
+
       return OK;
     },
   });
+
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["check", "docs --check", "fmt --check"]);
   expect(out).toContain("ci: docs ok (0.0s)\n");

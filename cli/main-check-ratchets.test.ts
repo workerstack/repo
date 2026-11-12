@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+
 import { commitMain, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";

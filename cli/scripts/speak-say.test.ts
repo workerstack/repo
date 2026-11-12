@@ -13,15 +13,18 @@ afterEach(() => vi.unstubAllGlobals());
 function eleven() {
   return cfgOf({ ELEVENLABS_API_KEY: "sk_el" });
 }
+
 function openai() {
   return cfgOf({ OPENAI_API_KEY: "sk_oa" });
 }
+
 function outPath(name = "out.mp3") {
   return path.join(plantDir(), "a", name);
 }
 
 async function audioOf(res: FetchResult): Promise<number[]> {
   const dest = await say({ cfg: eleven(), fetchFn: fetchReturning(res), out: outPath(), text: "hi" });
+
   return [...fs.readFileSync(dest)];
 }
 
@@ -60,6 +63,7 @@ it("fetch: uses the global fetch when none is injected", async () => {
   const seen: string[] = [];
   vi.stubGlobal("fetch", (url: string) => {
     seen.push(url);
+
     return Promise.resolve(new Response(new Uint8Array([9])));
   });
   const out = outPath("g.mp3");
@@ -76,10 +80,13 @@ it("say: needs text", async () => {
 
 it("say: sends the chosen voice, escaped, or the configured one", async () => {
   const urls: string[] = [];
+
   function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
     urls.push(`${url} ${init.body}`);
+
     return Promise.resolve(bytesRes(new Uint8Array()));
   }
+
   const out = outPath();
   await say({ cfg: eleven(), fetchFn, out, text: " hi ", voice: "a b/c" });
   await say({ cfg: openai(), fetchFn, out, text: "hi", voice: " " });
@@ -89,7 +96,9 @@ it("say: sends the chosen voice, escaped, or the configured one", async () => {
 });
 
 const spawned: string[][] = [];
+
 afterEach(() => spawned.splice(0));
+
 function sayPlaying({ play, out }: { play: boolean | string | undefined; out: string }) {
   return say({
     cfg: eleven(),
@@ -114,9 +123,11 @@ it.each([true, "true", "1"])("play: plays the saved file for %s", async (play) =
 
 it("play: builds the player command for mac and everything else", () => {
   const calls: [string, string[], unknown][] = [];
+
   function spy(cmd: string, args: string[], opts: { stdio: "ignore" }) {
     return void calls.push([cmd, args, opts]);
   }
+
   playPath("/a.mp3", spy, "darwin");
   playPath("/a.mp3", spy, "linux");
   expect(calls).toStrictEqual([
@@ -135,12 +146,15 @@ it("say: writes elevenlabs bytes to --out", async () => {
   const cwd = plantDir("speak-say-");
   const dest = path.join(cwd, "out.mp3");
   const buf = Buffer.from("ID3fake");
+
   function fetchFn(url: string, init: Parameters<FetchFn>[1]): ReturnType<FetchFn> {
     expect(url).toMatch(/text-to-speech\/JBFqnCBsd6RMkjVDRZzb/);
     expect(init.method).toBe("POST");
     expect(init.headers["xi-api-key"]).toBe("sk_el");
+
     return Promise.resolve(bytesRes(buf));
   }
+
   expect(await say({ cfg: eleven(), cwd, fetchFn, out: dest, text: "hello" })).toBe(dest);
   expect(fs.readFileSync(dest)).toStrictEqual(buf);
 });
@@ -161,6 +175,7 @@ function openaiSpeechFetch(url: string, init: Parameters<FetchFn>[1]): ReturnTyp
   expect(init.headers.Authorization).toBe("Bearer sk_oa");
   const body: unknown = JSON.parse(init.body ?? "{}");
   expect(body).toMatchObject({ input: "hi", voice: "coral" });
+
   return Promise.resolve(bytesRes(Buffer.from("oa")));
 }
 

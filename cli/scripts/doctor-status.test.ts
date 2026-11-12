@@ -19,7 +19,9 @@ function tmp(): string {
 function home() {
   const dir = tmp();
   vi.spyOn(os, "homedir").mockReturnValue(dir);
+
   for (const key of ["TYPESAFE_API_KEY", "ELEVENLABS_API_KEY", "OPENAI_API_KEY"]) vi.stubEnv(key, "");
+
   return dir;
 }
 

@@ -67,6 +67,7 @@ it("matchLessons returns nothing when there is no index", () => {
 it("hitLesson counts each new evidence once, keeps the 5 most recent, and updates the index", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson({ evidence: [] }));
+
   for (const ev of ["plan 1", "plan 2"])
     expect(hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-02", workspaceRoot: ws }).ok).toBe(true);
 
@@ -74,6 +75,7 @@ it("hitLesson counts each new evidence once, keeps the 5 most recent, and update
   expect(lessonText(ws, "plan-forks")).toMatch(/^last-hit: 2026-11-02$/m);
   hitLesson({ evidence: "plan 2", slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
   expect(lessonText(ws, "plan-forks")).toMatch(/^hits: 3$/m);
+
   for (const ev of ["plan 3", "plan 4", "plan 5", "plan 6"])
     hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
 

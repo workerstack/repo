@@ -9,7 +9,9 @@ import { str } from "./voice-args.ts";
 
 function errMessage(e: unknown): string {
   const message = isRecord(e) ? e.message : undefined;
+
   if (typeof message === "string" && message !== "") return message;
+
   return e instanceof Error ? String(e) : str(e);
 }
 
@@ -18,12 +20,15 @@ export async function main(argv: string[], opts: ListenMainOpts = {}): Promise<n
   if (opts.env === undefined) await loadOptionalConsumerEnv();
   const ctx = contextOf(argv, opts, (next) => main(next, opts));
   const handler = VERBS.get((ctx.rest[0] ?? "").toLowerCase());
+
   try {
     if (handler !== undefined) return await handler(ctx);
     ctx.log.error(USAGE);
+
     return 1;
   } catch (e) {
     ctx.log.error(errMessage(e));
+
     return 1;
   }
 }

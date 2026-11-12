@@ -8,12 +8,15 @@ import { addWorktree } from "./worktree-lifecycle.ts";
 import { worktreeHook } from "./worktree.ts";
 
 const tmp = scratch();
+
 beforeEach(() => {
   for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) vi.stubEnv(k, undefined);
 });
+
 afterEach(() => tmp.cleanup());
 
 const ok = { code: 0, stderr: "", stdout: "" };
+
 function remove(r: string, name: string): HookInput {
   return {
     cwd: r,
@@ -41,17 +44,20 @@ it("fails the create with the reason, whether the name is unusable or the throw 
   const bad = worktreeHook({ cwd: r, hook_event_name: "WorktreeCreate", name: ".." });
   expect([bad.code, bad.stdout]).toStrictEqual([1, ""]);
   expect(bad.stderr).toContain('worktree name ".." has no usable');
+
   const hostile = {
     toString: () =>
       ((): never => {
         throw "boom";
       })(),
   };
+
   const input = {
     cwd: r,
     hook_event_name: "WorktreeCreate",
     name: hostile,
   } as unknown /* JSON cannot carry a throwing toString; this plants one */ as HookInput;
+
   expect(worktreeHook(input)).toStrictEqual({ code: 1, stderr: "boom", stdout: "" });
 });
 

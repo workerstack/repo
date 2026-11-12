@@ -20,18 +20,22 @@ else process.stdout.write("rtk " + cmd);
 `;
 
 const tmpDirs: string[] = [];
+
 afterEach(() => {
   vi.restoreAllMocks();
+
   for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
 });
 
 function tmp(prefix: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   tmpDirs.push(dir);
+
   return dir;
 }
 
 let shared: string | undefined;
+
 afterAll(() => {
   if (shared !== undefined) fs.rmSync(shared, { force: true, recursive: true });
 });
@@ -42,12 +46,14 @@ function stubDir(): string {
     shared = fs.mkdtempSync(path.join(os.tmpdir(), "rtk-stub-"));
     plantProgram(shared, "rtk", STUB_JS);
   }
+
   return shared;
 }
 
 function withStub(dir: string) {
   return { PATH: `${dir}${path.delimiter}${repoEnv.process.PATH ?? ""}` };
 }
+
 function call(command: unknown, env: Record<string, string | undefined> = withStub(stubDir())) {
   return runHook(
     main,
@@ -141,12 +147,14 @@ describe("rtk-grok hook edge cases", () => {
   it("fails open when the reply cannot be written", () => {
     const input = new TextEncoder().encode(JSON.stringify({ tool_input: { command: "ls" } }));
     let isFed = false;
+
     const io: HookIo = {
       readChunk: () => (isFed ? null : ((isFed = true), input)),
       write: () => {
         throw new Error("closed pipe");
       },
     };
+
     vi.stubEnv("PATH", `${stubDir()}${path.delimiter}${repoEnv.process.PATH ?? ""}`);
     expect(main([], io)).toBe(0);
   });
@@ -164,6 +172,7 @@ describe("repo hook rtk-grok (spawned)", () => {
       { tool_input: { command: "git status", description: "d" }, tool_name: "Bash" },
       { env: withStub(stubDir()) },
     );
+
     expect(r.status, r.stderr).toBe(0);
     expect(JSON.parse(r.stdout)).toStrictEqual(updated("rtk git status"));
   });

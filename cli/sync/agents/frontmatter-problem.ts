@@ -16,11 +16,14 @@ function keysOf(kind: Kind): readonly string[] {
 /** What is wrong with a rule's own keys, or null. */
 function ruleProblem(data: ParsedDoc["data"]): string | null {
   const description = data["description"];
+
   if (typeof description !== "string" || description.trim() === "")
     return "invalid frontmatter: description is required";
   const paths = data["paths"];
+
   if (paths !== undefined && !(Array.isArray(paths) && paths.every((glob) => typeof glob === "string")))
     return "invalid frontmatter: paths must be a list of strings";
+
   return null;
 }
 
@@ -28,7 +31,9 @@ function ruleProblem(data: ParsedDoc["data"]): string | null {
 function bodyProblem(body: string): string | null {
   if (body.trim() === "") return "body is empty; write the instructions below the frontmatter";
   const bytes = Buffer.byteLength(body);
+
   if (bytes <= MAX_BODY_BYTES) return null;
+
   return (
     `body is ${bytes} bytes, over the 8 KiB (${MAX_BODY_BYTES} byte) limit; ` +
     "move detail into a skill or a reference"
@@ -39,11 +44,15 @@ function bodyProblem(body: string): string | null {
 export function frontmatterProblem(kind: Kind, { data, body }: ParsedDoc): string | null {
   const keys = keysOf(kind);
   const unknown = Object.keys(data).find((key) => !keys.includes(key));
+
   if (unknown !== undefined) return `unknown frontmatter key "${unknown}"; use ${keys.join(", ")}`;
+
   if (data["overrides"] !== undefined && typeof data["overrides"] !== "string")
     return "invalid frontmatter: overrides must be a string";
+
   if (data["variants"] !== undefined && !isVariantList(data["variants"]))
     return "invalid frontmatter: variants must be a list of mappings, each with a name";
   const bad = kind === RULES ? ruleProblem(data) : null;
+
   return bad ?? bodyProblem(body);
 }

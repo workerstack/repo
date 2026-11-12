@@ -9,7 +9,9 @@ function render(shards: number, secrets: string[] = [], { live = false }: { live
   const base = context(["release"], live ? { scripts: { "test:live": "vitest run -c live.config.ts" } } : {});
   const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets, shards } } };
   const [output] = nightly(ctx).outputs;
+
   if (output?.kind !== "file") throw new Error("no nightly.yml");
+
   return output.content;
 }
 
@@ -61,6 +63,7 @@ describe("nightly live job", () => {
   it("pins every action to a full commit SHA", () => {
     const uses = render(2, [], { live: true }).match(/uses: \S+/g) ?? [];
     expect(uses.length).toBeGreaterThan(0);
+
     for (const line of uses) expect(line).toMatch(/@[0-9a-f]{40}$/);
   });
 });
@@ -74,7 +77,9 @@ function renderRepo({ rust }: { rust: boolean }, manifest: Record<string, unknow
   const base = context(["release"], manifest, rust ? { "Cargo.toml": "[workspace]\n" } : {});
   const ctx: SyncContext = { ...base, config: { ...base.config, nightly: { secrets: [], shards } } };
   const [output] = nightly(ctx).outputs;
+
   if (output?.kind !== "file") throw new Error("no nightly.yml");
+
   return output.content;
 }
 

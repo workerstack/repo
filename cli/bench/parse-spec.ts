@@ -15,10 +15,13 @@ import type { Better } from "./spec.ts";
 
 /** A candidate as the runner reads it: its name, its command, and the command run once before, if any. */
 export type Candidate = { name: string; run: string[]; setup: string[] | null };
+
 /** A metric as the runner reads it, with its unit filled in. */
 export type Metric = { name: string; weight: number; better: Better; unit: string };
+
 /** A parsed spec: candidates by name, metrics by weight (heaviest first) then name, whatever the file's key order. */
 export type Spec = { candidates: Candidate[]; metrics: Metric[]; runs: number; warmup: number; os: OsLabel[] };
+
 export type ParsedSpec = { ok: true; spec: Spec } | { ok: false; errors: string[] };
 
 const NOT_SPEC = "the default export is not a bench spec; export default defineBench({ candidates, metrics })";
@@ -49,6 +52,7 @@ function namedSchema<T extends z.ZodType>(value: T) {
 
 function candidateSchema() {
   const command = z.array(z.string()).min(1, { error: "empty; give the command and its args" });
+
   return z.strictObject({ run: command, setup: command.optional() });
 }
 
@@ -64,9 +68,12 @@ function metricSchema() {
 function refuseBuiltIn(metrics: Record<string, z.infer<ReturnType<typeof metricSchema>>>, ctx: z.RefinementCtx) {
   for (const [name, metric] of Object.entries(metrics)) {
     const builtIn = BUILT_IN[name];
+
     if (builtIn === undefined) continue;
+
     if (metric.better === "higher")
       ctx.addIssue({ code: "custom", message: `${name} is built in and lower is better`, path: [name, "better"] });
+
     if (metric.unit !== undefined) {
       const message = `${name} is built in and measured in ${builtIn.unit}`;
       ctx.addIssue({ code: "custom", message, path: [name, "unit"] });
@@ -82,6 +89,7 @@ function specSchema() {
   const os = z.enum(OS_LABELS, {
     error: (issue) => `${JSON.stringify(issue.input)} is not a bench os; use ${osList()}`,
   });
+
   return z.strictObject({
     candidates: namedSchema(candidateSchema()),
     metrics: namedSchema(metricSchema()).superRefine(refuseBuiltIn),
@@ -98,7 +106,9 @@ function line(issue: z.core.$ZodIssue): string {
   const isKeyed = issue.code === "invalid_key";
   const message = isKeyed ? issue.issues.map((inner) => inner.message).join("; ") : issue.message;
   const segments = (isKeyed ? issue.path.slice(0, LAST) : issue.path).filter((part) => typeof part === "string");
+
   if (segments.length > 0) return `${segments.join(".")}: ${message}`;
+
   return issue.code === "invalid_type" ? NOT_SPEC : message;
 }
 
@@ -110,15 +120,18 @@ export function byWeight(a: Metric, b: Metric): number {
 /** Parses a spec file's default export into a `Spec`, or every line saying what is wrong with it. */
 export function parseSpec(value: unknown): ParsedSpec {
   const parsed = specSchema().safeParse(value);
+
   if (!parsed.success) return { errors: parsed.error.issues.map(line), ok: false };
   const { candidates, metrics, os, runs, warmup } = parsed.data;
   const named = Object.entries(candidates).map(([name, { run, setup }]) => ({ name, run, setup: setup ?? null }));
+
   const scored = Object.entries(metrics).map(([name, { better, unit, weight }]) => ({
     better,
     name,
     unit: BUILT_IN[name]?.unit ?? unit ?? "",
     weight,
   }));
+
   return {
     ok: true,
     spec: {

@@ -9,6 +9,7 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import type { HookInput } from "./hook-input.ts";
 
 const tmp = useTmp();
+
 function put(file: string, extra: HookInput) {
   return processFatTools(camelCall("Write", { content: "ok", file_path: file }, extra));
 }
@@ -24,6 +25,7 @@ function writePlan(ws: string, status: string, listed: string) {
   const planPath = path.join(plans, "1-listed-20260827T173530Z.md");
   const front = `---\nserial: 1\nname: listed\nstatus: ${status}\ncreated: 2026-08-27T17:35:30Z\nsource: "test"\n---\n`;
   fs.writeFileSync(planPath, `${front}\n# listed\n\nListed src: \`${listed}\`\nhttps://example.com/README.md\n`);
+
   return planPath;
 }
 

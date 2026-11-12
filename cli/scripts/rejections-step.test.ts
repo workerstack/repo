@@ -19,13 +19,16 @@ it(
       "}",
       "",
     ].join("\n");
+
     const mark = "Argument of type 'string' is not assignable to parameter of type 'UserId'";
     const reject = `import { load } from "./user.ts";\n\n/* rejects: ${mark} */\nload("u1");\n`;
+
     const root = consumer({
       "src/other.ts": "export const a = 1;\n",
       "src/user.reject.ts": reject,
       "src/user.ts": user,
     });
+
     const bins: Bins = { tsc: () => OK, vitest: () => null };
     write(root, { "src/user.ts": user.replace(' & { readonly brand: "UserId" }', "") });
     const widened = await turn(root, [], bins);

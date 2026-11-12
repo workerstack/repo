@@ -9,11 +9,14 @@ import { rewriteScratchPath, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 const tmp = useTmp();
+
 // A root that does not exist, in the spelling the product compares in (macOS expands /home).
 const ws = canonicalPath("/home/ecomet/Development/repo-test-2");
+
 function rootsAt(root: string) {
   return { checkout: root, cwd: root, root };
 }
+
 const nested = {
   checkout: path.resolve("/r"),
   cwd: path.join(path.resolve("/r"), "packages/a"),
@@ -44,6 +47,7 @@ it("rewriteScratchPath: does not rewrite in-workspace paths or non-scratch", () 
 it("Write|Edit rewrites Write/Edit/write/search_replace path fields and never denies", () => {
   const outside = "/tmp/host/.tmp/repo/scratch/notes.md";
   const dest = path.resolve(ws, ".tmp/repo/scratch/notes.md");
+
   for (const toolName of ["Write", "Edit", "write", "search_replace"]) {
     const out = processFatTools(camelCall(toolName, { content: "x", file_path: outside }, { workspaceRoot: ws }));
     expect(out).toStrictEqual({ type: "rewrite", updatedInput: { content: "x", file_path: dest } });
@@ -71,9 +75,11 @@ it("Write|Edit does not rewrite an escaping scratch path and still does not deny
 
 it("rewrites repo-root notes.md and leaves README", () => {
   const root = tmp.dir("gate-scratch-");
+
   function write(file: string) {
     return processFatTools(camelCall("Write", { content: "x", file_path: file }, { workspaceRoot: root }));
   }
+
   expect(rewriteScratchWrite("notes.md", rootsAt(root))).toBe(path.join(root, ".tmp", "repo", "notes.md"));
   expect(rewriteScratchWrite("README.md", rootsAt(root))).toBeNull();
   expect(write("notes.md")?.type).toBe("rewrite");

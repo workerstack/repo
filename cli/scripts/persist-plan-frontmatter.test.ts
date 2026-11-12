@@ -63,6 +63,7 @@ describe("validatePlan key lines and names", () => {
     const errors = errorsFor((t) =>
       t.replace(/^source: .*$/m, 'Not a key line\nsource: "bad \\q escape"').replace("reviews: 0", "reviews: 0"),
     );
+
     expect(errors).toStrictEqual([]);
   });
 

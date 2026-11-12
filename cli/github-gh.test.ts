@@ -27,6 +27,7 @@ function runner(timeoutMs?: number) {
   const dir = tempDir();
   const script = path.join(dir, "fake-gh.ts");
   fs.writeFileSync(script, FAKE_GH);
+
   return ghRunner({ command: [process.execPath, script], ...(timeoutMs === undefined ? {} : { timeoutMs }) });
 }
 

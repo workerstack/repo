@@ -41,6 +41,7 @@ it("follows every re-export form from an entry to the file that declares the nam
     "src/space.ts": "export const inSpace = 1;\n",
     "src/star.ts": 'export const s = 1;\nexport * from "./deep.ts";\nexport default function skipped(): void {}\n',
   });
+
   expect(namesIn(root)).toStrictEqual({
     [INDEX]: ["chosen", "own"],
     "src/deep.ts": ["Deep"],
@@ -63,6 +64,7 @@ it("names each reached declaration with the entry that reaches it first", () => 
       "src/cors.ts": "export const shared = 1;\nexport const only = 2;\n",
     },
   );
+
   const surface = publicSurface(root);
   const names = surface.names.get(path.join(root, "src/cors.ts"));
   expect(names?.get("shared")).toBe(".");
@@ -74,6 +76,7 @@ it("reaches a default export of an identifier and an anonymous default function"
     { ".": "./src/index.ts", "./anon": "./src/anon.ts" },
     { [INDEX]: "const value = 1;\nexport default value;\n", "src/anon.ts": "export default function (): void {}\n" },
   );
+
   expect(namesIn(root)).toStrictEqual({ [INDEX]: ["value"], "src/anon.ts": ["default"] });
 });
 
@@ -82,6 +85,7 @@ it("reaches a namespace import that is exported", () => {
     [INDEX]: 'import * as ns from "./ns.ts";\nexport { ns };\n',
     "src/ns.ts": "export const inside = 1;\n",
   });
+
   expect(namesIn(root)).toStrictEqual({ "src/ns.ts": ["inside"] });
 });
 
@@ -89,6 +93,7 @@ it("does not look into a package outside the walk", () => {
   const root = withEntries(ENTRY, {
     [INDEX]: 'import type { Z } from "zod";\nexport type A = Z;\nexport * from "zod";\nexport { y } from "zod";\n',
   });
+
   expect(unknownIn(root)).toStrictEqual([]);
   expect(namesIn(root)).toStrictEqual({ [INDEX]: ["A"] });
 });
@@ -125,6 +130,7 @@ it("reaches an unexported type through each type position", () => {
     "src/types.ts": TYPES,
     "src/wide.ts": "export const wide = 1;\n",
   });
+
   expect(namesIn(root)).toStrictEqual({
     [INDEX]: ["C", "G", "I", "K", "Local", "M", "T", "W", "f", "thing"],
     "src/types.ts": ["Base", "Contract", "Face", "Imported", "Param", "Pick", "Returned", "Shape"],
@@ -144,6 +150,7 @@ it("reaches a member of a namespace import by its qualified name, and a base cla
     "src/types.ts": "export type Picked = string;\nexport type Other = string;\n",
     "src/values.ts": "export class Base {}\nexport function make(): never { throw new Error(); }\n",
   });
+
   expect(namesIn(root)).toStrictEqual({
     [INDEX]: ["C", "D", "U"],
     "src/types.ts": ["Picked"],
@@ -164,10 +171,12 @@ const SHOWN = [
 
 it("reaches a type behind a typed initializer and not behind an untyped one, a private member or a body", () => {
   const names = ["Cast", "Called", "Typed", "Param", "Hidden", "Arrow"];
+
   const root = withEntries(ENTRY, {
     [INDEX]: SHOWN,
     "src/types.ts": names.map((name) => `export type ${name} = string;`).join("\n"),
   });
+
   expect(namesIn(root)).toStrictEqual({
     [INDEX]: ["C", "D", "arrow", "called", "cast", "f"],
     "src/types.ts": ["Arrow", "Cast", "Param", "Typed"],
@@ -178,6 +187,7 @@ it("does not take a type parameter for the declaration it shadows", () => {
   const root = withEntries(ENTRY, {
     [INDEX]: "type T = string;\nexport type Box<T> = { value: T };\nexport type Unused = number;\n",
   });
+
   expect(namesIn(root)).toStrictEqual({ [INDEX]: ["Box", "Unused"] });
 });
 
@@ -186,5 +196,6 @@ it("reaches an imported type when the type parameter shadows another name", () =
     [INDEX]: 'import type { Item } from "./item.ts";\nexport type Box<T> = { value: T; item: Item };\n',
     "src/item.ts": "export type Item = string;\n",
   });
+
   expect(namesIn(root)).toStrictEqual({ [INDEX]: ["Box"], "src/item.ts": ["Item"] });
 });

@@ -10,11 +10,15 @@ export type LinkSource = { root: string; rel: string; text: string; base: string
 export function linkProblems({ root, rel, text, base }: LinkSource): string[] {
   const prose = text.replaceAll(FENCED_CODE, "").replaceAll(INLINE_CODE, "");
   const problems: string[] = [];
+
   for (const match of prose.matchAll(MARKDOWN_LINK)) {
     // The target group is not optional, so every match holds it.
     const bare = String(match.groups?.target).replace(ANCHOR, "");
+
     if (bare === "" || bare.startsWith("/") || URL_SCHEME.test(bare)) continue;
+
     if (!fs.existsSync(path.join(root, base, bare))) problems.push(`${rel}: link ${bare} does not exist`);
   }
+
   return problems;
 }

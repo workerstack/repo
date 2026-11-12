@@ -30,6 +30,7 @@ const PROJECT_VARS = ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"];
 const OWNED_STUBS = ["cli/scripts/session-map.ts", "cli/scripts/worktree.ts"];
 const STUBS = AUTORUN_NEEDLES.map((n) => `scripts/${n}`);
 const RAN = [...HOOK_NAMES.map((n) => `hook ${n}`), ...STUBS];
+
 const EVENTS: Record<string, string> = {
   beforeSubmitPrompt: "UserPromptSubmit",
   preToolUse: "PreToolUse",
@@ -41,6 +42,7 @@ const EVENTS: Record<string, string> = {
 function gitRepo(prefix: string): string {
   const root = fs.realpathSync(tmpDir(prefix));
   spawnSync("git", ["init", "-q"], { cwd: root });
+
   return root;
 }
 
@@ -61,7 +63,9 @@ function writeStub(root: string, rel: string, ran = path.join(root, "ran.txt")):
 
 function run(command: string, cwd: string, extra: Record<string, string> = {}) {
   const env: Record<string, string | undefined> = childEnv({ ...extra });
+
   for (const k of PROJECT_VARS) if (!(k in extra)) delete env[k];
+
   return spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env, input: "{}", timeout: 20_000 });
 }
 
@@ -70,17 +74,21 @@ function seedShipped(root: string): void {
   const ssot = expandSource(fs.readFileSync(path.join(REPO_ROOT, "agents/hooks.jsonc"), "utf8"));
   fs.mkdirSync(path.join(root, "agents"), { recursive: true });
   fs.writeFileSync(path.join(root, "agents/hooks.jsonc"), ssot);
+
   for (const f of fs.readdirSync(path.join(REPO_ROOT, "agents/grok/hooks"))) {
     const text = expandSource(fs.readFileSync(path.join(REPO_ROOT, "agents/grok/hooks", f), "utf8"));
     writeJson(root, `.grok/hooks/${f}`, JSON.parse(text));
   }
+
   const hooks: Record<string, unknown[]> = {};
+
   for (const [event, entries] of Object.entries(ssotOf(ssot).hooks)) {
     hooks[must(EVENTS[event])] = entries.map((e) => ({
       ...(e.matcher === undefined || e.matcher === "" ? {} : { matcher: e.matcher }),
       hooks: [{ command: e.command, timeout: e.timeout, type: "command" }],
     }));
   }
+
   writeJson(root, ".claude/settings.json", { hooks, permissions: { deny: [] } });
   writeJson(root, ".codex/hooks.json", { hooks });
   writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
@@ -111,22 +119,27 @@ function commandsOf(root: string): Set<string> {
 it("every shipped and generated command runs its root bin or script from a subdir", () => {
   const root = gitRepo("union-anystart-");
   fs.mkdirSync(path.join(root, "packages/a"), { recursive: true });
+
   for (const rel of [...STUBS, ...OWNED_STUBS]) writeStub(root, rel);
   writeBin(root);
   seedShipped(root);
   expect(applyUnion({ workspaceRoot: root }).ok).toBe(true);
   const commands = commandsOf(root);
+
   const extras: Record<string, string>[] = [
     {},
     { CLAUDE_PROJECT_DIR: path.join(root, "packages/a") },
     { CLAUDE_PROJECT_DIR: root },
   ];
+
   for (const extra of extras) {
     fs.rmSync(path.join(root, "ran.txt"), { force: true });
+
     for (const c of commands) {
       const r = run(c, path.join(root, "packages/a"), extra);
       expect(r.status, `${JSON.stringify(extra)} ${c}\n${r.stderr}`).toBe(0);
     }
+
     const ran = new Set(fs.readFileSync(path.join(root, "ran.txt"), "utf8").split("\n").filter(Boolean));
     expect([...ran].toSorted()).toStrictEqual(RAN.toSorted());
   }

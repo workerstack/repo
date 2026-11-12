@@ -8,10 +8,12 @@ import { gitRepo, must, orchestrateKit, plantLesson, plantSource, replyOf } from
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 
 const kit = orchestrateKit();
+
 /** A plan whose first leaf edits `file`, so the save cites the lessons that match it. */
 function touching(file: string) {
   return VALID_PLAN.replace("1.1 [ ] read the gitignore if it exists", `1.1 [ ] edit ${file}`);
 }
+
 function savedPath(run: ReturnType<typeof kit.writeAs>) {
   return must(replyOf(run)).hookSpecificOutput.updatedInput.file_path;
 }

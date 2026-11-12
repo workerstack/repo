@@ -6,6 +6,7 @@ import { RENDER_TIMEOUT, consumer, context, render, stagesIn, text } from "./__f
 import { renderTrees } from "./trees.ts";
 
 useTempDirs();
+
 vi.setConfig({ testTimeout: RENDER_TIMEOUT });
 
 const HOUSE = { ".repo/rules/house.md": '---\ndescription: house\npaths: ["**/*"]\n---\nAlways greet the cat.\n' };
@@ -20,8 +21,10 @@ it.each<{ hosts: readonly Host[] }>([{ hosts: ["claude"] }, { hosts: HOSTS }])(
 
 describe("a rule with paths", () => {
   const rule = "---\ndescription: Team rule\npaths:\n  - src/**\n---\nTEAM RULE TEXT\n";
+
   function reach(hosts: readonly Host[]) {
     const outputs = render(consumer({ ".repo/rules/team.md": rule }), hosts);
+
     return outputs.filter((o) => o.kind === "file" && o.content.includes("TEAM RULE TEXT")).map((o) => o.path);
   }
 

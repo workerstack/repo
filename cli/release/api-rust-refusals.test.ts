@@ -38,6 +38,7 @@ describe("repo release api with nothing to check in a Rust repo", () => {
     const got = await api(rustRepo(), ["--against", "x.tgz"], {
       cargo: cargo([A]).run,
     });
+
     expect(got).toMatchObject({
       code: 1,
       err: `${PREFIX}--against compares a package tarball; this repo has no public package\n`,

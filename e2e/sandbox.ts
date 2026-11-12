@@ -30,9 +30,11 @@ export class Sandbox {
     this.repo = path.join(this.root, "repo");
     const tmp = path.join(this.root, "tmp");
     const cache = path.join(runRoot, "cache");
+
     for (const d of [this.home, this.repo, tmp, path.join(this.root, "logs")]) fs.mkdirSync(d, { recursive: true });
 
     const env: NodeJS.ProcessEnv = {};
+
     for (const [k, v] of Object.entries(childEnv())) if (!INHERITED_ENV.test(k)) env[k] = v;
     Object.assign(env, {
       BUN_CONFIG_REGISTRY: registry,
@@ -78,7 +80,9 @@ export class Sandbox {
   json<T>(rel: string, is: (v: unknown) => v is T): T {
     const text = this.read(rel);
     const value = JSON.parse(text);
+
     if (!is(value)) throw new Error(`${rel} does not hold the expected shape: ${text}`);
+
     return value;
   }
 
@@ -118,11 +122,13 @@ export class Sandbox {
   ): Promise<Run> {
     // Windows bun shims are .cmd files and need a shell; real executables must not get one.
     const shell = process.platform === "win32" && !NATIVE_EXES.has(cmd);
+
     const child = spawn(cmd, shell ? args.map(quoteWin) : args, {
       cwd: this.repo,
       env: { ...this.env, ...env },
       shell,
     });
+
     let stdout = "";
     let stderr = "";
     child.stdout.setEncoding("utf8").on("data", (d: string) => (stdout += d));
@@ -130,20 +136,24 @@ export class Sandbox {
     child.stdin.on("error", () => {});
     child.stdin.end(input ?? "");
     const killer = setTimeout(() => child.kill(), RUN_TIMEOUT_MS);
+
     const { status, error } = await new Promise<{ status: number | null; error?: Error }>((resolve) => {
       child.once("error", (e) => resolve({ error: e, status: null }));
       child.once("close", (code) => resolve({ status: code }));
     });
+
     clearTimeout(killer);
     const failure = error === undefined ? "" : ` error ${error.message}`;
     const head = `$ ${cmd} ${args.join(" ")}\n[status ${status}${failure}]\n`;
     const out = `${head}--- stdout\n${stdout}\n--- stderr\n${stderr}\n`;
     this.log(cmd, out);
+
     return { out, status, stderr, stdout };
   }
 
   expectOk(r: Run) {
     if (r.status !== 0) throw new Error(`command failed (logs: ${path.join(this.root, "logs")})\n${tail(r.out)}`);
+
     return r;
   }
 

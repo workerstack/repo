@@ -15,16 +15,21 @@ const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies"
  */
 export function depsLines(dir: string, manifest: PackageJson, packages: readonly WorkspacePackage[]): string[] {
   const names = new Set(DEPENDENCY_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})));
+
   const inWorkspace = new Map(
     packages.flatMap((pkg) => (pkg.manifest.name === undefined ? [] : [[pkg.manifest.name, pkg.dir] as const])),
   );
+
   function link(name: string, target: string) {
     return `- [${name}](${path.posix.relative(`${dir}/references`, `${target}/${INDEX_REL}`)})`;
   }
+
   const workspace = [...inWorkspace].filter(([name]) => names.has(name)).toSorted(([a], [b]) => byCodeUnit(a, b));
+
   const stack = [...names]
     .filter((name) => !inWorkspace.has(name) && name.startsWith(STACK_SCOPE))
     .toSorted(byCodeUnit);
+
   return [
     ...workspace.map(([name, target]) => link(name, target)),
     ...stack.map((name) => link(name, `${DEPENDENCY_DIR}${name}`)),
@@ -34,9 +39,11 @@ export function depsLines(dir: string, manifest: PackageJson, packages: readonly
 /** Every `@workerstack/*` dependency name of the root and its packages, deduped and sorted. */
 export function stackNames(workspace: Workspace): string[] {
   const names = new Set<string>();
+
   for (const manifest of [workspace.manifest, ...workspace.packages.map((pkg) => pkg.manifest)]) {
     for (const field of DEPENDENCY_FIELDS)
       for (const name of Object.keys(manifest[field] ?? {})) if (name.startsWith(STACK_SCOPE)) names.add(name);
   }
+
   return [...names].toSorted(byCodeUnit);
 }

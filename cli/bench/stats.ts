@@ -9,6 +9,7 @@ const HALF = 2;
 function middle(sorted: readonly number[]): number {
   const count = sorted.length;
   const pair = sorted.slice(Math.floor((count - 1) / HALF), Math.floor(count / HALF) + 1);
+
   return pair.reduce((sum, value) => sum + value, 0) / pair.length;
 }
 
@@ -18,6 +19,7 @@ export function summarize(samples: readonly number[]): Summary {
   const mean = samples.reduce((sum, value) => sum + value, 0) / count;
   const squares = samples.reduce((sum, value) => sum + (value - mean) ** HALF, 0);
   const stddev = count > 1 ? Math.sqrt(squares / (count - 1)) : 0;
+
   return {
     cv: mean === 0 ? 0 : stddev / mean,
     max: Math.max(...samples),

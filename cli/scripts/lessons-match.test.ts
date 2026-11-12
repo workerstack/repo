@@ -48,6 +48,7 @@ function twoCheckouts(rootHits: number, worktreeHits: number) {
   git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
   const w = path.join(ws, ".worktrees/w");
   save(w, "shared", lesson({ hits: worktreeHits, name: "shared" }));
+
   return { files: [path.join(ws, "src/a.ts"), path.join(w, "src/a.ts")], roots: resolveRoots({ workspaceRoot: ws }) };
 }
 

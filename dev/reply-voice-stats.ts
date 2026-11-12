@@ -48,7 +48,9 @@ function isTranscriptRecord(v: unknown): v is TranscriptRecord {
 function replyText(record: TranscriptRecord): string {
   if (record.type !== ASSISTANT || record.isSidechain === true) return "";
   const content: unknown = record.message?.content;
+
   if (!Array.isArray(content)) return "";
+
   return content
     .filter(
       (part): part is { text: string } => isObject(part) && part.type === TEXT_PART && typeof part.text === "string",
@@ -61,6 +63,7 @@ function replyText(record: TranscriptRecord): string {
 function parseRecord(line: string): TranscriptRecord | undefined {
   try {
     const value: unknown = JSON.parse(line);
+
     return isTranscriptRecord(value) ? value : undefined;
   } catch {
     return undefined;
@@ -70,7 +73,9 @@ function parseRecord(line: string): TranscriptRecord | undefined {
 /** The text of a main-thread reply written at or after `sinceMs`; empty for any other line. */
 function replyOf(line: string, sinceMs: number): string {
   const record = parseRecord(line);
+
   if (record === undefined || !(Date.parse(String(record.timestamp)) >= sinceMs)) return "";
+
   return replyText(record);
 }
 
@@ -87,6 +92,7 @@ export function replyVoiceStats({ root, since }: { root: string; since: string }
   const sinceMs = Date.parse(since);
   const stats: Stats = { arrows: 0, coldReplies: 0, keyValues: 0, replies: 0 };
   const lines = transcriptFiles(root, sinceMs).flatMap((file) => fs.readFileSync(file, "utf8").split("\n"));
+
   for (const text of lines.map((line) => replyOf(line, sinceMs))) {
     if (text.trim() === "") continue;
     const body = prose(text);
@@ -95,14 +101,17 @@ export function replyVoiceStats({ root, since }: { root: string; since: string }
     stats.replies += 1;
     stats.arrows += arrows;
     stats.keyValues += keyValues;
+
     if (arrows + keyValues > 0) stats.coldReplies += 1;
   }
+
   return stats;
 }
 
 /** The value after `flag`, `fallback` when the flag is absent, and undefined when it ends the arguments. */
 function flagValue(argv: string[], flag: string, fallback: string): string | undefined {
   const at = argv.indexOf(flag);
+
   return at >= 0 ? argv[at + 1] : fallback;
 }
 
@@ -110,11 +119,15 @@ function flagValue(argv: string[], flag: string, fallback: string): string | und
 export function run(argv: string[], io: Io): number {
   const root = flagValue(argv, ROOT_FLAG, path.join(os.homedir(), ...DEFAULT_ROOT_PARTS));
   const since = flagValue(argv, SINCE_FLAG, DEFAULT_SINCE);
+
   if (root === undefined) {
     io.err(ROOT_NEEDS_VALUE);
+
     return 1;
   }
+
   io.out(JSON.stringify({ root, since, ...replyVoiceStats({ root, since: since ?? "" }) }));
+
   return 0;
 }
 

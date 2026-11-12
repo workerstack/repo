@@ -56,6 +56,7 @@ function isLine(line: string | undefined): line is string {
 /** The three lines `git rev-parse` printed as git facts, or null when one is missing. */
 function factsOf(out: string): GitFacts | null {
   const [top, gitDir, commonDir] = out.split(LINE_SPLIT_RE);
+
   return isLine(top) && isLine(gitDir) && isLine(commonDir) ? { commonDir, gitDir, top } : null;
 }
 
@@ -63,17 +64,21 @@ function factsOf(out: string): GitFacts | null {
 export function gitRevParse(dir: string, run: typeof execFileSync = execFileSync): GitFacts | null {
   if (revParseMemo.has(dir)) return revParseMemo.get(dir) ?? null;
   let facts: GitFacts | null = null;
+
   try {
     const out = run(
       "git",
       ["-C", dir, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-dir", "--git-common-dir"],
       { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
     );
+
     facts = factsOf(out);
   } catch {
     facts = null;
   }
+
   revParseMemo.set(dir, facts);
+
   return facts;
 }
 
@@ -91,13 +96,17 @@ const NATIVE_EDGES: CanonicalEdges = { exists: fs.existsSync, real: fs.realpathS
  */
 export function canonicalPath(abs: string, p: typeof path = path, edges: CanonicalEdges = NATIVE_EDGES): string {
   const { exists, real } = edges;
+
   if (p !== path || typeof abs !== "string" || !path.isAbsolute(abs)) return abs;
   let dir = abs;
+
   while (!exists(dir)) {
     const up = path.dirname(dir);
+
     if (up === dir) return abs;
     dir = up;
   }
+
   try {
     return path.join(real(dir), path.relative(dir, abs));
   } catch {
@@ -112,6 +121,7 @@ export function resolveTyped(roots: { cwd: string }, raw: string, p: typeof path
 
 function firstString(...values: unknown[]): string {
   for (const v of values) if (typeof v === "string" && v.trim() !== "") return v.trim();
+
   return "";
 }
 
@@ -121,6 +131,7 @@ function asDir(value: string): string {
 
 function within(p: typeof path, top: string, dir: string): boolean {
   const rel = p.relative(top, dir);
+
   return !rel.startsWith("..") && !p.isAbsolute(rel);
 }
 
@@ -128,9 +139,12 @@ function within(p: typeof path, top: string, dir: string): boolean {
 function checkoutIn(dir: string, facts: GitFacts | null, { p, exists, realpath }: RootsContext): string {
   if (facts === null) return dir;
   const top = realpath(p.resolve(facts.top));
+
   if (!within(p, top, dir)) return top;
+
   for (let d = dir; ; d = p.dirname(d)) {
     if (exists(p.join(d, INSTALL_MARKER))) return d;
+
     if (d === top) return top;
   }
 }
@@ -138,12 +152,15 @@ function checkoutIn(dir: string, facts: GitFacts | null, { p, exists, realpath }
 function rootsFor(start: string, ctx: RootsContext): { checkout: string; root: string } {
   const facts = ctx.git(start);
   const checkout = checkoutIn(start, facts, ctx);
+
   if (facts === null) return { checkout, root: checkout };
   const { p } = ctx;
   const gitDir = ctx.realpath(p.resolve(facts.gitDir));
   const commonDir = ctx.realpath(p.resolve(facts.commonDir));
+
   if (gitDir === commonDir || p.basename(commonDir) !== GIT_DIR_NAME) return { checkout, root: checkout };
   const main = p.dirname(commonDir);
+
   return { checkout, root: p.join(main, p.relative(ctx.realpath(p.resolve(facts.top)), checkout)) };
 }
 
@@ -165,6 +182,7 @@ function contextOf(options: RootsOptions): RootsContext & { env: Env; cwd: strin
 /** The workspace the harness sent: Grok's and Cursor's root, else Antigravity's first path; "" when none. */
 function sentWorkspace(data: HookInput): string {
   const paths = Array.isArray(data.workspacePaths) ? data.workspacePaths : [];
+
   return firstString(data.workspaceRoot, data.workspace_root, paths[0]);
 }
 
@@ -180,6 +198,7 @@ export function resolveRoots(input: HookInput | null = {}, options: RootsOptions
   const hookCwd = realpath(p.resolve(cwd, asDir(typed === "" ? "." : typed)));
   const candidate = firstString(given, env.GROK_WORKSPACE_ROOT, env.CLAUDE_PROJECT_DIR);
   const start = candidate === "" ? hookCwd : realpath(p.resolve(cwd, asDir(candidate)));
+
   return {
     checkout: rootsFor(hookCwd, ctx).checkout,
     cwd: hookCwd,

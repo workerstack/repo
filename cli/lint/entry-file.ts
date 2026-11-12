@@ -15,8 +15,10 @@ const MISSING = `${SHAPE}; import main and call it once`;
 function isBin(filename: string): boolean {
   const file = nearestManifest(path.dirname(filename));
   const manifest = file === null ? null : readManifest(file);
+
   if (manifest === null) return false;
   const self = path.resolve(filename);
+
   return manifest.bins.some((bin) => path.resolve(path.dirname(manifest.file), bin) === self);
 }
 
@@ -32,11 +34,13 @@ function importsMain(program: TSESTree.Program): boolean {
 function callsMain(statement: Statement): boolean {
   if (statement.type !== AST_NODE_TYPES.ExpressionStatement) return false;
   let call = statement.expression;
+
   if (
     call.type === AST_NODE_TYPES.AwaitExpression ||
     (call.type === AST_NODE_TYPES.UnaryExpression && call.operator === "void")
   )
     call = call.argument;
+
   return (
     call.type === AST_NODE_TYPES.CallExpression &&
     call.callee.type === AST_NODE_TYPES.Identifier &&
@@ -51,15 +55,19 @@ function callsMain(statement: Statement): boolean {
 export const entryFile: RepoRule<"missing" | "move"> = {
   create(context) {
     if (!isBin(context.filename)) return {};
+
     return {
       Program(program) {
         const imported = importsMain(program);
         let isCalled = false;
+
         for (const statement of program.body) {
           if (statement.type === AST_NODE_TYPES.ImportDeclaration) continue;
+
           if (imported && !isCalled && callsMain(statement)) isCalled = true;
           else context.report({ messageId: "move", node: statement });
         }
+
         if (!isCalled) context.report({ messageId: "missing", node: program });
       },
     };

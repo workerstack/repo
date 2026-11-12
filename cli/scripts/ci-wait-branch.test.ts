@@ -22,9 +22,11 @@ import type { RecordFs } from "./ci-wait-record.ts";
 import { waitMain } from "./ci-wait.ts";
 
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
+
 function tip(branch: string) {
   return `rev-parse --verify --quiet refs/remotes/origin/${branch}`;
 }
+
 const FEAT = { ...GIT, [tip("feat/x")]: ok(`${SHA}\n`) };
 const NOTHING = "nothing to wait on: ci runs on pushes to main and on pull requests, and feat/x has neither\n";
 
@@ -57,6 +59,7 @@ it("an unreadable PR list or default branch is not proof of nothing", async () =
 
 it("a dispatched run on a branch without a PR is waited on", async () => {
   const dispatched = run(9, "2026-11-09T10:00:00Z", "feat/x");
+
   const got = await world(
     FEAT,
     {
@@ -66,6 +69,7 @@ it("a dispatched run on a branch without a PR is waited on", async () => {
     },
     "feat/x",
   );
+
   expect(got).toMatchObject({ code: 0, out: "waiting for ci on b3f5e8a (run 9)…\npassed\n" });
   expect(got.calls.some((call) => call.startsWith("gh pr list"))).toBe(false);
 });
@@ -80,6 +84,7 @@ it("<branch> waits on that branch's tip without asking for HEAD or its name", as
     },
     "feat/x",
   );
+
   expect(got.code).toBe(0);
   expect(got.calls).toContain(`git ${tip("feat/x")}`);
   expect(got.calls.some((call) => call.startsWith("git branch -r"))).toBe(false);
@@ -97,6 +102,7 @@ it("a branch that is not on origin is named, exits 4 without a record, and is no
 
 it("a branch ahead of origin is waited on at origin's sha, not the local one", async () => {
   const origin = "c0ffee00123456789abcdef0123456789abcdef0";
+
   const got = await world(
     { ...GIT, [tip("feat/x")]: ok(`${origin}\n`), "rev-parse feat/x": ok(`${SHA}\n`) },
     {
@@ -106,6 +112,7 @@ it("a branch ahead of origin is waited on at origin's sha, not the local one", a
     },
     "feat/x",
   );
+
   expect(got).toMatchObject({ code: 0, out: "waiting for ci on c0ffee0 (run 9)…\npassed\n" });
   expect(got.calls).not.toContain("git rev-parse feat/x");
   expect(got.record(origin)).toMatchObject({ branch: "feat/x", outcome: "passed" });
@@ -136,22 +143,26 @@ it("the bound counts the time spent finding the run", async () => {
 
 it("each outcome is recorded by full sha with its branch, failed jobs and time", async () => {
   const jobs = [job("test (windows-latest)", "failure"), job("lint", "success")];
+
   const got = await world(GIT, {
     ...GH,
     "run view 123 --json": view("failure", jobs),
     "run view 123 --log-failed": ok("x\n"),
   });
+
   expect(got.record(SHA)).toStrictEqual({
     at: "1970-01-01T00:00:00.000Z",
     branch: "main",
     failed: ["test (windows-latest)"],
     outcome: "failed",
   });
+
   const superseded = await world(GIT, {
     ...GH,
     [BRANCH_LIST]: ok(JSON.stringify([{ createdAt: "2026-11-09T10:05:00Z", databaseId: 124 }])),
     "run view 123 --json": view("cancelled", []),
   });
+
   expect(superseded.record(SHA)).toMatchObject({ outcome: "superseded" });
 });
 
@@ -171,14 +182,17 @@ it("a record that cannot be written is said on stderr and does not change the ex
     stderr: (s) => errs.push(s),
     stdout: () => {},
   });
+
   expect(code).toBe(0);
   expect(errs.join("")).toBe(`repo ci wait: cannot record the outcome for ${SHA}\n`);
 });
+
 const errs: string[] = [];
 
 it("with no runners injected it uses the real git, gh, clock and sleep, and outside a checkout says so", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-real-"));
   const err: string[] = [];
+
   try {
     const code = await waitMain({ cwd: dir, stderr: (s) => err.push(s), stdout: () => {} });
     expect(code).toBe(4);

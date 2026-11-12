@@ -20,15 +20,20 @@ export function stockBlock(rows: readonly string[], hashes: readonly string[]): 
   const wanted = new Set(hashes);
   const lines = rows.map((row) => (row.endsWith(CR) ? row.slice(0, row.length - CR.length) : row));
   let best: StockBlock | null = null;
+
   if (wanted.size === 0) return best;
+
   for (const [at, first] of lines.entries()) {
     const hash = createHash("sha256").update(first);
+
     for (const [index, line] of [first, ...lines.slice(at + 1)].entries()) {
       if (index > 0) hash.update(`\n${line}`);
       const found = matches(hash, wanted) ? trimmed(lines, at, at + index + 1) : null;
+
       if (found !== null && (best === null || found.end - found.at > best.end - best.at)) best = found;
     }
   }
+
   return best;
 }
 
@@ -44,6 +49,8 @@ function short(hash: Hash): string {
 /** The run `at` to `end` without its blank rows at the end; null when no row of it is left. */
 function trimmed(lines: readonly string[], at: number, end: number): StockBlock | null {
   const kept = lines.slice(at, end);
+
   while (kept.length > 0 && kept[kept.length - 1]?.trim() === "") kept.pop();
+
   return kept.length === 0 ? null : { at, end: at + kept.length };
 }

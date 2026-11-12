@@ -16,6 +16,7 @@ const HIGH = 61;
 function floor(branches: number) {
   return { branches, functions: 90, statements: 80 };
 }
+
 const JOB = "cli/scripts/job.ts";
 
 describe("ratchetProblems, files gone, unreadable or oddly shaped here", () => {
@@ -28,6 +29,7 @@ describe("ratchetProblems, files gone, unreadable or oddly shaped here", () => {
 
   it("reads a deleted floors, list and baseline file as empty", () => {
     const dir = repoOnMain(main);
+
     for (const rel of [FLOORS, FAILURES, BASELINE]) fs.rmSync(path.join(dir, rel));
     expect(ratchetProblems(dir)).toStrictEqual([
       `${FLOORS}: ${JOB} has no floor but main has one and the file exists; restore it`,

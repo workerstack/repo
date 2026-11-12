@@ -26,9 +26,12 @@ export function loadJevKey({
   home = os.homedir(),
 }: { env?: Env | undefined; home?: string | undefined } = {}): string {
   const fromEnv = (env.TYPESAFE_API_KEY ?? "").trim();
+
   if (fromEnv !== "") return fromEnv;
+
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(jevJsonPath(home), "utf8"));
+
     return isRecord(parsed) && Boolean(parsed.apiKey) ? String(parsed.apiKey).trim() : "";
   } catch {
     return "";
@@ -37,14 +40,21 @@ export function loadJevKey({
 
 export function retryWaitMs(header: string | null | undefined, now: number = Date.now()): number | null {
   const raw = (header ?? "").trim();
+
   if (raw === "") return null;
+
   if (SECONDS_RE.test(raw)) {
     const ms = Number(raw) * MS_PER_SECOND;
+
     return ms <= MAX_RETRY_WAIT_MS ? ms : null;
   }
+
   const when = Date.parse(raw);
+
   if (Number.isNaN(when)) return null;
   const ms = when - now;
+
   if (ms < 0) return 0;
+
   return ms <= MAX_RETRY_WAIT_MS ? ms : null;
 }

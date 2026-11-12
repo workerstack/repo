@@ -3,25 +3,33 @@ import { describe, expect, it } from "vitest";
 import { registryDoc, releaseWait } from "./wait.ts";
 
 type Answer = () => Response | Error;
+
 function doc(versions: string[], tags: Record<string, string>): Answer {
   const body = { "dist-tags": tags, versions: Object.fromEntries(versions.map((v) => [v, {}])) };
+
   return () => new Response(JSON.stringify(body));
 }
+
 function missing(): Response {
   return new Response("{}", { status: 404 });
 }
+
 function bad(): Response {
   return new Response("not json");
 }
+
 function offline(): Error {
   return new Error("offline");
 }
+
 function down(): Response {
   return new Response("down", { status: 503 });
 }
+
 function odd(): Response {
   return new Response('{"x":1}');
 }
+
 const SPEC = "@workerstack/repo@1.1.0-rc.0";
 
 /** Runs `release wait`; `answers` are the registry's replies in order, the last repeating. */
@@ -31,16 +39,21 @@ async function wait(argv: string[], answers: Answer[]) {
   const urls: string[] = [];
   const sleeps: number[] = [];
   let clock = 0;
+
   function fetcher(url: string): Promise<Response> {
     urls.push(url);
     const got = (answers.length > 1 ? answers.shift() : answers[0])?.();
+
     return got instanceof Response ? Promise.resolve(got) : Promise.reject(got);
   }
+
   function sleep(ms: number): Promise<void> {
     clock += ms;
     sleeps.push(ms);
+
     return Promise.resolve();
   }
+
   const io = {
     fetch: fetcher,
     now: () => clock,
@@ -48,7 +61,9 @@ async function wait(argv: string[], answers: Answer[]) {
     stderr: (s: string) => err.push(s),
     stdout: (s: string) => out.push(s),
   };
+
   const code = await releaseWait(argv, io);
+
   return { code, err: err.join(""), out: out.join(""), sleeps, urls };
 }
 
@@ -115,10 +130,13 @@ describe("repo release wait gives up", () => {
 describe("registryDoc asks the registry it is given", () => {
   it("fetches from a given registry, and from npm when none is given", async () => {
     const urls: string[] = [];
+
     function fetcher(url: string): Promise<Response> {
       urls.push(url);
+
       return Promise.resolve(new Response("{}", { status: 404 }));
     }
+
     await registryDoc(fetcher, "@workerstack/repo", "http://localhost:4873/");
     await registryDoc(fetcher, "@workerstack/repo");
     expect(urls).toStrictEqual([

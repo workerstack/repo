@@ -11,16 +11,20 @@ const MATRIX_NAME = "${{ matrix.label }}";
 function yamlNames(ctx: SyncContext): string[] {
   const output = release(ctx).outputs[0];
   const text = output?.kind === "file" ? output.content : "";
+
   return text.split(/^\n/m).flatMap((job) => {
     const name = /^ {4}name: (.*)$/m.exec(job)?.[1];
+
     if (name === undefined) return [];
     const labels = [...job.matchAll(/label: (.*) \}$/gm)].map((match) => match[1] ?? "");
+
     return name.includes(MATRIX_NAME) ? labels.map((label) => name.replace(MATRIX_NAME, label)) : [name];
   });
 }
 
 const E2E = { "test:e2e": "vitest" };
 const CARGO = { "Cargo.toml": "[package]\n" };
+
 const VARIANTS: [string, PackageJson, Record<string, string>][] = [
   ["plain", {}, {}],
   ["e2e", { scripts: E2E }, {}],

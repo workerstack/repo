@@ -41,6 +41,7 @@ export function nodelessGatesCase(get: GetSandbox) {
       expect(fmt.status, tail(fmt.out)).toBe(0);
       expect(fmt.stdout).toContain("All matched files use the correct format");
       sb.write("src/planted.ts", `${NON_NULL}\n${FLOATING}`);
+
       try {
         const lint = await sb.run("bun", ["repo", "lint"], { env });
         expect(lint.status, tail(lint.out)).toBe(1);
@@ -50,6 +51,7 @@ export function nodelessGatesCase(get: GetSandbox) {
       } finally {
         fs.rmSync(path.join(sb.repo, "src/planted.ts"));
       }
+
       await expectGatesPass(sb, env);
     },
   );
@@ -61,6 +63,7 @@ export function pluginAndSkipCases(get: GetSandbox) {
     const sb = get();
     sb.write("src/stateful.ts", "let count = 0;\nexport const next = (): number => ++count;\n");
     sb.write("src/polyfill.ts", 'import "./stateful.ts";\n');
+
     try {
       const lint = await sb.run("bun", ["repo", "lint"]);
       expect(lint.status, tail(lint.out)).toBe(1);
@@ -69,6 +72,7 @@ export function pluginAndSkipCases(get: GetSandbox) {
     } finally {
       for (const rel of ["src/stateful.ts", "src/polyfill.ts"]) fs.rmSync(path.join(sb.repo, rel));
     }
+
     expectClean(sb, await sb.run("bun", ["repo", "lint"]));
   });
 
@@ -76,6 +80,7 @@ export function pluginAndSkipCases(get: GetSandbox) {
     const sb = get();
     const original = sb.read("workerstack.config.ts");
     sb.write("src/skipped.ts", NON_NULL);
+
     try {
       await expectSkipsChecked(sb, original);
     } finally {
@@ -83,6 +88,7 @@ export function pluginAndSkipCases(get: GetSandbox) {
       sb.write("workerstack.config.ts", original);
       await sb.run("bun", ["repo", "sync"]);
     }
+
     expect(sb.read(".oxlintrc.json")).not.toContain("src/skipped.ts");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   });

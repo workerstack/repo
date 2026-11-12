@@ -4,6 +4,7 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
 
 const MESSAGE = "coverage ignore comments hide untested code; delete the code or add a test that runs it";
+
 function messagesOf(code: string) {
   return reportsOf(noV8Ignore, { "a.ts": code }).map((report) => report.message);
 }

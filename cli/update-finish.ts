@@ -11,6 +11,7 @@ export type Run = { io: UpdateIo; command: string; root: string };
 /** Prints each line to stderr and returns the exit code. */
 export function fail(io: UpdateIo, lines: readonly string[], code: number = EXIT_FAIL): number {
   for (const line of lines) io.err(line);
+
   return code;
 }
 
@@ -39,11 +40,15 @@ function syncLines(io: UpdateIo, result: ToolResult): void {
 export function finish(run: Run, files: string[]): number {
   const { io, command, root } = run;
   const installed = io.install(root);
+
   if (installed.code !== 0) return fail(io, [said(command, installFailed(installed.code)), ...indented(installed)]);
   syncLines(io, installed);
+
   if (!fs.existsSync(path.join(root, OXFMT_CONFIG_PATH))) return 0;
   const formatted = io.format(root, files);
+
   if (formatted.code === 0) return 0;
   const shown = files.map((file) => file.split(path.sep).join(POSIX)).join(", ");
+
   return fail(io, [said(command, formatFailed(shown)), ...indented(formatted)]);
 }

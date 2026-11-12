@@ -30,6 +30,7 @@ import { isTestFile } from "./test-files.ts";
 export const REPO_SCOPES: string[] = ["repo", "deps", "ci"];
 
 const MAX_HEADER = 100;
+
 /** The line above the diff `git commit --verbose` appends; everything from it down is not the message. */
 const SCISSORS = "# ------------------------ >8 ------------------------";
 
@@ -50,6 +51,7 @@ export type CommitRules = {
   /** The package owning a repo-relative file. */
   owners: (file: string) => Owner;
 };
+
 /** Where `repo commit-msg` runs and prints; `redProof` is the red-proof runner, replaceable in tests. */
 export type CommitMsgIo = {
   cwd: string;
@@ -60,9 +62,12 @@ export type CommitMsgIo = {
 /** The scope problem, if any: kebab-case always, and one of `scopes` or the repo scopes when `scopes` is given. */
 function scopeProblems(scope: string | undefined, scopes: string[] | undefined): string[] {
   if (scope === undefined) return [];
+
   if (!KEBAB_SCOPE.test(scope)) return [`the scope "${scope}" must be lowercase kebab-case`];
+
   if (scopes === undefined || scopes.includes(scope) || REPO_SCOPES.includes(scope)) return [];
   const known = `one of ${REPO_SCOPES.join(", ")} (${scopes.join(", ")})`;
+
   return [`unknown scope "${scope}"; use a workspace package name or ${known}`];
 }
 
@@ -72,9 +77,12 @@ type Body = { problems: string[]; free: string[] };
 /** The refusal of one body line, or null when the line is not a trailer, a `Breaking:` line or an attribution. */
 function lineProblem(line: string): string | null {
   if (ATTRIBUTION.test(line)) return `remove the attribution "${line}"; the work is the author's`;
+
   if (BREAKING_KEY.test(line)) return `write "${line}" as a "BREAKING CHANGE: <what breaks>" footer`;
+
   if (KEY_VALUE.test(line))
     return `remove "${line}"; commits carry no Key: value lines (write a why as a plain sentence)`;
+
   return null;
 }
 
@@ -86,24 +94,32 @@ function readBody(body: readonly string[]): Body {
   const problems: string[] = [];
   const free: string[] = [];
   let isInFooter = false;
+
   for (const raw of body) {
     const line = raw.trim();
+
     if (line === "" || BREAKING_FOOTER.test(line)) {
       isInFooter = line !== "";
       continue;
     }
+
     const problem = lineProblem(line);
+
     if (problem !== null) problems.push(problem);
     else if (!isInFooter && !REVERT_LINE.test(line)) free.push(line);
   }
+
   return { free, problems };
 }
 
 /** The free-text problem, if any: under the size limit the body holds none; over it, exactly one line says why. */
 function sizeProblems(free: readonly string[], { changedLines, maxChangedLines }: CommitFacts): string[] {
   if (changedLines <= maxChangedLines) return free.length === 0 ? [] : [FREE_BODY];
+
   if (free.length === 1) return [];
+
   if (free.length > 1) return [ONE_WHY];
+
   return [
     `the commit changes ${changedLines} lines, over the limit of ${maxChangedLines}; ` +
       "add a body line saying why, or split it",
@@ -114,6 +130,7 @@ function sizeProblems(free: readonly string[], { changedLines, maxChangedLines }
 function messageLines(message: string): string[] {
   const all = message.split("\n");
   const scissors = all.indexOf(SCISSORS);
+
   return (scissors === NOT_FOUND ? all : all.slice(0, scissors)).filter((line) => !line.startsWith("#"));
 }
 
@@ -128,10 +145,13 @@ function inspect(message: string, facts: CommitFacts): Inspected {
   const lines = messageLines(message);
   const at = lines.findIndex((line) => line.trim() !== "");
   const header = lines[at];
+
   if (header === undefined) return { problems: ["the commit message is empty"] };
+
   if (header.startsWith("Merge ")) return { problems: [] };
 
   const match = HEADER.exec(header);
+
   if (match === null) {
     return {
       problems: ['the header must be "type(scope)!: subject", e.g. "fix(paths): compare hook paths canonically"'],
@@ -140,16 +160,22 @@ function inspect(message: string, facts: CommitFacts): Inspected {
 
   const { type, scope, subject } = match.groups /* HEADER always captures type and subject */ as Header;
   const problems: string[] = [];
+
   if (!TYPES.includes(type)) problems.push(`unknown type "${type}"; use one of ${TYPES.join(", ")}`);
   problems.push(...scopeProblems(scope, facts.scopes));
+
   if (CAPITAL_START.test(subject)) problems.push("the subject must start lowercase");
+
   if (subject.endsWith(".")) problems.push("the subject must not end with a period");
+
   if (header.length > MAX_HEADER) problems.push(`the header is ${header.length} characters; keep it to ${MAX_HEADER}`);
+
   if (NEEDS_TEST.includes(type) && !facts.stagedFiles.some(isTestFile))
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
 
   const body = lines.slice(at + 1);
   const read = readBody(body);
+
   return {
     kind: { breaking: isBreaking(header, body), type },
     problems: [...problems, ...read.problems, ...sizeProblems(read.free, facts)],
@@ -168,12 +194,16 @@ export function checkCommitMessage(message: string, facts: CommitFacts): string[
 async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   const root = findRoot(cwd);
   const owners = ownerLookup(cwd);
+
   if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES, owners, tdd: false };
   const loaded = await loadConfig(root);
+
   if (!loaded.ok) return loaded.errors;
   const workspace = readWorkspace(root);
+
   if (!workspace.ok) return workspace.errors;
   const { tdd, commit } = loaded.config;
+
   return { maxChangedLines: commit.maxChangedLines, owners, scopes: scopesOf(workspace.workspace), tdd };
 }
 
@@ -181,6 +211,7 @@ async function commitRules(cwd: string): Promise<CommitRules | string[]> {
 function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
   const diff = runGit(io.cwd, ["diff", "--cached", "--name-status", "--no-renames", "-z"]);
   const change = parseNameStatus(diff.stdout);
+
   return proofApplies(change, rules) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
 }
 
@@ -193,10 +224,14 @@ function judge(
   const staged = stagedChange(io.cwd);
   const facts = { ...rules, changedLines: staged.changedLines, stagedFiles: staged.files };
   const { problems, kind } = inspect(message, facts);
+
   const proof =
     kind !== undefined && problems.length === 0 && NEEDS_TEST.includes(kind.type) ? proveRed(rules, io) : null;
+
   if (kind !== undefined) problems.push(...changelogProblems(kind, staged.files, rules.owners));
+
   if (proof?.ok === false) problems.push(proof.problem);
+
   return { problems, proof };
 }
 
@@ -208,11 +243,15 @@ function judge(
 export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: CommitMsgIo): number {
   const message = fs.readFileSync(path.resolve(io.cwd, messageFile), "utf8");
   const { problems, proof } = judge(message, rules, io);
+
   if (problems.length > 0) {
     io.stderr(`commit-msg: the message was refused\n${problems.map((problem) => `  - ${problem}\n`).join("")}`);
+
     return 1;
   }
+
   if (proof?.ok === true) io.stderr(`${proof.line}\n`);
+
   return 0;
 }
 
@@ -227,15 +266,21 @@ export async function main(
 ): Promise<number> {
   const ranged = argv[0] === RANGE_FLAG && argv.length === RANGE_ARGS;
   const [file] = argv;
+
   if (file === undefined || (file === RANGE_FLAG ? !ranged : argv.length > 1)) {
     io.stderr(NAME_A_SOURCE);
+
     return 1;
   }
+
   const rules = await commitRules(io.cwd);
+
   if (Array.isArray(rules)) {
     for (const error of rules) io.stderr(`repo commit-msg: ${error}\n`);
+
     return 1;
   }
+
   return ranged
     ? commitRange(argv[1] /* the range follows the flag */ as string, { check: checkCommitMessage, rules }, io)
     : runCommitMsgHook(file, rules, io);

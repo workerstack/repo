@@ -21,9 +21,11 @@ vi.mock("@clack/prompts", () => ({
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
 
 type Stream = NodeJS.ReadStream & NodeJS.WriteStream;
+
 function tty(): Stream {
   return { isTTY: true } /* isInteractive reads only isTTY */ as Stream;
 }
+
 function notTty(): Stream {
   return { isTTY: false } /* isInteractive reads only isTTY */ as Stream;
 }
@@ -76,6 +78,7 @@ describe("isInteractive", () => {
     Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
     process.argv = ["node", "repo"];
     vi.stubEnv("CI", undefined);
+
     try {
       expect(isInteractive()).toBe(true);
       process.argv = ["node", "repo", "--yes"];
@@ -102,9 +105,11 @@ describe("bailIfCancel", () => {
 
   it("cancel Aborted and exit 0", () => {
     clackIsCancel.mockReturnValue(true);
+
     const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
     });
+
     expect(() => bailIfCancel(Symbol("cancel"))).toThrow("EXIT");
     expect(clackCancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
@@ -146,9 +151,11 @@ describe("clack wrappers", () => {
   it("select cancel exits 0", async () => {
     clackSelect.mockResolvedValue("x");
     clackIsCancel.mockReturnValue(true);
+
     const exit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("EXIT");
     });
+
     await expect(select({} /* the mocked select reads no options */ as Parameters<typeof select>[0])).rejects.toThrow(
       "EXIT",
     );

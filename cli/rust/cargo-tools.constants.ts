@@ -5,40 +5,58 @@ export type Pin = { tool: "deny" | "shear" | "nextest" | "llvm-cov" | "semver-ch
 
 /** The cargo-deny release repo runs; bumping it is a repo release. */
 export const DENY_PIN: Pin = { tool: "deny", version: "0.20.2" };
+
 /** The cargo-shear release repo runs; bumping it is a repo release. */
 export const SHEAR_PIN: Pin = { tool: "shear", version: "1.14.0" };
+
 /** The cargo-nextest release repo runs; bumping it is a repo release. */
 export const NEXTEST_PIN: Pin = { tool: "nextest", version: "0.9.151" };
+
 /** The cargo-llvm-cov release repo runs; bumping it is a repo release. */
 export const LLVM_COV_PIN: Pin = { tool: "llvm-cov", version: "0.9.1" };
+
 /** The cargo-semver-checks release repo runs; bumping it is a repo release. */
 export const SEMVER_CHECKS_PIN: Pin = { tool: "semver-checks", version: "0.51.0" };
+
 /** The cargo-mutants release repo runs; bumping it is a repo release. */
 export const CARGO_MUTANTS_PIN: Pin = { tool: "mutants", version: "27.1.0" };
+
 /** The first `X.Y.Z` of a tool's `--version` output, as in `cargo-deny 0.20.2` or `Version: 1.14.0`. */
 export const SEMVER: RegExp = /\d+\.\d+\.\d+/;
+
 /** What cargo prints on stderr for a subcommand that is not installed. */
 export const NO_SUCH_COMMAND: string = "no such command";
+
 /** The longest unreadable text a problem quotes, in characters. */
 export const QUOTE_LIMIT: number = 80;
+
 /** The `severity` of a diagnostic that fails cargo-deny. */
 export const DENY_ERROR: string = "error";
+
 /** The `level` of a log line that fails cargo-deny. */
 export const LOG_ERROR: string = "ERROR";
+
 /** The `type` of a cargo-deny line that is a diagnostic. */
 export const DIAGNOSTIC_TYPE: string = "diagnostic";
+
 /** The `type` of a cargo-deny line that is a log message. */
 export const LOG_TYPE: string = "log";
+
 /** The start of the log message that says the advisory database could not be fetched. */
 export const FETCH_FAILED: string = "failed to fetch advisory database";
+
 /** The code of a shear finding for a dependency nothing uses. */
 export const UNUSED_DEPENDENCY: string = "shear/unused_dependency";
+
 /** What a person does about an unused dependency. */
 export const UNUSED_HELP: string = "remove it or list it under [package.metadata.cargo-shear] ignored";
+
 /** The highest shear exit code that still means it ran: 0 is clean and 1 is findings. */
 export const SHEAR_MAX_FINDING_EXIT: number = 1;
+
 /** The cargo-deny codes that say a crate has no license; the crate check already names such a workspace crate. */
 export const UNLICENSED_CODES: readonly string[] = ["unlicensed", "no-license-field"];
+
 /** The cargo-deny diagnostic codes of each section; a code in none of them prints with no section. */
 export const DENY_SECTIONS: Readonly<Record<string, readonly string[]>> = {
   advisories: [

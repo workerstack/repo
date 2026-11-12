@@ -23,12 +23,14 @@ function removeThenFail(target: string) {
 /** The exit code of one call in `home` that the service answers. */
 async function okCode(home: string): Promise<number> {
   const result = await go({ fetchImpl: ok(), home });
+
   return result.code;
 }
 
 /** `okCode` when the first lock removal finds the directory already gone. */
 function okCodeWhenRemoveRaced(home: string): Promise<number> {
   vi.spyOn(fs, "rmdirSync").mockImplementationOnce(removeThenFail(lockPath(home)));
+
   return okCode(home);
 }
 
@@ -69,6 +71,7 @@ it("waits for a lock that its owner releases", async () => {
   vi.spyOn(fs, "statSync").mockImplementationOnce((target) => {
     const seen = realStat(String(target));
     fs.rmdirSync(String(target));
+
     return seen;
   });
   expect(await okCode(home)).toBe(0);
@@ -85,6 +88,7 @@ it("rejects when taking the lock fails for another reason", async () => {
   const real = fs.mkdirSync.bind(fs);
   vi.spyOn(fs, "mkdirSync").mockImplementation((target, options) => {
     if (String(target) === lockPath(home)) throw Object.assign(new Error("EACCES"), { code: "EACCES" });
+
     return real(target, options);
   });
   await expect(go({ fetchImpl: ok(), home })).rejects.toThrow("EACCES");

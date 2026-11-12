@@ -45,6 +45,7 @@ const MANIFESTS: Record<string, string> = {
     peerDependencies: { "@scope/peer": "1" },
   }),
 };
+
 const WEB = "packages/web/src/a.ts";
 
 /** What the rule reports for `code` at `file` in the repo above. */
@@ -55,9 +56,11 @@ function messagesOf(code: string, file = WEB) {
 function undeclared(name: string, manifest = "packages/web/package.json") {
   return `"${name}" is not declared in ${manifest}; add it to its dependencies`;
 }
+
 function reaches(specifier: string, dir = "packages/api", name = "@app/api") {
   return `"${specifier}" reaches into ${dir}; import it as "${name}"`;
 }
+
 function nameless(specifier: string, dir: string) {
   return `"${specifier}" reaches into ${dir}; name it in ${dir}/package.json and import it by that name`;
 }

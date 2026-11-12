@@ -12,6 +12,7 @@ function total(reports: readonly RootReport[]): Parameters<typeof okLine>[0] {
   function sum(pick: (report: RootReport) => number) {
     return reports.reduce((all, report) => all + pick(report), 0);
   }
+
   return {
     examples: sum((report) => report.examples),
     exports: sum((report) => report.exports),
@@ -24,16 +25,22 @@ function total(reports: readonly RootReport[]): Parameters<typeof okLine>[0] {
 function checkAll(io: DocsIo): number {
   const root = findRoot(io.cwd) ?? io.cwd;
   const read = readWorkspace(root);
+
   if (!read.ok) {
     for (const error of read.errors) io.err(`${error}\n`);
+
     return EXIT_FAILED;
   }
+
   const { workspace } = read;
   const roots = docRootsOf(root, [{ dir: "", manifest: workspace.manifest }, ...workspace.packages]);
   const reports = roots.map((docRoot) => checkDocRoot(root, docRoot, io.tools));
   const findings = reports.flatMap((one) => one.findings);
+
   for (const finding of findings) io.err(`${finding}\n`);
+
   if (findings.length === 0) io.out(`${okLine(total(reports))}\n`);
+
   return findings.length === 0 ? 0 : EXIT_FAILED;
 }
 
@@ -41,8 +48,11 @@ function checkAll(io: DocsIo): number {
 export async function main(argv: string[], io: DocsIo = docsIo()): Promise<number> {
   if (argv.some((arg) => arg !== FLAG_CHECK)) {
     io.err(`${DOCS_USAGE}\n`);
+
     return EXIT_USAGE;
   }
+
   const synced = argv.includes(FLAG_CHECK) ? 0 : await io.sync(io.cwd);
+
   return synced === 0 ? checkAll(io) : synced;
 }

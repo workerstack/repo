@@ -7,6 +7,7 @@ import { cssKit, UNKNOWN_CSS } from "./__fixtures__/css-kit.ts";
 import { main } from "./stylelint-run.ts";
 
 const saved = process.cwd();
+
 afterEach(() => {
   process.chdir(saved);
   cleanTemps();
@@ -16,11 +17,13 @@ afterEach(() => {
 async function run(argv: string[]) {
   const out: string[] = [];
   const err: string[] = [];
+
   const code = await main(
     argv,
     (text) => out.push(text),
     (text) => err.push(text),
   );
+
   return { code, err, out };
 }
 

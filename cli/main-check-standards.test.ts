@@ -3,11 +3,13 @@ import fs from "node:fs";
 import { expect, it, vi } from "vitest";
 
 const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+
 import { usePacks, writeCleanManifest, writeConfigs, writeStandardsOutputs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
 
 const { repo, written } = useMainCheckRepo(fakes);
+
 vi.setConfig({ testTimeout: 60_000 });
 
 /** A lint.skip entry turning `rule` off in `file`. */
@@ -73,10 +75,12 @@ it("with the standards pack on, prints each live lint.skip and its count, and ex
   writeCleanManifest(repo);
   const reason = "the lookup result is always present";
   const rule = "typescript/no-non-null-assertion";
+
   const config = {
     lint: { skip: [skip("src/a.ts", rule, reason), skip("src/b.ts", rule, reason)] },
     packs: ["standards"],
   };
+
   repo.put("workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   repo.put("src/a.ts", "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
   repo.put("src/b.ts", "export const b = 1;\n");
@@ -99,10 +103,12 @@ rule's hits and counts the other over the baseline`, async () => {
   const config = { lint: { skip: [skip("src/retry.ts", "repo/magic-number", reason)] }, packs: ["standards"] };
   repo.put("workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   writeStandardsOutputs(repo);
+
   const retry = [
     "export function wait(): number {\n  return 5000 + 3;\n}\n",
     'export function is(m: string): boolean {\n  return m === "fast";\n}\n',
-  ].join("");
+  ].join("\n");
+
   repo.put("src/retry.ts", retry);
   await start();
   expect(written.out).toStrictEqual([
@@ -120,12 +126,14 @@ problem and counts an untested guard over the baseline`, async () => {
   writeCleanManifest(repo);
   usePacks(repo, "standards");
   writeStandardsOutputs(repo);
+
   const guard = [
     "export function isUser(value: unknown): value is string[] {",
     "  return Array.isArray(value);",
     "}",
     "",
   ];
+
   repo.put("src/is-user.ts", guard.join("\n"));
   repo.put("src/user.reject.ts", 'lod("u2");\n');
   await start();

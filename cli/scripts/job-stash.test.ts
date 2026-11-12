@@ -85,6 +85,7 @@ it("resolveStashFile reads an absolute path in a symlinked spelling of the root"
   const dir = plant();
   plantFiles(stashDirOf(dir), { "exec-q1.txt": "hi\n" });
   const alias = aliasOf(dir);
+
   try {
     const viaAlias = path.join(alias, STASH_REL, "exec-q1.txt");
     expect(resolveStashFile({ cwd: dir, root: dir }, viaAlias)).toBe(path.join(dir, STASH_REL, "exec-q1.txt"));

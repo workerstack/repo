@@ -17,13 +17,16 @@ function dayOf(nowMs: number): string {
 /** `value` as a number; 0 when it is not one. */
 function countOf(value: unknown): number {
   const n = Number(value);
+
   return Number.isNaN(n) ? 0 : n;
 }
 
 function readLedger(file: string, day: string): Ledger {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+
     if (!isRecord(parsed) || parsed.day !== day) return { day, input_tokens: 0, requests: 0 };
+
     return {
       day,
       input_tokens: countOf(parsed.input_tokens),
@@ -36,6 +39,7 @@ function readLedger(file: string, day: string): Ledger {
 
 function writeLedger(file: string, row: Ledger): void {
   fs.writeFileSync(file, `${JSON.stringify(row)}\n`, { mode: SECRET_FILE_MODE });
+
   try {
     fs.chmodSync(file, SECRET_FILE_MODE);
   } catch {
@@ -49,7 +53,9 @@ export function beginAttempt(home: string, nowMs: number, estimate: number): Beg
     const file = jevUsagePath(home);
     const day = dayOf(nowMs);
     const cur = readLedger(file, day);
+
     if (cur.requests >= MAX_REQUESTS_PER_DAY) return { stop: "requests" };
+
     if (cur.input_tokens >= MAX_INPUT_TOKENS_PER_DAY || cur.input_tokens + estimate > MAX_INPUT_TOKENS_PER_DAY)
       return { stop: "tokens" };
 
@@ -58,7 +64,9 @@ export function beginAttempt(home: string, nowMs: number, estimate: number): Beg
       input_tokens: cur.input_tokens + estimate,
       requests: cur.requests + 1,
     };
+
     writeLedger(file, next);
+
     return { estimate, ok: true };
   });
 }
@@ -71,6 +79,7 @@ export function settleTokens({ home, nowMs, estimate, actual }: Settle): { ok: t
     const cur = readLedger(file, day);
     const inputTokens = Math.max(0, cur.input_tokens - estimate + actual);
     writeLedger(file, { day, input_tokens: inputTokens, requests: cur.requests });
+
     return { ok: true };
   });
 }

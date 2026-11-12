@@ -19,10 +19,12 @@ export const AUTORUN_NEEDLES: string[] = [
   VALIDATE_SCRIPT,
   SIM_SCRIPT,
 ];
+
 export const OWNED_HOOKS: readonly HookName[] = ["scrub-spawn-prompt", "gate-fat-tools"];
 
 /** The consumer's git hooks dir, and the hooks it must hold once it exists. */
 export const GIT_HOOKS_DIR = "scripts/git-hooks";
+
 export const GIT_HOOKS: string[] = [
   "scripts/git-hooks/pre-commit",
   "scripts/git-hooks/pre-commit.mjs",
@@ -33,17 +35,22 @@ export const GIT_HOOKS: string[] = [
 /** Claude and Codex's write tools for the consumer's PreToolUse check. */
 export const PRE_WRITE_MATCHER = "Write|Edit";
 export const POST_WRITE_MATCHER = "Write|Edit|write|search_replace";
+
 /** Antigravity's write tools. Matchers the generator does not emit must use these names; it only translates its own. */
 export const AGY_WRITE_MATCHER = "write_file|edit_file";
+
 /** Cursor's write tool. Entries the generator does not emit must use its name; Cursor has no Edit tool. */
 export const CURSOR_WRITE_MATCHER = "Write";
 
 /** The seconds the folder map hook may run. */
 export const MAP_TIMEOUT_S = 5;
+
 /** The indent the union writes its JSON files with. */
 export const JSON_INDENT = 2;
+
 /** The key a hook entry holds its command under. */
 export const COMMAND_KEY = "command";
+
 /** The stock hooks source, which may hold the short `repo hook <name>` form. */
 export const RULESYNC_ID = "rulesync";
 

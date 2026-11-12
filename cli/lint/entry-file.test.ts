@@ -6,10 +6,12 @@ import { entryFile } from "./entry-file.ts";
 const MESSAGE = "a bin file holds only imports and one main() call; move this into the module main comes from";
 const MISSING = "a bin file holds only imports and one main() call; import main and call it once";
 const IMPORT = 'import { main } from "../src/main.ts";\n';
+
 const TYPED_MAIN =
   'import type { Argv } from "../src/argv.ts";\n' +
   'import { start as main } from "../src/main.ts";\n' +
   "await main([] as Argv);";
+
 function manifest(bin: unknown) {
   return JSON.stringify({ bin, name: "app" });
 }
@@ -71,6 +73,7 @@ describe("entry-file fails", () => {
       "packages/cli/bin/cli.ts": "export const run = 1;",
       "packages/cli/package.json": manifest({ cli: "./bin/cli.ts" }),
     };
+
     expect(reportsOf(entryFile, fixture).map((report) => report.message)).toStrictEqual([MESSAGE, MISSING]);
   });
 });

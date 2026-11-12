@@ -25,6 +25,7 @@ export function isLessonFile(filePath: string, workspaceRoot: string | null | un
 function readSeen(seenFile: string): string[] {
   try {
     const parsed: unknown = JSON.parse(fs.readFileSync(seenFile, "utf8"));
+
     return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
   } catch {
     return [];
@@ -37,19 +38,23 @@ function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow
   const seenFile = sid === "" ? "" : path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json");
   const seen = seenFile === "" ? [] : readSeen(seenFile);
   const fresh = rows.filter((r) => !seen.includes(r.file));
+
   if (seenFile !== "" && fresh.length > 0) {
     fs.mkdirSync(path.dirname(seenFile), { recursive: true });
     fs.writeFileSync(seenFile, JSON.stringify([...seen, ...fresh.map((r) => r.file)]));
   }
+
   return fresh;
 }
 
 function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
   const roots = resolveRoots(data);
   const target = writeTarget(toolInput);
+
   if (target === "") return null;
   const abs = resolveTyped(roots, target);
   const holder = holdingCheckout(abs, roots);
+
   if (
     isLessonFile(abs, holder) ||
     rewriteScratchPath(abs, roots) !== null ||
@@ -57,9 +62,11 @@ function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
   )
     return null;
   const fresh = unseenRows(data, roots, matchLessons({ files: [abs], roots }));
+
   if (fresh.length === 0) return null;
   const rel = path.relative(holder, abs).split(path.sep).join("/");
   const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
+
   return {
     hookSpecificOutput: {
       additionalContext: `Recorded lessons match ${rel}:\n${lines.join("\n")}`,
@@ -84,8 +91,10 @@ export function lessonWrite(write: WriteCase, ws: string): HookResult {
   const { data, roots, rawPath, toolInput } = write;
   const abs = path.resolve(ws, rawPath);
   const shared = mainCheckoutWriteReason(abs, roots);
+
   if (shared !== null) return denyWith(data, shared);
   const body = toolInput.content;
+
   if (typeof body !== "string") {
     return denyWith(
       data,
@@ -93,7 +102,10 @@ export function lessonWrite(write: WriteCase, ws: string): HookResult {
         "or run bun repo lessons hit <slug> --evidence <text>",
     );
   }
+
   const result = persistLesson({ content: body, filePath: canonicalPath(abs), workspaceRoot: ws });
+
   if (!result.ok) return denyWith(data, result.error);
+
   return savedReply(data, toolInput, { abs, content: result.content });
 }

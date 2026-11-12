@@ -59,6 +59,7 @@ it("repo clean: every repo-owned dir constant is in the reserved set", () => {
     LISTEN_DIR,
     SPEAK_DIR,
   ].map((d) => path.posix.basename(d));
+
   expect(new Set([...owned, "sessions"])).toStrictEqual(TMP_RESERVED_DIRS);
 });
 
@@ -67,10 +68,12 @@ function boardRow(home: string, session: string): string {
   const board = path.join(home, ".workerstack", "board");
   fs.mkdirSync(board, { recursive: true });
   const stat = fs.readFileSync("/proc/self/stat", "utf8");
+
   const start = stat
     .slice(stat.lastIndexOf(")") + 1)
     .trim()
     .split(/\s+/)[19];
+
   const row = path.join(board, `claude-${session}.json`);
   const boot = fs.readFileSync("/proc/sys/kernel/random/boot_id", "utf8").trim();
   const fields = { effort: "-", model: "-", provider: "claude", time: "2026-11-03T12:00:00Z" };
@@ -78,6 +81,7 @@ function boardRow(home: string, session: string): string {
     row,
     `${JSON.stringify({ ...fields, boot, cwd: "/x", pid: process.pid, session, start, work: "live" })}\n`,
   );
+
   return row;
 }
 

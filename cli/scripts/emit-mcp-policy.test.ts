@@ -16,9 +16,11 @@ type ClaudeSettings = {
   permissions: { deny: string[] };
   hooks?: unknown;
 };
+
 type McpFile = {
   mcpServers: Record<string, unknown>;
 };
+
 type GrokFile = {
   plugins?: { enabled?: unknown[]; deny_default?: boolean };
   permission?: { deny?: string[]; allow?: string[] };
@@ -26,6 +28,7 @@ type GrokFile = {
   mcp?: unknown;
   mcp_servers?: Record<string, { enabled?: boolean; command?: string }>;
 };
+
 type CodexFile = {
   agents?: { max_depth?: number };
   mcp_servers?: Record<string, unknown>;
@@ -35,6 +38,7 @@ type CodexFile = {
 function writeMcpJson(root: string, servers: Record<string, unknown>): string {
   const text = `${JSON.stringify({ mcpServers: servers }, null, 2)}\n`;
   plant(root, ".mcp.json", text);
+
   return text;
 }
 
@@ -43,6 +47,7 @@ function seedHostStubs(ws: string): void {
     hooks: { PreToolUse: [{ matcher: "Agent" }] },
     permissions: { deny: ["Agent(Explore)", "Agent(Plan)", "Agent(general-purpose)"] },
   };
+
   plant(ws, ".claude/settings.json", `${JSON.stringify(settings, null, 2)}\n`);
   plant(ws, ".codex/config.toml", "[agents]\nmax_depth = 1\n");
 }

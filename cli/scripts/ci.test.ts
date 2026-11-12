@@ -75,6 +75,7 @@ it("typechecks every tsconfig in the root and each package, not fixtures or inst
     [`vendor/x/y/node_modules/z/tsconfig.json`]: "{}\n",
     "vendor/x/y/package.json": '{ "name": "y" }\n',
   });
+
   const run = ci(root);
   expect(run.calls.tsc.map((call) => call.split(" -p ").at(-1))).toStrictEqual([
     "tsconfig.build.json",
@@ -130,6 +131,7 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
   const out: string[] = [];
   const spawned: { cmd: string; args: string[]; cwd: unknown }[] = [];
   let clock = 0;
+
   const code = main([], {
     bins: { tsc: () => OK, vitest: () => PASSED },
     checks: CHECKS,
@@ -139,11 +141,13 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
     repo: () => OK,
     spawn: (cmd, args, opts) => {
       spawned.push({ args, cmd, cwd: opts.cwd });
+
       return spawnReply(answers[cmd === "bun" ? (args[0] ?? cmd) : cmd]);
     },
     stderr: () => {},
     stdout: (s) => out.push(s),
   });
+
   return { code, out: out.join(""), root, spawned };
 }
 
@@ -152,6 +156,7 @@ it("runs ci.checks after the gates, in config order, each timed and counted in t
     "infra-gen-cli": { error: Object.assign(new Error("ENOENT"), { code: "ENOENT" }), status: null },
     "scripts/check/product-tree.ts": { status: 1, stdout: "projects/x has no project.yaml\n" },
   });
+
   expect(run.out).toBe(
     "ci: check ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\nci: 4 tests passed (0.5s)\n" +
       "ci: container-images ok (0.5s)\n" +
@@ -177,13 +182,17 @@ it("reads ci.checks from the config when no deps give them", async () => {
   const root = plant({
     "workerstack.config.ts": 'export default { packs: [], ci: { checks: { "a-check": ["tool", "x"] } } };\n',
   });
+
   const seen: string[] = [];
+
   const { code, out } = await ciFromConfig(root, {
     spawn: (cmd, args) => {
       seen.push([cmd, ...args].join(" "));
+
       return spawnReply();
     },
   });
+
   expect(code).toBe(0);
   expect(seen).toStrictEqual(["tool x"]);
   expect(out).toContain("ci: a-check ok (0.0s)\n");
@@ -192,12 +201,15 @@ it("reads ci.checks from the config when no deps give them", async () => {
 it("wait <branch> waits on that branch, and wait a b is refused with exit 2", async () => {
   const seen: string[][] = [];
   const err: string[] = [];
+
   function git(args: string[]) {
     return (seen.push(args), { code: 1, stderr: "no git", stdout: "" });
   }
+
   function run(argv: string[]) {
     return main(argv, { cwd: "/repo", git, stderr: (s) => err.push(s), stdout: () => {} });
   }
+
   expect(await run(["wait", "feat/x"])).toBe(4);
   expect(seen[0]).toStrictEqual(["rev-parse", "--verify", "--quiet", "refs/remotes/origin/feat/x"]);
   expect(err.join("")).toBe("repo ci wait: feat/x is not on origin; push it first\n");

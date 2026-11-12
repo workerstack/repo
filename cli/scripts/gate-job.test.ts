@@ -11,6 +11,7 @@ import type { HookInput } from "./hook-input.ts";
 
 const tmp = useTmp();
 const JOB = ["--job", "test", "--query", "x"].join(" ");
+
 const ACCEPTED = [
   `bun repo job ${JOB}`,
   `rtk bun repo job ${JOB}`,
@@ -20,6 +21,7 @@ const ACCEPTED = [
   `rtk /r/node_modules/.bin/repo job ${JOB}`,
   `/usr/bin/rtk /home/me/.bun/bin/bun /r/node_modules/.bin/repo job ${JOB}`,
 ];
+
 const REFUSED = [
   `/other/node_modules/.bin/repo job ${JOB}`,
   `node /r/node_modules/.bin/repo job ${JOB}`,
@@ -40,10 +42,13 @@ it(
     "and refuses other bins and commands (path.posix)",
   () => {
     const roots = { checkout: "/r", cwd: "/r/sub", root: "/r" };
+
     function ok(c: string) {
       return isWorkspaceJobScript(c, roots, path.posix);
     }
+
     for (const c of ACCEPTED) expect(ok(c), c).toBe(true);
+
     for (const c of REFUSED) expect(ok(c), c).toBe(false);
     expect(parseJobCommand(`bun repo job --job test --query x`, roots)).toStrictEqual({
       hasQuery: true,
@@ -60,14 +65,17 @@ it(
 
 it("lets the job command it hands out run, and still denies a denylisted path inside the job", () => {
   const ws = tmp.dir("gate-bin-deny-");
+
   function bash(command: string, extra: HookInput = {}) {
     return processFatTools(camelCall("Bash", { command }, { workspaceRoot: ws, ...extra }));
   }
+
   for (const extra of [{}, { subagentType: "scout" }]) {
     const read = jobCommand(ws, `--job exec --query ${quoteQuery(`sed -n 1,200p ${ws}/src/a.ts`)}`);
     expect(bash(read, extra)).toBeNull();
     expect(bash(`bun repo job --job exec --query ${quoteQuery("cat src/a.ts")}`, extra)).toBeNull();
   }
+
   const denied = jobCommand(ws, `--job exec --query ${quoteQuery("cat node_modules/x/y.js")}`);
   expect(bash(denied)).toMatchObject({ type: "deny" });
   expect(bash(`cat ${ws}/node_modules/x/y.js`)).toMatchObject({ type: "deny" });
@@ -90,9 +98,11 @@ it("matches the bin through a symlinked checkout", () => {
 
 it("matches the bin in a path.win32 checkout", () => {
   const roots = { checkout: "C:\\r", cwd: "C:\\r\\sub", root: "C:\\r" };
+
   function ok(c: string) {
     return isWorkspaceJobScript(c, roots, path.win32);
   }
+
   expect(ok(`C:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
   expect(ok(`..\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);
   expect(ok(`C:\\bun\\bin\\bun.exe C:\\r\\node_modules\\.bin\\repo job ${JOB}`)).toBe(true);

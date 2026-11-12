@@ -23,6 +23,7 @@ import {
 
 /** A file with an own-line block comment, and the line of the first one. */
 export type OwnLine = { file: string; line: number };
+
 /** The text with its own-line block comments converted, and the line of the first one (null when none). */
 type Converted = { text: string; first: number | null };
 
@@ -35,6 +36,7 @@ function ownLineStart(text: string, comment: string, offset: number): number | n
   const stop = text.indexOf("\n", end);
   const after = text.slice(end, stop < 0 ? text.length : stop);
   const alone = text.slice(start, offset).trim() === "" && after.trim() === "";
+
   return alone && !docs && !license ? start : null;
 }
 
@@ -45,11 +47,13 @@ export function convertText(text: string): Converted {
   let out = "";
   let copied = 0;
   let first: number | null = null;
+
   for (let kind: number = scanner.scan(); kind !== EOF_TOKEN; kind = scanner.scan()) {
     if (kind !== BLOCK_COMMENT_TOKEN) continue;
     const offset = scanner.getTokenOffset();
     const comment = text.slice(offset, offset + scanner.getTokenLength());
     const start = ownLineStart(text, comment, offset);
+
     if (start === null) continue;
     const indent = text.slice(start, offset);
     out +=
@@ -60,6 +64,7 @@ export function convertText(text: string): Converted {
     copied = offset + comment.length;
     first ??= scanner.getTokenStartLine() + 1;
   }
+
   return { first, text: first === null ? text : out + text.slice(copied) };
 }
 
@@ -71,6 +76,7 @@ export function firstOwnLine(text: string): number | null {
 function inFixtures(rel: string): boolean {
   return rel.split("/").includes(FIXTURES_DIR);
 }
+
 function isJsonc(rel: string): boolean {
   return JSONC_EXTENSIONS.some((ext) => rel.endsWith(ext)) && !inFixtures(rel);
 }
@@ -81,13 +87,18 @@ function isJsonc(rel: string): boolean {
  */
 export function convertJsonc(root: string, files: readonly string[], { check }: { check: boolean }): OwnLine[] {
   const found: OwnLine[] = [];
+
   for (const file of files.filter(isJsonc)) {
     const full = path.join(root, file);
+
     if (!fs.existsSync(full)) continue;
     const converted = convertText(fs.readFileSync(full, "utf8"));
+
     if (converted.first === null) continue;
     found.push({ file, line: converted.first });
+
     if (!check) fs.writeFileSync(full, converted.text);
   }
+
   return found;
 }

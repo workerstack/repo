@@ -33,6 +33,7 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/no-v8-ignore": "error",
   "repo/no-widen-then-assert": "error",
   "repo/public-jsdoc": "error",
+  "repo/require-readable-spacing": "error",
   "repo/skip-on-platform": "error",
   "repo/todo-needs-id": "error",
   "repo/types-file": "error",

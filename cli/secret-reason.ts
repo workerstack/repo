@@ -17,8 +17,10 @@ import {
 /** The Shannon entropy of `text`, in bits per character. */
 function entropyOf(text: string): number {
   const counts = new Map<string, number>();
+
   for (const char of text) counts.set(char, (counts.get(char) ?? 0) + 1);
   const shares = [...counts.values()].map((count) => count / text.length);
+
   return shares.reduce((bits, share) => bits - share * Math.log2(share), 0);
 }
 
@@ -40,8 +42,12 @@ function isNamedCredential(key: string, value: string): boolean {
 export function secretReason(key: string, value: string): string | null {
   if (PUBLIC_PREFIXES.some((head) => value.startsWith(head))) return null;
   const prefix = SECRET_PREFIXES.find((head) => value.startsWith(head));
+
   if (prefix !== undefined) return `${prefix} prefix`;
+
   if (value.includes(URL_MARK) || !DIGIT.test(value)) return null;
+
   if (isRandomToken(value)) return ENTROPY_REASON;
+
   return isNamedCredential(key, value) ? CREDENTIAL_REASON : null;
 }

@@ -12,15 +12,19 @@ import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 const tmpWs = useTmpWs("persist-roadmap-");
 const CREATED = "2026-11-09T10:15:00Z";
 const ROADMAPS = ".tmp/repo/roadmaps";
+
 function save(content: string, ws = tmpWs()) {
   return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
 }
+
 function sliceRule(n: number) {
   return `slice ${n} needs "N [ ] {title, 2–6 words}: {one sentence}"`;
 }
+
 function cap(n: number) {
   return `${n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`;
 }
+
 const SLICE_1 = "1 [ ] auth types: Reserved names list the new skills.\n";
 const SLICE_2 = "2 [ ] commit diff pass: Commit skills strip narrating comments.\n";
 const WIN_LOCATION = "C:\\Users\\me\\app\\.tmp\\repo\\plans\\21-json-export-20261109T101500Z.md";
@@ -30,8 +34,10 @@ const ONE = "1 [ ] slice number 1: Slice 1 ships one change.\n";
 function withSlices(n: number, location?: (i: number) => string) {
   const lines = Array.from({ length: n }, (_, i) => {
     const line = `${i + 1} [ ] slice number ${i + 1}: Slice ${i + 1} ships one change.`;
+
     return location === undefined ? line : `${line}\n      Location: ${location(i + 1)}`;
   });
+
   return DRAFT_ROADMAP.replace(SLICE_1 + SLICE_2, `${lines.join("\n")}\n`)
     .replace("3 [ ] Verify", `${n + 1} [ ] Verify`)
     .replace("3.1 [ ]", `${n + 1}.1 [ ]`);
@@ -40,6 +46,7 @@ function withSlices(n: number, location?: (i: number) => string) {
 // Lines above Previous mistakes in a saved file, frontmatter included, Location lines not counted.
 function above(text: string) {
   const lines = text.split("\n");
+
   return lines.slice(0, lines.indexOf("## Previous mistakes")).filter((l) => !/^\s+Location: /.test(l)).length;
 }
 
@@ -47,6 +54,7 @@ function above(text: string) {
 function slicesFor(lines: number) {
   const base = save(withSlices(2));
   expect(base.ok, base.error).toBe(true);
+
   return 2 + lines - above(savedOk(base).content);
 }
 
@@ -75,6 +83,7 @@ describe("a fresh pointer roadmap", () => {
 describe("a fresh roadmap slice", () => {
   const old =
     "1 [ ] Title: auth types\n      Goal: Reserved names list the new skills.\n      Why: Later slices add skills.\n";
+
   const badSlices = [
     { from: SLICE_1, n: 1, to: old, what: "an old two-line slice" },
     { from: SLICE_2, n: 2, to: "2 [ ] commit: Commit skills strip narrating comments.\n", what: "a 1-word title" },
@@ -92,6 +101,7 @@ describe("a fresh roadmap slice", () => {
     },
     { from: SLICE_2, n: 2, to: "2 [ ] commit diff pass\n", what: "no sentence" },
   ];
+
   it.each(badSlices)("denies $what", ({ n, from, to }) => {
     const r = save(DRAFT_ROADMAP.replace(from, to));
     expect(r.ok).toBe(false);
@@ -115,9 +125,11 @@ describe("the pointer roadmap line cap", () => {
   it("does not count Location lines", () => {
     const ws = tmpWs();
     const n = slicesFor(60);
+
     function plan(i: number) {
       return path.join(ws, ".tmp/repo/plans", `${i}-slice-number-${i}-20261109T101500Z.md`);
     }
+
     const r = save(withSlices(n, plan), ws);
     expect(r.ok, r.error).toBe(true);
     expect(savedOk(r).content.split("\n").indexOf("## Previous mistakes")).toBe(60 + n);

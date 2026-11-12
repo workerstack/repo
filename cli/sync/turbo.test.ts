@@ -17,8 +17,10 @@ useTempDirs();
 /** A temp root holding `files`, and a context that reads them from it. */
 function context(packs: Pack[], files: Record<string, string> = {}, tasks?: Record<string, TurboTask>): SyncContext {
   const root = tempDir("workerstack-turbo-");
+
   for (const [rel, text] of Object.entries(files)) put(root, rel, text);
   const turboConfig = tasks === undefined ? {} : { turbo: { tasks } };
+
   return {
     config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...turboConfig },
     read: (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), "utf8") : null),
@@ -38,6 +40,7 @@ const BASE = {
     typecheck: { outputs: [] },
   },
 };
+
 function json(value: object) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }

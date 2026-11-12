@@ -5,21 +5,26 @@ import type { Pack } from "../config.ts";
 import { release } from "./release.ts";
 
 const CACHE = "actions/cache/%@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
+
 const RESTORE = `      - uses: ${CACHE.replace("%", "restore")}
         with:
           path: .turbo/cache
           key: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-\${{ github.sha }}
           restore-keys: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-
 `;
+
 const SAVE = `      - uses: ${CACHE.replace("%", "save")}
         if: always() && github.ref == 'refs/heads/main'
         with:
           path: .turbo/cache
           key: turbo-\${{ runner.os }}-\${{ strategy.job-index }}-\${{ github.sha }}
 `;
+
 const GATES = "      - name: Run the gates and write the skip report\n";
+
 function text(packs: Pack[]) {
   const [output] = release(context(packs)).outputs;
+
   return output?.kind === "file" ? output.content : "";
 }
 

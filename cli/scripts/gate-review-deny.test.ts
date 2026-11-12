@@ -32,19 +32,24 @@ import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
 import { activeReview } from "./strategy.ts";
 
 const tmp = useTmp();
+
 function deny(reason: string) {
   return { reason, type: "deny" };
 }
+
 function send(kind: WriteKind, w: string, target: string) {
   return processFatTools(reviewWrite(kind, { cwd: w, target }));
 }
+
 function sendAs(kind: WriteKind, w: string, spec: { target: string; type: string }) {
   return processFatTools(asChild(reviewWrite(kind, { cwd: w, target: spec.target }), spec.type));
 }
+
 /** What a parent write is answered when the review is enforced on its harness, else nothing. */
 function parentAnswer(payload: HookInput, strategy = "review-fast") {
   return ENFORCED_HARNESSES.has(harnessOf(payload)) ? deny(reviewReason(strategy)) : null;
 }
+
 const ENDED: [string, string][] = [
   ["review-fast", "done"],
   ["review-fast", "blocked"],
@@ -65,6 +70,7 @@ it.each(WRITE_KINDS)("%s: denies a parent product write and follows ENFORCED_HAR
 it.each(WRITE_KINDS)("%s: allows the plan, the journal, .tmp and scratch, judged after the rewrite", (kind) => {
   const w = tmp.dir("gate-review-");
   const plan = startReview(w);
+
   const targets = [
     plan,
     path.join(w, ".tmp/repo/implementations/i.md"),
@@ -73,6 +79,7 @@ it.each(WRITE_KINDS)("%s: allows the plan, the journal, .tmp and scratch, judged
     "./.tmp/repo/plans/p.md",
     `${w}/src/../.tmp/repo/plans/p.md`,
   ];
+
   for (const target of targets) expect(notDenied(send(kind, w, target)), target).toBe(true);
 });
 
@@ -83,6 +90,7 @@ it.each(WRITE_KINDS)("%s: holds the deny for a spelling of a product path, and a
   expect(processFatTools(dotted)).toStrictEqual(parentAnswer(dotted));
   const relative = reviewWrite(kind, { cwd: w, target: "src/x.ts" });
   expect(processFatTools(relative)).toStrictEqual(parentAnswer(relative));
+
   for (const type of ["implementer-fast", "implementer-deep", "scout"])
     expect(sendAs(kind, w, { target: path.join(w, "src/x.ts"), type }), type).toBeNull();
 });
@@ -95,6 +103,7 @@ it.each(WRITE_KINDS)(
     const product = reviewWrite(kind, { cwd: w, target: path.join(w, "src/x.ts") });
     expect(processFatTools(inSession(product, null))).toBeNull();
     expect(processFatTools(inSession(product, "other"))).toBeNull();
+
     for (const [strategy, status] of ENDED) {
       fs.writeFileSync(plan, planText(strategy, status));
       expect(send(kind, w, path.join(w, "src/x.ts")), `${strategy} ${status}`).toBeNull();
@@ -107,13 +116,16 @@ function implementerAnswers(kind: WriteKind, w: string) {
   function as(type: string) {
     return (target: string) => sendAs(kind, w, { target, type });
   }
+
   const barred = [
     path.join(w, ".tmp/repo/plans/p.md"),
     path.join(w, ".tmp/repo/implementations/i.md"),
     "tmp/plans/p.md",
   ];
+
   const free = [path.join(w, "src/x.ts"), path.join(w, ".tmp/x"), path.join(w, ".tmp/repo/scratch/s.md")];
   free.push(path.join(w, ".tmp/repo/handoffs/h.md"));
+
   return {
     barred: barred.map(as("implementer-fast")),
     free: free.map(as("implementer-deep")),
@@ -126,6 +138,7 @@ it.each(WRITE_KINDS)(
   (kind) => {
     for (const state of ["none", "default", "review-fast", "review-deep"]) {
       const w = tmp.dir("gate-review-");
+
       if (state !== "none") startReview(w, { strategy: state });
       const { barred, free, scout } = implementerAnswers(kind, w);
       expect(barred, state).toStrictEqual([deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE), deny(IMPLEMENTER_WRITE)]);
@@ -166,6 +179,7 @@ it(
 it("a reviewer parent's product write inside a worktree still gets the review reason", () => {
   const w = tmp.committed("gate-review-");
   startReview(w);
+
   for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const)
     expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toStrictEqual(deny(reviewReason("review-fast")));
 });
@@ -174,12 +188,15 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
   const w = tmp.dir("gate-review-");
   const plan = startReview(w);
   const alias = aliasOf(w);
+
   for (const kind of ["claudeWrite", "codexTool", "codexHeredoc"] as const) {
     const product = reviewWrite(kind, { cwd: alias, target: path.join(alias, "src/x.ts") });
     expect(processFatTools(product), kind).toStrictEqual(parentAnswer(product));
+
     for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")])
       expect(notDenied(send(kind, alias, target)), `${kind} ${target}`).toBe(true);
   }
+
   expect(activeReview(alias, REVIEW_SID)?.plan).toBe(plan);
   const root = "C:\\r";
   expect(isOutsideRootTmp("C:\\r\\src\\x.ts", root, path.win32)).toBe(true);
@@ -192,9 +209,11 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
 it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES", () => {
   const w = tmp.dir("gate-review-");
   startReview(w);
+
   function run(extra: HookInput, file = path.join(w, "src/x.ts")) {
     return grokReply(w, { extra, input: { content: "x", file_path: file }, tool: "Write" });
   }
+
   const shape = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
   const parent = run({});
   const verdict = parent === null ? null : { decision: parent.decision, reason: parent.reason };

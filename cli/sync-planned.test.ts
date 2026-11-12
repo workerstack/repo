@@ -12,13 +12,16 @@ function file(filePath: string, content: string): Output {
     tracked: true,
   };
 }
+
 const ctx = {
   read: (rel: string) => (rel === "a.md" ? "disk\n" : null),
   root: "/r",
 } as unknown /* a stub that holds the two fields the planner reads */ as SyncContext;
+
 function reader(view: SyncContext): ReturnType<Generator> {
   return { errors: [], outputs: [file("b.md", view.read("a.md") ?? "none")] };
 }
+
 function writer(): ReturnType<Generator> {
   return {
     errors: [],

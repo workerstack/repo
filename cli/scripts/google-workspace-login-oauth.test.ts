@@ -97,6 +97,7 @@ it("oauth login: fails with the denial the browser reports, or a missing code", 
 async function exchangeFailing(creds: string, reply: Record<string, unknown>) {
   stubFetch(() => jsonRes(reply, 400));
   const r = await withIo(() => main(["login", "--creds", creds], browser("code=c")));
+
   return r.errs;
 }
 

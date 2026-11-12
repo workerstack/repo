@@ -11,21 +11,26 @@ import type { HookInput } from "./hook-input.ts";
 import { writeStamp } from "./strategy.ts";
 
 const tmp = useTmp();
+
 function job(w: string, cmd: string) {
   return jobCommand(w, `--job test --query ${quoteQuery(cmd)}`);
 }
+
 function claudeSh(w: string, command: string, extra: HookInput = {}): HookInput {
   return {
     ...inSession(claudeCall(w, "Bash", { command }), REVIEW_SID),
     ...extra,
   };
 }
+
 function rewrite(w: string, command: string) {
   return { type: "rewrite", updatedInput: { command: job(w, command) } };
 }
+
 function implementer(type: string) {
   return { agent_type: type };
 }
+
 const SUITES = [
   "bun test",
   "bunx vitest run a.test.ts",
@@ -40,6 +45,7 @@ const SUITES = [
   "pnpm run test",
   "  bun run test  ",
 ];
+
 const NOT_PARENT: [string, string][] = [
   ["default", "in-progress"],
   ["review-fast", "ready"],
@@ -50,6 +56,7 @@ const NOT_PARENT: [string, string][] = [
 it("rewrites an implementer child's test run to the job test and passes a compound through", () => {
   const w = tmp.dir("gate-review-");
   const cmd = "bun run test x.test.ts";
+
   for (const agent of ["implementer-fast", "implementer-deep"]) {
     const extra = implementer(agent);
     expect(processFatTools(claudeSh(w, cmd, extra)), agent).toStrictEqual(rewrite(w, cmd));
@@ -64,6 +71,7 @@ it("rewrites an implementer child's test run to the job test and passes a compou
     expect(processFatTools(claudeSh(w, "bun run test && echo ok", extra)), agent).toBeNull();
     expect(processFatTools(claudeSh(w, "bun run test x | tail -5", extra)), agent).toBeNull();
   }
+
   for (const suite of SUITES) {
     const out = processFatTools(claudeSh(w, suite, implementer("implementer-fast")));
     expect(out, suite).toStrictEqual(rewrite(w, suite.trim()));
@@ -94,6 +102,7 @@ it("rewrites a parent's test run only while a review plan is in progress in its 
   expect(processFatTools(claudeSh(w, "bun run test && echo ok"))).toBeNull();
   expect(processFatTools(claudeSh(w, cmd, { session_id: "other" }))).toBeNull();
   expect(processFatTools(claudeSh(w, cmd, { session_id: undefined }))).toBeNull();
+
   for (const [strategy, status] of NOT_PARENT) {
     fs.writeFileSync(plan, planText(strategy, status));
     expect(processFatTools(claudeSh(w, cmd)), `${strategy} ${status}`).toBeNull();

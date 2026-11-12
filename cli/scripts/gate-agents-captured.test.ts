@@ -23,9 +23,11 @@ type Captured = {
 function tool(file: string) {
   return { content: "x\n", file_path: file };
 }
+
 function patch(file: string) {
   return `*** Begin Patch\n*** Add File: ${file}\n+x\n*** End Patch`;
 }
+
 const tmp = useTmp();
 
 const claude: Captured = {
@@ -40,6 +42,7 @@ const claude: Captured = {
   parent: (f) => ({ hook_event_name: "PreToolUse", session_id: "6300f867", tool_input: tool(f), tool_name: "Write" }),
   sid: ["6300f867", "6300f867"],
 };
+
 const codex: Captured = {
   child: (f) => ({
     agent_id: "01a1b75e-29a2",
@@ -61,6 +64,7 @@ const codex: Captured = {
   }),
   sid: ["01a1b75e-14b3", "01a1b75e-14b3"],
 };
+
 // Grok's wire shape is Claude's: harnessOf says claude, so "claude" in ENFORCED_HARNESSES enforces Grok too.
 const grok: Captured = {
   child: (f) => ({
@@ -116,12 +120,14 @@ it("Antigravity sends its session id only as conversationId, and its child carri
     stepIdx: 2,
     toolCall: { args: { Content: "parent\n", Path: "/w/parent.txt" }, name: "write_file" },
   };
+
   const child = {
     conversationId: "4ea12b55",
     modelName: "gemini-3.8-flash-tiered",
     stepIdx: 2,
     toolCall: { args: { CommandLine: "printf 'child\\n' > /w/child.txt" }, name: "run_command" },
   };
+
   expect([harnessOf(parent), harnessOf(child)]).toStrictEqual(["antigravity", "antigravity"]);
   expect([sessionIdOf(parent), sessionIdOf(child)]).toStrictEqual(["d1398f48", "4ea12b55"]);
   expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toStrictEqual([true, true]);
@@ -140,9 +146,11 @@ it("Antigravity sends its session id only as conversationId, and its child carri
 it("Antigravity's edit in a committed repo is denied by the main-checkout guard though it is not enforced", () => {
   const w = tmp.committed("gate-captured-");
   writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
+
   function put(target: string) {
     return inSession(kindWrite("antigravity", { cwd: w, target }), "d1398f48");
   }
+
   const out = processFatTools(put(path.join(w, "src/x.ts")));
   expect(out?.type).toBe("deny");
   expect(denyReason(out)).toMatch(/^the main checkout is shared: run bun /);
@@ -159,6 +167,7 @@ it("Cursor's child has its own session id and no marker", () => {
     tool_input: tool("/w/parent.txt"),
     tool_name: "Write",
   };
+
   const child = { ...parent, conversation_id: "26bb97fb", session_id: "26bb97fb", tool_input: tool("/w/child.txt") };
   expect([harnessOf(parent), harnessOf(child)]).toStrictEqual(["cursor", "cursor"]);
   expect([isParentOrchestrator(parent), isParentOrchestrator(child)]).toStrictEqual([true, true]);

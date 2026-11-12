@@ -4,6 +4,7 @@ import { QUOTED_MIN } from "./maps.constants.ts";
 
 /** A frontmatter value as the reader produces it. */
 type YamlValue = string | string[] | YamlObject;
+
 export type YamlObject = {
   [key: string]: YamlValue;
 };
@@ -29,6 +30,7 @@ function unwrapped(s: string): string {
 
 function unquoteYaml(raw: unknown): string {
   const s = String(raw).trim();
+
   if (quotedBy(s, '"')) {
     try {
       return String(JSON.parse(s));
@@ -36,16 +38,21 @@ function unquoteYaml(raw: unknown): string {
       return unwrapped(s);
     }
   }
+
   if (quotedBy(s, "'")) return unwrapped(s).replaceAll("''", "'");
+
   return s;
 }
 
 /** The items of a `[a, b]` flow sequence; null for any other value. */
 export function parseFlowSeq(s: unknown): string[] | null {
   const t = String(s).trim();
+
   if (!t.startsWith("[") || !t.endsWith("]")) return null;
   const items = unwrapped(t).trim();
+
   if (items === "") return [];
+
   return items
     .split(",")
     .map((x) => unquoteYaml(x.trim()))
@@ -59,6 +66,7 @@ function indentOf(line: string): number {
 function more(c: Cursor): boolean {
   return c.i < c.lines.length;
 }
+
 /** The line the cursor is on; every caller checks `more` first. */
 function current(c: Cursor): string {
   return c.lines[c.i] /* every caller checks more() first */ as string;
@@ -67,60 +75,75 @@ function current(c: Cursor): string {
 /** A `>` or `|` block: the lines indented past `ind`, joined by spaces. */
 function folded(c: Cursor, ind: number): string {
   const parts: string[] = [];
+
   while (more(c)) {
     const n = current(c);
+
     if (n.trim() !== "" && indentOf(n) <= ind) break;
     parts.push(n.trim());
     c.i += 1;
   }
+
   return parts.filter(Boolean).join(" ");
 }
 
 /** The `- item` lines indented past `ind`. */
 function blockList(c: Cursor, ind: number): string[] {
   const arr: string[] = [];
+
   while (more(c) && indentOf(current(c)) > ind && current(c).trim().startsWith("- ")) {
     arr.push(unquoteYaml(current(c).trim().replace(LIST_MARK, "")));
     c.i += 1;
   }
+
   return arr;
 }
 
 /** The value of a key with nothing after its colon: a list or a map on the lines indented past `ind`, else `{}`. */
 function nested(c: Cursor, ind: number): YamlValue {
   if (!more(c) || indentOf(current(c)) <= ind) return {};
+
   if (current(c).trim().startsWith("- ")) return blockList(c, ind);
+
   return parseBlock(c, indentOf(current(c)));
 }
 
 /** The value of a key at indent `ind` whose line holds `val` after its colon. */
 function valueOf(c: Cursor, val: string, ind: number): YamlValue {
   if (val === ">" || val === "|") return folded(c, ind);
+
   if (val === "") return nested(c, ind);
+
   return parseFlowSeq(val) ?? unquoteYaml(val);
 }
 
 /** The keys at indent `base` from the cursor on, until a line indented less (or, nested, more). */
 function parseBlock(c: Cursor, base: number): YamlObject {
   const obj: YamlObject = {};
+
   while (more(c)) {
     const line = current(c);
     const skipped = line.trim() === "" || COMMENT_LINE.test(line);
     const ind = indentOf(line);
+
     if (!skipped && (ind < base || (base > 0 && ind > base))) break;
     c.i += 1;
     const trimmed = line.trim();
+
     if (skipped || !KEY_LINE.test(trimmed)) continue;
     // The pattern ends the key at its first colon and trims the value around it.
     const colon = trimmed.indexOf(":");
     obj[trimmed.slice(0, colon).trim()] = valueOf(c, trimmed.slice(colon + 1).trim(), ind);
   }
+
   return obj;
 }
 
 /** The frontmatter and body of a markdown file; no frontmatter reads as `{}`. */
 export function parseMarkdown(src: string): { parsed: YamlObject; body: string } {
   const split = splitFrontmatter(src);
+
   if (!split.ok) return { body: src, parsed: {} };
+
   return { body: split.body, parsed: parseBlock({ i: 0, lines: split.fm.split(LINE_BREAK) }, 0) };
 }

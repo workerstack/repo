@@ -26,9 +26,11 @@ import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();
+
 afterAll(dropFixture);
 
 const SLOW = 180_000;
+
 /**
  * What the first sync over the copied install prints: its old markers converted, an unhashed section hashed, and the
  * stock rules the handover left in place in AGENTS.md replaced by the region.
@@ -62,6 +64,7 @@ function expectUpToDateInNewProcess(root: string): void {
       cwd: root,
       encoding: "utf8",
     });
+
     expect({ out: again.stdout, status: again.status }).toStrictEqual({ out: "repo sync: up to date\n", status: 0 });
   }
 }
@@ -73,6 +76,7 @@ function bare(manifest: string): string {
   write(root, "package.json", manifest);
   write(root, COPIED_MARKER, "// copied script\n");
   linkStock(root);
+
   return root;
 }
 
@@ -128,6 +132,7 @@ it(
   "leaves no source to adopt again: the next sync succeeds with the settings key once",
   async () => {
     const root = copied();
+
     // fails only once the migration removed the copy, so the migration itself runs
     const failing = {
       generators: [
@@ -137,6 +142,7 @@ it(
         }),
       ],
     };
+
     const err: string[] = [];
     const code = await runSync([], { cwd: root, stderr: (s) => err.push(s), stdout: () => {} }, failing);
     expect(code).toBe(1);

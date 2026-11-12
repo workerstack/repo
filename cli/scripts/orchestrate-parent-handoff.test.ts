@@ -11,11 +11,14 @@ import { validateHandoff } from "./persist-handoff-validate.ts";
 
 const kit = orchestrateKit();
 const SHAPES: readonly Shape[] = ["claude", "grok"];
+
 // Roots and session come from the payload alone, as in a live session.
 const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
+
 function handoffs(ws: string) {
   const dir = path.join(ws, ".tmp/repo/handoffs");
+
   return fs.existsSync(dir) ? fs.readdirSync(dir).map((n) => path.join(dir, n)) : [];
 }
 
@@ -24,6 +27,7 @@ function onePlan(shape: Shape, sid: string): { ws: string; s: HookSession; plan:
   const ws = kit.temp();
   const s = hookSession(kit, { env: UNSET, shape, sid, ws });
   s.say("plan it");
+
   return { plan: s.reviewed("plans", VALID_PLAN), s, ws };
 }
 
@@ -34,6 +38,7 @@ function theHandoff(ws: string): { file: string; serial: number; text: string } 
   const file = must(files[0]);
   const text = fs.readFileSync(file, "utf8");
   expect(validateHandoff(path.basename(file), text)).toStrictEqual([]);
+
   return { file, serial: Number(path.basename(file).split("-")[0]), text };
 }
 
@@ -69,10 +74,12 @@ it.each(SHAPES)(
   (shape) => {
     const { ws, s, plan } = onePlan(shape, "h2");
     const roadmap = s.reviewed("roadmaps", DRAFT_ROADMAP);
+
     const line = closingLine([
       { kind: "plan", serial: 1, strategy: "default" },
       { kind: "roadmap", serial: 1, strategy: "default" },
     ]);
+
     const ctx = s.say("h", transcript(ws, `Both saved.\n\n${line}`));
     const { file, serial, text } = theHandoff(ws);
     expect(path.basename(file)).toMatch(/^\d+-run-plan-1-then-roadmap-1-\d{8}T\d{6}Z\.md$/);

@@ -35,6 +35,7 @@ export async function expectPlantedFails(sb: Sandbox, env: Record<string, string
 }
 
 const SKIP_REASON = "the lookup result is always present";
+
 function skipOf(file: string, rule = "typescript/no-non-null-assertion") {
   return {
     files: [file],
@@ -51,6 +52,7 @@ export async function expectSkipsChecked(sb: Sandbox, original: string) {
   function withSkips(...skips: object[]) {
     return original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
   }
+
   sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
   expectClean(sb, await sb.run("bun", ["repo", "sync"]));
   const check = await sb.run("bun", ["repo", "check"]);
@@ -116,6 +118,7 @@ export const GENERATED = [
 
 export const NON_NULL =
   'export function first(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
+
 export const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
 /** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
@@ -128,11 +131,14 @@ function sha(data: Buffer) {
 /** One line per file (sha256 of its bytes) and per link (its target) that `keep` accepts, links never followed. */
 export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): string[] {
   const lines: string[] = [];
+
   for (const name of fs.readdirSync(path.join(root, dir)).toSorted(byCodeUnit)) {
     const rel = dir === "" ? name : `${dir}/${name}`;
+
     if (SKIPPED.test(rel)) continue;
     const abs = path.join(root, rel);
     const stat = fs.lstatSync(abs);
+
     if (stat.isSymbolicLink()) {
       if (keep(rel)) lines.push(`${rel} -> ${linkText(abs)}`);
     } else if (stat.isDirectory()) {
@@ -141,6 +147,7 @@ export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): 
       lines.push(`${rel} ${sha(fs.readFileSync(abs))}`);
     }
   }
+
   return lines;
 }
 
@@ -151,16 +158,20 @@ export function hashes(root: string, keep: (rel: string) => boolean, dir = ""): 
 export async function ignoredFiles(sb: Sandbox) {
   const ls = await sb.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z");
   const listed = ls.stdout.split("\0").filter((f) => f !== "" && !SKIPPED.test(f));
+
   return [...new Set(listed.map((rel) => holdingLink(sb.repo, rel) ?? rel))];
 }
 
 /** The nearest parent of `rel` that is a link, or null when every parent is a real directory. */
 function holdingLink(root: string, rel: string): string | null {
   const parts = rel.split("/");
+
   for (let i = 1; i < parts.length; i++) {
     const parent = parts.slice(0, i).join("/");
+
     if (fs.lstatSync(path.join(root, parent)).isSymbolicLink()) return parent;
   }
+
   return null;
 }
 
@@ -172,6 +183,7 @@ export function removeGenerated(abs: string) {
 
 export async function generatedHashes(sb: Sandbox) {
   const ignored = new Set(await ignoredFiles(sb));
+
   return hashes(sb.repo, (rel) => ignored.has(rel));
 }
 
@@ -183,6 +195,7 @@ export function setHosts(sb: Sandbox, hosts: string[]) {
 }
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };
+
 type HookGroup = { matcher?: string; hooks?: { type: string; command: string }[] };
 
 /** The command hooks of one event's matcher groups in `file`. */
@@ -197,6 +210,7 @@ function groupCalls(file: string, event: string, groups: HookGroup[]): HookCall[
 /** The command hooks one host config file holds. */
 function fileCalls(sb: Sandbox, file: string): HookCall[] {
   const hooks = sb.json(file, isHookConfig).hooks ?? {};
+
   return Object.entries(hooks).flatMap(([event, groups]) =>
     Array.isArray(groups)
       ? groupCalls(file, event, groups /* host hook configs list matcher groups */ as HookGroup[])
@@ -208,7 +222,9 @@ function fileCalls(sb: Sandbox, file: string): HookCall[] {
 export function hookCalls(sb: Sandbox): HookCall[] {
   const files = [".claude/settings.json", ".codex/hooks.json", ".agents/hooks.json"];
   const grokDir = path.join(sb.repo, ".grok", "hooks");
+
   for (const f of fs.readdirSync(grokDir)) if (f.endsWith(".json")) files.push(`.grok/hooks/${f}`);
+
   return files.flatMap((file) => fileCalls(sb, file));
 }
 
@@ -216,8 +232,11 @@ export function claudeGate(sb: Sandbox) {
   const gate = hookCalls(sb).find(
     (c) => c.file === ".claude/settings.json" && c.event === "PreToolUse" && c.command.endsWith(" hook gate-fat-tools"),
   );
+
   expect(gate, "claude gate hook").toBeDefined();
+
   if (gate === undefined) throw new Error("no claude gate hook");
+
   return gate;
 }
 
@@ -234,8 +253,10 @@ export function hookPayloads(sb: Sandbox, call: HookCall) {
     session_id: "e2e-session",
     transcript_path: path.join(sb.root, "transcript.jsonl"),
   };
+
   if (call.event === "PreToolUse" || call.event === "PostToolUse") {
     const re = new RegExp(`^(?:${call.matcher === undefined || call.matcher === "" ? ".*" : call.matcher})$`);
+
     return TOOL_CALLS.filter((t) => re.test(t.tool_name)).map((t) => ({
       ...base,
       ...t,
@@ -243,10 +264,15 @@ export function hookPayloads(sb: Sandbox, call: HookCall) {
       ...(call.event === "PostToolUse" ? { tool_response: { success: true } } : {}),
     }));
   }
+
   if (call.event === "UserPromptSubmit") return [{ ...base, prompt: "Summarize src/index.ts." }];
+
   if (call.event === "SessionStart") return [{ ...base, source: "startup" }];
+
   // Create then Remove, in settings order, so the sandbox ends with no worktree.
   if (call.event === "WorktreeCreate") return [{ ...base, name: "e2e" }];
+
   if (call.event === "WorktreeRemove") return [{ ...base, worktree_path: path.join(sb.repo, ".worktrees", "e2e") }];
+
   return [{ ...base, stop_hook_active: false }];
 }

@@ -14,28 +14,36 @@ import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
 export const OXLINT_CONFIG_PATH = ".oxlintrc.json";
+
 /** The skip-free copies `repo check` writes beside it for one run, each named for its process. */
 export const UNSKIPPED_CONFIG_GLOB = ".oxlintrc.unskipped-*.json";
+
 export function unskippedConfigPath(pid: number): string {
   return UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));
 }
+
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
 export const FIXTURES: string = `**/${FIXTURES_DIR}/**`;
+
 /** Reject files hold code that must not compile, checked by `repo check` and `repo turn` instead of linted. */
 const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
 const WORKERSTACK_CONFIG = "**/workerstack.config.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
+
 /** The categories the base runs whole; the catalog lists their rules. */
 const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
+
 /** Every rule of the six plugins with its category. */
 const categories: Readonly<Record<string, string>> = catalog;
 const OFF_SIDE_EFFECTS = { "repo/no-module-side-effects": "off" };
 const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
+
 /** Through this package, never the bare name: an isolated install does not hoist our dependencies to the root. */
 const TAILWIND_PLUGIN = { name: "tailwindcss", specifier: "@workerstack/repo/tailwind" };
+
 /** oxlint-tailwindcss's class rules, at error where the plugin warns on duplicates and colours. */
 const TAILWIND_RULES: Readonly<Record<string, RuleSetting>> = {
   "tailwindcss/no-conflicting-classes": "error",
@@ -43,8 +51,10 @@ const TAILWIND_RULES: Readonly<Record<string, RuleSetting>> = {
   "tailwindcss/no-hardcoded-colors": "error",
   "tailwindcss/no-unknown-classes": "error",
 };
+
 /** The exports that name an oxlint plugin entry: ours and the tailwindcss re-export. */
 const PLUGIN_EXPORTS = ["./lint", "./tailwind"];
+
 /** A Stylelint rule, `stylelint/<rule>` in lowercase: any such name passes; one with no hit fails `repo check`. */
 function isStylelintRule(rule: string): boolean {
   return STYLELINT_RULE.test(rule);
@@ -53,8 +63,10 @@ function isStylelintRule(rule: string): boolean {
 /** The files a manifest's plugin exports (`./lint`, `./tailwind`) name, as a path or as their `default` condition. */
 function lintExportOf(manifest: PackageJson): unknown[] {
   const { exports } = manifest;
+
   return PLUGIN_EXPORTS.map((key) => {
     const target = isRecord(exports) ? exports[key] : undefined;
+
     return isRecord(target) ? target.default : target;
   });
 }
@@ -62,9 +74,11 @@ function lintExportOf(manifest: PackageJson): unknown[] {
 /** Every string `pick` finds in the root's and each package's manifest, as a root-relative POSIX path, sorted. */
 function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => unknown[]): string[] {
   const all = [{ dir: "", manifest: workspace.manifest }, ...workspace.packages];
+
   const files = all.flatMap(({ dir, manifest }) =>
     pick(manifest).flatMap((file) => (typeof file === "string" ? [path.posix.join(dir, file)] : [])),
   );
+
   return [...new Set(files)].toSorted();
 }
 
@@ -77,6 +91,7 @@ function packageOverrides(workspace: Workspace): { files: string[]; rules: Recor
     { files: filesOf(workspace, (manifest) => binsOf(manifest.bin)), rules: OFF_SIDE_EFFECTS },
     { files: filesOf(workspace, lintExportOf), rules: { ...OFF_DEFAULT_EXPORT, "repo/index-file": "off" } },
   ];
+
   return overrides.filter((override) => override.files.length > 0);
 }
 
@@ -90,7 +105,9 @@ function isOn(setting: RuleSetting) {
 /** The tailwindcss plugin, its entry sheet as settings and its rules, with an entry; none of them without one. */
 function tailwindParts(lint: ResolvedLint) {
   const entryPoint = lint.tailwind?.entryPoint;
+
   if (entryPoint === undefined) return { plugins: [], rules: {}, settings: {} };
+
   return { plugins: [TAILWIND_PLUGIN], rules: TAILWIND_RULES, settings: { settings: { tailwindcss: { entryPoint } } } };
 }
 
@@ -110,6 +127,7 @@ function runRules(lint: ResolvedLint): Set<string> {
  */
 function unknownRules(lint: ResolvedLint, { rust }: { rust: boolean }): string[] {
   const run = runRules(lint);
+
   function known(rule: string) {
     return (
       run.has(rule) ||
@@ -118,6 +136,7 @@ function unknownRules(lint: ResolvedLint, { rust }: { rust: boolean }): string[]
       (rust ? SCRIPT_RULES.includes(rule) || isRustRule(rule) : SCRIPT_RULES.includes(rule) && !isRustRule(rule))
     );
   }
+
   return lint.skip.flatMap((skip, index) =>
     skip.rules
       .filter((rule) => !known(rule))
@@ -135,6 +154,7 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
     const rules = skip.rules.filter(
       (rule) => !SCRIPT_RULES.includes(rule) && !isRustRule(rule) && !isStylelintRule(rule),
     );
+
     return rules.length === 0
       ? []
       : [{ files: skip.files, rules: Object.fromEntries(rules.map((rule) => [rule, "off"])) }];
@@ -167,8 +187,10 @@ export function oxlintConfig(
   { rust = false }: { rust?: boolean } = {},
 ): Built {
   const errors = [...unknownRules(lint, { rust }), ...tagErrors(workspace, lint.boundaries)];
+
   if (errors.length > 0) return { errors, ok: false };
   const tailwind = tailwindParts(lint);
+
   // The config is written in this key order, so a blank line starts each run of keys that is already sorted.
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
@@ -191,5 +213,6 @@ export function oxlintConfig(
 
     overrides: overridesOf(workspace, lint),
   };
+
   return { ok: true, value: `${JSON.stringify(config, null, JSON_INDENT)}\n` };
 }

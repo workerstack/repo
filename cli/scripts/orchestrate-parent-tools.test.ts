@@ -15,9 +15,11 @@ function inSession(session?: string) {
   return (ws: string, toolName: string | undefined, toolInput: unknown): HookOut["hookSpecificOutput"] | null => {
     const payload = { hookEventName: "PreToolUse", session_id: session, toolInput, toolName, workspaceRoot: ws };
     const out = replyOf(runHook(main, payload, { GROK_HOOK_EVENT: "pre_tool_use", GROK_WORKSPACE_ROOT: ws }));
+
     return out === null ? null : out.hookSpecificOutput;
   };
 }
+
 const pre = inSession();
 
 function saveAs(ws: string, file: string, content: string) {
@@ -76,6 +78,7 @@ describe("a write under .tmp/repo", () => {
 
   it("denies an Edit of a file that does not exist yet", () => {
     const ws = kit.temp("tools-");
+
     for (const dir of ["plans", "implementations"]) {
       const out = pre(ws, "Edit", { file_path: `.tmp/repo/${dir}/x.md`, new_string: "b", old_string: "a" });
       expect(out?.permissionDecision, dir).toBe("deny");
@@ -86,6 +89,7 @@ describe("a write under .tmp/repo", () => {
     const ws = kit.temp("tools-");
     const plan = saveAs(ws, ".tmp/repo/plans/x.md", VALID_PLAN);
     const roadmap = saveAs(ws, ".tmp/repo/roadmaps/x.md", DRAFT_ROADMAP);
+
     for (const filePath of [plan, roadmap]) {
       const out = pre(ws, "Edit", { file_path: filePath, new_string: "b", old_string: "no such text" });
       expect(out, filePath).toBeNull();
@@ -118,6 +122,7 @@ function lessons(): string {
   fs.mkdirSync(path.join(ws, "src"), { recursive: true });
   fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
   saveAs(ws, ".repo/lessons/plan-forks.md", VALID_LESSON);
+
   return ws;
 }
 

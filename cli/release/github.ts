@@ -31,19 +31,27 @@ function changelogText(cwd: string): string {
 export function releaseGithub(argv: readonly string[], io: GithubIo): number {
   const tag = argv[0] ?? "";
   const parts = argv.length === 1 ? splitSpec(tag) : null;
+
   if (parts === null) return refuse(io, GITHUB_PREFIX, WAIT_USAGE);
   const section = sectionFor(changelogText(io.cwd), parts.version);
+
   if (section === null) return refuse(io, GITHUB_PREFIX, noNotes(parts.version));
+
   function exists(): boolean {
     return io.gh(GH_RELEASE_VIEW(tag), io.cwd).code === 0;
   }
+
   let line = releaseExists(tag);
+
   if (!exists()) {
     const notes = trimBlank(section.body).join("\n");
     const made = io.gh(GH_RELEASE_CREATE(tag, notes, { prerelease: parts.version.includes("-") }), io.cwd);
+
     if (made.code === 0) line = releaseCreated(tag);
     else if (!exists()) return refuse(io, GITHUB_PREFIX, createFailed(made.stderr.trim()));
   }
+
   io.stdout(`${GITHUB_PREFIX}${line}\n`);
+
   return 0;
 }

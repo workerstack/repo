@@ -11,6 +11,7 @@ export type AgeKeyPair = { readonly identity: string; readonly recipient: string
 /** A new age X25519 key pair. */
 export async function newIdentity(): Promise<AgeKeyPair> {
   const identity = await generateIdentity();
+
   return { identity, recipient: await identityToRecipient(identity) };
 }
 
@@ -18,13 +19,16 @@ export async function newIdentity(): Promise<AgeKeyPair> {
 export async function seal(text: string, recipient: string): Promise<string> {
   const encrypter = new Encrypter();
   encrypter.addRecipient(recipient);
+
   return Buffer.from(await encrypter.encrypt(text)).toString("base64");
 }
 
 /** Each base64 cipher's plaintext, in order, opened by whichever of `identities` it was sealed for. */
 export function reveal(ciphers: readonly string[], identities: readonly string[]): Promise<string[]> {
   const decrypter = new Decrypter();
+
   for (const identity of identities) decrypter.addIdentity(identity);
+
   return Promise.all(ciphers.map((cipher) => decrypter.decrypt(Buffer.from(cipher, "base64"), "text")));
 }
 
@@ -39,5 +43,6 @@ export function isWrongKey(error: unknown): boolean {
  */
 export async function decryptChild(input: string): Promise<string> {
   const request = readRequest(input);
+
   return JSON.stringify(await reveal(request.ciphers, request.identities));
 }

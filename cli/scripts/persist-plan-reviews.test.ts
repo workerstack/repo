@@ -12,14 +12,18 @@ const tmpWs = useTmpWs();
 function fresh(ws: string) {
   const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
+
   return path.join(ws, savedOk(r).path);
 }
+
 function start(t: string) {
   return t.replace("status: ready", "status: in-progress");
 }
+
 function reviews(t: string, n: string) {
   return t.replace(/^reviews: .*$/m, `reviews: ${n}`);
 }
+
 function legacy(t: string) {
   return t.replace(/^reviews: .*\n/m, "");
 }
@@ -49,6 +53,7 @@ describe("review rounds gate", () => {
     const ws = tmpWs();
     const abs = fresh(ws);
     expect(update(ws, abs, reviews(read(abs), "2")).ok).toBe(true);
+
     for (const content of [reviews(read(abs), "1"), legacy(read(abs))]) {
       const r = update(ws, abs, content);
       expect(r.ok).toBe(false);
@@ -61,6 +66,7 @@ describe("review rounds count and legacy", () => {
   it("denies a count that is not a plain whole number", () => {
     const ws = tmpWs();
     const abs = fresh(ws);
+
     for (const n of ["-1", "x", "01"]) {
       const r = update(ws, abs, reviews(read(abs), n));
       expect(r.ok, n).toBe(false);

@@ -10,6 +10,7 @@ import { YOURS_PATHS } from "./yours-paths.constants.ts";
 
 /** A shared file no output writes any more: its text with every region cut, and one line per region cut. */
 export type Cut = { path: string; text: string; repairs: string[] };
+
 /** How `applyCuts` writes: the platform, and the one-output writer sync's deps may swap in. */
 export type CutWrite = {
   platform: NodeJS.Platform;
@@ -32,17 +33,21 @@ export function repairLines(outputs: readonly Output[]): string[] {
 export function splitPrune(root: string, candidates: Iterable<string>): { cut: Cut[]; remove: string[] } {
   const cut: Cut[] = [];
   const remove: string[] = [];
+
   for (const rel of [...new Set(candidates)]
     .filter((candidate) => !YOURS_PATHS.includes(candidate))
     .toSorted(byCodeUnit)) {
     const stat = fs.lstatSync(path.join(root, rel), { throwIfNoEntry: false });
+
     if (stat === undefined || stat.isDirectory()) continue;
     const text = stat.isFile() ? fs.readFileSync(path.join(root, rel), "utf8") : null;
     const result = text === null ? null : cutRegions(text, syntaxOf(rel));
+
     if (result !== null && result.repairs.length > 0) cut.push({ path: rel, ...result });
     // Marker-shaped lines sync did not write are the user's: such a file is neither cut nor removed.
     else if (text === null || !hasMarkers(text, syntaxOf(rel))) remove.push(rel);
   }
+
   return { cut, remove };
 }
 
@@ -59,19 +64,25 @@ export function cutDriftLines(cut: readonly Cut[]): string[] {
 export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): { lines: string[]; errors: string[] } {
   const lines: string[] = [];
   const errors: string[] = [];
+
   for (const entry of cut) {
     const isBlank = entry.text.trim() === "";
     const output: Output = { content: entry.text, kind: "file", managed: "block", path: entry.path, tracked: true };
+
     const error = isBlank
       ? removeFile(path.join(root, entry.path))
       : (write.writeOutput ?? writeOutput)(root, output, write.platform);
+
     if (error !== null) {
       errors.push(`${entry.path}: could not cut: ${error}`);
       continue;
     }
+
     lines.push(...entry.repairs.map((repair) => `${repair} from ${entry.path}`));
+
     if (isBlank) lines.push(`removed ${entry.path}: nothing but its regions was in it`);
   }
+
   return { errors, lines };
 }
 
@@ -80,6 +91,7 @@ function removeFile(abs: string): string | null {
   try {
     unlock(abs);
     fs.rmSync(abs);
+
     return null;
   } catch (error) {
     return String(error);

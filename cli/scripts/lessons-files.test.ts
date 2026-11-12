@@ -16,6 +16,7 @@ useTempDirs();
 function dir(ws: string) {
   return path.join(ws, LESSONS_DIR);
 }
+
 const TOOLING = ["node", "modules"].join("_");
 
 it("lists the files of a directory git does not track, skipping tooling dirs and links", () => {
@@ -52,9 +53,11 @@ it("sorts rows of equal hits by file name", () => {
   const ws = repo();
   save(ws, "b-one", lesson({ name: "b-one" }));
   save(ws, "a-one", lesson({ name: "a-one" }));
+
   const rows = indexText(ws)
     .split("\n")
     .filter((l) => l.startsWith("| .repo"));
+
   expect(rows.map((l) => l.split(" | ")[0])).toStrictEqual(["| .repo/lessons/a-one.md", "| .repo/lessons/b-one.md"]);
 });
 

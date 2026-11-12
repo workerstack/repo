@@ -7,12 +7,15 @@ import { namingConvention } from "./naming-convention.ts";
 function literal(name: string, fixed: string): string {
   return `\`${name}\` is a module-level literal const; name it ${fixed}`;
 }
+
 function flag(name: string, fixed: string): string {
   return `\`${name}\` holds a boolean; name it with is/has/can/should/was, like ${fixed}`;
 }
+
 function camel(name: string, kind: string, fixed: string): string {
   return `\`${name}\` is ${kind}; name it in camelCase: ${fixed}`;
 }
+
 function pascal(kind: string, name: string, fixed: string): string {
   return `${kind} \`${name}\` is not PascalCase; name it ${fixed}`;
 }

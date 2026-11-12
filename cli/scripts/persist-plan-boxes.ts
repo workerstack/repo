@@ -26,11 +26,14 @@ export function planBoxes(text: string): PlanBox[] {
   const lines = text.split("\n");
   const { fenced } = fencedLineSet(lines);
   const boxes: PlanBox[] = [];
+
   for (const [i, line] of lines.entries()) {
     // The pattern names every group, so a match always sets them.
     const m = fenced.has(i) ? null : (BOX_RE.exec(line) /* the pattern names every group */ as BoxMatch | null);
+
     if (m !== null) boxes.push({ id: m.groups.id, mark: m.groups.mark, text: m.groups.text });
   }
+
   return boxes;
 }
 
@@ -54,8 +57,11 @@ export function readPhaseErrors(
   { fresh, previous }: { fresh: boolean; previous?: string | null | undefined },
 ): string[] {
   const offending = phases.filter(readsOnly);
+
   if (offending.length === 0) return [];
+
   if (!fresh && previous != null && planPhases(planBoxes(previous)).some(readsOnly)) return [];
+
   return offending.map((p) => `phase ${p.id} only reads principles; move each read into the phase it gates`);
 }
 
@@ -64,7 +70,9 @@ export function parallelFiles(phase: PlanBox): string[] | null {
   const m = PARALLEL_RE.exec(phase.text) /* the pattern names its group */ as
     | (RegExpExecArray & { groups: { files: string } })
     | null;
+
   if (m === null) return null;
+
   return m.groups.files
     .split(FILE_SPLIT_RE)
     .filter(Boolean)
@@ -80,20 +88,25 @@ type Member = {
 function parallelGroups(phases: PlanPhase[]): Member[][] {
   const groups: Member[][] = [];
   let run: Member[] = [];
+
   for (const p of [...phases, null]) {
     const files = p === null ? null : parallelFiles(p);
+
     if (p !== null && files !== null) {
       run.push({ files, id: p.id });
       continue;
     }
+
     if (run.length > 0) groups.push(run);
     run = [];
   }
+
   return groups;
 }
 
 function sharedFileErrors(a: Member, b: Member): string[] {
   const shared = new Set(a.files.filter((x) => b.files.includes(x)));
+
   return [...shared].map(
     (f) => `parallel phases ${a.id} and ${b.id} both list ${f}; parallel phases need disjoint files`,
   );

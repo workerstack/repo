@@ -19,6 +19,7 @@ function entry(name: string, fields: Record<string, unknown>, manifest = `/work/
     ...fields,
   };
 }
+
 const FULL = { description: "d", license: "MIT", repository: "https://x", rust_version: "1.86" };
 
 /**
@@ -27,17 +28,22 @@ const FULL = { description: "d", license: "MIT", repository: "https://x", rust_v
  */
 function cargo(packages: { id: string }[], result: Partial<CargoResult> = {}, members?: string[]) {
   const calls: { root: string; args: readonly string[] }[] = [];
+
   function run(root: string, args: readonly string[]): CargoResult {
     calls.push({ args, root });
     const ids = members ?? packages.map((pkg) => pkg.id);
     const stdout = JSON.stringify({ packages, version: 1, workspace_members: ids, workspace_root: root });
+
     return { missing: false, status: 0, stderr: "", stdout, ...result };
   }
+
   return { calls, run };
 }
+
 function bad(stdout: string) {
   return crateProblems("/work", cargo([], { stdout }).run);
 }
+
 function problems(packages: { id: string }[]) {
   return crateProblems("/work", cargo(packages).run);
 }

@@ -31,6 +31,7 @@ function plant() {
 
 function committedRepo() {
   const dir = plant();
+
   function git(...args: string[]) {
     return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], {
       cwd: dir,
@@ -38,10 +39,12 @@ function committedRepo() {
       env: childEnv({ GIT_DIR: undefined, GIT_INDEX_FILE: undefined }),
     });
   }
+
   git("init", "-q", "-b", "main");
   fs.writeFileSync(path.join(dir, ".gitignore"), ".tmp/\n");
   git("add", "-A");
   git("commit", "-qm", "init");
+
   return dir;
 }
 
@@ -61,6 +64,7 @@ describe("stampPlanSave", () => {
 describe("a failure inside the shared-checkout check", () => {
   it("lets the call through instead of blocking it", () => {
     const repo = committedRepo();
+
     function call(lastUserInput: unknown): HookInput {
       return {
         conversationId: "c1",
@@ -69,12 +73,15 @@ describe("a failure inside the shared-checkout check", () => {
         workspacePaths: [repo],
       };
     }
+
     expect(processFatTools(call(""))).toMatchObject({ type: "deny" });
+
     const unreadable = {
       toString: () => {
         throw new Error("no text");
       },
     };
+
     expect(processFatTools(call(unreadable))).toBeNull();
   });
 });
@@ -89,12 +96,14 @@ describe("main", () => {
   it("fails open with exit 0 when the reply cannot be written", () => {
     const ws = plant();
     const payload = JSON.stringify({ tool_input: { pattern: "x" }, tool_name: "Grep", workspaceRoot: ws });
+
     const io = {
       ...stdinOf(payload),
       write: () => {
         throw new Error("pipe closed");
       },
     };
+
     expect(main([], io)).toBe(0);
   });
 

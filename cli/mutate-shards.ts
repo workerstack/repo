@@ -8,12 +8,14 @@ import { JSON_SUFFIX, SHORT_SHA } from "./mutate.constants.ts";
 /** `a and b`, `a, b and c`: two items or more. */
 function listOf(items: readonly string[]): string {
   const last = items.length - 1;
+
   return `${items.slice(0, last).join(", ")} and ${items[last]}`;
 }
 
 function unique<T>(items: readonly T[]): T[] {
   return [...new Set(items)];
 }
+
 export function shortOf(head: string): string {
   return head.slice(0, SHORT_SHA);
 }
@@ -23,11 +25,13 @@ type ToolCheck = (dir: string, reports: ShardReport[], kind: string) => string |
 
 function mixedHeads(dir: string, reports: ShardReport[]): string | null {
   const heads = unique(reports.map((report) => shortOf(report.head)));
+
   return heads.length > 1 ? `${dir} holds shards of ${listOf(heads)}; use one run's reports` : null;
 }
 
 function mixedTotals(dir: string, reports: ShardReport[], kind: string): string | null {
   const totals = unique(reports.map((report) => report.shard.total));
+
   return totals.length > 1
     ? `${dir} mixes ${kind}runs of ${listOf(totals.map(String))} shards; use one run's reports`
     : null;
@@ -36,6 +40,7 @@ function mixedTotals(dir: string, reports: ShardReport[], kind: string): string 
 function repeated(dir: string, reports: ShardReport[], kind: string): string | null {
   const seen = reports.map((report) => report.shard.index);
   const twice = seen.find((index, at) => seen.indexOf(index) !== at);
+
   return twice === undefined ? null : `${dir} holds ${kind}shard ${twice} twice; use one run's reports`;
 }
 
@@ -43,8 +48,10 @@ function missing(dir: string, reports: ShardReport[], kind: string): string | nu
   const total = Math.max(0, ...reports.map((report) => report.shard.total));
   const seen = reports.map((report) => report.shard.index);
   const absent = Array.from({ length: total }, (_, at) => at + 1).filter((index) => !seen.includes(index));
+
   if (absent.length === 0) return null;
   const noun = absent.length > 1 ? "shards" : "shard";
+
   return `${dir} is missing ${kind}${noun} ${absent.join(", ")} of ${total}; download every shard's report first`;
 }
 
@@ -53,16 +60,21 @@ const TOOL_CHECKS: readonly ToolCheck[] = [mixedTotals, repeated, missing];
 /** The first problem with the reports: heads must agree across all of them, the rest is judged per tool. */
 function problemWith(dir: string, reports: ShardReport[]): string | null {
   const heads = mixedHeads(dir, reports);
+
   if (heads !== null) return heads;
   const tools = unique(reports.map((report) => report.tool));
+
   for (const tool of tools) {
     const mine = reports.filter((report) => report.tool === tool);
     const kind = tools.length > 1 ? `${tool} ` : "";
+
     for (const check of TOOL_CHECKS) {
       const problem = check(dir, mine, kind);
+
       if (problem !== null) return problem;
     }
   }
+
   return null;
 }
 
@@ -70,15 +82,21 @@ function problemWith(dir: string, reports: ShardReport[]): string | null {
 export function loadShards(dir: string, deps: MutateDeps): ShardReport[] | string {
   const full = path.resolve(deps.cwd, dir);
   const names = (deps.fs.list(full) ?? []).filter((name) => name.endsWith(JSON_SUFFIX)).toSorted();
+
   if (names.length === 0) {
     const hint = `repo mutate --shard i/n --report ${dir}/mutation-i${JSON_SUFFIX}`;
+
     return `${dir} holds no mutation report; run \`${hint}\` first`;
   }
+
   const reports: ShardReport[] = [];
+
   for (const name of names) {
     const parsed = parseReport(deps.fs.read(path.join(full, name)) ?? "");
+
     if (!parsed.ok) return `${path.join(dir, name)} is not a mutation report: ${parsed.reason}`;
     reports.push(parsed.value);
   }
+
   return problemWith(dir, reports) ?? reports;
 }

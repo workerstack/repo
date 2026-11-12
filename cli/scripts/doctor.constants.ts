@@ -22,6 +22,7 @@ export const MAPS_SECTIONS: string[] = ["skills", "refs"];
 /** The platforms the hints and PATH lookup tell apart. */
 export const WIN32 = "win32";
 export const DARWIN = "darwin";
+
 /** The `installHints` id that prints every required tool's hints. */
 export const HINT_ALL = "all";
 
@@ -71,10 +72,13 @@ export const INSTALL_HINTS: Record<string, InstallHints> = {
 
 /** The executable suffixes Windows tries when PATHEXT is unset. */
 export const PATHEXT_DEFAULT = ".EXE;.CMD;.BAT;.COM";
+
 /** The version parts `versionAtLeast` compares: major, minor, patch. */
 export const VERSION_PARTS = 3;
+
 /** How long one `--version` call may take. */
 export const VERSION_TIMEOUT_MS = 8000;
+
 /** Floor when no package.json beside the scripts declares `engines.bun` (init copies the scripts into consumers). */
 export const BUN_MIN_FALLBACK = "1.4.4";
 
@@ -89,15 +93,19 @@ export const WORKSPACE_KIND_ORDER: string[] = ["oauth", "tokens", "adc", "claspr
 
 /** The root ignore file, which the redundant-line scan skips. */
 export const GITIGNORE = ".gitignore";
+
 /** git's output can be large in a big checkout. */
 export const GIT_MAX_BUFFER: number = 256 * 1024 * 1024;
+
 /** Days a worktree may sit unmerged before doctor lists it; the window `commit-push` uses for recent branches. */
 export const STALE_DAYS = 7;
 export const DAY_SECONDS = 86_400;
 export const MS_PER_SECOND = 1000;
+
 /** The shortest `dir/` line that can repeat a bare `dir` line. */
 export const MIN_DIR_LINE = 2;
 export const NOT_FOUND = -1;
+
 /** A sort comparator's answer when the left item goes first. */
 export const SORTS_BEFORE = -1;
 
@@ -105,8 +113,10 @@ export const SORTS_BEFORE = -1;
 export const MODEL_LIST_CAP_MS = 20_000;
 export const OFFERED_SHOWN = 6;
 export const MODEL_CLIS: ModelCli[] = ["codex", "grok", "agy", "cursor"];
+
 /** A cursor agent's `model: inherit` runs the parent session's model. */
 export const INHERIT = "inherit";
+
 /** What the shared cap settles with, so a list that outlasts it reads as capped. */
 export const CAPPED = "capped";
 export const ENOENT = "ENOENT";

@@ -28,10 +28,12 @@ function touch(root: string, rel: string) {
 function repo(prefix: string, markerAt: string | null = "") {
   const root = tmpDir(prefix);
   git(root, "init", "-q");
+
   if (markerAt !== null) touch(root, path.join(markerAt, INSTALL_MARKER));
   touch(root, "packages/a/index.js");
   git(root, "add", "-A");
   git(root, "commit", "-qm", "init");
+
   return root;
 }
 

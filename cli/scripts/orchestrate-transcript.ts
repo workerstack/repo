@@ -38,12 +38,14 @@ export function closingLineOf(msg: string): Approvable[] | null {
 export function isWaitScoutExact(msg: string): boolean {
   const nonempty = msg.split("\n").filter((l) => l.trim() !== "");
   const [only = ""] = nonempty;
+
   return nonempty.length === 1 && only.replace(LEAD, "") === WAIT_SCOUT;
 }
 
 /** True when the reply asks the person something: a scout wait, a closing line or a question. */
 export function hasStepAsk(msg: string): boolean {
   if (isWaitScoutExact(msg) || closingLineOf(msg) !== null) return true;
+
   return msg
     .split("\n")
     .map((l) => l.replace(LEAD, "").trim())
@@ -52,6 +54,7 @@ export function hasStepAsk(msg: string): boolean {
 
 export function firstNonEmptyStripped(msg: string): string {
   const first = msg.split("\n").find((line) => line.trim() !== "");
+
   return first === undefined ? "" : first.replace(LEAD, "");
 }
 
@@ -61,6 +64,7 @@ export function endsWithQuestion(msg: string): boolean {
     .map((l) => l.replace(TRAIL, ""))
     .filter((l) => l !== "")
     .at(LAST_INDEX);
+
   return last?.endsWith("?") === true;
 }
 
@@ -71,21 +75,28 @@ export function payloadAssistantMessage(data: HookInput): string {
 function isAssistantRecord(obj: unknown): obj is Record<string, unknown> {
   if (!isRecord(obj)) return false;
   const type = textOf(obj.type).toLowerCase();
+
   if (NON_ASSISTANT_TYPES.has(type)) return false;
+
   if (type === ASSISTANT) return true;
   const own = textOf(obj.role);
   const role = own === "" ? textOf(isRecord(obj.message) ? obj.message.role : undefined) : own;
+
   return role.toLowerCase() === ASSISTANT;
 }
 
 /** The text parts of a content array, tool calls and results left out; null when none has text. */
 function partsText(content: unknown[]): string | null {
   const texts: string[] = [];
+
   for (const part of content) {
     if (!isRecord(part) || TOOL_PARTS.has(textOf(part.type))) continue;
+
     if (typeof part.text === "string" && part.text !== "") texts.push(part.text);
   }
+
   const joined = texts.join("\n").trim();
+
   return joined === "" ? null : joined;
 }
 
@@ -93,9 +104,13 @@ function assistantTextFromRecord(obj: unknown): string | null {
   if (!isAssistantRecord(obj)) return null;
   const msg = isRecord(obj.message) ? obj.message : obj;
   const content = msg.content ?? obj.content;
+
   if (Array.isArray(content)) return partsText(content);
+
   if (typeof content === "string" && content.trim() !== "") return content;
+
   if (typeof obj.text === "string" && obj.text.trim() !== "") return obj.text;
+
   return null;
 }
 
@@ -104,11 +119,14 @@ function tailLines(filePath: string): string[] {
   const st = fs.statSync(filePath);
   const start = Math.max(0, st.size - TRANSCRIPT_TAIL_BYTES);
   const fd = fs.openSync(filePath, "r");
+
   try {
     const buf = Buffer.alloc(st.size - start);
     fs.readSync(fd, buf, 0, buf.length, start);
     const lines = buf.toString("utf8").split("\n");
+
     if (start > 0) lines.shift();
+
     return lines;
   } finally {
     fs.closeSync(fd);
@@ -127,11 +145,14 @@ export function lastAssistantFromTranscript(filePath: string): string {
   try {
     if (filePath === "") return "";
     let last = "";
+
     for (const line of tailLines(filePath)) {
       const t = line.trim();
       const extracted = t === "" ? null : assistantTextFromRecord(parseRecord(t));
+
       if (extracted !== null) last = extracted;
     }
+
     return last;
   } catch {
     return "";

@@ -36,6 +36,7 @@ it("matches the consumer fixture goldens byte for byte, path set included", () =
   const goldens = new Map([...readGoldens()].filter(([rel]) => isRulesPath(rel)));
   const out = renderText(fixtureSources(), HOSTS);
   expect([...out.keys()].toSorted()).toStrictEqual([...goldens.keys()].toSorted());
+
   for (const [rel, text] of goldens) expect(out.get(rel), rel).toBe(bodyOf(rel, text));
 });
 
@@ -74,6 +75,7 @@ it("renders a path rule for claude with a paths list and nothing else", () => {
     sourcesOf([BASE, rule("testing.md", { overrides: "x", paths: ["src/**", "lib/**"] }, "Test body.")]),
     ["claude"],
   );
+
   expect(out.get(".claude/rules/testing.md")).toBe("---\npaths:\n  - src/**\n  - lib/**\n---\nTest body.\n");
   expect([...out.keys()].toSorted()).toStrictEqual([".claude/rules/testing.md", "AGENTS.md"]);
 });
@@ -137,7 +139,9 @@ it("is stripped from every host's subagent file", () => {
     rel: ".repo/subagents/scout.md",
     scope: "",
   };
+
   const out = renderSubagents({ ...sourcesOf([]), subagents: [scout] }, HOSTS);
   expect(out.size).toBe(HOSTS.length);
+
   for (const [rel, text] of out) expect(text, rel).not.toContain("overrides");
 });
