@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import { isSource } from "../test-files.ts";
 
 /**
@@ -93,18 +95,21 @@ function shipsOf(raw: Record<string, unknown>): (rel: string) => boolean {
       ((included === undefined || included.some((match) => match(rel))) && !excluded.some((match) => match(rel))));
 }
 
+/** The manifest object at `file`, its name null unless a string; undefined when it is unreadable or no JSON object. */
+function rawManifest(file: string): { name: string | null; [key: string]: unknown } | undefined {
+  try {
+    return tryJson(z.looseObject({ name: z.string().nullable().catch(null) }), fs.readFileSync(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
 /** The manifest at `file`, or null when it cannot be read as a JSON object. */
 export function readManifest(file: string): Manifest | null {
-  let raw: unknown;
+  const raw = rawManifest(file);
 
-  try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return null;
-  }
-
-  if (!isRecord(raw)) return null;
-  const name = typeof raw.name === "string" ? raw.name : null;
+  if (raw === undefined) return null;
+  const { name } = raw;
   const doc = raw;
 
   function namesIn(keys: string[]) {

@@ -3,7 +3,9 @@
  * facts differently, so each spelling is its own optional field.
  */
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 
 /** Antigravity's tool call: the tool name and its arguments. */
 type HookToolCall = {
@@ -193,23 +195,14 @@ function agentOf(agent: unknown): string | HookAgent | undefined {
   return copyWhere(agent, AGENT_FIELDS, isString);
 }
 
-/** The JSON value of `raw`, or undefined when it does not parse. */
-function parseJson(raw: string): unknown {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Parses stdin text into a HookInput, or null when it is not JSON or not an object.
  * A field whose type is wrong is dropped; the rest are kept.
  */
 export function parseHookInput(raw: string): HookInput | null {
-  const value = parseJson(raw);
+  const value = tryJson(z.record(z.string(), z.unknown()), raw);
 
-  if (!isRecord(value)) return null;
+  if (value === undefined) return null;
   const out = flatFields(value);
 
   if (isRecord(value.toolCall)) out.toolCall = toolCallOf(value.toolCall);

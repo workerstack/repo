@@ -111,7 +111,7 @@ it("merges providers without dropping the other", () => {
 });
 
 it("rejects web OAuth clients", () => {
-  expect(() => parseDesktopOAuth({ web: { client_id: "cid" } })).toThrow(/Desktop client/);
+  expect(() => parseDesktopOAuth(JSON.stringify({ web: { client_id: "cid" } }))).toThrow(/Desktop client/);
 });
 
 it("installs Desktop JSON to dest", () => {

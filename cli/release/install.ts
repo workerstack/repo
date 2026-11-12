@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJsonFile } from "../package-json.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import {
   BUN_ADD,
@@ -41,10 +42,6 @@ function projectSchema() {
   return z.object({ dependencies: z.record(z.string(), z.string()) });
 }
 
-function readJson(file: string): unknown {
-  return JSON.parse(fs.readFileSync(file, "utf8"));
-}
-
 function firstLine(text: string): string {
   return text.trim().split("\n", 1).join("");
 }
@@ -63,14 +60,14 @@ export function addSpecs(project: string, specs: readonly string[], io: InstallI
 
 /** The name of the one package added to `project`. */
 export function addedName(project: string): string {
-  return Object.keys(projectSchema().parse(readJson(path.join(project, PROJECT_FILE))).dependencies).join("");
+  return Object.keys(readJsonFile(path.join(project, PROJECT_FILE), projectSchema()).dependencies).join("");
 }
 
 /** The package `name` as installed in `project`, which can hold several. */
 export function installedIn(project: string, name: string): Package {
   const root = path.join(project, INSTALLED_DIR, name);
 
-  return { installed: installedSchema().parse(readJson(path.join(root, PROJECT_FILE))), name, root };
+  return { installed: readJsonFile(path.join(root, PROJECT_FILE), installedSchema()), name, root };
 }
 
 /** Adds the peers bun leaves out (the optional ones); bun's stderr when that fails, else null. */
@@ -103,6 +100,6 @@ export function specOf(name: string, subpath: Subpath): string {
  */
 export function renameOld(project: string): void {
   const file = path.join(project, INSTALLED_DIR, OLD_ALIAS, PROJECT_FILE);
-  const manifest = z.record(z.string(), z.unknown()).parse(readJson(file));
+  const manifest = readJsonFile(file, z.record(z.string(), z.unknown()));
   fs.writeFileSync(file, JSON.stringify({ ...manifest, name: OLD_ALIAS }));
 }

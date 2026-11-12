@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { JSON_INDENT, OAUTH_FILE, SECRET_DIR_MODE, SECRET_FILE_MODE } from "./setup.constants.ts";
 import type { SpeakPatch } from "./setup.types.ts";
-import { readJson, section, str } from "./voice-args.ts";
+import { readObjectFile, section, str } from "./voice-args.ts";
 
 export function stateHome(home: string = os.homedir()): string {
   const d = path.join(home, ".workerstack");
@@ -40,7 +40,7 @@ export function speakJsonPath(home: string): string {
 export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   stateHome(home);
   const p = speakJsonPath(home);
-  const cur = readJson(p);
+  const cur = readObjectFile(p);
   const next: Record<string, unknown> = { ...cur, ...patch };
 
   if (patch.elevenlabs !== undefined) next.elevenlabs = { ...section(cur, "elevenlabs"), ...patch.elevenlabs };

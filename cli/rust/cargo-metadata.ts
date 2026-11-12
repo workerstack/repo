@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { METADATA_ARGS, PROBLEM_TAIL, STALE_EXIT } from "./cargo-metadata.constants.ts";
 import { MISSING_CARGO, QUOTE_LIMIT } from "./clippy.constants.ts";
 import type { CargoRun } from "./clippy.ts";
@@ -106,21 +107,13 @@ function quote(value: string) {
 
 /** `cargo metadata` output, parsed at the edge: the member crates, or the quoted output that was not that. */
 function parse(stdout: string): Workspace {
-  let json: unknown;
+  const read = tryJson(schema(), stdout);
 
-  try {
-    json = JSON.parse(stdout);
-  } catch {
-    json = null;
-  }
-
-  const read = schema().safeParse(json);
-
-  if (!read.success)
+  if (read === undefined)
     return { kind: "failed", problems: [`cargo metadata printed output repo cannot read: ${quote(stdout.trim())}`] };
-  const members = new Set(read.data.workspace_members);
+  const members = new Set(read.workspace_members);
 
-  return { crates: read.data.packages.filter((crate) => members.has(crate.id)), kind: "crates" };
+  return { crates: read.packages.filter((crate) => members.has(crate.id)), kind: "crates" };
 }
 
 /**

@@ -4,6 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { isPublic } from "../docs-exports.ts";
+import { tryJson } from "../json.ts";
 import { MANIFEST_FILE, VERSION_LINE } from "./release.constants.ts";
 
 /** The fields of the root package.json a release reads. */
@@ -15,13 +16,9 @@ function schema() {
 
 /** The manifest in `text`; null when it is not JSON or lacks a name or version. */
 export function parseManifest(text: string): Manifest | null {
-  try {
-    const parsed = schema().safeParse(JSON.parse(text));
+  const parsed = tryJson(schema(), text);
 
-    return parsed.success ? { ...parsed.data, private: parsed.data.private === true } : null;
-  } catch {
-    return null;
-  }
+  return parsed === undefined ? null : { ...parsed, private: parsed.private === true };
 }
 
 /** The manifest at `root`; null when it is missing, not JSON or lacks a name or version. */
@@ -36,9 +33,9 @@ export function readManifest(root: string): Manifest | null {
 /** Whether the root package.json names a package and says `"private": false`, as `repo check` reads a public one. */
 export function isPublicPackage(root: string): boolean {
   try {
-    const parsed = schema().safeParse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
+    const parsed = tryJson(schema(), fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
 
-    return parsed.success && isPublic(parsed.data);
+    return parsed !== undefined && isPublic(parsed);
   } catch {
     return false;
   }

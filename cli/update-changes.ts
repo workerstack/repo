@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { tryJson } from "./json.ts";
 import { matchesName } from "./matches-name.ts";
+import { packageJsonSchema } from "./package-json.ts";
 import { compareVersions, parseChangelog } from "./release/changelog-parse.ts";
 import { parseSemver } from "./release/version.ts";
 import {
@@ -40,12 +42,10 @@ function compared(x: string, y: string): number {
 /** The `version` of an installed package.json; null when the file is unreadable or names no semver version. */
 function installedVersion(dir: string, name: string): string | null {
   try {
-    const manifest: unknown = JSON.parse(fs.readFileSync(path.join(packageDir(dir, name), ROOT_FILE), "utf8"));
+    const text = fs.readFileSync(path.join(packageDir(dir, name), ROOT_FILE), "utf8");
+    const version = tryJson(packageJsonSchema.pick({ version: true }), text)?.version;
 
-    const version = (manifest /* parsed JSON, read as an object only after the check */ as { version?: unknown })
-      .version;
-
-    return typeof version === "string" && parseSemver(version) !== null ? version : null;
+    return version !== undefined && parseSemver(version) !== null ? version : null;
   } catch {
     return null;
   }

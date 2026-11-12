@@ -1,6 +1,7 @@
 /** The two reports of `repo mutate`: Stryker's json report in, a shard's own report out and read back. */
 import { z } from "zod";
 
+import { readJson } from "./json.ts";
 import { CARGO_KILLED, CARGO_MISSED, KILLED_STATUSES, SURVIVOR_STATUSES } from "./mutate.constants.ts";
 
 /** A mutant no test killed. */
@@ -146,23 +147,31 @@ export function fromCargoMutants(raw: unknown): Parsed<Record<string, FileScore>
   return { ok: true, value: files };
 }
 
-/** JSON text as a value, or why it is no JSON. */
-export function parseJson(text: string): Parsed<unknown> {
+/**
+ * A tool's or a shard's JSON text read through `schema`, or why not: the SyntaxError for text that is no JSON, else
+ * `why` of the issues (each `<key>: <message>` by default).
+ */
+export function readParsed<T>(
+  schema: z.ZodType<T>,
+  text: string,
+  why: (error: z.ZodError) => string = reasonOf,
+): Parsed<T> {
+  let value: unknown;
+
   try {
-    return { ok: true, value: JSON.parse(text) };
+    value = readJson(z.json(), text);
   } catch (error) {
     return { ok: false, reason: String(error) };
   }
+
+  const parsed = schema.safeParse(value);
+
+  return parsed.success ? { ok: true, value: parsed.data } : { ok: false, reason: why(parsed.error) };
 }
 
 /** A shard report read from JSON text. */
 export function parseReport(text: string): Parsed<ShardReport> {
-  const json = parseJson(text);
-
-  if (!json.ok) return json;
-  const parsed = schemas.report.safeParse(json.value);
-
-  return parsed.success ? { ok: true, value: parsed.data } : { ok: false, reason: reasonOf(parsed.error) };
+  return readParsed(schemas.report, text);
 }
 
 /** The survivors of every file of a report. */

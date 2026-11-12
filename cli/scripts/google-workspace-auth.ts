@@ -4,13 +4,15 @@ import crypto from "node:crypto";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import {
   accountContext,
   filled,
   loadToken,
   persistToken,
-  readJson,
-  rec,
+  readSecretJson,
   tokenStorePath,
   writeSecretJson,
 } from "./google-workspace-account.ts";
@@ -156,15 +158,24 @@ function awaitCode(loop: { server: http.Server; redirect: string }, auth: string
   }).finally(() => server.close());
 }
 
+/** An OAuth client JSON: its installed or web client, each with a client id and an optional secret. */
+function credsSchema() {
+  const client = z
+    .looseObject({ client_id: z.string().min(1), client_secret: z.string().catch("") })
+    .optional()
+    .catch(undefined);
+
+  return z.looseObject({ installed: client, web: client });
+}
+
 /** The Desktop client in the OAuth JSON at `credsPath`; throws when it names no client id. */
 function readClient(credsPath: string): { clientId: string; clientSecret: string } {
-  const raw = rec(readJson(credsPath));
-  const inst = rec(raw.installed ?? raw.web);
-  const clientId = filled(inst.client_id);
+  const creds = readSecretJson(credsPath, credsSchema());
+  const inst = creds?.installed ?? creds?.web;
 
-  if (clientId === undefined) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+  if (inst === undefined) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
 
-  return { clientId, clientSecret: filled(inst.client_secret) ?? "" };
+  return { clientId: inst.client_id, clientSecret: inst.client_secret };
 }
 
 export async function loginLoopback(
@@ -202,14 +213,11 @@ export function loginArgs(): string[] {
   return ["login", "--extra-scopes", EXTRA_SCOPES.join(",")];
 }
 
+/** Google's reply body: its object, empty for no body or another JSON value, or the start of text that is not JSON. */
 function parseReply(text: string): Rec {
-  try {
-    const parsed: unknown = text === "" ? null : JSON.parse(text);
+  if (text === "") return {};
 
-    return rec(parsed);
-  } catch {
-    return { raw: text.slice(0, RAW_REPLY_CHARS) };
-  }
+  return tryJson(z.record(z.string(), z.unknown()).catch({}), text) ?? { raw: text.slice(0, RAW_REPLY_CHARS) };
 }
 
 /** A Google API call with the account's bearer token; a string body is sent as JSON. */

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "../cli/json.ts";
 import {
   AGENTS_FILE,
   ARGV_START,
@@ -72,7 +73,7 @@ function readEntries(transcript: string): Entry[] {
     .readFileSync(transcript, "utf8")
     .split("\n")
     .filter((line) => line !== "")
-    .map((line) => entrySchema.parse(JSON.parse(line)));
+    .map((line) => readJson(entrySchema, line));
 }
 
 function answersWithUsage(entry: Entry): boolean {
@@ -114,7 +115,7 @@ function spawnRow(meta: z.infer<typeof metaSchema>, entries: Entry[]): Row {
 }
 
 function readSpawn(subagents: string, metaFile: string): Row {
-  const meta = metaSchema.parse(JSON.parse(fs.readFileSync(path.join(subagents, metaFile), "utf8")));
+  const meta = readJson(metaSchema, fs.readFileSync(path.join(subagents, metaFile), "utf8"));
 
   return spawnRow(meta, readEntries(path.join(subagents, metaFile.replace(META_SUFFIX_PATTERN, TRANSCRIPT_SUFFIX))));
 }

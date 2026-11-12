@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { isRecord } from "../json.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
@@ -25,7 +26,7 @@ function get(ws: string, rel: string): unknown {
 function listAt(ws: string, rel: string, ...keys: string[]): unknown[] {
   let cur = get(ws, rel);
 
-  for (const k of keys) cur = typeof cur === "object" && cur !== null ? Reflect.get(cur, k) : undefined;
+  for (const k of keys) cur = isRecord(cur) ? cur[k] : undefined;
 
   return Array.isArray(cur) ? cur : [];
 }

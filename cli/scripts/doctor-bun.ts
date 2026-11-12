@@ -3,11 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
+import { packageJsonSchema } from "../package-json.ts";
 import { BUN_MIN_FALLBACK, VERSION_PARTS } from "./doctor.constants.ts";
 
 const VERSION_RE = /\d+(?:\.\d+){0,2}/;
 const DOTTED_RE = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?/;
+
+function enginesSchema() {
+  return packageJsonSchema.pick({}).extend({ engines: z.looseObject({ bun: z.string().optional() }).optional() });
+}
 
 /** The package.json two levels above this script. */
 function besidePackageJson(): string {
@@ -17,8 +24,7 @@ function besidePackageJson(): string {
 /** The `engines.bun` floor from the package.json two levels above this script, as `1.4.4`. */
 export function bunMinimum(file: string = besidePackageJson()): string {
   try {
-    const pkg: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-    const range = isRecord(pkg) && isRecord(pkg.engines) ? pkg.engines.bun : undefined;
+    const range = tryJson(enginesSchema(), fs.readFileSync(file, "utf8"))?.engines?.bun;
 
     return VERSION_RE.exec(String(range))?.[0] ?? BUN_MIN_FALLBACK;
   } catch {

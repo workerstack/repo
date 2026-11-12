@@ -2,8 +2,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { z } from "zod";
-
 import {
   INSTALLED_MANIFEST,
   LATEST_TAG,
@@ -16,6 +14,8 @@ import {
   behindLine,
   skippedLine,
 } from "./check-latest.constants.ts";
+import { tryJson } from "./json.ts";
+import { packageJsonSchema } from "./package-json.ts";
 import { REGISTRY } from "./release/release.constants.ts";
 import { registryDoc } from "./release/wait.ts";
 import type { Env } from "./repo-env.ts";
@@ -26,10 +26,6 @@ export type LatestLines = { problems: string[]; report: string[] };
 /** What the check fetches with: `fetch`, taking the abort signal that bounds the wait. */
 export type LatestFetch = (url: string, init: { signal: AbortSignal }) => Promise<Response>;
 
-function manifestSchema(): z.ZodType<{ version: string }> {
-  return z.object({ version: z.string() });
-}
-
 /** The registry bun installs from: `BUN_CONFIG_REGISTRY`, then `NPM_CONFIG_REGISTRY`, else npm. */
 export function latestRegistry(env: Env): string {
   return env.BUN_CONFIG_REGISTRY ?? env.NPM_CONFIG_REGISTRY ?? REGISTRY;
@@ -39,12 +35,8 @@ export function latestRegistry(env: Env): string {
 function installedVersion(cwd: string): string | null {
   const file = path.join(cwd, ...INSTALLED_MANIFEST);
 
-  if (!fs.existsSync(file)) return null;
-
   try {
-    const parsed = manifestSchema().safeParse(JSON.parse(fs.readFileSync(file, "utf8")));
-
-    return parsed.success ? parsed.data.version : null;
+    return tryJson(packageJsonSchema.pick({ version: true }), fs.readFileSync(file, "utf8"))?.version ?? null;
   } catch {
     return null;
   }

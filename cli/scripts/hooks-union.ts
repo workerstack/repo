@@ -24,6 +24,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { readJson } from "../json.ts";
 import { hookCommand, hookNameOf, type HookName } from "./hook-command.ts";
 import { applyAgents, applyClaude, applyCodex, applyCursor } from "./hooks-union-apply.ts";
 import { isRootCmd } from "./hooks-union-commands.ts";
@@ -128,7 +131,8 @@ function staleCommands(root: string): string[] {
     const p = path.join(root, rel);
 
     if (!fs.existsSync(p)) return [];
-    const data: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
+    // allCommands walks any JSON value for its command strings.
+    const data = readJson(z.json(), stripJsonc(fs.readFileSync(p, "utf8")));
 
     return allCommands(data).flatMap((command) => staleOf(id, command) ?? []);
   });
@@ -157,7 +161,7 @@ function specFailures(root: string, spec: FileSpec): string[] {
 
   if (!fs.existsSync(p)) return [`${spec.id}: missing ${spec.path}`];
   const text = fs.readFileSync(p, "utf8");
-  const present = new Set(allCommands(JSON.parse(text)).map(hookNameOf));
+  const present = new Set(allCommands(readJson(z.json(), text)).map(hookNameOf));
 
   return [
     ...spec.hooks.filter((h) => !present.has(h)).map((h) => `${spec.id}: missing ${h}`),

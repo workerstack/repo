@@ -21,6 +21,14 @@ function read(manifest: unknown) {
   return result;
 }
 
+/** Writes `text` as the temp file `name` and returns its path. */
+function written(name: string, text: string): string {
+  const file = path.join(dir, name);
+  fs.writeFileSync(file, text);
+
+  return file;
+}
+
 function shipped(manifest: unknown, files: string[]): string[] {
   const { ships } = read(manifest);
 
@@ -44,6 +52,12 @@ describe("readManifest runtime and public", () => {
 
   it.each([[{}], [{ private: true }], [{ private: "false" }]])("is private for %j", (manifest) => {
     expect(read(manifest).isPublic).toBe(false);
+  });
+
+  it("is null for a missing file, text that is no JSON and JSON that is no object", () => {
+    expect(readManifest(path.join(dir, "missing.json"))).toBeNull();
+    expect(readManifest(written("garbled.json", "{ nope"))).toBeNull();
+    expect(readManifest(written("list.json", "[1]"))).toBeNull();
   });
 });
 

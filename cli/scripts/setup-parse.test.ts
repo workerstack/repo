@@ -38,10 +38,10 @@ it("setupTargets always offers browser and jev, and the enabled packs", () => {
   expect(setupTargets(["speak", "clasp"])).toStrictEqual(["speak", "browser", "jev"]);
 });
 
-it("parseDesktopOAuth takes an object and rejects a body without a client id", () => {
-  expect(parseDesktopOAuth(desktopOauth)).toBe(desktopOauth);
-  expect(() => parseDesktopOAuth({ installed: {} })).toThrow(/installed\.client_id/);
-  expect(() => parseDesktopOAuth(null)).toThrow(/installed\.client_id/);
+it("parseDesktopOAuth takes a Desktop client and rejects a body without a client id", () => {
+  expect(parseDesktopOAuth(JSON.stringify(desktopOauth))).toStrictEqual(desktopOauth);
+  expect(() => parseDesktopOAuth('{"installed":{}}')).toThrow(/installed\.client_id/);
+  expect(() => parseDesktopOAuth("null")).toThrow(/installed\.client_id/);
 });
 
 it("loadOAuthInput reads inline JSON and a file, and rejects empty or missing input", () => {

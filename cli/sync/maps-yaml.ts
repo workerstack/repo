@@ -1,4 +1,7 @@
 /** The small YAML reader the maps read skill and reference frontmatter with. */
+import { z } from "zod";
+
+import { readJson } from "../json.ts";
 import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
 import { QUOTED_MIN } from "./maps.constants.ts";
 
@@ -33,7 +36,7 @@ function unquoteYaml(raw: unknown): string {
 
   if (quotedBy(s, '"')) {
     try {
-      return String(JSON.parse(s));
+      return readJson(z.string(), s);
     } catch {
       return unwrapped(s);
     }

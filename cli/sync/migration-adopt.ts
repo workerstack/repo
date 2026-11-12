@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { Host, ResolvedConfig } from "../config.ts";
-import { isRecord } from "../json.ts";
+import { tryJson } from "../json.ts";
 import { sortedJsonValue } from "../scripts/json-keys.ts";
 import { isAgentsFile } from "./agents-file.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { isHostOutput } from "./hosts.ts";
 import { isRealDir, present, same, stockRel, trackedRels } from "./migrate-fs.ts";
-import { ownHooks, parseJson, readJson, settingsExtras } from "./migrate-settings.ts";
+import { ownHooks, settingsExtras, settingsSchema } from "./migrate-settings.ts";
 import {
   ADOPTABLE,
   CLAUDE_OVERLAY,
@@ -81,20 +81,22 @@ function carrySettings(state: MigrationState, have: Record<string, unknown>, bas
 /** `.claude/settings.json` keys the stock's own settings lack go to the overlay; `hooks` come from hooks.jsonc. */
 export function planClaudeSettings(state: MigrationState): void {
   const raw = state.read(CLAUDE_SETTINGS);
+  const stock = state.stockText(CLAUDE_SETTINGS);
 
-  if (raw !== null && state.unedited(CLAUDE_SETTINGS, raw, state.stockText(CLAUDE_SETTINGS))) return;
-  const have = readJson(path.join(state.root, CLAUDE_SETTINGS));
+  if (raw === null || state.unedited(CLAUDE_SETTINGS, raw, stock)) return;
+  // JSON that is no object reads as null and carries nothing; only text that is not JSON earns the note.
+  const have = tryJson(settingsSchema().nullable().catch(null), raw);
 
-  if (have === null) {
+  if (have === undefined) {
     const note = `${CLAUDE_SETTINGS} is not valid JSON; copy any keys of yours into ${CLAUDE_OVERLAY}`;
     state.steps.push({ kind: "note", note });
 
     return;
   }
 
-  const base = parseJson(state.stockText(CLAUDE_SETTINGS));
+  const base = stock === null ? undefined : tryJson(settingsSchema(), stock);
 
-  if (isRecord(have) && isRecord(base)) carrySettings(state, have, base);
+  if (have !== null && base !== undefined) carrySettings(state, have, base);
 }
 
 /**
@@ -102,16 +104,8 @@ export function planClaudeSettings(state: MigrationState): void {
  * the run.
  */
 function adoptSettings(run: Adoption, text: string): void {
-  let have: unknown;
-
-  try {
-    have = JSON.parse(text);
-  } catch {
-    have = null;
-  }
-
-  if (isRecord(have)) planClaudeSettings(run.state);
-  else run.stops.add(CLAUDE_SETTINGS);
+  if (tryJson(settingsSchema(), text) === undefined) run.stops.add(CLAUDE_SETTINGS);
+  else planClaudeSettings(run.state);
 }
 
 /** The real skill dirs of the host skill dirs sync does not own; an edited one moves to `.repo/skills`. */

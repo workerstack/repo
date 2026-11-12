@@ -11,6 +11,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { readJson } from "../json.ts";
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -117,7 +120,7 @@ function runHook(io: HookIo): number {
   const data = parseHookInput(raw);
 
   // A payload that is not JSON still fails the hook with the parse error; any other non-object is a no-op.
-  if (data === null) JSON.parse(raw);
+  if (data === null) readJson(z.json(), raw);
   const res = worktreeHook(data);
 
   if (res.stdout !== "") process.stdout.write(res.stdout);

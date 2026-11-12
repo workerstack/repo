@@ -1,10 +1,13 @@
 import path from "node:path";
 
+import { z } from "zod";
+
 import { isPublic } from "../docs-exports.ts";
 import { SECOND_GROUP } from "../docs-fences.constants.ts";
 import { group, splitMarkdown } from "../docs-fences.ts";
 import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
+import { tryJson } from "../json.ts";
 import { lines } from "../scripts/lines.ts";
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output, SyncContext } from "./outputs.ts";
@@ -98,17 +101,7 @@ function renderReadme(root: DocRoot, read: (rel: string) => string | null, repoR
 function descriptionOf(text: string | null): string {
   if (text === null) return "";
 
-  try {
-    const value: unknown = JSON.parse(text);
-
-    const object = (typeof value === "object" && value !== null ? value : {}) /* read from JSON */ as {
-      description?: unknown;
-    };
-
-    return typeof object.description === "string" ? object.description : "";
-  } catch {
-    return "";
-  }
+  return tryJson(z.looseObject({ description: z.string().catch("") }), text)?.description ?? "";
 }
 
 /** A GitHub-style anchor: lowercase, punctuation but `-` and `_` dropped, each space a `-`. */

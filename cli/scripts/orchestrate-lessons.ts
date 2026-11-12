@@ -5,6 +5,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
 import { holdingCheckout, matchLessons, persistLesson } from "./lessons-ops.ts";
@@ -24,9 +27,7 @@ export function isLessonFile(filePath: string, workspaceRoot: string | null | un
 
 function readSeen(seenFile: string): string[] {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(seenFile, "utf8"));
-
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+    return tryJson(z.array(z.string()), fs.readFileSync(seenFile, "utf8")) ?? [];
   } catch {
     return [];
   }

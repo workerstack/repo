@@ -4,11 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { expect } from "vitest";
+import { z } from "zod";
 
-import { isRecord } from "../cli/json.ts";
+import { packageJsonSchema } from "../cli/package-json.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { linkText } from "../dev/test-paths.ts";
-import { isStringList, isStringMap } from "./json";
 import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";
@@ -86,20 +86,27 @@ export async function installedVersion(sb: Sandbox) {
 }
 
 /** A package.json as init leaves it: scripts and devDependencies are always there. */
-type PackageJson = { scripts: Record<string, string>; devDependencies: Record<string, string> };
+/** The package.json init writes: its scripts and devDependencies, each a map of strings. */
+export const packageJsonWritten = /* @__PURE__ */ packageJsonSchema
+  .pick({ devDependencies: true, scripts: true })
+  .required();
 
-export function isPackageJson(v: unknown): v is PackageJson {
-  return isRecord(v) && isStringMap(v.scripts) && isStringMap(v.devDependencies);
+function buildClaudeSettingsSchema() {
+  return z.looseObject({ permissions: z.looseObject({ allow: z.array(z.string()) }) });
 }
 
-export function isClaudeSettings(v: unknown): v is { permissions: { allow: string[] } } {
-  return isRecord(v) && isRecord(v.permissions) && isStringList(v.permissions.allow);
+/** A claude settings file with its allowed permissions. */
+export const claudeSettingsSchema = /* @__PURE__ */ buildClaudeSettingsSchema();
+
+function buildHookConfigSchema() {
+  const handler = z.looseObject({ command: z.string().optional(), type: z.string().optional() });
+  const group = z.looseObject({ hooks: z.array(handler).optional(), matcher: z.string().optional() });
+
+  return z.looseObject({ hooks: z.record(z.string(), z.array(group)).optional() });
 }
 
-/** An agent host's hook config: hook groups keyed by event, when it has any. */
-function isHookConfig(v: unknown): v is { hooks?: Record<string, unknown> } {
-  return isRecord(v) && (v.hooks === undefined || isRecord(v.hooks));
-}
+/** An agent host's hook config: matcher groups of handlers keyed by event, when it has any. */
+export const hookConfigSchema = /* @__PURE__ */ buildHookConfigSchema();
 
 /** Every path `repo sync` generates for the default config; none is tracked in the consumer. */
 export const GENERATED = [
@@ -193,26 +200,22 @@ export function setHosts(sb: Sandbox, hosts: string[]) {
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };
 
-type HookGroup = { matcher?: string; hooks?: { type: string; command: string }[] };
+type HookGroup = NonNullable<z.output<typeof hookConfigSchema>["hooks"]>[string][number];
 
 /** The command hooks of one event's matcher groups in `file`. */
 function groupCalls(file: string, event: string, groups: HookGroup[]): HookCall[] {
   return groups.flatMap((g) =>
-    (g.hooks ?? [])
-      .filter((h) => h.type === "command")
-      .map((h) => ({ command: h.command, event, file, matcher: g.matcher })),
+    (g.hooks ?? []).flatMap((h) =>
+      h.type === "command" && h.command !== undefined ? [{ command: h.command, event, file, matcher: g.matcher }] : [],
+    ),
   );
 }
 
 /** The command hooks one host config file holds. */
 function fileCalls(sb: Sandbox, file: string): HookCall[] {
-  const hooks = sb.json(file, isHookConfig).hooks ?? {};
+  const hooks = sb.json(file, hookConfigSchema).hooks ?? {};
 
-  return Object.entries(hooks).flatMap(([event, groups]) =>
-    Array.isArray(groups)
-      ? groupCalls(file, event, groups /* host hook configs list matcher groups */ as HookGroup[])
-      : [],
-  );
+  return Object.entries(hooks).flatMap(([event, groups]) => groupCalls(file, event, groups));
 }
 
 /** Every command hook the consumer's agent hosts would run. */

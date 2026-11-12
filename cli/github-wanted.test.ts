@@ -110,3 +110,11 @@ it("wantedAt reads the checkout's Cargo.toml: a Rust repo requires the msrv chec
   expect(await requiredChecks({ "Cargo.toml": "[package]\n" })).toContain("msrv");
   expect(await requiredChecks({})).not.toContain("msrv");
 });
+
+it("wantedAt keeps the description and homepage of a package.json without keywords", async () => {
+  const { keywords: _keywords, ...manifest } = MANIFEST;
+  const wanted = await wantedAt(githubRepo({ files: { "package.json": JSON.stringify(manifest) } }));
+
+  const read = wanted.ok ? [wanted.wanted.description, wanted.wanted.homepage, wanted.wanted.topics] : [];
+  expect(read).toStrictEqual([MANIFEST.description, MANIFEST.homepage, undefined]);
+});

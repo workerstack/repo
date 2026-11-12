@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { asRec, filled, textOf } from "./browser-session.ts";
 import { waitVersion } from "./browser-wait.ts";
 /** The CDP client: one websocket to a running engine, one pending promise per request id. */
@@ -21,13 +24,7 @@ function opened(ws: WebSocket, timeoutMs: number): Promise<void> {
 }
 
 function parse(data: unknown): Rec | null {
-  try {
-    const parsed: unknown = JSON.parse(String(data));
-
-    return asRec(parsed);
-  } catch {
-    return null;
-  }
+  return tryJson(z.record(z.string(), z.unknown()), String(data)) ?? null;
 }
 
 /** Settles the request a reply answers; a reply that is no JSON or names no pending id is dropped. */

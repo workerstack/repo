@@ -1,7 +1,9 @@
 /** The daily request and input-token ledger: reserve before a call, settle to the real count after. */
 import fs from "node:fs";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { jevUsagePath } from "./jev-key.ts";
 import { DAY_CHARS, MAX_INPUT_TOKENS_PER_DAY, MAX_REQUESTS_PER_DAY, SECRET_FILE_MODE } from "./jev.constants.ts";
 import type { Begun, Ledger } from "./jev.types.ts";
@@ -14,27 +16,29 @@ function dayOf(nowMs: number): string {
   return new Date(nowMs).toISOString().slice(0, DAY_CHARS);
 }
 
-/** `value` as a number; 0 when it is not one. */
-function countOf(value: unknown): number {
-  const n = Number(value);
-
-  return Number.isNaN(n) ? 0 : n;
+/** The ledger file as writeLedger writes it; a missing count reads as 0. */
+function ledgerSchema() {
+  return z.looseObject({
+    day: z.string(),
+    input_tokens: z.number().default(0),
+    requests: z.number().default(0),
+  });
 }
 
 function readLedger(file: string, day: string): Ledger {
+  let text: string;
+
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-
-    if (!isRecord(parsed) || parsed.day !== day) return { day, input_tokens: 0, requests: 0 };
-
-    return {
-      day,
-      input_tokens: countOf(parsed.input_tokens),
-      requests: countOf(parsed.requests),
-    };
+    text = fs.readFileSync(file, "utf8");
   } catch {
     return { day, input_tokens: 0, requests: 0 };
   }
+
+  const ledger = tryJson(ledgerSchema(), text);
+
+  if (ledger?.day !== day) return { day, input_tokens: 0, requests: 0 };
+
+  return { day, input_tokens: ledger.input_tokens, requests: ledger.requests };
 }
 
 function writeLedger(file: string, row: Ledger): void {

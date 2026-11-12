@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { JSON_INDENT } from "./json.constants.ts";
 
 /** The root-relative paths sync wrote last run, tracked or not; only these are ever pruned. */
@@ -8,18 +11,16 @@ export const MANIFEST_REL = ".repo/tmp/sync.json";
 
 export type Manifest = { version: 1; paths: string[] };
 
+function manifestSchema() {
+  return z.object({ paths: z.array(z.string()), version: z.literal(1) });
+}
+
 /** The manifest on disk; a missing, unreadable or invalid one reads as empty, so nothing is pruned. */
 export function readManifest(root: string): Manifest {
   try {
-    const data: unknown = JSON.parse(fs.readFileSync(path.join(root, MANIFEST_REL), "utf8"));
+    const read = tryJson(manifestSchema(), fs.readFileSync(path.join(root, MANIFEST_REL), "utf8"));
 
-    if (typeof data === "object" && data !== null) {
-      const version: unknown = Reflect.get(data, "version");
-      const paths: unknown = Reflect.get(data, "paths");
-
-      if (version === 1 && Array.isArray(paths) && paths.every((entry) => typeof entry === "string"))
-        return { paths: paths, version: 1 };
-    }
+    if (read !== undefined) return read;
   } catch {
     // falls through to the empty manifest
   }

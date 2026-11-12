@@ -4,7 +4,7 @@ import path from "node:path";
 import { vi, type Mock } from "vitest";
 import { HOSTS } from "../config.ts";
 import type { InitOptions } from "../init.ts";
-import { isPackageJson } from "../package-json.ts";
+import { packageJsonSchema, readJsonFile } from "../package-json.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 
 /** Removes every dir `tmp` made after each test of the calling file. */
@@ -33,8 +33,7 @@ export type WrittenPackage = {
 };
 
 export function readPkg(dir: string): WrittenPackage {
-  const value: unknown = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8"));
-  if (!isPackageJson(value)) throw new Error(`${dir}/package.json is not a package.json`);
+  const value = readJsonFile(path.join(dir, "package.json"), packageJsonSchema);
   return { ...value, scripts: value.scripts ?? {}, devDependencies: value.devDependencies ?? {} };
 }
 

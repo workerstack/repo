@@ -6,11 +6,12 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
 import { nearestManifest } from "./manifest.ts";
 import { parseModule } from "./parse-module.ts";
 import { DEFAULT, MANIFEST, NAMESPACE } from "./public-surface.constants.ts";
-import { entryFiles, readJson } from "./public-surface.entries.ts";
+import { entryFiles, readPackageFile } from "./public-surface.entries.ts";
 import { referencesOf } from "./public-surface.syntax.ts";
 import type {
   Graph,
@@ -203,9 +204,10 @@ function publishEntry(graph: Graph, file: string, entry: string): void {
  */
 export function publicSurface(root: string): Surface {
   const surface: Surface = { entries: new Map(), names: new Map(), unknown: [] };
-  const manifest = readJson(path.join(root, MANIFEST));
+  const schema = z.looseObject({ exports: z.unknown().optional(), private: z.unknown().optional() });
+  const manifest = readPackageFile(path.join(root, MANIFEST), schema);
 
-  if (!isRecord(manifest) || manifest["private"] === true) return surface;
+  if (manifest === null || manifest.private === true) return surface;
 
   const graph: Graph = {
     failed: new Set(),
@@ -216,7 +218,7 @@ export function publicSurface(root: string): Surface {
     unknown: surface.unknown,
   };
 
-  surface.entries = entryFiles(root, manifest["exports"]);
+  surface.entries = entryFiles(root, manifest.exports);
 
   for (const [entry, files] of surface.entries) for (const file of files) publishEntry(graph, file, entry);
 

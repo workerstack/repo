@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { fail, pass, plural, type Gate } from "../scripts/ci-gate.ts";
 import type { Result } from "../scripts/lint-baseline.ts";
 import { LLVM_COV_PIN, NEXTEST_PIN } from "./cargo-tools.constants.ts";
@@ -93,25 +94,17 @@ function hasDoctests(root: string, run: CargoRun): Result<boolean> {
     };
   }
 
-  let json: unknown;
+  const parsed = tryJson(schema(), result.stdout);
 
-  try {
-    json = JSON.parse(result.stdout);
-  } catch {
-    json = null;
-  }
-
-  const parsed = schema().safeParse(json);
-
-  if (!parsed.success) {
+  if (parsed === undefined) {
     return {
       errors: [`cargo metadata printed output repo cannot read: ${quote(result.stdout)}`],
       ok: false,
     };
   }
 
-  const members = new Set(parsed.data.workspace_members);
-  const value = parsed.data.packages.some((pkg) => members.has(pkg.id) && pkg.targets.some((t) => t.doctest));
+  const members = new Set(parsed.workspace_members);
+  const value = parsed.packages.some((pkg) => members.has(pkg.id) && pkg.targets.some((t) => t.doctest));
 
   return { ok: true, value };
 }

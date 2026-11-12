@@ -2,11 +2,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, readJson } from "../json.ts";
+import { readJsonFile } from "../package-json.ts";
 import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
 import { expandHookCommand } from "../scripts/hook-command.ts";
 import { applyUnion } from "../scripts/hooks-union.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { renderHooks } from "./agents/render-hooks.ts";
 import type { Sources } from "./agents/sources.types.ts";
 import { renderSubagents } from "./agents/subagents.ts";
@@ -70,7 +74,8 @@ function staticFiles(stock: string): Map<string, string> {
         `${to}/${rel}`,
         text.replaceAll(
           HOOK_COMMAND,
-          (_: string, key: string, value: string) => key + JSON.stringify(expandHookCommand(String(JSON.parse(value)))),
+          (_: string, key: string, value: string) =>
+            key + JSON.stringify(expandHookCommand(readJson(z.string(), value))),
         ),
       );
     }
@@ -87,15 +92,15 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
   let own: unknown;
 
   try {
-    own = JSON.parse(overlay);
+    // Any JSON here; a value that is not an object throws its own message below.
+    own = readJson(z.json(), overlay);
   } catch (error) {
-    throw new Error(`${overlayRel}: ${(error /* JSON.parse throws a SyntaxError */ as Error).message}`, {
-      cause: error,
-    });
+    throw new Error(`${overlayRel}: ${errorMessage(error)}`, { cause: error });
   }
 
   if (!isRecord(own)) throw new Error(`${overlayRel}: must be a JSON object`);
-  const base: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+  // Any JSON: mergeSettings merges whatever the staged file holds.
+  const base = readJsonFile(file, z.json());
   fs.writeFileSync(file, `${JSON.stringify(mergeSettings(base, own), null, JSON_INDENT)}\n`);
 }
 

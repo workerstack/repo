@@ -1,7 +1,8 @@
-import fs from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import { MD, RULE_FRONTMATTER } from "./migrate.constants.ts";
 
 /** Where `settingsExtras` is in the value it walks, and the dotted paths of the pieces it found so far. */
@@ -10,24 +11,9 @@ type Trail = { at: string; paths: string[] };
 /** The hooks a settings file carries over, and each carried event with its group count. */
 type OwnHooks = { hooks: Record<string, unknown[]>; events: [string, number][] };
 
-/** The JSON value of `text`: undefined for no text, null when it is not JSON. */
-export function parseJson(text: string | null): unknown {
-  if (text === null) return undefined;
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
-
-/** The parsed file; undefined when it is missing, null when it is not valid JSON. */
-export function readJson(file: string): unknown {
-  try {
-    return parseJson(fs.readFileSync(file, "utf8"));
-  } catch {
-    return undefined;
-  }
+/** A settings file as an object whose values are not yet checked. */
+export function settingsSchema(): z.ZodRecord<z.ZodString, z.ZodUnknown> {
+  return z.record(z.string(), z.unknown());
 }
 
 function keep(value: unknown, trail: Trail): unknown {
@@ -122,9 +108,8 @@ export function alreadyHolds(to: string, existing: string, content: string): boo
     return existing.includes(content.slice(RULE_FRONTMATTER.length).trim());
   }
 
-  try {
-    return covers(JSON.parse(existing), JSON.parse(content));
-  } catch {
-    return false;
-  }
+  // Any JSON value on either side; covers then compares them.
+  const [have, want] = [tryJson(z.json(), existing), tryJson(z.json(), content)];
+
+  return have !== undefined && want !== undefined && covers(have, want);
 }

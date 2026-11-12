@@ -11,6 +11,8 @@ import ts from "typescript";
 
 import { SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { readJson } from "../json.ts";
+import { packageJsonSchema } from "../package-json.ts";
 import { isTestFile } from "../test-files.ts";
 import { KEYS_OF, OLD_CALL, PACKAGE_MANIFEST, UNWRAP } from "./env-command.constants.ts";
 import { trackedFiles } from "./env-files.ts";
@@ -50,7 +52,7 @@ export function isIsolated(root: string, rel: string): boolean {
 
 /** The package of the package.json `rel`: its name and its folder. */
 function packageOf(root: string, rel: string): OldPackage {
-  const manifest = JSON.parse(fs.readFileSync(path.join(root, rel), "utf8")) /* a package.json */ as { name?: string };
+  const manifest = readJson(packageJsonSchema.pick({ name: true }), fs.readFileSync(path.join(root, rel), "utf8"));
 
   return { dir: path.posix.dirname(rel), name: String(manifest.name) };
 }

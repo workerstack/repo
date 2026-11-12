@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { parseArgv, readJson, section, str } from "./voice-args.ts";
+import { parseArgv, readObjectFile, section, str } from "./voice-args.ts";
 
 const dirs: string[] = [];
 
@@ -60,12 +60,12 @@ describe("parseArgv separators and filtering", () => {
   });
 });
 
-describe("readJson", () => {
+describe("readObjectFile", () => {
   it("reads an object, and gives an empty one for missing, broken or non-object files", () => {
-    expect(readJson(plant('{"a":1}'))).toStrictEqual({ a: 1 });
-    expect(readJson(plant("{nope"))).toStrictEqual({});
-    expect(readJson(plant("[1]"))).toStrictEqual({});
-    expect(readJson(path.join(os.tmpdir(), "voice-args-missing", "x.json"))).toStrictEqual({});
+    expect(readObjectFile(plant('{"a":1}'))).toStrictEqual({ a: 1 });
+    expect(readObjectFile(plant("{nope"))).toStrictEqual({});
+    expect(readObjectFile(plant("[1]"))).toStrictEqual({});
+    expect(readObjectFile(path.join(os.tmpdir(), "voice-args-missing", "x.json"))).toStrictEqual({});
   });
 });
 

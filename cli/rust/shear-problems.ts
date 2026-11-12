@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { SHEAR_MAX_FINDING_EXIT, UNUSED_DEPENDENCY, UNUSED_HELP } from "./cargo-tools.constants.ts";
 import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
@@ -28,17 +29,7 @@ function findingLine(finding: z.infer<ReturnType<typeof schema>>["findings"][num
 
 /** The findings of `result.stdout`, or null when it is not shear's JSON. */
 function readShear(result: CargoResult): string[] | null {
-  let json: unknown;
-
-  try {
-    json = JSON.parse(result.stdout);
-  } catch {
-    return null;
-  }
-
-  const body = schema().safeParse(json);
-
-  return body.success ? body.data.findings.map(findingLine) : null;
+  return tryJson(schema(), result.stdout)?.findings.map(findingLine) ?? null;
 }
 
 /**

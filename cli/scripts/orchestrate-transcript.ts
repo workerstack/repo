@@ -1,7 +1,9 @@
 /** The assistant's last reply, from the payload or the transcript's tail, and what its lines ask. */
 import fs from "node:fs";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson, type JsonObject } from "../json.ts";
 import { parseClosingLine } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -73,8 +75,7 @@ export function payloadAssistantMessage(data: HookInput): string {
   return firstNonEmpty(data.lastAssistantMessage, data.last_assistant_message) ?? "";
 }
 
-function isAssistantRecord(obj: unknown): obj is Record<string, unknown> {
-  if (!isRecord(obj)) return false;
+function isAssistantRecord(obj: JsonObject): boolean {
   const type = textOf(obj.type).toLowerCase();
 
   if (NON_ASSISTANT_TYPES.has(type)) return false;
@@ -101,8 +102,9 @@ function partsText(content: unknown[]): string | null {
   return joined === "" ? null : joined;
 }
 
-function assistantTextFromRecord(obj: unknown): string | null {
-  if (!isAssistantRecord(obj)) return null;
+/** The assistant text of one transcript record; each harness nests it its own way, so the fields are narrowed here. */
+function assistantTextFromRecord(obj: JsonObject | undefined): string | null {
+  if (obj === undefined || !isAssistantRecord(obj)) return null;
   const msg = isRecord(obj.message) ? obj.message : obj;
   const content = msg.content ?? obj.content;
 
@@ -134,14 +136,6 @@ function tailLines(filePath: string): string[] {
   }
 }
 
-function parseRecord(line: string): unknown {
-  try {
-    return JSON.parse(line);
-  } catch {
-    return null;
-  }
-}
-
 export function lastAssistantFromTranscript(filePath: string): string {
   try {
     if (filePath === "") return "";
@@ -149,7 +143,7 @@ export function lastAssistantFromTranscript(filePath: string): string {
 
     for (const line of tailLines(filePath)) {
       const t = line.trim();
-      const extracted = t === "" ? null : assistantTextFromRecord(parseRecord(t));
+      const extracted = t === "" ? null : assistantTextFromRecord(tryJson(z.record(z.string(), z.unknown()), t));
 
       if (extracted !== null) last = extracted;
     }

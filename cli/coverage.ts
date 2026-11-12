@@ -8,10 +8,13 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { z } from "zod";
+
 import { CONFIG_FILE } from "./config.constants.ts";
 import { findRoot, loadConfig } from "./config.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
+import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type CargoRun, runCargo } from "./rust/clippy.ts";
 import { type Floors, readFloorsFile } from "./rust/floors.ts";
@@ -25,6 +28,20 @@ const METRICS = ["statements", "branches", "functions", "lines"] as const;
 type Metric = (typeof METRICS)[number];
 
 type Summary = Record<string, Record<Metric, { pct: number }>>;
+
+/**
+ * The part of vitest's json-summary this reads: each file's percent per metric. The total goes unread, since its pct
+ * is the text "Unknown" when nothing was measured.
+ */
+function summarySchema(): z.ZodType<Summary> {
+  const metric = z.looseObject({ pct: z.number() });
+  const metrics = z.looseObject({ branches: metric, functions: metric, lines: metric, statements: metric });
+
+  return z
+    .record(z.string(), z.unknown())
+    .transform((all) => Object.fromEntries(Object.entries(all).filter(([key]) => key !== TOTAL_KEY)))
+    .pipe(z.record(z.string(), metrics));
+}
 
 /** The floors of each measured file, by metric: TypeScript and Rust rows alike. */
 type Rows = Record<string, Record<string, number>>;
@@ -79,11 +96,8 @@ function measure(root: string): Measured {
 
     const ran = captureBun(args, root, childEnv());
 
-    if (ran.code === PASSED) {
-      const summary: unknown = JSON.parse(fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8"));
-
-      return { ok: true, summary: summary /* vitest writes the json-summary shape */ as Summary };
-    }
+    if (ran.code === PASSED)
+      return { ok: true, summary: readJson(summarySchema(), fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8")) };
 
     process.stderr.write(ran.stdout + ran.stderr);
     write(process.stderr, ["coverage: the tests failed; fix them before raising floors"]);
@@ -99,7 +113,6 @@ function tsRows(root: string, summary: Summary): Rows {
   const rows: Rows = {};
 
   for (const [abs, metrics] of Object.entries(summary)) {
-    if (abs === TOTAL_KEY) continue;
     const rel = path.relative(root, abs).split(path.sep).join("/");
     rows[rel] = Object.fromEntries(METRICS.map((key) => [key, Math.floor(metrics[key].pct)]));
   }

@@ -79,6 +79,8 @@ describe("package names", () => {
 
   it("names a package with an unreadable manifest as unnamed", () => {
     expect(nameOf({ "a/i.ts": "", "a/package.json": "{ nope" }, "a")).toBe("");
+    const listedButGone = plant({ "a/i.ts": "" }, { init: false });
+    expect(buildTree(listedButGone, ["a/i.ts", "a/package.json"]).kids.get("a")?.pkg).toBe("");
   });
 });
 

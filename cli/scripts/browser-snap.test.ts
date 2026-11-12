@@ -30,7 +30,7 @@ it("snap fails without a session or with a dead pid", async () => {
   expect(dead.stderr).toBe(NO_SESSION);
 });
 
-it("snap numbers the ref-bearing nodes in either ax shape and remembers them", async () => {
+it("snap numbers the ref-bearing nodes in either ax shape, spells number and boolean names, keeps them", async () => {
   const axNodes = [
     { backendNodeId: 5, name: "Go", nodeId: "a", role: "button" },
     { backendDOMNodeId: 6, name: { value: "" }, role: { value: "LINK" } },
@@ -39,17 +39,21 @@ it("snap numbers the ref-bearing nodes in either ax shape and remembers them", a
     { role: "textbox" },
     { name: {}, role: "link" },
     { role: {} },
+    { name: { value: 3 }, role: "button" },
+    { name: true, role: "link" },
   ];
 
   const t = await live({ lastRefs: {} }, { axNodes, markdown: "# T\n\nsome page body text" });
   const r = await exec(t.cwd, ["snap"]);
-  const lines = "[1] button Go\n[2] link\n[3] textbox\n[4] link\n";
+  const lines = "[1] button Go\n[2] link\n[3] textbox\n[4] link\n[5] button 3\n[6] link true\n";
   expect(r.stdout).toBe(`engine: lightpanda\nurl: ${URL_X}\n\n# T\n\nsome page body text\n\n${lines}`);
   expect(readStored(t.cwd).lastRefs).toStrictEqual({
     "1": { backendNodeId: 5, name: "Go", nodeId: "a", role: "button" },
     "2": { backendNodeId: 6, name: "", role: "link" },
     "3": { name: "", role: "textbox" },
     "4": { name: "", role: "link" },
+    "5": { name: "3", role: "button" },
+    "6": { name: "true", role: "link" },
   });
 });
 

@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
 import { CONFIG_FILE } from "../config.constants.ts";
-import { loadConfig, type SkillPack } from "../config.ts";
+import { loadConfig, SKILL_PACKS } from "../config.ts";
+import { readJson } from "../json.ts";
 import { moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
@@ -37,7 +40,7 @@ async function writeStep(root: string, step: StepOf<"write">): Promise<string> {
   const loaded = await loadConfig(root);
 
   function packs() {
-    return JSON.parse(wanted) /* the list is the JSON of known packs the plan wrote */ as SkillPack[];
+    return readJson(z.array(z.enum(SKILL_PACKS)), wanted);
   }
 
   if (loaded.ok && packs().every((pack) => loaded.config.agents.skills.includes(pack))) return step.note;

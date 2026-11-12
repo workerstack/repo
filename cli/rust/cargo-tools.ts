@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import {
   DENY_ERROR,
   DIAGNOSTIC_TYPE,
@@ -37,7 +38,7 @@ function schemas() {
 
   return {
     diagnostic,
-    head: z.object({ type: z.string() }),
+    head: z.looseObject({ type: z.string() }),
     krate,
     log,
   };
@@ -141,17 +142,10 @@ function denyDiagnostic(fields: Fields, schema: Schemas, left: ReadonlySet<strin
 
 /** Reads one stderr line of cargo-deny. */
 function readDeny(line: string, schema: Schemas, left: ReadonlySet<string>): DenyLine {
-  let json: unknown;
+  // Loose, so the line passes through whole to the diagnostic and log schemas.
+  const json = tryJson(schema.head, line);
 
-  try {
-    json = JSON.parse(line);
-  } catch {
-    return { unreadable: true };
-  }
-
-  const head = schema.head.safeParse(json);
-
-  if (!head.success) return { unreadable: true };
+  if (json === undefined) return { unreadable: true };
   const diagnostic = schema.diagnostic.safeParse(json);
 
   if (diagnostic.success) {
@@ -164,7 +158,7 @@ function readDeny(line: string, schema: Schemas, left: ReadonlySet<string>): Den
 
   if (log.success) return log.data.fields.level === LOG_ERROR ? { problem: logLine(log.data.fields.message) } : PASS;
 
-  return head.data.type === DIAGNOSTIC_TYPE || head.data.type === LOG_TYPE ? { unreadable: true } : PASS;
+  return json.type === DIAGNOSTIC_TYPE || json.type === LOG_TYPE ? { unreadable: true } : PASS;
 }
 
 /**

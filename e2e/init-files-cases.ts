@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { parse } from "jsonc-parser";
 import { expect, it } from "vitest";
+import { z } from "zod";
 
+import { readJson } from "../cli/json.ts";
 import { installedBin } from "../dev/test-paths.ts";
 import type { GetSandbox } from "./get-sandbox.types";
 import { claudeGate, expectClean } from "./init-helpers";
@@ -11,6 +13,18 @@ import { PACKAGE_NAME } from "./registry";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";
 import { tail } from "./tail";
+
+/** The gate's answer to a hook: the rewritten command or the permission decision, each absent when it gave none. */
+function buildGateAnswerSchema() {
+  const output = z.looseObject({
+    permissionDecision: z.string().optional(),
+    updatedInput: z.looseObject({ command: z.string().optional() }).optional(),
+  });
+
+  return z.looseObject({ hookSpecificOutput: output.optional() });
+}
+
+const gateAnswerSchema = /* @__PURE__ */ buildGateAnswerSchema();
 
 /** The lines sync writes in the .gitignore block, in order. */
 const IGNORED = [
@@ -93,9 +107,7 @@ export function installedBinCase(get: GetSandbox) {
     const rewrite = await sb.run("bash", ["-c", claudeGate(sb).command], { env, input: JSON.stringify(payload) });
     expectClean(sb, rewrite);
 
-    type Rewrite = { hookSpecificOutput?: { updatedInput?: { command?: string } } };
-
-    const out = JSON.parse(rewrite.stdout) /* the gate answers a rewrite with its updated input */ as Rewrite;
+    const out = readJson(gateAnswerSchema, rewrite.stdout);
     expect(out.hookSpecificOutput?.updatedInput?.command).toMatch(
       new RegExp(`^${installedBin(sb.repo).replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&")} job --job exec --query `),
     );
@@ -130,10 +142,7 @@ async function gateRead(sb: Sandbox, command: string, rel: string) {
   expect(ms, `${rel} took ${ms}ms`).toBeLessThan(5000);
   expect(r.out, tail(r.out)).not.toMatch(BROKEN_RUNTIME);
 
-  type Decision = { hookSpecificOutput?: { permissionDecision?: string } };
-
-  const decided = r.stdout === "" ? "{}" : r.stdout;
-  const answer = JSON.parse(decided) /* the gate answers with a decision, or nothing */ as Decision;
+  const answer = readJson(gateAnswerSchema, r.stdout === "" ? "{}" : r.stdout);
 
   return { decision: answer.hookSpecificOutput?.permissionDecision, out: r.out, status: r.status };
 }

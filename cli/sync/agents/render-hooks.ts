@@ -5,8 +5,10 @@
  * (`claudecode`, `codexcli`, `antigravity-cli`, `cursor`): a same event is replaced in place, new ones go last.
  * `D:<n>` cites a line of rulesync 43.7.0's bundled `dist/import-*.js`.
  */
+import { z } from "zod";
+
 import type { Host } from "../../config.ts";
-import type { JsonObject } from "../../json.ts";
+import { readJson, type JsonObject } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { ANTIGRAVITY, CLAUDE, CODEX } from "./hook-targets.ts";
 import {
@@ -72,7 +74,7 @@ function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Gro
 /** The stock settings with `hooks` replaced in place (else appended) and `$schema` first when missing. */
 function claudeSettings(base: string, hooks: JsonObject): JsonObject {
   const settings: JsonObject = {
-    ...(JSON.parse(base) /* the stock claude settings file is a JSON object */ as JsonObject),
+    ...readJson(z.record(z.string(), z.unknown()), base),
     hooks,
   };
 

@@ -27,7 +27,7 @@ function isMcpToolRule(s: string): boolean {
 function pickServers(servers: JsonObject, allow: string[]): JsonObject {
   const out: JsonObject = {};
 
-  for (const name of allow) if (Object.hasOwn(servers, name)) out[name] = JSON.parse(JSON.stringify(servers[name]));
+  for (const name of allow) if (Object.hasOwn(servers, name)) out[name] = structuredClone(servers[name]);
 
   return out;
 }

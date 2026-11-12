@@ -8,6 +8,8 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
 import {
   COMMON_BRANCHES,
   DEFAULT_FLOORS,
@@ -20,7 +22,7 @@ import {
   TAB,
 } from "./check-ratchets.constants.ts";
 import { childEnv } from "./env.ts";
-import { isRecord } from "./json.ts";
+import { tryJson } from "./json.ts";
 import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
@@ -63,38 +65,48 @@ function mainRef(root: string): string | null {
   return remote.find((ref) => hasRef(root, ref)) ?? null;
 }
 
-function parse(text: string | null): unknown {
-  try {
-    return text === null ? undefined : JSON.parse(text);
-  } catch {
-    return undefined;
-  }
+/** Where a ratcheted file is read on main: the repo, main's ref and the file's root-relative path. */
+type OnMain = { root: string; ref: string; rel: string };
+
+/** A JSON object whose entries `value` refuses are dropped: a hand-edited file's odd row or floor reads as absent. */
+function keptSchema<T>(value: z.ZodType<T>): z.ZodType<Record<string, T>> {
+  return z.record(z.string(), z.unknown()).transform((map) =>
+    Object.fromEntries(
+      Object.entries(map).flatMap(([key, raw]): [string, T][] => {
+        const read = value.safeParse(raw);
+
+        return read.success ? [[key, read.data]] : [];
+      }),
+    ),
+  );
 }
 
-function readMain(root: string, ref: string, rel: string): unknown {
-  return parse(git(root, ["show", `${ref}:${rel}`]));
+function numbersSchema(): z.ZodType<Record<string, number>> {
+  return keptSchema(z.number());
 }
 
-function readHere(root: string, rel: string): unknown {
+function tableSchema(): z.ZodType<Table> {
+  return keptSchema(numbersSchema());
+}
+
+/** A JSON list's strings; its other items are dropped. */
+function listSchema(): z.ZodType<string[]> {
+  return z.array(z.unknown()).transform((items) => items.filter((item) => typeof item === "string"));
+}
+
+/** `text` read through `schema`; undefined when there is no text, it is no JSON, or `schema` refuses its shape. */
+function parse<T>(schema: z.ZodType<T>, text: string | null): T | undefined {
+  return text === null ? undefined : tryJson(schema, text);
+}
+
+function readMain<T>(schema: z.ZodType<T>, { root, ref, rel }: OnMain): T | undefined {
+  return parse(schema, git(root, ["show", `${ref}:${rel}`]));
+}
+
+function readHere<T>(schema: z.ZodType<T>, root: string, rel: string): T | undefined {
   const file = path.join(root, rel);
 
-  return parse(fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
-}
-
-function asTable(value: unknown): Table | undefined {
-  if (!isRecord(value)) return undefined;
-  const table: Table = {};
-
-  for (const [key, row] of Object.entries(value)) {
-    if (!isRecord(row)) continue;
-    table[key] = Object.fromEntries(Object.entries(row).filter((e): e is [string, number] => typeof e[1] === "number"));
-  }
-
-  return table;
-}
-
-function asList(value: unknown): string[] | undefined {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : undefined;
+  return parse(schema, fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 }
 
 /** Old path → new path of the renames between main and the working tree. */
@@ -129,10 +141,10 @@ function fileFloors({ rel, key, file }: Row, was: Record<string, number>, now: R
 }
 
 function floorProblems(root: string, ref: string, file: string): string[] {
-  const was = asTable(readMain(root, ref, file));
+  const was = readMain(tableSchema(), { ref, rel: file, root });
 
   if (was === undefined) return [];
-  const now = asTable(readHere(root, file)) ?? {};
+  const now = readHere(tableSchema(), root, file) ?? {};
   const moved = renames(root, ref);
 
   return Object.entries(was).flatMap(([rel, metrics]) => {
@@ -147,18 +159,12 @@ function floorProblems(root: string, ref: string, file: string): string[] {
   });
 }
 
-function asNumbers(value: unknown): Record<string, number> | undefined {
-  return isRecord(value)
-    ? Object.fromEntries(Object.entries(value).filter((e): e is [string, number] => typeof e[1] === "number"))
-    : undefined;
-}
-
 /** A mutation floor lowered, or dropped while its package dir exists; a package dir that is gone takes its floor. */
 function mutationProblems(root: string, ref: string, file: string): string[] {
-  const was = asNumbers(readMain(root, ref, file));
+  const was = readMain(numbersSchema(), { ref, rel: file, root });
 
   if (was === undefined) return [];
-  const now = asNumbers(readHere(root, file)) ?? {};
+  const now = readHere(numbersSchema(), root, file) ?? {};
 
   return Object.entries(was).flatMap(([pkg, floor]) => {
     const has = now[pkg];
@@ -171,10 +177,10 @@ function mutationProblems(root: string, ref: string, file: string): string[] {
 }
 
 function listProblems(root: string, ref: string, file: string): string[] {
-  const was = asList(readMain(root, ref, file));
+  const was = readMain(listSchema(), { ref, rel: file, root });
 
   if (was === undefined) return [];
-  const now = asList(readHere(root, file)) ?? [];
+  const now = readHere(listSchema(), root, file) ?? [];
 
   return now
     .filter((entry) => !was.includes(entry))
@@ -192,10 +198,10 @@ function totals(table: Table): Map<string, number> {
 }
 
 function baselineProblems(root: string, ref: string): string[] {
-  const was = asTable(readMain(root, ref, BASELINE_PATH));
+  const was = readMain(tableSchema(), { ref, rel: BASELINE_PATH, root });
 
   if (was === undefined) return [];
-  const now = totals(asTable(readHere(root, BASELINE_PATH)) ?? {});
+  const now = totals(readHere(tableSchema(), root, BASELINE_PATH) ?? {});
 
   return [...totals(was)].flatMap(([rule, before]) => {
     const after = now.get(rule) ?? 0;

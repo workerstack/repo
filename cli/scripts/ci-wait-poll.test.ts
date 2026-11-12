@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { z } from "zod";
 
-import { finish, newestFirst, readJson, type PollIo } from "./ci-wait-poll.ts";
+import { finish, newestFirst, ghJson, type PollIo } from "./ci-wait-poll.ts";
 
 const RUN = { createdAt: "2026-11-10T10:00:00Z", databaseId: 5, headBranch: "main" };
 
@@ -51,11 +51,11 @@ it("a failure lists the failed jobs", async () => {
   expect(await finish(io([done("failure")]), RUN, 0)).toStrictEqual({ jobs: ["test"], kind: "failed" });
 });
 
-it("newestFirst orders by creation time and readJson rejects a bad shape or a failed run", () => {
+it("newestFirst orders by creation time and ghJson rejects a bad shape or a failed run", () => {
   expect(
     newestFirst([{ createdAt: "a" }, { createdAt: "c" }, { createdAt: "b" }]).map((r) => r.createdAt),
   ).toStrictEqual(["c", "b", "a"]);
-  expect(readJson({ code: 0, stdout: "[1]" }, z.array(z.string()))).toBeNull();
-  expect(readJson({ code: 1, stdout: "[]" }, z.array(z.string()))).toBeNull();
-  expect(readJson({ code: 0, stdout: "[]" }, z.array(z.string()))).toStrictEqual([]);
+  expect(ghJson({ code: 0, stdout: "[1]" }, z.array(z.string()))).toBeNull();
+  expect(ghJson({ code: 1, stdout: "[]" }, z.array(z.string()))).toBeNull();
+  expect(ghJson({ code: 0, stdout: "[]" }, z.array(z.string()))).toStrictEqual([]);
 });

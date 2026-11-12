@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import type { Result } from "../scripts/lint-baseline.ts";
 import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
@@ -47,14 +48,11 @@ function rootsOf(root: string): string[] {
 
 /** The report in `text` as rows, or why it cannot be read. */
 function parse(text: string, root: string): Result<Record<string, RustFloor>> {
-  let json: unknown;
+  // Any JSON here; the report schema then says whether repo can read it.
+  const json = tryJson(z.json(), text);
 
-  try {
-    json = JSON.parse(text);
-  } catch {
+  if (json === undefined)
     return { errors: [`cargo llvm-cov wrote a report that is not JSON: ${quote(text)}`], ok: false };
-  }
-
   const report = schema().safeParse(json);
 
   if (!report.success) return { errors: [`cargo llvm-cov wrote a report repo cannot read: ${quote(text)}`], ok: false };

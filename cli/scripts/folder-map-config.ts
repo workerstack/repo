@@ -3,7 +3,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { readJson } from "../json.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { CONFIG_REL, DEFAULTS, GIT_MAX_BUFFER, LIST_KEYS, NUMBER_KEYS } from "./folder-map.constants.ts";
 import type { MapConfig } from "./folder-map.types.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
@@ -25,18 +28,13 @@ function isListKey(k: string): k is (typeof LIST_KEYS)[number] {
 
 /** The config's top-level entries ({} when it is not an object), or null after a warning when it cannot be read. */
 function readConfig(abs: string, warn: (msg: string) => void): Record<string, unknown> | null {
-  let raw: unknown;
-
   try {
-    raw = JSON.parse(stripJsonc(fs.readFileSync(abs, "utf8")));
-  } catch (err) {
-    const error = err /* readFileSync, stripJsonc and JSON.parse throw Errors */ as Error;
-    warn(`repo map: ignoring ${CONFIG_REL}: ${error.message}`);
+    return readJson(z.record(z.string(), z.unknown()).catch({}), stripJsonc(fs.readFileSync(abs, "utf8")));
+  } catch (error) {
+    warn(`repo map: ignoring ${CONFIG_REL}: ${errorMessage(error)}`);
 
     return null;
   }
-
-  return isRecord(raw) ? raw : {};
 }
 
 /** Sets one known key on `out` when its value is good; warns by name when it is not; skips unknown keys. */

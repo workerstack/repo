@@ -4,7 +4,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { fail, type MutateConfig, type MutateDeps } from "./mutate-deps.ts";
-import { parseJson, type FileScore, type Parsed, type ShardReport } from "./mutate-report.ts";
+import { readParsed, type FileScore, type Parsed, type ShardReport } from "./mutate-report.ts";
 import { ARROW, NEWLINE, OK, PERCENT, PERCENT_DIGITS, ROOT_PACKAGE } from "./mutate.constants.ts";
 
 /** A package's mutants: how many tests killed and how many lived. */
@@ -54,14 +54,8 @@ export function readFloors(deps: MutateDeps, root: string, file: string): Parsed
   const text = deps.fs.read(path.join(root, file));
 
   if (text === null) return { ok: true, value: {} };
-  const json = parseJson(text);
 
-  if (!json.ok) return json;
-  const parsed = floorsSchema.safeParse(json.value);
-
-  return parsed.success
-    ? { ok: true, value: parsed.data }
-    : { ok: false, reason: parsed.error.issues.map((issue) => issue.message).join("; ") };
+  return readParsed(floorsSchema, text, (error) => error.issues.map((issue) => issue.message).join("; "));
 }
 
 /** Every package's score against its floor, sorted by package. */

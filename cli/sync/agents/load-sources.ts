@@ -9,8 +9,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../../json.ts";
+import { z } from "zod";
+
+import { isRecord, readJson } from "../../json.ts";
 import { stripJsonc } from "../../scripts/strip-jsonc.ts";
+import { errorMessage } from "../../sync-errors.ts";
 import { listDocs } from "./list-docs.ts";
 import { mergeDocs } from "./merge-docs.ts";
 import { readDoc } from "./read-doc.ts";
@@ -42,9 +45,10 @@ function loadHooks(stock: Top, tops: readonly Top[], problems: string[]): HooksS
   let value: unknown;
 
   try {
-    value = JSON.parse(stripJsonc(text));
+    // Any JSON here; a value that is not an object earns its own problem below.
+    value = readJson(z.json(), stripJsonc(text));
   } catch (error) {
-    problems.push(`${rel}: invalid JSONC: ${(error /* JSON.parse throws only SyntaxError */ as Error).message}`);
+    problems.push(`${rel}: invalid JSONC: ${errorMessage(error)}`);
 
     return { rel, value: {} };
   }

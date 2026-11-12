@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "./json.ts";
 import type { NameStatus } from "./red-proof.ts";
 import { isSource, isTestFile } from "./test-files.ts";
 
@@ -13,9 +16,9 @@ export type Owner = { dir: string; public: boolean };
  */
 function isPublic(file: string): boolean {
   try {
-    return (
-      (JSON.parse(fs.readFileSync(file, "utf8")) /* only private is read */ as { private?: unknown }).private !== true
-    );
+    const manifest = tryJson(z.looseObject({ private: z.unknown().optional() }), fs.readFileSync(file, "utf8"));
+
+    return manifest !== undefined && manifest.private !== true;
   } catch {
     return false;
   }

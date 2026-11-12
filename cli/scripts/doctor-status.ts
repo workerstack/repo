@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { WORKSPACE_ACCOUNT_RE, WORKSPACE_KIND_ORDER } from "./doctor.constants.ts";
 import type { DoctorStatus } from "./doctor.types.ts";
@@ -28,10 +30,10 @@ export function jevDoctorStatus({ env = repoEnv.process, home = os.homedir() }: 
   if ((env.TYPESAFE_API_KEY ?? "").trim() !== "") return { extra: "env", ok: true };
 
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8"));
-    const key = isRecord(parsed) ? parsed.apiKey : undefined;
+    const text = fs.readFileSync(path.join(home, ".workerstack", "jev.json"), "utf8");
+    const key = tryJson(z.looseObject({ apiKey: z.string().optional() }), text)?.apiKey;
 
-    if (typeof key === "string" && key.trim() !== "") return { extra: "config", ok: true };
+    if (key !== undefined && key.trim() !== "") return { extra: "config", ok: true };
   } catch {
     // absent
   }

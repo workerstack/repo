@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import {
   ACCOUNT_RE,
   ADC_USER,
@@ -56,9 +58,10 @@ function adcPath(home: string): string {
   return path.join(home, ".config", "gcloud", "application_default_credentials.json");
 }
 
-export function readJson(p: string): unknown {
+/** The JSON file at `p` read through `schema`; null when it is missing, not JSON or not that shape. */
+export function readSecretJson<S extends z.ZodType>(p: string, schema: S): z.output<S> | null {
   try {
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    return tryJson(schema, fs.readFileSync(p, "utf8")) ?? null;
   } catch {
     return null;
   }
@@ -69,41 +72,37 @@ export function writeSecretJson(p: string, obj: unknown): void {
   fs.writeFileSync(p, `${JSON.stringify(obj, null, JSON_INDENT)}\n`, { mode: SECRET_FILE_MODE });
 }
 
-function toToken(j: Rec, p: string): Token | null {
-  const refreshToken = filled(j.refresh_token);
-  const clientId = filled(j.client_id);
+/** A token file: a refresh token and a client id, both non-empty, with its other fields kept. */
+function tokenSchema() {
+  return z.looseObject({ client_id: z.string().min(1), refresh_token: z.string().min(1) });
+}
 
-  if (refreshToken === undefined || clientId === undefined) return null;
+/** Clasp's file: its default token; it carries no client id check, so a missing or odd one reads as "". */
+function clasprcSchema() {
+  const token = z.looseObject({ client_id: z.string().catch(""), refresh_token: z.string().min(1) });
 
-  return { ...j, client_id: clientId, refresh_token: refreshToken, sourcePath: p };
+  return z.looseObject({ tokens: z.looseObject({ default: token }) });
 }
 
 function tokenFromStore(account: WorkspaceAccount): Token | null {
   const p = tokenStorePath(account);
-  const j = rec(readJson(p));
+  const j = readSecretJson(p, tokenSchema());
 
-  return toToken(j, p);
+  return j === null ? null : { ...j, sourcePath: p };
 }
 
 function tokenFromAdc(home: string): Token | null {
   const p = adcPath(home);
-  const j = rec(readJson(p));
+  const j = readSecretJson(p, tokenSchema().extend({ type: z.literal(ADC_USER) }));
 
-  if (j.type === ADC_USER) return toToken(j, p);
-
-  return null;
+  return j === null ? null : { ...j, sourcePath: p };
 }
 
 function tokenFromClasprc(home: string): Token | null {
   const p = path.join(home, ".clasprc.json");
-  const t = rec(rec(rec(readJson(p)).tokens).default);
-  const refreshToken = filled(t.refresh_token);
+  const t = readSecretJson(p, clasprcSchema())?.tokens.default;
 
-  if (refreshToken === undefined) return null;
-  // Clasp's file carries no client_id check; the refresh needs one, so it stays whatever the file holds.
-  const clientId = typeof t.client_id === "string" ? t.client_id : "";
-
-  return { ...t, client_id: clientId, isClasprc: true, refresh_token: refreshToken, sourcePath: p };
+  return t === undefined ? null : { ...t, isClasprc: true, sourcePath: p };
 }
 
 /** The account's stored token, else gcloud's ADC user, else clasp's default token. */
@@ -118,11 +117,10 @@ function publicFields(t: Token): Rec {
 /** Saves a refreshed token where it came from; an ADC token goes to the account store, not gcloud's file. */
 export function persistToken(account: WorkspaceAccount, t: Token): void {
   if (t.isClasprc === true) {
-    const raw = rec(readJson(t.sourcePath));
-    const tokens = rec(raw.tokens);
+    const raw = readSecretJson(t.sourcePath, z.looseObject({ tokens: z.record(z.string(), z.unknown()).catch({}) }));
+    const tokens = raw?.tokens ?? {};
     tokens.default = publicFields(t);
-    raw.tokens = tokens;
-    writeSecretJson(t.sourcePath, raw);
+    writeSecretJson(t.sourcePath, { ...raw, tokens });
 
     return;
   }

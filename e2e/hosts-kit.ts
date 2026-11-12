@@ -2,8 +2,10 @@
 import path from "node:path";
 
 import { expect } from "vitest";
+import { z } from "zod";
 
-import { isRecord } from "../cli/json.ts";
+import { isRecord, readJson, tryJson } from "../cli/json.ts";
+import { hookConfigSchema } from "./init-helpers";
 import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";
@@ -13,9 +15,7 @@ export const ROOT_VARS = { CLAUDE_PROJECT_DIR: undefined, GROK_WORKSPACE_ROOT: u
 export const GATE = " hook gate-fat-tools";
 export const MAP = " hook session-map";
 
-type Handler = { type?: string; command?: string };
-
-type Group = { matcher?: string; hooks?: Handler[] };
+type Group = NonNullable<z.output<typeof hookConfigSchema>["hooks"]>[string][number];
 
 /** Which command hooks to pick: those of `event` whose command ends with `ends`. */
 type HookPick = { event: string; ends: string };
@@ -30,10 +30,7 @@ export function expectClean(sb: Sandbox, r: Run) {
 
 /** The hook groups of `event` in a host's hook file, in file order. */
 function groupsOf(sb: Sandbox, file: string, event: string): Group[] {
-  const doc: unknown = JSON.parse(sb.read(file));
-  const hooks = isRecord(doc) && isRecord(doc.hooks) ? doc.hooks[event] : undefined;
-
-  return Array.isArray(hooks) ? (hooks /* a host's hook file lists matcher groups per event */ as Group[]) : [];
+  return readJson(hookConfigSchema, sb.read(file)).hooks?.[event] ?? [];
 }
 
 /** The command hooks of `pick.event` in a host's hook file, in file order; `pick.ends` keeps those of one repo hook. */
@@ -69,9 +66,9 @@ export function runHook(sb: Sandbox, command: string, { payload, cwd, env }: Hoo
 }
 
 function json(r: Run): Record<string, unknown> {
-  const doc: unknown = JSON.parse(r.stdout);
+  const doc = tryJson(z.record(z.string(), z.unknown()), r.stdout);
 
-  if (!isRecord(doc)) throw new Error(`not a JSON object: ${tail(r.out)}`);
+  if (doc === undefined) throw new Error(`not a JSON object: ${tail(r.out)}`);
 
   return doc;
 }

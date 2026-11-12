@@ -9,6 +9,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "./json.ts";
 import {
   BINARIES_TYPE,
   DEPENDENCY_TYPES,
@@ -59,7 +60,7 @@ function unignoredPath(): string {
 /** The path of the knip bin in this package's install. */
 function knipBin(): string {
   const manifest = Bun.resolveSync("knip/package.json", import.meta.dirname);
-  const { bin } = manifestSchema().parse(JSON.parse(fs.readFileSync(manifest, "utf8")));
+  const { bin } = readJson(manifestSchema(), fs.readFileSync(manifest, "utf8"));
 
   return path.join(path.dirname(manifest), bin.knip);
 }
@@ -72,7 +73,7 @@ function runKnip(args: string[], cwd: string): Captured {
 /** The issues in knip's json report, in its order; null when `stdout` is not that report. */
 function issuesOf(stdout: string): Issue[] | null {
   try {
-    const parsed = reportSchema().parse(JSON.parse(stdout));
+    const parsed = readJson(reportSchema(), stdout);
 
     return parsed.issues.flatMap((entry) =>
       WORDINGS.flatMap(

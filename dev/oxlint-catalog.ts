@@ -3,17 +3,25 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { readJson } from "../cli/json.ts";
 import { captureTool } from "../cli/scripts/lint.ts";
 
 const ROOT = path.join(import.meta.dirname, "..");
 const CATALOG = "cli/sync/oxlint-catalog.json";
 const SCOPES: ReadonlySet<string> = new Set(["eslint", "typescript", "unicorn", "oxc", "import", "vitest"]);
 
-type Listed = { scope: string; value: string; category: string };
+function buildListedSchema() {
+  return z.array(z.looseObject({ category: z.string(), scope: z.string(), value: z.string() }));
+}
+
+/** The rules oxlint's `--rules --format=json` lists, as far as the catalog reads them. */
+const listedSchema = /* @__PURE__ */ buildListedSchema();
 
 /** Every rule of the catalog's scopes as `scope/value` mapped to its category, keys sorted. */
 export function oxlintCatalog(listing: string): Record<string, string> {
-  const listed = JSON.parse(listing) /* oxlint's rules json has this shape */ as Listed[];
+  const listed = readJson(listedSchema, listing);
 
   const rules = listed
     .filter((rule) => SCOPES.has(rule.scope))

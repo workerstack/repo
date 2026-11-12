@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { childEnv } from "../env.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { readJson } from "../json.ts";
 import { codeOf, DUPLICATE_CODE } from "../lint/script-rules.ts";
 import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
@@ -130,7 +131,7 @@ function scan(bin: string, root: string, sources: readonly string[]): Report {
       stdio: "ignore",
     });
 
-    return reportSchema().parse(JSON.parse(fs.readFileSync(path.join(out, REPORT), "utf8")));
+    return readJson(reportSchema(), fs.readFileSync(path.join(out, REPORT), "utf8"));
   } finally {
     fs.rmSync(temp, { force: true, recursive: true });
   }

@@ -10,7 +10,7 @@ import { initGit } from "./init-git.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
 import { JSON_INDENT, NO_PACKS, OLD_DEFAULT_SCRIPTS, SYNC_COMMAND, SYNC_POSTINSTALL } from "./init.constants.ts";
 import { PRINT_WIDTH } from "./lint/max-line-width.constants.ts";
-import { isPackageJson, readJsonFile, type PackageJson } from "./package-json.ts";
+import { packageJsonSchema, readJsonFile, type PackageJson } from "./package-json.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { execFileSync } from "./spawn.ts";
@@ -98,11 +98,11 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
   const destPath = path.join(dest, "package.json");
   let destPkg: PackageJson = {};
 
-  if (fs.existsSync(destPath)) destPkg = readJsonFile(destPath, isPackageJson);
+  if (fs.existsSync(destPath)) destPkg = readJsonFile(destPath, packageJsonSchema);
 
   if (destPkg.name === PACKAGE_NAME) return;
 
-  const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), isPackageJson);
+  const srcPkg = readJsonFile(path.join(pkgRoot, "package.json"), packageJsonSchema);
   const destScripts: Record<string, string> = { ...destPkg.scripts };
 
   for (const [name, value] of Object.entries(destScripts))

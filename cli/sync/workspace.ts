@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "../json.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 
 function versionsSchema() {
@@ -182,12 +184,10 @@ function parseManifest(rel: string, file: string): ManifestResult {
   let raw: unknown;
 
   try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    // Any JSON here; packageJsonSchema then words each issue as an error of its own.
+    raw = readJson(z.json(), fs.readFileSync(file, "utf8"));
   } catch (error) {
-    return {
-      errors: [`${rel}: not valid JSON: ${(error /* JSON.parse and fs throw an Error */ as Error).message}`],
-      ok: false,
-    };
+    return { errors: [`${rel}: not valid JSON: ${errorMessage(error)}`], ok: false };
   }
 
   const parsed = packageJsonSchema.safeParse(raw);

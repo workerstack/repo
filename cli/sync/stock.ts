@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { tryJson } from "../json.ts";
+import { packageJsonSchema } from "../package-json.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 
 /** Whether a package.json `name` is this package's own. */
@@ -16,9 +18,9 @@ export function stockRoot(root: string): string {
 /** Whether the package at `root` is `@workerstack/repo` itself, by its package.json name. */
 export function isSelf(root: string): boolean {
   try {
-    const pkg: unknown = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    const text = fs.readFileSync(path.join(root, "package.json"), "utf8");
 
-    return typeof pkg === "object" && pkg !== null && isSelfName(Reflect.get(pkg, "name"));
+    return isSelfName(tryJson(packageJsonSchema.pick({ name: true }), text)?.name);
   } catch {
     return false;
   }

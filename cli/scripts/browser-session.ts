@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import { ENGINES, ERROR_PREFIX, JSON_INDENT, SESSION_FILE, SESSION_REL } from "./browser.constants.ts";
 import type { BrowserResult, Engine, Rec, RefEntry, Session } from "./browser.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -45,42 +47,33 @@ function sessionFile(cwd?: string): string {
   return path.join(sessionDir(cwd), SESSION_FILE);
 }
 
-function engineOf(v: unknown): Engine | null {
-  return ENGINES.find((e) => e === v) ?? null;
+/**
+ * The stored session: a known engine and a numeric port, or no session. Every other field falls back as textOf and
+ * numberOf read it, and a ref that is not an object is dropped.
+ */
+function sessionSchema() {
+  const text = z.union([z.string(), z.number(), z.boolean()]).transform(String).catch("");
+
+  const ref = z
+    .object({ backendNodeId: z.unknown().optional(), name: text, nodeId: z.unknown().optional(), role: text })
+    .transform((e): RefEntry => ({ backendNodeId: e.backendNodeId, name: e.name, nodeId: e.nodeId, role: e.role }));
+
+  return z.object({
+    engine: z.literal(ENGINES),
+    escalated: z.boolean().catch(false),
+    lastRefs: z
+      .record(z.string(), ref.nullable().catch(null))
+      .catch({})
+      .transform((refs) => keptRefs(refs)),
+    lastURL: text,
+    pid: z.number().optional().catch(undefined),
+    port: z.coerce.number(),
+    swapCount: z.coerce.number().catch(0),
+  });
 }
 
-function toRefs(v: unknown): Record<string, RefEntry> {
-  const lastRefs: Record<string, RefEntry> = {};
-
-  for (const [id, e] of Object.entries(asRec(v))) {
-    if (!isRecord(e)) continue;
-    lastRefs[id] = {
-      backendNodeId: e.backendNodeId,
-      name: textOf(e.name),
-      nodeId: e.nodeId,
-      role: textOf(e.role),
-    };
-  }
-
-  return lastRefs;
-}
-
-function toSession(v: unknown): Session | null {
-  if (!isRecord(v)) return null;
-  const engine = engineOf(v.engine);
-  const port = Number(v.port);
-
-  if (engine === null || !Number.isFinite(port)) return null;
-
-  return {
-    engine,
-    escalated: v.escalated === true,
-    lastRefs: toRefs(v.lastRefs),
-    lastURL: textOf(v.lastURL),
-    pid: typeof v.pid === "number" ? v.pid : undefined,
-    port,
-    swapCount: numberOf(v.swapCount),
-  };
+function keptRefs(refs: Record<string, RefEntry | null>): Record<string, RefEntry> {
+  return Object.fromEntries(Object.entries(refs).filter((entry): entry is [string, RefEntry] => entry[1] !== null));
 }
 
 /** A session just launched on `engine`, with no page and no refs. */
@@ -98,14 +91,8 @@ export function newSession(engine: Engine, pid: number | undefined, port: number
 
 /** The stored session; null when there is none or it does not parse. */
 export function readSession(cwd?: string): Session | null {
-  const f = sessionFile(cwd);
-
-  if (!fs.existsSync(f)) return null;
-
   try {
-    const raw: unknown = JSON.parse(fs.readFileSync(f, "utf8"));
-
-    return toSession(raw);
+    return tryJson(sessionSchema(), fs.readFileSync(sessionFile(cwd), "utf8")) ?? null;
   } catch {
     return null;
   }

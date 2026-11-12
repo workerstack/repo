@@ -95,15 +95,15 @@ it("placeDevDependency is a no-op when src is not repo", () => {
 });
 
 it.each([
-  ["an array", []],
-  ["a numeric name", { name: 1 }],
-  ["a numeric version", { version: 1 }],
-  ["a script that is not a string", { scripts: { a: 1 } }],
-  ["scripts as an array", { scripts: [] }],
-  ["dependencies as a string", { dependencies: "x" }],
-])("package.json refused for %s", (_name, pkg) => {
+  ["an array", [], "expected object, received array"],
+  ["a numeric name", { name: 1 }, "expected string, received number\n  → at name"],
+  ["a numeric version", { version: 1 }, "expected string, received number\n  → at version"],
+  ["a script that is not a string", { scripts: { a: 1 } }, "expected string, received number\n  → at scripts.a"],
+  ["scripts as an array", { scripts: [] }, "expected record, received array\n  → at scripts"],
+  ["dependencies as a string", { dependencies: "x" }, "expected record, received string\n  → at dependencies"],
+])("package.json refused for %s", (_name, pkg, issue) => {
   const dest = tmp("pj-wrong-");
   const file = path.join(dest, "package.json");
   fs.writeFileSync(file, JSON.stringify(pkg));
-  expect(() => mergePackageJson(dest, stubPkgRoot())).toThrowError(`${file} does not hold`);
+  expect(() => mergePackageJson(dest, stubPkgRoot())).toThrowError(`${file}: ✖ Invalid input: ${issue}`);
 });

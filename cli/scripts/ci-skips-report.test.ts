@@ -20,16 +20,14 @@ it(
   () => {
     const root = "/work/app";
 
-    const json = JSON.parse(
-      vitestJson("/work/app/cli/b.test.ts", [
-        ["z skipped", "skipped"],
-        ["a pending", "pending"],
-        ["a pending", "pending"],
-        ["m todo", "todo"],
-        ["ran", "passed"],
-        ["broke", "failed"],
-      ]),
-    );
+    const json = vitestJson("/work/app/cli/b.test.ts", [
+      ["z skipped", "skipped"],
+      ["a pending", "pending"],
+      ["a pending", "pending"],
+      ["m todo", "todo"],
+      ["ran", "passed"],
+      ["broke", "failed"],
+    ]);
 
     expect(skippedIds(json, root)).toStrictEqual([
       "cli/b.test.ts > a pending",
@@ -40,12 +38,12 @@ it(
 );
 
 it("a windows report with backslashed absolute paths gives the posix id", () => {
-  const json = JSON.parse(vitestJson("C:\\work\\app\\cli\\a.test.ts", [["reads a symlink", "skipped"]]));
+  const json = vitestJson("C:\\work\\app\\cli\\a.test.ts", [["reads a symlink", "skipped"]]);
   expect(skippedIds(json, "C:\\work\\app")).toStrictEqual(["cli/a.test.ts > reads a symlink"]);
 });
 
 it("a json that is not a vitest report has no skips", () => {
-  expect(skippedIds({ nope: 1 }, "/x")).toStrictEqual([]);
+  expect(skippedIds('{"nope":1}', "/x")).toStrictEqual([]);
 });
 
 it("writeReport writes the os and the ids, and an absent vitest json gives an empty list", () => {

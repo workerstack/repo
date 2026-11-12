@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
 
 import type { Host } from "../../config.ts";
+import { isRecord } from "../../json.ts";
 import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
 import { applyUnion } from "../../scripts/hooks-union.ts";
 import { renderHooks } from "../agents/render-hooks.ts";
@@ -31,10 +32,17 @@ export const BASE_REL = "agents/settings/claude.json";
 /** A path into a parsed JSON value: object keys and array indexes. */
 export type Step = string | number;
 
+/** The value at `key` in `node`: an index into an array, a key of an object, else undefined. */
+function step(node: unknown, key: Step): unknown {
+  if (Array.isArray(node)) return node[Number(key)];
+
+  return isRecord(node) ? node[String(key)] : undefined;
+}
+
 /** The value at `keys` under `value`; undefined once a step reaches something that is not an object. */
 export function at(value: unknown, ...keys: readonly Step[]): unknown {
   let node = value;
-  for (const key of keys) node = typeof node === "object" && node !== null ? Reflect.get(node, key) : undefined;
+  for (const key of keys) node = step(node, key);
   return node;
 }
 

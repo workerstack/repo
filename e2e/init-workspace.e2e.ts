@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { linkText } from "../dev/test-paths.ts";
 import { gitStdout } from "./git-stdout";
-import { expectClean, ignoredFiles, isClaudeSettings, isPackageJson } from "./init-helpers";
+import { expectClean, ignoredFiles, claudeSettingsSchema, packageJsonWritten } from "./init-helpers";
 import { PACKAGE_NAME } from "./registry";
 import { Sandbox } from "./sandbox";
 import { tail } from "./tail";
@@ -130,12 +130,12 @@ describe("existing repo content survives init", () => {
     await sb.commit("existing content");
     expectClean(sb, await sb.launch(PACKAGE_NAME, "init"));
 
-    const pkg = sb.json("package.json", isPackageJson);
+    const pkg = sb.json("package.json", packageJsonWritten);
     expect(pkg.scripts.build).toBe("tsc -p .");
     expect(pkg.devDependencies.typescript).toBe("^5.9.3");
     expect(sb.read("AGENTS.md")).toContain("Always run the linter.");
     expect(sb.exists(".repo/rules/agents.md")).toBe(false);
-    expect(sb.json(".claude/settings.json", isClaudeSettings).permissions.allow).toContain("Bash(make test)");
+    expect(sb.json(".claude/settings.json", claudeSettingsSchema).permissions.allow).toContain("Bash(make test)");
     const ls = await sb.git("ls-files");
     expect(ls.stdout.split("\n")).toContain("AGENTS.md");
   });

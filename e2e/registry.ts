@@ -9,9 +9,10 @@ import net, { type AddressInfo } from "node:net";
 import path from "node:path";
 
 import * as tar from "tar";
+import { z } from "zod";
 
 import { childEnv } from "../cli/env.ts";
-import { isRecord } from "../cli/json.ts";
+import { readJsonFile } from "../cli/package-json.ts";
 
 export const PACKAGE_NAME = "@workerstack/repo";
 
@@ -157,9 +158,8 @@ export function retagTarball(tarball: string, version: string, work: string): st
   // node-tar, not the tar binary: Git Bash's GNU tar reads `D:\...` as a remote host.
   tar.x({ cwd: dir, file: tarball, sync: true });
   const pkgPath = path.join(dir, "package", "package.json");
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-
-  if (!isRecord(pkg)) throw new Error(`${pkgPath} is not a JSON object`);
+  // A record, not the package.json schema, so the keys keep their order when the file is written back.
+  const pkg = readJsonFile(pkgPath, z.record(z.string(), z.unknown()));
   pkg.version = version;
   fs.writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 
