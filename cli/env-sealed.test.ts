@@ -13,8 +13,14 @@ const KEY_FILE = ".workerstack/keys/test.key";
 
 // The real child spawns bun and decrypts with age.
 const SPAWN = { timeout: 30_000 };
-const NO_KEY = "repo env: WEBHOOK_KEY is sealed and no key is at ~/.workerstack/keys/";
-const OTHER_KEY = "repo env: NPM_TOKEN is sealed for another key than ~/.workerstack/keys/";
+
+// No .repo/env.keys.json names this repo, so the key file reads `<repo>`.
+const NO_KEY =
+  "repo env: WEBHOOK_KEY is sealed and no key is at ~/.workerstack/keys/<repo>.key; run `bun repo env key import`";
+
+const OTHER_KEY =
+  "repo env: NPM_TOKEN is sealed for another key than ~/.workerstack/keys/<repo>.key; " +
+  "run `bun repo env key import` with this repo's key";
 
 /** A temp HOME holding `identity` as its one key file, set as HOME with no WORKERSTACK_ENV_KEY or REPO_ENV. */
 function homeWith(identity: string): string {

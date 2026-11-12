@@ -7,7 +7,9 @@ const { repoWith } = useGitTree("check-env-values-config-");
 
 const FILE = "projects/anyrow/env.ts";
 const IMPORT = 'import { defineEnv } from "@workerstack/repo/env";\n';
-const SEAL_HINT = 'seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")';
+
+/** The fix a plaintext `prod.KEY` line names: the command that seals it in place. */
+const SEAL_HINT = "run `bun repo env set KEY --scope prod`";
 
 /** The lines `repo check` prints for one file at `FILE`. */
 function linesFor(content: string): string[] {

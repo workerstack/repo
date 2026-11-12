@@ -24,6 +24,12 @@ export const KEYS_FILE = ".repo/env.keys.json";
 /** The variable that holds an age identity, read before any key file. */
 export const ENV_KEY_VARIABLE = "WORKERSTACK_ENV_KEY";
 
+/** The fix a sealed read names when no key is found: import this repo's key. */
+export const KEY_IMPORT_FIX = "run `bun repo env key import`";
+
+/** The fix a sealed read names when the key found is another repo's. */
+export const WRONG_KEY_FIX = "run `bun repo env key import` with this repo's key";
+
 /** The variable that names the current scope of a defineEnv file. */
 export const SCOPE_VARIABLE = "REPO_ENV";
 

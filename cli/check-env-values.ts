@@ -9,7 +9,7 @@ import {
   PROCESS_BLOCK,
   SCANNED_EXTENSIONS,
   SCOPE_BLOCKS,
-  SEAL_HINT,
+  sealHint,
   VALUE_BLOCKS,
 } from "./check-env-values.constants.ts";
 import { ENV_PROPERTY } from "./env.constants.ts";
@@ -110,7 +110,7 @@ function secretLines(rel: string, blocks: Blocks): string[] {
       const reason = value === undefined ? null : secretReason(key, value);
 
       if (reason === null) continue;
-      lines.push(`env: ${rel} ${scope}.${key} looks like a secret (${reason}) but is plain; ${SEAL_HINT}`);
+      lines.push(`env: ${rel} ${scope}.${key} looks like a secret (${reason}) but is plain; ${sealHint(key, scope)}`);
     }
   }
 
