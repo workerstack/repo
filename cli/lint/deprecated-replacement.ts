@@ -1,3 +1,5 @@
+import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+
 import { DEPRECATED, MESSAGE, NEXT_TAG, REPLACEMENT } from "./deprecated-replacement.constants.ts";
 import type { RepoRule } from "./rule.types.ts";
 
@@ -14,16 +16,22 @@ function deprecatedText(value: string): string | null {
  * Fails a deprecation tag that names no replacement: a caller who sees the strike-through needs to know what to use
  * instead. It applies to every JSDoc block, public or not.
  */
-export const deprecatedReplacement: RepoRule = {
+export const deprecatedReplacement: RepoRule<"replacement"> = {
   create(context) {
     return {
       Program() {
         for (const comment of context.sourceCode.getAllComments()) {
-          if (comment.type !== "Block" || !comment.value.startsWith("*")) continue;
+          if (comment.type !== AST_TOKEN_TYPES.Block || !comment.value.startsWith("*")) continue;
           const text = deprecatedText(comment.value);
-          if (text !== null && !REPLACEMENT.test(text)) context.report({ message: MESSAGE, node: comment });
+          if (text !== null && !REPLACEMENT.test(text)) context.report({ messageId: "replacement", node: comment });
         }
       },
     };
+  },
+  defaultOptions: [],
+  meta: {
+    messages: { replacement: MESSAGE },
+    schema: [],
+    type: "problem",
   },
 };

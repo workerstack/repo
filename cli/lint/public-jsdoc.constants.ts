@@ -70,7 +70,6 @@ export const NODE_TYPES = {
   arrow: "ArrowFunctionExpression",
   asExpression: "TSAsExpression",
   binary: "BinaryExpression",
-  block: "Block",
   classBody: "ClassBody",
   conditional: "TSConditionalType",
   emptyBody: "TSEmptyBodyFunctionExpression",

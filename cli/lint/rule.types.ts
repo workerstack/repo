@@ -1,18 +1,10 @@
-import type { Comment, Context, CreateRule, ESTree, Visitor } from "@oxlint/plugins";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
-/** The comment fields rules read; `range` is included because `report` needs it on a comment node. */
-export type RuleComment = Pick<Comment, "type" | "value" | "start" | "end" | "range">;
+/** A comment as eslint's `SourceCode` hands it to a rule; positions come from `range`. */
+export type RuleComment = TSESTree.Comment;
 
-/** The members of oxlint's `Context` rules read, so a test can build one whole with no cast. */
-export type RuleContext = Pick<Context, "cwd" | "filename" | "options" | "report"> & {
-  /** The parts of oxlint's `SourceCode` rules read; methods, so oxlint's real `SourceCode` assigns to it. */
-  sourceCode: {
-    text: string;
-    getAllComments(): readonly RuleComment[];
-    getCommentsBefore(node: ESTree.Node): readonly RuleComment[];
-    getCommentsAfter(node: ESTree.Node): readonly RuleComment[];
-  };
-};
-
-/** An oxlint rule whose `create` reads only `RuleContext`. */
-export type RepoRule = Omit<CreateRule, "create"> & { create: (context: RuleContext) => Visitor };
+/** A repo lint rule: a typescript-eslint rule module, which eslint's `Linter` and oxlint both run. */
+export type RepoRule<Ids extends string = string, Options extends readonly unknown[] = []> = TSESLint.RuleModule<
+  Ids,
+  Options
+>;

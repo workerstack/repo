@@ -54,13 +54,13 @@ describe("entry-file passes", () => {
 
 describe("entry-file fails", () => {
   it.each([
-    [`${IMPORT}main().then(() => process.exit());`, [MESSAGE, MISSING]],
+    [`${IMPORT}main().then(() => process.exit());`, [MISSING, MESSAGE]],
     [`${IMPORT}const argv = process.argv.slice(2);\nawait main(argv);`, [MESSAGE]],
     [`${IMPORT}await main();\nawait main();`, [MESSAGE]],
-    ["async function main(): Promise<void> {}\nawait main();", [MESSAGE, MESSAGE, MISSING]],
+    ["async function main(): Promise<void> {}\nawait main();", [MESSAGE, MISSING, MESSAGE]],
     [`${IMPORT}export { main };\nawait main();`, [MESSAGE]],
     [IMPORT, [MISSING]],
-    [`${IMPORT}await run();`, [MESSAGE, MISSING]],
+    [`${IMPORT}await run();`, [MISSING, MESSAGE]],
   ])("%j", (code, messages) => {
     expect(messagesOf(code)).toStrictEqual(messages);
   });

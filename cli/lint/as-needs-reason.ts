@@ -1,4 +1,4 @@
-import type { ESTree } from "@oxlint/plugins";
+import { AST_NODE_TYPES, AST_TOKEN_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
 import { CONST_TYPE } from "./const-type.constants.ts";
 import { isReason } from "./is-reason.ts";
@@ -8,9 +8,13 @@ const AS_KEYWORD = /\bas\b/;
 const LINE_BEFORE_AS = /^[\s)]*as\b/;
 
 /** `as const` and `as unknown` claim nothing a reader must trust. */
-function claimsNothing(type: ESTree.TSType): boolean {
-  if (type.type === "TSUnknownKeyword") return true;
-  return type.type === "TSTypeReference" && type.typeName.type === "Identifier" && type.typeName.name === CONST_TYPE;
+function claimsNothing(type: TSESTree.TypeNode): boolean {
+  if (type.type === AST_NODE_TYPES.TSUnknownKeyword) return true;
+  return (
+    type.type === AST_NODE_TYPES.TSTypeReference &&
+    type.typeName.type === AST_NODE_TYPES.Identifier &&
+    type.typeName.name === CONST_TYPE
+  );
 }
 
 /**
@@ -18,17 +22,18 @@ function claimsNothing(type: ESTree.TSType): boolean {
  * it.
  */
 function endsReason(text: string, comment: RuleComment): boolean {
-  return comment.type === "Block" || LINE_BEFORE_AS.test(text.slice(comment.end));
+  return comment.type === AST_TOKEN_TYPES.Block || LINE_BEFORE_AS.test(text.slice(comment.range[1]));
 }
 
 /** Whether a comment of a reason lies after the expression and before the `as` keyword. */
-function hasReason(text: string, comments: readonly RuleComment[], node: ESTree.TSAsExpression): boolean {
-  let edge = node.expression.end;
+function hasReason(text: string, comments: readonly RuleComment[], node: TSESTree.TSAsExpression): boolean {
+  let edge = node.expression.range[1];
   for (const comment of comments) {
-    if (comment.start < edge || comment.end > node.typeAnnotation.start) continue;
-    if (AS_KEYWORD.test(text.slice(edge, comment.start))) return false;
+    const [start, end] = comment.range;
+    if (start < edge || end > node.typeAnnotation.range[0]) continue;
+    if (AS_KEYWORD.test(text.slice(edge, start))) return false;
     if (isReason(comment.value) && endsReason(text, comment)) return true;
-    edge = comment.end;
+    edge = end;
   }
   return false;
 }
@@ -37,19 +42,26 @@ function hasReason(text: string, comments: readonly RuleComment[], node: ESTree.
  * Fails an `as` cast with no reason right before its keyword: `x as Foo` tells the checker to trust it, so the reader
  * is told why. `as const` and `as unknown` pass; `<Foo>x` is native `typescript/consistent-type-assertions`'.
  */
-export const asNeedsReason: RepoRule = {
+export const asNeedsReason: RepoRule<"reason"> = {
   create(context) {
     return {
       TSAsExpression(node) {
         if (claimsNothing(node.typeAnnotation)) return;
         const { text } = context.sourceCode;
         if (hasReason(text, context.sourceCode.getAllComments(), node)) return;
-        const type = text.slice(node.typeAnnotation.start, node.typeAnnotation.end);
-        const message =
-          `"as ${type}" needs a reason: write x /* why the type holds */ as ${type}, ` +
-          "or narrow with a check or a schema parse";
-        context.report({ message, node });
+        const type = text.slice(...node.typeAnnotation.range);
+        context.report({ data: { type }, messageId: "reason", node });
       },
     };
+  },
+  defaultOptions: [],
+  meta: {
+    messages: {
+      reason:
+        '"as {{type}}" needs a reason: write x /* why the type holds */ as {{type}}, ' +
+        "or narrow with a check or a schema parse",
+    },
+    schema: [],
+    type: "problem",
   },
 };

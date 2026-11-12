@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reportsOf, ruleContext } from "../../dev/rule-harness.ts";
+import { reportsOf } from "../../dev/rule-harness.ts";
 import { asNeedsReason } from "./as-needs-reason.ts";
 
 function needs(type: string) {
@@ -50,42 +50,18 @@ describe("as-needs-reason fails", () => {
   });
 });
 
-/**
- * Reports over `code` parsed as oxlint hands it, with no parenthesis nodes: a comment in parentheses follows the
- * expression.
- */
-function unparenthesized(code: string): string[] {
-  const messages: string[] = [];
-  const { context, program } = ruleContext({
-    code,
-    cwd: "/",
-    filename: "/a.ts",
-    options: [],
-    report: ({ message }) => messages.push(message ?? ""),
-  });
-  const visitor = asNeedsReason.create(context);
-  function visit(node: unknown): void {
-    if (typeof node !== "object" || node === null) return;
-    if ("type" in node && node.type === "TSAsExpression")
-      visitor.TSAsExpression?.(node /* the walk found a cast node */ as never);
-    for (const child of Object.values(node)) visit(child);
-  }
-  visit(program);
-  return messages;
-}
-
 describe("as-needs-reason with a line reason", () => {
   it.each([
     "export const foo = (\n  value\n  // the schema parsed it above\n) as Foo;",
     "export const foo = (value // the schema parsed it above\n) as Foo;",
   ])("passes %j", (code) => {
-    expect(unparenthesized(code)).toStrictEqual([]);
+    expect(messagesOf(code)).toStrictEqual([]);
   });
 
   it.each([
     "export const foo = (value // the schema parsed it above\n  /* ok */) as Foo;",
     "export const foo = (value // why\n) as Foo;",
   ])("fails %j", (code) => {
-    expect(unparenthesized(code)).toStrictEqual([needs("Foo")]);
+    expect(messagesOf(code)).toStrictEqual([needs("Foo")]);
   });
 });
