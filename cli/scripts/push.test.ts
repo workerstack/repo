@@ -52,12 +52,12 @@ function ignore(): void {
   // A dropped record: nothing is written.
 }
 
-const noRecords = {
+const noRecords: RecordFs = {
   mkdirSync: ignore,
   renameSync: ignore,
   rmSync: ignore,
   writeFileSync: ignore,
-} as unknown /* a record calls only these four, and their results are not read */ as RecordFs;
+};
 
 /** Runs `repo push <argv>` in `r` with gh faked so the ci run ends in `conclusion`, and reports what it did. */
 async function push(r: PushRepo, argv: string[] = [], conclusion: Conclusion = "success") {

@@ -6,6 +6,7 @@ import { afterEach, expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
 import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 import { mergedAndDirtyWorktrees } from "./__fixtures__/worktree-scenarios.ts";
+import type { HookInput } from "./hook-input.ts";
 import { isManaged } from "./worktree-git.ts";
 import { main } from "./worktree.ts";
 
@@ -69,7 +70,7 @@ it("judges managed paths on win32 the way git prints them", () => {
   expect(isManaged("C:/elsewhere", "C:\\r", path.win32)).toBe(false);
 });
 
-function event(r: string, data: object) {
+function event(r: string, data: HookInput) {
   return cli(path.join(r, "packages/a"), ["hook"], { input: JSON.stringify(data) });
 }
 

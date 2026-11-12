@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { baselineOf, indexUrl } from "./crates-index.ts";
+import { baselineOf, indexUrl, type Entry } from "./crates-index.ts";
 
 /** A fetch that answers with `status` and `body`, and records the call. */
 function index(status: number, body = "") {
@@ -19,7 +19,7 @@ function lines(...rows: object[]) {
   return `${rows.map((item) => JSON.stringify(item)).join("\n")}\n`;
 }
 
-function row(vers: string, extra: object = {}) {
+function row(vers: string, extra: Partial<Entry> = {}) {
   return { deps: [], pubtime: `t-${vers}`, vers, yanked: false, ...extra };
 }
 

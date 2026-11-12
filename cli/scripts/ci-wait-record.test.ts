@@ -14,7 +14,7 @@ function fakeFs({ fail = false } = {}) {
   const ops: string[] = [];
   const files = new Map<string, string>();
 
-  const memory = {
+  const memory: RecordFs = {
     mkdirSync: (dir: string) => ops.push(`mkdir ${dir}`),
     renameSync: (from: string, to: string) => {
       ops.push(`rename ${from} ${to}`);
@@ -28,7 +28,7 @@ function fakeFs({ fail = false } = {}) {
       if (fail) throw new Error("disk full");
       files.set(file, data);
     },
-  } as unknown /* only the methods a record calls are given */ as RecordFs;
+  };
 
   return { files, fs: memory, ops };
 }

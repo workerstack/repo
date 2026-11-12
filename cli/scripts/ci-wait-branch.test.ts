@@ -18,7 +18,6 @@ import {
   view,
   world,
 } from "./__fixtures__/ci-wait-world.ts";
-import type { RecordFs } from "./ci-wait-record.ts";
 import { waitMain } from "./ci-wait.ts";
 
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
@@ -173,8 +172,10 @@ it("a record that cannot be written is said on stderr and does not change the ex
       mkdirSync: () => {
         throw new Error("read-only");
       },
+      renameSync: () => {},
       rmSync: () => {},
-    } as unknown /* only the methods a record calls are given */ as RecordFs,
+      writeFileSync: () => {},
+    },
     gh: answerer("gh", { ...GH, "run view 123 --json": view("success", []) }, []),
     git: answerer("git", GIT, []),
     now: () => 0,

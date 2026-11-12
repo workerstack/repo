@@ -16,6 +16,8 @@ const REPO_RULES = {
       "repo/boundaries": ["error", { allow: { lib: [], ui: ["lib"] }, tags: { "@app/lib": "lib", "@app/ui": "ui" } }],
       "repo/config-file": "error",
       "repo/max-line-width": "error",
+      "repo/no-chained-type-assertions": "error",
+      "repo/no-object-parameters": "error",
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
       "repo/no-v8-ignore": "error",
@@ -41,6 +43,12 @@ const REPO_RULES = {
     "export const applied = Reflect.apply(invoke, undefined, [{ apply: () => 1 }]);",
     "",
     'export const read = Reflect.get(source, "id");',
+    "",
+    "export const chained = source as unknown as { readonly id: string };",
+    "",
+    "export function takes(value: object) { return value; }",
+    "",
+    "export function untyped(value) { return value; }",
     "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
@@ -69,6 +77,10 @@ const FLOW = "packages/lib/src/flow.ts";
 
 /** What the widen and Reflect rules report in flow.ts. */
 const FLOW_FINDINGS = [
+  `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
+    "Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
+  `${FLOW}:13 repo(no-object-parameters) Parameter \`value\` uses the broad \`object\` type. Accept a named owner ` +
+    "type; parse external input at its boundary before calling this function.",
   `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
     "assertion. Keep the precise type from initialization through use; parse boundary input once.",
   `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +

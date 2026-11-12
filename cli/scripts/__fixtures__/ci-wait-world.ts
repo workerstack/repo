@@ -39,7 +39,7 @@ function memoryFs(files: Map<string, string>): RecordFs {
       files.delete(String(from));
     },
     rmSync: () => undefined,
-  } as unknown /* only the four methods a record calls are given */ as RecordFs;
+  };
 }
 
 export async function world(git: World, gh: World, branch?: string) {

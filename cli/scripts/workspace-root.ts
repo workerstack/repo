@@ -91,13 +91,13 @@ type CanonicalEdges = {
 const NATIVE_EDGES: CanonicalEdges = { exists: fs.existsSync, real: fs.realpathSync.native };
 
 /**
- * `abs` with its nearest existing ancestor in the `realpath.native` spelling. A relative path, a non-string, or a
- * path for a foreign `p` (a `path.win32` test on Linux) comes back unchanged.
+ * `abs` with its nearest existing ancestor in the `realpath.native` spelling. A relative path, or a path for a
+ * foreign `p` (a `path.win32` test on Linux), comes back unchanged.
  */
 export function canonicalPath(abs: string, p: typeof path = path, edges: CanonicalEdges = NATIVE_EDGES): string {
   const { exists, real } = edges;
 
-  if (p !== path || typeof abs !== "string" || !path.isAbsolute(abs)) return abs;
+  if (p !== path || !path.isAbsolute(abs)) return abs;
   let dir = abs;
 
   while (!exists(dir)) {

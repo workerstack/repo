@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { realDir as tmpDir } from "./__fixtures__/real-dir.ts";
+import type { HookInput } from "./hook-input.ts";
 import { canonicalPath, gitRevParse, INSTALL_MARKER, resolveRoots, resolveTyped } from "./workspace-root.ts";
 
 useTempDirs();
@@ -27,11 +28,8 @@ function factsAt(top: string) {
 }
 
 describe("canonicalPath", () => {
-  it("returns a relative path, a non-string and a foreign-path-module path unchanged", () => {
+  it("returns a relative path and a foreign-path-module path unchanged", () => {
     expect(canonicalPath("a/b")).toBe("a/b");
-    expect(canonicalPath(7 /* a bad caller value */ as unknown /* typed as string by the signature */ as string)).toBe(
-      7,
-    );
     expect(canonicalPath("C:\\r\\x", path.win32)).toBe("C:\\r\\x");
   });
 
@@ -137,7 +135,7 @@ describe("resolveRoots", () => {
     const input = { cwd, toolCall: { args: { Cwd: agCwd } }, workspacePaths: [paths], workspaceRoot: ws };
     const env = { CLAUDE_PROJECT_DIR: claude, GROK_WORKSPACE_ROOT: grok };
 
-    function rootOf(i: object, e: Partial<typeof env>) {
+    function rootOf(i: HookInput, e: Partial<typeof env>) {
       return resolveRoots(i, { cwd: proc, env: e }).root;
     }
 

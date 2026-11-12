@@ -19,10 +19,12 @@ import { namingConvention } from "./naming-convention.ts";
 import { nativePathSeparator } from "./native-path-separator.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 import { noBooleanParam } from "./no-boolean-param.ts";
+import { noChainedTypeAssertions } from "./no-chained-type-assertions.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
 import { noModuleMocking } from "./no-module-mocking.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
+import { noObjectParameters } from "./no-object-parameters.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
 import { noReflectGet } from "./no-reflect-get.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
@@ -65,10 +67,12 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "native-path-separator": nativePathSeparator,
     "no-block-comment": noBlockComment,
     "no-boolean-param": noBooleanParam,
+    "no-chained-type-assertions": noChainedTypeAssertions,
     "no-commented-out-code": noCommentedOutCode,
     "no-module-mocking": noModuleMocking,
     "no-module-side-effects": noModuleSideEffects,
     "no-module-state": noModuleState,
+    "no-object-parameters": noObjectParameters,
     "no-reflect-apply": noReflectApply,
     "no-reflect-get": noReflectGet,
     "no-side-effect-import": noSideEffectImport,

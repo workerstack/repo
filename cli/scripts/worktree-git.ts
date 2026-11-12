@@ -25,10 +25,6 @@ function trimmed(stream: string | null | undefined): string {
   return stream?.trim() ?? "";
 }
 
-export function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
 export function git(cwd: string, args: string[]): GitRun {
   const r = spawnSync("git", args, { cwd, encoding: "utf8" });
 

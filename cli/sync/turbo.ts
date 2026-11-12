@@ -1,3 +1,4 @@
+import type { TurboTask } from "../turbo-config.ts";
 import { readManifest } from "./manifest.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
@@ -10,9 +11,12 @@ import {
   TYPECHECK_TASK,
 } from "./turbo.constants.ts";
 
+/** The `turbo.json` sync writes: the schema, the files every task keys on, and the tasks by name. */
+export type TurboJson = { $schema: string; globalDependencies: readonly string[]; tasks: Record<string, TurboTask> };
+
 /** The generated `turbo.json` text: `typecheck` and `test`, then the config's `turbo.tasks`. */
 function turboText(ctx: SyncContext): string {
-  const config = {
+  const config: TurboJson = {
     $schema: TURBO_SCHEMA_URL,
     globalDependencies: GLOBAL_DEPENDENCIES,
     tasks: { test: TEST_TASK, typecheck: TYPECHECK_TASK, ...ctx.config.turbo?.tasks },

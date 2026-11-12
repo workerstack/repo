@@ -16,6 +16,7 @@ import {
   patchUpdate,
 } from "./__fixtures__/hook-payload.ts";
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 import { rewritePatch, rewriteScratchWrite } from "./gate-rewrites.ts";
 import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_REREAD } from "./gate.constants.ts";
 
@@ -28,7 +29,7 @@ function cx(cwd: string, tool: string, command: string) {
   return inSession(codexCall(cwd, tool, { command }), "cx1");
 }
 
-function codexAllow(updatedInput: object) {
+function codexAllow(updatedInput: ToolArgs) {
   return {
     hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput },
   };

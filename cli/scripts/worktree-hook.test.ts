@@ -39,26 +39,11 @@ it("creates the worktree on WorktreeCreate and prints only its path", () => {
   expect(git(wt(r, "z"), "branch", "--show-current")).toBe("wt/z");
 });
 
-it("fails the create with the reason, whether the name is unusable or the throw is not an Error", () => {
+it("fails the create with the reason when the name is unusable", () => {
   const r = tmp.repo();
   const bad = worktreeHook({ cwd: r, hook_event_name: "WorktreeCreate", name: ".." });
   expect([bad.code, bad.stdout]).toStrictEqual([1, ""]);
   expect(bad.stderr).toContain('worktree name ".." has no usable');
-
-  const hostile = {
-    toString: () =>
-      ((): never => {
-        throw "boom";
-      })(),
-  };
-
-  const input = {
-    cwd: r,
-    hook_event_name: "WorktreeCreate",
-    name: hostile,
-  } as unknown /* JSON cannot carry a throwing toString; this plants one */ as HookInput;
-
-  expect(worktreeHook(input)).toStrictEqual({ code: 1, stderr: "boom", stdout: "" });
 });
 
 it("removes a worktree and its branch once the default branch holds it", () => {

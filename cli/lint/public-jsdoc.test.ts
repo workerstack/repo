@@ -1,13 +1,14 @@
 import { expect, it } from "vitest";
 
 import { reportsOf } from "../../dev/rule-harness.ts";
+import type { PackageJson } from "../sync/workspace.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
 
 const ASK = "say what a caller needs and the type does not";
 const MISSING = `has no JSDoc: add a /** */ block that says what a caller needs and the type does not`;
 
 /** What the rule reports over a package whose "." entry is `src/index.ts` holding `code`, beside `extra` files. */
-function messagesOf(code: string, extra: Record<string, string> = {}, manifest: object = {}): string[] {
+function messagesOf(code: string, extra: Record<string, string> = {}, manifest: Partial<PackageJson> = {}): string[] {
   const files = {
     "package.json": JSON.stringify({ exports: { ".": "./src/index.ts" }, name: "p", ...manifest }),
     "src/index.ts": code,

@@ -1,12 +1,12 @@
 /** The replies the parent hook's handlers return, and the write target they answer about. */
 import { answerDeny, answerRewrite, WRITE_PATH_FIELDS } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
-import type { HookResult, ToolInput } from "./orchestrate.types.ts";
+import type { HookResult, HostReply, ToolInput } from "./orchestrate.types.ts";
 
 /** No reply: the host goes on as it would without the hook. */
 export const PASS: Readonly<HookResult> = { code: 0 };
 
-export function replyWith(reply: object): HookResult {
+export function replyWith(reply: HostReply): HookResult {
   return { code: 0, reply };
 }
 

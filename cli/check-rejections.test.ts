@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { expect, it } from "vitest";
 
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
@@ -25,7 +26,7 @@ function plant(files: Record<string, string | object>): string {
 }
 
 /** A package at `dir`: a `tsconfig.json` on this checkout's base that excludes reject files, and its strict sibling. */
-function pkg(dir: string, compilerOptions: object = {}): Record<string, object> {
+function pkg(dir: string, compilerOptions: ts.server.protocol.CompilerOptions = {}): Record<string, object> {
   const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
 
   return {
@@ -175,7 +176,8 @@ it("checks a .tsx reject file with its owner's jsx option and ambient types", { 
     "",
   ].join("\n");
 
-  const files = { ...pkg(".", { jsx: "preserve" }), "src/jsx.d.ts": jsx, "src/view.reject.tsx": source };
+  const owner = pkg(".", { jsx: ts.server.protocol.JsxEmit.Preserve });
+  const files = { ...owner, "src/jsx.d.ts": jsx, "src/view.reject.tsx": source };
   expect(problemsOf(files)).toStrictEqual(["src/view.reject.tsx: line 5 compiles; it must reject: anything"]);
 });
 

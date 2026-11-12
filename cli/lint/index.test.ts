@@ -19,10 +19,12 @@ const RULE_NAMES = [
   "native-path-separator",
   "no-block-comment",
   "no-boolean-param",
+  "no-chained-type-assertions",
   "no-commented-out-code",
   "no-module-mocking",
   "no-module-side-effects",
   "no-module-state",
+  "no-object-parameters",
   "no-reflect-apply",
   "no-reflect-get",
   "no-side-effect-import",
@@ -35,7 +37,7 @@ const RULE_NAMES = [
   "types-file",
 ];
 
-it("is the plugin `repo` with the twenty-nine rules the generated config turns on", () => {
+it("is the plugin `repo` with the thirty-one rules the generated config turns on", () => {
   expect(plugin.meta.name).toBe("repo");
   expect(Object.keys(plugin.rules).toSorted()).toStrictEqual(RULE_NAMES);
 });

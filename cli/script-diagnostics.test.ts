@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, expect, it } from "vitest";
 
+import type { WorkerstackConfig } from "./config.ts";
 import { fakeRunner } from "./css/__fixtures__/css-kit.ts";
 import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
 import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics, scriptLintAt } from "./script-diagnostics.ts";
@@ -61,7 +62,7 @@ it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */
-function checkout(files: Record<string, string>, config: object): string {
+function checkout(files: Record<string, string>, config: WorkerstackConfig): string {
   const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
 

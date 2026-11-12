@@ -8,6 +8,7 @@ import { must, orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orch
 import { VALID_TMP } from "./__fixtures__/persist-bodies.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain } from "./gate-fat-tools.ts";
+import type { HookInput } from "./hook-input.ts";
 import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
@@ -55,9 +56,17 @@ it("leaves Antigravity calls to the gate", () => {
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
 });
 
+/** The fields of a Cursor payload these cases vary: the hook's own, and the Cursor-only ones it must ignore. */
+type CursorFields = Omit<Partial<HookInput>, "transcript_path"> & {
+  attachments?: string[];
+  loop_count?: number;
+  status?: string;
+  transcript_path?: string | null;
+};
+
 // Cursor sends cursor_version and its own camelCase event names. Whatever the hook prints must be empty or a
 // reply Cursor accepts: its native deny, Claude's nested form with no top-level field, or decision:block on stop.
-function cursor(cwd: string, event: string, extra: object = {}): HookOut | null {
+function cursor(cwd: string, event: string, extra: CursorFields = {}): HookOut | null {
   return replyOf(
     kit.run(
       { cursor_version: "2026.11.05", cwd, hook_event_name: event, model: "m", session_id: "cu", ...extra },

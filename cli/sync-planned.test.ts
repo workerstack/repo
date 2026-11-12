@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { planSync } from "./sync-outputs.ts";
+import { context } from "./sync/__fixtures__/context-kit.ts";
 import type { Generator, Output, SyncContext } from "./sync/outputs.ts";
 
 function file(filePath: string, content: string): Output {
@@ -13,10 +14,7 @@ function file(filePath: string, content: string): Output {
   };
 }
 
-const ctx = {
-  read: (rel: string) => (rel === "a.md" ? "disk\n" : null),
-  root: "/r",
-} as unknown /* a stub that holds the two fields the planner reads */ as SyncContext;
+const ctx = context({ files: { "a.md": "disk\n" } });
 
 function reader(view: SyncContext): ReturnType<Generator> {
   return { errors: [], outputs: [file("b.md", view.read("a.md") ?? "none")] };
