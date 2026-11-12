@@ -117,14 +117,14 @@ it(
 );
 
 it("plans both configs as sync's own, untracked files, the hooks as tracked ones, and nothing without the pack", () => {
-  const shapes = standards(context(["standards"]), []).outputs.map(({ kind, path: rel, tracked, managed }) => ({
+  const planned = standards(context(["standards"]), []).outputs.map(({ kind, path: rel, tracked, managed }) => ({
     kind,
     managed,
     path: rel,
     tracked,
   }));
 
-  expect(shapes).toStrictEqual([
+  expect(planned).toStrictEqual([
     { kind: "file", managed: "whole", path: ".oxlintrc.json", tracked: false },
     { kind: "file", managed: "whole", path: "knip.json", tracked: false },
     { kind: "file", managed: "whole", path: ".oxfmtrc.jsonc", tracked: false },

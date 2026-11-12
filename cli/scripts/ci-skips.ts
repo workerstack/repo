@@ -8,7 +8,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson, tryJson } from "../json.ts";
-import { ID_SEPARATOR, MIN_REPORTS, REPORT_FILE, REPORT_SHAPE, SKIPPED_STATUSES } from "./ci-skips.constants.ts";
+import { ID_SEPARATOR, MIN_REPORTS, REPORT_FILE, REPORT_EXPECTED, SKIPPED_STATUSES } from "./ci-skips.constants.ts";
 
 /** Where relative paths start, and where lines go. */
 export type SkipsIo = { cwd: string; stdout: (s: string) => void; stderr: (s: string) => void };
@@ -129,7 +129,7 @@ function readReport(file: string): { report: Report | null; reason: string } {
 
   const parsed = ciReport().safeParse(json);
 
-  return { reason: REPORT_SHAPE, report: parsed.success ? parsed.data : null };
+  return { reason: REPORT_EXPECTED, report: parsed.success ? parsed.data : null };
 }
 
 /** The lines that say why the reports of a directory cannot be read. */

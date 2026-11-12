@@ -20,6 +20,7 @@ const REPO_RULES = {
       "repo/no-object-parameters": "error",
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
+      "repo/no-shape-in-symbol-names": "error",
       "repo/no-v8-ignore": "error",
       "repo/no-widen-then-assert": "error",
       "repo/public-jsdoc": "error",
@@ -50,6 +51,12 @@ const REPO_RULES = {
     "",
     "export function untyped(value) { return value; }",
     "",
+    "export const shaped = 1;",
+    "",
+    "export const field = source.shape;",
+    "",
+    "shaped;",
+    "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
     'import { b } from "@app/ui";',
@@ -75,12 +82,19 @@ const REPO_RULES = {
 
 const FLOW = "packages/lib/src/flow.ts";
 
-/** What the widen and Reflect rules report in flow.ts. */
+/** What no-shape-in-symbol-names reports for `shaped`, its declaration and its top-level use; `.shape` passes. */
+const NAME_FINDING =
+  'repo(no-shape-in-symbol-names) Rename symbol "shaped" for its domain role; "shape" describes structure rather ' +
+  "than ownership.";
+
+/** What the widen, Reflect, assertion, parameter and symbol-name rules report in flow.ts. */
 const FLOW_FINDINGS = [
   `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
     "Keep the original precise type, or parse untrusted input at its boundary before narrowing it.",
   `${FLOW}:13 repo(no-object-parameters) Parameter \`value\` uses the broad \`object\` type. Accept a named owner ` +
     "type; parse external input at its boundary before calling this function.",
+  `${FLOW}:17 ${NAME_FINDING}`,
+  `${FLOW}:21 ${NAME_FINDING}`,
   `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
     "assertion. Keep the precise type from initialization through use; parse boundary input once.",
   `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +

@@ -1,7 +1,7 @@
 import {
   KEYWORD_ENTRY_FIX,
-  KEYWORD_SHAPE,
-  KEYWORD_SHAPE_FIX,
+  KEYWORD_PATTERN,
+  KEYWORD_PATTERN_FIX,
   KEYWORDS_FILE,
   KEYWORDS_FIELD,
   KEYWORDS_FIX,
@@ -25,8 +25,8 @@ function entryLines(entries: readonly unknown[]): string[] {
   for (const [index, entry] of entries.entries()) {
     if (typeof entry !== "string")
       lines.push(line(`keyword ${index + ONE} is ${JSON.stringify(entry)}, not a string; ${KEYWORD_ENTRY_FIX}`));
-    else if (!KEYWORD_SHAPE.test(entry))
-      lines.push(line(`keyword "${entry}" is not a GitHub topic; ${KEYWORD_SHAPE_FIX}`));
+    else if (!KEYWORD_PATTERN.test(entry))
+      lines.push(line(`keyword "${entry}" is not a GitHub topic; ${KEYWORD_PATTERN_FIX}`));
   }
 
   return lines;

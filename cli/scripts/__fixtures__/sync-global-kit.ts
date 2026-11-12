@@ -81,7 +81,7 @@ export const HOSTS = [
 export const CLAUDE = HOSTS[1];
 
 /** The keys the tests read back from a written dest; each host's file holds only its own. */
-export type DestShape = {
+export type DestKeys = {
   keepMe: unknown;
   approvalMode: string;
   permissions: { defaultMode: string };
@@ -95,9 +95,9 @@ export type DestShape = {
 };
 
 /** The dest file a host's sync wrote under `home`, parsed. */
-export function readHostDest(home: string, h: { dest: string; format: string }): DestShape {
+export function readHostDest(home: string, h: { dest: string; format: string }): DestKeys {
   const raw = fs.readFileSync(path.join(home, h.dest), "utf8");
-  return (h.format === "json" ? JSON.parse(raw) : parseToml(raw)) as DestShape;
+  return (h.format === "json" ? JSON.parse(raw) : parseToml(raw)) as DestKeys;
 }
 
 /** Plants a host's dest file under `home` holding `value`. */

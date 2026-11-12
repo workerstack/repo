@@ -2,14 +2,14 @@ import fs from "node:fs";
 
 import { expect, it } from "vitest";
 
-import { hookSession, type HookSession, type Shape } from "./__fixtures__/hook-session.ts";
+import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
 import { orchestrateKit } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { closingLine } from "./closing-line.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
-const SHAPES: readonly Shape[] = ["claude", "grok"];
+const CASINGS: readonly Casing[] = ["claude", "grok"];
 
 // Roots and session come from the payload alone, as in a live session.
 const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
@@ -19,8 +19,8 @@ const AWAY =
 
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
 
-function live(shape: Shape, ws: string, sid: string): HookSession {
-  return hookSession(kit, { env: UNSET, shape, sid, ws });
+function live(casing: Casing, ws: string, sid: string): HookSession {
+  return hookSession(kit, { casing, env: UNSET, sid, ws });
 }
 
 function setKey(file: string, key: string, value: string) {
@@ -34,15 +34,15 @@ function withMode(mode: string) {
   return VALID_PLAN.replace("strategy: default", `strategy: default\nmode: ${mode}`);
 }
 
-it.each(SHAPES)("/away gives sessionGate=away, then /auto gives sessionGate=auto (%s payloads)", (shape) => {
-  const s = live(shape, kit.temp(), "a1");
+it.each(CASINGS)("/away gives sessionGate=away, then /auto gives sessionGate=auto (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "a1");
   expect(s.say("/away")).toMatch(/^sessionGate=away\b/);
   expect(s.say("go on")).toMatch(/^sessionGate=away\b/);
   expect(s.say("/auto")).toMatch(/^sessionGate=auto\b/);
 });
 
-it.each(SHAPES)("an in-progress mode: ask plan this session saved wins over /away (%s payloads)", (shape) => {
-  const s = live(shape, kit.temp(), "m1");
+it.each(CASINGS)("an in-progress mode: ask plan this session saved wins over /away (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "m1");
   s.say("/away");
   setKey(s.reviewed("plans", withMode("ask")), "status", "in-progress");
   expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
@@ -50,21 +50,21 @@ it.each(SHAPES)("an in-progress mode: ask plan this session saved wins over /awa
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
-it.each(SHAPES)("another session's mode: away plan leaves this session's mode alone (%s payloads)", (shape) => {
+it.each(CASINGS)("another session's mode: away plan leaves this session's mode alone (%s payloads)", (casing) => {
   const ws = kit.temp();
-  setKey(live(shape, ws, "other").reviewed("plans", withMode("away")), "status", "in-progress");
-  const s = live(shape, ws, "m2");
+  setKey(live(casing, ws, "other").reviewed("plans", withMode("away")), "status", "in-progress");
+  const s = live(casing, ws, "m2");
   expect(s.say("go")).toMatch(/^sessionGate=auto\b/);
   expect(s.stop("Keep --json?")).toBeNull();
   expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
   expect(s.stop("wrote src/a.ts")?.reason).toBe(ASK_STOP_REASON);
 });
 
-it.each(SHAPES)(
+it.each(CASINGS)(
   "away blocks a reply ending in a question, allows a closing line, " +
     "and gives up after the stop-block cap (%s payloads)",
-  (shape) => {
-    const s = live(shape, kit.temp(), "w1");
+  (casing) => {
+    const s = live(casing, kit.temp(), "w1");
     s.say("/away");
     expect(s.stop("Two options.\n\nKeep --json or add --format=json?\n")).toStrictEqual({
       decision: "block",
@@ -80,8 +80,8 @@ it.each(SHAPES)(
   },
 );
 
-it.each(SHAPES)("a review spawn holds the closing line until the plan's reviews is bumped (%s payloads)", (shape) => {
-  const s = live(shape, kit.temp(), "r1");
+it.each(CASINGS)("a review spawn holds the closing line until the plan's reviews is bumped (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "r1");
   s.say("plan it");
   const plan = s.reviewed("plans", VALID_PLAN);
   s.spawnReview("/review-plan 1\n\nReview it.");
@@ -95,8 +95,8 @@ it.each(SHAPES)("a review spawn holds the closing line until the plan's reviews 
   expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();
 });
 
-it.each(SHAPES)("a closing line naming a plan with reviews: 0 blocks (%s payloads)", (shape) => {
-  const s = live(shape, kit.temp(), "z1");
+it.each(CASINGS)("a closing line naming a plan with reviews: 0 blocks (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "z1");
   s.say("plan it");
   s.save(".tmp/repo/plans/x.md", VALID_PLAN);
   expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({

@@ -112,8 +112,8 @@ it("quotes a report that is not there, not JSON or not the shape", () => {
   expect(absent.ok ? "" : absent.errors[0]).toContain("cargo llvm-cov wrote no report repo can read");
   const text = rustCoverage(ROOT, writing("not json at all"));
   expect(text.ok ? "" : text.errors[0]).toContain("not json at all");
-  const shape = rustCoverage(ROOT, writing('{"data":[]}'));
-  expect(shape.ok ? "" : shape.errors[0]).toContain('{"data":[]}');
+  const noData = rustCoverage(ROOT, writing('{"data":[]}'));
+  expect(noData.ok ? "" : noData.errors[0]).toContain('{"data":[]}');
 });
 
 it("names every metric below its floor", () => {

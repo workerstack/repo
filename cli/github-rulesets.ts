@@ -123,7 +123,7 @@ function bypassOf(ruleset: Ruleset) {
 }
 
 /** The clauses for the fields that hold one value or a list of them. */
-function shapeClauses(want: Ruleset, cur: Ruleset): string[] {
+function valueClauses(want: Ruleset, cur: Ruleset): string[] {
   const clauses: string[] = [];
 
   if (want.target !== cur.target) clauses.push(`targets "${cur.target}", wanted "${want.target}"`);
@@ -210,7 +210,7 @@ function checkClauses(want: Ruleset, cur: Ruleset): string[] {
  * count.
  */
 export function rulesetDrift(want: Ruleset, cur: Ruleset): string[] {
-  return [...shapeClauses(want, cur), ...ruleClauses(want, cur), ...checkClauses(want, cur)].map(
+  return [...valueClauses(want, cur), ...ruleClauses(want, cur), ...checkClauses(want, cur)].map(
     (clause) => `ruleset ${want.name} ${clause}: ${FIX}`,
   );
 }

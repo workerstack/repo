@@ -30,17 +30,17 @@ export type TurboRun = (args: string[], cwd: string, env: Record<string, string>
  */
 export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
-type ReportShape = z.ZodObject<
+type ReportSchema = z.ZodObject<
   { success: z.ZodOptional<z.ZodBoolean>; testResults: z.ZodDefault<z.ZodArray<z.ZodUnknown>> },
   z.core.$loose
 >;
 
-function reportShape(): ReportShape {
+function reportSchema(): ReportSchema {
   return z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
 }
 
 /** One package's vitest report, as far as the merge reads it. */
-export type PackageReport = z.output<ReportShape>;
+export type PackageReport = z.output<ReportSchema>;
 
 /** The variables the flags ask turbo's tasks to see. */
 function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {
@@ -92,7 +92,7 @@ function packageReports(root: string): PackageReport[] {
 
   return dirs.flatMap((dir) => {
     try {
-      return tryJson(reportShape(), fs.readFileSync(path.join(root, dir, REPORT_RELATIVE), "utf8")) ?? [];
+      return tryJson(reportSchema(), fs.readFileSync(path.join(root, dir, REPORT_RELATIVE), "utf8")) ?? [];
     } catch {
       return [];
     }

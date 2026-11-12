@@ -109,7 +109,7 @@ function hasPack(config: { packs?: readonly Pack[] | undefined }, pack: Pack) {
 }
 
 /** The sections a config's default export may hold, each parsed on its own. */
-function configShape() {
+function baseConfigSchema() {
   return z.strictObject(
     {
       agents: agentsSchema.optional(),
@@ -132,7 +132,7 @@ function configShape() {
 
 /** The schema of a config's default export, each section checked against the packs it needs. */
 function buildConfigSchema() {
-  return configShape()
+  return baseConfigSchema()
     .refine((config) => config.agents === undefined || hasPack(config, "agents"), needsPack("agents", "agents"))
     .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
     .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))

@@ -7,7 +7,7 @@ const GATES = { "in-progress": 1 };
 const OPTS = { gates: GATES, review: "/review-plan {n}" };
 const ENTRY = "- review: slow → fast";
 
-const ENTRY_SHAPE =
+const ENTRY_FORMAT =
   'Previous mistakes entry must be "- {feedback|verify|review|premise|decision}: {what was wrong} → {what changed}": ';
 
 describe("parseMistakes", () => {
@@ -24,7 +24,7 @@ describe("parseMistakes", () => {
     expect(parseMistakes(undefined, PLAN_MISTAKE_SOURCES).errors).toStrictEqual([
       "## Previous mistakes is empty; write (none)",
     ]);
-    expect(parseMistakes("- nope: a → b", PLAN_MISTAKE_SOURCES).errors).toStrictEqual([`${ENTRY_SHAPE}- nope: a → b`]);
+    expect(parseMistakes("- nope: a → b", PLAN_MISTAKE_SOURCES).errors).toStrictEqual([`${ENTRY_FORMAT}- nope: a → b`]);
   });
 });
 
@@ -97,6 +97,6 @@ describe("mistakeLogErrors", () => {
 
 describe("mistakeLogErrors entries", () => {
   it("reports a malformed entry", () => {
-    expect(mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: "bad" }, opts)).toStrictEqual([`${ENTRY_SHAPE}bad`]);
+    expect(mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: "bad" }, opts)).toStrictEqual([`${ENTRY_FORMAT}bad`]);
   });
 });

@@ -3,12 +3,12 @@ import fs from "node:fs";
 import { replyOf, type HookOut, type OrchestrateKit } from "./orchestrate-kit.ts";
 
 /** The two payload shapes a session's events are sent in. */
-export type Shape = "claude" | "grok";
+export type Casing = "claude" | "grok";
 type Env = Record<string, string | undefined>;
 /** The fields one event carries; each lands in the shape's own key. */
 export type Fields = { prompt?: string; msg?: string; tool?: string; input?: Record<string, unknown>; tp?: string };
 /** The workspace, session, shape and env every event of the session is sent with. */
-export type SessionAt = { ws: string; sid: string; shape: Shape; env?: Env };
+export type SessionAt = { ws: string; sid: string; casing: Casing; env?: Env };
 
 export interface HookSession {
   call: (event: string, f?: Fields) => HookOut | null;
@@ -23,7 +23,7 @@ export interface HookSession {
 }
 
 function payloadOf(at: SessionAt, event: string, f: Fields): object {
-  if (at.shape === "claude")
+  if (at.casing === "claude")
     return {
       cwd: at.ws,
       hook_event_name: event,
@@ -48,7 +48,7 @@ function payloadOf(at: SessionAt, event: string, f: Fields): object {
 }
 
 export function hookSession(kit: OrchestrateKit, at: SessionAt): HookSession {
-  const claude = at.shape === "claude";
+  const claude = at.casing === "claude";
   const call = (event: string, f: Fields = {}): HookOut | null => replyOf(kit.run(payloadOf(at, event, f), at.env));
   const save = (file: string, content: string): string => {
     const input = claude ? { file_path: file, content } : { path: file, content };

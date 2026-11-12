@@ -7,9 +7,9 @@ import { nearestManifest, readManifest } from "./manifest.ts";
 import type { Statement } from "./names.ts";
 import type { RepoRule } from "./rule.types.ts";
 
-const SHAPE = "a bin file holds only imports and one main() call";
-const MESSAGE = `${SHAPE}; move this into the module main comes from`;
-const MISSING = `${SHAPE}; import main and call it once`;
+const BIN_RULE = "a bin file holds only imports and one main() call";
+const MESSAGE = `${BIN_RULE}; move this into the module main comes from`;
+const MISSING = `${BIN_RULE}; import main and call it once`;
 
 /** Whether `filename` is a `bin` of its nearest package.json, both resolved from the manifest's dir. */
 function isBin(filename: string): boolean {

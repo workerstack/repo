@@ -2224,9 +2224,9 @@
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
   "cli/scripts/__fixtures__/gate-workspace.ts": ["fe6b45a1b4405eac"],
-  "cli/scripts/__fixtures__/google-workspace-kit.ts": ["8e8fa59fd7e8b8fd", "a402920a54b138ab"],
+  "cli/scripts/__fixtures__/google-workspace-kit.ts": ["5bfb0752c4cc4320", "8e8fa59fd7e8b8fd", "a402920a54b138ab"],
   "cli/scripts/__fixtures__/hook-payload.ts": ["665d3d2e20a4edbd"],
-  "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d"],
+  "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d", "abffba7aed8b4a74"],
   "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
   "cli/scripts/__fixtures__/ignore-kit.ts": ["9b61f61a57123cf7"],
   "cli/scripts/__fixtures__/jev-kit.ts": ["9bf3497a2822ca25"],
@@ -2264,7 +2264,7 @@
   "cli/scripts/__fixtures__/spawn-transcript.txt": ["79d64e832f5c1eff"],
   "cli/scripts/__fixtures__/speak-kit.ts": ["cd0e91c7f9ebf198"],
   "cli/scripts/__fixtures__/stub-process-stdio.ts": ["03b54bfc63a58f8b"],
-  "cli/scripts/__fixtures__/sync-global-kit.ts": ["e826278ff2cfea8a"],
+  "cli/scripts/__fixtures__/sync-global-kit.ts": ["d63287bd4d60ec6c", "e826278ff2cfea8a"],
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
   "cli/scripts/__fixtures__/turn-repo.ts": ["674678a101b27cd8", "a41ab18e37a943f4"],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
@@ -2625,7 +2625,7 @@
     "7cc8d07cba4b0810",
     "9fc778ed7f772d5f"
   ],
-  "cli/scripts/ci-skips.constants.ts": ["76a9d3daa36923db", "7a8ded2beaf8aa9c"],
+  "cli/scripts/ci-skips.constants.ts": ["023e797936ed4461", "76a9d3daa36923db", "7a8ded2beaf8aa9c"],
   "cli/scripts/ci-skips.test.ts": [
     "5b7620eac6da82f1",
     "7212c71ec00ba96d",
@@ -2643,6 +2643,7 @@
     "3220ddb32a0d516c",
     "36756942b25cdd1d",
     "42f77d9b36d0f864",
+    "659c28466853a24a",
     "a9679f69123bfa1f",
     "f1eea1352d74f50e"
   ],
@@ -2675,6 +2676,7 @@
     "8422487f3070ece7",
     "94ebe515aaaa767b",
     "a0f95fef9a6c1f7d",
+    "d70e3b5a035e5463",
     "ecded3b5d3e56aee"
   ],
   "cli/scripts/ci-wait-branch.test.ts": [
@@ -3577,6 +3579,7 @@
     "9d642eca2322bf03",
     "aeebee6baf46b0b1",
     "b342985d510b9b2a",
+    "d3209fa9701b8f38",
     "e2f7abc2d37adf15",
     "e5939607d87c3930",
     "f44f0ce19c63e782"
@@ -4505,6 +4508,7 @@
   ],
   "cli/scripts/lint-repo-rules.test.ts": [
     "55f576c8426a1982",
+    "8755c992c03a2799",
     "96a9edbb6f3fe6d9",
     "9925ae8909d811f1",
     "b0c55e864fbe253a",
@@ -4818,6 +4822,7 @@
   ],
   "cli/scripts/orchestrate-parent-away.test.ts": [
     "0bfe3dc024180877",
+    "251eb372d3610d45",
     "2c5407f9e71b8ee7",
     "3e0b414d3730a74f",
     "484e2692cc80ca46",
@@ -4829,6 +4834,7 @@
     "5aebebcc9c930dc8",
     "603184da032f21e7",
     "8d9b2a8722c927a8",
+    "d87a810068457f8c",
     "e66d0c62f32c90a5",
     "f37c2ab9d9e7d85f"
   ],
@@ -4858,6 +4864,7 @@
     "719b85da354d13ca"
   ],
   "cli/scripts/orchestrate-parent-handoff.test.ts": [
+    "34100aaadcc8188a",
     "65a0e783b3083221",
     "742562cef60d96ac",
     "869870e736284c7f",
@@ -4912,6 +4919,7 @@
     "6b10f8d7b74bc823",
     "7aff1a80d624d583",
     "dc51e16f72a9b396",
+    "ef6f427b1e8ce436",
     "f84aeaf6858e4485"
   ],
   "cli/scripts/orchestrate-parent-tools.test.ts": [
@@ -4939,6 +4947,7 @@
     "f6dfaa7ae98e41cb"
   ],
   "cli/scripts/orchestrate-parent-yes.test.ts": [
+    "47860cea9187caa2",
     "65e35266d6a8dc84",
     "69cc1eaf8328c995",
     "9ed23018836ef7c7",
@@ -5028,7 +5037,6 @@
   "cli/scripts/orchestrate.types.ts": [
     "446ce0a13752c763",
     "695a233aea863271",
-    "921c57dfc87fa42d",
     "d46d4aed3b621c34",
     "d8eea68ceda4d5d5",
     "f25b82254bd227ea",
@@ -5203,6 +5211,7 @@
   ],
   "cli/scripts/persist-mistakes.test.ts": [
     "602cb96409875af6",
+    "6eb9925f18992a4f",
     "7c03b08875f4035b",
     "b6ea08940df455e8",
     "c342f7e1864eb981",
@@ -5460,6 +5469,7 @@
     "0886ffaa530b5aa1",
     "0f79aa3dd0b9460a",
     "d8edab5b2bc065b2",
+    "da09c82ccd08f006",
     "dda3598b207e7c8b",
     "e65897a059b9a09c"
   ],
@@ -6171,6 +6181,7 @@
   ],
   "cli/scripts/sync-global-settings-apply.test.ts": [
     "0ca5144a5cf3f59d",
+    "1eb6d0def3fd7fb9",
     "9a7a03d0c7d0b7af",
     "b40bc4627fef8fdb",
     "fb79415a45498c40",
