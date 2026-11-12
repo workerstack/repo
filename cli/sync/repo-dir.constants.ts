@@ -11,6 +11,8 @@ export const PACKAGE_DIRS: readonly string[] = ["rules", "skills"];
 export const READ_DIRS: readonly string[] = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
 /** The root `.repo/` files sync reads. */
 export const READ_FILES: readonly string[] = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "map.jsonc"];
+/** Root `.repo/` dirs sync does not read, with who does: the bench specs `repo bench` runs. Root-only, like lessons. */
+export const OTHER_READER_DIRS: ReadonlyArray<readonly [string, string]> = [["bench", "repo bench"]];
 /** The `.repo/settings/` dir, which holds only the claude settings file. */
 export const SETTINGS_DIR = "settings";
 /** The one settings file `.repo/settings/` may hold. */

@@ -119,6 +119,44 @@ commit-msg: the message was refused
 
 A branch with no upstream is pushed with `git push -u origin <branch>`. The push runs through the pre-push hook and shows its output. Exit codes: 0 passed, 1 failed (a refused push, a worktree branch, or a failed ci run), 2 superseded, 3 nothing to wait on, 4 error (also a bad argument: `usage: repo push [<branch>]`), 5 ask. After the push, 0 to 4 are `bun repo ci wait`'s.
 
+## Bench
+
+`bun repo bench <name>` runs `.repo/bench/<name>.bench.ts`, whose default export is `defineBench` from `@workerstack/repo/bench` (with the types `BenchSpec`, `BenchCandidate`, `BenchMetric`, `Better` and `OsLabel`):
+
+```ts
+import { defineBench } from "@workerstack/repo/bench";
+
+export default defineBench({
+  candidates: { bun: { run: ["bun", "x.ts"] }, node: { run: ["node", "x.mjs"], setup: ["bun", "build", "x.ts"] } },
+  metrics: { ops: { better: "higher", unit: "ops/s", weight: 1 }, rss: { weight: 1 }, wall: { weight: 2 } },
+  os: ["ubuntu-latest", "macos-latest", "windows-latest"],
+  runs: 10,
+  warmup: 1,
+});
+```
+
+| Field | Takes |
+| --- | --- |
+| `candidates` | at least one name (`a-z`, `0-9`, `-`) → `run` (the command, measured) and optional `setup` (run once before, unmeasured) |
+| `metrics` | at least one name → `weight` over 0, `better` `lower` (default) or `higher`, optional `unit` |
+| `runs` | measured runs per candidate, at least 3; default 10 |
+| `warmup` | unmeasured runs per candidate first; default 1 |
+| `os` | runner labels `--remote` measures on: `ubuntu-latest`, `ubuntu-24.04-arm`, `macos-latest`, `macos-13`, `windows-latest`; default none |
+
+Built in, lower is better, weight only: `wall` (ms), `cpu` (ms, user plus system) and `rss` (MB, peak). Any other metric is read from the candidate's last stdout line, `bench: {"ops": 9120}`; a run without it fails. Candidates run interleaved, round-robin. Each candidate's score is the weighted mean, over metrics, of best/value (value/best when higher is better) on medians, × 100, so the best on every metric scores 100; medians are raised to a floor first (wall 0.1 ms, cpu 1 ms, rss 1 MB, custom 1e-6), so a 0 never divides. Each cell is `median ±CV% min–max`; a CV over 10% gets `!` and a line naming the cause. On Linux a child's peak RSS starts from the runner's own (the kernel carries it across exec), so the env records that peak as `rssFloorBytes` (null on macOS and Windows, which count per process), and an rss median within 5% of it gets `~` and a line saying the real peak is at most that. Columns go by weight, then name; rows by score, then name. The raw samples, machine and commit go to `.repo/tmp/bench/<name>/<os label>.json`.
+
+```console
+$ bun repo bench startup
+startup · ubuntu-latest (linux x64) · AMD Ryzen 9 7950X (32) · 64 GB · bun 1.3.2 · 82c0e43+dirty · 10 runs, 1 warmup
+candidate  score  wall ms (×2)       ops ops/s (×1)      rss MB (×1)
+bun          100  41.2 ±4% 39–45     9120 ±3% 8700–9500  48.1 ±1% 47–49
+node          62  88.0 ±11%! 76–104  7010 ±4% 6600–7400  61.3 ±1% 60–63
+! node wall: CV 11% over 10%; rerun with more runs or a quieter machine (load from other work counts)
+raw: .repo/tmp/bench/startup/ubuntu-latest.json
+```
+
+`--remote` also measures on the spec's other `os` labels in CI: it runs here first when this machine's label is listed, dispatches `bench.yml` (the `benchmark` pack) at HEAD's sha, waits up to 90 minutes, downloads each `bench-<name>-<os>` artifact and prints one table per OS. It refuses, one line each: no `.github/workflows/bench.yml`, bench.yml not on `origin/<default branch>` (GitHub dispatches only from there), HEAD not on origin, a dirty tree, and an `os` with no other label. Exit codes: 0 done, 1 a candidate or the remote run failed, 4 a bad argument, spec or precondition.
+
 ## Agents and references
 
 `@workerstack/repo/agents/*` holds the stock skills, rules, subagents and hooks that `bun repo sync` links into each host tree. `@workerstack/repo/references/*` holds these files, which a repo's own `references/INDEX.md` links in `node_modules`.

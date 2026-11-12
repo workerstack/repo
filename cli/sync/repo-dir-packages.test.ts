@@ -14,14 +14,16 @@ it("passes rules and skills, a pathless rule, and a path rule that matches a fil
   expect(check(root, rules, { listed: [`${WEB}/src/api/a.ts`], packages: [WEB] })).toStrictEqual([]);
 });
 
-it("refuses every entry but rules/ and skills/, subagents and lessons with where they live", () => {
+it("refuses every entry but rules/ and skills/, subagents, lessons and bench with where they live", () => {
   const root = repo({
+    [`${WEB}/.repo/bench/x.bench.ts`]: "x",
     [`${WEB}/.repo/lessons/INDEX.md`]: "x",
     [`${WEB}/.repo/subagents/a.md`]: "x",
     [`${WEB}/.repo/hooks.jsonc`]: "{}",
     [`${WEB}/.repo/rules/ok.md`]: "x",
   });
   expect(check(root, [], { packages: [WEB] })).toStrictEqual([
+    `${WEB}/.repo/bench/: a package .repo holds only rules/ and skills/; bench live in the root .repo`,
     `${WEB}/.repo/hooks.jsonc: a package .repo holds only rules/ and skills/`,
     `${WEB}/.repo/lessons/: a package .repo holds only rules/ and skills/; lessons live in the root .repo`,
     `${WEB}/.repo/subagents/: a package .repo holds only rules/ and skills/; subagents live in the root .repo`,

@@ -2198,6 +2198,11 @@
   "agents/subagents/researcher.md": ["1f1fa4b03064c897"],
   "agents/subagents/scout.md": ["cac206ad5d7179fe"],
   "cli/scripts/__fixtures__/baseline-repo.ts": ["3ea9c8922c644715"],
+  "cli/scripts/__fixtures__/bench-remote-world.ts": ["35f9b02ec266d5b2"],
+  "cli/scripts/__fixtures__/bench-world.ts": ["8b0d49986303449a"],
+  "cli/scripts/__fixtures__/bench/bad.bench.ts": ["fb6418fea1e761a0"],
+  "cli/scripts/__fixtures__/bench/remote-only.bench.ts": ["417060a952f1bc79"],
+  "cli/scripts/__fixtures__/bench/startup.bench.ts": ["f8ebacc525169da3"],
   "cli/scripts/__fixtures__/board-kit.ts": ["28cc65f3b7765fa9"],
   "cli/scripts/__fixtures__/browser-kit.ts": ["724c8a9721086640"],
   "cli/scripts/__fixtures__/browser-nav-kit.ts": ["36d304033bb7065f"],
@@ -2263,6 +2268,11 @@
   "cli/scripts/__fixtures__/worktree-repo.ts": ["ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": ["a6c16720c2a1eb27", "f97a4724ca9dcc56"],
+  "cli/scripts/bench-remote-fail.test.ts": ["f32e627e09ccc3d1"],
+  "cli/scripts/bench-remote.test.ts": ["f594b74c7086985b"],
+  "cli/scripts/bench.constants.ts": ["cf47dd7f46dccf5c"],
+  "cli/scripts/bench.test.ts": ["5a99cd084deb9fd8"],
+  "cli/scripts/bench.ts": ["2af8ce7ae7ae3f08"],
   "cli/scripts/board-files.ts": ["b2c05dc8ef6d6338"],
   "cli/scripts/board-hook.test.ts": [
     "0a308cb463b43aec",
@@ -3981,6 +3991,7 @@
   "cli/scripts/lint.constants.ts": ["12e07e19e81df819", "87eb815c0fc6a75a", "b80b74e52c7ce5d5", "c432d8093a2a369c"],
   "cli/scripts/lint.test.ts": [
     "068632380bcdb556",
+    "1827dd1dfa6dffe5",
     "225fa923c5ceb88b",
     "2938250f13d10719",
     "3651df1ae5b28ebc",
@@ -5613,6 +5624,7 @@
     "aed613caab53ac2d",
     "bf798e8a41efb3f6",
     "efa00621c5422da6",
+    "f17e80cf143fe0fb",
     "f30123d8dff4d425"
   ],
   "references/google-workspace.md": ["db455dc3b114ef70"],
@@ -5645,6 +5657,7 @@
   "references/listen.md": ["53783d65923e6731"],
   "references/map.md": [
     "036c9062b9c6e91f",
+    "114eae57cbb4b9bf",
     "1be99b85fef64bbd",
     "3665b9291d607f50",
     "5bff702015ecc71f",

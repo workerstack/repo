@@ -51,6 +51,10 @@
     },
     "./tsconfig/*": "./tsconfig/*.json",
     "./agents/*": "./agents/*",
+    "./bench": {
+      "types": "./cli/bench/spec.ts",
+      "default": "./cli/bench/spec.ts"
+    },
     "./lint": "./cli/lint/index.ts",
     "./tailwind": "./cli/lint/tailwind-plugin.ts",
     "./vitest": {

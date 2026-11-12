@@ -25,7 +25,7 @@ export { CONFIG_FILE } from "./config.constants.ts";
 export type { ImportConfig } from "./import-config.ts";
 
 /** Config packs a repo can turn on in workerstack.config.ts. */
-export const PACKS = ["agents", "standards", "docs", "release", "workspace"] as const;
+export const PACKS = ["agents", "standards", "docs", "release", "workspace", "benchmark"] as const;
 /** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
 

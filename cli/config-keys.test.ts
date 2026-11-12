@@ -71,7 +71,8 @@ describe("loadConfig", () => {
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toStrictEqual({
       errors: [
-        'workerstack.config.ts: packs[1]: "lint" is not a pack; use agents, standards, docs, release or workspace',
+        'workerstack.config.ts: packs[1]: "lint" is not a pack; ' +
+          "use agents, standards, docs, release, workspace or benchmark",
       ],
       ok: false,
     });

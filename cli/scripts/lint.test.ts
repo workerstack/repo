@@ -196,7 +196,7 @@ describe("runTool", () => {
     expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), run: () => 0, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
       'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; ' +
-        "use agents, standards, docs, release or workspace\n",
+        "use agents, standards, docs, release, workspace or benchmark\n",
     );
 
     const bare = tree({});

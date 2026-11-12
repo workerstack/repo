@@ -1,7 +1,7 @@
 /**
- * `repo check`'s workflow lines: actionlint, pinned to one release, run over `.github/workflows` under the release
- * pack. The binary is fetched once into the state home, checked against its pinned sha256 and cached; a download that
- * fails or does not match is a problem line, never a cached file.
+ * `repo check`'s workflow lines: actionlint, pinned to one release, run over `.github/workflows` under any pack that
+ * generates a workflow (release or benchmark). The binary is fetched once into the state home, checked against its
+ * pinned sha256 and cached; a download that fails or does not match is a problem line, never a cached file.
  */
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -27,6 +27,7 @@ import {
   WINDOWS_PLATFORM,
   WINDOWS_TAR,
   WORKFLOW_EXTENSIONS,
+  WORKFLOW_PACKS,
   WORKFLOWS_DIR,
 } from "./actionlint.constants.ts";
 import { findRoot, loadConfig } from "./config.ts";
@@ -163,14 +164,14 @@ function linesOf(ran: Captured): string[] {
 }
 
 /**
- * `repo check`'s actionlint lines for the repo at `cwd`: none without a config, without the release pack or without a
- * workflow file, and then no download either.
+ * `repo check`'s actionlint lines for the repo at `cwd`: none without a config, without a pack that generates a
+ * workflow (release or benchmark) or without a workflow file, and then no download either.
  */
 export async function checkActionlintAt(cwd: string, deps: ActionlintDeps = {}): Promise<ActionlintCheck> {
   const root = findRoot(cwd);
   if (root === null) return NONE;
   const loaded = await loadConfig(root);
-  if (!loaded.ok || !loaded.config.packs.includes("release")) return NONE;
+  if (!loaded.ok || !loaded.config.packs.some((pack) => WORKFLOW_PACKS.includes(pack))) return NONE;
   const files = workflowsOf(root);
   if (files.length === 0) return NONE;
   const io = { fetch: fetchArchive, hashes: HASHES, spawn: spawnCaptured, ...deps };
