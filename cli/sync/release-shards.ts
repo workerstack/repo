@@ -6,6 +6,7 @@ import {
   COVERAGE_STEPS,
   INSTALL_STEP,
   SETUP_BUN_STEP,
+  setupNodeStep,
   TEST_SHARDS,
   TEST_TIMEOUT_MINUTES,
   UBUNTU,
@@ -38,8 +39,11 @@ export function testShards({ sharded }: { sharded: boolean }): Shards {
   return TEST_SHARDS.map(([os, total]) => (sharded && os === UBUNTU ? [os, UBUNTU_COVERAGE_SHARDS] : [os, total]));
 }
 
-/** The job that merges the Ubuntu shards' blobs and checks every floor. */
-export function coverageJob(): string {
+/**
+ * The job that merges the Ubuntu shards' blobs and checks every floor; node is set up after bun when the packages
+ * declare `range` as engines.node, since the merge runs vitest as the tests do.
+ */
+export function coverageJob(range: string | undefined): string {
   return [
     `  ${COVERAGE_JOB}:`,
     `    name: ${COVERAGE_JOB}`,
@@ -49,6 +53,7 @@ export function coverageJob(): string {
     "    steps:",
     CHECKOUT_STEP,
     SETUP_BUN_STEP,
+    ...(range === undefined ? [] : [setupNodeStep(range)]),
     INSTALL_STEP,
     COVERAGE_STEPS,
   ].join("\n");

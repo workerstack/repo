@@ -12,3 +12,6 @@ export const CHECK_FLAG = "--check";
 
 /** The dir a package manager installs packages into. */
 export const MODULES_DIR = "node_modules";
+
+/** The spawn error code of a bin that is not on PATH. */
+export const NOT_FOUND = "ENOENT";
