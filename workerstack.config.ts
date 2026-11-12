@@ -98,6 +98,7 @@ export default defineConfig({
         files: [
           "dev/agent-tokens.ts",
           "dev/capture-tree-goldens.ts",
+          "dev/fmt-parity.ts",
           "dev/link-self.ts",
           "dev/oxlint-catalog.ts",
           "dev/reply-voice-stats.ts",
