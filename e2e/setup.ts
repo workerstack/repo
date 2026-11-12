@@ -104,7 +104,7 @@ function buildOld(work: string): string {
  * so there the root is left to it: removing a shard's sandboxes ourselves blocked the teardown for 119s on Windows
  * (run 42954496882).
  */
-function runParent(): { parent: string; remove: boolean } {
+function runParent() {
   const { REPO_E2E_ROOT, RUNNER_TEMP } = repoEnv.process;
 
   if (REPO_E2E_ROOT !== undefined && REPO_E2E_ROOT !== "") return { parent: REPO_E2E_ROOT, remove: true };

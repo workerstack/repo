@@ -35,9 +35,15 @@ function resolved(specifier: string, from: string): string | null {
   }
 }
 
+/** Whether the platform packages spell the OS `platform` names with a name of their own. */
+function isRenamedOs(platform: string): platform is keyof typeof JSCPD_OS {
+  return Object.hasOwn(JSCPD_OS, platform);
+}
+
 /** The platform packages that could hold the binary for `target`, the likeliest first. */
 function candidates(target: Target): Candidate[] {
-  const name = `${JSCPD_PREFIX}${JSCPD_OS[target.platform] ?? target.platform}-${target.arch}`;
+  const os = isRenamedOs(target.platform) ? JSCPD_OS[target.platform] : target.platform;
+  const name = `${JSCPD_PREFIX}${os}-${target.arch}`;
 
   if (target.platform === LINUX_PLATFORM)
     return LINUX_LIBCS.map((libc) => ({ binary: JSCPD_BINARY, name: `${name}${libc}` }));

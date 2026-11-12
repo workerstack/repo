@@ -42,7 +42,9 @@ export function tagErrors(workspace: Workspace, boundaries: LintBoundaries | und
 }
 
 /** `repo/boundaries` as the generated config sets it: with the tags as its options when the config sets them. */
-export function boundariesSetting(boundaries: LintBoundaries | undefined): Record<string, RuleSetting> {
+export function boundariesSetting(
+  boundaries: LintBoundaries | undefined,
+): Partial<Record<"repo/boundaries", RuleSetting>> {
   if (boundaries === undefined) return {};
 
   return { "repo/boundaries": ["error", { allow: boundaries.allow, tags: boundaries.tags }] };

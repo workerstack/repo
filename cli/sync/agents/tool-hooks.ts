@@ -10,14 +10,19 @@ type DefsByEvent = Record<string, Def[]>;
 type EventNames = Readonly<Record<string, string>>;
 
 /** The payload fields each handler kind carries after its common ones; `model` only where the target emits it. */
-const PAYLOAD: Readonly<Record<string, readonly string[]>> = {
+const PAYLOAD = {
   [AGENT]: [MODEL],
   [HTTP]: ["url", "headers", "allowedEnvVars"],
   [MCP_TOOL]: ["server", "tool", "input"],
   [PROMPT]: [MODEL],
-};
+} as const satisfies Readonly<Record<string, readonly string[]>>;
 
 const NAMED: readonly string[] = ["name", "description"];
+
+/** Whether `type` is a handler kind `PAYLOAD` lists payload fields for. */
+function hasPayload(type: string): type is keyof typeof PAYLOAD {
+  return Object.hasOwn(PAYLOAD, type);
+}
 
 /**
  * The host's name for an event; an override event it has none for keeps its own (`lookupOwn … ?? eventName`,
@@ -60,17 +65,17 @@ function hookObject(def: Def, event: string, target: Readonly<Target>): JsonObje
   const source = typeof def["command"] === "string" ? expandHookCommand(def["command"]) : def["command"];
   const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
 
-  const fields: Record<string, Json | undefined> = {
+  const payload = (hasPayload(type) ? PAYLOAD[type] : []).filter((key) => key !== MODEL || target.promptModel);
+  const extra = [...payload, ...(target.named ? NAMED : [])].map((key): [string, Json | undefined] => [key, def[key]]);
+
+  const fields = {
     ...passthroughFields({ def, event, target, type }),
     command,
     prompt: def["prompt"],
     timeout: def["timeout"],
     type,
+    ...Object.fromEntries(extra),
   };
-
-  const payload = (PAYLOAD[type] ?? []).filter((key) => key !== MODEL || target.promptModel);
-
-  for (const key of [...payload, ...(target.named ? NAMED : [])]) fields[key] = def[key];
 
   return Object.fromEntries(Object.entries(fields).filter(isSet));
 }
@@ -97,7 +102,7 @@ function byMatcher(defs: readonly Def[], event: string, target: Readonly<Target>
  * left without a group, are dropped (D:53756-53800).
  */
 export function toolHooks(config: JsonObject, target: Readonly<Target>): Record<string, Group[]> {
-  const out: Record<string, Group[]> = {};
+  const out = new Map<string, Group[]>();
 
   for (const [event, defs] of effectiveEvents(config, target.overrideKey, target.names)) {
     const noMatcher = target.noMatcher.has(event);
@@ -110,8 +115,8 @@ export function toolHooks(config: JsonObject, target: Readonly<Target>): Record<
       entries.push(matcher === "" || noMatcher ? { hooks } : { hooks, matcher });
     }
 
-    if (entries.length > 0) out[nameOf(target.names, event)] = entries;
+    if (entries.length > 0) out.set(nameOf(target.names, event), entries);
   }
 
-  return out;
+  return Object.fromEntries(out);
 }

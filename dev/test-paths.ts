@@ -67,7 +67,10 @@ export function linkText(link: string): string {
   return path.relative(dir, resolved).split(path.sep).join("/");
 }
 
-const found: { bun?: string } = {};
+/** The bun binary's path, once bun was asked for it. */
+type BunCache = { bun?: string };
+
+const found: BunCache = {};
 
 /**
  * The bun binary, asked of bun on first use and kept: tests spawn repo scripts with it, since process.execPath is

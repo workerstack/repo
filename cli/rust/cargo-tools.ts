@@ -4,7 +4,7 @@ import { tryJson } from "../json.ts";
 import {
   DENY_ERROR,
   DIAGNOSTIC_TYPE,
-  DENY_SECTIONS,
+  denySectionOf,
   FETCH_FAILED,
   LOG_ERROR,
   LOG_TYPE,
@@ -110,9 +110,7 @@ function crateOf(krate: Krate | null): string {
 
 /** One error diagnostic as a line: section, crate, message and the first label that says something. */
 function diagnosticLine(d: z.infer<Schemas["diagnostic"]>["fields"], krate: Krate | null): string {
-  const section = Object.entries(DENY_SECTIONS).find(
-    ([, codes]) => d.code !== undefined && codes.includes(d.code),
-  )?.[0];
+  const section = denySectionOf(d.code);
 
   const label = d.labels?.find((l) => l.message !== "");
   const where = label === undefined ? "" : ` (${label.span}: ${label.message})`;

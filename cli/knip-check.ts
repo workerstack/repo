@@ -154,7 +154,7 @@ function runUnignored(workspace: Workspace, run: KnipRun): Captured {
 }
 
 /** The issues no entry of `ignores` covers, and how many each entry covers (an issue two cover counts for both). */
-function applyIgnores(ignores: readonly KnipIgnore[], issues: readonly Issue[]): { open: Issue[]; hits: number[] } {
+function applyIgnores(ignores: readonly KnipIgnore[], issues: readonly Issue[]) {
   const hits = ignores.map((ignore) => issues.filter((issue) => covers(ignore, issue)).length);
 
   return { hits, open: issues.filter((issue) => !ignores.some((ignore) => covers(ignore, issue))) };

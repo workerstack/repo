@@ -77,7 +77,7 @@ function revealInChild(ciphers: readonly string[], key: string): string[] {
  */
 export function defineEnv<C extends EnvConfig>(config: C): EnvInstance<C> {
   const io: EnvIo = { reveal: revealInChild, source: () => process.env };
-  const site: { stack?: string } = {};
+  const site: Pick<Error, "stack"> = {};
   Error.captureStackTrace(site, defineEnv);
 
   return createEnv(config, io, stackFile(String(site.stack), process.cwd()));

@@ -161,7 +161,7 @@ describe("fixtures rename, a taken name", () => {
 });
 
 /** Runs `main` on `argv` in `dir`, and what it printed to stdout and stderr. */
-function run(dir: string, argv: string[]): { code: number; err: string; out: string } {
+function run(dir: string, argv: string[]) {
   vi.restoreAllMocks();
   vi.spyOn(process, "cwd").mockReturnValue(dir);
   const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);

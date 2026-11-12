@@ -80,10 +80,10 @@ export const HIDDEN_ACCESS: readonly string[] = ["private", "protected"];
 export const DECLARATION: RegExp = /Declaration$|^TSDeclareFunction$/;
 
 /** Where each node type holds the name it refers to. */
-export const REFERENCE_KEYS: Readonly<Record<string, string>> = {
+export const REFERENCE_KEYS = {
   ClassDeclaration: "superClass",
   TSClassImplements: "expression",
   TSInterfaceHeritage: "expression",
   TSTypeQuery: "exprName",
   TSTypeReference: "typeName",
-};
+} as const;

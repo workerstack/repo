@@ -6,7 +6,7 @@ import { knownFailures } from "./known-failures.ts";
 const tempTree = useTempTree("known-failures-");
 
 /** A temp project holding `files` (path → content); the test files are those ending in `.test.ts`. */
-function project(files: Record<string, string>): { root: string; tests: string[] } {
+function project(files: Record<string, string>) {
   const root = tempTree(files);
 
   return { root, tests: Object.keys(files).filter((rel) => rel.endsWith(".test.ts")) };

@@ -1,7 +1,7 @@
 /** `D:<n>` cites a line of rulesync 43.7.0's bundled `dist/import-*.js`. */
 
 /** Canonical event to Claude event, D:6011-6044; also the events Claude supports. */
-export const CLAUDE_EVENTS: Readonly<Record<string, string>> = {
+export const CLAUDE_EVENTS = {
   beforeSubmitPrompt: "UserPromptSubmit",
   configChange: "ConfigChange",
   cwdChanged: "CwdChanged",
@@ -35,10 +35,10 @@ export const CLAUDE_EVENTS: Readonly<Record<string, string>> = {
   userPromptExpansion: "UserPromptExpansion",
   worktreeCreate: "WorktreeCreate",
   worktreeRemove: "WorktreeRemove",
-};
+} as const;
 
 /** D:6525-6540. */
-export const CODEX_EVENTS: Readonly<Record<string, string>> = {
+export const CODEX_EVENTS = {
   beforeSubmitPrompt: "UserPromptSubmit",
   permissionRequest: "PermissionRequest",
   postCompact: "PostCompact",
@@ -53,17 +53,17 @@ export const CODEX_EVENTS: Readonly<Record<string, string>> = {
   stopCancelled: "Interrupt",
   subagentStart: "SubagentStart",
   subagentStop: "SubagentStop",
-};
+} as const;
 
 /** D:6135-6142. */
-export const ANTIGRAVITY_EVENTS: Readonly<Record<string, string>> = {
+export const ANTIGRAVITY_EVENTS = {
   postModelInvocation: "PostInvocation",
   postToolUse: "PostToolUse",
   preModelInvocation: "PreInvocation",
   preToolUse: "PreToolUse",
   sessionStart: "SessionStart",
   stop: "Stop",
-};
+} as const;
 
 /** D:6162-6184: the events cursor supports, in its order. */
 const CURSOR_EVENT_NAMES: readonly string[] = [
@@ -96,13 +96,13 @@ export const CURSOR_EVENTS: Readonly<Record<string, string>> = /* @__PURE__ */ O
 );
 
 /** Whole matcher tokens Antigravity names differently, D:54345-54351. */
-export const ANTIGRAVITY_TOOLS: Readonly<Record<string, string>> = {
+export const ANTIGRAVITY_TOOLS = {
   Bash: "run_command",
   Edit: "(?:edit_file|replace_file_content)",
   Read: "(?:read_file|view_file)",
   WebSearch: "search_web",
   Write: "(?:write_file|write_to_file)",
-};
+} as const;
 
 /** A name token outside escapes and character classes, D:52398. */
 export const MATCHER_TOKEN: RegExp = /\\.|\[(?:\\.|[^\]\\])*\]|(?<=^|[^\w\\]|\\\w)[A-Za-z_]\w*(?!\w)/gs;

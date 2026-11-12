@@ -102,9 +102,12 @@ describe("githubFiles repository and rewrite", () => {
 
   it("rewrites its own files, as sync stamped them", () => {
     const first = githubFiles(make()).outputs;
-    const files: Record<string, string> = { "package.json": PACKAGE_JSON };
 
-    for (const output of first) if (output.kind === "file") files[output.path] = stamp(output.path, output.content);
+    const stamped = first.flatMap((output): [string, string][] =>
+      output.kind === "file" ? [[output.path, stamp(output.path, output.content)]] : [],
+    );
+
+    const files = { "package.json": PACKAGE_JSON, ...Object.fromEntries(stamped) };
     expect(githubFiles(make({ files })).outputs).toStrictEqual(first);
   });
 });

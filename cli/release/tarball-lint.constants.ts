@@ -4,10 +4,15 @@ export const MODULE_TYPE: string = "module";
 export const REQUIRE_CONDITION: string = "require";
 export const PUBLINT_LEVEL = "suggestion" as const;
 
-const RESOLUTION_NAMES: Readonly<Record<string, string>> = {
+const RESOLUTION_NAMES = {
   "node16-cjs": "node16 (from CJS)",
   "node16-esm": "node16 (from ESM)",
-};
+} as const satisfies Readonly<Record<string, string>>;
+
+/** Whether attw's resolution kind `resolution` prints under a longer name. */
+function isNamedResolution(resolution: string): resolution is keyof typeof RESOLUTION_NAMES {
+  return Object.hasOwn(RESOLUTION_NAMES, resolution);
+}
 
 export function publintLine(formatted: string): string {
   return `publint: ${formatted}`;
@@ -22,7 +27,8 @@ export type AttwFinding = {
 };
 
 export function attwLine({ entrypoint, resolution, why, kind }: AttwFinding): string {
-  const under = resolution === undefined ? "" : ` under ${RESOLUTION_NAMES[resolution] ?? resolution}`;
+  const named = resolution !== undefined && isNamedResolution(resolution) ? RESOLUTION_NAMES[resolution] : resolution;
+  const under = named === undefined ? "" : ` under ${named}`;
 
   return `attw: ${entrypoint ?? "package"}${under}: ${why} (${kind})`;
 }

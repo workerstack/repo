@@ -61,7 +61,7 @@ function disableHit(comment: Comment): Hit | null {
 }
 
 /** The text TypeScript reads a directive from, and where it starts: a block comment's last line, from `/*` or after. */
-function directiveLine(comment: Comment): { text: string; at: number } {
+function directiveLine(comment: Comment) {
   if (comment.type === "Line") return { at: comment.start, text: `//${comment.value}` };
   const raw = `/*${comment.value}*/`;
   const breaks = [...raw.matchAll(LINE_BREAK)];

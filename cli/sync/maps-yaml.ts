@@ -121,7 +121,7 @@ function valueOf(c: Cursor, val: string, ind: number): YamlValue {
 }
 
 /** The keys at indent `base` from the cursor on, until a line indented less (or, nested, more). */
-function parseBlock(c: Cursor, base: number): YamlObject {
+function parseBlock(c: Cursor, base: number) {
   const obj: YamlObject = {};
 
   while (more(c)) {
@@ -142,8 +142,11 @@ function parseBlock(c: Cursor, base: number): YamlObject {
   return obj;
 }
 
+/** A markdown file's parsed frontmatter and the body after it. */
+export type ParsedMarkdown = { parsed: YamlObject; body: string };
+
 /** The frontmatter and body of a markdown file; no frontmatter reads as `{}`. */
-export function parseMarkdown(src: string): { parsed: YamlObject; body: string } {
+export function parseMarkdown(src: string): ParsedMarkdown {
   const split = splitFrontmatter(src);
 
   if (!split.ok) return { body: src, parsed: {} };

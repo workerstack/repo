@@ -1,5 +1,5 @@
 import { splitFrontmatter } from "../cli/scripts/emit-agent-shell-tools.ts";
-import { BODY_RULES, DESCRIPTION_RULES } from "./sync-pstack-rules.constants.ts";
+import { bodyRulesOf, descriptionRulesOf } from "./sync-pstack-rules.constants.ts";
 import {
   BRO_SKILL,
   DROP_FM,
@@ -29,21 +29,26 @@ const BRO_LEAD =
   "This reply only: restate the last message in plain human language. Not a mode switch or session flag. " +
   "After this reply, revert to output.md.";
 
+/** Whether the skill called `name` has a recipe of its own. */
+function hasAdapter(name: string): name is keyof typeof ADAPTERS {
+  return Object.hasOwn(ADAPTERS, name);
+}
+
 function withSlash(skill: PstackSkill, body: string, extra?: string): string {
   return insertAfterFirstParagraph(body, slashBlock(skill.name, extra));
 }
 
 function ruled(skill: PstackSkill, body: string, misses: string[]): string {
-  return applyRules(body, BODY_RULES[skill.name] ?? [], misses);
+  return applyRules(body, bodyRulesOf(skill.name), misses);
 }
 
 /** Skills whose body has its own recipe; the rest follow `adaptBody`. */
-const ADAPTERS: Partial<Record<string, Adapter>> = {
+const ADAPTERS = {
   [BRO_SKILL]: (_skill, body) => [BRO_LEAD, "", body.trim(), "", "Slash `/bro` only.", ""].join("\n"),
   "blast-radius": (skill, body, misses) => withSlash(skill, rewriteUnslopRefs(ruled(skill, body, misses))),
   correct: (skill, body, misses) => withSlash(skill, ruled(skill, body, misses)),
   teach: (skill, body, misses) => withSlash(skill, rewriteUnslopRefs(ruled(skill, body, misses)), TEACH_NOT_EXPLAIN),
-};
+} satisfies Readonly<Record<string, Adapter>>;
 
 /** A file of one skill: `rel` is its path inside the skill. */
 type Target = {
@@ -53,9 +58,8 @@ type Target = {
 
 function adaptBody({ skill, rel }: Target, body: string, misses: string[]): string {
   if (rel === PATTERNS_REL) return adaptPatterns(body);
-  const named = ADAPTERS[skill.name];
 
-  if (named !== undefined) return named(skill, body, misses);
+  if (hasAdapter(skill.name)) return ADAPTERS[skill.name](skill, body, misses);
 
   if (rel !== SKILL_REL) return rewriteUnslopRefs(body);
 
@@ -75,7 +79,7 @@ function adaptDescription(skill: PstackSkill, desc: string, misses: string[]): s
   if (skill.name === TYPESCRIPT_SKILL)
     return d.includes(`/${TYPESCRIPT_SKILL}`) ? d : `${d.replace(TRAILING_DOT_RE, "")}, or for /${TYPESCRIPT_SKILL}.`;
 
-  const out = applyRules(d, DESCRIPTION_RULES[skill.name] ?? [], misses);
+  const out = applyRules(d, descriptionRulesOf(skill.name), misses);
 
   return skill.slash && skill.name !== BRO_SKILL ? ensureUseFor(out, skill.name) : out;
 }

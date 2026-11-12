@@ -22,7 +22,7 @@ function isAgentFile(rel: string) {
 }
 
 /** Frontmatter block (fences included) and the body after it. */
-function split(text: string): { head: string; body: string } {
+function split(text: string) {
   const close = text.indexOf("\n---\n", 4);
 
   return { body: text.slice(close + 5), head: text.slice(0, close + 5) };

@@ -8,7 +8,7 @@ export type Rule = {
 };
 
 /** Body rewrites by skill name, applied in order. */
-export const BODY_RULES: Partial<Record<string, readonly Rule[]>> = {
+const BODY_RULES = {
   "blast-radius": [
     {
       id: "blast-radius.how-why",
@@ -159,10 +159,10 @@ export const BODY_RULES: Partial<Record<string, readonly Rule[]>> = {
       to: "Examples: `references/patterns.md` next to this skill.",
     },
   ],
-};
+} satisfies Readonly<Record<string, readonly Rule[]>>;
 
 /** Description rewrites by skill name, applied in order. */
-export const DESCRIPTION_RULES: Partial<Record<string, readonly Rule[]>> = {
+const DESCRIPTION_RULES = {
   "principle-build-the-lever": [
     {
       id: "build-the-lever.desc-subagents",
@@ -183,4 +183,18 @@ export const DESCRIPTION_RULES: Partial<Record<string, readonly Rule[]>> = {
       to: "Dig into how it works and why it is that way, then weave that into one clear explanation.",
     },
   ],
-};
+} satisfies Readonly<Record<string, readonly Rule[]>>;
+
+function isKeyOf<Table extends object>(table: Table, name: string): name is Extract<keyof Table, string> {
+  return Object.hasOwn(table, name);
+}
+
+/** The body rewrites of the skill called `name`, in order; none for a skill without any. */
+export function bodyRulesOf(name: string): readonly Rule[] {
+  return isKeyOf(BODY_RULES, name) ? BODY_RULES[name] : [];
+}
+
+/** The description rewrites of the skill called `name`, in order; none for a skill without any. */
+export function descriptionRulesOf(name: string): readonly Rule[] {
+  return isKeyOf(DESCRIPTION_RULES, name) ? DESCRIPTION_RULES[name] : [];
+}

@@ -58,7 +58,7 @@ export const SHEAR_MAX_FINDING_EXIT: number = 1;
 export const UNLICENSED_CODES: readonly string[] = ["unlicensed", "no-license-field"];
 
 /** The cargo-deny diagnostic codes of each section; a code in none of them prints with no section. */
-export const DENY_SECTIONS: Readonly<Record<string, readonly string[]>> = {
+const DENY_SECTIONS = {
   advisories: [
     "vulnerability",
     "notice",
@@ -133,7 +133,12 @@ export const DENY_SECTIONS: Readonly<Record<string, readonly string[]>> = {
     "unmatched-source",
     "unmatched-organization",
   ],
-};
+} satisfies Readonly<Record<string, readonly string[]>>;
+
+/** The cargo-deny section that reports `code`, or undefined when no section lists it. */
+export function denySectionOf(code: string | undefined): string | undefined {
+  return Object.entries(DENY_SECTIONS).find(([, codes]) => code !== undefined && codes.includes(code))?.[0];
+}
 
 /** One whitespace character, where the first word of a message ends. */
 export const WHITESPACE: RegExp = /\s/;

@@ -11,6 +11,12 @@ import { YOURS_PATHS } from "./yours-paths.constants.ts";
 /** A shared file no output writes any more: its text with every region cut, and one line per region cut. */
 export type Cut = { path: string; text: string; repairs: string[] };
 
+/** The prune candidates split in two: the shared files to cut and the owned paths to remove. */
+export type PruneSplit = { cut: Cut[]; remove: string[] };
+
+/** What `applyCuts` did: one line per region cut or file removed, and one error per file it could not write. */
+export type CutResult = { lines: string[]; errors: string[] };
+
 /** How `applyCuts` writes: the platform, and the one-output writer sync's deps may swap in. */
 export type CutWrite = {
   platform: NodeJS.Platform;
@@ -30,7 +36,7 @@ export function repairLines(outputs: readonly Output[]): string[] {
  * in `remove`. A file whose only marker-shaped lines sync did not write, one of `YOURS_PATHS`, a real dir and a
  * missing path are in neither.
  */
-export function splitPrune(root: string, candidates: Iterable<string>): { cut: Cut[]; remove: string[] } {
+export function splitPrune(root: string, candidates: Iterable<string>): PruneSplit {
   const cut: Cut[] = [];
   const remove: string[] = [];
 
@@ -61,7 +67,7 @@ export function cutDriftLines(cut: readonly Cut[]): string[] {
  * when only whitespace is left, as it held nothing of the user's. `lines` names each region cut and each file
  * removed; `errors` each file that could not be written.
  */
-export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): { lines: string[]; errors: string[] } {
+export function applyCuts(root: string, cut: readonly Cut[], write: CutWrite): CutResult {
   const lines: string[] = [];
   const errors: string[] = [];
 

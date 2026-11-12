@@ -5,7 +5,7 @@ import { reportsOf } from "../../dev/rule-harness.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** Packages that declare each other, so only the tags can refuse an import between them. */
-const MANIFESTS: Record<string, string> = {
+const MANIFESTS = {
   "package.json": JSON.stringify({ name: "@app/root" }),
   "packages/core/package.json": JSON.stringify({ dependencies: { "@app/lib": "*" }, name: "@app/core" }),
   "packages/lib/package.json": JSON.stringify({

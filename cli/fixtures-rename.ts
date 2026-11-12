@@ -52,7 +52,7 @@ function reaches(targets: readonly string[], parent: string): boolean {
 }
 
 /** `text` of the file at `rel` with the references to `folder` pointed at its new name, and how many changed. */
-function rewrite(text: string, rel: string, folder: FixtureFolder): { refs: number; text: string } {
+function rewrite(text: string, rel: string, folder: FixtureFolder) {
   const parent = parentOf(folder.from);
   const name = path.posix.basename(folder.from);
   const dir = parentOf(rel);

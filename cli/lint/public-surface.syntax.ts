@@ -133,6 +133,11 @@ function chainOf(node: SyntaxValue): string[] {
   return head.length === 0 ? head : [...head, nameOf(get(node, "right") ?? get(node, "property"))];
 }
 
+/** Whether `type` is a node type `REFERENCE_KEYS` says where to find the name in. */
+function isReferenceType(type: string): type is keyof typeof REFERENCE_KEYS {
+  return Object.hasOwn(REFERENCE_KEYS, type);
+}
+
 /** The names the type of `statement`'s declaration mentions, minus any a type parameter of its own shadows. */
 export function referencesOf(statement: SyntaxNode): Reference[] {
   const references: Reference[] = [];
@@ -143,8 +148,8 @@ export function referencesOf(statement: SyntaxNode): Reference[] {
     if (node["type"] === NODE.importType)
       references.push({ name: chainOf(node["qualifier"])[0] ?? NAMESPACE, source: sourceText(node) });
 
-    const key = REFERENCE_KEYS[textOf(get(node, "type"))];
-    const chain = key === undefined ? [] : chainOf(node[key]);
+    const type = textOf(get(node, "type"));
+    const chain = isReferenceType(type) ? chainOf(node[REFERENCE_KEYS[type]]) : [];
 
     if (chain[0] !== undefined) references.push({ member: chain[1] ?? null, name: chain[0], source: null });
 

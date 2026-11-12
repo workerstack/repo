@@ -22,6 +22,7 @@ import { noBooleanParam } from "./no-boolean-param.ts";
 import { noChainedTypeAssertions } from "./no-chained-type-assertions.ts";
 import { noCommentedOutCode } from "./no-commented-out-code.ts";
 import { noForbiddenTermInSymbolNames } from "./no-forbidden-term-in-symbol-names.ts";
+import { noKnownValueWidening } from "./no-known-value-widening.ts";
 import { noModuleMocking } from "./no-module-mocking.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
@@ -74,6 +75,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-boolean-param": noBooleanParam,
     "no-chained-type-assertions": noChainedTypeAssertions,
     "no-commented-out-code": noCommentedOutCode,
+    "no-known-value-widening": noKnownValueWidening,
     "no-module-mocking": noModuleMocking,
     "no-module-side-effects": noModuleSideEffects,
     "no-module-state": noModuleState,

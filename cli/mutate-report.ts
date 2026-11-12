@@ -181,15 +181,17 @@ export function survivorCount(files: Record<string, FileScore>): number {
 
 /** Every shard's files as one map; a file two shards both hold (cargo-mutants splits mutants, not files) sums. */
 export function mergeFiles(reports: readonly ShardReport[]): Record<string, FileScore> {
-  const files: Record<string, FileScore> = {};
+  const files = new Map<string, FileScore>();
 
   for (const [file, score] of reports.flatMap((r) => Object.entries(r.files))) {
-    const held = files[file];
-    files[file] =
+    const held = files.get(file);
+    files.set(
+      file,
       held === undefined
         ? score
-        : { killed: held.killed + score.killed, survivors: [...held.survivors, ...score.survivors] };
+        : { killed: held.killed + score.killed, survivors: [...held.survivors, ...score.survivors] },
+    );
   }
 
-  return files;
+  return Object.fromEntries(files);
 }

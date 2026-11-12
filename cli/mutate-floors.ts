@@ -97,7 +97,10 @@ export function failures(vs: Verdict[], file: string, where: string): string[] {
 
 /** The floors with each package raised to its whole score; none lowered, none dropped. */
 export function raised(floors: Floors, vs: Verdict[]): Floors {
-  return { ...floors, ...Object.fromEntries(vs.map((v) => [v.pkg, Math.max(v.floor ?? 0, floorOf(v))])) };
+  return Object.fromEntries([
+    ...Object.entries(floors),
+    ...vs.map((v): [string, number] => [v.pkg, Math.max(v.floor ?? 0, floorOf(v))]),
+  ]);
 }
 
 /** `1 survivor`, `2 survivors`. */

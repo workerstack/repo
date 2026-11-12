@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { readPkg, stubPkgRoot, tmp, useInitKit } from "./__fixtures__/init-kit.ts";
 import { mergePackageJson } from "./init.ts";
+import type { PackageJson } from "./package-json.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
@@ -85,9 +86,7 @@ it("keeps an existing repo devDependency version", () => {
 });
 
 it("placeDevDependency is a no-op when src is not repo", () => {
-  const destPkg: { dependencies?: Record<string, string>; devDependencies?: Record<string, string> } = {
-    dependencies: { lodash: "4" },
-  };
+  const destPkg: PackageJson = { dependencies: { lodash: "4" } };
 
   placeDevDependency(destPkg, { name: "fixture-pkg", version: "1.0.0" });
   expect(destPkg.dependencies).toStrictEqual({ lodash: "4" });

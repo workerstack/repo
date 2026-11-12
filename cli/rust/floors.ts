@@ -51,15 +51,15 @@ export function readFloorsFile(file: string): Floors {
 
   if (!table.success) throw new Error(`${file} is not an object of floors; ${REWRITE_HINT}`);
   const schema = schemas();
-  const floors: Floors = {};
 
-  for (const [rel, row] of Object.entries(table.data)) {
+  const rows = Object.entries(table.data).map(([rel, row]): [string, Floors[string]] => {
     const parsed = isRustKey(rel) ? schema.rust.safeParse(row) : schema.ts.safeParse(row);
 
     if (!parsed.success)
       throw new Error(`${file}: ${rel} has a bad floor row (${parsed.error.message}); ${REWRITE_HINT}`);
-    floors[rel] = parsed.data;
-  }
 
-  return floors;
+    return [rel, parsed.data];
+  });
+
+  return Object.fromEntries(rows);
 }

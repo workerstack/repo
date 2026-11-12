@@ -43,8 +43,11 @@ export function defaultBranch(t: Tools): string {
   return ref.startsWith(ORIGIN_HEAD_PREFIX) ? ref.slice(ORIGIN_HEAD_PREFIX.length) : MAIN_FALLBACK;
 }
 
+/** How many commits a branch is ahead of and behind its upstream. */
+type Divergence = { ahead: number; behind: number };
+
 /** How many commits `branch` is ahead of and behind origin's. */
-export function divergence(t: Tools, branch: string): { ahead: number; behind: number } {
+export function divergence(t: Tools, branch: string): Divergence {
   const [ahead, behind] = read(t, GIT_AHEAD_BEHIND(branch)).split(WHITESPACE);
 
   return { ahead: Number(ahead), behind: Number(behind) };

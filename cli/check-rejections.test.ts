@@ -26,21 +26,13 @@ function plant(files: Record<string, string | JsonObject>): string {
 }
 
 /** A package at `dir`: a `tsconfig.json` on this checkout's base that excludes reject files, and its strict sibling. */
-function pkg(dir: string, compilerOptions: JsonObject = {}): Record<string, JsonObject> {
+function pkg(dir: string, compilerOptions: JsonObject = {}) {
   const exclude = ["**/*.reject.ts", "**/*.reject.tsx"];
+  const extended = path.join(pkgRoot, "tsconfig", "base.json");
+  const base: JsonObject = { compilerOptions, exclude, extends: extended, include: ["src"] };
+  const strict: JsonObject = { exclude, extends: ["./tsconfig.json", path.join(pkgRoot, "tsconfig", "strict.json")] };
 
-  return {
-    [path.posix.join(dir, "tsconfig.json")]: {
-      compilerOptions,
-      exclude,
-      extends: path.join(pkgRoot, "tsconfig", "base.json"),
-      include: ["src"],
-    },
-    [path.posix.join(dir, "tsconfig.src.json")]: {
-      exclude,
-      extends: ["./tsconfig.json", path.join(pkgRoot, "tsconfig", "strict.json")],
-    },
-  };
+  return { [path.posix.join(dir, "tsconfig.json")]: base, [path.posix.join(dir, "tsconfig.src.json")]: strict };
 }
 
 /** The problems of every planted file. */
@@ -189,13 +181,11 @@ it("checks each package's reject files under that package's own options", { time
     "",
   ].join("\n");
 
-  const loose = pkg("packages/loose");
-  loose["packages/loose/tsconfig.src.json"] = { extends: "./tsconfig.json" };
-
   const files = {
     ...pkg("packages/strict"),
-    ...loose,
+    ...pkg("packages/loose"),
     "packages/loose/src/a.reject.ts": source,
+    "packages/loose/tsconfig.src.json": { extends: "./tsconfig.json" },
     "packages/strict/src/a.reject.ts": source,
   };
 

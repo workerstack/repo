@@ -38,7 +38,10 @@ type Reference = {
   expectedTracked: string;
 };
 
-const taken: { reference?: Promise<Reference> } = {};
+/** The reference run, started on first use and shared by every crash point. */
+type Taken = { reference?: Promise<Reference> };
+
+const taken: Taken = {};
 
 async function takeReference(): Promise<Reference> {
   const reference = copied();

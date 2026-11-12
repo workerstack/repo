@@ -35,7 +35,7 @@ function failFetch() {
 }
 
 /** A repo with a config of `packs`, the workflow files named, and a cached binary. */
-function repo(packs: string, workflows: string[]): { root: string; cacheDir: string } {
+function repo(packs: string, workflows: string[]) {
   const root = tempDir();
   const cacheDir = tempDir();
   fs.writeFileSync(path.join(cacheDir, EXE), "binary");

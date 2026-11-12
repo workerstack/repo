@@ -93,7 +93,7 @@ function summaryParts({ changed, prune, cut }: Changes): string[] {
 }
 
 /** Machine state, not repo content, so `--check` never sets it: the hooks path and the hooks' execute bits. */
-function setUpHooks(run: Run): { done: string[]; warnings: string[] } {
+function setUpHooks(run: Run) {
   const { root, deps } = run;
   const standards = run.resolved.packs.includes("standards");
   const hooks = syncHooksPath(root, { on: standards }, deps.git);

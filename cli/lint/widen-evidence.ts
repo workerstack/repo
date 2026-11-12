@@ -33,7 +33,7 @@ const FUNCTIONS: readonly string[] = [
 ];
 
 /** Expressions whose value is built right there, so its shape is known. */
-const BUILT_VALUES: readonly string[] = [
+export const BUILT_VALUES: readonly string[] = [
   "ArrayExpression",
   "ArrowFunctionExpression",
   "ClassExpression",
@@ -42,14 +42,25 @@ const BUILT_VALUES: readonly string[] = [
   "NewExpression",
   "ObjectExpression",
   "TemplateLiteral",
+  "UnaryExpression",
 ];
 
+/** Whether `node` is a function, an arrow or a declared or bodiless signature. */
+function isFunctionLike(node: TSESTree.Node): node is TSESTree.FunctionLike {
+  return FUNCTIONS.includes(node.type);
+}
+
+/** `node` when it is a function, an arrow or a declared or bodiless signature, else null. */
+export function functionLike(node: TSESTree.Node): TSESTree.FunctionLike | null {
+  return isFunctionLike(node) ? node : null;
+}
+
 /** The innermost function `node` is in, or null at module level. */
-export function functionBoundary(node: TSESTree.Node): TSESTree.Node | null {
+export function functionBoundary(node: TSESTree.Node): TSESTree.FunctionLike | null {
   let current = node.parent;
 
   while (current !== undefined && current.type !== AST_NODE_TYPES.Program) {
-    if (FUNCTIONS.includes(current.type)) return current;
+    if (isFunctionLike(current)) return current;
     current = current.parent;
   }
 

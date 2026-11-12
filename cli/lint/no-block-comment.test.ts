@@ -5,7 +5,7 @@ import { MESSAGE } from "./no-block-comment.constants.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 
 /** The count of reports over `code` and the code with every fix applied. */
-function run(code: string): { reports: number; fixed: string } {
+function run(code: string) {
   const messages = reportsOf(noBlockComment, { "a.ts": code }).map((report) => report.message);
   expect(messages.every((message) => message === MESSAGE)).toBe(true);
 

@@ -31,8 +31,21 @@ export const MODULE_SPECIFIERS: readonly string[] = ["ImportDefaultSpecifier", "
 const PATH_CALLS: readonly string[] = ["join", "resolve", "dirname", "normalize", "relative"];
 const FS_CALLS: readonly string[] = ["realpath", "realpathSync", "mkdtemp", "mkdtempSync"];
 
+/** The modules that export a function returning a native path. */
+type NativeModule =
+  | "fs"
+  | "fs/promises"
+  | "node:fs"
+  | "node:fs/promises"
+  | "node:os"
+  | "node:path"
+  | "node:url"
+  | "os"
+  | "path"
+  | "url";
+
 /** The functions that return a native path, by the module they are imported from. */
-export const NATIVE_CALLS: Readonly<Record<string, readonly string[]>> = {
+export const NATIVE_CALLS: Readonly<Record<NativeModule, readonly string[]>> = {
   fs: FS_CALLS,
   "fs/promises": FS_CALLS,
   "node:fs": FS_CALLS,

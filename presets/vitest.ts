@@ -94,7 +94,7 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
 }
 
 /** The floors file's TypeScript per-file thresholds, or none when the file is absent; Rust rows are `repo ci`'s. */
-function readFloors(file: string): Record<string, TsFloor> {
+function readFloors(file: string) {
   const thresholds: Record<string, TsFloor> = {};
 
   for (const [rel, row] of Object.entries(readFloorsFile(path.resolve(file))))

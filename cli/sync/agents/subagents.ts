@@ -109,11 +109,12 @@ function flatAgent(dir: string, key: string, { doc, name }: Agent): Rendered {
 
 function codexAgent({ doc, name }: Agent): Rendered {
   const description: Json | undefined = doc.data["description"];
-  const rest: Fields = { name, ...(isTruthy(description) ? { description } : {}) };
-  Object.assign(
-    rest,
-    without(block(doc.data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
-  );
+
+  const rest = {
+    name,
+    ...(isTruthy(description) ? { description } : {}),
+    ...without(block(doc.data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
+  };
 
   return [`.codex/agents/${doc.file.replace(MD_SUFFIX, ".toml")}`, codexToml(rest, doc.body)];
 }

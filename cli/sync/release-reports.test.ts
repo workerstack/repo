@@ -23,20 +23,25 @@ function glob(pattern: string) {
 
 const INDEX = "${{ strategy.job-index }}";
 
-const RUNNER_OS: Record<string, string> = {
+const RUNNER_OS = {
   "macos-latest": "macOS",
   "ubuntu-latest": "Linux",
   "windows-latest": "Windows",
-};
+} as const satisfies Readonly<Record<string, string>>;
 
 /** Each test matrix row's OS in include order; a row's index is its `strategy.job-index`. */
 const rows = [...yaml.slice(0, yaml.indexOf("  commits:")).matchAll(/- \{ os: ([^,]+),/g)].map(
   (match) => match[1] ?? "",
 );
 
+/** Whether `os` is a runner image `RUNNER_OS` names. */
+function isRunner(os: string): os is keyof typeof RUNNER_OS {
+  return Object.hasOwn(RUNNER_OS, os);
+}
+
 function expand(template: string, os: string, index: number) {
   return template
-    .replace("${{ runner.os }}", RUNNER_OS[os] ?? "")
+    .replace("${{ runner.os }}", isRunner(os) ? RUNNER_OS[os] : "")
     .replace("${{ matrix.os }}", os)
     .replace(INDEX, String(index));
 }

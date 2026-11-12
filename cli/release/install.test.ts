@@ -10,10 +10,10 @@ import { addedName, addPeers, addSpecs, initProject, installedIn, installOld, re
 
 afterEach(removePlanted);
 
-function recording(code: number, stderr = ""): { bun: Runner; calls: string[][] } {
+function recording(code: number, stderr = "") {
   const calls: string[][] = [];
 
-  function bun(args: string[]) {
+  function bun(args: string[]): ReturnType<Runner> {
     calls.push(args);
 
     return { code, stderr, stdout: "" };

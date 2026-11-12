@@ -44,12 +44,15 @@ function named(text: string, { text: wanted, prefix }: Specifier): boolean {
   return ['"', "'", "`"].some((quote) => text.includes(`${quote}${wanted}${prefix ? "" : quote}`));
 }
 
+/** What checking a manifest's exports against its references found, and how many specifiers it checked. */
+type ExportFindings = { findings: string[]; checked: number };
+
 /** One finding per specifier no reference text names, and one when the manifest lacks the references export. */
 export function exportFindings(
   dir: string,
   manifest: { name?: string | undefined; exports?: Json | undefined },
   references: string,
-): { findings: string[]; checked: number } {
+): ExportFindings {
   const specifiers = specifiersOf(manifest.name ?? "", manifest.exports);
   const findings = specifiers.filter((one) => !named(references, one)).map((one) => unnamedExport(one.shown, dir));
 

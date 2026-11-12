@@ -80,7 +80,7 @@ function shardLine(run: Run, ran: Ran, shown: string): string {
 }
 
 /** A run's report path as typed (or the default), where it is written, and the plan it follows. */
-function paths(run: Run, config: MutateConfig, deps: MutateDeps): { shown: string; file: string } {
+function paths(run: Run, config: MutateConfig, deps: MutateDeps) {
   const shown = run.report ?? DEFAULT_REPORT;
 
   return { file: run.report === undefined ? path.join(config.root, shown) : path.resolve(deps.cwd, shown), shown };

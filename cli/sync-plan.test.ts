@@ -56,12 +56,12 @@ function hosts(ctx: SyncContext): Planned {
 }
 
 it("runs every generator in order and concatenates outputs and errors", () => {
-  const files: Record<string, string> = {
-    ".gitignore": "# >>> @workerstack/repo\n",
-    "bunfig.toml": "[test]\n",
-  };
+  const files = new Map([
+    [".gitignore", "# >>> @workerstack/repo\n"],
+    ["bunfig.toml", "[test]\n"],
+  ]);
 
-  const plan = planSync(context((rel) => files[rel] ?? null));
+  const plan = planSync(context((rel) => files.get(rel) ?? null));
   // The git files pass runs after the generators, over what they produced, even when one of them failed.
   expect(plan.outputs.map((output) => output.path)).toStrictEqual([
     "references/INDEX.md",

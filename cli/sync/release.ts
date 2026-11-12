@@ -2,7 +2,7 @@ import { isRecord } from "../json.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
-import type { Output, SyncContext } from "./outputs.ts";
+import type { Generator, SyncContext } from "./outputs.ts";
 import { type Shards, coverageJob, shardsCoverage, testShards } from "./release-shards.ts";
 import {
   API_STEP,
@@ -211,7 +211,7 @@ export function ciJobNames(ctx: CiInput): string[] {
 }
 
 /** Under the release pack, the tracked, whole-file `.github/workflows/ci.yml`; a hand-written one is refused. */
-export function release(ctx: SyncContext): { outputs: Output[]; errors: string[] } {
+export function release(ctx: SyncContext): ReturnType<Generator> {
   if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
   const existing = ctx.read(CI_PATH);
 

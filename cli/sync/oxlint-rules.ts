@@ -1,14 +1,11 @@
-/** Size limits count code only: blank lines and comments are free. */
-const CODE_LINES = { skipBlankLines: true, skipComments: true };
-
 /** A rule's setting: its severity alone, or the severity followed by the rule's options. */
-export type RuleSetting = string | [string, ...unknown[]];
+export type RuleSetting = string | readonly [string, ...unknown[]];
 
 /**
  * Every rule the base turns on; each is an error, none a warning. The `repo/` rules are `@workerstack/repo/lint`'s.
  * The written config lists them in this order, so a blank line starts each run of keys that is already sorted.
  */
-export const RULES: Record<string, RuleSetting> = {
+export const RULES = {
   "repo/as-needs-reason": "error",
   "repo/boundaries": "error",
   "repo/class-file": "error",
@@ -26,6 +23,7 @@ export const RULES: Record<string, RuleSetting> = {
   "repo/no-boolean-param": "error",
   "repo/no-chained-type-assertions": "error",
   "repo/no-commented-out-code": "error",
+  "repo/no-known-value-widening": "error",
   "repo/no-module-mocking": "error",
   "repo/no-module-side-effects": "error",
   "repo/no-module-state": "error",
@@ -49,8 +47,9 @@ export const RULES: Record<string, RuleSetting> = {
 
   "oxc/no-accumulating-spread": "error",
 
-  "eslint/max-lines": ["error", { max: 200, ...CODE_LINES }],
-  "eslint/max-lines-per-function": ["error", { max: 30, ...CODE_LINES }],
+  // Size limits count code only: blank lines and comments are free.
+  "eslint/max-lines": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
+  "eslint/max-lines-per-function": ["error", { max: 30, skipBlankLines: true, skipComments: true }],
   "eslint/max-params": ["error", { max: 3 }],
 
   "eslint/complexity": ["error", { max: 10 }],
@@ -122,10 +121,10 @@ export const RULES: Record<string, RuleSetting> = {
   // an argument of `undefined` fills a required `T | undefined` parameter so dropping it fails tsc
   "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
-};
+} as const;
 
 /** Rules the catalog lists that the base turns off, each with why. */
-export const OFF_RULES: Readonly<Record<string, string>> = {
+export const OFF_RULES = {
   "eslint/id-length": "It fails `i` and `a` in short callbacks, where a longer name adds nothing.",
   "eslint/no-magic-numbers": "repo/magic-number owns magic numbers.",
   "eslint/no-negated-condition": "unicorn/no-negated-condition owns it and also covers ternaries.",
@@ -133,18 +132,17 @@ export const OFF_RULES: Readonly<Record<string, string>> = {
   "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
   "typescript/explicit-function-return-type":
     "Inference of the return type is exact, so writing it out only repeats it.",
-  "typescript/no-unsafe-type-assertion":
-    "repo/as-needs-reason owns `as` (a narrowing assertion takes a reason comment), " +
-    "and disable comments are refused, so this rule would leave no way to write one",
+  "typescript/no-unsafe-type-assertion": `repo/as-needs-reason owns \`as\` (a narrowing assertion takes a \
+reason comment), and disable comments are refused, so this rule would leave no way to write one`,
   "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
   "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
   "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",
   "vitest/prefer-expect-assertions": "vitest/expect-expect already checks that an assertion ran in each test.",
   "vitest/require-test-timeout": "The vitest config sets the timeout for every test.",
-};
+} as const;
 
 /** Test rules, only in test files, where module-scope setup and printing are allowed. */
-export const TEST_RULES: Record<string, "off" | "error"> = {
+export const TEST_RULES = {
   "eslint/no-console": "off",
   "repo/no-module-state": "off",
   "vitest/expect-expect": "error",
@@ -154,4 +152,4 @@ export const TEST_RULES: Record<string, "off" | "error"> = {
   "vitest/prefer-called-with": "error",
   "vitest/prefer-strict-equal": "error",
   "vitest/warn-todo": "error",
-};
+} as const;

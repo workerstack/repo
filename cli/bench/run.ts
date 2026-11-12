@@ -1,5 +1,5 @@
 /** Runs a parsed spec: each setup once, then warmup plus measured runs of every candidate, interleaved. */
-import { BUILT_IN, LINE_BREAK } from "./bench.constants.ts";
+import { builtInOf, LINE_BREAK } from "./bench.constants.ts";
 import { readCustom, usageMetrics, type Spawn } from "./measure.ts";
 import type { Candidate, Spec } from "./parse-spec.ts";
 import type { Samples } from "./score.ts";
@@ -40,7 +40,7 @@ type Measuring = { candidate: Candidate; label: string };
 
 function measure(spec: Spec, io: RunIo, { candidate, label }: Measuring): Record<string, number> | string {
   const names = new Set(spec.metrics.map((metric) => metric.name));
-  const custom = [...names].filter((name) => BUILT_IN[name] === undefined);
+  const custom = [...names].filter((name) => builtInOf(name) === undefined);
   const started = io.now();
   const got = io.spawn(candidate.run, io.cwd);
   const wall = io.now() - started;

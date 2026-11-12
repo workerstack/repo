@@ -189,7 +189,7 @@ function ciphersOf(layers: Layers): string[] {
 type Getters = Record<string, string | undefined>;
 
 /** An object whose enumerable getter per key returns `read(key)`. */
-function getters(keys: readonly string[], read: (key: string) => string | undefined): Getters {
+function getters(keys: readonly string[], read: (key: string) => string | undefined) {
   const view: Getters = {};
 
   for (const key of keys) Object.defineProperty(view, key, { enumerable: true, get: () => read(key) });
