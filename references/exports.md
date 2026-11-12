@@ -159,6 +159,65 @@ raw: .repo/tmp/bench/startup/ubuntu-latest.json
 
 `--remote` also measures on the spec's other `os` labels in CI: it runs here first when this machine's label is listed, dispatches `bench.yml` (the `benchmark` pack) at HEAD's sha, waits up to 90 minutes, downloads each `bench-<name>-<os>` artifact and prints one table per OS. It refuses, one line each: no `.github/workflows/bench.yml`, bench.yml not on `origin/<default branch>` (GitHub dispatches only from there), HEAD not on origin, a dirty tree, and an `os` with no other label. Exit codes: 0 done, 1 a candidate or the remote run failed, 4 a bad argument, spec or precondition.
 
+## Env
+
+`@workerstack/repo/env` exports `defineEnv` and `sealed` (with the types `EnvConfig`, `EnvInstance`, `ProcessSpec`, `Scope`, `Sealed` and `Value`). It is for scripts: a Cloudflare Worker reads `ctx.env`, and `defineEnv` there throws the message "repo env: defineEnv is script-only; a Cloudflare Worker reads ctx.env".
+
+```ts
+import { defineEnv, sealed } from "@workerstack/repo/env";
+
+export const repoEnv = defineEnv({
+  global: { CLOUDFLARE_ACCOUNT_ID: "28fa2622…", NPM_TOKEN: sealed("YWdlLWVuY3J5cHRpb24ub3Jn…") },
+  local: {},
+  dev: {},
+  prod: {},
+  process: { CI: "optional", HOME: "required" },
+});
+
+repoEnv.current.NPM_TOKEN; // string, decrypted on the first sealed read
+repoEnv.process.HOME; // string; CI is string | undefined
+```
+
+| Field | Takes |
+| --- | --- |
+| `global` | values every scope shares; optional |
+| `local` `dev` `prod` | one block per scope (required, may be `{}`); a string or `sealed(...)` per key |
+| `process` | process variables this env reads → `"required"` (a string; throws when read unset) or `"optional"` (`string \| undefined`) |
+| `parent` | another `defineEnv` result; its values carry into each scope |
+
+A scope merges like `createScriptEnv`: own `global`, then the parent's scope view, then own scope; the later wins. `global` is the parent's `global` then own. The instance holds:
+
+| Member | Reads |
+| --- | --- |
+| `current` | the scope `REPO_ENV` names (`local`, `dev` or `prod`; `local` when unset), checked at each read; a key that scope lacks throws |
+| `global` `local` `dev` `prod` | that view's merged values |
+| `process` | the declared process variables, read from `process.env` at each read |
+| `read(source)` | the `process` view of another `source` object (a test seam) |
+| `sealedKeys(scope)` | the set of keys whose winning value in `scope` is sealed |
+
+`sealed("<base64>")` takes the base64 of an age cipher made for the recipient in `.repo/env.keys.json` (`{ "recipient": "age1…", "repo": "<name>" }`); plaintext or an empty string throws at once. Nothing decrypts until a sealed value is read: the first such read decrypts every sealed value of the env and its parents in one `bun` child and keeps the plaintext in that instance only, so a plain read needs no key. The key is `WORKERSTACK_ENV_KEY` (an age identity) when set, else every `~/.workerstack/keys/*.key`; the repo's own is `~/.workerstack/keys/<repo>.key`, saved at 0600.
+
+The runtime errors, one line each (`<key>` is the read, `<repo>` the name in `.repo/env.keys.json`):
+
+```console
+repo env: REPO_ENV is "staging"; set it to local, dev or prod
+repo env: NPM_TOKEN has no prod value in src/env.ts; add it to its prod block
+repo env: process.HOME is required and unset
+repo env: NPM_TOKEN is sealed and no key is at ~/.workerstack/keys/<repo>.key; save this repo's age key there (0600) or set WORKERSTACK_ENV_KEY
+repo env: NPM_TOKEN is sealed for another key than ~/.workerstack/keys/<repo>.key; save this repo's age key there
+repo env: NPM_TOKEN could not be decrypted: <reason>
+```
+
+`bun repo check` reads every tracked `.ts`, `.tsx` and `.mts` file that calls `defineEnv(` and fails, one line each:
+
+```console
+env: src/env.ts global.NPM_TOKEN looks like a secret (credential name) but is plain; seal it: sealed("<base64 of `age -r <recipient in .repo/env.keys.json>`>")
+env: src/env.ts dev.NPM_TOKEN is missing (prod has it); add it to dev or remove it from prod
+env: src/env.ts reads process.env.HOME but its process block does not declare it; add `HOME: "optional"`
+```
+
+The reason is `sk_ prefix` (or another provider prefix), `high entropy` or `credential name`; `pk_live_` and `pk_test_` values pass. A scope block with a spread or no key takes no part in the missing-key rule.
+
 ## Agents and references
 
 `@workerstack/repo/agents/*` holds the stock skills, rules, subagents and hooks that `bun repo sync` links into each host tree. `@workerstack/repo/references/*` holds these files, which a repo's own `references/INDEX.md` links in `node_modules`.

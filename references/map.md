@@ -59,6 +59,8 @@ Cheap outline. Not a file dump.
 - `cli/scripts/listen.ts` — STT
 - `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
 - `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
+- `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
+- `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
 
 ## Tmp
 - `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
@@ -86,6 +88,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
 - `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
 - `bench/` — `<name>.bench.ts` specs, a `defineBench` default export each; read by `bun repo bench <name>`, not by sync; root only
+- `env.keys.json` — `{ "recipient": "age1…", "repo": "<name>" }`: the age public key `sealed(...)` values are sealed for, and the name of the key file `~/.workerstack/keys/<repo>.key`
 - `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
 
 ## Generated (do not hand-edit)

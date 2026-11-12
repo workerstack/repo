@@ -15,7 +15,9 @@ const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const ALLOWED =
   "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, bench/ (read by repo bench), " +
   "settings/claude.json, hooks.jsonc, " +
-  "mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)" +
+  "mcp-policy.jsonc, permissions.json, map.jsonc, " +
+  "env.keys.json (read by @workerstack/repo/env (the public key sealed values are locked to)), " +
+  "lint-baseline.json (read by repo turn and repo check)" +
   ", test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
 const MODULES_DIR = ["node", "modules"].join("_");
 const GIT_DIR = ["", "git"].join(".");
