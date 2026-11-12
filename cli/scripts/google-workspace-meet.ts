@@ -1,4 +1,5 @@
 /** Calendar meetings and Gmail: create an event (or print a template link), send and list mail. */
+import type { Json } from "../json.ts";
 import { filled, rec } from "./google-workspace-account.ts";
 import { gfetch } from "./google-workspace-auth.ts";
 import { apiMessage, fail, ok } from "./google-workspace-reply.ts";
@@ -14,6 +15,7 @@ import {
   STAMP_PUNCT_RE,
 } from "./google-workspace.constants.ts";
 import type { MeetingSpec, WorkspaceAccount } from "./google-workspace.types.ts";
+import { jsonText } from "./json-text.ts";
 
 type Opt = string | undefined;
 
@@ -61,7 +63,7 @@ export async function meetingCreate(account: WorkspaceAccount, spec: MeetingSpec
     method: "POST",
   });
 
-  if (r.ok) return ok(`${String(r.json.summary)}\n${String(r.json.htmlLink)}\nid=${String(r.json.id)}`);
+  if (r.ok) return ok(`${jsonText(r.json.summary)}\n${jsonText(r.json.htmlLink)}\nid=${jsonText(r.json.id)}`);
 
   const stamp0 = toGCalStamp(event.start.dateTime);
   const stamp1 = toGCalStamp(event.end.dateTime);
@@ -94,7 +96,7 @@ export async function mailSend(
 
   if (!r.ok) return fail(apiMessage(r.json, "mail send failed"));
 
-  return ok(`sent id=${String(r.json.id)}`);
+  return ok(`sent id=${jsonText(r.json.id)}`);
 }
 
 export async function mailList(account: WorkspaceAccount, { query, n }: { query?: Opt; n?: Opt }): Promise<number> {
@@ -105,8 +107,8 @@ export async function mailList(account: WorkspaceAccount, { query, n }: { query?
   const r = await gfetch(account, `${GMAIL}/users/me/messages?${q.toString()}`);
 
   if (!r.ok) return fail(apiMessage(r.json, "mail list failed"));
-  const messages: unknown[] = Array.isArray(r.json.messages) ? r.json.messages : [];
-  const ids = messages.map((m) => rec(m).id);
+  const messages: Json[] = Array.isArray(r.json.messages) ? r.json.messages : [];
+  const ids = messages.map((m) => jsonText(rec(m).id));
 
   return ok(ids.length > 0 ? ids.join("\n") : "no messages");
 }

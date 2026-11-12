@@ -1,22 +1,25 @@
 import { expect, it } from "vitest";
 
-import { isRecord } from "../json.ts";
+import { isRecord, type Json } from "../json.ts";
 import { callAt, jsonRes, sentJson, stubFetch } from "./__fixtures__/google-workspace-kit.ts";
 import { runWorkspace, useLoggedInWorkspace } from "./__fixtures__/use-logged-in-workspace.ts";
+import { jsonText } from "./json-text.ts";
 
 useLoggedInWorkspace("ws-comms-");
 
 const HOUR = 3_600_000;
 
-function dateTimeOf(v: unknown) {
-  return isRecord(v) ? String(v.dateTime) : "";
+function dateTimeOf(v: Json | undefined): string {
+  const dateTime = isRecord(v) ? v.dateTime : undefined;
+
+  return typeof dateTime === "string" ? dateTime : "";
 }
 
 it("mail: sends with a placeholder subject and an empty body", async () => {
   const calls = stubFetch(() => jsonRes({ id: "m9" }));
   const r = await runWorkspace("mail", "send", "--to", "a@b.c");
   expect(r.logs).toBe("sent id=m9\n");
-  const raw = String(sentJson(calls).raw).replaceAll("-", "+").replaceAll("_", "/");
+  const raw = jsonText(sentJson(calls).raw).replaceAll("-", "+").replaceAll("_", "/");
   const text = Buffer.from(raw, "base64").toString();
   expect(text).toBe("To: a@b.c\r\nSubject: (no subject)\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n");
 });

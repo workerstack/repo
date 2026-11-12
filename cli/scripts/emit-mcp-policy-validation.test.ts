@@ -1,3 +1,4 @@
+import { TomlDate } from "smol-toml";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { DENY_ALL, plant, plantDirs, plantPolicy } from "./__fixtures__/mcp-policy-kit.ts";
@@ -64,7 +65,7 @@ it("requiredDeepMatch: matches nested lists, objects and nulls inside lists", ()
 });
 
 it("requiredDeepMatch: does not treat dates as plain objects", () => {
-  expect(requiredDeepMatch([new Date(1)], [new Date(2)])).toBe(false);
+  expect(requiredDeepMatch([new TomlDate(new Date(1))], [new TomlDate(new Date(2))])).toBe(false);
 });
 
 it("requiredDeepMatch: requires an object on disk when the desired value is an object", () => {

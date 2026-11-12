@@ -1,11 +1,10 @@
 import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
-import { isRecord } from "../json.ts";
+import { asNode, type SyntaxNode } from "../syntax-node.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import { packageRoot, publicSurface, type Surface } from "./public-surface.ts";
-import type { Node } from "./public-surface.types.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
@@ -14,12 +13,12 @@ type MessageId = "fault" | "unknown";
 type Context = TSESLint.RuleContext<MessageId, []>;
 
 /** Whether a node the walk read is one the linter built, as every node under the program it hands a rule is. */
-function isLinted(node: Node): node is Node & TSESTree.Node {
+function isLinted(node: SyntaxNode): node is SyntaxNode & TSESTree.Node {
   return Array.isArray(node["range"]);
 }
 
 /** The node as the linter built it, as every node the walk reads is; throws on one that is not, a broken invariant. */
-function linted(node: Node): TSESTree.Node {
+function linted(node: SyntaxNode): TSESTree.Node {
   return ESLintUtils.nullThrows([node].find(isLinted), "the walk reads only nodes the linter built");
 }
 
@@ -28,14 +27,14 @@ type File = {
   source: Source;
   names: Map<string, string>;
   signed: Set<string>;
-  report: (node: Node, data: { label: string; entry: string; fault: string }) => void;
+  report: (node: SyntaxNode, data: { label: string; entry: string; fault: string }) => void;
 };
 
 /** A reached declaration: its `statement`, the `declaration` inside it and its `name` and `entry`. */
-type Found = { statement: Node; declaration: Node; name: string; entry: string };
+type Found = { statement: SyntaxNode; declaration: SyntaxNode; name: string; entry: string };
 
 /** The names declared as overload signatures (`function f(): void;`), whose implementation carries no doc. */
-function signedNames(body: Node[]): Set<string> {
+function signedNames(body: SyntaxNode[]): Set<string> {
   const signed = new Set<string>();
 
   for (const statement of body) {
@@ -61,14 +60,16 @@ function checkDeclaration(file: File, found: Found): void {
   if (isFunction && file.signed.has(name)) return;
   const variable = nodesOf(declaration["declarations"]).find((item) => get(item["id"], "name") === name);
   check(walk, statement, { label: name, name });
-  const annotated = isRecord(get(variable?.["id"], "typeAnnotation"));
-  const untyped = variable !== undefined && !annotated && !statesItsType(variable["init"]);
+  const isAnnotated = asNode(get(variable?.["id"], "typeAnnotation")) !== null;
+  const untyped = variable !== undefined && !isAnnotated && !statesItsType(variable["init"]);
 
-  if (untyped || (isFunction && !isRecord(declaration["returnType"]))) walk.fail(statement, name, FAULTS.inferred);
+  const isUntypedFunction = isFunction && asNode(declaration["returnType"]) === null;
+
+  if (untyped || isUntypedFunction) walk.fail(statement, name, FAULTS.inferred);
   walkPublic(variable ?? declaration, visitorOf(walk));
 }
 
-function checkFile(file: File, body: Node[]): void {
+function checkFile(file: File, body: SyntaxNode[]): void {
   for (const statement of body) {
     const declaration = declarationOf(statement);
 
@@ -96,7 +97,7 @@ function checkProgram(context: Context, surface: Surface, program: TSESTree.Prog
     text: sourceCode.text,
   };
 
-  function report(node: Node, data: Parameters<File["report"]>[1]): void {
+  function report(node: SyntaxNode, data: Parameters<File["report"]>[1]): void {
     context.report({ data, messageId: "fault", node: linted(node) });
   }
 

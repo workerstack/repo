@@ -1,5 +1,7 @@
+import type { Json, JsonObject } from "../json.ts";
+
 /** A parsed JSON object, or a CDP request's params and reply. */
-export type Rec = Record<string, unknown>;
+export type Rec = JsonObject;
 
 /** The engines a session runs on. */
 export type Engine = "lightpanda" | "chromium";
@@ -14,8 +16,8 @@ export type Bins = {
 export type RefEntry = {
   role: string;
   name: string;
-  backendNodeId: unknown;
-  nodeId: unknown;
+  backendNodeId: Json | undefined;
+  nodeId: Json | undefined;
 };
 
 /** The live browser session stored in session.json. */
@@ -49,7 +51,7 @@ export type FakeCdpState = {
   failProbe: boolean;
   thinSnap: boolean;
   engine: string;
-  axNodes?: unknown[];
+  axNodes?: Json[];
   /** Per CDP method: a record is the reply, a string is the error message. */
   replies?: Record<string, Rec | string>;
   /** Every CDP request the fake receives, in order. */
@@ -114,7 +116,7 @@ export type Snap = {
 export type Verb = (argv: string[], ctx: Ctx) => Promise<BrowserResult>;
 
 /** What a ref verb does to the node it resolved. */
-export type Act = (cdp: Cdp, objectId: unknown, text: string) => Promise<unknown>;
+export type Act = (cdp: Cdp, objectId: string, text: string) => Promise<unknown>;
 
 /** A capture verb: the file it writes and the CDP call that renders it. */
 export type Capture = {

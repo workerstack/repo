@@ -1,11 +1,12 @@
 /** Reads one source file into the names it exports, imports and declares. */
 import { parseSync } from "oxc-parser";
 
+import { asNode, type SyntaxNode } from "../syntax-node.ts";
 import { DEFAULT, NAMESPACE, NODE } from "./public-surface.constants.ts";
-import { asNode, declaredNames, get, nameOf, nodesOf, sourceText, unknownForm } from "./public-surface.syntax.ts";
-import type { Module, Node } from "./public-surface.types.ts";
+import { declaredNames, get, nameOf, nodesOf, sourceText, unknownForm } from "./public-surface.syntax.ts";
+import type { Module } from "./public-surface.types.ts";
 
-function importedName(specifier: Node): string {
+function importedName(specifier: SyntaxNode): string {
   if (specifier["type"] === NODE.importNamespace) return NAMESPACE;
 
   if (specifier["type"] === NODE.importDefault) return DEFAULT;
@@ -13,12 +14,12 @@ function importedName(specifier: Node): string {
   return nameOf(specifier["imported"]);
 }
 
-function addImports(module: Module, statement: Node): void {
+function addImports(module: Module, statement: SyntaxNode): void {
   for (const specifier of nodesOf(statement["specifiers"]))
     module.imports.set(nameOf(specifier["local"]), { name: importedName(specifier), source: sourceText(statement) });
 }
 
-function addDefault(module: Module, statement: Node): void {
+function addDefault(module: Module, statement: SyntaxNode): void {
   const declaration = statement["declaration"];
   const identifier = get(declaration, "type") === NODE.identifier ? nameOf(declaration) : null;
   const local = declaredNames(statement)[0] ?? identifier;
@@ -27,7 +28,7 @@ function addDefault(module: Module, statement: Node): void {
   else module.exports.set(DEFAULT, { name: local, source: null });
 }
 
-function addExports(module: Module, statement: Node): void {
+function addExports(module: Module, statement: SyntaxNode): void {
   const source = asNode(statement["source"]) === null ? null : sourceText(statement);
 
   if (statement["type"] === NODE.exportAll) {
@@ -59,7 +60,7 @@ export function parseModule(file: string, code: string): Module {
   };
 
   for (const statement of nodesOf(parseSync(file, code).program.body)) {
-    const type = String(statement["type"]);
+    const type = String(get(statement, "type"));
 
     if (type === NODE.importDeclaration) addImports(module, statement);
 

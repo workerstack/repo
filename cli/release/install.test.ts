@@ -22,6 +22,14 @@ function recording(code: number, stderr = ""): { bun: Runner; calls: string[][] 
   return { bun, calls };
 }
 
+describe("installedIn", () => {
+  it("reads a manifest without exports, the key being optional", () => {
+    const project = tempDir();
+    write(project, { [`${INSTALLED_DIR}/@a/x/package.json`]: { name: "@a/x", version: "1.0.0" } });
+    expect(installedIn(project, "@a/x").installed).toStrictEqual({ peerDependencies: {}, version: "1.0.0" });
+  });
+});
+
 describe("installOld", () => {
   it("adds the registry version under the old alias from the given registry", () => {
     const { bun, calls } = recording(0);

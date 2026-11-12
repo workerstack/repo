@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, readJson, type JsonObject } from "../json.ts";
+import { isRecord, type Json, readJson, type JsonObject } from "../json.ts";
 import { hookNameOf } from "./hook-command.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";
 import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
@@ -12,7 +12,7 @@ import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
 /** A script file name in a command. */
 const SCRIPT_FILE = /([\w.-]+\.(?:ts|mjs|js)\b)/;
 
-function commandsIn(group: unknown): string[] {
+function commandsIn(group: Json): string[] {
   if (!isRecord(group)) return [];
   const out: string[] = [];
 
@@ -25,7 +25,7 @@ function commandsIn(group: unknown): string[] {
 }
 
 /** What makes two groups the same hook: the repo hook name in either command form, else the script file name. */
-function needleOf(group: unknown): string {
+function needleOf(group: Json): string {
   const commands = commandsIn(group);
 
   for (const c of commands) {
@@ -43,7 +43,7 @@ function needleOf(group: unknown): string {
 }
 
 /** `desired` first, then each existing group that is not the same hook as one of them. */
-export function upsertGroups(existing: unknown, desired: unknown[]): unknown[] {
+export function upsertGroups(existing: Json | undefined, desired: Json[]): Json[] {
   const prev = Array.isArray(existing) ? existing : [];
   const desiredNeedles = new Set(desired.map(needleOf));
   const extras = prev.filter((g) => !desiredNeedles.has(needleOf(g)));
@@ -63,7 +63,7 @@ export function loadJson(p: string): JsonObject {
 
   if (raw.trim() === "") return {};
 
-  return readJson(z.record(z.string(), z.unknown()).catch({}), raw);
+  return readJson(z.record(z.string(), z.json()).catch({}), raw);
 }
 
 export function saveJson(p: string, obj: unknown): void {
@@ -74,8 +74,8 @@ export function saveJson(p: string, obj: unknown): void {
 /**
  * Antigravity rejects the `{matcher, hooks}` group form for SessionStart: flat entries, `extra` after what is there.
  */
-export function flatSession(existing: unknown, extra: HookEntry[]): unknown[] {
-  const prev = (Array.isArray(existing) ? existing : []).flatMap((e: unknown): unknown[] =>
+export function flatSession(existing: Json | undefined, extra: HookEntry[]): Json[] {
+  const prev = (Array.isArray(existing) ? existing : []).flatMap((e): Json[] =>
     isRecord(e) && Array.isArray(e.hooks) ? e.hooks : [e],
   );
 
@@ -90,7 +90,7 @@ export function flatEntries(groups: HookGroup[]): (HookEntry & { matcher: string
 }
 
 /** Every `command` string anywhere in `value`, in document order. */
-export function allCommands(value: unknown, out: string[] = []): string[] {
+export function allCommands(value: Json | undefined, out: string[] = []): string[] {
   if (Array.isArray(value)) {
     for (const v of value) allCommands(v, out);
   } else if (isRecord(value)) {

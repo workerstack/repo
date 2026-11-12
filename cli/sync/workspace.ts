@@ -26,12 +26,12 @@ function catalogFields() {
 const packageJsonSchema: z.ZodObject<{
   name: z.ZodOptional<z.ZodString>;
   private: z.ZodOptional<z.ZodBoolean>;
-  version: z.ZodOptional<z.ZodUnknown>;
-  sideEffects: z.ZodOptional<z.ZodUnknown>;
-  packageManager: z.ZodOptional<z.ZodUnknown>;
-  bin: z.ZodOptional<z.ZodUnknown>;
-  exports: z.ZodOptional<z.ZodUnknown>;
-  scripts: z.ZodOptional<z.ZodUnknown>;
+  version: z.ZodOptional<z.ZodJSONSchema>;
+  sideEffects: z.ZodOptional<z.ZodJSONSchema>;
+  packageManager: z.ZodOptional<z.ZodJSONSchema>;
+  bin: z.ZodOptional<z.ZodJSONSchema>;
+  exports: z.ZodOptional<z.ZodJSONSchema>;
+  scripts: z.ZodOptional<z.ZodJSONSchema>;
   workspaces: z.ZodOptional<
     z.ZodUnion<
       readonly [
@@ -61,16 +61,16 @@ function buildPackageJsonSchema() {
   return z.object(
     {
       // Kept for the lint config, which narrows them where it reads them.
-      bin: z.unknown().optional(),
-      exports: z.unknown().optional(),
+      bin: z.json().optional(),
+      exports: z.json().optional(),
       name: z.string({ error: "must be a string" }).optional(),
       // Kept as written: sync accepts any value and only `repo check` judges these.
-      packageManager: z.unknown().optional(),
+      packageManager: z.json().optional(),
       private: z.boolean({ error: "must be true or false" }).optional(),
       // Kept as written; `repo check` narrows the root's scripts where it reads them.
-      scripts: z.unknown().optional(),
-      sideEffects: z.unknown().optional(),
-      version: z.unknown().optional(),
+      scripts: z.json().optional(),
+      sideEffects: z.json().optional(),
+      version: z.json().optional(),
       workspaces: z
         .union([globs, z.object({ packages: globs.optional(), ...catalogFields() })], {
           error: 'must be a list of globs or { "packages": [...] }',
@@ -88,7 +88,7 @@ function buildPackageJsonSchema() {
 
 /**
  * The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay
- * unjudged `unknown`s; every other field is dropped at parse.
+ * unjudged JSON; every other field is dropped at parse.
  */
 export type PackageJson = z.output<typeof packageJsonSchema>;
 

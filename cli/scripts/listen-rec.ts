@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isRecord } from "../json.ts";
 import { clampSeconds } from "./listen-argv.ts";
 import { finishTranscript } from "./listen-clip.ts";
 import { ffmpegRecordArgs, needFfmpeg, recCapture } from "./listen-ffmpeg.ts";
@@ -139,7 +138,10 @@ async function capture(ctx: ListenCtx, { bin, args, seconds, wav }: Job): Promis
 
   const ffErr = str(fs.readFileSync(ffLog, "utf8")).slice(0, FFMPEG_LOG_CHARS);
 
-  if (isRecord(r.error) && r.error.code === TIMED_OUT) throw new Error(str(ffErr, "ffmpeg rec timed out"));
+  const { error } = r;
+  const isTimedOut = typeof error === "object" && error !== null && "code" in error && error.code === TIMED_OUT;
+
+  if (isTimedOut) throw new Error(str(ffErr, "ffmpeg rec timed out"));
 
   if (r.status !== 0 && !fs.existsSync(wav)) throw new Error(str(ffErr, "ffmpeg rec failed"));
 

@@ -5,7 +5,8 @@ import path from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { z } from "zod";
 
-import { isRecord, readJson, type JsonObject } from "../json.ts";
+import { isRecord, type Json, readJson } from "../json.ts";
+import type { SettingsTable } from "./settings-table.ts";
 import {
   ALL_HOSTS,
   ENOENT,
@@ -35,7 +36,7 @@ export function shouldSkip(segment: unknown, skipRe: RegExp | null | undefined):
   return skipRe.test(String(segment));
 }
 
-function checkedHost(h: unknown): ManifestHost {
+function checkedHost(h: Json): ManifestHost {
   if (!isRecord(h) || typeof h.id !== "string" || (h.format !== JSON_FORMAT && h.format !== TOML_FORMAT))
     throw new Error("manifest host needs id and format json|toml");
 
@@ -47,7 +48,7 @@ function checkedHost(h: unknown): ManifestHost {
 
 /** A JSON object, or null for any other JSON value. */
 function objectOrNull() {
-  return z.record(z.string(), z.unknown()).nullable().catch(null);
+  return z.record(z.string(), z.json()).nullable().catch(null);
 }
 
 export function loadManifest(workspaceRoot: string): Manifest {
@@ -70,7 +71,7 @@ export function hostIdsOf(manifest: Manifest): Set<string> {
 }
 
 /** Parse payload or dest text as `format`; empty text is `{}`. Throws on bad syntax. */
-export function parseText(raw: string | null | undefined, format: SettingsFormat): JsonObject {
+export function parseText(raw: string | null | undefined, format: SettingsFormat): SettingsTable {
   const s = raw ?? "";
 
   if (s.trim() === "") return {};
@@ -82,11 +83,11 @@ export function parseText(raw: string | null | undefined, format: SettingsFormat
 }
 
 function isMissing(err: unknown): boolean {
-  return isRecord(err) && err.code === ENOENT;
+  return err instanceof Error && "code" in err && err.code === ENOENT;
 }
 
 /** Read a dest file; a missing file is `{}`, anything unreadable throws `unreadable dest: <label>`. */
-export function readDest(destAbs: string, format: SettingsFormat, label: string): JsonObject {
+export function readDest(destAbs: string, format: SettingsFormat, label: string): SettingsTable {
   let raw: string;
 
   try {
@@ -107,7 +108,7 @@ export function readDest(destAbs: string, format: SettingsFormat, label: string)
  * Read a host payload; a missing file throws `missing payload: <rel>`, bad syntax `unreadable payload: <rel>`.
  * A file of the payload's name under `<consumerRoot>/.repo/global-settings/` replaces the stock payload whole.
  */
-export function readPayload(workspaceRoot: string, host: ManifestHost, consumerRoot?: string): JsonObject {
+export function readPayload(workspaceRoot: string, host: ManifestHost, consumerRoot?: string): SettingsTable {
   const overlay = consumerRoot === undefined ? null : path.join(consumerRoot, OVERLAY_DIR, path.basename(host.payload));
   const abs = overlay !== null && fs.existsSync(overlay) ? overlay : path.join(workspaceRoot, host.payload);
   let raw: string;

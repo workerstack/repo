@@ -15,6 +15,7 @@ import {
   REFS,
   tmp,
 } from "./__fixtures__/browser-kit.ts";
+import { errMessage } from "./browser-session.ts";
 
 afterEach(cleanBrowser);
 
@@ -108,4 +109,9 @@ it("spells out a number or boolean ref field and empties any other junk when it 
     lastRefs: { "1": { name: "true", role: "5" }, "2": { name: "", role: "link" } },
     lastURL: "",
   });
+});
+
+it("reads a thrown error as its message and any other thrown value as its text", () => {
+  expect(errMessage(new Error("engine gone"))).toBe("engine gone");
+  expect(errMessage("socket closed")).toBe("socket closed");
 });

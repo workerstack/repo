@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { parse as parseToml, stringify as stringifyToml, type TomlTable } from "smol-toml";
 import { z } from "zod";
 
 import { isRecord, readJson, type JsonObject } from "../json.ts";
@@ -14,6 +14,7 @@ import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
 import { claudeCheckOk, codexCheckOk, grokCheckOk } from "./emit-mcp-check.ts";
 import {
+  type CodexConfig,
   desiredAgentsMcp,
   desiredClaudeSettings,
   desiredCodex,
@@ -31,6 +32,7 @@ import {
   JSON_INDENT,
   MCP_JSON_REL,
 } from "./emit.constants.ts";
+import type { SettingsTable } from "./settings-table.ts";
 
 export type EmitResult = {
   ok: boolean;
@@ -49,9 +51,9 @@ type EmitOptions = {
 };
 
 /** One host file: the text on disk (null when missing), what it holds and what the policy wants there. */
-type Host<D extends JsonObject = JsonObject> = {
+type Host<D extends SettingsTable = SettingsTable, K extends SettingsTable = SettingsTable> = {
   raw: string | null;
-  disk: JsonObject;
+  disk: K;
   desired: D;
 };
 
@@ -60,8 +62,8 @@ type Target = { keepHomeTables: boolean; policy: Policy };
 
 type Hosts = {
   grok: Host;
-  claude: Host;
-  codex: Host<JsonObject & { agents: JsonObject }>;
+  claude: Host<JsonObject, JsonObject>;
+  codex: Host<CodexConfig>;
   agents: Host;
 };
 
@@ -69,10 +71,10 @@ type Hosts = {
 function parseJsonFile(raw: string | null): JsonObject {
   if (raw === null || raw.trim() === "") return {};
 
-  return readJson(z.record(z.string(), z.unknown()).catch({}), raw);
+  return readJson(z.record(z.string(), z.json()).catch({}), raw);
 }
 
-function parseTomlFile(raw: string | null): JsonObject {
+function parseTomlFile(raw: string | null): TomlTable {
   if (raw === null || raw.trim() === "") return {};
 
   return parseToml(raw);

@@ -7,13 +7,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-import { parse as parseToml } from "smol-toml";
+import { parse as parseToml, type TomlTable } from "smol-toml";
 
-import { isRecord, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
+import { isSettingsTable, type SettingsTable, type SettingsValue } from "./settings-table.ts";
 
 /** One settings key whose payload value is missing or different in the dest. */
 export type DriftEntry = {
@@ -37,30 +37,33 @@ export type CheckResult = {
   error?: string;
 };
 
-type ProjectGrok = { error: string; value?: undefined } | { value: JsonObject; error?: undefined };
+type ProjectGrok = { error: string; value?: undefined } | { value: TomlTable; error?: undefined };
 
 type Host = ReturnType<typeof loadManifest>["hosts"][number];
 
 /** Leaf `[path, value]` pairs of a payload; arrays and dates are leaves. */
-function leaves(obj: JsonObject, skipRe: RegExp, prefix: string[] = []): [string[], unknown][] {
-  const out: [string[], unknown][] = [];
+function leaves(obj: SettingsTable, skipRe: RegExp, prefix: string[] = []): [string[], SettingsValue][] {
+  const out: [string[], SettingsValue][] = [];
 
   for (const [k, v] of Object.entries(obj)) {
     if (shouldSkip(k, skipRe)) continue;
     const next = [...prefix, k];
 
-    if (isRecord(v)) out.push(...leaves(v, skipRe, next));
+    if (isSettingsTable(v)) out.push(...leaves(v, skipRe, next));
     else out.push([next, v]);
   }
 
   return out;
 }
 
-function valueAt(obj: unknown, keyPath: string[]): { found: false } | { found: true; value: unknown } {
-  let cur = obj;
+/** Whether `keyPath` is present below `obj`, and the value there. */
+type Found = { found: false } | { found: true; value: SettingsValue | undefined };
+
+function valueAt(obj: SettingsTable, keyPath: string[]): Found {
+  let cur: SettingsValue | undefined = obj;
 
   for (const k of keyPath) {
-    if (!isRecord(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
+    if (!isSettingsTable(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
     cur = cur[k];
   }
 
@@ -77,7 +80,9 @@ function readProjectGrok(abs: string): ProjectGrok {
   try {
     raw = fs.readFileSync(abs, "utf8");
   } catch (err) {
-    if (isRecord(err) && err.code === NOT_FOUND_CODE) return { error: "missing project .grok/config.toml" };
+    const isMissing = err instanceof Error && "code" in err && err.code === NOT_FOUND_CODE;
+
+    if (isMissing) return { error: "missing project .grok/config.toml" };
 
     return { error: "unreadable project .grok/config.toml" };
   }
@@ -90,8 +95,8 @@ function readProjectGrok(abs: string): ProjectGrok {
 }
 
 /** `h`'s status: unreadable when its dest cannot be read, else ok or each payload leaf the dest lacks or differs on. */
-function hostStatus(h: Host, home: string, want: { payload: JsonObject; skipRe: RegExp }): HostStatus {
-  let destValue: JsonObject;
+function hostStatus(h: Host, home: string, want: { payload: SettingsTable; skipRe: RegExp }): HostStatus {
+  let destValue: SettingsTable;
 
   try {
     destValue = readDest(resolveDest(home, h.dest), h.format, h.dest);

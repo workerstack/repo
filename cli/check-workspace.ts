@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
 import {
   CATALOG_FIELDS,
   CATALOG_PREFIX,
@@ -30,7 +32,7 @@ import {
   missingScript,
 } from "./check-workspace.constants.ts";
 import type { Spot } from "./check-workspace.constants.ts";
-import { isRecord } from "./json.ts";
+import { isRecord, type Json } from "./json.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { catalogsOf } from "./sync/workspace.ts";
 import type { Catalogs, PackageJson, Workspace, WorkspacePackage } from "./sync/workspace.ts";
@@ -138,10 +140,10 @@ function lockLines(root: string, catalogs: Catalogs, declared: Set<string>): str
   const lock = path.join(root, "bun.lock");
 
   if (!fs.existsSync(lock)) return [fs.existsSync(path.join(root, "bun.lockb")) ? LOCK_BINARY : LOCK_MISSING];
-  let parsed: unknown;
+  let parsed: Json;
 
   try {
-    parsed = Bun.JSONC.parse(fs.readFileSync(lock, "utf8"));
+    parsed = z.json().parse(Bun.JSONC.parse(fs.readFileSync(lock, "utf8")));
   } catch (error) {
     return [lockUnparsable(String(error))];
   }
@@ -152,12 +154,13 @@ function lockLines(root: string, catalogs: Catalogs, declared: Set<string>): str
 /** Every locked copy of every name: the top-level one has no parent. */
 type Copies = Map<string, { version: string; parent: string | undefined }[]>;
 
-function lockCopies(lock: unknown): Copies {
+function lockCopies(lock: Json): Copies {
   const copies: Copies = new Map();
   const table = isRecord(lock) && isRecord(lock.packages) ? lock.packages : {};
 
   for (const [key, value] of Object.entries(table)) {
-    const spec = Array.isArray(value) ? String(value[0]) : "";
+    const [head] = Array.isArray(value) ? value : [];
+    const spec = typeof head === "string" ? head : "";
     const at = spec.lastIndexOf("@");
 
     if (at <= 0) continue;

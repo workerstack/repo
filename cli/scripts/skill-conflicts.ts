@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
 import { NOT_FOUND } from "./emit.constants.ts";
 
 /** The workspace skills dir codex and antigravity read; sync fills it with links. */
@@ -25,7 +24,7 @@ export function listSkillDirNames(skillsRoot: string): string[] {
   try {
     entries = fs.readdirSync(skillsRoot, { withFileTypes: true });
   } catch (err) {
-    if (isRecord(err) && err.code === NOT_FOUND) return [];
+    if (err instanceof Error && "code" in err && err.code === NOT_FOUND) return [];
     throw err;
   }
 

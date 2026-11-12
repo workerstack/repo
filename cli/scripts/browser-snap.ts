@@ -1,5 +1,5 @@
 /** Reading a page: its markdown and numbered refs, what that read shows, and which pages Lightpanda cannot read. */
-import { isRecord } from "../json.ts";
+import { isRecord, type Json } from "../json.ts";
 import { withCdp } from "./browser-cdp.ts";
 import { asRec, textOf } from "./browser-session.ts";
 import {
@@ -58,11 +58,11 @@ export function isBlockedSnap(markdown: unknown, lines: unknown): boolean {
   return refs === 0 && body.length < THIN_BODY;
 }
 
-function axText(v: unknown): string {
+function axText(v: Json | undefined): string {
   return textOf(isRecord(v) ? v.value : v);
 }
 
-function formatRefs(nodes: unknown[]): {
+function formatRefs(nodes: Json[]): {
   lastRefs: Record<string, RefEntry>;
   lines: string[];
 } {

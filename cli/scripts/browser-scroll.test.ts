@@ -2,6 +2,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { cleanBrowser, exec, failure, live, methods, NO_SESSION, nth, tmp } from "./__fixtures__/browser-kit.ts";
 import type { Calls } from "./__fixtures__/browser-kit.ts";
+import { jsonText } from "./json-text.ts";
 
 afterEach(cleanBrowser);
 
@@ -62,7 +63,7 @@ it("scroll brings a remembered ref into view", async () => {
   expect(methods(t.calls)).toStrictEqual(["DOM.resolveNode", "Runtime.callFunctionOn"]);
   expect(nth(t.calls, 0).params).toStrictEqual({ backendNodeId: 11 });
   expect(nth(t.calls, 1).params).toMatchObject({ objectId: "oid-11" });
-  expect(String(nth(t.calls, 1).params.functionDeclaration)).toContain("scrollIntoView");
+  expect(jsonText(nth(t.calls, 1).params.functionDeclaration)).toContain("scrollIntoView");
 });
 
 it("scroll calls a ref stale when it no longer resolves, however the engine says so", async () => {
@@ -82,4 +83,11 @@ it("scroll reports another engine error as it is, with one trailing newline", as
   expect(await exec(t.cwd, ["scroll"])).toStrictEqual(failure("boom\n"));
   const nl = await live({}, { replies: { "Runtime.evaluate": "two\nlines\n" } });
   expect(await exec(nl.cwd, ["scroll"])).toStrictEqual(failure("two\nlines\n"));
+});
+
+it("scroll sends a ref with no backend id as a bare resolve, which reads as stale", async () => {
+  const t = await live({ lastRefs: { "1": { name: "Home", role: "link" } } });
+  const r = await exec(t.cwd, ["scroll", "1"]);
+  expect(r.stderr).toBe("stale ref: 1\n");
+  expect(nth(t.calls, 0)).toStrictEqual({ method: "DOM.resolveNode", params: {} });
 });

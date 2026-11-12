@@ -1,5 +1,6 @@
-import { isRecord } from "../json.ts";
 /** What the gate knows of each harness: its wire shape, its tools, and how it takes a deny or a rewrite. */
+import { z } from "zod";
+
 import type { HookInput } from "./hook-input.ts";
 
 /** Which wire shape a hook payload came in; Grok sends Claude's. */
@@ -118,7 +119,7 @@ export function harnessOf(data: HookInput): Harness {
   // Cursor also sends model and session_id, so it is told apart by its version before Codex's check.
   if (typeof data.cursor_version === "string") return "cursor";
 
-  if (isRecord(data.toolCall)) return "antigravity";
+  if (data.toolCall !== undefined) return "antigravity";
 
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
   if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
@@ -131,9 +132,12 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   const harness = harnessOf(data);
   const call = harness === "antigravity" ? data.toolCall : undefined;
   const name = call === undefined ? [data.toolName, data.tool_name].find(Boolean) : call.name;
-  const args: unknown = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
+  const args = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
 
-  return { args: isRecord(args) ? args : null, harness, key: eventKey(name) };
+  // A caller may hand a payload built outside parseHookInput, so an input that is no object reads as no args.
+  const record = z.record(z.string(), z.unknown()).nullable().catch(null).parse(args);
+
+  return { args: record, harness, key: eventKey(name) };
 }
 
 /** Top-level "block" is the only legacy deny Claude/Codex validate; allow = empty stdout. */

@@ -33,7 +33,7 @@ function prose(text: string): string {
 }
 
 function buildTranscriptRecordSchema() {
-  const field = z.unknown().optional();
+  const field = z.json().optional();
 
   return z.looseObject({
     isSidechain: field,
@@ -50,7 +50,7 @@ type TranscriptRecord = z.output<typeof transcriptRecordSchema>;
 
 function replyText(record: TranscriptRecord): string {
   if (record.type !== ASSISTANT || record.isSidechain === true) return "";
-  const content: unknown = record.message?.content;
+  const content = record.message?.content;
 
   if (!Array.isArray(content)) return "";
 
@@ -70,8 +70,9 @@ function parseRecord(line: string): TranscriptRecord | undefined {
 /** The text of a main-thread reply written at or after `sinceMs`; empty for any other line. */
 function replyOf(line: string, sinceMs: number): string {
   const record = parseRecord(line);
+  const timestamp = record?.timestamp;
 
-  if (record === undefined || !(Date.parse(String(record.timestamp)) >= sinceMs)) return "";
+  if (record === undefined || typeof timestamp !== "string" || !(Date.parse(timestamp) >= sinceMs)) return "";
 
   return replyText(record);
 }

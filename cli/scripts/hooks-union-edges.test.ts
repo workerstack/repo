@@ -2,9 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
-import { isRecord } from "../json.ts";
+import { isRecord, type Json, readJson } from "../json.ts";
 import { hookCommand } from "./hook-command.ts";
 import { BEHIND } from "./hooks-union-commands.ts";
 import { AUTORUN_NEEDLES, OWNED_HOOKS } from "./hooks-union.constants.ts";
@@ -18,13 +19,13 @@ function put(ws: string, rel: string, body: unknown) {
   fs.writeFileSync(abs, typeof body === "string" ? body : JSON.stringify(body));
 }
 
-function get(ws: string, rel: string): unknown {
-  return JSON.parse(fs.readFileSync(path.join(ws, rel), "utf8"));
+function get(ws: string, rel: string): Json {
+  return readJson(z.json(), fs.readFileSync(path.join(ws, rel), "utf8"));
 }
 
 /** The list at `keys` below the JSON file, or [] when any step is not there. */
-function listAt(ws: string, rel: string, ...keys: string[]): unknown[] {
-  let cur = get(ws, rel);
+function listAt(ws: string, rel: string, ...keys: string[]): Json[] {
+  let cur: Json | undefined = get(ws, rel);
 
   for (const k of keys) cur = isRecord(cur) ? cur[k] : undefined;
 

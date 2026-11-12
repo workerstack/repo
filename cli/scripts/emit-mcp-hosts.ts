@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { isRecord, type JsonObject } from "../json.ts";
 import { GROK_REL, MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
+import { isSettingsTable, type SettingsTable, type SettingsValue } from "./settings-table.ts";
 
 /** The parts of a validated policy the emitters read; `servers` are those of the user's `.mcp.json`. */
 export type Policy = {
@@ -10,6 +11,9 @@ export type Policy = {
   servers: JsonObject;
   denyPlugins: boolean;
 };
+
+/** The codex config the policy wants: its `[agents]` table always sets `max_depth`. */
+export type CodexConfig = SettingsTable & { agents: SettingsTable & { max_depth: SettingsValue } };
 
 export function stringList(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
@@ -27,7 +31,11 @@ function isMcpToolRule(s: string): boolean {
 function pickServers(servers: JsonObject, allow: string[]): JsonObject {
   const out: JsonObject = {};
 
-  for (const name of allow) if (Object.hasOwn(servers, name)) out[name] = structuredClone(servers[name]);
+  for (const name of allow) {
+    const spec = servers[name];
+
+    if (Object.hasOwn(servers, name) && spec !== undefined) out[name] = structuredClone(spec);
+  }
 
   return out;
 }
@@ -39,8 +47,8 @@ export function isHomeGrokConfig(workspaceRoot: string | undefined, home: string
 }
 
 /** Drops the legacy `deny_default`; denied plugins get an empty `enabled`, and an empty table goes. */
-function setPlugins(obj: JsonObject, { denyPlugins }: Pick<Policy, "denyPlugins">): void {
-  const plugins = isRecord(obj.plugins) ? { ...obj.plugins } : {};
+function setPlugins(obj: SettingsTable, { denyPlugins }: Pick<Policy, "denyPlugins">): void {
+  const plugins: SettingsTable = isSettingsTable(obj.plugins) ? { ...obj.plugins } : {};
   delete plugins.deny_default;
 
   if (denyPlugins) {
@@ -54,8 +62,8 @@ function setPlugins(obj: JsonObject, { denyPlugins }: Pick<Policy, "denyPlugins"
 }
 
 /** Grok's permission table: every MCP tool denied, the allowed servers' tools allowed first, other rules kept. */
-function grokPermission(obj: JsonObject, allow: string[]): JsonObject {
-  const perm = isRecord(obj.permission) ? { ...obj.permission } : {};
+function grokPermission(obj: SettingsTable, allow: string[]): SettingsTable {
+  const perm: SettingsTable = isSettingsTable(obj.permission) ? { ...obj.permission } : {};
   perm.deny = [...stringList(perm.deny).filter((s) => s !== MCP_TOOL), MCP_TOOL];
   const nextAllow = [...allow.map(mcpToolAllow), ...stringList(perm.allow).filter((s) => !isMcpToolRule(s))];
 
@@ -66,8 +74,8 @@ function grokPermission(obj: JsonObject, allow: string[]): JsonObject {
 }
 
 /** Drops the legacy nested `mcp.servers`, and the `mcp` table when nothing else is in it. */
-function dropNestedServers(obj: JsonObject): void {
-  if (!isRecord(obj.mcp)) return;
+function dropNestedServers(obj: SettingsTable): void {
+  if (!isSettingsTable(obj.mcp)) return;
   const mcp = { ...obj.mcp };
   delete mcp.servers;
 
@@ -75,18 +83,18 @@ function dropNestedServers(obj: JsonObject): void {
   else delete obj.mcp;
 }
 
-function leftoverOf(native: unknown, nested: unknown): JsonObject {
-  if (isRecord(native)) return native;
+function leftoverOf(native: SettingsValue | undefined, nested: SettingsValue | undefined): SettingsTable {
+  if (isSettingsTable(native)) return native;
 
-  return isRecord(nested) ? nested : {};
+  return isSettingsTable(nested) ? nested : {};
 }
 
 /** Every server on disk, disabled unless allowed, then the allowed servers of the policy over them. */
-function grokServers(disk: JsonObject, policy: Policy): JsonObject {
+function grokServers(disk: SettingsTable, policy: Policy): SettingsTable {
   const allowSet = new Set(policy.allow);
-  const native = isRecord(disk.mcp_servers) ? disk.mcp_servers : {};
-  const nested = isRecord(disk.mcp) && isRecord(disk.mcp.servers) ? disk.mcp.servers : {};
-  const servers: JsonObject = {};
+  const native = isSettingsTable(disk.mcp_servers) ? disk.mcp_servers : {};
+  const nested = isSettingsTable(disk.mcp) && isSettingsTable(disk.mcp.servers) ? disk.mcp.servers : {};
+  const servers: SettingsTable = {};
 
   for (const name of new Set([...Object.keys(native), ...Object.keys(nested)])) {
     const prev = leftoverOf(native[name], nested[name]);
@@ -100,10 +108,10 @@ function grokServers(disk: JsonObject, policy: Policy): JsonObject {
 }
 
 export function desiredGrok(
-  disk: JsonObject,
+  disk: SettingsTable,
   policy: Policy,
   { keepHomeTables }: { keepHomeTables: boolean },
-): JsonObject {
+): SettingsTable {
   const obj = { ...disk };
 
   if (!keepHomeTables) delete obj.features;
@@ -133,10 +141,10 @@ export function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObj
   return obj;
 }
 
-export function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { agents: JsonObject } {
-  const obj: JsonObject = { ...disk };
-  const agents: JsonObject = isRecord(obj.agents) ? { ...obj.agents } : {};
-  agents.max_depth ??= 1;
+export function desiredCodex(disk: SettingsTable, policy: Policy): CodexConfig {
+  const obj: SettingsTable = { ...disk };
+  const prev: SettingsTable = isSettingsTable(obj.agents) ? obj.agents : {};
+  const agents = { ...prev, max_depth: prev.max_depth ?? 1 };
   obj.agents = agents;
 
   if (policy.allow.length > 0) obj.mcp_servers = pickServers(policy.servers, policy.allow);

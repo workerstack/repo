@@ -1,7 +1,7 @@
 /** The union's write for each host's hook file. */
 import path from "node:path";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { isRecord, type Json, type JsonObject } from "../json.ts";
 import { consumerNamed, desiredPost, desiredPre, loadConsumerDeny, sessionHooks } from "./hooks-union-desired.ts";
 import { flatEntries, flatSession, loadJson, saveJson, uniq, upsertGroups } from "./hooks-union-merge.ts";
 import {
@@ -17,9 +17,9 @@ import type { Roots } from "./hooks-union.types.ts";
 /** Claude's permissions with the live deny kept, minus write-path rules, plus the consumer's deny. */
 function claudePermissions(live: JsonObject, roots: Roots): JsonObject {
   const permissions = isRecord(live.permissions) ? { ...live.permissions } : {};
-  const liveDeny: unknown[] = Array.isArray(permissions.deny) ? permissions.deny : [];
+  const liveDeny: Json[] = Array.isArray(permissions.deny) ? permissions.deny : [];
   permissions.deny = uniq([
-    ...liveDeny.filter((x: unknown) => typeof x !== "string" || !x.startsWith("Write(")),
+    ...liveDeny.filter((x) => typeof x !== "string" || !x.startsWith("Write(")),
     ...loadConsumerDeny(roots),
   ]);
 

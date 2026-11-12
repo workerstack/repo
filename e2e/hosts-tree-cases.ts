@@ -97,7 +97,8 @@ function worktreeSessionCase(get: GetSandbox, tree: Tree) {
     });
 
     expectClean(sb, r);
-    const context = String(output(r).additionalContext);
+    const { additionalContext } = output(r);
+    const context = typeof additionalContext === "string" ? additionalContext : "";
     expect(
       context.startsWith(
         // The notice names the bin as the platform spells a path; a rewritten command uses forward slashes.
@@ -131,7 +132,8 @@ function worktreeGateCase(get: GetSandbox, tree: Tree) {
 
     expectClean(sb, r);
     const updated = output(r).updatedInput;
-    const rewritten = String(isRecord(updated) ? updated.command : "");
+    const written = isRecord(updated) ? updated.command : "";
+    const rewritten = typeof written === "string" ? written : "";
     expect(rewritten.startsWith(`${installedBin(main)} job --job exec --query `), rewritten).toBe(true);
     expect(rewritten).toContain(`${wt}/src/index.ts`);
     expect(rewritten).not.toContain(`${main}/src/index.ts`);

@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, type Json } from "../json.ts";
 import {
   AUTH_RE,
   DEFAULT_GGML,
@@ -25,6 +27,11 @@ import {
 import type { FetchFn, FetchResult, ListenCfg, SpawnSyncFn, Stt, SttOpts, WhichFn } from "./listen.types.ts";
 import { streamText } from "./stream-text.ts";
 import { str } from "./voice-args.ts";
+
+/** A reply body as JSON; one that is no JSON value reads as null. */
+function replyJson(value: unknown): Json {
+  return z.json().catch(null).parse(value);
+}
 
 export function formatHttpError(status: number | string, body: string | undefined): string {
   const n = Number(status);
@@ -201,7 +208,8 @@ async function transcribeOpenai(file: string, cfg: ListenCfg, fetchFn: FetchFn):
   });
 
   if (res.ok !== true) throw new Error(formatHttpError(statusOf(res), await bodyText(res)));
-  const j: unknown = typeof res.json === "function" ? await res.json() : {};
+  // A reply that is no JSON value reads as null, so it yields no text.
+  const j = typeof res.json === "function" ? replyJson(await res.json()) : {};
 
   return str(isRecord(j) ? j.text : undefined, typeof j === "string" ? j : "");
 }

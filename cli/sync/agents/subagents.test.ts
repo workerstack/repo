@@ -6,6 +6,7 @@ import { expect, it } from "vitest";
 
 import { fixtureDirs, readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS } from "../../config.ts";
+import type { JsonObject } from "../../json.ts";
 import { byCodeUnit } from "../by-code-unit.ts";
 import { stamp } from "../header.ts";
 import { loadSources } from "./load-sources.ts";
@@ -69,7 +70,7 @@ it("emits only the enabled hosts' files", () => {
 });
 
 /** A consumer subagent at `rel` under `.repo/subagents/`. */
-function agentDoc(rel: string, data: Record<string, unknown>, body = ""): Doc {
+function agentDoc(rel: string, data: JsonObject, body = ""): Doc {
   return { body, data, file: rel, origin: "repo", rel: `.repo/subagents/${rel}`, scope: "" };
 }
 
@@ -106,6 +107,18 @@ it("covers the edge shapes: nested paths, default descriptions, codex quirks", (
   );
   expect(out.get(".agents/agents/single.md")).toBe(
     "---\nname: single\ndescription: d\nmodel: b\nx: '1'\n---\none line\n",
+  );
+});
+
+it("writes a nested map's strings on one line for the flat hosts", () => {
+  const sources = {
+    hooks: { rel: "agents/hooks.jsonc", value: {} },
+    rules: [],
+    subagents: [agentDoc("nest.md", { cursor: { opts: { note: "a\n\nb" } }, name: "nest" }, "body")],
+  };
+
+  expect(renderSubagents(sources, ["cursor"]).get(".cursor/agents/nest.md")).toBe(
+    "---\nname: nest\nopts:\n  note: a b\n---\nbody\n",
   );
 });
 

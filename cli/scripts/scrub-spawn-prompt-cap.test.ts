@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { here, parseOut, plansRoot, root } from "./__fixtures__/scrub-kit.ts";
+import { jsonText } from "./json-text.ts";
 import { main as orchMain } from "./orchestrate-parent.ts";
 import {
   MAX_PROMPT_CHARS,
@@ -47,7 +48,7 @@ it("denies over-cap prompts after scrub without slicing or …[truncated]", () =
   });
 
   expect(rewritten?.prompt).not.toContain(TRUNCATE_SUFFIX);
-  expect(String(rewritten?.prompt).length).toBeGreaterThan(MAX_PROMPT_CHARS);
+  expect(jsonText(rewritten?.prompt).length).toBeGreaterThan(MAX_PROMPT_CHARS);
   const ws = root;
 
   const denied = processHookPayload({

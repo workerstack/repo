@@ -45,6 +45,7 @@ import {
 import type { BrowserResult, Capture, Ctx, RunOpts, Session, Verb } from "./browser.types.ts";
 import { globalsRow } from "./doctor-rows.ts";
 import { runDoctor } from "./doctor.ts";
+import { jsonText } from "./json-text.ts";
 
 async function stop(_argv: string[], ctx: Ctx): Promise<BrowserResult> {
   killPid(readSession(ctx.cwd)?.pid, ctx.platform);
@@ -146,7 +147,7 @@ function capture(spec: Capture): Verb {
     fs.mkdirSync(dir, { recursive: true });
     await withCdp(session, async (cdp) => {
       const r = await cdp.send(spec.method, spec.params);
-      fs.writeFileSync(path.join(dir, spec.file), Buffer.from(String(r.data), "base64"));
+      fs.writeFileSync(path.join(dir, spec.file), Buffer.from(jsonText(r.data), "base64"));
     });
     writeSession(ctx.cwd, session);
 

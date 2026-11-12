@@ -15,6 +15,7 @@ import {
   which,
   cleanupTmp,
 } from "./__fixtures__/listen-env.ts";
+import { jsonText } from "./json-text.ts";
 import { NEED_FFMPEG } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);
@@ -30,7 +31,7 @@ describe("start", () => {
     const env = { HOME: "/h", OPENAI_API_KEY: "k" };
     const r = await run(["start"], { env, nodeBin: "/custom/bun", spawnFn: rec.spawnFn });
     const call = rec.spawned[0];
-    const wav = String(readSession(r.cwd).wav);
+    const wav = jsonText(readSession(r.cwd).wav);
     expect(r.code).toBe(0);
     expect(call?.bin).toBe("/custom/bun");
     expect(call?.args).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd", r.cwd]);
@@ -105,7 +106,7 @@ fs.renameSync(${JSON.stringify(`${argsFile}.tmp`)}, ${JSON.stringify(argsFile)})
 
     const stub = plantProgram(dir, "stub-bun", js);
     const r = await run(["start"], { nodeBin: stub });
-    const wav = String(readSession(r.cwd).wav);
+    const wav = jsonText(readSession(r.cwd).wav);
     await vi.waitFor(() => expect(fs.existsSync(argsFile)).toBe(true), { timeout: 5000 });
     const got = fs.readFileSync(argsFile, "utf8").split("\n").slice(0, 6);
     expect(r.code).toBe(0);

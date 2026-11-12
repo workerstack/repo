@@ -58,6 +58,26 @@ describe("replyVoiceStats", () => {
   });
 });
 
+describe("replyVoiceStats, sparse records", () => {
+  it("reads records that leave out isSidechain, message or its content", () => {
+    const at = "2026-11-01T10:00:00Z";
+
+    const root = transcriptRoot([
+      JSON.stringify({ message: { content: [{ text: "a → b", type: "text" }] }, timestamp: at, type: "assistant" }),
+      JSON.stringify({ message: {}, timestamp: at, type: "assistant" }),
+      JSON.stringify({ timestamp: at, type: "assistant" }),
+      JSON.stringify({}),
+    ]);
+
+    expect(replyVoiceStats({ root, since: "2026-10-15" })).toStrictEqual({
+      arrows: 1,
+      coldReplies: 1,
+      keyValues: 0,
+      replies: 1,
+    });
+  });
+});
+
 describe("run", () => {
   it("prints one JSON line with the root, the since flag and the stats, and exits 0", () => {
     const root = transcriptRoot([reply("a -> b k=v", "2026-11-01T10:00:00Z"), reply("plain", "2026-11-01T10:01:00Z")]);

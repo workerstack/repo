@@ -204,7 +204,7 @@ function publishEntry(graph: Graph, file: string, entry: string): void {
  */
 export function publicSurface(root: string): Surface {
   const surface: Surface = { entries: new Map(), names: new Map(), unknown: [] };
-  const schema = z.looseObject({ exports: z.unknown().optional(), private: z.unknown().optional() });
+  const schema = z.looseObject({ exports: z.json().optional(), private: z.json().optional() });
   const manifest = readPackageFile(path.join(root, MANIFEST), schema);
 
   if (manifest === null || manifest.private === true) return surface;

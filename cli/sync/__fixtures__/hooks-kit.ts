@@ -3,9 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "vitest";
+import { z } from "zod";
 
 import type { Host } from "../../config.ts";
-import { isRecord } from "../../json.ts";
+import { isRecord, type Json, type JsonObject, readJson } from "../../json.ts";
 import { emitMcpPolicy } from "../../scripts/emit-mcp-policy.ts";
 import { applyUnion } from "../../scripts/hooks-union.ts";
 import { renderHooks } from "../agents/render-hooks.ts";
@@ -33,33 +34,32 @@ export const BASE_REL = "agents/settings/claude.json";
 export type Step = string | number;
 
 /** The value at `key` in `node`: an index into an array, a key of an object, else undefined. */
-function step(node: unknown, key: Step): unknown {
+function step(node: Json | undefined, key: Step): Json | undefined {
   if (Array.isArray(node)) return node[Number(key)];
 
   return isRecord(node) ? node[String(key)] : undefined;
 }
 
 /** The value at `keys` under `value`; undefined once a step reaches something that is not an object. */
-export function at(value: unknown, ...keys: readonly Step[]): unknown {
+export function at(value: Json | undefined, ...keys: readonly Step[]): Json | undefined {
   let node = value;
   for (const key of keys) node = step(node, key);
   return node;
 }
 
 /** The keys of the object at `keys` under `value`, in order; none when it is not an object. */
-export function keysAt(value: unknown, ...keys: readonly Step[]): string[] {
+export function keysAt(value: Json | undefined, ...keys: readonly Step[]): string[] {
   const node = at(value, ...keys);
   return typeof node === "object" && node !== null ? Object.keys(node) : [];
 }
 
 /** The parsed JSON a render wrote at `rel`. */
-export function parsed(files: ReadonlyMap<string, string>, rel: string): unknown {
-  const value: unknown = JSON.parse(files.get(rel) ?? "");
-  return value;
+export function parsed(files: ReadonlyMap<string, string>, rel: string): Json {
+  return readJson(z.json(), files.get(rel) ?? "");
 }
 
 /** Sources holding only `value` as the consumer's hooks.jsonc. */
-export function hooksOf(value: Record<string, unknown>): Sources {
+export function hooksOf(value: JsonObject): Sources {
   return { hooks: { rel: ".repo/hooks.jsonc", value }, rules: [], subagents: [] };
 }
 
@@ -79,14 +79,14 @@ export function afterStage(files: ReadonlyMap<string, string>, { stock, consumer
 }
 
 /** One handler definition rendered for one host: the host's file's events object (`rulesync` for antigravity). */
-export function renderOne(host: Host, event: string, def: Record<string, unknown>): unknown {
+export function renderOne(host: Host, event: string, def: JsonObject): Json | undefined {
   const files = renderHooks(hooksOf({ hooks: { [event]: [def] } }), [host], "{}");
   const file = parsed(files, [...files.keys()][0] ?? "");
   return at(file, host === "antigravity" ? "rulesync" : "hooks");
 }
 
 /** Every passthrough field any host knows, plus one none does. */
-export const EVERY_FIELD: Readonly<Record<string, unknown>> = {
+export const EVERY_FIELD: Readonly<JsonObject> = {
   additionalContextLimit: 100,
   args: ["x"],
   async: false,

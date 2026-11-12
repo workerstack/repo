@@ -6,7 +6,7 @@
 import { stringify } from "smol-toml";
 
 import type { Host } from "../../config.ts";
-import { isRecord } from "../../json.ts";
+import { isRecord, type Json, type JsonObject } from "../../json.ts";
 import { type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
 import { AFTER, BEFORE, MD_SUFFIX } from "./sources.constants.ts";
 import type { Doc, Sources } from "./sources.types.ts";
@@ -80,7 +80,10 @@ type Agent = { doc: Doc; name: string };
 
 type Rendered = [string, string];
 
-function own(data: Doc["data"], key: string): Record<string, unknown> {
+/** Frontmatter fields on their way out; a field read from a source that lacks it is undefined until dropped. */
+type Fields = Record<string, Json | undefined>;
+
+function own(data: Doc["data"], key: string): JsonObject {
   return without(block(data[key]), "name", "description");
 }
 
@@ -158,22 +161,26 @@ function targets(doc: Doc, target: string): boolean {
   return names.includes("*") || names.includes(target);
 }
 
-function block(value: unknown): Record<string, unknown> {
+function block(value: Json | undefined): JsonObject {
   return isRecord(value) ? value : {};
 }
 
 /** A run of newlines, which the non-claude dumper wrote as one space. */
 const NEWLINE_RUNS = /\n+/g;
 
-function without(map: Record<string, unknown>, ...keys: string[]): Record<string, unknown> {
+function without<T>(map: Record<string, T>, ...keys: string[]): Record<string, T> {
   return Object.fromEntries(Object.entries(map).filter(([key]) => !keys.includes(key)));
 }
 
 /** `known` keys first in that order, then the rest in source order; nullish values dropped. */
-function ordered(map: Record<string, unknown>, known: readonly string[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+function ordered(map: Fields, known: readonly string[]): JsonObject {
+  const out: JsonObject = {};
 
-  for (const key of known) if (map[key] !== undefined && map[key] !== null) out[key] = map[key];
+  for (const key of known) {
+    const value = map[key];
+
+    if (value !== undefined && value !== null) out[key] = value;
+  }
 
   for (const [key, value] of Object.entries(map))
     if (!(key in out) && value !== undefined && value !== null) out[key] = value;
@@ -182,11 +189,13 @@ function ordered(map: Record<string, unknown>, known: readonly string[]): Record
 }
 
 /** Every string on one line, as the non-claude hosts' dumper wrote them: newline runs become a space, trimmed. */
-function flatten<T>(value: T): T {
-  return flattened(value) /* flattening keeps the shape: strings stay strings, lists lists, maps maps */ as T;
+function flatten(fields: Fields): Fields {
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [key, value === undefined ? value : flattened(value)]),
+  );
 }
 
-function flattened(value: unknown): unknown {
+function flattened(value: Json): Json {
   if (typeof value === "string") return value.replaceAll(NEWLINE_RUNS, " ").trim();
 
   if (Array.isArray(value)) return value.map(flattened);

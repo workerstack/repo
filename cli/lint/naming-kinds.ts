@@ -118,7 +118,7 @@ function isJsx(value: unknown): boolean {
 /** Whether a `return` under `value`, outside any nested function, returns JSX. */
 function returnsJsxUnder(value: unknown): boolean {
   return nodesOf(value).some((node) => {
-    if (FUNCTIONS.includes(String(node["type"]))) return false;
+    if (FUNCTIONS.includes(String(get(node, "type")))) return false;
 
     if (node["type"] === SYNTAX.return) return isJsx(node["argument"]);
 

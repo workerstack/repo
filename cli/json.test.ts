@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { isRecord, readJson, tryJson } from "./json.ts";
+import { isRecord, type Json, readJson, tryJson } from "./json.ts";
 
 const named = z.object({ name: z.string() });
 
 describe("isRecord", () => {
-  it.each([[{}], [{ a: 1 }], [JSON.parse('{"name":"a"}')]])("accepts the object %j", (value) => {
+  it.each<[Json]>([[{}], [{ a: 1 }], [{ nested: { list: [1, "a", null] } }]])("accepts the object %j", (value) => {
     expect(isRecord(value)).toBe(true);
   });
 
-  it.each([[null], [undefined], [[]], [[1]], [new Date(0)], ["{}"], [7]])("rejects %j", (value) => {
+  it.each<[Json | undefined]>([[null], [undefined], [[]], [[1]], ["{}"], [7]])("rejects %j", (value) => {
     expect(isRecord(value)).toBe(false);
   });
 });

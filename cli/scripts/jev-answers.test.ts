@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { z } from "zod";
 
-import { isRecord } from "../json.ts";
+import { isRecord, readJson } from "../json.ts";
 import { KEY, NOW, QUESTIONS, answerBody, go, plantDir, reply, scripted } from "./__fixtures__/jev-kit.ts";
 import { createJevRunner } from "./create-jev-runner.ts";
 import { MAX_QUESTIONS, MAX_STATE_CHARS, MODEL } from "./jev.constants.ts";
@@ -47,7 +48,7 @@ it("what is sent: sends non-JSON state as text and JSON-looking state as data", 
   const sent: unknown[] = [];
 
   function fetchImpl(_url: string, init: { body: string }) {
-    const body: unknown = JSON.parse(init.body);
+    const body = readJson(z.json(), init.body);
     sent.push(isRecord(body) ? body.state : undefined);
 
     return Promise.resolve(reply(200, answerBody()));

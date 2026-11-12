@@ -217,7 +217,7 @@ export function loginArgs(): string[] {
 function parseReply(text: string): Rec {
   if (text === "") return {};
 
-  return tryJson(z.record(z.string(), z.unknown()).catch({}), text) ?? { raw: text.slice(0, RAW_REPLY_CHARS) };
+  return tryJson(z.record(z.string(), z.json()).catch({}), text) ?? { raw: text.slice(0, RAW_REPLY_CHARS) };
 }
 
 /** A Google API call with the account's bearer token; a string body is sent as JSON. */

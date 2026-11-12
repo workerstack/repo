@@ -6,6 +6,7 @@ import fs from "node:fs";
 
 import { parse } from "jsonc-parser";
 import ts from "typescript";
+import { z } from "zod";
 
 import { dependencyNames } from "./dependency-names.ts";
 import { isRecord, type JsonObject } from "./json.ts";
@@ -16,15 +17,17 @@ import { installedManifest } from "./type-surface.constants.ts";
 /** A JSON or JSONC file's top-level fields; none for a file that is missing, unreadable or holds no object. */
 export function fieldsOf(file: string | undefined): JsonObject {
   if (file === undefined) return {};
-  let parsed: unknown;
+  let text: unknown;
 
   try {
-    parsed = parse(fs.readFileSync(file, "utf8"));
+    text = parse(fs.readFileSync(file, "utf8"));
   } catch {
     return {};
   }
 
-  return isRecord(parsed) ? parsed : {};
+  const parsed = z.json().safeParse(text);
+
+  return parsed.success && isRecord(parsed.data) ? parsed.data : {};
 }
 
 /** Each installed package with the deps whose own manifest lists it in `dependencies`. */

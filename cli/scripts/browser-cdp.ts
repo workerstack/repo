@@ -24,7 +24,7 @@ function opened(ws: WebSocket, timeoutMs: number): Promise<void> {
 }
 
 function parse(data: unknown): Rec | null {
-  return tryJson(z.record(z.string(), z.unknown()), String(data)) ?? null;
+  return tryJson(z.record(z.string(), z.json()), String(data)) ?? null;
 }
 
 /** Settles the request a reply answers; a reply that is no JSON or names no pending id is dropped. */

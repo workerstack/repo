@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** zod, @types/bun, @total-typescript/ts-reset, oxlint-tailwindcss and @typescript-eslint/utils are now peers, so your install shares one copy with this package; bun and npm install them for you, and bun warns about a peer whose range your own pin misses. A public package of yours without "bin" now fails `bun repo check` for each "dependencies" entry, and one with "bin" for each entry its exported types use; move each named entry as the line says.
+- `isRecord` takes a parsed `Json` and `JsonObject` values are `Json`; parse unknown input with `readJson(z.json(), …)` first.
 - The vitest preset no longer inlines zod in the runner.
 - The `commit-push`, `commit-push-deploy` and `commit-push-release` skills now chain to `/commit` and `bun repo push` instead of repeating their steps.
 - **Breaking:** `commit-msg` now refuses `Key: value` trailer lines (`Co-Authored-By:`, `Signed-off-by:`, `Why:`), attribution (`🤖`, `noreply@anthropic.com`, a line starting `Generated with`), `Breaking:` lines and free bodies. Allowed beside the subject: a `BREAKING CHANGE:` footer, git's `This reverts commit <sha>.` line, and one why-line when the commit is over the size limit. A plan's `commit:` line takes `!` before the colon and no longer takes `style`. Upgrade: rewrite habits and templates that add trailers or bodies (editor templates, agent skills, scripts); write a break as a `BREAKING CHANGE:` footer.

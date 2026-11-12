@@ -1,5 +1,5 @@
-import type { JsonObject } from "../../json.ts";
 /** A matcher-group host's hooks from the merged hooks.jsonc. `D:<n>` cites rulesync 43.7.0's bundled import code. */
+import type { Json, JsonObject } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { AGENT, COMMAND, HTTP, MCP_TOOL, MODEL, PROMPT } from "./hooks.constants.ts";
 import type { Def, Group, Target } from "./hooks.types.ts";
@@ -46,6 +46,11 @@ export function effectiveEvents(config: JsonObject, overrideKey: string, names: 
   return Object.entries({ ...Object.fromEntries(shared), ...block?.hooks });
 }
 
+/** Whether a field holds a value: not missing and not null. */
+function isSet(entry: [string, Json | undefined]): entry is [string, Json] {
+  return entry[1] !== undefined && entry[1] !== null;
+}
+
 /**
  * Passthrough fields, `type`, `command`, `timeout`, `prompt`, the type's payload, then codex's `name`/`description`
  * (D:53698-53735, D:53598-53612).
@@ -55,7 +60,7 @@ function hookObject(def: Def, event: string, target: Readonly<Target>): JsonObje
   const source = typeof def["command"] === "string" ? expandHookCommand(def["command"]) : def["command"];
   const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
 
-  const fields: JsonObject = {
+  const fields: Record<string, Json | undefined> = {
     ...passthroughFields({ def, event, target, type }),
     command,
     prompt: def["prompt"],
@@ -67,7 +72,7 @@ function hookObject(def: Def, event: string, target: Readonly<Target>): JsonObje
 
   for (const key of [...payload, ...(target.named ? NAMED : [])]) fields[key] = def[key];
 
-  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined && value !== null));
+  return Object.fromEntries(Object.entries(fields).filter(isSet));
 }
 
 /** The definitions of one event grouped by (translated) matcher, in first-appearance order. */

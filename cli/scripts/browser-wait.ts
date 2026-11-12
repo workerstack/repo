@@ -1,7 +1,9 @@
 /** Waiting on an engine: a free port to start it on, and its `/json/version` once it answers. */
 import net from "node:net";
 
-import { asRec } from "./browser-session.ts";
+import { z } from "zod";
+
+import { asRec, boundPort } from "./browser-session.ts";
 import { ENGINE_NOT_READY, HOST, POLL_MS, VERSION_PATH } from "./browser.constants.ts";
 import type { Rec } from "./browser.types.ts";
 
@@ -14,7 +16,7 @@ export function freePort(): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const s = net.createServer();
     s.listen(0, HOST, () => {
-      const p = Number(asRec(s.address()).port);
+      const p = boundPort(s.address());
       s.close(() => resolve(p));
     });
     s.on("error", reject);
@@ -27,7 +29,7 @@ async function version(port: number): Promise<Rec | null> {
     const r = await fetch(`http://${HOST}:${port}${VERSION_PATH}`);
 
     if (!r.ok) return null;
-    const v: unknown = await r.json();
+    const v = z.json().parse(await r.json());
 
     return asRec(v);
   } catch {

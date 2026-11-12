@@ -1,5 +1,7 @@
 /** Calls the ElevenLabs and OpenAI APIs: the account check, the voice list, and the raw request under both. */
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, type Json } from "../json.ts";
 import { resolveProvider } from "./speak-config.ts";
 import {
   ELEVEN_API,
@@ -13,6 +15,11 @@ import {
   UNAUTHORIZED,
 } from "./speak.constants.ts";
 import type { ApiOpts, FetchFn, FetchResult, ProviderOpts, SpeakCfg } from "./speak.types.ts";
+
+/** A reply body as JSON; one that is no JSON value reads as null. */
+function replyJson(value: unknown): Json {
+  return z.json().catch(null).parse(value);
+}
 
 const MISSING_PERMISSIONS = /missing_permissions/i;
 const MISSING_PERMISSION = /missing permission/i;
@@ -47,7 +54,7 @@ export function formatHttpError(status: unknown, body: unknown, provider: string
 
 /** The message of a thrown value, or the value itself as text. */
 export function errMessage(e: unknown): string {
-  const m = isRecord(e) ? e.message : undefined;
+  const m = typeof e === "object" && e !== null && "message" in e ? e.message : undefined;
 
   if (typeof m === "string" && m !== "") return m;
 
@@ -92,10 +99,11 @@ async function apiFetch(url: string, { method = "GET", headers, body, fetchFn }:
 }
 
 /** The parsed JSON body of the reply, or an empty object when it has no reader. */
-async function apiJson(url: string, opts: ApiOpts): Promise<unknown> {
+async function apiJson(url: string, opts: ApiOpts): Promise<Json> {
   const res = await apiFetch(url, opts);
 
-  return typeof res.json === "function" ? res.json() : {};
+  // A reply that is no JSON value reads as null, which every reader treats as an empty reply.
+  return typeof res.json === "function" ? replyJson(await res.json()) : {};
 }
 
 /** The audio bytes of the reply, from its reader or its body. */
@@ -132,7 +140,7 @@ export async function whoami({ provider, cfg, fetchFn }: ProviderOpts): Promise<
   return "openai ok";
 }
 
-function voiceLine(v: unknown): string {
+function voiceLine(v: Json): string {
   if (!isRecord(v)) return "undefined  undefined";
 
   return `${plainOr(v.voice_id, "undefined")}  ${plainOr(v.name, "undefined")}`;
@@ -141,7 +149,7 @@ function voiceLine(v: unknown): string {
 export async function voices({ provider, cfg, fetchFn }: ProviderOpts): Promise<string> {
   if (resolveProvider(cfg, provider) === OPENAI) return OPENAI_VOICES.join("\n");
   const j = await apiJson(`${ELEVEN_API}/voices`, { fetchFn, headers: { "xi-api-key": cfg.elevenlabs.apiKey } });
-  const list: unknown[] = isRecord(j) && Array.isArray(j.voices) ? j.voices : [];
+  const list: Json[] = isRecord(j) && Array.isArray(j.voices) ? j.voices : [];
 
   return list.map(voiceLine).join("\n");
 }

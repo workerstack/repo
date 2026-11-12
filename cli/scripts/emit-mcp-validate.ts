@@ -4,22 +4,24 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, readJson, type JsonObject } from "../json.ts";
+import { isRecord, type Json, readJson, type JsonObject } from "../json.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
+import { isSettingsTable, type SettingsTable, type SettingsValue } from "./settings-table.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 
-function arraysEqual(a: unknown[], b: unknown[]): boolean {
+function arraysEqual(a: SettingsValue[], b: SettingsValue[]): boolean {
   return a.length === b.length && a.every((v, i) => deepEqual(v, b[i]));
 }
 
-function objectsEqual(a: JsonObject, b: JsonObject): boolean {
+function objectsEqual(a: SettingsTable, b: SettingsTable): boolean {
   const ak = Object.keys(a);
 
   return ak.length === Object.keys(b).length && ak.every((k) => Object.hasOwn(b, k) && deepEqual(a[k], b[k]));
 }
 
-export function deepEqual(a: unknown, b: unknown): boolean {
+/** Whether two parsed config values hold the same data; a TOML datetime equals only itself. */
+export function deepEqual(a: SettingsValue | undefined, b: SettingsValue | undefined): boolean {
   if (Object.is(a, b)) return true;
 
   if (typeof a !== typeof b || a == null || b == null) return false;
@@ -28,24 +30,25 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
   if (typeof a !== "object") return false;
 
-  return isRecord(a) && isRecord(b) && objectsEqual(a, b);
+  return isSettingsTable(a) && isSettingsTable(b) && objectsEqual(a, b);
 }
 
 /** desired keys must be present on disk; extra disk keys allowed. */
-export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
+export function requiredDeepMatch(disk: SettingsValue | undefined, desired: SettingsValue | undefined): boolean {
   if (Array.isArray(desired)) return deepEqual(disk, desired);
 
   if (desired != null && typeof desired === "object") {
-    if (!isRecord(disk)) return false;
+    if (!isSettingsTable(disk)) return false;
 
-    return Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
+    // A desired TOML datetime has no keys to require, as Object.entries of a Date has none.
+    return !isSettingsTable(desired) || Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
   }
 
   return deepEqual(disk, desired);
 }
 
 function readPolicyFile(p: string): JsonObject {
-  const objectOrNull = z.record(z.string(), z.unknown()).nullable().catch(null);
+  const objectOrNull = z.record(z.string(), z.json()).nullable().catch(null);
   const policy = readJson(objectOrNull, stripJsonc(fs.readFileSync(p, "utf8")));
 
   if (policy === null) throw new Error("invalid policy");
@@ -108,7 +111,7 @@ const CHECKS: readonly ((policy: JsonObject) => string | null)[] = [
   agentsError,
 ];
 
-export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
+export function validatePolicy(policy: Json): { ok: true } | { ok: false; error: string } {
   if (!isRecord(policy)) return { error: "invalid policy", ok: false };
 
   for (const check of CHECKS) {

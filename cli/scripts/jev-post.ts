@@ -1,7 +1,7 @@
 /** One jev request on the wire, and the short summary printed from its answers. */
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
 import {
   CHOICE,
   ENDPOINT,
@@ -15,6 +15,12 @@ import {
   TIMEOUT_MS,
 } from "./jev.constants.ts";
 import type { HeadersLike, JevFetch, JevResult, PostResult, StopKind } from "./jev.types.ts";
+import { jsonText } from "./json-text.ts";
+
+/** A reply body as JSON; one that is no JSON value reads as null. */
+function replyJson(value: unknown): Json {
+  return z.json().catch(null).parse(value);
+}
 
 /** The request body's parts besides the model. */
 type Ask = { questions: Record<string, unknown>; state: unknown };
@@ -42,17 +48,19 @@ export function parseState(stateText: string): unknown {
 }
 
 /** One answer's summary line, or null for a kind the summary skips. */
-function answerLine(id: string, answer: Record<string, unknown>): string | null {
-  if (answer.type === CHOICE) return `- ${id} choice=${String(answer.choice)} confidence=${String(answer.confidence)}`;
+function answerLine(id: string, answer: JsonObject): string | null {
+  const confidence = jsonText(answer.confidence);
 
-  if (answer.type === NOUL) return `- ${id} noul=${String(answer.noul)}`;
+  if (answer.type === CHOICE) return `- ${id} choice=${jsonText(answer.choice)} confidence=${confidence}`;
 
-  if (answer.type === SCORE) return `- ${id} score=${String(answer.score)} confidence=${String(answer.confidence)}`;
+  if (answer.type === NOUL) return `- ${id} noul=${jsonText(answer.noul)}`;
+
+  if (answer.type === SCORE) return `- ${id} score=${jsonText(answer.score)} confidence=${confidence}`;
 
   return null;
 }
 
-export function formatAnswers(payload: Record<string, unknown>): string {
+export function formatAnswers(payload: JsonObject): string {
   const model = typeof payload.model === "string" && payload.model !== "" ? payload.model : MODEL;
   const used = Number(isRecord(payload.usage) ? payload.usage.input_tokens : payload.usage);
   const lines = [`${model}. input_tokens=${Number.isFinite(used) ? used : 0}`];
@@ -79,10 +87,11 @@ export async function postOnce(fetchImpl: JevFetch, key: string, { questions, st
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
-  let json: unknown = null;
+  let json: Json = null;
 
   try {
-    json = await response.json();
+    // A body that is no JSON value reads as null, as a body that fails to parse does.
+    json = replyJson(await response.json());
   } catch {
     json = null;
   }

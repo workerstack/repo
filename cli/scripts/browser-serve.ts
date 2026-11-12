@@ -5,8 +5,8 @@ import type { Duplex } from "node:stream";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
-import { asRec, errMessage, filled } from "./browser-session.ts";
+import { type Json, tryJson } from "../json.ts";
+import { asRec, boundPort, errMessage, filled } from "./browser-session.ts";
 import { decodeWsFrames, encodeWsFrame } from "./browser-ws.ts";
 import {
   CDP_ERROR,
@@ -24,6 +24,7 @@ import {
   WS_GUID,
 } from "./browser.constants.ts";
 import type { FakeCdp, FakeCdpState, Rec, WsMessage } from "./browser.types.ts";
+import { jsonText } from "./json-text.ts";
 
 type Handler = (state: FakeCdpState, params: Rec) => Rec;
 
@@ -123,16 +124,17 @@ export function handleCdp(state: FakeCdpState, method: string, params: Rec): Rec
 
 function reply(socket: Duplex, state: FakeCdpState, data: string): void {
   // JSON that is not an object still gets a reply, as an empty request; text that is not JSON gets none.
-  const msg = tryJson(z.record(z.string(), z.unknown()).catch({}), data);
+  const msg = tryJson(z.record(z.string(), z.json()).catch({}), data);
 
   if (msg === undefined) return;
 
-  function send(body: Rec) {
+  // A request with no id gets a reply with none: JSON.stringify leaves an undefined field out.
+  function send(body: { [key: string]: Json | undefined }) {
     return socket.write(encodeWsFrame(JSON.stringify(body)));
   }
 
   Promise.resolve()
-    .then(() => handleCdp(state, String(msg.method), asRec(msg.params)))
+    .then(() => handleCdp(state, jsonText(msg.method), asRec(msg.params)))
     .then((result) => send({ id: msg.id, result }))
     .catch((err: unknown) => send({ error: { code: CDP_ERROR, message: errMessage(err) }, id: msg.id }));
 }
@@ -209,7 +211,7 @@ export async function serveCdp(
     server.once("error", reject);
     server.listen(port, HOST, resolve);
   });
-  bound = Number(asRec(server.address()).port);
+  bound = boundPort(server.address());
 
   return { close: () => server.close(), port: bound, state: st };
 }

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, tryJson } from "../json.ts";
+import { isRecord, type Json, tryJson } from "../json.ts";
 import { BUILD_CONFIG, BUILT_EXTENSIONS, CODE_TARGET } from "./public-surface.constants.ts";
 import type { Build } from "./public-surface.types.ts";
 
@@ -42,7 +42,7 @@ function sourceOf(root: string, build: Build | null, target: string): string {
 }
 
 /** Every string in an `exports` value, whether it is a path, a list of them or a map of conditions. */
-function targetsOf(value: unknown): string[] {
+function targetsOf(value: Json | undefined): string[] {
   if (typeof value === "string") return [value];
 
   if (Array.isArray(value)) return value.flatMap(targetsOf);
@@ -51,7 +51,7 @@ function targetsOf(value: unknown): string[] {
 }
 
 /** The `exports` entries: a map of subpaths, or conditions written straight on `exports`, which mean ".". */
-function subpathsOf(exports: unknown): [string, unknown][] {
+function subpathsOf(exports: Json | undefined): [string, Json | undefined][] {
   if (isRecord(exports) && Object.keys(exports).every((key) => key.startsWith("."))) return Object.entries(exports);
 
   return [[".", exports]];
@@ -62,7 +62,7 @@ function subpathsOf(exports: unknown): [string, unknown][] {
  * declarations and are skipped, and a key left with no target is left out. A built target maps back to source through
  * `tsconfig.build.json`.
  */
-export function entryFiles(root: string, exports: unknown): Map<string, string[]> {
+export function entryFiles(root: string, exports: Json | undefined): Map<string, string[]> {
   const build = buildOf(root);
   const found = new Map<string, string[]>();
 

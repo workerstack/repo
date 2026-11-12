@@ -11,11 +11,11 @@ import { fileURLToPath } from "node:url";
 
 import { stringify as stringifyToml } from "smol-toml";
 
-import type { JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { deepMerge } from "./deep-merge.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest } from "./global-settings-files.ts";
+import type { SettingsTable } from "./settings-table.ts";
 import {
   ALL_HOSTS,
   APPLY,
@@ -98,7 +98,7 @@ export function parseArgv(argv: unknown): ParsedArgv {
   return { ...state, ok: true };
 }
 
-function stringifyDest(value: JsonObject, format: SettingsFormat): string {
+function stringifyDest(value: SettingsTable, format: SettingsFormat): string {
   const body = format === JSON_FORMAT ? JSON.stringify(value, null, JSON_INDENT) : stringifyToml(value);
 
   return body.endsWith("\n") ? body : `${body}\n`;

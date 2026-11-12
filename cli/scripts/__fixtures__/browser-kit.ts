@@ -11,6 +11,7 @@ import type {
   BrowserResult,
   Engine,
   FakeCdpState,
+  Rec,
   RunOpts,
 } from "../browser.types.ts";
 import { bunPath } from "../../../dev/test-paths.ts";
@@ -252,7 +253,7 @@ export function runCli(
 
 // ---- planted sessions: an in-process fake engine plus a live stand-in pid ----
 
-export type Calls = { method: string; params: Record<string, unknown> }[];
+export type Calls = { method: string; params: Rec }[];
 
 export function nth<T>(items: readonly T[], i: number): T {
   const v = items[i];
@@ -388,7 +389,7 @@ export const failure = (stderr: string): BrowserResult => ({
   stdout: "",
   stderr,
 });
-export const callParams = (calls: Calls): Record<string, unknown>[] =>
+export const callParams = (calls: Calls): Rec[] =>
   calls
     .filter((c) => c.method === "Runtime.callFunctionOn")
     .map((c) => c.params);

@@ -4,7 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import { z } from "zod";
 
-import { isRecord, readJson } from "../json.ts";
+import { isRecord, type Json, type JsonObject, readJson } from "../json.ts";
 import { readJsonFile } from "../package-json.ts";
 import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
@@ -34,12 +34,12 @@ const STATIC_ROOTS = [
 ] as const;
 
 /** `over` onto `base`: objects merge key by key, lists append what they lack, anything else is replaced. */
-function mergeSettings(base: unknown, over: unknown): unknown {
+function mergeSettings(base: Json | undefined, over: Json): Json {
   if (Array.isArray(base) && Array.isArray(over))
     return [...base, ...over.filter((item) => !base.some((have) => isDeepStrictEqual(have, item)))];
 
   if (isRecord(base) && isRecord(over)) {
-    const merged: Record<string, unknown> = { ...base };
+    const merged: JsonObject = { ...base };
 
     for (const [key, value] of Object.entries(over))
       merged[key] = key in base ? mergeSettings(base[key], value) : value;
@@ -89,7 +89,7 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
   const overlay = ctx.read(overlayRel);
 
   if (overlay === null) return;
-  let own: unknown;
+  let own: Json;
 
   try {
     // Any JSON here; a value that is not an object throws its own message below.

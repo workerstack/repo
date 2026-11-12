@@ -22,17 +22,17 @@ import {
 } from "./browser.constants.ts";
 import type { Act, BrowserResult, Cdp, Ctx, Rec, RefEntry, Session, Verb } from "./browser.types.ts";
 
-function callOn(cdp: Cdp, objectId: unknown, functionDeclaration: string) {
+function callOn(cdp: Cdp, objectId: string, functionDeclaration: string) {
   return cdp.send("Runtime.callFunctionOn", { functionDeclaration, objectId });
 }
 
-export async function fillAct(cdp: Cdp, objectId: unknown, text: string): Promise<void> {
+export async function fillAct(cdp: Cdp, objectId: string, text: string): Promise<void> {
   await callOn(cdp, objectId, FOCUS_FN);
   await cdp.send("Input.insertText", { text });
   await callOn(cdp, objectId, INPUT_FN);
 }
 
-export function selectAct(cdp: Cdp, objectId: unknown, text: string): Promise<Rec> {
+export function selectAct(cdp: Cdp, objectId: string, text: string): Promise<Rec> {
   return cdp.send("Runtime.callFunctionOn", {
     arguments: [{ value: text }],
     functionDeclaration: SELECT_FN,
@@ -41,10 +41,10 @@ export function selectAct(cdp: Cdp, objectId: unknown, text: string): Promise<Re
 }
 
 /** The object id of a ref's node; a node the page no longer has is stale. */
-async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<unknown> {
-  const resolved = await cdp.send("DOM.resolveNode", {
-    backendNodeId: rec.backendNodeId,
-  });
+async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<string> {
+  // A ref with no backend id sends no field, as JSON.stringify left an undefined one out.
+  const id = rec.backendNodeId;
+  const resolved = await cdp.send("DOM.resolveNode", id === undefined ? {} : { backendNodeId: id });
 
   const objectId = asRec(resolved.object).objectId;
 
@@ -68,11 +68,11 @@ function refFail(msg: string, ref: string): BrowserResult {
   return fail(STALE_RE.test(msg) ? `stale ref: ${ref}` : msg);
 }
 
-export function clickAct(cdp: Cdp, objectId: unknown): Promise<Rec> {
+export function clickAct(cdp: Cdp, objectId: string): Promise<Rec> {
   return callOn(cdp, objectId, CLICK_FN);
 }
 
-export function hoverAct(cdp: Cdp, objectId: unknown): Promise<Rec> {
+export function hoverAct(cdp: Cdp, objectId: string): Promise<Rec> {
   return callOn(cdp, objectId, HOVER_FN);
 }
 

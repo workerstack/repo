@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 
 import type { Host } from "../../config.ts";
+import type { Json, JsonObject } from "../../json.ts";
 import { EVERY_FIELD, at, keysAt, renderOne } from "../__fixtures__/hooks-kit.ts";
 
 /** The one hook a single-definition render wrote: cursor's flat entry, else the first group's first handler. */
-function firstHook(host: Host, hooks: unknown): unknown {
+function firstHook(host: Host, hooks: Json | undefined): Json | undefined {
   return host === "cursor" ? at(hooks, "preToolUse", 0) : at(hooks, keysAt(hooks)[0] ?? "", 0, "hooks", 0);
 }
 
@@ -40,7 +41,7 @@ it.each([
 );
 
 /** The first preToolUse handler a matcher-group host wrote for `def`. */
-function preToolUse(host: Host, def: Record<string, unknown>): unknown {
+function preToolUse(host: Host, def: JsonObject): Json | undefined {
   return at(renderOne(host, "preToolUse", def), "PreToolUse", 0, "hooks", 0);
 }
 
@@ -67,7 +68,10 @@ const IGNORED = ["stop", "subagentStop", "taskCompleted", "teammateIdle"].map((e
   written: false,
 }));
 
-it.each([
+/** One onFailure case: the definition, the event it sits under, its name and whether claude writes onFailure. */
+type OnFailureCase = { def: JsonObject; event: string; name: string; written: boolean };
+
+it.each<OnFailureCase>([
   { def: { command: "c" }, event: "preToolUse", name: "a command hook", written: true },
   { def: { type: "http", url: "u" }, event: "preToolUse", name: "an http hook", written: true },
   { def: { prompt: "p", type: "prompt" }, event: "preToolUse", name: "a prompt hook", written: false },
@@ -92,7 +96,7 @@ it.each([
 });
 
 /** The command claude wrote for an exec-form hook running `value`. */
-function execCommand(value: string): unknown {
+function execCommand(value: string): Json | undefined {
   return at(preToolUse("claude", { args: [], command: value }), "command");
 }
 

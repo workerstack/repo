@@ -1,4 +1,4 @@
-import { isRecord } from "../json.ts";
+import { isRecord, type Json, type JsonObject } from "../json.ts";
 import {
   CODE_FILE,
   CURRENT_DIR,
@@ -19,7 +19,7 @@ export type Subpath = { key: string; runtime: string; types: string | null; kind
 export type Expanded = { exports: number; subpaths: Subpath[]; errors: string[] };
 
 /** The file that runs: a string, the first array entry with one, or the first runtime condition with one. */
-function runtimeOf(value: unknown): string | null {
+function runtimeOf(value: Json | undefined): string | null {
   if (typeof value === "string") return value;
 
   if (Array.isArray(value)) return value.map(runtimeOf).find((target) => target !== null) ?? null;
@@ -36,7 +36,7 @@ function runtimeOf(value: unknown): string | null {
 }
 
 /** The file that types: the `types` condition, or one nested in a runtime condition, or a `.ts` runtime string. */
-function typesOf(value: unknown): string | null {
+function typesOf(value: Json | undefined): string | null {
   if (typeof value === "string") return TS_SOURCE.test(value) ? value : null;
 
   if (Array.isArray(value)) return value.map(typesOf).find((target) => target !== null) ?? null;
@@ -79,7 +79,7 @@ function patternOf(target: string): RegExp {
  * The subpaths one `exports` key stands for: itself, or a file each when it is a `*` pattern; or the line that says
  * why not.
  */
-function expandKey(key: string, value: unknown, files: readonly string[]): Subpath[] | string {
+function expandKey(key: string, value: Json, files: readonly string[]): Subpath[] | string {
   const runtime = runtimeOf(value);
 
   if (runtime === null) return noRuntime(key);
@@ -105,7 +105,7 @@ function expandKey(key: string, value: unknown, files: readonly string[]): Subpa
 }
 
 /** The `exports` field as a map of keys; a string, array or condition object stands for the root key. */
-function keyMap(exports: unknown): Record<string, unknown> | null {
+function keyMap(exports: Json | undefined): JsonObject | null {
   if ((typeof exports !== "string" && typeof exports !== "object") || exports === null) return null;
 
   if (isRecord(exports) && Object.keys(exports).every((key) => key.startsWith(ROOT_KEY))) return exports;
@@ -114,7 +114,7 @@ function keyMap(exports: unknown): Record<string, unknown> | null {
 }
 
 /** Expands an `exports` field against the package's files (paths relative to its root, with `/`). */
-export function exportSubpaths(exports: unknown, files: readonly string[]): Expanded {
+export function exportSubpaths(exports: Json | undefined, files: readonly string[]): Expanded {
   const out: Expanded = { errors: [], exports: 0, subpaths: [] };
   const map = keyMap(exports);
 

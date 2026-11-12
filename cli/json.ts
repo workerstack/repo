@@ -1,12 +1,15 @@
-/** The one record guard for parsed JSON, YAML and TOML, and the schema-first JSON readers. */
+/** The parsed JSON and YAML value type, its one record guard, and the schema-first JSON readers. */
 import { z } from "zod";
 
-/** A parsed object whose values are not yet checked. */
-export type JsonObject = Record<string, unknown>;
+/** A value JSON.parse or a YAML parse returns: a primitive, an array of Json or an object of Json. */
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 
-/** True for a non-null object that is not an array and not a Date, which smol-toml returns for a datetime. */
-export function isRecord(value: unknown): value is JsonObject {
-  return typeof value === "object" && value !== null && !Array.isArray(value) && !(value instanceof Date);
+/** A parsed JSON or YAML object. */
+export type JsonObject = { [key: string]: Json };
+
+/** True for a parsed object, false for an array, a primitive, null and a missing value. */
+export function isRecord(value: Json | undefined): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**

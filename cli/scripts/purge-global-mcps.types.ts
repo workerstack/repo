@@ -1,3 +1,5 @@
+import type { TomlTable } from "smol-toml";
+
 import type { JsonObject } from "../json.ts";
 
 /** The parsed `repo purge-mcps` command line, or why it is bad. */
@@ -9,7 +11,7 @@ export type GrokPlan = {
   skip: boolean;
   detail: string;
   changed?: boolean;
-  obj: JsonObject | null;
+  obj: TomlTable | null;
 };
 
 /** A JSON dest's plan: skip it, or write `json` as its new text. */

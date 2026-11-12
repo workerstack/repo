@@ -32,9 +32,13 @@ export function passthroughFields(input: PassthroughInput): JsonObject {
   for (const field of target.passthrough) {
     if (field.kind === "keyword") {
       if (def["failClosed"] === true && onFailureApplies(input)) out["onFailure"] = BLOCK;
-    } else if (VALID[field.kind](def[field.key]) && (field.commandOnly !== true || type === COMMAND)) {
-      out[field.key] = def[field.key];
+      continue;
     }
+
+    const value = def[field.key];
+
+    if (value !== undefined && VALID[field.kind](value) && (field.commandOnly !== true || type === COMMAND))
+      out[field.key] = value;
   }
 
   return out;
