@@ -1,10 +1,11 @@
 /** What `bun repo env` prints, the verbs and flags it takes, and its exit codes. */
-export const ENV_SUMMARY = "Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key)";
+export const ENV_SUMMARY =
+  "Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key, migrate)";
 
 export const USAGE: string =
   "usage: bun repo env init | set KEY --scope <global|local|dev|prod> [--plain] [--file f] | " +
   "get KEY --scope s [--reveal] | ls | run --scope s -- cmd | export --scope s --format dotenv | " +
-  "key import | key ci [--dry-run]";
+  "key import | key ci [--dry-run] | migrate [--dry-run]";
 
 export const PREFIX = "repo env: ";
 export const EXIT_OK = 0;
@@ -45,6 +46,37 @@ export const GH_SECRET: readonly string[] = ["secret", "set", "WORKERSTACK_ENV_K
 /** The import that holds `sealed`, added to an env file that seals its first value. */
 export const ENV_MODULE = "@workerstack/repo/env";
 export const SEALED_NAME = "sealed";
+
+/** What `migrate` rewrites: the old call, its secret marker and helpers, a config's parent key, and the manifest. */
+export const OLD_CALL = "createScriptEnv";
+export const SECRET_CALL = "secret";
+export const KEYS_OF = "secretKeysOf";
+export const UNWRAP = "unwrapSecrets";
+export const PARENT_KEY = "parent";
+export const PACKAGE_MANIFEST = "package.json";
+export const DRY_RUN = "--dry-run";
+
+/** How a migrate import map names a namespace import, in place of the name it takes. */
+export const NAMESPACE = "*";
+
+/** What an isolated config's name adds to its binding's, and the type an isolated seal is cast to. */
+export const CONFIG_SUFFIX = "Config";
+export const FIRST_SUFFIX = 2;
+export const SEALED_TYPE = "Sealed";
+
+/** What the migrate parity child puts before its one line of hashes, and how long it may run. */
+export const PARITY_SENTINEL = "repo-env-parity:";
+export const PARITY_TIMEOUT_MS = 60_000;
+export const MS_PER_SECOND = 1000;
+
+/** The exit codes of a migrate cut short by SIGINT or SIGTERM, after its files are restored. */
+export const SIGNAL_EXITS: readonly (readonly ["SIGINT" | "SIGTERM", number])[] = [
+  ["SIGINT", 130],
+  ["SIGTERM", 143],
+];
+
+/** Where a path starts on a `git status --porcelain` line, after the two status letters and a space. */
+export const STATUS_WIDTH = 3;
 
 /** The brands a loaded env file's values carry, registered so any copy of the library shares them. */
 export const LAYERS_SYMBOL = "@workerstack/repo/env.layers";
