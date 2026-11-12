@@ -7,6 +7,7 @@ import { renderLessonsIndex } from "../scripts/lessons-index.ts";
 import { LESSONS_DIR, INDEX_NAME } from "../scripts/lessons.constants.ts";
 import { lines } from "../scripts/lines.ts";
 import { available } from "./available.ts";
+import { benchWorkflow } from "./bench-workflow.ts";
 import { blockOutput } from "./block-output.ts";
 import { githubFiles } from "./github-files.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -165,6 +166,7 @@ export const GENERATORS: readonly Generator[] = [
   release,
   nightly,
   releaseWorkflow,
+  benchWorkflow,
   githubFiles,
   vitestProjects,
   turbo,

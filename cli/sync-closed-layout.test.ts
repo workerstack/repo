@@ -13,7 +13,8 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, settings/claude.json, hooks.jsonc, " +
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, bench/ (read by repo bench), " +
+  "settings/claude.json, hooks.jsonc, " +
   "mcp-policy.jsonc, permissions.json, map.jsonc, lint-baseline.json (read by repo turn and repo check)" +
   ", test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)";
 const MODULES_DIR = ["node", "modules"].join("_");

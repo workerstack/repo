@@ -1,6 +1,6 @@
 /**
  * What `.repo/` may hold and whether it holds it right. `.repo/` is user input, so every entry must be one sync
- * reads, or `lint-baseline.json` and `test-times.json`, which other commands read; nothing there is silently
+ * reads, or `bench/`, `lint-baseline.json` and `test-times.json`, which other commands read; nothing there is silently
  * ignored. Checked here: the layout, skills (a `SKILL.md` per folder, a matching `name`, a `description`,
  * `overrides` of a stock skill), relative links in rules and skills, that each rule `paths` glob matches a file. Rule
  * and subagent frontmatter is checked where they are loaded (`agents/load-sources.ts`).
@@ -15,6 +15,7 @@ import { linkProblems } from "./link-problems.ts";
 import {
   CLAUDE_SETTINGS_FILE,
   DEAD_ENTRY,
+  OTHER_READER_DIRS,
   OTHER_READERS,
   PACKAGE_DIRS,
   READ_DIRS,
@@ -29,12 +30,18 @@ import { skillProblems } from "./skill-problems.ts";
 function allowedList(): string {
   return [
     ...READ_DIRS.map((dir) => `${dir}/`),
+    ...OTHER_READER_DIRS.map(([dir, reader]) => `${dir}/ (read by ${reader})`),
     `${SETTINGS_DIR}/${CLAUDE_SETTINGS_FILE}`,
     ...READ_FILES,
     ...OTHER_READERS.map(([file, reader]) => `${file} (read by ${reader})`),
   ].join(", ");
 }
 const ALLOWED = /* @__PURE__ */ allowedList();
+
+/** Every dir the root `.repo/` may hold but settings/: the ones sync reads and the ones other commands read. */
+function rootDirs(): string[] {
+  return [...READ_DIRS, ...OTHER_READER_DIRS.map(([dir]) => dir)];
+}
 
 export type RepoDirInput = {
   sources: Sources;
@@ -72,7 +79,7 @@ function packageLayoutProblems(root: string, dir: string): string[] {
     .filter((entry) => !(entry.isDirectory() && PACKAGE_DIRS.includes(entry.name)))
     .map((entry) => {
       const dirName = entry.isDirectory();
-      const where = dirName && READ_DIRS.includes(entry.name) ? `; ${entry.name} live in the root .repo` : "";
+      const where = dirName && rootDirs().includes(entry.name) ? `; ${entry.name} live in the root .repo` : "";
       const rel = `${dir}/${REPO_DIR}/${entry.name}${dirName ? "/" : ""}`;
       return `${rel}: a package .repo holds only rules/ and skills/${where}`;
     });
@@ -90,7 +97,7 @@ function layoutProblems(root: string): string[] {
   const dir = path.join(root, REPO_DIR);
   for (const entry of entriesOf(dir)) {
     const known = entry.isDirectory()
-      ? READ_DIRS.includes(entry.name)
+      ? rootDirs().includes(entry.name)
       : [...READ_FILES, ...OTHER_READERS.map(([file]) => file)].includes(entry.name);
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
     if (entry.name === SETTINGS_DIR && entry.isDirectory()) problems.push(...settingsProblems(dir));

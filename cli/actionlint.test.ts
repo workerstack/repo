@@ -40,7 +40,7 @@ function repo(packs: string, workflows: string[]): { root: string; cacheDir: str
   return { cacheDir, root };
 }
 
-it("runs nothing without a config, without the release pack or without a workflow", async () => {
+it("runs nothing without a config, without a workflow pack or without a workflow", async () => {
   const bare = tempDir();
   const spawn = answering(0, "");
   expect(await checkActionlintAt(bare, { fetch: failFetch, spawn })).toStrictEqual({ problems: [] });
@@ -81,6 +81,12 @@ it("lints every .yml and .yaml workflow with the cached binary, in the repo root
   expect(call?.env.GIT_DIR).toBeUndefined();
 });
 
+it("lints the workflows under the benchmark pack alone, which generates bench.yml", async () => {
+  const { root, cacheDir } = repo('["benchmark"]', ["bench.yml"]);
+  const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn: answering(0, "[]") });
+  expect(out).toStrictEqual({ problems: [] });
+  expect(calls.map((call) => call.args.at(-1))).toStrictEqual([".github/workflows/bench.yml"]);
+});
 it("prints one line per problem actionlint finds", async () => {
   const { root, cacheDir } = repo('["release"]', ["release.yml"]);
   const items = [

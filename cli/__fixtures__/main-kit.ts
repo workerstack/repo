@@ -120,6 +120,7 @@ main
   setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
+  bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)
   browser           Browse with Lightpanda, Chromium when blocked
   google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail
   jev               Yes/no or named-option decision on saved text

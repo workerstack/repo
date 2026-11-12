@@ -6,6 +6,7 @@ import { GITHUB_SUMMARY } from "./github.constants.ts";
 import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY } from "./link.constants.ts";
 import { REMOVE_SUMMARY } from "./remove.constants.ts";
+import { BENCH_SUMMARY } from "./scripts/bench.constants.ts";
 import { HOOK_USAGE, isHookName, type HookName } from "./scripts/hook-command.ts";
 import { PUSH_SUMMARY } from "./scripts/push.constants.ts";
 import { UPDATE_SUMMARY } from "./update.constants.ts";
@@ -25,6 +26,7 @@ export type CommandName =
   | "persist"
   | "phase-files"
   | "lessons"
+  | "bench"
   | "browser"
   | "google-workspace"
   | "jev"
@@ -80,6 +82,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
 
   // Tools an agent runs.
+  bench: { load: () => import("./scripts/bench.ts"), summary: BENCH_SUMMARY },
   browser: { load: () => import("./scripts/browser.ts"), summary: "Browse with Lightpanda, Chromium when blocked" },
   "google-workspace": {
     load: () => import("./scripts/google-workspace.ts"),
