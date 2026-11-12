@@ -1,4 +1,4 @@
-import type { Json } from "../json.ts";
+import type { Json, JsonObject } from "../json.ts";
 import type { Env } from "../repo-env.ts";
 
 export type JevResult = {
@@ -62,7 +62,7 @@ export type StopKind = "requests" | "tokens";
 export type Begun = { busy: true } | { stop: StopKind } | { ok: true; estimate: number };
 
 /** One run's checked inputs. */
-export type JevInput = { questions: Record<string, unknown>; questionsText: string; stateText: string };
+export type JevInput = { questions: JsonObject; questionsText: string; stateText: string };
 
 /** Everything one run's attempts share. */
 export type JevCall = {
@@ -70,7 +70,7 @@ export type JevCall = {
   key: string;
   estimate: number;
   state: unknown;
-  questions: Record<string, unknown>;
+  questions: JsonObject;
   fetchImpl: JevFetch;
   sleep: (ms: number) => Promise<void>;
   nowFn: () => number;

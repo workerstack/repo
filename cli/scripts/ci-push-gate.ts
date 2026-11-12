@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { type JsonObject, tryJson } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
@@ -227,11 +227,7 @@ function sessionOf(data: HookInput): string {
 /**
  * For every tool call: settles the session's earlier pushes and notes the push in a Bash `command`, if there is one.
  */
-export function notePush(
-  data: HookInput,
-  toolInput: Record<string, unknown> | undefined,
-  deps: GateDeps = realDeps(),
-): void {
+export function notePush(data: HookInput, toolInput: JsonObject | undefined, deps: GateDeps = realDeps()): void {
   const command = toolInput?.command;
   const session = sessionOf(data);
   recordPush({ command: typeof command === "string" ? command : "", cwd: resolveRoots(data).cwd, session }, deps);

@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
 import { projectEdit } from "./ignore-edits.ts";
@@ -14,7 +15,7 @@ import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-repl
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
 import { firstNonEmptyStripped } from "./orchestrate-transcript.ts";
 import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
-import type { Approvable, HookResult, Persist, PersistOutcome, ToolInput, WriteCase } from "./orchestrate.types.ts";
+import type { Approvable, HookResult, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
@@ -136,7 +137,7 @@ function persistWrite(write: WriteCase, { persist, approvable }: PersistRoute): 
 }
 
 /** The answer to a parent Write or Edit under .tmp/repo or a lessons dir; null when the host should run it as sent. */
-export function parentWrite(data: HookInput, toolInput: ToolInput | undefined): HookResult | null {
+export function parentWrite(data: HookInput, toolInput: ToolArgs | undefined): HookResult | null {
   if (toolInput === undefined) return denyWith(data, DENY_REASON);
   const roots = resolveRoots(data);
   const typed = writeTarget(toolInput);

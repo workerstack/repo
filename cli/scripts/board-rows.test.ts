@@ -9,6 +9,7 @@ import { BOOT, plantHome, plantRowFile, probeOf, rowsDir } from "./__fixtures__/
 import { boardDir, boardHome } from "./board-files.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
 import { digest, lines, note, sweep } from "./board.ts";
+import type { NoteOptions } from "./board.types.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -73,7 +74,7 @@ it("note: stamps the time from a Date, a number or the clock", () => {
 it("note: chooses the work label: forced, sticky, typed, remembered, else active", () => {
   const home = plantHome();
 
-  function work(w: unknown, extra: Record<string, unknown> = {}) {
+  function work(w: unknown, extra: NoteOptions = {}) {
     return note({ ...base, home, work: w, ...extra })?.work;
   }
 

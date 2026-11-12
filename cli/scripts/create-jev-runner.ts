@@ -30,7 +30,7 @@ function readJevInput({ stateText, questionsText }: JevRunOpts): JevInput | { fa
   if (typeof stateText !== "string" || typeof questionsText !== "string") return { fail: fail(USAGE) };
 
   if (stateText.length > MAX_STATE_CHARS) return { fail: fail("state exceeds 64000 characters\n") };
-  const questions = tryJson(z.record(z.string(), z.unknown()), questionsText);
+  const questions = tryJson(z.record(z.string(), z.json()), questionsText);
 
   if (questions === undefined) return { fail: fail(NOT_AN_OBJECT) };
   const count = Object.keys(questions).length;

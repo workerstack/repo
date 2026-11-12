@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { expect, it } from "vitest";
+import { z } from "zod";
 
 import { loadConfig } from "../config.ts";
+import { readJson } from "../json.ts";
 import { TAGGED_BOUNDARIES, taggedTree } from "../sync/__fixtures__/tagged-kit.ts";
 import { put, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { standards } from "../sync/standards.ts";
@@ -14,9 +16,6 @@ const SLOW = 60_000;
 
 /** The consumer is untyped (no install), so only the rule under test is read from oxlint's report. */
 const RULE = "[Error/repo(boundaries)]";
-
-/** The part of the written `.oxlintrc.json` the test reads. */
-type Written = { rules: Record<string, unknown> };
 
 useTempDirs();
 
@@ -38,7 +37,7 @@ it("a tagged workspace fails only lib's import of ui, under the options sync wri
   const root = taggedTree();
   expect(await syncStandards(root)).toStrictEqual([]);
   const text = fs.readFileSync(path.join(root, ".oxlintrc.json"), "utf8");
-  const written = JSON.parse(text) /* the oxlint config sync just wrote */ as Written;
+  const written = readJson(z.object({ rules: z.record(z.string(), z.json()) }), text);
   expect(written.rules["repo/boundaries"]).toStrictEqual(["error", TAGGED_BOUNDARIES]);
   const run = captureTool("oxlint", ["-f", "unix"], root);
   expect(run.stdout.split("\n").filter((line) => line.endsWith(RULE))).toStrictEqual([

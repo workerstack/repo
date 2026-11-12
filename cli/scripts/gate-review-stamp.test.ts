@@ -17,6 +17,7 @@ import {
   stamped,
 } from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
+import { jsonText } from "./json-text.ts";
 import { activeReview, stampPath } from "./strategy.ts";
 
 const tmp = useTmp();
@@ -146,9 +147,9 @@ it("fails open when the stamp cannot be written", () => {
 function savedPlan(w: string, strategy: string) {
   const body = VALID_PLAN.replace("strategy: default", `strategy: ${strategy}`);
   const saved = grokReply(w, { input: { content: body, file_path: ".tmp/repo/plans/x.md" }, tool: "Write" });
-  const filePath = String(saved?.hookSpecificOutput?.updatedInput?.file_path);
+  const filePath = jsonText(saved?.hookSpecificOutput?.updatedInput?.file_path);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const content = String(saved?.hookSpecificOutput?.updatedInput?.content);
+  const content = jsonText(saved?.hookSpecificOutput?.updatedInput?.content);
   fs.writeFileSync(filePath, content);
 
   return { content, file_path: filePath };

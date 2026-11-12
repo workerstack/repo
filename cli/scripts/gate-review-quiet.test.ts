@@ -7,6 +7,7 @@ import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { asChild, claudeCall, inSession, WRITE_KINDS } from "./__fixtures__/hook-payload.ts";
 import { planFile, REVIEW_SID, reviewWrite, startReview } from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { stampPath, writeStamp } from "./strategy.ts";
 
@@ -23,7 +24,7 @@ const COMMANDS = [
 
 /** Parent and scout calls of every kind the gate handles, in one workspace. */
 function calls(w: string): HookInput[] {
-  function sent(tool: string, input: Record<string, unknown>) {
+  function sent(tool: string, input: ToolArgs) {
     return inSession(claudeCall(w, tool, input), REVIEW_SID);
   }
 

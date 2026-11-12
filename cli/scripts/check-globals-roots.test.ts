@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
+import { readJson } from "../json.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   PROJECT_OK,
@@ -104,10 +106,7 @@ describe("consumerRoot overlay", () => {
     expect(checkGlobals({ home, sourceRoot: stock, workspaceRoot: ws })).toMatchObject({ ok: true });
     const settings = path.join(home, ".claude/settings.json");
 
-    const written = JSON.parse(fs.readFileSync(settings, "utf8")) /* sync wrote a JSON object */ as Record<
-      string,
-      unknown
-    >;
+    const written = readJson(z.record(z.string(), z.json()), fs.readFileSync(settings, "utf8"));
 
     delete written.customKey;
     fs.writeFileSync(settings, JSON.stringify(written));

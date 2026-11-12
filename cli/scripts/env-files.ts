@@ -4,6 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import ts from "typescript";
+import { z } from "zod";
 
 import { DEFINE_ENV, DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
@@ -192,6 +193,16 @@ type LoadedValue = string | { readonly [SEALED]: string };
 
 type LoadedEnv = { readonly [LAYERS]: Readonly<Record<string, Readonly<Record<string, LoadedValue>>>> };
 
+/** Whether a module export is a defineEnv env: an object that carries the merged layers. */
+function isLoadedEnv(value: unknown): value is LoadedEnv {
+  return typeof value === "object" && value !== null && LAYERS in value;
+}
+
+/** A module namespace read as its named exports, each a defineEnv env or null. */
+function namespaceSchema() {
+  return z.record(z.string(), z.custom<LoadedEnv>(isLoadedEnv).nullable().catch(null));
+}
+
 /** A merged block's values: a string as text, a sealed brand as its cipher. */
 function blockValues(block: Readonly<Record<string, LoadedValue>> | undefined): Map<string, Value> {
   const values = new Map<string, Value>();
@@ -206,16 +217,12 @@ function blockValues(block: Readonly<Record<string, LoadedValue>> | undefined): 
 export async function loadLayers(root: string, rel: string): Promise<Layers> {
   const file = path.join(root, rel);
 
-  const loaded = (await import(pathToFileURL(file).href)) /* a module namespace is an object */ as Record<
-    string,
-    unknown
-  >;
+  const loaded = namespaceSchema().parse(await import(pathToFileURL(file).href));
 
   const parents = parentsOf(configsOf(sourceOf(rel, fs.readFileSync(file, "utf8"))));
 
   const envs = Object.entries(loaded).filter(
-    (entry): entry is [string, LoadedEnv] =>
-      typeof entry[1] === "object" && entry[1] !== null && LAYERS in entry[1] && !parents.has(entry[0]),
+    (entry): entry is [string, LoadedEnv] => entry[1] !== null && !parents.has(entry[0]),
   );
 
   const [, env] = envs.at(LAST) ?? refuse(`${rel} exports no defineEnv env`);

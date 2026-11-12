@@ -7,7 +7,7 @@ import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { cursorCall, inSession, replyCommand, replyInput } from "./__fixtures__/hook-payload.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
-import { answerDeny, type HookOutput } from "./gate-harness.ts";
+import { answerDeny, type HookOutput, type ToolArgs } from "./gate-harness.ts";
 import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_FILE_SIZE, REASON_REREAD } from "./gate.constants.ts";
 
 const tmp = useTmp();
@@ -16,11 +16,11 @@ const JOB_EXEC = /node_modules\/\.bin\/repo job --job exec --query /;
 const WORKTREE_REASON = /^worktrees live in .*[\\/]\.worktrees[\\/]<name> on branch wt\/<name>: run bun /;
 const ENV = { CLAUDE_PROJECT_DIR: "", GROK_WORKSPACE_ROOT: "" };
 
-function payload(cwd: string, tool: string, input: Record<string, unknown>) {
+function payload(cwd: string, tool: string, input: ToolArgs) {
   return inSession(cursorCall(cwd, tool, input), "cu1");
 }
 
-function cursor(cwd: string, tool: string, input: Record<string, unknown>) {
+function cursor(cwd: string, tool: string, input: ToolArgs) {
   return processHookPayload(payload(cwd, tool, input));
 }
 

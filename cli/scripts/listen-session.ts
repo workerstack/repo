@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { JsonObject } from "../json.ts";
 import {
   JSON_INDENT,
   LATEST_FILE,
@@ -31,11 +32,11 @@ export function latestPath(cwd: string): string {
   return path.join(listenDir(cwd), LATEST_FILE);
 }
 
-export function readSession(cwd: string): Record<string, unknown> {
+export function readSession(cwd: string): JsonObject {
   return readObjectFile(sessionPath(cwd));
 }
 
-export function writeSession(cwd: string, obj: Record<string, unknown>): void {
+export function writeSession(cwd: string, obj: JsonObject): void {
   fs.writeFileSync(sessionPath(cwd), `${JSON.stringify(obj, null, JSON_INDENT)}\n`);
 }
 

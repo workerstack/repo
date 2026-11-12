@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { processFatTools } from "./gate-fat-tools.ts";
-import { isHookObject } from "./gate-harness.ts";
+import { isHookObject, type ToolArgs } from "./gate-harness.ts";
 import { relInside } from "./gate-paths.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -26,7 +26,7 @@ function repoRoot(): string {
   return dir;
 }
 
-function claude(cwd: string, tool: string, input: Record<string, unknown>): HookInput {
+function claude(cwd: string, tool: string, input: ToolArgs): HookInput {
   return {
     cwd,
     tool_input: input,
@@ -34,7 +34,7 @@ function claude(cwd: string, tool: string, input: Record<string, unknown>): Hook
   };
 }
 
-function codex(cwd: string, tool: string, input: Record<string, unknown>): HookInput {
+function codex(cwd: string, tool: string, input: ToolArgs): HookInput {
   return {
     ...claude(cwd, tool, input),
     model: "m",

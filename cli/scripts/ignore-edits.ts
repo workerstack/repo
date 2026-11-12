@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import type { ToolArgs } from "./gate-harness.ts";
 import {
   COMMENT_MARK,
   DELETE_FILE,
@@ -13,7 +14,7 @@ import {
   PATCH_HEADER_RE,
   PLUS_MARK,
 } from "./gitignore-guard.constants.ts";
-import type { IgnoreEdit, ToolArgs } from "./gitignore-guard.types.ts";
+import type { IgnoreEdit } from "./gitignore-guard.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 /** One file section of a patch: the path its header names and its `+` lines. */

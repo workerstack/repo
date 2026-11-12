@@ -22,6 +22,7 @@ import {
   ZOMBIE,
 } from "./board.constants.ts";
 import type { HostIdentity, LooseRow, Probe, ProbeDeps, ProcessInfo, ProcStat } from "./board.types.ts";
+import { jsonText } from "./json-text.ts";
 
 /** The probe deps with the spawn default filled in. */
 type Deps = ProbeDeps & { spawn: NonNullable<ProbeDeps["spawn"]> };
@@ -191,5 +192,5 @@ export function rowAlive(
 
   if (info == null || info.start == null || info.start === "") return false;
 
-  return info.start === String(row.start);
+  return info.start === jsonText(row.start);
 }

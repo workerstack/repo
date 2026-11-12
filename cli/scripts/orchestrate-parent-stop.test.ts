@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { claudeHook } from "./__fixtures__/claude-hook.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
+import type { HookInput } from "./hook-input.ts";
 import { main } from "./orchestrate-parent.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
@@ -140,7 +141,7 @@ describe("the last assistant message read from a transcript", () => {
   });
 });
 
-function need(extra: Record<string, unknown>) {
+function need(extra: HookInput) {
   return {
     hook_event_name: "SubagentStop",
     session_id: "c1",

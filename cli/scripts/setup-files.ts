@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { JsonObject } from "../json.ts";
 import { JSON_INDENT, OAUTH_FILE, SECRET_DIR_MODE, SECRET_FILE_MODE } from "./setup.constants.ts";
 import type { SpeakPatch } from "./setup.types.ts";
 import { readObjectFile, section, str } from "./voice-args.ts";
@@ -41,7 +42,7 @@ export function mergeSpeakJson(home: string, patch: SpeakPatch): string {
   stateHome(home);
   const p = speakJsonPath(home);
   const cur = readObjectFile(p);
-  const next: Record<string, unknown> = { ...cur, ...patch };
+  const next: JsonObject = { ...cur, ...patch };
 
   if (patch.elevenlabs !== undefined) next.elevenlabs = { ...section(cur, "elevenlabs"), ...patch.elevenlabs };
 

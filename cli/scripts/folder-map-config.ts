@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { readJson } from "../json.ts";
+import { type Json, type JsonObject, readJson } from "../json.ts";
 import { errorMessage } from "../sync-errors.ts";
 import { CONFIG_REL, DEFAULTS, GIT_MAX_BUFFER, LIST_KEYS, NUMBER_KEYS } from "./folder-map.constants.ts";
 import type { MapConfig } from "./folder-map.types.ts";
@@ -27,9 +27,9 @@ function isListKey(k: string): k is (typeof LIST_KEYS)[number] {
 }
 
 /** The config's top-level entries ({} when it is not an object), or null after a warning when it cannot be read. */
-function readConfig(abs: string, warn: (msg: string) => void): Record<string, unknown> | null {
+function readConfig(abs: string, warn: (msg: string) => void): JsonObject | null {
   try {
-    return readJson(z.record(z.string(), z.unknown()).catch({}), stripJsonc(fs.readFileSync(abs, "utf8")));
+    return readJson(z.record(z.string(), z.json()).catch({}), stripJsonc(fs.readFileSync(abs, "utf8")));
   } catch (error) {
     warn(`repo map: ignoring ${CONFIG_REL}: ${errorMessage(error)}`);
 
@@ -38,7 +38,7 @@ function readConfig(abs: string, warn: (msg: string) => void): Record<string, un
 }
 
 /** Sets one known key on `out` when its value is good; warns by name when it is not; skips unknown keys. */
-function applyKey(out: MapConfig, [k, v]: [string, unknown], warn: (msg: string) => void): void {
+function applyKey(out: MapConfig, [k, v]: [string, Json], warn: (msg: string) => void): void {
   if (isNumberKey(k)) {
     if (typeof v === "number" && Number.isFinite(v) && v > 0) out[k] = v;
     else warn(`repo map: ignoring ${CONFIG_REL} key ${k}`);

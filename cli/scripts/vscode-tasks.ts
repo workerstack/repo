@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { readJson, tryJson } from "../json.ts";
+import { type Json, readJson, tryJson } from "../json.ts";
 import { packageJsonSchema } from "../package-json.ts";
 import { errorMessage } from "../sync-errors.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
@@ -31,11 +31,11 @@ export type VsTask = {
   label?: string;
   type?: string;
   command?: string;
-  dependsOn?: unknown;
+  dependsOn?: Json;
   options?: { cwd?: string };
-  problemMatcher?: unknown[];
+  problemMatcher?: Json[];
   presentation?: { panel: string; reveal: string };
-  [key: string]: unknown;
+  [key: string]: Json | undefined;
 };
 
 export type TasksFile = {
@@ -56,7 +56,7 @@ type PackageJson = z.output<ReturnType<typeof packageSchema>>;
 
 /** A tasks.json: its tasks that are objects; a file with no tasks array has none. */
 function tasksFileSchema() {
-  const task = z.record(z.string(), z.unknown()).nullable().catch(null);
+  const task = z.record(z.string(), z.json()).nullable().catch(null);
 
   return z.looseObject({ tasks: z.array(task).catch([]) }).catch({ tasks: [] });
 }
@@ -120,9 +120,9 @@ function labelPrefix(name: string): string {
 
 /** A generated task; its keys are listed in the order tasks.json holds them. */
 function shellTask(label: string, script: string, cwd?: string): VsTask {
-  const options: [string, unknown][] = cwd === undefined ? [] : [["options", { cwd }]];
+  const options: [string, Json][] = cwd === undefined ? [] : [["options", { cwd }]];
 
-  return Object.fromEntries<unknown>([
+  return Object.fromEntries<Json>([
     ["label", label],
     ["type", SHELL_TYPE],
     ["command", `bun run ${script}`],

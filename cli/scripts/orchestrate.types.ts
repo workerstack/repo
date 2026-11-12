@@ -1,11 +1,8 @@
 import type { closingLine, parseApproval } from "./closing-line.ts";
-import type { HookOutput } from "./gate-harness.ts";
+import type { HookOutput, ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { STRATEGIES } from "./strategy.constants.ts";
 import type { Roots } from "./workspace-root.ts";
-
-/** A tool's input, whose shape varies per tool. */
-export type ToolInput = Record<string, unknown>;
 
 export type Strategy = (typeof STRATEGIES)[number];
 
@@ -73,5 +70,5 @@ export type WriteCase = {
   roots: Roots;
   rawPath: string;
   canon: string;
-  toolInput: ToolInput;
+  toolInput: ToolArgs;
 };

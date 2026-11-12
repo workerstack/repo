@@ -10,7 +10,7 @@ import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
 /** Antigravity's tool call: the tool name and its arguments. */
 type HookToolCall = {
   name?: string;
-  args?: Record<string, unknown>;
+  args?: JsonObject;
 };
 
 /** The nested agent object some harnesses send in place of flat agent fields. */
@@ -41,8 +41,8 @@ export type HookInput = {
   tool_name?: string;
   toolName?: string;
   /** Shape varies per tool; callers narrow it. */
-  tool_input?: Record<string, unknown>;
-  toolInput?: Record<string, unknown>;
+  tool_input?: JsonObject;
+  toolInput?: JsonObject;
   /** Antigravity's call, instead of the tool name and input fields. */
   toolCall?: HookToolCall;
   transcript_path?: string;

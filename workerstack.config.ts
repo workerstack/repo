@@ -126,11 +126,6 @@ export default defineConfig({
           "while their temp dir is the run root",
         rules: ["repo/env-in-config"],
       },
-      {
-        files: ["cli/scripts/**"],
-        reason: "roadmap 8 slice 12 gives the cli/scripts dictionaries owned value types and deletes this entry",
-        rules: ["repo/no-unsafe-dictionary-type"],
-      },
     ],
   },
   nightly: { shards: 8 },

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   type Spawned,
@@ -94,7 +95,7 @@ it("oauth login: fails with the denial the browser reports, or a missing code", 
   expect(empty.errs).toContain("missing code");
 });
 
-async function exchangeFailing(creds: string, reply: Record<string, unknown>) {
+async function exchangeFailing(creds: string, reply: JsonObject) {
   stubFetch(() => jsonRes(reply, 400));
   const r = await withIo(() => main(["login", "--creds", creds], browser("code=c")));
 

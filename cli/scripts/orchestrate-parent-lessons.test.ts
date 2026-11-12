@@ -5,11 +5,12 @@ import { expect, it } from "vitest";
 
 import { must, orchestrateKit, plantSource, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_LESSON } from "./__fixtures__/persist-bodies.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 
 const kit = orchestrateKit();
 
 /** One PreToolUse in Grok's shape, as session `sid`; the reply's hook output, or null when the hook stays silent. */
-function pre(ws: string, call: { tool: string; input: Record<string, unknown> }, sid = "s1") {
+function pre(ws: string, call: { tool: string; input: ToolArgs }, sid = "s1") {
   const fields = { session_id: sid, toolInput: call.input, toolName: call.tool };
 
   return replyOf(kit.grok({ ws }, "PreToolUse", fields))?.hookSpecificOutput ?? null;

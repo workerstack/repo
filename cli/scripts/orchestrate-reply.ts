@@ -1,7 +1,7 @@
 /** The replies the parent hook's handlers return, and the write target they answer about. */
-import { answerDeny, answerRewrite, WRITE_PATH_FIELDS } from "./gate-harness.ts";
+import { answerDeny, answerRewrite, type ToolArgs, WRITE_PATH_FIELDS } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
-import type { HookResult, HostReply, ToolInput } from "./orchestrate.types.ts";
+import type { HookResult, HostReply } from "./orchestrate.types.ts";
 
 /** No reply: the host goes on as it would without the hook. */
 export const PASS: Readonly<HookResult> = { code: 0 };
@@ -20,7 +20,7 @@ export function denyWith(data: HookInput, reason: string): HookResult {
 }
 
 /** The path the host named, in whichever field it used; "" when none. */
-export function writeTarget(toolInput: ToolInput): string {
+export function writeTarget(toolInput: ToolArgs): string {
   for (const key of ["file_path", "filePath", "path", "target_file"]) {
     const v = toolInput[key];
 
@@ -31,13 +31,13 @@ export function writeTarget(toolInput: ToolInput): string {
 }
 
 /** The full content a Write sent; "" for an Edit. */
-export function contentOf(toolInput: ToolInput): string {
+export function contentOf(toolInput: ToolArgs): string {
   return typeof toolInput.content === "string" ? toolInput.content : "";
 }
 
 // Hosts name the target differently; point every key the host sent at the absolute file.
-function withPath(toolInput: ToolInput, abs: string): ToolInput {
-  const next: ToolInput = Object.assign({}, toolInput);
+function withPath(toolInput: ToolArgs, abs: string): ToolArgs {
+  const next: ToolArgs = Object.assign({}, toolInput);
   const keys: string[] = WRITE_PATH_FIELDS.filter((key) => typeof next[key] === "string" && next[key] !== "");
 
   for (const key of keys) next[key] = abs;
@@ -46,6 +46,6 @@ function withPath(toolInput: ToolInput, abs: string): ToolInput {
 }
 
 /** The write rewritten to land `file.content` at `file.abs`. */
-export function savedReply(data: HookInput, toolInput: ToolInput, file: { abs: string; content: string }): HookResult {
+export function savedReply(data: HookInput, toolInput: ToolArgs, file: { abs: string; content: string }): HookResult {
   return replyWith(answerRewrite(data, Object.assign(withPath(toolInput, file.abs), { content: file.content })));
 }

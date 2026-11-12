@@ -5,10 +5,11 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
 import { IN_PROGRESS, ITEM_DIRS, PLAN_KIND } from "./orchestrate.constants.ts";
-import type { Approvable, ItemRef, ReviewState, ReviewsOpen, ToolInput } from "./orchestrate.types.ts";
+import type { Approvable, ItemRef, ReviewState, ReviewsOpen } from "./orchestrate.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
@@ -149,7 +150,7 @@ export function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): Revi
 }
 
 // A spawn whose prompt starts `/review-plan N` or `/review-roadmap N` records the item's `reviews` at spawn.
-export function recordReviewSpawn(data: HookInput, toolInput: ToolInput | undefined): void {
+export function recordReviewSpawn(data: HookInput, toolInput: ToolArgs | undefined): void {
   try {
     const [, kind, serial] = REVIEW_SPAWN_RE.exec(typeof toolInput?.prompt === "string" ? toolInput.prompt : "") ?? [];
     const file = reviewsOpenFile(data);

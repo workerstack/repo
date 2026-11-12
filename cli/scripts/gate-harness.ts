@@ -1,6 +1,7 @@
 /** What the gate knows of each harness: its wire shape, its tools, and how it takes a deny or a rewrite. */
 import { z } from "zod";
 
+import type { JsonObject } from "../json.ts";
 import type { HookInput } from "./hook-input.ts";
 
 /** Which wire shape a hook payload came in; Grok sends Claude's. */
@@ -15,8 +16,8 @@ export type ToolSpec = {
   limits?: boolean;
 };
 
-/** A tool call's argument bag; the shape varies per harness and tool, so each field is checked where it is read. */
-export type ToolArgs = Record<string, unknown>;
+/** A tool call's parsed JSON arguments; their shape varies per harness and tool, so each read checks its field. */
+export type ToolArgs = JsonObject;
 
 /** The gate's verdict on one call: a deny reason, a rewritten input, or null to let it through. */
 export type GateResult = { type: "deny"; reason: string } | { type: "rewrite"; updatedInput: ToolArgs } | null;
@@ -135,7 +136,7 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   const args = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
 
   // A caller may hand a payload built outside parseHookInput, so an input that is no object reads as no args.
-  const record = z.record(z.string(), z.unknown()).nullable().catch(null).parse(args);
+  const record = z.record(z.string(), z.json()).nullable().catch(null).parse(args);
 
   return { args: record, harness, key: eventKey(name) };
 }

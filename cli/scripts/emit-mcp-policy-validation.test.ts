@@ -1,6 +1,7 @@
 import { TomlDate } from "smol-toml";
 import { afterEach, expect, it, vi } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { DENY_ALL, plant, plantDirs, plantPolicy } from "./__fixtures__/mcp-policy-kit.ts";
 import { isHomeGrokConfig } from "./emit-mcp-hosts.ts";
 import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
@@ -9,7 +10,7 @@ const tmp = plantDirs();
 
 afterEach(() => vi.restoreAllMocks());
 
-function withPatch(patch: Record<string, unknown>) {
+function withPatch(patch: JsonObject) {
   return { ...DENY_ALL, ...patch };
 }
 

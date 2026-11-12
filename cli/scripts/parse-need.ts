@@ -2,7 +2,7 @@
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { type JsonObject, tryJson } from "../json.ts";
 import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
 /** One validated job row. */
@@ -42,14 +42,14 @@ function globOf(value: unknown): string[] | undefined {
 }
 
 /** Sets `row[field]` to the trimmed text of `rec[field]` when it holds any. */
-function copyText(row: NeedJob, rec: Record<string, unknown>, field: TextField): void {
+function copyText(row: NeedJob, rec: JsonObject, field: TextField): void {
   const value = text(rec[field]);
 
   if (value !== "") row[field] = value;
 }
 
 /** The row `rec` asks for, or null when its job is unknown or it names no query (nor a stash, for a slice). */
-function jobRow(rec: Record<string, unknown>): NeedJob | null {
+function jobRow(rec: JsonObject): NeedJob | null {
   const job = text(rec.job);
   const query = text(rec.query);
   const stash = text(rec.stash);
@@ -77,7 +77,7 @@ export function parseNeed(input: string | null | undefined): NeedResult {
   if (m === null) return { error: "no json need array", ok: false };
 
   // A value that is not an array reads as an empty one, and an item that is not an object as null.
-  const jobItem = z.record(z.string(), z.unknown()).nullable().catch(null);
+  const jobItem = z.record(z.string(), z.json()).nullable().catch(null);
   const group = m[1] /* the pattern has one group, set whenever it matches */ as string;
   const parsed = tryJson(z.array(jobItem).catch([]), group);
 

@@ -86,7 +86,7 @@ export function start(ctx: ListenCtx): number {
   const child = ctx.spawnFn(ctx.nodeBin, argv, { cwd, detached: true, env, stdio, windowsHide: true });
 
   if (typeof child.unref === "function") child.unref();
-  writeSession(cwd, { pid: child.pid, started: Date.now(), wav });
+  writeSession(cwd, { ...(child.pid === undefined ? {} : { pid: child.pid }), started: Date.now(), wav });
   ctx.log.log(`recording pid=${child.pid}\n${wav}`);
 
   return 0;
