@@ -1,14 +1,17 @@
 import { eastAsianWidth } from "get-east-asian-width";
 
 import {
+  CALL_EXPRESSION,
   CODE_HINT,
   COMMENT_HINT,
   EMOJI,
   EMOJI_WIDTH,
+  IDENTIFIER,
   LITERAL,
   PARENT_KEY,
   PRINT_WIDTH,
   REGEX_HINT,
+  SEALED_CALLEE,
   STRING_HINT,
   TEMPLATE_ELEMENT,
   TRAILING_CR,
@@ -19,7 +22,24 @@ import type { RepoRule } from "./rule.types.ts";
 
 type Range = { start: number; end: number; hint: string };
 
-type Found = { type: string; range: readonly [number, number]; regex?: unknown; value?: unknown };
+/** A source span whose columns a line's width leaves out. */
+type Span = { start: number; end: number };
+
+type Found = {
+  type: string;
+  range: readonly [number, number];
+  regex?: unknown;
+  value?: unknown;
+  name?: unknown;
+  callee?: Found;
+  arguments?: readonly Found[];
+};
+
+/** What `gather` collects: hinted ranges, and the cipher literals of `sealed(…)` calls that take no columns. */
+type Gathered = { ranges: Range[]; exempt: Span[] };
+
+/** A line's text without its exempt spans, and where each kept part starts in the line. */
+type Kept = { text: string; parts: readonly { from: number; at: number }[] };
 
 type Piece = { at: number; width: number };
 
@@ -59,18 +79,64 @@ function hintOf(node: Found): string | undefined {
   return typeof node.value === "string" ? STRING_HINT : undefined;
 }
 
-/** Every string, template and regex range under `node`, found without the `parent` links. */
-function gather(node: unknown, ranges: Range[]): void {
+/** The range of the cipher a `sealed("…")` call takes as its one string argument, or none for any other node. */
+function cipherOf(node: Found): Span | undefined {
+  if (node.type !== CALL_EXPRESSION || node.callee?.type !== IDENTIFIER || node.callee.name !== SEALED_CALLEE)
+    return undefined;
+
+  const [argument, ...rest] = node.arguments ?? [];
+
+  if (argument?.type !== LITERAL || typeof argument.value !== "string" || rest.length > 0) return undefined;
+
+  return { end: argument.range[1], start: argument.range[0] };
+}
+
+/** Every string, template and regex range under `node`, and every sealed cipher, found without the `parent` links. */
+function gather(node: unknown, found: Gathered): void {
   if (typeof node !== "object" || node === null) return;
 
   if ("type" in node && "range" in node) {
-    const found = node /* an object with a type and a range is an AST node */ as Found;
-    const hint = hintOf(found);
+    const ast = node /* an object with a type and a range is an AST node */ as Found;
+    const cipher = cipherOf(ast);
+    const hint = hintOf(ast);
 
-    if (hint !== undefined) ranges.push({ end: found.range[1], hint, start: found.range[0] });
+    if (cipher !== undefined) found.exempt.push(cipher);
+    else if (hint !== undefined && !found.exempt.some((span) => span.start === ast.range[0]))
+      found.ranges.push({ end: ast.range[1], hint, start: ast.range[0] });
   }
 
-  for (const [key, value] of Object.entries(node)) if (key !== PARENT_KEY) gather(value, ranges);
+  for (const [key, value] of Object.entries(node)) if (key !== PARENT_KEY) gather(value, found);
+}
+
+/** `line`, which starts at source offset `lineStart`, with the parts `exempt` covers taken out. */
+function keptOf(line: string, lineStart: number, exempt: readonly Span[]): Kept {
+  const skipped = new Set<number>();
+
+  for (const span of exempt) {
+    for (let at = Math.max(0, span.start - lineStart); at < Math.min(line.length, span.end - lineStart); at++)
+      skipped.add(at);
+  }
+
+  const parts: { from: number; at: number }[] = [];
+  let text = "";
+
+  for (let from = 0; from < line.length; from++) {
+    if (skipped.has(from)) continue;
+
+    if (from === 0 || skipped.has(from - 1)) parts.push({ at: text.length, from });
+    text += line.charAt(from);
+  }
+
+  return { parts, text };
+}
+
+/** The offset in the line of `offset` in its kept text. */
+function lineOffset(kept: Kept, offset: number): number {
+  let part = { at: 0, from: 0 };
+
+  for (const candidate of kept.parts) if (candidate.at <= offset) part = candidate;
+
+  return part.from + offset - part.at;
 }
 
 /** The hint of the string, comment or regex that covers most of the line from `start` to `end`, else the code hint. */
@@ -103,8 +169,9 @@ export const maxLineWidth: RepoRule<"wide"> = {
   create(context) {
     return {
       Program(program) {
-        const ranges: Range[] = [];
-        gather(program, ranges);
+        const found: Gathered = { exempt: [], ranges: [] };
+        gather(program, found);
+        const { exempt, ranges } = found;
 
         for (const comment of context.sourceCode.getAllComments())
           ranges.push({ end: comment.range[1], hint: COMMENT_HINT, start: comment.range[0] });
@@ -113,12 +180,14 @@ export const maxLineWidth: RepoRule<"wide"> = {
 
         for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
           const line = raw.replace(TRAILING_CR, "");
-          const column = overflowAt(line);
+          const kept = keptOf(line, lineStart, exempt);
+          const overflow = overflowAt(kept.text);
 
-          if (column !== undefined && widthOf(line.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
+          if (overflow !== undefined && widthOf(kept.text.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
             const hint = hintAt(ranges, lineStart, lineStart + line.length);
+            const column = lineOffset(kept, overflow);
             context.report({
-              data: { hint, width: String(widthOf(line)) },
+              data: { hint, width: String(widthOf(kept.text)) },
               loc: { end: { column: line.length, line: index + 1 }, start: { column, line: index + 1 } },
               messageId: "wide",
             });

@@ -31,6 +31,9 @@ function filled(count: number, fill: string) {
 
 const FILL_COLUMNS = PRINT_WIDTH - PREFIX.length - 1;
 
+/** The base64 of an age cipher as `bun repo env set` writes it: 340 columns, wider than any line may be. */
+const CIPHER = "YWdl".repeat(85);
+
 describe("max-line-width", () => {
   it("passes a line of exactly 120 ASCII columns and fails 121 once", () => {
     expect(messagesOf(stringLine(PRINT_WIDTH))).toStrictEqual([]);
@@ -96,5 +99,34 @@ describe("max-line-width exemptions", () => {
   it("reports each long line once", () => {
     const code = `${stringLine(130)}\nexport const b = 1;\n${stringLine(125)}\n`;
     expect(messagesOf(code)).toStrictEqual([over(10, STRING_HINT), over(5, STRING_HINT)]);
+  });
+});
+
+describe("max-line-width sealed ciphers", () => {
+  it("passes a line long only by the cipher sealed() takes, beside it or alone where oxfmt moves it", () => {
+    expect(messagesOf(`export const env = defineEnv({ prod: { KEY: sealed("${CIPHER}") } });`)).toStrictEqual([]);
+
+    const formatted = [
+      "export const env = defineEnv({",
+      "  prod: {",
+      "    KEY: sealed(",
+      `      "${CIPHER}",`,
+      "    ),",
+      "  },",
+      "});",
+    ].join("\n");
+
+    expect(messagesOf(formatted)).toStrictEqual([]);
+  });
+
+  it("fails a cipher outside sealed(), or under another callee name", () => {
+    expect(messagesOf(`export const a = "${CIPHER}";`)).toHaveLength(1);
+    expect(messagesOf(`const seal = sealed;\nexport const a = seal("${CIPHER}");`)).toHaveLength(1);
+  });
+
+  it("measures a line long without its cipher as if the cipher were gone, hinting at the code past it", () => {
+    const code = `x(sealed("${CIPHER}"), "${"x".repeat(121)}");`;
+    expect(messagesOf(code)).toStrictEqual([over(17, STRING_HINT)]);
+    expect(messagesOf(`x(sealed("${CIPHER}"), "${"😀".repeat(60)}x");`)).toStrictEqual([over(17, STRING_HINT)]);
   });
 });
