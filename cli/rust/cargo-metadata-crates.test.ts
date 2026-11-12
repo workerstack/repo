@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { onCratesIo, workspaceCrates } from "./cargo-metadata.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 
-function entry(name: string, fields: Record<string, unknown> = {}) {
+function entry(name: string, fields: JsonObject = {}) {
   return {
     id: `${name} 0.2.0`,
     manifest_path: `/work/${name}/Cargo.toml`,

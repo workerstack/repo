@@ -1,12 +1,13 @@
 import { expect, it } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { parseSpec } from "./parse-spec.ts";
 import { defineBench } from "./spec.ts";
 
 const ONE = { candidates: { bun: { run: ["bun", "-e", "1"] } }, metrics: { wall: { weight: 1 } } };
 
 /** The refusals `parseSpec` gives for `ONE` with `change` over it. */
-function refusals(change: Record<string, unknown>) {
+function refusals(change: JsonObject) {
   return parseSpec({ ...ONE, ...change });
 }
 

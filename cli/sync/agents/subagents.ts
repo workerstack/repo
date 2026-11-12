@@ -108,8 +108,8 @@ function flatAgent(dir: string, key: string, { doc, name }: Agent): Rendered {
 }
 
 function codexAgent({ doc, name }: Agent): Rendered {
-  const description: unknown = doc.data["description"];
-  const rest: Record<string, unknown> = { name, ...(isTruthy(description) ? { description } : {}) };
+  const description: Json | undefined = doc.data["description"];
+  const rest: Fields = { name, ...(isTruthy(description) ? { description } : {}) };
   Object.assign(
     rest,
     without(block(doc.data["codexcli"]), "name", "description", "developer_instructions", "short-description"),
@@ -135,7 +135,7 @@ const RENDER: Readonly<Record<Host, (agent: Agent) => Rendered>> = {
  * smol-toml for the frontmatter, then `developer_instructions` appended last. A multi-line body without `'''`
  * becomes a `'''` block. Appending after any `[table]` puts the key inside that table, as rulesync did.
  */
-function codexToml(rest: Record<string, unknown>, body: string): string {
+function codexToml(rest: Fields, body: string): string {
   const head = `${stringify(rest).trimEnd()}\n`;
 
   if (body === "") return head;
@@ -146,7 +146,7 @@ function codexToml(rest: Record<string, unknown>, body: string): string {
 }
 
 /** Gray-matter layout: fences around the YAML, then the body. */
-function markdown(fm: Record<string, unknown>, body: string, mode: YamlMode): string {
+function markdown(fm: Fields, body: string, mode: YamlMode): string {
   const entries = Object.entries(fm) /* frontmatter values come from parsed YAML */ as [string, YamlValue][];
 
   return `---\n${emitYaml(entries, mode)}---\n${body}\n`;

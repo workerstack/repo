@@ -2,7 +2,7 @@
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
-import { tryJson } from "../json.ts";
+import { type JsonObject, tryJson } from "../json.ts";
 import { BENCH_LINE, BYTES_PER_KB, BYTES_PER_MB, FLOORED_PLATFORM, US_PER_MS, VM_HWM } from "./bench.constants.ts";
 
 /** The part of Bun's `ResourceUsage` a run reads: peak RSS in bytes and CPU time in microseconds. */
@@ -47,13 +47,13 @@ export function usageMetrics(usage: Usage): { cpu: number; rss: number } {
 }
 
 /** The JSON object after `bench: ` on the last line of `stdout`, or null when that line is not one. */
-function benchObject(stdout: string): Record<string, unknown> | null {
+function benchObject(stdout: string): JsonObject | null {
   const output = stdout.trimEnd();
   const last = output.slice(output.lastIndexOf("\n") + 1);
 
   if (!last.startsWith(BENCH_LINE)) return null;
 
-  return tryJson(z.record(z.string(), z.unknown()), last.slice(BENCH_LINE.length)) ?? null;
+  return tryJson(z.record(z.string(), z.json()), last.slice(BENCH_LINE.length)) ?? null;
 }
 
 /** Reads the `names` metrics from the last stdout line, `bench: {"<name>": <number>, ...}`. */

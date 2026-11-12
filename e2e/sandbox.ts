@@ -10,7 +10,7 @@ import { inject } from "vitest";
 import type { z } from "zod";
 
 import { childEnv } from "../cli/env.ts";
-import { readJson } from "../cli/json.ts";
+import { type JsonObject, readJson } from "../cli/json.ts";
 import { quoteWin } from "./quote-win";
 import { PACKAGE_NAME } from "./registry";
 import type { Run } from "./run.types";
@@ -58,8 +58,8 @@ export class Sandbox {
   }
 
   /** Minimal consumer: package.json, one source module and the index that re-exports it, one commit. */
-  async scaffold(extra: Record<string, unknown> = {}) {
-    const pkg: Record<string, unknown> = { name: "consumer", private: true, ...extra };
+  async scaffold(extra: JsonObject = {}) {
+    const pkg: JsonObject = { name: "consumer", private: true, ...extra };
     this.write("package.json", `${JSON.stringify(pkg, null, 2)}\n`);
     this.write("src/answer.ts", "export const answer = 42;\n");
     this.write("src/index.ts", 'export { answer } from "./answer.ts";\n');

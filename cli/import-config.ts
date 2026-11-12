@@ -9,17 +9,23 @@ import { CONFIG_FILE, COPY_ID_BYTES } from "./config.constants.ts";
  * Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own
  * way.
  */
-export type ImportConfig = (root: string) => Promise<Record<string, unknown>>;
+export type ImportConfig = (root: string) => Promise<ConfigModule>;
+
+/** A config file's module namespace; `loadConfig` reads only its default export. */
+export type ConfigModule = {
+  /** The config `defineConfig` returned; `loadConfig` parses it and refuses a module without one. */
+  readonly default?: unknown;
+};
 
 /** The module namespace of the file at `file`. */
-async function importFile(file: string): Promise<Record<string, unknown>> {
+async function importFile(file: string): Promise<ConfigModule> {
   const namespace: unknown = await import(/* @vite-ignore */ pathToFileURL(file).href);
 
-  return namespace /* an import resolves to its module namespace object */ as Record<string, unknown>;
+  return namespace /* an import resolves to its module namespace object */ as ConfigModule;
 }
 
 /** The module of a config whose text changed since it was loaded, imported from a temporary copy beside it. */
-async function importCopy(root: string, file: string): Promise<Record<string, unknown>> {
+async function importCopy(root: string, file: string): Promise<ConfigModule> {
   const copy = path.join(root, `.workerstack.config.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
   fs.copyFileSync(file, copy);
 
@@ -37,7 +43,7 @@ async function importCopy(root: string, file: string): Promise<Record<string, un
  * file, writes nothing.
  */
 function cachedImporter(): ImportConfig {
-  const loaded = new Map<string, { text: string; module: Record<string, unknown> }>();
+  const loaded = new Map<string, { text: string; module: ConfigModule }>();
 
   return async (root) => {
     const file = path.join(root, CONFIG_FILE);

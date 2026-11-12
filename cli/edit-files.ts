@@ -3,11 +3,11 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { readJson } from "./json.ts";
+import { type Json, readJson } from "./json.ts";
 import { JSON_INDENT, POSIX } from "./update.constants.ts";
 
 /** One change to a parsed manifest: the root-relative POSIX file and what to do to its parsed JSON, in place. */
-export type Edit = { file: string; apply: (raw: unknown) => void };
+export type Edit = { file: string; apply: (raw: Json) => void };
 
 /**
  * Reads each file the edits name once, applies its edits in place so key order stays, and writes it back as JSON.

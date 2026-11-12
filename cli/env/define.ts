@@ -185,9 +185,12 @@ function ciphersOf(layers: Layers): string[] {
   return [...new Set(values.filter(isSealed).map((value) => value[SEALED]))];
 }
 
+/** A view of env values by key; a getter returns undefined for a key its source lacks. */
+type Getters = Record<string, string | undefined>;
+
 /** An object whose enumerable getter per key returns `read(key)`. */
-function getters(keys: readonly string[], read: (key: string) => string | undefined): Record<string, unknown> {
-  const view: Record<string, unknown> = {};
+function getters(keys: readonly string[], read: (key: string) => string | undefined): Getters {
+  const view: Getters = {};
 
   for (const key of keys) Object.defineProperty(view, key, { enumerable: true, get: () => read(key) });
 
@@ -215,7 +218,7 @@ function plainOf(layers: Layers, io: EnvIo): Plain {
 }
 
 /** A view of `block` read through `plain`. */
-function viewOf(block: Block, plain: Plain): Record<string, unknown> {
+function viewOf(block: Block, plain: Plain): Getters {
   return getters(Object.keys(block), (key) => plain(key, block[key] /* a key of its own block */ as Value));
 }
 
@@ -231,7 +234,7 @@ function currentScope(source: Source): Scope {
 type CurrentRead = { readonly io: EnvIo; readonly layers: Layers; readonly origin: string; readonly plain: Plain };
 
 /** Every scope's keys, each read from the scope `REPO_ENV` names at read time; a key it lacks names `origin`. */
-function currentOf({ io, layers, origin, plain }: CurrentRead): Record<string, unknown> {
+function currentOf({ io, layers, origin, plain }: CurrentRead): Getters {
   const keys = [...new Set(SCOPES.flatMap((scope) => Object.keys(layers[scope])))];
 
   return getters(keys, (key) => {
@@ -249,7 +252,7 @@ function currentOf({ io, layers, origin, plain }: CurrentRead): Record<string, u
  * The process view of `source` per `spec`: a required variable is always a key and throws when read unset; an optional
  * one is a key only when `source` sets it, so a spread over defaults keeps them.
  */
-function processView(spec: ProcessSpec, source: Source): Record<string, unknown> {
+function processView(spec: ProcessSpec, source: Source): Getters {
   const keys = Object.keys(spec).filter((name) => spec[name] === "required" || source[name] !== undefined);
 
   return getters(keys, (name) => {

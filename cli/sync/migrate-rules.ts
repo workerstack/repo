@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { JsonObject } from "../json.ts";
 import { emitYaml, parseDoc } from "./agents/frontmatter.ts";
 import { filesUnder, isDir } from "./migrate-fs.ts";
 import { FENCE, LINE_BREAK, MD, NOT_FOUND, REPO_DIR } from "./migrate.constants.ts";
@@ -106,7 +107,7 @@ function globList(value: unknown): string[] {
  * A rule's new `description` (from its first `#` heading, else its name) and `paths` (from `globs`), with their
  * notes.
  */
-function ruleKeys(data: Record<string, unknown>, body: string, doc: OldDoc): NewKeys {
+function ruleKeys(data: JsonObject, body: string, doc: OldDoc): NewKeys {
   const keys: NewKeys = { converted: [], parts: [], top: [] };
   const description = data["description"];
 

@@ -1,10 +1,11 @@
 import { expect, it } from "vitest";
 
+import type { JsonObject } from "../json.ts";
 import { crateProblems } from "./cargo-metadata.ts";
 import type { CargoResult } from "./clippy.ts";
 
 /** One `packages[]` entry as cargo 1.99.1 prints it for a workspace member. */
-function entry(name: string, fields: Record<string, unknown>, manifest = `/work/${name}/Cargo.toml`) {
+function entry(name: string, fields: JsonObject, manifest = `/work/${name}/Cargo.toml`) {
   return {
     description: null,
     id: `${name} 0.1.0`,

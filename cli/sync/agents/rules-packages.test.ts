@@ -7,7 +7,7 @@ import type { Doc, Sources } from "./sources.types.ts";
 
 const WEB = "packages/web";
 
-function pkgRule(file: string, data: Record<string, unknown>, body: string): Doc {
+function pkgRule(file: string, data: Doc["data"], body: string): Doc {
   return {
     body,
     data: { description: "d", ...data },
