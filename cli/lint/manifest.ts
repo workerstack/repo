@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { isSource } from "../test-files.ts";
 
 /**
@@ -28,10 +29,6 @@ const LEADING_DOT_SLASH = /^\.\//;
 const TRAILING_SLASHES = /\/+$/;
 const GLOB_TOKEN = /\*\*\/|\*\*|\*|\?|[.+^${}()|[\]\\]/g;
 const GLOB_PARTS: Record<string, string> = { "*": "[^/]*", "**": ".*", "**/": "(?:.*/)?", "?": "[^/]" };
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** The nearest package.json at or above `start`, or null when none is. */
 export function nearestManifest(start: string): string | null {

@@ -9,12 +9,11 @@ import { isDeepStrictEqual } from "node:util";
 
 import { parse as parseToml } from "smol-toml";
 
+import { isRecord, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
-import { isRecord } from "./hook-input.ts";
-import type { JsonObject } from "./sync-global-settings.types.ts";
 
 /** One settings key whose payload value is missing or different in the dest. */
 export type DriftEntry = {
@@ -42,10 +41,6 @@ type ProjectGrok = { error: string; value?: undefined } | { value: JsonObject; e
 
 type Host = ReturnType<typeof loadManifest>["hosts"][number];
 
-function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
-}
-
 /** Leaf `[path, value]` pairs of a payload; arrays and dates are leaves. */
 function leaves(obj: JsonObject, skipRe: RegExp, prefix: string[] = []): [string[], unknown][] {
   const out: [string[], unknown][] = [];
@@ -54,7 +49,7 @@ function leaves(obj: JsonObject, skipRe: RegExp, prefix: string[] = []): [string
     if (shouldSkip(k, skipRe)) continue;
     const next = [...prefix, k];
 
-    if (isPlainObject(v)) out.push(...leaves(v, skipRe, next));
+    if (isRecord(v)) out.push(...leaves(v, skipRe, next));
     else out.push([next, v]);
   }
 
@@ -65,7 +60,7 @@ function valueAt(obj: unknown, keyPath: string[]): { found: false } | { found: t
   let cur = obj;
 
   for (const k of keyPath) {
-    if (!isPlainObject(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
+    if (!isRecord(cur) || !Object.prototype.hasOwnProperty.call(cur, k)) return { found: false };
     cur = cur[k];
   }
 

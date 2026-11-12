@@ -1,3 +1,5 @@
+/** Reading a page: its markdown and numbered refs, what that read shows, and which pages Lightpanda cannot read. */
+import { isRecord } from "../json.ts";
 import { withCdp } from "./browser-cdp.ts";
 import { asRec, textOf } from "./browser-session.ts";
 import {
@@ -16,8 +18,6 @@ import {
   TITLE_LINE_RE,
 } from "./browser.constants.ts";
 import type { Cdp, RefEntry, Session, Snap } from "./browser.types.ts";
-/** Reading a page: its markdown and numbered refs, what that read shows, and which pages Lightpanda cannot read. */
-import { isRecord } from "./hook-input.ts";
 import { writeStash } from "./job-stash.ts";
 
 function parseUrl(url: unknown): URL | null {

@@ -2,9 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { isImplementer, isParentOrchestrator, sessionIdOf } from "./gate-agents.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
-import { TOOLS, isHookObject, isPlainObject, toolCallOf, type Payload } from "./gate-harness.ts";
+import { TOOLS, isHookObject, toolCallOf, type Payload } from "./gate-harness.ts";
 import { writeTargets } from "./gate-rewrites.ts";
 import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
 import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
@@ -99,7 +100,7 @@ function gitAskedBy(root: string, sid: string): Set<string> {
     );
 
     // A file that is not an object throws in the destructure the gate always used, which lands in the catch below.
-    if (!isPlainObject(parsed)) return new Set();
+    if (!isRecord(parsed)) return new Set();
     const words = parsed.words;
 
     return new Set(Array.isArray(words) ? words.filter((w): w is string => typeof w === "string") : []);

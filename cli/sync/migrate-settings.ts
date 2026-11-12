@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 
-import { isRecord } from "../scripts/hook-input.ts";
+import { isRecord } from "../json.ts";
 import { MD, RULE_FRONTMATTER } from "./migrate.constants.ts";
 
 /** Where `settingsExtras` is in the value it walks, and the dotted paths of the pieces it found so far. */

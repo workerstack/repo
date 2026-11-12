@@ -1,3 +1,4 @@
+import { isRecord } from "../json.ts";
 import {
   CODE_FILE,
   CURRENT_DIR,
@@ -17,17 +18,13 @@ export type Subpath = { key: string; runtime: string; types: string | null; kind
 /** The subpaths of an `exports` field, the number of keys it had, and a line for each key that cannot be used. */
 export type Expanded = { exports: number; subpaths: Subpath[]; errors: string[] };
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** The file that runs: a string, the first array entry with one, or the first runtime condition with one. */
 function runtimeOf(value: unknown): string | null {
   if (typeof value === "string") return value;
 
   if (Array.isArray(value)) return value.map(runtimeOf).find((target) => target !== null) ?? null;
 
-  if (!isObject(value)) return null;
+  if (!isRecord(value)) return null;
 
   for (const condition of Object.keys(value).filter((name) => RUNTIME_CONDITIONS.includes(name))) {
     const target = runtimeOf(value[condition]);
@@ -44,13 +41,13 @@ function typesOf(value: unknown): string | null {
 
   if (Array.isArray(value)) return value.map(typesOf).find((target) => target !== null) ?? null;
 
-  if (!isObject(value)) return null;
+  if (!isRecord(value)) return null;
   const typed = value[TYPES_CONDITION];
 
   if (typeof typed === "string") return typed;
 
   for (const condition of RUNTIME_CONDITIONS) {
-    const target = isObject(value[condition]) ? typesOf(value[condition]) : null;
+    const target = isRecord(value[condition]) ? typesOf(value[condition]) : null;
 
     if (target !== null) return target;
   }
@@ -111,7 +108,7 @@ function expandKey(key: string, value: unknown, files: readonly string[]): Subpa
 function keyMap(exports: unknown): Record<string, unknown> | null {
   if ((typeof exports !== "string" && typeof exports !== "object") || exports === null) return null;
 
-  if (isObject(exports) && Object.keys(exports).every((key) => key.startsWith(ROOT_KEY))) return exports;
+  if (isRecord(exports) && Object.keys(exports).every((key) => key.startsWith(ROOT_KEY))) return exports;
 
   return { [ROOT_KEY]: exports };
 }

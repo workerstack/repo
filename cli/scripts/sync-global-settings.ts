@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 
 import { stringify as stringifyToml } from "smol-toml";
 
+import type { JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { deepMerge } from "./deep-merge.ts";
@@ -29,7 +30,6 @@ import {
   UNKNOWN_HOST,
 } from "./sync-global-settings.constants.ts";
 import type {
-  JsonObject,
   ManifestHost,
   ParsedArgv,
   ReportRow,

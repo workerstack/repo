@@ -3,7 +3,7 @@ import fs from "node:fs";
 
 import { parse as parseToml } from "smol-toml";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord, type JsonObject } from "../json.ts";
 import {
   ALREADY_CLEAN,
   CURSOR_SERVER,
@@ -14,12 +14,8 @@ import {
   PLUGIN_IDS,
   STRIPE_PLUGIN,
 } from "./purge-global-mcps.constants.ts";
-import type { GrokPlan, JsonObject, JsonPlan } from "./purge-global-mcps.types.ts";
+import type { GrokPlan, JsonPlan } from "./purge-global-mcps.types.ts";
 import { claudePluginsPath, cursorMcpPath, grokConfigPath } from "./purge-paths.ts";
-
-function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
-}
 
 function unreadable(abs: string): Error {
   return new Error(`unreadable dest: ${abs}`);
@@ -69,7 +65,7 @@ function parseJsonObject(raw: string, abs: string): JsonObject {
     throw unreadable(abs);
   }
 
-  if (!isPlainObject(parsed)) throw unreadable(abs);
+  if (!isRecord(parsed)) throw unreadable(abs);
 
   return parsed;
 }
@@ -84,7 +80,7 @@ function parseTomlObject(raw: string, abs: string): JsonObject {
 
 /** A copy of the config's [plugins] table, {} when it has none; a [plugins] that is no table is unreadable. */
 function pluginsOf(obj: JsonObject, abs: string): JsonObject {
-  if (isPlainObject(obj.plugins)) return { ...obj.plugins };
+  if (isRecord(obj.plugins)) return { ...obj.plugins };
 
   if (obj.plugins != null) throw unreadable(abs);
 
@@ -163,7 +159,7 @@ export function planClaudePlugins(home: string): JsonPlan {
 
   if (plugins == null) return noop(abs, ALREADY_CLEAN);
 
-  if (!isPlainObject(plugins)) throw unreadable(abs);
+  if (!isRecord(plugins)) throw unreadable(abs);
   const keys = Object.keys(plugins).filter(isStripePluginKey);
 
   if (keys.length === 0) return noop(abs, ALREADY_CLEAN);
@@ -186,7 +182,7 @@ export function planCursor(home: string): JsonPlan {
 
   if (servers == null) return noop(abs, ALREADY_CLEAN);
 
-  if (!isPlainObject(servers)) throw unreadable(abs);
+  if (!isRecord(servers)) throw unreadable(abs);
 
   if (!Object.prototype.hasOwnProperty.call(servers, CURSOR_SERVER)) return noop(abs, ALREADY_CLEAN);
   const nextServers = { ...servers };

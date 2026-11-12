@@ -1,5 +1,5 @@
 /** One jev request on the wire, and the short summary printed from its answers. */
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 import {
   CHOICE,
   ENDPOINT,

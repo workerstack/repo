@@ -2,16 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord, type JsonObject } from "../json.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
-
-type JsonObject = Record<string, unknown>;
-
-/** A record that is not an array or a TOML date. */
-export function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
-}
 
 function arraysEqual(a: unknown[], b: unknown[]): boolean {
   return a.length === b.length && a.every((v, i) => deepEqual(v, b[i]));
@@ -32,7 +26,7 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
   if (typeof a !== "object") return false;
 
-  return isPlainObject(a) && isPlainObject(b) && objectsEqual(a, b);
+  return isRecord(a) && isRecord(b) && objectsEqual(a, b);
 }
 
 /** desired keys must be present on disk; extra disk keys allowed. */
@@ -40,7 +34,7 @@ export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
   if (Array.isArray(desired)) return deepEqual(disk, desired);
 
   if (desired != null && typeof desired === "object") {
-    if (!isPlainObject(disk)) return false;
+    if (!isRecord(disk)) return false;
 
     return Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
   }
@@ -51,7 +45,7 @@ export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
 function readPolicyFile(p: string): JsonObject {
   const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
 
-  if (!isPlainObject(policy)) throw new Error("invalid policy");
+  if (!isRecord(policy)) throw new Error("invalid policy");
 
   return policy;
 }
@@ -62,7 +56,7 @@ function mergePolicy(base: JsonObject, over: JsonObject): JsonObject {
 
   for (const [k, v] of Object.entries(over)) {
     const prev = out[k];
-    out[k] = isPlainObject(prev) && isPlainObject(v) ? mergePolicy(prev, v) : v;
+    out[k] = isRecord(prev) && isRecord(v) ? mergePolicy(prev, v) : v;
   }
 
   return out;
@@ -87,12 +81,12 @@ function agentsError(policy: JsonObject): string | null {
 
   if (agents == null) return null;
 
-  if (!isPlainObject(agents)) return "agents must be an object";
+  if (!isRecord(agents)) return "agents must be an object";
 
   const bad = AGENT_IDS.find((id) => {
     const row = agents[id];
 
-    return row != null && (!isPlainObject(row) || row.inherit !== false);
+    return row != null && (!isRecord(row) || row.inherit !== false);
   });
 
   return bad === undefined ? null : `agents.${bad}.inherit must be false`;
@@ -112,7 +106,7 @@ const CHECKS: readonly ((policy: JsonObject) => string | null)[] = [
 ];
 
 export function validatePolicy(policy: unknown): { ok: true } | { ok: false; error: string } {
-  if (!isPlainObject(policy)) return { error: "invalid policy", ok: false };
+  if (!isRecord(policy)) return { error: "invalid policy", ok: false };
 
   for (const check of CHECKS) {
     const error = check(policy);

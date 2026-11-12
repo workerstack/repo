@@ -9,6 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../../json.ts";
 import { stripJsonc } from "../../scripts/strip-jsonc.ts";
 import { listDocs } from "./list-docs.ts";
 import { mergeDocs } from "./merge-docs.ts";
@@ -25,10 +26,6 @@ export type SourceRoots = {
 };
 
 type Top = { dir: string; origin: Doc["origin"]; root: string };
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * The last root with a `hooks.jsonc`; stock always counts, so a missing stock file fails the read.
@@ -52,7 +49,7 @@ function loadHooks(stock: Top, tops: readonly Top[], problems: string[]): HooksS
     return { rel, value: {} };
   }
 
-  if (isObject(value)) return { rel, value };
+  if (isRecord(value)) return { rel, value };
   problems.push(`${rel}: invalid JSONC: expected an object`);
 
   return { rel, value: {} };

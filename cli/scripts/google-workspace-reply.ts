@@ -1,7 +1,7 @@
+import { isRecord } from "../json.ts";
 /** Reading a Google reply (its JSON body, its error text) and printing a verb's result line. */
 import { filled, rec } from "./google-workspace-account.ts";
 import type { Rec } from "./google-workspace.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 /** The `error.message` of a Google API reply, or the fallback. */
 export function apiMessage(json: unknown, fallback: string): string {

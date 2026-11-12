@@ -2,9 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { ENGINES, ERROR_PREFIX, JSON_INDENT, SESSION_FILE, SESSION_REL } from "./browser.constants.ts";
 import type { BrowserResult, Engine, Rec, RefEntry, Session } from "./browser.types.ts";
-import { isRecord } from "./hook-input.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** `v` when it is a record, else an empty one. */

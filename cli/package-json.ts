@@ -1,6 +1,8 @@
 // The slice of a package.json init reads, and a reader that refuses any other shape.
 import fs from "node:fs";
 
+import { isRecord } from "./json.ts";
+
 /** The slice of package.json init reads; other keys pass through. */
 export type PackageJson = {
   name?: string;
@@ -10,10 +12,6 @@ export type PackageJson = {
   devDependencies?: Record<string, string>;
   [key: string]: unknown;
 };
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 
 function isStringRecord(v: unknown): v is Record<string, string> {
   return isRecord(v) && Object.values(v).every((x) => typeof x === "string");

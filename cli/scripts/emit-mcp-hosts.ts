@@ -1,10 +1,8 @@
 /** What the MCP policy wants in each host's config, from what is on disk. */
 import path from "node:path";
 
-import { isPlainObject } from "./emit-mcp-validate.ts";
+import { isRecord, type JsonObject } from "../json.ts";
 import { GROK_REL, MCP_DENY, MCP_TOOL } from "./emit.constants.ts";
-
-type JsonObject = Record<string, unknown>;
 
 /** The parts of a validated policy the emitters read; `servers` are those of the user's `.mcp.json`. */
 export type Policy = {
@@ -42,7 +40,7 @@ export function isHomeGrokConfig(workspaceRoot: string | undefined, home: string
 
 /** Drops the legacy `deny_default`; denied plugins get an empty `enabled`, and an empty table goes. */
 function setPlugins(obj: JsonObject, { denyPlugins }: Pick<Policy, "denyPlugins">): void {
-  const plugins = isPlainObject(obj.plugins) ? { ...obj.plugins } : {};
+  const plugins = isRecord(obj.plugins) ? { ...obj.plugins } : {};
   delete plugins.deny_default;
 
   if (denyPlugins) {
@@ -57,7 +55,7 @@ function setPlugins(obj: JsonObject, { denyPlugins }: Pick<Policy, "denyPlugins"
 
 /** Grok's permission table: every MCP tool denied, the allowed servers' tools allowed first, other rules kept. */
 function grokPermission(obj: JsonObject, allow: string[]): JsonObject {
-  const perm = isPlainObject(obj.permission) ? { ...obj.permission } : {};
+  const perm = isRecord(obj.permission) ? { ...obj.permission } : {};
   perm.deny = [...stringList(perm.deny).filter((s) => s !== MCP_TOOL), MCP_TOOL];
   const nextAllow = [...allow.map(mcpToolAllow), ...stringList(perm.allow).filter((s) => !isMcpToolRule(s))];
 
@@ -69,7 +67,7 @@ function grokPermission(obj: JsonObject, allow: string[]): JsonObject {
 
 /** Drops the legacy nested `mcp.servers`, and the `mcp` table when nothing else is in it. */
 function dropNestedServers(obj: JsonObject): void {
-  if (!isPlainObject(obj.mcp)) return;
+  if (!isRecord(obj.mcp)) return;
   const mcp = { ...obj.mcp };
   delete mcp.servers;
 
@@ -78,16 +76,16 @@ function dropNestedServers(obj: JsonObject): void {
 }
 
 function leftoverOf(native: unknown, nested: unknown): JsonObject {
-  if (isPlainObject(native)) return native;
+  if (isRecord(native)) return native;
 
-  return isPlainObject(nested) ? nested : {};
+  return isRecord(nested) ? nested : {};
 }
 
 /** Every server on disk, disabled unless allowed, then the allowed servers of the policy over them. */
 function grokServers(disk: JsonObject, policy: Policy): JsonObject {
   const allowSet = new Set(policy.allow);
-  const native = isPlainObject(disk.mcp_servers) ? disk.mcp_servers : {};
-  const nested = isPlainObject(disk.mcp) && isPlainObject(disk.mcp.servers) ? disk.mcp.servers : {};
+  const native = isRecord(disk.mcp_servers) ? disk.mcp_servers : {};
+  const nested = isRecord(disk.mcp) && isRecord(disk.mcp.servers) ? disk.mcp.servers : {};
   const servers: JsonObject = {};
 
   for (const name of new Set([...Object.keys(native), ...Object.keys(nested)])) {
@@ -96,7 +94,7 @@ function grokServers(disk: JsonObject, policy: Policy): JsonObject {
   }
 
   for (const [name, spec] of Object.entries(pickServers(policy.servers, policy.allow)))
-    servers[name] = isPlainObject(spec) ? { ...spec } : spec;
+    servers[name] = isRecord(spec) ? { ...spec } : spec;
 
   return servers;
 }
@@ -125,7 +123,7 @@ export function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObj
   const obj = { ...disk };
   obj.enableAllProjectMcpServers = false;
   obj.enabledMcpjsonServers = [...policy.allow];
-  const permissions = isPlainObject(obj.permissions) ? { ...obj.permissions } : {};
+  const permissions = isRecord(obj.permissions) ? { ...obj.permissions } : {};
   const deny = Array.isArray(permissions.deny) ? [...permissions.deny] : [];
 
   if (!deny.includes(MCP_DENY)) deny.push(MCP_DENY);
@@ -137,7 +135,7 @@ export function desiredClaudeSettings(disk: JsonObject, policy: Policy): JsonObj
 
 export function desiredCodex(disk: JsonObject, policy: Policy): JsonObject & { agents: JsonObject } {
   const obj: JsonObject = { ...disk };
-  const agents: JsonObject = isPlainObject(obj.agents) ? { ...obj.agents } : {};
+  const agents: JsonObject = isRecord(obj.agents) ? { ...obj.agents } : {};
   agents.max_depth ??= 1;
   obj.agents = agents;
 

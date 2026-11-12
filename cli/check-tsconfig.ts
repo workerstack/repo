@@ -4,6 +4,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { isRecord } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
@@ -161,10 +162,6 @@ function problems({ cwd, listed, reset }: Scan, rel: string): string[] {
   return [...lines.filter((line) => line !== undefined), ...rejectProblems(cwd, rel, read.parsed.fileNames)];
 }
 
-function isObject(value: unknown): value is { path?: unknown } {
-  return value instanceof Object;
-}
-
 /** The keys of a package.json or tsconfig this check reads; typescript parses a JSON file's root as an object. */
 type RawConfig = { scripts?: unknown; extends?: unknown; references?: unknown };
 
@@ -222,7 +219,7 @@ function linkedConfigs(cwd: string, rel: string): string[] {
   const extended = parents.map((spec) => path.posix.join(dir, spec.endsWith(".json") ? spec : `${spec}.json`));
 
   const referenced = refs.flatMap((ref) =>
-    isObject(ref) && typeof ref.path === "string" ? [projectFile(dir, ref.path)] : [],
+    isRecord(ref) && typeof ref.path === "string" ? [projectFile(dir, ref.path)] : [],
   );
 
   return [...extended, ...referenced];

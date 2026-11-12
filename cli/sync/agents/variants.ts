@@ -4,6 +4,7 @@
  */
 import fs from "node:fs";
 
+import { isRecord } from "../../json.ts";
 import { parseDoc } from "./frontmatter.ts";
 import { MD, VARIANT_NAME } from "./sources.constants.ts";
 import type { DocFile } from "./sources.types.ts";
@@ -11,12 +12,8 @@ import type { DocFile } from "./sources.types.ts";
 /** One `variants:` entry: a frontmatter mapping whose `name` can name a file. */
 export type Variant = Record<string, unknown> & { name: string };
 
-function isMap(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function isVariant(value: unknown): value is Variant {
-  return isMap(value) && typeof value["name"] === "string" && VARIANT_NAME.test(value["name"]);
+  return isRecord(value) && typeof value["name"] === "string" && VARIANT_NAME.test(value["name"]);
 }
 
 /** Whether `value` is a well-formed `variants:` list. */
@@ -30,7 +27,7 @@ function deepMerge(base: Record<string, unknown>, over: Record<string, unknown>)
 
   for (const [key, value] of Object.entries(over)) {
     const under = out[key];
-    out[key] = isMap(under) && isMap(value) ? deepMerge(under, value) : value;
+    out[key] = isRecord(under) && isRecord(value) ? deepMerge(under, value) : value;
   }
 
   return out;

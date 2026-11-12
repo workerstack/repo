@@ -1,3 +1,4 @@
+import { isRecord } from "../json.ts";
 /** The board's hook side: a row from a hook payload, and the other sessions' lines for this one. */
 import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
@@ -6,7 +7,6 @@ import { bootOr, hostIdentity, probeProcess } from "./board-process.ts";
 import { DEFAULT_SESSION, NONE } from "./board.constants.ts";
 import { digest, note } from "./board.ts";
 import type { BoardInput, BoardRow, Probe, RecordDeps } from "./board.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 type Data = BoardInput | null | undefined;
 

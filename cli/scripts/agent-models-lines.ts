@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { codexOffered, MODEL_LISTS } from "./doctor-lists.ts";
@@ -21,7 +22,6 @@ import {
   OFFERED_SHOWN,
 } from "./doctor.constants.ts";
 import type { AgentModelsOpts, ListCli, ListResult, ListRunner, ModelCli, ModelRef, Offered } from "./doctor.types.ts";
-import { isRecord } from "./hook-input.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const LINE_RE = /\r?\n/;

@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
+import { isRecord } from "../json.ts";
 import { callAt, jsonRes, sentJson, stubFetch } from "./__fixtures__/google-workspace-kit.ts";
 import { runWorkspace, useLoggedInWorkspace } from "./__fixtures__/use-logged-in-workspace.ts";
-import { isRecord } from "./hook-input.ts";
 
 useLoggedInWorkspace("ws-comms-");
 

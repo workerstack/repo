@@ -16,7 +16,7 @@ import type {
   SpawnSyncResult,
   SttOpts,
 } from "../listen.types.ts";
-import { isRecord } from "../hook-input.ts";
+import { isRecord } from "../../json.ts";
 
 export type Handler = (a?: unknown, b?: unknown) => void;
 

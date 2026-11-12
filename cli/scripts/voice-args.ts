@@ -1,9 +1,9 @@
 /** The argv, JSON and string helpers `repo listen` and `repo speak` share. */
 import fs from "node:fs";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord, type JsonObject } from "../json.ts";
+import type { ParsedArgv } from "./parsed-argv.types.ts";
 import { FLAG_ON, FLAG_PREFIX } from "./voice-args.constants.ts";
-import type { JsonObject, ParsedArgv } from "./voice-args.types.ts";
 
 /** Records one argument; true when it took `next` as its value. */
 function take(out: ParsedArgv, arg: string, next: string | undefined): boolean {

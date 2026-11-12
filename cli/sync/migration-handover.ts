@@ -10,6 +10,7 @@ import { isDeepStrictEqual } from "node:util";
 
 import { applyEdits, modify, parse } from "jsonc-parser";
 
+import { isRecord, type JsonObject } from "../json.ts";
 import { AGENTS_FILE } from "./agents-file.constants.ts";
 import { userText } from "./agents-file.ts";
 import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
@@ -37,8 +38,6 @@ const MADE_YOURS = {
   would: "would make .mcp.json yours: writable, without the generated header",
 };
 
-type Json = Record<string, unknown>;
-
 type Handover = Extract<MigrationStep, { kind: "handover" }>;
 
 type Write = Handover["writes"][number];
@@ -47,7 +46,13 @@ type Write = Handover["writes"][number];
 type Failed = { rel: string; error: string };
 
 /** A file whose servers go into `.mcp.json`: what else is written and removed with them, and what its step says. */
-type Read = { rel: string; servers: Json; writes: Write[]; remove: string[]; what: { done: string; would: string } };
+type Read = {
+  rel: string;
+  servers: JsonObject;
+  writes: Write[];
+  remove: string[];
+  what: { done: string; would: string };
+};
 
 type Source = Read | Failed;
 
@@ -65,10 +70,6 @@ export function planHandover(root: string, input: HandoverInput): MigrationStep[
   const rules = ["", ...input.packages].flatMap((scope) => ruleSteps(root, scope, input.history));
 
   return [...rules, ...mcpSteps(root)];
-}
-
-function isObject(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** The text of the file at `rel`, null when it is missing or cannot be read. */
@@ -228,8 +229,10 @@ function withoutHeader(disk: string): string {
  * One step per source, each writing `.mcp.json` with the servers so far when it adds one or, first, must make it the
  * user's.
  */
-function mergeSteps(start: { servers: Json; own: string | null; fix: boolean }, sources: Read[]): Handover[] {
-  const whole: Json = start.own === null ? {} : (parse(start.own) /* parseMcpJson found it a JSON object */ as Json);
+function mergeSteps(start: { servers: JsonObject; own: string | null; fix: boolean }, sources: Read[]): Handover[] {
+  const whole: JsonObject =
+    start.own === null ? {} : (parse(start.own) /* parseMcpJson found it a JSON object */ as JsonObject);
+
   let servers = start.servers;
 
   return sources.map((source, index) => {
@@ -285,10 +288,10 @@ function policySource(root: string): Source | null {
   const text = readOrNull(root, POLICY);
   const policy: unknown = text === null ? null : parse(text);
 
-  if (text === null || !isObject(policy) || !Object.hasOwn(policy, SERVERS_KEY)) return null;
+  if (text === null || !isRecord(policy) || !Object.hasOwn(policy, SERVERS_KEY)) return null;
   const servers = policy[SERVERS_KEY];
 
-  if (!isObject(servers)) return { error: `${POLICY}: ${SERVERS_KEY} is not an object; ${FIX}`, rel: POLICY };
+  if (!isRecord(servers)) return { error: `${POLICY}: ${SERVERS_KEY} is not an object; ${FIX}`, rel: POLICY };
   const content = applyEdits(text, modify(text, [SERVERS_KEY], undefined, {}));
   const what = Object.keys(servers).length === 0 ? EMPTY_POLICY : movedServers(POLICY);
 

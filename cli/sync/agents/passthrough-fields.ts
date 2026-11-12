@@ -1,5 +1,6 @@
+import type { JsonObject } from "../../json.ts";
 import { BLOCK, COMMAND, HTTP, ON_FAILURE_IGNORED } from "./hooks.constants.ts";
-import type { Def, Json, Passthrough, Target } from "./hooks.types.ts";
+import type { Def, Passthrough, Target } from "./hooks.types.ts";
 
 /** One handler definition on its way to a host: its kind and the event it sits under. */
 export type PassthroughInput = {
@@ -24,9 +25,9 @@ function onFailureApplies({ def, type, event }: PassthroughInput): boolean {
 }
 
 /** The target's passthrough fields `def` sets validly for its kind, in the target's order. */
-export function passthroughFields(input: PassthroughInput): Json {
+export function passthroughFields(input: PassthroughInput): JsonObject {
   const { def, type, target } = input;
-  const out: Json = {};
+  const out: JsonObject = {};
 
   for (const field of target.passthrough) {
     if (field.kind === "keyword") {

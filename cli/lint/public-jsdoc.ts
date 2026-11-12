@@ -1,6 +1,6 @@
 import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
-import { isRecord } from "./manifest.ts";
+import { isRecord } from "../json.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";

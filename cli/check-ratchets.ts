@@ -20,6 +20,7 @@ import {
   TAB,
 } from "./check-ratchets.constants.ts";
 import { childEnv } from "./env.ts";
+import { isRecord } from "./json.ts";
 import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
@@ -29,10 +30,6 @@ import { defaultBranch } from "./scripts/worktree-git.ts";
 export type RatchetPaths = { floors?: string; knownFailures?: string; mutationFloors?: string };
 
 type Table = Record<string, Record<string, number>>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** git's stdout, or null when it failed; run without any `GIT_*` variable a hook set. */
 function git(root: string, args: string[]): string | null {

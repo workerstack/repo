@@ -1,7 +1,7 @@
 /** The daily request and input-token ledger: reserve before a call, settle to the real count after. */
 import fs from "node:fs";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 import { jevUsagePath } from "./jev-key.ts";
 import { DAY_CHARS, MAX_INPUT_TOKENS_PER_DAY, MAX_REQUESTS_PER_DAY, SECRET_FILE_MODE } from "./jev.constants.ts";
 import type { Begun, Ledger } from "./jev.types.ts";

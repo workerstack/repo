@@ -1,4 +1,4 @@
-import { isRecord } from "./manifest.ts";
+import { isRecord } from "../json.ts";
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
 import {
   BODY,

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { Host, ResolvedConfig } from "../config.ts";
-import { isRecord } from "../scripts/hook-input.ts";
+import { isRecord } from "../json.ts";
 import { sortedJsonValue } from "../scripts/json-keys.ts";
 import { isAgentsFile } from "./agents-file.ts";
 import { byCodeUnit } from "./by-code-unit.ts";

@@ -7,6 +7,7 @@ import ts from "typescript";
 
 import { DEFINE_ENV, DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { isRecord } from "../json.ts";
 import { listFiles } from "../list-files.ts";
 import { isTestFile } from "../test-files.ts";
 import { LAST, LAYERS_SYMBOL, SCOPES, SEALED_NAME, SEALED_SYMBOL } from "./env-command.constants.ts";
@@ -185,10 +186,6 @@ export function chooseFile(root: string, cwd: string, { anyOne, file, key }: Cho
   if (pool.length === 0) refuse(`no defineEnv file ${what}; pass --file <env file>`);
 
   return refuse(`${pool.length} env files: ${pool.join(", ")}; pass --file`);
-}
-
-function isRecord(value: unknown): value is Record<PropertyKey, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 /** A defineEnv env as loaded: its merged blocks by name, each value plain text or a sealed brand. */

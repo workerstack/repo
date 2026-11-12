@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "./manifest.ts";
+import { isRecord } from "../json.ts";
 import { BUILD_CONFIG, BUILT_EXTENSIONS, CODE_TARGET } from "./public-surface.constants.ts";
 import { get } from "./public-surface.syntax.ts";
 import type { Build } from "./public-surface.types.ts";

@@ -9,11 +9,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { stamp } from "../sync/header.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
 import { writeOwned } from "../sync/write.ts";
-import { isRecord } from "./hook-input.ts";
 import { MODULES_DIR } from "./lint.constants.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 import { JSON_INDENT, SHELL_TYPE, TASKS_VERSION } from "./vscode-tasks.constants.ts";

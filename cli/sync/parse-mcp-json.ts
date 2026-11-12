@@ -4,18 +4,14 @@
  */
 import { parse, type ParseError } from "jsonc-parser";
 
+import { isRecord, type JsonObject } from "../json.ts";
+
 const MCP_JSON = ".mcp.json";
 const SERVERS_KEY = "mcpServers";
 const FIX = "fix it, nothing written";
 
 /** Plain JSON: what `claude mcp add --scope project` writes and every host parses. */
 const STRICT = { allowEmptyContent: false, allowTrailingComma: false, disallowComments: true };
-
-type Json = Record<string, unknown>;
-
-function isObject(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function failed(problem: string) {
   return { error: `${MCP_JSON}: ${problem}; ${FIX}`, ok: false as const };
@@ -25,7 +21,7 @@ function failed(problem: string) {
  * The servers of `.mcp.json` given its text, none when it is missing (`null`); a named error when it is no JSON object
  * or its `mcpServers` is no object.
  */
-export function parseMcpJson(text: string | null): { ok: true; servers: Json } | { ok: false; error: string } {
+export function parseMcpJson(text: string | null): { ok: true; servers: JsonObject } | { ok: false; error: string } {
   if (text === null) return { ok: true, servers: {} };
   const errors: ParseError[] = [];
   const value: unknown = parse(text, errors, STRICT);
@@ -33,8 +29,8 @@ export function parseMcpJson(text: string | null): { ok: true; servers: Json } |
 
   if (first !== undefined) return failed(`not valid JSON at line ${text.slice(0, first.offset).split("\n").length}`);
 
-  if (!isObject(value)) return failed("not a JSON object");
+  if (!isRecord(value)) return failed("not a JSON object");
   const servers = Object.hasOwn(value, SERVERS_KEY) ? value[SERVERS_KEY] : {};
 
-  return isObject(servers) ? { ok: true, servers } : failed(`${SERVERS_KEY} is not an object`);
+  return isRecord(servers) ? { ok: true, servers } : failed(`${SERVERS_KEY} is not an object`);
 }

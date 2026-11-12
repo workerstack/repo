@@ -1,7 +1,8 @@
+import type { JsonObject } from "../../json.ts";
 /** A matcher-group host's hooks from the merged hooks.jsonc. `D:<n>` cites rulesync 43.7.0's bundled import code. */
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { AGENT, COMMAND, HTTP, MCP_TOOL, MODEL, PROMPT } from "./hooks.constants.ts";
-import type { Def, Group, Json, Target } from "./hooks.types.ts";
+import type { Def, Group, Target } from "./hooks.types.ts";
 import { passthroughFields } from "./passthrough-fields.ts";
 
 type DefsByEvent = Record<string, Def[]>;
@@ -37,7 +38,7 @@ export function typeOf(def: Def): string {
  * Shared events the host names, in source order, then `{...shared, ...override}`; overrides are unfiltered
  * (D:53170-53178).
  */
-export function effectiveEvents(config: Json, overrideKey: string, names: EventNames): [string, Def[]][] {
+export function effectiveEvents(config: JsonObject, overrideKey: string, names: EventNames): [string, Def[]][] {
   const hooks = config["hooks"] /* hooks.jsonc's hooks map events to definition lists */ as DefsByEvent | undefined;
   const shared = Object.entries(hooks ?? {}).filter(([event]) => Object.hasOwn(names, event));
   const block = config[overrideKey] /* an override block holds a hooks map */ as { hooks?: DefsByEvent } | undefined;
@@ -49,12 +50,12 @@ export function effectiveEvents(config: Json, overrideKey: string, names: EventN
  * Passthrough fields, `type`, `command`, `timeout`, `prompt`, the type's payload, then codex's `name`/`description`
  * (D:53698-53735, D:53598-53612).
  */
-function hookObject(def: Def, event: string, target: Readonly<Target>): Json {
+function hookObject(def: Def, event: string, target: Readonly<Target>): JsonObject {
   const type = typeOf(def);
   const source = typeof def["command"] === "string" ? expandHookCommand(def["command"]) : def["command"];
   const command = typeof source === "string" && target.command !== undefined ? target.command(source, def) : source;
 
-  const fields: Json = {
+  const fields: JsonObject = {
     ...passthroughFields({ def, event, target, type }),
     command,
     prompt: def["prompt"],
@@ -90,7 +91,7 @@ function byMatcher(defs: readonly Def[], event: string, target: Readonly<Target>
  * or `{hooks}` when the matcher is empty or the event takes none. Groups left without a writable hook, and events
  * left without a group, are dropped (D:53756-53800).
  */
-export function toolHooks(config: Json, target: Readonly<Target>): Record<string, Group[]> {
+export function toolHooks(config: JsonObject, target: Readonly<Target>): Record<string, Group[]> {
   const out: Record<string, Group[]> = {};
 
   for (const [event, defs] of effectiveEvents(config, target.overrideKey, target.names)) {

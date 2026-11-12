@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord, type HookInput } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
+import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
 import { IN_PROGRESS, ITEM_DIRS, PLAN_KIND } from "./orchestrate.constants.ts";
 import type { Approvable, ItemRef, ReviewState, ReviewsOpen, ToolInput } from "./orchestrate.types.ts";

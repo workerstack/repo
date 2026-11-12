@@ -1,7 +1,7 @@
 /** The union's write for each host's hook file. */
 import path from "node:path";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord, type JsonObject } from "../json.ts";
 import { consumerNamed, desiredPost, desiredPre, loadConsumerDeny, sessionHooks } from "./hooks-union-desired.ts";
 import { flatEntries, flatSession, loadJson, saveJson, uniq, upsertGroups } from "./hooks-union-merge.ts";
 import {
@@ -12,7 +12,7 @@ import {
   CURSOR_HOOKS,
   CURSOR_WRITE_MATCHER,
 } from "./hooks-union.constants.ts";
-import type { JsonObject, Roots } from "./hooks-union.types.ts";
+import type { Roots } from "./hooks-union.types.ts";
 
 /** Claude's permissions with the live deny kept, minus write-path rules, plus the consumer's deny. */
 function claudePermissions(live: JsonObject, roots: Roots): JsonObject {

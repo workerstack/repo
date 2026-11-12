@@ -5,7 +5,7 @@ import path from "node:path";
 import { vi } from "vitest";
 import { tempDir } from "../../sync/__fixtures__/temp-dirs.ts";
 import type { SpawnFn } from "../google-workspace.types.ts";
-import { isRecord } from "../hook-input.ts";
+import { isRecord } from "../../json.ts";
 
 /** A planted home for one case. Bun's `os.homedir` ignores env changes, so the call is spied; callers restore with `vi.restoreAllMocks()`. */
 export function plantHome(prefix: string): string {

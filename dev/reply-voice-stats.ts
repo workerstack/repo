@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../cli/json.ts";
 import { processIo } from "./process-io.ts";
 import {
   ARGV_START,
@@ -36,13 +37,9 @@ type TranscriptRecord = {
   message?: { content?: unknown } | null;
 };
 
-function isObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** True for a JSON object whose `message`, when present, is an object or null. */
 function isTranscriptRecord(v: unknown): v is TranscriptRecord {
-  return isObject(v) && (v.message === undefined || v.message === null || isObject(v.message));
+  return isRecord(v) && (v.message === undefined || v.message === null || isRecord(v.message));
 }
 
 function replyText(record: TranscriptRecord): string {
@@ -53,7 +50,7 @@ function replyText(record: TranscriptRecord): string {
 
   return content
     .filter(
-      (part): part is { text: string } => isObject(part) && part.type === TEXT_PART && typeof part.text === "string",
+      (part): part is { text: string } => isRecord(part) && part.type === TEXT_PART && typeof part.text === "string",
     )
     .map((part) => part.text)
     .join("\n");

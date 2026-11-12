@@ -20,8 +20,6 @@ export type NamedHook = {
   command: string;
 };
 
-export type JsonObject = Record<string, unknown>;
-
 /** The three roots one union run reads and writes. */
 export type Roots = {
   ws: string;

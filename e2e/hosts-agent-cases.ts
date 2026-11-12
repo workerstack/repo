@@ -1,10 +1,10 @@
 /** The hosts suite's codex gate and SessionStart cases and claude's SessionStart cases. */
 import { expect, it } from "vitest";
 
+import { isRecord } from "../cli/json.ts";
 import { installedBin } from "../dev/test-paths.ts";
 import type { GetSandbox } from "./get-sandbox.types";
 import { claudePayload, codexBase, commands, expectClean, GATE, MAP, only, output, runHook } from "./hosts-kit";
-import { isRecord } from "./json";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";
 import { tail } from "./tail";

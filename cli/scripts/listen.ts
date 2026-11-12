@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 import { contextOf, VERBS } from "./listen-verbs.ts";
 import { USAGE } from "./listen.constants.ts";
 import type { ListenMainOpts } from "./listen.types.ts";

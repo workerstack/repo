@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { parse as parseToml } from "smol-toml";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord, type JsonObject } from "../json.ts";
 import {
   ALL_HOSTS,
   ENOENT,
@@ -13,7 +13,7 @@ import {
   OVERLAY_DIR,
   TOML_FORMAT,
 } from "./sync-global-settings.constants.ts";
-import type { JsonObject, Manifest, ManifestHost, SettingsFormat } from "./sync-global-settings.types.ts";
+import type { Manifest, ManifestHost, SettingsFormat } from "./sync-global-settings.types.ts";
 
 export function resolveDest(home: string | null | undefined, dest: string | null | undefined): string {
   if (home == null || home === "") throw new Error("home required");
@@ -32,10 +32,6 @@ export function shouldSkip(segment: unknown, skipRe: RegExp | null | undefined):
   if (skipRe == null) return false;
 
   return skipRe.test(String(segment));
-}
-
-export function isPlainObject(v: unknown): v is JsonObject {
-  return v != null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date);
 }
 
 function checkedHost(h: unknown): ManifestHost {
@@ -73,7 +69,7 @@ export function parseText(raw: string | null | undefined, format: SettingsFormat
   if (s.trim() === "") return {};
   const v: unknown = format === JSON_FORMAT ? JSON.parse(s) : parseToml(s);
 
-  if (!isPlainObject(v)) throw new Error("not an object");
+  if (!isRecord(v)) throw new Error("not an object");
 
   return v;
 }

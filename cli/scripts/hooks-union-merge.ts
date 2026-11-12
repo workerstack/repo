@@ -2,10 +2,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord, type JsonObject } from "../json.ts";
 import { hookNameOf } from "./hook-command.ts";
-import { isRecord } from "./hook-input.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";
-import type { HookEntry, HookGroup, JsonObject } from "./hooks-union.types.ts";
+import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
 
 /** A script file name in a command. */
 const SCRIPT_FILE = /([\w.-]+\.(?:ts|mjs|js)\b)/;

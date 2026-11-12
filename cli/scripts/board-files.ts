@@ -3,11 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { safe, str } from "./board-line.ts";
 import { BOARD_PARTS, DIR_MODE, FILE_MODE, HEX, RANDOM_SKIP, ROW_EXT } from "./board.constants.ts";
 import type { BoardRow } from "./board.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 export function boardHome(env: Env = repoEnv.process): string {
   const home = env.REPO_BOARD_HOME;
