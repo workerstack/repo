@@ -23,8 +23,10 @@ import { noCommentedOutCode } from "./no-commented-out-code.ts";
 import { noMockOfSubject } from "./no-mock-of-subject.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
+import { noReflectApply } from "./no-reflect-apply.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
+import { noWidenThenAssert } from "./no-widen-then-assert.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
 import { skipOnPlatform } from "./skip-on-platform.ts";
 import { todoNeedsId } from "./todo-needs-id.ts";
@@ -56,8 +58,10 @@ const plugin: TSESLint.FlatConfig.Plugin = {
     "no-mock-of-subject": noMockOfSubject,
     "no-module-side-effects": noModuleSideEffects,
     "no-module-state": noModuleState,
+    "no-reflect-apply": noReflectApply,
     "no-side-effect-import": noSideEffectImport,
     "no-v8-ignore": noV8Ignore,
+    "no-widen-then-assert": noWidenThenAssert,
     "public-jsdoc": publicJsdoc,
     "skip-on-platform": skipOnPlatform,
     "todo-needs-id": todoNeedsId,

@@ -16,7 +16,9 @@ const REPO_RULES = {
       "repo/boundaries": ["error", { allow: { lib: [], ui: ["lib"] }, tags: { "@app/lib": "lib", "@app/ui": "ui" } }],
       "repo/config-file": "error",
       "repo/max-line-width": "error",
+      "repo/no-reflect-apply": "error",
       "repo/no-v8-ignore": "error",
+      "repo/no-widen-then-assert": "error",
       "repo/public-jsdoc": "error",
     },
   }),
@@ -26,6 +28,15 @@ const REPO_RULES = {
     exports: { ".": "./src/index.ts" },
     name: "@app/lib",
   }),
+  // oxlint's top scope is "global" where eslint's is "module": the shadowed Reflect proves scope reads still hold
+  "packages/lib/src/flow.ts": [
+    "const source = { id: 1 };",
+    "const widened: unknown = source;",
+    "export const parsed = widened as { readonly id: number };",
+    "function invoke(Reflect: { apply(): number }) { return Reflect.apply(); }",
+    "export const applied = Reflect.apply(invoke, undefined, [{ apply: () => 1 }]);",
+    "",
+  ].join("\n"),
   "packages/lib/src/index.ts": [
     'import { b } from "@app/ui";',
     'import pad from "left-pad";',
@@ -52,8 +63,13 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
     ({ filename, code, message, labels }) => `${filename}:${labels[0]?.span.line} ${code} ${message}`,
   );
   const index = "packages/lib/src/index.ts";
+  const flow = "packages/lib/src/flow.ts";
   const missing = "has no JSDoc: add a /** */ block that says what a caller needs and the type does not";
   expect(findings.toSorted()).toStrictEqual([
+    `${flow}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
+      "assertion. Keep the precise type from initialization through use; parse boundary input once.",
+    `${flow}:5 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
+      "behind a named interface.",
     `${index}:1 repo(boundaries) "@app/ui" is a ui package, and a lib package may import only lib; move what it ` +
       'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts',
     `${index}:2 repo(boundaries) "left-pad" is not declared in packages/lib/package.json; add it to its dependencies`,
