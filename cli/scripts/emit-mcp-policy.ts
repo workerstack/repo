@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 
+import { isRecord, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
@@ -20,7 +21,7 @@ import {
   stringList,
   type Policy,
 } from "./emit-mcp-hosts.ts";
-import { deepEqual, isPlainObject, loadPolicy, validatePolicy } from "./emit-mcp-validate.ts";
+import { deepEqual, loadPolicy, validatePolicy } from "./emit-mcp-validate.ts";
 import {
   AGENTS_MCP_REL,
   CLAUDE_SETTINGS_REL,
@@ -29,8 +30,6 @@ import {
   JSON_INDENT,
   MCP_JSON_REL,
 } from "./emit.constants.ts";
-
-type JsonObject = Record<string, unknown>;
 
 export type EmitResult = {
   ok: boolean;
@@ -69,7 +68,7 @@ function parseJsonFile(raw: string | null): JsonObject {
   if (raw === null || raw.trim() === "") return {};
   const v: unknown = JSON.parse(raw);
 
-  return isPlainObject(v) ? v : {};
+  return isRecord(v) ? v : {};
 }
 
 function parseTomlFile(raw: string | null): JsonObject {
@@ -96,7 +95,7 @@ function policyOf(ws: string, opts: EmitOptions): { ok: true; policy: Policy } |
   const mcpJson = parseMcpJson(readTextOrNull(path.join(nonEmptyOr(opts.consumerRoot, ws), MCP_JSON_REL)));
 
   if (!mcpJson.ok) return { error: mcpJson.error, ok: false };
-  const denyPlugins = isPlainObject(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true;
+  const denyPlugins = isRecord(rawPolicy.plugins) && rawPolicy.plugins.denyDefault === true;
 
   return { ok: true, policy: { allow: stringList(rawPolicy.allow), denyPlugins, servers: mcpJson.servers } };
 }

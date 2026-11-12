@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
+import { isRecord } from "../json.ts";
 import { emitAgentShellTools } from "../scripts/emit-agent-shell-tools.ts";
 import { emitMcpPolicy } from "../scripts/emit-mcp-policy.ts";
 import { expandHookCommand } from "../scripts/hook-command.ts";
@@ -28,16 +29,12 @@ const STATIC_ROOTS = [
   ["agents/grok/hooks", ".grok/hooks"],
 ] as const;
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** `over` onto `base`: objects merge key by key, lists append what they lack, anything else is replaced. */
 function mergeSettings(base: unknown, over: unknown): unknown {
   if (Array.isArray(base) && Array.isArray(over))
     return [...base, ...over.filter((item) => !base.some((have) => isDeepStrictEqual(have, item)))];
 
-  if (isObject(base) && isObject(over)) {
+  if (isRecord(base) && isRecord(over)) {
     const merged: Record<string, unknown> = { ...base };
 
     for (const [key, value] of Object.entries(over))
@@ -97,7 +94,7 @@ function mergeOverlay(ctx: SyncContext, file: string, overlayRel: string): void 
     });
   }
 
-  if (!isObject(own)) throw new Error(`${overlayRel}: must be a JSON object`);
+  if (!isRecord(own)) throw new Error(`${overlayRel}: must be a JSON object`);
   const base: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
   fs.writeFileSync(file, `${JSON.stringify(mergeSettings(base, own), null, JSON_INDENT)}\n`);
 }

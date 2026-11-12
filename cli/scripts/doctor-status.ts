@@ -3,10 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { WORKSPACE_ACCOUNT_RE, WORKSPACE_KIND_ORDER } from "./doctor.constants.ts";
 import type { DoctorStatus } from "./doctor.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 type KeyOpts = { env?: Env; home?: string };
 

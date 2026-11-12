@@ -22,15 +22,10 @@ import {
   WHITESPACE,
 } from "./check-public.constants.ts";
 import type { ResolvedConfig } from "./config.ts";
+import { isRecord, type JsonObject } from "./json.ts";
 import { keywordLines } from "./keywords.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
-
-type Json = Record<string, unknown>;
-
-function isRecord(value: unknown): value is Json {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function isText(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
@@ -50,7 +45,7 @@ function problem(field: string, value: unknown, fix: string): string {
 }
 
 /** `package.json` as written; the workspace read has already shown it is a JSON object. */
-function readManifest(root: string): Json {
+function readManifest(root: string): JsonObject {
   return z.looseObject({}).parse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
 }
 
@@ -129,7 +124,7 @@ function publishLines(publishConfig: unknown): string[] {
   return [problem("publishConfig.access", set.access, `set it to "${PUBLISH_ACCESS}"`)];
 }
 
-function identityLines(manifest: Json, owner: ResolvedOwner): string[] {
+function identityLines(manifest: JsonObject, owner: ResolvedOwner): string[] {
   const { description, keywords, license, homepage, bugs } = manifest;
   const lines: string[] = [];
 
@@ -147,7 +142,7 @@ function identityLines(manifest: Json, owner: ResolvedOwner): string[] {
   return lines;
 }
 
-function buildLines(manifest: Json): string[] {
+function buildLines(manifest: JsonObject): string[] {
   const engines = isRecord(manifest.engines) ? manifest.engines : {};
   const lines: string[] = [];
 
@@ -161,7 +156,7 @@ function buildLines(manifest: Json): string[] {
   return lines;
 }
 
-function manifestLines(manifest: Json, owner: ResolvedOwner): string[] {
+function manifestLines(manifest: JsonObject, owner: ResolvedOwner): string[] {
   return [...identityLines(manifest, owner), ...buildLines(manifest), ...publishLines(manifest.publishConfig)];
 }
 

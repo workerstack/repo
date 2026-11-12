@@ -30,6 +30,7 @@ import {
   missingScript,
 } from "./check-workspace.constants.ts";
 import type { Spot } from "./check-workspace.constants.ts";
+import { isRecord } from "./json.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { catalogsOf } from "./sync/workspace.ts";
 import type { Catalogs, PackageJson, Workspace, WorkspacePackage } from "./sync/workspace.ts";
@@ -190,10 +191,6 @@ function listOf(items: string[]): string {
   const last = rest.pop();
 
   return rest.length === 1 ? `${rest[0]} and ${last}` : `${rest.join(", ")} and ${last}`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 /** Every name a manifest declares directly, in any dependency field. */

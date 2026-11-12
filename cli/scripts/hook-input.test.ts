@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { isRecord, parseHookInput } from "./hook-input.ts";
+import { parseHookInput } from "./hook-input.ts";
 
 it("parseHookInput: reads a Claude payload", () => {
   const input = parseHookInput(
@@ -140,11 +140,4 @@ it("parseHookInput: keeps only well-typed parts of toolCall and agent", () => {
     toolCall: { args: { a: 1 }, name: "Read" },
   });
   expect(parseHookInput(JSON.stringify({ agent: 3, toolCall: "x" }))).toStrictEqual({});
-});
-
-it("isRecord takes a plain object and rejects null, arrays and scalars", () => {
-  expect(isRecord({ a: 1 })).toBe(true);
-  expect(isRecord(null)).toBe(false);
-  expect(isRecord([])).toBe(false);
-  expect(isRecord("x")).toBe(false);
 });

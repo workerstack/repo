@@ -3,8 +3,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { NOT_FOUND } from "./emit.constants.ts";
-import { isRecord } from "./hook-input.ts";
 
 /** The workspace skills dir codex and antigravity read; sync fills it with links. */
 export const WORKSPACE_SKILLS_REL = ".agents/skills";

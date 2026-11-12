@@ -1,8 +1,6 @@
 /** Guards that narrow parsed JSON to the shape a test reads. */
 
-export function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
+import { isRecord } from "../cli/json.ts";
 
 export function isStringMap(v: unknown): v is Record<string, string> {
   return isRecord(v) && Object.values(v).every((x) => typeof x === "string");

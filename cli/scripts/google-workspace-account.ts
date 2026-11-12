@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import {
   ACCOUNT_RE,
   ADC_USER,
@@ -13,7 +14,6 @@ import {
   TOKEN_META,
 } from "./google-workspace.constants.ts";
 import type { Rec, Token, WorkspaceAccount } from "./google-workspace.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 export function rec(v: unknown): Rec {
   return isRecord(v) ? v : {};

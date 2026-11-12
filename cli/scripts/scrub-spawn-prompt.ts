@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { isRecord } from "../json.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
 import type { HookInput } from "./hook-input.ts";
@@ -113,8 +114,4 @@ export function main(_argv: string[] = [], io: HookIo = processHookIo()): number
   } catch {
     return 0;
   }
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
 }

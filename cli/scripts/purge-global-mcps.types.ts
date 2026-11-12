@@ -1,5 +1,4 @@
-/** A parsed JSON or TOML table. */
-export type JsonObject = Record<string, unknown>;
+import type { JsonObject } from "../json.ts";
 
 /** The parsed `repo purge-mcps` command line, or why it is bad. */
 export type ParsedArgv = { ok: true; apply: boolean } | { ok: false; error: string };

@@ -5,9 +5,10 @@ import path from "node:path";
 
 import { expect } from "vitest";
 
+import { isRecord } from "../cli/json.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import { linkText } from "../dev/test-paths.ts";
-import { isRecord, isStringList, isStringMap } from "./json";
+import { isStringList, isStringMap } from "./json";
 import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";
@@ -37,11 +38,7 @@ export async function expectPlantedFails(sb: Sandbox, env: Record<string, string
 const SKIP_REASON = "the lookup result is always present";
 
 function skipOf(file: string, rule = "typescript/no-non-null-assertion") {
-  return {
-    files: [file],
-    reason: SKIP_REASON,
-    rules: [rule],
-  };
+  return { files: [file], reason: SKIP_REASON, rules: [rule] };
 }
 
 /**

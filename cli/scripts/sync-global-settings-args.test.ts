@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { deepMerge } from "./deep-merge.ts";
-import { isPlainObject, resolveDest, shouldSkip } from "./global-settings-files.ts";
+import { resolveDest, shouldSkip } from "./global-settings-files.ts";
 import { parseArgv } from "./sync-global-settings.ts";
 
 const skipRe = new RegExp(
@@ -37,13 +37,6 @@ it("rejects dest outside home", () => {
   expect(() => resolveDest(home, "../.ssh/config")).toThrow("dest not under home: ../.ssh/config");
   expect(() => resolveDest(home, "/etc/passwd")).toThrow("dest not under home: /etc/passwd");
   expect(resolveDest(home, ".grok/config.toml")).toBe(path.resolve(home, ".grok/config.toml"));
-});
-
-it("isPlainObject takes a plain object only", () => {
-  expect(isPlainObject({ a: 1 })).toBe(true);
-  expect(isPlainObject([1])).toBe(false);
-  expect(isPlainObject(new Date(0))).toBe(false);
-  expect(isPlainObject(null)).toBe(false);
 });
 
 it("skips mcp, hooks and apiKey keys", () => {

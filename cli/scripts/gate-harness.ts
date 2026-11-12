@@ -1,3 +1,4 @@
+import { isRecord } from "../json.ts";
 /** What the gate knows of each harness: its wire shape, its tools, and how it takes a deny or a rewrite. */
 import type { HookInput } from "./hook-input.ts";
 
@@ -107,10 +108,6 @@ export function eventKey(s: string | undefined): string {
   return (s ?? "").toLowerCase().replaceAll(NON_KEY_CHAR_RE, "");
 }
 
-export function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v != null && typeof v === "object" && !Array.isArray(v);
-}
-
 /** A payload object as the gate reads it; anything else (null, an array, a scalar) is not a hook call. */
 export function isHookObject(v: unknown): v is HookInput {
   return v != null && typeof v === "object" && !Array.isArray(v);
@@ -121,7 +118,7 @@ export function harnessOf(data: HookInput): Harness {
   // Cursor also sends model and session_id, so it is told apart by its version before Codex's check.
   if (typeof data.cursor_version === "string") return "cursor";
 
-  if (isPlainObject(data.toolCall)) return "antigravity";
+  if (isRecord(data.toolCall)) return "antigravity";
 
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
   if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
@@ -136,7 +133,7 @@ export function toolCallOf(data: HookInput): { harness: Harness; key: string; ar
   const name = call === undefined ? [data.toolName, data.tool_name].find(Boolean) : call.name;
   const args: unknown = call === undefined ? (data.toolInput ?? data.tool_input) : call.args;
 
-  return { args: isPlainObject(args) ? args : null, harness, key: eventKey(name) };
+  return { args: isRecord(args) ? args : null, harness, key: eventKey(name) };
 }
 
 /** Top-level "block" is the only legacy deny Claude/Codex validate; allow = empty stdout. */

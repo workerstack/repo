@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { isRecord, readManifest } from "./manifest.ts";
+import { readManifest } from "./manifest.ts";
 
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-manifest-")));
 
@@ -113,15 +113,5 @@ describe("readManifest ships targets and exclusions", () => {
       "src/a.ts",
       "src/deep/b.ts",
     ]);
-  });
-});
-
-describe("isRecord", () => {
-  it.each([[null], [[]], ["{}"], [1]])("rejects %j", (value) => {
-    expect(isRecord(value)).toBe(false);
-  });
-
-  it("accepts a plain object", () => {
-    expect(isRecord({ name: "a" })).toBe(true);
   });
 });

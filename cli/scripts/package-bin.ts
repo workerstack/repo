@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 
 /** The bin script `name` the package.json at `manifest` declares, as a path beside that manifest. */
 export function packageBin(manifest: string, name: string): string {

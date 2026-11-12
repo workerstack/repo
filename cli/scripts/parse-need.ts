@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { isRecord } from "../json.ts";
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
@@ -18,10 +19,6 @@ export type NeedResult = { ok: true; jobs: NeedJob[] } | { ok: false; error: str
 
 /** The fields a row keeps as trimmed text when they hold any. */
 type TextField = "path" | "cwd" | "from" | "to";
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 
 /** `value` as text when it is a JSON scalar (string, number, boolean); "" for null, undefined, objects and arrays. */
 function scalarText(value: unknown): string {

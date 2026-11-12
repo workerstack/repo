@@ -1,7 +1,7 @@
 import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 
+import { isRecord } from "../json.ts";
 import { docFault } from "./doc-fault.ts";
-import { isRecord } from "./manifest.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import type { Node } from "./public-surface.types.ts";

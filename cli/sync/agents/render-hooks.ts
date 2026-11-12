@@ -6,6 +6,7 @@
  * `D:<n>` cites a line of rulesync 43.7.0's bundled `dist/import-*.js`.
  */
 import type { Host } from "../../config.ts";
+import type { JsonObject } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { ANTIGRAVITY, CLAUDE, CODEX } from "./hook-targets.ts";
 import {
@@ -24,7 +25,7 @@ import {
   MCP_TOOL,
   PROMPT,
 } from "./hooks.constants.ts";
-import type { Def, Group, Json } from "./hooks.types.ts";
+import type { Def, Group } from "./hooks.types.ts";
 import type { Sources } from "./sources.types.ts";
 import { effectiveEvents, nameOf, toolHooks, typeOf } from "./tool-hooks.ts";
 
@@ -39,7 +40,7 @@ function containsNull(value: unknown): boolean {
 }
 
 /** Why Codex would refuse a handler, or undefined (`describeRejectedHandler`, D:56419-56429). */
-function codexRejects(hook: Json): boolean {
+function codexRejects(hook: JsonObject): boolean {
   const { timeout } = hook;
 
   if (timeout !== undefined && !(typeof timeout === "number" && Number.isSafeInteger(timeout) && timeout >= 0))
@@ -69,8 +70,11 @@ function filterCodexHandlers(hooks: Record<string, Group[]>): Record<string, Gro
 }
 
 /** The stock settings with `hooks` replaced in place (else appended) and `$schema` first when missing. */
-function claudeSettings(base: string, hooks: Json): Json {
-  const settings: Json = { ...(JSON.parse(base) /* the stock claude settings file is a JSON object */ as Json), hooks };
+function claudeSettings(base: string, hooks: JsonObject): JsonObject {
+  const settings: JsonObject = {
+    ...(JSON.parse(base) /* the stock claude settings file is a JSON object */ as JsonObject),
+    hooks,
+  };
 
   return "$schema" in settings ? settings : { $schema: CLAUDE_SCHEMA, ...settings };
 }
@@ -79,7 +83,7 @@ function claudeSettings(base: string, hooks: Json): Json {
  * One cursor entry: `type` only when the source has one, `model` only on prompt handlers; `loop_limit` kept when
  * null.
  */
-function cursorEntry(def: Def): Json {
+function cursorEntry(def: Def): JsonObject {
   const { type, command, timeout, matcher, prompt, model, failClosed } = def;
 
   const entry = {
@@ -102,8 +106,8 @@ function cursorEntry(def: Def): Json {
  * Cursor's flat entries, no grouping (D:57912-57936): command and prompt handlers only; events left empty are
  * dropped.
  */
-function cursorHooks(config: Json): Json {
-  const out: Json = {};
+function cursorHooks(config: JsonObject): JsonObject {
+  const out: JsonObject = {};
 
   for (const [event, defs] of effectiveEvents(config, CURSOR_KEY, CURSOR_EVENTS)) {
     const mapped = defs.filter((def) => CURSOR_TYPES.has(typeOf(def))).map(cursorEntry);
@@ -115,7 +119,7 @@ function cursorHooks(config: Json): Json {
 }
 
 /** Antigravity's file: its flat events as bare handler lists, `{}` when no event is left. */
-function antigravityFile(config: Json): Json {
+function antigravityFile(config: JsonObject): JsonObject {
   const flat = Object.entries(toolHooks(config, ANTIGRAVITY)).map(([event, groups]) => [
     event,
     ANTIGRAVITY_FLAT.has(event) ? groups.flatMap((group) => group.hooks) : groups,

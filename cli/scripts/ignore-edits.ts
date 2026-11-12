@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import {
   COMMENT_MARK,
   DELETE_FILE,
@@ -12,7 +13,6 @@ import {
   PLUS_MARK,
 } from "./gitignore-guard.constants.ts";
 import type { IgnoreEdit, ToolArgs } from "./gitignore-guard.types.ts";
-import { isRecord } from "./hook-input.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 /** One file section of a patch: the path its header names and its `+` lines. */

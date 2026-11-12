@@ -3,9 +3,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { CONFIG_REL, DEFAULTS, GIT_MAX_BUFFER, LIST_KEYS, NUMBER_KEYS } from "./folder-map.constants.ts";
 import type { MapConfig } from "./folder-map.types.ts";
-import { isRecord } from "./hook-input.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 
 /** A trailing slash, which git's prefix ends in. */

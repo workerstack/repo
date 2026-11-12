@@ -1,8 +1,8 @@
 /** What the emitters read: a file's text when it exists, and a root option that falls back when unset or empty. */
 import fs from "node:fs";
 
+import { isRecord } from "../json.ts";
 import { NOT_FOUND } from "./emit.constants.ts";
-import { isRecord } from "./hook-input.ts";
 
 /** The text of `abs`, or null when it does not exist; any other read failure throws. */
 export function readTextOrNull(abs: string): string | null {

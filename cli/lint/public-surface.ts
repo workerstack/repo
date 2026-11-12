@@ -6,7 +6,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord, nearestManifest } from "./manifest.ts";
+import { isRecord } from "../json.ts";
+import { nearestManifest } from "./manifest.ts";
 import { parseModule } from "./parse-module.ts";
 import { DEFAULT, MANIFEST, NAMESPACE } from "./public-surface.constants.ts";
 import { entryFiles, readJson } from "./public-surface.entries.ts";

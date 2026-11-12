@@ -1,5 +1,5 @@
 /** Calls the ElevenLabs and OpenAI APIs: the account check, the voice list, and the raw request under both. */
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 import { resolveProvider } from "./speak-config.ts";
 import {
   ELEVEN_API,

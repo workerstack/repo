@@ -2,8 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import type { ListCli, Offered } from "./doctor.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 const LINE_RE = /\r?\n/;
 const CURSOR_ID_RE = /^(\S+) - /;

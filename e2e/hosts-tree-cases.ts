@@ -4,13 +4,13 @@ import path from "node:path";
 
 import { beforeAll, expect, inject, it } from "vitest";
 
+import { isRecord } from "../cli/json.ts";
 import { readManifest } from "../cli/sync/manifest.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { validateOutputs } from "../cli/sync/validate-outputs.ts";
 import { installedBin } from "../dev/test-paths.ts";
 import type { GetSandbox } from "./get-sandbox.types";
 import { commands, expectClean, GATE, MAP, only, output, ROOT_VARS, runHook } from "./hosts-kit";
-import { isRecord } from "./json";
 import type { Sandbox } from "./sandbox";
 
 /** Each generated-only host, the dir it owns, the paths sync must write for it and the other hosts' dirs. */

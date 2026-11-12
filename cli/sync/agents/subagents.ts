@@ -6,6 +6,7 @@
 import { stringify } from "smol-toml";
 
 import type { Host } from "../../config.ts";
+import { isRecord } from "../../json.ts";
 import { type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
 import { AFTER, BEFORE, MD_SUFFIX } from "./sources.constants.ts";
 import type { Doc, Sources } from "./sources.types.ts";
@@ -159,10 +160,6 @@ function targets(doc: Doc, target: string): boolean {
 
 function block(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /** A run of newlines, which the non-claude dumper wrote as one space. */

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { isRecord } from "./hook-input.ts";
+import { isRecord } from "../json.ts";
 import { clampSeconds } from "./listen-argv.ts";
 import { finishTranscript } from "./listen-clip.ts";
 import { ffmpegRecordArgs, needFfmpeg, recCapture } from "./listen-ffmpeg.ts";

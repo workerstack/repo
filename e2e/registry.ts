@@ -11,7 +11,7 @@ import path from "node:path";
 import * as tar from "tar";
 
 import { childEnv } from "../cli/env.ts";
-import { isRecord } from "./json";
+import { isRecord } from "../cli/json.ts";
 
 export const PACKAGE_NAME = "@workerstack/repo";
 

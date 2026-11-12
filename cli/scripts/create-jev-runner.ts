@@ -1,8 +1,8 @@
 /** The jev runner: checks the inputs, reserves the ledger, makes the one call a process may make, and retries once. */
 import os from "node:os";
 
+import { isRecord } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
-import { isRecord } from "./hook-input.ts";
 import { estimateTokens, loadJevKey, retryWaitMs } from "./jev-key.ts";
 import { beginAttempt, settleTokens } from "./jev-ledger.ts";
 import { fail, formatAnswers, headerGet, parseState, postOnce, stopText } from "./jev-post.ts";

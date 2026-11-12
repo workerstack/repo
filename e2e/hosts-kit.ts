@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect } from "vitest";
 
-import { isRecord } from "./json";
+import { isRecord } from "../cli/json.ts";
 import type { Run } from "./run.types";
 import type { Sandbox } from "./sandbox";
 import { BROKEN_RUNTIME } from "./sandbox.constants";

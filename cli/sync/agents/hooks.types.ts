@@ -1,11 +1,10 @@
-/** A parsed JSON object: a hooks.jsonc block, a handler definition or a written hook. */
-export type Json = Record<string, unknown>;
+import type { JsonObject } from "../../json.ts";
 
 /** One handler definition as hooks.jsonc writes it. */
-export type Def = Json;
+export type Def = JsonObject;
 
 /** One matcher group of a host's event: `{matcher, hooks}`, or `{hooks}` when the event takes no matcher. */
-export type Group = { matcher?: string; hooks: Json[] };
+export type Group = { matcher?: string; hooks: JsonObject[] };
 
 /**
  * One passthrough field (D:53298-53339): written when valid for its kind (D:53378-53385, `isStringArray` D:4415),

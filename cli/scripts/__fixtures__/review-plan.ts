@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect } from "vitest";
-import { isPlainObject, type HookOutput, type ToolArgs } from "../gate-harness.ts";
+import type { HookOutput, ToolArgs } from "../gate-harness.ts";
+import { isRecord } from "../../json.ts";
 import type { HookInput } from "../hook-input.ts";
 import { main as orchMain } from "../orchestrate-parent.ts";
 import { stampPath, writeStamp } from "../strategy.ts";
@@ -56,7 +57,7 @@ export function stamped(root: string): boolean {
 /** What the review session's stamp file holds. */
 export function stampContent(root: string): ToolArgs {
   const stamp: unknown = JSON.parse(fs.readFileSync(stampPath(root, REVIEW_SID), "utf8"));
-  return isPlainObject(stamp) ? stamp : {};
+  return isRecord(stamp) ? stamp : {};
 }
 
 /** A Write, Edit or other call as Grok sends it through orchestrate-parent, answered in `root`. */

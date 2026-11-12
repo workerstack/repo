@@ -11,8 +11,8 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 
+import { isRecord } from "../cli/json.ts";
 import { repoEnv } from "../cli/repo-env.ts";
-import { isRecord } from "./json";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 
 export const OLD_VERSION = "0.0.0-e2e.0";

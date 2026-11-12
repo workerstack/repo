@@ -1,8 +1,6 @@
 /** `repo yolo`'s manifest, argv and report shapes. */
 import type { JSON_FORMAT, TOML_FORMAT } from "./sync-global-settings.constants.ts";
 
-export type JsonObject = Record<string, unknown>;
-
 export type SettingsFormat = typeof JSON_FORMAT | typeof TOML_FORMAT;
 
 /** One host in the manifest: the payload file in the repo and the dotfile under $HOME it merges into. */

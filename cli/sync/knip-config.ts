@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
+import { isRecord } from "../json.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
-import { isRecord } from "../lint/manifest.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";

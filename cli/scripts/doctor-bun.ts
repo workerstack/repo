@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { isRecord } from "../json.ts";
 import { BUN_MIN_FALLBACK, VERSION_PARTS } from "./doctor.constants.ts";
-import { isRecord } from "./hook-input.ts";
 
 const VERSION_RE = /\d+(?:\.\d+){0,2}/;
 const DOTTED_RE = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?/;

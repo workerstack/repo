@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import {
   CHARS_PER_TOKEN,
   DEFAULTS,
@@ -12,7 +13,6 @@ import {
   TOP_DIR,
 } from "./folder-map.constants.ts";
 import type { MapConfig, RenderFit, Row, RowTextOptions, TreeFilter, TreeNode, TreePlace } from "./folder-map.types.ts";
-import { isRecord } from "./hook-input.ts";
 
 /** Trailing slashes a glob may end in. */
 const TRAILING_SLASHES_RE = /\/+$/;

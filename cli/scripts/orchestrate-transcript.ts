@@ -1,9 +1,10 @@
 /** The assistant's last reply, from the payload or the transcript's tail, and what its lines ask. */
 import fs from "node:fs";
 
+import { isRecord } from "../json.ts";
 import { parseClosingLine } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
-import { isRecord, type HookInput } from "./hook-input.ts";
+import type { HookInput } from "./hook-input.ts";
 import {
   ASSISTANT,
   LAST_INDEX,

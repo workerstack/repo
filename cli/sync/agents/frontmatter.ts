@@ -4,6 +4,7 @@
  */
 import { parse } from "yaml";
 
+import { isRecord } from "../../json.ts";
 import {
   CLAUDE_ANYWHERE,
   CLAUDE_FIRST,
@@ -49,15 +50,11 @@ function toLf(text: string): string {
   return text.replaceAll(CR_LINE_ENDS, "\n");
 }
 
-function isMap(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 /** A value with its nullish entries dropped: list items, and map values at every level. */
 function cleaned(value: unknown): unknown {
   if (Array.isArray(value)) return value.filter((item) => item !== null && item !== undefined);
 
-  return isMap(value) ? dropNullish(value) : value;
+  return isRecord(value) ? dropNullish(value) : value;
 }
 
 function dropNullish(map: Record<string, unknown>): Record<string, unknown> {
@@ -91,7 +88,7 @@ export function parseDoc(rel: string, text: string): ParsedDoc {
   if (close === NOT_FOUND) throw new Error(`${rel}: invalid frontmatter: no closing --- line`);
   const raw = parseYaml(rel, lines.slice(1, close).join("\n"));
 
-  if (raw !== null && !isMap(raw)) throw new Error(`${rel}: invalid frontmatter: expected a mapping`);
+  if (raw !== null && !isRecord(raw)) throw new Error(`${rel}: invalid frontmatter: expected a mapping`);
 
   return {
     body: lines

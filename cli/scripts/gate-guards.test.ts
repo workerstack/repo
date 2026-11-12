@@ -6,7 +6,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { processFatTools } from "./gate-fat-tools.ts";
-import { isHookObject, isPlainObject } from "./gate-harness.ts";
+import { isHookObject } from "./gate-harness.ts";
 import { relInside } from "./gate-paths.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -52,10 +52,7 @@ function deny(reason: string) {
 
 describe("payload guards", () => {
   it("accept an object and reject null, arrays and scalars", () => {
-    expect(isPlainObject({})).toBe(true);
     expect(isHookObject({})).toBe(true);
-
-    for (const value of [null, undefined, [], "text", 7]) expect(isPlainObject(value)).toBe(false);
 
     for (const value of [null, undefined, [], "text"]) expect(isHookObject(value)).toBe(false);
   });

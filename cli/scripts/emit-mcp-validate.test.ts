@@ -3,9 +3,10 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { isRecord } from "../json.ts";
 import { BASE_POLICY } from "./__fixtures__/mcp-base-policy.ts";
 import { plantDirs, readJsonAs } from "./__fixtures__/mcp-policy-kit.ts";
-import { isPlainObject, loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
+import { loadPolicy, requiredDeepMatch, validatePolicy } from "./emit-mcp-validate.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
 
 const tmpDir = plantDirs();
@@ -37,7 +38,7 @@ it("repo SSOT allow is empty and not cloudflare/docker", () => {
 
 it("every subagent has an inherit:false row, and validation holds implementers to it", () => {
   const policy = loadPolicy(repoRoot);
-  const agents = isPlainObject(policy.agents) ? policy.agents : {};
+  const agents = isRecord(policy.agents) ? policy.agents : {};
 
   for (const id of ["orchestrator", "scout", "researcher", "implementer-fast", "implementer-deep"]) {
     expect(agents[id]).toStrictEqual({ inherit: false });
@@ -76,13 +77,6 @@ it("subagent inherit flags stay none/false", () => {
 it("requiredDeepMatch allows extra disk keys", () => {
   expect(requiredDeepMatch({ a: 1, extra: true }, { a: 1 })).toBe(true);
   expect(requiredDeepMatch({ a: 2 }, { a: 1 })).toBe(false);
-});
-
-it("isPlainObject takes a record and rejects null, arrays and TOML dates", () => {
-  expect(isPlainObject({ a: 1 })).toBe(true);
-  expect(isPlainObject(null)).toBe(false);
-  expect(isPlainObject([])).toBe(false);
-  expect(isPlainObject(new Date(0))).toBe(false);
 });
 
 it("uses the stock policy alone when the consumer has none", () => {

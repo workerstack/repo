@@ -3,6 +3,8 @@
  * facts differently, so each spelling is its own optional field.
  */
 
+import { isRecord } from "../json.ts";
+
 /** Antigravity's tool call: the tool name and its arguments. */
 type HookToolCall = {
   name?: string;
@@ -130,10 +132,6 @@ const AGENT_FIELDS = [
 const BOOLEAN_FIELDS = ["stop_hook_active", "stopHookActive"] as const;
 
 const TOOL_INPUT_FIELDS = ["tool_input", "toolInput"] as const;
-
-export function isRecord(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === "object" && !Array.isArray(v);
-}
 
 /** Copies each key of `keys` whose value in `from` passes `keep`. */
 function copyWhere<K extends string, V>(

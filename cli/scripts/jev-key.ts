@@ -3,8 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { isRecord } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
-import { isRecord } from "./hook-input.ts";
 import { CHARS_PER_TOKEN, MAX_RETRY_WAIT_MS, MS_PER_SECOND } from "./jev.constants.ts";
 
 const SECONDS_RE = /^\d+$/;
