@@ -2241,7 +2241,7 @@
   "cli/scripts/__fixtures__/json-dirs.ts": ["71f968b133ef2302"],
   "cli/scripts/__fixtures__/lessons-kit.ts": ["d4f284c6eb69d05b"],
   "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
-  "cli/scripts/__fixtures__/lint-scripts-kit.ts": ["6d3a41ab5cb8d68b"],
+  "cli/scripts/__fixtures__/lint-scripts-kit.ts": ["6d3a41ab5cb8d68b", "7b37a8425ab3d3a7"],
   "cli/scripts/__fixtures__/listen-env.ts": [
     "0aa69c297b2cecb0",
     "10697ad644a7bbfa",
@@ -2293,7 +2293,7 @@
   "cli/scripts/bench-remote.test.ts": ["77cc8d66e5eac2a1", "f594b74c7086985b"],
   "cli/scripts/bench.constants.ts": ["11d0efe3e83e0208", "cf47dd7f46dccf5c"],
   "cli/scripts/bench.test.ts": ["04af0531c2a2c470", "5a99cd084deb9fd8"],
-  "cli/scripts/bench.ts": ["2af8ce7ae7ae3f08", "6527fcda441cc2f9", "b8bb949de6afb041"],
+  "cli/scripts/bench.ts": ["2af8ce7ae7ae3f08", "6527fcda441cc2f9", "6a90fcad354b1796", "b8bb949de6afb041"],
   "cli/scripts/board-files.ts": [
     "1eca9b77f540a59b",
     "6b8f0dcac0ce9df5",
@@ -4611,6 +4611,7 @@
     "4932e13e9ca3cee5",
     "712f580080f7900b",
     "776b23b446148ff5",
+    "7877d0b0fb3d3ade",
     "8f72e8b985976493",
     "96a50c55dff24848",
     "a176b9709c91f243",
@@ -4632,6 +4633,7 @@
     "090d01cd74d673ee",
     "4c04e61a222b1f1b",
     "55f576c8426a1982",
+    "6d3fbf81fc74fbed",
     "8755c992c03a2799",
     "96a9edbb6f3fe6d9",
     "9925ae8909d811f1",

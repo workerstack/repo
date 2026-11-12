@@ -119,7 +119,7 @@ function codexAgent({ doc, name }: Agent): Rendered {
 }
 
 /** Whether `value` is truthy, as a plain `if (value)` reads it. */
-function isTruthy(value: unknown): boolean {
+function isTruthy(value: Json | undefined): boolean {
   return Boolean(value);
 }
 

@@ -1,7 +1,7 @@
 /** The two reports of `repo mutate`: Stryker's json report in, a shard's own report out and read back. */
 import { z } from "zod";
 
-import { readJson } from "./json.ts";
+import { type Json, readJson } from "./json.ts";
 import { CARGO_KILLED, CARGO_MISSED, KILLED_STATUSES, SURVIVOR_STATUSES } from "./mutate.constants.ts";
 
 /** A mutant no test killed. */
@@ -96,7 +96,7 @@ function survivorOf(mutant: Mutant): Survivor[] {
  * Stryker's report as per-file scores: Killed and Timeout kill, Survived and NoCoverage survive, the rest is left
  * out.
  */
-export function fromStryker(raw: unknown): Parsed<Record<string, FileScore>> {
+export function fromStryker(raw: Json): Parsed<Record<string, FileScore>> {
   const parsed = schemas.stryker.safeParse(raw);
 
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };
@@ -132,7 +132,7 @@ function scoreOf(outcome: Outcome): Found[] {
  * cargo-mutants' outcomes.json as per-file scores: CaughtMutant and Timeout kill, MissedMutant survives, the rest
  * is left out.
  */
-export function fromCargoMutants(raw: unknown): Parsed<Record<string, FileScore>> {
+export function fromCargoMutants(raw: Json): Parsed<Record<string, FileScore>> {
   const parsed = schemas.cargoMutants.safeParse(raw);
 
   if (!parsed.success) return { ok: false, reason: reasonOf(parsed.error) };

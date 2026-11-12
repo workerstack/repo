@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
+import type { Json } from "../json.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { releasePack } from "./pack.ts";
@@ -37,7 +38,7 @@ function pack(cwd: string, tools: Tools = {}, argv: string[] = []) {
 }
 
 /** Fakes bun's packer to name a tarball and tar to show `manifest` as its package.json. */
-function fakes(manifest: unknown, stdout = ""): Tools {
+function fakes(manifest: Json, stdout = ""): Tools {
   return {
     bun: () => ok(stdout),
     list: () => ["acme-app-0.1.0.tgz"],

@@ -46,7 +46,7 @@ const VITEST = 'import { expect, it } from "vitest";\n';
 
 /** Typed stand-ins for vitest's globals, so the unsafe-any rules see no error-typed call. */
 const VITEST_GLOBALS = [
-  "declare const expect: (value: unknown) => { toBe: (expected: unknown) => void };",
+  "declare const expect: <Value>(value: Value) => { toBe: (expected: Value) => void };",
   "declare const it: (name: string, run: () => void) => void;",
   "",
 ].join("\n");

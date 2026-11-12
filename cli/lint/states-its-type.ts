@@ -1,9 +1,9 @@
-import { asNode, textOf } from "../syntax-node.ts";
+import { asNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { ARITHMETIC, NODE_TYPES } from "./public-jsdoc.constants.ts";
 import { get, nodesOf } from "./public-surface.syntax.ts";
 
 /** Whether `node` is a literal, a template without holes, or arithmetic on them. */
-function isLiteral(node: unknown): boolean {
+function isLiteral(node: SyntaxValue): boolean {
   const type = textOf(get(node, "type"));
 
   if (type === NODE_TYPES.literal) return true;
@@ -18,7 +18,7 @@ function isLiteral(node: unknown): boolean {
 }
 
 /** Whether an initializer shows its type: a literal, a cast, or a function that writes its return type. */
-export function statesItsType(init: unknown): boolean {
+export function statesItsType(init: SyntaxValue): boolean {
   const type = textOf(get(init, "type"));
 
   if (type === NODE_TYPES.satisfies) return statesItsType(get(init, "expression"));

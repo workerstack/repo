@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { tryJson } from "./json.ts";
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
-import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "./syntax-node.ts";
+import { asNode, isSyntaxList, type SyntaxNode, type SyntaxValue, textOf } from "./syntax-node.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
 type Case = { line: number; call: string; title: string | null; name: string | null };
@@ -24,7 +24,7 @@ function lineOf(source: string, at: number) {
 }
 
 /** `value[key]`, or undefined when `value` is no node. */
-function get(value: unknown, key: string): SyntaxValue {
+function get(value: SyntaxValue, key: string): SyntaxValue {
   return asNode(value)?.[key];
 }
 
@@ -39,7 +39,7 @@ function firstOf(value: SyntaxValue): SyntaxValue {
 }
 
 /** The identifiers of a callee chain `a.b.c`, root first; null when the chain holds anything else. */
-function chainOf(callee: unknown): string[] | null {
+function chainOf(callee: SyntaxValue): string[] | null {
   const type = get(callee, "type");
 
   if (type === NODE.identifier) return [textOf(get(callee, "name"))];
@@ -51,7 +51,7 @@ function chainOf(callee: unknown): string[] | null {
 }
 
 /** The text of a string literal or a template without expressions, else null. */
-function titleOf(arg: unknown): string | null {
+function titleOf(arg: SyntaxValue): string | null {
   if (get(arg, "type") === NODE.literal) {
     const value = get(arg, "value");
 
@@ -89,8 +89,8 @@ function isFailsCall(chain: string[] | null): chain is string[] {
 type Walk = { source: string; out: Case[] };
 
 /** The cases under `node`, `scope` being the describe titles around it (null for one that is no literal). */
-function collect(node: unknown, scope: Scope, walk: Walk): void {
-  if (Array.isArray(node)) {
+function collect(node: SyntaxValue, scope: Scope, walk: Walk): void {
+  if (isSyntaxList(node)) {
     for (const child of node) collect(child, scope, walk);
 
     return;
@@ -110,7 +110,7 @@ function collect(node: unknown, scope: Scope, walk: Walk): void {
 function casesOf(rel: string, source: string): Case[] {
   if (!source.includes(`.${FAILS}`)) return [];
   const found: Case[] = [];
-  collect(parseSync(rel, source).program, [], { out: found, source });
+  collect(asNode(parseSync(rel, source).program), [], { out: found, source });
 
   return found;
 }

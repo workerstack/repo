@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { Json } from "../json.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
 import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
 import { entriesOf } from "./entries-of.ts";
@@ -38,17 +39,15 @@ function contextOf(check: SkillCheck): SkillContext {
   return { ...check, checkOverrides, optional, skillsDir, stockNames };
 }
 
-function nameProblems({ file, name }: Skill, value: unknown): string[] {
+function nameProblems({ file, name }: Skill, value: Json | undefined): string[] {
   if (value === undefined) return [`${file}: name is required; set it to the folder name "${name}"`];
 
   if (value === name) return [];
-  // A YAML scalar, printed as String prints it.
-  const shown = value /* frontmatter values are YAML scalars here */ as string;
 
-  return [`${file}: name "${shown}" must equal the folder name "${name}"`];
+  return [`${file}: name ${JSON.stringify(value)} must equal the folder name "${name}"`];
 }
 
-function descriptionProblems(file: string, description: unknown): string[] {
+function descriptionProblems(file: string, description: Json | undefined): string[] {
   if (typeof description !== "string" || description.trim() === "") return [`${file}: description is required`];
 
   if (description.length <= MAX_DESCRIPTION_CHARS) return [];
@@ -58,7 +57,11 @@ function descriptionProblems(file: string, description: unknown): string[] {
   ];
 }
 
-function overridesProblems(context: SkillContext, { file, folder, name }: Skill, overrides: unknown): string[] {
+function overridesProblems(
+  context: SkillContext,
+  { file, folder, name }: Skill,
+  overrides: Json | undefined,
+): string[] {
   if (context.scope !== "" && overrides !== undefined)
     return [`${file}: overrides has no meaning in a package skill; remove it`];
 

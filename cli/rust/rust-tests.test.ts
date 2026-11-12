@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { OK, PASSED, plant } from "../scripts/__fixtures__/ci-run.ts";
 import { cleanTemps } from "../scripts/__fixtures__/turn-repo.ts";
 import { main } from "../scripts/ci.ts";
@@ -63,7 +64,7 @@ const HEALTHY: Record<string, CargoResult> = {
 };
 
 /** A floors file in a temp dir holding `rows`, and the path it is at. */
-function floorsFile(rows: unknown): string {
+function floorsFile(rows: Json): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rust-tests-"));
   dirs.push(dir);
   const file = path.join(dir, "floors.json");

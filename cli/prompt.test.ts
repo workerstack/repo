@@ -1,3 +1,4 @@
+import type * as clack from "@clack/prompts";
 import { describe, expect, it, vi } from "vitest";
 
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
@@ -79,10 +80,10 @@ function fakeClack() {
   return {
     cancel: vi.fn<Clack["cancel"]>(),
     confirm: vi.fn<Clack["confirm"]>(),
-    isCancel: vi.fn<(value: unknown) => boolean>(() => false),
+    isCancel: vi.fn<(...args: Parameters<Clack["isCancel"]>) => boolean>(() => false),
     password: vi.fn<Clack["password"]>(),
     // The menu's every call; the fake picks its first option.
-    select: vi.fn<(opts: unknown) => void>(),
+    select: vi.fn<(...args: Parameters<Clack["select"]>) => void>(),
     spinner: vi.fn<Clack["spinner"]>(),
     text: vi.fn<Clack["text"]>(),
   };
@@ -95,7 +96,7 @@ function promptsOver(fake: FakeClack) {
   return promptsOf({
     ...fake,
     isCancel: (value): value is symbol => fake.isCancel(value),
-    select: <Value>(opts: { options: { value: Value }[] }): Promise<Value | symbol> => {
+    select: <Value>(opts: Parameters<typeof clack.select<Value>>[0]): Promise<Value | symbol> => {
       fake.select(opts);
 
       return Promise.resolve(opts.options.at(0)?.value ?? Symbol("no option"));

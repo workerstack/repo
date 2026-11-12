@@ -1,5 +1,5 @@
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
-import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
+import { asNode, isSyntaxList, type ParserOutput, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import {
   BODY,
   DECLARATION,
@@ -17,12 +17,12 @@ import {
 import type { Reference } from "./public-surface.types.ts";
 
 /** `value[key]`, or undefined when `value` is no node. */
-export function get(value: unknown, key: string): SyntaxValue {
+export function get(value: SyntaxValue, key: string): SyntaxValue {
   return asNode(value)?.[key];
 }
 
-/** The nodes in `value`, which is one node, a list of them, or nothing. */
-export function nodesOf(value: unknown): SyntaxNode[] {
+/** The nodes in `value`, which is one node, a list of them, or nothing; a parser's typed output reads the same. */
+export function nodesOf(value: SyntaxValue | ParserOutput): SyntaxNode[] {
   return [value]
     .flat()
     .map(asNode)
@@ -30,7 +30,7 @@ export function nodesOf(value: unknown): SyntaxNode[] {
 }
 
 /** The name an identifier or a string literal carries. */
-export function nameOf(node: unknown): string {
+export function nameOf(node: SyntaxValue): string {
   return textOf(get(node, "name") ?? get(node, "value"));
 }
 
@@ -61,8 +61,8 @@ function skipsChild(node: SyntaxNode, key: string): boolean {
 }
 
 /** Walks what a declaration shows a consumer: no function body, no private member, no untyped initializer. */
-export function walkPublic(node: unknown, visit: (node: SyntaxNode) => boolean): void {
-  if (Array.isArray(node)) {
+export function walkPublic(node: SyntaxValue, visit: (node: SyntaxNode) => boolean): void {
+  if (isSyntaxList(node)) {
     for (const child of node) walkPublic(child, visit);
 
     return;
@@ -122,7 +122,7 @@ export function unknownForm(statement: SyntaxNode): string | null {
 }
 
 /** The names at the start of a `a.b.c` chain, root first; empty when the chain starts at anything else. */
-function chainOf(node: unknown): string[] {
+function chainOf(node: SyntaxValue): string[] {
   const type = get(node, "type");
 
   if (type === NODE.identifier) return [nameOf(node)];

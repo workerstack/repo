@@ -31,16 +31,16 @@ function isText(value: unknown): value is string {
   return typeof value === "string" && value.trim() !== "";
 }
 
-function isFilled(value: unknown): boolean {
+function isFilled(value: Json | undefined): boolean {
   return Array.isArray(value) && value.length > 0;
 }
 
 /** How a field reads in a line: `"x" is missing`, or `"x" is <value as JSON>`. */
-function state(field: string, value: unknown): string {
+function state(field: string, value: Json | undefined): string {
   return value === undefined ? `"${field}" is missing` : `"${field}" is ${JSON.stringify(value)}`;
 }
 
-function problem(field: string, value: unknown, fix: string): string {
+function problem(field: string, value: Json | undefined, fix: string): string {
   return `${MANIFEST_FILE}: ${state(field, value)}; ${fix}`;
 }
 
@@ -57,7 +57,7 @@ function authorLines(author: Json | undefined, owner: ResolvedOwner): string[] {
   return [problem("author", author, `set it to ${JSON.stringify(owner.name)}, the owner in workerstack.config.ts`)];
 }
 
-function urlLines(url: unknown): string[] {
+function urlLines(url: Json | undefined): string[] {
   if (typeof url !== "string") return [problem("repository.url", url, `set it to a URL starting ${GIT_URL_PREFIX}`)];
 
   if (url.startsWith(GIT_URL_PREFIX)) return [];

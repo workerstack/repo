@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { isRustKey, readFloorsFile } from "./floors.ts";
 
 let dir = "";
@@ -16,7 +17,7 @@ afterEach(() => {
   fs.rmSync(dir, { force: true, recursive: true });
 });
 
-function write(value: unknown): string {
+function write(value: Json): string {
   const file = path.join(dir, "floors.json");
   fs.writeFileSync(file, typeof value === "string" ? value : JSON.stringify(value));
 

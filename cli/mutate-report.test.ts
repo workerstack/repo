@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 
+import type { Json } from "./json.ts";
 import { fromCargoMutants, parseReport } from "./mutate-report.ts";
 
 function span(line: number, column: number) {
@@ -41,7 +42,7 @@ const baseline = {
   summary: "Success",
 };
 
-function outcomes(...entries: unknown[]) {
+function outcomes(...entries: Json[]) {
   return {
     outcomes: entries,
     total_mutants: entries.length,

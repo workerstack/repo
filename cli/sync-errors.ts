@@ -4,13 +4,13 @@ import { SYNC_PREFIX } from "./sync.constants.ts";
 export type FailIo = { postinstall: boolean; io: { stderr: (s: string) => void } };
 
 /** The `code` of a Node system error, or undefined for any other thrown value. */
-export function errorCode(error: unknown): string | undefined {
-  return error instanceof Error && "code" in error && typeof error.code === "string" ? error.code : undefined;
+export function errorCode(cause: unknown): string | undefined {
+  return cause instanceof Error && "code" in cause && typeof cause.code === "string" ? cause.code : undefined;
 }
 
 /** The message of a thrown Error; any other thrown value as text. */
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+export function errorMessage(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /** Prints each error as a sync line; the exit code, which `--postinstall` keeps at 0. */

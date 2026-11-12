@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterAll, describe, expect, it } from "vitest";
 
+import type { Json } from "../json.ts";
 import { readManifest } from "./manifest.ts";
 
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-manifest-")));
@@ -11,7 +12,7 @@ const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-l
 afterAll(() => fs.rmSync(dir, { force: true, recursive: true }));
 
 /** Writes `manifest` as a temp package.json and reads it back. */
-function read(manifest: unknown) {
+function read(manifest: Json) {
   const file = path.join(dir, `${fs.readdirSync(dir).length}.json`);
   fs.writeFileSync(file, JSON.stringify(manifest));
   const result = readManifest(file);
@@ -29,7 +30,7 @@ function written(name: string, text: string): string {
   return file;
 }
 
-function shipped(manifest: unknown, files: string[]): string[] {
+function shipped(manifest: Json, files: string[]): string[] {
   const { ships } = read(manifest);
 
   return files.filter(ships);

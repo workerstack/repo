@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
+import type { Json } from "./json.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { isTestFile } from "./test-files.ts";
 import { INSTALLED_DIR } from "./type-surface.constants.ts";
@@ -47,7 +48,7 @@ function globsOf(entries: readonly string[]): Bun.Glob[] {
 }
 
 /** Whether npm packs a package-relative file, per the manifest's `files` field. */
-function packedBy(files: unknown): (file: string) => boolean {
+function packedBy(files: Json | undefined): (file: string) => boolean {
   if (!Array.isArray(files)) return (file) => !isTestFile(file) && !FIXTURE_PATH.test(file);
   const entries = files.filter((entry): entry is string => typeof entry === "string");
   const included = globsOf(entries.filter((entry) => !entry.startsWith(NEGATION)));
@@ -58,7 +59,7 @@ function packedBy(files: unknown): (file: string) => boolean {
 }
 
 /** The manifest's `files` field, and files beyond the walk, such as build outputs, to judge the same way. */
-type Packing = { files: unknown; extra: readonly string[] };
+type Packing = { files: Json | undefined; extra: readonly string[] };
 
 /** A package-relative file, and whether npm packs it. */
 export type Packed = { file: string; isPacked: boolean };

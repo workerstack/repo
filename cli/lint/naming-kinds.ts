@@ -1,6 +1,6 @@
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
-import { textOf } from "../syntax-node.ts";
+import { asNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { NAMING_SYNTAX as SYNTAX } from "./naming-syntax.constants.ts";
 import { get, nameOf, nodesOf } from "./public-surface.syntax.ts";
 
@@ -35,12 +35,12 @@ export function exportedLocals(program: TSESTree.Program): Set<string> {
   );
 
   // Without a `from`, a string literal local is a parse error, so each local is an identifier.
-  return new Set(specifiers.map(({ local }) => nameOf(local)));
+  return new Set(specifiers.map(({ local }) => nameOf(asNode(local))));
 }
 
 /** Whether `node` is under a `declare`: an external shape the code does not name. */
 export function isAmbient(node: Node): boolean {
-  for (let at: unknown = node; at !== null && at !== undefined; at = get(at, SYNTAX.parent))
+  for (let at: SyntaxValue = asNode(node); at !== null && at !== undefined; at = get(at, SYNTAX.parent))
     if (get(at, "declare") === true || get(at, "kind") === SYNTAX.global) return true;
 
   return false;
@@ -105,7 +105,7 @@ export function holdsBoolean(declarator: TSESTree.VariableDeclarator): boolean {
 }
 
 /** Whether `value` is JSX, or a ternary or `&&` that gives JSX. */
-function isJsx(value: unknown): boolean {
+function isJsx(value: SyntaxValue): boolean {
   const type = textOf(get(value, "type"));
 
   if (JSX.includes(type)) return true;
@@ -117,7 +117,7 @@ function isJsx(value: unknown): boolean {
 }
 
 /** Whether a `return` under `value`, outside any nested function, returns JSX. */
-function returnsJsxUnder(value: unknown): boolean {
+function returnsJsxUnder(value: SyntaxValue): boolean {
   return nodesOf(value).some((node) => {
     if (FUNCTIONS.includes(textOf(get(node, "type")))) return false;
 
@@ -131,9 +131,9 @@ function returnsJsxUnder(value: unknown): boolean {
 export function isComponent(value: TSESTree.Expression | TSESTree.FunctionLike | null, filename: string): boolean {
   if (value === null || !JSX_FILE.test(filename)) return false;
 
-  if (value.type === AST_NODE_TYPES.ArrowFunctionExpression && value.expression) return isJsx(value.body);
+  if (value.type === AST_NODE_TYPES.ArrowFunctionExpression && value.expression) return isJsx(asNode(value.body));
 
-  return FUNCTIONS.includes(value.type) && returnsJsxUnder(get(value, "body"));
+  return FUNCTIONS.includes(value.type) && returnsJsxUnder(get(asNode(value), "body"));
 }
 
 /** Whether `value` is a function or arrow expression. */

@@ -98,19 +98,13 @@ it("reports a file it cannot read before touching it", () => {
 it("names what it could not restore and says to rerun", () => {
   const root = seeded();
   const real = fs.writeFileSync;
-  vi.spyOn(fs, "writeFileSync").mockImplementation(
-    (target: fs.PathOrFileDescriptor, data: unknown, options?: unknown) => {
-      if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
+  vi.spyOn(fs, "writeFileSync").mockImplementation((...args: Parameters<typeof fs.writeFileSync>) => {
+    const [target, data] = args;
 
-      const write = real /* the real writer takes any path, data and options */ as (
-        t: unknown,
-        d: unknown,
-        o?: unknown,
-      ) => void;
+    if (String(target) === path.join(root, "a.txt") && data instanceof Buffer) throw new Error("EIO: i/o error");
 
-      return write(target, data, options);
-    },
-  );
+    return real(...args);
+  });
 
   const result = writeAll(
     root,

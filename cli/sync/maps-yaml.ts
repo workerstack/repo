@@ -6,7 +6,7 @@ import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
 import { QUOTED_MIN } from "./maps.constants.ts";
 
 /** A frontmatter value as the reader produces it. */
-type YamlValue = string | string[] | YamlObject;
+export type YamlValue = string | string[] | YamlObject;
 
 export type YamlObject = {
   [key: string]: YamlValue;
@@ -31,8 +31,8 @@ function unwrapped(s: string): string {
   return s.slice(1, s.length - 1);
 }
 
-function unquoteYaml(raw: unknown): string {
-  const s = String(raw).trim();
+function unquoteYaml(raw: string): string {
+  const s = raw.trim();
 
   if (quotedBy(s, '"')) {
     try {
@@ -48,8 +48,8 @@ function unquoteYaml(raw: unknown): string {
 }
 
 /** The items of a `[a, b]` flow sequence; null for any other value. */
-export function parseFlowSeq(s: unknown): string[] | null {
-  const t = String(s).trim();
+export function parseFlowSeq(s: string): string[] | null {
+  const t = s.trim();
 
   if (!t.startsWith("[") || !t.endsWith("]")) return null;
   const items = unwrapped(t).trim();

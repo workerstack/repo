@@ -20,7 +20,7 @@ function manifestSchema(): z.ZodType<GithubManifest> {
   return z.object({
     description: z.string().optional().catch(undefined),
     homepage: z.string().optional().catch(undefined),
-    keywords: z.unknown().optional(),
+    keywords: z.json().optional(),
   });
 }
 

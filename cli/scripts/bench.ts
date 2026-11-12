@@ -120,7 +120,7 @@ async function loadSpec(cwd: string, rel: string): Promise<Spec | string> {
   try {
     const url = pathToFileURL(file).href;
     const loaded = (await import(url)) /* an import resolves to its module namespace object */ as ConfigModule;
-    const parsed = parseSpec(loaded.default);
+    const parsed = parseSpec(loaded);
 
     return parsed.ok ? parsed.spec : parsed.errors.map((error) => `${rel}: ${error}`).join(`\n${PREFIX}`);
   } catch (error) {

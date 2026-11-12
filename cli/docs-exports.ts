@@ -1,5 +1,6 @@
 import { LAST_INDEX } from "./docs-fences.constants.ts";
 import { SKIPPED_EXPORTS, noReferencesExport, REFERENCES_EXPORT, unnamedExport } from "./docs.constants.ts";
+import type { Json } from "./json.ts";
 
 /**
  * A public entry point: the text a reference must hold quoted, whether it is a prefix (`./x/*`), and how to print
@@ -13,7 +14,7 @@ export function isPublic(manifest: { private?: boolean | undefined }): boolean {
 }
 
 /** The keys of `exports`; a string or a bare condition map is the `.` entry. */
-function exportKeys(exports: unknown): string[] {
+function exportKeys(exports: Json | undefined): string[] {
   if (typeof exports !== "object" || exports === null || Array.isArray(exports))
     return exports === undefined ? [] : ["."];
   const keys = Object.keys(exports);
@@ -25,7 +26,7 @@ function exportKeys(exports: unknown): string[] {
  * The specifiers `name` exports but `./package.json` and `./references/*`: `.` is the name, `./x/*` the prefix
  * `name/x/`.
  */
-export function specifiersOf(name: string, exports: unknown): Specifier[] {
+export function specifiersOf(name: string, exports: Json | undefined): Specifier[] {
   return exportKeys(exports)
     .filter((key) => !SKIPPED_EXPORTS.includes(key))
     .map((key) => {
@@ -46,7 +47,7 @@ function named(text: string, { text: wanted, prefix }: Specifier): boolean {
 /** One finding per specifier no reference text names, and one when the manifest lacks the references export. */
 export function exportFindings(
   dir: string,
-  manifest: { name?: string | undefined; exports?: unknown },
+  manifest: { name?: string | undefined; exports?: Json | undefined },
   references: string,
 ): { findings: string[]; checked: number } {
   const specifiers = specifiersOf(manifest.name ?? "", manifest.exports);

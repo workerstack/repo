@@ -5,7 +5,7 @@ import { problemKindInfo } from "@arethetypeswrong/core/problems";
 import { publint } from "publint";
 import { formatMessage } from "publint/utils";
 
-import type { JsonObject } from "../json.ts";
+import type { Json, JsonObject } from "../json.ts";
 import {
   attwLine,
   ESM_ONLY_IGNORED,
@@ -21,7 +21,7 @@ type Manifest = JsonObject;
 type Problem = { kind: keyof typeof problemKindInfo; entrypoint?: string; resolutionKind?: string };
 
 /** Whether any condition object in `exports` has a `require` key. */
-function hasRequire(exports: unknown): boolean {
+function hasRequire(exports: Json | undefined): boolean {
   if (typeof exports !== "object" || exports === null) return false;
 
   return Object.entries(exports).some(([key, value]) => key === REQUIRE_CONDITION || hasRequire(value));

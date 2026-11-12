@@ -39,13 +39,13 @@ describe("isWrongKey", () => {
     const sender = await newIdentity();
     const other = await newIdentity();
     const cipher = await seal("hello env", sender.recipient);
-    const error: unknown = await reveal([cipher], [other.identity]).catch((caught: unknown) => caught);
+    const error: unknown = await reveal([cipher], [other.identity]).catch((cause: unknown) => cause);
     expect(isWrongKey(error)).toBe(true);
   });
 
   it("does not name a cipher that is not age", async () => {
     const { identity } = await newIdentity();
-    const error: unknown = await reveal(["AAAA"], [identity]).catch((caught: unknown) => caught);
+    const error: unknown = await reveal(["AAAA"], [identity]).catch((cause: unknown) => cause);
     expect([error instanceof Error, isWrongKey(error)]).toStrictEqual([true, false]);
   });
 

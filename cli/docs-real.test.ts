@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { docsRun, fence, json, tempRoot } from "./__fixtures__/docs-fixture.ts";
 import { docsIo, REAL_TOOLS } from "./docs-io.ts";
 import { main } from "./docs.ts";
+import type { Json } from "./json.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -33,7 +34,7 @@ const TSCONFIG = {
 };
 
 /** A workspace whose package `@ws/a` has one `ts run` example and is linked into the root's install folder. */
-function workspace(example: string, manifest: unknown = MANIFEST): string {
+function workspace(example: string, manifest: Json = MANIFEST): string {
   const root = tempRoot({
     "package.json": json({ name: "mono", private: true, workspaces: ["packages/*"] }),
     "packages/a/index.ts": "export const answer = 42;\n",

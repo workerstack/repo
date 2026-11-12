@@ -17,10 +17,10 @@ const installHint = `bun add -d ${PLUGIN_PACKAGE}`;
  * True for the error `import()` gives when the plugin itself, not one of its own dependencies, is not installed:
  * node and bun give a code, and vite's module runner, which loads the preset under vitest, says so in the message.
  */
-function isPluginMissing(error: unknown): boolean {
-  if (!(error instanceof Error) || !error.message.includes(PLUGIN_PACKAGE)) return false;
+function isPluginMissing(cause: unknown): boolean {
+  if (!(cause instanceof Error) || !cause.message.includes(PLUGIN_PACKAGE)) return false;
 
-  return ("code" in error && error.code === NOT_FOUND) || error.message.includes(NOT_INSTALLED);
+  return ("code" in cause && cause.code === NOT_FOUND) || cause.message.includes(NOT_INSTALLED);
 }
 
 function hasCloudflareTest(loaded: PluginModule): loaded is { cloudflareTest: CloudflareTest } {

@@ -31,11 +31,11 @@ import type { Def, Group } from "./hooks.types.ts";
 import type { Sources } from "./sources.types.ts";
 import { effectiveEvents, nameOf, toolHooks, typeOf } from "./tool-hooks.ts";
 
-function text(value: unknown): string {
+function text(value: Json): string {
   return `${JSON.stringify(value, null, JSON_INDENT)}\n`;
 }
 
-function containsNull(value: unknown): boolean {
+function containsNull(value: Json | undefined): boolean {
   if (value === null) return true;
 
   return typeof value === "object" && Object.values(value).some(containsNull);

@@ -8,7 +8,7 @@ const ONE = { candidates: { bun: { run: ["bun", "-e", "1"] } }, metrics: { wall:
 
 /** The refusals `parseSpec` gives for `ONE` with `change` over it. */
 function refusals(change: JsonObject) {
-  return parseSpec({ ...ONE, ...change });
+  return parseSpec({ default: { ...ONE, ...change } });
 }
 
 const PARSED = {
@@ -50,12 +50,12 @@ it("orders candidates by name and metrics by weight then name, whatever the key 
     ["bun", { run: ["bun", "x.ts"] }],
   ]);
 
-  const parsed = parseSpec({ candidates, metrics, os: ["macos-latest", "ubuntu-latest"], runs: 7, warmup: 2 });
-  expect(parsed).toStrictEqual({ ok: true, spec: PARSED });
+  const spec = { candidates, metrics, os: ["macos-latest", "ubuntu-latest"], runs: 7, warmup: 2 };
+  expect(parseSpec({ default: spec })).toStrictEqual({ ok: true, spec: PARSED });
 });
 
 it("defaults to 10 runs, 1 warmup and no remote os", () => {
-  const parsed = parseSpec(ONE);
+  const parsed = parseSpec({ default: ONE });
   expect(parsed.ok && [parsed.spec.runs, parsed.spec.warmup, parsed.spec.os]).toStrictEqual([10, 1, []]);
 });
 
@@ -93,7 +93,7 @@ it("refuses every bad field at once", () => {
 });
 
 it.each([null, 3, "spec", []])("refuses a default export that is not a spec object: %j", (value) => {
-  expect(parseSpec(value)).toStrictEqual({
+  expect(parseSpec({ default: value })).toStrictEqual({
     errors: ["the default export is not a bench spec; export default defineBench({ candidates, metrics })"],
     ok: false,
   });
