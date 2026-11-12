@@ -1,34 +1,14 @@
-import type { Diagnostic, Fixer } from "@oxlint/plugins";
 import { describe, expect, it } from "vitest";
 
-import { ruleContext } from "../../dev/rule-harness.ts";
+import { fixedOf, reportsOf } from "../../dev/rule-harness.ts";
 import { MESSAGE } from "./no-block-comment.constants.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 
-type Edit = { range: [number, number]; text: string };
-const FIXER = { replaceTextRange: (range: [number, number], text: string): Edit => ({ range, text }) };
-
-/** The count of reports over `code` and the code with every fix applied, last range first. */
+/** The count of reports over `code` and the code with every fix applied. */
 function run(code: string): { reports: number; fixed: string } {
-  const reported: Diagnostic[] = [];
-  const { context } = ruleContext({
-    code,
-    cwd: "/",
-    filename: "/a.ts",
-    options: [],
-    report: (diagnostic) => reported.push(diagnostic),
-  });
-  const visitor = noBlockComment.create(context);
-  visitor.Program?.({} /* the rule reads no node */ as never);
-  const edits = reported.map(
-    (report) =>
-      report.fix?.(FIXER as unknown /* the one method the fixes call */ as Fixer) /* a fix is always given */ as Edit,
-  );
-  const fixed = edits
-    .toSorted((a, b) => b.range[0] - a.range[0])
-    .reduce((acc, { range, text }) => acc.slice(0, range[0]) + text + acc.slice(range[1]), code);
-  expect(reported.every((report) => report.message === MESSAGE)).toBe(true);
-  return { fixed, reports: reported.length };
+  const messages = reportsOf(noBlockComment, { "a.ts": code }).map((report) => report.message);
+  expect(messages.every((message) => message === MESSAGE)).toBe(true);
+  return { fixed: fixedOf(noBlockComment, code), reports: messages.length };
 }
 
 const CASES: [string, string, string][] = [

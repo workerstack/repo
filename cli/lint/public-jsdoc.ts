@@ -1,4 +1,4 @@
-import type { ESTree } from "@oxlint/plugins";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { isRecord } from "./manifest.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
@@ -6,20 +6,23 @@ import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import { packageRoot, publicSurface, type Surface } from "./public-surface.ts";
 import type { Node } from "./public-surface.types.ts";
-import type { RepoRule, RuleContext } from "./rule.types.ts";
+import type { RepoRule } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
-/** A node the walk read, as the ESTree node oxlint gave it. */
-function estree(node: Node): ESTree.Node {
-  return node /* oxlint's own nodes */ as unknown /* the walk only reads them */ as ESTree.Node;
+type MessageId = "fault" | "unknown";
+type Context = TSESLint.RuleContext<MessageId, []>;
+
+/** Whether a node the walk read is one the linter built, as every node under the program it hands a rule is. */
+function isLinted(node: Node): node is Node & TSESTree.Node {
+  return Array.isArray(node["range"]);
 }
 
-/** One file being checked: the names a public entry reaches in it, and how to report on a node. */
+/** One file being checked: the names a public entry reaches in it, and how to report a fault on a node. */
 type File = {
   source: Source;
   names: Map<string, string>;
   signed: Set<string>;
-  report: (node: Node, message: string) => void;
+  report: (node: Node, data: { label: string; entry: string; fault: string }) => void;
 };
 /** A reached declaration: its `statement`, the `declaration` inside it and its `name` and `entry`. */
 type Found = { statement: Node; declaration: Node; name: string; entry: string };
@@ -37,7 +40,7 @@ function signedNames(body: Node[]): Set<string> {
 function checkDeclaration(file: File, found: Found): void {
   const { statement, declaration, name, entry } = found;
   const walk: Walk = {
-    fail: (node, label, text) => file.report(node, `\`${label}\` is public through "${entry}" and ${text}`),
+    fail: (node, label, fault) => file.report(node, { entry, fault, label }),
     owner: name,
     source: file.source,
   };
@@ -62,22 +65,25 @@ function checkFile(file: File, body: Node[]): void {
   }
 }
 
-/** The message for a form the walk could not follow. */
-function unknownMessage(form: string): string {
-  return `cannot follow ${FORMS[form] ?? `\`${form}\``} ${UNKNOWN_FAULT}`;
+/** How a message names a form the walk could not follow. */
+function formOf(form: string): string {
+  return FORMS[form] ?? `\`${form}\``;
 }
 
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */
-function checkProgram(context: RuleContext, surface: Surface, program: ESTree.Program): void {
+function checkProgram(context: Context, surface: Surface, program: TSESTree.Program): void {
   const { sourceCode } = context;
-  const source: Source = { before: (node) => sourceCode.getCommentsBefore(estree(node)), text: sourceCode.text };
-  function report(node: Node, message: string): void {
-    return context.report({ message, node: estree(node) });
+  const source: Source = {
+    before: (node) => (isLinted(node) ? sourceCode.getCommentsBefore(node) : []),
+    text: sourceCode.text,
+  };
+  function report(node: Node, data: Parameters<File["report"]>[1]): void {
+    if (isLinted(node)) context.report({ data, messageId: "fault", node });
   }
   for (const found of surface.unknown) {
     if (found.file !== context.filename) continue;
     const at = { column: 0, line: found.line };
-    context.report({ loc: { end: at, start: at }, message: unknownMessage(found.form) });
+    context.report({ data: { form: formOf(found.form) }, loc: { end: at, start: at }, messageId: "unknown" });
   }
   const names = surface.names.get(context.filename);
   const body = nodesOf(program.body);
@@ -85,7 +91,7 @@ function checkProgram(context: RuleContext, surface: Surface, program: ESTree.Pr
 }
 
 /** The rule, with the surfaces it has read held in a closure: one read per package per lint run, no module state. */
-function makeRule(): RepoRule {
+function makeRule(): RepoRule<MessageId> {
   const surfaces = new Map<string, Surface>();
   function surfaceOf(root: string): Surface {
     const known = surfaces.get(root);
@@ -101,6 +107,15 @@ function makeRule(): RepoRule {
       const surface = surfaceOf(root);
       return { Program: (program) => checkProgram(context, surface, program) };
     },
+    defaultOptions: [],
+    meta: {
+      messages: {
+        fault: '`{{label}}` is public through "{{entry}}" and {{fault}}',
+        unknown: `cannot follow {{form}} ${UNKNOWN_FAULT}`,
+      },
+      schema: [],
+      type: "problem",
+    },
   };
 }
 
@@ -109,4 +124,4 @@ function makeRule(): RepoRule {
  * can see, with its type written out, no restated name, no internal reference, and the doc on its own line. A form
  * the walk cannot follow is reported, since what it exposes goes unchecked.
  */
-export const publicJsdoc: RepoRule = /* @__PURE__ */ makeRule();
+export const publicJsdoc: RepoRule<MessageId> = /* @__PURE__ */ makeRule();

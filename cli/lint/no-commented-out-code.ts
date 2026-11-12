@@ -1,3 +1,4 @@
+import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
 import { parseSync } from "oxc-parser";
 
 import type { RepoRule, RuleComment } from "./rule.types.ts";
@@ -37,13 +38,17 @@ const CODE = [
 
 /** JSDoc documents, a triple-slash comment directs the compiler, and a tool comment is read by its tool. */
 function skipped(comment: RuleComment): boolean {
-  if (comment.type === "Block" && comment.value.startsWith("*")) return true;
-  if (comment.type === "Line" && comment.value.startsWith("/")) return true;
+  if (comment.type === AST_TOKEN_TYPES.Block && comment.value.startsWith("*")) return true;
+  if (comment.type === AST_TOKEN_TYPES.Line && comment.value.startsWith("/")) return true;
   return TOOL.test(comment.value);
 }
 
 function joins(text: string, previous: RuleComment, comment: RuleComment): boolean {
-  return previous.type === "Line" && comment.type === "Line" && ADJACENT.test(text.slice(previous.end, comment.start));
+  return (
+    previous.type === AST_TOKEN_TYPES.Line &&
+    comment.type === AST_TOKEN_TYPES.Line &&
+    ADJACENT.test(text.slice(previous.range[1], comment.range[0]))
+  );
 }
 
 type Group = [RuleComment, ...RuleComment[]];
@@ -84,7 +89,9 @@ function isCode(source: string): boolean {
 
 function textOf(group: readonly RuleComment[]): string {
   return group
-    .map((comment) => (comment.type === "Block" ? comment.value.replaceAll(BLOCK_STAR, "") : comment.value))
+    .map((comment) =>
+      comment.type === AST_TOKEN_TYPES.Block ? comment.value.replaceAll(BLOCK_STAR, "") : comment.value,
+    )
     .join("\n");
 }
 
@@ -97,13 +104,19 @@ function isCodeGroup(text: string): boolean {
  * Fails a comment that parses as code: git keeps the old version, so code left in a comment only rots. Consecutive
  * line comments are read as one; JSDoc, triple-slash and tool comments are skipped.
  */
-export const noCommentedOutCode: RepoRule = {
+export const noCommentedOutCode: RepoRule<"code"> = {
   create(context) {
     return {
       Program() {
         for (const group of groupsOf(context.sourceCode.text, context.sourceCode.getAllComments()))
-          if (isCodeGroup(textOf(group))) context.report({ message: MESSAGE, node: group[0] });
+          if (isCodeGroup(textOf(group))) context.report({ messageId: "code", node: group[0] });
       },
     };
+  },
+  defaultOptions: [],
+  meta: {
+    messages: { code: MESSAGE },
+    schema: [],
+    type: "problem",
   },
 };

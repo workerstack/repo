@@ -18,8 +18,7 @@ import {
 import type { RepoRule } from "./rule.types.ts";
 
 type Range = { start: number; end: number; hint: string };
-type Ranged = { start: number; end: number };
-type Found = Ranged & { type: string; regex?: unknown; value?: unknown };
+type Found = { type: string; range: readonly [number, number]; regex?: unknown; value?: unknown };
 type Piece = { at: number; width: number };
 
 /** The columns one grapheme takes the way oxfmt counts: an emoji 2, marks 0, wide and fullwidth 2, the rest 1. */
@@ -54,10 +53,10 @@ function hintOf(node: Found): string | undefined {
 /** Every string, template and regex range under `node`, found without the `parent` links. */
 function gather(node: unknown, ranges: Range[]): void {
   if (typeof node !== "object" || node === null) return;
-  if ("type" in node && "start" in node && "end" in node) {
+  if ("type" in node && "range" in node) {
     const found = node /* an object with a type and a range is an AST node */ as Found;
     const hint = hintOf(found);
-    if (hint !== undefined) ranges.push({ end: found.end, hint, start: found.start });
+    if (hint !== undefined) ranges.push({ end: found.range[1], hint, start: found.range[0] });
   }
   for (const [key, value] of Object.entries(node)) if (key !== PARENT_KEY) gather(value, ranges);
 }
@@ -83,30 +82,36 @@ function overflowAt(line: string): number | undefined {
 }
 
 /** Fails each line wider than `PRINT_WIDTH` columns as oxfmt counts them, reported at column 121. */
-export const maxLineWidth: RepoRule = {
+export const maxLineWidth: RepoRule<"wide"> = {
   create(context) {
     return {
-      Program(program: Ranged) {
+      Program(program) {
         const ranges: Range[] = [];
         gather(program, ranges);
         for (const comment of context.sourceCode.getAllComments())
-          ranges.push({ end: comment.end, hint: COMMENT_HINT, start: comment.start });
+          ranges.push({ end: comment.range[1], hint: COMMENT_HINT, start: comment.range[0] });
 
         let lineStart = 0;
         for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
           const line = raw.replace(TRAILING_CR, "");
           const column = overflowAt(line);
           if (column !== undefined && widthOf(line.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
-            const width = widthOf(line);
             const hint = hintAt(ranges, lineStart, lineStart + line.length);
             context.report({
+              data: { hint, width: String(widthOf(line)) },
               loc: { end: { column: line.length, line: index + 1 }, start: { column, line: index + 1 } },
-              message: `this line is ${width} columns, over ${PRINT_WIDTH}; ${hint}`,
+              messageId: "wide",
             });
           }
           lineStart += raw.length + 1;
         }
       },
     };
+  },
+  defaultOptions: [],
+  meta: {
+    messages: { wide: `this line is {{width}} columns, over ${PRINT_WIDTH}; {{hint}}` },
+    schema: [],
+    type: "layout",
   },
 };

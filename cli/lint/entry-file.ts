@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { ESTree } from "@oxlint/plugins";
+import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
 import { ENTRY_EXPORT } from "./entry-export.constants.ts";
 import { nearestManifest, readManifest } from "./manifest.ts";
@@ -20,27 +20,35 @@ function isBin(filename: string): boolean {
   return manifest.bins.some((bin) => path.resolve(path.dirname(manifest.file), bin) === self);
 }
 
-function importsMain(program: ESTree.Program): boolean {
+function importsMain(program: TSESTree.Program): boolean {
   return program.body.some(
     (statement) =>
-      statement.type === "ImportDeclaration" && statement.specifiers.some((item) => item.local.name === ENTRY_EXPORT),
+      statement.type === AST_NODE_TYPES.ImportDeclaration &&
+      statement.specifiers.some((item) => item.local.name === ENTRY_EXPORT),
   );
 }
 
 /** `main(…)`, `await main(…)` or `void main(…)` as a statement. */
 function callsMain(statement: Statement): boolean {
-  if (statement.type !== "ExpressionStatement") return false;
+  if (statement.type !== AST_NODE_TYPES.ExpressionStatement) return false;
   let call = statement.expression;
-  if (call.type === "AwaitExpression" || (call.type === "UnaryExpression" && call.operator === "void"))
+  if (
+    call.type === AST_NODE_TYPES.AwaitExpression ||
+    (call.type === AST_NODE_TYPES.UnaryExpression && call.operator === "void")
+  )
     call = call.argument;
-  return call.type === "CallExpression" && call.callee.type === "Identifier" && call.callee.name === ENTRY_EXPORT;
+  return (
+    call.type === AST_NODE_TYPES.CallExpression &&
+    call.callee.type === AST_NODE_TYPES.Identifier &&
+    call.callee.name === ENTRY_EXPORT
+  );
 }
 
 /**
  * Fails a file its nearest package.json lists as a `bin` unless it holds only imports and one call of an imported
  * `main`, so what the program does lives in a module a test can import. A file whose manifest is unreadable is skipped.
  */
-export const entryFile: RepoRule = {
+export const entryFile: RepoRule<"missing" | "move"> = {
   create(context) {
     if (!isBin(context.filename)) return {};
     return {
@@ -48,12 +56,18 @@ export const entryFile: RepoRule = {
         const imported = importsMain(program);
         let isCalled = false;
         for (const statement of program.body) {
-          if (statement.type === "ImportDeclaration") continue;
+          if (statement.type === AST_NODE_TYPES.ImportDeclaration) continue;
           if (imported && !isCalled && callsMain(statement)) isCalled = true;
-          else context.report({ message: MESSAGE, node: statement });
+          else context.report({ messageId: "move", node: statement });
         }
-        if (!isCalled) context.report({ message: MISSING, node: program });
+        if (!isCalled) context.report({ messageId: "missing", node: program });
       },
     };
+  },
+  defaultOptions: [],
+  meta: {
+    messages: { missing: MISSING, move: MESSAGE },
+    schema: [],
+    type: "problem",
   },
 };

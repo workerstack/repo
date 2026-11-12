@@ -2,7 +2,7 @@
  * `@workerstack/repo/lint`: the oxlint JS plugin `repo`, which the standards pack's generated `.oxlintrc.json` loads
  * with every rule on. oxlint reads a plugin from its default export.
  */
-import type { Plugin } from "@oxlint/plugins";
+import type { TSESLint } from "@typescript-eslint/utils";
 
 import { asNeedsReason } from "./as-needs-reason.ts";
 import { boundaries } from "./boundaries.ts";
@@ -34,13 +34,7 @@ import { typesFile } from "./types-file.ts";
  * The oxlint plugin `repo`, which a generated `.oxlintrc.json` loads from `@workerstack/repo/lint` with every rule
  * on.
  */
-const plugin: Plugin & {
-  /** What oxlint reads to name the plugin's rules. */
-  meta: {
-    /** The prefix of every rule key, as in `repo/no-module-state`. */
-    name: string;
-  };
-} = {
+const plugin: TSESLint.FlatConfig.Plugin = {
   meta: { name: "repo" },
   rules: {
     "as-needs-reason": asNeedsReason,

@@ -1,3 +1,5 @@
+import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+
 import { docFault } from "./doc-fault.ts";
 import { isRecord } from "./manifest.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
@@ -6,7 +8,7 @@ import type { Node } from "./public-surface.types.ts";
 import type { RuleComment } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
-/** The file's text and the comments before a node, as oxlint's `SourceCode` gives them. */
+/** The file's text and the comments before a node, as the linter's `SourceCode` gives them. */
 export type Source = { text: string; before: (node: Node) => readonly RuleComment[] };
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
 export type Walk = { source: Source; owner: string; fail: (node: Node, label: string, text: string) => void };
@@ -17,20 +19,22 @@ function keyName(key: unknown): string {
   );
   return label === undefined ? COMPUTED : String(label);
 }
+/** A `[name]` key; the key is read first, as an enum member has none and its `computed` getter is deprecated. */
 function isUnnameable(node: Node): boolean {
-  return node["computed"] === true && get(node["key"], "type") === NODE_TYPES.identifier;
+  return get(node["key"], "type") === NODE_TYPES.identifier && node["computed"] === true;
 }
 
 function jsdocOf(source: Source, node: Node): RuleComment | undefined {
   return source
     .before(node)
-    .filter((comment) => comment.type === NODE_TYPES.block && comment.value.startsWith("*"))
+    .filter((comment) => comment.type === AST_TOKEN_TYPES.Block && comment.value.startsWith("*"))
     .pop();
 }
 
 /** TypeScript attaches a member's doc only from comments after a line break, so `{ /** x *\/ a: string }` is no doc. */
 function sharesLine(source: Source, comment: RuleComment): boolean {
-  return source.text.slice(source.text.lastIndexOf("\n", comment.start) + 1, comment.start).trim() !== "";
+  const [start] = comment.range;
+  return source.text.slice(source.text.lastIndexOf("\n", start) + 1, start).trim() !== "";
 }
 
 /** Reports the fault in the JSDoc before `node`, if any; `name` is the part a doc may not merely restate. */
