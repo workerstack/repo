@@ -33,7 +33,7 @@ export type ApiOpts = {
 };
 
 /** The speaker edge: plays one audio file with the platform's player. */
-export type SpeakSpawn = (cmd: string, args: string[], opts: { stdio: "ignore" }) => unknown;
+export type SpeakSpawn = (cmd: string, args: string[], opts: { stdio: "ignore" }) => void;
 
 export type SpeakMainOpts = {
   env?: Env | undefined;

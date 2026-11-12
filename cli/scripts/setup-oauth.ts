@@ -120,7 +120,7 @@ export async function openUrl(
   }: {
     platform?: NodeJS.Platform | undefined;
     spawnSyncFn?: SetupSpawnSync | undefined;
-    openUrlFn?: ((url: string) => unknown) | undefined;
+    openUrlFn?: ((url: string) => void) | undefined;
   } = {},
 ): Promise<void> {
   if (typeof openUrlFn === "function") {

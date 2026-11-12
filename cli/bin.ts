@@ -10,7 +10,7 @@ export type Bin = {
 };
 
 /** What `exitWhenFlushed` ends: a writable whose `end` calls back once everything written has been handed on. */
-type Endable = { end: (done: () => void) => unknown };
+type Endable = { end: (done: () => void) => void };
 
 /**
  * Ends every stream, then exits with `code` once all have finished. A bare `process.exit` right after a write to a pipe

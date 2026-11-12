@@ -20,6 +20,7 @@ import {
   USAGE,
 } from "./jev.constants.ts";
 import type { Attempt, JevCall, JevInput, JevResult, JevRun, JevRunOpts, PostResult, Posted } from "./jev.types.ts";
+import { parsedFetch } from "./parsed-fetch.ts";
 
 function sleepMs(ms: number): Promise<void> {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -123,8 +124,7 @@ export function createJevRunner(): JevRun {
 
     return callJev({
       estimate: estimateTokens(input.stateText, input.questionsText),
-      // The global fetch returns a Response, which carries every JevResponse field.
-      fetchImpl: opts.fetchImpl ?? globalThis.fetch,
+      fetchImpl: opts.fetchImpl ?? parsedFetch,
       home,
       key,
       nowFn: typeof nowOpt === "function" ? nowOpt : () => nowOpt ?? Date.now(),

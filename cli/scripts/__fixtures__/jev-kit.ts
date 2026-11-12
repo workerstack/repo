@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { vi } from "vitest";
+import type { Json } from "../../json.ts";
 import { tempDir, useTempDirs } from "../../sync/__fixtures__/temp-dirs.ts";
 import { createJevRunner } from "../create-jev-runner.ts";
 import { MODEL } from "../jev.constants.ts";
@@ -28,7 +29,7 @@ export function answerBody(extra: Record<string, unknown> = {}) {
   };
 }
 
-export function reply(status: number, body: unknown, headers?: Record<string, string>): JevResponse {
+export function reply(status: number, body: Json, headers?: Record<string, string>): JevResponse {
   const lower = headers && Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
   return {
     status,
@@ -117,7 +118,7 @@ export function choiceBody(confidence = 0.91) {
   };
 }
 
-export function jsonResponse(status: number, body: unknown, headers: Record<string, string> = {}): JevResponse {
+export function jsonResponse(status: number, body: Json, headers: Record<string, string> = {}): JevResponse {
   return {
     headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
     json: () => Promise.resolve(body),

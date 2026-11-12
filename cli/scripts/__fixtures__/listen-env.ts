@@ -17,7 +17,7 @@ import type {
   SttOpts,
 } from "../listen.types.ts";
 import { z } from "zod";
-import { isRecord, type JsonObject, readJson } from "../../json.ts";
+import { isRecord, type Json, type JsonObject, readJson } from "../../json.ts";
 
 export type Handler = (a?: unknown, b?: unknown) => void;
 
@@ -172,7 +172,7 @@ export function reply(res: FetchResult): FetchFn {
   return () => Promise.resolve(res);
 }
 
-export function jsonReply(body: unknown): FetchFn {
+export function jsonReply(body: Json): FetchFn {
   return reply({ ok: true, status: 200, json: () => Promise.resolve(body) });
 }
 

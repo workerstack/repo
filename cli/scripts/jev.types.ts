@@ -18,7 +18,7 @@ export type HeadersLike = { get(name: string): string | null } | Record<string, 
 
 export type JevResponse = {
   status: number;
-  json: () => Promise<unknown>;
+  json: () => Promise<Json>;
   headers?: HeadersLike | null;
 };
 

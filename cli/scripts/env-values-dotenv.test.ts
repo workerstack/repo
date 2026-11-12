@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import {
   ENV_REL,
@@ -22,6 +23,7 @@ import {
   useEnvRepos,
 } from "../__fixtures__/env-repo.ts";
 import { seal } from "../env/age.ts";
+import { readJson } from "../json.ts";
 import { main } from "./env-values.ts";
 
 const run = envRunner(main);
@@ -39,7 +41,7 @@ function digest(value: string): string {
 }
 
 /** The values as bun's `--env-file` reads `dotenv` back, hashed. */
-function readBack(dir: string, dotenv: string, names: string[]): unknown {
+function readBack(dir: string, dotenv: string, names: string[]): Record<string, string> {
   const file = path.join(dir, "out.env");
   fs.writeFileSync(file, dotenv);
 
@@ -48,7 +50,7 @@ function readBack(dir: string, dotenv: string, names: string[]): unknown {
     env: { PATH: "" },
   });
 
-  return JSON.parse(child.stdout);
+  return readJson(z.record(z.string(), z.string()), child.stdout);
 }
 
 /** The dev values each quoting is picked for. */

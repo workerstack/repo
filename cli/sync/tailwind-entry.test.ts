@@ -3,8 +3,10 @@ import path from "node:path";
 
 import { parse } from "jsonc-parser";
 import { afterEach, expect, it } from "vitest";
+import { z } from "zod";
 
 import type { ResolvedLint } from "../config.ts";
+import type { Json } from "../json.ts";
 import { cleanTemps, git, tempDir, write } from "../scripts/__fixtures__/turn-repo.ts";
 import { runSync } from "../sync.ts";
 import { withTailwindEntry } from "./tailwind-entry.ts";
@@ -85,9 +87,9 @@ it("an entryPoint that is no file, or does not import tailwindcss, is refused", 
   ]);
 });
 
-/** The generated config at `rel` under `root`, parsed. */
-function generated(root: string, rel: string): unknown {
-  return parse(fs.readFileSync(path.join(root, rel), "utf8"));
+/** The generated config at `rel` under `root`, parsed as JSONC and read as JSON. */
+function generated(root: string, rel: string): Json {
+  return z.json().parse(parse(fs.readFileSync(path.join(root, rel), "utf8")));
 }
 
 it("repo sync gives oxlint and oxfmt the one entry, and refuses a second", async () => {

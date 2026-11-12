@@ -78,14 +78,13 @@ it("leaves a real dir that stands where a file belongs and reports the failed wr
 it("reports a file it cannot read before touching it", () => {
   const root = seeded();
   const real = fs.readFileSync;
-  vi.spyOn(fs, "readFileSync").mockImplementation(((target: fs.PathOrFileDescriptor, options?: unknown) => {
-    if (String(target).endsWith("a.txt")) throw new Error("EACCES: permission denied, open");
+  vi.spyOn(fs, "readFileSync").mockImplementation(
+    (target: fs.PathOrFileDescriptor, options?: Parameters<typeof fs.readFileSync>[1]) => {
+      if (String(target).endsWith("a.txt")) throw new Error("EACCES: permission denied, open");
 
-    return (real /* the real reader takes any path and options */ as (t: unknown, o?: unknown) => unknown)(
-      target,
-      options,
-    );
-  }) /* a stand-in with the reader's call shape */ as typeof fs.readFileSync);
+      return options === undefined ? real(target) : real(target, options);
+    },
+  );
   const result = writeAll(root, { changed: [file("a.txt", "new\n")], manifest: MANIFEST, prune: [] }, deps);
   expect(result).toStrictEqual({
     errors: ["a.txt: cannot write: EACCES: permission denied, open; restored 0 outputs, nothing changed"],

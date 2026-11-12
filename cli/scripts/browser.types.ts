@@ -115,8 +115,8 @@ export type Snap = {
 /** A verb's handler. */
 export type Verb = (argv: string[], ctx: Ctx) => Promise<BrowserResult>;
 
-/** What a ref verb does to the node it resolved. */
-export type Act = (cdp: Cdp, objectId: string, text: string) => Promise<unknown>;
+/** What a ref verb does to the node it resolved: the CDP reply, or nothing when the act sends several. */
+export type Act = (cdp: Cdp, objectId: string, text: string) => Promise<Rec | void>;
 
 /** A capture verb: the file it writes and the CDP call that renders it. */
 export type Capture = {

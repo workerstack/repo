@@ -17,11 +17,6 @@ import {
 import type { HeadersLike, JevFetch, JevResult, PostResult, StopKind } from "./jev.types.ts";
 import { jsonText } from "./json-text.ts";
 
-/** A reply body as JSON; one that is no JSON value reads as null. */
-function replyJson(value: unknown): Json {
-  return z.json().catch(null).parse(value);
-}
-
 /** The request body's parts besides the model. */
 type Ask = { questions: JsonObject; state: unknown };
 
@@ -38,7 +33,7 @@ export function headerGet(headers: HeadersLike | null | undefined, name: string)
   return plain[name] ?? null;
 }
 
-export function parseState(stateText: string): unknown {
+export function parseState(stateText: string): Json {
   const trimmed = stateText.trim();
 
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return stateText;
@@ -90,8 +85,7 @@ export async function postOnce(fetchImpl: JevFetch, key: string, { questions, st
   let json: Json = null;
 
   try {
-    // A body that is no JSON value reads as null, as a body that fails to parse does.
-    json = replyJson(await response.json());
+    json = await response.json();
   } catch {
     json = null;
   }

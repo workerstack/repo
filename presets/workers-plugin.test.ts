@@ -29,10 +29,8 @@ describe("workersPlugin, a module", () => {
   });
 
   it.each([
-    ["a module without cloudflareTest", { other: 1 }],
+    ["a module without cloudflareTest", {}],
     ["a cloudflareTest that is not a function", { cloudflareTest: 1 }],
-    ["a module that is not an object", "text"],
-    ["a null module", null],
   ])("names the expected range for %s", async (_name, loaded) => {
     await expect(workersPlugin(CONFIG_PATH, () => Promise.resolve(loaded))).rejects.toThrow(
       "@workerstack/repo/vitest: @cloudflare/vitest-plugin does not export cloudflareTest; " +

@@ -139,7 +139,7 @@ function formatManifest(dest: string): void {
 
 export type InitOptions = {
   pkgRoot?: string;
-  execFileSync?: (cmd: string, args: string[], opts: ExecFileSyncOptions) => unknown;
+  execFileSync?: (cmd: string, args: string[], opts: ExecFileSyncOptions) => void;
   skipGlobals?: boolean;
   onPhase?: (name: string, state: "start" | "stop") => void;
   /** Skill packs written as `agents.skills` into a new config. */

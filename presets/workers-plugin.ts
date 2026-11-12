@@ -8,6 +8,9 @@ type Plugin = Exclude<NonNullable<ViteUserConfig["plugins"]>[number], Promise<un
 
 type CloudflareTest = (options: { wrangler: { configPath: string } }) => Plugin;
 
+/** The plugin module as `import()` resolves it: a namespace whose `cloudflareTest`, if any, is not yet checked. */
+type PluginModule = { readonly cloudflareTest?: unknown };
+
 const installHint = `bun add -d ${PLUGIN_PACKAGE}`;
 
 /**
@@ -20,17 +23,12 @@ function isPluginMissing(error: unknown): boolean {
   return ("code" in error && error.code === NOT_FOUND) || error.message.includes(NOT_INSTALLED);
 }
 
-function hasCloudflareTest(loaded: unknown): loaded is { cloudflareTest: CloudflareTest } {
-  return (
-    typeof loaded === "object" &&
-    loaded !== null &&
-    "cloudflareTest" in loaded &&
-    typeof loaded.cloudflareTest === "function"
-  );
+function hasCloudflareTest(loaded: PluginModule): loaded is { cloudflareTest: CloudflareTest } {
+  return typeof loaded.cloudflareTest === "function";
 }
 
 /** The plugin package, imported from the preset's own resolution scope, where an optional peer is linked. */
-function importPlugin(): Promise<unknown> {
+function importPlugin(): Promise<PluginModule> {
   const specifier: string = PLUGIN_PACKAGE;
 
   return import(specifier);
@@ -42,8 +40,11 @@ function importPlugin(): Promise<unknown> {
  * that says how to install it, naming the wrangler file; a module without `cloudflareTest` is an error naming the
  * expected range; any other load error passes through unchanged.
  */
-export async function workersPlugin(configPath: string, load: () => Promise<unknown> = importPlugin): Promise<Plugin> {
-  let loaded: unknown;
+export async function workersPlugin(
+  configPath: string,
+  load: () => Promise<PluginModule> = importPlugin,
+): Promise<Plugin> {
+  let loaded: PluginModule;
 
   try {
     loaded = await load();

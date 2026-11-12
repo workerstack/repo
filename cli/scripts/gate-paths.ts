@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
@@ -97,7 +98,7 @@ export function collectPathValues(input: ToolArgs): string[] {
 }
 
 /** The file a Read names, in whichever spelling the harness uses. */
-export function readFilePath(input: ToolArgs): unknown {
+export function readFilePath(input: ToolArgs): Json {
   return [input.target_file, input.file_path, input.targetFile, input.filePath].find(Boolean) ?? "";
 }
 

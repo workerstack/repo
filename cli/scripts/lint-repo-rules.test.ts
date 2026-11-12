@@ -21,6 +21,8 @@ const REPO_RULES = {
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
       "repo/no-shape-in-symbol-names": "error",
+      "repo/no-unknown-returns": "error",
+      "repo/no-unknown-type-aliases": "error",
       "repo/no-unsafe-dictionary-type": "error",
       "repo/no-v8-ignore": "error",
       "repo/no-widen-then-assert": "error",
@@ -70,6 +72,14 @@ const REPO_RULES = {
     "",
     "export type Branded = Record<string, { brand? }>;",
     "",
+    "export type Raw = unknown;",
+    "",
+    "export type Load = () => unknown;",
+    "",
+    "export type Wait = () => Promise;",
+    "",
+    "export interface Loader { load(); save(): Promise<string> }",
+    "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
     'import { b } from "@app/ui";',
@@ -103,9 +113,11 @@ const NAME_FINDING =
   "than ownership.";
 
 /**
- * What the widen, Reflect, assertion, parameter, symbol-name and dictionary rules report in flow.ts. Only `Bag` is an
- * unsafe dictionary: the planted plain alias use, mapped type, property and alias use missing a type, an argument or
- * a default hold null children under oxlint, which the dictionary rule reads without a plugin error.
+ * What the widen, Reflect, assertion, parameter, symbol-name, dictionary and unknown rules report in flow.ts. Only
+ * `Bag` is an unsafe dictionary: the planted plain alias use, mapped type, property and alias use missing a type, an
+ * argument or a default hold null children under oxlint, which the dictionary rule reads without a plugin error. Only
+ * `Raw` hides unknown and only `Load` returns it: `untyped`, `load()` and a bare `Promise` hold a null return type
+ * or type arguments, which the unknown-returns rule reads without a plugin error.
  */
 const FLOW_FINDINGS = [
   `${FLOW}:11 repo(no-chained-type-assertions) This assertion chain discards type evidence. ` +
@@ -118,6 +130,10 @@ const FLOW_FINDINGS = [
     "contract. Use an owner/schema-derived value type; parse external payloads before insertion.",
   `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
     "assertion. Keep the precise type from initialization through use; parse boundary input once.",
+  `${FLOW}:35 repo(no-unknown-type-aliases) Type alias \`Raw\` hides \`unknown\`. Keep \`unknown\` explicit at the ` +
+    "parsing boundary or on an allowed `cause` field; otherwise use the parsed owner type.",
+  `${FLOW}:37 repo(no-unknown-returns) This function exposes \`unknown\` to its caller. Parse the value at its ` +
+    "boundary and return a named domain type.",
   `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
     "behind a named interface.",
   `${FLOW}:9 repo(no-reflect-get) Replace \`Reflect.get\` with typed property access. Parse dynamic input into ` +

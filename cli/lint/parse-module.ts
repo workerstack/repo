@@ -1,7 +1,7 @@
 /** Reads one source file into the names it exports, imports and declares. */
 import { parseSync } from "oxc-parser";
 
-import { asNode, type SyntaxNode } from "../syntax-node.ts";
+import { asNode, type SyntaxNode, textOf } from "../syntax-node.ts";
 import { DEFAULT, NAMESPACE, NODE } from "./public-surface.constants.ts";
 import { declaredNames, get, nameOf, nodesOf, sourceText, unknownForm } from "./public-surface.syntax.ts";
 import type { Module } from "./public-surface.types.ts";
@@ -24,7 +24,7 @@ function addDefault(module: Module, statement: SyntaxNode): void {
   const identifier = get(declaration, "type") === NODE.identifier ? nameOf(declaration) : null;
   const local = declaredNames(statement)[0] ?? identifier;
 
-  if (local === null) module.unknown.push({ at: Number(statement["start"]), form: String(get(declaration, "type")) });
+  if (local === null) module.unknown.push({ at: Number(statement["start"]), form: textOf(get(declaration, "type")) });
   else module.exports.set(DEFAULT, { name: local, source: null });
 }
 
@@ -60,7 +60,7 @@ export function parseModule(file: string, code: string): Module {
   };
 
   for (const statement of nodesOf(parseSync(file, code).program.body)) {
-    const type = String(get(statement, "type"));
+    const type = textOf(get(statement, "type"));
 
     if (type === NODE.importDeclaration) addImports(module, statement);
 

@@ -88,7 +88,7 @@ function fakeChild(over: Partial<ChildLike> = {}) {
   return { child, on };
 }
 
-function capture(child: ChildLike, killFn: (pid: number, sig: string | number) => unknown = () => {}) {
+function capture(child: ChildLike, killFn: (pid: number, sig: string | number) => void = () => {}) {
   return recCapture({ args: [], bin: "ffmpeg", errFd: null, killFn, seconds: 5, spawnFn: () => child });
 }
 

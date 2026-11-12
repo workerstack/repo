@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
+import type { Json } from "../../json.ts";
 import { loadCfg } from "../speak-config.ts";
 import type { FetchFn, FetchResult, SpeakCfg } from "../speak.types.ts";
 
@@ -61,7 +62,7 @@ export function fetchThrowing(what: unknown): FetchFn {
 }
 
 /** An ok response whose body parses to `value`. */
-export function jsonRes(value: unknown): FetchResult {
+export function jsonRes(value: Json): FetchResult {
   return okRes({ json: () => Promise.resolve(value) });
 }
 

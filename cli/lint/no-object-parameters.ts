@@ -2,17 +2,9 @@
 import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 
 import { functionParameterBindingName, functionParameterTypeAnnotation } from "./function-parameters.ts";
+import { type FunctionOwner, functionVisitors } from "./function-visitors.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { createTypeAliasEnvironment, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
-
-/** Every node that owns a parameter list: functions, their declared signatures and function types. */
-type ParameterOwner =
-  | TSESTree.FunctionLike
-  | TSESTree.TSCallSignatureDeclaration
-  | TSESTree.TSConstructSignatureDeclaration
-  | TSESTree.TSConstructorType
-  | TSESTree.TSFunctionType
-  | TSESTree.TSMethodSignature;
 
 const MESSAGE =
   "Parameter `{{parameter}}` uses the broad `object` type. Accept a named owner type; " +
@@ -38,7 +30,7 @@ export const noObjectParameters: RepoRule<"objectParameter"> = {
   create(context) {
     let environment: TypeAliasEnvironment | null = null;
 
-    function check(node: ParameterOwner): void {
+    function check(node: FunctionOwner): void {
       const aliases = ESLintUtils.nullThrows(environment, "the Program visitor runs first");
 
       for (const parameter of node.params) {
@@ -52,19 +44,10 @@ export const noObjectParameters: RepoRule<"objectParameter"> = {
     }
 
     return {
-      ArrowFunctionExpression: check,
-      FunctionDeclaration: check,
-      FunctionExpression: check,
+      ...functionVisitors(check),
       Program(program) {
         environment = createTypeAliasEnvironment(program, context.sourceCode.visitorKeys);
       },
-      TSCallSignatureDeclaration: check,
-      TSConstructSignatureDeclaration: check,
-      TSConstructorType: check,
-      TSDeclareFunction: check,
-      TSEmptyBodyFunctionExpression: check,
-      TSFunctionType: check,
-      TSMethodSignature: check,
     };
   },
   defaultOptions: [],

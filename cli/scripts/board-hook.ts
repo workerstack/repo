@@ -14,7 +14,7 @@ function isSet(value: string | undefined): value is string {
   return value !== undefined && value !== "";
 }
 
-function firstTruthy(values: unknown[]): unknown {
+function firstTruthy<T>(values: T[]): T | undefined {
   return values.find(isTruthy);
 }
 
@@ -43,7 +43,7 @@ function sessionOf(data: Data, env: Env): string {
   return str(firstTruthy([data?.session_id, data?.sessionId, env.GROK_SESSION_ID])).trim();
 }
 
-function cwdOf(data: Data, env: Env): unknown {
+function cwdOf(data: Data, env: Env): string {
   const roots = [env.GROK_WORKSPACE_ROOT, data?.workspaceRoot, data?.workspace_root, data?.cwd, env.CLAUDE_PROJECT_DIR];
 
   return firstTruthy(roots) ?? process.cwd();

@@ -24,8 +24,8 @@ type Run = {
   targets: string[];
 };
 
-/** One target's setup step. */
-type Runner = (ctx: SetupCtx) => Promise<unknown>;
+/** One target's setup step; each resolves to whether it set its target up, which main does not read. */
+type Runner = (ctx: SetupCtx) => Promise<{ ok: boolean }>;
 
 const RUNNERS: Readonly<Record<string, Runner>> = {
   browser: setupBrowser,

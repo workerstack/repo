@@ -94,7 +94,7 @@ export function openUrl(
   {
     platform = process.platform,
     spawnSyncFn = spawnSync,
-  }: { platform?: NodeJS.Platform; spawnSyncFn?: (cmd: string, args: string[], opts: SpawnSyncOpts) => unknown } = {},
+  }: { platform?: NodeJS.Platform; spawnSyncFn?: (cmd: string, args: string[], opts: SpawnSyncOpts) => void } = {},
 ): void {
   if (platform === DARWIN) {
     spawnSyncFn("open", [url], { stdio: "ignore" });
