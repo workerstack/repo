@@ -14,7 +14,7 @@ import { holdingCheckout, matchLessons, persistLesson } from "./lessons-ops.ts";
 import { LESSONS_DIR } from "./lessons.constants.ts";
 import { denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
-import type { HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";
+import type { ContextReply, HookResult, ToolInput, WriteCase } from "./orchestrate.types.ts";
 import { isUnderDir } from "./persist-tmp.ts";
 import { canonicalPath, resolveRoots, resolveTyped, type Roots } from "./workspace-root.ts";
 import { mainCheckoutWriteReason } from "./worktree-guards.ts";
@@ -48,7 +48,7 @@ function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow
   return fresh;
 }
 
-function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
+function noticeFor(data: HookInput, toolInput: ToolInput): ContextReply | null {
   const roots = resolveRoots(data);
   const target = writeTarget(toolInput);
 
@@ -77,7 +77,7 @@ function noticeFor(data: HookInput, toolInput: ToolInput): object | null {
 }
 
 // Lessons that match a file this session edits, each shown once per session. Fails open.
-export function lessonNotice(data: HookInput, toolInput: ToolInput): object | null {
+export function lessonNotice(data: HookInput, toolInput: ToolInput): ContextReply | null {
   try {
     return noticeFor(data, toolInput);
   } catch {

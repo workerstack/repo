@@ -2215,7 +2215,7 @@
   "cli/scripts/__fixtures__/checkout-calls.ts": ["706fc33c4b931ede"],
   "cli/scripts/__fixtures__/ci-config-run.ts": ["6fb704b8a5106e1e"],
   "cli/scripts/__fixtures__/ci-run.ts": ["86bc194b217de9bd"],
-  "cli/scripts/__fixtures__/ci-wait-world.ts": ["b77339ecfbbd46c5"],
+  "cli/scripts/__fixtures__/ci-wait-world.ts": ["aa327120f18ac604", "b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
   "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98"],
   "cli/scripts/__fixtures__/doctor-kit.ts": ["9c6a7f1bfedb9efb", "e642ba74423b1c39"],
@@ -2401,7 +2401,6 @@
   "cli/scripts/browser-session.ts": [
     "033a0632bd668cb1",
     "26e15e3dfcb226b5",
-    "b48f87e8a3bb36e2",
     "ba6ef8177deece3e",
     "dade9ab82819cf74",
     "e3f282a2288c816c",
@@ -2671,7 +2670,6 @@
   ],
   "cli/scripts/ci-turbo.ts": [
     "2b6cf92a9901ba10",
-    "31af2e578c2542af",
     "7044a3cf7977073d",
     "73653b46a84645f9",
     "8422487f3070ece7",
@@ -2682,6 +2680,7 @@
   "cli/scripts/ci-wait-branch.test.ts": [
     "0f7403690fe371ed",
     "22eff89cc023fe56",
+    "5d468690fd9d309f",
     "8b958cbcc3058402",
     "c60043035d1e14ab",
     "cd470b1d013c2640",
@@ -2705,12 +2704,19 @@
   ],
   "cli/scripts/ci-wait-record.test.ts": [
     "4e775914010f4163",
+    "7e8d8c375a4d4437",
     "b274db3097501cad",
     "df0133b1cbeaace6",
     "e53e8ee7ad3591b3",
     "f71a530effb2b202"
   ],
-  "cli/scripts/ci-wait-record.ts": ["31209f4e2569f751", "823c98a40d869783", "86e8ece034a61237", "9cffd6058757a24c"],
+  "cli/scripts/ci-wait-record.ts": [
+    "31209f4e2569f751",
+    "434f221573bacb88",
+    "823c98a40d869783",
+    "86e8ece034a61237",
+    "9cffd6058757a24c"
+  ],
   "cli/scripts/ci-wait-run.test.ts": ["1ff03114d52427f4", "29705feb6fbbde74", "38781513e2776958", "783212feff6f1c47"],
   "cli/scripts/ci-wait-run.ts": [
     "0955e1f4247fb64e",
@@ -3484,6 +3490,7 @@
     "62c71829fbea189d",
     "c058fb604338b7af",
     "c39b64ad8233217e",
+    "cc342e4d04710c03",
     "ddd904bf0c6f5fd6"
   ],
   "cli/scripts/gate-harness.test.ts": ["0fbe09a9380467e5", "4350a1381203da7e", "e2d9ea88841c9bdd"],
@@ -4500,6 +4507,7 @@
     "55f576c8426a1982",
     "96a9edbb6f3fe6d9",
     "9925ae8909d811f1",
+    "b0c55e864fbe253a",
     "fd770525085063be"
   ],
   "cli/scripts/lint-rust.test.ts": [
@@ -4785,6 +4793,7 @@
   ],
   "cli/scripts/orchestrate-lessons.ts": [
     "3074ca8f862d3461",
+    "35a47873f2fe6f8a",
     "5c5d51cd799cf476",
     "7b9eb9b3dbbf9da3",
     "f43b9a7c56ebb281",
@@ -4861,6 +4870,7 @@
     "2e8da75dba8bae3c",
     "70f2c03960f348b6",
     "838fda78142d035c",
+    "904135ab3d1be339",
     "9a8fbad8554e8373"
   ],
   "cli/scripts/orchestrate-parent-intercept.test.ts": [
@@ -4952,6 +4962,7 @@
     "4225aa0718360812",
     "48252996edbb5e90",
     "50cfc600020c79e8",
+    "5f9aa47060030d79",
     "669accee775f8944",
     "900427db2c1d3337",
     "9dff271a0feafdb4",
@@ -4963,7 +4974,7 @@
     "d5aba868f9ad901f",
     "e79b942990a4cd11"
   ],
-  "cli/scripts/orchestrate-reply.ts": ["2bc659a36dc8aa79", "e06e43b41ed1efe6", "f71d2a2f008bb88d"],
+  "cli/scripts/orchestrate-reply.ts": ["2bc659a36dc8aa79", "3a5d913bfbe715ca", "e06e43b41ed1efe6", "f71d2a2f008bb88d"],
   "cli/scripts/orchestrate-reviews.ts": [
     "2dbe22701e27b240",
     "367861773bc630ff",
@@ -5017,7 +5028,9 @@
   "cli/scripts/orchestrate.types.ts": [
     "446ce0a13752c763",
     "695a233aea863271",
+    "921c57dfc87fa42d",
     "d46d4aed3b621c34",
+    "d8eea68ceda4d5d5",
     "f25b82254bd227ea",
     "f6a7ba8bb8d28eab"
   ],
@@ -5657,7 +5670,7 @@
   ],
   "cli/scripts/push-target.ts": ["a525b270004a6945", "f91c97ee3a2dad44"],
   "cli/scripts/push.constants.ts": ["7a014523add81904", "d8e6f8b4b1a99b1e"],
-  "cli/scripts/push.test.ts": ["cb4a4248d04efcc8", "f0b85a34b3a34700"],
+  "cli/scripts/push.test.ts": ["30895fc0bf7b1f9a", "cb4a4248d04efcc8", "f0b85a34b3a34700"],
   "cli/scripts/push.ts": ["56f273cb9ab4acb4", "f8b7cff9f3d8fa69"],
   "cli/scripts/redundant-ignore-lines.test.ts": ["4440a3dbfa8fc8d3", "4725b0b83d50ac1d", "48e4ccc99bb0f6f2"],
   "cli/scripts/redundant-ignore-lines.ts": ["805a6a11cfcc93ae", "def83def5804afad"],
@@ -6387,6 +6400,7 @@
     "787e552dcb0859f4",
     "b0ccd5b4f20d909c",
     "b5bff334d6c54f97",
+    "c42a0ae3a1f56ddb",
     "ebf6792a2cd86f50"
   ],
   "cli/scripts/workspace-root.test.ts": [
@@ -6402,6 +6416,7 @@
   ],
   "cli/scripts/workspace-root.ts": [
     "3faf95e45f828e1e",
+    "4df0b4e52d9380c9",
     "5944b936bb6b99b0",
     "7711077d3d450b65",
     "850a245e6caa0840",
@@ -6457,6 +6472,7 @@
     "41639b036d28e859",
     "470e15ba681bb70e",
     "6a5e5976c1c3c348",
+    "ed8273157dadfc46",
     "ff919a43cb25a45d"
   ],
   "cli/scripts/worktree-finish-errors.test.ts": [
@@ -6481,6 +6497,7 @@
     "1a4af07379d6e08c",
     "264d70876e560b21",
     "55aab7b9574b4953",
+    "64e22282e2bde8dc",
     "6b897361a05a1b6c",
     "c78b08a5b9e171aa"
   ],
@@ -6496,6 +6513,7 @@
   ],
   "cli/scripts/worktree-guards.ts": ["06803a7d1e0b56fc", "155ded919c4f973a", "c9b9afa6ad6723e2", "ef687710d10f787b"],
   "cli/scripts/worktree-hook.test.ts": [
+    "0be4fe1fb65030a8",
     "264afd2788cad775",
     "2fe51fe4e3058bc8",
     "6ac4d1873ca7933f",
@@ -6593,6 +6611,7 @@
   "cli/scripts/worktree.ts": [
     "39fe708a8275f215",
     "3e4fd65b76ee59b3",
+    "5006500bd27d7fd4",
     "7cbb20cb23042c53",
     "885c1170d0531d79",
     "934bffd9e21e3129",

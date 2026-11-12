@@ -14,10 +14,11 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
-import { branchExists, errorMessage, git, isMerged, samePath, worktreeEntries } from "./worktree-git.ts";
+import { branchExists, git, isMerged, samePath, worktreeEntries } from "./worktree-git.ts";
 import { addWorktree, finishWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import {

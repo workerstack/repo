@@ -10,7 +10,7 @@ import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { untrackedEntries } from "./git-files.ts";
 import { MANIFEST_REL, renderManifest } from "./manifest.ts";
 import type { SyncContext } from "./outputs.ts";
-import { turbo } from "./turbo.ts";
+import { turbo, type TurboJson } from "./turbo.ts";
 
 useTempDirs();
 
@@ -41,7 +41,7 @@ const BASE = {
   },
 };
 
-function json(value: object) {
+function json(value: TurboJson) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 

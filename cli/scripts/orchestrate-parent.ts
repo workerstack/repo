@@ -7,7 +7,7 @@ import { repoEnv } from "../repo-env.ts";
 import { notePush } from "./ci-push-gate.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
-import { answerDeny, answerRewrite, eventKey, fatHookOutput } from "./gate-harness.ts";
+import { answerDeny, answerRewrite, eventKey, fatHookOutput, type HookOutput } from "./gate-harness.ts";
 import { stampPlanSave } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
@@ -30,7 +30,7 @@ function promptOf(input: ToolInput | null | undefined): string | null {
 function rewriteSpawn(
   toolInput: ToolInput | undefined,
   data: HookInput,
-): { deny: object } | { updated: ToolInput | null } {
+): { deny: HookOutput } | { updated: ToolInput | null } {
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt = promptOf(updated) ?? promptOf(toolInput) ?? "";
 

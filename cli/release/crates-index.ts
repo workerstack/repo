@@ -23,11 +23,16 @@ export type Baseline =
 type IndexFetch = (url: string, init: { headers: Record<string, string> }) => Promise<Response>;
 
 /** One version line of the index, as far as this reads it. */
-function entry() {
+function entry(): z.ZodObject<{
+  pubtime: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+  vers: z.ZodString;
+  yanked: z.ZodOptional<z.ZodBoolean>;
+}> {
   return z.object({ pubtime: z.string().nullish(), vers: z.string(), yanked: z.boolean().optional() });
 }
 
-type Entry = z.infer<ReturnType<typeof entry>>;
+/** One version line of the index, as parsed. */
+export type Entry = z.infer<ReturnType<typeof entry>>;
 
 /** The sparse index URL of a crate: its name lowercased under the directories the length of the name picks. */
 export function indexUrl(name: string): string {

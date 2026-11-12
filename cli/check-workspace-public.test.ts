@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { LOCK_OK, MANIFEST, ROOT, lines } from "./__fixtures__/check-workspace-lines.ts";
+import type { PackageJson } from "./sync/workspace.ts";
 
-function sdk(rest: object, root: object = ROOT): Record<string, object> {
+function sdk(rest: Partial<PackageJson>, root: Partial<PackageJson> = ROOT): Record<string, PackageJson> {
   return {
     [MANIFEST]: root,
     "packages/core/package.json": { name: "@acme/core" },

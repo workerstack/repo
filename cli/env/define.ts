@@ -293,5 +293,5 @@ export function createEnv<C extends EnvConfig>(config: C, io: EnvIo, origin: str
   Object.defineProperty(env, LAYERS, { value: layers });
 
   // Each view holds a getter per key of the layers its type is computed from.
-  return env as unknown /* the views match the layer types */ as EnvInstance<C>;
+  return env /* the views match the layer types */ as EnvInstance<C>;
 }

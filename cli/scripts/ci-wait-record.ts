@@ -17,8 +17,13 @@ type RecordOutcome = (typeof OUTCOMES)[number];
 /** What happened to the `ci` run of a commit, and when it was known. */
 export type WaitRecord = { branch: string; outcome: RecordOutcome; failed: string[]; at: string };
 
-/** The file operations a record needs; node's by default. */
-export type RecordFs = Pick<typeof nodeFs, "mkdirSync" | "writeFileSync" | "renameSync" | "rmSync">;
+/** The four file operations a record makes, with the arguments it passes; node's fs by default. */
+export type RecordFs = {
+  mkdirSync: (dir: string, options: { recursive: true }) => void;
+  writeFileSync: (file: string, data: string) => void;
+  renameSync: (from: string, to: string) => void;
+  rmSync: (file: string, options: { force: true }) => void;
+};
 
 export function recordSchema(): z.ZodType<WaitRecord> {
   return z.object({

@@ -1,4 +1,5 @@
 import type { closingLine, parseApproval } from "./closing-line.ts";
+import type { HookOutput } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { STRATEGIES } from "./strategy.constants.ts";
 import type { Roots } from "./workspace-root.ts";
@@ -23,10 +24,19 @@ export type ApprovalItem = {
 /** A reply of `y` or `h`, with or without a strategy. */
 export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApproval>>, { kind: "unknown" }>;
 
+/** Context the host adds for one event, blocking it when `decision` is set. */
+export type ContextReply = {
+  decision?: "block";
+  hookSpecificOutput: { additionalContext: string; hookEventName: string };
+};
+
+/** Every reply a handler builds: the gate's deny or rewrite, a block with a reason, or added context. */
+export type HostReply = HookOutput | { decision: "block"; reason: string } | ContextReply;
+
 /** What a handler decides: the exit code and, when the host should see one, the one reply `main` writes. */
 export type HookResult = {
   code: number;
-  reply?: object;
+  reply?: HostReply;
 };
 
 /** What every persist function answers to a full-content save. */
