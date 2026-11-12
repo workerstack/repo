@@ -1,8 +1,6 @@
-import type { Context } from "@oxlint/plugins";
-import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 
-import { reportsOf } from "../../dev/rule-harness.ts";
+import { reportsOf, ruleContext } from "../../dev/rule-harness.ts";
 import { asNeedsReason } from "./as-needs-reason.ts";
 
 function needs(type: string) {
@@ -58,12 +56,14 @@ describe("as-needs-reason fails", () => {
  */
 function unparenthesized(code: string): string[] {
   const messages: string[] = [];
-  const { comments, program } = parseSync("a.ts", code, { preserveParens: false });
-  const context = {
-    report: ({ message }: { message?: string | null }) => messages.push(message ?? ""),
-    sourceCode: { getAllComments: () => comments, text: code },
-  };
-  const visitor = asNeedsReason.create(context as unknown /* a partial double of the context */ as Context);
+  const { context, program } = ruleContext({
+    code,
+    cwd: "/",
+    filename: "/a.ts",
+    options: [],
+    report: ({ message }) => messages.push(message ?? ""),
+  });
+  const visitor = asNeedsReason.create(context);
   function visit(node: unknown): void {
     if (typeof node !== "object" || node === null) return;
     if ("type" in node && node.type === "TSAsExpression")

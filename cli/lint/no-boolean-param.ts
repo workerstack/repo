@@ -1,4 +1,6 @@
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
+
+import type { RepoRule } from "./rule.types.ts";
 
 /** The message for a flag parameter called `name`. */
 function messageOf(name: string): string {
@@ -49,7 +51,7 @@ function flagName(param: Parameter): string | null {
  * an object literal method, a setter and a signature in an interface or type literal pass, as does a destructured
  * options parameter. Reads the annotation and the default only, since oxlint gives a rule no types.
  */
-export const noBooleanParam: CreateRule = {
+export const noBooleanParam: RepoRule = {
   create(context) {
     function check(node: Func): void {
       if (!isDeclared(node)) return;

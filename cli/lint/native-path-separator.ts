@@ -1,7 +1,8 @@
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { isNativePath, unwrap } from "./is-native-path.ts";
 import { MATCHING_METHODS, SEPARATOR } from "./native-path-separator.constants.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 const WHITESPACE_RUN = /\s+/g;
 
@@ -19,7 +20,7 @@ function separatorIn(node: Node): string | undefined {
 }
 
 /** Fails a string match against a separator literal on a value that is provably a native path. */
-export const nativePathSeparator: CreateRule = {
+export const nativePathSeparator: RepoRule = {
   create(context) {
     const { text } = context.sourceCode;
     function source(node: Node): string {

@@ -1,4 +1,4 @@
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import {
   isBooleanName,
@@ -21,6 +21,7 @@ import {
   isLiteral,
   isModuleLevel,
 } from "./naming-kinds.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 type Node = ESTree.Node;
 type Func = ESTree.Function | ESTree.ArrowFunctionExpression;
@@ -145,7 +146,7 @@ function checkPascal(check: Check, node: Named | ESTree.TSEnumMember): void {
  * `declare`d shapes, and `_`-led parameters and destructured bindings pass. oxlint gives a rule no types, so a
  * boolean is known by its annotation or initializer only.
  */
-export const namingConvention: CreateRule = {
+export const namingConvention: RepoRule = {
   create(context) {
     const check: Check = {
       exported: new Set(),

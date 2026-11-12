@@ -1,8 +1,7 @@
 import path from "node:path";
 
-import type { CreateRule } from "@oxlint/plugins";
-
 import { movedOf, type Statement } from "./names.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** `vite.config.ts`, `workerstack.config.ts`, `eslint.config.mjs`. */
 const CONFIG = /\.config\.(?:ts|mts|js|mjs)$/;
@@ -19,7 +18,7 @@ function allowed(statement: Statement): boolean {
 }
 
 /** Fails any other statement in a config file: what a config builds lives in a module it imports. */
-export const configFile: CreateRule = {
+export const configFile: RepoRule = {
   create(context) {
     if (!CONFIG.test(path.basename(context.filename))) return {};
     return {

@@ -1,6 +1,7 @@
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { nameOf } from "./public-surface.syntax.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 type Member = ESTree.ClassElement;
 type Method = ESTree.MethodDefinition;
@@ -52,7 +53,7 @@ function placeOf(member: Member): Placed {
  * getters, setters, static and abstract ones; then `protected`, `private` and `#x` methods. Overloads rank with
  * their method, and parameter properties are not members. Reports only; it never moves a member.
  */
-export const memberOrdering: CreateRule = {
+export const memberOrdering: RepoRule = {
   create(context) {
     return {
       ClassBody(body) {

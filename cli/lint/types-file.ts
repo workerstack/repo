@@ -1,6 +1,5 @@
-import type { CreateRule } from "@oxlint/plugins";
-
 import type { Statement } from "./names.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 const MESSAGE = "a .types.ts file holds only exported types and interfaces; move this into a module";
 const TYPES = ["TSTypeAliasDeclaration", "TSInterfaceDeclaration"];
@@ -15,7 +14,7 @@ function typeOnly(statement: Statement): boolean {
 }
 
 /** Fails every statement of a `*.types.ts` file that is not a type: such a file is erased whole at build. */
-export const typesFile: CreateRule = {
+export const typesFile: RepoRule = {
   create(context) {
     if (!context.filename.endsWith(".types.ts")) return {};
     return {

@@ -1,23 +1,24 @@
-import type { Context, Fixer } from "@oxlint/plugins";
-import { parseSync } from "oxc-parser";
+import type { Diagnostic, Fixer } from "@oxlint/plugins";
 import { describe, expect, it } from "vitest";
 
+import { ruleContext } from "../../dev/rule-harness.ts";
 import { MESSAGE } from "./no-block-comment.constants.ts";
 import { noBlockComment } from "./no-block-comment.ts";
 
 type Edit = { range: [number, number]; text: string };
-type Reported = { message?: string | null; fix?: (fixer: Fixer) => Edit };
 const FIXER = { replaceTextRange: (range: [number, number], text: string): Edit => ({ range, text }) };
 
 /** The count of reports over `code` and the code with every fix applied, last range first. */
 function run(code: string): { reports: number; fixed: string } {
-  const reported: Reported[] = [];
-  const comments = parseSync("a.ts", code).comments;
-  const context = {
-    report: (r: Reported) => reported.push(r),
-    sourceCode: { getAllComments: () => comments, text: code },
-  };
-  const visitor = noBlockComment.create(context as unknown /* a partial double of the context */ as Context);
+  const reported: Diagnostic[] = [];
+  const { context } = ruleContext({
+    code,
+    cwd: "/",
+    filename: "/a.ts",
+    options: [],
+    report: (diagnostic) => reported.push(diagnostic),
+  });
+  const visitor = noBlockComment.create(context);
   visitor.Program?.({} /* the rule reads no node */ as never);
   const edits = reported.map(
     (report) =>

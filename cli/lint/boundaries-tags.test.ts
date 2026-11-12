@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { boundaries } from "./boundaries.ts";
+import type { RuleContext } from "./rule.types.ts";
 
 /** Packages that declare each other, so only the tags can refuse an import between them. */
 const MANIFESTS: Record<string, string> = {
@@ -16,19 +17,18 @@ const MANIFESTS: Record<string, string> = {
   "packages/web/package.json": JSON.stringify({ dependencies: { "@app/lib": "*", "@app/ui": "*" }, name: "@app/web" }),
 };
 /** Usage's tags, with a second lib package for the same-tag case; `@app/tools` carries none. */
-const OPTIONS = [
-  {
-    allow: { app: ["ui", "lib"], lib: [], ui: ["lib"] },
-    tags: { "@app/core": "lib", "@app/lib": "lib", "@app/ui": "ui", "@app/web": "app" },
-  },
-];
+const TAGS = {
+  allow: { app: ["ui", "lib"], lib: [], ui: ["lib"] },
+  tags: { "@app/core": "lib", "@app/lib": "lib", "@app/ui": "ui", "@app/web": "app" },
+};
+const OPTIONS = [TAGS];
 const LIB = "packages/lib/src/lib.ts";
 const LIB_TO_UI =
   '"@app/ui" is a ui package, and a lib package may import only lib; move what it needs into a package lib may ' +
   'import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts';
 
 /** What the rule reports for `code` at `file`, under `options`. */
-function messagesOf(file: string, code: string, options: readonly unknown[] = OPTIONS): string[] {
+function messagesOf(file: string, code: string, options: RuleContext["options"] = OPTIONS): string[] {
   return reportsOf(boundaries, { ...MANIFESTS, [file]: code }, options).map((report) => report.message);
 }
 
@@ -76,10 +76,10 @@ it("a package with no name is not judged by tag", () => {
 });
 
 it.each([
-  { allow: OPTIONS[0]?.allow, tags: "lib" },
-  { allow: OPTIONS[0]?.allow, tags: { "@app/lib": 1, "@app/ui": "ui" } },
-  { allow: "lib", tags: OPTIONS[0]?.tags },
-  { allow: { lib: [1] }, tags: OPTIONS[0]?.tags },
+  { allow: TAGS.allow, tags: "lib" },
+  { allow: TAGS.allow, tags: { "@app/lib": 1, "@app/ui": "ui" } },
+  { allow: "lib", tags: TAGS.tags },
+  { allow: { lib: [1] }, tags: TAGS.tags },
 ])("options that are not tags and allow lists judge no tag: %j", (options) => {
   expect(messagesOf(LIB, 'import { b } from "@app/ui";', [options])).toStrictEqual([]);
 });

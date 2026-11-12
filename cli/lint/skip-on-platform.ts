@@ -1,5 +1,6 @@
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
+import type { RepoRule } from "./rule.types.ts";
 import { GLOBAL_OBJECT, PROCESS, SKIP, TYPEOF, UNDEFINED, VERSIONS } from "./skip-on-platform.constants.ts";
 
 type Node = ESTree.Node;
@@ -94,7 +95,7 @@ function isTestContext(node: Node, name: string): boolean {
 }
 
 /** Fails a `skipIf`, `runIf` or `ctx.skip` whose condition reads anything but the platform or the runtime. */
-export const skipOnPlatform: CreateRule = {
+export const skipOnPlatform: RepoRule = {
   create(context) {
     const { text } = context.sourceCode;
     function render(node: Node): string {

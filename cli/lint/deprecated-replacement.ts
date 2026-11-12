@@ -1,6 +1,5 @@
-import type { CreateRule } from "@oxlint/plugins";
-
 import { DEPRECATED, MESSAGE, NEXT_TAG, REPLACEMENT } from "./deprecated-replacement.constants.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** The text of the deprecation tag in a JSDoc block's `value`, or null when it has none. */
 function deprecatedText(value: string): string | null {
@@ -15,7 +14,7 @@ function deprecatedText(value: string): string | null {
  * Fails a deprecation tag that names no replacement: a caller who sees the strike-through needs to know what to use
  * instead. It applies to every JSDoc block, public or not.
  */
-export const deprecatedReplacement: CreateRule = {
+export const deprecatedReplacement: RepoRule = {
   create(context) {
     return {
       Program() {

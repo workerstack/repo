@@ -2,15 +2,15 @@
  * The layer half of `repo/boundaries`: `lint.boundaries` as sync writes it into the rule's options, and the message
  * for a package import whose target's tag the importer's tag may not import.
  */
-import type { CreateRule } from "@oxlint/plugins";
 
 import { isRecord } from "./manifest.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** Each package name's one tag, and per tag the other tags its packages may import. */
 export type Tags = { tags: Readonly<Record<string, string>>; allow: Readonly<Record<string, readonly string[]>> };
 
 /** What a rule's `meta.schema` takes. */
-type RuleSchema = NonNullable<NonNullable<CreateRule["meta"]>["schema"]>;
+type RuleSchema = NonNullable<NonNullable<RepoRule["meta"]>["schema"]>;
 
 const CONFIG_FILE = "workerstack.config.ts";
 /** A tag read with "an" before it: `app`, `infra`; `ui` and `lib` take "a". */

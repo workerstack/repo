@@ -1,15 +1,16 @@
 /**
  * Runs an oxlint JS plugin rule in process, the way oxlint hands it each file, over fixture files written to a temp
- * dir. oxlint's own `RuleTester` refuses bun, so this parses with `oxc-parser`, oxlint's parser; `cli/scripts/
- * lint.test.ts` runs each rule through real oxlint too.
+ * dir. oxlint's own `RuleTester` refuses Bun, so this parses with `oxc-parser`, oxlint's parser. Rules are typed
+ * against `RuleContext` (cli/lint/rule.types.ts), so the context built here is whole and tsc fails if a rule reads
+ * anything else; `cli/scripts/lint.test.ts` still runs each rule through real oxlint.
  */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { Context, CreateRule } from "@oxlint/plugins";
-import { parseSync } from "oxc-parser";
+import { parseSync, type Program } from "oxc-parser";
 
+import type { RepoRule, RuleComment, RuleContext } from "../cli/lint/rule.types.ts";
 import { PARENT_KEY } from "./parent-key.constants.ts";
 
 /** The fixture files oxlint would lint: JS and TS, with or without JSX, in any module flavour. */
@@ -20,13 +21,13 @@ export type Fixture = Record<string, string>;
 /** One finding: the fixture path it is in and the rule's message. */
 export type Report = { file: string; message: string };
 
-type Comment = { start: number; end: number; type: string; value: string };
+type Span = { start: number; end: number };
 type Node = { start: number; end: number; type: string; parent?: Node | null };
 type Visitors = Record<string, ((node: never) => void) | undefined>;
 
 /** The comments that touch `node` before it with only whitespace between, as oxlint's `SourceCode` reports them. */
-function commentsBefore(code: string, comments: readonly Comment[], node: Node): Comment[] {
-  const out: Comment[] = [];
+function commentsBefore(code: string, comments: readonly RuleComment[], node: Span): RuleComment[] {
+  const out: RuleComment[] = [];
   let edge = node.start;
   for (const comment of comments.toReversed()) {
     if (comment.end > edge) continue;
@@ -37,8 +38,8 @@ function commentsBefore(code: string, comments: readonly Comment[], node: Node):
   return out;
 }
 
-function commentsAfter(code: string, comments: readonly Comment[], node: Node): Comment[] {
-  const out: Comment[] = [];
+function commentsAfter(code: string, comments: readonly RuleComment[], node: Span): RuleComment[] {
+  const out: RuleComment[] = [];
   let edge = node.end;
   for (const comment of comments) {
     if (comment.start < edge) continue;
@@ -70,30 +71,41 @@ function visitAll(program: unknown, visitors: Visitors): void {
   );
 }
 
-type Lint = { dir: string; file: string; code: string; options: readonly unknown[]; reports: Report[] };
-
-function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, options, reports }: Lint): void {
-  const filename = path.join(dir, file);
+/** The whole `RuleContext` oxlint would give a rule for `code`, and the program it would walk. */
+export function ruleContext(input: {
+  cwd: string;
+  filename: string;
+  code: string;
+  options: RuleContext["options"];
+  report: RuleContext["report"];
+}): { context: RuleContext; program: Program } {
+  const { cwd, filename, code, options, report } = input;
   const parsed = parseSync(filename, code, { preserveParens: false });
-  const comments =
-    parsed.comments /* oxc-parser's comments carry start, end, type and value, the fields Comment lists */ as Comment[];
-  const context = {
-    cwd: dir,
-    filename,
-    options,
-    report: ({ message }: { message?: string | null }) => reports.push({ file, message: message ?? "" }),
-    sourceCode: {
-      getAllComments: () => comments,
-      getCommentsAfter: (node: Node) => commentsAfter(code, comments, node),
-      getCommentsBefore: (node: Node) => commentsBefore(code, comments, node),
-      getText: () => code,
-      text: code,
-    },
+  const comments: readonly RuleComment[] = parsed.comments.map((comment) => ({
+    ...comment,
+    range: [comment.start, comment.end],
+  }));
+  const sourceCode = {
+    getAllComments: () => comments,
+    getCommentsAfter: (node: Span) => commentsAfter(code, comments, node),
+    getCommentsBefore: (node: Span) => commentsBefore(code, comments, node),
+    text: code,
   };
-  const visitors = rule.create(
-    context /* the fake holds the Context members the rules read */ as unknown /* the rest stay unset */ as Context,
-  ) /* create returns the visitor map oxlint calls by node type */ as Visitors;
-  visitAll(parsed.program, visitors);
+  return { context: { cwd, filename, options, report, sourceCode }, program: parsed.program };
+}
+
+type Lint = { dir: string; file: string; code: string; options: RuleContext["options"]; reports: Report[] };
+
+function lintFile(rule: Pick<RepoRule, "create">, { dir, file, code, options, reports }: Lint): void {
+  const { context, program } = ruleContext({
+    code,
+    cwd: dir,
+    filename: path.join(dir, file),
+    options,
+    report: ({ message }) => reports.push({ file, message: message ?? "" }),
+  });
+  const visitors = rule.create(context) /* create returns the visitor map oxlint calls by node type */ as Visitors;
+  visitAll(program, visitors);
 }
 
 /**
@@ -101,9 +113,9 @@ function lintFile(rule: Pick<CreateRule, "create">, { dir, file, code, options, 
  * the rule's `context.options`, as oxlint hands over what follows `"error"` in `["error", {…}]`.
  */
 export function reportsOf(
-  rule: Pick<CreateRule, "create">,
+  rule: Pick<RepoRule, "create">,
   fixture: Fixture,
-  options: readonly unknown[] = [],
+  options: RuleContext["options"] = [],
 ): Report[] {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-rule-")));
   try {
