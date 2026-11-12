@@ -7,7 +7,7 @@ export const ENTRY_FILE: string = "api-entry.ts";
 export const PACKAGE_OF_FILE: RegExp = /^.*\/node_modules\/((?:@[^/]+\/)?[^/]+)\//;
 
 /** Prints a type in full, an alias as what it stands for, so two copies of it compare by the same text. */
-export const SHAPE_FLAGS: ts.TypeFormatFlags = ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias;
+export const FULL_TYPE_FLAGS: ts.TypeFormatFlags = ts.TypeFormatFlags.NoTruncation | ts.TypeFormatFlags.InTypeAlias;
 
 /** Modifiers that make a class member nominal: two declarations of the class are two types. */
 export const NOMINAL_MODIFIERS: ts.ModifierFlags = ts.ModifierFlags.Private | ts.ModifierFlags.Protected;

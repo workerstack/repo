@@ -1,7 +1,7 @@
 import {
   CREDENTIAL_NAME,
   CREDENTIAL_REASON,
-  CREDENTIAL_SHAPE,
+  CREDENTIAL_PATTERN,
   DIGIT,
   ENTROPY_BITS,
   ENTROPY_REASON,
@@ -9,7 +9,7 @@ import {
   LOWER,
   PUBLIC_PREFIXES,
   SECRET_PREFIXES,
-  TOKEN_SHAPE,
+  TOKEN_PATTERN,
   UPPER,
   URL_MARK,
 } from "./check-env-values.constants.ts";
@@ -26,12 +26,12 @@ function entropyOf(text: string): number {
 
 /** A mixed-case token of high entropy: no hex id, UUID, domain or slug mixes both cases. */
 function isRandomToken(value: string): boolean {
-  return TOKEN_SHAPE.test(value) && UPPER.test(value) && LOWER.test(value) && entropyOf(value) >= ENTROPY_BITS;
+  return TOKEN_PATTERN.test(value) && UPPER.test(value) && LOWER.test(value) && entropyOf(value) >= ENTROPY_BITS;
 }
 
 /** A long value of letters and digits, no space, under a key named for a credential. */
 function isNamedCredential(key: string, value: string): boolean {
-  return CREDENTIAL_NAME.test(key) && CREDENTIAL_SHAPE.test(value) && LETTER.test(value);
+  return CREDENTIAL_NAME.test(key) && CREDENTIAL_PATTERN.test(value) && LETTER.test(value);
 }
 
 /**

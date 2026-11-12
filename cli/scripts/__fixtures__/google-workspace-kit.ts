@@ -149,8 +149,8 @@ export function browser(query: string, seen: Spawned[] = []): SpawnFn {
 }
 
 /** A Desktop OAuth JSON under `home`, with the client under `shape`. */
-export function plantCreds(home: string, shape: "installed" | "web" = "installed"): string {
+export function plantCreds(home: string, kind: "installed" | "web" = "installed"): string {
   const file = path.join(home, "oauth.json");
-  writeJson(file, { [shape]: { client_id: "cid", client_secret: "cs" } });
+  writeJson(file, { [kind]: { client_id: "cid", client_secret: "cs" } });
   return file;
 }

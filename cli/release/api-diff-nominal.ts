@@ -5,7 +5,7 @@ import {
   NOMINAL_TYPES,
   OPTIONAL_MARK,
   PACKAGE_OF_FILE,
-  SHAPE_FLAGS,
+  FULL_TYPE_FLAGS,
   TEXT_SEPARATOR,
 } from "./api-diff.constants.ts";
 
@@ -65,7 +65,7 @@ export function typeText(ctx: Ctx, type: ts.Type): string {
   const { checker } = ctx;
 
   function print(of: ts.Type): string {
-    return checker.typeToString(of, undefined, SHAPE_FLAGS);
+    return checker.typeToString(of, undefined, FULL_TYPE_FLAGS);
   }
 
   const props = (type.flags & ts.TypeFlags.Object) === 0 ? [] : checker.getPropertiesOfType(type);

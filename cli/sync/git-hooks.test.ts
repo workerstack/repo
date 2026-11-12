@@ -49,14 +49,14 @@ function runHook(name: string, ...args: string[]) {
 }
 
 it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync owns, none without the pack", () => {
-  const shapes = hooks(context(["standards"])).map((output) => ({
+  const planned = hooks(context(["standards"])).map((output) => ({
     executable: output.kind === "file" && output.executable === true,
     managed: output.managed,
     path: output.path,
     tracked: output.tracked,
   }));
 
-  expect(shapes).toStrictEqual([
+  expect(planned).toStrictEqual([
     { executable: true, managed: "whole", path: ".githooks/commit-msg", tracked: true },
     { executable: true, managed: "whole", path: ".githooks/pre-commit", tracked: true },
     { executable: true, managed: "whole", path: ".githooks/pre-push", tracked: true },

@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { isRecord } from "../json.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
-import type { DestShape } from "./__fixtures__/sync-global-kit.ts";
+import type { DestKeys } from "./__fixtures__/sync-global-kit.ts";
 import { CLAUDE, HOSTS, readHostDest, repoRoot, writeHostDest } from "./__fixtures__/sync-global-kit.ts";
 import { syncGlobals } from "./sync-global-settings.ts";
 
@@ -53,11 +53,11 @@ it("writes the Usage keys for every host", () => {
   const dests = HOSTS.map((h) => readHostDest(home, h));
 
   const [grok, claude, codex, agy, cursor] = dests /* one per HOSTS entry */ as [
-    DestShape,
-    DestShape,
-    DestShape,
-    DestShape,
-    DestShape,
+    DestKeys,
+    DestKeys,
+    DestKeys,
+    DestKeys,
+    DestKeys,
   ];
 
   expect(claude.permissions.defaultMode).toBe("bypassPermissions");

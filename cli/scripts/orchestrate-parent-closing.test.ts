@@ -14,7 +14,7 @@ const kit = orchestrateKit();
 
 /** Session `sid` in `ws`, sent in Claude's shape with the project dir set. */
 function claude(ws: string, sid: string): HookSession {
-  return hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
+  return hookSession(kit, { casing: "claude", env: { CLAUDE_PROJECT_DIR: ws }, sid, ws });
 }
 
 function approvals(ws: string, sid: string) {

@@ -89,7 +89,7 @@ describe("a session receipt", () => {
 
 const BEFORE = JSON.stringify({ content: "before", role: "assistant" });
 
-const shapes: [string, unknown, string][] = [
+const badLines: [string, unknown, string][] = [
   ["a line that is not JSON", "not json{", "before"],
   ["a JSON line that is not an object", 42, "before"],
   ["a user record", { text: "u", type: "user" }, "before"],
@@ -110,7 +110,7 @@ const shapes: [string, unknown, string][] = [
 ];
 
 describe("the last assistant message read from a transcript", () => {
-  it.each(shapes)("reads %s", (_name, record, expected) => {
+  it.each(badLines)("reads %s", (_name, record, expected) => {
     const ws = hook.temp();
     const line = typeof record === "string" ? record : JSON.stringify(record);
     const file = plantFile(ws, "transcript.jsonl", `${BEFORE}\n${line}\n`);

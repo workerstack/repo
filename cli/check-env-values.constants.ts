@@ -39,7 +39,7 @@ export const SECRET_PREFIXES: readonly string[] = [
 export const URL_MARK: string = "://";
 
 /** The shape a random token takes: base64, base64url or an OAuth secret's `.~:` set, at least 20 characters. */
-export const TOKEN_SHAPE: Readonly<RegExp> = /^[\w+/=.~:-]{20,}$/u;
+export const TOKEN_PATTERN: Readonly<RegExp> = /^[\w+/=.~:-]{20,}$/u;
 
 /** An upper-case letter; a random token mixes both cases, which no hex id, UUID, domain or slug does. */
 export const UPPER: Readonly<RegExp> = /[A-Z]/u;
@@ -69,7 +69,7 @@ export const ENTROPY_REASON: string = "high entropy";
 export const CREDENTIAL_NAME: Readonly<RegExp> = /(?:^|_)(?:TOKEN|SECRET|PASSWORD|PASSWD)(?:_|$)|_KEY$/u;
 
 /** The shape a value under a credential name takes to be flagged: no space, at least 16 characters. */
-export const CREDENTIAL_SHAPE: Readonly<RegExp> = /^\S{16,}$/u;
+export const CREDENTIAL_PATTERN: Readonly<RegExp> = /^\S{16,}$/u;
 
 /** The reason a value under a credential name is flagged. */
 export const CREDENTIAL_REASON: string = "credential name";

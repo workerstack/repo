@@ -214,11 +214,11 @@ it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES",
     return grokReply(w, { extra, input: { content: "x", file_path: file }, tool: "Write" });
   }
 
-  const shape = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
+  const payload = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
   const parent = run({});
   const verdict = parent === null ? null : { decision: parent.decision, reason: parent.reason };
   const block = { decision: "block", reason: reviewReason("review-fast") };
-  expect(verdict).toStrictEqual(ENFORCED_HARNESSES.has(harnessOf(shape)) ? block : null);
+  expect(verdict).toStrictEqual(ENFORCED_HARNESSES.has(harnessOf(payload)) ? block : null);
   expect(run({ subagent_type: "implementer-fast" })).toBeNull();
   expect(run({ subagent_type: "scout" })).toBeNull();
   expect(run({}, path.join(w, ".tmp/x.md"))?.decision).toBeUndefined();

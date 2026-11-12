@@ -12,7 +12,7 @@ import { validateRoadmap } from "./persist-roadmap-validate.ts";
 const kit = orchestrateKit();
 
 function claude(ws: string, sid: string): HookSession {
-  return hookSession(kit, { env: { CLAUDE_PROJECT_DIR: ws }, shape: "claude", sid, ws });
+  return hookSession(kit, { casing: "claude", env: { CLAUDE_PROJECT_DIR: ws }, sid, ws });
 }
 
 function withStrategy(s: string) {

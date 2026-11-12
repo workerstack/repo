@@ -21,4 +21,4 @@ export const REPORT_FILE: RegExp = /^ci-report-.*\.json$/;
 
 /** Reports needed before a test can be said to be skipped on every OS. */
 export const MIN_REPORTS = 2;
-export const REPORT_SHAPE = "expected { os: string, skipped: string[] }";
+export const REPORT_EXPECTED = "expected { os: string, skipped: string[] }";

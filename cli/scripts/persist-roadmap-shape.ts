@@ -39,7 +39,7 @@ export function locationOk(loc: string, p: path.PlatformPath = path): boolean {
 }
 
 /** What the shape checks read from a roadmap under validation. */
-export type ShapeInput = {
+export type RoadmapInput = {
   text: string;
   body: string;
   order: string[];
@@ -49,7 +49,7 @@ export type ShapeInput = {
 };
 
 /** A pointer roadmap: no Usage, only Order and Verify, one-line slices, the 60-line cap. */
-export function pointerErrors({ text, body, order: allOrder, bodies, fresh, previous }: ShapeInput): string[] {
+export function pointerErrors({ text, body, order: allOrder, bodies, fresh, previous }: RoadmapInput): string[] {
   const order = allOrder.filter((h) => h !== MISTAKES_H2);
   const kept = order.filter((h) => POINTER_H2.includes(h));
   const slices = parsePointerSlices(bodies.Order ?? "");
