@@ -1,5 +1,8 @@
 /** One run of a candidate command: the real process runner, its resource usage in table units, and its custom line. */
+import { z } from "zod";
+
 import { childEnv } from "../env.ts";
+import { tryJson } from "../json.ts";
 import { BENCH_LINE, BYTES_PER_KB, BYTES_PER_MB, FLOORED_PLATFORM, US_PER_MS, VM_HWM } from "./bench.constants.ts";
 
 /** The part of Bun's `ResourceUsage` a run reads: peak RSS in bytes and CPU time in microseconds. */
@@ -50,15 +53,7 @@ function benchObject(stdout: string): Record<string, unknown> | null {
 
   if (!last.startsWith(BENCH_LINE)) return null;
 
-  try {
-    const value: unknown = JSON.parse(last.slice(BENCH_LINE.length));
-
-    if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
-
-    return value /* JSON.parse's object, its values unread */ as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  return tryJson(z.record(z.string(), z.unknown()), last.slice(BENCH_LINE.length)) ?? null;
 }
 
 /** Reads the `names` metrics from the last stdout line, `bench: {"<name>": <number>, ...}`. */

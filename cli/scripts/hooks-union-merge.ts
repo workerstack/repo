@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, readJson, type JsonObject } from "../json.ts";
 import { hookNameOf } from "./hook-command.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";
 import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
@@ -60,9 +62,8 @@ export function loadJson(p: string): JsonObject {
   const raw = fs.readFileSync(p, "utf8");
 
   if (raw.trim() === "") return {};
-  const v: unknown = JSON.parse(raw);
 
-  return isRecord(v) ? v : {};
+  return readJson(z.record(z.string(), z.unknown()).catch({}), raw);
 }
 
 export function saveJson(p: string, obj: unknown): void {

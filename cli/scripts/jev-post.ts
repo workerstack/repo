@@ -1,5 +1,7 @@
 /** One jev request on the wire, and the short summary printed from its answers. */
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import {
   CHOICE,
   ENDPOINT,
@@ -35,12 +37,8 @@ export function parseState(stateText: string): unknown {
 
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return stateText;
 
-  try {
-    // Text that opens with { or [ parses to an object or array, never null.
-    return JSON.parse(stateText);
-  } catch {
-    return stateText;
-  }
+  // Text that opens with { or [ parses to an object or array, never null; any JSON state is sent as it is.
+  return tryJson(z.json(), stateText) ?? stateText;
 }
 
 /** One answer's summary line, or null for a kind the summary skips. */

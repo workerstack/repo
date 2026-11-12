@@ -5,7 +5,7 @@ import type { Env } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DEFAULT_MODEL, DEFAULT_SECONDS, MAX_SECONDS, STT_AUTO } from "./listen.constants.ts";
 import type { ListenCfg } from "./listen.types.ts";
-import { readJson, section, str } from "./voice-args.ts";
+import { readObjectFile, section, str } from "./voice-args.ts";
 
 export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): number {
   const n = Number(v);
@@ -17,7 +17,7 @@ export function clampSeconds(v: unknown, fallback: number = DEFAULT_SECONDS): nu
 
 export function loadCfg({ env, home }: { env: Env; home: string }): ListenCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
-  const file = readJson(filePath);
+  const file = readObjectFile(filePath);
   const openai = section(file, "openai");
   const listen = section(file, "listen");
 

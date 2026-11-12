@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { isImplementer, isParentOrchestrator, sessionIdOf } from "./gate-agents.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, toolCallOf, type Payload } from "./gate-harness.ts";
@@ -95,15 +97,9 @@ function gitAskedBy(root: string, sid: string): Set<string> {
   try {
     if (sid === "") return new Set();
 
-    const parsed: unknown = JSON.parse(
-      fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8"),
-    );
+    const text = fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8");
 
-    // A file that is not an object throws in the destructure the gate always used, which lands in the catch below.
-    if (!isRecord(parsed)) return new Set();
-    const words = parsed.words;
-
-    return new Set(Array.isArray(words) ? words.filter((w): w is string => typeof w === "string") : []);
+    return new Set(tryJson(z.looseObject({ words: z.array(z.string()) }), text)?.words);
   } catch {
     return new Set();
   }

@@ -5,6 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
+import { tryJson } from "../json.ts";
 import type { Result } from "../scripts/lint-baseline.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
 import {
@@ -42,7 +43,7 @@ export function runCargo(root: string, args: readonly string[]): CargoResult {
   const result = spawnSync(CARGO, [...args], options);
 
   if (result.error !== undefined) {
-    const isMissing = Reflect.get(result.error, "code") === NOT_FOUND;
+    const isMissing = "code" in result.error && result.error.code === NOT_FOUND;
 
     return { missing: isMissing, status: 1, stderr: result.error.message, stdout: "" };
   }
@@ -66,7 +67,7 @@ function schemas() {
     spans: z.array(span),
   });
 
-  return { compilerLine: z.object({ message: diagnostic }), head: z.object({ reason: z.string() }) };
+  return { compilerLine: z.object({ message: diagnostic }), head: z.looseObject({ reason: z.string() }) };
 }
 
 type Schemas = ReturnType<typeof schemas>;
@@ -81,19 +82,12 @@ const UNREADABLE: Read = { kind: "unreadable" };
 
 /** The diagnostic `line` carries, parsed at the edge; every other cargo line is passed over. */
 function readLine(line: string, schema: Schemas): Read {
-  let json: unknown;
+  // Loose, so the line passes through whole to the compiler line schema.
+  const json = tryJson(schema.head, line);
 
-  try {
-    json = JSON.parse(line);
-  } catch {
-    return UNREADABLE;
-  }
+  if (json === undefined) return UNREADABLE;
 
-  const kind = schema.head.safeParse(json);
-
-  if (!kind.success) return UNREADABLE;
-
-  if (kind.data.reason !== COMPILER_MESSAGE) return OTHER;
+  if (json.reason !== COMPILER_MESSAGE) return OTHER;
   const body = schema.compilerLine.safeParse(json);
 
   return body.success ? { kind: "message", message: body.data.message } : UNREADABLE;

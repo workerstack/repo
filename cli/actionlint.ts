@@ -32,6 +32,7 @@ import {
 } from "./actionlint.constants.ts";
 import { findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
+import { readJson } from "./json.ts";
 import { type Captured } from "./scripts/lint.ts";
 import { stateHome } from "./scripts/setup-files.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
@@ -186,7 +187,7 @@ function linesOf(ran: Captured): string[] {
   if (ran.code !== EXIT_PROBLEMS) return [failure];
 
   try {
-    const items = itemsSchema().parse(JSON.parse(ran.stdout));
+    const items = readJson(itemsSchema(), ran.stdout);
 
     return items.map((i) => `actionlint: ${i.filepath}:${i.line}:${i.column}: ${i.message} [${i.kind}]`);
   } catch {

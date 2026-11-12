@@ -2,8 +2,9 @@
 import fs from "node:fs";
 
 import { parse as parseToml } from "smol-toml";
+import { z } from "zod";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { isRecord, tryJson, type JsonObject } from "../json.ts";
 import {
   ALREADY_CLEAN,
   CURSOR_SERVER,
@@ -57,15 +58,9 @@ function readDest(abs: string): string | null {
 }
 
 function parseJsonObject(raw: string, abs: string): JsonObject {
-  let parsed: unknown;
+  const parsed = tryJson(z.record(z.string(), z.unknown()), raw);
 
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw unreadable(abs);
-  }
-
-  if (!isRecord(parsed)) throw unreadable(abs);
+  if (parsed === undefined) throw unreadable(abs);
 
   return parsed;
 }

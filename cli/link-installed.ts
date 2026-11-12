@@ -3,7 +3,9 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "./json.ts";
 import { MARKER_FILE, MODULES, SCOPE_PREFIX } from "./link.constants.ts";
+import { readJsonFile } from "./package-json.ts";
 
 /** The package.json fields linking reads. */
 export type Manifest = {
@@ -35,12 +37,11 @@ function markerSchema(): z.ZodType<Marker> {
   return z.object({ name: z.string(), source: z.string() });
 }
 
-function readJson(file: string): unknown {
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch {
-    return null;
-  }
+/** The install's file at `file` read through `schema`, or null when it is missing, no JSON, or of another shape. */
+function readInstalled<T>(file: string, schema: z.ZodType<T>): T | null {
+  if (!fs.existsSync(file)) return null;
+
+  return tryJson(schema, fs.readFileSync(file, "utf8")) ?? null;
 }
 
 /** Where `name` sits in `root`'s install dir. */
@@ -50,14 +51,12 @@ export function installedDir(root: string, name: string): string {
 
 /** The package.json of the package in `dir`, or null when there is none or it names no package. */
 function readManifest(dir: string): Manifest | null {
-  const parsed = manifestSchema().safeParse(readJson(path.join(dir, "package.json")));
-
-  return parsed.success ? parsed.data : null;
+  return readInstalled(path.join(dir, "package.json"), manifestSchema());
 }
 
 /** The package.json of the package in `dir`; throws when it is missing or names no package and version. */
 export function requireManifest(dir: string): Manifest {
-  return manifestSchema().parse(readJson(path.join(dir, "package.json")));
+  return readJsonFile(path.join(dir, "package.json"), manifestSchema());
 }
 
 /** The version in `dir`'s package.json, or null when there is none. */
@@ -67,9 +66,7 @@ export function readVersion(dir: string): string | null {
 
 /** The marker of the swapped copy of `name`, or null for an npm copy. */
 function markerOf(root: string, name: string): Marker | null {
-  const parsed = markerSchema().safeParse(readJson(path.join(installedDir(root, name), MARKER_FILE)));
-
-  return parsed.success ? parsed.data : null;
+  return readInstalled(path.join(installedDir(root, name), MARKER_FILE), markerSchema());
 }
 
 function namesIn(dir: string): string[] {

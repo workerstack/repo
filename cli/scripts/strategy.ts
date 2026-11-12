@@ -4,11 +4,15 @@
  *   session stamp  which plan this session reviews; the plan file is the truth, the stamp only points at it
  *   mode           how a session handles a question: ask, auto or away
  *
- * The closing line and approval replies live in `closing-line.ts`. Node builtins and `canonicalPath` only.
+ * The closing line and approval replies live in `closing-line.ts`. Node builtins, `canonicalPath` and the stamp's
+ * schema only.
  */
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import {
   DEFAULT_STRATEGY,
   FM_LINE_RE,
@@ -62,12 +66,9 @@ export function writeStamp(root: string, sid: string, planAbs: string): void {
   }
 }
 
-/** The plan file the session's stamp points at, or null. Throws when the stamp is missing or not JSON. */
+/** The plan file the session's stamp points at, or null when it is not JSON naming one. Throws when it is missing. */
 function stampedPlan(root: string, sid: string): string | null {
-  const stamp: unknown = JSON.parse(fs.readFileSync(stampPath(root, sid), "utf8"));
-  const plan = typeof stamp === "object" && stamp !== null && "plan" in stamp ? stamp.plan : null;
-
-  return typeof plan === "string" ? plan : null;
+  return tryJson(z.looseObject({ plan: z.string() }), fs.readFileSync(stampPath(root, sid), "utf8"))?.plan ?? null;
 }
 
 /** The `key: value` lines of a file's frontmatter, or null when it has none. */

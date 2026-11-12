@@ -1,7 +1,9 @@
 /** The argv, JSON and string helpers `repo listen` and `repo speak` share. */
 import fs from "node:fs";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson, type JsonObject } from "../json.ts";
 import type { ParsedArgv } from "./parsed-argv.types.ts";
 import { FLAG_ON, FLAG_PREFIX } from "./voice-args.constants.ts";
 
@@ -42,16 +44,12 @@ export function parseArgv(argv: unknown): ParsedArgv {
 }
 
 /** The JSON object at `p`, or an empty one when it is missing, broken or not an object. */
-export function readJson(p: string): JsonObject {
+export function readObjectFile(p: string): JsonObject {
   try {
-    const j: unknown = JSON.parse(fs.readFileSync(p, "utf8"));
-
-    if (isRecord(j)) return j;
+    return tryJson(z.record(z.string(), z.unknown()), fs.readFileSync(p, "utf8")) ?? {};
   } catch {
-    // none
+    return {};
   }
-
-  return {};
 }
 
 const NOTHING: readonly unknown[] = [undefined, null];

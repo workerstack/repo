@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson, tryJson } from "../json.ts";
 import { ID_SEPARATOR, MIN_REPORTS, REPORT_FILE, REPORT_SHAPE, SKIPPED_STATUSES } from "./ci-skips.constants.ts";
 
 /** Where relative paths start, and where lines go. */
@@ -28,6 +29,8 @@ function vitestReport() {
   });
 }
 
+type VitestReport = z.output<ReturnType<typeof vitestReport>>;
+
 function ciReport() {
   return z.object({
     durations: z.record(z.string(), z.number()).optional(),
@@ -40,13 +43,15 @@ function posix(file: string) {
   return file.replaceAll("\\", "/");
 }
 
-/** The ids of the tests vitest's JSON report says did not run, sorted and unique; the paths are root-relative posix. */
-export function skippedIds(json: unknown, root: string): string[] {
-  const parsed = vitestReport().safeParse(json);
+/** The root-relative posix ids of the tests vitest's JSON report `text` says did not run, sorted and unique. */
+export function skippedIds(text: string, root: string): string[] {
+  return skippedOf(tryJson(vitestReport(), text), root);
+}
 
-  if (!parsed.success) return [];
+function skippedOf(report: VitestReport | undefined, root: string): string[] {
+  if (report === undefined) return [];
 
-  const ids = parsed.data.testResults.flatMap((file) =>
+  const ids = report.testResults.flatMap((file) =>
     file.assertionResults
       .filter((test) => SKIPPED_STATUSES.includes(test.status))
       .map((test) => `${path.posix.relative(posix(root), posix(file.name))}${ID_SEPARATOR}${test.fullName}`),
@@ -61,13 +66,11 @@ export function sortedByKey<T>(entries: [string, T][]): [string, T][] {
 }
 
 /** The whole ms each test file took, by root-relative posix path, sorted; a file without both times has none. */
-function durationsOf(json: unknown, root: string): Record<string, number> {
-  const parsed = vitestReport().safeParse(json);
-
-  if (!parsed.success) return {};
+function durationsOf(report: VitestReport | undefined, root: string): Record<string, number> {
+  if (report === undefined) return {};
   const ms = new Map<string, number>();
 
-  for (const { name, startTime, endTime } of parsed.data.testResults) {
+  for (const { name, startTime, endTime } of report.testResults) {
     if (startTime !== undefined && endTime !== undefined)
       ms.set(path.posix.relative(posix(root), posix(name)), Math.round(endTime - startTime));
   }
@@ -77,18 +80,20 @@ function durationsOf(json: unknown, root: string): Record<string, number> {
 
 /** Writes `file` from the JSON report at `jsonFile`; a report that was not written or read has no skips. */
 export function writeReport(file: string, jsonFile: string, root: string): void {
-  let json: unknown = null;
+  let text = "";
 
   try {
-    json = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
+    text = fs.readFileSync(jsonFile, "utf8");
   } catch {
-    json = null;
+    // An absent report has no skips.
   }
 
+  const vitest = tryJson(vitestReport(), text);
+
   const report: Report = {
-    durations: durationsOf(json, root),
+    durations: durationsOf(vitest, root),
     os: process.platform,
-    skipped: skippedIds(json, root),
+    skipped: skippedOf(vitest, root),
   };
 
   fs.writeFileSync(file, `${JSON.stringify(report)}\n`);
@@ -117,7 +122,7 @@ function readReport(file: string): { report: Report | null; reason: string } {
   let json: unknown;
 
   try {
-    json = JSON.parse(fs.readFileSync(file, "utf8"));
+    json = readJson(z.json(), fs.readFileSync(file, "utf8"));
   } catch {
     return { reason: "not valid JSON", report: null };
   }

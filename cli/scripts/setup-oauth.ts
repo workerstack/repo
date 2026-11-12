@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { readJson } from "../json.ts";
 import { writeSecretJson } from "./setup-files.ts";
 import { OAUTH_FILE } from "./setup.constants.ts";
 import type { SetupSpawnSync } from "./setup.types.ts";
@@ -11,19 +13,24 @@ import { str } from "./voice-args.ts";
 /** The file names Google gives a downloaded OAuth client. */
 const CLIENT_SECRET_JSON = /client_secret.*\.json$/i;
 
-function rec(v: unknown): Record<string, unknown> {
-  return isRecord(v) ? v : {};
+/** An OAuth client JSON: its installed or web client when that names a client id, its other keys kept. */
+function oauthSchema() {
+  const client = z
+    .looseObject({ client_id: z.string().min(1) })
+    .optional()
+    .catch(undefined);
+
+  return z.looseObject({ installed: client, web: client }).catch({});
 }
 
-export function parseDesktopOAuth(raw: unknown): Record<string, unknown> {
-  const parsed: unknown = typeof raw === "string" ? JSON.parse(raw) : raw;
-  const j = rec(parsed);
-  const inst = rec(j.installed ?? j.web);
-  const hasClientId = typeof inst.client_id === "string" && inst.client_id !== "";
+/** The OAuth client JSON `text`; throws unless it is a Desktop client with a client id. */
+export function parseDesktopOAuth(text: string): Record<string, unknown> {
+  const j = readJson(oauthSchema(), text);
 
-  if (!hasClientId) throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
+  if (j.installed === undefined && j.web === undefined)
+    throw new Error("OAuth JSON needs installed.client_id (Desktop app download)");
 
-  if (!isRecord(j.installed)) throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
+  if (j.installed === undefined) throw new Error("OAuth JSON must be a Desktop client (installed), not a Web client");
 
   return j;
 }

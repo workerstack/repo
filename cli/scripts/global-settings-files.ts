@@ -3,8 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { parse as parseToml } from "smol-toml";
+import { z } from "zod";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { isRecord, readJson, type JsonObject } from "../json.ts";
 import {
   ALL_HOSTS,
   ENOENT,
@@ -44,11 +45,17 @@ function checkedHost(h: unknown): ManifestHost {
   return { ...h, dest: h.dest, format: h.format, id: h.id, payload: h.payload };
 }
 
+/** A JSON object, or null for any other JSON value. */
+function objectOrNull() {
+  return z.record(z.string(), z.unknown()).nullable().catch(null);
+}
+
 export function loadManifest(workspaceRoot: string): Manifest {
   const raw = fs.readFileSync(path.join(workspaceRoot, MANIFEST_REL), "utf8");
-  const manifest: unknown = JSON.parse(raw);
+  // Each key is checked below with its own message, which `repo yolo` prints as its error.
+  const manifest = readJson(objectOrNull(), raw);
 
-  if (!isRecord(manifest)) throw new Error("invalid manifest");
+  if (manifest === null) throw new Error("invalid manifest");
   const { skipKeyPattern, hosts } = manifest;
 
   if (typeof skipKeyPattern !== "string") throw new Error("manifest skipKeyPattern required");
@@ -67,9 +74,9 @@ export function parseText(raw: string | null | undefined, format: SettingsFormat
   const s = raw ?? "";
 
   if (s.trim() === "") return {};
-  const v: unknown = format === JSON_FORMAT ? JSON.parse(s) : parseToml(s);
+  const v = format === JSON_FORMAT ? readJson(objectOrNull(), s) : parseToml(s);
 
-  if (!isRecord(v)) throw new Error("not an object");
+  if (v === null) throw new Error("not an object");
 
   return v;
 }

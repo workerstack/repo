@@ -9,7 +9,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { readJson, tryJson } from "../json.ts";
+import { packageJsonSchema } from "../package-json.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { stamp } from "../sync/header.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
@@ -39,7 +43,23 @@ export type TasksFile = {
   version: string;
 };
 
-type PackageJson = Record<string, unknown>;
+/** The slice of a package.json the tasks come from: its name, scripts and workspace globs in either form. */
+function packageSchema() {
+  const globs = z.array(z.string());
+
+  return packageJsonSchema.pick({ name: true, scripts: true }).extend({
+    workspaces: z.union([globs, z.looseObject({ packages: globs.optional() })]).optional(),
+  });
+}
+
+type PackageJson = z.output<ReturnType<typeof packageSchema>>;
+
+/** A tasks.json: its tasks that are objects; a file with no tasks array has none. */
+function tasksFileSchema() {
+  const task = z.record(z.string(), z.unknown()).nullable().catch(null);
+
+  return z.looseObject({ tasks: z.array(task).catch([]) }).catch({ tasks: [] });
+}
 
 const RUN_RE = /^bun run \S+$/;
 const SCOPE_AT = /^@/;
@@ -60,9 +80,7 @@ function slash(p: string): string {
 
 function readPackage(file: string): PackageJson | null {
   try {
-    const pkg: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-
-    return isRecord(pkg) ? pkg : null;
+    return tryJson(packageSchema(), fs.readFileSync(file, "utf8")) ?? null;
   } catch {
     return null;
   }
@@ -78,15 +96,14 @@ function globDirs(root: string, pattern: string): string[] {
 }
 
 /** The `workspaces` globs of `pkg`: the array form, or the object form's `packages`. */
-function workspaceGlobs(pkg: PackageJson): unknown {
-  if (Array.isArray(pkg.workspaces)) return pkg.workspaces;
+function workspaceGlobs(pkg: PackageJson): string[] {
+  const ws = pkg.workspaces;
 
-  return isRecord(pkg.workspaces) ? pkg.workspaces.packages : undefined;
+  return Array.isArray(ws) ? ws : (ws?.packages ?? []);
 }
 
 function workspaceDirs(root: string, pkg: PackageJson): string[] {
-  const ws = workspaceGlobs(pkg);
-  const patterns = (Array.isArray(ws) ? ws : []).filter((p): p is string => typeof p === "string");
+  const patterns = workspaceGlobs(pkg);
   const dropped = new Set(patterns.filter((p) => p.startsWith("!")).flatMap((p) => globDirs(root, p.slice(1))));
   const dirs = new Set(patterns.filter((p) => !p.startsWith("!")).flatMap((p) => globDirs(root, p)));
 
@@ -116,7 +133,7 @@ function shellTask(label: string, script: string, cwd?: string): VsTask {
 }
 
 function scriptsOf(pkg: PackageJson): string[] {
-  return isRecord(pkg.scripts) ? Object.keys(pkg.scripts) : [];
+  return Object.keys(pkg.scripts ?? {});
 }
 
 /**
@@ -141,7 +158,7 @@ export function buildTasks(root: string, existing: VsTask[]): TasksFile {
   for (const dir of workspaceDirs(root, pkg)) {
     const workspace = readPackage(path.join(dir, "package.json"));
 
-    if (workspace === null || typeof workspace.name !== "string" || workspace.name === "") continue;
+    if (workspace?.name === undefined || workspace.name === "") continue;
     const cwd = `\${workspaceFolder}/${slash(path.relative(root, dir))}`;
 
     for (const script of scriptsOf(workspace)) {
@@ -167,14 +184,9 @@ export function renderTasks(root: string, existing: string | null): RenderedTask
 
   if (existing !== null) {
     try {
-      const parsed: unknown = JSON.parse(stripJsonc(existing));
-
-      if (isRecord(parsed) && Array.isArray(parsed.tasks)) tasks = parsed.tasks.filter(isRecord);
-    } catch (err) {
-      return {
-        error: `cannot parse ${TASKS_REL}: ${(err /* JSON.parse and stripJsonc throw only Error */ as Error).message}`,
-        ok: false,
-      };
+      tasks = readJson(tasksFileSchema(), stripJsonc(existing)).tasks.filter((task) => task !== null);
+    } catch (error) {
+      return { error: `cannot parse ${TASKS_REL}: ${errorMessage(error)}`, ok: false };
     }
   }
 

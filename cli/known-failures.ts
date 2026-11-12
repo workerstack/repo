@@ -6,7 +6,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { parseSync } from "oxc-parser";
+import { z } from "zod";
 
+import { tryJson } from "./json.ts";
 import { DEFAULT_LIST, DESCRIBE, FAILS, NODE, SEPARATOR, SOURCE, TEST_ROOTS } from "./known-failures.constants.ts";
 
 /** A `.fails` case found in a file: where, how it was called, and its name, or null for a title that is no literal. */
@@ -120,13 +122,7 @@ function readList(file: string): string[] | null {
 
   if (text === null) return null;
 
-  try {
-    const parsed: unknown = JSON.parse(text);
-
-    return Array.isArray(parsed) ? parsed.filter(isString) : [];
-  } catch {
-    return [];
-  }
+  return tryJson(z.array(z.unknown()), text)?.filter(isString) ?? [];
 }
 
 /**

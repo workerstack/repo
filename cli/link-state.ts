@@ -3,8 +3,10 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "./json.ts";
 import { LinkError } from "./link-error.ts";
 import { JSON_INDENT, STATE_DIR, STATE_FILE, STATE_VERSION, badState } from "./link.constants.ts";
+import { errorMessage } from "./sync-errors.ts";
 
 /** One link: the directory it was packed from, the npm version it replaced, and when it last synced. */
 export type LinkEntry = { source: string; npm: string | null; syncedAt: string };
@@ -27,17 +29,12 @@ export function readState(root: string): LinkState {
   const file = stateFile(root);
 
   if (!fs.existsSync(file)) return {};
-  let parsed: z.ZodSafeParseResult<{ version: number; links: LinkState }>;
 
   try {
-    parsed = stateSchema().safeParse(JSON.parse(fs.readFileSync(file, "utf8")));
+    return readJson(stateSchema(), fs.readFileSync(file, "utf8")).links;
   } catch (error) {
-    throw new LinkError(badState(file, (error /* JSON.parse and the file read throw Errors */ as Error).message));
+    throw new LinkError(badState(file, errorMessage(error)));
   }
-
-  if (!parsed.success) throw new LinkError(badState(file, z.prettifyError(parsed.error)));
-
-  return parsed.data.links;
 }
 
 /** Writes the state by rename, so a reader never sees half a file and two commands never share a temp file. */

@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { BaseSequencer, type TestSpecification } from "vitest/node";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../cli/json.ts";
 
 /**
  * Vitest's sequencer for sharded runs: files split by their measured time from `.repo/test-times.json` for this
@@ -98,12 +101,14 @@ export class ShardSequencer extends BaseSequencer {
   /** The platform's row of the table under `root`, or none when the table or the row is missing or unreadable. */
   private static readRow(root: string): Record<string, number> | undefined {
     try {
-      const table: unknown = JSON.parse(fs.readFileSync(path.join(root, ".repo", "test-times.json"), "utf8"));
-      const row: unknown = typeof table === "object" && table !== null ? Reflect.get(table, process.platform) : null;
+      const text = fs.readFileSync(path.join(root, ".repo", "test-times.json"), "utf8");
+      const row = tryJson(z.record(z.string(), z.unknown()), text)?.[process.platform];
 
-      if (typeof row !== "object" || row === null) return undefined;
+      if (!isRecord(row)) return undefined;
 
-      return Object.fromEntries(Object.entries(row).filter(([, time]) => typeof time === "number"));
+      return Object.fromEntries(
+        Object.entries(row).filter((entry): entry is [string, number] => typeof entry[1] === "number"),
+      );
     } catch {
       return undefined;
     }

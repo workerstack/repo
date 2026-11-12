@@ -1,8 +1,10 @@
 /** One `repo mutate --rust` run in a throwaway clone of HEAD: `cargo mutants` over the workspace, then its outcomes. */
 import path from "node:path";
 
+import { z } from "zod";
+
 import type { MutateDeps } from "./mutate-deps.ts";
-import { fromCargoMutants, parseJson, type ShardReport } from "./mutate-report.ts";
+import { fromCargoMutants, readParsed, type ShardReport } from "./mutate-report.ts";
 import { checkout, inTempDir, refuse, type Plan, type Ran } from "./mutate-run.ts";
 import { NEWLINE } from "./mutate.constants.ts";
 import { CARGO_MUTANTS_PIN } from "./rust/cargo-tools.constants.ts";
@@ -37,7 +39,8 @@ function scoresOf(out: string, deps: MutateDeps): ShardReport["files"] | null {
   const text = deps.fs.read(path.join(out, OUTCOMES));
 
   if (text === null) return refuse(deps, "cargo-mutants wrote no readable outcomes: the outcomes file is missing");
-  const json = parseJson(text);
+  // The outcomes are read twice: as JSON here, then by fromCargoMutants into per-file scores.
+  const json = readParsed(z.json(), text);
   const scores = json.ok ? fromCargoMutants(json.value) : json;
 
   return scores.ok ? scores.value : refuse(deps, `cargo-mutants wrote no readable outcomes: ${scores.reason}`);

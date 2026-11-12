@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import {
   ADVISORIES_URL,
   BUG_REPORT,
@@ -17,26 +20,21 @@ import {
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output, SyncContext } from "./outputs.ts";
 
+/** The `repository` of a package.json, in its object or string form; a manifest with any other reads as none. */
+function repositorySchema() {
+  return z.looseObject({ repository: z.union([z.string(), z.looseObject({ url: z.string() })]).optional() });
+}
+
 /**
  * `owner/repo` from the manifest text's `repository` (object or string form), or null when it names no GitHub
  * repository.
  */
 function repositorySlug(manifest: string | null): string | null {
   if (manifest === null) return null;
-  let parsed: unknown;
+  const repository = tryJson(repositorySchema(), manifest)?.repository;
+  const url = typeof repository === "object" ? repository.url : repository;
 
-  try {
-    parsed = JSON.parse(manifest);
-  } catch {
-    return null;
-  }
-
-  const repository: unknown = typeof parsed === "object" && parsed !== null ? Reflect.get(parsed, "repository") : null;
-
-  const url: unknown =
-    typeof repository === "object" && repository !== null ? Reflect.get(repository, "url") : repository;
-
-  return typeof url === "string" ? (GITHUB_REPOSITORY.exec(url)?.[1] ?? null) : null;
+  return url === undefined ? null : (GITHUB_REPOSITORY.exec(url)?.[1] ?? null);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { readJson, waitFor, type Target, type WaitOutcome } from "../scripts/ci-wait.ts";
+import { ghJson, waitFor, type Target, type WaitOutcome } from "../scripts/ci-wait.ts";
 import { sectionFor } from "./changelog-parse.ts";
 import { read, type Tools } from "./git.ts";
 import { parseManifest } from "./manifest.ts";
@@ -51,7 +51,7 @@ function check(t: Tools, tag: string, parts: Spec): string | Target {
   if (sectionFor(read(t, GIT_SHOW(sha, CHANGELOG_FILE)), parts.version) === null)
     return noSection(short, parts.version);
   const got = t.gh([...GH_DEFAULT_BRANCH], t.cwd);
-  const named = readJson(got, branchSchema());
+  const named = ghJson(got, branchSchema());
 
   if (named === null) return noDefaultBranch(got.stderr.trim());
   const branch = named.defaultBranchRef.name;

@@ -1,36 +1,51 @@
-// The slice of a package.json init reads, and a reader that refuses any other shape.
+// The slice of a package.json init and the slice readers read, and a reader that refuses any other shape.
 import fs from "node:fs";
 
-import { isRecord } from "./json.ts";
+import { z } from "zod";
 
-/** The slice of package.json init reads; other keys pass through. */
-export type PackageJson = {
-  name?: string;
-  version?: string;
-  scripts?: Record<string, string>;
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-  [key: string]: unknown;
-};
+import { readJson } from "./json.ts";
+import { errorMessage } from "./sync-errors.ts";
 
-function isStringRecord(v: unknown): v is Record<string, string> {
-  return isRecord(v) && Object.values(v).every((x) => typeof x === "string");
+type Strings = z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
+
+/** The slice of package.json init reads: names and versions as strings, script and dependency maps of strings. */
+export const packageJsonSchema: z.ZodObject<
+  {
+    name: z.ZodOptional<z.ZodString>;
+    version: z.ZodOptional<z.ZodString>;
+    scripts: Strings;
+    dependencies: Strings;
+    devDependencies: Strings;
+  },
+  z.core.$loose
+> = /* @__PURE__ */ buildPackageJsonSchema();
+
+function buildPackageJsonSchema() {
+  const strings = z.record(z.string(), z.string()).optional();
+
+  // Loose, so the keys init does not read pass through to the manifest it writes back.
+  return z.looseObject({
+    dependencies: strings,
+    devDependencies: strings,
+    name: z.string().optional(),
+    scripts: strings,
+    version: z.string().optional(),
+  });
 }
 
-/** True when name and version are strings and the script and dependency maps hold only strings. */
-export function isPackageJson(v: unknown): v is PackageJson {
-  return (
-    isRecord(v) &&
-    [v.name, v.version].every((x) => x === undefined || typeof x === "string") &&
-    [v.scripts, v.dependencies, v.devDependencies].every((x) => x === undefined || isStringRecord(x))
-  );
-}
+/** A package.json as init reads it; other keys pass through. */
+export type PackageJson = z.output<typeof packageJsonSchema>;
 
-/** The JSON file at `file`, refused with a clear error unless `is` accepts its shape. */
-export function readJsonFile<T>(file: string, is: (v: unknown) => v is T): T {
-  const value: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+/**
+ * The JSON file at `file` read through `schema`. Throws an Error that starts with `file`, then the SyntaxError's
+ * message for text that is not JSON or zod's prettified issues for a shape `schema` refuses.
+ */
+export function readJsonFile<S extends z.ZodType>(file: string, schema: S): z.output<S> {
+  const text = fs.readFileSync(file, "utf8");
 
-  if (!is(value)) throw new Error(`${file} does not hold the shape repo needs`);
-
-  return value;
+  try {
+    return readJson(schema, text);
+  } catch (error) {
+    throw new Error(`${file}: ${errorMessage(error)}`, { cause: error });
+  }
 }

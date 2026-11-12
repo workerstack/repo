@@ -15,7 +15,7 @@ import {
   withIo,
   writeJson,
 } from "./__fixtures__/google-workspace-kit.ts";
-import { accountContext, tokenStorePath } from "./google-workspace-account.ts";
+import { accountContext, persistToken, tokenStorePath } from "./google-workspace-account.ts";
 import { accessToken } from "./google-workspace-auth.ts";
 import { main } from "./google-workspace.ts";
 
@@ -115,6 +115,15 @@ it("refresh: writes a refreshed clasp token back into the clasp file", async () 
   expect(saved.keep).toBe(1);
   expect(JSON.stringify(saved.tokens)).toContain('"access_token":"new"');
   expect(JSON.stringify(saved)).not.toMatch(/sourcePath|isClasprc/);
+});
+
+it("refresh: writes a clasp token into a fresh clasp file when its file holds no JSON object", () => {
+  const home = plantHome("ws-clasp-gone-");
+  const file = path.join(home, ".clasprc.json");
+  writeJson(file, "not an object");
+  const token = { client_id: "cid", isClasprc: true, refresh_token: "rt", sourcePath: file } as const;
+  persistToken(accountContext(undefined, home), token);
+  expect(readObject(file)).toStrictEqual({ tokens: { default: { client_id: "cid", refresh_token: "rt" } } });
 });
 
 it("refresh: sends an empty client id when the clasp file has none", async () => {

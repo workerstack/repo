@@ -12,6 +12,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { childEnv } from "../env.ts";
+import { tryJson } from "../json.ts";
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
 import {
   ANCHOR,
@@ -95,15 +96,9 @@ export function repoJson(root: string, paths: readonly string[] | null, list: Gi
 
 /** The `ignorePatterns` of the generated oxfmt config text, or null when it is not a config. */
 function ignoresOf(text: string): string[] | null {
-  try {
-    const parsed = z
-      .object({ ignorePatterns: z.array(z.string()).optional() })
-      .safeParse(JSON.parse(text.replace(COMMENT_LINE, "")));
+  const config = tryJson(z.object({ ignorePatterns: z.array(z.string()).optional() }), text.replace(COMMENT_LINE, ""));
 
-    return parsed.success ? (parsed.data.ignorePatterns ?? []) : null;
-  } catch {
-    return null;
-  }
+  return config === undefined ? null : (config.ignorePatterns ?? []);
 }
 
 /**

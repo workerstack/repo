@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "../cli/json.ts";
 import { processIo } from "./process-io.ts";
 import { ARGV_START, HEADING, RULE_LINE, USAGE } from "./rule-ledger.constants.ts";
 
@@ -113,7 +114,7 @@ function reportStale(ledgerKeys: { keys: string[]; used: Set<string>; label: str
 /** The ledger file parsed, or the message to print when it cannot be read or does not fit the schema. */
 function readLedger(ledgerPath: string): { ledger: Ledger } | { error: string } {
   try {
-    return { ledger: ledgerSchema.parse(JSON.parse(fs.readFileSync(ledgerPath, "utf8"))) };
+    return { ledger: readJson(ledgerSchema, fs.readFileSync(ledgerPath, "utf8")) };
   } catch (error) {
     return { error: `${ledgerPath}: ${error instanceof Error ? error.message : String(error)}` };
   }

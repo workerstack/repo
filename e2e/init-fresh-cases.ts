@@ -3,10 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { expect, inject, it } from "vitest";
+import { z } from "zod";
 
 import type { GetSandbox } from "./get-sandbox.types";
 import { gitStdout } from "./git-stdout";
-import { expectClean, GENERATED, ignoredFiles, installedVersion, isPackageJson } from "./init-helpers";
+import { expectClean, GENERATED, ignoredFiles, installedVersion, packageJsonWritten } from "./init-helpers";
 
 /** Init installs this build and writes only the config and a postinstall; install generates the trees. */
 export function installCases(get: GetSandbox) {
@@ -14,13 +15,13 @@ export function installCases(get: GetSandbox) {
     const sb = get();
     const version = inject("version");
     expect(await installedVersion(sb)).toBe(version);
-    expect(JSON.stringify(sb.json("package.json", isPackageJson).devDependencies)).toContain(version);
+    expect(JSON.stringify(sb.json("package.json", packageJsonWritten).devDependencies)).toContain(version);
   });
 
   it("init copies nothing: it writes the config and a postinstall, and install generates the trees", () => {
     const sb = get();
     expect(sb.exists("workerstack.config.ts")).toBe(true);
-    expect(sb.json("package.json", isPackageJson).scripts.postinstall).toBe("repo sync --postinstall");
+    expect(sb.json("package.json", packageJsonWritten).scripts.postinstall).toBe("repo sync --postinstall");
 
     for (const rel of [".rulesync", "scripts"]) expect(sb.exists(rel), rel).toBe(false);
 
@@ -28,7 +29,7 @@ export function installCases(get: GetSandbox) {
 
     for (const rel of ["CLAUDE.md", "GEMINI.md", ".gemini"]) expect(sb.exists(rel), rel).toBe(false);
     expect(fs.existsSync(path.join(sb.home, ".grok", "config.toml"))).toBe(true);
-    const scripts = sb.json("package.json", isPackageJson).scripts;
+    const scripts = sb.json("package.json", packageJsonWritten).scripts;
     expect(Object.keys(scripts).filter((k) => k.startsWith("repo:"))).toStrictEqual([]);
   });
 }
@@ -37,7 +38,7 @@ export function installCases(get: GetSandbox) {
 export function manifestCase(get: GetSandbox) {
   it("writes private, sideEffects and a pinned bun, so repo check passes", async () => {
     const sb = get();
-    const pkg = sb.json("package.json", (v): v is Record<string, unknown> => typeof v === "object" && v !== null);
+    const pkg = sb.json("package.json", z.record(z.string(), z.unknown()));
     expect(pkg).toMatchObject({ private: true, sideEffects: false });
     expect(pkg.packageManager).toMatch(/^bun@\d+\.\d+\.\d+/);
     expectClean(sb, await sb.run("bun", ["repo", "check"]));

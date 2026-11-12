@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { quote } from "../rust/cargo-tools.ts";
 import {
   DIR_LENGTH,
@@ -60,18 +61,10 @@ function entriesOf(body: string): { entries: Entry[] } | { bad: string } {
 
   for (const line of body.split("\n")) {
     if (line.trim() === "") continue;
-    let json: unknown;
+    const read = tryJson(entry(), line);
 
-    try {
-      json = JSON.parse(line);
-    } catch {
-      json = null;
-    }
-
-    const read = entry().safeParse(json);
-
-    if (!read.success) return { bad: line };
-    entries.push(read.data);
+    if (read === undefined) return { bad: line };
+    entries.push(read);
   }
 
   return { entries };

@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { Shard } from "./mutate-args.ts";
 import type { MutateDeps } from "./mutate-deps.ts";
 import { splitShards } from "./mutate-files.ts";
-import { fromStryker, parseJson, type ShardReport } from "./mutate-report.ts";
+import { fromStryker, readParsed, type ShardReport } from "./mutate-report.ts";
 import {
   BUN_FLAGS,
   CLONE_DIR,
@@ -73,9 +73,8 @@ function strykerBin(clone: string, deps: MutateDeps): string | null {
   const modules = path.join(clone, INSTALLED_DIR);
   const core = deps.fs.read(path.join(modules, STRYKER_CORE, MANIFEST));
   const runner = deps.fs.read(path.join(modules, STRYKER_RUNNER, MANIFEST));
-  const manifest = core === null || runner === null ? null : parseJson(core);
-  const parsed = manifest?.ok === true ? binSchema.safeParse(manifest.value) : null;
-  const bin = parsed?.success === true ? parsed.data.bin : undefined;
+  const manifest = core === null || runner === null ? null : readParsed(binSchema, core);
+  const bin = manifest?.ok === true ? manifest.value.bin : undefined;
   const relative = typeof bin === "string" ? bin : bin?.[STRYKER_BIN_NAME];
 
   if (relative === undefined) return refuse(deps, `install the mutation tool first: ${INSTALL_HINT}`);
@@ -113,7 +112,8 @@ function stryker(base: string, run: { files: string[]; bin: string }, deps: Muta
   const text = deps.fs.read(raw);
 
   if (text === null) return refuse(deps, "Stryker wrote no readable report: the report file is missing");
-  const json = parseJson(text);
+  // Stryker's report is read twice: as JSON here, then by fromStryker into per-file scores.
+  const json = readParsed(z.json(), text);
   const scores = json.ok ? fromStryker(json.value) : json;
 
   return scores.ok ? scores.value : refuse(deps, `Stryker wrote no readable report: ${scores.reason}`);

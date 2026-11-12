@@ -2,7 +2,10 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
 import { childEnv } from "./env.ts";
+import { readJson } from "./json.ts";
 import { MAX_BUFFER } from "./red-proof.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import type { GitRun } from "./sync/standards.ts";
@@ -26,11 +29,9 @@ export function runVitest(args: string[], cwd: string, timeoutMs: number): Retur
     return { code: 1, stderr: `cannot resolve vitest from ${cwd}` };
   }
 
-  const { bin } = JSON.parse(fs.readFileSync(manifest, "utf8")) /* vitest's manifest has a bin map */ as {
-    bin: Record<string, string>;
-  };
-
-  const script = path.join(path.dirname(manifest), bin["vitest"] /* vitest declares its bin */ as string);
+  const schema = z.looseObject({ bin: z.looseObject({ vitest: z.string() }) });
+  const { bin } = readJson(schema, fs.readFileSync(manifest, "utf8"));
+  const script = path.join(path.dirname(manifest), bin.vitest);
 
   const result = spawnSync(process.execPath, ["--bun", script, ...args], {
     cwd,

@@ -2,6 +2,7 @@ import fs from "node:fs";
 
 import { z } from "zod";
 
+import { readJson } from "../json.ts";
 import { MAX_PERCENT, REWRITE_HINT, RUST_EXTENSION } from "./floors.constants.ts";
 
 /** The floors of one TypeScript file, each an integer percent. */
@@ -40,7 +41,8 @@ export function readFloorsFile(file: string): Floors {
   let json: unknown;
 
   try {
-    json = JSON.parse(fs.readFileSync(file, "utf8"));
+    // Any JSON here; the table and row schemas then word what is wrong.
+    json = readJson(z.json(), fs.readFileSync(file, "utf8"));
   } catch {
     throw new Error(`${file} is not valid JSON; ${REWRITE_HINT}`);
   }

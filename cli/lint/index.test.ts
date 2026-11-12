@@ -24,6 +24,7 @@ const RULE_NAMES = [
   "no-module-side-effects",
   "no-module-state",
   "no-reflect-apply",
+  "no-reflect-get",
   "no-side-effect-import",
   "no-v8-ignore",
   "no-widen-then-assert",
@@ -34,7 +35,7 @@ const RULE_NAMES = [
   "types-file",
 ];
 
-it("is the plugin `repo` with the twenty-eight rules the generated config turns on", () => {
+it("is the plugin `repo` with the twenty-nine rules the generated config turns on", () => {
   expect(plugin.meta.name).toBe("repo");
   expect(Object.keys(plugin.rules).toSorted()).toStrictEqual(RULE_NAMES);
 });

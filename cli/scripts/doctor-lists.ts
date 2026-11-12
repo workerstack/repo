@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import type { ListCli, Offered } from "./doctor.types.ts";
 
 const LINE_RE = /\r?\n/;
@@ -12,6 +14,10 @@ const GROK_HEADER = "Available models:";
 
 function firstGroups(out: string, re: RegExp): string[] {
   return out.split(LINE_RE).flatMap((l) => re.exec(l)?.[1] ?? []);
+}
+
+function modelsCacheSchema() {
+  return z.looseObject({ models: z.array(z.looseObject({ slug: z.string().optional() })) });
 }
 
 /** Each CLI's list command and how to read ids out of its output. */
@@ -35,22 +41,11 @@ export function codexOffered(home: string): Offered {
     return { skip: `codex models cache missing at ${file}` };
   }
 
-  try {
-    const parsed: unknown = JSON.parse(text);
+  const ids = tryJson(modelsCacheSchema(), text)
+    ?.models.flatMap((m) => m.slug ?? [])
+    .filter((slug) => slug !== "");
 
-    if (!isRecord(parsed) || !Array.isArray(parsed.models)) throw new Error("malformed");
-    const ids: string[] = [];
-
-    for (const m of parsed.models) {
-      if (!isRecord(m)) throw new Error("malformed");
-
-      if (typeof m.slug === "string" && m.slug !== "") ids.push(m.slug);
-    }
-
-    if (ids.length > 0) return { ids };
-  } catch {
-    // malformed
-  }
+  if (ids !== undefined && ids.length > 0) return { ids };
 
   return { skip: `codex models cache malformed at ${file}` };
 }

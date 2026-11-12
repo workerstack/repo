@@ -105,7 +105,7 @@ describe("createEnv process keys", () => {
 
 /** What `run` returns, run as if inside a runtime with `caches` and the user agent `userAgent`. */
 function asRuntime<T>(userAgent: string, run: () => T): T {
-  const original: unknown = Reflect.get(globalThis, "navigator");
+  const original: unknown = globalThis.navigator;
   Object.defineProperty(globalThis, "caches", { configurable: true, value: {} });
   Object.defineProperty(globalThis, "navigator", { configurable: true, value: { userAgent } });
 

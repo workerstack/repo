@@ -24,6 +24,7 @@ import { noModuleMocking } from "./no-module-mocking.ts";
 import { noModuleSideEffects } from "./no-module-side-effects.ts";
 import { noModuleState } from "./no-module-state.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
+import { noReflectGet } from "./no-reflect-get.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
 import { noWidenThenAssert } from "./no-widen-then-assert.ts";
@@ -69,6 +70,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-module-side-effects": noModuleSideEffects,
     "no-module-state": noModuleState,
     "no-reflect-apply": noReflectApply,
+    "no-reflect-get": noReflectGet,
     "no-side-effect-import": noSideEffectImport,
     "no-v8-ignore": noV8Ignore,
     "no-widen-then-assert": noWidenThenAssert,

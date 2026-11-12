@@ -7,6 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
@@ -61,7 +62,7 @@ function sessionFile(root: string, session: string): string {
 
 function parsePushed(deps: GateDeps, file: string): Pushed[] {
   try {
-    return pushedSchema().parse(JSON.parse(deps.fs.readFileSync(file, "utf8")));
+    return tryJson(pushedSchema(), deps.fs.readFileSync(file, "utf8")) ?? [];
   } catch {
     return [];
   }
@@ -120,9 +121,7 @@ export function recordPush(input: { command: string; cwd: string; session: strin
 
 function readRecord(deps: GateDeps, root: string, sha: string): WaitRecord | null {
   try {
-    const parsed = recordSchema().safeParse(JSON.parse(deps.fs.readFileSync(recordPath(root, sha), "utf8")));
-
-    return parsed.success ? parsed.data : null;
+    return tryJson(recordSchema(), deps.fs.readFileSync(recordPath(root, sha), "utf8")) ?? null;
   } catch {
     return null;
   }

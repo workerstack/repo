@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { z } from "zod";
+
+import { readJsonFile } from "../package-json.ts";
 import { COMMAND_KEY, HASH_HEX_DIGITS } from "./stock-history.constants.ts";
 
 /**
@@ -97,5 +99,5 @@ export function hashText(bytes: Buffer | string): string {
 
 /** The shipped table of stock file hashes. */
 export function readStockHistory(file: string = STOCK_HISTORY_FILE): StockHistory {
-  return JSON.parse(fs.readFileSync(file, "utf8")) /* dev/stock-history.ts writes this shape */ as StockHistory;
+  return readJsonFile(file, z.record(z.string(), z.array(z.string()).readonly()));
 }

@@ -22,7 +22,7 @@ import {
   WHITESPACE,
 } from "./check-public.constants.ts";
 import type { ResolvedConfig } from "./config.ts";
-import { isRecord, type JsonObject } from "./json.ts";
+import { isRecord, readJson, type JsonObject } from "./json.ts";
 import { keywordLines } from "./keywords.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
@@ -46,7 +46,7 @@ function problem(field: string, value: unknown, fix: string): string {
 
 /** `package.json` as written; the workspace read has already shown it is a JSON object. */
 function readManifest(root: string): JsonObject {
-  return z.looseObject({}).parse(JSON.parse(fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8")));
+  return readJson(z.looseObject({}), fs.readFileSync(path.join(root, MANIFEST_FILE), "utf8"));
 }
 
 function authorLines(author: unknown, owner: ResolvedOwner): string[] {

@@ -1,7 +1,9 @@
 /** The jev runner: checks the inputs, reserves the ledger, makes the one call a process may make, and retries once. */
 import os from "node:os";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { estimateTokens, loadJevKey, retryWaitMs } from "./jev-key.ts";
 import { beginAttempt, settleTokens } from "./jev-ledger.ts";
@@ -28,15 +30,9 @@ function readJevInput({ stateText, questionsText }: JevRunOpts): JevInput | { fa
   if (typeof stateText !== "string" || typeof questionsText !== "string") return { fail: fail(USAGE) };
 
   if (stateText.length > MAX_STATE_CHARS) return { fail: fail("state exceeds 64000 characters\n") };
-  let questions: unknown;
+  const questions = tryJson(z.record(z.string(), z.unknown()), questionsText);
 
-  try {
-    questions = JSON.parse(questionsText);
-  } catch {
-    return { fail: fail(NOT_AN_OBJECT) };
-  }
-
-  if (!isRecord(questions)) return { fail: fail(NOT_AN_OBJECT) };
+  if (questions === undefined) return { fail: fail(NOT_AN_OBJECT) };
   const count = Object.keys(questions).length;
 
   if (count < 1) return { fail: fail("questions missing\n") };

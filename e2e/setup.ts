@@ -11,7 +11,8 @@ import { fileURLToPath } from "node:url";
 import * as tar from "tar";
 import type { TestProject } from "vitest/node";
 
-import { isRecord } from "../cli/json.ts";
+import { tryJson } from "../cli/json.ts";
+import { packageJsonSchema } from "../cli/package-json.ts";
 import { repoEnv } from "../cli/repo-env.ts";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 
@@ -44,11 +45,11 @@ function tarballVersion(tarball: string): string {
   });
 
   if (raw === "") throw new Error(`no package/package.json in ${tarball}`);
-  const pkg = JSON.parse(raw);
+  const version = tryJson(packageJsonSchema.pick({ version: true }), raw)?.version;
 
-  if (!isRecord(pkg) || typeof pkg.version !== "string") throw new Error(`no version in ${tarball}'s package.json`);
+  if (version === undefined) throw new Error(`no version in ${tarball}'s package.json`);
 
-  return pkg.version;
+  return version;
 }
 
 /**

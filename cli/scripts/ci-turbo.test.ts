@@ -187,8 +187,12 @@ it("without the pack the gates are unchanged and turbo never runs", () => {
   });
 });
 
-it("mergeReports leaves out what is not a report", () => {
-  expect(mergeReports([5, null, report("a.test.ts", "todo")])).toMatchObject({ numTotalTests: 2, success: true });
+it("a package report that is JSON but not a report adds no skips", () => {
+  const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
+  fs.mkdirSync(path.join(root, "packages/b/.turbo"), { recursive: true });
+  fs.writeFileSync(path.join(root, "packages/b/.turbo/vitest-report.json"), "5");
+  ciPacked(root, ["--report", "r.json"], done(2, 0));
+  expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
 it("a workspace that cannot be read adds no package reports", () => {

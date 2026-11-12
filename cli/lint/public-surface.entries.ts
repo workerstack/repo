@@ -2,27 +2,28 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../json.ts";
 import { BUILD_CONFIG, BUILT_EXTENSIONS, CODE_TARGET } from "./public-surface.constants.ts";
-import { get } from "./public-surface.syntax.ts";
 import type { Build } from "./public-surface.types.ts";
 
-/** The JSON at `file`, or null when it is missing or not JSON. */
-export function readJson(file: string): unknown {
+/** The package's JSON file at `file` read through `schema`, or null when it is missing, no JSON or of another shape. */
+export function readPackageFile<T>(file: string, schema: z.ZodType<T>): T | null {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
+    return tryJson(schema, fs.readFileSync(file, "utf8")) ?? null;
   } catch {
     return null;
   }
 }
 
+function buildSchema(): z.ZodType<{ compilerOptions: Build }> {
+  return z.looseObject({ compilerOptions: z.looseObject({ outDir: z.string(), rootDir: z.string() }) });
+}
+
 /** `rootDir` and `outDir` from the package's build config, or null when it names not both. */
 function buildOf(root: string): Build | null {
-  const options = get(readJson(path.join(root, BUILD_CONFIG)), "compilerOptions");
-  const rootDir = get(options, "rootDir");
-  const outDir = get(options, "outDir");
-
-  return typeof rootDir === "string" && typeof outDir === "string" ? { outDir, rootDir } : null;
+  return readPackageFile(path.join(root, BUILD_CONFIG), buildSchema())?.compilerOptions ?? null;
 }
 
 /** The source file behind `target`: a built file in `outDir` maps to its source in `rootDir`, else `target` itself. */

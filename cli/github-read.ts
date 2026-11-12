@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { Gh, GhFailure } from "./github-gh.ts";
 import { MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
 import type { Current, CurrentRuleset } from "./github.types.ts";
+import { tryJson } from "./json.ts";
 
 export type ReadResult = { ok: true; current: Current } | GhFailure;
 
@@ -67,17 +68,9 @@ async function getJson<T>(gh: Gh, path: string, schema: () => z.ZodType<T>): Pro
   const result = await gh({ method: "GET", path });
 
   if (!result.ok) return result;
-  let json: unknown;
+  const value = tryJson(schema(), result.stdout);
 
-  try {
-    json = JSON.parse(result.stdout);
-  } catch {
-    return UNEXPECTED;
-  }
-
-  const parsed = schema().safeParse(json);
-
-  return parsed.success ? { ok: true, value: parsed.data } : UNEXPECTED;
+  return value === undefined ? UNEXPECTED : { ok: true, value };
 }
 
 /** The managed rulesets: the list first, then each managed one by id, together. */

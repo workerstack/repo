@@ -6,8 +6,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { z } from "zod";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { isRecord, readJson, type JsonObject } from "../json.ts";
 import { repoEnv } from "../repo-env.ts";
 import { parseMcpJson } from "../sync/parse-mcp-json.ts";
 import { nonEmptyOr, readTextOrNull } from "./emit-inputs.ts";
@@ -64,11 +65,11 @@ type Hosts = {
   agents: Host;
 };
 
+/** The object a host's JSON file holds; empty when there is none or it holds another value. Throws for bad JSON. */
 function parseJsonFile(raw: string | null): JsonObject {
   if (raw === null || raw.trim() === "") return {};
-  const v: unknown = JSON.parse(raw);
 
-  return isRecord(v) ? v : {};
+  return readJson(z.record(z.string(), z.unknown()).catch({}), raw);
 }
 
 function parseTomlFile(raw: string | null): JsonObject {

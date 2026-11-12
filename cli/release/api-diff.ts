@@ -28,7 +28,7 @@ function typed(side: Side): Subpath[] {
 
 /** The compiler options of `TSCONFIG`, as `tsc -p` reads them. */
 function compilerOptions(project: string): ts.CompilerOptions {
-  return ts.parseJsonConfigFileContent(JSON.parse(TSCONFIG), ts.sys, project).options;
+  return ts.parseJsonConfigFileContent(TSCONFIG, ts.sys, project).options;
 }
 
 /** The exports of a module by name. */

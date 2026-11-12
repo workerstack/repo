@@ -17,6 +17,7 @@ const REPO_RULES = {
       "repo/config-file": "error",
       "repo/max-line-width": "error",
       "repo/no-reflect-apply": "error",
+      "repo/no-reflect-get": "error",
       "repo/no-v8-ignore": "error",
       "repo/no-widen-then-assert": "error",
       "repo/public-jsdoc": "error",
@@ -38,6 +39,8 @@ const REPO_RULES = {
     "function invoke(Reflect: { apply(): number }) { return Reflect.apply(); }",
     "",
     "export const applied = Reflect.apply(invoke, undefined, [{ apply: () => 1 }]);",
+    "",
+    'export const read = Reflect.get(source, "id");',
     "",
   ].join("\n"),
   "packages/lib/src/index.ts": [
@@ -62,6 +65,18 @@ const REPO_RULES = {
   "packages/ui/package.json": JSON.stringify({ name: "@app/ui" }),
 };
 
+const FLOW = "packages/lib/src/flow.ts";
+
+/** What the widen and Reflect rules report in flow.ts. */
+const FLOW_FINDINGS = [
+  `${FLOW}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
+    "assertion. Keep the precise type from initialization through use; parse boundary input once.",
+  `${FLOW}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
+    "behind a named interface.",
+  `${FLOW}:9 repo(no-reflect-get) Replace \`Reflect.get\` with typed property access. Parse dynamic input into ` +
+    "a named domain type before reading it.",
+];
+
 it("oxlint runs the repo plugin's rules with their options, from the linted repo's cwd", { timeout: SLOW }, () => {
   const linted = captureTool("oxlint", ["-f", "json"], tree(REPO_RULES));
 
@@ -74,13 +89,9 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
   );
 
   const index = "packages/lib/src/index.ts";
-  const flow = "packages/lib/src/flow.ts";
   const missing = "has no JSDoc: add a /** */ block that says what a caller needs and the type does not";
   expect(findings.toSorted()).toStrictEqual([
-    `${flow}:3 repo(no-widen-then-assert) Binding "widened" discards type evidence and later recreates it with an ` +
-      "assertion. Keep the precise type from initialization through use; parse boundary input once.",
-    `${flow}:7 repo(no-reflect-apply) Replace \`Reflect.apply\` with a typed function call. Model dynamic dispatch ` +
-      "behind a named interface.",
+    ...FLOW_FINDINGS,
     `${index}:1 repo(boundaries) "@app/ui" is a ui package, and a lib package may import only lib; move what it ` +
       'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts',
     `${index}:12 repo(public-jsdoc) \`Size.Small\` is public through "." and ${missing}`,

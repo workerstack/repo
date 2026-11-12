@@ -1,3 +1,4 @@
+import { isRecord } from "../json.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -70,7 +71,7 @@ export type CiInput = Pick<SyncContext, "config" | "workspace" | "read">;
 /** The root manifest's `scripts` entry `name` when it is a string. */
 function scriptOf(ctx: CiInput, name: string) {
   const scripts: unknown = ctx.workspace.manifest.scripts;
-  const script: unknown = typeof scripts === "object" && scripts !== null ? Reflect.get(scripts, name) : undefined;
+  const script = isRecord(scripts) ? scripts[name] : undefined;
 
   return typeof script === "string" ? script : undefined;
 }

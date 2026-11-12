@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord, type JsonObject } from "../json.ts";
+import { z } from "zod";
+
+import { isRecord, readJson, type JsonObject } from "../json.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
@@ -43,9 +45,10 @@ export function requiredDeepMatch(disk: unknown, desired: unknown): boolean {
 }
 
 function readPolicyFile(p: string): JsonObject {
-  const policy: unknown = JSON.parse(stripJsonc(fs.readFileSync(p, "utf8")));
+  const objectOrNull = z.record(z.string(), z.unknown()).nullable().catch(null);
+  const policy = readJson(objectOrNull, stripJsonc(fs.readFileSync(p, "utf8")));
 
-  if (!isRecord(policy)) throw new Error("invalid policy");
+  if (policy === null) throw new Error("invalid policy");
 
   return policy;
 }

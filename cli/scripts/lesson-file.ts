@@ -1,6 +1,9 @@
 /** One lesson file: its globs, parse, canonical render and validation. */
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import {
   BOM_RE,
   DATE_RE,
@@ -68,18 +71,8 @@ function readFrontmatter(text: unknown): Frontmatter | null {
   return { body: s.slice(end + FM_CLOSE.length), map };
 }
 
-function isStringList(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
-
 function jsonList(raw: string): string[] | null {
-  try {
-    const v: unknown = JSON.parse(raw);
-
-    return isStringList(v) ? v : null;
-  } catch {
-    return null;
-  }
+  return tryJson(z.array(z.string()), raw) ?? null;
 }
 
 /** The `# ` title and the first plain line under it, with what is missing. */

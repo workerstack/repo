@@ -8,7 +8,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { newestFirst, readJson } from "../scripts/ci-wait-poll.ts";
+import { readJson } from "../json.ts";
+import { newestFirst, ghJson } from "../scripts/ci-wait-poll.ts";
 import type { Runner } from "../scripts/ci-wait-run.ts";
 import { BENCH_PATH } from "../sync/bench-workflow.constants.ts";
 import {
@@ -127,7 +128,7 @@ export function remoteTarget(io: RemoteIo, spec: string, others: readonly string
 function dispatched(io: RemoteIo, target: Target): Listed[] {
   const fields = "createdAt,databaseId,event,headSha,url";
   const args = ["run", "list", "--workflow", WORKFLOW, "--commit", target.sha, "--event", DISPATCH_EVENT];
-  const runs = readJson(io.gh([...args, "--json", fields], io.cwd), runsSchema()) ?? [];
+  const runs = ghJson(io.gh([...args, "--json", fields], io.cwd), runsSchema()) ?? [];
 
   return newestFirst(runs.filter((run) => run.headSha === target.sha && run.event === DISPATCH_EVENT));
 }
@@ -150,7 +151,7 @@ async function findRun(io: RemoteIo, target: Target, finding: Finding): Promise<
 /** The run's view once it completes, or null when it is still running at `WAIT_BOUND_MS`. */
 async function completed(io: RemoteIo, run: Listed, started: number): Promise<View | null> {
   const got = io.gh(["run", "view", String(run.databaseId), "--json", "conclusion,jobs,status"], io.cwd);
-  const view = readJson(got, viewSchema());
+  const view = ghJson(got, viewSchema());
 
   if (view?.status === RUN_COMPLETED) return view;
 
@@ -169,7 +170,7 @@ function failedOs(view: View) {
 
 function readRaw(file: string): BenchResult | null {
   try {
-    return resultSchema().parse(JSON.parse(fs.readFileSync(file, "utf8")));
+    return readJson(resultSchema(), fs.readFileSync(file, "utf8"));
   } catch {
     return null;
   }

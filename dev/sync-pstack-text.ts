@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { tryJson } from "../cli/json.ts";
 import type { Rule } from "./sync-pstack-rules.constants.ts";
 import { QUOTE_END } from "./sync-pstack-skills.constants.ts";
 import {
@@ -18,15 +21,8 @@ const QUOTE_MIN = 2;
 function unquoteYaml(raw: string): string {
   const s = raw.trim();
 
-  if (s.length >= QUOTE_MIN && s.startsWith('"') && s.endsWith('"')) {
-    try {
-      const v: unknown = JSON.parse(s);
-
-      return typeof v === "string" ? v : s;
-    } catch {
-      return s.slice(1, QUOTE_END);
-    }
-  }
+  if (s.length >= QUOTE_MIN && s.startsWith('"') && s.endsWith('"'))
+    return tryJson(z.string(), s) ?? s.slice(1, QUOTE_END);
 
   if (s.length >= QUOTE_MIN && s.startsWith("'") && s.endsWith("'")) return s.slice(1, QUOTE_END).replaceAll("''", "'");
 

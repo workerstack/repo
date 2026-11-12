@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJsonFile } from "../package-json.ts";
+import { JSON_INDENT } from "../sync/json.constants.ts";
 import {
   CURRENT_DIR,
   EMPTY_MODULE,
@@ -55,10 +57,6 @@ export type ConsumerIo = Pick<PackIo, "cwd" | "stdout" | "stderr" | "bun" | "tar
   tsc: string;
 };
 
-function readJson(file: string): unknown {
-  return JSON.parse(fs.readFileSync(file, "utf8"));
-}
-
 function failuresSchema() {
   return z.array(z.object({ key: z.string(), kind: z.string(), message: z.string() }));
 }
@@ -85,9 +83,9 @@ function probeImports({ project, name, present }: Installed, io: ConsumerIo): st
 
   if (!fs.existsSync(output)) return [probeCrashed(probe.code, probe.stderr.trim())];
 
-  return failuresSchema()
-    .parse(readJson(output))
-    .map((failure) => failedProbe(failure.key, failure.kind, failure.message));
+  return readJsonFile(output, failuresSchema()).map((failure) =>
+    failedProbe(failure.key, failure.kind, failure.message),
+  );
 }
 
 /** Type-checks an `import type` of every subpath with a types target; the line for each tsc error. */
@@ -96,7 +94,7 @@ function checkTypes({ project, name, present }: Installed, io: ConsumerIo): stri
   const imports = typed.map((subpath, index) => TYPE_IMPORT(index, specOf(name, subpath)));
   const importLines = imports.join("");
   fs.writeFileSync(path.join(project, TYPES_FILE), importLines === "" ? EMPTY_MODULE : importLines);
-  fs.writeFileSync(path.join(project, TSCONFIG_FILE), TSCONFIG);
+  fs.writeFileSync(path.join(project, TSCONFIG_FILE), `${JSON.stringify(TSCONFIG, null, JSON_INDENT)}\n`);
   const tsc = io.bun(TSC_ARGS(io.tsc), project);
 
   if (tsc.code === 0) return [];

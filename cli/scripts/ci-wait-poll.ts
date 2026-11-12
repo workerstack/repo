@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import type { Runner } from "./ci-wait-run.ts";
 import {
   CONCLUSION_CANCELLED,
@@ -50,17 +51,11 @@ function viewSchema() {
   });
 }
 
-/** The JSON in a gh run's stdout, parsed against `schema`; null when the run failed or the text is not that. */
-export function readJson<T>(got: { code: number; stdout: string }, schema: z.ZodType<T>): T | null {
+/** The JSON in a gh run's stdout, read through `schema`; null when the run failed or the text is not that. */
+export function ghJson<S extends z.ZodType>(got: { code: number; stdout: string }, schema: S): z.output<S> | null {
   if (got.code !== 0) return null;
 
-  try {
-    const parsed = schema.safeParse(JSON.parse(got.stdout));
-
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
+  return tryJson(schema, got.stdout) ?? null;
 }
 
 export function newestFirst<T extends { createdAt: string }>(runs: T[]): T[] {
@@ -69,7 +64,7 @@ export function newestFirst<T extends { createdAt: string }>(runs: T[]): T[] {
 
 /** The newest run on the branch that was created after `run`. */
 function newerRun(io: PollIo, run: RunInfo): { databaseId: number } | undefined {
-  const runs = readJson(io.gh(GH_LIST_BRANCH(run.headBranch), io.cwd), branchRunsSchema()) ?? [];
+  const runs = ghJson(io.gh(GH_LIST_BRANCH(run.headBranch), io.cwd), branchRunsSchema()) ?? [];
 
   return newestFirst(runs.filter((other) => other.createdAt > run.createdAt))[0];
 }
@@ -106,7 +101,7 @@ function conclude(io: PollIo, run: RunInfo, view: View): RunOutcome {
  * child process could not be given.
  */
 export async function finish(io: PollIo, run: RunInfo, started: number): Promise<RunOutcome> {
-  const view = readJson(io.gh(GH_VIEW(run.databaseId), io.cwd), viewSchema());
+  const view = ghJson(io.gh(GH_VIEW(run.databaseId), io.cwd), viewSchema());
 
   if (view?.status === STATUS_COMPLETED) return conclude(io, run, view);
 

@@ -7,8 +7,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { inject } from "vitest";
+import type { z } from "zod";
 
 import { childEnv } from "../cli/env.ts";
+import { readJson } from "../cli/json.ts";
 import { quoteWin } from "./quote-win";
 import { PACKAGE_NAME } from "./registry";
 import type { Run } from "./run.types";
@@ -76,14 +78,15 @@ export class Sandbox {
     return fs.readFileSync(path.join(this.repo, rel), "utf8");
   }
 
-  /** `rel` parsed as JSON, refused unless `is` accepts its shape. */
-  json<T>(rel: string, is: (v: unknown) => v is T): T {
+  /** `rel` parsed as JSON through `schema`; throws naming `rel` and its text when it is not JSON or not that shape. */
+  json<S extends z.ZodType>(rel: string, schema: S): z.output<S> {
     const text = this.read(rel);
-    const value = JSON.parse(text);
 
-    if (!is(value)) throw new Error(`${rel} does not hold the expected shape: ${text}`);
-
-    return value;
+    try {
+      return readJson(schema, text);
+    } catch (error) {
+      throw new Error(`${rel} does not hold the expected shape: ${text}`, { cause: error });
+    }
   }
 
   exists(rel: string) {

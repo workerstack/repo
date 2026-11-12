@@ -6,6 +6,7 @@ import { z } from "zod";
 import { loadConfig } from "./config.ts";
 import { wantedSettings } from "./github.ts";
 import type { GithubManifest, WantedResult } from "./github.types.ts";
+import { readJson } from "./json.ts";
 import { ciJobNames } from "./sync/release.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
@@ -19,7 +20,7 @@ function manifestSchema(): z.ZodType<GithubManifest> {
   return z.object({
     description: z.string().optional().catch(undefined),
     homepage: z.string().optional().catch(undefined),
-    keywords: z.unknown(),
+    keywords: z.unknown().optional(),
   });
 }
 
@@ -29,7 +30,7 @@ function manifestSchema(): z.ZodType<GithubManifest> {
  */
 function manifestOf(root: string): GithubManifest {
   try {
-    return manifestSchema().parse(JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")));
+    return readJson(manifestSchema(), fs.readFileSync(path.join(root, "package.json"), "utf8"));
   } catch {
     return {};
   }

@@ -3,6 +3,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../cli/json.ts";
 import { sortedJsonValue } from "../cli/scripts/json-keys.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import {
@@ -133,13 +136,16 @@ function currentFiles(repoRoot: string, source: CurrentSource): [string, Buffer]
   });
 }
 
-/** The hook commands of a settings file's bytes; none when it is not JSON. */
+function buildSettingsSchema() {
+  return z.looseObject({ hooks: z.unknown().optional() });
+}
+
+/** The slice of a settings file the history reads: its `hooks`, whatever they hold. */
+const settingsSchema = /* @__PURE__ */ buildSettingsSchema();
+
+/** The hook commands of a settings file's bytes; none when it is not a JSON object. */
 function settingsCommands(bytes: Buffer): string[] {
-  try {
-    return hookCommands(JSON.parse(bytes.toString("utf8")));
-  } catch {
-    return [];
-  }
+  return hookCommands(tryJson(settingsSchema, bytes.toString("utf8")));
 }
 
 function git(cwd: string, args: string[], input?: string): Buffer {

@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { readJson } from "./json.ts";
 import { JSON_INDENT, POSIX } from "./update.constants.ts";
 
 /** One change to a parsed manifest: the root-relative POSIX file and what to do to its parsed JSON, in place. */
@@ -16,7 +19,7 @@ export function editFiles(root: string, edits: readonly Edit[]): string[] {
   return [...byFile].map(([file, list]) => {
     const parts = file.split(POSIX);
     const full = path.join(root, ...parts);
-    const raw: unknown = JSON.parse(fs.readFileSync(full, "utf8"));
+    const raw = readJson(z.json(), fs.readFileSync(full, "utf8"));
 
     for (const edit of list) edit.apply(raw);
     fs.writeFileSync(full, `${JSON.stringify(raw, null, JSON_INDENT)}\n`);

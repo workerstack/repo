@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "../json.ts";
 import type { Runner } from "../scripts/ci-wait.ts";
 import { refuse } from "./refuse.ts";
 import {
@@ -65,7 +66,7 @@ export function packTarball(
 
   try {
     // By name from its own dir: GNU tar reads an absolute `C:\\…` as `host:path` and tries to connect to the host `C`.
-    manifest = packedSchema().parse(JSON.parse(io.tar(TAR_MANIFEST(only), dir).stdout));
+    manifest = readJson(packedSchema(), io.tar(TAR_MANIFEST(only), dir).stdout);
   } catch {
     return PACKED_UNREADABLE;
   }

@@ -5,6 +5,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import {
   DATETIME_RE,
@@ -124,13 +127,7 @@ export function frontmatterMap(raw: string, lineRe: RegExp = FM_LINE_RE): Frontm
     if (key === undefined) continue;
     let v = value;
 
-    if (v.startsWith('"') && v.endsWith('"')) {
-      try {
-        v = String(JSON.parse(v));
-      } catch {
-        v = v.slice(1, v.length - 1);
-      }
-    }
+    if (v.startsWith('"') && v.endsWith('"')) v = tryJson(z.string(), v) ?? v.slice(1, v.length - 1);
 
     map[key] = v;
   }

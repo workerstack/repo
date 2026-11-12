@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type VitestRun, runVitest, untar } from "./red-proof-vitest.ts";
 import { REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
@@ -121,7 +122,7 @@ function reportSchema() {
 /** The vitest results in the report file, or null when it is missing, unreadable or not a vitest report. */
 function readReport(file: string): { name: string; status: string }[] | null {
   try {
-    return reportSchema().parse(JSON.parse(fs.readFileSync(file, "utf8"))).testResults;
+    return readJson(reportSchema(), fs.readFileSync(file, "utf8")).testResults;
   } catch {
     return null;
   }

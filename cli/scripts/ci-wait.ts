@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 
-import { finish, newestFirst, readJson, type RunInfo, type RunOutcome } from "./ci-wait-poll.ts";
+import { finish, newestFirst, ghJson, type RunInfo, type RunOutcome } from "./ci-wait-poll.ts";
 import { recordRoot, writeRecord, type RecordFs } from "./ci-wait-record.ts";
 import { realSleep, spawnRunner, type Runner } from "./ci-wait-run.ts";
 import {
@@ -31,7 +31,7 @@ import {
   SHA_SHOWN,
 } from "./ci-wait.constants.ts";
 
-export { readJson } from "./ci-wait-poll.ts";
+export { ghJson } from "./ci-wait-poll.ts";
 
 export type { Runner } from "./ci-wait-run.ts";
 
@@ -113,7 +113,7 @@ function noTrigger(io: Io, branch: string): string | null {
   const main = named.code === 0 ? named.stdout.trim().replace(REMOTE_PREFIX, "") : "";
 
   if (branch === main) return null;
-  const prs = readJson(io.gh(GH_OPEN_PRS(branch), io.cwd), prsSchema());
+  const prs = ghJson(io.gh(GH_OPEN_PRS(branch), io.cwd), prsSchema());
 
   if (prs === null || prs.length > 0) return null;
   const pushes = main === "" ? "the default branch" : main;
@@ -123,7 +123,7 @@ function noTrigger(io: Io, branch: string): string | null {
 
 /** The newest run of the target's commit on its branch, if there is one. */
 function lookup(io: Io, target: Target): RunInfo | undefined {
-  const runs = readJson(io.gh(GH_LIST_COMMIT(target.sha), io.cwd), runsSchema()) ?? [];
+  const runs = ghJson(io.gh(GH_LIST_COMMIT(target.sha), io.cwd), runsSchema()) ?? [];
 
   return newestFirst(runs.filter((run) => run.headBranch === target.branch))[0];
 }

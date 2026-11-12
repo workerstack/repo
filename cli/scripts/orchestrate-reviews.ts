@@ -2,7 +2,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
 import { IN_PROGRESS, ITEM_DIRS, PLAN_KIND } from "./orchestrate.constants.ts";
@@ -73,20 +75,24 @@ export function inProgressRoadmaps(ws: string): string[] {
   return texts;
 }
 
+function counted(entry: [string, number | null]): entry is [string, number] {
+  return entry[1] !== null;
+}
+
+/** The open review counts by item; an entry that is not a number is dropped. */
+function reviewsOpenSchema() {
+  return z
+    .record(z.string(), z.number().nullable().catch(null))
+    .transform((open): ReviewsOpen => Object.fromEntries(Object.entries(open).filter(counted)));
+}
+
 export function readReviewsOpen(data: HookInput): ReviewsOpen {
   const file = reviewsOpenFile(data);
 
   if (file === null) return {};
 
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-
-    if (!isRecord(parsed)) return {};
-    const out: ReviewsOpen = {};
-
-    for (const [k, v] of Object.entries(parsed)) if (typeof v === "number") out[k] = v;
-
-    return out;
+    return tryJson(reviewsOpenSchema(), fs.readFileSync(file, "utf8")) ?? {};
   } catch {
     return {};
   }

@@ -12,7 +12,7 @@ import {
   STOP_WAIT_MS,
 } from "./listen.constants.ts";
 import type { KillFn } from "./listen.types.ts";
-import { readJson } from "./voice-args.ts";
+import { readObjectFile } from "./voice-args.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** The listen dir under the repo root, made when missing. */
@@ -32,7 +32,7 @@ export function latestPath(cwd: string): string {
 }
 
 export function readSession(cwd: string): Record<string, unknown> {
-  return readJson(sessionPath(cwd));
+  return readObjectFile(sessionPath(cwd));
 }
 
 export function writeSession(cwd: string, obj: Record<string, unknown>): void {

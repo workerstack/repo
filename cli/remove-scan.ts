@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { atRoute } from "./at-route.ts";
+import { readJson } from "./json.ts";
+import { packageJsonSchema, type PackageJson } from "./package-json.ts";
 import type { Removal } from "./removal.types.ts";
 import { EXTRAS, PATCHED, VERSION_AT } from "./remove.constants.ts";
 import type { Workspace } from "./sync/workspace.ts";
@@ -19,7 +21,7 @@ function nameOf(field: string, key: string): string {
 }
 
 /** The root's overrides, resolutions, trusted dependencies and patches that name one of `names`. */
-function extraRemovals(raw: unknown, names: readonly string[]): Removal[] {
+function extraRemovals(raw: PackageJson, names: readonly string[]): Removal[] {
   return EXTRAS.flatMap(({ field, homes }) =>
     homes.flatMap((parent) => {
       const node = atRoute(raw, parent);
@@ -53,7 +55,7 @@ export function patchPath(root: string, patch: string): string {
  */
 export function removalsOf(root: string, workspace: Workspace, names: readonly string[]): Removal[] {
   const file = path.join(root, ROOT_FILE);
-  const raw: unknown = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+  const raw = fs.existsSync(file) ? readJson(packageJsonSchema, fs.readFileSync(file, "utf8")) : {};
   const sources = updateSources(workspace).filter((source) => names.includes(source.name));
   const entries = sources.flatMap((source) => source.paths.map((route) => ({ ...source, patch: null, route })));
   const fields = entries.filter((entry) => entry.field !== CATALOG);

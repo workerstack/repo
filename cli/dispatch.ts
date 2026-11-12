@@ -1,5 +1,6 @@
 import { cliDeps, type CliDeps } from "./cli-deps.ts";
 import { COMMANDS, isCommandName } from "./commands.ts";
+import { readJson } from "./json.ts";
 import {
   HELP_COMMANDS,
   HELP_PAD,
@@ -9,6 +10,7 @@ import {
   USAGE_TAIL_ROWS,
   VERSION_COMMANDS,
 } from "./main.constants.ts";
+import { packageJsonSchema } from "./package-json.ts";
 import type { Flags } from "./parse-argv.ts";
 import { runCheck } from "./run-check.ts";
 import { HOOK_NAMES } from "./scripts/hook-command.ts";
@@ -33,12 +35,12 @@ export function usage(): string {
 }
 
 function pkgVersion(packageJson: string): string {
-  const pkg: unknown = JSON.parse(packageJson);
+  // Any shape but an object with a string version reads as no version; text that is no JSON still throws.
+  const { version } = readJson(packageJsonSchema.pick({ version: true }).catch({}), packageJson);
 
-  if (typeof pkg !== "object" || pkg === null || !("version" in pkg) || typeof pkg.version !== "string")
-    throw new Error("package.json has no version");
+  if (version === undefined) throw new Error("package.json has no version");
 
-  return pkg.version;
+  return version;
 }
 
 function syncIo(): SyncIo {

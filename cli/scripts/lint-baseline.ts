@@ -10,7 +10,9 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { readJson, tryJson } from "../json.ts";
 import { standardsRoot } from "../standards-root.ts";
+import { errorMessage } from "../sync-errors.ts";
 import { OXLINT_CONFIG_PATH } from "../sync/oxlint-config.ts";
 import { BASELINE_PATH, JSON_INDENT } from "./lint-baseline.constants.ts";
 import { REPORT_START } from "./lint.constants.ts";
@@ -177,11 +179,10 @@ export function readBaseline(root: string): Result<Counts> {
   let raw: unknown;
 
   try {
-    raw = JSON.parse(fs.readFileSync(file, "utf8"));
+    // Any JSON here; baselineSchema then words each issue as a line of its own.
+    raw = readJson(z.json(), fs.readFileSync(file, "utf8"));
   } catch (error) {
-    const { message } = error /* JSON.parse throws only a SyntaxError */ as Error;
-
-    return fail([`not valid JSON: ${message}; fix it, or delete it and ${LOWER}`]);
+    return fail([`not valid JSON: ${errorMessage(error)}; fix it, or delete it and ${LOWER}`]);
   }
 
   const parsed = baselineSchema().safeParse(raw);
@@ -217,15 +218,10 @@ export function lintReport(
   run: typeof captureTool = captureTool,
 ): Result<Diagnostic[]> {
   const ran = run("oxlint", ["-f", "json", ...args], root);
-  let raw: unknown;
+  const report = tryJson(reportSchema(), ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
 
-  try {
-    raw = JSON.parse(ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
-  } catch {
+  if (report === undefined)
     return { errors: [`oxlint exited ${ran.code}: ${`${ran.stdout}${ran.stderr}`.trim()}`], ok: false };
-  }
-
-  const report = reportSchema().parse(raw);
 
   const diagnostics = report.diagnostics.map((d) => {
     const rule = d.code ?? PARSE_ERROR;

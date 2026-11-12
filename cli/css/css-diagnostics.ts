@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import type { Listed } from "../check-comments.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { readJson } from "../json.ts";
 import { codeOf } from "../lint/script-rules.ts";
 import type { Diagnostic, Result } from "../scripts/lint-baseline.ts";
 import { captureBun } from "../scripts/lint.ts";
@@ -91,7 +92,7 @@ function parsedResults(stdout: string): Result<FileResult[]> {
   let raw: unknown;
 
   try {
-    raw = JSON.parse(stdout);
+    raw = readJson(z.json(), stdout);
   } catch (error) {
     return cannotRun(String(error));
   }

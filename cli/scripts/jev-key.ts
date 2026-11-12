@@ -3,11 +3,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { CHARS_PER_TOKEN, MAX_RETRY_WAIT_MS, MS_PER_SECOND } from "./jev.constants.ts";
 
 const SECONDS_RE = /^\d+$/;
+
+function jevJsonSchema() {
+  return z.looseObject({ apiKey: z.string().optional() });
+}
 
 function jevJsonPath(home: string): string {
   return path.join(home, ".workerstack", "jev.json");
@@ -30,9 +36,7 @@ export function loadJevKey({
   if (fromEnv !== "") return fromEnv;
 
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(jevJsonPath(home), "utf8"));
-
-    return isRecord(parsed) && Boolean(parsed.apiKey) ? String(parsed.apiKey).trim() : "";
+    return (tryJson(jevJsonSchema(), fs.readFileSync(jevJsonPath(home), "utf8"))?.apiKey ?? "").trim();
   } catch {
     return "";
   }

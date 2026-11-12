@@ -15,7 +15,7 @@ import {
   OPENAI,
 } from "./speak.constants.ts";
 import type { Provider, SpeakCfg } from "./speak.types.ts";
-import { section, str, readJson } from "./voice-args.ts";
+import { section, str, readObjectFile } from "./voice-args.ts";
 
 /** The first value that is truthy, as a config source of any type. */
 function first(...values: unknown[]): unknown {
@@ -50,7 +50,7 @@ function openaiOf(env: Env, file: Record<string, unknown>): SpeakCfg["openai"] {
 
 export function loadCfg({ env = repoEnv.process, home = os.homedir() }: { env?: Env; home?: string } = {}): SpeakCfg {
   const filePath = path.join(home, ".workerstack", "speak.json");
-  const file = readJson(filePath);
+  const file = readObjectFile(filePath);
 
   return {
     elevenlabs: elevenOf(env, file),

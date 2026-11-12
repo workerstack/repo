@@ -11,7 +11,10 @@ import { once } from "node:events";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { z } from "zod";
+
 import { bunRuntime } from "../env/keys.ts";
+import { tryJson } from "../json.ts";
 import { MS_PER_SECOND, PARITY_SENTINEL, PARITY_TIMEOUT_MS, SCOPES } from "./env-command.constants.ts";
 
 /** One env to hash: the file that exports it, repo-relative, and the export's name. */
@@ -29,7 +32,20 @@ export type Parity =
 export type ParityRun = { readonly env: NodeJS.ProcessEnv; readonly timeout?: number };
 
 /** What the child prints behind the sentinel: the hashes, or the index of the target that threw and its class. */
-type ChildOut = { readonly hashes?: ViewHashes[]; readonly failed?: number; readonly error?: string };
+type ChildOut = {
+  readonly hashes?: ViewHashes[] | undefined;
+  readonly failed?: number | undefined;
+  readonly error?: string | undefined;
+};
+
+/** The shape of ChildOut, so a line that parses but holds another shape fails as one that does not parse. */
+function childOutSchema(): z.ZodType<ChildOut> {
+  return z.looseObject({
+    error: z.string().optional(),
+    failed: z.number().optional(),
+    hashes: z.array(z.record(z.string(), z.record(z.string(), z.string()))).optional(),
+  });
+}
 
 /** What the child printed, and whether it was killed for its time. */
 type ChildRun = { readonly stdout: string; readonly isLate: boolean };
@@ -38,7 +54,7 @@ type ChildRun = { readonly stdout: string; readonly isLate: boolean };
 function childScript(): string {
   return [
     'const { createHash } = await import("node:crypto");',
-    "const targets = JSON.parse(await Bun.stdin.text());",
+    "const targets = await Bun.stdin.json();",
     `const views = ${JSON.stringify(SCOPES)};`,
     'const hash = (value) => createHash("sha256").update(String(value)).digest("hex");',
     "const viewHashes = (view) => Object.fromEntries(Object.keys(view).map((key) => [key, hash(view[key])]));",
@@ -58,13 +74,12 @@ function childScript(): string {
   ].join("\n");
 }
 
-/** What the sentinel line holds; undefined when it does not parse, so no parse error echoes its text. */
+/**
+ * What the sentinel line holds; undefined when it does not parse or holds another shape, so no error echoes its
+ * text.
+ */
 function readOut(line: string): ChildOut | undefined {
-  try {
-    return JSON.parse(line.slice(PARITY_SENTINEL.length)) /* the child prints a ChildOut */ as ChildOut;
-  } catch {
-    return undefined;
-  }
+  return tryJson(childOutSchema(), line.slice(PARITY_SENTINEL.length));
 }
 
 /** A failed check of `targets`, at every file it reads, for `reason`. */

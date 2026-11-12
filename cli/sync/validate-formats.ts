@@ -2,8 +2,10 @@
 import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
-import type { z } from "zod";
+import { z } from "zod";
 
+import { readJson } from "../json.ts";
+import { errorMessage } from "../sync-errors.ts";
 import type { CommentSyntax } from "./header.ts";
 import { HOST_SCHEMAS, OXFMT_CONFIG, OXLINT_CONFIG } from "./validate-schemas.ts";
 
@@ -171,13 +173,12 @@ function parseJsoncContent(content: string): Parsed {
 /** Parses `content` as `format` and returns the value a schema checks, or a problem. */
 export function parseContent(format: OutputFormat, content: string): Parsed {
   try {
-    if (format === "json") return { value: JSON.parse(content) };
+    // Any JSON value: the format's schema checks the shape.
+    if (format === "json") return { value: readJson(z.json(), content) };
 
     if (format === "toml") return { value: parseToml(content) };
   } catch (error) {
-    const message = (error /* JSON.parse and smol-toml throw an Error */ as Error).message;
-
-    return { problem: `invalid ${format === "json" ? "JSON" : "TOML"}: ${message}` };
+    return { problem: `invalid ${format === "json" ? "JSON" : "TOML"}: ${errorMessage(error)}` };
   }
 
   if (format === "jsonc") return parseJsoncContent(content);

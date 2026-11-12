@@ -4,7 +4,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../cli/json.ts";
+import { z } from "zod";
+
+import { isRecord, tryJson } from "../cli/json.ts";
 import { processIo } from "./process-io.ts";
 import {
   ARGV_START,
@@ -30,17 +32,21 @@ function prose(text: string): string {
   return text.replace(FENCED_CODE_RE, " ").replace(INLINE_CODE_RE, " ");
 }
 
-type TranscriptRecord = {
-  type?: unknown;
-  isSidechain?: unknown;
-  timestamp?: unknown;
-  message?: { content?: unknown } | null;
-};
+function buildTranscriptRecordSchema() {
+  const field = z.unknown().optional();
 
-/** True for a JSON object whose `message`, when present, is an object or null. */
-function isTranscriptRecord(v: unknown): v is TranscriptRecord {
-  return isRecord(v) && (v.message === undefined || v.message === null || isRecord(v.message));
+  return z.looseObject({
+    isSidechain: field,
+    message: z.looseObject({ content: field }).nullable().optional(),
+    timestamp: field,
+    type: field,
+  });
 }
+
+/** A transcript line's record: a JSON object whose `message`, when present, is an object or null. */
+const transcriptRecordSchema = /* @__PURE__ */ buildTranscriptRecordSchema();
+
+type TranscriptRecord = z.output<typeof transcriptRecordSchema>;
 
 function replyText(record: TranscriptRecord): string {
   if (record.type !== ASSISTANT || record.isSidechain === true) return "";
@@ -58,13 +64,7 @@ function replyText(record: TranscriptRecord): string {
 
 /** The transcript record a line holds, or undefined when it is not JSON or not a record. */
 function parseRecord(line: string): TranscriptRecord | undefined {
-  try {
-    const value: unknown = JSON.parse(line);
-
-    return isTranscriptRecord(value) ? value : undefined;
-  } catch {
-    return undefined;
-  }
+  return tryJson(transcriptRecordSchema, line);
 }
 
 /** The text of a main-thread reply written at or after `sinceMs`; empty for any other line. */

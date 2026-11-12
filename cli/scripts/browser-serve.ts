@@ -3,6 +3,9 @@ import crypto from "node:crypto";
 import http from "node:http";
 import type { Duplex } from "node:stream";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { asRec, errMessage, filled } from "./browser-session.ts";
 import { decodeWsFrames, encodeWsFrame } from "./browser-ws.ts";
 import {
@@ -119,15 +122,10 @@ export function handleCdp(state: FakeCdpState, method: string, params: Rec): Rec
 }
 
 function reply(socket: Duplex, state: FakeCdpState, data: string): void {
-  let parsed: unknown;
+  // JSON that is not an object still gets a reply, as an empty request; text that is not JSON gets none.
+  const msg = tryJson(z.record(z.string(), z.unknown()).catch({}), data);
 
-  try {
-    parsed = JSON.parse(data);
-  } catch {
-    return;
-  }
-
-  const msg = asRec(parsed);
+  if (msg === undefined) return;
 
   function send(body: Rec) {
     return socket.write(encodeWsFrame(JSON.stringify(body)));

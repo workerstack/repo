@@ -31,19 +31,19 @@ export function TSC_ARGS(tsc: string): string[] {
 
 export const PROBE_ARGS: string[] = [PROBE_FILE];
 
-export const TSCONFIG: string = `{
-  "compilerOptions": {
-    "target": "ES2022",
-    "strict": true,
-    "module": "preserve",
-    "moduleResolution": "bundler",
-    "noEmit": true,
-    "skipLibCheck": true,
-    "allowImportingTsExtensions": true
+/** The temp project's tsconfig: written for tsc, and read as it is by the API diff. */
+export const TSCONFIG: { compilerOptions: Record<string, string | boolean>; files: string[] } = {
+  compilerOptions: {
+    allowImportingTsExtensions: true,
+    module: "preserve",
+    moduleResolution: "bundler",
+    noEmit: true,
+    skipLibCheck: true,
+    strict: true,
+    target: "ES2022",
   },
-  "files": ["${TYPES_FILE}"]
-}
-`;
+  files: [TYPES_FILE],
+};
 
 /** Runs in a `bun` child of the temp project: imports or resolves each subpath and writes the failures to a file. */
 export const PROBE_SOURCE: string = `import { readFileSync, writeFileSync } from "node:fs";

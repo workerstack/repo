@@ -1,7 +1,10 @@
 import path from "node:path";
 
+import { z } from "zod";
+
 import { CONFIG_FILE } from "../config.constants.ts";
 import { SKILL_PACKS, type SkillPack } from "../config.ts";
+import { tryJson } from "../json.ts";
 import { stripJsonc } from "../scripts/strip-jsonc.ts";
 import { filesUnder, isDir, trackedRels } from "./migrate-fs.ts";
 import {
@@ -74,23 +77,15 @@ export function planLeftovers(state: MigrationState): void {
     unread(state, `${COPIED_DIR}/${name}`);
 }
 
+/** A features file: an object whose `packs`, when it is no list, lists none. */
+function featuresSchema() {
+  return z.object({ packs: z.array(z.unknown()).catch([]) });
+}
+
 /** The known packs `repo.features.jsonc` lists, each once; none when it is missing or no JSON. */
 function featurePacks(state: MigrationState): SkillPack[] {
-  let packs: unknown;
-
-  try {
-    ({ packs } = JSON.parse(
-      stripJsonc(state.read(FEATURES) ?? ""),
-    ) /* a features file is an object of packs, any other value throws here */ as {
-      packs?: unknown;
-    });
-  } catch {
-    return [];
-  }
-
-  const known = (Array.isArray(packs) ? packs : []).filter((pack): pack is SkillPack =>
-    SKILL_PACKS.some((name) => name === pack),
-  );
+  const packs = tryJson(featuresSchema(), stripJsonc(state.read(FEATURES) ?? ""))?.packs ?? [];
+  const known = packs.filter((pack): pack is SkillPack => SKILL_PACKS.some((name) => name === pack));
 
   return [...new Set(known)];
 }

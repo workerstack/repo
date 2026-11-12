@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
-import { isRecord } from "../json.ts";
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
 /** One validated job row. */
@@ -74,20 +76,19 @@ export function parseNeed(input: string | null | undefined): NeedResult {
 
   if (m === null) return { error: "no json need array", ok: false };
 
-  let parsed: unknown;
+  // A value that is not an array reads as an empty one, and an item that is not an object as null.
+  const jobItem = z.record(z.string(), z.unknown()).nullable().catch(null);
+  const group = m[1] /* the pattern has one group, set whenever it matches */ as string;
+  const parsed = tryJson(z.array(jobItem).catch([]), group);
 
-  try {
-    parsed = JSON.parse(m[1] /* the pattern has one group, set whenever it matches */ as string);
-  } catch {
-    return { error: "invalid json", ok: false };
-  }
+  if (parsed === undefined) return { error: "invalid json", ok: false };
 
-  if (!Array.isArray(parsed) || parsed.length < 1) return { error: "need array empty", ok: false };
+  if (parsed.length < 1) return { error: "need array empty", ok: false };
 
   const jobs: NeedJob[] = [];
 
   for (const item of parsed) {
-    if (!isRecord(item)) return { error: "invalid job item", ok: false };
+    if (item === null) return { error: "invalid job item", ok: false };
     const row = jobRow(item);
 
     if (row === null) return { error: "invalid job or query", ok: false };

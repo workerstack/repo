@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { tryJson } from "../json.ts";
+import { packageJsonSchema } from "../package-json.ts";
 import {
   CHARS_PER_TOKEN,
   DEFAULTS,
@@ -41,11 +42,7 @@ function packageName(root: string, dir: string, manifest: string): string {
   try {
     const text = fs.readFileSync(path.join(root, dir, manifest), "utf8");
 
-    if (manifest === PACKAGE_JSON) {
-      const pkg: unknown = JSON.parse(text);
-
-      return isRecord(pkg) && typeof pkg.name === "string" ? pkg.name : "";
-    }
+    if (manifest === PACKAGE_JSON) return tryJson(packageJsonSchema.pick({ name: true }), text)?.name ?? "";
 
     return (manifest === GO_MOD ? GO_MODULE_RE : TOML_NAME_RE).exec(text)?.[1] ?? "";
   } catch {

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { tryJson } from "../json.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import type { Gate } from "./ci-gate.ts";
 import {
@@ -29,9 +30,17 @@ export type TurboRun = (args: string[], cwd: string, env: Record<string, string>
  */
 export type TurboOptions = { root: string; coverage: boolean; json: string | undefined; shard?: string | undefined };
 
-function reportShape() {
+type ReportShape = z.ZodObject<
+  { success: z.ZodOptional<z.ZodBoolean>; testResults: z.ZodDefault<z.ZodArray<z.ZodUnknown>> },
+  z.core.$loose
+>;
+
+function reportShape(): ReportShape {
   return z.looseObject({ success: z.boolean().optional(), testResults: z.array(z.unknown()).default([]) });
 }
+
+/** One package's vitest report, as far as the merge reads it. */
+export type PackageReport = z.output<ReportShape>;
 
 /** The variables the flags ask turbo's tasks to see. */
 function envOf({ coverage, json, shard }: TurboOptions): Record<string, string> {
@@ -61,37 +70,29 @@ function gateOf(run: Captured, named: string): Gate {
 }
 
 /** One report from all of them: the test files together, the counts summed and `success` only if every one had it. */
-export function mergeReports(reports: readonly unknown[]): Record<string, unknown> {
-  const parsed = reports.flatMap((report) => {
-    const result = reportShape().safeParse(report);
-
-    return result.success ? [result.data] : [];
-  });
-
+export function mergeReports(reports: readonly PackageReport[]): Record<string, unknown> {
   const totals: Record<string, number> = {};
 
-  for (const report of parsed) {
+  for (const report of reports) {
     for (const [key, value] of Object.entries(report))
       if (typeof value === "number") totals[key] = (totals[key] ?? 0) + value;
   }
 
   return {
     ...totals,
-    success: parsed.every((report) => report.success !== false),
-    testResults: parsed.flatMap((report) => report.testResults),
+    success: reports.every((report) => report.success !== false),
+    testResults: reports.flatMap((report) => report.testResults),
   };
 }
 
-/** Each package's report, parsed; a package that wrote none, or one that is not JSON, is left out. */
-function packageReports(root: string): unknown[] {
+/** Each package's report, parsed; a package that wrote none, or one that is not a report, is left out. */
+function packageReports(root: string): PackageReport[] {
   const workspace = readWorkspace(root);
   const dirs = workspace.ok ? workspace.workspace.packages.map((pkg) => pkg.dir) : [];
 
   return dirs.flatMap((dir) => {
     try {
-      const report: unknown = JSON.parse(fs.readFileSync(path.join(root, dir, REPORT_RELATIVE), "utf8"));
-
-      return [report];
+      return tryJson(reportShape(), fs.readFileSync(path.join(root, dir, REPORT_RELATIVE), "utf8")) ?? [];
     } catch {
       return [];
     }

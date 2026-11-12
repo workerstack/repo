@@ -3,9 +3,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { isRecord } from "../json.ts";
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
-import { safe, str } from "./board-line.ts";
+import { safe } from "./board-line.ts";
 import { BOARD_PARTS, DIR_MODE, FILE_MODE, HEX, RANDOM_SKIP, ROW_EXT } from "./board.constants.ts";
 import type { BoardRow } from "./board.types.ts";
 
@@ -23,26 +25,31 @@ export function rowPath(dir: string, provider: unknown, session: unknown): strin
   return path.join(dir, `${safe(provider)}-${safe(session)}${ROW_EXT}`);
 }
 
+/** A row file as note writes it; a missing text field reads as "", and a NaN pid was written as null. */
+function rowSchema() {
+  const text = z.union([z.string(), z.number(), z.boolean()]).transform(String).default("");
+
+  return z.object({
+    boot: text,
+    cwd: text,
+    effort: text,
+    model: text,
+    pid: z
+      .number()
+      .nullish()
+      .transform((pid) => pid ?? Number.NaN),
+    provider: text,
+    session: text,
+    start: text,
+    sticky: z.boolean().default(false),
+    time: text,
+    work: text,
+  });
+}
+
 export function readRow(file: string): BoardRow | null {
   try {
-    const row: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
-
-    if (!isRecord(row)) return null;
-
-    // Fields are re-checked where used (String(...) coercions); a missing one reads as its empty value.
-    return {
-      boot: str(row.boot),
-      cwd: str(row.cwd),
-      effort: str(row.effort),
-      model: str(row.model),
-      pid: row.pid == null ? Number.NaN : Number(row.pid),
-      provider: str(row.provider),
-      session: str(row.session),
-      start: str(row.start),
-      sticky: row.sticky === true,
-      time: str(row.time),
-      work: str(row.work),
-    };
+    return tryJson(rowSchema(), fs.readFileSync(file, "utf8")) ?? null;
   } catch {
     return null;
   }
