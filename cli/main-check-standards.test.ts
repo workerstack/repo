@@ -2,13 +2,11 @@ import fs from "node:fs";
 
 import { expect, it, vi } from "vitest";
 
-const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
-
 import { usePacks, writeCleanManifest, writeConfigs, writeStandardsOutputs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
 
-const { repo, written } = useMainCheckRepo(fakes);
+const { fakes, repo, written } = useMainCheckRepo();
 
 vi.setConfig({ testTimeout: 60_000 });
 
@@ -22,7 +20,7 @@ it("with the standards pack on, prints each lint count over .repo/lint-baseline.
   usePacks(repo, "standards");
   writeStandardsOutputs(repo);
   repo.put("src/a.ts", "export function a(xs: string[]): string {\n  return xs.find(Boolean)!;\n}\n");
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toBe(
     "repo check: .repo/lint-baseline.json: src/a.ts has 1 typescript(no-non-null-assertion), the baseline allows 0\n",
   );
@@ -33,7 +31,7 @@ it("with the standards pack on, prints each manifest problem and exits 1", async
   writeConfigs(repo);
   repo.write("package.json", { name: "app", sideEffects: ["*.css"] });
   usePacks(repo, "standards");
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toBe(
     [
       'repo check: package.json: "private" is missing; set true, or false to publish it',
@@ -49,7 +47,7 @@ it("with the standards pack on, prints each refused comment with its file and li
   writeConfigs(repo);
   usePacks(repo, "standards");
   repo.put("src/a.ts", "export const a = 1;\n// @ts-ignore\n");
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toBe(
     'repo check: src/a.ts:2: "@ts-ignore" hides a type error; fix the type, or write @ts-expect-error with a reason\n',
   );
@@ -63,7 +61,7 @@ it("with the standards pack on, prints knip's problems to stderr and its ignores
   repo.put("workerstack.config.ts", `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`);
   repo.put("src/a.ts", "export const a = 1;\n");
   repo.put("src/b.ts", "export const b = 1;\n");
-  await start();
+  await start(fakes);
   expect(written.out).toContain("repo check: knip: 1 ignore: file src/b.ts (loaded by name)\n");
   expect(written.err).toContain("repo check: knip: src/a.ts: unused file; delete it\n");
   expect(written.err).not.toContain("repo check: knip: src/b.ts: unused file; delete it\n");
@@ -84,7 +82,7 @@ it("with the standards pack on, prints each live lint.skip and its count, and ex
   repo.put("workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   repo.put("src/a.ts", "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
   repo.put("src/b.ts", "export const b = 1;\n");
-  await start();
+  await start(fakes);
   expect(written.out).toStrictEqual([
     `repo check: skip typescript/no-non-null-assertion in src/a.ts: 1 hit (${reason})\n`,
     "repo check: skips: typescript/no-non-null-assertion 1\n",
@@ -110,7 +108,7 @@ rule's hits and counts the other over the baseline`, async () => {
   ].join("\n");
 
   repo.put("src/retry.ts", retry);
-  await start();
+  await start(fakes);
   expect(written.out).toStrictEqual([
     `repo check: skip repo/magic-number in src/retry.ts: 2 hits (${reason})\n`,
     "repo check: skips: repo/magic-number 2\n",
@@ -136,7 +134,7 @@ problem and counts an untested guard over the baseline`, async () => {
 
   repo.put("src/is-user.ts", guard.join("\n"));
   repo.put("src/user.reject.ts", 'lod("u2");\n');
-  await start();
+  await start(fakes);
   expect(repo.besidesKnip()).toBe(
     [
       "repo check: rejections: src/user.reject.ts: line 1 fails unmarked: TS2304: Cannot find name 'lod'.",

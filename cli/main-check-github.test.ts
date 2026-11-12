@@ -1,25 +1,23 @@
-import { expect, it, vi } from "vitest";
-
-const fakes = await vi.hoisted(() => import("./__fixtures__/main-mocks.ts").then((mocks) => mocks.mockedGithubFakes()));
+import { expect, it } from "vitest";
 
 import { addOrigin, usePacks, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
 
-const { repo, written } = useMainCheckRepo(fakes);
+const { fakes, repo, written } = useMainCheckRepo();
 const ORIGIN = "https://github.com/workerstack/repo.git";
 
 /** Runs check with a fake gh over empty settings in place of the logged-out one; the fake, to read its calls. */
 async function startWithFakeGh(): Promise<ReturnType<typeof fakeGh>> {
   const fake = fakeGh(EMPTY_SETTINGS());
-  const { gh } = fakes.githubIo;
-  fakes.githubIo.gh = fake.gh;
+  const { gh } = fakes.checkIo;
+  fakes.checkIo.gh = fake.gh;
 
   try {
-    await start();
+    await start(fakes);
   } finally {
-    fakes.githubIo.gh = gh;
+    fakes.checkIo.gh = gh;
   }
 
   return fake;
@@ -39,7 +37,7 @@ alone makes no gh call and prints no github line`, async () => {
 it("reports a skipped GitHub check on stdout when there is no GitHub origin", async () => {
   writeConfigs(repo);
   usePacks(repo, "release");
-  await start();
+  await start(fakes);
   expect(written.out.join("")).toContain("repo check: github: skipped, no GitHub origin\n");
   expect(written.err.join("")).not.toContain("github");
 });
@@ -48,7 +46,7 @@ it("reports a skipped GitHub check on stdout, without failing, when gh is not lo
   writeConfigs(repo);
   usePacks(repo, "release");
   addOrigin(repo, ORIGIN);
-  await start();
+  await start(fakes);
   expect(written.out.join("")).toContain("repo check: github: skipped, gh is not logged in (gh auth status)\n");
   // The release pack's other problems fail this run; the skipped GitHub check is none of them.
   expect(written.err.join("")).not.toContain("github");

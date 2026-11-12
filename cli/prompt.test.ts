@@ -1,24 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-const clackSelect = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackConfirm = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackText = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackPassword = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackSpinner = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackIsCancel = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-const clackCancel = vi.hoisted(() => vi.fn<(...args: unknown[]) => unknown>());
-
-vi.mock("@clack/prompts", () => ({
-  cancel: clackCancel,
-  confirm: clackConfirm,
-  isCancel: clackIsCancel,
-  password: clackPassword,
-  select: clackSelect,
-  spinner: clackSpinner,
-  text: clackText,
-}));
+import { describe, expect, it, vi } from "vitest";
 
 import { bailIfCancel, confirm, isInteractive, password, select, spinner, text } from "./prompt.ts";
+import { promptsOf, type Clack } from "./scripts/prompt.ts";
 
 type Stream = NodeJS.ReadStream & NodeJS.WriteStream;
 
@@ -91,94 +74,139 @@ describe("isInteractive", () => {
   });
 });
 
-describe("bailIfCancel", () => {
-  afterEach(() => {
-    clackIsCancel.mockReset();
-    clackCancel.mockReset();
-  });
+/** A clack whose every call is a fake; `isCancel` says no unless a test says yes. */
+function fakeClack() {
+  return {
+    cancel: vi.fn<Clack["cancel"]>(),
+    confirm: vi.fn<Clack["confirm"]>(),
+    isCancel: vi.fn<(value: unknown) => boolean>(() => false),
+    password: vi.fn<Clack["password"]>(),
+    // The menu's every call; the fake picks its first option.
+    select: vi.fn<(opts: unknown) => void>(),
+    spinner: vi.fn<Clack["spinner"]>(),
+    text: vi.fn<Clack["text"]>(),
+  };
+}
 
+type FakeClack = ReturnType<typeof fakeClack>;
+
+/** The prompts over `fake`: its `isCancel` read as clack's guard, its select picking the first option. */
+function promptsOver(fake: FakeClack) {
+  return promptsOf({
+    ...fake,
+    isCancel: (value): value is symbol => fake.isCancel(value),
+    select: <Value>(opts: { options: { value: Value }[] }): Promise<Value | symbol> => {
+      fake.select(opts);
+
+      return Promise.resolve(opts.options.at(0)?.value ?? Symbol("no option"));
+    },
+  });
+}
+
+/** `process.exit` throwing `EXIT`, so a cancel stops the test where the CLI would stop. */
+function spyExit() {
+  return vi.spyOn(process, "exit").mockImplementation(() => {
+    throw new Error("EXIT");
+  });
+}
+
+describe("bailIfCancel", () => {
   it("returns value when not cancel", () => {
-    clackIsCancel.mockReturnValue(false);
-    expect(bailIfCancel("ok")).toBe("ok");
-    expect(clackCancel).not.toHaveBeenCalled();
+    const fake = fakeClack();
+    expect(promptsOver(fake).bailIfCancel("ok")).toBe("ok");
+    expect(fake.cancel).not.toHaveBeenCalled();
   });
 
   it("cancel Aborted and exit 0", () => {
-    clackIsCancel.mockReturnValue(true);
+    const fake = fakeClack();
+    fake.isCancel.mockReturnValue(true);
+    const exit = spyExit();
 
-    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("EXIT");
-    });
-
-    expect(() => bailIfCancel(Symbol("cancel"))).toThrow("EXIT");
-    expect(clackCancel).toHaveBeenCalledWith("Aborted");
+    expect(() => promptsOver(fake).bailIfCancel(Symbol("cancel"))).toThrow("EXIT");
+    expect(fake.cancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
     exit.mockRestore();
   });
 });
 
-/** Clears the clack mocks a wrapper test sets. */
-function resetClack(): void {
-  clackSelect.mockReset();
-  clackConfirm.mockReset();
-  clackSpinner.mockReset();
-  clackIsCancel.mockReset();
-  clackCancel.mockReset();
-}
+const MENU = { message: "Command", options: [{ value: "init" }] };
 
 describe("clack wrappers", () => {
-  afterEach(resetClack);
-
   it("select bails then returns", async () => {
-    clackSelect.mockResolvedValue("init");
-    clackIsCancel.mockReturnValue(false);
-    await expect(
-      select({ message: "Command" } /* the mocked select reads no options */ as Parameters<typeof select>[0]),
-    ).resolves.toBe("init");
-    expect(clackSelect).toHaveBeenCalledWith({ message: "Command" });
+    const fake = fakeClack();
+    await expect(promptsOver(fake).select(MENU)).resolves.toBe("init");
+    expect(fake.select).toHaveBeenCalledWith(MENU);
   });
 
   it("confirm bails then returns", async () => {
-    clackConfirm.mockResolvedValue(true);
-    clackIsCancel.mockReturnValue(false);
-    await expect(confirm({ message: "Re-init?" })).resolves.toBe(true);
-    expect(clackConfirm).toHaveBeenCalledWith({ message: "Re-init?" });
+    const fake = fakeClack();
+    fake.confirm.mockResolvedValue(true);
+    await expect(promptsOver(fake).confirm({ message: "Re-init?" })).resolves.toBe(true);
+    expect(fake.confirm).toHaveBeenCalledWith({ message: "Re-init?" });
   });
 });
 
 describe("clack wrappers", () => {
-  afterEach(resetClack);
   it("select cancel exits 0", async () => {
-    clackSelect.mockResolvedValue("x");
-    clackIsCancel.mockReturnValue(true);
+    const fake = fakeClack();
+    fake.isCancel.mockReturnValue(true);
+    const exit = spyExit();
 
-    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("EXIT");
-    });
-
-    await expect(select({} /* the mocked select reads no options */ as Parameters<typeof select>[0])).rejects.toThrow(
-      "EXIT",
-    );
-    expect(clackCancel).toHaveBeenCalledWith("Aborted");
+    await expect(promptsOver(fake).select(MENU)).rejects.toThrow("EXIT");
+    expect(fake.cancel).toHaveBeenCalledWith("Aborted");
     expect(exit).toHaveBeenCalledWith(0);
     exit.mockRestore();
   });
-});
 
-describe("clack wrappers", () => {
-  afterEach(resetClack);
   it("spinner passthrough", () => {
-    const s = { start: vi.fn<() => void>(), stop: vi.fn<() => void>() };
-    clackSpinner.mockReturnValue(s);
-    expect(spinner()).toBe(s);
-    expect(clackSpinner).toHaveBeenCalledOnce();
+    const fake = fakeClack();
+    const s = { message: vi.fn<() => void>(), start: vi.fn<() => void>(), stop: vi.fn<() => void>() };
+    fake.spinner.mockReturnValue(s);
+    expect(promptsOver(fake).spinner()).toBe(s);
+    expect(fake.spinner).toHaveBeenCalledOnce();
   });
 
   it("text and password bail then return", async () => {
-    clackText.mockResolvedValue("proj");
-    clackPassword.mockResolvedValue("sk_x");
-    clackIsCancel.mockReturnValue(false);
-    await expect(text({ message: "Project ID" })).resolves.toBe("proj");
-    await expect(password({ message: "API key" })).resolves.toBe("sk_x");
+    const fake = fakeClack();
+    fake.text.mockResolvedValue("proj");
+    fake.password.mockResolvedValue("sk_x");
+    await expect(promptsOver(fake).text({ message: "Project ID" })).resolves.toBe("proj");
+    await expect(promptsOver(fake).password({ message: "API key" })).resolves.toBe("sk_x");
+  });
+});
+
+/** One key on stdin, where clack's prompts read it. */
+function press(name: string, sequence: string = ""): void {
+  process.stdin.emit("keypress", sequence, { name, sequence });
+}
+
+/** Each named prompt asked in turn, its keys pressed as it waits; what each one answered. */
+async function answerEach(): Promise<unknown[]> {
+  const confirmed = confirm({ message: "Re-init?" });
+  press("return");
+  const picked = select({ message: "Command", options: [{ value: "init" }, { value: "check" }] });
+  press("down");
+  press("return");
+  const typed = text({ message: "Project ID" });
+  press("p", "p");
+  press("return");
+  const secret = password({ message: "API key" });
+  press("k", "k");
+  press("return");
+
+  return [await confirmed, await picked, await typed, await secret];
+}
+
+describe("the named prompts", () => {
+  it("run on @clack/prompts itself", async () => {
+    const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    try {
+      expect(await answerEach()).toStrictEqual([true, "check", "p", "k"]);
+      expect(bailIfCancel("ok")).toBe("ok");
+      expect(Object.keys(spinner())).toStrictEqual(expect.arrayContaining(["message", "start", "stop"]));
+    } finally {
+      write.mockRestore();
+    }
   });
 });

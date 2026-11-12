@@ -2218,7 +2218,7 @@
   "cli/scripts/__fixtures__/ci-wait-world.ts": ["b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
   "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98"],
-  "cli/scripts/__fixtures__/doctor-kit.ts": ["9c6a7f1bfedb9efb"],
+  "cli/scripts/__fixtures__/doctor-kit.ts": ["9c6a7f1bfedb9efb", "e642ba74423b1c39"],
   "cli/scripts/__fixtures__/doctor-models-kit.ts": ["ad894596b777bd53"],
   "cli/scripts/__fixtures__/doctor-workspace-kit.ts": ["d602f5b244feed86"],
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68"],
@@ -2235,7 +2235,7 @@
   "cli/scripts/__fixtures__/job-kit.ts": ["a3ad72e2760b98c5"],
   "cli/scripts/__fixtures__/json-dirs.ts": ["71f968b133ef2302"],
   "cli/scripts/__fixtures__/lessons-kit.ts": ["d4f284c6eb69d05b"],
-  "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["d0a1ba2c8c4795f2"],
+  "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
   "cli/scripts/__fixtures__/lint-scripts-kit.ts": ["6d3a41ab5cb8d68b"],
   "cli/scripts/__fixtures__/listen-env.ts": ["215dd279c1180218"],
   "cli/scripts/__fixtures__/mcp-base-policy.ts": ["4c75b546d03187b2"],
@@ -2855,14 +2855,19 @@
   ],
   "cli/scripts/doctor-bun.ts": ["0776f1ed222e3421", "3feea365153570f1", "8afc541184ee98ce"],
   "cli/scripts/doctor-env.test.ts": ["ae8e239a0d7af3ad", "eb0523dedefc81f2", "eec42c59df07ddfd"],
-  "cli/scripts/doctor-globals.test.ts": ["3e4304b2c2d5899b", "71bd5508c7b1cd31", "7fa0e78634faeaf0"],
+  "cli/scripts/doctor-globals.test.ts": [
+    "3e4304b2c2d5899b",
+    "71bd5508c7b1cd31",
+    "7fa0e78634faeaf0",
+    "b5faf797d8039379"
+  ],
   "cli/scripts/doctor-hints.test.ts": ["0bf74253eacf7cc5", "cc4868fc64facdb0", "f13203dcf0cd1466", "f76061d213dc26fc"],
   "cli/scripts/doctor-keys.test.ts": ["15a39deafe4d0574", "4de2881b1bf13382", "febf90fec57e4a4e"],
   "cli/scripts/doctor-lists.ts": ["7c8848984527f665", "c317d7c274e8c25f", "d30e11893bd9643e"],
   "cli/scripts/doctor-maps.test.ts": ["104e43068c95b1a5", "a97d22dc03abf183"],
   "cli/scripts/doctor-models-skip.test.ts": ["655f5d0fe469a037", "e3c8162f0b0a91b8", "ff17136673aa691e"],
   "cli/scripts/doctor-models.test.ts": ["3d3a153c15f8c9d2", "de0b3862ac25cf0d", "df655ff888fd4f44", "e60e7105828c9923"],
-  "cli/scripts/doctor-rows.ts": ["30351a48ac0251bf", "7ba7b10a36efdede", "bb1cfb603a34e96e"],
+  "cli/scripts/doctor-rows.ts": ["30351a48ac0251bf", "7ba7b10a36efdede", "8356ef186cdc5a08", "bb1cfb603a34e96e"],
   "cli/scripts/doctor-run.test.ts": [
     "21b0a8aa8b4b30fc",
     "4eb008eab6bf2bde",
@@ -4291,6 +4296,7 @@
     "337e4d3746b4593c",
     "3cb5ff2fcdf361ce",
     "419709a353de916f",
+    "41b58c5bd8d51030",
     "4932e13e9ca3cee5",
     "712f580080f7900b",
     "776b23b446148ff5",
@@ -5368,7 +5374,13 @@
     "b48352dcb06cf746",
     "eb9862d9d36b826f"
   ],
-  "cli/scripts/prompt.ts": ["140c9db2b9f28657", "39fa16f595ba3c77", "6abd90cba119d0e2", "efd6b22f289aa885"],
+  "cli/scripts/prompt.ts": [
+    "03b7005dc0c38639",
+    "140c9db2b9f28657",
+    "39fa16f595ba3c77",
+    "6abd90cba119d0e2",
+    "efd6b22f289aa885"
+  ],
   "cli/scripts/purge-global-mcps-cli.test.ts": [
     "2156f193d22f2a36",
     "3af38f99613e97a3",
