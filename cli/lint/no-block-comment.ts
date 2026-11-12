@@ -1,10 +1,9 @@
-import type { Comment, CreateRule } from "@oxlint/plugins";
-
 import { commentLines } from "./comment-lines.ts";
 import { BANNER, CONFIG, CRLF, DOC, LF, MESSAGE } from "./no-block-comment.constants.ts";
+import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 /** The text before `comment` on its line when only whitespace stands on both sides of it, else `null`. */
-function indentOf(text: string, comment: Comment): string | null {
+function indentOf(text: string, comment: RuleComment): string | null {
   const lineStart = text.lastIndexOf(LF, comment.start - 1) + 1;
   const found = text.indexOf(LF, comment.end);
   const lineEnd = found < 0 ? text.length : found;
@@ -14,7 +13,7 @@ function indentOf(text: string, comment: Comment): string | null {
 }
 
 /** Whether the rule leaves `comment` as a block: a doc, a first-line banner, or a config comment. */
-function kept(text: string, comment: Comment): boolean {
+function kept(text: string, comment: RuleComment): boolean {
   if (comment.value.startsWith(DOC) || CONFIG.test(comment.value)) return true;
   return comment.value.startsWith(BANNER) && !text.slice(0, comment.start).includes(LF);
 }
@@ -23,7 +22,7 @@ function kept(text: string, comment: Comment): boolean {
  * Fails a block comment alone on its lines and rewrites it as one `//` line per line of text. A doc, a comment
  * inside a line, a first-line banner and a config comment stay.
  */
-export const noBlockComment: CreateRule = {
+export const noBlockComment: RepoRule = {
   create(context) {
     return {
       Program() {

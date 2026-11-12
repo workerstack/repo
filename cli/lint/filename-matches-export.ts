@@ -1,9 +1,10 @@
 import path from "node:path";
 
-import type { ESTree, CreateRule } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { ENTRY_EXPORT } from "./entry-export.constants.ts";
 import { declaredNames } from "./names.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** Index files collect, declaration files describe, and test files test: none is named after one export. */
 const SKIPPED = /^index\.|\.d\.[cm]?ts$|\.(?:test|spec|e2e)\./;
@@ -54,7 +55,7 @@ function soleExport(program: ESTree.Program): string | null {
  * Fails a file with exactly one exported name that is not named after it, compared on letters and digits so
  * `read-workspace.ts`, `readWorkspace.ts` and `read_workspace.ts` all match `readWorkspace`.
  */
-export const filenameMatchesExport: CreateRule = {
+export const filenameMatchesExport: RepoRule = {
   create(context) {
     const base = path.basename(context.filename);
     if (SKIPPED.test(base)) return {};

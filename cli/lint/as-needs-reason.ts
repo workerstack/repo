@@ -1,7 +1,8 @@
-import type { Comment, ESTree, CreateRule } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { CONST_TYPE } from "./const-type.constants.ts";
 import { isReason } from "./is-reason.ts";
+import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 const AS_KEYWORD = /\bas\b/;
 const LINE_BEFORE_AS = /^[\s)]*as\b/;
@@ -16,12 +17,12 @@ function claimsNothing(type: ESTree.TSType): boolean {
  * A block reason may sit anywhere before the `as`; a line reason must end the line, or the parenthesis, right before
  * it.
  */
-function endsReason(text: string, comment: Comment): boolean {
+function endsReason(text: string, comment: RuleComment): boolean {
   return comment.type === "Block" || LINE_BEFORE_AS.test(text.slice(comment.end));
 }
 
 /** Whether a comment of a reason lies after the expression and before the `as` keyword. */
-function hasReason(text: string, comments: readonly Comment[], node: ESTree.TSAsExpression): boolean {
+function hasReason(text: string, comments: readonly RuleComment[], node: ESTree.TSAsExpression): boolean {
   let edge = node.expression.end;
   for (const comment of comments) {
     if (comment.start < edge || comment.end > node.typeAnnotation.start) continue;
@@ -36,7 +37,7 @@ function hasReason(text: string, comments: readonly Comment[], node: ESTree.TSAs
  * Fails an `as` cast with no reason right before its keyword: `x as Foo` tells the checker to trust it, so the reader
  * is told why. `as const` and `as unknown` pass; `<Foo>x` is native `typescript/consistent-type-assertions`'.
  */
-export const asNeedsReason: CreateRule = {
+export const asNeedsReason: RepoRule = {
   create(context) {
     return {
       TSAsExpression(node) {

@@ -1,4 +1,3 @@
-import type { CreateRule } from "@oxlint/plugins";
 import { eastAsianWidth } from "get-east-asian-width";
 
 import {
@@ -16,6 +15,7 @@ import {
   URL_TEXT,
   ZERO_WIDTH,
 } from "./max-line-width.constants.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 type Range = { start: number; end: number; hint: string };
 type Ranged = { start: number; end: number };
@@ -83,7 +83,7 @@ function overflowAt(line: string): number | undefined {
 }
 
 /** Fails each line wider than `PRINT_WIDTH` columns as oxfmt counts them, reported at column 121. */
-export const maxLineWidth: CreateRule = {
+export const maxLineWidth: RepoRule = {
   create(context) {
     return {
       Program(program: Ranged) {

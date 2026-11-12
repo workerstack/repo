@@ -1,5 +1,6 @@
-import type { Comment, CreateRule } from "@oxlint/plugins";
 import { parseSync } from "oxc-parser";
+
+import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 const MESSAGE = "this comment is code; delete it, git keeps the old version";
 /** Comments a tool reads: type and lint directives, pure marks, and coverage hints. */
@@ -35,22 +36,22 @@ const CODE = [
 ];
 
 /** JSDoc documents, a triple-slash comment directs the compiler, and a tool comment is read by its tool. */
-function skipped(comment: Comment): boolean {
+function skipped(comment: RuleComment): boolean {
   if (comment.type === "Block" && comment.value.startsWith("*")) return true;
   if (comment.type === "Line" && comment.value.startsWith("/")) return true;
   return TOOL.test(comment.value);
 }
 
-function joins(text: string, previous: Comment, comment: Comment): boolean {
+function joins(text: string, previous: RuleComment, comment: RuleComment): boolean {
   return previous.type === "Line" && comment.type === "Line" && ADJACENT.test(text.slice(previous.end, comment.start));
 }
 
-type Group = [Comment, ...Comment[]];
+type Group = [RuleComment, ...RuleComment[]];
 
 /** The comments to read as one text each: a run of line comments on adjacent lines, or one block comment. */
-function groupsOf(text: string, comments: readonly Comment[]): Group[] {
+function groupsOf(text: string, comments: readonly RuleComment[]): Group[] {
   const groups: Group[] = [];
-  let open: { group: Group; last: Comment } | null = null;
+  let open: { group: Group; last: RuleComment } | null = null;
   for (const comment of comments) {
     if (skipped(comment)) {
       open = null;
@@ -81,7 +82,7 @@ function isCode(source: string): boolean {
   return false;
 }
 
-function textOf(group: readonly Comment[]): string {
+function textOf(group: readonly RuleComment[]): string {
   return group
     .map((comment) => (comment.type === "Block" ? comment.value.replaceAll(BLOCK_STAR, "") : comment.value))
     .join("\n");
@@ -96,7 +97,7 @@ function isCodeGroup(text: string): boolean {
  * Fails a comment that parses as code: git keeps the old version, so code left in a comment only rots. Consecutive
  * line comments are read as one; JSDoc, triple-slash and tool comments are skipped.
  */
-export const noCommentedOutCode: CreateRule = {
+export const noCommentedOutCode: RepoRule = {
   create(context) {
     return {
       Program() {

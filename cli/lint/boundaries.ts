@@ -1,11 +1,12 @@
 import { builtinModules } from "node:module";
 import path from "node:path";
 
-import type { ESTree, CreateRule } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { type Tags, TAGS_SCHEMA, tagProblem, tagsOf } from "./boundaries-tags.ts";
 import { BUN_MODULE, SCOPED_PARTS } from "./boundaries.constants.ts";
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** The file being linted, its package's manifest, the dir paths in messages are relative to, and the package tags. */
 type Where = { cwd: string; filename: string; own: Manifest; tags: Tags };
@@ -75,7 +76,7 @@ function problemOf(where: Where, specifier: string): string | null {
  * `devDependencies` is not installed by a consumer. With `lint.boundaries`, which sync writes as its options, a
  * package import also needs the importer's tag to allow the target's.
  */
-export const boundaries: CreateRule = {
+export const boundaries: RepoRule = {
   create(context) {
     const ownFile = nearestManifest(path.dirname(context.filename));
     const own = ownFile === null ? null : readManifest(ownFile);

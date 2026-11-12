@@ -1,10 +1,11 @@
 import path from "node:path";
 
-import type { ESTree, CreateRule } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { ENTRY_EXPORT } from "./entry-export.constants.ts";
 import { nearestManifest, readManifest } from "./manifest.ts";
 import type { Statement } from "./names.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 const SHAPE = "a bin file holds only imports and one main() call";
 const MESSAGE = `${SHAPE}; move this into the module main comes from`;
@@ -39,7 +40,7 @@ function callsMain(statement: Statement): boolean {
  * Fails a file its nearest package.json lists as a `bin` unless it holds only imports and one call of an imported
  * `main`, so what the program does lives in a module a test can import. A file whose manifest is unreadable is skipped.
  */
-export const entryFile: CreateRule = {
+export const entryFile: RepoRule = {
   create(context) {
     if (!isBin(context.filename)) return {};
     return {

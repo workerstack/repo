@@ -1,6 +1,7 @@
-import type { Context, ESTree, CreateRule } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { PARENT_KEY } from "./max-line-width.constants.ts";
+import type { RepoRule, RuleContext } from "./rule.types.ts";
 
 // `"sideEffects": false` is only true when importing a module runs nothing. A bundler keeps any top-level code it
 // cannot prove pure, so module scope only declares; a call it needs is marked pure or moved into a function.
@@ -55,12 +56,12 @@ function firstOf<T>(items: readonly T[], find: (item: T) => Node | null): Node |
   return null;
 }
 
-function pure(context: Context, node: Node): boolean {
+function pure(context: RuleContext, node: Node): boolean {
   return context.sourceCode.getCommentsBefore(node).some((comment) => PURE.test(comment.value));
 }
 
 /** The first node under `node` that runs at import: a non-pure effect, a decorator, or a static part's code. */
-function firstEffect(context: Context, node: Node | null): Node | null {
+function firstEffect(context: RuleContext, node: Node | null): Node | null {
   if (node === null || FUNCTIONS.includes(node.type)) return null;
   if (node.type === "Decorator") return node;
   if (node.type === "StaticBlock") return firstOf(node.body, (statement) => statementEffect(context, statement));
@@ -71,7 +72,7 @@ function firstEffect(context: Context, node: Node | null): Node | null {
 }
 
 /** What a module-scope statement runs at import, or null when it only declares. */
-function statementEffect(context: Context, statement: Node): Node | null {
+function statementEffect(context: RuleContext, statement: Node): Node | null {
   const inner = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
   if (inner === null || DECLARATIONS.includes(inner.type)) return null;
   if (inner.type === "ExpressionStatement" && typeof inner.directive === "string") return null;
@@ -83,7 +84,7 @@ function statementEffect(context: Context, statement: Node): Node | null {
 }
 
 /** Fails module-scope code that runs at import, reported on the first such node of each statement. */
-export const noModuleSideEffects: CreateRule = {
+export const noModuleSideEffects: RepoRule = {
   create(context) {
     return {
       Program(program) {

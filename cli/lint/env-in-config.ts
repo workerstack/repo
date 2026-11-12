@@ -1,8 +1,9 @@
 import path from "node:path";
 
-import type { CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
+import type { RepoRule } from "./rule.types.ts";
 
 /** Modules whose `env` export is the process environment. */
 const ENV_MODULES = ["process", "node:process", "cloudflare:workers"];
@@ -48,7 +49,7 @@ function importedName(imported: ESTree.ModuleExportName): string {
 }
 
 /** Fails a read of the process environment in any file not named `env.ts`; tests are not exempt. */
-export const envInConfig: CreateRule = {
+export const envInConfig: RepoRule = {
   create(context) {
     if (path.basename(context.filename) === ENV_FILE) return {};
     return {

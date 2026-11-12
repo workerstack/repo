@@ -1,4 +1,4 @@
-import type { Context, CreateRule, ESTree } from "@oxlint/plugins";
+import type { ESTree } from "@oxlint/plugins";
 
 import { isRecord } from "./manifest.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
@@ -6,6 +6,7 @@ import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import { packageRoot, publicSurface, type Surface } from "./public-surface.ts";
 import type { Node } from "./public-surface.types.ts";
+import type { RepoRule, RuleContext } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
 /** A node the walk read, as the ESTree node oxlint gave it. */
@@ -67,7 +68,7 @@ function unknownMessage(form: string): string {
 }
 
 /** Reports what is wrong in the file `context` lints, given the surface of its package. */
-function checkProgram(context: Context, surface: Surface, program: ESTree.Program): void {
+function checkProgram(context: RuleContext, surface: Surface, program: ESTree.Program): void {
   const { sourceCode } = context;
   const source: Source = { before: (node) => sourceCode.getCommentsBefore(estree(node)), text: sourceCode.text };
   function report(node: Node, message: string): void {
@@ -84,7 +85,7 @@ function checkProgram(context: Context, surface: Surface, program: ESTree.Progra
 }
 
 /** The rule, with the surfaces it has read held in a closure: one read per package per lint run, no module state. */
-function makeRule(): CreateRule {
+function makeRule(): RepoRule {
   const surfaces = new Map<string, Surface>();
   function surfaceOf(root: string): Surface {
     const known = surfaces.get(root);
@@ -108,4 +109,4 @@ function makeRule(): CreateRule {
  * can see, with its type written out, no restated name, no internal reference, and the doc on its own line. A form
  * the walk cannot follow is reported, since what it exposes goes unchecked.
  */
-export const publicJsdoc: CreateRule = /* @__PURE__ */ makeRule();
+export const publicJsdoc: RepoRule = /* @__PURE__ */ makeRule();

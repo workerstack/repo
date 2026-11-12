@@ -1,4 +1,4 @@
-import type { CreateRule } from "@oxlint/plugins";
+import type { RepoRule } from "./rule.types.ts";
 
 const ADVICE = "import a function from it and call that";
 
@@ -6,7 +6,7 @@ const ADVICE = "import a function from it and call that";
  * Fails an import that binds nothing: it is there only to run the module, so importing it has an effect no caller
  * chose. `import type` is erased and passes.
  */
-export const noSideEffectImport: CreateRule = {
+export const noSideEffectImport: RepoRule = {
   create(context) {
     return {
       ImportDeclaration(node) {

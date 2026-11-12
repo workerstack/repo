@@ -3,11 +3,11 @@ import { isRecord } from "./manifest.ts";
 import { COMPUTED, FAULTS, KIND, MEMBERS, NODE_TYPES, SIGNATURES } from "./public-jsdoc.constants.ts";
 import { get, isHiddenMember, nodesOf, walkPublic } from "./public-surface.syntax.ts";
 import type { Node } from "./public-surface.types.ts";
+import type { RuleComment } from "./rule.types.ts";
 import { statesItsType } from "./states-its-type.ts";
 
-type Comment = { type: string; value: string; start: number };
 /** The file's text and the comments before a node, as oxlint's `SourceCode` gives them. */
-export type Source = { text: string; before: (node: Node) => Comment[] };
+export type Source = { text: string; before: (node: Node) => readonly RuleComment[] };
 /** One public declaration being checked: `owner` is its name, and `fail` reports a fault finishing "… and ". */
 export type Walk = { source: Source; owner: string; fail: (node: Node, label: string, text: string) => void };
 
@@ -21,7 +21,7 @@ function isUnnameable(node: Node): boolean {
   return node["computed"] === true && get(node["key"], "type") === NODE_TYPES.identifier;
 }
 
-function jsdocOf(source: Source, node: Node): Comment | undefined {
+function jsdocOf(source: Source, node: Node): RuleComment | undefined {
   return source
     .before(node)
     .filter((comment) => comment.type === NODE_TYPES.block && comment.value.startsWith("*"))
@@ -29,7 +29,7 @@ function jsdocOf(source: Source, node: Node): Comment | undefined {
 }
 
 /** TypeScript attaches a member's doc only from comments after a line break, so `{ /** x *\/ a: string }` is no doc. */
-function sharesLine(source: Source, comment: Comment): boolean {
+function sharesLine(source: Source, comment: RuleComment): boolean {
   return source.text.slice(source.text.lastIndexOf("\n", comment.start) + 1, comment.start).trim() !== "";
 }
 
