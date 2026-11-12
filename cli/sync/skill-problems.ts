@@ -1,17 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { SKILL_PACKS, type SkillPack } from "../config.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
 import { parseDoc } from "./agents/frontmatter.ts";
 import { entriesOf } from "./entries-of.ts";
 import { linkProblems } from "./link-problems.ts";
 import { MAX_DESCRIPTION_CHARS, SKILLS_DIR } from "./repo-dir.constants.ts";
 
-/** One skills dir to check: the repo root, the stock package root, the enabled packs, and the package dir or "". */
-export type SkillCheck = { root: string; stock: string; enabled: readonly SkillPack[]; scope: string };
+/** One skills dir to check: the repo root, the stock root, the stock skills turned off, and the package dir or "". */
+export type SkillCheck = { root: string; stock: string; off: readonly string[]; scope: string };
 
-/** What every skill of one check is held to: the stock names, the names of packs that are off, and the dir. */
+/** What every skill of one check is held to: the stock names, the names of skills that are off, and the dir. */
 type SkillContext = SkillCheck & {
   stockNames: ReadonlySet<string>;
   optional: ReadonlySet<string>;
@@ -23,13 +22,13 @@ type SkillContext = SkillCheck & {
 type Skill = { name: string; folder: string; file: string };
 
 function contextOf(check: SkillCheck): SkillContext {
-  const { enabled, root, scope, stock } = check;
+  const { off, root, scope, stock } = check;
   const stockNames = new Set(
     entriesOf(path.join(stock, STOCK_SKILLS_REL))
       .filter((e) => e.isDirectory())
       .map((e) => e.name),
   );
-  const optional = new Set<string>(SKILL_PACKS.filter((pack) => !enabled.includes(pack)));
+  const optional = new Set<string>(off);
   // The stock package is this repo's own root, whose skills are not overrides of anything.
   const checkOverrides = scope === "" && path.resolve(stock) !== path.resolve(root);
   const skillsDir = scope === "" ? SKILLS_DIR : `${scope}/${SKILLS_DIR}`;

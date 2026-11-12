@@ -43,6 +43,17 @@ export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as c
 /** One of `SKILL_PACKS`: a name `agents.skills` takes. */
 export type SkillPack = (typeof SKILL_PACKS)[number];
 
+/** Stock skills gated by a config pack: on only while the pack is in `packs`. */
+export const PACK_SKILLS: Readonly<Partial<Record<Pack, readonly string[]>>> = { benchmark: ["benchmark"] };
+
+/** The stock skill names a config turns off: skill packs not in `agents.skills`, and skills of a pack that is off. */
+export function offSkills(config: Pick<ResolvedConfig, "agents" | "packs">): string[] {
+  const packSkills = Object.entries(PACK_SKILLS)
+    .filter(([pack]) => !config.packs.some((on) => on === pack))
+    .flatMap(([, names]) => names);
+  return [...SKILL_PACKS.filter((pack) => !config.agents.skills.includes(pack)), ...packSkills];
+}
+
 function listOf(names: readonly string[]) {
   return `${names.slice(0, LAST).join(", ")} or ${names.at(LAST)}`;
 }

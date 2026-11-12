@@ -26,6 +26,15 @@ it("leaves out an optional pack unless agents.skills lists it", () => {
   expect(linkTarget(on, ".claude/skills/listen")).toBe("../../.agents/skills/listen");
 });
 
+it("leaves out a pack skill unless its config pack is on", () => {
+  const off = render(consumer(), ["claude", "codex"]);
+  expect(find(off, ".agents/skills/benchmark")).toBeUndefined();
+  expect(find(off, ".claude/skills/benchmark")).toBeUndefined();
+  const on = render(consumer(), ["claude", "codex"], { packs: ["agents", "benchmark"] });
+  expect(linkTarget(on, ".agents/skills/benchmark")).toBe(`${STOCK_SKILL}/benchmark`);
+  expect(linkTarget(on, ".claude/skills/benchmark")).toBe("../../.agents/skills/benchmark");
+});
+
 it("lets a .repo/skills skill win over the stock one and add its own", () => {
   const root = consumer({
     ".repo/skills/ask/SKILL.md": "---\nname: ask\ndescription: mine\noverrides: ask\n---\n",

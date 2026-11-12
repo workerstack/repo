@@ -2,7 +2,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { SkillPack } from "../../config.ts";
+import { offSkills, type Pack, type SkillPack } from "../../config.ts";
 import type { Doc, Sources } from "../agents/sources.types.ts";
 import { repoDirProblems } from "../repo-dir.ts";
 import { put, tempDir } from "./temp-dirs.ts";
@@ -50,12 +50,13 @@ export function sourcesOf(rules: Doc[] = []): Sources {
 }
 
 /** What git lists, the enabled skill packs and the workspace packages of one check; none of each by default. */
-export type CheckOptions = { listed?: string[] | null; skills?: readonly SkillPack[]; packages?: string[] };
+export type CheckOptions = { listed?: string[] | null; skills?: readonly SkillPack[]; packs?: readonly Pack[]; packages?: string[] };
 
 /** The `.repo/` problems of `root` with `rules` loaded, against this repo's stock. */
 export function check(root: string, rules: Doc[] = [], options: CheckOptions = {}): string[] {
-  const { listed = null, packages = [], skills = [] } = options;
-  return repoDirProblems(root, { listed, packages, skills, sources: sourcesOf(rules), stock: SELF_ROOT });
+  const { listed = null, packages = [], packs = ["agents"], skills = [] } = options;
+  const off = offSkills({ agents: { hosts: [], skills }, packs });
+  return repoDirProblems(root, { listed, off, packages, sources: sourcesOf(rules), stock: SELF_ROOT });
 }
 
 /** A SKILL.md named `name`. */

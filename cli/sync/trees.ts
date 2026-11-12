@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { offSkills } from "../config.ts";
 import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { agentsFile, isAgentsFile } from "./agents-file.ts";
 import { loadSources } from "./agents/load-sources.ts";
@@ -56,9 +57,9 @@ function checkedSources(ctx: SyncContext, render: Render): { sources: Sources; r
   // The checks run on the docs that loaded, so one bad file does not hide the problems of the others.
   const rules = renderScopes(ctx, sources);
   const listed = listedFiles(ctx.root, []);
-  const { skills } = ctx.config.agents;
+  const off = offSkills(ctx.config);
   const problems = [
-    ...repoDirProblems(ctx.root, { listed, packages, skills, sources, stock: render.stock }),
+    ...repoDirProblems(ctx.root, { listed, off, packages, sources, stock: render.stock }),
     ...loadProblems,
     ...rules.clashes,
   ];

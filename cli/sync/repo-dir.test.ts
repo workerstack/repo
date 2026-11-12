@@ -105,8 +105,8 @@ function fixtureProblems({ withSrc }: { withSrc: boolean }): string[] {
   expect(fs.existsSync(path.join(root, "src"))).toBe(true);
   return repoDirProblems(root, {
     listed: withSrc ? listed : listed.filter((rel) => !rel.startsWith("src/")),
+    off: [],
     packages: [],
-    skills: [],
     sources: loaded.sources,
     stock: fixtureDirs().stock,
   });

@@ -12,12 +12,13 @@ Upgrading is running `bun repo update '@workerstack/*'`: it bumps every `@worker
 
 Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.
 
-<!-- repo:skills 443fcee7 -->
+<!-- repo:skills 2a595c29 -->
 | name | origin | description | task | commandPath | refs |
 | --- | --- | --- | --- | --- | --- |
 | ask | repo | Session flag. Finish one step, recap, then ask before the next. |  |  |  |
 | auto | repo | >- |  |  |  |
 | away | repo | Session flag. Nobody is watching: decide instead of asking, log each choice, keep going. |  |  |  |
+| benchmark | repo | Benchmark anything: pick the dimensions that serve a decision, weight them, run bun repo bench and report each number w… |  |  |  |
 | blast-radius | repo | >- |  |  |  |
 | bro | repo | Restate the last message in plain human language, with no jargon. |  |  |  |
 | browser | repo | >- |  |  |  |

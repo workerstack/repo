@@ -7,7 +7,6 @@
  */
 import path from "node:path";
 
-import type { SkillPack } from "../config.ts";
 import { scopeOf } from "./agents/rules.ts";
 import type { Doc, Sources } from "./agents/sources.types.ts";
 import { entriesOf } from "./entries-of.ts";
@@ -50,19 +49,18 @@ export type RepoDirInput = {
   /** Every file git sees, root-relative; null outside git, which skips the `paths` check. */
   listed: readonly string[] | null;
   /**
-   * The enabled skill packs; a `.repo/skills` skill named like a stock skill of a pack that is off needs no
-   * `overrides`.
+   * The stock skills the config turns off; a `.repo/skills` skill named like one needs no `overrides`.
    */
-  skills: readonly SkillPack[];
+  off: readonly string[];
   /** Root-relative dirs of the workspace packages, whose `.repo/` holds only `rules/` and `skills/`. */
   packages: readonly string[];
 };
 
 /** One `path: problem; fix` line per fault in `<root>/.repo`, in a stable order. */
-export function repoDirProblems(root: string, { sources, stock, listed, skills, packages }: RepoDirInput): string[] {
+export function repoDirProblems(root: string, { sources, stock, listed, off, packages }: RepoDirInput): string[] {
   const own = sources.rules.filter((doc) => doc.origin === "repo");
   function skillsIn(scope: string): string[] {
-    return skillProblems({ enabled: skills, root, scope, stock });
+    return skillProblems({ off, root, scope, stock });
   }
   return [
     ...layoutProblems(root),
