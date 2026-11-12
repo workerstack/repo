@@ -87,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `repo/max-line-width` no longer fails the cipher a `sealed("…")` call takes, beside the call or alone on the line oxfmt moves it to; before, every value `bun repo env set` or `bun repo env migrate` sealed made a line of about 350 columns (`this line is 353 columns, over 120; split the string with + or a join`) that refused the commit, and a cipher cannot be split because `sealed()` and the env file reader take one literal. Other code on that line still counts.
 - `bun repo github` keeps the package.json `description` and `homepage` of a package with no `keywords`; before a missing `keywords` dropped both so the repo settings it wanted had no description or homepage.
 - `repo sync` finds the Tailwind entry sheet and Stylelint lists only the checkout's own sheets even before `.gitignore` ignores the dependency dir; before, a large untracked dependency tree overflowed git's listing and sync left the tailwindcss class rules out with no error (seen on Windows).
 - `@workerstack/repo/lint` type-checks again in a consumer on target ES2022 with no lib: `repo/boundaries` no longer calls `toReversed` to list the tags an import may use, and its message reads the same (`app, ui or lib`).

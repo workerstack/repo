@@ -3,6 +3,11 @@ export const PRINT_WIDTH = 120;
 
 /** A URL cannot wrap, so a line that is long only by one is left alone. */
 export const URL_TEXT: RegExp = /https?:\/\/\S+/g;
+
+/** The call whose one string argument is an age cipher: base64 that cannot wrap, so its columns are not counted. */
+export const SEALED_CALLEE = "sealed";
+export const CALL_EXPRESSION = "CallExpression";
+export const IDENTIFIER = "Identifier";
 export const TRAILING_CR: RegExp = /\r$/;
 
 /** The key every node holds its parent under; a walk of the children skips it. */
