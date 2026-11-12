@@ -61,8 +61,11 @@ function gated(rel: string): boolean {
 }
 const BIN = /* @__PURE__ */ path.join(import.meta.dirname, "../../bin/repo.ts");
 
+/** The changed files to read as text: not deleted, and not a symlink, whose target may be a directory. */
 function present(turn: Turn) {
-  return turn.changes.filter((change) => !change.deleted).map((change) => change.rel);
+  return turn.changes
+    .filter((change) => !change.deleted && !fs.lstatSync(path.join(turn.root, change.rel)).isSymbolicLink())
+    .map((change) => change.rel);
 }
 function text(root: string, rel: string) {
   return fs.readFileSync(path.join(root, rel), { encoding: "utf8", flag: "r" });
@@ -205,6 +208,14 @@ function checkReads(turn: Turn, rel: string, outputs: ReadonlySet<string>): bool
   return named || isManifest(turn, rel) || outputs.has(rel);
 }
 
+/** What git stores for `rel` now: a symlink's target (never followed, it may be a directory), else its text. */
+function content(root: string, rel: string): string | null {
+  const full = path.join(root, rel);
+  const link = fs.lstatSync(full, { throwIfNoEntry: false })?.isSymbolicLink();
+  if (link === undefined) return null;
+  return link ? fs.readlinkSync(full) : text(root, rel);
+}
+
 /** What `git add -A` would stage now, each with its text (null when deleted). */
 function dirty(root: string): Map<string, string | null> {
   function git(args: string[]) {
@@ -213,7 +224,7 @@ function dirty(root: string): Map<string, string | null> {
       .filter(Boolean);
   }
   const rels = [...git(["diff", "--name-only"]), ...git(["ls-files", "--others", "--exclude-standard"])];
-  return new Map(rels.map((rel) => [rel, fs.existsSync(path.join(root, rel)) ? text(root, rel) : null]));
+  return new Map(rels.map((rel) => [rel, content(root, rel)]));
 }
 
 /** `repo sync` in the root, and the files it changed that git would stage. */
