@@ -2,7 +2,9 @@ import { execFileSync } from "node:child_process";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { COMMANDS, HOOKS, dispatch, isCommandName, runCommand, type Main, type Registry } from "./commands.ts";
+import { HOOKS } from "./commands-hooks.ts";
+import { COMMANDS, dispatch, isCommandName, runCommand } from "./commands.ts";
+import type { Main, Registry } from "./commands.types.ts";
 import { HOOK_NAMES } from "./scripts/hook-command.ts";
 
 describe("registry", () => {
@@ -76,16 +78,72 @@ describe("bun repo", () => {
   });
 });
 
-/** The registry with every command's and hook's `main` replaced by `main`. */
-function registry(main: Main): Registry {
+/** The registry with every command's and hook's `load` replaced by `load`. */
+function stubbed(load: () => Promise<{ main: Main }>): Registry {
   function stub<T extends Record<string, object>>(table: T) {
     return Object.fromEntries(
-      Object.entries(table).map(([k, v]) => [k, { ...v, load: () => Promise.resolve({ main }) }]),
+      Object.entries(table).map(([k, v]) => [k, { ...v, load }]),
     ) /* the same keys, each entry with only its load replaced */ as T;
   }
 
   return { commands: stub(COMMANDS), hooks: stub(HOOKS) };
 }
+
+/** The registry with every command's and hook's `main` replaced by `main`. */
+function registry(main: Main): Registry {
+  return stubbed(() => Promise.resolve({ main }));
+}
+
+/** The registry with every command's and hook's `load` throwing, so a test sees what loads nothing. */
+function unloadable(): Registry {
+  return stubbed(() => {
+    throw new Error("help loaded a command");
+  });
+}
+
+/** What `dispatch` returns for `argv`, and what it wrote to stdout. */
+async function dispatched(argv: string[], table: Registry): Promise<{ code: number | null; out: string }> {
+  const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+  try {
+    const code = await dispatch(argv, table);
+
+    return { code, out: out.mock.calls.map((c) => String(c[0])).join("") };
+  } finally {
+    out.mockRestore();
+  }
+}
+
+/** The usage line each command's help starts with; env keeps its `bun repo env` spelling. */
+function usagePrefix(name: string): string {
+  return name === "env" ? "usage: bun repo env" : `usage: repo ${name}`;
+}
+
+describe("dispatch help", () => {
+  /** Each command name with each help flag, and the summary its help shows. */
+  const asks = Object.entries(COMMANDS).flatMap(([name, { summary }]) =>
+    ["--help", "-h"].map((flag): [string, string, string] => [name, flag, summary]),
+  );
+
+  it.each(asks)("%s %s prints the usage line and summary, exits 0 and loads nothing", async (name, flag, summary) => {
+    const { code, out } = await dispatched([name, flag], unloadable());
+    const [usageLine = "", summaryLine, ...rest] = out.split("\n");
+
+    expect(code).toBe(0);
+    expect(usageLine).toMatch(new RegExp(`^${usagePrefix(name)}(?: |$)`));
+    expect(summaryLine).toBe(summary);
+    expect(rest).toStrictEqual([""]);
+  });
+
+  it.each([
+    ["lint", ["x", "--help"]],
+    ["job", ["--job", "search", "--pattern", "-h"]],
+  ])("%s with help past the first argument runs the command with it", async (cmd, args) => {
+    const main = vi.fn<Main>(() => 0);
+    expect(await dispatch([cmd, ...args], registry(main))).toBe(0);
+    expect(main).toHaveBeenCalledWith(args);
+  });
+});
 
 describe("dispatch", () => {
   it.each([

@@ -33,6 +33,8 @@ export const EXIT_USAGE = 2;
 export const SCOPE_PREFIX = "@";
 export const TIME_DIGITS = 2;
 
+/** How to call `repo unlink`. */
+export const UNLINK_USAGE = "usage: repo unlink <name> | --all";
 export const USAGE = "usage: repo link <name> | repo link status | repo link --pre-push; repo unlink <name> | --all";
 export const NO_LINKS = "No links; every package comes from npm.";
 export const NOT_INSTALLED = "(not installed)";

@@ -14,12 +14,13 @@ import {
   ONE_WHY,
   REVERT_LINE,
 } from "./commit-msg.constants.ts";
-import { NAME_A_SOURCE, RANGE_ARGS, RANGE_FLAG } from "./commit-range.constants.ts";
-import { commitRange } from "./commit-range.ts";
+import { NAME_A_SOURCE } from "./commit-range.constants.ts";
+import { commitPush, commitRange, sourceOf } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
 import { BREAKING_FOOTER, HEADER, isBreaking, TYPES } from "./conventional.ts";
 import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
 import { scopesOf } from "./scopes-of.ts";
+import { processHookIo, readAllText } from "./scripts/hook-io.ts";
 import { stagedChange } from "./staged-change.ts";
 import { runGit } from "./sync/standards.ts";
 import { readWorkspace } from "./sync/workspace.ts";
@@ -52,10 +53,14 @@ export type CommitRules = {
   owners: (file: string) => Owner;
 };
 
-/** Where `repo commit-msg` runs and prints; `redProof` is the red-proof runner, replaceable in tests. */
+/**
+ * Where `repo commit-msg` runs and prints; `stdin` reads git's pre-push ref lines and `redProof` is the red-proof
+ * runner, both replaceable in tests.
+ */
 export type CommitMsgIo = {
   cwd: string;
   stderr: (text: string) => void;
+  stdin?: () => string;
   redProof?: (root: string, change: NameStatus[]) => RedProofResult;
 };
 
@@ -252,18 +257,22 @@ export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: Co
 }
 
 /**
- * `repo commit-msg <file>`, the commit-msg git hook, or `--range <base>..<head>` for the commits of a range:
- * `runCommitMsgHook` with the config's size limit and the workspace's scopes, or exit 1 with the reason when the file
- * is not named or the config is broken.
+ * `repo commit-msg <file>`, the commit-msg git hook; `--range <base>..<head>` for the commits of a range; or
+ * `--pre-push <remote> [<url>]`, the pre-push git hook, for the commits a push sends, its ref lines on stdin:
+ * `runCommitMsgHook` or the range check with the config's size limit and the workspace's scopes, or exit 1 with the
+ * reason when no source is named or the config is broken.
  */
 export async function main(
   argv: string[],
-  io: CommitMsgIo = { cwd: process.cwd(), stderr: (text) => process.stderr.write(text) },
+  io: CommitMsgIo = {
+    cwd: process.cwd(),
+    stderr: (text) => process.stderr.write(text),
+    stdin: readAllText.bind(undefined, processHookIo()),
+  },
 ): Promise<number> {
-  const ranged = argv[0] === RANGE_FLAG && argv.length === RANGE_ARGS;
-  const [file] = argv;
+  const source = sourceOf(argv);
 
-  if (file === undefined || (file === RANGE_FLAG ? !ranged : argv.length > 1)) {
+  if (source === null) {
     io.stderr(NAME_A_SOURCE);
 
     return 1;
@@ -277,7 +286,11 @@ export async function main(
     return 1;
   }
 
-  return ranged
-    ? commitRange(argv[1] /* the range follows the flag */ as string, { check: checkCommitMessage, rules }, io)
-    : runCommitMsgHook(file, rules, io);
+  const how = { check: checkCommitMessage, rules };
+
+  if (source.kind === "range") return commitRange(source.range, how, io);
+
+  if (source.kind === "push") return commitPush({ input: io.stdin?.() ?? "", remote: source.remote }, how, io);
+
+  return runCommitMsgHook(source.file, rules, io);
 }

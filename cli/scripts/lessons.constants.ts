@@ -23,8 +23,9 @@ export const KEYS: readonly string[] = ["name", "paths", "hits", "last-hit", "ev
 /** The dirs a walk of a checkout without git skips. */
 export const SKIP_WALK: ReadonlySet<string> = /* @__PURE__ */ new Set([".git", "node_modules", ".tmp"]);
 
-export const USAGE =
-  "usage: bun repo lessons match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
+/** What `repo lessons` takes. */
+export const LESSONS_ARGS = "match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";
+export const USAGE: string = `usage: bun repo lessons ${LESSONS_ARGS}`;
 
 export const EVIDENCE_FLAG = "--evidence";
 

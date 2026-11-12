@@ -37,25 +37,34 @@ export const MENU_MESSAGE: string = "Command";
 /** The help text's head; the command list follows it. */
 export const USAGE_HEAD: string = "Usage: repo [command]\n\nDefault (no command): TTY menu; else init — full setup\n";
 
+/** The summaries of the commands `cli/main.ts` runs itself, for `repo --help` and `repo <cmd> --help`. */
+const INIT_SUMMARY = `Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs \
+repo sync), repo yolo`;
+
+const CHECK_SUMMARY = `Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, \
+lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline \
+against main`;
+
+const SYNC_SUMMARY =
+  "Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)";
+
+const MAP_SUMMARY = "Code-only folder map (git-tracked, no files); dir for depth";
+
 /** The help rows before the registry's commands, each a name and its summary. */
 export const USAGE_BUILTINS: readonly (readonly [string, string])[] = [
-  [
-    "init",
-    `Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs repo sync), \
-repo yolo`,
-  ],
-  [
-    "check",
-    `Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, \
-lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline \
-against main`,
-  ],
-  [
-    "sync",
-    "Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)",
-  ],
-  ["map [dir]", "Code-only folder map (git-tracked, no files); dir for depth"],
+  ["init", INIT_SUMMARY],
+  ["check", CHECK_SUMMARY],
+  ["sync", SYNC_SUMMARY],
+  ["map [dir]", MAP_SUMMARY],
 ];
+
+/** What `repo <cmd> --help` prints for each command `cli/main.ts` runs itself: its usage line, then its summary. */
+export const BUILTIN_HELP: ReadonlyMap<string, string> = /* @__PURE__ */ new Map([
+  ["init", `usage: repo init [--skip-globals] [--yes] [--packs <list>]\n${INIT_SUMMARY}\n`],
+  ["check", `usage: repo check\n${CHECK_SUMMARY}\n`],
+  ["sync", `usage: repo sync [--check | --postinstall]\n${SYNC_SUMMARY}\n`],
+  ["map", `usage: repo map [dir]\n${MAP_SUMMARY}\n`],
+]);
 
 /** The help rows after the hooks' row. */
 export const USAGE_TAIL_ROWS: readonly (readonly [string, string])[] = [

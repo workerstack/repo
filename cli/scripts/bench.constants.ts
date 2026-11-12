@@ -1,6 +1,9 @@
 /** What `repo bench` prints and exits with, and where it finds specs and writes raw results. */
 export const BENCH_SUMMARY = "Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)";
-export const USAGE = "usage: bun repo bench <name> [--remote]";
+
+/** What `repo bench` takes after its name. */
+export const BENCH_ARGS = "<name> [--remote]";
+export const USAGE: string = `usage: bun repo bench ${BENCH_ARGS}`;
 export const REMOTE_FLAG = "--remote";
 export const PREFIX = "repo bench: ";
 

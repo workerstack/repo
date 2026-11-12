@@ -8,7 +8,9 @@ export const TIMEOUT_MS = 10_000;
 export const MAX_RETRY_WAIT_MS = 2_000;
 export const LOCK_STALE_MS = 10_000;
 
-export const USAGE = "usage: bun repo jev --available | --state FILE --questions FILE\n";
+/** What `repo jev` takes. */
+export const JEV_ARGS = "--available | --state FILE --questions FILE";
+export const USAGE: string = `usage: bun repo jev ${JEV_ARGS}\n`;
 export const MISSING_KEY = "missing TYPESAFE_API_KEY or ~/.workerstack/jev.json. setup: bun repo setup jev\n";
 export const REQUEST_FAILED = "jev request failed\n";
 export const NOT_AN_OBJECT = "questions must be a JSON object\n";

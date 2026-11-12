@@ -7,8 +7,11 @@ export const BRANCH_PREFIX = "wt/";
 /** The ref prefix of a local branch. */
 export const HEADS_REF = "refs/heads/";
 
+/** What `repo worktree` takes. */
+export const WORKTREE_ARGS = "add <name> | finish [<name>] | list | prune | hook";
+
 /** What `repo worktree` prints for a command it does not know. */
-export const USAGE = "usage: bun repo worktree add <name> | finish [<name>] | list | prune | hook";
+export const USAGE: string = `usage: bun repo worktree ${WORKTREE_ARGS}`;
 
 /** How people and agents run this script, in every message that names a next step. */
 export const WORKTREE_CMD = "bun repo worktree";

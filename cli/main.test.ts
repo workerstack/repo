@@ -117,3 +117,32 @@ it("unknown --packs writes usage", async () => {
   expect(process.exitCode).toBe(1);
   expect(init).not.toHaveBeenCalled();
 });
+
+/** Where a help row's summary starts: two spaces of indent and the padded name. */
+const HELP_COLUMN = 20;
+
+/** The summary `repo --help` shows on `name`'s row. */
+function helpSummary(name: string): string | undefined {
+  const row = USAGE.split("\n").find((line) => line.startsWith(`  ${name} `));
+
+  return row?.slice(HELP_COLUMN);
+}
+
+it.each(
+  ["init", "sync", "check", "map"].flatMap((cmd) => [
+    [cmd, "--help"],
+    [cmd, "-h"],
+  ]),
+)("%s %s prints its usage line and summary and runs nothing", async (cmd, flag) => {
+  process.argv = ["node", "repo", cmd, flag];
+  await start(fakes);
+  const [usageLine = "", summaryLine, ...rest] = written.out.join("").split("\n");
+  expect(usageLine).toMatch(new RegExp(`^usage: repo ${cmd}(?: |$)`));
+  expect(summaryLine).toBe(helpSummary(cmd));
+  expect(rest).toStrictEqual([""]);
+  expect(written.err.join("")).toBe("");
+  expect(process.exitCode).toBe(0);
+  expect(init).not.toHaveBeenCalled();
+  expect(runSync).not.toHaveBeenCalled();
+  expect(mapCommand).not.toHaveBeenCalled();
+});

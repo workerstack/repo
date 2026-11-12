@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
 
 import { git, lines, put, removeTemps, tempDir } from "./__fixtures__/commit-repo.ts";
@@ -28,9 +31,14 @@ function plant() {
   return { base, commit, root };
 }
 
-async function range(root: string, ...args: string[]) {
+function range(root: string, ...args: string[]) {
+  return pushed(root, "", ...args);
+}
+
+/** `repo commit-msg` with `input` on stdin, as git's pre-push hook gives its ref lines. */
+async function pushed(root: string, input: string, ...args: string[]) {
   const err: string[] = [];
-  const code = await main(args, { cwd: root, stderr: (text) => err.push(text) });
+  const code = await main(args, { cwd: root, stderr: (text) => err.push(text), stdin: () => input });
 
   return { code, stderr: err.join("") };
 }
@@ -41,7 +49,8 @@ const OVER = "the commit changes 1100 lines, over the limit of 1000; add a body 
 const FORCE_PUSH = "is not an ancestor of HEAD (a force push?); checking HEAD alone";
 
 const USAGE =
-  "repo commit-msg: name the commit message file as git's commit-msg hook does or pass --range <base>..<head>\n";
+  "repo commit-msg: name the commit message file as git's commit-msg hook does, or pass --range <base>..<head> or " +
+  "--pre-push\n";
 
 /** Plants a side branch merged into main with a merge commit on top. */
 function merged(plantd: ReturnType<typeof plant>) {
@@ -122,4 +131,79 @@ it("refuses on a config it cannot read", async () => {
   commit({ [CONFIG_FILE]: "export default { commit: 5 }\n" }, "chore: x");
   const result = await range(root, "--range", `${base}..HEAD`);
   expect(result.code).toBe(1);
+});
+
+const ZERO = "0".repeat(40);
+
+it("--pre-push checks <remote sha>..<local sha> of each pushed ref, lines ending in CRLF too", async () => {
+  const { root, commit, base } = plant();
+  git(root, "update-ref", "refs/remotes/origin/main", base);
+  commit({ "a.ts": "a\n" }, "chore: a");
+  const big = commit({ "big.ts": lines(1100) }, "chore: big");
+  const problem = `commit-msg: ${big.slice(0, 7)} chore: big: ${OVER}\n`;
+  const line = `refs/heads/main ${big} refs/heads/main ${base}`;
+  expect(await pushed(root, `${line}\n`, "--pre-push", "origin")).toStrictEqual({ code: 1, stderr: problem });
+  expect(await pushed(root, `${line}\r\n`, "--pre-push", "origin", "git@example.com:a/b.git")).toStrictEqual({
+    code: 1,
+    stderr: problem,
+  });
+  expect(await pushed(root, `refs/heads/main ${big} refs/heads/main ${big}\n`, "--pre-push", "origin")).toStrictEqual({
+    code: 0,
+    stderr: "",
+  });
+});
+
+it("--pre-push checks every commit of a new ref that no origin ref holds", async () => {
+  const { root, commit, base } = plant();
+  git(root, "update-ref", "refs/remotes/origin/main", base);
+  git(root, "checkout", "-q", "-b", "feat");
+  const big = commit({ "big.ts": lines(1100) }, "chore: big");
+  const head = commit({ "b.ts": "b\n" }, "chore: b");
+  const input = `refs/heads/feat ${head} refs/heads/feat ${ZERO}\n`;
+  expect(await pushed(root, input, "--pre-push", "origin")).toStrictEqual({
+    code: 1,
+    stderr: `commit-msg: ${big.slice(0, 7)} chore: big: ${OVER}\n`,
+  });
+});
+
+it("--pre-push passes a delete, no ref lines, and refuses an unreadable line or no remote", async () => {
+  const { root, base } = plant();
+  const remove = `(delete) ${ZERO} refs/heads/gone ${base}\n`;
+  expect(await pushed(root, remove, "--pre-push", "origin")).toStrictEqual({ code: 0, stderr: "" });
+  expect(await pushed(root, "", "--pre-push", "origin")).toStrictEqual({ code: 0, stderr: "" });
+  expect(await main(["--pre-push", "origin"], { cwd: root, stderr: () => {} })).toBe(0);
+  expect(await pushed(root, "refs/heads/main\n", "--pre-push", "origin")).toStrictEqual({
+    code: 1,
+    stderr:
+      'repo commit-msg: unreadable pre-push line "refs/heads/main"; ' +
+      "want <local ref> <local sha> <remote ref> <remote sha>\n",
+  });
+  expect(await pushed(root, "", "--pre-push")).toStrictEqual({ code: 1, stderr: USAGE });
+  expect(await pushed(root, "", "--pre-push", "origin", "url", "extra")).toStrictEqual({ code: 1, stderr: USAGE });
+});
+
+it("--pre-push refuses a ref whose local sha names no commit", async () => {
+  const { root, base } = plant();
+  const unknown = "1".repeat(40);
+  expect(
+    await pushed(root, `refs/heads/main ${unknown} refs/heads/main ${base}\n`, "--pre-push", "origin"),
+  ).toStrictEqual({ code: 1, stderr: `repo commit-msg: no commit range "${base}..${unknown}"\n` });
+});
+
+it("the spawned bin reads the pre-push ref lines from its stdin", () => {
+  const { root, commit, base } = plant();
+  const big = commit({ "big.ts": lines(1100) }, "chore: big");
+  const bin = path.join(import.meta.dirname, "../bin/repo.ts");
+  const input = `refs/heads/main ${big} refs/heads/main ${base}\n`;
+
+  const r = spawnSync("bun", [bin, "commit-msg", "--pre-push", "origin", "url"], {
+    cwd: root,
+    encoding: "utf8",
+    input,
+  });
+
+  expect({ status: r.status, stderr: r.stderr }).toStrictEqual({
+    status: 1,
+    stderr: `commit-msg: ${big.slice(0, 7)} chore: big: ${OVER}\n`,
+  });
 });

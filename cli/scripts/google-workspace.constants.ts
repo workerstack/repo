@@ -97,10 +97,13 @@ export const STAMP_MS_RE: RegExp = /\.\d{3}Z$/;
 export const PAD_RE: RegExp = /=+$/;
 export const ATTENDEE_SPLIT_RE: RegExp = /[,;\s]+/;
 
-export const USAGE: string =
-  "usage: google-workspace [--account NAME] whoami | scopes | accounts | login | " +
+/** What `repo google-workspace` takes. */
+export const GOOGLE_WORKSPACE_ARGS: string =
+  "[--account NAME] whoami | scopes | accounts | login | " +
   "sheet create --title T [--csv csv] | sheet set --id ID --cell A1 --value V | " +
   "sheet get --id ID [--range A1:B2] | sheet append --id ID --csv csv | sheet clear --id ID [--range A1:Z] | " +
   "doc create --title T [--body text] | doc append --id ID --body text | drive list [--query Q] | " +
   "slide create --title T | meeting create --title T [--start ISO --end ISO] [--attendees a@b,c@d] | " +
   "mail send --to E --subject S --body T | mail list";
+
+export const USAGE: string = `usage: google-workspace ${GOOGLE_WORKSPACE_ARGS}`;

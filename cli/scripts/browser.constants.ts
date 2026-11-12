@@ -9,7 +9,10 @@ export const ENGINES: readonly Engine[] = ["lightpanda", "chromium"];
 
 /** The verbs `repo browser` takes. */
 export const USAGE = "nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure";
-export const HELP_VERBS: ReadonlySet<string> = /* @__PURE__ */ new Set(["", "help", "-h", "--help"]);
+export const HELP_VERBS: ReadonlySet<string> = /* @__PURE__ */ new Set(["", "help"]);
+
+/** How to call `repo browser`. */
+export const BROWSER_USAGE: string = `usage: repo browser ${USAGE} [<args>…]`;
 export const NAV = "nav";
 
 /** Verbs only Chromium can serve. */

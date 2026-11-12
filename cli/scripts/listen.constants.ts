@@ -39,9 +39,12 @@ export const STT_OPENAI: string = "openai";
 export const STT_AUTO: string = "auto";
 export const FLAG_TRUE: string = "true";
 
-export const USAGE: string =
-  "usage: listen whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] " +
+/** What `repo listen` takes. */
+export const LISTEN_ARGS: string =
+  "whoami | devices | rec [--seconds N] [--device D] [--clip] | start [--device D] | stop [--clip] " +
   "| toggle [--clip] | status | file --path P [--clip] | latest";
+
+export const USAGE: string = `usage: listen ${LISTEN_ARGS}`;
 
 export const SETUP: string = "bun repo setup listen";
 export const LISTEN_DIR: string = ".tmp/repo/listen";

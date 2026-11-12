@@ -13,6 +13,3 @@ export const HUGE_BYTES: number = 512 * 1024;
 
 /** Reference files the refs table leaves out. */
 export const SKIP_REF_NAMES: ReadonlySet<string> = /* @__PURE__ */ new Set(["INDEX.md"]);
-
-/** A quoted scalar has at least its two quotes. */
-export const QUOTED_MIN: number = 2;

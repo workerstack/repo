@@ -31,6 +31,9 @@ export const FIXTURES_SUMMARY: string =
 /** The flag that applies the rename; without it `repo fixtures` only lists. */
 export const FIX_FLAG: string = "--fix";
 
+/** How to call `repo fixtures`. */
+export const FIXTURES_USAGE: string = `usage: repo fixtures [${FIX_FLAG}]`;
+
 /** The exit code of a command line `repo fixtures` does not take. */
 export const USAGE_EXIT: number = 2;
 

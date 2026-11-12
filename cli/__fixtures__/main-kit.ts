@@ -143,8 +143,8 @@ dir])
   worktree          Managed worktrees: add, list, finish, remove
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run \
 for HEAD
-  commit-msg        Check a commit message file against the staged change (the commit-msg git hook), or each commit \
-of --range <base>..<head>
+  commit-msg        Check a commit message file against the staged change (the commit-msg git hook), each commit of \
+--range <base>..<head>, or the commits a push sends (--pre-push)
   coverage          run the suite with coverage and raise coverage-floors.json; a drop fails
   docs              Check references: index, links, exports, examples, tarball (--check: only check; else sync first)
   fixtures          Rename fixture folders to __fixtures__ and rewrite their path references (--fix: apply; else \

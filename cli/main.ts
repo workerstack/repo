@@ -1,8 +1,9 @@
 import { cliDeps, type CliDeps } from "./cli-deps.ts";
+import { HELP_FLAGS } from "./commands.constants.ts";
 import { dispatch, usage } from "./dispatch.ts";
 import type { InitOptions } from "./init.ts";
-import { ARGV_START, INIT_COMMAND } from "./main.constants.ts";
-import { parseArgv } from "./parse-argv.ts";
+import { ARGV_START, BUILTIN_HELP, INIT_COMMAND } from "./main.constants.ts";
+import { parseArgv, type Flags } from "./parse-argv.ts";
 import { selectCommand } from "./select-command.ts";
 
 export const APPLY_GLOBALS_CONFIRM: string = "Apply global prompt optimizations? (recommended)";
@@ -40,6 +41,11 @@ function isNone(cmd: string | undefined): cmd is undefined | "" {
   return cmd === undefined || cmd === "";
 }
 
+/** What `repo <cmd> --help` prints for a command this file runs, or undefined when argv asks for no such help. */
+function builtinHelp({ cmd, args: [first] }: Flags): string | undefined {
+  return cmd !== undefined && first !== undefined && HELP_FLAGS.has(first) ? BUILTIN_HELP.get(cmd) : undefined;
+}
+
 /** Every command but `hook <name>` and the registry commands, which the bin runs through `dispatch` first. */
 export async function start(deps: CliDeps = cliDeps()): Promise<void> {
   const flags = parseArgv(process.argv.slice(ARGV_START));
@@ -47,6 +53,14 @@ export async function start(deps: CliDeps = cliDeps()): Promise<void> {
   if (flags.packsError) {
     process.stdout.write(usage());
     process.exitCode = 1;
+
+    return;
+  }
+
+  const help = builtinHelp(flags);
+
+  if (help !== undefined) {
+    process.stdout.write(help);
 
     return;
   }

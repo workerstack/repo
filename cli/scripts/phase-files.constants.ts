@@ -1,4 +1,6 @@
-export const USAGE = "usage: repo phase-files <plan serial|path> <phases, e.g. 2,3>\n";
+/** How to call `repo phase-files`. */
+export const PHASE_FILES_USAGE = "usage: repo phase-files <plan serial|path> <phases, e.g. 2,3>";
+export const USAGE: string = `${PHASE_FILES_USAGE}\n`;
 
 /** The exit code of a refused call: a bad argument, a missing plan or phase, or a failed git. */
 export const REFUSED_EXIT: number = 2;

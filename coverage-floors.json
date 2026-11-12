@@ -1943,12 +1943,6 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/sync/maps-yaml.ts": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100
-  },
   "cli/sync/maps.constants.ts": {
     "branches": 100,
     "functions": 100,
