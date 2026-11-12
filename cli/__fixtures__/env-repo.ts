@@ -53,6 +53,9 @@ export const IMPORT_SEALED = 'import { defineEnv, sealed } from "@workerstack/re
 /** Room for the age work and the git runs a case does. */
 export const SPAWN = { timeout: 30_000 };
 
+/** The mode a key file reads back with: 0600, or 0666 on win32, which has no POSIX mode bits. */
+export const KEY_FILE_MODE: number = process.platform === "win32" ? 0o666 : 0o600;
+
 const roots: string[] = [];
 
 /**

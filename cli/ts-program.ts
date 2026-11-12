@@ -58,9 +58,9 @@ export function isTest(rel: string): boolean {
   return isScripted(rel) && TEST.test(path.posix.basename(rel));
 }
 
-/** `file` with forward slashes, the spelling typescript keys its source files by. */
+/** `file` with forward slashes on every platform, the spelling typescript keys its source files by. */
 export function posix(file: string): string {
-  return file.split(path.sep).join("/");
+  return file.replaceAll("\\", "/");
 }
 
 /** The root-relative dir of the tsconfig.json nearest above `rel`, up to the root; null when there is none. */

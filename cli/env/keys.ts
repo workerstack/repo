@@ -22,7 +22,8 @@ const RECIPIENT_PREFIX = "age1";
 const COMMENT = "#";
 
 /** A stack frame's file: `at f (file:line:col)` or `at file:line:col`, a `file://` URL or a path. */
-const FRAME = /^\s*at (?:.*\()?(?:file:\/\/)?(.+?):\d+:\d+\)?$/mu;
+const FRAME = /^\s*at (?:.*\()?(.+?):\d+:\d+\)?$/mu;
+const FILE_URL = "file:";
 
 /** The home folder `source` names, HOME then USERPROFILE, else `fallback`. */
 export function homeDir(source: Source, fallback: string): string {
@@ -106,9 +107,11 @@ export function bunRuntime(versions: Source, execPath: string): string {
 
 /** The file of a stack's first frame, relative to `cwd`; undefined when no frame names one. */
 export function stackFile(stack: string, cwd: string): string | undefined {
-  const file = FRAME.exec(stack)?.[1];
+  const location = FRAME.exec(stack)?.[1];
 
-  return file === undefined ? undefined : path.relative(cwd, file);
+  if (location === undefined) return undefined;
+
+  return path.relative(cwd, location.startsWith(FILE_URL) ? fileURLToPath(location) : location);
 }
 
 /** The decrypt child's stdin, parsed; throws a line when it is not `{ ciphers, identities }` of strings. */

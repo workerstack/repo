@@ -14,6 +14,7 @@ import {
   KEY_LABEL,
   KEY_REL,
   keysFileFor,
+  KEY_FILE_MODE,
   modeOf,
   NO_KEYS_FILE,
   short,
@@ -48,7 +49,7 @@ describe("env key import", () => {
       out: `repo env: saved ${KEY_LABEL} (0600); it unlocks .repo/env.keys.json's recipient\n`,
     });
     const keyFile = path.join(w.home, KEY_REL);
-    expect(modeOf(keyFile)).toBe(0o600);
+    expect(modeOf(keyFile)).toBe(KEY_FILE_MODE);
     expect(fs.readFileSync(keyFile, "utf8").trim()).toBe(identity);
     expect(got.out).not.toContain(identity);
   });
