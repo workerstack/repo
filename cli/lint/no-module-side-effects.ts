@@ -92,7 +92,7 @@ function statementEffect(context: Context, statement: Node): Node | null {
 
   if (inner === null || DECLARATIONS.includes(inner.type)) return null;
 
-  if (inner.type === AST_NODE_TYPES.ExpressionStatement && typeof inner.directive === "string") return null;
+  if (inner.type === AST_NODE_TYPES.ExpressionStatement && (inner.directive ?? undefined) !== undefined) return null;
 
   if (inner.type === AST_NODE_TYPES.VariableDeclaration)
     return firstOf(inner.declarations, (item) => firstEffect(context, item.init));

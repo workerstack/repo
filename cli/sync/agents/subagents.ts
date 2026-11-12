@@ -6,7 +6,7 @@
 import { stringify } from "smol-toml";
 
 import type { Host } from "../../config.ts";
-import { isRecord, type Json, type JsonObject } from "../../json.ts";
+import { isRecord, isString, type Json, type JsonObject } from "../../json.ts";
 import { type YamlMode, type YamlValue, emitYaml, finalize } from "./frontmatter.ts";
 import { AFTER, BEFORE, MD_SUFFIX } from "./sources.constants.ts";
 import type { Doc, Sources } from "./sources.types.ts";
@@ -62,7 +62,7 @@ export function renderSubagents(sources: Sources, hosts: readonly Host[]): Map<s
   for (const doc of sources.subagents.toSorted(shallowestFirst)) {
     const name = doc.data["name"];
 
-    if (typeof name !== "string") throw new Error(`${doc.rel}: invalid frontmatter: name must be a string`);
+    if (!isString(name)) throw new Error(`${doc.rel}: invalid frontmatter: name must be a string`);
     const nested = doc.file.includes("/");
 
     for (const host of hosts) {
@@ -197,7 +197,7 @@ function flatten(fields: Fields): Fields {
 }
 
 function flattened(value: Json): Json {
-  if (typeof value === "string") return value.replaceAll(NEWLINE_RUNS, " ").trim();
+  if (isString(value)) return value.replaceAll(NEWLINE_RUNS, " ").trim();
 
   if (Array.isArray(value)) return value.map(flattened);
 

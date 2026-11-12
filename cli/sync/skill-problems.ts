@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Json } from "../json.ts";
+import { isString, type Json } from "../json.ts";
 import { STOCK_SKILLS_REL } from "../scripts/skill-conflicts.ts";
 import { type ParsedDoc, parseDoc } from "./agents/frontmatter.ts";
 import { entriesOf } from "./entries-of.ts";
@@ -48,7 +48,7 @@ function nameProblems({ file, name }: Skill, value: Json | undefined): string[] 
 }
 
 function descriptionProblems(file: string, description: Json | undefined): string[] {
-  if (typeof description !== "string" || description.trim() === "") return [`${file}: description is required`];
+  if (!isString(description) || description.trim() === "") return [`${file}: description is required`];
 
   if (description.length <= MAX_DESCRIPTION_CHARS) return [];
 
@@ -67,7 +67,7 @@ function overridesProblems(
 
   if (!context.checkOverrides) return [];
 
-  if (typeof overrides === "string" && !context.stockNames.has(overrides))
+  if (isString(overrides) && !context.stockNames.has(overrides))
     return [`${file}: overrides "${overrides}" but no stock skill has that name`];
 
   if (context.stockNames.has(name) && !context.optional.has(name) && overrides !== name)

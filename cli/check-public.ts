@@ -22,8 +22,8 @@ import {
   WHITESPACE,
 } from "./check-public.constants.ts";
 import type { ResolvedConfig } from "./config.ts";
-import { isRecord, type Json, type JsonObject, readJson } from "./json.ts";
-import { keywordLines } from "./keywords.ts";
+import { isRecord, isString, type Json, type JsonObject, readJson } from "./json.ts";
+import { keywordLines } from "./keyword-lines.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
 
@@ -58,7 +58,7 @@ function authorLines(author: Json | undefined, owner: ResolvedOwner): string[] {
 }
 
 function urlLines(url: Json | undefined): string[] {
-  if (typeof url !== "string") return [problem("repository.url", url, `set it to a URL starting ${GIT_URL_PREFIX}`)];
+  if (!isString(url)) return [problem("repository.url", url, `set it to a URL starting ${GIT_URL_PREFIX}`)];
 
   if (url.startsWith(GIT_URL_PREFIX)) return [];
 

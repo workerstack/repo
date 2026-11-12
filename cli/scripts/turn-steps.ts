@@ -12,6 +12,7 @@ import { withoutSkipped } from "../check-magic.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { type LintSkip } from "../config.ts";
 import { cssDiagnostics, isLintedCss } from "../css/css-diagnostics.ts";
+import type { Result } from "../result.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { readManifest } from "../sync/manifest.ts";
@@ -28,7 +29,6 @@ import {
   writeBaseline,
   type Diagnostic,
   type Excess,
-  type Result,
 } from "./lint-baseline.ts";
 import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import { LINTABLE } from "./lintable.constants.ts";
@@ -155,7 +155,7 @@ function lintFix(root: string, files: readonly string[]) {
  */
 function withScripts(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
   const listed = report.ok ? sourceFiles(turn.root) : report;
-  const scripts = listed.ok ? scriptDiagnostics(turn.root, { files, sources: listed.files }) : listed;
+  const scripts = listed.ok ? scriptDiagnostics(turn.root, { files, sources: listed.value }) : listed;
 
   if (!report.ok || !scripts.ok) return scripts;
   const reported = [...new Set([...files, ...scripts.value.map((d) => d.file)])];
@@ -184,7 +184,7 @@ export function lintStep(turn: Turn): StepResult {
   const baseline = readBaseline(turn.root);
 
   if (!report.ok || !baseline.ok) {
-    const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.errors));
+    const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.error));
     const output = errors.map((line) => `repo turn: ${line}\n`);
 
     return failed("lint failed", output, fixed);

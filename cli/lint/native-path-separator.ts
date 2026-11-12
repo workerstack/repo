@@ -1,5 +1,6 @@
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
+import { isStringLiteral } from "../syntax-node.ts";
 import { isNativePath, unwrap } from "./is-native-path.ts";
 import { MATCHING_METHODS, SEPARATOR } from "./native-path-separator.constants.ts";
 import type { RepoRule } from "./rule.types.ts";
@@ -10,8 +11,7 @@ type Node = TSESTree.Node;
 
 /** The separator a string or template literal holds in its cooked value, or undefined; `"\n"` holds none. */
 function separatorIn(node: Node): string | undefined {
-  if (node.type === AST_NODE_TYPES.Literal)
-    return typeof node.value === "string" ? SEPARATOR.exec(node.value)?.[0] : undefined;
+  if (node.type === AST_NODE_TYPES.Literal) return isStringLiteral(node) ? SEPARATOR.exec(node.value)?.[0] : undefined;
 
   if (node.type !== AST_NODE_TYPES.TemplateLiteral) return undefined;
 

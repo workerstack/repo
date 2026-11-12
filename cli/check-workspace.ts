@@ -32,7 +32,7 @@ import {
   missingScript,
 } from "./check-workspace.constants.ts";
 import type { Spot } from "./check-workspace.constants.ts";
-import { isRecord, type Json } from "./json.ts";
+import { isRecord, isString, type Json } from "./json.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { catalogsOf } from "./sync/workspace.ts";
 import type { Catalogs, PackageJson, Workspace, WorkspacePackage } from "./sync/workspace.ts";
@@ -121,7 +121,7 @@ function scriptLines(root: string, { dir, manifest }: WorkspacePackage): string[
   const scripts = isRecord(manifest.scripts) ? manifest.scripts : {};
 
   return TURBO_SCRIPTS.filter(
-    ({ config, script }) => fs.existsSync(path.join(root, dir, config)) && typeof scripts[script] !== "string",
+    ({ config, script }) => fs.existsSync(path.join(root, dir, config)) && !isString(scripts[script]),
   ).map((entry) => missingScript(`${dir}/package.json`, { dir, ...entry }));
 }
 
@@ -160,7 +160,7 @@ function lockCopies(lock: Json): Copies {
 
   for (const [key, value] of Object.entries(table)) {
     const [head] = Array.isArray(value) ? value : [];
-    const spec = typeof head === "string" ? head : "";
+    const spec = isString(head) ? head : "";
     const at = spec.lastIndexOf("@");
 
     if (at <= 0) continue;

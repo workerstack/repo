@@ -1,4 +1,5 @@
 /** Runs a parsed spec: each setup once, then warmup plus measured runs of every candidate, interleaved. */
+import type { Result } from "../result.ts";
 import { builtInOf, LINE_BREAK } from "./bench.constants.ts";
 import { readCustom, usageMetrics, type Spawn } from "./measure.ts";
 import type { Candidate, Spec } from "./parse-spec.ts";
@@ -38,20 +39,20 @@ function setUp(spec: Spec, io: RunIo): string | null {
 /** One run's value of each spec metric by name, or the line saying why the run counts for nothing. */
 type Measuring = { candidate: Candidate; label: string };
 
-function measure(spec: Spec, io: RunIo, { candidate, label }: Measuring): Record<string, number> | string {
+function measure(spec: Spec, io: RunIo, { candidate, label }: Measuring): Result<Record<string, number>, string> {
   const names = new Set(spec.metrics.map((metric) => metric.name));
   const custom = [...names].filter((name) => builtInOf(name) === undefined);
   const started = io.now();
   const got = io.spawn(candidate.run, io.cwd);
   const wall = io.now() - started;
 
-  if (got.code !== 0) return `${label} ${exited(got.code, got.stderr)}`;
+  if (got.code !== 0) return { error: `${label} ${exited(got.code, got.stderr)}`, ok: false };
   const read = readCustom(got.stdout, custom);
 
-  if (!read.ok) return `${label} printed no \`bench:\` line with ${JSON.stringify(read.missing)}`;
+  if (!read.ok) return { error: `${label} printed no \`bench:\` line with ${JSON.stringify(read.missing)}`, ok: false };
   const measured = Object.entries({ ...usageMetrics(got.usage), wall, ...read.values });
 
-  return Object.fromEntries(measured.filter(([name]) => names.has(name)));
+  return { ok: true, value: Object.fromEntries(measured.filter(([name]) => names.has(name))) };
 }
 
 /** A kept run: the candidate it measured and its values by metric. */
@@ -88,9 +89,9 @@ export function runSpec(spec: Spec, io: RunIo): RunOutcome {
       const label = `${candidate.name} ${isWarm ? `warmup ${at + 1}` : `run ${at - spec.warmup + 1}`}`;
       const got = measure(spec, io, { candidate, label });
 
-      if (typeof got === "string") return { line: got, ok: false };
+      if (!got.ok) return { line: got.error, ok: false };
 
-      if (!isWarm) kept.push({ name: candidate.name, values: got });
+      if (!isWarm) kept.push({ name: candidate.name, values: got.value });
     }
   }
 

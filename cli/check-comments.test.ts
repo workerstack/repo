@@ -135,19 +135,19 @@ function repo(): string {
 const LISTED = ["b.cjs", "b.cts", "b.js", "b.jsx", "b.mjs", "b.mts", "b.tsx", "src/a.ts"];
 
 it("lists tracked and untracked source files, leaving out ignored, fixtures and other extensions", () => {
-  expect(sourceFiles(repo())).toStrictEqual({ files: LISTED, ok: true });
+  expect(sourceFiles(repo())).toStrictEqual({ ok: true, value: LISTED });
 });
 
 it("lists the same files under a hook's GIT_INDEX_FILE naming another index", () => {
   const root = repo();
   vi.stubEnv("GIT_INDEX_FILE", path.join(plant({}), "index"));
-  expect(sourceFiles(root)).toStrictEqual({ files: LISTED, ok: true });
+  expect(sourceFiles(root)).toStrictEqual({ ok: true, value: LISTED });
 });
 
 it("says why when git cannot list the files", () => {
   const listed = sourceFiles(plant({}));
   expect(listed.ok).toBe(false);
-  expect(listed.ok ? [] : listed.errors).toStrictEqual([
+  expect(listed.ok ? [] : listed.error).toStrictEqual([
     expect.stringMatching(/^git ls-files failed: .*not a git repository/),
   ]);
 });

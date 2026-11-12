@@ -29,6 +29,7 @@ import { noModuleState } from "./no-module-state.ts";
 import { noObjectParameters } from "./no-object-parameters.ts";
 import { noReflectApply } from "./no-reflect-apply.ts";
 import { noReflectGet } from "./no-reflect-get.ts";
+import { noRuntimeTypeof } from "./no-runtime-typeof.ts";
 import { noSideEffectImport } from "./no-side-effect-import.ts";
 import { noUnknownParameters } from "./no-unknown-parameters.ts";
 import { noUnknownReturns } from "./no-unknown-returns.ts";
@@ -82,6 +83,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-object-parameters": noObjectParameters,
     "no-reflect-apply": noReflectApply,
     "no-reflect-get": noReflectGet,
+    "no-runtime-typeof": noRuntimeTypeof,
     "no-shape-in-symbol-names": noForbiddenTermInSymbolNames,
     "no-side-effect-import": noSideEffectImport,
     "no-unknown-parameters": noUnknownParameters,

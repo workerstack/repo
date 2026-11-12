@@ -38,7 +38,7 @@ const ERROR_RULES = [
   "repo/naming-convention repo/native-path-separator repo/no-block-comment repo/no-boolean-param",
   "repo/no-chained-type-assertions repo/no-commented-out-code repo/no-known-value-widening repo/no-module-mocking",
   "repo/no-module-side-effects repo/no-module-state repo/no-object-parameters repo/no-reflect-apply",
-  "repo/no-reflect-get",
+  "repo/no-reflect-get repo/no-runtime-typeof",
   "repo/no-shape-in-symbol-names repo/no-side-effect-import repo/no-unknown-parameters repo/no-unknown-returns",
   "repo/no-unknown-type-aliases repo/no-unsafe-dictionary-type repo/no-v8-ignore",
   "repo/no-widen-then-assert repo/public-jsdoc repo/require-readable-spacing",

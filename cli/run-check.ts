@@ -129,7 +129,7 @@ async function checkRatchets(root: string, loaded: LoadResult, print: Printer): 
   const coverage = loaded.ok ? loaded.config.coverage : DEFAULT_COVERAGE;
   const listed = sourceFiles(root);
   // Without a git listing there are no test files to read.
-  const files = listed.ok ? listed.files : [];
+  const files = listed.ok ? listed.value : [];
   print.fail([...ratchetProblems(root, coverage), ...knownFailures(root, files, coverage.knownFailures)]);
 }
 

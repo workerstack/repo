@@ -164,7 +164,7 @@ it("ignores a message that is neither a warning nor an error, and a warning with
 it("makes an E0308 error a problem with its place, never a hit", () => {
   const lines = [error("E0308", "mismatched types", [at(1, 21), aside(1, 5)])];
   expect(clippyHits(ROOT, cargo([...lines, finished({ success: false })], 101).run)).toStrictEqual({
-    errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
+    error: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
     ok: false,
   });
 });
@@ -172,7 +172,7 @@ it("makes an E0308 error a problem with its place, never a hit", () => {
 it("makes an error without a code a problem", () => {
   const lines = [error(null, "this file contains an unclosed delimiter"), finished({ success: false })];
   expect(clippyHits(ROOT, cargo(lines, 101).run)).toStrictEqual({
-    errors: ["cargo clippy: error: this file contains an unclosed delimiter"],
+    error: ["cargo clippy: error: this file contains an unclosed delimiter"],
     ok: false,
   });
 });
@@ -181,7 +181,7 @@ it("lists a repeated problem once and no hit beside it", () => {
   const failure = error("E0308", "mismatched types", [at(1, 21)]);
   const hit = warning("dead_code", "m", [at(1, 1)]);
   expect(clippyHits(ROOT, cargo([hit, failure, failure], 101).run)).toStrictEqual({
-    errors: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
+    error: ["cargo clippy: error[E0308]: mismatched types (src/lib.rs:1)"],
     ok: false,
   });
 });
@@ -189,7 +189,7 @@ it("lists a repeated problem once and no hit beside it", () => {
 it("makes a lint with no primary span a problem", () => {
   const lines = [warning("dead_code", "never used", [aside(1, 1)])];
   expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
-    errors: ["cargo clippy: never used has a lint code but no primary span"],
+    error: ["cargo clippy: never used has a lint code but no primary span"],
     ok: false,
   });
 });
@@ -197,14 +197,14 @@ it("makes a lint with no primary span a problem", () => {
 it("makes a non-zero exit with no error message a problem, with stderr", () => {
   const run = cargo([finished({ success: false })], 101, { stderr: "error: could not find `Cargo.toml`\n" }).run;
   expect(clippyHits(ROOT, run)).toStrictEqual({
-    errors: ["cargo clippy exited 101 and printed no error: error: could not find `Cargo.toml`"],
+    error: ["cargo clippy exited 101 and printed no error: error: could not find `Cargo.toml`"],
     ok: false,
   });
 });
 
 it("names the exit alone when cargo printed nothing else", () => {
   expect(clippyHits(ROOT, cargo([], 2).run)).toStrictEqual({
-    errors: ["cargo clippy exited 2 and printed no error"],
+    error: ["cargo clippy exited 2 and printed no error"],
     ok: false,
   });
 });
@@ -212,7 +212,7 @@ it("names the exit alone when cargo printed nothing else", () => {
 it("makes a line it cannot read a problem", () => {
   const lines = ["not json", JSON.stringify({ message: { level: 1 }, reason: "compiler-message" }), '{"x":1}', ""];
   expect(clippyHits(ROOT, cargo(lines).run)).toStrictEqual({
-    errors: [
+    error: [
       "cargo clippy printed a line repo cannot read: not json",
       'cargo clippy printed a line repo cannot read: {"message":{"level":1},"reason":"compiler-message"}',
       'cargo clippy printed a line repo cannot read: {"x":1}',
@@ -223,13 +223,13 @@ it("makes a line it cannot read a problem", () => {
 
 it("cuts a long unreadable line", () => {
   expect(clippyHits(ROOT, cargo(["x".repeat(200)]).run)).toStrictEqual({
-    errors: [`cargo clippy printed a line repo cannot read: ${"x".repeat(80)}...`],
+    error: [`cargo clippy printed a line repo cannot read: ${"x".repeat(80)}...`],
     ok: false,
   });
 });
 
 it("tells where to get cargo when it is not on PATH", () => {
-  expect(clippyHits(ROOT, cargo([], 1, { missing: true }).run)).toStrictEqual({ errors: [MISSING], ok: false });
+  expect(clippyHits(ROOT, cargo([], 1, { missing: true }).run)).toStrictEqual({ error: [MISSING], ok: false });
 });
 
 it("the default runner reports a cargo missing from PATH", () => {

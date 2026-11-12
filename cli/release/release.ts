@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { Result } from "../result.ts";
 import { waitFor, type Runner, type WaitOutcome } from "../scripts/ci-wait.ts";
 import { stampChangelog } from "./changelog.ts";
 import { must, read, type Tools } from "./git.ts";
@@ -51,16 +52,17 @@ export type ReleaseIo = {
 };
 
 /** The mode the arguments ask for, or the usage line. */
-function parseMode(argv: readonly string[]): Mode | string {
+function parseMode(argv: readonly string[]): Result<Mode, string> {
   const [flag, id, ...rest] = argv;
 
-  if (flag === undefined) return { kind: "auto" };
+  if (flag === undefined) return { ok: true, value: { kind: "auto" } };
 
-  if (flag === FLAG_STABLE && id === undefined) return { kind: "stable" };
+  if (flag === FLAG_STABLE && id === undefined) return { ok: true, value: { kind: "stable" } };
 
-  if (flag === FLAG_PRE && id !== undefined && PRE_ID.test(id) && rest.length === 0) return { id, kind: "pre" };
+  if (flag === FLAG_PRE && id !== undefined && PRE_ID.test(id) && rest.length === 0)
+    return { ok: true, value: { id, kind: "pre" } };
 
-  return USAGE;
+  return { error: USAGE, ok: false };
 }
 
 function refuse(io: ReleaseIo, line: string): number {
@@ -155,16 +157,16 @@ async function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
 export async function releaseMain(argv: readonly string[], io: ReleaseIo): Promise<number> {
   const mode = parseMode(argv);
 
-  if (typeof mode === "string") return refuse(io, mode);
+  if (!mode.ok) return refuse(io, mode.error);
   const root = io.git([...GIT_TOPLEVEL], io.cwd).stdout.trim();
 
   if (root === "") return refuse(io, NOT_CHECKOUT);
   const tools: Tools = { cwd: root, gh: io.gh, git: io.git };
 
   try {
-    const plan = await makePlan(tools, mode);
+    const plan = await makePlan(tools, mode.value);
 
-    return typeof plan === "string" ? refuse(io, plan) : await carryOut(tools, io, plan);
+    return plan.ok ? await carryOut(tools, io, plan.value) : refuse(io, plan.error);
   } catch (error) {
     return refuse(io, (error /* only Errors are thrown here */ as Error).message);
   }

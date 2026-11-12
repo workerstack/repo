@@ -4,6 +4,7 @@ import path from "node:path";
 import type { MutateDeps } from "./mutate-deps.ts";
 import { parseReport, type ShardReport } from "./mutate-report.ts";
 import { JSON_SUFFIX, SHORT_SHA } from "./mutate.constants.ts";
+import type { Result } from "./result.ts";
 
 /** `a and b`, `a, b and c`: two items or more. */
 function listOf(items: readonly string[]): string {
@@ -79,14 +80,14 @@ function problemWith(dir: string, reports: ShardReport[]): string | null {
 }
 
 /** The reports in `dir` when they are one complete run; else the line that says what is wrong with them. */
-export function loadShards(dir: string, deps: MutateDeps): ShardReport[] | string {
+export function loadShards(dir: string, deps: MutateDeps): Result<ShardReport[], string> {
   const full = path.resolve(deps.cwd, dir);
   const names = (deps.fs.list(full) ?? []).filter((name) => name.endsWith(JSON_SUFFIX)).toSorted();
 
   if (names.length === 0) {
     const hint = `repo mutate --shard i/n --report ${dir}/mutation-i${JSON_SUFFIX}`;
 
-    return `${dir} holds no mutation report; run \`${hint}\` first`;
+    return { error: `${dir} holds no mutation report; run \`${hint}\` first`, ok: false };
   }
 
   const reports: ShardReport[] = [];
@@ -94,9 +95,11 @@ export function loadShards(dir: string, deps: MutateDeps): ShardReport[] | strin
   for (const name of names) {
     const parsed = parseReport(deps.fs.read(path.join(full, name)) ?? "");
 
-    if (!parsed.ok) return `${path.join(dir, name)} is not a mutation report: ${parsed.reason}`;
+    if (!parsed.ok) return { error: `${path.join(dir, name)} is not a mutation report: ${parsed.reason}`, ok: false };
     reports.push(parsed.value);
   }
 
-  return problemWith(dir, reports) ?? reports;
+  const problem = problemWith(dir, reports);
+
+  return problem === null ? { ok: true, value: reports } : { error: problem, ok: false };
 }

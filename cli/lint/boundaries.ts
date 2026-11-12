@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
+import { isStringLiteral } from "../syntax-node.ts";
 import { TAG_MESSAGE, type Tags, TAGS_SCHEMA, type TagsOptions, tagProblem, tagsOf } from "./boundaries-tags.ts";
 import { BUN_MODULE, SCOPED_PARTS } from "./boundaries.constants.ts";
 import { type Manifest, nearestManifest, readManifest } from "./manifest.ts";
@@ -99,7 +100,7 @@ export const boundaries: RepoRule<MessageId, TagsOptions> = {
     function check(node: Sourced): void {
       const { source } = node;
 
-      if (source?.type !== AST_NODE_TYPES.Literal || typeof source.value !== "string") return;
+      if (source?.type !== AST_NODE_TYPES.Literal || !isStringLiteral(source)) return;
       const problem = problemOf(where, source.value);
 
       if (problem !== null) context.report({ ...problem, node });

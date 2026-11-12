@@ -1,5 +1,13 @@
 /** What a declaration shows a consumer, read off parser output: shared by the module reader and the reference walk. */
-import { asNode, isSyntaxList, type ParserOutput, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
+import {
+  asNode,
+  isSyntaxList,
+  isSyntaxString,
+  type ParserOutput,
+  type SyntaxNode,
+  type SyntaxValue,
+  textOf,
+} from "../syntax-node.ts";
 import {
   BODY,
   DECLARATION,
@@ -70,7 +78,7 @@ export function walkPublic(node: SyntaxValue, visit: (node: SyntaxNode) => boole
 
   const found = asNode(node);
 
-  if (found === null || typeof found["type"] !== "string" || isHiddenMember(found)) return;
+  if (found === null || !isSyntaxString(found["type"]) || isHiddenMember(found)) return;
 
   if (!visit(found)) return;
 

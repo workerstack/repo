@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Json, JsonObject } from "../json.ts";
+import { isString, type Json, type JsonObject } from "../json.ts";
 import { emitYaml, parseDoc } from "./agents/frontmatter.ts";
 import { filesUnder, isDir } from "./migrate-fs.ts";
 import { FENCE, LINE_BREAK, MD, NOT_FOUND, REPO_DIR } from "./migrate.constants.ts";
@@ -97,7 +97,7 @@ function ownDocs(root: string, kind: DocKind): string[] {
 
 /** Globs from a `globs` value: a list, or a comma-separated string. */
 function globList(value: Json | undefined): string[] {
-  const listed = typeof value === "string" ? value.split(",") : [];
+  const listed = isString(value) ? value.split(",") : [];
   const items = Array.isArray(value) ? value.map(String) : listed;
 
   return items.map((item) => item.trim()).filter((item) => item !== "");
@@ -111,7 +111,7 @@ function ruleKeys(data: JsonObject, body: string, doc: OldDoc): NewKeys {
   const keys: NewKeys = { converted: [], parts: [], top: [] };
   const description = data["description"];
 
-  if (typeof description !== "string" || description.trim() === "") {
+  if (!isString(description) || description.trim() === "") {
     const heading = HEADING.exec(body)?.[1];
     keys.top.push(["description", (heading ?? path.posix.basename(doc.name)).trim()]);
     keys.parts.push("description added");

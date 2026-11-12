@@ -13,8 +13,8 @@ export type Region = { name: string; body: string; place: "top" | "bottom" };
 /** A shared file's new text, LF and exact, and one line per repair sync made to get there. */
 export type RegionResult = { text: string; repairs: string[] };
 
-/** A shared file's text and the row a region with no marker goes at instead of its `place`. */
-export type PlacedText = { text: string; at: number };
+/** A shared file's text and the row a region with no marker goes at instead of its `place`, if any. */
+export type PlacedText = { text: string; at: number | undefined };
 
 type Step = { rows: string[]; repairs: string[] };
 
@@ -37,16 +37,19 @@ export function syntaxOf(rel: string): RegionSyntax {
 }
 
 /**
- * `source` with each region written per the repair table, and every other `repo:<name>` region cut. In a `#` file the
- * legacy git pair is the first region's. Markers are read loosely and written exactly; the result is LF. A source
- * given with a row puts a region with no marker at that row, as where the stock text it replaces stood.
+ * `text` with each region written per the repair table, and every other `repo:<name>` region cut. In a `#` file the
+ * legacy git pair is the first region's. Markers are read loosely and written exactly; the result is LF.
  */
-export function writeRegions(
-  source: string | PlacedText,
-  syntax: RegionSyntax,
-  regions: readonly Region[],
-): RegionResult {
-  const { text, at } = typeof source === "string" ? { at: undefined, text: source } : source;
+export function writeRegions(text: string, syntax: RegionSyntax, regions: readonly Region[]): RegionResult {
+  return writePlaced({ at: undefined, text }, syntax, regions);
+}
+
+/**
+ * `writeRegions` over `source.text`, where a row `source.at` puts a region with no marker at that row, as where the
+ * stock text it replaces stood.
+ */
+export function writePlaced(source: PlacedText, syntax: RegionSyntax, regions: readonly Region[]): RegionResult {
+  const { text, at } = source;
   const [first] = regions;
   const base: Doc = { legacy: first === undefined ? LEGACY_NAME : first.name, rows: toLines(text), syntax };
   const start: Shared = { ...base, cr: crMarked(text, base) };

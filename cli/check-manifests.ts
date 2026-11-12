@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { CALL_SEPARATOR, QUOTED_SPAN } from "./check-manifests.constants.ts";
+import { isRecord, isString } from "./json.ts";
 import type { PackageJson, Workspace } from "./sync/workspace.ts";
 
 const BUN_PIN = /^bun@\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/;
@@ -55,7 +56,7 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
   if (packageManager === undefined)
     return [`package.json: "packageManager" is missing; set it to "bun@${Bun.version}"`];
 
-  if (typeof packageManager === "string" && BUN_PIN.test(packageManager)) return [];
+  if (isString(packageManager) && BUN_PIN.test(packageManager)) return [];
 
   return [
     `package.json: "packageManager" is ${JSON.stringify(packageManager)}; ` +
@@ -65,10 +66,10 @@ function packageManagerLines({ packageManager }: PackageJson): string[] {
 
 function chainedScriptLines({ scripts }: PackageJson): string[] {
   const lines: string[] = [];
-  const entries = typeof scripts === "object" && scripts !== null ? Object.entries(scripts) : [];
+  const entries = isRecord(scripts) ? Object.entries(scripts) : [];
 
   for (const [name, command] of entries) {
-    const calls = typeof command === "string" ? toolCalls(command) : 0;
+    const calls = isString(command) ? toolCalls(command) : 0;
 
     if (calls <= 1) continue;
     lines.push(

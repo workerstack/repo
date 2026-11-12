@@ -60,7 +60,7 @@ function test(imports: string, body: string): string {
 function guardsOf(files: Record<string, string>, checked: readonly string[] = Object.keys(files)): Diagnostic[] {
   const found = guardDiagnostics(plant({ "tsconfig.json": TSCONFIG, ...files }), checked);
 
-  if (!found.ok) throw new Error(found.errors.join("\n"));
+  if (!found.ok) throw new Error(found.error.join("\n"));
 
   return found.value;
 }
@@ -159,7 +159,7 @@ it("re-checks the guards of the sources a changed test imports, when only the te
 it("reports a tsconfig.json typescript cannot read", () => {
   const root = plant({ "pkg/a.ts": USER, "pkg/tsconfig.json": "{" });
   const found = guardDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 it("fails a turn that touches only a test and drops the last false assert", { timeout: TURN }, async () => {

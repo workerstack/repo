@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { beforeAll, expect, inject, it } from "vitest";
 
-import { isRecord } from "../cli/json.ts";
+import { isRecord, isString } from "../cli/json.ts";
 import { readManifest } from "../cli/sync/manifest.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { validateOutputs } from "../cli/sync/validate-outputs.ts";
@@ -98,7 +98,7 @@ function worktreeSessionCase(get: GetSandbox, tree: Tree) {
 
     expectClean(sb, r);
     const { additionalContext } = output(r);
-    const context = typeof additionalContext === "string" ? additionalContext : "";
+    const context = isString(additionalContext) ? additionalContext : "";
     expect(
       context.startsWith(
         // The notice names the bin as the platform spells a path; a rewritten command uses forward slashes.
@@ -133,7 +133,7 @@ function worktreeGateCase(get: GetSandbox, tree: Tree) {
     expectClean(sb, r);
     const updated = output(r).updatedInput;
     const written = isRecord(updated) ? updated.command : "";
-    const rewritten = typeof written === "string" ? written : "";
+    const rewritten = isString(written) ? written : "";
     expect(rewritten.startsWith(`${installedBin(main)} job --job exec --query `), rewritten).toBe(true);
     expect(rewritten).toContain(`${wt}/src/index.ts`);
     expect(rewritten).not.toContain(`${main}/src/index.ts`);

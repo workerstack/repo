@@ -118,7 +118,7 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
 it("reports a tsconfig.json typescript cannot read", () => {
   const root = plant({ "pkg/a.ts": "export const a = 1;\n", "pkg/tsconfig.json": "{" });
   const found = magicDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.errors).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
 });
 
 it("withoutSkipped drops only the hits of the rule a skip names, in the files its globs match", () => {

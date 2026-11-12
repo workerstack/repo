@@ -8,7 +8,7 @@
 import { z } from "zod";
 
 import type { Host } from "../../config.ts";
-import { type Json, type JsonObject, readJson } from "../../json.ts";
+import { isNumber, isRecord, isString, type Json, type JsonObject, readJson } from "../../json.ts";
 import { expandHookCommand } from "../../scripts/hook-command.ts";
 import { ANTIGRAVITY, CLAUDE, CODEX } from "./hook-targets.ts";
 import {
@@ -38,21 +38,19 @@ function text(value: Json): string {
 function containsNull(value: Json | undefined): boolean {
   if (value === null) return true;
 
-  return typeof value === "object" && Object.values(value).some(containsNull);
+  return (isRecord(value) || Array.isArray(value)) && Object.values(value).some(containsNull);
 }
 
 /** Why Codex would refuse a handler, or undefined (`describeRejectedHandler`, D:56419-56429). */
 function codexRejects(hook: JsonObject): boolean {
   const { timeout } = hook;
 
-  if (timeout !== undefined && !(typeof timeout === "number" && Number.isSafeInteger(timeout) && timeout >= 0))
-    return true;
+  if (timeout !== undefined && !(isNumber(timeout) && Number.isSafeInteger(timeout) && timeout >= 0)) return true;
 
   if (hook["type"] !== MCP_TOOL) return false;
 
   return (
-    [hook["server"], hook["tool"]].some((value) => typeof value !== "string" || value === "") ||
-    containsNull(hook["input"])
+    [hook["server"], hook["tool"]].some((value) => !isString(value) || value === "") || containsNull(hook["input"])
   );
 }
 
@@ -96,7 +94,7 @@ function cursorEntry(def: Def): JsonObject {
   const { type, command, timeout, matcher, prompt, model, failClosed } = def;
 
   const entry = {
-    command: typeof command === "string" ? expandHookCommand(command) : command,
+    command: isString(command) ? expandHookCommand(command) : command,
     failClosed,
     loop_limit: def[LOOP_LIMIT],
     matcher,

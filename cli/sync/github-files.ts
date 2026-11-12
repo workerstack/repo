@@ -20,9 +20,13 @@ import {
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output, SyncContext } from "./outputs.ts";
 
-/** The `repository` of a package.json, in its object or string form; a manifest with any other reads as none. */
+/**
+ * The `repository` url of a package.json, from its object or string form; a manifest with any other reads as none.
+ */
 function repositorySchema() {
-  return z.looseObject({ repository: z.union([z.string(), z.looseObject({ url: z.string() })]).optional() });
+  const object = z.looseObject({ url: z.string() }).transform(({ url }) => url);
+
+  return z.looseObject({ repository: z.union([z.string(), object]).optional() });
 }
 
 /**
@@ -31,8 +35,7 @@ function repositorySchema() {
  */
 function repositorySlug(manifest: string | null): string | null {
   if (manifest === null) return null;
-  const repository = tryJson(repositorySchema(), manifest)?.repository;
-  const url = typeof repository === "object" ? repository.url : repository;
+  const url = tryJson(repositorySchema(), manifest)?.repository;
 
   return url === undefined ? null : (GITHUB_REPOSITORY.exec(url)?.[1] ?? null);
 }

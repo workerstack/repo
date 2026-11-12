@@ -51,7 +51,7 @@ export function withTailwindEntry(root: string, lint: ResolvedLint): TailwindLin
   }
 
   const listed = cssFiles(root);
-  const entries = listed.ok ? listed.files.filter((rel) => importsTailwind(fileText(root, rel))) : [];
+  const entries = listed.ok ? listed.value.filter((rel) => importsTailwind(fileText(root, rel))) : [];
   const [entryPoint, ...others] = entries;
 
   if (entryPoint === undefined) return { lint, ok: true };

@@ -46,7 +46,7 @@ export const hit = (at: string, rule: string, message: string): Diagnostic => ({
 export function magicOf(files: Record<string, string>): Diagnostic[] {
   const planted = Object.keys(files);
   const found = scriptDiagnostics(plant(files), { files: planted, sources: planted });
-  if (!found.ok) throw new Error(found.errors.join("\n"));
+  if (!found.ok) throw new Error(found.error.join("\n"));
   return found.value.filter((d) => MAGIC_RULES.includes(d.rule));
 }
 

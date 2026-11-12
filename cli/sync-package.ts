@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isString } from "./json.ts";
 import { installedDir, requireManifest, type Manifest, type Marker } from "./link-installed.ts";
 import type { LinkTarget } from "./link-io.types.ts";
 import {
@@ -28,7 +29,7 @@ function run(command: string[], cwd: string): string {
 function binsOf(manifest: Manifest): [string, string][] {
   if (manifest.bin === undefined) return [];
 
-  if (typeof manifest.bin === "string") return [[path.posix.basename(manifest.name), manifest.bin]];
+  if (isString(manifest.bin)) return [[path.posix.basename(manifest.name), manifest.bin]];
 
   return Object.entries(manifest.bin);
 }

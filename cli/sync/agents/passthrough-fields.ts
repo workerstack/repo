@@ -1,4 +1,4 @@
-import type { Json, JsonObject } from "../../json.ts";
+import { isBoolean, isString, isStringList, type Json, type JsonObject } from "../../json.ts";
 import { BLOCK, COMMAND, HTTP, ON_FAILURE_IGNORED } from "./hooks.constants.ts";
 import type { Def, Passthrough, Target } from "./hooks.types.ts";
 
@@ -11,10 +11,10 @@ export type PassthroughInput = {
 };
 
 const VALID: Readonly<Record<Exclude<Passthrough["kind"], "keyword">, (value: Json) => boolean>> = {
-  array: (value) => Array.isArray(value) && value.every((item) => typeof item === "string"),
-  boolean: (value) => typeof value === "boolean",
+  array: isStringList,
+  boolean: isBoolean,
   number: (value) => Number.isFinite(value),
-  string: (value) => typeof value === "string" && value !== "",
+  string: (value) => isString(value) && value !== "",
 };
 
 /** Whether claude writes `onFailure` here: command and http hooks off the ignored events, never an async command. */

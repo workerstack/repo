@@ -30,6 +30,7 @@ export const RULES = {
   "repo/no-object-parameters": "error",
   "repo/no-reflect-apply": "error",
   "repo/no-reflect-get": "error",
+  "repo/no-runtime-typeof": "error",
   "repo/no-shape-in-symbol-names": "error",
   "repo/no-side-effect-import": "error",
   "repo/no-unknown-parameters": "error",

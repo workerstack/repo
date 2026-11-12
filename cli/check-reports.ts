@@ -42,10 +42,10 @@ export async function checkReports({ dir, write }: CheckRun, deps: MutateDeps): 
   if (Array.isArray(config)) return fail(deps, ...config);
   const reports = loadShards(dir, deps);
 
-  if (typeof reports === "string") return fail(deps, reports);
+  if (!reports.ok) return fail(deps, reports.error);
   const floors = readFloors(deps, config.root, config.floors);
 
   if (!floors.ok) return fail(deps, `${config.floors} is not a floors file: ${floors.reason}`);
 
-  return settle({ config, dir, floors: floors.value, reports, write }, deps);
+  return settle({ config, dir, floors: floors.value, reports: reports.value, write }, deps);
 }

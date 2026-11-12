@@ -21,6 +21,7 @@ const REPO_RULES = {
       "repo/no-object-parameters": "error",
       "repo/no-reflect-apply": "error",
       "repo/no-reflect-get": "error",
+      "repo/no-runtime-typeof": "error",
       "repo/no-shape-in-symbol-names": "error",
       "repo/no-unknown-parameters": "error",
       "repo/no-unknown-returns": "error",
@@ -108,6 +109,10 @@ const REPO_RULES = {
     "function guard(value) { return; }",
     "guard(() => OS_NAMES, Registry);\n",
   ].join("\n\n"),
+  // a predicate's typeof passes; a function with no return type, null under oxlint, reports its bare typeof
+  "packages/lib/src/probe.ts":
+    'export function isText(value): value is string { return typeof value === "string"; }\n\n' +
+    "export function kind(value) { return typeof value; }\n",
   // a statement straight after a binding, with no blank line between them
   "packages/lib/src/spacing.ts": "function first() {\n  const a = 1;\n  return a;\n}\n",
   // oxc refuses an index signature without a type before any JS plugin sees it, so it holds no null to crash on
@@ -191,6 +196,8 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
       "that runs it",
     `${index}:8 repo(public-jsdoc) \`bare\` is public through "." and ${missing}`,
     `packages/lib/src/known.ts:1 ${widening("open dictionary", "binding `OS_NAMES`")}`,
+    "packages/lib/src/probe.ts:3 repo(no-runtime-typeof) A `typeof` check narrows a representation without " +
+      "establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
     "packages/lib/src/spacing.ts:3 repo(require-readable-spacing) Expected blank line before this statement.",
     "packages/lib/src/untyped.ts:1 TS(1021) An index signature must have a type annotation.",
     'packages/lib/vite.config.ts:1 repo(config-file) a config file holds only imports and exports; move "plugins" ' +

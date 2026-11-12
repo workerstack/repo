@@ -1,3 +1,4 @@
+import { isString } from "../../json.ts";
 import { readDoc } from "./read-doc.ts";
 import { MD_SUFFIX, RULES } from "./sources.constants.ts";
 import type { Doc, DocFile, Kind } from "./sources.types.ts";
@@ -22,7 +23,7 @@ function nameOf(file: string): string {
 function overridesOf(doc: Doc | null): string | undefined {
   const overrides = doc?.data["overrides"];
 
-  return typeof overrides === "string" ? overrides.toLowerCase() : undefined;
+  return isString(overrides) ? overrides.toLowerCase() : undefined;
 }
 
 /** The stock names later files replace; a bad `overrides` or a taken name without one is a problem. */
@@ -33,9 +34,9 @@ function claimed(input: MergeInput, parsed: readonly Parsed[], stockNames: Reado
   for (const { file, doc } of parsed) {
     const overrides = doc?.data["overrides"];
 
-    if (typeof overrides === "string" && stockNames.has(overrides.toLowerCase())) {
+    if (isString(overrides) && stockNames.has(overrides.toLowerCase())) {
       replaced.add(overrides.toLowerCase());
-    } else if (typeof overrides === "string") {
+    } else if (isString(overrides)) {
       input.problems.push(`${file.rel}: overrides "${overrides}" but no stock ${singular} has that name`);
     } else if (doc !== null && stockNames.has(nameOf(file.file))) {
       const name = file.file.replace(MD_SUFFIX, "");

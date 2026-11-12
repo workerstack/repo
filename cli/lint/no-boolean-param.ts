@@ -1,5 +1,6 @@
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
+import { isBooleanLiteral } from "../syntax-node.ts";
 import type { RepoRule } from "./rule.types.ts";
 
 type Parameter = TSESTree.Parameter;
@@ -44,7 +45,7 @@ function flagName(param: Parameter): string | null {
   if (annotation !== undefined) return hasBoolean(annotation) ? found.id.name : null;
   const { fallback } = found;
 
-  return fallback?.type === AST_NODE_TYPES.Literal && typeof fallback.value === "boolean" ? found.id.name : null;
+  return fallback?.type === AST_NODE_TYPES.Literal && isBooleanLiteral(fallback) ? found.id.name : null;
 }
 
 /**

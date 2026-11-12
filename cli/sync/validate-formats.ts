@@ -154,7 +154,9 @@ function parseFrontmatter(content: string): Parsed {
     };
   }
 
-  if (typeof data !== "object" || Array.isArray(data)) return { problem: "invalid frontmatter: must be a mapping" };
+  const mapping = z.record(z.string(), z.unknown()).safeParse(data).success;
+
+  if (!mapping) return { problem: "invalid frontmatter: must be a mapping" };
 
   return { value: data };
 }

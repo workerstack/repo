@@ -7,10 +7,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { sourceFiles, type Listed } from "../check-comments.ts";
+import { sourceFiles } from "../check-comments.ts";
 import type { LintSkip, ResolvedLint } from "../config.ts";
 import { cssFiles, isLintedCss } from "../css/css-diagnostics.ts";
 import { codeOf } from "../lint/script-rules.ts";
+import type { Result } from "../result.ts";
 import { RUST_SOURCE } from "../rust/rust-hits.constants.ts";
 import { rustSources } from "../rust/rust-hits.ts";
 import { standardsWorkspace } from "../standards-workspace.ts";
@@ -117,12 +118,12 @@ function countLine(entries: readonly Matched[], diagnostics: readonly Diagnostic
  * The JS/TS source files, the Rust ones (with a root Cargo.toml they are the repo's) and the stylesheets, the globs of
  * a skip match; or why git could not list them, each reason once, as the three listings fail alike.
  */
-function sourcesOf(root: string): Listed {
+function sourcesOf(root: string): Result<string[]> {
   const lists = [sourceFiles(root), rustSources(root), cssFiles(root)];
-  const errors = [...new Set(lists.flatMap((list) => (list.ok ? [] : list.errors)))];
-  const files = lists.flatMap((list) => (list.ok ? list.files : []));
+  const errors = [...new Set(lists.flatMap((list) => (list.ok ? [] : list.error)))];
+  const files = lists.flatMap((list) => (list.ok ? list.value : []));
 
-  return errors.length > 0 ? { errors, ok: false } : { files: files.toSorted(byKey), ok: true };
+  return errors.length > 0 ? { error: errors, ok: false } : { ok: true, value: files.toSorted(byKey) };
 }
 
 /**
@@ -130,13 +131,13 @@ function sourcesOf(root: string): Listed {
  * package tags and the tailwind entry stay, so a skipped tag or class hit counts. A tag map or entry sync would refuse
  * returns sync's errors.
  */
-function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run }: Unskipped) {
+function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run }: Unskipped): Result<Diagnostic[]> {
   const tailwind = withTailwindEntry(workspace.root, lint);
 
-  if (!tailwind.ok) return tailwind;
+  if (!tailwind.ok) return { error: tailwind.errors, ok: false };
   const built = oxlintConfig(workspace, { ...tailwind.lint, skip: [] });
 
-  if (!built.ok) return built;
+  if (!built.ok) return { error: built.errors, ok: false };
   const rel = unskippedConfigPath(process.pid);
   const file = path.join(workspace.root, rel);
   fs.writeFileSync(file, built.value);
@@ -160,8 +161,8 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
   if (skips.length === 0) return NONE;
   const listed = sourcesOf(workspace.root);
 
-  if (!listed.ok) return { problems: listed.errors, report: [] };
-  const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.files)), index, skip }));
+  if (!listed.ok) return { problems: listed.error, report: [] };
+  const entries = skips.map((skip, index) => ({ files: new Set(skipFiles(skip.files, listed.value)), index, skip }));
   const files = [...new Set(entries.flatMap((entry) => [...entry.files]))].toSorted(byKey);
   const oxlinted = files.filter((file) => !RUST_SOURCE.test(file) && !isLintedCss(file));
 
@@ -170,13 +171,13 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
       ? { ok: true as const, value: [] }
       : unskippedReport(workspace, lint, { files: oxlinted, run });
 
-  if (!linted.ok) return { problems: linted.errors, report: [] };
+  if (!linted.ok) return { problems: linted.error, report: [] };
   const diagnostics = [...linted.value, ...scripts];
 
   const lines = entries.map((entry) => {
-    const missing = entry.skip.files.filter((glob) => skipFiles([glob], listed.files).length === 0);
+    const missing = entry.skip.files.filter((glob) => skipFiles([glob], listed.value).length === 0);
     // An entry that matches nothing is stale on its paths alone; its rules cannot hit.
-    const checked = entry.files.size === 0 ? NONE : entryLines(entry, diagnostics, listed.files);
+    const checked = entry.files.size === 0 ? NONE : entryLines(entry, diagnostics, listed.value);
 
     return {
       problems: [...missing.map((glob) => noFile(entry.index, glob)), ...checked.problems],

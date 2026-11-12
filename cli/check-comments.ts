@@ -11,6 +11,7 @@ import { parseSync, type Comment } from "oxc-parser";
 import { BLOCK_CLOSE_WIDTH, LAST, TS_IGNORE, TS_NOCHECK } from "./check-comments.constants.ts";
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
 import { isReason } from "./lint/is-reason.ts";
+import type { Result } from "./result.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import { runGit } from "./sync/standards.ts";
 
@@ -38,9 +39,6 @@ const EXPECT = '"@ts-expect-error" needs a reason: // @ts-expect-error <why this
 
 /** A refused comment: where in the file its directive starts, and what to do instead. */
 type Hit = { at: number; message: string };
-
-/** The source files of a checkout, or why git could not list them. */
-export type Listed = { ok: true; files: string[] } | { ok: false; errors: string[] };
 
 function isSource(rel: string) {
   return SOURCE.test(rel) && !rel.split("/").includes(FIXTURES_DIR);
@@ -138,17 +136,17 @@ export function commentProblems(root: string, files: readonly string[]): string[
 }
 
 /** The tracked and untracked, not ignored, source files under `root`, outside any `__fixtures__` dir, sorted. */
-export function sourceFiles(root: string): Listed {
+export function sourceFiles(root: string): Result<string[]> {
   const run = runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"]);
 
-  if (run.status !== 0) return { errors: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
+  if (run.status !== 0) return { error: [`git ls-files failed: ${run.stderr.trim()}`], ok: false };
 
-  return { files: [...new Set(run.stdout.split("\0").filter(isSource))].toSorted(byCodeUnit), ok: true };
+  return { ok: true, value: [...new Set(run.stdout.split("\0").filter(isSource))].toSorted(byCodeUnit) };
 }
 
 /** `commentProblems` over every source file of the checkout at `root`, as `repo check` runs it. */
 export function checkComments(root: string): string[] {
   const listed = sourceFiles(root);
 
-  return listed.ok ? commentProblems(root, listed.files) : listed.errors;
+  return listed.ok ? commentProblems(root, listed.value) : listed.error;
 }

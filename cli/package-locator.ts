@@ -9,6 +9,7 @@ import path from "node:path";
 
 import ts from "typescript";
 
+import { isString } from "./json.ts";
 import { posix } from "./ts-program.ts";
 import { fieldsOf } from "./type-surface-blame.ts";
 import { INSTALLED_SEGMENT, MANIFEST, PACKAGE_DIR } from "./type-surface.constants.ts";
@@ -59,7 +60,7 @@ function nameOf({ names }: Lookups, manifest: string | undefined): string | null
 
   if (known !== undefined) return known;
   const { name } = fieldsOf(manifest);
-  const found = typeof name === "string" ? name : null;
+  const found = isString(name) ? name : null;
   names.set(manifest, found);
 
   return found;

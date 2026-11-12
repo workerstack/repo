@@ -1,6 +1,6 @@
 import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
 
-import { asNode, type SyntaxValue, textOf } from "../syntax-node.ts";
+import { asNode, isBooleanLiteral, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { NAMING_SYNTAX as SYNTAX } from "./naming-syntax.constants.ts";
 import { get, nameOf, nodesOf } from "./public-surface.syntax.ts";
 
@@ -97,7 +97,7 @@ export function holdsBoolean(declarator: TSESTree.VariableDeclarator): boolean {
 
   if (init === null) return false;
 
-  if (init.type === AST_NODE_TYPES.Literal) return typeof init.value === "boolean";
+  if (init.type === AST_NODE_TYPES.Literal) return isBooleanLiteral(init);
 
   if (init.type === AST_NODE_TYPES.UnaryExpression) return init.operator === "!";
 

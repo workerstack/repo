@@ -4,7 +4,7 @@ import { EMPTY_SETTINGS, fakeGh } from "./__fixtures__/github-store.ts";
 import { must, wantedOf } from "./__fixtures__/github-wanted.ts";
 import type { Gh, GhFailure } from "./github-gh.ts";
 import { readCurrent } from "./github-read.ts";
-import type { JsonObject } from "./json.ts";
+import { isString, type JsonObject } from "./json.ts";
 
 const BASE = "repos/o/r";
 const ALERTS = `${BASE}/vulnerability-alerts`;
@@ -33,7 +33,7 @@ function canned(json: JsonObject, fails: Record<string, GhFailure> = {}): Gh {
     if (failed !== undefined) return Promise.resolve(failed);
     const answer = json[path];
 
-    return Promise.resolve({ ok: true, stdout: typeof answer === "string" ? answer : JSON.stringify(answer ?? {}) });
+    return Promise.resolve({ ok: true, stdout: isString(answer) ? answer : JSON.stringify(answer ?? {}) });
   };
 }
 

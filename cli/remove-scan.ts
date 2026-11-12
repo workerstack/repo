@@ -23,9 +23,9 @@ function nameOf(field: string, key: string): string {
 
 /** The patch file a `patchedDependencies` entry at `route` names; null when the entry is not a path. */
 function patchOf(raw: Json, route: readonly string[]): string | null {
-  const file = atRoute(raw, route);
+  const file = z.string().safeParse(atRoute(raw, route));
 
-  return typeof file === "string" ? file : null;
+  return file.success ? file.data : null;
 }
 
 /** The root's overrides, resolutions, trusted dependencies and patches that name one of `names`. */

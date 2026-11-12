@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import type { JsonObject } from "../json.ts";
+import { isString, type JsonObject } from "../json.ts";
 import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { catalogsOf, readWorkspace } from "./workspace.ts";
 
@@ -16,7 +16,7 @@ function repo(files: Record<string, JsonObject | string>): string {
   for (const [rel, content] of Object.entries(files)) {
     const file = path.join(root, rel);
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, typeof content === "string" ? content : JSON.stringify(content));
+    fs.writeFileSync(file, isString(content) ? content : JSON.stringify(content));
   }
 
   return root;

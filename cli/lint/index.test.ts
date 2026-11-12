@@ -28,6 +28,7 @@ const RULE_NAMES = [
   "no-object-parameters",
   "no-reflect-apply",
   "no-reflect-get",
+  "no-runtime-typeof",
   "no-shape-in-symbol-names",
   "no-side-effect-import",
   "no-unknown-parameters",

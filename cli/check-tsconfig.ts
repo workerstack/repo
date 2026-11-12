@@ -5,7 +5,7 @@ import path from "node:path";
 import ts from "typescript";
 import { z } from "zod";
 
-import { isRecord } from "./json.ts";
+import { isRecord, isString } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
@@ -188,11 +188,9 @@ function projectFile(dir: string, spec: string): string {
 /** Every config the scripts of `dir`'s package.json run with `-p` or `--project`, relative to `cwd`. */
 function scriptTargets(cwd: string, dir: string): string[] {
   const scripts = readRaw(cwd, path.posix.join(dir, PACKAGE_FILE)).scripts;
-  const commands = typeof scripts === "object" && scripts !== null ? Object.values(scripts) : [];
+  const commands = isRecord(scripts) ? Object.values(scripts) : [];
 
-  const flags = commands
-    .filter((command) => typeof command === "string")
-    .flatMap((command) => [...command.matchAll(PROJECT_FLAG)]);
+  const flags = commands.filter(isString).flatMap((command) => [...command.matchAll(PROJECT_FLAG)]);
 
   return flags.flatMap((flag) => flag.slice(1).map((spec) => projectFile(dir, spec)));
 }
@@ -213,16 +211,12 @@ function linkedConfigs(cwd: string, rel: string): string[] {
   const raw = readRaw(cwd, rel);
   const dir = path.posix.dirname(rel);
 
-  const parents = [raw.extends]
-    .flat()
-    .flatMap((spec) => (typeof spec === "string" && spec.startsWith(".") ? [spec] : []));
+  const parents = [raw.extends].flat().flatMap((spec) => (isString(spec) && spec.startsWith(".") ? [spec] : []));
 
   const refs = Array.isArray(raw.references) ? raw.references : [];
   const extended = parents.map((spec) => path.posix.join(dir, spec.endsWith(".json") ? spec : `${spec}.json`));
 
-  const referenced = refs.flatMap((ref) =>
-    isRecord(ref) && typeof ref.path === "string" ? [projectFile(dir, ref.path)] : [],
-  );
+  const referenced = refs.flatMap((ref) => (isRecord(ref) && isString(ref.path) ? [projectFile(dir, ref.path)] : []));
 
   return [...extended, ...referenced];
 }

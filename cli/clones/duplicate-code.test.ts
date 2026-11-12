@@ -134,7 +134,7 @@ function missing(name: string): string {
 it("returns the missing binary of a platform jscpd ships none for as a problem line", () => {
   const scope = { files: Object.keys(PAIR), sources: Object.keys(PAIR) };
   expect(duplicateDiagnostics(plant(PAIR), scope, { arch: "x64", platform: "freebsd" })).toStrictEqual({
-    errors: [
+    error: [
       "jscpd has no binary for this platform (jscpd-freebsd-x64); run `bun install` with optional dependencies " +
         "on a platform jscpd ships one for",
     ],
@@ -158,9 +158,9 @@ it("looks for Windows' msvc package, and for both Linux libcs of an arch not ins
     return duplicateDiagnostics(plant(PAIR), scope, { arch: "riscv64", platform });
   }
 
-  expect(at("win32")).toStrictEqual({ errors: [missing("jscpd-windows-riscv64-msvc")], ok: false });
+  expect(at("win32")).toStrictEqual({ error: [missing("jscpd-windows-riscv64-msvc")], ok: false });
   expect(at("linux")).toStrictEqual({
-    errors: [missing("jscpd-linux-riscv64-gnu or jscpd-linux-riscv64-musl")],
+    error: [missing("jscpd-linux-riscv64-gnu or jscpd-linux-riscv64-musl")],
     ok: false,
   });
 });

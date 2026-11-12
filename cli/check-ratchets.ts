@@ -22,7 +22,7 @@ import {
   TAB,
 } from "./check-ratchets.constants.ts";
 import { childEnv } from "./env.ts";
-import { tryJson } from "./json.ts";
+import { isString, tryJson } from "./json.ts";
 import { DEFAULT_LIST } from "./known-failures.constants.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.constants.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
@@ -91,7 +91,7 @@ function tableSchema(): z.ZodType<Table> {
 
 /** A JSON list's strings; its other items are dropped. */
 function listSchema(): z.ZodType<string[]> {
-  return z.array(z.unknown()).transform((items) => items.filter((item) => typeof item === "string"));
+  return z.array(z.json()).transform((items) => items.filter(isString));
 }
 
 /** `text` read through `schema`; undefined when there is no text, it is no JSON, or `schema` refuses its shape. */

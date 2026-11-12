@@ -3,8 +3,8 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import type { Result } from "../result.ts";
 import { fail, pass, plural, type Gate } from "../scripts/ci-gate.ts";
-import type { Result } from "../scripts/lint-baseline.ts";
 import { LLVM_COV_PIN, NEXTEST_PIN } from "./cargo-tools.constants.ts";
 import { pinProblem, quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
@@ -65,10 +65,10 @@ function measured(root: string, run: CargoRun): Result<Tested> {
 function plain(root: string, run: CargoRun): Result<Tested> {
   const result = run(root, NEXTEST_ARGS);
 
-  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+  if (result.missing) return { error: [MISSING_CARGO], ok: false };
   const text = outputOf(result);
 
-  return result.status === 0 ? { ok: true, value: { rows: null, text } } : { errors: [text.trim()], ok: false };
+  return result.status === 0 ? { ok: true, value: { rows: null, text } } : { error: [text.trim()], ok: false };
 }
 
 /** The shape of `cargo metadata --no-deps` this reads, built once per run so the module runs no code. */
@@ -85,11 +85,11 @@ function schema() {
 function hasDoctests(root: string, run: CargoRun): Result<boolean> {
   const result = run(root, METADATA_ARGS);
 
-  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+  if (result.missing) return { error: [MISSING_CARGO], ok: false };
 
   if (result.status !== 0) {
     return {
-      errors: [`cargo metadata exited ${result.status}: ${quote(outputOf(result))}`],
+      error: [`cargo metadata exited ${result.status}: ${quote(outputOf(result))}`],
       ok: false,
     };
   }
@@ -98,7 +98,7 @@ function hasDoctests(root: string, run: CargoRun): Result<boolean> {
 
   if (parsed === undefined) {
     return {
-      errors: [`cargo metadata printed output repo cannot read: ${quote(result.stdout)}`],
+      error: [`cargo metadata printed output repo cannot read: ${quote(result.stdout)}`],
       ok: false,
     };
   }
@@ -118,10 +118,10 @@ function doctests(root: string, run: CargoRun): Result<number | null> {
   if (!found.value) return { ok: true, value: null };
   const result = run(root, DOCTEST_ARGS);
 
-  if (result.missing) return { errors: [MISSING_CARGO], ok: false };
+  if (result.missing) return { error: [MISSING_CARGO], ok: false };
   const text = outputOf(result);
 
-  if (result.status !== 0) return { errors: [text.trim()], ok: false };
+  if (result.status !== 0) return { error: [text.trim()], ok: false };
   const counts = [...text.matchAll(DOCTEST_PASSED)].map((match) => Number(match[1]));
 
   return { ok: true, value: counts.reduce((sum, count) => sum + count, 0) };
@@ -151,10 +151,10 @@ export function rustTests(root: string, deps: Deps): Gate {
   if (problem !== null) return failed([problem]);
   const tested = deps.coverage ? measured(root, deps.run) : plain(root, deps.run);
 
-  if (!tested.ok) return failed(tested.errors);
+  if (!tested.ok) return failed(tested.error);
   const docs = doctests(root, deps.run);
 
-  if (!docs.ok) return failed(docs.errors);
+  if (!docs.ok) return failed(docs.error);
   const lines = tested.value.rows === null ? [] : floorLines(path.resolve(root, deps.floors), tested.value.rows);
 
   if (lines.length > 0) return failed(lines);

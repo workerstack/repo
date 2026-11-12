@@ -14,7 +14,7 @@ function rejectFiles(root: string, packages: readonly string[], touched: readonl
   const listed = sourceFiles(root);
 
   if (!listed.ok) return listed;
-  const files = listed.files.filter((rel) => REJECT_FILE.test(rel) && touched.includes(ownerOf(rel, packages)));
+  const files = listed.value.filter((rel) => REJECT_FILE.test(rel) && touched.includes(ownerOf(rel, packages)));
 
   return { files, ok: true as const };
 }
@@ -26,7 +26,7 @@ export function rejectionsStep(turn: Turn): StepResult | null {
   if (!listed.ok) {
     return failed(
       "rejections failed",
-      listed.errors.map((line) => `repo turn: ${line}\n`),
+      listed.error.map((line) => `repo turn: ${line}\n`),
     );
   }
 

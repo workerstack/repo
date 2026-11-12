@@ -4714,6 +4714,7 @@
     "6dc312e889540b6d",
     "79a3dc32321f0d34",
     "8e2013c2b6db3a0b",
+    "b0bbfcd55ded1677",
     "b6a453f9c2daea9c",
     "c3f163981bf46797",
     "c5ef5c7ab14e5e8f",
@@ -4800,6 +4801,7 @@
     "96a9edbb6f3fe6d9",
     "9925ae8909d811f1",
     "b0c55e864fbe253a",
+    "d51c244adf341195",
     "fd770525085063be"
   ],
   "cli/scripts/lint-rust.test.ts": [
@@ -4855,6 +4857,7 @@
     "a6ec8d8ad72a1f5f",
     "a80cb47a942f0816",
     "ca49db46340afc96",
+    "ea25b534813411b0",
     "f55dcaba623e33ba"
   ],
   "cli/scripts/lint-spawn.test.ts": [
@@ -6111,7 +6114,8 @@
     "741503eef4d639a6",
     "8b3129a81cd3a4c8",
     "a3268d59772d0507",
-    "c8f919f3fce81664"
+    "c8f919f3fce81664",
+    "fcdc47b8faf8da8a"
   ],
   "cli/scripts/root-anchor.constants.ts": ["a0f779de3035a0ac"],
   "cli/scripts/rtk-grok.constants.ts": ["718e5365f3b0b1c8", "b4a1cb29c60c7af9"],
@@ -6772,6 +6776,7 @@
     "7ed1ce0ff6d9a650",
     "92db5ec7d0e5b0c9",
     "a7423323b7ababed",
+    "a9f0358303151a5d",
     "aa660528fab1472e",
     "aae0d4c430ea5890",
     "bdcfe41619301dac",

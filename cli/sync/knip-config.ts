@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
-import { isRecord } from "../json.ts";
+import { isRecord, isString } from "../json.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -45,7 +45,7 @@ const RULES = [
 function binNames(manifest: PackageJson): string[] {
   if (isRecord(manifest.bin)) return Object.keys(manifest.bin);
 
-  if (typeof manifest.bin !== "string" || manifest.name === undefined) return [];
+  if (!isString(manifest.bin) || manifest.name === undefined) return [];
 
   return [path.posix.basename(manifest.name)];
 }

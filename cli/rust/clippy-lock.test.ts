@@ -35,19 +35,19 @@ function cargo(status: number, extra: Partial<CargoResult> = {}) {
 
 it("runs no cargo and names the missing lock when the root has no Cargo.lock", () => {
   const { run, calls } = cargo(0);
-  expect(clippyHits(BARE, run)).toStrictEqual({ errors: [MISSING_LOCK], ok: false });
+  expect(clippyHits(BARE, run)).toStrictEqual({ error: [MISSING_LOCK], ok: false });
   expect(calls).toStrictEqual([]);
 });
 
 it("names the stale lock when --locked made cargo exit 101", () => {
   const stderr = "error: the lock file /w/Cargo.lock needs to be updated but --locked was passed to prevent this\n";
-  expect(clippyHits(ROOT, cargo(101, { stderr }).run)).toStrictEqual({ errors: [STALE_LOCK], ok: false });
+  expect(clippyHits(ROOT, cargo(101, { stderr }).run)).toStrictEqual({ error: [STALE_LOCK], ok: false });
 });
 
 it("keeps any other exit 101 as the exit problem", () => {
   const run = cargo(101, { stderr: "error: could not compile\n" }).run;
   expect(clippyHits(ROOT, run)).toStrictEqual({
-    errors: ["cargo clippy exited 101 and printed no error: error: could not compile"],
+    error: ["cargo clippy exited 101 and printed no error: error: could not compile"],
     ok: false,
   });
 });

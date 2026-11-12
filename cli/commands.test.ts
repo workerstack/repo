@@ -8,12 +8,12 @@ import { HOOK_NAMES } from "./scripts/hook-command.ts";
 describe("registry", () => {
   it.each(Object.entries(COMMANDS))("command %s loads a main", async (_name, entry) => {
     const loaded = await entry.load();
-    expect(typeof loaded.main).toBe("function");
+    expect(loaded.main).toBeTypeOf("function");
   });
 
   it.each(HOOK_NAMES)("hook %s loads a main", async (name) => {
     const loaded = await HOOKS[name].load();
-    expect(typeof loaded.main).toBe("function");
+    expect(loaded.main).toBeTypeOf("function");
   });
 
   it("names commands, and nothing else", () => {

@@ -35,8 +35,11 @@ import type { Captured } from "./scripts/lint.ts";
 /** What a run mutates: the root, the commit, every selected file and the shard of them this run takes. */
 export type Plan = { root: string; sha: string; files: string[]; shard: Shard };
 
+/** Stryker's manifest `bin`, a path or a map of names to paths, read as the path of its own bin. */
 function buildBinSchema() {
-  return z.object({ bin: z.union([z.string(), z.record(z.string(), z.string())]) });
+  const named = z.record(z.string(), z.string()).transform((bins) => bins[STRYKER_BIN_NAME]);
+
+  return z.object({ bin: z.union([z.string(), named]) });
 }
 
 const binSchema = /* @__PURE__ */ buildBinSchema();
@@ -74,8 +77,7 @@ function strykerBin(clone: string, deps: MutateDeps): string | null {
   const core = deps.fs.read(path.join(modules, STRYKER_CORE, MANIFEST));
   const runner = deps.fs.read(path.join(modules, STRYKER_RUNNER, MANIFEST));
   const manifest = core === null || runner === null ? null : readParsed(binSchema, core);
-  const bin = manifest?.ok === true ? manifest.value.bin : undefined;
-  const relative = typeof bin === "string" ? bin : bin?.[STRYKER_BIN_NAME];
+  const relative = manifest?.ok === true ? manifest.value.bin : undefined;
 
   if (relative === undefined) return refuse(deps, `install the mutation tool first: ${INSTALL_HINT}`);
 

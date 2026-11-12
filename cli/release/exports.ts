@@ -1,4 +1,5 @@
-import { isRecord, type Json, type JsonObject } from "../json.ts";
+import { isRecord, isString, type Json, type JsonObject } from "../json.ts";
+import type { Result } from "../result.ts";
 import {
   CODE_FILE,
   CURRENT_DIR,
@@ -20,7 +21,7 @@ export type Expanded = { exports: number; subpaths: Subpath[]; errors: string[] 
 
 /** The file that runs: a string, the first array entry with one, or the first runtime condition with one. */
 function runtimeOf(value: Json | undefined): string | null {
-  if (typeof value === "string") return value;
+  if (isString(value)) return value;
 
   if (Array.isArray(value)) return value.map(runtimeOf).find((target) => target !== null) ?? null;
 
@@ -37,14 +38,14 @@ function runtimeOf(value: Json | undefined): string | null {
 
 /** The file that types: the `types` condition, or one nested in a runtime condition, or a `.ts` runtime string. */
 function typesOf(value: Json | undefined): string | null {
-  if (typeof value === "string") return TS_SOURCE.test(value) ? value : null;
+  if (isString(value)) return TS_SOURCE.test(value) ? value : null;
 
   if (Array.isArray(value)) return value.map(typesOf).find((target) => target !== null) ?? null;
 
   if (!isRecord(value)) return null;
   const typed = value[TYPES_CONDITION];
 
-  if (typeof typed === "string") return typed;
+  if (isString(typed)) return typed;
 
   for (const condition of RUNTIME_CONDITIONS) {
     const target = isRecord(value[condition]) ? typesOf(value[condition]) : null;
@@ -79,13 +80,14 @@ function patternOf(target: string): RegExp {
  * The subpaths one `exports` key stands for: itself, or a file each when it is a `*` pattern; or the line that says
  * why not.
  */
-function expandKey(key: string, value: Json, files: readonly string[]): Subpath[] | string {
+function expandKey(key: string, value: Json, files: readonly string[]): Result<Subpath[], string> {
   const runtime = runtimeOf(value);
 
-  if (runtime === null) return noRuntime(key);
+  if (runtime === null) return { error: noRuntime(key), ok: false };
   const types = typesOf(value);
 
-  if (!key.includes(STAR) || !runtime.includes(STAR)) return [{ key, kind: kindOf(runtime), runtime, types }];
+  if (!key.includes(STAR) || !runtime.includes(STAR))
+    return { ok: true, value: [{ key, kind: kindOf(runtime), runtime, types }] };
   const pattern = patternOf(runtime);
 
   const found = files.flatMap((file) => {
@@ -94,19 +96,21 @@ function expandKey(key: string, value: Json, files: readonly string[]): Subpath[
     return captured === undefined ? [] : [{ captured, file }];
   });
 
-  if (found.length === 0) return noMatch(key);
+  if (found.length === 0) return { error: noMatch(key), ok: false };
 
-  return found.map(({ file, captured }) => ({
+  const subpaths = found.map(({ file, captured }) => ({
     key: key.replace(STAR, captured),
     kind: kindOf(file),
     runtime: `${CURRENT_DIR}${file}`,
     types: types?.replace(STAR, captured) ?? null,
   }));
+
+  return { ok: true, value: subpaths };
 }
 
 /** The `exports` field as a map of keys; a string, array or condition object stands for the root key. */
 function keyMap(exports: Json | undefined): JsonObject | null {
-  if ((typeof exports !== "string" && typeof exports !== "object") || exports === null) return null;
+  if (!isString(exports) && !Array.isArray(exports) && !isRecord(exports)) return null;
 
   if (isRecord(exports) && Object.keys(exports).every((key) => key.startsWith(ROOT_KEY))) return exports;
 
@@ -124,8 +128,8 @@ export function exportSubpaths(exports: Json | undefined, files: readonly string
     out.exports += 1;
     const got = expandKey(key, value, files);
 
-    if (typeof got === "string") out.errors.push(got);
-    else out.subpaths.push(...got);
+    if (got.ok) out.subpaths.push(...got.value);
+    else out.errors.push(got.error);
   }
 
   return out;
