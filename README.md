@@ -296,6 +296,8 @@ A branch with no upstream is pushed with `git push -u origin <branch>`. The push
 
 ### Bench
 
+The `benchmark` pack also links the `/benchmark` skill, which picks the dimensions and writes the spec.
+
 `bun repo bench <name>` runs `.repo/bench/<name>.bench.ts`, whose default export is `defineBench` from `@workerstack/repo/bench` (with the types `BenchSpec`, `BenchCandidate`, `BenchMetric`, `Better` and `OsLabel`):
 
 ```ts
@@ -911,7 +913,7 @@ Cheap outline. Not a file dump.
 
 ### Skills layout
 - Source: `agents/skills/<name>/SKILL.md`, the one copy (`STOCK_SKILLS_REL` in `cli/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
-- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them. In this repo sync links both `.claude/skills/<name>` and `.agents/skills/<name>` straight to `agents/skills/<name>` with a relative link. The package ships no generated trees, so each consumer's sync makes its links
+- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them, and a config pack can gate a stock skill the same way (the `benchmark` pack links `/benchmark`). In this repo sync links both `.claude/skills/<name>` and `.agents/skills/<name>` straight to `agents/skills/<name>` with a relative link. The package ships no generated trees, so each consumer's sync makes its links
 - Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
 - There is no skills generator step: `bun repo sync` only links skills; nothing wipes `.agents/skills`
 
@@ -983,7 +985,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml` and `hooks/*.json` copied from `agents/grok/`; the hook scripts stay in the package's `cli/scripts/`
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
 - release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); also, for a public root with a config `owner` and a GitHub `repository`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/{bug_report,config}.yml` (tracked, whole-file); a hand-written one is refused
-- benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused
+- benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused; also the `/benchmark` skill links in `.agents/skills` and `.claude/skills`
 - always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:skills`, `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
 
 ### Generator divergences

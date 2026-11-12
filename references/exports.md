@@ -121,6 +121,8 @@ A branch with no upstream is pushed with `git push -u origin <branch>`. The push
 
 ## Bench
 
+The `benchmark` pack also links the `/benchmark` skill, which picks the dimensions and writes the spec.
+
 `bun repo bench <name>` runs `.repo/bench/<name>.bench.ts`, whose default export is `defineBench` from `@workerstack/repo/bench` (with the types `BenchSpec`, `BenchCandidate`, `BenchMetric`, `Better` and `OsLabel`):
 
 ```ts

@@ -71,6 +71,14 @@ it("asks a skill named like a stock skill for overrides, unless its pack is off"
 it("does not ask for overrides when the stock is this repo itself", () => {
   const root = repo({ ".repo/skills/ask/SKILL.md": skill("ask") });
   expect(
-    repoDirProblems(root, { listed: null, packages: [], skills: [], sources: sourcesOf(), stock: root }),
+    repoDirProblems(root, { listed: null, off: [], packages: [], sources: sourcesOf(), stock: root }),
   ).toStrictEqual([]);
+});
+
+it("asks a skill named like a pack skill for overrides only while its config pack is on", () => {
+  const root = repo({ ".repo/skills/benchmark/SKILL.md": skill("benchmark") });
+  expect(check(root)).toStrictEqual([]);
+  expect(check(root, [], { packs: ["agents", "benchmark"] })).toStrictEqual([
+    ".repo/skills/benchmark: a stock skill has this name; add `overrides: benchmark` to its SKILL.md or rename it",
+  ]);
 });

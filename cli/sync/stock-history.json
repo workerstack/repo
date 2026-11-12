@@ -117,6 +117,8 @@
     "ced7c3eaf2356090"
   ],
   ".agents/skills/away/SKILL.md": ["e9100f4b23565ac0"],
+  ".agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
+  ".agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
   ".agents/skills/blast-radius/SKILL.md": ["edd6d7e66ec29712"],
   ".agents/skills/bro/SKILL.md": ["1d06d81d9b584f52"],
   ".agents/skills/browser/SKILL.md": [
@@ -2119,6 +2121,8 @@
   "agents/skills/ask/SKILL.md": ["06a3ef753760f34f"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e"],
   "agents/skills/away/SKILL.md": ["e9100f4b23565ac0"],
+  "agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
+  "agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
   "agents/skills/blast-radius/SKILL.md": ["edd6d7e66ec29712"],
   "agents/skills/bro/SKILL.md": ["1d06d81d9b584f52"],
   "agents/skills/browser/SKILL.md": ["7b4f07e5c0f9e2b2"],
@@ -5606,6 +5610,7 @@
     "0bdfb9d313ef5858",
     "1b5c605be587f519",
     "2f03845cf48b1834",
+    "4bd073ffae8a95e9",
     "58fe4af32f7c0f0b",
     "792a127aa91441be",
     "79d35824f2528e48",
@@ -5621,6 +5626,7 @@
   "references/cloudflare.md": ["9d26d71227fdfc29"],
   "references/exports.md": [
     "28c733238c8ebeff",
+    "42173e1ce7d819df",
     "77895c578e57d302",
     "848935de803d48f6",
     "aed613caab53ac2d",
@@ -5665,6 +5671,7 @@
     "5bff702015ecc71f",
     "612ff00b10bde4f8",
     "64321295e7470c58",
+    "7c29c1dd0d29d4a9",
     "ac0d0d4c2036f1e6",
     "be99ba4bbf55ee14",
     "d92570bc93ab6cd8",

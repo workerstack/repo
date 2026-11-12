@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { BASE_CONFIG } from "../../__fixtures__/base-config.ts";
-import type { Host, SkillPack } from "../../config.ts";
+import type { Host, Pack, SkillPack } from "../../config.ts";
 import type { Output, SyncContext } from "../outputs.ts";
 import { renderTrees } from "../trees.ts";
 import { put, tempDir } from "./temp-dirs.ts";
@@ -18,6 +18,8 @@ export const RENDER_TIMEOUT = 60_000;
 /** The optional packs and workspace packages of a render. */
 export interface RenderOptions {
   skills?: readonly SkillPack[];
+  /** The config packs that are on; just agents by default. */
+  packs?: readonly Pack[];
   packages?: readonly string[];
 }
 
@@ -61,7 +63,7 @@ export function context(root: string, hosts: readonly Host[], options: RenderOpt
   return {
     root,
     config: {
-      packs: ["agents"],
+      packs: options.packs ?? ["agents"],
       agents: { hosts, skills: options.skills ?? [] },
       ...BASE_CONFIG,
     },

@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { SKILL_PACKS } from "../config.ts";
+import { offSkills } from "../config.ts";
 import { WORKSPACE_SKILLS_REL, STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -17,10 +17,9 @@ function readsAgentsDir(hosts: readonly string[]): boolean {
   return hosts.includes("codex") || hosts.includes("antigravity");
 }
 
-/** The skill names to link: the stock's (without the packs not enabled) and the overlay's own, sorted. */
+/** The skill names to link: the stock's (without the skills the config turns off) and the overlay's own, sorted. */
 function skillNames(ctx: SyncContext, stock: string, own: readonly string[]): string[] {
-  const { skills } = ctx.config.agents;
-  const optional = new Set<string>(SKILL_PACKS.filter((pack) => !skills.includes(pack)));
+  const optional = new Set<string>(offSkills(ctx.config));
   const stockNames = listSkillDirNames(path.join(stock, STOCK_SKILLS_REL)).filter((name) => !optional.has(name));
   return [...new Set([...stockNames, ...own])].toSorted(byCodeUnit);
 }
