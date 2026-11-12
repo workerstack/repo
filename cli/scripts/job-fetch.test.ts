@@ -8,6 +8,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 
 import { bunPath } from "../../dev/test-paths";
 import { plant, useJobEnv } from "./__fixtures__/job-kit.ts";
+import { boundPort } from "./browser-session.ts";
 import { runFetch, stripHtml } from "./job-fetch.ts";
 import { runJob } from "./job.ts";
 
@@ -43,7 +44,7 @@ async function closedPort(): Promise<number> {
   const address = probe.address();
   await new Promise((resolve) => probe.close(resolve));
 
-  return typeof address === "object" && address !== null ? address.port : 0;
+  return boundPort(address);
 }
 
 it("runFetch lists the title and the sentences of a page without its markup", () => {

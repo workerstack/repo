@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import type { Json, JsonObject } from "../json.ts";
+import { isString, type Json, type JsonObject } from "../json.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
 import type { HookInput } from "./hook-input.ts";
@@ -74,7 +74,7 @@ export function rewriteSpawnToolInput(toolInput: JsonObject | undefined): JsonOb
   const next: JsonObject = Object.assign({}, toolInput);
   let isChanged = false;
 
-  if (typeof next.prompt === "string") {
+  if (isString(next.prompt)) {
     const scrubbed = capSpawnPrompt(next.prompt);
 
     if (scrubbed !== next.prompt) {
@@ -98,7 +98,7 @@ export function processHookPayload(data: HookInput | null | undefined): SpawnAns
   const updated = rewriteSpawnToolInput(toolInput);
   const prompt = sentPrompt(updated, toolInput);
 
-  if (typeof prompt === "string" && prompt.length > MAX_PROMPT_CHARS)
+  if (isString(prompt) && prompt.length > MAX_PROMPT_CHARS)
     return answerDeny(data, spawnCapReason(resolveRoots(data).root));
 
   return updated === null ? null : answerRewrite(data, updated);

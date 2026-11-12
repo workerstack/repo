@@ -14,12 +14,11 @@ export type JevInit = {
   signal: AbortSignal;
 };
 
-export type HeadersLike = { get(name: string): string | null } | Record<string, string>;
-
 export type JevResponse = {
   status: number;
   json: () => Promise<Json>;
-  headers?: HeadersLike | null;
+  /** The slice of a fetch Headers the runner reads: one header by name, null when absent. */
+  headers: { get(name: string): string | null };
 };
 
 export type JevFetch = (url: string, init: JevInit) => Promise<JevResponse>;
@@ -29,9 +28,9 @@ export type JevRunOpts = {
   env?: Env | undefined;
   fetchImpl?: JevFetch | undefined;
   sleep?: ((ms: number) => Promise<void>) | undefined;
-  now?: number | (() => number) | undefined;
-  stateText?: unknown;
-  questionsText?: unknown;
+  now?: (() => number) | undefined;
+  stateText?: string | undefined;
+  questionsText?: string | undefined;
 };
 
 export type JevRun = (opts?: JevRunOpts) => Promise<JevResult>;
@@ -49,7 +48,7 @@ export type Ledger = {
 export type PostResult = {
   status: number;
   json: Json;
-  headers: HeadersLike | null | undefined;
+  headers: JevResponse["headers"];
 };
 
 /** One request's outcome: a refusal, or the response and the clock it was charged at. */

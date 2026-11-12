@@ -72,6 +72,11 @@ it("runJev: names the failure when a file cannot be read", async () => {
   });
 });
 
+/** A fixed clock the runner options carry through. */
+function clock(): number {
+  return 5;
+}
+
 it("runJev: hands the file contents and its options to the runner", async () => {
   const dir = plantDir();
   const { state, questions } = plantInputs(dir);
@@ -80,7 +85,7 @@ it("runJev: hands the file contents and its options to the runner", async () => 
   const out = await runJev(["--state", state, `--questions=${questions}`], {
     env: { TYPESAFE_API_KEY: KEY },
     home: dir,
-    now: 5,
+    now: clock,
     run: (opts) => {
       seen.push(opts ?? {});
 
@@ -92,7 +97,7 @@ it("runJev: hands the file contents and its options to the runner", async () => 
   expect(seen[0]).toMatchObject({
     env: { TYPESAFE_API_KEY: KEY },
     home: dir,
-    now: 5,
+    now: clock,
     questionsText: QUESTIONS,
     stateText: "state text",
   });

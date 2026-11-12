@@ -85,7 +85,7 @@ export function start(ctx: ListenCtx): number {
   const stdio = ["ignore", "ignore", "ignore"]; // same as "ignore"
   const child = ctx.spawnFn(ctx.nodeBin, argv, { cwd, detached: true, env, stdio, windowsHide: true });
 
-  if (typeof child.unref === "function") child.unref();
+  child.unref?.();
   writeSession(cwd, { ...(child.pid === undefined ? {} : { pid: child.pid }), started: Date.now(), wav });
   ctx.log.log(`recording pid=${child.pid}\n${wav}`);
 
@@ -102,8 +102,8 @@ function interrupt(ctx: ListenCtx, pid: number): void {
     // none
   }
 
-  if (typeof ctx.waitPid === "function") ctx.waitPid(pid, ctx.killFn);
-  else waitPidExit(pid, ctx.killFn);
+  if (ctx.waitPid === undefined) waitPidExit(pid, ctx.killFn);
+  else ctx.waitPid(pid, ctx.killFn);
 }
 
 /** `stop`: ends the session's recorder and transcribes what it recorded. */
@@ -122,6 +122,11 @@ export async function stop(ctx: ListenCtx): Promise<number> {
   return 0;
 }
 
+/** True for the error a capture settles with when it was killed past its length. */
+function isTimeout(error: unknown): error is { code: string } {
+  return typeof error === "object" && error !== null && "code" in error && error.code === TIMED_OUT;
+}
+
 type Job = { bin: string; args: string[]; seconds: number; wav: string };
 
 /** Runs a timed capture with ffmpeg's log in the listen dir; throws with that log when no wav comes of it. */
@@ -138,10 +143,7 @@ async function capture(ctx: ListenCtx, { bin, args, seconds, wav }: Job): Promis
 
   const ffErr = str(fs.readFileSync(ffLog, "utf8")).slice(0, FFMPEG_LOG_CHARS);
 
-  const { error } = r;
-  const isTimedOut = typeof error === "object" && error !== null && "code" in error && error.code === TIMED_OUT;
-
-  if (isTimedOut) throw new Error(str(ffErr, "ffmpeg rec timed out"));
+  if (isTimeout(r.error)) throw new Error(str(ffErr, "ffmpeg rec timed out"));
 
   if (r.status !== 0 && !fs.existsSync(wav)) throw new Error(str(ffErr, "ffmpeg rec failed"));
 

@@ -118,12 +118,12 @@ export function isHookObject(v: unknown): v is HookInput {
 /** Which wire shape the hook payload came in. */
 export function harnessOf(data: HookInput): Harness {
   // Cursor also sends model and session_id, so it is told apart by its version before Codex's check.
-  if (typeof data.cursor_version === "string") return "cursor";
+  if (data.cursor_version !== undefined) return "cursor";
 
   if (data.toolCall !== undefined) return "antigravity";
 
   // Codex sends both on every tool hook; Claude would read Codex's `allow` as skipping its permission prompt.
-  if (typeof data.turn_id === "string" && typeof data.model === "string") return "codex";
+  if (data.turn_id !== undefined && data.model !== undefined) return "codex";
 
   return "claude";
 }

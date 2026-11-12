@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { type Json, type JsonObject, readJson } from "../json.ts";
+import { isNumber, isStringList, type Json, type JsonObject, readJson } from "../json.ts";
 import { errorMessage } from "../sync-errors.ts";
 import { CONFIG_REL, DEFAULTS, GIT_MAX_BUFFER, LIST_KEYS, NUMBER_KEYS } from "./folder-map.constants.ts";
 import type { MapConfig } from "./folder-map.types.ts";
@@ -13,10 +13,6 @@ import { stripJsonc } from "./strip-jsonc.ts";
 
 /** A trailing slash, which git's prefix ends in. */
 const TRAILING_SLASH_RE = /\/$/;
-
-function isStringList(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
 
 function isNumberKey(k: string): k is (typeof NUMBER_KEYS)[number] {
   return NUMBER_KEYS.some((key) => key === k);
@@ -40,7 +36,7 @@ function readConfig(abs: string, warn: (msg: string) => void): JsonObject | null
 /** Sets one known key on `out` when its value is good; warns by name when it is not; skips unknown keys. */
 function applyKey(out: MapConfig, [k, v]: [string, Json], warn: (msg: string) => void): void {
   if (isNumberKey(k)) {
-    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[k] = v;
+    if (isNumber(v) && Number.isFinite(v) && v > 0) out[k] = v;
     else warn(`repo map: ignoring ${CONFIG_REL} key ${k}`);
   } else if (isListKey(k)) {
     if (isStringList(v)) out[k] = v;

@@ -2,7 +2,7 @@
 /** Extract/validate a JSON `need:` array; `orchestrate-parent.ts` calls `parseNeed`. */
 import { z } from "zod";
 
-import { type Json, type JsonObject, tryJson } from "../json.ts";
+import { isBoolean, isNumber, isString, type Json, type JsonObject, tryJson } from "../json.ts";
 import { NEED_JOBS, NEED_LINE, SLICE_JOB } from "./parse-need.constants.ts";
 
 /** One validated job row. */
@@ -24,9 +24,9 @@ type TextField = "path" | "cwd" | "from" | "to";
 
 /** `value` as text when it is a JSON scalar (string, number, boolean); "" for null, undefined, objects and arrays. */
 function scalarText(value: Json | undefined): string {
-  if (typeof value === "string") return value;
+  if (isString(value)) return value;
 
-  return typeof value === "number" || typeof value === "boolean" ? String(value) : "";
+  return isNumber(value) || isBoolean(value) ? String(value) : "";
 }
 
 /** `value` as trimmed text; "" for anything but a scalar. */

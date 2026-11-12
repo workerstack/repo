@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { isString, tryJson } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -97,7 +97,7 @@ export function lessonWrite(write: WriteCase, ws: string): HookResult {
   if (shared !== null) return denyWith(data, shared);
   const body = toolInput.content;
 
-  if (typeof body !== "string") {
+  if (!isString(body)) {
     return denyWith(
       data,
       "Edit is not allowed on lesson files. Write the full lesson (60 lines max) " +

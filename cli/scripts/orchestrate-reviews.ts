@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { isString, tryJson } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
@@ -152,7 +152,8 @@ export function reviewStateOf(ws: string, open: ReviewsOpen, ref: ItemRef): Revi
 // A spawn whose prompt starts `/review-plan N` or `/review-roadmap N` records the item's `reviews` at spawn.
 export function recordReviewSpawn(data: HookInput, toolInput: ToolArgs | undefined): void {
   try {
-    const [, kind, serial] = REVIEW_SPAWN_RE.exec(typeof toolInput?.prompt === "string" ? toolInput.prompt : "") ?? [];
+    const prompt = toolInput?.prompt;
+    const [, kind, serial] = REVIEW_SPAWN_RE.exec(isString(prompt) ? prompt : "") ?? [];
     const file = reviewsOpenFile(data);
 
     if (kind === undefined || file === null) return;

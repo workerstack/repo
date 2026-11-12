@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, tryJson } from "../json.ts";
+import { isBoolean, isNumber, isRecord, isString, type Json, tryJson } from "../json.ts";
 import { ENGINES, ERROR_PREFIX, JSON_INDENT, SESSION_FILE, SESSION_REL } from "./browser.constants.ts";
 import type { BrowserResult, Engine, Rec, RefEntry, Session } from "./browser.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -17,9 +17,9 @@ export function asRec(v: Json | undefined): Rec {
 
 /** `v` as text: a string as is, a number or boolean spelled out, anything else empty. */
 export function textOf(v: Json | undefined): string {
-  if (typeof v === "string") return v;
+  if (isString(v)) return v;
 
-  return typeof v === "number" || typeof v === "boolean" ? String(v) : "";
+  return isNumber(v) || isBoolean(v) ? String(v) : "";
 }
 
 /** `v` as a number; 0 when it is not one. */

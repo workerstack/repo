@@ -9,6 +9,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import type { Result } from "../result.ts";
 import { newestFirst, ghJson } from "../scripts/ci-wait-poll.ts";
 import type { Runner } from "../scripts/ci-wait-run.ts";
 import { BENCH_PATH } from "../sync/bench-workflow.constants.ts";
@@ -104,24 +105,30 @@ function text(io: RemoteIo, args: string[]) {
 }
 
 /** The target to dispatch, or the line naming the first precondition that is not met. */
-export function remoteTarget(io: RemoteIo, spec: string, others: readonly string[]): Target | string {
-  if (others.length === 0) return `${spec}'s os names no runner but this one; add one or run without --remote`;
+export function remoteTarget(io: RemoteIo, spec: string, others: readonly string[]): Result<Target, string> {
+  if (others.length === 0)
+    return { error: `${spec}'s os names no runner but this one; add one or run without --remote`, ok: false };
 
-  if (!fs.existsSync(path.join(io.cwd, BENCH_PATH))) return noWorkflow();
+  if (!fs.existsSync(path.join(io.cwd, BENCH_PATH))) return { error: noWorkflow(), ok: false };
   const named = text(io, ["rev-parse", "--abbrev-ref", "origin/HEAD"]).replace(ORIGIN_PREFIX, "");
   const base = named === "" ? DEFAULT_BRANCH : named;
 
-  if (io.git(["cat-file", "-e", `origin/${base}:${BENCH_PATH}`], io.cwd).code !== 0)
-    return `GitHub dispatches ${WORKFLOW} only from origin/${base}; land it there first (bun repo push)`;
+  if (io.git(["cat-file", "-e", `origin/${base}:${BENCH_PATH}`], io.cwd).code !== 0) {
+    return {
+      error: `GitHub dispatches ${WORKFLOW} only from origin/${base}; land it there first (bun repo push)`,
+      ok: false,
+    };
+  }
+
   const sha = text(io, ["rev-parse", "HEAD"]);
   const branch = text(io, ["rev-parse", "--abbrev-ref", "HEAD"]);
 
   if (text(io, ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch}`]) !== sha)
-    return `origin does not have HEAD ${sha.slice(0, SHA_SHOWN)}; run bun repo push first`;
+    return { error: `origin does not have HEAD ${sha.slice(0, SHA_SHOWN)}; run bun repo push first`, ok: false };
 
-  if (text(io, ["status", "--porcelain"]) !== "") return DIRTY;
+  if (text(io, ["status", "--porcelain"]) !== "") return { error: DIRTY, ok: false };
 
-  return { branch, os: others, sha, spec };
+  return { ok: true, value: { branch, os: others, sha, spec } };
 }
 
 /** The dispatched bench.yml runs at the target's sha. */

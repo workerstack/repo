@@ -4,13 +4,13 @@ import type { KeyAsk, SetupCtx, SetupIo } from "./setup.types.ts";
 import { str } from "./voice-args.ts";
 
 export function logLine(io: SetupIo | null | undefined, s: string): void {
-  if (typeof io?.log === "function") io.log(s);
-  else process.stdout.write(`${s}\n`);
+  if (io?.log === undefined) process.stdout.write(`${s}\n`);
+  else io.log(s);
 }
 
 export function errLine(io: SetupIo | null | undefined, s: string): void {
-  if (typeof io?.error === "function") io.error(s);
-  else process.stderr.write(`${s}\n`);
+  if (io?.error === undefined) process.stderr.write(`${s}\n`);
+  else io.error(s);
 }
 
 /** The terminal prompts, writing through stdout and stderr. */

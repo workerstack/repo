@@ -30,6 +30,9 @@ type Deps = ProbeDeps & { spawn: NonNullable<ProbeDeps["spawn"]> };
 /** One platform's probe of a pid already known to be an integer above 1. */
 type PlatformProbe = (n: number, deps: Deps) => ProcessInfo | null;
 
+/** One step of the walk: stop with the host (null when there is none), or go on to the parent pid. */
+type WalkStep = { done: true; host: HostIdentity | null } | { done: false; parent: number };
+
 export function readBootId({ readFile = fs.readFileSync, platform = process.platform }: ProbeDeps = {}): string {
   if (platform !== LINUX) return NONE;
 
@@ -146,13 +149,13 @@ export function probeProcess(pid: number, deps: ProbeDeps = {}): ProcessInfo | n
   return probe === null ? null : probe(pid, { ...deps, spawn });
 }
 
-/** The host when `info` is not a shell, the parent to walk to when it is, or null when the walk must stop. */
-function walkStep(info: ProcessInfo | null, current: number): HostIdentity | number | null {
-  if (info == null || !(info.pid > 1) || info.start == null || info.start === "") return null;
+/** The host when `info` is not a shell, the parent to walk to when it is, or a stop with no host. */
+function walkStep(info: ProcessInfo | null, current: number): WalkStep {
+  if (info == null || !(info.pid > 1) || info.start == null || info.start === "") return { done: true, host: null };
 
-  if (!SHELLS.has(commBase(info.comm))) return { pid: info.pid, start: info.start };
+  if (!SHELLS.has(commBase(info.comm))) return { done: true, host: { pid: info.pid, start: info.start } };
 
-  return !(info.ppid > 1) || info.ppid === current ? null : info.ppid;
+  return !(info.ppid > 1) || info.ppid === current ? { done: true, host: null } : { done: false, parent: info.ppid };
 }
 
 export function hostIdentity({
@@ -164,8 +167,8 @@ export function hostIdentity({
   for (let i = 0; i < MAX_WALK && current !== undefined && current > 1; i++) {
     const step = walkStep(probe(current), current);
 
-    if (typeof step !== "number") return step;
-    current = step;
+    if (step.done) return step.host;
+    current = step.parent;
   }
 
   return null;

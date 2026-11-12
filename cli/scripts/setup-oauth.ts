@@ -123,7 +123,7 @@ export async function openUrl(
     openUrlFn?: ((url: string) => void) | undefined;
   } = {},
 ): Promise<void> {
-  if (typeof openUrlFn === "function") {
+  if (openUrlFn !== undefined) {
     openUrlFn(url);
 
     return;

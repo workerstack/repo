@@ -1,7 +1,7 @@
 /** One jev request on the wire, and the short summary printed from its answers. */
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonObject, tryJson } from "../json.ts";
+import { isRecord, isString, type Json, type JsonObject, tryJson } from "../json.ts";
 import {
   CHOICE,
   ENDPOINT,
@@ -14,7 +14,7 @@ import {
   SCORE,
   TIMEOUT_MS,
 } from "./jev.constants.ts";
-import type { HeadersLike, JevFetch, JevResult, PostResult, StopKind } from "./jev.types.ts";
+import type { JevFetch, JevResult, PostResult, StopKind } from "./jev.types.ts";
 import { jsonText } from "./json-text.ts";
 
 /** The request body's parts besides the model. */
@@ -22,15 +22,6 @@ type Ask = { questions: JsonObject; state: unknown };
 
 export function fail(text: string): JevResult {
   return { code: FAIL_CODE, text };
-}
-
-export function headerGet(headers: HeadersLike | null | undefined, name: string): string | null {
-  if (headers == null) return null;
-
-  if ("get" in headers && typeof headers.get === "function") return headers.get(name);
-  const plain: Record<string, string> = headers /* not a Headers object, so a plain map */ as Record<string, string>;
-
-  return plain[name] ?? null;
 }
 
 export function parseState(stateText: string): Json {
@@ -56,7 +47,7 @@ function answerLine(id: string, answer: JsonObject): string | null {
 }
 
 export function formatAnswers(payload: JsonObject): string {
-  const model = typeof payload.model === "string" && payload.model !== "" ? payload.model : MODEL;
+  const model = isString(payload.model) && payload.model !== "" ? payload.model : MODEL;
   const used = Number(isRecord(payload.usage) ? payload.usage.input_tokens : payload.usage);
   const lines = [`${model}. input_tokens=${Number.isFinite(used) ? used : 0}`];
   const answers = isRecord(payload.answers) ? payload.answers : {};

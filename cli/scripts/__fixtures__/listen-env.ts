@@ -20,6 +20,7 @@ import type {
 } from "../listen.types.ts";
 import { z } from "zod";
 import { isRecord, type Json, type JsonObject, readJson } from "../../json.ts";
+import { fetchResult } from "./fetch-result.ts";
 
 /** The listeners a fake child was handed, by event. */
 export type Handlers = { error?: ErrorListener; exit?: ExitListener };
@@ -66,8 +67,8 @@ export const AV =
 export const textFetch =
   (text: string): FetchFn =>
   () =>
-    Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ text }) });
-export const failFetch: FetchFn = () => Promise.resolve({ ok: false, status: 500 });
+    Promise.resolve(fetchResult({ ok: true, status: 200, json: () => Promise.resolve({ text }) }));
+export const failFetch: FetchFn = () => Promise.resolve(fetchResult({ ok: false, status: 500 }));
 export const quiet = { log() {}, error() {} };
 
 export interface Ran {
@@ -182,8 +183,8 @@ export function plantModel(file: string) {
   fs.writeFileSync(file, "ggml");
 }
 
-export function reply(res: FetchResult): FetchFn {
-  return () => Promise.resolve(res);
+export function reply(res: Partial<FetchResult>): FetchFn {
+  return () => Promise.resolve(fetchResult(res));
 }
 
 export function jsonReply(body: Json): FetchFn {

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import type { Json } from "../json.ts";
+import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import {
   COMMENT_MARK,
@@ -92,7 +92,7 @@ export function ignoreTarget(raw: string, cwd: string, p: typeof path = path): s
 export function writeIgnoreEdits(args: ToolArgs, cwd: string, fields: readonly string[]): IgnoreEdit[] {
   for (const key of fields) {
     const raw = args[key];
-    const file = typeof raw === "string" ? ignoreTarget(raw, cwd) : null;
+    const file = isString(raw) ? ignoreTarget(raw, cwd) : null;
 
     if (file === null) continue;
     const next = firstString([args.content, args.Content]) ?? projectEdit(readText(file), args);

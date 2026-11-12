@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { fetchResult } from "./__fixtures__/fetch-result.ts";
 import { bytesReply, cfgFor, cleanupTmp, reply, sttFor, tmp, which } from "./__fixtures__/listen-env.ts";
 import { defaultGgmlPath, downloadGgml, ensureStt } from "./listen-whisper.ts";
 import { DEFAULT_MODEL, GGML_URL, NEED_STT } from "./listen.constants.ts";
@@ -75,7 +76,7 @@ describe("downloadGgml skip", () => {
     function fetchFn() {
       fetches += 1;
 
-      return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("nope")), ok: true });
+      return Promise.resolve(fetchResult({ arrayBuffer: () => Promise.resolve(Buffer.from("nope")), ok: true }));
     }
 
     await downloadGgml({ fetchFn, home, log: undefined });

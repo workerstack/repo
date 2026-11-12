@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { fetchResult } from "./__fixtures__/fetch-result.ts";
 import {
   cleanupTmp,
   type Handlers,
@@ -56,6 +57,11 @@ function fakeFfmpeg(_bin: string, args: string[], opts: SpawnOpts) {
 function aliveThenGone(_pid: number, sig: string | number): void {
   if (sig === 0) return;
   throw new Error("esrch");
+}
+
+/** The bytes of a fake ggml model download. */
+function ggmlBytes() {
+  return Promise.resolve(Buffer.from("ggml-fake"));
 }
 
 /** A fetch that must never run. */
@@ -158,7 +164,7 @@ describe("main ggml download", () => {
     function fetchFn(url: string) {
       fetched = url;
 
-      return Promise.resolve({ arrayBuffer: () => Promise.resolve(Buffer.from("ggml-fake")), ok: true, status: 200 });
+      return Promise.resolve(fetchResult({ arrayBuffer: ggmlBytes, ok: true, status: 200 }));
     }
 
     const spawnSyncFn = whisperWrites("from local download\n");

@@ -1,3 +1,5 @@
+import { isString } from "../json.ts";
+import type { Result } from "../result.ts";
 import { withCdp } from "./browser-cdp.ts";
 import { canSwap, swapToChromium } from "./browser-engine.ts";
 import { asRec, errMessage, fail, filled, liveSession, ok, writeSession } from "./browser-session.ts";
@@ -48,7 +50,7 @@ async function resolveRef(cdp: Cdp, rec: RefEntry): Promise<string> {
 
   const objectId = asRec(resolved.object).objectId;
 
-  if (typeof objectId !== "string" || objectId === "") throw new Error(STALE);
+  if (!isString(objectId) || objectId === "") throw new Error(STALE);
 
   return objectId;
 }
@@ -108,18 +110,18 @@ function targetOf(
   verb: string,
   argv: string[],
   session: Session,
-): { refId: string; rec: RefEntry; text: string } | string {
-  if (Object.keys(session.lastRefs).length === 0) return NO_REFS;
+): Result<{ refId: string; rec: RefEntry; text: string }, string> {
+  if (Object.keys(session.lastRefs).length === 0) return { error: NO_REFS, ok: false };
   const refId = argv[1] ?? "";
   const rec = session.lastRefs[refId];
 
-  if (rec === undefined) return `missing ref: ${refId}`;
+  if (rec === undefined) return { error: `missing ref: ${refId}`, ok: false };
   const text = argv.slice(TEXT_ARG).join(" ");
   const usage = textUsageOf(verb);
 
-  if (usage !== undefined && usage !== "" && text === "") return usage;
+  if (usage !== undefined && usage !== "" && text === "") return { error: usage, ok: false };
 
-  return { rec, refId, text };
+  return { ok: true, value: { rec, refId, text } };
 }
 
 /** A ref verb: `act` on the node of ref argv[1], retried once on Chromium when Lightpanda fails it. */
@@ -130,8 +132,8 @@ export function refVerb(verb: string, act: Act): Verb {
     if (session === null) return fail(NO_SESSION);
     const target = targetOf(verb, argv, session);
 
-    if (typeof target === "string") return fail(target);
-    const { refId, rec, text } = target;
+    if (!target.ok) return fail(target.error);
+    const { refId, rec, text } = target.value;
 
     async function run(cdp: Cdp) {
       return act(cdp, await resolveRef(cdp, rec), text);

@@ -1,7 +1,7 @@
 /** Read, Grep and Glob: which calls are denied, and the limits and ignores the gate adds to the rest. */
 import path from "node:path";
 
-import type { Json } from "../json.ts";
+import { isString, type Json } from "../json.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import type { ToolArgs, ToolSpec } from "./gate-harness.ts";
 import {
@@ -120,7 +120,7 @@ export function limitsGuard(call: GateCall): GuardResult {
 function globDirDenied(input: ToolArgs, roots: Roots): boolean {
   const raw = [input.target_directory, input.targetDirectory, input.path].find(Boolean) ?? "";
 
-  if (typeof raw !== "string" || raw === "") return false;
+  if (!isString(raw) || raw === "") return false;
   const abs = path.isAbsolute(raw) ? raw : path.resolve(roots.cwd, raw);
 
   return pathIsDenied(abs) || pathIsDenied(path.basename(abs));

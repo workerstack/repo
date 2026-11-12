@@ -16,7 +16,7 @@ async function promptKey({
   interactive: boolean;
   io: SetupIo | null | undefined;
 }): Promise<string> {
-  if (!interactive || typeof io?.password !== "function") return "";
+  if (!interactive || io?.password === undefined) return "";
   logLine(io, `Open: ${JEV_KEY_URL}`);
 
   return str(await io.password({ message: "TypeSafe API key" }));

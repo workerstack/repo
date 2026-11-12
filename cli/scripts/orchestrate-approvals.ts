@@ -1,6 +1,7 @@
 /** One closing line asks for approval; a bare `y` approves exactly what it names, and `h` hands it off. */
 import fs from "node:fs";
 
+import type { Result } from "../result.ts";
 import { closingLine, parseApproval } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -166,17 +167,17 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
 }
 
 /** Each item's strategy change; the failure, as `kind N: why`, when one cannot be written. */
-function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | null): StrategyChange[] | string {
+function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | null): Result<StrategyChange[], string> {
   const writes: StrategyChange[] = [];
 
   for (const i of resolved) {
     const w: StrategyWrite = wanted === null ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
 
-    if (!w.ok) return `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`;
+    if (!w.ok) return { error: `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`, ok: false };
     writes.push({ content: w.content, item: i });
   }
 
-  return writes;
+  return { ok: true, value: writes };
 }
 
 /** Writes each changed file; the error text when one fails. */
@@ -210,9 +211,10 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
   const resolved = resolveNamed(data, named, wanted);
 
   if (resolved === null) return "";
-  const writes = planWrites(ws, resolved, wanted);
+  const planned = planWrites(ws, resolved, wanted);
 
-  if (typeof writes === "string") return `${refused} ${writes}`;
+  if (!planned.ok) return `${refused} ${planned.error}`;
+  const writes = planned.value;
   const failed = applyWrites(writes);
 
   if (failed !== null) return `${refused} ${queueText(named)}: strategy ${wanted} could not be written (${failed})`;

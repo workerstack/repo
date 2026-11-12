@@ -29,13 +29,8 @@ export function answerBody(extra: Record<string, unknown> = {}) {
   };
 }
 
-export function reply(status: number, body: Json, headers?: Record<string, string>): JevResponse {
-  const lower = headers && Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
-  return {
-    status,
-    json: () => Promise.resolve(body),
-    ...(lower ? { headers: { get: (name: string) => lower[name.toLowerCase()] ?? null } } : {}),
-  };
+export function reply(status: number, body: Json, headers: Record<string, string> = {}): JevResponse {
+  return { status, json: () => Promise.resolve(body), headers: new Headers(headers) };
 }
 
 /** A fetch that answers from a script, one entry per call, and records the call count. */
@@ -64,18 +59,13 @@ export function plantLedger(home: string, content: unknown): void {
 
 /** One fresh runner call with a key, a fixed clock and a small question set. */
 export function go(over: JevRunOpts) {
-  return createJevRunner()({ home: plantDir(), env: { TYPESAFE_API_KEY: KEY }, now: NOW, stateText: "page", questionsText: QUESTIONS, ...over });
+  return createJevRunner()({ home: plantDir(), env: { TYPESAFE_API_KEY: KEY }, now: () => NOW, stateText: "page", questionsText: QUESTIONS, ...over });
 }
 
 /** A sleep that records its waits and returns at once. */
 export function sleeper() {
   const waits: number[] = [];
   return { waits, sleep: (ms: number) => Promise.resolve(void waits.push(ms)) };
-}
-
-/** A response whose headers are a plain map, or nothing. */
-export function plainReply(status: number, headers: Record<string, string> | null): JevResponse {
-  return { status, json: () => Promise.resolve(null), headers };
 }
 
 export function lockPath(home: string): string {
@@ -120,7 +110,7 @@ export function choiceBody(confidence = 0.91) {
 
 export function jsonResponse(status: number, body: Json, headers: Record<string, string> = {}): JevResponse {
   return {
-    headers: { get: (name: string) => headers[name.toLowerCase()] ?? null },
+    headers: new Headers(headers),
     json: () => Promise.resolve(body),
     status,
   };

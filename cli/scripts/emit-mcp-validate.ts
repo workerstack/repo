@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, readJson, type JsonObject } from "../json.ts";
+import { isRecord, isStringList, type Json, readJson, type JsonObject } from "../json.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
 import { AGENT_IDS, CONSUMER_POLICY_REL, POLICY_DEFAULT, POLICY_REL } from "./emit.constants.ts";
 import { isSettingsTable, type SettingsTable, type SettingsValue } from "./settings-table.ts";
@@ -24,11 +24,7 @@ function objectsEqual(a: SettingsTable, b: SettingsTable): boolean {
 export function deepEqual(a: SettingsValue | undefined, b: SettingsValue | undefined): boolean {
   if (Object.is(a, b)) return true;
 
-  if (typeof a !== typeof b || a == null || b == null) return false;
-
-  if (Array.isArray(a)) return Array.isArray(b) && arraysEqual(a, b);
-
-  if (typeof a !== "object") return false;
+  if (Array.isArray(a) && Array.isArray(b)) return arraysEqual(a, b);
 
   return isSettingsTable(a) && isSettingsTable(b) && objectsEqual(a, b);
 }
@@ -37,12 +33,8 @@ export function deepEqual(a: SettingsValue | undefined, b: SettingsValue | undef
 export function requiredDeepMatch(disk: SettingsValue | undefined, desired: SettingsValue | undefined): boolean {
   if (Array.isArray(desired)) return deepEqual(disk, desired);
 
-  if (desired != null && typeof desired === "object") {
-    if (!isSettingsTable(disk)) return false;
-
-    // A desired TOML datetime has no keys to require, as Object.entries of a Date has none.
-    return !isSettingsTable(desired) || Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
-  }
+  if (isSettingsTable(desired))
+    return isSettingsTable(disk) && Object.entries(desired).every(([k, v]) => requiredDeepMatch(disk[k], v));
 
   return deepEqual(disk, desired);
 }
@@ -99,7 +91,7 @@ function agentsError(policy: JsonObject): string | null {
 }
 
 function nonEmptyStrings(v: Json | undefined): boolean {
-  return Array.isArray(v) && v.every((name) => typeof name === "string" && name !== "");
+  return isStringList(v) && v.every((name) => name !== "");
 }
 
 /** The field checks in order: each returns the policy's error, or null when its field holds. */

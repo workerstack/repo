@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isRecord, type Json, type JsonInput, readJson, type JsonObject } from "../json.ts";
+import { isRecord, isString, type Json, type JsonInput, readJson, type JsonObject } from "../json.ts";
 import { hookNameOf } from "./hook-command.ts";
 import { COMMAND_KEY, JSON_INDENT } from "./hooks-union.constants.ts";
 import type { HookEntry, HookGroup } from "./hooks-union.types.ts";
@@ -16,10 +16,10 @@ function commandsIn(group: Json): string[] {
   if (!isRecord(group)) return [];
   const out: string[] = [];
 
-  if (typeof group.command === "string") out.push(group.command);
+  if (isString(group.command)) out.push(group.command);
   const hooks = Array.isArray(group.hooks) ? group.hooks : [];
 
-  for (const h of hooks) if (isRecord(h) && typeof h.command === "string") out.push(h.command);
+  for (const h of hooks) if (isRecord(h) && isString(h.command)) out.push(h.command);
 
   return out;
 }
@@ -81,7 +81,7 @@ export function flatSession(existing: Json | undefined, extra: HookEntry[]): Jso
 
   const added = new Set(extra.map((h) => h.command));
 
-  return [...prev.filter((e) => !(isRecord(e) && typeof e.command === "string" && added.has(e.command))), ...extra];
+  return [...prev.filter((e) => !(isRecord(e) && isString(e.command) && added.has(e.command))), ...extra];
 }
 
 /** `{matcher, hooks}` groups as the flat `{...hook, matcher}` entries Cursor reads. */
@@ -95,7 +95,7 @@ export function allCommands(value: Json | undefined, out: string[] = []): string
     for (const v of value) allCommands(v, out);
   } else if (isRecord(value)) {
     for (const [k, v] of Object.entries(value)) {
-      if (k === COMMAND_KEY && typeof v === "string") out.push(v);
+      if (k === COMMAND_KEY && isString(v)) out.push(v);
       else allCommands(v, out);
     }
   }

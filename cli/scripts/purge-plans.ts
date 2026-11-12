@@ -27,13 +27,18 @@ function isStripePluginKey(k: string): boolean {
   return k.split("@")[0] === STRIPE_PLUGIN;
 }
 
+/** True for a TOML primitive, false for an array, a table and a datetime. */
+function isTomlPrimitive(x: TomlValue): x is Exclude<TomlValue, object> {
+  return typeof x !== "object";
+}
+
 function strList(v: TomlValue | undefined, label: string): string[] {
   if (v == null) return [];
 
   if (!Array.isArray(v)) throw unreadable(label);
 
   return v.map((x) => {
-    if (typeof x === "object") throw unreadable(label);
+    if (!isTomlPrimitive(x)) throw unreadable(label);
 
     return String(x);
   });

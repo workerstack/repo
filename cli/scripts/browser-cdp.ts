@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { isNumber, isString, tryJson } from "../json.ts";
 import { asRec, filled, textOf } from "./browser-session.ts";
 import { waitVersion } from "./browser-wait.ts";
 /** The CDP client: one websocket to a running engine, one pending promise per request id. */
@@ -31,7 +31,7 @@ function parse(data: string): Rec | null {
 function settle(pending: Pending, data: string): void {
   const msg = parse(data);
 
-  if (msg === null || typeof msg.id !== "number") return;
+  if (msg === null || !isNumber(msg.id)) return;
   const p = pending.get(msg.id);
 
   if (p === undefined) return;
@@ -68,7 +68,7 @@ export async function connectCdp(port: number, timeoutMs: number = READY_MS): Pr
   const version = await waitVersion(port, timeoutMs);
   const wsUrl = version.webSocketDebuggerUrl;
 
-  if (typeof wsUrl !== "string" || wsUrl === "") throw new Error(ENGINE_NOT_READY);
+  if (!isString(wsUrl) || wsUrl === "") throw new Error(ENGINE_NOT_READY);
   const ws = new WebSocket(wsUrl);
   await opened(ws, timeoutMs);
 

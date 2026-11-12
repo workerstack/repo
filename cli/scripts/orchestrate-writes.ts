@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { isString } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -79,7 +80,7 @@ function savedRoute(write: WriteCase, kind: Approvable["kind"]): Route {
   const exists = isFile(abs);
   const saved = SAVED[kind];
 
-  if (exists && typeof write.toolInput.content !== "string") {
+  if (exists && !isString(write.toolInput.content)) {
     const denied = savedEdit(write, abs, saved.validate);
 
     if (denied === null) recordApproval(write.data, abs);

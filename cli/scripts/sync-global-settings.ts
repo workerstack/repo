@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { stringify as stringifyToml } from "smol-toml";
 
 import { repoEnv } from "../repo-env.ts";
+import type { Result } from "../result.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { deepMerge } from "./deep-merge.ts";
 import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest } from "./global-settings-files.ts";
@@ -67,21 +68,23 @@ function fail(text: string | undefined): number {
 }
 
 /** The step that sets the host to `value`, which came from the next arg when `tookNext`. */
-function hostStep(state: ArgState, { tookNext, value }: HostArg): ArgStep | string {
-  return value === undefined || value === "" ? UNKNOWN_HOST : { state: { ...state, host: value }, tookNext };
+function hostStep(state: ArgState, { tookNext, value }: HostArg): Result<ArgStep, string> {
+  if (value === undefined || value === "") return { error: UNKNOWN_HOST, ok: false };
+
+  return { ok: true, value: { state: { ...state, host: value }, tookNext } };
 }
 
 /** Reads the flag `a`, with `next` after it; the step, or the error text. */
-function flagStep(state: ArgState, a: string, next: string | undefined): ArgStep | string {
-  if (a === DRY_RUN_FLAG) return { state: { ...state, dryRun: true }, tookNext: false };
+function flagStep(state: ArgState, a: string, next: string | undefined): Result<ArgStep, string> {
+  if (a === DRY_RUN_FLAG) return { ok: true, value: { state: { ...state, dryRun: true }, tookNext: false } };
 
-  if (a === CHECK_FLAG) return { state: { ...state, check: true }, tookNext: false };
+  if (a === CHECK_FLAG) return { ok: true, value: { state: { ...state, check: true }, tookNext: false } };
 
   if (a === HOST_FLAG) return hostStep(state, { tookNext: true, value: next });
 
   if (a.startsWith(HOST_PREFIX)) return hostStep(state, { tookNext: false, value: a.slice(HOST_PREFIX.length) });
 
-  return `unknown flag: ${a}`;
+  return { error: `unknown flag: ${a}`, ok: false };
 }
 
 export function parseArgv(argv: readonly string[]): ParsedArgv {
@@ -96,8 +99,8 @@ export function parseArgv(argv: readonly string[]): ParsedArgv {
 
     const step = flagStep(state, a, argv[i + 1]);
 
-    if (typeof step === "string") return { error: step, ok: false };
-    ({ state, tookNext: isTaken } = step);
+    if (!step.ok) return step;
+    ({ state, tookNext: isTaken } = step.value);
   }
 
   if (state.check && state.dryRun) return { error: "--check and --dry-run do not combine", ok: false };

@@ -3,7 +3,7 @@ import fs from "node:fs";
 
 import { z } from "zod";
 
-import { isRecord, type Json, tryJson, type JsonObject } from "../json.ts";
+import { isRecord, isString, type Json, tryJson, type JsonObject } from "../json.ts";
 import { parseClosingLine } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -22,7 +22,7 @@ const TRAIL = /[\s`*_]+$/;
 
 /** A JSON field as text: the string itself, anything else empty. */
 function textOf(value: Json | undefined): string {
-  return typeof value === "string" ? value : "";
+  return isString(value) ? value : "";
 }
 
 /** The non-empty lines of a reply, each without its leading quote, list or emphasis marks. */
@@ -94,7 +94,7 @@ function partsText(content: Json[]): string | null {
   for (const part of content) {
     if (!isRecord(part) || TOOL_PARTS.has(textOf(part.type))) continue;
 
-    if (typeof part.text === "string" && part.text !== "") texts.push(part.text);
+    if (isString(part.text) && part.text !== "") texts.push(part.text);
   }
 
   const joined = texts.join("\n").trim();
@@ -110,9 +110,9 @@ function assistantTextFromRecord(obj: JsonObject | undefined): string | null {
 
   if (Array.isArray(content)) return partsText(content);
 
-  if (typeof content === "string" && content.trim() !== "") return content;
+  if (isString(content) && content.trim() !== "") return content;
 
-  if (typeof obj.text === "string" && obj.text.trim() !== "") return obj.text;
+  if (isString(obj.text) && obj.text.trim() !== "") return obj.text;
 
   return null;
 }

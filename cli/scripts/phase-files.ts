@@ -149,7 +149,7 @@ function changedPaths(cwd: string): { paths: string[] } | Refusal {
       stderr?: string | null;
     };
 
-    const why = typeof stderr === "string" && stderr !== "" ? stderr : message;
+    const why = stderr !== undefined && stderr !== null && stderr !== "" ? stderr : message;
 
     return { error: `git status failed in ${cwd}: ${why.trim()}\n` };
   }

@@ -16,20 +16,20 @@ async function step(io: SetupIo, ctx: SetupCtx, s: Step): Promise<void> {
   logLine(io, `Open: ${s.url}`);
   await openUrl(s.url, ctx);
 
-  if (typeof io.confirm === "function") await io.confirm({ initialValue: true, message: s.confirm });
+  if (io.confirm !== undefined) await io.confirm({ initialValue: true, message: s.confirm });
 }
 
 async function askOAuthSource(io: SetupIo, home: string): Promise<string> {
   const found = findDownloadedOAuthJson(home);
 
   const src = str(
-    typeof io.text === "function"
-      ? await io.text({
+    io.text === undefined
+      ? found
+      : await io.text({
           defaultValue: found,
           initialValue: found,
           message: "Path to Desktop OAuth JSON (or paste the JSON)",
-        })
-      : found,
+        }),
   );
 
   if (src === "") throw new Error("need path to Desktop OAuth JSON");
@@ -45,12 +45,12 @@ async function consoleWalk(io: SetupIo, ctx: SetupCtx, home: string): Promise<st
   await step(io, ctx, { confirm: created, lines: [share], url: workspaceConsoleUrls(flagProject).projectCreate });
 
   const projectId =
-    typeof io.text === "function"
-      ? str(
+    io.text === undefined
+      ? flagProject
+      : str(
           await io.text({ initialValue: flagProject, message: "Project ID (from the console URL ?project=)" }),
           flagProject,
-        )
-      : flagProject;
+        );
 
   const urls = workspaceConsoleUrls(projectId);
   const consent = "Consent: Internal on paid Workspace, else Testing + add your email as a test user.";

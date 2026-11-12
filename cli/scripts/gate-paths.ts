@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { Json } from "../json.ts";
+import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
@@ -103,7 +103,7 @@ export function readFilePath(input: ToolArgs): Json {
 }
 
 export function resolveReadPath(filePath: Json, roots: Roots): string | null {
-  if (typeof filePath !== "string" || filePath === "") return null;
+  if (!isString(filePath) || filePath === "") return null;
 
   return resolveTyped(roots, filePath);
 }

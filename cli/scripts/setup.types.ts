@@ -1,7 +1,6 @@
 import type { Env } from "../repo-env.ts";
 import type { SpawnSyncOpts } from "./google-workspace.types.ts";
-import type { WhichFn } from "./listen.types.ts";
-import type { FetchResult } from "./speak.types.ts";
+import type { FetchResult, WhichFn } from "./listen.types.ts";
 
 export type Flags = Record<string, string>;
 

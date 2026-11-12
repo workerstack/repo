@@ -5,10 +5,13 @@ import type { ListenMainOpts } from "./listen.types.ts";
 /** Speech-to-text (input only). Mic/file → local whisper.cpp or OpenAI Whisper. */
 import { loadOptionalConsumerEnv } from "./load-optional-consumer-env.ts";
 
-function errMessage(cause: unknown): string {
-  const message = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
+/** True for a thrown value that carries a text message. */
+function hasMessage(cause: unknown): cause is { message: string } {
+  return typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string";
+}
 
-  if (typeof message === "string" && message !== "") return message;
+function errMessage(cause: unknown): string {
+  if (hasMessage(cause) && cause.message !== "") return cause.message;
 
   return String(cause).trim();
 }

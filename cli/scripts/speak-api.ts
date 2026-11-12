@@ -1,5 +1,6 @@
 /** Calls the ElevenLabs and OpenAI APIs: the account check, the voice list, and the raw request under both. */
-import { isRecord, type Json } from "../json.ts";
+import { isNumber, isRecord, isString, type Json } from "../json.ts";
+import type { FetchResult } from "./listen.types.ts";
 import { parsedFetch } from "./parsed-fetch.ts";
 import { resolveProvider } from "./speak-config.ts";
 import {
@@ -13,7 +14,7 @@ import {
   SETUP,
   UNAUTHORIZED,
 } from "./speak.constants.ts";
-import type { ApiOpts, FetchFn, FetchResult, ProviderOpts, SpeakCfg } from "./speak.types.ts";
+import type { ApiOpts, FetchFn, ProviderOpts, SpeakCfg } from "./speak.types.ts";
 
 const MISSING_PERMISSIONS = /missing_permissions/i;
 const MISSING_PERMISSION = /missing permission/i;
@@ -21,7 +22,7 @@ const REJECTED_KEY = /unauthorized|invalid.?api.?key|authentication/i;
 
 /** A status or label as text; anything else is blank. */
 function plain(value: Json | undefined): string {
-  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+  return isString(value) || isNumber(value) ? String(value) : "";
 }
 
 /** A label as text, or `fallback` when it is blank. */
@@ -46,29 +47,47 @@ export function formatHttpError(status: number | string, body: string | undefine
   return `${status} ${raw.slice(0, HTTP_BODY_CHARS)}`.trim();
 }
 
+/** True for a thrown value that carries a text message. */
+function hasMessage(cause: unknown): cause is { message: string } {
+  return typeof cause === "object" && cause !== null && "message" in cause && typeof cause.message === "string";
+}
+
+/** True for a thrown string or number, which prints as itself. */
+function isPrintable(cause: unknown): cause is string | number {
+  return typeof cause === "string" || typeof cause === "number";
+}
+
+/** True for a thrown object or null, which prints as its tag. */
+function isTagged(cause: unknown): cause is object | null {
+  return typeof cause === "object";
+}
+
 /** The message of a thrown value, or the value itself as text. */
 export function errMessage(cause: unknown): string {
-  const m = typeof cause === "object" && cause !== null && "message" in cause ? cause.message : undefined;
+  if (hasMessage(cause) && cause.message !== "") return cause.message;
 
-  if (typeof m === "string" && m !== "") return m;
+  if (isPrintable(cause)) return String(cause);
 
-  if (typeof cause === "string" || typeof cause === "number") return String(cause);
+  return isTagged(cause) ? Object.prototype.toString.call(cause) : "";
+}
 
-  return typeof cause === "object" ? Object.prototype.toString.call(cause) : "";
+/** True when the platform's fetch is there to call. */
+function isCallable(value: unknown): value is (...args: never[]) => void {
+  return typeof value === "function";
 }
 
 /** The platform's fetch, or undefined when it has none. */
 export function globalFetch(): FetchFn | undefined {
   const found: unknown = globalThis.fetch;
 
-  if (typeof found !== "function") return undefined;
+  if (!isCallable(found)) return undefined;
 
   return (url, { method, headers, body }) => parsedFetch(url, { body: body ?? null, headers, method });
 }
 
 async function bodyText(res: FetchResult | null): Promise<string> {
   try {
-    return typeof res?.text === "function" ? await res.text() : "";
+    return (await res?.text()) ?? "";
   } catch {
     return "";
   }
@@ -94,22 +113,18 @@ async function apiFetch(url: string, { method = "GET", headers, body, fetchFn }:
   return res;
 }
 
-/** The parsed JSON body of the reply, or an empty object when it has no reader. */
+/** The parsed JSON body of the reply. */
 async function apiJson(url: string, opts: ApiOpts): Promise<Json> {
   const res = await apiFetch(url, opts);
 
-  return typeof res.json === "function" ? await res.json() : {};
+  return await res.json();
 }
 
-/** The audio bytes of the reply, from its reader or its body. */
+/** The audio bytes of the reply. */
 export async function apiBytes(url: string, opts: ApiOpts): Promise<Buffer> {
   const res = await apiFetch(url, opts);
 
-  if (typeof res.arrayBuffer === "function") return Buffer.from(new Uint8Array(await res.arrayBuffer()));
-
-  if (Buffer.isBuffer(res.body)) return res.body;
-
-  return Buffer.from(Array.isArray(res.body) ? res.body.map(Number) : []);
+  return Buffer.from(new Uint8Array(await res.arrayBuffer()));
 }
 
 async function elevenWhoami(cfg: SpeakCfg, fetchFn: FetchFn | undefined): Promise<string> {

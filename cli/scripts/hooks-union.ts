@@ -79,8 +79,7 @@ function given(v: string | undefined): string | undefined {
   return v === "" ? undefined : v;
 }
 
-function resolveRoots(opts: UnionOptions | string): Roots {
-  if (typeof opts === "string") return { consumer: opts, src: opts, ws: opts };
+function resolveRoots(opts: UnionOptions): Roots {
   const ws = given(opts.workspaceRoot) ?? process.cwd();
 
   return { consumer: given(opts.consumerRoot) ?? ws, src: given(opts.sourceRoot) ?? ws, ws };
@@ -94,10 +93,10 @@ function checked(roots: Roots): UnionResult {
   return { check: true, failures: [], ok: true };
 }
 
-export function applyUnion(opts: UnionOptions | string = {}): UnionResult {
+export function applyUnion(opts: UnionOptions = {}): UnionResult {
   const roots = resolveRoots(opts);
 
-  if (typeof opts === "object" && opts.check === true) return checked(roots);
+  if (opts.check === true) return checked(roots);
   applyClaude(roots);
   applyCodex(roots);
   applyAgents(roots);
@@ -175,7 +174,7 @@ function gitHookFailures(consumer: string): string[] {
   return GIT_HOOKS.filter((rel) => !fs.existsSync(path.join(consumer, rel))).map((rel) => `git-hook missing: ${rel}`);
 }
 
-export function checkUnion(opts: UnionOptions | string = {}): string[] {
+export function checkUnion(opts: UnionOptions = {}): string[] {
   const roots = resolveRoots(opts);
   const specs = fileSpecs(roots);
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { isString, type Json } from "../json.ts";
 import { claudeHook } from "./__fixtures__/claude-hook.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -90,7 +91,7 @@ describe("a session receipt", () => {
 
 const BEFORE = JSON.stringify({ content: "before", role: "assistant" });
 
-const badLines: [string, unknown, string][] = [
+const badLines: [string, Json, string][] = [
   ["a line that is not JSON", "not json{", "before"],
   ["a JSON line that is not an object", 42, "before"],
   ["a user record", { text: "u", type: "user" }, "before"],
@@ -113,7 +114,7 @@ const badLines: [string, unknown, string][] = [
 describe("the last assistant message read from a transcript", () => {
   it.each(badLines)("reads %s", (_name, record, expected) => {
     const ws = hook.temp();
-    const line = typeof record === "string" ? record : JSON.stringify(record);
+    const line = isString(record) ? record : JSON.stringify(record);
     const file = plantFile(ws, "transcript.jsonl", `${BEFORE}\n${line}\n`);
     hook.stop(ws, "t1", { transcript_path: file });
     expect(receipt(ws, "t1")[0]).toBe(expected);

@@ -6,7 +6,7 @@ import type { AddressInfo } from "node:net";
 
 import { z } from "zod";
 
-import { tryJson } from "../json.ts";
+import { isNumber, tryJson } from "../json.ts";
 import {
   accountContext,
   filled,
@@ -56,7 +56,7 @@ function expiryFromNow(j: Rec): number {
 
 /** When a refreshed token expires: the server's own date, else `expires_in` from now. */
 function expiryOf(j: Rec): number {
-  return typeof j.expiry_date === "number" && j.expiry_date > 0 ? j.expiry_date : expiryFromNow(j);
+  return isNumber(j.expiry_date) && j.expiry_date > 0 ? j.expiry_date : expiryFromNow(j);
 }
 
 function cachedAccess(t: Token): string | undefined {

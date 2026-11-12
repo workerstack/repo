@@ -4,7 +4,9 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import type { Json } from "../../json.ts";
 import { loadCfg } from "../speak-config.ts";
-import type { FetchFn, FetchResult, SpeakCfg } from "../speak.types.ts";
+import type { FetchResult } from "../listen.types.ts";
+import type { FetchFn, SpeakCfg } from "../speak.types.ts";
+import { fetchResult } from "./fetch-result.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -29,12 +31,12 @@ export function cfgOf(env: Record<string, string>): SpeakCfg {
   return loadCfg({ env, home: plantDir("speak-cfg-") });
 }
 
-export function okRes(over: FetchResult = {}): FetchResult {
-  return { ok: true, status: 200, ...over };
+export function okRes(over: Partial<FetchResult> = {}): FetchResult {
+  return fetchResult({ ok: true, status: 200, ...over });
 }
 
 export function failRes(status: number, text: string): FetchResult {
-  return { ok: false, status, text: () => Promise.resolve(text) };
+  return fetchResult({ ok: false, status, text: () => Promise.resolve(text) });
 }
 
 /** Collects what main logs. */
