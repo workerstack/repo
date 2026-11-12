@@ -1,9 +1,9 @@
 ---
 name: knip-unused-exported-type
 paths: ["cli/knip-check.ts","cli/knip-check.constants.ts"]
-hits: 1
+hits: 2
 last-hit: 2026-11-12
-evidence: ["roadmap 8"]
+evidence: ["roadmap 8","roadmap 9"]
 ---
 
 # knip fails an exported type nothing imports
