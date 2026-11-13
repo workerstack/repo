@@ -6848,7 +6848,7 @@
   "cli/scripts/shim-launcher.mjs": ["795de8711c692e49"],
   "cli/scripts/shim-launcher.test.ts": ["1d0bb838e203838f"],
   "cli/scripts/shim-main.test.ts": ["691e3043125a193b"],
-  "cli/scripts/shim.constants.ts": ["4b269c1951976942"],
+  "cli/scripts/shim.constants.ts": ["3bec13f5038fcdc5", "4b269c1951976942"],
   "cli/scripts/shim.test.ts": ["2ff355a6c9266472", "61a3a81a413c1bdd"],
   "cli/scripts/shim.ts": ["65c9f6beb6ff50d3", "669a31e92c6e44bb"],
   "cli/scripts/shipped-deps.test.ts": [
