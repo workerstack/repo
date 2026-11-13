@@ -125,8 +125,8 @@ export const NON_NULL =
 
 export const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";
 
-/** Dependencies, git internals and the hooks' scratch dirs are not sync output. */
-const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees)(?:\/|$)/;
+/** Dependencies, git internals and the hooks' scratch and state dirs are not sync output. */
+const SKIPPED = /^(?:node_modules|\.git|\.tmp|\.worktrees|\.repo\/tmp)(?:\/|$)/;
 
 function sha(data: Buffer) {
   return createHash("sha256").update(data).digest("hex");
