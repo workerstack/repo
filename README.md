@@ -344,7 +344,7 @@ $ bun repo eval skill-routing --dry-run
 eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5 via session, at most $0.0834 (cap $1.00)
 ```
 
-An eval lists the repo files and folders its prompt and grader read as `files` in `defineEval`: repo-relative, with `/`, and each must exist, or the eval is refused (`eval broken: files.0: no file or folder agents/skills/nope`). `--changed <base>` runs every case of the eval when one of those, or anything under `evals/<name>/`, changed since the merge base with `<base>`, committed or not, and runs none otherwise (exit 0, no call made). `evals/rules-compliance` asks the model its first step for real prompts, given the rules and the scope page.
+An eval lists the repo files and folders its prompt and grader read as `files` in `defineEval`: repo-relative, with `/`, and each must exist, or the eval is refused (`eval broken: files.0: no file or folder agents/skills/nope`). `--changed <base>` runs every case of the eval when one of those, or anything under `evals/<name>/`, changed since the merge base with `<base>`, committed or not, and runs none otherwise (exit 0, no call made). `evals/rules-compliance` asks `claude-sonnet-5-5` its first step for real prompts, given the rules and the scope page, 2 samples a case so its bound stays under the $1.00 cap; both evals pass an answer whose first word is the expected one.
 
 ```console
 $ bun repo eval skill-routing --changed main --dry-run

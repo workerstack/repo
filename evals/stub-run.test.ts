@@ -15,13 +15,15 @@ import { cases as routingCases } from "./skill-routing/cases.ts";
 const ROOT = join(import.meta.dirname, "..");
 const CONTROL_SUFFIX = /-control$/;
 const VERDICT = /^(?:pass|fail) \S+/;
-const SAMPLES = 3;
+
+/** Samples a case gets, by eval: the rules eval runs on sonnet, so it takes fewer to stay under the cap. */
+const SAMPLES = { "rules-compliance": 2, "skill-routing": 3 } as const;
 const VIAS: Via[] = ["api", "session"];
 const { run } = useEvalRun();
 
 type Case = { id: string; input: string; expect: string };
 
-type Eval = { cases: readonly Case[]; name: string };
+type Eval = { cases: readonly Case[]; name: keyof typeof SAMPLES };
 
 /** What a stub model saw: how many calls, the flags that pick it and the deps that answer them. */
 type Stub = { calls: () => number; deps: EvalDeps; flags: string[] };
@@ -149,7 +151,7 @@ describe.each(MATRIX)("$name offline via $via, by the answers", (one) => {
 
   it("passes every case on right answers, then a rerun spends $0.0000 all from the cache", async () => {
     const stub = stubFor(via, rightAnswers(cases));
-    const calls = cases.length * SAMPLES;
+    const calls = cases.length * SAMPLES[name];
     const first = await run([name, ...stub.flags], { ...stub.deps, root: ROOT });
 
     expect(first).toMatchObject({ code: 0, err: "" });
@@ -185,7 +187,7 @@ it.each(SELECTIONS)("a change to $file runs $name in full: $isPicked", async ({ 
   const got = await run([name, "--changed", "main", "--dry-run"], { changedSince: () => [file], root: ROOT });
 
   const head = isPicked
-    ? `eval ${name}: ${file} changed since main\neval ${name}: ${total} cases x ${SAMPLES} samples`
+    ? `eval ${name}: ${file} changed since main\neval ${name}: ${total} cases x ${SAMPLES[name]} samples`
     : `eval ${name}: nothing it reads changed since main\n`;
 
   expect(got.code).toBe(0);
