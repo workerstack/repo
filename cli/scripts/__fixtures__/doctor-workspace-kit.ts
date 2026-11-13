@@ -5,9 +5,13 @@ import path from "node:path";
 import { expect } from "vitest";
 
 import { childEnv } from "../../env.ts";
+import { IGNORED_DIRS, REPO } from "../../repo-dirs.ts";
 import type { DoctorResult } from "../doctor.types.ts";
 import { addWorktree } from "../worktree-lifecycle.ts";
 import { cleanLater, runDoctor, tmp, writeRequired } from "./doctor-kit.ts";
+
+/** The ignore lines for the ignored `.repo` dirs. */
+export const REPO_IGNORES: string = IGNORED_DIRS.map((d) => `**/${REPO}/${d}/\n`).join("");
 
 const IDENTITY = {
   GIT_AUTHOR_EMAIL: "t@t",
@@ -59,11 +63,11 @@ export function section(stdout: string): { head: string; items: string[] } {
   return { head: lines[at]!, items }; // at was asserted above
 }
 
-/** Every kind of leftover in repo `r`: stray scratch, nested ignores, an outside, a missing and a merged worktree. */
+/** Every kind of leftover in repo `r`: stray ignored `.repo` dirs, nested ignores, an outside, a missing and a merged worktree. */
 export function seedLeftovers(r: string) {
   const seeded = [
-    put(r, "packages/b/.tmp/repo/x.txt"),
-    put(r, "apps/x/.tmp/repo/plans/1-p.md"),
+    put(r, "packages/b/.repo/tmp/x.txt"),
+    put(r, "apps/x/.repo/plans/1-p.md"),
     put(r, "packages/b/.gitignore", ".tmp/\n"),
     put(r, "packages/u/.gitignore", ".tmp/\n"),
   ];
@@ -89,8 +93,8 @@ export function leftoverPatterns(r: string, outside: string): string[] {
   const at = (...rel: string[]) => path.join(r, ...rel);
   const rule = `ignored by ${esc(at(".gitignore"))}:\\d+ \\.tmp/?`;
   return [
-    `^${esc(`- stray .tmp/repo ${at("apps", "x", ".tmp", "repo")} (holds plans): rm -r ${at("apps", "x", ".tmp", "repo")}`)}$`,
-    `^${esc(`- stray .tmp/repo ${at("packages", "b", ".tmp", "repo")}: rm -r ${at("packages", "b", ".tmp", "repo")}`)}$`,
+    `^${esc(`- stray .repo dir ${at("apps", "x", ".repo", "plans")} (holds plans): rm -r ${at("apps", "x", ".repo", "plans")}`)}$`,
+    `^${esc(`- stray .repo dir ${at("packages", "b", ".repo", "tmp")}: rm -r ${at("packages", "b", ".repo", "tmp")}`)}$`,
     `^${esc(`- redundant .gitignore ${at("packages", "b", ".gitignore")} (".tmp/" `)}${rule}${esc(`): git -C ${r} rm -q packages/b/.gitignore`)}$`,
     `^${esc(`- redundant .gitignore ${at("packages", "u", ".gitignore")} (".tmp/" `)}${rule}${esc(`): rm ${at("packages", "u", ".gitignore")}`)}$`,
     `^${esc(`- duplicate .gitignore line ${at(".gitignore")}:2 ".tmp/" (".tmp" on line 1 covers it): delete line 2 of ${at(".gitignore")}`)}$`,

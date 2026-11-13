@@ -54,7 +54,7 @@ it("--shard 2/3 with coverage writes a blob, leaves the floors to merge and keep
   expect(run.code).toBe(0);
   expect(run.calls.vitest).toStrictEqual([
     `run --coverage --shard=2/3 --passWithNoTests --reporter=default --reporter=blob ` +
-      `--outputFile.blob=${path.join(root, ".tmp/repo/blob/blob-2-3.json")} --coverage.thresholds=false`,
+      `--outputFile.blob=${path.join(root, ".repo/tmp/blob/blob-2-3.json")} --coverage.thresholds=false`,
   ]);
   expect(run.out).toContain("ci: 4 tests passed (shard 2/3, floors left to repo ci merge) (0.5s)\n");
 });

@@ -57,7 +57,7 @@ it("denies over-cap prompts after scrub without slicing or …[truncated]", () =
   });
 
   expect(denied).toMatchObject({ decision: "block" });
-  expect(denied?.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
+  expect(denied?.reason).toContain(`${plansRoot}/.repo/plans/`);
   expect(denied?.reason).toMatch(/re-spawn/i);
   expect(denied?.reason).toMatch(/abs path/i);
   expect(JSON.stringify(denied)).not.toContain(TRUNCATE_SUFFIX);
@@ -96,7 +96,7 @@ it("denies Grok spawn over cap without updatedInput slice", () => {
   expect(result.status).toBe(0);
   const json = parseOut(result.stdout);
   expect(json.decision).toBe("block");
-  expect(json.reason).toContain(`${plansRoot}/.tmp/repo/plans/`);
+  expect(json.reason).toContain(`${plansRoot}/.repo/plans/`);
   expect(json.reason).toMatch(/re-spawn/i);
   expect(result.stdout).not.toContain(TRUNCATE_SUFFIX);
   expect(json.hookSpecificOutput?.updatedInput).toBeUndefined();

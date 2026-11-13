@@ -104,7 +104,7 @@ it("holds each branch to its own newest push and joins the lines", () => {
 it("treats a record it cannot read as no record", () => {
   const r = pushed([["main", A]]);
   r.result(A, "passed");
-  fs.writeFileSync(path.join(r.main, `.tmp/repo/ci/${A}.json`), '{"outcome":"weird"}');
+  fs.writeFileSync(path.join(r.main, `.repo/tmp/ci/${A}.json`), '{"outcome":"weird"}');
   expect(r.gate()).toBe(noResult(A));
 });
 

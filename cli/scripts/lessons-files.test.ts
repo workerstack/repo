@@ -25,6 +25,11 @@ it("lists the files of a directory git does not track, skipping tooling dirs and
   expect(repoFiles(ws)).toStrictEqual(["src/a.ts"]);
 });
 
+it("skips .repo/scratch and .repo/tmp when it walks, but not .repo/lessons", () => {
+  const ws = repo([".repo/scratch/a.md", ".repo/tmp/b.md", ".repo/lessons/c.md", "src/a.ts"]);
+  expect(repoFiles(ws).toSorted()).toStrictEqual([".repo/lessons/c.md", "src/a.ts"]);
+});
+
 it("lists tracked and untracked files of a git checkout", () => {
   const ws = repo(["src/a.ts"]);
   git(ws, "init", "-q");

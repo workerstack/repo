@@ -29,7 +29,7 @@ it("shot with Lightpanda session → swap to Chromium replay; one swap cap", asy
   expect(s.engine).toBe("chromium");
   expect(s.swapCount).toBe(1);
   expect(s.lastURL).toMatch(/example\.com/);
-  const art = path.join(cwd, ".tmp/repo/browser/shot.png");
+  const art = path.join(cwd, ".repo/tmp/browser/shot.png");
   expect(fs.existsSync(art)).toBe(true);
   const shot2 = await run(cwd, ["shot"], bin);
   expect(shot2.code).toBe(0);
@@ -41,7 +41,7 @@ it("pdf → Chromium path; never Lightpanda paint", async () => {
   const pdf = await run(cwd, ["pdf"], bin);
   expect(pdf.code).toBe(0);
   expect(readStored(cwd).engine).toBe("chromium");
-  expect(fs.existsSync(path.join(cwd, ".tmp/repo/browser/page.pdf"))).toBe(true);
+  expect(fs.existsSync(path.join(cwd, ".repo/tmp/browser/page.pdf"))).toBe(true);
 });
 
 it("shot/pdf with no session fails clearly", async () => {
@@ -77,13 +77,13 @@ it("shot and pdf write the png and the pdf the engine paints, and say where", as
   expect(shot).toStrictEqual({
     code: 0,
     stderr: "",
-    stdout: `engine: chromium\nfile: ${path.join(".tmp/repo/browser", "shot.png")}\n`,
+    stdout: `engine: chromium\nfile: ${path.join(".repo/tmp/browser", "shot.png")}\n`,
   });
-  const png = fs.readFileSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"));
+  const png = fs.readFileSync(path.join(t.cwd, ".repo/tmp/browser/shot.png"));
   expect(png.subarray(0, 4)).toStrictEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
   const pdf = await exec(t.cwd, ["pdf"], { bins: NEVER });
-  expect(pdf.stdout).toBe(`engine: chromium\nfile: ${path.join(".tmp/repo/browser", "page.pdf")}\n`);
-  expect(fs.readFileSync(path.join(t.cwd, ".tmp/repo/browser/page.pdf")).subarray(0, 5).toString()).toBe("%PDF-");
+  expect(pdf.stdout).toBe(`engine: chromium\nfile: ${path.join(".repo/tmp/browser", "page.pdf")}\n`);
+  expect(fs.readFileSync(path.join(t.cwd, ".repo/tmp/browser/page.pdf")).subarray(0, 5).toString()).toBe("%PDF-");
   expect(methods(t.calls)).toStrictEqual(["Page.captureScreenshot", "Page.printToPDF"]);
 });
 
@@ -93,12 +93,12 @@ it("shot swaps a lightpanda session that recorded no pid to chromium before pain
   const shot = await exec(t.cwd, ["shot"], { bins: { chromium, lightpanda: "" } });
   expect(shot.code).toBe(0);
   expect(readStored(t.cwd)).toMatchObject({ engine: "chromium", swapCount: 1 });
-  expect(fs.existsSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"))).toBe(true);
+  expect(fs.existsSync(path.join(t.cwd, ".repo/tmp/browser/shot.png"))).toBe(true);
 });
 
 it("shot fails a chromium session whose process is gone", async () => {
   const t = await live({ engine: "chromium", pid: deadPid() });
   const shot = await exec(t.cwd, ["shot"], { bins: NEVER });
   expect(shot.stderr).toBe(NO_SESSION);
-  expect(fs.existsSync(path.join(t.cwd, ".tmp/repo/browser/shot.png"))).toBe(false);
+  expect(fs.existsSync(path.join(t.cwd, ".repo/tmp/browser/shot.png"))).toBe(false);
 });

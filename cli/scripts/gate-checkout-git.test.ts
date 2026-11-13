@@ -50,7 +50,7 @@ it("denies a git command that commits or destroys work in the main checkout, in 
   expect(processFatTools(claudeSh(a, "git stash && git reset --hard && git commit --amend"))).toBeNull();
   expect(processFatTools(agyCall(r, "run_command", { CommandLine: "git stash", Cwd: a }))).toBeNull();
   expect(notDenied(processFatTools(claudeSh(r, "git status && git log --oneline")))).toBe(true);
-  const heredocNote = "cat > .tmp/n.md <<'EOF'\ngit stash\ngit commit -m x\nEOF";
+  const heredocNote = "cat > .repo/scratch/n.md <<'EOF'\ngit stash\ngit commit -m x\nEOF";
   expect(notDenied(processFatTools(claudeSh(r, heredocNote)))).toBe(true);
 });
 
@@ -118,5 +118,5 @@ it("sits ahead of the review guard: the main checkout reason wins there, a workt
   for (const child of ["implementer-fast", "scout"])
     expect(processFatTools(claudeWrite(r, inWorktree, { agent_type: child })), child).toBeNull();
 
-  expect(notDenied(processFatTools(claudeWrite(r, path.join(r, ".tmp/repo/n.md"))))).toBe(true);
+  expect(notDenied(processFatTools(claudeWrite(r, path.join(r, ".repo/scratch/n.md"))))).toBe(true);
 });

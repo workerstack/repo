@@ -66,9 +66,9 @@ describe("a closing line read against the saved items", () => {
 
   it("blocks a plan that has no review, reading a review record that is not a map as no record", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
     expect(stop(ws, "k0", planOne)?.reason).toBe(blocked);
-    const record = ".tmp/repo/sessions/k1/reviews-open.json";
+    const record = ".repo/tmp/sessions/k1/reviews-open.json";
     plantFile(ws, record, "[1]");
     expect(stop(ws, "k1", planOne)?.reason).toBe(blocked);
     plantFile(ws, record, '{"plan 1":"0"}');
@@ -77,20 +77,20 @@ describe("a closing line read against the saved items", () => {
 
   it("reads a plan with no reviews line as unreviewed", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/repo/plans/1-x.md", item(1, "status: ready", "strategy: default"));
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "strategy: default"));
     expect(stop(ws, "k4", planOne)?.reason).toBe(blocked);
   });
 
   it("holds a plan whose review record is open", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
-    plantFile(ws, ".tmp/repo/sessions/k2/reviews-open.json", '{"plan 1":0,"plan 2":"x"}');
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/tmp/sessions/k2/reviews-open.json", '{"plan 1":0,"plan 2":"x"}');
     expect(stop(ws, "k2", planOne)?.reason).toMatch(/^plan 1's review has not settled/);
   });
 
   it("names no file for a serial the frontmatter does not carry", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/repo/plans/5-x.md", item(6, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/plans/5-x.md", item(6, "status: ready", "reviews: 0", "strategy: default"));
     expect(stop(ws, "k3", closing("plan 5 (strategy: default)"))).toBeNull();
   });
 });
@@ -101,21 +101,21 @@ function stamped(ws: string, sid: string): void {
 
   const lines = [
     path.join(ws, "other.md"),
-    path.join(ws, ".tmp/repo/plans/9-missing.md"),
-    path.join(ws, ".tmp/repo/plans/4-bare.md"),
-    path.join(ws, ".tmp/repo/plans/2-nostatus.md"),
-    path.join(ws, ".tmp/repo/plans/3-nostrategy.md"),
-    path.join(ws, ".tmp/repo/plans/7-ok.md"),
-    path.join(ws, ".tmp/repo/roadmaps/3-r.md"),
+    path.join(ws, ".repo/plans/9-missing.md"),
+    path.join(ws, ".repo/plans/4-bare.md"),
+    path.join(ws, ".repo/plans/2-nostatus.md"),
+    path.join(ws, ".repo/plans/3-nostrategy.md"),
+    path.join(ws, ".repo/plans/7-ok.md"),
+    path.join(ws, ".repo/roadmaps/3-r.md"),
   ];
 
   plantFile(ws, "other.md", "not an item");
-  plantFile(ws, ".tmp/repo/plans/4-bare.md", "no frontmatter at all");
-  plantFile(ws, ".tmp/repo/plans/2-nostatus.md", item(2, "reviews: 1", "strategy: default"));
-  plantFile(ws, ".tmp/repo/plans/3-nostrategy.md", item(3, "a line with no key", "status: ready", "reviews: 1"));
-  plantFile(ws, ".tmp/repo/plans/7-ok.md", item(7, ...SETTLED));
-  plantFile(ws, ".tmp/repo/roadmaps/3-r.md", item(3, "status: draft", "reviews: 1", "strategy: default"));
-  plantFile(ws, `.tmp/repo/sessions/${sid}/approvals.txt`, `${lines.join("\n")}\n`);
+  plantFile(ws, ".repo/plans/4-bare.md", "no frontmatter at all");
+  plantFile(ws, ".repo/plans/2-nostatus.md", item(2, "reviews: 1", "strategy: default"));
+  plantFile(ws, ".repo/plans/3-nostrategy.md", item(3, "a line with no key", "status: ready", "reviews: 1"));
+  plantFile(ws, ".repo/plans/7-ok.md", item(7, ...SETTLED));
+  plantFile(ws, ".repo/roadmaps/3-r.md", item(3, "status: draft", "reviews: 1", "strategy: default"));
+  plantFile(ws, `.repo/tmp/sessions/${sid}/approvals.txt`, `${lines.join("\n")}\n`);
 }
 
 describe("a turn that saved reviewed items", () => {
@@ -137,8 +137,8 @@ describe("a reply of y", () => {
 
   it("refuses a strategy change when the plan has no frontmatter block to carry it", () => {
     const ws = hook.temp();
-    const file = plantFile(ws, ".tmp/repo/plans/2-x.md", `---\nserial: 2\n${SETTLED.join("\n")}\n---`);
-    plantFile(ws, ".tmp/repo/sessions/y1/approvals.txt", `${file}\n`);
+    const file = plantFile(ws, ".repo/plans/2-x.md", `---\nserial: 2\n${SETTLED.join("\n")}\n---`);
+    plantFile(ws, ".repo/tmp/sessions/y1/approvals.txt", `${file}\n`);
     const tp = transcript(ws, closing("plan 2 (strategy: default)"));
     expect(say(ws, "y1", { prompt: "y review-fast", transcript_path: tp })).toContain(
       "y did not approve plan 2: strategy review-fast could not be written (no frontmatter)",
@@ -151,7 +151,7 @@ function reviewedPlan(ws: string, sid: string): string {
   const out = hook.send(ws, {
     hook_event_name: "PreToolUse",
     session_id: sid,
-    tool_input: { content: VALID_PLAN, file_path: ".tmp/repo/plans/new.md" },
+    tool_input: { content: VALID_PLAN, file_path: ".repo/plans/new.md" },
     tool_name: "Write",
   });
 
@@ -179,11 +179,11 @@ describe("a reply of h", () => {
   it.skipIf(process.platform === "win32")("refuses when the session id would break the handoff", () => {
     const ws = hook.temp();
     const sid = "s1\n## Extra";
-    const file = plantFile(ws, ".tmp/repo/plans/1-x.md", item(1, ...SETTLED));
-    plantFile(ws, `.tmp/repo/sessions/${sid}/approvals.txt`, `${file}\n`);
+    const file = plantFile(ws, ".repo/plans/1-x.md", item(1, ...SETTLED));
+    plantFile(ws, `.repo/tmp/sessions/${sid}/approvals.txt`, `${file}\n`);
     const tp = transcript(ws, closing("plan 1 (strategy: default)"));
     const lines = say(ws, sid, { prompt: "h", transcript_path: tp });
     expect(lines.some((l) => l.startsWith("h did not hand off plan 1: the handoff could not be written"))).toBe(true);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/handoffs"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/handoffs"))).toStrictEqual([]);
   });
 });

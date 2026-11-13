@@ -17,7 +17,7 @@ describe("validatePlan section rules", () => {
   });
 
   it("denies an empty section and one without bullets", () => {
-    expect(errorsFor((t) => t.replace("- Plans live under .tmp/repo/plans/\n", "plain prose\n"))).toContain(
+    expect(errorsFor((t) => t.replace("- Plans live under .repo/plans/\n", "plain prose\n"))).toContain(
       "Context bullets",
     );
     expect(errorsFor((t) => t.replace("- Do not clobber other .gitignore lines\n", ""))).toContain("Constraints empty");

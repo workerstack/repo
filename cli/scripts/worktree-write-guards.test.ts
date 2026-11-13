@@ -16,20 +16,30 @@ function rootsOf(r: string) {
 
 const WIN_ROOTS = rootsOf("C:\\r");
 
-it("denies a write into the main checkout and frees .tmp, worktrees and anything outside", () => {
+it("denies a write into the main checkout and frees .repo work dirs, worktrees and anything outside", () => {
   const r = tmp.repo();
   const roots = rootsOf(r);
 
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under " +
-    `${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+    `${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".repo")}${path.sep}` +
+    `{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}${path.sep} is writable here`;
 
   expect(mainCheckoutWriteReason(path.join(r, "src/x.ts"), roots)).toBe(reason);
-  expect(mainCheckoutWriteReason(path.join(r, ".repo/lessons/l.md"), roots)).toBe(reason);
+
+  for (const held of [".repo/lessons/l.md", ".repo/lint-baseline.json", ".repo/test-times.json", ".tmp/x", ".repo"])
+    expect(mainCheckoutWriteReason(path.join(r, held), roots), held).toBe(reason);
+
   expect(mainCheckoutWriteReason("src/x.ts", roots)).toBe(reason);
   expect(mainCheckoutWriteReason(path.join(aliasOf(r), "src/x.ts"), roots)).toBe(reason);
 
-  for (const free of [".tmp/repo/n.md", ".tmp", ".worktrees/a/src/x.ts", ".worktrees/a"])
+  for (const free of [
+    ".repo/scratch/n.md",
+    ".repo/plans/p.md",
+    ".repo/tmp/sync.json",
+    ".worktrees/a/src/x.ts",
+    ".worktrees/a",
+  ])
     expect(mainCheckoutWriteReason(path.join(r, free), roots), free).toBeNull();
 
   expect(mainCheckoutWriteReason(path.join(tmp.dir("wt-out-"), "x.ts"), roots)).toBeNull();
@@ -52,12 +62,22 @@ function check(target: string): string | null {
 it("reads win32 spellings of a write", () => {
   expect(check("C:\\r\\src\\x.ts")).toBe(
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; " +
-      "only C:\\r\\.tmp\\ is writable here",
+      "only C:\\r\\.repo\\{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}\\ " +
+      "is writable here",
   );
   expect(check("c:/R/src/x.ts")).toMatch(/^the main checkout is shared/);
   expect(check("src\\x.ts")).toMatch(/^the main checkout is shared/);
 
-  for (const free of ["C:\\r\\.tmp\\repo\\n.md", "C:/r/.worktrees/a/src/x.ts", "D:\\other\\x.ts", "C:\\rr\\x.ts"])
+  for (const held of ["C:\\r\\.repo\\lessons\\x.md", "C:\\r\\.repo\\lint-baseline.json", "C:\\r\\.tmp\\x"])
+    expect(check(held), held).toMatch(/^the main checkout is shared/);
+
+  for (const free of [
+    "C:\\r\\.repo\\plans\\n.md",
+    "c:/R/.repo/scratch/x",
+    "C:/r/.worktrees/a/src/x.ts",
+    "D:\\other\\x.ts",
+    "C:\\rr\\x.ts",
+  ])
     expect(check(free), free).toBeNull();
 });
 

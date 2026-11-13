@@ -12,7 +12,7 @@ import { activeReview, implementerOf, parseMode, parseStrategy, stampPath, write
 useTempDirs();
 
 function writePlan(root: string, name: string, fm: Record<string, string>): string {
-  const abs = path.join(root, ".tmp", "repo", "plans", name);
+  const abs = path.join(root, ".repo", "plans", name);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
 
   const head = Object.entries(fm)
@@ -54,8 +54,8 @@ it("accepts exactly ask, auto and away", () => {
 
 it("stampPath keeps the sid inside the sessions dir", () => {
   const root = realDir("strategy-");
-  expect(stampPath(root, "abc-1")).toBe(path.join(root, ".tmp", "repo", "sessions", "abc-1", "strategy.json"));
-  expect(path.relative(path.join(root, ".tmp", "repo", "sessions"), stampPath(root, "../../x")).startsWith("..")).toBe(
+  expect(stampPath(root, "abc-1")).toBe(path.join(root, ".repo", "tmp", "sessions", "abc-1", "strategy.json"));
+  expect(path.relative(path.join(root, ".repo", "tmp", "sessions"), stampPath(root, "../../x")).startsWith("..")).toBe(
     false,
   );
 });
@@ -82,7 +82,7 @@ it("is null for ready, done, blocked, default, a missing key, a missing plan and
     expect(activeReview(root, label)).toBeNull();
   }
 
-  writeStamp(root, "gone", path.join(root, ".tmp", "repo", "plans", "9-gone-20261107T181901Z.md"));
+  writeStamp(root, "gone", path.join(root, ".repo", "plans", "9-gone-20261107T181901Z.md"));
   expect(activeReview(root, "gone")).toBeNull();
   expect(activeReview(root, "never-stamped")).toBeNull();
 });
@@ -117,7 +117,7 @@ it("writeStamp twice leaves one identical file and no temp file", () => {
 it("stamps a plan typed with ./ or .. as its canonical path", () => {
   const root = realDir("strategy-");
   const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
-  writeStamp(root, "s1", `${root}/./.tmp/repo/../repo/plans/4-x-20261107T181901Z.md`);
+  writeStamp(root, "s1", `${root}/./.repo/tmp/../plans/4-x-20261107T181901Z.md`);
   expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
 });
 
@@ -125,7 +125,7 @@ it("stamps through a symlinked spelling of the root and finds the plan", () => {
   const root = realDir("strategy-");
   const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
   const alias = aliasOf(root);
-  writeStamp(alias, "s1", path.join(alias, ".tmp", "repo", "plans", "4-x-20261107T181901Z.md"));
+  writeStamp(alias, "s1", path.join(alias, ".repo", "plans", "4-x-20261107T181901Z.md"));
   expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
   expect(activeReview(alias, "s1")).toStrictEqual({ plan, serial: 4, strategy: "review-fast" });
   expect(activeReview(root, "s1")?.plan).toBe(plan);

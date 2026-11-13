@@ -196,7 +196,7 @@ export const TURBO_SAVE_STEP: string = `      - uses: actions/cache/save@${CACHE
 /** Before the gates: the typecheck's incremental build info of the OS's latest run, whose key starts the same. */
 export const TSBUILDINFO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}
         with:
-          path: .tmp/repo/tsbuildinfo
+          path: .repo/tmp/tsbuildinfo
           key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
           restore-keys: tsbuildinfo-\${{ runner.os }}-`;
 
@@ -204,7 +204,7 @@ export const TSBUILDINFO_RESTORE_STEP: string = `      - uses: actions/cache/res
 export const TSBUILDINFO_SAVE_STEP: string = `      - uses: actions/cache/save@${CACHE_PIN}
         if: always() && github.ref == 'refs/heads/main'
         with:
-          path: .tmp/repo/tsbuildinfo
+          path: .repo/tmp/tsbuildinfo
           key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}`;
 
 /** The step that checks every commit of the push or pull request; an empty BASE leaves HEAD alone to be checked. */
@@ -226,7 +226,7 @@ export const BLOB_UPLOAD_STEP: string = `      - uses: ${UPLOAD}
         if: runner.os == 'Linux'
         with:
           name: blob-\${{ strategy.job-index }}
-          path: .tmp/repo/blob/
+          path: .repo/tmp/blob/
           if-no-files-found: error`;
 
 /** The coverage job's steps after the install: the blobs are downloaded into one directory and merged. */

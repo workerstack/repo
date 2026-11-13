@@ -6,6 +6,7 @@ import { afterEach, vi } from "vitest";
 import { cleanBuilds } from "../clean-builds.ts";
 import { runClean } from "../clean-run.ts";
 import { childEnv } from "../../env.ts";
+import { IGNORED_DIRS, REPO } from "../../repo-dirs.ts";
 
 /** The clock every clean test plans against, and its units. */
 export const NOW: number = Date.parse("2026-11-03T12:00:00Z");
@@ -14,7 +15,12 @@ export const DAY: number = 24 * HOUR;
 /** A live and a dead session id. */
 export const LIVE = "11111111-aaaa-4bbb-8ccc-000000000001";
 export const DEAD = "22222222-aaaa-4bbb-8ccc-000000000002";
-const T = ".tmp/repo";
+const R = REPO;
+const T = `${REPO}/scratch`;
+const S = `${REPO}/tmp`;
+
+/** The ignore lines a checkout carries for the ignored `.repo` dirs. */
+export const IGNORE_LINES: string = IGNORED_DIRS.map((d) => `**/${REPO}/${d}/\n`).join("");
 
 /** A temp dir maker whose dirs, and every mock, go after each case. */
 export function cleanDirs(): (prefix: string) => string {
@@ -48,31 +54,31 @@ export function planter(root: string): (rel: string, ms: number, body?: string) 
   };
 }
 
-/** `git init` in `root` with .tmp/ ignored. */
+/** `git init` in `root` with the ignored `.repo` dirs ignored. */
 export function gitInit(root: string): void {
   execFileSync("git", ["init", "-q"], { cwd: root, env: childEnv({ GIT_DIR: undefined, GIT_INDEX_FILE: undefined }) });
-  fs.writeFileSync(path.join(root, ".gitignore"), ".tmp/\n");
+  fs.writeFileSync(path.join(root, ".gitignore"), IGNORE_LINES);
 }
 
-/** A repo whose .tmp/repo holds one entry of every kind the sweep plans. */
+/** A repo whose ignored `.repo` dirs hold one entry of every kind the sweep plans. */
 export function sweepRepo(tempDir: (prefix: string) => string): string {
   const root = tempDir("repo-clean-");
   gitInit(root);
   const put = planter(root);
   for (const file of ["plans/1-a", "roadmaps/1-r", "handoffs/1-h", "implementations/1-i"])
-    put(`${T}/${file}-20261103T000000Z.md`, 48 * HOUR);
+    put(`${R}/${file}-20261103T000000Z.md`, 48 * HOUR);
   put(`${T}/3-notes-20261103T120000Z.md`, 48 * HOUR);
   put(`${T}/old.log`, 2 * HOUR);
   put(`${T}/new.log`, 5 * 60_000);
   put(`${T}/review/notes.md`, 2 * HOUR);
   age(path.join(root, T, "review"), 2 * HOUR);
-  for (const sid of [LIVE, DEAD]) put(`${T}/sessions/${sid}/wrote.txt`, 2 * HOUR);
-  for (const end of [LIVE, DEAD, "default"]) put(`${T}/orchestrator-logs/ask-stop-${end}`, 2 * HOUR);
-  put(`${T}/stash/old.txt`, 48 * HOUR);
-  put(`${T}/stash/new.txt`, HOUR);
-  put(`${T}/browser/session.json`, 48 * HOUR);
+  for (const sid of [LIVE, DEAD]) put(`${S}/sessions/${sid}/wrote.txt`, 2 * HOUR);
+  for (const end of [LIVE, DEAD, "default"]) put(`${S}/orchestrator-logs/ask-stop-${end}`, 2 * HOUR);
+  put(`${S}/stash/old.txt`, 48 * HOUR);
+  put(`${S}/stash/new.txt`, HOUR);
+  put(`${S}/browser/session.json`, 48 * HOUR);
   // Adding a file bumps its dir's mtime; the session dirs were last touched with their files.
-  for (const sid of [LIVE, DEAD]) age(path.join(root, T, "sessions", sid), 2 * HOUR);
+  for (const sid of [LIVE, DEAD]) age(path.join(root, S, "sessions", sid), 2 * HOUR);
   return root;
 }
 
@@ -90,14 +96,14 @@ export const exists =
     fs.existsSync(path.join(root, p));
 
 const BUILD_FILES: Record<string, string> = {
-  ".gitignore": ".next\n.turbo/\n.flare\nnode_modules\n*.tsbuildinfo\n.tmp/\n",
+  ".gitignore": `.next\n.turbo/\n.flare\nnode_modules\n*.tsbuildinfo\n${IGNORE_LINES}`,
   "src/a.ts": "x",
   ".next/a": "abc",
   "apps/.turbo/b": "de",
   "x.tsbuildinfo": "f",
   "node_modules/m/i": "ghij",
   ".flare/s": "k",
-  ".tmp/repo/old.log": "l",
+  ".repo/scratch/old.log": "l",
 };
 
 /** A git repo with a real .gitignore, caches and node_modules under it, and a scratch dir. */

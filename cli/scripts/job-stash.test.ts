@@ -13,7 +13,7 @@ useJobEnv();
 it("writeStash saves the text under the root and names it relative to the root", () => {
   const dir = plant();
   const ref = writeStash({ cwd: dir }, "exec", "one\ntwo");
-  expect(ref).toMatch(/^\.tmp\/repo\/stash\/exec-[0-9a-z]{4}\.txt$/);
+  expect(ref).toMatch(/^\.repo\/tmp\/stash\/exec-[0-9a-z]{4}\.txt$/);
   expect(fs.readFileSync(path.join(dir, ref), "utf8")).toBe("one\ntwo\n");
 });
 

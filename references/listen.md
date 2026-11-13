@@ -18,7 +18,7 @@ bun repo listen file --path clip.wav [--clip]
 bun repo listen latest
 ```
 
-`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.tmp/repo/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
+`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.repo/tmp/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
 
 ## Auth and capture
 

@@ -1,6 +1,6 @@
 ---
 name: pickup
-description: Continue a handoff under .tmp/repo/handoffs/.
+description: Continue a handoff under .repo/handoffs/.
 ---
 # pickup
 
@@ -18,7 +18,7 @@ Load a handoff and continue in this session. Not a mode. Not `/handoff`. Inverse
 
 ## Resolve
 
-Read `.tmp/repo/handoffs/`. Use `bun repo job --job search|exec` when the listing is fat.
+Read `.repo/handoffs/`. Use `bun repo job --job search|exec` when the listing is fat.
 
 Order:
 

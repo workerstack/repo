@@ -33,9 +33,9 @@ function calls(w: string): HookInput[] {
   for (const kind of WRITE_KINDS) {
     const targets = [
       path.join(w, "src/x.ts"),
-      path.join(w, ".tmp/repo/plans/p.md"),
+      path.join(w, ".repo/plans/p.md"),
       "tmp/notes.md",
-      path.join(w, "packages/a/.tmp/repo/scratch/s.md"),
+      path.join(w, "packages/a/.repo/scratch/scratch/s.md"),
     ];
 
     for (const target of targets)
@@ -70,7 +70,7 @@ const states: [string, (w: string) => void][] = [
   ["ready", (w) => startReview(w, { status: "ready" })],
   ["done", (w) => startReview(w, { status: "done", strategy: "review-deep" })],
   ["blocked", (w) => startReview(w, { status: "blocked" })],
-  ["stamp of a missing plan", (w) => writeStamp(w, REVIEW_SID, path.join(w, ".tmp/repo/plans/gone.md"))],
+  ["stamp of a missing plan", (w) => writeStamp(w, REVIEW_SID, path.join(w, ".repo/plans/gone.md"))],
   [
     "corrupt stamp",
     (w) => {

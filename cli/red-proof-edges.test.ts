@@ -70,7 +70,7 @@ it("throws naming the command when write-tree fails, leaving no dir", () => {
   expect(() => redProof(root, A_TEST, { git: faulty, vitest: never })).toThrow(
     "red-proof: git write-tree failed: fatal: nope",
   );
-  expect(fs.existsSync(nodePath.join(root, ".tmp", "repo", `red-proof-${process.pid}`))).toBe(false);
+  expect(fs.existsSync(nodePath.join(root, ".repo", "tmp", `red-proof-${process.pid}`))).toBe(false);
 });
 
 it("throws when the archive cannot be unpacked", () => {

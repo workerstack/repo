@@ -46,7 +46,7 @@ it("leaves Antigravity calls to the gate", () => {
 
   for (const toolCall of [
     { args: { CommandLine: "cat big.log", Cwd: a }, name: "run_command" },
-    { args: { Path: path.join(a, ".tmp/repo/scratch/x.md"), Replacement: "b", Target: "a" }, name: "edit_file" },
+    { args: { Path: path.join(a, ".repo/scratch/x.md"), Replacement: "b", Target: "a" }, name: "edit_file" },
   ]) {
     const payload = { conversationId: "ag", toolCall, workspacePaths: [r] };
     expect(runHook(gateMain, payload).stdout, toolCall.name).not.toBe("");
@@ -81,26 +81,26 @@ function nested(reply: HookOut): void {
 }
 
 function askedOf(r: string) {
-  return JSON.parse(fs.readFileSync(path.join(r, ".tmp/repo/sessions/cu/git-asked.json"), "utf8"));
+  return JSON.parse(fs.readFileSync(path.join(r, ".repo/tmp/sessions/cu/git-asked.json"), "utf8"));
 }
 
 it("beforeSubmitPrompt prints nothing Cursor would reject and only records what git the user asked for", () => {
   const r = repo();
   // Cursor's event does one thing: git-asked.json. No /ask stamp, board line, approval or additionalContext.
   expect(cursor(r, "beforeSubmitPrompt", { attachments: [], prompt: "/ask" })).toBeNull();
-  expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
-  expect(fs.readdirSync(path.join(r, ".tmp/repo/sessions/cu"))).toStrictEqual(["git-asked.json"]);
+  expect(fs.existsSync(path.join(r, ".repo/tmp/orchestrator-logs"))).toBe(false);
+  expect(fs.readdirSync(path.join(r, ".repo/tmp/sessions/cu"))).toStrictEqual(["git-asked.json"]);
   expect(askedOf(r)).toStrictEqual({ words: [] });
   expect(cursor(r, "beforeSubmitPrompt", { attachments: [], prompt: "please stash the main checkout" })).toBeNull();
   expect(askedOf(r)).toStrictEqual({ words: ["stash"] });
-  expect(fs.existsSync(path.join(r, ".tmp/repo/orchestrator-logs"))).toBe(false);
+  expect(fs.existsSync(path.join(r, ".repo/tmp/orchestrator-logs"))).toBe(false);
 });
 
 it("stop prints nothing for a completed turn and decision:block only for the ask gate", () => {
   const r = repo();
   const done = { loop_count: 0, status: "completed", transcript_path: null };
   expect(cursor(r, "stop", done)).toBeNull();
-  const stamp = path.join(r, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-cu`);
+  const stamp = path.join(r, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-cu`);
   fs.mkdirSync(path.dirname(stamp), { recursive: true });
   fs.writeFileSync(stamp, "ask");
   expect(cursor(r, "stop", done)).toStrictEqual({ decision: "block", reason: ASK_STOP_REASON });
@@ -112,11 +112,11 @@ it("preToolUse Shell dump and Write redirect answer in the nested form", () => {
   const shell = must(cursor(r, "preToolUse", { tool_input: { command: "cat big.log", cwd: r }, tool_name: "Shell" }));
   nested(shell);
   expect(shell.hookSpecificOutput.updatedInput.command).toMatch(/node_modules\/\.bin\/repo job --job exec --query /);
-  const toolInput = { content: VALID_TMP, file_path: ".tmp/repo/note.md" };
+  const toolInput = { content: VALID_TMP, file_path: ".repo/scratch/note.md" };
   const write = must(cursor(r, "preToolUse", { tool_input: toolInput, tool_name: "Write" }));
   nested(write);
   const saved = write.hookSpecificOutput.updatedInput.file_path;
-  expect(path.dirname(saved)).toBe(path.join(r, ".tmp/repo"));
+  expect(path.dirname(saved)).toBe(path.join(r, ".repo/scratch"));
   expect(fs.existsSync(saved)).toBe(true);
 });
 
@@ -129,7 +129,7 @@ function expectNativeDeny(reply: HookOut | null): void {
 
 it("preToolUse denies in Cursor's native shape and passes plain calls through", () => {
   const r = repo();
-  const toolInput = { content: "not a plan", file_path: ".tmp/repo/plans/x.md" };
+  const toolInput = { content: "not a plan", file_path: ".repo/plans/x.md" };
   const bad = cursor(r, "preToolUse", { tool_input: toolInput, tool_name: "Write" });
   expectNativeDeny(bad);
   expect(bad?.hookSpecificOutput).toBeUndefined();

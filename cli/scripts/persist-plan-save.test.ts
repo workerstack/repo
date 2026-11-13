@@ -51,7 +51,7 @@ describe("persistPlan names", () => {
     expect(byGoal.filename).toBe("1-unnamed-20260826T143000Z.md");
 
     const goal =
-      "Repo .gitignore ignores .tmp/ so files under .tmp/repo/plans/ stay untracked. Existing ignore entries stay.";
+      "Repo .gitignore ignores .tmp/ so files under .repo/plans/ stay untracked. Existing ignore entries stay.";
 
     expect(byGoal.content).toContain(`source: ${JSON.stringify(goal)}`);
   });
@@ -62,27 +62,27 @@ describe("persistPlan denials", () => {
     const ws = tmpWs();
     const r = persistPlan({ content: "just words", workspaceRoot: ws });
     expect(r.ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("denies a save whose frontmatter never closes", () => {
     const ws = tmpWs();
     const r = persistPlan({ content: `---\nserial: 1\n${VALID_PLAN}`, workspaceRoot: ws });
     expect(r.ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("denies an empty save the same way", () => {
     const ws = tmpWs();
     expect(persistPlan({ workspaceRoot: ws }).ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 });
 
 describe("persistPlan serials", () => {
   it("refuses to overwrite a file when the next serial cannot move past it", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, ".tmp/repo/plans");
+    const dir = path.join(ws, ".repo/plans");
     fs.mkdirSync(dir, { recursive: true });
     // 2^53: adding one to it gives it back, so the next serial names the planted file.
     const planted = path.join(dir, "9007199254740992-demo-20260826T143000Z.md");
@@ -99,13 +99,13 @@ describe("persistPlan without a workspace argument", () => {
     const ws = envWorkspace();
     const r = persistPlan({ content: VALID_PLAN, created: CREATED });
     expect(r.ok, r.error).toBe(true);
-    expect(fs.existsSync(path.join(ws, ".tmp/repo/plans", String(r.filename)))).toBe(true);
+    expect(fs.existsSync(path.join(ws, ".repo/plans", String(r.filename)))).toBe(true);
   });
 
   it("denies an empty call and still prepares that root's plans dir", () => {
     const ws = envWorkspace();
     expect(persistPlan().ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("validates an update of a saved plan against that root", () => {

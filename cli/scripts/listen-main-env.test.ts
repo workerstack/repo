@@ -64,8 +64,8 @@ describe("main home and PATH", () => {
 describe("main options", () => {
   it("--cwd overrides the cwd option", async () => {
     const real = tmp("listen-cwdflag-");
-    fs.mkdirSync(path.join(real, ".tmp/repo/listen"), { recursive: true });
-    fs.writeFileSync(path.join(real, ".tmp/repo/listen/latest.txt"), "kept\n");
+    fs.mkdirSync(path.join(real, ".repo/tmp/listen"), { recursive: true });
+    fs.writeFileSync(path.join(real, ".repo/tmp/listen/latest.txt"), "kept\n");
     const r = await run(["latest", "--cwd", real], { cwd: tmp("listen-cwdflag-o-") });
     expect(r.logs).toStrictEqual(["kept"]);
   });

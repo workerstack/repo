@@ -23,7 +23,7 @@ describe("persistRoadmap", () => {
     const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
-    expect(r.path).toBe(".tmp/repo/roadmaps/1-auth-program-20261025T180000Z.md");
+    expect(r.path).toBe(".repo/roadmaps/1-auth-program-20261025T180000Z.md");
     const text = read(path.join(ws, savedOk(r).path));
     expect(text).toMatch(/^status: draft$/m);
     expect(text).not.toMatch(/^\s+Location:/m);

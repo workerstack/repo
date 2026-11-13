@@ -9,7 +9,7 @@ import { readJson } from "../json.ts";
 import { loadSources } from "../sync/agents/load-sources.ts";
 import { renderHooks } from "../sync/agents/render-hooks.ts";
 import { orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
-import { isUnderTmp, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
+import { isUnderTmp } from "./persist-tmp.ts";
 
 const kit = orchestrateKit();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -98,16 +98,14 @@ it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
   expect(fs.existsSync(path.join(root, ".grok/hooks/orchestrate-parent.json"))).toBe(true);
 });
 
-it("isUnderTmp matches root files and rejects reserved and nested paths", () => {
+it("isUnderTmp matches root files and rejects nested paths", () => {
   const ws = "/ws";
-  const reserved = ["plans", "roadmaps", "handoffs", "implementations", "browser", "orchestrator-logs", "stash"];
-  expect(TMP_RESERVED_DIRS).toStrictEqual(new Set([...reserved, "sessions", "listen", "speak"]));
-  expect(isUnderTmp(".tmp/repo/notes.md", ws)).toBe(true);
-  expect(isUnderTmp(path.join(ws, ".tmp/repo/1-x-20260827T143000Z.md"), ws)).toBe(true);
+  expect(isUnderTmp(".repo/scratch/notes.md", ws)).toBe(true);
+  expect(isUnderTmp(path.join(ws, ".repo/scratch/1-x-20260827T143000Z.md"), ws)).toBe(true);
 
   for (const rel of ["tmp/x.md", "browser/x.md", "orchestrator-logs/x.md", "cov/x.md", "plans/x.md", "handoffs/x.md"])
-    expect(isUnderTmp(`.tmp/repo/${rel}`, ws), rel).toBe(false);
+    expect(isUnderTmp(`.repo/scratch/${rel}`, ws), rel).toBe(false);
 
-  for (const rel of ["implementations/x.md", "plans", "handoffs", "implementations", "browser", "orchestrator-logs"])
-    expect(isUnderTmp(`.tmp/repo/${rel}`, ws), rel).toBe(false);
+  expect(isUnderTmp(".repo/plans/x.md", ws)).toBe(false);
+  expect(isUnderTmp(".repo/tmp/x.md", ws)).toBe(false);
 });

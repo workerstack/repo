@@ -56,7 +56,7 @@ Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule belo
 | `doctor` | unified prereq doctor (`bun repo doctor`); alias `ensure` |
 | `ensure` | alias of `doctor` |
 
-Session + profile + artifacts: `.tmp/repo/browser/` only.
+Session + profile + artifacts: `.repo/tmp/browser/` only.
 
 ### Install
 
@@ -99,9 +99,9 @@ Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when th
 
 `need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
 
-Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/ask` or `/away` stamps `.tmp/repo/orchestrator-logs/session-gate-{sid}` with `ask` or `away`; `/auto` unlinks either stamp. A plan or roadmap `mode:` wins over the flag.
+Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/ask` or `/away` stamps `.repo/tmp/orchestrator-logs/session-gate-{sid}` with `ask` or `away`; `/auto` unlinks either stamp. A plan or roadmap `mode:` wins over the flag.
 
-Scratch: `.tmp/repo/`. Stash: `.tmp/repo/stash/`. Sessions: `.tmp/repo/sessions/{sid}/`. Browser: `.tmp/repo/browser/`.
+Scratch: `.repo/scratch/`. Stash: `.repo/tmp/stash/`. Sessions: `.repo/tmp/sessions/{sid}/`. Browser: `.repo/tmp/browser/`.
 
 ## Clasp
 
@@ -534,9 +534,9 @@ If `google-oauth.json` is missing, `login` prints `setup: bun repo setup google-
 
 ## Hooks
 
-SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `bun repo map` prints as `additionalContext` (capped under Claude Code's 10,000-char per-hook `additionalContext` limit, about 2.4k tokens, below the 5k `bun repo map` budget; cache-stable, fail-open) and logs `{rows, tokens}` to `.tmp/repo/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no generated sessionStart. Do not register a SessionStart hook on `.grok/hooks/orchestrate-parent.json`.
+SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `bun repo map` prints as `additionalContext` (capped under Claude Code's 10,000-char per-hook `additionalContext` limit, about 2.4k tokens, below the 5k `bun repo map` budget; cache-stable, fail-open) and logs `{rows, tokens}` to `.repo/tmp/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no generated sessionStart. Do not register a SessionStart hook on `.grok/hooks/orchestrate-parent.json`.
 
-Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. UserPromptSubmit may emit a one-line `sessionGate=ask|auto|away` plus session receipt, then up to 8 other live lines from `~/.workerstack/board/` (`hookSpecificOutput.additionalContext`). The current session's own line is omitted. Skip host Stop banners. `/ask` and `/away` exact-match slashes stamp `session-gate-{sid}` to `ask` or `away`. `/auto` unlinks. Sid-less: no stamp. Default: `auto`. The `sessionGate=` word is the effective mode: the newest `in-progress` plan or roadmap in this session's `.tmp/repo/sessions/<sid>/approvals.txt` with a valid `mode:` wins, else the stamp, else `auto`. Another session's plans never count.
+Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. UserPromptSubmit may emit a one-line `sessionGate=ask|auto|away` plus session receipt, then up to 8 other live lines from `~/.workerstack/board/` (`hookSpecificOutput.additionalContext`). The current session's own line is omitted. Skip host Stop banners. `/ask` and `/away` exact-match slashes stamp `session-gate-{sid}` to `ask` or `away`. `/auto` unlinks. Sid-less: no stamp. Default: `auto`. The `sessionGate=` word is the effective mode: the newest `in-progress` plan or roadmap in this session's `.repo/tmp/sessions/<sid>/approvals.txt` with a valid `mode:` wins, else the stamp, else `auto`. Another session's plans never count.
 
 In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait scout`. Reason: `ask after this step`. In `sessionGate=away`, parent Stop blocks a reply whose last line ends in `?` and is not a closing line. Reason: `away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue`. Both blocks share the `stop-block` counter, cap 3, so a true blocker still reaches the person. `sessionGate=auto` does not Stop-block.
 
@@ -555,15 +555,15 @@ Payload: `cursor_version`, `session_id`, `model`, `tool_name`, `tool_input`, `cw
 | `Shell` | `command`, `cwd` | denylist, `.gitignore`, `git worktree add` and main-checkout git guards; dump, search, `curl` and `ls` rewrites |
 | `Read` | `file_path` | denylist, 200KB deny, re-read deny |
 | `Grep` | `pattern`, `file_path`, `glob` | denylist |
-| `Write` | `file_path`, `content` | main-checkout deny, scratch redirect to the root `.tmp/repo`, `.gitignore` guard; orchestrate-parent persists plans and the like |
+| `Write` | `file_path`, `content` | main-checkout deny, redirect of `.repo` work files and scratch to the root `.repo`, `.gitignore` guard; orchestrate-parent persists plans and the like |
 
 `Read` takes no offset or limit and `Grep` no `head_limit`, so the gate injects and caps neither (`limits: false` in `TOOLS.cursor`). A re-read of a file this session wrote therefore cannot say "Read with offset+limit": Cursor's reason names `bun repo job --job exec --query 'sed -n 1,200p <file>'`. `List` and `Delete` get no answer.
 
-Reply: a deny is `{"permission":"deny","user_message":reason,"agent_message":reason}`. A rewrite is Claude's nested `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{...}}}` with no `permission` and no top-level field (Cursor reads the nested form only then; `permission` would also auto-approve). Cursor applies a rewritten `command` (Shell) and `file_path` (Write), but writes its own `content`: a persisted tmp write lands at the `.tmp/repo/` path with its `TMP_NAME:` line still in the body. Empty stdout with exit 0 allows. Invalid JSON on stdout blocks the call. `stop` may reply `{"decision":"block","reason":...}`. orchestrate-parent handles Cursor's `beforeSubmitPrompt` only to write `git-asked.json` (see Worktrees); there it stamps no `/ask` or `/away`, handles no `y` or `h`, prints no board line and adds no context.
+Reply: a deny is `{"permission":"deny","user_message":reason,"agent_message":reason}`. A rewrite is Claude's nested `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{...}}}` with no `permission` and no top-level field (Cursor reads the nested form only then; `permission` would also auto-approve). Cursor applies a rewritten `command` (Shell) and `file_path` (Write), but writes its own `content`: a persisted tmp write lands at the `.repo/scratch/` path with its `TMP_NAME:` line still in the body. Empty stdout with exit 0 allows. Invalid JSON on stdout blocks the call. `stop` may reply `{"decision":"block","reason":...}`. orchestrate-parent handles Cursor's `beforeSubmitPrompt` only to write `git-asked.json` (see Worktrees); there it stamps no `/ask` or `/away`, handles no `y` or `h`, prints no board line and adds no context.
 
-Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.tmp/repo/plans/`, `.tmp/repo/handoffs/`, `.tmp/repo/implementations/`, `.tmp/repo/roadmaps/`, and `.tmp/repo/` root files persist via `cli/scripts/persist-plan.ts` / `persist-handoff.ts` / `persist-implementation.ts` / `persist-tmp.ts` / `persist-roadmap.ts`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
+Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.repo/plans/`, `.repo/handoffs/`, `.repo/implementations/`, `.repo/roadmaps/`, and `.repo/scratch/` root files persist via `cli/scripts/persist-plan.ts` / `persist-handoff.ts` / `persist-implementation.ts` / `persist-tmp.ts` / `persist-roadmap.ts`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
 
-Writes under `.repo/lessons/` go through `bun repo lessons`: a lesson Write in a managed worktree is validated, saved, and reindexed (`INDEX.md`) there, and the same Write in the main checkout is denied with the Worktrees reason; an Edit of a lesson is denied with the Write and `lessons.ts hit` routes. Lessons match per holding checkout: the root, or the managed worktree that holds the file; an unmanaged linked worktree falls back to the caller's checkout. On any other Write or Edit, PreToolUse adds `additionalContext` for lessons whose globs match the file, each once per session (`.tmp/repo/sessions/<sid>/lessons-seen.json`). It reads only `INDEX.md` and fails open.
+Writes under `.repo/lessons/` go through `bun repo lessons`: a lesson Write in a managed worktree is validated, saved, and reindexed (`INDEX.md`) there, and the same Write in the main checkout is denied with the Worktrees reason; an Edit of a lesson is denied with the Write and `lessons.ts hit` routes. Lessons match per holding checkout: the root, or the managed worktree that holds the file; an unmanaged linked worktree falls back to the caller's checkout. On any other Write or Edit, PreToolUse adds `additionalContext` for lessons whose globs match the file, each once per session (`.repo/tmp/sessions/<sid>/lessons-seen.json`). It reads only `INDEX.md` and fails open.
 
 SubagentStop (and child Stop with `subagentType`) intercepts a parseable `need:` whose jobs are all `search|exec|slice|fetch` (cap 4): runs job in-hook and continues the child with concatenated facts. Mixed/web/test, parse fail, FALLBACK, `stopHookActive`, or more than 3 intercepts per child session → empty stdout (allow stop).
 
@@ -577,7 +577,7 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 
 `ci-push-gate.ts` makes a turn that pushed wait for ci. On every PreToolUse, parent or subagent, `notePush` runs before `emitFat` and notes each `git push` in the Bash command: bare, `origin main`, `-u origin x`, `HEAD:refs/heads/x`, `git -C <dir> push`, `cd <dir> && git push` and chains. `bun repo push [<branch>]` notes a push of the branch they pick (an explicit branch, or the recent-branch table's); ask, a worktree branch and a detached HEAD note none. Dirs go through `path.resolve`, and the branch and sha are read in that dir. The entry lands in the session's `pushed.json` (`[{branch, sha, at}]`) and stays pending until a later hook sees the sha land on `origin/<branch>`; a rejected push and every older sha are ignored. The hook writes only `pushed.json` and its stamp. `bun repo release` pushes through git from node, not a Bash `git push`, and waits on ci itself, so the gate does not see it.
 
-Per branch, only the newest landed sha counts. The parent's Stop blocks while that sha has no terminal record in `.tmp/repo/ci/<sha>.json` (written by `bun repo ci wait`): `passed`, `nothing` and `error` settle it, and so do three `failed` records of this session's pushes on the branch sharing a job. Another session's records do not count. The record lives under the main checkout's `.tmp/repo/ci/`, so a push from a worktree and a wait from the root meet. The three lines:
+Per branch, only the newest landed sha counts. The parent's Stop blocks while that sha has no terminal record in `.repo/tmp/ci/<sha>.json` (written by `bun repo ci wait`): `passed`, `nothing` and `error` settle it, and so do three `failed` records of this session's pushes on the branch sharing a job. Another session's records do not count. The record lives under the main checkout's `.repo/tmp/ci/`, so a push from a worktree and a wait from the root meet. The three lines:
 
 - ``Stop: you pushed <sha> to <branch> and its ci run has no result; run `bun repo ci wait <branch>` in the background and fix it if it fails``
 - ``Stop: ci failed on <sha> on <branch> (<job>); fix it in a new worktree, push, and run `bun repo ci wait <branch>` in the background``
@@ -589,11 +589,11 @@ The gate runs for the parent before the ask and away checks and before the `stop
 
 A plan or roadmap carries `strategy: default|review-fast|review-deep` (`plan-format.md`). `default` adds nothing here. For `review-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
 
-Stamp: a parent's save of a plan whose frontmatter holds a `review-*` strategy writes `.tmp/repo/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `review-*`, so `done` and `blocked` end it with no cleanup.
+Stamp: a parent's save of a plan whose frontmatter holds a `review-*` strategy writes `.repo/tmp/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `review-*`, so `done` and `blocked` end it with no cleanup.
 
 Deny: `reviewGuard` in `processFatTools` sits right after the worktree deny, before the write branch and the scout return. While a review is active in an enforced harness, a parent write whose target is outside the root `.tmp/` is denied. The target is judged by canonical path after the scratch rewrite, not as typed. A child, a missing `sid` and an unenforced harness are not denied. Reason: `plan {n} runs strategy {s}: this session reviews. Spawn {implementer} for product writes; the plan, the journal and .tmp/ stay writable.`
 
-Implementer guards apply under every strategy: the spawn prompt names the worktree path, so the implementer's first Write is under `.worktrees/<name>` (the main-checkout deny holds for it too); an `implementer-*` child's write under `.tmp/repo/plans` or `.tmp/repo/implementations` is denied (`implementer writes product files and tests only; the reviewer writes the plan and the journal`), and so is a shell `git add` or `git commit` (`implementer never stages or commits; report the changed files and the reviewer stages them`).
+Implementer guards apply under every strategy: the spawn prompt names the worktree path, so the implementer's first Write is under `.worktrees/<name>` (the main-checkout deny holds for it too); an `implementer-*` child's write under `.repo/plans` or `.repo/implementations` is denied (`implementer writes product files and tests only; the reviewer writes the plan and the journal`), and so is a shell `git add` or `git commit` (`implementer never stages or commits; report the changed files and the reviewer stages them`).
 
 Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `<root>/node_modules/.bin/repo job --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
 
@@ -601,7 +601,7 @@ Approval: the Stop hook blocks a reply that should ask for approval unless its l
 
 The closing line `closingLine` renders, for one plan: `Reply "y" to run plan {n} (strategy: {s}), or "y {a}" / "y {b}", or "h" / "h fast" / "h deep" for a fresh session.` A queue joins items with `, then ` and keeps one `or "h" …` tail.
 
-Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.tmp/repo/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks a closing line that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so a `y` or `h` on an unsettled item is refused too: `y did not approve plan {n}: its review has not settled; wait for it, then end with the closing line again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
+Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.repo/tmp/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks a closing line that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so a `y` or `h` on an unsettled item is refused too: `y did not approve plan {n}: its review has not settled; wait for it, then end with the closing line again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
 
 Handoff: `h` keeps each file's strategy; `h fast` and `h deep` write `review-fast` or `review-deep` through the same validated write as `y <strategy>`. There is no `h default`. The hook writes one handoff for the whole line through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy review-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
 
@@ -629,7 +629,7 @@ The main checkout is `root` (`resolveRoots().root`), outside `<root>/.tmp` and `
 - Git in the main checkout: `commit`, `merge`, `cherry-pick`, `revert`, `am` and `pull` are denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run cd <root> && bun repo worktree finish <name>`. `stash`, `reset`, `checkout`, `switch`, `restore`, `clean` and `rebase` are denied with `git <sub> in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git <sub>`.
 - Anywhere in the repo: a force push (`-f`, `--force`, `--force-with-lease`, `+ref`); `branch -d|-D|-f|-m|-M` of the default branch; `update-ref` of the default branch. The default branch is `origin/HEAD`, else `init.defaultBranch`, `main` or `master` when it exists locally, else the main checkout's current branch.
 - Own worktree: inside the managed worktree the effective cwd is in (`cd` and `git -C` are followed), every other git command runs, `stash`, `reset --hard`, `checkout`, `rebase` and `commit --amend` included.
-- Exception: `.tmp/repo/sessions/<sid>/git-asked.json` holds `{ "words": [...] }`, rewritten on every user prompt (an empty list clears it) by orchestrate-parent on Claude, Codex and Grok `UserPromptSubmit` and on Cursor's `beforeSubmitPrompt`, and read by the gate by sid. A named word lets that subcommand run for the turn. Bare words grant only `stash`, `commit` (so `/commit` grants it), `rebase` and `cherry-pick`; a force push needs `force push`, `force-push`, `push -f` or `push --force`; every other subcommand needs the literal `git <sub>`, since "main checkout", "clean up" and "merge to main" are everyday phrases. A negation ("don't stash") matches too, so the `AGENTS.md` line still applies. Claude and Codex children share the parent's sid and so its grant; Grok and Cursor children do not. Antigravity (1.5.3) writes no file: every tool call carries the user's message as top-level `lastUserInput`, and the gate feeds it through the same word rules. Only the main agent's calls carry it; an agy subagent's calls carry `lastUserInput: ""`, so a child gets no grant and a spawn prompt cannot grant one. Antigravity's gated tools are `write_file {Path, Content}`, `edit_file {Path, Target, Replacement}` and `run_command {CommandLine}`; `read_file {Path, StartLine, EndLine}` is not gated. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt` either, so no prompt can grant a git subcommand there and the denies still apply; the Cursor IDE was not tested.
+- Exception: `.repo/tmp/sessions/<sid>/git-asked.json` holds `{ "words": [...] }`, rewritten on every user prompt (an empty list clears it) by orchestrate-parent on Claude, Codex and Grok `UserPromptSubmit` and on Cursor's `beforeSubmitPrompt`, and read by the gate by sid. A named word lets that subcommand run for the turn. Bare words grant only `stash`, `commit` (so `/commit` grants it), `rebase` and `cherry-pick`; a force push needs `force push`, `force-push`, `push -f` or `push --force`; every other subcommand needs the literal `git <sub>`, since "main checkout", "clean up" and "merge to main" are everyday phrases. A negation ("don't stash") matches too, so the `AGENTS.md` line still applies. Claude and Codex children share the parent's sid and so its grant; Grok and Cursor children do not. Antigravity (1.5.3) writes no file: every tool call carries the user's message as top-level `lastUserInput`, and the gate feeds it through the same word rules. Only the main agent's calls carry it; an agy subagent's calls carry `lastUserInput: ""`, so a child gets no grant and a spawn prompt cannot grant one. Antigravity's gated tools are `write_file {Path, Content}`, `edit_file {Path, Target, Replacement}` and `run_command {CommandLine}`; `read_file {Path, StartLine, EndLine}` is not gated. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt` either, so no prompt can grant a git subcommand there and the denies still apply; the Cursor IDE was not tested.
 - Fail-open: not a git repo, a repo with no commit yet, and an error inside the check let the call through. A missing `sid` or an unwritable `git-asked.json` means no grant, so the deny stands. `finish`, `prune` and the `WorktreeRemove` hook run git from node, never the shell, so the git deny cannot block them.
 - Not parsed: `bash -c '...'`, `$(...)` and `xargs git` hide a git command from the gate. An `rtk` or `env VAR=v` prefix and `cd <dir>` or `git -C <dir>` are parsed; a heredoc body is not a command.
 - Shell-write gap: `sed -i`, `>`, `tee` and `rm` write the main checkout past the write deny, and so do the `rm` hints in `bun repo doctor`. The commit deny is the backstop: the change cannot be committed there without the user's message naming commit.
@@ -652,7 +652,7 @@ Created when `/implement-plan` starts. Straight shots skip this file. Do not mer
 
 ### Path
 
-`.tmp/repo/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.repo/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** own counter (not plan serials). Unpadded decimal int ≥ 1. Never `0001`.
 - **filename:** unpadded serial, slug, UTC datetime stamp. Same regex as new plans: `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
@@ -706,7 +706,7 @@ No other `##` headings.
 
 ### Write
 
-Write under `.tmp/repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-implementation.ts` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
+Write under `.repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-implementation.ts` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
 
 Host without that hook: name the file per **Path**, or pipe the body to `bun repo persist implementation --workspace {repo}` and use its `absPath`.
 
@@ -724,7 +724,7 @@ Never allocate a new serial to log a leaf. Append Log, update Files/Done, flip t
 
 ### Worked example
 
-File: `.tmp/repo/implementations/1-notes-export-json-20260826T143000Z.md`
+File: `.repo/implementations/1-notes-export-json-20260826T143000Z.md`
 
 ```markdown
 ---
@@ -784,10 +784,10 @@ A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600)
 
 ### Decision
 
-Write `.tmp/repo/jev/<slug>-state.txt` (plain text or a JSON object) and `.tmp/repo/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
+Write `.repo/scratch/jev/<slug>-state.txt` (plain text or a JSON object) and `.repo/scratch/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
 
 ```
-bun repo jev --state .tmp/repo/jev/<slug>-state.txt --questions .tmp/repo/jev/<slug>-questions.json
+bun repo jev --state .repo/scratch/jev/<slug>-state.txt --questions .repo/scratch/jev/<slug>-questions.json
 ```
 
 Yes/no:
@@ -903,7 +903,7 @@ bun repo listen file --path clip.wav [--clip]
 bun repo listen latest
 ```
 
-`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.tmp/repo/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
+`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.repo/tmp/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
 
 ### Auth and capture
 
@@ -1007,10 +1007,10 @@ Cheap outline. Not a file dump.
 - `cli/scripts/scrub-spawn-prompt.ts`
 - `cli/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
 - `cli/scripts/parse-need.ts`
-- `cli/scripts/persist-handoff.ts` — `.tmp/repo/handoffs/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/persist-tmp.ts` — `.tmp/repo/{serial}-{slug}-{stamp}.{ext}` root files
+- `cli/scripts/persist-handoff.ts` — `.repo/handoffs/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
 - `cli/scripts/persist-plan.ts`
-- `cli/scripts/persist-implementation.ts` — `.tmp/repo/implementations/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
 - `cli/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
 - `cli/scripts/purge-global-mcps.ts`
 - `cli/scripts/emit-mcp-policy.ts`
@@ -1042,16 +1042,16 @@ Cheap outline. Not a file dump.
 - `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
 
 ### Tmp
-- `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
-- `.tmp/repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
-- `.tmp/repo/orchestrator-logs/` — need-intercept, session-gate, stop-block stamps
-- `.tmp/repo/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
-- `.tmp/repo/browser/` — browser session/profile/shot/pdf (not MCP)
-- `.tmp/repo/handoffs/` — persist-handoff / `/handoff`
-- `.tmp/repo/stash/` — job / snap overflow
-- `.tmp/repo/sessions/{sid}/` — wrote/read/receipt
-- `.tmp/repo/speak/` — TTS mp3
-- `.tmp/repo/listen/` — STT wav + `latest.txt`
+- `.repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
+- `.repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
+- `.repo/tmp/orchestrator-logs/` — need-intercept, session-gate, stop-block stamps
+- `.repo/scratch/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
+- `.repo/tmp/browser/` — browser session/profile/shot/pdf (not MCP)
+- `.repo/handoffs/` — persist-handoff / `/handoff`
+- `.repo/tmp/stash/` — job / snap overflow
+- `.repo/tmp/sessions/{sid}/` — wrote/read/receipt
+- `.repo/tmp/speak/` — TTS mp3
+- `.repo/tmp/listen/` — STT wav + `latest.txt`
 
 ### `.repo/` layout
 Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ignored `tmp/`.
@@ -1141,7 +1141,7 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 
 ### Path
 
-`.tmp/repo/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.repo/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int only (`1`, `12`, `10000`). **Never** `0001`, never quoted `"0001"` / `"1"`. Serial ≥ 1.
 - **filename:** unpadded serial, slug, UTC datetime stamp (`6-sync-global-settings-20260826T143000Z.md`, not `0001-slug.md`). Stamp is `created` with `-` and `:` dropped (keep `T` and `Z`).
@@ -1165,9 +1165,9 @@ Send `PLAN_NAME: <name>` as the body's first line. The save reads the name from 
 ### Allocate next serial (repo, bash)
 
 ```bash
-mkdir -p .tmp/repo/plans
+mkdir -p .repo/plans
 next=1
-for f in .tmp/repo/plans/*; do
+for f in .repo/plans/*; do
   [ -f "$f" ] || continue
   b=$(basename "$f")
   case "$b" in
@@ -1325,7 +1325,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 ### Worked example
 
-File: `.tmp/repo/plans/1-notes-export-json-20260826T143000Z.md`
+File: `.repo/plans/1-notes-export-json-20260826T143000Z.md`
 
 ````markdown
 ---
@@ -1451,12 +1451,12 @@ Ordered program of child plans. Not a plan, a handoff, or a design doc.
 
 ### Path
 
-`.tmp/repo/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.repo/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int ≥ 1. Never `0001`.
 - **filename:** `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
 - Create mints the next serial. A later write of an existing file keeps that path and serial. The hook validates the update and the host writes it. An Edit of a saved roadmap is checked against the text it would produce, and a valid one runs as sent.
-- Child plans stay in `.tmp/repo/plans/`.
+- Child plans stay in `.repo/plans/`.
 
 ### Frontmatter
 
@@ -1498,7 +1498,7 @@ DONE   both slices done; repo init lists auth-types
 
 ## Order
 1 [ ] auth types: Reserved names list the new skills.
-      Location: /home/me/app/.tmp/repo/plans/14-auth-types-20261025T165531Z.md
+      Location: /home/me/app/.repo/plans/14-auth-types-20261025T165531Z.md
 2 [ ] commit diff pass: Commit skills strip narrating comments.
 
 ## Verify
@@ -1512,7 +1512,7 @@ DONE   both slices done; repo init lists auth-types
 - **Card:** the 5 lines after `# {slug}` and one blank line, as in a plan (`plan-format.md`): WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
 - **Headings:** `## Order`, `## Verify`, `## Previous mistakes`, nothing else. Lines inside a code fence are never headings. A new roadmap with any other `##` is denied with `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## {heading} into the slice plans`.
 - **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`. The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
-- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.tmp/repo/plans/{file}` also resolves.
+- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
 - `[x]` only after that child plan's Verify is done.
 - **Verify:** 1–5 runnable program gates, same `N.M [ ]` grammar as plans.
 - **Previous mistakes:** `(none)`, or one entry per line. Append-only.
@@ -1544,7 +1544,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 - `status` is one of the five values; `source` ≤120; `strategy` is one of the three values; `mode`, when present, is `ask`, `auto` or `away`
 - a new roadmap: the card; only Order, Verify and Previous mistakes, in that order; ≥2 one-line slices, title 2–6 words, one sentence; at most 60 lines above Previous mistakes without `Location:` lines
 - an update keeps the saved file's shape; an old-shape one keeps the old checks: headings in order, Goal 1–3 sentences, bulleted Context, Decisions and Watch-outs, ≥2 slices each with Title (2–6 words), one-sentence Goal and Why (1–2 sentences)
-- Location, when present, is the absolute plan path (a relative `.tmp/repo/plans/{file}` still resolves)
+- Location, when present, is the absolute plan path (a relative `.repo/plans/{file}` still resolves)
 - Verify has 1–5 leaves
 - `## Previous mistakes` is last, required on a fresh create, and keeps every saved entry unchanged and in order
 - `reviews` is a whole number, never lower than the saved one; `locked` needs at least 1
@@ -1588,7 +1588,7 @@ Plan: two or more files, two or more items in the message, two or more valid app
 
 ### Research
 
-Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.tmp/repo/`.
+Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.repo/scratch/`.
 
 ### Questions
 
@@ -1604,7 +1604,7 @@ Feedback revises the same plan file (a Write of a saved plan updates it in place
 
 ### Implement
 
-`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.tmp/repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
+`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
 ### Types
 
@@ -1696,7 +1696,7 @@ bun repo speak voices [--provider elevenlabs|openai]
 bun repo speak say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
 ```
 
-`say` writes an mp3 under `.tmp/repo/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
+`say` writes an mp3 under `.repo/tmp/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
 
 ### Auth
 

@@ -5,6 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import { isIgnoredRepoPath, repoPath } from "../repo-dirs.ts";
 import { isImplementer, isParentOrchestrator, sessionIdOf } from "./gate-agents.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, toolCallOf, type Payload } from "./gate-harness.ts";
@@ -34,9 +35,9 @@ function isOutside(p: typeof path, dir: string, target: string): boolean {
   return rel === ".." || rel.startsWith(`..${p.sep}`) || p.isAbsolute(rel);
 }
 
-/** True when `target` is not inside `<root>/.tmp`; both in the roots' spelling. */
-export function isOutsideRootTmp(target: string, root: string, p: typeof path = path): boolean {
-  return isOutside(p, canonicalPath(p.resolve(root, ".tmp"), p), target);
+/** True when `target` is not inside one of the root's ignored `.repo` dirs; both in the roots' spelling. */
+export function isOutsideRootRepoDirs(target: string, root: string, p: typeof path = path): boolean {
+  return !isIgnoredRepoPath(canonicalPath(root, p), canonicalPath(target, p), p);
 }
 
 /** True when a plan's frontmatter holds a review strategy. */
@@ -62,7 +63,7 @@ function savesReviewPlan({ tool, input }: StampSite, target: string): boolean {
 
 /** A parent's save of a plan that holds a review strategy points the session at it. */
 function stampReviewPlan(site: StampSite, targets: string[]): void {
-  const plans = canonicalPath(path.join(site.roots.root, ".tmp", "repo", "plans"));
+  const plans = canonicalPath(repoPath(site.roots.root, "plans"));
   const plan = targets.find((t) => path.dirname(t) === plans && path.extname(t) === MD_EXT && savesReviewPlan(site, t));
 
   if (plan !== undefined) writeStamp(site.roots.root, site.sid, plan);
@@ -143,27 +144,31 @@ export function sharedCheckoutGuard(call: GateCall): GuardResult {
 function reviewDenyReason(review: ActiveReview): string {
   return (
     `plan ${review.serial} runs strategy ${review.strategy}: this session reviews. ` +
-    `Spawn ${implementerOf(review.strategy, 1)} for product writes; the plan, the journal and .tmp/ stay writable.`
+    `Spawn ${implementerOf(review.strategy, 1)} for product writes; ` +
+    "the plan, the journal and .repo/ work dirs stay writable."
   );
 }
 
 /** The deny for an implementer's write to the plan or the journal. */
 function implementerWriteDeny(call: GateCall): GuardResult {
   const { roots } = call;
-  const owned = ["plans", "implementations"].map((d) => canonicalPath(path.join(roots.root, ".tmp", "repo", d)));
+  const owned = ["plans", "implementations"].map((d) => canonicalPath(repoPath(roots.root, d)));
   const hit = writeTargets(call).some((t) => owned.some((dir) => !isOutside(path, dir, t)));
 
   return hit ? { reason: REASON_IMPLEMENTER_WRITE, type: "deny" } : undefined;
 }
 
-/** A parent's write: a plan save stamps the session, and while a review plan runs no write outside `<root>/.tmp`. */
+/**
+ * A parent's write: a plan save stamps the session, and while a review plan runs no write outside
+ * `<root>/.repo/<ignored dir>`.
+ */
 function parentWriteDeny(call: GateCall): GuardResult {
   const { roots, sid, harness } = call;
   const targets = writeTargets(call);
   stampReviewPlan(call, targets);
   const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
 
-  if (review !== null && targets.some((t) => isOutsideRootTmp(t, roots.root)))
+  if (review !== null && targets.some((t) => isOutsideRootRepoDirs(t, roots.root)))
     return { reason: reviewDenyReason(review), type: "deny" };
 
   return undefined;
@@ -173,7 +178,8 @@ function parentWriteDeny(call: GateCall): GuardResult {
  * What a review strategy asks of a write, and of an implementer's shell. Ahead of the write branch and the scout
  * return, so no early return skips it. An error in here lets the call through, as the gate does everywhere else.
  *   implementer-*  never writes the plan or the journal, never runs git add or git commit (every strategy)
- *   parent         a save of a review plan stamps the session; while that plan runs, no write outside `<root>/.tmp`
+ *   parent         a save of a review plan stamps the session; while that plan runs, no write outside
+ *                  `<root>/.repo/<ignored dir>`
  */
 export function reviewGuard(call: GateCall): GuardResult {
   try {

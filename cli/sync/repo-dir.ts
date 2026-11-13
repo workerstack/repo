@@ -14,6 +14,7 @@ import { linkProblems } from "./link-problems.ts";
 import {
   CLAUDE_SETTINGS_FILE,
   DEAD_ENTRY,
+  IGNORED_ONLY_DIRS,
   OTHER_READER_DIRS,
   OTHER_READERS,
   PACKAGE_DIRS,
@@ -29,6 +30,7 @@ import { skillProblems } from "./skill-problems.ts";
 function allowedList(): string {
   return [
     ...READ_DIRS.map((dir) => `${dir}/`),
+    ...IGNORED_ONLY_DIRS.map((dir) => `${dir}/`),
     ...OTHER_READER_DIRS.map(([dir, reader]) => `${dir}/ (read by ${reader})`),
     `${SETTINGS_DIR}/${CLAUDE_SETTINGS_FILE}`,
     ...READ_FILES,
@@ -40,7 +42,7 @@ const ALLOWED = /* @__PURE__ */ allowedList();
 
 /** Every dir the root `.repo/` may hold but settings/: the ones sync reads and the ones other commands read. */
 function rootDirs(): string[] {
-  return [...READ_DIRS, ...OTHER_READER_DIRS.map(([dir]) => dir)];
+  return [...READ_DIRS, ...IGNORED_ONLY_DIRS, ...OTHER_READER_DIRS.map(([dir]) => dir)];
 }
 
 export type RepoDirInput = {

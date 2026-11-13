@@ -87,7 +87,7 @@ it("main exits 2 with FALLBACK for unknown flags, a --cwd that leaves the worksp
 
 it("main exits 2 with FALLBACK when the job throws", () => {
   const dir = plant();
-  fs.writeFileSync(path.join(dir, ".tmp"), "a file where the stash dir should go");
+  fs.writeFileSync(path.join(dir, ".repo"), "a file where the stash dir should go");
   plantFiles(dir, { "many.js": 'for (let i = 0; i < 20; i++) console.log("row " + i);' });
   expect(runMain(["--job", "exec", "--query", "bun many.js"], dir)).toStrictEqual({ code: 2, out: FALLBACK });
 });

@@ -17,7 +17,7 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 
 function legacyFile() {
   const ws = tmpWs();
-  const dir = path.join(ws, ".tmp/repo/roadmaps");
+  const dir = path.join(ws, ".repo/roadmaps");
   fs.mkdirSync(dir, { recursive: true });
   const abs = path.join(dir, FILE);
   const body = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
@@ -57,7 +57,7 @@ describe("legacy roadmap section rules", () => {
   it("denies a slice Why of three sentences and a Location outside the plans dir", () => {
     const errors = legacyUpdate((t) =>
       t
-        .replace("      Why: Every", "      Location: .tmp/repo/roadmaps/x.md\n      Why: Every")
+        .replace("      Why: Every", "      Location: .repo/roadmaps/x.md\n      Why: Every")
         .replace("Every later land goes through commit.", "One. Two. Three."),
     ).errors;
 

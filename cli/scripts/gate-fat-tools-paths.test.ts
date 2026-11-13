@@ -35,20 +35,25 @@ describe("scratch rewrites", () => {
     const { roots } = plant();
     expect(rewriteScratchPath(null, roots)).toBeNull();
     expect(rewriteScratchPath("", roots)).toBeNull();
-    expect(rewriteScratchPath(".tmp/repo/a.md", null)).toBeNull();
+    expect(rewriteScratchPath(".repo/scratch/a.md", null)).toBeNull();
     expect(rewriteScratchWrite("notes.md", null)).toBeNull();
     expect(rewriteScratchWrite("notes.md", undefined)).toBeNull();
   });
 
   it("refuses a scratch path that lands on another drive", () => {
     const win = { checkout: "C:\\ws", cwd: "C:\\ws", root: "C:\\ws" };
-    expect(rewriteScratchPath(".tmp/repo/D:/x", win, path.win32)).toBeNull();
-    expect(rewriteScratchPath("sub\\.tmp\\repo\\a.md", win, path.win32)).toBe("C:\\ws\\.tmp\\repo\\a.md");
+    expect(rewriteScratchPath(".repo/scratch/D:/x", win, path.win32)).toBeNull();
+    expect(rewriteScratchPath("sub\\.repo\\scratch\\a.md", win, path.win32)).toBe("C:\\ws\\.repo\\scratch\\a.md");
+  });
+
+  it("refuses a stray tmp path whose segment jumps to another drive", () => {
+    const win = { checkout: "C:\\ws\\wt", cwd: "C:\\ws\\wt", root: "C:\\ws" };
+    expect(rewriteScratchWrite("tmp/D:/x", win, path.win32)).toBeNull();
   });
 
   it("moves a stray scratch name to the root scratch dir", () => {
     const { ws, roots } = plant();
-    expect(rewriteScratchWrite("notes.md", roots)).toBe(path.join(ws, ".tmp", "repo", "notes.md"));
+    expect(rewriteScratchWrite("notes.md", roots)).toBe(path.join(ws, ".repo", "scratch", "notes.md"));
     expect(rewriteScratchWrite("src/notes.md", roots)).toBeNull();
   });
 });
@@ -57,7 +62,7 @@ describe("the session write list", () => {
   it("names no list without a root or a session", () => {
     expect(wroteListPath("", "s1")).toBe("");
     expect(wroteListPath("/ws", "")).toBe("");
-    expect(wroteListPath("/ws", "s1")).toBe(path.join("/ws", ".tmp", "repo", "sessions", "s1", "wrote.txt"));
+    expect(wroteListPath("/ws", "s1")).toBe(path.join("/ws", ".repo", "tmp", "sessions", "s1", "wrote.txt"));
   });
 });
 
@@ -68,7 +73,7 @@ describe("the session write list, recording", () => {
     recordWrote(null, "s1", file);
     recordWrote(roots, "", file);
     recordWrote(roots, "s1", "");
-    expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
+    expect(fs.existsSync(path.join(ws, ".repo"))).toBe(false);
     recordWrote(roots, "s1", file);
     recordWrote(roots, "s1", file);
     expect(fs.readFileSync(wroteListPath(ws, "s1"), "utf8")).toBe(`${fwd(file)}\n`);
@@ -88,7 +93,7 @@ describe("the session write list, recording", () => {
 
   it("gives up quietly when the session dir cannot be made", () => {
     const { ws, roots } = plant();
-    fs.writeFileSync(path.join(ws, ".tmp"), "a file where the dir goes");
+    fs.writeFileSync(path.join(ws, ".repo"), "a file where the dir goes");
     expect(() => recordWrote(roots, "s1", path.join(ws, "a.ts"))).not.toThrow();
     expect(wasWroteThisSession(roots, "s1", path.join(ws, "a.ts"))).toBe(false);
   });
@@ -104,7 +109,7 @@ describe("patches", () => {
   it("lists every final path but a deleted one", () => {
     const { ws, roots } = plant();
     const out = rewritePatch("*** Delete File: gone.ts\n*** Add File: notes.md\n*** Update File: src/a.ts", roots);
-    const scratch = path.join(ws, ".tmp", "repo", "notes.md");
+    const scratch = path.join(ws, ".repo", "scratch", "notes.md");
     expect(out.paths).toStrictEqual([scratch, path.join(ws, "src", "a.ts")]);
     expect(out.patch).toContain(`*** Add File: ${scratch}`);
     expect(out.patch).toContain("*** Delete File: gone.ts");

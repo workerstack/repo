@@ -19,7 +19,7 @@ function claude(ws: string, sid: string): HookSession {
 
 function approvals(ws: string, sid: string) {
   return fs
-    .readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "approvals.txt"), "utf8")
+    .readFileSync(path.join(ws, ".repo/tmp/sessions", sid, "approvals.txt"), "utf8")
     .trim()
     .split("\n");
 }
@@ -34,7 +34,7 @@ it("records the saved path of each plan and roadmap save, Claude and Grok shapes
   s.say("plan it");
   const plan = s.reviewed("plans", VALID_PLAN);
   expect(path.basename(plan)).toMatch(/^1-add-tmp-ignore-/);
-  const input = { content: DRAFT_ROADMAP, path: ".tmp/repo/roadmaps/y.md" };
+  const input = { content: DRAFT_ROADMAP, path: ".repo/roadmaps/y.md" };
   const grok = kit.grok({ sid: "s1", ws }, "PreToolUse", { toolInput: input, toolName: "write" });
   const roadmap = must(replyOf(grok)).hookSpecificOutput.updatedInput.path;
   expect(approvals(ws, "s1")).toStrictEqual([plan, roadmap]);
@@ -112,20 +112,20 @@ it("does not block on earlier turns or roadmap child plans", () => {
   const s4 = claude(child, "s4");
   s4.say("run the roadmap");
   const childPlan = s4.reviewed("plans", VALID_PLAN);
-  fs.mkdirSync(path.join(child, ".tmp/repo/roadmaps"), { recursive: true });
+  fs.mkdirSync(path.join(child, ".repo/roadmaps"), { recursive: true });
   const fm = "serial: 1\nname: auth-program\nstatus: in-progress\nreviews: 1\nstrategy: default";
   fs.writeFileSync(
-    path.join(child, ".tmp/repo/roadmaps/1-auth-program-20261103T000000Z.md"),
+    path.join(child, ".repo/roadmaps/1-auth-program-20261103T000000Z.md"),
     `---\n${fm}\n---\n\n## Order\n1 [ ] Title: auth types\n      Location: ${childPlan}\n`,
   );
   expect(s4.stop("Wrote plan 1.")).toBeNull();
 });
 
 it("matches a slice's Location to its plan per platform", () => {
-  const win = "1 [ ] Title: t\n      Location: C:\\Users\\me\\repo\\.tmp\\repo\\plans\\1-x.md\n";
-  expect(isSliceOf("c:/Users/me/repo/.tmp/repo/plans/1-x.md", win, path.win32)).toBe(true);
-  const posix = "      Location: /r/.tmp/repo/plans/1-x.md\n";
-  expect(isSliceOf("/r/.tmp/repo/plans/2-x.md", posix, path.posix)).toBe(false);
+  const win = "1 [ ] Title: t\n      Location: C:\\Users\\me\\repo\\.repo\\plans\\1-x.md\n";
+  expect(isSliceOf("c:/Users/me/repo/.repo/plans/1-x.md", win, path.win32)).toBe(true);
+  const posix = "      Location: /r/.repo/plans/1-x.md\n";
+  expect(isSliceOf("/r/.repo/plans/2-x.md", posix, path.posix)).toBe(false);
 });
 
 it("does not block on missing turn stamps or a missing session", () => {
@@ -136,7 +136,7 @@ it("does not block on missing turn stamps or a missing session", () => {
   const noSid = claude(ws, "");
   noSid.say("plan it");
   noSid.reviewed("plans", VALID_PLAN);
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/sessions"))).toBe(false);
   expect(noSid.stop("Done.")).toBeNull();
 });
 

@@ -1,17 +1,23 @@
-/** What `repo clean` reads from disk: listings, ages, sizes, statuses, roadmap pins and nested .tmp/repo dirs. */
+/** What `repo clean` reads from disk: listings, ages, sizes, statuses, roadmap pins and nested ignored `.repo` dirs. */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import {
   DONE_STATUS,
   DURABLE,
   FRONTMATTER_RE,
   GIT_MAX_BUFFER,
+  LAST_SEG,
   LOCATION_RE,
   MD_EXT,
+  NESTED_DIR_SEGS,
+  NESTED_REPO_SEGS,
   NO_SERIAL,
+  PARENT_SEG,
   ROADMAPS_DIR,
+  ROADMAPS_FAST_DIR,
   SERIAL_RE,
   STATUS_RE,
   TRAILING_SLASHES_RE,
@@ -52,28 +58,30 @@ export function stats(p: string): PathStats {
 }
 
 function holdsFile(p: string): boolean {
-  let st: fs.Stats;
-
-  try {
-    st = fs.lstatSync(p);
-  } catch {
-    return false;
-  }
-
-  if (!st.isDirectory()) return true;
+  if (!fs.lstatSync(p).isDirectory()) return true;
 
   return list(p).some((name) => holdsFile(path.join(p, name)));
 }
 
-/** The .tmp/repo dir one git ignored-dir entry names, else null. */
-function nestedRel(entry: string): string | null {
-  const e = entry.replace(TRAILING_SLASHES_RE, "");
+function isIgnored(name: string): boolean {
+  return IGNORED_DIRS.some((dir) => dir === name);
+}
 
-  if (e.endsWith("/.tmp")) return `${e}/repo`;
+/** The nested ignored `.repo` dirs one git ignored-dir entry names, else none; the root's own `.repo` never counts. */
+function nestedRels(entry: string, root: string): string[] {
+  const segs = entry.replace(TRAILING_SLASHES_RE, "").split("/");
+  const last = segs.at(LAST_SEG) /* split yields at least one element */ as string;
 
-  if (e.endsWith("/.tmp/repo")) return e;
+  if (segs.length >= NESTED_DIR_SEGS && segs.at(PARENT_SEG) === REPO && isIgnored(last)) return [segs.join("/")];
 
-  return null;
+  // a nested `.repo` ignored whole: each ignored dir it holds
+  if (segs.length >= NESTED_REPO_SEGS && last === REPO) {
+    return list(path.join(root, ...segs))
+      .filter((n) => isIgnored(n))
+      .map((n) => [...segs, n].join("/"));
+  }
+
+  return [];
 }
 
 function isDir(abs: string): boolean {
@@ -82,14 +90,14 @@ function isDir(abs: string): boolean {
   try {
     isDirectory = fs.lstatSync(abs).isDirectory();
   } catch {
-    // no repo dir under this .tmp
+    // the ignored entry is gone or a file
   }
 
   return isDirectory;
 }
 
-/** Nested .tmp/repo dirs below the root, from git's ignored-dir listing; [] outside git. */
-export function nestedTmpDirs(root: string): string[] {
+/** Nested ignored `.repo` dirs below the root, from git's ignored-dir listing; [] outside git. */
+export function nestedRepoDirs(root: string): string[] {
   const r = spawnSync("git", ["ls-files", "-o", "-i", "--exclude-standard", "--directory", "-z"], {
     cwd: root,
     encoding: "utf8",
@@ -100,12 +108,11 @@ export function nestedTmpDirs(root: string): string[] {
   const out = new Set<string>();
 
   for (const entry of r.stdout.split("\0")) {
-    const rel = nestedRel(entry);
+    for (const rel of nestedRels(entry, root)) {
+      const abs = path.join(root, rel);
 
-    if (rel === null) continue;
-    const abs = path.join(root, rel);
-
-    if (isDir(abs)) out.add(abs);
+      if (isDir(abs)) out.add(abs);
+    }
   }
 
   return [...out];
@@ -123,7 +130,7 @@ export function leadingSerial(name: string): number | null {
  * name.
  */
 export function serialOf(dir: string, name: string): number | null {
-  if (dir !== ROADMAPS_DIR && !name.endsWith(MD_EXT)) return null;
+  if (dir !== ROADMAPS_DIR && dir !== ROADMAPS_FAST_DIR && !name.endsWith(MD_EXT)) return null;
 
   return leadingSerial(name);
 }
@@ -148,20 +155,21 @@ function readText(file: string): string | null {
   }
 }
 
-/** Resolved `Location:` paths named by every roadmap that is not `done`. */
-export function roadmapLocations(tmp: string): Set<string> {
-  const dir = path.join(tmp, ROADMAPS_DIR);
+/** Resolved `Location:` paths named by every roadmap under `repo` (a `.repo` dir) that is not `done`. */
+export function roadmapLocations(repo: string): Set<string> {
   const out = new Set<string>();
 
-  for (const name of list(dir)) {
-    const file = path.join(dir, name);
+  for (const dir of [ROADMAPS_DIR, ROADMAPS_FAST_DIR]) {
+    for (const name of list(path.join(repo, dir))) {
+      const file = path.join(repo, dir, name);
 
-    if (statusOf(file) === DONE_STATUS) continue;
-    const text = readText(file);
+      if (statusOf(file) === DONE_STATUS) continue;
+      const text = readText(file);
 
-    if (text === null) continue;
+      if (text === null) continue;
 
-    for (const m of text.matchAll(LOCATION_RE)) out.add(path.resolve(String(m[1]))); // group 1 is unconditional
+      for (const m of text.matchAll(LOCATION_RE)) out.add(path.resolve(String(m[1]))); // group 1 is unconditional
+    }
   }
 
   return out;
@@ -181,7 +189,12 @@ export function keeperOf(names: string[], pick: (name: string) => number | null)
   return best;
 }
 
-/** The first durable dir (`plans`, `roadmaps`, `handoffs`, `implementations`) holding a file under `dir`, else null. */
+/**
+ * The durable dir name (`plans`, `roadmaps`, ...) when the ignored `.repo` dir `dir` is one holding a file, else
+ * null.
+ */
 export function nestedHolds(dir: string): string | null {
-  return DURABLE.find((d) => holdsFile(path.join(dir, d))) ?? null;
+  const name = path.basename(dir);
+
+  return DURABLE.includes(name) && holdsFile(dir) ? name : null;
 }

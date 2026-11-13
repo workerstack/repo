@@ -1,8 +1,9 @@
 /** Directories, patterns and limits the plan saver and its checks share. */
 
 import { TYPES } from "../conventional.ts";
+import { REPO } from "../repo-dirs.ts";
 
-export const PLAN_DIR = ".tmp/repo/plans";
+export const PLAN_DIR: string = `${REPO}/plans`;
 
 /** Old unstamped names and new `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*(-\d{8}T\d{6}Z)?\.md$/;

@@ -50,11 +50,11 @@ function run(argv: string[], body = "") {
 }
 
 const KINDS = [
-  ["plan", VALID_PLAN, ".tmp/repo/plans"],
-  ["roadmap", DRAFT_ROADMAP, ".tmp/repo/roadmaps"],
-  ["handoff", VALID_HANDOFF, ".tmp/repo/handoffs"],
-  ["implementation", VALID_IMPL, ".tmp/repo/implementations"],
-  ["tmp", VALID_TMP, ".tmp/repo"],
+  ["plan", VALID_PLAN, ".repo/plans"],
+  ["roadmap", DRAFT_ROADMAP, ".repo/roadmaps"],
+  ["handoff", VALID_HANDOFF, ".repo/handoffs"],
+  ["implementation", VALID_IMPL, ".repo/implementations"],
+  ["tmp", VALID_TMP, ".repo/scratch"],
 ] as const;
 
 describe("repo persist <kind>", () => {
@@ -90,7 +90,7 @@ describe("repo persist root", () => {
     const r = run(["handoff"], VALID_HANDOFF);
     expect(r.code, r.stderr).toBe(0);
     const json = parsePersistCliJson(r.stdout);
-    expect(path.dirname(json.absPath)).toBe(path.join(root, ".tmp/repo/handoffs"));
+    expect(path.dirname(json.absPath)).toBe(path.join(root, ".repo/handoffs"));
     expect(fs.existsSync(path.join(sub, ".tmp"))).toBe(false);
   });
 });

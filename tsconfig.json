@@ -3,7 +3,7 @@
     "allowJs": true,
     "checkJs": false
   },
-  "exclude": ["node_modules", ".tmp", ".worktrees", "dist", "**/__fixtures__/**/ws/**"],
+  "exclude": ["node_modules", ".tmp", ".repo/scratch", ".repo/tmp", ".worktrees", "dist", "**/__fixtures__/**/ws/**"],
   "extends": "./tsconfig/bun.json",
   "include": ["**/*.ts", "**/*.mts"]
 }

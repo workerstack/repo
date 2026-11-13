@@ -30,7 +30,7 @@ export type CleanRun = {
   rm?: typeof fs.rmSync;
 };
 
-/** What `cleanPlan` plans from: the root, the time, the live sessions and the nested .tmp/repo dirs. */
+/** What `cleanPlan` plans from: the root, the time, the live sessions and the nested ignored `.repo` dirs. */
 export type PlanInput = {
   root: string;
   now: number;
@@ -38,8 +38,8 @@ export type PlanInput = {
   nested?: string[];
 };
 
-/** How each repo-owned dir under .tmp/repo is cleaned. */
-export type Policy = "age-done" | "age" | "keep" | "per-session" | "per-stamp" | "per-receipt";
+/** How each ignored dir under `.repo` is cleaned: `loose` is scratch, `state` is tmp. */
+export type Policy = "age-done" | "age" | "keep" | "loose" | "state" | "per-session" | "per-stamp" | "per-receipt";
 
 /** A plan under way: its time, live sessions, pinned plans, the newest artifact and the lists so far. */
 export type PlanState = {

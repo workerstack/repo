@@ -111,7 +111,7 @@ it("runSearch stashes more than six matches and shows six", () => {
   const r = search(dir, "hit");
   const ref = /stash=(\S+)/.exec(r.text)?.[1] ?? "";
   expect(r.text.split("\n")[0]).toBe(`20 matches, 6 shown. stash=${ref}`);
-  expect(ref).toMatch(/^\.tmp\/repo\/stash\/search-/);
+  expect(ref).toMatch(/^\.repo\/tmp\/stash\/search-/);
   expect(fs.readFileSync(path.join(dir, ref), "utf8").split("\n").filter(Boolean)).toHaveLength(20);
   expect(fs.readdirSync(stashDirOf(dir))).toHaveLength(1);
 });

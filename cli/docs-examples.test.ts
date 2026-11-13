@@ -48,7 +48,7 @@ it("writes each block with an export and a tsconfig that extends the stock bun o
   const fake = exampleTools();
   const blocks = doc(fence("ts", "const a = 1;"), fence("tsx", "const b = <i />;"));
   expect(checkExamples(ctx(root), blocks, fake.tools)).toStrictEqual([]);
-  const scratch = path.join(root, ".tmp/repo/docs");
+  const scratch = path.join(root, ".repo/scratch/docs");
   expect(read(path.join(scratch, "references/auth.md-1.ts"))).toBe("const a = 1;\nexport {};\n");
   expect(fs.existsSync(path.join(scratch, "references/auth.md-2.tsx"))).toBe(true);
   const config = read(path.join(scratch, "tsconfig.json"));
@@ -65,7 +65,7 @@ it("extends the doc root's own tsconfig and runs from the package folder", () =>
   const fake = exampleTools();
   const blocks = blocksOf("packages/a", "references/x.md", fence("ts run", "const a = 1;"));
   expect(checkExamples(ctx(root, { dir: "packages/a" }), blocks, fake.tools)).toStrictEqual([]);
-  const scratch = path.join(root, ".tmp/repo/docs/packages/a");
+  const scratch = path.join(root, ".repo/scratch/docs/packages/a");
   const own = path.join(root, "packages/a/tsconfig.json").replaceAll("\\", "/");
   expect(read(path.join(scratch, "tsconfig.json"))).toContain(`"extends": ${JSON.stringify(own)}`);
   expect(fake.calls[1]).toStrictEqual({

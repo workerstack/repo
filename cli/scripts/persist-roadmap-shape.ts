@@ -23,7 +23,7 @@ import {
 import { capErrors, cardErrors, usageErrors } from "./persist-sections.ts";
 
 /**
- * A slice's Location: any absolute path, or a plan file under `.tmp/repo/plans/`. A drive-letter
+ * A slice's Location: any absolute path, or a plan file under `.repo/plans/`. A drive-letter
  * path is absolute under every platform's rules, so a roadmap written on Windows checks the same on posix.
  */
 export function locationOk(loc: string, p: path.PlatformPath = path): boolean {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
- * Delete scratch under .tmp/repo/ that repo does not own, dead-session state and stray nested .tmp/repo dirs,
- * and age out repo's own files untouched for 30 days (roadmap D12).
+ * Delete scratch under .repo/scratch/ that repo does not own, dead-session state in .repo/tmp/ and stray nested
+ * ignored .repo dirs, and age out repo's own files untouched for 30 days (roadmap D12).
  */
 import { BOTH_FLAGS } from "./build-dirs.constants.ts";
 import { cleanBuilds, configuredNames } from "./clean-builds.ts";
@@ -27,7 +27,7 @@ async function cleanBuildsMain({ deps, dryRun }: { deps: boolean; dryRun: boolea
   return cleanBuilds({ deps, dryRun, names: configured.names, out: (line) => emit("log", line), root: checkout });
 }
 
-/** `repo clean`: the .tmp/repo sweep, or with --build or --deps only the ignored build output. */
+/** `repo clean`: the ignored `.repo` dirs sweep, or with --build or --deps only the ignored build output. */
 export function main(argv: string[]): number | Promise<number> {
   const build = argv.includes(BUILD_FLAG);
   const deps = argv.includes(DEPS_FLAG);

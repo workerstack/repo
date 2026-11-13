@@ -1,12 +1,12 @@
 ---
 name: write-roadmap
 description: >-
-  Write an ordered program of plans under .tmp/repo/roadmaps/. Use for
+  Write an ordered program of plans under .repo/roadmaps/. Use for
   /write-roadmap. Stops for y, which locks and runs it.
 ---
 # write-roadmap
 
-You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.tmp/repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user replies `y`.
+You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user replies `y`.
 
 Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`. Add a bare `mode: {value}` line beside it on the same terms as `/write-plan`: `away` when this session runs `/away`, or the mode the person asked for.
 

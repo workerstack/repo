@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { Host } from "../config.ts";
+import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import { blockOutput } from "./block-output.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
@@ -31,7 +32,15 @@ const SETTINGS_PATH = ".vscode/settings.json";
 export const GIT_FILE_PATHS: readonly string[] = [GITIGNORE_PATH, GITATTRIBUTES_PATH, SETTINGS_PATH];
 const IGNORE_REGION = "ignore";
 const ATTRIBUTES_REGION = "generated";
-const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/", "coverage/"];
+
+/** The lines every `.gitignore` block starts with; the bare `.tmp/` stays so a root `.tmp` is still ignored. */
+export const IGNORE_BASE: readonly string[] = [
+  ".tmp/",
+  ".worktrees/",
+  "coverage/",
+  .../* @__PURE__ */ IGNORED_DIRS.map((dir) => `**/${REPO}/${dir}/`),
+];
+
 const DEPENDENCY_DIR = `node_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
 

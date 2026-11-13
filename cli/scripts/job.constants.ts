@@ -1,3 +1,5 @@
+import { REPO, STATE } from "../repo-dirs.ts";
+
 /** What a job prints when the caller should run the plain command instead. */
 export const FALLBACK = "FALLBACK";
 
@@ -17,7 +19,7 @@ export const STASH_CAP: number = 2 * 1024 * 1024;
 export const MAX_HITS = 10_000;
 
 /** Where stashes live, relative to the root. */
-export const STASH_REL = ".tmp/repo/stash";
+export const STASH_REL: string = `${REPO}/${STATE}/stash`;
 
 /** The jobs `repo job` runs. */
 export const SEARCH_JOB = "search";

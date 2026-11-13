@@ -1,3 +1,4 @@
+import { REPO, STATE } from "../repo-dirs.ts";
 /** `repo setup browser`: prints install hints for Lightpanda and a chromium-family browser; no secrets. */
 import { repoEnv } from "../repo-env.ts";
 import { whichBin } from "./doctor-which.ts";
@@ -41,7 +42,7 @@ export async function setupBrowser(ctx: SetupCtx = {}): Promise<{ ok: boolean; l
   const lp = await reprobeHint({ found: findLp(), id: "lightpanda", interactive, io, platform, probe: findLp });
   const chromium = await reprobeHint({ found: findCr(), id: "chromium", interactive, io, platform, probe: findCr });
   const st = browserEngineStatus(lp, chromium, platform);
-  logLine(io, "session: .tmp/repo/browser/");
+  logLine(io, `session: ${REPO}/${STATE}/browser/`);
   const advice = browserAdvice(lp, chromium, platform);
 
   if (advice !== "") logLine(io, advice);

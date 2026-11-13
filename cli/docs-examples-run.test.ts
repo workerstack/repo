@@ -41,7 +41,7 @@ it("builds the doc root first when an example imports its own name and it has a 
   expect(checkExamples(ctx(root, { build: true }), blocks, fake.tools)).toStrictEqual([]);
   expect(fake.calls.map((call) => [call.tool, call.args[0], call.cwd])).toStrictEqual([
     ["bun", "run", root],
-    ["tsc", "--pretty", path.join(root, ".tmp/repo/docs")],
+    ["tsc", "--pretty", path.join(root, ".repo/scratch/docs")],
   ]);
 });
 

@@ -83,7 +83,7 @@ export function plantFiles(dir: string, files: Record<string, string>): void {
 
 /** The stash dir of a root, created. */
 export function stashDirOf(root: string): string {
-  const dir = path.join(root, ".tmp", "repo", "stash");
+  const dir = path.join(root, ".repo", "tmp", "stash");
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

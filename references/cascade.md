@@ -10,6 +10,6 @@ Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when th
 
 `need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
 
-Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/ask` or `/away` stamps `.tmp/repo/orchestrator-logs/session-gate-{sid}` with `ask` or `away`; `/auto` unlinks either stamp. A plan or roadmap `mode:` wins over the flag.
+Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/ask` or `/away` stamps `.repo/tmp/orchestrator-logs/session-gate-{sid}` with `ask` or `away`; `/auto` unlinks either stamp. A plan or roadmap `mode:` wins over the flag.
 
-Scratch: `.tmp/repo/`. Stash: `.tmp/repo/stash/`. Sessions: `.tmp/repo/sessions/{sid}/`. Browser: `.tmp/repo/browser/`.
+Scratch: `.repo/scratch/`. Stash: `.repo/tmp/stash/`. Sessions: `.repo/tmp/sessions/{sid}/`. Browser: `.repo/tmp/browser/`.

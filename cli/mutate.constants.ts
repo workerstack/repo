@@ -1,6 +1,7 @@
 /** The names `repo mutate` and its report share. */
 
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
+import { REPO, STATE } from "./repo-dirs.ts";
 
 /** Prefix of the temp dir holding a run's clone, Stryker config and raw report. */
 export const TEMP_PREFIX = "workerstack-mutate-";
@@ -11,7 +12,7 @@ export const CONFIG_NAME = "stryker.json";
 export const RAW_REPORT_NAME = "stryker-report.json";
 
 /** Where an unsharded run writes its report, relative to the repo root. */
-export const DEFAULT_REPORT = ".tmp/repo/mutation/report.json";
+export const DEFAULT_REPORT: string = `${REPO}/${STATE}/mutation/report.json`;
 
 /** The spaces a written JSON file is indented with. */
 export const JSON_INDENT = 2;

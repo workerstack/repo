@@ -1,3 +1,5 @@
+import { REPO, STATE } from "../repo-dirs.ts";
+
 /** Milliseconds between looks for the run, and how long to look before giving up. */
 export const POLL_MS = 10_000;
 export const GIVE_UP_MS = 120_000;
@@ -17,7 +19,7 @@ export const EXIT_NOTHING = 3;
 export const EXIT_ERROR = 4;
 
 /** Where the outcome of each waited-on commit is recorded, under the main checkout's root. */
-export const RECORD_DIR = ".tmp/repo/ci";
+export const RECORD_DIR: string = `${REPO}/${STATE}/ci`;
 export const RECORD_TEMP_SUFFIX = ".tmp";
 
 /** Job conclusions that are not a failure. */

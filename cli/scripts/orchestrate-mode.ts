@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { REPO, STATE } from "../repo-dirs.ts";
 import type { HookInput } from "./hook-input.ts";
 import {
   approvalsFile,
@@ -92,7 +93,7 @@ function sessionReceiptContext(data: HookInput): string {
 
   if (!fs.existsSync(dir)) return "";
 
-  return `${countsLine(dir)} session=.tmp/repo/sessions/${sid}/`;
+  return `${countsLine(dir)} session=${REPO}/${STATE}/sessions/${sid}/`;
 }
 
 export function effectiveSessionContext(data: HookInput): string {

@@ -1,7 +1,7 @@
 /**
  * Where repo state lives for a hook or script call (roadmap D1, D2).
  *
- *   root      `.tmp/repo` scratch: the main checkout, so subdirs and worktrees share one
+ *   root      `.repo` work files and scratch: the main checkout, so subdirs and worktrees share one
  *   checkout  tracked files (lessons, `cli/scripts`): the checkout the agent works in
  *   cwd       paths the agent typed and child-process cwds: the hook's cwd, else the sent workspace
  *

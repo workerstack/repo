@@ -4,7 +4,7 @@ description: Review a roadmap in a fresh agent before lock. Use for /review-road
 ---
 # review-roadmap
 
-You review one roadmap under `.tmp/repo/roadmaps/` that someone else wrote. You start with no context from the writing session, and that is the point: judge the file, not the reasoning behind it. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
+You review one roadmap under `.repo/roadmaps/` that someone else wrote. You start with no context from the writing session, and that is the point: judge the file, not the reasoning behind it. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
 
 Slash `/review-roadmap {n|path}` only. Not a session flag. `/write-roadmap` runs it in a fresh agent after every write or revision. Run it yourself on any roadmap.
 

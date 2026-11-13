@@ -1,5 +1,6 @@
-/** The providers, defaults, endpoints and messages of `repo speak`. */
+import { REPO, STATE } from "../repo-dirs.ts";
 
+/** The providers, defaults, endpoints and messages of `repo speak`. */
 /** The two text-to-speech providers. */
 export const ELEVENLABS = "elevenlabs";
 export const OPENAI = "openai";
@@ -46,7 +47,7 @@ export const SPEAK_ARGS: string =
 export const USAGE: string = `usage: speak ${SPEAK_ARGS}`;
 
 export const SETUP = "bun repo setup speak";
-export const SPEAK_DIR = ".tmp/repo/speak";
+export const SPEAK_DIR: string = `${REPO}/${STATE}/speak`;
 
 export const NEED_KEY =
   "missing ELEVENLABS_API_KEY or OPENAI_API_KEY (or ~/.workerstack/speak.json). setup: bun repo setup speak";

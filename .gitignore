@@ -2,11 +2,18 @@ node_modules
 dist
 coverage
 
-# repo:ignore 4aeece9a
+# repo:ignore 8d3ba818
 .tmp/
 .worktrees/
-.repo/tmp/
 coverage/
+**/.repo/plans/
+**/.repo/plans-fast/
+**/.repo/roadmaps/
+**/.repo/roadmaps-fast/
+**/.repo/handoffs/
+**/.repo/implementations/
+**/.repo/scratch/
+**/.repo/tmp/
 knip.json
 knip.unignored-*.json
 .oxfmtrc.jsonc

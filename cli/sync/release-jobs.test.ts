@@ -144,10 +144,10 @@ describe("release caches", () => {
     const restore = test.indexOf("restore-keys: tsbuildinfo-${{ runner.os }}-\n");
 
     const save = test.indexOf(
-      "if: always() && github.ref == 'refs/heads/main'\n        with:\n          path: .tmp/repo",
+      "if: always() && github.ref == 'refs/heads/main'\n        with:\n          path: .repo/tmp/tsbuildinfo",
     );
 
     expect([restore > test.indexOf("bun install"), restore < gates, save > gates]).toStrictEqual([true, true, true]);
-    expect(yaml().split(".tmp/repo/tsbuildinfo")).toHaveLength(3);
+    expect(yaml().split(".repo/tmp/tsbuildinfo")).toHaveLength(3);
   });
 });

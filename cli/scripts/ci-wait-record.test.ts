@@ -58,7 +58,7 @@ it.each(["passed", "failed", "superseded", "nothing", "error"] as const)(
 it("the record is written to a temp file and renamed over the final name", () => {
   const world = fakeFs();
   writeRecord({ root: ROOT, sha: SHA }, record("passed"), world.fs);
-  const final = path.join(ROOT, ".tmp", "repo", "ci", `${SHA}.json`);
+  const final = path.join(ROOT, ".repo", "tmp", "ci", `${SHA}.json`);
   expect(world.ops[0]).toBe(`mkdir ${path.dirname(final)}`);
   expect(world.ops[1]).toMatch(/^write .+\.tmp$/);
   const temp = world.ops[1]?.slice("write ".length);
@@ -79,7 +79,7 @@ it("writes with node's fs when none is given", () => {
 
   try {
     expect(writeRecord({ root: dir, sha: SHA }, record("nothing"))).toBe(true);
-    expect(fs.readdirSync(path.join(dir, ".tmp", "repo", "ci"))).toStrictEqual([`${SHA}.json`]);
+    expect(fs.readdirSync(path.join(dir, ".repo", "tmp", "ci"))).toStrictEqual([`${SHA}.json`]);
   } finally {
     fs.rmSync(dir, { force: true, recursive: true });
   }

@@ -50,11 +50,11 @@ it("Antigravity: denies a Path typed through an alias of the root", () => {
   expect(processHookPayload(agyWrite(alias, path.join(alias, ".worktrees/a/src/x.ts")))).toBeNull();
 });
 
-it("Antigravity: redirects a root-level scratch write_file under .tmp/repo, overwriting Path only", () => {
+it("Antigravity: redirects a root-level scratch write_file under .repo/scratch, overwriting Path only", () => {
   const r = tmp.committed("gate-main-");
   expect(processHookPayload(agyWrite(r, path.join(r, "notes.md")))).toStrictEqual({
     decision: "allow",
-    overwrite: { Path: path.join(r, ".tmp/repo/notes.md") },
+    overwrite: { Path: path.join(r, ".repo/scratch/notes.md") },
   });
   expect(fs.existsSync(path.join(r, "notes.md"))).toBe(false);
 });

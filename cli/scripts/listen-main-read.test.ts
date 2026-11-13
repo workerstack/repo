@@ -121,7 +121,7 @@ describe("file --clip", () => {
 
     expect(r.code).toBe(1);
     expect(r.errs).toStrictEqual(["pbcopy failed"]);
-    expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toBe("kept\n");
+    expect(fs.readFileSync(path.join(cwd, ".repo/tmp/listen/latest.txt"), "utf8")).toBe("kept\n");
   });
 
   it("without --clip nothing touches the clipboard", async () => {

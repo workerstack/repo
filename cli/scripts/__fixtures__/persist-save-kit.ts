@@ -36,8 +36,8 @@ export function saveAtRepoRoot(kit: Pick<SaveKit, "body" | "dir" | "save" | "tmp
 
 /** Puts a plan with serial 9 in `ws`, so a save can show it does not count plan serials. */
 export function seedOtherPlan(ws: string): void {
-  fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
-  fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260826T143000Z.md"), "x");
+  fs.mkdirSync(path.join(ws, ".repo/plans"), { recursive: true });
+  fs.writeFileSync(path.join(ws, ".repo/plans/9-other-20260826T143000Z.md"), "x");
 }
 
 /** `dir` exists and holds nothing: the save made its folder and wrote no file. */

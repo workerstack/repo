@@ -36,7 +36,7 @@ describe("start", () => {
     expect(call?.bin).toBe("/custom/bun");
     expect(call?.args).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd", r.cwd]);
     expect(call?.opts).toMatchObject({ cwd: r.cwd, detached: true, env, windowsHide: true });
-    expect(path.dirname(wav)).toBe(path.join(r.cwd, ".tmp/repo/listen"));
+    expect(path.dirname(wav)).toBe(path.join(r.cwd, ".repo/tmp/listen"));
     expect(readSession(r.cwd)).toMatchObject({ pid: 5150 });
     expect(rec.unrefs()).toBe(1);
     expect(r.logs).toStrictEqual([`recording pid=5150\n${wav}`]);

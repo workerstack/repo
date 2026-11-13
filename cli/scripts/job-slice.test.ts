@@ -55,7 +55,7 @@ it("runSlice shows six of a longer slice and names the stash relative to the roo
   const r = runSlice({ cwd: dir, root: dir, stash: "g7k" });
   expect(r.text).toBe(
     [
-      "30 lines, 6 shown. stash=.tmp/repo/stash/search-g7k.txt",
+      "30 lines, 6 shown. stash=.repo/tmp/stash/search-g7k.txt",
       "- stash:1 — row 1",
       "- stash:2 — row 2",
       "- stash:3 — row 3",
@@ -72,7 +72,7 @@ it("runSlice names the stash absolutely when it runs away from the root", () => 
   const sub = path.join(dir, "pkg");
   fs.mkdirSync(sub);
   const r = runSlice({ cwd: sub, root: dir, stash: "g7k" });
-  const abs = path.join(dir, ".tmp", "repo", "stash", "search-g7k.txt");
+  const abs = path.join(dir, ".repo", "tmp", "stash", "search-g7k.txt");
   expect(r.text.split("\n")[0]).toBe(`30 lines, 6 shown. stash=${abs}`);
 });
 

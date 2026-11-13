@@ -3,9 +3,10 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { REPO, SCRATCH, repoPath } from "../repo-dirs.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { VALID_TMP, savedOk } from "./__fixtures__/persist-bodies.ts";
-import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
+import { persistTmp } from "./persist-tmp.ts";
 
 useTempDirs();
 
@@ -14,7 +15,7 @@ function tmpWs(): string {
 }
 
 describe("persistTmp", () => {
-  it("writes a stamped artifact under .tmp/repo with no TMP_* or YAML", () => {
+  it("writes a stamped artifact under .repo/scratch with no TMP_* or YAML", () => {
     const ws = tmpWs();
 
     const r = persistTmp({
@@ -26,7 +27,7 @@ describe("persistTmp", () => {
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.filename).toBe("1-bank-email-draft-20260827T143000Z.md");
-    expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
+    expect(r.path).toBe(`${REPO}/${SCRATCH}/${r.filename}`);
     expect(path.isAbsolute(savedOk(r).path)).toBe(false);
     const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
     expect(text).toBe(r.content);
@@ -69,25 +70,25 @@ describe("persistTmp extensions", () => {
 describe("persistTmp serials", () => {
   it("does not collide with plan or handoff serials", () => {
     const ws = tmpWs();
-    fs.mkdirSync(path.join(ws, ".tmp/repo/plans"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".tmp/repo/handoffs"), { recursive: true });
-    fs.mkdirSync(path.join(ws, ".tmp/repo/implementations"), { recursive: true });
-    fs.writeFileSync(path.join(ws, ".tmp/repo/plans/9-other-20260827T143000Z.md"), "x");
-    fs.writeFileSync(path.join(ws, ".tmp/repo/handoffs/9-other-20260827T143000Z.md"), "x");
-    fs.writeFileSync(path.join(ws, ".tmp/repo/implementations/9-other-20260827T143000Z.md"), "x");
+    fs.mkdirSync(path.join(ws, ".repo/plans"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".repo/handoffs"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".repo/implementations"), { recursive: true });
+    fs.writeFileSync(path.join(ws, ".repo/plans/9-other-20260827T143000Z.md"), "x");
+    fs.writeFileSync(path.join(ws, ".repo/handoffs/9-other-20260827T143000Z.md"), "x");
+    fs.writeFileSync(path.join(ws, ".repo/implementations/9-other-20260827T143000Z.md"), "x");
     const r = persistTmp({ content: VALID_TMP, workspaceRoot: ws });
     expect(r.serial).toBe(1);
   });
 
   it("skips directories when allocating serial", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, TMP_DIR);
+    const dir = repoPath(ws, SCRATCH);
     fs.mkdirSync(path.join(dir, "9-not-a-dump"), { recursive: true });
     fs.mkdirSync(path.join(dir, "tmp"), { recursive: true });
     fs.writeFileSync(path.join(dir, "tmp/9-nested-20260827T143000Z.md"), "x");
     const r = persistTmp({ content: VALID_TMP, workspaceRoot: ws });
     expect(r.serial).toBe(1);
-    expect(r.path).toBe(`${TMP_DIR}/${r.filename}`);
+    expect(r.path).toBe(`${REPO}/${SCRATCH}/${r.filename}`);
   });
 });
 
@@ -139,7 +140,7 @@ describe("persistTmp gitignore and name", () => {
     const r = persistTmp({ content: "just a dump\n", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("missing TMP_NAME");
-    expect(fs.existsSync(path.join(ws, TMP_DIR))).toBe(false);
+    expect(fs.existsSync(repoPath(ws, SCRATCH))).toBe(false);
   });
 });
 
@@ -154,7 +155,7 @@ describe("persistTmp refused content", () => {
 
     expect(r.ok).toBe(false);
     expect(r.error).toBe("ext");
-    expect(fs.existsSync(path.join(ws, TMP_DIR)) ? fs.readdirSync(path.join(ws, TMP_DIR)) : []).toStrictEqual([]);
+    expect(fs.existsSync(repoPath(ws, SCRATCH)) ? fs.readdirSync(repoPath(ws, SCRATCH)) : []).toStrictEqual([]);
   });
 
   it("rejects binary content", () => {

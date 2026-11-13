@@ -14,7 +14,7 @@ const BLOB_STEP = `      - uses: ${UPLOAD}
         if: runner.os == 'Linux'
         with:
           name: blob-\${{ strategy.job-index }}
-          path: .tmp/repo/blob/
+          path: .repo/tmp/blob/
           if-no-files-found: error
 `;
 

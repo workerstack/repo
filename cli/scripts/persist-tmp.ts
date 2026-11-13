@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
-/** Allocate/slugify/write a one-off convo artifact under .tmp/repo/. */
+/** Allocate/slugify/write a one-off convo artifact under .repo/scratch/. */
 import fs from "node:fs";
 import path from "node:path";
 
+import { REPO, SCRATCH, type RepoDir, repoPath } from "../repo-dirs.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DECIMAL, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
 import {
@@ -19,22 +20,6 @@ import { resolveRoots } from "./workspace-root.ts";
 
 const LINE_BREAK_RE = /\r?\n/;
 const LEADING_DOT_RE = /^\./;
-
-export const TMP_DIR = ".tmp/repo";
-
-/** Top-level names under `.tmp/repo/` that repo owns; anything else at that level is a `/tmp` artifact or scratch. */
-export const TMP_RESERVED_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
-  "plans",
-  "roadmaps",
-  "handoffs",
-  "implementations",
-  "browser",
-  "orchestrator-logs",
-  "stash",
-  "sessions",
-  "listen",
-  "speak",
-]);
 
 /** Whether `s` names no path: missing or empty. */
 function isBlank(s: string | null | undefined): s is null | undefined | "" {
@@ -54,39 +39,21 @@ export function isUnderDir(
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
-export function isUnderPlans(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "plans"]);
-}
-
-export function isUnderRoadmaps(
+/** True when `filePath` is inside `<workspaceRoot>/.repo/<dir>`. */
+export function isUnderRepoDir(
   filePath: string | null | undefined,
   workspaceRoot: string | null | undefined,
+  dir: RepoDir,
 ): boolean {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "roadmaps"]);
-}
-
-export function isUnderHandoffs(
-  filePath: string | null | undefined,
-  workspaceRoot: string | null | undefined,
-): boolean {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "handoffs"]);
-}
-
-export function isUnderImplementations(
-  filePath: string | null | undefined,
-  workspaceRoot: string | null | undefined,
-): boolean {
-  return isUnderDir(filePath, workspaceRoot, [".tmp", "repo", "implementations"]);
+  return isUnderDir(filePath, workspaceRoot, [REPO, dir]);
 }
 
 export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
   if (isBlank(filePath) || isBlank(workspaceRoot)) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
-  const root = path.resolve(workspaceRoot, ".tmp", "repo");
+  const root = repoPath(workspaceRoot, SCRATCH);
 
-  if (path.dirname(abs) !== root) return false;
-
-  return !TMP_RESERVED_DIRS.has(path.basename(abs));
+  return path.dirname(abs) === root;
 }
 
 /** Which persist owns a Write to `absPath`, given the scratch root; null for none. */
@@ -94,13 +61,13 @@ export function persistOwner(
   absPath: string,
   root: string,
 ): "plans" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
-  if (isUnderPlans(absPath, root)) return "plans";
+  if (isUnderRepoDir(absPath, root, "plans")) return "plans";
 
-  if (isUnderRoadmaps(absPath, root)) return "roadmaps";
+  if (isUnderRepoDir(absPath, root, "roadmaps")) return "roadmaps";
 
-  if (isUnderHandoffs(absPath, root)) return "handoffs";
+  if (isUnderRepoDir(absPath, root, "handoffs")) return "handoffs";
 
-  if (isUnderImplementations(absPath, root)) return "implementations";
+  if (isUnderRepoDir(absPath, root, "implementations")) return "implementations";
 
   if (isUnderTmp(absPath, root)) return "tmp";
 
@@ -183,7 +150,7 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
   if (parsed.error !== undefined) return { error: parsed.error, ok: false };
   const { name, ext, body } = parsed;
   const slug = slugify(name);
-  const dir = path.join(ws, TMP_DIR);
+  const dir = repoPath(ws, SCRATCH);
   fs.mkdirSync(dir, { recursive: true });
   const stamp = compactCreatedStamp(createdAtOf(created));
   const free = freeName(dir, { ext, first: nextTmpSerial(dir), slug, stamp });
@@ -194,5 +161,5 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
   if (!FILENAME_RE.test(filename)) return { error: "filename", ok: false };
   fs.writeFileSync(dest, body);
 
-  return { content: body, ext, filename, ok: true, path: `${TMP_DIR}/${filename}`, serial, slug };
+  return { content: body, ext, filename, ok: true, path: `${REPO}/${SCRATCH}/${filename}`, serial, slug };
 }

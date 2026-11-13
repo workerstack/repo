@@ -11,7 +11,7 @@ import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts"
 const kit = orchestrateKit();
 
 function stampAbs(ws: string, sid: string) {
-  return path.join(ws, ".tmp/repo/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
+  return path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
 }
 
 /** The context a Grok prompt gets in `ws` as session `sid`. */
@@ -81,7 +81,7 @@ it("/ask stamps; /auto unlinks back to auto", () => {
 it("sid-less /ask does not stamp", () => {
   const ws = kit.temp();
   kit.grok({ sid: "", ws }, "UserPromptSubmit", { prompt: "/ask" });
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/orchestrator-logs"))).toBe(false);
 });
 
 it("ask Stop without a question blocks; with a question or wait-scout allows; auto allows", () => {

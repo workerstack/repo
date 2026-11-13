@@ -174,7 +174,7 @@ const DESCRIPTION_RULES = {
     {
       id: "guard-the-context-window.desc-subagents",
       re: /Route bulk to subagents; keep summaries in the main thread, not raw payloads\./,
-      to: "Route bulk to job and `.tmp/repo/` scratch; keep summaries in the session, not raw payloads.",
+      to: "Route bulk to job and `.repo/scratch/` scratch; keep summaries in the session, not raw payloads.",
     },
   ],
   teach: [

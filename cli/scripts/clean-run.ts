@@ -2,12 +2,13 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { repoPath } from "../repo-dirs.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
 import { readBootId } from "./board-process.ts";
 import { sweep } from "./board.ts";
 import { cleanPlan } from "./clean-plan.ts";
-import { nestedTmpDirs, stats } from "./clean-scan.ts";
+import { nestedRepoDirs, stats } from "./clean-scan.ts";
 import {
   DURABLE,
   GB,
@@ -21,7 +22,6 @@ import {
   RM_RETRIES,
 } from "./clean.constants.ts";
 import type { CleanRun, KeepItem, RemoveItem } from "./clean.types.ts";
-import { TMP_DIR } from "./persist-tmp.ts";
 
 /** "n kind" for each kind in `order` that `items` hold, plural past one. */
 function counted(
@@ -97,14 +97,14 @@ export function runClean(run: CleanRun): number {
     return path.relative(root, p).split(path.sep).join("/");
   }
 
-  const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedTmpDirs(root), now, root });
+  const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedRepoDirs(root), now, root });
   const { done, bytes, failed } = removeAll(run, remove, relOf);
   const verb = dryRun ? "would remove" : "removed";
   const parts = counted(done, REMOVE_ORDER, PLURAL);
   out(
     parts.length > 0
       ? `${verb} ${parts.join(", ")} (${size(bytes)})`
-      : `${verb} 0 entries from ${relOf(path.join(root, TMP_DIR))}`,
+      : `${verb} 0 entries from ${relOf(repoPath(root))}`,
   );
   out(`${dryRun ? "would keep" : "kept"} ${keptLine(keep)}`);
 

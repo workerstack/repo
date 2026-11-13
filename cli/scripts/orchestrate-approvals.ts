@@ -31,7 +31,7 @@ import type {
 } from "./orchestrate.types.ts";
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import { isUnderPlans, isUnderRoadmaps } from "./persist-tmp.ts";
+import { isUnderRepoDir } from "./persist-tmp.ts";
 import { STRATEGIES } from "./strategy.constants.ts";
 import { parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -44,9 +44,9 @@ const STRATEGY_LINE = /^strategy:.*$/m;
 const WAIT_THEN_CLOSE = "wait for it, then end with the closing line again";
 
 function kindAt(abs: string, ws: string): Approvable["kind"] | null {
-  if (isUnderPlans(abs, ws)) return "plan";
+  if (isUnderRepoDir(abs, ws, "plans")) return "plan";
 
-  return isUnderRoadmaps(abs, ws) ? "roadmap" : null;
+  return isUnderRepoDir(abs, ws, "roadmaps") ? "roadmap" : null;
 }
 
 function readItem(abs: string): { text: string; mtime: number } | null {

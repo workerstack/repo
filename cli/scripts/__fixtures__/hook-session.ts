@@ -64,7 +64,7 @@ export function hookSession(kit: OrchestrateKit, at: SessionAt): HookSession {
     stop: (msg) => call("Stop", { msg }),
     save,
     reviewed: (dir, body) => {
-      const saved = save(`.tmp/repo/${dir}/x.md`, body);
+      const saved = save(`.repo/${dir}/x.md`, body);
       save(saved, fs.readFileSync(saved, "utf8").replace("reviews: 0", "reviews: 1"));
       return saved;
     },

@@ -24,7 +24,7 @@ const FILES = {
   ".flare/state": "f",
   ".gitignore": IGNORE,
   ".next/cache/a.bin": "12345",
-  ".tmp/repo/plans/note.md": "note",
+  ".repo/plans/note.md": "note",
   ".vite/tracked.json": "{}\n",
   "apps/web/.next/trace": "1",
   "apps/web/.turbo/log.txt": "123",
@@ -60,7 +60,7 @@ function names(plan: ReturnType<typeof planBuild>, kind: string) {
   return plan.ok ? plan.items.filter((item) => item.kind === kind).map((item) => item.path) : [];
 }
 
-const BUILT = ["src/a.ts", "keep/.turbo/log.txt", ".vite/tracked.json", ".tmp/repo/plans/note.md"];
+const BUILT = ["src/a.ts", "keep/.turbo/log.txt", ".vite/tracked.json", ".repo/plans/note.md"];
 
 it("plans the ignored build dirs and tsbuildinfo files at any depth, and no tracked or unignored path", () => {
   const root = repo();

@@ -21,7 +21,7 @@ export const IMPLEMENTER_GIT = "implementer never stages or commits; report the 
 /** The deny a parent product write gets while a review of `strategy` runs. */
 export function reviewReason(strategy: string): string {
   const implementer = strategy === "review-fast" ? "implementer-fast" : "implementer-deep";
-  return `plan 3 runs strategy ${strategy}: this session reviews. Spawn ${implementer} for product writes; the plan, the journal and .tmp/ stay writable.`;
+  return `plan 3 runs strategy ${strategy}: this session reviews. Spawn ${implementer} for product writes; the plan, the journal and .repo/ work dirs stay writable.`;
 }
 
 /** Plan 3 with `strategy` and `status` in its front matter. */
@@ -31,7 +31,7 @@ export function planText(strategy: string, status: string): string {
 
 /** Writes plan 3 under `root` and returns its path and text. */
 export function planFile(root: string, strategy: string, status = "in-progress") {
-  const file = path.join(root, ".tmp/repo/plans/3-review-plan-20261107T181901Z.md");
+  const file = path.join(root, ".repo/plans/3-review-plan-20261107T181901Z.md");
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const text = planText(strategy, status);
   fs.writeFileSync(file, text);

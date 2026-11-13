@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 /**
  * SessionStart hook: inject the code-only folder map as additionalContext.
- * Logs { rows, tokens } to .tmp/repo/sessions/<sid>/map.json for tuning.
+ * Logs { rows, tokens } to .repo/tmp/sessions/<sid>/map.json for tuning.
  * Fail-open: any error, no git, or an empty map → empty stdout, exit 0.
  */
 import fs from "node:fs";
 import path from "node:path";
 
+import { STATE, repoPath } from "../repo-dirs.ts";
 import { repoEnv } from "../repo-env.ts";
 import { recordHook } from "./board-hook.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
@@ -43,7 +44,7 @@ function logSize(root: string, data: HookInput, out: FolderMapResult): void {
   const sid = (nonEmptyOr(data.session_id, data.sessionId) ?? "").replaceAll(UNSAFE_SID_CHAR, "");
 
   if (sid === "") return;
-  const dir = path.join(root, ".tmp", "repo", "sessions", sid);
+  const dir = repoPath(root, STATE, "sessions", sid);
   fs.mkdirSync(dir, { recursive: true });
   const size = { depth: out.depth, rows: out.rows, tokens: out.tokens };
   fs.writeFileSync(path.join(dir, "map.json"), `${JSON.stringify(size)}\n`);

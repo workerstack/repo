@@ -2,7 +2,7 @@
 name: principle-guard-the-context-window
 description: >-
   Apply when context is filling up: large outputs, long files, repeated reads,
-  fan-out planning. Route bulk to job and `.tmp/repo/` scratch; keep
+  fan-out planning. Route bulk to job and `.repo/scratch/` scratch; keep
   summaries in the session, not raw payloads. Use for
   /principle-guard-the-context-window.
 ---

@@ -42,7 +42,7 @@ function repo() {
   fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
   fs.writeFileSync(path.join(a, "small.md"), "x\n");
 
-  return { a, r, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
+  return { a, r, scratch: (rel: string) => path.join(r, ".repo/scratch", rel) };
 }
 
 it("denies a Shell dump of a denylisted path in Cursor's reply shape", () => {
@@ -77,14 +77,14 @@ it("rewrites a Shell dump, a web fetch and ls in the nested form, never with per
 
 it("redirects a nested Write to the root scratch with no permission field", () => {
   const { r, a, scratch } = repo();
-  const typed = path.join(a, ".tmp/repo/scratch/x.md");
+  const typed = path.join(a, ".repo/scratch/scratch/x.md");
   const nested = { hookEventName: "PreToolUse", updatedInput: { content: "hi", file_path: scratch("scratch/x.md") } };
   expect(cursor(a, "Write", { content: "hi", file_path: typed })).toStrictEqual({ hookSpecificOutput: nested });
   const root = { hookEventName: "PreToolUse", updatedInput: { content: "hi", file_path: scratch("notes.md") } };
   expect(cursor(r, "Write", { content: "hi", file_path: "notes.md" })).toStrictEqual({ hookSpecificOutput: root });
   expect(cursor(a, "Write", { content: "hi", file_path: path.join(a, "src.ts") })).toBeNull();
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
-  expect(fs.existsSync(path.join(r, ".tmp/repo/scratch"))).toBe(false);
+  expect(fs.existsSync(path.join(r, ".repo/scratch/scratch"))).toBe(false);
 });
 
 it("denies Read and Grep on a denylisted path and Read of a file over 200KB", () => {

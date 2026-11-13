@@ -1,6 +1,6 @@
 ---
 name: implement-plan
-description: 'Execute remaining leaves in a .tmp/repo/plans checklist. Skip [x].'
+description: 'Execute remaining leaves in a .repo/plans checklist. Skip [x].'
 ---
 # implement-plan
 
@@ -10,7 +10,7 @@ strategy review-fast or review-deep: read node_modules/@workerstack/repo/referen
 
 Arg `{n|path}` picks that file. Empty arg: unique in-progress, else unique ready, else list serials.
 
-Worktree: before the first open leaf, run `bun repo worktree add {serial}-{name}` (serial and name from the frontmatter; it prints `.worktrees/{serial}-{name}` and reuses one that exists). Every product edit, test run and commit happens there; the gate denies product writes and commits in the main checkout. The plan, the journal and `.tmp/repo/` stay in the root. A subagent starts in the root, so its prompt names the worktree path.
+Worktree: before the first open leaf, run `bun repo worktree add {serial}-{name}` (serial and name from the frontmatter; it prints `.worktrees/{serial}-{name}` and reuses one that exists). Every product edit, test run and commit happens there; the gate denies product writes and commits in the main checkout. The plan, the journal and `.repo/scratch/` stay in the root. A subagent starts in the root, so its prompt names the worktree path.
 
 Format: `node_modules/@workerstack/repo/references/plan-format.md`. Write-allowlist = paths listed in the plan, repo-relative to the worktree; an absolute path under the root names the same path there. Run Verify leaves. Do not skip a test leaf. Do not flip a behavior leaf `[x]` until its test ran.
 
@@ -26,4 +26,4 @@ After Verify, if frontmatter `commit:` is set, run `/commit` with that subject a
 
 `/commit` in the worktree then runs `cd <root> && bun repo worktree finish {serial}-{name}` (from the root: run inside the removed worktree, the shell reports exit 1 after a successful finish, so do not rerun it), which rebases onto the default branch, fast-forwards it and removes the worktree. On a rebase conflict it aborts, keeps the worktree and names the files: resolve them there, rerun the Verify checks, run `finish` again. Mark the plan `blocked` only when you cannot land it.
 
-On start: if this plan has no journal, Write one under `.tmp/repo/implementations/` (`IMPL_NAME:`, `IMPL_PLAN: {n}`). Format: `node_modules/@workerstack/repo/references/implementation-format.md`. After each leaf: append `N.M [x] …` to Log, update Files (repo-relative product paths) and Done. Blocked → `status: blocked` and Blockers, e.g. `- finish could not land wt/{serial}-{name}: rebase conflict in src/x.ts left unresolved in {root}/.worktrees/{serial}-{name}`. Verify done → `status: done`. Straight shots do not write a journal.
+On start: if this plan has no journal, Write one under `.repo/implementations/` (`IMPL_NAME:`, `IMPL_PLAN: {n}`). Format: `node_modules/@workerstack/repo/references/implementation-format.md`. After each leaf: append `N.M [x] …` to Log, update Files (repo-relative product paths) and Done. Blocked → `status: blocked` and Blockers, e.g. `- finish could not land wt/{serial}-{name}: rebase conflict in src/x.ts left unresolved in {root}/.worktrees/{serial}-{name}`. Verify done → `status: done`. Straight shots do not write a journal.

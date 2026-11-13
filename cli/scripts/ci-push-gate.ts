@@ -8,6 +8,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { isString, type JsonObject, tryJson } from "../json.ts";
+import { REPO, STATE } from "../repo-dirs.ts";
 import { repoEnv } from "../repo-env.ts";
 import { DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
@@ -20,8 +21,8 @@ import { resolveRoots } from "./workspace-root.ts";
 /** The stamp counting this turn's blocks, apart from `stop-block`, which ask and away share. */
 const PUSH_BLOCK_STAMP = "push-block";
 export const MAX_PUSH_BLOCK = 6;
-const LOGS_DIR = ".tmp/repo/orchestrator-logs";
-const SESSIONS_DIR = ".tmp/repo/sessions";
+const LOGS_DIR = `${REPO}/${STATE}/orchestrator-logs`;
+const SESSIONS_DIR = `${REPO}/${STATE}/sessions`;
 const PUSHED_FILE = "pushed.json";
 const FAILED_ROUNDS = 3;
 const TERMINAL: readonly string[] = ["passed", "nothing", "error"];

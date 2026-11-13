@@ -1,6 +1,6 @@
 ---
 name: tmp
-description: Dump a one-off convo artifact under .tmp/repo/.
+description: Dump a one-off convo artifact under .repo/scratch/.
 ---
 # tmp
 
@@ -14,11 +14,11 @@ Empty `$ARGUMENTS` + no already-visible dumpable blob → `need task`. Empty + v
 
 ## When
 
-Dump a one-off convo artifact. Not `/handoff` (no pickup no Goal/State/Next). Not `.tmp/repo/plans/`. Not `.tmp/repo/implementations/`. Not product source. Not OS `/tmp`.
+Dump a one-off convo artifact. Not `/handoff` (no pickup no Goal/State/Next). Not `.repo/plans/`. Not `.repo/implementations/`. Not product source. Not OS `/tmp`.
 
 ## Path
 
-`.tmp/repo/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`
+`.repo/scratch/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.{ext}`
 
 - serial: unpadded int ≥ 1, next after existing tmp dumps (own counter; not plan/handoff/implementation serials)
 - slug: lower, non `[a-z0-9]` → `-`, collapse, trim 50
@@ -33,7 +33,7 @@ TMP_EXT: md
 <artifact only>
 ```
 
-`TMP_EXT` optional. Write any root filename under `.tmp/repo/` (not `plans|roadmaps|handoffs|implementations|browser|orchestrator-logs|stash|sessions`). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-tmp.ts`: serial/slug/ext from `TMP_*`, strips those lines, no YAML frontmatter, rewrites path + content. Write outside that root or missing `TMP_NAME:` is denied.
+`TMP_EXT` optional. Write any root filename under `.repo/scratch/` (not `plans|roadmaps|handoffs|implementations|browser|orchestrator-logs|stash|sessions`). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-tmp.ts`: serial/slug/ext from `TMP_*`, strips those lines, no YAML frontmatter, rewrites path + content. Write outside that root or missing `TMP_NAME:` is denied.
 
 Host without that hook: name the file per **Path** yourself, or pipe the body to `bun repo persist tmp --workspace {repo}` and use its `absPath`.
 
@@ -42,7 +42,7 @@ Never rewrite an existing dump; new serial. Artifact file content after hook = a
 ## Report
 
 ```
-[tmp]: serial={int} path={abs}/.tmp/repo/{serial}-{slug}-{stamp}.{ext}
+[tmp]: serial={int} path={abs}/.repo/scratch/{serial}-{slug}-{stamp}.{ext}
 ```
 
 Do not dump the body.

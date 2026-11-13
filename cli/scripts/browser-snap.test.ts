@@ -125,7 +125,7 @@ it("snap stashes a long ref list and shows the headings and the first refs", asy
   expect(lines.slice(3, 5)).toStrictEqual(["# One", "## Two"]);
   expect(lines).toContain("[24] button B24");
   expect(lines).not.toContain("[25] button B25");
-  const dir = path.join(t.cwd, ".tmp/repo/stash");
+  const dir = path.join(t.cwd, ".repo/tmp/stash");
   const file = nth(fs.readdirSync(dir), 0);
   expect(fs.readFileSync(path.join(dir, file), "utf8")).toContain("[30] button B30");
   expect(nth(lines, 2)).toContain(file);

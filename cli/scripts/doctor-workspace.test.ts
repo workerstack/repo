@@ -11,6 +11,7 @@ import {
   gitRepo,
   leftoverPatterns,
   put,
+  REPO_IGNORES,
   section,
   seedLeftovers,
   seedStale,
@@ -18,7 +19,7 @@ import {
 import { addWorktree } from "./worktree-lifecycle.ts";
 
 it("lists each leftover with the command that clears it, groups worktrees, and deletes nothing", () => {
-  const r = gitRepo("doc-ws-", ".tmp\n.tmp/\n.worktrees/\n");
+  const r = gitRepo("doc-ws-", `.tmp\n.tmp/\n.worktrees/\n${REPO_IGNORES}`);
   expect(doctor(path.join(r, "packages", "a")).code).toBe(0);
   const { gone, m, outside, seeded } = seedLeftovers(r);
   const res = doctor(path.join(r, "packages", "a"));
@@ -60,12 +61,13 @@ it("lists an unmerged managed worktree whose last commit is 7 or more days old, 
 });
 
 it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh and dirty worktrees", () => {
-  const r = gitRepo("doc-ws-quiet-", ".tmp/\n.worktrees/\n");
+  const r = gitRepo("doc-ws-quiet-", `.tmp/\n.worktrees/\n${REPO_IGNORES}`);
   expect(section(doctor(r).stdout).head).toMatch(/^workspace\s+ok\s*$/);
-  put(r, ".tmp/repo/verify/S/.tmp/repo/x");
+  put(r, ".repo/scratch/verify/S/.repo/tmp/x");
+  put(r, ".repo/tmp/stash/x");
   fs.mkdirSync(path.join(r, "vendor", "sub"), { recursive: true });
   git(path.join(r, "vendor", "sub"), "init", "-q");
-  put(r, "vendor/sub/.tmp/repo/x");
+  put(r, "vendor/sub/.repo/tmp/x");
   put(r, "packages/c/.gitignore", ".tmp/\ndist-local/\n");
   put(r, "packages/g/.gitignore", "*.log\n");
   addWorktree(r, "f");

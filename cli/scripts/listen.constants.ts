@@ -1,3 +1,4 @@
+import { REPO, STATE } from "../repo-dirs.ts";
 import type { AudioDevice } from "./listen.types.ts";
 
 /** The OpenAI model, the local ggml model and the whisper.cpp binaries `repo listen` looks for. */
@@ -47,7 +48,7 @@ export const LISTEN_ARGS: string =
 export const USAGE: string = `usage: listen ${LISTEN_ARGS}`;
 
 export const SETUP: string = "bun repo setup listen";
-export const LISTEN_DIR: string = ".tmp/repo/listen";
+export const LISTEN_DIR: string = `${REPO}/${STATE}/listen`;
 export const SESSION_FILE: string = "session.json";
 export const JSON_INDENT: number = 2;
 export const LATEST_FILE: string = "latest.txt";

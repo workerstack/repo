@@ -1,8 +1,9 @@
+import { REPO } from "../repo-dirs.ts";
 /** Names, patterns and limits the roadmap saver and its validator share. */
 import { PLAN_MISTAKE_SOURCES } from "./persist-mistakes.ts";
 import { gateOf } from "./persist-plan.constants.ts";
 
-export const ROADMAP_DIR = ".tmp/repo/roadmaps";
+export const ROADMAP_DIR: string = `${REPO}/roadmaps`;
 export const ROADMAP_FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
 export const STATUS_RE: RegExp = /^(draft|locked|in-progress|done|blocked)$/;
 export const REQUIRED_KEYS: readonly string[] = ["serial", "name", "status", "created", "source"];

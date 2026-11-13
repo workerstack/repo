@@ -23,7 +23,7 @@ export const extra = (h: string): string =>
 
 /** A roadmap saved in the old shape before pointer roadmaps: written straight to disk, as roadmaps 1–4 are. */
 export function savedLegacy(ws: string, body = LEGACY_ROADMAP, head = "status: draft\nreviews: 0"): string {
-  const dir = path.join(ws, ".tmp/repo/roadmaps");
+  const dir = path.join(ws, ".repo/roadmaps");
   fs.mkdirSync(dir, { recursive: true });
   const abs = path.join(dir, LEGACY_FILE);
   const rest = body.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");

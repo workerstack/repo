@@ -28,13 +28,13 @@ it("setupBrowser is done on Windows with chromium alone and prints no advice", a
   const io = captureIo();
   const r = await setupBrowser({ io, pathEnv: "/bin", platform: "win32", whichFn: has("chromium") });
   expect(r.ok).toBe(true);
-  expect(io.logs.at(-1)).toBe("session: .tmp/repo/browser/");
+  expect(io.logs.at(-1)).toBe("session: .repo/tmp/browser/");
 });
 
 it("setupBrowser prints no advice when neither engine is found", async () => {
   const io = captureIo();
   await setupBrowser({ io, pathEnv: "/bin", platform: "linux", whichFn: has() });
-  expect(io.logs.at(-1)).toBe("session: .tmp/repo/browser/");
+  expect(io.logs.at(-1)).toBe("session: .repo/tmp/browser/");
 });
 
 it("setupBrowser leaves an engine missing when the user declines the re-check or it still is not there", async () => {
@@ -60,7 +60,7 @@ it("prints install hints when engines are missing", async () => {
   expect(r.ok).toBe(false);
   expect(io.logs.join("\n")).toMatch(/lightpanda missing/);
   expect(io.logs.join("\n")).toMatch(/chromium missing/);
-  expect(io.logs.join("\n")).toMatch(/\.tmp\/repo\/browser/);
+  expect(io.logs.join("\n")).toMatch(/\.repo\/tmp\/browser/);
 });
 
 it("chromium-only on linux is not done; advises Lightpanda", async () => {

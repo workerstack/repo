@@ -47,7 +47,6 @@ export const LEAD_MARKS_RE: RegExp = /^[\s`*_>]+/;
 export const TRAIL_MARKS_RE: RegExp = /[\s`*_]+$/;
 export const APPROVAL_RE: RegExp = /^([yh])(?:\s+(\S+))?$/i;
 
-export const STAMP_DIR: readonly string[] = [".tmp", "repo", "sessions"];
 export const STAMP_FILE = "strategy.json";
 export const UNSAFE_SID_RE: RegExp = /[^\w-]/g;
 export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
