@@ -6,6 +6,7 @@ import {
   CHECKOUT_STATE,
   IGNORED_DIRS,
   isIgnoredRepoPath,
+  oldTmpHome,
   REPO,
   repoPath,
   routesToRoot,
@@ -71,5 +72,23 @@ describe("routesToRoot", () => {
     expect(routesToRoot(WIN_ROOT, "C:\\work\\repo\\.repo\\tmp\\stage\\x", w)).toBe(false);
     expect(routesToRoot(WIN_ROOT, "C:\\work\\repo\\.repo\\plans\\x", w)).toBe(true);
     expect(routesToRoot(WIN_ROOT, "C:\\work\\repo\\.repo\\tmp\\sessions\\x", w)).toBe(true);
+  });
+});
+
+describe("oldTmpHome", () => {
+  it.each([
+    ["plans", "plans"],
+    ["plans-fast", "plans-fast"],
+    ["roadmaps", "roadmaps"],
+    ["roadmaps-fast", "roadmaps-fast"],
+    ["handoffs", "handoffs"],
+    ["implementations", "implementations"],
+    ["sessions", "tmp/sessions"],
+    ["stash", "tmp/stash"],
+    ["red-proof-3", "tmp/red-proof-3"],
+    ["research", "scratch/research"],
+    ["notes-12.md", "scratch/notes-12.md"],
+  ])("homes %s at %s", (name, home) => {
+    expect(oldTmpHome(name)).toBe(home);
   });
 });

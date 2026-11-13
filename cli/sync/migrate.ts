@@ -24,7 +24,18 @@ export type MigrationStep =
    * to its source path first, so the moved file says `overrides:` and a run that stopped between the two is finished
    * by planning again.
    */
-  | { kind: "move"; from: string; to: string; except?: readonly string[]; note: string; mark?: MoveMark }
+  | {
+      kind: "move";
+      from: string;
+      to: string;
+      except?: readonly string[];
+      note: string;
+      mark?: MoveMark;
+      /** Rewrites the old `.tmp/repo` paths in its text files before moving. */
+      relocate?: true;
+    }
+  /** Removes the dir when it is empty; nothing otherwise. `note` is the line printed when it did. */
+  | { kind: "prune"; path: string; note: string }
   /** Writes a file. `note` is the line printed. */
   | { kind: "write"; path: string; content: string; note: string }
   /** Prints a line for something the user must do by hand. */

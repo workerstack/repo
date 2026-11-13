@@ -15,6 +15,7 @@ import type { Output } from "./sync/outputs.ts";
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readStockHistory } from "./sync/stock-history.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
+import { planTmpRepo } from "./sync/tmp-repo.ts";
 import { validateOutputs } from "./sync/validate-outputs.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
 import { writeOutputs } from "./write-outputs.ts";
@@ -203,12 +204,18 @@ async function adopt(run: Run, blocks: StepRun): Promise<number | null> {
   return "exit" in adoption ? adoption.exit : null;
 }
 
-/** The rule upgrade, the handover, the first plan, the migration and the adoption; the exit code when one stops. */
+/**
+ * The relocation of `.tmp/repo`, the rule upgrade, the handover, the first plan, the migration and the adoption; the
+ * exit code when one stops.
+ */
 async function prepare(run: Run): Promise<number | null> {
+  const blocks = blocksOf(run);
+  const relocation = await stepBlock({ noun: "relocation", steps: planTmpRepo(run.root) }, blocks);
+
+  if ("exit" in relocation) return relocation.exit;
   const upgraded = await upgradeRules(run);
 
   if (upgraded !== null) return upgraded;
-  const blocks = blocksOf(run);
   const handed = await stepBlock({ noun: "handover", steps: handover(run) }, blocks);
 
   if ("exit" in handed) return handed.exit;

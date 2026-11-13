@@ -6,9 +6,10 @@ import { z } from "zod";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { loadConfig, SKILL_PACKS } from "../config.ts";
 import { readJson } from "../json.ts";
-import { moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
+import { isDir, moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
+import { rewriteOldPaths } from "./tmp-repo.ts";
 
 /** A step that acts: no conflict survives the early return of `applyMigration`. */
 type Acting = Exclude<MigrationStep, { kind: "conflict" }>;
@@ -57,12 +58,22 @@ const ACTIONS: Actions = {
   },
   move(run, step) {
     if (step.mark !== undefined) writeAtomic(path.join(run.root, step.mark.path), step.mark.content);
+
+    if (step.relocate === true) rewriteOldPaths(path.join(run.root, step.from));
+
     moveTree(path.join(run.root, step.from), path.join(run.root, step.to), step.except ?? []);
     run.lines.push(`${PREFIX}${step.note}`);
 
     if (step.mark !== undefined) run.lines.push(`${PREFIX}${step.mark.note}`);
   },
   note(run, step) {
+    run.lines.push(`${PREFIX}${step.note}`);
+  },
+  prune(run, step) {
+    const dir = path.join(run.root, step.path);
+
+    if (!isDir(dir) || fs.readdirSync(dir).length > 0) return;
+    fs.rmdirSync(dir);
     run.lines.push(`${PREFIX}${step.note}`);
   },
   remove(run, step) {
