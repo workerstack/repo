@@ -19,7 +19,7 @@ Assume every contributor is an agent that sees only the files it opened, copies 
 
 ## Find the mistake classes
 
-First, read recent commits, reverts, review comments, agent instruction files, and comments that explain workarounds. Also read `.repo/lessons/INDEX.md`: every lesson with `hits` of 2 or more is a class with its evidence. Group the mistakes into classes. A class counts once it has happened twice.
+First, read recent commits, reverts, review comments, agent instruction files, and comments that explain workarounds. Also read `.repo/lessons/INDEX.md` (one line per lesson with its hits): every lesson with `hits` of 2 or more is a class with its evidence. Group the mistakes into classes. A class counts once it has happened twice.
 
 ## Fix each class at the highest level that works
 

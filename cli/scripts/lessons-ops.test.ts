@@ -25,9 +25,7 @@ describe("persistLesson", () => {
     const text = lessonText(ws, "plan-forks");
     expect(text).toMatch(/^hits: 1$/m);
     expect(text).toMatch(/^last-hit: 2026-11-01$/m);
-    expect(indexText(ws)).toContain(
-      "| .repo/lessons/plan-forks.md | src/** | 1 | 2026-11-01 | Rewriting a saved plan minted a new serial. |",
-    );
+    expect(indexText(ws)).toContain("- `plan-forks` (hits 1): Plan rewrites fork serials");
   });
 
   it("denies an invalid lesson and writes nothing", () => {
@@ -48,12 +46,12 @@ describe("persistLesson", () => {
 
 it("matchLessons returns only matching rows, sorted by hits, capped", () => {
   const ws = repo();
-  save(ws, "low", lesson({ name: "low", paths: ["src/**"], summary: "Low." }));
-  save(ws, "high", lesson({ hits: 3, name: "high", paths: ["src/*.ts"], summary: "High." }));
-  save(ws, "docs-only", lesson({ hits: 9, name: "docs-only", paths: ["docs/**"], summary: "Docs." }));
+  save(ws, "low", lesson({ name: "low", paths: ["src/**"] }));
+  save(ws, "high", lesson({ hits: 3, name: "high", paths: ["src/*.ts"] }));
+  save(ws, "docs-only", lesson({ hits: 9, name: "docs-only", paths: ["docs/**"] }));
   const rows = matchLessons({ files: [path.join(ws, "src/a.ts")], workspaceRoot: ws });
   expect(rows.map((r) => r.file)).toStrictEqual([".repo/lessons/high.md", ".repo/lessons/low.md"]);
-  expect(rows[0]).toMatchObject({ hits: 3, paths: ["src/*.ts"], summary: "High." });
+  expect(rows[0]).toMatchObject({ hits: 3, paths: ["src/*.ts"], title: "Plan rewrites fork serials" });
   expect(matchLessons({ cap: 1, files: ["src/a.ts"], workspaceRoot: ws }).map((r) => r.file)).toStrictEqual([
     ".repo/lessons/high.md",
   ]);
@@ -80,7 +78,7 @@ it("hitLesson counts each new evidence once, keeps the 5 most recent, and update
     hitLesson({ evidence: ev, slug: "plan-forks", today: "2026-11-03", workspaceRoot: ws });
 
   expect(lessonText(ws, "plan-forks")).toMatch(/^evidence: \["plan 2","plan 3","plan 4","plan 5","plan 6"\]$/m);
-  expect(indexText(ws)).toContain("| 7 | 2026-11-03 |");
+  expect(indexText(ws)).toContain("- `plan-forks` (hits 7)");
 });
 
 it("removeLesson removes the file and its row", () => {

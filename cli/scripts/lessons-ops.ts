@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { globToRegExp, parseLesson, renderLesson, validateLesson } from "./lesson-file.ts";
 import { repoFiles, toPosix } from "./lessons-check.ts";
-import { byHitsThenFile, lessonsDir, parseIndex, writeIndex } from "./lessons-index.ts";
+import { byHitsThenFile, lessonsDir, readLessons, writeIndex } from "./lessons-index.ts";
 import { DEFAULT_CAP, INDEX_NAME, LESSONS_DIR, MAX_EVIDENCE, MD_EXT, SLUG_RE } from "./lessons.constants.ts";
 import type {
   HitInput,
@@ -57,24 +57,21 @@ function filesByHolder(files: string[], scope: Roots): Map<string, string[]> {
   return byHolder;
 }
 
-function readIndex(holder: string): string | null {
-  try {
-    return fs.readFileSync(path.join(lessonsDir(holder), INDEX_NAME), "utf8");
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Index rows whose globs match any of `files`, by hits then name. Each file is matched against the lessons of the
- * checkout that holds it. Reads INDEX.md only. Pass `roots` (from `resolveRoots`), or `workspaceRoot` for one checkout.
+ * checkout that holds it. Reads the lesson files, not INDEX.md; an invalid one is named on stderr and skipped.
+ * Pass `roots` (from `resolveRoots`), or `workspaceRoot` for one checkout.
  */
 export function matchLessons(opts: MatchOptions): IndexRow[] {
   const { files, cap = DEFAULT_CAP } = opts;
   const rows = new Map<string, IndexRow>();
 
   for (const [holder, rels] of filesByHolder(files, opts.roots ?? loneRoots(opts.workspaceRoot))) {
-    for (const row of parseIndex(readIndex(holder) ?? "")) {
+    const { invalid, rows: held } = readLessons(holder);
+
+    for (const file of invalid) process.stderr.write(`${file}: invalid, run bun repo lessons check\n`);
+
+    for (const row of held) {
       const seen = rows.get(row.file);
       const hit = row.paths.some((g) => rels.some((f) => globToRegExp(g).test(f)));
 

@@ -4,8 +4,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { Json } from "../json.ts";
-import { orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
-import { VALID_HANDOFF, VALID_IMPL, VALID_LESSON, VALID_PLAN, DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
+import { orchestrateKit, plantLesson, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { VALID_HANDOFF, VALID_IMPL, VALID_PLAN, DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { main } from "./orchestrate-parent.ts";
 
@@ -126,7 +126,7 @@ function lessons(): string {
   const ws = kit.temp("tools-");
   fs.mkdirSync(path.join(ws, "src"), { recursive: true });
   fs.writeFileSync(path.join(ws, "src/a.ts"), "x\n");
-  saveAs(ws, ".repo/lessons/plan-forks.md", VALID_LESSON);
+  plantLesson(ws);
 
   return ws;
 }

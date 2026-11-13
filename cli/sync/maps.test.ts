@@ -90,7 +90,7 @@ it("reports every ref with no description as a sync error and writes nothing", (
 it("writes the lessons index, tracked, from the lesson files", () => {
   const result = lessons(context(withLesson()));
   expect(result.errors).toStrictEqual([]);
-  const content: unknown = expect.stringContaining(".repo/lessons/plan-forks.md");
+  const content: unknown = expect.stringContaining("`plan-forks`");
   expect(result.outputs).toStrictEqual([
     { content, kind: "file", managed: "whole", path: ".repo/lessons/INDEX.md", tracked: true },
   ]);

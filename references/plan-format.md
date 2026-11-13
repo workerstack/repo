@@ -124,7 +124,7 @@ This plan's own log of what went wrong. Last heading, after Verify, no checkboxe
 - `source`: `feedback` (the user sent the plan back), `verify` (a Verify or test failed after a fix), `review` (an accepted `/review-plan` finding), `premise` (an assumption turned out wrong), `decision` (a choice made under away instead of asking).
 - A decision entry is `- decision: {question} → {choice}, because {why}`.
 - Append-only. A save that edits or drops an existing entry is denied and names the entry.
-- An entry that will happen again on other tasks also becomes a lesson: `node_modules/@workerstack/repo/references/lessons.md`.
+- Write a lesson only for a mistake our normal workflow will hit again on other tasks. A one-time issue stays in the plan's Previous mistakes. An entry that will happen again on other tasks also becomes a lesson: `node_modules/@workerstack/repo/references/lessons.md`.
 
 ## Revisions
 

@@ -6,7 +6,6 @@ export type Lesson = {
   lastHit: string;
   evidence: string[];
   title: string;
-  summary: string;
   mistake: string;
   fix: string;
 };
@@ -19,7 +18,7 @@ export type IndexRow = {
   paths: string[];
   hits: number;
   lastHit: string;
-  summary: string;
+  title: string;
 };
 
 /** The roots `resolveRoots` returns. */
@@ -42,8 +41,8 @@ export type RemoveResult = { ok: true; error?: undefined } | { ok: false; error:
 /** A lesson file's frontmatter keys and the body after it. */
 export type Frontmatter = { map: Record<string, string>; body: string };
 
-/** A lesson body split into its title, summary and sections, with what is wrong with it. */
-export type LessonBody = { errors: string[]; fix: string; mistake: string; summary: string; title: string };
+/** A lesson body split into its title and sections, with what is wrong with it. */
+export type LessonBody = { errors: string[]; fix: string; mistake: string; title: string };
 
 /** The frontmatter fields of a lesson; a list is null when it is not a JSON list of strings. */
 export type LessonFields = {

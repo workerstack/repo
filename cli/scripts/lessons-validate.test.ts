@@ -16,7 +16,11 @@ describe("validateLesson", () => {
 
   it("rejects each broken shape with a reason that names the fix", () => {
     const cases: [string, string, RegExp][] = [
-      ["plan-forks.md", lesson() + "\n".repeat(60), /60 lines/],
+      [
+        "plan-forks.md",
+        lesson().replace("# Plan rewrites fork serials", `# ${"t".repeat(80)}`),
+        /title is 80 chars; the cap is 72/,
+      ],
       ["plan-forks.md", lesson().replace(/\n## Fix[\s\S]*$/, "\n"), /## Fix/],
       ["plan-forks.md", `${lesson()}\n## Notes\nmore\n`, /## Mistake.*## Fix/],
       ["plan-forks.md", lesson({ paths: [] }), /paths/],

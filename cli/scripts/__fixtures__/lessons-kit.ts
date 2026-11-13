@@ -33,8 +33,7 @@ export function lesson({
   paths = ["src/**"],
   hits = 1,
   evidence = ["plan 16"],
-  summary = "Rewriting a saved plan minted a new serial.",
-}: { name?: string; paths?: string[]; hits?: number; evidence?: string[]; summary?: string } = {}): string {
+}: { name?: string; paths?: string[]; hits?: number; evidence?: string[] } = {}): string {
   return `---
 name: ${name}
 paths: ${JSON.stringify(paths)}
@@ -44,8 +43,6 @@ evidence: ${JSON.stringify(evidence)}
 ---
 
 # Plan rewrites fork serials
-
-${summary}
 
 ## Mistake
 A full-body Write to a saved plan went through the create path.

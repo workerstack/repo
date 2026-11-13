@@ -188,8 +188,6 @@ evidence: ["plan 16"]
 
 # Plan rewrites fork serials
 
-Rewriting a saved plan minted a new serial.
-
 ## Mistake
 A full-body Write to a saved plan went through the create path.
 

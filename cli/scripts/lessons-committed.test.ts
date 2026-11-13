@@ -55,15 +55,15 @@ it("refuses hit, rm and index on the command line from the main checkout with ex
 
 it("saves, hits, removes and reindexes in a worktree", () => {
   const { ws, w } = committed();
-  const r = save(w, "second", lesson({ name: "second", summary: "Second." }));
+  const r = save(w, "second", lesson({ name: "second" }));
   expect(r.ok, r.error).toBe(true);
-  expect(indexText(w)).toContain("second.md");
+  expect(indexText(w)).toContain("`second`");
   expect(hitLesson({ evidence: "plan 4", slug: "second", today: "2026-11-02", workspaceRoot: w }).ok).toBe(true);
   const cli1 = runLessons(path.join(w, "src"), "hit", "plan-forks", "--evidence", "plan 5");
   expect(cli1.status, cli1.stderr).toBe(0);
   expect(runLessons(w, "rm", "second").status).toBe(0);
   expect(runLessons(w, "index").status).toBe(0);
-  expect(indexText(w)).not.toContain("second.md");
+  expect(indexText(w)).not.toContain("`second`");
   expect(fs.existsSync(path.join(ws, LESSONS_DIR, "second.md"))).toBe(false);
 });
 
@@ -81,7 +81,7 @@ it("still reindexes and checks the main checkout for repo init", () => {
 it("matches a file against the lessons of the checkout that holds it", () => {
   const { ws, w } = committed();
   // The worktree has its own lesson set; the root's lesson must not apply to its files.
-  save(w, "worktree-only", lesson({ hits: 4, name: "worktree-only", paths: ["src/**"], summary: "Worktree." }));
+  save(w, "worktree-only", lesson({ hits: 4, name: "worktree-only", paths: ["src/**"] }));
   fs.rmSync(path.join(w, LESSONS_DIR, "plan-forks.md"));
   writeIndex({ workspaceRoot: w });
   const roots = resolveRoots({ workspaceRoot: ws });

@@ -6,12 +6,10 @@ last-hit: 2026-11-12
 evidence: ["roadmap 8"]
 ---
 
-# commit-msg caps the header and ties the body to the size limit
-
-The commit-msg hook refused commits after the full verify had already passed.
+# Keep the commit subject under 100 chars; add a body only past 1000 lines
 
 ## Mistake
-Plan 151's commit subject ran past 100 characters, and the hook refused the header. Plan 156 added a why-line body to a 972-line commit, and the hook refused it with "remove the body". A body is allowed only on commits over the 1000-line limit.
+The commit-msg hook refused a commit after verify passed: a subject over 100 chars (plan 151), and a why-line body on a 972-line commit (plan 156). A body is allowed only past 1000 changed lines.
 
 ## Fix
-Keep `type(scope): subject` at 100 characters or fewer. Run `git diff --cached --shortstat` before committing, and add exactly one `-m` why-line only when insertions plus deletions exceed 1000. Otherwise commit with the subject alone.
+Keep `type(scope): subject` at 100 chars or fewer. Run `git diff --cached --shortstat`; add one `-m` why-line only when insertions plus deletions exceed 1000, else commit with the subject alone.

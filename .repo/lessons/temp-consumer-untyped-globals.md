@@ -1,17 +1,15 @@
 ---
 name: temp-consumer-untyped-globals
-paths: ["cli/scripts/lint-plugin.test.ts","cli/guard-diagnostics.test.ts","cli/scripts/turn.test.ts"]
-hits: 3
+paths: ["cli/scripts/lint-plugin.test.ts","cli/guard-diagnostics.test.ts","cli/scripts/turn.test.ts","cli/scripts/lint-main.test.ts","cli/scripts/lint-repo-rules.test.ts"]
+hits: 5
 last-hit: 2026-11-11
-evidence: ["plan 95","plan 97","roadmap 6"]
+evidence: ["plan 95","plan 97","roadmap 6","plan 150","plan 150"]
 ---
 
-# A temp consumer has no types, so type-aware rules fire on every global
-
-Tests that plant a consumer in a temp dir and run real oxlint or `repo turn` there install no `@types/node` or vitest, so `process`, `expect`, `it` and `vi` are error-typed, and every type-aware unsafe-any rule reports their use.
+# A new lint rule or type-aware rule trips the sources lint tests plant
 
 ## Mistake
-Plan 95 turned on the correctness and suspicious categories plus `no-unsafe-member-access`, `no-unsafe-return` and `no-unsafe-call`. `cli/scripts/lint-plugin.test.ts` and `cli/guard-diagnostics.test.ts` assert the exact hit list of a planted consumer, and both failed on unsafe-any hits from untyped globals, not on the rules they plant.
+Lint-runner tests plant sources in temp dirs and assert exact diagnostics. A new rule (plan 150), or type-aware rules on a temp consumer with no `@types/node` (plan 95), reported the planted code and failed tests only in full ci.
 
 ## Fix
-When a planted file uses a global only for its shape, declare it typed in the planted source (`declare const expect: …`), as `cli/guard-diagnostics.test.ts` does. When the planted files are many and the test asserts each planted rule, drop the `typescript(no-unsafe-*)` lines before comparing, as `cli/scripts/lint-plugin.test.ts` does. Planted sources must also pass the base itself: plan 97's `if (n)` in `cli/scripts/turn.test.ts` failed strict-boolean-expressions. Run the full suite after turning on any rule.
+After adding or widening a rule, run guard-diagnostics, lint-main and lint-plugin first. Declare globals a planted file needs (`declare const expect: …`) or drop `typescript(no-unsafe-*)` lines before comparing. Change a planted source only if the rule reports it.

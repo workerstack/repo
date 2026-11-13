@@ -64,7 +64,7 @@ function noticeFor(data: HookInput, toolInput: ToolArgs): ContextReply | null {
 
   if (fresh.length === 0) return null;
   const rel = path.relative(holder, abs).split(path.sep).join("/");
-  const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.summary}`);
+  const lines = fresh.map((r) => `- ${r.file} (hits ${r.hits}): ${r.title}`);
 
   return {
     hookSpecificOutput: {
@@ -97,7 +97,7 @@ export function lessonWrite(write: WriteCase, ws: string): HookResult {
   if (!isString(body)) {
     return denyWith(
       data,
-      "Edit is not allowed on lesson files. Write the full lesson (60 lines max) " +
+      "Edit is not allowed on lesson files. Write the full lesson (title 72, Mistake 280, Fix 360 chars max) " +
         "or run bun repo lessons hit <slug> --evidence <text>",
     );
   }

@@ -6,12 +6,10 @@ last-hit: 2026-11-04
 evidence: ["v0.16.0 test-windows"]
 ---
 
-# Paths compared in two spellings of one dir never match
-
-A check that compares a typed path, the hook cwd or git's output against the roots silently misses when one side is a symlink, a junction or a Windows 8.3 short name.
+# Compare paths only after canonicalPath or resolveTyped
 
 ## Mistake
-v0.16.0 failed 42 Windows tests and never published. `os.tmpdir()` on the runner is `C:\Users\RUNNER~1\…`, git prints `C:/Users/runneradmin/…`, and `fs.realpathSync` (JS) does not expand 8.3 names. `resolveRoots` returned a long root with a short cwd, so the re-read deny, the nested `.gitignore` guard, lesson matches and plan citations missed, and the worktree guard denied a correct `git worktree add`. The same split happened on Linux from a symlinked checkout.
+A check comparing a typed path, the hook cwd or git's output against the roots misses when one side is a symlink or a Windows 8.3 short name. v0.16.0 failed 42 Windows tests and never published.
 
 ## Fix
-Compare a path only after `canonicalPath` (paths git prints, roots passed in) or `resolveTyped(roots, raw)` (paths an agent typed), both in `workspace-root.ts`. Test each check through `aliasOf` from `dev/test-paths.ts`, which gives the 8.3 form on Windows and a symlink elsewhere, and push so Windows CI runs before any tag.
+Compare only after `canonicalPath` (git output, passed roots) or `resolveTyped(roots, raw)` (typed paths), both in `workspace-root.ts`. Test each check through `aliasOf` from `dev/test-paths.ts`, and push so Windows CI runs before any tag.

@@ -136,7 +136,7 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   const errors = validatePlan(filename, full);
 
   for (const r of uncitedLessons(lessonRoots, full))
-    errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.summary})`);
+    errors.push(`cite this matched lesson in Watch-outs: ${r.file} (${r.title})`);
 
   if (errors.length > 0) return refused(errors);
   fs.writeFileSync(dest, full);

@@ -25,7 +25,7 @@ it("notices the lessons of the worktree that holds a file written from the root"
 
   const ctx = outputOf(kit.writeAs(from("n1"), path.join(w, "src/a.ts"), "y\n")).additionalContext;
   expect(ctx).toContain("Recorded lessons match src/a.ts:");
-  expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1)");
+  expect(ctx).toContain(".repo/lessons/plan-forks.md (hits 1): Plan rewrites fork serials");
   // Shown once per session; another session sees it again.
   expect(kit.writeAs(from("n1"), path.join(w, "src/a.ts"), "y\n").stdout).toBe("");
   expect(kit.writeAs(from("n2"), path.join(w, "src/a.ts"), "y\n").stdout).toContain("Recorded lessons match");
@@ -64,7 +64,7 @@ it("validates, saves and reindexes a lesson Write to a worktree sent from the ro
   const res = outputOf(kit.writeAs(at, lesson, VALID_LESSON));
   expect(res.updatedInput.file_path).toBe(lesson);
   expect(res.updatedInput.content).toMatch(/^hits: 1$/m);
-  expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+  expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("`plan-forks`");
   expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
 });
 
@@ -76,7 +76,7 @@ it("validates a lesson Write in an unmanaged linked worktree outside the root", 
   const lesson = path.join(outside, ".repo/lessons/plan-forks.md");
   const at = { cwd: outside, env: { CLAUDE_PROJECT_DIR: outside }, sid: "u1" };
   expect(outputOf(kit.writeAs(at, lesson, VALID_LESSON)).updatedInput.file_path).toBe(lesson);
-  expect(fs.readFileSync(path.join(outside, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+  expect(fs.readFileSync(path.join(outside, ".repo/lessons/INDEX.md"), "utf8")).toContain("`plan-forks`");
   expect(fs.existsSync(path.join(r, ".rulesync"))).toBe(false);
 });
 
@@ -86,6 +86,6 @@ it("hands a worktree lesson Write back in the worktree and indexes it there", ()
   const lesson = path.join(w, ".repo/lessons/plan-forks.md");
   const at = { cwd: w, env: { CLAUDE_PROJECT_DIR: r }, sid: "s4" };
   expect(outputOf(kit.writeAs(at, lesson, VALID_LESSON)).updatedInput.file_path).toBe(lesson);
-  expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("plan-forks.md");
+  expect(fs.readFileSync(path.join(w, ".repo/lessons/INDEX.md"), "utf8")).toContain("`plan-forks`");
   expect(fs.existsSync(path.join(r, ".repo/lessons/INDEX.md"))).toBe(false);
 });

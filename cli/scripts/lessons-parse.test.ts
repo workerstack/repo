@@ -9,7 +9,7 @@ function errorsOf(text: string, defaults?: Record<string, string>) {
   return r.ok ? [] : r.errors;
 }
 
-const BODY = "# T\n\nSummary.\n\n## Mistake\nm\n\n## Fix\nf\n";
+const BODY = "# T\n\n## Mistake\nm\n\n## Fix\nf\n";
 
 function head(extra = "") {
   return `---\nname: a-b\npaths: ["src/**"]\nhits: 1\nlast-hit: 2026-10-31\nevidence: []\n${extra}---\n\n`;
@@ -87,18 +87,18 @@ describe("parseLesson body", () => {
     );
   });
 
-  it("wants a summary under the title, before any section", () => {
-    expect(errorsOf(`${head()}# T\n`)).toContain("put a one-line summary under the # title");
-    expect(errorsOf(`${head()}# T\n## Mistake\nm\n## Fix\nf\n`)).toContain("put a one-line summary under the # title");
+  it("refuses a line under the title, before any section", () => {
+    const drop = "drop the line under the # title; put its point in the title or ## Mistake";
+    expect(errorsOf(`${head()}# T\n\nSummary.\n\n## Mistake\nm\n\n## Fix\nf\n`)).toContain(drop);
   });
 
   it("names a missing or empty section", () => {
-    expect(errorsOf(`${head()}# T\n\nS.\n\n## Mistake\nm\n`)).toContain("missing ## Fix");
-    expect(errorsOf(`${head()}# T\n\nS.\n\n## Mistake\n\n## Fix\nf\n`)).toContain("## Mistake is empty");
+    expect(errorsOf(`${head()}# T\n\n## Mistake\nm\n`)).toContain("missing ## Fix");
+    expect(errorsOf(`${head()}# T\n\n## Mistake\n\n## Fix\nf\n`)).toContain("## Mistake is empty");
   });
 
   it("allows only Mistake then Fix", () => {
-    const swapped = errorsOf(`${head()}# T\n\nS.\n\n## Fix\nf\n\n## Mistake\nm\n`);
+    const swapped = errorsOf(`${head()}# T\n\n## Fix\nf\n\n## Mistake\nm\n`);
     expect(swapped).toStrictEqual(["use only ## Mistake then ## Fix as section headings"]);
   });
 });
