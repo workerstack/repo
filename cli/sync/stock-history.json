@@ -2134,7 +2134,8 @@
   "agents/global-settings/codex.toml": ["10789e70ce1d19ec"],
   "agents/global-settings/cursor.json": ["b3de3bd00be91a8d"],
   "agents/global-settings/grok.toml": ["8c40c25772a5f2bf"],
-  "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
+  "agents/global-settings/manifest.json": ["3202001ec47a97be", "a5222fd6cdbaf375", "d3b09100aa56f84a"],
+  "agents/global-settings/opencode.json": ["b1fe11bb1bcfe952"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f", "fdd40c82484396ab"],
   "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
   "agents/rules/overview.md": [
@@ -2329,7 +2330,12 @@
   "cli/scripts/__fixtures__/spawn-transcript.txt": ["79d64e832f5c1eff", "ae73ebee0d2b90af"],
   "cli/scripts/__fixtures__/speak-kit.ts": ["82f6ce2c2fc6b02b", "9bb019111deb326c", "cd0e91c7f9ebf198"],
   "cli/scripts/__fixtures__/stub-process-stdio.ts": ["03b54bfc63a58f8b"],
-  "cli/scripts/__fixtures__/sync-global-kit.ts": ["8397de75caeda08c", "d63287bd4d60ec6c", "e826278ff2cfea8a"],
+  "cli/scripts/__fixtures__/sync-global-kit.ts": [
+    "8397de75caeda08c",
+    "d63287bd4d60ec6c",
+    "e826278ff2cfea8a",
+    "fbaa73dc781f31f1"
+  ],
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
   "cli/scripts/__fixtures__/turn-repo.ts": ["674678a101b27cd8", "6f992e3831a68c1c", "a41ab18e37a943f4"],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
@@ -2673,6 +2679,7 @@
     "1f5ad785e6ecc7e0",
     "20428b85e0929d9b",
     "21320721be396951",
+    "38c3a056539ff652",
     "3998be583fb379ed",
     "43b73056fed3ab1c",
     "4709347de5f2744d",
@@ -2692,6 +2699,7 @@
     "8287287262c9b0f4",
     "ae16886d68ee3380",
     "bcd0e762fc9a9294",
+    "cb128bf0ee35aa29",
     "ceffcdc6fa14c233",
     "d2f3442ef260f73d",
     "dae4ac2907a6fb8d",
@@ -3166,7 +3174,13 @@
     "fe63c2543a97f937"
   ],
   "cli/scripts/darwin.constants.ts": ["5b710e5a49509376"],
-  "cli/scripts/deep-merge.ts": ["20b090800381fecc", "874a7716db59df9f", "bd8628f517483c93", "c27449ba25f67b70"],
+  "cli/scripts/deep-merge.ts": [
+    "20b090800381fecc",
+    "44a0835891a68373",
+    "874a7716db59df9f",
+    "bd8628f517483c93",
+    "c27449ba25f67b70"
+  ],
   "cli/scripts/doctor-agents.test.ts": [
     "591d62f3eb068eae",
     "9bf2430d789f8aea",
@@ -3207,7 +3221,8 @@
     "7ba7b10a36efdede",
     "8356ef186cdc5a08",
     "bb1cfb603a34e96e",
-    "de5ec9a79a789e73"
+    "de5ec9a79a789e73",
+    "e0882b7d42c97fe6"
   ],
   "cli/scripts/doctor-run.test.ts": [
     "21b0a8aa8b4b30fc",
@@ -3220,6 +3235,7 @@
     "bf8c7be4cfab7de8",
     "faa88ab2333acfb8"
   ],
+  "cli/scripts/doctor-shim.test.ts": ["59f13339deaa45dd"],
   "cli/scripts/doctor-status.test.ts": [
     "29e929273f9ecbac",
     "38e4571932d2298c",
@@ -3289,6 +3305,7 @@
     "1cbebcbb0662beb8",
     "55f372993fbbdbda",
     "6783493e8dcdaee0",
+    "68bc25104595d391",
     "70fa70891f225465",
     "75fbc1a20ff1deb2",
     "7ec5ec19a047f439",
@@ -4084,6 +4101,7 @@
     "06ffa8e5a6cae0a2",
     "1f86e8956bb57610",
     "215360a68a2a08ec",
+    "2929affb26c4a7e1",
     "4e4e57cfe6943e53",
     "6ff94d9f0bae2788",
     "98a5e8065224009d",
@@ -5351,6 +5369,7 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
+  "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
     "20b2ed0f90454984",
     "35f2e09909cf7c22",
@@ -6554,8 +6573,8 @@
     "db5166ba530a4d45",
     "e94925d451a395b9"
   ],
-  "cli/scripts/settings-table.test.ts": ["3ffc375b2614003b"],
-  "cli/scripts/settings-table.ts": ["2f255d4f3897e8ef"],
+  "cli/scripts/settings-table.test.ts": ["3ffc375b2614003b", "5dbddf8ed0586979"],
+  "cli/scripts/settings-table.ts": ["2f255d4f3897e8ef", "d71e9b09289208df"],
   "cli/scripts/setup-argv.ts": [
     "7d1274d68413d49b",
     "84c465ef2fa5cbe5",
@@ -6770,6 +6789,13 @@
   "cli/scripts/setup.types.ts": ["7bc3f52693cda8bf", "8c14ed54287dd9d7", "b0a51ce6b58f85a8", "ff203ec26cc56945"],
   "cli/scripts/shell-ignore-edits.test.ts": ["92b2aa388e7f3ec9", "b8524d4e9fc06504", "bc464ef1007d0f8c"],
   "cli/scripts/shell-ignore-edits.ts": ["a9e50dd2aafd4916", "de77201fd68dcad7", "f764a56267034eac"],
+  "cli/scripts/shim-launcher.d.mts": ["af27b05d6e1e1c22"],
+  "cli/scripts/shim-launcher.mjs": ["795de8711c692e49"],
+  "cli/scripts/shim-launcher.test.ts": ["1d0bb838e203838f"],
+  "cli/scripts/shim-main.test.ts": ["691e3043125a193b"],
+  "cli/scripts/shim.constants.ts": ["4b269c1951976942"],
+  "cli/scripts/shim.test.ts": ["2ff355a6c9266472", "61a3a81a413c1bdd"],
+  "cli/scripts/shim.ts": ["65c9f6beb6ff50d3", "669a31e92c6e44bb"],
   "cli/scripts/shipped-deps.test.ts": [
     "09445f870890acda",
     "2fb08251eab10426",
@@ -6987,6 +7013,7 @@
     "1eb6d0def3fd7fb9",
     "9a7a03d0c7d0b7af",
     "b40bc4627fef8fdb",
+    "b839934dc6c50447",
     "fb79415a45498c40",
     "fcb9e7cee5f620a2",
     "fd34697f1c720176"
@@ -6997,7 +7024,12 @@
     "79591b6f621b7d97",
     "a568c8e57f2a07b9"
   ],
-  "cli/scripts/sync-global-settings-cli.test.ts": ["4f2c651b100eab0d", "7062a27e1ef03d01", "c794ce0f6654f859"],
+  "cli/scripts/sync-global-settings-cli.test.ts": [
+    "4f2c651b100eab0d",
+    "7062a27e1ef03d01",
+    "bcc9077044336d15",
+    "c794ce0f6654f859"
+  ],
   "cli/scripts/sync-global-settings-edges.test.ts": [
     "152b7b93dcd935f7",
     "28adc346095d0814",
@@ -7014,6 +7046,7 @@
     "9c33a6777d1f25a4",
     "a393896dee53845c",
     "dec7f5d15a4c7d18",
+    "e09fb9a4d480240a",
     "f59c2b035b04f9cf"
   ],
   "cli/scripts/sync-global-settings-roots.test.ts": [
@@ -7022,7 +7055,7 @@
     "c8bcc1888eb97b1b",
     "e948a2659bc66726"
   ],
-  "cli/scripts/sync-global-settings.constants.ts": ["3053b0fbd360d3c1", "be26ef093b195306"],
+  "cli/scripts/sync-global-settings.constants.ts": ["3053b0fbd360d3c1", "79c316990dfa444b", "be26ef093b195306"],
   "cli/scripts/sync-global-settings.test.ts": [
     "00d9aabe8724ad5c",
     "128213028608199d",
@@ -7047,6 +7080,7 @@
     "d0aa8b564586ae8e",
     "dd88e1898af400aa",
     "e3e3515a0d36fce4",
+    "fb454f586f764034",
     "ff99e0c3c1328f60"
   ],
   "cli/scripts/sync-global-settings.types.ts": ["414c6a5f5293271a", "7d9fdbe4d76b1367", "dfa6c3432a65af40"],
@@ -7594,6 +7628,7 @@
     "27fb844347c693f0",
     "2899648d7103c529",
     "3665b9291d607f50",
+    "4b9692cd9139f976",
     "5bff702015ecc71f",
     "612ff00b10bde4f8",
     "64321295e7470c58",
@@ -7637,7 +7672,13 @@
     "9b601f0b67b953d0",
     "c7ef31ef5e5babe5"
   ],
-  "references/setup.md": ["2315bc708e31ce43", "41e06da9597b7138", "86592fb5319f20b3", "ac0e14fdea20df33"],
+  "references/setup.md": [
+    "2315bc708e31ce43",
+    "41e06da9597b7138",
+    "86592fb5319f20b3",
+    "ac0e14fdea20df33",
+    "b470fc4030393cd3"
+  ],
   "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4"],
   "references/sync.md": ["7e389acc08c15554"]
 }

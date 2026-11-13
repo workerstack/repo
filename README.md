@@ -996,7 +996,7 @@ Cheap outline. Not a file dump.
 - `cli/scripts/orchestrate-parent.ts` + `agents/grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
 - `agents/grok/hooks/rtk.json` — RTK
-- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
+- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor` `opencode`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json` `opencode.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
 - `agents/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
 - `agents/grok/{roles,hooks}/` — grok's static roles and hook configs; `bun repo sync` copies them into `.grok/roles` and `.grok/hooks`
 - `agents/skills/<name>/` — the one skills source; `bun repo sync` links each into the host skill dirs
@@ -1011,7 +1011,7 @@ Cheap outline. Not a file dump.
 - `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
 - `cli/scripts/persist-plan.ts`
 - `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
+- `cli/scripts/sync-global-settings.ts` — applies by default, `--dry-run` previews, `--check` reports drift, `--host <id>`; report line `{action} {id} {dest}`, or `skip {id} {dest}: <reason>` for a dest it leaves as it is
 - `cli/scripts/purge-global-mcps.ts`
 - `cli/scripts/emit-mcp-policy.ts`
 - `cli/scripts/emit-agent-shell-tools.ts`
@@ -1065,7 +1065,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - `permissions.json` — path deny rules added to the generated hooks
 - `lint-baseline.json` — per file, per rule, the lint problems still allowed; read by `bun repo turn` and `bun repo check`
 - `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
-- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
+- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`, `opencode.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
 - `bench/` — `<name>.bench.ts` specs, a `defineBench` default export each; read by `bun repo bench <name>`, not by sync; root only
 - `env.keys.json` — `{ "recipient": "age1…", "repo": "<name>" }`: the age public key `sealed(...)` values are sealed for, and the name of the key file `~/.workerstack/keys/<repo>.key`
 - `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
@@ -1672,7 +1672,7 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 
 ### Full-permission defaults
 
-`bun repo init` and `bun repo yolo` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
+`bun repo init` and `bun repo yolo` merge full-permission keys into six machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy`, `cursor-agent` and `opencode` then start without approval prompts; there are no `repo:<agent>` launch scripts.
 
 | host | dest under `$HOME` | keys |
 | --- | --- | --- |
@@ -1683,6 +1683,10 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 | cursor | `.cursor/cli-config.json` | `approvalMode = "unrestricted"` |
 
 `bun repo yolo` applies by default; `--dry-run` previews, `--check` prints one line of per-host status, exits 1 on any drift, and `--host <id>` limits it to one host; an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bun repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bun repo yolo` hint. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
+
+opencode (V2) has no yolo flag: its payload is one allow-all rule in `permissions` of `~/.config/opencode/opencode.json`. The merge puts that rule ahead of the rules already there, so a user's own `deny` or `ask` still wins, and a second run adds nothing. A dest whose `permissions` is not a list, or one with an `opencode.jsonc` beside it (the file opencode reads), is left as is: apply prints `skip opencode .config/opencode/opencode.json: <reason>`, `--check` prints `opencode skipped: <reason>` and exits 1.
+
+`bun repo shim` installs a bare `repo` launcher once per machine, so a command runs without the `bun` prefix. It writes a launcher into `~/.local/bin` (Windows: `%LOCALAPPDATA%\workerstack\bin`, with `repo.mjs` and `repo.cmd` beside it for cmd.exe and PowerShell). From any directory the launcher runs the nearest parent's `node_modules/@workerstack/repo`, so each project keeps its own version; outside a project it prints `repo: no @workerstack/repo found above <dir>; run \`bun install\` in the project` and exits 1. `--dry-run` previews, `--check` exits 1 on a missing or stale file, `--dir <path>` installs elsewhere. When the directory is not on PATH it prints the line to add (bash and zsh, fish, or PowerShell); it never edits PATH or a shell rc file. Rerun it after upgrading the package: `bun repo doctor` shows a `shim` row (`ok`, `not installed` or `stale`). bun must be on PATH, as for `bun repo`.
 
 Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.
 
