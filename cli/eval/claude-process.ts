@@ -20,6 +20,11 @@ function sessionEnv(): Record<string, string> {
   return Object.fromEntries(Object.entries(childEnv()).filter(([name]) => !isDropped(name)));
 }
 
+/** Drops a stdin write error: the child's exit code, reported on `close`, is the outcome of the call. */
+function ignoreBrokenInput(): void {
+  // The handler exists so the error is not thrown; the close event resolves the call.
+}
+
 function start(call: ClaudeCall, dir: string): ReturnType<RunClaude> {
   const missing = "eval: --via session needs the claude CLI, logged in; install Claude Code, or use --via api";
   const file = path.join(dir, "system.txt");
@@ -35,7 +40,8 @@ function start(call: ClaudeCall, dir: string): ReturnType<RunClaude> {
     child.stdout?.on("data", (chunk: string) => (stdout += chunk));
     child.on("error", (cause) => reject(new Error(missing, { cause })));
     child.on("close", (code) => resolve({ code: code ?? 1, stdout }));
-    child.stdin?.on("error", reject);
+    // A claude that exits before reading its input breaks the pipe (EPIPE); `close` still fires, and its code says why.
+    child.stdin?.on("error", ignoreBrokenInput);
     child.stdin?.end(call.stdin);
   });
 }
