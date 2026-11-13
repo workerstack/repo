@@ -146,27 +146,30 @@ describe.each(MATRIX)("$name offline via $via, by the cap", (one) => {
   });
 });
 
+/** A cap no grading run reaches: the cap has its own tests above, so these stay apart from the price table. */
+const ROOMY_CAP = ["--max-cost", "100"];
+
 describe.each(MATRIX)("$name offline via $via, by the answers", (one) => {
   const { cases, name, via } = one;
 
   it("passes every case on right answers, then a rerun spends $0.0000 all from the cache", async () => {
     const stub = stubFor(via, rightAnswers(cases));
     const calls = cases.length * SAMPLES[name];
-    const first = await run([name, ...stub.flags], { ...stub.deps, root: ROOT });
+    const first = await run([name, ...stub.flags, ...ROOMY_CAP], { ...stub.deps, root: ROOT });
 
     expect(first).toMatchObject({ code: 0, err: "" });
     expect(verdicts(first.out)).toStrictEqual(cases.map((each) => `pass ${each.id}`));
     expect(stub.calls()).toBe(calls);
 
-    const again = await run([name, ...stub.flags], { ...stub.deps, root: ROOT });
+    const again = await run([name, ...stub.flags, ...ROOMY_CAP], { ...stub.deps, root: ROOT });
 
-    expect(again.out).toContain(`spent $0.0000 of $1.00, ${calls} of ${calls} calls cached\n`);
+    expect(again.out).toContain(`spent $0.0000 of $100.00, ${calls} of ${calls} calls cached\n`);
     expect(stub.calls()).toBe(calls);
   });
 
   it("fails every case on its pair's answers", async () => {
     const stub = stubFor(via, pairAnswers(cases));
-    const got = await run([name, ...stub.flags], { ...stub.deps, root: ROOT });
+    const got = await run([name, ...stub.flags, ...ROOMY_CAP], { ...stub.deps, root: ROOT });
 
     expect(verdicts(got.out)).toStrictEqual(cases.map((each) => `fail ${each.id}`));
   });
