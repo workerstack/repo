@@ -58,12 +58,13 @@ function read(root: string, rel: string): string {
   return fs.readFileSync(path.join(root, rel), "utf8");
 }
 
-/** Every file under `root` but `.git`, with its bytes. */
+/** Every file under `root` but `.git`, keyed by its `/` path, with its bytes. */
 function snapshot(root: string) {
   const files: Record<string, string> = {};
 
-  for (const rel of fs.readdirSync(root, { encoding: "utf8", recursive: true }).toSorted()) {
-    const file = path.join(root, rel);
+  for (const native of fs.readdirSync(root, { encoding: "utf8", recursive: true }).toSorted()) {
+    const file = path.join(root, native);
+    const rel = native.split(path.sep).join("/");
 
     if (!rel.startsWith(".git/") && fs.statSync(file).isFile()) files[rel] = fs.readFileSync(file, "latin1");
   }
