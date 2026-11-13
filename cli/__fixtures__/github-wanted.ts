@@ -31,7 +31,7 @@ export function served(wanted: Wanted = wantedOf()): Current {
     _links: { self: { href: "https://api.github.com" } },
   }));
   const { description = "", homepage = "", topics = [] } = wanted;
-  return { rulesets, reporting: true, alerts: true, description, homepage, topics };
+  return { rulesets, reporting: true, alerts: true, scanning: true, pushProtection: true, securityUpdates: true, description, homepage, topics };
 }
 
 /** `served`, with the ruleset called `name` replaced by `change` of it. */

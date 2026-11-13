@@ -29,6 +29,18 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/check-context.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/check-context.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/check-env-modules.ts": {
     "branches": 100,
     "functions": 100,
@@ -354,6 +366,18 @@
     "statements": 100
   },
   "cli/magic/magic-strings.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/main-ref.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/main-ref.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,
@@ -2040,6 +2064,12 @@
     "statements": 100
   },
   "cli/sync/package-name.constants.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/sync/release-small-jobs.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

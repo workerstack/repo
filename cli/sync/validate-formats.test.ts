@@ -53,6 +53,7 @@ it("accepts a commented JSONC settings file with a trailing comma, and a .gitatt
       file(".vscode/settings.json", text),
       file(".gitattributes", "* text=auto\n"),
       file(".github/workflows/ci.yml", "name: ci\n"),
+      file(".github/dependabot.yml", "version: 2\n"),
       file(".github/workflows/release.yml", "name: release\n"),
     ]),
   ).toStrictEqual([]);

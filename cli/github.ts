@@ -25,6 +25,20 @@ export function wantedSettings(manifest: GithubManifest, checks: readonly string
   return { ok: true, wanted };
 }
 
+/** The code security settings that are off. */
+function securityDrift(current: Current): Drift[] {
+  const drifts: Drift[] = [];
+
+  if (!current.scanning) drifts.push({ area: "scanning", message: `secret scanning is off: ${FIX}` });
+
+  if (!current.pushProtection) drifts.push({ area: "pushProtection", message: `push protection is off: ${FIX}` });
+
+  if (!current.securityUpdates)
+    drifts.push({ area: "securityUpdates", message: `Dependabot security updates are off: ${FIX}` });
+
+  return drifts;
+}
+
 /** Each setting of `current` that differs from `wanted`, with the line that says how to fix it. */
 export function driftOf(wanted: Wanted, current: Current): Drift[] {
   const drifts: Drift[] = wanted.rulesets.flatMap((want): Drift[] => {
@@ -37,6 +51,8 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
   if (!current.reporting) drifts.push({ area: "reporting", message: `private vulnerability reporting is off: ${FIX}` });
 
   if (!current.alerts) drifts.push({ area: "alerts", message: `Dependabot alerts are off: ${FIX}` });
+
+  drifts.push(...securityDrift(current));
 
   for (const area of ["description", "homepage"] as const) {
     const want = wanted[area];

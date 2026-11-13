@@ -5,18 +5,17 @@ import { hasOwnedHeader } from "./header.ts";
 import { nodeRange } from "./node-range.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import { type Shards, coverageJob, shardsCoverage, testShards } from "./release-shards.ts";
+import { commitsJob, consumerJob, skipsJob } from "./release-small-jobs.ts";
 import {
-  API_STEP,
   BLOB_UPLOAD_STEP,
   CHECKOUT_FULL_STEP,
   CHECKOUT_STEP,
   CI_PATH,
   COMMITS_JOB,
-  COMMITS_STEP,
   COVERAGE_JOB,
   CONSUMER_JOB,
-  CONSUMER_STEP,
-  CONSUMER_TIMEOUT_MINUTES,
+  DEPENDABOT,
+  DEPENDABOT_PATH,
   E2E_JOB,
   E2E_SCRIPT,
   E2E_PLAYWRIGHT,
@@ -27,13 +26,13 @@ import {
   INSTALL_STEP,
   MATRIX,
   MATRIX_LABEL,
+  NOT_DRAFT,
   NON_ROOT_STEP,
   nodeSteps,
   PREAMBLE,
   GATES_STEP,
   SETUP_BUN_STEP,
   SKIPS_JOB,
-  SKIPS_STEPS,
   SLOW_TIMEOUT_MINUTES,
   TEST_JOB,
   TEST_TIMEOUT_MINUTES,
@@ -108,6 +107,7 @@ function testJob({ blob, node, rust, turbo }: TestOptions) {
   return [
     "  test:",
     `    name: ${TEST_JOB} (${MATRIX_LABEL})`,
+    NOT_DRAFT,
     matrix(TEST_TIMEOUT_MINUTES, testShards({ sharded: blob })),
     "    steps:",
     CHECKOUT_STEP,
@@ -126,39 +126,11 @@ function testJob({ blob, node, rust, turbo }: TestOptions) {
   ].join("\n");
 }
 
-function commitsJob() {
-  return [
-    "  commits:",
-    `    name: ${COMMITS_JOB}`,
-    "    runs-on: ubuntu-latest",
-    `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
-    "    steps:",
-    CHECKOUT_FULL_STEP,
-    SETUP_BUN_STEP,
-    INSTALL_STEP,
-    COMMITS_STEP,
-  ].join("\n");
-}
-
-function skipsJob() {
-  return [
-    "  skips:",
-    `    name: ${SKIPS_JOB}`,
-    "    needs: test",
-    "    runs-on: ubuntu-latest",
-    `    timeout-minutes: ${TEST_TIMEOUT_MINUTES}`,
-    "    steps:",
-    CHECKOUT_STEP,
-    SETUP_BUN_STEP,
-    INSTALL_STEP,
-    SKIPS_STEPS,
-  ].join("\n");
-}
-
 function e2eJob(script: string, node: string) {
   return [
     "  e2e:",
     `    name: ${E2E_JOB} (${MATRIX_LABEL})`,
+    NOT_DRAFT,
     matrix(SLOW_TIMEOUT_MINUTES, e2eMatrix(script)),
     "    defaults:",
     "      run:",
@@ -169,21 +141,6 @@ function e2eJob(script: string, node: string) {
     node,
     INSTALL_STEP,
     shardable(script) ? shardStep(script) : `      - run: bun run ${E2E_SCRIPT}`,
-  ].join("\n");
-}
-
-function consumerJob({ rust }: { rust: boolean }) {
-  return [
-    "  consumer:",
-    `    name: ${CONSUMER_JOB}`,
-    "    runs-on: ubuntu-latest",
-    `    timeout-minutes: ${CONSUMER_TIMEOUT_MINUTES}`,
-    "    steps:",
-    CHECKOUT_FULL_STEP,
-    SETUP_BUN_STEP,
-    INSTALL_STEP,
-    CONSUMER_STEP,
-    ...(rust ? [] : [API_STEP]),
   ].join("\n");
 }
 
@@ -211,17 +168,20 @@ export function ciJobNames(ctx: CiInput): string[] {
   ];
 }
 
-/** Under the release pack, the tracked, whole-file `.github/workflows/ci.yml`; a hand-written one is refused. */
-export function release(ctx: SyncContext): ReturnType<Generator> {
-  if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
-  const existing = ctx.read(CI_PATH);
+/** The `ci.yml` and `dependabot.yml` paths that exist without sync's header: sync does not own those. */
+function handWritten(ctx: SyncContext) {
+  return [CI_PATH, DEPENDABOT_PATH].filter((path) => {
+    const existing = ctx.read(path);
 
-  if (existing !== null && !hasOwnedHeader(existing))
-    return { errors: [`${CI_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
+    return existing !== null && !hasOwnedHeader(existing);
+  });
+}
 
+/** The ci.yml text, or the error of the node range its jobs need. */
+function workflow(ctx: SyncContext) {
   const range = nodeRange(ctx.workspace);
 
-  if (!range.ok) return { errors: [range.error], outputs: [] };
+  if (!range.ok) return range;
   const node = nodeSteps(range.value);
   const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
@@ -238,7 +198,27 @@ export function release(ctx: SyncContext): ReturnType<Generator> {
     ...(rust ? [semverJob(), msrvJob()] : []),
   ];
 
-  const content = `${PREAMBLE}\n${jobs.join("\n\n")}\n`;
+  return { ok: true as const, value: `${PREAMBLE}\n${jobs.join("\n\n")}\n` };
+}
 
-  return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: CI_PATH, tracked: true }] };
+/**
+ * Under the release pack, the tracked, whole-file `.github/workflows/ci.yml` and `.github/dependabot.yml`; a
+ * hand-written one is refused.
+ */
+export function release(ctx: SyncContext): ReturnType<Generator> {
+  if (!ctx.config.packs.includes("release")) return { errors: [], outputs: [] };
+  const refused = handWritten(ctx).map((path) => `${path} is hand-written; delete it so repo sync can own it`);
+
+  if (refused.length > 0) return { errors: refused, outputs: [] };
+  const ci = workflow(ctx);
+
+  if (!ci.ok) return { errors: [ci.error], outputs: [] };
+
+  return {
+    errors: [],
+    outputs: [
+      { content: ci.value, kind: "file", managed: "whole", path: CI_PATH, tracked: true },
+      { content: DEPENDABOT, kind: "file", managed: "whole", path: DEPENDABOT_PATH, tracked: true },
+    ],
+  };
 }

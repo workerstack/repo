@@ -58,3 +58,6 @@ export const GITHUB_SUMMARY: string =
 /** One, for the plural of a count, and a second's milliseconds. */
 export const ONE: number = 1;
 export const MS_PER_SECOND: number = 1000;
+
+/** The status GitHub reports for a security feature that is on. */
+export const ENABLED: string = "enabled";

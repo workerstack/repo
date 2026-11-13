@@ -9,9 +9,15 @@ import { isString, type JsonObject } from "./json.ts";
 const BASE = "repos/o/r";
 const ALERTS = `${BASE}/vulnerability-alerts`;
 
+const ENABLED = {
+  dependabot_security_updates: { status: "enabled" },
+  secret_scanning: { status: "enabled" },
+  secret_scanning_push_protection: { status: "enabled" },
+};
+
 const GOOD: JsonObject = {
   [ALERTS]: "",
-  [BASE]: { description: null, homepage: null, topics: [] },
+  [BASE]: { description: null, homepage: null, security_and_analysis: ENABLED, topics: [] },
   [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
   [`${BASE}/rulesets`]: [],
 };
@@ -44,7 +50,16 @@ it("reads the settings the fake serves, null text as empty, and only the managed
   const fake = fakeGh({ ...EMPTY_SETTINGS(), reporting: true, rulesets, topics: ["a"] });
   const result = await readCurrent(fake.gh, "o/r");
   expect(result).toMatchObject({
-    current: { alerts: true, description: "", homepage: "", reporting: true, topics: ["a"] },
+    current: {
+      alerts: true,
+      description: "",
+      homepage: "",
+      pushProtection: true,
+      reporting: true,
+      scanning: true,
+      securityUpdates: true,
+      topics: ["a"],
+    },
     ok: true,
   });
   expect(result.ok && result.current.rulesets.map((ruleset) => ruleset.name)).toStrictEqual(["main", "release tags"]);
@@ -54,6 +69,27 @@ it("reads the settings the fake serves, null text as empty, and only the managed
 it("reads Dependabot alerts as off on a 404", async () => {
   const off = await readCurrent(canned(GOOD, { [ALERTS]: failure("http", 404) }), "o/r");
   expect(off).toMatchObject({ current: { alerts: false }, ok: true });
+});
+
+it("reads each security status as on only when it says enabled", async () => {
+  const off = {
+    dependabot_security_updates: { status: "disabled" },
+    secret_scanning: { status: "disabled" },
+    secret_scanning_push_protection: { status: "disabled" },
+  };
+
+  const answer = { description: null, homepage: null, security_and_analysis: off, topics: [] };
+  const result = await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r");
+  expect(result).toMatchObject({
+    current: { pushProtection: false, scanning: false, securityUpdates: false },
+    ok: true,
+  });
+});
+
+it("fails when the repo answer has no security_and_analysis, never reading it as on", async () => {
+  const unexpected = { kind: "other", message: "GitHub answered something unexpected", ok: false };
+  const answer = { description: null, homepage: null, topics: [] };
+  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r")).toStrictEqual(unexpected);
 });
 
 it("reads an actor with no id as 0", async () => {
