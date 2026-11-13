@@ -1,4 +1,6 @@
 {
+  "files.associations": { "*.css": "tailwindcss" },
+  "css.lint.unknownAtRules": "ignore",
   "files.readonlyInclude": {
     ".agents/agents/implementer-deep.md": true,
     ".agents/agents/implementer-fast.md": true,
