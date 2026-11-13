@@ -1,10 +1,10 @@
 /** The strategy domain's values, approval-block and reply patterns, and stamp layout. */
 import type { Approval, ApprovalAction, Mode, Strategy } from "./strategy.types.ts";
 
-export const DEFAULT_STRATEGY = "default";
+export const FREE_STRATEGY = "free";
 export const SPAWN_FAST = "spawn-fast";
 const SPAWN_DEEP = "spawn-deep";
-export const STRATEGIES: readonly Strategy[] = [DEFAULT_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
+export const STRATEGIES: readonly Strategy[] = [FREE_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
 export const MODES: readonly Mode[] = ["ask", "auto", "away"];
 
@@ -39,8 +39,8 @@ export const ITEM_SEP = ", then ";
 export const BLOCK_FENCE = "```";
 
 export const BLOCK_ROWS: readonly string[] = [
-  "  i  implement    id · isf · isd",
-  "  h  hand off     hd · hsf · hsd",
+  "  i  implement    if · isf · isd",
+  "  h  hand off     hf · hsf · hsd",
   "     or reply to revise",
 ];
 
@@ -60,7 +60,9 @@ export const LINE_END_WS_RE: RegExp = /[^\S\n]+$/;
 /** Reply grammar: exact whole replies, then an action word and strategy words, each exact or inferred. */
 export const TRAILING_PUNCT_RE: RegExp = /[.!]+$/;
 export const WORD_SEP_RE: RegExp = /\s+/;
-export const CODE_NEAR_MISS_RE: RegExp = /^[ih]s[a-z]?$/;
+
+/** A word shaped like a code but none, such as `isx`, or a code with its `s` dropped (`id` for `isd`). */
+export const CODE_NEAR_MISS_RE: RegExp = /^[ih](?:s[a-z]?|[fd])$/;
 export const MAX_REPLY_WORDS = 4;
 export const MAX_STRATEGY_WORDS = 2;
 export const MAX_ACTION_WORDS = 2;
@@ -76,10 +78,10 @@ export const EXACT_REPLIES: ReadonlyMap<string, Approval> = /* @__PURE__ */ new 
   ["go", { kind: "approve", strategy: null }],
   ["do it", { kind: "approve", strategy: null }],
   ["h", { kind: "handoff", strategy: null }],
-  ["id", { kind: "approve", strategy: "default" }],
+  ["if", { kind: "approve", strategy: "free" }],
   ["isf", { kind: "approve", strategy: "spawn-fast" }],
   ["isd", { kind: "approve", strategy: "spawn-deep" }],
-  ["hd", { kind: "handoff", strategy: "default" }],
+  ["hf", { kind: "handoff", strategy: "free" }],
   ["hsf", { kind: "handoff", strategy: "spawn-fast" }],
   ["hsd", { kind: "handoff", strategy: "spawn-deep" }],
 ]);
@@ -93,7 +95,7 @@ export const ACTION_WORDS: readonly (readonly [string, ApprovalAction])[] = [
 
 /** Words that name a strategy once an action is there; `fast` and `deep` are the handoff shorthands. */
 export const STRATEGY_WORDS: readonly (readonly [string, Strategy])[] = [
-  [DEFAULT_STRATEGY, DEFAULT_STRATEGY],
+  [FREE_STRATEGY, FREE_STRATEGY],
   [SPAWN_FAST, SPAWN_FAST],
   [SPAWN_DEEP, SPAWN_DEEP],
   [FAST, SPAWN_FAST],

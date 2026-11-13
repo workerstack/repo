@@ -23,7 +23,7 @@ describe("plan mode moves and fences", () => {
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     const [head, ...body] = text.split("\n---\n");
-    expect(head).toMatch(/\nstrategy: default\nmode: away$/);
+    expect(head).toMatch(/\nstrategy: free\nmode: away$/);
     expect(body.join("\n---\n")).not.toMatch(/^mode:/m);
     expect(validatePlan(savedOk(r).filename, text)).toStrictEqual([]);
   });
@@ -68,7 +68,7 @@ describe("plan mode updates", () => {
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay."));
     expect(kept.ok, kept.error).toBe(true);
-    expect(read(abs)).toMatch(/^strategy: default\nmode: auto$/m);
+    expect(read(abs)).toMatch(/^strategy: free\nmode: auto$/m);
     const changed = update(ws, abs, withMode(VALID_PLAN, "away"));
     expect(changed.ok, changed.error).toBe(true);
     expect(read(abs).match(/^mode:/gm)).toStrictEqual(["mode:"]);

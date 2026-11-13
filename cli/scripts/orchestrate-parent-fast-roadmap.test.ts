@@ -94,7 +94,7 @@ it("i approves a fast roadmap with the lock text, and no code is a choice", () =
     `i approves fast-roadmap 1: fast-roadmap 1: set status locked, then run /implement-roadmap-fast 1 (${roadmap})`,
   );
 
-  for (const code of ["id", "isf", "isd", "hd", "hsf", "hsd"])
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd"])
     expect(s.say(code, tp)).toContain(`"${code}" is not a choice; end with this block again:\n${block}`);
 
   expect(read(roadmap)).toBe(before);
@@ -155,7 +155,7 @@ it("a fast plan named only by an in-progress full roadmap still asks for its blo
       "name: full",
       "status: in-progress",
       "reviews: 1",
-      "strategy: default",
+      "strategy: free",
       "---",
       "",
       "## Order",
@@ -192,7 +192,7 @@ it("checks an Edit of a saved fast roadmap against the text it would produce", (
   }
 
   expect(edit("status: locked")).toBeNull();
-  const denied = edit("strategy: default");
+  const denied = edit("strategy: free");
   expect(denied?.hookSpecificOutput.permissionDecision).toBe("deny");
   expect(denied?.hookSpecificOutput.permissionDecisionReason).toContain("a fast roadmap has no strategy");
 });

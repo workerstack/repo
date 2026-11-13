@@ -13,7 +13,7 @@ import { persistPlan } from "./persist-plan.ts";
 const tmpWs = useTmpWs();
 
 const CREATED = "2026-08-26T14:30:00Z";
-const NO_KEY = "strategy: default|spawn-fast|spawn-deep";
+const NO_KEY = "strategy: free|spawn-fast|spawn-deep";
 
 function without(body: string) {
   return body.replace(/^strategy:.*\n/m, "");
@@ -47,7 +47,7 @@ describe("plan strategy moves and fences", () => {
     const r = persistPlan({ content: fenced, created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
-    expect(text).toMatch(/^strategy: default$/m);
+    expect(text).toMatch(/^strategy: free$/m);
     expect(text).toMatch(/^```console\nstrategy: spawn-fast\n```$/m);
   });
 });
@@ -100,7 +100,7 @@ describe("plan strategy updates", () => {
 
   it("adds the key to a saved head that lacks it only from a body line", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withStrategy(VALID_PLAN, "default"), created: CREATED, workspaceRoot: ws });
+    const r = persistPlan({ content: withStrategy(VALID_PLAN, "free"), created: CREATED, workspaceRoot: ws });
     const abs = path.join(ws, savedOk(r).path);
     fs.writeFileSync(abs, read(abs).replace(/^strategy:.*\n/m, ""));
     expect(update(ws, abs, without(VALID_PLAN)).errors).toContain(NO_KEY);

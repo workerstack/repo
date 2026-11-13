@@ -10,13 +10,13 @@ import { ignoreBlockLines, strayIgnoreFiles, untrackedEntries } from "./sync/git
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
 import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
+import { planStrategyRename } from "./sync/migrate-strategy-name.ts";
 import { generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { planHandover } from "./sync/migration-handover.ts";
 import type { Output } from "./sync/outputs.ts";
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readStockHistory } from "./sync/stock-history.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
-import { planStrategyRename } from "./sync/strategy-rename.ts";
 import { planTmpRepo } from "./sync/tmp-repo.ts";
 import { validateOutputs } from "./sync/validate-outputs.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";

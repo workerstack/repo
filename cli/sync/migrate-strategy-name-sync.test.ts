@@ -8,7 +8,8 @@ useTempDirs();
 vi.setConfig({ testTimeout: 120_000 });
 
 const NOTE =
-  "repo sync: renamed strategy review-fast to spawn-fast and review-deep to spawn-deep in 3 files under .repo\n";
+  "repo sync: renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in 3 files " +
+  "under .repo\n";
 
 /** A consumer whose plans and handoff still carry the old strategy names. */
 function old(): string {
@@ -57,7 +58,8 @@ it("moves .tmp/repo home and renames in one sync", async () => {
   expect(result.out.slice(0, 3)).toStrictEqual([
     "repo sync: moved .tmp/repo/plans to .repo/plans\n",
     "repo sync: removed the empty .tmp/repo\n",
-    "repo sync: renamed strategy review-fast to spawn-fast and review-deep to spawn-deep in 1 file under .repo\n",
+    "repo sync: renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in 1 file " +
+      "under .repo\n",
   ]);
   expect(read(root, ".repo/plans/1-a.md")).toBe("---\nstrategy: spawn-deep\n---\nplan\n");
 });

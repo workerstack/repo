@@ -6,10 +6,10 @@ import { describe, expect, it } from "vitest";
 import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { put } from "./__fixtures__/temp-dirs.ts";
 import { applyMigration } from "./apply-migration.ts";
-import { planStrategyRename, relativeSlash, renameStrategies } from "./strategy-rename.ts";
+import { planStrategyRename, relativeSlash, renameStrategies } from "./migrate-strategy-name.ts";
 
-const NOTE_HEAD = "renamed strategy review-fast to spawn-fast and review-deep to spawn-deep";
-const { tempDir } = useTempDirs("strategy-rename-");
+const NOTE_HEAD = "renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free";
+const { tempDir } = useTempDirs("migrate-strategy-name-");
 
 describe("renameStrategies doc", () => {
   it("maps the strategy line of the leading frontmatter only", () => {
@@ -37,6 +37,31 @@ describe("renameStrategies doc", () => {
 
     expect(once).toBe("---\r\nstrategy: spawn-fast\r\n---\r\n");
     expect(renameStrategies(once, "doc")).toBe(once);
+  });
+});
+
+describe("renameStrategies default to free", () => {
+  it("maps plain and quoted frontmatter, and a rerun changes nothing", () => {
+    const plain = renameStrategies("---\nstrategy: default\n---\nbody\n", "doc");
+    const quoted = renameStrategies('---\nstrategy: "default"\n---\nbody\n', "doc");
+
+    expect(plain).toBe("---\nstrategy: free\n---\nbody\n");
+    expect(quoted).toBe('---\nstrategy: "free"\n---\nbody\n');
+    expect(renameStrategies(plain, "doc")).toBe(plain);
+  });
+
+  it("leaves a plan body line with default", () => {
+    const text = "---\nstrategy: free\n---\nstrategy: default\nthe default\n";
+
+    expect(renameStrategies(text, "doc")).toBe(text);
+  });
+
+  it("maps parenthesised handoff mentions and leaves prose, rerun-stable", () => {
+    const once = renameStrategies("a (strategy: default) b (strategy default written) c (strategy default)", "handoff");
+
+    expect(once).toBe("a (strategy: free) b (strategy free written) c (strategy free)");
+    expect(renameStrategies(once, "handoff")).toBe(once);
+    expect(renameStrategies("(we kept the strategy default)", "handoff")).toBe("(we kept the strategy default)");
   });
 });
 
@@ -80,7 +105,9 @@ describe("planStrategyRename", () => {
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({
       kind: "rename-strategy",
-      note: "renamed strategy review-fast to spawn-fast and review-deep to spawn-deep in 4 files under .repo",
+      note:
+        "renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in 4 files " +
+        "under .repo",
       paths: [".repo/handoffs/h.md", ".repo/plans/a.md", ".repo/plans/b.md", ".repo/roadmaps/r.md"],
     });
   });
@@ -114,7 +141,8 @@ describe("the rename-strategy step", () => {
     const lines = await applyMigration(root, planStrategyRename(root));
 
     expect(lines).toStrictEqual([
-      "repo sync: renamed strategy review-fast to spawn-fast and review-deep to spawn-deep in 2 files under .repo",
+      "repo sync: renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free " +
+        "in 2 files under .repo",
     ]);
     expect(fs.readFileSync(path.join(root, ".repo/plans/a.md"), "utf8")).toBe(
       "---\nstrategy: spawn-deep\n---\nstrategy: review-deep\n",

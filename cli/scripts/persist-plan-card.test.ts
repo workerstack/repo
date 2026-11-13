@@ -51,7 +51,7 @@ describe("card format", () => {
 describe("card denials", () => {
   it("drops a PLAN_NAME sent after commit and strategy so the card sits under the title", () => {
     const body = CARDED.split("\n").slice(2).join("\n");
-    const r = save(`commit: feat: add the thing\nstrategy: default\nPLAN_NAME: add tmp ignore\n${body}`);
+    const r = save(`commit: feat: add the thing\nstrategy: free\nPLAN_NAME: add tmp ignore\n${body}`);
     expect(r.ok, r.error).toBe(true);
     expect(r.content).not.toMatch(/^PLAN_NAME:/m);
     expect(r.content).toContain(`${H1}${CARD.join("\n")}\n\n## Goal`);

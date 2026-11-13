@@ -22,7 +22,7 @@ function legacyFile() {
   const abs = path.join(dir, FILE);
   const body = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
   const head = "serial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z";
-  fs.writeFileSync(abs, `---\n${head}\nsource: "auth program"\nstrategy: default\n---\n\n${body}`);
+  fs.writeFileSync(abs, `---\n${head}\nsource: "auth program"\nstrategy: free\n---\n\n${body}`);
 
   return { abs, ws };
 }
@@ -89,7 +89,7 @@ describe("legacy roadmap slice and frontmatter rules", () => {
 
     const sent =
       "---\nserial: 1\nname: auth-program\nstatus: draft\nreviews: 0\ncreated: 2026-10-25T18:00:00Z\n" +
-      `source: "auth program"\nstrategy: default\n---\n\nstatus: blocked\nreviews: 3\n${legacy}`;
+      `source: "auth program"\nstrategy: free\n---\n\nstatus: blocked\nreviews: 3\n${legacy}`;
 
     const { ws, abs } = legacyFile();
     const r = prepareRoadmapUpdate({ content: sent, filePath: abs, workspaceRoot: ws });

@@ -15,7 +15,7 @@ import { z } from "zod";
 import { tryJson } from "../json.ts";
 import { STATE, repoPath } from "../repo-dirs.ts";
 import {
-  DEFAULT_STRATEGY,
+  FREE_STRATEGY,
   FM_LINE_RE,
   FRONTMATTER_RE,
   IMPLEMENTER_DEEP,
@@ -108,7 +108,7 @@ export function activeReview(root: string, sid: string): ActiveReview | null {
     if (plan === null || fm === null) return null;
     const strategy = parseStrategy(fm.strategy);
 
-    if (fm.status !== IN_PROGRESS || strategy === null || strategy === DEFAULT_STRATEGY) return null;
+    if (fm.status !== IN_PROGRESS || strategy === null || strategy === FREE_STRATEGY) return null;
 
     return { plan, serial: Number(fm.serial), strategy };
   } catch {

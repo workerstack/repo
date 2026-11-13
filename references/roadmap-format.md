@@ -25,14 +25,14 @@ status: draft          # draft | locked | in-progress | done | blocked
 reviews: 0             # settled /review-roadmap rounds; never lowered or removed
 created: 2026-10-25T18:00:00Z
 source: "<≤120 chars>"
-strategy: default      # default | spawn-fast | spawn-deep
+strategy: free          # free | spawn-fast | spawn-deep
 mode: away             # optional: ask | auto | away
 ---
 ```
 
 `draft` → `locked` → `in-progress` → `done` | `blocked`.
 
-`strategy` is required: `default`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
+`strategy` is required: `free`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
 `mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`); any session stamp beats it. A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 

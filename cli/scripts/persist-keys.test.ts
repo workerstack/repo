@@ -12,7 +12,7 @@ import {
 describe("strategy and mode keys", () => {
   it("reads the value from the frontmatter or a body line", () => {
     expect(extractStrategy("---\nstrategy: spawn-fast\n---\n# x")).toBe("spawn-fast");
-    expect(extractStrategy("# x\nstrategy: default\n")).toBe("default");
+    expect(extractStrategy("# x\nstrategy: free\n")).toBe("free");
     expect(extractMode("---\nname: x\n---\nmode:   away \n")).toBe("away");
     expect(extractMode("---\nname: x\n---\n# x")).toBeUndefined();
     expect(extractMode("---\nunterminated\nmode: ask")).toBe("ask");
@@ -25,12 +25,12 @@ describe("strategy and mode keys", () => {
   });
 
   it("strips the first key line outside a fence", () => {
-    expect(stripStrategyLine("a\nstrategy: default\nb")).toBe("a\nb");
+    expect(stripStrategyLine("a\nstrategy: free\nb")).toBe("a\nb");
     expect(stripModeLine("a\nmode: ask\nmode: auto\nb")).toBe("a\nmode: auto\nb");
   });
 
   it("names the allowed values", () => {
-    expect(strategyError()).toBe("strategy: default|spawn-fast|spawn-deep");
+    expect(strategyError()).toBe("strategy: free|spawn-fast|spawn-deep");
     expect(modeErrors({})).toStrictEqual([]);
     expect(modeErrors({ mode: "away" })).toStrictEqual([]);
     expect(modeErrors({ mode: "" })).toStrictEqual(["mode: ask|auto|away"]);

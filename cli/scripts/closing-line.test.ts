@@ -10,7 +10,7 @@ it("maps y in any case with no strategy to keep each file's value", () => {
 
 it("maps a strategy word, ignoring extra spaces", () => {
   expect(parseApproval("y spawn-deep")).toStrictEqual({ kind: "approve", strategy: "spawn-deep" });
-  expect(parseApproval("y  default ")).toStrictEqual({ kind: "approve", strategy: "default" });
+  expect(parseApproval("y  free ")).toStrictEqual({ kind: "approve", strategy: "free" });
 });
 
 function approve(strategy: string | null) {
@@ -26,8 +26,8 @@ function unknown(word: string) {
 }
 
 const ONE =
-  "```\nplan 4 · spawn-fast\n  i  implement    id · isf · isd\n" +
-  "  h  hand off     hd · hsf · hsd\n     or reply to revise\n```";
+  "```\nplan 4 · spawn-fast\n  i  implement    if · isf · isd\n" +
+  "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```";
 
 const QUEUE: Approvable[] = [
   { kind: "plan", serial: 4, strategy: "spawn-fast" },
@@ -65,7 +65,7 @@ it("ignores trailing whitespace on block lines", () => {
 
 it("is null for a changed row, a missing fence, text after, an unknown strategy or nothing", () => {
   expect(parseClosingBlock(ONE.replace("hand off", "handoff"))).toBeNull();
-  expect(parseClosingBlock(ONE.replace("id · isf · isd", "id · isf"))).toBeNull();
+  expect(parseClosingBlock(ONE.replace("if · isf · isd", "if · isf"))).toBeNull();
   expect(parseClosingBlock(ONE.replace(/\n```$/, ""))).toBeNull();
   expect(parseClosingBlock(ONE.replace(/^```\n/, ""))).toBeNull();
   expect(parseClosingBlock(`${ONE}\nthanks`)).toBeNull();
@@ -87,20 +87,22 @@ it("hands off with the header strategies on h or hand off", () => {
 });
 
 it("maps each exact code", () => {
-  expect(parseApproval("id")).toStrictEqual(approve("default"));
+  expect(parseApproval("if")).toStrictEqual(approve("free"));
   expect(parseApproval("isf")).toStrictEqual(approve("spawn-fast"));
   expect(parseApproval("ISF")).toStrictEqual(approve("spawn-fast"));
   expect(parseApproval("isd!")).toStrictEqual(approve("spawn-deep"));
-  expect(parseApproval("hd")).toStrictEqual(handoff("default"));
+  expect(parseApproval("hf")).toStrictEqual(handoff("free"));
   expect(parseApproval("hsf")).toStrictEqual(handoff("spawn-fast"));
   expect(parseApproval("hsd")).toStrictEqual(handoff("spawn-deep"));
 });
 
 it("infers a misspelled action and strategy after an action word", () => {
-  expect(parseApproval("implement deafult")).toStrictEqual(approve("default"));
+  expect(parseApproval("implement fere")).toStrictEqual(approve("free"));
+  expect(parseApproval("i free")).toStrictEqual(approve("free"));
+  expect(parseApproval("h free")).toStrictEqual(handoff("free"));
   expect(parseApproval("y spawn fats")).toStrictEqual(approve("spawn-fast"));
   expect(parseApproval("y spawn-deep")).toStrictEqual(approve("spawn-deep"));
-  expect(parseApproval("y  default ")).toStrictEqual(approve("default"));
+  expect(parseApproval("y  free ")).toStrictEqual(approve("free"));
   expect(parseApproval("h fast")).toStrictEqual(handoff("spawn-fast"));
   expect(parseApproval(" H  Deep ")).toStrictEqual(handoff("spawn-deep"));
   expect(parseApproval("hand of deep")).toStrictEqual(handoff("spawn-deep"));
@@ -123,6 +125,12 @@ it("is a revision when the action resolves and the strategy words match nothing"
 
 it("is unknown when a strategy inference is ambiguous", () => {
   expect(parseApproval("i daet")).toStrictEqual(unknown("i daet"));
+});
+
+it("is unknown for the retired id and hd codes, and a revision for i default", () => {
+  expect(parseApproval("id")).toStrictEqual(unknown("id"));
+  expect(parseApproval("hd")).toStrictEqual(unknown("hd"));
+  expect(parseApproval("i default")).toBeNull();
 });
 
 it("is unknown for a code-shaped word that is no code", () => {
@@ -162,8 +170,8 @@ const FAST: Approvable = { kind: "fast-plan", serial: 3 };
 const FULL: Approvable = { kind: "plan", serial: 4, strategy: "spawn-fast" };
 
 const MIXED =
-  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    id · isf · isd\n" +
-  "  h  hand off     hd · hsf · hsd\n     or reply to revise\n```";
+  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    if · isf · isd\n" +
+  "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```";
 
 it("renders and reads the all-fast block with only the i and h rows", () => {
   expect(closingBlock([FAST])).toBe(FAST_ONE);
@@ -182,7 +190,7 @@ it("refuses a fast block with a strategy, a full item without one, or the wrong 
   expect(parseClosingBlock(FAST_ONE.replace("hand off", "handoff"))).toBeNull();
   expect(parseClosingBlock(MIXED.replace("plan 4", "fast-plan 4"))).toBeNull();
   expect(parseClosingBlock(FAST_ONE.replace("fast-plan", "fast-slice"))).toBeNull();
-  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    id · isf · isd"))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    if · isf · isd"))).toBeNull();
 });
 
 it("on an all-fast block a bare approval or handoff stands and every code or strategy word is unknown", () => {
@@ -191,7 +199,7 @@ it("on an all-fast block a bare approval or handoff stands and every code or str
 
   expect(approvalFor("h", [FAST])).toStrictEqual(handoff(null));
 
-  for (const p of ["id", "isf", "isd", "hd", "hsf", "hsd", "h fast", "y spawn-deep"])
+  for (const p of ["if", "isf", "isd", "hf", "hsf", "hsd", "h fast", "y spawn-deep"])
     expect(approvalFor(p, [FAST]), p).toStrictEqual(unknown(p));
 });
 
@@ -218,8 +226,8 @@ it("renders and reads a fast roadmap block with only the i and h rows, alone or 
 it("renders the full rows when a full plan joins a fast roadmap", () => {
   const block = closingBlock([FAST_ROADMAP, FULL]);
   expect(block).toBe(
-    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    id · isf · isd\n" +
-      "  h  hand off     hd · hsf · hsd\n     or reply to revise\n```",
+    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    if · isf · isd\n" +
+      "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```",
   );
   expect(parseClosingBlock(block)).toStrictEqual([FAST_ROADMAP, FULL]);
   expect(approvalFor("isf", [FAST_ROADMAP, FULL])).toStrictEqual(approve("spawn-fast"));

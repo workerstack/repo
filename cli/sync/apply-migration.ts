@@ -7,9 +7,9 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import { loadConfig, SKILL_PACKS } from "../config.ts";
 import { readJson } from "../json.ts";
 import { isDir, moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
+import { kindOf, renameStrategies } from "./migrate-strategy-name.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
-import { kindOf, renameStrategies } from "./strategy-rename.ts";
 import { rewriteOldPaths } from "./tmp-repo.ts";
 
 /** A step that acts: no conflict survives the early return of `applyMigration`. */
