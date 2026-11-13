@@ -132,6 +132,7 @@ main
   bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)
   browser           Browse with Lightpanda, Chromium when blocked
   env               Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key)
+  eval              Score a model on evals/<name> cases; prints a cost estimate and refuses over a cap
   google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail
   jev               Yes/no or named-option decision on saved text
   job               Compressed search, exec, slice, fetch and test dumps (--job search|exec|slice|fetch|test)

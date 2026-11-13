@@ -32,6 +32,7 @@ export type CommandName =
   | "setup"
   | "doctor"
   | "env"
+  | "eval"
   | "clean"
   | "yolo"
   | "shim"
