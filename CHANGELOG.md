@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `evals` is a pack `packs` in `workerstack.config.ts` accepts, opt-in like `benchmark`; turning it on writes nothing yet, it gates the evals environment and `eval.yml` of later releases.
+
 ### Fixed
 
 - `repo sync` no longer writes the deprecated `typescript.tsdk` to `.vscode/settings.json`. For TypeScript older than 7 it writes `js/ts.tsdk.path` instead, and it moves a `typescript.tsdk` you already have to `js/ts.tsdk.path` with the same value, or drops it when `js/ts.tsdk.path` is already set. Run `bun repo sync` and commit the file.

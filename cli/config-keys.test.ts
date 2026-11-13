@@ -68,11 +68,18 @@ describe("loadConfig", () => {
     });
   });
 
+  it("loads a config that lists the evals pack", async () => {
+    expect(await loadConfig(repo('export default { packs: ["agents", "evals"] }\n'))).toMatchObject({
+      config: { packs: ["agents", "evals"] },
+      ok: true,
+    });
+  });
+
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toStrictEqual({
       errors: [
         'workerstack.config.ts: packs[1]: "lint" is not a pack; ' +
-          "use agents, standards, docs, release, workspace or benchmark",
+          "use agents, standards, docs, release, workspace, benchmark or evals",
       ],
       ok: false,
     });
