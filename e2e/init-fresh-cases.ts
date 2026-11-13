@@ -20,7 +20,7 @@ export function installCases(get: GetSandbox) {
 
   it("init copies nothing: it writes the config and a postinstall, and install generates the trees", () => {
     const sb = get();
-    expect(sb.exists("workerstack.config.ts")).toBe(true);
+    expect(sb.exists("repo.config.ts")).toBe(true);
     expect(sb.json("package.json", packageJsonWritten).scripts.postinstall).toBe("repo sync --postinstall");
 
     for (const rel of [".rulesync", "scripts"]) expect(sb.exists(rel), rel).toBe(false);

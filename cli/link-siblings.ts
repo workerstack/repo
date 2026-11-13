@@ -9,7 +9,7 @@ import { readWorkspace } from "./sync/workspace.ts";
 /** What a name is looked up against: the config's mapped checkouts and the packages this repo depends on. */
 export type LinkLookup = {
   roots: LinkRoots;
-  /** `link` from workerstack.config.ts: package name to a checkout path relative to this checkout. */
+  /** `link` from repo.config.ts: package name to a checkout path relative to this checkout. */
   mapped: Readonly<Record<string, string>>;
   /** The names this checkout's package.json files declare as dependencies. */
   used: ReadonlySet<string>;

@@ -23,9 +23,9 @@ it.each([
   [
     "author",
     { ...COMPLETE, author: "workerstack" },
-    '"author" is "workerstack"; set it to "Lovro Žagar", the owner in workerstack.config.ts',
+    '"author" is "workerstack"; set it to "Lovro Žagar", the owner in repo.config.ts',
   ],
-  ["author", without("author"), '"author" is missing; set it to "Lovro Žagar", the owner in workerstack.config.ts'],
+  ["author", without("author"), '"author" is missing; set it to "Lovro Žagar", the owner in repo.config.ts'],
   [
     "repository.url",
     { ...COMPLETE, repository: { type: "git", url: "https://github.com/workerstack/repo.git" } },

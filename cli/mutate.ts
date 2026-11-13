@@ -70,7 +70,7 @@ function target(config: MutateConfig, run: Run, deps: MutateDeps): Result<Found,
 
   if (files.length > 0) return { ok: true, value: { files, sha } };
   const globs = config.mutate.join(", ");
-  const line = `no tracked file matches coverage.mutate (${globs}); set coverage.mutate in workerstack.config.ts`;
+  const line = `no tracked file matches coverage.mutate (${globs}); set coverage.mutate in repo.config.ts`;
 
   return { error: fail(deps, line), ok: false };
 }

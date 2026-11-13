@@ -75,7 +75,7 @@ it("a skip may name a tailwindcss rule only when an entry turns the rules on", (
   });
   expect(oxlintConfig(ROOT, { skip: [skip] })).toStrictEqual({
     errors: [
-      'workerstack.config.ts: lint.skip[0].rules: "tailwindcss/no-hardcoded-colors" ' +
+      'repo.config.ts: lint.skip[0].rules: "tailwindcss/no-hardcoded-colors" ' +
         "is not a rule the generated config runs",
     ],
     ok: false,

@@ -38,7 +38,7 @@ export const MENU_MESSAGE: string = "Command";
 export const USAGE_HEAD: string = "Usage: repo [command]\n\nDefault (no command): TTY menu; else init — full setup\n";
 
 /** The summaries of the commands `cli/main.ts` runs itself, for `repo --help` and `repo <cmd> --help`. */
-const INIT_SUMMARY = `Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs \
+const INIT_SUMMARY = `Full setup: write repo.config.ts and package.json, bun install (whose postinstall runs \
 repo sync), repo yolo`;
 
 const CHECK_SUMMARY = `Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, \
@@ -46,7 +46,7 @@ lint within .repo/lint-baseline.json, knip, actionlint on workflows, and floors,
 against main`;
 
 const SYNC_SUMMARY =
-  "Write the committed generated files from workerstack.config.ts (--check: report drift; --postinstall: never fail)";
+  "Write the committed generated files from repo.config.ts (--check: report drift; --postinstall: never fail)";
 
 const MAP_SUMMARY = "Code-only folder map (git-tracked, no files); dir for depth";
 

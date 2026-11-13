@@ -26,7 +26,7 @@ async function importFile(file: string): Promise<ConfigModule> {
 
 /** The module of a config whose text changed since it was loaded, imported from a temporary copy beside it. */
 async function importCopy(root: string, file: string): Promise<ConfigModule> {
-  const copy = path.join(root, `.workerstack.config.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
+  const copy = path.join(root, `.repo.config.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
   fs.copyFileSync(file, copy);
 
   try {

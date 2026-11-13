@@ -114,7 +114,7 @@ it("lint --baseline seeds the repo's magic hits, and none a lint.skip turns off"
   expect(baseline()).toStrictEqual({ "src/b.ts": { [MAGIC]: 1 }, "src/wait.ts": { [MAGIC]: 1 } });
   const skip = { files: ["src/wait.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
   fs.writeFileSync(
-    path.join(root, "workerstack.config.ts"),
+    path.join(root, "repo.config.ts"),
     `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] }, null, 2)};\n`,
   );
   fs.rmSync(path.join(root, BASELINE_PATH));

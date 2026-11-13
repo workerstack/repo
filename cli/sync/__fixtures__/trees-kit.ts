@@ -50,7 +50,7 @@ export function stagesIn(root: string): string[] {
 /** A consumer: a config, a package.json and `node_modules/@workerstack/repo` linked to this repo's root. */
 export function consumer(files: Record<string, string> = {}): string {
   const root = tempDir("workerstack-trees-");
-  put(root, "workerstack.config.ts", "export default {}\n");
+  put(root, "repo.config.ts", "export default {}\n");
   put(root, "package.json", JSON.stringify({ name: "fixture", scripts: { build: "tsc" } }));
   fs.mkdirSync(path.join(root, "node_modules", "@workerstack"), { recursive: true });
   fs.symlinkSync(SELF_ROOT, path.join(root, "node_modules", "@workerstack", "repo"), "dir");

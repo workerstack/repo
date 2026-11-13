@@ -22,8 +22,8 @@ function tree() {
     "a.jsonc": WITH,
     "inline.jsonc": '{\n  "a": 1, /* kept */\n  "b": "/* kept */"\n}\n',
     "package.json": '{ "name": "app", "type": "module" }\n',
+    "repo.config.ts": 'export default { packs: ["standards"] };\n',
     "tsconfig.json": WITH,
-    "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
   });
 }
 

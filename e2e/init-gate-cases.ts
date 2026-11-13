@@ -78,14 +78,14 @@ export function pluginAndSkipCases(get: GetSandbox) {
 
   it("check prints a live lint.skip and fails a stale one, and a skip of an unknown rule fails sync", async () => {
     const sb = get();
-    const original = sb.read("workerstack.config.ts");
+    const original = sb.read("repo.config.ts");
     sb.write("src/skipped.ts", NON_NULL);
 
     try {
       await expectSkipsChecked(sb, original);
     } finally {
       fs.rmSync(path.join(sb.repo, "src/skipped.ts"));
-      sb.write("workerstack.config.ts", original);
+      sb.write("repo.config.ts", original);
       await sb.run("bun", ["repo", "sync"]);
     }
 

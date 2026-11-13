@@ -3,6 +3,7 @@
  * for a package import whose target's tag the importer's tag may not import.
  */
 
+import { CONFIG_FILE } from "../config.constants.ts";
 import type { RepoRule } from "./rule.types.ts";
 
 /** Each package name's one tag, and per tag the other tags its packages may import. */
@@ -13,8 +14,6 @@ export type TagsOptions = [Tags?];
 
 /** What a rule's `meta.schema` takes. */
 type RuleSchema = RepoRule["meta"]["schema"];
-
-const CONFIG_FILE = "workerstack.config.ts";
 
 /** A tag read with "an" before it: `app`, `infra`; `ui` and `lib` take "a". */
 const AN_TAG = /^[aeio]/i;

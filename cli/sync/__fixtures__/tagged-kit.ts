@@ -38,7 +38,7 @@ export function taggedTree(boundaries: unknown = TAGGED_BOUNDARIES): string {
   const manifest = { name: "@tagged/root", private: true, type: "module", workspaces: ["packages/*"] };
   put(root, "package.json", `${JSON.stringify(manifest, null, 2)}\n`);
   const config = { lint: { boundaries }, packs: ["standards"] };
-  put(root, "workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
+  put(root, "repo.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   for (const [dir, { declares, source }] of Object.entries(PACKAGES)) {
     put(root, `packages/${dir}/package.json`, manifestOf(dir, declares));
     put(root, `packages/${dir}/src/${dir}.ts`, source);

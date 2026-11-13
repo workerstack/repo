@@ -168,8 +168,7 @@ it("names the glob when no tracked file matches, before any clone", async () => 
   const f = fakes(sim({ tracked: ["docs/x.ts"] }));
   expect(await runMutate(SHARD, f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
-    "repo mutate: no tracked file matches coverage.mutate (src/**/*.ts); set coverage.mutate in " +
-      "workerstack.config.ts\n",
+    "repo mutate: no tracked file matches coverage.mutate (src/**/*.ts); set coverage.mutate in repo.config.ts\n",
   );
   expect(f.calls.some((c) => c.includes("clone") || c.startsWith("mkdtemp"))).toBe(false);
 });
@@ -179,9 +178,9 @@ it("refuses a bad --shard before touching git, and prints the config's errors", 
   expect(await runMutate(["--shard", "9/8"], bad.deps)).toBe(1);
   expect(bad.err.join("")).toBe("repo mutate: --shard takes i/n with 1 <= i <= n, such as 2/8\n");
   expect(bad.calls).toStrictEqual([]);
-  const noConfig = fakes(sim({ config: ["workerstack.config.ts: no default export"] }));
+  const noConfig = fakes(sim({ config: ["repo.config.ts: no default export"] }));
   expect(await runMutate(SHARD, noConfig.deps)).toBe(1);
-  expect(noConfig.err.join("")).toBe("repo mutate: workerstack.config.ts: no default export\n");
+  expect(noConfig.err.join("")).toBe("repo mutate: repo.config.ts: no default export\n");
 });
 
 it("says so when the directory is no git repository", async () => {

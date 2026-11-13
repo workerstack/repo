@@ -129,7 +129,7 @@ describe("repo commit-msg size and setup", () => {
     const root = repo({}, { [CONFIG_FILE]: "export default { commit: 5 }\n" });
     expect(await commitMsg(root, "chore: x\n")).toStrictEqual({
       code: 1,
-      stderr: "repo commit-msg: workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }\n",
+      stderr: "repo commit-msg: repo.config.ts: commit: must be an object like { maxChangedLines: 1000 }\n",
     });
   });
 

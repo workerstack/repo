@@ -12,7 +12,7 @@ function skip(rules: string[]) {
 }
 
 function refused(index: number, rule: string) {
-  return `workerstack.config.ts: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`;
+  return `repo.config.ts: lint.skip[${index}].rules: "${rule}" is not a rule the generated config runs`;
 }
 
 it("oxlintConfig writes no override for a Rust skip, even beside an oxlint rule", () => {

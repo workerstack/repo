@@ -1,5 +1,5 @@
 import { CONFIG_FILE } from "./config.constants.ts";
-import { findRoot, loadConfig, type ResolvedConfig } from "./config.ts";
+import { findRoot, loadConfig, missingConfig, type ResolvedConfig } from "./config.ts";
 import type { Result } from "./result.ts";
 import { errorMessage, fail } from "./sync-errors.ts";
 import { computeOutputs } from "./sync-outputs.ts";
@@ -8,6 +8,7 @@ import type { SyncDeps, SyncIo } from "./sync.ts";
 import { applyMigration } from "./sync/apply-migration.ts";
 import { ignoreBlockLines, strayIgnoreFiles, untrackedEntries } from "./sync/git-files.ts";
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
+import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { planHandover } from "./sync/migration-handover.ts";
@@ -57,13 +58,31 @@ function refuse(run: Mode & { io: SyncIo }, errors: string[]): number {
   return fail(run, run.check ? errors : [...errors, "nothing written"]);
 }
 
+/**
+ * An old consumer's config moves to its new name before the root is looked up by that name; the exit code when it
+ * cannot.
+ */
+function moveConfig(early: Mode & { io: SyncIo }): number | null {
+  const moved = moveOldConfig(early.io.cwd, { check: early.check });
+
+  if (moved === null) return null;
+
+  if ("error" in moved) return refuse(early, [moved.error]);
+
+  for (const line of moveLines(moved.rewritten)) early.io.stdout(`${SYNC_PREFIX}${line}\n`);
+
+  return null;
+}
+
 /** The run for the repo above `io.cwd`, with its config and workspace read; the exit code when one cannot be. */
 async function open(mode: Mode, io: SyncIo, deps: SyncDeps): Promise<Result<Run, number>> {
   const early = { ...mode, io };
-  const root = findRoot(io.cwd);
-  const missing = `no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``;
+  const moved = moveConfig(early);
 
-  if (root === null) return { error: fail(early, [missing]), ok: false };
+  if (moved !== null) return { error: moved, ok: false };
+  const root = findRoot(io.cwd);
+
+  if (root === null) return { error: fail(early, [missingConfig(io.cwd)]), ok: false };
   const load = deps.load ?? loadConfig;
   const config = await load(root);
 

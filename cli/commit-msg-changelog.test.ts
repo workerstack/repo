@@ -10,7 +10,7 @@ import { main } from "./commit-msg.ts";
 /** The hook's changelog rule: which commits must stage an entry, and for which package. */
 afterEach(removePlanted);
 
-const PLAIN = { "workerstack.config.ts": "export default {}\n" };
+const PLAIN = { "repo.config.ts": "export default {}\n" };
 const SRC = { "src/x.test.ts": "t\n", "src/x.ts": "export const x = 1;\n" };
 const PRIVATE = { ...PLAIN, "package.json": { name: "p", private: true } };
 

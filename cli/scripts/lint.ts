@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
-import { findRoot, loadConfig } from "../config.ts";
+import { findRoot, loadConfig, missingConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
 import { repoEnv } from "../repo-env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
@@ -109,7 +109,7 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
 
   const root = findRoot(cwd);
 
-  if (root === null) return fail([`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``]);
+  if (root === null) return fail([missingConfig(cwd)]);
   const loaded = await loadConfig(root);
 
   if (!loaded.ok) return fail(loaded.errors);

@@ -58,7 +58,7 @@ it("with the standards pack on, prints knip's problems to stderr and its ignores
   writeConfigs(repo);
   writeCleanManifest(repo);
   const ignore = '{ file: "src/b.ts", reason: "loaded by name" }';
-  repo.put("workerstack.config.ts", `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`);
+  repo.put("repo.config.ts", `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`);
   repo.put("src/a.ts", "export const a = 1;\n");
   repo.put("src/b.ts", "export const b = 1;\n");
   await start(fakes);
@@ -79,7 +79,7 @@ it("with the standards pack on, prints each live lint.skip and its count, and ex
     packs: ["standards"],
   };
 
-  repo.put("workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
+  repo.put("repo.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   repo.put("src/a.ts", "export const a = (xs: string[]): string => xs.find(Boolean)!;\n");
   repo.put("src/b.ts", "export const b = 1;\n");
   await start(fakes);
@@ -99,7 +99,7 @@ rule's hits and counts the other over the baseline`, async () => {
   writeCleanManifest(repo);
   const reason = "retry tuning lives here for now";
   const config = { lint: { skip: [skip("src/retry.ts", "repo/magic-number", reason)] }, packs: ["standards"] };
-  repo.put("workerstack.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
+  repo.put("repo.config.ts", `export default ${JSON.stringify(config, null, 2)};\n`);
   writeStandardsOutputs(repo);
 
   const retry = [

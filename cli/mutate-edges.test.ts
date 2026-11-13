@@ -51,18 +51,18 @@ it("reads and writes files, lists a dir, and tells a missing file and dir from a
 
 it("finds the config of the repo above cwd, its errors, and no config", async () => {
   const root = tempDir();
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { coverage: { mutate: ["lib/**"] } };\n');
+  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { coverage: { mutate: ["lib/**"] } };\n');
   fs.mkdirSync(path.join(root, "deep"));
   expect(await realDeps(path.join(root, "deep")).config(path.join(root, "deep"))).toStrictEqual({
     floors: "mutation-floors.json",
     mutate: ["lib/**"],
     root: fs.realpathSync(root),
   });
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default { coverage: 5 };\n");
+  fs.writeFileSync(path.join(root, "repo.config.ts"), "export default { coverage: 5 };\n");
   const bad = await realDeps(root).config(root);
-  expect(Array.isArray(bad) && bad[0]).toMatch(/^workerstack.config.ts: coverage/);
+  expect(Array.isArray(bad) && bad[0]).toMatch(/^repo.config.ts: coverage/);
   const none = await realDeps(tempDir()).config(tempDir());
-  expect(Array.isArray(none) && none[0]).toMatch(/^no workerstack.config.ts in/);
+  expect(Array.isArray(none) && none[0]).toMatch(/^no repo.config.ts in/);
 });
 
 it("lists workspace package dirs, none for an unreadable manifest", () => {

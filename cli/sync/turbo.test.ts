@@ -31,7 +31,7 @@ function context(packs: Pack[], files: Record<string, string> = {}, tasks?: Reco
 
 const BASE = {
   $schema: "https://turborepo.com/schema.json",
-  globalDependencies: ["bun.lock", "package.json", "workerstack.config.ts"],
+  globalDependencies: ["bun.lock", "package.json", "repo.config.ts"],
   tasks: {
     test: {
       env: ["REPO_COVERAGE", "REPO_VITEST_REPORT", "REPO_VITEST_SHARD"],

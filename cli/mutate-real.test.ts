@@ -60,11 +60,11 @@ function plantedRepo(): string {
     ".gitignore": "node_modules\n.repo/tmp/\n",
     "mutation-floors.json": { ".": 99 },
     "package.json": manifest,
+    "repo.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
     "src/math.test.ts": MATH_TEST,
     "src/math.ts": MATH,
     "src/str.test.ts": STR_TEST,
     "src/str.ts": STR,
-    "workerstack.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
   });
   const installed = spawnSync(process.execPath, ["install"], { cwd: dir, encoding: "utf8", env: toolEnv(childEnv()) });
   expect(installed.status, installed.stderr).toBe(0);

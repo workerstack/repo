@@ -132,7 +132,7 @@ describe("commit-msg red-proof in a single-package repo", () => {
     expect(await callCountsAcrossPublic(root)).toStrictEqual({ after: 1, before: 0 });
   });
 
-  it("takes a repo with no workerstack.config.ts as tdd false, by its root package.json", async () => {
+  it("takes a repo with no repo.config.ts as tdd false, by its root package.json", async () => {
     const root = plant({ "package.json": PRIVATE });
     stage(root, SRC_AND_TEST);
     expect(await callCountsAcrossPublic(root)).toStrictEqual({ after: 1, before: 0 });

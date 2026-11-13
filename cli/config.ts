@@ -15,10 +15,11 @@ import { linkSchema } from "./link-schema.ts";
 import { lintOf, lintSchema } from "./lint-schema.ts";
 import { nightlyOf, nightlySchema } from "./nightly-config.ts";
 import { ownerSchema } from "./owner-config.ts";
+import type { RepoConfig } from "./repo-config.types.ts";
 import { reportRepeats } from "./report-repeats.ts";
+import { oldConfigHint } from "./sync/migrate-config-name.ts";
 import { generatedTask } from "./turbo-config.constants.ts";
 import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
-import type { WorkerstackConfig } from "./workerstack-config.types.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
 
@@ -26,10 +27,10 @@ export { CONFIG_FILE } from "./config.constants.ts";
 
 export type { ConfigModule, ImportConfig } from "./import-config.ts";
 
-/** Config packs a repo can turn on in workerstack.config.ts. */
+/** Config packs a repo can turn on in repo.config.ts. */
 export const PACKS = ["agents", "standards", "docs", "release", "workspace", "benchmark", "evals"] as const;
 
-/** One of `PACKS`: the name `packs` in workerstack.config.ts takes. */
+/** One of `PACKS`: the name `packs` in repo.config.ts takes. */
 export type Pack = (typeof PACKS)[number];
 
 /** The package a config imports `defineConfig` from, and the import error that says nothing provides it. */
@@ -145,12 +146,12 @@ function buildConfigSchema() {
     .refine(
       (config) => config.tdd === undefined || hasPack(config, "standards"),
       needsPack("tdd", "standards"),
-    ) satisfies z.ZodType<unknown, WorkerstackConfig>;
+    ) satisfies z.ZodType<unknown, RepoConfig>;
 }
 
 const configSchema = /* @__PURE__ */ buildConfigSchema();
 
-export type { WorkerstackConfig };
+export type { RepoConfig };
 
 export type {
   LintBoundaries,
@@ -165,8 +166,8 @@ export type {
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
 
-/** Types a workerstack.config.ts default export. */
-export function defineConfig(config: WorkerstackConfig): WorkerstackConfig {
+/** Types a repo.config.ts default export. */
+export function defineConfig(config: RepoConfig): RepoConfig {
   return config;
 }
 
@@ -175,7 +176,7 @@ export function defaultPacks(): Pack[] {
   return ["agents", "standards", "docs"];
 }
 
-/** The nearest directory at or above `cwd` that holds workerstack.config.ts, or null. */
+/** The nearest directory at or above `cwd` that holds repo.config.ts, or null. */
 export function findRoot(cwd: string): string | null {
   let dir = path.resolve(cwd);
 
@@ -188,6 +189,11 @@ export function findRoot(cwd: string): string | null {
   }
 }
 
+/** What a command prints when no config is at or above `cwd`: the move to make when the old name is there. */
+export function missingConfig(cwd: string): string {
+  return oldConfigHint(cwd) ?? `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``;
+}
+
 function fail(messages: string[]): LoadResult {
   return {
     errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
@@ -196,7 +202,7 @@ function fail(messages: string[]): LoadResult {
 }
 
 /**
- * Imports and validates `<root>/workerstack.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
+ * Imports and validates `<root>/repo.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
  * every host and no skills, an omitted commit limit with the default, and omitted lint skips with none.
  */
 export async function loadConfig(root: string, importModule: ImportConfig = importConfig): Promise<LoadResult> {

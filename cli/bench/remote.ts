@@ -53,10 +53,9 @@ const DIRTY = "--remote measures HEAD; commit or drop the changes first";
 const PASSED: readonly string[] = [CONCLUSION_SUCCESS, CONCLUSION_SKIPPED];
 
 function noWorkflow() {
-  return [
-    `--remote needs ${BENCH_PATH};`,
-    'add "benchmark" to packs in workerstack.config.ts and run bun repo sync',
-  ].join(" ");
+  return [`--remote needs ${BENCH_PATH};`, 'add "benchmark" to packs in repo.config.ts and run bun repo sync'].join(
+    " ",
+  );
 }
 
 function runsSchema() {

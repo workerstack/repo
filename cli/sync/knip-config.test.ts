@@ -70,15 +70,15 @@ describe("the generated knip config: shape", () => {
     });
   });
 
-  it("is one root workspace for a single package, with workerstack.config.ts as an entry and fixtures ignored", () => {
+  it("is one root workspace for a single package, with repo.config.ts as an entry and fixtures ignored", () => {
     expect(parsed(workspace({}, []))).toMatchObject({
       workspaces: {
-        ".": { entry: [...DEFAULT_ENTRIES, "workerstack.config.ts"], ignore: FIXTURES, ignoreBinaries: [] },
+        ".": { entry: [...DEFAULT_ENTRIES, "repo.config.ts"], ignore: FIXTURES, ignoreBinaries: [] },
       },
     });
   });
 
-  it("adds a workspace per package dir, without workerstack.config.ts, and ends with a newline", () => {
+  it("adds a workspace per package dir, without repo.config.ts, and ends with a newline", () => {
     const ws = workspace({}, [
       { dir: "packages/api", manifest: {} },
       { dir: "packages/web", manifest: {} },
@@ -104,7 +104,7 @@ describe("the generated knip config: vitest", () => {
     expect(parsed(ws)).toMatchObject({
       workspaces: {
         ".": {
-          entry: [...DEFAULT_ENTRIES, "workerstack.config.ts", "vitest.config.ts", "vitest.e2e.config.ts"],
+          entry: [...DEFAULT_ENTRIES, "repo.config.ts", "vitest.config.ts", "vitest.e2e.config.ts"],
           vitest: { config: ["vitest.config.ts", "vitest.e2e.config.ts"] },
         },
         "packages/api": {
@@ -121,12 +121,12 @@ describe("the generated knip config: vitest", () => {
 });
 
 describe("the generated knip config: evals", () => {
-  it("makes evals/*/eval.ts a root entry after workerstack.config.ts when the root has an evals dir", () => {
+  it("makes evals/*/eval.ts a root entry after repo.config.ts when the root has an evals dir", () => {
     const ws = workspace({}, [{ dir: "packages/api", manifest: {} }], ["evals/routing/eval.ts"]);
 
     expect(parsed(ws)).toMatchObject({
       workspaces: {
-        ".": { entry: [...DEFAULT_ENTRIES, "workerstack.config.ts", "evals/*/eval.ts"] },
+        ".": { entry: [...DEFAULT_ENTRIES, "repo.config.ts", "evals/*/eval.ts"] },
         "packages/api": { entry: DEFAULT_ENTRIES },
       },
     });
@@ -134,7 +134,7 @@ describe("the generated knip config: evals", () => {
 
   it("adds no eval entry where the root has no evals dir", () => {
     expect(parsed(workspace({}, []))).toMatchObject({
-      workspaces: { ".": { entry: [...DEFAULT_ENTRIES, "workerstack.config.ts"] } },
+      workspaces: { ".": { entry: [...DEFAULT_ENTRIES, "repo.config.ts"] } },
     });
   });
 });

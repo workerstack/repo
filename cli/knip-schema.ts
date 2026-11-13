@@ -1,4 +1,4 @@
-/** The `knip` section of workerstack.config.ts: the sanctioned knip ignores. */
+/** The `knip` section of repo.config.ts: the sanctioned knip ignores. */
 import { z } from "zod";
 
 /** One `knip.ignore` entry: the file, dependency or binary knip is not to report, and why it cannot see the use. */

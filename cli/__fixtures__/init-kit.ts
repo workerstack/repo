@@ -61,7 +61,7 @@ export function hostsList(): string {
   return HOSTS.map((h) => JSON.stringify(h)).join(", ");
 }
 
-/** The `workerstack.config.ts` init writes around `body`. */
+/** The `repo.config.ts` init writes around `body`. */
 export const config = (body: string): string =>
   `import { defineConfig } from "@workerstack/repo";\n\nexport default defineConfig({\n${body}});\n`;
 

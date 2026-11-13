@@ -22,7 +22,7 @@ it("checkLintSkips returns sync's error for two tailwind entries and no entryPoi
   const workspace = { manifest: { name: "app" }, packages: [], root };
   expect(checkLintSkips(workspace, { skip: [SKIP] }, { run, scripts: [] })).toStrictEqual({
     problems: [
-      "workerstack.config.ts: lint.tailwind.entryPoint: two sheets import tailwindcss (src/admin.css, src/app.css); " +
+      "repo.config.ts: lint.tailwind.entryPoint: two sheets import tailwindcss (src/admin.css, src/app.css); " +
         "set the one oxlint checks classes against",
     ],
     report: [],

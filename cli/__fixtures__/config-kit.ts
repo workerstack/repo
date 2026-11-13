@@ -27,10 +27,10 @@ export function useConfigKit(): void {
 
 /** A new empty temp dir, removed after the test. */
 export function configDir(): string {
-  return tempDir("workerstack-config-");
+  return tempDir("repo-config-");
 }
 
-/** A temp repo root holding `config` as workerstack.config.ts, and `manifest` as package.json unless it is null. */
+/** A temp repo root holding `config` as repo.config.ts, and `manifest` as package.json unless it is null. */
 export function repo(config: string, manifest: object | string | null = { name: "fixture" }): string {
   const root = configDir();
   fs.writeFileSync(path.join(root, CONFIG_FILE), config);
@@ -48,8 +48,8 @@ export function linkPackage(root: string): void {
   fs.symlinkSync(REPO_ROOT, path.join(scope, "repo"), "junction");
 }
 
-/** The failed load naming each of `errors` in workerstack.config.ts. */
+/** The failed load naming each of `errors` in repo.config.ts. */
 export const refusal = (...errors: string[]): { errors: string[]; ok: false } => ({
-  errors: errors.map((e) => `workerstack.config.ts: ${e}`),
+  errors: errors.map((e) => `repo.config.ts: ${e}`),
   ok: false,
 });

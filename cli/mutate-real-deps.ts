@@ -3,8 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { CONFIG_FILE } from "./config.constants.ts";
-import { findRoot, loadConfig } from "./config.ts";
+import { findRoot, loadConfig, missingConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import type { MutateDeps, MutateFs } from "./mutate-deps.ts";
 import { CARGO_MANIFEST, ROOT_PACKAGE } from "./mutate.constants.ts";
@@ -37,7 +36,7 @@ export const realFs: MutateFs = {
 async function config(cwd: string): ReturnType<MutateDeps["config"]> {
   const root = findRoot(cwd);
 
-  if (root === null) return [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``];
+  if (root === null) return [missingConfig(cwd)];
   const loaded = await loadConfig(root);
 
   if (!loaded.ok) return loaded.errors;

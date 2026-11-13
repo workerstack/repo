@@ -234,7 +234,7 @@ it("repo ci holds the rust floors of the file the config names", async () => {
   const run = await ciWith({
     "Cargo.toml": "[workspace]\n",
     "ratchets/floors.json": JSON.stringify(rows),
-    "workerstack.config.ts": 'export default { coverage: { floors: "ratchets/floors.json" } };\n',
+    "repo.config.ts": 'export default { coverage: { floors: "ratchets/floors.json" } };\n',
   });
 
   expect(run.code).toBe(1);

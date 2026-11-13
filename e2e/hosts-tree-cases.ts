@@ -56,8 +56,8 @@ export function generatedHostCases(get: GetSandbox) {
     "$host: sync with only that host writes every planned file, and each passes validateOutputs",
     async ({ host, owns, others, expected }) => {
       const sb = get();
-      const config = sb.read("workerstack.config.ts");
-      sb.write("workerstack.config.ts", config.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify([host])}`));
+      const config = sb.read("repo.config.ts");
+      sb.write("repo.config.ts", config.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify([host])}`));
 
       try {
         expectClean(sb, await sb.run("bun", ["repo", "sync"], { env: ROOT_VARS }));
@@ -72,7 +72,7 @@ export function generatedHostCases(get: GetSandbox) {
         expect(validateOutputs(sb.repo, outputs)).toStrictEqual([]);
         expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"], { env: ROOT_VARS }));
       } finally {
-        sb.write("workerstack.config.ts", config);
+        sb.write("repo.config.ts", config);
         await sb.run("bun", ["repo", "sync"], { env: ROOT_VARS });
       }
     },

@@ -95,7 +95,7 @@ async function pickTarget({ ctx, targets }: Run, raw: string | undefined, status
   let target = normalizeTarget(raw);
 
   if (target !== "" && !targets.includes(target)) {
-    errLine(io, `${target} is off. Add it to agents.skills in workerstack.config.ts, then run \`bun repo sync\`.`);
+    errLine(io, `${target} is off. Add it to agents.skills in repo.config.ts, then run \`bun repo sync\`.`);
 
     return "";
   }

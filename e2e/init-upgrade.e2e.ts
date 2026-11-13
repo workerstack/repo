@@ -20,7 +20,7 @@ async function emptyDirInits() {
   expectClean(sb, init);
   expect(init.out).toContain("repo init: ran git init");
 
-  for (const rel of ["workerstack.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
+  for (const rel of ["repo.config.ts", "package.json", ...GENERATED]) expect(sb.exists(rel), rel).toBe(true);
   const hooksPath = await sb.git("config", "core.hooksPath");
   expect(hooksPath.stdout.trim()).toBe(".githooks");
   expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));

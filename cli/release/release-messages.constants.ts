@@ -8,7 +8,7 @@ export const USAGE: string =
 export const DIRTY = "the working tree has changes; commit or stash them first";
 export const GH_MISSING = "gh is not installed or not logged in; run `gh auth login`";
 export const EMPTY_UNRELEASED = "CHANGELOG.md has no entries under ## [Unreleased]; add them first";
-export const PACK_OFF = 'the release pack is off; add "release" to packs in workerstack.config.ts';
+export const PACK_OFF = 'the release pack is off; add "release" to packs in repo.config.ts';
 export const NO_MANIFEST = "package.json needs a name and a version";
 export const NOT_CHECKOUT = "run it inside a git checkout";
 

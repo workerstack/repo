@@ -60,10 +60,10 @@ export default defineConfig({ test: { include: ["src/**/*.test.ts"], coverage: {
 `;
 
   const files = {
+    "repo.config.ts": config,
     "src/a.test.ts": PASSING,
     "src/a.ts": SOURCE,
     "vitest.config.ts": vitest,
-    "workerstack.config.ts": config,
   };
 
   for (const [name, text] of Object.entries(files)) {
@@ -187,14 +187,14 @@ it("repo coverage: fails, saying so, when the floors file cannot be formatted", 
 it("repo coverage: fails before running anything when the repo config is invalid", async () => {
   const root = project("export default { coverage: { floor: 'a.json' } };\n");
   expect(await coverage(root)).toBe(1);
-  expect(err.join("")).toBe('repo coverage: workerstack.config.ts: coverage: unknown key "floor"\n');
+  expect(err.join("")).toBe('repo coverage: repo.config.ts: coverage: unknown key "floor"\n');
 });
 
 it("repo coverage: names a missing repo config", async () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-coverage-")));
   temps.push(root);
   expect(await coverage(root)).toBe(1);
-  expect(err.join("")).toContain("repo coverage: no workerstack.config.ts");
+  expect(err.join("")).toContain("repo coverage: no repo.config.ts");
 });
 
 it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RUN_MS }, async () => {

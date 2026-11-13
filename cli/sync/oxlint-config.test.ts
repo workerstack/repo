@@ -122,7 +122,7 @@ const EVAL_OVERRIDE = {
 };
 
 /** `ci.checks` run in key order, so the workerstack config keeps its keys where the consumer put them. */
-const WORKERSTACK_OVERRIDE = { files: ["**/workerstack.config.ts"], rules: { "eslint/sort-keys": "off" } };
+const WORKERSTACK_OVERRIDE = { files: ["**/repo.config.ts"], rules: { "eslint/sort-keys": "off" } };
 const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, EVAL_OVERRIDE, WORKERSTACK_OVERRIDE];
 
 describe("oxlintConfig base", () => {

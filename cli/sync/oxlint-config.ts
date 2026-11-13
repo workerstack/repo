@@ -30,7 +30,7 @@ export const FIXTURES: string = `**/${FIXTURES_DIR}/**`;
 const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
-const WORKERSTACK_CONFIG = "**/workerstack.config.ts";
+const REPO_CONFIG = `**/${CONFIG_FILE}`;
 const EVAL_FILES = "**/evals/*/eval.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
 
@@ -172,7 +172,7 @@ function overridesOf(workspace: Workspace, lint: ResolvedLint) {
     // `repo eval` imports an eval file's default export, which its `defineEval` call builds at import.
     { files: [EVAL_FILES], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
     // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.
-    { files: [WORKERSTACK_CONFIG], rules: { "eslint/sort-keys": "off" } },
+    { files: [REPO_CONFIG], rules: { "eslint/sort-keys": "off" } },
     ...packageOverrides(workspace),
     ...skipOverrides(lint.skip),
   ];

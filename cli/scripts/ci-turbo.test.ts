@@ -202,14 +202,14 @@ it("a workspace that cannot be read adds no package reports", () => {
 });
 
 it("reads the packs from the config when none are injected: workspace runs turbo", async () => {
-  const root = plant({ "workerstack.config.ts": 'export default { packs: ["workspace"] };\n' });
+  const root = plant({ "repo.config.ts": 'export default { packs: ["workspace"] };\n' });
   const run = await ciConfigured(root, done(4, 0));
   expect(run.calls.turbo).toHaveLength(1);
   expect(run.calls.vitest).toStrictEqual([]);
 });
 
 it("an invalid config runs the gates of a repo without the pack", async () => {
-  const run = await ciConfigured(plant({ "workerstack.config.ts": "export default 1;\n" }), done(4, 0));
+  const run = await ciConfigured(plant({ "repo.config.ts": "export default 1;\n" }), done(4, 0));
   expect(run.calls.turbo).toStrictEqual([]);
   expect(run.calls.vitest).toStrictEqual(["run --coverage"]);
 });
@@ -217,5 +217,5 @@ it("an invalid config runs the gates of a repo without the pack", async () => {
 it("outside a repo the unconfigured run is refused", async () => {
   const run = await ciConfigured(tempDir("workerstack-ci-none-"), done(4, 0));
   expect(run.code).toBe(1);
-  expect(run.err).toContain("no workerstack.config.ts");
+  expect(run.err).toContain("no repo.config.ts");
 });

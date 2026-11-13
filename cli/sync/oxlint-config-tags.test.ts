@@ -50,7 +50,7 @@ it("oxlintConfig takes a nameless root, whose packages alone a tag can name", ()
   expect(oxlintConfig(nameless, { boundaries: { allow: ALLOW, tags: TAGS }, skip: [] }).ok).toBe(true);
   const rootTagged = { allow: ALLOW, tags: { ...TAGS, "@app/root": "app" } };
   expect(oxlintConfig(nameless, { boundaries: rootTagged, skip: [] })).toStrictEqual({
-    errors: ['workerstack.config.ts: lint.boundaries.tags: "@app/root" is not a workspace package'],
+    errors: ['repo.config.ts: lint.boundaries.tags: "@app/root" is not a workspace package'],
     ok: false,
   });
 });
@@ -74,7 +74,7 @@ it.each([
   ],
 ])("oxlintConfig refuses %j and writes nothing", (boundaries, error) => {
   expect(oxlintConfig(APP, { boundaries, skip: [] })).toStrictEqual({
-    errors: [`workerstack.config.ts: ${error}`],
+    errors: [`repo.config.ts: ${error}`],
     ok: false,
   });
 });

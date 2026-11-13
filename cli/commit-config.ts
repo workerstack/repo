@@ -1,4 +1,4 @@
-/** The `commit` section of workerstack.config.ts: how big a commit may be before its message must say why. */
+/** The `commit` section of repo.config.ts: how big a commit may be before its message must say why. */
 import { z } from "zod";
 
 /** How many changed lines a commit may have before its message must say why. */

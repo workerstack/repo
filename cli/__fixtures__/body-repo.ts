@@ -18,7 +18,7 @@ export function useBodyRepo(label: string): { repo: (body: string) => string; re
   return {
     refusal: (message) => ({ errors: [`${CONFIG_FILE}: ${message}`], ok: false }),
     repo: (body) => {
-      const root = fs.mkdtempSync(path.join(os.tmpdir(), `workerstack-config-${label}-`));
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), `repo-config-${label}-`));
       temps.push(root);
       fs.writeFileSync(path.join(root, CONFIG_FILE), `export default ${body}\n`);
       return root;

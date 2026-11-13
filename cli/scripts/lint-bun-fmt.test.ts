@@ -16,7 +16,7 @@ const FMT_SCRIPT = `{ "name": "app", "scripts": { "fmt": "sh -c 'exit 7'" }, "ty
 
 /** A consumer with the standards configs sync writes, a package.json `fmt` script, and `files`. */
 function consumer(files: Record<string, string>): string {
-  const config = { "package.json": FMT_SCRIPT, "workerstack.config.ts": 'export default { packs: ["standards"] };\n' };
+  const config = { "package.json": FMT_SCRIPT, "repo.config.ts": 'export default { packs: ["standards"] };\n' };
 
   return tree({ ...standardsFiles(), ...config, ...files });
 }

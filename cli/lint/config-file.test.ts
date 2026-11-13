@@ -37,7 +37,7 @@ describe("config-file fails", () => {
     expect(messagesOf(code)).toStrictEqual(messages);
   });
 
-  it.each(["vitest.config.mts", "eslint.config.js", "tool.config.mjs", "workerstack.config.ts", "pkg/vite.config.ts"])(
+  it.each(["vitest.config.mts", "eslint.config.js", "tool.config.mjs", "repo.config.ts", "pkg/vite.config.ts"])(
     "a %s",
     (file) => {
       expect(messagesOf("const FULL = 1;\nexport default { FULL };", file)).toStrictEqual([move('"FULL"')]);

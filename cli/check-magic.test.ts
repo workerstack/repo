@@ -135,12 +135,12 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
 
 const SHARDS = "export default { nightly: { shards: 8 } };\n";
 
-it("reports no magic number in the root workerstack.config.ts, which holds values, but does elsewhere", () => {
-  const found = magicOf({ "src/shards.ts": SHARDS, "workerstack.config.ts": SHARDS });
+it("reports no magic number in the root repo.config.ts, which holds values, but does elsewhere", () => {
+  const found = magicOf({ "repo.config.ts": SHARDS, "src/shards.ts": SHARDS });
   expect(found).toStrictEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });
 
-it("reports a magic number in a workerstack.config.ts below the root", () => {
-  const found = magicOf({ "pkg/workerstack.config.ts": SHARDS });
-  expect(found).toStrictEqual([hit("pkg/workerstack.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
+it("reports a magic number in a repo.config.ts below the root", () => {
+  const found = magicOf({ "pkg/repo.config.ts": SHARDS });
+  expect(found).toStrictEqual([hit("pkg/repo.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });

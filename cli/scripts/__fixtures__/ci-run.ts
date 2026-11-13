@@ -16,7 +16,7 @@ export type Calls = { repo: string[]; tsc: string[]; vitest: string[]; turbo: { 
 export function plant(files: Record<string, string> = {}): string {
   const root = tempDir("workerstack-ci-");
   write(root, {
-    "workerstack.config.ts": "export default {};\n",
+    "repo.config.ts": "export default {};\n",
     "package.json": '{ "name": "app", "workspaces": ["packages/*"] }\n',
     "tsconfig.json": "{}\n",
     "packages/a/package.json": '{ "name": "a" }\n',

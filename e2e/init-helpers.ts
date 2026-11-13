@@ -50,7 +50,7 @@ export async function expectSkipsChecked(sb: Sandbox, original: string) {
     return original.replace("packs:", `lint: { skip: ${JSON.stringify(skips)} },\n  packs:`);
   }
 
-  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
+  sb.write("repo.config.ts", withSkips(skipOf("src/skipped.ts"), skipOf("src/gone.ts")));
   expectClean(sb, await sb.run("bun", ["repo", "sync"]));
   const check = await sb.run("bun", ["repo", "check"]);
   expect(check.status, tail(check.out)).toBe(1);
@@ -62,12 +62,11 @@ export async function expectSkipsChecked(sb: Sandbox, original: string) {
     'repo check: lint.skip[1]: "src/gone.ts" matches no file; fix the path or delete the entry',
   );
   expect(fs.readdirSync(sb.repo).filter((name) => name.startsWith(".oxlintrc.unskipped-"))).toStrictEqual([]);
-  sb.write("workerstack.config.ts", withSkips(skipOf("src/skipped.ts", "repo/no-modul-state")));
+  sb.write("repo.config.ts", withSkips(skipOf("src/skipped.ts", "repo/no-modul-state")));
   const sync = await sb.run("bun", ["repo", "sync"]);
   expect(sync.status, tail(sync.out)).toBe(1);
   expect(sync.stderr).toContain(
-    'repo sync: workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" ' +
-      "is not a rule the generated config runs",
+    'repo sync: repo.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
   );
 }
 
@@ -193,9 +192,9 @@ export async function generatedHashes(sb: Sandbox) {
 
 /** Overwrite the config's `agents.hosts` list. */
 export function setHosts(sb: Sandbox, hosts: string[]) {
-  const text = sb.read("workerstack.config.ts");
+  const text = sb.read("repo.config.ts");
   expect(text).toMatch(/hosts: \[[^\]]*\]/);
-  sb.write("workerstack.config.ts", text.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify(hosts)}`));
+  sb.write("repo.config.ts", text.replace(/hosts: \[[^\]]*\]/, `hosts: ${JSON.stringify(hosts)}`));
 }
 
 type HookCall = { file: string; event: string; matcher?: string; command: string };

@@ -20,7 +20,7 @@ it("repo clean's flags: main refuses --build with --deps, exit 2, and removes no
 
 it("repo clean's flags with a config: main --build runs only the cache removal, with the config's names", async () => {
   const root = buildRepo(tempDir);
-  planter(root)("workerstack.config.ts", 0, 'export default { clean: { build: [".flare"] } };\n');
+  planter(root)("repo.config.ts", 0, 'export default { clean: { build: [".flare"] } };\n');
   inRepo(root);
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   expect(await main(["--build"])).toBe(0);
@@ -30,7 +30,7 @@ it("repo clean's flags with a config: main --build runs only the cache removal, 
 
 it("repo clean's flags with a config: main works with a config that has no clean section", async () => {
   const root = buildRepo(tempDir);
-  planter(root)("workerstack.config.ts", 0, "export default {};\n");
+  planter(root)("repo.config.ts", 0, "export default {};\n");
   inRepo(root);
   const log = vi.spyOn(console, "log").mockImplementation(() => {});
   expect(await main(["--build"])).toBe(0);
@@ -46,9 +46,9 @@ it(
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(await main(["--deps", "--dry-run"])).toBe(0);
     expect(log.mock.calls.at(-1)?.[0]).toMatch(/^would remove 2 build dirs, .* 1 node_modules/);
-    planter(root)("workerstack.config.ts", 0, "export default { clean: { build: 1 } };\n");
+    planter(root)("repo.config.ts", 0, "export default { clean: { build: 1 } };\n");
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await main(["--build"])).toBe(1);
-    expect(err.mock.calls[0]?.[0]).toMatch(/^workerstack.config.ts: clean/);
+    expect(err.mock.calls[0]?.[0]).toMatch(/^repo.config.ts: clean/);
   },
 );

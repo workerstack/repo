@@ -1,7 +1,8 @@
+import { CONFIG_FILE } from "./config.constants.ts";
+
 /** Where `repo check` reads the manifest and license from, and the config file it points owner problems at. */
 export const MANIFEST_FILE = "package.json";
 export const LICENSE_FILE = "LICENSE";
-const CONFIG_NAME = "workerstack.config.ts";
 
 export const LICENSE_ID = "MIT";
 export const MODULE_TYPE = "module";
@@ -19,7 +20,7 @@ export const BUGS_FIX = 'set it to { "url": "…/issues" }';
 const OWNER_FIELDS = "owner: { name, github }";
 
 /** The line `repo check` prints when a public release-pack root has no `owner`. */
-export const OWNER_MISSING: string = `${CONFIG_NAME}: the release pack with a public package needs ${OWNER_FIELDS}`;
+export const OWNER_MISSING: string = `${CONFIG_FILE}: the release pack with a public package needs ${OWNER_FIELDS}`;
 
 /** The MIT license text after its copyright line, whitespace-normalized; a LICENSE must contain it whole. */
 export const MIT_BODY: string =

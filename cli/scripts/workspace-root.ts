@@ -14,16 +14,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CONFIG_FILE } from "../config.constants.ts";
 import { isString, type Json } from "../json.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { GIT_DIR_NAME } from "./git-dir-name.constants.ts";
 import type { HookInput } from "./hook-input.ts";
 
 /**
- * The file that marks a repo install: the consumer's `workerstack.config.ts`, which also exists with no `agents/`
+ * The file that marks a repo install: the consumer's `repo.config.ts`, which also exists with no `agents/`
  * dir.
  */
-export const INSTALL_MARKER = "workerstack.config.ts";
+export const INSTALL_MARKER: string = CONFIG_FILE;
 
 export type GitFacts = {
   top: string;

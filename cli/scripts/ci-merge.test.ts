@@ -104,7 +104,7 @@ it("is refused outside a repo", () => {
   });
 
   expect(code).toBe(1);
-  expect(err.join("")).toMatch(/^repo ci merge: no workerstack\.config\.ts in \//);
+  expect(err.join("")).toMatch(/^repo ci merge: no repo\.config\.ts in \//);
 });
 
 it("repo ci merge <dir> is dispatched from main to the root's vitest", () => {

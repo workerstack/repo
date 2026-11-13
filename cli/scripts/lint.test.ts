@@ -20,7 +20,7 @@ const tree = useTempTree("workerstack-lint-");
 function repo(packs: string, files: Record<string, string> = {}): string {
   return tree({
     "package.json": '{ "name": "app", "type": "module" }\n',
-    "workerstack.config.ts": `export default { packs: ${packs} };\n`,
+    "repo.config.ts": `export default { packs: ${packs} };\n`,
     ...files,
   });
 }
@@ -123,7 +123,7 @@ describe("the lint and fmt mains in process, with the real tools and node off PA
     process.chdir(repo("[]"));
     expect(await fmt([])).toBe(1);
     expect(write).toHaveBeenCalledWith(
-      'repo fmt: the standards pack is off; add "standards" to packs in workerstack.config.ts\n',
+      'repo fmt: the standards pack is off; add "standards" to packs in repo.config.ts\n',
     );
     write.mockRestore();
   });
@@ -156,7 +156,7 @@ describe("runTool", () => {
     const io = capture();
     expect(await runTool(tool, [], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
-      `repo ${command}: the standards pack is off; add "standards" to packs in workerstack.config.ts\n`,
+      `repo ${command}: the standards pack is off; add "standards" to packs in repo.config.ts\n`,
     );
     expect(run).not.toHaveBeenCalled();
   });
@@ -187,16 +187,14 @@ describe("runTool", () => {
     const io = capture();
     expect(await runTool("oxlint", [], { cwd: repo('["lint"]'), run: () => 0, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe(
-      'repo lint: workerstack.config.ts: packs[0]: "lint" is not a pack; ' +
+      'repo lint: repo.config.ts: packs[0]: "lint" is not a pack; ' +
         "use agents, standards, docs, release, workspace, benchmark or evals\n",
     );
 
     const bare = tree({});
     const none = capture();
     expect(await runTool("bun fmt", [], { cwd: bare, run: () => 0, stderr: none.stderr })).toBe(1);
-    expect(none.err.join("")).toBe(
-      `repo fmt: no workerstack.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
-    );
+    expect(none.err.join("")).toBe(`repo fmt: no repo.config.ts in ${bare} or any parent; run \`bun repo init\`\n`);
   });
 });
 

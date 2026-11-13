@@ -72,9 +72,7 @@ it("writes each lint.skip entry as the last override, and refuses a rule the con
 
   const typo = { ...live, rules: ["repo/no-modul-state"] };
   expect(standards(context(["standards"], "app", { skip: [typo] }), [])).toStrictEqual({
-    errors: [
-      'workerstack.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs',
-    ],
+    errors: ['repo.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs'],
     outputs: [],
   });
 });

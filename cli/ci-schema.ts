@@ -1,4 +1,4 @@
-/** The `ci` section of workerstack.config.ts: named commands `repo ci` runs after its own gates. */
+/** The `ci` section of repo.config.ts: named commands `repo ci` runs after its own gates. */
 import { z } from "zod";
 
 import {

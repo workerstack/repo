@@ -27,7 +27,7 @@ const NO_AGENTS = { hosts: [], skills: [] };
 it("writes the default packs and all five hosts when the repo has no config", () => {
   const dest = tmp("repo-config-");
   init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(defaultBody()));
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
   expect(HOSTS).toStrictEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
 });
 
@@ -35,27 +35,27 @@ it("writes the same default packs when package.json declares workspaces", () => 
   const dest = tmp("repo-config-ws-");
   fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
   init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(defaultBody()));
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
 });
 
 it("keeps a config the repo already has", () => {
   const dest = tmp("repo-config-keep-");
   const own = 'export default { packs: ["docs"] }\n';
-  fs.writeFileSync(path.join(dest, "workerstack.config.ts"), own);
+  fs.writeFileSync(path.join(dest, "repo.config.ts"), own);
   init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(own);
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(own);
 });
 
 it("writes the default packs for a dir without package.json", () => {
   const dest = tmp("repo-config-bare-");
   writeConfigIfMissing(dest);
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(defaultBody()));
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
 });
 
 it("writes the chosen skill packs as agents.skills", () => {
   const dest = tmp("repo-config-skills-");
   writeConfigIfMissing(dest, ["listen", "speak"]);
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(
     config(`${PACKS_LINE}  agents: { hosts: [${hostsList()}], skills: ["listen", "speak"] },\n`),
   );
 });
@@ -63,7 +63,7 @@ it("writes the chosen skill packs as agents.skills", () => {
 it("breaks agents over lines when one line would pass 120 columns", () => {
   const dest = tmp("repo-config-wide-");
   writeConfigIfMissing(dest, [...SKILL_PACKS]);
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(
     config(
       `${PACKS_LINE}  agents: {\n    hosts: [${hostsList()}],\n\
     skills: ["google-workspace", "listen", "speak", "clasp"],\n  },\n`,
@@ -104,5 +104,5 @@ it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
 it("writes no skills key for an empty choice", () => {
   const dest = tmp("repo-config-none-");
   writeConfigIfMissing(dest, []);
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toBe(config(defaultBody()));
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
 });

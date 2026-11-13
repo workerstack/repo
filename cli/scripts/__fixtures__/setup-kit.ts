@@ -48,7 +48,7 @@ export const desktopOauth = {
 
 export function enablePacks(cwd: string, packs: string[]): string {
   const cfg = `export default { packs: ["agents"], agents: { skills: ${JSON.stringify(packs)} } }\n`;
-  fs.writeFileSync(path.join(cwd, "workerstack.config.ts"), cfg);
+  fs.writeFileSync(path.join(cwd, "repo.config.ts"), cfg);
   return cwd;
 }
 

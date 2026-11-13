@@ -173,10 +173,10 @@ it("refuses a keyword list holding a non-string instead of dropping it", async (
 });
 
 it("refuses a config or a package.json it cannot read, with the reason", async () => {
-  const config = githubRepo({ files: { "workerstack.config.ts": "export default 3;\n" } });
+  const config = githubRepo({ files: { "repo.config.ts": "export default 3;\n" } });
   const manifest = githubRepo({ files: { "package.json": "{" } });
   const [bad, broken] = await Promise.all([run(config, fakeGh()), run(manifest, fakeGh())]);
-  expect([bad.code, bad.err.startsWith("repo github: workerstack.config.ts:")]).toStrictEqual([1, true]);
+  expect([bad.code, bad.err.startsWith("repo github: repo.config.ts:")]).toStrictEqual([1, true]);
   expect([broken.code, broken.err.startsWith("repo github: package.json")]).toStrictEqual([1, true]);
 });
 

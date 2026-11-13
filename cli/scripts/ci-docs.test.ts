@@ -70,7 +70,7 @@ it("docsGates is empty off the pack and holds one gate on it", () => {
 });
 
 it("reads the docs pack from the config, so the docs gate runs when the config turns it on", async () => {
-  const root = plant({ "workerstack.config.ts": 'export default { packs: ["docs"] };\n' });
+  const root = plant({ "repo.config.ts": 'export default { packs: ["docs"] };\n' });
   const seen: string[] = [];
 
   const { code, out } = await ciFromConfig(root, {

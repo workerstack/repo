@@ -117,7 +117,7 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): Works
 
 /**
  * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its
- * own (the root also `workerstack.config.ts`, and every `evals/<name>/eval.ts` when it has an `evals/` dir), the
+ * own (the root also `repo.config.ts`, and every `evals/<name>/eval.ts` when it has an `evals/` dir), the
  * vitest configs present read by knip's vitest plugin, fixtures ignored, a workspace's own bins not reported, and the
  * root carrying `ignores`. `repo check` passes none for its ignore-free run.
  */

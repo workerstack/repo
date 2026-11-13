@@ -10,7 +10,7 @@ import { loadConfig } from "./config.ts";
 
 useConfigKit();
 
-const EXPLODED = /^workerstack\.config\.ts: .*config exploded/;
+const EXPLODED = /^repo\.config\.ts: .*config exploded/;
 
 /** The errors of loading the config `source`, which must be refused. */
 async function refusedErrors(source: string): Promise<readonly string[]> {
@@ -27,7 +27,7 @@ describe("loadConfig", () => {
 
     if (result.ok) return;
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*default export/);
+    expect(result.errors[0]).toMatch(/^repo\.config\.ts: .*default export/);
   });
 
   it("rejects a config with no default export", async () => {
@@ -36,7 +36,7 @@ describe("loadConfig", () => {
 
     if (result.ok) return;
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: .*no default export/);
+    expect(result.errors[0]).toMatch(/^repo\.config\.ts: .*no default export/);
   });
 });
 
@@ -51,16 +51,14 @@ console.log(JSON.stringify(await loadConfig(${JSON.stringify(root)})));`;
     const run = spawnSync(process.execPath, ["--no-install", "-e", script], { cwd: root, encoding: "utf8" });
 
     const installHint = [
-      `workerstack.config.ts: @workerstack/repo is not installed in ${root};`,
+      `repo.config.ts: @workerstack/repo is not installed in ${root};`,
       "run `bun install` there",
     ].join(" ");
 
     expect(JSON.parse(run.stdout)).toStrictEqual({ errors: [installHint], ok: false });
 
     function missing() {
-      return Promise.reject(
-        new Error(`Cannot find package '@workerstack/repo' imported from ${root}/workerstack.config.ts`),
-      );
+      return Promise.reject(new Error(`Cannot find package '@workerstack/repo' imported from ${root}/repo.config.ts`));
     }
 
     expect(await loadConfig(root, missing)).toStrictEqual({ errors: [installHint], ok: false });
@@ -71,7 +69,7 @@ describe("loadConfig", () => {
   it("keeps the import's own message for any other package the config cannot find", async () => {
     const result = await loadConfig(repo('import x from "left-pad-nope";\n\nexport default x;\n'));
     expect(result).toMatchObject({
-      errors: [expect.stringMatching(/^workerstack\.config\.ts: failed to load: .*left-pad-nope/)],
+      errors: [expect.stringMatching(/^repo\.config\.ts: failed to load: .*left-pad-nope/)],
       ok: false,
     });
   });
@@ -99,7 +97,7 @@ describe("loadConfig", () => {
       expect(await loadConfig(root)).toMatchObject({ config: { packs: ["agents"] }, ok: true });
       expect(await loadConfig(root)).toMatchObject({ config: { packs: ["agents"] }, ok: true });
       await new Promise((resolve) => setTimeout(resolve, 50));
-      expect(seen.filter((name) => name.startsWith(".workerstack.config."))).toStrictEqual([]);
+      expect(seen.filter((name) => name.startsWith(".repo.config."))).toStrictEqual([]);
 
       fs.writeFileSync(path.join(root, CONFIG_FILE), 'export default { packs: ["docs"] }\n');
       expect(await loadConfig(root)).toMatchObject({ config: { packs: ["docs"] }, ok: true });

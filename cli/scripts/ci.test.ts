@@ -103,7 +103,7 @@ it("when vitest is absent the tests gate is skipped and the run still passes", (
 
 it("a repo with no tsconfig skips the typecheck gate without a time", () => {
   const root = tempDir("workerstack-ci-bare-");
-  write(root, { "package.json": '{ "name": "app" }\n', "workerstack.config.ts": "export default {};\n" });
+  write(root, { "package.json": '{ "name": "app" }\n', "repo.config.ts": "export default {};\n" });
   const run = ci(root);
   expect(run.code).toBe(0);
   expect(run.out).toContain("ci: typecheck skipped (no tsconfig.json)\n");
@@ -114,7 +114,7 @@ it("a repo with no tsconfig skips the typecheck gate without a time", () => {
 it("outside a repo the run is refused", () => {
   const run = ci(tempDir("workerstack-ci-empty-"));
   expect(run.code).toBe(1);
-  expect(run.err).toMatch(/^repo ci: no workerstack\.config\.ts in .* or any parent; run `bun repo init`\n$/);
+  expect(run.err).toMatch(/^repo ci: no repo\.config\.ts in .* or any parent; run `bun repo init`\n$/);
 });
 
 const CHECKS = {
@@ -180,7 +180,7 @@ it("passing checks leave the exit code 0", () => {
 
 it("reads ci.checks from the config when no deps give them", async () => {
   const root = plant({
-    "workerstack.config.ts": 'export default { packs: [], ci: { checks: { "a-check": ["tool", "x"] } } };\n',
+    "repo.config.ts": 'export default { packs: [], ci: { checks: { "a-check": ["tool", "x"] } } };\n',
   });
 
   const seen: string[] = [];

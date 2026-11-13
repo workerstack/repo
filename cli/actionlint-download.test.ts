@@ -37,7 +37,7 @@ function fakes(exe: string, tarCode = 0) {
 /** A release-pack repo with one workflow and no cache. */
 function planted() {
   const root = tempDir();
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["release"] };\n');
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), "name: x\n");
 

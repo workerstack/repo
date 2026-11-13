@@ -3,8 +3,8 @@ import type { Host, LintBoundaries, LintSkip, Pack, SkillPack } from "./config.t
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
 import type { TurboTask } from "./turbo-config.ts";
 
-/** What workerstack.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
-export type WorkerstackConfig = {
+/** What repo.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
+export type RepoConfig = {
   /** The packs to turn on; omit it for agents, standards and docs. */
   packs?: readonly Pack[] | undefined;
   /** Which agent trees `repo sync` generates. */

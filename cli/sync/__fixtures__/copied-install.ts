@@ -11,6 +11,7 @@ import { runSync } from "../../sync.ts";
 import { computeOutputs } from "../../sync-outputs.ts";
 import { untrackedEntries } from "../git-files.ts";
 import { applyMigration } from "../apply-migration.ts";
+import { moveOldConfig } from "../migrate-config-name.ts";
 import { planMigration, generatedFiles, type MigrateDeps, type MigrationStep } from "../migrate.ts";
 import { readWorkspace } from "../workspace.ts";
 import { tempDir } from "./temp-dirs.ts";
@@ -31,7 +32,7 @@ export const LINES: readonly string[] = [
   "repo sync: moved .rulesync/lessons/ (1) to .repo/lessons/",
   "repo sync: moved your .rulesync/hooks.jsonc to .repo/hooks.jsonc (it now replaces the stock hooks)",
   "repo sync: moved your .rulesync/mcp-policy.jsonc to .repo/mcp-policy.jsonc",
-  'repo sync: moved packs ["listen"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts',
+  'repo sync: moved packs ["listen"] from .rulesync/repo.features.jsonc to agents.skills in repo.config.ts',
 ];
 /** The generated paths the migration of the recorded install untracks; AGENTS.md is shared now, so it stays tracked. */
 export const UNTRACKED = ".agents/, .claude/, .codex/, .cursor/, .grok/";
@@ -56,9 +57,14 @@ export function fixtureDir(): string {
   if (extracted.dir !== undefined) return extracted.dir;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-copied-fixture-"));
   tar.x({ file: FIXTURE_TGZ, cwd: dir, sync: true });
+  // the pack predates the config's rename: move it as a consumer's sync would, in a throwaway git that lists every
+  // file, since that move is not what these suites test
+  git(dir, "init", "-q");
+  moveOldConfig(dir, { check: false });
+  fs.rmSync(path.join(dir, ".git"), { recursive: true, force: true });
   // the packed config lists packs that no longer exist; the migration under test starts from a config that loads
   fs.writeFileSync(
-    path.join(dir, "workerstack.config.ts"),
+    path.join(dir, "repo.config.ts"),
     'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["agents", "docs"],\n})\n',
   );
   extracted.dir = dir;
@@ -132,7 +138,7 @@ export function copied(options: { git?: boolean } = {}): string {
 /** A consumer that never ran the copying init: a config, the stock linked in, and `files`, committed unless not. */
 export function plain(files: Record<string, string>, options: { git?: boolean } = {}): string {
   const root = tempDir("workerstack-migrate-");
-  write(root, "workerstack.config.ts", "export default {}\n");
+  write(root, "repo.config.ts", "export default {}\n");
   write(root, "package.json", JSON.stringify({ name: "fixture" }));
   for (const [rel, text] of Object.entries(files)) write(root, rel, text);
   linkStock(root);

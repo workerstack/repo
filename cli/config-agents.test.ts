@@ -49,7 +49,7 @@ describe("agents", () => {
 
   it("rejects an unknown host", async () => {
     expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["clod"] } }\n')).toStrictEqual([
-      'workerstack.config.ts: agents.hosts[0]: "clod" is not a host; use claude, codex, antigravity, grok or cursor',
+      'repo.config.ts: agents.hosts[0]: "clod" is not a host; use claude, codex, antigravity, grok or cursor',
     ]);
   });
 
@@ -57,8 +57,7 @@ describe("agents", () => {
     expect(
       await agentsOf('export default { packs: ["agents"], agents: { skills: ["listen", "nope"] } }\n'),
     ).toStrictEqual([
-      'workerstack.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, ' +
-        "speak or clasp",
+      'repo.config.ts: agents.skills[1]: "nope" is not a skill pack; use google-workspace, listen, speak or clasp',
     ]);
   });
 });
@@ -70,20 +69,20 @@ describe("agents", () => {
         'export default { packs: ["agents"], agents: { hosts: ["claude", "claude"], skills: ["listen", "listen"] } }\n',
       ),
     ).toStrictEqual([
-      'workerstack.config.ts: agents.hosts: "claude" is listed twice',
-      'workerstack.config.ts: agents.skills: "listen" is listed twice',
+      'repo.config.ts: agents.hosts: "claude" is listed twice',
+      'repo.config.ts: agents.skills: "listen" is listed twice',
     ]);
   });
 
   it("rejects an empty hosts list", async () => {
     expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: [] } }\n')).toStrictEqual([
-      "workerstack.config.ts: agents.hosts: list at least one host",
+      "repo.config.ts: agents.hosts: list at least one host",
     ]);
   });
 
   it("rejects an unknown key inside agents", async () => {
     expect(await agentsOf('export default { packs: ["agents"], agents: { host: [] } }\n')).toStrictEqual([
-      'workerstack.config.ts: agents: unknown key "host"',
+      'repo.config.ts: agents: unknown key "host"',
     ]);
   });
 });

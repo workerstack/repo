@@ -119,9 +119,9 @@ it(
     const skip = { files: ["src/retry.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
 
     const root = consumer({
+      "repo.config.ts": `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] })};\n`,
       "src/retry.ts": "export const retry = 1;\n",
       "src/wait.ts": "export const wait = 1;\n",
-      "workerstack.config.ts": `export default ${JSON.stringify({ lint: { skip: [skip] }, packs: ["standards"] })};\n`,
     });
 
     write(root, {
@@ -221,8 +221,8 @@ it(
     });
     const both = await turn(root, ["--staged", "src"]);
     expect(both.err).toBe("repo turn: --staged gates the index, a path gates a package; pass one\n");
-    write(root, { "workerstack.config.ts": 'export default { packs: ["docs"] };\n' });
+    write(root, { "repo.config.ts": 'export default { packs: ["docs"] };\n' });
     const off = await turn(root, []);
-    expect(off.err).toBe('repo turn: the standards pack is off; add "standards" to packs in workerstack.config.ts\n');
+    expect(off.err).toBe('repo turn: the standards pack is off; add "standards" to packs in repo.config.ts\n');
   },
 );

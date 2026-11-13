@@ -97,5 +97,5 @@ it("writes to the process streams and runs sync from the folder it is given", as
   expect(io.cwd).toBe(process.cwd());
   expect(io.tools).toBe(REAL_TOOLS);
   expect(await io.sync(tempRoot())).toBe(1);
-  expect(err.mock.calls.join("")).toMatch(/workerstack\.config\.ts/);
+  expect(err.mock.calls.join("")).toMatch(/repo\.config\.ts/);
 });

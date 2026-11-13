@@ -57,7 +57,7 @@ function expectMovedOwnFiles(root: string): void {
   expect(exists(root, ".repo/lessons/INDEX.md")).toBe(false);
   expect(read(root, ".repo/hooks.jsonc")).toBe(read(fixture, ".rulesync/hooks.jsonc"));
   expect(read(root, ".repo/mcp-policy.jsonc")).toBe(read(fixture, ".rulesync/mcp-policy.jsonc"));
-  expect(read(root, "workerstack.config.ts")).toBe(
+  expect(read(root, "repo.config.ts")).toBe(
     'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n' +
       '  agents: { skills: ["listen"] },\n  packs: ["agents", "docs"],\n})\n',
   );

@@ -28,7 +28,7 @@ const LIB = "packages/lib/src/lib.ts";
 
 const LIB_TO_UI =
   '"@app/ui" is a ui package, and a lib package may import only lib; move what it needs into a package lib may ' +
-  'import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts';
+  'import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts';
 
 /** Options as a test passes them: any list, since a case may hand over options that are not tags. */
 type Options = TSESLint.RuleContext<string, readonly unknown[]>["options"];
@@ -51,7 +51,7 @@ it('an app package importing a ui one names every tag it may import, after "an"'
   const options = [{ ...OPTIONS[0], allow: { app: ["lib"], lib: [], ui: ["lib"] } }];
   expect(messagesOf("packages/web/src/a.ts", 'import { b } from "@app/ui";', options)).toStrictEqual([
     '"@app/ui" is a ui package, and an app package may import only app or lib; move what it needs into a package app ' +
-      'may import, or add "ui" to lint.boundaries.allow.app in workerstack.config.ts',
+      'may import, or add "ui" to lint.boundaries.allow.app in repo.config.ts',
   ]);
 });
 

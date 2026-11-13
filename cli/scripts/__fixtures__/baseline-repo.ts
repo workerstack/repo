@@ -46,7 +46,7 @@ export function consumer(files: Record<string, string>, packs = '["standards"]')
   const all = {
     ...Object.fromEntries(toolConfigs()),
     "package.json": '{ "name": "app", "type": "module" }\n',
-    "workerstack.config.ts": `export default { packs: ${packs} };\n`,
+    "repo.config.ts": `export default { packs: ${packs} };\n`,
     ...files,
   };
   for (const [rel, text] of Object.entries(all)) {

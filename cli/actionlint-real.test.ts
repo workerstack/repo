@@ -13,7 +13,7 @@ afterEach(removePlanted);
 /** A release-pack repo whose one workflow has `jobs` as its job section. */
 function planted(jobs: string): string {
   const root = tempDir();
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["release"] };\n');
+  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["release"] };\n');
   fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
   const body = `name: x\non: push\njobs:\n  build:\n${jobs}\n    steps:\n      - run: echo hi\n`;
   fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), body);
