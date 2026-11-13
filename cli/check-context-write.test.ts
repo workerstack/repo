@@ -61,6 +61,18 @@ describe("writeContext, a rise", () => {
   });
 });
 
+describe("writeContext, a chained rise", () => {
+  it("adds no line when the bucket's lines already chain to the measure", () => {
+    const first = '{"bucket":"rules","from":5739,"to":5900,"reason":"a"}\n';
+    const chain = `${first}{"bucket":"rules","from":5900,"to":6100,"reason":"b"}\n`;
+
+    const dir = contextTree(HERE, { [LEDGER]: chain });
+
+    expect(writeContext(dir, { reason: "r", write: true }, mainWith(MAIN))).toStrictEqual(wrote(0));
+    expect(read(dir, LEDGER)).toBe(chain);
+  });
+});
+
 describe("writeContext, no rise", () => {
   const cases = [
     ["a drop", mainWith({ ...HERE, rules: 9999 })],
