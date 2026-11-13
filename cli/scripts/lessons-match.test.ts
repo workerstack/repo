@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { git, lesson, repo, save } from "./__fixtures__/lessons-kit.ts";
@@ -22,21 +22,38 @@ it("breaks a tie of hits by file name", () => {
   expect(names(matchLessons({ files: ["src/a.ts"], workspaceRoot: ws }))).toStrictEqual(["a-one.md", "b-one.md"]);
 });
 
-it("skips an index row that does not have five cells", () => {
+it("finds a lesson in a checkout with no INDEX.md", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson());
-  const index = path.join(ws, LESSONS_DIR, "INDEX.md");
-  fs.chmodSync(index, 0o644);
-  fs.appendFileSync(index, "| .repo/lessons/short.md | src/** | 3 |\n");
+  fs.rmSync(path.join(ws, LESSONS_DIR, "INDEX.md"));
+  expect(matchLessons({ files: ["src/a.ts"], workspaceRoot: ws })).toMatchObject([
+    { paths: ["src/**"], title: "Plan rewrites fork serials" },
+  ]);
+});
+
+it("finds a lesson a Windows checkout turned to CRLF", () => {
+  const ws = repo();
+  save(ws, "plan-forks", lesson());
+  const file = path.join(ws, LESSONS_DIR, "plan-forks.md");
+  fs.writeFileSync(file, fs.readFileSync(file, "utf8").replaceAll("\n", "\r\n"));
   expect(names(matchLessons({ files: ["src/a.ts"], workspaceRoot: ws }))).toStrictEqual(["plan-forks.md"]);
 });
 
+it("skips an invalid lesson and names it on stderr", () => {
+  const ws = repo();
+  save(ws, "plan-forks", lesson());
+  fs.writeFileSync(path.join(ws, LESSONS_DIR, "old-shape.md"), "no frontmatter\n");
+  const err = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+  expect(names(matchLessons({ files: ["src/a.ts"], workspaceRoot: ws }))).toStrictEqual(["plan-forks.md"]);
+  expect(err).toHaveBeenCalledWith(".repo/lessons/old-shape.md: invalid, run bun repo lessons check\n");
+  err.mockRestore();
+});
+
 // Windows cannot name a file with "|", and the glob must match one on disk.
-it.skipIf(process.platform === "win32")("reads a summary and glob that hold an escaped pipe", () => {
+it.skipIf(process.platform === "win32")("reads a glob that holds a pipe", () => {
   const ws = repo(["src/a|b.ts"]);
-  save(ws, "pipes", lesson({ name: "pipes", paths: ["src/a|b.ts"], summary: "Left | right." }));
-  const rows = matchLessons({ files: ["src/a|b.ts"], workspaceRoot: ws });
-  expect(rows).toMatchObject([{ paths: ["src/a|b.ts"], summary: "Left | right." }]);
+  save(ws, "pipes", lesson({ name: "pipes", paths: ["src/a|b.ts"] }));
+  expect(matchLessons({ files: ["src/a|b.ts"], workspaceRoot: ws })).toMatchObject([{ paths: ["src/a|b.ts"] }]);
 });
 
 function twoCheckouts(rootHits: number, worktreeHits: number) {

@@ -6,12 +6,10 @@ last-hit: 2026-11-09
 evidence: ["roadmap 1","plan 20"]
 ---
 
-# New hook events belong in hooks.jsonc, not the hooks-union overlay
-
-Claude worktree events written by `hooks-union.ts` broke `rulesync generate --check`.
+# Declare hook events in agents/hooks.jsonc, not the hooks-union overlay
 
 ## Mistake
-Plan 30 had `hooks-union.ts` add `WorktreeCreate`/`WorktreeRemove` to `.claude/settings.json` after rulesync ran. Rulesync replaces the whole `hooks` key from `agents/hooks.jsonc` on every generate, so the check reported the file as stale. A repo's own hook in `settings.json` never survives generate either, which made the plan's "keep a repo's own hook" branch dead code.
+Plan 30 had `hooks-union.ts` add worktree events to `.claude/settings.json` after generate. Generate replaces the whole `hooks` key from `agents/hooks.jsonc`, so the check reported the file as stale.
 
 ## Fix
-Declare repo's hooks in `agents/hooks.jsonc`: shared events under `hooks`, one harness's events under its block (`claudecode.hooks`, using camelCase names such as `worktreeCreate`). Keep `hooks-union.ts` to what the generator (`cli/sync/agents/render-hooks.ts`) cannot express, plus `checkUnion` needles. After any hook change, run `bun bin/repo.ts sync` and `cli/sync/golden.test.ts`.
+Put hooks in `agents/hooks.jsonc`: shared events under `hooks`, one harness's under its block (`claudecode.hooks`, camelCase). Keep `hooks-union.ts` for what `render-hooks.ts` cannot express. After a hook change run `bun bin/repo.ts sync` and `cli/sync/golden.test.ts`.

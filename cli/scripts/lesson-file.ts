@@ -16,16 +16,16 @@ import {
   H1_RE,
   FIX,
   H2_PREFIX,
-  HEADING_MARK,
   KEYS,
-  MAX_LINES,
+  MAX_FIX,
+  MAX_MISTAKE,
+  MAX_TITLE,
   MD_EXT,
   MISTAKE,
   NOT_FOUND,
   REGEX_SPECIAL_RE,
   SECTIONS,
   SLUG_RE,
-  TRAILING_NL_RE,
 } from "./lessons.constants.ts";
 import type { Frontmatter, Lesson, LessonBody, LessonFields, ParsedLesson } from "./lessons.types.ts";
 
@@ -75,21 +75,21 @@ function jsonList(raw: string): string[] | null {
   return tryJson(z.array(z.string()), raw) ?? null;
 }
 
-/** The `# ` title and the first plain line under it, with what is missing. */
-function headOf(lines: string[]): Pick<LessonBody, "errors" | "summary" | "title"> {
+/** The `# ` title, and what is wrong with it or with a plain line between it and the first `## `. */
+function headOf(lines: string[]): Pick<LessonBody, "errors" | "title"> {
   const errors: string[] = [];
   const h1Line = lines.find((l) => H1_RE.test(l));
 
   if (h1Line === undefined) errors.push("start the body with a # title line");
   const h1 = h1Line === undefined ? NOT_FOUND : lines.indexOf(h1Line);
   const title = h1Line?.slice(H1_PREFIX.length).trim() ?? "";
-  const summary = (lines.slice(h1 + 1).find((l) => l.trim() !== "" && !l.startsWith(HEADING_MARK)) ?? "").trim();
   const firstH2 = lines.findIndex((l) => l.startsWith(H2_PREFIX));
+  const between = lines.slice(h1 + 1, firstH2 === NOT_FOUND ? undefined : firstH2);
 
-  if (summary === "" || (firstH2 !== NOT_FOUND && lines.indexOf(summary) > firstH2))
-    errors.push("put a one-line summary under the # title");
+  if (h1Line !== undefined && between.some((l) => l.trim() !== ""))
+    errors.push("drop the line under the # title; put its point in the title or ## Mistake");
 
-  return { errors, summary, title };
+  return { errors, title };
 }
 
 /** The trimmed text between the heading at line `at` and line `end`. */
@@ -112,7 +112,7 @@ function sectionsOf(lines: string[]) {
   };
 }
 
-/** Split the body into title, summary, and the Mistake/Fix sections. */
+/** Split the body into the title and the Mistake/Fix sections. */
 function readBody(body: string): LessonBody {
   const lines = body.split("\n");
   const head = headOf(lines);
@@ -129,7 +129,14 @@ function readBody(body: string): LessonBody {
   const fix = sections.get(FIX) ?? "";
   const mistake = sections.get(MISTAKE) ?? "";
 
-  return { errors, fix, mistake, summary: head.summary, title: head.title };
+  for (const [what, text, cap, advice] of [
+    ["title", head.title, MAX_TITLE, "state the rule shorter"],
+    [`## ${MISTAKE}`, mistake, MAX_MISTAKE, "keep only what went wrong"],
+    [`## ${FIX}`, fix, MAX_FIX, "keep only what to do"],
+  ] as const)
+    if (text.length > cap) errors.push(`${what} is ${text.length} chars; the cap is ${cap}, so ${advice}`);
+
+  return { errors, fix, mistake, title: head.title };
 }
 
 function readFields(map: Record<string, string>): LessonFields {
@@ -171,7 +178,7 @@ export function parseLesson(text: string, { defaults }: { defaults?: Record<stri
   const { evidence, paths } = fields;
 
   if (errors.length > 0 || paths === null || evidence === null) return { errors, ok: false };
-  const { fix, mistake, summary, title } = body;
+  const { fix, mistake, title } = body;
 
   return {
     lesson: {
@@ -182,7 +189,6 @@ export function parseLesson(text: string, { defaults }: { defaults?: Record<stri
       mistake,
       name: fields.name,
       paths,
-      summary,
       title,
     },
     ok: true,
@@ -200,8 +206,6 @@ evidence: ${JSON.stringify(l.evidence)}
 
 # ${l.title}
 
-${l.summary}
-
 ## Mistake
 ${l.mistake}
 
@@ -212,16 +216,10 @@ ${l.fix}
 
 /** What is wrong with lesson `filename` holding `text`; with `files`, each glob must match one of them. */
 export function validateLesson(filename: string, text: string, { files }: { files?: string[] } = {}): string[] {
-  const lineCount = text.replace(TRAILING_NL_RE, "").split("\n").length;
-
-  const errors: string[] =
-    lineCount > MAX_LINES
-      ? [`lesson is ${lineCount} lines; the cap is ${MAX_LINES} lines, so cut it or split the mistake`]
-      : [];
-
+  const errors: string[] = [];
   const parsed = parseLesson(text);
 
-  if (!parsed.ok) return [...errors, ...parsed.errors];
+  if (!parsed.ok) return parsed.errors;
   const slug = path.basename(filename, MD_EXT);
 
   if (parsed.lesson.name !== slug) errors.push(`name ${parsed.lesson.name} must match the filename ${slug}`);

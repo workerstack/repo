@@ -42,7 +42,7 @@ it("validates a lesson text without a file list", () => {
 
 it("renders an empty index and reports no problems for a checkout without lessons", () => {
   const ws = repo();
-  expect(renderLessonsIndex(ws)).toContain("| lesson | paths | hits | last-hit | summary |");
+  expect(renderLessonsIndex(ws)).toContain("\n# Lessons\n");
   expect(lessonProblems(ws)).toStrictEqual([]);
 });
 
@@ -54,16 +54,61 @@ it("skips a lesson file that does not parse when it indexes", () => {
   expect(indexText(ws)).not.toContain("broken.md");
 });
 
-it("sorts rows of equal hits by file name", () => {
+it("lists one line per lesson, most hits first, then by file name", () => {
   const ws = repo();
   save(ws, "b-one", lesson({ name: "b-one" }));
   save(ws, "a-one", lesson({ name: "a-one" }));
+  save(ws, "top", lesson({ hits: 6, name: "top" }));
 
-  const rows = indexText(ws)
-    .split("\n")
-    .filter((l) => l.startsWith("| .repo"));
+  expect(
+    indexText(ws)
+      .split("\n")
+      .filter((l) => l.startsWith("- ")),
+  ).toStrictEqual([
+    "- `top` (hits 6): Plan rewrites fork serials",
+    "- `a-one` (hits 1): Plan rewrites fork serials",
+    "- `b-one` (hits 1): Plan rewrites fork serials",
+  ]);
+  expect(indexText(ws)).toContain("\n# Lessons\n\n- `top`");
+});
 
-  expect(rows.map((l) => l.split(" | ")[0])).toStrictEqual(["| .repo/lessons/a-one.md", "| .repo/lessons/b-one.md"]);
+const BIG = "x".repeat(400);
+
+const BODY_HEAD = /# Plan[\s\S]*$/;
+
+/** The kit lesson with its body replaced; `mid` is a line left between the title and `## Mistake`. */
+function withBody({ title, mistake, fix, mid = "" }: { title: string; mistake: string; fix: string; mid?: string }) {
+  return lesson().replace(BODY_HEAD, `# ${title}\n\n${mid}## Mistake\n${mistake}\n\n## Fix\n${fix}\n`);
+}
+
+function errorsOf(text: string): string {
+  return validateLesson("plan-forks.md", text).join("; ");
+}
+
+it("refuses a title, Mistake or Fix over its cap, and a line under the title", () => {
+  const ok = { fix: "f", mistake: "m", title: "t" };
+
+  expect(errorsOf(withBody({ ...ok, title: "t".repeat(73) }))).toBe(
+    "title is 73 chars; the cap is 72, so state the rule shorter",
+  );
+
+  expect(errorsOf(withBody({ ...ok, mistake: BIG.slice(0, 281) }))).toBe(
+    "## Mistake is 281 chars; the cap is 280, so keep only what went wrong",
+  );
+
+  expect(errorsOf(withBody({ ...ok, fix: BIG.slice(0, 361) }))).toBe(
+    "## Fix is 361 chars; the cap is 360, so keep only what to do",
+  );
+
+  expect(errorsOf(withBody({ ...ok, mid: "A summary.\n\n" }))).toBe(
+    "drop the line under the # title; put its point in the title or ## Mistake",
+  );
+});
+
+it("accepts a title, Mistake and Fix exactly at their caps", () => {
+  const text = withBody({ fix: BIG.slice(0, 360), mistake: BIG.slice(0, 280), title: "t".repeat(72) });
+
+  expect(errorsOf(text)).toBe("");
 });
 
 it("denies a lesson file whose name is not a slug or not markdown", () => {

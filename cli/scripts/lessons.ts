@@ -22,7 +22,7 @@ function matchVerb(rest: string[], roots: Roots): number {
   if (rest.length === 0) return fail(USAGE);
 
   for (const r of matchLessons({ files: rest.map((f) => path.resolve(roots.cwd, f)), roots }))
-    process.stdout.write(`${r.file} (hits ${r.hits}): ${r.summary}\n`);
+    process.stdout.write(`${r.file} (hits ${r.hits}): ${r.title}\n`);
 
   return 0;
 }

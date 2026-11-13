@@ -3,7 +3,14 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { must, orchestrateKit, plantSource, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import {
+  must,
+  orchestrateKit,
+  plantLesson,
+  plantSource,
+  replyOf,
+  type HookOut,
+} from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_LESSON } from "./__fixtures__/persist-bodies.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 
@@ -39,7 +46,7 @@ it("hands a valid lesson to the host and regenerates the index", () => {
   expect(out.updatedInput.content).toMatch(/^hits: 1$/m);
   expect(fs.existsSync(path.join(ws, ".repo/lessons/plan-forks.md"))).toBe(false);
   expect(fs.readFileSync(path.join(ws, ".repo/lessons/INDEX.md"), "utf8")).toContain(
-    "| .repo/lessons/plan-forks.md | src/** | 1 |",
+    "- `plan-forks` (hits 1): Plan rewrites fork serials",
   );
 });
 
@@ -62,11 +69,11 @@ it("denies an Edit of a lesson and names the routes that work", () => {
 
 it("tells the session about a matching lesson once", () => {
   const ws = withSource();
-  saveLesson(ws);
+  plantLesson(ws);
   const edit = { file_path: path.join(ws, "src/a.ts"), new_string: "y", old_string: "x" };
   const first = must(pre(ws, { input: edit, tool: "Edit" }));
   expect(first.additionalContext).toContain(".repo/lessons/plan-forks.md");
-  expect(first.additionalContext).toContain("Rewriting a saved plan minted a new serial.");
+  expect(first.additionalContext).toContain("Plan rewrites fork serials");
   expect(pre(ws, write("src/a.ts", "z\n"))).toBeNull();
   expect(pre(ws, write("src/a.ts", "z\n"), "s2")?.additionalContext).toContain("plan-forks");
   expect(pre(ws, write("other.ts", "z\n"), "s3")).toBeNull();

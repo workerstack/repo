@@ -2,8 +2,10 @@
 export const LESSONS_DIR = ".repo/lessons";
 export const INDEX_NAME = "INDEX.md";
 
-/** A lesson file is at most this many lines. */
-export const MAX_LINES = 60;
+/** A lesson's title, `## Mistake` and `## Fix` hold at most this many characters each. */
+export const MAX_TITLE = 72;
+export const MAX_MISTAKE = 280;
+export const MAX_FIX = 360;
 
 /** A lesson keeps this many of its most recent evidence entries. */
 export const MAX_EVIDENCE = 5;
@@ -49,7 +51,6 @@ export const H2_PREFIX = "## ";
 export const MISTAKE = "Mistake";
 export const FIX = "Fix";
 export const SECTIONS: readonly string[] = [MISTAKE, FIX];
-export const HEADING_MARK = "#";
 
 /** Glob tokens, longest first, and the regex source each stands for; any other char is matched literally. */
 export const GLOB_TOKENS: readonly (readonly [string, string])[] = [
@@ -60,17 +61,3 @@ export const GLOB_TOKENS: readonly (readonly [string, string])[] = [
 ];
 
 export const REGEX_SPECIAL_RE: RegExp = /[.+^${}()|[\]\\]/g;
-export const TRAILING_NL_RE: RegExp = /\n$/;
-
-/** An index row: `| file | paths | hits | last-hit | summary |`. */
-export const ROW_PREFIX: string = `| ${LESSONS_DIR}/`;
-
-/** The `| ` before a row's first cell and the ` |` after its last. */
-export const ROW_EDGE = 2;
-export const CELL_SEP = " | ";
-export const INDEX_CELLS = 5;
-export const PATHS_SEP = ", ";
-export const ESCAPED_PIPE = "\\|";
-export const PIPE = "|";
-export const SPACES_RE: RegExp = /\s+/g;
-export const NUL = "\u0000";

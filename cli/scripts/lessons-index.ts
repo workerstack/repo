@@ -6,20 +6,7 @@ import { stamp } from "../sync/header.ts";
 import { OWNED_MODE } from "../sync/write.constants.ts";
 import { writeOwned } from "../sync/write.ts";
 import { parseLesson } from "./lesson-file.ts";
-import {
-  CELL_SEP,
-  ESCAPED_PIPE,
-  INDEX_CELLS,
-  INDEX_NAME,
-  LESSONS_DIR,
-  MD_EXT,
-  NUL,
-  PATHS_SEP,
-  PIPE,
-  ROW_EDGE,
-  ROW_PREFIX,
-  SPACES_RE,
-} from "./lessons.constants.ts";
+import { INDEX_NAME, LESSONS_DIR, MD_EXT } from "./lessons.constants.ts";
 import type { IndexInput, IndexRow } from "./lessons.types.ts";
 
 export function lessonsDir(ws: string): string {
@@ -45,69 +32,37 @@ export function byHitsThenFile(a: IndexRow, b: IndexRow): number {
   return diff === 0 || Number.isNaN(diff) ? a.file.localeCompare(b.file) : diff;
 }
 
-function cell(s: string): string {
-  return s.replaceAll(SPACES_RE, " ").replaceAll(PIPE, ESCAPED_PIPE);
-}
+/** The valid lessons as rows, and the repo-relative paths of the lesson files that do not parse. */
+export type LessonsRead = { invalid: string[]; rows: IndexRow[] };
 
-/** One row per valid lesson file, and per `pending` text the host is about to write. */
-function indexRows(ws: string, pending: Record<string, string> = {}): IndexRow[] {
+/** Read the lesson files under `ws`, and the `pending` texts the host is about to write. */
+export function readLessons(ws: string, pending: Record<string, string> = {}): LessonsRead {
   const names = [...new Set([...lessonFiles(ws), ...Object.keys(pending)])].toSorted();
+  const invalid: string[] = [];
+  const rows: IndexRow[] = [];
 
-  const rows = names.flatMap((name): IndexRow[] => {
+  for (const name of names) {
     const parsed = parseLesson(pending[name] ?? fs.readFileSync(path.join(lessonsDir(ws), name), "utf8"));
 
-    if (!parsed.ok) return [];
-    const l = parsed.lesson;
+    const file = `${LESSONS_DIR}/${name}`;
 
-    return [{ file: `${LESSONS_DIR}/${name}`, hits: l.hits, lastHit: l.lastHit, paths: l.paths, summary: l.summary }];
-  });
+    if (parsed.ok) {
+      const l = parsed.lesson;
+      rows.push({ file, hits: l.hits, lastHit: l.lastHit, paths: l.paths, title: l.title });
+    } else {
+      invalid.push(file);
+    }
+  }
 
-  return rows.toSorted(byHitsThenFile);
+  return { invalid, rows: rows.toSorted(byHitsThenFile) };
 }
 
 /** The index text, under sync's header line and a blank line, so every writer of it writes the same bytes. */
 function renderIndex(rows: IndexRow[]): string {
-  const body = rows.map(
-    (r) => `| ${r.file} | ${cell(r.paths.join(PATHS_SEP))} | ${r.hits} | ${r.lastHit} | ${cell(r.summary)} |`,
-  );
-
-  const text = [
-    "",
-    "# Lessons",
-    "",
-    "| lesson | paths | hits | last-hit | summary |",
-    "| --- | --- | --- | --- | --- |",
-    ...body,
-    "",
-  ].join("\n");
+  const body = rows.map((r) => `- \`${path.basename(r.file, MD_EXT)}\` (hits ${r.hits}): ${r.title}`);
+  const text = ["", "# Lessons", "", ...body, ""].join("\n");
 
   return stamp(`${LESSONS_DIR}/${INDEX_NAME}`, text);
-}
-
-/** The rows of an index text; a line that is not a five-cell lesson row is skipped. */
-export function parseIndex(text: string): IndexRow[] {
-  return text
-    .split("\n")
-    .filter((line) => line.startsWith(ROW_PREFIX))
-    .flatMap((line): IndexRow[] => {
-      const cells = line
-        .slice(ROW_EDGE, -ROW_EDGE)
-        .replaceAll(ESCAPED_PIPE, NUL)
-        .split(CELL_SEP)
-        .map((c) => c.replaceAll(NUL, PIPE));
-
-      if (cells.length !== INDEX_CELLS) return [];
-
-      const [file, pathsCell, hits, lastHit, summary] = cells /* five cells checked above */ as [
-        string,
-        string,
-        string,
-        string,
-        string,
-      ];
-
-      return [{ file, hits: Number(hits), lastHit, paths: pathsCell.split(PATHS_SEP).filter(Boolean), summary }];
-    });
 }
 
 /** Whether the index was written, and where. */
@@ -120,7 +75,7 @@ export type IndexWritten = { ok: boolean; path: string };
 export function writeIndex({ workspaceRoot: ws, pending }: IndexInput): IndexWritten {
   const dir = lessonsDir(ws);
   fs.mkdirSync(dir, { recursive: true });
-  const text = renderIndex(indexRows(ws, pending));
+  const text = renderIndex(readLessons(ws, pending).rows);
   const dest = path.join(dir, INDEX_NAME);
   const error = writeOwned(dest, text, OWNED_MODE);
 
@@ -131,5 +86,5 @@ export function writeIndex({ workspaceRoot: ws, pending }: IndexInput): IndexWri
 
 /** The text of the lessons index for the lesson files under `ws`. */
 export function renderLessonsIndex(ws: string): string {
-  return renderIndex(indexRows(ws));
+  return renderIndex(readLessons(ws).rows);
 }

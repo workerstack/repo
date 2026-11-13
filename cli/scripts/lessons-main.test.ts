@@ -37,7 +37,7 @@ it("prints the lessons that match the files named", () => {
   const ws = repo();
   save(ws, "plan-forks", lesson({ hits: 2 }));
   expect(run(ws, ["match", "src/a.ts"])).toBe(0);
-  expect(out).toStrictEqual([".repo/lessons/plan-forks.md (hits 2): Rewriting a saved plan minted a new serial.\n"]);
+  expect(out).toStrictEqual([".repo/lessons/plan-forks.md (hits 2): Plan rewrites fork serials\n"]);
 });
 
 it("prints nothing for a file no lesson covers", () => {
@@ -74,7 +74,7 @@ it("rewrites the index", () => {
   fs.chmodSync(path.join(ws, LESSONS_DIR, "INDEX.md"), 0o644);
   fs.writeFileSync(path.join(ws, LESSONS_DIR, "INDEX.md"), "stale\n");
   expect(run(ws, ["index"])).toBe(0);
-  expect(indexText(ws)).toContain("plan-forks.md");
+  expect(indexText(ws)).toContain("`plan-forks`");
 });
 
 it("refuses to rewrite the index in a committed main checkout", () => {
