@@ -1,3 +1,5 @@
+import { REPO, STATE } from "../repo-dirs.ts";
+
 /** What `repo eval` prints and exits with. */
 export const EVAL_SUMMARY = "Score a model on evals/<name> cases; prints a cost estimate and refuses over a cap";
 
@@ -12,3 +14,8 @@ export const DEFAULT_CAP = 1;
 export const EXIT_OK = 0;
 export const EXIT_FAILED = 1;
 export const EXIT_USAGE = 4;
+
+/** The main checkout's folder for eval state, and its cache and run-summary subfolders. */
+export const EVALS_DIR: string = `${REPO}/${STATE}/evals`;
+export const CACHE_DIR = "cache";
+export const RUNS_DIR = "runs";

@@ -2316,7 +2316,7 @@
   "cli/scripts/__fixtures__/ci-run.ts": ["86bc194b217de9bd"],
   "cli/scripts/__fixtures__/ci-wait-world.ts": ["aa327120f18ac604", "b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
-  "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98", "fbc9c5c71d216353"],
+  "cli/scripts/__fixtures__/clean-kit.ts": ["c27646e175908c01", "eb5bc9b085d09b98", "fbc9c5c71d216353"],
   "cli/scripts/__fixtures__/doctor-kit.ts": ["2e695712107f399c", "9c6a7f1bfedb9efb", "e642ba74423b1c39"],
   "cli/scripts/__fixtures__/doctor-models-kit.ts": ["ad894596b777bd53"],
   "cli/scripts/__fixtures__/doctor-workspace-kit.ts": ["d602f5b244feed86", "e698f5aae3f17b19"],
@@ -3141,6 +3141,7 @@
     "76f573771fd1f795",
     "843c2290ece5ee5c",
     "bb52d27d62fe487d",
+    "d0c7b119ffd20654",
     "d991e71c6388b158"
   ],
   "cli/scripts/clean-run.ts": [
@@ -3167,11 +3168,13 @@
     "398d2d3bd0b58474",
     "45dc1a5a9cfab839",
     "a5796d8065a8c793",
-    "e16af6180aa7a0e8"
+    "e16af6180aa7a0e8",
+    "f6615107c72ae119"
   ],
   "cli/scripts/clean.constants.ts": [
     "02d734ca4539af59",
     "3c191042192fa44c",
+    "86ac7fdac67ab50b",
     "b3be7dc4a6ffbac0",
     "c8c8b3b1b1b1b172",
     "d1cafa66d4ad453d",
@@ -3587,9 +3590,9 @@
   "cli/scripts/env-values.ts": ["29f7583da417fbf3", "51e6418d29d80288"],
   "cli/scripts/eol.test.ts": ["0a1b1c7d25ebbb0f", "4bb280aeb71171fb", "4e6e8c22ccc74117", "ba19f6bfbc899f4e"],
   "cli/scripts/eval-args.ts": ["5ce041381ff360a8"],
-  "cli/scripts/eval.constants.ts": ["ffc8d6a0f97ecf02"],
-  "cli/scripts/eval.test.ts": ["cd1d881254501443"],
-  "cli/scripts/eval.ts": ["b436f0760df575c8"],
+  "cli/scripts/eval.constants.ts": ["32c5ae825de134a3", "ffc8d6a0f97ecf02"],
+  "cli/scripts/eval.test.ts": ["0d84533fe1fd3369", "cd1d881254501443"],
+  "cli/scripts/eval.ts": ["ac165fdc280ec38e", "b436f0760df575c8"],
   "cli/scripts/first-non-empty.test.ts": ["3d09b826fbcec1df"],
   "cli/scripts/first-non-empty.ts": ["c1659547d42f31f1"],
   "cli/scripts/fix-passes.test.ts": ["48d81eab9bf3a5ac", "a7a67dd548c1aa1a"],

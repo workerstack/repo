@@ -1,13 +1,47 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
-import { expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { estimate } from "../eval/estimate.ts";
+import { dollars, estimate } from "../eval/estimate.ts";
 import { loadEval } from "../eval/load.ts";
 import { main, type EvalDeps } from "./eval.ts";
 
 const ROOT = path.join(import.meta.dirname, "..", "eval", "__fixtures__");
 const MESSAGE = { content: [{ text: "yes", type: "text" }], usage: { input_tokens: 100, output_tokens: 200 } };
+const NOW = new Date("2026-11-13T10:15:00.123Z");
+const SUMMARY_LINE = /^summary (?<file>\/.+-20261113T101500123Z-[0-9a-f]{4}\.json)$/m;
+
+let stateDir = "";
+
+beforeEach(() => {
+  stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "eval-state-"));
+});
+
+afterEach(() => {
+  fs.rmSync(stateDir, { force: true, recursive: true });
+});
+
+/** The summary files the runs so far left in the state dir. */
+function summaries(): string[] {
+  const runs = path.join(stateDir, "runs");
+
+  return fs.existsSync(runs) ? fs.readdirSync(runs) : [];
+}
+
+/** The parsed summary file a run's stdout names. */
+function summaryOf(out: string): { end: { kind: string; message?: string }; cached: number; calls: number } {
+  const file = SUMMARY_LINE.exec(out)?.groups?.file ?? "";
+
+  // The summary is JSON this command wrote; the test reads back the fields it asserts.
+  return JSON.parse(fs.readFileSync(file, "utf8")) /* written by writeSummary */ as ReturnType<typeof summaryOf>;
+}
+
+/** The API answering `yes` with fixed usage. */
+function answer(): Promise<Response> {
+  return Promise.resolve(new Response(JSON.stringify(MESSAGE)));
+}
 
 /** Runs `repo eval argv` against the fixtures; the key reads and the fetch calls are counted. */
 async function run(argv: string[], deps: EvalDeps = {}) {
@@ -18,7 +52,7 @@ async function run(argv: string[], deps: EvalDeps = {}) {
   function fetchFn(): Promise<Response> {
     state.fetches += 1;
 
-    return Promise.resolve(new Response(JSON.stringify(MESSAGE)));
+    return answer();
   }
 
   const code = await main(argv, {
@@ -30,7 +64,9 @@ async function run(argv: string[], deps: EvalDeps = {}) {
       },
     },
     fetchFn,
+    now: () => NOW,
     root: ROOT,
+    state: stateDir,
     stderr: (s) => err.push(s),
     stdout: (s) => out.push(s),
     ...deps,
@@ -43,7 +79,7 @@ async function worst() {
   const loaded = await loadEval(ROOT, "sample");
 
   if (!loaded.ok) throw new Error(loaded.message);
-  const found = estimate("sample", loaded.spec, 1);
+  const found = estimate("sample", loaded.spec, { cap: 1 });
 
   if (!found.ok) throw new Error(found.message);
 
@@ -86,7 +122,75 @@ it("runs the cases and prints pass or fail per case, controls marked, then the s
   expect(got).toMatchObject({ code: 0, err: "", fetches: 6 });
   const found = await worst();
 
-  expect(got.out).toBe(`${found.text}\npass yes\nfail no (control)\nspent $0.0007 of $1.00\n`);
+  const file = SUMMARY_LINE.exec(got.out)?.groups?.file ?? "";
+
+  expect(got.out).toBe(`${found.text}\npass yes\nfail no (control)\nspent $0.0007 of $1.00\nsummary ${file}\n`);
+  expect(path.isAbsolute(file)).toBe(true);
+  expect(summaryOf(got.out)).toMatchObject({ cached: 0, calls: 6, end: { kind: "done" } });
+});
+
+it("answers a rerun of unchanged text from the cache for $0", async () => {
+  await run(["sample"]);
+  const again = await run(["sample"]);
+  const head = "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5, 6 cached, at most $0.0000 (cap $1.00)";
+
+  expect(again).toMatchObject({ code: 0, err: "", fetches: 0 });
+  expect(again.out).toContain(`${head}\npass yes\nfail no (control)\nspent $0.0000 of $1.00, 6 of 6 calls cached\n`);
+  expect(summaryOf(again.out)).toMatchObject({ cached: 6, calls: 0, end: { kind: "done" } });
+  expect(summaries()).toHaveLength(2);
+});
+
+it("counts cached calls on a dry run and writes no summary", async () => {
+  await run(["sample"]);
+  const dry = await run(["sample", "--dry-run"]);
+
+  expect(dry).toMatchObject({ code: 0, fetches: 0, keyReads: 0 });
+  expect(dry.out).toContain(", 6 cached, at most $0.0000");
+  expect(summaries()).toHaveLength(1);
+});
+
+it("stops before the next case once real spend leaves no room for its bound", async () => {
+  const found = await worst();
+  let billed = 0;
+
+  /** Bills far more input tokens than the bytes bound allows, as a wrong estimate would. */
+  function overBilled(): Promise<Response> {
+    billed += 1;
+    const usage = { input_tokens: 100_000, output_tokens: 200 };
+
+    return Promise.resolve(new Response(JSON.stringify({ ...MESSAGE, usage })));
+  }
+
+  const got = await run(["sample", "--max-cost", String(found.cost)], { fetchFn: overBilled });
+
+  const stop = [
+    `eval sample: stopped at the cap ${dollars(found.cost)} after 1 of 2 cases`,
+    "raise it with --max-cost <usd>\n",
+  ].join("; ");
+
+  expect(got).toMatchObject({ code: 1, err: stop });
+  expect(billed).toBe(3);
+  expect(got.out).toMatch(/\npass yes\nspent \$0\.0303 of \$0\.\d{4}\nsummary \//);
+  expect(summaryOf(got.out).end).toStrictEqual({ kind: "stopped" });
+});
+
+it("reads the main checkout's cache by default on a dry run", async () => {
+  const out: string[] = [];
+  const code = await main(["sample", "--dry-run"], { root: ROOT, stdout: (s) => out.push(s) });
+
+  expect(code).toBe(0);
+  expect(out.join("")).toContain("eval sample: 2 cases x 3 samples");
+});
+
+it("stamps the summary with the real clock by default", async () => {
+  const out: string[] = [];
+  const deps = { env: { ANTHROPIC_API_KEY: "key" }, fetchFn: answer, root: ROOT, state: stateDir };
+  const code = await main(["sample"], { ...deps, stdout: (s) => out.push(s) });
+
+  expect(code).toBe(0);
+  expect(summaries()[0]).toMatch(
+    new RegExp(`^sample-${new Date().getUTCFullYear()}\\d{4}T\\d{9}Z-[0-9a-f]{4}\\.json$`, "v"),
+  );
 });
 
 it("accepts --max-cost before the name", async () => {
@@ -152,4 +256,6 @@ it("exits 1 with the API's message when a call fails", async () => {
 
   expect(got).toMatchObject({ code: 1 });
   expect(got.err).toBe("eval: API error 401: bad key\n");
+  expect(got.out).toMatch(/\nspent \$0\.0000 of \$1\.00\nsummary \//);
+  expect(summaryOf(got.out).end).toStrictEqual({ kind: "failed", message: "eval: API error 401: bad key" });
 });
