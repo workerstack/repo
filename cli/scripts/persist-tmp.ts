@@ -51,7 +51,7 @@ export function isUnderRepoDir(
 export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: string | null | undefined): boolean {
   if (isBlank(filePath) || isBlank(workspaceRoot)) return false;
   const abs = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(workspaceRoot, filePath);
-  const root = repoPath(workspaceRoot, SCRATCH);
+  const root = path.resolve(repoPath(workspaceRoot, SCRATCH));
 
   return path.dirname(abs) === root;
 }

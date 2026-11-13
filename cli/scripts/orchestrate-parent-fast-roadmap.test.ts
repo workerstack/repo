@@ -73,7 +73,7 @@ function moved(roadmap: string, status: string, location?: string) {
 
 it("saves a fast roadmap under roadmaps-fast with no strategy or reviews key, and Stop asks for the fast block", () => {
   const { roadmap, s, ws } = oneRoadmap("r1");
-  expect(path.relative(ws, roadmap)).toMatch(/^\.repo\/roadmaps-fast\/1-tidy-ignores-\d{8}T\d{6}Z\.md$/);
+  expect(path.relative(ws, roadmap)).toMatch(/^\.repo[\\/]roadmaps-fast[\\/]1-tidy-ignores-\d{8}T\d{6}Z\.md$/);
   expect(read(roadmap)).not.toMatch(/^(reviews|strategy):/m);
   const block = closing(fastRoadmapItem(1));
   expect(block).toBe("```\nfast-roadmap 1\n  i  implement\n  h  hand off\n     or reply to revise\n```");

@@ -103,7 +103,7 @@ describe("fast plan serials and paths", () => {
   });
 
   it("saves under a root whose name holds Windows separators and returns a posix path", () => {
-    const ws = path.join(tmpWs(), "C:\\Users\\me\\repo");
+    const ws = process.platform === "win32" ? tmpWs() : path.join(tmpWs(), "C:\\Users\\me\\repo");
     fs.mkdirSync(ws, { recursive: true });
     const r = save(SENT, ws);
     expect(r.ok, r.error).toBe(true);

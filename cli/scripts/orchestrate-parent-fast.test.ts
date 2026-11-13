@@ -65,7 +65,7 @@ function theHandoff(ws: string) {
 
 it("saves a fast plan under plans-fast with no strategy or reviews key, and Stop asks for the fast block", () => {
   const { fast, s, ws } = oneFast("f1");
-  expect(path.relative(ws, fast)).toMatch(/^\.repo\/plans-fast\/1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
+  expect(path.relative(ws, fast)).toMatch(/^\.repo[\\/]plans-fast[\\/]1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
   expect(read(fast)).not.toMatch(/^(reviews|strategy):/m);
   const block = closing(fastItem(1));
   expect(block).toBe("```\nfast-plan 1\n  i  implement\n  h  hand off\n     or reply to revise\n```");
