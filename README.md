@@ -684,8 +684,10 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 Per branch, only the newest landed sha counts. The parent's Stop blocks while that sha has no terminal record in `.repo/tmp/ci/<sha>.json` (written by `bun repo ci wait`): `passed`, `nothing` and `error` settle it, and so do three `failed` records of this session's pushes on the branch sharing a job. Another session's records do not count. The record lives under the main checkout's `.repo/tmp/ci/`, so a push from a worktree and a wait from the root meet. The three lines:
 
 - ``Stop: you pushed <sha> to <branch> and its ci run has no result; run `bun repo ci wait <branch>` in the background and fix it if it fails``
-- ``Stop: ci failed on <sha> on <branch> (<job>); fix it in a new worktree, push, and run `bun repo ci wait <branch>` in the background``
+- ``Stop: ci failed on <sha> on <branch> (<job>); fix it in a new worktree, push, and run `bun repo ci wait <branch>` in the background; if only the user can fix a job, run bun repo backlog add 'blocked: `<job>` <why>' and name that line in your reply``
 - ``Stop: <job> failed 3 times on <branch> this session; report the failure and its logs to the user, then stop``
+
+A job only the user can fix is marked in the main checkout's `.repo/backlog.md` with an open line from column 0, ``- [ ] blocked: `<job>` <why>`` (or `- [-]`), which `bun repo backlog add 'blocked: `<job>` <why>'` writes. Each line names one job, with its exact name from the run; an indented line, a `*` bullet and a backlog in a worktree do not count. A failed run whose jobs are all blocked lets the Stop go on; otherwise the failed line names only the jobs that are not blocked, and blocked jobs do not count toward three failures. A failed run with no job names is never released. Ticking the line `[x]` re-arms the gate.
 
 The gate runs for the parent before the ask and away checks and before the `stopHookActive` pass. It has its own `push-block` stamp, capped at 6 blocks a turn and cleared on the next prompt beside `stop-block`; it is independent of the `stop-block` cap of 3, which ask and away share. A subagent's Stop is unchanged (`interceptNeed`); its pushes settle at the parent's Stop.
 

@@ -10,7 +10,8 @@ import { z } from "zod";
 import { isString, type JsonObject, tryJson } from "../json.ts";
 import { REPO, STATE } from "../repo-dirs.ts";
 import { repoEnv } from "../repo-env.ts";
-import { DECIMAL } from "./ci-push-parse.constants.ts";
+import { BACKLOG_REL } from "./backlog.constants.ts";
+import { BLOCKED_LINE_RE, DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
 import { recordPath, recordRoot, recordSchema, type WaitRecord } from "./ci-wait-record.ts";
 import { spawnRunner, type Runner } from "./ci-wait-run.ts";
@@ -26,6 +27,12 @@ const SESSIONS_DIR = `${REPO}/${STATE}/sessions`;
 const PUSHED_FILE = "pushed.json";
 const FAILED_ROUNDS = 3;
 const TERMINAL: readonly string[] = ["passed", "nothing", "error"];
+
+const BLOCKED_HINT =
+  "; if only the user can fix a job, run bun repo backlog add 'blocked: `<job>` <why>' " +
+  "and name that line in your reply";
+
+type LineCtx = { root: string; active: boolean; blocked: ReadonlySet<string> };
 
 /** What the gate reads, writes and asks; the real ones by default. */
 export type GateDeps = {
@@ -128,21 +135,33 @@ function readRecord(deps: GateDeps, root: string, sha: string): WaitRecord | nul
   }
 }
 
-/** The jobs that failed in three or more of the branch's pushed commits. */
-function repeatedJobs(deps: GateDeps, root: string, pushed: Pushed[]): string[] {
+/** The jobs open `blocked:` lines in the root's backlog name; none when it is missing or unreadable. */
+function blockedJobs(deps: GateDeps, root: string): ReadonlySet<string> {
+  try {
+    const text = deps.fs.readFileSync(path.join(root, BACKLOG_REL), "utf8");
+
+    return new Set(Array.from(text.matchAll(BLOCKED_LINE_RE), (m) => String(m[1])));
+  } catch {
+    return new Set();
+  }
+}
+
+/** The jobs not blocked that failed in three or more of the branch's pushed commits. */
+function repeatedJobs(deps: GateDeps, ctx: LineCtx, pushed: Pushed[]): string[] {
   const counts = new Map<string, number>();
 
   for (const sha of new Set(pushed.map((p) => p.sha))) {
-    const record = readRecord(deps, root, sha);
+    const record = readRecord(deps, ctx.root, sha);
+    const failed = record?.outcome === "failed" ? record.failed : [];
 
-    for (const job of record?.outcome === "failed" ? record.failed : []) counts.set(job, (counts.get(job) ?? 0) + 1);
+    for (const job of failed.filter((j) => !ctx.blocked.has(j))) counts.set(job, (counts.get(job) ?? 0) + 1);
   }
 
   return [...counts].filter(([, n]) => n >= FAILED_ROUNDS).map(([job]) => job);
 }
 
 /** The Stop line for one branch's pushes, or null when its newest landed commit is settled. */
-function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed: Pushed[]): string | null {
+function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Pushed[]): string | null {
   const branch = String(pushed[0]?.branch);
 
   const landed = pushed.filter(
@@ -165,19 +184,32 @@ function lineFor(deps: GateDeps, ctx: { root: string; active: boolean }, pushed:
     );
   }
 
-  const repeated = repeatedJobs(deps, ctx.root, pushed);
+  return failedLine(deps, ctx, { branch, failed: record.failed, pushed, short, wait });
+}
+
+/** The Stop line for a branch whose newest landed commit failed `failed`; null when every job is blocked. */
+function failedLine(
+  deps: GateDeps,
+  ctx: LineCtx,
+  run: { branch: string; failed: string[]; pushed: Pushed[]; short: string; wait: string },
+): string | null {
+  const open = run.failed.filter((job) => !ctx.blocked.has(job));
+
+  // An empty list says nothing about which jobs failed, so it is never released.
+  if (run.failed.length > 0 && open.length === 0) return null;
+  const repeated = repeatedJobs(deps, ctx, run.pushed);
 
   if (repeated.length > 0) {
     const report =
-      `Stop: ${repeated.join(", ")} failed ${FAILED_ROUNDS} times on ${branch} this session; ` +
+      `Stop: ${repeated.join(", ")} failed ${FAILED_ROUNDS} times on ${run.branch} this session; ` +
       "report the failure and its logs to the user, then stop";
 
     return ctx.active ? null : report;
   }
 
   return (
-    `Stop: ci failed on ${short} on ${branch} (${record.failed.join(", ")}); ` +
-    `fix it in a new worktree, push, and run ${wait} in the background`
+    `Stop: ci failed on ${run.short} on ${run.branch} (${open.join(", ")}); ` +
+    `fix it in a new worktree, push, and run ${run.wait} in the background${BLOCKED_HINT}`
   );
 }
 
@@ -203,7 +235,8 @@ export function pushStopBlock(
   const root = recordRoot(deps.git, input.cwd);
   const pushed = loadPushed(deps, sessionFile(root, input.session));
   const byBranch = Map.groupBy(pushed, (p) => p.branch);
-  const lines = [...byBranch.values()].flatMap((rows) => lineFor(deps, { active: input.active, root }, rows) ?? []);
+  const ctx = { active: input.active, blocked: blockedJobs(deps, root), root };
+  const lines = [...byBranch.values()].flatMap((rows) => lineFor(deps, ctx, rows) ?? []);
   const stamp = path.join(input.root, LOGS_DIR, `${PUSH_BLOCK_STAMP}-${input.session}`);
   const n = readCount(deps, stamp);
 
