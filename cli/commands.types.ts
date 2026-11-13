@@ -26,6 +26,7 @@ export type CommandName =
   | "backlog"
   | "bench"
   | "browser"
+  | "changelog"
   | "google-workspace"
   | "jev"
   | "listen"

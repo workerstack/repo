@@ -16,15 +16,21 @@ export function changelogProblems(kind: Kind, staged: readonly string[], owners:
   if (!kind.breaking && !USER_FACING.includes(kind.type)) return [];
   const what = kind.breaking ? "a breaking change" : `a ${kind.type}`;
 
-  const dirs = new Set(
-    staged
-      .map(owners)
-      .filter((owner) => owner.public)
-      .map((owner) => owner.dir),
-  );
+  const dirs = [
+    ...new Set(
+      staged
+        .map(owners)
+        .filter((owner) => owner.public)
+        .map((owner) => owner.dir),
+    ),
+  ];
 
-  return [...dirs]
-    .map((dir) => (dir === "." ? CHANGELOG : `${dir}/${CHANGELOG}`))
-    .filter((file) => !staged.includes(file))
-    .map((file) => `${what} changes what users see; add an entry under ## [Unreleased] in ${file} and stage it`);
+  return dirs
+    .map((dir) => ({ dir, file: dir === "." ? CHANGELOG : `${dir}/${CHANGELOG}` }))
+    .filter(({ file }) => !staged.includes(file))
+    .map(({ dir, file }) => {
+      const flag = dirs.length > 1 ? ` --dir ${dir}` : "";
+
+      return `${what} changes what users see; run bun repo changelog add <section> "<text>"${flag} for ${file}`;
+    });
 }

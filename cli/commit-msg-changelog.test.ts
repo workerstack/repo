@@ -20,10 +20,15 @@ const MONO = {
   "packages/pub/package.json": { name: "pub" },
 };
 
-function refusal(what: string, file = "CHANGELOG.md") {
-  const add = `add an entry under ## [Unreleased] in ${file} and stage it`;
+/** One refusal line; `dir` is the `--dir` the line carries, which it does only when several packages are staged. */
+function line(what: string, file = "CHANGELOG.md", dir?: string) {
+  const flag = dir === undefined ? "" : ` --dir ${dir}`;
 
-  return `commit-msg: the message was refused\n  - ${what} changes what users see; ${add}\n`;
+  return `  - ${what} changes what users see; run bun repo changelog add <section> "<text>"${flag} for ${file}\n`;
+}
+
+function refusal(what: string, file = "CHANGELOG.md") {
+  return `commit-msg: the message was refused\n${line(what, file)}`;
 }
 
 function redProof() {
@@ -73,6 +78,26 @@ describe("the commit-msg hook asks for a changelog entry", () => {
     stage(root, { "packages/pub/x.test.ts": "t\n", "packages/pub/x.ts": "x\n" });
     const got = await hook(root, "feat(pub): add x\n");
     expect(got).toStrictEqual({ code: 1, stderr: refusal("a feat", "packages/pub/CHANGELOG.md") });
+  });
+});
+
+describe("the commit-msg hook names --dir when several packages are staged", () => {
+  it("one line per package, each with its --dir", async () => {
+    const root = plant({ ...PLAIN, ...MONO, "package.json": { name: "mono", workspaces: ["packages/*"] } });
+    stage(root, { "packages/pub/x.test.ts": "t\n", "packages/pub/x.ts": "x\n", ...SRC });
+    const got = await hook(root, "fix: handle x\n");
+    expect(got.code).toBe(1);
+    const pub = line("a fix", "packages/pub/CHANGELOG.md", "packages/pub");
+    expect(got.stderr).toBe(`commit-msg: the message was refused\n${pub}${line("a fix", "CHANGELOG.md", ".")}`);
+  });
+
+  it("keeps --dir on the one line left, since the staged files still span two packages", async () => {
+    const root = plant({ ...PLAIN, ...MONO, "package.json": { name: "mono", workspaces: ["packages/*"] } });
+    stage(root, { "CHANGELOG.md": "# C\n", "packages/pub/x.test.ts": "t\n", "packages/pub/x.ts": "x\n", ...SRC });
+    const got = await hook(root, "fix: handle x\n");
+    expect(got.stderr).toBe(
+      `commit-msg: the message was refused\n${line("a fix", "packages/pub/CHANGELOG.md", "packages/pub")}`,
+    );
   });
 });
 
