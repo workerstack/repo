@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { changelogFormatProblems, hasUnreleased, stampChangelog } from "./changelog.ts";
+import { changelogFormatProblems, hasUnreleased, insertEntry, stampChangelog } from "./changelog.ts";
 
 const HEAD = "# Changelog\n\nAll notable changes.\n\n";
 
@@ -162,5 +162,80 @@ describe("stampChangelog edge cases", () => {
 
   it("adds Unreleased when the file has none", () => {
     expect(stampChangelog(HEAD, "0.1.0", "2026-11-09")).toBe(`${HEAD}## [Unreleased]\n\n## [0.1.0] - 2026-11-09\n`);
+  });
+});
+
+/** The text `insertEntry` gives back for a changelog with an Unreleased section. */
+function added(text: string, section: string, entry: string): string {
+  return insertEntry(text, section, entry)?.text ?? "";
+}
+
+const OLDER = "## [0.1.0] - 2026-10-01\n\n### Added\n\n- old\n";
+const BASE = `${HEAD}## [Unreleased]\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n\n${OLDER}`;
+
+describe("changelogFormatProblems file name", () => {
+  it("names the file it was given", () => {
+    expect(changelogFormatProblems(null, "lib/CHANGELOG.md")).toStrictEqual([
+      "lib/CHANGELOG.md is missing; add one in the Keep a Changelog format",
+    ]);
+    expect(changelogFormatProblems(`${HEAD}${OLDER}`, "lib/CHANGELOG.md")).toStrictEqual([
+      "lib/CHANGELOG.md has no ## [Unreleased] section; add it above the newest version",
+    ]);
+    expect(changelogFormatProblems(`${HEAD}## [Unreleased]\n\n## [0.1.0]\n`, "lib/CHANGELOG.md")).toStrictEqual([
+      'lib/CHANGELOG.md:7: "## [0.1.0]" needs a date; write ## [0.1.0] - YYYY-MM-DD',
+    ]);
+  });
+});
+
+describe("insertEntry", () => {
+  it("adds the bullet after the last line of its group and changes nothing else", () => {
+    expect(added(BASE, "Added", "b")).toBe(BASE.replace("- a\n", "- a\n- b\n"));
+    expect(added(BASE, "Fixed", "g")).toBe(BASE.replace("- f\n", "- f\n- g\n"));
+    expect(added(BASE, "Added", "- b")).toBe(added(BASE, "Added", "b"));
+  });
+
+  it("puts a new group in Keep a Changelog order with one blank line around its heading", () => {
+    expect(added(BASE, "Changed", "c")).toBe(BASE.replace("### Fixed", "### Changed\n\n- c\n\n### Fixed"));
+    expect(added(BASE, "Security", "s")).toBe(BASE.replace("- f\n", "- f\n\n### Security\n\n- s\n"));
+  });
+});
+
+describe("insertEntry in a new place", () => {
+  it("puts a first group above a later one", () => {
+    const text = `${HEAD}## [Unreleased]\n\n### Fixed\n\n- f\n\n${OLDER}`;
+    expect(added(text, "Added", "a")).toBe(
+      `${HEAD}## [Unreleased]\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n\n${OLDER}`,
+    );
+  });
+
+  it("fills an Unreleased with no group, followed by a version or by the end of the file", () => {
+    expect(added(`${HEAD}## [Unreleased]\n\n${OLDER}`, "Added", "a")).toBe(
+      `${HEAD}## [Unreleased]\n\n### Added\n\n- a\n\n${OLDER}`,
+    );
+    expect(added(`${HEAD}## [Unreleased]\n`, "Added", "a")).toBe(`${HEAD}## [Unreleased]\n\n### Added\n\n- a\n`);
+  });
+
+  it("fills a heading that holds no entry yet", () => {
+    const text = `${HEAD}## [Unreleased]\n\n### Added\n\n### Fixed\n\n- f\n`;
+    expect(added(text, "Added", "a")).toBe(`${HEAD}## [Unreleased]\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n`);
+  });
+
+  it("keeps CRLF line endings, and a missing final newline", () => {
+    const crlf = BASE.replaceAll("\n", "\r\n");
+    expect(added(crlf, "Added", "b")).toBe(added(BASE, "Added", "b").replaceAll("\n", "\r\n"));
+    expect(added(BASE.trimEnd(), "Added", "b")).toBe(added(BASE, "Added", "b").trimEnd());
+  });
+});
+
+describe("insertEntry leaves alone", () => {
+  it("a ### inside a code fence, which is no group", () => {
+    const text = `${HEAD}## [Unreleased]\n\n\`\`\`md\n### Added\n\`\`\`\n\n### Fixed\n\n- f\n`;
+    expect(added(text, "Added", "a")).toBe(
+      `${HEAD}## [Unreleased]\n\n\`\`\`md\n### Added\n\`\`\`\n\n### Added\n\n- a\n\n### Fixed\n\n- f\n`,
+    );
+  });
+
+  it("gives nothing for a changelog with no Unreleased", () => {
+    expect(insertEntry(`${HEAD}${OLDER}`, "Added", "a")).toBeNull();
   });
 });

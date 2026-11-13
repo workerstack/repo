@@ -6,6 +6,7 @@ import {
   parseChangelog,
   trimBlank,
   unreleasedHasText,
+  type Heading,
   type Parsed,
   type Section,
 } from "./changelog-parse.ts";
@@ -20,17 +21,27 @@ import {
 } from "./release.constants.ts";
 import { parseSemver, type Parts } from "./version.ts";
 
+/** The refusal for a changelog that does not exist. */
+export function fileMissing(file: string): string {
+  return `${file} is missing; add one in the Keep a Changelog format`;
+}
+
+/** The refusal for a changelog with no Unreleased section. */
+export function noUnreleased(file: string): string {
+  return `${file} has no ## [${UNRELEASED}] section; add it above the newest version`;
+}
+
 /** Whether the file's Unreleased section holds any entry. */
 export function hasUnreleased(text: string): boolean {
   return unreleasedHasText(parseChangelog(text));
 }
 
 /** The versions listed so far, and the one listed last. */
-type Listed = { seen: Set<string>; previous: { version: string; parts: Parts } | null };
+type Listed = { file: string; seen: Set<string>; previous: { version: string; parts: Parts } | null };
 
 /** The problem with one `##` heading, given the versions listed above it. */
 function versionProblem(text: string, line: number, state: Listed): string | null {
-  const where = `${CHANGELOG_FILE}:${line}`;
+  const where = `${state.file}:${line}`;
   const version = VERSION_HEADING.exec(text)?.[1] ?? "";
 
   if (version === UNRELEASED) return null;
@@ -50,23 +61,25 @@ function versionProblem(text: string, line: number, state: Listed): string | nul
   return newer === null ? null : `${where}: ${version} is below ${newer}; list versions newest first`;
 }
 
-/** One line per way the changelog text strays from Keep a Changelog; the single line "is missing" for no file. */
-export function changelogFormatProblems(text: string | null): string[] {
-  if (text === null) return [`${CHANGELOG_FILE} is missing; add one in the Keep a Changelog format`];
-  const state: Listed = { previous: null, seen: new Set() };
+/**
+ * One line per way the changelog text strays from Keep a Changelog; the single line "is missing" for no file. The
+ * lines name the file as `file`.
+ */
+export function changelogFormatProblems(text: string | null, file: string = CHANGELOG_FILE): string[] {
+  if (text === null) return [fileMissing(file)];
+  const state: Listed = { file, previous: null, seen: new Set() };
   const problems: string[] = [];
 
   for (const { at, kind, text: heading } of headings(linesOf(text))) {
     if (kind === "section" && !SECTIONS.includes(heading))
-      problems.push(`${CHANGELOG_FILE}:${at + 1}: "### ${heading}" is not a section; use ${SECTION_LIST}`);
+      problems.push(`${file}:${at + 1}: "### ${heading}" is not a section; use ${SECTION_LIST}`);
 
     const problem = kind === "version" ? versionProblem(heading, at + 1, state) : null;
 
     if (problem !== null) problems.push(problem);
   }
 
-  if (!parseChangelog(text).sections.some(({ version }) => version === UNRELEASED))
-    problems.push(`${CHANGELOG_FILE} has no ## [${UNRELEASED}] section; add it above the newest version`);
+  if (!parseChangelog(text).sections.some(({ version }) => version === UNRELEASED)) problems.push(noUnreleased(file));
 
   return problems;
 }
@@ -119,4 +132,68 @@ export function stampChangelog(text: string, version: string, date: string): str
   const head = trimBlank(preamble).join("\n");
 
   return `${[head, `## [${UNRELEASED}]`, stamped, ...rest].filter((part) => part !== "").join("\n\n")}\n`;
+}
+
+const LEADING_DASH = /^- /;
+const CRLF = "\r\n";
+
+/** The index of the last line of `lines` from `from` up to `to` that holds text. */
+function lastText(lines: readonly string[], from: number, to: number): number {
+  return from + lines.slice(from, to).findLastIndex((line) => line.trim() !== "");
+}
+
+/** The changelog with the entry added, and the 1-based line of its bullet. */
+export type Inserted = { text: string; line: number };
+
+/** The Unreleased section of `lines`: where it starts and ends, and its `###` headings. */
+type Span = { start: number; end: number; groups: Heading[] };
+
+/** The Unreleased section of `lines`, or undefined when there is none. */
+function unreleasedSpan(lines: readonly string[]): Span | undefined {
+  const found = headings(lines);
+  const head = found.find(({ kind, text }) => kind === "version" && VERSION_HEADING.exec(text)?.[1] === UNRELEASED);
+  const start = head?.at ?? 0;
+  const end = found.find(({ at, kind }) => kind === "version" && at > start)?.at ?? lines.length;
+
+  return head === undefined
+    ? undefined
+    : { end, groups: found.filter(({ at, kind }) => kind === "section" && at > start && at < end), start };
+}
+
+/** The group and the bullet line to add to it. */
+type Wanted = { section: string; bullet: string };
+
+/** Where the bullet goes: the index of the line it goes before, and the lines to put there. */
+function placement(lines: readonly string[], span: Span, { section, bullet }: Wanted) {
+  const heading = `### ${section}`;
+  const own = span.groups.find(({ text }) => text === section);
+  const later = span.groups.find(({ text }) => SECTIONS.indexOf(text) > SECTIONS.indexOf(section));
+
+  if (own !== undefined) {
+    const last = lastText(lines, own.at, span.groups.find(({ at }) => at > own.at)?.at ?? span.end);
+
+    return { added: last === own.at ? ["", bullet] : [bullet], at: last + 1 };
+  }
+
+  if (later !== undefined) return { added: [heading, "", bullet, ""], at: later.at };
+
+  return { added: ["", heading, "", bullet], at: lastText(lines, span.start, span.end) + 1 };
+}
+
+/**
+ * Adds `- entry` under `### section` of the Unreleased section: after the last line of that group, or in a new group
+ * that keeps the Keep a Changelog order. Only lines of Unreleased change; CRLF endings stay. Null when there is no
+ * Unreleased section.
+ */
+export function insertEntry(text: string, section: string, entry: string): Inserted | null {
+  const plain = text.replaceAll(CRLF, "\n");
+  const lines = linesOf(plain);
+  const span = unreleasedSpan(lines);
+
+  if (span === undefined) return null;
+  const bullet = `- ${entry.replace(LEADING_DASH, "")}`;
+  const { added, at } = placement(lines, span, { bullet, section });
+  const joined = `${lines.toSpliced(at, 0, ...added).join("\n")}${plain.endsWith("\n") ? "\n" : ""}`;
+
+  return { line: at + added.indexOf(bullet) + 1, text: text.includes(CRLF) ? joined.replaceAll("\n", CRLF) : joined };
 }

@@ -132,6 +132,7 @@ main
   backlog           Add, list, start, mark done and clear .repo/backlog.md items
   bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)
   browser           Browse with Lightpanda, Chromium when blocked
+  changelog         Print and add [Unreleased] entries of CHANGELOG.md
   env               Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key)
   eval              Score a model on evals/<name> cases; prints a cost estimate and refuses over a cap
   google-workspace  Google Sheets, Docs, Slides, Calendar and Gmail

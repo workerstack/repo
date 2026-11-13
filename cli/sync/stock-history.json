@@ -178,6 +178,7 @@
     "f3a84c021a149a9a"
   ],
   ".agents/skills/commit-push-release/SKILL.md": [
+    "08111d5eead38495",
     "25690b369797a0d2",
     "26cf05d51ce234ae",
     "4af96a03e84afdea",
@@ -185,7 +186,6 @@
     "871f460bb9eec931",
     "885dd4eef3582820",
     "a7a9922865b2de36",
-    "ae809773a897c993",
     "b6325031e41b1270",
     "c5472740d80b135a",
     "d17d97a4400c58a1",
@@ -2198,6 +2198,7 @@
     "f3a84c021a149a9a"
   ],
   "agents/skills/commit-push-release/SKILL.md": [
+    "08111d5eead38495",
     "25690b369797a0d2",
     "a2c7d80fdd85396e",
     "ae809773a897c993",
@@ -2312,6 +2313,7 @@
   ],
   "cli/scripts/__fixtures__/browser-nav-kit.ts": ["36d304033bb7065f"],
   "cli/scripts/__fixtures__/browser-ws-kit.ts": ["75a00a1328938a60"],
+  "cli/scripts/__fixtures__/changelog-kit.ts": ["43d5e9768817b226"],
   "cli/scripts/__fixtures__/check-globals-kit.ts": ["1dd2b666f08695b2"],
   "cli/scripts/__fixtures__/checkout-calls.ts": ["706fc33c4b931ede", "898562166117a216"],
   "cli/scripts/__fixtures__/ci-config-run.ts": ["6fb704b8a5106e1e"],
@@ -2415,7 +2417,7 @@
     "f97a4724ca9dcc56"
   ],
   "cli/scripts/backlog-main.test.ts": ["b94231d679f03902"],
-  "cli/scripts/backlog.constants.ts": ["9bd3801bc88c2a4f"],
+  "cli/scripts/backlog.constants.ts": ["9bd3801bc88c2a4f", "f0117487710f5ec4"],
   "cli/scripts/backlog.test.ts": ["1b04ad2372b9fc28"],
   "cli/scripts/backlog.ts": ["84e17ea920d869e0"],
   "cli/scripts/bench-remote-fail.test.ts": ["3ca644ea91fc0b07", "f32e627e09ccc3d1"],
@@ -2726,6 +2728,10 @@
     "d0399647af74a7c1",
     "d9a815792129c173"
   ],
+  "cli/scripts/changelog-main.test.ts": ["5aa72667c18651fe"],
+  "cli/scripts/changelog.constants.ts": ["c99b21b125046319"],
+  "cli/scripts/changelog.test.ts": ["4904c370fbdeae1e"],
+  "cli/scripts/changelog.ts": ["835ee7c12226a28b"],
   "cli/scripts/check-globals-line.test.ts": [
     "0803b30d0290ec5e",
     "51d056fa40177ca5",
@@ -6636,6 +6642,7 @@
     "fa7453f8f15d70dd",
     "faf9cda12cd5aedd"
   ],
+  "cli/scripts/refusal.ts": ["a570ac37ed085668"],
   "cli/scripts/rejections-step-failures.test.ts": [
     "481635558ce70f63",
     "5f24b9e3160ee34a",

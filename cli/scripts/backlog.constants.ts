@@ -4,7 +4,8 @@ export const BACKLOG_NAME = "backlog.md";
 export const BACKLOG_REL: string = `${BACKLOG_DIR}/${BACKLOG_NAME}`;
 
 /** What `repo backlog` takes. */
-export const BACKLOG_ARGS = "[list] | add <text> | start <N|text> | done <N|text> | clear [--yes]";
+const BACKLOG_ARGS = "[list] | add <text> | start <N|text> | done <N|text> | clear [--yes]";
+export const BACKLOG_SUMMARY = "Add, list, start, mark done and clear .repo/backlog.md items";
 export const USAGE: string = `usage: repo backlog ${BACKLOG_ARGS}`;
 
 export const YES_FLAG = "--yes";

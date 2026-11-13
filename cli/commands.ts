@@ -29,9 +29,10 @@ import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY, UNLINK_USAGE, USAGE as LINK_USAGE } from "./link.constants.ts";
 import { USAGE as RELEASE_USAGE } from "./release/release-messages.constants.ts";
 import { REMOVE_SUMMARY, REMOVE_USAGE } from "./remove.constants.ts";
-import { BACKLOG_ARGS } from "./scripts/backlog.constants.ts";
+import { BACKLOG_SUMMARY, USAGE as BACKLOG_USAGE } from "./scripts/backlog.constants.ts";
 import { BENCH_ARGS, BENCH_SUMMARY } from "./scripts/bench.constants.ts";
 import { BROWSER_USAGE } from "./scripts/browser.constants.ts";
+import { CHANGELOG_SUMMARY, USAGE as CHANGELOG_USAGE } from "./scripts/changelog.constants.ts";
 import { ENV_SUMMARY, USAGE as ENV_USAGE } from "./scripts/env-command.constants.ts";
 import { EVAL_ARGS, EVAL_SUMMARY } from "./scripts/eval.constants.ts";
 import { GOOGLE_WORKSPACE_ARGS } from "./scripts/google-workspace.constants.ts";
@@ -79,17 +80,14 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
 
   // Tools an agent runs.
-  backlog: {
-    load: () => import("./scripts/backlog.ts"),
-    summary: "Add, list, start, mark done and clear .repo/backlog.md items",
-    usage: `usage: repo backlog ${BACKLOG_ARGS}`,
-  },
+  backlog: { load: () => import("./scripts/backlog.ts"), summary: BACKLOG_SUMMARY, usage: BACKLOG_USAGE },
   bench: { load: () => import("./scripts/bench.ts"), summary: BENCH_SUMMARY, usage: `usage: repo bench ${BENCH_ARGS}` },
   browser: {
     load: () => import("./scripts/browser.ts"),
     summary: "Browse with Lightpanda, Chromium when blocked",
     usage: BROWSER_USAGE,
   },
+  changelog: { load: () => import("./scripts/changelog.ts"), summary: CHANGELOG_SUMMARY, usage: CHANGELOG_USAGE },
   env: { load: () => import("./scripts/env-command.ts"), summary: ENV_SUMMARY, usage: ENV_USAGE },
   eval: { load: () => import("./scripts/eval.ts"), summary: EVAL_SUMMARY, usage: `usage: repo eval ${EVAL_ARGS}` },
   "google-workspace": {
