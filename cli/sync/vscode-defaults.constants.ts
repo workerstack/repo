@@ -1,7 +1,11 @@
 export const EXTENSIONS_PATH = ".vscode/extensions.json";
 
-/** The first TypeScript major with a native server: it has no `tsserver.js`, so `typescript.tsdk` cannot pick it. */
+/** The first TypeScript major with a native server: it has no `tsserver.js`, so a `lib` path cannot pick it. */
 export const NATIVE_TYPESCRIPT_MAJOR = 7;
+
+/** The key VS Code deprecated for the workspace TypeScript, and the key that replaced it with the same value. */
+export const DEPRECATED_TSDK_KEY: string = "typescript.tsdk";
+export const TSDK_KEY: string = "js/ts.tsdk.path";
 
 export const TYPESCRIPT_PACKAGE = "node_modules/typescript/package.json";
 export const VITEST_PACKAGE = "node_modules/vitest/package.json";

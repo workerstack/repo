@@ -47,15 +47,16 @@ it("formats through bun and lints through oxc under the standards pack", () => {
   expect(recommendationsFor(standards())).toStrictEqual(["oxc.oxc-vscode", "wdomitrz.simple-lsp-client"]);
 });
 
-it("points the editor at the installed TypeScript 7 or later, and at tsserver for an older one", () => {
+it("points the editor at the installed TypeScript 7 or later, and at its lib for an older one", () => {
   const seven = settingsFor(standards({ files: typescript("7.0.2") }));
   expect(seven).toMatchObject({ "js/ts.experimental.useTsgo": true, "js/ts.tsdk.path": "./node_modules/typescript" });
   expect(seven).not.toHaveProperty("typescript.tsdk");
   expect(recommendationsFor(standards({ files: typescript("7.0.2") }))).toContain("TypeScriptTeam.native-preview");
 
   const six = settingsFor(standards({ files: typescript("6.0.3") }));
-  expect(six).toMatchObject({ "typescript.tsdk": "node_modules/typescript/lib" });
-  expect(six).not.toHaveProperty("js/ts.tsdk.path");
+  expect(six).toMatchObject({ "js/ts.tsdk.path": "./node_modules/typescript/lib" });
+  expect(six).not.toHaveProperty("js/ts.experimental.useTsgo");
+  expect(six).not.toHaveProperty("typescript.tsdk");
   expect(recommendationsFor(standards({ files: typescript("6.0.3") }))).not.toContain("TypeScriptTeam.native-preview");
 });
 

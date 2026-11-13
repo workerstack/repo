@@ -75,6 +75,20 @@ it("adds the map to a commented file and keeps every other key and comment byte 
   expect(parse(after)).toMatchObject({ "editor.tabSize": 4, "files.autoSave": "off" });
 });
 
+it("moves the deprecated typescript.tsdk to js/ts.tsdk.path, and drops it when the new key is already set", () => {
+  const moved: unknown = parse(
+    settingsOf({ files: { ".vscode/settings.json": '{ "typescript.tsdk": "ts/lib" }' } }, OUTPUTS),
+  );
+
+  expect(moved).toMatchObject({ "js/ts.tsdk.path": "ts/lib" });
+  expect(moved).not.toHaveProperty("typescript.tsdk");
+
+  const both = '{ "typescript.tsdk": "old/lib", "js/ts.tsdk.path": "new/lib" }';
+  const dropped: unknown = parse(settingsOf({ files: { ".vscode/settings.json": both } }, OUTPUTS));
+  expect(dropped).toMatchObject({ "js/ts.tsdk.path": "new/lib" });
+  expect(dropped).not.toHaveProperty("typescript.tsdk");
+});
+
 it("replaces a map of the user's own, and keeps the keys around it as written", () => {
   const before =
     '{\n  // lock\n  "files.readonlyInclude": { "mine.txt": true, "bunfig.toml": false },\n' +

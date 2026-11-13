@@ -44,7 +44,7 @@ const NATIVE_TYPESCRIPT_SETTINGS = {
 } satisfies JsonObject;
 
 const CLASSIC_TYPESCRIPT_SETTINGS = {
-  "typescript.tsdk": "node_modules/typescript/lib",
+  "js/ts.tsdk.path": "./node_modules/typescript/lib",
 } satisfies JsonObject;
 
 const NONE: VscodeDefaults = { recommendations: [], settings: {} };
