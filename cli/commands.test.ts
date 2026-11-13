@@ -25,6 +25,15 @@ describe("registry", () => {
   });
 });
 
+describe("worktree", () => {
+  it("names in its summary the subcommands its usage line takes, and back", () => {
+    const listed = COMMANDS.worktree.summary.replace("Managed worktrees: ", "").split(", ");
+    const taken = COMMANDS.worktree.usage.replace("usage: repo worktree ", "").split(" | ");
+    expect(taken.map((t) => t.split(" ")[0])).toStrictEqual(listed);
+    expect(listed).toStrictEqual(["add", "finish", "list", "prune", "hook"]);
+  });
+});
+
 describe("coverage", () => {
   it("is a command, with the help line Usage shows", () => {
     expect(isCommandName("coverage")).toBe(true);

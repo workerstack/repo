@@ -44,7 +44,7 @@ import { PUSH_SUMMARY, USAGE as PUSH_USAGE } from "./scripts/push.constants.ts";
 import { SETUP_TARGETS } from "./scripts/setup.constants.ts";
 import { SHIM_SUMMARY, USAGE as SHIM_USAGE } from "./scripts/shim.constants.ts";
 import { SPEAK_ARGS } from "./scripts/speak.constants.ts";
-import { WORKTREE_ARGS } from "./scripts/worktree.constants.ts";
+import { WORKTREE_ARGS, WORKTREE_SUBCOMMANDS } from "./scripts/worktree.constants.ts";
 import { UPDATE_SUMMARY, USAGE as UPDATE_USAGE } from "./update.constants.ts";
 
 export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
@@ -132,7 +132,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
   worktree: {
     load: () => import("./scripts/worktree.ts"),
-    summary: "Managed worktrees: add, list, finish, remove",
+    summary: `Managed worktrees: ${/* @__PURE__ */ WORKTREE_SUBCOMMANDS.join(", ")}`,
     usage: `usage: repo worktree ${WORKTREE_ARGS}`,
   },
 

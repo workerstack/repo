@@ -2,8 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { childEnv } from "../env.ts";
 import { canonicalPath } from "./workspace-root.ts";
-import { HEADS_REF, NO_BRANCH, WORKTREES_DIR } from "./worktree.constants.ts";
+import { HEADS_REF, NO_BRANCH, REMOTE_TIMEOUT_MS, WORKTREES_DIR } from "./worktree.constants.ts";
 import type { GitRun, WorktreeEntry } from "./worktree.types.ts";
 
 const UNSAFE_NAME_CHARS = /[^A-Za-z0-9._-]/g;
@@ -13,6 +14,7 @@ const TRAILING_DASHES = /-+$/;
 const BLANK_LINE_RUN = /\n\n+/;
 const ORIGIN_PREFIX = /^origin\//;
 const LEADING_SPACE = /^\s/;
+const REMOTES_REF = "refs/remotes/origin/";
 
 /** `raw`, or "" when there is none. */
 export function textOf(raw: string | undefined): string {
@@ -173,15 +175,40 @@ export function tipOf(root: string, branch: string): string {
   return git(root, ["rev-parse", "--verify", "-q", HEADS_REF + branch]).out;
 }
 
+/** True when the main checkout at `root` has `target` checked out. */
+export function isCheckedOut(root: string, target: string): boolean {
+  return git(root, ["symbolic-ref", "--short", "HEAD"]).out === target;
+}
+
+/**
+ * Delete origin's copy of `branch`, and with it the tracking ref, when origin's tracking ref of it exists. It never
+ * prompts, waits at most `REMOTE_TIMEOUT_MS` and skips the pre-push hook (a delete sends no commits); a failure only
+ * warns on stderr.
+ */
+export function dropRemoteBranch(root: string, branch: string): void {
+  if (!git(root, ["show-ref", "--verify", "-q", `${REMOTES_REF}${branch}`]).ok) return;
+
+  const r = spawnSync("git", ["push", "--no-verify", "origin", "--delete", branch], {
+    cwd: root,
+    encoding: "utf8",
+    env: childEnv({ GIT_TERMINAL_PROMPT: "0" }),
+    timeout: REMOTE_TIMEOUT_MS,
+  });
+
+  if (r.status === 0) return;
+  const said = trimmed(r.stderr);
+  const reason = said === "" ? "no answer in time" : gitReason(said);
+  process.stderr.write(`could not delete origin's ${branch}: ${reason}; run git push origin --delete ${branch}\n`);
+}
+
 /**
  * Move `target` to `branch`'s tip with a fast-forward only: in the root when it has `target` checked out, else
  * through the ref.
  */
 export function fastForward(root: string, branch: string, target: string): GitRun {
   const source = HEADS_REF + branch;
-  const isCheckedOut = git(root, ["symbolic-ref", "--short", "HEAD"]).out === target;
 
-  return isCheckedOut
+  return isCheckedOut(root, target)
     ? git(root, ["merge", "--ff-only", source])
     : git(root, ["fetch", ".", `${source}:${HEADS_REF}${target}`]);
 }

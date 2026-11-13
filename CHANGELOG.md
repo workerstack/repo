@@ -29,12 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The strategy `default` is now `free`: the main session works as in a plain chat and may spawn agents, but nothing forces it to. The approval codes `id` and `hd` are now `if` and `hf`. `bun repo sync` rewrites `default` to `free` in saved plans, roadmaps and handoffs.
 - The four deep skills are now `write-plan-deep`, `write-roadmap-deep`, `implement-plan-deep` and `implement-roadmap-deep`, and `bun repo sync` rewrites the old names in `.repo` markdown and moves `.repo/skills` overrides to the new folders.
 - `/auto` and `mode: auto` are gone. `ask` is now the default: it stops once for plan approval, then runs to done, and the per-step pause is gone. `bun repo sync` rewrites a saved `mode: auto` to `mode: ask`. A `.repo/skills/auto` override now fails sync because no stock skill has that name.
+- `bun repo worktree finish` and `prune` now delete origin's `wt/<name>` before the local branch, when `refs/remotes/origin/wt/<name>` exists, so the push gate no longer holds a Stop on the old failed run of a branch that landed. The delete never prompts and stops after 30s; on failure it warns `could not delete origin's wt/<name>: <git's reason>; run git push origin --delete wt/<name>` and the command still exits 0.
+- After it lands a branch on the default branch the root has checked out, `bun repo worktree finish` runs `bun repo sync` in the root, output on stderr, so ignored generated configs such as `.oxlintrc.json`, `knip.json` and `.oxfmtrc.jsonc` match the new tree. It skips a root with no `repo` script or bin, and on failure warns `could not sync <root>: run bun repo sync there` and still exits 0.
 
 ### Fixed
 
 - `repo eval --via session` reports `eval: claude: exit N` when `claude` exits before it reads its input, instead of failing with `EPIPE: broken pipe`.
 - `repo sync` no longer writes the deprecated `typescript.tsdk` to `.vscode/settings.json`. For TypeScript older than 7 it writes `js/ts.tsdk.path` instead, and it moves a `typescript.tsdk` you already have to `js/ts.tsdk.path` with the same value, or drops it when `js/ts.tsdk.path` is already set. Run `bun repo sync` and commit the file.
 - `repo release api` no longer reports an unchanged type as narrowed when it has a key typed `unique symbol`, such as the `Sealed` brand of `@workerstack/repo/env`, or when it holds, lists or returns one at any depth: each installed copy declares its own symbol, so the two copies never fit each other. It still compares the TypeScript library's own types, such as a returned `Promise`, by what they hold, so a changed `loadConfig` result is now reported.
+- `bun repo --help` lists the `worktree` subcommands that run, `add, finish, list, prune, hook`, from the same list as the usage line, instead of naming a `remove` that exits 2.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

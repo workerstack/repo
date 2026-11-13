@@ -213,3 +213,13 @@ it("blocks without counting when the stamp cannot be written", () => {
   const input = { active: false, cwd: r.main, root: r.main, session: "s1" };
   expect(pushStopBlock(input, { ...r.deps, fs: deny })).toBe(noResult(A));
 });
+
+it("passes a failed wt/ push once origin's branch is gone, and holds it while origin has it", () => {
+  const held = pushed([["wt/a", A]], { landed: { "wt/a": [A] } });
+  held.result(A, "failed", TEST);
+  expect(held.gate()).toContain(`ci failed on ${A.slice(0, 7)} on wt/a`);
+
+  const gone = pushed([["wt/a", A]], { landed: {} });
+  gone.result(A, "failed", TEST);
+  expect(gone.gate()).toBeNull();
+});

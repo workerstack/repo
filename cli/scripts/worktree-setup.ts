@@ -2,8 +2,18 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
+import { tryJson } from "../json.ts";
 import { branchExists, git } from "./worktree-git.ts";
-import { INSTALL_TIMEOUT_MS, LOCKFILES, STDERR_FD, WORKTREES_DIR } from "./worktree.constants.ts";
+import {
+  BIN_DIR,
+  INSTALL_TIMEOUT_MS,
+  LOCKFILES,
+  STDERR_FD,
+  SYNC_TIMEOUT_MS,
+  WORKTREES_DIR,
+} from "./worktree.constants.ts";
 
 /** Copy each gitignored file `.worktreeinclude` matches that the worktree lacks; never overwrite. */
 export function copyIncluded(root: string, dest: string): void {
@@ -56,4 +66,34 @@ export function installDependencies(root: string, dest: string): void {
 
   if (r.status !== 0)
     process.stderr.write(`could not install dependencies in ${dest}: run bun install --frozen-lockfile there\n`);
+}
+
+/**
+ * True when `bun repo` can run in `root`: a `repo` script in its package.json, or a `repo` bin in its bin dir, the
+ * places `.githooks/pre-push` looks.
+ */
+function canRunRepo(root: string): boolean {
+  const bins = ["repo", "repo.exe"].map((b) => path.join(root, BIN_DIR, b));
+
+  if (bins.some((b) => fs.existsSync(b))) return true;
+  const manifest = path.join(root, "package.json");
+  const withRepoScript = z.looseObject({ scripts: z.looseObject({ repo: z.string() }) });
+
+  return fs.existsSync(manifest) && tryJson(withRepoScript, fs.readFileSync(manifest, "utf8")) !== undefined;
+}
+
+/**
+ * After the root's files moved, its generated configs are stale: run `bun repo sync` there, output to stderr. Skipped
+ * when `bun repo` cannot run in the root; a failure only warns.
+ */
+export function syncRoot(root: string): void {
+  if (!canRunRepo(root)) return;
+
+  const r = spawnSync("bun", ["repo", "sync"], {
+    cwd: root,
+    stdio: ["ignore", STDERR_FD, STDERR_FD],
+    timeout: SYNC_TIMEOUT_MS,
+  });
+
+  if (r.status !== 0) process.stderr.write(`could not sync ${root}: run bun repo sync there\n`);
 }
