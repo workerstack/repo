@@ -14,9 +14,11 @@ const FAST_PLAN: FastKind = {
   validate: validateFastPlan,
 };
 
-/** Rewrite of a saved fast plan: `[x]` and status moves allowed. */
+/** Rewrite of a saved fast plan: `[x]`, status moves and Previous mistakes appends allowed. */
 export function prepareFastPlanUpdate(input: Rewrite): PlanResult {
-  return prepareRewrite(input, (filename, full) => validateFastPlan(filename, full, { fresh: false }));
+  return prepareRewrite(input, (filename, full, previous) =>
+    validateFastPlan(filename, full, { fresh: false, previous }),
+  );
 }
 
 /** Saves a new fast plan: serial counted in `plans-fast` only, frontmatter without reviews or strategy. */

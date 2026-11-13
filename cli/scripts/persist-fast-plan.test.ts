@@ -4,9 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
+import { updateFastPlan as update } from "./__fixtures__/persist-fast-plan-kit.ts";
 import { read, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
 import { fastPlanLineCount, validateFastPlan } from "./persist-fast-plan-validate.ts";
-import { persistFastPlan, prepareFastPlanUpdate } from "./persist-fast-plan.ts";
+import { persistFastPlan } from "./persist-fast-plan.ts";
 import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs("persist-fast-");
@@ -48,14 +49,6 @@ function saved(ws = tmpWs()) {
 
 function goodPlan() {
   return saved().r.content;
-}
-
-function update(ws: string, abs: string, content: string) {
-  const r = prepareFastPlanUpdate({ content, filePath: abs, workspaceRoot: ws });
-
-  if (r.ok) fs.writeFileSync(abs, r.content);
-
-  return r;
 }
 
 describe("fast plan save", () => {
@@ -138,9 +131,11 @@ describe("fast plan denials", () => {
 describe("fast plan section and size denials", () => {
   it("denies a section beyond Goal, Steps and Verify, and a missing one", () => {
     const extra = save(`${SENT}\n## Context\n- x\n`);
-    expect(extra.errors).toContain("a fast plan holds only Goal, Steps and Verify");
+    expect(extra.errors).toContain("a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes");
     const missing = save(SENT.replace(/## Verify[\s\S]*$/, ""));
-    expect(missing.errors).toContain("a fast plan holds only Goal, Steps and Verify");
+    expect(missing.errors).toContain(
+      "a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes",
+    );
   });
 
   it("denies more than 40 lines counting the frontmatter, and allows exactly 40", () => {

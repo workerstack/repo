@@ -4,6 +4,7 @@ import {
   BODY,
   NAME,
   PLAN_ABS,
+  SENT,
   saveRoadmap,
   savedRoadmap,
   updateRoadmap,
@@ -11,7 +12,7 @@ import {
   withLocation,
 } from "./__fixtures__/persist-fast-roadmap-kit.ts";
 import { read, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
-import { validateFastRoadmap } from "./persist-fast-roadmap-validate.ts";
+import { fastRoadmapLineCount, validateFastRoadmap } from "./persist-fast-roadmap-validate.ts";
 
 const tmpWs = useTmpWs("persist-fast-roadmap-up-");
 const SLICE_2 = "2 [ ] ignore logs: add *.log to .gitignore";
@@ -85,5 +86,47 @@ describe("validateFastRoadmap head checks", () => {
     expect(validateFastRoadmap(NAME, "# no frontmatter\n")).toContain("missing frontmatter");
     expect(validateFastRoadmap(NAME, `${text}\n\`\`\`\n`).join()).toMatch(/unclosed code fence/);
     expect(validateFastRoadmap(NAME, text.replace(/\n$/, ""))).toStrictEqual([]);
+  });
+});
+
+const LOG = "\n## Previous mistakes\n- slice: split too thin → merged two slices\n";
+const KEPT = "Previous mistakes is append-only; keep this entry unchanged: - slice: split too thin → merged two slices";
+
+/** The Usage roadmap padded to exactly `20 + extra` counted lines. */
+function atCap(extra = 0) {
+  return withExtraBoxes(20 - fastRoadmapLineCount(savedRoadmap(tmpWs()).r.content) + extra);
+}
+
+describe("fast roadmap Previous mistakes saves", () => {
+  it("saves a new roadmap at its 20-line cap with a trailing log, and still caps the lines above it", () => {
+    const r = saveRoadmap(`${atCap()}${LOG}`, tmpWs());
+    expect(r.ok, r.error).toBe(true);
+    expect(saveRoadmap(`${atCap(1)}${LOG}`, tmpWs()).errors).toContain(
+      "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)",
+    );
+  });
+
+  it("adds a log to a saved roadmap at its cap and appends to it", () => {
+    const ws = tmpWs();
+    const first = saveRoadmap(atCap(), ws);
+    expect(first.ok, first.error).toBe(true);
+    const abs = `${ws}/${first.path}`;
+    expect(updateRoadmap(ws, abs, `${read(abs)}${LOG}`).ok).toBe(true);
+    const more = updateRoadmap(ws, abs, `${read(abs)}- decision: a → b\n`);
+    expect(more.ok, more.error).toBe(true);
+  });
+});
+
+describe("fast roadmap Previous mistakes denials", () => {
+  it("denies a changed or dropped entry, a malformed entry, and a log that is not last", () => {
+    const ws = tmpWs();
+    const first = saveRoadmap(`${SENT}${LOG}`, ws);
+    expect(first.ok, first.error).toBe(true);
+    const abs = `${ws}/${first.path}`;
+    expect(updateRoadmap(ws, abs, read(abs).replace("merged two", "merged")).errors).toContain(KEPT);
+    expect(updateRoadmap(ws, abs, read(abs).replace(/\n## Previous mistakes[\s\S]*$/, "\n")).errors).toContain(KEPT);
+    expect(updateRoadmap(ws, abs, `${read(abs)}- nope: a → b\n`).errors?.join()).toMatch(/\|slice\}: \{what was/);
+    const early = saveRoadmap(SENT.replace("## Verify", "## Previous mistakes\n(none)\n\n## Verify"), tmpWs());
+    expect(early.errors).toContain("## Previous mistakes must be the last heading, once");
   });
 });

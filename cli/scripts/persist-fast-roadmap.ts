@@ -14,9 +14,11 @@ const FAST_ROADMAP: FastKind = {
   validate: validateFastRoadmap,
 };
 
-/** Rewrite of a saved fast roadmap: `[x]`, Locations and status moves allowed. */
+/** Rewrite of a saved fast roadmap: `[x]`, Locations, status moves and Previous mistakes appends allowed. */
 export function prepareFastRoadmapUpdate(input: Rewrite): PlanResult {
-  return prepareRewrite(input, (filename, full) => validateFastRoadmap(filename, full, { fresh: false }));
+  return prepareRewrite(input, (filename, full, previous) =>
+    validateFastRoadmap(filename, full, { fresh: false, previous }),
+  );
 }
 
 /** Saves a new fast roadmap: serial counted in `roadmaps-fast` only, frontmatter without reviews or strategy. */

@@ -1,4 +1,4 @@
-/** The session gate: /auto, /ask and /away stamps, an in-progress item's `mode:`, and the context naming both. */
+/** The session gate: /auto, /ask and /away stamps, then an in-progress item's `mode:`, and the context naming both. */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -25,7 +25,7 @@ const SLASHES: readonly (readonly [RegExp, Mode])[] = [
   [/^\s*\/away\s*$/, "away"],
 ];
 
-/** A prompt of exactly /auto, /ask or /away sets this session's gate; /auto clears the stamp. */
+/** A prompt of exactly /auto, /ask or /away stamps that mode as this session's gate and drops the legacy stamp. */
 export function applySessionGateSlash(data: HookInput, prompt: string): void {
   const slash = SLASHES.find(([re]) => re.test(prompt))?.[1];
 
@@ -35,13 +35,6 @@ export function applySessionGateSlash(data: HookInput, prompt: string): void {
 
   if (p === null || legacy === null) return;
   unlinkQuiet(legacy);
-
-  if (slash === "auto") {
-    unlinkQuiet(p);
-
-    return;
-  }
-
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, slash);
 }
@@ -78,11 +71,11 @@ function stampedMode(data: HookInput): Mode | null {
 }
 
 /**
- * The mode this session runs: the newest in-progress plan or roadmap in this session's approvals with a valid `mode:`,
- * else the /ask or /away stamp, else auto. Another session's files never count.
+ * The mode this session runs: the /auto, /ask or /away stamp, else the newest in-progress plan or roadmap in this
+ * session's approvals with a valid `mode:`, else auto. Another session's files never count.
  */
 export function effectiveModeOf(data: HookInput): Mode {
-  return itemMode(data) ?? stampedMode(data) ?? "auto";
+  return stampedMode(data) ?? itemMode(data) ?? "auto";
 }
 
 function sessionReceiptContext(data: HookInput): string {

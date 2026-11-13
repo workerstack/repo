@@ -12,8 +12,8 @@ Replies are agent-terse: what landed, paths, pass or fail. Nobody reads them liv
 
 Still stop on a true blocker: a missing credential, a destructive action. The Stop hook blocks a reply that ends in a question with `away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue`. After 3 blocks it lets the question through.
 
-Frontmatter `mode:` on this session's in-progress plan or roadmap wins over the flag.
+Any stamp (`/auto`, `/ask`, `/away`) beats a saved `mode:`. A saved `mode:` applies only when the session has no stamp.
 
-Approval still happens before an away run. Write and review the plan, end with the approval block, and wait for `i` or `h`.
+Approval runs itself. Write and review the plan, end with the approval block, and stop. Once the review settles, the Stop hook runs the block's header choice (`i`), logs a `- decision:` in each file's `## Previous mistakes`, and blocks once so you re-read each file before you edit it. Do not wait for `y` or `h`.
 
-`/auto` returns this session to the default. `/ask` is the other flag: one step, then ask.
+`/auto` stamps `auto` and returns this session to the default. `/ask` is the other flag: one step, then ask.

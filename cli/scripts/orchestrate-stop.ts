@@ -9,6 +9,7 @@ import { parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
+import { orchestrateAway } from "./orchestrate-away.ts";
 import { interceptNeed, isStopActive } from "./orchestrate-intercept.ts";
 import { applySessionGateSlash, effectiveModeOf, effectiveSessionContext } from "./orchestrate-mode.ts";
 import { blockWith, PASS, replyWith } from "./orchestrate-reply.ts";
@@ -49,12 +50,17 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
   return blockWith(reason);
 }
 
-/** What the turn's last reply is held to: a settled approval block, then the session's mode. */
+/** What the turn's last reply is held to: a settled approval block, run under away, then the session's mode. */
 function replyVerdict(data: HookInput, msg: string): HookResult {
   const named = parseClosingBlock(msg);
   const reviewReason = closingReviewReason(data, named);
 
   if (reviewReason !== null) return blockWith(reviewReason);
+  const mode = effectiveModeOf(data);
+  // Under away the hook runs the block's header choice itself; that block is not one the stop-block cap counts.
+  const ran = mode === "away" ? orchestrateAway(data, msg) : null;
+
+  if (ran !== null) return blockWith(ran);
   const approvalReason = approvalBlockReason(data, msg);
 
   if (approvalReason !== null) {
@@ -62,8 +68,6 @@ function replyVerdict(data: HookInput, msg: string): HookResult {
 
     return blockWith(approvalReason);
   }
-
-  const mode = effectiveModeOf(data);
 
   if (mode === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
 

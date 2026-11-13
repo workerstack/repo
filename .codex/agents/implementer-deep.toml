@@ -23,8 +23,11 @@ Rules:
 
 If a leaf cannot be done as written, stop and say why. Do not work around it.
 
-End with exactly these three lines:
+Never ask. Decide, and report each decision for the parent to log.
+
+End with exactly these four lines:
 changed: <comma-separated repo-relative paths>
 tests: <last test command> → exit <N>
+decisions: <each choice made instead of asking "{question} → {choice} because {why}", ";"-separated, or none>
 status: done|partial|stuck
 '''

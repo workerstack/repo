@@ -23,7 +23,10 @@ const RULES = [
 const RETURNS = new Map([
   [
     "implementer",
-    "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\nstatus: done|partial|stuck",
+    "changed: <comma-separated repo-relative paths>\ntests: <last test command> → exit <N>\n" +
+      'decisions: <each choice made instead of asking "{question} → {choice} because {why}", ' +
+      '";"-separated, or none>\n' +
+      "status: done|partial|stuck",
   ],
   [
     "researcher",

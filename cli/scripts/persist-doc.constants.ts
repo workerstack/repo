@@ -15,6 +15,9 @@ export const SLUG_MAX = 50;
 /** What `indexOf` returns for no match. */
 export const NOT_FOUND = -1;
 
+/** The last index of an array, for `slice` and `at`. */
+export const LAST = -1;
+
 /** The headings and marker line several checks name. */
 export const MISTAKES_H2 = "Previous mistakes";
 export const USAGE_H2 = "Usage";

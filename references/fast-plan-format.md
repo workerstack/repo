@@ -16,14 +16,14 @@ A short checklist for work the person chose to do fast. Saved by `cli/scripts/pe
 
 ## Body
 
-The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
+The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order, then an optional `## Previous mistakes`. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
 
 ## Cap and denials
 
-At most 40 lines, frontmatter included. Replies:
+At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are outside the cap. It is append-only, and under `/away` it holds the `- decision:` lines. Replies:
 
 - `a fast plan has no strategy`
-- `a fast plan holds only Goal, Steps and Verify`
+- `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
 - `a fast plan is at most 40 lines; write a plan (/write-plan)`
 - `a new fast plan has only [ ] boxes`
 

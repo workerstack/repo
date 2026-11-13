@@ -34,7 +34,7 @@ mode: away             # optional: ask | auto | away
 
 `strategy` is required: `default`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`). A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`); any session stamp beats it. A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 
 `/implement-roadmap` refuses `draft`.
 

@@ -2,6 +2,7 @@
 import path from "node:path";
 
 import { when } from "./persist-doc-checks.ts";
+import { LAST } from "./persist-doc.constants.ts";
 import { fastPlanLineCount } from "./persist-fast-plan-validate.ts";
 import {
   FAST_PLANS_SEGMENTS,
@@ -20,12 +21,9 @@ import {
 import { type FastRules, validateFastDoc } from "./persist-fast-validate.ts";
 import { FILENAME_RE } from "./persist-plan.constants.ts";
 import { parsePointerSlices } from "./persist-roadmap-slices.ts";
-import { LOCATION_LINE_RE, STATUS_RE } from "./persist-roadmap.constants.ts";
+import { LOCATION_LINE_RE, ROADMAP_MISTAKE_SOURCES, STATUS_RE } from "./persist-roadmap.constants.ts";
 
-type Options = { fresh?: boolean };
-
-/** The last index of an array, for `slice` and `at`. */
-const LAST = -1;
+type Options = { fresh?: boolean; previous?: string };
 
 /**
  * A Location is a fast plan: an absolute posix or win32 path ending `.repo/plans-fast/<plan file>`, read by
@@ -57,7 +55,7 @@ function sliceErrors(order: string): string[] {
   ];
 }
 
-/** The saved file's line count for the cap: frontmatter included, Location lines not. */
+/** The saved file's line count for the cap: frontmatter included, Location lines and a Previous mistakes log not. */
 export function fastRoadmapLineCount(text: string): number {
   return fastPlanLineCount(text, LOCATION_LINE_RE);
 }
@@ -72,14 +70,19 @@ const RULES: FastRules = {
   onlyOpenBoxes: ONLY_OPEN_BOXES,
   onlySections: ONLY_SECTIONS,
   requiredKeys: FAST_ROADMAP_REQUIRED_KEYS,
+  sources: ROADMAP_MISTAKE_SOURCES,
   status: STATUS_RE,
   tooLong: TOO_LONG,
 };
 
 /**
- * `fresh` is a new fast roadmap: only `[ ]` boxes. An update (`fresh: false`) may tick boxes and move the status.
- * Returns every denial, in order, once each.
+ * `fresh` is a new fast roadmap: only `[ ]` boxes. An update (`fresh: false`) may tick boxes and move the status;
+ * `previous` is the saved text it replaces. Returns every denial, in order, once each.
  */
-export function validateFastRoadmap(filename: string, text: string, { fresh = true }: Options = {}): string[] {
-  return validateFastDoc({ filename, fresh, text }, RULES);
+export function validateFastRoadmap(
+  filename: string,
+  text: string,
+  { fresh = true, previous }: Options = {},
+): string[] {
+  return validateFastDoc({ filename, fresh, previous, text }, RULES);
 }

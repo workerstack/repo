@@ -6,7 +6,7 @@ description: >-
 ---
 # auto
 
-Session flag. Default. Slash `/auto` unlinks any `/ask` or `/away` stamp on this session.
+Session flag. Default. Slash `/auto` stamps this session `auto`, replacing any `/ask` or `/away` stamp. A stamp beats a saved `mode:`.
 
 Work the task through. Do not stop after each step. When a blocker, missing fact, or real choice appears, stop and ask. Do not monkey-patch around a failure.
 

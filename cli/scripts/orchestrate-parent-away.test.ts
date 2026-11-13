@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
 import { closing, orchestrateKit, plan as planItem } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
-import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
+import { ASK_STOP_REASON, AWAY_RUN_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 const CASINGS: readonly Casing[] = ["claude", "grok"];
@@ -40,12 +40,26 @@ it.each(CASINGS)("/away gives sessionGate=away, then /auto gives sessionGate=aut
   expect(s.say("/auto")).toMatch(/^sessionGate=auto\b/);
 });
 
-it.each(CASINGS)("an in-progress mode: ask plan this session saved wins over /away (%s payloads)", (casing) => {
+it.each(CASINGS)("/away wins over an in-progress mode: ask plan this session saved (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "m1");
   s.say("/away");
   setKey(s.reviewed("plans", withMode("ask")), "status", "in-progress");
-  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
-  expect(s.stop("wrote src/a.ts")?.reason).toBe(ASK_STOP_REASON);
+  expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+  expect(s.stop("Keep --json?")).toStrictEqual({ decision: "block", reason: AWAY });
+});
+
+it.each(CASINGS)("an unstamped session's in-progress mode: away plan gives away (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "m3");
+  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+  expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+  expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
+});
+
+it.each(CASINGS)("/auto wins over an in-progress mode: away plan (%s payloads)", (casing) => {
+  const s = live(casing, kit.temp(), "m4");
+  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+  expect(s.say("/auto")).toMatch(/^sessionGate=auto\b/);
+  expect(s.say("go")).toMatch(/^sessionGate=auto\b/);
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
@@ -61,7 +75,7 @@ it.each(CASINGS)("another session's mode: away plan leaves this session's mode a
 
 it.each(CASINGS)(
   "away blocks a reply ending in a question, allows an approval block, " +
-    "and gives up after the stop-block cap (%s payloads)",
+    "gives up after the stop-block cap, and still runs a settled plan (%s payloads)",
   (casing) => {
     const s = live(casing, kit.temp(), "w1");
     s.say("/away");
@@ -74,8 +88,10 @@ it.each(CASINGS)(
     expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
     expect(s.stop("Keep --json?")).toBeNull();
     s.say("plan it");
-    s.reviewed("plans", VALID_PLAN);
-    expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();
+    const plan = s.reviewed("plans", VALID_PLAN);
+    expect(s.stop(`Saved.\n\n${plan1}`)?.reason).toBe(
+      `${AWAY_RUN_REASON}; i approves plan 1: plan 1: run /implement-plan 1 (${plan})`,
+    );
   },
 );
 
