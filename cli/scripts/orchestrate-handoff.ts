@@ -1,4 +1,4 @@
-/** An `h` reply's handoff: one handoff file for the whole queue the closing line named. */
+/** An `h` reply's handoff: one handoff file for the whole queue the approval block named. */
 import path from "node:path";
 
 import type { HookInput } from "./hook-input.ts";

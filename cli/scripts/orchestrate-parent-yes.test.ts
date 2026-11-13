@@ -4,7 +4,16 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { hookSession, type HookSession } from "./__fixtures__/hook-session.ts";
-import { closing, must, orchestrateKit, replyOf, strategyOf, transcript } from "./__fixtures__/orchestrate-kit.ts";
+import {
+  closing,
+  must,
+  orchestrateKit,
+  plan as planItem,
+  replyOf,
+  roadmap as roadmapItem,
+  strategyOf,
+  transcript,
+} from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
@@ -31,9 +40,9 @@ function read(file: string) {
   return fs.readFileSync(file, "utf8");
 }
 
-/** A transcript ending with the closing line for plan 1 at the default strategy. */
+/** A transcript ending with the approval block for plan 1 at the default strategy. */
 function plan1Line(ws: string) {
-  return transcript(ws, `Saved.\n\n${closing("plan 1 (strategy: default)")}`);
+  return transcript(ws, `Saved.\n\n${closing(planItem(1))}`);
 }
 
 /** A session in a fresh workspace that saved one reviewed plan with `body`. */
@@ -45,49 +54,67 @@ function onePlan(sid: string, body = VALID_PLAN) {
   return { plan: s.reviewed("plans", body), s, ws };
 }
 
-it("approves exactly what the closing line names, and leaves the file's bytes and strategy alone", () => {
+it("approves exactly what the approval block names, and leaves the file's bytes and strategy alone", () => {
   const { ws, s, plan } = onePlan("s6");
   s.say("and a roadmap");
   const roadmap = s.reviewed("roadmaps", DRAFT_ROADMAP);
   const before = [plan, roadmap].map(read);
 
-  const tp = transcript(
-    ws,
-    `Both saved.\n\n${closing("plan 1 (strategy: default), then roadmap 1 (strategy: default)")}`,
-  );
+  const tp = transcript(ws, `Both saved.\n\n${closing(planItem(1), roadmapItem(1))}`);
 
-  for (const text of ["y", "Y "]) {
+  for (const text of ["i", "y", "Y ", "go", "Do it!"]) {
     expect(lines(s.say(text, tp))).toContain(
-      `y approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); ` +
+      `i approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); ` +
         `roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`,
     );
   }
 
   expect([plan, roadmap].map(read)).toStrictEqual(before);
-  expect(s.say("yes do it", tp)).not.toContain("y approves");
-  expect(s.say("y", transcript(ws, "Plan 1 is saved. Start?"))).not.toContain("y approves");
-  expect(s.say("y", transcript(ws, 'Reply "y" to run plan 1.'))).not.toContain("y approves");
-  expect(s.say("y", transcript(ws, closing("plan 7 (strategy: default)")))).not.toContain("y approves");
-  expect(s.say("y")).not.toContain("y approves");
+  expect(s.say("yes do it", tp)).not.toContain("i approves");
+  expect(s.say("y", transcript(ws, "Plan 1 is saved. Start?"))).not.toContain("i approves");
+  expect(s.say("y", transcript(ws, 'Reply "y" to run plan 1.'))).not.toContain("i approves");
+  expect(s.say("y", transcript(ws, closing(planItem(7))))).not.toContain("i approves");
+  expect(s.say("y")).not.toContain("i approves");
+});
+
+it("a reply that only starts like a choice is a revision and adds no approval context", () => {
+  const { ws, s } = onePlan("v1");
+  const tp = plan1Line(ws);
+
+  for (const text of ["go with B but change X", "test", "keep", "hi", "i have a question", "y review-medium"]) {
+    const out = s.say(text, tp);
+    expect(out, text).not.toContain("approves");
+    expect(out, text).not.toContain("not a choice");
+  }
 });
 
 it("on a default plan the context is today's, byte for byte", () => {
   const { ws, s, plan } = onePlan("d1");
-  expect(lines(s.say("y", plan1Line(ws)))).toContain(`y approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(lines(s.say("y", plan1Line(ws)))).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
 });
 
-it("a bare y does not approve a line whose strategy differs from the file's", () => {
+it("a bare i does not approve a block whose strategy differs from the file's", () => {
   const { ws, s, plan } = onePlan("d2", withStrategy("spawn-fast"));
-  expect(s.say("y", plan1Line(ws))).not.toContain("y approves");
+  expect(s.say("y", plan1Line(ws))).not.toContain("i approves");
 
-  const truthful = transcript(
-    ws,
-    'Saved.\n\nReply "y" to run plan 1 (strategy: spawn-fast), or "y default" / "y spawn-deep", ' +
-      'or "h" / "h fast" / "h deep" for a fresh session.',
-  );
+  const truthful = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
 
-  expect(s.say("y", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
+  expect(s.say("i", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
+});
+
+it("isf and implement deafult write the strategy they name, and hsd is no approval", () => {
+  const { ws, s, plan } = onePlan("c1", withStrategy("spawn-fast"));
+  const tp = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
+  expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(strategyOf(plan)).toBe("spawn-fast");
+  expect(s.say("isd", tp)).toContain("strategy spawn-deep was written to its frontmatter");
+  expect(strategyOf(plan)).toBe("spawn-deep");
+  expect(s.say("implement deafult", transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-deep"))}`))).toContain(
+    "strategy default was written to its frontmatter",
+  );
+  expect(strategyOf(plan)).toBe("default");
+  expect(s.say("hsd", plan1Line(ws))).not.toContain("i approves");
 });
 
 it("y spawn-deep writes the strategy, tells the agent to re-read, and a second one changes no bytes", () => {
@@ -96,7 +123,7 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
   const tp = plan1Line(ws);
 
   const want =
-    "y approves plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
+    "i approves plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
     `re-read the plan, then run /implement-plan 1 (${plan})`;
 
   expect(lines(s.say("y spawn-deep", tp))).toContain(want);
@@ -105,7 +132,7 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
   expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toStrictEqual([]);
   const mtime = fs.statSync(plan).mtimeMs;
   // Nothing left to write: the context is the plain approval, with no claim of a change.
-  expect(lines(s.say("Y  Spawn-Deep ", tp))).toContain(`y approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(lines(s.say("Y  Spawn-Deep ", tp))).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
   expect(read(plan)).toBe(after);
   expect(fs.statSync(plan).mtimeMs).toBe(mtime);
 });
@@ -122,15 +149,11 @@ it("y default rewrites every item of a queue, a plan and a roadmap", () => {
 
   const tp = transcript(
     ws,
-    [
-      'Saved.\n\nReply "y" to run plan 1 (strategy: spawn-fast), then plan 2 (strategy: spawn-deep), ',
-      'then roadmap 1 (strategy: spawn-fast), or "y default" / "y spawn-fast" / "y spawn-deep", ',
-      'or "h" / "h fast" / "h deep" for a fresh session.',
-    ].join(""),
+    `Saved.\n\n${closing(planItem(1, "spawn-fast"), planItem(2, "spawn-deep"), roadmapItem(1, "spawn-fast"))}`,
   );
 
   expect(s.say("y default", tp)).toContain(
-    `y approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); ` +
+    `i approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); ` +
       `plan 2: ${written("plan")} run /implement-plan 2 (${p2}); ` +
       `roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap 1 (${rm})`,
   );
@@ -152,12 +175,16 @@ it("y with a Grok payload writes the strategy too", () => {
   expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
-it("y review-medium approves nothing and names the valid replies", () => {
+it("isx and i daet approve nothing and show the block again", () => {
   const { ws, s, plan } = onePlan("u1");
   const before = read(plan);
-  const out = s.say("y review-medium", plan1Line(ws));
-  expect(lines(out)).toContain('unknown strategy "review-medium"; use y, y default, y spawn-fast or y spawn-deep');
-  expect(out).not.toContain("y approves");
+
+  for (const reply of ["isx", "i daet"]) {
+    const out = s.say(reply, plan1Line(ws));
+    expect(out).toContain(`"${reply}" is not a choice; end with this block again:\n${closing(planItem(1))}`);
+    expect(out).not.toContain("i approves");
+  }
+
   expect(read(plan)).toBe(before);
 });
 
@@ -167,7 +194,7 @@ it("an invalid result is never written", () => {
   fs.writeFileSync(plan, read(plan).replace("## Goal", "## Aim"));
   const before = read(plan);
   const out = s.say("y spawn-deep", tp);
-  expect(out).toContain("y did not approve plan 1: strategy spawn-deep could not be written");
-  expect(out).not.toContain("y approves");
+  expect(out).toContain("i did not approve plan 1: strategy spawn-deep could not be written");
+  expect(out).not.toContain("i approves");
   expect(read(plan)).toBe(before);
 });

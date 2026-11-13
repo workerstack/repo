@@ -1,7 +1,11 @@
-/** Stop blocks a reply that skips a closing line, an /ask step ask or an /away decision; a prompt resets the turn. */
+/**
+ * Stop blocks a reply that skips an approval block, an /ask step ask or an /away decision; a prompt resets the
+ * turn.
+ */
 import { repoEnv } from "../repo-env.ts";
 import { otherLines, recordHook } from "./board-hook.ts";
 import { pushHold } from "./ci-push-gate.ts";
+import { parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
@@ -12,7 +16,6 @@ import { closingReviewReason } from "./orchestrate-reviews.ts";
 import { approvalsFile } from "./orchestrate-session.ts";
 import { readStampInt, unlinkStamp, writeStamp } from "./orchestrate-stamps.ts";
 import {
-  closingLineOf,
   endsWithQuestion,
   hasStepAsk,
   isWaitScoutExact,
@@ -46,9 +49,9 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
   return blockWith(reason);
 }
 
-/** What the turn's last reply is held to: a settled closing line, then the session's mode. */
+/** What the turn's last reply is held to: a settled approval block, then the session's mode. */
 function replyVerdict(data: HookInput, msg: string): HookResult {
-  const named = closingLineOf(msg);
+  const named = parseClosingBlock(msg);
   const reviewReason = closingReviewReason(data, named);
 
   if (reviewReason !== null) return blockWith(reviewReason);

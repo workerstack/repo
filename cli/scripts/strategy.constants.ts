@@ -1,9 +1,9 @@
-/** The strategy domain's values, closing-line and approval patterns, and stamp layout. */
-import type { Mode, Strategy } from "./strategy.types.ts";
+/** The strategy domain's values, approval-block and reply patterns, and stamp layout. */
+import type { Approval, ApprovalAction, Mode, Strategy } from "./strategy.types.ts";
 
 export const DEFAULT_STRATEGY = "default";
 export const SPAWN_FAST = "spawn-fast";
-export const SPAWN_DEEP = "spawn-deep";
+const SPAWN_DEEP = "spawn-deep";
 export const STRATEGIES: readonly Strategy[] = [DEFAULT_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
 export const MODES: readonly Mode[] = ["ask", "auto", "away"];
@@ -25,27 +25,72 @@ export const IMPLEMENTER_DEEP = "implementer-deep";
 
 export const PLAN = "plan";
 export const ROADMAP = "roadmap";
-export const HANDOFFS = '"h" / "h fast" / "h deep" for a fresh session';
 
 /** The words after `h` that pick a spawn strategy for the fresh session. */
-export const FAST = "fast";
-export const DEEP = "deep";
+const FAST = "fast";
+const DEEP = "deep";
+export const NOT_FOUND = -1;
 export const HANDOFF_LETTER = "h";
 export const ITEM_SEP = ", then ";
 
-/** One closing-line item: `plan 4 (strategy: spawn-fast)`. */
-const ITEM_SRC = "(?:plan|roadmap) \\d+ \\(strategy: [a-z-]+\\)";
+/** The approval block: a fence, the header, then rows that never change. */
+export const BLOCK_FENCE = "```";
 
-export const CLOSING_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(
-  `^Reply "y" to run (${ITEM_SRC}(?:, then ${ITEM_SRC})*), or `,
-);
+export const BLOCK_ROWS: readonly string[] = [
+  "  i  implement    id · isf · isd",
+  "  h  hand off     hd · hsf · hsd",
+  "     or reply to revise",
+];
 
-export const ITEM_RE: RegExp = /^(plan|roadmap) (\d+) \(strategy: ([a-z-]+)\)$/;
+export const HEADER_SEP = " · ";
 
-/** Markdown around a closing line: bold, backticks, a quote marker. */
-export const LEAD_MARKS_RE: RegExp = /^[\s`*_>]+/;
-export const TRAIL_MARKS_RE: RegExp = /[\s`*_]+$/;
-export const APPROVAL_RE: RegExp = /^([yh])(?:\s+(\S+))?$/i;
+/** One header item: `plan 4 · spawn-fast`. The kind stays open here; `parseClosingBlock` narrows it. */
+export const HEADER_ITEM_RE: RegExp = /^([a-z]+) (\d+) · ([a-z-]+)$/;
+
+export const LINE_END_WS_RE: RegExp = /[^\S\n]+$/;
+
+/** Reply grammar: exact whole replies, then an action word and strategy words, each exact or inferred. */
+export const TRAILING_PUNCT_RE: RegExp = /[.!]+$/;
+export const WORD_SEP_RE: RegExp = /\s+/;
+export const CODE_NEAR_MISS_RE: RegExp = /^[ih]s[a-z]?$/;
+export const MAX_REPLY_WORDS = 4;
+export const MAX_STRATEGY_WORDS = 2;
+export const MAX_ACTION_WORDS = 2;
+export const INFER_MAX_DISTANCE = 2;
+export const INFER_MIN_LENGTH = 4;
+export const IMPLEMENT_LETTERS: readonly string[] = ["i", "y"];
+
+/** Every whole reply that needs no inference. */
+export const EXACT_REPLIES: ReadonlyMap<string, Approval> = /* @__PURE__ */ new Map<string, Approval>([
+  ["i", { kind: "approve", strategy: null }],
+  ["y", { kind: "approve", strategy: null }],
+  ["yes", { kind: "approve", strategy: null }],
+  ["go", { kind: "approve", strategy: null }],
+  ["do it", { kind: "approve", strategy: null }],
+  ["h", { kind: "handoff", strategy: null }],
+  ["id", { kind: "approve", strategy: "default" }],
+  ["isf", { kind: "approve", strategy: "spawn-fast" }],
+  ["isd", { kind: "approve", strategy: "spawn-deep" }],
+  ["hd", { kind: "handoff", strategy: "default" }],
+  ["hsf", { kind: "handoff", strategy: "spawn-fast" }],
+  ["hsd", { kind: "handoff", strategy: "spawn-deep" }],
+]);
+
+/** Words that name an action, each exact or within the inference distance. */
+export const ACTION_WORDS: readonly (readonly [string, ApprovalAction])[] = [
+  ["implement", "approve"],
+  ["hand off", "handoff"],
+  ["handoff", "handoff"],
+];
+
+/** Words that name a strategy once an action is there; `fast` and `deep` are the handoff shorthands. */
+export const STRATEGY_WORDS: readonly (readonly [string, Strategy])[] = [
+  [DEFAULT_STRATEGY, DEFAULT_STRATEGY],
+  [SPAWN_FAST, SPAWN_FAST],
+  [SPAWN_DEEP, SPAWN_DEEP],
+  [FAST, SPAWN_FAST],
+  [DEEP, SPAWN_DEEP],
+];
 
 export const STAMP_FILE = "strategy.json";
 export const UNSAFE_SID_RE: RegExp = /[^\w-]/g;

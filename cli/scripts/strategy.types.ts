@@ -1,4 +1,4 @@
-/** The strategy domain's values, closing-line items and approval replies. */
+/** The strategy domain's values, approval-block items and approval replies. */
 
 export type Strategy = "default" | "spawn-fast" | "spawn-deep";
 
@@ -12,5 +12,7 @@ export type Approval =
   | { kind: "approve"; strategy: Strategy | null }
   | { kind: "handoff"; strategy: Strategy | null }
   | { kind: "unknown"; word: string };
+
+export type ApprovalAction = "approve" | "handoff";
 
 export type ActiveReview = { plan: string; serial: number; strategy: SpawnStrategy };

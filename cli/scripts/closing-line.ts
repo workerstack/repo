@@ -1,60 +1,54 @@
+import { osaDistance } from "./osa-distance.ts";
 import {
-  APPROVAL_RE,
-  CLOSING_RE,
-  DEEP,
-  FAST,
+  ACTION_WORDS,
+  BLOCK_FENCE,
+  BLOCK_ROWS,
+  CODE_NEAR_MISS_RE,
+  EXACT_REPLIES,
   HANDOFF_LETTER,
-  HANDOFFS,
-  ITEM_RE,
+  HEADER_ITEM_RE,
+  HEADER_SEP,
+  IMPLEMENT_LETTERS,
+  INFER_MAX_DISTANCE,
+  INFER_MIN_LENGTH,
   ITEM_SEP,
-  LEAD_MARKS_RE,
+  LINE_BREAK_RE,
+  LINE_END_WS_RE,
+  NOT_FOUND,
+  MAX_ACTION_WORDS,
+  MAX_REPLY_WORDS,
+  MAX_STRATEGY_WORDS,
   PLAN,
-  SPAWN_DEEP,
-  SPAWN_FAST,
   ROADMAP,
-  STRATEGIES,
-  TRAIL_MARKS_RE,
+  STRATEGY_WORDS,
+  TRAILING_PUNCT_RE,
+  WORD_SEP_RE,
 } from "./strategy.constants.ts";
 /**
- * The closing line: the one line that asks for approval or a handoff, rendered and parsed here and nowhere else;
- * and what a reply `y`, `y <strategy>`, `h`, `h fast` or `h deep` means.
+ * The approval block: the fenced block that asks for approval or a handoff, rendered and parsed here and nowhere
+ * else; and what a reply to it means.
  */
 import { parseStrategy } from "./strategy.ts";
-import type { Approval, Approvable, Strategy } from "./strategy.types.ts";
-
-function itemText(i: Approvable): string {
-  return `${i.kind} ${i.serial} (strategy: ${i.strategy})`;
-}
-
-function handoffStrategy(w: string): Strategy | null {
-  if (w === FAST) return SPAWN_FAST;
-
-  return w === DEEP ? SPAWN_DEEP : null;
-}
+import type { Approval, ApprovalAction, Approvable } from "./strategy.types.ts";
 
 /**
- * The only renderer of the approval line. The first `or` list holds every strategy not held by all items;
- * the second offers a handoff to a fresh session.
+ * The only renderer of the approval block: a fenced header naming each item and its strategy, then fixed rows for
+ * implement and hand off with their codes.
  */
-export function closingLine(items: Approvable[]): string {
-  if (items.length === 0) throw new Error("closingLine needs at least one item");
-  const others = STRATEGIES.filter((s) => !items.every((i) => i.strategy === s));
-  const run = items.map(itemText).join(ITEM_SEP);
+export function closingBlock(items: Approvable[]): string {
+  if (items.length === 0) throw new Error("closingBlock needs at least one item");
+  const header = items.map((i) => `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}`).join(ITEM_SEP);
 
-  return `Reply "y" to run ${run}, or ${others.map((s) => `"y ${s}"`).join(" / ")}, or ${HANDOFFS}.`;
+  return [BLOCK_FENCE, header, ...BLOCK_ROWS, BLOCK_FENCE].join("\n");
 }
 
-function itemOf(part: string): Approvable | null {
-  const it = ITEM_RE.exec(part) /* CLOSING_RE matched, so every part is an item */ as RegExpExecArray;
+function headerItem(part: string): Approvable | null {
+  const m = HEADER_ITEM_RE.exec(part);
 
-  const [, kind, serial, word] = [...it] /* all three groups match whenever the pattern does */ as [
-    string,
-    string,
-    string,
-    string,
-  ];
+  if (m === null) return null;
 
-  const strategy = parseStrategy(word);
+  const [, kind, serial, word] = m;
+  const strategy = parseStrategy(String(word));
 
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
 
@@ -62,39 +56,88 @@ function itemOf(part: string): Approvable | null {
 }
 
 /**
- * The items a closing line names, or null unless the line is exactly what `closingLine` renders for them.
- * Markdown around the line (bold, backticks, a quote marker) is ignored.
+ * The items of the message's last fenced block, or null unless that block ends the message and is exactly what
+ * `closingBlock` renders for them. Prose before it and whitespace at line ends are ignored.
  */
-export function parseClosingLine(line: string): Approvable[] | null {
-  const text = line.replace(LEAD_MARKS_RE, "").replace(TRAIL_MARKS_RE, "");
-  const m = CLOSING_RE.exec(text);
+export function parseClosingBlock(msg: string): Approvable[] | null {
+  const lines = msg
+    .trimEnd()
+    .split(LINE_BREAK_RE)
+    .map((l) => l.replace(LINE_END_WS_RE, ""));
 
-  if (m === null) return null;
+  const end = lines.length - 1;
+  const start = lines.lastIndexOf(BLOCK_FENCE, end - 1);
+
+  if (lines[end] !== BLOCK_FENCE || start === NOT_FOUND) return null;
+
   const items: Approvable[] = [];
 
-  for (const part of (m[1] /* group 1 is not optional in CLOSING_RE */ as string).split(ITEM_SEP)) {
-    const item = itemOf(part);
+  const header = String(lines[start + 1]);
+
+  for (const part of header.split(ITEM_SEP)) {
+    const item = headerItem(part);
 
     if (item === null) return null;
     items.push(item);
   }
 
-  return closingLine(items) === text ? items : null;
+  return closingBlock(items) === lines.slice(start).join("\n") ? items : null;
+}
+
+/** Every distinct value whose word is `phrase`, or else within the inference distance of it. */
+function matches<T>(phrase: string, words: readonly (readonly [string, T])[]): T[] {
+  const exact = words.find(([w]) => w === phrase);
+
+  if (exact !== undefined) return [exact[1]];
+
+  if (phrase.length < INFER_MIN_LENGTH) return [];
+
+  return [...new Set(words.filter(([w]) => osaDistance(phrase, w) <= INFER_MAX_DISTANCE).map(([, v]) => v))];
+}
+
+function actionOf(words: string[]): { kind: ApprovalAction; used: number } | null {
+  const first = String(words[0]);
+
+  if (first === HANDOFF_LETTER) return { kind: "handoff", used: 1 };
+
+  if (IMPLEMENT_LETTERS.includes(first)) return { kind: "approve", used: 1 };
+
+  for (let used = 1; used <= MAX_ACTION_WORDS; used++) {
+    const [kind, ...more] = matches(words.slice(0, used).join(" "), ACTION_WORDS);
+
+    if (kind !== undefined && more.length === 0) return { kind, used };
+  }
+
+  return null;
 }
 
 /**
- * A reply of `y` (keep each file's strategy) or `y <strategy>`, or a handoff `h` (keep) or `h fast` / `h deep`.
- * Null when the prompt is neither a y nor an h reply.
+ * What a reply means: a short yes, `h`, or a code, exactly; else an action (`i`, `y`, `h`, or `implement` /
+ * `hand off` inferred) with optional strategy words, inferred when misspelled. Null for a revision; `unknown`
+ * (carrying the whole reply) for a near-miss code or a strategy word close to several.
  */
 export function parseApproval(prompt: string): Approval | null {
-  const m = APPROVAL_RE.exec(prompt.trim());
+  const whole = prompt.trim();
+  const words = whole.toLowerCase().replace(TRAILING_PUNCT_RE, "").trim().split(WORD_SEP_RE);
+  const text = words.join(" ");
+  const exact = EXACT_REPLIES.get(text);
 
-  if (m === null) return null;
-  const [, letter, word] = m;
-  const kind = letter?.toLowerCase() === HANDOFF_LETTER ? "handoff" : "approve";
+  if (exact !== undefined) return { ...exact };
 
-  if (word === undefined) return { kind, strategy: null };
-  const strategy = kind === "handoff" ? handoffStrategy(word.toLowerCase()) : parseStrategy(word.toLowerCase());
+  if (words.length > MAX_REPLY_WORDS) return null;
 
-  return strategy === null ? { kind: "unknown", word } : { kind, strategy };
+  if (words.length === 1 && CODE_NEAR_MISS_RE.test(text)) return { kind: "unknown", word: whole };
+
+  const action = actionOf(words);
+
+  if (action === null) return null;
+  const rest = words.slice(action.used);
+
+  if (rest.length === 0) return { kind: action.kind, strategy: null };
+
+  const [strategy, ...more] = rest.length > MAX_STRATEGY_WORDS ? [] : matches(rest.join("-"), STRATEGY_WORDS);
+
+  if (strategy === undefined) return null;
+
+  return more.length === 0 ? { kind: action.kind, strategy } : { kind: "unknown", word: whole };
 }

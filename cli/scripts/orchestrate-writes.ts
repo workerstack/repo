@@ -30,7 +30,7 @@ import { stampPath as strategyStampPath } from "./strategy.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords } from "./worktree-guards.ts";
 
-/** A write saved through `persist`; an approvable one is recorded for a `y`. */
+/** A write saved through `persist`; an approvable one is recorded for an `i`. */
 type PersistRoute = { persist: Persist; approvable: boolean };
 
 /** How a write is answered: already decided (null passes it to the host), or saved through `persist`. */

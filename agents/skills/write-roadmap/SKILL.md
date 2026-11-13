@@ -6,7 +6,7 @@ description: >-
 ---
 # write-roadmap
 
-You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user replies `y`.
+You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user approves with `i`.
 
 Author a bare `strategy: {value}` line above `ROADMAP_NAME:`. Values and the heuristic: `/write-plan`. Add a bare `mode: {value}` line beside it on the same terms as `/write-plan`: `away` when this session runs `/away`, or the mode the person asked for.
 
@@ -20,9 +20,9 @@ After each save, spawn a fresh host agent whose prompt is only `/review-roadmap 
 
 On feedback, revise the same file (a Write of the saved path updates it in place), add a `- feedback: …` entry for what the user rejected and what changed, and run `/review-roadmap` again. Never edit or drop an earlier entry.
 
-On `y`, set `status: locked` on the same file, then run `/implement-roadmap {n}`. On `h`, `h fast` or `h deep`, the hook writes the handoff: tell the person to run the `/pickup {serial}` it names in a fresh session, and do no work here. The save denies the lock while `reviews` is 0. Do not run `/write-plan` or `/implement-plan` from this skill.
+On `i`, a short yes or an `i` code, set `status: locked` on the same file, then run `/implement-roadmap {n}`. On `h` or an `h` code, the hook writes the handoff: tell the person to run the `/pickup {serial}` it names in a fresh session, and do no work here. The save denies the lock while `reviews` is 0. Do not run `/write-plan` or `/implement-plan` from this skill.
 
-Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with two lines: `Strategy: {s}, because …` in one sentence, then the closing line from `/write-plan` for this roadmap, `Reply "y" to run roadmap {n} (strategy: {s}), or …, or "h" / "h fast" / "h deep" for a fresh session.`, in its queue form when other reviewed plans or roadmaps wait. Only after the review settled (`reviews` bumped since the review spawn); the Stop hook blocks it otherwise. Ask for approval no other way.
+Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with the approval block from `/write-plan` for this roadmap, headed `roadmap {n} · {s}`, in its queue form when other reviewed plans or roadmaps wait. Only after the review settled (`reviews` bumped since the review spawn); the Stop hook blocks it otherwise. Ask for approval no other way.
 
 ## Shape
 
