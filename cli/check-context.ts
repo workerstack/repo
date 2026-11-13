@@ -83,9 +83,33 @@ function descriptionBytes(rel: string, file: string): number {
 
 type Rise = [Bucket, number, number];
 
-/** Whether the ledger holds a line for this rise. */
+type Step = { from: number; to: number };
+
+/** Whether `steps` chain from `from` to `to`, each step used at most once. */
+function chains(steps: Step[], from: number, to: number): boolean {
+  if (from === to) return true;
+
+  return steps.some(
+    (step, at) =>
+      step.from === from &&
+      chains(
+        steps.filter((_, other) => other !== at),
+        step.to,
+        to,
+      ),
+  );
+}
+
+/**
+ * Whether the ledger records this rise: one line for it, or the bucket's lines in a chain from main's value to the
+ * measure.
+ */
 function isRecorded(recorded: { bucket: string; from: number; to: number }[], [bucket, from, to]: Rise): boolean {
-  return recorded.some((row) => row.bucket === bucket && row.from === from && row.to === to);
+  return chains(
+    recorded.filter((row) => row.bucket === bucket),
+    from,
+    to,
+  );
 }
 
 function sum(values: number[]): number {
@@ -149,7 +173,7 @@ function rises(measured: Budget, main: MainReader | null): Rise[] {
 
 /**
  * The problems of the context budget at `root`: none without a budget file, a file that differs from the measure is
- * stale, and a rise over main's file needs a ledger line for that bucket, main's value and the measured one.
+ * stale, and a rise over main's file needs that bucket's ledger lines to chain from main's value to the measured one.
  */
 export function contextProblems(root: string, main: MainReader | null = mainReader(root)): string[] {
   const text = readText(path.join(root, BUDGET_PATH));

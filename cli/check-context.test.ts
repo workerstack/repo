@@ -67,6 +67,52 @@ describe("contextProblems, a rise over main", () => {
   });
 });
 
+const BROKEN = [
+  [
+    "a broken chain",
+    [
+      ["rules", 5739, 5900],
+      ["rules", 5950, 6100],
+    ],
+  ],
+  [
+    "a chain through another bucket",
+    [
+      ["rules", 5739, 5900],
+      ["index", 5900, 6100],
+    ],
+  ],
+  [
+    "a chain that overshoots",
+    [
+      ["rules", 5739, 5900],
+      ["rules", 5900, 6200],
+      ["rules", 6200, 5900],
+    ],
+  ],
+] as const;
+
+describe("contextProblems, a rise over chained ledger lines", () => {
+  it("passes when the bucket's lines chain from main's value to the measure", () => {
+    const lines = [
+      { bucket: "rules", from: 5900, reason: "second", to: 6100 },
+      { bucket: "index", from: 5739, reason: "other", to: 5900 },
+      { bucket: "rules", from: 5739, reason: "first", to: 5900 },
+    ];
+
+    const dir = contextTree(HERE, { [BUDGET]: HERE, [LEDGER]: lines.map((l) => `${JSON.stringify(l)}\n`).join("") });
+
+    expect(contextProblems(dir, mainWith(MAIN))).toStrictEqual([]);
+  });
+
+  it.each(BROKEN)("fails %s", (_name, rows) => {
+    const text = rows.map(([bucket, from, to]) => `${JSON.stringify({ bucket, from, reason: "r", to })}\n`).join("");
+    const dir = contextTree(HERE, { [BUDGET]: HERE, [LEDGER]: text });
+
+    expect(contextProblems(dir, mainWith(MAIN))).toStrictEqual([RISE]);
+  });
+});
+
 function staleOf(budget: string | Record<string, number | string>): string[] {
   return contextProblems(contextTree(HERE, { [BUDGET]: budget }), mainWith(HERE));
 }
