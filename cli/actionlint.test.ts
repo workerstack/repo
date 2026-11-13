@@ -96,6 +96,13 @@ it("lints the workflows under the benchmark pack alone, which generates bench.ym
   expect(calls.map((call) => call.args.at(-1))).toStrictEqual([".github/workflows/bench.yml"]);
 });
 
+it("lints the workflows under the evals pack alone, which generates eval.yml", async () => {
+  const { root, cacheDir } = repo('["evals"]', ["eval.yml"]);
+  const out = await checkActionlintAt(root, { cacheDir, fetch: failFetch, spawn: answering(0, "[]") });
+  expect(out).toStrictEqual({ problems: [] });
+  expect(calls.map((call) => call.args.at(-1))).toStrictEqual([".github/workflows/eval.yml"]);
+});
+
 it("prints one line per problem actionlint finds", async () => {
   const { root, cacheDir } = repo('["release"]', ["release.yml"]);
 

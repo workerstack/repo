@@ -1,4 +1,4 @@
-# repo:generated ef89681b
+# repo:generated 93c00d74
 * text=auto eol=lf
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
@@ -33,6 +33,7 @@
 .github/dependabot.yml linguist-generated
 .github/workflows/bench.yml linguist-generated
 .github/workflows/ci.yml linguist-generated
+.github/workflows/eval.yml linguist-generated
 .github/workflows/nightly.yml linguist-generated
 .github/workflows/release.yml linguist-generated
 .grok/agents/implementer-deep.md linguist-generated

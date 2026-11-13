@@ -177,7 +177,7 @@ export const E2E_PLAYWRIGHT_SHARD_STEP: string = /* @__PURE__ */ E2E_SHARD_STEP.
 export const E2E_PLAYWRIGHT: RegExp = /^(?:(?:bun --bun|bunx)\s+)?playwright\s/;
 
 /** The cache action's pin: a full commit SHA with its release as the comment. */
-const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
+export const CACHE_PIN: string = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0";
 
 /** Under the workspace pack, before the gates: the shard's turbo cache of the latest run with this key prefix. */
 export const TURBO_RESTORE_STEP: string = `      - uses: actions/cache/restore@${CACHE_PIN}

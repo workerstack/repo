@@ -140,5 +140,5 @@ export default defineConfig({
   },
   nightly: { shards: 8 },
   owner: { github: "lovrozagar", name: "Lovro Žagar" },
-  packs: ["agents", "standards", "docs", "release", "benchmark"],
+  packs: ["agents", "standards", "docs", "release", "benchmark", "evals"],
 });
