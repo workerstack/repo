@@ -3,3 +3,5 @@
 {"bucket":"skills","from":9363,"to":9473,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
 {"bucket":"rules","from":2913,"to":3243,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
 {"bucket":"rules","from":2913,"to":3124,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
+{"bucket":"index","from":1579,"to":1626,"reason":"fast plans add write-plan-fast and implement-plan-fast skills"}
+{"bucket":"skills","from":9473,"to":9612,"reason":"fast plans add write-plan-fast and implement-plan-fast skills"}

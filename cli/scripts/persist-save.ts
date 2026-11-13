@@ -3,8 +3,19 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { firstNonEmpty } from "./first-non-empty.ts";
-import { SOURCE_MAX } from "./persist-doc.constants.ts";
-import { captured, compactCreatedStamp, createdAtOf, freeName } from "./persist-doc.ts";
+import { FM_OPEN, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
+import {
+  captured,
+  compactCreatedStamp,
+  createdAtOf,
+  freeName,
+  nextSerial,
+  slugFromFilename,
+  stripBom,
+  type PersistResult,
+} from "./persist-doc.ts";
+import { withSavedFrontmatter } from "./persist-plan-head.ts";
+import { unclosedFenceErrors } from "./persist-sections.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const SPACES_RE = /\s+/g;
@@ -65,4 +76,56 @@ export function persistSource(
   const squeezed = section === null ? fallback : captured(section, 1).trim().replaceAll(SPACES_RE, " ");
 
   return (firstNonEmpty(...named) ?? squeezed).slice(0, SOURCE_MAX);
+}
+
+/** A saved plan or fast plan: where it is, its serial and slug, and the text the host writes. */
+export type PlanResult = PersistResult<{
+  path: string;
+  serial: number;
+  slug: string;
+  content: string;
+  filename: string;
+}>;
+
+/**
+ * Rewrite of a saved plan or fast plan: same file and serial. `validate` names the denials for the new text (it is
+ * given the saved text too). Validates only: the host writes `content`, since a write here first makes Claude Code
+ * refuse the Write as modified since read.
+ */
+export function prepareRewrite(
+  input: Rewrite,
+  validate: (filename: string, text: string, previous: string) => string[],
+): PlanResult {
+  const { raw, previous, filename, rel } = rewriteTarget(input);
+  const text = stripBom(raw);
+  const fence = unclosedFenceErrors(text);
+
+  if (fence.length > 0) return refused(fence);
+  const full = text.startsWith(FM_OPEN) ? text : withSavedFrontmatter(previous, text);
+  const errors = validate(filename, full, previous);
+
+  if (errors.length > 0) return refused(errors);
+
+  return {
+    content: full,
+    filename,
+    ok: true,
+    path: rel,
+    // validate accepted the filename, so the serial prefix is there
+    serial: Number(SERIAL_PREFIX_RE.exec(filename)?.[1]),
+    slug: slugFromFilename(filename),
+  };
+}
+
+/** The serial and file a new plan is written to, with its creation time. */
+export type Allocation = { createdAt: string; dest: string; filename: string; serial: number };
+
+/** Next serial and the file a new plan is written to under `dir`, which is made when missing. */
+export function allocate(dir: string, slug: string, created: string | undefined): Allocation {
+  fs.mkdirSync(dir, { recursive: true });
+  const createdAt = createdAtOf(created);
+  const serial = nextSerial(dir);
+  const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
+
+  return { createdAt, dest: path.join(dir, filename), filename, serial };
 }

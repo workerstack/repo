@@ -2,23 +2,23 @@
 import path from "node:path";
 
 import {
+  commitCheck,
   createdCheck,
   h1Check,
   missingErrors,
   patternErrors,
   serialLineCheck,
+  serialNameCheck,
   slugCheck,
   sourceLengthCheck,
   when,
 } from "./persist-doc-checks.ts";
-import { SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
-import { hasKey, parseFrontmatter } from "./persist-doc.ts";
+import { parseFrontmatter } from "./persist-doc.ts";
 import { modeErrors, strategyError } from "./persist-keys.ts";
 import { reviewErrors } from "./persist-mistakes.ts";
 import { BODY_CHECKS, type Doc } from "./persist-plan-body-checks.ts";
 import {
   ABSOLUTE_PATH,
-  COMMIT_SUBJECT_RE,
   EXTENSION_RE,
   FILENAME_RE,
   RELATIVE_PATH,
@@ -47,10 +47,6 @@ function requiredErrors(doc: Doc): string[] {
   return missingErrors(doc, REQUIRED_KEYS);
 }
 
-function commitError({ map }: Doc): string[] {
-  return when({ bad: hasKey(map, "commit") && !COMMIT_SUBJECT_RE.test(String(map.commit)), error: "commit" });
-}
-
 function strategyErrors({ map }: Doc): string[] {
   return when({ bad: parseStrategy(map.strategy) === null, error: strategyError() });
 }
@@ -66,13 +62,6 @@ function reviewChecks({ map, previous }: Doc): string[] {
   });
 }
 
-function serialNameError({ filename, map }: Doc): string[] {
-  const fileSerial = SERIAL_PREFIX_RE.exec(filename)?.[1];
-  const named = fileSerial !== undefined && map.serial !== undefined && map.serial !== "";
-
-  return when({ bad: named && Number(map.serial) !== Number(fileSerial), error: "serial/filename" });
-}
-
 /** Checks on the frontmatter and the name, run before the sections are read. */
 const HEAD_CHECKS: Check[] = [
   serialLineCheck,
@@ -80,13 +69,13 @@ const HEAD_CHECKS: Check[] = [
   statusError,
   createdCheck,
   sourceLengthCheck,
-  commitError,
+  commitCheck,
   strategyErrors,
   modeChecks,
   slugCheck,
   h1Check,
   reviewChecks,
-  serialNameError,
+  serialNameCheck,
 ];
 
 /**

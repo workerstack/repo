@@ -63,6 +63,10 @@ describe("who owns a loose file", () => {
 
   it("names the owner of a path, or null", () => {
     expect(persistOwner(at("plans", "1-a.md"), root)).toBe("plans");
+    expect(persistOwner(at("plans-fast", "x.md"), root)).toBe("plans-fast");
+    const wt = path.join(root, ".worktrees", "w");
+
+    expect(persistOwner(repoPath(wt, "plans-fast", "x.md"), wt)).toBe("plans-fast");
     expect(persistOwner(at("roadmaps", "1-a.md"), root)).toBe("roadmaps");
     expect(persistOwner(at("handoffs", "1-a.md"), root)).toBe("handoffs");
     expect(persistOwner(at("implementations", "1-a.md"), root)).toBe("implementations");

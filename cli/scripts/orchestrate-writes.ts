@@ -14,10 +14,13 @@ import { projectEdit } from "./ignore-edits.ts";
 import { holdingCheckout } from "./lessons-ops.ts";
 import { isLessonFile, lessonWrite } from "./orchestrate-lessons.ts";
 import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-reply.ts";
+import { kindAt } from "./orchestrate-reviews.ts";
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
 import { firstNonEmptyStripped } from "./orchestrate-transcript.ts";
 import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
-import type { Approvable, HookResult, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
+import type { HookResult, ItemKind, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
+import { validateFastPlan } from "./persist-fast-plan-validate.ts";
+import { persistFastPlan, prepareFastPlanUpdate } from "./persist-fast-plan.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
@@ -44,7 +47,12 @@ type Validate = (name: string, text: string, opts: { fresh: boolean; previous: s
 const IMPL_NAME_LINE = /^\s*IMPL_NAME:/m;
 const SID_UNSAFE = /[^\w-]/g;
 
-const SAVED: Readonly<Record<Approvable["kind"], { validate: Validate; prepare: Prepare; persist: Persist }>> = {
+const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; persist: Persist }>> = {
+  "fast-plan": {
+    persist: persistFastPlan,
+    prepare: prepareFastPlanUpdate,
+    validate: (name, text, { fresh }) => validateFastPlan(name, text, { fresh }),
+  },
   plan: { persist: persistPlan, prepare: preparePlanUpdate, validate: validatePlan },
   roadmap: { persist: persistRoadmap, prepare: prepareRoadmapUpdate, validate: validateRoadmap },
 };
@@ -68,8 +76,8 @@ function savedEdit(write: WriteCase, abs: string, validate: Validate): HookResul
   return errors.length > 0 ? denyWith(write.data, errors.join("; ")) : null;
 }
 
-/** A plan or roadmap: an Edit of a saved one is validated, and a valid one counts as a save; a Write is persisted. */
-function savedRoute(write: WriteCase, kind: Approvable["kind"]): Route {
+/** A saved item: an Edit of an existing one is validated and a valid one counts as a save; a Write is persisted. */
+function savedRoute(write: WriteCase, kind: ItemKind): Route {
   const abs = path.resolve(write.rawPath);
   const exists = isFile(abs);
   const saved = SAVED[kind];
@@ -106,9 +114,9 @@ function routeWrite(write: WriteCase): Route {
   const { canon } = write;
   const ws = write.roots.root;
 
-  if (isUnderRepoDir(canon, ws, "plans")) return savedRoute(write, "plan");
+  const kind = kindAt(canon, ws);
 
-  if (isUnderRepoDir(canon, ws, "roadmaps")) return savedRoute(write, "roadmap");
+  if (kind !== null) return savedRoute(write, kind);
 
   if (isUnderRepoDir(canon, ws, "handoffs")) return { approvable: false, persist: persistHandoff };
 

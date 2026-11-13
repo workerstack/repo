@@ -4,11 +4,26 @@ import path from "node:path";
 import type { HookInput } from "./hook-input.ts";
 import { itemKey, queueText } from "./orchestrate-reviews.ts";
 import { sessionIdOf } from "./orchestrate-session.ts";
+import { ITEM_KINDS } from "./orchestrate.constants.ts";
 import type { ApprovalItem, HandoffEntry } from "./orchestrate.types.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 
 function handoffLeaf(i: ApprovalItem): string {
-  return i.kind === "plan" ? `/implement-plan ${i.serial}` : `set status locked, then /implement-roadmap ${i.serial}`;
+  const spec = ITEM_KINDS[i.kind];
+
+  return `${spec.prefix}${spec.command} ${i.serial}`;
+}
+
+function stateLine(q: HandoffEntry): string {
+  const strategy = q.strategy === null ? "" : ` (strategy: ${q.strategy})`;
+
+  return `- ${itemKey(q.item)}: ${q.item.path}${strategy}`;
+}
+
+function shownEntry(q: HandoffEntry): string {
+  const strategy = q.strategy === null ? "" : ` (strategy ${q.strategy}${q.written ? " written" : ""})`;
+
+  return `${itemKey(q.item)}${strategy}`;
 }
 
 // One handoff for the whole queue line, in its order; Watch-outs stay empty because the files carry their own.
@@ -24,7 +39,7 @@ function handoffBody(sid: string, queue: HandoffEntry[]): string {
     `Run ${queueText(queue.map((q) => q.item))} in a fresh session.`,
     "",
     "## State",
-    ...queue.map((q) => `- ${itemKey(q.item)}: ${q.item.path} (strategy: ${q.strategy})`),
+    ...queue.map(stateLine),
     "",
     "## Context",
     `- handed off by an h reply in session ${sid}`,
@@ -41,9 +56,7 @@ function handoffBody(sid: string, queue: HandoffEntry[]): string {
 
 /** Writes the handoff and tells the agent where; or why it could not be written. */
 export function orchestrateHandoff(data: HookInput, ws: string, queue: HandoffEntry[]): string {
-  const shown = queue
-    .map((q) => `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`)
-    .join(", then ");
+  const shown = queue.map(shownEntry).join(", then ");
 
   const result = persistHandoff({ content: handoffBody(sessionIdOf(data), queue), workspaceRoot: ws });
 

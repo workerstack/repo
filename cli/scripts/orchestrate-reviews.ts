@@ -9,8 +9,9 @@ import { repoPath } from "../repo-dirs.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
-import { IN_PROGRESS, ITEM_DIRS, PLAN_KIND } from "./orchestrate.constants.ts";
-import type { Approvable, ItemRef, ReviewState, ReviewsOpen } from "./orchestrate.types.ts";
+import { IN_PROGRESS, ITEM_KINDS, ITEM_KIND_LIST, PLAN_KIND } from "./orchestrate.constants.ts";
+import type { Approvable, ItemKind, ItemRef, ReviewState, ReviewsOpen, Strategy } from "./orchestrate.types.ts";
+import { isUnderRepoDir } from "./persist-tmp.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
@@ -19,6 +20,16 @@ const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end wit
 
 export function itemKey(item: ItemRef): string {
   return `${item.kind} ${item.serial}`;
+}
+
+/** The kind whose dir holds `abs`; null for a path no item kind owns. */
+export function kindAt(abs: string, ws: string): ItemKind | null {
+  return ITEM_KIND_LIST.find((kind) => isUnderRepoDir(abs, ws, ITEM_KINDS[kind].dir)) ?? null;
+}
+
+/** The strategy an item runs; null for a fast plan, which has none. */
+export function itemStrategy(item: Approvable): Strategy | null {
+  return item.kind === "fast-plan" ? null : item.strategy;
 }
 
 export function queueText(items: Approvable[]): string {
@@ -119,7 +130,7 @@ function holdsSerial(abs: string, serial: number): boolean {
 
 // The saved file for a plan or roadmap serial, found through its directory; null when none holds that serial.
 function itemFile(ws: string, ref: ItemRef): string | null {
-  const dir = repoPath(ws, ITEM_DIRS[ref.kind]);
+  const dir = repoPath(ws, ITEM_KINDS[ref.kind].dir);
   let names: string[];
 
   try {
@@ -134,6 +145,7 @@ function itemFile(ws: string, ref: ItemRef): string | null {
 }
 
 export function reviewState(open: ReviewsOpen, ref: ItemRef, reviews: number): ReviewState {
+  if (!ITEM_KINDS[ref.kind].needsReview) return "settled";
   const atSpawn = open[itemKey(ref)];
 
   if (atSpawn !== undefined) return reviews > atSpawn ? "settled" : "open";

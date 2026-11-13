@@ -1,5 +1,5 @@
 import { REPO, STATE } from "../repo-dirs.ts";
-import type { Approvable } from "./orchestrate.types.ts";
+import type { ItemKind, ItemSpec } from "./orchestrate.types.ts";
 
 /** Where the parent hook keeps its per-session stamps. */
 export const ORCHESTRATOR_LOGS_DIR: string = `${REPO}/${STATE}/orchestrator-logs`;
@@ -82,14 +82,36 @@ export const ASSISTANT = "assistant";
 /** Content parts that carry a tool call or result, not reply text. */
 export const TOOL_PARTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["tool_use", "tool_result", "function_call"]);
 
-/** The statuses at which a reviewed plan or roadmap waits for a `y`. */
-export const APPROVABLE_STATUS: Readonly<Record<Approvable["kind"], ReadonlySet<string>>> = {
-  plan: /* @__PURE__ */ new Set(["ready"]),
-  roadmap: /* @__PURE__ */ new Set(["draft", "locked"]),
+/**
+ * Everything that differs per item kind: the .repo dir it is saved in, the statuses at which it waits for an `i`,
+ * whether a review must settle first, and the command a run or handoff names (`prefix` comes before it).
+ */
+export const ITEM_KINDS: Readonly<Record<ItemKind, ItemSpec>> = {
+  "fast-plan": {
+    approvable: /* @__PURE__ */ new Set(["ready"]),
+    command: "/implement-plan-fast",
+    dir: "plans-fast",
+    needsReview: false,
+    prefix: "",
+  },
+  plan: {
+    approvable: /* @__PURE__ */ new Set(["ready"]),
+    command: "/implement-plan",
+    dir: "plans",
+    needsReview: true,
+    prefix: "",
+  },
+  roadmap: {
+    approvable: /* @__PURE__ */ new Set(["draft", "locked"]),
+    command: "/implement-roadmap",
+    dir: "roadmaps",
+    needsReview: true,
+    prefix: "set status locked, then ",
+  },
 };
 
-/** The .repo dir each approvable kind is saved in. */
-export const ITEM_DIRS: Readonly<Record<Approvable["kind"], string>> = { plan: "plans", roadmap: "roadmaps" };
+/** The kinds in the order a path is tried against their dirs. */
+export const ITEM_KIND_LIST: readonly ItemKind[] = ["plan", "roadmap", "fast-plan"];
 
 /** The kind a `/review-plan N` or `/review-roadmap N` spawn names. */
 export const PLAN_KIND = "plan";
