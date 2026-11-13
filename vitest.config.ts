@@ -23,7 +23,7 @@ export default defineConfig({
         },
       },
     },
-    include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "presets/**/*.test.ts"],
+    include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "evals/**/*.test.ts", "presets/**/*.test.ts"],
     setupFiles: ["dev/vitest-setup.ts"],
     unstubEnvs: true,
   },

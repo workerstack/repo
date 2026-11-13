@@ -20,6 +20,10 @@ export const KNIP_UNIGNORED_GLOB = "knip.unignored-*.json";
 const ROOT = ".";
 const VITEST_CONFIGS = "vitest*.config.*";
 
+/** The dir `repo eval` loads `<name>/eval.ts` from; knip cannot see that import. */
+const EVALS_DIR = "evals";
+const EVAL_ENTRY = `${EVALS_DIR}/*/eval.ts`;
+
 /** Every issue type knip 6.43.0 reports: each is an error, so none passes unseen. */
 const RULES = [
   "files",
@@ -96,7 +100,8 @@ function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: string
 
 /** The root workspace: its own settings and the `ignores`, each as the list knip takes for its kind. */
 function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): WorkspaceConfig {
-  const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [CONFIG_FILE]);
+  const evals = fs.existsSync(path.join(workspace.root, EVALS_DIR)) ? [EVAL_ENTRY] : [];
+  const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [CONFIG_FILE, ...evals]);
   const files = ignores.flatMap((ignore) => ("file" in ignore ? [ignore.file] : []));
   const dependencies = ignores.flatMap((ignore) => ("dependency" in ignore ? [ignore.dependency] : []));
   const binaries = ignores.flatMap((ignore) => ("binary" in ignore ? [ignore.binary] : []));
@@ -112,9 +117,9 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): Works
 
 /**
  * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its
- * own (the root also `workerstack.config.ts`), the vitest configs present read by knip's vitest plugin, fixtures
- * ignored, a workspace's own bins not reported, and the root carrying `ignores`. `repo check` passes none for its
- * ignore-free run.
+ * own (the root also `workerstack.config.ts`, and every `evals/<name>/eval.ts` when it has an `evals/` dir), the
+ * vitest configs present read by knip's vitest plugin, fixtures ignored, a workspace's own bins not reported, and the
+ * root carrying `ignores`. `repo check` passes none for its ignore-free run.
  */
 export function knipConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): string {
   const config = {

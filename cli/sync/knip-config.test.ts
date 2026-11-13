@@ -120,6 +120,25 @@ describe("the generated knip config: vitest", () => {
   });
 });
 
+describe("the generated knip config: evals", () => {
+  it("makes evals/*/eval.ts a root entry after workerstack.config.ts when the root has an evals dir", () => {
+    const ws = workspace({}, [{ dir: "packages/api", manifest: {} }], ["evals/routing/eval.ts"]);
+
+    expect(parsed(ws)).toMatchObject({
+      workspaces: {
+        ".": { entry: [...DEFAULT_ENTRIES, "workerstack.config.ts", "evals/*/eval.ts"] },
+        "packages/api": { entry: DEFAULT_ENTRIES },
+      },
+    });
+  });
+
+  it("adds no eval entry where the root has no evals dir", () => {
+    expect(parsed(workspace({}, []))).toMatchObject({
+      workspaces: { ".": { entry: [...DEFAULT_ENTRIES, "workerstack.config.ts"] } },
+    });
+  });
+});
+
 describe("the generated knip config: bins", () => {
   it("ignores the binaries a workspace's own manifest declares, as a map or a path, and no other's", () => {
     const ws = workspace({ bin: { other: "./bin/o.ts", repo: "./bin/repo.ts" } }, [
