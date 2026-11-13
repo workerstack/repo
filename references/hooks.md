@@ -45,7 +45,7 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 
 ## Local ci and bun test
 
-`localCiGuard` in `gate-shell.ts` denies a shell command that runs the whole ci: `repo ci`, `bun repo ci`, `bun ./bin/repo.ts ci`, `bun run ci` (npm and pnpm too), alone or in a compound, when `ci` is followed by the end or a flag. The reason is ``GitHub runs ci, not you: push the branch, then run `bun repo ci wait <branch>` in the background. To check one change, run the nearest test file with `bun run test <file>`.`` `ci wait`, `skips`, `times` and `merge` pass. `testRunGuard` rewrites `bun test` (bun's own runner, which cannot run the vitest suites) to `bun run test` for every caller, in a compound too; an implementer's or a reviewing parent's plain run then goes through `repo job` as before.
+`localCiGuard` in `gate-shell.ts` denies a shell command that runs the whole ci: `bun repo ci` (also run by path or without `bun`) or `bun run ci` (npm and pnpm too), alone or in a compound, when `ci` is followed by the end or a flag. The reason is ``GitHub runs ci, not you: push the branch, then run `bun repo ci wait <branch>` in the background. To check one change, run the nearest test file with `bun run test <file>`.`` `ci wait`, `skips`, `times` and `merge` pass. `testRunGuard` rewrites `bun test` (bun's own runner, which cannot run the vitest suites) to `bun run test` for every caller, in a compound too; an implementer's or a reviewing parent's plain run then goes through `bun repo job` as before.
 
 ## Push gate
 
