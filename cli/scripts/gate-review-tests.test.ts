@@ -47,7 +47,7 @@ const SUITES = [
 ];
 
 const NOT_PARENT: [string, string][] = [
-  ["default", "in-progress"],
+  ["free", "in-progress"],
   ["spawn-fast", "ready"],
   ["spawn-fast", "done"],
   ["spawn-fast", "blocked"],
@@ -114,6 +114,6 @@ it("leaves a scout child's command and a stampless default session unchanged", (
   startReview(w);
   expect(processFatTools(claudeSh(w, "bun run test x", implementer("scout")))).toBeNull();
   const other = tmp.dir("gate-review-");
-  writeStamp(other, REVIEW_SID, planFile(other, "default").file);
+  writeStamp(other, REVIEW_SID, planFile(other, "free").file);
   expect(processFatTools(claudeSh(other, "bun run test x"))).toBeNull();
 });

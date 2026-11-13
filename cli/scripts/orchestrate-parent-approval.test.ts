@@ -27,7 +27,7 @@ function item(serial: number, ...lines: string[]) {
   return `---\nserial: ${serial}\n${lines.join("\n")}\n---\n\n# body\n`;
 }
 
-const SETTLED = ["status: ready", "reviews: 1", "strategy: default"];
+const SETTLED = ["status: ready", "reviews: 1", "strategy: free"];
 
 function transcript(ws: string, text: string): string {
   const rec = JSON.stringify({ message: { content: [{ text, type: "text" }], role: "assistant" }, type: "assistant" });
@@ -66,7 +66,7 @@ describe("an approval block read against the saved items", () => {
 
   it("blocks a plan that has no review, reading a review record that is not a map as no record", () => {
     const ws = hook.temp();
-    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: free"));
     expect(stop(ws, "k0", planOne)?.reason).toBe(blocked);
     const record = ".repo/tmp/sessions/k1/reviews-open.json";
     plantFile(ws, record, "[1]");
@@ -77,20 +77,20 @@ describe("an approval block read against the saved items", () => {
 
   it("reads a plan with no reviews line as unreviewed", () => {
     const ws = hook.temp();
-    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "strategy: default"));
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "strategy: free"));
     expect(stop(ws, "k4", planOne)?.reason).toBe(blocked);
   });
 
   it("holds a plan whose review record is open", () => {
     const ws = hook.temp();
-    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/plans/1-x.md", item(1, "status: ready", "reviews: 0", "strategy: free"));
     plantFile(ws, ".repo/tmp/sessions/k2/reviews-open.json", '{"plan 1":0,"plan 2":"x"}');
     expect(stop(ws, "k2", planOne)?.reason).toMatch(/^plan 1's review has not settled/);
   });
 
   it("names no file for a serial the frontmatter does not carry", () => {
     const ws = hook.temp();
-    plantFile(ws, ".repo/plans/5-x.md", item(6, "status: ready", "reviews: 0", "strategy: default"));
+    plantFile(ws, ".repo/plans/5-x.md", item(6, "status: ready", "reviews: 0", "strategy: free"));
     expect(stop(ws, "k3", closing(planItem(5)))).toBeNull();
   });
 });
@@ -111,10 +111,10 @@ function stamped(ws: string, sid: string): void {
 
   plantFile(ws, "other.md", "not an item");
   plantFile(ws, ".repo/plans/4-bare.md", "no frontmatter at all");
-  plantFile(ws, ".repo/plans/2-nostatus.md", item(2, "reviews: 1", "strategy: default"));
+  plantFile(ws, ".repo/plans/2-nostatus.md", item(2, "reviews: 1", "strategy: free"));
   plantFile(ws, ".repo/plans/3-nostrategy.md", item(3, "a line with no key", "status: ready", "reviews: 1"));
   plantFile(ws, ".repo/plans/7-ok.md", item(7, ...SETTLED));
-  plantFile(ws, ".repo/roadmaps/3-r.md", item(3, "status: draft", "reviews: 1", "strategy: default"));
+  plantFile(ws, ".repo/roadmaps/3-r.md", item(3, "status: draft", "reviews: 1", "strategy: free"));
   plantFile(ws, `.repo/tmp/sessions/${sid}/approvals.txt`, `${lines.join("\n")}\n`);
 }
 
@@ -168,7 +168,7 @@ describe("a reply of i to a plan that cannot be rewritten", () => {
     const tp = transcript(ws, closing(planItem(1)));
     const lines = say(ws, "y2", { prompt: "y spawn-fast", transcript_path: tp });
     expect(lines.find((l) => l.startsWith("i did not approve"))).toContain("plan 1: strategy spawn-fast could not be");
-    expect(fs.readFileSync(plan, "utf8")).toContain("strategy: default");
+    expect(fs.readFileSync(plan, "utf8")).toContain("strategy: free");
   });
 });
 

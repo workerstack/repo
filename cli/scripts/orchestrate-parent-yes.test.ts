@@ -25,11 +25,11 @@ function claude(ws: string, sid: string): HookSession {
 }
 
 function withStrategy(s: string) {
-  return VALID_PLAN.replace("strategy: default", `strategy: ${s}`);
+  return VALID_PLAN.replace("strategy: free", `strategy: ${s}`);
 }
 
 function roadmapWith(s: string) {
-  return DRAFT_ROADMAP.replace("strategy: default", `strategy: ${s}`);
+  return DRAFT_ROADMAP.replace("strategy: free", `strategy: ${s}`);
 }
 
 function lines(s: string) {
@@ -103,17 +103,17 @@ it("a bare i does not approve a block whose strategy differs from the file's", (
   expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
-it("isf and implement deafult write the strategy they name, and hsd is no approval", () => {
+it("isf and implement fere write the strategy they name, and hsd is no approval", () => {
   const { ws, s, plan } = onePlan("c1", withStrategy("spawn-fast"));
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
   expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
   expect(s.say("isd", tp)).toContain("strategy spawn-deep was written to its frontmatter");
   expect(strategyOf(plan)).toBe("spawn-deep");
-  expect(s.say("implement deafult", transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-deep"))}`))).toContain(
-    "strategy default was written to its frontmatter",
+  expect(s.say("implement fere", transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-deep"))}`))).toContain(
+    "strategy free was written to its frontmatter",
   );
-  expect(strategyOf(plan)).toBe("default");
+  expect(strategyOf(plan)).toBe("free");
   expect(s.say("hsd", plan1Line(ws))).not.toContain("i approves");
 });
 
@@ -128,7 +128,7 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
 
   expect(lines(s.say("y spawn-deep", tp))).toContain(want);
   const after = read(plan);
-  expect(after).toBe(before.replace("strategy: default", "strategy: spawn-deep"));
+  expect(after).toBe(before.replace("strategy: free", "strategy: spawn-deep"));
   expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toStrictEqual([]);
   const mtime = fs.statSync(plan).mtimeMs;
   // Nothing left to write: the context is the plain approval, with no claim of a change.
@@ -137,12 +137,12 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
   expect(fs.statSync(plan).mtimeMs).toBe(mtime);
 });
 
-/** The context words for a strategy default written into a `kind`. */
+/** The context words for a strategy free written into a `kind`. */
 function written(kind: string): string {
-  return `strategy default was written to its frontmatter; re-read the ${kind}, then`;
+  return `strategy free was written to its frontmatter; re-read the ${kind}, then`;
 }
 
-it("y default rewrites every item of a queue, a plan and a roadmap", () => {
+it("y free rewrites every item of a queue, a plan and a roadmap", () => {
   const { ws, s, plan: p1 } = onePlan("r2", withStrategy("spawn-fast"));
   const p2 = s.reviewed("plans", withStrategy("spawn-deep"));
   const rm = s.reviewed("roadmaps", roadmapWith("spawn-fast"));
@@ -152,16 +152,16 @@ it("y default rewrites every item of a queue, a plan and a roadmap", () => {
     `Saved.\n\n${closing(planItem(1, "spawn-fast"), planItem(2, "spawn-deep"), roadmapItem(1, "spawn-fast"))}`,
   );
 
-  expect(s.say("y default", tp)).toContain(
+  expect(s.say("y free", tp)).toContain(
     `i approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); ` +
       `plan 2: ${written("plan")} run /implement-plan 2 (${p2}); ` +
       `roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap 1 (${rm})`,
   );
 
-  for (const f of [p1, p2, rm]) expect(strategyOf(f)).toBe("default");
+  for (const f of [p1, p2, rm]) expect(strategyOf(f)).toBe("free");
   const rmText = read(rm);
   expect(validateRoadmap(path.basename(rm), rmText, { fresh: false, previous: rmText })).toStrictEqual([]);
-  s.say("y default", tp);
+  s.say("y free", tp);
   expect(read(rm)).toBe(rmText);
 });
 

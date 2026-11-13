@@ -1,6 +1,6 @@
 // Valid bodies for each persist kind, shared by the persist suites and the hook suite.
 export const VALID_PLAN = `PLAN_NAME: add tmp ignore
-strategy: default
+strategy: free
 
 # add-tmp-ignore
 
@@ -51,7 +51,7 @@ $ git check-ignore -v .repo/plans
 
 // A new roadmap: the card, one line per slice, Verify and Previous mistakes.
 export const DRAFT_ROADMAP = `ROADMAP_NAME: auth program
-strategy: default
+strategy: free
 
 # auth-program
 
@@ -75,7 +75,7 @@ DONE   both slices done; repo init lists auth-types
 
 // A roadmap in the shape saved before pointer roadmaps: Goal, Usage, Context, Decisions, three lines per slice.
 export const LEGACY_ROADMAP = `ROADMAP_NAME: auth program
-strategy: default
+strategy: free
 
 # auth-program
 

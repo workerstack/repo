@@ -42,7 +42,7 @@ function turn(s: HookSession, text: string): void {
 }
 
 const OLD_LINE =
-  'Reply "y" to run plan 1 (strategy: default), or "y spawn-fast" / "y spawn-deep", ' +
+  'Reply "y" to run plan 1 (strategy: free), or "y spawn-fast" / "y spawn-deep", ' +
   'or "h" / "h fast" / "h deep" for a fresh session.';
 
 it("blocks once per turn until the reply ends with the block naming every pending item", () => {
@@ -87,7 +87,7 @@ it("blocks a block that is followed by more text", () => {
 
 it("blocks when the block shows a strategy the file does not hold, and names the block the files render", () => {
   const s = claude(kit.temp(), "mis");
-  const fast = VALID_PLAN.replace("strategy: default", "strategy: spawn-fast");
+  const fast = VALID_PLAN.replace("strategy: free", "strategy: spawn-fast");
   s.say("plan it");
   s.reviewed("plans", fast);
   expect(s.stop(`Saved.\n\n${closing(plan(1))}`)).toStrictEqual({
@@ -114,7 +114,7 @@ it("does not block on earlier turns or roadmap child plans", () => {
   s4.say("run the roadmap");
   const childPlan = s4.reviewed("plans", VALID_PLAN);
   fs.mkdirSync(path.join(child, ".repo/roadmaps"), { recursive: true });
-  const fm = "serial: 1\nname: auth-program\nstatus: in-progress\nreviews: 1\nstrategy: default";
+  const fm = "serial: 1\nname: auth-program\nstatus: in-progress\nreviews: 1\nstrategy: free";
   fs.writeFileSync(
     path.join(child, ".repo/roadmaps/1-auth-program-20261103T000000Z.md"),
     `---\n${fm}\n---\n\n## Order\n1 [ ] Title: auth types\n      Location: ${childPlan}\n`,

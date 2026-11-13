@@ -1,8 +1,8 @@
 /** The strategy domain's values, approval-block items and approval replies. */
 
-export type Strategy = "default" | "spawn-fast" | "spawn-deep";
+export type Strategy = "free" | "spawn-fast" | "spawn-deep";
 
-export type SpawnStrategy = Exclude<Strategy, "default">;
+export type SpawnStrategy = Exclude<Strategy, "free">;
 
 export type Mode = "ask" | "auto" | "away";
 

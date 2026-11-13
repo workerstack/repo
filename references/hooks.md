@@ -61,7 +61,7 @@ The gate runs for the parent before the ask and away checks and before the `stop
 
 ## Review strategy
 
-A plan or roadmap carries `strategy: default|spawn-fast|spawn-deep` (`plan-format.md`). `default` adds nothing here. For `spawn-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
+A plan or roadmap carries `strategy: free|spawn-fast|spawn-deep` (`plan-format.md`). `free` adds nothing here. For `spawn-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
 
 Stamp: a parent's save of a plan whose frontmatter holds a `spawn-*` strategy writes `.repo/tmp/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `spawn-*`, so `done` and `blocked` end it with no cleanup.
 
@@ -71,22 +71,22 @@ Implementer guards apply under every strategy: the spawn prompt names the worktr
 
 Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `<root>/node_modules/.bin/repo job --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
 
-Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. A code or spelled-out strategy writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. A near-miss code (`isx`) or a strategy word within two edits of several choices approves nothing: `"{reply}" is not a choice; end with this block again:` and the block. Any other reply gets no approval context.
+Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. A code or spelled-out strategy writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. A near-miss code (`isx`, or `id` with its `s` dropped), or a strategy word within two edits of several choices approves nothing: `"{reply}" is not a choice; end with this block again:` and the block. Any other reply gets no approval context.
 
 The approval block `closingBlock` renders, for one plan, fenced as code:
 
 ```
 plan {n} · {s}
-  i  implement    id · isf · isd
-  h  hand off     hd · hsf · hsd
+  i  implement    if · isf · isd
+  h  hand off     hf · hsf · hsd
      or reply to revise
 ```
 
-A queue joins header items with `, then `; the rows never change. Replies are case-insensitive, and a trailing `.` or `!` is ignored. `i`, `y`, `yes`, `go` and `do it` approve with each file's strategy, and `h` hands off with it. The codes `id`, `isf`, `isd`, `hd`, `hsf` and `hsd` match exactly. Otherwise an action (`i`, `y`, `h`, or a word within two edits of `implement` or `hand off`) may take one or two strategy words, exact or within two edits of exactly one of `default`, `spawn-fast`, `spawn-deep`, `fast` or `deep`. Only words of four or more letters are inferred, A bare strategy word with no action, or strategy words that match nothing (`i think so`), is feedback.
+A queue joins header items with `, then `; the rows never change. Replies are case-insensitive, and a trailing `.` or `!` is ignored. `i`, `y`, `yes`, `go` and `do it` approve with each file's strategy, and `h` hands off with it. The codes `if`, `isf`, `isd`, `hf`, `hsf` and `hsd` match exactly. Otherwise an action (`i`, `y`, `h`, or a word within two edits of `implement` or `hand off`) may take one or two strategy words, exact or within two edits of exactly one of `free`, `spawn-fast`, `spawn-deep`, `fast` or `deep`. Only words of four or more letters are inferred, A bare strategy word with no action, or strategy words that match nothing (`i think so`), is feedback.
 
 Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.repo/tmp/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks an approval block that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the approval block`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so an `i` or `h` on an unsettled item is refused too: `i did not approve plan {n}: its review has not settled; wait for it, then end with the approval block again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
 
-Handoff: `h` keeps each file's strategy; `hd`, `hsf` and `hsd` (or `h` with a strategy word) write that strategy through the same validated write as an `i` code. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
+Handoff: `h` keeps each file's strategy; `hf`, `hsf` and `hsd` (or `h` with a strategy word) write that strategy through the same validated write as an `i` code. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
 
 Enforcement, from the live probe of each harness's child payload:
 

@@ -100,7 +100,7 @@ it("every code on an all-fast block is no choice and shows the block again", () 
   const tp = transcript(ws, `Saved.\n\n${closing(fastItem(1))}`);
   const before = read(fast);
 
-  for (const code of ["id", "isf", "isd", "hd", "hsf", "hsd"]) {
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd"]) {
     const out = s.say(code, tp);
     expect(out).toContain(`"${code}" is not a choice; end with this block again:\n${closing(fastItem(1))}`);
     expect(out).not.toContain("approves");
@@ -127,7 +127,7 @@ it("a code on a mixed queue writes the strategy only to the full plan", () => {
   const full = s.reviewed("plans", VALID_PLAN);
   const fastBefore = read(fast);
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1), fastItem(1))}`);
-  expect(closing(planItem(1), fastItem(1)).split("\n")[1]).toBe("plan 1 · default, then fast-plan 1");
+  expect(closing(planItem(1), fastItem(1)).split("\n")[1]).toBe("plan 1 · free, then fast-plan 1");
 
   expect(lines(s.say("isd", tp))).toContain(
     "i approves plan 1, then fast-plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
@@ -203,7 +203,7 @@ it("checks an Edit of a saved fast plan against the text it would produce", () =
   }
 
   expect(edit("status: in-progress")).toBeNull();
-  const denied = edit("strategy: default");
+  const denied = edit("strategy: free");
   expect(denied?.hookSpecificOutput.permissionDecision).toBe("deny");
   expect(denied?.hookSpecificOutput.permissionDecisionReason).toContain("a fast plan has no strategy");
 });

@@ -114,10 +114,10 @@ export function transcript(ws: string, text: string): string {
 export const closing = (...items: Approvable[]): string => closingBlock(items);
 
 /** A plan item as the approval block names it; the strategy is the default unless given. */
-export const plan = (serial: number, strategy: Strategy = "default"): Approvable => ({ kind: "plan", serial, strategy });
+export const plan = (serial: number, strategy: Strategy = "free"): Approvable => ({ kind: "plan", serial, strategy });
 
 /** A roadmap item as the approval block names it; the strategy is the default unless given. */
-export const roadmap = (serial: number, strategy: Strategy = "default"): Approvable => ({
+export const roadmap = (serial: number, strategy: Strategy = "free"): Approvable => ({
   kind: "roadmap",
   serial,
   strategy,

@@ -39,11 +39,11 @@ function planFm(strategy: string | null, status = "in-progress") {
 }
 
 it("accepts exactly the three values", () => {
-  expect(STRATEGIES).toStrictEqual(["default", "spawn-fast", "spawn-deep"]);
+  expect(STRATEGIES).toStrictEqual(["free", "spawn-fast", "spawn-deep"]);
 
   for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
 
-  for (const bad of ["review-fast", "review-deep", "review-medium", "Default", " default", "", undefined])
+  for (const bad of ["review-fast", "review-deep", "review-medium", "Free", " free", "default", "", undefined])
     expect(parseStrategy(bad)).toBeNull();
 });
 
@@ -77,14 +77,14 @@ it("writeStamp then activeReview returns an in-progress spawn-fast plan", () => 
   expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 4, strategy: "spawn-fast" });
 });
 
-it("is null for ready, done, blocked, default, a missing key, a missing plan and an unstamped session", () => {
+it("is null for ready, done, blocked, free, a missing key, a missing plan and an unstamped session", () => {
   const root = realDir("strategy-");
 
   for (const [fm, label] of [
     [planFm("spawn-fast", "ready"), "ready"],
     [planFm("spawn-fast", "done"), "done"],
     [planFm("spawn-fast", "blocked"), "blocked"],
-    [planFm("default"), "default"],
+    [planFm("free"), "free"],
     [planFm(null), "nokey"],
   ] as const) {
     const plan = writePlan(root, `4-${label}-20261107T181901Z.md`, fm);
@@ -146,7 +146,7 @@ it("enforces the harnesses whose child payload carries a marker: claude (and Gro
 });
 
 it("tells an item that has a strategy from a fast plan or fast roadmap", () => {
-  expect(hasStrategy({ kind: "plan", serial: 1, strategy: "default" })).toBe(true);
+  expect(hasStrategy({ kind: "plan", serial: 1, strategy: "free" })).toBe(true);
   expect(hasStrategy({ kind: "roadmap", serial: 1, strategy: "spawn-deep" })).toBe(true);
   expect(hasStrategy({ kind: "fast-plan", serial: 1 })).toBe(false);
   expect(hasStrategy({ kind: "fast-roadmap", serial: 1 })).toBe(false);

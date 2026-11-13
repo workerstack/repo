@@ -11,7 +11,7 @@ import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
 const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
-const NO_KEY = "strategy: default|spawn-fast|spawn-deep";
+const NO_KEY = "strategy: free|spawn-fast|spawn-deep";
 const MODE_KEY = "mode: ask|auto|away";
 
 function without(body: string) {
@@ -65,9 +65,9 @@ describe("roadmap strategy on an update", () => {
   it("takes a new one, and denies a frontmatter without it", () => {
     const ws = tmpWs();
     const abs = path.join(ws, savedOk(save(withStrategy(DRAFT_ROADMAP, "spawn-fast"), ws)).path);
-    const changed = update(ws, abs, withStrategy(DRAFT_ROADMAP, "default"));
+    const changed = update(ws, abs, withStrategy(DRAFT_ROADMAP, "free"));
     expect(changed.ok, changed.error).toBe(true);
-    expect(read(abs)).toMatch(/^strategy: default$/m);
+    expect(read(abs)).toMatch(/^strategy: free$/m);
     expect(read(abs).match(/^strategy:/gm)).toHaveLength(1);
     const full = update(ws, abs, read(abs).replace(/^strategy:.*\n/m, ""));
     expect(full.ok).toBe(false);
@@ -81,7 +81,7 @@ describe("roadmap mode on a new save", () => {
     const r = save(withMode(DRAFT_ROADMAP, "away"), ws);
     expect(r.ok, r.error).toBe(true);
     const [head, ...body] = read(path.join(ws, savedOk(r).path)).split("\n---\n");
-    expect(head).toMatch(/\nstrategy: default\nmode: away$/);
+    expect(head).toMatch(/\nstrategy: free\nmode: away$/);
     expect(body.join("\n---\n")).not.toMatch(/^mode:/m);
   });
 

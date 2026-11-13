@@ -45,7 +45,7 @@ const CASES: readonly Case[] = [
     key: "plan 1",
     save: (s) => s.reviewed("plans", VALID_PLAN),
     step: (f) => `run /implement-plan 1 (${f})`,
-    strategy: "default",
+    strategy: "free",
     validate: validatePlan,
   },
   {
@@ -53,7 +53,7 @@ const CASES: readonly Case[] = [
     key: "roadmap 1",
     save: (s) => s.reviewed("roadmaps", DRAFT_ROADMAP),
     step: (f) => `set status locked, then run /implement-roadmap 1 (${f})`,
-    strategy: "default",
+    strategy: "free",
     validate: validateRoadmap,
   },
   {
@@ -111,7 +111,7 @@ it("runs a plan again once it is revised after its run", () => {
   s.say("revise the goal");
   s.save(plan, read(plan).replace("reviews: 1", "reviews: 2"));
   expect(s.stop("Revised.")).toStrictEqual(runBlock("plan 1", `run /implement-plan 1 (${plan})`));
-  expect(lines(read(plan)).filter((l) => l === decisionLine("plan 1", "default"))).toHaveLength(2);
+  expect(lines(read(plan)).filter((l) => l === decisionLine("plan 1", "free"))).toHaveLength(2);
 });
 
 it("a plan saved in an earlier turn runs only when the reply's block names it", () => {

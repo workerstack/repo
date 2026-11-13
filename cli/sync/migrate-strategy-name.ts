@@ -1,12 +1,12 @@
-/** Renames the old `review-fast` / `review-deep` strategies to `spawn-fast` / `spawn-deep` in plans and handoffs. */
+/** Renames the old strategies `review-fast`, `review-deep` and `default` to `spawn-fast`, `spawn-deep` and `free`. */
 import fs from "node:fs";
 import path from "node:path";
 
 import { REPO } from "../repo-dirs.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { isDir } from "./migrate-fs.ts";
+import { frontmatterRe, handoffFreeRe, handoffRe, LEADING_FRONTMATTER } from "./migrate-strategy-name.constants.ts";
 import type { MigrationStep } from "./migrate.ts";
-import { frontmatterRe, handoffRe, LEADING_FRONTMATTER } from "./strategy-rename.constants.ts";
 
 /** Where a file keeps its strategy: a plan or roadmap in its frontmatter, a handoff in a parenthesised mention. */
 export type StrategyKind = "doc" | "handoff";
@@ -18,14 +18,14 @@ const DIRS: readonly { dir: string; kind: StrategyKind }[] = [
   { dir: "handoffs", kind: "handoff" },
 ];
 
-/** The replacement of one match: its head kept, the speed behind `spawn-`. */
-function swap(_all: string, head: string, speed: string): string {
-  return `${head}spawn-${speed}`;
+/** The replacement of one match: its head kept, the speed behind `spawn-`, or `free` for the old `default`. */
+function swap(_all: string, head: string, speed: string | undefined): string {
+  return speed === undefined ? `${head}free` : `${head}spawn-${speed}`;
 }
 
 /** `text` with the old strategy names replaced; the rest, and any `spawn-*` value, as it was. */
 export function renameStrategies(text: string, kind: StrategyKind): string {
-  if (kind === "handoff") return text.replaceAll(handoffRe(), swap);
+  if (kind === "handoff") return text.replaceAll(handoffRe(), swap).replaceAll(handoffFreeRe(), "$1free");
   const front = LEADING_FRONTMATTER.exec(text)?.[0];
 
   if (front === undefined) return text;
@@ -67,7 +67,9 @@ export function planStrategyRename(root: string, p: typeof path = path): Migrati
   return [
     {
       kind: "rename-strategy",
-      note: `renamed strategy review-fast to spawn-fast and review-deep to spawn-deep in ${count} under ${REPO}`,
+      note:
+        `renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in ${count} ` +
+        `under ${REPO}`,
       paths,
     },
   ];

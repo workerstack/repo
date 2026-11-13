@@ -29,7 +29,7 @@ export function savedLegacy(ws: string, body = LEGACY_ROADMAP, head = "status: d
   const rest = body.replace(/^ROADMAP_NAME:.*\n/, "").replace(/^strategy:.*\n\n?/, "");
   fs.writeFileSync(
     abs,
-    `---\nserial: 1\nname: auth-program\n${head}\ncreated: 2026-10-25T18:00:00Z\nsource: "auth program"\nstrategy: default\n---\n\n${rest}`,
+    `---\nserial: 1\nname: auth-program\n${head}\ncreated: 2026-10-25T18:00:00Z\nsource: "auth program"\nstrategy: free\n---\n\n${rest}`,
   );
   return abs;
 }

@@ -91,14 +91,14 @@ it.each(CASINGS)(
     const { file, serial, text } = theHandoff(ws);
     expect(path.basename(file)).toMatch(/^\d+-run-plan-1-then-roadmap-1-\d{8}T\d{6}Z\.md$/);
     expect(ctx.split("\n")).toContain(
-      `h handed off plan 1 (strategy default), then roadmap 1 (strategy default) to ${file}; ` +
+      `h handed off plan 1 (strategy free), then roadmap 1 (strategy free) to ${file}; ` +
         `tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
     );
     expect(text).toContain(plan);
     expect(text).toContain(roadmap);
     const leaves = text.split("\n").filter((l) => /^\d+\.\d+ \[ \] /.test(l));
     expect(leaves).toStrictEqual(["1.1 [ ] /implement-plan 1", "1.2 [ ] set status locked, then /implement-roadmap 1"]);
-    expect([strategyOf(plan), strategyOf(roadmap)]).toStrictEqual(["default", "default"]);
+    expect([strategyOf(plan), strategyOf(roadmap)]).toStrictEqual(["free", "free"]);
   },
 );
 

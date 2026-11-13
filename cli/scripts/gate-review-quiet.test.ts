@@ -66,7 +66,7 @@ function answers(w: string): string[] {
 }
 
 const states: [string, (w: string) => void][] = [
-  ["default", (w) => startReview(w, { strategy: "default" })],
+  ["free", (w) => startReview(w, { strategy: "free" })],
   ["ready", (w) => startReview(w, { status: "ready" })],
   ["done", (w) => startReview(w, { status: "done", strategy: "spawn-deep" })],
   ["blocked", (w) => startReview(w, { status: "blocked" })],

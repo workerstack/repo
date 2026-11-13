@@ -30,7 +30,7 @@ function setKey(file: string, key: string, value: string) {
 }
 
 function withMode(mode: string) {
-  return VALID_PLAN.replace("strategy: default", `strategy: default\nmode: ${mode}`);
+  return VALID_PLAN.replace("strategy: free", `strategy: free\nmode: ${mode}`);
 }
 
 it.each(CASINGS)("/away gives sessionGate=away, then /auto gives sessionGate=auto (%s payloads)", (casing) => {

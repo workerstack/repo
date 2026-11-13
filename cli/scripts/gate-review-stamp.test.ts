@@ -61,7 +61,7 @@ it.each(WRITE_KINDS)(
 
 it.each(WRITE_KINDS)("%s: writes no stamp for a default plan, without a session id, or from a child", (kind) => {
   const w = tmp.dir("gate-review-");
-  const dflt = planFile(w, "default");
+  const dflt = planFile(w, "free");
   put(kind, w, { content: dflt.text, target: dflt.file });
   expect(stamped(w)).toBe(false);
   const rev = planFile(w, "spawn-fast");
@@ -95,21 +95,21 @@ it.each(WRITE_KINDS)(
 
 it("stamps from the Write content, not the file on disk", () => {
   const w = tmp.dir("gate-review-");
-  const { file } = planFile(w, "default");
+  const { file } = planFile(w, "free");
   put("claudeWrite", w, { content: planText("spawn-fast", "in-progress"), target: file });
   expect(stamped(w)).toBe(true);
   fs.rmSync(stampPath(w, REVIEW_SID));
-  put("claudeWrite", w, { content: planText("default", "in-progress"), target: file });
+  put("claudeWrite", w, { content: planText("free", "in-progress"), target: file });
   expect(stamped(w)).toBe(false);
 });
 
 it("stamps from the Content of an Antigravity write_file, not the file on disk", () => {
   const w = tmp.dir("gate-review-");
-  const { file } = planFile(w, "default");
+  const { file } = planFile(w, "free");
   put("antigravity", w, { content: planText("spawn-fast", "in-progress"), target: file });
   expect(stamped(w)).toBe(true);
   fs.rmSync(stampPath(w, REVIEW_SID));
-  put("antigravity", w, { content: planText("default", "in-progress"), target: file });
+  put("antigravity", w, { content: planText("free", "in-progress"), target: file });
   expect(stamped(w)).toBe(false);
 });
 
@@ -146,7 +146,7 @@ it("fails open when the stamp cannot be written", () => {
 
 /** The plan Grok's persist hook would save, written the way the host does. */
 function savedPlan(w: string, strategy: string) {
-  const body = VALID_PLAN.replace("strategy: default", `strategy: ${strategy}`);
+  const body = VALID_PLAN.replace("strategy: free", `strategy: ${strategy}`);
   const saved = grokReply(w, { input: { content: body, file_path: ".repo/plans/x.md" }, tool: "Write" });
   const filePath = jsonText(saved?.hookSpecificOutput?.updatedInput?.file_path);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -171,7 +171,7 @@ it("Grok: stamps on a valid Edit and on a full Write of a review plan, and not f
   grokReply(w, { input: { content: review.content, file_path: review.file_path }, tool: "Write" });
   expect(stamped(w)).toBe(true);
   const other = tmp.dir("gate-review-");
-  const dflt = savedPlan(other, "default");
+  const dflt = savedPlan(other, "free");
   grokReply(other, { input: tick(dflt.file_path), tool: "Edit" });
   grokReply(other, { input: { content: dflt.content, file_path: dflt.file_path }, tool: "Write" });
   expect(stamped(other)).toBe(false);

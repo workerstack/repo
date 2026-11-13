@@ -54,7 +54,7 @@ describe("roadmap source", () => {
     fs.writeFileSync(
       abs,
       `---\nserial: 1\nname: auth-program\nstatus: draft\ncreated: ${CREATED}\n` +
-        `strategy: default\n---\n\n${LEGACY_ROADMAP}`,
+        `strategy: free\n---\n\n${LEGACY_ROADMAP}`,
     );
     const content = LEGACY_ROADMAP.replace(/^ROADMAP_NAME:.*\n/, "").replace("# auth-program\n\n", "");
     const r = prepareRoadmapUpdate({ content, filePath: abs, workspaceRoot: ws });

@@ -11,7 +11,7 @@ import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, toolCallOf, type Payload } from "./gate-harness.ts";
 import { writeTargets } from "./gate-rewrites.ts";
 import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
-import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
+import { ENFORCED_HARNESSES, FREE_STRATEGY } from "./strategy.constants.ts";
 import { activeReview, implementerOf, parseStrategy, stampPath, writeStamp } from "./strategy.ts";
 import type { ActiveReview } from "./strategy.types.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
@@ -46,7 +46,7 @@ function isReviewPlanText(text: string): boolean {
   const line = STRATEGY_LINE_RE.exec(front?.[1] ?? "");
   const strategy = parseStrategy(line?.[1]);
 
-  return strategy !== null && strategy !== "default";
+  return strategy !== null && strategy !== FREE_STRATEGY;
 }
 
 /** What a stamp needs to know of a plan save: the tool, its input, and the session it belongs to. */
