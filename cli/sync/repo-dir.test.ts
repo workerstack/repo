@@ -18,7 +18,8 @@ const ALLOWED = [
   "env.keys.json (read by @workerstack/repo/env (the public key sealed values are locked to)), ",
   "lint-baseline.json (read by repo turn and repo check), ",
   "test-times.json (read by the vitest shard sequencer written by `bun repo ci times`), ",
-  "context-growth.jsonl (read by repo check, written by `bun repo check --write --reason`)",
+  "context-growth.jsonl (read by repo check, written by `bun repo check --write --reason`), ",
+  "backlog.md (read by the /backlog skill)",
 ].join("");
 
 useTempDirs();
@@ -29,6 +30,7 @@ it("passes when .repo does not exist", () => {
 
 it("passes every entry sync reads, the bench specs `repo bench` reads, and ignores whatever is in tmp/", () => {
   const root = repo({
+    ".repo/backlog.md": "# Backlog\n",
     ".repo/bench/x.bench.ts": "export default {};\n",
     ".repo/context-growth.jsonl": "{}\n",
     ".repo/env.keys.json": "{}",
