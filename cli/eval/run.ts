@@ -9,10 +9,10 @@ export type Completion = { text: string; inputTokens: number; outputTokens: numb
 
 export type Complete = (input: string) => Promise<Completion>;
 
-export type CaseResult = { id: string; control: boolean; pass: boolean; fails: number; samples: number };
+type CaseResult = { id: string; control: boolean; pass: boolean; fails: number; samples: number };
 
 /** How a run ended: every case ran, the cap stopped it before a case, or a call failed. */
-export type RunEnd = { kind: "done" } | { kind: "stopped" } | { kind: "failed"; message: string };
+type RunEnd = { kind: "done" } | { kind: "stopped" } | { kind: "failed"; message: string };
 
 /** The cases that ran, what they cost, how many calls were paid for or served from the cache, and the end. */
 export type RunResult = { cases: CaseResult[]; spent: number; calls: number; cached: number; end: RunEnd };
