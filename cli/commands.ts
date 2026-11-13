@@ -29,6 +29,7 @@ import { HOOK_COMMAND } from "./hook-command.constants.ts";
 import { LINK_SUMMARY, UNLINK_SUMMARY, UNLINK_USAGE, USAGE as LINK_USAGE } from "./link.constants.ts";
 import { USAGE as RELEASE_USAGE } from "./release/release-messages.constants.ts";
 import { REMOVE_SUMMARY, REMOVE_USAGE } from "./remove.constants.ts";
+import { BACKLOG_ARGS } from "./scripts/backlog.constants.ts";
 import { BENCH_ARGS, BENCH_SUMMARY } from "./scripts/bench.constants.ts";
 import { BROWSER_USAGE } from "./scripts/browser.constants.ts";
 import { ENV_SUMMARY, USAGE as ENV_USAGE } from "./scripts/env-command.constants.ts";
@@ -78,6 +79,11 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   },
 
   // Tools an agent runs.
+  backlog: {
+    load: () => import("./scripts/backlog.ts"),
+    summary: "Add, list, start, mark done and clear .repo/backlog.md items",
+    usage: `usage: repo backlog ${BACKLOG_ARGS}`,
+  },
   bench: { load: () => import("./scripts/bench.ts"), summary: BENCH_SUMMARY, usage: `usage: repo bench ${BENCH_ARGS}` },
   browser: {
     load: () => import("./scripts/browser.ts"),

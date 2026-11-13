@@ -129,6 +129,7 @@ main
   shim              Install a \`repo\` command that runs the project's own copy (--check, --dry-run, --dir <path>)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
+  backlog           Add, list, start, mark done and clear .repo/backlog.md items
   bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)
   browser           Browse with Lightpanda, Chromium when blocked
   env               Seal, list, read and hand out defineEnv values (init, set, get, ls, run, export, key)
