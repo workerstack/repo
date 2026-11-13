@@ -1,4 +1,5 @@
 import {
+  EVAL_INSTALL_CLAUDE_STEP,
   EVAL_KEEP_STEPS,
   EVAL_PATH,
   EVAL_PREAMBLE,
@@ -19,7 +20,17 @@ export function evalWorkflow(ctx: SyncContext): ReturnType<Generator> {
 
   if (existing !== null && !hasOwnedHeader(existing))
     return { errors: [`${EVAL_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
-  const steps = [CHECKOUT_STEP, SETUP_BUN_STEP, INSTALL_STEP, EVAL_RESTORE_STEP, EVAL_RUN_STEP, EVAL_KEEP_STEPS];
+
+  const steps = [
+    CHECKOUT_STEP,
+    SETUP_BUN_STEP,
+    INSTALL_STEP,
+    EVAL_RESTORE_STEP,
+    EVAL_INSTALL_CLAUDE_STEP,
+    EVAL_RUN_STEP,
+    EVAL_KEEP_STEPS,
+  ];
+
   const content = `${[EVAL_PREAMBLE, ...steps].join("\n")}\n`;
 
   return { errors: [], outputs: [{ content, kind: "file", managed: "whole", path: EVAL_PATH, tracked: true }] };

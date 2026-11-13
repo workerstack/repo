@@ -23,6 +23,12 @@ export const DEFAULT_MAX_TOKENS = 256;
 
 /** Tokens added to every call's input bound; covers role and message framing the bytes do not. */
 export const FRAMING_TOKENS = 32;
+
+/** Tokens a `claude -p` call adds to its input on top of the text sent: Claude Code's own framing, measured ~900. */
+export const SESSION_FRAMING_TOKENS = 1500;
 export const TOKENS_PER_MTOK = 1_000_000;
 export const DOLLAR_DECIMALS_SMALL = 4;
 export const DOLLAR_DECIMALS_LARGE = 2;
+
+/** The ways a call can be paid, session first: the default. */
+export const VIAS = ["session", "api"] as const;

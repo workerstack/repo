@@ -4,11 +4,13 @@ import { REPO, STATE } from "../repo-dirs.ts";
 export const EVAL_SUMMARY = "Score a model on evals/<name> cases; prints a cost estimate and refuses over a cap";
 
 /** What `repo eval` takes. */
-export const EVAL_ARGS = "<name> [--dry-run] [--max-cost <usd>] [--changed <base>]";
+export const EVAL_ARGS = "<name> [--dry-run] [--max-cost <usd>] [--changed <base>] [--via session|api]";
 export const EVAL_USAGE: string = `usage: bun repo eval ${EVAL_ARGS}`;
 export const DRY_RUN_FLAG = "--dry-run";
 export const MAX_COST_FLAG = "--max-cost";
 export const CHANGED_FLAG = "--changed";
+export const VIA_FLAG = "--via";
+export const VIA_LINE: string = `eval: ${VIA_FLAG} takes session or api`;
 
 /** The cap in USD when `--max-cost` is not given. */
 export const DEFAULT_CAP = 1;

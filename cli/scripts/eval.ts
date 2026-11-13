@@ -1,8 +1,9 @@
 /**
- * `repo eval <name> [--dry-run] [--max-cost <usd>] [--changed <base>]`: loads `evals/<name>/eval.ts`; with
- * `--changed`, prints the first file it reads that changed since the merge base with `<base>`, or that none did and
- * exits 0 there. Then it prints the worst-case cost of its
- * uncached calls, refuses over the cap (default $1.00), and otherwise runs every case through the Anthropic API and
+ * `repo eval <name> [--dry-run] [--max-cost <usd>] [--changed <base>] [--via session|api]`: loads
+ * `evals/<name>/eval.ts`; with `--changed`, prints the first file it reads that changed since the merge base with
+ * `<base>`, or that none did and exits 0 there. Then it prints the worst-case cost of its uncached calls, refuses over
+ * the cap (default $1.00), and otherwise runs every case through `claude -p` on the logged-in session (`--via
+ * session`, the default, which reads no key) or the Anthropic API (`--via api`, which needs `ANTHROPIC_API_KEY`) and
  * prints pass or fail per case with the spend. Answers are cached under `.repo/tmp/evals/cache` of the main checkout,
  * so a rerun of unchanged text costs nothing; the run stops before a case whose bound would cross the cap, and every
  * run that started leaves a JSON summary under `.repo/tmp/evals/runs`. `--dry-run` stops after the estimate and never
@@ -13,11 +14,13 @@ import path from "node:path";
 
 import { openCache } from "../eval/cache.ts";
 import { changedFiles, firstChanged } from "../eval/changed.ts";
+import { claudeProcess } from "../eval/claude-process.ts";
 import { createClient, type FetchFn } from "../eval/client.ts";
-import { dollars, estimate } from "../eval/estimate.ts";
+import { dollars, estimate, type Via } from "../eval/estimate.ts";
 import { loadEval } from "../eval/load.ts";
 import type { Price } from "../eval/price.constants.ts";
-import { runEval, sampleKey, type RunResult } from "../eval/run.ts";
+import { runEval, sampleKey, type Complete, type RunResult } from "../eval/run.ts";
+import { createSessionClient, type RunClaude } from "../eval/session-client.ts";
 import type { ResolvedEval } from "../eval/spec.ts";
 import { writeSummary } from "../eval/summary.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
@@ -43,7 +46,9 @@ export type EvalDeps = {
   state?: string;
   now?: () => Date;
   fetchFn?: FetchFn;
-  /** Read for `ANTHROPIC_API_KEY` only when a real run starts. */
+  /** The one call to `claude -p` of a `--via session` run; the real process by default. */
+  runClaude?: RunClaude;
+  /** Read for `ANTHROPIC_API_KEY` only when a real `--via api` run starts. */
   env?: Pick<Env, "ANTHROPIC_API_KEY">;
   stdout?: (s: string) => void;
   stderr?: (s: string) => void;
@@ -53,7 +58,7 @@ export type EvalDeps = {
 
 type Io = Required<EvalDeps>;
 
-type Plan = { name: string; spec: ResolvedEval; price: Price; cap: number; cost: number; text: string };
+type Plan = { name: string; spec: ResolvedEval; price: Price; cap: number; cost: number; text: string; via: Via };
 
 /** A planned run, a refusal (exit 1), or an eval that reads nothing changed (exit 0); each with what it prints. */
 type Prepared = { kind: "plan"; plan: Plan } | { kind: "refused"; line: string } | { kind: "unchanged"; line: string };
@@ -68,6 +73,7 @@ function realIo(deps: EvalDeps | undefined): Io {
     fetchFn: fetch,
     now: () => new Date(),
     root: process.cwd(),
+    runClaude: claudeProcess,
     state: deps?.state ?? path.join(resolveRoots().root, EVALS_DIR),
     stderr: process.stderr.write.bind(process.stderr),
     stdout: process.stdout.write.bind(process.stdout),
@@ -96,14 +102,13 @@ function endLine(plan: Plan, run: RunResult): string | undefined {
   return undefined;
 }
 
-/** Runs the cases through the API and the cache, prints the report and the summary path, then why it ended early. */
-async function runReal(io: Io, plan: Plan, apiKey: string): Promise<number> {
-  const { spec } = plan;
-  const config = { apiKey, maxTokens: spec.maxTokens, model: spec.model, system: spec.system };
-  const job = { cache: openCache(path.join(io.state, CACHE_DIR)), cap: plan.cap, price: plan.price };
+/** Runs the cases through `complete` and the cache, prints the report and the summary path, then why it ended early. */
+async function runReal(io: Io, plan: Plan, complete: Complete): Promise<number> {
+  const { spec, via } = plan;
+  const job = { cache: openCache(path.join(io.state, CACHE_DIR)), cap: plan.cap, complete, price: plan.price, via };
 
-  const run = await runEval(spec, { ...job, complete: createClient(io.fetchFn, config) });
-  const summary = { cap: plan.cap, estimate: plan.cost, eval: plan.name, model: spec.model, run };
+  const run = await runEval(spec, job);
+  const summary = { cap: plan.cap, estimate: plan.cost, eval: plan.name, model: spec.model, run, via };
   const file = writeSummary(path.join(io.state, RUNS_DIR), summary, io.now());
   const why = endLine(plan, run);
 
@@ -145,8 +150,9 @@ async function prepare(io: Io, args: Args): Promise<Prepared> {
   const found = estimate(name, spec, {
     cap,
     isCached(one, sample) {
-      return cache.get(sampleKey(spec, one, sample)) !== undefined;
+      return cache.get(sampleKey(spec, one, { sample, via: args.via })) !== undefined;
     },
+    via: args.via,
   });
 
   if (!found.ok) return { kind: "refused", line: found.message };
@@ -159,7 +165,22 @@ async function prepare(io: Io, args: Args): Promise<Prepared> {
 
   const text = `${selected.line}${found.text}`;
 
-  return { kind: "plan", plan: { cap, cost: found.cost, name, price: found.price, spec, text } };
+  return { kind: "plan", plan: { cap, cost: found.cost, name, price: found.price, spec, text, via: args.via } };
+}
+
+/**
+ * The model call for the plan's `via`: `claude -p` without ever reading the key, or the API on the key; undefined
+ * without one.
+ */
+function clientFor(io: Io, plan: Plan): Complete | undefined {
+  const { maxTokens, model, system } = plan.spec;
+
+  if (plan.via === "session") return createSessionClient(io.runClaude, { maxTokens, model, system });
+  const apiKey = io.env.ANTHROPIC_API_KEY;
+
+  if (apiKey === undefined || apiKey === "") return undefined;
+
+  return createClient(io.fetchFn, { apiKey, maxTokens, model, system });
 }
 
 export async function main(argv: string[], deps?: EvalDeps): Promise<number> {
@@ -189,13 +210,13 @@ export async function main(argv: string[], deps?: EvalDeps): Promise<number> {
   io.stdout(`${planned.plan.text}\n`);
 
   if (parsed.args.isDryRun) return EXIT_OK;
-  const apiKey = io.env.ANTHROPIC_API_KEY;
+  const complete = clientFor(io, planned.plan);
 
-  if (apiKey === undefined || apiKey === "") {
+  if (complete === undefined) {
     io.stderr(`eval: set ANTHROPIC_API_KEY to run; ${DRY_RUN_FLAG} needs none\n`);
 
     return EXIT_FAILED;
   }
 
-  return runReal(io, planned.plan, apiKey);
+  return runReal(io, planned.plan, complete);
 }

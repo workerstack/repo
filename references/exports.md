@@ -183,28 +183,30 @@ raw: .repo/tmp/bench/startup/ubuntu-latest.json
 
 ## Evals
 
-`bun repo eval <name>` runs `evals/<name>/eval.ts` against the Anthropic API. It first prints a worst-case estimate and refuses a run over the cap before any call. The cap is $1.00 by default; `--max-cost <usd>` raises it. `--dry-run` stops after the estimate and needs no key. A real run needs `ANTHROPIC_API_KEY`, stops before a case that could cross the cap, caches each answer under `.repo/tmp/evals/cache`, so a rerun of unchanged text costs $0, and writes a spend summary under `.repo/tmp/evals/runs`.
+`bun repo eval <name>` runs `evals/<name>/eval.ts` on Claude. It first prints a worst-case estimate and refuses a run over the cap before any call. The cap is $1.00 by default; `--max-cost <usd>` raises it. `--dry-run` stops after the estimate and reads no key. `--via session` (the default) runs each call as `claude -p` on the Claude Code session you are logged in to, with no key; Claude Code adds about 1500 hidden input tokens to every call, which the estimate counts, and a reply may pass the max tokens, so a run can overshoot the cap by the last case's extra output. Without the `claude` CLI logged in it prints `eval: --via session needs the claude CLI, logged in; install Claude Code, or use --via api` and exits 1. `--via api` calls the Anthropic API and needs `ANTHROPIC_API_KEY`; any other `--via` value exits 4 (`eval: --via takes session or api`). A real run stops before a case that could cross the cap, caches each answer under `.repo/tmp/evals/cache`, so a rerun of unchanged text costs $0 (session and API answers are cached apart), and writes a spend summary under `.repo/tmp/evals/runs`.
 
 ```console
 $ bun repo eval skill-routing --dry-run
-eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5, at most $0.0834 (cap $1.00)
+eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5 via session, at most $0.0834 (cap $1.00)
 ```
 
-An eval lists the repo files and folders its prompt and grader read as `files` in `defineEval`: repo-relative, with `/`, and each must exist, or the eval is refused (`eval broken: files.0: no file or folder agents/skills/nope`). `--changed <base>` runs every case of the eval when one of those, or anything under `evals/<name>/`, changed since the merge base with `<base>`, committed or not, and runs none otherwise (exit 0, no key read). `evals/rules-compliance` asks the model its first step for real prompts, given the rules and the scope page.
+An eval lists the repo files and folders its prompt and grader read as `files` in `defineEval`: repo-relative, with `/`, and each must exist, or the eval is refused (`eval broken: files.0: no file or folder agents/skills/nope`). `--changed <base>` runs every case of the eval when one of those, or anything under `evals/<name>/`, changed since the merge base with `<base>`, committed or not, and runs none otherwise (exit 0, no call made). `evals/rules-compliance` asks the model its first step for real prompts, given the rules and the scope page.
 
 ```console
 $ bun repo eval skill-routing --changed main --dry-run
 eval skill-routing: agents/skills/su/SKILL.md changed since main
-eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5, at most $0.0834 (cap $1.00)
+eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5 via session, at most $0.0834 (cap $1.00)
 $ bun repo eval rules-compliance --changed main
 eval rules-compliance: nothing it reads changed since main
 ```
 
-With the `evals` pack on, `bun repo github` keeps a GitHub environment named `evals` that needs one reviewer and deploys only from the default branch, and sync writes `.github/workflows/eval.yml`. It runs only when started by hand, with the eval's name and a cap in US dollars (default 1). Its one job runs in the `evals` environment, so it waits for your approval and reads the key from there. It restores and saves the answer cache, and uploads the summaries as the `eval-<name>` artifact.
+With the `evals` pack on, `bun repo github` keeps a GitHub environment named `evals` that needs one reviewer and deploys only from the default branch, and sync writes `.github/workflows/eval.yml`. It runs only when started by hand, with the eval's name and a cap in US dollars (default 1) and `via`, `session` (default) or `api`. Its one job runs in the `evals` environment, so it waits for your approval and reads the secret from there: `CLAUDE_CODE_OAUTH_TOKEN` for `session`, which installs `@anthropic-ai/claude-code@2.1.323` first, or `ANTHROPIC_API_KEY` for `api`. It restores and saves the answer cache, and uploads the summaries as the `eval-<name>` artifact.
 
 ```console
-$ gh secret set ANTHROPIC_API_KEY --env evals     # once; also set a spend limit in the Anthropic console
-$ gh workflow run eval.yml -f eval=skill-routing -f max-cost=0.5
+$ claude setup-token                                   # prints a long-lived token; copy it
+$ gh secret set CLAUDE_CODE_OAUTH_TOKEN --env evals    # once, for --via session; paste the token
+$ gh secret set ANTHROPIC_API_KEY --env evals          # once, only for --via api; also set a spend limit in the Anthropic console
+$ gh workflow run eval.yml -f eval=skill-routing -f max-cost=0.5 -f via=session
 ```
 
 The run then waits under "Review deployments" until you approve it. A dispatch from any branch but the default one is refused by the environment.
