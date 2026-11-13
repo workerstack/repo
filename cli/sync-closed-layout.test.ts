@@ -24,7 +24,7 @@ const ALLOWED =
   "lint-baseline.json (read by repo turn and repo check)" +
   ", test-times.json (read by the vitest shard sequencer written by `bun repo ci times`)" +
   ", context-growth.jsonl (read by repo check, written by `bun repo check --write --reason`)" +
-  ", backlog.md (read by the /backlog skill)";
+  ", backlog.md (read by repo backlog)";
 
 const MODULES_DIR = ["node", "modules"].join("_");
 const GIT_DIR = ["", "git"].join(".");

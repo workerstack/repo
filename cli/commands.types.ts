@@ -23,6 +23,7 @@ export type CommandName =
   | "persist"
   | "phase-files"
   | "lessons"
+  | "backlog"
   | "bench"
   | "browser"
   | "google-workspace"

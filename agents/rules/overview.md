@@ -22,4 +22,4 @@ Every change happens in a worktree. Run `bun repo worktree add <name>`, then edi
 
 Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matches the work, read that file in full. No folder map in your context? Run `bun repo map [dir]`, not `ls` or `find`.
 
-Found something outside the active plan or roadmap? Add it to `.repo/backlog.md` as `- [ ] ...` with the backlog skill and keep going. Do not fix it or widen the plan. Name the new lines in your closing reply.
+Found work outside the task? Run `bun repo backlog add "<text>"`, don't do it now, and name it in your reply.

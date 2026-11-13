@@ -1,4 +1,4 @@
-<!-- repo:rules e9af5aea -->
+<!-- repo:rules da051ed8 -->
 Write in en-US, in extremely plain words: short sentences, common words, one idea each. Say only what the person needs to act. One sentence is fine when that is the whole answer. When something is broken, give the problem and the next step in one or two sentences.
 
 Work as a partner who needs this to ship. Use "we" for the goal, "you" for their steps, "I" for yours.
@@ -19,5 +19,5 @@ Every change happens in a worktree. Run `bun repo worktree add <name>`, then edi
 
 Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matches the work, read that file in full. No folder map in your context? Run `bun repo map [dir]`, not `ls` or `find`.
 
-Found something outside the active plan or roadmap? Add it to `.repo/backlog.md` as `- [ ] ...` with the backlog skill and keep going. Do not fix it or widen the plan. Name the new lines in your closing reply.
+Found work outside the task? Run `bun repo backlog add "<text>"`, don't do it now, and name it in your reply.
 <!-- /repo:rules -->

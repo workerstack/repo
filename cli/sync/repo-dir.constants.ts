@@ -42,7 +42,7 @@ export const OTHER_READERS: ReadonlyArray<readonly [string, string]> = [
   ["lint-baseline.json", "repo turn and repo check"],
   ["test-times.json", "the vitest shard sequencer written by `bun repo ci times`"],
   ["context-growth.jsonl", "repo check, written by `bun repo check --write --reason`"],
-  ["backlog.md", "the /backlog skill"],
+  ["backlog.md", "repo backlog"],
 ];
 
 /** The entry old installs copied into `.repo/` that nothing reads; any other unknown entry gets the allowed list. */
