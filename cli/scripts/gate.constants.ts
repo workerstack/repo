@@ -97,6 +97,26 @@ export const BASH_URL: RegExp = /https?:\/\/\S+/;
 export const TEST_CMD: RegExp =
   /^\s*(?:bun (?:run )?test|bunx? (?:--bun )?vitest|npx vitest|vitest|npm (?:run )?test|pnpm (?:run )?test)\b/;
 
+/** Bun's own test runner at the start of a command or a `;`, `&`, `|` or `(` segment; group 1 precedes it. */
+export const BUN_NATIVE_TEST: RegExp = /(^|[;&|(]\s*)bun\s+test\b/g;
+
+/** What `bun test` becomes: the repo's `test` script, which runs vitest. */
+export const BUN_SCRIPT_TEST = "bun run test";
+
+/**
+ * A local run of the whole ci: `repo ci`, or `bun run ci` (npm, pnpm), followed by the end or a flag, never by a
+ * subcommand such as `wait`, `skips`, `times` or `merge`. Each matches at the start of a command or segment.
+ */
+export const LOCAL_CI_REPO: RegExp =
+  /(?:^|[;&|(]\s*)(?:rtk\s+)?(?:bun(?:\s+--bun)?\s+(?:run\s+)?)?(?:\S*\/)?repo(?:\.ts)?\s+ci(?=\s*(?:$|[;&|)])|\s+-)/;
+
+export const LOCAL_CI_SCRIPT: RegExp =
+  /(?:^|[;&|(]\s*)(?:rtk\s+)?(?:(?:bun|npm|pnpm)(?:\s+--bun)?\s+run|pnpm)\s+ci(?=\s*(?:$|[;&|)])|\s+-)/;
+
+export const REASON_LOCAL_CI: string =
+  "GitHub runs ci, not you: push the branch, then run `bun repo ci wait <branch>` in the background. " +
+  "To check one change, run the nearest test file with `bun run test <file>`.";
+
 export const GIT_STAGE: RegExp =
   /(?:^|[\s;&|(])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+(?:add|commit)(?![\w-])/;
 

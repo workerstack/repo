@@ -3807,6 +3807,7 @@
   ],
   "cli/scripts/gate-fat-tools.ts": [
     "0b4e209be9ca28d2",
+    "0c8a89fa0f68ac4b",
     "13b6de3c5c419724",
     "25f5534906f72e1d",
     "2909c7966a124734",
@@ -3985,6 +3986,7 @@
     "c7a1dd09ed1815dc"
   ],
   "cli/scripts/gate-review-tests.test.ts": [
+    "131aebe09c79ccaa",
     "3a223682bdf3b041",
     "663f6f1a06d36f2f",
     "86b63d37244e5f0c",
@@ -4034,6 +4036,7 @@
     "f3e7ee3341634cca",
     "f7afef622d2c1a47"
   ],
+  "cli/scripts/gate-shell-guards.test.ts": ["853648a6d3a33477"],
   "cli/scripts/gate-shell.test.ts": [
     "1c6d99de3467ee71",
     "55e332b9fb2c72e8",
@@ -4043,7 +4046,13 @@
     "eff3cee987f1987c",
     "fec98bd71e4ab28a"
   ],
-  "cli/scripts/gate-shell.ts": ["6ba2498a53c8d0cc", "7a0cda2545aad169", "bc82923573819c86", "ef31bdab0a5d6d05"],
+  "cli/scripts/gate-shell.ts": [
+    "37a8d1446cd4108a",
+    "6ba2498a53c8d0cc",
+    "7a0cda2545aad169",
+    "bc82923573819c86",
+    "ef31bdab0a5d6d05"
+  ],
   "cli/scripts/gate-worktree.test.ts": [
     "261fad42e9e33e17",
     "83db00f958561507",
@@ -4070,7 +4079,7 @@
     "ca3fe308adaa6fbf",
     "faae70fc22547fc5"
   ],
-  "cli/scripts/gate.constants.ts": ["84f1a9240f257e2a", "b152625cf69f41e2", "c15e082933e60a95"],
+  "cli/scripts/gate.constants.ts": ["0b23eb557feabb67", "84f1a9240f257e2a", "b152625cf69f41e2", "c15e082933e60a95"],
   "cli/scripts/git-dir-name.constants.ts": ["3a6b352465fa0fb9"],
   "cli/scripts/gitignore-guard-patch.test.ts": [
     "27506c085a4f6eda",
@@ -7633,6 +7642,7 @@
   ],
   "references/google-workspace.md": ["48a0a8dd31c8250b", "db455dc3b114ef70"],
   "references/hooks.md": [
+    "079e3d23d213aed6",
     "093ed3a655f55cd3",
     "37424abba0611db9",
     "44ba642a2e1cbcb6",

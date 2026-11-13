@@ -17,7 +17,15 @@ import {
 import { limitsGuard, pathGuard } from "./gate-limits.ts";
 import { reviewGuard, sharedCheckoutGuard } from "./gate-review.ts";
 import { patchGuard, patchOfCommand, writeGuard } from "./gate-rewrites.ts";
-import { denylistShellGuard, dumpGuard, jobScriptGuard, testRunGuard, treeGuard, webGuard } from "./gate-shell.ts";
+import {
+  denylistShellGuard,
+  dumpGuard,
+  jobScriptGuard,
+  localCiGuard,
+  testRunGuard,
+  treeGuard,
+  webGuard,
+} from "./gate-shell.ts";
 /** PreToolUse: fat Read/Grep/Glob/Bash gate. Fail-open: parse/crash → empty stdout, exit 0. */
 import { PATCH_FIELD, SCOUT_TYPES, GITIGNORE, WORKTREE_WORD } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -115,6 +123,7 @@ export type Guard = (call: GateCall) => GuardResult;
 const GUARDS: readonly Guard[] = [
   ignoreGuard,
   strayWorktreeGuard,
+  localCiGuard,
   sharedCheckoutGuard,
   reviewGuard,
   writeGuard,
