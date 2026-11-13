@@ -370,6 +370,7 @@
     "cbba526722cdac95",
     "d99d89399f729857"
   ],
+  ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   ".agents/skills/show-me/SKILL.md": ["e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
     "0db2716e177b9fec",
@@ -2124,7 +2125,8 @@
     "e4712c9c042a6815",
     "eb259b17ad2556a3",
     "ee68d40bb1dad625",
-    "f7aca76804f498ba"
+    "f7aca76804f498ba",
+    "ff62f76c3b6f9352"
   ],
   "agents/global-settings/antigravity.json": ["7a2c5d27e1f7b1e8"],
   "agents/global-settings/claude.json": ["2b1dd203c98c740e"],
@@ -2134,7 +2136,13 @@
   "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f", "fdd40c82484396ab"],
   "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
-  "agents/rules/overview.md": ["8d1e4ccff74232b2", "d430ca6fec0763d6", "e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
+  "agents/rules/overview.md": [
+    "2ddb09b6644abd31",
+    "8d1e4ccff74232b2",
+    "d430ca6fec0763d6",
+    "e32b4a6bcdb23d69",
+    "fbe4a33c058c0f7c"
+  ],
   "agents/rules/rust.md": [
     "14edf7de7aaaa090",
     "985134dcb5b5d374",
@@ -2216,6 +2224,7 @@
   "agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
   "agents/skills/review-plan/SKILL.md": ["19d5b003103c9085", "553005bf5d6c4571", "5dc75175807fa513"],
   "agents/skills/review-roadmap/SKILL.md": ["53f5034d8be7143c", "b6b1ea7e37810ec4", "d99d89399f729857"],
+  "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/show-me/SKILL.md": ["e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["b5077f853232702d"],
