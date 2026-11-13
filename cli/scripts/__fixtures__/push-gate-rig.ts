@@ -13,6 +13,23 @@ export const C = "c".repeat(40);
 export const D = "d".repeat(40);
 export const WIN = "C:\\work\\repo";
 export type Row = { branch: string; sha: string; at: string };
+
+/** How the gate asks for a wait on `branch`. */
+export function wait(branch: string) {
+  return `\`bun repo ci wait ${branch}\``;
+}
+
+const HINT =
+  "; if only the user can fix a job, run bun repo backlog add 'blocked: `<job>` <why>' " +
+  "and name that line in your reply";
+
+/** The Stop line for a failed run on main at `sha` naming `jobs`. */
+export function failedLine(sha: string, jobs: string) {
+  return (
+    `Stop: ci failed on ${sha.slice(0, 7)} on main (${jobs}); ` +
+    `fix it in a new worktree, push, and run ${wait("main")} in the background${HINT}`
+  );
+}
 export const row = (branch: string, sha: string): Row[] => [{ branch, sha, at: AT }];
 
 export type World = {
@@ -60,6 +77,10 @@ function files(main: string) {
       fs.writeFileSync(recordPath(main, sha), JSON.stringify({ branch: "main", outcome, failed, at: AT }));
     },
     stamp: (session = "s1") => path.join(main, ".repo/tmp/orchestrator-logs", `push-block-${session}`),
+    backlog: (text: string, dir = main) => {
+      fs.mkdirSync(path.join(dir, ".repo"), { recursive: true });
+      fs.writeFileSync(path.join(dir, ".repo/backlog.md"), text);
+    },
   };
 }
 

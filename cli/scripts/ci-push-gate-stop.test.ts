@@ -3,14 +3,10 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { A, B, C, cleanRigs, rig } from "./__fixtures__/push-gate-rig.ts";
+import { A, B, C, cleanRigs, failedLine, rig, wait } from "./__fixtures__/push-gate-rig.ts";
 import { MAX_PUSH_BLOCK, pushStopBlock } from "./ci-push-gate.ts";
 
 afterEach(cleanRigs);
-
-function wait(branch: string) {
-  return `\`bun repo ci wait ${branch}\``;
-}
 
 function noResult(sha: string, branch = "main") {
   return (
@@ -115,10 +111,7 @@ it("asks a failed push to be fixed and pushed again before the third failed roun
   ]);
 
   r.result(B, "failed", TEST);
-  expect(r.gate()).toBe(
-    `Stop: ci failed on ${B.slice(0, 7)} on main (test (windows-latest)); ` +
-      `fix it in a new worktree, push, and run ${wait("main")} in the background`,
-  );
+  expect(r.gate()).toBe(failedLine(B, "test (windows-latest)"));
 });
 
 function threeRounds() {
