@@ -17,7 +17,7 @@ const LP_INSTALL_SH = "curl -fsSL https://pkg.lightpanda.io/install.sh | bash";
 const WHISPER_REPO = "https://github.com/ggml-org/whisper.cpp";
 const BUN_SITE = "https://bun.sh";
 export const REQUIRED = ["bun", "git", "rtk", "lightpanda", "chromium"] as const;
-export const MAPS_SECTIONS: string[] = ["skills", "refs"];
+export const MAPS_SECTIONS: string[] = ["refs"];
 
 /** The platforms the hints and PATH lookup tell apart. */
 export const WIN32 = "win32";

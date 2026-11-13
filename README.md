@@ -26,13 +26,9 @@ Agent workflow, code standards, gates, workspace and docs checks for workerstack
 - [Scope](#scope)
 - [Setup](#setup)
 - [Speak](#speak)
+- [Sync](#sync)
 
 ## Browser
-
----
-tags: [browser]
----
-
 
 Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked.
 
@@ -97,11 +93,6 @@ No user env. Never `REPO_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
 
 ## Protocol
 
----
-tags: [cascade]
----
-
-
 The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `<root>/node_modules/.bin/repo job` (squeez + stash). Isolation facts stay ≤8 lines.
 
 Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact; spawn researcher for heavy web or browser research that returns facts with sources. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
@@ -113,11 +104,6 @@ Session flags: `/auto` (default) keeps going and asks on blockers instead of mon
 Scratch: `.tmp/repo/`. Stash: `.tmp/repo/stash/`. Sessions: `.tmp/repo/sessions/{sid}/`. Browser: `.tmp/repo/browser/`.
 
 ## Clasp
-
----
-tags: [clasp]
----
-
 
 Low-level Apps Script CLI. Optional. Doctor reports it.
 
@@ -136,11 +122,6 @@ clasp status
 Script files live next to `appsscript.json`. Git tracks them. `clasp run` needs the Apps Script API and an API-executable deployment. That path is for custom `.gs`, not day-to-day Workspace.
 
 ## Cloudflare
-
----
-tags: [cloudflare]
----
-
 
 Use `cf` for every Cloudflare task. Do not run `wrangler` yourself and do not add it to a project that has none.
 
@@ -477,11 +458,6 @@ tier: implementer
 
 ## google-workspace
 
----
-tags: [google-workspace]
----
-
-
 Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session.
 
 ```
@@ -557,11 +533,6 @@ If `google-oauth.json` is missing, `login` prints `setup: bun repo setup google-
 `gcloud` on PATH is an alternate login (`gcloud auth application-default login` with the extra scopes). Still per person, still local.
 
 ## Hooks
-
----
-tags: [hooks]
----
-
 
 SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `bun repo map` prints as `additionalContext` (capped under Claude Code's 10,000-char per-hook `additionalContext` limit, about 2.4k tokens, below the 5k `bun repo map` budget; cache-stable, fail-open) and logs `{rows, tokens}` to `.tmp/repo/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no generated sessionStart. Do not register a SessionStart hook on `.grok/hooks/orchestrate-parent.json`.
 
@@ -795,11 +766,6 @@ source: "add --json to notes export"
 
 ## Jev
 
----
-tags: [jev]
----
-
-
 Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not open research. Not code. Not job.
 
 ### Availability
@@ -852,11 +818,6 @@ One request per process. UTC-day ledger `~/.workerstack/jev-usage.json` stops at
 Exit 2 means the decision call did not return a label. Answer from the sources. Do not invent a label. Do not print the key or the state.
 
 ## Lessons
-
----
-tags: [lessons]
----
-
 
 Mistakes that outlive one task. One committed file per mistake under `.repo/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
 
@@ -927,11 +888,6 @@ At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architect
 - `/review-plan` reads the matched lessons and flags one that no leaf acts on.
 
 ## Listen
-
----
-tags: [listen]
----
-
 
 Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP.
 
@@ -1010,11 +966,6 @@ No daemon. Each keypress is one CLI. First press records; second press transcrib
 
 ## Map
 
----
-tags: [map]
----
-
-
 Cheap outline. Not a file dump.
 
 ### Protocol
@@ -1025,7 +976,7 @@ Cheap outline. Not a file dump.
 - `node_modules/@workerstack/repo/references/map.md` — this file
 - `node_modules/@workerstack/repo/references/output.md` — default voice
 - `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan` → approval → `/implement-plan`; two or more slices → `/write-roadmap`
-- `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the repo's domain law, then the generated `repo:skills` (skills), `repo:refs` (reference docs), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
+- `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the generated `repo:refs` (one line per reference doc), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
 
 ### Agent SSOT
 - Docs SoT: `agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` and `.agents/skills/<name>` are generated links to `agents/skills/<name>`, not SoT; no mirror scan
@@ -1130,7 +1081,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
 - release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); also, for a public root with a config `owner` and a GitHub `repository`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/{bug_report,config}.yml` (tracked, whole-file); a hand-written one is refused
 - benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused; also the `/benchmark` skill links in `.agents/skills` and `.claude/skills`
-- always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:skills`, `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
+- always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
 
 ### Generator divergences
 Where `cli/sync/agents/` differs from the rulesync 43.7.0 it replaced:
@@ -1141,11 +1092,6 @@ Where `cli/sync/agents/` differs from the rulesync 43.7.0 it replaced:
 - A bad subagent, or a rule without frontmatter, fails sync
 
 ## Output
-
----
-tags: [output]
----
-
 
 en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape.
 
@@ -1456,11 +1402,6 @@ $ notes export
 
 ## Review loop
 
----
-tags: [review-loop]
----
-
-
 Read this when the plan's `strategy` is `review-fast` or `review-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
 
 ### Start
@@ -1611,11 +1552,6 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 
 ## RTK
 
----
-tags: [rtk]
----
-
-
 Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images.
 
 Grok PostToolUse is observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only.
@@ -1639,11 +1575,6 @@ Unknown cmds passthrough. `rtk run` unfiltered.
 **lightpanda:** browser-rail CDP via `bun repo browser` (not MCP, not env).
 
 ## Scope
-
----
-tags: [scope]
----
-
 
 Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This file is the size-gate SSOT.
 
@@ -1718,11 +1649,6 @@ Verify of every plan reads `principle-prove-it-works`. After two fixes that shar
 
 ## Setup
 
----
-tags: [setup]
----
-
-
 Handheld machine setup for optional integrations. Any OS. Secrets stay in `~/.workerstack/` (Windows `%USERPROFILE%\.workerstack`). Not git. Env still wins over the file.
 
 ```
@@ -1761,11 +1687,6 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.
 
 ## Speak
-
----
-tags: [speak]
----
-
 
 Text-to-speech from the session. Output only. Not STT. Not a mic. Not MCP. Speech-to-text is `/listen`: `node_modules/@workerstack/repo/references/listen.md` and `bun repo listen`.
 
@@ -1820,3 +1741,15 @@ Env wins over the file. Default provider is `SPEAK_PROVIDER` else the first conf
 Create an ElevenLabs key at https://elevenlabs.io/app/settings/api-keys. OpenAI at https://platform.openai.com/api-keys.
 
 Doctor reports speak as optional: `ok` when a key or `~/.workerstack/speak.json` exists, else `missing (optional)`. It prints the provider name, not the secret.
+
+## Sync
+
+### Skills naming
+
+Do not reuse a repo skill name for a consumer custom skill: a repo-owned skill of the same name in `.repo/skills/` replaces the stock one. Pack names stay reserved when their directory is absent.
+
+`bun repo sync` links the stock skills from the installed package into each host tree and writes the rest; it never copies stock references or scripts. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
+
+Upgrading is running `bun repo update '@workerstack/*'`: it bumps every `@workerstack/*` package to its npm latest, installs, and prints what that install's sync wrote and removed, plus each package's CHANGELOG sections between the installed and the new version. The first sync in a repo an older `bun repo init` copied moves your own rules, subagents, skills, settings keys, lessons, hooks and references into `.repo/` and `references/`, untracks the generated paths, removes the copied `.rulesync/`, and prints one moved line per move. Commit the result.
+
+Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.

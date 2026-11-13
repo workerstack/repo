@@ -4,7 +4,7 @@
 
 | lesson | paths | hits | last-hit | summary |
 | --- | --- | --- | --- | --- |
-| .repo/lessons/stock-history-regenerate-last.md | cli/sync/stock-history.json, dev/stock-history.ts | 5 | 2026-11-12 | A fix staged after `bun dev/stock-history.ts` ran left the history behind and `bun repo ci` failed its stock-history test. |
+| .repo/lessons/stock-history-regenerate-last.md | cli/sync/stock-history.json, dev/stock-history.ts | 6 | 2026-11-12 | A fix staged after `bun dev/stock-history.ts` ran left the history behind and `bun repo ci` failed its stock-history test. |
 | .repo/lessons/shipped-source-es2022-lib.md | cli/lint/comment-lines.ts, cli/release/consumer.constants.ts, tsconfig/bun.json | 4 | 2026-11-12 | The package ships its `cli/` TypeScript source. `repo release consumer` type-checks an `import type` of every `exports` subpath, and so every file those subpaths reach (`cli/config.ts`, `cli/lint/index.ts` and their imports), in a temp project with `target: ES2022` and the default lib, as a consumer without this repo's presets would. This repo's own typecheck uses `tsconfig/bun.json`, whose `lib` is `ESNext`. So an ES2023-or-later API passes `bun repo ci` locally and fails only in CI's `consumer` job. |
 | .repo/lessons/parallel-phase-skips-coverage.md | references/review-loop.md, agents/subagents/implementer.md | 3 | 2026-11-12 | Each parallel implementer ran only its own test file so new branches nobody tested surfaced only at the full suite's 100% gate. |
 | .repo/lessons/posix-only-path-parsing.md | cli/scripts/persist-*.ts, cli/scripts/lessons*.ts, cli/scripts/orchestrate*.ts | 3 | 2026-11-04 | A regex for absolute paths that starts with `/` never matches `C:\...`, so the check passes on Windows without running. |

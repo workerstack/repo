@@ -1,5 +1,5 @@
 ---
-tags: [lessons]
+description: Record repeated mistakes
 ---
 
 # Lessons

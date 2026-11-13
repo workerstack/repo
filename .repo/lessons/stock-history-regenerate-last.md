@@ -1,9 +1,9 @@
 ---
 name: stock-history-regenerate-last
 paths: ["cli/sync/stock-history.json","dev/stock-history.ts"]
-hits: 5
+hits: 6
 last-hit: 2026-11-12
-evidence: ["plan 124","plan 125","plan 126","roadmap 8","roadmap 9"]
+evidence: ["plan 125","plan 126","roadmap 8","roadmap 9","plan 161"]
 ---
 
 # Stock history goes stale after any later fix

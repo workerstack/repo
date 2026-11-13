@@ -1,5 +1,5 @@
 ---
-tags: [clasp]
+description: Apps Script CLI
 ---
 
 # Clasp

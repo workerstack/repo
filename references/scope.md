@@ -1,5 +1,5 @@
 ---
-tags: [scope]
+description: When and how to plan
 ---
 
 # Scope

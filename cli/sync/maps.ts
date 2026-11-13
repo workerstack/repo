@@ -1,28 +1,31 @@
 import path from "node:path";
 
-import { STOCK_SKILLS_REL, listSkillDirNames } from "../scripts/skill-conflicts.ts";
-import { refRow, skillRow, table, walkRefMd } from "./maps-rows.ts";
+import { refRow, walkRefMd } from "./maps-rows.ts";
 import { INDEX_REL, REFS_REL } from "./maps.constants.ts";
 import { regionBody, syntaxOf } from "./region.ts";
 
-/** The `repo:skills` and `repo:refs` section bodies of references/INDEX.md. */
-export type MapSections = { skills: string; refs: string };
+/** The `repo:refs` section body and one error per reference that has no usable description. */
+export type RefsSection = { body: string; errors: string[] };
 
 /**
- * The bodies of the `repo:skills` and `repo:refs` sections of references/INDEX.md, from one scan of the skills
- * and references under `root`. Only this package keeps them; the hand-written text of the index is never touched.
+ * The body of the `repo:refs` section of references/INDEX.md, from one scan of the references under `root`: a line
+ * per file. Only this package keeps it; the hand-written text of the index is never touched. Every reference whose
+ * description is missing or too long is named in `errors`.
  */
-export function mapSections(root: string): MapSections {
-  const skills = listSkillDirNames(path.join(root, STOCK_SKILLS_REL)).map((dir) => skillRow(root, dir));
+export function refsSection(root: string): RefsSection {
+  const lines: string[] = [];
+  const errors: string[] = [];
 
-  const refs = walkRefMd(path.join(root, REFS_REL), REFS_REL, [])
-    .toSorted((a, b) => a.rel.localeCompare(b.rel))
-    .map(refRow);
+  const files = walkRefMd(path.join(root, REFS_REL), REFS_REL, []).toSorted((a, b) => a.rel.localeCompare(b.rel));
 
-  return {
-    refs: table(["path", "title", "tags", "summary"], refs),
-    skills: table(["name", "origin", "description", "task", "commandPath", "refs"], skills),
-  };
+  for (const file of files) {
+    const row = refRow(file);
+
+    if ("error" in row) errors.push(row.error);
+    else lines.push(row.line);
+  }
+
+  return { body: lines.join("\n"), errors };
 }
 
 /** The trimmed lines of the INDEX region `repo:<name>`, its markers read loosely, or null when the pair is missing. */

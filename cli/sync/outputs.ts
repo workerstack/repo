@@ -12,7 +12,7 @@ import { blockOutput } from "./block-output.ts";
 import { githubFiles } from "./github-files.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { INDEX_REL } from "./maps.constants.ts";
-import { mapSections } from "./maps.ts";
+import { refsSection } from "./maps.ts";
 import { nightly } from "./nightly.ts";
 import { readme } from "./readme.ts";
 import { type Region, syntaxOf, writeRegions } from "./region.ts";
@@ -85,8 +85,7 @@ export function bunfig(ctx: SyncContext): GeneratorResult {
 
 /**
  * The repo:packages, repo:stack and (with the references index installed) repo:available sections of
- * references/INDEX.md, under the docs pack; in this repo also the repo:skills and repo:refs maps of its own skills
- * and references.
+ * references/INDEX.md, under the docs pack; in this repo also the repo:refs list of its own references.
  */
 export function index(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
@@ -100,8 +99,9 @@ export function index(ctx: SyncContext): GeneratorResult {
   sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
 
   if (isSelfName(ctx.workspace.manifest.name)) {
-    const maps = mapSections(ctx.root);
-    sections.push(section("skills", maps.skills), section("refs", maps.refs));
+    const refs = refsSection(ctx.root);
+    sections.push(section("refs", refs.body));
+    errors.push(...refs.errors);
   }
 
   if (errors.length > 0) return { errors, outputs: [] };

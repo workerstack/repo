@@ -1,5 +1,5 @@
 ---
-tags: [setup]
+description: Set up integrations
 ---
 
 # Setup

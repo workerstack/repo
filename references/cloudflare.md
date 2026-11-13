@@ -1,5 +1,5 @@
 ---
-tags: [cloudflare]
+description: Cloudflare work via cf
 ---
 
 # Cloudflare

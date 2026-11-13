@@ -8,6 +8,7 @@ import { group, splitMarkdown } from "../docs-fences.ts";
 import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
 import { tryJson } from "../json.ts";
+import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
 import { lines } from "../scripts/lines.ts";
 import { hasOwnedHeader } from "./header.ts";
 import type { Generator, Output, SyncContext } from "./outputs.ts";
@@ -143,7 +144,9 @@ function rowOf(raw: string, { fenced }: { fenced: boolean }): Row {
 }
 
 /** A reference file split into its label (first H1, else the file name) and rows without that H1. */
-function parseDoc(file: string, text: string): Parsed {
+function parseDoc(file: string, source: string): Parsed {
+  const split = splitFrontmatter(source);
+  const text = split.ok ? split.body : source;
   const fenced = fencedLines(text);
   const all = lines(text).map((raw, at) => rowOf(raw, { fenced: fenced.has(at + 1) }));
   const h1 = all.find((row) => row.level === 1);

@@ -1,5 +1,5 @@
 ---
-tags: [hooks]
+description: What each hook does
 ---
 
 # Hooks

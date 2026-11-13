@@ -1,5 +1,5 @@
 ---
-tags: [output]
+description: Reply style details
 ---
 
 # Output

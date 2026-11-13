@@ -1,5 +1,5 @@
 ---
-tags: [rtk]
+description: Shrink shell output
 ---
 
 # RTK

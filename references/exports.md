@@ -1,3 +1,7 @@
+---
+description: What the package exports
+---
+
 # Exports
 
 What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-checks each `ts` block below against the installed package.
