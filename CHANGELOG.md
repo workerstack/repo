@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - `repo sync` no longer writes the deprecated `typescript.tsdk` to `.vscode/settings.json`. For TypeScript older than 7 it writes `js/ts.tsdk.path` instead, and it moves a `typescript.tsdk` you already have to `js/ts.tsdk.path` with the same value, or drops it when `js/ts.tsdk.path` is already set. Run `bun repo sync` and commit the file.
+- `repo release api` no longer reports an unchanged type as narrowed when it has a key typed `unique symbol`, such as the `Sealed` brand of `@workerstack/repo/env`, or when it holds, lists or returns one at any depth: each installed copy declares its own symbol, so the two copies never fit each other. It still compares the TypeScript library's own types, such as a returned `Promise`, by what they hold, so a changed `loadConfig` result is now reported.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

@@ -113,6 +113,13 @@ describe("apiDiff copies", () => {
   });
 });
 
+describe("apiDiff symbol keys", () => {
+  it("leaves identical types keyed by a unique symbol alone, and what holds or returns them", () => {
+    for (const name of ["Keyed", "KeyedOr", "HoldsKeyed", "ListsKeyed", "Branded", "makeKeyed"])
+      expect(kinds(".")).not.toHaveProperty(name);
+  });
+});
+
 describe("apiDiff names, all together", () => {
   it("reports nothing else", () => {
     expect(Object.keys(kinds(".")).toSorted()).toStrictEqual(
