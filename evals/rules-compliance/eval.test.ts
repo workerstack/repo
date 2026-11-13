@@ -30,37 +30,12 @@ it("puts the rules and the scope page in the system text and names the four firs
   for (const step of STEPS) expect(system).toContain(`${step}: `);
 });
 
-it("has 4 plan cases, 4 worktree cases and one control each, every source a transcript or its case", () => {
-  expect(real.filter((one) => one.expect === "plan")).toHaveLength(4);
-  expect(real.filter((one) => one.expect === "worktree")).toHaveLength(4);
+it("has 6 plan cases, 2 worktree cases and one control each, every source a transcript or its case", () => {
+  expect(real.filter((one) => one.expect === "plan")).toHaveLength(6);
+  expect(real.filter((one) => one.expect === "worktree")).toHaveLength(2);
   expect(cases).toHaveLength(16);
 
   for (const one of cases) expect(one.source, one.id).toMatch(SOURCE);
-});
-
-const REWRITTEN = [
-  {
-    control: "we agreed repo eval should run on the session by default. what is the default right now?",
-    id: "worktree-make-default",
-    input: "we agreed repo eval should run on the session by default. good, just make it the default, should be easy",
-    source: "transcript 2026-11-10, context added",
-  },
-  {
-    control: "we moved the eval cache to .repo/tmp/evals. does repo clean still work after the move?",
-    id: "worktree-clean-after-move",
-    input:
-      "we moved the eval cache to .repo/tmp/evals. " +
-      "also make sure repo clean is updated to work after the move correctly",
-    source: "transcript 2026-11-12, context added",
-  },
-];
-
-it.each(REWRITTEN)("$id names its target in the message, with a control that shares the opening", (want) => {
-  const one = cases.find((other) => other.id === want.id);
-  const control = cases.find((other) => other.id === `${want.id}-control`);
-
-  expect(one).toMatchObject({ input: want.input, source: want.source });
-  expect(control?.input).toBe(want.control);
 });
 
 it.each(real.map((one) => [one.id, one] as const))("%s has a control that expects the next step down", (id, one) => {

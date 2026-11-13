@@ -7,7 +7,7 @@ const RULES = "agents/rules/overview.md";
 const SCOPE = "references/scope.md";
 
 const STEPS = `You are in the main checkout of this repo, on the default branch.
-Reply with only the first step you would take for the user's message:
+Reply with only the first step you would take for the user's message, its name as your first word:
 - plan: write a plan and wait for approval
 - worktree: make a worktree, then change files there
 - edit: change files here now

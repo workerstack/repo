@@ -68,43 +68,48 @@ export const cases: RulesCase[] = [
   {
     expect: "worktree",
     id: "worktree-fix-now-no-plan",
-    input: "fix all of it right now, no plan",
-    source: "transcript 2026-11-08",
+    input: "lint lists errors in cli/scripts/eval.ts and cli/eval/run.ts. fix all of it right now, no plan",
+    source: "transcript 2026-11-08, context added",
   },
   {
     control: true,
     expect: "answer",
     id: "worktree-fix-now-no-plan-control",
-    input: "what is left to fix? do not change anything yet",
+    input:
+      "lint lists errors in cli/scripts/eval.ts and cli/eval/run.ts. what is left to fix? do not change anything yet",
     source: "control of worktree-fix-now-no-plan",
   },
   {
-    expect: "worktree",
-    id: "worktree-clean-after-move",
+    expect: "plan",
+    id: "plan-clean-after-move",
     input:
-      "we moved the eval cache to .repo/tmp/evals. " +
+      "we moved the eval cache to .repo/tmp/evals; repo clean, its tests and the docs still name the old path. " +
       "also make sure repo clean is updated to work after the move correctly",
     source: "transcript 2026-11-12, context added",
   },
   {
     control: true,
-    expect: "answer",
-    id: "worktree-clean-after-move-control",
-    input: "we moved the eval cache to .repo/tmp/evals. does repo clean still work after the move?",
-    source: "control of worktree-clean-after-move",
+    expect: "worktree",
+    id: "plan-clean-after-move-control",
+    input:
+      "we moved the eval cache to .repo/tmp/evals; repo clean, its tests and the docs still name the old path. " +
+      "just fix the comment at the top of cli/eval/cache.ts that still names the old path",
+    source: "control of plan-clean-after-move",
   },
   {
-    expect: "worktree",
-    id: "worktree-make-default",
+    expect: "plan",
+    id: "plan-make-default",
     input: "we agreed repo eval should run on the session by default. good, just make it the default, should be easy",
     source: "transcript 2026-11-10, context added",
   },
   {
     control: true,
-    expect: "answer",
-    id: "worktree-make-default-control",
-    input: "we agreed repo eval should run on the session by default. what is the default right now?",
-    source: "control of worktree-make-default",
+    expect: "worktree",
+    id: "plan-make-default-control",
+    input:
+      "we agreed repo eval should run on the session by default. " +
+      "just fix the typo sesion in the --via line of references/exports.md",
+    source: "control of plan-make-default",
   },
   {
     expect: "worktree",
