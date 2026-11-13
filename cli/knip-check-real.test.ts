@@ -28,7 +28,7 @@ it(
     fs.writeFileSync(path.join(ws.root, "package.json"), JSON.stringify({ ...ws.manifest, main: "src/index.ts" }));
     const ignore = '{ file: "src/old.ts", reason: "loaded by name" }';
     fs.writeFileSync(
-      path.join(ws.root, "workerstack.config.ts"),
+      path.join(ws.root, "repo.config.ts"),
       `export default { packs: ["standards"], knip: { ignore: [${ignore}] } };\n`,
     );
     const out = await checkKnipAt(ws.root);
@@ -52,7 +52,7 @@ it(
 
     const ws = knipRoot(files, {});
     fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
-    fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    fs.writeFileSync(path.join(ws.root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
     const out = await checkKnipAt(ws.root);
     expect(out.problems).toStrictEqual([]);
   },
@@ -63,7 +63,7 @@ it("does not report @workerstack/repo as unused when the config does not import 
   fs.symlinkSync(INSTALL, path.join(ws.root, "node_modules"), "junction");
   const manifest = { devDependencies: { "@workerstack/repo": "1.0.0" }, name: "app", type: "module" };
   fs.writeFileSync(path.join(ws.root, "package.json"), JSON.stringify(manifest));
-  fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+  fs.writeFileSync(path.join(ws.root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
   const out = await checkKnipAt(ws.root);
   expect(out.problems).toStrictEqual([]);
 });

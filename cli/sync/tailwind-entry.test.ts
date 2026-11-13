@@ -14,7 +14,7 @@ import { withTailwindEntry } from "./tailwind-entry.ts";
 afterEach(cleanTemps);
 
 const IMPORT = '@import "tailwindcss";\n';
-const AT = "workerstack.config.ts: lint.tailwind.entryPoint";
+const AT = "repo.config.ts: lint.tailwind.entryPoint";
 
 /** A git checkout holding `files`, none committed. */
 function checkout(files: Record<string, string>): string {
@@ -97,8 +97,8 @@ it("repo sync gives oxlint and the oxfmt config the one entry, and refuses a sec
 
   const root = checkout({
     "package.json": '{ "name": "app" }\n',
+    "repo.config.ts": config,
     "src/app.css": IMPORT,
-    "workerstack.config.ts": config,
   });
 
   const err: string[] = [];

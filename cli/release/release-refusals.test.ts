@@ -105,16 +105,16 @@ describe("repo release refuses the package and its config", () => {
   });
 
   it("a repo without the release pack", async () => {
-    const w = world({ "workerstack.config.ts": "export default { packs: [] };\n" });
+    const w = world({ "repo.config.ts": "export default { packs: [] };\n" });
     feat(w);
-    const line = 'the release pack is off; add "release" to packs in workerstack.config.ts';
+    const line = 'the release pack is off; add "release" to packs in repo.config.ts';
     expect(await attempt(w)).toStrictEqual(refusal(line));
   });
 });
 
 describe("repo release refuses a manifest it cannot use", () => {
   it("a broken config", async () => {
-    const w = world({ "workerstack.config.ts": "export default 3;\n" });
+    const w = world({ "repo.config.ts": "export default 3;\n" });
     const got = await attempt(w);
     expect(got).toMatchObject({ code: 1, out: "", wrote: false });
     expect(got.err).toMatch(/^repo release: .*default export/);

@@ -92,7 +92,7 @@ it("regenerates the committed trees byte for byte", async () => {
 
 it("replaces a dangling skill link left by a removed node_modules instead of following it", async () => {
   const root = consumer();
-  put(root, "workerstack.config.ts", CLAUDE_CONFIG);
+  put(root, "repo.config.ts", CLAUDE_CONFIG);
   fs.mkdirSync(path.join(root, ".claude", "skills"), { recursive: true });
   fs.symlinkSync("../../gone/ask", path.join(root, ".claude", "skills", "ask"), "dir");
 
@@ -112,7 +112,7 @@ it("replaces a dangling skill link left by a removed node_modules instead of fol
 
 it("reports a failed render and leaves no stage behind", async () => {
   const root = consumer({ ".repo/settings/claude.json": "{" });
-  put(root, "workerstack.config.ts", CLAUDE_CONFIG);
+  put(root, "repo.config.ts", CLAUDE_CONFIG);
   const result = await sync(root);
   expect(result.code).toBe(1);
   expect(result.stderr).toContain(".repo/settings/claude.json");
@@ -122,7 +122,7 @@ it("reports a failed render and leaves no stage behind", async () => {
 
 it("fails on a .repo subagent with broken frontmatter, naming the file", async () => {
   const root = consumer({ ".repo/subagents/bad.md": "---\nname: [unclosed\n---\nbody\n" });
-  put(root, "workerstack.config.ts", CLAUDE_CONFIG);
+  put(root, "repo.config.ts", CLAUDE_CONFIG);
   const result = await sync(root);
   expect(result.code).toBe(1);
   expect(result.stderr).toContain("sync: .repo/subagents/bad.md: invalid frontmatter: ");

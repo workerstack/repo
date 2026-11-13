@@ -25,9 +25,7 @@ describe("loadConfig", () => {
     expect(
       await loadConfig(repo(`export default { packs: ${list}, commit: { maxChangedLines: 1500 } }\n`)),
     ).toStrictEqual({
-      errors: [
-        'workerstack.config.ts: commit: set only with the standards pack; add "standards" to packs or delete commit',
-      ],
+      errors: ['repo.config.ts: commit: set only with the standards pack; add "standards" to packs or delete commit'],
       ok: false,
     });
   });
@@ -36,25 +34,25 @@ describe("loadConfig", () => {
 describe("loadConfig", () => {
   it.each(["0", "-5", "10.5", '"1500"'])("rejects a size limit of %s", async (value) => {
     expect(await loadConfig(repo(`export default { commit: { maxChangedLines: ${value} } }\n`))).toStrictEqual({
-      errors: ["workerstack.config.ts: commit.maxChangedLines: must be a whole number of lines above 0"],
+      errors: ["repo.config.ts: commit.maxChangedLines: must be a whole number of lines above 0"],
       ok: false,
     });
   });
 
   it("rejects an unknown key under commit, and a commit that is not an object", async () => {
     expect(await loadConfig(repo("export default { commit: { maxLines: 5 } }\n"))).toStrictEqual({
-      errors: ['workerstack.config.ts: commit: unknown key "maxLines"'],
+      errors: ['repo.config.ts: commit: unknown key "maxLines"'],
       ok: false,
     });
     expect(await loadConfig(repo("export default { commit: 5 }\n"))).toStrictEqual({
-      errors: ["workerstack.config.ts: commit: must be an object like { maxChangedLines: 1000 }"],
+      errors: ["repo.config.ts: commit: must be an object like { maxChangedLines: 1000 }"],
       ok: false,
     });
   });
 
   it("rejects an unknown key", async () => {
     expect(await loadConfig(repo("export default { pakcs: [] }\n"))).toStrictEqual({
-      errors: ['workerstack.config.ts: unknown key "pakcs"'],
+      errors: ['repo.config.ts: unknown key "pakcs"'],
       ok: false,
     });
   });
@@ -63,7 +61,7 @@ describe("loadConfig", () => {
 describe("loadConfig", () => {
   it("rejects each unknown key alongside a valid one", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs"], a: 1, b: 2 }\n'))).toStrictEqual({
-      errors: ['workerstack.config.ts: unknown key "a"', 'workerstack.config.ts: unknown key "b"'],
+      errors: ['repo.config.ts: unknown key "a"', 'repo.config.ts: unknown key "b"'],
       ok: false,
     });
   });
@@ -78,7 +76,7 @@ describe("loadConfig", () => {
   it("rejects a name that is not a pack", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "lint"] }\n'))).toStrictEqual({
       errors: [
-        'workerstack.config.ts: packs[1]: "lint" is not a pack; ' +
+        'repo.config.ts: packs[1]: "lint" is not a pack; ' +
           "use agents, standards, docs, release, workspace, benchmark or evals",
       ],
       ok: false,
@@ -87,7 +85,7 @@ describe("loadConfig", () => {
 
   it("rejects a pack listed twice", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "docs"] }\n'))).toStrictEqual({
-      errors: ['workerstack.config.ts: packs: "docs" is listed twice'],
+      errors: ['repo.config.ts: packs: "docs" is listed twice'],
       ok: false,
     });
   });
@@ -96,7 +94,7 @@ describe("loadConfig", () => {
 describe("loadConfig", () => {
   it("counts a pack listed more than twice", async () => {
     expect(await loadConfig(repo('export default { packs: ["docs", "agents", "docs", "docs"] }\n'))).toStrictEqual({
-      errors: ['workerstack.config.ts: packs: "docs" is listed 3 times'],
+      errors: ['repo.config.ts: packs: "docs" is listed 3 times'],
       ok: false,
     });
   });
@@ -107,6 +105,6 @@ describe("loadConfig", () => {
 
     if (result.ok) return;
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toMatch(/^workerstack\.config\.ts: packs: \S/);
+    expect(result.errors[0]).toMatch(/^repo\.config\.ts: packs: \S/);
   });
 });

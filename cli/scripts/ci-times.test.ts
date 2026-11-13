@@ -14,7 +14,7 @@ function report(os: string, durations?: Record<string, number>): string {
 
 function times(files: Record<string, string>, dirName = "reports", { config = true }: { config?: boolean } = {}) {
   const root = tempDir("workerstack-times-");
-  write(root, { ...(config ? { "workerstack.config.ts": "export default {};\n" } : {}), ...files });
+  write(root, { ...(config ? { "repo.config.ts": "export default {};\n" } : {}), ...files });
   const out: string[] = [];
   const err: string[] = [];
   const code = timesMain(dirName, { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
@@ -84,6 +84,6 @@ it("outside a repo there is no root to write the table to", () => {
   });
 
   expect(run.code).toBe(1);
-  expect(run.err).toMatch(/^repo ci times: no workerstack\.config\.ts in .+ or any parent; run `bun repo init`\n$/);
+  expect(run.err).toMatch(/^repo ci times: no repo\.config\.ts in .+ or any parent; run `bun repo init`\n$/);
   expect(run.out).toBe("");
 });

@@ -1,5 +1,5 @@
 /** The file name `repo` looks for at a repo root, and the one `defineConfig` is exported from. */
-export const CONFIG_FILE: string = "workerstack.config.ts";
+export const CONFIG_FILE: string = "repo.config.ts";
 
 /** The index `Array#at` reads the last item from, and the `slice` end that drops it. */
 export const LAST: number = -1;

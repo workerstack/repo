@@ -72,7 +72,7 @@ function expectUpToDateInNewProcess(root: string): void {
 /** A consumer whose only copied-install trace is the marker, with this repo linked as the stock package. */
 function bare(manifest: string): string {
   const root = tempDir("workerstack-migrate-");
-  write(root, "workerstack.config.ts", "export default {}\n");
+  write(root, "repo.config.ts", "export default {}\n");
   write(root, "package.json", manifest);
   write(root, COPIED_MARKER, "// copied script\n");
   linkStock(root);

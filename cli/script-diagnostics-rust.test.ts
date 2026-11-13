@@ -50,7 +50,7 @@ function lines(found: { all: { line: string }[] }) {
 /** A git checkout with the standards pack, `skip`, and `files`. */
 function checkout(files: Record<string, string>, skip: object[] = []): string {
   const config = { lint: { skip }, packs: ["standards"] };
-  const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
+  const root = plant({ ...files, "repo.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
 
   return root;
@@ -82,7 +82,7 @@ it("checkScriptsAt reports why the Rust files could not be listed", async () => 
   const root = plant({
     "Cargo.lock": cargoLock("app"),
     "Cargo.toml": CARGO_TOML,
-    "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
+    "repo.config.ts": 'export default { packs: ["standards"] };\n',
   });
 
   const checked = await checkScriptsAt(root, noCargo);
@@ -113,7 +113,7 @@ it("scriptLintAt reports why the files could not be listed", { timeout: SLOW }, 
   const root = plant({
     "Cargo.lock": cargoLock("app"),
     "Cargo.toml": CARGO_TOML,
-    "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
+    "repo.config.ts": 'export default { packs: ["standards"] };\n',
   });
 
   const linted = await scriptLintAt(root, WHOLE, noCargo);

@@ -32,9 +32,9 @@ export function writeConfigs(repo: CheckRepo): void {
   });
 }
 
-/** A workerstack.config.ts that turns on `packs` and nothing else. */
+/** A repo.config.ts that turns on `packs` and nothing else. */
 export function usePacks(repo: CheckRepo, ...packs: string[]): void {
-  repo.put("workerstack.config.ts", `export default { packs: ${JSON.stringify(packs)} };\n`);
+  repo.put("repo.config.ts", `export default { packs: ${JSON.stringify(packs)} };\n`);
 }
 
 /** A package.json `repo check` passes under the standards pack. */

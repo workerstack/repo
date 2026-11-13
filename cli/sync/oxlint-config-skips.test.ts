@@ -56,7 +56,7 @@ it("oxlintConfig accepts a Stylelint rule's skip and writes no override for it",
 it("oxlintConfig refuses a Stylelint skip name that is not a lowercase rule name", () => {
   const skips = [{ files: ["src/legacy.css"], reason: REASON, rules: ["stylelint/Bad Name"] }];
   expect(oxlintConfig(APP, { skip: skips })).toStrictEqual({
-    errors: ['workerstack.config.ts: lint.skip[0].rules: "stylelint/Bad Name" is not a rule the generated config runs'],
+    errors: ['repo.config.ts: lint.skip[0].rules: "stylelint/Bad Name" is not a rule the generated config runs'],
     ok: false,
   });
 });

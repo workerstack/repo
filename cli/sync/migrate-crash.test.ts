@@ -150,9 +150,7 @@ it("reports a config that no longer loads after the migration", async () => {
   function load(dir: string): ReturnType<typeof loadConfig> {
     loads += 1;
 
-    return loads === 1
-      ? loadConfig(dir)
-      : Promise.resolve({ errors: ["workerstack.config.ts: copy refused"], ok: false });
+    return loads === 1 ? loadConfig(dir) : Promise.resolve({ errors: ["repo.config.ts: copy refused"], ok: false });
   }
 
   const err: string[] = [];

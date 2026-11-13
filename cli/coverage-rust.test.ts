@@ -29,7 +29,7 @@ function neverRuns(): never {
 function rustRepo(): string {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-coverage-rust-")));
   temps.push(root);
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default {};\n");
+  fs.writeFileSync(path.join(root, "repo.config.ts"), "export default {};\n");
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
 
   return root;

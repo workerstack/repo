@@ -66,7 +66,7 @@ it("names a .repo rule without frontmatter and removes the stage", () => {
 
 it("reports a missing stock package", () => {
   const bare = tempDir("workerstack-trees-");
-  put(bare, "workerstack.config.ts", "export default {}\n");
+  put(bare, "repo.config.ts", "export default {}\n");
   expect(renderTrees(context(bare, ["claude"]))).toStrictEqual({
     errors: [expect.stringContaining("bun install")],
     ok: false,

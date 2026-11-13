@@ -30,7 +30,7 @@ function packed(files: Record<string, string>): Mini {
   write(stock, "package.json", '{ "name": "@workerstack/repo" }\n');
   write(stock, "agents/skills/ask/SKILL.md", "ask\n");
 
-  for (const [rel, text] of Object.entries({ ...MARKER_FILE, "workerstack.config.ts": SIMPLE_CONFIG, ...files }))
+  for (const [rel, text] of Object.entries({ ...MARKER_FILE, "repo.config.ts": SIMPLE_CONFIG, ...files }))
     write(root, rel, text);
 
   return { generated, root, stock };

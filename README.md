@@ -162,7 +162,7 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 ### Config
 
-`workerstack.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
+`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
 
 ```ts
 import { defineConfig } from "@workerstack/repo";
@@ -1775,7 +1775,7 @@ bun repo setup browser
 bun repo setup jev
 ```
 
-TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `agents.skills` in `workerstack.config.ts` names it. `bun repo setup <pack>` when that pack is off prints how to enable it (add it to `agents.skills`, then `bun repo sync`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
+TTY: menu with ok/missing. The menu lists enabled packs and always lists browser and jev. A pack is enabled when `agents.skills` in `repo.config.ts` names it. `bun repo setup <pack>` when that pack is off prints how to enable it (add it to `agents.skills`, then `bun repo sync`) and exits 1. Already ok asks redo (`--redo` skips the ask). Missing bins: print the OS command (never run it), then re-check PATH. Ends with one status line per listed target. Non-TTY needs flags (keys / `--creds`). Doctor never installs bins; setup never installs bins either.
 
 | target | what it writes | flags |
 | --- | --- | --- |

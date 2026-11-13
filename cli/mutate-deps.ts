@@ -2,7 +2,7 @@ import { FAILED, NEWLINE } from "./mutate.constants.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import type { Captured } from "./scripts/lint.ts";
 
-/** What `repo mutate` reads from workerstack.config.ts: the repo root, the globs to mutate, the floors file. */
+/** What `repo mutate` reads from repo.config.ts: the repo root, the globs to mutate, the floors file. */
 export type MutateConfig = { root: string; mutate: readonly string[]; floors: string };
 
 /** The file system `repo mutate` touches; paths are absolute. */

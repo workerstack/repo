@@ -67,7 +67,7 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
   expect(printed(out)).toStrictEqual([]);
   const skip = { files: ["src/lib.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
   const config = { lint: { skip: [skip] }, packs: ["standards"] };
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
+  fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
   fs.writeFileSync(
     path.join(root, "src/lib.rs"),
     `${clean}\n/// Parses the text.\n///\n/// # Panics\n///\n/// When it is not a number.\n` +

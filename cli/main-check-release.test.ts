@@ -17,7 +17,7 @@ it("with the release pack on, prints the Stryker install and the empty coverage.
       `repo check: the release pack runs mutation tests nightly; \
 bun add -d @stryker-mutator/core@10.1.1 @stryker-mutator/vitest-runner@10.1.1`,
       `repo check: coverage.mutate (src/**/*.ts) matches no tracked file; \
-set coverage.mutate in workerstack.config.ts`,
+set coverage.mutate in repo.config.ts`,
       "",
     ].join("\n"),
   );
@@ -27,14 +27,11 @@ set coverage.mutate in workerstack.config.ts`,
 it("with the release pack and a public root, prints each missing metadata field and exits 1", async () => {
   writeConfigs(repo);
   repo.write("package.json", { author: "workerstack", name: "app", private: false });
-  repo.put(
-    "workerstack.config.ts",
-    'export default { packs: ["release"], owner: { name: "Ann Lee", github: "ann" } };\n',
-  );
+  repo.put("repo.config.ts", 'export default { packs: ["release"], owner: { name: "Ann Lee", github: "ann" } };\n');
   await start(fakes);
   const printed = repo.besidesKnip();
   expect(printed).toContain(
-    'repo check: package.json: "author" is "workerstack"; set it to "Ann Lee", the owner in workerstack.config.ts\n',
+    'repo check: package.json: "author" is "workerstack"; set it to "Ann Lee", the owner in repo.config.ts\n',
   );
   expect(printed).toContain('repo check: package.json: "keywords" is missing; list 1 to 20 GitHub topics\n');
   expect(printed).toContain("repo check: LICENSE is missing; add the MIT license naming Ann Lee\n");
@@ -47,7 +44,7 @@ it("with the release pack and a public root without an owner, asks for the owner
   usePacks(repo, "release");
   await start(fakes);
   expect(repo.besidesKnip()).toContain(
-    "repo check: workerstack.config.ts: the release pack with a public package needs owner: { name, github }\n",
+    "repo check: repo.config.ts: the release pack with a public package needs owner: { name, github }\n",
   );
   expect(process.exitCode).toBe(1);
 });

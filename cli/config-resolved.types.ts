@@ -53,7 +53,7 @@ export type ResolvedLint = {
   readonly tailwind?: LintTailwind | undefined;
 };
 
-/** A validated workerstack.config.ts with every omitted value filled in, as the `repo` commands read it. */
+/** A validated repo.config.ts with every omitted value filled in, as the `repo` commands read it. */
 export type ResolvedConfig = {
   /** The packs that are on: the defaults when the config omits `packs`. */
   readonly packs: readonly Pack[];

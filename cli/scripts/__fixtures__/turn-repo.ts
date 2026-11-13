@@ -60,7 +60,7 @@ export function consumer(files: Record<string, string>, { deps = true } = {}): s
   git(root, "init", "-q", "-b", "main");
   write(root, {
     "package.json": '{ "name": "app", "type": "module" }\n',
-    "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
+    "repo.config.ts": 'export default { packs: ["standards"] };\n',
     ...files,
   });
   if (deps) fs.symlinkSync(path.join(PKG_ROOT, DEPENDENCIES), path.join(root, DEPENDENCIES), "junction");

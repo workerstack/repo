@@ -85,7 +85,7 @@ it("keeps CRLF line endings when it marks, and frames a frontmatter that never c
 
 it("marks an adopted skill that bears a stock name, so the first sync passes", async () => {
   const root = tempDir("workerstack-migrate-");
-  write(root, "workerstack.config.ts", "export default {}\n");
+  write(root, "repo.config.ts", "export default {}\n");
   write(root, "package.json", JSON.stringify({ name: "fixture" }));
   write(root, ".claude/skills/ask/SKILL.md", "---\nname: ask\ndescription: mine\n---\nmy ask\n");
   linkStock(root);

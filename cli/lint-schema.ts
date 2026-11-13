@@ -1,5 +1,5 @@
 /**
- * The `lint` section of workerstack.config.ts: the sanctioned rule skips, the `repo/boundaries` package tags and the
+ * The `lint` section of repo.config.ts: the sanctioned rule skips, the `repo/boundaries` package tags and the
  * Tailwind entry sheet.
  */
 import path from "node:path";

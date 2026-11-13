@@ -27,7 +27,7 @@ describe("checkPublic gate", () => {
 
   it("asks for the owner and checks no more when it is missing", () => {
     expect(lines({ ...COMPLETE, author: "x" }, null, { owner: undefined })).toStrictEqual([
-      "workerstack.config.ts: the release pack with a public package needs owner: { name, github }",
+      "repo.config.ts: the release pack with a public package needs owner: { name, github }",
     ]);
   });
 });

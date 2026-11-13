@@ -85,7 +85,7 @@ it("skips repo's own scratch, nested repos, partly useful or glob ignores, fresh
 it("reads the git top's .gitignore for a repo install in a subpackage", () => {
   const r = gitRepo("doc-ws-sub-", ".tmp\n.tmp/\n");
   const web = path.join(r, "apps", "web");
-  put(web, "workerstack.config.ts", "");
+  put(web, "repo.config.ts", "");
   put(web, ".gitignore", ".tmp/\n");
   const { items } = section(doctor(web).stdout);
   const top = path.join(r, ".gitignore");

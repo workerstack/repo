@@ -12,8 +12,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { DEFAULT_FLOORS } from "../check-ratchets.constants.ts";
-import { CONFIG_FILE } from "../config.constants.ts";
-import { findRoot, loadConfig, type Pack } from "../config.ts";
+import { findRoot, loadConfig, missingConfig, type Pack } from "../config.ts";
 import { runCargo, type CargoRun } from "../rust/clippy.ts";
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
 import { rustTests } from "../rust/rust-tests.ts";
@@ -147,7 +146,7 @@ function prepare(
   if (refusal !== undefined) return refusal;
   const root = findRoot(cwd);
 
-  if (root === null) return { error: `no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\`` };
+  if (root === null) return { error: missingConfig(cwd) };
   const [bins, repo, turbo] = [deps.bins ?? BINS, deps.repo ?? runRepo, deps.turbo ?? turboRunner()];
   const [checks, spawn] = [deps.checks ?? {}, deps.spawn ?? defaultSpawn];
   const [cargo, floors] = [deps.cargo ?? runCargo, deps.floors ?? DEFAULT_FLOORS];

@@ -26,7 +26,7 @@ export function world(files: Record<string, unknown> = {}, tagged = true): World
   plantedGit(work, "remote", "add", "origin", remote);
   write(work, {
     "package.json": { name: NAME, version: "0.1.0" },
-    "workerstack.config.ts": 'export default { packs: ["release"] };\n',
+    "repo.config.ts": 'export default { packs: ["release"] };\n',
     "CHANGELOG.md": EMPTY_UNRELEASED,
     ...files,
   });

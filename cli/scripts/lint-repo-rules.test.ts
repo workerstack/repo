@@ -188,7 +188,7 @@ it("oxlint runs the repo plugin's rules with their options, from the linted repo
   expect(findings.toSorted()).toStrictEqual([
     ...FLOW_FINDINGS,
     `${index}:1 repo(boundaries) "@app/ui" is a ui package, and a lib package may import only lib; move what it ` +
-      'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts',
+      'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts',
     `${index}:12 repo(public-jsdoc) \`Size.Small\` is public through "." and ${missing}`,
     `${index}:2 repo(boundaries) "left-pad" is not declared in packages/lib/package.json; add it to its dependencies`,
     `${index}:5 repo(max-line-width) this line is 121 columns, over 120; split the string with + or a join`,

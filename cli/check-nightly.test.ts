@@ -19,8 +19,7 @@ const STRYKER: PackageJson = {
 
 const INSTALL_LINE = `the release pack runs mutation tests nightly; ${INSTALL_HINT}`;
 
-const NO_FILE_LINE =
-  "coverage.mutate (src/**/*.ts) matches no tracked file; set coverage.mutate in workerstack.config.ts";
+const NO_FILE_LINE = "coverage.mutate (src/**/*.ts) matches no tracked file; set coverage.mutate in repo.config.ts";
 
 function input(manifest: PackageJson, tracked: string[], packs: Pack[] = ["release"]) {
   return {
@@ -87,26 +86,26 @@ const MANIFEST = JSON.stringify({ name: "app", ...STRYKER });
 
 describe("checkNightlyAt", () => {
   it("reads the config, the root manifest and the tracked files", async () => {
-    const root = repo({ "lib/a.ts": "", "package.json": "{}", ["workerstack.config.ts"]: CONFIG });
+    const root = repo({ "lib/a.ts": "", "package.json": "{}", ["repo.config.ts"]: CONFIG });
     expect(await checkNightlyAt(root)).toStrictEqual([INSTALL_LINE, NO_FILE_LINE]);
   });
 
   it("passes a repo with Stryker and a tracked source", async () => {
-    const root = repo({ "package.json": MANIFEST, "src/a.ts": "", "workerstack.config.ts": CONFIG });
+    const root = repo({ "package.json": MANIFEST, "repo.config.ts": CONFIG, "src/a.ts": "" });
     expect(await checkNightlyAt(root)).toStrictEqual([]);
   });
 
   it("does not count an untracked file", async () => {
-    const root = repo({ "package.json": MANIFEST, "workerstack.config.ts": CONFIG });
+    const root = repo({ "package.json": MANIFEST, "repo.config.ts": CONFIG });
     fs.mkdirSync(path.join(root, "src"));
     fs.writeFileSync(path.join(root, "src/a.ts"), "");
     expect(await checkNightlyAt(root)).toStrictEqual([NO_FILE_LINE]);
   });
 
   it("leaves a bad config, an unreadable manifest and a missing git to the other checks", async () => {
-    expect(await checkNightlyAt(repo({ "workerstack.config.ts": "export default 3;\n" }))).toStrictEqual([]);
-    expect(await checkNightlyAt(repo({ "package.json": "[", "workerstack.config.ts": CONFIG }))).toStrictEqual([]);
-    const bare = plant({ "package.json": MANIFEST, "workerstack.config.ts": CONFIG });
+    expect(await checkNightlyAt(repo({ "repo.config.ts": "export default 3;\n" }))).toStrictEqual([]);
+    expect(await checkNightlyAt(repo({ "package.json": "[", "repo.config.ts": CONFIG }))).toStrictEqual([]);
+    const bare = plant({ "package.json": MANIFEST, "repo.config.ts": CONFIG });
     expect(await checkNightlyAt(bare)).toStrictEqual([]);
   });
 });

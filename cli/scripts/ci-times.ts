@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE, findRoot } from "../config.ts";
+import { findRoot, missingConfig } from "../config.ts";
 import { readReports, sortedByKey, type Report, type ReportWords, type SkipsIo } from "./ci-skips.ts";
 import { TIMES_FILE, TIMES_INDENT } from "./ci.constants.ts";
 
@@ -43,7 +43,7 @@ export function timesMain(dir: string, io: SkipsIo): number {
 
   const root = findRoot(io.cwd);
 
-  if (root === null) return fail([`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``]);
+  if (root === null) return fail([missingConfig(io.cwd)]);
   const read = readReports(dir, io.cwd, TIMES_WORDS);
 
   if ("failures" in read) return fail(read.failures);

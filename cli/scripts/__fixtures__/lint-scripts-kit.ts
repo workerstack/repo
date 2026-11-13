@@ -23,7 +23,7 @@ export const planted = (): string => consumer({ "src/a.ts": STRING_SOURCE, "src/
 export function skipIn(root: string, file: string, rule: string): void {
   const skip = { files: [file], rules: [rule], reason: "kept on purpose" };
   const config = { packs: ["standards"], lint: { skip: [skip] } };
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+  fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${JSON.stringify(config)};\n`);
 }
 
 /** Spies on stdout and stderr; `lines` is what each was asked to print, one string per write. */

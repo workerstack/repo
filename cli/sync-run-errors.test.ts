@@ -29,7 +29,7 @@ it("a config error exits 1 and leaves every file byte-identical", async () => {
 
   expect(await sync(root)).toStrictEqual({
     code: 1,
-    stderr: 'repo sync: workerstack.config.ts: unknown key "pakcs"\nrepo sync: nothing written\n',
+    stderr: 'repo sync: repo.config.ts: unknown key "pakcs"\nrepo sync: nothing written\n',
     stdout: "",
   });
   expect(snapshot(root)).toStrictEqual(before);
@@ -88,7 +88,7 @@ it("--postinstall prints an error and exits 0", async () => {
   const root = fixture("export default { pakcs: [] }\n");
   expect(await sync(root, "--postinstall")).toStrictEqual({
     code: 0,
-    stderr: 'repo sync: workerstack.config.ts: unknown key "pakcs"\nrepo sync: nothing written\n',
+    stderr: 'repo sync: repo.config.ts: unknown key "pakcs"\nrepo sync: nothing written\n',
     stdout: "",
   });
   expect(fs.existsSync(path.join(root, "bunfig.toml"))).toBe(false);
@@ -141,7 +141,7 @@ it("says to run repo init when no config exists in cwd or any parent", async () 
   const cwd = tempDir();
   expect(await sync(cwd)).toStrictEqual({
     code: 1,
-    stderr: `repo sync: no workerstack.config.ts in ${cwd} or any parent; run \`bun repo init\`\n`,
+    stderr: `repo sync: no repo.config.ts in ${cwd} or any parent; run \`bun repo init\`\n`,
     stdout: "",
   });
   expect(fs.readdirSync(cwd)).toStrictEqual([]);

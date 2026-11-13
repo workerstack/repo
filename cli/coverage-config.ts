@@ -1,5 +1,5 @@
 /**
- * The `coverage` section of workerstack.config.ts: where the floors and the known-failures list live, what to
+ * The `coverage` section of repo.config.ts: where the floors and the known-failures list live, what to
  * mutate.
  */
 import { z } from "zod";

@@ -113,12 +113,12 @@ export const USAGE: string = `Usage: repo [command]
 Default (no command): TTY menu; else init — full setup
 
 Commands:
-  init              Full setup: write workerstack.config.ts and package.json, bun install (whose postinstall runs \
+  init              Full setup: write repo.config.ts and package.json, bun install (whose postinstall runs \
 repo sync), repo yolo
   check             Tsconfig bases, manifests, disable comments, lint.skip entries, generated files current, lint \
 within .repo/lint-baseline.json, knip, actionlint on workflows, and floors, known failures and the baseline against \
 main
-  sync              Write the committed generated files from workerstack.config.ts (--check: report drift; \
+  sync              Write the committed generated files from repo.config.ts (--check: report drift; \
 --postinstall: never fail)
   map [dir]         Code-only folder map (git-tracked, no files); dir for depth
   clean             Remove scratch and stale generated files (--build: ignored build dirs; --deps: and node_modules; \

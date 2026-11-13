@@ -94,7 +94,7 @@ describe("BINS.vitest reads the range from the workspace", () => {
     "spawns node in a package dir when its sibling root declares the range",
     () => {
       vi.stubEnv("PATH", FAKE_NODE);
-      const root = workspace({ node: ">=22" }, {}, { "workerstack.config.ts": "export default {};\n" });
+      const root = workspace({ node: ">=22" }, {}, { "repo.config.ts": "export default {};\n" });
       const run = BINS.vitest(["run"], path.join(root, "packages/api"));
       expect(run?.stdout).toMatch(/^fake-node \S+ --fsModuleCache=false run\n$/);
     },

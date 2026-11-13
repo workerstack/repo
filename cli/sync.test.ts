@@ -65,7 +65,7 @@ it("refuses a config without the agents pack in this repo, whose trees are the s
   expect(await sync(root)).toStrictEqual({
     code: 1,
     stderr:
-      "repo sync: workerstack.config.ts: this repo ships the agent trees as its stock source; " +
+      "repo sync: repo.config.ts: this repo ships the agent trees as its stock source; " +
       'keep "agents" in packs\nrepo sync: nothing written\n',
     stdout: "",
   });

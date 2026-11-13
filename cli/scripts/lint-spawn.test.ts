@@ -30,7 +30,7 @@ describe("runTool without an injected runner", () => {
   it("returns 1 when the tool process dies of a signal", async () => {
     const root = tempDir();
     fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
-    fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+    fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
     fs.writeFileSync(path.join(root, ".oxlintrc.json"), "{}\n");
     const killer = path.join(tempDir(), "killer");
     fs.writeFileSync(killer, "#!/bin/sh\nkill -9 $$\n", { mode: 0o755 });

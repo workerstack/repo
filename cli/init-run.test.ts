@@ -25,12 +25,7 @@ it("over a copied consumer removes old default repo: scripts, keeps edited ones,
     postinstall: "repo sync --postinstall",
     "repo:clean": "repo clean && rm -rf dist",
   });
-  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([
-    ".mcp.json",
-    ".rulesync",
-    "package.json",
-    "workerstack.config.ts",
-  ]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", ".rulesync", "package.json", "repo.config.ts"]);
   expect(fs.readdirSync(path.join(dest, ".rulesync"))).toStrictEqual([]);
 });
 
@@ -59,7 +54,7 @@ it("omitted pkgRoot uses the built-in package root", () => {
   const dest = tmp("repo-realroot-");
   init(dest, { execFileSync: fakeExec() });
   expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe(readPkg(checkoutRoot()).version);
-  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "repo.config.ts"]);
 });
 
 it("self init changes nothing and runs nothing", () => {

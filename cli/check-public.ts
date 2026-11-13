@@ -54,7 +54,7 @@ function authorLines(author: Json | undefined, owner: ResolvedOwner): string[] {
 
   if (name === owner.name) return [];
 
-  return [problem("author", author, `set it to ${JSON.stringify(owner.name)}, the owner in workerstack.config.ts`)];
+  return [problem("author", author, `set it to ${JSON.stringify(owner.name)}, the owner in repo.config.ts`)];
 }
 
 function urlLines(url: Json | undefined): string[] {

@@ -146,10 +146,10 @@ it("checkLintSkipsAt checks nothing without a config, the standards pack or a re
   const none = { problems: [], report: [] };
   const ws = checkout({ "src/a.ts": nonNull(1) });
   expect(await checkLintSkipsAt(ws.root, [])).toStrictEqual(none);
-  fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), 'export default { packs: ["docs"] };\n');
+  fs.writeFileSync(path.join(ws.root, "repo.config.ts"), 'export default { packs: ["docs"] };\n');
   expect(await checkLintSkipsAt(ws.root, [])).toStrictEqual(none);
   const config = { lint: { skip: [skip(["src/a.ts"])] }, packs: ["standards"] };
-  fs.writeFileSync(path.join(ws.root, "workerstack.config.ts"), `export default ${JSON.stringify(config)};\n`);
+  fs.writeFileSync(path.join(ws.root, "repo.config.ts"), `export default ${JSON.stringify(config)};\n`);
   fs.writeFileSync(path.join(ws.root, "package.json"), "{");
   expect(await checkLintSkipsAt(ws.root, [])).toStrictEqual(none);
 });
@@ -192,7 +192,7 @@ it("checkLintSkips returns sync's error for a tag map sync refuses, and lints no
   const run = vi.fn<typeof captureTool>(captureTool);
   const boundaries = { allow: { lib: [] }, tags: { "@app/gone": "lib" } };
   expect(checkLintSkips(tagged(), { boundaries, skip: [LIB_SKIP] }, { run, scripts: [] })).toStrictEqual({
-    problems: ['workerstack.config.ts: lint.boundaries.tags: "@app/gone" is not a workspace package'],
+    problems: ['repo.config.ts: lint.boundaries.tags: "@app/gone" is not a workspace package'],
     report: [],
   });
   expect(run).not.toHaveBeenCalled();

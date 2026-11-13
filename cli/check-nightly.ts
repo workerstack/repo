@@ -29,11 +29,8 @@ export function nightlyProblems({ config, workspace, tracked }: NightlyInput): s
   if (!stryker && (hasMatches || !rustOnly))
     lines.push(`the release pack runs mutation tests nightly; ${INSTALL_HINT}`);
 
-  if (!hasMatches && !rustOnly) {
-    lines.push(
-      `coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in workerstack.config.ts`,
-    );
-  }
+  if (!hasMatches && !rustOnly)
+    lines.push(`coverage.mutate (${globs.join(", ")}) matches no tracked file; set coverage.mutate in repo.config.ts`);
 
   return lines;
 }

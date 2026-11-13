@@ -42,14 +42,14 @@ it("a tagged workspace fails only lib's import of ui, under the options sync wri
   const run = captureTool("oxlint", ["-f", "unix"], root);
   expect(run.stdout.split("\n").filter((line) => line.endsWith(RULE))).toStrictEqual([
     'packages/lib/src/lib.ts:1:1: "@tagged/ui" is a ui package, and a lib package may import only lib; move what it ' +
-      `needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in workerstack.config.ts ${RULE}`,
+      `needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts ${RULE}`,
   ]);
 });
 
 it("sync refuses a tag naming a package the workspace lacks, writing nothing", { timeout: SLOW }, async () => {
   const root = taggedTree({ ...TAGGED_BOUNDARIES, tags: { ...TAGGED_BOUNDARIES.tags, "@tagged/gone": "lib" } });
   expect(await syncStandards(root)).toStrictEqual([
-    'workerstack.config.ts: lint.boundaries.tags: "@tagged/gone" is not a workspace package',
+    'repo.config.ts: lint.boundaries.tags: "@tagged/gone" is not a workspace package',
   ]);
   expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(false);
 });

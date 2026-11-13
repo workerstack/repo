@@ -54,8 +54,8 @@ function keepAll() {
 export function unknownKeyCase(get: GetSandbox) {
   it("an unknown config key fails sync, while install prints it, exits 0 and changes no file", async () => {
     const sb = get();
-    const original = sb.read("workerstack.config.ts");
-    sb.write("workerstack.config.ts", original.replace("agents:", "bogusKey: true,\n  agents:"));
+    const original = sb.read("repo.config.ts");
+    sb.write("repo.config.ts", original.replace("agents:", "bogusKey: true,\n  agents:"));
 
     try {
       const before = hashes(sb.repo, keepAll);
@@ -67,7 +67,7 @@ export function unknownKeyCase(get: GetSandbox) {
       expect(install.out).toContain('unknown key "bogusKey"');
       expect(hashes(sb.repo, keepAll)).toStrictEqual(before);
     } finally {
-      sb.write("workerstack.config.ts", original);
+      sb.write("repo.config.ts", original);
     }
 
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
@@ -79,7 +79,7 @@ export function hostsCase(get: GetSandbox) {
   it("limiting agents.hosts prunes the other trees, and restoring them brings the trees back", async () => {
     const sb = get();
     const before = await generatedHashes(sb);
-    const original = sb.read("workerstack.config.ts");
+    const original = sb.read("repo.config.ts");
 
     try {
       setHosts(sb, ["claude"]);
@@ -90,7 +90,7 @@ export function hostsCase(get: GetSandbox) {
       for (const rel of ["AGENTS.md", ".mcp.json", ".claude/settings.json"]) expect(sb.exists(rel), rel).toBe(true);
       expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
     } finally {
-      sb.write("workerstack.config.ts", original);
+      sb.write("repo.config.ts", original);
       await sb.run("bun", ["repo", "sync"]);
     }
 

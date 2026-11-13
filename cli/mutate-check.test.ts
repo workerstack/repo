@@ -131,10 +131,10 @@ it("writes nothing and fails when a package is below its floor", async () => {
 
 it("prints a config's errors and an unreadable floors file instead of scoring", async () => {
   const config = planted(pair());
-  const state = sim({ config: ["workerstack.config.ts: no default export"] });
+  const state = sim({ config: ["repo.config.ts: no default export"] });
   const broken = fakes(state);
   expect(await runMutate(["check", "reports"], broken.deps)).toBe(1);
-  expect(broken.err.join("")).toBe("repo mutate: workerstack.config.ts: no default export\n");
+  expect(broken.err.join("")).toBe("repo mutate: repo.config.ts: no default export\n");
   config.files.set(at("mutation-floors.json"), "[1]");
   expect(await runMutate(["check", "reports"], config.deps)).toBe(1);
   expect(config.err.join("")).toMatch(/^repo mutate: mutation-floors.json is not a floors file: .+\n$/);

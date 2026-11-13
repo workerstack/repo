@@ -13,17 +13,16 @@ import { COPIED_MARKER } from "./migrate.constants.ts";
 
 useTempDirs();
 
-const CONFIG_FILE = "workerstack.config.ts";
+const CONFIG_FILE = "repo.config.ts";
 
 function packs(text: string) {
   return { ".rulesync/repo.features.jsonc": text };
 }
 
-const MOVED =
-  'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in workerstack.config.ts';
+const MOVED = 'moved packs ["speak", "clasp"] from .rulesync/repo.features.jsonc to agents.skills in repo.config.ts';
 
 const ASK =
-  'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to workerstack.config.ts; ' +
+  'could not add the packs ["listen"] of .rulesync/repo.features.jsonc to repo.config.ts; ' +
   'add agents: { skills: ["listen"] } there';
 
 const LISTEN = '{ "packs": ["listen"] }';
@@ -85,7 +84,7 @@ it("puts the config back and says so when the inserted key does not take effect"
   const steps = planOf(m);
   expect(steps[0]).toMatchObject({ kind: "write", path: CONFIG_FILE });
   expect(await applyMigration(m.root, steps)).toContain(
-    'repo sync: could not add agents.skills ["listen"] to workerstack.config.ts; ' +
+    'repo sync: could not add agents.skills ["listen"] to repo.config.ts; ' +
       'add agents: { skills: ["listen"] } there',
   );
   expect(read(m.root, CONFIG_FILE)).toBe(before);

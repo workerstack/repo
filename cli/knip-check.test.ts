@@ -56,7 +56,7 @@ function boom(): never {
 }
 
 function pack(root: string, body: string) {
-  return fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default ${body};\n`);
+  return fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${body};\n`);
 }
 
 describe("a knip that did not report", () => {

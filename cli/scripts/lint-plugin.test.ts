@@ -35,7 +35,7 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
 
   const all = {
     "package.json": `${JSON.stringify({ ...manifest, type: "module" })}\n`,
-    "workerstack.config.ts": 'export default { packs: ["standards"] };\n',
+    "repo.config.ts": 'export default { packs: ["standards"] };\n',
     ...Object.fromEntries(configs),
     ...files,
   };

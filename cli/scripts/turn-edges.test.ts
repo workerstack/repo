@@ -65,12 +65,12 @@ it("refuses two paths, a path outside the repo, no config, a broken config and a
   expect(await refusal(["../elsewhere"])).toBe(`repo turn: ../elsewhere is outside ${root}\n`);
   const bare = tempDir("workerstack-turn-bare-");
   expect(await refusal([], bare)).toBe(
-    `repo turn: no workerstack.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
+    `repo turn: no repo.config.ts in ${bare} or any parent; run \`bun repo init\`\n`,
   );
   write(root, { "package.json": "{" });
   expect(await refusal([])).toMatch(/^repo turn: package.json: not valid JSON/);
-  write(root, { "workerstack.config.ts": "export default 1;\n" });
-  expect(await refusal([])).toMatch(/^repo turn: workerstack.config.ts: /);
+  write(root, { "repo.config.ts": "export default 1;\n" });
+  expect(await refusal([])).toMatch(/^repo turn: repo.config.ts: /);
 });
 
 it("prints to the process's own stdout and stderr when not given others", { timeout: SLOW }, async () => {

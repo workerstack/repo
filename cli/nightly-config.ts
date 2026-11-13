@@ -1,5 +1,5 @@
 /**
- * The `nightly` section of workerstack.config.ts: how many shards the nightly mutation run has, which secrets its
+ * The `nightly` section of repo.config.ts: how many shards the nightly mutation run has, which secrets its
  * live job gets.
  */
 import { z } from "zod";

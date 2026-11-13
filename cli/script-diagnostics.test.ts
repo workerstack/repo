@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import { afterEach, expect, it } from "vitest";
 
-import type { WorkerstackConfig } from "./config.ts";
+import type { RepoConfig } from "./config.ts";
 import { fakeRunner } from "./css/__fixtures__/css-kit.ts";
 import { cleanTemps, hit, NAMES_NOTHING, NUMBER, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
 import { checkRejectionsAt, checkScriptsAt, scriptDiagnostics, scriptLintAt } from "./script-diagnostics.ts";
@@ -62,8 +62,8 @@ it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
 });
 
 /** A git checkout with a config of `packs` and `skip`, and `files`. */
-function checkout(files: Record<string, string>, config: WorkerstackConfig): string {
-  const root = plant({ ...files, "workerstack.config.ts": `export default ${JSON.stringify(config)};\n` });
+function checkout(files: Record<string, string>, config: RepoConfig): string {
+  const root = plant({ ...files, "repo.config.ts": `export default ${JSON.stringify(config)};\n` });
   execFileSync("git", ["init", "-q"], { cwd: root });
 
   return root;
@@ -95,7 +95,7 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
 
   const brokenChecked = await checkScriptsAt(broken);
   expect(brokenChecked.problems).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
-  const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
+  const plain = plant({ "repo.config.ts": 'export default { packs: ["standards"] };\n' });
   const plainChecked = await checkScriptsAt(plain);
   expect(plainChecked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
@@ -126,7 +126,7 @@ it(
     ]);
     expect(await checkRejectionsAt(checkout(files, { packs: ["docs"] }))).toStrictEqual([]);
     expect(await checkRejectionsAt(plant(files))).toStrictEqual([]);
-    const plain = plant({ "workerstack.config.ts": 'export default { packs: ["standards"] };\n' });
+    const plain = plant({ "repo.config.ts": 'export default { packs: ["standards"] };\n' });
     expect(await checkRejectionsAt(plain)).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
   },
 );

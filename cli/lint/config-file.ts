@@ -5,7 +5,7 @@ import { AST_NODE_TYPES } from "@typescript-eslint/utils";
 import { moveReport, type Statement } from "./names.ts";
 import type { RepoRule } from "./rule.types.ts";
 
-/** `vite.config.ts`, `workerstack.config.ts`, `eslint.config.mjs`. */
+/** `vite.config.ts`, `repo.config.ts`, `eslint.config.mjs`. */
 const CONFIG = /\.config\.(?:ts|mts|js|mjs)$/;
 const MESSAGE = "a config file holds only imports and exports";
 

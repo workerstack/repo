@@ -1,5 +1,5 @@
 /**
- * The `turbo` section of workerstack.config.ts: extra turbo tasks, merged after the generated `typecheck` and
+ * The `turbo` section of repo.config.ts: extra turbo tasks, merged after the generated `typecheck` and
  * `test`.
  */
 import { z } from "zod";

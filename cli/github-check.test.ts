@@ -79,7 +79,7 @@ it("reports a refused keyword as a problem", async () => {
 });
 
 it("leaves a config or a package.json it cannot read to sync", async () => {
-  const config = githubRepo({ files: { "workerstack.config.ts": "export default 3;\n" } });
+  const config = githubRepo({ files: { "repo.config.ts": "export default 3;\n" } });
   const manifest = githubRepo({ files: { "package.json": "{" } });
   const results = await Promise.all([check(config, fakeGh()), check(manifest, fakeGh())]);
   expect(results).toStrictEqual([
@@ -94,14 +94,14 @@ it("builds its own io when none is given", async () => {
 
 it("makes no gh call and prints nothing without the release pack", async () => {
   const fake = fakeGh();
-  const cwd = githubRepo({ files: { "workerstack.config.ts": 'export default { packs: ["standards"] };\n' } });
+  const cwd = githubRepo({ files: { "repo.config.ts": 'export default { packs: ["standards"] };\n' } });
   expect(await check(cwd, fake)).toStrictEqual({ problems: [], report: [] });
   expect(await check(cwd, fake, { ci: true })).toStrictEqual({ problems: [], report: [] });
   expect(fake.calls).toStrictEqual([]);
 });
 
 it("reports the environment drift with the evals pack and no release pack", async () => {
-  const cwd = githubRepo({ files: { "workerstack.config.ts": 'export default { packs: ["evals"] };\n' } });
+  const cwd = githubRepo({ files: { "repo.config.ts": 'export default { packs: ["evals"] };\n' } });
   const settled = await settledSettings(cwd, { environment: null });
   expect(await check(cwd, fakeGh(settled))).toStrictEqual({
     problems: [`github: evals environment is missing: ${RUN}`],

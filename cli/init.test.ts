@@ -38,7 +38,7 @@ it("refuses a name that is not a pack", () => {
   expect(() => parsePacksFlag("listen,nope")).toThrow("unknown pack nope");
 });
 
-it(`a fresh init writes only workerstack.config.ts, package.json and an empty .mcp.json, installs, then syncs \
+it(`a fresh init writes only repo.config.ts, package.json and an empty .mcp.json, installs, then syncs \
 globals`, () => {
   const dest = tmp("repo-dest-");
   const exec = fakeExec();
@@ -49,7 +49,7 @@ globals`, () => {
     stdout: (s) => out.push(s),
   });
 
-  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "workerstack.config.ts"]);
+  expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "repo.config.ts"]);
   expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe('{\n  "mcpServers": {}\n}\n');
   expect(out).toStrictEqual(["repo init: wrote .mcp.json\n"]);
   expect(readPkg(dest)).toStrictEqual(freshPackageJson());
@@ -119,7 +119,7 @@ it("keeps a .mcp.json the repo already has and says nothing of it", () => {
 it("--packs listen writes agents.skills into a new config", () => {
   const dest = tmp("repo-packs-");
   init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
-  expect(fs.readFileSync(path.join(dest, "workerstack.config.ts"), "utf8")).toContain(
+  expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toContain(
     `agents: { hosts: [${hostsList()}], skills: ["listen"] }`,
   );
 });

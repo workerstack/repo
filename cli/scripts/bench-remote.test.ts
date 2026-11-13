@@ -93,7 +93,7 @@ it.each([
     "no bench.yml",
     { files: {} },
     "repo bench: --remote needs .github/workflows/bench.yml; " +
-      'add "benchmark" to packs in workerstack.config.ts and run bun repo sync',
+      'add "benchmark" to packs in repo.config.ts and run bun repo sync',
   ],
   [
     "bench.yml not on origin/main",

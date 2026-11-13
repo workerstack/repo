@@ -39,7 +39,7 @@ function repo(packs: string, workflows: string[]) {
   const root = tempDir();
   const cacheDir = tempDir();
   fs.writeFileSync(path.join(cacheDir, EXE), "binary");
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), `export default { packs: ${packs} };\n`);
+  fs.writeFileSync(path.join(root, "repo.config.ts"), `export default { packs: ${packs} };\n`);
   const flows = path.join(root, ".github", "workflows");
   fs.mkdirSync(flows, { recursive: true });
 

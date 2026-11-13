@@ -42,9 +42,9 @@ it("passes a module const, a class field, a dynamic pattern, a RegExp with no pa
   expect(magicOf(files)).toStrictEqual([]);
 });
 
-it("passes the root workerstack.config.ts, which holds values by definition", () => {
+it("passes the root repo.config.ts, which holds values by definition", () => {
   const config = "export default function config(): RegExp {\n  return /x/;\n}\n";
-  expect(magicOf({ "workerstack.config.ts": config })).toStrictEqual([]);
+  expect(magicOf({ "repo.config.ts": config })).toStrictEqual([]);
 });
 
 it("passes a test file, whose regex is its expectation", () => {

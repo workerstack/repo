@@ -15,7 +15,7 @@ afterEach(() => {
 it("checkLintSkipsAt hands a readable workspace to the skip check, which reports nothing with no skip", async () => {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-skips-at-")));
   temps.push(root);
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), 'export default { packs: ["standards"] };\n');
+  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
   fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
   expect(await checkLintSkipsAt(root, [])).toStrictEqual({ problems: [], report: [] });
 });

@@ -21,7 +21,7 @@ export const MANIFEST = {
 
 /** The files of a checkout with the evals pack on beside release. */
 export const EVALS_FILES: Record<string, string> = {
-  "workerstack.config.ts": 'export default { packs: ["release", "evals"] };\n',
+  "repo.config.ts": 'export default { packs: ["release", "evals"] };\n',
 };
 
 type Options = { origin?: string | null; files?: Record<string, string> };
@@ -33,7 +33,7 @@ export function githubRepo({ origin = GITHUB_ORIGIN, files = {} }: Options = {})
   execFileSync("git", ["init", "-q"], { cwd: dir });
   if (origin !== null) execFileSync("git", ["remote", "add", "origin", origin], { cwd: dir });
   const all = {
-    "workerstack.config.ts": 'export default { packs: ["release"] };\n',
+    "repo.config.ts": 'export default { packs: ["release"] };\n',
     "package.json": JSON.stringify(MANIFEST),
     ...files,
   };

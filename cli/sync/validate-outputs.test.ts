@@ -46,7 +46,7 @@ it("accepts every output this repo plans", { timeout: SLOW }, async () => {
 
 it("validates all four through a real sync of a root with a Cargo.toml and the standards pack", async () => {
   const root = tmpRoot();
-  fs.writeFileSync(path.join(root, "workerstack.config.ts"), "export default {};\n");
+  fs.writeFileSync(path.join(root, "repo.config.ts"), "export default {};\n");
   fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app" }\n');
   fs.writeFileSync(path.join(root, "Cargo.toml"), '[package]\nname = "app"\n');
   const config = { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG };

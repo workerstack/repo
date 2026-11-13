@@ -10,8 +10,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { CONFIG_FILE } from "./config.constants.ts";
-import { findRoot, loadConfig } from "./config.ts";
+import { findRoot, loadConfig, missingConfig } from "./config.ts";
 import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { readJson } from "./json.ts";
@@ -160,7 +159,7 @@ export function writeFloors(root: string, file: string, floors: Rows): boolean {
 async function locate(cwd: string): Promise<{ root: string; floors: string } | string[]> {
   const root = findRoot(cwd);
 
-  if (root === null) return [`repo coverage: no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``];
+  if (root === null) return [`repo coverage: ${missingConfig(cwd)}`];
   const loaded = await loadConfig(root);
 
   if (!loaded.ok) return loaded.errors.map((line) => `repo coverage: ${line}`);

@@ -31,7 +31,7 @@ function formatRepo(files: Record<string, string>, { repo = true }: { repo?: boo
     out.kind === "file" ? [[out.path, out.content]] : [],
   );
 
-  const manifest = { "package.json": '{ "name": "app", "type": "module" }\n', "workerstack.config.ts": CONFIG };
+  const manifest = { "package.json": '{ "name": "app", "type": "module" }\n', "repo.config.ts": CONFIG };
 
   return jsonDir({ ...manifest, ...Object.fromEntries(configs), ...files }, repo);
 }

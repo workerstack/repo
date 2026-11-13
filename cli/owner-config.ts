@@ -1,4 +1,4 @@
-/** The `owner` section of workerstack.config.ts: who a public package's author, LICENSE and CODEOWNERS name. */
+/** The `owner` section of repo.config.ts: who a public package's author, LICENSE and CODEOWNERS name. */
 import { z } from "zod";
 
 /** Who owns the repo: `author` in public manifests, the LICENSE holder and the GitHub login for CODEOWNERS. */

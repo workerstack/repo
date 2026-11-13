@@ -103,12 +103,12 @@ it("prefixes each package's paths with its folder, and checks only the roots wit
   ]);
 });
 
-it("finds the doc roots from the nearest workerstack.config.ts", async () => {
+it("finds the doc roots from the nearest repo.config.ts", async () => {
   const root = tempRoot({
     "package.json": json({ name: "app", private: true }),
     "references/INDEX.md": "# Index\n",
+    "repo.config.ts": "",
     "sub/.keep": "",
-    "workerstack.config.ts": "",
   });
 
   const run = docsRun(`${root}/sub`);

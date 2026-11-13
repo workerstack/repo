@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
-import { findRoot, loadConfig } from "../config.ts";
+import { findRoot, loadConfig, missingConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
 import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import type { Result } from "../result.ts";
@@ -126,7 +126,7 @@ async function prepare(
 ): Promise<{ ok: true; turn: Turn; staged: boolean } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
 
-  if (root === null) return { errors: [`no ${CONFIG_FILE} in ${cwd} or any parent; run \`bun repo init\``], ok: false };
+  if (root === null) return { errors: [missingConfig(cwd)], ok: false };
   const parsed = parseArgs(argv, cwd, root);
 
   if (!parsed.ok) return parsed;

@@ -14,6 +14,7 @@ import { packageJsonSchema, readJsonFile, type PackageJson } from "./package-jso
 import { placeDevDependency } from "./place-dev-dependency.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { execFileSync } from "./spawn.ts";
+import { oldConfigHint } from "./sync/migrate-config-name.ts";
 import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 import { OXFMT_CONFIG_PATH } from "./sync/standards.ts";
 
@@ -60,7 +61,7 @@ function quoted(names: readonly string[]): string {
 }
 
 /**
- * Write `workerstack.config.ts`, formatted as bun fmt would, with the default packs (agents, standards and docs),
+ * Write `repo.config.ts`, formatted as bun fmt would, with the default packs (agents, standards and docs),
  * every host and the chosen skill packs, only when the repo has no config.
  */
 export function writeConfigIfMissing(dest: string, skills: readonly string[] = []): void {
@@ -196,6 +197,10 @@ export function init(
 
   // This package is its own workspace: nothing to write, install or apply.
   if (samePath(dest, pkgRoot)) return;
+  // A config under the old name moves with sync; a second one written beside it would leave both.
+  const hint = oldConfigHint(dest);
+
+  if (hint !== null) throw new Error(hint);
 
   onPhase?.("merge", "start");
 

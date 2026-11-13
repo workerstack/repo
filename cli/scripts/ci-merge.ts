@@ -5,8 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE } from "../config.constants.ts";
-import { findRoot } from "../config.ts";
+import { findRoot, missingConfig } from "../config.ts";
 import { plural, textOf } from "./ci-gate.ts";
 import type { SkipsIo } from "./ci-skips.ts";
 import {
@@ -59,7 +58,7 @@ export function mergeMain(dir: string, io: MergeIo): number {
 
   const root = findRoot(io.cwd);
 
-  if (root === null) return fail(`no ${CONFIG_FILE} in ${io.cwd} or any parent; run \`bun repo init\``);
+  if (root === null) return fail(missingConfig(io.cwd));
   const at = path.resolve(io.cwd, dir);
   const names = blobNames(at);
 

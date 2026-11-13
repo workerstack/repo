@@ -67,10 +67,10 @@ export function unlinkedLine(name: string, npm: string): string {
 
 /** The error for a name no sibling publishes. */
 export function noSibling(main: string, name: string): string {
-  return (
-    `no sibling of ${main} publishes "${name}"; clone it beside this checkout, ` +
-    "or map it in workerstack.config.ts `link`"
-  );
+  return [
+    `no sibling of ${main} publishes "${name}";`,
+    "clone it beside this checkout, or map it in repo.config.ts `link`",
+  ].join(" ");
 }
 
 /** The error for a sibling dir that has no package this repo uses. */
@@ -80,7 +80,7 @@ export function publishesNothing(dir: string): string {
 
 /** The error for a mapped checkout that lacks the package. */
 export function notPublished(dir: string, name: string): string {
-  return `${dir} does not publish ${name}; fix \`link\` in workerstack.config.ts`;
+  return `${dir} does not publish ${name}; fix \`link\` in repo.config.ts`;
 }
 
 /** The error for a sibling that cannot build. */

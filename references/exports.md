@@ -8,7 +8,7 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 ## Config
 
-`workerstack.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
+`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
 
 ```ts
 import { defineConfig } from "@workerstack/repo";

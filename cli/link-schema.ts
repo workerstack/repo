@@ -1,4 +1,4 @@
-/** The `link` section of workerstack.config.ts: package name to the checkout `repo link` packs it from. */
+/** The `link` section of repo.config.ts: package name to the checkout `repo link` packs it from. */
 import { z } from "zod";
 
 import { LINK_OBJECT_ERROR, LINK_PATH_ERROR } from "./link.constants.ts";
