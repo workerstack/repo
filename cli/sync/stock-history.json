@@ -3591,7 +3591,7 @@
   "cli/scripts/eol.test.ts": ["0a1b1c7d25ebbb0f", "4bb280aeb71171fb", "4e6e8c22ccc74117", "ba19f6bfbc899f4e"],
   "cli/scripts/eval-args.ts": ["5ce041381ff360a8"],
   "cli/scripts/eval.constants.ts": ["32c5ae825de134a3", "ffc8d6a0f97ecf02"],
-  "cli/scripts/eval.test.ts": ["0d84533fe1fd3369", "cd1d881254501443"],
+  "cli/scripts/eval.test.ts": ["07557a58c26a56cc", "0d84533fe1fd3369", "cd1d881254501443"],
   "cli/scripts/eval.ts": ["ac165fdc280ec38e", "b436f0760df575c8"],
   "cli/scripts/first-non-empty.test.ts": ["3d09b826fbcec1df"],
   "cli/scripts/first-non-empty.ts": ["c1659547d42f31f1"],
