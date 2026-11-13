@@ -21,3 +21,6 @@ export const IGNORED_DIRS: readonly [
   "scratch",
   "tmp",
 ] = [...WORK_DIRS, SCRATCH, STATE];
+
+/** Prefix of the throwaway dirs the red proof makes under `.repo/tmp`. */
+export const RED_PROOF = "red-proof-";

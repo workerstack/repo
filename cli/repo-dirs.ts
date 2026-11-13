@@ -1,10 +1,10 @@
 /** The one place that names where the package keeps agent files: `.repo/<dir>` at a checkout root. */
 import path from "node:path";
 
-import { IGNORED_DIRS, REPO, STATE } from "./repo-dirs.constants.ts";
+import { IGNORED_DIRS, RED_PROOF, REPO, SCRATCH, STATE, WORK_DIRS } from "./repo-dirs.constants.ts";
 import { relInside } from "./scripts/gate-paths.ts";
 
-export { IGNORED_DIRS, REPO, SCRATCH, STATE, WORK_DIRS } from "./repo-dirs.constants.ts";
+export { IGNORED_DIRS, RED_PROOF, REPO, SCRATCH, STATE, WORK_DIRS } from "./repo-dirs.constants.ts";
 
 export type RepoDir = (typeof IGNORED_DIRS)[number];
 
@@ -57,4 +57,13 @@ export function routesToRoot(root: string, abs: string, p: typeof path = path): 
   const [top, entry] = segs;
 
   return !(STATE_SET.has(top) && entry !== undefined && CHECKOUT_STATE.has(entry));
+}
+
+/** The `.repo`-relative home, with `/`, of an entry that used to sit at `.tmp/repo/<name>`. */
+export function oldTmpHome(name: string): string {
+  if (WORK_DIRS.some((dir) => dir === name)) return name;
+
+  if (STATE_DIRS.has(name) || name.startsWith(RED_PROOF)) return `${STATE}/${name}`;
+
+  return `${SCRATCH}/${name}`;
 }

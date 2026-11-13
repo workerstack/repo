@@ -7,7 +7,7 @@ import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type VitestRun, runVitest, untar } from "./red-proof-vitest.ts";
 import { REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
-import { STATE, repoPath } from "./repo-dirs.ts";
+import { RED_PROOF, STATE, repoPath } from "./repo-dirs.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
 
@@ -192,7 +192,7 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
   const tests = change.filter((entry) => entry.status !== STATUS_DELETED && isRunnable(entry.path));
 
   if (tests.length === 0) return { ok: false, problem: NO_FILE };
-  const tree = repoPath(root, STATE, `red-proof-${process.pid}`);
+  const tree = repoPath(root, STATE, `${RED_PROOF}${process.pid}`);
   fs.rmSync(tree, { force: true, recursive: true });
   fs.mkdirSync(tree, { recursive: true });
 
