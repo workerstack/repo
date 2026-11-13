@@ -2384,7 +2384,7 @@
   "cli/scripts/__fixtures__/persist-save-kit.ts": ["5e7c942870e4b20c", "a7826cb3bb0240b2"],
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["980563ab7af07d10"],
-  "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c", "f66c871ba3b68b5c"],
+  "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c", "c597f8fef6bc1cda", "f66c871ba3b68b5c"],
   "cli/scripts/__fixtures__/push-repo.ts": ["3c3b3cda1721dbfa"],
   "cli/scripts/__fixtures__/real-dir.ts": ["a060c156a3eee345"],
   "cli/scripts/__fixtures__/review-plan.ts": [
@@ -2829,13 +2829,15 @@
   "cli/scripts/ci-merge.test.ts": ["02bdab0b437a5537", "705fe2cea3ecb36f", "f4ca1893d2899797", "f90c1b42ab1740e2"],
   "cli/scripts/ci-merge.ts": ["70a423f9c090f725", "73060c5f2a8e032f", "9842a236dd11ebe7", "b4253a45f91f222b"],
   "cli/scripts/ci-off-values.constants.ts": ["5ff3e2c460039b6b"],
+  "cli/scripts/ci-push-gate-backlog.test.ts": ["aef06132932c39bc"],
   "cli/scripts/ci-push-gate-stop.test.ts": [
     "07ba9e42945d9700",
     "1b7ac0472977254e",
     "1eecc46128b18fe2",
     "33ee0ec95f5aa33f",
     "4d736568f3fa0e26",
-    "dae457f7e3fc2e32"
+    "dae457f7e3fc2e32",
+    "fa8e492eb7fb2fbe"
   ],
   "cli/scripts/ci-push-gate.test.ts": [
     "7fd3864585d276ea",
@@ -2847,6 +2849,7 @@
     "fd07aa3f338cceba"
   ],
   "cli/scripts/ci-push-gate.ts": [
+    "0a73102c49a44288",
     "628b846244fb5c54",
     "6582451071748aec",
     "65a806d4dcd78c6b",
@@ -2858,7 +2861,7 @@
     "bcc3eace062f0cc5",
     "db006dbedeeeb9fa"
   ],
-  "cli/scripts/ci-push-parse.constants.ts": ["52076bdda8d0275a"],
+  "cli/scripts/ci-push-parse.constants.ts": ["52076bdda8d0275a", "bd0c7892e1f928b2"],
   "cli/scripts/ci-push-parse.test.ts": ["276e87755bcda98e", "be5b5c51be56febe"],
   "cli/scripts/ci-push-parse.ts": [
     "2be1eee9b97c7750",
@@ -7940,6 +7943,7 @@
     "8816d7b0f28a1748",
     "97b8970430339866",
     "acac21b89edafb2c",
+    "d107daf2a85c684f",
     "d206b3f0ff29c7f7",
     "d4ce8ce10f454ded",
     "f2e528eba65b0e50",
