@@ -144,6 +144,14 @@ describe("the PATH hint", () => {
     expect(shim(dir, { pathEnv: ["/usr/bin", dir].join(path.delimiter) }).out).toHaveLength(1);
   });
 
+  it("reads PATH with the host delimiter whatever platform the launcher is for", () => {
+    const dir = tempDir("shim-path-host-");
+    const pathEnv = ["/usr/bin", dir].join(path.delimiter);
+
+    expect(shim(dir, { pathEnv, platform: "win32" }).out).toHaveLength(3);
+    expect(shim(dir, { pathEnv, platform: "linux" }).out).toHaveLength(1);
+  });
+
   it("names the export and fish lines on POSIX when the dir is off PATH", () => {
     const dir = tempDir("shim-path-off-");
     const out = shim(dir, { pathEnv: "/usr/bin" }).out.join("\n");

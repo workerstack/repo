@@ -111,11 +111,10 @@ function fold(entry: string, platform: string): string {
   return (platform === K.WINDOWS ? entry.toLowerCase() : entry).replace(K.TRAILING_SEPARATORS, "");
 }
 
+/** PATH entries split on this host's delimiter, since `pathEnv` is this process's own PATH. */
 function pathEntries(pathEnv: string | undefined, platform: string): string[] {
-  const sep = platform === K.WINDOWS ? ";" : ":";
-
   return (pathEnv ?? "")
-    .split(sep)
+    .split(path.delimiter)
     .filter((p) => p !== "")
     .map((p) => fold(p, platform));
 }
