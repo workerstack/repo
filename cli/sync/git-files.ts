@@ -6,6 +6,7 @@ import type { Host } from "../config.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import { blockOutput } from "./block-output.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
+import { extensionsEdit } from "./extensions-edit.ts";
 import { BACKLOG_FILE, GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
 import { HOST_TREES } from "./hosts.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
@@ -16,6 +17,8 @@ import { CARGO_TARGET_DIR, TOOLCHAIN_PATH } from "./rust.constants.ts";
 import { settingsEdit } from "./settings-edit.ts";
 import { isSelfName } from "./stock.ts";
 import { TURBO_CONFIG_PATH, TURBO_DIR } from "./turbo.constants.ts";
+import { EXTENSIONS_PATH } from "./vscode-defaults.constants.ts";
+import { vscodeDefaults } from "./vscode-defaults.ts";
 import type { Workspace } from "./workspace.ts";
 
 /** What a pass over the generators' outputs returns: more outputs, or the errors that stopped it. */
@@ -93,9 +96,10 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
 /**
  * The post-pass over the generators' outputs: the `repo:ignore` region of `.gitignore`, the `repo:generated` region
  * of `.gitattributes`, and `files.readonlyInclude` in `.vscode/settings.json`. Block outputs are left out of all three.
+ * The editor defaults of the standards pack join the settings file, and `.vscode/extensions.json` is planned with it.
  */
 export function gitFiles(ctx: SyncContext, outputs: readonly Output[]): Result {
-  const results = [gitignore(ctx, outputs), gitattributes(ctx, outputs), settings(ctx, outputs)];
+  const results = [gitignore(ctx, outputs), gitattributes(ctx, outputs), settings(ctx, outputs), extensions(ctx)];
 
   return { errors: results.flatMap((result) => result.errors), outputs: results.flatMap((result) => result.outputs) };
 }
@@ -145,7 +149,21 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
 function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
   const paths = wholeFiles(outputs).map((output) => output.path);
 
-  return { errors: [], outputs: [blockOutput(SETTINGS_PATH, settingsEdit(ctx.read(SETTINGS_PATH), paths))] };
+  const { settings: defaults } = vscodeDefaults(ctx);
+
+  return { errors: [], outputs: [blockOutput(SETTINGS_PATH, settingsEdit(ctx.read(SETTINGS_PATH), paths, defaults))] };
+}
+
+/** `.vscode/extensions.json` with the recommended extensions it lacks; no output when the repo gets no defaults. */
+function extensions(ctx: SyncContext): Result {
+  const { recommendations } = vscodeDefaults(ctx);
+
+  if (recommendations.length === 0) return { errors: [], outputs: [] };
+
+  return {
+    errors: [],
+    outputs: [blockOutput(EXTENSIONS_PATH, extensionsEdit(ctx.read(EXTENSIONS_PATH), recommendations))],
+  };
 }
 
 /**

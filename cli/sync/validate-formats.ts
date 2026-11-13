@@ -61,6 +61,7 @@ function hostFormats(): FormatEntry[] {
     { comment: null, format: "json", match: inDir(".grok/hooks", ".json"), schema: codexHooks },
     { comment: "//", format: "jsonc", match: exact(".vscode/tasks.json") },
     { comment: null, format: "jsonc", match: exact(".vscode/settings.json") },
+    { comment: null, format: "jsonc", match: exact(".vscode/extensions.json") },
     { comment: null, format: "markdown", match: inDir(".claude/agents", ".md"), schema: agentFrontmatter },
     { comment: null, format: "markdown", match: inDir(".cursor/agents", ".md"), schema: agentFrontmatter },
     { comment: null, format: "markdown", match: inDir(".grok/agents", ".md"), schema: agentFrontmatter },

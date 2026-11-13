@@ -21,6 +21,7 @@ const OWN_IGNORED = [
   "/.gitignore",
   "/.oxfmtrc.jsonc",
   "/.oxlintrc.json",
+  "/.vscode/extensions.json",
   "/.vscode/settings.json",
   "/knip.json",
 ];

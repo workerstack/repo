@@ -1,4 +1,46 @@
 {
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+  "editor.defaultFormatter": "wdomitrz.simple-lsp-client",
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "file",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.watcherExclude": {
+    "**/.turbo/**": true,
+    "**/.worktrees/**": true
+  },
+  "oxc.enable.oxfmt": false,
+  "search.exclude": {
+    "**/.turbo": true,
+    "**/.worktrees": true,
+    "**/coverage": true
+  },
+  "simpleLspClient.formatters": {
+    "bun": {
+      "cmd": [
+        "bun",
+        "fmt",
+        "--no-script",
+        "--stdin-filepath",
+        "${file}"
+      ],
+      "filetypes": [
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact",
+        "json",
+        "jsonc",
+        "css",
+        "tailwindcss",
+        "scss"
+      ]
+    }
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
   "files.associations": { "*.css": "tailwindcss" },
   "css.lint.unknownAtRules": "ignore",
   "files.readonlyInclude": {
