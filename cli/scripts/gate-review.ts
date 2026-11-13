@@ -1,4 +1,4 @@
-/** What a review strategy and the shared main checkout ask of a write, a patch or a shell command. */
+/** What a spawn strategy and the shared main checkout ask of a write, a patch or a shell command. */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -40,7 +40,7 @@ export function isOutsideRootRepoDirs(target: string, root: string, p: typeof pa
   return !isIgnoredRepoPath(canonicalPath(root, p), canonicalPath(target, p), p);
 }
 
-/** True when a plan's frontmatter holds a review strategy. */
+/** True when a plan's frontmatter holds a spawn strategy. */
 function isReviewPlanText(text: string): boolean {
   const front = FRONTMATTER_RE.exec(text);
   const line = STRATEGY_LINE_RE.exec(front?.[1] ?? "");
@@ -61,7 +61,7 @@ function savesReviewPlan({ tool, input }: StampSite, target: string): boolean {
   return isReviewPlanText(tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8"));
 }
 
-/** A parent's save of a plan that holds a review strategy points the session at it. */
+/** A parent's save of a plan that holds a spawn strategy points the session at it. */
 function stampReviewPlan(site: StampSite, targets: string[]): void {
   const plans = canonicalPath(repoPath(site.roots.root, "plans"));
   const plan = targets.find((t) => path.dirname(t) === plans && path.extname(t) === MD_EXT && savesReviewPlan(site, t));
@@ -175,7 +175,7 @@ function parentWriteDeny(call: GateCall): GuardResult {
 }
 
 /**
- * What a review strategy asks of a write, and of an implementer's shell. Ahead of the write branch and the scout
+ * What a spawn strategy asks of a write, and of an implementer's shell. Ahead of the write branch and the scout
  * return, so no early return skips it. An error in here lets the call through, as the gate does everywhere else.
  *   implementer-*  never writes the plan or the journal, never runs git add or git commit (every strategy)
  *   parent         a save of a review plan stamps the session; while that plan runs, no write outside

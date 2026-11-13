@@ -39,9 +39,9 @@ describe("activeReview on odd stamps and plans", () => {
   it("skips frontmatter lines that are not key: value", () => {
     const root = tmpRoot();
     const plan = path.join(root, "plan.md");
-    fs.writeFileSync(plan, "---\n# note\n\nserial: 3\nstatus: in-progress\nstrategy: review-deep\n---\n");
+    fs.writeFileSync(plan, "---\n# note\n\nserial: 3\nstatus: in-progress\nstrategy: spawn-deep\n---\n");
     writeStamp(root, "s1", plan);
-    expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 3, strategy: "review-deep" });
+    expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 3, strategy: "spawn-deep" });
   });
 });
 

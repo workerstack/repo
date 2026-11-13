@@ -99,7 +99,7 @@ it.each([
   "%s: the child carries a marker the gate reads, so the parent is denied and the child is not",
   (name, c) => {
     const w = tmp.dir("gate-captured-");
-    writeStamp(w, c.sid[0], planFile(w, "review-fast").file);
+    writeStamp(w, c.sid[0], planFile(w, "spawn-fast").file);
     const parent = c.parent(path.join(w, "src/x.ts"));
     const child = c.child(path.join(w, "src/x.ts"));
     expect(harnessOf(parent)).toBe(name === "codex" ? "codex" : "claude");
@@ -108,7 +108,7 @@ it.each([
     expect([sessionIdOf(parent), sessionIdOf(child)]).toStrictEqual(c.sid);
     expect([isParentOrchestrator(parent), subagentTypeOf(parent)]).toStrictEqual([true, ""]);
     expect([isParentOrchestrator(child), subagentTypeOf(child)]).toStrictEqual([false, "scout"]);
-    expect(processFatTools({ ...parent, cwd: w })).toStrictEqual({ reason: reviewReason("review-fast"), type: "deny" });
+    expect(processFatTools({ ...parent, cwd: w })).toStrictEqual({ reason: reviewReason("spawn-fast"), type: "deny" });
     expect(processFatTools({ ...child, cwd: w })).toBeNull();
   },
 );
@@ -135,7 +135,7 @@ it("Antigravity sends its session id only as conversationId, and its child carri
   expect(ENFORCED_HARNESSES.has("antigravity")).toBe(false);
   // A review is running for the parent's conversation; an unenforced harness is still let through.
   const w = tmp.dir("gate-captured-");
-  writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
+  writeStamp(w, "d1398f48", planFile(w, "spawn-fast").file);
   const product = path.join(w, "src/x.ts");
   const args = { Content: "x", Path: product };
   const write = { ...parent, toolCall: { args, name: "write_file" }, workspacePaths: [w] };
@@ -145,7 +145,7 @@ it("Antigravity sends its session id only as conversationId, and its child carri
 
 it("Antigravity's edit in a committed repo is denied by the main-checkout guard though it is not enforced", () => {
   const w = tmp.committed("gate-captured-");
-  writeStamp(w, "d1398f48", planFile(w, "review-fast").file);
+  writeStamp(w, "d1398f48", planFile(w, "spawn-fast").file);
 
   function put(target: string) {
     return inSession(kindWrite("antigravity", { cwd: w, target }), "d1398f48");

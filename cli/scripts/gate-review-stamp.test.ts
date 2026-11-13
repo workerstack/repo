@@ -38,7 +38,7 @@ function stampFiles(w: string) {
 it.each(WRITE_KINDS)(
   "%s: stamps the session on a parent save of a review plan, and changes nothing else about the answer",
   (kind) => {
-    for (const strategy of ["review-fast", "review-deep"]) {
+    for (const strategy of ["spawn-fast", "spawn-deep"]) {
       const w = tmp.dir("gate-review-");
       const { file, text } = planFile(w, strategy, "ready");
       expect(put(kind, w, { content: text, target: file }), strategy).toBeNull();
@@ -52,10 +52,10 @@ it.each(WRITE_KINDS)(
   "%s: stamps on a box tick of an in-progress review plan in a session with no stamp (resume)",
   (kind) => {
     const w = tmp.dir("gate-review-");
-    const { file, text } = planFile(w, "review-deep");
+    const { file, text } = planFile(w, "spawn-deep");
     expect(stamped(w)).toBe(false);
     put(kind, w, { content: text, target: file });
-    expect(activeReview(w, REVIEW_SID)).toStrictEqual({ plan: file, serial: 3, strategy: "review-deep" });
+    expect(activeReview(w, REVIEW_SID)).toStrictEqual({ plan: file, serial: 3, strategy: "spawn-deep" });
   },
 );
 
@@ -64,7 +64,7 @@ it.each(WRITE_KINDS)("%s: writes no stamp for a default plan, without a session 
   const dflt = planFile(w, "default");
   put(kind, w, { content: dflt.text, target: dflt.file });
   expect(stamped(w)).toBe(false);
-  const rev = planFile(w, "review-fast");
+  const rev = planFile(w, "spawn-fast");
   processFatTools(inSession(reviewWrite(kind, { content: rev.text, cwd: w, target: rev.file }), null));
   expect(stampFiles(w)).toStrictEqual([]);
 
@@ -78,15 +78,15 @@ it.each(WRITE_KINDS)(
   "%s: writes no stamp for a non-plan write, and the plan's own status decides afterwards",
   (kind) => {
     const w = tmp.dir("gate-review-");
-    const { file, text } = planFile(w, "review-fast");
+    const { file, text } = planFile(w, "spawn-fast");
     put(kind, w, { content: text, target: path.join(w, "src/x.ts") });
     put(kind, w, { content: text, target: path.join(w, ".repo/roadmaps/r.md") });
     expect(stamped(w)).toBe(false);
     put(kind, w, { content: text, target: file });
-    expect(activeReview(w, REVIEW_SID)?.strategy).toBe("review-fast");
+    expect(activeReview(w, REVIEW_SID)?.strategy).toBe("spawn-fast");
 
     for (const status of ["done", "blocked", "ready"]) {
-      fs.writeFileSync(file, planText("review-fast", status));
+      fs.writeFileSync(file, planText("spawn-fast", status));
       expect(stamped(w), status).toBe(true);
       expect(activeReview(w, REVIEW_SID), status).toBeNull();
     }
@@ -96,7 +96,7 @@ it.each(WRITE_KINDS)(
 it("stamps from the Write content, not the file on disk", () => {
   const w = tmp.dir("gate-review-");
   const { file } = planFile(w, "default");
-  put("claudeWrite", w, { content: planText("review-fast", "in-progress"), target: file });
+  put("claudeWrite", w, { content: planText("spawn-fast", "in-progress"), target: file });
   expect(stamped(w)).toBe(true);
   fs.rmSync(stampPath(w, REVIEW_SID));
   put("claudeWrite", w, { content: planText("default", "in-progress"), target: file });
@@ -106,7 +106,7 @@ it("stamps from the Write content, not the file on disk", () => {
 it("stamps from the Content of an Antigravity write_file, not the file on disk", () => {
   const w = tmp.dir("gate-review-");
   const { file } = planFile(w, "default");
-  put("antigravity", w, { content: planText("review-fast", "in-progress"), target: file });
+  put("antigravity", w, { content: planText("spawn-fast", "in-progress"), target: file });
   expect(stamped(w)).toBe(true);
   fs.rmSync(stampPath(w, REVIEW_SID));
   put("antigravity", w, { content: planText("default", "in-progress"), target: file });
@@ -115,7 +115,7 @@ it("stamps from the Content of an Antigravity write_file, not the file on disk",
 
 it("stamps an alias spelling of the plan as the canonical path, once", () => {
   const w = tmp.dir("gate-review-");
-  const { file, text } = planFile(w, "review-fast");
+  const { file, text } = planFile(w, "spawn-fast");
   const alias = aliasOf(w);
   const plan = "3-review-plan-20261107T181901Z.md";
 
@@ -137,7 +137,7 @@ it("stamps an alias spelling of the plan as the canonical path, once", () => {
 
 it("fails open when the stamp cannot be written", () => {
   const w = tmp.dir("gate-review-");
-  const { file, text } = planFile(w, "review-fast");
+  const { file, text } = planFile(w, "spawn-fast");
   fs.mkdirSync(path.join(w, ".repo/tmp"), { recursive: true });
   fs.writeFileSync(path.join(w, ".repo/tmp/sessions"), "a file where the directory belongs");
   expect(put("claudeWrite", w, { content: text, target: file })).toBeNull();
@@ -162,7 +162,7 @@ function tick(file: string) {
 
 it("Grok: stamps on a valid Edit and on a full Write of a review plan, and not for default", () => {
   const w = tmp.dir("gate-review-");
-  const review = savedPlan(w, "review-fast");
+  const review = savedPlan(w, "spawn-fast");
   expect(stamped(w)).toBe(false);
   expect(grokReply(w, { input: tick(review.file_path), tool: "Edit" })).toBeNull();
   expect(activeReview(w, REVIEW_SID)).toBeNull();
@@ -179,7 +179,7 @@ it("Grok: stamps on a valid Edit and on a full Write of a review plan, and not f
 
 it("Grok: stamps nothing for a child", () => {
   const w = tmp.dir("gate-review-");
-  const review = savedPlan(w, "review-fast");
+  const review = savedPlan(w, "spawn-fast");
   grokReply(w, { extra: { subagent_type: "scout" }, input: tick(review.file_path), tool: "Edit" });
   expect(stamped(w)).toBe(false);
 });

@@ -591,9 +591,9 @@ The gate runs for the parent before the ask and away checks and before the `stop
 
 ### Review strategy
 
-A plan or roadmap carries `strategy: default|review-fast|review-deep` (`plan-format.md`). `default` adds nothing here. For `review-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
+A plan or roadmap carries `strategy: default|spawn-fast|spawn-deep` (`plan-format.md`). `default` adds nothing here. For `spawn-*` the main session reviews and an implementer agent writes (`review-loop.md`). The code is `cli/scripts/strategy.ts`, called from `gate-fat-tools.ts` and `cli/scripts/orchestrate-parent.ts`.
 
-Stamp: a parent's save of a plan whose frontmatter holds a `review-*` strategy writes `.repo/tmp/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `review-*`, so `done` and `blocked` end it with no cleanup.
+Stamp: a parent's save of a plan whose frontmatter holds a `spawn-*` strategy writes `.repo/tmp/sessions/<sid>/strategy.json`, which holds the plan's canonical path. A box tick on such a plan stamps too, so a resumed run in a new session stamps on its first save. A child's save stamps nothing. The gate writes it for every harness. orchestrate-parent calls `stampPlanSave` first for the plan Writes it persists itself. The stamp only points at the plan. `activeReview` reads the plan: it is active while `status` is `in-progress` and `strategy` is `spawn-*`, so `done` and `blocked` end it with no cleanup.
 
 Deny: `reviewGuard` in `processFatTools` sits right after the worktree deny, before the write branch and the scout return. While a review is active in an enforced harness, a parent write whose target is outside the root `.tmp/` is denied. The target is judged by canonical path after the scratch rewrite, not as typed. A child, a missing `sid` and an unenforced harness are not denied. Reason: `plan {n} runs strategy {s}: this session reviews. Spawn {implementer} for product writes; the plan, the journal and .tmp/ stay writable.`
 
@@ -601,13 +601,13 @@ Implementer guards apply under every strategy: the spawn prompt names the worktr
 
 Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `<root>/node_modules/.bin/repo job --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
 
-Approval: the Stop hook blocks a reply that should ask for approval unless its last line is a closing line that names every pending item with the strategy its file holds. The block reason is `end with: ` and the line `closingLine` renders from the files. On the next prompt, a bare `y` returns `y approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. `y <strategy>` writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. An unknown word approves nothing: `unknown strategy "{word}"; use y, y default, y review-fast or y review-deep`.
+Approval: the Stop hook blocks a reply that should ask for approval unless its last line is a closing line that names every pending item with the strategy its file holds. The block reason is `end with: ` and the line `closingLine` renders from the files. On the next prompt, a bare `y` returns `y approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. `y <strategy>` writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. An unknown word approves nothing: `unknown strategy "{word}"; use y, y default, y spawn-fast or y spawn-deep`.
 
 The closing line `closingLine` renders, for one plan: `Reply "y" to run plan {n} (strategy: {s}), or "y {a}" / "y {b}", or "h" / "h fast" / "h deep" for a fresh session.` A queue joins items with `, then ` and keeps one `or "h" …` tail.
 
 Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.repo/tmp/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks a closing line that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the closing line`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so a `y` or `h` on an unsettled item is refused too: `y did not approve plan {n}: its review has not settled; wait for it, then end with the closing line again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
 
-Handoff: `h` keeps each file's strategy; `h fast` and `h deep` write `review-fast` or `review-deep` through the same validated write as `y <strategy>`. There is no `h default`. The hook writes one handoff for the whole line through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy review-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
+Handoff: `h` keeps each file's strategy; `h fast` and `h deep` write `spawn-fast` or `spawn-deep` through the same validated write as `y <strategy>`. There is no `h default`. The hook writes one handoff for the whole line through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
 
 Enforcement, from the live probe of each harness's child payload:
 
@@ -1195,7 +1195,7 @@ reviews: 0             # settled /review-plan rounds; never lowered or removed
 created: 2026-08-26T14:30:00Z    # UTC ISO-8601 seconds + Z; no milliseconds
 source: "<≤120 chars of user task>"
 commit: feat: <subject>
-strategy: default      # default | review-fast | review-deep
+strategy: default      # default | spawn-fast | spawn-deep
 mode: away             # optional: ask | auto | away
 ---
 ```
@@ -1205,10 +1205,10 @@ mode: away             # optional: ask | auto | away
 `strategy` is required. It says how the plan gets implemented:
 
 - `default`: the main session does the work, as it always has. No extra rules apply.
-- `review-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
-- `review-deep`: the same loop, with `implementer-deep` from the first attempt.
+- `spawn-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
+- `spawn-deep`: the same loop, with `implementer-deep` from the first attempt.
 
-A save with no `strategy` or an unknown value is denied with `strategy: default|review-fast|review-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
+A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
 
 `mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` wins over the session's `/ask` or `/away` flag, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
@@ -1317,7 +1317,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 - filename matches new stamped regex or legacy unstamped; new writes unpadded + stamp (`1-foo-20260826T143000Z.md` not `0001-foo.md`); serial int equals leading digits; `name` equals slug after stripping optional trailing `-\d{8}T\d{6}Z`
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
-- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is required and is `default`, `review-fast` or `review-deep`; a save without it, or with another value, is invalid. Optional `mode` is `ask`, `auto` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
+- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is required and is `default`, `spawn-fast` or `spawn-deep`; a save without it, or with another value, is invalid. Optional `mode` is `ask`, `auto` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
 - headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase
@@ -1407,7 +1407,7 @@ $ notes export
 
 ## Review loop
 
-Read this when the plan's `strategy` is `review-fast` or `review-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
+Read this when the plan's `strategy` is `spawn-fast` or `spawn-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
 
 ### Start
 
@@ -1415,7 +1415,7 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 
 ### Phases
 
-- Phases run in order; each goes to one implementer: `implementer-fast` first on `review-fast`, `implementer-deep` on `review-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
+- Phases run in order; each goes to one implementer: `implementer-fast` first on `spawn-fast`, `implementer-deep` on `spawn-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
 - The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun repo worktree add {serial}-{name}` first if it is missing.
 - A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
@@ -1473,14 +1473,14 @@ status: draft          # draft | locked | in-progress | done | blocked
 reviews: 0             # settled /review-roadmap rounds; never lowered or removed
 created: 2026-10-25T18:00:00Z
 source: "<≤120 chars>"
-strategy: default      # default | review-fast | review-deep
+strategy: default      # default | spawn-fast | spawn-deep
 mode: away             # optional: ask | auto | away
 ---
 ```
 
 `draft` → `locked` → `in-progress` → `done` | `blocked`.
 
-`strategy` is required: `default`, `review-fast` or `review-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|review-fast|review-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
+`strategy` is required: `default`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
 
 `mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`). A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 
@@ -1605,7 +1605,7 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ### Approval
 
-Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `y` (or `y {strategy}`) to the closing `Reply "y" to run …` line, an explicit "plan and do it" in the request, or `/implement-roadmap` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole line to a fresh session and keeps each file's strategy; `h fast` and `h deep` write `review-fast` or `review-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. A `y` or `h` on an item whose review has not settled is refused.
+Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `y` (or `y {strategy}`) to the closing `Reply "y" to run …` line, an explicit "plan and do it" in the request, or `/implement-roadmap` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole line to a fresh session and keeps each file's strategy; `h fast` and `h deep` write `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. A `y` or `h` on an item whose review has not settled is refused.
 
 ### Implement
 

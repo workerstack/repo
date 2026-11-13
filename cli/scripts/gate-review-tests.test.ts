@@ -48,9 +48,9 @@ const SUITES = [
 
 const NOT_PARENT: [string, string][] = [
   ["default", "in-progress"],
-  ["review-fast", "ready"],
-  ["review-fast", "done"],
-  ["review-fast", "blocked"],
+  ["spawn-fast", "ready"],
+  ["spawn-fast", "done"],
+  ["spawn-fast", "blocked"],
 ];
 
 it("rewrites an implementer child's test run to the job test and passes a compound through", () => {

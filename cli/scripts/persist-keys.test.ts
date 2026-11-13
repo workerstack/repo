@@ -11,7 +11,7 @@ import {
 
 describe("strategy and mode keys", () => {
   it("reads the value from the frontmatter or a body line", () => {
-    expect(extractStrategy("---\nstrategy: review-fast\n---\n# x")).toBe("review-fast");
+    expect(extractStrategy("---\nstrategy: spawn-fast\n---\n# x")).toBe("spawn-fast");
     expect(extractStrategy("# x\nstrategy: default\n")).toBe("default");
     expect(extractMode("---\nname: x\n---\nmode:   away \n")).toBe("away");
     expect(extractMode("---\nname: x\n---\n# x")).toBeUndefined();
@@ -30,7 +30,7 @@ describe("strategy and mode keys", () => {
   });
 
   it("names the allowed values", () => {
-    expect(strategyError()).toBe("strategy: default|review-fast|review-deep");
+    expect(strategyError()).toBe("strategy: default|spawn-fast|spawn-deep");
     expect(modeErrors({})).toStrictEqual([]);
     expect(modeErrors({ mode: "away" })).toStrictEqual([]);
     expect(modeErrors({ mode: "" })).toStrictEqual(["mode: ask|auto|away"]);

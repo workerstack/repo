@@ -30,18 +30,19 @@ function planFm(strategy: string | null, status = "in-progress") {
 }
 
 it("accepts exactly the three values", () => {
-  expect(STRATEGIES).toStrictEqual(["default", "review-fast", "review-deep"]);
+  expect(STRATEGIES).toStrictEqual(["default", "spawn-fast", "spawn-deep"]);
 
   for (const s of STRATEGIES) expect(parseStrategy(s)).toBe(s);
 
-  for (const bad of ["review-medium", "Default", " default", "", undefined]) expect(parseStrategy(bad)).toBeNull();
+  for (const bad of ["review-fast", "review-deep", "review-medium", "Default", " default", "", undefined])
+    expect(parseStrategy(bad)).toBeNull();
 });
 
-it("review-fast starts fast then goes deep; review-deep is deep both times", () => {
-  expect(implementerOf("review-fast", 1)).toBe("implementer-fast");
-  expect(implementerOf("review-fast", 2)).toBe("implementer-deep");
-  expect(implementerOf("review-deep", 1)).toBe("implementer-deep");
-  expect(implementerOf("review-deep", 2)).toBe("implementer-deep");
+it("spawn-fast starts fast then goes deep; spawn-deep is deep both times", () => {
+  expect(implementerOf("spawn-fast", 1)).toBe("implementer-fast");
+  expect(implementerOf("spawn-fast", 2)).toBe("implementer-deep");
+  expect(implementerOf("spawn-deep", 1)).toBe("implementer-deep");
+  expect(implementerOf("spawn-deep", 2)).toBe("implementer-deep");
 });
 
 it("accepts exactly ask, auto and away", () => {
@@ -60,20 +61,20 @@ it("stampPath keeps the sid inside the sessions dir", () => {
   );
 });
 
-it("writeStamp then activeReview returns an in-progress review-fast plan", () => {
+it("writeStamp then activeReview returns an in-progress spawn-fast plan", () => {
   const root = realDir("strategy-");
-  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
+  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-fast"));
   writeStamp(root, "s1", plan);
-  expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 4, strategy: "review-fast" });
+  expect(activeReview(root, "s1")).toStrictEqual({ plan, serial: 4, strategy: "spawn-fast" });
 });
 
 it("is null for ready, done, blocked, default, a missing key, a missing plan and an unstamped session", () => {
   const root = realDir("strategy-");
 
   for (const [fm, label] of [
-    [planFm("review-fast", "ready"), "ready"],
-    [planFm("review-fast", "done"), "done"],
-    [planFm("review-fast", "blocked"), "blocked"],
+    [planFm("spawn-fast", "ready"), "ready"],
+    [planFm("spawn-fast", "done"), "done"],
+    [planFm("spawn-fast", "blocked"), "blocked"],
     [planFm("default"), "default"],
     [planFm(null), "nokey"],
   ] as const) {
@@ -89,10 +90,10 @@ it("is null for ready, done, blocked, default, a missing key, a missing plan and
 
 it("follows the plan file: a done plan ends the review with the stamp still there", () => {
   const root = realDir("strategy-");
-  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-deep"));
+  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-deep"));
   writeStamp(root, "s1", plan);
-  expect(activeReview(root, "s1")?.strategy).toBe("review-deep");
-  writePlan(root, "4-x-20261107T181901Z.md", planFm("review-deep", "done"));
+  expect(activeReview(root, "s1")?.strategy).toBe("spawn-deep");
+  writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-deep", "done"));
   expect(fs.existsSync(stampPath(root, "s1"))).toBe(true);
   expect(activeReview(root, "s1")).toBeNull();
 });
@@ -106,7 +107,7 @@ it("is null for a corrupt stamp", () => {
 
 it("writeStamp twice leaves one identical file and no temp file", () => {
   const root = realDir("strategy-");
-  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
+  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-fast"));
   writeStamp(root, "s1", plan);
   const first = fs.readFileSync(stampPath(root, "s1"), "utf8");
   writeStamp(root, "s1", plan);
@@ -116,18 +117,18 @@ it("writeStamp twice leaves one identical file and no temp file", () => {
 
 it("stamps a plan typed with ./ or .. as its canonical path", () => {
   const root = realDir("strategy-");
-  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
+  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-fast"));
   writeStamp(root, "s1", `${root}/./.repo/tmp/../plans/4-x-20261107T181901Z.md`);
   expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
 });
 
 it("stamps through a symlinked spelling of the root and finds the plan", () => {
   const root = realDir("strategy-");
-  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("review-fast"));
+  const plan = writePlan(root, "4-x-20261107T181901Z.md", planFm("spawn-fast"));
   const alias = aliasOf(root);
   writeStamp(alias, "s1", path.join(alias, ".repo", "plans", "4-x-20261107T181901Z.md"));
   expect(JSON.parse(fs.readFileSync(stampPath(root, "s1"), "utf8"))).toStrictEqual({ plan });
-  expect(activeReview(alias, "s1")).toStrictEqual({ plan, serial: 4, strategy: "review-fast" });
+  expect(activeReview(alias, "s1")).toStrictEqual({ plan, serial: 4, strategy: "spawn-fast" });
   expect(activeReview(root, "s1")?.plan).toBe(plan);
 });
 

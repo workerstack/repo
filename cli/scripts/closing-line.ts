@@ -9,8 +9,8 @@ import {
   ITEM_SEP,
   LEAD_MARKS_RE,
   PLAN,
-  REVIEW_DEEP,
-  REVIEW_FAST,
+  SPAWN_DEEP,
+  SPAWN_FAST,
   ROADMAP,
   STRATEGIES,
   TRAIL_MARKS_RE,
@@ -27,9 +27,9 @@ function itemText(i: Approvable): string {
 }
 
 function handoffStrategy(w: string): Strategy | null {
-  if (w === FAST) return REVIEW_FAST;
+  if (w === FAST) return SPAWN_FAST;
 
-  return w === DEEP ? REVIEW_DEEP : null;
+  return w === DEEP ? SPAWN_DEEP : null;
 }
 
 /**

@@ -82,19 +82,19 @@ it("does not take the old closing line for an ask, in any markdown wrapping", ()
 
 it("blocks when the line shows a strategy the file does not hold, and names the line the files render", () => {
   const s = claude(kit.temp(), "mis");
-  const fast = VALID_PLAN.replace("strategy: default", "strategy: review-fast");
+  const fast = VALID_PLAN.replace("strategy: default", "strategy: spawn-fast");
   s.say("plan it");
   s.reviewed("plans", fast);
   const line = closing(dflt("plan 1"));
   expect(parseClosingLine(line)).not.toBeNull();
-  const others = 'or "y default" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.';
+  const others = 'or "y default" / "y spawn-deep", or "h" / "h fast" / "h deep" for a fresh session.';
   expect(s.stop(`Saved.\n\n${line}`)).toStrictEqual({
     decision: "block",
-    reason: `end with: Reply "y" to run plan 1 (strategy: review-fast), ${others}`,
+    reason: `end with: Reply "y" to run plan 1 (strategy: spawn-fast), ${others}`,
   });
   s.say("again");
   s.reviewed("plans", fast);
-  const both = `Reply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-fast), ${others}`;
+  const both = `Reply "y" to run plan 1 (strategy: spawn-fast), then plan 2 (strategy: spawn-fast), ${others}`;
   expect(s.stop(both)).toBeNull();
 });
 

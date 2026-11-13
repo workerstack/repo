@@ -2,9 +2,9 @@
 import type { Mode, Strategy } from "./strategy.types.ts";
 
 export const DEFAULT_STRATEGY = "default";
-export const REVIEW_FAST = "review-fast";
-export const REVIEW_DEEP = "review-deep";
-export const STRATEGIES: readonly Strategy[] = [DEFAULT_STRATEGY, REVIEW_FAST, REVIEW_DEEP];
+export const SPAWN_FAST = "spawn-fast";
+export const SPAWN_DEEP = "spawn-deep";
+export const STRATEGIES: readonly Strategy[] = [DEFAULT_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
 export const MODES: readonly Mode[] = ["ask", "auto", "away"];
 
@@ -27,13 +27,13 @@ export const PLAN = "plan";
 export const ROADMAP = "roadmap";
 export const HANDOFFS = '"h" / "h fast" / "h deep" for a fresh session';
 
-/** The words after `h` that pick a review strategy for the fresh session. */
+/** The words after `h` that pick a spawn strategy for the fresh session. */
 export const FAST = "fast";
 export const DEEP = "deep";
 export const HANDOFF_LETTER = "h";
 export const ITEM_SEP = ", then ";
 
-/** One closing-line item: `plan 4 (strategy: review-fast)`. */
+/** One closing-line item: `plan 4 (strategy: spawn-fast)`. */
 const ITEM_SRC = "(?:plan|roadmap) \\d+ \\(strategy: [a-z-]+\\)";
 
 export const CLOSING_RE: Readonly<RegExp> = /* @__PURE__ */ new RegExp(

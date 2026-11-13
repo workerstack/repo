@@ -55,20 +55,20 @@ it.each(CASINGS)("y and h on an unsettled item refuse with a reason and change n
 });
 
 it.each(CASINGS)(
-  "h fast writes review-fast into the plan and one valid handoff that runs it (%s payloads)",
+  "h fast writes spawn-fast into the plan and one valid handoff that runs it (%s payloads)",
   (casing) => {
     const { ws, s, plan } = onePlan(casing, "h1");
     const ctx = s.say("h fast", transcript(ws, `Saved.\n\n${plan1}`));
     const { file, serial, text } = theHandoff(ws);
     expect(path.basename(file)).toMatch(/^\d+-run-plan-1-\d{8}T\d{6}Z\.md$/);
     expect(ctx.split("\n")).toContain(
-      `h handed off plan 1 (strategy review-fast written) to ${file}; ` +
+      `h handed off plan 1 (strategy spawn-fast written) to ${file}; ` +
         `tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
     );
     expect(text).toContain(plan);
     expect(text).toContain("h1");
     expect(text).toMatch(/^1\.1 \[ \] \/implement-plan 1$/m);
-    expect(strategyOf(plan)).toBe("review-fast");
+    expect(strategyOf(plan)).toBe("spawn-fast");
   },
 );
 

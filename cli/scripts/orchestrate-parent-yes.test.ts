@@ -77,35 +77,35 @@ it("on a default plan the context is today's, byte for byte", () => {
 });
 
 it("a bare y does not approve a line whose strategy differs from the file's", () => {
-  const { ws, s, plan } = onePlan("d2", withStrategy("review-fast"));
+  const { ws, s, plan } = onePlan("d2", withStrategy("spawn-fast"));
   expect(s.say("y", plan1Line(ws))).not.toContain("y approves");
 
   const truthful = transcript(
     ws,
-    'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), or "y default" / "y review-deep", ' +
+    'Saved.\n\nReply "y" to run plan 1 (strategy: spawn-fast), or "y default" / "y spawn-deep", ' +
       'or "h" / "h fast" / "h deep" for a fresh session.',
   );
 
   expect(s.say("y", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
-  expect(strategyOf(plan)).toBe("review-fast");
+  expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
-it("y review-deep writes the strategy, tells the agent to re-read, and a second one changes no bytes", () => {
+it("y spawn-deep writes the strategy, tells the agent to re-read, and a second one changes no bytes", () => {
   const { ws, s, plan } = onePlan("r1");
   const before = read(plan);
   const tp = plan1Line(ws);
 
   const want =
-    "y approves plan 1: plan 1: strategy review-deep was written to its frontmatter; " +
+    "y approves plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
     `re-read the plan, then run /implement-plan 1 (${plan})`;
 
-  expect(lines(s.say("y review-deep", tp))).toContain(want);
+  expect(lines(s.say("y spawn-deep", tp))).toContain(want);
   const after = read(plan);
-  expect(after).toBe(before.replace("strategy: default", "strategy: review-deep"));
+  expect(after).toBe(before.replace("strategy: default", "strategy: spawn-deep"));
   expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toStrictEqual([]);
   const mtime = fs.statSync(plan).mtimeMs;
   // Nothing left to write: the context is the plain approval, with no claim of a change.
-  expect(lines(s.say("Y  Review-Deep ", tp))).toContain(`y approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(lines(s.say("Y  Spawn-Deep ", tp))).toContain(`y approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
   expect(read(plan)).toBe(after);
   expect(fs.statSync(plan).mtimeMs).toBe(mtime);
 });
@@ -116,15 +116,15 @@ function written(kind: string): string {
 }
 
 it("y default rewrites every item of a queue, a plan and a roadmap", () => {
-  const { ws, s, plan: p1 } = onePlan("r2", withStrategy("review-fast"));
-  const p2 = s.reviewed("plans", withStrategy("review-deep"));
-  const rm = s.reviewed("roadmaps", roadmapWith("review-fast"));
+  const { ws, s, plan: p1 } = onePlan("r2", withStrategy("spawn-fast"));
+  const p2 = s.reviewed("plans", withStrategy("spawn-deep"));
+  const rm = s.reviewed("roadmaps", roadmapWith("spawn-fast"));
 
   const tp = transcript(
     ws,
     [
-      'Saved.\n\nReply "y" to run plan 1 (strategy: review-fast), then plan 2 (strategy: review-deep), ',
-      'then roadmap 1 (strategy: review-fast), or "y default" / "y review-fast" / "y review-deep", ',
+      'Saved.\n\nReply "y" to run plan 1 (strategy: spawn-fast), then plan 2 (strategy: spawn-deep), ',
+      'then roadmap 1 (strategy: spawn-fast), or "y default" / "y spawn-fast" / "y spawn-deep", ',
       'or "h" / "h fast" / "h deep" for a fresh session.',
     ].join(""),
   );
@@ -144,19 +144,19 @@ it("y default rewrites every item of a queue, a plan and a roadmap", () => {
 
 it("y with a Grok payload writes the strategy too", () => {
   const { ws, plan } = onePlan("g1");
-  const fields = { prompt: "y review-fast", transcriptPath: plan1Line(ws) };
+  const fields = { prompt: "y spawn-fast", transcriptPath: plan1Line(ws) };
   const out = must(replyOf(kit.grok({ sid: "g1", ws }, "UserPromptSubmit", fields)));
   expect(out.hookSpecificOutput.additionalContext).toContain(
-    `strategy review-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
+    `strategy spawn-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
   );
-  expect(strategyOf(plan)).toBe("review-fast");
+  expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
 it("y review-medium approves nothing and names the valid replies", () => {
   const { ws, s, plan } = onePlan("u1");
   const before = read(plan);
   const out = s.say("y review-medium", plan1Line(ws));
-  expect(lines(out)).toContain('unknown strategy "review-medium"; use y, y default, y review-fast or y review-deep');
+  expect(lines(out)).toContain('unknown strategy "review-medium"; use y, y default, y spawn-fast or y spawn-deep');
   expect(out).not.toContain("y approves");
   expect(read(plan)).toBe(before);
 });
@@ -166,8 +166,8 @@ it("an invalid result is never written", () => {
   const tp = plan1Line(ws);
   fs.writeFileSync(plan, read(plan).replace("## Goal", "## Aim"));
   const before = read(plan);
-  const out = s.say("y review-deep", tp);
-  expect(out).toContain("y did not approve plan 1: strategy review-deep could not be written");
+  const out = s.say("y spawn-deep", tp);
+  expect(out).toContain("y did not approve plan 1: strategy spawn-deep could not be written");
   expect(out).not.toContain("y approves");
   expect(read(plan)).toBe(before);
 });

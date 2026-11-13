@@ -109,7 +109,7 @@ it("treats a missing session id, a missing file and a bad file as no grant", () 
 it("sits ahead of the review guard: the main checkout reason wins there, a worktree hits the review reason", () => {
   const r = tmp.committed("gate-main-");
   startReview(r, { sid: SID });
-  const review = deny(reviewReason("review-fast"));
+  const review = deny(reviewReason("spawn-fast"));
   const inWorktree = path.join(r, ".worktrees/a/src/x.ts");
   expect(processFatTools(claudeWrite(r, path.join(r, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(claudeWrite(r, inWorktree))).toStrictEqual(review);
