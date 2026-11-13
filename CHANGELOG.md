@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-rc.0] - 2026-11-13
+
 ### Added
 
 - `/write-roadmap-fast` saves a short roadmap under `.repo/roadmaps-fast/` when the person asks for one, and `/implement-roadmap-fast {n}` runs a locked one in this session: each open slice becomes a fast plan (`/write-plan-fast`, its path set as the slice's `Location`) run with `/implement-plan-fast`, then the Verify boxes. A fast roadmap holds Order (two or more `N [ ] title: sentence` slices) and Verify in at most 20 lines, Location lines not counted, has no strategy and no review, and is denied with `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)` when over. Its approval block is `fast-roadmap {n}` with `i` implement and `h` hand off only. Format: `references/fast-roadmap-format.md`.
