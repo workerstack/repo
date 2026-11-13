@@ -1,4 +1,5 @@
 {
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "editor.codeActionsOnSave": {
     "source.fixAll.oxc": "explicit"
   },
@@ -40,7 +41,6 @@
       ]
     }
   },
-  "typescript.tsdk": "node_modules/typescript/lib",
   "files.associations": { "*.css": "tailwindcss" },
   "css.lint.unknownAtRules": "ignore",
   "files.readonlyInclude": {
