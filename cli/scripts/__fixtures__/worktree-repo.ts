@@ -44,6 +44,19 @@ export function bunRepo(r: string, postinstall: string): string {
   return r;
 }
 
+/** A bare origin at `bare` that holds `main` and each of `branches`, wired into `r` as `origin` with its tracking refs. */
+export function addOrigin(r: string, bare: string, branches: string[] = []): void {
+  fs.mkdirSync(bare, { recursive: true });
+  git(bare, "init", "-q", "--bare");
+  git(r, "remote", "add", "origin", bare);
+  git(r, "push", "-q", "--no-verify", "origin", "main", ...branches);
+}
+
+/** True when `refs/remotes/origin/<branch>` exists in `r`. */
+export function hasTracking(r: string, branch: string): boolean {
+  return spawnSync("git", ["show-ref", "--verify", "-q", `refs/remotes/origin/${branch}`], { cwd: r }).status === 0;
+}
+
 /** Points origin/HEAD at a copy of main. */
 export function pinOriginHead(r: string): void {
   git(r, "update-ref", "refs/remotes/origin/main", "main");

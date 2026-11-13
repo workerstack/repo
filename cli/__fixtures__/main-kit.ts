@@ -144,7 +144,7 @@ main
 dir])
   phase-files       Map a parallel group's unstaged changes to its phases
   speak             Text-to-speech
-  worktree          Managed worktrees: add, list, finish, remove
+  worktree          Managed worktrees: add, finish, list, prune, hook
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run \
 for HEAD
   commit-msg        Check a commit message file against the staged change (the commit-msg git hook), each commit of \

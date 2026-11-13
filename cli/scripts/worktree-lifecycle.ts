@@ -5,10 +5,12 @@ import { canonicalPath } from "./workspace-root.ts";
 import {
   branchExists,
   defaultBranch,
+  dropRemoteBranch,
   fastForward,
   git,
   gitReason,
   hasOwnCommits,
+  isCheckedOut,
   isManaged,
   isMerged,
   liveEntry,
@@ -19,7 +21,7 @@ import {
   worktreeEntries,
   worktreeOf,
 } from "./worktree-git.ts";
-import { copyIncluded, createWorktree, installDependencies } from "./worktree-setup.ts";
+import { copyIncluded, createWorktree, installDependencies, syncRoot } from "./worktree-setup.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import {
   BRANCH_PREFIX,
@@ -85,11 +87,18 @@ function removeWorktreeDir(root: string, worktree: string): void {
     throw new Error(`could not remove ${worktree}: ${gitReason(removed.err)}; fix that, then run finish again`);
 }
 
+/** Delete `branch` once the default branch holds it: origin's copy first, so a crash between leaves the local one. */
+function dropBranch(root: string, branch: string): boolean {
+  dropRemoteBranch(root, branch);
+
+  return git(root, ["branch", "-D", branch]).ok;
+}
+
 /** Remove the worktree, if any, then delete the branch once the default branch holds it. */
 function retire(root: string, worktree: string | undefined, branch: string): void {
   if (worktree !== undefined) removeWorktreeDir(root, worktree);
 
-  if (isMerged(root, branch)) git(root, ["branch", "-D", branch]);
+  if (isMerged(root, branch)) dropBranch(root, branch);
 }
 
 /** The name `finish` works on: `raw`, or the worktree `cwd` is in when `raw` is undefined. */
@@ -159,9 +168,20 @@ function shortSha(f: Finishing): string {
   return git(f.root, ["rev-parse", "--short", HEADS_REF + f.branch]).out;
 }
 
+/** Land the branch, retire it, and sync the root when it has the default branch out; the landed short sha. */
+function landAndRetire(f: Finishing): string {
+  land(f);
+  const sha = shortSha(f);
+  retire(f.root, f.dest, f.branch);
+
+  if (isCheckedOut(f.root, f.target)) syncRoot(f.root);
+
+  return sha;
+}
+
 /**
  * Land `wt/<name>` on the default branch and remove it: rebase inside the worktree, fast-forward the default branch,
- * remove worktree and branch. A rerun converges from any crash point. Never pushes.
+ * remove worktree and branch, delete origin's copy, sync the root. A rerun converges from any crash point.
  * `rootArg` is the main checkout; an undefined `raw` takes the name from the worktree `cwd` is in.
  */
 export function finishWorktree(rootArg: string, raw: string | undefined, cwd: string = rootArg): FinishResult {
@@ -195,11 +215,7 @@ export function finishWorktree(rootArg: string, raw: string | undefined, cwd: st
     );
   }
 
-  land(f);
-  const sha = shortSha(f);
-  retire(root, f.dest, f.branch);
-
-  return { ...done, sha };
+  return { ...done, sha: landAndRetire(f) };
 }
 
 /** Remove clean managed worktrees whose commits reached the default branch, then merged `wt/*` branches left. */
@@ -210,7 +226,7 @@ export function pruneWorktrees(root: string): Pruned[] {
     if (!w.managed || w.state !== "clean" || !w.merged || w.branch === null) continue;
 
     if (!git(root, ["worktree", "remove", w.path]).ok) continue;
-    git(root, ["branch", "-D", w.branch]);
+    dropBranch(root, w.branch);
     removed.push({ branch: w.branch, path: w.path });
   }
 
@@ -223,6 +239,6 @@ function pruneBranches(root: string): Pruned[] {
   const branches = git(root, ["for-each-ref", "--format=%(refname:short)", HEADS_REF + BRANCH_PREFIX]).out.split("\n");
 
   return branches
-    .filter((b) => b !== "" && !held.has(b) && isMerged(root, b) && git(root, ["branch", "-D", b]).ok)
+    .filter((b) => b !== "" && !held.has(b) && isMerged(root, b) && dropBranch(root, b))
     .map((branch) => ({ branch, path: null }));
 }

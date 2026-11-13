@@ -7,12 +7,6 @@ export const BRANCH_PREFIX = "wt/";
 /** The ref prefix of a local branch. */
 export const HEADS_REF = "refs/heads/";
 
-/** What `repo worktree` takes. */
-export const WORKTREE_ARGS = "add <name> | finish [<name>] | list | prune | hook";
-
-/** What `repo worktree` prints for a command it does not know. */
-export const USAGE: string = `usage: bun repo worktree ${WORKTREE_ARGS}`;
-
 /** How people and agents run this script, in every message that names a next step. */
 export const WORKTREE_CMD = "bun repo worktree";
 
@@ -31,6 +25,13 @@ export const LOCKFILES: readonly string[] = ["bun.lock", "bun.lockb"];
 /** How long the dependency install of a new worktree may run. */
 export const INSTALL_TIMEOUT_MS = 120_000;
 
+/** The dir under the root that holds the bins its packages installed. */
+export const BIN_DIR = "node_modules/.bin";
+
+/** How long a delete of origin's branch or a `bun repo sync` in the root may run. */
+export const REMOTE_TIMEOUT_MS = 30_000;
+export const SYNC_TIMEOUT_MS = 120_000;
+
 /** What `defaultBranch` names when no branch is checked out and none is known. */
 export const NO_BRANCH = "HEAD";
 
@@ -43,6 +44,16 @@ export const FINISH_CMD = "finish";
 export const LIST_CMD = "list";
 export const PRUNE_CMD = "prune";
 export const HOOK_CMD = "hook";
+
+/** Every `repo worktree` subcommand, in the order help and usage name them. */
+export const WORKTREE_SUBCOMMANDS: readonly string[] = [ADD_CMD, FINISH_CMD, LIST_CMD, PRUNE_CMD, HOOK_CMD];
+
+/** What `repo worktree` takes. */
+const NAMED_ARGS = `${ADD_CMD} <name> | ${FINISH_CMD} [<name>]`;
+export const WORKTREE_ARGS: string = `${NAMED_ARGS} | ${LIST_CMD} | ${PRUNE_CMD} | ${HOOK_CMD}`;
+
+/** What `repo worktree` prints for a command it does not know. */
+export const USAGE: string = `usage: bun repo worktree ${WORKTREE_ARGS}`;
 
 /** The Claude Code events the hook answers. */
 export const CREATE_EVENT = "WorktreeCreate";

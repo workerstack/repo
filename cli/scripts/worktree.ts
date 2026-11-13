@@ -3,9 +3,10 @@
  * Worktrees live at `<root>/.worktrees/<name>` on branch `wt/<name>` (roadmap D5, D6).
  *
  *   bun repo worktree add <name>   make or reuse one; prints its path
- *   bun repo worktree finish [<name>]  rebase it onto the default branch, fast-forward that, remove worktree and branch
+ *   bun repo worktree finish [<name>]  rebase it onto the default branch, fast-forward that, remove worktree and
+ *                                  branch, delete origin's copy and run `bun repo sync` in the root
  *   bun repo worktree list         every linked worktree with its state
- *   bun repo worktree prune        remove clean ones whose own commits reached the default branch
+ *   bun repo worktree prune        remove clean ones whose own commits reached the default branch, and origin's copies
  *   bun repo worktree hook         Claude Code WorktreeCreate / WorktreeRemove on stdin
  */
 import fs from "node:fs";

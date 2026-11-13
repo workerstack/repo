@@ -4,7 +4,19 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
-import { captured, cli, commitIn, git, hasBranch, mainIn, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
+import {
+  addOrigin,
+  captured,
+  cli,
+  commitIn,
+  git,
+  hasBranch,
+  hasTracking,
+  mainIn,
+  scratch,
+  write,
+  wt,
+} from "./__fixtures__/worktree-repo.ts";
 import { mergedAndDirtyWorktrees } from "./__fixtures__/worktree-scenarios.ts";
 import type { HookInput } from "./hook-input.ts";
 import { isManaged } from "./worktree-git.ts";
@@ -49,6 +61,22 @@ it("removes only clean managed worktrees whose own commits reached the default b
   for (const n of ["fresh", "dirty", "un"]) expect(fs.existsSync(wt(r, n)), n).toBe(true);
   expect(fs.existsSync(outside)).toBe(true);
   expect(cli(r, ["prune"]).stdout).toBe("nothing to prune\n");
+});
+
+it("deletes origin's branch of a merged worktree it prunes, and of a merged branch left over", () => {
+  const r = tmp.repo();
+  addOrigin(r, tmp.dir("origin-"));
+  cli(r, ["add", "b"]);
+  commitIn(wt(r, "b"), "b.txt");
+  git(r, "branch", "wt/c", "main");
+  git(r, "merge", "-q", "--no-edit", "wt/b");
+  git(r, "push", "-q", "--no-verify", "origin", "wt/b", "wt/c");
+  const out = cli(r, ["prune"]);
+  expect(out.status, out.stderr).toBe(0);
+  expect(out.stdout).toContain(`removed ${wt(r, "b")} (wt/b)`);
+  expect(git(r, "ls-remote", "--heads", "origin", "wt/*")).toBe("");
+  expect(hasTracking(r, "wt/b") || hasTracking(r, "wt/c")).toBe(false);
+  expect(hasBranch(r, "wt/b") || hasBranch(r, "wt/c")).toBe(false);
 });
 
 it("prints native real paths when the project dir is an alias of the repo", () => {

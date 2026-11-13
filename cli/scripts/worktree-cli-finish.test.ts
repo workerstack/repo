@@ -4,7 +4,19 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cli, commitIn, git, hasBranch, scratch, short, subjects, write, wt } from "./__fixtures__/worktree-repo.ts";
+import {
+  addOrigin,
+  cli,
+  commitIn,
+  git,
+  hasBranch,
+  hasTracking,
+  scratch,
+  short,
+  subjects,
+  write,
+  wt,
+} from "./__fixtures__/worktree-repo.ts";
 
 const tmp = scratch();
 
@@ -138,4 +150,43 @@ it("converges when a crashed run left the work merged", () => {
   expect(fs.existsSync(wt(r, "kept"))).toBe(false);
   expect(hasBranch(r, "wt/kept")).toBe(false);
   expect(cli(r, ["finish", "kept"]).status).toBe(1);
+});
+
+/** A repo with worktree `a` holding one commit and an origin that holds `branches`; `broken` points origin nowhere. */
+function withOrigin(branches: string[], { broken = false }: { broken?: boolean } = {}): string {
+  const r = tmp.repo();
+  cli(r, ["add", "a"]);
+  commitIn(wt(r, "a"), "a.txt");
+  addOrigin(r, tmp.dir("origin-"), branches);
+
+  if (broken) git(r, "remote", "set-url", "origin", path.join(r, "no-such-origin"));
+
+  return r;
+}
+
+it("deletes origin's branch and its tracking ref when it lands", () => {
+  const r = withOrigin(["wt/a"]);
+  const out = cli(r, ["finish", "a"]);
+  expect(out.status, out.stderr).toBe(0);
+  expect(out.stderr).toBe("");
+  expect(git(r, "ls-remote", "--heads", "origin", "wt/a")).toBe("");
+  expect(hasTracking(r, "wt/a")).toBe(false);
+  expect(hasBranch(r, "wt/a")).toBe(false);
+});
+
+it("warns and still lands when origin cannot be reached", () => {
+  const r = withOrigin(["wt/a"], { broken: true });
+  const tip = git(wt(r, "a"), "rev-parse", "HEAD");
+  const out = cli(r, ["finish", "a"]);
+  expect(out.status, out.stderr).toBe(0);
+  expect(out.stderr).toMatch(/^could not delete origin's wt\/a: .+; run git push origin --delete wt\/a\n$/);
+  expect(git(r, "rev-parse", "main")).toBe(tip);
+  expect(hasBranch(r, "wt/a")).toBe(false);
+});
+
+it("skips the delete when origin has no tracking ref of the branch", () => {
+  const r = withOrigin([], { broken: true });
+  const out = cli(r, ["finish", "a"]);
+  expect(out.status, out.stderr).toBe(0);
+  expect(out.stderr).toBe("");
 });
