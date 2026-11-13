@@ -72,7 +72,7 @@ mode: away             # optional: ask | auto | away
 
 A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` wins over the session's `/ask` or `/away` flag, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 

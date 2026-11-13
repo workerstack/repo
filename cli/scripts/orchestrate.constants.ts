@@ -27,6 +27,12 @@ export const STOP_BLOCK_STAMP = "stop-block";
 export const PUSH_BLOCK_STAMP = "push-block";
 export const NEED_INTERCEPT_STAMP = "need-intercept";
 
+/** The items an /away Stop ran, as JSON `itemKey → mtimeMs` after its write, so a Stop runs each save once. */
+export const AWAY_RUN_STAMP = "away-run";
+
+export const AWAY_RUN_REASON =
+  "away: ran the approval block's header choice and logged it in each file, so re-read each file before you edit it";
+
 /** The session id stamps fall back to; it names no session of its own. */
 export const NO_SESSION = "default";
 

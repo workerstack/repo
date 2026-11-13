@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { MISTAKES_H2 } from "./persist-doc.constants.ts";
-import { mistakeLogErrors, parseMistakes, PLAN_MISTAKE_SOURCES, reviewErrors } from "./persist-mistakes.ts";
+import { mistakeLogErrors, parseMistakes, PLAN_MISTAKE_SOURCES, reviewErrors, withEntry } from "./persist-mistakes.ts";
 import { reviewsToEnter } from "./persist-plan.constants.ts";
 
 const OPTS = { gates: reviewsToEnter, review: "/review-plan {n}" };
@@ -98,5 +98,38 @@ describe("mistakeLogErrors", () => {
 describe("mistakeLogErrors entries", () => {
   it("reports a malformed entry", () => {
     expect(mistakeLogErrors([MISTAKES_H2], { [MISTAKES_H2]: "bad" }, opts)).toStrictEqual([`${ENTRY_FORMAT}bad`]);
+  });
+});
+
+describe("withEntry", () => {
+  const doc = "# x\n\n## Verify\n1 [ ] y\n";
+
+  it("replaces a (none) body with the line", () => {
+    const want = `${doc}\n## Previous mistakes\n${ENTRY}\n`;
+    expect(withEntry(`${doc}\n## Previous mistakes\n(none)\n\n`, ENTRY)).toBe(want);
+  });
+
+  it("appends after the last entry", () => {
+    expect(withEntry(`${doc}\n## Previous mistakes\n- verify: a → b`, ENTRY)).toBe(
+      `${doc}\n## Previous mistakes\n- verify: a → b\n${ENTRY}\n`,
+    );
+  });
+
+  it("adds the section at the end when there is none", () => {
+    expect(withEntry(`${doc}\n\n`, ENTRY)).toBe(`${doc}\n## Previous mistakes\n${ENTRY}\n`);
+  });
+
+  it("skips a fenced ## Previous mistakes line and keeps every line above the real one", () => {
+    const fenced = "# x\n\n```md\n## Previous mistakes\n- verify: a → b\n```\n\n## Verify\n1 [ ] y\n";
+    expect(withEntry(`${fenced}\n## Previous mistakes\n(none)\n`, ENTRY)).toBe(
+      `${fenced}\n## Previous mistakes\n${ENTRY}\n`,
+    );
+    expect(withEntry(fenced, ENTRY)).toBe(`${fenced}\n## Previous mistakes\n${ENTRY}\n`);
+  });
+
+  it("keeps existing entry lines as they are and drops only (none) and trailing blank lines", () => {
+    expect(withEntry(`${doc}\n## Previous mistakes\n\n- verify: a → b\n  \n\n`, ENTRY)).toBe(
+      `${doc}\n## Previous mistakes\n\n- verify: a → b\n${ENTRY}\n`,
+    );
   });
 });

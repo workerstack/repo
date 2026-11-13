@@ -1,6 +1,7 @@
-import { MISTAKES_H2, NONE_LINE, NOT_FOUND } from "./persist-doc.constants.ts";
 /** The `## Previous mistakes` log every plan and roadmap ends with, and the review count that gates a status. */
+import { LAST, MISTAKES_H2, NONE_LINE, NOT_FOUND } from "./persist-doc.constants.ts";
 import { hasKey, type FrontmatterMap, type Sections } from "./persist-doc.ts";
+import { lastHeadingIndex } from "./persist-sections.ts";
 
 /** Entry kinds a plan logs. A roadmap adds its own. */
 export const PLAN_MISTAKE_SOURCES: readonly string[] = ["feedback", "verify", "review", "premise", "decision"];
@@ -124,4 +125,23 @@ export function mistakeLogErrors(
   if (previous?.order.includes(MISTAKES_H2) === true) errors.push(...appendOnlyErrors(log.entries, previous, sources));
 
   return errors;
+}
+
+const TRAILING_NEWLINES_RE = /\n+$/;
+
+/**
+ * `text` with `line` logged under its last `## Previous mistakes` outside a fence: in place of `(none)`, after the
+ * last entry, or in a new section at the end when there is none. Lines above it and its entries stay as they are;
+ * only `(none)` and trailing blank lines go. The result ends in one newline.
+ */
+export function withEntry(text: string, line: string): string {
+  const lines = text.replace(TRAILING_NEWLINES_RE, "").split("\n");
+  const at = lastHeadingIndex(lines, MISTAKES_H2);
+
+  if (at === NOT_FOUND) return `${lines.join("\n")}\n\n## ${MISTAKES_H2}\n${line}\n`;
+  const entries = lines.slice(at + 1).filter((l) => l.trim() !== NONE_LINE);
+
+  while (entries.at(LAST)?.trim() === "") entries.pop();
+
+  return `${[...lines.slice(0, at + 1), ...entries, line].join("\n")}\n`;
 }

@@ -98,7 +98,7 @@ function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
 }
 
 // Reviewed plans and roadmaps this session saved that still wait for an `i`, in first-save order.
-function approvableItems(data: HookInput): ApprovalItem[] {
+export function approvableItems(data: HookInput): ApprovalItem[] {
   const file = approvalsFile(data);
 
   if (file === null) return [];
@@ -146,6 +146,11 @@ function runOf(i: ApprovalItem): string {
 
 function approveStep(i: ApprovalItem): string {
   return `${itemKey(i)}: ${runOf(i)}`;
+}
+
+/** What a bare `i` says for `items`: the queue, then each item's step, by default its run. */
+export function approvedText(items: ApprovalItem[], step: (i: ApprovalItem) => string = approveStep): string {
+  return `i approves ${queueText(items)}: ${items.map(step).join("; ")}`;
 }
 
 function strategyStep(i: ApprovalItem, strategy: Strategy): string {
@@ -251,11 +256,9 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
     return orchestrateHandoff(data, ws, queue);
   }
 
-  const steps = writes.map((w) =>
-    w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted),
-  );
+  const written = new Set(writes.flatMap((w) => (w.content === null ? [] : [w.item])));
 
-  return `i approves ${queueText(named)}: ${steps.join("; ")}`;
+  return approvedText(resolved, (i) => (wanted === null || !written.has(i) ? approveStep(i) : strategyStep(i, wanted)));
 }
 
 // Context for a reply of `i`, a code, `h` or a spelled-out choice that answers the previous reply's approval block.

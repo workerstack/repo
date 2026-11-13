@@ -24,7 +24,7 @@ describe("fast roadmap denials", () => {
   });
 
   it("denies sections beyond Order and Verify, and a missing one", () => {
-    const only = "a fast roadmap holds only Order and Verify";
+    const only = "a fast roadmap holds only Order and Verify, then an optional Previous mistakes";
     expect(errorsOf(`${SENT}\n## Goal\nx\n`)).toContain(only);
     expect(errorsOf(SENT.replace(/## Verify[\s\S]*$/, ""))).toContain(only);
   });

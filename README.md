@@ -101,7 +101,7 @@ Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when th
 
 `need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
 
-Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/ask` or `/away` stamps `.repo/tmp/orchestrator-logs/session-gate-{sid}` with `ask` or `away`; `/auto` unlinks either stamp. A plan or roadmap `mode:` wins over the flag.
+Session flags: `/auto` (default) keeps going and asks on blockers instead of monkey-patching. `/ask` finishes one step, recaps, then asks. `/away` decides instead of asking and logs each choice as a `- decision:` entry in the plan. Slash `/auto`, `/ask` or `/away` stamps `.repo/tmp/orchestrator-logs/session-gate-{sid}` with `auto`, `ask` or `away`. Any stamp beats a plan or roadmap `mode:`, which applies only with no stamp. Under away the Stop hook runs the approval block's header choice once the review settles and logs the decision.
 
 Scratch: `.repo/scratch/`. Stash: `.repo/tmp/stash/`. Sessions: `.repo/tmp/sessions/{sid}/`. Browser: `.repo/tmp/browser/`.
 
@@ -472,14 +472,14 @@ A short checklist for work the person chose to do fast. Saved by `cli/scripts/pe
 
 ### Body
 
-The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
+The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order, then an optional `## Previous mistakes`. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
 
 ### Cap and denials
 
-At most 40 lines, frontmatter included. Replies:
+At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are outside the cap. It is append-only, and under `/away` it holds the `- decision:` lines. Replies:
 
 - `a fast plan has no strategy`
-- `a fast plan holds only Goal, Steps and Verify`
+- `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
 - `a fast plan is at most 40 lines; write a plan (/write-plan)`
 - `a new fast plan has only [ ] boxes`
 
@@ -503,16 +503,16 @@ A short ordered program of fast plans, for work the person chose to do fast. Sav
 
 ### Body
 
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
 
 ### Cap and Location
 
-At most 20 lines, frontmatter included and Location lines not. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
+At most 20 lines, frontmatter included; Location lines and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
 
 ### Denials
 
 - `a fast roadmap has no strategy`
-- `a fast roadmap holds only Order and Verify`
+- `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
 - `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)`
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`
@@ -606,9 +606,9 @@ If `google-oauth.json` is missing, `login` prints `setup: bun repo setup google-
 
 SessionStart carries only the folder map: Claude / Codex run the `session-map` hook, which injects the code-only map `bun repo map` prints as `additionalContext` (capped under Claude Code's 10,000-char per-hook `additionalContext` limit, about 2.4k tokens, below the 5k `bun repo map` budget; cache-stable, fail-open) and logs `{rows, tokens}` to `.repo/tmp/sessions/<sid>/map.json`. Inject nothing else at SessionStart. Antigravity has no generated sessionStart. Do not register a SessionStart hook on `.grok/hooks/orchestrate-parent.json`.
 
-Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. UserPromptSubmit may emit a one-line `sessionGate=ask|auto|away` plus session receipt, then up to 8 other live lines from `~/.workerstack/board/` (`hookSpecificOutput.additionalContext`). The current session's own line is omitted. Skip host Stop banners. `/ask` and `/away` exact-match slashes stamp `session-gate-{sid}` to `ask` or `away`. `/auto` unlinks. Sid-less: no stamp. Default: `auto`. The `sessionGate=` word is the effective mode: the newest `in-progress` plan or roadmap in this session's `.repo/tmp/sessions/<sid>/approvals.txt` with a valid `mode:` wins, else the stamp, else `auto`. Another session's plans never count.
+Grok PostToolUse / SessionStart are observe-only — do not attempt output scrub; compress via RTK / spawn / isolation facts only. Do not add PostToolUse scrub hooks. UserPromptSubmit may emit a one-line `sessionGate=ask|auto|away` plus session receipt, then up to 8 other live lines from `~/.workerstack/board/` (`hookSpecificOutput.additionalContext`). The current session's own line is omitted. Skip host Stop banners. `/auto`, `/ask` and `/away` exact-match slashes stamp `session-gate-{sid}` to `auto`, `ask` or `away`. Sid-less: no stamp. Default: `auto`. The `sessionGate=` word is the effective mode: the stamp wins, else the newest `in-progress` plan or roadmap in this session's `.repo/tmp/sessions/<sid>/approvals.txt` with a valid `mode:`, else `auto`. Another session's plans never count.
 
-In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait scout`. Reason: `ask after this step`. In `sessionGate=away`, parent Stop blocks a reply whose last line ends in `?` and does not end with an approval block. Reason: `away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue`. Both blocks share the `stop-block` counter, cap 3, so a true blocker still reaches the person. `sessionGate=auto` does not Stop-block.
+In `sessionGate=ask`, parent Stop on `end_turn` blocks unless the recap asks (`?`) or is exactly `[orchestrator]: wait scout`. Reason: `ask after this step`. In `sessionGate=away`, parent Stop blocks a reply whose last line ends in `?` and does not end with an approval block. Reason: `away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue`. Both blocks share the `stop-block` counter, cap 3, so a true blocker still reaches the person. Under away, once the review settles, Stop also runs the approval block's header choice (a bare `i`) for every kind (plan, roadmap, fast-plan, fast-roadmap). It logs `- decision: approval of {kind N} under /away → i (strategy S) because away runs the block's header choice once the review settled` in each file's `## Previous mistakes`, stamps `away-run`, and blocks once with `away: ran the approval block's header choice and logged it in each file so re-read each file before you edit it; i approves …`. The `away-run` stamp keeps it to one run per approval block. `sessionGate=auto` does not Stop-block.
 
 Claude / Codex / Antigravity / Cursor PreToolUse still run the `scrub-spawn-prompt` and `gate-fat-tools` hooks. Grok spawn/fat rewrite is the `orchestrate-parent` hook. RTK stays `.grok/hooks/rtk.json`, which runs the `rtk-grok` hook.
 Every repo hook command finds the root (`$GROK_WORKSPACE_ROOT`, else `$CLAUDE_PROJECT_DIR`, else its git top level) and runs `<root>/node_modules/.bin/repo hook <name>`. A checkout with no install prints `repo: <root>/node_modules/.bin/repo is missing; run bun install` and exits 1, which never blocks the tool call. `bun repo sync --check` fails any repo hook in another form.
@@ -698,7 +698,7 @@ Enforcement, from the live probe of each harness's child payload:
 | antigravity | none; only a different `conversationId`, its only session-id key | no |
 | cursor | none; only a different `session_id` | no |
 
-An unenforced harness follows the rule as an instruction (`review-loop.md`). Cursor's `beforeSubmitPrompt` writes only `git-asked.json` in orchestrate-parent, so `i`, the codes and `h` have no effect there and `/away` never stamps; Cursor runs Stop, so `mode:` and the Stop rules still apply. Antigravity has no Stop hook, so the settled-review and away rules are prompt-only there. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt`, so no prompt can grant a git subcommand there and the git denies still apply; the Cursor IDE was not tested.
+An unenforced harness follows the rule as an instruction (`review-loop.md`). Cursor's `beforeSubmitPrompt` writes only `git-asked.json` in orchestrate-parent, so `i`, the codes and `h` have no effect there and no slash stamps: `/away` is prompt-only in Cursor, though a saved `mode: away` still runs Cursor's Stop. Antigravity has no Stop hook, so the settled-review, away and approval-run rules are prompt-only there. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt`, so no prompt can grant a git subcommand there and the git denies still apply; the Cursor IDE was not tested.
 
 `git-asked.json` (Worktrees) is keyed by sid. Claude and Codex children share the parent's sid and so its grant; a Grok, Cursor or Antigravity child has its own sid and gets none. Antigravity has no `git-asked.json`: the gate reads `lastUserInput` from the tool call, and an agy subagent's calls carry an empty one, so a child gets no grant.
 
@@ -1289,7 +1289,7 @@ mode: away             # optional: ask | auto | away
 
 A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` wins over the session's `/ask` or `/away` flag, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 
@@ -1561,7 +1561,7 @@ mode: away             # optional: ask | auto | away
 
 `strategy` is required: `default`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`). A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`); any session stamp beats it. A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 
 `/implement-roadmap` refuses `draft`.
 
@@ -1668,7 +1668,7 @@ Straight shot: one file, one obvious edit, nothing to decide. Do it, starting wi
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit.
 
-`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/away` decides instead of asking and logs each choice as a `decision` entry; approval still comes before an away run. Frontmatter `mode: ask|auto|away` on this session's in-progress plan or roadmap wins over the flag. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); Only the person picks a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan`.
+`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/auto` stamps `auto`. `/away` decides instead of asking and logs each choice as a `decision` entry; under away the Stop hook runs the approval block's header choice once the review settles and logs it. Any stamp beats a saved `mode: ask|auto|away`, which applies only when the session has no stamp. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); Only the person picks a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan`.
 
 ### Research
 

@@ -85,6 +85,13 @@ export function sectionBodies(text: string): Sections {
   return { bodies, order: h2.map((h) => h.title) };
 }
 
+/** The 0-based index of the last `## {title}` line outside code fences; NOT_FOUND when there is none. */
+export function lastHeadingIndex(lines: string[], title: string): number {
+  const { fenced } = fencedLineSet(lines);
+
+  return lines.findLastIndex((l, i) => !fenced.has(i) && H2_RE.exec(l)?.[1]?.trim() === title);
+}
+
 const USAGE_MISSING =
   "missing ## Usage after ## Goal: show what a person types and sees, before and after, in fenced blocks, " +
   'or one "No visible change:" line';

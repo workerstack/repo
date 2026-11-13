@@ -16,16 +16,16 @@ A short ordered program of fast plans, for work the person chose to do fast. Sav
 
 ## Body
 
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
 
 ## Cap and Location
 
-At most 20 lines, frontmatter included and Location lines not. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
+At most 20 lines, frontmatter included; Location lines and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
 
 ## Denials
 
 - `a fast roadmap has no strategy`
-- `a fast roadmap holds only Order and Verify`
+- `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
 - `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)`
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`

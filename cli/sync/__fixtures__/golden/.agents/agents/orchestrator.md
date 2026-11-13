@@ -20,4 +20,4 @@ model: inherit
 commandExecutionPolicy: eager
 inheritMcp: false
 ---
-Follow AGENTS.md. Scratch in `.repo/scratch/`. Browse with `bun repo browser`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.
+Follow AGENTS.md. Scratch in `.repo/scratch/`. Browse with `bun repo browser`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright. Under `/away` it decides instead of asking and returns its decisions for the parent to log.

@@ -22,7 +22,7 @@ Author `commit: type(scope): subject` on its own line before persist (scope opti
 
 Author `strategy: default|spawn-fast|spawn-deep` on its own line beside `commit:`. `default` for a small or docs-only plan. `spawn-fast` for multi-phase code work. `spawn-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `node_modules/@workerstack/repo/references/plan-format.md`.
 
-Author `mode: away` on its own line beside `strategy:` only when this session runs `/away`, and `mode: ask|auto|away` only when the person asked for that mode. Otherwise send no `mode:` line.
+Author `mode: away` on its own line beside `strategy:` only when this session runs `/away`, and `mode: ask|auto|away` only when the person asked for that mode. Otherwise send no `mode:` line. A session stamp beats a saved `mode:`; under away the Stop hook runs the approval block's `i` once the review settles, so do not wait for `y`.
 
 The plan is the proposal and caps the result (`node_modules/@workerstack/repo/references/scope.md`). A plan over 100 lines above `## Previous mistakes`, frontmatter included, is two or more slices: write a roadmap (`/write-roadmap`) instead. Before writing, research until every leaf is defensible; ask any plan-shaping question the user alone can answer, then research again on the answer. Do not default a plan-shaping choice. A minor open choice goes under Constraints as the chosen default plus "confirm".
 

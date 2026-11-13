@@ -14,4 +14,4 @@ description: 'Run a locked .repo/roadmaps-fast roadmap in order, each slice as a
    - Tick the slice `[x]` only after its plan is done.
 3. Run the Verify boxes and tick each `[x]`. Set `status: done`.
 
-No subagents, no journal, no review. Under `/away` do not ask: decide and continue. Stop on a blocker or a failed Verify and say where.
+No subagents, no journal, no review. Under `/away` do not ask: decide, log `- decision: {question} → {choice}, because {why}` in an optional trailing `## Previous mistakes` of the fast roadmap, and continue. Stop on a blocker or a failed Verify and say where.

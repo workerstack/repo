@@ -10,4 +10,4 @@ Finish one coherent step. Recap what landed. Ask whether to continue. Wait. Do n
 
 `/auto` is the default: keep going; ask only on blockers. Slash `/auto` unlinks the stamp and returns this session to auto.
 
-`/away` is the third flag: decide instead of asking, and log each choice.
+`/away` is the third flag: decide instead of asking, log each choice, and let the Stop hook run the approval. Any stamp beats a saved `mode:`.

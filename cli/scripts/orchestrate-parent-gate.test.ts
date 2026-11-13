@@ -67,13 +67,13 @@ it("UserPromptSubmit default additionalContext is sessionGate=auto", () => {
   expect(say(kit.temp(), "s1", "ship it")).toMatch(/sessionGate=auto/);
 });
 
-it("/ask stamps; /auto unlinks back to auto", () => {
+it("/ask stamps ask; /auto stamps auto", () => {
   const ws = kit.temp();
   const sid = "g1";
   expect(say(ws, sid, "/ask")).toMatch(/sessionGate=ask/);
   expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
   expect(say(ws, sid, "/auto")).toMatch(/sessionGate=auto/);
-  expect(fs.existsSync(stampAbs(ws, sid))).toBe(false);
+  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("auto");
   expect(say(ws, sid, "/ask")).toMatch(/sessionGate=ask/);
   expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
 });
