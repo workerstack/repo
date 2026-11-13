@@ -99,6 +99,19 @@ it.skipIf(process.platform === "win32")("reports exit 1 when claude dies on a si
   expect(result.code).toBe(1);
 });
 
+/** More input than a pipe buffers, so writing it to a claude that exits without reading breaks the pipe. */
+const PIPE_OVERFLOW = "x".repeat(4 * 1024 * 1024);
+
+it("reports claude's exit code when it exits before reading its input", async () => {
+  const bin = tempTree({});
+  plantStub(bin, "claude", { cmd: "exit /b 3", sh: "exit 3\n" });
+  vi.stubEnv("PATH", `${bin}${path.delimiter}${childEnv().PATH ?? ""}`);
+
+  const result = await claudeProcess({ ...CALL, args: [], stdin: PIPE_OVERFLOW });
+
+  expect(result.code).toBe(3);
+});
+
 it("rejects with the install line when claude is not on PATH", async () => {
   vi.stubEnv("PATH", tempTree({}));
 
