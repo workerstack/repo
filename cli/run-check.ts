@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { WRITE_FLAG } from "./check-context.constants.ts";
 import { ROOT_DIR, manifestFileOf, surfaceUnreadable } from "./check-deps.constants.ts";
 import type { CliDeps } from "./cli-deps.ts";
 import type { LoadResult } from "./config.ts";
@@ -133,6 +134,21 @@ async function checkRatchets(root: string, loaded: LoadResult, print: Printer): 
   print.fail([...ratchetProblems(root, coverage), ...knownFailures(root, files, coverage.knownFailures)]);
 }
 
+/** The shipped-context budget against main's; it runs only where `context-budget.json` exists. */
+async function checkContext(root: string, print: Printer): Promise<void> {
+  const { contextProblems } = await import("./check-context.ts");
+  print.fail(contextProblems(root));
+}
+
+/** `repo check --write`: rewrites the context budget and its ledger, and runs no other check. */
+async function writeContext(io: SyncIo, args: readonly string[]): Promise<void> {
+  const { parseContextFlags, writeContext: write } = await import("./check-context.ts");
+  const done = write(io.cwd, parseContextFlags(args));
+  (done.ok ? io.stdout : io.stderr)(`${done.message}\n`);
+
+  if (!done.ok) process.exitCode = 1;
+}
+
 /** Knip and actionlint, whose reports and problems print after every other check's. */
 async function checkTools(cwd: string, print: Printer): Promise<void> {
   const { checkKnipAt } = await import("./knip-check.ts");
@@ -144,8 +160,16 @@ async function checkTools(cwd: string, print: Printer): Promise<void> {
   print.fail(problems);
 }
 
-/** `repo check`: every check in order, then exit 1 on any problem, else sync --check's code. */
-export async function runCheck(io: SyncIo, deps: Pick<CliDeps, "runSync" | "checkIo">): Promise<void> {
+/**
+ * `repo check`: every check in order, then exit 1 on any problem, else sync --check's code. With `--write` in `args`
+ * it only rewrites the context budget; `--reason <text>` records a rise over main.
+ */
+export async function runCheck(
+  io: SyncIo,
+  deps: Pick<CliDeps, "runSync" | "checkIo">,
+  args: readonly string[],
+): Promise<void> {
+  if (args.includes(WRITE_FLAG)) return writeContext(io, args);
   const { cwd } = io;
   // Started first: the GitHub calls overlap the other checks, which never wait on them.
   const githubPending = import("./github-apply.ts").then(({ checkGithubAt }) => checkGithubAt(cwd, deps.checkIo));
@@ -160,6 +184,7 @@ export async function runCheck(io: SyncIo, deps: Pick<CliDeps, "runSync" | "chec
   await checkLint(cwd, print);
   await checkRelease(cwd, loaded, print);
   await checkRatchets(cwd, loaded, print);
+  await checkContext(cwd, print);
   await checkTools(cwd, print);
   const github = await githubPending;
   print.report(github.report);

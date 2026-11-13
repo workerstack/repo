@@ -37,6 +37,7 @@ const NODE_STEPS = `      - name: Remove node
 
 const E2E_JOB = `  e2e:
     name: e2e (\${{ matrix.label }})
+    if: github.event.pull_request.draft != true
     runs-on: \${{ matrix.os }}
     timeout-minutes: 40
     strategy:
@@ -88,7 +89,7 @@ describe("release gates", () => {
   it("rewrites a ci.yml that has the generated header on its first line", () => {
     const result = release(context(["release"], {}, { [CI_PATH]: `${HEADER}\nname: old\n` }));
     expect(result.errors).toStrictEqual([]);
-    expect(result.outputs).toHaveLength(1);
+    expect(result.outputs).toHaveLength(2);
   });
 
   it("refuses a hand-written ci.yml", () => {

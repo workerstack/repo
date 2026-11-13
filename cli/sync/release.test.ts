@@ -35,6 +35,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -47,6 +48,7 @@ permissions:
 jobs:
   test:
     name: test (\${{ matrix.label }})
+    if: github.event.pull_request.draft != true
     runs-on: \${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -158,7 +160,10 @@ describe("release", () => {
   it("writes the whole tracked ci.yml without an e2e job when the root has no test:e2e script", () => {
     expect(release(context(["release"]))).toStrictEqual({
       errors: [],
-      outputs: [{ content: HEAD, kind: "file", managed: "whole", path: CI_PATH, tracked: true }],
+      outputs: [
+        { content: HEAD, kind: "file", managed: "whole", path: CI_PATH, tracked: true },
+        expect.objectContaining({ path: ".github/dependabot.yml" }),
+      ],
     });
   });
 

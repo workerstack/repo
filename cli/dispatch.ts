@@ -53,7 +53,7 @@ function syncIo(): SyncIo {
 
 /** The commands this file runs itself, by name; help and version go by any of their spellings. */
 const BUILTINS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, Handler>([
-  ["check", (_flags, deps) => runCheck(syncIo(), deps)],
+  ["check", (flags, deps) => runCheck(syncIo(), deps, flags.args)],
   [
     "sync",
     async (flags, deps) => {

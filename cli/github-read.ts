@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { Gh, GhFailure } from "./github-gh.ts";
-import { MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
+import { ENABLED, MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
 import type { Current, CurrentRuleset } from "./github.types.ts";
 import { tryJson } from "./json.ts";
 
@@ -45,7 +45,24 @@ function rulesetSchema(): z.ZodType<CurrentRuleset> {
     }));
 }
 
-function repoSchema(): z.ZodType<{ description: string; homepage: string; topics: string[] }> {
+type Repo = {
+  description: string;
+  homepage: string;
+  topics: string[];
+  security_and_analysis?: Security | undefined;
+};
+
+type Status = { status: string };
+
+type Security = {
+  dependabot_security_updates: Status;
+  secret_scanning: Status;
+  secret_scanning_push_protection: Status;
+};
+
+function repoSchema(): z.ZodType<Repo> {
+  const status = z.object({ status: z.string() });
+
   return z.object({
     description: z
       .string()
@@ -55,6 +72,13 @@ function repoSchema(): z.ZodType<{ description: string; homepage: string; topics
       .string()
       .nullable()
       .transform((text) => text ?? ""),
+    security_and_analysis: z
+      .object({
+        dependabot_security_updates: status,
+        secret_scanning: status,
+        secret_scanning_push_protection: status,
+      })
+      .optional(),
     topics: z.array(z.string()),
   });
 }
@@ -117,8 +141,19 @@ export async function readCurrent(gh: Gh, slug: string): Promise<ReadResult> {
   if (!reporting.ok) return reporting;
 
   if (!alerts.ok) return alerts;
-  const { description, homepage, topics } = repo.value;
-  const current = { alerts: alerts.value, reporting: reporting.value.enabled, rulesets: rulesets.value };
+  const { description, homepage, topics, security_and_analysis: security } = repo.value;
+
+  // A repo answer without the key (a token that cannot see it) is a failure: never read as "on".
+  if (security === undefined) return UNEXPECTED;
+
+  const current = {
+    alerts: alerts.value,
+    pushProtection: security.secret_scanning_push_protection.status === ENABLED,
+    reporting: reporting.value.enabled,
+    rulesets: rulesets.value,
+    scanning: security.secret_scanning.status === ENABLED,
+    securityUpdates: security.dependabot_security_updates.status === ENABLED,
+  };
 
   return { current: { ...current, description, homepage, topics }, ok: true };
 }

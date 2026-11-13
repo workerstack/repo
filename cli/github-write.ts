@@ -69,6 +69,18 @@ function securityWrites({ slug, drifts }: Plan): Write[] {
   if (hasArea(drifts, "alerts"))
     writes.push({ call: { method: "PUT", path: `repos/${slug}/vulnerability-alerts` }, part: "Dependabot alerts on" });
 
+  if (hasArea(drifts, "scanning") || hasArea(drifts, "pushProtection")) {
+    const enabled = { status: "enabled" };
+    const body = { security_and_analysis: { secret_scanning: enabled, secret_scanning_push_protection: enabled } };
+    const part = "secret scanning and push protection on";
+    writes.push({ call: { body, method: "PATCH", path: `repos/${slug}` }, part });
+  }
+
+  if (hasArea(drifts, "securityUpdates")) {
+    const call: GhCall = { method: "PUT", path: `repos/${slug}/automated-security-fixes` };
+    writes.push({ call, part: "Dependabot security updates on" });
+  }
+
   return writes;
 }
 

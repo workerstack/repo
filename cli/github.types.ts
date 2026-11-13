@@ -54,6 +54,9 @@ export type Current = {
   rulesets: CurrentRuleset[];
   reporting: boolean;
   alerts: boolean;
+  scanning: boolean;
+  pushProtection: boolean;
+  securityUpdates: boolean;
   description: string;
   homepage: string;
   topics: string[];
@@ -61,7 +64,16 @@ export type Current = {
 
 /** One setting that differs, with the line that says how to fix it; a ruleset's lines carry its name. */
 export type Drift = {
-  area: "ruleset" | "reporting" | "alerts" | "description" | "homepage" | "topics";
+  area:
+    | "ruleset"
+    | "reporting"
+    | "alerts"
+    | "scanning"
+    | "pushProtection"
+    | "securityUpdates"
+    | "description"
+    | "homepage"
+    | "topics";
   name?: string;
   message: string;
   /** For description, homepage and topics: the value package.json wants. */

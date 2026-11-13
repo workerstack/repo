@@ -6,6 +6,9 @@ export type Settings = {
   rulesets: (Ruleset & { id: number })[];
   reporting: boolean;
   alerts: boolean;
+  scanning: boolean;
+  pushProtection: boolean;
+  securityUpdates: boolean;
   description: string | null;
   homepage: string | null;
   topics: string[];
@@ -15,6 +18,9 @@ export const EMPTY_SETTINGS = (): Settings => ({
   rulesets: [],
   reporting: false,
   alerts: true,
+  scanning: true,
+  pushProtection: true,
+  securityUpdates: true,
   description: null,
   homepage: null,
   topics: [],
@@ -57,8 +63,13 @@ function write(settings: Settings, { method, path, body }: GhCall): GhResult {
   }
   if (method === "PUT" && sub === "/private-vulnerability-reporting") settings.reporting = true;
   else if (method === "PUT" && sub === "/vulnerability-alerts") settings.alerts = true;
+  else if (method === "PUT" && sub === "/automated-security-fixes") settings.securityUpdates = true;
   else if (method === "PUT" && sub === "/topics") settings.topics = (body as { names: string[] }).names;
   else if (method === "PATCH" && sub === "") {
+    if (input.security_and_analysis !== undefined) {
+      settings.scanning = true;
+      settings.pushProtection = true;
+    }
     settings.description = (input.description as string | undefined) ?? settings.description;
     settings.homepage = (input.homepage as string | undefined) ?? settings.homepage;
   }
@@ -73,7 +84,13 @@ function read(settings: Settings, path: string): GhResult {
   if (path.endsWith("/private-vulnerability-reporting")) return ok({ enabled: settings.reporting });
   if (path.endsWith("/vulnerability-alerts")) return settings.alerts ? ok() : NOT_FOUND;
   const { description, homepage, topics } = settings;
-  return ok({ description, homepage, topics, name: "repo", private: false });
+  const status = (on: boolean) => ({ status: on ? "enabled" : "disabled" });
+  const security_and_analysis = {
+    secret_scanning: status(settings.scanning),
+    secret_scanning_push_protection: status(settings.pushProtection),
+    dependabot_security_updates: status(settings.securityUpdates),
+  };
+  return ok({ description, homepage, topics, name: "repo", private: false, security_and_analysis });
 }
 
 /** A fake gh over `initial` settings; `fail` may answer any call with a failure. */

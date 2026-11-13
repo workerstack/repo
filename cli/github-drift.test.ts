@@ -141,3 +141,18 @@ it("names a description, homepage and topics that differ from package.json", () 
     },
   ]);
 });
+
+it("names the three security settings that are off", () => {
+  const off = { ...served(), pushProtection: false, scanning: false, securityUpdates: false };
+  expect(driftOf(wantedOf(), off)).toStrictEqual([
+    { area: "scanning", message: `secret scanning is off: ${RUN}` },
+    { area: "pushProtection", message: `push protection is off: ${RUN}` },
+    { area: "securityUpdates", message: `Dependabot security updates are off: ${RUN}` },
+  ]);
+});
+
+it("names none of them when all three are on", () => {
+  expect(
+    driftOf(wantedOf(), { ...served(), pushProtection: true, scanning: true, securityUpdates: true }),
+  ).toStrictEqual([]);
+});

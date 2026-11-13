@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +18,7 @@ permissions:
 jobs:
   test:
     name: test (${{ matrix.label }})
+    if: github.event.pull_request.draft != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -139,6 +141,7 @@ jobs:
 
   e2e:
     name: e2e (${{ matrix.label }})
+    if: github.event.pull_request.draft != true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:

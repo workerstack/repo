@@ -1,4 +1,4 @@
-# repo:generated 5f5f1bf0
+# repo:generated 901d0e1a
 * text=auto eol=lf
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
@@ -32,6 +32,7 @@
 .github/ISSUE_TEMPLATE/bug_report.yml linguist-generated
 .github/ISSUE_TEMPLATE/config.yml linguist-generated
 .github/PULL_REQUEST_TEMPLATE.md linguist-generated
+.github/dependabot.yml linguist-generated
 .github/workflows/bench.yml linguist-generated
 .github/workflows/ci.yml linguist-generated
 .github/workflows/nightly.yml linguist-generated

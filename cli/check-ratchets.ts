@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 /**
  * The ratchets `repo check` holds against main: coverage floors only rise (a rename carries its floor), the
  * known-failures list only shrinks, a mutation floor never drops, and a lint rule's baseline total never rises for a
@@ -11,59 +10,22 @@ import path from "node:path";
 import { z } from "zod";
 
 import {
-  COMMON_BRANCHES,
   DEFAULT_FLOORS,
   DEFAULT_MUTATION_FLOORS,
-  DETACHED,
   NEWLINE,
-  ORIGIN,
   RENAME,
   RENAME_COLUMNS,
   TAB,
 } from "./check-ratchets.constants.ts";
-import { childEnv } from "./env.ts";
 import { isString, tryJson } from "./json.ts";
 import { DEFAULT_LIST } from "./known-failures.constants.ts";
+import { git, mainRef, showOnMain } from "./main-ref.ts";
 import { BASELINE_PATH } from "./scripts/lint-baseline.constants.ts";
-import { toolEnv } from "./scripts/tool-env.ts";
-import { defaultBranch } from "./scripts/worktree-git.ts";
 
 /** Where the ratcheted files live, as the config's `coverage` section names them. */
 export type RatchetPaths = { floors?: string; knownFailures?: string; mutationFloors?: string };
 
 type Table = Record<string, Record<string, number>>;
-
-/** git's stdout, or null when it failed; run without any `GIT_*` variable a hook set. */
-function git(root: string, args: string[]): string | null {
-  const run = spawnSync("git", args, { cwd: root, encoding: "utf8", env: toolEnv(childEnv()) });
-
-  return run.status === 0 ? run.stdout : null;
-}
-
-function hasRef(root: string, ref: string) {
-  return git(root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]) !== null;
-}
-
-/** The branches a clone without a local main may still have as `origin/<name>`. */
-function originNames(root: string): string[] {
-  const head = git(root, ["symbolic-ref", "--short", `refs/remotes/${ORIGIN}/HEAD`]);
-
-  return [head?.trim().replace(`${ORIGIN}/`, "") ?? "", ...COMMON_BRANCHES].filter(Boolean);
-}
-
-/**
- * Main's ref: the local default branch, else `origin/<name>`. The default branch falling back to the current branch
- * (or HEAD) is no main, since that compares a branch with itself.
- */
-function mainRef(root: string): string | null {
-  const name = defaultBranch(root);
-  const current = git(root, ["symbolic-ref", "--short", "HEAD"])?.trim();
-
-  if (name !== DETACHED && name !== current && hasRef(root, name)) return name;
-  const remote = [name, ...originNames(root)].map((n) => `${ORIGIN}/${n}`);
-
-  return remote.find((ref) => hasRef(root, ref)) ?? null;
-}
 
 /** Where a ratcheted file is read on main: the repo, main's ref and the file's root-relative path. */
 type OnMain = { root: string; ref: string; rel: string };
@@ -100,7 +62,7 @@ function parse<T>(schema: z.ZodType<T>, text: string | null): T | undefined {
 }
 
 function readMain<T>(schema: z.ZodType<T>, { root, ref, rel }: OnMain): T | undefined {
-  return parse(schema, git(root, ["show", `${ref}:${rel}`]));
+  return parse(schema, showOnMain(root, ref, rel));
 }
 
 function readHere<T>(schema: z.ZodType<T>, root: string, rel: string): T | undefined {

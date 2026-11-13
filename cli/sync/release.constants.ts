@@ -1,4 +1,20 @@
 export const CI_PATH: string = ".github/workflows/ci.yml";
+export const DEPENDABOT_PATH: string = ".github/dependabot.yml";
+
+/** The Dependabot config: weekly github-actions updates in one group, each release waiting 7 days. */
+export const DEPENDABOT: string = `version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
+`;
+
 export const E2E_SCRIPT: string = "test:e2e";
 
 /** Action pins, each a full commit SHA with its release as the comment. */
@@ -55,6 +71,7 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -83,6 +100,12 @@ export const NON_ROOT_STEP: string = `      - name: Refuse to run as root
         if: runner.os != 'Windows'
         run: |
           if [ "$(id -u)" = "0" ]; then echo "${ROOT_REFUSAL}"; exit 1; fi`;
+
+/**
+ * Skips a job on a draft pull request; the pull_request context is empty on push and workflow_dispatch, so it runs
+ * there.
+ */
+export const NOT_DRAFT: string = "    if: github.event.pull_request.draft != true";
 
 export const MATRIX: string = `    runs-on: \${{ matrix.os }}
     timeout-minutes: %MINUTES%
