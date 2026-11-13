@@ -30,3 +30,5 @@ At most 40 lines, frontmatter included. Replies:
 ## Approval
 
 All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy codes. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
+
+A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.

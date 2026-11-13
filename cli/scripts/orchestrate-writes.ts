@@ -21,6 +21,8 @@ import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
 import type { HookResult, ItemKind, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
 import { validateFastPlan } from "./persist-fast-plan-validate.ts";
 import { persistFastPlan, prepareFastPlanUpdate } from "./persist-fast-plan.ts";
+import { validateFastRoadmap } from "./persist-fast-roadmap-validate.ts";
+import { persistFastRoadmap, prepareFastRoadmapUpdate } from "./persist-fast-roadmap.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
@@ -52,6 +54,11 @@ const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; p
     persist: persistFastPlan,
     prepare: prepareFastPlanUpdate,
     validate: (name, text, { fresh }) => validateFastPlan(name, text, { fresh }),
+  },
+  "fast-roadmap": {
+    persist: persistFastRoadmap,
+    prepare: prepareFastRoadmapUpdate,
+    validate: validateFastRoadmap,
   },
   plan: { persist: persistPlan, prepare: preparePlanUpdate, validate: validatePlan },
   roadmap: { persist: persistRoadmap, prepare: prepareRoadmapUpdate, validate: validateRoadmap },

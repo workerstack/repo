@@ -94,6 +94,13 @@ export const ITEM_KINDS: Readonly<Record<ItemKind, ItemSpec>> = {
     needsReview: false,
     prefix: "",
   },
+  "fast-roadmap": {
+    approvable: /* @__PURE__ */ new Set(["draft", "locked"]),
+    command: "/implement-roadmap-fast",
+    dir: "roadmaps-fast",
+    needsReview: false,
+    prefix: "set status locked, then ",
+  },
   plan: {
     approvable: /* @__PURE__ */ new Set(["ready"]),
     command: "/implement-plan",
@@ -111,7 +118,7 @@ export const ITEM_KINDS: Readonly<Record<ItemKind, ItemSpec>> = {
 };
 
 /** The kinds in the order a path is tried against their dirs. */
-export const ITEM_KIND_LIST: readonly ItemKind[] = ["plan", "roadmap", "fast-plan"];
+export const ITEM_KIND_LIST: readonly ItemKind[] = ["plan", "roadmap", "fast-plan", "fast-roadmap"];
 
 /** The kind a `/review-plan N` or `/review-roadmap N` spawn names. */
 export const PLAN_KIND = "plan";

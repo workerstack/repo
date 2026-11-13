@@ -60,12 +60,14 @@ export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: s
 export function persistOwner(
   absPath: string,
   root: string,
-): "plans" | "plans-fast" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
+): "plans" | "plans-fast" | "roadmaps" | "roadmaps-fast" | "handoffs" | "implementations" | "tmp" | null {
   if (isUnderRepoDir(absPath, root, "plans")) return "plans";
 
   if (isUnderRepoDir(absPath, root, "plans-fast")) return "plans-fast";
 
   if (isUnderRepoDir(absPath, root, "roadmaps")) return "roadmaps";
+
+  if (isUnderRepoDir(absPath, root, "roadmaps-fast")) return "roadmaps-fast";
 
   if (isUnderRepoDir(absPath, root, "handoffs")) return "handoffs";
 

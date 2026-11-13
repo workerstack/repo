@@ -7,7 +7,16 @@ import { aliasOf } from "../../dev/test-paths";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { realDir } from "./__fixtures__/real-dir.ts";
 import { ENFORCED_HARNESSES, MODES, STRATEGIES } from "./strategy.constants.ts";
-import { activeReview, implementerOf, parseMode, parseStrategy, stampPath, writeStamp } from "./strategy.ts";
+import {
+  activeReview,
+  hasStrategy,
+  implementerOf,
+  kindHasStrategy,
+  parseMode,
+  parseStrategy,
+  stampPath,
+  writeStamp,
+} from "./strategy.ts";
 
 useTempDirs();
 
@@ -134,4 +143,13 @@ it("stamps through a symlinked spelling of the root and finds the plan", () => {
 
 it("enforces the harnesses whose child payload carries a marker: claude (and Grok through it) and codex", () => {
   expect([...ENFORCED_HARNESSES].toSorted()).toStrictEqual(["claude", "codex"]);
+});
+
+it("tells an item that has a strategy from a fast plan or fast roadmap", () => {
+  expect(hasStrategy({ kind: "plan", serial: 1, strategy: "default" })).toBe(true);
+  expect(hasStrategy({ kind: "roadmap", serial: 1, strategy: "spawn-deep" })).toBe(true);
+  expect(hasStrategy({ kind: "fast-plan", serial: 1 })).toBe(false);
+  expect(hasStrategy({ kind: "fast-roadmap", serial: 1 })).toBe(false);
+  expect(kindHasStrategy("plan")).toBe(true);
+  expect(kindHasStrategy("fast-roadmap")).toBe(false);
 });

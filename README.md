@@ -12,6 +12,7 @@ Agent workflow, code standards, gates, workspace and docs checks for workerstack
 - [Cloudflare](#cloudflare)
 - [Exports](#exports)
 - [Fast plan format (SSOT)](#fast-plan-format-ssot)
+- [Fast roadmap format (SSOT)](#fast-roadmap-format-ssot)
 - [google-workspace](#google-workspace)
 - [Hooks](#hooks)
 - [Implementation format (SSOT)](#implementation-format-ssot)
@@ -486,6 +487,45 @@ At most 40 lines, frontmatter included. Replies:
 
 All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy codes. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
 
+A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
+
+## Fast roadmap format (SSOT)
+
+A short ordered program of fast plans, for work the person chose to do fast. Saved by `cli/scripts/persist-fast-roadmap.ts`. Default is a roadmap (`roadmap-format.md`).
+
+### Path
+
+`.repo/roadmaps-fast/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. Serials count in `roadmaps-fast` only.
+
+### Frontmatter
+
+`serial`, `name`, `status` (`draft | locked | in-progress | done`), `created`, `source`. No `strategy`, no `reviews`.
+
+### Body
+
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+
+### Cap and Location
+
+At most 20 lines, frontmatter included and Location lines not. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
+
+### Denials
+
+- `a fast roadmap has no strategy`
+- `a fast roadmap holds only Order and Verify`
+- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)`
+- `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
+- `a new fast roadmap has only [ ] boxes`
+- `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
+
+### Approval
+
+Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy codes. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
+
+### Run
+
+`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`.
+
 ## google-workspace
 
 Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session.
@@ -591,7 +631,7 @@ Payload: `cursor_version`, `session_id`, `model`, `tool_name`, `tool_input`, `cw
 
 Reply: a deny is `{"permission":"deny","user_message":reason,"agent_message":reason}`. A rewrite is Claude's nested `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{...}}}` with no `permission` and no top-level field (Cursor reads the nested form only then; `permission` would also auto-approve). Cursor applies a rewritten `command` (Shell) and `file_path` (Write), but writes its own `content`: a persisted tmp write lands at the `.repo/scratch/` path with its `TMP_NAME:` line still in the body. Empty stdout with exit 0 allows. Invalid JSON on stdout blocks the call. `stop` may reply `{"decision":"block","reason":...}`. orchestrate-parent handles Cursor's `beforeSubmitPrompt` only to write `git-asked.json` (see Worktrees); there it stamps no `/ask` or `/away`, handles no `y` or `h`, prints no board line and adds no context.
 
-Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.repo/plans/`, `.repo/plans-fast/` (a fast plan the person asked for: `fast-plan-format.md`; no review, no strategy, its block is `fast-plan {n}` with `i` and `h` only), `.repo/handoffs/`, `.repo/implementations/`, `.repo/roadmaps/`, and `.repo/scratch/` root files persist via `cli/scripts/persist-plan.ts` / `persist-handoff.ts` / `persist-implementation.ts` / `persist-tmp.ts` / `persist-roadmap.ts`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
+Session agent tools are on. Fat Read/Grep/Glob/Bash still gate. Writes under `.repo/plans/`, `.repo/plans-fast/` (a fast plan the person asked for: `fast-plan-format.md`; no review, no strategy, its block is `fast-plan {n}` with `i` and `h` only), `.repo/roadmaps-fast/` (a fast roadmap the person asked for: `fast-roadmap-format.md`; at most 20 lines, block `fast-roadmap {n}` with `i` and `h` only), `.repo/handoffs/`, `.repo/implementations/`, `.repo/roadmaps/`, and `.repo/scratch/` root files persist via `cli/scripts/persist-plan.ts` / `persist-handoff.ts` / `persist-implementation.ts` / `persist-tmp.ts` / `persist-roadmap.ts`. The hook hands the host the absolute path of the saved file. Invalid body denies. A Write of a saved plan updates that file in place (same serial); an Edit of a saved plan is checked against the text it would produce, and a valid one runs as sent. `## Previous mistakes` entries are append-only on both. Roadmaps follow the same rules: a Write of a saved roadmap is validated and the host writes it, and an Edit is checked against the text it would produce.
 
 Writes under `.repo/lessons/` go through `bun repo lessons`: a lesson Write in a managed worktree is validated, saved, and reindexed (`INDEX.md`) there, and the same Write in the main checkout is denied with the Worktrees reason; an Edit of a lesson is denied with the Write and `lessons.ts hit` routes. Lessons match per holding checkout: the root, or the managed worktree that holds the file; an unmanaged linked worktree falls back to the caller's checkout. On any other Write or Edit, PreToolUse adds `additionalContext` for lessons whose globs match the file, each once per session (`.repo/tmp/sessions/<sid>/lessons-seen.json`). It reads the lesson files, not `INDEX.md`, and fails open.
 
@@ -1628,7 +1668,7 @@ Straight shot: one file, one obvious edit, nothing to decide. Do it, starting wi
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit.
 
-`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/away` decides instead of asking and logs each choice as a `decision` entry; approval still comes before an away run. Frontmatter `mode: ask|auto|away` on this session's in-progress plan or roadmap wins over the flag. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan`.
+`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/away` decides instead of asking and logs each choice as a `decision` entry; approval still comes before an away run. Frontmatter `mode: ask|auto|away` on this session's in-progress plan or roadmap wins over the flag. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); Only the person picks a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan`.
 
 ### Research
 

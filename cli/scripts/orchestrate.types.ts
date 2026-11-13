@@ -8,7 +8,7 @@ import type { Roots } from "./workspace-root.ts";
 
 export type Strategy = (typeof STRATEGIES)[number];
 
-/** The kinds of saved item the hooks route: plan, roadmap and fast plan. */
+/** The kinds of saved item the hooks route: plan, roadmap, fast plan and fast roadmap. */
 export type ItemKind = BlockKind;
 
 /** What differs per item kind; the table is `ITEM_KINDS`. */
@@ -25,7 +25,7 @@ export type ItemSpec = {
   command: string;
 };
 
-/** A plan, roadmap or fast plan, as the approval block names it. */
+/** A plan, roadmap, fast plan or fast roadmap, as the approval block names it. */
 export type Approvable = BlockItem;
 
 /** A saved item by kind and serial, never by path text. */
@@ -36,6 +36,9 @@ export type ApprovalItem = {
   path: string;
   mtime: number;
 } & Approvable;
+
+/** A saved item that has a strategy to write: a full plan or roadmap. */
+export type StrategyItem = Extract<ApprovalItem, { strategy: Strategy }>;
 
 /** A reply of `i` or `h`, with or without a strategy. */
 export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApproval>>, { kind: "unknown" }>;
@@ -65,7 +68,7 @@ export type StrategyWrite = { ok: true; content: string | null } | { ok: false; 
 
 export type StrategyChange = { item: ApprovalItem; content: string | null };
 
-/** One handoff queue entry: the item, the strategy it runs (none for a fast plan) and whether that was written. */
+/** One handoff queue entry: the item, the strategy it runs (none for a fast item) and whether that was written. */
 export type HandoffEntry = { item: ApprovalItem; strategy: Strategy | null; written: boolean };
 
 /**

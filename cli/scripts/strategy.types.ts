@@ -6,12 +6,15 @@ export type SpawnStrategy = Exclude<Strategy, "default">;
 
 export type Mode = "ask" | "auto" | "away";
 
-/** What an approval block can name: a full plan or roadmap, with its strategy, or a fast plan, which has none. */
-export type ItemKind = "plan" | "roadmap" | "fast-plan";
+/**
+ * What an approval block can name: a full plan or roadmap, with its strategy, or a fast plan or roadmap, which have
+ * none.
+ */
+export type ItemKind = "plan" | "roadmap" | "fast-plan" | "fast-roadmap";
 
 export type Approvable =
   | { kind: "plan" | "roadmap"; serial: number; strategy: Strategy }
-  | { kind: "fast-plan"; serial: number };
+  | { kind: "fast-plan" | "fast-roadmap"; serial: number };
 
 export type Approval =
   | { kind: "approve"; strategy: Strategy | null }
