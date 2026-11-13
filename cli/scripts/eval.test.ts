@@ -1,34 +1,15 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { expect, it } from "vitest";
 
 import { dollars, estimate } from "../eval/estimate.ts";
 import { loadEval } from "../eval/load.ts";
-import { main, type EvalDeps } from "./eval.ts";
+import { answer, EVAL_FIXTURES as ROOT, MESSAGE, useEvalRun } from "./__fixtures__/eval-run.ts";
+import { main } from "./eval.ts";
 
-const ROOT = path.join(import.meta.dirname, "..", "eval", "__fixtures__");
-const MESSAGE = { content: [{ text: "yes", type: "text" }], usage: { input_tokens: 100, output_tokens: 200 } };
-const NOW = new Date("2026-11-13T10:15:00.123Z");
 const SUMMARY_LINE = /^summary (?<file>.+-20261113T101500123Z-[0-9a-f]{4}\.json)$/m;
-
-let stateDir = "";
-
-beforeEach(() => {
-  stateDir = fs.mkdtempSync(path.join(os.tmpdir(), "eval-state-"));
-});
-
-afterEach(() => {
-  fs.rmSync(stateDir, { force: true, recursive: true });
-});
-
-/** The summary files the runs so far left in the state dir. */
-function summaries(): string[] {
-  const runs = path.join(stateDir, "runs");
-
-  return fs.existsSync(runs) ? fs.readdirSync(runs) : [];
-}
+const { run, state, summaries } = useEvalRun();
 
 /** The parsed summary file a run's stdout names. */
 function summaryOf(out: string): { end: { kind: string; message?: string }; cached: number; calls: number } {
@@ -36,43 +17,6 @@ function summaryOf(out: string): { end: { kind: string; message?: string }; cach
 
   // The summary is JSON this command wrote; the test reads back the fields it asserts.
   return JSON.parse(fs.readFileSync(file, "utf8")) /* written by writeSummary */ as ReturnType<typeof summaryOf>;
-}
-
-/** The API answering `yes` with fixed usage. */
-function answer(): Promise<Response> {
-  return Promise.resolve(new Response(JSON.stringify(MESSAGE)));
-}
-
-/** Runs `repo eval argv` against the fixtures; the key reads and the fetch calls are counted. */
-async function run(argv: string[], deps: EvalDeps = {}) {
-  const out: string[] = [];
-  const err: string[] = [];
-  const state = { fetches: 0, keyReads: 0 };
-
-  function fetchFn(): Promise<Response> {
-    state.fetches += 1;
-
-    return answer();
-  }
-
-  const code = await main(argv, {
-    env: {
-      get ANTHROPIC_API_KEY() {
-        state.keyReads += 1;
-
-        return "key";
-      },
-    },
-    fetchFn,
-    now: () => NOW,
-    root: ROOT,
-    state: stateDir,
-    stderr: (s) => err.push(s),
-    stdout: (s) => out.push(s),
-    ...deps,
-  });
-
-  return { code, err: err.join(""), out: out.join(""), ...state };
 }
 
 async function worst() {
@@ -184,7 +128,7 @@ it("reads the main checkout's cache by default on a dry run", async () => {
 
 it("stamps the summary with the real clock by default", async () => {
   const out: string[] = [];
-  const deps = { env: { ANTHROPIC_API_KEY: "key" }, fetchFn: answer, root: ROOT, state: stateDir };
+  const deps = { env: { ANTHROPIC_API_KEY: "key" }, fetchFn: answer, root: ROOT, state: state() };
   const code = await main(["sample"], { ...deps, stdout: (s) => out.push(s) });
 
   expect(code).toBe(0);
@@ -233,7 +177,7 @@ it("prints usage with no name, two names or an unknown flag", async () => {
 
   for (const got of runs) {
     expect(got).toMatchObject({ code: 4, out: "" });
-    expect(got.err).toBe("usage: bun repo eval <name> [--dry-run] [--max-cost <usd>]\n");
+    expect(got.err).toBe("usage: bun repo eval <name> [--dry-run] [--max-cost <usd>] [--changed <base>]\n");
   }
 });
 

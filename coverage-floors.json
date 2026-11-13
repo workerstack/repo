@@ -179,6 +179,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/eval/changed.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/eval/client.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -192,6 +198,12 @@
     "statements": 100
   },
   "cli/eval/estimate.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/eval/first-line-is.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

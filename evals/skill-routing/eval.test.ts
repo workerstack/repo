@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import { loadEval } from "../../cli/eval/load.ts";
 import { cases } from "./cases.ts";
-import { routesTo } from "./routes-to.ts";
 import { skillSystem } from "./skill-system.ts";
 
 const SKILLS = join(import.meta.dirname, "..", "..", "agents", "skills");
@@ -54,18 +53,6 @@ describe("skillSystem", () => {
   });
 });
 
-describe("routesTo", () => {
-  const grade = routesTo("commit");
-
-  it.each(["commit", "/commit", "`commit`", "commit.", "Commit\n"])("accepts %j", (answer) => {
-    expect(grade(answer)).toBe(true);
-  });
-
-  it.each(["commit-push", "none", "I would use commit"])("rejects %j", (answer) => {
-    expect(grade(answer)).toBe(false);
-  });
-});
-
 it("has 12 routed cases and 12 controls", () => {
   expect(routed).toHaveLength(12);
   expect(controls).toHaveLength(12);
@@ -104,12 +91,13 @@ describe("skill routing cases", () => {
 });
 
 describe("skill routing eval", () => {
-  it("loads through the runner with the haiku model and its grader accepts only each expected name", async () => {
+  it("loads on haiku with the files it reads, and its grader accepts only each expected name", async () => {
     const loaded = await loadEval(ROOT, "skill-routing");
 
     if (!loaded.ok) throw new Error(loaded.message);
 
     expect(loaded.spec.model).toBe("claude-haiku-5-5");
+    expect(loaded.spec.files).toStrictEqual(["agents/skills", "cli/eval", "cli/sync/agents/frontmatter.ts"]);
     expect(loaded.spec.cases.map((entry) => entry.id)).toStrictEqual(cases.map((entry) => entry.id));
 
     for (const [index, entry] of cases.entries()) {
