@@ -7,6 +7,9 @@ export const DIR_PREFIX = "--dir=";
 
 export const USAGE: string = "usage: repo shim [--check | --dry-run] [--dir <path>]";
 
+export const SHIM_SUMMARY: string =
+  "Install a `repo` command that runs the project's own copy (--check, --dry-run, --dir <path>)";
+
 export const WINDOWS = "win32";
 
 /** The launcher, as a file every OS gets, and the two extra files Windows needs for cmd.exe and PowerShell. */
