@@ -77,6 +77,7 @@ export const HOSTS = [
   { dest: ".codex/config.toml", format: "toml", id: "codex" },
   { dest: ".gemini/antigravity-cli/settings.json", format: "json", id: "antigravity" },
   { dest: ".cursor/cli-config.json", format: "json", id: "cursor" },
+  { dest: ".config/opencode/opencode.json", format: "json", id: "opencode" },
 ] as const;
 
 export const CLAUDE = HOSTS[1];

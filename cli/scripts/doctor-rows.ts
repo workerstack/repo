@@ -8,6 +8,17 @@ import { sectionBody } from "../sync/maps.ts";
 import { isSelf } from "../sync/stock.ts";
 import type * as checkGlobalsModule from "./check-globals.ts";
 import { GLOBALS_MANIFEST_REL, MAPS_SECTIONS, ROW_PAD } from "./doctor.constants.ts";
+import { shimState } from "./shim.ts";
+
+/** The `shim` row: the launcher in its default dir is `ok`, `not installed`, or `stale` against this package's copy. */
+export function shimRow(o: { home: string; platform: string; localAppData: string | undefined }): string {
+  const source = fs.readFileSync(path.join(packageRoot(), "cli", "scripts", "shim-launcher.mjs"), "utf8");
+  const state = shimState({ ...o, source });
+
+  if (state === "ok") return row("shim", "ok");
+
+  return row("shim", state === "missing" ? "not installed" : "stale", "run `repo shim`");
+}
 
 export function errorText(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);

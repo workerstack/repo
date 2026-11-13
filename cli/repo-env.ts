@@ -27,6 +27,7 @@ const config = {
     LISTEN_SECONDS: "optional",
     LISTEN_STT: "optional",
     LISTEN_WHISPER_MODEL: "optional",
+    LOCALAPPDATA: "optional",
     NODE_PATH: "optional",
     NPM_CONFIG_REGISTRY: "optional",
     OPENAI_API_KEY: "optional",

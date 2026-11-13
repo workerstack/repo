@@ -65,6 +65,20 @@ export default defineConfig({
   lint: {
     skip: [
       {
+        files: ["cli/scripts/shim-launcher.mjs"],
+        reason:
+          "the installed `repo` is this file byte for byte, so it is plain JS with no type syntax; " +
+          "typed rules read its node: imports as unresolved because no tsconfig includes it",
+        rules: [
+          "typescript/no-unsafe-assignment",
+          "typescript/no-unsafe-call",
+          "typescript/no-unsafe-member-access",
+          "typescript/no-unsafe-return",
+          "typescript/strict-boolean-expressions",
+          "repo/no-module-side-effects",
+        ],
+      },
+      {
         files: ["cli/sync/apply-migration.ts"],
         reason:
           "the steps run in plan order so a crash after step n leaves only later steps undone " +

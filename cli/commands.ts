@@ -39,6 +39,7 @@ import { LISTEN_ARGS } from "./scripts/listen.constants.ts";
 import { PHASE_FILES_USAGE } from "./scripts/phase-files.constants.ts";
 import { PUSH_SUMMARY, USAGE as PUSH_USAGE } from "./scripts/push.constants.ts";
 import { SETUP_TARGETS } from "./scripts/setup.constants.ts";
+import { USAGE as SHIM_USAGE } from "./scripts/shim.constants.ts";
 import { SPEAK_ARGS } from "./scripts/speak.constants.ts";
 import { WORKTREE_ARGS } from "./scripts/worktree.constants.ts";
 import { UPDATE_SUMMARY, USAGE as UPDATE_USAGE } from "./update.constants.ts";
@@ -62,6 +63,11 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     load: () => import("./scripts/setup.ts"),
     summary: "Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)",
     usage: `usage: repo setup ${SETUP_TARGETS} [--redo]`,
+  },
+  shim: {
+    load: () => import("./scripts/shim.ts"),
+    summary: "Install a `repo` command that runs the project's own copy (--check, --dry-run, --dir <path>)",
+    usage: SHIM_USAGE,
   },
   tasks: {
     load: () => import("./scripts/vscode-tasks.ts"),

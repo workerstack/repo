@@ -52,7 +52,8 @@ it("writes the Usage keys for every host", () => {
   expect(syncGlobals({ apply: true, home, workspaceRoot: repoRoot }).ok).toBe(true);
   const dests = HOSTS.map((h) => readHostDest(home, h));
 
-  const [grok, claude, codex, agy, cursor] = dests /* one per HOSTS entry */ as [
+  const [grok, claude, codex, agy, cursor, opencode] = dests /* one per HOSTS entry */ as [
+    DestKeys,
     DestKeys,
     DestKeys,
     DestKeys,
@@ -69,6 +70,7 @@ it("writes the Usage keys for every host", () => {
   expect(grok.features.two_pass_compaction).toBe(true);
   expect(agy.toolPermission).toBe("always-proceed");
   expect(cursor.approvalMode).toBe("unrestricted");
+  expect(opencode.permissions).toStrictEqual([{ action: "*", effect: "allow", resource: "*" }]);
 });
 
 it.each(HOSTS)("$id: unrelated dest keys survive apply", (h) => {

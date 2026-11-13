@@ -7,7 +7,7 @@ import { enabledSkills } from "../config.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { agentModelsLines } from "./agent-models-lines.ts";
 import { bunMinimum, versionAtLeast } from "./doctor-bun.ts";
-import { globalsRow, mapsRow, row } from "./doctor-rows.ts";
+import { globalsRow, mapsRow, row, shimRow } from "./doctor-rows.ts";
 import { jevDoctorStatus, speakDoctorStatus, workspaceDoctorStatus } from "./doctor-status.ts";
 import { installHints, lookupChromium, readVersion, whichBin, withNmBin } from "./doctor-which.ts";
 import { workspaceLines, workspaceIssues } from "./doctor-workspace.ts";
@@ -143,6 +143,7 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
     ...tools.lines,
     ...setup,
     ...(opts.globals == null ? [] : [opts.globals]),
+    shimRow({ home: o.home, localAppData: o.env.LOCALAPPDATA, platform }),
     ...hintLines(missingRequired, platform),
     ...(maps === null ? [] : [maps.line]),
     ...repoRows(o),

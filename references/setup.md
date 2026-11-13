@@ -27,7 +27,7 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 
 ## Full-permission defaults
 
-`bun repo init` and `bun repo yolo` merge full-permission keys into five machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy` and `cursor-agent` then start without approval prompts; there are no `repo:<agent>` launch scripts.
+`bun repo init` and `bun repo yolo` merge full-permission keys into six machine-wide files, keeping every other key (skip with `--skip-globals`). Plain `claude`, `codex`, `grok`, `agy`, `cursor-agent` and `opencode` then start without approval prompts; there are no `repo:<agent>` launch scripts.
 
 | host | dest under `$HOME` | keys |
 | --- | --- | --- |
@@ -38,5 +38,9 @@ TTY: menu with ok/missing. The menu lists enabled packs and always lists browser
 | cursor | `.cursor/cli-config.json` | `approvalMode = "unrestricted"` |
 
 `bun repo yolo` applies by default; `--dry-run` previews, `--check` prints one line of per-host status, exits 1 on any drift, and `--host <id>` limits it to one host; an unknown id prints `unknown host: <id>` and a deleted payload prints `missing payload: <path>`. `bun repo doctor` shows one `globals` row: `ok`, or the first drift line, which names the host, dest and key and ends with the `bun repo yolo` hint. The project hooks (gate-fat-tools, scrub-spawn-prompt) still run in bypass mode.
+
+opencode (V2) has no yolo flag: its payload is one allow-all rule in `permissions` of `~/.config/opencode/opencode.json`. The merge puts that rule ahead of the rules already there, so a user's own `deny` or `ask` still wins, and a second run adds nothing. A dest whose `permissions` is not a list, or one with an `opencode.jsonc` beside it (the file opencode reads), is left as is: apply prints `skip opencode .config/opencode/opencode.json: <reason>`, `--check` prints `opencode skipped: <reason>` and exits 1.
+
+`bun repo shim` installs a bare `repo` launcher once per machine, so a command runs without the `bun` prefix. It writes a launcher into `~/.local/bin` (Windows: `%LOCALAPPDATA%\workerstack\bin`, with `repo.mjs` and `repo.cmd` beside it for cmd.exe and PowerShell). From any directory the launcher runs the nearest parent's `node_modules/@workerstack/repo`, so each project keeps its own version; outside a project it prints `repo: no @workerstack/repo found above <dir>; run \`bun install\` in the project` and exits 1. `--dry-run` previews, `--check` exits 1 on a missing or stale file, `--dir <path>` installs elsewhere. When the directory is not on PATH it prints the line to add (bash and zsh, fish, or PowerShell); it never edits PATH or a shell rc file. Rerun it after upgrading the package: `bun repo doctor` shows a `shim` row (`ok`, `not installed` or `stale`). bun must be on PATH, as for `bun repo`.
 
 Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.

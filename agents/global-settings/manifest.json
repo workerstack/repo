@@ -29,6 +29,12 @@
       "format": "json",
       "id": "cursor",
       "payload": "agents/global-settings/cursor.json"
+    },
+    {
+      "dest": ".config/opencode/opencode.json",
+      "format": "json",
+      "id": "opencode",
+      "payload": "agents/global-settings/opencode.json"
     }
   ],
   "skipKeyPattern": "^(secrets?|api[_-]?key|access[_-]?token|tokens?|passwords?|authorization|mcp(servers)?|hooks)$",

@@ -15,9 +15,10 @@ const DESTS = [
   ".codex/config.toml",
   ".gemini/antigravity-cli/settings.json",
   ".cursor/cli-config.json",
+  ".config/opencode/opencode.json",
 ];
 
-const IDS = ["grok", "claude", "codex", "antigravity", "cursor"];
+const IDS = ["grok", "claude", "codex", "antigravity", "cursor", "opencode"];
 
 let home: string;
 let cwd: string;

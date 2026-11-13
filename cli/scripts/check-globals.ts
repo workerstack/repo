@@ -12,8 +12,16 @@ import { parse as parseToml, type TomlTable } from "smol-toml";
 import { repoEnv } from "../repo-env.ts";
 import { ALL_HOSTS, APPLY_HINT, NOT_FOUND_CODE, PROJECT_REL } from "./check-globals.constants.ts";
 import { nonEmptyOr } from "./emit-inputs.ts";
-import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, shouldSkip } from "./global-settings-files.ts";
-import { isSettingsTable, type SettingsTable, type SettingsValue } from "./settings-table.ts";
+import {
+  hostIdsOf,
+  loadManifest,
+  readDest,
+  readPayload,
+  resolveDest,
+  shouldSkip,
+  skipReason,
+} from "./global-settings-files.ts";
+import { isSettingsTable, isTableArray, type SettingsTable, type SettingsValue } from "./settings-table.ts";
 
 /** One settings key whose payload value is missing or different in the dest. */
 export type DriftEntry = {
@@ -23,12 +31,16 @@ export type DriftEntry = {
   kind: "missing" | "differs";
 };
 
-/** One host's check outcome: `ok`, drift (`missing`/`differs` entries), or an `unreadable` dest. */
+/**
+ * One host's check outcome: `ok`, drift (`missing`/`differs` entries), an `unreadable` dest, or a `skipped` one that
+ * `reason` says sync leaves as it is.
+ */
 export type HostStatus = {
   id: string;
   dest: string;
-  state: "ok" | "drift" | "unreadable";
+  state: "ok" | "drift" | "unreadable" | "skipped";
   drift: DriftEntry[];
+  reason?: string;
 };
 
 export type CheckResult = {
@@ -94,6 +106,15 @@ function readProjectGrok(abs: string): ProjectGrok {
   }
 }
 
+/** Whether the dest value has the payload value: equal, or a list of rules holding every payload rule. */
+function holds(have: SettingsValue | undefined, want: SettingsValue): boolean {
+  const isRules = isTableArray(want) && Array.isArray(have);
+
+  if (isRules) return want.every((rule) => have.some((r) => isDeepStrictEqual(r, rule)));
+
+  return isDeepStrictEqual(have, want);
+}
+
 /** `h`'s status: unreadable when its dest cannot be read, else ok or each payload leaf the dest lacks or differs on. */
 function hostStatus(h: Host, home: string, want: { payload: SettingsTable; skipRe: RegExp }): HostStatus {
   let destValue: SettingsTable;
@@ -104,10 +125,14 @@ function hostStatus(h: Host, home: string, want: { payload: SettingsTable; skipR
     return { dest: h.dest, drift: [], id: h.id, state: "unreadable" };
   }
 
+  const reason = skipReason(resolveDest(home, h.dest), destValue, want.payload);
+
+  if (reason !== null) return { dest: h.dest, drift: [], id: h.id, reason, state: "skipped" };
+
   const drift = leaves(want.payload, want.skipRe).flatMap(([keyPath, value]): DriftEntry[] => {
     const have = valueAt(destValue, keyPath);
 
-    if (have.found && isDeepStrictEqual(have.value, value)) return [];
+    if (have.found && holds(have.value, value)) return [];
 
     return [{ dest: h.dest, host: h.id, key: keyPath.join("."), kind: have.found ? "differs" : "missing" }];
   });
@@ -147,6 +172,8 @@ export function checkHosts({
 export function checkLine(statuses: HostStatus[]): string {
   return statuses
     .map((s) => {
+      if (s.state === "skipped") return `${s.id} skipped: ${s.reason}`;
+
       if (s.state !== "drift") return `${s.id} ${s.state}`;
 
       const parts = (["missing", "differs"] as const).flatMap((kind) => {
@@ -214,6 +241,9 @@ export function checkGlobals({
   const unreadable = statuses.find((s) => s.state === "unreadable");
 
   if (unreadable !== undefined) return { error: `unreadable dest: ${unreadable.dest}; ${APPLY_HINT}`, ok: false };
+  const skipped = statuses.find((s) => s.state === "skipped");
+
+  if (skipped !== undefined) return { error: `${skipped.id} ${skipped.dest} skipped: ${skipped.reason}`, ok: false };
   const drift = statuses.flatMap((s) => s.drift);
 
   if (drift.length > 0) return { drift, ok: false };

@@ -9,7 +9,7 @@ import { HOSTS, runYolo } from "./__fixtures__/sync-global-kit.ts";
 useTempDirs();
 
 const HINT = "run `bun repo yolo`";
-const ALL_OK = "grok ok · claude ok · codex ok · antigravity ok · cursor ok";
+const ALL_OK = "grok ok · claude ok · codex ok · antigravity ok · cursor ok · opencode ok";
 const HOST_STATE_RE = /^\w+ missing [\w.-]+(,[\w.-]+)*$/;
 
 /** A cwd with no manifest but a clean project grok config, so --check has nothing else to complain about. */
@@ -95,7 +95,7 @@ it("--check names a changed key as differs", () => {
   const r = runYolo(["--check"], home, cwd);
   expect(r.status).toBe(1);
   expect(r.stdout.trim().split("\n")).toStrictEqual([
-    "grok ok · claude differs permissions.defaultMode · codex ok · antigravity ok · cursor ok",
+    "grok ok · claude differs permissions.defaultMode · codex ok · antigravity ok · cursor ok · opencode ok",
     HINT,
   ]);
 });
@@ -106,7 +106,9 @@ it("--check marks an unparseable dest unreadable for that host only", () => {
   fs.writeFileSync(path.join(home, ".claude/settings.json"), "{broken");
   const r = runYolo(["--check"], home, cwd);
   expect(r.status).toBe(1);
-  expect(r.stdout.trim().split("\n")[0]).toBe("grok ok · claude unreadable · codex ok · antigravity ok · cursor ok");
+  expect(r.stdout.trim().split("\n")[0]).toBe(
+    "grok ok · claude unreadable · codex ok · antigravity ok · cursor ok · opencode ok",
+  );
 });
 
 it("--check --host claude prints that one host", () => {
