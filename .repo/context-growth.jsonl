@@ -5,3 +5,5 @@
 {"bucket":"rules","from":2913,"to":3124,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
 {"bucket":"index","from":1579,"to":1626,"reason":"fast plans add write-plan-fast and implement-plan-fast skills"}
 {"bucket":"skills","from":9473,"to":9612,"reason":"fast plans add write-plan-fast and implement-plan-fast skills"}
+{"bucket":"index","from":1626,"to":1679,"reason":"fast roadmaps add write-roadmap-fast and implement-roadmap-fast skills"}
+{"bucket":"skills","from":9612,"to":9777,"reason":"fast roadmaps add write-roadmap-fast and implement-roadmap-fast skills"}

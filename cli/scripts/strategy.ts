@@ -28,8 +28,18 @@ import {
   STRATEGIES,
   UNSAFE_SID_RE,
 } from "./strategy.constants.ts";
-import type { ActiveReview, Mode, SpawnStrategy, Strategy } from "./strategy.types.ts";
+import type { ActiveReview, Approvable, ItemKind, Mode, SpawnStrategy, Strategy } from "./strategy.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
+
+/** True for a kind that has a strategy: a full plan or roadmap. A fast plan or fast roadmap has none. */
+export function kindHasStrategy(kind: ItemKind): kind is "plan" | "roadmap" {
+  return kind === "plan" || kind === "roadmap";
+}
+
+/** True for an item that has a strategy; the one guard every caller uses instead of testing a kind. */
+export function hasStrategy<T extends Approvable>(item: T): item is Extract<T, { strategy: Strategy }> {
+  return kindHasStrategy(item.kind);
+}
 
 export function parseMode(v: string | undefined): Mode | null {
   return MODES.find((m) => m === v) ?? null;

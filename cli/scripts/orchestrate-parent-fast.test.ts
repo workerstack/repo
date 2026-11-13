@@ -3,7 +3,8 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
-import { hookSession, type HookSession } from "./__fixtures__/hook-session.ts";
+import { claudeSession, lines, read } from "./__fixtures__/fast-session.ts";
+import type { HookSession } from "./__fixtures__/hook-session.ts";
 import {
   closing,
   fastPlan as fastItem,
@@ -34,16 +35,8 @@ const FAST_BODY = [
   "",
 ].join("\n");
 
-function read(file: string) {
-  return fs.readFileSync(file, "utf8");
-}
-
-function lines(s: string) {
-  return s.split("\n");
-}
-
 function claude(ws: string, sid: string): HookSession {
-  return hookSession(kit, { casing: "claude", env: { CLAUDE_PROJECT_DIR: ws }, sid, ws });
+  return claudeSession(kit, ws, sid);
 }
 
 /** A session in a fresh workspace that saved one fast plan through the hook. */

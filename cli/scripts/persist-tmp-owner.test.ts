@@ -68,6 +68,7 @@ describe("who owns a loose file", () => {
 
     expect(persistOwner(repoPath(wt, "plans-fast", "x.md"), wt)).toBe("plans-fast");
     expect(persistOwner(at("roadmaps", "1-a.md"), root)).toBe("roadmaps");
+    expect(persistOwner(at("roadmaps-fast", "1-a.md"), root)).toBe("roadmaps-fast");
     expect(persistOwner(at("handoffs", "1-a.md"), root)).toBe("handoffs");
     expect(persistOwner(at("implementations", "1-a.md"), root)).toBe("implementations");
     expect(persistOwner(scratch("1-a.md"), root)).toBe("tmp");

@@ -7,6 +7,7 @@ import {
   EXACT_REPLIES,
   FAST_BLOCK_ROWS,
   FAST_PLAN,
+  FAST_ROADMAP,
   HANDOFF_LETTER,
   HEADER_ITEM_RE,
   HEADER_SEP,
@@ -30,16 +31,16 @@ import {
  * The approval block: the fenced block that asks for approval or a handoff, rendered and parsed here and nowhere
  * else; and what a reply to it means.
  */
-import { parseStrategy } from "./strategy.ts";
+import { hasStrategy, parseStrategy } from "./strategy.ts";
 import type { Approval, ApprovalAction, Approvable } from "./strategy.types.ts";
 
 /** True when no item has a strategy, so the block has no codes to offer. */
-function allFast(items: Approvable[]): boolean {
-  return items.every((i) => i.kind === FAST_PLAN);
+function noneHasStrategy(items: Approvable[]): boolean {
+  return !items.some(hasStrategy);
 }
 
 function headerOf(i: Approvable): string {
-  return i.kind === FAST_PLAN ? `${i.kind} ${i.serial}` : `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}`;
+  return hasStrategy(i) ? `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}` : `${i.kind} ${i.serial}`;
 }
 
 /**
@@ -48,7 +49,7 @@ function headerOf(i: Approvable): string {
  */
 export function closingBlock(items: Approvable[]): string {
   if (items.length === 0) throw new Error("closingBlock needs at least one item");
-  const rows = allFast(items) ? FAST_BLOCK_ROWS : BLOCK_ROWS;
+  const rows = noneHasStrategy(items) ? FAST_BLOCK_ROWS : BLOCK_ROWS;
 
   return [BLOCK_FENCE, items.map(headerOf).join(ITEM_SEP), ...rows, BLOCK_FENCE].join("\n");
 }
@@ -60,7 +61,7 @@ function headerItem(part: string): Approvable | null {
 
   const [, kind, serial, word] = m;
 
-  if (kind === FAST_PLAN) return word === undefined ? { kind, serial: Number(serial) } : null;
+  if (kind === FAST_PLAN || kind === FAST_ROADMAP) return word === undefined ? { kind, serial: Number(serial) } : null;
   const strategy = parseStrategy(String(word));
 
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
@@ -162,7 +163,7 @@ export function parseApproval(prompt: string): Approval | null {
 export function approvalFor(prompt: string, items: Approvable[]): Approval | null {
   const reply = parseApproval(prompt);
 
-  if (reply === null || reply.kind === "unknown" || reply.strategy === null || !allFast(items)) return reply;
+  if (reply === null || reply.kind === "unknown" || reply.strategy === null || !noneHasStrategy(items)) return reply;
 
   return { kind: "unknown", word: prompt.trim() };
 }

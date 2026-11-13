@@ -201,3 +201,26 @@ it("on a block with a strategy item every code stands, and a revision stays null
   expect(approvalFor("keep it", [FAST])).toBeNull();
   expect(approvalFor("isx", [FAST])).toStrictEqual(unknown("isx"));
 });
+
+const FAST_ROADMAP: Approvable = { kind: "fast-roadmap", serial: 2 };
+const FAST_ROADMAP_BLOCK = "```\nfast-roadmap 2\n  i  implement\n  h  hand off\n     or reply to revise\n```";
+
+it("renders and reads a fast roadmap block with only the i and h rows, alone or with fast plans", () => {
+  expect(closingBlock([FAST_ROADMAP])).toBe(FAST_ROADMAP_BLOCK);
+  expect(parseClosingBlock(FAST_ROADMAP_BLOCK)).toStrictEqual([FAST_ROADMAP]);
+  expect(closingBlock([FAST_ROADMAP, FAST]).split("\n")[1]).toBe("fast-roadmap 2, then fast-plan 3");
+  expect(parseClosingBlock(closingBlock([FAST_ROADMAP, FAST]))).toStrictEqual([FAST_ROADMAP, FAST]);
+  expect(parseClosingBlock(FAST_ROADMAP_BLOCK.replace("fast-roadmap 2", "fast-roadmap 2 · default"))).toBeNull();
+  expect(approvalFor("isf", [FAST_ROADMAP])).toStrictEqual(unknown("isf"));
+  expect(approvalFor("i", [FAST_ROADMAP])).toStrictEqual(approve(null));
+});
+
+it("renders the full rows when a full plan joins a fast roadmap", () => {
+  const block = closingBlock([FAST_ROADMAP, FULL]);
+  expect(block).toBe(
+    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    id · isf · isd\n" +
+      "  h  hand off     hd · hsf · hsd\n     or reply to revise\n```",
+  );
+  expect(parseClosingBlock(block)).toStrictEqual([FAST_ROADMAP, FULL]);
+  expect(approvalFor("isf", [FAST_ROADMAP, FULL])).toStrictEqual(approve("spawn-fast"));
+});

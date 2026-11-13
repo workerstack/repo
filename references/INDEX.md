@@ -2,13 +2,14 @@
 
 Files are in `node_modules/@workerstack/repo/references/`. Read one in full when its line matches the work.
 
-<!-- repo:refs 35786898 -->
+<!-- repo:refs 899cb0cb -->
 - `browser.md`: Browse web pages
 - `cascade.md`: Shrink big tool output
 - `clasp.md`: Apps Script CLI
 - `cloudflare.md`: Cloudflare work via cf
 - `exports.md`: What the package exports
 - `fast-plan-format.md`: Fast plan file format
+- `fast-roadmap-format.md`: Fast roadmap file format
 - `google-workspace.md`: Google Sheets, Docs, Gmail
 - `hooks.md`: What each hook does
 - `implementation-format.md`: Implement journal format

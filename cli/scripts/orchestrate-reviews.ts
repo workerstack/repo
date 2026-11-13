@@ -12,6 +12,7 @@ import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
 import { IN_PROGRESS, ITEM_KINDS, ITEM_KIND_LIST, PLAN_KIND } from "./orchestrate.constants.ts";
 import type { Approvable, ItemKind, ItemRef, ReviewState, ReviewsOpen, Strategy } from "./orchestrate.types.ts";
 import { isUnderRepoDir } from "./persist-tmp.ts";
+import { hasStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
@@ -27,9 +28,9 @@ export function kindAt(abs: string, ws: string): ItemKind | null {
   return ITEM_KIND_LIST.find((kind) => isUnderRepoDir(abs, ws, ITEM_KINDS[kind].dir)) ?? null;
 }
 
-/** The strategy an item runs; null for a fast plan, which has none. */
+/** The strategy an item runs; null for a fast plan or fast roadmap, which have none. */
 export function itemStrategy(item: Approvable): Strategy | null {
-  return item.kind === "fast-plan" ? null : item.strategy;
+  return hasStrategy(item) ? item.strategy : null;
 }
 
 export function queueText(items: Approvable[]): string {
@@ -62,9 +63,13 @@ export function isSliceOf(planPath: string, roadmapText: string, impl: typeof pa
   return false;
 }
 
-/** The text of each in-progress roadmap in the workspace. */
-export function inProgressRoadmaps(ws: string): string[] {
-  const dir = repoPath(ws, "roadmaps");
+/** A running roadmap's text, with the kind of roadmap it is. */
+export type RunningRoadmap = { kind: "roadmap" | "fast-roadmap"; text: string };
+
+const ROADMAP_KINDS = ["roadmap", "fast-roadmap"] as const;
+
+function runningIn(ws: string, kind: RunningRoadmap["kind"]): RunningRoadmap[] {
+  const dir = repoPath(ws, ITEM_KINDS[kind].dir);
   let names: string[] = [];
 
   try {
@@ -73,19 +78,24 @@ export function inProgressRoadmaps(ws: string): string[] {
     return [];
   }
 
-  const texts: string[] = [];
+  const running: RunningRoadmap[] = [];
 
   for (const name of names) {
     try {
       const text = fs.readFileSync(path.join(dir, name), "utf8");
 
-      if (frontmatterOf(text).status === IN_PROGRESS) texts.push(text);
+      if (frontmatterOf(text).status === IN_PROGRESS) running.push({ kind, text });
     } catch {
       // skip unreadable
     }
   }
 
-  return texts;
+  return running;
+}
+
+/** Each in-progress roadmap and fast roadmap in the workspace, with its kind. */
+export function inProgressRoadmaps(ws: string): RunningRoadmap[] {
+  return ROADMAP_KINDS.flatMap((kind) => runningIn(ws, kind));
 }
 
 function counted(entry: [string, number | null]): entry is [string, number] {

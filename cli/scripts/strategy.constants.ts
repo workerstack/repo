@@ -26,6 +26,7 @@ export const IMPLEMENTER_DEEP = "implementer-deep";
 export const PLAN = "plan";
 export const ROADMAP = "roadmap";
 export const FAST_PLAN = "fast-plan";
+export const FAST_ROADMAP = "fast-roadmap";
 
 /** The words after `h` that pick a spawn strategy for the fresh session. */
 const FAST = "fast";

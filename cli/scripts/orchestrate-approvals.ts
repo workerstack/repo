@@ -17,6 +17,7 @@ import {
   reviewState,
   reviewStateOf,
   reviewsOf,
+  type RunningRoadmap,
 } from "./orchestrate-reviews.ts";
 import { approvalsFile, frontmatterOf, readLines } from "./orchestrate-session.ts";
 import { resolveStamp, stampMtime } from "./orchestrate-stamps.ts";
@@ -25,23 +26,28 @@ import { APPROVAL_BLOCK_STAMP, ITEM_KINDS, TURN_START_STAMP } from "./orchestrat
 import type {
   Approvable,
   ApprovalItem,
+  ItemKind,
   ItemRef,
   KnownApproval,
   ReviewsOpen,
   Strategy,
   StrategyChange,
+  StrategyItem,
   StrategyWrite,
 } from "./orchestrate.types.ts";
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import { parseStrategy } from "./strategy.ts";
+import { hasStrategy, kindHasStrategy, parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
-/** An item that has a strategy to write: everything but a fast plan. */
-type StrategyItem = Exclude<ApprovalItem, { kind: "fast-plan" }>;
-
 /** What every saved item is judged against: the workspace, its running roadmaps and the open reviews. */
-type Scan = { ws: string; running: string[]; open: ReviewsOpen };
+type Scan = { ws: string; running: RunningRoadmap[]; open: ReviewsOpen };
+
+/** The kind of roadmap whose slices a kind of plan can be. */
+const SLICE_OF: Readonly<Partial<Record<ItemKind, RunningRoadmap["kind"]>>> = {
+  "fast-plan": "fast-roadmap",
+  plan: "roadmap",
+};
 
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/;
 const STRATEGY_LINE = /^strategy:.*$/m;
@@ -55,7 +61,10 @@ function readItem(abs: string): { text: string; mtime: number } | null {
   }
 }
 
-/** True when the saved item is at a status that waits for an `i`, settled, and no slice of a running roadmap. */
+/**
+ * True when the saved item is at a status that waits for an `i`, settled, and no slice of a running roadmap of its
+ * own kind: a plan is skipped only by a full roadmap, a fast plan only by a fast roadmap.
+ */
 function waitsForI(scan: Scan, abs: string, saved: { ref: ItemRef; fm: Record<string, string> }): boolean {
   const { ref, fm } = saved;
 
@@ -63,12 +72,14 @@ function waitsForI(scan: Scan, abs: string, saved: { ref: ItemRef; fm: Record<st
 
   if (reviewState(scan.open, ref, reviewsOf(fm)) !== "settled") return false;
 
-  return ref.kind !== "plan" || !scan.running.some((t) => isSliceOf(abs, t));
+  const owner = SLICE_OF[ref.kind];
+
+  return !scan.running.some((r) => r.kind === owner && isSliceOf(abs, r.text));
 }
 
-/** The item a ref names with the strategy its file holds; null when that is no strategy. A fast plan has none. */
+/** The item a ref names with the strategy its file holds; null when that is no strategy. A fast item has none. */
 function itemOf(ref: ItemRef, at: { path: string; mtime: number }, held: string | undefined): ApprovalItem | null {
-  if (ref.kind === "fast-plan") return { ...at, kind: ref.kind, serial: ref.serial };
+  if (!kindHasStrategy(ref.kind)) return { ...at, kind: ref.kind, serial: ref.serial };
   const strategy = parseStrategy(held);
 
   return strategy === null ? null : { ...at, kind: ref.kind, serial: ref.serial, strategy };
@@ -180,9 +191,9 @@ function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | nul
   const writes: StrategyChange[] = [];
 
   for (const i of resolved) {
-    // A fast plan has no strategy, so a code leaves it alone.
+    // A fast plan or roadmap has no strategy, so a code leaves it alone.
     const w: StrategyWrite =
-      wanted === null || i.kind === "fast-plan" ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
+      wanted === null || !hasStrategy(i) ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
 
     if (!w.ok) return { error: `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`, ok: false };
     writes.push({ content: w.content, item: i });
