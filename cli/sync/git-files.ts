@@ -6,7 +6,7 @@ import type { Host } from "../config.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import { blockOutput } from "./block-output.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
+import { BACKLOG_FILE, GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.constants.ts";
 import { HOST_TREES } from "./hosts.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -39,6 +39,7 @@ export const IGNORE_BASE: readonly string[] = [
   ".worktrees/",
   "coverage/",
   .../* @__PURE__ */ IGNORED_DIRS.map((dir) => `**/${REPO}/${dir}/`),
+  `**/${REPO}/${BACKLOG_FILE}`,
 ];
 
 const DEPENDENCY_DIR = `node_modules/`;

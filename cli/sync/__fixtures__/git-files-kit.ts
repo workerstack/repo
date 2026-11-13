@@ -20,6 +20,7 @@ export const IGNORE_BASE = [
   "**/.repo/implementations/",
   "**/.repo/scratch/",
   "**/.repo/tmp/",
+  "**/.repo/backlog.md",
 ];
 /** The `#` region `name` holding `rows`, as sync writes it. */
 export const region = (name: string, rows: readonly string[]) =>

@@ -2,7 +2,7 @@ node_modules
 dist
 coverage
 
-# repo:ignore 8d3ba818
+# repo:ignore a59efaac
 .tmp/
 .worktrees/
 coverage/
@@ -14,6 +14,7 @@ coverage/
 **/.repo/implementations/
 **/.repo/scratch/
 **/.repo/tmp/
+**/.repo/backlog.md
 knip.json
 knip.unignored-*.json
 .oxfmtrc.jsonc
