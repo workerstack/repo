@@ -5592,8 +5592,8 @@
     "ec7e3df750cc2caf"
   ],
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
-  "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["a744718b241410f5"],
-  "cli/scripts/orchestrate-parent-fast.test.ts": ["20903c5a82e941aa", "a5096970f64b7026"],
+  "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5"],
+  "cli/scripts/orchestrate-parent-fast.test.ts": ["17354fbdeca16e46", "20903c5a82e941aa", "a5096970f64b7026"],
   "cli/scripts/orchestrate-parent-gate.test.ts": [
     "145b3f433667be4e",
     "23fde34f3223f374",
@@ -5931,7 +5931,7 @@
   "cli/scripts/persist-fast-plan-mistakes.test.ts": ["4f96434b298d1475"],
   "cli/scripts/persist-fast-plan-validate.ts": ["5a0a9c583c20d19a", "79925e487e0658ed", "f069acaa227cfcbe"],
   "cli/scripts/persist-fast-plan.constants.ts": ["4a14fe0b2f9a0706", "739ca703c4c3a7c4"],
-  "cli/scripts/persist-fast-plan.test.ts": ["1ac62df390dd1baf", "5ff620d6179a3e0b"],
+  "cli/scripts/persist-fast-plan.test.ts": ["1ac62df390dd1baf", "5ff620d6179a3e0b", "b69ce4a040ad188e"],
   "cli/scripts/persist-fast-plan.ts": ["12ad72530ad8e0fc", "59167533e3b9bbba", "6b6294e195416e5e"],
   "cli/scripts/persist-fast-roadmap-denials.test.ts": ["3896263981e9a427", "77b46223832337bb"],
   "cli/scripts/persist-fast-roadmap-update.test.ts": ["dc8084200755a9dc", "fd860e444ed2595a"],
@@ -6450,6 +6450,7 @@
     "219ea921a5a0de1b",
     "3c233550cd7a6eb1",
     "479f40ce0f38cc0e",
+    "542b2f9e2097494c",
     "62d5aa6962255705",
     "799c5b019980020b",
     "7ccb82327e3d034e",

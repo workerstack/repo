@@ -2,7 +2,7 @@
 
 # Lessons
 
-- `stock-history-regenerate-last` (hits 6): Run bun dev/stock-history.ts after every other staged change
+- `stock-history-regenerate-last` (hits 7): Run bun dev/stock-history.ts after every other staged change
 - `temp-consumer-untyped-globals` (hits 5): A new lint rule or type-aware rule trips the sources lint tests plant
 - `posix-only-path-parsing` (hits 4): A path regex that only knows `/` silently skips Windows
 - `shipped-source-es2022-lib` (hits 4): Code an export reaches must type-check under ES2022, not ESNext

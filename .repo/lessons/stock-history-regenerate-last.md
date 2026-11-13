@@ -1,9 +1,9 @@
 ---
 name: stock-history-regenerate-last
 paths: ["cli/sync/stock-history.json","dev/stock-history.ts"]
-hits: 6
-last-hit: 2026-11-12
-evidence: ["plan 125","plan 126","roadmap 8","roadmap 9","plan 161"]
+hits: 7
+last-hit: 2026-11-13
+evidence: ["plan 126","roadmap 8","roadmap 9","plan 161","fast-plan 2"]
 ---
 
 # Run bun dev/stock-history.ts after every other staged change
