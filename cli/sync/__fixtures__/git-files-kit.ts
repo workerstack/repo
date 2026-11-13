@@ -1,7 +1,7 @@
 // Contexts, planned outputs and readers for the git files suites: `.gitignore`, `.gitattributes` and the editor settings.
 import { parse } from "jsonc-parser";
 
-import { type Host } from "../../config.ts";
+import { type Host, type Pack } from "../../config.ts";
 import { BASE_CONFIG } from "../../__fixtures__/base-config.ts";
 import { gitFiles } from "../git-files.ts";
 import { HOST_TREES } from "../hosts.ts";
@@ -28,14 +28,27 @@ export const region = (name: string, rows: readonly string[]) =>
 export const attributes = (...rels: string[]) =>
   region("generated", ["* text=auto eol=lf", ...rels.map((rel) => `${rel} linguist-generated`)]);
 
-export type Fixture = { hosts?: Host[]; name?: string; files?: Record<string, string> };
+export type Fixture = {
+  hosts?: Host[];
+  name?: string;
+  files?: Record<string, string>;
+  packs?: Pack[];
+  tailwind?: string;
+};
 
-export function context({ hosts = [], name = "app", files = {} }: Fixture = {}): SyncContext {
+export function context({
+  hosts = [],
+  name = "app",
+  files = {},
+  packs = ["agents"],
+  tailwind,
+}: Fixture = {}): SyncContext {
   return {
     config: {
       agents: { hosts, skills: [] },
-      packs: ["agents"],
+      packs,
       ...BASE_CONFIG,
+      lint: tailwind === undefined ? BASE_CONFIG.lint : { ...BASE_CONFIG.lint, tailwind: { entryPoint: tailwind } },
     },
     read: (rel) => files[rel] ?? null,
     root: "/repo",
@@ -80,6 +93,8 @@ export const gitattributesOf = (fixture: Fixture, outputs: Output[]) =>
   outputOf(run(fixture, outputs).outputs, ".gitattributes");
 export const settingsOf = (fixture: Fixture, outputs: Output[]) =>
   outputOf(run(fixture, outputs).outputs, ".vscode/settings.json");
+export const extensionsOf = (fixture: Fixture, outputs: Output[] = []) =>
+  run(fixture, outputs).outputs.find((output) => output.path === ".vscode/extensions.json");
 export const readonlyOf = (text: string): string[] =>
   Object.keys(
     (parse(text) /* the settings file is a JSON object of maps */ as Record<string, Record<string, boolean>>)[

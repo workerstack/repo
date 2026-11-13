@@ -1,45 +1,35 @@
-import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
+import { applyEdits, modify, parse } from "jsonc-parser";
 import { z } from "zod";
 
+import type { JsonObject } from "../json.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
+import { editJsonc } from "./jsonc-edit.ts";
 import type { RegionResult } from "./region.ts";
 
 const READONLY_KEY = "files.readonlyInclude";
 
 /**
- * The `.vscode/settings.json` text with `files.readonlyInclude` set to `paths`, every other key and comment as
- * written, and the repair that explains it when the file is left as is: not valid JSONC, or holding no object.
+ * The `.vscode/settings.json` text with `files.readonlyInclude` set to `paths` and each key of `defaults` the file
+ * lacks added, every other key and comment as written, and the repair that explains it when the file is left as is:
+ * not valid JSONC, or holding no object. A key the file already holds keeps its value, whatever `defaults` says.
  */
-export function settingsEdit(existing: string | null, paths: readonly string[]): RegionResult {
-  const current = existing ?? "";
-  const isFresh = current.trim() === "";
-  const text = isFresh ? "{}" : current;
-  const kept = unusable(text);
+export function settingsEdit(
+  existing: string | null,
+  paths: readonly string[],
+  defaults: JsonObject = {},
+): RegionResult {
+  return editJsonc(existing, (text, formatting) => {
+    const readonly = Object.fromEntries(paths.toSorted(byCodeUnit).map((rel) => [rel, true]));
+    // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would
+    // rewrite the last one's.
+    const options = { formattingOptions: formatting, getInsertionIndex: () => 0 };
+    let edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
+    const held = z.record(z.string(), z.unknown()).parse(parse(edited, [], { allowTrailingComma: true }));
 
-  if (kept !== null) return { repairs: [kept], text };
-  const readonly = Object.fromEntries(paths.toSorted(byCodeUnit).map((rel) => [rel, true]));
-  const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would
-  // rewrite the last one's.
-  const options = { formattingOptions: { eol, insertSpaces: true, tabSize: 2 }, getInsertionIndex: () => 0 };
-  const edited = applyEdits(text, modify(text, [READONLY_KEY], readonly, options));
+    // Each goes in first, so the last one in leads: walking the keys backwards leaves them sorted.
+    for (const key of Object.keys(defaults).toSorted(byCodeUnit).toReversed())
+      if (!(key in held)) edited = applyEdits(edited, modify(edited, [key], defaults[key], options));
 
-  return { repairs: [], text: isFresh ? `${edited}${eol}` : edited };
-}
-
-/** Why settings `text` is left as is, naming the line of its first JSONC error; null when it holds an object. */
-function unusable(text: string): string | null {
-  const problems: ParseError[] = [];
-  const value: unknown = parse(text, problems, { allowTrailingComma: true });
-  const [problem] = problems;
-
-  if (problem !== undefined) {
-    const line = text.slice(0, problem.offset).split("\n").length;
-
-    return `not valid JSONC at line ${line} (${printParseErrorCode(problem.error)}); left as is`;
-  }
-
-  const object = z.record(z.string(), z.unknown()).safeParse(value).success;
-
-  return object ? null : "must hold a JSON object; left as is";
+    return { text: edited };
+  });
 }

@@ -13,6 +13,7 @@ import type { Generator, Output, SyncContext } from "./outputs.ts";
 import { FIXTURES, OXLINT_CONFIG_PATH, oxlintConfig } from "./oxlint-config.ts";
 import { CARGO_PATH } from "./rust.constants.ts";
 import { EXECUTABLE_MODE, HOOKS_DIR, INDEX_FIELDS, LOCAL_SCOPE, WINDOWS_PLATFORM } from "./standards.constants.ts";
+import { EXTENSIONS_PATH } from "./vscode-defaults.constants.ts";
 
 export const OXFMT_CONFIG_PATH = ".oxfmtrc.jsonc";
 const INDEX_FIELD_SEPARATOR = /[ \t]/;
@@ -25,7 +26,15 @@ const INDEX_FIELD_SEPARATOR = /[ \t]/;
  */
 function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined): string {
   const outputs = [
-    ...new Set([...planned, ...GIT_FILE_PATHS, ...HOOK_PATHS, OXLINT_CONFIG_PATH, OXFMT_CONFIG_PATH, KNIP_CONFIG_PATH]),
+    ...new Set([
+      ...planned,
+      ...GIT_FILE_PATHS,
+      EXTENSIONS_PATH,
+      ...HOOK_PATHS,
+      OXLINT_CONFIG_PATH,
+      OXFMT_CONFIG_PATH,
+      KNIP_CONFIG_PATH,
+    ]),
   ].map((rel) => `/${rel}`);
 
   // Written in this order, not sorted: the consumer's file keeps the order it always had.
