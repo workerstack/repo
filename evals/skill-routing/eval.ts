@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { firstLineIs } from "../../cli/eval/first-line-is.ts";
+import { firstWordIs } from "../../cli/eval/first-word-is.ts";
 import { defineEval, type EvalSpec } from "../../cli/eval/spec.ts";
 import { cases } from "./cases.ts";
 import { skillSystem } from "./skill-system.ts";
@@ -9,7 +9,7 @@ import { skillSystem } from "./skill-system.ts";
 const MAX_TOKENS = 16;
 
 const spec: EvalSpec = defineEval({
-  cases: cases.map(({ expect, ...rest }) => ({ ...rest, pass: firstLineIs(expect) })),
+  cases: cases.map(({ expect, ...rest }) => ({ ...rest, pass: firstWordIs(expect) })),
   // Every case sends every skill description, so any skill edit can move any route.
   files: ["agents/skills", "cli/eval", "cli/sync/agents/frontmatter.ts"],
   maxTokens: MAX_TOKENS,

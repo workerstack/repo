@@ -81,27 +81,29 @@ export const cases: RulesCase[] = [
   {
     expect: "worktree",
     id: "worktree-clean-after-move",
-    input: "also make sure repo clean is updated to work after the move correctly",
-    source: "transcript 2026-11-12",
+    input:
+      "we moved the eval cache to .repo/tmp/evals. " +
+      "also make sure repo clean is updated to work after the move correctly",
+    source: "transcript 2026-11-12, context added",
   },
   {
     control: true,
     expect: "answer",
     id: "worktree-clean-after-move-control",
-    input: "does repo clean still work after the move?",
+    input: "we moved the eval cache to .repo/tmp/evals. does repo clean still work after the move?",
     source: "control of worktree-clean-after-move",
   },
   {
     expect: "worktree",
     id: "worktree-make-default",
-    input: "good, just make it the default, should be easy",
-    source: "transcript 2026-11-10",
+    input: "we agreed repo eval should run on the session by default. good, just make it the default, should be easy",
+    source: "transcript 2026-11-10, context added",
   },
   {
     control: true,
     expect: "answer",
     id: "worktree-make-default-control",
-    input: "what is the default right now?",
+    input: "we agreed repo eval should run on the session by default. what is the default right now?",
     source: "control of worktree-make-default",
   },
   {

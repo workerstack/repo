@@ -43,10 +43,10 @@ describe("changedFiles", () => {
 });
 
 describe("firstChanged", () => {
-  const files = ["agents/skills", "cli/eval/first-line-is.ts"];
+  const files = ["agents/skills", "cli/eval/first-word-is.ts"];
 
   it.each([
-    [["README.md", "cli/eval/first-line-is.ts"], "cli/eval/first-line-is.ts"],
+    [["README.md", "cli/eval/first-word-is.ts"], "cli/eval/first-word-is.ts"],
     [["agents/skills/su/SKILL.md"], "agents/skills/su/SKILL.md"],
     [["evals/skill-routing/cases.ts"], "evals/skill-routing/cases.ts"],
   ])("finds the first of %j that it reads: %s", (changed, found) => {
