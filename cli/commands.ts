@@ -168,11 +168,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   github: { load: () => import("./github-apply.ts"), summary: GITHUB_SUMMARY, usage: GITHUB_USAGE },
   link: { load: () => import("./link.ts"), summary: LINK_SUMMARY, usage: LINK_USAGE },
   push: { load: () => import("./scripts/push.ts"), summary: PUSH_SUMMARY, usage: PUSH_USAGE },
-  release: {
-    load: () => import("./release/main.ts"),
-    summary: RELEASE_SUMMARY,
-    usage: RELEASE_USAGE,
-  },
+  release: { load: () => import("./release/main.ts"), summary: RELEASE_SUMMARY, usage: RELEASE_USAGE },
   remove: { load: () => import("./remove.ts"), summary: REMOVE_SUMMARY, usage: REMOVE_USAGE },
   unlink: {
     load: () => import("./link.ts").then(({ unlinkMain }) => ({ main: unlinkMain })),
