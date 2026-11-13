@@ -6,6 +6,7 @@ const config = {
   dev: {},
   local: {},
   process: {
+    ANTHROPIC_API_KEY: "optional",
     BUN_CONFIG_REGISTRY: "optional",
     CI: "optional",
     CLAUDE_EFFORT: "optional",

@@ -32,6 +32,7 @@ import { REMOVE_SUMMARY, REMOVE_USAGE } from "./remove.constants.ts";
 import { BENCH_ARGS, BENCH_SUMMARY } from "./scripts/bench.constants.ts";
 import { BROWSER_USAGE } from "./scripts/browser.constants.ts";
 import { ENV_SUMMARY, USAGE as ENV_USAGE } from "./scripts/env-command.constants.ts";
+import { EVAL_ARGS, EVAL_SUMMARY } from "./scripts/eval.constants.ts";
 import { GOOGLE_WORKSPACE_ARGS } from "./scripts/google-workspace.constants.ts";
 import { JEV_ARGS } from "./scripts/jev.constants.ts";
 import { LESSONS_ARGS } from "./scripts/lessons.constants.ts";
@@ -88,6 +89,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     usage: BROWSER_USAGE,
   },
   env: { load: () => import("./scripts/env-command.ts"), summary: ENV_SUMMARY, usage: ENV_USAGE },
+  eval: { load: () => import("./scripts/eval.ts"), summary: EVAL_SUMMARY, usage: `usage: repo eval ${EVAL_ARGS}` },
   "google-workspace": {
     load: () => import("./scripts/google-workspace.ts"),
     summary: "Google Sheets, Docs, Slides, Calendar and Gmail",
