@@ -74,7 +74,7 @@ it("rewrites an implementer child's test run to the job test and passes a compou
 
   for (const suite of SUITES) {
     const out = processFatTools(claudeSh(w, suite, implementer("implementer-fast")));
-    expect(out, suite).toStrictEqual(rewrite(w, suite.trim()));
+    expect(out, suite).toStrictEqual(rewrite(w, suite.trim().replace(/^bun test\b/, "bun run test")));
   }
 });
 

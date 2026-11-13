@@ -43,6 +43,10 @@ The canonical hooks.jsonc event is `beforeSubmitPrompt` (→ Claude/Codex `UserP
 
 `[features] two_pass_compaction` must live in `~/.grok/config.toml` (from `agents/global-settings/grok.toml` via `bun repo yolo`). Project `.grok/config.toml` cannot set `[features]`.
 
+## Local ci and bun test
+
+`localCiGuard` in `gate-shell.ts` denies a shell command that runs the whole ci: `repo ci`, `bun repo ci`, `bun ./bin/repo.ts ci`, `bun run ci` (npm and pnpm too), alone or in a compound, when `ci` is followed by the end or a flag. The reason is ``GitHub runs ci, not you: push the branch, then run `bun repo ci wait <branch>` in the background. To check one change, run the nearest test file with `bun run test <file>`.`` `ci wait`, `skips`, `times` and `merge` pass. `testRunGuard` rewrites `bun test` (bun's own runner, which cannot run the vitest suites) to `bun run test` for every caller, in a compound too; an implementer's or a reviewing parent's plain run then goes through `repo job` as before.
+
 ## Push gate
 
 `ci-push-gate.ts` makes a turn that pushed wait for ci. On every PreToolUse, parent or subagent, `notePush` runs before `emitFat` and notes each `git push` in the Bash command: bare, `origin main`, `-u origin x`, `HEAD:refs/heads/x`, `git -C <dir> push`, `cd <dir> && git push` and chains. `bun repo push [<branch>]` notes a push of the branch they pick (an explicit branch, or the recent-branch table's); ask, a worktree branch and a detached HEAD note none. Dirs go through `path.resolve`, and the branch and sha are read in that dir. The entry lands in the session's `pushed.json` (`[{branch, sha, at}]`) and stays pending until a later hook sees the sha land on `origin/<branch>`; a rejected push and every older sha are ignored. The hook writes only `pushed.json` and its stamp. `bun repo release` pushes through git from node, not a Bash `git push`, and waits on ci itself, so the gate does not see it.

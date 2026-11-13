@@ -10,7 +10,12 @@ import {
   BASH_TREE,
   BASH_URL,
   BASH_WEB,
+  BUN_NATIVE_TEST,
+  BUN_SCRIPT_TEST,
+  LOCAL_CI_REPO,
+  LOCAL_CI_SCRIPT,
   REASON_DENYLIST,
+  REASON_LOCAL_CI,
   TEST_CMD,
 } from "./gate.constants.ts";
 import { activeReview } from "./strategy.ts";
@@ -42,17 +47,32 @@ export function jobScriptGuard(call: GateCall): GuardResult {
   return isWorkspaceJobScript(call.text, call.roots) ? null : undefined;
 }
 
+/** A whole-ci run by an agent is denied: GitHub runs ci. `repo ci wait` and the other subcommands pass. */
+export function localCiGuard(call: GateCall): GuardResult {
+  return call.tool.kind === "bash" && [LOCAL_CI_REPO, LOCAL_CI_SCRIPT].some((re) => re.test(call.text))
+    ? { reason: REASON_LOCAL_CI, type: "deny" }
+    : undefined;
+}
+
+/** Bun's own runner cannot run this repo's vitest suites, so `bun test` runs the `test` script instead. */
+function shadowBunTest(text: string): string {
+  return text.replace(BUN_NATIVE_TEST, `$1${BUN_SCRIPT_TEST}`);
+}
+
 /**
- * A test run's full log goes to the stash and the caller sees the failing lines: for implementers, and for a
- * parent while its session reviews. job takes one plain command; compound shell passes through.
+ * A `bun test` runs as `bun run test`, for every caller. A test run's full log then goes to the stash and the caller
+ * sees the failing lines: for implementers, and for a parent while its session reviews. job takes one plain command;
+ * compound shell passes through.
  */
 export function testRunGuard(call: GateCall): GuardResult {
-  const { text, sub, parent, sid, roots } = call;
+  const { sub, parent, sid, roots } = call;
+  const text = shadowBunTest(call.text);
+  const shadowed = text === call.text ? undefined : withCommand(call, text);
 
-  if (!TEST_CMD.test(text) || SHELL_META.test(text)) return undefined;
+  if (!TEST_CMD.test(text) || SHELL_META.test(text)) return shadowed;
   const isReviewing = parent && sid !== "" && activeReview(roots.root, sid) !== null;
 
-  return isImplementer(sub) || isReviewing ? withCommand(call, jobFor(call, "test", text.trim())) : undefined;
+  return isImplementer(sub) || isReviewing ? withCommand(call, jobFor(call, "test", text.trim())) : shadowed;
 }
 
 /** A fetch goes through `job fetch`; one with no URL to fetch is denied. */
