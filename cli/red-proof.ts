@@ -7,6 +7,7 @@ import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type VitestRun, runVitest, untar } from "./red-proof-vitest.ts";
 import { REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
+import { STATE, repoPath } from "./repo-dirs.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
 
@@ -181,7 +182,7 @@ function verdict(ran: { failed: string[]; passed: string[] }, total: number): Re
 
 /**
  * Runs the changed vitest test files against HEAD's source and says whether one fails there. The staged tree is built
- * under `<root>/.tmp/repo/red-proof-<pid>/` with every changed source file put back; the dir is removed on the way out.
+ * under `<root>/.repo/tmp/red-proof-<pid>/` with every changed source file put back; the dir is removed on the way out.
  */
 export function redProof(root: string, change: NameStatus[], deps: RedProofDeps = {}): RedProofResult {
   const { git = runGit, vitest = runVitest, timeoutMs = TIMEOUT_MS } = deps;
@@ -191,7 +192,7 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
   const tests = change.filter((entry) => entry.status !== STATUS_DELETED && isRunnable(entry.path));
 
   if (tests.length === 0) return { ok: false, problem: NO_FILE };
-  const tree = path.join(root, ".tmp", "repo", `red-proof-${process.pid}`);
+  const tree = repoPath(root, STATE, `red-proof-${process.pid}`);
   fs.rmSync(tree, { force: true, recursive: true });
   fs.mkdirSync(tree, { recursive: true });
 

@@ -1,3 +1,5 @@
+import { REPO, SCRATCH } from "./repo-dirs.ts";
+
 export const DOCS_SUMMARY =
   "Check references: index, links, exports, examples, tarball (--check: only check; else sync first)";
 
@@ -31,7 +33,7 @@ export const INSTALLED_DIR = "node_modules/";
 const MANIFEST_FILE = "package.json";
 export const TSCONFIG_FILE = "tsconfig.json";
 export const PACK_ARGS: readonly string[] = ["pm", "pack", "--dry-run", "--ignore-scripts"];
-export const SCRATCH_DIR = ".tmp/repo/docs";
+export const SCRATCH_DIR: string = `${REPO}/${SCRATCH}/docs`;
 export const REFERENCES_EXPORT = "./references/*";
 export const SKIPPED_EXPORTS: readonly string[] = ["./package.json", REFERENCES_EXPORT];
 

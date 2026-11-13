@@ -17,7 +17,7 @@ const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: ""
 const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
 
 function handoffs(ws: string) {
-  const dir = path.join(ws, ".tmp/repo/handoffs");
+  const dir = path.join(ws, ".repo/handoffs");
 
   return fs.existsSync(dir) ? fs.readdirSync(dir).map((n) => path.join(dir, n)) : [];
 }

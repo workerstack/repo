@@ -9,7 +9,7 @@ import { stampPath } from "./strategy.ts";
 const kit = orchestrateKit();
 
 function sessionFile(ws: string, sid: string) {
-  return path.join(ws, ".tmp/repo/sessions", sid, "git-asked.json");
+  return path.join(ws, ".repo/tmp/sessions", sid, "git-asked.json");
 }
 
 function words(ws: string, sid: string) {
@@ -76,7 +76,7 @@ it("writes nothing without a session id, and still stamps the prompt gate as bef
   );
 
   expect(out.status).toBe(0);
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/sessions"))).toBe(false);
 });
 
 it("writes where the gate reads, however odd the session id", () => {
@@ -88,11 +88,11 @@ it("writes where the gate reads, however odd the session id", () => {
   }
 
   submit(ws, "../escape", "stash it");
-  expect(readerFile("../escape")).toBe(path.join(ws, ".tmp/repo/sessions/escape/git-asked.json"));
+  expect(readerFile("../escape")).toBe(path.join(ws, ".repo/tmp/sessions/escape/git-asked.json"));
   expect(JSON.parse(fs.readFileSync(readerFile("../escape"), "utf8"))).toStrictEqual({ words: ["stash"] });
   expect(fs.existsSync(path.join(ws, ".tmp/escape"))).toBe(false);
   submit(ws, "../../agents/", "stash it");
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/sessions/git-asked.json"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/sessions/git-asked.json"))).toBe(false);
 });
 
 it("leaves a host stop banner alone and fails open when the session dir cannot be made", () => {
@@ -101,9 +101,9 @@ it("leaves a host stop banner alone and fails open when the session dir cannot b
   submit(ws, "g3", "Stop hook feedback: keep going");
   expect(words(ws, "g3")).toStrictEqual(["stash"]);
   const blocked = workspace();
-  fs.mkdirSync(path.join(blocked, ".tmp/repo"), { recursive: true });
-  fs.writeFileSync(path.join(blocked, ".tmp/repo/sessions"), "a file where the dir should be");
+  fs.mkdirSync(path.join(blocked, ".repo/tmp"), { recursive: true });
+  fs.writeFileSync(path.join(blocked, ".repo/tmp/sessions"), "a file where the dir should be");
   // The prompt still gets its usual reply; only the stamp is lost.
   expect(submit(blocked, "g4", "stash it").stdout).toContain("additionalContext");
-  expect(fs.statSync(path.join(blocked, ".tmp/repo/sessions")).isFile()).toBe(true);
+  expect(fs.statSync(path.join(blocked, ".repo/tmp/sessions")).isFile()).toBe(true);
 });

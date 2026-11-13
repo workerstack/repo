@@ -77,7 +77,7 @@ ${NODE_STEPS}      - name: Refuse to run as root
       - run: bun install --frozen-lockfile
       - uses: ${CACHE.replace("%", "restore")}
         with:
-          path: .tmp/repo/tsbuildinfo
+          path: .repo/tmp/tsbuildinfo
           key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
           restore-keys: tsbuildinfo-\${{ runner.os }}-
       - name: Run the gates and write the skip report
@@ -90,7 +90,7 @@ ${NODE_STEPS}      - name: Refuse to run as root
       - uses: ${CACHE.replace("%", "save")}
         if: always() && github.ref == 'refs/heads/main'
         with:
-          path: .tmp/repo/tsbuildinfo
+          path: .repo/tmp/tsbuildinfo
           key: tsbuildinfo-\${{ runner.os }}-\${{ github.sha }}
       - uses: ${UPLOAD}
         if: always()

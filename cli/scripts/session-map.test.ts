@@ -40,7 +40,7 @@ describe("session-map hook on the process stdin", () => {
     vi.stubEnv("REPO_BOARD_HOME", tmpBoard());
     expect(sessionMain()).toBe(0);
     expect(String(out.mock.calls[0]?.[0])).toContain("src/");
-    expect(fs.existsSync(path.join(root, ".tmp/repo/sessions/s-stdin/map.json"))).toBe(true);
+    expect(fs.existsSync(path.join(root, ".repo/tmp/sessions/s-stdin/map.json"))).toBe(true);
   });
 });
 
@@ -56,7 +56,7 @@ describe("session-map hook", () => {
     expect(out.hookSpecificOutput.additionalContext).toBe(
       "Folder map (code folders, complete; `…` = deeper, run `bun repo map <dir>`):\nsrc/lib/\n",
     );
-    const log = JSON.parse(fs.readFileSync(path.join(root, ".tmp/repo/sessions/s1/map.json"), "utf8"));
+    const log = JSON.parse(fs.readFileSync(path.join(root, ".repo/tmp/sessions/s1/map.json"), "utf8"));
     expect(log).toStrictEqual({ depth: 6, rows: 1, tokens: 3 });
   });
 });

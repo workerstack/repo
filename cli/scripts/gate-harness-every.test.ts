@@ -23,7 +23,7 @@ import { DENY_FILE_BYTES, REASON_DENYLIST, REASON_REREAD } from "./gate.constant
 const tmp = useTmp();
 const deniedPath = ["node", "modules/x/package.json"].join("_");
 const JOB_QUERY = /node_modules\/\.bin\/repo job --job exec --query /;
-const REL = ".tmp/repo/scratch/x.md";
+const REL = ".repo/scratch/scratch/x.md";
 
 function cx(cwd: string, tool: string, command: string) {
   return inSession(codexCall(cwd, tool, { command }), "cx1");
@@ -49,7 +49,7 @@ function repo() {
   fs.mkdirSync(a, { recursive: true });
   fs.writeFileSync(path.join(a, "big.log"), "x".repeat(DENY_FILE_BYTES + 1024));
 
-  return { a, r, scratch: (rel: string) => path.join(r, ".tmp/repo", rel) };
+  return { a, r, scratch: (rel: string) => path.join(r, ".repo/scratch", rel) };
 }
 
 it("Codex: redirects heredoc and freeform patches with allow, and leaves Update headers", () => {
@@ -59,11 +59,11 @@ it("Codex: redirects heredoc and freeform patches with allow, and leaves Update 
   expect(processHookPayload(viaShell)).toStrictEqual(codexAllow({ command: heredoc(patchAdd(moved)) }));
   const viaTool = processHookPayload(cx(a, "apply_patch", patchAdd(REL)));
   expect(viaTool).toStrictEqual(codexAllow({ command: patchAdd(moved) }));
-  expect(processHookPayload(cx(a, "apply_patch", patchUpdate(".tmp/repo/scratch/u.md")))).toBeNull();
+  expect(processHookPayload(cx(a, "apply_patch", patchUpdate(".repo/scratch/scratch/u.md")))).toBeNull();
   expect(processHookPayload(asChild(viaShell, "scout"))).toStrictEqual(
     codexAllow({ command: heredoc(patchAdd(moved)) }),
   );
-  expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
+  expect(fs.existsSync(path.join(a, ".repo"))).toBe(false);
   expect(fs.existsSync(scratch("scratch"))).toBe(false);
 });
 
@@ -145,20 +145,20 @@ it("Antigravity: overwrites only the changed args, denies with decision, and ski
 });
 
 it("redirects a nested plan through tools orchestrate-parent cannot see, and leaves Claude's to it", () => {
-  const { r, a, scratch } = repo();
-  const nested = path.join(a, ".tmp/repo/plans/p.md");
+  const { r, a } = repo();
+  const nested = path.join(a, ".repo/plans/p.md");
   const patched = processHookPayload(cx(a, "apply_patch", patchAdd(nested)));
-  expect(patched).toStrictEqual(codexAllow({ command: patchAdd(scratch("plans/p.md")) }));
+  expect(patched).toStrictEqual(codexAllow({ command: patchAdd(path.join(r, ".repo/plans/p.md")) }));
   const agy = processHookPayload(agyCall(r, "write_file", { Content: "x", Path: nested }));
-  expect(agy).toStrictEqual({ decision: "allow", overwrite: { Path: scratch("plans/p.md") } });
+  expect(agy).toStrictEqual({ decision: "allow", overwrite: { Path: path.join(r, ".repo/plans/p.md") } });
   const claude = claudeCall(a, "Write", { content: "x", file_path: nested });
   expect(processHookPayload(inSession(claude, "cl1"))).toBeNull();
 });
 
 it("parses Windows patch headers and targets with path.win32", () => {
   const w = { checkout: "C:\\r", cwd: "C:\\r\\packages\\a", root: "C:\\r" };
-  const nested = "C:\\r\\packages\\a\\.tmp\\repo\\scratch\\x.md";
-  const dest = "C:\\r\\.tmp\\repo\\scratch\\x.md";
+  const nested = "C:\\r\\packages\\a\\.repo\\scratch\\x.md";
+  const dest = "C:\\r\\.repo\\scratch\\x.md";
   expect(rewritePatch(patchAdd(nested), w, path.win32).patch).toBe(patchAdd(dest));
   expect(rewriteScratchWrite(nested, w, path.win32)).toBe(dest);
 });

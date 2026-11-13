@@ -15,7 +15,7 @@ it(
     expect(build(root)).toStrictEqual({ code: 0, lines: ["removed 2 build dirs and 1 tsbuildinfo file (6 B)"] });
     expect(exists(root)(".next")).toBe(false);
 
-    for (const kept of ["node_modules/m/i", ".flare/s", ".tmp/repo/old.log", "src/a.ts"])
+    for (const kept of ["node_modules/m/i", ".flare/s", ".repo/scratch/old.log", "src/a.ts"])
       expect(exists(root)(kept)).toBe(true);
   },
 );

@@ -9,7 +9,7 @@ import type { CargoResult } from "./rust/clippy.ts";
 
 const OUT_DIR = path.join(BASE, "out");
 const OUTCOMES = path.join(OUT_DIR, "mutants.out", "outcomes.json");
-const REPORT = at(".tmp/repo/mutation/report.json");
+const REPORT = at(".repo/tmp/mutation/report.json");
 const PACKAGES = ["crates/a", "crates/b"];
 const NO_BINARY: CargoResult = { missing: false, status: 101, stderr: "error: no such command: `mutants`", stdout: "" };
 
@@ -83,8 +83,8 @@ it("runs cargo mutants in a clone of HEAD, then scores each crate dir against it
   expect(f.out).toStrictEqual([
     `mutate: HEAD ${SHA.slice(0, 7)}\n`,
     "mutate: cargo-mutants, 28 mutants, shard 1/1\n",
-    "mutate: crates/a 69.57% (floor 60), 7 survivors in .tmp/repo/mutation/report.json\n",
-    "mutate: crates/b 100.00% (no floor), 0 survivors in .tmp/repo/mutation/report.json\n",
+    "mutate: crates/a 69.57% (floor 60), 7 survivors in .repo/tmp/mutation/report.json\n",
+    "mutate: crates/b 100.00% (no floor), 0 survivors in .repo/tmp/mutation/report.json\n",
   ]);
 
   const report = JSON.parse(f.files.get(REPORT) ?? "") /* the shard report this command wrote */ as {
@@ -103,7 +103,7 @@ it("fails a crate below its floor", async () => {
   expect(await runMutate(["--rust"], f.deps)).toBe(1);
   expect(f.err.join("")).toBe(
     "repo mutate: crates/a scored 69.57%, below its floor of 80 in mutation-floors.json; see the survivors " +
-      "in .tmp/repo/mutation/report.json\n",
+      "in .repo/tmp/mutation/report.json\n",
   );
 });
 

@@ -8,6 +8,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { isString, tryJson } from "../json.ts";
+import { STATE, isIgnoredRepoPath, repoPath } from "../repo-dirs.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -37,7 +38,7 @@ function readSeen(seenFile: string): string[] {
 /** The rows this session has not been shown, recorded as shown; with no session every row is fresh. */
 function unseenRows(data: HookInput, roots: Roots, rows: LessonRow[]): LessonRow[] {
   const sid = sessionIdOf(data);
-  const seenFile = sid === "" ? "" : path.join(roots.root, ".tmp", "repo", "sessions", sid, "lessons-seen.json");
+  const seenFile = sid === "" ? "" : repoPath(roots.root, STATE, "sessions", sid, "lessons-seen.json");
   const seen = seenFile === "" ? [] : readSeen(seenFile);
   const fresh = rows.filter((r) => !seen.includes(r.file));
 
@@ -57,11 +58,7 @@ function noticeFor(data: HookInput, toolInput: ToolArgs): ContextReply | null {
   const abs = resolveTyped(roots, target);
   const holder = holdingCheckout(abs, roots);
 
-  if (
-    isLessonFile(abs, holder) ||
-    rewriteScratchPath(abs, roots) !== null ||
-    isUnderDir(abs, roots.root, [".tmp", "repo"])
-  )
+  if (isLessonFile(abs, holder) || rewriteScratchPath(abs, roots) !== null || isIgnoredRepoPath(roots.root, abs))
     return null;
   const fresh = unseenRows(data, roots, matchLessons({ files: [abs], roots }));
 

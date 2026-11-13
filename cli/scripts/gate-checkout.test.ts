@@ -62,15 +62,16 @@ it("denies a Codex apply_patch (tool and shell heredoc), a Cursor Write and an A
   });
 });
 
-it("lets .tmp, a worktree, scratch redirects and paths outside the root through", () => {
+it("lets .repo work dirs, a worktree, scratch redirects and paths outside the root through", () => {
   const r = tmp.committed("gate-main-");
   const outside = path.join(os.tmpdir(), "gate-main-elsewhere", "x.ts");
 
   for (const file of [
-    path.join(r, ".tmp/repo/n.md"),
-    path.join(r, ".tmp/x.txt"),
+    path.join(r, ".repo/scratch/n.md"),
+    path.join(r, ".repo/plans/x.md"),
+    path.join(r, ".repo/tmp/x.txt"),
     path.join(r, ".worktrees/a/src/x.ts"),
-    path.join(r, "packages/a/.tmp/repo/x.md"),
+    path.join(r, "packages/a/.repo/scratch/x.md"),
     path.join(r, "tmp/notes.md"),
     outside,
   ]) {
@@ -90,7 +91,7 @@ it("judges the canonical path through a symlink to the root", () => {
   expect(processFatTools(claudeWrite(alias, path.join(alias, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(processFatTools(claudeWrite(r, path.join(alias, "src/x.ts")))).toStrictEqual(deny(reasonOf(r)));
   expect(notDenied(processFatTools(claudeWrite(alias, path.join(alias, ".worktrees/a/src/x.ts"))))).toBe(true);
-  expect(notDenied(processFatTools(claudeWrite(alias, path.join(alias, ".tmp/repo/n.md"))))).toBe(true);
+  expect(notDenied(processFatTools(claudeWrite(alias, path.join(alias, ".repo/scratch/n.md"))))).toBe(true);
   expect(processFatTools(claudeSh(alias, "git commit -m x"))).toMatchObject({ type: "deny" });
 });
 
@@ -120,12 +121,13 @@ it("reads win32 spellings of the root", () => {
 
   const reason =
     "the main checkout is shared: run bun repo worktree add <name> and write under C:\\r\\.worktrees\\<name>; " +
-    "only C:\\r\\.tmp\\ is writable here";
+    "only C:\\r\\.repo\\{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}\\ " +
+    "is writable here";
 
   expect(check("C:\\r\\src\\x.ts")).toBe(reason);
   expect(check("c:/R/src/x.ts")).toBe(reason);
   expect(check("src\\x.ts")).toBe(reason);
-  expect(check("C:\\r\\.tmp\\repo\\n.md")).toBeNull();
+  expect(check("C:\\r\\.repo\\plans\\n.md")).toBeNull();
   expect(check("c:/R/.worktrees/a/src/x.ts")).toBeNull();
   expect(check("D:\\other\\x.ts")).toBeNull();
   expect(mainCheckoutWriteReason("C:\\r\\src\\x.ts", roots, { committed: () => false, p: path.win32 })).toBeNull();

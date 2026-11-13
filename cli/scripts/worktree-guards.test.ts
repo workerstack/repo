@@ -48,7 +48,8 @@ it("suggests a name from the branch or the dir, and a placeholder when neither i
 it("resolves a write target against the root when the roots carry no cwd", () => {
   const r = tmp.repo();
   expect(mainCheckoutWriteReason("packages/a/index.js", { root: r })).toMatch(/^the main checkout is shared: /);
-  expect(mainCheckoutWriteReason(".tmp/note.md", { root: r })).toBeNull();
+  expect(mainCheckoutWriteReason(".repo/scratch/note.md", { root: r })).toBeNull();
+  expect(mainCheckoutWriteReason(".tmp/note.md", { root: r })).toMatch(/^the main checkout is shared: /);
   expect(managedLessonsDir("packages/a/index.js", { root: r })).toBe(path.join(r, ".repo", "lessons"));
   expect(managedLessonsDir(".worktrees/w/src/a.ts", { root: r })).toBe(
     path.join(r, ".worktrees", "w", ".repo", "lessons"),

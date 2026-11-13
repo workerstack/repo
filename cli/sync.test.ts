@@ -18,7 +18,16 @@ import {
 
 useSyncKit();
 
-const GITIGNORE = region("# ", "", ["ignore", ".tmp/\n.worktrees/\n.repo/tmp/\ncoverage/\nnode_modules/"]);
+const GITIGNORE = region("# ", "", [
+  "ignore",
+  [
+    ".tmp/\n.worktrees/\ncoverage/\n",
+    "**/.repo/plans/\n**/.repo/plans-fast/\n**/.repo/roadmaps/\n**/.repo/roadmaps-fast/\n",
+    "**/.repo/handoffs/\n**/.repo/implementations/\n**/.repo/scratch/\n**/.repo/tmp/\n",
+    "node_modules/",
+  ].join(""),
+]);
+
 const GITATTRIBUTES = region("# ", "", ["generated", "* text=auto eol=lf\nbunfig.toml linguist-generated"]);
 const SETTINGS = '{\n  "files.readonlyInclude": {\n    "bunfig.toml": true\n  }\n}\n';
 const API_ENTRY = "- [@acme/api](../packages/api/references/INDEX.md): API worker";

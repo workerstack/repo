@@ -73,9 +73,9 @@ describe("phase-files defaults", () => {
 
   it("skips plan files whose name does not start with a serial", () => {
     const dir = plant();
-    fs.mkdirSync(path.join(dir, ".tmp/repo/plans"), { recursive: true });
-    fs.writeFileSync(path.join(dir, ".tmp/repo/plans/notes.md"), PLAN);
-    fs.writeFileSync(path.join(dir, ".tmp/repo/plans/7-x.txt"), PLAN);
+    fs.mkdirSync(path.join(dir, ".repo/plans"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".repo/plans/notes.md"), PLAN);
+    fs.writeFileSync(path.join(dir, ".repo/plans/7-x.txt"), PLAN);
     const err = capture();
     expect(main(["7", "2"], dir)).toBe(2);
     expect(err.join("")).toContain("no plan 7 in ");

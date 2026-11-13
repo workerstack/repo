@@ -1,10 +1,11 @@
 /**
- * The files a session wrote, kept in `<root>/.tmp/repo/sessions/<sid>/wrote.txt`, so a re-read can be sent to a
+ * The files a session wrote, kept in `<root>/.repo/tmp/sessions/<sid>/wrote.txt`, so a re-read can be sent to a
  * slice.
  */
 import fs from "node:fs";
 import path from "node:path";
 
+import { STATE, repoPath } from "../repo-dirs.ts";
 import type { Harness } from "./gate-harness.ts";
 import { jobCommand, quoteQuery, shellPath } from "./gate-job.ts";
 import { isUnder } from "./gate-paths.ts";
@@ -14,7 +15,7 @@ import { resolveTyped, type Roots } from "./workspace-root.ts";
 export function wroteListPath(workspaceRoot: string | null | undefined, sid: string): string {
   if (workspaceRoot == null || workspaceRoot === "" || sid === "") return "";
 
-  return path.join(workspaceRoot, ".tmp", "repo", "sessions", sid, "wrote.txt");
+  return repoPath(workspaceRoot, STATE, "sessions", sid, "wrote.txt");
 }
 
 /** Absolute posix key for a file this session wrote, or "" when it is outside the root and checkout. */

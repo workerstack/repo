@@ -4,7 +4,7 @@ description: Review a plan in a fresh agent before approval. Use for /review-pla
 ---
 # review-plan
 
-You review one plan under `.tmp/repo/plans/` that someone else wrote. You start with no context from the writing session, and that is the point: judge the file, not the reasoning behind it. Format: `node_modules/@workerstack/repo/references/plan-format.md`. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
+You review one plan under `.repo/plans/` that someone else wrote. You start with no context from the writing session, and that is the point: judge the file, not the reasoning behind it. Format: `node_modules/@workerstack/repo/references/plan-format.md`. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
 
 Slash `/review-plan {n|path}` only. Not a session flag. `/write-plan` runs it in a fresh agent after every write or revision. Run it yourself on any plan.
 

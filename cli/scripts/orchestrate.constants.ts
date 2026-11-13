@@ -1,7 +1,8 @@
+import { REPO, STATE } from "../repo-dirs.ts";
 import type { Approvable } from "./orchestrate.types.ts";
 
 /** Where the parent hook keeps its per-session stamps. */
-export const ORCHESTRATOR_LOGS_DIR = ".tmp/repo/orchestrator-logs";
+export const ORCHESTRATOR_LOGS_DIR: string = `${REPO}/${STATE}/orchestrator-logs`;
 
 /** One-release dual-read; drop next release. */
 export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
@@ -87,7 +88,7 @@ export const APPROVABLE_STATUS: Readonly<Record<Approvable["kind"], ReadonlySet<
   roadmap: /* @__PURE__ */ new Set(["draft", "locked"]),
 };
 
-/** The .tmp/repo dir each approvable kind is saved in. */
+/** The .repo dir each approvable kind is saved in. */
 export const ITEM_DIRS: Readonly<Record<Approvable["kind"], string>> = { plan: "plans", roadmap: "roadmaps" };
 
 /** The kind a `/review-plan N` or `/review-roadmap N` spawn names. */

@@ -17,7 +17,7 @@ function tmpWs(): string {
 }
 
 describe("persistHandoff", () => {
-  it("writes a stamped handoff under .tmp/repo/handoffs", () => {
+  it("writes a stamped handoff under .repo/handoffs", () => {
     const ws = tmpWs();
 
     const r = persistHandoff({

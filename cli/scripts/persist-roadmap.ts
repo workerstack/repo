@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Allocate/validate/write a new roadmap under .tmp/repo/roadmaps/; validate an update of a saved one. */
+/** Allocate/validate/write a new roadmap under .repo/roadmaps/; validate an update of a saved one. */
 import fs from "node:fs";
 import path from "node:path";
 

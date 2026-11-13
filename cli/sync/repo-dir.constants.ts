@@ -1,3 +1,5 @@
+import { IGNORED_DIRS } from "../repo-dirs.ts";
+
 /** The dir of a repo's own sync input, at the root and in a workspace package. */
 export const REPO_DIR = ".repo";
 
@@ -12,6 +14,11 @@ export const PACKAGE_DIRS: readonly string[] = ["rules", "skills"];
 
 /** The root `.repo/` dirs sync reads. */
 export const READ_DIRS: readonly string[] = ["rules", "subagents", "skills", "lessons", "tmp", "global-settings"];
+
+/** The gitignored root `.repo/` dirs sync never reads (work docs, scratch): allowed, never loaded as rules. */
+export const IGNORED_ONLY_DIRS: readonly string[] = /* @__PURE__ */ IGNORED_DIRS.filter(
+  (dir) => !READ_DIRS.includes(dir),
+);
 
 /** The root `.repo/` files sync reads. */
 export const READ_FILES: readonly string[] = ["hooks.jsonc", "mcp-policy.jsonc", "permissions.json", "map.jsonc"];

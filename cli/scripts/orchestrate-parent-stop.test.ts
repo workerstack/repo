@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 function receipt(ws: string, sid: string) {
-  return fs.readFileSync(path.join(ws, ".tmp/repo/sessions", sid, "receipt.txt"), "utf8").split("\n");
+  return fs.readFileSync(path.join(ws, ".repo/tmp/sessions", sid, "receipt.txt"), "utf8").split("\n");
 }
 
 describe("a host that sends no stdin", () => {
@@ -28,7 +28,7 @@ describe("a host that sends no stdin", () => {
 });
 
 function ask(ws: string, sid: string) {
-  return plantFile(ws, `.tmp/repo/orchestrator-logs/session-gate-${sid}`, "ask");
+  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "ask");
 }
 
 describe("a Stop that is not the end of a turn", () => {
@@ -67,23 +67,23 @@ describe("the ask-mode stop block", () => {
   it("counts from zero when the stop-block stamp holds no number", () => {
     const ws = hook.temp();
     ask(ws, "a4");
-    plantFile(ws, ".tmp/repo/orchestrator-logs/stop-block-a4", "junk");
+    plantFile(ws, ".repo/tmp/orchestrator-logs/stop-block-a4", "junk");
     expect(hook.stop(ws, "a4", { last_assistant_message: "Done." })?.decision).toBe("block");
-    expect(fs.readFileSync(path.join(ws, ".tmp/repo/orchestrator-logs/stop-block-a4"), "utf8")).toBe("1");
+    expect(fs.readFileSync(path.join(ws, ".repo/tmp/orchestrator-logs/stop-block-a4"), "utf8")).toBe("1");
   });
 });
 
 describe("a session receipt", () => {
   it("counts the non-empty lines of the wrote and read lists", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/repo/sessions/r1/wrote.txt", "a.ts\n\n  \nb.ts\n");
+    plantFile(ws, ".repo/tmp/sessions/r1/wrote.txt", "a.ts\n\n  \nb.ts\n");
     hook.stop(ws, "r1", { last_assistant_message: "All done." });
-    expect(receipt(ws, "r1")).toStrictEqual(["All done.", "2 wrote, 0 read.", "session=.tmp/repo/sessions/r1/", ""]);
+    expect(receipt(ws, "r1")).toStrictEqual(["All done.", "2 wrote, 0 read.", "session=.repo/tmp/sessions/r1/", ""]);
   });
 
   it("is not written when the session directory cannot be made", () => {
     const ws = hook.temp();
-    const blocker = plantFile(ws, ".tmp/repo/sessions/r2", "a file, not a directory");
+    const blocker = plantFile(ws, ".repo/tmp/sessions/r2", "a file, not a directory");
     expect(hook.stop(ws, "r2", { last_assistant_message: "Done." })).toBeNull();
     expect(fs.readFileSync(blocker, "utf8")).toBe("a file, not a directory");
   });
@@ -138,7 +138,7 @@ describe("the last assistant message read from a transcript", () => {
   it("is empty when the transcript is missing", () => {
     const ws = hook.temp();
     hook.stop(ws, "t3", { transcript_path: path.join(ws, "missing.jsonl") });
-    expect(receipt(ws, "t3")).toStrictEqual(["0 wrote, 0 read.", "session=.tmp/repo/sessions/t3/", ""]);
+    expect(receipt(ws, "t3")).toStrictEqual(["0 wrote, 0 read.", "session=.repo/tmp/sessions/t3/", ""]);
   });
 });
 
@@ -172,7 +172,7 @@ describe("a child agent stop that cannot be answered", () => {
   it("passes once the session has intercepted three needs", () => {
     const ws = hook.temp();
     plantFile(ws, "hit.txt", "capped-token\n");
-    plantFile(ws, ".tmp/repo/orchestrator-logs/need-intercept-c1", "3");
+    plantFile(ws, ".repo/tmp/orchestrator-logs/need-intercept-c1", "3");
     const msg = 'need: [{"job":"search","query":"capped-token"}]';
     expect(hook.send(ws, need({ last_assistant_message: msg }))).toBeNull();
   });

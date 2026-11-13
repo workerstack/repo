@@ -35,7 +35,7 @@ it("attributes a file to the deepest package dir holding it, else the root", () 
 
 const TRACKED = ["packages/a/src/x.ts", "src/y.ts"];
 const FILES = { "packages/a/src/x.ts": "x\n", "src/y.ts": "y\n" };
-const REPORT = ".tmp/repo/mutation/report.json";
+const REPORT = ".repo/tmp/mutation/report.json";
 
 function unsharded(floors: Record<string, number> | string | null) {
   const report = rawReport({

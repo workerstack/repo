@@ -12,7 +12,7 @@ bun repo speak voices [--provider elevenlabs|openai]
 bun repo speak say --text "hello" [--provider elevenlabs|openai] [--voice ID] [--out path] [--play]
 ```
 
-`say` writes an mp3 under `.tmp/repo/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
+`say` writes an mp3 under `.repo/tmp/speak/` (or `--out`) and prints the path. `--play` is local `afplay` (mac) or `ffplay`.
 
 ## Auth
 

@@ -2,14 +2,12 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { SCRATCH, type RepoDir, repoPath } from "../repo-dirs.ts";
 import {
   extractTmpExt,
   extractTmpName,
   isUnderDir,
-  isUnderHandoffs,
-  isUnderImplementations,
-  isUnderPlans,
-  isUnderRoadmaps,
+  isUnderRepoDir,
   isUnderTmp,
   normalizeTmpExt,
   persistOwner,
@@ -19,26 +17,32 @@ import {
 const root = path.resolve("/work/repo");
 
 function at(...parts: string[]) {
-  return path.join(root, ".tmp", "repo", ...parts);
+  return repoPath(root, ...parts);
 }
 
-describe("who owns a file under .tmp/repo", () => {
-  it.each([
-    ["plans", isUnderPlans],
-    ["roadmaps", isUnderRoadmaps],
-    ["handoffs", isUnderHandoffs],
-    ["implementations", isUnderImplementations],
-  ])("%s owns files below its folder, absolute or relative, and nothing else", (dir, isUnder) => {
-    expect(isUnder(at(dir, "1-a.md"), root)).toBe(true);
-    expect(isUnder(`.tmp/repo/${dir}/deep/1-a.md`, root)).toBe(true);
-    expect(isUnder(at(dir), root)).toBe(false);
-    expect(isUnder(at("other", "1-a.md"), root)).toBe(false);
-    expect(isUnder(path.join(root, ".tmp", "repo", "..", "x.md"), root)).toBe(false);
-    expect(isUnder("", root)).toBe(false);
-    expect(isUnder(at(dir, "1-a.md"), "")).toBe(false);
-    expect(isUnder(null, root)).toBe(false);
-    expect(isUnder(at(dir, "1-a.md"), undefined)).toBe(false);
-  });
+function scratch(...parts: string[]) {
+  return at(SCRATCH, ...parts);
+}
+
+describe("who owns a file under .repo", () => {
+  it.each(["plans", "roadmaps", "handoffs", "implementations"] as const)(
+    "%s owns files below its folder, absolute or relative, and nothing else",
+    (dir: RepoDir) => {
+      function isUnder(f: string | null | undefined, ws: string | null | undefined) {
+        return isUnderRepoDir(f, ws, dir);
+      }
+
+      expect(isUnder(at(dir, "1-a.md"), root)).toBe(true);
+      expect(isUnder(`.repo/${dir}/deep/1-a.md`, root)).toBe(true);
+      expect(isUnder(at(dir), root)).toBe(false);
+      expect(isUnder(at("other", "1-a.md"), root)).toBe(false);
+      expect(isUnder(path.join(root, ".repo", "..", "x.md"), root)).toBe(false);
+      expect(isUnder("", root)).toBe(false);
+      expect(isUnder(at(dir, "1-a.md"), "")).toBe(false);
+      expect(isUnder(null, root)).toBe(false);
+      expect(isUnder(at(dir, "1-a.md"), undefined)).toBe(false);
+    },
+  );
 
   it("checks any folder under the root by its segments", () => {
     expect(isUnderDir("a/b/c.txt", root, ["a", "b"])).toBe(true);
@@ -47,14 +51,14 @@ describe("who owns a file under .tmp/repo", () => {
 });
 
 describe("who owns a loose file", () => {
-  it("gives tmp the loose files at the top of .tmp/repo, not the folders repo owns", () => {
-    expect(isUnderTmp(at("1-note-20260827T143000Z.md"), root)).toBe(true);
-    expect(isUnderTmp(".tmp/repo/1-note-20260827T143000Z.md", root)).toBe(true);
-    expect(isUnderTmp(at("scratch", "1-note.md"), root)).toBe(false);
-    expect(isUnderTmp(at("plans"), root)).toBe(false);
-    expect(isUnderTmp(at("stash"), root)).toBe(false);
+  it("gives tmp the loose files at the top of .repo/scratch, not nested files", () => {
+    expect(isUnderTmp(scratch("1-note-20260827T143000Z.md"), root)).toBe(true);
+    expect(isUnderTmp(".repo/scratch/1-note-20260827T143000Z.md", root)).toBe(true);
+    expect(isUnderTmp(scratch("scratch", "1-note.md"), root)).toBe(false);
+    expect(isUnderTmp(at("plans", "1-a.md"), root)).toBe(false);
+    expect(isUnderTmp(scratch("plans", "1-a.md"), root)).toBe(false);
     expect(isUnderTmp("", root)).toBe(false);
-    expect(isUnderTmp(at("1-a.md"), null)).toBe(false);
+    expect(isUnderTmp(scratch("1-a.md"), null)).toBe(false);
   });
 
   it("names the owner of a path, or null", () => {
@@ -62,8 +66,8 @@ describe("who owns a loose file", () => {
     expect(persistOwner(at("roadmaps", "1-a.md"), root)).toBe("roadmaps");
     expect(persistOwner(at("handoffs", "1-a.md"), root)).toBe("handoffs");
     expect(persistOwner(at("implementations", "1-a.md"), root)).toBe("implementations");
-    expect(persistOwner(at("1-a.md"), root)).toBe("tmp");
-    expect(persistOwner(at("browser", "1-a.md"), root)).toBeNull();
+    expect(persistOwner(scratch("1-a.md"), root)).toBe("tmp");
+    expect(persistOwner(scratch("browser", "1-a.md"), root)).toBeNull();
     expect(persistOwner(path.join(root, "src", "a.ts"), root)).toBeNull();
   });
 });

@@ -62,9 +62,9 @@ describe("a spawn", () => {
 
   it("leaves a review record only for a review prompt whose item is saved", () => {
     const ws = kit.temp("tools-");
-    saveAs(ws, ".tmp/repo/plans/x.md", VALID_PLAN);
-    saveAs(ws, ".tmp/repo/roadmaps/x.md", DRAFT_ROADMAP);
-    const record = path.join(ws, ".tmp/repo/sessions/sp/reviews-open.json");
+    saveAs(ws, ".repo/plans/x.md", VALID_PLAN);
+    saveAs(ws, ".repo/roadmaps/x.md", DRAFT_ROADMAP);
+    const record = path.join(ws, ".repo/tmp/sessions/sp/reviews-open.json");
     inSession("sp")(ws, "Task", { prompt: 5 });
     inSession("sp")(ws, "Task", { prompt: "/review-plan 9" });
     expect(fs.existsSync(record)).toBe(false);
@@ -74,9 +74,9 @@ describe("a spawn", () => {
   });
 });
 
-describe("a write under .tmp/repo", () => {
+describe("a write under .repo", () => {
   it("saves a handoff under handoffs", () => {
-    const saved = saveAs(kit.temp("tools-"), ".tmp/repo/handoffs/x.md", VALID_HANDOFF);
+    const saved = saveAs(kit.temp("tools-"), ".repo/handoffs/x.md", VALID_HANDOFF);
     expect(path.basename(path.dirname(saved))).toBe("handoffs");
     expect(path.basename(saved)).toMatch(/^1-sync-skills-to-hosts-/);
   });
@@ -85,15 +85,15 @@ describe("a write under .tmp/repo", () => {
     const ws = kit.temp("tools-");
 
     for (const dir of ["plans", "implementations"]) {
-      const out = pre(ws, "Edit", { file_path: `.tmp/repo/${dir}/x.md`, new_string: "b", old_string: "a" });
+      const out = pre(ws, "Edit", { file_path: `.repo/${dir}/x.md`, new_string: "b", old_string: "a" });
       expect(out?.permissionDecision, dir).toBe("deny");
     }
   });
 
   it("passes an Edit of a saved plan whose old text is not in the file", () => {
     const ws = kit.temp("tools-");
-    const plan = saveAs(ws, ".tmp/repo/plans/x.md", VALID_PLAN);
-    const roadmap = saveAs(ws, ".tmp/repo/roadmaps/x.md", DRAFT_ROADMAP);
+    const plan = saveAs(ws, ".repo/plans/x.md", VALID_PLAN);
+    const roadmap = saveAs(ws, ".repo/roadmaps/x.md", DRAFT_ROADMAP);
 
     for (const filePath of [plan, roadmap]) {
       const out = pre(ws, "Edit", { file_path: filePath, new_string: "b", old_string: "no such text" });
@@ -103,7 +103,7 @@ describe("a write under .tmp/repo", () => {
 });
 
 function journal(ws: string): string {
-  return saveAs(ws, ".tmp/repo/implementations/x.md", VALID_IMPL);
+  return saveAs(ws, ".repo/implementations/x.md", VALID_IMPL);
 }
 
 describe("a write to a saved journal", () => {
@@ -144,7 +144,7 @@ describe("a lesson notice", () => {
 
   it("starts over when the seen list is not a list", () => {
     const ws = lessons();
-    const seen = path.join(ws, ".tmp/repo/sessions/sj/lessons-seen.json");
+    const seen = path.join(ws, ".repo/tmp/sessions/sj/lessons-seen.json");
     fs.mkdirSync(path.dirname(seen), { recursive: true });
     fs.writeFileSync(seen, '{"a":1}');
     expect(edit(ws, "sj")?.additionalContext).toContain("plan-forks");
@@ -153,7 +153,7 @@ describe("a lesson notice", () => {
 
   it("never blocks the edit when the seen list cannot be saved", () => {
     const ws = lessons();
-    fs.mkdirSync(path.join(ws, ".tmp/repo/sessions/sd/lessons-seen.json"), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".repo/tmp/sessions/sd/lessons-seen.json"), { recursive: true });
     expect(edit(ws, "sd")).toBeNull();
   });
 });

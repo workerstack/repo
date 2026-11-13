@@ -4,9 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
+import { REPO, SCRATCH, repoPath } from "../repo-dirs.ts";
 import { VALID_TMP } from "./__fixtures__/persist-bodies.ts";
 import { saveAtRepoRoot } from "./__fixtures__/persist-save-kit.ts";
-import { TMP_DIR, persistTmp } from "./persist-tmp.ts";
+import { persistTmp } from "./persist-tmp.ts";
 
 const { tempDir } = useTempDirs("persist-tmp-s-");
 
@@ -20,7 +21,7 @@ const STAMP = "20260827T143000Z";
 describe("persistTmp serials", () => {
   it("steps past a taken name and keeps counting from the files it can see", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, TMP_DIR);
+    const dir = repoPath(ws, SCRATCH);
     // A folder holding the next name hides from the serial scan but still blocks the write.
     fs.mkdirSync(path.join(dir, `1-bank-email-draft-${STAMP}.md`), { recursive: true });
     fs.mkdirSync(path.join(dir, `2-bank-email-draft-${STAMP}.md`));
@@ -33,7 +34,7 @@ describe("persistTmp serials", () => {
 
   it("gives up with a serial collision once five names in a row are taken", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, TMP_DIR);
+    const dir = repoPath(ws, SCRATCH);
 
     for (let n = 1; n <= 6; n++) fs.mkdirSync(path.join(dir, `${n}-bank-email-draft-${STAMP}.md`), { recursive: true });
     const r = persistTmp({ content: VALID_TMP, created: CREATED, workspaceRoot: ws });
@@ -43,7 +44,7 @@ describe("persistTmp serials", () => {
 
   it("skips a file with no number in front when counting", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, TMP_DIR);
+    const dir = repoPath(ws, SCRATCH);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "no-number.md"), "x");
     const r = persistTmp({ content: VALID_TMP, created: CREATED, workspaceRoot: ws });
@@ -54,7 +55,7 @@ describe("persistTmp serials", () => {
 describe("persistTmp serial limits", () => {
   it("refuses a serial that no longer prints as digits", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, TMP_DIR);
+    const dir = repoPath(ws, SCRATCH);
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, `${"1".padEnd(22, "0")}-old-${STAMP}.md`), "x");
     const r = persistTmp({ content: VALID_TMP, created: CREATED, workspaceRoot: ws });
@@ -71,7 +72,7 @@ describe("persistTmp stamp and root", () => {
   });
 
   it("saves under the repo root of the working directory when no workspace is given", () => {
-    saveAtRepoRoot({ body: VALID_TMP, dir: TMP_DIR, save: persistTmp, tmpWs });
+    saveAtRepoRoot({ body: VALID_TMP, dir: `${REPO}/${SCRATCH}`, save: persistTmp, tmpWs });
     expect(persistTmp()).toStrictEqual({ error: "missing TMP_NAME", ok: false });
   });
 });

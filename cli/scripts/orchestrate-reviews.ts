@@ -5,6 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { isString, tryJson } from "../json.ts";
+import { repoPath } from "../repo-dirs.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
@@ -52,7 +53,7 @@ export function isSliceOf(planPath: string, roadmapText: string, impl: typeof pa
 
 /** The text of each in-progress roadmap in the workspace. */
 export function inProgressRoadmaps(ws: string): string[] {
-  const dir = path.join(ws, ".tmp", "repo", "roadmaps");
+  const dir = repoPath(ws, "roadmaps");
   let names: string[] = [];
 
   try {
@@ -118,7 +119,7 @@ function holdsSerial(abs: string, serial: number): boolean {
 
 // The saved file for a plan or roadmap serial, found through its directory; null when none holds that serial.
 function itemFile(ws: string, ref: ItemRef): string | null {
-  const dir = path.join(ws, ".tmp", "repo", ITEM_DIRS[ref.kind]);
+  const dir = repoPath(ws, ITEM_DIRS[ref.kind]);
   let names: string[];
 
   try {

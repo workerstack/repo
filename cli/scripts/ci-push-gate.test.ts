@@ -171,8 +171,8 @@ it("never throws when the file cannot be written, and writes nothing", () => {
 
 it("starts over when the file holds something else", () => {
   const r = rig();
-  fs.mkdirSync(path.join(r.main, ".tmp/repo/sessions/s1"), { recursive: true });
-  fs.writeFileSync(path.join(r.main, ".tmp/repo/sessions/s1/pushed.json"), "junk");
+  fs.mkdirSync(path.join(r.main, ".repo/tmp/sessions/s1"), { recursive: true });
+  fs.writeFileSync(path.join(r.main, ".repo/tmp/sessions/s1/pushed.json"), "junk");
   r.note("git push");
   expect(r.pushed()).toStrictEqual(row("main", A));
 });

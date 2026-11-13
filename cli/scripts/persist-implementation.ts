@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Allocate/slugify/validate/write a session journal under .tmp/repo/implementations/. */
+/** Allocate/slugify/validate/write a session journal under .repo/implementations/. */
 import fs from "node:fs";
 import path from "node:path";
 

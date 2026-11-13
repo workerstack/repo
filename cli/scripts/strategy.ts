@@ -13,6 +13,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import { STATE, repoPath } from "../repo-dirs.ts";
 import {
   DEFAULT_STRATEGY,
   FM_LINE_RE,
@@ -23,7 +24,6 @@ import {
   LINE_BREAK_RE,
   MODES,
   REVIEW_FAST,
-  STAMP_DIR,
   STAMP_FILE,
   STRATEGIES,
   UNSAFE_SID_RE,
@@ -45,7 +45,7 @@ export function implementerOf(s: ReviewStrategy, attempt: 1 | 2): typeof IMPLEME
 }
 
 export function stampPath(root: string, sid: string): string {
-  return path.join(root, ...STAMP_DIR, sid.replaceAll(UNSAFE_SID_RE, ""), STAMP_FILE);
+  return repoPath(root, STATE, "sessions", sid.replaceAll(UNSAFE_SID_RE, ""), STAMP_FILE);
 }
 
 /**

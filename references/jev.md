@@ -22,10 +22,10 @@ A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600)
 
 ## Decision
 
-Write `.tmp/repo/jev/<slug>-state.txt` (plain text or a JSON object) and `.tmp/repo/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
+Write `.repo/scratch/jev/<slug>-state.txt` (plain text or a JSON object) and `.repo/scratch/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
 
 ```
-bun repo jev --state .tmp/repo/jev/<slug>-state.txt --questions .tmp/repo/jev/<slug>-questions.json
+bun repo jev --state .repo/scratch/jev/<slug>-state.txt --questions .repo/scratch/jev/<slug>-questions.json
 ```
 
 Yes/no:

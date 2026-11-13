@@ -175,8 +175,8 @@ describe("validateImplementation Files and status", () => {
     expect(errorsOf(section("Files", "a.ts"))).toContain("Files bullets");
     expect(errorsOf(section("Files", "- /etc/x"))).toContain("Files abs");
     expect(errorsOf(section("Files", "- C:\\x"))).toContain("Files abs");
-    expect(errorsOf(section("Files", "- .tmp/x"))).toContain("Files tmp");
-    expect(errorsOf(section("Files", "- a/.tmp/x"))).toContain("Files tmp");
+    expect(errorsOf(section("Files", "- .repo/x"))).toContain("Files tmp");
+    expect(errorsOf(section("Files", "- a/.repo/x"))).toContain("Files tmp");
   });
 
   it("refuses blocked without a blocker", () => {

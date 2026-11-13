@@ -1,6 +1,7 @@
 /** Names, patterns and limits the handoff saver and its validator share. */
+import { REPO } from "../repo-dirs.ts";
 
-export const HANDOFF_DIR = ".tmp/repo/handoffs";
+export const HANDOFF_DIR: string = `${REPO}/handoffs`;
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;

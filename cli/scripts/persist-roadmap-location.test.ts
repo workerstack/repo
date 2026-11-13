@@ -16,13 +16,13 @@ function withLocation(location: string) {
 
 describe("a slice Location", () => {
   it("rejects one outside the plans dir", () => {
-    const r = persistRoadmap({ content: withLocation(".tmp/repo/roadmaps/nope.md"), workspaceRoot: tmpWs() });
+    const r = persistRoadmap({ content: withLocation(".repo/roadmaps/nope.md"), workspaceRoot: tmpWs() });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("location");
   });
 
   it("accepts a workspace-relative plan Location", () => {
-    const content = withLocation(".tmp/repo/plans/14-auth-types-20261025T165531Z.md");
+    const content = withLocation(".repo/plans/14-auth-types-20261025T165531Z.md");
     expect(persistRoadmap({ content, workspaceRoot: tmpWs() }).ok).toBe(true);
   });
 });

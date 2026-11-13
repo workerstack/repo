@@ -20,7 +20,7 @@ function plainWrites(ws: string) {
 }
 
 function writePlan(ws: string, status: string, listed: string) {
-  const plans = path.join(ws, ".tmp", "repo", "plans");
+  const plans = path.join(ws, ".repo", "plans");
   fs.mkdirSync(plans, { recursive: true });
   const planPath = path.join(plans, "1-listed-20260827T173530Z.md");
   const front = `---\nserial: 1\nname: listed\nstatus: ${status}\ncreated: 2026-08-27T17:35:30Z\nsource: "test"\n---\n`;

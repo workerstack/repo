@@ -30,7 +30,7 @@ Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule belo
 | `doctor` | unified prereq doctor (`bun repo doctor`); alias `ensure` |
 | `ensure` | alias of `doctor` |
 
-Session + profile + artifacts: `.tmp/repo/browser/` only.
+Session + profile + artifacts: `.repo/tmp/browser/` only.
 
 ## Install
 

@@ -1,44 +1,40 @@
-/** Rewrites of where a write or a patch lands: stray scratch goes under the root's `.tmp/repo`. */
+/**
+ * Rewrites of where a write or a patch lands: any checkout's `.repo/<ignored dir>` goes to the root's, stray scratch to
+ * `.repo/scratch`.
+ */
 import path from "node:path";
 
 import { isString } from "../json.ts";
+import { IGNORED_DIRS, REPO, SCRATCH, STATE, repoPath, routesToRoot } from "../repo-dirs.ts";
 import type { GateCall, GuardResult } from "./gate-call.ts";
 import { WRITE_PATH_FIELDS } from "./gate-harness.ts";
 import { isUnder, relInside } from "./gate-paths.ts";
 import { recordWrote } from "./gate-wrote.ts";
 import {
-  DOT_TMP_DEPTH,
-  DOT_TMP_DIR,
   PATCH_ADD,
   PATCH_DELETE,
   PATCH_HEREDOC_RE,
   PATCH_MOVE,
   PATCH_PATH_RE,
-  REPO_DIR,
-  SCRATCH_MARKER,
   SCRATCH_ROOT_RE,
-  TMP_DIR,
 } from "./gate.constants.ts";
 import { persistOwner } from "./persist-tmp.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
-/** The scratch dir a root keeps, `<root>/.tmp/repo`. */
-function scratchDir(roots: Roots, p: typeof path): string {
-  return p.resolve(roots.root, DOT_TMP_DIR, REPO_DIR);
+/** A `.repo/<ignored dir>` segment pair in a path of either separator; group 1 is the text before `.repo`. */
+function ignoredMarker(): RegExp {
+  return new RegExp(`(^|[\\\\/])${REPO.replace(".", "\\.")}[\\\\/](?:${IGNORED_DIRS.join("|")})(?:[\\\\/]|$)`);
 }
 
-/** The path below a `.tmp/repo/` marker as a safe relative posix path, or null when there is none or it climbs. */
-function scratchRel(posix: string, p: typeof path): string | null {
-  const marker = SCRATCH_MARKER.exec(posix);
-  const rel = marker === null ? "" : posix.slice(marker.index + marker[0].length);
-  const relNorm = p.posix.normalize(rel);
-
-  return rel === "" || rel.startsWith("/") || relNorm === "." || rel.split("/").includes("..") ? null : relNorm;
+/** The scratch dir a root keeps, `<root>/.repo/scratch`. */
+function scratchDir(roots: Roots): string {
+  return repoPath(roots.root, SCRATCH);
 }
 
 /**
- * A Write aimed at any `.tmp/repo/` other than the root's goes to `<root>/.tmp/repo/<rest>`.
- * Relative paths resolve against the hook cwd. Null when it is already root scratch or not scratch.
+ * A Write into any checkout's `.repo/<ignored dir>/` (a nested subdir or a worktree) goes to the same path under the
+ * root's `.repo`, except each checkout's own state (`routesToRoot`). Committed `.repo` files stay.
+ * Relative paths resolve against the hook cwd. Null when it is already the root's, stays, or is not such a path.
  */
 export function rewriteScratchPath(
   filePath: string | null | undefined,
@@ -46,43 +42,42 @@ export function rewriteScratchPath(
   p: typeof path = path,
 ): string | null {
   if (filePath == null || filePath === "" || roots == null) return null;
-  const raw = filePath;
-  const destRoot = scratchDir(roots, p);
-  const absIn = resolveTyped(roots, raw, p);
+  const absIn = resolveTyped(roots, filePath, p);
+  const inRoot = isUnder(roots.root, absIn, p);
+  // Inside the root, look below it, so a root that itself sits under some `.repo/<dir>` is not matched.
+  const text = inRoot ? p.relative(roots.root, absIn) : absIn;
+  const marker = ignoredMarker().exec(text);
 
-  if (isUnder(destRoot, absIn, p)) return null;
-  // Inside the root, look below it, so a root that itself sits under some `.tmp/repo` is not matched.
-  const posix = (isUnder(roots.root, absIn, p) ? p.relative(roots.root, absIn) : raw).replaceAll("\\", "/");
-  const relNorm = scratchRel(posix, p);
+  if (marker === null) return null;
+  const prefix = text.slice(0, marker.index);
+  const base = inRoot ? p.join(roots.root, prefix) : prefix;
+  const below = text.slice(marker.index + (marker[1] /* group 1 always participates in a match */ as string).length);
 
-  if (relNorm === null) return null;
-  const dest = p.resolve(destRoot, relNorm);
-
-  return relInside(destRoot, dest, p) === null ? null : dest;
+  return rootDest({ absIn, base, below, root: roots.root }, p);
 }
 
-/**
- * `<scratch>/<rest>` for the segments left after a `tmp/` or `.tmp/<name>/` prefix, null when that leaves the
- * scratch.
- */
+type RootDestInput = { absIn: string; base: string; below: string; root: string };
+
+/** Where the `.repo/<ignored dir>` path `below` of checkout `base` lands under the root, null when it stays. */
+function rootDest({ absIn, base, below, root }: RootDestInput, p: typeof path): string | null {
+  const rel = relInside(p.join(base, REPO), p.join(base, below), p);
+
+  if (rel === null || !rel.includes("/") || !routesToRoot(base, absIn, p)) return null;
+  const dest = p.resolve(root, REPO, ...rel.split("/"));
+
+  return dest === absIn || relInside(p.join(root, REPO), dest, p) === null ? null : dest;
+}
+
+/** `<scratch>/<rest>` for the segments left after a stray `tmp/` prefix, null when that leaves the scratch. */
 function scratchBelow(rest: string[], scratch: string, p: typeof path): string | null {
   const dest = p.resolve(scratch, ...rest);
 
   return relInside(scratch, dest, p) === null ? null : dest;
 }
 
-/** The segments below a `tmp/` or `.tmp/<name>/` prefix, or null when the path has neither. */
-function strayDirRest(segs: string[]): string[] | null {
-  const [first, second] = segs;
-
-  if (first === TMP_DIR) return segs.slice(1);
-
-  return first === DOT_TMP_DIR && second !== REPO_DIR ? segs.slice(DOT_TMP_DEPTH) : null;
-}
-
 /**
- * Stray scratch names and `tmp/` dirs at the checkout top go under the root's `.tmp/repo`. Product files at the top
- * (README.md, `src/`, `cli/`) match neither rule and stay where they are.
+ * Writes into another checkout's `.repo/<ignored dir>`, stray scratch names and `tmp/` dirs at the checkout top land
+ * in the root's `.repo`. Product files at the top (README.md, `src/`, `cli/`) match no rule and stay where they are.
  */
 export function rewriteScratchWrite(
   filePath: string,
@@ -97,10 +92,9 @@ export function rewriteScratchWrite(
 
   if (rel === null) return null;
   const segs = rel.split("/");
-  const scratch = scratchDir(roots, p);
-  const rest = strayDirRest(segs);
+  const scratch = scratchDir(roots);
 
-  if (rest !== null) return scratchBelow(rest, scratch, p);
+  if (segs[0] === STATE) return scratchBelow(segs.slice(1), scratch, p);
 
   return segs.length === 1 && SCRATCH_ROOT_RE.test(rel) ? p.resolve(scratch, rel) : null;
 }
@@ -168,7 +162,7 @@ export function writeTargets({
 function movedPath(call: GateCall, current: string, dest: string): string | null {
   const { tool, roots } = call;
 
-  // orchestrate-parent redirects the same `.tmp/repo` path, persists it, and answers the Write itself.
+  // orchestrate-parent redirects the same `.repo` path, persists it, and answers the Write itself.
   const isPersisted =
     tool.persistShared === true &&
     dest === rewriteScratchPath(current, roots) &&

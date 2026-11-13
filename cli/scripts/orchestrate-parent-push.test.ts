@@ -11,7 +11,7 @@ import type { HookInput } from "./hook-input.ts";
 const hook = claudeHook();
 
 function ask(ws: string, sid: string) {
-  return plantFile(ws, `.tmp/repo/orchestrator-logs/session-gate-${sid}`, "ask");
+  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "ask");
 }
 
 function gitIn(cwd: string, ...args: string[]) {
@@ -60,7 +60,7 @@ function inPush(command: string) {
 }
 
 function result(ws: string, sha: string, outcome: string) {
-  return plantFile(ws, `.tmp/repo/ci/${sha}.json`, JSON.stringify({ at: "t", branch: "main", failed: [], outcome }));
+  return plantFile(ws, `.repo/tmp/ci/${sha}.json`, JSON.stringify({ at: "t", branch: "main", failed: [], outcome }));
 }
 
 function line(sha: string) {
@@ -125,7 +125,7 @@ it("blocks before the ask check and does not spend its stop-block count", () => 
   push(ws, "g6");
   land();
   expect(hook.stop(ws, "g6", { last_assistant_message: "Done." })?.reason).toBe(line(sha));
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs/stop-block-g6"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/orchestrator-logs/stop-block-g6"))).toBe(false);
 });
 
 it("lets the stop through after six blocks, and a new prompt clears the count", () => {
@@ -140,7 +140,7 @@ it("lets the stop through after six blocks, and a new prompt clears the count", 
     prompt: "go on",
     session_id: "g7",
   });
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/orchestrator-logs/push-block-g7"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/orchestrator-logs/push-block-g7"))).toBe(false);
   expect(hook.stop(ws, "g7", { last_assistant_message: "Done." })?.reason).toBe(line(sha));
 });
 

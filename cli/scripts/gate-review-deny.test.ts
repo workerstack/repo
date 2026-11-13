@@ -26,7 +26,7 @@ import {
 } from "./__fixtures__/review-plan.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
-import { isOutsideRootTmp } from "./gate-review.ts";
+import { isOutsideRootRepoDirs } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
 import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
 import { activeReview } from "./strategy.ts";
@@ -67,17 +67,17 @@ it.each(WRITE_KINDS)("%s: denies a parent product write and follows ENFORCED_HAR
   }
 });
 
-it.each(WRITE_KINDS)("%s: allows the plan, the journal, .tmp and scratch, judged after the rewrite", (kind) => {
+it.each(WRITE_KINDS)("%s: allows the plan, the journal, .repo/tmp and scratch, judged after the rewrite", (kind) => {
   const w = tmp.dir("gate-review-");
   const plan = startReview(w);
 
   const targets = [
     plan,
-    path.join(w, ".tmp/repo/implementations/i.md"),
-    path.join(w, ".tmp/x"),
+    path.join(w, ".repo/implementations/i.md"),
+    path.join(w, ".repo/tmp/x"),
     "tmp/notes.md",
-    "./.tmp/repo/plans/p.md",
-    `${w}/src/../.tmp/repo/plans/p.md`,
+    "./.repo/plans/p.md",
+    `${w}/src/../.repo/plans/p.md`,
   ];
 
   for (const target of targets) expect(notDenied(send(kind, w, target)), target).toBe(true);
@@ -118,18 +118,18 @@ function implementerAnswers(kind: WriteKind, w: string) {
   }
 
   const barred = [
-    path.join(w, ".tmp/repo/plans/p.md"),
-    path.join(w, ".tmp/repo/implementations/i.md"),
-    "tmp/plans/p.md",
+    path.join(w, ".repo/plans/p.md"),
+    path.join(w, ".repo/implementations/i.md"),
+    "packages/a/.repo/plans/p.md",
   ];
 
-  const free = [path.join(w, "src/x.ts"), path.join(w, ".tmp/x"), path.join(w, ".tmp/repo/scratch/s.md")];
-  free.push(path.join(w, ".tmp/repo/handoffs/h.md"));
+  const free = [path.join(w, "src/x.ts"), path.join(w, ".repo/tmp/x"), path.join(w, ".repo/scratch/scratch/s.md")];
+  free.push(path.join(w, ".repo/handoffs/h.md"));
 
   return {
     barred: barred.map(as("implementer-fast")),
     free: free.map(as("implementer-deep")),
-    scout: as("scout")(path.join(w, ".tmp/repo/plans/p.md")),
+    scout: as("scout")(path.join(w, ".repo/plans/p.md")),
   };
 }
 
@@ -193,17 +193,21 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
     const product = reviewWrite(kind, { cwd: alias, target: path.join(alias, "src/x.ts") });
     expect(processFatTools(product), kind).toStrictEqual(parentAnswer(product));
 
-    for (const target of [path.join(alias, ".tmp/repo/plans/p.md"), path.join(alias, ".tmp/x")])
+    for (const target of [path.join(alias, ".repo/plans/p.md"), path.join(alias, ".repo/tmp/x")])
       expect(notDenied(send(kind, alias, target)), `${kind} ${target}`).toBe(true);
   }
 
   expect(activeReview(alias, REVIEW_SID)?.plan).toBe(plan);
   const root = "C:\\r";
-  expect(isOutsideRootTmp("C:\\r\\src\\x.ts", root, path.win32)).toBe(true);
-  expect(isOutsideRootTmp("C:\\r\\.tmpx\\x", root, path.win32)).toBe(true);
-  expect(isOutsideRootTmp("D:\\r\\.tmp\\x", root, path.win32)).toBe(true);
-  expect(isOutsideRootTmp("c:\\R\\.TMP\\repo\\plans\\p.md", root, path.win32)).toBe(false);
-  expect(isOutsideRootTmp("C:\\r\\.tmp\\x", root, path.win32)).toBe(false);
+  expect(isOutsideRootRepoDirs("C:\\r\\src\\x.ts", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("C:\\r\\.tmp\\x", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("C:\\r\\.repo\\lessons\\x.md", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("C:\\r\\.repo\\lint-baseline.json", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("C:\\r\\.repo\\test-times.json", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("C:\\r\\.repox\\plans\\x", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("D:\\r\\.repo\\plans\\x", root, path.win32)).toBe(true);
+  expect(isOutsideRootRepoDirs("c:\\R\\.REPO\\plans\\p.md", root, path.win32)).toBe(false);
+  expect(isOutsideRootRepoDirs("C:\\r\\.repo\\tmp\\x", root, path.win32)).toBe(false);
 });
 
 it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES", () => {
@@ -221,5 +225,5 @@ it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES",
   expect(verdict).toStrictEqual(ENFORCED_HARNESSES.has(harnessOf(payload)) ? block : null);
   expect(run({ subagent_type: "implementer-fast" })).toBeNull();
   expect(run({ subagent_type: "scout" })).toBeNull();
-  expect(run({}, path.join(w, ".tmp/x.md"))?.decision).toBeUndefined();
+  expect(run({}, path.join(w, ".repo/tmp/x.md"))?.decision).toBeUndefined();
 });

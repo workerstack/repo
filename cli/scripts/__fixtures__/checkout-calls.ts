@@ -18,12 +18,12 @@ export function deny(reason: string) {
 
 /** The reason a product write gets in the main checkout `r`. */
 export function reasonOf(r: string): string {
-  return `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".tmp")}${path.sep} is writable here`;
+  return `the main checkout is shared: run bun repo worktree add <name> and write under ${path.join(r, ".worktrees", "<name>")}; only ${path.join(r, ".repo")}${path.sep}{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}${path.sep} is writable here`;
 }
 
 /** The session's git-asked.json under the checkout `r`. */
 export function askedFile(r: string): string {
-  return path.join(r, ".tmp/repo/sessions", SID, "git-asked.json");
+  return path.join(r, ".repo/tmp/sessions", SID, "git-asked.json");
 }
 
 /** Writes `text` as the session's git-asked.json. */

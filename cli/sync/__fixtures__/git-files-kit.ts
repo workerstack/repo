@@ -8,7 +8,19 @@ import { HOST_TREES } from "../hosts.ts";
 import type { Managed, Output, SyncContext } from "../outputs.ts";
 import { regionHash } from "../region.ts";
 
-export const IGNORE_BASE = [".tmp/", ".worktrees/", ".repo/tmp/", "coverage/"];
+export const IGNORE_BASE = [
+  ".tmp/",
+  ".worktrees/",
+  "coverage/",
+  "**/.repo/plans/",
+  "**/.repo/plans-fast/",
+  "**/.repo/roadmaps/",
+  "**/.repo/roadmaps-fast/",
+  "**/.repo/handoffs/",
+  "**/.repo/implementations/",
+  "**/.repo/scratch/",
+  "**/.repo/tmp/",
+];
 /** The `#` region `name` holding `rows`, as sync writes it. */
 export const region = (name: string, rows: readonly string[]) =>
   `# repo:${name} ${regionHash(rows.join("\n"))}\n${rows.map((row) => `${row}\n`).join("")}# /repo:${name}\n`;

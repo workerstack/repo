@@ -19,7 +19,7 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 
 /** The path of the saved roadmap in `ws`, its folder made. */
 function roadmapFile(ws: string): string {
-  const dir = path.join(ws, ".tmp/repo/roadmaps");
+  const dir = path.join(ws, ".repo/roadmaps");
   fs.mkdirSync(dir, { recursive: true });
 
   return path.join(dir, FILE);
@@ -68,7 +68,7 @@ describe("roadmap source", () => {
 describe("roadmap serials and empty saves", () => {
   it("skips non-serial names when numbering and never overwrites a counted file", () => {
     const ws = tmpWs();
-    const dir = path.join(ws, ".tmp/repo/roadmaps");
+    const dir = path.join(ws, ".repo/roadmaps");
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "notes.md"), "n");
     fs.writeFileSync(path.join(dir, "7-old-20260101T000000Z.md"), "old");
@@ -80,7 +80,7 @@ describe("roadmap serials and empty saves", () => {
   it("denies a save with no content", () => {
     const ws = tmpWs();
     expect(persistRoadmap({ workspaceRoot: ws }).ok).toBe(false);
-    expect(fs.readdirSync(path.join(ws, ".tmp/repo/roadmaps"))).toStrictEqual([]);
+    expect(fs.readdirSync(path.join(ws, ".repo/roadmaps"))).toStrictEqual([]);
   });
 
   it("denies an unclosed fence in a save and in an update", () => {

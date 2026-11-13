@@ -8,7 +8,7 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 
 ## Path
 
-`.tmp/repo/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.repo/plans/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int only (`1`, `12`, `10000`). **Never** `0001`, never quoted `"0001"` / `"1"`. Serial ≥ 1.
 - **filename:** unpadded serial, slug, UTC datetime stamp (`6-sync-global-settings-20260826T143000Z.md`, not `0001-slug.md`). Stamp is `created` with `-` and `:` dropped (keep `T` and `Z`).
@@ -32,9 +32,9 @@ Send `PLAN_NAME: <name>` as the body's first line. The save reads the name from 
 ## Allocate next serial (repo, bash)
 
 ```bash
-mkdir -p .tmp/repo/plans
+mkdir -p .repo/plans
 next=1
-for f in .tmp/repo/plans/*; do
+for f in .repo/plans/*; do
   [ -f "$f" ] || continue
   b=$(basename "$f")
   case "$b" in
@@ -192,7 +192,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 ## Worked example
 
-File: `.tmp/repo/plans/1-notes-export-json-20260826T143000Z.md`
+File: `.repo/plans/1-notes-export-json-20260826T143000Z.md`
 
 ````markdown
 ---

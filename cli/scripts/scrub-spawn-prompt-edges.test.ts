@@ -43,8 +43,8 @@ describe("processHookPayload shapes", () => {
 
 describe("spawnCapReason", () => {
   it("names the given root and falls back to the resolved one", () => {
-    expect(spawnCapReason("/planted/root")).toContain("/planted/root/.tmp/repo/plans/");
-    expect(spawnCapReason()).toContain("/.tmp/repo/plans/");
+    expect(spawnCapReason("/planted/root")).toContain("/planted/root/.repo/plans/");
+    expect(spawnCapReason()).toContain("/.repo/plans/");
   });
 });
 

@@ -8,12 +8,12 @@ Ordered program of child plans. Not a plan, a handoff, or a design doc.
 
 ## Path
 
-`.tmp/repo/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+`.repo/roadmaps/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
 
 - **serial:** unpadded decimal int ≥ 1. Never `0001`.
 - **filename:** `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
 - Create mints the next serial. A later write of an existing file keeps that path and serial. The hook validates the update and the host writes it. An Edit of a saved roadmap is checked against the text it would produce, and a valid one runs as sent.
-- Child plans stay in `.tmp/repo/plans/`.
+- Child plans stay in `.repo/plans/`.
 
 ## Frontmatter
 
@@ -55,7 +55,7 @@ DONE   both slices done; repo init lists auth-types
 
 ## Order
 1 [ ] auth types: Reserved names list the new skills.
-      Location: /home/me/app/.tmp/repo/plans/14-auth-types-20261025T165531Z.md
+      Location: /home/me/app/.repo/plans/14-auth-types-20261025T165531Z.md
 2 [ ] commit diff pass: Commit skills strip narrating comments.
 
 ## Verify
@@ -69,7 +69,7 @@ DONE   both slices done; repo init lists auth-types
 - **Card:** the 5 lines after `# {slug}` and one blank line, as in a plan (`plan-format.md`): WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
 - **Headings:** `## Order`, `## Verify`, `## Previous mistakes`, nothing else. Lines inside a code fence are never headings. A new roadmap with any other `##` is denied with `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## {heading} into the slice plans`.
 - **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`. The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
-- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.tmp/repo/plans/{file}` also resolves.
+- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
 - `[x]` only after that child plan's Verify is done.
 - **Verify:** 1–5 runnable program gates, same `N.M [ ]` grammar as plans.
 - **Previous mistakes:** `(none)`, or one entry per line. Append-only.
@@ -101,7 +101,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 - `status` is one of the five values; `source` ≤120; `strategy` is one of the three values; `mode`, when present, is `ask`, `auto` or `away`
 - a new roadmap: the card; only Order, Verify and Previous mistakes, in that order; ≥2 one-line slices, title 2–6 words, one sentence; at most 60 lines above Previous mistakes without `Location:` lines
 - an update keeps the saved file's shape; an old-shape one keeps the old checks: headings in order, Goal 1–3 sentences, bulleted Context, Decisions and Watch-outs, ≥2 slices each with Title (2–6 words), one-sentence Goal and Why (1–2 sentences)
-- Location, when present, is the absolute plan path (a relative `.tmp/repo/plans/{file}` still resolves)
+- Location, when present, is the absolute plan path (a relative `.repo/plans/{file}` still resolves)
 - Verify has 1–5 leaves
 - `## Previous mistakes` is last, required on a fresh create, and keeps every saved entry unchanged and in order
 - `reviews` is a whole number, never lower than the saved one; `locked` needs at least 1

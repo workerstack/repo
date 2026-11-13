@@ -1,7 +1,11 @@
-/** The pure half of `repo clean`: which paths under .tmp/repo to remove and what to keep, by each dir's policy. */
+/**
+ * The pure half of `repo clean`: which paths under the ignored `.repo` dirs to remove and what to keep, by each dir's
+ * policy.
+ */
 import fs from "node:fs";
 import path from "node:path";
 
+import { CHECKOUT_STATE, IGNORED_DIRS, STATE_DIRS, repoPath } from "../repo-dirs.ts";
 import {
   keeperOf,
   leadingSerial,
@@ -13,11 +17,21 @@ import {
   stats,
   statusOf,
 } from "./clean-scan.ts";
-import { AGE, DAY, DONE_STATUS, HOUR, NESTED_KIND, oldKindOf, PLANS_DIR, policyOf } from "./clean.constants.ts";
+import {
+  AGE,
+  DAY,
+  DONE_STATUS,
+  HOUR,
+  NESTED_KIND,
+  oldKindOf,
+  PLANS_DIR,
+  PLANS_FAST_DIR,
+  policyOf,
+} from "./clean.constants.ts";
 import type { AgedEntry, CleanPlan, Decision, PlanInput, PlanState, Policy } from "./clean.types.ts";
-import { FILENAME_RE, TMP_DIR, TMP_RESERVED_DIRS } from "./persist-tmp.ts";
+import { FILENAME_RE } from "./persist-tmp.ts";
 
-/** One dir's planner: what to do with `p`, the entry `name` of .tmp/repo. */
+/** One dir's planner: what to do with `p`, the dir `name` (or the state dir `name` of `.repo/tmp`). */
 type Planner = (state: PlanState, name: string, p: string) => void;
 
 function recent(state: PlanState, p: string, window: number = HOUR): boolean {
@@ -45,7 +59,7 @@ function agedOut(state: PlanState, a: AgedEntry): boolean {
 
   if (policyOf(a.name) === "age-done" && statusOf(a.child) !== DONE_STATUS) return false;
 
-  return !(a.name === PLANS_DIR && state.pinned.has(path.resolve(a.child)));
+  return !((a.name === PLANS_DIR || a.name === PLANS_FAST_DIR) && state.pinned.has(path.resolve(a.child)));
 }
 
 function ageEntries(state: PlanState, name: string, p: string): void {
@@ -88,20 +102,11 @@ function stashReceipts(state: PlanState, _name: string, p: string): void {
   }
 }
 
-const PLANNERS: Readonly<Record<Policy, Planner>> = {
-  age: ageEntries,
-  "age-done": ageEntries,
-  keep: keepDir,
-  "per-receipt": stashReceipts,
-  "per-session": sessionDirs,
-  "per-stamp": stampFiles,
-};
-
 function isArtifact(name: string, p: string): boolean {
   return FILENAME_RE.test(name) && !fs.lstatSync(p).isDirectory();
 }
 
-/** An entry no policy owns: a tmp artifact ages out unless it holds the top serial; anything else goes once stale. */
+/** An entry of scratch: a tmp artifact ages out unless it holds the top serial; anything else goes once stale. */
 function looseEntry(state: PlanState, name: string, p: string): void {
   if (isArtifact(name, p)) {
     const gone = name !== state.artifactKeeper && old(state, p);
@@ -111,22 +116,72 @@ function looseEntry(state: PlanState, name: string, p: string): void {
   }
 }
 
-function plannerOf(name: string): Planner {
-  const policy = TMP_RESERVED_DIRS.has(name) ? policyOf(name) : undefined;
+/** `.repo/scratch`: every entry is loose. */
+function scratchEntries(state: PlanState, _name: string, p: string): void {
+  const names = list(p);
+  // names that pass isArtifact start with the serial FILENAME_RE demands
+  state.artifactKeeper = keeperOf(
+    names.filter((n) => isArtifact(n, path.join(p, n))),
+    leadingSerial,
+  );
 
-  return policy === undefined ? looseEntry : PLANNERS[policy];
+  for (const name of names) looseEntry(state, name, path.join(p, name));
+}
+
+/** An entry of `.repo/tmp` no state policy owns: it goes once stale. */
+function strayState(state: PlanState, p: string): void {
+  decide(state, { gone: !recent(state, p), keptAs: "recent", kind: stats(p).dir ? "dir" : "file", path: p });
+}
+
+/** `.repo/tmp`: checkout state stays, each state dir follows its policy, anything else goes once stale. */
+function stateEntries(state: PlanState, _name: string, p: string): void {
+  for (const name of list(p)) {
+    const child = path.join(p, name);
+    const policy = STATE_DIRS.has(name) ? policyOf(name) : undefined;
+
+    if (CHECKOUT_STATE.has(name)) keepDir(state, name, child);
+    else if (policy === undefined) strayState(state, child);
+    else PLANNERS[policy](state, name, child);
+  }
+}
+
+const PLANNERS: Readonly<Record<Policy, Planner>> = {
+  age: ageEntries,
+  "age-done": ageEntries,
+  keep: keepDir,
+  loose: scratchEntries,
+  "per-receipt": stashReceipts,
+  "per-session": sessionDirs,
+  "per-stamp": stampFiles,
+  state: stateEntries,
+};
+
+function isDir(p: string): boolean {
+  try {
+    return fs.lstatSync(p).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 /** Pure decision: which paths to remove and what was kept, by kind. */
 export function cleanPlan({ root, now, liveSessions, nested = [] }: PlanInput): CleanPlan {
-  const tmp = path.join(root, TMP_DIR);
-  const names = list(tmp);
-  const artifacts = names.filter((n) => isArtifact(n, path.join(tmp, n)));
-  // names were filtered by FILENAME_RE, which starts with the serial
-  const artifactKeeper = keeperOf(artifacts, leadingSerial);
-  const state: PlanState = { artifactKeeper, keep: [], liveSessions, now, pinned: roadmapLocations(tmp), remove: [] };
+  const repo = repoPath(root);
 
-  for (const name of names) plannerOf(name)(state, name, path.join(tmp, name));
+  const state: PlanState = {
+    artifactKeeper: null,
+    keep: [],
+    liveSessions,
+    now,
+    pinned: roadmapLocations(repo),
+    remove: [],
+  };
+
+  for (const dir of IGNORED_DIRS) {
+    const policy = policyOf(dir);
+
+    if (policy !== undefined && isDir(path.join(repo, dir))) PLANNERS[policy](state, dir, path.join(repo, dir));
+  }
 
   for (const dir of nested) {
     const held = nestedHolds(dir);

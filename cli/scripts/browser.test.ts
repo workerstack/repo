@@ -152,14 +152,14 @@ it("fails an unknown verb", async () => {
 
 it("keeps the session under the cwd's root, or the process cwd's when none is given", () => {
   const cwd = tmp("browser-dir-");
-  expect(sessionDir(cwd)).toBe(path.join(fs.realpathSync(cwd), ".tmp/repo/browser"));
+  expect(sessionDir(cwd)).toBe(path.join(fs.realpathSync(cwd), ".repo/tmp/browser"));
   expect(sessionDir()).toBe(sessionDir(process.cwd()));
 });
 
-it("keeps the session at the repo root's .tmp/repo/browser from packages/a", () => {
+it("keeps the session at the repo root's .repo/tmp/browser from packages/a", () => {
   const r = fs.realpathSync(tmp("browser-sub-"));
   spawnSync("git", ["init", "-q"], { cwd: r });
   const a = path.join(r, "packages", "a");
   fs.mkdirSync(a, { recursive: true });
-  expect(sessionDir(a)).toBe(path.join(r, ".tmp/repo/browser"));
+  expect(sessionDir(a)).toBe(path.join(r, ".repo/tmp/browser"));
 });

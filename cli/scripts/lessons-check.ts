@@ -14,8 +14,9 @@ export function toPosix(p: string): string {
 
 function walkFiles(ws: string, dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((ent): string[] => {
-    if (SKIP_WALK.has(ent.name)) return [];
     const abs = path.join(dir, ent.name);
+
+    if (SKIP_WALK.has(ent.name) || SKIP_WALK.has(toPosix(path.relative(ws, abs)))) return [];
 
     if (ent.isDirectory()) return walkFiles(ws, abs);
 

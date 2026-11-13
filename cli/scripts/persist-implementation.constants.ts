@@ -1,6 +1,7 @@
 /** Names, patterns and limits the journal saver and its validator share. */
+import { REPO } from "../repo-dirs.ts";
 
-export const IMPLEMENTATION_DIR = ".tmp/repo/implementations";
+export const IMPLEMENTATION_DIR: string = `${REPO}/implementations`;
 
 /** `{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`; stamp required for new writes. */
 export const FILENAME_RE: RegExp = /^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$/;
@@ -22,7 +23,7 @@ export const LOG_H2 = "Log";
 export const FILES_H2 = "Files";
 export const BLOCKERS_H2 = "Blockers";
 export const BLOCKED_STATUS = "blocked";
-export const TMP_SEGMENT = ".tmp/";
+export const TMP_SEGMENT: string = `${REPO}/`;
 export const META_LINE_RE: RegExp = /^\s*IMPL_(NAME|PLAN):\s*.+\s*$/;
 export const NAME_RE: RegExp = /^\s*IMPL_NAME:\s*(.+?)\s*$/m;
 export const PLAN_RE: RegExp = /^\s*IMPL_PLAN:\s*(.+?)\s*$/m;

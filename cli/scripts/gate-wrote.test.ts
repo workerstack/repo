@@ -33,15 +33,15 @@ it("leaves a nested plan to orchestrate-parent, records it, and writes no target
     );
   }
 
-  expect(call(path.join(a, ".tmp/repo/plans/x.md"))).toBeNull();
-  expect(call(path.join(a, ".tmp/repo/scratch/x.txt"))).toStrictEqual({
+  expect(call(path.join(a, ".repo/plans/x.md"))).toBeNull();
+  expect(call(path.join(a, ".repo/scratch/scratch/x.txt"))).toStrictEqual({
     type: "rewrite",
-    updatedInput: { content: "x", file_path: path.join(ws, ".tmp/repo/scratch/x.txt") },
+    updatedInput: { content: "x", file_path: path.join(ws, ".repo/scratch/scratch/x.txt") },
   });
-  const wrote = fs.readFileSync(path.join(ws, ".tmp/repo/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
+  const wrote = fs.readFileSync(path.join(ws, ".repo/tmp/sessions/sid9/wrote.txt"), "utf8").trim().split("\n");
   expect(wrote).toStrictEqual(
-    [".tmp/repo/plans/x.md", ".tmp/repo/scratch/x.txt"].map((p) => path.join(ws, p).replaceAll("\\", "/")),
+    [".repo/plans/x.md", ".repo/scratch/scratch/x.txt"].map((p) => path.join(ws, p).replaceAll("\\", "/")),
   );
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
-  expect(fs.existsSync(path.join(ws, ".tmp/repo/scratch"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/scratch/scratch"))).toBe(false);
 });

@@ -58,7 +58,7 @@ it("adaptFile rewrites guard-the-context-window subagent wording", () => {
   expect(guard.ok).toBe(true);
   expect(guard.misses).toStrictEqual([]);
   expect(guard.text).toContain("job");
-  expect(guard.text).toContain(".tmp/repo/");
+  expect(guard.text).toContain(".repo/scratch/");
   expect(guard.text.toLowerCase()).not.toContain("subagent");
 });
 

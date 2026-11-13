@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import { HOSTS, type Host } from "../config.ts";
+import { IGNORED_DIRS } from "../repo-dirs.ts";
 import {
   IGNORE_BASE,
   attributes,
@@ -14,7 +15,13 @@ import {
   region,
   treeOutputs,
 } from "./__fixtures__/git-files-kit.ts";
-import { untrackedEntries } from "./git-files.ts";
+import { IGNORE_BASE as REAL_IGNORE_BASE, untrackedEntries } from "./git-files.ts";
+
+it("ignores the bare .tmp/ and every ignored .repo dir, and the fixture list matches the real one", () => {
+  for (const dir of IGNORED_DIRS) expect(REAL_IGNORE_BASE).toContain(`**/.repo/${dir}/`);
+  expect(REAL_IGNORE_BASE).toContain(".tmp/");
+  expect([...REAL_IGNORE_BASE]).toStrictEqual(IGNORE_BASE);
+});
 
 it("lists .mcp.json and every host dir for the untracked trees of all hosts, and never the shared AGENTS.md", () => {
   expect(gitignoreOf({ hosts: [...HOSTS] }, treeOutputs(HOSTS, false))).toBe(

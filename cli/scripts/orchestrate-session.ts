@@ -1,7 +1,8 @@
-/** The session's own files under .tmp/repo/sessions/<sid>/, and the frontmatter reads they share. */
+/** The session's own files under .repo/tmp/sessions/<sid>/, and the frontmatter reads they share. */
 import fs from "node:fs";
 import path from "node:path";
 
+import { STATE, repoPath } from "../repo-dirs.ts";
 import { repoEnv } from "../repo-env.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -21,9 +22,9 @@ export function isRealSession(sid: string): boolean {
   return Boolean(sid) && sid !== NO_SESSION;
 }
 
-/** The session's dir under the workspace's .tmp/repo/sessions. */
+/** The session's dir under the workspace's .repo/scratch/sessions. */
 export function sessionDir(data: HookInput, sid: string): string {
-  return path.join(resolveRoots(data).root, ".tmp", "repo", "sessions", sid);
+  return repoPath(resolveRoots(data).root, STATE, "sessions", sid);
 }
 
 /** A file in this session's dir; null when the payload names no real session. */

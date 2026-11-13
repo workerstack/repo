@@ -45,7 +45,7 @@ export function fakeGit(main: string, world: World, asked: string[]): Runner {
 
 /** The files a session leaves under `main`. */
 function files(main: string) {
-  const file = (session: string) => path.join(main, ".tmp/repo/sessions", session, "pushed.json");
+  const file = (session: string) => path.join(main, ".repo/tmp/sessions", session, "pushed.json");
   const read = (session: string) => JSON.parse(fs.readFileSync(file(session), "utf8")) /* rows the gate wrote */ as Row[] & Record<string, unknown>[];
   return {
     raw: (session = "s1"): Record<string, unknown>[] => (fs.existsSync(file(session)) ? read(session) : []),
@@ -59,7 +59,7 @@ function files(main: string) {
       fs.mkdirSync(path.dirname(recordPath(main, sha)), { recursive: true });
       fs.writeFileSync(recordPath(main, sha), JSON.stringify({ branch: "main", outcome, failed, at: AT }));
     },
-    stamp: (session = "s1") => path.join(main, ".tmp/repo/orchestrator-logs", `push-block-${session}`),
+    stamp: (session = "s1") => path.join(main, ".repo/tmp/orchestrator-logs", `push-block-${session}`),
   };
 }
 

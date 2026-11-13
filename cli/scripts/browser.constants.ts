@@ -1,7 +1,8 @@
+import { REPO, STATE } from "../repo-dirs.ts";
 import type { Capture, Engine, FakeCdpState } from "./browser.types.ts";
 
 /** Where the session, its profile and its captures live, relative to the root. */
-export const SESSION_REL = ".tmp/repo/browser";
+export const SESSION_REL: string = `${REPO}/${STATE}/browser`;
 export const SESSION_FILE = "session.json";
 export const PROFILE_DIR = "profile";
 export const JSON_INDENT = 2;

@@ -122,7 +122,7 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
     line: "red-proof: 1 of 3 changed test files failed on HEAD",
     ok: true,
   });
-  const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
+  const name = nodePath.join(".repo", "tmp", `red-proof-${process.pid}`);
   expect(calls).toStrictEqual([
     { cwd: nodePath.join(name, "pkg-a"), files: ["a.test.ts"], linked: true, rootLinked: true },
     { cwd: nodePath.join(name, "pkg-b"), files: ["b.test.ts", "c.test.ts"], linked: false, rootLinked: true },
@@ -132,7 +132,7 @@ it("runs two packages each in their own HEAD-tree dir with their modules linked"
 it("removes its dir after a pass and after a throw", () => {
   const root = plant({ "s.ts": "head\n" });
   stage(root, { "a.test.ts": PASS });
-  const tree = nodePath.join(root, ".tmp", "repo", `red-proof-${process.pid}`);
+  const tree = nodePath.join(root, ".repo", "tmp", `red-proof-${process.pid}`);
   const seen: boolean[] = [];
 
   const run = fakeVitest(
@@ -167,7 +167,7 @@ it("owns a nested test by the nearest package dir above it", () => {
   );
 
   redProof(root, change(["A", "cli/sub/deep/a.test.ts"], ["A", "top/b.test.ts"]), { vitest: run });
-  const name = nodePath.join(".tmp", "repo", `red-proof-${process.pid}`);
+  const name = nodePath.join(".repo", "tmp", `red-proof-${process.pid}`);
   expect(calls).toStrictEqual([
     [nodePath.join(name, "cli"), "sub/deep/a.test.ts"],
     [name, "top/b.test.ts"],

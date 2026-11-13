@@ -98,7 +98,7 @@ it.each(CASINGS)("a review spawn holds the closing line until the plan's reviews
 it.each(CASINGS)("a closing line naming a plan with reviews: 0 blocks (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "z1");
   s.say("plan it");
-  s.save(".tmp/repo/plans/x.md", VALID_PLAN);
+  s.save(".repo/plans/x.md", VALID_PLAN);
   expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({
     decision: "block",
     reason: "plan 1 has reviews: 0; run /review-plan 1 in a fresh agent first",

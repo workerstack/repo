@@ -21,7 +21,13 @@ export const DATE_RE: RegExp = /^\d{4}-\d{2}-\d{2}$/;
 export const KEYS: readonly string[] = ["name", "paths", "hits", "last-hit", "evidence"];
 
 /** The dirs a walk of a checkout without git skips. */
-export const SKIP_WALK: ReadonlySet<string> = /* @__PURE__ */ new Set([".git", "node_modules", ".tmp"]);
+export const SKIP_WALK: ReadonlySet<string> = /* @__PURE__ */ new Set([
+  ".git",
+  "node_modules",
+  ".tmp",
+  ".repo/scratch",
+  ".repo/tmp",
+]);
 
 /** What `repo lessons` takes. */
 export const LESSONS_ARGS = "match <file...> | hit <slug> --evidence <text> | rm <slug> | index | check";

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Allocate/slugify/validate/write a local plan under .tmp/repo/plans/. */
+/** Allocate/slugify/validate/write a local plan under .repo/plans/. */
 import fs from "node:fs";
 import path from "node:path";
 

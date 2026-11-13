@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-/** Allocate/slugify/validate/write a session handoff under .tmp/repo/handoffs/. */
+/** Allocate/slugify/validate/write a session handoff under .repo/handoffs/. */
 import fs from "node:fs";
 import path from "node:path";
 

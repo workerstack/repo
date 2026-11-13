@@ -14,7 +14,7 @@ import { spawnSync } from "./spawn.ts";
 afterEach(removePlanted);
 
 const SLOW = 120_000;
-const REPORT = ".tmp/repo/mutation/report.json";
+const REPORT = ".repo/tmp/mutation/report.json";
 const TOOL = "10.1.1";
 const VITEST = "^5.1.0";
 
@@ -57,7 +57,7 @@ function plantedRepo(): string {
   };
 
   write(dir, {
-    ".gitignore": "node_modules\n.tmp/\n",
+    ".gitignore": "node_modules\n.repo/tmp/\n",
     "mutation-floors.json": { ".": 99 },
     "package.json": manifest,
     "src/math.test.ts": MATH_TEST,

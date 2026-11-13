@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { nestedHolds, nestedTmpDirs } from "./clean-scan.ts";
+import { nestedHolds, nestedRepoDirs } from "./clean-scan.ts";
 import { row } from "./doctor-rows.ts";
 import {
   DAY_SECONDS,
@@ -56,13 +56,13 @@ function byPath(a: { path: string }, b: { path: string }): number {
 }
 
 function strayIssues(root: string): WorkspaceIssue[] {
-  return nestedTmpDirs(root).map((dir) => {
+  return nestedRepoDirs(root).map((dir) => {
     const holds = nestedHolds(dir);
 
     return {
       clear: `rm -r ${dir}`,
       detail: holds === null ? "" : `holds ${holds}`,
-      kind: "stray .tmp/repo",
+      kind: "stray .repo dir",
       path: dir,
     };
   });

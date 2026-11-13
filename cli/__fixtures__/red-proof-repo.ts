@@ -20,7 +20,7 @@ export function linkModules(dir: string): void {
 export function plant(files: Record<string, unknown>, rootManifest = true): string {
   const dir = tempDir();
   git(dir, "init", "-q", "-b", "main");
-  write(dir, { ".gitignore": "node_modules\n.tmp\n", ...(rootManifest ? { "package.json": { name: "p" } } : {}) });
+  write(dir, { ".gitignore": "node_modules\n.repo/tmp\n", ...(rootManifest ? { "package.json": { name: "p" } } : {}) });
   write(dir, files);
   linkModules(dir);
   git(dir, "add", "-A");

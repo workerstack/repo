@@ -40,4 +40,4 @@ antigravity-cli:
   commandExecutionPolicy: eager
   tools: [read_file, run_command, manage_task, send_message, schedule, invoke_subagent, define_subagent, manage_subagents, write_file, edit_file, search_web, ask_question]
 ---
-Follow AGENTS.md. Scratch in `.tmp/repo/`. Browse with `bun repo browser`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.
+Follow AGENTS.md. Scratch in `.repo/scratch/`. Browse with `bun repo browser`; the rail swaps to Chromium when Lightpanda is blocked. App e2e uses Playwright.

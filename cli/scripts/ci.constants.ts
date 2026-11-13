@@ -1,4 +1,5 @@
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { REPO, STATE } from "../repo-dirs.ts";
 
 /** A tsconfig file name in the root or a package directory. */
 export const TSCONFIG_FILE: RegExp = /^tsconfig.*\.json$/;
@@ -10,7 +11,7 @@ export const SKIPPED_SEGMENTS: readonly string[] = [FIXTURES_DIR, `node_modules`
 export const TSC_ARGS: readonly string[] = ["--noEmit", "--incremental", "--tsBuildInfoFile"];
 
 /** Where each config's build info goes, relative to the root, so CI can cache it between runs. */
-export const TSBUILDINFO_DIR: string = ".tmp/repo/tsbuildinfo";
+export const TSBUILDINFO_DIR: string = `${REPO}/${STATE}/tsbuildinfo`;
 export const TSBUILDINFO_EXTENSION: string = ".tsbuildinfo";
 
 /** tsc's flag before the config it checks. */
@@ -49,7 +50,7 @@ export const BLOB_OUTPUT_FLAG: string = "--outputFile.blob=";
 export const DEFAULT_REPORTER_FLAG: string = "--reporter=default";
 
 /** Where the shards' blobs go, relative to the root. */
-export const BLOB_DIR: string = ".tmp/repo/blob";
+export const BLOB_DIR: string = `${REPO}/${STATE}/blob`;
 
 /** A shard's flag that leaves the floors to the merged run. */
 export const NO_THRESHOLDS_FLAG: string = "--coverage.thresholds=false";

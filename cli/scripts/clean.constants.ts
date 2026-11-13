@@ -1,3 +1,4 @@
+import { WORK_DIRS } from "../repo-dirs.ts";
 import type { BuildItem } from "./build-dirs.ts";
 import type { Policy } from "./clean.types.ts";
 
@@ -15,10 +16,12 @@ export const DAY: number = 24 * HOUR;
 /** Repo files untouched this long age out (roadmap D12). */
 export const AGE: number = 30 * DAY;
 
-/** The dirs that hold repo's durable files; a nested .tmp/repo holding a file in one is kept. */
+/** The dirs that hold repo's durable files; a nested ignored `.repo` dir holding a file in one is kept. */
 export const PLANS_DIR = "plans";
+export const PLANS_FAST_DIR = "plans-fast";
 export const ROADMAPS_DIR = "roadmaps";
-export const DURABLE: readonly string[] = [PLANS_DIR, ROADMAPS_DIR, "handoffs", "implementations"];
+export const ROADMAPS_FAST_DIR = "roadmaps-fast";
+export const DURABLE: readonly string[] = WORK_DIRS;
 
 /** The status of a finished plan, roadmap, journal or handoff. */
 export const DONE_STATUS = "done";
@@ -26,29 +29,42 @@ export const DONE_STATUS = "done";
 /** The extension `nextSerial` counts in every dir but roadmaps. */
 export const MD_EXT = ".md";
 
-/** The kept kind of a nested .tmp/repo that holds durable files. */
+/** The kept kind of a nested ignored `.repo` dir that holds durable files. */
 export const NESTED_KIND = "nested";
 
 /** No serial seen yet; every real serial is above it. */
 export const NO_SERIAL = -1;
 
+/** Segment offsets and counts of a git ignored-dir entry: `<...>/.repo/<dir>` is three deep, `<...>/.repo` two. */
+export const LAST_SEG = -1;
+export const PARENT_SEG = -2;
+export const NESTED_DIR_SEGS = 3;
+export const NESTED_REPO_SEGS = 2;
+
 /** The slashes git's `--directory` listing ends a dir entry with. */
 export const TRAILING_SLASHES_RE: RegExp = /\/+$/;
 
-// How each repo-owned dir is cleaned. A reserved dir with no policy fails at load, so a new one is never deleted
-// silently.
-// clean.test.ts holds POLICY to TMP_RESERVED_DIRS, so a reserved dir without a policy fails the suite.
+// How each ignored dir under `.repo`, and each state dir under `.repo/tmp`, is cleaned. An ignored dir with no policy
+// fails the types, so a new one is never deleted silently.
 const POLICY = {
+  blob: "keep",
   browser: "keep",
+  ci: "keep",
   handoffs: "age",
   implementations: "age-done",
   listen: "keep",
+  mutation: "keep",
   "orchestrator-logs": "per-stamp",
   plans: "age-done",
+  "plans-fast": "age-done",
   roadmaps: "age-done",
+  "roadmaps-fast": "age-done",
+  scratch: "loose",
   sessions: "per-session",
   speak: "keep",
   stash: "per-receipt",
+  tmp: "state",
+  tsbuildinfo: "keep",
 } as const satisfies Readonly<Record<string, Policy>>;
 
 function hasPolicy(dir: string): dir is keyof typeof POLICY {
@@ -65,7 +81,9 @@ const OLD_KIND = {
   handoffs: "old handoff",
   implementations: "old journal",
   plans: "old plan",
+  "plans-fast": "old plan",
   roadmaps: "old roadmap",
+  "roadmaps-fast": "old roadmap",
 } as const satisfies Readonly<Record<string, string>>;
 
 function ages(dir: string): dir is keyof typeof OLD_KIND {

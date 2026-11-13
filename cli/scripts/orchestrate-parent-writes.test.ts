@@ -24,31 +24,31 @@ function read(file: string) {
 
 it("hands the host the absolute path of a new plan", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
-  expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/repo/plans"));
+  const saved = savedAt(ws, { content: VALID_PLAN, file: ".repo/plans/x.md", tool: "Write" });
+  expect(path.dirname(saved)).toBe(path.join(ws, ".repo/plans"));
   expect(path.basename(saved)).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
   expect(fs.existsSync(saved)).toBe(true);
 });
 
 it("rewrites whichever path key the host sent", () => {
   const ws = kit.temp();
-  const out = must(pre(ws, "write", { content: VALID_TMP, path: ".tmp/repo/note.md" }));
+  const out = must(pre(ws, "write", { content: VALID_TMP, path: ".repo/scratch/note.md" }));
   expect(out.updatedInput.file_path).toBeUndefined();
-  expect(path.dirname(out.updatedInput.path)).toBe(path.join(ws, ".tmp/repo"));
+  expect(path.dirname(out.updatedInput.path)).toBe(path.join(ws, ".repo/scratch"));
   expect(fs.existsSync(out.updatedInput.path)).toBe(true);
 });
 
-it("saves a new roadmap under .tmp/repo/roadmaps with an absolute path", () => {
+it("saves a new roadmap under .repo/roadmaps with an absolute path", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".tmp/repo/roadmaps/new.md" });
-  expect(path.dirname(saved)).toBe(path.join(ws, ".tmp/repo/roadmaps"));
+  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".repo/roadmaps/new.md" });
+  expect(path.dirname(saved)).toBe(path.join(ws, ".repo/roadmaps"));
   expect(path.basename(saved)).toMatch(/^1-auth-program-\d{8}T\d{6}Z\.md$/);
   expect(fs.existsSync(saved)).toBe(true);
 });
 
 it("validates a full-body roadmap re-save and leaves the write to the host", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".tmp/repo/roadmaps/new.md" });
+  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".repo/roadmaps/new.md" });
   const before = read(saved);
   const body = DRAFT_ROADMAP.replace("strip narrating comments.", "strip narrating comments and logs.");
   const again = must(pre(ws, "write", { content: body, file_path: path.relative(ws, saved) }));
@@ -66,7 +66,7 @@ it("leaves a write under docs/roadmaps alone", () => {
 
 it("checks a roadmap Edit against the text it would produce", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".tmp/repo/roadmaps/new.md" });
+  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".repo/roadmaps/new.md" });
   const before = read(saved);
   const edit = { file_path: saved, new_string: "2 [ ] commit:", old_string: "2 [ ] commit diff pass:" };
   const broken = must(pre(ws, "Edit", edit));
@@ -84,7 +84,7 @@ it("checks a roadmap Edit against the text it would produce", () => {
 
 it("denies locking an unreviewed roadmap by Edit and allows it after a round", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".tmp/repo/roadmaps/new.md" });
+  const saved = savedAt(ws, { content: DRAFT_ROADMAP, file: ".repo/roadmaps/new.md" });
   const lock = { file_path: saved, new_string: "status: locked", old_string: "status: draft" };
   const denied = must(pre(ws, "Edit", lock));
   expect(denied.permissionDecision).toBe("deny");
@@ -95,7 +95,7 @@ it("denies locking an unreviewed roadmap by Edit and allows it after a round", (
 
 it("rewrites an existing plan in place and hands back its absolute path", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
+  const saved = savedAt(ws, { content: VALID_PLAN, file: ".repo/plans/x.md", tool: "Write" });
   const before = read(saved);
 
   const body = before
@@ -106,14 +106,14 @@ it("rewrites an existing plan in place and hands back its absolute path", () => 
   const again = must(pre(ws, "Write", { content: body, file_path: path.relative(ws, saved) }));
   expect(again.updatedInput.file_path).toBe(saved);
   expect(again.updatedInput.content).toMatch(/^1\.1 \[x\] /m);
-  expect(fs.readdirSync(path.join(ws, ".tmp/repo/plans"))).toStrictEqual([path.basename(saved)]);
+  expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([path.basename(saved)]);
   // The host writes it: a hook write first makes Claude Code refuse the Write as modified since read.
   expect(read(saved)).toBe(before);
 });
 
 it("lets a valid Edit of an existing plan through", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
+  const saved = savedAt(ws, { content: VALID_PLAN, file: ".repo/plans/x.md", tool: "Write" });
   const before = read(saved);
 
   for (const [tool, input] of [
@@ -127,7 +127,7 @@ it("lets a valid Edit of an existing plan through", () => {
 
 it("denies starting an unreviewed plan by Edit and allows it after a round", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: VALID_PLAN, file: ".tmp/repo/plans/x.md", tool: "Write" });
+  const saved = savedAt(ws, { content: VALID_PLAN, file: ".repo/plans/x.md", tool: "Write" });
   const flip = { file_path: saved, new_string: "status: in-progress", old_string: "status: ready" };
   const denied = must(pre(ws, "Edit", flip));
   expect(denied.permissionDecision).toBe("deny");
@@ -140,7 +140,7 @@ it("denies an Edit that breaks a plan or drops a Previous mistakes entry", () =>
   const ws = kit.temp();
   const entry = "- review: Verify ran the whole suite → runs check-ignore only";
   const body = VALID_PLAN.replace("## Previous mistakes\n(none)", `## Previous mistakes\n${entry}`);
-  const saved = savedAt(ws, { content: body, file: ".tmp/repo/plans/x.md", tool: "Write" });
+  const saved = savedAt(ws, { content: body, file: ".repo/plans/x.md", tool: "Write" });
   const broken = must(pre(ws, "Edit", { file_path: saved, new_string: "## Aim", old_string: "## Goal" }));
   expect(broken.permissionDecision).toBe("deny");
   const dropped = must(pre(ws, "Edit", { file_path: saved, new_string: "(none)", old_string: entry }));
@@ -150,7 +150,7 @@ it("denies an Edit that breaks a plan or drops a Previous mistakes entry", () =>
 
 it("hands the host the absolute path of a full-body journal update", () => {
   const ws = kit.temp();
-  const saved = savedAt(ws, { content: VALID_IMPL, file: ".tmp/repo/implementations/x.md", tool: "Write" });
+  const saved = savedAt(ws, { content: VALID_IMPL, file: ".repo/implementations/x.md", tool: "Write" });
   const again = must(pre(ws, "Write", { content: read(saved), file_path: path.relative(ws, saved) }));
   expect(again.updatedInput.file_path).toBe(saved);
 });

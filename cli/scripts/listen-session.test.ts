@@ -20,8 +20,8 @@ describe("paths", () => {
     spawnSync("git", ["init", "-q"], { cwd: r });
     const a = path.join(r, "packages", "a");
     fs.mkdirSync(a, { recursive: true });
-    expect(sessionPath(a)).toBe(path.join(r, ".tmp/repo/listen/session.json"));
-    expect(latestPath(a)).toBe(path.join(r, ".tmp/repo/listen/latest.txt"));
+    expect(sessionPath(a)).toBe(path.join(r, ".repo/tmp/listen/session.json"));
+    expect(latestPath(a)).toBe(path.join(r, ".repo/tmp/listen/latest.txt"));
   });
 });
 

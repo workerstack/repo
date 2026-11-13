@@ -75,7 +75,7 @@ it("saves under the working directory's repo root and plays through the injected
   const opts = { cwd: root, env, fetchFn: audio, home: plantDir(), log: c.log, spawn };
   expect(await main(["say", "--text", "hi", "--play"], opts)).toBe(0);
   const saved = c.logs[0] ?? "";
-  expect(path.dirname(saved)).toBe(path.join(root, ".tmp", "repo", "speak"));
+  expect(path.dirname(saved)).toBe(path.join(root, ".repo", "tmp", "speak"));
   expect(played.join("").endsWith(saved)).toBe(true);
 });
 

@@ -30,7 +30,7 @@ describe("persistImplementation", () => {
 });
 
 describe("persistImplementation file", () => {
-  it("writes a stamped journal under .tmp/repo/implementations", () => {
+  it("writes a stamped journal under .repo/implementations", () => {
     const ws = tmpWs();
 
     const r = persistImplementation({
@@ -139,7 +139,7 @@ describe("persistImplementation refused Files", () => {
     expect(abs.error).toContain("Files abs");
 
     const tmp = persistImplementation({
-      content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- .tmp/repo/x.md"),
+      content: VALID_IMPL.replace("## Files\n(none)", "## Files\n- .repo/scratch/x.md"),
       workspaceRoot: ws,
     });
 

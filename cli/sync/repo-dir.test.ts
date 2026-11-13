@@ -10,7 +10,9 @@ import { loadSources } from "./agents/load-sources.ts";
 import { repoDirProblems } from "./repo-dir.ts";
 
 const ALLOWED = [
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, bench/ (read by repo bench), settings/claude.json, ",
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, ",
+  "plans/, plans-fast/, roadmaps/, roadmaps-fast/, handoffs/, implementations/, scratch/, ",
+  "bench/ (read by repo bench), settings/claude.json, ",
   "hooks.jsonc, ",
   "mcp-policy.jsonc, permissions.json, map.jsonc, ",
   "env.keys.json (read by @workerstack/repo/env (the public key sealed values are locked to)), ",
@@ -44,6 +46,10 @@ it("passes every entry sync reads, the bench specs `repo bench` reads, and ignor
   });
 
   expect(check(root)).toStrictEqual([]);
+});
+
+it("accepts the gitignored work dirs and scratch", () => {
+  expect(check(repo({ ".repo/plans/x.md": "x", ".repo/scratch/x": "x" }))).toStrictEqual([]);
 });
 
 it("names an unknown file with the allowed list and where explanations go, mcp.json included", () => {

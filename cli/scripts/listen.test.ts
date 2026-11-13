@@ -69,7 +69,7 @@ describe("main file", () => {
     expect(posted.headers?.Authorization).toBe("Bearer sk_oa");
     expect(posted.body).toBeInstanceOf(FormData);
     expect(r.logs.join("\n")).toContain("hello world");
-    expect(fs.readFileSync(path.join(cwd, ".tmp/repo/listen/latest.txt"), "utf8")).toMatch(/hello world/);
+    expect(fs.readFileSync(path.join(cwd, ".repo/tmp/listen/latest.txt"), "utf8")).toMatch(/hello world/);
   });
 });
 
@@ -83,7 +83,7 @@ describe("main file at the repo root", () => {
     fs.writeFileSync(wav, "RIFFDATA");
     const r = await run(["file", "--path", wav], { cwd: a, fetchFn: subHello, whichFn: ffmpegOnly });
     expect(r.code).toBe(0);
-    const latest = path.join(repo, ".tmp/repo/listen/latest.txt");
+    const latest = path.join(repo, ".repo/tmp/listen/latest.txt");
     expect(fs.readFileSync(latest, "utf8")).toMatch(/sub hello/);
     expect(r.logs).toContain(`transcript=${latest}`);
     expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);

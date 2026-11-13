@@ -3,6 +3,8 @@
   "exclude": [
     "node_modules",
     ".tmp",
+    ".repo/scratch",
+    ".repo/tmp",
     ".worktrees",
     "dist",
     "**/__fixtures__/**/ws/**",

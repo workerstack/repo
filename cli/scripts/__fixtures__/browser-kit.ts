@@ -70,7 +70,7 @@ function rmRetry(dir: string, tries = 6): void {
 }
 
 export function sessionPath(cwd: string): string {
-  return path.join(cwd, ".tmp/repo/browser/session.json");
+  return path.join(cwd, ".repo/tmp/browser/session.json");
 }
 
 /** Ends every engine, socket and stand-in the case started, then removes its dirs. */

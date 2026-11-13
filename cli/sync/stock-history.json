@@ -18,6 +18,7 @@
     "133b1b74b24a3f46",
     "1ae89d237d2c2b80",
     "72c3257003248350",
+    "89910177d62a735c",
     "96705985020446e8",
     "9cdedc0ea0931d34",
     "e27c88e3e117285a"
@@ -29,6 +30,7 @@
     "b759babf42658805",
     "caf97ca969c7a1d6",
     "cc4b43644f4523dd",
+    "d13542adc6f23f5a",
     "ff7b733230dd9d7e"
   ],
   ".agents/agents/implementer.md": [
@@ -65,6 +67,7 @@
     "cd4f1d924a9c5555",
     "d012e696c8a60d2d",
     "d4258429aceffcf4",
+    "d48e905678bfa542",
     "dc0c40fe38b9f0eb",
     "efee37c7041c5224",
     "f538c266a2a1bdd9",
@@ -124,6 +127,7 @@
   ".agents/skills/browser/SKILL.md": [
     "006b4ad35b3a1a91",
     "05aaee7ac2cb0467",
+    "2d5e6478888d12b3",
     "304bb21b758994de",
     "65531878e95ebf60",
     "7b4f07e5c0f9e2b2",
@@ -200,10 +204,10 @@
     "7a3f89770d37b4f7",
     "9227cf6c506c04f2",
     "92d4ea66fab36cd8",
+    "a281a4218262ceb0",
     "a759780ef8fdf27b",
     "aca653a9814b43b6",
     "d8cc38429e6dd012",
-    "ef5fb026e92195c6",
     "f3e7b2c8c3f3cd60"
   ],
   ".agents/skills/correct/SKILL.md": [
@@ -239,7 +243,6 @@
     "06fba9039b1a22e1",
     "1d61a5d0f66ab950",
     "3dbd6379ee7810b0",
-    "44eedd812d91e9af",
     "49ead44092670760",
     "63557eb7492f6359",
     "6e0f82dd37d946dd",
@@ -249,6 +252,7 @@
     "c4e8edabc2b99b09",
     "c5bfa94eb2168b7a",
     "cd16b109924465c4",
+    "edef7d82b89669ff",
     "efab76f90ef41f2e"
   ],
   ".agents/skills/implement-plan/SKILL.md": [
@@ -257,6 +261,7 @@
     "2b5636f9a2ff8ee7",
     "590599b1128b9e28",
     "6aeaa3dc06034290",
+    "7b4b8613c0350c91",
     "88b87065fe481872",
     "89a049f208beeb6e",
     "8de84bbe6b6b30ac",
@@ -284,6 +289,7 @@
   ],
   ".agents/skills/jev/SKILL.md": [
     "17988d059979d8b1",
+    "26ed1924d69879b7",
     "3f800b77a18a0e44",
     "704e17f63c0c6f1d",
     "82f84ef02f95cd4f",
@@ -294,6 +300,7 @@
     "0b061ab13d47aed5",
     "122733b333a3791d",
     "35e3619290e8b1f9",
+    "64a0306494a23729",
     "65ac6d1651be3a61",
     "898c9ae9ca2e6f9f",
     "c27f5b9042fe72f5",
@@ -303,6 +310,7 @@
   ".agents/skills/parent/SKILL.md": ["59dbeb51df656cfc", "73e094183c7fd665", "9c2b1760b782a7fa"],
   ".agents/skills/pickup/SKILL.md": [
     "430376b21904efe3",
+    "5db82549b1033bee",
     "818aee7f7110ea1f",
     "88ffc658c632280c",
     "9c204751c618a139",
@@ -320,7 +328,11 @@
   ".agents/skills/principle-explain-the-number/SKILL.md": ["f39688366a1e2f6e"],
   ".agents/skills/principle-fix-root-causes/SKILL.md": ["0258e9028aacfdb9"],
   ".agents/skills/principle-foundational-thinking/SKILL.md": ["e9a3afbb7d6ae2e4"],
-  ".agents/skills/principle-guard-the-context-window/SKILL.md": ["4c471b0fae9b4257", "8a603b9f292afb99"],
+  ".agents/skills/principle-guard-the-context-window/SKILL.md": [
+    "4c471b0fae9b4257",
+    "8a603b9f292afb99",
+    "a436edcd5855d601"
+  ],
   ".agents/skills/principle-laziness-protocol/SKILL.md": ["cb88de30552a1ef8"],
   ".agents/skills/principle-make-operations-idempotent/SKILL.md": ["f49658e745d9b7a3"],
   ".agents/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md": ["3a860765734ad68d"],
@@ -337,9 +349,9 @@
   ".agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
   ".agents/skills/review-plan/SKILL.md": [
     "098470de41694978",
-    "19d5b003103c9085",
     "3638009f06c3c414",
     "419c736dd6d7a1ab",
+    "553005bf5d6c4571",
     "5dc75175807fa513",
     "90bcc58596518fa7",
     "986b1a493c980983",
@@ -349,14 +361,14 @@
   ],
   ".agents/skills/review-roadmap/SKILL.md": [
     "1b36dd588943efb5",
-    "53f5034d8be7143c",
     "81aa26f2ef6a6d44",
     "875fefc60824ba66",
     "9ccba3f2549abf73",
     "a331802812b38256",
     "b6b1ea7e37810ec4",
     "bcc9cf64c2517c2f",
-    "cbba526722cdac95"
+    "cbba526722cdac95",
+    "d99d89399f729857"
   ],
   ".agents/skills/show-me/SKILL.md": ["e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
@@ -384,13 +396,13 @@
     "033449f140f31d75",
     "1723f3224dcb59b1",
     "54657a6690988e3f",
+    "54f6eb139d94e99a",
     "629d1f3fb2b5cb59",
     "7eb9838ffe8c0774",
     "8e937ee544c75c57",
     "8ed7b782501f1cf9",
     "a47b4e8bd112c8f3",
     "d513a6163e86a8d9",
-    "eef6ab7e9e2df25a",
     "ef0718eedb2a10ec"
   ],
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
@@ -398,11 +410,11 @@
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
-    "0f1b19182c479cc3",
     "1d2cfbedeea5a019",
     "2da67e047dace5e0",
     "38ca520ce04ef84c",
     "40d58be5fd6271b7",
+    "5573511f9e67aeaa",
     "576784b62e8a0c04",
     "5d33ed43cdf164b8",
     "6935e0d5bd3fcbec",
@@ -422,8 +434,8 @@
   ],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
+    "1b075dbcf503e91f",
     "1dc3f6f74b35a44b",
-    "24f42922a1d3b175",
     "26c934c36c226a5e",
     "41049496a298f201",
     "6954947a18bf807e",
@@ -450,6 +462,7 @@
   ".claude/agents/implementer-deep.md": [
     "031e81d769192513",
     "56484bf8548b02b8",
+    "74eab0cb9fe44036",
     "822ee453d08568bf",
     "9267fa4c2acdb2d4",
     "f65895cdd912d4c5"
@@ -459,6 +472,7 @@
     "4449948f4ea0a58a",
     "5e8db097f912935b",
     "86d07febe2b62a67",
+    "8ac857d594b45169",
     "9b74e3df7ad108ee"
   ],
   ".claude/agents/implementer.md": [
@@ -578,6 +592,7 @@
     "174582e2719f4377",
     "19c97924d800b612",
     "2a37be3aa1d4bcab",
+    "3ce5f2404b397430",
     "664d36cb62ef0583",
     "6d5706d0a9947d88",
     "ee2a3ac19dcfa929",
@@ -586,6 +601,7 @@
   ".codex/agents/implementer-fast.toml": [
     "14bf01586cae5dc5",
     "61077634d7708213",
+    "8f479955f4ebac38",
     "a4d2ea9403223d5c",
     "abf29959b2290481",
     "dbeb1917b4c03a49",
@@ -668,9 +684,11 @@
     "8da20c8434f2b07e",
     "cd8050fb5f981553",
     "d0c044828f7e4057",
-    "e7e445d3f058744b"
+    "e7e445d3f058744b",
+    "fe1c7b3f0fed6c0c"
   ],
   ".cursor/agents/implementer-fast.md": [
+    "063326f99d28a7ca",
     "14fa65edf9a36a5d",
     "4b8c32f36effe7b3",
     "6077c07b0c83664d",
@@ -707,6 +725,7 @@
   ],
   ".grok/agents/implementer-deep.md": [
     "18f1017fdaa0289f",
+    "2556abb388a93470",
     "3ba8d4145612a173",
     "4d731f7711115f0d",
     "75ef677dfb4df613",
@@ -716,6 +735,7 @@
   ".grok/agents/implementer-fast.md": [
     "25f31234db82a2d1",
     "2d615028bd30b178",
+    "2ff8ab604a3e3323",
     "45badc05cc2dc26e",
     "ae3ee9fd926bcca8",
     "eca8c71ad0ddc153",
@@ -737,6 +757,7 @@
   ],
   ".grok/agents/orchestrator.md": [
     "0c941bd0c8f22d7e",
+    "3e513c3e65b8025c",
     "448904ff4954ac15",
     "51b3f423c0160563",
     "548582c5745c9f0b",
@@ -2071,6 +2092,7 @@
     "56d925eb52637603",
     "6069dab37a35df2f",
     "6242fbc0249a58ff",
+    "64da3f5fc79974c1",
     "65351a84a41d596d",
     "67d017a332cb33f4",
     "68e29d68070a04b8",
@@ -2112,7 +2134,7 @@
   "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f", "fdd40c82484396ab"],
   "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
-  "agents/rules/overview.md": ["d430ca6fec0763d6", "e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
+  "agents/rules/overview.md": ["8d1e4ccff74232b2", "d430ca6fec0763d6", "e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
   "agents/rules/rust.md": [
     "14edf7de7aaaa090",
     "985134dcb5b5d374",
@@ -2128,7 +2150,7 @@
   "agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
   "agents/skills/blast-radius/SKILL.md": ["edd6d7e66ec29712"],
   "agents/skills/bro/SKILL.md": ["1d06d81d9b584f52"],
-  "agents/skills/browser/SKILL.md": ["7b4f07e5c0f9e2b2"],
+  "agents/skills/browser/SKILL.md": ["2d5e6478888d12b3", "7b4f07e5c0f9e2b2"],
   "agents/skills/clasp/SKILL.md": ["dc0ca93c6f5bdac4"],
   "agents/skills/commit-and-push/SKILL.md": ["c89699fe704d1375"],
   "agents/skills/commit-push-deploy/SKILL.md": [
@@ -2151,17 +2173,23 @@
     "d64e879263b0efb1",
     "f409c40c5a8c7f30"
   ],
-  "agents/skills/commit/SKILL.md": ["94e2f88bad9a500b", "cd8a216b424f6a38", "ef5fb026e92195c6", "f3e7b2c8c3f3cd60"],
+  "agents/skills/commit/SKILL.md": [
+    "94e2f88bad9a500b",
+    "a281a4218262ceb0",
+    "cd8a216b424f6a38",
+    "ef5fb026e92195c6",
+    "f3e7b2c8c3f3cd60"
+  ],
   "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199"],
   "agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
-  "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8"],
-  "agents/skills/implement-plan/SKILL.md": ["8de84bbe6b6b30ac"],
+  "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff"],
+  "agents/skills/implement-plan/SKILL.md": ["7b4b8613c0350c91", "8de84bbe6b6b30ac"],
   "agents/skills/implement-roadmap/SKILL.md": ["52dcc438a52e2594"],
-  "agents/skills/jev/SKILL.md": ["ba541c351d8c64dc"],
-  "agents/skills/listen/SKILL.md": ["f1a932afddb5e8d1"],
-  "agents/skills/pickup/SKILL.md": ["818aee7f7110ea1f"],
+  "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
+  "agents/skills/listen/SKILL.md": ["64a0306494a23729", "f1a932afddb5e8d1"],
+  "agents/skills/pickup/SKILL.md": ["5db82549b1033bee", "818aee7f7110ea1f"],
   "agents/skills/principle-attack-the-premise/SKILL.md": ["15684000f80ab2b1"],
   "agents/skills/principle-boundary-discipline/SKILL.md": ["3a0c8d6c907ffc2e"],
   "agents/skills/principle-build-the-lever/SKILL.md": ["3e3b282365fe79a0"],
@@ -2171,7 +2199,7 @@
   "agents/skills/principle-explain-the-number/SKILL.md": ["f39688366a1e2f6e"],
   "agents/skills/principle-fix-root-causes/SKILL.md": ["0258e9028aacfdb9"],
   "agents/skills/principle-foundational-thinking/SKILL.md": ["e9a3afbb7d6ae2e4"],
-  "agents/skills/principle-guard-the-context-window/SKILL.md": ["4c471b0fae9b4257"],
+  "agents/skills/principle-guard-the-context-window/SKILL.md": ["4c471b0fae9b4257", "a436edcd5855d601"],
   "agents/skills/principle-laziness-protocol/SKILL.md": ["cb88de30552a1ef8"],
   "agents/skills/principle-make-operations-idempotent/SKILL.md": ["f49658e745d9b7a3"],
   "agents/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md": ["3a860765734ad68d"],
@@ -2186,22 +2214,22 @@
   "agents/skills/principle-subtract-before-you-add/SKILL.md": ["953ec35a7e52f656"],
   "agents/skills/principle-test-behavior-not-implementation/SKILL.md": ["80cbf74fcb6e16c5"],
   "agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
-  "agents/skills/review-plan/SKILL.md": ["19d5b003103c9085", "5dc75175807fa513"],
-  "agents/skills/review-roadmap/SKILL.md": ["53f5034d8be7143c", "b6b1ea7e37810ec4"],
+  "agents/skills/review-plan/SKILL.md": ["19d5b003103c9085", "553005bf5d6c4571", "5dc75175807fa513"],
+  "agents/skills/review-roadmap/SKILL.md": ["53f5034d8be7143c", "b6b1ea7e37810ec4", "d99d89399f729857"],
   "agents/skills/show-me/SKILL.md": ["e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
-  "agents/skills/tmp/SKILL.md": ["e11fac7d3548cf2d", "eef6ab7e9e2df25a"],
+  "agents/skills/tmp/SKILL.md": ["54f6eb139d94e99a", "e11fac7d3548cf2d", "eef6ab7e9e2df25a"],
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  "agents/skills/write-plan/SKILL.md": ["0f1b19182c479cc3", "89623fe95bda0ea7", "ee7e143018db8227"],
-  "agents/skills/write-roadmap/SKILL.md": ["24f42922a1d3b175", "7cd4f6ac9cde565d"],
+  "agents/skills/write-plan/SKILL.md": ["0f1b19182c479cc3", "5573511f9e67aeaa", "89623fe95bda0ea7", "ee7e143018db8227"],
+  "agents/skills/write-roadmap/SKILL.md": ["1b075dbcf503e91f", "24f42922a1d3b175", "7cd4f6ac9cde565d"],
   "agents/subagents/implementer-deep.md": ["33e148700c1f207e"],
   "agents/subagents/implementer-fast.md": ["0eb791219e23fc74"],
-  "agents/subagents/implementer.md": ["c70d9a9fa6c3112d"],
-  "agents/subagents/orchestrator.md": ["7111a150b0512523"],
+  "agents/subagents/implementer.md": ["c70d9a9fa6c3112d", "ec7b7d8bdb670db3"],
+  "agents/subagents/orchestrator.md": ["7111a150b0512523", "7ebf2f95b4741284"],
   "agents/subagents/researcher.md": ["1f1fa4b03064c897"],
   "agents/subagents/scout.md": ["cac206ad5d7179fe"],
   "cli/scripts/__fixtures__/baseline-repo.ts": ["3ea9c8922c644715", "eb13ccd54d74a928"],
@@ -2211,19 +2239,24 @@
   "cli/scripts/__fixtures__/bench/remote-only.bench.ts": ["417060a952f1bc79"],
   "cli/scripts/__fixtures__/bench/startup.bench.ts": ["f8ebacc525169da3"],
   "cli/scripts/__fixtures__/board-kit.ts": ["28cc65f3b7765fa9"],
-  "cli/scripts/__fixtures__/browser-kit.ts": ["0f2297eeb3ee7fb6", "5f6f16668ff571ef", "724c8a9721086640"],
+  "cli/scripts/__fixtures__/browser-kit.ts": [
+    "0f2297eeb3ee7fb6",
+    "5f6f16668ff571ef",
+    "724c8a9721086640",
+    "cbb5f7b37782c2d7"
+  ],
   "cli/scripts/__fixtures__/browser-nav-kit.ts": ["36d304033bb7065f"],
   "cli/scripts/__fixtures__/browser-ws-kit.ts": ["75a00a1328938a60"],
   "cli/scripts/__fixtures__/check-globals-kit.ts": ["1dd2b666f08695b2"],
-  "cli/scripts/__fixtures__/checkout-calls.ts": ["706fc33c4b931ede"],
+  "cli/scripts/__fixtures__/checkout-calls.ts": ["706fc33c4b931ede", "898562166117a216"],
   "cli/scripts/__fixtures__/ci-config-run.ts": ["6fb704b8a5106e1e"],
   "cli/scripts/__fixtures__/ci-run.ts": ["86bc194b217de9bd"],
   "cli/scripts/__fixtures__/ci-wait-world.ts": ["aa327120f18ac604", "b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
-  "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98"],
+  "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98", "fbc9c5c71d216353"],
   "cli/scripts/__fixtures__/doctor-kit.ts": ["2e695712107f399c", "9c6a7f1bfedb9efb", "e642ba74423b1c39"],
   "cli/scripts/__fixtures__/doctor-models-kit.ts": ["ad894596b777bd53"],
-  "cli/scripts/__fixtures__/doctor-workspace-kit.ts": ["d602f5b244feed86"],
+  "cli/scripts/__fixtures__/doctor-workspace-kit.ts": ["d602f5b244feed86", "e698f5aae3f17b19"],
   "cli/scripts/__fixtures__/fetch-result.ts": ["2f7afe1279c24f6f"],
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
@@ -2235,13 +2268,13 @@
     "c7b8918a421721b4"
   ],
   "cli/scripts/__fixtures__/hook-payload.ts": ["124d5a6cecf5be01", "665d3d2e20a4edbd"],
-  "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d", "abffba7aed8b4a74"],
+  "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d", "abffba7aed8b4a74", "b9ecd113fa8c32d4"],
   "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
   "cli/scripts/__fixtures__/ignore-kit.ts": ["9b61f61a57123cf7"],
   "cli/scripts/__fixtures__/jev-kit.ts": ["3aa91921de4a6986", "9bf3497a2822ca25", "ec7c7851b0011da7"],
   "cli/scripts/__fixtures__/job-http-server.ts": ["d4a8026dee635432"],
   "cli/scripts/__fixtures__/job-kit.constants.ts": ["2c86c5ce622b96d4"],
-  "cli/scripts/__fixtures__/job-kit.ts": ["a3ad72e2760b98c5"],
+  "cli/scripts/__fixtures__/job-kit.ts": ["4c09695f874dee98", "a3ad72e2760b98c5"],
   "cli/scripts/__fixtures__/json-dirs.ts": ["71f968b133ef2302"],
   "cli/scripts/__fixtures__/lessons-kit.ts": ["d4f284c6eb69d05b"],
   "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
@@ -2257,19 +2290,24 @@
   "cli/scripts/__fixtures__/mcp-base-policy.ts": ["4c75b546d03187b2"],
   "cli/scripts/__fixtures__/mcp-policy-kit.ts": ["0c1fb5e8c85a962a", "20e6cef7387de308", "e3b71c080e827a67"],
   "cli/scripts/__fixtures__/orchestrate-kit.ts": ["7eaf3bd728256df0"],
-  "cli/scripts/__fixtures__/persist-bodies.ts": ["ca631d8846a42277"],
+  "cli/scripts/__fixtures__/persist-bodies.ts": ["ca631d8846a42277", "d5a19defa71665cd"],
   "cli/scripts/__fixtures__/persist-edit-kit.ts": ["9c8ed853cb8bf48b"],
   "cli/scripts/__fixtures__/persist-lesson-kit.ts": ["77fc1d7ae2b17848"],
-  "cli/scripts/__fixtures__/persist-plan-kit.ts": ["b5295c3eeb937ede"],
+  "cli/scripts/__fixtures__/persist-plan-kit.ts": ["5a98f524bfc822bf", "b5295c3eeb937ede"],
   "cli/scripts/__fixtures__/persist-plan-rules-kit.ts": ["8d4b3c119c04a7e4"],
-  "cli/scripts/__fixtures__/persist-roadmap-kit.ts": ["3d7f28a11595dfc2"],
-  "cli/scripts/__fixtures__/persist-save-kit.ts": ["5e7c942870e4b20c"],
+  "cli/scripts/__fixtures__/persist-roadmap-kit.ts": ["37de40a318a30eef", "3d7f28a11595dfc2"],
+  "cli/scripts/__fixtures__/persist-save-kit.ts": ["5e7c942870e4b20c", "a7826cb3bb0240b2"],
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["980563ab7af07d10"],
-  "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c"],
+  "cli/scripts/__fixtures__/push-gate-rig.ts": ["bea88a067253171c", "f66c871ba3b68b5c"],
   "cli/scripts/__fixtures__/push-repo.ts": ["3c3b3cda1721dbfa"],
   "cli/scripts/__fixtures__/real-dir.ts": ["a060c156a3eee345"],
-  "cli/scripts/__fixtures__/review-plan.ts": ["8d882adc88cfe399", "9aba6d098a569a99", "d6318a681e3eecb7"],
+  "cli/scripts/__fixtures__/review-plan.ts": [
+    "8d882adc88cfe399",
+    "9aba6d098a569a99",
+    "9f30ff17d752d89a",
+    "d6318a681e3eecb7"
+  ],
   "cli/scripts/__fixtures__/run-hook.ts": ["9d4322ef51dfba86"],
   "cli/scripts/__fixtures__/run-persist-cli.ts": ["51360b04801d42cb"],
   "cli/scripts/__fixtures__/scrub-kit.ts": ["cf6cc15b999f422d"],
@@ -2452,7 +2490,13 @@
     "aec51ce560ee45f8",
     "eee0e619175b93bf"
   ],
-  "cli/scripts/browser-nav.test.ts": ["2a8f44b8fed9d1ed", "7076b4708480b573", "ac6703fc7e4676c5", "de48346535114e41"],
+  "cli/scripts/browser-nav.test.ts": [
+    "1fc710552d8bbab1",
+    "2a8f44b8fed9d1ed",
+    "7076b4708480b573",
+    "ac6703fc7e4676c5",
+    "de48346535114e41"
+  ],
   "cli/scripts/browser-scroll.test.ts": [
     "093f3967a201e208",
     "683dbcd542fdb219",
@@ -2488,11 +2532,12 @@
     "e6860f9234c2fba1",
     "ef0bda76cca2b435"
   ],
-  "cli/scripts/browser-shot.test.ts": ["2c9c71e10fa44eb5", "2f1cf31b50b0cab6", "765f1f7a39c5c9fc"],
+  "cli/scripts/browser-shot.test.ts": ["2c9c71e10fa44eb5", "2f1cf31b50b0cab6", "765f1f7a39c5c9fc", "cf456f43c8e1fde9"],
   "cli/scripts/browser-snap.test.ts": [
     "4addb512eeb74aef",
     "97c4fe18bc4fad58",
     "be0e5a48cc0badf0",
+    "c2dbe73c4f1fc9f1",
     "cf6885d250c84e89",
     "e42f54db899a6af1",
     "ff41db8691c86d92"
@@ -2520,6 +2565,7 @@
   "cli/scripts/browser-ws.ts": ["1a95333c60c385c7", "2098a0dbb4bd6179", "29487c83fe8b84e5", "4e268c55d01d866b"],
   "cli/scripts/browser.constants.ts": [
     "8a3f2ed36b16a95a",
+    "9c4bc5ee0dfd2602",
     "9f1da252f69ab811",
     "a7729c0cdcccd05f",
     "b0c183671a6d083b",
@@ -2541,7 +2587,8 @@
     "c02474f0870a232f",
     "c1e8545259c031d1",
     "d86db0ce00b126ad",
-    "e282f849e1cd90e4"
+    "e282f849e1cd90e4",
+    "fe3861f6d99b0a20"
   ],
   "cli/scripts/browser.ts": [
     "15165b62bb99a049",
@@ -2567,6 +2614,7 @@
     "5564f5b89f51557e",
     "ba9b8239f580acf0",
     "bb131188ff857a89",
+    "ddf7cec12adf1c2e",
     "ead7dd9669670bae",
     "eb0e377be718f244"
   ],
@@ -2672,6 +2720,7 @@
   "cli/scripts/ci-push-gate-stop.test.ts": [
     "07ba9e42945d9700",
     "1b7ac0472977254e",
+    "1eecc46128b18fe2",
     "33ee0ec95f5aa33f",
     "4d736568f3fa0e26",
     "dae457f7e3fc2e32"
@@ -2679,6 +2728,7 @@
   "cli/scripts/ci-push-gate.test.ts": [
     "7fd3864585d276ea",
     "9145aaaa77ff9b00",
+    "b81107c6a9ed1c20",
     "bd87941757d97d32",
     "c17629b802f96826",
     "f13f0ac7e30d53c4",
@@ -2692,6 +2742,7 @@
     "780e3bdeee6e8392",
     "937f5dd146c019d4",
     "9f79af6776007f7b",
+    "b92f3f05969ae794",
     "bcc3eace062f0cc5",
     "db006dbedeeeb9fa"
   ],
@@ -2741,7 +2792,13 @@
     "f28baf595eedd9c2",
     "ff4a4fa74d17508c"
   ],
-  "cli/scripts/ci-shard.test.ts": ["407a66a6fc554393", "6723f778005b5f8d", "8a6ee9a08ba2fc6e", "ca09be528486cb5b"],
+  "cli/scripts/ci-shard.test.ts": [
+    "407a66a6fc554393",
+    "6723f778005b5f8d",
+    "8a6ee9a08ba2fc6e",
+    "ca09be528486cb5b",
+    "d702d05a8d3d26eb"
+  ],
   "cli/scripts/ci-skips-report.test.ts": [
     "541f7437d6e640f0",
     "5d2fb18b1127d52e",
@@ -2833,6 +2890,7 @@
   ],
   "cli/scripts/ci-wait-record.test.ts": [
     "4e775914010f4163",
+    "6709662eee89c6b7",
     "7e8d8c375a4d4437",
     "b274db3097501cad",
     "df0133b1cbeaace6",
@@ -2865,7 +2923,13 @@
     "e9beba5d318a2fef",
     "f578c326ae880013"
   ],
-  "cli/scripts/ci-wait.constants.ts": ["2201514fb3aa2d78", "63090fdf82ad275d", "96a7c6c8ca33fb2c", "b4e83571657a4647"],
+  "cli/scripts/ci-wait.constants.ts": [
+    "2152c5d645b2c1af",
+    "2201514fb3aa2d78",
+    "63090fdf82ad275d",
+    "96a7c6c8ca33fb2c",
+    "b4e83571657a4647"
+  ],
   "cli/scripts/ci-wait.test.ts": [
     "029cba0d30d7f9c8",
     "14d6379a8267d28f",
@@ -2896,6 +2960,7 @@
     "b1ed4f2d1181a3c4",
     "b8d414521906c8dd",
     "ba40f475f89802f2",
+    "d696a53dcd5e50e2",
     "dc31e80b58be106e",
     "f5baaa5bee16f0fb"
   ],
@@ -2939,10 +3004,12 @@
     "6a7ea67940c7e6a4",
     "6d884e782b13117f",
     "c9cb42b85ee71118",
+    "ce3a4c474947d7e9",
     "d5035c11d22171bc"
   ],
   "cli/scripts/clean-builds.test.ts": [
     "15908d574467ff49",
+    "21cccbae22ba522f",
     "65ec012dd9feafcf",
     "7b3126c7b8de4534",
     "b4775e852e730877",
@@ -2960,6 +3027,7 @@
     "1798d050fd681145",
     "23e0fed31889371a",
     "4eb216029d016f5f",
+    "5f721d38d70c9417",
     "8c326ca7f53d52c1",
     "908c6fede456d874",
     "d2d50dffce5dd79b",
@@ -2972,9 +3040,11 @@
     "5845a7f5c9b83463",
     "6ecd8ec33704644e",
     "b07664f807dc268a",
-    "b239e07175d78d74"
+    "b239e07175d78d74",
+    "d16b322f091e615b"
   ],
   "cli/scripts/clean-plan.ts": [
+    "117dd56f5067850c",
     "1611304f68738382",
     "1741cb794eb36d8b",
     "5d5e55265a420934",
@@ -2986,6 +3056,7 @@
     "0caa7df75209b148",
     "0d96e79317d93eca",
     "10b2a4850e9d6456",
+    "62dd579f47683809",
     "6436cc755347a201",
     "76f573771fd1f795",
     "843c2290ece5ee5c",
@@ -2999,6 +3070,7 @@
     "739046f2cc2139b4",
     "75a5180d61de7442",
     "a4b3b4e592ee014e",
+    "b9bc7814c7b278e7",
     "db1a3471dea65ea4"
   ],
   "cli/scripts/clean-scan.ts": [
@@ -3006,11 +3078,19 @@
     "168e0b0180084a6f",
     "3d49c15aba42ac95",
     "3dc75ce4ec8db5a9",
+    "65421684a5fac4c7",
     "9045d9986fa661e5"
   ],
-  "cli/scripts/clean-sweep.test.ts": ["0bb42a0124d82fd5", "45dc1a5a9cfab839", "a5796d8065a8c793", "e16af6180aa7a0e8"],
+  "cli/scripts/clean-sweep.test.ts": [
+    "0bb42a0124d82fd5",
+    "398d2d3bd0b58474",
+    "45dc1a5a9cfab839",
+    "a5796d8065a8c793",
+    "e16af6180aa7a0e8"
+  ],
   "cli/scripts/clean.constants.ts": [
     "02d734ca4539af59",
+    "3c191042192fa44c",
     "b3be7dc4a6ffbac0",
     "c8c8b3b1b1b1b172",
     "d1cafa66d4ad453d",
@@ -3035,9 +3115,10 @@
     "a1c12a23dd7e97ed",
     "ae030ce39cd64f78",
     "b9e17eb99a635f4e",
+    "c400dd0c0c2b51c4",
     "e651a0a8658dade8"
   ],
-  "cli/scripts/clean.types.ts": ["83ed408b054d8baf", "99cd973a989e440b"],
+  "cli/scripts/clean.types.ts": ["83ed408b054d8baf", "99cd973a989e440b", "efac0ae9683e4a2e"],
   "cli/scripts/closing-line.test.ts": ["50f1caeaaed99a1e"],
   "cli/scripts/closing-line.ts": ["95a9fed71c26d059", "b48d099d9e87265e", "d2f1cc300c22d569"],
   "cli/scripts/comments-step.test.ts": [
@@ -3161,8 +3242,19 @@
     "8d6d1c7078bbf61a",
     "9370c08906cf6d37"
   ],
-  "cli/scripts/doctor-workspace.test.ts": ["0ee7aba366274e4b", "66950674d6440f15", "d54a75c988712c95"],
-  "cli/scripts/doctor-workspace.ts": ["0462109dd136a46f", "098f79b47c58389d", "3f2090d217ef7472", "661933badcc34e5f"],
+  "cli/scripts/doctor-workspace.test.ts": [
+    "0ee7aba366274e4b",
+    "66950674d6440f15",
+    "938459481528180f",
+    "d54a75c988712c95"
+  ],
+  "cli/scripts/doctor-workspace.ts": [
+    "0462109dd136a46f",
+    "098f79b47c58389d",
+    "3f2090d217ef7472",
+    "661933badcc34e5f",
+    "bc612f99de889e99"
+  ],
   "cli/scripts/doctor.constants.ts": ["57170a1bbd1e5af9", "5a7b1b74d08fcd0a", "7e0408886407ca8a", "e1fe52b9823d63bb"],
   "cli/scripts/doctor.test.ts": [
     "078f7f9f9e660f85",
@@ -3583,6 +3675,7 @@
     "7ee48f1a4469b93e",
     "806ea2f4a3401bdd",
     "c979fa825209fbce",
+    "d389a3a5c92db013",
     "db244fe63eed7ab2",
     "e93e23aab8a7eb60"
   ],
@@ -3593,10 +3686,12 @@
     "7c3e629bfe5a5177",
     "8af6b9a7736ad226",
     "a3f3b510a72789bc",
+    "d5e95097353c5b9a",
     "e7cb1eaa1d75dab5"
   ],
   "cli/scripts/gate-checkout.test.ts": [
     "4fd02acc70bbf2f6",
+    "792e06db447d7a4c",
     "9339ec1451b22d9a",
     "a903717d006ac921",
     "a91fd07a1204549c",
@@ -3635,6 +3730,7 @@
     "5ac5992b244ff6c1",
     "787d47971738c3cc",
     "870244d06f1ae15a",
+    "bd652f4834adece2",
     "d03905138ab5df31",
     "ed4fe98406b8c80e",
     "eebe19d6ff8b3e7e",
@@ -3698,7 +3794,8 @@
     "65e2dfd0e8e09bfc",
     "a0cae36a0e315946",
     "a1ef8b8ad989e892",
-    "b94e040878a96ecb"
+    "b94e040878a96ecb",
+    "fc3d6bf0da96dcdc"
   ],
   "cli/scripts/gate-harness-every.test.ts": [
     "01a6cecdba7795bf",
@@ -3708,7 +3805,8 @@
     "c058fb604338b7af",
     "c39b64ad8233217e",
     "cc342e4d04710c03",
-    "ddd904bf0c6f5fd6"
+    "ddd904bf0c6f5fd6",
+    "eec501be62abcd0b"
   ],
   "cli/scripts/gate-harness.test.ts": ["0fbe09a9380467e5", "4350a1381203da7e", "d5804b487aa56661", "e2d9ea88841c9bdd"],
   "cli/scripts/gate-harness.ts": [
@@ -3802,6 +3900,7 @@
   ],
   "cli/scripts/gate-review-deny.test.ts": [
     "36b99c1df1c40857",
+    "4ec6f1d52653eb74",
     "9655e5abd0a747bd",
     "9d642eca2322bf03",
     "aeebee6baf46b0b1",
@@ -3827,10 +3926,12 @@
     "2732415a3ce949a4",
     "579c24692ebdd564",
     "602cf72b791296be",
+    "b5f5cb25c33eb51e",
     "cb3d65c1e16fa25e",
     "de477c537f7d4556"
   ],
   "cli/scripts/gate-review-stamp.test.ts": [
+    "30fc3b51742527c2",
     "42debbfbc9de0e41",
     "4acaf915c7ead043",
     "5a3427abbd964a33",
@@ -3854,6 +3955,7 @@
     "60a91c7a016cc23d",
     "b13b37f19459facb",
     "be9d83179b3c096f",
+    "c149f0a471ff4937",
     "cf5d96f608b76016",
     "d5ae79ec7d5ab8e8",
     "f18898c398f238eb"
@@ -3864,6 +3966,7 @@
     "298cc40e6c01a387",
     "3424ab743c9e849b",
     "7f8644ed8d2710b4",
+    "d9f49d67d4bef8e5",
     "dcf914ad29e0f751"
   ],
   "cli/scripts/gate-rewrites.test.ts": [
@@ -3873,10 +3976,12 @@
     "7bc4a8e15326b748",
     "935b4262accdb7b8",
     "ce48e75b9a712110",
-    "e87227443723a5f0"
+    "e87227443723a5f0",
+    "f527e1a2e649c09c"
   ],
   "cli/scripts/gate-rewrites.ts": [
     "02181828e03b823d",
+    "32eed7591206a888",
     "4436fa8a3b66ad1f",
     "6154dd0c64cdffa3",
     "777cc2eb943f29d2",
@@ -3907,6 +4012,7 @@
     "077331c2bce8bc04",
     "4f22a6f30c4c5ba6",
     "870ff6299a245655",
+    "9b3a4201fe41ff78",
     "bd8291ac65a858a8",
     "c6983db117a3bdf1",
     "dab153b70652b1fa",
@@ -3917,9 +4023,10 @@
     "57d71ea82d423722",
     "5ba2a5723803729b",
     "9a0aa2eae808067a",
+    "ca3fe308adaa6fbf",
     "faae70fc22547fc5"
   ],
-  "cli/scripts/gate.constants.ts": ["84f1a9240f257e2a", "c15e082933e60a95"],
+  "cli/scripts/gate.constants.ts": ["84f1a9240f257e2a", "b152625cf69f41e2", "c15e082933e60a95"],
   "cli/scripts/git-dir-name.constants.ts": ["3a6b352465fa0fb9"],
   "cli/scripts/gitignore-guard-patch.test.ts": [
     "27506c085a4f6eda",
@@ -4464,6 +4571,7 @@
   "cli/scripts/job-args.ts": ["56eb308212f41a1c", "6848e96d0fee4535", "6853c44703a76a1f", "6c4ec85db61afbf2"],
   "cli/scripts/job-exec.test.ts": [
     "6eb57af4a782397c",
+    "95db72d585c026ea",
     "aa84d2446b24992e",
     "afc748464a793f09",
     "b7882f8a7ef53f93",
@@ -4518,6 +4626,7 @@
   "cli/scripts/job-main.test.ts": [
     "292404f9e4161426",
     "455fc134c48ca529",
+    "7f48758a31ef8711",
     "93169fce5aba0650",
     "9353948a0ed4b898",
     "b6b101d61c9372aa"
@@ -4540,6 +4649,7 @@
     "3842202ec809620e",
     "697336d27c6b5e73",
     "91c377475ecdfc8a",
+    "af04f69ac97c942a",
     "b3d21992dcc6c42b",
     "c87d514d91b09fd7",
     "eaa968ac16c626f1"
@@ -4556,6 +4666,7 @@
     "4d7dd17385708e06",
     "52c1e3a66798c532",
     "63793baccd2b9788",
+    "826448103728ba3f",
     "97b43dfefdd15973",
     "9caf2eb9d97a80b6",
     "d9f96c963140d260",
@@ -4565,11 +4676,13 @@
   "cli/scripts/job-stash.test.ts": [
     "8cbccfbc77468be5",
     "9a0cd3143fd79534",
+    "cc6f662fddaf017b",
     "de215b18375d9018",
     "dfd1c519860d5264",
     "e5731e5d44c1c993"
   ],
   "cli/scripts/job-stash.ts": [
+    "5dc4e2e4e9d138c0",
     "6ccea5c3bd837cc3",
     "aaf7127044a39f26",
     "ad4fafda8ae6844c",
@@ -4578,7 +4691,7 @@
   ],
   "cli/scripts/job-tree.constants.ts": ["1dc7108238189201", "92932d61267e8636", "f9fc6527051ec178"],
   "cli/scripts/job-tree.ts": ["35ac26859b109cee", "740b10f1cee9680c", "c3f808d78c1625da", "c96e13a26639ad20"],
-  "cli/scripts/job.constants.ts": ["08b203e5d8aea7de", "3ed5df926872cc17", "9dd99c34955f414d"],
+  "cli/scripts/job.constants.ts": ["08b203e5d8aea7de", "3ed5df926872cc17", "5209fdb95e8984bb", "9dd99c34955f414d"],
   "cli/scripts/job.test.ts": [
     "1007efd8b5159ff5",
     "13094f560f2ad613",
@@ -4678,7 +4791,7 @@
     "ad50f16d313acf0f",
     "b101700630dd8a05"
   ],
-  "cli/scripts/lessons-check.ts": ["0cdae5d3618d9c40", "9129e6b84aaa5295"],
+  "cli/scripts/lessons-check.ts": ["0cdae5d3618d9c40", "6ccc4854b7eec90d", "9129e6b84aaa5295"],
   "cli/scripts/lessons-cli.test.ts": ["0acadd2ee42df2af", "b9f8a1456034d3e4", "ffffa645b6c712a4"],
   "cli/scripts/lessons-committed.test.ts": [
     "0a88a13580aa5b26",
@@ -4688,6 +4801,7 @@
   ],
   "cli/scripts/lessons-files.test.ts": [
     "217e37ed528bcc4c",
+    "4a96314b8834092c",
     "650175f087d09ec1",
     "7ee82389c71648d8",
     "b8d224ca76271a60",
@@ -4730,7 +4844,7 @@
     "e296a8d95175e092"
   ],
   "cli/scripts/lessons-validate.test.ts": ["a6cafc2d6acdf200", "e9964afef9aaf85f", "f5abbfd57387ee2b"],
-  "cli/scripts/lessons.constants.ts": ["07fa24de5ff2a727", "886c4b95d8b31c34", "c4f75a9eeb2bc505"],
+  "cli/scripts/lessons.constants.ts": ["07fa24de5ff2a727", "85ffc0e4c97ba6e4", "886c4b95d8b31c34", "c4f75a9eeb2bc505"],
   "cli/scripts/lessons.test.ts": [
     "02a5ea6d9666689d",
     "213be150537dfa4a",
@@ -5041,6 +5155,7 @@
     "fd5b8393a0132e74"
   ],
   "cli/scripts/listen-main-env.test.ts": [
+    "0afe388e8698068d",
     "48925b4e62ad1f27",
     "5fbebea0027a2df1",
     "6c03abfeae7a18b1",
@@ -5065,6 +5180,7 @@
     "2dcfe55fdd32d471",
     "5521bdf91a94d26a",
     "7faed7c7423e9583",
+    "938458d82df1adf3",
     "eaf7deb72ca63758",
     "ec016acf073f125b",
     "ef082e6fc1fd943d"
@@ -5098,7 +5214,8 @@
     "74764c458a44a521",
     "920d082332c8ff4f",
     "c02329cd27479aa1",
-    "c188fdbebb5d23e6"
+    "c188fdbebb5d23e6",
+    "ec14169b3c749839"
   ],
   "cli/scripts/listen-main-stop.test.ts": [
     "1a5ee628b946983f",
@@ -5120,6 +5237,7 @@
     "c60a8130a61e2622"
   ],
   "cli/scripts/listen-session.test.ts": [
+    "58e2f4d6413e4d0b",
     "6663c125bffffdb9",
     "682067dfb0a96d57",
     "9accbf6198879127",
@@ -5164,7 +5282,13 @@
     "98891810b9ebb5a8",
     "b71f6d6cd2839c1b"
   ],
-  "cli/scripts/listen.constants.ts": ["61044ac5e286717f", "6daf192e4f0b1695", "aca51d63bcfe52af", "ebe6025e2dc62d7c"],
+  "cli/scripts/listen.constants.ts": [
+    "44a644fc5871db93",
+    "61044ac5e286717f",
+    "6daf192e4f0b1695",
+    "aca51d63bcfe52af",
+    "ebe6025e2dc62d7c"
+  ],
   "cli/scripts/listen.test.ts": [
     "0d05bb3968510ce1",
     "4088b5fbabc1d799",
@@ -5178,6 +5302,7 @@
     "acd56be5ab75f031",
     "afc1a30ce52c5d78",
     "cfa0479cebce493d",
+    "d8d3e582eff4919b",
     "e2e8bdf42453424e"
   ],
   "cli/scripts/listen.ts": [
@@ -5221,7 +5346,8 @@
     "421ab09b9c43549e",
     "9f9b27dec5c16cab",
     "b2d45e9f6f622629",
-    "d21f6e59c72ab446"
+    "d21f6e59c72ab446",
+    "de949613aecfae8c"
   ],
   "cli/scripts/orchestrate-handoff.ts": [
     "915ac0b49216bd67",
@@ -5242,6 +5368,7 @@
     "5c5d51cd799cf476",
     "7b9eb9b3dbbf9da3",
     "931d7fc46399d24e",
+    "b8e426fcf2906c3b",
     "f43b9a7c56ebb281",
     "fd54b5426a33f215",
     "fe1feaff24972560"
@@ -5251,6 +5378,7 @@
     "60bbd6486f6e1234",
     "8046b594aeb1033b",
     "9159640b71e2d794",
+    "a4bad1af34af3791",
     "f2fb519799e6db7c"
   ],
   "cli/scripts/orchestrate-parent-approval.test.ts": [
@@ -5260,6 +5388,7 @@
     "3409cba0dd8989a7",
     "4a3c6088e941be09",
     "502290e105e67c8e",
+    "a7c8b8cd34e27df0",
     "b3cb307812070200",
     "cbabdef364b33a8b"
   ],
@@ -5270,18 +5399,21 @@
     "3e0b414d3730a74f",
     "484e2692cc80ca46",
     "568892629636fc72",
-    "b24383a7921a0cd0"
+    "b24383a7921a0cd0",
+    "c5a0b2b268952535"
   ],
   "cli/scripts/orchestrate-parent-closing.test.ts": [
     "270f045fbd3315cf",
     "5aebebcc9c930dc8",
     "603184da032f21e7",
+    "65a36ffc09c81c54",
     "8d9b2a8722c927a8",
     "d87a810068457f8c",
     "e66d0c62f32c90a5",
     "f37c2ab9d9e7d85f"
   ],
   "cli/scripts/orchestrate-parent-config.test.ts": [
+    "6d74e64dd82bcf5f",
     "71d4b4c4f0c66a6e",
     "7e5e0a8cfbcb4591",
     "9d19728917383875",
@@ -5292,6 +5424,7 @@
     "ec7e3df750cc2caf"
   ],
   "cli/scripts/orchestrate-parent-gate.test.ts": [
+    "145b3f433667be4e",
     "23fde34f3223f374",
     "3c530ea399a45ac6",
     "5111e1097fa53965",
@@ -5304,10 +5437,12 @@
     "14cfdd050725e994",
     "312d81d08e5f37b8",
     "32a31dc6da748175",
+    "355e0299cbcf78e3",
     "539e634f8c8e0bf4",
     "719b85da354d13ca"
   ],
   "cli/scripts/orchestrate-parent-handoff.test.ts": [
+    "33ff4a362d562ebc",
     "34100aaadcc8188a",
     "65a0e783b3083221",
     "742562cef60d96ac",
@@ -5321,6 +5456,7 @@
     "059be9a0d236c486",
     "1139ff41f6b4987c",
     "2e8da75dba8bae3c",
+    "63b4c84d19ed2986",
     "70f2c03960f348b6",
     "838fda78142d035c",
     "904135ab3d1be339",
@@ -5344,6 +5480,7 @@
   ],
   "cli/scripts/orchestrate-parent-push.test.ts": [
     "09177062677df2c8",
+    "0be0b106440fd2f0",
     "117258364f83f9d8",
     "88b9f1f6b0fc2a13",
     "93889e7d41dc208d",
@@ -5355,11 +5492,13 @@
   "cli/scripts/orchestrate-parent-roots.test.ts": [
     "1b6d3d82ee22393c",
     "82ce19dfcfde4248",
+    "8d33bd1dc7faec31",
     "9a7bc3ce1f2bf70e",
     "a96051e8ab637f98",
     "e377c71af4b453f9"
   ],
   "cli/scripts/orchestrate-parent-stop.test.ts": [
+    "2630f06f3c47df30",
     "30f09b0f29d8db8a",
     "3a02669024b079c4",
     "46fdad3af87fccd1",
@@ -5380,9 +5519,11 @@
     "7fd53a121e702cad",
     "864b6e488df00376",
     "a8d3e4e624b13cd6",
+    "da3de1bcf6f9e8e2",
     "e3bb8f89fa69f1aa"
   ],
   "cli/scripts/orchestrate-parent-worktree-lessons.test.ts": [
+    "23c9493049877c4c",
     "4fbc12a196362db6",
     "8024632108d0ba4b",
     "c7056d905e83d589",
@@ -5390,6 +5531,7 @@
     "e3a7cb895d23862b"
   ],
   "cli/scripts/orchestrate-parent-writes.test.ts": [
+    "0ddb06e833007690",
     "24eaf8f06e3c320d",
     "43d60d824db96fb4",
     "5737fc53345c2b91",
@@ -5452,6 +5594,7 @@
     "367861773bc630ff",
     "3937363e37c32c0e",
     "9356d6c5987c2da1",
+    "a6c12af1f4705b74",
     "cc9c2c1649fa52a3",
     "e00d583ce6241fdc",
     "e84543afb9ee38bd",
@@ -5459,6 +5602,7 @@
   ],
   "cli/scripts/orchestrate-session.ts": [
     "3702246cc3a2a301",
+    "3e87322d4260459f",
     "4df8ebc6f868d09e",
     "5964257d20d0a4cc",
     "96e4c4b7dc63c549",
@@ -5501,9 +5645,10 @@
     "aa8e0f5b88199405",
     "cc8878e677b199a5",
     "cf9b101f6bc35b89",
-    "dfb6e09d1b6a4cc9"
+    "dfb6e09d1b6a4cc9",
+    "e11393352769064a"
   ],
-  "cli/scripts/orchestrate.constants.ts": ["6d0edc2fc7753517", "f53eb58b61135576"],
+  "cli/scripts/orchestrate.constants.ts": ["555ef3c518afa9ba", "6d0edc2fc7753517", "f53eb58b61135576"],
   "cli/scripts/orchestrate.types.ts": [
     "1635a3007d1bacfb",
     "446ce0a13752c763",
@@ -5609,9 +5754,10 @@
     "c04ebe704943d3e0",
     "c76f74f0e7ea3b66"
   ],
-  "cli/scripts/persist-handoff.constants.ts": ["1be5971abc6129a0", "a437c2db21ca43b4"],
+  "cli/scripts/persist-handoff.constants.ts": ["1be5971abc6129a0", "5bbe1217c2d81d1b", "a437c2db21ca43b4"],
   "cli/scripts/persist-handoff.test.ts": [
     "1eac76879a18f36f",
+    "57c14b36b7215b74",
     "71d4f3624977dcd4",
     "777999b91fb9ce3f",
     "7a98ae9f1ca40941",
@@ -5624,6 +5770,7 @@
     "ed1568d9eff96e7f"
   ],
   "cli/scripts/persist-handoff.ts": [
+    "276b39e4e0ee372c",
     "4bd17f067d36d7b9",
     "529d0e3343ced6fb",
     "5f8b11fd181c6cab",
@@ -5650,6 +5797,7 @@
     "22c929852323eb23",
     "5043fae9a7d5c86d",
     "51511db5e296ceda",
+    "753d3425da927b37",
     "79f47c23fdd5706b",
     "82c124f3e75d1776",
     "b6ef80c0c9392785",
@@ -5657,12 +5805,13 @@
     "deb8261b8363a649"
   ],
   "cli/scripts/persist-implementation-validate.ts": ["455cb09b1862ce57", "63fac8112bf99742", "8b7a14bdc27a7cb3"],
-  "cli/scripts/persist-implementation.constants.ts": ["066d916ead718158", "2072fa1b244657f4"],
+  "cli/scripts/persist-implementation.constants.ts": ["066d916ead718158", "2072fa1b244657f4", "7ed2d4ee6a18ec63"],
   "cli/scripts/persist-implementation.test.ts": [
     "0bb7b40252b41008",
     "1eae381964e78128",
     "38815f4dfdf8060f",
     "41640738cfb720bf",
+    "4aced063e6635605",
     "591cead31e9a7b0e",
     "5f12f0e9232f8892",
     "69af7b5be1769215",
@@ -5681,6 +5830,7 @@
     "a1f7a11d26d7f284",
     "c1d7ea843b378a09",
     "c807dd83bdc007ad",
+    "cc4c71e04afe6574",
     "e84ddee3e562fdfb",
     "f1059e0ff243a741"
   ],
@@ -5722,6 +5872,7 @@
     "0d4afa38b26721b4",
     "143798ec3d2f38b2",
     "1e04a4847be2cbd0",
+    "4fe52f0956a1125f",
     "6f208d1ae2428713",
     "86e9a2c00223ea39",
     "eeda68bae623bbdc"
@@ -5813,6 +5964,7 @@
   "cli/scripts/persist-plan-save.test.ts": [
     "1ff00bb26d20829d",
     "5386da853184574a",
+    "7454068faac749a8",
     "a59142fb0688bfa7",
     "a67586e846832fbe",
     "b3f71a885f2389dc",
@@ -5862,6 +6014,7 @@
   ],
   "cli/scripts/persist-plan.constants.ts": [
     "1b41007bee1bda50",
+    "39bc6b2560b8f039",
     "636e0726d722a6ac",
     "6f3bd3a78490f8d9",
     "702577fb6e0389a4",
@@ -5891,6 +6044,7 @@
     "a380ec9440f1d144",
     "d87f6af3c347ddd8",
     "e36437661ce4631b",
+    "e68f4d9c6c5fd870",
     "fdf533e7dc3d71ce"
   ],
   "cli/scripts/persist-roadmap-edges.test.ts": [
@@ -5900,7 +6054,8 @@
     "901ab3a4a1478583",
     "a3e1b8617c0bee6b",
     "e1ff613dbbe34388",
-    "f31424f42fd87932"
+    "f31424f42fd87932",
+    "fef5a2c80ce91cdc"
   ],
   "cli/scripts/persist-roadmap-keys.test.ts": [
     "78c399f733c527df",
@@ -5913,12 +6068,14 @@
   "cli/scripts/persist-roadmap-legacy.test.ts": [
     "1be69ae50622ae11",
     "37572b4685f94e0a",
+    "634a7952fd564fac",
     "a9aadd6e6b2c6df4",
     "c12f6005215f9e2a",
     "c34cdc34d8055abe",
     "f02f59c90fad6a91"
   ],
   "cli/scripts/persist-roadmap-location.test.ts": [
+    "46c8b6fea535bfbe",
     "72fb1e049a1c3cbb",
     "801b749862520775",
     "8c303a05405f1217",
@@ -5945,6 +6102,7 @@
     "62d213ba1e3e6450",
     "8903ca55cf90d29e",
     "c251980177101b46",
+    "e2f7f2df6b3bd0cc",
     "f07215a6bef626a7"
   ],
   "cli/scripts/persist-roadmap-rules.test.ts": [
@@ -5962,6 +6120,7 @@
     "d8edab5b2bc065b2",
     "da09c82ccd08f006",
     "dda3598b207e7c8b",
+    "e4915d0a59ddc909",
     "e65897a059b9a09c"
   ],
   "cli/scripts/persist-roadmap-slices.ts": [
@@ -5981,8 +6140,14 @@
     "c1856474bbb65268",
     "fd0d2f49c23fb681"
   ],
-  "cli/scripts/persist-roadmap.constants.ts": ["2814d77c48090b0c", "8c72d985860829e9", "e9365877c7e3e9a8"],
+  "cli/scripts/persist-roadmap.constants.ts": [
+    "2814d77c48090b0c",
+    "8c72d985860829e9",
+    "9a51eed7f00a6fd1",
+    "e9365877c7e3e9a8"
+  ],
   "cli/scripts/persist-roadmap.test.ts": [
+    "0c3c2dc1f4f4ef78",
     "0dfc7d18404e8a89",
     "12c52553a22e74b9",
     "3ce6d816a3acddd1",
@@ -5996,6 +6161,7 @@
   "cli/scripts/persist-roadmap.ts": [
     "0f09a482ec439c3c",
     "27b8da689ffa67b8",
+    "5d13603e51cf4cf2",
     "6b2ec36cf6fda68c",
     "791198acc5171575",
     "8af8efe15a597591",
@@ -6025,6 +6191,7 @@
   ],
   "cli/scripts/persist-tmp-owner.test.ts": [
     "21d1dc49df97abdc",
+    "642819ba2c7c00ea",
     "6f67ce73dfe4ab97",
     "744fb8c62a47f804",
     "c2d3c193e2477897"
@@ -6032,6 +6199,7 @@
   "cli/scripts/persist-tmp-save.test.ts": [
     "2a1c29a57af82d5f",
     "2c851a5e2a67d713",
+    "60ade880f9163b71",
     "6e22554bbc98fedb",
     "6f8cff15c0c952fd",
     "8879d75d3936877b",
@@ -6047,6 +6215,7 @@
     "898a47bc0c08e3a2",
     "a0b299312cd7ce63",
     "b080af3302a31c91",
+    "be626fbd542866ed",
     "c26727cd6a642db6",
     "c4d6d51ed9822b2e",
     "cb1980f2bbc100aa"
@@ -6061,6 +6230,7 @@
     "a991627fc65be791",
     "c103f014cbb49eb6",
     "c2a18f22df94a637",
+    "d28ed747d8bf0305",
     "d5e6044eff223997",
     "f707651c16570b33"
   ],
@@ -6070,7 +6240,8 @@
     "767aecf21f29ff85",
     "942793c032a723ef",
     "a23f97f7bf883b75",
-    "e1948828fd6dcb5f"
+    "e1948828fd6dcb5f",
+    "eb5fed8c2f775147"
   ],
   "cli/scripts/persist.ts": [
     "1ee2da701ccb9d93",
@@ -6080,11 +6251,17 @@
     "ca2c9c5de373b863",
     "f59703a561cc3adf"
   ],
-  "cli/scripts/phase-files-edges.test.ts": ["3bd936d1d8512bb6", "c7d26843e8539e61", "d1eda4a9e0eaee91"],
+  "cli/scripts/phase-files-edges.test.ts": [
+    "3bd936d1d8512bb6",
+    "62de6476eb6e8afa",
+    "c7d26843e8539e61",
+    "d1eda4a9e0eaee91"
+  ],
   "cli/scripts/phase-files.constants.ts": ["403e1c47ddd29f13", "8220564622b10c7c", "91e3ae2c44fced46"],
   "cli/scripts/phase-files.test.ts": [
     "109adb5b2e271424",
     "3151195cff192f99",
+    "4789d3022678437c",
     "55a5f0524968331d",
     "8e6f71e7870c2b4c",
     "96e8c3c7fc6693bb",
@@ -6267,10 +6444,12 @@
     "5a318896e83ddc90",
     "6cef2ddc781297c4",
     "854cf86b4451f601",
+    "b63ee54463482b6a",
     "d3146cc1933d4c79",
     "e30aba1ed66cce6f"
   ],
   "cli/scripts/scrub-spawn-prompt-edges.test.ts": [
+    "4345e4df13864997",
     "56e380c240ecd7f9",
     "5893a3769d196823",
     "7dba5ac3516a26a6",
@@ -6309,6 +6488,7 @@
     "91836df6a4716545",
     "b4bdc45f07c14fac",
     "c95c27d221d8bf14",
+    "d4ec01ef30ee24b8",
     "e6f5abe932b6602f",
     "fa1e382bdfd879b7"
   ],
@@ -6342,6 +6522,7 @@
     "d242b27aec6544e6",
     "e5e2c8d7b200bb44",
     "eaf6f7621d32a6a4",
+    "f86c459f398bfd8e",
     "f9f37521bfb5d5e4",
     "fdc46fbe5e034a31"
   ],
@@ -6352,6 +6533,7 @@
     "43f03d5cc51c2753",
     "5f822570d4d08367",
     "620f0d7bee6ea199",
+    "6920dabec4e7d039",
     "7bc4fa40e0d4ab3f",
     "9078459087b195ee",
     "b8d351dc197db00a",
@@ -6373,6 +6555,7 @@
   "cli/scripts/setup-browser.test.ts": [
     "17e56f1ea5615ede",
     "44fbfa2d2292b37a",
+    "728c2b7e6d5a047e",
     "7649af611a1410ca",
     "a1d4e442587abc81",
     "ade4b8e24daf36f1",
@@ -6380,7 +6563,13 @@
     "c61b551ff344c881",
     "d1a46fa1c387b849"
   ],
-  "cli/scripts/setup-browser.ts": ["0f876d0cd82b7741", "1b356d54f647a8a7", "9dccdb56337a18eb", "de5eecd123321d3f"],
+  "cli/scripts/setup-browser.ts": [
+    "0f876d0cd82b7741",
+    "1b356d54f647a8a7",
+    "9dccdb56337a18eb",
+    "de5eecd123321d3f",
+    "f0eee519700eb060"
+  ],
   "cli/scripts/setup-files.test.ts": [
     "03e16345c90d7496",
     "03eaea47e6283858",
@@ -6673,6 +6862,7 @@
     "24f34c919631a08f",
     "3220e912fbd20d74",
     "5fd89fa238fbdfcf",
+    "da2401ca6a7a9b04",
     "f18f78ced0823157",
     "fc653a5d013812f8"
   ],
@@ -6680,6 +6870,7 @@
     "11d3c6e689138945",
     "17b0c1a21dc6e485",
     "276a24022e2ef4cb",
+    "348be4accb9414c1",
     "56872e4888bbb70c",
     "907de9498a03f9d5",
     "9af63a4d1223dca6",
@@ -6687,7 +6878,7 @@
     "f96f7d7b2bfb860a"
   ],
   "cli/scripts/speak-say.ts": ["56ca9f154743a472", "a9866059cf6ef5a8", "dcc1f1d261cc55a0"],
-  "cli/scripts/speak.constants.ts": ["1311dda047d31951", "5be5e5795111e52e", "c8ac3d4584adf0b9"],
+  "cli/scripts/speak.constants.ts": ["1311dda047d31951", "30da74cdc3116379", "5be5e5795111e52e", "c8ac3d4584adf0b9"],
   "cli/scripts/speak.test.ts": [
     "06188d5dc4fd8eb4",
     "2cd522def35322ca",
@@ -6735,7 +6926,7 @@
     "c6a522db6aad1d06",
     "d0def68013924926"
   ],
-  "cli/scripts/strategy.constants.ts": ["27ccb68cac18b5f2", "692115f578bbb364"],
+  "cli/scripts/strategy.constants.ts": ["27ccb68cac18b5f2", "5c1e7674533f1765", "692115f578bbb364"],
   "cli/scripts/strategy.test.ts": [
     "033dfde60e453a0a",
     "3f7d567512462665",
@@ -6744,12 +6935,14 @@
     "966fa14b5de5005c",
     "9bea4cb5f19f1499",
     "a03115791fff9c63",
+    "c3dbfa3ccbba3a27",
     "c53844d7d9fc0afc",
     "f29d159b2b0c08ea",
     "f7e09c8ade067a59"
   ],
   "cli/scripts/strategy.ts": [
     "02a2ff289f1f6670",
+    "23a0f4f24f6ca50f",
     "2956a41cdc340f18",
     "37be4b9a772cfc3f",
     "92cea0617b670209",
@@ -6961,7 +7154,12 @@
     "ea10ad0dfba620fd",
     "ec9eb89952f047ca"
   ],
-  "cli/scripts/typecheck-gate.test.ts": ["2d5b95197b4e591e", "9f27cf3df53e9153", "e07603cd790ed4fc"],
+  "cli/scripts/typecheck-gate.test.ts": [
+    "2d5b95197b4e591e",
+    "50599abfad139484",
+    "9f27cf3df53e9153",
+    "e07603cd790ed4fc"
+  ],
   "cli/scripts/typecheck-gate.ts": [
     "41517f4abba3f224",
     "6ba5f086529e2a04",
@@ -7073,6 +7271,7 @@
     "3faf95e45f828e1e",
     "4df0b4e52d9380c9",
     "5944b936bb6b99b0",
+    "732c465942c34cf3",
     "7711077d3d450b65",
     "7ab4f8eaf3985c93",
     "850a245e6caa0840",
@@ -7165,6 +7364,7 @@
   "cli/scripts/worktree-guards.constants.ts": ["099ae5ca99d29b35", "7a75b2f98f0ba368"],
   "cli/scripts/worktree-guards.test.ts": [
     "0cd24d69d68e9922",
+    "20ae62e05a046397",
     "2319b89a972a3912",
     "290062d947ebbb47",
     "6cec9706e2c46ede",
@@ -7176,6 +7376,7 @@
   "cli/scripts/worktree-guards.ts": [
     "06803a7d1e0b56fc",
     "155ded919c4f973a",
+    "3a2cc354aa7f7557",
     "549d27cf591be3bf",
     "bce1ec77a263ee56",
     "c9b9afa6ad6723e2",
@@ -7263,6 +7464,7 @@
   "cli/scripts/worktree-write-guards.test.ts": [
     "27278365885109fb",
     "28596317ffe17b99",
+    "2a1950bec4b93939",
     "3fd547977f06b693",
     "4bcb29edf79ea98f",
     "b40147e151a9843e",
@@ -7309,8 +7511,14 @@
     "bad6e0f18260f806",
     "d201291d7f416c2d"
   ],
-  "references/browser.md": ["0ebbff0224a7dd44", "9dd0425d48c70e29"],
-  "references/cascade.md": ["92cfceeca9b71d56", "b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
+  "references/browser.md": ["0ebbff0224a7dd44", "607c3f41f8823196", "9dd0425d48c70e29"],
+  "references/cascade.md": [
+    "469ffa9cb8f081f5",
+    "92cfceeca9b71d56",
+    "b0b5570781aa673b",
+    "c0d67d065ac5c177",
+    "e6236424e7133581"
+  ],
   "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
   "references/exports.md": [
@@ -7334,6 +7542,7 @@
   ],
   "references/google-workspace.md": ["48a0a8dd31c8250b", "db455dc3b114ef70"],
   "references/hooks.md": [
+    "093ed3a655f55cd3",
     "37424abba0611db9",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
@@ -7351,9 +7560,10 @@
     "156426647e9671cf",
     "3702b03d170d2710",
     "374e39dc02ef33f0",
-    "4f550f2dbd5bdaae"
+    "4f550f2dbd5bdaae",
+    "fe8b0f833551773b"
   ],
-  "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca"],
+  "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca", "aafda63bc80ad4d6"],
   "references/lessons.md": [
     "26f7f71b3519bf34",
     "3e41ff65b6a4c6df",
@@ -7362,11 +7572,12 @@
     "d82f28a5346a5f6c",
     "db5b43a73c0dfb7b"
   ],
-  "references/listen.md": ["53783d65923e6731", "cae54e3f489aab38"],
+  "references/listen.md": ["53783d65923e6731", "5c1f2e5f8eade499", "cae54e3f489aab38"],
   "references/map.md": [
     "036c9062b9c6e91f",
     "0d56535a6e88785f",
     "114eae57cbb4b9bf",
+    "18d5a2e051d75e98",
     "1be99b85fef64bbd",
     "1c7a64e672bd3099",
     "27fb844347c693f0",
@@ -7393,16 +7604,29 @@
     "1656111787ae22a8",
     "1b791f542ea9a9b7",
     "364900ae840f6753",
+    "67525ea6dcbb0ef2",
     "71993ad32e4415fd",
     "93b5154bc7dd725c",
     "98565802b83268f5",
     "c71beda324fb785e"
   ],
   "references/review-loop.md": ["21b52d81d3fb3344", "33cc0b0817305aa2", "7bb47085b4231e88", "854dcaac0df8fdbf"],
-  "references/roadmap-format.md": ["05119661b62dcd5b", "0e879896d6b9f135", "b3496ee8ab0a6b1c", "f029319acb117a92"],
+  "references/roadmap-format.md": [
+    "05119661b62dcd5b",
+    "0e879896d6b9f135",
+    "51deefc4b794d3d7",
+    "b3496ee8ab0a6b1c",
+    "f029319acb117a92"
+  ],
   "references/rtk.md": ["67a7da2c4625191c", "d76ba0a5923edd2f"],
-  "references/scope.md": ["191a397174c6f260", "2e6941901ff909d3", "96f952d35af99ba0", "c7ef31ef5e5babe5"],
+  "references/scope.md": [
+    "191a397174c6f260",
+    "2e6941901ff909d3",
+    "96f952d35af99ba0",
+    "9b601f0b67b953d0",
+    "c7ef31ef5e5babe5"
+  ],
   "references/setup.md": ["2315bc708e31ce43", "41e06da9597b7138", "86592fb5319f20b3", "ac0e14fdea20df33"],
-  "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30"],
+  "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4"],
   "references/sync.md": ["7e389acc08c15554"]
 }

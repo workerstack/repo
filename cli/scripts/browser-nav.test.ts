@@ -19,7 +19,7 @@ import { navigated } from "./__fixtures__/browser-nav-kit.ts";
 
 afterEach(cleanBrowser);
 
-it("lightpanda on PATH → nav uses Lightpanda; session under .tmp/repo/browser/; no env", async () => {
+it("lightpanda on PATH → nav uses Lightpanda; session under .repo/tmp/browser/; no env", async () => {
   const cwd = tmp("browser-lp-");
   const bin = path.join(cwd, "bin");
   writeFake(bin, "lightpanda");
@@ -32,7 +32,7 @@ it("lightpanda on PATH → nav uses Lightpanda; session under .tmp/repo/browser/
   expect(s.engine).toBe("lightpanda");
   expect(s.lastURL).toMatch(/example\.com/);
   expect(s.pid).toBeGreaterThan(0);
-  expect(path.normalize(sessionPath(cwd))).toContain(path.join(".tmp", "repo", "browser"));
+  expect(path.normalize(sessionPath(cwd))).toContain(path.join(".repo", "tmp", "browser"));
   expect(repoEnv.process.REPO_BROWSER).toBeUndefined();
 });
 

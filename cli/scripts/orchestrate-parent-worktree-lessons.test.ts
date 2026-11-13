@@ -45,7 +45,8 @@ it("denies a lesson Write in the main checkout and writes nothing there", () => 
     expect(res.permissionDecisionReason).toBe(
       "the main checkout is shared: run bun repo worktree add <name> " +
         `and write under ${path.join(r, ".worktrees/<name>")}; ` +
-        `only ${path.join(r, ".tmp")}${path.sep} is writable here`,
+        `only ${path.join(r, ".repo")}${path.sep}` +
+        `{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}${path.sep} is writable here`,
     );
   }
 

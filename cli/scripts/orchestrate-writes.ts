@@ -1,11 +1,12 @@
 /**
- * The parent's writes: saves under .tmp/repo answered with the persisted text, and the session's receipt and git
+ * The parent's writes: saves under .repo answered with the persisted text, and the session's receipt and git
  * ask.
  */
 import fs from "node:fs";
 import path from "node:path";
 
 import { isString } from "../json.ts";
+import { REPO, STATE } from "../repo-dirs.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { rewriteScratchPath } from "./gate-rewrites.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -24,14 +25,7 @@ import { validatePlan } from "./persist-plan-validate.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import {
-  isUnderHandoffs,
-  isUnderImplementations,
-  isUnderPlans,
-  isUnderRoadmaps,
-  isUnderTmp,
-  persistTmp,
-} from "./persist-tmp.ts";
+import { isUnderRepoDir, isUnderTmp, persistTmp } from "./persist-tmp.ts";
 import { stampPath as strategyStampPath } from "./strategy.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords } from "./worktree-guards.ts";
@@ -112,13 +106,13 @@ function routeWrite(write: WriteCase): Route {
   const { canon } = write;
   const ws = write.roots.root;
 
-  if (isUnderPlans(canon, ws)) return savedRoute(write, "plan");
+  if (isUnderRepoDir(canon, ws, "plans")) return savedRoute(write, "plan");
 
-  if (isUnderRoadmaps(canon, ws)) return savedRoute(write, "roadmap");
+  if (isUnderRepoDir(canon, ws, "roadmaps")) return savedRoute(write, "roadmap");
 
-  if (isUnderHandoffs(canon, ws)) return { approvable: false, persist: persistHandoff };
+  if (isUnderRepoDir(canon, ws, "handoffs")) return { approvable: false, persist: persistHandoff };
 
-  if (isUnderImplementations(canon, ws)) return implementationRoute(write);
+  if (isUnderRepoDir(canon, ws, "implementations")) return implementationRoute(write);
 
   if (isUnderTmp(canon, ws)) return { approvable: false, persist: persistTmp };
 
@@ -137,7 +131,7 @@ function persistWrite(write: WriteCase, { persist, approvable }: PersistRoute): 
   return savedReply(write.data, write.toolInput, { abs: saved, content: result.content });
 }
 
-/** The answer to a parent Write or Edit under .tmp/repo or a lessons dir; null when the host should run it as sent. */
+/** The answer to a parent Write or Edit under `.repo` or a lessons dir; null when the host should run it as sent. */
 export function parentWrite(data: HookInput, toolInput: ToolArgs | undefined): HookResult | null {
   if (toolInput === undefined) return denyWith(data, DENY_REASON);
   const roots = resolveRoots(data);
@@ -164,7 +158,7 @@ export function writeSessionReceipt(data: HookInput, msg: string): void {
   try {
     fs.mkdirSync(dir, { recursive: true });
     const first = firstNonEmptyStripped(msg).slice(0, RECEIPT_HEAD_CHARS);
-    const lines = [first, countsLine(dir), `session=.tmp/repo/sessions/${sid}/`].filter(Boolean);
+    const lines = [first, countsLine(dir), `session=${REPO}/${STATE}/sessions/${sid}/`].filter(Boolean);
     fs.writeFileSync(path.join(dir, "receipt.txt"), `${lines.join("\n")}\n`);
   } catch {
     // fail-open

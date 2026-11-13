@@ -15,7 +15,9 @@ vi.setConfig({ testTimeout: 120_000 });
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const ALLOWED =
-  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, bench/ (read by repo bench), " +
+  "rules/, subagents/, skills/, lessons/, tmp/, global-settings/, " +
+  "plans/, plans-fast/, roadmaps/, roadmaps-fast/, handoffs/, implementations/, scratch/, " +
+  "bench/ (read by repo bench), " +
   "settings/claude.json, hooks.jsonc, " +
   "mcp-policy.jsonc, permissions.json, map.jsonc, " +
   "env.keys.json (read by @workerstack/repo/env (the public key sealed values are locked to)), " +

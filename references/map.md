@@ -45,10 +45,10 @@ Cheap outline. Not a file dump.
 - `cli/scripts/scrub-spawn-prompt.ts`
 - `cli/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
 - `cli/scripts/parse-need.ts`
-- `cli/scripts/persist-handoff.ts` — `.tmp/repo/handoffs/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/persist-tmp.ts` — `.tmp/repo/{serial}-{slug}-{stamp}.{ext}` root files
+- `cli/scripts/persist-handoff.ts` — `.repo/handoffs/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
 - `cli/scripts/persist-plan.ts`
-- `cli/scripts/persist-implementation.ts` — `.tmp/repo/implementations/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
 - `cli/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
 - `cli/scripts/purge-global-mcps.ts`
 - `cli/scripts/emit-mcp-policy.ts`
@@ -80,16 +80,16 @@ Cheap outline. Not a file dump.
 - `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
 
 ## Tmp
-- `.tmp/repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
-- `.tmp/repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
-- `.tmp/repo/orchestrator-logs/` — need-intercept, session-gate, stop-block stamps
-- `.tmp/repo/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
-- `.tmp/repo/browser/` — browser session/profile/shot/pdf (not MCP)
-- `.tmp/repo/handoffs/` — persist-handoff / `/handoff`
-- `.tmp/repo/stash/` — job / snap overflow
-- `.tmp/repo/sessions/{sid}/` — wrote/read/receipt
-- `.tmp/repo/speak/` — TTS mp3
-- `.tmp/repo/listen/` — STT wav + `latest.txt`
+- `.repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
+- `.repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
+- `.repo/tmp/orchestrator-logs/` — need-intercept, session-gate, stop-block stamps
+- `.repo/scratch/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
+- `.repo/tmp/browser/` — browser session/profile/shot/pdf (not MCP)
+- `.repo/handoffs/` — persist-handoff / `/handoff`
+- `.repo/tmp/stash/` — job / snap overflow
+- `.repo/tmp/sessions/{sid}/` — wrote/read/receipt
+- `.repo/tmp/speak/` — TTS mp3
+- `.repo/tmp/listen/` — STT wav + `latest.txt`
 
 ## `.repo/` layout
 Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ignored `tmp/`.

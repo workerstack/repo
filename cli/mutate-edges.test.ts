@@ -190,7 +190,7 @@ current directory, the default report against the root`, async () => {
   const whole = fakes(sim());
   whole.deps.cwd = at("sub");
   await runMutate([], whole.deps);
-  expect(whole.files.has(at(".tmp/repo/mutation/report.json"))).toBe(true);
+  expect(whole.files.has(at(".repo/tmp/mutation/report.json"))).toBe(true);
   const report = JSON.stringify({ files: {}, head: "09ed564aaaa", shard: { index: 1, total: 1 }, tool: "stryker" });
   const check = fakes(sim());
   check.deps.cwd = at("sub");

@@ -45,7 +45,7 @@ export function writeStash(
   return stashRef({ cwd, root }, name);
 }
 
-/** The path a stash ref names: an absolute path, or `.tmp/repo/stash/<name>` from the root; null for a bare id. */
+/** The path a stash ref names: an absolute path, or `.repo/tmp/stash/<name>` from the root; null for a bare id. */
 function namedPath(root: string, id: string): string | null {
   if (path.isAbsolute(id)) return id;
 
@@ -73,7 +73,7 @@ function bareStash(dir: string, id: string): string | null {
   return hit === undefined ? null : path.join(dir, hit);
 }
 
-/** A bare id or name, `.tmp/repo/stash/<name>`, or that file's absolute path, all in the root stash. */
+/** A bare id or name, `.repo/tmp/stash/<name>`, or that file's absolute path, all in the root stash. */
 export function resolveStashFile(
   { cwd = process.cwd(), root = resolveRoots({}, { cwd }).root }: StashRoots | undefined = {},
   stash: string | undefined,

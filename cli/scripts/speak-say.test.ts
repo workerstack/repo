@@ -159,13 +159,13 @@ it("say: writes elevenlabs bytes to --out", async () => {
   expect(fs.readFileSync(dest)).toStrictEqual(buf);
 });
 
-it("say: saves under the repo root's .tmp/repo/speak from packages/a", async () => {
+it("say: saves under the repo root's .repo/tmp/speak from packages/a", async () => {
   const r = fs.realpathSync(plantDir("speak-sub-"));
   spawnSync("git", ["init", "-q"], { cwd: r });
   const a = path.join(r, "packages", "a");
   fs.mkdirSync(a, { recursive: true });
   const dest = await say({ cfg: openai(), cwd: a, fetchFn: fetchReturning(bytesRes(Buffer.from("oa"))), text: "hi" });
-  expect(path.dirname(dest)).toBe(path.join(r, ".tmp/repo/speak"));
+  expect(path.dirname(dest)).toBe(path.join(r, ".repo/tmp/speak"));
   expect(fs.readFileSync(dest, "utf8")).toBe("oa");
   expect(fs.existsSync(path.join(a, ".tmp"))).toBe(false);
 });

@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { isString, type Json, type JsonObject } from "../json.ts";
+import { REPO } from "../repo-dirs.ts";
 import { answerDeny, answerRewrite, type HookOutput } from "./gate-harness.ts";
 /** PreToolUse: intent-scrub spawn `prompt`. Fail-open: unchanged/error → empty stdout, exit 0. */
 import type { HookInput } from "./hook-input.ts";
@@ -42,7 +43,7 @@ export function spawnCapReason(workspaceRoot?: string): string {
 
   return (
     `spawn prompt exceeds ${MAX_PROMPT_CHARS} chars after scrub; ` +
-    `write it under ${root}/.tmp/repo/plans/ and re-spawn with that abs path`
+    `write it under ${root}/${REPO}/plans/ and re-spawn with that abs path`
   );
 }
 

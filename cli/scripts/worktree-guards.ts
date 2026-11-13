@@ -1,5 +1,6 @@
 import path from "node:path";
 
+import { IGNORED_DIRS, REPO, isIgnoredRepoPath } from "../repo-dirs.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import { defaultBranch, hasCommit, isManaged, relIn, textOf, worktreeName, worktreeOf } from "./worktree-git.ts";
 import {
@@ -73,7 +74,8 @@ function cwdOr(roots: WorktreeRoots, root: string): string {
 }
 
 /**
- * The deny reason for a write into the main checkout (inside the root, outside `.tmp` and `.worktrees`), else null.
+ * The deny reason for a write into the main checkout (inside the root, outside `.repo/<ignored dir>` and `.worktrees`),
+ * else null.
  * Null as well when the root is not a git repo or has no commit yet, since no worktree can be made there.
  * `guard.committed` is the git check, injectable for foreign-path tests.
  */
@@ -84,13 +86,14 @@ export function mainCheckoutWriteReason(target: string, roots: WorktreeRoots, gu
 
   if (relIn(abs, root, p) === null) return null;
 
-  if ([".tmp", WORKTREES_DIR].some((free) => relIn(abs, p.join(root, free), p) !== null)) return null;
+  if (isIgnoredRepoPath(root, abs, p) || relIn(abs, p.join(root, WORKTREES_DIR), p) !== null) return null;
 
   if (!committed(root)) return null;
 
   return (
     `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ` +
-    `${p.join(root, WORKTREES_DIR, "<name>")}; only ${p.join(root, ".tmp")}${p.sep} is writable here`
+    `${p.join(root, WORKTREES_DIR, "<name>")}; ` +
+    `only ${p.join(root, REPO)}${p.sep}{${IGNORED_DIRS.join(",")}}${p.sep} is writable here`
   );
 }
 

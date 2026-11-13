@@ -19,9 +19,6 @@ export const DENY_FILE_BYTES: number = 200 * 1024;
 /** A child type longer than this is a path or a prompt, not an agent name. */
 export const MAX_CHILD_TYPE_LENGTH = 64;
 
-/** Path segments `.tmp/<name>/` drops before the rest lands under the root scratch. */
-export const DOT_TMP_DEPTH = 2;
-
 export const REASON_DENYLIST = "path denylist; use package API";
 export const REASON_FILE_SIZE = "file >200KB";
 export const REASON_REREAD = "already wrote this session; Read with offset+limit";
@@ -59,9 +56,6 @@ export const PATCH_ADD = "Add File";
 export const PATCH_DELETE = "Delete File";
 export const PATCH_MOVE = "Move to";
 export const PATCH_FIELD = "command";
-export const TMP_DIR = "tmp";
-export const DOT_TMP_DIR = ".tmp";
-export const REPO_DIR = "repo";
 export const MD_EXT = ".md";
 export const GITIGNORE = ".gitignore";
 export const WORKTREE_WORD = "worktree";
@@ -107,7 +101,6 @@ export const GIT_STAGE: RegExp =
   /(?:^|[\s;&|(])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?|-\w))*\s+(?:add|commit)(?![\w-])/;
 
 export const SCRATCH_ROOT_RE: RegExp = /^(?:dump|scratch|notes|output)(?:\.|$)|\.tmp$/i;
-export const SCRATCH_MARKER: RegExp = /(^|\/)\.tmp\/repo\//;
 export const PATCH_PATH_RE: RegExp = /^\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
 export const PATCH_HEREDOC_RE: RegExp = /^\s*apply_patch\s*<<\s*(['"]?)(\w+)\1[ \t]*\n(?<patch>[\s\S]*?)\n\2\s*$/;
 export const UUID_RE: RegExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

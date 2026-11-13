@@ -38,7 +38,7 @@ export const CARD = [
   "WHY    plans stay untracked",
   "RISK   other ignore lines must survive",
   "TOUCH  .gitignore",
-  "DONE   git check-ignore reports .tmp/repo/plans",
+  "DONE   git check-ignore reports .repo/plans",
 ] as const;
 export const H1 = "# add-tmp-ignore\n\n";
 export const stripCard = (t: string): string =>

@@ -28,7 +28,7 @@ function put(kind: WriteKind, w: string, write: { target: string; content?: stri
 
 /** Every stamp under the workspace's sessions, whatever the session id. */
 function stampFiles(w: string) {
-  const sessions = path.join(w, ".tmp/repo/sessions");
+  const sessions = path.join(w, ".repo/tmp/sessions");
 
   if (!fs.existsSync(sessions)) return [];
 
@@ -80,7 +80,7 @@ it.each(WRITE_KINDS)(
     const w = tmp.dir("gate-review-");
     const { file, text } = planFile(w, "review-fast");
     put(kind, w, { content: text, target: path.join(w, "src/x.ts") });
-    put(kind, w, { content: text, target: path.join(w, ".tmp/repo/roadmaps/r.md") });
+    put(kind, w, { content: text, target: path.join(w, ".repo/roadmaps/r.md") });
     expect(stamped(w)).toBe(false);
     put(kind, w, { content: text, target: file });
     expect(activeReview(w, REVIEW_SID)?.strategy).toBe("review-fast");
@@ -120,9 +120,9 @@ it("stamps an alias spelling of the plan as the canonical path, once", () => {
   const plan = "3-review-plan-20261107T181901Z.md";
 
   const spelled = [
-    path.join(alias, ".tmp/repo/plans", plan),
-    path.join(w, "agents/../.tmp/repo/plans", plan),
-    path.join(w, "./.tmp/repo/plans/../plans", plan),
+    path.join(alias, ".repo/plans", plan),
+    path.join(w, "agents/../.repo/plans", plan),
+    path.join(w, "./.repo/plans/../plans", plan),
   ];
 
   for (const target of spelled) {
@@ -138,7 +138,8 @@ it("stamps an alias spelling of the plan as the canonical path, once", () => {
 it("fails open when the stamp cannot be written", () => {
   const w = tmp.dir("gate-review-");
   const { file, text } = planFile(w, "review-fast");
-  fs.writeFileSync(path.join(w, ".tmp/repo/sessions"), "a file where the directory belongs");
+  fs.mkdirSync(path.join(w, ".repo/tmp"), { recursive: true });
+  fs.writeFileSync(path.join(w, ".repo/tmp/sessions"), "a file where the directory belongs");
   expect(put("claudeWrite", w, { content: text, target: file })).toBeNull();
   expect(put("claudeEdit", w, { target: path.join(w, "src/x.ts") })).toBeNull();
 });
@@ -146,7 +147,7 @@ it("fails open when the stamp cannot be written", () => {
 /** The plan Grok's persist hook would save, written the way the host does. */
 function savedPlan(w: string, strategy: string) {
   const body = VALID_PLAN.replace("strategy: default", `strategy: ${strategy}`);
-  const saved = grokReply(w, { input: { content: body, file_path: ".tmp/repo/plans/x.md" }, tool: "Write" });
+  const saved = grokReply(w, { input: { content: body, file_path: ".repo/plans/x.md" }, tool: "Write" });
   const filePath = jsonText(saved?.hookSpecificOutput?.updatedInput?.file_path);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const content = jsonText(saved?.hookSpecificOutput?.updatedInput?.content);

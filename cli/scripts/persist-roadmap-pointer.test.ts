@@ -11,7 +11,7 @@ import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 
 const tmpWs = useTmpWs("persist-roadmap-");
 const CREATED = "2026-11-09T10:15:00Z";
-const ROADMAPS = ".tmp/repo/roadmaps";
+const ROADMAPS = ".repo/roadmaps";
 
 function save(content: string, ws = tmpWs()) {
   return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
@@ -27,7 +27,7 @@ function cap(n: number) {
 
 const SLICE_1 = "1 [ ] auth types: Reserved names list the new skills.\n";
 const SLICE_2 = "2 [ ] commit diff pass: Commit skills strip narrating comments.\n";
-const WIN_LOCATION = "C:\\Users\\me\\app\\.tmp\\repo\\plans\\21-json-export-20261109T101500Z.md";
+const WIN_LOCATION = "C:\\Users\\me\\app\\.repo\\plans\\21-json-export-20261109T101500Z.md";
 const ONE = "1 [ ] slice number 1: Slice 1 ships one change.\n";
 
 // The draft with n one-line slices; `location` adds an indented Location line under each.
@@ -127,7 +127,7 @@ describe("the pointer roadmap line cap", () => {
     const n = slicesFor(60);
 
     function plan(i: number) {
-      return path.join(ws, ".tmp/repo/plans", `${i}-slice-number-${i}-20261109T101500Z.md`);
+      return path.join(ws, ".repo/plans", `${i}-slice-number-${i}-20261109T101500Z.md`);
     }
 
     const r = save(withSlices(n, plan), ws);
@@ -145,7 +145,7 @@ describe("a Windows plan Location", () => {
   it("is accepted under win32 and posix path rules, and a roadmap path is not", () => {
     for (const p of [path.win32, path.posix]) {
       expect(locationOk(WIN_LOCATION, p), p === path.win32 ? "win32" : "posix").toBe(true);
-      expect(locationOk(".tmp\\repo\\roadmaps\\nope.md", p)).toBe(false);
+      expect(locationOk(".repo\\roadmaps\\nope.md", p)).toBe(false);
     }
   });
 });
@@ -160,7 +160,7 @@ describe("a pointer roadmap update", () => {
     const grown = prepareRoadmapUpdate({ content: withSlices(n + 1), filePath: abs, workspaceRoot: ws });
     expect(grown.ok).toBe(false);
     expect(grown.errors).toContain(cap(61));
-    const plan = path.join(ws, ".tmp/repo/plans/9-slice-number-1-20261109T101500Z.md");
+    const plan = path.join(ws, ".repo/plans/9-slice-number-1-20261109T101500Z.md");
     const located = withSlices(n).replace(ONE, `${ONE}      Location: ${plan}\n`);
     const r = update(ws, abs, located.replace("1 [ ] slice number 1", "1 [x] slice number 1"));
     expect(r.ok, r.error).toBe(true);
