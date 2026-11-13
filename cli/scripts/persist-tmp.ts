@@ -60,8 +60,10 @@ export function isUnderTmp(filePath: string | null | undefined, workspaceRoot: s
 export function persistOwner(
   absPath: string,
   root: string,
-): "plans" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
+): "plans" | "plans-fast" | "roadmaps" | "handoffs" | "implementations" | "tmp" | null {
   if (isUnderRepoDir(absPath, root, "plans")) return "plans";
+
+  if (isUnderRepoDir(absPath, root, "plans-fast")) return "plans-fast";
 
   if (isUnderRepoDir(absPath, root, "roadmaps")) return "roadmaps";
 
@@ -161,5 +163,13 @@ export function persistTmp({ workspaceRoot, content, created }: PersistTmpOption
   if (!FILENAME_RE.test(filename)) return { error: "filename", ok: false };
   fs.writeFileSync(dest, body);
 
-  return { content: body, ext, filename, ok: true, path: `${REPO}/${SCRATCH}/${filename}`, serial, slug };
+  return {
+    content: body,
+    ext,
+    filename,
+    ok: true,
+    path: `${REPO}/${SCRATCH}/${filename}`,
+    serial,
+    slug,
+  };
 }

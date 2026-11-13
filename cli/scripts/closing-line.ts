@@ -5,6 +5,8 @@ import {
   BLOCK_ROWS,
   CODE_NEAR_MISS_RE,
   EXACT_REPLIES,
+  FAST_BLOCK_ROWS,
+  FAST_PLAN,
   HANDOFF_LETTER,
   HEADER_ITEM_RE,
   HEADER_SEP,
@@ -31,15 +33,24 @@ import {
 import { parseStrategy } from "./strategy.ts";
 import type { Approval, ApprovalAction, Approvable } from "./strategy.types.ts";
 
+/** True when no item has a strategy, so the block has no codes to offer. */
+function allFast(items: Approvable[]): boolean {
+  return items.every((i) => i.kind === FAST_PLAN);
+}
+
+function headerOf(i: Approvable): string {
+  return i.kind === FAST_PLAN ? `${i.kind} ${i.serial}` : `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}`;
+}
+
 /**
- * The only renderer of the approval block: a fenced header naming each item and its strategy, then fixed rows for
- * implement and hand off with their codes.
+ * The only renderer of the approval block: a fenced header naming each item and its strategy (a fast plan has none),
+ * then fixed rows for implement and hand off, with their codes unless every item is a fast plan.
  */
 export function closingBlock(items: Approvable[]): string {
   if (items.length === 0) throw new Error("closingBlock needs at least one item");
-  const header = items.map((i) => `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}`).join(ITEM_SEP);
+  const rows = allFast(items) ? FAST_BLOCK_ROWS : BLOCK_ROWS;
 
-  return [BLOCK_FENCE, header, ...BLOCK_ROWS, BLOCK_FENCE].join("\n");
+  return [BLOCK_FENCE, items.map(headerOf).join(ITEM_SEP), ...rows, BLOCK_FENCE].join("\n");
 }
 
 function headerItem(part: string): Approvable | null {
@@ -48,6 +59,8 @@ function headerItem(part: string): Approvable | null {
   if (m === null) return null;
 
   const [, kind, serial, word] = m;
+
+  if (kind === FAST_PLAN) return word === undefined ? { kind, serial: Number(serial) } : null;
   const strategy = parseStrategy(String(word));
 
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
@@ -140,4 +153,16 @@ export function parseApproval(prompt: string): Approval | null {
   if (strategy === undefined) return null;
 
   return more.length === 0 ? { kind: action.kind, strategy } : { kind: "unknown", word: whole };
+}
+
+/**
+ * What a reply means to the block it answers. A block of only fast plans offers no codes, so a code or a strategy
+ * word is `unknown` there; a bare `i` or `h` stands.
+ */
+export function approvalFor(prompt: string, items: Approvable[]): Approval | null {
+  const reply = parseApproval(prompt);
+
+  if (reply === null || reply.kind === "unknown" || reply.strategy === null || !allFast(items)) return reply;
+
+  return { kind: "unknown", word: prompt.trim() };
 }

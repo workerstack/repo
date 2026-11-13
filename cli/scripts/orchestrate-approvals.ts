@@ -2,7 +2,7 @@
 import fs from "node:fs";
 
 import type { Result } from "../result.ts";
-import { closingBlock, parseApproval, parseClosingBlock } from "./closing-line.ts";
+import { approvalFor, closingBlock, parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
@@ -10,6 +10,8 @@ import {
   inProgressRoadmaps,
   isSliceOf,
   itemKey,
+  itemStrategy,
+  kindAt,
   queueText,
   readReviewsOpen,
   reviewState,
@@ -19,10 +21,11 @@ import {
 import { approvalsFile, frontmatterOf, readLines } from "./orchestrate-session.ts";
 import { resolveStamp, stampMtime } from "./orchestrate-stamps.ts";
 import { lastAssistantFromTranscript } from "./orchestrate-transcript.ts";
-import { APPROVABLE_STATUS, APPROVAL_BLOCK_STAMP, TURN_START_STAMP } from "./orchestrate.constants.ts";
+import { APPROVAL_BLOCK_STAMP, ITEM_KINDS, TURN_START_STAMP } from "./orchestrate.constants.ts";
 import type {
   Approvable,
   ApprovalItem,
+  ItemRef,
   KnownApproval,
   ReviewsOpen,
   Strategy,
@@ -31,9 +34,11 @@ import type {
 } from "./orchestrate.types.ts";
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import { isUnderRepoDir } from "./persist-tmp.ts";
 import { parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
+
+/** An item that has a strategy to write: everything but a fast plan. */
+type StrategyItem = Exclude<ApprovalItem, { kind: "fast-plan" }>;
 
 /** What every saved item is judged against: the workspace, its running roadmaps and the open reviews. */
 type Scan = { ws: string; running: string[]; open: ReviewsOpen };
@@ -41,12 +46,6 @@ type Scan = { ws: string; running: string[]; open: ReviewsOpen };
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/;
 const STRATEGY_LINE = /^strategy:.*$/m;
 const WAIT_THEN_CLOSE = "wait for it, then end with the approval block again";
-
-function kindAt(abs: string, ws: string): Approvable["kind"] | null {
-  if (isUnderRepoDir(abs, ws, "plans")) return "plan";
-
-  return isUnderRepoDir(abs, ws, "roadmaps") ? "roadmap" : null;
-}
 
 function readItem(abs: string): { text: string; mtime: number } | null {
   try {
@@ -56,7 +55,26 @@ function readItem(abs: string): { text: string; mtime: number } | null {
   }
 }
 
-/** The saved item at `abs` when it waits for an `i`; null when it is no settled, approvable plan or roadmap. */
+/** True when the saved item is at a status that waits for an `i`, settled, and no slice of a running roadmap. */
+function waitsForI(scan: Scan, abs: string, saved: { ref: ItemRef; fm: Record<string, string> }): boolean {
+  const { ref, fm } = saved;
+
+  if (!ITEM_KINDS[ref.kind].approvable.has(fm.status ?? "")) return false;
+
+  if (reviewState(scan.open, ref, reviewsOf(fm)) !== "settled") return false;
+
+  return ref.kind !== "plan" || !scan.running.some((t) => isSliceOf(abs, t));
+}
+
+/** The item a ref names with the strategy its file holds; null when that is no strategy. A fast plan has none. */
+function itemOf(ref: ItemRef, at: { path: string; mtime: number }, held: string | undefined): ApprovalItem | null {
+  if (ref.kind === "fast-plan") return { ...at, kind: ref.kind, serial: ref.serial };
+  const strategy = parseStrategy(held);
+
+  return strategy === null ? null : { ...at, kind: ref.kind, serial: ref.serial, strategy };
+}
+
+/** The saved item at `abs` when it waits for an `i`; null when it is not settled and approvable. */
 function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   const kind = kindAt(abs, scan.ws);
   const read = kind === null ? null : readItem(abs);
@@ -65,13 +83,7 @@ function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   const fm = frontmatterOf(read.text);
   const ref = { kind, serial: Number(fm.serial) };
 
-  if (!APPROVABLE_STATUS[kind].has(fm.status ?? "") || reviewState(scan.open, ref, reviewsOf(fm)) !== "settled")
-    return null;
-
-  if (kind === "plan" && scan.running.some((t) => isSliceOf(abs, t))) return null;
-  const strategy = parseStrategy(fm.strategy);
-
-  return strategy === null ? null : { ...ref, mtime: read.mtime, path: abs, strategy };
+  return waitsForI(scan, abs, { fm, ref }) ? itemOf(ref, { mtime: read.mtime, path: abs }, fm.strategy) : null;
 }
 
 // Reviewed plans and roadmaps this session saved that still wait for an `i`, in first-save order.
@@ -92,7 +104,7 @@ function covers(named: Approvable[] | null, items: ApprovalItem[], pending: Appr
 
   // The strategy a block shows must be the one the file holds, so a bare `i` never runs one the person did not see.
   function shownTruly(n: Approvable): boolean {
-    return items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
+    return items.some((i) => itemKey(i) === itemKey(n) && itemStrategy(i) === itemStrategy(n));
   }
 
   return (
@@ -116,9 +128,9 @@ export function approvalBlockReason(data: HookInput, msg: string): string | null
 }
 
 function runOf(i: ApprovalItem): string {
-  return i.kind === "plan"
-    ? `run /implement-plan ${i.serial} (${i.path})`
-    : `set status locked, then run /implement-roadmap ${i.serial} (${i.path})`;
+  const spec = ITEM_KINDS[i.kind];
+
+  return `${spec.prefix}run ${spec.command} ${i.serial} (${i.path})`;
 }
 
 function approveStep(i: ApprovalItem): string {
@@ -131,7 +143,7 @@ function strategyStep(i: ApprovalItem, strategy: Strategy): string {
 
 // The file's text with its `strategy:` frontmatter line set, validated through the persist module;
 // null when nothing would change.
-function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): StrategyWrite {
+function strategyWrite(ws: string, item: StrategyItem, strategy: Strategy): StrategyWrite {
   const previous = fs.readFileSync(item.path, "utf8");
   const m = FRONTMATTER_BLOCK.exec(previous);
 
@@ -155,12 +167,10 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
   for (const n of named) {
     const hit = items.find((i) => itemKey(i) === itemKey(n));
 
-    if (hit === undefined) return null;
+    // A bare reply runs the strategy each file holds, so it must be the one the block showed.
+    if (hit === undefined || (wanted === null && itemStrategy(hit) !== itemStrategy(n))) return null;
     resolved.push(hit);
   }
-
-  // A bare reply runs the strategy each file holds, so it must be the one the block showed.
-  if (wanted === null && resolved.some((i, k) => i.strategy !== named[k]?.strategy)) return null;
 
   return resolved;
 }
@@ -170,7 +180,9 @@ function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | nul
   const writes: StrategyChange[] = [];
 
   for (const i of resolved) {
-    const w: StrategyWrite = wanted === null ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
+    // A fast plan has no strategy, so a code leaves it alone.
+    const w: StrategyWrite =
+      wanted === null || i.kind === "fast-plan" ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
 
     if (!w.ok) return { error: `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`, ok: false };
     writes.push({ content: w.content, item: i });
@@ -221,7 +233,7 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
   if (reply.kind === "handoff") {
     const queue = writes.map((w) => ({
       item: w.item,
-      strategy: wanted ?? w.item.strategy,
+      strategy: itemStrategy(w.item) === null ? null : (wanted ?? itemStrategy(w.item)),
       written: w.content !== null,
     }));
 
@@ -237,13 +249,15 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
 
 // Context for a reply of `i`, a code, `h` or a spelled-out choice that answers the previous reply's approval block.
 export function approvalContext(data: HookInput, prompt: string): string {
-  const reply = parseApproval(prompt);
   const tp = firstNonEmpty(data.transcript_path, data.transcriptPath);
 
-  if (reply === null || tp === undefined) return "";
+  if (tp === undefined) return "";
   const named = parseClosingBlock(lastAssistantFromTranscript(tp));
 
   if (named === null) return "";
+  const reply = approvalFor(prompt, named);
+
+  if (reply === null) return "";
 
   if (reply.kind !== "unknown") return settledReply(data, reply, named);
 

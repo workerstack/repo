@@ -123,6 +123,9 @@ export const roadmap = (serial: number, strategy: Strategy = "default"): Approva
   strategy,
 });
 
+/** A fast plan item as the approval block names it: no strategy. */
+export const fastPlan = (serial: number): Approvable => ({ kind: "fast-plan", serial });
+
 /** The `strategy:` a saved file holds. */
 export const strategyOf = (file: string): string | undefined =>
   /^strategy: (.*)$/m.exec(fs.readFileSync(file, "utf8"))?.[1];

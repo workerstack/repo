@@ -2,8 +2,9 @@
  * The ordered check tables handoff and journal validation run: head checks on the frontmatter, then section
  * checks.
  */
-import { CREATED_RE, SERIAL_LINE_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
-import { parseFrontmatter, slugFromFilename, type FrontmatterMap, type Sections } from "./persist-doc.ts";
+import { CREATED_RE, SERIAL_LINE_RE, SERIAL_PREFIX_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
+import { hasKey, parseFrontmatter, slugFromFilename, type FrontmatterMap, type Sections } from "./persist-doc.ts";
+import { COMMIT_SUBJECT_RE } from "./persist-plan.constants.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 
 /** A saved doc under validation. */
@@ -47,6 +48,19 @@ export function createdCheck(doc: Doc): string[] {
 
 export function sourceLengthCheck({ map }: Doc): string[] {
   return when({ bad: map.source !== undefined && map.source.length > SOURCE_MAX, error: "source length" });
+}
+
+/** `commit` when the frontmatter carries a `commit:` that is not a Conventional Commits subject. */
+export function commitCheck({ map }: Doc): string[] {
+  return when({ bad: hasKey(map, "commit") && !COMMIT_SUBJECT_RE.test(String(map.commit)), error: "commit" });
+}
+
+/** `serial/filename` when the frontmatter serial and the file name's serial prefix differ. */
+export function serialNameCheck({ filename, map }: Doc): string[] {
+  const fileSerial = SERIAL_PREFIX_RE.exec(filename)?.[1];
+  const named = fileSerial !== undefined && map.serial !== undefined && map.serial !== "";
+
+  return when({ bad: named && Number(map.serial) !== Number(fileSerial), error: "serial/filename" });
 }
 
 export function slugCheck({ filename, map }: Doc): string[] {

@@ -25,6 +25,7 @@ export const IMPLEMENTER_DEEP = "implementer-deep";
 
 export const PLAN = "plan";
 export const ROADMAP = "roadmap";
+export const FAST_PLAN = "fast-plan";
 
 /** The words after `h` that pick a spawn strategy for the fresh session. */
 const FAST = "fast";
@@ -42,10 +43,16 @@ export const BLOCK_ROWS: readonly string[] = [
   "     or reply to revise",
 ];
 
+/** The rows of a block that names only fast plans: no codes, because a fast plan has no strategy. */
+export const FAST_BLOCK_ROWS: readonly string[] = ["  i  implement", "  h  hand off", "     or reply to revise"];
+
 export const HEADER_SEP = " · ";
 
-/** One header item: `plan 4 · spawn-fast`. The kind stays open here; `parseClosingBlock` narrows it. */
-export const HEADER_ITEM_RE: RegExp = /^([a-z]+) (\d+) · ([a-z-]+)$/;
+/**
+ * One header item: `plan 4 · spawn-fast` or `fast-plan 3`. The kind and whether a strategy follows stay open here;
+ * `parseClosingBlock` narrows both.
+ */
+export const HEADER_ITEM_RE: RegExp = /^([a-z]+(?:-[a-z]+)*) (\d+)(?: · ([a-z-]+))?$/;
 
 export const LINE_END_WS_RE: RegExp = /[^\S\n]+$/;
 

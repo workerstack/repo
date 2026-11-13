@@ -1,16 +1,34 @@
+import type { RepoDir } from "../repo-dirs.ts";
 import type { parseApproval } from "./closing-line.ts";
 import type { HookOutput, ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { STRATEGIES } from "./strategy.constants.ts";
-import type { Approvable as BlockItem } from "./strategy.types.ts";
+import type { Approvable as BlockItem, ItemKind as BlockKind } from "./strategy.types.ts";
 import type { Roots } from "./workspace-root.ts";
 
 export type Strategy = (typeof STRATEGIES)[number];
 
-/** A reviewed plan or roadmap, as the approval block names it. */
+/** The kinds of saved item the hooks route: plan, roadmap and fast plan. */
+export type ItemKind = BlockKind;
+
+/** What differs per item kind; the table is `ITEM_KINDS`. */
+export type ItemSpec = {
+  /** The `.repo` dir the kind is saved in. */
+  dir: RepoDir;
+  /** The statuses at which a saved item waits for an `i`. */
+  approvable: ReadonlySet<string>;
+  /** Whether a review must settle before the item can be approved. */
+  needsReview: boolean;
+  /** Said before the command, as in `set status locked, then`. */
+  prefix: string;
+  /** The skill that runs the item. */
+  command: string;
+};
+
+/** A plan, roadmap or fast plan, as the approval block names it. */
 export type Approvable = BlockItem;
 
-/** A plan or roadmap by kind and serial, never by path text. */
+/** A saved item by kind and serial, never by path text. */
 export type ItemRef = Pick<Approvable, "kind" | "serial">;
 
 /** A reviewed item this session saved, with its file and when it was saved. */
@@ -47,15 +65,16 @@ export type StrategyWrite = { ok: true; content: string | null } | { ok: false; 
 
 export type StrategyChange = { item: ApprovalItem; content: string | null };
 
-/** One handoff queue entry: the item, the strategy it runs and whether that was written to its file. */
-export type HandoffEntry = { item: ApprovalItem; strategy: Strategy; written: boolean };
+/** One handoff queue entry: the item, the strategy it runs (none for a fast plan) and whether that was written. */
+export type HandoffEntry = { item: ApprovalItem; strategy: Strategy | null; written: boolean };
 
 /**
  * A review's lifecycle, per item:
  *   unreviewed  no review spawn recorded and `reviews` is 0
  *   open        a review spawn recorded `reviews` at spawn, and the file's `reviews` is not above it yet
  *   settled     `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1
- * Only a settled item may be named by an approval block, approved with `i`, or handed off with `h`.
+ * A fast plan is always settled. Only a settled item may be named by an approval block, approved with `i`, or
+ * handed off with `h`.
  */
 export type ReviewState = "unreviewed" | "open" | "settled";
 

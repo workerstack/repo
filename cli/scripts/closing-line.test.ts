@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { closingBlock, parseApproval, parseClosingBlock } from "./closing-line.ts";
+import { approvalFor, closingBlock, parseApproval, parseClosingBlock } from "./closing-line.ts";
 import type { Approvable } from "./strategy.types.ts";
 
 it("maps y in any case with no strategy to keep each file's value", () => {
@@ -154,4 +154,50 @@ it("is null for a revision", () => {
     "Please change the plan to use a queue instead of a list",
   ])
     expect(parseApproval(p)).toBeNull();
+});
+
+const FAST_ONE = "```\nfast-plan 3\n  i  implement\n  h  hand off\n     or reply to revise\n```";
+
+const FAST: Approvable = { kind: "fast-plan", serial: 3 };
+const FULL: Approvable = { kind: "plan", serial: 4, strategy: "spawn-fast" };
+
+const MIXED =
+  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    id · isf · isd\n" +
+  "  h  hand off     hd · hsf · hsd\n     or reply to revise\n```";
+
+it("renders and reads the all-fast block with only the i and h rows", () => {
+  expect(closingBlock([FAST])).toBe(FAST_ONE);
+  expect(closingBlock([FAST, { kind: "fast-plan", serial: 5 }]).split("\n")[1]).toBe("fast-plan 3, then fast-plan 5");
+  expect(parseClosingBlock(`Saved.\n\n${FAST_ONE}\n`)).toStrictEqual([FAST]);
+});
+
+it("renders and reads a mixed queue with the full rows", () => {
+  expect(closingBlock([FULL, FAST])).toBe(MIXED);
+  expect(parseClosingBlock(MIXED)).toStrictEqual([QUEUE[0], FAST]);
+});
+
+it("refuses a fast block with a strategy, a full item without one, or the wrong rows", () => {
+  expect(parseClosingBlock(FAST_ONE.replace("fast-plan 3", "fast-plan 3 · default"))).toBeNull();
+  expect(parseClosingBlock(ONE.replace(" · spawn-fast", ""))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace("hand off", "handoff"))).toBeNull();
+  expect(parseClosingBlock(MIXED.replace("plan 4", "fast-plan 4"))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace("fast-plan", "fast-slice"))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    id · isf · isd"))).toBeNull();
+});
+
+it("on an all-fast block a bare approval or handoff stands and every code or strategy word is unknown", () => {
+  for (const p of ["i", "y", "yes", "go", "do it", "implement"])
+    expect(approvalFor(p, [FAST])).toStrictEqual(approve(null));
+
+  expect(approvalFor("h", [FAST])).toStrictEqual(handoff(null));
+
+  for (const p of ["id", "isf", "isd", "hd", "hsf", "hsd", "h fast", "y spawn-deep"])
+    expect(approvalFor(p, [FAST]), p).toStrictEqual(unknown(p));
+});
+
+it("on a block with a strategy item every code stands, and a revision stays null", () => {
+  expect(approvalFor("isf", [FAST, FULL])).toStrictEqual(approve("spawn-fast"));
+  expect(approvalFor("isf", QUEUE)).toStrictEqual(approve("spawn-fast"));
+  expect(approvalFor("keep it", [FAST])).toBeNull();
+  expect(approvalFor("isx", [FAST])).toStrictEqual(unknown("isx"));
 });

@@ -6,18 +6,7 @@ import path from "node:path";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { matchLessons } from "./lessons-ops.ts";
 import { type Roots } from "./lessons.types.ts";
-import { FM_OPEN, SERIAL_PREFIX_RE } from "./persist-doc.constants.ts";
-import {
-  compactCreatedStamp,
-  createdAtOf,
-  extractH1,
-  nextSerial,
-  slugFromFilename,
-  slugify,
-  stripFrontmatter,
-  type PersistResult,
-  stripBom,
-} from "./persist-doc.ts";
+import { extractH1, slugify, stripFrontmatter } from "./persist-doc.ts";
 import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
 import {
   extractCommit,
@@ -25,20 +14,21 @@ import {
   injectFrontmatter,
   stripCommitLine,
   stripPlanName,
-  withSavedFrontmatter,
 } from "./persist-plan-head.ts";
 import { validatePlan, workspacePaths } from "./persist-plan-validate.ts";
 import { GOAL_SECTION_RE, PLAN_DIR, WATCH_OUTS_H2 } from "./persist-plan.constants.ts";
-import { type Rewrite, persistSource, refused, rewriteTarget, saveTarget } from "./persist-save.ts";
+import {
+  type PlanResult,
+  type Rewrite,
+  allocate,
+  persistSource,
+  prepareRewrite,
+  refused,
+  saveTarget,
+} from "./persist-save.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
 
-export type PlanResult = PersistResult<{
-  path: string;
-  serial: number;
-  slug: string;
-  content: string;
-  filename: string;
-}>;
+export type { PlanResult };
 
 type SaveInput = {
   workspaceRoot?: string;
@@ -58,41 +48,9 @@ function uncitedLessons(roots: Roots, text: string) {
   return matchLessons({ files, roots }).filter((r) => !watch.includes(r.file));
 }
 
-/**
- * Rewrite of a saved plan: same file and serial, `[x]` allowed, Previous mistakes append-only.
- * Validates only. The host writes `content`: a write here first makes Claude Code refuse the
- * Write as modified since read.
- */
+/** Rewrite of a saved plan: `[x]` allowed, Previous mistakes append-only. */
 export function preparePlanUpdate(input: Rewrite): PlanResult {
-  const { raw, previous, filename, rel } = rewriteTarget(input);
-  const text = stripBom(raw);
-  const fence = unclosedFenceErrors(text);
-
-  if (fence.length > 0) return refused(fence);
-  const full = text.startsWith(FM_OPEN) ? text : withSavedFrontmatter(previous, text);
-  const errors = validatePlan(filename, full, { fresh: false, previous });
-
-  if (errors.length > 0) return refused(errors);
-
-  return {
-    content: full,
-    filename,
-    ok: true,
-    path: rel,
-    // validatePlan accepted the filename, so the serial prefix is there
-    serial: Number(SERIAL_PREFIX_RE.exec(filename)?.[1]),
-    slug: slugFromFilename(filename),
-  };
-}
-
-/** Next serial and the file a new plan is written to. */
-function allocate(plansDir: string, slug: string, created: string | undefined) {
-  fs.mkdirSync(plansDir, { recursive: true });
-  const createdAt = createdAtOf(created);
-  const serial = nextSerial(plansDir);
-  const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
-
-  return { createdAt, dest: path.join(plansDir, filename), filename, serial };
+  return prepareRewrite(input, (filename, full, previous) => validatePlan(filename, full, { fresh: false, previous }));
 }
 
 type Parts = {
