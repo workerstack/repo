@@ -31,6 +31,7 @@ const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
 const WORKERSTACK_CONFIG = "**/workerstack.config.ts";
+const EVAL_FILES = "**/evals/*/eval.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
 
 /** The categories the base runs whole; the catalog lists their rules. */
@@ -162,12 +163,14 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
   });
 }
 
-/** The overrides, in order: tests, configs, the workerstack config, then the package and `lint.skip` ones. */
+/** The overrides, in order: tests, configs, eval files, the workerstack config, the package and `lint.skip` ones. */
 function overridesOf(workspace: Workspace, lint: ResolvedLint) {
   return [
     { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
     // vitest and workerstack configs must default-export, and call their define helper at import.
     { files: [CONFIGS], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
+    // `repo eval` imports an eval file's default export, which its `defineEval` call builds at import.
+    { files: [EVAL_FILES], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
     // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.
     { files: [WORKERSTACK_CONFIG], rules: { "eslint/sort-keys": "off" } },
     ...packageOverrides(workspace),

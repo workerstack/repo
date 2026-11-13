@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `evals` is a pack `packs` in `workerstack.config.ts` accepts, opt-in like `benchmark`; turning it on writes nothing yet, it gates the evals environment and `eval.yml` of later releases.
+- `repo sync` makes `evals/*/eval.ts` a root entry of the generated `knip.json` when the root has an `evals/` dir, and adds an `.oxlintrc.json` override for `**/evals/*/eval.ts` that allows its default export and its `defineEval` call at import, so an eval file passes `repo check` and `repo lint` in every repo. This repo gains `evals/skill-routing`: `bun repo eval skill-routing` asks `claude-haiku-5-5` which skill it would load for real prompts, given every skill's description, and its graders run offline in the vitest suite.
 
 ### Fixed
 

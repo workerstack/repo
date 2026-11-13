@@ -115,9 +115,15 @@ const CONFIG_OVERRIDE = {
   rules: { "import/no-default-export": "off", "repo/no-module-side-effects": "off" },
 };
 
+/** An eval file default-exports the spec its define call builds at import, as a config does. */
+const EVAL_OVERRIDE = {
+  files: ["**/evals/*/eval.ts"],
+  rules: { "import/no-default-export": "off", "repo/no-module-side-effects": "off" },
+};
+
 /** `ci.checks` run in key order, so the workerstack config keeps its keys where the consumer put them. */
 const WORKERSTACK_OVERRIDE = { files: ["**/workerstack.config.ts"], rules: { "eslint/sort-keys": "off" } };
-const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, WORKERSTACK_OVERRIDE];
+const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, EVAL_OVERRIDE, WORKERSTACK_OVERRIDE];
 
 describe("oxlintConfig base", () => {
   it(
