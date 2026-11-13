@@ -40,24 +40,88 @@ function foreignDeclaration(ctx: Ctx, declaration: ts.Declaration): boolean {
   return !ctx.packages.some((name) => name === owner);
 }
 
-/** Whether one type cannot be told from its twin by structure: nominal, or declared by a dependency. */
+/** Whether a declaration is the TypeScript library's, which both compared packages share as one copy. */
+function libraryDeclaration(declaration: ts.Declaration): boolean {
+  return declaration.getSourceFile().hasNoDefaultLib;
+}
+
+/**
+ * Whether a property is keyed by a unique symbol, which each copy of its module declares anew; the library's own keys,
+ * such as `Symbol.iterator`, are one copy for both.
+ */
+function symbolKeyed(ctx: Ctx, prop: ts.Symbol): boolean {
+  const declaration = prop.valueDeclaration;
+
+  if (declaration === undefined || libraryDeclaration(declaration)) return false;
+  const name = ts.getNameOfDeclaration(declaration);
+
+  if (name === undefined || !ts.isComputedPropertyName(name)) return false;
+
+  return (ctx.checker.getTypeAtLocation(name.expression).flags & ts.TypeFlags.UniqueESSymbol) !== 0;
+}
+
+/** Whether one type cannot be told from its twin by structure: nominal, keyed by a unique symbol, or a dependency's. */
 function nominalHead(ctx: Ctx, type: ts.Type): boolean {
   if ((type.flags & NOMINAL_TYPES) !== 0) return true;
+  const declarations = (type.getSymbol()?.declarations ?? []).filter((declaration) => !libraryDeclaration(declaration));
+
+  if (declarations.some((declaration) => nominalDeclaration(declaration) || foreignDeclaration(ctx, declaration)))
+    return true;
+
+  return ctx.checker.getPropertiesOfType(type).some((prop) => symbolKeyed(ctx, prop));
+}
+
+/** Whether a type is declared only by the TypeScript library, whose members are the same for both copies. */
+function isLibraryType(type: ts.Type): boolean {
   const declarations = type.getSymbol()?.declarations ?? [];
 
-  return declarations.some((declaration) => nominalDeclaration(declaration) || foreignDeclaration(ctx, declaration));
+  return declarations.length > 0 && declarations.every(libraryDeclaration);
 }
 
-/** The type, its union members, and what its call signatures return: a function of a nominal class is as nominal. */
-function heads(type: ts.Type): ts.Type[] {
-  const returned = type.getCallSignatures().map((signature) => signature.getReturnType());
+/** The type arguments of a generic reference, such as the `T` of `T[]`; none for any other type. */
+function typeArguments(ctx: Ctx, type: ts.Type): readonly ts.Type[] {
+  if ((type.flags & ts.TypeFlags.Object) === 0) return [];
+  const object = type /* the Object flag marks an ObjectType */ as ts.ObjectType;
 
-  return [type, ...(type.isUnion() ? type.types : []), ...returned];
+  if ((object.objectFlags & ts.ObjectFlags.Reference) === 0) return [];
+
+  return ctx.checker.getTypeArguments(object /* the Reference object flag marks a TypeReference */ as ts.TypeReference);
 }
 
-/** Whether the type, or what it is made of one level down, is nominal or a dependency's. */
+/** What a type is made of: union and intersection members, type arguments, and, outside the library, its members. */
+function parts(ctx: Ctx, type: ts.Type): ts.Type[] {
+  const { checker } = ctx;
+  const members = type.isUnionOrIntersection() ? type.types : [];
+  const args = typeArguments(ctx, type);
+
+  if (isLibraryType(type)) return [...members, ...args];
+  const props = checker.getPropertiesOfType(type).map((prop) => checker.getTypeOfSymbol(prop));
+
+  const signatures = [...type.getCallSignatures(), ...type.getConstructSignatures()].flatMap((signature) => [
+    signature.getReturnType(),
+    ...signature.getParameters().map((parameter) => checker.getTypeOfSymbol(parameter)),
+  ]);
+
+  return [...members, ...args, ...props, ...signatures];
+}
+
+/**
+ * Whether the type, or anything it is made of at any depth, is nominal or a dependency's: a field of a nominal type
+ * is as nominal.
+ */
 export function isNominal(ctx: Ctx, type: ts.Type): boolean {
-  return heads(type).some((head) => nominalHead(ctx, head));
+  const seen = new Set<ts.Type>();
+  const queue = [type];
+
+  for (const next of queue) {
+    if (seen.has(next)) continue;
+    seen.add(next);
+
+    if (nominalHead(ctx, next)) return true;
+    queue.push(...parts(ctx, next));
+  }
+
+  return false;
 }
 
 /** The type in text: its name, its members and signatures, and the member names of an enum, class or namespace. */
@@ -74,7 +138,7 @@ export function typeText(ctx: Ctx, type: ts.Type): string {
     .map((prop) => {
       const optional = (prop.flags & ts.SymbolFlags.Optional) === 0 ? "" : OPTIONAL_MARK;
 
-      return `${prop.name}${optional}:${print(checker.getTypeOfSymbol(prop))}`;
+      return `${checker.symbolToString(prop)}${optional}:${print(checker.getTypeOfSymbol(prop))}`;
     })
     .toSorted();
 

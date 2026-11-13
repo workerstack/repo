@@ -1,5 +1,16 @@
 const lines = (...text: string[]): string => `${text.join("\n")}\n`;
 
+/** Types keyed by a unique symbol, the same in both versions: each copy of the symbol is its own type. */
+const SYMBOL_KEYED = [
+  "declare const KEY: unique symbol;",
+  "export type Keyed = { readonly [KEY]: string };",
+  "export type KeyedOr = string | Keyed;",
+  "export interface HoldsKeyed { readonly k?: KeyedOr }",
+  "export interface ListsKeyed { readonly all: readonly Keyed[] }",
+  "export type Branded<T> = { readonly [KEY]: T };",
+  "export declare function makeKeyed(x: string): Keyed;",
+];
+
 /** The entry's declarations at the old version. */
 export const OLD_INDEX = lines(
   'import type { Dep } from "dep";',
@@ -39,6 +50,7 @@ export const OLD_INDEX = lines(
   "export interface GainsValue { a: number }",
   "export declare const useDep: Dep;",
   "export declare const useDepB: DepB;",
+  ...SYMBOL_KEYED,
 );
 
 /** The entry's declarations at the new version, one name changed per line of the old. */
@@ -80,6 +92,7 @@ export const NEW_INDEX = lines(
   "export declare class GainsValue { a: number }",
   "export declare const useDep: Dep;",
   "export declare const useDepB: DepB;",
+  ...SYMBOL_KEYED,
 );
 
 /** A dependency whose `Dep` holds a nominal class, so two copies are never assignable. */
