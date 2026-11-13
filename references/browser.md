@@ -1,5 +1,5 @@
 ---
-tags: [browser]
+description: Browse web pages
 ---
 
 # Browser

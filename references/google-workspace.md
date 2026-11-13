@@ -1,5 +1,5 @@
 ---
-tags: [google-workspace]
+description: Google Sheets, Docs, Gmail
 ---
 
 # google-workspace

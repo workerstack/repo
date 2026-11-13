@@ -1,5 +1,5 @@
 ---
-tags: [cascade]
+description: Shrink big tool output
 ---
 
 # Protocol

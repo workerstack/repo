@@ -155,3 +155,15 @@ it("rewrites another relative link to the README's folder and leaves external on
       '[q](?x=1) [home](.) ![img](references/img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
   );
 });
+
+it("drops a reference's leading frontmatter from its section", () => {
+  const text = render({
+    "package.json": JSON.stringify({ name: "@acme/lib" }),
+    "references/INDEX.md": "# References\n\n- [Auth](auth.md)\n",
+    "references/auth.md": "---\ndescription: X\n---\n# Title\n\nBody.\n",
+  });
+
+  expect(text).toContain("## Title\n\nBody.\n");
+  expect(text).not.toContain("description:");
+  expect(text).not.toContain("---");
+});

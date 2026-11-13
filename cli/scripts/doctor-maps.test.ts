@@ -34,7 +34,7 @@ it("@workerstack/repo with both markers → maps ok row, exit 0", () => {
   writeRequiredMaps(cwd);
   const r = linuxRun(cwd, bin);
   expect(r.code).toBe(0);
-  expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
+  expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:refs$/m);
 });
 
 it("@workerstack/repo with the hashed markers sync writes → maps ok row, exit 0", () => {
@@ -42,10 +42,11 @@ it("@workerstack/repo with the hashed markers sync writes → maps ok row, exit 
   writeRequiredMaps(cwd, BOTH_MARKERS.replaceAll(/<!-- repo:(\w+) -->/g, "<!-- repo:$1 e3b0c442 -->"));
   const r = linuxRun(cwd, bin);
   expect(r.code).toBe(0);
-  expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:skills, repo:refs$/m);
+  expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:refs$/m);
 });
 
-it.each(["skills", "refs"])("@workerstack/repo missing repo:%s → exit 1 naming it", (name) => {
+it("@workerstack/repo missing repo:refs → exit 1 naming it", () => {
+  const name = "refs";
   const { cwd, bin } = toolsCwd("doc-map-one-");
   writeRequiredMaps(cwd, BOTH_MARKERS.replace(`<!-- repo:${name} -->\n<!-- /repo:${name} -->\n`, ""));
   const r = linuxRun(cwd, bin);

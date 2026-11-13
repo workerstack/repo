@@ -2091,6 +2091,7 @@
     "c8d8dee7f9ace6b2",
     "c8d912b89f209771",
     "d0467eb5c016e37a",
+    "d0c33994ecaedc0b",
     "d1ba464d8edd7b36",
     "d8565d88aa7377d6",
     "d8a0dcd0fda62249",
@@ -2111,7 +2112,7 @@
   "agents/global-settings/manifest.json": ["a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "79eadf1f6862644f", "fdd40c82484396ab"],
   "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
-  "agents/rules/overview.md": ["e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
+  "agents/rules/overview.md": ["d430ca6fec0763d6", "e32b4a6bcdb23d69", "fbe4a33c058c0f7c"],
   "agents/rules/rust.md": [
     "14edf7de7aaaa090",
     "985134dcb5b5d374",
@@ -2220,7 +2221,7 @@
   "cli/scripts/__fixtures__/ci-wait-world.ts": ["aa327120f18ac604", "b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
   "cli/scripts/__fixtures__/clean-kit.ts": ["eb5bc9b085d09b98"],
-  "cli/scripts/__fixtures__/doctor-kit.ts": ["9c6a7f1bfedb9efb", "e642ba74423b1c39"],
+  "cli/scripts/__fixtures__/doctor-kit.ts": ["2e695712107f399c", "9c6a7f1bfedb9efb", "e642ba74423b1c39"],
   "cli/scripts/__fixtures__/doctor-models-kit.ts": ["ad894596b777bd53"],
   "cli/scripts/__fixtures__/doctor-workspace-kit.ts": ["d602f5b244feed86"],
   "cli/scripts/__fixtures__/fetch-result.ts": ["2f7afe1279c24f6f"],
@@ -3106,7 +3107,7 @@
     "cd3fa6625ea21d90",
     "d30e11893bd9643e"
   ],
-  "cli/scripts/doctor-maps.test.ts": ["104e43068c95b1a5", "a97d22dc03abf183"],
+  "cli/scripts/doctor-maps.test.ts": ["104e43068c95b1a5", "a97d22dc03abf183", "d9884bb58a3c115e"],
   "cli/scripts/doctor-models-skip.test.ts": ["655f5d0fe469a037", "e3c8162f0b0a91b8", "ff17136673aa691e"],
   "cli/scripts/doctor-models.test.ts": ["3d3a153c15f8c9d2", "de0b3862ac25cf0d", "df655ff888fd4f44", "e60e7105828c9923"],
   "cli/scripts/doctor-rows.ts": [
@@ -3162,7 +3163,7 @@
   ],
   "cli/scripts/doctor-workspace.test.ts": ["0ee7aba366274e4b", "66950674d6440f15", "d54a75c988712c95"],
   "cli/scripts/doctor-workspace.ts": ["0462109dd136a46f", "098f79b47c58389d", "3f2090d217ef7472", "661933badcc34e5f"],
-  "cli/scripts/doctor.constants.ts": ["57170a1bbd1e5af9", "5a7b1b74d08fcd0a", "e1fe52b9823d63bb"],
+  "cli/scripts/doctor.constants.ts": ["57170a1bbd1e5af9", "5a7b1b74d08fcd0a", "7e0408886407ca8a", "e1fe52b9823d63bb"],
   "cli/scripts/doctor.test.ts": [
     "078f7f9f9e660f85",
     "244c06b917282157",
@@ -7305,12 +7306,13 @@
     "9f9b60a985db406e",
     "a40fbfe717dca626",
     "b7d997fa071aaa53",
-    "bad6e0f18260f806"
+    "bad6e0f18260f806",
+    "d201291d7f416c2d"
   ],
-  "references/browser.md": ["0ebbff0224a7dd44"],
-  "references/cascade.md": ["b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
-  "references/clasp.md": ["ac7289c627e699cf"],
-  "references/cloudflare.md": ["9d26d71227fdfc29"],
+  "references/browser.md": ["0ebbff0224a7dd44", "9dd0425d48c70e29"],
+  "references/cascade.md": ["92cfceeca9b71d56", "b0b5570781aa673b", "c0d67d065ac5c177", "e6236424e7133581"],
+  "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf"],
+  "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
   "references/exports.md": [
     "28c733238c8ebeff",
     "2fca3761756a65e1",
@@ -7327,10 +7329,12 @@
     "c01c471098d8c32a",
     "efa00621c5422da6",
     "f17e80cf143fe0fb",
-    "f30123d8dff4d425"
+    "f30123d8dff4d425",
+    "fdda2838f9f06a54"
   ],
-  "references/google-workspace.md": ["db455dc3b114ef70"],
+  "references/google-workspace.md": ["48a0a8dd31c8250b", "db455dc3b114ef70"],
   "references/hooks.md": [
+    "37424abba0611db9",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
     "5ec9f771966eb2b6",
@@ -7343,26 +7347,29 @@
     "f2e528eba65b0e50"
   ],
   "references/implementation-format.md": [
+    "051279c861f33c4e",
     "156426647e9671cf",
     "3702b03d170d2710",
     "374e39dc02ef33f0",
     "4f550f2dbd5bdaae"
   ],
-  "references/jev.md": ["715031d31346edb7"],
+  "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca"],
   "references/lessons.md": [
     "26f7f71b3519bf34",
+    "3e41ff65b6a4c6df",
     "6b3eae256df3cc84",
     "937cee73491e374e",
     "d82f28a5346a5f6c",
     "db5b43a73c0dfb7b"
   ],
-  "references/listen.md": ["53783d65923e6731"],
+  "references/listen.md": ["53783d65923e6731", "cae54e3f489aab38"],
   "references/map.md": [
     "036c9062b9c6e91f",
     "0d56535a6e88785f",
     "114eae57cbb4b9bf",
     "1be99b85fef64bbd",
     "1c7a64e672bd3099",
+    "27fb844347c693f0",
     "2899648d7103c529",
     "3665b9291d607f50",
     "5bff702015ecc71f",
@@ -7381,19 +7388,21 @@
     "f84ecd892cca03ec",
     "fdab4a0447b8871e"
   ],
-  "references/output.md": ["3042f30880b6975e"],
+  "references/output.md": ["017364ce9c76c2a4", "3042f30880b6975e"],
   "references/plan-format.md": [
     "1656111787ae22a8",
     "1b791f542ea9a9b7",
+    "364900ae840f6753",
     "71993ad32e4415fd",
     "93b5154bc7dd725c",
     "98565802b83268f5",
     "c71beda324fb785e"
   ],
-  "references/review-loop.md": ["21b52d81d3fb3344", "33cc0b0817305aa2", "854dcaac0df8fdbf"],
-  "references/roadmap-format.md": ["05119661b62dcd5b", "0e879896d6b9f135", "b3496ee8ab0a6b1c"],
-  "references/rtk.md": ["67a7da2c4625191c"],
-  "references/scope.md": ["2e6941901ff909d3", "96f952d35af99ba0", "c7ef31ef5e5babe5"],
-  "references/setup.md": ["2315bc708e31ce43", "41e06da9597b7138", "ac0e14fdea20df33"],
-  "references/speak.md": ["8afa8c253feb5a30"]
+  "references/review-loop.md": ["21b52d81d3fb3344", "33cc0b0817305aa2", "7bb47085b4231e88", "854dcaac0df8fdbf"],
+  "references/roadmap-format.md": ["05119661b62dcd5b", "0e879896d6b9f135", "b3496ee8ab0a6b1c", "f029319acb117a92"],
+  "references/rtk.md": ["67a7da2c4625191c", "d76ba0a5923edd2f"],
+  "references/scope.md": ["191a397174c6f260", "2e6941901ff909d3", "96f952d35af99ba0", "c7ef31ef5e5babe5"],
+  "references/setup.md": ["2315bc708e31ce43", "41e06da9597b7138", "86592fb5319f20b3", "ac0e14fdea20df33"],
+  "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30"],
+  "references/sync.md": ["7e389acc08c15554"]
 }

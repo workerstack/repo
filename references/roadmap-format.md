@@ -1,3 +1,7 @@
+---
+description: Roadmap file format
+---
+
 # Roadmap format (SSOT)
 
 Ordered program of child plans. Not a plan, a handoff, or a design doc.

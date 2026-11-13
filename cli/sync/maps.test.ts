@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { listedFiles } from "../docs-index.ts";
 import { VALID_LESSON } from "../scripts/__fixtures__/persist-bodies.ts";
 import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./__fixtures__/maps-kit.ts";
 import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
@@ -19,7 +20,7 @@ function withLesson(): string {
   return ws;
 }
 
-it("fills repo:skills and repo:refs and keeps the hand text around them byte for byte", () => {
+it("fills repo:refs and keeps the hand text around it byte for byte", () => {
   expect(indexText(copyFixtureWs())).toBe(fs.readFileSync(GOLDEN_INDEX, "utf8"));
 });
 
@@ -29,35 +30,61 @@ it("is stable: the written index regenerates to itself", () => {
   expect(indexText(ws)).toBe(fs.readFileSync(path.join(ws, INDEX), "utf8"));
 });
 
-it("refs rows name the stock package path and skip INDEX.md", () => {
+it("refs rows are a code span of the path under references/ and skip INDEX.md", () => {
   const text = indexText(copyFixtureWs());
-  expect(text).toContain("| node_modules/@workerstack/repo/references/alpha.md | Alpha |");
-  expect(text).toContain("| node_modules/@workerstack/repo/references/nested/beta.md |");
-  expect(text).not.toMatch(/references\/INDEX\.md \|/);
+  expect(text).toContain("- `alpha.md`: Alpha ref");
+  expect(text).toContain("- `nested/beta.md`: Nested beta ref");
+  expect(text).not.toContain("INDEX.md`");
   expect(text).not.toMatch(/Body ignored|Beta body|More text ignored/);
 });
 
-it("creates the sections when INDEX.md is missing", () => {
-  const ws = copyFixtureWs();
-  fs.rmSync(path.join(ws, INDEX));
-  const text = indexText(ws);
-  expect(text).toMatch(/^<!-- repo:skills [\da-f]{8} -->$/m);
-  expect(text).toMatch(/^<!-- repo:refs [\da-f]{8} -->$/m);
+it("writes no skills section", () => {
+  expect(indexText(copyFixtureWs())).not.toContain("repo:skills");
 });
 
-it("another package gets no skills or refs map", () => {
+it("lists every ref of the new index", () => {
+  const ws = copyFixtureWs();
+  const text = indexText(ws);
+
+  const found = listedFiles({ name: "@workerstack/repo", path: INDEX, text }, (rel) =>
+    fs.existsSync(path.join(ws, rel)),
+  );
+
+  const listed = found.map((one) => one.path);
+  expect(listed).toStrictEqual(["references/alpha.md", "references/nested/beta.md"]);
+});
+
+it("creates the section when INDEX.md is missing", () => {
+  const ws = copyFixtureWs();
+  fs.rmSync(path.join(ws, INDEX));
+  expect(indexText(ws)).toMatch(/^<!-- repo:refs [\da-f]{8} -->$/m);
+});
+
+it("another package gets no refs map", () => {
   const ws = copyFixtureWs();
   const result = index(context(ws, "consumer"));
   const output = result.outputs[0];
-  expect(output?.kind === "file" && output.content).not.toContain("alpha-work");
+  expect(output?.kind === "file" && output.content).not.toContain("alpha.md");
 });
 
 it("includes extra refs next to the fixture refs", () => {
   const ws = copyFixtureWs();
-  put(ws, "references/stripe.md", "---\ntags: [stripe]\n---\n# Stripe\n\nConsumer payments ref.\n");
+  put(ws, "references/stripe.md", "---\ndescription: Consumer payments\n---\n# Stripe\n");
   const text = indexText(ws);
-  expect(text).toMatch(/references\/stripe\.md \| Stripe \| stripe \| Consumer payments ref/);
+  expect(text).toContain("- `stripe.md`: Consumer payments");
   expect(text).toMatch(/alpha\.md/);
+});
+
+it("reports every ref with no description as a sync error and writes nothing", () => {
+  const ws = copyFixtureWs();
+  put(ws, "references/x.md", "# X\n");
+  put(ws, "references/y.md", "# Y\n");
+  const result = index(context(ws));
+  expect(result.errors).toStrictEqual([
+    "references/x.md: description: missing or over 32 characters",
+    "references/y.md: description: missing or over 32 characters",
+  ]);
+  expect(result.outputs).toStrictEqual([]);
 });
 
 it("writes the lessons index, tracked, from the lesson files", () => {

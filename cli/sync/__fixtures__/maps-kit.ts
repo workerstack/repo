@@ -23,12 +23,11 @@ export function selfWs(prefix: string): string {
   return ws;
 }
 
-/** The packed maps workspace in a temp dir, with one stock skill installed. */
+/** The packed maps workspace in a temp dir, with refs that carry a description. */
 export function copyFixtureWs(): string {
   const dest = tempDir("maps-ws-");
-  // packed, so no skill tree sits live in the repo for an agent to discover
+  // packed, so no reference tree sits live in the repo for an agent to discover
   tar.x({ file: FIXTURE_WS, cwd: dest, sync: true });
-  put(dest, "node_modules/@workerstack/repo/agents/skills/beta/SKILL.md", "---\nname: beta\n---\n");
   return dest;
 }
 

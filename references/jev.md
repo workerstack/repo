@@ -1,5 +1,5 @@
 ---
-tags: [jev]
+description: One outside yes/no decision
 ---
 
 # Jev

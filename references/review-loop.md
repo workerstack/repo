@@ -1,5 +1,5 @@
 ---
-tags: [review-loop]
+description: Review an implementer
 ---
 
 # Review loop

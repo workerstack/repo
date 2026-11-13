@@ -1,3 +1,7 @@
+---
+description: Plan file format
+---
+
 # Plan format (SSOT)
 
 Local session checklist. Not a design doc, PR stack, or DAG.

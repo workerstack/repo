@@ -111,8 +111,6 @@ export function homeWith(prefix: string, files: Record<string, unknown>): string
 
 export const BOTH_MARKERS = [
   "# Index",
-  "<!-- repo:skills -->",
-  "<!-- /repo:skills -->",
   "<!-- repo:refs -->",
   "<!-- /repo:refs -->",
   "<!-- repo:stack -->",

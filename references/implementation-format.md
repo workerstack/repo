@@ -1,3 +1,7 @@
+---
+description: Implement journal format
+---
+
 # Implementation format (SSOT)
 
 Local session journal for `/implement-plan`. Not a plan, handoff, or git commit.
