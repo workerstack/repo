@@ -23,6 +23,7 @@ export const STATE_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([
   "mutation",
   "tsbuildinfo",
   "blob",
+  "evals",
 ]);
 
 const STATE_SET: ReadonlySet<string> = /* @__PURE__ */ new Set<string>([STATE]);

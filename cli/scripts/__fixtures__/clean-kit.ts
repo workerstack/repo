@@ -77,8 +77,10 @@ export function sweepRepo(tempDir: (prefix: string) => string): string {
   put(`${S}/stash/old.txt`, 48 * HOUR);
   put(`${S}/stash/new.txt`, HOUR);
   put(`${S}/browser/session.json`, 48 * HOUR);
+  put(`${S}/evals/cache/old.json`, 48 * HOUR);
   // Adding a file bumps its dir's mtime; the session dirs were last touched with their files.
   for (const sid of [LIVE, DEAD]) age(path.join(root, S, "sessions", sid), 2 * HOUR);
+  for (const dir of ["evals/cache", "evals"]) age(path.join(root, S, dir), 48 * HOUR);
   return root;
 }
 

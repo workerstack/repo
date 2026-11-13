@@ -13,6 +13,7 @@ import { SESSION_REL } from "./browser.constants.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedHolds } from "./clean-scan.ts";
 import { policyOf } from "./clean.constants.ts";
+import { EVALS_DIR } from "./eval.constants.ts";
 import { STASH_REL } from "./job.constants.ts";
 import { LISTEN_DIR } from "./listen.constants.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
@@ -59,6 +60,7 @@ it("repo clean: every repo-owned dir constant has a policy", () => {
     ORCHESTRATOR_LOGS_DIR,
     LISTEN_DIR,
     SPEAK_DIR,
+    EVALS_DIR,
   ].map((d) => path.posix.basename(d));
 
   const ignored: readonly string[] = IGNORED_DIRS;

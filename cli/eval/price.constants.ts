@@ -21,8 +21,8 @@ export const DEFAULT_MODEL = "claude-haiku-5-5";
 export const DEFAULT_SAMPLES = 3;
 export const DEFAULT_MAX_TOKENS = 256;
 
-/** The estimate counts one token per this many characters, which over-counts. */
-export const CHARS_PER_TOKEN = 3;
+/** Tokens added to every call's input bound; covers role and message framing the bytes do not. */
+export const FRAMING_TOKENS = 32;
 export const TOKENS_PER_MTOK = 1_000_000;
 export const DOLLAR_DECIMALS_SMALL = 4;
 export const DOLLAR_DECIMALS_LARGE = 2;

@@ -50,6 +50,7 @@ const POLICY = {
   blob: "keep",
   browser: "keep",
   ci: "keep",
+  evals: "keep",
   handoffs: "age",
   implementations: "age-done",
   listen: "keep",

@@ -173,6 +173,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/eval/cache.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/eval/client.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -210,6 +216,12 @@
     "statements": 100
   },
   "cli/eval/spec.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/eval/summary.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

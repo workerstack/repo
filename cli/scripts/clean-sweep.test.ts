@@ -38,6 +38,7 @@ const KEPT = [
   `.repo/tmp/orchestrator-logs/ask-stop-${LIVE}`,
   ".repo/tmp/stash/new.txt",
   ".repo/tmp/browser/session.json",
+  ".repo/tmp/evals/cache/old.json",
 ];
 
 it("repo clean removes agent scratch, dead sessions, stale stamps and old stash; keeps what repo owns", () => {
