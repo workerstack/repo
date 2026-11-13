@@ -37,9 +37,18 @@ function refuseDuplicates(cases: readonly { id: string }[], ctx: z.RefinementCtx
   }
 }
 
-function evalSchema() {
+/** A listed path: posix, and a file or folder under `root`. */
+function fileSchema(root: string) {
+  return z.string().superRefine((rel, ctx) => {
+    if (rel.includes("\\")) ctx.addIssue({ code: "custom", message: `use / in ${rel}` });
+    else if (!existsSync(path.join(root, rel))) ctx.addIssue({ code: "custom", message: `no file or folder ${rel}` });
+  });
+}
+
+function evalSchema(root: string) {
   return z.strictObject({
     cases: z.array(caseSchema()).min(1, { error: "none; add at least one" }).superRefine(refuseDuplicates),
+    files: z.array(fileSchema(root)).default([]),
     maxTokens: z.number().int().min(1, { error: "under 1" }).default(DEFAULT_MAX_TOKENS),
     model: z.string().default(DEFAULT_MODEL),
     samples: z.number().int().min(1, { error: "under 1; run at least one sample" }).default(DEFAULT_SAMPLES),
@@ -60,7 +69,7 @@ export async function loadEval(root: string, name: string): Promise<LoadedEval> 
   if (!existsSync(file)) return { message: `eval: no evals/${name}/eval.ts`, ok: false };
   // Any module has an optional default export; the schema below checks it.
   const module = (await import(pathToFileURL(file).href)) /* an import has this shape */ as { default?: unknown };
-  const parsed = evalSchema().safeParse(module.default);
+  const parsed = evalSchema(root).safeParse(module.default);
 
   if (!parsed.success) return { message: `eval ${name}: ${parsed.error.issues.map(line).join("; ")}`, ok: false };
 

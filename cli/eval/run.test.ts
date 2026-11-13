@@ -48,6 +48,7 @@ function spec(change: Partial<ResolvedEval> = {}): ResolvedEval {
       { id: "two-bad", input: "b", pass, source: "s" },
       { control: true, id: "ctl", input: "c", pass, source: "s" },
     ],
+    files: [],
     maxTokens: 256,
     model: "claude-haiku-5-5",
     samples: 3,

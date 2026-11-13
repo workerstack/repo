@@ -45,3 +45,18 @@ it("refuses a default export that is not an eval", async () => {
   if (result.ok) throw new Error("expected an error");
   expect(result.message).toMatch(/^eval not-eval: /);
 });
+
+it("loads an eval with no files as listing none, and one that lists a folder and a file", async () => {
+  const sample = await loadEval(ROOT, "sample");
+  const listed = await loadEval(ROOT, "with-files");
+
+  expect(sample.ok && sample.spec.files).toStrictEqual([]);
+  expect(listed.ok && listed.spec.files).toStrictEqual(["evals/sample", "evals/sample/eval.ts"]);
+});
+
+it.each([
+  ["missing-file", "eval missing-file: files.0: no file or folder agents/skills/nope"],
+  ["backslash-file", "eval backslash-file: files.1: use / in evals\\sample\\eval.ts"],
+])("refuses %s with the line naming the listed path", async (name, message) => {
+  expect(await loadEval(ROOT, name)).toStrictEqual({ message, ok: false });
+});
