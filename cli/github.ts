@@ -1,20 +1,25 @@
 import { z } from "zod";
 
+import { environmentDrift } from "./github-environment.ts";
 import { rulesetDrift, wantedRulesets } from "./github-rulesets.ts";
 import { FIX } from "./github.constants.ts";
 import type { Current, Drift, GithubManifest, WantedResult, Wanted } from "./github.types.ts";
 import { keywordLines } from "./keyword-lines.ts";
 
 /**
- * What the repository should look like: both rulesets with `checks` as the required status checks, and the
- * description, homepage and topics package.json gives; keywords are the topics as written, or a refusal. A field
- * package.json leaves out is left alone on GitHub.
+ * What the repository should look like: both rulesets with `checks` as the required status checks, the `evals`
+ * environment when `environment` is set, and the description, homepage and topics package.json gives; keywords are
+ * the topics as written, or a refusal. A field package.json leaves out is left alone on GitHub.
  */
-export function wantedSettings(manifest: GithubManifest, checks: readonly string[]): WantedResult {
+export function wantedSettings(
+  manifest: GithubManifest,
+  checks: readonly string[],
+  { environment }: { environment: boolean },
+): WantedResult {
   const errors = manifest.keywords === undefined ? [] : keywordLines(manifest.keywords);
 
   if (errors.length > 0) return { errors, ok: false };
-  const wanted: Wanted = { rulesets: wantedRulesets(checks) };
+  const wanted: Wanted = { environment, rulesets: wantedRulesets(checks) };
 
   if (manifest.description !== undefined) wanted.description = manifest.description;
 
@@ -71,6 +76,8 @@ export function driftOf(wanted: Wanted, current: Current): Drift[] {
       value: topics,
     });
   }
+
+  drifts.push(...environmentDrift(current));
 
   return drifts;
 }

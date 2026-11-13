@@ -19,6 +19,11 @@ export const MANIFEST = {
   devDependencies: { vitest: "^5.1.0" },
 };
 
+/** The files of a checkout with the evals pack on beside release. */
+export const EVALS_FILES: Record<string, string> = {
+  "workerstack.config.ts": 'export default { packs: ["release", "evals"] };\n',
+};
+
 type Options = { origin?: string | null; files?: Record<string, string> };
 
 /** A git checkout under a temp dir with an origin, a release-pack config and `MANIFEST` unless `files` replaces them. */

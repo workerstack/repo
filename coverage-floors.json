@@ -215,6 +215,18 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/github-environment.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/github-get-json.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/guard-diagnostics.ts": {
     "branches": 100,
     "functions": 100,

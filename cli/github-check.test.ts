@@ -99,3 +99,12 @@ it("makes no gh call and prints nothing without the release pack", async () => {
   expect(await check(cwd, fake, { ci: true })).toStrictEqual({ problems: [], report: [] });
   expect(fake.calls).toStrictEqual([]);
 });
+
+it("reports the environment drift with the evals pack and no release pack", async () => {
+  const cwd = githubRepo({ files: { "workerstack.config.ts": 'export default { packs: ["evals"] };\n' } });
+  const settled = await settledSettings(cwd, { environment: null });
+  expect(await check(cwd, fakeGh(settled))).toStrictEqual({
+    problems: [`github: evals environment is missing: ${RUN}`],
+    report: [],
+  });
+});

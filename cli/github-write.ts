@@ -1,3 +1,4 @@
+import { environmentWrites } from "./github-environment.ts";
 import type { Gh, GhCall, GhFailure } from "./github-gh.ts";
 import { ONE } from "./github.constants.ts";
 import type { Current, Drift, Wanted } from "./github.types.ts";
@@ -5,8 +6,14 @@ import type { Current, Drift, Wanted } from "./github.types.ts";
 /** What a run changes: the settings it wanted, the ones it found, and the drift between them. */
 export type Plan = { slug: string; wanted: Wanted; current: Current; drifts: Drift[] };
 
-/** One API call, with the phrase for the summary line; the last call of a group carries the group's phrase. */
-export type Write = { call: GhCall; part?: string };
+/**
+ * One API call, with the phrase for the summary line; the last call of a group carries the group's phrase. `refusal`
+ * is the line to print when GitHub answers this call with a status that is not a login problem.
+ */
+export type Write = { call: GhCall; part?: string; refusal?: string };
+
+/** Why the writes stopped: the failure, and the refusal of the write that failed when it has one. */
+export type WriteFailure = GhFailure & { refusal?: string };
 
 function noun(count: number, word: string) {
   return `${count} ${word}${count === ONE ? "" : "s"}`;
@@ -86,7 +93,7 @@ function securityWrites({ slug, drifts }: Plan): Write[] {
 
 /** The API calls that fix `plan.drifts`, in the order they run, each with the phrase for the summary. */
 export function writesFor(plan: Plan): Write[] {
-  return [...rulesetWrites(plan), ...securityWrites(plan), ...metadataWrites(plan)];
+  return [...rulesetWrites(plan), ...securityWrites(plan), ...environmentWrites(plan), ...metadataWrites(plan)];
 }
 
 /** Runs the writes one after another and stops at the first failure; a rerun converges from wherever this stopped. */
@@ -94,11 +101,11 @@ export async function runWrites(
   gh: Gh,
   [next, ...rest]: readonly Write[],
   done: readonly string[] = [],
-): Promise<{ ok: true; parts: string[] } | GhFailure> {
+): Promise<{ ok: true; parts: string[] } | WriteFailure> {
   if (next === undefined) return { ok: true, parts: [...done] };
   const result = await gh(next.call);
 
-  if (!result.ok) return result;
+  if (!result.ok) return next.refusal === undefined ? result : { ...result, refusal: next.refusal };
 
   return await runWrites(gh, rest, next.part === undefined ? done : [...done, next.part]);
 }

@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `evals` is a pack `packs` in `workerstack.config.ts` accepts, opt-in like `benchmark`; turning it on writes nothing yet, it gates the evals environment and `eval.yml` of later releases.
 - `repo sync` makes `evals/*/eval.ts` a root entry of the generated `knip.json` when the root has an `evals/` dir, and adds an `.oxlintrc.json` override for `**/evals/*/eval.ts` that allows its default export and its `defineEval` call at import, so an eval file passes `repo check` and `repo lint` in every repo. This repo gains `evals/skill-routing`: `bun repo eval skill-routing` asks `claude-haiku-5-5` which skill it would load for real prompts, given every skill's description, and its graders run offline in the vitest suite.
+- With `evals` in `packs`, `bun repo github` creates or fixes a GitHub environment named `evals` that needs one person's approval and deploys only from the default branch: the admin who runs it becomes the reviewer when there is none, an existing `User` or `Team` reviewer and the wait timer are kept, self-review is let through, and a branch policy names the default branch alone. `bun repo github --check` and `repo check` report a missing environment, a missing reviewer, blocked self-review and any other branch as drift. A private repo whose plan has no required reviewers gets its own refusal line. Without the pack nothing reads or writes an environment. You still add `ANTHROPIC_API_KEY` to the environment by hand.
 
 ### Fixed
 

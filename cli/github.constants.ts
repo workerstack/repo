@@ -53,7 +53,20 @@ export const GITHUB_REMOTE: RegExp =
 
 /** The help line of `repo github`. */
 export const GITHUB_SUMMARY: string =
-  "apply the repository's rulesets, security settings and metadata, or report drift with --check";
+  "apply the repository's rulesets, security settings, evals environment and metadata, or report drift with --check";
+
+/** The environment that holds the eval key, behind a required reviewer, under the evals pack. */
+export const EVALS_ENVIRONMENT: string = "evals";
+export const ENVIRONMENT_LABEL: string = `${EVALS_ENVIRONMENT} environment`;
+
+/** The protection rules of an environment that `repo github` reads. */
+export const RULE_REVIEWERS: string = "required_reviewers";
+export const RULE_WAIT_TIMER: string = "wait_timer";
+
+/** What `repo github` prints when GitHub refuses the reviewer of a private repo's environment. */
+export const PRIVATE_REFUSAL: string =
+  `GitHub refused the ${ENVIRONMENT_LABEL}'s required reviewer; ` +
+  "a private repo needs GitHub Enterprise for it, or make the repo public";
 
 /** One, for the plural of a count, and a second's milliseconds. */
 export const ONE: number = 1;

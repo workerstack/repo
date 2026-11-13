@@ -157,7 +157,7 @@ list)
   mutate            mutation-test the tracked files in a clone of HEAD (--shard i/n, --report <file>); check <dir> \
 [--write]: score reports against mutation-floors.json
   turn              Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)
-  github            apply the repository's rulesets, security settings and metadata, or report drift with --check
+  github            apply the repository's rulesets, security settings, evals environment and metadata, or report drift with --check
   link              Swap a dependency for a packed sibling checkout (status: list links; --pre-push: the push check)
   push              Push the named branch, or the one the recent-branch table picks, and wait on its ci run (exit 5: \
 name the branch)

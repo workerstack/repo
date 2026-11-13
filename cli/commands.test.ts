@@ -45,7 +45,8 @@ describe("github", () => {
   it("is a command, with the help line Usage shows", () => {
     expect(isCommandName("github")).toBe(true);
     expect(COMMANDS.github.summary).toBe(
-      "apply the repository's rulesets, security settings and metadata, or report drift with --check",
+      "apply the repository's rulesets, security settings, evals environment and metadata, " +
+        "or report drift with --check",
     );
   });
 });

@@ -11,7 +11,7 @@ import {
 } from "./github.constants.ts";
 
 /** One GitHub API request: `path` is relative to the API root, `body` is sent as JSON. */
-export type GhCall = { method: "GET" | "POST" | "PUT" | "PATCH"; path: string; body?: unknown };
+export type GhCall = { method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; path: string; body?: unknown };
 
 /**
  * Why a call did not succeed; `message` reads as a sentence about gh, and `status` is the HTTP status when GitHub
