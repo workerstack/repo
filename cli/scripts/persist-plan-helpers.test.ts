@@ -36,9 +36,9 @@ describe("plan name and serial helpers", () => {
   });
 
   it("reads commit, strategy and mode from the frontmatter first, then a body line", () => {
-    const fm = "---\ncommit: feat: add x\nstrategy: review-fast\nmode: away\n---\n\n# t\n";
+    const fm = "---\ncommit: feat: add x\nstrategy: spawn-fast\nmode: away\n---\n\n# t\n";
     expect(extractCommit(fm)).toBe("feat: add x");
-    expect(extractStrategy(fm)).toBe("review-fast");
+    expect(extractStrategy(fm)).toBe("spawn-fast");
     expect(extractMode(fm)).toBe("away");
     const bare = "---\nserial: 1\n---\n\ncommit: fix: y\nmode: away\n";
     expect(extractCommit(bare)).toBe("fix: y");

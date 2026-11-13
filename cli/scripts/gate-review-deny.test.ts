@@ -46,18 +46,18 @@ function sendAs(kind: WriteKind, w: string, spec: { target: string; type: string
 }
 
 /** What a parent write is answered when the review is enforced on its harness, else nothing. */
-function parentAnswer(payload: HookInput, strategy = "review-fast") {
+function parentAnswer(payload: HookInput, strategy = "spawn-fast") {
   return ENFORCED_HARNESSES.has(harnessOf(payload)) ? deny(reviewReason(strategy)) : null;
 }
 
 const ENDED: [string, string][] = [
-  ["review-fast", "done"],
-  ["review-fast", "blocked"],
+  ["spawn-fast", "done"],
+  ["spawn-fast", "blocked"],
   ["default", "in-progress"],
 ];
 
 it.each(WRITE_KINDS)("%s: denies a parent product write and follows ENFORCED_HARNESSES", (kind) => {
-  for (const strategy of ["review-fast", "review-deep"]) {
+  for (const strategy of ["spawn-fast", "spawn-deep"]) {
     const w = tmp.dir("gate-review-");
     startReview(w, { strategy });
     const payload = reviewWrite(kind, { cwd: w, target: path.join(w, "src/x.ts") });
@@ -136,7 +136,7 @@ function implementerAnswers(kind: WriteKind, w: string) {
 it.each(WRITE_KINDS)(
   "%s: denies an implementer's write to the plan or the journal under every strategy, and nothing else",
   (kind) => {
-    for (const state of ["none", "default", "review-fast", "review-deep"]) {
+    for (const state of ["none", "default", "spawn-fast", "spawn-deep"]) {
       const w = tmp.dir("gate-review-");
 
       if (state !== "none") startReview(w, { strategy: state });
@@ -181,7 +181,7 @@ it("a reviewer parent's product write inside a worktree still gets the review re
   startReview(w);
 
   for (const kind of ["claudeWrite", "claudeEdit", "codexTool", "codexHeredoc"] as const)
-    expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toStrictEqual(deny(reviewReason("review-fast")));
+    expect(send(kind, w, path.join(w, ".worktrees/a/src/x.ts")), kind).toStrictEqual(deny(reviewReason("spawn-fast")));
 });
 
 it("judges by the canonical path through an alias of the root, and for a path.win32 root", () => {
@@ -221,7 +221,7 @@ it("Grok: a parent write through orchestrate-parent follows ENFORCED_HARNESSES",
   const payload = camelCall("Write", {}, { hookEventName: "PreToolUse", session_id: REVIEW_SID, workspaceRoot: w });
   const parent = run({});
   const verdict = parent === null ? null : { decision: parent.decision, reason: parent.reason };
-  const block = { decision: "block", reason: reviewReason("review-fast") };
+  const block = { decision: "block", reason: reviewReason("spawn-fast") };
   expect(verdict).toStrictEqual(ENFORCED_HARNESSES.has(harnessOf(payload)) ? block : null);
   expect(run({ subagent_type: "implementer-fast" })).toBeNull();
   expect(run({ subagent_type: "scout" })).toBeNull();

@@ -140,8 +140,8 @@ describe("a reply of y", () => {
     const file = plantFile(ws, ".repo/plans/2-x.md", `---\nserial: 2\n${SETTLED.join("\n")}\n---`);
     plantFile(ws, ".repo/tmp/sessions/y1/approvals.txt", `${file}\n`);
     const tp = transcript(ws, closing("plan 2 (strategy: default)"));
-    expect(say(ws, "y1", { prompt: "y review-fast", transcript_path: tp })).toContain(
-      "y did not approve plan 2: strategy review-fast could not be written (no frontmatter)",
+    expect(say(ws, "y1", { prompt: "y spawn-fast", transcript_path: tp })).toContain(
+      "y did not approve plan 2: strategy spawn-fast could not be written (no frontmatter)",
     );
   });
 });
@@ -168,8 +168,8 @@ describe("a reply of y to a plan that cannot be rewritten", () => {
     const plan = reviewedPlan(ws, "y2");
     fs.chmodSync(plan, 0o444);
     const tp = transcript(ws, closing("plan 1 (strategy: default)"));
-    const lines = say(ws, "y2", { prompt: "y review-fast", transcript_path: tp });
-    expect(lines.find((l) => l.startsWith("y did not approve"))).toContain("plan 1: strategy review-fast could not be");
+    const lines = say(ws, "y2", { prompt: "y spawn-fast", transcript_path: tp });
+    expect(lines.find((l) => l.startsWith("y did not approve"))).toContain("plan 1: strategy spawn-fast could not be");
     expect(fs.readFileSync(plan, "utf8")).toContain("strategy: default");
   });
 });

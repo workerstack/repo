@@ -1,8 +1,8 @@
 /** The strategy domain's values, closing-line items and approval replies. */
 
-export type Strategy = "default" | "review-fast" | "review-deep";
+export type Strategy = "default" | "spawn-fast" | "spawn-deep";
 
-export type ReviewStrategy = Exclude<Strategy, "default">;
+export type SpawnStrategy = Exclude<Strategy, "default">;
 
 export type Mode = "ask" | "auto" | "away";
 
@@ -13,4 +13,4 @@ export type Approval =
   | { kind: "handoff"; strategy: Strategy | null }
   | { kind: "unknown"; word: string };
 
-export type ActiveReview = { plan: string; serial: number; strategy: ReviewStrategy };
+export type ActiveReview = { plan: string; serial: number; strategy: SpawnStrategy };

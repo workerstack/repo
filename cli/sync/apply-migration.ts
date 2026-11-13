@@ -9,6 +9,7 @@ import { readJson } from "../json.ts";
 import { isDir, moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
+import { kindOf, renameStrategies } from "./strategy-rename.ts";
 import { rewriteOldPaths } from "./tmp-repo.ts";
 
 /** A step that acts: no conflict survives the early return of `applyMigration`. */
@@ -79,6 +80,15 @@ const ACTIONS: Actions = {
   remove(run, step) {
     removeAll(run.root, step.paths);
     run.removed = true;
+  },
+  "rename-strategy"(run, step) {
+    for (const rel of step.paths) {
+      const file = path.join(run.root, rel);
+
+      writeAtomic(file, renameStrategies(fs.readFileSync(file, "utf8"), kindOf(rel)));
+    }
+
+    run.lines.push(`${PREFIX}${step.note}`);
   },
   untrack(run, step) {
     untrack(run.root, step.paths);

@@ -11,7 +11,7 @@ import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 
 const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
-const NO_KEY = "strategy: default|review-fast|review-deep";
+const NO_KEY = "strategy: default|spawn-fast|spawn-deep";
 const MODE_KEY = "mode: ask|auto|away";
 
 function without(body: string) {
@@ -33,10 +33,10 @@ function save(content: string, ws = tmpWs()) {
 describe("roadmap strategy on a new save", () => {
   it("moves a body strategy line into the frontmatter after source and out of the body", () => {
     const ws = tmpWs();
-    const r = save(withStrategy(DRAFT_ROADMAP, "review-deep"), ws);
+    const r = save(withStrategy(DRAFT_ROADMAP, "spawn-deep"), ws);
     expect(r.ok, r.error).toBe(true);
     const [head, ...body] = read(path.join(ws, savedOk(r).path)).split("\n---\n");
-    expect(head).toMatch(/\nsource: "auth program"\nstrategy: review-deep$/);
+    expect(head).toMatch(/\nsource: "auth program"\nstrategy: spawn-deep$/);
     expect(body.join("\n---\n")).not.toMatch(/^strategy:/m);
   });
 
@@ -55,16 +55,16 @@ describe("roadmap strategy on a new save", () => {
 describe("roadmap strategy on an update", () => {
   it("keeps the key on a body-only update", () => {
     const ws = tmpWs();
-    const abs = path.join(ws, savedOk(save(withStrategy(DRAFT_ROADMAP, "review-fast"), ws)).path);
+    const abs = path.join(ws, savedOk(save(withStrategy(DRAFT_ROADMAP, "spawn-fast"), ws)).path);
     const body = without(DRAFT_ROADMAP).replace("strip narrating comments.", "strip narrating comments and logs.");
     const kept = update(ws, abs, body);
     expect(kept.ok, kept.error).toBe(true);
-    expect(read(abs)).toMatch(/^strategy: review-fast$/m);
+    expect(read(abs)).toMatch(/^strategy: spawn-fast$/m);
   });
 
   it("takes a new one, and denies a frontmatter without it", () => {
     const ws = tmpWs();
-    const abs = path.join(ws, savedOk(save(withStrategy(DRAFT_ROADMAP, "review-fast"), ws)).path);
+    const abs = path.join(ws, savedOk(save(withStrategy(DRAFT_ROADMAP, "spawn-fast"), ws)).path);
     const changed = update(ws, abs, withStrategy(DRAFT_ROADMAP, "default"));
     expect(changed.ok, changed.error).toBe(true);
     expect(read(abs)).toMatch(/^strategy: default$/m);

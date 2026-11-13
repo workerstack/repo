@@ -38,6 +38,8 @@ export type MigrationStep =
   | { kind: "prune"; path: string; note: string }
   /** Writes a file. `note` is the line printed. */
   | { kind: "write"; path: string; content: string; note: string }
+  /** Renames the old `review-*` strategies in each of `paths`; `note` is the line printed. */
+  | { kind: "rename-strategy"; paths: string[]; note: string }
   /** Prints a line for something the user must do by hand. */
   | { kind: "note"; note: string }
   /**

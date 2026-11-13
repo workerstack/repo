@@ -25,7 +25,7 @@
         "timeout": 5,
         "type": "command"
       },
-      // Fat Read/Grep/Glob/Bash + Write/Edit scratch rewrite. Writes are denied only to an implementer-* child (plan, journal) and to the parent while a review-* plan runs (outside .tmp/).
+      // Fat Read/Grep/Glob/Bash + Write/Edit scratch rewrite. Writes are denied only to an implementer-* child (plan, journal) and to the parent while a spawn-* plan runs (outside the ignored .repo dirs).
       {
         "command": "repo hook gate-fat-tools",
         "matcher": "Read|read_file|Grep|grep|Glob|list_dir|Bash|Shell|run_terminal_command|Write|Edit|write|search_replace|apply_patch|write_file|edit_file|run_command",

@@ -4,7 +4,7 @@ description: Review an implementer
 
 # Review loop
 
-Read this when the plan's `strategy` is `review-fast` or `review-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
+Read this when the plan's `strategy` is `spawn-fast` or `spawn-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
 
 ## Start
 
@@ -12,7 +12,7 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 
 ## Phases
 
-- Phases run in order; each goes to one implementer: `implementer-fast` first on `review-fast`, `implementer-deep` on `review-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
+- Phases run in order; each goes to one implementer: `implementer-fast` first on `spawn-fast`, `implementer-deep` on `spawn-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
 - The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun repo worktree add {serial}-{name}` first if it is missing.
 - A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.

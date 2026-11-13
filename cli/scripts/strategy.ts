@@ -23,12 +23,12 @@ import {
   IN_PROGRESS,
   LINE_BREAK_RE,
   MODES,
-  REVIEW_FAST,
+  SPAWN_FAST,
   STAMP_FILE,
   STRATEGIES,
   UNSAFE_SID_RE,
 } from "./strategy.constants.ts";
-import type { ActiveReview, Mode, ReviewStrategy, Strategy } from "./strategy.types.ts";
+import type { ActiveReview, Mode, SpawnStrategy, Strategy } from "./strategy.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 export function parseMode(v: string | undefined): Mode | null {
@@ -39,9 +39,9 @@ export function parseStrategy(v: string | undefined): Strategy | null {
   return STRATEGIES.find((s) => s === v) ?? null;
 }
 
-/** The implementer agent for a review strategy. review-fast starts fast and escalates; there is no attempt 3. */
-export function implementerOf(s: ReviewStrategy, attempt: 1 | 2): typeof IMPLEMENTER_FAST | typeof IMPLEMENTER_DEEP {
-  return s === REVIEW_FAST && attempt === 1 ? IMPLEMENTER_FAST : IMPLEMENTER_DEEP;
+/** The implementer agent for a spawn strategy. spawn-fast starts fast and escalates; there is no attempt 3. */
+export function implementerOf(s: SpawnStrategy, attempt: 1 | 2): typeof IMPLEMENTER_FAST | typeof IMPLEMENTER_DEEP {
+  return s === SPAWN_FAST && attempt === 1 ? IMPLEMENTER_FAST : IMPLEMENTER_DEEP;
 }
 
 export function stampPath(root: string, sid: string): string {
@@ -89,7 +89,7 @@ function frontmatter(text: string): Record<string, string> | null {
   return fm;
 }
 
-/** The review this session runs: the stamped plan, when its own frontmatter says in-progress and review-*. */
+/** The review this session runs: the stamped plan, when its own frontmatter says in-progress and spawn-*. */
 export function activeReview(root: string, sid: string): ActiveReview | null {
   try {
     const plan = stampedPlan(root, sid);

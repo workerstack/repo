@@ -19,7 +19,7 @@ const STAGING = [
 ];
 
 it("an implementer's git add and git commit are denied under every strategy; reads and a parent's git pass", () => {
-  for (const state of ["none", "default", "review-fast"]) {
+  for (const state of ["none", "default", "spawn-fast"]) {
     const w = tmp.dir("gate-review-");
 
     if (state !== "none") startReview(w, { strategy: state });

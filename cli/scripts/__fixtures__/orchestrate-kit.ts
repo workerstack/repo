@@ -110,7 +110,7 @@ export function transcript(ws: string, text: string): string {
 
 /** The closing line text after `Reply "y" to run `, with every other reply the default strategies offer. */
 export const closing = (what: string): string =>
-  `Reply "y" to run ${what}, or "y review-fast" / "y review-deep", or "h" / "h fast" / "h deep" for a fresh session.`;
+  `Reply "y" to run ${what}, or "y spawn-fast" / "y spawn-deep", or "h" / "h fast" / "h deep" for a fresh session.`;
 
 /** The `strategy:` a saved file holds. */
 export const strategyOf = (file: string): string | undefined =>

@@ -20,7 +20,7 @@ export const IMPLEMENTER_GIT = "implementer never stages or commits; report the 
 
 /** The deny a parent product write gets while a review of `strategy` runs. */
 export function reviewReason(strategy: string): string {
-  const implementer = strategy === "review-fast" ? "implementer-fast" : "implementer-deep";
+  const implementer = strategy === "spawn-fast" ? "implementer-fast" : "implementer-deep";
   return `plan 3 runs strategy ${strategy}: this session reviews. Spawn ${implementer} for product writes; the plan, the journal and .repo/ work dirs stay writable.`;
 }
 
@@ -40,7 +40,7 @@ export function planFile(root: string, strategy: string, status = "in-progress")
 
 /** A session (default: the review suites') stamped to a plan holding `strategy` at `status`; returns the plan's path. */
 export function startReview(root: string, spec: { strategy?: string; status?: string; sid?: string } = {}): string {
-  const { file } = planFile(root, spec.strategy ?? "review-fast", spec.status ?? "in-progress");
+  const { file } = planFile(root, spec.strategy ?? "spawn-fast", spec.status ?? "in-progress");
   writeStamp(root, spec.sid ?? REVIEW_SID, file);
   return file;
 }

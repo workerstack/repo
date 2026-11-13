@@ -15,6 +15,7 @@ import type { Output } from "./sync/outputs.ts";
 import { type StepRun, stepBlock } from "./sync/step-block.ts";
 import { readStockHistory } from "./sync/stock-history.ts";
 import { isSelf, stockRoot } from "./sync/stock.ts";
+import { planStrategyRename } from "./sync/strategy-rename.ts";
 import { planTmpRepo } from "./sync/tmp-repo.ts";
 import { validateOutputs } from "./sync/validate-outputs.ts";
 import { readWorkspace, type Workspace } from "./sync/workspace.ts";
@@ -213,6 +214,9 @@ async function prepare(run: Run): Promise<number | null> {
   const relocation = await stepBlock({ noun: "relocation", steps: planTmpRepo(run.root) }, blocks);
 
   if ("exit" in relocation) return relocation.exit;
+  const renamed = await stepBlock({ noun: "strategy", steps: planStrategyRename(run.root) }, blocks);
+
+  if ("exit" in renamed) return renamed.exit;
   const upgraded = await upgradeRules(run);
 
   if (upgraded !== null) return upgraded;

@@ -57,7 +57,7 @@ reviews: 0             # settled /review-plan rounds; never lowered or removed
 created: 2026-08-26T14:30:00Z    # UTC ISO-8601 seconds + Z; no milliseconds
 source: "<≤120 chars of user task>"
 commit: feat: <subject>
-strategy: default      # default | review-fast | review-deep
+strategy: default      # default | spawn-fast | spawn-deep
 mode: away             # optional: ask | auto | away
 ---
 ```
@@ -67,10 +67,10 @@ mode: away             # optional: ask | auto | away
 `strategy` is required. It says how the plan gets implemented:
 
 - `default`: the main session does the work, as it always has. No extra rules apply.
-- `review-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
-- `review-deep`: the same loop, with `implementer-deep` from the first attempt.
+- `spawn-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
+- `spawn-deep`: the same loop, with `implementer-deep` from the first attempt.
 
-A save with no `strategy` or an unknown value is denied with `strategy: default|review-fast|review-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
+A save with no `strategy` or an unknown value is denied with `strategy: default|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with `y <strategy>` when approving, or `h fast` / `h deep` when handing off.
 
 `mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` wins over the session's `/ask` or `/away` flag, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
@@ -179,7 +179,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 - filename matches new stamped regex or legacy unstamped; new writes unpadded + stamp (`1-foo-20260826T143000Z.md` not `0001-foo.md`); serial int equals leading digits; `name` equals slug after stripping optional trailing `-\d{8}T\d{6}Z`
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
-- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is required and is `default`, `review-fast` or `review-deep`; a save without it, or with another value, is invalid. Optional `mode` is `ask`, `auto` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
+- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is required and is `default`, `spawn-fast` or `spawn-deep`; a save without it, or with another value, is invalid. Optional `mode` is `ask`, `auto` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
 - headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase

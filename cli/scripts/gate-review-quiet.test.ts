@@ -68,7 +68,7 @@ function answers(w: string): string[] {
 const states: [string, (w: string) => void][] = [
   ["default", (w) => startReview(w, { strategy: "default" })],
   ["ready", (w) => startReview(w, { status: "ready" })],
-  ["done", (w) => startReview(w, { status: "done", strategy: "review-deep" })],
+  ["done", (w) => startReview(w, { status: "done", strategy: "spawn-deep" })],
   ["blocked", (w) => startReview(w, { status: "blocked" })],
   ["stamp of a missing plan", (w) => writeStamp(w, REVIEW_SID, path.join(w, ".repo/plans/gone.md"))],
   [
@@ -78,7 +78,7 @@ const states: [string, (w: string) => void][] = [
       fs.writeFileSync(stampPath(w, REVIEW_SID), "{");
     },
   ],
-  ["stamp for another session", (w) => writeStamp(w, "other", planFile(w, "review-fast").file)],
+  ["stamp for another session", (w) => writeStamp(w, "other", planFile(w, "spawn-fast").file)],
 ];
 
 it(
