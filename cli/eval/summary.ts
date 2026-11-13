@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 
 import { writeAtomic } from "../sync/migrate-fs.ts";
+import type { Via } from "./estimate.ts";
 import type { RunResult } from "./run.ts";
 
 const SUFFIX_BYTES = 2;
@@ -11,7 +12,7 @@ const JSON_INDENT = 2;
 /** The ISO punctuation a stamp drops. */
 const STAMP_PUNCTUATION = /[-:.]/g;
 
-export type SummaryInput = { eval: string; model: string; cap: number; estimate: number; run: RunResult };
+export type SummaryInput = { eval: string; model: string; cap: number; estimate: number; run: RunResult; via: Via };
 
 /** `20261113T100655123Z`: the UTC clock down to the millisecond. */
 function stampOf(now: Date): string {
@@ -34,6 +35,7 @@ export function writeSummary(dir: string, input: SummaryInput, now: Date): strin
     eval: input.eval,
     model: input.model,
     spent: run.spent,
+    via: input.via,
   };
 
   writeAtomic(file, `${JSON.stringify(body, null, JSON_INDENT)}\n`);

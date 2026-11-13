@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import type { Via } from "./estimate.ts";
 import type { RunResult } from "./run.ts";
 import { writeSummary } from "./summary.ts";
 
@@ -23,8 +24,10 @@ function runOf(end: RunResult["end"]): RunResult {
   return { cached: 1, calls: 4, cases: CASES, end, spent: 0.5 };
 }
 
-function write(end: RunResult["end"], now = NOW): string {
-  return writeSummary(dir, { cap: 2, estimate: 1.5, eval: "demo", model: "m", run: runOf(end) }, now);
+function write(end: RunResult["end"], now = NOW, via: Via = "session"): string {
+  const input = { cap: 2, estimate: 1.5, eval: "demo", model: "m", run: runOf(end), via };
+
+  return writeSummary(dir, input, now);
 }
 
 it("names the file from the eval and the UTC clock", () => {
@@ -57,6 +60,13 @@ it.each([[{ kind: "done" }], [{ kind: "stopped" }], [{ kind: "failed", message: 
       eval: "demo",
       model: "m",
       spent: 0.5,
+      via: "session",
     });
   },
 );
+
+it("records how the run was paid", () => {
+  const json = JSON.parse(fs.readFileSync(write({ kind: "done" }, NOW, "api"), "utf8"));
+
+  expect(json).toMatchObject({ via: "api" });
+});

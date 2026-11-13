@@ -34,6 +34,14 @@ on:
         required: true
         type: string
         default: "1"
+      via:
+        description: How the eval is paid for, the Claude Code session or the API key
+        required: true
+        type: choice
+        options:
+          - session
+          - api
+        default: session
 
 concurrency:
   group: eval-\${{ inputs.eval }}
@@ -58,13 +66,18 @@ jobs:
           path: .repo/tmp/evals/cache
           key: evals-\${{ inputs.eval }}-\${{ github.run_id }}
           restore-keys: evals-\${{ inputs.eval }}-
+      - name: Install Claude Code
+        if: inputs.via == 'session'
+        run: npm install -g @anthropic-ai/claude-code@2.1.323
       - name: Run the eval
         shell: bash
         env:
           ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: \${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           EVAL: \${{ inputs.eval }}
           MAX_COST: \${{ inputs.max-cost }}
-        run: bun repo eval "$EVAL" --max-cost "$MAX_COST"
+          VIA: \${{ inputs.via }}
+        run: bun repo eval "$EVAL" --max-cost "$MAX_COST" --via "$VIA"
       - uses: actions/cache/save@${CACHE}
         if: always()
         with:
@@ -97,6 +110,17 @@ it("writes the whole eval.yml with the pack on, over one it wrote before", () =>
   expect(evalWorkflow(context(EVALS, {}, { [PATH]: `${HEADER}\nname: eval\n` }))).toStrictEqual(written);
 });
 
+it("installs Claude Code only for the session and passes via to the run through env, never inside run", () => {
+  const runs = EVAL_YML.split("\n").filter((line) => line.trim().startsWith("run:"));
+
+  expect(runs.length).toBeGreaterThan(0);
+  expect(runs.filter((line) => line.includes("${{"))).toStrictEqual([]);
+  expect(EVAL_YML).toContain(
+    "        if: inputs.via == 'session'\n        run: npm install -g @anthropic-ai/claude-code@2.1.323",
+  );
+  expect(EVAL_YML).toContain('--via "$VIA"');
+});
+
 it("refuses a hand-written eval.yml", () => {
   expect(evalWorkflow(context(EVALS, {}, { [PATH]: "name: mine\n" }))).toStrictEqual({
     errors: [`${PATH} is hand-written; delete it so repo sync can own it`],
@@ -104,10 +128,16 @@ it("refuses a hand-written eval.yml", () => {
   });
 });
 
-it("names ANTHROPIC_API_KEY in no checked-in workflow but eval.yml", () => {
+it("names neither secret in any checked-in workflow but eval.yml", () => {
   const dir = fileURLToPath(new URL("../../.github/workflows", import.meta.url));
   const others = fs.readdirSync(dir).filter((name) => name !== "eval.yml");
   expect(others.length).toBeGreaterThan(0);
-  const leaks = others.filter((name) => fs.readFileSync(path.join(dir, name), "utf8").includes("ANTHROPIC_API_KEY"));
+
+  const leaks = others.filter((name) => {
+    const text = fs.readFileSync(path.join(dir, name), "utf8");
+
+    return text.includes("ANTHROPIC_API_KEY") || text.includes("CLAUDE_CODE_OAUTH_TOKEN");
+  });
+
   expect(leaks).toStrictEqual([]);
 });

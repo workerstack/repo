@@ -4,9 +4,10 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { openCache } from "./cache.ts";
+import { cacheKey, openCache } from "./cache.ts";
+import type { Via } from "./estimate.ts";
 import { FRAMING_TOKENS } from "./price.constants.ts";
-import { runEval } from "./run.ts";
+import { runEval, sampleKey } from "./run.ts";
 import type { ResolvedEval } from "./spec.ts";
 
 const HAIKU = { input: 0.1, output: 0.5 };
@@ -20,6 +21,10 @@ beforeEach(() => {
 afterEach(() => {
   fs.rmSync(dir, { force: true, recursive: true });
 });
+
+function long() {
+  return Promise.resolve({ inputTokens: 1000, outputTokens: 5000, text: "good" });
+}
 
 function pass(output: string): boolean {
   return output === "good";
@@ -60,8 +65,9 @@ function spec(change: Partial<ResolvedEval> = {}): ResolvedEval {
 function job(
   complete: (input: string) => Promise<never> | Promise<{ inputTokens: number; outputTokens: number; text: string }>,
   cap = 1,
+  via: Via = "api",
 ) {
-  return { cache: openCache(dir), cap, complete, price: HAIKU };
+  return { cache: openCache(dir), cap, complete, price: HAIKU, via };
 }
 
 it("passes at 1 of 3 failing and fails at 2 of 3", async () => {
@@ -140,4 +146,32 @@ it("ends failed on one failed sample, keeps the others and calls no later case",
 
   expect(next.cached).toBe(2);
   expect(rerun.calls.filter((one) => one === "a")).toHaveLength(1);
+});
+
+it("stops on the session bound where the API bound would still run", async () => {
+  const bound = (4 + FRAMING_TOKENS) * 0.1 + 256 * 0.5;
+  const cap = ((3 * (bound + 1500 * 0.1)) / 1_000_000) * 1.05;
+  const api = await runEval(spec(), job(stub({}, 10).complete, cap, "api"));
+  const session = await runEval(spec(), job(stub({}, 10).complete, cap, "session"));
+
+  expect(api.end).toStrictEqual({ kind: "done" });
+  expect(session.end).toStrictEqual({ kind: "stopped" });
+  expect(session.cases).toHaveLength(1);
+});
+
+it("spends a reply past maxTokens in full", async () => {
+  const result = await runEval(spec({ cases: [{ id: "a", input: "a", pass, source: "s" }] }), job(long, 1, "session"));
+
+  expect(result.spent).toBeCloseTo((3 * (1000 * 0.1 + 5000 * 0.5)) / 1_000_000, 12);
+});
+
+it("keeps API keys as they were and gives session keys their own", () => {
+  const one = { id: "a", input: "a", pass, source: "s" };
+  const parts = { input: "a", maxTokens: 256, model: "claude-haiku-5-5", sample: 0, system: "sys" };
+
+  expect(sampleKey(spec(), one, { sample: 0, via: "api" })).toBe(cacheKey(parts));
+  expect(sampleKey(spec(), one, { sample: 0, via: "session" })).not.toBe(cacheKey(parts));
+  const first = sampleKey(spec(), one, { sample: 0, via: "session" });
+
+  expect(sampleKey(spec(), one, { sample: 1, via: "session" })).not.toBe(first);
 });

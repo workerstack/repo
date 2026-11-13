@@ -8,7 +8,8 @@ import { useGitTree } from "../__fixtures__/git-tree.ts";
 import { useEvalRun } from "./__fixtures__/eval-run.ts";
 import { parseArgs } from "./eval-args.ts";
 
-const ESTIMATE = /^eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5, at most \$[\d.]+ \(cap \$1\.00\)$/m;
+const COUNT = "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5 via (?:session|api)";
+const ESTIMATE = new RegExp(`^${COUNT}, at most \\$[\\d.]+ \\(cap \\$1\\.00\\)$`, "mv");
 const NEEDS_BASE = "eval: --changed needs a git base, such as main\n";
 const SOLO = "export default { cases: [{ id: 'a', input: 'x', pass: () => true, source: 's' }], system: 's' };\n";
 const tree = useGitTree("eval-changed-main-");
@@ -26,7 +27,7 @@ function wroteRuns(): boolean {
 
 it("takes the base after --changed as its value, not as a second name", () => {
   expect(parseArgs(["sample", "--changed", "main"])).toStrictEqual({
-    args: { cap: 1, changed: "main", isDryRun: false, name: "sample" },
+    args: { cap: 1, changed: "main", isDryRun: false, name: "sample", via: "session" },
     ok: true,
   });
 });
@@ -50,6 +51,7 @@ it("prints the no-match line and exits 0 without reading the key or writing a su
   const result = await run(["sample", "--changed", "main"], { changedSince: () => ["evals/other/eval.ts"] });
 
   expect(result).toStrictEqual({
+    claudeCalls: 0,
     code: 0,
     err: "",
     fetches: 0,
@@ -63,6 +65,13 @@ it("refuses a base git cannot diff against, exit 1", async () => {
   const result = await run(["sample", "--changed", "nope"], { changedSince: () => null });
 
   expect(result).toMatchObject({ code: 1, err: 'eval: --changed: git cannot diff against "nope"\n', keyReads: 0 });
+});
+
+it("takes --via with --changed and runs a changed eval on the session", async () => {
+  const result = await run(["sample", "--changed", "main", "--via", "session"], { changedSince: folderChanged });
+
+  expect(result).toMatchObject({ claudeCalls: 6, code: 0, fetches: 0, keyReads: 0 });
+  expect(result.out.split("\n")[0]).toBe("eval sample: evals/sample/eval.ts changed since main");
 });
 
 it("reads git by default: a committed eval with nothing since HEAD runs nothing", async () => {

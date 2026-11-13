@@ -1,6 +1,6 @@
 import { errorMessage } from "../sync-errors.ts";
 import { type Cache, cacheKey } from "./cache.ts";
-import { callBound, type IsCached, missesOf } from "./estimate.ts";
+import { callBound, type IsCached, missesOf, type Via } from "./estimate.ts";
 import { type Price, TOKENS_PER_MTOK } from "./price.constants.ts";
 import type { EvalCase, ResolvedEval } from "./spec.ts";
 
@@ -18,11 +18,16 @@ type RunEnd = { kind: "done" } | { kind: "stopped" } | { kind: "failed"; message
 export type RunResult = { cases: CaseResult[]; spent: number; calls: number; cached: number; end: RunEnd };
 
 /** What a run needs besides the spec: the model call, its prices, the cap and the cache. */
-export type RunJob = { complete: Complete; price: Price; cap: number; cache: Cache };
+export type RunJob = { complete: Complete; price: Price; cap: number; cache: Cache; via: Via };
 
-/** The cache key of one sample of one case. */
-export function sampleKey(spec: ResolvedEval, one: EvalCase, sample: number): string {
-  const { maxTokens, model, system } = spec;
+/** Which sample of a case, and how it is sent. */
+export type Draw = { sample: number; via: Via };
+
+/** The cache key of one sample of one case; a session answer never reuses an API key, which stays as it was. */
+export function sampleKey(spec: ResolvedEval, one: EvalCase, draw: Draw): string {
+  const { sample, via } = draw;
+  const { maxTokens, system } = spec;
+  const model = via === "session" ? `session:${spec.model}` : spec.model;
 
   return cacheKey({ input: one.input, maxTokens, model, sample, system });
 }
@@ -37,7 +42,7 @@ type Ctx = { spec: ResolvedEval; job: RunJob };
 
 /** One sample: the cached answer, or a call whose answer is cached right after it returns. */
 async function takeSample(ctx: Ctx, one: EvalCase, index: number): Promise<{ done: Completion; isHit: boolean }> {
-  const key = sampleKey(ctx.spec, one, index);
+  const key = sampleKey(ctx.spec, one, { sample: index, via: ctx.job.via });
   const hit = ctx.job.cache.get(key);
 
   if (hit !== undefined) return { done: hit, isHit: true };
@@ -73,7 +78,7 @@ function tally(run: RunResult, settled: PromiseSettledResult<{ done: Completion;
 /** Whether the cache answers sample `index` of `one`. */
 function cachedIn(ctx: Ctx): IsCached {
   return function isCached(one, index) {
-    return ctx.job.cache.get(sampleKey(ctx.spec, one, index)) !== undefined;
+    return ctx.job.cache.get(sampleKey(ctx.spec, one, { sample: index, via: ctx.job.via })) !== undefined;
   };
 }
 
@@ -84,7 +89,9 @@ async function runInOrder(ctx: Ctx, cases: readonly EvalCase[], run: RunResult):
   if (one === undefined) return;
   const { job, spec } = ctx;
 
-  if (run.spent + missesOf(spec, one, cachedIn(ctx)) * callBound(spec, one, job.price) > job.cap) {
+  const bound = callBound(spec, one, { price: job.price, via: job.via });
+
+  if (run.spent + missesOf(spec, one, cachedIn(ctx)) * bound > job.cap) {
     run.end = { kind: "stopped" };
 
     return;

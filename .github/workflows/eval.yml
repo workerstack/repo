@@ -13,6 +13,14 @@ on:
         required: true
         type: string
         default: "1"
+      via:
+        description: How the eval is paid for, the Claude Code session or the API key
+        required: true
+        type: choice
+        options:
+          - session
+          - api
+        default: session
 
 concurrency:
   group: eval-${{ inputs.eval }}
@@ -37,13 +45,18 @@ jobs:
           path: .repo/tmp/evals/cache
           key: evals-${{ inputs.eval }}-${{ github.run_id }}
           restore-keys: evals-${{ inputs.eval }}-
+      - name: Install Claude Code
+        if: inputs.via == 'session'
+        run: npm install -g @anthropic-ai/claude-code@2.1.323
       - name: Run the eval
         shell: bash
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           EVAL: ${{ inputs.eval }}
           MAX_COST: ${{ inputs.max-cost }}
-        run: bun repo eval "$EVAL" --max-cost "$MAX_COST"
+          VIA: ${{ inputs.via }}
+        run: bun repo eval "$EVAL" --max-cost "$MAX_COST" --via "$VIA"
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: always()
         with:
