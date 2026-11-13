@@ -20,6 +20,7 @@ import { IGNORE_BASE as REAL_IGNORE_BASE, untrackedEntries } from "./git-files.t
 it("ignores the bare .tmp/ and every ignored .repo dir, and the fixture list matches the real one", () => {
   for (const dir of IGNORED_DIRS) expect(REAL_IGNORE_BASE).toContain(`**/.repo/${dir}/`);
   expect(REAL_IGNORE_BASE).toContain(".tmp/");
+  expect(REAL_IGNORE_BASE).toContain("**/.repo/backlog.md");
   expect([...REAL_IGNORE_BASE]).toStrictEqual(IGNORE_BASE);
 });
 

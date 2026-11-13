@@ -120,6 +120,7 @@
     "ced7c3eaf2356090"
   ],
   ".agents/skills/away/SKILL.md": ["e9100f4b23565ac0"],
+  ".agents/skills/backlog/SKILL.md": ["749b30d34e8b751d"],
   ".agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   ".agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
   ".agents/skills/blast-radius/SKILL.md": ["edd6d7e66ec29712"],
@@ -2128,7 +2129,8 @@
     "eb259b17ad2556a3",
     "ee68d40bb1dad625",
     "f7aca76804f498ba",
-    "ff62f76c3b6f9352"
+    "ff62f76c3b6f9352",
+    "ffc0ef4a329cfe3f"
   ],
   "agents/global-settings/antigravity.json": ["7a2c5d27e1f7b1e8"],
   "agents/global-settings/claude.json": ["2b1dd203c98c740e"],
@@ -2144,6 +2146,7 @@
     "8d1e4ccff74232b2",
     "cd1de5a4acf42142",
     "d430ca6fec0763d6",
+    "e28549c22ba54616",
     "e32b4a6bcdb23d69",
     "fbe4a33c058c0f7c"
   ],
@@ -2158,6 +2161,7 @@
   "agents/skills/ask/SKILL.md": ["06a3ef753760f34f"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e"],
   "agents/skills/away/SKILL.md": ["e9100f4b23565ac0"],
+  "agents/skills/backlog/SKILL.md": ["749b30d34e8b751d"],
   "agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   "agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
   "agents/skills/blast-radius/SKILL.md": ["edd6d7e66ec29712"],
@@ -3109,6 +3113,7 @@
   ],
   "cli/scripts/clean-sweep.test.ts": [
     "0bb42a0124d82fd5",
+    "178081a0489af744",
     "398d2d3bd0b58474",
     "45dc1a5a9cfab839",
     "a5796d8065a8c793",

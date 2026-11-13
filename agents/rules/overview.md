@@ -21,3 +21,5 @@ Before you change anything, read `node_modules/@workerstack/repo/references/scop
 Every change happens in a worktree. Run `bun repo worktree add <name>`, then edit, test and commit in `.worktrees/<name>`, then run `bun repo worktree finish <name>` from the root. Never write product files in the main checkout. Any git is fine in your worktree. In the main checkout or on the default branch, run no destructive git (stash, reset, checkout, switch, restore, clean, rebase, force push, deleting the default branch) unless the user asked. Never drop stashes you did not make.
 
 Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matches the work, read that file in full. No folder map in your context? Run `bun repo map [dir]`, not `ls` or `find`.
+
+Found something outside the active plan or roadmap? Add it to `.repo/backlog.md` as `- [ ] ...` with the backlog skill and keep going. Do not fix it or widen the plan. Name the new lines in your closing reply.

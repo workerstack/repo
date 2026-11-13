@@ -84,6 +84,7 @@ it("repo clean keeps the committed .repo files and reports an empty sweep agains
   const put = planter(root);
 
   const committed = [
+    ".repo/backlog.md",
     ".repo/lessons/x.md",
     ".repo/lint-baseline.json",
     ".repo/test-times.json",

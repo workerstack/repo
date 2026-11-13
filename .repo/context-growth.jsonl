@@ -1,1 +1,5 @@
 {"bucket":"skills","from":9284,"to":9363,"reason":"rust guidance moved from an always-on path rule to a skill"}
+{"bucket":"rules","from":3032,"to":3243,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
+{"bucket":"skills","from":9363,"to":9473,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
+{"bucket":"rules","from":2913,"to":3243,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}
+{"bucket":"rules","from":2913,"to":3124,"reason":"backlog skill and one always-on rule so agents log off-plan finds"}

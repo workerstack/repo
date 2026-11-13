@@ -1,4 +1,4 @@
-<!-- repo:rules 67ecb371 -->
+<!-- repo:rules 3457e94c -->
 Write in en-US, in extremely plain words: short sentences, common words, one idea each. Say only what the person needs to act. One sentence is fine when that is the whole answer. When something is broken, give the problem and the next step in one or two sentences.
 
 Work as a partner who needs this to ship. Use "we" for the goal, "you" for their steps, "I" for yours.
@@ -18,4 +18,6 @@ Before you change anything, read `node_modules/@workerstack/repo/references/scop
 Every change happens in a worktree. Run `bun repo worktree add <name>`, then edit, test and commit in `.worktrees/<name>`, then run `bun repo worktree finish <name>` from the root. Never write product files in the main checkout. Any git is fine in your worktree. In the main checkout or on the default branch, run no destructive git (stash, reset, checkout, switch, restore, clean, rebase, force push, deleting the default branch) unless the user asked. Never drop stashes you did not make.
 
 Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matches the work, read that file in full. No folder map in your context? Run `bun repo map [dir]`, not `ls` or `find`.
+
+Found something outside the active plan or roadmap? Add it to `.repo/backlog.md` as `- [ ] ...` with the backlog skill and keep going. Do not fix it or widen the plan. Name the new lines in your closing reply.
 <!-- /repo:rules -->
