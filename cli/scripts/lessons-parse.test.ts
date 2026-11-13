@@ -95,6 +95,11 @@ describe("parseLesson body", () => {
   it("names a missing or empty section", () => {
     expect(errorsOf(`${head()}# T\n\n## Mistake\nm\n`)).toContain("missing ## Fix");
     expect(errorsOf(`${head()}# T\n\n## Mistake\n\n## Fix\nf\n`)).toContain("## Mistake is empty");
+    expect(errorsOf(`${head()}# T\n`)).toStrictEqual([
+      "missing ## Mistake",
+      "missing ## Fix",
+      "use only ## Mistake then ## Fix as section headings",
+    ]);
   });
 
   it("allows only Mistake then Fix", () => {

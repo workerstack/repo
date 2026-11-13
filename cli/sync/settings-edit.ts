@@ -13,11 +13,7 @@ const READONLY_KEY = "files.readonlyInclude";
  * lacks added, every other key and comment as written, and the repair that explains it when the file is left as is:
  * not valid JSONC, or holding no object. A key the file already holds keeps its value, whatever `defaults` says.
  */
-export function settingsEdit(
-  existing: string | null,
-  paths: readonly string[],
-  defaults: JsonObject = {},
-): RegionResult {
+export function settingsEdit(existing: string | null, paths: readonly string[], defaults: JsonObject): RegionResult {
   return editJsonc(existing, (text, formatting) => {
     const readonly = Object.fromEntries(paths.toSorted(byCodeUnit).map((rel) => [rel, true]));
     // Inserted first, the new key leaves every neighbour's whitespace as written; appended, its formatting would
