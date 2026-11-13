@@ -4,7 +4,7 @@
  *   session stamp  which plan this session reviews; the plan file is the truth, the stamp only points at it
  *   mode           how a session handles a question: ask, auto or away
  *
- * The closing line and approval replies live in `closing-line.ts`. Node builtins, `canonicalPath` and the stamp's
+ * The approval block and approval replies live in `closing-line.ts`. Node builtins, `canonicalPath` and the stamp's
  * schema only.
  */
 import fs from "node:fs";

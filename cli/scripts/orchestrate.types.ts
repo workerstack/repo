@@ -1,13 +1,14 @@
-import type { closingLine, parseApproval } from "./closing-line.ts";
+import type { parseApproval } from "./closing-line.ts";
 import type { HookOutput, ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { STRATEGIES } from "./strategy.constants.ts";
+import type { Approvable as BlockItem } from "./strategy.types.ts";
 import type { Roots } from "./workspace-root.ts";
 
 export type Strategy = (typeof STRATEGIES)[number];
 
-/** A reviewed plan or roadmap, as the closing line names it. */
-export type Approvable = Parameters<typeof closingLine>[0][number];
+/** A reviewed plan or roadmap, as the approval block names it. */
+export type Approvable = BlockItem;
 
 /** A plan or roadmap by kind and serial, never by path text. */
 export type ItemRef = Pick<Approvable, "kind" | "serial">;
@@ -18,7 +19,7 @@ export type ApprovalItem = {
   mtime: number;
 } & Approvable;
 
-/** A reply of `y` or `h`, with or without a strategy. */
+/** A reply of `i` or `h`, with or without a strategy. */
 export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApproval>>, { kind: "unknown" }>;
 
 /** Context the host adds for one event, blocking it when `decision` is set. */
@@ -54,7 +55,7 @@ export type HandoffEntry = { item: ApprovalItem; strategy: Strategy; written: bo
  *   unreviewed  no review spawn recorded and `reviews` is 0
  *   open        a review spawn recorded `reviews` at spawn, and the file's `reviews` is not above it yet
  *   settled     `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1
- * Only a settled item may be named by a closing line, approved with `y`, or handed off with `h`.
+ * Only a settled item may be named by an approval block, approved with `i`, or handed off with `h`.
  */
 export type ReviewState = "unreviewed" | "open" | "settled";
 

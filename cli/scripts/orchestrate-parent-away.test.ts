@@ -3,9 +3,8 @@ import fs from "node:fs";
 import { expect, it } from "vitest";
 
 import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
-import { orchestrateKit } from "./__fixtures__/orchestrate-kit.ts";
+import { closing, orchestrateKit, plan as planItem } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
-import { closingLine } from "./closing-line.ts";
 import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
@@ -17,7 +16,7 @@ const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: ""
 const AWAY =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
 
-const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
+const plan1 = closing(planItem(1));
 
 function live(casing: Casing, ws: string, sid: string): HookSession {
   return hookSession(kit, { casing, env: UNSET, sid, ws });
@@ -61,7 +60,7 @@ it.each(CASINGS)("another session's mode: away plan leaves this session's mode a
 });
 
 it.each(CASINGS)(
-  "away blocks a reply ending in a question, allows a closing line, " +
+  "away blocks a reply ending in a question, allows an approval block, " +
     "and gives up after the stop-block cap (%s payloads)",
   (casing) => {
     const s = live(casing, kit.temp(), "w1");
@@ -80,22 +79,25 @@ it.each(CASINGS)(
   },
 );
 
-it.each(CASINGS)("a review spawn holds the closing line until the plan's reviews is bumped (%s payloads)", (casing) => {
-  const s = live(casing, kit.temp(), "r1");
-  s.say("plan it");
-  const plan = s.reviewed("plans", VALID_PLAN);
-  s.spawnReview("/review-plan 1\n\nReview it.");
+it.each(CASINGS)(
+  "a review spawn holds the approval block until the plan's reviews is bumped (%s payloads)",
+  (casing) => {
+    const s = live(casing, kit.temp(), "r1");
+    s.say("plan it");
+    const plan = s.reviewed("plans", VALID_PLAN);
+    s.spawnReview("/review-plan 1\n\nReview it.");
 
-  const reason =
-    "plan 1's review has not settled; wait for it, " +
-    "settle its findings with reviews bumped, then end with the closing line";
+    const reason =
+      "plan 1's review has not settled; wait for it, " +
+      "settle its findings with reviews bumped, then end with the approval block";
 
-  expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({ decision: "block", reason });
-  setKey(plan, "reviews", "2");
-  expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();
-});
+    expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({ decision: "block", reason });
+    setKey(plan, "reviews", "2");
+    expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();
+  },
+);
 
-it.each(CASINGS)("a closing line naming a plan with reviews: 0 blocks (%s payloads)", (casing) => {
+it.each(CASINGS)("an approval block naming a plan with reviews: 0 blocks (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "z1");
   s.say("plan it");
   s.save(".repo/plans/x.md", VALID_PLAN);

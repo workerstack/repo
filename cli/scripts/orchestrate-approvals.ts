@@ -1,8 +1,8 @@
-/** One closing line asks for approval; a bare `y` approves exactly what it names, and `h` hands it off. */
+/** One approval block asks for approval; a bare `i` approves exactly what it names, and `h` hands it off. */
 import fs from "node:fs";
 
 import type { Result } from "../result.ts";
-import { closingLine, parseApproval } from "./closing-line.ts";
+import { closingBlock, parseApproval, parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
@@ -18,8 +18,8 @@ import {
 } from "./orchestrate-reviews.ts";
 import { approvalsFile, frontmatterOf, readLines } from "./orchestrate-session.ts";
 import { resolveStamp, stampMtime } from "./orchestrate-stamps.ts";
-import { closingLineOf, lastAssistantFromTranscript } from "./orchestrate-transcript.ts";
-import { APPROVABLE_STATUS, APPROVAL_BLOCK_STAMP, LAST_INDEX, TURN_START_STAMP } from "./orchestrate.constants.ts";
+import { lastAssistantFromTranscript } from "./orchestrate-transcript.ts";
+import { APPROVABLE_STATUS, APPROVAL_BLOCK_STAMP, TURN_START_STAMP } from "./orchestrate.constants.ts";
 import type {
   Approvable,
   ApprovalItem,
@@ -32,7 +32,6 @@ import type {
 import { preparePlanUpdate } from "./persist-plan.ts";
 import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { isUnderRepoDir } from "./persist-tmp.ts";
-import { STRATEGIES } from "./strategy.constants.ts";
 import { parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -41,7 +40,7 @@ type Scan = { ws: string; running: string[]; open: ReviewsOpen };
 
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/;
 const STRATEGY_LINE = /^strategy:.*$/m;
-const WAIT_THEN_CLOSE = "wait for it, then end with the closing line again";
+const WAIT_THEN_CLOSE = "wait for it, then end with the approval block again";
 
 function kindAt(abs: string, ws: string): Approvable["kind"] | null {
   if (isUnderRepoDir(abs, ws, "plans")) return "plan";
@@ -57,7 +56,7 @@ function readItem(abs: string): { text: string; mtime: number } | null {
   }
 }
 
-/** The saved item at `abs` when it waits for a `y`; null when it is no settled, approvable plan or roadmap. */
+/** The saved item at `abs` when it waits for an `i`; null when it is no settled, approvable plan or roadmap. */
 function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   const kind = kindAt(abs, scan.ws);
   const read = kind === null ? null : readItem(abs);
@@ -75,7 +74,7 @@ function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   return strategy === null ? null : { ...ref, mtime: read.mtime, path: abs, strategy };
 }
 
-// Reviewed plans and roadmaps this session saved that still wait for a `y`, in first-save order.
+// Reviewed plans and roadmaps this session saved that still wait for an `i`, in first-save order.
 function approvableItems(data: HookInput): ApprovalItem[] {
   const file = approvalsFile(data);
 
@@ -86,12 +85,12 @@ function approvableItems(data: HookInput): ApprovalItem[] {
   return readLines(file).flatMap((abs) => approvalItemAt(scan, abs) ?? []);
 }
 
-/** True when the closing line names every pending item, and only known items with the strategy each file holds. */
+/** True when the approval block names every pending item, and only known items with the strategy each file holds. */
 function covers(named: Approvable[] | null, items: ApprovalItem[], pending: ApprovalItem[]): boolean {
   if (named === null) return false;
   const known = new Set(items.map(itemKey));
 
-  // The strategy a line shows must be the one the file holds, so a bare `y` never runs one the person did not see.
+  // The strategy a block shows must be the one the file holds, so a bare `i` never runs one the person did not see.
   function shownTruly(n: Approvable): boolean {
     return items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy);
   }
@@ -102,7 +101,7 @@ function covers(named: Approvable[] | null, items: ApprovalItem[], pending: Appr
   );
 }
 
-// Stop reason when this turn saved a reviewed item and the reply does not end with a closing line covering it.
+// Stop reason when this turn saved a reviewed item and the reply does not end with an approval block covering it.
 export function approvalBlockReason(data: HookInput, msg: string): string | null {
   if (approvalsFile(data) === null || resolveStamp(data, APPROVAL_BLOCK_STAMP) !== null) return null;
   const turnStart = stampMtime(data, TURN_START_STAMP);
@@ -113,7 +112,7 @@ export function approvalBlockReason(data: HookInput, msg: string): string | null
 
   if (pending.length === 0) return null;
 
-  return covers(closingLineOf(msg), items, pending) ? null : `end with: ${closingLine(items)}`;
+  return covers(parseClosingBlock(msg), items, pending) ? null : `end with this block:\n${closingBlock(items)}`;
 }
 
 function runOf(i: ApprovalItem): string {
@@ -160,7 +159,7 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
     resolved.push(hit);
   }
 
-  // A bare reply runs the strategy each file holds, so it must be the one the line showed.
+  // A bare reply runs the strategy each file holds, so it must be the one the block showed.
   if (wanted === null && resolved.some((i, k) => i.strategy !== named[k]?.strategy)) return null;
 
   return resolved;
@@ -201,7 +200,7 @@ function firstUnsettled(ws: string, open: ReviewsOpen, named: Approvable[]): App
 }
 
 function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]): string {
-  const refused = reply.kind === "handoff" ? "h did not hand off" : "y did not approve";
+  const refused = reply.kind === "handoff" ? "h did not hand off" : "i did not approve";
   const ws = resolveRoots(data).root;
   const unsettled = firstUnsettled(ws, readReviewsOpen(data), named);
 
@@ -233,24 +232,20 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
     w.content === null || wanted === null ? approveStep(w.item) : strategyStep(w.item, wanted),
   );
 
-  return `y approves ${queueText(named)}: ${steps.join("; ")}`;
+  return `i approves ${queueText(named)}: ${steps.join("; ")}`;
 }
 
-// Context for a reply of `y`, `y <strategy>`, `h`, `h fast` or `h deep` that answers the previous reply's closing line.
+// Context for a reply of `i`, a code, `h` or a spelled-out choice that answers the previous reply's approval block.
 export function approvalContext(data: HookInput, prompt: string): string {
   const reply = parseApproval(prompt);
   const tp = firstNonEmpty(data.transcript_path, data.transcriptPath);
 
   if (reply === null || tp === undefined) return "";
-  const named = closingLineOf(lastAssistantFromTranscript(tp));
+  const named = parseClosingBlock(lastAssistantFromTranscript(tp));
 
   if (named === null) return "";
 
   if (reply.kind !== "unknown") return settledReply(data, reply, named);
 
-  const choices = STRATEGIES.map((s) => `y ${s}`)
-    .slice(0, LAST_INDEX)
-    .join(", ");
-
-  return `unknown strategy "${reply.word}"; use y, ${choices} or y ${STRATEGIES.at(LAST_INDEX)}`;
+  return `"${reply.word}" is not a choice; end with this block again:\n${closingBlock(named)}`;
 }

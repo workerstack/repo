@@ -15,7 +15,7 @@ import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
 const LOCATION_LINE = /^\s*Location:\s*(.+?)\s*$/gm;
-const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end with the closing line";
+const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end with the approval block";
 
 export function itemKey(item: ItemRef): string {
   return `${item.kind} ${item.serial}`;
@@ -172,7 +172,7 @@ export function recordReviewSpawn(data: HookInput, toolInput: ToolArgs | undefin
   }
 }
 
-// Stop reason when the reply's closing line names an item whose review has not settled.
+// Stop reason when the reply's approval block names an item whose review has not settled.
 export function closingReviewReason(data: HookInput, named: Approvable[] | null): string | null {
   if (named === null) return null;
   const ws = resolveRoots(data).root;

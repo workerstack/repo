@@ -7,7 +7,9 @@ import { afterEach, expect } from "vitest";
 import { VALID_LESSON } from "./persist-bodies.ts";
 import { runHook, type HookRun } from "./run-hook.ts";
 import { persistLesson } from "../lessons-ops.ts";
+import { closingBlock } from "../closing-line.ts";
 import { main } from "../orchestrate-parent.ts";
+import type { Approvable, Strategy } from "../strategy.types.ts";
 
 type Env = Record<string, string | undefined>;
 
@@ -108,9 +110,18 @@ export function transcript(ws: string, text: string): string {
   return file;
 }
 
-/** The closing line text after `Reply "y" to run `, with every other reply the default strategies offer. */
-export const closing = (what: string): string =>
-  `Reply "y" to run ${what}, or "y spawn-fast" / "y spawn-deep", or "h" / "h fast" / "h deep" for a fresh session.`;
+/** The approval block a reply ends with for `items`, as the hooks render it. */
+export const closing = (...items: Approvable[]): string => closingBlock(items);
+
+/** A plan item as the approval block names it; the strategy is the default unless given. */
+export const plan = (serial: number, strategy: Strategy = "default"): Approvable => ({ kind: "plan", serial, strategy });
+
+/** A roadmap item as the approval block names it; the strategy is the default unless given. */
+export const roadmap = (serial: number, strategy: Strategy = "default"): Approvable => ({
+  kind: "roadmap",
+  serial,
+  strategy,
+});
 
 /** The `strategy:` a saved file holds. */
 export const strategyOf = (file: string): string | undefined =>

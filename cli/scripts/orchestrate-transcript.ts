@@ -4,7 +4,7 @@ import fs from "node:fs";
 import { z } from "zod";
 
 import { isRecord, isString, type Json, tryJson, type JsonObject } from "../json.ts";
-import { parseClosingLine } from "./closing-line.ts";
+import { parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import {
@@ -15,7 +15,6 @@ import {
   TRANSCRIPT_TAIL_BYTES,
   WAIT_SCOUT,
 } from "./orchestrate.constants.ts";
-import type { Approvable } from "./orchestrate.types.ts";
 
 const LEAD = /^[\s`*_>]+/;
 const TRAIL = /[\s`*_]+$/;
@@ -25,19 +24,6 @@ function textOf(value: Json | undefined): string {
   return isString(value) ? value : "";
 }
 
-/** The non-empty lines of a reply, each without its leading quote, list or emphasis marks. */
-function strippedLines(msg: string): string[] {
-  return msg
-    .split("\n")
-    .map((l) => l.replace(LEAD, "").replace(TRAIL, ""))
-    .filter((l) => l !== "");
-}
-
-/** The items the reply's last line asks to approve; null when it is no closing line. */
-export function closingLineOf(msg: string): Approvable[] | null {
-  return parseClosingLine(strippedLines(msg).at(LAST_INDEX) ?? "");
-}
-
 export function isWaitScoutExact(msg: string): boolean {
   const nonempty = msg.split("\n").filter((l) => l.trim() !== "");
   const [only = ""] = nonempty;
@@ -45,9 +31,9 @@ export function isWaitScoutExact(msg: string): boolean {
   return nonempty.length === 1 && only.replace(LEAD, "") === WAIT_SCOUT;
 }
 
-/** True when the reply asks the person something: a scout wait, a closing line or a question. */
+/** True when the reply asks the person something: a scout wait, an approval block or a question. */
 export function hasStepAsk(msg: string): boolean {
-  if (isWaitScoutExact(msg) || closingLineOf(msg) !== null) return true;
+  if (isWaitScoutExact(msg) || parseClosingBlock(msg) !== null) return true;
 
   return msg
     .split("\n")

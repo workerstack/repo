@@ -4,9 +4,16 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { hookSession, type Casing } from "./__fixtures__/hook-session.ts";
-import { must, orchestrateKit, strategyOf, transcript } from "./__fixtures__/orchestrate-kit.ts";
+import {
+  closing,
+  must,
+  orchestrateKit,
+  plan as planItem,
+  roadmap as roadmapItem,
+  strategyOf,
+  transcript,
+} from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
-import { closingLine } from "./closing-line.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 
 const kit = orchestrateKit();
@@ -14,7 +21,7 @@ const CASINGS: readonly Casing[] = ["claude", "grok"];
 
 // Roots and session come from the payload alone, as in a live session.
 const UNSET = { CLAUDE_PROJECT_DIR: "", GROK_HOOK_EVENT: "", GROK_SESSION_ID: "", GROK_WORKSPACE_ROOT: "" };
-const plan1 = closingLine([{ kind: "plan", serial: 1, strategy: "default" }]);
+const plan1 = closing(planItem(1));
 
 function handoffs(ws: string) {
   const dir = path.join(ws, ".repo/handoffs");
@@ -42,13 +49,13 @@ function theHandoff(ws: string) {
   return { file, serial: Number(path.basename(file).split("-")[0]), text };
 }
 
-it.each(CASINGS)("y and h on an unsettled item refuse with a reason and change nothing (%s payloads)", (casing) => {
+it.each(CASINGS)("i and h on an unsettled item refuse with a reason and change nothing (%s payloads)", (casing) => {
   const { ws, s, plan } = onePlan(casing, "u1");
   s.spawnReview("/review-plan 1");
   const before = fs.readFileSync(plan, "utf8");
   const tp = transcript(ws, `Saved.\n\n${plan1}`);
-  const why = "its review has not settled; wait for it, then end with the closing line again";
-  expect(s.say("y", tp).split("\n")).toContain(`y did not approve plan 1: ${why}`);
+  const why = "its review has not settled; wait for it, then end with the approval block again";
+  expect(s.say("i", tp).split("\n")).toContain(`i did not approve plan 1: ${why}`);
   expect(s.say("h fast", tp).split("\n")).toContain(`h did not hand off plan 1: ${why}`);
   expect(fs.readFileSync(plan, "utf8")).toBe(before);
   expect(handoffs(ws)).toStrictEqual([]);
@@ -78,10 +85,7 @@ it.each(CASINGS)(
     const { ws, s, plan } = onePlan(casing, "h2");
     const roadmap = s.reviewed("roadmaps", DRAFT_ROADMAP);
 
-    const line = closingLine([
-      { kind: "plan", serial: 1, strategy: "default" },
-      { kind: "roadmap", serial: 1, strategy: "default" },
-    ]);
+    const line = closing(planItem(1), roadmapItem(1));
 
     const ctx = s.say("h", transcript(ws, `Both saved.\n\n${line}`));
     const { file, serial, text } = theHandoff(ws);
@@ -97,3 +101,14 @@ it.each(CASINGS)(
     expect([strategyOf(plan), strategyOf(roadmap)]).toStrictEqual(["default", "default"]);
   },
 );
+
+it.each(CASINGS)("hsd writes spawn-deep into the plan and hands it off (%s payloads)", (casing) => {
+  const { ws, s, plan } = onePlan(casing, "h3");
+  const ctx = s.say("hsd", transcript(ws, `Saved.\n\n${plan1}`));
+  const { file, serial } = theHandoff(ws);
+  expect(ctx.split("\n")).toContain(
+    `h handed off plan 1 (strategy spawn-deep written) to ${file}; ` +
+      `tell the person to run /pickup ${serial} in a fresh session, and do no work here`,
+  );
+  expect(strategyOf(plan)).toBe("spawn-deep");
+});

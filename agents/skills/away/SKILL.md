@@ -14,6 +14,6 @@ Still stop on a true blocker: a missing credential, a destructive action. The St
 
 Frontmatter `mode:` on this session's in-progress plan or roadmap wins over the flag.
 
-Approval still happens before an away run. Write and review the plan, end with the closing line, and wait for `y` or `h`.
+Approval still happens before an away run. Write and review the plan, end with the approval block, and wait for `i` or `h`.
 
 `/auto` returns this session to the default. `/ask` is the other flag: one step, then ask.
