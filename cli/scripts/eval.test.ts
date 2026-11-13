@@ -11,7 +11,7 @@ import { main, type EvalDeps } from "./eval.ts";
 const ROOT = path.join(import.meta.dirname, "..", "eval", "__fixtures__");
 const MESSAGE = { content: [{ text: "yes", type: "text" }], usage: { input_tokens: 100, output_tokens: 200 } };
 const NOW = new Date("2026-11-13T10:15:00.123Z");
-const SUMMARY_LINE = /^summary (?<file>\/.+-20261113T101500123Z-[0-9a-f]{4}\.json)$/m;
+const SUMMARY_LINE = /^summary (?<file>.+-20261113T101500123Z-[0-9a-f]{4}\.json)$/m;
 
 let stateDir = "";
 
@@ -170,7 +170,7 @@ it("stops before the next case once real spend leaves no room for its bound", as
 
   expect(got).toMatchObject({ code: 1, err: stop });
   expect(billed).toBe(3);
-  expect(got.out).toMatch(/\npass yes\nspent \$0\.0303 of \$0\.\d{4}\nsummary \//);
+  expect(got.out).toMatch(/\npass yes\nspent \$0\.0303 of \$0\.\d{4}\nsummary \S/);
   expect(summaryOf(got.out).end).toStrictEqual({ kind: "stopped" });
 });
 
@@ -256,6 +256,6 @@ it("exits 1 with the API's message when a call fails", async () => {
 
   expect(got).toMatchObject({ code: 1 });
   expect(got.err).toBe("eval: API error 401: bad key\n");
-  expect(got.out).toMatch(/\nspent \$0\.0000 of \$1\.00\nsummary \//);
+  expect(got.out).toMatch(/\nspent \$0\.0000 of \$1\.00\nsummary \S/);
   expect(summaryOf(got.out).end).toStrictEqual({ kind: "failed", message: "eval: API error 401: bad key" });
 });
