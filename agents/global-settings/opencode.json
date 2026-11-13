@@ -1,0 +1,9 @@
+{
+  "permissions": [
+    {
+      "action": "*",
+      "effect": "allow",
+      "resource": "*"
+    }
+  ]
+}

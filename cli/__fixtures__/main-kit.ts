@@ -126,6 +126,7 @@ main
   doctor            Check the tools and versions this repo needs
   purge-mcps        Purge global MCP servers (dry-run; --apply to write)
   setup             Handheld keys and OAuth (speak, listen, google-workspace, browser, jev)
+  shim              Install a \`repo\` command that runs the project's own copy (--check, --dry-run, --dir <path>)
   tasks             Write .vscode/tasks.json from package scripts (VS Code and Cursor)
   yolo              Turn on full-permission mode on every host (--check, --dry-run, --host <id>)
   bench             Score candidate commands on a .repo/bench spec (--remote: its other OSes in CI too)

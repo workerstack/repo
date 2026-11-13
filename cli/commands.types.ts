@@ -34,6 +34,7 @@ export type CommandName =
   | "env"
   | "clean"
   | "yolo"
+  | "shim"
   | "purge-mcps"
   | "tasks"
   | "lint"

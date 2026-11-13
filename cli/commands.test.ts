@@ -148,6 +148,7 @@ describe("dispatch help", () => {
 describe("dispatch", () => {
   it.each([
     ["yolo", ["--dry-run", "--host", "grok"]],
+    ["shim", ["--check", "--dir", "x"]],
     ["purge-mcps", ["--apply"]],
     ["doctor", []],
     ["setup", ["speak", "--skip-verify"]],

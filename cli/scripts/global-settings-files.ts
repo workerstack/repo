@@ -6,10 +6,11 @@ import { parse as parseToml } from "smol-toml";
 import { z } from "zod";
 
 import { isRecord, isString, type Json, readJson } from "../json.ts";
-import type { SettingsTable } from "./settings-table.ts";
+import { isSettingsTable, isTableArray, type SettingsTable } from "./settings-table.ts";
 import {
   ALL_HOSTS,
   ENOENT,
+  JSON_EXT,
   JSON_FORMAT,
   MANIFEST_REL,
   OVERLAY_DIR,
@@ -124,4 +125,33 @@ export function readPayload(workspaceRoot: string, host: ManifestHost, consumerR
   } catch {
     throw new Error(`unreadable payload: ${host.payload}`);
   }
+}
+
+/** The first key of `payload` holding a list of rules where `dest` holds something else, as a dotted path. */
+function nonArrayKey(payload: SettingsTable, dest: SettingsTable, prefix: string[] = []): string | null {
+  for (const [k, v] of Object.entries(payload)) {
+    const have = dest[k];
+    const keyPath = [...prefix, k];
+
+    if (isTableArray(v) && have !== undefined && !Array.isArray(have)) return keyPath.join(".");
+
+    if (isSettingsTable(v) && isSettingsTable(have)) {
+      const nested = nonArrayKey(v, have, keyPath);
+
+      if (nested !== null) return nested;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Why a host's dest must be left as it is, or null. A `.json` dest with a `.jsonc` file beside it is not the file the
+ * tool reads, and a list of rules would replace a dest value that is not a list.
+ */
+export function skipReason(destAbs: string, dest: SettingsTable, payload: SettingsTable): string | null {
+  if (destAbs.endsWith(JSON_EXT) && fs.existsSync(`${destAbs}c`)) return `${path.basename(destAbs)}c exists`;
+  const key = nonArrayKey(payload, dest);
+
+  return key === null ? null : `${key} is not an array`;
 }

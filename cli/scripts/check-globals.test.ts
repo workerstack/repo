@@ -43,7 +43,7 @@ describe("checkGlobals", () => {
     const cli = runCli(ws, home);
     expect(cli.status).toBe(1);
     expect(cli.stdout.trim().split("\n")).toStrictEqual([
-      "grok ok · claude ok · codex ok · antigravity ok · cursor missing approvalMode",
+      "grok ok · claude ok · codex ok · antigravity ok · cursor missing approvalMode · opencode ok",
       HINT,
     ]);
   });

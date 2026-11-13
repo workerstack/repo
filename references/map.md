@@ -34,7 +34,7 @@ Cheap outline. Not a file dump.
 - `cli/scripts/orchestrate-parent.ts` + `agents/grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
 - `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
 - `agents/grok/hooks/rtk.json` — RTK
-- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
+- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor` `opencode`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json` `opencode.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
 - `agents/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
 - `agents/grok/{roles,hooks}/` — grok's static roles and hook configs; `bun repo sync` copies them into `.grok/roles` and `.grok/hooks`
 - `agents/skills/<name>/` — the one skills source; `bun repo sync` links each into the host skill dirs
@@ -49,7 +49,7 @@ Cheap outline. Not a file dump.
 - `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
 - `cli/scripts/persist-plan.ts`
 - `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/sync-global-settings.ts` — dry-run by default, `--apply` writes `$HOME`, `--host <id>`; report line `{action} {id} {dest}`
+- `cli/scripts/sync-global-settings.ts` — applies by default, `--dry-run` previews, `--check` reports drift, `--host <id>`; report line `{action} {id} {dest}`, or `skip {id} {dest}: <reason>` for a dest it leaves as it is
 - `cli/scripts/purge-global-mcps.ts`
 - `cli/scripts/emit-mcp-policy.ts`
 - `cli/scripts/emit-agent-shell-tools.ts`
@@ -103,7 +103,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - `permissions.json` — path deny rules added to the generated hooks
 - `lint-baseline.json` — per file, per rule, the lint problems still allowed; read by `bun repo turn` and `bun repo check`
 - `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
-- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
+- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`, `opencode.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
 - `bench/` — `<name>.bench.ts` specs, a `defineBench` default export each; read by `bun repo bench <name>`, not by sync; root only
 - `env.keys.json` — `{ "recipient": "age1…", "repo": "<name>" }`: the age public key `sealed(...)` values are sealed for, and the name of the key file `~/.workerstack/keys/<repo>.key`
 - `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)

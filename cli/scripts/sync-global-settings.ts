@@ -15,7 +15,7 @@ import { repoEnv } from "../repo-env.ts";
 import type { Result } from "../result.ts";
 import { checkHint, checkHosts, checkLine, projectConfigError } from "./check-globals.ts";
 import { deepMerge } from "./deep-merge.ts";
-import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest } from "./global-settings-files.ts";
+import { hostIdsOf, loadManifest, readDest, readPayload, resolveDest, skipReason } from "./global-settings-files.ts";
 import type { SettingsTable } from "./settings-table.ts";
 import {
   ALL_HOSTS,
@@ -28,6 +28,7 @@ import {
   JSON_FORMAT,
   JSON_INDENT,
   OK_STATE,
+  SKIP,
   UNKNOWN_HOST,
 } from "./sync-global-settings.constants.ts";
 import type {
@@ -127,7 +128,11 @@ function rootOf(...roots: (string | undefined)[]): string {
 function syncHost(h: ManifestHost, s: HostSync): ReportRow {
   const source = readPayload(s.ws, h, s.consumer);
   const destAbs = resolveDest(s.home, h.dest);
-  const merged = deepMerge(readDest(destAbs, h.format, h.dest), source, s.skipRe);
+  const current = readDest(destAbs, h.format, h.dest);
+  const reason = skipReason(destAbs, current, source);
+
+  if (reason !== null) return { action: SKIP, dest: h.dest, id: h.id, line: `${SKIP} ${h.id} ${h.dest}: ${reason}` };
+  const merged = deepMerge(current, source, s.skipRe);
 
   if (s.apply) {
     fs.mkdirSync(path.dirname(destAbs), { recursive: true });
