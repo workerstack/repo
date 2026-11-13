@@ -9,6 +9,7 @@ import { lines } from "../scripts/lines.ts";
 import { available } from "./available.ts";
 import { benchWorkflow } from "./bench-workflow.ts";
 import { blockOutput } from "./block-output.ts";
+import { evalWorkflow } from "./eval-workflow.ts";
 import { githubFiles } from "./github-files.ts";
 import { hasOwnedHeader } from "./header.ts";
 import { INDEX_REL } from "./maps.constants.ts";
@@ -185,6 +186,7 @@ export const GENERATORS: readonly Generator[] = [
   nightly,
   releaseWorkflow,
   benchWorkflow,
+  evalWorkflow,
   githubFiles,
   vitestProjects,
   turbo,

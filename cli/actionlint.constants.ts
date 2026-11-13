@@ -18,8 +18,11 @@ export const MAX_OUTPUT_BYTES: number = 64 * 1024 * 1024;
 /** The workflow directory, relative to the repo root. */
 export const WORKFLOWS_DIR = ".github/workflows";
 
-/** Packs that generate a workflow (release: ci, nightly, release.yml; benchmark: bench.yml); actionlint runs then. */
-export const WORKFLOW_PACKS: readonly Pack[] = ["release", "benchmark"];
+/**
+ * Packs that generate a workflow (release: ci, nightly, release.yml; benchmark: bench.yml; evals: eval.yml);
+ * actionlint runs then.
+ */
+export const WORKFLOW_PACKS: readonly Pack[] = ["release", "benchmark", "evals"];
 
 /** The extensions of a workflow file. */
 export const WORKFLOW_EXTENSIONS: readonly string[] = [".yml", ".yaml"];

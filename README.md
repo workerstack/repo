@@ -335,6 +335,24 @@ raw: .repo/tmp/bench/startup/ubuntu-latest.json
 
 `--remote` also measures on the spec's other `os` labels in CI: it runs here first when this machine's label is listed, dispatches `bench.yml` (the `benchmark` pack) at HEAD's sha, waits up to 90 minutes, downloads each `bench-<name>-<os>` artifact and prints one table per OS. It refuses, one line each: no `.github/workflows/bench.yml`, bench.yml not on `origin/<default branch>` (GitHub dispatches only from there), HEAD not on origin, a dirty tree, and an `os` with no other label. Exit codes: 0 done, 1 a candidate or the remote run failed, 4 a bad argument, spec or precondition.
 
+### Evals
+
+`bun repo eval <name>` runs `evals/<name>/eval.ts` against the Anthropic API. It first prints a worst-case estimate and refuses a run over the cap before any call. The cap is $1.00 by default; `--max-cost <usd>` raises it. `--dry-run` stops after the estimate and needs no key. A real run needs `ANTHROPIC_API_KEY`, stops before a case that could cross the cap, caches each answer under `.repo/tmp/evals/cache`, so a rerun of unchanged text costs $0, and writes a spend summary under `.repo/tmp/evals/runs`.
+
+```console
+$ bun repo eval skill-routing --dry-run
+eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5, at most $0.0834 (cap $1.00)
+```
+
+With the `evals` pack on, `bun repo github` keeps a GitHub environment named `evals` that needs one reviewer and deploys only from the default branch, and sync writes `.github/workflows/eval.yml`. It runs only when started by hand, with the eval's name and a cap in US dollars (default 1). Its one job runs in the `evals` environment, so it waits for your approval and reads the key from there. It restores and saves the answer cache, and uploads the summaries as the `eval-<name>` artifact.
+
+```console
+$ gh secret set ANTHROPIC_API_KEY --env evals     # once; also set a spend limit in the Anthropic console
+$ gh workflow run eval.yml -f eval=skill-routing -f max-cost=0.5
+```
+
+The run then waits under "Review deployments" until you approve it. A dispatch from any branch but the default one is refused by the environment.
+
 ### Env
 
 `@workerstack/repo/env` exports `defineEnv` and `sealed` (with the types `EnvConfig`, `EnvInstance`, `ProcessSpec`, `Scope`, `Sealed` and `Value`). It is for scripts: a Cloudflare Worker reads `ctx.env`, and `defineEnv` there throws the message "repo env: defineEnv is script-only; a Cloudflare Worker reads ctx.env".
@@ -1164,7 +1182,7 @@ Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ig
 - cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
 - release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); also, for a public root with a config `owner` and a GitHub `repository`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/{bug_report,config}.yml` (tracked, whole-file); a hand-written one is refused
 - benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused; also the `/benchmark` skill links in `.agents/skills` and `.claude/skills`
-- evals pack: nothing yet; it gates the evals environment and eval.yml of later releases
+- evals pack: `.github/workflows/eval.yml` (tracked, whole-file), dispatched by hand with an eval name and a cost cap, and the evals environment `bun repo github` manages; a hand-written eval.yml is refused
 - standards pack, editor: keys the file lacks are added to `.vscode/settings.json`, and ids it lacks to `recommendations` in `.vscode/extensions.json`, never changing what you set: Bun formats on save through the Simple LSP Client extension (`bun fmt --no-script --stdin-filepath`), the oxc extension only lints (`oxc.enable.oxfmt: false`, fix-all on save), the workspace TypeScript (`js/ts.tsdk.path`, with the TypeScript 7 extension for 7 or later; a deprecated `typescript.tsdk` moves to `js/ts.tsdk.path`), `.css` as `tailwindcss` with a Tailwind entry sheet, the Vitest extension when vitest is installed
 - always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
 

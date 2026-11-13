@@ -181,6 +181,24 @@ raw: .repo/tmp/bench/startup/ubuntu-latest.json
 
 `--remote` also measures on the spec's other `os` labels in CI: it runs here first when this machine's label is listed, dispatches `bench.yml` (the `benchmark` pack) at HEAD's sha, waits up to 90 minutes, downloads each `bench-<name>-<os>` artifact and prints one table per OS. It refuses, one line each: no `.github/workflows/bench.yml`, bench.yml not on `origin/<default branch>` (GitHub dispatches only from there), HEAD not on origin, a dirty tree, and an `os` with no other label. Exit codes: 0 done, 1 a candidate or the remote run failed, 4 a bad argument, spec or precondition.
 
+## Evals
+
+`bun repo eval <name>` runs `evals/<name>/eval.ts` against the Anthropic API. It first prints a worst-case estimate and refuses a run over the cap before any call. The cap is $1.00 by default; `--max-cost <usd>` raises it. `--dry-run` stops after the estimate and needs no key. A real run needs `ANTHROPIC_API_KEY`, stops before a case that could cross the cap, caches each answer under `.repo/tmp/evals/cache`, so a rerun of unchanged text costs $0, and writes a spend summary under `.repo/tmp/evals/runs`.
+
+```console
+$ bun repo eval skill-routing --dry-run
+eval skill-routing: 24 cases x 3 samples = 72 calls on claude-haiku-5-5, at most $0.0834 (cap $1.00)
+```
+
+With the `evals` pack on, `bun repo github` keeps a GitHub environment named `evals` that needs one reviewer and deploys only from the default branch, and sync writes `.github/workflows/eval.yml`. It runs only when started by hand, with the eval's name and a cap in US dollars (default 1). Its one job runs in the `evals` environment, so it waits for your approval and reads the key from there. It restores and saves the answer cache, and uploads the summaries as the `eval-<name>` artifact.
+
+```console
+$ gh secret set ANTHROPIC_API_KEY --env evals     # once; also set a spend limit in the Anthropic console
+$ gh workflow run eval.yml -f eval=skill-routing -f max-cost=0.5
+```
+
+The run then waits under "Review deployments" until you approve it. A dispatch from any branch but the default one is refused by the environment.
+
 ## Env
 
 `@workerstack/repo/env` exports `defineEnv` and `sealed` (with the types `EnvConfig`, `EnvInstance`, `ProcessSpec`, `Scope`, `Sealed` and `Value`). It is for scripts: a Cloudflare Worker reads `ctx.env`, and `defineEnv` there throws the message "repo env: defineEnv is script-only; a Cloudflare Worker reads ctx.env".

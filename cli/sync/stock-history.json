@@ -7796,6 +7796,7 @@
   "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
   "references/exports.md": [
+    "040cef985f3738a6",
     "28c733238c8ebeff",
     "2fca3761756a65e1",
     "368a2098f1f53291",
@@ -7860,6 +7861,7 @@
   "references/listen.md": ["53783d65923e6731", "5c1f2e5f8eade499", "cae54e3f489aab38"],
   "references/map.md": [
     "036c9062b9c6e91f",
+    "09b82728338f5a82",
     "0d56535a6e88785f",
     "114eae57cbb4b9bf",
     "18d5a2e051d75e98",
