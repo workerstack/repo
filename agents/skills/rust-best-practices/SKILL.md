@@ -1,6 +1,7 @@
 ---
-trigger: glob
-globs: '**/*.rs'
+name: rust-best-practices
+description: >-
+  Rust best practices. Use when reading or editing any .rs file, or for /rust-best-practices.
 ---
 Format with rustfmt at its defaults; `bun repo fmt` runs `cargo fmt --all`, and `bun repo fmt --check` fails on a diff.
 

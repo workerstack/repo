@@ -34,12 +34,14 @@ export const CLAUDE_SETTINGS_FILE = "claude.json";
 
 /**
  * Files sync does not read, with who does: the lint baseline `repo turn` lowers and `repo check` holds the tree
- * to, and the test times `repo ci times` writes for the shard sequencer.
+ * to, the test times `repo ci times` writes for the shard sequencer, and the log of agent-context rises that
+ * `repo check --write --reason` appends to.
  */
 export const OTHER_READERS: ReadonlyArray<readonly [string, string]> = [
   ["env.keys.json", "@workerstack/repo/env (the public key sealed values are locked to)"],
   ["lint-baseline.json", "repo turn and repo check"],
   ["test-times.json", "the vitest shard sequencer written by `bun repo ci times`"],
+  ["context-growth.jsonl", "repo check, written by `bun repo check --write --reason`"],
 ];
 
 /** The entry old installs copied into `.repo/` that nothing reads; any other unknown entry gets the allowed list. */
