@@ -86,7 +86,7 @@ it.each([
   ["x", ['package.json: "keywords" is "x"; list 1 to 20 GitHub topics']],
   [["My Tool!"], [expect.stringContaining('package.json: keyword "My Tool!" is not a GitHub topic')]],
 ])("refuses keywords %j with the keyword lines and applies nothing", (keywords, errors) => {
-  expect(wantedSettings({ keywords }, CHECKS)).toStrictEqual({ errors, ok: false });
+  expect(wantedSettings({ keywords }, CHECKS, { environment: false })).toStrictEqual({ errors, ok: false });
 });
 
 it("leaves what package.json does not say alone", () => {

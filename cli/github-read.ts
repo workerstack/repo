@@ -1,16 +1,14 @@
 import { z } from "zod";
 
+import { readEnvironment } from "./github-environment.ts";
+import { UNEXPECTED, getJson, type Got } from "./github-get-json.ts";
 import type { Gh, GhFailure } from "./github-gh.ts";
 import { ENABLED, MAIN_RULESET, NOT_FOUND, TAGS_RULESET } from "./github.constants.ts";
-import type { Current, CurrentRuleset } from "./github.types.ts";
-import { tryJson } from "./json.ts";
+import type { Current, CurrentRuleset, Wanted } from "./github.types.ts";
 
 export type ReadResult = { ok: true; current: Current } | GhFailure;
 
-type Got<T> = { ok: true; value: T } | GhFailure;
-
 const MANAGED = [MAIN_RULESET, TAGS_RULESET];
-const UNEXPECTED: GhFailure = { kind: "other", message: "GitHub answered something unexpected", ok: false };
 
 function listSchema(): z.ZodType<{ id: number; name: string }[]> {
   return z.array(z.object({ id: z.number(), name: z.string() }));
@@ -46,6 +44,8 @@ function rulesetSchema(): z.ZodType<CurrentRuleset> {
 }
 
 type Repo = {
+  default_branch: string;
+  private: boolean;
   description: string;
   homepage: string;
   topics: string[];
@@ -64,6 +64,7 @@ function repoSchema(): z.ZodType<Repo> {
   const status = z.object({ status: z.string() });
 
   return z.object({
+    default_branch: z.string(),
     description: z
       .string()
       .nullable()
@@ -72,6 +73,7 @@ function repoSchema(): z.ZodType<Repo> {
       .string()
       .nullable()
       .transform((text) => text ?? ""),
+    private: z.boolean(),
     security_and_analysis: z
       .object({
         dependabot_security_updates: status,
@@ -85,16 +87,6 @@ function repoSchema(): z.ZodType<Repo> {
 
 function enabledSchema(): z.ZodType<{ enabled: boolean }> {
   return z.object({ enabled: z.boolean() });
-}
-
-/** GETs `path` and parses its JSON body with `schema`; an answer of another shape is a failure. */
-async function getJson<T>(gh: Gh, path: string, schema: () => z.ZodType<T>): Promise<Got<T>> {
-  const result = await gh({ method: "GET", path });
-
-  if (!result.ok) return result;
-  const value = tryJson(schema(), result.stdout);
-
-  return value === undefined ? UNEXPECTED : { ok: true, value };
 }
 
 /** The managed rulesets: the list first, then each managed one by id, together. */
@@ -123,15 +115,19 @@ async function readAlerts(gh: Gh, base: string): Promise<Got<boolean>> {
   return result.status === NOT_FOUND ? { ok: true, value: false } : result;
 }
 
-/** Everything `repo github` manages, read with every call started together; the first failure is the answer. */
-export async function readCurrent(gh: Gh, slug: string): Promise<ReadResult> {
+/**
+ * Everything `repo github` manages, read with every call started together; the first failure is the answer. The
+ * `evals` environment is read only when `wanted` has it, so a repo without the evals pack pays no call for it.
+ */
+export async function readCurrent(gh: Gh, slug: string, wanted: Wanted): Promise<ReadResult> {
   const base = `repos/${slug}`;
 
-  const [rulesets, repo, reporting, alerts] = await Promise.all([
+  const [rulesets, repo, reporting, alerts, environment] = await Promise.all([
     readRulesets(gh, base),
     getJson(gh, base, repoSchema),
     getJson(gh, `${base}/private-vulnerability-reporting`, enabledSchema),
     readAlerts(gh, base),
+    wanted.environment ? readEnvironment(gh, base) : undefined,
   ]);
 
   if (!rulesets.ok) return rulesets;
@@ -141,6 +137,8 @@ export async function readCurrent(gh: Gh, slug: string): Promise<ReadResult> {
   if (!reporting.ok) return reporting;
 
   if (!alerts.ok) return alerts;
+
+  if (environment !== undefined && !environment.ok) return environment;
   const { description, homepage, topics, security_and_analysis: security } = repo.value;
 
   // A repo answer without the key (a token that cannot see it) is a failure: never read as "on".
@@ -155,5 +153,8 @@ export async function readCurrent(gh: Gh, slug: string): Promise<ReadResult> {
     securityUpdates: security.dependabot_security_updates.status === ENABLED,
   };
 
-  return { current: { ...current, description, homepage, topics }, ok: true };
+  const repoFields = { defaultBranch: repo.value.default_branch, description, homepage, isPrivate: repo.value.private };
+  const read = environment === undefined ? {} : { environment: environment.value };
+
+  return { current: { ...current, ...repoFields, ...read, topics }, ok: true };
 }

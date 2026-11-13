@@ -38,10 +38,11 @@ export type GithubManifest = {
 
 /**
  * What the repository should look like; `description`, `homepage` and `topics` are absent when package.json is
- * silent.
+ * silent, and `environment` is whether the evals pack wants the `evals` environment.
  */
 export type Wanted = {
   rulesets: Ruleset[];
+  environment: boolean;
   description?: string;
   homepage?: string;
   topics?: string[];
@@ -49,7 +50,28 @@ export type Wanted = {
 
 export type WantedResult = { ok: true; wanted: Wanted } | { ok: false; errors: string[] };
 
-/** What the repository looks like now. */
+/** A required reviewer of an environment: a person or a team, by id. */
+export type Reviewer = { type: "User" | "Team"; id: number };
+
+/** A branch an environment deploys from, by the policy's id and the branch name. */
+export type BranchPolicy = { id: number; name: string };
+
+/**
+ * An environment as `repo github` reads it: who must approve, which branches deploy (`any` branch, every
+ * `protected` one, or the `custom` policies), and the wait timer it sends back unchanged.
+ */
+export type Environment = {
+  reviewers: Reviewer[];
+  preventSelfReview: boolean;
+  branches: "any" | "protected" | "custom";
+  policies: BranchPolicy[];
+  waitTimer: number;
+};
+
+/** The `evals` environment, or null when there is none, and the id of the admin running `repo github`. */
+export type EvalsEnvironment = { found: Environment | null; viewerId: number };
+
+/** What the repository looks like now; `environment` is read only when it is wanted. */
 export type Current = {
   rulesets: CurrentRuleset[];
   reporting: boolean;
@@ -60,6 +82,9 @@ export type Current = {
   description: string;
   homepage: string;
   topics: string[];
+  defaultBranch: string;
+  isPrivate: boolean;
+  environment?: EvalsEnvironment;
 };
 
 /** One setting that differs, with the line that says how to fix it; a ruleset's lines carry its name. */
@@ -73,7 +98,8 @@ export type Drift = {
     | "securityUpdates"
     | "description"
     | "homepage"
-    | "topics";
+    | "topics"
+    | "environment";
   name?: string;
   message: string;
   /** For description, homepage and topics: the value package.json wants. */

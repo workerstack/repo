@@ -15,7 +15,7 @@ export function must<T>(value: T | undefined): T {
 
 /** The wanted settings for `manifest` and `checks`; a refusal throws. */
 export function wantedOf(manifest: GithubManifest = MANIFEST, checks: string[] = CHECKS): Wanted {
-  const result = wantedSettings(manifest, checks);
+  const result = wantedSettings(manifest, checks, { environment: false });
   if (!result.ok) throw new Error(result.errors.join("; "));
   return result.wanted;
 }
@@ -31,7 +31,7 @@ export function served(wanted: Wanted = wantedOf()): Current {
     _links: { self: { href: "https://api.github.com" } },
   }));
   const { description = "", homepage = "", topics = [] } = wanted;
-  return { rulesets, reporting: true, alerts: true, scanning: true, pushProtection: true, securityUpdates: true, description, homepage, topics };
+  return { rulesets, reporting: true, alerts: true, scanning: true, pushProtection: true, securityUpdates: true, description, homepage, topics, defaultBranch: "main", isPrivate: false };
 }
 
 /** `served`, with the ruleset called `name` replaced by `change` of it. */

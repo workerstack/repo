@@ -5,6 +5,7 @@ import { readCurrent } from "./github-read.ts";
 import { wantedAt } from "./github-wanted-at.ts";
 import { runWrites, writesFor } from "./github-write.ts";
 import {
+  DENIED_STATUSES,
   CHECK_FLAG,
   CHECK_PREFIX,
   CI_SKIP,
@@ -13,6 +14,7 @@ import {
   MID_DOT,
   NO_ORIGIN,
   NO_ORIGIN_LINE,
+  NOT_FOUND,
   UP_TO_DATE,
 } from "./github.constants.ts";
 import { driftOf } from "./github.ts";
@@ -60,7 +62,8 @@ async function apply({ slug, wanted, current }: Plan, io: GithubIo): Promise<num
   const done = await runWrites(io.gh, writes);
 
   if (!done.ok) {
-    io.stderr(say(applyFailure(slug, done, "change")));
+    const refused = done.refusal !== undefined && !DENIED_STATUSES.includes(done.status ?? NOT_FOUND);
+    io.stderr(say(refused ? `${slug}: ${done.refusal}` : applyFailure(slug, done, "change")));
 
     return 1;
   }
@@ -70,7 +73,10 @@ async function apply({ slug, wanted, current }: Plan, io: GithubIo): Promise<num
   return 0;
 }
 
-/** `repo github [--check]`: apply the repository's rulesets, security settings and metadata, or only report drift. */
+/**
+ * `repo github [--check]`: apply the repository's rulesets, security settings, evals environment and metadata, or
+ * only report drift.
+ */
 export async function repoGithub(argv: string[], io: GithubIo): Promise<number> {
   const check = argv.length === 1 && argv[0] === CHECK_FLAG;
 
@@ -96,7 +102,7 @@ export async function repoGithub(argv: string[], io: GithubIo): Promise<number> 
     return 1;
   }
 
-  const read = await readCurrent(io.gh, slug);
+  const read = await readCurrent(io.gh, slug, wanted.wanted);
 
   if (!read.ok) {
     io.stderr(say(applyFailure(slug, read, check ? "read" : "change")));
@@ -114,15 +120,18 @@ function skipped(reason: string): GithubLines {
 }
 
 /**
- * The drift of the checkout at `cwd` for `repo check`, under the release pack only: each setting that differs is a
- * problem. When GitHub cannot be read (CI's token, no login, no answer in time, no GitHub origin) it is a skip
- * report, never a failure.
+ * The drift of the checkout at `cwd` for `repo check`, under the release or evals pack only: each setting that
+ * differs is a problem. When GitHub cannot be read (CI's token, no login, no answer in time, no GitHub origin) it is
+ * a skip report, never a failure.
  */
 export async function checkGithubAt(cwd: string, io: CheckIo = realCheckIo()): Promise<GithubLines> {
   const loaded = await loadConfig(cwd);
 
-  // Without the release pack there is no CI to require; an unreadable config is already reported by sync --check.
-  if (!loaded.ok || !loaded.config.packs.includes("release")) return { problems: [], report: [] };
+  // Without the release pack there is no CI to require, and without evals no environment; an unreadable config is
+  // already reported by sync --check.
+  const managed = loaded.ok && (loaded.config.packs.includes("release") || loaded.config.packs.includes("evals"));
+
+  if (!managed) return { problems: [], report: [] };
 
   if (io.ci) return skipped(CI_SKIP);
   const slug = originSlug(cwd);
@@ -134,7 +143,7 @@ export async function checkGithubAt(cwd: string, io: CheckIo = realCheckIo()): P
   if ("unreadable" in wanted) return { problems: [], report: [] };
 
   if (!wanted.ok) return { problems: wanted.errors.map((error) => `${CHECK_PREFIX} ${error}`), report: [] };
-  const read = await readCurrent(io.gh, slug);
+  const read = await readCurrent(io.gh, slug, wanted.wanted);
 
   if (!read.ok) return skipped(skipReason(read));
   const problems = driftOf(wanted.wanted, read.current).map((drift) => `${CHECK_PREFIX} ${drift.message}`);

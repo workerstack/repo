@@ -46,8 +46,9 @@ function readAt(root: string, rel: string): string | null {
 }
 
 /**
- * The settings the checkout at `root` wants: the CI job names come from its config and manifest, and the metadata from
- * package.json. A config or manifest that cannot be read is another check's line, so it is marked `unreadable`.
+ * The settings the checkout at `root` wants: the CI job names and the evals environment come from its config and
+ * manifest, and the metadata from package.json. A config or manifest that cannot be read is another check's line, so
+ * it is marked `unreadable`.
  */
 export async function wantedAt(root: string): Promise<WantedAtResult> {
   const loaded = await loadConfig(root);
@@ -58,5 +59,5 @@ export async function wantedAt(root: string): Promise<WantedAtResult> {
   if (!read.ok) return { errors: read.errors, ok: false, unreadable: true };
   const checks = ciJobNames({ config: loaded.config, read: (rel) => readAt(root, rel), workspace: read.workspace });
 
-  return wantedSettings(manifestOf(root), checks);
+  return wantedSettings(manifestOf(root), checks, { environment: loaded.config.packs.includes("evals") });
 }

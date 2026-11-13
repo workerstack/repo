@@ -15,9 +15,18 @@ const ENABLED = {
   secret_scanning_push_protection: { status: "enabled" },
 };
 
+const REPO = {
+  default_branch: "main",
+  description: null,
+  homepage: null,
+  private: false,
+  security_and_analysis: ENABLED,
+  topics: [],
+};
+
 const GOOD: JsonObject = {
   [ALERTS]: "",
-  [BASE]: { description: null, homepage: null, security_and_analysis: ENABLED, topics: [] },
+  [BASE]: REPO,
   [`${BASE}/private-vulnerability-reporting`]: { enabled: true },
   [`${BASE}/rulesets`]: [],
 };
@@ -48,7 +57,7 @@ it("reads the settings the fake serves, null text as empty, and only the managed
   const other = { ...must(main), id: 9, name: "other" };
   const rulesets = [must(main), other, must(tags)];
   const fake = fakeGh({ ...EMPTY_SETTINGS(), reporting: true, rulesets, topics: ["a"] });
-  const result = await readCurrent(fake.gh, "o/r");
+  const result = await readCurrent(fake.gh, "o/r", wantedOf());
   expect(result).toMatchObject({
     current: {
       alerts: true,
@@ -67,7 +76,7 @@ it("reads the settings the fake serves, null text as empty, and only the managed
 });
 
 it("reads Dependabot alerts as off on a 404", async () => {
-  const off = await readCurrent(canned(GOOD, { [ALERTS]: failure("http", 404) }), "o/r");
+  const off = await readCurrent(canned(GOOD, { [ALERTS]: failure("http", 404) }), "o/r", wantedOf());
   expect(off).toMatchObject({ current: { alerts: false }, ok: true });
 });
 
@@ -78,8 +87,8 @@ it("reads each security status as on only when it says enabled", async () => {
     secret_scanning_push_protection: { status: "disabled" },
   };
 
-  const answer = { description: null, homepage: null, security_and_analysis: off, topics: [] };
-  const result = await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r");
+  const answer = { ...REPO, security_and_analysis: off };
+  const result = await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r", wantedOf());
   expect(result).toMatchObject({
     current: { pushProtection: false, scanning: false, securityUpdates: false },
     ok: true,
@@ -88,8 +97,8 @@ it("reads each security status as on only when it says enabled", async () => {
 
 it("fails when the repo answer has no security_and_analysis, never reading it as on", async () => {
   const unexpected = { kind: "other", message: "GitHub answered something unexpected", ok: false };
-  const answer = { description: null, homepage: null, topics: [] };
-  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r")).toStrictEqual(unexpected);
+  const { security_and_analysis: _, ...answer } = REPO;
+  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r", wantedOf())).toStrictEqual(unexpected);
 });
 
 it("reads an actor with no id as 0", async () => {
@@ -104,7 +113,7 @@ it("reads an actor with no id as 0", async () => {
   };
 
   const json = { ...GOOD, [`${BASE}/rulesets`]: [{ id: 1, name: "main" }], [`${BASE}/rulesets/1`]: ruleset };
-  const result = await readCurrent(canned(json), "o/r");
+  const result = await readCurrent(canned(json), "o/r", wantedOf());
   expect(result.ok && result.current.rulesets[0]?.bypass_actors).toStrictEqual([
     { actor_id: 0, actor_type: "OrganizationAdmin", bypass_mode: "always" },
   ]);
@@ -113,7 +122,7 @@ it("reads an actor with no id as 0", async () => {
 const PATHS = [`${BASE}/rulesets`, BASE, `${BASE}/private-vulnerability-reporting`, ALERTS];
 
 it.each(PATHS)("fails with the failure of %s when that call fails", async (path) => {
-  const result = await readCurrent(canned(GOOD, { [path]: failure("http", 500) }), "o/r");
+  const result = await readCurrent(canned(GOOD, { [path]: failure("http", 500) }), "o/r", wantedOf());
   expect(result).toStrictEqual(failure("http", 500));
 });
 
@@ -124,10 +133,10 @@ it("fails when a managed ruleset cannot be read by id", async () => {
     call.path.endsWith("/rulesets/1") ? failure("timeout") : undefined,
   );
 
-  expect(await readCurrent(fake.gh, "o/r")).toStrictEqual(failure("timeout"));
+  expect(await readCurrent(fake.gh, "o/r", wantedOf())).toStrictEqual(failure("timeout"));
 });
 
 it.each(["<html>", { topics: "x" }])("fails on the answer %j, which is not the expected shape", async (answer) => {
   const unexpected = { kind: "other", message: "GitHub answered something unexpected", ok: false };
-  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r")).toStrictEqual(unexpected);
+  expect(await readCurrent(canned({ ...GOOD, [BASE]: answer }), "o/r", wantedOf())).toStrictEqual(unexpected);
 });
