@@ -3,31 +3,16 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { A, B, C, cleanRigs, failedLine, rig, wait } from "./__fixtures__/push-gate-rig.ts";
+import { A, B, C, cleanRigs, failedLine, noResult, pushed, rig } from "./__fixtures__/push-gate-rig.ts";
 import { MAX_PUSH_BLOCK, pushStopBlock } from "./ci-push-gate.ts";
 
 afterEach(cleanRigs);
-
-function noResult(sha: string, branch = "main") {
-  return (
-    `Stop: you pushed ${sha.slice(0, 7)} to ${branch} and its ci run has no result; ` +
-    `run ${wait(branch)} in the background and fix it if it fails`
-  );
-}
 
 const REPORT =
   "Stop: test (windows-latest) failed 3 times on main this session; " +
   "report the failure and its logs to the user, then stop";
 
 const TEST = ["test (windows-latest)"];
-
-/** A rig where the session pushed each of `rows`. */
-function pushed(rows: [string, string][], over = {}) {
-  const r = rig(over);
-  r.plant("s1", rows);
-
-  return r;
-}
 
 it("passes when the session pushed nothing or has no id", () => {
   expect(rig().gate()).toBeNull();

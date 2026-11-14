@@ -11,11 +11,11 @@ import { isString, type JsonObject, tryJson } from "../json.ts";
 import { REPO, STATE } from "../repo-dirs.ts";
 import { repoEnv } from "../repo-env.ts";
 import { BACKLOG_REL } from "./backlog.constants.ts";
+import { type GateDeps, lineFor } from "./ci-push-gate-line.ts";
 import { BLOCKED_LINE_RE, DECIMAL } from "./ci-push-parse.constants.ts";
 import { pushedRefs } from "./ci-push-parse.ts";
-import { recordPath, recordRoot, recordSchema, type WaitRecord } from "./ci-wait-record.ts";
-import { spawnRunner, type Runner } from "./ci-wait-run.ts";
-import { SHA_SHOWN } from "./ci-wait.constants.ts";
+import { recordRoot } from "./ci-wait-record.ts";
+import { spawnRunner } from "./ci-wait-run.ts";
 import type { HookInput } from "./hook-input.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -25,21 +25,6 @@ export const MAX_PUSH_BLOCK = 6;
 const LOGS_DIR = `${REPO}/${STATE}/orchestrator-logs`;
 const SESSIONS_DIR = `${REPO}/${STATE}/sessions`;
 const PUSHED_FILE = "pushed.json";
-const FAILED_ROUNDS = 3;
-const TERMINAL: readonly string[] = ["passed", "nothing", "error"];
-
-const BLOCKED_HINT =
-  "; if only the user can fix a job, run bun repo backlog add 'blocked: `<job>` <why>' " +
-  "and name that line in your reply";
-
-type LineCtx = { root: string; active: boolean; blocked: ReadonlySet<string> };
-
-/** What the gate reads, writes and asks; the real ones by default. */
-export type GateDeps = {
-  git: Runner;
-  fs: Pick<typeof nodeFs, "readFileSync" | "writeFileSync" | "mkdirSync">;
-  now: () => Date;
-};
 
 function realDeps(): GateDeps {
   return {
@@ -127,14 +112,6 @@ export function recordPush(input: { command: string; cwd: string; session: strin
   }
 }
 
-function readRecord(deps: GateDeps, root: string, sha: string): WaitRecord | null {
-  try {
-    return tryJson(recordSchema(), deps.fs.readFileSync(recordPath(root, sha), "utf8")) ?? null;
-  } catch {
-    return null;
-  }
-}
-
 /** The jobs open `blocked:` lines in the root's backlog name; none when it is missing or unreadable. */
 function blockedJobs(deps: GateDeps, root: string): ReadonlySet<string> {
   try {
@@ -144,73 +121,6 @@ function blockedJobs(deps: GateDeps, root: string): ReadonlySet<string> {
   } catch {
     return new Set();
   }
-}
-
-/** The jobs not blocked that failed in three or more of the branch's pushed commits. */
-function repeatedJobs(deps: GateDeps, ctx: LineCtx, pushed: Pushed[]): string[] {
-  const counts = new Map<string, number>();
-
-  for (const sha of new Set(pushed.map((p) => p.sha))) {
-    const record = readRecord(deps, ctx.root, sha);
-    const failed = record?.outcome === "failed" ? record.failed : [];
-
-    for (const job of failed.filter((j) => !ctx.blocked.has(j))) counts.set(job, (counts.get(job) ?? 0) + 1);
-  }
-
-  return [...counts].filter(([, n]) => n >= FAILED_ROUNDS).map(([job]) => job);
-}
-
-/** The Stop line for one branch's pushes, or null when its newest landed commit is settled. */
-function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Pushed[]): string | null {
-  const branch = String(pushed[0]?.branch);
-
-  const landed = pushed.filter(
-    (p) => deps.git(["merge-base", "--is-ancestor", p.sha, `origin/${branch}`], ctx.root).code === 0,
-  );
-
-  const newest = landed[landed.length - 1];
-
-  if (newest === undefined) return null;
-  const record = readRecord(deps, ctx.root, newest.sha);
-
-  if (record !== null && TERMINAL.includes(record.outcome)) return null;
-  const short = newest.sha.slice(0, SHA_SHOWN);
-  const wait = `\`bun repo ci wait ${branch}\``;
-
-  if (record?.outcome !== "failed") {
-    return (
-      `Stop: you pushed ${short} to ${branch} and its ci run has no result; ` +
-      `run ${wait} in the background and fix it if it fails`
-    );
-  }
-
-  return failedLine(deps, ctx, { branch, failed: record.failed, pushed, short, wait });
-}
-
-/** The Stop line for a branch whose newest landed commit failed `failed`; null when every job is blocked. */
-function failedLine(
-  deps: GateDeps,
-  ctx: LineCtx,
-  run: { branch: string; failed: string[]; pushed: Pushed[]; short: string; wait: string },
-): string | null {
-  const open = run.failed.filter((job) => !ctx.blocked.has(job));
-
-  // An empty list says nothing about which jobs failed, so it is never released.
-  if (run.failed.length > 0 && open.length === 0) return null;
-  const repeated = repeatedJobs(deps, ctx, run.pushed);
-
-  if (repeated.length > 0) {
-    const report =
-      `Stop: ${repeated.join(", ")} failed ${FAILED_ROUNDS} times on ${run.branch} this session; ` +
-      "report the failure and its logs to the user, then stop";
-
-    return ctx.active ? null : report;
-  }
-
-  return (
-    `Stop: ci failed on ${run.short} on ${run.branch} (${open.join(", ")}); ` +
-    `fix it in a new worktree, push, and run ${run.wait} in the background${BLOCKED_HINT}`
-  );
 }
 
 function readCount(deps: GateDeps, stamp: string): number {
