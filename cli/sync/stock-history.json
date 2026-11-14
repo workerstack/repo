@@ -111,10 +111,10 @@
   ".agents/skills/ask/SKILL.md": [
     "06a3ef753760f34f",
     "694ed0baa8e7d400",
+    "bc6ac1c8061ebb5e",
     "e2587dc23cd18e52",
     "ee7dce90c63920a1",
-    "f3717a70dc301af9",
-    "fd992d95ff08aa3a"
+    "f3717a70dc301af9"
   ],
   ".agents/skills/auto/SKILL.md": [
     "0c63db4a5c46414b",
@@ -123,7 +123,7 @@
     "a91f1a00a2723607",
     "ced7c3eaf2356090"
   ],
-  ".agents/skills/away/SKILL.md": ["c4fe4ae187fc949f", "e9100f4b23565ac0"],
+  ".agents/skills/away/SKILL.md": ["e9100f4b23565ac0", "f6740f3730564f16"],
   ".agents/skills/backlog/SKILL.md": ["2cc7f10a67e378fd"],
   ".agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   ".agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
@@ -2181,9 +2181,15 @@
     "f418280b4c3225ed"
   ],
   "agents/settings/claude.json": ["bfc78d8fc65d4afe"],
-  "agents/skills/ask/SKILL.md": ["06a3ef753760f34f", "9c8dce3c6696eb1e", "fd992d95ff08aa3a"],
+  "agents/skills/ask/SKILL.md": ["06a3ef753760f34f", "9c8dce3c6696eb1e", "bc6ac1c8061ebb5e", "fd992d95ff08aa3a"],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e", "c6244630ffaa9593"],
-  "agents/skills/away/SKILL.md": ["3c7997f0397f9508", "c4fe4ae187fc949f", "dfe96572d60369ec", "e9100f4b23565ac0"],
+  "agents/skills/away/SKILL.md": [
+    "3c7997f0397f9508",
+    "c4fe4ae187fc949f",
+    "dfe96572d60369ec",
+    "e9100f4b23565ac0",
+    "f6740f3730564f16"
+  ],
   "agents/skills/backlog/SKILL.md": ["2cc7f10a67e378fd", "749b30d34e8b751d"],
   "agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   "agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
@@ -5741,6 +5747,7 @@
     "60a9085eb682f758",
     "60bbd6486f6e1234",
     "8046b594aeb1033b",
+    "8351693403a6d5a8",
     "9159640b71e2d794",
     "a4bad1af34af3791",
     "c4233bf3ebccec0b",
@@ -5821,6 +5828,7 @@
     "3c530ea399a45ac6",
     "5111e1097fa53965",
     "70065f19eee432ab",
+    "80216253c307f51e",
     "88e1c06aa22a3f48",
     "8df9de37a2c27ffe",
     "bc8f3e57528a8118",
@@ -8128,6 +8136,7 @@
   ],
   "references/browser.md": ["0ebbff0224a7dd44", "607c3f41f8823196", "9dd0425d48c70e29"],
   "references/cascade.md": [
+    "3943d2650103ed3b",
     "469ffa9cb8f081f5",
     "8a8b498a28fdeb92",
     "92cfceeca9b71d56",
@@ -8187,6 +8196,7 @@
     "7b468204e1ffda9d",
     "8816d7b0f28a1748",
     "97b8970430339866",
+    "97b9a605ba9b5bd9",
     "acac21b89edafb2c",
     "b8962e56228a9e40",
     "d206b3f0ff29c7f7",
