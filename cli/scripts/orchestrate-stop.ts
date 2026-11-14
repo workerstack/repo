@@ -1,5 +1,5 @@
 /**
- * Stop blocks a reply that skips an approval block, an /ask step ask or an /away decision; a prompt resets the
+ * Stop blocks a reply that skips an approval block or an /away decision; a prompt resets the
  * turn.
  */
 import { repoEnv } from "../repo-env.ts";
@@ -18,7 +18,6 @@ import { approvalsFile } from "./orchestrate-session.ts";
 import { readStampInt, unlinkStamp, writeStamp } from "./orchestrate-stamps.ts";
 import {
   endsWithQuestion,
-  hasStepAsk,
   isWaitScoutExact,
   lastAssistantFromTranscript,
   payloadAssistantMessage,
@@ -26,7 +25,6 @@ import {
 import { writeGitAsked, writeSessionReceipt } from "./orchestrate-writes.ts";
 import {
   APPROVAL_BLOCK_STAMP,
-  ASK_STOP_REASON,
   AWAY_STOP_REASON,
   END_TURN,
   MAX_STOP,
@@ -40,7 +38,7 @@ const STOP_FEEDBACK = /^\s*Stop hook feedback:/;
 const BLOCKED_BY_STOP = /Blocked by stop hook/;
 const TASK_NOTIFICATION = /task[-_ ]?notification/i;
 
-// The ask and away blocks share one counter and its cap, so a true blocker still reaches the person.
+// The away block has a counter and a cap, so a true blocker still reaches the person.
 function cappedStopBlock(data: HookInput, reason: string): HookResult {
   const n = readStampInt(data, STOP_BLOCK_STAMP);
 
@@ -70,8 +68,6 @@ function replyVerdict(data: HookInput, msg: string): HookResult {
   }
 
   if (mode === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
-
-  if (mode === "ask" && !hasStepAsk(msg)) return cappedStopBlock(data, ASK_STOP_REASON);
 
   return PASS;
 }

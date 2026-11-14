@@ -38,9 +38,13 @@ export function relativeSlash(root: string, abs: string, p: typeof path): string
   return p.relative(root, abs).split(p.sep).join("/");
 }
 
-/** The `.md` files directly under `<root>/.repo/<dir>`, sorted, whose text the rename changes. */
-function changed(root: string, entry: (typeof DIRS)[number], p: typeof path): string[] {
-  const dir = p.join(root, REPO, entry.dir);
+/** The `.md` files directly under `<root>/.repo/<dir>`, sorted, whose text `rewrite` changes. */
+export function changedMarkdown(
+  at: { root: string; dirName: string; p?: typeof path },
+  rewrite: (text: string) => string,
+): string[] {
+  const { root, dirName, p = path } = at;
+  const dir = p.join(root, REPO, dirName);
 
   if (!isDir(dir)) return [];
 
@@ -51,10 +55,15 @@ function changed(root: string, entry: (typeof DIRS)[number], p: typeof path): st
     .filter((file) => {
       const text = fs.readFileSync(file, "utf8");
 
-      return renameStrategies(text, entry.kind) !== text;
+      return rewrite(text) !== text;
     })
     .map((file) => relativeSlash(root, file, p))
     .toSorted(byCodeUnit);
+}
+
+/** The `.md` files directly under `<root>/.repo/<dir>`, sorted, whose text the rename changes. */
+function changed(root: string, entry: (typeof DIRS)[number], p: typeof path): string[] {
+  return changedMarkdown({ dirName: entry.dir, p, root }, (text) => renameStrategies(text, entry.kind));
 }
 
 /** The one step that renames the old strategies in each plan, roadmap and handoff that has them; none otherwise. */

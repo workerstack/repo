@@ -9,6 +9,7 @@ import { applyMigration } from "./sync/apply-migration.ts";
 import { ignoreBlockLines, strayIgnoreFiles, untrackedEntries } from "./sync/git-files.ts";
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
 import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
+import { planModeRename } from "./sync/migrate-mode-name.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { planSkillRename } from "./sync/migrate-skill-names.ts";
 import { planStrategyRename } from "./sync/migrate-strategy-name.ts";
@@ -232,9 +233,9 @@ async function adopt(run: Run, blocks: StepRun): Promise<number | null> {
 }
 
 /**
- * The relocation of `.tmp/repo` and the strategy and skill renames, each planned after the one before applied, before
- * anything is planned from them; the skill rename comes before the first plan, which refuses a `.repo/skills` skill
- * whose name or `overrides:` the stock no longer has. The exit code when one stops.
+ * The relocation of `.tmp/repo` and the strategy, skill and mode renames, each planned after the one before applied,
+ * before anything is planned from them; the skill rename comes before the first plan, which refuses a `.repo/skills`
+ * skill whose name or `overrides:` the stock no longer has. The exit code when one stops.
  */
 async function renameOld(run: Run, blocks: StepRun): Promise<number | null> {
   const relocation = await stepBlock({ noun: "relocation", steps: planTmpRepo(run.root) }, blocks);
@@ -245,12 +246,15 @@ async function renameOld(run: Run, blocks: StepRun): Promise<number | null> {
   if ("exit" in strategies) return strategies.exit;
   const skills = await stepBlock({ noun: "skill", steps: planSkillRename(run.root) }, blocks);
 
-  return "exit" in skills ? skills.exit : null;
+  if ("exit" in skills) return skills.exit;
+  const modes = await stepBlock({ noun: "mode", steps: planModeRename(run.root) }, blocks);
+
+  return "exit" in modes ? modes.exit : null;
 }
 
 /**
- * The relocation of `.tmp/repo`, the strategy and skill renames, the rule upgrade, the handover, the first plan, the
- * migration and the adoption; the exit code when one stops.
+ * The relocation of `.tmp/repo`, the strategy, skill and mode renames, the rule upgrade, the handover, the first plan,
+ * the migration and the adoption; the exit code when one stops.
  */
 async function prepare(run: Run): Promise<number | null> {
   const blocks = blocksOf(run);

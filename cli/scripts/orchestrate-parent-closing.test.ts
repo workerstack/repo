@@ -7,7 +7,6 @@ import { hookSession, type HookSession } from "./__fixtures__/hook-session.ts";
 import { closing, must, orchestrateKit, plan, replyOf, roadmap } from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
-import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 
@@ -141,10 +140,10 @@ it("does not block on missing turn stamps or a missing session", () => {
   expect(noSid.stop("Done.")).toBeNull();
 });
 
-it("under /ask the approval block counts as the step ask", () => {
+it("under /ask a reply with or without an approval block passes", () => {
   const s = claude(kit.temp(), "s7");
   s.say("/ask");
   expect(s.stop(`Saved.\n\n${closing(plan(3))}`)).toBeNull();
-  expect(s.stop(`Saved.\n\n${OLD_LINE}`)?.reason).toBe(ASK_STOP_REASON);
-  expect(s.stop("Saved plan 3.")?.reason).toBe(ASK_STOP_REASON);
+  expect(s.stop(`Saved.\n\n${OLD_LINE}`)).toBeNull();
+  expect(s.stop("Saved plan 3.")).toBeNull();
 });

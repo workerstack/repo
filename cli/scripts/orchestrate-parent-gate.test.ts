@@ -5,8 +5,7 @@ import { expect, it } from "vitest";
 
 import { must, orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
-import { hasStepAsk } from "./orchestrate-transcript.ts";
-import { ASK_STOP_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
+import { SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 
@@ -36,12 +35,6 @@ function plantSibling(board: string): string {
   return boardDir;
 }
 
-it("hasStepAsk is true on a question; wait-scout is exact", () => {
-  expect(hasStepAsk("wrote src/a.ts\nContinue?")).toBe(true);
-  expect(hasStepAsk("wrote src/a.ts")).toBe(false);
-  expect(hasStepAsk("[orchestrator]: wait scout")).toBe(true);
-});
-
 it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   const ws = kit.temp();
   const board = kit.temp("orch-board-");
@@ -50,7 +43,7 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   const env = { GROK_HOOK_EVENT: "user_prompt_submit", GROK_SESSION_ID: "self", GROK_WORKSPACE_ROOT: ws };
   const r = kit.run(call, { ...env, REPO_BOARD_HOME: board, REPO_BOARD_PROVIDER: "claude" });
   const ctx = must(replyOf(r)).hookSpecificOutput.additionalContext;
-  expect(ctx).toMatch(/sessionGate=auto/);
+  expect(ctx).toMatch(/sessionGate=ask/);
   expect(ctx).toContain("sibling live work");
   expect(ctx).not.toContain("ship the auth fix");
 
@@ -63,19 +56,30 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   expect(fs.existsSync(path.join(boardDir, "claude-other.json"))).toBe(true);
 });
 
-it("UserPromptSubmit default additionalContext is sessionGate=auto", () => {
-  expect(say(kit.temp(), "s1", "ship it")).toMatch(/sessionGate=auto/);
+it("with no stamp the session gate is ask", () => {
+  expect(say(kit.temp(), "s1", "ship it")).toMatch(/^sessionGate=ask\b/);
 });
 
-it("/ask stamps ask; /auto stamps auto", () => {
+it("/ask stamps ask and /away stamps away", () => {
   const ws = kit.temp();
   const sid = "g1";
+  expect(say(ws, sid, "/away")).toMatch(/sessionGate=away/);
+  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("away");
   expect(say(ws, sid, "/ask")).toMatch(/sessionGate=ask/);
   expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
-  expect(say(ws, sid, "/auto")).toMatch(/sessionGate=auto/);
-  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("auto");
-  expect(say(ws, sid, "/ask")).toMatch(/sessionGate=ask/);
-  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
+});
+
+it("a stamp left holding auto reads as ask", () => {
+  const ws = kit.temp();
+  fs.mkdirSync(path.dirname(stampAbs(ws, "g2")), { recursive: true });
+  fs.writeFileSync(stampAbs(ws, "g2"), "auto");
+  expect(say(ws, "g2", "go")).toMatch(/^sessionGate=ask\b/);
+});
+
+it("a prompt of exactly /auto writes no stamp", () => {
+  const ws = kit.temp();
+  say(ws, "g3", "/auto");
+  expect(fs.existsSync(stampAbs(ws, "g3"))).toBe(false);
 });
 
 it("sid-less /ask does not stamp", () => {
@@ -84,15 +88,11 @@ it("sid-less /ask does not stamp", () => {
   expect(fs.existsSync(path.join(ws, ".repo/tmp/orchestrator-logs"))).toBe(false);
 });
 
-it("ask Stop without a question blocks; with a question or wait-scout allows; auto allows", () => {
+it("ask Stop passes a reply with no question, with a question or with wait-scout", () => {
   const ws = kit.temp();
   const sid = "stop1";
   say(ws, sid, "/ask");
-  const blocked = must(replyOf(stop(ws, sid, "wrote src/a.ts")));
-  expect(blocked.decision).toBe("block");
-  expect(blocked.reason).toBe(ASK_STOP_REASON);
+  expect(stop(ws, sid, "wrote src/a.ts").stdout).toBe("");
   expect(stop(ws, sid, "wrote src/a.ts\nContinue?").stdout).toBe("");
   expect(stop(ws, sid, "[orchestrator]: wait scout").stdout).toBe("");
-  say(ws, sid, "/auto");
-  expect(stop(ws, sid, "wrote src/a.ts").stdout).toBe("");
 });

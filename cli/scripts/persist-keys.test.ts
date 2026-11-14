@@ -19,20 +19,21 @@ describe("strategy and mode keys", () => {
   });
 
   it("ignores a key line inside a code fence", () => {
-    const text = "# x\n```\nmode: auto\n```\n";
+    const text = "# x\n```\nmode: away\n```\n";
     expect(extractMode(text)).toBeUndefined();
     expect(stripModeLine(text)).toBe(text);
   });
 
   it("strips the first key line outside a fence", () => {
     expect(stripStrategyLine("a\nstrategy: free\nb")).toBe("a\nb");
-    expect(stripModeLine("a\nmode: ask\nmode: auto\nb")).toBe("a\nmode: auto\nb");
+    expect(stripModeLine("a\nmode: ask\nmode: away\nb")).toBe("a\nmode: away\nb");
   });
 
   it("names the allowed values", () => {
     expect(strategyError()).toBe("strategy: free|spawn-fast|spawn-deep");
     expect(modeErrors({})).toStrictEqual([]);
     expect(modeErrors({ mode: "away" })).toStrictEqual([]);
-    expect(modeErrors({ mode: "" })).toStrictEqual(["mode: ask|auto|away"]);
+    expect(modeErrors({ mode: "auto" })).toStrictEqual(["mode: ask|away"]);
+    expect(modeErrors({ mode: "" })).toStrictEqual(["mode: ask|away"]);
   });
 });

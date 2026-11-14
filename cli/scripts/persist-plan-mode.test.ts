@@ -10,7 +10,7 @@ import { persistPlan } from "./persist-plan.ts";
 const tmpWs = useTmpWs();
 
 const CREATED = "2026-08-26T14:30:00Z";
-const MODE_KEY = "mode: ask|auto|away";
+const MODE_KEY = "mode: ask|away";
 
 function withMode(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
@@ -63,12 +63,12 @@ describe("plan mode updates", () => {
     const none = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
     expect(none.ok, none.error).toBe(true);
     expect(read(path.join(ws, savedOk(none).path))).not.toMatch(/^mode:/m);
-    const r = persistPlan({ content: withMode(VALID_PLAN, "auto"), created: CREATED, workspaceRoot: ws });
+    const r = persistPlan({ content: withMode(VALID_PLAN, "ask"), created: CREATED, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay."));
     expect(kept.ok, kept.error).toBe(true);
-    expect(read(abs)).toMatch(/^strategy: free\nmode: auto$/m);
+    expect(read(abs)).toMatch(/^strategy: free\nmode: ask$/m);
     const changed = update(ws, abs, withMode(VALID_PLAN, "away"));
     expect(changed.ok, changed.error).toBe(true);
     expect(read(abs).match(/^mode:/gm)).toStrictEqual(["mode:"]);

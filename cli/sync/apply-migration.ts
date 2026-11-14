@@ -7,6 +7,7 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import { loadConfig, SKILL_PACKS } from "../config.ts";
 import { readJson } from "../json.ts";
 import { isDir, moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
+import { renameMode } from "./migrate-mode-name.ts";
 import { renameSkills } from "./migrate-skill-names.ts";
 import { kindOf, renameStrategies } from "./migrate-strategy-name.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
@@ -24,6 +25,13 @@ type Run = { root: string; lines: string[]; untracked: readonly string[]; remove
 
 /** What one step does to the run, by kind. */
 type Actions = { [K in Acting["kind"]]: (run: Run, step: StepOf<K>) => Promise<void> | void };
+
+/** `text` of the file at root-relative `rel` with the rename `rename` applied. */
+function renamed(rename: StepOf<"rename-text">["rename"], text: string, rel: string): string {
+  if (rename === "skills") return renameSkills(text);
+
+  return rename === "mode" ? renameMode(text) : renameStrategies(text, kindOf(rel));
+}
 
 const SKILLS_LIST = /skills: (\[[^\]]*\])/;
 
@@ -87,7 +95,7 @@ const ACTIONS: Actions = {
       const file = path.join(run.root, rel);
       const text = fs.readFileSync(file, "utf8");
 
-      writeAtomic(file, step.rename === "skills" ? renameSkills(text) : renameStrategies(text, kindOf(rel)));
+      writeAtomic(file, renamed(step.rename, text, rel));
     }
 
     run.lines.push(`${PREFIX}${step.note}`);

@@ -4,7 +4,7 @@ export type Strategy = "free" | "spawn-fast" | "spawn-deep";
 
 export type SpawnStrategy = Exclude<Strategy, "free">;
 
-export type Mode = "ask" | "auto" | "away";
+export type Mode = "ask" | "away";
 
 /**
  * What an approval block can name: a full plan or roadmap, with its strategy, or a fast plan or roadmap, which have

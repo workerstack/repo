@@ -1,13 +1,11 @@
 ---
 name: ask
-description: 'Session flag. Finish one step, recap, then ask before the next.'
+description: 'Session flag. Default. Stop once for plan approval then run to done.'
 ---
 # ask
 
-Session flag. Slash `/ask` stamps this session.
+Session flag. Default. Slash `/ask` stamps this session `ask`.
 
-Finish one coherent step. Recap what landed. Ask whether to continue. Wait. Do not start the next step in this turn.
+Write and review the plan, stop once for approval, then run to done. Ask only on a blocker or a real choice. Do not pause after each step.
 
-`/auto` is the default: keep going; ask only on blockers. Slash `/auto` unlinks the stamp and returns this session to auto.
-
-`/away` is the third flag: decide instead of asking, log each choice, and let the Stop hook run the approval. Any stamp beats a saved `mode:`.
+`/away` is the other flag: decide instead of asking, log each choice, and let the Stop hook run the approval. Any stamp beats a saved `mode:`, so `/ask` beats a saved `mode: away`.

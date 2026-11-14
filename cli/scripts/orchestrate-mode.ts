@@ -1,4 +1,4 @@
-/** The session gate: /auto, /ask and /away stamps, then an in-progress item's `mode:`, and the context naming both. */
+/** The session gate: /ask and /away stamps, then an in-progress item's `mode:`, and the context naming both. */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -16,16 +16,16 @@ import {
 } from "./orchestrate-session.ts";
 import { resolveSessionGateStamp, sessionGateStampPath } from "./orchestrate-stamps.ts";
 import { AUTO_ASK_STAMP, IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
+import { ASK_MODE, AWAY_MODE } from "./strategy.constants.ts";
 import { parseMode } from "./strategy.ts";
 import type { Mode } from "./strategy.types.ts";
 
 const SLASHES: readonly (readonly [RegExp, Mode])[] = [
-  [/^\s*\/auto\s*$/, "auto"],
   [/^\s*\/ask\s*$/, "ask"],
   [/^\s*\/away\s*$/, "away"],
 ];
 
-/** A prompt of exactly /auto, /ask or /away stamps that mode as this session's gate and drops the legacy stamp. */
+/** A prompt of exactly /ask or /away stamps that mode as this session's gate and drops the legacy stamp. */
 export function applySessionGateSlash(data: HookInput, prompt: string): void {
   const slash = SLASHES.find(([re]) => re.test(prompt))?.[1];
 
@@ -57,25 +57,26 @@ function itemMode(data: HookInput): Mode | null {
   return null;
 }
 
+/** The mode a readable stamp holds: away when it says so, else ask, so a stamp left holding `auto` reads as ask. */
 function stampedMode(data: HookInput): Mode | null {
-  let mode: Mode | null = null;
-
   try {
     const p = resolveSessionGateStamp(data);
-    mode = p === null ? null : parseMode(fs.readFileSync(p, "utf8").trim());
+
+    if (p === null) return null;
+
+    return fs.readFileSync(p, "utf8").trim() === AWAY_MODE ? AWAY_MODE : ASK_MODE;
   } catch {
     // An unreadable stamp names no mode.
+    return null;
   }
-
-  return mode;
 }
 
 /**
- * The mode this session runs: the /auto, /ask or /away stamp, else the newest in-progress plan or roadmap in this
- * session's approvals with a valid `mode:`, else auto. Another session's files never count.
+ * The mode this session runs: the /ask or /away stamp, else the newest in-progress plan or roadmap in this
+ * session's approvals with a valid `mode:`, else ask. Another session's files never count.
  */
 export function effectiveModeOf(data: HookInput): Mode {
-  return stampedMode(data) ?? itemMode(data) ?? "auto";
+  return stampedMode(data) ?? itemMode(data) ?? ASK_MODE;
 }
 
 function sessionReceiptContext(data: HookInput): string {

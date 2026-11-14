@@ -2,7 +2,7 @@
  * The strategy domain: how a plan or roadmap gets implemented, and the things that follow from it.
  *
  *   session stamp  which plan this session reviews; the plan file is the truth, the stamp only points at it
- *   mode           how a session handles a question: ask, auto or away
+ *   mode           how a session handles a question: ask or away
  *
  * The approval block and approval replies live in `closing-line.ts`. Node builtins, `canonicalPath` and the stamp's
  * schema only.

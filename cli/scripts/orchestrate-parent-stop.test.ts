@@ -8,7 +8,6 @@ import { claudeHook } from "./__fixtures__/claude-hook.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
 import type { HookInput } from "./hook-input.ts";
 import { main } from "./orchestrate-parent.ts";
-import { ASK_STOP_REASON } from "./orchestrate.constants.ts";
 
 const hook = claudeHook();
 
@@ -31,6 +30,10 @@ function ask(ws: string, sid: string) {
   return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "ask");
 }
 
+function away(ws: string, sid: string) {
+  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "away");
+}
+
 describe("a Stop that is not the end of a turn", () => {
   it("passes while a stop hook is already active", () => {
     const ws = hook.temp();
@@ -47,28 +50,27 @@ describe("a Stop that is not the end of a turn", () => {
   });
 });
 
-describe("the ask-mode stop block", () => {
-  it("blocks a turn that ends without a question", () => {
+describe("the ask-mode stop", () => {
+  it("passes a turn that ends without a question", () => {
     const ws = hook.temp();
     ask(ws, "a3");
-    expect(hook.stop(ws, "a3", { last_assistant_message: "Done." })).toStrictEqual({
-      decision: "block",
-      reason: ASK_STOP_REASON,
-    });
+    expect(hook.stop(ws, "a3", { last_assistant_message: "Done." })).toBeNull();
   });
+});
 
+describe("the away-mode stop block", () => {
   it("stops blocking at the cap held in the legacy stamp", () => {
     const ws = hook.temp();
-    ask(ws, "a5");
+    away(ws, "a5");
     plantFile(ws, ".tmp/orchestrator-logs/stop-block-a5", "3");
-    expect(hook.stop(ws, "a5", { last_assistant_message: "Done." })).toBeNull();
+    expect(hook.stop(ws, "a5", { last_assistant_message: "Keep it?" })).toBeNull();
   });
 
   it("counts from zero when the stop-block stamp holds no number", () => {
     const ws = hook.temp();
-    ask(ws, "a4");
+    away(ws, "a4");
     plantFile(ws, ".repo/tmp/orchestrator-logs/stop-block-a4", "junk");
-    expect(hook.stop(ws, "a4", { last_assistant_message: "Done." })?.decision).toBe("block");
+    expect(hook.stop(ws, "a4", { last_assistant_message: "Keep it?" })?.decision).toBe("block");
     expect(fs.readFileSync(path.join(ws, ".repo/tmp/orchestrator-logs/stop-block-a4"), "utf8")).toBe("1");
   });
 });

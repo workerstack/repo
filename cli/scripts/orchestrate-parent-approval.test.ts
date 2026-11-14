@@ -44,7 +44,7 @@ describe("a prompt", () => {
       expect(say(ws, sid, { [field]: "/ask" })[0], field).toMatch(/^sessionGate=ask\b/);
     }
 
-    expect(say(ws, "f-none", {})[0]).toMatch(/^sessionGate=auto\b/);
+    expect(say(ws, "f-none", {})[0]).toMatch(/^sessionGate=ask\b/);
   });
 
   it("is ignored when it is a host banner", () => {
@@ -130,7 +130,7 @@ describe("a reply of i", () => {
   it("approves nothing without a session", () => {
     const ws = hook.temp();
     const tp = transcript(ws, closing(planItem(1)));
-    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["sessionGate=auto"]);
+    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["sessionGate=ask"]);
   });
 
   it("refuses a strategy change when the plan has no frontmatter block to carry it", () => {
