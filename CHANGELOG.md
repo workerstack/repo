@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo lint` runs about four times faster (11 s to 2.5 s on this repo): the lint rules share their per-file work, the script checks share one parse, and they run while oxlint works
 - The commit gate (repo turn) writes and stages cli/sync/stock-history.json in this package's checkout when a stock file changes, so the table lands in the same commit; sync now runs before the related tests, and --staged restages each step's rewrites before the next step.
 - Under `workflow: "pull-request"` the default-branch push deny now names `bun repo worktree finish <name>`, also denies a delete push of the default branch, and `bun repo push wt/<name>` points at finish.
+- `bun repo sync` writes the change workflow paragraph of `AGENTS.md` for the repo's `workflow`: pull-request and main get their own steps, and worktree keeps today's text. Skills and references describe every mode, and the new `references/workflow.md` says what each one does.
 
 ### Removed
 

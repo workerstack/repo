@@ -30,7 +30,7 @@ First, read recent commits, reverts, review comments, agent instruction files, a
 
 ## Fix and prove
 
-Then fix the most frequent classes now, one worktree per class (`bun repo worktree add correct-{slug}`), each committed and finished (`/commit` runs `finish` from the root). When a fixed class came from a lesson, run `bun repo lessons rm <slug>` in that worktree, in the same commit: the check replaces the lesson. A correction you fix now but cannot encode yet goes in as a lesson (`bun repo lessons hit`, or write one) inside a worktree: the class's `correct-{slug}`, else `lesson-{slug}`. Prove each new check fails on a real past mistake. Run the same command locally and in CI. Exceptions go on the offending line with a reason, an expiry date, and a human's approval.
+Then fix the most frequent classes now, one worktree per class (`bun repo worktree add correct-{slug}`), each committed and finished (`/commit` lands it the way `AGENTS.md` says, by default `finish` from the root). When a fixed class came from a lesson, run `bun repo lessons rm <slug>` in that worktree, in the same commit: the check replaces the lesson. A correction you fix now but cannot encode yet goes in as a lesson (`bun repo lessons hit`, or write one) inside a worktree: the class's `correct-{slug}`, else `lesson-{slug}`. Prove each new check fails on a real past mistake. Run the same command locally and in CI. Exceptions go on the offending line with a reason, an expiry date, and a human's approval.
 
 ## Keep the rule table
 

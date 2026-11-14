@@ -44,7 +44,7 @@ What to do instead.
 
 ## Write
 
-- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). In the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
+- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). Under `workflow: "main"` the main checkout takes them too. Under the other modes, in the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.repo/{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
 - Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
 - `bun repo lessons hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
 - `bun repo lessons rm <slug>` deletes a lesson and reindexes.

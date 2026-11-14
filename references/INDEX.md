@@ -2,7 +2,7 @@
 
 Files are in `node_modules/@workerstack/repo/references/`. Read one in full when its line matches the work.
 
-<!-- repo:refs 899cb0cb -->
+<!-- repo:refs 6b8f8387 -->
 - `browser.md`: Browse web pages
 - `cascade.md`: Shrink big tool output
 - `clasp.md`: Apps Script CLI
@@ -26,6 +26,7 @@ Files are in `node_modules/@workerstack/repo/references/`. Read one in full when
 - `setup.md`: Set up integrations
 - `speak.md`: Text to speech
 - `sync.md`: How sync writes files
+- `workflow.md`: How changes land, per workflow
 <!-- /repo:refs -->
 
 <!-- repo:stack e4fdfa05 -->

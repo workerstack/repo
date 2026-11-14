@@ -2,6 +2,7 @@
 import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import type { Host } from "../../config.ts";
 import type { Effort } from "../../scripts/strategy.types.ts";
+import { DEFAULT_WORKFLOW } from "../../workflow.ts";
 import type { Doc, Sources } from "../agents/sources.types.ts";
 import { renderRules } from "../agents/rules.ts";
 
@@ -29,14 +30,17 @@ export function sourcesOf(rules: Doc[]): Sources {
   return { hooks: { rel: "agents/hooks.jsonc", value: {} }, rules, subagents: [] };
 }
 
-/** The text of every file `renderRules` plans for the root scope, or for `scope`, on a config's resolved effort. */
+/**
+ * The text of every file `renderRules` plans for the root scope, or for `scope`, on a config's resolved effort and the
+ * default workflow.
+ */
 export function renderText(
   sources: Sources,
   hosts: readonly Host[],
   scope = "",
   effort: Effort = AGENT_DEFAULTS.defaultEffort,
 ): Map<string, string> {
-  return new Map([...renderRules(sources.rules, { effort, hosts, scope })].map(([rel, file]) => [rel, file.text]));
+  return new Map([...renderRules(sources.rules, { effort, hosts, scope, workflow: DEFAULT_WORKFLOW })].map(([rel, file]) => [rel, file.text]));
 }
 
 export const BASE: Doc = stockRule("overview.md", {}, "Base body.");
