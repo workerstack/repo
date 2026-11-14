@@ -7,14 +7,8 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESTree } from "@typescript-eslint/utils";
 
-import {
-  expandAlias,
-  isBuiltIn,
-  isUnappliedReferenceTo,
-  referenceName,
-  unwrapped,
-  type Walk,
-} from "./dictionary-walk.ts";
+import { expandAlias, isBuiltIn, isUnappliedReferenceTo, referenceName, type Walk } from "./dictionary-walk.ts";
+import { nullThrows } from "./null-throws.ts";
 
 type TypeNode = TSESTree.TypeNode;
 
@@ -48,7 +42,7 @@ function isEmptyMember(member: TSESTree.TypeElement): boolean {
       ? (member.typeAnnotation ?? undefined)
       : undefined;
 
-  return annotation !== undefined && unwrapped(annotation.typeAnnotation).type === AST_NODE_TYPES.TSNeverKeyword;
+  return annotation !== undefined && annotation.typeAnnotation.type === AST_NODE_TYPES.TSNeverKeyword;
 }
 
 /** Whether the interface `declarations` merge into is `{}`: one declaration, no heritage, only empty members. */
@@ -95,27 +89,26 @@ function referenceValue(reference: TSESTree.TSTypeReference, walk: Walk): Unsafe
 
 /** The escape hatch `type` is, or undefined when it is a concrete value type. */
 function unsafeValueOf(type: TypeNode, walk: Walk): UnsafeValue | undefined {
-  const current = unwrapped(type);
-  const keyword = keywordValue(current);
+  const keyword = keywordValue(type);
 
   if (keyword !== undefined) return keyword;
 
-  if (current.type === AST_NODE_TYPES.TSTypeLiteral)
-    return current.members.every(isEmptyMember) ? "empty-object" : undefined;
+  if (type.type === AST_NODE_TYPES.TSTypeLiteral) return type.members.every(isEmptyMember) ? "empty-object" : undefined;
 
-  if (current.type === AST_NODE_TYPES.TSUnionType)
-    return current.types.some((member) => unsafeValueOf(member, walk) !== undefined) ? "union" : undefined;
+  if (type.type === AST_NODE_TYPES.TSUnionType)
+    return type.types.some((member) => unsafeValueOf(member, walk) !== undefined) ? "union" : undefined;
 
-  if (current.type === AST_NODE_TYPES.TSIntersectionType) return intersectionValue(current, walk);
+  if (type.type === AST_NODE_TYPES.TSIntersectionType) return intersectionValue(type, walk);
 
-  return current.type === AST_NODE_TYPES.TSTypeReference ? referenceValue(current, walk) : undefined;
+  return type.type === AST_NODE_TYPES.TSTypeReference ? referenceValue(type, walk) : undefined;
 }
 
-/** The value type of `member` when it is a typed index signature. */
+/** The value type of `member` when it is an index signature. */
 function indexValueTypes(member: TSESTree.TypeElement, walk: Walk): ValueType[] {
-  const annotation = member.type === AST_NODE_TYPES.TSIndexSignature ? (member.typeAnnotation ?? undefined) : undefined;
+  if (member.type !== AST_NODE_TYPES.TSIndexSignature) return [];
+  const annotation = nullThrows(member.typeAnnotation, "an index signature has a value type");
 
-  return annotation === undefined ? [] : [{ substitutions: walk.substitutions, type: annotation.typeAnnotation }];
+  return [{ substitutions: walk.substitutions, type: annotation.typeAnnotation }];
 }
 
 /** The value types of the built-in `reference`, a `Record` or a wrapper's operand, or null when it is no built-in. */
@@ -149,18 +142,16 @@ function referenceValueTypes(reference: TSESTree.TSTypeReference, walk: Walk): r
 
 /** The value types of the dictionary `type` is, or none when it is no dictionary. */
 function dictionaryValueTypes(type: TypeNode, walk: Walk): readonly ValueType[] {
-  const current = unwrapped(type);
+  if (type.type === AST_NODE_TYPES.TSTypeLiteral)
+    return type.members.flatMap((member) => indexValueTypes(member, walk));
 
-  if (current.type === AST_NODE_TYPES.TSTypeLiteral)
-    return current.members.flatMap((member) => indexValueTypes(member, walk));
-
-  if (current.type === AST_NODE_TYPES.TSMappedType) {
-    const value = current.typeAnnotation ?? undefined;
+  if (type.type === AST_NODE_TYPES.TSMappedType) {
+    const value = type.typeAnnotation ?? undefined;
 
     return value === undefined ? [] : [{ substitutions: walk.substitutions, type: value }];
   }
 
-  return current.type === AST_NODE_TYPES.TSTypeReference ? referenceValueTypes(current, walk) : [];
+  return type.type === AST_NODE_TYPES.TSTypeReference ? referenceValueTypes(type, walk) : [];
 }
 
 /** The escape hatch the value type `type`, as an index signature's, is, or undefined when it is concrete. */

@@ -1,29 +1,40 @@
-import * as parser from "@typescript-eslint/parser";
-import { TSESLint } from "@typescript-eslint/utils";
+import type { TSESTree } from "@typescript-eslint/utils";
 import { expect, it } from "vitest";
 
-import { noUnknownReturns } from "./no-unknown-returns.ts";
-import { noUnknownTypeAliases } from "./no-unknown-type-aliases.ts";
-import { childNodes } from "./type-parameters.ts";
+import { reportsOf } from "../../dev/rule-harness.ts";
+import type { RepoRule } from "./rule.types.ts";
+import { typeAliasEnvironmentOf } from "./type-aliases.ts";
+import { childNodes, type VisitorKeys } from "./type-parameters.ts";
 
-/** Two rules that both read the type alias environment, run over one parse of `code`; the rule ids they report. */
-function bothRulesOn(code: string): (string | null)[] {
-  const config: TSESLint.FlatConfig.Config = {
-    files: ["**/*.ts"],
-    languageOptions: { parser },
-    plugins: { repo: { rules: { aliases: noUnknownTypeAliases, returns: noUnknownReturns } } },
-    rules: { "repo/aliases": "error", "repo/returns": "error" },
+/** A rule that reports, once on the program, the text `look` reads off the program oxlint parsed. */
+function probe(look: (program: TSESTree.Program, visitorKeys: VisitorKeys) => string): RepoRule<"seen"> {
+  return {
+    create(context) {
+      return {
+        Program(program) {
+          const text = look(program, context.sourceCode.visitorKeys);
+          context.report({ data: { text }, messageId: "seen", node: program });
+        },
+      };
+    },
+    defaultOptions: [],
+    meta: { messages: { seen: "{{text}}" }, schema: [], type: "problem" },
   };
-
-  return new TSESLint.Linter().verify(code, config, "a.ts").map((message) => message.ruleId);
 }
 
-it("gives the second rule that asks about a program the environment the first built", () => {
-  const code = "type Payload = unknown;\nexport function read(): Payload { return 1; }\n";
-  expect(bothRulesOn(code)).toStrictEqual(["repo/aliases", "repo/returns"]);
+/** The one message `probe(look)` reports over `a.ts` holding `code`. */
+function seen(code: string, look: (program: TSESTree.Program, visitorKeys: VisitorKeys) => string): string[] {
+  return reportsOf(probe(look), { "a.ts": code }).map((report) => report.message);
+}
+
+it("gives every rule that asks about one program the environment the first ask built", () => {
+  const same = seen("type Payload = unknown;", (program, visitorKeys) =>
+    String(typeAliasEnvironmentOf(program, visitorKeys) === typeAliasEnvironmentOf(program, visitorKeys)),
+  );
+
+  expect(same).toStrictEqual(["true"]);
 });
 
 it("finds no children under a node type the visitor keys do not name", () => {
-  const { ast } = parser.parseForESLint("type A = string;");
-  expect(childNodes(ast, {})).toStrictEqual([]);
+  expect(seen("type A = string;", (program) => String(childNodes(program, {}).length))).toStrictEqual(["0"]);
 });

@@ -401,12 +401,6 @@
     "lines": 100,
     "statements": 100
   },
-  "cli/lint/script-rules.ts": {
-    "branches": 100,
-    "functions": 100,
-    "lines": 100,
-    "statements": 100
-  },
   "cli/lint/skip-on-platform.constants.ts": {
     "branches": 100,
     "functions": 100,
@@ -666,6 +660,12 @@
     "statements": 100
   },
   "cli/script-diagnostics.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
+  "cli/script-rules.ts": {
     "branches": 100,
     "functions": 100,
     "lines": 100,

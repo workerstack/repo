@@ -23,6 +23,9 @@ function catalogFields() {
   };
 }
 
+/** One `devEngines.runtime` entry: the runtime's name and the version range development needs. */
+type DevRuntime = z.ZodObject<{ name: z.ZodString; version: z.ZodOptional<z.ZodString> }>;
+
 /** The manifest fields a workspace read checks; other keys pass through. */
 export const packageJsonSchema: z.ZodObject<{
   name: z.ZodOptional<z.ZodString>;
@@ -32,6 +35,9 @@ export const packageJsonSchema: z.ZodObject<{
   packageManager: z.ZodOptional<z.ZodJSONSchema>;
   bin: z.ZodOptional<z.ZodJSONSchema>;
   engines: z.ZodOptional<z.ZodObject<{ node: z.ZodOptional<z.ZodString> }>>;
+  devEngines: z.ZodOptional<
+    z.ZodObject<{ runtime: z.ZodOptional<z.ZodUnion<readonly [DevRuntime, z.ZodArray<DevRuntime>]>> }>
+  >;
   exports: z.ZodOptional<z.ZodJSONSchema>;
   scripts: z.ZodOptional<z.ZodJSONSchema>;
   workspaces: z.ZodOptional<
@@ -56,6 +62,24 @@ export const packageJsonSchema: z.ZodObject<{
   optionalDependencies: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodString>>;
 }> = /* @__PURE__ */ buildPackageJsonSchema();
 
+/** `devEngines`, read only for its runtime: one `{ name, version }` entry or a list of them. */
+function devEnginesSchema() {
+  const runtime = z.object(
+    {
+      name: z.string({ error: "must be a string" }),
+      version: z.string({ error: "must be a version range" }).optional(),
+    },
+    { error: "must be an object" },
+  );
+
+  return z.object({ runtime: z.union([runtime, z.array(runtime)]).optional() }, { error: "must be an object" });
+}
+
+/** `engines`, read only for its node range: one range across the packages sets up node in the synced ci.yml. */
+function enginesSchema() {
+  return z.object({ node: z.string({ error: "must be a version range" }).optional() }, { error: "must be an object" });
+}
+
 function buildPackageJsonSchema() {
   const globs = z.array(z.string());
   const versions = versionsSchema();
@@ -64,10 +88,8 @@ function buildPackageJsonSchema() {
     {
       // Kept for the lint config, which narrows them where it reads them.
       bin: z.json().optional(),
-      // Only engines.node: one range across the packages sets up node in the synced ci.yml.
-      engines: z
-        .object({ node: z.string({ error: "must be a version range" }).optional() }, { error: "must be an object" })
-        .optional(),
+      devEngines: devEnginesSchema().optional(),
+      engines: enginesSchema().optional(),
       exports: z.json().optional(),
       name: z.string({ error: "must be a string" }).optional(),
       // Kept as written: sync accepts any value and only `repo check` judges these.
@@ -94,7 +116,7 @@ function buildPackageJsonSchema() {
 
 /**
  * The package.json fields repo sync reads; `version`, `sideEffects`, `packageManager`, `bin` and `exports` stay
- * unjudged JSON; `engines` keeps only `node`; every other field is dropped at parse.
+ * unjudged JSON; `engines` keeps only `node`, `devEngines` only `runtime`; every other field is dropped at parse.
  */
 export type PackageJson = z.output<typeof packageJsonSchema>;
 

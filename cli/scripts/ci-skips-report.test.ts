@@ -49,16 +49,16 @@ it("a json that is not a vitest report has no skips", () => {
 it("writeReport writes the os and the ids, and an absent vitest json gives an empty list", () => {
   const dir = tempDir("workerstack-skips-");
   write(dir, { "v.json": vitestJson(path.join(dir, "a.test.ts"), [["t", "skipped"]]) });
-  writeReport(path.join(dir, "out.json"), path.join(dir, "v.json"), dir);
+  writeReport(path.join(dir, "out.json"), [path.join(dir, "v.json")], dir);
   expect(JSON.parse(read(dir, "out.json"))).toStrictEqual({
     durations: {},
     os: process.platform,
     skipped: ["a.test.ts > t"],
   });
-  writeReport(path.join(dir, "none.json"), path.join(dir, "missing.json"), dir);
+  writeReport(path.join(dir, "none.json"), [path.join(dir, "missing.json")], dir);
   expect(JSON.parse(read(dir, "none.json"))).toStrictEqual({ durations: {}, os: process.platform, skipped: [] });
   fs.writeFileSync(path.join(dir, "bad.json"), "{ nope");
-  writeReport(path.join(dir, "bad-out.json"), path.join(dir, "bad.json"), dir);
+  writeReport(path.join(dir, "bad-out.json"), [path.join(dir, "bad.json")], dir);
   expect(JSON.parse(read(dir, "bad-out.json"))).toStrictEqual({ durations: {}, os: process.platform, skipped: [] });
 });
 
@@ -77,7 +77,7 @@ it("writeReport adds the whole ms of endTime - startTime per file, by posix path
       ],
     }),
   });
-  writeReport(path.join(dir, "out.json"), path.join(dir, "v.json"), dir);
+  writeReport(path.join(dir, "out.json"), [path.join(dir, "v.json")], dir);
 
   const written = JSON.parse(read(dir, "out.json")) /* writeReport wrote durations as numbers */ as {
     durations: Record<string, number>;

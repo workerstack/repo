@@ -37,6 +37,7 @@ import {
   WAIT_MANY,
 } from "./ci.constants.ts";
 import { captureBun, type Captured } from "./lint.ts";
+import { nodeReport } from "./node-run.ts";
 import { turboRunner } from "./turbo-bin.ts";
 import type { Bins } from "./turn-steps.ts";
 import { BINS } from "./turn.ts";
@@ -188,10 +189,13 @@ async function gatesMain(
   }
 }
 
-/** Writes the report file from the JSON at `json`; false, with the reason on stderr, when it cannot be written. */
+/**
+ * Writes the report file from the JSON of both runs, at `json` and beside it; false, with the reason on stderr, when it
+ * cannot be written.
+ */
 function writeTo({ report, json, root }: { report: string; json: string; root: string }, io: Io): boolean {
   try {
-    writeReport(path.resolve(io.cwd, report), json, root);
+    writeReport(path.resolve(io.cwd, report), [json, nodeReport(json)], root);
 
     return true;
   } catch (error) {

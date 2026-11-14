@@ -19,6 +19,9 @@ export type SyntaxValue =
   | SyntaxNode
   | readonly SyntaxValue[];
 
+/** A literal of either parser, read only by its value. */
+type Literal = { readonly value: SyntaxValue };
+
 /** A syntax node read off parser output, keyed by its field names. */
 export type SyntaxNode = { readonly [key: string]: SyntaxValue };
 
@@ -46,12 +49,12 @@ export function isSyntaxString(value: SyntaxValue): value is string {
 }
 
 /** True for a literal holding a string, false for a number, boolean, null, regex or bigint literal. */
-export function isStringLiteral(node: TSESTree.Literal): node is TSESTree.StringLiteral {
+export function isStringLiteral<L extends Literal>(node: L): node is Extract<L, { value: string }> {
   return typeof node.value === "string";
 }
 
 /** True for a `true` or `false` literal, false for a string, number, null, regex or bigint literal. */
-export function isBooleanLiteral(node: TSESTree.Literal): node is TSESTree.BooleanLiteral {
+export function isBooleanLiteral<L extends Literal>(node: L): node is Extract<L, { value: boolean }> {
   return typeof node.value === "boolean";
 }
 

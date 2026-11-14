@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { useTempTree } from "../__fixtures__/temp-tree.ts";
-import { nodeRange } from "./node-range.ts";
+import { devNodeRange, nodeRange } from "./node-range.ts";
 import { readWorkspace, type PackageJson, type Workspace } from "./workspace.ts";
 
 const tree = useTempTree("workerstack-node-range-");
@@ -57,6 +57,52 @@ describe("nodeRange", () => {
       error: "engines.node differs across packages (packages/api >=20, packages/web >=22); set one range in each",
       ok: false,
     });
+  });
+});
+
+/** A `devEngines.runtime` value: one entry or a list. */
+type Runtime = NonNullable<PackageJson["devEngines"]>["runtime"];
+
+/** A workspace whose root names `runtime` as its devEngines.runtime and whose `packages/api` names `api`. */
+function dev(runtime: Runtime, api?: Runtime): Workspace {
+  const packages =
+    api === undefined ? [] : [{ dir: "packages/api", manifest: { devEngines: { runtime: api }, name: "api" } }];
+
+  return { manifest: { devEngines: { runtime }, name: "app" }, packages, root: "/repo" };
+}
+
+describe("devNodeRange", () => {
+  it("reads the node entry of an object or a list, and has none for another runtime or no version", () => {
+    expect(devNodeRange(dev({ name: "node", version: ">=22.12.0" }))).toStrictEqual({ ok: true, value: ">=22.12.0" });
+
+    const list = [
+      { name: "bun", version: ">=1" },
+      { name: "node", version: ">=22.12.0" },
+    ];
+
+    expect(devNodeRange(dev(list))).toStrictEqual({ ok: true, value: ">=22.12.0" });
+    expect(devNodeRange(dev({ name: "bun", version: ">=1" }))).toStrictEqual({ ok: true, value: undefined });
+    expect(devNodeRange(dev({ name: "node" }))).toStrictEqual({ ok: true, value: undefined });
+    expect(devNodeRange(workspace(">=22"))).toStrictEqual({ ok: true, value: undefined });
+  });
+
+  it("refuses two ranges, naming the field and each declaring package", () => {
+    expect(devNodeRange(dev({ name: "node", version: ">=22" }, { name: "node", version: ">=24" }))).toStrictEqual({
+      error: "devEngines.runtime differs across packages (. >=22, packages/api >=24); set one range in each",
+      ok: false,
+    });
+  });
+
+  it("reads devEngines.runtime from disk, and refuses a runtime that is not an object", () => {
+    const root = tree({
+      "package.json": JSON.stringify({ devEngines: { runtime: { name: "node", version: ">=22.12.0" } }, name: "app" }),
+    });
+
+    const read = readWorkspace(root);
+    expect(read.ok && devNodeRange(read.workspace)).toStrictEqual({ ok: true, value: ">=22.12.0" });
+
+    const bad = tree({ "package.json": JSON.stringify({ devEngines: { runtime: "node" }, name: "app" }) });
+    expect(readWorkspace(bad).ok).toBe(false);
   });
 });
 

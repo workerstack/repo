@@ -5,7 +5,7 @@
  */
 import ts from "typescript";
 
-import { MAGIC_STRING } from "../lint/script-rules.ts";
+import { MAGIC_STRING } from "../script-rules.ts";
 import type { MagicHit } from "./magic-hit.ts";
 import { CONSTANTS_FILE, constString, hitAt, isMeaningful } from "./magic-nodes.ts";
 

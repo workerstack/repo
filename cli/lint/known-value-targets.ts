@@ -13,7 +13,6 @@ import {
   isUnappliedReferenceTo,
   referenceName,
   type TypeEnvironment,
-  unwrapped,
   type Walk,
 } from "./dictionary-walk.ts";
 import { visibleTypeAlias } from "./type-aliases.ts";
@@ -55,13 +54,11 @@ function hasIndexSignature(literal: TSESTree.TSTypeLiteral): boolean {
 
 /** Whether the key type `type` admits every string, number or symbol, through unions, parameters and aliases. */
 function isBroadKey(type: TypeNode, walk: Walk): boolean {
-  const current = unwrapped(type);
+  if (BROAD_KEYS.includes(type.type)) return true;
 
-  if (BROAD_KEYS.includes(current.type)) return true;
+  if (type.type === AST_NODE_TYPES.TSUnionType) return type.types.some((member) => isBroadKey(member, walk));
 
-  if (current.type === AST_NODE_TYPES.TSUnionType) return current.types.some((member) => isBroadKey(member, walk));
-
-  return current.type === AST_NODE_TYPES.TSTypeReference && isBroadKeyReference(current, walk);
+  return type.type === AST_NODE_TYPES.TSTypeReference && isBroadKeyReference(type, walk);
 }
 
 /** Whether the key `reference` names a broad key: a parameter bound to one, `PropertyKey`, or a plain alias of one. */
@@ -106,17 +103,15 @@ function builtInKind(
 
 /** The broad kind `type` is inside an alias: only an open dictionary, `unknown` or `object`, never an anonymous one. */
 function aliasKind(type: TypeNode, walk: Walk): WideningTarget | null {
-  const current = unwrapped(type);
-  const keyword = keywordKind(current);
+  const keyword = keywordKind(type);
 
   if (keyword !== null) return keyword;
 
-  if (current.type === AST_NODE_TYPES.TSTypeLiteral) return hasIndexSignature(current) ? "open dictionary" : null;
+  if (type.type === AST_NODE_TYPES.TSTypeLiteral) return hasIndexSignature(type) ? "open dictionary" : null;
 
-  if (current.type === AST_NODE_TYPES.TSMappedType)
-    return isBroadKey(current.constraint, walk) ? "open dictionary" : null;
+  if (type.type === AST_NODE_TYPES.TSMappedType) return isBroadKey(type.constraint, walk) ? "open dictionary" : null;
 
-  return current.type === AST_NODE_TYPES.TSTypeReference ? aliasReferenceKind(current, walk) : null;
+  return type.type === AST_NODE_TYPES.TSTypeReference ? aliasReferenceKind(type, walk) : null;
 }
 
 /** The broad kind the reference `reference` stands for inside an alias, through parameters, built-ins and aliases. */
@@ -157,21 +152,20 @@ function referenceKind(reference: TSESTree.TSTypeReference, name: string, walk: 
  * type that keeps what was known of a value.
  */
 export function classifyWideningTarget(type: TypeNode, environment: TypeEnvironment): WideningTarget | null {
-  const current = unwrapped(type);
-  const keyword = keywordKind(current);
+  const keyword = keywordKind(type);
 
   if (keyword !== null) return keyword;
 
-  if (current.type === AST_NODE_TYPES.TSTypeLiteral) {
-    if (hasIndexSignature(current)) return "open dictionary";
+  if (type.type === AST_NODE_TYPES.TSTypeLiteral) {
+    if (hasIndexSignature(type)) return "open dictionary";
 
-    return current.members.length > 0 ? "anonymous object" : null;
+    return type.members.length > 0 ? "anonymous object" : null;
   }
 
-  if (current.type === AST_NODE_TYPES.TSMappedType) return "open dictionary";
-  const name = current.type === AST_NODE_TYPES.TSTypeReference ? referenceName(current) : null;
+  if (type.type === AST_NODE_TYPES.TSMappedType) return "open dictionary";
+  const name = type.type === AST_NODE_TYPES.TSTypeReference ? referenceName(type) : null;
 
-  return current.type === AST_NODE_TYPES.TSTypeReference && name !== null
-    ? referenceKind(current, name, freshWalk(environment))
+  return type.type === AST_NODE_TYPES.TSTypeReference && name !== null
+    ? referenceKind(type, name, freshWalk(environment))
     : null;
 }

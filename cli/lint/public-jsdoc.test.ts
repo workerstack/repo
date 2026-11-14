@@ -160,6 +160,6 @@ it("reports an inferred const whose initializer is not a stated type", () => {
     `${doc}export const d = 1 + e;`,
   ];
 
-  const messages = messagesOf(code.join("\ndeclare const e: number;\n"));
+  const messages = messagesOf([...code, "declare const e: number;"].join("\n"));
   expect(messages.length).toBe(3);
 });

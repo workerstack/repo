@@ -142,6 +142,16 @@
       }
     },
     {
+      "label": "test:node",
+      "type": "shell",
+      "command": "bun run test:node",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "new",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "typecheck",
       "type": "shell",
       "command": "bun run typecheck",

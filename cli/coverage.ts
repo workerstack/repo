@@ -4,7 +4,6 @@
  * per-file thresholds. A floor only rises: a measurement below one fails and writes nothing.
  */
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,13 +13,13 @@ import { findRoot, loadConfig, missingConfig } from "./config.ts";
 import { COVERAGE_TIMEOUT_MS, JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { readJson } from "./json.ts";
-import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { removeTree } from "./remove-tree.ts";
 import { type CargoRun, runCargo } from "./rust/clippy.ts";
 import { type Floors, readFloorsFile } from "./rust/floors.ts";
 import { rustCoverage } from "./rust/rust-coverage.ts";
 import { sortedJsonValue } from "./scripts/json-keys.ts";
-import { captureBun, captureTool } from "./scripts/lint.ts";
+import { capture, captureBun, captureTool, type Captured } from "./scripts/lint.ts";
+import { missingNode, testRuns, type TestRun, vitestCommand } from "./scripts/node-run.ts";
 import { CARGO_PATH } from "./sync/rust.constants.ts";
 
 const METRICS = ["statements", "branches", "functions", "lines"] as const;
@@ -61,49 +60,67 @@ function write(stream: NodeJS.WriteStream, lines: readonly string[]): void {
   stream.write(`${lines.join("\n")}\n`);
 }
 
-/** Whether vitest resolves from `root`; a repo without it has no TypeScript tests to measure. */
-function hasVitest(root: string): boolean {
-  try {
-    createRequire(path.join(root, "x.js")).resolve("vitest/package.json");
+/** The flags that measure into `dir` with thresholds off, so a floor miss cannot fail the run. */
+function measureFlags(dir: string): string[] {
+  return [
+    "run",
+    "--passWithNoTests",
+    "--coverage",
+    "--coverage.thresholds=false",
+    "--coverage.reporter=json-summary",
+    `--coverage.reportsDirectory=${dir}`,
+  ];
+}
 
-    return true;
-  } catch {
-    return false;
-  }
+/** `run` of the suite at `root`, measured into `dir`: the node run on node, the main on bun; null with no vitest. */
+async function measureRun(root: string, run: TestRun, dir: string): Promise<Captured | null> {
+  const command = vitestCommand(root, run, measureFlags(dir));
+
+  if (command === null) return null;
+  // An env default, not --testTimeout: the preset merges it under the project's config, so its own timeouts win.
+  const env = childEnv({ REPO_VITEST_TIMEOUT: String(COVERAGE_TIMEOUT_MS) });
+
+  if (run === "main") return await captureBun(["--bun", ...command], root, env);
+
+  return await capture("node", command, { cwd: root, env, missing: missingNode(undefined) });
 }
 
 /**
- * Runs the suite in `root` with thresholds off, so a floor miss cannot fail the run, and a `json-summary` report in
- * a temp dir that is removed after. No vitest installed means no summary, which is no failure; vitest writes the
- * report even with no tests. A failing test prints vitest's own output and its own line.
+ * Runs each run of the suite in `root` (the node run too when the root holds a node config), each with a
+ * `json-summary` report in a temp dir that is removed after, and joins their summaries. No vitest installed means no
+ * summary, which is no failure; vitest writes the report even with no tests. A failing test prints vitest's own
+ * output and its own line.
  */
 async function measure(root: string): Promise<Measured> {
-  if (!hasVitest(root)) return { ok: true, summary: null };
+  const runs = await Promise.all(testRuns(root).map((run) => summaryOf(root, run)));
+  const summary: Summary = {};
+
+  for (const { ran, read } of runs) {
+    if (ran === null) return { ok: true, summary: null };
+
+    if (ran.code !== PASSED) {
+      process.stderr.write(ran.stdout + ran.stderr);
+      write(process.stderr, ["coverage: the tests failed; fix them before raising floors"]);
+
+      return { ok: false };
+    }
+
+    Object.assign(summary, read);
+  }
+
+  return { ok: true, summary };
+}
+
+/** `run` of the suite at `root` and the summary it wrote to a temp dir, removed after; no summary when it failed. */
+async function summaryOf(root: string, run: TestRun): Promise<{ ran: Captured | null; read: Summary }> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX));
 
   try {
-    const flags = ["--coverage", "--coverage.thresholds=false", "--coverage.reporter=json-summary"];
+    const ran = await measureRun(root, run, dir);
+    const passed = ran !== null && ran.code === PASSED;
+    const read = passed ? readJson(summarySchema(), fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8")) : {};
 
-    const args = [
-      "--bun",
-      "vitest",
-      "run",
-      "--passWithNoTests",
-      ...NESTED_VITEST_FLAGS,
-      ...flags,
-      `--coverage.reportsDirectory=${dir}`,
-    ];
-
-    // An env default, not --testTimeout: the preset merges it under the project's config, so its own timeouts win.
-    const ran = await captureBun(args, root, childEnv({ REPO_VITEST_TIMEOUT: String(COVERAGE_TIMEOUT_MS) }));
-
-    if (ran.code === PASSED)
-      return { ok: true, summary: readJson(summarySchema(), fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8")) };
-
-    process.stderr.write(ran.stdout + ran.stderr);
-    write(process.stderr, ["coverage: the tests failed; fix them before raising floors"]);
-
-    return { ok: false };
+    return { ran, read };
   } finally {
     removeTree(dir);
   }

@@ -55,6 +55,24 @@ it("repo coverage: floors every file the suite measures, sorted by path", { time
   expect(written["src/b.ts"]).toStrictEqual({ branches: 100, functions: 100, lines: 100, statements: 100 });
 });
 
+it("repo coverage: floors the files the node run measures beside the main run's", { timeout: RUN_MS }, async () => {
+  const root = project(temps);
+  const preset = JSON.stringify(path.join(REPO_ROOT, "presets", "vitest.ts"));
+
+  const node = `import { defineConfig } from ${preset};
+export default defineConfig({ test: { include: ["node/**/*.test.ts"], coverage: { include: ["node/**"] } } });
+`;
+
+  fs.mkdirSync(path.join(root, "node"));
+  fs.writeFileSync(path.join(root, "vitest.node.config.ts"), node);
+  fs.writeFileSync(path.join(root, "node/b.ts"), SECOND_SOURCE);
+  fs.writeFileSync(path.join(root, "node/b.test.ts"), SECOND_TEST);
+  expect(await coverage(root)).toBe(0);
+  const written = floorsOf(root);
+  expect(Object.keys(written)).toStrictEqual(["node/b.ts", "src/a.ts"]);
+  expect(written["node/b.ts"]).toStrictEqual({ branches: 100, functions: 100, lines: 100, statements: 100 });
+});
+
 it(
   "repo coverage: prints each raised floor with its old and new value and writes the file",
   { timeout: RUN_MS },

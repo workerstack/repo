@@ -15,7 +15,8 @@ import {
   VITEST_COVERAGE_FLAG,
   VITEST_RUN_COMMAND,
 } from "./ci.constants.ts";
-import { countsOfRun, type Bins } from "./turn-steps.ts";
+import { countsOfRun } from "./test-counts.ts";
+import type { Bins } from "./turn-steps.ts";
 
 /** Where `repo ci merge` runs and prints, and the vitest it runs. */
 export type MergeIo = SkipsIo & { bins: Bins };
@@ -65,7 +66,7 @@ export async function mergeMain(dir: string, io: MergeIo): Promise<number> {
   if (names.length === 0) return fail(`no blob-*.json in ${dir}`);
 
   if (!isWholeSet(names)) return fail(`${dir} holds ${names.join(", ")}; want blob-1-n … blob-n-n of one n`);
-  const run = await io.bins.vitest(mergeArgs(at), root);
+  const run = await io.bins.vitest(mergeArgs(at), root, "main");
 
   if (run === null) return fail(`no blob-*.json in ${dir}`);
   io.stdout(textOf(run));

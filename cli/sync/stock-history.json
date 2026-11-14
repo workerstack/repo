@@ -2440,7 +2440,12 @@
   "cli/scripts/__fixtures__/check-globals-kit.ts": ["1dd2b666f08695b2"],
   "cli/scripts/__fixtures__/checkout-calls.ts": ["706fc33c4b931ede", "898562166117a216"],
   "cli/scripts/__fixtures__/ci-config-run.ts": ["6fb704b8a5106e1e", "ca2db471b97572aa"],
-  "cli/scripts/__fixtures__/ci-run.ts": ["49ecae2a16599122", "86bc194b217de9bd", "d182dd39f7122d58"],
+  "cli/scripts/__fixtures__/ci-run.ts": [
+    "235a6e48fe9160e2",
+    "49ecae2a16599122",
+    "86bc194b217de9bd",
+    "d182dd39f7122d58"
+  ],
   "cli/scripts/__fixtures__/ci-wait-world.ts": ["aa327120f18ac604", "b77339ecfbbd46c5"],
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
   "cli/scripts/__fixtures__/clean-kit.ts": [
@@ -2598,6 +2603,7 @@
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
   "cli/scripts/__fixtures__/turn-cache-kit.ts": ["3210c8aa32dee287"],
   "cli/scripts/__fixtures__/turn-repo.ts": [
+    "4550f04957c10613",
     "53dbda6d5d9c26be",
     "56c3ec22d64b1b5b",
     "6582821c714e027f",
@@ -3045,6 +3051,7 @@
   "cli/scripts/ci-merge.ts": [
     "70a423f9c090f725",
     "73060c5f2a8e032f",
+    "8f9021538cb7a572",
     "9842a236dd11ebe7",
     "9ccc887f1f9d9e8f",
     "b4253a45f91f222b"
@@ -3153,6 +3160,7 @@
     "f3a117ba8ecb6db0"
   ],
   "cli/scripts/ci-skips-report.test.ts": [
+    "537daff438d1adce",
     "541f7437d6e640f0",
     "5d2fb18b1127d52e",
     "7cc8d07cba4b0810",
@@ -3177,6 +3185,7 @@
     "36756942b25cdd1d",
     "42f77d9b36d0f864",
     "659c28466853a24a",
+    "9c1223aa98127358",
     "a9679f69123bfa1f",
     "cf1606af68829bb5",
     "f1eea1352d74f50e"
@@ -3184,6 +3193,7 @@
   "cli/scripts/ci-tests.ts": [
     "0ac3a1a68ebef685",
     "2fb132208b9c7c8c",
+    "4bd36f20bd1e1992",
     "85c143e7af4fe0e3",
     "89e403d290022e86",
     "90004738fb9cad48",
@@ -3365,6 +3375,7 @@
     "c6a3c33e55b9c021",
     "d79ab4ba150eddd4",
     "df21e88d1b67cbea",
+    "e0a53f43cbc5f4ba",
     "ef48d710e3b7df80"
   ],
   "cli/scripts/clean-age.test.ts": [
@@ -5642,6 +5653,7 @@
     "2b7fae1bc5a7d36b",
     "36d459fcb7ee65d6",
     "5588eb1fa915b595",
+    "82850f440dda8dd8",
     "832d6068159bad9c",
     "896105bd6a1abcc5",
     "8b28230464b96920",
@@ -5976,6 +5988,8 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
+  "cli/scripts/node-run.test.ts": ["23ac3e018f4b5afe", "7e3c5d68df28087d"],
+  "cli/scripts/node-run.ts": ["f0eb470d29296dad"],
   "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
     "16ab81522c4f32c6",
@@ -8201,7 +8215,14 @@
     "ff99e0c3c1328f60"
   ],
   "cli/scripts/sync-global-settings.types.ts": ["414c6a5f5293271a", "7d9fdbe4d76b1367", "dfa6c3432a65af40"],
-  "cli/scripts/tests-step.ts": ["0db8ddc117fe748d", "a68209d128afbd2f", "ec5fed3643669bfa", "fef5683c3f513394"],
+  "cli/scripts/test-counts.ts": ["e76022274a07b7a6"],
+  "cli/scripts/tests-step.ts": [
+    "0db8ddc117fe748d",
+    "361d72132853665f",
+    "a68209d128afbd2f",
+    "ec5fed3643669bfa",
+    "fef5683c3f513394"
+  ],
   "cli/scripts/tool-command.ts": ["6de6ccbc8df134dc"],
   "cli/scripts/tool-env.ts": ["c0424b41c8d1a44d", "fb9d5ec7ad1113d1"],
   "cli/scripts/turbo-bin.constants.ts": [
@@ -8241,7 +8262,7 @@
     "ff9a7a12e0084b3c"
   ],
   "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c"],
-  "cli/scripts/turn-cache.test.ts": ["101990a687eeb816", "4c690abadeec153d"],
+  "cli/scripts/turn-cache.test.ts": ["4c690abadeec153d"],
   "cli/scripts/turn-edges.test.ts": [
     "118e2e6c40512b34",
     "1d1a2df75d51169e",
@@ -8272,7 +8293,13 @@
     "f7f095d24a461ce1"
   ],
   "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1", "e0874963acbfc1b5", "f170ae4fd9909abe"],
-  "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5b23a8e41551cfe9", "5f85051e432b3834", "ca23417ead3b41df"],
+  "cli/scripts/turn-node.test.ts": [
+    "10b993c44fae4b77",
+    "5b23a8e41551cfe9",
+    "5f85051e432b3834",
+    "bcd6d19b003a5b6e",
+    "ca23417ead3b41df"
+  ],
   "cli/scripts/turn-reverted.test.ts": ["0bea80142d57c1e2", "4df7f5ff2661bef9", "c3828222a972774b", "faeee95c01e0557c"],
   "cli/scripts/turn-scope.test.ts": ["0c57cd0b0fd9ae4c", "44ad64cd311d360a", "7c82258cfb205adc"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
@@ -8289,6 +8316,7 @@
     "142c76e083e11d59",
     "247f8432f5769192",
     "34f46d812902b85e",
+    "359990fc76638333",
     "4bf935737473eeaf",
     "5c42bceb9c0ba678",
     "5f413223055ae7ca",
@@ -8336,6 +8364,7 @@
   ],
   "cli/scripts/turn.ts": [
     "07be63859ab6744b",
+    "1d63c9b330c4b911",
     "260a427077560c39",
     "34c2ae4e1aa9692b",
     "38272a86146319ef",

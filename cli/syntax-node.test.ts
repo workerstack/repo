@@ -1,14 +1,13 @@
-import { parse } from "@typescript-eslint/parser";
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { parseSync, type Expression } from "oxc-parser";
 import { describe, expect, it } from "vitest";
 
 import { asNode, isBooleanLiteral, isStringLiteral, isSyntaxList, isSyntaxString, textOf } from "./syntax-node.ts";
 
 /** The literal `code` spells, parsed as one parenthesized expression. */
-function literalOf(code: string): TSESTree.Literal {
-  const [statement] = parse(`(${code});`).body;
+function literalOf(code: string): Extract<Expression, { type: "Literal" }> {
+  const [statement] = parseSync("a.ts", `(${code});`, { preserveParens: false }).program.body;
 
-  if (statement?.type !== AST_NODE_TYPES.ExpressionStatement || statement.expression.type !== AST_NODE_TYPES.Literal)
+  if (statement?.type !== "ExpressionStatement" || statement.expression.type !== "Literal")
     throw new Error(`${code} is no literal`);
 
   return statement.expression;

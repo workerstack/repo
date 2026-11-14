@@ -66,8 +66,7 @@ export function sortedByKey<T>(entries: [string, T][]): [string, T][] {
 }
 
 /** The whole ms each test file took, by root-relative posix path, sorted; a file without both times has none. */
-function durationsOf(report: VitestReport | undefined, root: string): Record<string, number> {
-  if (report === undefined) return {};
+function durationsOf(report: VitestReport, root: string): Record<string, number> {
   const ms = new Map<string, number>();
 
   for (const { name, startTime, endTime } of report.testResults) {
@@ -78,8 +77,8 @@ function durationsOf(report: VitestReport | undefined, root: string): Record<str
   return Object.fromEntries(sortedByKey([...ms]));
 }
 
-/** Writes `file` from the JSON report at `jsonFile`; a report that was not written or read has no skips. */
-export function writeReport(file: string, jsonFile: string, root: string): void {
+/** The vitest JSON report at `jsonFile`, or none when it was not written or does not read as one. */
+function readVitestReport(jsonFile: string): VitestReport | undefined {
   let text = "";
 
   try {
@@ -88,7 +87,12 @@ export function writeReport(file: string, jsonFile: string, root: string): void 
     // An absent report has no skips.
   }
 
-  const vitest = tryJson(vitestReport(), text);
+  return tryJson(vitestReport(), text);
+}
+
+/** Writes `file` from the JSON reports at `jsonFiles`, one per run; a report not written or read has no skips. */
+export function writeReport(file: string, jsonFiles: readonly string[], root: string): void {
+  const vitest = { testResults: jsonFiles.flatMap((jsonFile) => readVitestReport(jsonFile)?.testResults ?? []) };
 
   const report: Report = {
     durations: durationsOf(vitest, root),

@@ -23,17 +23,9 @@ export default defineConfig({
         reason: "Stryker loads it by name from its config's testRunner: vitest",
       },
       {
-        dependency: "oxlint",
-        reason: "cli/scripts/tool-command.ts resolves its package.json with Bun.resolveSync and runs its bin by path",
-      },
-      {
         dependency: "jscpd",
         reason:
           "cli/clones/jscpd-bin.ts resolves its platform package with Bun.resolveSync and spawns the binary by path",
-      },
-      {
-        dependency: "oxlint-tsgolint",
-        reason: "oxlint runs its native binary through OXLINT_TSGOLINT_PATH, resolved in cli/scripts/tool-command.ts",
       },
       {
         dependency: "turbo",

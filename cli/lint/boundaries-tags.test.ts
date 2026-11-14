@@ -1,7 +1,6 @@
-import type { TSESLint } from "@typescript-eslint/utils";
 import { expect, it } from "vitest";
 
-import { reportsOf } from "../../dev/rule-harness.ts";
+import { reportsOf, type RuleOptions } from "../../dev/rule-harness.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** Packages that declare each other, so only the tags can refuse an import between them. */
@@ -30,11 +29,8 @@ const LIB_TO_UI =
   '"@app/ui" is a ui package, and a lib package may import only lib; move what it needs into a package lib may ' +
   'import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts';
 
-/** Options as a test passes them: any list, since a case may hand over options that are not tags. */
-type Options = TSESLint.RuleContext<string, readonly unknown[]>["options"];
-
 /** What the rule reports for `code` at `file`, under `options`. */
-function messagesOf(file: string, code: string, options: Options = OPTIONS): string[] {
+function messagesOf(file: string, code: string, options: RuleOptions = OPTIONS): string[] {
   return reportsOf(boundaries, { ...MANIFESTS, [file]: code }, options).map((report) => report.message);
 }
 
@@ -84,5 +80,5 @@ it("a package with no name is not judged by tag", () => {
 
 it("options that are not tags and allow lists are refused before the rule runs", () => {
   const options = [{ allow: { lib: [1] }, tags: TAGS.tags }];
-  expect(() => messagesOf(LIB, 'import { b } from "@app/ui";', options)).toThrow(/repo\/rule/);
+  expect(() => messagesOf(LIB, 'import { b } from "@app/ui";', options)).toThrow(/Options validation failed/);
 });

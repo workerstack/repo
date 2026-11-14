@@ -5,6 +5,7 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
+import { nullThrows } from "./null-throws.ts";
 import { PROPERTY_KEY, READONLY, RECORD, RECORD_ARITY } from "./widen-types.constants.ts";
 
 /** How a type widens: to `unknown` or `any`, to `object`, or to a record of unknown values. */
@@ -38,9 +39,7 @@ function isUnknownOrAny(type: TSESTree.TypeNode | undefined): boolean {
 }
 
 /** `string`, `number`, `symbol`, `PropertyKey` or a union of them: a key type that admits any key. */
-function isBroadKey(type: TSESTree.TypeNode | undefined): boolean {
-  if (type === undefined) return false;
-
+function isBroadKey(type: TSESTree.TypeNode): boolean {
   if (KEY_KEYWORDS.includes(type.type)) return true;
 
   if (type.type === AST_NODE_TYPES.TSUnionType) return type.types.every(isBroadKey);
@@ -53,10 +52,15 @@ function isBroadIndexLiteral(type: TSESTree.TSTypeLiteral): boolean {
   const [member] = type.members;
 
   if (type.members.length !== 1 || member?.type !== AST_NODE_TYPES.TSIndexSignature) return false;
-  const [parameter] = member.parameters;
-  const key = parameter?.type === AST_NODE_TYPES.Identifier ? parameter.typeAnnotation?.typeAnnotation : undefined;
 
-  return member.parameters.length === 1 && isBroadKey(key) && isUnknownOrAny(member.typeAnnotation?.typeAnnotation);
+  const parameter = nullThrows(
+    member.parameters.find((node): node is TSESTree.Identifier => node.type === AST_NODE_TYPES.Identifier),
+    "an index signature has one key",
+  );
+
+  const key = nullThrows(parameter.typeAnnotation, "an index signature's key has a type");
+
+  return isBroadKey(key.typeAnnotation) && isUnknownOrAny(member.typeAnnotation?.typeAnnotation);
 }
 
 /** `Record<K, unknown>` with K a broad key, an index literal of the same, or either under `Readonly<…>`. */
@@ -70,7 +74,7 @@ function isBroadRecord(type: TSESTree.TypeNode): boolean {
   if (referenceName(type) === READONLY) return key !== undefined && isBroadRecord(key);
   const isRecord = referenceName(type) === RECORD && typeArguments.length === RECORD_ARITY;
 
-  return isRecord && isBroadKey(key) && isUnknownOrAny(value);
+  return isRecord && isBroadKey(nullThrows(key, "a Record has a key type")) && isUnknownOrAny(value);
 }
 
 /** How `type` widens a value, or null when it keeps some evidence of the value's shape. */

@@ -6,7 +6,6 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESTree } from "@typescript-eslint/utils";
 
-import { nullThrows } from "./null-throws.ts";
 import {
   typeAliasEnvironmentOf,
   hasVisibleTypeBinding,
@@ -71,28 +70,18 @@ export function isBuiltIn(
   return name !== null && names.includes(name) && !hasVisibleTypeBinding(name, reference, environment.typeAliases);
 }
 
-/** `type` past any `readonly` operator. */
-export function unwrapped(type: TypeNode): TypeNode {
-  if (type.type !== AST_NODE_TYPES.TSTypeOperator || type.operator !== "readonly") return type;
-
-  return unwrapped(nullThrows(type.typeAnnotation, "a readonly operator has an operand"));
-}
-
 /** Whether `type` is a bare reference to the type parameter `name`, which a substitution maps to itself. */
 export function isUnappliedReferenceTo(type: TypeNode, name: string): boolean {
-  const current = unwrapped(type);
-
   return (
-    current.type === AST_NODE_TYPES.TSTypeReference &&
-    referenceName(current) === name &&
-    (current.typeArguments ?? undefined) === undefined
+    type.type === AST_NODE_TYPES.TSTypeReference &&
+    referenceName(type) === name &&
+    (type.typeArguments ?? undefined) === undefined
   );
 }
 
 /** `type` with a type parameter reference followed through `substitutions` to what it stands for. */
 function substituted(type: TypeNode, substitutions: Substitutions, followed: ReadonlySet<string>): TypeNode {
-  const current = unwrapped(type);
-  const name = current.type === AST_NODE_TYPES.TSTypeReference ? referenceName(current) : null;
+  const name = type.type === AST_NODE_TYPES.TSTypeReference ? referenceName(type) : null;
 
   if (name === null || followed.has(name)) return type;
   const next = substitutions.get(name);

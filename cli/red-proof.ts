@@ -4,11 +4,11 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "./json.ts";
-import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type VitestRun, runVitest, untar } from "./red-proof-vitest.ts";
 import { REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 import { RED_PROOF, STATE, repoPath } from "./repo-dirs.ts";
+import { type TestRun, testRuns } from "./scripts/node-run.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
 
@@ -143,11 +143,11 @@ function readReport(file: string): { name: string; status: string }[] | null {
 
 type Ran = { problem: string } | { failed: string[]; passed: string[] };
 
-type Run = (args: string[], cwd: string) => ReturnType<VitestRun>;
+type Run = (args: string[], cwd: string, run: TestRun) => ReturnType<VitestRun>;
 
 /**
- * Runs the groups' test files in the base tree; the problem when a run wrote no report, else who failed and who
- * passed.
+ * Runs the groups' test files in the base tree, in each run of the owning package; the problem when a run wrote no
+ * report, else who failed in any run and who passed in all.
  */
 function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ran {
   const failed: string[] = [];
@@ -155,15 +155,22 @@ function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ra
   let n = 0;
 
   for (const [dir, files] of groups) {
-    const output = path.join(tree, `.red-proof-report-${n++}.json`);
-    const args = ["run", ...files, ...NESTED_VITEST_FLAGS, "--reporter=json", `--outputFile=${output}`];
-    const ran = vitest(args, path.join(tree, dir));
-    const results = readReport(output);
+    const cwd = path.join(tree, dir);
+    const results: { name: string; status: string }[] = [];
 
-    if (results === null) {
-      const tail = ran.stderr.trim().split("\n").slice(STDERR_TAIL_LINES).join(" | ");
+    for (const run of testRuns(cwd)) {
+      const output = path.join(tree, `.red-proof-report-${n++}.json`);
+      const args = ["run", ...files, "--passWithNoTests", "--reporter=json", `--outputFile=${output}`];
+      const ran = vitest(args, cwd, run);
+      const report = readReport(output);
 
-      return { problem: `red-proof: vitest wrote no report in ${dir} (exit ${ran.code}): ${tail}`.trimEnd() };
+      if (report === null) {
+        const tail = ran.stderr.trim().split("\n").slice(STDERR_TAIL_LINES).join(" | ");
+
+        return { problem: `red-proof: vitest wrote no report in ${dir} (exit ${ran.code}): ${tail}`.trimEnd() };
+      }
+
+      results.push(...report);
     }
 
     for (const file of files) {
@@ -218,7 +225,7 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
       linkModules(context),
     );
 
-    const ran = runGroups(tree, groups, (args, cwd) => vitest(args, cwd, timeoutMs));
+    const ran = runGroups(tree, groups, (args, cwd, run) => vitest(args, cwd, { run, timeoutMs }));
 
     return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length, base);
   } finally {

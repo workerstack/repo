@@ -110,7 +110,7 @@ const PASSES = [
   "export function f(): unknown {\n  const found: boolean | string = g();\n  return found;\n}",
   "export function f(): unknown {\n  const found: string | undefined = g();\n  return found;\n}",
   "declare const Some_thing: string;\ndeclare class my_store {}",
-  "global {\n  var Some_thing: string;\n  function Make_thing(): void {}\n}",
+  "export {};\ndeclare global {\n  var Some_thing: string;\n  function Make_thing(): void;\n}",
   "export class Store {\n  constructor(private my_x: string) {}\n}",
   "export default function (): void {}",
 ];

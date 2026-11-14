@@ -1,39 +1,28 @@
 import { spawnSync } from "node:child_process";
-import fs from "node:fs";
-import path from "node:path";
-
-import { z } from "zod";
 
 import { childEnv } from "./env.ts";
-import { readJson } from "./json.ts";
-import { MAX_BUFFER } from "./red-proof.constants.ts";
+import { MAX_BUFFER, NOT_FOUND } from "./red-proof.constants.ts";
+import { type TestRun, missingNode, vitestCommand } from "./scripts/node-run.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import type { GitRun } from "./sync/standards.ts";
 
-/**
- * Runs vitest with `args` (after the binary) in `cwd`, giving up after `timeoutMs`; a run that did not finish has a
- * non-zero code.
- */
-export type VitestRun = (args: string[], cwd: string, timeoutMs: number) => { code: number; stderr: string };
+/** Which run of a package's tests to start, and how long it may take before it is stopped. */
+export type VitestLimits = { run: TestRun; timeoutMs: number };
+
+/** Runs vitest with `args` (after the binary) in `cwd`; a run that did not finish in time has a non-zero code. */
+export type VitestRun = (args: string[], cwd: string, limits: VitestLimits) => { code: number; stderr: string };
 
 /**
- * Vitest from the package at `cwd`, run under bun as the package's own tests would; null-free: a run that ends early
- * reports why.
+ * Vitest from the package at `cwd`, the main run under bun and the node run on node, as the package's own tests run;
+ * null-free: a run that ends early reports why.
  */
-export function runVitest(args: string[], cwd: string, timeoutMs: number): ReturnType<VitestRun> {
-  let manifest: string;
+export function runVitest(args: string[], cwd: string, { run, timeoutMs }: VitestLimits): ReturnType<VitestRun> {
+  const command = vitestCommand(cwd, run, args);
 
-  try {
-    manifest = Bun.resolveSync("vitest/package.json", cwd);
-  } catch {
-    return { code: 1, stderr: `cannot resolve vitest from ${cwd}` };
-  }
+  if (command === null) return { code: 1, stderr: `cannot resolve vitest from ${cwd}` };
+  const [bin, argv] = run === "node" ? ["node", command] : [process.execPath, ["--bun", ...command]];
 
-  const schema = z.looseObject({ bin: z.looseObject({ vitest: z.string() }) });
-  const { bin } = readJson(schema, fs.readFileSync(manifest, "utf8"));
-  const script = path.join(path.dirname(manifest), bin.vitest);
-
-  const result = spawnSync(process.execPath, ["--bun", script, ...args], {
+  const result = spawnSync(bin, argv, {
     cwd,
     encoding: "utf8",
     env: toolEnv(childEnv({ NO_COLOR: "1" })),
@@ -42,6 +31,9 @@ export function runVitest(args: string[], cwd: string, timeoutMs: number): Retur
   });
 
   const { error } = result;
+
+  if (error !== undefined && "code" in error && error.code === NOT_FOUND)
+    return { code: 1, stderr: missingNode(undefined) };
 
   if (error !== undefined) return { code: 1, stderr: `vitest did not finish within ${timeoutMs}ms (${error.message})` };
 

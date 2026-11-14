@@ -1,8 +1,10 @@
 import { isRecord, isString } from "../json.ts";
+import type { Result } from "../result.ts";
+import { NODE_CONFIG } from "../scripts/node-run.ts";
 import { MSRV_JOB, RUST_TOOL_STEPS, SEMVER_JOB } from "./ci-rust.constants.ts";
 import { isRust, msrvJob, semverJob } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
-import { nodeRange } from "./node-range.ts";
+import { devNodeRange, nodeRange } from "./node-range.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import { type Shards, coverageJob, shardsCoverage, testShards } from "./release-shards.ts";
 import { commitsJob, consumerJob, skipsJob } from "./release-small-jobs.ts";
@@ -177,11 +179,30 @@ function handWritten(ctx: SyncContext) {
   });
 }
 
+/**
+ * The node range the test job sets up: engines.node, else, when the root holds a node config, the devEngines node
+ * range it needs; or the refusal of a node config with neither.
+ */
+function testNodeRange(ctx: SyncContext, engines: string | undefined): Result<string | undefined, string> {
+  if (engines !== undefined || ctx.read(NODE_CONFIG) === null) return { ok: true, value: engines };
+  const dev = devNodeRange(ctx.workspace);
+
+  if (!dev.ok || dev.value !== undefined) return dev;
+
+  return {
+    error: `${NODE_CONFIG} runs on node; set devEngines.runtime to {"name":"node","version":"<range>"}`,
+    ok: false,
+  };
+}
+
 /** The ci.yml text, or the error of the node range its jobs need. */
 function workflow(ctx: SyncContext) {
   const range = nodeRange(ctx.workspace);
 
   if (!range.ok) return range;
+  const testRange = testNodeRange(ctx, range.value);
+
+  if (!testRange.ok) return testRange;
   const node = nodeSteps(range.value);
   const e2e = scriptOf(ctx, E2E_SCRIPT);
   const rust = isRust(ctx);
@@ -189,7 +210,7 @@ function workflow(ctx: SyncContext) {
   const tools = rust ? [RUST_TOOL_STEPS] : [];
 
   const jobs = [
-    testJob({ blob, node, rust: tools, turbo: ctx.config.packs.includes("workspace") }),
+    testJob({ blob, node: nodeSteps(testRange.value), rust: tools, turbo: ctx.config.packs.includes("workspace") }),
     commitsJob(),
     skipsJob(),
     ...(blob ? [coverageJob(range.value)] : []),

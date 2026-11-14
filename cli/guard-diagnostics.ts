@@ -9,8 +9,8 @@ import path from "node:path";
 
 import ts from "typescript";
 
-import { codeOf, GUARD_REJECTS } from "./lint/script-rules.ts";
 import type { Result } from "./result.ts";
+import { codeOf, GUARD_REJECTS } from "./script-rules.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import {
   byOwner,

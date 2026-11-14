@@ -5,7 +5,7 @@
  */
 import ts from "typescript";
 
-import { MAGIC_REGEX } from "../lint/script-rules.ts";
+import { MAGIC_REGEX } from "../script-rules.ts";
 import type { MagicHit } from "./magic-hit.ts";
 import { CONSTANTS_FILE, hitAt } from "./magic-nodes.ts";
 import { REGEXP_NAME } from "./regexp-name.constants.ts";

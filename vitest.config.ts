@@ -1,4 +1,4 @@
-import { coverageConfigDefaults } from "vitest/config";
+import { configDefaults, coverageConfigDefaults } from "vitest/config";
 
 import { FULL_COVERAGE } from "./full-coverage.constants.ts";
 import { defineConfig } from "./presets/vitest.ts";
@@ -6,8 +6,8 @@ import { defineConfig } from "./presets/vitest.ts";
 export default defineConfig({
   test: {
     coverage: {
-      // Fixtures are copies of other repos' files, read by tests and never run.
-      exclude: [...coverageConfigDefaults.exclude, "**/__fixtures__/**"],
+      // Fixtures are copies of other repos' files, read by tests and never run; the rules are vitest.node.config.ts's.
+      exclude: [...coverageConfigDefaults.exclude, "**/__fixtures__/**", "cli/lint/**"],
       include: ["cli/**/*.ts", "presets/**/*.ts"],
       // json-summary feeds `bun repo coverage`.
       reporter: [coverageConfigDefaults.reporter, "json-summary"].flat(),
@@ -23,6 +23,8 @@ export default defineConfig({
         },
       },
     },
+    // oxlint's RuleTester runs only on Node, so the rule tests run under vitest.node.config.ts.
+    exclude: [...configDefaults.exclude, "cli/lint/**"],
     // Refuses a run under Node before any test starts.
     globalSetup: ["dev/refuse-node.ts"],
     include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "evals/**/*.test.ts", "presets/**/*.test.ts"],

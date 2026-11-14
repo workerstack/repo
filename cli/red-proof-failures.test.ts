@@ -5,6 +5,7 @@ import { afterEach, expect, it } from "vitest";
 import { removePlanted } from "./__fixtures__/planted-repo.ts";
 import { change } from "./__fixtures__/red-proof-change.ts";
 import { PASS, fakeVitest, outputOf, plant, stage } from "./__fixtures__/red-proof-repo.ts";
+import type { VitestLimits } from "./red-proof-vitest.ts";
 import { redProof } from "./red-proof.ts";
 
 /** Refusals with no test to run, and vitest runs that leave no report, through the injected runner. */
@@ -77,21 +78,21 @@ it.each(["{nope", "{}", '{"testResults":[{"name":1}]}'])("refuses a report that 
   });
 });
 
-it("hands the runner the nested flags, a json report, no coverage and the default timeout", () => {
+it("hands the main run the files, a json report, no coverage and the default timeout", () => {
   const root = plant({ "s.ts": "head\n" });
   stage(root, { "a.test.ts": PASS });
   const seen: { args: string[]; timeout: number }[] = [];
 
-  function run(args: string[], cwd: string, timeoutMs: number) {
-    seen.push({ args, timeout: timeoutMs });
+  function run(args: string[], cwd: string, limits: VitestLimits) {
+    seen.push({ args, timeout: limits.timeoutMs });
 
-    return fakeVitest(() => true)(args, cwd, timeoutMs);
+    return fakeVitest(() => true)(args, cwd, limits);
   }
 
   redProof(root, A_TEST, { vitest: run });
   const joined = seen.map((call) => call.args.join(" ")).join("");
   expect(seen.map((call) => call.args.slice(0, 4))).toStrictEqual([
-    ["run", "a.test.ts", "--fsModuleCache=false", "--reporter=json"],
+    ["run", "a.test.ts", "--passWithNoTests", "--reporter=json"],
   ]);
   expect(joined).toMatch(/--outputFile=\S*red-proof-\d+\S*\.json$/);
   expect(joined).not.toContain("overage");

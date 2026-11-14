@@ -87,3 +87,26 @@ it("refuses to write ci.yml when the root and a workspace package declare differ
     outputs: [],
   });
 });
+
+describe("a repo with a node test run", () => {
+  const nodeConfig = { "vitest.node.config.ts": "export default {};\n" };
+  const dev = { ...BASE, devEngines: { runtime: { name: "node", version: ">=22" } } };
+
+  it("sets up the devEngines node in the test job only; coverage gets none and e2e keeps removing node", () => {
+    const ci = text(context(["release"], dev, nodeConfig));
+    expect(job(ci, "test")).toContain(`${AFTER_BUN}${SETUP_NODE_STEP}`);
+    expect(job(ci, "test")).not.toContain("Remove node");
+    expect(job(ci, "coverage")).not.toContain("setup-node");
+    expect(job(ci, "e2e")).toContain(`${AFTER_BUN}${NODE_STEPS}`);
+  });
+
+  it("refuses a node config when no package names a node range", () => {
+    expect(release(context(["release"], BASE, nodeConfig)).errors).toStrictEqual([
+      'vitest.node.config.ts runs on node; set devEngines.runtime to {"name":"node","version":"<range>"}',
+    ]);
+  });
+
+  it("sets up nothing for a devEngines range without a node config", () => {
+    expect(text(context(["release"], dev))).not.toContain("setup-node");
+  });
+});

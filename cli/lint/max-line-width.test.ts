@@ -97,7 +97,7 @@ describe("max-line-width exemptions", () => {
   });
 
   it("reports each long line once", () => {
-    const code = `${stringLine(130)}\nexport const b = 1;\n${stringLine(125)}\n`;
+    const code = `${stringLine(130)}\nexport const b = 1;\n${stringLine(125).replace("const a", "const c")}\n`;
     expect(messagesOf(code)).toStrictEqual([over(10, STRING_HINT), over(5, STRING_HINT)]);
   });
 });

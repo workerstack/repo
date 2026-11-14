@@ -32,12 +32,16 @@ import {
 } from "./lint-baseline.ts";
 import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import { LINTABLE } from "./lintable.constants.ts";
+import type { TestRun } from "./node-run.ts";
 import { BUNFIG_FILE, LOCKFILES, MANIFEST_FILE } from "./turn-steps.constants.ts";
 
-/** typescript, a dependency, and vitest, an optional peer: null when the package at `cwd` cannot resolve it. */
+/**
+ * typescript, a dependency, and vitest, an optional peer, as `run` of the package at `cwd`: null when that package
+ * cannot resolve vitest.
+ */
 export type Bins = {
   tsc: (args: string[], cwd: string) => Promise<Captured>;
-  vitest: (args: string[], cwd: string) => Promise<Captured> | null;
+  vitest: (args: string[], cwd: string, run: TestRun) => Promise<Captured> | null;
 };
 
 /** The command that gates a change set, which names it in every line it prints. */
@@ -64,11 +68,6 @@ export type StepResult = { label: string; ok: boolean; output: string[]; touched
 
 /** A step; null when its inputs did not change. */
 export type Step = (turn: Turn) => Promise<StepResult | null>;
-
-const TESTS_LINE = /^\s*Tests\s+(.*)$/m;
-const FAILED_COUNT = /(\d+) failed/;
-const PASSED_COUNT = /(\d+) passed/;
-const TOTAL_COUNT = /\((\d+)\)/;
 
 /** Rust sources: no oxlint, only the script checks (the lexer rules; clippy compiles, so `repo check` runs it). */
 const RUST_SOURCE = /\.rs$/;
@@ -227,19 +226,6 @@ export function owners(turn: Turn): string[] {
 
 export function dirName(owner: string): string {
   return owner === "" ? "." : owner;
-}
-
-export type Counts = { passed: number; failed: number; total: number };
-
-/** vitest's `Tests  1 failed | 3 passed (4)` line, read from its default reporter. */
-export function countsOfRun(run: Captured): Counts {
-  const line = TESTS_LINE.exec(run.stdout)?.[1] ?? "";
-
-  function number(pattern: RegExp) {
-    return Number(pattern.exec(line)?.[1] ?? 0);
-  }
-
-  return { failed: number(FAILED_COUNT), passed: number(PASSED_COUNT), total: number(TOTAL_COUNT) };
 }
 
 function isManifest(turn: Turn, rel: string) {

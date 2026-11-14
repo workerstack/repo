@@ -65,8 +65,6 @@ const PASSES = [
   "type Index<T> = Record<string, T>; declare function f<T>(): Index<T>;",
   // an untyped member or index signature has no value type to judge
   "type A = Record<string, { readonly brand? }>;",
-  "type A = { [key: string] };",
-  "interface A { [key: string] }",
   "type A = { [K in string] };",
   "interface A { [key: string]: Command }",
   // a type parameter shadows the built-in of its name
@@ -130,9 +128,6 @@ const FAILS: [string, Value[]][] = [
   ["export default interface Escape {} type A = Record<string, Escape>;", ["empty-object"]],
   ["const value = 1; export { value }; type A = Record<string, unknown>;", ["unknown"]],
   ["class A { [key: string]: unknown }", ["unknown"]],
-  // a readonly operator, which tsc allows only on arrays and tuples, hides no dictionary and no value
-  ["type A = readonly Record<string, unknown>;", ["unknown"]],
-  ["type A = Record<string, readonly unknown>;", ["unknown"]],
 ];
 
 describe("no-unsafe-dictionary-type", () => {

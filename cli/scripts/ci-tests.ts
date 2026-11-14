@@ -1,4 +1,7 @@
-/** The `repo ci` tests gate: one `vitest run`, with coverage unless asked otherwise, of all tests or one slice. */
+/**
+ * The `repo ci` tests gate: one `vitest run`, with coverage unless asked otherwise, of all tests or one slice, then
+ * the node run, whole, when the root holds a node config and the slice is the first.
+ */
 import fs from "node:fs";
 import path from "node:path";
 
@@ -18,7 +21,10 @@ import {
   SHARD_WITH_FLOORS_NOTE,
   VITEST_SHARD_FLAG,
 } from "./ci.constants.ts";
-import { countsOfRun, type Bins } from "./turn-steps.ts";
+import type { Captured } from "./lint.ts";
+import { nodeReport, testRuns } from "./node-run.ts";
+import { summedCounts } from "./test-counts.ts";
+import type { Bins } from "./turn-steps.ts";
 
 /**
  * What the gate needs of the run: the root, the vitest bin, whether coverage is on, where the json report goes and
@@ -65,19 +71,37 @@ function shardNote(ctx: TestsCtx): string {
   return ctx.coverage ? ` (shard ${ctx.shard}, ${SHARD_WITH_FLOORS_NOTE})` : ` (shard ${ctx.shard})`;
 }
 
-/** One `vitest run`; a Rust repo with no vitest test file passes, and a slice's line names it. */
+/**
+ * The node run's args: whole, with its own floors and no blob, since `repo ci merge` merges only the main run's
+ * slices; its json report goes beside the main one.
+ */
+function nodeArgs(ctx: TestsCtx): string[] {
+  const reporting = ctx.json === undefined ? [] : [...REPORT_REPORTERS, `${REPORT_OUTPUT_FLAG}${nodeReport(ctx.json)}`];
+
+  return [...(ctx.coverage ? VITEST_RUN_ARGS : VITEST_RUN_NO_COVERAGE_ARGS), ...reporting];
+}
+
+/** Whether this run holds the node run: the root has a node config, and this is the whole run or its first slice. */
+function runsNode(ctx: TestsCtx): boolean {
+  return testRuns(ctx.root).includes("node") && (ctx.shard === undefined || ctx.shard.startsWith("1/"));
+}
+
+/** One `vitest run` and the node run; a Rust repo with no vitest test file passes, and a slice's line names it. */
 export async function testsGate(ctx: TestsCtx): Promise<Gate> {
   const rustRepo = fs.existsSync(path.join(ctx.root, RUST_MANIFEST));
-  const run = await ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root);
+  const main = await ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root, "main");
 
-  if (run === null) return skip("tests skipped (no vitest in .)");
-  const counts = countsOfRun(run);
+  if (main === null) return skip("tests skipped (no vitest in .)");
+  const node = runsNode(ctx) ? await ctx.bins.vitest(nodeArgs(ctx), ctx.root, "node") : null;
+  const runs: Captured[] = node === null ? [main] : [main, node];
+  const counts = summedCounts(runs);
   const named = shardNote(ctx);
+  const bad = runs.filter((run) => run.code !== 0);
 
-  if (run.code === 0 && rustRepo && counts.total === 0) return pass(`${NO_TEST_FILES_LABEL}${named}`);
+  if (bad.length === 0 && rustRepo && counts.total === 0) return pass(`${NO_TEST_FILES_LABEL}${named}`);
 
-  if (run.code === 0) return pass(`${plural(counts.passed, "test")} passed${named}`);
+  if (bad.length === 0) return pass(`${plural(counts.passed, "test")} passed${named}`);
   const detail = counts.failed > 0 ? ` (${counts.failed} failed, ${counts.passed} passed)` : "";
 
-  return fail(`tests failed${detail}${named}`, [textOf(run)]);
+  return fail(`tests failed${detail}${named}`, bad.map(textOf));
 }

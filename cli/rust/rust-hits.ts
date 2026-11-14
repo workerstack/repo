@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { codeOf } from "../lint/script-rules.ts";
 import type { Result } from "../result.ts";
+import { codeOf } from "../script-rules.ts";
 import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { runGit } from "../sync/standards.ts";

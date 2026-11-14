@@ -1,9 +1,14 @@
-/** The related-tests step of `repo precommit`: `vitest related --run` in each owning package of the changed code. */
+/**
+ * The related-tests step of `repo precommit`: `vitest related --run` in each run of each owning package of the
+ * changed code.
+ */
 import path from "node:path";
 
 import type { Captured } from "./lint.ts";
 import { LINTABLE } from "./lintable.constants.ts";
-import { countsOfRun, dirName, failed, owners, passed, type Counts, type StepResult, type Turn } from "./turn-steps.ts";
+import { testRuns } from "./node-run.ts";
+import { type Counts, summedCounts } from "./test-counts.ts";
+import { dirName, failed, owners, passed, type StepResult, type Turn } from "./turn-steps.ts";
 
 function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -22,7 +27,10 @@ function testsLabel(counts: Counts, skipped: readonly string[], bad: readonly Ca
   return none === "" || counts.total > 0 ? `0 related tests${none}` : `related tests skipped${none}`;
 }
 
-/** One `vitest related --run` per owning package on its changed code files; null where vitest is not installed. */
+/**
+ * One `vitest related --run` per run of each owning package on its changed code files; null where vitest is not
+ * installed.
+ */
 async function relatedRuns(turn: Turn): Promise<{ owner: string; run: Captured | null }[]> {
   const runs: { owner: string; run: Captured | null }[] = [];
 
@@ -33,8 +41,9 @@ async function relatedRuns(turn: Turn): Promise<{ owner: string; run: Captured |
 
     if (own.length === 0) continue;
     const args = ["related", "--run", "--passWithNoTests", ...own];
+    const dir = path.join(turn.root, owner);
 
-    runs.push({ owner, run: await turn.bins.vitest(args, path.join(turn.root, owner)) });
+    for (const run of testRuns(dir)) runs.push({ owner, run: await turn.bins.vitest(args, dir, run) });
   }
 
   return runs;
@@ -43,15 +52,9 @@ async function relatedRuns(turn: Turn): Promise<{ owner: string; run: Captured |
 /** The related tests of the change set, their counts summed over the packages. */
 export async function testsStep(turn: Turn): Promise<StepResult> {
   const runs = await relatedRuns(turn);
-  const skipped = runs.filter(({ run }) => run === null).map(({ owner }) => dirName(owner));
+  const skipped = [...new Set(runs.filter(({ run }) => run === null).map(({ owner }) => dirName(owner)))];
   const ran = runs.flatMap(({ run }) => (run === null ? [] : [run]));
-  const counts: Counts = { failed: 0, passed: 0, total: 0 };
-
-  for (const next of ran.map(countsOfRun)) {
-    counts.failed += next.failed;
-    counts.passed += next.passed;
-    counts.total += next.total;
-  }
+  const counts = summedCounts(ran);
 
   const bad = ran.filter((run) => run.code !== 0);
   const label = testsLabel(counts, skipped, bad);

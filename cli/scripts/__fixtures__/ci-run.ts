@@ -69,11 +69,14 @@ async function runCi(root: string, argv: string[], fail: Partial<Record<string, 
       calls.tsc.push(args.join(" "));
       return fail[args.at(-1) ?? ""] ?? OK;
     },
-    vitest: (args) => {
-      calls.vitest.push(args.join(" "));
-      writeJson(args, fail.json);
-      const run = fail.tests === undefined ? PASSED : fail.tests;
-      return run === null ? null : Promise.resolve(run);
+    // The node run is recorded with a `node` prefix, and `nodeJson` and `nodeTests` override its report and result.
+    vitest: (args, _cwd, run) => {
+      const node = run === "node";
+      calls.vitest.push(node ? `node ${args.join(" ")}` : args.join(" "));
+      writeJson(args, node ? fail.nodeJson : fail.json);
+      const given = node ? fail.nodeTests : fail.tests;
+      const result = given === undefined ? PASSED : given;
+      return result === null ? null : Promise.resolve(result);
     },
   };
   const deps: CiDeps = {

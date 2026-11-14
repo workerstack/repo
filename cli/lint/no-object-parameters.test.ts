@@ -46,9 +46,8 @@ const PASSES = [
   "import type { Alias } from './alias'; function f(value: Alias) {}",
   "import Alias from './alias'; function f(value: Alias) {}",
   "import * as Alias from './alias'; function f(value: Alias) {}",
-  // an alias out of scope, an ambiguous name and a qualified name resolve to nothing
+  // an alias out of scope and a qualified name resolve to nothing
   "function one() { type Payload = object; } function two() { function consume(value: Payload) {} }",
-  "interface Alias {} type Alias = object; function f(value: Alias) {}",
   "function f(value: Types.Alias) {}",
   "export const make = class { run(value: string) {} };",
   // an alias the resolver cannot finish: a cycle, a missing argument, a type parameter given arguments

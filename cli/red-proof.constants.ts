@@ -17,3 +17,6 @@ export const MAX_BUFFER: number = 64 * KIB * KIB;
 
 /** How many trailing stderr lines a missing-report problem quotes. */
 export const STDERR_TAIL_LINES = -3;
+
+/** The spawn error code when the binary is not on PATH. */
+export const NOT_FOUND = "ENOENT";

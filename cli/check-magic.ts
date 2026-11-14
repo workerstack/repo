@@ -12,13 +12,13 @@ import ts from "typescript";
 
 import { CONFIG_FILE } from "./config.constants.ts";
 import { type LintSkip } from "./config.ts";
-import { codeOf } from "./lint/script-rules.ts";
 import type { MagicHit } from "./magic/magic-hit.ts";
 import { constString } from "./magic/magic-nodes.ts";
 import { magicNumbers } from "./magic/magic-numbers.ts";
 import { magicRegexes } from "./magic/magic-regexes.ts";
 import { magicStrings } from "./magic/magic-strings.ts";
 import type { Result } from "./result.ts";
+import { codeOf } from "./script-rules.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { skipFiles } from "./scripts/lint-skips.ts";
 import {

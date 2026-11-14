@@ -15,7 +15,7 @@
     "url": "https://github.com/workerstack/repo/issues"
   },
   "license": "MIT",
-  "author": "Lovro Žagar",
+  "author": "Lovro \u017dagar",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/workerstack/repo.git"
@@ -101,6 +101,7 @@
     "lint": "bun ./bin/repo.ts lint",
     "fmt": "bun ./bin/repo.ts fmt",
     "test": "bun --bun vitest run",
+    "test:node": "vitest run -c vitest.node.config.ts",
     "ci": "bun ./bin/repo.ts ci",
     "test:e2e": "bun --bun vitest run -c vitest.e2e.config.ts"
   },
@@ -137,10 +138,8 @@
     "@types/bun": "^1.4.4",
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.13.3",
-    "@typescript-eslint/parser": "8.72.2",
     "@typescript-eslint/utils": "8.72.2",
     "@vitest/coverage-istanbul": "^5.1.0",
-    "eslint": "10.14.0",
     "oxlint-tailwindcss": "1.17.0",
     "tar": "^7.5.22",
     "verdaccio": "^6.10.5",
@@ -181,6 +180,12 @@
     },
     "vitest": {
       "optional": true
+    }
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22.12.0"
     }
   },
   "engines": {

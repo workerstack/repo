@@ -10,8 +10,8 @@ import { z } from "zod";
 
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { readJson } from "../json.ts";
-import { codeOf } from "../lint/script-rules.ts";
 import type { Result } from "../result.ts";
+import { codeOf } from "../script-rules.ts";
 import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { captureBun } from "../scripts/lint.ts";
 import { runGit } from "../sync/standards.ts";

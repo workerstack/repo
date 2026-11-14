@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { git, tempDir, write } from "./planted-repo.ts";
 import type { RedProofResult, VitestRun } from "../red-proof.ts";
+import type { TestRun } from "../scripts/node-run.ts";
 
 /** This checkout's installed modules, which a planted repo links so its vitest resolves. */
 export const CHECKOUT_MODULES = path.resolve(import.meta.dirname, "..", "..", "node_modules");
@@ -48,16 +49,16 @@ export const staged = (dir: string): string => git(dir, "diff", "--cached", "--n
 
 /** The vitest runner stand-in: calls `onRun` with the cwd and args, writes a report failing the files `fails` names. */
 export function fakeVitest(
-  fails: (file: string, cwd: string) => boolean,
-  onRun: (cwd: string, args: string[]) => void = () => undefined,
+  fails: (file: string, cwd: string, run: TestRun) => boolean,
+  onRun: (cwd: string, args: string[], run: TestRun) => void = () => undefined,
 ): VitestRun {
-  return (args, cwd) => {
-    onRun(cwd, args);
+  return (args, cwd, { run }) => {
+    onRun(cwd, args, run);
     const output = outputOf(args);
     const files = args.filter((arg) => arg !== "run" && !arg.startsWith("-"));
     const testResults = files.map((file) => ({
       name: path.join(cwd, file),
-      status: fails(file, cwd) ? "failed" : "passed",
+      status: fails(file, cwd, run) ? "failed" : "passed",
     }));
     fs.writeFileSync(output, JSON.stringify({ testResults }));
     return { code: testResults.some((r) => r.status === "failed") ? 1 : 0, stderr: "" };

@@ -41,16 +41,9 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: package.json
-      - name: Remove node
-        if: runner.os == 'Linux'
-        run: |
-          sudo rm -f $(which -a node nodejs)
-          sudo rm -rf /opt/hostedtoolcache/node
-          hash -r
-      - name: Assert node is gone
-        if: runner.os == 'Linux'
-        run: |
-          if command -v node; then echo "node is still on PATH"; exit 1; fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ">=22.12.0"
       - name: Refuse to run as root
         if: runner.os != 'Windows'
         run: |

@@ -6,7 +6,7 @@ import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { isRecord, isString, type Json } from "../json.ts";
 import { binsOf } from "../lint/manifest.ts";
-import { isRustRule, SCRIPT_RULES } from "../lint/script-rules.ts";
+import { isRustRule, SCRIPT_RULES } from "../script-rules.ts";
 import { ERROR_SEVERITY, JSON_INDENT } from "./json.constants.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
 import { OFF_RULES, RULES, type RuleSetting, TEST_RULES } from "./oxlint-rules.ts";

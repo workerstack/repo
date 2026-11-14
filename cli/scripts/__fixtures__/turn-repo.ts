@@ -91,7 +91,10 @@ export const turn = (root: string, argv: string[], bins?: Bins) => collected(mai
 /** `repo precommit` in `root` with its output collected; `bins` replaces tsc and vitest. */
 export const precommit = (root: string, bins?: Bins, argv: string[] = []) => collected(precommitMain, root, argv, bins);
 
-/** Fake tsc and vitest that pass, recording each call in `calls` as `{bin} {dir} {args}`, the dir relative to `root`. */
+/**
+ * Fake tsc and vitest that pass, recording each call in `calls` as `{bin} {dir} {args}`, the dir relative to `root`;
+ * the node run's bin is `vitest-node`.
+ */
 export function recording(root: string) {
   const calls: string[] = [];
 
@@ -101,7 +104,7 @@ export function recording(root: string) {
 
   const bins: Bins = {
     tsc: async (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
-    vitest: (args, cwd) => (called("vitest", args, cwd), null),
+    vitest: (args, cwd, run) => (called(run === "node" ? "vitest-node" : "vitest", args, cwd), null),
   };
 
   return { bins, calls };

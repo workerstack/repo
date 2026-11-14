@@ -57,7 +57,7 @@ it("is the plugin `repo` with the thirty-five rules the generated config turns o
 function loadedWithPlugin(): string[] {
   const entry = path.join(import.meta.dirname, "index.ts");
   const script = `await import(${JSON.stringify(entry)}); console.log(JSON.stringify(Object.keys(require.cache)));`;
-  const run = spawnSync(process.execPath, ["-e", script], { encoding: "utf8" });
+  const run = spawnSync("bun", ["-e", script], { encoding: "utf8" });
 
   return z.array(z.string()).parse(JSON.parse(run.stdout));
 }

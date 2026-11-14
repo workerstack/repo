@@ -81,8 +81,6 @@ const VALID = [
   source("declare function make(): Row;", "const widened: unknown = make();", "const parsed = widened as Row;"),
   // the evidence was itself widened by an assertion
   source("const source = { id: 1 } as unknown;", "const widened: unknown = source;", "const parsed = widened as Row;"),
-  // an index signature whose key is not a broad key does not widen
-  rewidened("{ [...key: string[]]: unknown }", "Row"),
   // object widening asserted to a qualified name, record widening asserted to a non-record
   rewidened("object", "Types.Row"),
   rewidened("Record<string, unknown>", "string"),

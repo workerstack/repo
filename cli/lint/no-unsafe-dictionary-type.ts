@@ -98,9 +98,9 @@ export const noUnsafeDictionaryType: RepoRule<"unsafeDictionary"> = {
       },
       TSIndexSignature(node) {
         const types = nullThrows(environment, "the Program visitor runs first");
-        const annotation = node.typeAnnotation ?? undefined;
 
-        if (annotation === undefined || node.parent.type === AST_NODE_TYPES.TSTypeLiteral) return;
+        if (node.parent.type === AST_NODE_TYPES.TSTypeLiteral) return;
+        const annotation = nullThrows(node.typeAnnotation, "an index signature has a value type");
         const value = classifyUnsafeDictionaryValue(annotation.typeAnnotation, types);
 
         if (value !== undefined) report(node, value);
