@@ -1,4 +1,5 @@
 // A consumer repo for the `repo check` suites: git, a changelog, and this checkout linked where an install puts it.
+import { RELEASE_URL } from "../actionlint.constants.ts";
 import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
@@ -10,9 +11,19 @@ import { pkgRoot, pkgVersion, type MainFakes, type Written } from "./main-kit.ts
 import { standards } from "../sync/standards.ts";
 import { removeTree } from "../remove-tree.ts";
 
-/** A fetch that answers every request with a registry document whose latest tag is `latest`. */
-export const latestFetch = (latest: string) => (): Promise<Response> =>
-  Promise.resolve(new Response(JSON.stringify({ versions: { [latest]: {} }, "dist-tags": { latest } })));
+/** The real fetch, kept before a test stubs the global. */
+const realFetch = globalThis.fetch;
+
+/**
+ * A fetch that answers every request with a registry document whose latest tag is `latest`, but the pinned
+ * actionlint download, which goes out for real so a runner with no cached binary installs the true archive.
+ */
+export const latestFetch =
+  (latest: string) =>
+  (url: string | URL | Request): Promise<Response> =>
+    String(url).startsWith(RELEASE_URL)
+      ? realFetch(url)
+      : Promise.resolve(new Response(JSON.stringify({ versions: { [latest]: {} }, "dist-tags": { latest } })));
 
 /** The repo a check test runs in, and what it writes there. */
 export type CheckRepo = {
