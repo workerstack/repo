@@ -209,7 +209,7 @@ describe("where the push check reads the workflow", () => {
 
     for (const [cmd, place] of [
       ["git status && git log", at(r)],
-      [`git -C ${outside} push origin main`, at(r)],
+      [`git -C '${outside}' push origin main`, at(r)],
       ["cat <<'EOF'\ngit push origin main\nEOF", at(r)],
       ["git push origin main", at(unborn)],
     ] as const)
