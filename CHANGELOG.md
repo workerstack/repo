@@ -66,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fast plans and fast roadmaps save a strategy like plans do: the save sets `strategy:` from the session, the in-progress fast roadmap or the config, an optional `advice:` line is kept, and both stay outside the line cap. Their approval block and picker are the plan's, with strategy words, and `/implement-plan-fast` hands steps to implementers under spawn-fast or spawn-deep.
 - The repo lint plugin loads no eslint, so each lint run starts about 120 ms sooner. It adds `@typescript-eslint/types` and `@typescript-eslint/scope-manager` as dependencies, and the `@typescript-eslint/utils` peer is now optional.
 - /implement-roadmap-deep writes and reviews every parallel group plan at once, runs spawn groups together, and lands each plan in slice order after slice-files, a rebase and ci; /review-plan flags a path outside the slice's list; /implement-plan-deep takes commit only
+- Runners send read-only Verify checks (lint, fmt --check, tsc --noEmit, sync --check, docs --check) in one message and run tests, coverage and ci alone
 
 ### Removed
 

@@ -57,4 +57,6 @@ The plan's block (`plan-format.md`): header `fast-plan {n} · {strategy}`, an ad
 
 `/implement-plan-fast {n|path} commit only` is the fast roadmap runner's subagent form: it commits in the worktree, never finishes, leaves `status: in-progress`, and ends with `worktree: <abs path>` and `commit: <short sha>` lines.
 
+Verify boxes run as `plan-format.md` Verify batching says: report-only checks in one message, tests, coverage and ci alone.
+
 A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.

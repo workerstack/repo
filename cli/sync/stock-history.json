@@ -261,8 +261,8 @@
     "efab76f90ef41f2e",
     "f01909910bdbeac9"
   ],
-  ".agents/skills/implement-plan-deep/SKILL.md": ["b708f70cdf390ba8"],
-  ".agents/skills/implement-plan-fast/SKILL.md": ["5ce4d643499e3d98"],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["0ca6362bf39d4074"],
+  ".agents/skills/implement-plan-fast/SKILL.md": ["0cedd128b8a900a9"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
     "19b9a67082b5ffc4",
@@ -283,8 +283,8 @@
     "fd12b52d1aa68e91",
     "ff317d44d9986d6a"
   ],
-  ".agents/skills/implement-roadmap-deep/SKILL.md": ["5d2db7a4eb01d313"],
-  ".agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa"],
+  ".agents/skills/implement-roadmap-deep/SKILL.md": ["a0db945bbd7995d3"],
+  ".agents/skills/implement-roadmap-fast/SKILL.md": ["deb43681e2bf449c"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
     "25a307e0751b0be4",
@@ -2256,6 +2256,7 @@
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
   "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff", "f01909910bdbeac9"],
   "agents/skills/implement-plan-deep/SKILL.md": [
+    "0ca6362bf39d4074",
     "1632789dd06220ae",
     "292f5b0c8de32f1d",
     "3f1c199de368543d",
@@ -2263,6 +2264,7 @@
     "b708f70cdf390ba8"
   ],
   "agents/skills/implement-plan-fast/SKILL.md": [
+    "0cedd128b8a900a9",
     "4fa5d8c08371513e",
     "5ce4d643499e3d98",
     "8f71c61551d7af2e",
@@ -2281,10 +2283,16 @@
   "agents/skills/implement-roadmap-deep/SKILL.md": [
     "35fbb27fd12d5260",
     "5d2db7a4eb01d313",
+    "a0db945bbd7995d3",
     "c240aa668b4d478f",
     "f3c378aa2c60cdaa"
   ],
-  "agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa", "a982fa72dddc6e87", "c52179e71ef7184c"],
+  "agents/skills/implement-roadmap-fast/SKILL.md": [
+    "00d7a85242604dfa",
+    "a982fa72dddc6e87",
+    "c52179e71ef7184c",
+    "deb43681e2bf449c"
+  ],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
   "agents/skills/listen/SKILL.md": ["64a0306494a23729", "f1a932afddb5e8d1"],
@@ -8749,6 +8757,7 @@
     "fdda2838f9f06a54"
   ],
   "references/fast-plan-format.md": [
+    "0178a38d59434b07",
     "0a08c65f5c53b51c",
     "0ab67c7bb5eaaf1b",
     "26cf2c0d28278e9b",
@@ -8767,6 +8776,7 @@
     "a71f7d28912fdd0e",
     "b84bdd18bef7728c",
     "ca01396cb5fe5d51",
+    "dd394b6395ce94df",
     "f8bc3a574edec9dd"
   ],
   "references/google-workspace.md": ["48a0a8dd31c8250b", "d5398e907adf37e2", "db455dc3b114ef70"],
@@ -8891,6 +8901,7 @@
     "9abb2dc781e736a2",
     "9c69a0ba989f72fc",
     "a3efd593a4fc382b",
+    "c38058d30c8a7818",
     "c6179e8588309d6e",
     "c71beda324fb785e",
     "e68747157bd6c347"

@@ -811,6 +811,10 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 
 Tests live in Steps (not a new heading). New behavior or a bug: a failing test leaf before the impl leaf. Other behavior change: a test leaf immediately after the impl leaf. Docs, rename-only, config-only, generated: no test leaf. Verify is the end gate (project cmd or named subset), not a substitute for those leaves. Do not re-run the whole suite after every leaf unless it is cheap.
 
+#### Verify batching
+
+Send these Verify leaves in one message: `bun repo lint`, `bun repo fmt --check`, `bun --bun tsc --noEmit -p <config>`, `bun repo sync --check` and `bun repo docs --check`. None writes a file another reads. Run every other leaf alone after them: tests, `bun repo coverage`, `bun repo ci`, `bun repo check`, and the write forms `bun repo lint --baseline`, `bun repo fmt`, `bun repo sync`, `bun repo docs`, and tsc with `--incremental` or emit. When a batched check fails, fix it and rerun the whole batch.
+
 Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan-deep` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
 
 ### Validation checklist
@@ -1248,6 +1252,8 @@ The plan's block (`plan-format.md`): header `fast-plan {n} · {strategy}`, an ad
 
 `/implement-plan-fast {n|path} commit only` is the fast roadmap runner's subagent form: it commits in the worktree, never finishes, leaves `status: in-progress`, and ends with `worktree: <abs path>` and `commit: <short sha>` lines.
 
+Verify boxes run as `plan-format.md` Verify batching says: report-only checks in one message, tests, coverage and ci alone.
+
 A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
 
 ## Fast roadmap format (SSOT)
@@ -1294,7 +1300,7 @@ The plan's block (`plan-format.md`): header `fast-roadmap {n} · {strategy}`, an
 
 ### Run
 
-`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`. A parallel group writes all its plans first, then runs free plans in commit-only `claude` subagents spawned in one message and spawn plans from the session, and runs mixed groups or any group under `workflow: "pull-request"` in order. It lands each plan in slice order after `bun repo slice-files` (a file outside the list moves that plan last), a rebase onto the default branch and `bun repo ci`.
+`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`. A parallel group writes all its plans first, then runs free plans in commit-only `claude` subagents spawned in one message and spawn plans from the session, and runs mixed groups or any group under `workflow: "pull-request"` in order. It lands each plan in slice order after `bun repo slice-files` (a file outside the list moves that plan last), a rebase onto the default branch and `bun repo ci`. Its Verify boxes run as `plan-format.md` Verify batching says.
 
 ## Lessons
 

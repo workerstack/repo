@@ -12,7 +12,7 @@ description: 'Run a locked .repo/roadmaps-fast roadmap in order, each slice as a
    - Add a `Location: <abs path the save returned>` line under the slice, indented six spaces (Edit the saved roadmap). Never write a second plan when Location is set.
    - Alone: run `/implement-plan-fast {m}` in this session. Do not stop: the hook does not ask for its block.
    - Tick the slice `[x]` only after its plan is done.
-3. Run the Verify boxes and tick each `[x]`. Set `status: done`.
+3. Run the Verify boxes as `node_modules/@workerstack/repo/references/plan-format.md` Verify batching says, and tick each `[x]`. Set `status: done`.
 
 A group runs by its plans' `strategy:`:
 

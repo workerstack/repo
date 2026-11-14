@@ -14,7 +14,7 @@ Arg `{n|path}` picks that file. Empty arg: unique in-progress, else unique ready
 
 Worktree: before the first open leaf, run `bun repo worktree add {serial}-{name}` (serial and name from the frontmatter; it prints `.worktrees/{serial}-{name}` and reuses one that exists). Every product edit, test run and commit happens there; the gate denies product writes and commits in the main checkout unless `workflow` is `main`. The plan, the journal and `.repo/scratch/` stay in the root. A subagent starts in the root, so its prompt names the worktree path.
 
-Format: `node_modules/@workerstack/repo/references/plan-format.md`. Write-allowlist = paths listed in the plan, repo-relative to the worktree; an absolute path under the root names the same path there. Run Verify leaves. Do not skip a test leaf. Do not flip a behavior leaf `[x]` until its test ran.
+Format: `node_modules/@workerstack/repo/references/plan-format.md`. Write-allowlist = paths listed in the plan, repo-relative to the worktree; an absolute path under the root names the same path there. Run Verify leaves as plan-format.md Verify batching says. Do not skip a test leaf. Do not flip a behavior leaf `[x]` until its test ran.
 
 A leaf that names a principle skill is done by reading that skill and following it. Also follow the next paragraph, and read a principle an already-read principle cites. Do not open the rest of the catalog.
 
