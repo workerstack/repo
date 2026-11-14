@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import { SECTION_PACKS } from "./config-schema.ts";
 
 const TYPES = path.join(import.meta.dirname, "repo-config.types.ts");
-const PROBE = path.join(import.meta.dirname, "__config-docs-probe.ts");
+
+/** In the forward-slash form the compiler hands its host on every platform, Windows too. */
+const PROBE = path.join(import.meta.dirname, "__config-docs-probe.ts").replaceAll(path.sep, "/");
 const PROBE_TEXT = 'import type { RepoConfig } from "./repo-config.types.ts";\nexport type Probe = RepoConfig;\n';
 
 const OPTIONS: ts.CompilerOptions = {
