@@ -16,7 +16,7 @@ import type { Result } from "../result.ts";
 import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { readManifest } from "../sync/manifest.ts";
-import type { Change } from "./change-set.ts";
+import type { Change, Scope } from "./change-set.ts";
 import { fixPasses } from "./fix-passes.ts";
 import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import {
@@ -41,8 +41,8 @@ export type Bins = {
 };
 
 /**
- * A change set to gate, with the root's packages, the bins it runs, the config's `lint.skip` entries, and whether it
- * is the index (`--staged`), which turn restages after each step.
+ * A change set to gate, with the root's packages, the bins it runs, the config's `lint.skip` entries, and its scope;
+ * under the staged scope (`--staged`) turn restages after each step.
  */
 export type Turn = {
   root: string;
@@ -50,7 +50,7 @@ export type Turn = {
   packages: readonly string[];
   bins: Bins;
   skips: readonly LintSkip[];
-  isStaged: boolean;
+  scope: Scope;
 };
 
 export type StepResult = { label: string; ok: boolean; output: string[]; touched: string[] };

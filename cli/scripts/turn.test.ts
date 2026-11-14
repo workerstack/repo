@@ -3,14 +3,13 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { fwd } from "../../dev/test-paths.ts";
 import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
-import { dirName, type Bins } from "./turn-steps.ts";
+import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
 
-import { srcConfig, TSCONFIG } from "./__fixtures__/turn-repo.ts";
+import { recording, srcConfig, TSCONFIG } from "./__fixtures__/turn-repo.ts";
 
 const OK: Captured = { code: 0, stderr: "", stdout: "" };
 const PIN = `bun@${Bun.version}`;
@@ -170,17 +169,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
     "src/root.ts": "export const root = 42;\n",
   });
 
-  const calls: string[] = [];
-
-  function called(bin: string, args: string[], cwd: string) {
-    return calls.push(`${bin} ${dirName(fwd(path.relative(root, cwd)))} ${args.join(" ")}`);
-  }
-
-  const bins: Bins = {
-    tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
-    vitest: (args, cwd) => (called("vitest", args, cwd), null),
-  };
-
+  const { bins, calls } = recording(root);
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
     "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · " +

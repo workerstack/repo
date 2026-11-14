@@ -3,7 +3,8 @@
  * comments, lint and its baseline, typecheck, reject files, sync, the stock history table (in this package's own
  * checkout), related tests and check, each step only when its inputs changed, then prints one summary line. Only
  * `--staged` restages, only what turn itself rewrote, and right after the step that rewrote it, so a later step reads
- * the index as the commit will hold it.
+ * the index as the commit will hold it. A file a step returned to the base leaves the change set before the next step,
+ * and a turn with no change left runs no more steps.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -15,7 +16,7 @@ import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import type { Result } from "../result.ts";
 import { nodeRange } from "../sync/node-range.ts";
 import { readWorkspace } from "../sync/workspace.ts";
-import { changeSet, type Scope } from "./change-set.ts";
+import { changeSet, type Change, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { capture, captureBun } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
@@ -147,8 +148,7 @@ async function prepare(
   const changes = changeSet(root, parsed.scope, packages);
 
   if (!changes.ok) return changes;
-  const isStaged = parsed.scope.kind === "staged";
-  const turn = { bins, changes: changes.changes, isStaged, packages, root, skips: loaded.config.lint.skip };
+  const turn = { bins, changes: changes.changes, packages, root, scope: parsed.scope, skips: loaded.config.lint.skip };
 
   return { ok: true, turn };
 }
@@ -166,29 +166,54 @@ function restage(root: string, touched: readonly string[], stderr: (s: string) =
   return false;
 }
 
-/** The steps' results, and false for `isRestaged` when a restage under `--staged` failed. */
-type Ran = { results: StepResult[]; isRestaged: boolean };
+/**
+ * The steps' results, false for `isRestaged` when a restage under `--staged` failed, and true for `isEmptied` when a
+ * step returned every change to the base.
+ */
+type Ran = { results: StepResult[]; isRestaged: boolean; isEmptied: boolean };
 
 /**
- * Runs every step whose inputs changed, printing a failed step's output as it ends and, under `--staged`, restaging
- * what it rewrote before the next step.
+ * The changes git still lists after a step rewrote files: one the step returned to the base leaves, and none joins.
+ * The package scope gates every file, so it keeps them all. A failed read keeps the set: under `--staged` it fails
+ * only after a failed restage, which has already failed the turn and said what to stage.
  */
-function runSteps(turn: Turn, stderr: (s: string) => void): Ran {
-  let isRestaged = true;
+function remaining(turn: Turn): readonly Change[] {
+  if (turn.scope.kind === "package") return turn.changes;
+  const now = changeSet(turn.root, turn.scope, turn.packages);
 
-  const results = STEPS.flatMap((step) => {
+  if (!now.ok) return turn.changes;
+  const listed = new Set(now.changes.map((change) => change.rel));
+
+  return turn.changes.filter((change) => listed.has(change.rel));
+}
+
+/**
+ * Runs every step whose inputs changed, printing a failed step's output as it ends, under `--staged` restaging what
+ * it rewrote, and after a rewrite dropping the changes it returned to the base, before the next step.
+ */
+function runSteps(start: Turn, stderr: (s: string) => void): Ran {
+  let changes = start.changes;
+  let isRestaged = true;
+  const results: StepResult[] = [];
+
+  for (const step of STEPS) {
+    const turn: Turn = { ...start, changes };
     const result = step(turn);
 
-    if (result === null) return [];
+    if (result === null) continue;
 
     for (const chunk of result.output) stderr(chunk);
 
-    if (turn.isStaged && !restage(turn.root, result.touched, stderr)) isRestaged = false;
+    if (turn.scope.kind === "staged" && !restage(turn.root, result.touched, stderr)) isRestaged = false;
+    results.push(result);
 
-    return [result];
-  });
+    if (result.touched.length === 0) continue;
+    changes = remaining(turn);
 
-  return { isRestaged, results };
+    if (changes.length === 0) return { isEmptied: true, isRestaged, results };
+  }
+
+  return { isEmptied: false, isRestaged, results };
 }
 
 /** The deps with the process's own for each one left out. */
@@ -219,9 +244,10 @@ export async function main(argv: string[], deps: TurnDeps = {}): Promise<number>
     return 0;
   }
 
-  const { results, isRestaged } = runSteps(turn, stderr);
+  const { results, isRestaged, isEmptied } = runSteps(turn, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
-  stdout(`turn: ${files} · ${results.map((result) => result.label).join(" · ")}\n`);
+  const labels = [...results.map((result) => result.label), ...(isEmptied ? ["no changes left"] : [])];
+  stdout(`turn: ${files} · ${labels.join(" · ")}\n`);
 
   return isRestaged && results.every((result) => result.ok) ? 0 : 1;
 }

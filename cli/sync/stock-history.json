@@ -2538,6 +2538,7 @@
     "56c3ec22d64b1b5b",
     "674678a101b27cd8",
     "6f992e3831a68c1c",
+    "8f9c8a10a45e9d89",
     "a41ab18e37a943f4",
     "d685cdb582cec3a5"
   ],
@@ -3439,6 +3440,7 @@
     "9789e2ed64838739",
     "a2d666af55261fc7",
     "bcb7b41ce4c56b46",
+    "c58e4795547e119e",
     "ce5e7627a43cb84b",
     "e1a87ae8b3234b63"
   ],
@@ -7157,6 +7159,7 @@
     "5f24b9e3160ee34a",
     "75d9e1ea55f0a28f",
     "8b68db8a3a5a161f",
+    "94ea8d149c3470c2",
     "9a666063eff51418",
     "c4df638579be4d80",
     "f7fe96b8e7e22cd0",
@@ -7776,7 +7779,7 @@
   "cli/scripts/stock-history-collect.test.ts": ["8435a5cc3bec0bbe"],
   "cli/scripts/stock-history-collect.ts": ["dfa30aa05cf89526"],
   "cli/scripts/stock-history-step.test.ts": ["c34df25e6d0f1f16"],
-  "cli/scripts/stock-history-step.ts": ["91ed01dd067f81db"],
+  "cli/scripts/stock-history-step.ts": ["91ed01dd067f81db", "dcf803bc4ef639a2"],
   "cli/scripts/strategy-stamp.test.ts": [
     "0cdc3b188a4e17dd",
     "1fc7fc58b28b3c2e",
@@ -8000,7 +8003,8 @@
     "4f8aa590bab79b05",
     "aefc97e9b853e7de",
     "c05a2b8c5cb398ef",
-    "cffaead7383728e5"
+    "cffaead7383728e5",
+    "fdae8c69317d7c05"
   ],
   "cli/scripts/turn-git-env.test.ts": [
     "0aa8e9309fb4be2d",
@@ -8016,11 +8020,13 @@
   ],
   "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1"],
   "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5f85051e432b3834", "ca23417ead3b41df"],
+  "cli/scripts/turn-reverted.test.ts": ["faeee95c01e0557c"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": ["1185b24a2a30bcd3", "13127ab245837357", "6a271617c14e7eaa", "c89acccabc45f07c"],
   "cli/scripts/turn-steps.ts": [
     "03d9afe32c225ba5",
     "08140649cac1ee3d",
+    "142c76e083e11d59",
     "34f46d812902b85e",
     "5c42bceb9c0ba678",
     "5f413223055ae7ca",
@@ -8059,6 +8065,7 @@
     "dc339a39ee7084dc",
     "de703648a043e16d",
     "edd2c41d667803d8",
+    "f62dd3b5a28e9a6e",
     "f81b7ff9dc49fa55"
   ],
   "cli/scripts/turn.ts": [
@@ -8067,6 +8074,7 @@
     "38272a86146319ef",
     "42e0a56d9b0d3a37",
     "4d724a31174c57f9",
+    "60ee13ea6ba433a3",
     "6ab04a8f5ddadee2",
     "712999bfabd39d9b",
     "756d5670aca5bc88",

@@ -93,7 +93,7 @@ it("a failed restage under --staged fails the turn and says what to stage", { ti
   // A held index lock makes `git add` fail the way a concurrent git process would.
   fs.writeFileSync(path.join(root, ".git/index.lock"), "");
   const result = await turn(root, ["--staged"]);
-  expect(result.err).toContain("repo turn: git add failed for src/a.ts; stage it yourself and commit again\n");
+  expect(result.err).toBe("repo turn: git add failed for src/a.ts; stage it yourself and commit again\n");
   expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · /);
   expect(result.code).toBe(1);
 });

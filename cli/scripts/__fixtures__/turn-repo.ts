@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { expect } from "vitest";
 import { main } from "../turn.ts";
-import type { Bins } from "../turn-steps.ts";
+import { dirName, type Bins } from "../turn-steps.ts";
+import { fwd } from "../../../dev/test-paths.ts";
 import { WRITABLE_MODE } from "../../sync/write.constants.ts";
 import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
@@ -80,6 +81,22 @@ export async function turn(root: string, argv: string[], bins?: Bins) {
   const io = { cwd: root, stdout: (s: string) => out.push(s), stderr: (s: string) => err.push(s) };
   const code = await main(argv, bins === undefined ? io : { ...io, bins });
   return { code, out: out.join(""), err: err.join("") };
+}
+
+/** Fake tsc and vitest that pass, recording each call in `calls` as `{bin} {dir} {args}`, the dir relative to `root`. */
+export function recording(root: string) {
+  const calls: string[] = [];
+
+  function called(bin: string, args: string[], cwd: string) {
+    return calls.push(`${bin} ${dirName(fwd(path.relative(root, cwd)))} ${args.join(" ")}`);
+  }
+
+  const bins: Bins = {
+    tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
+    vitest: (args, cwd) => (called("vitest", args, cwd), null),
+  };
+
+  return { bins, calls };
 }
 
 export const staged = (root: string) => git(root, "diff", "--cached", "--name-only").split("\n").filter(Boolean);
