@@ -5,9 +5,12 @@ import { expect, it } from "vitest";
 
 import {
   NAME,
+  hoistingSuite,
+  installedFile,
   mod,
   npmCopy,
   put,
+  resolvedFrom,
   scene,
   sibling,
   stateFile,
@@ -144,4 +147,13 @@ it("reapplies from a directory and prints a line each through the given writers"
     `out repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}\n`,
     `err repo link: warning: ${w.flare} is gone; ${NAME} stays on npm; \`bun repo unlink ${NAME}\` forgets it\n`,
   ]);
+});
+
+it("links a workspace sibling's hoisted dependency again after an install put npm's copy back", async () => {
+  const w = scene();
+  const suite = hoistingSuite(w);
+  await main(["suite"], w.io());
+  installAgain(w.main, "0.3.3");
+  await reapplyLinks(w.io());
+  expect(resolvedFrom(w.main, "zod")).toBe(installedFile(suite, "zod"));
 });

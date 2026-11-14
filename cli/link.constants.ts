@@ -9,6 +9,12 @@ export const MARKER_FILE = ".repo-link";
 export const MODULES = "node_modules";
 export const BIN_DIR = ".bin";
 
+/** The entry at a checkout's top (a dir, or a worktree's file): the search for a sibling's dependencies stops there. */
+export const CHECKOUT_TOP = ".git";
+
+/** The dir link type Windows makes without admin rights; POSIX ignores it. */
+export const DIR_LINK = "junction";
+
 /** Inside the install dir, so a swap's rename never crosses filesystems. */
 export const STAGING_DIR = "node_modules/.repo-link";
 export const SWAP_PREFIX = "swap-";
