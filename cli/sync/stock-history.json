@@ -4159,6 +4159,7 @@
     "8bce6d62845a107a",
     "a97073a895e199a3"
   ],
+  "cli/scripts/gate-paths-expansions.test.ts": ["30ef61a1d867f65a"],
   "cli/scripts/gate-paths.test.ts": [
     "0ebdec1f8bc8ec1f",
     "14ef575950db3c3b",
@@ -4174,6 +4175,7 @@
     "1fd94d3658291a12",
     "21ea01722475cfe4",
     "2534df69877b6fba",
+    "4055a6b5822f105e",
     "40ae31a4bf0c6534",
     "74bd29dfffaa3c7a",
     "aa6f22f83d04974a",
@@ -7326,8 +7328,10 @@
   "cli/scripts/setup.types.ts": ["7bc3f52693cda8bf", "8c14ed54287dd9d7", "b0a51ce6b58f85a8", "ff203ec26cc56945"],
   "cli/scripts/shell-ignore-edits.test.ts": ["92b2aa388e7f3ec9", "b8524d4e9fc06504", "bc464ef1007d0f8c"],
   "cli/scripts/shell-ignore-edits.ts": ["a9e50dd2aafd4916", "de77201fd68dcad7", "f764a56267034eac"],
-  "cli/scripts/shell-words.test.ts": ["7085ca00517e66a0", "8310092f11d94c0d"],
-  "cli/scripts/shell-words.ts": ["b0ada64c296bf750", "d111421729db2124"],
+  "cli/scripts/shell-spans.constants.ts": ["33657cadf2e983be"],
+  "cli/scripts/shell-spans.ts": ["dd44831e9bf05a2e"],
+  "cli/scripts/shell-words.test.ts": ["0bd6342383239d87", "7085ca00517e66a0", "8310092f11d94c0d"],
+  "cli/scripts/shell-words.ts": ["b0ada64c296bf750", "bc9748cf8b627ac5", "d111421729db2124"],
   "cli/scripts/shim-launcher.d.mts": ["af27b05d6e1e1c22"],
   "cli/scripts/shim-launcher.mjs": ["795de8711c692e49"],
   "cli/scripts/shim-launcher.test.ts": ["1d0bb838e203838f"],

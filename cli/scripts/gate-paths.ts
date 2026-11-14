@@ -6,7 +6,7 @@ import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { patternWords } from "./pattern-words.ts";
-import { holdsCommand, simpleCommands } from "./shell-words.ts";
+import { holdsCommand, type ShellCommand, simpleCommands } from "./shell-words.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
 export const DENY_PATH_SEGMENTS: ReadonlySet<string> = /* @__PURE__ */ new Set([
@@ -30,6 +30,9 @@ const GIT_DIR_RE = /(^|[\s/])\.git(\/|$)/;
 
 /** The lockfile named as a word. */
 const BUN_LOCK_RE = /\bbun\.lock\b/;
+
+/** A `NAME=value` word that sets a variable before the program word. */
+const ASSIGNMENT_RE = /^[A-Za-z_]\w*=/;
 
 /** A Windows program's `.exe` ending, dropped before a command name is matched. */
 const EXE_EXT_RE = /\.exe$/i;
@@ -81,34 +84,54 @@ export function pathIsDenied(p: string | null | undefined): boolean {
   return n.split("/").some((seg) => DENY_PATH_SEGMENTS.has(seg));
 }
 
-/** True when a dump or search command names a denied path, a lockfile or `.git`. */
+/**
+ * True when a dump or search command names a denied path, a lockfile or `.git`. A line with no dump or search name is
+ * judged too when a command's program is an expansion, since it may run any of them.
+ */
 export function bashTargetsDenylist(command: string | undefined): boolean {
   const cmd = command ?? "";
+  const commands = simpleCommands(cmd);
 
-  if (cmd.trim() === "" || !BASH_DUMP_CMDS.test(cmd)) return false;
+  if (!BASH_DUMP_CMDS.test(cmd) && !commands.some((c) => runsUnknown(c))) return false;
 
-  return readsDeniedPath(cmd);
+  return commands.some((c) => readsDeniedPath(c));
+}
+
+/** True when the program word of `c`, the first that sets no variable, holds an expansion. */
+function programExpanded({ words, expanded }: ShellCommand): boolean {
+  return expanded.has(words.findIndex((w) => !ASSIGNMENT_RE.test(w)));
+}
+
+/** True when `c`, or a command a word of it holds (`sh -c '…'`), runs a program the gate cannot name. */
+function runsUnknown(c: ShellCommand): boolean {
+  return programExpanded(c) || c.words.some((w) => holdsCommand(w) && simpleCommands(w).some((n) => runsUnknown(n)));
+}
+
+/** True when one spelling of a word names the lockfile, a `.git` dir, or (judged as a path) a denied path. */
+function namesDenied(word: string, { asPath }: { asPath: boolean }): boolean {
+  return BUN_LOCK_RE.test(word) || gitDirIn(word) || ((asPath || word.includes("/")) && pathIsDenied(word));
 }
 
 /**
- * True when a simple command of `cmd` reads a denied path. Each word its program may open is judged: in a command that
- * runs a dump or search, as a path; in any other, when it holds a slash; in every command, for the lockfile or a
- * `.git` dir. A pattern its program never opens is skipped (`patternWords`), and so is nothing a redirect names. A word
- * that holds a command is judged the same way, skipped or not. Each nested word is shorter than its command, since
- * quotes or escapes were removed to keep it whole, so the recursion ends.
+ * True when the simple command `c` reads a denied path. Each word its program may open is judged, in both the spelling
+ * `words` keeps and the one bash reads: in a command that runs a dump or search, as a path; in any other, when it holds
+ * a slash; in every command, for the lockfile or a `.git` dir. A pattern its program never opens is skipped
+ * (`patternWords`), and so is nothing a redirect names. A command that holds an expansion skips no pattern, since the
+ * value may turn one into a path (`-e x`, `--files`), and one whose program is an expansion is judged as a dump. A
+ * word that holds a command is judged the same way, skipped or not. Each nested word is shorter than its command,
+ * since quotes or escapes were removed to keep it whole, so the recursion ends.
  */
-function readsDeniedPath(cmd: string): boolean {
-  return simpleCommands(cmd).some(({ words, redirects }) => {
-    const isDump = words.some((w) => isDumpName(w));
-    const skipped = skippedWords(words, redirects);
+function readsDeniedPath(c: ShellCommand): boolean {
+  const { words, bashWords, redirects, expanded } = c;
+  const isDump = programExpanded(c) || words.some((w) => isDumpName(w));
+  const skipped = expanded.size > 0 ? new Set<number>() : skippedWords(words, redirects);
 
-    return words.some((w, i) => {
-      if (holdsCommand(w) && readsDeniedPath(w)) return true;
+  return words.some((w, i) => {
+    if (holdsCommand(w) && simpleCommands(w).some((n) => readsDeniedPath(n))) return true;
 
-      if (skipped.has(i)) return false;
+    if (skipped.has(i)) return false;
 
-      return BUN_LOCK_RE.test(w) || gitDirIn(w) || ((isDump || w.includes("/")) && pathIsDenied(w));
-    });
+    return namesDenied(w, { asPath: isDump }) || namesDenied(String(bashWords[i]), { asPath: isDump });
   });
 }
 
