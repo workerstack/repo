@@ -6,6 +6,9 @@ import type { GateResult, ToolArgs } from "./gate-harness.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";
 import { bashTargetsDenylist, pathIsDenied } from "./gate-paths.ts";
 
+/** A dir that does not exist, so a glob in a command matches nothing, as in an empty dir. */
+const NO_DIR = "/no-such-gate-dir";
+
 describe("pathIsDenied", () => {
   it("denies denylist segments, lockfiles, and .git/", () => {
     expect(pathIsDenied("node_modules/left-pad/index.js")).toBe(true);
@@ -24,14 +27,14 @@ describe("pathIsDenied", () => {
 
 describe("bashTargetsDenylist", () => {
   it("catches cat/rg/find on denylist paths, not cargo build", () => {
-    expect(bashTargetsDenylist("cat bun.lock")).toBe(true);
-    expect(bashTargetsDenylist("rg foo node_modules")).toBe(true);
-    expect(bashTargetsDenylist("find dist -name '*.js'")).toBe(true);
-    expect(bashTargetsDenylist("cat .git/objects/pack/foo")).toBe(true);
-    expect(bashTargetsDenylist("git add bun.lock")).toBe(false);
-    expect(bashTargetsDenylist("git diff bun.lock")).toBe(false);
-    expect(bashTargetsDenylist("cargo build")).toBe(false);
-    expect(bashTargetsDenylist("cat src/index.ts")).toBe(false);
+    expect(bashTargetsDenylist("cat bun.lock", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("rg foo node_modules", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("find dist -name '*.js'", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("cat .git/objects/pack/foo", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("git add bun.lock", NO_DIR)).toBe(false);
+    expect(bashTargetsDenylist("git diff bun.lock", NO_DIR)).toBe(false);
+    expect(bashTargetsDenylist("cargo build", NO_DIR)).toBe(false);
+    expect(bashTargetsDenylist("cat src/index.ts", NO_DIR)).toBe(false);
   });
 });
 
@@ -112,19 +115,19 @@ const stillDenied = [
 ];
 
 it("bashTargetsDenylist: passes a pattern that spells a denied name", () => {
-  for (const cmd of patterns) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+  for (const cmd of patterns) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(false);
 });
 
 it("bashTargetsDenylist: still denies every word a search may open", () => {
-  for (const cmd of stillDenied) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+  for (const cmd of stillDenied) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
 });
 
 it("bashTargetsDenylist: passes a bare dir name handed to a command that dumps nothing", () => {
-  for (const cmd of passes) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+  for (const cmd of passes) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(false);
 });
 
 it("bashTargetsDenylist: denies a dump of a denied path, bare, quoted, redirected, wrapped or nested", () => {
-  for (const cmd of denies) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+  for (const cmd of denies) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
 });
 
 type Run = (arg: string) => GateResult;

@@ -5,20 +5,23 @@ import { describe, expect, it } from "vitest";
 import { alreadyRtk, isWorkspaceJobScript, parseJobCommand, stripFlagValue } from "./gate-job.ts";
 import { bashTargetsDenylist } from "./gate-paths.ts";
 
+/** A dir that does not exist, so a glob in a command matches nothing, as in an empty dir. */
+const NO_DIR = "/no-such-gate-dir";
+
 const WS = "/planted/WS";
 const roots = { checkout: WS, cwd: WS, root: WS };
 const bin = path.join(WS, ["node_modules", ".bin", "repo"].join("/"));
 
 describe("bashTargetsDenylist edges", () => {
   it("lets an empty or missing command through", () => {
-    expect(bashTargetsDenylist(undefined)).toBe(false);
-    expect(bashTargetsDenylist("   ")).toBe(false);
+    expect(bashTargetsDenylist(undefined, NO_DIR)).toBe(false);
+    expect(bashTargetsDenylist("   ", NO_DIR)).toBe(false);
   });
 
   it("denies a dump of the lockfile or the git dir, not a plain mention", () => {
-    expect(bashTargetsDenylist("cat bun.lock")).toBe(true);
-    expect(bashTargetsDenylist("grep x .git/config")).toBe(true);
-    expect(bashTargetsDenylist("echo bun.lock")).toBe(false);
+    expect(bashTargetsDenylist("cat bun.lock", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("grep x .git/config", NO_DIR)).toBe(true);
+    expect(bashTargetsDenylist("echo bun.lock", NO_DIR)).toBe(false);
   });
 });
 

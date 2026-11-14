@@ -18,10 +18,10 @@ function shown(src: string): string[] {
   return lex(src).map(show);
 }
 
-/** The parts of the word at the start of `src`, each as kind and text. */
+/** The parts of the word at the start of `src`, each as kind and text; `qlit` for quoted text, which never globs. */
 function parts(src: string): string[] {
   return wordAt(src, 0).word.parts.map((part: Part) => {
-    if (part.kind === "lit") return `lit:${part.text}|${part.bash}`;
+    if (part.kind === "lit") return `${part.quoted ? "q" : ""}lit:${part.text}|${part.bash}`;
 
     return part.kind === "param" ? `param:${part.raw}:${part.substs.join(",")}` : `subst:${part.raw}:${part.body}`;
   });
@@ -127,27 +127,27 @@ describe("lex heredoc forms", () => {
 });
 
 describe("wordAt", () => {
-  it("reads quotes, and joins adjacent literal text", () => {
-    expect(parts(`a'b c'"d e"f`)).toStrictEqual(["lit:ab cd ef|ab cd ef"]);
-    expect(parts("'open")).toStrictEqual(["lit:open|open"]);
-    expect(parts('"\\"\\$\\x"')).toStrictEqual(['lit:"$\\x|"$\\x']);
+  it("reads quotes, and joins adjacent literal text of the same quoting", () => {
+    expect(parts(`a'b c'"d e"f`)).toStrictEqual(["lit:a|a", "qlit:b cd e|b cd e", "lit:f|f"]);
+    expect(parts("'open")).toStrictEqual(["qlit:open|open"]);
+    expect(parts('"\\"\\$\\x"')).toStrictEqual(['qlit:"$\\x|"$\\x']);
   });
 
   it("keeps a backslash before a plain character in text and drops it for bash", () => {
-    expect(parts("a\\b\\ c\\")).toStrictEqual(["lit:a\\b c\\|ab c\\"]);
+    expect(parts("a\\b\\ c\\")).toStrictEqual(["lit:a|a", "qlit:\\b |b ", "lit:c|c", "qlit:\\|\\"]);
     expect(parts("a\\\nb")).toStrictEqual(["lit:ab|ab"]);
-    expect(parts('"a\\\nb"')).toStrictEqual(["lit:ab|ab"]);
+    expect(parts('"a\\\nb"')).toStrictEqual(["qlit:ab|ab"]);
   });
 
   it("decodes $'…' and reads $\"…\" as double quotes", () => {
-    expect(parts("$'a\\tb'")).toStrictEqual(["lit:a\tb|a\tb"]);
-    expect(parts('$"a $x"')).toStrictEqual(["lit:a |a ", "param:$x:"]);
+    expect(parts("$'a\\tb'")).toStrictEqual(["qlit:a\tb|a\tb"]);
+    expect(parts('$"a $x"')).toStrictEqual(["qlit:a |a ", "param:$x:"]);
   });
 
   it("decodes every $'…' escape form, keeping one it does not know or past Unicode", () => {
     const text = "dist\u0001\n'\\q\\U7fffffff";
 
-    expect(parts("$'\\x64\\u0069\\U00000073\\164\\cA\\n\\'\\q\\U7fffffff'")).toStrictEqual([`lit:${text}|${text}`]);
+    expect(parts("$'\\x64\\u0069\\U00000073\\164\\cA\\n\\'\\q\\U7fffffff'")).toStrictEqual([`qlit:${text}|${text}`]);
   });
 
   it("skips quotes, escapes and backticks inside a substitution, and an unclosed quote to the end", () => {
@@ -174,7 +174,7 @@ describe("wordAt expansions", () => {
   it("reads substitutions with the script they run", () => {
     expect(parts("$(a (b) c)")).toStrictEqual(["subst:$(a (b) c):a (b) c"]);
     expect(parts("`a \\`b\\``")).toStrictEqual(["subst:`a \\`b\\``:a `b`"]);
-    expect(parts('"`a`"')).toStrictEqual(["lit:|", "subst:`a`:a"]);
+    expect(parts('"`a`"')).toStrictEqual(["qlit:|", "subst:`a`:a"]);
     expect(parts("<(a)x")).toStrictEqual(["subst:<(a):a", "lit:x|x"]);
   });
 
@@ -186,7 +186,7 @@ describe("wordAt expansions", () => {
 describe("word helpers", () => {
   it("reads an unquoted body as double-quoted text, escaping only \\ $ ` and a line break", () => {
     expect(scriptText(unquotedBody('a\\"\\$b $c\n'))).toBe('a\\"$b $c\n');
-    expect(quotedBody("$c").parts).toStrictEqual([{ bash: "$c", kind: "lit", text: "$c" }]);
+    expect(quotedBody("$c").parts).toStrictEqual([{ bash: "$c", kind: "lit", quoted: true, text: "$c" }]);
   });
 
   it("tells a literal word from one with an expansion", () => {

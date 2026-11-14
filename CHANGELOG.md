@@ -75,6 +75,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo browser nav` stops waiting as soon as the engine exits before it answers, instead of after the full 4 s wait. When the Chromium fallback exits this way, it prints `engine exited before it was ready (exit code N)`, or `(signal S)` when a signal ended it.
 - The Bash path gate and the pull-request push gate now judge every command bash runs, including commands in blocks, loops, functions, substitutions and scripts a shell reads, and no longer judge heredoc bodies, comments or commit messages as commands
 - The Bash gates read the variables, `~` and `cd` a line sets before they judge it: `S=/abs; cd $S && git push` is judged in `/abs`, `D=node_modules; cat $D/x` is denied, and a value the gate cannot read gets the strict answer.
+- The gates now judge the words bash makes: braces such as `{probe,main}`, unquoted values split by IFS, globs matched on disk, and a `case` inside `$(…)`. A glob the gate cannot read gets the strict answer.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

@@ -18,12 +18,12 @@ import {
   STDIN_OPERAND,
   WATCH_VALUE_OPTS,
   ASSIGNMENT_RE,
+  LAST,
 } from "./shell.constants.ts";
 
 const SHORT_CLUSTER_RE = /^-[A-Za-z]+$/;
 const PATH_SEP_RE = /[\\/]/;
 const EXE_RE = /\.exe$/i;
-const LAST = -1;
 
 /** One command being read: its words, the index of its program, and the stdin it gets. */
 type Cmd = { words: readonly ShellWord[]; prog: number; stdin: Stdin };
@@ -190,7 +190,7 @@ export function programAt(words: readonly ShellWord[]): number {
  * a known name anywhere in the words (so `xargs sh -c` counts), or an expanded program word, read as a shell.
  */
 export function scriptsOf(c: Simple, stdin: Stdin): Script[] {
-  if (c.data === true) return [];
+  if (c.data !== undefined) return [];
   const cmd: Cmd = { prog: programAt(c.words), stdin: redirectStdin(c.redirects, stdin), words: c.words };
 
   for (const [at, word] of cmd.words.entries()) {

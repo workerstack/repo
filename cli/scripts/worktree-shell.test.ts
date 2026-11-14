@@ -92,3 +92,11 @@ it("moves git's dir by -C, --git-dir, --work-tree and the variables before it, u
   expect(dirsOf('git --work-tree="$W" status')).toStrictEqual([['?"$W"', "status"]]);
   expect(dirsOf("git -C")).toStrictEqual([]);
 });
+
+it("reads the GIT_DIR env sets from its field, unknown when the value is not literal or has a tilde", () => {
+  expect(dirsOf("X=GIT_DIR=/g; env $X git push")).toStrictEqual([["/g", "push"]]);
+  expect(dirsOf("env GIT_DIR=/g git push")).toStrictEqual([["/g", "push"]]);
+  expect(dirsOf("env GIT_DIR=~/x git push")).toStrictEqual([["?GIT_DIR=~/x", "push"]]);
+  expect(dirsOf("env GIT_DIR=a:~/x git push")).toStrictEqual([["?GIT_DIR=a:~/x", "push"]]);
+  expect(dirsOf("env GIT_DIR=$Q git push")).toStrictEqual([["?GIT_DIR=$Q", "push"]]);
+});

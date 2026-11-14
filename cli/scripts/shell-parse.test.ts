@@ -8,7 +8,7 @@ import { shellParse } from "./shell-parse.ts";
 function showSimple(node: Simple): string {
   const words = [...node.words.map((w) => w.raw), ...node.redirects.map((r) => `${r.op}${r.target.raw}`)].join(" ");
 
-  return node.data === true ? `data[${words}]` : `[${words}]`;
+  return node.data === undefined ? `[${words}]` : `data[${words}]`;
 }
 
 /** A command tree as short text: a simple command is its words in brackets, a node its kind and children. */

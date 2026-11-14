@@ -3,13 +3,18 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { Visited } from "./shell-ast.types.ts";
-import { expandWord } from "./shell-expand.ts";
+import { readWord } from "./shell-fields.ts";
 import { shellFlow } from "./shell-flow.ts";
 
-/** A visited command as its words read with its variables (`?raw` when unknown) and its dir. */
+/** A field's text, in `[…]` when it holds a blank. */
+function shown(text: string): string {
+  return text.includes(" ") ? `[${text}]` : text;
+}
+
+/** A visited command as the fields bash runs (`?raw` when unknown, `[a b]` for one that holds a blank) and its dir. */
 function show(v: Visited): string {
   if (v.kind === "opaque") return `opaque(${v.cause})`;
-  const words = v.words.map((w) => expandWord(w, v.vars)).map((r) => (r.literal ? r.text : `?${r.raw}`));
+  const words = v.words.map(readWord).map((r) => (r.literal ? shown(r.text) : `?${r.raw}`));
 
   return `${words.join(" ")} @${v.dir.known ? v.dir.path : `?${v.dir.cause}`}`;
 }
@@ -18,7 +23,8 @@ function show(v: Visited): string {
 function runs(src: string): string[] {
   const out: string[] = [];
   shellFlow(src, { cwd: "/r", env: { cdpath: "", home: "/h" }, p: path.posix }, (v) => {
-    if (v.kind === "opaque" || (v.data !== true && !/^[A-Za-z_]\w*=/.test(v.words[0]?.raw ?? ""))) out.push(show(v));
+    if (v.kind === "opaque" || (v.data === undefined && !/^[A-Za-z_]\w*=/.test(v.words[0]?.raw ?? "")))
+      out.push(show(v));
   });
 
   return out;
@@ -54,13 +60,34 @@ describe("walk variables", () => {
   });
 });
 
+describe("walk braces past the cap", () => {
+  it("visits a command whose braces make too many words as one it cannot read, and loses the dir and vars", () => {
+    const cap = "opaque(braces that make too many words)";
+
+    expect(runs("D=/a; echo {1..2000}; cd $D; ls")).toStrictEqual([
+      cap,
+      "cd ?$D @?braces that make too many words",
+      "ls @?$D",
+    ]);
+  });
+
+  it("feeds a script reader the cause when the command before it in a pipe makes too many words", () => {
+    expect(runs("echo {1..2000} | sh")).toStrictEqual([
+      "opaque(braces that make too many words)",
+      "sh @/r",
+      "opaque(braces that make too many words)",
+    ]);
+  });
+});
+
 describe("walk for and select", () => {
-  it("walks the body once per known value, in turn", () => {
-    expect(runs('for b in x "y z"; do git push o $b; done')).toStrictEqual(["git push o x @/r", "git push o ?$b @/r"]);
+  it("walks the body once per known field of the list, in turn", () => {
+    expect(runs('for b in x "y z"; do git push o $b; done')).toStrictEqual(["git push o x @/r", "git push o y z @/r"]);
     expect(runs('for b in x "y z"; do git push o "$b"; done')).toStrictEqual([
       "git push o x @/r",
-      "git push o y z @/r",
+      "git push o [y z] @/r",
     ]);
+    expect(runs("for b in {x,y}*.ts; do echo $b; done")).toStrictEqual(["echo x*.ts @/r", "echo y*.ts @/r"]);
     expect(runs("L=a; for b in $L c; do echo $b; done")).toStrictEqual(["echo a @/r", "echo c @/r"]);
   });
 
@@ -72,8 +99,8 @@ describe("walk for and select", () => {
     ]);
   });
 
-  it("keeps the name unknown for a list it cannot read, a pattern, select, $@, or too many values", () => {
-    const lists = ["$(ls)", "*.ts", "a b c d e f g h i"];
+  it("keeps the name unknown for a list it cannot read, a glob it cannot match, select, $@, or too many values", () => {
+    const lists = ["$(ls)", "$X/*.ts", "a b c d e f g h i", "{a,b,c}{d,e,f}"];
 
     for (const list of lists) expect(runs(`for d in ${list}; do echo $d; done`), list).toContain("echo ?$d @/r");
     expect(runs("select d in a; do echo $d; done")).toContain("echo ?$d @/r");

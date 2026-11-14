@@ -94,15 +94,42 @@ const PUSH_DELETE_FLAG = /^(?:--delete|-d)$/;
 /** A refspec with an empty source: `[+]:<dst>` deletes `<dst>` on the remote; group 1 is `<dst>`. */
 const DELETE_REFSPEC = /^\+?:(.+)$/;
 
+/** A character a RegExp reads as syntax. */
+const REGEXP_SPECIAL_RE = /[.*+?^${}()|[\]\\/]/g;
+
+/** The `*` git reads in a refspec as any text, and the `+` that forces it. */
+const REF_GLOB = "*";
+const FORCE_PREFIX = "+";
+
+/**
+ * True when the refspec `spec` holds a `*` that git may read as a name in `names`: its target, or itself with none.
+ * An option is no refspec.
+ */
+function patternReaches(spec: string, names: ReadonlySet<string>): boolean {
+  if (spec.startsWith("-")) return false;
+  const unforced = spec.startsWith(FORCE_PREFIX) ? spec.slice(FORCE_PREFIX.length) : spec;
+  const target = unforced.slice(unforced.lastIndexOf(":") + 1);
+  const body = target.split(REF_GLOB).map((piece) => piece.replaceAll(REGEXP_SPECIAL_RE, "\\$&"));
+  const re = new RegExp(`^${body.join(".*")}$`);
+
+  return target.includes(REF_GLOB) && [...names].some((n) => re.test(n));
+}
+
 /**
  * Whether the words after `git push` reach `branch` in a form the ref resolver never reads: `--all` or `--mirror`,
- * a `:<branch>` or `+:<branch>` delete refspec, or `--delete`/`-d` with `<branch>`; bare or as `refs/heads/<branch>`.
+ * a `:<branch>` or `+:<branch>` delete refspec, `--delete`/`-d` with `<branch>`, or a refspec or name whose `*` may
+ * match it; bare or as `refs/heads/<branch>`.
  */
 export function hitsUnresolved(rest: readonly ReadWord[], branch: string): boolean {
   const names = new Set([branch, HEADS_REF + branch]);
   const words = rest.map((w) => w.text);
 
-  if (words.some((w) => PUSH_EVERY_REF.test(w) || names.has(DELETE_REFSPEC.exec(w)?.[1] ?? ""))) return true;
+  if (
+    words.some(
+      (w) => PUSH_EVERY_REF.test(w) || names.has(DELETE_REFSPEC.exec(w)?.[1] ?? "") || patternReaches(w, names),
+    )
+  )
+    return true;
 
   return words.some((w) => PUSH_DELETE_FLAG.test(w)) && words.some((w) => names.has(w));
 }

@@ -1,8 +1,9 @@
 /** The dir a `cd`, `pushd` or `popd` moves to, as far as the gate can know it before the shell runs. */
 import type path from "node:path";
 
-import type { Dir, Scope, ShellWord, Value, Vars } from "./shell-ast.types.ts";
-import { expandWord, lookup, valueOf } from "./shell-expand.ts";
+import type { Dir, ReadWord, Scope, ShellWord, Value, Vars } from "./shell-ast.types.ts";
+import { lookup } from "./shell-expand.ts";
+import { readWord, valueOf } from "./shell-fields.ts";
 import { programAt } from "./shell-scripts.ts";
 import { CD, CD_OPTIONS, DIR_CHANGERS, END_OF_OPTIONS, POPD, STDIN_OPERAND } from "./shell.constants.ts";
 
@@ -21,12 +22,12 @@ function searchesCdPath(to: string, vars: Vars, p: typeof path): boolean {
 }
 
 /** The words after the program and its options, past a `--`. */
-function operands(words: readonly ShellWord[], prog: number): readonly ShellWord[] {
+function operands(words: readonly ReadWord[], prog: number): readonly ReadWord[] {
   let i = prog + 1;
 
-  for (let t = words[i]; t !== undefined && CD_OPTIONS.has(t.raw); t = words[++i]);
+  for (let t = words[i]; t !== undefined && CD_OPTIONS.has(t.text); t = words[++i]);
 
-  return words.slice(words[i]?.raw === END_OF_OPTIONS ? i + 1 : i);
+  return words.slice(words[i]?.text === END_OF_OPTIONS ? i + 1 : i);
 }
 
 /**
@@ -51,10 +52,10 @@ function homeDir(scope: Scope, p: typeof path): Dir {
 }
 
 /** The dir one operand names in `scope`; unknown for `-`, a stack entry, and a path `CDPATH` may find elsewhere. */
-function resolveOperand(word: ShellWord, { dir, vars }: Scope, p: typeof path): Dir {
-  const to = valueOf(expandWord(word, vars));
+function resolveOperand(word: ReadWord, { dir, vars }: Scope, p: typeof path): Dir {
+  const to = valueOf(word);
 
-  if (word.raw.startsWith("+")) return unknown(word.raw);
+  if (word.text.startsWith("+")) return unknown(word.raw);
 
   if (to.known && to.text === STDIN_OPERAND) return unknown("the folder of cd -");
 
@@ -62,17 +63,17 @@ function resolveOperand(word: ShellWord, { dir, vars }: Scope, p: typeof path): 
 }
 
 /**
- * The dir after `words` when they change it, from the dir of `scope`, each word read with its variables; null when
- * they are no `cd`, `pushd` or `popd`.
+ * The dir after the fields `words` when they change it, from the dir of `scope`; null when they are no `cd`, `pushd`
+ * or `popd`.
  */
 export function cdEffect(words: readonly ShellWord[], scope: Scope, p: typeof path): Dir | null {
   const prog = programAt(words);
-  const word = words[prog];
-  const read = word === undefined ? null : expandWord(word, scope.vars);
-  const name = read?.literal === true ? read.text : "";
+  const read = words.map(readWord);
+  const program = read[prog];
+  const name = program?.literal === true ? program.text : "";
 
   if (!DIR_CHANGERS.has(name)) return null;
-  const args = operands(words, prog);
+  const args = operands(read, prog);
   const [only] = args;
 
   if (name === POPD) return unknown("the folder of popd");
