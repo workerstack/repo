@@ -1,6 +1,7 @@
 /** `validateFastRoadmap`: the head checks a roadmap shares, then the fast roadmap denials. */
 import path from "node:path";
 
+import { parallelGroupErrors } from "./parallel-groups.ts";
 import { when } from "./persist-doc-checks.ts";
 import { LAST } from "./persist-doc.constants.ts";
 import { fastPlanLineCount } from "./persist-fast-plan-validate.ts";
@@ -38,7 +39,7 @@ function locationIsFastPlan(loc: string): boolean {
   return absolute && FILENAME_RE.test(file) && dir.join() === FAST_PLANS_SEGMENTS.join();
 }
 
-/** The Order denials: how many slices, their shape and their Locations. */
+/** The Order denials: how many slices, their shape, their Locations and their parallel groups. */
 function sliceErrors(order: string): string[] {
   const slices = parsePointerSlices(order);
   const badLocation = slices.some((s) => s.location !== null && !locationIsFastPlan(s.location));
@@ -52,6 +53,10 @@ function sliceErrors(order: string): string[] {
       }),
     ),
     ...when({ bad: badLocation, error: LOCATION_NOT_FAST_PLAN }),
+    ...parallelGroupErrors(
+      slices.map((s) => ({ files: s.files, id: s.n })),
+      "slice",
+    ),
   ];
 }
 

@@ -14,6 +14,8 @@ Body's first line is `FAST_ROADMAP_NAME: <3-6 word name>`, then `# {slug}`, `## 
 
 Research until every slice is defensible. Ask only what the person alone can answer.
 
+When adjacent slices change disjoint paths and need nothing from each other, end each slice line with `(parallel: <path>, …)` listing every path its plan changes (files, folders ending `/`, or globs), so the runner can run them at once.
+
 Report the serial N at the absolute path the Write returned, the slice titles in order and the top risk. End the reply with the fast block, fenced as code, nothing after it:
 
 ```

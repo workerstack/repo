@@ -4,8 +4,8 @@
 
 - `posix-only-path-parsing` (hits 5): A path regex that only knows `/` silently skips Windows
 - `temp-consumer-untyped-globals` (hits 5): A new lint rule or type-aware rule trips the sources lint tests plant
+- `turn-green-is-not-coverage-green` (hits 5): A green turn still misses the 100% coverage floor
 - `shipped-source-es2022-lib` (hits 4): Code an export reaches must type-check under ES2022, not ESNext
-- `turn-green-is-not-coverage-green` (hits 4): A green turn still misses the 100% coverage floor
 - `knip-unused-exported-type` (hits 3): Export a name only when another file imports it
 - `migration-proved-on-packed-consumer` (hits 3): Prove a sync migration on a consumer built from the old packed tgz
 - `parallel-phase-skips-coverage` (hits 3): Parallel phases pass their own tests and still fail the 100% floor

@@ -14,6 +14,8 @@ Two or more slices. One slice is `/write-plan-deep`: say so and stop. Do not wri
 
 Research until every slice is defensible. Ask only what changes the program. Then write the draft and stop.
 
+When adjacent slices change disjoint paths and need nothing from each other, end each slice line with `(parallel: <path>, …)` listing every path its plan changes (files, folders ending `/`, or globs), so the runner can run them at once.
+
 After each save, spawn a fresh host agent whose prompt is only `/review-roadmap {n}` and the roadmap's absolute path (on Claude Code the `claude` agent type; scout is not the reviewer). Accept or reject each finding with a reason. Apply accepted ones to the same file and add one `- review: …` entry each to `## Previous mistakes`. Bump `reviews` by one in the save that settles the round, even with no findings: send a bare `reviews: {n}` line above `ROADMAP_NAME:`. The save denies a lower count.
 
 On feedback, revise the same file (a Write of the saved path updates it in place), add a `- feedback: …` entry for what the user rejected and what changed, and run `/review-roadmap` again. Never edit or drop an earlier entry.

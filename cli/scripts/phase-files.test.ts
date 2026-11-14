@@ -27,6 +27,13 @@ name: x
 5 [ ] Later (parallel: later/d.ts)
 5.1 [ ] four
 6 [ ] More (parallel: later/e.ts)
+6.1 [ ] five
+7 [ ] Serial two
+7.1 [ ] six
+8 [ ] Folder (parallel: lib/)
+8.1 [ ] seven
+9 [ ] Glob (parallel: cli/*.ts)
+9.1 [ ] eight
 `;
 
 const tmpDirs: string[] = [];
@@ -110,6 +117,18 @@ describe("phase-files", () => {
   });
 });
 
+describe("phase-files folder and glob entries", () => {
+  it("owns a file under a folder and a file the glob matches, not one a folder deeper", () => {
+    write("lib/x/y.ts");
+    write("cli/a.ts");
+    write("cli/b/c.ts");
+    const r = run("7", "8,9");
+    expect(r.code).toBe(1);
+    expect(r.out).toBe("phase 8  lib/x/y.ts\nphase 9  cli/a.ts\n");
+    expect(r.err).toContain("unowned  cli/b/c.ts");
+  });
+});
+
 describe("phase-files", () => {
   it("takes the new side of an unstaged rename", () => {
     git(wt, "mv", "src/old.ts", "src/ren.ts");
@@ -168,7 +187,7 @@ describe("phase-files", () => {
   });
 
   it("rejects an unknown phase", () => {
-    expect(run("7", "9")).toMatchObject({ code: 2, err: "plan 7 has no phase 9\n" });
+    expect(run("7", "19")).toMatchObject({ code: 2, err: "plan 7 has no phase 19\n" });
   });
 
   it("rejects missing arguments and a missing plan path", () => {

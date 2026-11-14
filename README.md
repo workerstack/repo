@@ -782,7 +782,7 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 
 ### Parallel phases
 
-A phase line may end `(parallel: <path>, <path>, …)`, listing every file its leaves write, repo-relative and comma-separated:
+A phase line may end `(parallel: <path>, <path>, …)`, listing every file its leaves write, repo-relative and comma-separated. An entry is a file (`src/cli.ts`), a folder ending `/` (`src/parse/`), or a glob (`src/*.test.ts`):
 
 ```markdown
 2 [ ] Parser (parallel: src/parse.ts, src/parse.test.ts)
@@ -792,9 +792,9 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 ```
 
 - Adjacent parallel phases form a group whose phases can run at the same time. A group needs two or more phases, and no two of its lists may share a path.
-- Paths are compared as written, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path.
-- Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
-- Under a review strategy a group runs at once as `references/review-loop.md` says; `bun repo phase-files <plan> <phases>` checks that each phase wrote only its list.
+- Entries are compared by path segment, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path. A folder reaches every path under it. A glob segment matches a plain one when its pattern does (`*` and `?` stay inside one segment, `**` spans any depth). Two glob segments always count as overlapping. Two entries overlap when one path could match both: `src/` overlaps `src/cli.ts`, `cli/*.ts` overlaps `cli/init.ts`, and `cli/*.ts` does not overlap `cli/bench/`.
+- Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `parallel phases 2 and 3 overlap at src/ and src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
+- Under a review strategy a group runs at once as `references/review-loop.md` says; `bun repo phase-files <plan> <phases>` checks that each phase wrote only its list, owning a changed file by the same segment rule.
 - Every path a parallel phase's leaves name sits in its list. The save cannot see that; `/review-plan` checks it.
 
 ### Prose vs steps
@@ -822,7 +822,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 - `PLAN_NAME:` dropped wherever it sits above the first `##` outside a fence
 - ≤100 lines above `## Previous mistakes`, frontmatter included; an update over 100 only when no longer than the saved file
 - no phase whose every leaf reads a principle, on a fresh write or on an update whose saved file had none
-- `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, lists disjoint after `\` → `/`
+- `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, no two entries overlapping after `\` → `/`
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
 - fresh write: the card right after `# {slug}` and one blank line, `WHAT` `WHY` `RISK` `TOUCH` `DONE` in order, padded to 7 columns, text non-empty, each line ≤120 characters; zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:` (set by the save); Verify 1–5 leaves
 
@@ -972,7 +972,7 @@ DONE   both slices done; repo init lists auth-types
 
 - **Card:** the 5 lines after `# {slug}` and one blank line, as in a plan (`plan-format.md`): WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
 - **Headings:** `## Order`, `## Verify`, `## Previous mistakes`, nothing else. Lines inside a code fence are never headings. A new roadmap with any other `##` is denied with `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## {heading} into the slice plans`.
-- **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`. The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
+- **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`, optionally ending `(parallel: <path>, …)` (see Parallel slices). The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
 - **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap-deep` sets it to the absolute plan path `/write-plan-deep` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
 - `[x]` only after that child plan's Verify is done.
 - **Verify:** 1–5 runnable program gates, same `N.M [ ]` grammar as plans.
@@ -984,6 +984,21 @@ A roadmap has at least two slices. One slice is `/write-plan-deep`.
 #### Roadmaps saved before pointers
 
 A roadmap saved with `## Goal` keeps that shape and its rules for every later save, even one that deletes `## Goal`: the saved file decides. Its headings are `# {slug}`, `## Goal` (1–3 sentences), `## Usage`, `## Context`, `## Decisions`, `## Order`, `## Watch-outs`, `## Verify`, `## Previous mistakes`; Context, Decisions and Watch-outs are bullets, each decision naming the rejected alternative. Each slice is `N [ ] Title: {2–6 words}` with indented `Goal:` (one sentence), `Why:` (one or two sentences) and the optional `Location:`. It has no card and no cap. One saved before `## Usage` or `## Previous mistakes` existed stays valid without them.
+
+### Parallel slices
+
+A slice line may end `(parallel: <path>, …)`, listing every path its plan changes, repo-relative and comma-separated. Adjacent marked slices form a group that may run at once; mark slices that change disjoint paths and need nothing from each other.
+
+```markdown
+1 [ ] auth types: Reserved names list the new skills. (parallel: cli/init.ts, references/INDEX.md)
+2 [ ] commit diff pass: Commit skills strip narrating comments. (parallel: agents/skills/commit/, cli/lint/*.test.ts)
+```
+
+- An entry is a file, a folder ending `/`, or a glob. Entries overlap by the segment rule in `plan-format.md` Parallel phases.
+- The marker is cut before the one-sentence check, so it never counts as a second sentence. A `(parallel: …)` mid-line is sentence text.
+- Old-shape roadmaps take no marker.
+- Denies: `slice 3 is parallel alone; parallel needs two or more adjacent slices`, `slice 1 is parallel with no paths; list the paths it changes after parallel:`, `parallel slices 1 and 2 both list cli/init.ts; parallel slices need disjoint paths`, `parallel slices 1 and 2 overlap at agents/skills/ and agents/skills/commit/SKILL.md; parallel slices need disjoint paths`.
+- The save cannot see whether a slice's plan stays inside its list; `/review-roadmap` checks the sentence against it.
 
 ### Previous mistakes
 
@@ -1003,7 +1018,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 
 - filename stamped and unpadded; `name` equals the slug
 - `status` is one of the five values; `source` ≤120; `strategy` is one of the three values; `advice`, when present, is `{strategy} because {reason}` within 100 characters; `approval`, when present, is `ask` or `away`
-- a new roadmap: the card; only Order, Verify and Previous mistakes, in that order; ≥2 one-line slices, title 2–6 words, one sentence; at most 60 lines above Previous mistakes without `Location:` lines
+- a new roadmap: the card; only Order, Verify and Previous mistakes, in that order; ≥2 one-line slices, title 2–6 words, one sentence; `(parallel: …)` slices in adjacent groups of two or more, each with a non-empty list, no two entries overlapping; at most 60 lines above Previous mistakes without `Location:` lines
 - an update keeps the saved file's shape; an old-shape one keeps the old checks: headings in order, Goal 1–3 sentences, bulleted Context, Decisions and Watch-outs, ≥2 slices each with Title (2–6 words), one-sentence Goal and Why (1–2 sentences)
 - Location, when present, is the absolute plan path (a relative `.repo/plans/{file}` still resolves)
 - Verify has 1–5 leaves
@@ -1221,7 +1236,7 @@ A short ordered program of fast plans, for work the person chose to do fast. Sav
 
 ### Body
 
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`, each optionally ending `(parallel: <path>, …)` with the rules in `roadmap-format.md` Parallel slices; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
 
 ### Cap and Location
 
@@ -1235,6 +1250,10 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`
 - `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
+- `slice 3 is parallel alone; parallel needs two or more adjacent slices`
+- `slice 1 is parallel with no paths; list the paths it changes after parallel:`
+- `parallel slices 1 and 2 both list cli/init.ts; parallel slices need disjoint paths`
+- `parallel slices 1 and 2 overlap at agents/skills/ and agents/skills/commit/SKILL.md; parallel slices need disjoint paths`
 
 ### Approval
 

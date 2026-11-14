@@ -1,4 +1,5 @@
 /** Reads the slices out of a roadmap's Order section, in the legacy and the pointer shape. */
+import { parallelList, withoutParallel } from "./parallel-groups.ts";
 import {
   GOAL_KEY,
   KEY_RE,
@@ -24,11 +25,15 @@ export type Slice = {
   hasLocation: boolean;
 };
 
-/** One line of a pointer roadmap's Order: `N [ ] {title}: {one sentence}`, then an optional Location. */
+/**
+ * One line of a pointer roadmap's Order: `N [ ] {title}: {one sentence}`, an optional trailing
+ * `(parallel: …)` list, then an optional Location line. `files` is null without the marker.
+ */
 export type PointerSlice = {
   n: string;
   ok: boolean;
   location: string | null;
+  files: string[] | null;
 };
 
 export function sentences(text: string): string[] {
@@ -74,7 +79,8 @@ export function parseSlices(orderBody: string): Slice[] {
 }
 
 function pointerHead(head: RegExpMatchArray): PointerSlice {
-  const text = String(head.groups?.text).trim().match(POINTER_TEXT_RE);
+  const line = String(head.groups?.text).trim();
+  const text = withoutParallel(line).match(POINTER_TEXT_RE);
   const words = text === null ? 0 : wordsOf(String(text.groups?.title)).length;
 
   const ok =
@@ -83,7 +89,7 @@ function pointerHead(head: RegExpMatchArray): PointerSlice {
     words <= TITLE_WORDS_MAX &&
     sentences(String(text.groups?.sentence)).length === 1;
 
-  return { location: null, n: String(head.groups?.n), ok };
+  return { files: parallelList(line), location: null, n: String(head.groups?.n), ok };
 }
 
 export function parsePointerSlices(orderBody: string): PointerSlice[] {

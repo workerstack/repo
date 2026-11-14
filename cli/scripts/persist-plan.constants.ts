@@ -54,8 +54,6 @@ export const BOX_RE: RegExp = /^( {0,2})(?<id>\d+(?:\.\d+){0,2}) \[(?<mark>[ xX]
 export const PHASE_ID_RE: RegExp = /^\d+$/;
 export const LEAF_ID_RE: RegExp = /^\d+\.\d+(?:\.\d+)?$/;
 export const PRINCIPLE_READ_RE: RegExp = /^read\s+(?:`principle-[\w-]+`(?:\s*(?:,|and)\s*)?)+\.?$/i;
-export const PARALLEL_RE: RegExp = /\(parallel:(?<files>[^)]*)\)\s*$/;
-export const FILE_SPLIT_RE: RegExp = /[,\s]+/;
 
 export const PLAN_NAME_RE: RegExp = /^\s*PLAN_NAME:\s*(\S.*?)\s*$/;
 

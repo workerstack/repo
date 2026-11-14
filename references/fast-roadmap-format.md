@@ -17,7 +17,7 @@ A short ordered program of fast plans, for work the person chose to do fast. Sav
 
 ## Body
 
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`, each optionally ending `(parallel: <path>, …)` with the rules in `roadmap-format.md` Parallel slices; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
 
 ## Cap and Location
 
@@ -31,6 +31,10 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`
 - `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
+- `slice 3 is parallel alone; parallel needs two or more adjacent slices`
+- `slice 1 is parallel with no paths; list the paths it changes after parallel:`
+- `parallel slices 1 and 2 both list cli/init.ts; parallel slices need disjoint paths`
+- `parallel slices 1 and 2 overlap at agents/skills/ and agents/skills/commit/SKILL.md; parallel slices need disjoint paths`
 
 ## Approval
 

@@ -150,7 +150,7 @@ A Write of a saved plan updates that file: same path, serial, and `created`. The
 
 ## Parallel phases
 
-A phase line may end `(parallel: <path>, <path>, …)`, listing every file its leaves write, repo-relative and comma-separated:
+A phase line may end `(parallel: <path>, <path>, …)`, listing every file its leaves write, repo-relative and comma-separated. An entry is a file (`src/cli.ts`), a folder ending `/` (`src/parse/`), or a glob (`src/*.test.ts`):
 
 ```markdown
 2 [ ] Parser (parallel: src/parse.ts, src/parse.test.ts)
@@ -160,9 +160,9 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 ```
 
 - Adjacent parallel phases form a group whose phases can run at the same time. A group needs two or more phases, and no two of its lists may share a path.
-- Paths are compared as written, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path.
-- Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
-- Under a review strategy a group runs at once as `references/review-loop.md` says; `bun repo phase-files <plan> <phases>` checks that each phase wrote only its list.
+- Entries are compared by path segment, never resolved on disk; `\` reads as `/`, so `src\cli.ts` and `src/cli.ts` are the same path. A folder reaches every path under it. A glob segment matches a plain one when its pattern does (`*` and `?` stay inside one segment, `**` spans any depth). Two glob segments always count as overlapping. Two entries overlap when one path could match both: `src/` overlaps `src/cli.ts`, `cli/*.ts` overlaps `cli/init.ts`, and `cli/*.ts` does not overlap `cli/bench/`.
+- Denies: `parallel phases 2 and 3 both list src/cli.ts; parallel phases need disjoint files`, `parallel phases 2 and 3 overlap at src/ and src/cli.ts; parallel phases need disjoint files`, `phase 4 is parallel alone; parallel needs two or more adjacent phases`, `phase 2 is parallel with no files; list the files it writes after parallel:`.
+- Under a review strategy a group runs at once as `references/review-loop.md` says; `bun repo phase-files <plan> <phases>` checks that each phase wrote only its list, owning a changed file by the same segment rule.
 - Every path a parallel phase's leaves name sits in its list. The save cannot see that; `/review-plan` checks it.
 
 ## Prose vs steps
@@ -190,7 +190,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 - `PLAN_NAME:` dropped wherever it sits above the first `##` outside a fence
 - ≤100 lines above `## Previous mistakes`, frontmatter included; an update over 100 only when no longer than the saved file
 - no phase whose every leaf reads a principle, on a fresh write or on an update whose saved file had none
-- `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, lists disjoint after `\` → `/`
+- `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, no two entries overlapping after `\` → `/`
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
 - fresh write: the card right after `# {slug}` and one blank line, `WHAT` `WHY` `RISK` `TOUCH` `DONE` in order, padded to 7 columns, text non-empty, each line ≤120 characters; zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:` (set by the save); Verify 1–5 leaves
 

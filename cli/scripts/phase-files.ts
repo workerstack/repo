@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { byCodeUnit } from "../sync/by-code-unit.ts";
+import { owns } from "./parallel-groups.ts";
 import { parallelFiles, planBoxes, planPhases, type PlanPhase } from "./persist-plan-boxes.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import {
@@ -160,7 +161,7 @@ function report({ wanted, declaredBy }: Request, changed: readonly string[]): nu
   const owned = new Set<string>();
 
   for (const [id, declared] of declaredBy) {
-    const mine = changed.filter((f) => declared.includes(f));
+    const mine = changed.filter((f) => declared.some((entry) => owns(entry, f)));
 
     for (const f of mine) owned.add(f);
     process.stdout.write(`phase ${id}${mine.map((f) => `  ${f}`).join("")}\n`);

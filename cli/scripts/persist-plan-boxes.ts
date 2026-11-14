@@ -1,12 +1,6 @@
-import {
-  BOX_RE,
-  FILE_SPLIT_RE,
-  LEAF_ID_RE,
-  PARALLEL_RE,
-  PHASE_ID_RE,
-  PRINCIPLE_READ_RE,
-} from "./persist-plan.constants.ts";
 /** The checkbox lines of a plan: boxes, phases, `(parallel: …)` groups and the read-only phase check. */
+import { parallelGroupErrors, parallelList } from "./parallel-groups.ts";
+import { BOX_RE, LEAF_ID_RE, PHASE_ID_RE, PRINCIPLE_READ_RE } from "./persist-plan.constants.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 
 export type PlanBox = {
@@ -65,67 +59,18 @@ export function readPhaseErrors(
   return offending.map((p) => `phase ${p.id} only reads principles; move each read into the phase it gates`);
 }
 
-/** The files a `(parallel: a, b)` phase declares, `\` read as `/`, as written; null when not parallel. */
+/** The entries a `(parallel: a, b)` phase declares, `\` read as `/`; null when not parallel. */
 export function parallelFiles(phase: PlanBox): string[] | null {
-  const m = PARALLEL_RE.exec(phase.text) /* the pattern names its group */ as
-    | (RegExpExecArray & { groups: { files: string } })
-    | null;
-
-  if (m === null) return null;
-
-  return m.groups.files
-    .split(FILE_SPLIT_RE)
-    .filter(Boolean)
-    .map((f) => f.replaceAll("\\", "/"));
-}
-
-type Member = {
-  id: string;
-  files: string[];
-};
-
-/** Runs of adjacent `parallel:` phases. */
-function parallelGroups(phases: PlanPhase[]): Member[][] {
-  const groups: Member[][] = [];
-  let run: Member[] = [];
-
-  for (const p of [...phases, null]) {
-    const files = p === null ? null : parallelFiles(p);
-
-    if (p !== null && files !== null) {
-      run.push({ files, id: p.id });
-      continue;
-    }
-
-    if (run.length > 0) groups.push(run);
-    run = [];
-  }
-
-  return groups;
-}
-
-function sharedFileErrors(a: Member, b: Member): string[] {
-  const shared = new Set(a.files.filter((x) => b.files.includes(x)));
-
-  return [...shared].map(
-    (f) => `parallel phases ${a.id} and ${b.id} both list ${f}; parallel phases need disjoint files`,
-  );
-}
-
-function groupErrors(group: Member[]): string[] {
-  return group.flatMap((a, i) => [
-    ...(group.length === 1 ? [`phase ${a.id} is parallel alone; parallel needs two or more adjacent phases`] : []),
-    ...(a.files.length > 0
-      ? []
-      : [`phase ${a.id} is parallel with no files; list the files it writes after parallel:`]),
-    ...group.slice(i + 1).flatMap((b) => sharedFileErrors(a, b)),
-  ]);
+  return parallelList(phase.text);
 }
 
 /**
- * Adjacent `parallel:` phases form a group that may run at once, so their declared files must be
- * disjoint. A group needs two or more phases, and each phase must declare its files.
+ * Adjacent `parallel:` phases form a group that may run at once, so their declared entries must not
+ * overlap. A group needs two or more phases, and each phase must declare its files.
  */
 export function parallelErrors(phases: PlanPhase[]): string[] {
-  return parallelGroups(phases).flatMap(groupErrors);
+  return parallelGroupErrors(
+    phases.map((p) => ({ files: parallelFiles(p), id: p.id })),
+    "phase",
+  );
 }

@@ -1,6 +1,7 @@
 /** The two shapes a roadmap's sections take: the pointer card of a new roadmap and the legacy full form. */
 import path from "node:path";
 
+import { parallelGroupErrors } from "./parallel-groups.ts";
 import { when } from "./persist-doc-checks.ts";
 import { MISTAKES_H2, USAGE_H2 } from "./persist-doc.constants.ts";
 import { FILENAME_RE, PLAN_DIR } from "./persist-plan.constants.ts";
@@ -70,6 +71,10 @@ export function pointerErrors({ text, body, order: allOrder, bodies, fresh, prev
       ...when({ bad: !slice.ok, error: `slice ${slice.n} needs "N [ ] {title, 2–6 words}: {one sentence}"` }),
       ...when({ bad: slice.location !== null && !locationOk(slice.location), error: "location" }),
     ]),
+    ...parallelGroupErrors(
+      slices.map((s) => ({ files: s.files, id: s.n })),
+      "slice",
+    ),
     ...capErrors(text, { cap: POINTER_LINE_CAP, fix: POINTER_CAP_FIX, fresh, previous, skip: LOCATION_LINE_RE }),
   ];
 }

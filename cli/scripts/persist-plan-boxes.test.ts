@@ -45,6 +45,16 @@ describe("parallelFiles and parallelErrors", () => {
       "phase 1 is parallel with no files; list the files it writes after parallel:",
     ]);
   });
+
+  it("names a folder that holds a sibling's file", () => {
+    const nested = planPhases(
+      planBoxes("1 [ ] A (parallel: src/)\n1.1 [ ] x\n2 [ ] B (parallel: src\\cli.ts)\n2.1 [ ] y"),
+    );
+
+    expect(parallelErrors(nested)).toStrictEqual([
+      "parallel phases 1 and 2 overlap at src/ and src/cli.ts; parallel phases need disjoint files",
+    ]);
+  });
 });
 
 describe("readPhaseErrors", () => {
