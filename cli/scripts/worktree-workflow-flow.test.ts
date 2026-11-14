@@ -101,3 +101,24 @@ describe("git commands after a cd the gate cannot follow", () => {
     expect(worktreeAddReason(`cd "$D" && git worktree add ${managed} -b wt/b`, place)).toBeNull();
   });
 });
+
+describe("pushes in the dir a runner names and in script files", () => {
+  it.each(STRICT)("denies a push of main from env -C or sudo -D naming the root under %s", (read) => {
+    const r = repoWithWorktree();
+    const place = at(r, r, path.dirname(r));
+    const runs = [`env -C '${r}'`, `env -C'${r}'`, `env --chdir='${r}'`, `sudo -D '${r}'`, `sudo --chdir='${r}'`];
+
+    for (const run of runs)
+      expect(sharedAs(read, { cmd: `${run} git push origin main`, place }), run).toBe(pushDeny(read));
+    expect(sharedAs(read, { cmd: 'env -C "$D" git push origin main', place: at(r) })).toBe(
+      unreadDeny('git push runs in "$D"', read),
+    );
+  });
+
+  it("lets a push of main through when env -C names a dir outside the root", () => {
+    const r = repoWithWorktree();
+    const cmd = `env -C '${path.dirname(r)}' git push origin main`;
+
+    expect(sharedAs("pull-request", { cmd, place: at(r) })).toBeNull();
+  });
+});

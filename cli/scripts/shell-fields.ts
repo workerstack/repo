@@ -135,3 +135,15 @@ export function readWord(field: ShellWord): ReadWord {
 export function valueOf(word: ReadWord): Value {
   return word.literal ? { known: true, text: word.text } : { cause: word.raw, known: false };
 }
+
+/**
+ * The value of an option word past its `prefix` (`--chdir=`, or a short `-C` with the value attached); unknown with a
+ * leading `~`, which bash leaves as typed past an option, or when a part is unknown.
+ */
+export function optionValue(w: ReadWord, prefix: string): Value {
+  const raw = w.raw.slice(prefix.length);
+
+  return w.literal && !raw.startsWith("~")
+    ? { known: true, text: w.text.slice(prefix.length) }
+    : { cause: raw, known: false };
+}

@@ -28,19 +28,27 @@ export const ASSIGNMENT_RE: RegExp = /^([A-Za-z_]\w*)(\[[^\]]*\])?(\+?)=/;
 export const SHELLS: ReadonlySet<string> = /* @__PURE__ */ new Set(["sh", "bash", "zsh", "dash", "ksh", "mksh", "ash"]);
 
 /**
- * A program that runs the command after it: the options of its own that take the next word as a value, how many
- * operands of its own come before the command, and whether the command still reads the caller's stdin.
+ * A program that runs the command after it: the options of its own that take the next word as a value, those of them
+ * that name the dir the command runs in, how many operands of its own come before the command, and whether the
+ * command still reads the caller's stdin.
  */
-export type Runner = { values: readonly string[]; operands: number; isStdinKept: boolean };
+export type Runner = { values: readonly string[]; dirs: readonly string[]; operands: number; isStdinKept: boolean };
 
-/** A runner with no operands of its own that hands the caller's stdin on, the common case. */
-const PLAIN = { isStdinKept: true, operands: 0 } as const;
+/** A runner with no operands or dir options of its own that hands the caller's stdin on, the common case. */
+const PLAIN = { dirs: [], isStdinKept: true, operands: 0 } as const;
 
 /** Programs that run the command after them, each read by its `Runner`. */
 export const RUNNER_SPECS: ReadonlyMap<string, Runner> = /* @__PURE__ */ new Map<string, Runner>([
-  ["sudo", { ...PLAIN, values: ["-u", "-g", "-C", "-h", "-p", "-r", "-t", "-U", "-D", "-R", "--user", "--group"] }],
+  [
+    "sudo",
+    {
+      ...PLAIN,
+      dirs: ["-D", "--chdir"],
+      values: ["-u", "-g", "-C", "-h", "-p", "-r", "-t", "-U", "-D", "-R", "--user", "--group", "--chdir"],
+    },
+  ],
   ["doas", { ...PLAIN, values: ["-u", "-C"] }],
-  ["env", { ...PLAIN, values: ["-u", "-C", "--unset", "--chdir"] }],
+  ["env", { ...PLAIN, dirs: ["-C", "--chdir"], values: ["-u", "-C", "--unset", "--chdir"] }],
   ["exec", { ...PLAIN, values: ["-a"] }],
   ["command", { ...PLAIN, values: [] }],
   ["nohup", { ...PLAIN, values: [] }],

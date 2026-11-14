@@ -5,6 +5,7 @@
 import type path from "node:path";
 
 import { cdEffect } from "./cd-effect.ts";
+import { runDir } from "./command-at.ts";
 import type { Dir, ShellNode, ShellWord, Simple, StartEnv, Stdin, Vars, Visited } from "./shell-ast.types.ts";
 import { expandCommand, readWord } from "./shell-fields.ts";
 import { scriptText } from "./shell-lex-word.ts";
@@ -101,16 +102,24 @@ function callOf(w: Walker, c: Simple, st: State): State | null {
 }
 
 /**
- * Visits `c` as bash runs it in `st`, after the scripts of its substitutions: its fields, or a command the gate cannot
- * read when its braces make too many words, which gives null.
+ * Visits `c` as bash runs it in `st`, after the scripts of its substitutions: its fields in the dir its program runs
+ * in, which a runner such as `env -C` moves, with that dir; or a command the gate cannot read when its braces make too
+ * many words, which gives null.
  */
-function visitSimple(w: Walker, c: Simple, st: State): Simple | null {
+function visitSimple(w: Walker, c: Simple, st: State): { ran: Simple; dir: Dir } | null {
   for (const word of wordsOf(c)) walkSubsts(w, word, st);
   const ran = run(w, c, st);
 
-  w.visit(ran === null ? { cause: BRACES_CAUSE, dir: st.dir, kind: "opaque" } : { ...ran, dir: st.dir, vars: st.vars });
+  if (ran === null) {
+    w.visit({ cause: BRACES_CAUSE, dir: st.dir, kind: "opaque" });
 
-  return ran;
+    return null;
+  }
+
+  const dir = c.data === undefined ? runDir(ran.words, st.dir, w.p) : st.dir;
+  w.visit({ ...ran, dir, vars: st.vars });
+
+  return { dir, ran };
 }
 
 /**
@@ -118,20 +127,21 @@ function visitSimple(w: Walker, c: Simple, st: State): Simple | null {
  * `PWD`) and the variables it sets. A command the gate cannot read leaves the dir and every variable unknown.
  */
 function walkSimple(w: Walker, c: Simple, st: State): State {
-  const ran = visitSimple(w, c, st);
+  const visited = visitSimple(w, c, st);
 
-  if (ran === null) return { ...st, dir: LOST_DIR, vars: new Map() };
+  if (visited === null) return { ...st, dir: LOST_DIR, vars: new Map() };
 
   if (c.data !== undefined) return st;
+  const { ran, dir: at } = visited;
   const called = callOf(w, ran, st);
 
   if (called !== null) return called;
   let now = st;
 
   for (const s of scriptsOf(ran, st.stdin)) {
-    if (s.kind === "opaque") w.visit({ cause: s.cause, dir: now.dir, kind: "opaque" });
+    if (s.kind === "opaque") w.visit({ cause: s.cause, dir: at, kind: "opaque" });
     else if (s.inherits) now = { ...walkNode(w, parse(s.text), unfed(now)), stdin: now.stdin };
-    else walkNode(w, parse(s.text), unfed(now));
+    else walkNode(w, parse(s.text), { ...unfed(now), dir: at, vars: withDir(now.vars, at) });
   }
 
   const dir = cdEffect(ran.words, now, w.p);
@@ -221,8 +231,8 @@ function walkApart(w: Walker, node: Of<"async" | "subshell">, st: State): State 
  * The values a `for` gives its name from the fields of its list; null when one is unknown, `select` picks, or there
  * are too many.
  */
-function forValues(node: Of<"for">, list: Simple | null): string[] | null {
-  if (node.select === true || list === null || list.words.length > MAX_FOR_VALUES) return null;
+function forValues(node: Of<"for">, list: Simple | undefined): string[] | null {
+  if (node.select === true || list === undefined || list.words.length > MAX_FOR_VALUES) return null;
   const read = list.words.map(readWord);
 
   return read.every((r) => r.literal) ? read.map((r) => r.text) : null;
@@ -233,7 +243,7 @@ function forValues(node: Of<"for">, list: Simple | null): string[] | null {
  * last; when the values are not known, a loop with the name unknown.
  */
 function walkFor(w: Walker, node: Of<"for">, st: State): State {
-  const values = forValues(node, node.words === null ? null : visitSimple(w, node.words, st));
+  const values = forValues(node, node.words === null ? undefined : visitSimple(w, node.words, st)?.ran);
 
   if (values === null) {
     const vars = withVar(st.vars, node.name, { cause: `$${node.name}`, known: false });
