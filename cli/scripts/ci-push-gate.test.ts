@@ -31,7 +31,7 @@ it("resolves the branch and the commit in the directory -C names", () => {
   const r = rig();
   const other = path.resolve(r.main, "..", "other");
   r.world.tips[other] = { branch: "feat", sha: B };
-  r.note(`git -C ${path.relative(r.main, other)} push`);
+  r.note(`git -C '${path.relative(r.main, other)}' push`);
   expect(r.pushed()).toStrictEqual(row("feat", B));
 });
 
