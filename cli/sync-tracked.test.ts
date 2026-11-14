@@ -73,24 +73,24 @@ async function syncedInstall(root: string) {
   return { code: result.code, left: hostFiles(root), refused: result.err.join("").includes("git tracks") };
 }
 
-const KNIP_LINE = line("knip.json", "it, but sync keeps it untracked", "--cached knip.json");
+const KNIP_LINE = line("knip.jsonc", "it, but sync keeps it untracked", "--cached knip.jsonc");
 
 it("fails on a force-added untracked output and writes nothing, then passes once untracked", async () => {
-  const root = repoTracking(["knip.json"]);
+  const root = repoTracking(["knip.jsonc"]);
   const before = snapshot(root);
 
-  expect(await sync(root, ["knip.json"])).toStrictEqual({ code: 1, stderr: `${KNIP_LINE}\n${NOTHING}`, stdout: "" });
+  expect(await sync(root, ["knip.jsonc"])).toStrictEqual({ code: 1, stderr: `${KNIP_LINE}\n${NOTHING}`, stdout: "" });
   expect(snapshot(root)).toStrictEqual(before);
 
-  untrack(root, "knip.json");
-  expect(await codeOf(root, ["knip.json"])).toBe(0);
-  expect(await codeOf(root, ["knip.json"], "--check")).toBe(0);
+  untrack(root, "knip.jsonc");
+  expect(await codeOf(root, ["knip.jsonc"])).toBe(0);
+  expect(await codeOf(root, ["knip.jsonc"], "--check")).toBe(0);
 });
 
 it("--check fails on it too, without the closing line", async () => {
-  const root = repoTracking(["knip.json"]);
+  const root = repoTracking(["knip.jsonc"]);
 
-  expect(await sync(root, ["knip.json"], "--check")).toStrictEqual({ code: 1, stderr: `${KNIP_LINE}\n`, stdout: "" });
+  expect(await sync(root, ["knip.jsonc"], "--check")).toStrictEqual({ code: 1, stderr: `${KNIP_LINE}\n`, stdout: "" });
 });
 
 it("groups the tracked files under an ignored host dir in one line", async () => {
@@ -110,9 +110,9 @@ it("says one file when a host dir holds one tracked file", async () => {
 
 it("names the files a line with a star matches, one line per block line in block order", async () => {
   const root = repoTracking([
-    "knip.json",
-    "knip.unignored-a.json",
-    "knip.unignored-b.json",
+    "knip.jsonc",
+    "knip.unignored-a.jsonc",
+    "knip.unignored-b.jsonc",
     ".repo/plans/one.md",
     ".claude/agents/a.md",
   ]);
@@ -120,17 +120,17 @@ it("names the files a line with a star matches, one line per block line in block
   const one = "1 file that matches it, but sync keeps it untracked";
   const plans = line("**/.repo/plans/", one, "--cached .repo/plans/one.md");
   const both = "2 files that match it, but sync keeps them untracked";
-  const unignored = line("knip.unignored-*.json", both, "--cached knip.unignored-a.json knip.unignored-b.json");
+  const unignored = line("knip.unignored-*.jsonc", both, "--cached knip.unignored-a.jsonc knip.unignored-b.jsonc");
   const dir = line(".claude/", "1 file under it, but sync keeps it untracked", "-r --cached .claude/");
 
-  expect(await checked(root, ["knip.json", ".claude/agents/a.md"])).toBe(
+  expect(await checked(root, ["knip.jsonc", ".claude/agents/a.md"])).toBe(
     [plans, KNIP_LINE, unignored, dir, ""].join("\n"),
   );
 });
 
 it("passes when git tracks nothing the block covers", async () => {
   const root = repoTracking([]);
-  expect(await codeOf(root, ["knip.json"])).toBe(0);
+  expect(await codeOf(root, ["knip.jsonc"])).toBe(0);
 });
 
 it("passes a copied install with a tracked .claude/, which migration untracks", async () => {
@@ -150,12 +150,12 @@ it("passes an adopting install with a tracked .claude/, which adoption untracks"
 });
 
 it("checks nothing outside a git repo", async () => {
-  const root = repoTracking(["knip.json"], { git: false });
-  expect(await codeOf(root, ["knip.json"])).toBe(0);
+  const root = repoTracking(["knip.jsonc"], { git: false });
+  expect(await codeOf(root, ["knip.jsonc"])).toBe(0);
 });
 
 it("checks nothing when git fails on a broken git file", async () => {
-  const root = repoTracking(["knip.json"], { git: false });
+  const root = repoTracking(["knip.jsonc"], { git: false });
   write(root, GIT_DIR, "gitdir: /nonexistent\n");
-  expect(await codeOf(root, ["knip.json"])).toBe(0);
+  expect(await codeOf(root, ["knip.jsonc"])).toBe(0);
 });

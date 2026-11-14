@@ -134,7 +134,7 @@ it("puts one header on each whole file whose format takes a comment, none on str
     expect(!takes || hasOwnedHeader(text), rel).toBe(true);
   }
 
-  for (const rel of [".claude/settings.json", ".agents/mcp_config.json", ".oxlintrc.json", "knip.json", "turbo.json"])
+  for (const rel of [".claude/settings.json", ".agents/mcp_config.json", "turbo.json"])
     expect(headerCount(read(root, rel)), rel).toBe(0);
 
   for (const rel of [".claude/agents/scout.md", ".claude/rules/testing.md", ".agents/rules/testing.md"])

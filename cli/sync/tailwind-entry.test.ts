@@ -105,7 +105,9 @@ it("repo sync gives oxlint and the oxfmt config the one entry, and refuses a sec
   const io = { cwd: root, stderr: (text: string) => err.push(text), stdout: () => true };
   expect(await runSync([], io, { generators: [] })).toBe(0);
   expect(generated(root, ".oxfmtrc.jsonc")).toMatchObject({ sortTailwindcss: { stylesheet: "src/app.css" } });
-  expect(generated(root, ".oxlintrc.json")).toMatchObject({ settings: { tailwindcss: { entryPoint: "src/app.css" } } });
+  expect(generated(root, ".oxlintrc.jsonc")).toMatchObject({
+    settings: { tailwindcss: { entryPoint: "src/app.css" } },
+  });
   write(root, { "src/admin.css": IMPORT });
   expect(await runSync([], io, { generators: [] })).toBe(1);
   expect(err).toContain(

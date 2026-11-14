@@ -8,7 +8,7 @@ const tree = useTempTree("workerstack-repo-rules-");
 
 /** A public lib package whose files each break one repo rule, with lint.boundaries tagging it below ui. */
 const REPO_RULES = {
-  ".oxlintrc.json": JSON.stringify({
+  ".oxlintrc.jsonc": JSON.stringify({
     categories: { correctness: "off" },
     jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
     plugins: [],

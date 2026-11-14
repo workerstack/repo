@@ -14,10 +14,10 @@ import { boundariesSetting, tagErrors } from "./oxlint-tags.ts";
 import type { PackageJson, Workspace } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
-export const OXLINT_CONFIG_PATH = ".oxlintrc.json";
+export const OXLINT_CONFIG_PATH = ".oxlintrc.jsonc";
 
 /** The skip-free copies `repo check` writes beside it for one run, each named for its process. */
-export const UNSKIPPED_CONFIG_GLOB = ".oxlintrc.unskipped-*.json";
+export const UNSKIPPED_CONFIG_GLOB = ".oxlintrc.unskipped-*.jsonc";
 
 export function unskippedConfigPath(pid: number): string {
   return UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));

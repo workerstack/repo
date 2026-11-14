@@ -116,14 +116,14 @@ it("is what the gitignore block lists for the outputs, without the base lines", 
   expect(untrackedEntries([], [file("AGENTS.md", false)])).toStrictEqual(["AGENTS.md"]);
 });
 
-it("adds the pattern of knip's ignore-free copies beside knip.json, sorted among the files", () => {
-  const outputs = [file("AGENTS.md", false), file("knip.json", false), file(".oxlintrc.json", false)];
+it("adds the pattern of knip's ignore-free copies beside knip.jsonc, sorted among the files", () => {
+  const outputs = [file("AGENTS.md", false), file("knip.jsonc", false), file(".oxlintrc.jsonc", false)];
   expect(untrackedEntries([], outputs)).toStrictEqual([
     "AGENTS.md",
-    "knip.json",
-    "knip.unignored-*.json",
-    ".oxlintrc.json",
-    ".oxlintrc.unskipped-*.json",
+    "knip.jsonc",
+    "knip.unignored-*.jsonc",
+    ".oxlintrc.jsonc",
+    ".oxlintrc.unskipped-*.jsonc",
   ]);
 });
 

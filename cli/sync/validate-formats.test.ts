@@ -21,7 +21,7 @@ it("accepts well-formed json, toml, markdown and text", () => {
 
   const outputs = [
     file(".vscode/tasks.json", "{}\n"),
-    file("knip.json", "{}\n"),
+    file("knip.jsonc", "{}\n"),
     file("bunfig.toml", '[install]\nlinker = "hoisted"\n'),
     file("AGENTS.md", "# Plain markdown\n"),
     file("references/INDEX.md", "---\n---\nEmpty frontmatter\n"),
@@ -37,7 +37,7 @@ it("reports bad JSON with the parser's message", () => {
   const lines = validateOutputs(tmpRoot(), [file(".agents/mcp_config.json", "{ nope")]);
   expect(lines).toHaveLength(1);
   expect(lines[0]).toMatch(/^\.agents\/mcp_config\.json: invalid JSON: /);
-  expect(validateOutputs(tmpRoot(), [file("knip.json", "{ nope")])[0]).toMatch(/^knip\.json: invalid JSON: /);
+  expect(validateOutputs(tmpRoot(), [file("knip.jsonc", "{ nope")])[0]).toMatch(/^knip\.jsonc: invalid JSONC: /);
 });
 
 it("reads .vscode/tasks.json as JSONC, so sync's header comment parses", () => {

@@ -123,7 +123,7 @@ it("checks each config against every top-level key its tool allows, and only tho
 
 it("accepts a commented oxfmt config and a plain oxlint config", () => {
   const outputs = [
-    file(".oxlintrc.json", JSON.stringify({ plugins: ["eslint"], rules: { "eslint/no-console": ["error", {}] } })),
+    file(".oxlintrc.jsonc", JSON.stringify({ plugins: ["eslint"], rules: { "eslint/no-console": ["error", {}] } })),
     file(".oxfmtrc.jsonc", '// generated\n{ "printWidth": 120, "ignorePatterns": ["/a"], }\n'),
   ];
 
@@ -132,12 +132,12 @@ it("accepts a commented oxfmt config and a plain oxlint config", () => {
 
 it("refuses a key neither tool knows", () => {
   const lines = validateOutputs(tmpRoot(), [
-    file(".oxlintrc.json", '{ "rulez": {} }'),
+    file(".oxlintrc.jsonc", '{ "rulez": {} }'),
     file(".oxfmtrc.jsonc", '{ "width": 120 }'),
   ]);
 
   expect(lines).toHaveLength(2);
-  expect(lines[0]).toMatch(/^\.oxlintrc\.json: .*"rulez"/);
+  expect(lines[0]).toMatch(/^\.oxlintrc\.jsonc: .*"rulez"/);
   expect(lines[1]).toMatch(/^\.oxfmtrc\.jsonc: .*"width"/);
 });
 

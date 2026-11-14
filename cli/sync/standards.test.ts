@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { parse } from "jsonc-parser";
 import { expect, it } from "vitest";
 
 import { CONFIG_FILE } from "../config.constants.ts";
@@ -8,6 +9,7 @@ import { runSync } from "../sync.ts";
 import { contentOf, context, file, link } from "./__fixtures__/standards-kit.ts";
 import { tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
+import { MANIFEST_REL } from "./manifest.ts";
 import { standards } from "./standards.ts";
 
 useTempDirs();
@@ -20,10 +22,10 @@ const OWN_IGNORED = [
   "/.githooks/pre-push",
   "/.gitignore",
   "/.oxfmtrc.jsonc",
-  "/.oxlintrc.json",
+  "/.oxlintrc.jsonc",
   "/.vscode/extensions.json",
   "/.vscode/settings.json",
-  "/knip.json",
+  "/knip.jsonc",
 ];
 
 /** What the planned outputs of the trees test add to it. */
@@ -46,7 +48,7 @@ it("writes the oxlint config of the workspace: the repo plugin, and a package bi
   const { outputs, errors } = standards(ctx, []);
   expect(errors).toStrictEqual([]);
 
-  const config = contentOf(outputs, ".oxlintrc.json") /* the standards pass writes this config */ as {
+  const config = contentOf(outputs, ".oxlintrc.jsonc") /* the standards pass writes this config */ as {
     jsPlugins: unknown;
     overrides: unknown[];
   };
@@ -64,7 +66,7 @@ it("writes each lint.skip entry as the last override, and refuses a rule the con
   const { outputs, errors } = standards(context(["standards"], "app", { skip: [live] }), []);
   expect(errors).toStrictEqual([]);
 
-  const config = contentOf(outputs, ".oxlintrc.json") /* the oxlint config always has overrides */ as {
+  const config = contentOf(outputs, ".oxlintrc.jsonc") /* the oxlint config always has overrides */ as {
     overrides: unknown[];
   };
 
@@ -124,8 +126,8 @@ it("plans both configs as sync's own, untracked files, the hooks as tracked ones
   }));
 
   expect(planned).toStrictEqual([
-    { kind: "file", managed: "whole", path: ".oxlintrc.json", tracked: false },
-    { kind: "file", managed: "whole", path: "knip.json", tracked: false },
+    { kind: "file", managed: "whole", path: ".oxlintrc.jsonc", tracked: false },
+    { kind: "file", managed: "whole", path: "knip.jsonc", tracked: false },
     { kind: "file", managed: "whole", path: ".oxfmtrc.jsonc", tracked: false },
     { kind: "file", managed: "whole", path: ".githooks/commit-msg", tracked: true },
     { kind: "file", managed: "whole", path: ".githooks/pre-commit", tracked: true },
@@ -152,7 +154,7 @@ function sync(root: string) {
 it("writes both configs and has git ignore them, then prunes them once the pack is dropped", async () => {
   const root = repo('["standards"]');
   expect(await sync(root)).toBe(0);
-  expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(true);
+  expect(fs.existsSync(path.join(root, ".oxlintrc.jsonc"))).toBe(true);
   expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
 
   for (const hook of ["pre-commit", "commit-msg", "pre-push"]) {
@@ -162,28 +164,52 @@ it("writes both configs and has git ignore them, then prunes them once the pack 
   }
 
   expect(gitignoreLines(root)).toStrictEqual(
-    expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.json", ".oxlintrc.unskipped-*.json"]),
+    expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.jsonc", ".oxlintrc.unskipped-*.jsonc"]),
   );
 
   fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
   expect(await sync(root)).toBe(0);
-  expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(false);
+  expect(fs.existsSync(path.join(root, ".oxlintrc.jsonc"))).toBe(false);
   expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(false);
   expect(fs.existsSync(path.join(root, ".githooks"))).toBe(false);
   expect(fs.readFileSync(path.join(root, ".gitignore"), "utf8")).not.toContain(".ox");
 });
 
-it("writes knip.json with the knip.ignore entries, has git ignore it and its copies, then prunes it", async () => {
+it("writes knip.jsonc with the knip.ignore entries, has git ignore it and its copies, then prunes it", async () => {
   const root = repo('["standards"]');
   const ignore = '{ ignore: [{ file: "src/old.ts", reason: "by name" }] }';
   const config = `export default { packs: ["standards"], knip: ${ignore} }\n`;
   fs.writeFileSync(path.join(root, CONFIG_FILE), config);
   expect(await sync(root)).toBe(0);
-  expect(JSON.parse(fs.readFileSync(path.join(root, "knip.json"), "utf8"))).toMatchObject({
+  expect(parse(fs.readFileSync(path.join(root, "knip.jsonc"), "utf8"))).toMatchObject({
     workspaces: { ".": { ignoreFiles: ["src/old.ts"] } },
   });
-  expect(gitignoreLines(root)).toStrictEqual(expect.arrayContaining(["knip.json", "knip.unignored-*.json"]));
+  expect(gitignoreLines(root)).toStrictEqual(expect.arrayContaining(["knip.jsonc", "knip.unignored-*.jsonc"]));
   fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
   expect(await sync(root)).toBe(0);
-  expect(fs.existsSync(path.join(root, "knip.json"))).toBe(false);
+  expect(fs.existsSync(path.join(root, "knip.jsonc"))).toBe(false);
+});
+
+it("opens both generated configs with the @generated header", async () => {
+  const root = repo('["standards"]');
+  expect(await sync(root)).toBe(0);
+
+  for (const rel of [".oxlintrc.jsonc", "knip.jsonc"])
+    expect(fs.readFileSync(path.join(root, rel), "utf8").split("\n")[0]).toBe("// @generated by @workerstack/repo");
+});
+
+it("removes the old .json configs a last sync wrote, through the manifest", async () => {
+  const root = repo('["standards"]');
+  expect(await sync(root)).toBe(0);
+
+  const old = [".oxlintrc.json", "knip.json"];
+
+  for (const rel of old) fs.writeFileSync(path.join(root, rel), "{}\n");
+  fs.writeFileSync(path.join(root, MANIFEST_REL), JSON.stringify({ paths: old, version: 1 }));
+
+  expect(await sync(root)).toBe(0);
+
+  for (const rel of old) expect(fs.existsSync(path.join(root, rel))).toBe(false);
+
+  for (const rel of [".oxlintrc.jsonc", "knip.jsonc"]) expect(fs.existsSync(path.join(root, rel))).toBe(true);
 });

@@ -60,7 +60,7 @@ function pack(root: string, body: string) {
 }
 
 describe("a knip that did not report", () => {
-  const tail = "run `bun repo sync` and check knip.json";
+  const tail = "run `bun repo sync` and check knip.jsonc";
 
   it("exit 2 is one problem naming the tail of its stderr", () => {
     const out = checkKnip(knipRoot({}), [], answering("", 2, "a\nb\nc\nd\n"));
@@ -75,9 +75,9 @@ describe("a knip that did not report", () => {
 });
 
 describe("the unignored config", () => {
-  it("is written beside knip.json for the run from the workspace without ignores, and removed after", () => {
+  it("is written beside knip.jsonc for the run from the workspace without ignores, and removed after", () => {
     const ws = knipRoot({});
-    const name = `knip.unignored-${process.pid}.json`;
+    const name = `knip.unignored-${process.pid}.jsonc`;
     let seen = "";
 
     const out = checkKnip(ws, [{ file: "gone.ts", reason: "r" }], (args, cwd) => {

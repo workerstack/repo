@@ -179,7 +179,7 @@ it("runs a config whose skip names only magic rules, which the plugin does not h
   const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, { skip: [skip] });
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
-  fs.writeFileSync(path.join(root, ".oxlintrc.json"), built.value);
+  fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), built.value);
   const run = captureTool("oxlint", ["src/clean.ts"], root);
   expect([run.code, run.stderr]).toStrictEqual([0, ""]);
 });

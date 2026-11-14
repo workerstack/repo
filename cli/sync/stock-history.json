@@ -3681,7 +3681,7 @@
   "cli/scripts/eval.ts": ["ac165fdc280ec38e", "b436f0760df575c8", "e74174294ce13f24", "f2488668127824ea"],
   "cli/scripts/first-non-empty.test.ts": ["3d09b826fbcec1df"],
   "cli/scripts/first-non-empty.ts": ["c1659547d42f31f1"],
-  "cli/scripts/fix-passes.test.ts": ["48d81eab9bf3a5ac", "a7a67dd548c1aa1a"],
+  "cli/scripts/fix-passes.test.ts": ["48d81eab9bf3a5ac", "91a5308807ca23c7", "a7a67dd548c1aa1a"],
   "cli/scripts/fix-passes.ts": ["688815789341abb7"],
   "cli/scripts/fixtures/bad-prompt-counter.md": ["1842fa6855ed3563"],
   "cli/scripts/fixtures/bad-prompt-please-filler.txt": ["c8f002dd9bfa97fe"],
@@ -4955,6 +4955,7 @@
     "048c8f7505903611",
     "04aeb4c906872a56",
     "0aa78c19c12852a8",
+    "26e6575c04dea920",
     "49113dea933f0796",
     "5028fd916e3f1624",
     "566e6037d88fc5fc",
@@ -5125,6 +5126,7 @@
     "0524cad6c0b0fb26",
     "35fc86b97b72af3f",
     "467aec2392c92fee",
+    "5a7da6b5677f24b8",
     "5c32793b671b9656",
     "80a94a7a02d9ced9",
     "90f3101a4c22424e",
@@ -5165,6 +5167,7 @@
     "038d9baa86e55b48",
     "03acaefd9b8db336",
     "5ca38193186cbb37",
+    "6828fe1dbb9e6b56",
     "842b3aa1368fe4a7",
     "945a37753af6acef",
     "9963407099fa6b37",
@@ -5172,7 +5175,7 @@
     "d87c962b3ea232b8",
     "e12242b867dd4549"
   ],
-  "cli/scripts/lint-main-fix.test.ts": ["3f5d3afe31961b63", "c98e0dfedeb656ab"],
+  "cli/scripts/lint-main-fix.test.ts": ["3f5d3afe31961b63", "5b7ad354f5e215fc", "c98e0dfedeb656ab"],
   "cli/scripts/lint-main.constants.ts": ["1a29acb0ca4af187", "5caf57c00bcb28d9", "90f791060f269c4b"],
   "cli/scripts/lint-main.test.ts": [
     "173247fd5a28b273",
@@ -5203,6 +5206,7 @@
     "00883a023db65ca8",
     "23612b6f293de8bd",
     "2563079d8a559123",
+    "2950b21d4d02cf09",
     "337e4d3746b4593c",
     "3869db5a319f2715",
     "3cb5ff2fcdf361ce",
@@ -5232,6 +5236,7 @@
   ],
   "cli/scripts/lint-repo-rules.test.ts": [
     "090d01cd74d673ee",
+    "4ab7177995b47fbb",
     "4c04e61a222b1f1b",
     "55f576c8426a1982",
     "5a3a4b982d1a81b3",
@@ -5277,6 +5282,7 @@
   ],
   "cli/scripts/lint-skips-tailwind.test.ts": ["4f9eeda3dfa0e18f", "51b9a345fd579d94", "e460437872a56709"],
   "cli/scripts/lint-skips.test.ts": [
+    "09ca3d55f3e89062",
     "101b48dfd21db5c0",
     "20248a767ba4538b",
     "214bf95219d7359b",
@@ -5298,6 +5304,7 @@
     "832d6068159bad9c",
     "896105bd6a1abcc5",
     "8b28230464b96920",
+    "8f7c040d4f672744",
     "9bd9f7b14debb0d9",
     "a6ec8d8ad72a1f5f",
     "a80cb47a942f0816",
@@ -5308,6 +5315,7 @@
   "cli/scripts/lint-spawn.test.ts": [
     "0ffd94b941cbd4d1",
     "3d9fdfc18deda4a7",
+    "5520835dc9657826",
     "84a3d45c5b029186",
     "8bf3c5443c715a10",
     "f66d7acb31733f2f",
@@ -5316,6 +5324,7 @@
   "cli/scripts/lint-tags.test.ts": [
     "06fec332fbc1c762",
     "618a2b54e78173d8",
+    "67f3078c10c5e61d",
     "6a736d8036c77db5",
     "7701a8015a202816",
     "8d67023950332c2f"
@@ -5336,6 +5345,7 @@
     "2938250f13d10719",
     "3651df1ae5b28ebc",
     "3dd2a019e122c152",
+    "538770606a90d57d",
     "5fa9641460b96b30",
     "63d840690b0a9d4a",
     "6439776aee627e98",
@@ -7532,6 +7542,7 @@
   "cli/scripts/turn-baseline.test.ts": [
     "0f9bfd85d95beca1",
     "1af874f708509362",
+    "30ccd4f305c8189d",
     "378a3313cc2e22f8",
     "466152b48d520179",
     "4cbd395a23030473",
@@ -8021,6 +8032,7 @@
     "77895c578e57d302",
     "848935de803d48f6",
     "9aec093f52641cd3",
+    "ab620e6def73c99a",
     "aed613caab53ac2d",
     "afe9efe70fd8047f",
     "bf798e8a41efb3f6",

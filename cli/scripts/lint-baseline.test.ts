@@ -83,7 +83,7 @@ it("the check skips a repo with the standards pack off or no config, and reports
   expect(await checkLintBaseline(consumer({ "src/a.ts": nonNull(1) }, '["docs"]'), [])).toStrictEqual([]);
   expect(await checkLintBaseline(os.tmpdir(), [])).toStrictEqual([]);
   const unsynced = consumer({ "src/a.ts": nonNull(1) });
-  fs.rmSync(path.join(unsynced, ".oxlintrc.json"));
+  fs.rmSync(path.join(unsynced, ".oxlintrc.jsonc"));
   expect(await checkLintBaseline(unsynced, [])).toStrictEqual([]);
   const broken = consumer({ [BASELINE_PATH]: '{ "src/a.ts": { "x": -1 } }\n' });
   expect(await checkLintBaseline(broken, [])).toStrictEqual([
@@ -103,7 +103,7 @@ it(
     expect(await checkLintBaseline(root, [])).toStrictEqual([
       `${BASELINE_PATH}: src/a.ts has 1 parse-error, the baseline allows 0`,
     ]);
-    fs.writeFileSync(path.join(root, ".oxlintrc.json"), "{");
+    fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), "{");
     const [failed] = await checkLintBaseline(root, []);
     expect(failed).toMatch(/^oxlint exited 1: Failed to parse oxlint configuration file/);
   },

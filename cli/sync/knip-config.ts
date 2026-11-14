@@ -13,10 +13,16 @@ import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
 import type { PackageJson, Workspace, WorkspacePackage } from "./workspace.ts";
 
 /** The generated config sync writes at the root. */
-export const KNIP_CONFIG_PATH = "knip.json";
+export const KNIP_CONFIG_PATH = "knip.jsonc";
 
 /** The ignore-free copies `repo check` writes beside it for one run, each named for its process. */
-export const KNIP_UNIGNORED_GLOB = "knip.unignored-*.json";
+export const KNIP_UNIGNORED_GLOB = "knip.unignored-*.jsonc";
+
+/** The ignore-free copy of the knip config for the process `pid`. */
+export function knipUnignoredPath(pid: number): string {
+  return KNIP_UNIGNORED_GLOB.replace("*", String(pid));
+}
+
 const ROOT = ".";
 const VITEST_CONFIGS = "vitest*.config.*";
 

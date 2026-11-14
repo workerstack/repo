@@ -87,9 +87,9 @@ function configFormats(): FormatEntry[] {
     { comment: "#", format: "toml", match: exact("rustfmt.toml") },
     { comment: "#", format: "toml", match: exact("clippy.toml") },
     { comment: "#", format: "toml", match: exact("deny.toml") },
-    { comment: null, format: "json", match: exact(".oxlintrc.json"), schema: OXLINT_CONFIG },
+    { comment: "//", format: "jsonc", match: exact(".oxlintrc.jsonc"), schema: OXLINT_CONFIG },
     { comment: "//", format: "jsonc", match: exact(".oxfmtrc.jsonc"), schema: OXFMT_CONFIG },
-    { comment: null, format: "json", match: exact("knip.json") },
+    { comment: "//", format: "jsonc", match: exact("knip.jsonc") },
     { comment: null, format: "json", match: exact("turbo.json"), schema: HOST_SCHEMAS.turboConfig },
   ];
 }

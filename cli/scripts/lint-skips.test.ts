@@ -206,7 +206,7 @@ describe("skipFiles agrees with oxlint's override matching", () => {
     const built = oxlintConfig(ws, { skip: [skip([glob])] });
 
     if (!built.ok) throw new Error(built.errors.join("\n"));
-    fs.writeFileSync(path.join(ws.root, ".oxlintrc.json"), built.value);
+    fs.writeFileSync(path.join(ws.root, ".oxlintrc.jsonc"), built.value);
     const out = captureTool("oxlint", ["-f", "json"], ws.root).stdout;
 
     const report = JSON.parse(out) /* oxlint's json report, as lintReport reads it */ as {
