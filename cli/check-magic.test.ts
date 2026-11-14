@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
 
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
@@ -15,6 +18,7 @@ import {
   SLOW,
   STRING,
 } from "./magic/__fixtures__/magic-repo.ts";
+import type { SharedSources } from "./ts-program.ts";
 
 afterEach(cleanTemps);
 
@@ -113,6 +117,21 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
   const checked = ["src/a.ts", "src/b.tsx", "src/c.mts", "src/d.cts"];
   const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, body]));
   expect(magicOf(files).map((d) => d.file)).toStrictEqual(checked);
+});
+
+it("parses a file edited between two runs that share their sources again", { timeout: SLOW }, () => {
+  const root = plant({ "src/a.ts": "export const f = () => 5000;\n", "tsconfig.json": '{ "include": ["src"] }\n' });
+  const shared: SharedSources = new Map();
+
+  expect(magicDiagnostics(root, ["src/a.ts"], shared)).toStrictEqual({
+    ok: true,
+    value: [hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"))],
+  });
+  fs.writeFileSync(path.join(root, "src/a.ts"), "export const f = (n: number) => n + 6000;\n");
+  expect(magicDiagnostics(root, ["src/a.ts"], shared)).toStrictEqual({
+    ok: true,
+    value: [hit("src/a.ts:1:37", NUMBER, NAMES_NOTHING("6000"))],
+  });
 });
 
 it("reports a tsconfig.json typescript cannot read", () => {

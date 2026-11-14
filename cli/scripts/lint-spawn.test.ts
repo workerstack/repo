@@ -26,15 +26,28 @@ it("names the tsgolint binary with .exe on Windows only", () => {
   expect(tsgolintSpecifier("linux", "arm64")).toBe("@oxlint-tsgolint/linux-arm64/tsgolint");
 });
 
+/** A temp repo with the standards pack on and an oxlint config, so runTool reaches the spawn. */
+function standardsRepo(): string {
+  const root = tempDir();
+  fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
+  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
+  fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), "{}\n");
+
+  return root;
+}
+
 describe("runTool without an injected runner", () => {
   it("returns 1 when the tool process dies of a signal", async () => {
-    const root = tempDir();
-    fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
-    fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
-    fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), "{}\n");
+    const root = standardsRepo();
     const killer = path.join(tempDir(), "killer");
     fs.writeFileSync(killer, "#!/bin/sh\nkill -9 $$\n", { mode: 0o755 });
     vi.spyOn(process, "execPath", "get").mockReturnValue(killer);
+    expect(await runTool("oxlint", [], { cwd: root, stderr: () => {} })).toBe(1);
+  });
+
+  it("returns 1 when the tool process cannot start", async () => {
+    const root = standardsRepo();
+    vi.spyOn(process, "execPath", "get").mockReturnValue(path.join(tempDir(), "no-such-bun"));
     expect(await runTool("oxlint", [], { cwd: root, stderr: () => {} })).toBe(1);
   });
 });

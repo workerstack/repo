@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/do` is now `/rn`: it makes no plan review or question and runs no test of its own; it keeps its own worktree the commit hook's gate and finish and sync rewrites `/do` in saved files under .repo
 - With no --max-cost, `repo eval` now caps a session run at $5.00 and an API run at $1.00. A session run spends plan usage, not dollars, so its byte bound no longer refuses rules-compliance. The `max-cost` input of `eval.yml` is optional; an empty value takes the default for its via.
 - A prompt that starts with `/ask` or `/away` now stamps that session mode, so `/away /write-roadmap-deep split the cli` runs away. Before, only a prompt of the flag alone stamped. A flag later in the prompt, a longer word such as `/awayx`, and `/auto` still stamp nothing.
+- `bun repo lint` runs about four times faster (11 s to 2.5 s on this repo): the lint rules share their per-file work, the script checks share one parse, and they run while oxlint works
 
 ### Removed
 

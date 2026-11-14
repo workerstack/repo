@@ -1,6 +1,7 @@
 /**
  * The compiler options a script checks a file with: those of the `tsconfig.json` nearest above it (its owner), or of a
- * config beside that one, such as the strict `tsconfig.src.json`. Shared by the magic and rejection checks.
+ * config beside that one, such as the strict `tsconfig.src.json`. Shared by the magic, guard and rejection checks,
+ * and the source files the magic and guard checks of one run both parse.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -90,4 +91,68 @@ export function setupOf(root: string, dir: string | null, config: string): Resul
   const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
 
   return { ok: true, value: { fileNames: parsed.fileNames, options: { ...parsed.options, noEmit: true } } };
+}
+
+/**
+ * The source files the programs of one run share: a file one check parsed, and its checker bound, is handed to the
+ * next program that asks for it with the same options while its text is unchanged, as typescript's language service
+ * shares them. Keyed by the program's options, the file name and how it is parsed.
+ */
+export type SharedSources = Map<string, ts.SourceFile>;
+
+/** A compiler host for `options` that takes each source file from `shared` while its text is the one cached. */
+function sharedHost(options: ts.CompilerOptions, shared: SharedSources): ts.CompilerHost {
+  const base = ts.createCompilerHost(options);
+  const optionsKey = JSON.stringify(options);
+
+  return {
+    ...base,
+    getSourceFile: (fileName, version, ...rest) => {
+      const text = base.readFile(fileName);
+
+      if (text === undefined) return base.getSourceFile(fileName, version, ...rest);
+      const key = `${optionsKey}\0${fileName}\0${JSON.stringify(version)}`;
+      const known = shared.get(key);
+
+      if (known?.text === text) return known;
+      const file = ts.createSourceFile(fileName, text, version);
+      shared.set(key, file);
+
+      return file;
+    },
+  };
+}
+
+/** One tsconfig a run checks files under: the root, the owner dir (null for none), and the run's shared sources. */
+export type Owner = { root: string; dir: string | null; shared: SharedSources };
+
+/** An owner's first program, the setup it was made with, and a wider program over more files that reuses its parse. */
+export type OwnerProgram = { setup: Setup; program: ts.Program; widen: (rootNames: readonly string[]) => ts.Program };
+
+/** The program of `owner`'s tsconfig.json over `rootNames`, or why that config cannot be read. */
+export function ownerProgram(owner: Owner, rootNames: readonly string[]): Result<OwnerProgram> {
+  const setup = setupOf(owner.root, owner.dir, RUNTIME_CONFIG);
+
+  if (!setup.ok) return setup;
+  const { options } = setup.value;
+  const host = sharedHost(options, owner.shared);
+  const program = ts.createProgram({ host, options, rootNames });
+
+  function widen(wider: readonly string[]) {
+    return ts.createProgram({ host, oldProgram: program, options, rootNames: wider });
+  }
+
+  return { ok: true, value: { program, setup: setup.value, widen } };
+}
+
+/** `files` (root-relative POSIX paths) as program paths under `real`, grouped by the dir of their owning tsconfig. */
+export function byOwner(real: string, files: readonly string[]): Map<string | null, string[]> {
+  const groups = new Map<string | null, string[]>();
+
+  for (const rel of files) {
+    const dir = ownerOf(real, rel);
+    groups.set(dir, [...(groups.get(dir) ?? []), path.posix.join(real, rel)]);
+  }
+
+  return groups;
 }

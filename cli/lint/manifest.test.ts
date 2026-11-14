@@ -131,3 +131,17 @@ describe("readManifest ships targets and exclusions", () => {
     ]);
   });
 });
+
+describe("readManifest reads", () => {
+  it("a manifest again once it changes on disk, and keeps it while it does not", () => {
+    const file = written("changing.json", JSON.stringify({ name: "before" }));
+    const first = readManifest(file);
+
+    expect(first?.name).toBe("before");
+    expect(readManifest(file)).toBe(first);
+    fs.writeFileSync(file, JSON.stringify({ name: "after" }));
+    expect(readManifest(file)?.name).toBe("after");
+    fs.rmSync(file);
+    expect(readManifest(file)).toBeNull();
+  });
+});

@@ -21,6 +21,7 @@ import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
 import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { standardsRoot } from "./standards-root.ts";
+import type { SharedSources } from "./ts-program.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
 export type ScriptCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
@@ -67,10 +68,11 @@ export function scriptDiagnostics(
 ): Result<Diagnostic[]> {
   const { files } = scope;
   const { target, ...css } = options;
-  const magic = magicDiagnostics(root, files);
+  const shared: SharedSources = new Map();
+  const magic = magicDiagnostics(root, files, shared);
 
   if (!magic.ok) return magic;
-  const guards = guardDiagnostics(root, files);
+  const guards = guardDiagnostics(root, files, shared);
 
   if (!guards.ok) return guards;
   const clones = duplicateDiagnostics(root, scope, target);

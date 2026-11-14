@@ -1,7 +1,8 @@
 /**
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/shared/type-alias-resolution.ts`. Resolves a type
  * reference through the local type aliases visible at it, with lexical shadowing and generic arguments, so a rule can
- * match what an alias stands for. The environment is built per program in the rule's `Program` visitor.
+ * match what an alias stands for. The environment is made once per program, for the first rule that asks in its
+ * `Program` visitor.
  */
 import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 
@@ -101,14 +102,29 @@ function collectTypeBindings(
   for (const child of childNodes(node, visitorKeys)) collectTypeBindings(child, visitorKeys, bindingsByName);
 }
 
-/** Every type alias and competing type binding in `program`; build it once per program, in the `Program` visitor. */
-export function createTypeAliasEnvironment(program: TSESTree.Program, visitorKeys: VisitorKeys): TypeAliasEnvironment {
-  const bindingsByName = new Map<string, TypeBinding[]>();
+/**
+ * The lookup of each program's environment, which walks a program once however many rules ask: a rule asks in its
+ * `Program` visitor. The programs are held weakly, so one is dropped once the linter is done with it.
+ */
+function environmentMemo(): (program: TSESTree.Program, visitorKeys: VisitorKeys) => TypeAliasEnvironment {
+  const known = new WeakMap<TSESTree.Program, TypeAliasEnvironment>();
 
-  collectTypeBindings(program, visitorKeys, bindingsByName);
+  return (program, visitorKeys) => {
+    const found = known.get(program);
 
-  return { bindingsByName, visitorKeys };
+    if (found !== undefined) return found;
+    const bindingsByName = new Map<string, TypeBinding[]>();
+    collectTypeBindings(program, visitorKeys, bindingsByName);
+    const environment = { bindingsByName, visitorKeys };
+    known.set(program, environment);
+
+    return environment;
+  };
 }
+
+/** Every type alias and competing type binding in `program`, walked for the first rule that asks, kept for the rest. */
+export const typeAliasEnvironmentOf: (program: TSESTree.Program, visitorKeys: VisitorKeys) => TypeAliasEnvironment =
+  /* @__PURE__ */ environmentMemo();
 
 /** How many parents up from `node` `ancestor` is, or null when it is no ancestor. */
 function ancestorDistance(ancestor: TSESTree.Node, node: TSESTree.Node): number | null {

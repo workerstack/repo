@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -25,8 +25,8 @@ import { toolEnv } from "./tool-env.ts";
 /** The tools the standards pack runs: the pinned oxlint, and the formatter of the bun running this. */
 export type Tool = "oxlint" | "bun fmt";
 
-/** Runs `tool` with `args` in `root` and returns its exit code. */
-export type RunTool = (tool: Tool, args: string[], root: string) => number;
+/** Runs `tool` with `args` in `root` and returns its exit code, or a promise of it for a tool still running. */
+export type RunTool = (tool: Tool, args: string[], root: string) => number | Promise<number>;
 
 /** `cargo` runs `cargo fmt`; tests hand their own, and `stdout` receives its diff. */
 export type ToolDeps = {
@@ -51,13 +51,13 @@ function reportComments(found: readonly OwnLine[], stderr: (s: string) => void):
  * the tool then runs on `args` as it was given. A tree with a key out of order fails the check even when the tool
  * passes.
  */
-function formatSorted(job: {
+async function formatSorted(job: {
   root: string;
   cwd: string;
   args: string[];
   stderr: (s: string) => void;
   run: RunTool;
-}): number {
+}): Promise<number> {
   const { root, cwd, args, stderr, run } = job;
 
   const paths = args
@@ -83,7 +83,7 @@ function formatSorted(job: {
       stderr(`repo fmt: ${file} has keys out of order, first "${key}"; ${FIX_HINT}\n`);
   }
 
-  const code = run("bun fmt", args, root);
+  const code = await run("bun fmt", args, root);
 
   return code === 0 && (sorted.found.length > 0 || commented.length > 0) && check ? 1 : code;
 }
@@ -123,7 +123,7 @@ export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): 
 
   if (tool !== "bun fmt") return run(tool, args, root);
 
-  return withCargoFmt(root, formatSorted({ args, cwd, root, run, stderr }), { ...deps, args, stderr });
+  return withCargoFmt(root, await formatSorted({ args, cwd, root, run, stderr }), { ...deps, args, stderr });
 }
 
 /**
@@ -205,17 +205,23 @@ function commandOf(tool: Tool) {
   return { args: [oxlintBin()], env: childEnv(oxlintEnv()) };
 }
 
-/** Spawns bun on the tool's command line, output straight to the terminal. */
-function spawnTool(tool: Tool, args: string[], root: string): number {
+/**
+ * Spawns bun on the tool's command line, output straight to the terminal, without blocking: `repo lint` runs its
+ * script checks while oxlint works. A tool that cannot start or ends on a signal exits 1.
+ */
+function spawnTool(tool: Tool, args: string[], root: string): Promise<number> {
   const command = commandOf(tool);
 
-  const result = spawnSync(process.execPath, [...command.args, ...args], {
+  const child = spawn(process.execPath, [...command.args, ...args], {
     cwd: root,
     env: toolEnv(command.env),
     stdio: "inherit",
   });
 
-  return result.status ?? 1;
+  return new Promise((resolve) => {
+    child.on("error", () => resolve(1));
+    child.on("close", (code) => resolve(code ?? 1));
+  });
 }
 
 function readUtf8(file: string): string {
