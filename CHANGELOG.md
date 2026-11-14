@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The shell gate no longer denies `bun repo coverage | tail` or `bun run build | head`. It denies a bare `coverage`, `build` or `dist` only when the same command runs a dump or search such as `cat`, `head`, `grep` or `find`, so `find dist` and `sh -c 'cat dist'` are still denied. A path with a slash is judged in every command.
 - The push gate no longer holds a Stop on a pushed commit whose ci run was cancelled by a newer push. A later commit on the branch that contains it and has a passed `bun repo ci wait` record now settles it, so `bun repo ci wait <branch>` on the new head ends the wait. A later failed run still does not.
 - `bun repo link` links each dependency the linked package needs and the consumer lacks, or holds out of range, from the sibling checkout's own install, so a dependency added since the npm version (such as jscpd) resolves. Peers still only warn.
+- The Bash gate no longer refuses a search whose pattern, or a find name test value, spells a denied dir name or the lockfile; every word the command may open, a redirect target included, is still judged.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

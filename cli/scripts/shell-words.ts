@@ -12,10 +12,18 @@ const HOLDS_COMMAND_RE = /[\s|&;()<>`]/;
 /** A backslash and the character it escapes, or `$(`. */
 const PAIR_LENGTH = 2;
 
-/** The commands read so far, the words of the open one, and the open word. */
+/** A simple command: its words, and the indices of those that a `<` or `>` redirects to or from. */
+export type ShellCommand = { words: string[]; redirects: ReadonlySet<number> };
+
+/**
+ * The commands read so far, the words and redirect targets of the open one, the open word, and whether the next word
+ * is a redirect target.
+ */
 type Lexer = {
-  commands: string[][];
+  commands: ShellCommand[];
   isInWord: boolean;
+  isRedirectNext: boolean;
+  redirects: Set<number>;
   word: string;
   words: string[];
 };
@@ -29,7 +37,12 @@ function append(lx: Lexer, text: string): void {
 }
 
 function endWord(lx: Lexer): void {
-  if (lx.isInWord) lx.words.push(lx.word);
+  if (lx.isInWord) {
+    if (lx.isRedirectNext) lx.redirects.add(lx.words.length);
+    lx.isRedirectNext = false;
+    lx.words.push(lx.word);
+  }
+
   lx.word = "";
   lx.isInWord = false;
 }
@@ -37,8 +50,10 @@ function endWord(lx: Lexer): void {
 function endCommand(lx: Lexer): void {
   endWord(lx);
 
-  if (lx.words.length > 0) lx.commands.push(lx.words);
+  if (lx.words.length > 0) lx.commands.push({ redirects: lx.redirects, words: lx.words });
   lx.words = [];
+  lx.redirects = new Set<number>();
+  lx.isRedirectNext = false;
 }
 
 function literal(lx: Lexer, cmd: string, i: number): number {
@@ -107,6 +122,14 @@ function wordEnd(lx: Lexer, _cmd: string, i: number): number {
   return i + 1;
 }
 
+/** `<` or `>` ends the open word, and the next word is the file it reads or writes. */
+function redirect(lx: Lexer, _cmd: string, i: number): number {
+  endWord(lx);
+  lx.isRedirectNext = true;
+
+  return i + 1;
+}
+
 const HANDLERS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, Handler>([
   ["'", singleQuoted],
   ['"', doubleQuoted],
@@ -121,17 +144,26 @@ const HANDLERS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, H
   ["`", commandEnd],
   [" ", wordEnd],
   ["\t", wordEnd],
-  ["<", wordEnd],
-  [">", wordEnd],
+  ["<", redirect],
+  [">", redirect],
 ]);
 
 /**
- * The simple commands of `cmd`, each as its words with quotes and escapes removed. Outside quotes, `|`, `||`, `&&`,
+ * The simple commands of `cmd`, each as its words with quotes and escapes removed and the indices of the words a
+ * `<` or `>` names. Outside quotes, `|`, `||`, `&&`,
  * `&` (not in `>&` or `&>`), `;`, newlines, `(`, `)`, `$(` and backticks end a command; blanks, `<` and `>` end a
  * word. An unclosed quote reads to the end as one word.
  */
-export function simpleCommands(cmd: string): string[][] {
-  const lx: Lexer = { commands: [], isInWord: false, word: "", words: [] };
+export function simpleCommands(cmd: string): ShellCommand[] {
+  const lx: Lexer = {
+    commands: [],
+    isInWord: false,
+    isRedirectNext: false,
+    redirects: new Set<number>(),
+    word: "",
+    words: [],
+  };
+
   let i = 0;
 
   while (i < cmd.length) i = (HANDLERS.get(cmd.charAt(i)) ?? literal)(lx, cmd, i);
