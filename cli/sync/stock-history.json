@@ -5722,6 +5722,7 @@
   "cli/scripts/orchestrate-mode.ts": [
     "2b8e89b3938126ff",
     "53be3eead5d165c2",
+    "5f489bc1f432498d",
     "60a9085eb682f758",
     "60bbd6486f6e1234",
     "8046b594aeb1033b",
@@ -5740,6 +5741,7 @@
     "751579352e2daf53",
     "a7c8b8cd34e27df0",
     "b3cb307812070200",
+    "b6f09fafdefeff5e",
     "bd6ce6b8d7f955a9",
     "c3584edc38bdcfa0",
     "cbabdef364b33a8b",
@@ -5881,6 +5883,7 @@
     "e377c71af4b453f9"
   ],
   "cli/scripts/orchestrate-parent-stop.test.ts": [
+    "09f533da91757fd9",
     "2630f06f3c47df30",
     "30f09b0f29d8db8a",
     "3a02669024b079c4",
@@ -6010,6 +6013,7 @@
   ],
   "cli/scripts/orchestrate-stamps.ts": [
     "158880c13eb3497e",
+    "36271fb572c36b7c",
     "4c1778be546b54b2",
     "55cea2bbe6f1c746",
     "8cc9a8767e748dec",
@@ -6063,6 +6067,7 @@
     "5c40357b6d89fb66",
     "637744e46013e57f",
     "6d0edc2fc7753517",
+    "bad802e750d27a80",
     "d289728cbbee0d37",
     "e3aa3fc922bead55",
     "f53eb58b61135576"
