@@ -22,7 +22,7 @@ function show(v: Visited): string {
 /** The commands of `src` from `/r` that run something, not data or assignments alone, each as `show` gives it. */
 function runs(src: string): string[] {
   const out: string[] = [];
-  shellFlow(src, { cwd: "/r", env: { cdpath: "", home: "/h" }, p: path.posix }, (v) => {
+  shellFlow(src, { cwd: "/r", env: { cdpath: "", home: "/h", path: "/bin" }, p: path.posix }, (v) => {
     if (v.kind === "opaque" || (v.data === undefined && !/^[A-Za-z_]\w*=/.test(v.words[0]?.raw ?? "")))
       out.push(show(v));
   });

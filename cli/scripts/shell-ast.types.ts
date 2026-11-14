@@ -42,7 +42,7 @@ export type Value = { known: true; text: string } | { known: false; cause: strin
 export type Vars = ReadonlyMap<string, Value>;
 
 /** The variables a line starts with from the shell that runs it: the home folder and the `cd` search path. */
-export type StartEnv = { home: string; cdpath: string };
+export type StartEnv = { home: string; cdpath: string; path: string };
 
 /** Where a command runs: its dir and the variables it sees. */
 export type Scope = { dir: Dir; vars: Vars };
@@ -100,5 +100,11 @@ export type Dir = { known: true; path: string } | { known: false; cause: string 
  */
 export type Visited = (Simple & Scope) | { kind: "opaque"; cause: string; dir: Dir };
 
-/** A script a command makes bash run: its text and whether it runs in the caller's state, or an unreadable one. */
-export type Script = { kind: "text"; text: string; inherits: boolean } | { kind: "opaque"; cause: string };
+/**
+ * A script a command makes bash run: its text, whether it runs in the caller's state, and the file it was read from;
+ * a file a shell reads, by the word that names it; or an unreadable one.
+ */
+export type Script =
+  | { kind: "text"; text: string; inherits: boolean; file?: string }
+  | { kind: "file"; word: ShellWord; inherits: boolean }
+  | { kind: "opaque"; cause: string };

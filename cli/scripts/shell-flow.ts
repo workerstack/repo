@@ -6,6 +6,7 @@ import type path from "node:path";
 
 import { cdEffect } from "./cd-effect.ts";
 import { runDir } from "./command-at.ts";
+import { type ReadScript, readScripts } from "./script-file.ts";
 import type { Dir, ShellNode, ShellWord, Simple, StartEnv, Stdin, Vars, Visited } from "./shell-ast.types.ts";
 import { expandCommand, readWord } from "./shell-fields.ts";
 import { scriptText } from "./shell-lex-word.ts";
@@ -15,10 +16,17 @@ import { pipedStdin, programAt, redirectStdin, scriptsOf } from "./shell-scripts
 import { joinVars, sameVars, seedVars, varsAfter, withDir, withVar } from "./shell-vars.ts";
 
 /**
- * Where a walk stands: the dir, the variables, the functions defined so far, the calls being walked (to stop
- * recursion), and what the commands here read on stdin.
+ * Where a walk stands: the dir, the variables, the functions defined so far, the calls and script files being walked
+ * (to stop recursion), and what the commands here read on stdin.
  */
-type State = { dir: Dir; vars: Vars; funcs: ReadonlyMap<string, ShellNode>; calls: readonly string[]; stdin: Stdin };
+type State = {
+  dir: Dir;
+  vars: Vars;
+  funcs: ReadonlyMap<string, ShellNode>;
+  calls: readonly string[];
+  files: readonly string[];
+  stdin: Stdin;
+};
 
 /** What stays fixed through a walk: the path module and the visitor. */
 type Walker = { p: typeof path; visit: (v: Visited) => void };
@@ -136,18 +144,32 @@ function walkSimple(w: Walker, c: Simple, st: State): State {
   const called = callOf(w, ran, st);
 
   if (called !== null) return called;
+  const scripts = readScripts(scriptsOf(ran, st.stdin), { dir: at, vars: st.vars }, w.p);
+
   let now = st;
 
-  for (const s of scriptsOf(ran, st.stdin)) {
-    if (s.kind === "opaque") w.visit({ cause: s.cause, dir: at, kind: "opaque" });
-    else if (s.inherits) now = { ...walkNode(w, parse(s.text), unfed(now)), stdin: now.stdin };
-    else walkNode(w, parse(s.text), { ...unfed(now), dir: at, vars: withDir(now.vars, at) });
-  }
+  for (const s of scripts) now = walkScript(w, s, { at, now });
 
   const dir = cdEffect(ran.words, now, w.p);
   const moved = dir === null ? now : { ...now, dir, vars: withDir(now.vars, dir) };
 
   return { ...moved, vars: varsAfter(ran, moved.vars) };
+}
+
+/**
+ * A script a command at `at` makes bash run: in the caller's state when it inherits it, else in a copy at `at`; a
+ * script file already being walked is not walked again, and an unreadable script is visited as opaque.
+ */
+function walkScript(w: Walker, s: ReadScript, { at, now }: { at: Dir; now: State }): State {
+  if (s.kind === "opaque") w.visit({ cause: s.cause, dir: at, kind: "opaque" });
+
+  if (s.kind === "opaque" || (s.file !== undefined && now.files.includes(s.file))) return now;
+  const into = { ...unfed(now), files: s.file === undefined ? now.files : [...now.files, s.file] };
+
+  if (s.inherits) return { ...walkNode(w, parse(s.text), into), files: now.files, stdin: now.stdin };
+  walkNode(w, parse(s.text), { ...into, dir: at, vars: withDir(now.vars, at) });
+
+  return now;
 }
 
 /** What `item` writes to the next item of a pipe run in `st`: the line an `echo` or `printf` prints, else opaque. */
@@ -311,6 +333,6 @@ function parse(src: string): ShellNode {
 /** Walks `src` from `start.cwd`, handing `visit` each simple command bash would run and each script it cannot read. */
 export function shellFlow(src: string, start: FlowStart, visit: (v: Visited) => void): void {
   const dir: Dir = { known: true, path: start.cwd };
-  const st: State = { calls: [], dir, funcs: new Map(), stdin: NO_STDIN, vars: seedVars(start.env, start.cwd) };
-  walkNode({ p: start.p, visit }, parse(src), st);
+  const vars = seedVars(start.env, start.cwd);
+  walkNode({ p: start.p, visit }, parse(src), { calls: [], dir, files: [], funcs: new Map(), stdin: NO_STDIN, vars });
 }

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkflowRead } from "../workflow.ts";
 import { pushDeny, sharedAs, STRICT, useGuardRepos } from "./__fixtures__/workflow-guards.ts";
-import { at } from "./__fixtures__/worktree-repo.ts";
+import { at, write } from "./__fixtures__/worktree-repo.ts";
 import { worktreeAddReason } from "./worktree-guards.ts";
 
 const { repoWithWorktree } = useGuardRepos();
@@ -102,7 +102,7 @@ describe("git commands after a cd the gate cannot follow", () => {
   });
 });
 
-describe("pushes in the dir a runner names and in script files", () => {
+describe("pushes in the dir a runner names", () => {
   it.each(STRICT)("denies a push of main from env -C or sudo -D naming the root under %s", (read) => {
     const r = repoWithWorktree();
     const place = at(r, r, path.dirname(r));
@@ -110,6 +110,11 @@ describe("pushes in the dir a runner names and in script files", () => {
 
     for (const run of runs)
       expect(sharedAs(read, { cmd: `${run} git push origin main`, place }), run).toBe(pushDeny(read));
+  });
+
+  it.each(STRICT)("denies a push from env -C naming a dir it cannot read under %s", (read) => {
+    const r = repoWithWorktree();
+
     expect(sharedAs(read, { cmd: 'env -C "$D" git push origin main', place: at(r) })).toBe(
       unreadDeny('git push runs in "$D"', read),
     );
@@ -120,5 +125,41 @@ describe("pushes in the dir a runner names and in script files", () => {
     const cmd = `env -C '${path.dirname(r)}' git push origin main`;
 
     expect(sharedAs("pull-request", { cmd, place: at(r) })).toBeNull();
+  });
+});
+
+describe("pushes in script files", () => {
+  it.each(STRICT)("denies a push of main in a script file a shell runs or sources under %s", (read) => {
+    const r = repoWithWorktree();
+    const bin = path.join(r, "bin");
+
+    write(path.join(r, "x.sh"), "git push origin main\n");
+    write(path.join(bin, "y.sh"), `git -C '${r}' push origin main\n`);
+    const runs = ["bash x.sh", "sh ./x.sh", "source x.sh", ". x.sh", "bash - x.sh", `PATH='${bin}'; source y.sh`];
+
+    for (const cmd of runs) expect(sharedAs(read, { cmd, place: at(r) }), cmd).toBe(pushDeny(read));
+  });
+
+  it.each(STRICT)("denies a script file it cannot read under %s, naming it", (read) => {
+    const r = repoWithWorktree();
+
+    write(path.join(r, "big.sh"), `${"# pad\n".repeat(50_000)}true\n`);
+
+    const unread = [
+      ["bash missing.sh", "missing.sh"],
+      ['bash "$S"', '"$S"'],
+      ["bash big.sh", "big.sh"],
+    ] as const;
+
+    for (const [cmd, cause] of unread)
+      expect(sharedAs(read, { cmd, place: at(r) }), cmd).toBe(unreadDeny(`a shell runs a script from ${cause}`, read));
+  });
+
+  it("walks a script that sources itself once, and passes a script with no push", () => {
+    const r = repoWithWorktree();
+
+    write(path.join(r, "loop.sh"), "source loop.sh\ngit status\n");
+
+    expect(sharedAs("pull-request", { cmd: "bash loop.sh", place: at(r) })).toBeNull();
   });
 });

@@ -21,3 +21,12 @@ export function useTempDirs(prefix: string): { track: (file: string) => void; te
     track: (file) => temps.push(file),
   };
 }
+
+/** Writes `files` (relative path to text) under `dir`, making the dirs they need, and gives `dir` back. */
+export function plantFiles(dir: string, files: Record<string, string>): string {
+  for (const [name, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
+    fs.writeFileSync(path.join(dir, name), text);
+  }
+  return dir;
+}

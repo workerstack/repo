@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
 
-import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
+import { plantFiles, useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
 import { usePresetDefaults } from "./__fixtures__/platform.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootPath } from "./temp-root-env.ts";
@@ -17,14 +17,7 @@ const FLOOR = { branches: 70, functions: 90, lines: 85, statements: 80 };
 
 /** A temp dir holding `files` (name to text), removed after the test. */
 function plant(files: Record<string, string>): string {
-  const dir = tempDir();
-
-  for (const [name, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true });
-    fs.writeFileSync(path.join(dir, name), text);
-  }
-
-  return dir;
+  return plantFiles(tempDir(), files);
 }
 
 /** The coverage options of a config's `test`, on whichever provider. */

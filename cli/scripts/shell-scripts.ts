@@ -1,6 +1,7 @@
 /**
- * The scripts a simple command makes bash run: words after `eval`, a shell's `-c` script or the stdin it reads, and the
- * command strings of `su`, `runuser`, `flock`, `script`, `env -S`, `watch`, `trap` and `git rebase --exec`.
+ * The scripts a simple command makes bash run: words after `eval`, a shell's `-c` script, the stdin it reads or the
+ * file it runs, the file `source` or `.` reads, and the command strings of `su`, `runuser`, `flock`, `script`,
+ * `env -S`, `watch`, `trap` and `git rebase --exec`.
  */
 import type { Redirect, Script, ShellWord, Simple, Stdin } from "./shell-ast.types.ts";
 import { isLiteral, scriptText } from "./shell-lex-word.ts";
@@ -80,9 +81,7 @@ function shellOptions(words: readonly ShellWord[], at: number): ShellOptions {
   const got: ShellOptions = { hasCommand: false, hasStdinFlag: false, operand: at + 1 };
 
   for (let t = textOf(words[got.operand]); t.startsWith("-") || t.startsWith("+"); t = textOf(words[++got.operand])) {
-    if (t === END_OF_OPTIONS) return { ...got, operand: got.operand + 1 };
-
-    if (t === STDIN_OPERAND) break;
+    if (t === END_OF_OPTIONS || t === STDIN_OPERAND) return { ...got, operand: got.operand + 1 };
 
     if (SHELL_VALUE_OPTS.has(t)) {
       got.operand++;
@@ -95,14 +94,27 @@ function shellOptions(words: readonly ShellWord[], at: number): ShellOptions {
   return got;
 }
 
-/** A shell at `at`: its `-c` script, the stdin it reads with `-s` or no operand, or nothing for a script file. */
+/**
+ * A shell at `at`: its `-c` script, the stdin it reads with `-s` or no operand, or the script file it runs when it is
+ * a shell by name; an expanded program word with an operand runs no script the gate reads.
+ */
 function shellScripts(cmd: Cmd, at: number): Script[] {
   const { operand, hasCommand, hasStdinFlag } = shellOptions(cmd.words, at);
   const word = cmd.words[operand];
 
   if (hasCommand) return word === undefined ? [] : script(scriptText(word));
 
-  return word === undefined || hasStdinFlag ? stdinScript(cmd, at) : [];
+  if (word === undefined || hasStdinFlag) return stdinScript(cmd, at);
+
+  return SHELLS.has(programName(cmd.words[at])) ? [{ inherits: false, kind: "file", word }] : [];
+}
+
+/** `source [--] file` or `. file` at program position: the file, read in the caller's state. */
+function sourceScript(cmd: Cmd, at: number): Script[] | null {
+  const operand = at + 1;
+  const word = cmd.words[textOf(cmd.words[operand]) === END_OF_OPTIONS ? operand + 1 : operand];
+
+  return at !== cmd.prog || word === undefined ? null : [{ inherits: true, kind: "file", word }];
 }
 
 /** The script in option `short` or `long` among the words after `at`: `-c v`, `--long v` or `--long=v`. */
@@ -151,6 +163,8 @@ const FINDERS: ReadonlyMap<string, Finder> = /* @__PURE__ */ new Map<string, Fin
   ["env", (cmd, at) => optionScript(cmd.words, at, SPLIT_STRING_OPTION)],
   ["watch", watchScript],
   ["trap", trapScript],
+  ["source", sourceScript],
+  [".", sourceScript],
   ["git", rebaseScript],
 ]);
 
