@@ -18,7 +18,7 @@ Research until every slice is defensible. Ask only what the person alone can ans
 
 When adjacent slices change disjoint paths and need nothing from each other, end each slice line with `(parallel: <path>, …)` listing every path its plan changes (files, folders ending `/`, or globs), so the runner can run them at once.
 
-Report the serial N at the absolute path the Write returned, the slice titles in order and the top risk. End the reply with the approval block, fenced as code, nothing after it:
+Report the serial N at the absolute path the Write returned, the slice titles in order and the top risk. On Claude Code outside away, print no block: end the reply after the report, and the Stop hook names the approval picker. Call AskUserQuestion with exactly its input and act on the answer's context. Everywhere else, end the reply with the approval block, fenced as code, nothing after it:
 
 ```
 fast-roadmap {n} · {s}
@@ -28,4 +28,4 @@ fast-roadmap {n} · {s}
      or reply to revise
 ```
 
-`{s}` is the strategy in the file. When the file has `advice:`, put its row right under the header; with no advice, no row. The Stop hook names the exact block when yours is off. `i` sets `status: locked` on the same file, then runs `/implement-roadmap-fast {n}` in this session with the file's strategy; `i free`, `i fast` and `i deep` write that strategy first and keep it as the session strategy. `h` hands off to a fresh session (`/pickup`), and `h free`, `h fast` and `h deep` write a strategy first; do no work here. Any other reply is feedback: revise the same file and show the block again. On Claude Code the Stop hook may name an approval picker instead: call AskUserQuestion with exactly its input and act on the answer's context; feedback revises the file and stops again.
+`{s}` is the strategy in the file. When the file has `advice:`, put its row right under the header; with no advice, no row. The Stop hook names the exact block when yours is off. `i` sets `status: locked` on the same file, then runs `/implement-roadmap-fast {n}` in this session with the file's strategy; `i free`, `i fast` and `i deep` write that strategy first and keep it as the session strategy. `h` hands off to a fresh session (`/pickup`), and `h free`, `h fast` and `h deep` write a strategy first; do no work here. Any other reply is feedback: revise the same file and show the block again. A picker answer that is no option's label is feedback too.

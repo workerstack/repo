@@ -16,6 +16,6 @@ Example Usage line:
 Before: `notes export --json` → error: unknown flag   After: prints [{"id":1,…}]   Files: src/cli.ts, src/export.ts
 ```
 
-When a reviewed plan or roadmap waits for approval, end with the exact approval block `/write-plan-deep` defines. On Claude Code, when the Stop hook names the approval picker, call AskUserQuestion with exactly its input and act on the answer's context. Otherwise add nothing extra.
+When a reviewed plan or roadmap waits for approval, end with the exact approval block `/write-plan-deep` defines. On Claude Code outside away, print no block: the Stop hook names the approval picker, so call AskUserQuestion with exactly its input and act on the answer's context. Otherwise add nothing extra.
 
 Slash `/show-me` only.

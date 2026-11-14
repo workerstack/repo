@@ -382,7 +382,7 @@
   ".agents/skills/rn/SKILL.md": ["789603e95b5f279d"],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   ".agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
-  ".agents/skills/show-me/SKILL.md": ["cd5ecedb0c43eac5", "e2c694b19fd544e0"],
+  ".agents/skills/show-me/SKILL.md": ["55eb818598b82ea0", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
     "0db2716e177b9fec",
     "172f0ca5fbb95303",
@@ -420,8 +420,8 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["0b89717b68be4721"],
-  ".agents/skills/write-plan-fast/SKILL.md": ["763fb822979db4fc"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["c0a2ea8aba749e84"],
+  ".agents/skills/write-plan-fast/SKILL.md": ["794f6bb34acd9933"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
     "1d2cfbedeea5a019",
@@ -445,8 +445,8 @@
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-deep/SKILL.md": ["bd695939c8da6e25"],
-  ".agents/skills/write-roadmap-fast/SKILL.md": ["2e78e4f1737bf4ef"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["2a3d74fdb3583e94"],
+  ".agents/skills/write-roadmap-fast/SKILL.md": ["d95fd7df190c848e"],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
     "1dc3f6f74b35a44b",
@@ -2338,7 +2338,13 @@
   "agents/skills/rn/SKILL.md": ["789603e95b5f279d", "aaf5aaeb50b095c1"],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
-  "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "cd5ecedb0c43eac5", "e2c694b19fd544e0"],
+  "agents/skills/show-me/SKILL.md": [
+    "2a006de7c96e6ce7",
+    "366ab3f1a21c0651",
+    "55eb818598b82ea0",
+    "cd5ecedb0c43eac5",
+    "e2c694b19fd544e0"
+  ],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
@@ -2353,6 +2359,7 @@
     "7f6e5bc26e86d5c0",
     "98c81331e3815f5f",
     "abde0d45b94341d5",
+    "c0a2ea8aba749e84",
     "c3f7f68d8c2d9a34",
     "e55ffcf52d8aa01d"
   ],
@@ -2360,6 +2367,7 @@
     "1526693b464d404e",
     "36f97168fab6538e",
     "763fb822979db4fc",
+    "794f6bb34acd9933",
     "d56078320f4fc34e",
     "f5e15f2148b40d71"
   ],
@@ -2376,6 +2384,7 @@
   ],
   "agents/skills/write-roadmap-deep/SKILL.md": [
     "1c3f3504084900f8",
+    "2a3d74fdb3583e94",
     "46328cb6579fbc65",
     "4f1ff76618ae16bc",
     "683c246259a44f2a",
@@ -2388,6 +2397,7 @@
     "2e78e4f1737bf4ef",
     "70f55655f36f1db1",
     "b24b1ab1d462eaeb",
+    "d95fd7df190c848e",
     "f18dd93a01bf07ab"
   ],
   "agents/skills/write-roadmap/SKILL.md": [
@@ -8885,6 +8895,7 @@
     "97b9a605ba9b5bd9",
     "acac21b89edafb2c",
     "b8962e56228a9e40",
+    "c15f243767d95bc0",
     "d206b3f0ff29c7f7",
     "d4ce8ce10f454ded",
     "f2e528eba65b0e50",
