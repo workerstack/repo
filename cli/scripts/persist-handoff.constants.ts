@@ -20,5 +20,5 @@ export const PHASE_ID_RE: RegExp = /^\d+$/;
 export const GOAL_SENTENCES_MAX = 3;
 export const SENTENCE_SPLIT_RE: RegExp = /(?<=[.!?])(?:\s+|$)/;
 export const GOAL_SECTION_RE: RegExp = /## Goal\n([\s\S]*?)\n## /;
-export const NAME_LINE_RE: RegExp = /^\s*HANDOFF_NAME:\s*(.+?)\s*$/m;
-export const NAME_STRIP_RE: RegExp = /^\s*HANDOFF_NAME:\s*.+\s*\n/;
+export const NAME_LINE_RE: RegExp = /^\s*HANDOFF_NAME:[ \t]*(.+?)\s*$/m;
+export const NAME_STRIP_RE: RegExp = /^\s*HANDOFF_NAME:[ \t]*.*\s*\n/;

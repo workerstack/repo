@@ -145,3 +145,16 @@ describe("handoff fences", () => {
     expect(r.ok, r.error).toBe(true);
   });
 });
+
+describe("persistHandoff with an empty HANDOFF_NAME line", () => {
+  it("names the handoff from its title, not from the line below, and strips the empty line", () => {
+    const ws = tmpWs();
+    const content = VALID_HANDOFF.replace("HANDOFF_NAME: sync skills to hosts\n", "HANDOFF_NAME:\nwrong name\n");
+
+    const r = persistHandoff({ content, created: "2026-08-27T14:30:00Z", workspaceRoot: ws });
+
+    expect(r.ok, r.error).toBe(true);
+    expect(r.filename).toBe("1-sync-skills-to-hosts-20260827T143000Z.md");
+    expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).not.toContain("HANDOFF_NAME:");
+  });
+});

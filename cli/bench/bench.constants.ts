@@ -73,7 +73,7 @@ export const BYTES_PER_KB = 1024;
 export const FLOORED_PLATFORM = "linux";
 
 /** The peak-RSS line of /proc/self/status, its kibibytes captured. */
-export const VM_HWM: RegExp = /^VmHWM:\s+(\d+) kB$/mu;
+export const VM_HWM: RegExp = /^VmHWM:[ \t]+(\d+) kB$/mu;
 
 /** The built-in peak-RSS metric, the one the floor bounds. */
 export const RSS_METRIC = "rss";

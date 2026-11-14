@@ -57,6 +57,6 @@ export const SLICES_MIN = 2;
 
 /** A Verify lists one to this many `N.M` leaves. */
 export const LEAVES_MAX = 5;
-export const ROADMAP_NAME_RE: RegExp = /^ROADMAP_NAME:\s*(.+)\s*$/m;
-export const ROADMAP_NAME_STRIP_RE: RegExp = /^ROADMAP_NAME:\s*.+\n/m;
+export const ROADMAP_NAME_RE: RegExp = /^ROADMAP_NAME:[ \t]*(.+)\s*$/m;
+export const ROADMAP_NAME_STRIP_RE: RegExp = /^ROADMAP_NAME:[ \t]*.*\n/m;
 export const GOAL_SECTION_RE: RegExp = /## Goal\n([\s\S]*?)\n## /;

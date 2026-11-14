@@ -54,17 +54,22 @@ describe("persistImplementation file", () => {
 });
 
 describe("persistImplementation defaults", () => {
-  it("defaults plan to none", () => {
+  it.each([
+    ["no IMPL_PLAN line", ""],
+    ["an empty IMPL_PLAN line, never the line below", "IMPL_PLAN:\n6\n"],
+  ])("defaults plan to none with %s", (_, line) => {
     const ws = tmpWs();
 
     const r = persistImplementation({
-      content: VALID_IMPL.replace("IMPL_PLAN: 6\n", ""),
+      content: VALID_IMPL.replace("IMPL_PLAN: 6\n", line),
       workspaceRoot: ws,
     });
 
     expect(r.ok).toBe(true);
     expect(r.plan).toBe("none");
-    expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).toMatch(/^---\nserial: 1\nplan: none\n/);
+    const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
+    expect(text).toMatch(/^---\nserial: 1\nplan: none\n/);
+    expect(text).not.toContain("IMPL_PLAN:");
   });
 
   it("does not collide with plan serials", () => {

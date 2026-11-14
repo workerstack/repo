@@ -23,8 +23,8 @@ export const REPORT_RELATIVE = ".turbo/vitest-report.json";
 export const SHARD_ENV = "REPO_VITEST_SHARD";
 
 /** The tasks and cached counts of turbo's summary. */
-export const TASKS_LINE: RegExp = /^\s*Tasks:\s+\d+ successful, (\d+) total$/m;
-export const CACHED_LINE: RegExp = /^\s*Cached:\s+(\d+) cached, \d+ total$/m;
+export const TASKS_LINE: RegExp = /^\s*Tasks:[ \t]+\d+ successful, (\d+) total$/m;
+export const CACHED_LINE: RegExp = /^\s*Cached:[ \t]+(\d+) cached, \d+ total$/m;
 
 /** The ids of the tasks that failed, as turbo's summary lists them. */
-export const FAILED_LINE: RegExp = /^\s*Failed:\s+(.+)$/m;
+export const FAILED_LINE: RegExp = /^\s*Failed:[ \t]+(.+)$/m;
