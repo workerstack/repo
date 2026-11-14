@@ -157,3 +157,9 @@ describe("planSkills of an old stock skill name", () => {
     });
   });
 });
+
+it("moves a copy of an old stock skill name unmarked when its SKILL.md names no old skill or is not there", () => {
+  const unmarked = { from: OLD_FROM, kind: "move", note: `moved ${OLD_FROM} to ${NEW_TO}`, to: NEW_TO };
+  expect(planOf(mini({ [`${OLD_FROM}/SKILL.md`]: "mine\n" }))[0]).toStrictEqual(unmarked);
+  expect(planOf(mini({ [`${OLD_FROM}/notes.md`]: "mine\n" }))[0]).toStrictEqual(unmarked);
+});

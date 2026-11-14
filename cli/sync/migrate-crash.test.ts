@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, expect, it } from "vitest";
 
 import { loadConfig } from "../config.ts";
-import { runSync } from "../sync.ts";
+import { runSync, type SyncDeps } from "../sync.ts";
 import {
   LINES,
   copied,
@@ -13,6 +13,7 @@ import {
   exists,
   git,
   migrate,
+  read,
   snapshot,
   sync,
   write,
@@ -143,6 +144,31 @@ it("reports a conflict as exit 0 under --postinstall, and a failed untrack as an
   expect(exists(locked, COPIED_MARKER)).toBe(true);
 });
 
+/** Fails the plan once the skill rename after the migration wrote the new name into the moved rule. */
+function renameRefused(ctx: { read: (rel: string) => string | null }) {
+  return ctx.read(".repo/rules/team.md")?.includes("/write-plan-deep") === true
+    ? { errors: ["generator saw the renamed skill"], outputs: [] }
+    : { errors: [], outputs: [] };
+}
+
+/** repo sync in `root` with `deps` and no post passes; its exit code and stderr. */
+async function syncWith(root: string, deps: SyncDeps): Promise<{ code: number; err: string[] }> {
+  const err: string[] = [];
+  const code = await runSync([], { cwd: root, stderr: (s) => err.push(s), stdout: () => {} }, { post: [], ...deps });
+
+  return { code, err };
+}
+
+it("reports a generator error the skill rename after the migration causes, the rename kept", async () => {
+  const root = copied();
+  write(root, ".rulesync/rules/team.md", "Run /write-plan first.\n");
+  const { code, err } = await syncWith(root, { generators: [renameRefused] });
+
+  expect(code).toBe(1);
+  expect(err[0]).toBe("repo sync: generator saw the renamed skill\n");
+  expect(read(root, ".repo/rules/team.md")).toBe("Run /write-plan-deep first.\n");
+});
+
 it("reports a config that no longer loads after the migration", async () => {
   const root = copied();
   let loads = 0;
@@ -153,13 +179,7 @@ it("reports a config that no longer loads after the migration", async () => {
     return loads === 1 ? loadConfig(dir) : Promise.resolve({ errors: ["repo.config.ts: copy refused"], ok: false });
   }
 
-  const err: string[] = [];
-
-  const code = await runSync(
-    [],
-    { cwd: root, stderr: (s) => err.push(s), stdout: () => {} },
-    { generators: [], load, post: [] },
-  );
+  const { code, err } = await syncWith(root, { generators: [], load });
 
   expect(code).toBe(1);
   expect(err.join("")).toContain("copy refused");

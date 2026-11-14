@@ -75,6 +75,18 @@ it.each(CASINGS)("an old auto stamp beats an in-progress mode: away plan (%s pay
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
+it.each(CASINGS)(
+  "an unreadable stamp names no mode, so an in-progress mode: away plan gives away (%s payloads)",
+  (casing) => {
+    const ws = kit.temp();
+    const s = live(casing, ws, "m6");
+    setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+    fs.mkdirSync(path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m6`), { recursive: true });
+    expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+    expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
+  },
+);
+
 it.each(CASINGS)("another session's mode: away plan leaves this session's mode alone (%s payloads)", (casing) => {
   const ws = kit.temp();
   setKey(live(casing, ws, "other").reviewed("plans", withMode("away")), "status", "in-progress");
