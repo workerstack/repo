@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   freshToken,
@@ -46,7 +47,7 @@ it("accounts: lists named accounts with what each holds and skips stray entries"
 });
 
 it("accounts: says when nothing is stored", async () => {
-  fs.rmSync(path.join(home, ".workerstack"), { recursive: true });
+  removeTree(path.join(home, ".workerstack"));
   const r = await run("accounts");
   expect(r.logs).toBe("no accounts\n");
 });

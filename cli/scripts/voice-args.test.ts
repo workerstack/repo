@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { parseArgv, readObjectFile, section, str } from "./voice-args.ts";
 
 const dirs: string[] = [];
@@ -18,7 +19,7 @@ function plant(content: string): string {
 }
 
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
 });
 
 describe("parseArgv", () => {

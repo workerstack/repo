@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterAll, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import { clippyHits, runCargo, type CargoResult } from "./clippy.ts";
 
@@ -20,7 +21,7 @@ const ROOT = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-clippy-"));
 
 fs.writeFileSync(path.join(ROOT, "Cargo.lock"), cargoLock("app"));
 
-afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
+afterAll(() => removeTree(ROOT));
 
 type Span = { file: string; line: number; column: number; primary: boolean };
 

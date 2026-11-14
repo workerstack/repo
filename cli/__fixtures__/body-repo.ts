@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach } from "vitest";
 
 import { CONFIG_FILE } from "../config.constants.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 /** What a refused config loads as: `message` under the config file's name. */
 export type Refusal = { errors: string[]; ok: false };
@@ -13,7 +14,7 @@ export type Refusal = { errors: string[]; ok: false };
 export function useBodyRepo(label: string): { repo: (body: string) => string; refusal: (message: string) => Refusal } {
   const temps: string[] = [];
   afterEach(() => {
-    for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+    removeTemps(temps.splice(0));
   });
   return {
     refusal: (message) => ({ errors: [`${CONFIG_FILE}: ${message}`], ok: false }),

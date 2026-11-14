@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach } from "vitest";
 
 import { main, type EvalDeps } from "../eval.ts";
+import { removeTree } from "../../remove-tree.ts";
 
 /** The eval fixtures' root, holding `evals/sample` and the broken specs. */
 export const EVAL_FIXTURES: string = path.join(import.meta.dirname, "..", "..", "eval", "__fixtures__");
@@ -47,7 +48,7 @@ export function useEvalRun(): {
   });
 
   afterEach(() => {
-    fs.rmSync(stateDir, { force: true, recursive: true });
+    removeTree(stateDir);
   });
 
   async function run(argv: string[], deps: EvalDeps = {}): Promise<EvalRun> {

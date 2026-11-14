@@ -7,6 +7,7 @@ import { expect } from "vitest";
 import { main } from "../turn.ts";
 import type { Bins } from "../turn-steps.ts";
 import { WRITABLE_MODE } from "../../sync/write.constants.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 export const PKG_ROOT = path.resolve(import.meta.dirname, "../../..");
 const BIN = path.join(PKG_ROOT, "bin/repo.ts");
@@ -18,7 +19,7 @@ const temps: string[] = [];
 
 /** Removes every repo made since the last call; each test file runs it after each test. */
 export function cleanTemps(): void {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 }
 
 export function git(root: string, ...args: string[]): string {

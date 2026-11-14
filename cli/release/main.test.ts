@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { main } from "./main.ts";
 
 afterEach(() => {
@@ -75,7 +76,7 @@ describe("repo release consumer", () => {
       expect(got).toMatchObject({ code: 1, out: "" });
       expect(got.err).toMatch(/^repo release consumer: bun add failed: /);
     } finally {
-      fs.rmSync(dir, { force: true, recursive: true });
+      removeTree(dir);
     }
   });
 

@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { isHookObject, type ToolArgs } from "./gate-harness.ts";
 import { relInside } from "./gate-paths.ts";
@@ -14,7 +15,7 @@ import type { HookInput } from "./hook-input.ts";
 const roots: string[] = [];
 
 afterEach(() => {
-  for (const dir of roots.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(roots.splice(0));
 });
 
 /** A fresh git repo, so the hook's cwd is its own root. */

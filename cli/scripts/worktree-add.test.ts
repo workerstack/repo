@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { captured, commitIn, git, hasBranch, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 import { worktreeName } from "./worktree-git.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
@@ -61,7 +62,7 @@ it("says so when git cannot make the worktree", () => {
 it("remakes a worktree whose dir was deleted behind git's back", () => {
   const r = tmp.repo();
   addWorktree(r, "gone");
-  fs.rmSync(wt(r, "gone"), { recursive: true });
+  removeTree(wt(r, "gone"));
   expect(addWorktree(r, "gone")).toStrictEqual({ branch: "wt/gone", created: true, path: wt(r, "gone") });
   expect(fs.existsSync(path.join(wt(r, "gone"), "packages/a/index.js"))).toBe(true);
   expect(hasBranch(r, "wt/gone")).toBe(true);

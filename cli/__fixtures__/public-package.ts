@@ -8,10 +8,11 @@ import type { ResolvedConfig } from "../config.ts";
 import type { ResolvedOwner } from "../owner-config.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import { BASE_CONFIG } from "./base-config.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 });
 
 export const OWNER: ResolvedOwner = { name: "Lovro Žagar", github: "lovrozagar" };

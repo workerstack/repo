@@ -48,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo ci wait <branch>` right after `gh workflow run` now looks for the dispatched run for 30s and waits on it, instead of saying there is nothing to wait on.
 - On Linux the commit-msg hook judges `git commit --amend` as the whole commit it makes, so a feat amend keeps its test and CHANGELOG line and an amend over the size limit takes its why-line.
 - `repo coverage` no longer fails on 5 second test timeouts when the machine is busy: its run gives each test and hook 60 seconds by default, and a timeout the project sets still wins.
+- `repo clean`, `repo sync`, `repo init` and the vitest preset's temp root now retry a busy dir with backoff before they give up, instead of failing or skipping it on the first error; on Windows a file held for a moment no longer leaves the dir behind.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

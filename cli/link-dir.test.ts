@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { NAME, mod, put, scene, sibling, stateOf, versionIn, workspace } from "./__fixtures__/link-world.ts";
 import { main } from "./link.ts";
+import { removeTree } from "./remove-tree.ts";
 
 it("links only the packages of a sibling dir that this repo uses", async () => {
   const w = scene();
@@ -13,7 +14,7 @@ it("links only the packages of a sibling dir that this repo uses", async () => {
     [NAME, "flare"],
     ["@workerstack/unused", "unused"],
   ]);
-  fs.rmSync(w.flare, { recursive: true });
+  removeTree(w.flare);
   expect(await main(["suite"], w.io())).toBe(0);
   expect(w.out.filter((line) => line.startsWith("linked "))).toStrictEqual([
     `linked ${NAME} 1.0.0 from ${path.join(suite, "packages", "flare")} (npm had 0.3.2)`,
@@ -25,7 +26,7 @@ it("links only the packages of a sibling dir that this repo uses", async () => {
 it("finds a package of a workspace sibling by its name", async () => {
   const w = scene();
   workspace(path.join(w.base, "suite"), [["@workerstack/other", "other"]]);
-  fs.rmSync(w.flare, { recursive: true });
+  removeTree(w.flare);
   expect(await main(["@workerstack/other"], w.io())).toBe(0);
   expect(versionIn(w.main, "@workerstack/other")).toBe("1.0.0");
 });
@@ -69,7 +70,7 @@ it("links a mapped checkout that is not a sibling", async () => {
   const w = scene();
   sibling(path.join(w.base, "far", "away"), NAME, "0.8.0");
   put(w.main, { "repo.config.ts": `export default { link: { "${NAME}": "../far/away" } }\n` });
-  fs.rmSync(w.flare, { recursive: true });
+  removeTree(w.flare);
   expect(await main([NAME], w.io())).toBe(0);
   expect(versionIn(w.main, NAME)).toBe("0.8.0");
 });

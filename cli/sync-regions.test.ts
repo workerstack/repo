@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "./__fixtures__/remove-temps.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
 import { runSync, type SyncDeps } from "./sync.ts";
 import { gitFiles } from "./sync/git-files.ts";
@@ -34,7 +35,7 @@ const WARNING = `repo sync: ${SETTINGS}: not valid JSONC at line 1 (ValueExpecte
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(temps.splice(0));
 });
 
 /** A synced consumer, outside git, whose manifest still names the fixture files no output writes any more. */

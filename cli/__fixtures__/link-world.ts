@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import { z } from "zod";
 import type { LinkIo } from "../link-io.types.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 const MODULES = "node_modules";
 
@@ -87,7 +88,7 @@ export const USAGE =
 
 const worlds: World[] = [];
 afterEach(() => {
-  for (const w of worlds.splice(0)) fs.rmSync(w.base, { recursive: true, force: true });
+  removeTemps(worlds.splice(0).map((w) => w.base));
 });
 
 /** A fresh scene, removed after the test. */

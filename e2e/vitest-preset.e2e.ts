@@ -3,11 +3,11 @@
  * Workers plugin and wrangler, and runs `bun --bun vitest` the way a user does. A Worker package's tests run in
  * workerd under a path floor; a leaked temp file fails the run; a missing plugin says how to install it.
  */
-import fs from "node:fs";
 import path from "node:path";
 
 import { beforeAll, describe, expect, inject, it } from "vitest";
 
+import { removeTree } from "../cli/remove-tree.ts";
 import { PACKAGE_NAME } from "./registry";
 import { Sandbox } from "./sandbox";
 import { tail } from "./tail";
@@ -112,7 +112,7 @@ describe("a Worker package", () => {
   );
 
   it("says how to install the plugin once it is gone, and exits 1", async () => {
-    fs.rmSync(path.join(sb.repo, "node_modules", ...PLUGIN.split("/")), { recursive: true });
+    removeTree(path.join(sb.repo, "node_modules", ...PLUGIN.split("/")));
     const run = await sb.run("bun", ["--bun", "vitest", "run"], { env: NO_COLOR });
     expect(run.status, tail(run.out)).toBe(FAILED);
     expect(run.out).toContain(NO_PLUGIN_LINE);

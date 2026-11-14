@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, expect, it } from "vitest";
 
 import { loadConfig } from "../config.ts";
+import { removeTree } from "../remove-tree.ts";
 import { runSync, type SyncDeps } from "../sync.ts";
 import {
   LINES,
@@ -87,7 +88,7 @@ it("replans only the removal when .rulesync/ was half removed", async () => {
   const steps = await copiedPlan(root);
   await applyMigration(root, steps.slice(0, -1));
   fs.rmSync(path.join(root, ".rulesync", "scripts", "browser.ts"));
-  fs.rmSync(path.join(root, ".rulesync", "rules"), { recursive: true });
+  removeTree(path.join(root, ".rulesync", "rules"));
   const rest = await copiedPlan(root);
   expect(rest.map((step) => step.kind)).toStrictEqual(["remove"]);
   await applyMigration(root, rest);

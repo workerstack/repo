@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { removeTree } from "../remove-tree.ts";
 import { spawnSync } from "../spawn.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { normalizeRel } from "./manifest.ts";
@@ -138,6 +139,6 @@ export function removeAll(root: string, paths: readonly string[]): void {
         fs.rmSync(path.join(abs, file), { force: true });
     }
 
-    fs.rmSync(abs, { force: true, recursive: true });
+    removeTree(abs);
   }
 }

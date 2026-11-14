@@ -11,12 +11,13 @@ import { bunPath } from "../../../dev/test-paths";
 import { childEnv } from "../../env.ts";
 import { tempDir } from "../../sync/__fixtures__/temp-dirs.ts";
 import type { SettingsValue } from "../settings-table.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** Planted dirs under the OS temp dir, removed after each case; nothing here touches the real home. */
 export function plantDirs(): (prefix: string) => string {
   const dirs: string[] = [];
   afterEach(() => {
-    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+    removeTemps(dirs.splice(0));
   });
   return (prefix) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

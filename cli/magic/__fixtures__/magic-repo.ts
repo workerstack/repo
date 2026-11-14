@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { scriptDiagnostics } from "../../script-diagnostics.ts";
 import type { Diagnostic } from "../../scripts/lint-baseline.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 export const SLOW = 60_000;
 export const NUMBER = "repo(magic-number)";
@@ -21,7 +22,7 @@ export const COPIES = (name: string, text: string) =>
 const temps: string[] = [];
 
 export function cleanTemps(): void {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 }
 
 /** A temp root holding `files`, removed by `cleanTemps`. */

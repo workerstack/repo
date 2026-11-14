@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import type { CargoResult, CargoRun } from "./clippy.ts";
 import { rustCoverage, rustFloorProblems } from "./rust-coverage.ts";
 
@@ -85,7 +86,7 @@ it("matches a root given with a trailing slash, or through a symlink", () => {
   const link = path.join(fs.mkdtempSync(path.join(real, "link-")), "to");
   fs.symlinkSync(real, link);
   expect(rustCoverage(link, writing(json))).toStrictEqual({ ok: true, value });
-  fs.rmSync(path.dirname(link), { force: true, recursive: true });
+  removeTree(path.dirname(link));
 });
 
 it("carries the output of a run that exits nonzero", () => {

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** What `useTmp` hands a suite. Every dir is a real path, so a test compares in the product's spelling. */
 export interface Tmp {
@@ -23,10 +24,7 @@ const IDENTITY = ["-c", "user.email=t@t", "-c", "user.name=t"];
 export function useTmp(): Tmp {
   const made: string[] = [];
   afterEach(() => {
-    for (const d of made.splice(0)) {
-      fs.rmSync(d, { recursive: true, force: true });
-      fs.rmSync(`${d}-alias`, { force: true });
-    }
+    removeTemps(made.splice(0).flatMap((d) => [d, `${d}-alias`]));
   });
   const dir = (prefix: string) => {
     const real = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));

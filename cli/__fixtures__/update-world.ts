@@ -4,6 +4,7 @@ import path from "node:path";
 import type { UpdateIo } from "../update-io.types.ts";
 import type { PackageJson } from "../sync/workspace.ts";
 import { REGISTRY } from "../release/release.constants.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 /** What the fake registry answers for a name: a `latest` version, a 404, a document with no `latest`, or a timeout. */
 export type Reply = string | { status: 404 } | { noLatest: true } | { timeout: true };
@@ -16,7 +17,7 @@ const made: string[] = [];
 
 /** Removes every temp workspace the test made; run it after each test. */
 export function cleanup(): void {
-  for (const dir of made.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(made.splice(0));
 }
 
 /** The reply as the registry's document for one package. */

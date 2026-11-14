@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { packageBin } from "./package-bin.ts";
 import { BINS, vitestBin } from "./turn.ts";
@@ -22,7 +23,7 @@ fs.writeFileSync(path.join(FAKE_NODE, "node"), '#!/bin/sh\necho "fake-node $*"\n
 const NO_NODE = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-no-node-"));
 
 afterAll(() => {
-  for (const dir of [FAKE_NODE, NO_NODE]) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps([FAKE_NODE, NO_NODE]);
 });
 
 afterEach(() => {

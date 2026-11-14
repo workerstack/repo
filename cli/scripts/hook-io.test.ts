@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { HOOK_READ_CHUNK_BYTES } from "./hook-io.constants.ts";
 import { processHookIo, readAllText, readHookInput, type HookIo } from "./hook-io.ts";
 
@@ -86,7 +87,7 @@ describe("HookIo.write", () => {
 const tmpDirs: string[] = [];
 
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
   vi.restoreAllMocks();
 });
 

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import type { Via } from "./estimate.ts";
 import type { RunResult } from "./run.ts";
 import { writeSummary } from "./summary.ts";
@@ -17,7 +18,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(dir, { force: true, recursive: true });
+  removeTree(dir);
 });
 
 function runOf(end: RunResult["end"]): RunResult {

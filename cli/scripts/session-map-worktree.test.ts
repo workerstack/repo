@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { ctxOf, run, worktree } from "./__fixtures__/session-map-kit.ts";
 import { fallbackNotice, header, sessionContext } from "./session-map.ts";
 
@@ -52,7 +52,7 @@ describe("session-map hook", () => {
 
     it("still says it when the map is empty", () => {
       const { wt } = worktree(false);
-      fs.rmSync(path.join(wt, "src"), { recursive: true });
+      removeTree(path.join(wt, "src"));
       const ctx = ctxOf(run(wt, JSON.stringify({ cwd: wt, session_id: "s-empty" })).stdout);
       expect(ctx).toContain("(this worktree has no install)");
       expect(ctx).not.toContain("Folder map (");

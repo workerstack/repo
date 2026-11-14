@@ -3,12 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { parse as parseToml } from "smol-toml";
 import { afterEach, vi } from "vitest";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** A planted home under the OS temp dir, removed after each case; nothing here touches the real home. */
 export function plantHomes(): (prefix: string) => string {
   const dirs: string[] = [];
   afterEach(() => {
-    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+    removeTemps(dirs.splice(0));
   });
   return (prefix) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

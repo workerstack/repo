@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../cli/__fixtures__/remove-temps.ts";
 import { STOCK_SKILLS_REL } from "../cli/scripts/skill-conflicts.ts";
 import type { runSync as RunSync } from "../cli/sync.ts";
 import { capture, respond, tmpDir } from "./sync-pstack-fixtures.ts";
@@ -12,7 +13,7 @@ import { syncPstackSkills } from "./sync-pstack-write.ts";
 const tmpDirs: string[] = [];
 
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 const BRO_URL = "https://raw.githubusercontent.com/backnotprop/pstack/main/skills/bro/SKILL.md";

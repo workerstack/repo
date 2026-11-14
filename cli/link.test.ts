@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 
 import { NAME, mod, put, read, scene, sibling, stateOf, versionIn } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
+import { removeTree } from "./remove-tree.ts";
 
 it("swaps in the packed sibling, warns about a dependency, and says how to undo it", async () => {
   const w = scene();
@@ -21,7 +22,7 @@ it("swaps in the packed sibling, warns about a dependency, and says how to undo 
 
 it("warns when a dependency is not installed at all", async () => {
   const w = scene();
-  fs.rmSync(mod(w.main, "zod"), { recursive: true });
+  removeTree(mod(w.main, "zod"));
   await main([NAME], w.io());
   expect(w.out[1]).toBe(`warning: ${NAME} needs zod ^4, this checkout does not install it`);
 });
@@ -50,7 +51,7 @@ it("exits 1 naming the root when no sibling publishes it", async () => {
 
 it("exits 1 when the sibling has no install to build with", async () => {
   const w = scene();
-  fs.rmSync(path.join(w.flare, "node_modules"), { recursive: true });
+  removeTree(path.join(w.flare, "node_modules"));
   expect(await main([NAME], w.io())).toBe(1);
   expect(w.err).toStrictEqual([
     `repo link: ${w.flare} has no node_modules, so its prepack cannot build; run \`bun install\` there`,
@@ -60,7 +61,7 @@ it("exits 1 when the sibling has no install to build with", async () => {
 
 it("exits 1 when this checkout has no install to link into", async () => {
   const w = scene();
-  fs.rmSync(mod(w.main), { recursive: true });
+  removeTree(mod(w.main));
   expect(await main([NAME], w.io())).toBe(1);
   expect(w.err).toStrictEqual([`repo link: ${w.main} has no node_modules; run \`bun install\` there`]);
 });

@@ -7,6 +7,7 @@ import type { CargoRun } from "../../rust/clippy.ts";
 import { releaseApi } from "../api.ts";
 import type { ApiIo } from "../api.ts";
 import { cleanManifest, fixtureTarball } from "./tarball.ts";
+import { removeTree } from "../../remove-tree.ts";
 
 export const PREFIX = "repo release api: ";
 export const NAME = "@acme/fx";
@@ -84,7 +85,7 @@ export async function api(cwd: string, argv: string[], tools: Tools = {}) {
       return dir;
     },
     list: (dir) => fs.readdirSync(dir),
-    rm: (dir) => fs.rmSync(dir, { recursive: true, force: true }),
+    rm: (dir) => removeTree(dir),
     registry: tools.registry ?? REGISTRY,
     fetch: tools.fetch ?? unused("fetch"),
     cargo: tools.cargo ?? unused("cargo"),

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { removeTree } from "../cli/remove-tree.ts";
 import { repoEnv } from "../cli/repo-env.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { BUN_SHIM_PREFIX, PERMISSION_DENIED } from "./temp-root.constants.ts";
@@ -36,7 +37,7 @@ function removeDeadRoots(base: string): void {
   for (const name of fs.readdirSync(base)) {
     const pid = pidOf(name);
 
-    if (pid !== undefined && !isAlive(pid)) fs.rmSync(path.join(base, name), { force: true, recursive: true });
+    if (pid !== undefined && !isAlive(pid)) removeTree(path.join(base, name));
   }
 }
 
@@ -59,7 +60,7 @@ function finish(root: string): void {
   }
 
   const left = fs.readdirSync(root).filter((name) => !name.startsWith(BUN_SHIM_PREFIX));
-  fs.rmSync(root, { force: true, recursive: true });
+  removeTree(root);
 
   if (left.length === 0) return;
   process.exitCode = FAILED;
@@ -70,7 +71,7 @@ export function setup(): () => void {
   const root = rootPath();
   removeDeadRoots(path.dirname(root));
   // A live pid's root is this run's own; one left by an earlier process with the same pid is stale.
-  fs.rmSync(root, { force: true, recursive: true });
+  removeTree(root);
   fs.mkdirSync(root);
 
   return () => finish(root);

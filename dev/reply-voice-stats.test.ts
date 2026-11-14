@@ -4,13 +4,14 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "../cli/__fixtures__/remove-temps.ts";
 import type { JsonObject } from "../cli/json.ts";
 import { replyVoiceStats, run } from "./reply-voice-stats.ts";
 
 const tmpDirs: string[] = [];
 
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 function reply(text: string, timestamp: string, extra: JsonObject = {}) {

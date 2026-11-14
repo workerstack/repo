@@ -4,12 +4,13 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTemps } from "./__fixtures__/remove-temps.ts";
 import { removeTree } from "./remove-tree.ts";
 
 const made: string[] = [];
 
 afterEach(() => {
-  for (const dir of made.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(made.splice(0));
 });
 
 function tmp(): string {

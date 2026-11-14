@@ -6,6 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { standards } from "../../sync/standards.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 export const SLOW = 60_000;
 export const NN = "typescript(no-non-null-assertion)";
@@ -18,7 +19,7 @@ export const WAIT = "export function wait(): number {\n  return 5000;\n}\n";
 const temps: string[] = [];
 
 export function cleanTemps(): void {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 }
 
 /** `count` functions, each with one non-null assertion, the first named after the file `<stem>.ts` they go in. */

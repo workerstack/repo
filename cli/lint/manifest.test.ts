@@ -5,11 +5,12 @@ import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Json } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import { readManifest } from "./manifest.ts";
 
 const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-lint-manifest-")));
 
-afterAll(() => fs.rmSync(dir, { force: true, recursive: true }));
+afterAll(() => removeTree(dir));
 
 /** Writes `manifest` as a temp package.json and reads it back. */
 function read(manifest: Json) {

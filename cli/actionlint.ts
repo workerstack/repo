@@ -33,6 +33,7 @@ import {
 import { findRoot, loadConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import { readJson } from "./json.ts";
+import { removeTree } from "./remove-tree.ts";
 import { type Captured } from "./scripts/lint.ts";
 import { stateHome } from "./scripts/setup-files.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
@@ -152,7 +153,7 @@ async function install(plan: Plan): Promise<Binary> {
     return { ok: true, path: plan.target };
   } finally {
     fs.rmSync(archive, { force: true });
-    fs.rmSync(extracted, { force: true, recursive: true });
+    removeTree(extracted);
   }
 }
 

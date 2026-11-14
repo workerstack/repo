@@ -5,11 +5,18 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { planBuild, removeBuild } from "./build-dirs.ts";
 import { toolEnv } from "./tool-env.ts";
 
 useTempDirs();
+
+/** A remove that finds `.next` busy and removes anything else. */
+function busy(target: string): void {
+  if (target.endsWith(".next")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
+  removeTree(target);
+}
 
 function git(root: string, ...args: string[]) {
   return execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
@@ -99,7 +106,7 @@ it("adds the dir names the config lists, still only where git ignores them", () 
 it("removes what was planned and nothing else, the tracked .vite and the unignored .turbo among what stays", () => {
   const root = repo();
   const plan = planBuild(root, { deps: true, extra: [] });
-  const result = plan.ok ? removeBuild(plan.items, { dryRun: false, rm: fs.rmSync }) : null;
+  const result = plan.ok ? removeBuild(plan.items, { dryRun: false, rm: removeTree }) : null;
   expect(result?.skipped).toStrictEqual([]);
   expect(result?.done).toHaveLength(plan.ok ? plan.items.length : -1);
 
@@ -112,7 +119,7 @@ it("removes what was planned and nothing else, the tracked .vite and the unignor
 it("removes nothing on a dry run, and lists the same items", () => {
   const root = repo();
   const plan = planBuild(root, { deps: true, extra: [] });
-  const result = plan.ok ? removeBuild(plan.items, { dryRun: true, rm: fs.rmSync }) : null;
+  const result = plan.ok ? removeBuild(plan.items, { dryRun: true, rm: removeTree }) : null;
   expect(result?.done).toHaveLength(plan.ok ? plan.items.length : -1);
   expect(fs.existsSync(path.join(root, ".next/cache/a.bin"))).toBe(true);
   expect(fs.existsSync(path.join(root, "node_modules/x/index.js"))).toBe(true);
@@ -121,18 +128,13 @@ it("removes nothing on a dry run, and lists the same items", () => {
 it("a second plan after removing finds nothing, and a path that fails is skipped with its code", () => {
   const root = repo();
 
-  const busy = ((target: string) => {
-    if (target.endsWith(".next")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
-    fs.rmSync(target, { force: true, recursive: true });
-  }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
-
   const plan = planBuild(root, { deps: false, extra: [] });
   const result = plan.ok ? removeBuild(plan.items, { dryRun: false, rm: busy }) : null;
   expect(result?.skipped.map((entry) => entry.code)).toStrictEqual(["EBUSY", "EBUSY"]);
   const clean = planBuild(root, { deps: false, extra: [] });
   expect(clean.ok ? names(clean, "dir").length : -1).toBe(2);
 
-  if (clean.ok) removeBuild(clean.items, { dryRun: false, rm: fs.rmSync });
+  if (clean.ok) removeBuild(clean.items, { dryRun: false, rm: removeTree });
   expect(planBuild(root, { deps: false, extra: [] })).toStrictEqual({ items: [], ok: true });
 });
 

@@ -1,10 +1,10 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
 import { removePlanted, repoOnMain, write } from "./__fixtures__/planted-repo.ts";
 import { ratchetProblems } from "./check-ratchets.ts";
+import { removeTree } from "./remove-tree.ts";
 
 afterEach(removePlanted);
 
@@ -28,7 +28,7 @@ it("fails a dropped floor while its package dir exists, and passes one dropped w
   const dir = repoOnMain(main);
   write(dir, { [FILE]: { ".": 89 } });
   expect(ratchetProblems(dir, paths)).toStrictEqual([`${FILE} drops packages/a from 70; floors only rise`]);
-  fs.rmSync(path.join(dir, "packages/a"), { recursive: true });
+  removeTree(path.join(dir, "packages/a"));
   expect(ratchetProblems(dir, paths)).toStrictEqual([]);
 });
 

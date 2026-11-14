@@ -1,9 +1,9 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
+import { removeTree } from "../remove-tree.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { git, lesson, repo, runLessons, save } from "./__fixtures__/lessons-kit.ts";
 import { LESSONS_DIR } from "./lessons.constants.ts";
@@ -32,7 +32,7 @@ it("matches against the checkout's lessons from a subdir and from a worktree", (
   const typed = runLessons(ws, "match", path.join(aliasOf(ws), "packages/a/src/x.ts"));
   expect(typed.stdout).toContain(".repo/lessons/pkg-a.md");
   git(ws, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
-  fs.rmSync(path.join(ws, LESSONS_DIR), { recursive: true });
+  removeTree(path.join(ws, LESSONS_DIR));
   const wt = runLessons(path.join(ws, ".worktrees/w/packages/a"), "match", "src/x.ts");
   expect(wt.status, wt.stderr).toBe(0);
   expect(wt.stdout).toContain(".repo/lessons/pkg-a.md");

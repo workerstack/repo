@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import {
   HOOK_COMMANDS_KEY,
@@ -17,7 +18,7 @@ import {
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(temps.splice(0));
 });
 
 describe("hashText", () => {

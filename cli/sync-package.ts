@@ -15,6 +15,7 @@ import {
   UNPACKED_DIR,
 } from "./link.constants.ts";
 import { PackError } from "./pack-error.ts";
+import { removeTree } from "./remove-tree.ts";
 
 /** Runs a command, or throws a PackError with what it printed. */
 function run(command: string[], cwd: string): string {
@@ -88,6 +89,6 @@ export async function syncPackage(root: string, target: LinkTarget): Promise<Man
 
     return manifest;
   } finally {
-    fs.rmSync(temp, { force: true, recursive: true });
+    removeTree(temp);
   }
 }

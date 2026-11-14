@@ -16,6 +16,7 @@ import { moveOldConfig } from "../migrate-config-name.ts";
 import { planMigration, generatedFiles, type MigrateDeps, type MigrationStep } from "../migrate.ts";
 import { readWorkspace } from "../workspace.ts";
 import { tempDir } from "./temp-dirs.ts";
+import { removeTree } from "../../remove-tree.ts";
 
 /** This repo's root, linked into each consumer as the stock package. */
 export const SELF_ROOT: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -62,7 +63,7 @@ export function fixtureDir(): string {
   // file, since that move is not what these suites test
   git(dir, "init", "-q");
   moveOldConfig(dir, { check: false });
-  fs.rmSync(path.join(dir, ".git"), { recursive: true, force: true });
+  removeTree(path.join(dir, ".git"));
   // the packed config lists packs that no longer exist; the migration under test starts from a config that loads
   fs.writeFileSync(
     path.join(dir, "repo.config.ts"),
@@ -74,7 +75,7 @@ export function fixtureDir(): string {
 
 /** Removes the extracted fixture; a test file that used it calls this after all its tests. */
 export function dropFixture(): void {
-  if (extracted.dir !== undefined) fs.rmSync(extracted.dir, { recursive: true, force: true });
+  if (extracted.dir !== undefined) removeTree(extracted.dir);
 }
 
 /** Writes `text` at `rel`, first making a file sync left read-only writable, as a hand edit has to. */

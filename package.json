@@ -39,6 +39,8 @@
     "dist/cli/json.d.ts",
     "dist/cli/package-json.js",
     "dist/cli/package-json.d.ts",
+    "dist/cli/remove-tree*.js",
+    "dist/cli/remove-tree*.d.ts",
     "dist/cli/repo-env*.js",
     "dist/cli/repo-env*.d.ts",
     "dist/cli/rust/floors*.js",

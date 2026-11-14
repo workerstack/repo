@@ -7,6 +7,7 @@ import { cleanBuilds } from "../clean-builds.ts";
 import { runClean } from "../clean-run.ts";
 import { childEnv } from "../../env.ts";
 import { IGNORED_DIRS, REPO } from "../../repo-dirs.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** The clock every clean test plans against, and its units. */
 export const NOW: number = Date.parse("2026-11-03T12:00:00Z");
@@ -27,7 +28,7 @@ export function cleanDirs(): (prefix: string) => string {
   const dirs: string[] = [];
   afterEach(() => {
     vi.restoreAllMocks();
-    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+    removeTemps(dirs.splice(0));
   });
   return (prefix) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

@@ -17,6 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadConfig } from "../cli/config.ts";
+import { removeTree } from "../cli/remove-tree.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import type { Output } from "../cli/sync/outputs.ts";
 import { PACKAGE_NAME } from "../cli/sync/package-name.constants.ts";
@@ -88,7 +89,7 @@ export async function renderFixtureTrees(): Promise<Map<string, string>> {
 
     return new Map([...files].toSorted(([a], [b]) => byCodeUnit(a, b)));
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    removeTree(root);
   }
 }
 
@@ -112,7 +113,7 @@ type Io = { out: (text: string) => void };
 async function run(io: Io): Promise<number> {
   const { root, golden } = fixtureDirs();
   const files = await renderFixtureTrees();
-  fs.rmSync(golden, { force: true, recursive: true });
+  removeTree(golden);
 
   for (const [rel, content] of files) {
     const file = path.join(golden, ...rel.split("/"));

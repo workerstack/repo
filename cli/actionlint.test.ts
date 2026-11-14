@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { removePlanted, tempDir } from "./__fixtures__/planted-repo.ts";
 import { checkActionlintAt, type Spawn } from "./actionlint.ts";
 import { childEnv } from "./env.ts";
+import { removeTree } from "./remove-tree.ts";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -61,7 +62,7 @@ it("runs nothing without a config, without a workflow pack or without a workflow
   expect(await checkActionlintAt(none.root, { cacheDir: none.cacheDir, fetch: failFetch, spawn })).toStrictEqual({
     problems: [],
   });
-  fs.rmSync(path.join(none.root, ".github"), { recursive: true });
+  removeTree(path.join(none.root, ".github"));
   expect(await checkActionlintAt(none.root, { cacheDir: none.cacheDir, fetch: failFetch, spawn })).toStrictEqual({
     problems: [],
   });

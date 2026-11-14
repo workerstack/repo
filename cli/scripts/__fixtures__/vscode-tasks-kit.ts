@@ -7,10 +7,11 @@ import { afterEach } from "vitest";
 
 import { stripJsonc } from "../strip-jsonc.ts";
 import type { TasksFile, TasksIo } from "../vscode-tasks.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
 });
 
 export function tempRoot() {

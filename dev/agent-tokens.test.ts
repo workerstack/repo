@@ -4,13 +4,14 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { removeTemps } from "../cli/__fixtures__/remove-temps.ts";
 import { run } from "./agent-tokens.ts";
 
 const USAGE = "usage: bun dev/agent-tokens.ts <session dir> [--match <description substring>]";
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(temps.splice(0));
 });
 
 type Spawn = { id: string; agentType: string; description: string; entries: object[] };

@@ -28,6 +28,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 
 import { newIdentity, reveal, seal, type AgeKeyPair } from "../env/age.ts";
 import type { EnvDeps } from "../scripts/env-io.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 const SELF_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -65,7 +66,7 @@ const roots: string[] = [];
 export function useEnvRepos(): void {
   afterEach(() => {
     vi.unstubAllEnvs();
-    for (const dir of roots.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+    removeTemps(roots.splice(0));
   });
   beforeEach(() => {
     const elsewhere = fs.mkdtempSync(path.join(os.tmpdir(), "env-elsewhere-"));

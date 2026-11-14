@@ -5,11 +5,12 @@ import { onTestFinished } from "vitest";
 import type { ExampleTools } from "../docs-examples.ts";
 import type { DocsIo } from "../docs-io.ts";
 import type { DocsTools } from "../docs-root.ts";
+import { removeTree } from "../remove-tree.ts";
 
 /** A temp folder holding `files` (relative path to text), removed when the test ends. */
 export function tempRoot(files: Record<string, string> = {}): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "repo-docs-"));
-  onTestFinished(() => fs.rmSync(root, { recursive: true, force: true }));
+  onTestFinished(() => removeTree(root));
   for (const [rel, text] of Object.entries(files)) {
     fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
     fs.writeFileSync(path.join(root, rel), text);

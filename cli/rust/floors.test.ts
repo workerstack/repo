@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { isString, type Json } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import { isRustKey, readFloorsFile } from "./floors.ts";
 
 let dir = "";
@@ -14,7 +15,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(dir, { force: true, recursive: true });
+  removeTree(dir);
 });
 
 function write(value: Json): string {

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { childEnv } from "../cli/env.ts";
+import { removeTree } from "../cli/remove-tree.ts";
 
 /** Each case plants a tiny vitest project that uses presets/temp-root.ts and runs the real vitest on it. */
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -33,7 +34,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(parent, { force: true, recursive: true });
+  removeTree(parent);
 });
 
 function runsDir() {

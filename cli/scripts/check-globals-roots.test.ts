@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import {
   PROJECT_OK,
@@ -114,7 +115,7 @@ describe("consumerRoot overlay", () => {
       drift: [{ host: "claude", key: "customKey" }],
       ok: false,
     });
-    fs.rmSync(path.join(ws, ".repo"), { recursive: true });
+    removeTree(path.join(ws, ".repo"));
     expect(
       checkGlobals({ home, sourceRoot: stock, workspaceRoot: ws }).drift?.some((d) => d.key === "customKey"),
     ).toBeFalsy();

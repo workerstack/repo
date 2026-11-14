@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { cacheKey, openCache } from "./cache.ts";
 
 const parts = { input: "in", maxTokens: 100, model: "m", sample: 0, system: "sys" };
@@ -16,7 +17,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  fs.rmSync(dir, { force: true, recursive: true });
+  removeTree(dir);
 });
 
 it("returns what was set", () => {

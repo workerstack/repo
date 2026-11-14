@@ -4,10 +4,11 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import { note } from "../board.ts";
 import type { BoardRow, NoteOptions, ProcessInfo } from "../board.types.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const homes: string[] = [];
 afterEach(() => {
-  for (const dir of homes.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(homes.splice(0));
 });
 
 /** A fresh planted home, removed after the case. */

@@ -7,6 +7,7 @@ import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
 import { type VitestRun, runVitest, untar } from "./red-proof-vitest.ts";
 import { REPORT_FAILED, STATUS_ADDED, STATUS_DELETED, STDERR_TAIL_LINES } from "./red-proof.constants.ts";
+import { removeTree } from "./remove-tree.ts";
 import { RED_PROOF, STATE, repoPath } from "./repo-dirs.ts";
 import { type GitRun, runGit } from "./sync/standards.ts";
 import { isCodeFile, isSource, isTestFile } from "./test-files.ts";
@@ -204,7 +205,7 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
 
   if (tests.length === 0) return { ok: false, problem: noFile(base) };
   const tree = repoPath(root, STATE, `${RED_PROOF}${process.pid}`);
-  fs.rmSync(tree, { force: true, recursive: true });
+  removeTree(tree);
   fs.mkdirSync(tree, { recursive: true });
 
   try {
@@ -221,6 +222,6 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
 
     return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length, base);
   } finally {
-    fs.rmSync(tree, { force: true, recursive: true });
+    removeTree(tree);
   }
 }

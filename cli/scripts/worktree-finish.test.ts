@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./__fixtures__/worktree-repo.ts";
 import { expectOnlyMainWorktree } from "./__fixtures__/worktree-scenarios.ts";
 import { addWorktree, finishWorktree } from "./worktree-lifecycle.ts";
@@ -82,7 +83,7 @@ it("converges when a crashed run left the work merged, with the worktree gone or
 it("unregisters a worktree whose dir another session deleted, then finishes the merged branch", () => {
   const r = tmp.repo();
   addWorktree(r, "lost");
-  fs.rmSync(wt(r, "lost"), { recursive: true });
+  removeTree(wt(r, "lost"));
   expect(finishWorktree(r, "lost").sha).toBeNull();
   expectOnlyMainWorktree(r);
   expect(hasBranch(r, "wt/lost")).toBe(false);

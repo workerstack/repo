@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { childEnv } from "../env.ts";
 import { IGNORE_LINES } from "./__fixtures__/clean-kit.ts";
 import { cleanPlan } from "./clean-plan.ts";
@@ -21,7 +22,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
 
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
 });
 
 function tempDir() {

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "./__fixtures__/remove-temps.ts";
 import { initMcpJson } from "./init-mcp-json.ts";
 
 const dirs: string[] = [];
@@ -18,7 +19,7 @@ function tmp() {
 afterEach(() => {
   vi.restoreAllMocks();
 
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
 });
 
 describe("initMcpJson", () => {

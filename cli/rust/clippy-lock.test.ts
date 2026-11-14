@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import { clippyHits, type CargoResult } from "./clippy.ts";
 
@@ -18,7 +19,7 @@ fs.mkdirSync(BARE);
 
 fs.writeFileSync(path.join(ROOT, "Cargo.lock"), cargoLock("app"));
 
-afterAll(() => fs.rmSync(ROOT, { force: true, recursive: true }));
+afterAll(() => removeTree(ROOT));
 
 /** A runner that records its calls and returns an empty run with exit `status`. */
 function cargo(status: number, extra: Partial<CargoResult> = {}) {

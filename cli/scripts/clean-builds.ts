@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
 import { loadConfig } from "../config.ts";
+import { removeTree } from "../remove-tree.ts";
 import { AFTER_DEPS, CLEAN_PREFIX } from "./build-dirs.constants.ts";
 import { planBuild, removeBuild, type BuildItem } from "./build-dirs.ts";
 import { size } from "./clean-run.ts";
@@ -41,7 +42,7 @@ function buildSummary(done: readonly BuildItem[], { deps, dryRun }: Pick<BuildRu
  * code.
  */
 export function cleanBuilds(run: BuildRun): number {
-  const { root, deps, dryRun, names, out, rm = fs.rmSync } = run;
+  const { root, deps, dryRun, names, out, rm = removeTree } = run;
   const plan = planBuild(root, { deps, extra: names });
 
   if (!plan.ok) {

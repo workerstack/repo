@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { removeTree } from "../remove-tree.ts";
 import { MANIFEST_REL } from "./manifest.ts";
 import type { Output } from "./outputs.ts";
 import { type JournalEntry, journalStep, undoJournal } from "./write-journal.ts";
@@ -140,7 +141,7 @@ function removePath(root: string, rel: string): string | null {
 function writeLink(abs: string, target: string, platform: NodeJS.Platform): string | null {
   try {
     unlock(abs);
-    fs.rmSync(abs, { force: true, recursive: true });
+    removeTree(abs);
     fs.mkdirSync(path.dirname(abs), { recursive: true });
 
     if (platform === WINDOWS_PLATFORM) fs.symlinkSync(path.resolve(path.dirname(abs), target), abs, "junction");
