@@ -5270,6 +5270,7 @@
     "ecbe8078fb24de88"
   ],
   "cli/scripts/lint-main.ts": [
+    "16b4a933b979ad49",
     "2c19debd1e276afc",
     "3ed863c7d662a583",
     "4fc9bf096b81fc70",
@@ -5391,6 +5392,7 @@
     "f55dcaba623e33ba"
   ],
   "cli/scripts/lint-spawn.test.ts": [
+    "0aed1c67de024804",
     "0ffd94b941cbd4d1",
     "3d9fdfc18deda4a7",
     "5520835dc9657826",
@@ -5462,6 +5464,7 @@
     "cf25d9c7d89c0af4",
     "e36eb5d2cd48a734",
     "e5265aacb5a5cf31",
+    "e555a9262973babc",
     "e864a5974b4dc2cd",
     "e8a9bfb33609f4c5",
     "ed3cee4ece4fc45f"
