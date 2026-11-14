@@ -82,10 +82,11 @@ function summarize(numstat: string, reader: Reader): StagedChange {
 
 /**
  * The staged change at `root`: every staged path, and the insertions plus deletions that count toward the size
- * limit, leaving out binaries, lockfiles, the lint baseline and `linguist-generated` paths. Nothing outside a repo.
+ * limit, leaving out binaries, lockfiles, the lint baseline and `linguist-generated` paths, measured from `base` (a
+ * commit or tree; git's own HEAD, or nothing on an unborn branch, when undefined). Nothing outside a repo.
  */
-export function stagedChange(root: string, git: GitRun = runGit): StagedChange {
-  const diff = git(root, ["diff", "--cached", "--numstat", "-z"]);
+export function stagedChange(root: string, git: GitRun = runGit, base?: string): StagedChange {
+  const diff = git(root, ["diff", "--cached", "--numstat", "-z", ...(base === undefined ? [] : [base])]);
 
   return diff.status === 0
     ? summarize(diff.stdout, { attrArgs: ["--cached"], git, root })

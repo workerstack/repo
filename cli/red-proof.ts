@@ -16,15 +16,26 @@ export type NameStatus = { status: string; path: string };
 
 export type { VitestRun } from "./red-proof-vitest.ts";
 
-export type RedProofDeps = { git?: GitRun; vitest?: VitestRun; timeoutMs?: number };
+/** The commit the change builds on, whose source the tests run against: HEAD, or HEAD's parent for an amend. */
+export type ProofBase = "HEAD" | "HEAD^";
+
+export type RedProofDeps = { base?: ProofBase; git?: GitRun; vitest?: VitestRun; timeoutMs?: number };
 
 export type RedProofResult = { ok: true; line: string } | { ok: false; problem: string };
 
 const E2E_PATH = /(^|\/)e2e\//;
 const TIMEOUT_MS = 5 * 60_000;
 
-const NO_FILE =
-  "red-proof: no changed vitest test file outside e2e/ to run on HEAD; add one that fails without the change";
+/** The refusal when no changed test file can run on `base`. */
+function noFile(base: ProofBase): string {
+  return `red-proof: no changed vitest test file outside e2e/ to run on ${base}; add one that fails without the change`;
+}
+
+/** The skip line when `base` does not exist: an unborn branch, or an amend of a root commit. */
+const NO_BASE: Record<ProofBase, string> = {
+  HEAD: "red-proof: skipped, no HEAD to run against",
+  "HEAD^": "red-proof: skipped, no parent of HEAD to run against",
+};
 
 /** The entries of `git diff --name-status -z` output. */
 export function parseNameStatus(text: string): NameStatus[] {
@@ -50,9 +61,9 @@ function must(what: string, result: ReturnType<GitRun>): string {
 
 const ARCHIVE = ".red-proof.tar";
 
-type Tree = { root: string; tree: string; git: GitRun };
+type Tree = { root: string; tree: string; git: GitRun; base: ProofBase };
 
-/** Unpacks the staged tree into the HEAD tree dir. */
+/** Unpacks the staged tree into the base tree dir. */
 function unpack({ root, tree, git }: Tree): void {
   const archive = path.join(tree, ARCHIVE);
   const sha = must("git write-tree", git(root, ["write-tree"])).trim();
@@ -62,8 +73,8 @@ function unpack({ root, tree, git }: Tree): void {
   must("tar", untar(tree, ["-xf", ARCHIVE]));
 }
 
-/** Puts every changed source file back from HEAD, or removes it when new. */
-function putBack({ root, tree, git }: Tree, change: NameStatus[]): void {
+/** Puts every changed source file back from the base, or removes it when new. */
+function putBack({ root, tree, git, base }: Tree, change: NameStatus[]): void {
   for (const { status, path: file } of change.filter((entry) => isSource(entry.path))) {
     const target = path.join(tree, file);
 
@@ -71,7 +82,7 @@ function putBack({ root, tree, git }: Tree, change: NameStatus[]): void {
       fs.rmSync(target, { force: true });
     } else {
       fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.writeFileSync(target, must(`git show HEAD:${file}`, git(root, ["show", `HEAD:${file}`])));
+      fs.writeFileSync(target, must(`git show ${base}:${file}`, git(root, ["show", `${base}:${file}`])));
     }
   }
 }
@@ -134,7 +145,7 @@ type Ran = { problem: string } | { failed: string[]; passed: string[] };
 type Run = (args: string[], cwd: string) => ReturnType<VitestRun>;
 
 /**
- * Runs the groups' test files in the HEAD tree; the problem when a run wrote no report, else who failed and who
+ * Runs the groups' test files in the base tree; the problem when a run wrote no report, else who failed and who
  * passed.
  */
 function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ran {
@@ -166,38 +177,38 @@ function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ra
   return { failed, passed };
 }
 
-/** Red when any test file failed on HEAD, else a refusal naming the ones that passed. */
-function verdict(ran: { failed: string[]; passed: string[] }, total: number): RedProofResult {
+/** Red when any test file failed on `base`, else a refusal naming the ones that passed. */
+function verdict(ran: { failed: string[]; passed: string[] }, total: number, base: ProofBase): RedProofResult {
   if (ran.failed.length > 0)
-    return { line: `red-proof: ${ran.failed.length} of ${total} changed test files failed on HEAD`, ok: true };
+    return { line: `red-proof: ${ran.failed.length} of ${total} changed test files failed on ${base}`, ok: true };
   const named = ran.passed.join(", ");
 
   return {
     ok: false,
     problem:
-      `red-proof: no changed test file fails on HEAD's source (${named} passed); ` +
+      `red-proof: no changed test file fails on ${base}'s source (${named} passed); ` +
       "a feat or fix needs one that fails without the change",
   };
 }
 
 /**
- * Runs the changed vitest test files against HEAD's source and says whether one fails there. The staged tree is built
- * under `<root>/.repo/tmp/red-proof-<pid>/` with every changed source file put back; the dir is removed on the way out.
+ * Runs the changed vitest test files against the source of `deps.base` (HEAD by default) and says whether one fails
+ * there. The staged tree is built under `<root>/.repo/tmp/red-proof-<pid>/` with every changed source file put back;
+ * the dir is removed on the way out.
  */
 export function redProof(root: string, change: NameStatus[], deps: RedProofDeps = {}): RedProofResult {
-  const { git = runGit, vitest = runVitest, timeoutMs = TIMEOUT_MS } = deps;
+  const { base = "HEAD", git = runGit, vitest = runVitest, timeoutMs = TIMEOUT_MS } = deps;
 
-  if (git(root, ["rev-parse", "--verify", "--quiet", "HEAD"]).status !== 0)
-    return { line: "red-proof: skipped, no HEAD to run against", ok: true };
+  if (git(root, ["rev-parse", "--verify", "--quiet", base]).status !== 0) return { line: NO_BASE[base], ok: true };
   const tests = change.filter((entry) => entry.status !== STATUS_DELETED && isRunnable(entry.path));
 
-  if (tests.length === 0) return { ok: false, problem: NO_FILE };
+  if (tests.length === 0) return { ok: false, problem: noFile(base) };
   const tree = repoPath(root, STATE, `${RED_PROOF}${process.pid}`);
   fs.rmSync(tree, { force: true, recursive: true });
   fs.mkdirSync(tree, { recursive: true });
 
   try {
-    const context = { git, root, tree };
+    const context = { base, git, root, tree };
     unpack(context);
     putBack(context, change);
 
@@ -208,7 +219,7 @@ export function redProof(root: string, change: NameStatus[], deps: RedProofDeps 
 
     const ran = runGroups(tree, groups, (args, cwd) => vitest(args, cwd, timeoutMs));
 
-    return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length);
+    return "problem" in ran ? { ok: false, problem: ran.problem } : verdict(ran, tests.length, base);
   } finally {
     fs.rmSync(tree, { force: true, recursive: true });
   }
