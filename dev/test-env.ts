@@ -1,10 +1,14 @@
 import os from "node:os";
 import path from "node:path";
 
+import { WINDOWS_PLATFORM } from "../cli/actionlint.constants.ts";
 import { toolEnv } from "../cli/scripts/tool-env.ts";
 import {
+  AUTOCRLF_CONFIG,
   BUN_CACHE_VAR,
   GIT_CONFIG_COUNT,
+  GIT_CONFIG_GLOBAL,
+  GIT_CONFIG_SYSTEM,
   GIT_CONFIG_KEY,
   GIT_CONFIG_VALUE,
   HOST_PROJECT_VARS,
@@ -24,11 +28,19 @@ import {
  * Recent git also starts `maintenance run --auto --detach` (and `gc --auto --detach`) after a commit or rebase; that
  * child outlives the test and races the recursive removal of its temp dir. Env config reaches every git a test or a
  * spawned CLI runs, whatever repo it makes; it is appended to any count already present.
+ *
+ * The Windows runner's git checks files out with CRLF (`core.autocrlf=true` in its system config), and fixture repos
+ * have no `.gitattributes`, so a test that matches LF only in a file git wrote failed only there. On `platform` other
+ * than Windows, git's system config is `dev/autocrlf.gitconfig`, which sets the same, so such a test fails on every
+ * run; a fixture's own `core.autocrlf` still wins, as it does on Windows. An inherited global or system config file
+ * goes, so neither the host's choice nor a developer's own config reaches a test.
  */
-export function testEnv(inherited: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function testEnv(inherited: NodeJS.ProcessEnv, platform: NodeJS.Platform = process.platform): NodeJS.ProcessEnv {
   const env = toolEnv(inherited);
 
-  for (const key of HOST_PROJECT_VARS) delete env[key];
+  for (const key of [...HOST_PROJECT_VARS, GIT_CONFIG_GLOBAL, GIT_CONFIG_SYSTEM]) delete env[key];
+
+  if (platform !== WINDOWS_PLATFORM) env[GIT_CONFIG_SYSTEM] = path.join(import.meta.dirname, AUTOCRLF_CONFIG);
   const start = Number(env[GIT_CONFIG_COUNT] ?? 0);
   env[BUN_CACHE_VAR] = env[BUN_CACHE_VAR] ?? path.join(os.homedir(), ".bun", "install", "cache", "@t@");
   env[GIT_CONFIG_COUNT] = String(start + QUIET_GIT.length);

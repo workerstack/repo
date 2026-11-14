@@ -26,8 +26,8 @@ import {
   SYNC_HINT,
   UNDER,
 } from "./json-keys.constants.ts";
-import { GIT_CONFIG_ENV, GIT_ENV_PREFIX } from "./lint.constants.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
+import { toolEnv } from "./tool-env.ts";
 
 /** A file whose keys are out of order, and the path of the first key that is. */
 type Found = { file: string; key: string };
@@ -48,15 +48,6 @@ export function sortedJsonValue(data: JsonInput, indent: number = INDENT): strin
   return sortedJsonText(text)?.text ?? text;
 }
 
-/**
- * git's environment without the `GIT_*` variables a hook hands over, which would aim it at the repo being committed.
- */
-function gitEnv(): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(childEnv()).filter(([name]) => !name.startsWith(GIT_ENV_PREFIX) || GIT_CONFIG_ENV.test(name)),
-  );
-}
-
 /** What listing the json files gives back: git's exit status (null when it did not run) and its output. */
 type GitListing = { status: number | null; stdout: string };
 
@@ -68,7 +59,7 @@ function gitList(root: string): GitListing {
   return spawnSync("git", ["ls-files", "-co", "--exclude-standard", "-z", "--", ...JSONC_PATHSPECS], {
     cwd: root,
     encoding: "utf8",
-    env: gitEnv(),
+    env: toolEnv(childEnv()),
   });
 }
 
