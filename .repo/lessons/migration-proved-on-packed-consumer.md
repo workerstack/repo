@@ -1,9 +1,9 @@
 ---
 name: migration-proved-on-packed-consumer
 paths: ["cli/sync/migration-*.ts","cli/sync/tmp-repo*.ts","cli/sync/agents-file.ts","cli/sync/agents-stock.ts","cli/sync/region.ts"]
-hits: 3
+hits: 4
 last-hit: 2026-11-14
-evidence: ["roadmap 5","roadmap 10","roadmap 12"]
+evidence: ["roadmap 5","roadmap 10","roadmap 12","roadmap 15"]
 ---
 
 # Prove a sync migration on a consumer built from the old packed tgz
