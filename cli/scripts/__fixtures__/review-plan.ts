@@ -6,10 +6,14 @@ import type { HookOutput, ToolArgs } from "../gate-harness.ts";
 import { z } from "zod";
 import { isRecord, readJson } from "../../json.ts";
 import type { HookInput } from "../hook-input.ts";
-import { main as orchMain } from "../orchestrate-parent.ts";
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
+import { mainWith } from "../orchestrate-parent.ts";
 import { stampPath, writeStamp } from "../strategy.ts";
 import { camelCall, inSession, kindWrite, replyOf, type WriteKind } from "./hook-payload.ts";
 import { runHook } from "./run-hook.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const orchMain = mainWith(AGENT_DEFAULTS);
 
 /** The session every review suite stamps. */
 export const REVIEW_SID = "rv1";

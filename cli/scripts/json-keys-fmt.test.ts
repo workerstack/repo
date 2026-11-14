@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { collectHistory, historyText } from "../../dev/stock-history.ts";
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { writeFloors } from "../coverage.ts";
 import { standards } from "../sync/standards.ts";
 import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./__fixtures__/json-dirs.ts";
@@ -21,7 +22,7 @@ afterEach(() => {
 /** A git repo with the standards pack, the two configs as sync writes them, and `files`. */
 function formatRepo(files: Record<string, string>, { repo = true }: { repo?: boolean } = {}): string {
   const ctx = {
-    config: { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
+    config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
     read: () => null,
     root: "",
     workspace: { manifest: {}, packages: [], root: "" },

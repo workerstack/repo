@@ -1,3 +1,4 @@
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -63,7 +64,7 @@ export const COMPLETE: Record<string, unknown> = {
 const config = (over: Partial<ResolvedConfig> = {}): ResolvedConfig => ({
   ...BASE_CONFIG,
   packs: ["release"],
-  agents: { hosts: [], skills: [] },
+  agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
   owner: OWNER,
   ...over,
 });

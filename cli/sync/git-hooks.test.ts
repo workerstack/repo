@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { repoEnv } from "../repo-env.ts";
 import { tempDir as makeTempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
 import type { Output, SyncContext } from "./outputs.ts";
@@ -20,7 +21,7 @@ function tempDir(): string {
 function context(packs: SyncContext["config"]["packs"], read: SyncContext["read"] = () => null): SyncContext {
   return {
     config: {
-      agents: { hosts: [], skills: [] },
+      agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
       packs,
       ...BASE_CONFIG,
     },

@@ -1,4 +1,5 @@
 // Repos, rules and a checker for the `.repo/` suites: every check runs against this repo's own stock.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -55,7 +56,7 @@ export type CheckOptions = { listed?: string[] | null; skills?: readonly SkillPa
 /** The `.repo/` problems of `root` with `rules` loaded, against this repo's stock. */
 export function check(root: string, rules: Doc[] = [], options: CheckOptions = {}): string[] {
   const { listed = null, packages = [], packs = ["agents"], skills = [] } = options;
-  const off = offSkills({ agents: { hosts: [], skills }, packs });
+  const off = offSkills({ agents: { ...AGENT_DEFAULTS, hosts: [], skills }, packs });
   return repoDirProblems(root, { listed, off, packages, sources: sourcesOf(rules), stock: SELF_ROOT });
 }
 

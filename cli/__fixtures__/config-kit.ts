@@ -7,7 +7,13 @@ import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 
 /** This checkout's root, the package a linked `@workerstack/repo` points at. */
 export const REPO_ROOT: string = path.join(import.meta.dirname, "..", "..");
-export const AGENTS = { hosts: ["claude", "codex", "antigravity", "grok", "cursor"], skills: [] };
+export const AGENTS = {
+  defaultEffort: "deep",
+  defaultMode: "ask",
+  defaultStrategy: "free",
+  hosts: ["claude", "codex", "antigravity", "grok", "cursor"],
+  skills: [],
+};
 export const COMMIT = { maxChangedLines: 1000 };
 export const LINT = { skip: [] };
 export const KNIP = { ignore: [] };

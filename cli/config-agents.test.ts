@@ -5,6 +5,9 @@ import { HOSTS, SKILL_PACKS, loadConfig } from "./config.ts";
 
 useConfigKit();
 
+/** What agents resolves its three defaults to when the config sets none. */
+const UNSET = { defaultEffort: "deep", defaultMode: "ask", defaultStrategy: "free" };
+
 /** The agents a config resolves to, or the errors loading it. */
 async function agentsOf(source: string) {
   const result = await loadConfig(repo(source));
@@ -24,6 +27,7 @@ describe("agents", () => {
         'export default { packs: ["agents"], agents: { hosts: ["codex", "claude"], skills: ["listen", "clasp"] } }\n',
       ),
     ).toStrictEqual({
+      ...UNSET,
       hosts: ["codex", "claude"],
       skills: ["listen", "clasp"],
     });
@@ -31,10 +35,12 @@ describe("agents", () => {
 
   it("defaults hosts to all five and skills to none when only one is given", async () => {
     expect(await agentsOf('export default { packs: ["agents"], agents: { skills: ["speak"] } }\n')).toStrictEqual({
+      ...UNSET,
       hosts: [...HOSTS],
       skills: ["speak"],
     });
     expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toStrictEqual({
+      ...UNSET,
       hosts: ["grok"],
       skills: [],
     });
@@ -83,6 +89,53 @@ describe("agents", () => {
   it("rejects an unknown key inside agents", async () => {
     expect(await agentsOf('export default { packs: ["agents"], agents: { host: [] } }\n')).toStrictEqual([
       'repo.config.ts: agents: unknown key "host"',
+    ]);
+  });
+});
+
+describe("agents defaults", () => {
+  it("parses defaultStrategy, defaultMode and defaultEffort", async () => {
+    const source =
+      'export default { packs: ["agents"], agents: ' +
+      '{ defaultStrategy: "spawn-fast", defaultMode: "away", defaultEffort: "fast" } }\n';
+
+    expect(await agentsOf(source)).toStrictEqual({
+      defaultEffort: "fast",
+      defaultMode: "away",
+      defaultStrategy: "spawn-fast",
+      hosts: [...HOSTS],
+      skills: [],
+    });
+  });
+
+  it("resolves unset defaults to free, ask and deep", async () => {
+    expect(await agentsOf('export default { packs: ["agents"], agents: { hosts: ["grok"] } }\n')).toStrictEqual({
+      defaultEffort: "deep",
+      defaultMode: "ask",
+      defaultStrategy: "free",
+      hosts: ["grok"],
+      skills: [],
+    });
+  });
+});
+
+describe("agents defaults errors", () => {
+  it("rejects a bad defaultEffort, defaultMode and defaultStrategy with the values each takes", async () => {
+    const source =
+      'export default { packs: ["agents"], agents: ' +
+      '{ defaultStrategy: "spawn", defaultMode: "auto", defaultEffort: "medium" } }\n';
+
+    expect(await agentsOf(source)).toStrictEqual([
+      'repo.config.ts: agents.defaultEffort: must be "fast" or "deep"',
+      'repo.config.ts: agents.defaultMode: must be "ask" or "away"',
+      'repo.config.ts: agents.defaultStrategy: must be "free", "spawn-fast" or "spawn-deep"',
+    ]);
+  });
+
+  it("names every agents key when agents is not an object", async () => {
+    expect(await agentsOf('export default { packs: ["agents"], agents: 1 }\n')).toStrictEqual([
+      "repo.config.ts: agents: must be an object like " +
+        '{ hosts: [...], skills: [...], defaultStrategy: "free", defaultMode: "ask", defaultEffort: "deep" }',
     ]);
   });
 });

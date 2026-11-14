@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DECIMAL, H1_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
@@ -28,6 +29,7 @@ import {
 } from "./persist-roadmap.constants.ts";
 import { type Rewrite, persistSource, refused, rewriteTarget, saveTarget } from "./persist-save.ts";
 import { unclosedFenceErrors } from "./persist-sections.ts";
+import type { Strategy } from "./strategy.types.ts";
 
 const LEADING_SPACE_RE = /^\s+/;
 
@@ -160,8 +162,11 @@ export function prepareRoadmapUpdate(input: Rewrite): RoadmapResult {
   return { content: full, filename, ok: true, path: rel, serial: serialOf(filename) };
 }
 
+/** What a new roadmap is saved from beyond its text: when, and the strategy it gets without a `strategy:` line. */
+type NewInput = { created: string | undefined; defaultStrategy: Strategy };
+
 /** A new roadmap's next serial, file name and text. */
-function newFile(dir: string, pre: Preamble, created: string | undefined) {
+function newFile(dir: string, pre: Preamble, { created, defaultStrategy }: NewInput) {
   const slug = slugify(pre.name);
   const createdAt = createdAtOf(created);
   const serial = nextSerial(dir, "");
@@ -176,24 +181,28 @@ function newFile(dir: string, pre: Preamble, created: string | undefined) {
     slug,
     source: persistSource([pre.name], pre.body.match(GOAL_SECTION_RE), slug),
     status: firstNonEmpty(pre.status) ?? DRAFT_STATUS,
-    strategy: pre.strategy,
+    strategy: pre.strategy ?? defaultStrategy,
   });
 
   return { filename, full, serial };
 }
 
+/** What a new roadmap save takes; `defaultStrategy` is `free` when not given. */
+type SaveInput = { workspaceRoot?: string; content?: string; created?: string; defaultStrategy?: Strategy };
+
 export function persistRoadmap({
   workspaceRoot,
   content,
   created,
-}: { workspaceRoot?: string; content?: string; created?: string } = {}): RoadmapResult {
+  defaultStrategy = AGENT_DEFAULTS.defaultStrategy,
+}: SaveInput = {}): RoadmapResult {
   const { ws, raw } = saveTarget(workspaceRoot, content);
   const dir = path.join(ws, ROADMAP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const fence = unclosedFenceErrors(raw);
 
   if (fence.length > 0) return refused(fence);
-  const { serial, filename, full } = newFile(dir, preamble(raw), created);
+  const { serial, filename, full } = newFile(dir, preamble(raw), { created, defaultStrategy });
   const errors = validateRoadmap(filename, full, { fresh: true });
 
   if (errors.length > 0) return refused(errors);

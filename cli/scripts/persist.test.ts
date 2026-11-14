@@ -40,10 +40,10 @@ function fakeIo(body: string) {
 }
 
 /** Runs `main`, capturing what it writes to stderr. */
-function run(argv: string[], body = "") {
+async function run(argv: string[], body = "") {
   const { io, out } = fakeIo(body);
   const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  const code = main(argv, io);
+  const code = await main(argv, io);
   const stderr = err.mock.calls.map((c) => String(c[0])).join("");
 
   return { code, stderr, stdout: out.join("") };
@@ -58,9 +58,9 @@ const KINDS = [
 ] as const;
 
 describe("repo persist <kind>", () => {
-  it.each(KINDS)("saves a valid %s body under --workspace and prints its four keys", (kind, body, dir) => {
+  it.each(KINDS)("saves a valid %s body under --workspace and prints its four keys", async (kind, body, dir) => {
     const ws = tmpDir();
-    const r = run([kind, "--workspace", ws], body);
+    const r = await run([kind, "--workspace", ws], body);
     expect(r.code, r.stderr).toBe(0);
     expect(r.stdout.endsWith("\n")).toBe(true);
     const json = parsePersistCliJson(r.stdout);
@@ -70,16 +70,34 @@ describe("repo persist <kind>", () => {
     expect(fs.existsSync(json.absPath)).toBe(true);
   });
 
-  it("takes the body from stdin chunks past the first read", () => {
+  it("takes the body from stdin chunks past the first read", async () => {
     expect(VALID_HANDOFF.length).toBeGreaterThan(300);
     const ws = tmpDir();
-    const r = run(["handoff", "--workspace", ws], VALID_HANDOFF);
+    const r = await run(["handoff", "--workspace", ws], VALID_HANDOFF);
     expect(fs.readFileSync(parsePersistCliJson(r.stdout).absPath, "utf8")).toContain("sync skills to hosts");
   });
 });
 
+describe("repo persist defaults", () => {
+  it.each([
+    ["plan", VALID_PLAN],
+    ["roadmap", DRAFT_ROADMAP],
+  ] as const)(
+    "fills a %s sent without strategy from agents.defaultStrategy in the workspace config",
+    async (kind, body) => {
+      const ws = tmpDir();
+      const config = 'export default { packs: ["agents"], agents: { defaultStrategy: "spawn-fast" } };\n';
+      fs.writeFileSync(path.join(ws, "repo.config.ts"), config);
+      const r = await run([kind, "--workspace", ws], body.replace(/^strategy:.*\n/m, ""));
+      expect(r.code, r.stderr).toBe(0);
+      const saved = fs.readFileSync(parsePersistCliJson(r.stdout).absPath, "utf8");
+      expect(saved.match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-fast"]);
+    },
+  );
+});
+
 describe("repo persist root", () => {
-  it("saves under the repo root of the working directory without --workspace", () => {
+  it("saves under the repo root of the working directory without --workspace", async () => {
     const root = tmpDir();
     execFileSync("git", ["init", "-q"], { cwd: root });
     const sub = path.join(root, "packages/a");
@@ -87,7 +105,7 @@ describe("repo persist root", () => {
     vi.stubEnv("GROK_WORKSPACE_ROOT", "");
     vi.stubEnv("CLAUDE_PROJECT_DIR", "");
     vi.spyOn(process, "cwd").mockReturnValue(sub);
-    const r = run(["handoff"], VALID_HANDOFF);
+    const r = await run(["handoff"], VALID_HANDOFF);
     expect(r.code, r.stderr).toBe(0);
     const json = parsePersistCliJson(r.stdout);
     expect(path.dirname(json.absPath)).toBe(path.join(root, ".repo/handoffs"));
@@ -96,23 +114,23 @@ describe("repo persist root", () => {
 });
 
 describe("repo persist errors", () => {
-  it("exits 1 with the saver's message on an invalid body and writes nothing", () => {
+  it("exits 1 with the saver's message on an invalid body and writes nothing", async () => {
     const ws = tmpDir();
-    const r = run(["tmp", "--workspace", ws], "no name line\n");
+    const r = await run(["tmp", "--workspace", ws], "no name line\n");
     expect(r.code).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr).toBe("missing TMP_NAME\n");
     expect(fs.existsSync(path.join(ws, ".tmp"))).toBe(false);
   });
 
-  it("exits 1 with the saver's reasons for an empty body", () => {
-    const r = run(["plan", "--workspace", tmpDir()], "");
+  it("exits 1 with the saver's reasons for an empty body", async () => {
+    const r = await run(["plan", "--workspace", tmpDir()], "");
     expect(r.code).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr).toMatch(/\S\n$/);
   });
 
-  it("prints a thrown value that is not an Error as text", () => {
+  it("prints a thrown value that is not an Error as text", async () => {
     const io: HookIo = {
       readChunk: () => {
         throw "stdin gone";
@@ -121,17 +139,17 @@ describe("repo persist errors", () => {
     };
 
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    expect(main(["tmp"], io)).toBe(1);
+    expect(await main(["tmp"], io)).toBe(1);
     expect(err).toHaveBeenCalledWith("stdin gone\n");
   });
 });
 
 describe("repo persist thrown errors", () => {
-  it("exits 1 with the thrown message when the workspace cannot be written", () => {
+  it("exits 1 with the thrown message when the workspace cannot be written", async () => {
     const ws = tmpDir();
     const file = path.join(ws, "file");
     fs.writeFileSync(file, "");
-    const r = run(["handoff", "--workspace", file], VALID_HANDOFF);
+    const r = await run(["handoff", "--workspace", file], VALID_HANDOFF);
     expect(r.code).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr.length).toBeGreaterThan(1);
@@ -139,30 +157,30 @@ describe("repo persist thrown errors", () => {
 });
 
 describe("repo persist unknown kind", () => {
-  it("exits 1 naming the kinds for an unknown kind", () => {
-    const r = run(["nope"], VALID_HANDOFF);
+  it("exits 1 naming the kinds for an unknown kind", async () => {
+    const r = await run(["nope"], VALID_HANDOFF);
     expect(r.code).toBe(1);
     expect(r.stdout).toBe("");
     expect(r.stderr).toBe('repo persist: unknown kind "nope"; use plan, roadmap, handoff, implementation or tmp\n');
   });
 
-  it("does not take an Object.prototype name for a kind", () => {
-    const r = run(["constructor"], "x");
+  it("does not take an Object.prototype name for a kind", async () => {
+    const r = await run(["constructor"], "x");
     expect(r.code).toBe(1);
     expect(r.stderr).toContain('unknown kind "constructor"');
   });
 });
 
 describe("repo persist usage", () => {
-  it("exits 1 with a usage line when no kind is given", () => {
-    const r = run([]);
+  it("exits 1 with a usage line when no kind is given", async () => {
+    const r = await run([]);
     expect(r.code).toBe(1);
     expect(r.stderr).toBe("repo persist: missing kind; use plan, roadmap, handoff, implementation or tmp\n");
   });
 
-  it("takes no arguments as no kind", () => {
+  it("takes no arguments as no kind", async () => {
     const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    expect(main()).toBe(1);
+    expect(await main()).toBe(1);
     expect(err).toHaveBeenCalledWith("repo persist: missing kind; use plan, roadmap, handoff, implementation or tmp\n");
   });
 });

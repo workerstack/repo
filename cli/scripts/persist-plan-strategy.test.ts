@@ -52,10 +52,50 @@ describe("plan strategy moves and fences", () => {
   });
 });
 
-describe("plan strategy denials", () => {
-  it("denies a save without it and says the three values", () => {
+describe("plan strategy default", () => {
+  it("fills free on a new save without it when no default is given", () => {
     const ws = tmpWs();
     const r = persistPlan({ content: without(VALID_PLAN), created: CREATED, workspaceRoot: ws });
+    expect(r.ok, r.error).toBe(true);
+    expect(read(path.join(ws, savedOk(r).path))).toMatch(/^source: .*\nstrategy: free\n---$/m);
+  });
+
+  it("fills the given default on a new save without it, and a body line beats the default", () => {
+    const ws = tmpWs();
+
+    const filled = persistPlan({
+      content: without(VALID_PLAN),
+      created: CREATED,
+      defaultStrategy: "spawn-deep",
+      workspaceRoot: ws,
+    });
+
+    expect(filled.ok, filled.error).toBe(true);
+    expect(read(path.join(ws, savedOk(filled).path))).toMatch(/^strategy: spawn-deep$/m);
+
+    const sent = persistPlan({
+      content: withStrategy(VALID_PLAN, "spawn-fast"),
+      created: CREATED,
+      defaultStrategy: "spawn-deep",
+      workspaceRoot: ws,
+    });
+
+    expect(sent.ok, sent.error).toBe(true);
+    expect(read(path.join(ws, savedOk(sent).path)).match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-fast"]);
+  });
+});
+
+describe("plan strategy denials", () => {
+  it("denies an empty value even with a default", () => {
+    const ws = tmpWs();
+
+    const r = persistPlan({
+      content: withStrategy(VALID_PLAN, ""),
+      created: CREATED,
+      defaultStrategy: "spawn-fast",
+      workspaceRoot: ws,
+    });
+
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(NO_KEY);
     expectNothingSaved(path.join(ws, PLAN_DIR));

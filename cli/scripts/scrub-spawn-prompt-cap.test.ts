@@ -3,10 +3,11 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { here, parseOut, plansRoot, root } from "./__fixtures__/scrub-kit.ts";
 import { jsonText } from "./json-text.ts";
-import { main as orchMain } from "./orchestrate-parent.ts";
+import { mainWith } from "./orchestrate-parent.ts";
 import {
   MAX_PROMPT_CHARS,
   TRUNCATE_SUFFIX,
@@ -14,6 +15,9 @@ import {
   processHookPayload,
   rewriteSpawnToolInput,
 } from "./scrub-spawn-prompt.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const orchMain = mainWith(AGENT_DEFAULTS);
 
 it("strips pasted transcripts and keeps first You are + facts + abs paths", () => {
   const raw = fs.readFileSync(path.join(here, "__fixtures__/spawn-transcript.txt"), "utf8");

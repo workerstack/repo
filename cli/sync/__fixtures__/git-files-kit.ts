@@ -1,4 +1,5 @@
 // Contexts, planned outputs and readers for the git files suites: `.gitignore`, `.gitattributes` and the editor settings.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import { parse } from "jsonc-parser";
 
 import { type Host, type Pack } from "../../config.ts";
@@ -45,7 +46,7 @@ export function context({
 }: Fixture = {}): SyncContext {
   return {
     config: {
-      agents: { hosts, skills: [] },
+      agents: { ...AGENT_DEFAULTS, hosts, skills: [] },
       packs,
       ...BASE_CONFIG,
       lint: tailwind === undefined ? BASE_CONFIG.lint : { ...BASE_CONFIG.lint, tailwind: { entryPoint: tailwind } },

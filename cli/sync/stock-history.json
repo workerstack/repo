@@ -417,7 +417,7 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["abde0d45b94341d5"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["3ddd8c267267a72d"],
   ".agents/skills/write-plan-fast/SKILL.md": ["d56078320f4fc34e"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
@@ -442,7 +442,7 @@
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["c8d6f91094ef6817"],
   ".agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1"],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
@@ -2112,6 +2112,7 @@
     "55105b3a36d09a15",
     "553bb5d105e137d9",
     "56d925eb52637603",
+    "5b17e364270d947e",
     "5f4e483495932e0f",
     "6069dab37a35df2f",
     "6242fbc0249a58ff",
@@ -2284,7 +2285,7 @@
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  "agents/skills/write-plan-deep/SKILL.md": ["98c81331e3815f5f", "abde0d45b94341d5"],
+  "agents/skills/write-plan-deep/SKILL.md": ["3ddd8c267267a72d", "98c81331e3815f5f", "abde0d45b94341d5"],
   "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e"],
   "agents/skills/write-plan/SKILL.md": [
     "0f1b19182c479cc3",
@@ -2297,7 +2298,7 @@
     "d37f2553e7b8e1bc",
     "ee7e143018db8227"
   ],
-  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8"],
+  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8", "c8d6f91094ef6817"],
   "agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1", "f18dd93a01bf07ab"],
   "agents/skills/write-roadmap/SKILL.md": [
     "0001e66dc0806396",
@@ -2313,7 +2314,12 @@
   "agents/subagents/researcher.md": ["1f1fa4b03064c897"],
   "agents/subagents/scout.md": ["cac206ad5d7179fe"],
   "cli/scripts/__fixtures__/away-run-kit.ts": ["a47e473f08e7c93f"],
-  "cli/scripts/__fixtures__/baseline-repo.ts": ["3ea9c8922c644715", "a5a4d7cb66821988", "eb13ccd54d74a928"],
+  "cli/scripts/__fixtures__/baseline-repo.ts": [
+    "3ea9c8922c644715",
+    "a5a4d7cb66821988",
+    "a90a43f27ce2d3d8",
+    "eb13ccd54d74a928"
+  ],
   "cli/scripts/__fixtures__/bench-remote-world.ts": ["35f9b02ec266d5b2"],
   "cli/scripts/__fixtures__/bench-world.ts": ["8b0d49986303449a"],
   "cli/scripts/__fixtures__/bench/bad.bench.ts": ["fb6418fea1e761a0"],
@@ -2386,7 +2392,8 @@
     "7eaf3bd728256df0",
     "c087bd41394dfc42",
     "c121172c3b4feff1",
-    "c7da8b78167fc0e9"
+    "c7da8b78167fc0e9",
+    "d1a847a62a2a506f"
   ],
   "cli/scripts/__fixtures__/persist-bodies.ts": [
     "21324b80b55d46cb",
@@ -2412,9 +2419,10 @@
     "8d882adc88cfe399",
     "9aba6d098a569a99",
     "9f30ff17d752d89a",
+    "b47b7e1278f9e275",
     "d6318a681e3eecb7"
   ],
-  "cli/scripts/__fixtures__/run-hook.ts": ["9d4322ef51dfba86"],
+  "cli/scripts/__fixtures__/run-hook.ts": ["44481883c6e6cf97", "9d4322ef51dfba86"],
   "cli/scripts/__fixtures__/run-persist-cli.ts": ["51360b04801d42cb"],
   "cli/scripts/__fixtures__/scrub-kit.ts": ["cf6cc15b999f422d"],
   "cli/scripts/__fixtures__/session-map-kit.ts": ["dd73aa8f6f1a666a"],
@@ -3942,6 +3950,7 @@
     "5fcbc6d2484d90ed",
     "644b775d7dcda830",
     "749f5049beacc90b",
+    "82ae5bd4031e3af1",
     "aafdb749cf43606f",
     "ab6889458c798f6d",
     "d8b5feea17978e08",
@@ -4943,6 +4952,7 @@
     "0aa78c19c12852a8",
     "49113dea933f0796",
     "5028fd916e3f1624",
+    "566e6037d88fc5fc",
     "81c84e01c57ef983",
     "87a3eecfd7abbfe7",
     "9864b5f14204000a",
@@ -5189,6 +5199,7 @@
     "23612b6f293de8bd",
     "2563079d8a559123",
     "337e4d3746b4593c",
+    "3869db5a319f2715",
     "3cb5ff2fcdf361ce",
     "419709a353de916f",
     "41b58c5bd8d51030",
@@ -5637,6 +5648,7 @@
   ],
   "cli/scripts/orchestrate-mode.ts": [
     "2b8e89b3938126ff",
+    "53be3eead5d165c2",
     "60a9085eb682f758",
     "60bbd6486f6e1234",
     "8046b594aeb1033b",
@@ -5703,6 +5715,7 @@
     "d0bea5cd5a2b0e74",
     "ec7e3df750cc2caf"
   ],
+  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538"],
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5", "d9c6d340e898848a"],
   "cli/scripts/orchestrate-parent-fast.test.ts": [
@@ -5807,11 +5820,13 @@
     "dc51e16f72a9b396",
     "e8bd603638d81904",
     "ef6f427b1e8ce436",
-    "f84aeaf6858e4485"
+    "f84aeaf6858e4485",
+    "fbe9960bb732ae58"
   ],
   "cli/scripts/orchestrate-parent-tools.test.ts": [
     "2cfe45b889688482",
     "4abbf9eb6c89473d",
+    "5575c64a71502e0b",
     "5c70afef28ad0f4e",
     "709cca71a290604e",
     "7656c40405819ff7",
@@ -5880,6 +5895,7 @@
     "ab5384a8e456d77f",
     "b7bb6f6331d7fe8f",
     "b8f924caba056bf3",
+    "d3ca6a1ac0db8e2e",
     "d5aba868f9ad901f",
     "e79b942990a4cd11",
     "fbdd157ade37085f"
@@ -5929,6 +5945,7 @@
     "2b5426a37dd0173a",
     "3db20a7b8a643212",
     "568a3fd2237ec95a",
+    "6ec03dd840cfa0a1",
     "7d2c8ae74b4b9eaf",
     "8b91dc56e44dabee",
     "a6ac6ebda5855155",
@@ -5954,6 +5971,7 @@
     "20c41eda7015de67",
     "26d41e3d50e3859c",
     "322f69607db4838f",
+    "66d41b853e4af5f0",
     "89e318956284f1b8",
     "97c079e50cebc18b",
     "aa8e0f5b88199405",
@@ -5964,6 +5982,7 @@
     "e11393352769064a"
   ],
   "cli/scripts/orchestrate.constants.ts": [
+    "209e0aec04b5ac3b",
     "50b0ece65ccf2591",
     "555ef3c518afa9ba",
     "5c40357b6d89fb66",
@@ -6344,6 +6363,7 @@
   "cli/scripts/persist-plan-strategy.test.ts": [
     "2565cc90dee726b3",
     "6d88fe605cdaad67",
+    "7d375dfa3724bb0a",
     "a30e5e5dc51431fe",
     "af0687a4b9582724",
     "af8acd5d92c7cc57",
@@ -6405,6 +6425,7 @@
     "4d4dec0828cc62f6",
     "4f54503f0d96ab32",
     "6164f9ac381bfb72",
+    "6b456c141259b871",
     "72c125878bd649e5",
     "77513d5aa3aab572",
     "980bb1ccb5f71e90",
@@ -6427,6 +6448,7 @@
     "fef5a2c80ce91cdc"
   ],
   "cli/scripts/persist-roadmap-keys.test.ts": [
+    "3ddd5721f32559be",
     "78c399f733c527df",
     "863a349384dae46a",
     "9d2ce24ddde1fe70",
@@ -6541,6 +6563,7 @@
     "9b2fdcbc46462377",
     "a7e24f197f12ab34",
     "abf5a6cdd9edc56c",
+    "af800ed0b37f5984",
     "b4a972c10d591cd7",
     "d1733228c1d4d5a3",
     "fc5c14b11827695f"
@@ -6618,6 +6641,7 @@
   "cli/scripts/persist.test.ts": [
     "0ede29e21b4217bc",
     "453c0d905f6f6be8",
+    "462e31e4806778ac",
     "767aecf21f29ff85",
     "942793c032a723ef",
     "a23f97f7bf883b75",
@@ -6630,6 +6654,7 @@
     "921b1c935fe02746",
     "a075dc84d76622ca",
     "ca2c9c5de373b863",
+    "dd3845ae094dc98e",
     "f59703a561cc3adf"
   ],
   "cli/scripts/phase-files-edges.test.ts": [
@@ -6823,6 +6848,7 @@
     "e06e4dafc480f7c4"
   ],
   "cli/scripts/scrub-spawn-prompt-cap.test.ts": [
+    "3b8d1d7deb042a33",
     "5a318896e83ddc90",
     "6cef2ddc781297c4",
     "854cf86b4451f601",
@@ -6840,7 +6866,12 @@
     "af72ebba36714029",
     "b5e1244b672a8671"
   ],
-  "cli/scripts/scrub-spawn-prompt-stdin.test.ts": ["096c7d025a9e85bf", "4cdc6de1c00eed52", "4cf18a9a1c38600c"],
+  "cli/scripts/scrub-spawn-prompt-stdin.test.ts": [
+    "096c7d025a9e85bf",
+    "1114b458567a82e8",
+    "4cdc6de1c00eed52",
+    "4cf18a9a1c38600c"
+  ],
   "cli/scripts/scrub-spawn-prompt.test.ts": [
     "5067c7a93333250f",
     "51148dfd7f9d175e",
@@ -7319,6 +7350,7 @@
   ],
   "cli/scripts/strategy.constants.ts": [
     "0eba0c6c38295182",
+    "2560bccc2541d402",
     "27ccb68cac18b5f2",
     "5c1e7674533f1765",
     "692115f578bbb364",
@@ -7371,6 +7403,7 @@
     "7e26716ded9495c4",
     "8393015faf557982",
     "90f7ff0facb322f3",
+    "9de04af0b2dd360e",
     "c9e2541e5a8abd9b",
     "ed597fa29a75bad1"
   ],
@@ -8058,6 +8091,7 @@
     "612ff00b10bde4f8",
     "64321295e7470c58",
     "7c29c1dd0d29d4a9",
+    "8f882b3c72fa4553",
     "9fe17276fb13e9f1",
     "ac0d0d4c2036f1e6",
     "b78cfac44c3cde82",
@@ -8089,7 +8123,8 @@
     "98565802b83268f5",
     "a3efd593a4fc382b",
     "c6179e8588309d6e",
-    "c71beda324fb785e"
+    "c71beda324fb785e",
+    "e68747157bd6c347"
   ],
   "references/review-loop.md": [
     "21b52d81d3fb3344",
@@ -8102,6 +8137,7 @@
   "references/roadmap-format.md": [
     "05119661b62dcd5b",
     "0e879896d6b9f135",
+    "2939a780d5f02c50",
     "4a1f34c9e353962f",
     "51deefc4b794d3d7",
     "6996928b19a20977",
@@ -8117,6 +8153,7 @@
     "18c6b799d9a1a5e1",
     "191a397174c6f260",
     "22e19ce27e037919",
+    "2323fc5b8314a5e4",
     "2511ab627f9c612d",
     "2e2740608cdd63a5",
     "2e6941901ff909d3",

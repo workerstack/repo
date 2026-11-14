@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import type { ResolvedConfig } from "../config.ts";
 import { exists, read, write } from "./__fixtures__/copied-install.ts";
 import { DEFINE, REMOVAL, SIMPLE_CONFIG, mini, notes, planOf } from "./__fixtures__/mini-install.ts";
@@ -102,7 +103,12 @@ it("lists only the generated paths of the enabled hosts that git tracks, and nev
     { git: true },
   );
 
-  const claudeOnly: ResolvedConfig = { agents: { hosts: ["claude"], skills: [] }, packs: ["agents"], ...BASE_CONFIG };
+  const claudeOnly: ResolvedConfig = {
+    agents: { ...AGENT_DEFAULTS, hosts: ["claude"], skills: [] },
+    packs: ["agents"],
+    ...BASE_CONFIG,
+  };
+
   expect(planOf(m, claudeOnly).find((step) => step.kind === "untrack")).toStrictEqual({
     kind: "untrack",
     paths: ["AGENTS.md", ".claude/"],

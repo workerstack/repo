@@ -1,4 +1,5 @@
 // Consumers, contexts and output readers for the trees suites, typed so no suite casts what a render wrote.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,7 +65,7 @@ export function context(root: string, hosts: readonly Host[], options: RenderOpt
     root,
     config: {
       packs: options.packs ?? ["agents"],
-      agents: { hosts, skills: options.skills ?? [] },
+      agents: { ...AGENT_DEFAULTS, hosts, skills: options.skills ?? [] },
       ...BASE_CONFIG,
     },
     workspace: {

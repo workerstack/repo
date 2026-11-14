@@ -1,5 +1,5 @@
 /** The strategy domain's values, approval-block and reply patterns, and stamp layout. */
-import type { Approval, ApprovalAction, Mode, Strategy } from "./strategy.types.ts";
+import type { Approval, ApprovalAction, Effort, Mode, Strategy } from "./strategy.types.ts";
 
 export const FREE_STRATEGY = "free";
 export const SPAWN_FAST = "spawn-fast";
@@ -34,6 +34,8 @@ export const FAST_ROADMAP = "fast-roadmap";
 /** The words after `h` that pick a spawn strategy for the fresh session. */
 const FAST = "fast";
 const DEEP = "deep";
+
+export const EFFORTS: readonly Effort[] = [FAST, DEEP];
 export const NOT_FOUND = -1;
 export const HANDOFF_LETTER = "h";
 export const ITEM_SEP = ", then ";

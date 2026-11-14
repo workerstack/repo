@@ -8,8 +8,12 @@ import { VALID_LESSON } from "./persist-bodies.ts";
 import { runHook, type HookRun } from "./run-hook.ts";
 import { persistLesson } from "../lessons-ops.ts";
 import { closingBlock } from "../closing-line.ts";
-import { main } from "../orchestrate-parent.ts";
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
+import { mainWith } from "../orchestrate-parent.ts";
 import type { Approvable, Strategy } from "../strategy.types.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const main = mainWith(AGENT_DEFAULTS);
 
 type Env = Record<string, string | undefined>;
 

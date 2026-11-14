@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { AgentDefaults } from "../config-resolved.types.ts";
 import { isString } from "../json.ts";
 import { REPO, STATE } from "../repo-dirs.ts";
 import type { ToolArgs } from "./gate-harness.ts";
@@ -45,23 +46,34 @@ type Prepare = (args: Parameters<Persist>[0] & { filePath: string }) => PersistO
 
 type Validate = (name: string, text: string, opts: { fresh: boolean; previous: string }) => string[];
 
+/** A fresh save of an item; a full plan or roadmap sent without a `strategy:` line gets the default one. */
+type Fresh = (args: Parameters<Persist>[0], defaults: AgentDefaults) => PersistOutcome;
+
 /** How a saved plan or roadmap is checked, updated in place, and saved fresh. */
 const IMPL_NAME_LINE = /^\s*IMPL_NAME:/m;
 const SID_UNSAFE = /[^\w-]/g;
 
-const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; persist: Persist }>> = {
+const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; persist: Fresh }>> = {
   "fast-plan": {
-    persist: persistFastPlan,
+    persist: (args) => persistFastPlan(args),
     prepare: prepareFastPlanUpdate,
     validate: (name, text, { fresh }) => validateFastPlan(name, text, { fresh }),
   },
   "fast-roadmap": {
-    persist: persistFastRoadmap,
+    persist: (args) => persistFastRoadmap(args),
     prepare: prepareFastRoadmapUpdate,
     validate: validateFastRoadmap,
   },
-  plan: { persist: persistPlan, prepare: preparePlanUpdate, validate: validatePlan },
-  roadmap: { persist: persistRoadmap, prepare: prepareRoadmapUpdate, validate: validateRoadmap },
+  plan: {
+    persist: (args, { defaultStrategy }) => persistPlan({ ...args, defaultStrategy }),
+    prepare: preparePlanUpdate,
+    validate: validatePlan,
+  },
+  roadmap: {
+    persist: (args, { defaultStrategy }) => persistRoadmap({ ...args, defaultStrategy }),
+    prepare: prepareRoadmapUpdate,
+    validate: validateRoadmap,
+  },
 };
 
 function isFile(abs: string): boolean {
@@ -84,7 +96,7 @@ function savedEdit(write: WriteCase, abs: string, validate: Validate): HookResul
 }
 
 /** A saved item: an Edit of an existing one is validated and a valid one counts as a save; a Write is persisted. */
-function savedRoute(write: WriteCase, kind: ItemKind): Route {
+function savedRoute(write: WriteCase, kind: ItemKind, defaults: AgentDefaults): Route {
   const abs = path.resolve(write.rawPath);
   const exists = isFile(abs);
   const saved = SAVED[kind];
@@ -97,7 +109,9 @@ function savedRoute(write: WriteCase, kind: ItemKind): Route {
     return { done: denied };
   }
 
-  const persist: Persist = exists ? (args) => saved.prepare({ ...args, filePath: abs }) : saved.persist;
+  const persist: Persist = exists
+    ? (args) => saved.prepare({ ...args, filePath: abs })
+    : (args) => saved.persist(args, defaults);
 
   return { approvable: true, persist };
 }
@@ -117,13 +131,13 @@ function implementationRoute(write: WriteCase): Route {
   return { done: savedReply(write.data, write.toolInput, { abs, content }) };
 }
 
-function routeWrite(write: WriteCase): Route {
+function routeWrite(write: WriteCase, defaults: AgentDefaults): Route {
   const { canon } = write;
   const ws = write.roots.root;
 
   const kind = kindAt(canon, ws);
 
-  if (kind !== null) return savedRoute(write, kind);
+  if (kind !== null) return savedRoute(write, kind, defaults);
 
   if (isUnderRepoDir(canon, ws, "handoffs")) return { approvable: false, persist: persistHandoff };
 
@@ -146,20 +160,45 @@ function persistWrite(write: WriteCase, { persist, approvable }: PersistRoute): 
   return savedReply(write.data, write.toolInput, { abs: saved, content: result.content });
 }
 
-/** The answer to a parent Write or Edit under `.repo` or a lessons dir; null when the host should run it as sent. */
-export function parentWrite(data: HookInput, toolInput: ToolArgs | undefined): HookResult | null {
-  if (toolInput === undefined) return denyWith(data, DENY_REASON);
+/** The file a write targets, with the roots it is read against; null when the input names no file. */
+function writeCaseOf(data: HookInput, toolInput: ToolArgs): WriteCase | null {
   const roots = resolveRoots(data);
   const typed = writeTarget(toolInput);
 
   if (typed === "") return null;
   const rawPath = rewriteScratchPath(typed, roots) ?? path.resolve(roots.cwd, typed);
+
   // Classify in the roots' spelling; answers keep the typed spelling, which Claude Code's read-before-write knows.
-  const write: WriteCase = { canon: canonicalPath(rawPath), data, rawPath, roots, toolInput };
-  const holder = holdingCheckout(write.canon, roots);
+  return { canon: canonicalPath(rawPath), data, rawPath, roots, toolInput };
+}
+
+/** Whether a write saves a new full plan or roadmap: the one write whose answer reads the agents defaults. */
+export function savesNewItem(data: HookInput, toolInput: ToolArgs | undefined): boolean {
+  const write = toolInput === undefined ? null : writeCaseOf(data, toolInput);
+
+  if (write === null) return false;
+  const kind = kindAt(write.canon, write.roots.root);
+
+  return (kind === "plan" || kind === "roadmap") && !isFile(path.resolve(write.rawPath));
+}
+
+/**
+ * The answer to a parent Write or Edit under `.repo` or a lessons dir; null when the host should run it as sent. A
+ * new plan or roadmap without a `strategy:` line is saved with the default one.
+ */
+export function parentWrite(
+  data: HookInput,
+  toolInput: ToolArgs | undefined,
+  defaults: AgentDefaults,
+): HookResult | null {
+  if (toolInput === undefined) return denyWith(data, DENY_REASON);
+  const write = writeCaseOf(data, toolInput);
+
+  if (write === null) return null;
+  const holder = holdingCheckout(write.canon, write.roots);
 
   if (isLessonFile(write.canon, holder)) return lessonWrite(write, holder);
-  const route = routeWrite(write);
+  const route = routeWrite(write, defaults);
 
   return "done" in route ? route.done : persistWrite(write, route);
 }

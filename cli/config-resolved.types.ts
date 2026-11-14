@@ -3,10 +3,21 @@ import type { ResolvedCoverage } from "./coverage-config.ts";
 import type { ResolvedKnip } from "./knip-schema.ts";
 import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
+import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
 import type { ResolvedTurbo } from "./turbo-config.ts";
 
+/** What an agent session starts from when nothing else names it: the hooks and the root `AGENTS.md` read these. */
+export type AgentDefaults = {
+  /** The strategy a new plan or roadmap saved without a `strategy:` line gets. */
+  readonly defaultStrategy: Strategy;
+  /** The mode a session runs when no /ask or /away stamp and no in-progress item names one. */
+  readonly defaultMode: Mode;
+  /** The plan skills the root `AGENTS.md` points a change at when no skill was named. */
+  readonly defaultEffort: Effort;
+};
+
 /** The agent setup a config resolves to. */
-export type ResolvedAgents = {
+export type ResolvedAgents = AgentDefaults & {
   /** The hosts `repo sync` lays an agent tree out for: every host unless the config lists some. */
   readonly hosts: readonly Host[];
   /** The optional skill packs shipped to the agents: none unless the config lists some. */

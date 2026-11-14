@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import type { Pack } from "../config.ts";
 import type { TurboTask } from "../turbo-config.ts";
 import { put, tempDir, useTempDirs } from "./__fixtures__/temp-dirs.ts";
@@ -22,7 +23,7 @@ function context(packs: Pack[], files: Record<string, string> = {}, tasks?: Reco
   const turboConfig = tasks === undefined ? {} : { turbo: { tasks } };
 
   return {
-    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...turboConfig },
+    config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs, ...BASE_CONFIG, ...turboConfig },
     read: (rel) => (fs.existsSync(path.join(root, rel)) ? fs.readFileSync(path.join(root, rel), "utf8") : null),
     root,
     workspace: { manifest: {}, packages: [], root },

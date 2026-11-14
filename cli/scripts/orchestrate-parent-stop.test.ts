@@ -20,9 +20,9 @@ function receipt(ws: string, sid: string) {
 }
 
 describe("a host that sends no stdin", () => {
-  it("ends with exit 0 and no reply when the process stdin is at end", () => {
+  it("ends with exit 0 and no reply when the process stdin is at end", async () => {
     vi.spyOn(fs, "readSync").mockReturnValue(0);
-    expect(main()).toBe(0);
+    expect(await main()).toBe(0);
   });
 });
 

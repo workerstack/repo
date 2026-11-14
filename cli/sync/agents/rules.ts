@@ -8,6 +8,7 @@
  */
 import type { Host } from "../../config.ts";
 import { isString } from "../../json.ts";
+import type { Effort } from "../../scripts/strategy.types.ts";
 import { PACKAGE_NAME } from "../package-name.constants.ts";
 import { emitYaml, finalize } from "./frontmatter.ts";
 import type { Doc } from "./sources.types.ts";
@@ -36,16 +37,27 @@ export type RuleFile = {
 /** The line that opens every package `AGENTS.md`. */
 const PACKAGE_POINTER = "Start at references/INDEX.md in this package.";
 
-/** One scope's rules: its dir (`""` for the root and stock) and the hosts that are on. */
-type Scoped = { scope: string; hosts: readonly Host[] };
+/** One scope's rules: its dir (`""` for the root and stock), the hosts that are on, and the repo's default effort. */
+export type Scoped = { scope: string; hosts: readonly Host[]; effort: Effort };
+
+/** The line that ends the root `AGENTS.md`: the plan skills a change gets when no skill was named. */
+function planRoute(effort: Effort): string {
+  return (
+    `When a change needs a plan and no skill was named, use /write-plan-${effort} and /implement-plan-${effort}, ` +
+    `or /write-roadmap-${effort} and /implement-roadmap-${effort} for two or more slices.`
+  );
+}
 
 /** A rule's globs, prefixed with the scope's dir. */
 function globsOf(doc: Doc, scope: string): string[] {
   return scopeOf(doc).map((glob) => (scope === "" ? glob : `${scope}/${glob}`));
 }
 
-/** The `AGENTS.md` of a scope: its pathless sections, then a pointer per path rule when an unscoped host is on. */
-function agentsText(own: readonly Doc[], { scope, hosts }: Scoped): string {
+/**
+ * The `AGENTS.md` of a scope: its pathless sections, then a pointer per path rule when an unscoped host is on; the
+ * root's ends with the plan route for the effort.
+ */
+function agentsText(own: readonly Doc[], { scope, hosts, effort }: Scoped): string {
   const scoped = own.filter((doc) => scopeOf(doc).length > 0);
 
   const sections = own
@@ -59,11 +71,11 @@ function agentsText(own: readonly Doc[], { scope, hosts }: Scoped): string {
     sections.push(`## Rules by path\n${lines.join("\n")}`);
   }
 
-  return finalize((scope === "" ? sections : [PACKAGE_POINTER, ...sections]).join("\n\n"));
+  return finalize((scope === "" ? [...sections, planRoute(effort)] : [PACKAGE_POINTER, ...sections]).join("\n\n"));
 }
 
 /** The claude and antigravity files of one rule, under the scope's dir; a pathless one covers the whole dir. */
-function hostFiles(doc: Doc, { scope, hosts }: Scoped, out: Map<string, RuleFile>): void {
+function hostFiles(doc: Doc, { scope, hosts }: Omit<Scoped, "effort">, out: Map<string, RuleFile>): void {
   const globs = scopeOf(doc).length === 0 ? [`${scope}/**`] : globsOf(doc, scope);
   const nested = scope === "" ? doc.file : `${scope}/${doc.file}`;
 
@@ -86,15 +98,17 @@ function hostFiles(doc: Doc, { scope, hosts }: Scoped, out: Map<string, RuleFile
  * The files of one scope's rules (`""` for the root and stock, a package dir for a package), given the hosts that are
  * on, by POSIX path. The root `AGENTS.md` holds the pathless stock rules and a pointer per path rule; a package's holds
  * the pointer line first, and its globs are prefixed with the dir. Every one of a package's rules, pathless ones as
- * `<dir>/**`, is written for claude and antigravity under `<dir>/`.
+ * `<dir>/**`, is written for claude and antigravity under `<dir>/`. The root `AGENTS.md` ends with the plan skills of
+ * `effort`.
  */
-export function renderRules(rules: readonly Doc[], hosts: readonly Host[], scope: string): Map<string, RuleFile> {
+export function renderRules(rules: readonly Doc[], scoped: Scoped): Map<string, RuleFile> {
+  const { hosts, scope } = scoped;
   const out = new Map<string, RuleFile>();
 
   if (hosts.length === 0) return out;
   const own = rules.filter((doc) => doc.scope === scope);
   const home = scope === "" ? "" : `${scope}/`;
-  out.set(`${home}AGENTS.md`, { source: `${home}.repo/rules`, text: agentsText(own, { hosts, scope }) });
+  out.set(`${home}AGENTS.md`, { source: `${home}.repo/rules`, text: agentsText(own, scoped) });
   const written = scope === "" ? own.filter((doc) => scopeOf(doc).length > 0) : own;
 
   for (const doc of written) hostFiles(doc, { hosts, scope }, out);

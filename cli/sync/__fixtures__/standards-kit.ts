@@ -1,3 +1,4 @@
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import { parse, type ParseError } from "jsonc-parser";
 
 import { type Pack, type ResolvedLint } from "../../config.ts";
@@ -8,7 +9,7 @@ import type { Output, SyncContext } from "../outputs.ts";
 export function context(packs: Pack[], name = "app", lint: ResolvedLint = { skip: [] }): SyncContext {
   return {
     config: {
-      agents: { hosts: [], skills: [] },
+      agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
       packs,
       ...BASE_CONFIG,
       lint,

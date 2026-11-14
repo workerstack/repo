@@ -6,6 +6,7 @@ import { expect, it } from "vitest";
 
 import { readGoldens, renderFixtureTrees } from "../../dev/capture-tree-goldens.ts";
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { loadConfig } from "../config.ts";
 import { computeOutputs } from "../sync-outputs.ts";
 import { runSync } from "../sync.ts";
@@ -49,7 +50,13 @@ it("validates all four through a real sync of a root with a Cargo.toml and the s
   fs.writeFileSync(path.join(root, "repo.config.ts"), "export default {};\n");
   fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app" }\n');
   fs.writeFileSync(path.join(root, "Cargo.toml"), '[package]\nname = "app"\n');
-  const config = { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG };
+
+  const config = {
+    agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
+    packs: ["standards" as const],
+    ...BASE_CONFIG,
+  };
+
   const err: string[] = [];
   const io = { cwd: root, stderr: (s: string) => err.push(s), stdout: () => {} };
 

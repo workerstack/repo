@@ -1,4 +1,5 @@
 // A sync context over in-memory files and the INDEX fixtures the references-index suites share.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import type { Host, Pack } from "../../config.ts";
 import { BASE_CONFIG } from "../../__fixtures__/base-config.ts";
 import type { Output, SyncContext } from "../outputs.ts";
@@ -24,7 +25,7 @@ export function context({
 }: Fixture = {}): SyncContext {
   return {
     config: {
-      agents: { hosts, skills: [] },
+      agents: { ...AGENT_DEFAULTS, hosts, skills: [] },
       packs,
       ...BASE_CONFIG,
     },
