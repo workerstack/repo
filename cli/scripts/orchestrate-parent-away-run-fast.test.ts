@@ -69,8 +69,8 @@ it("a fast plan named by an in-progress fast roadmap gets no block under /away",
   expect(read(fast)).toBe(before);
 });
 
-it.each(["/auto", "/ask"])("a %s session keeps the block ask", (mode) => {
-  const { s } = modeSession(kit, "u5", mode);
+it("an /ask session keeps the block ask", () => {
+  const { s } = modeSession(kit, "u5", "/ask");
   const plan = s.reviewed("plans", VALID_PLAN);
   const before = read(plan);
   expect(s.stop("Saved.")).toStrictEqual(ASK_PLAN_1);

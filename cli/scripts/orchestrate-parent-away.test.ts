@@ -1,11 +1,12 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import { expect, it } from "vitest";
 
 import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
 import { closing, orchestrateKit, plan as planItem } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
-import { ASK_STOP_REASON, AWAY_RUN_REASON } from "./orchestrate.constants.ts";
+import { AWAY_RUN_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 const CASINGS: readonly Casing[] = ["claude", "grok"];
@@ -33,11 +34,11 @@ function withMode(mode: string) {
   return VALID_PLAN.replace("strategy: free", `strategy: free\nmode: ${mode}`);
 }
 
-it.each(CASINGS)("/away gives sessionGate=away, then /auto gives sessionGate=auto (%s payloads)", (casing) => {
+it.each(CASINGS)("/away gives sessionGate=away, then /ask gives sessionGate=ask (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "a1");
   expect(s.say("/away")).toMatch(/^sessionGate=away\b/);
   expect(s.say("go on")).toMatch(/^sessionGate=away\b/);
-  expect(s.say("/auto")).toMatch(/^sessionGate=auto\b/);
+  expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
 });
 
 it.each(CASINGS)("/away wins over an in-progress mode: ask plan this session saved (%s payloads)", (casing) => {
@@ -55,11 +56,22 @@ it.each(CASINGS)("an unstamped session's in-progress mode: away plan gives away 
   expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
 });
 
-it.each(CASINGS)("/auto wins over an in-progress mode: away plan (%s payloads)", (casing) => {
+it.each(CASINGS)("/ask wins over an in-progress mode: away plan (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "m4");
   setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
-  expect(s.say("/auto")).toMatch(/^sessionGate=auto\b/);
-  expect(s.say("go")).toMatch(/^sessionGate=auto\b/);
+  expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
+  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
+  expect(s.stop("Keep --json?")).toBeNull();
+});
+
+it.each(CASINGS)("an old auto stamp beats an in-progress mode: away plan (%s payloads)", (casing) => {
+  const ws = kit.temp();
+  const s = live(casing, ws, "m5");
+  const stamp = path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m5`);
+  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+  fs.mkdirSync(path.dirname(stamp), { recursive: true });
+  fs.writeFileSync(stamp, "auto");
+  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
@@ -67,10 +79,10 @@ it.each(CASINGS)("another session's mode: away plan leaves this session's mode a
   const ws = kit.temp();
   setKey(live(casing, ws, "other").reviewed("plans", withMode("away")), "status", "in-progress");
   const s = live(casing, ws, "m2");
-  expect(s.say("go")).toMatch(/^sessionGate=auto\b/);
+  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
   expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
-  expect(s.stop("wrote src/a.ts")?.reason).toBe(ASK_STOP_REASON);
+  expect(s.stop("wrote src/a.ts")).toBeNull();
 });
 
 it.each(CASINGS)(

@@ -54,12 +54,12 @@ it("spawn-fast starts fast then goes deep; spawn-deep is deep both times", () =>
   expect(implementerOf("spawn-deep", 2)).toBe("implementer-deep");
 });
 
-it("accepts exactly ask, auto and away", () => {
-  expect(MODES).toStrictEqual(["ask", "auto", "away"]);
+it("accepts exactly ask and away", () => {
+  expect(MODES).toStrictEqual(["ask", "away"]);
 
   for (const m of MODES) expect(parseMode(m)).toBe(m);
 
-  for (const bad of ["Away", " ask", "", "review", undefined]) expect(parseMode(bad)).toBeNull();
+  for (const bad of ["auto", "Away", " ask", "", "review", undefined]) expect(parseMode(bad)).toBeNull();
 });
 
 it("stampPath keeps the sid inside the sessions dir", () => {

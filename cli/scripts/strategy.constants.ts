@@ -6,7 +6,10 @@ export const SPAWN_FAST = "spawn-fast";
 const SPAWN_DEEP = "spawn-deep";
 export const STRATEGIES: readonly Strategy[] = [FREE_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
-export const MODES: readonly Mode[] = ["ask", "auto", "away"];
+export const ASK_MODE: Mode = "ask";
+export const AWAY_MODE: Mode = "away";
+
+export const MODES: readonly Mode[] = [ASK_MODE, AWAY_MODE];
 
 /**
  * Harnesses whose child and parent payloads differ by a marker the gate reads, so the review deny is enforced.

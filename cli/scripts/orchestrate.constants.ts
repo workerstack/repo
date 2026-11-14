@@ -15,7 +15,6 @@ export const SESSION_GATE_STAMP = "session-gate";
 
 /** One-release dual-read of 0.5 leftover stamp. */
 export const AUTO_ASK_STAMP = "auto-ask";
-export const ASK_STOP_REASON = "ask after this step";
 
 export const AWAY_STOP_REASON =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';

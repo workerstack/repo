@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The config file is `repo.config.ts` and its type is `RepoConfig`, with no alias. `bun repo sync` moves an old `workerstack.config.ts` to `repo.config.ts` after it rewrites `WorkerstackConfig` and `workerstack.config.ts` in every text file git lists, changelogs left out, so an import of the old type keeps working; `bun repo sync --check` and every other command tell a repo that has not synced yet to run `bun repo sync`. Run `bun repo sync` and commit the result.
 - The strategy `default` is now `free`: the main session works as in a plain chat and may spawn agents, but nothing forces it to. The approval codes `id` and `hd` are now `if` and `hf`. `bun repo sync` rewrites `default` to `free` in saved plans, roadmaps and handoffs.
 - The four deep skills are now `write-plan-deep`, `write-roadmap-deep`, `implement-plan-deep` and `implement-roadmap-deep`, and `bun repo sync` rewrites the old names in `.repo` markdown and moves `.repo/skills` overrides to the new folders.
+- `/auto` and `mode: auto` are gone. `ask` is now the default: it stops once for plan approval, then runs to done, and the per-step pause is gone. `bun repo sync` rewrites a saved `mode: auto` to `mode: ask`. A `.repo/skills/auto` override now fails sync because no stock skill has that name.
 
 ### Fixed
 

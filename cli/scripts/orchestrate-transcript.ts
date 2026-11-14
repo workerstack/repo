@@ -4,7 +4,6 @@ import fs from "node:fs";
 import { z } from "zod";
 
 import { isRecord, isString, type Json, tryJson, type JsonObject } from "../json.ts";
-import { parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import {
@@ -29,16 +28,6 @@ export function isWaitScoutExact(msg: string): boolean {
   const [only = ""] = nonempty;
 
   return nonempty.length === 1 && only.replace(LEAD, "") === WAIT_SCOUT;
-}
-
-/** True when the reply asks the person something: a scout wait, an approval block or a question. */
-export function hasStepAsk(msg: string): boolean {
-  if (isWaitScoutExact(msg) || parseClosingBlock(msg) !== null) return true;
-
-  return msg
-    .split("\n")
-    .map((l) => l.replace(LEAD, "").trim())
-    .some((l) => l.includes("?"));
 }
 
 export function firstNonEmptyStripped(msg: string): string {

@@ -12,7 +12,7 @@ import { persistRoadmap } from "./persist-roadmap.ts";
 
 const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
 const NO_KEY = "strategy: free|spawn-fast|spawn-deep";
-const MODE_KEY = "mode: ask|auto|away";
+const MODE_KEY = "mode: ask|away";
 
 function without(body: string) {
   return body.replace(/^strategy:.*\n/m, "");
@@ -104,12 +104,12 @@ describe("roadmap mode on a new save", () => {
 describe("roadmap mode on an update", () => {
   it("keeps a saved mode on a body-only update and takes a new one", () => {
     const ws = tmpWs();
-    const r = save(withMode(DRAFT_ROADMAP, "auto"), ws);
+    const r = save(withMode(DRAFT_ROADMAP, "away"), ws);
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, DRAFT_ROADMAP.replace(/^strategy:.*\n/m, ""));
     expect(kept.ok, kept.error).toBe(true);
-    expect(read(abs)).toMatch(/^mode: auto$/m);
+    expect(read(abs)).toMatch(/^mode: away$/m);
     const changed = update(ws, abs, withMode(DRAFT_ROADMAP, "ask"));
     expect(changed.ok, changed.error).toBe(true);
     expect(read(abs).match(/^mode:/gm)).toStrictEqual(["mode:"]);
