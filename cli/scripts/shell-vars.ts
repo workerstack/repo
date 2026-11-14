@@ -53,14 +53,18 @@ function known(text: string): Value {
 
 /** The start variables of a line the hook judges: this process's home and `CDPATH`, which the shell inherits. */
 export function processEnv(): StartEnv {
-  return { cdpath: repoEnv.process.CDPATH ?? "", home: os.homedir() };
+  return { cdpath: repoEnv.process.CDPATH ?? "", home: os.homedir(), path: repoEnv.process.PATH ?? "" };
 }
 
-/** The variables a walk starts with: `HOME` and `CDPATH` from `env`, `PWD` as the start dir, and bash's own `IFS`. */
+/**
+ * The variables a walk starts with: `HOME`, `CDPATH` and `PATH` from `env`, `PWD` as the start dir, and bash's own
+ * `IFS`.
+ */
 export function seedVars(env: StartEnv, cwd: string): Vars {
   return new Map([
     ["HOME", known(env.home)],
     ["CDPATH", known(env.cdpath)],
+    ["PATH", known(env.path)],
     ["PWD", known(cwd)],
     ["IFS", known(DEFAULT_IFS)],
   ]);

@@ -1,14 +1,14 @@
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Simple, Value, Vars } from "./shell-ast.types.ts";
 import { expandCommand } from "./shell-fields.ts";
 import { wordAt } from "./shell-lex-word.ts";
 import { assignment, joinVars, processEnv, sameVars, seedVars, varsAfter, withDir, withVar } from "./shell-vars.ts";
 
-const START = seedVars({ cdpath: "", home: "/h" }, "/r");
+const START = seedVars({ cdpath: "", home: "/h", path: "/bin" }, "/r");
 
 function v(text: string): Value {
   return { known: true, text };
@@ -35,17 +35,24 @@ function after(src: string, name: string, vars: Vars = START): string {
 }
 
 describe("seedVars and processEnv", () => {
-  it("starts with the home, the cd path, the dir and bash's IFS", () => {
+  it("starts with the home, the cd path, the search path, the dir and bash's IFS", () => {
     expect([...START]).toStrictEqual([
       ["HOME", v("/h")],
       ["CDPATH", v("")],
+      ["PATH", v("/bin")],
       ["PWD", v("/r")],
       ["IFS", v(" \t\n")],
     ]);
   });
 
-  it("reads this process's home", () => {
+  it("reads this process's home and PATH", () => {
+    vi.stubEnv("PATH", "/a:/b");
+
     expect(processEnv().home).toBe(os.homedir());
+    expect(processEnv().path).toBe("/a:/b");
+    vi.stubEnv("PATH", undefined);
+
+    expect(processEnv().path).toBe("");
   });
 });
 

@@ -10,7 +10,7 @@ import { seedVars, withVar } from "./shell-vars.ts";
 
 const HERE: Dir = { known: true, path: "/r" };
 const LOST: Dir = { cause: '"$D"', known: false };
-const START = seedVars({ cdpath: "", home: "/h" }, "/r");
+const START = seedVars({ cdpath: "", home: "/h", path: "/bin" }, "/r");
 
 /** The dir after the command `src` run from `dir` with `vars`, as a path, `?cause`, or null when it changes none. */
 function after(src: string, dir: Dir = HERE, vars: Vars = START): string | null {

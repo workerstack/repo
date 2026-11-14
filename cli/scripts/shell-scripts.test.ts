@@ -21,8 +21,9 @@ function simple(src: string): Simple {
 function scripts(src: string, stdin: Stdin = NONE): string[] {
   return scriptsOf(simple(src), stdin).map((s: Script) => {
     if (s.kind === "opaque") return `opaque(${s.cause})`;
+    const text = s.kind === "file" ? `file(${s.word.raw})` : s.text;
 
-    return s.inherits ? `+${s.text}` : s.text;
+    return s.inherits ? `+${text}` : text;
   });
 }
 
@@ -40,11 +41,6 @@ describe("scriptsOf eval and shells", () => {
     expect(scripts("bash.exe --rcfile f -c -- a")).toStrictEqual(["a"]);
     expect(scripts("bash -c")).toStrictEqual([]);
     expect(scripts("$SHELL -c a")).toStrictEqual(["a"]);
-  });
-
-  it("leaves a script file alone", () => {
-    expect(scripts("bash run.sh", CURL)).toStrictEqual([]);
-    expect(scripts("bash - run.sh", CURL)).toStrictEqual([]);
   });
 });
 

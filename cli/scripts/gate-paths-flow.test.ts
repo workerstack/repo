@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { expect, it } from "vitest";
 
 import { fileTree } from "./__fixtures__/file-tree.ts";
@@ -104,4 +107,15 @@ it("bashTargetsDenylist: denies a glob it cannot match when a segment could name
   for (const cmd of unmatched) expect(bashTargetsDenylist(`cd $D && ${cmd}`, NO_DIR), cmd).toBe(true);
 
   for (const cmd of passing) expect(bashTargetsDenylist(`cd $D && ${cmd}`, NO_DIR), cmd).toBe(false);
+});
+
+it("bashTargetsDenylist: judges the reads in a script file a shell runs, from the dir env -C names", () => {
+  const dir = fileTree(["s/"]);
+  fs.writeFileSync(path.join(dir, "s/d.sh"), "cat dist/a.js\n");
+  fs.writeFileSync(path.join(dir, "s/ok.sh"), "cat src/a.ts\n");
+
+  const reads = [`cd '${dir}/s' && bash d.sh`, `env -C '${dir}/s' bash d.sh`, `cd '${dir}/s' && . ./d.sh`];
+
+  for (const cmd of reads) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
+  expect(bashTargetsDenylist(`cd '${dir}/s' && bash ok.sh`, NO_DIR)).toBe(false);
 });
