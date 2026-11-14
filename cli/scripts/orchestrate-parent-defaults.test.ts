@@ -105,12 +105,19 @@ describe("agents.defaultApproval", () => {
   it("an in-progress plan's approval: ask beats a default of away", async () => {
     const ws = workspace('{ defaultApproval: "away" }');
     const s = claudeSession(kit, ws, "d3");
-    const saved = s.save(".repo/plans/x.md", VALID_PLAN.replace("strategy: free", "strategy: free\napproval: ask"));
+
+    const saved = s.save(
+      ".repo/plans/x.md",
+      VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: add tmp ignore\napproval: ask"),
+    );
+
     fs.writeFileSync(saved, fs.readFileSync(saved, "utf8").replace(/^status: .*$/m, "status: in-progress"));
     expect(await say(ws, "d3", "go")).toMatch(/^approval=ask\b/);
     expect(await stop(ws, "d3", "Keep --json?")).toBeNull();
   });
+});
 
+describe("agents.defaultApproval with no usable config", () => {
   it.each([
     ["no config", null],
     ["an invalid config", '{ defaultApproval: "later" }'],
@@ -126,14 +133,14 @@ describe("agents.defaultStrategy", () => {
     const ws = workspace('{ defaultStrategy: "spawn-deep" }');
 
     const planText = await write(ws, "s1", {
-      content: VALID_PLAN.replace(/^strategy:.*\n/m, ""),
+      content: VALID_PLAN,
       file: ".repo/plans/x.md",
     });
 
     expect(planText).toMatch(/^strategy: spawn-deep$/m);
 
     const roadmapText = await write(ws, "s1", {
-      content: DRAFT_ROADMAP.replace(/^strategy:.*\n/m, ""),
+      content: DRAFT_ROADMAP,
       file: ".repo/roadmaps/x.md",
     });
 
@@ -143,13 +150,19 @@ describe("agents.defaultStrategy", () => {
     expect(fast).not.toMatch(/^strategy:/m);
   });
 
-  it("keeps a sent strategy over the default", async () => {
+  it("refuses a sent strategy line instead of keeping it over the default", async () => {
     const ws = workspace('{ defaultStrategy: "spawn-deep" }');
 
-    const content = VALID_PLAN.replace("strategy: free", "strategy: spawn-fast");
-    const text = await write(ws, "s2", { content, file: ".repo/plans/x.md" });
+    const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: add tmp ignore\nstrategy: spawn-fast");
 
-    expect(text.match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-fast"]);
+    const out = await send(ws, "s2", {
+      hook_event_name: "PreToolUse",
+      tool_input: { content, file_path: ".repo/plans/x.md" },
+      tool_name: "Write",
+    });
+
+    expect(out?.hookSpecificOutput.permissionDecision).toBe("deny");
+    expect(out?.hookSpecificOutput.permissionDecisionReason).toContain("strategy: is set from the session");
   });
 });
 

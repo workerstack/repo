@@ -14,7 +14,7 @@ import {
   stripBom,
   type PersistResult,
 } from "./persist-doc.ts";
-import { withSavedFrontmatter } from "./persist-plan-head.ts";
+import { keepSavedKeys, withSavedFrontmatter } from "./persist-plan-head.ts";
 import { unclosedFenceErrors } from "./persist-sections.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -101,7 +101,7 @@ export function prepareRewrite(
   const fence = unclosedFenceErrors(text);
 
   if (fence.length > 0) return refused(fence);
-  const full = text.startsWith(FM_OPEN) ? text : withSavedFrontmatter(previous, text);
+  const full = text.startsWith(FM_OPEN) ? keepSavedKeys(previous, text) : withSavedFrontmatter(previous, text);
   const errors = validate(filename, full, previous);
 
   if (errors.length > 0) return refused(errors);

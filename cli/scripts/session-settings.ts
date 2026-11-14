@@ -14,16 +14,10 @@ import { tryJson } from "../json.ts";
 import { REPO, STATE } from "../repo-dirs.ts";
 import type { Result } from "../result.ts";
 import type { HookInput } from "./hook-input.ts";
-import {
-  approvalsFile,
-  countsLine,
-  frontmatterOf,
-  isRealSession,
-  readLines,
-  sessionDir,
-  sessionIdOf,
-} from "./orchestrate-session.ts";
-import { IN_PROGRESS } from "./orchestrate.constants.ts";
+import { itemValue } from "./item-value.ts";
+import { countsLine, isRealSession, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
+import { ITEM_KIND_LIST, PLAN_KIND, ROADMAP_KIND } from "./orchestrate.constants.ts";
+import type { ItemKind } from "./orchestrate.types.ts";
 import { APPROVALS, EFFORTS, STRATEGIES } from "./strategy.constants.ts";
 import { parseApprovalSetting, parseStrategy } from "./strategy.ts";
 import type { Approval, Effort, Strategy } from "./strategy.types.ts";
@@ -142,22 +136,16 @@ export function writeSessionSettings(root: string, sid: string, change: SessionS
   }
 }
 
-/** The `approval:` of the newest in-progress plan or roadmap this session saved; null when none holds a valid one. */
-function itemApproval(data: HookInput): Approval | null {
-  const file = approvalsFile(data);
+/**
+ * The strategy a new item of `kind` is saved with: the session value, then (a plan only) the `strategy:` of the newest
+ * in-progress roadmap this session saved, then `defaults`.
+ */
+export function saveStrategy(data: HookInput, defaults: AgentDefaults, kind: ItemKind): Strategy {
+  const sid = sessionIdOf(data);
+  const saved = isRealSession(sid) ? readSessionSettings(resolveRoots(data).root, sid).strategy : undefined;
+  const parent = kind === PLAN_KIND ? itemValue(data, (fm) => parseStrategy(fm.strategy), [ROADMAP_KIND]) : null;
 
-  for (const abs of file === null ? [] : readLines(file).toReversed()) {
-    try {
-      const fm = frontmatterOf(fs.readFileSync(abs, "utf8"));
-      const approval = parseApprovalSetting(fm.approval);
-
-      if (fm.status === IN_PROGRESS && approval !== null) return approval;
-    } catch {
-      // skip unreadable
-    }
-  }
-
-  return null;
+  return saved ?? parent ?? defaults.defaultStrategy;
 }
 
 /**
@@ -169,7 +157,10 @@ export function effectiveSettings(data: HookInput, defaults: AgentDefaults): Set
   const saved = isRealSession(sid) ? readSessionSettings(resolveRoots(data).root, sid) : {};
 
   return {
-    approval: saved.approval ?? itemApproval(data) ?? defaults.defaultApproval,
+    approval:
+      saved.approval ??
+      itemValue(data, (fm) => parseApprovalSetting(fm.approval), ITEM_KIND_LIST) ??
+      defaults.defaultApproval,
     effort: saved.effort ?? defaults.defaultEffort,
     strategy: saved.strategy ?? defaults.defaultStrategy,
   };

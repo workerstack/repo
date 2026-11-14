@@ -8,6 +8,7 @@ import { agentDefaults } from "../agent-defaults.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { persistImplementation } from "./persist-implementation.ts";
+import { agentStrategyError } from "./persist-keys.ts";
 import { persistPlan } from "./persist-plan.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 import { persistTmp } from "./persist-tmp.ts";
@@ -16,16 +17,19 @@ import { resolveRoots } from "./workspace-root.ts";
 
 type Saved = { ok: true; serial: number; path: string; filename: string } | { ok: false; error: string };
 
-/** A save of one kind; a plan or roadmap sent without a `strategy:` line gets `defaultStrategy`. */
-type Saver = (opts: { workspaceRoot: string; content: string; defaultStrategy: Strategy }) => Saved;
+/** A save of one kind; a plan or roadmap is saved with `strategy`. */
+type Saver = (opts: { workspaceRoot: string; content: string; strategy: Strategy }) => Saved;
+
+/** A kind's save, and whether the agent's body may not send a `strategy:` (the session or config sets it). */
+type Entry = { save: Saver; setsStrategy: boolean };
 
 const SAVERS = {
-  handoff: persistHandoff,
-  implementation: persistImplementation,
-  plan: persistPlan,
-  roadmap: persistRoadmap,
-  tmp: persistTmp,
-} as const satisfies Readonly<Record<string, Saver>>;
+  handoff: { save: persistHandoff, setsStrategy: false },
+  implementation: { save: persistImplementation, setsStrategy: false },
+  plan: { save: persistPlan, setsStrategy: true },
+  roadmap: { save: persistRoadmap, setsStrategy: true },
+  tmp: { save: persistTmp, setsStrategy: false },
+} as const satisfies Readonly<Record<string, Entry>>;
 
 function isKind(kind: string): kind is keyof typeof SAVERS {
   return Object.hasOwn(SAVERS, kind);
@@ -46,11 +50,15 @@ function workspaceOf(argv: string[]): string {
   return (at >= 0 ? argv[at + 1] : undefined) ?? resolveRoots().root;
 }
 
-async function saveBody(save: Saver, argv: string[], io: HookIo): Promise<number> {
+async function saveBody({ save, setsStrategy }: Entry, argv: string[], io: HookIo): Promise<number> {
   try {
     const workspaceRoot = workspaceOf(argv);
-    const { defaultStrategy } = await agentDefaults(workspaceRoot);
-    const result = save({ content: readAllText(io), defaultStrategy, workspaceRoot });
+    const { defaultStrategy: strategy } = await agentDefaults(workspaceRoot);
+    const content = readAllText(io);
+    const refused = setsStrategy ? agentStrategyError(content, null) : null;
+
+    if (refused !== null) return fail(`persist: ${refused}`);
+    const result = save({ content, strategy, workspaceRoot });
 
     if (!result.ok) return fail(result.error);
     const { serial, path: saved, filename } = result;

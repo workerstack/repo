@@ -31,7 +31,7 @@ function setKey(file: string, key: string, value: string) {
 }
 
 function withApproval(approval: string) {
-  return VALID_PLAN.replace("strategy: free", `strategy: free\napproval: ${approval}`);
+  return VALID_PLAN.replace("PLAN_NAME: add tmp ignore", `PLAN_NAME: add tmp ignore\napproval: ${approval}`);
 }
 
 it.each(CASINGS)("/away gives approval=away, then /ask gives approval=ask (%s payloads)", (casing) => {

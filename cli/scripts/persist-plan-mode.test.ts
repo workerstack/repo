@@ -12,14 +12,19 @@ const tmpWs = useTmpWs();
 const CREATED = "2026-08-26T14:30:00Z";
 const APPROVAL_KEY = "approval: ask|away";
 
+/** A new plan saved with strategy free. */
+function saveFree(content: string, ws: string) {
+  return persistPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
+}
+
 function withApproval(body: string, value: string) {
-  return body.replace(/^strategy:.*$/m, (l) => `${l}\napproval: ${value}`);
+  return body.replace(/^(?:strategy:|PLAN_NAME:).*$/m, (l) => `${l}\napproval: ${value}`);
 }
 
 describe("plan approval moves and fences", () => {
   it("moves a body approval line into the frontmatter right after strategy and out of the body", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withApproval(VALID_PLAN, "away"), created: CREATED, workspaceRoot: ws });
+    const r = saveFree(withApproval(VALID_PLAN, "away"), ws);
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     const [head, ...body] = text.split("\n---\n");
@@ -31,7 +36,7 @@ describe("plan approval moves and fences", () => {
   it("leaves an approval line inside a code fence alone", () => {
     const ws = tmpWs();
     const fenced = VALID_PLAN.replace("## Context", "```console\napproval: later\n```\n\n## Context");
-    const r = persistPlan({ content: fenced, created: CREATED, workspaceRoot: ws });
+    const r = saveFree(fenced, ws);
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     expect(text.split("\n---\n")[0]).not.toMatch(/^approval:/m);
@@ -42,10 +47,10 @@ describe("plan approval moves and fences", () => {
 describe("plan approval denials", () => {
   it("denies an unknown approval on a body line or in the frontmatter and says the three values", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withApproval(VALID_PLAN, "later"), created: CREATED, workspaceRoot: ws });
+    const r = saveFree(withApproval(VALID_PLAN, "later"), ws);
     expect(r.ok).toBe(false);
     expect(r.errors).toContain(APPROVAL_KEY);
-    const ok = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+    const ok = saveFree(VALID_PLAN, ws);
     expect(ok.ok, ok.error).toBe(true);
     const abs = path.join(ws, savedOk(ok).path);
     const full = update(ws, abs, withApproval(read(abs), "later"));
@@ -60,8 +65,8 @@ describe("plan approval denials", () => {
 describe("plan mode key", () => {
   it("denies a save that sends the old mode key and names approval", () => {
     const ws = tmpWs();
-    const old = VALID_PLAN.replace("strategy: free", "strategy: free\nmode: away");
-    const r = persistPlan({ content: old, created: CREATED, workspaceRoot: ws });
+    const old = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: add tmp ignore\nmode: away");
+    const r = saveFree(old, ws);
 
     expect(r.errors).toContain("mode: is now approval:; use approval: ask|away");
   });
@@ -70,10 +75,10 @@ describe("plan mode key", () => {
 describe("plan approval updates", () => {
   it("stays valid with no approval and keeps a saved approval on a body-only update", () => {
     const ws = tmpWs();
-    const none = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+    const none = saveFree(VALID_PLAN, ws);
     expect(none.ok, none.error).toBe(true);
     expect(read(path.join(ws, savedOk(none).path))).not.toMatch(/^approval:/m);
-    const r = persistPlan({ content: withApproval(VALID_PLAN, "ask"), created: CREATED, workspaceRoot: ws });
+    const r = saveFree(withApproval(VALID_PLAN, "ask"), ws);
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const kept = update(ws, abs, VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay."));
@@ -91,7 +96,7 @@ const ENTRY = "- decision: a → b because c";
 describe("plan decision entries", () => {
   it("saves a decision entry and denies an update that edits or drops it", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withEntries(VALID_PLAN, ENTRY), created: CREATED, workspaceRoot: ws });
+    const r = saveFree(withEntries(VALID_PLAN, ENTRY), ws);
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const before = read(abs);

@@ -8,11 +8,11 @@ You run the roadmap in this session. Format: `node_modules/@workerstack/repo/ref
 
 Refuse `status: draft`. Say it is not locked and stop. Do not write a plan.
 
-Accept `locked` or `in-progress`. Set `in-progress` when you start. Same session. Do not spawn a subagent per slice.
+Accept `locked` or `in-progress`. Set `in-progress` when you start, and at every start, a resumed run too, save the roadmap again with `status: in-progress` (a Write of the saved file) so this session's hook records it and a child plan can take its `strategy:`. Same session. Do not spawn a subagent per slice.
 
 For each open slice, in order:
 
-1. If `Location` is absent, run `/write-plan-deep` from that slice's line: its title and sentence on a pointer roadmap, its Title, Goal and Why on an old-shape one. Research the slice's decisions and Usage there; they go into the plan, not the roadmap. Read the roadmap's `## Previous mistakes` first and put each entry that touches this slice in the plan's Watch-outs. The lock is the approval: do not stop for plan approval. `/write-plan-deep` picks the type and the `commit:` subject. The plan copies the roadmap's `strategy:` unless the slice's scope argues for another (heuristic in `/write-plan-deep`). If it hits a plan-shaping question, stop and leave the roadmap `locked` or `in-progress`.
+1. If `Location` is absent, run `/write-plan-deep` from that slice's line: its title and sentence on a pointer roadmap, its Title, Goal and Why on an old-shape one. Research the slice's decisions and Usage there; they go into the plan, not the roadmap. Read the roadmap's `## Previous mistakes` first and put each entry that touches this slice in the plan's Watch-outs. The lock is the approval: do not stop for plan approval. `/write-plan-deep` picks the type and the `commit:` subject. The plan's `strategy:` is set by the save: the session value, then the roadmap's, then the config. The plan sends `advice:` when the slice's scope argues for another value (heuristic in `/write-plan-deep`). If it hits a plan-shaping question, stop and leave the roadmap `locked` or `in-progress`.
 2. Set `Location` to the absolute plan path `/write-plan-deep` reported. Do not write a second plan when Location is already set.
 3. Run `/implement-plan-deep` on that plan. It works in the plan's worktree `{serial}-{name}` and finishes it. Do not stop between slices.
 4. Mark the slice `[x]` only after that plan's Verify is done.

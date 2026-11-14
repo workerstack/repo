@@ -17,7 +17,7 @@ describe("roadmap Previous mistakes section", () => {
   it("is required on a new roadmap, which starts its review count at 0", () => {
     const ws = tmpWs();
     const bare = DRAFT_ROADMAP.replace("\n## Previous mistakes\n(none)\n", "");
-    const r = persistRoadmap({ content: bare, workspaceRoot: ws });
+    const r = persistRoadmap({ content: bare, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/missing ## Previous mistakes; end a new roadmap with it and \(none\)/);
     expect(read(savedRoadmap(ws))).toMatch(/^reviews: 0$/m);
@@ -25,7 +25,13 @@ describe("roadmap Previous mistakes section", () => {
 
   it("rejects an unknown entry kind and a section that is not last", () => {
     const ws = tmpWs();
-    const bad = persistRoadmap({ content: withEntries(DRAFT_ROADMAP, "- oops: a → b"), workspaceRoot: ws });
+
+    const bad = persistRoadmap({
+      content: withEntries(DRAFT_ROADMAP, "- oops: a → b"),
+      strategy: "free",
+      workspaceRoot: ws,
+    });
+
     expect(bad.ok).toBe(false);
     expect(bad.error).toMatch(/feedback\|verify\|review\|premise\|decision\|slice/);
 
@@ -34,7 +40,9 @@ describe("roadmap Previous mistakes section", () => {
       "## Previous mistakes\n(none)\n\n## Verify",
     );
 
-    expect(persistRoadmap({ content: moved, workspaceRoot: ws }).error).toMatch(/must be the last heading/);
+    expect(persistRoadmap({ content: moved, strategy: "free", workspaceRoot: ws }).error).toMatch(
+      /must be the last heading/,
+    );
   });
 });
 

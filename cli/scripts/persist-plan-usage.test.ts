@@ -18,7 +18,7 @@ function withUsage(usage: string) {
 }
 
 function save(content: string) {
-  return persistPlan({ content, workspaceRoot: tmpWs() });
+  return persistPlan({ content, strategy: "free", workspaceRoot: tmpWs() });
 }
 
 describe("usage section denials", () => {
@@ -75,7 +75,7 @@ describe("usage section fences", () => {
 describe("usage section on update", () => {
   it("lets an update to a saved plan without Usage pass, and denies Usage below Context", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withUsage("No visible change: x"), workspaceRoot: ws });
+    const r = persistPlan({ content: withUsage("No visible change: x"), strategy: "free", workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     const abs = path.join(ws, savedOk(r).path);
     const legacy = fs.readFileSync(abs, "utf8").replace(/## Usage\n[\s\S]*?(?=## Context)/, "");

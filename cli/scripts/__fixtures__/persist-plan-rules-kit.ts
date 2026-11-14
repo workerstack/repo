@@ -18,6 +18,7 @@ export function usePlanRules(): PlanRules {
     const r = persistPlan({
       content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
+      strategy: "free",
       workspaceRoot: tempDir("persist-plan-rules-"),
     });
     if (!r.ok) throw new Error(r.error);

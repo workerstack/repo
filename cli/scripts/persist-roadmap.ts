@@ -3,7 +3,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { DECIMAL, H1_RE, SOURCE_MAX } from "./persist-doc.constants.ts";
 import {
@@ -19,9 +18,11 @@ import {
   stripBom,
 } from "./persist-doc.ts";
 import {
+  extractAdvice,
   extractApproval,
   extractRetiredMode,
   extractStrategy,
+  stripAdviceLine,
   stripApprovalLine,
   stripStrategyLine,
 } from "./persist-keys.ts";
@@ -44,6 +45,7 @@ type Preamble = {
   status: string;
   reviews: string | undefined;
   strategy: string | undefined;
+  advice: string | undefined;
   approval: string | undefined;
   mode: string | undefined;
   fullFrontmatter: boolean;
@@ -61,6 +63,7 @@ type RenderInput = {
   created: string;
   source: string;
   strategy: string | undefined;
+  advice: string | undefined;
   approval: string | undefined;
   mode?: string | undefined;
   body: string;
@@ -88,15 +91,18 @@ function preamble(raw: string): Preamble {
   const reviews = takeLine(status.text, "reviews");
   const strategy = stripped.map.strategy ?? extractStrategy(reviews.text);
   const unstrategized = stripStrategyLine(reviews.text);
-  const approval = stripped.map.approval ?? extractApproval(unstrategized);
-  const body = stripApprovalLine(unstrategized);
+  const advice = stripped.map.advice ?? extractAdvice(unstrategized);
+  const unadvised = stripAdviceLine(unstrategized);
+  const approval = stripped.map.approval ?? extractApproval(unadvised);
+  const body = stripApprovalLine(unadvised);
 
   return {
+    advice,
     approval,
     body,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
     fullFrontmatter: stripped.body !== stripBom(raw),
-    mode: stripped.map.mode ?? extractRetiredMode(unstrategized),
+    mode: stripped.map.mode ?? extractRetiredMode(unadvised),
     name: nameOf(trimmed, body),
     reviews: stripped.map.reviews ?? reviews.value,
     status: firstNonEmpty(stripped.map.status, status.value) ?? "",
@@ -112,6 +118,7 @@ function render({
   created,
   source,
   strategy,
+  advice,
   approval,
   mode,
   body,
@@ -124,6 +131,7 @@ function render({
     `created: ${created}`,
     `source: ${JSON.stringify(source.slice(0, SOURCE_MAX))}`,
     ...(firstNonEmpty(strategy) === undefined ? [] : [`strategy: ${strategy}`]),
+    ...(advice === undefined ? [] : [`advice: ${advice}`]),
     ...(approval === undefined ? [] : [`approval: ${approval}`]),
     ...(mode === undefined ? [] : [`mode: ${mode}`]),
   ];
@@ -132,15 +140,20 @@ function render({
 }
 
 /** The saved frontmatter an update keeps for each key it does not send; a full frontmatter drops them. */
-function keptKeys(pre: Preamble, prev: FrontmatterMap): Pick<RenderInput, "reviews" | "strategy" | "approval"> {
+function keptKeys(
+  pre: Preamble,
+  prev: FrontmatterMap,
+): Pick<RenderInput, "reviews" | "strategy" | "advice" | "approval"> {
   function keep(sent: string | undefined, saved: string | undefined) {
     return sent ?? (pre.fullFrontmatter ? undefined : saved);
   }
 
   return {
+    // The strategy and advice are not the agent's to drop: an update that omits them keeps the saved ones.
+    advice: pre.advice ?? prev.advice,
     approval: keep(pre.approval, prev.approval),
     reviews: keep(pre.reviews, prev.reviews),
-    strategy: keep(pre.strategy, prev.strategy),
+    strategy: pre.strategy ?? prev.strategy,
   };
 }
 
@@ -184,17 +197,18 @@ export function prepareRoadmapUpdate(input: Rewrite): RoadmapResult {
   return { content: full, filename, ok: true, path: rel, serial: serialOf(filename) };
 }
 
-/** What a new roadmap is saved from beyond its text: when, and the strategy it gets without a `strategy:` line. */
-type NewInput = { created: string | undefined; defaultStrategy: Strategy };
+/** What a new roadmap is saved from beyond its text: when, and the strategy it is saved with. */
+type NewInput = { created: string | undefined; strategy: Strategy };
 
 /** A new roadmap's next serial, file name and text. */
-function newFile(dir: string, pre: Preamble, { created, defaultStrategy }: NewInput) {
+function newFile(dir: string, pre: Preamble, { created, strategy }: NewInput) {
   const slug = slugify(pre.name);
   const createdAt = createdAtOf(created);
   const serial = nextSerial(dir, "");
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
 
   const full = render({
+    advice: pre.advice,
     approval: pre.approval,
     body: pre.body,
     created: createdAt,
@@ -204,28 +218,23 @@ function newFile(dir: string, pre: Preamble, { created, defaultStrategy }: NewIn
     slug,
     source: persistSource([pre.name], pre.body.match(GOAL_SECTION_RE), slug),
     status: firstNonEmpty(pre.status) ?? DRAFT_STATUS,
-    strategy: pre.strategy ?? defaultStrategy,
+    strategy,
   });
 
   return { filename, full, serial };
 }
 
-/** What a new roadmap save takes; `defaultStrategy` is `free` when not given. */
-type SaveInput = { workspaceRoot?: string; content?: string; created?: string; defaultStrategy?: Strategy };
+/** What a new roadmap save takes; `strategy` is the session's or the config's. */
+type SaveInput = { workspaceRoot?: string; content?: string; created?: string; strategy: Strategy };
 
-export function persistRoadmap({
-  workspaceRoot,
-  content,
-  created,
-  defaultStrategy = AGENT_DEFAULTS.defaultStrategy,
-}: SaveInput = {}): RoadmapResult {
+export function persistRoadmap({ workspaceRoot, content, created, strategy }: SaveInput): RoadmapResult {
   const { ws, raw } = saveTarget(workspaceRoot, content);
   const dir = path.join(ws, ROADMAP_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const fence = unclosedFenceErrors(raw);
 
   if (fence.length > 0) return refused(fence);
-  const { serial, filename, full } = newFile(dir, preamble(raw), { created, defaultStrategy });
+  const { serial, filename, full } = newFile(dir, preamble(raw), { created, strategy });
   const errors = validateRoadmap(filename, full, { fresh: true });
 
   if (errors.length > 0) return refused(errors);

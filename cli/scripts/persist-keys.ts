@@ -1,9 +1,10 @@
 import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
-/** The `strategy:` and `approval:` keys a plan or roadmap save sends in its frontmatter or as a body line. */
+/** The `strategy:`, `advice:` and `approval:` keys a plan or roadmap save sends, in frontmatter or as a body line. */
 import { hasKey, parseFrontmatter, type FrontmatterMap, stripBom } from "./persist-doc.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 import { APPROVALS, STRATEGIES } from "./strategy.constants.ts";
-import { parseApprovalSetting } from "./strategy.ts";
+import { parseApprovalSetting, parseStrategy } from "./strategy.ts";
+import type { Strategy } from "./strategy.types.ts";
 
 /** Index of the first `{key}:` line outside a code fence, else -1. */
 function keyLineAt(lines: string[], key: string): number {
@@ -66,6 +67,16 @@ export function stripApprovalLine(content: string): string {
   return stripKeyLine(content, "approval");
 }
 
+/** The `advice:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
+export function extractAdvice(content: string): string | undefined {
+  return extractKey(content, "advice");
+}
+
+/** `content` without its first `advice:` line outside a code fence. */
+export function stripAdviceLine(content: string): string {
+  return stripKeyLine(content, "advice");
+}
+
 /** The retired `mode:` value a save sends; kept so validation can refuse it with what replaced it. */
 export function extractRetiredMode(content: string): string | undefined {
   return extractKey(content, "mode");
@@ -88,4 +99,36 @@ export function approvalErrors(map: FrontmatterMap): string[] {
 /** `strategy` must be one of the three values. */
 export function strategyError(): string {
   return `strategy: ${STRATEGIES.join("|")}`;
+}
+
+const ADVICE_MAX = 100;
+const ADVICE_RE = /^(\S+) because \S/;
+
+function adviceLine(): string {
+  return `advice: {${STRATEGIES.join("|")}} because {reason}`;
+}
+
+function adviceError(): string {
+  return `${adviceLine()}, at most ${ADVICE_MAX} characters`;
+}
+
+/** Errors for a frontmatter's advice: optional; when sent `{strategy} because {reason}` within the length cap. */
+export function adviceErrors(map: FrontmatterMap): string[] {
+  if (!hasKey(map, "advice")) return [];
+  const value = String(map.advice);
+  const word = ADVICE_RE.exec(value)?.[1];
+
+  return value.length <= ADVICE_MAX && parseStrategy(word) !== null ? [] : [adviceError()];
+}
+
+/**
+ * The refusal for an agent's `strategy:` line: it is set from the session, the roadmap or the config. Null when the
+ * content sends none, or one equal to `saved`, the value the file already holds.
+ */
+export function agentStrategyError(content: string, saved: Strategy | null): string | null {
+  const sent = extractStrategy(content);
+
+  if (sent === undefined || sent === saved) return null;
+
+  return `strategy: is set from the session, the roadmap or the config; send ${adviceLine()}`;
 }

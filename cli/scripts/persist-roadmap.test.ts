@@ -20,7 +20,7 @@ function logs(t: string) {
 describe("persistRoadmap", () => {
   it("persists a two-slice pointer draft with no Location at serial 1", () => {
     const ws = tmpWs();
-    const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(true);
     expect(r.serial).toBe(1);
     expect(r.path).toBe(".repo/roadmaps/1-auth-program-20261025T180000Z.md");
@@ -33,7 +33,7 @@ describe("persistRoadmap", () => {
 
   it("rejects a one-slice roadmap", () => {
     const ws = tmpWs();
-    const r = persistRoadmap({ content: DRAFT_ROADMAP.replace(SLICE_2, ""), workspaceRoot: ws });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP.replace(SLICE_2, ""), strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
     expectNothingSaved(path.join(ws, ROADMAP_DIR));
@@ -43,12 +43,12 @@ describe("persistRoadmap", () => {
 describe("persistRoadmap and the ignore file", () => {
   it("never touches .gitignore", () => {
     const ws = tmpWs();
-    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: ws });
+    persistRoadmap({ content: DRAFT_ROADMAP, strategy: "free", workspaceRoot: ws });
     expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
     const kept = tmpWs();
     fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
-    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: kept });
-    persistRoadmap({ content: DRAFT_ROADMAP, workspaceRoot: kept });
+    persistRoadmap({ content: DRAFT_ROADMAP, strategy: "free", workspaceRoot: kept });
+    persistRoadmap({ content: DRAFT_ROADMAP, strategy: "free", workspaceRoot: kept });
     expect(read(path.join(kept, ".gitignore"))).toBe("node_modules\n");
   });
 });
@@ -56,7 +56,7 @@ describe("persistRoadmap and the ignore file", () => {
 describe("a rewrite of the same roadmap file", () => {
   it("keeps the serial when the same file is written again", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(first.ok).toBe(true);
     const again = update(ws, path.join(ws, savedOk(first).path), logs(String(first.content)));
     expect(again.ok).toBe(true);
@@ -70,7 +70,7 @@ describe("a rewrite of the same roadmap file", () => {
 describe("prepareRoadmapUpdate", () => {
   it("validates a rewrite of a saved roadmap without writing it", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     const abs = path.join(ws, savedOk(first).path);
     const before = read(abs);
     const r = prepareRoadmapUpdate({ content: logs(DRAFT_ROADMAP), filePath: abs, workspaceRoot: ws });
@@ -85,7 +85,7 @@ describe("prepareRoadmapUpdate", () => {
 
   it("denies a rewrite that breaks the heading order", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     const abs = path.join(ws, savedOk(first).path);
     const content = DRAFT_ROADMAP.replace("## Order", "## Aim");
     expect(prepareRoadmapUpdate({ content, filePath: abs, workspaceRoot: ws }).ok).toBe(false);

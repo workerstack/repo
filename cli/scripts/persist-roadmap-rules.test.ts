@@ -19,7 +19,7 @@ const FILE = "1-auth-program-20261025T180000Z.md";
 
 // A freshly saved roadmap as a validator input: mutate its text and read the errors back.
 function saved() {
-  const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: tmpWs() });
+  const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
 
   if (!r.ok) throw new Error(r.error);
 

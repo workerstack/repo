@@ -20,7 +20,7 @@ Local session checklist. Not a design doc, PR stack, or DAG.
 
 ## Slugify (`PLAN_NAME`)
 
-Send `PLAN_NAME: <name>` as the body's first line. The save reads the name from it and drops the line wherever it sits above the first `##` outside a code fence, so a body that opens with `commit:` or `strategy:` lines still saves with the card right under the title. A `PLAN_NAME:` line inside a fence or below the first `##` stays as text.
+Send `PLAN_NAME: <name>` as the body's first line. The save reads the name from it and drops the line wherever it sits above the first `##` outside a code fence, so a body that opens with `commit:` or `advice:` lines still saves with the card right under the title. A `PLAN_NAME:` line inside a fence or below the first `##` stays as text.
 
 1. lower
 2. non `[a-z0-9]` → `-`
@@ -58,21 +58,24 @@ created: 2026-08-26T14:30:00Z    # UTC ISO-8601 seconds + Z; no milliseconds
 source: "<≤120 chars of user task>"
 commit: feat: <subject>
 strategy: free          # free | spawn-fast | spawn-deep
+advice: spawn-deep because the hook and gate change together   # optional, ≤100 chars
 approval: away             # optional: ask | away
 ---
 ```
 
 `name` is the slug only (no datetime). `source` ≤120 chars.
 
-`strategy` is optional. Omit it to take `agents.defaultStrategy`, else `free`. It says how the plan gets implemented:
+`strategy` is set by the save, never by the agent: the session value (`/set`, `bun repo set`), then for a plan the newest in-progress roadmap this session saved, then `agents.defaultStrategy`, then `free`. An update that omits it keeps it. It says how the plan gets implemented:
 
 - `free`: the main session works as it would in a plain chat; it may spawn agents but nothing forces it to.
 - `spawn-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
 - `spawn-deep`: the same loop, with `implementer-deep` from the first attempt.
 
-A save with no `strategy` gets `agents.defaultStrategy`, else `free`. An unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
+A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. `bun repo persist plan` takes the config default and refuses the line the same way. An unknown saved value is invalid with `strategy: free|spawn-fast|spawn-deep`. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`approval` is optional: `ask` or `away`. While the plan is `in-progress`, its `approval` applies only when the session has no `/ask` or `/away` stamp, for the session that saved it only. The order is the session stamp, then the in-progress `approval`, then `agents.defaultApproval`, then `ask`. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for an approval. A body line `approval: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `approval: ask|away`.
+`advice` is optional: `advice: {free|spawn-fast|spawn-deep} because {reason}`, at most 100 characters, the strategy the agent would pick. A body line `advice: {value}` moves into the frontmatter after `strategy:` and before `approval:`, like `commit:`; a line inside a code fence is not moved. An update that omits it keeps it. A bad line is denied with `advice: {free|spawn-fast|spawn-deep} because {reason}, at most 100 characters`. `/write-plan-deep` always sends it on a new deep plan. It changes nothing by itself; the person picks at approval.
+
+`approval` is optional: `ask` or `away`. While the plan is `in-progress`, its `approval` applies only when the session has no `/ask` or `/away` value, for the session that saved it only. The order is the session approval, then the in-progress `approval`, then `agents.defaultApproval`, then `ask`. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for an approval. A body line `approval: {value}` moves into the frontmatter after `advice:`, like `commit:`; a line inside a code fence is not moved. Another value is denied with `approval: ask|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 
@@ -179,7 +182,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 - filename matches new stamped regex or legacy unstamped; new writes unpadded + stamp (`1-foo-20260826T143000Z.md` not `0001-foo.md`); serial int equals leading digits; `name` equals slug after stripping optional trailing `-\d{8}T\d{6}Z`
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
-- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is optional and is `free`, `spawn-fast` or `spawn-deep`; a save without it takes `agents.defaultStrategy`, else `free`, and another value is invalid. Optional `approval` is `ask` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
+- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is optional and is `free`, `spawn-fast` or `spawn-deep`; the save sets it (session value, in-progress roadmap, `agents.defaultStrategy`, `free`), an agent line that differs is denied, and another value is invalid. Optional `advice` is `{strategy} because {reason}` within 100 characters; another form is invalid. Optional `approval` is `ask` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
 - headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase
@@ -188,7 +191,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 - no phase whose every leaf reads a principle, on a fresh write or on an update whose saved file had none
 - `(parallel: …)` phases come in adjacent groups of two or more, each with a non-empty list, lists disjoint after `\` → `/`
 - checkbox grammar (`N [ ]` / `N.M [ ]` / `N.M.K [ ]`); no `- [ ]`; no `1. [ ]`
-- fresh write: the card right after `# {slug}` and one blank line, `WHAT` `WHY` `RISK` `TOUCH` `DONE` in order, padded to 7 columns, text non-empty, each line ≤120 characters; zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:`; Verify 1–5 leaves
+- fresh write: the card right after `# {slug}` and one blank line, `WHAT` `WHY` `RISK` `TOUCH` `DONE` in order, padded to 7 columns, text non-empty, each line ≤120 characters; zero `[x]` / `[X]`; Goal 1–3 sentences; Context/Constraints/Watch-outs bullets; Context includes `Task type:`, `Named checks:`, and a skip-with-reason when a named check is dropped; frontmatter includes `commit:` and `strategy:` (set by the save); Verify 1–5 leaves
 
 ## Worked example
 

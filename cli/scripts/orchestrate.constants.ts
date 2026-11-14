@@ -119,6 +119,9 @@ export const ITEM_KIND_LIST: readonly ItemKind[] = ["plan", "roadmap", "fast-pla
 /** The kind a `/review-plan N` or `/review-roadmap N` spawn names. */
 export const PLAN_KIND = "plan";
 
+/** The kind of a roadmap item. */
+export const ROADMAP_KIND = "roadmap";
+
 /** The event key of a tool call about to run. */
 export const PRE_TOOL_USE = "pretooluse";
 

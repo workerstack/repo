@@ -15,9 +15,9 @@ const BARE = "mode: away\n";
 const planWs = useTmpWs();
 const { tempDir: roadmapWs } = useTempDirs("persist-retired-mode-");
 
-/** `text` with a `mode:` line added after its `strategy:` line. */
+/** `text` with a `mode:` line added after its `strategy:` line, or its name line when it has none. */
 function afterStrategy(text: string): string {
-  return text.replace(/^strategy:.*$/m, (line) => `${line}\nmode: away`);
+  return text.replace(/^(?:strategy:|(?:PLAN|ROADMAP)_NAME:).*$/m, (line) => `${line}\nmode: away`);
 }
 
 /** One save path: its body, how it creates, and how it saves a new text over a saved file. */
@@ -32,16 +32,19 @@ type Kind = {
 
 const KINDS: Kind[] = [
   {
-    create: (content, ws) => persistPlan({ content, created: CREATED, workspaceRoot: ws }),
+    create: (content, ws) => persistPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws }),
     draft: VALID_PLAN,
     name: "plan",
     seed: (ws) =>
-      path.join(ws, savedOk(persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws })).path),
+      path.join(
+        ws,
+        savedOk(persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws })).path,
+      ),
     update: updatePlan,
     workspace: planWs,
   },
   {
-    create: (content, ws) => persistRoadmap({ content, created: CREATED, workspaceRoot: ws }),
+    create: (content, ws) => persistRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot: ws }),
     draft: DRAFT_ROADMAP,
     name: "roadmap",
     seed: (ws) => savedRoadmap(ws),

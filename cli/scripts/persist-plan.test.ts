@@ -34,6 +34,7 @@ describe("persistPlan file", () => {
     const r = persistPlan({
       content: VALID_PLAN,
       created,
+      strategy: "free",
       workspaceRoot: ws,
     });
 
@@ -55,18 +56,18 @@ describe("persistPlan file", () => {
 describe("persistPlan stamps and gitignore", () => {
   it("never touches .gitignore", () => {
     const ws = tmpWs();
-    persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
+    persistPlan({ content: VALID_PLAN, strategy: "free", workspaceRoot: ws });
     expect(fs.existsSync(path.join(ws, ".gitignore"))).toBe(false);
     const kept = tmpWs();
     fs.writeFileSync(path.join(kept, ".gitignore"), "node_modules\n");
-    persistPlan({ content: VALID_PLAN, workspaceRoot: kept });
-    persistPlan({ content: VALID_PLAN, workspaceRoot: kept });
+    persistPlan({ content: VALID_PLAN, strategy: "free", workspaceRoot: kept });
+    persistPlan({ content: VALID_PLAN, strategy: "free", workspaceRoot: kept });
     expect(fs.readFileSync(path.join(kept, ".gitignore"), "utf8")).toBe("node_modules\n");
   });
 
   it("stamps filename from created when created is omitted", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
+    const r = persistPlan({ content: VALID_PLAN, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(true);
     expect(r.filename).toMatch(/^1-add-tmp-ignore-\d{8}T\d{6}Z\.md$/);
     const text = fs.readFileSync(path.join(ws, savedOk(r).path), "utf8");
@@ -83,6 +84,7 @@ describe("persistPlan serials", () => {
     const r = persistPlan({
       content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
+      strategy: "free",
       workspaceRoot: ws,
     });
 
@@ -94,11 +96,12 @@ describe("persistPlan serials", () => {
   it("increments serial and keeps the same stamp", () => {
     const ws = tmpWs();
     const created = "2026-08-26T14:30:00Z";
-    persistPlan({ content: VALID_PLAN, created, workspaceRoot: ws });
+    persistPlan({ content: VALID_PLAN, created, strategy: "free", workspaceRoot: ws });
 
     const r = persistPlan({
       content: VALID_PLAN,
       created,
+      strategy: "free",
       workspaceRoot: ws,
     });
 
@@ -110,15 +113,16 @@ describe("persistPlan serials", () => {
 
 const CREATED = "2026-08-26T14:30:00Z";
 
+/** A new plan saved with strategy free. */
+function saveFree(content: string, ws: string) {
+  return persistPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
+}
+
 describe("persistPlan commit subject", () => {
   it("keeps a valid commit subject and allows a plan with no commit", () => {
     const ws = tmpWs();
 
-    const good = persistPlan({
-      content: `commit: feat(plans): record the subject\n${VALID_PLAN}`,
-      created: CREATED,
-      workspaceRoot: ws,
-    });
+    const good = saveFree(`commit: feat(plans): record the subject\n${VALID_PLAN}`, ws);
 
     expect(good.ok).toBe(true);
     const text = fs.readFileSync(path.join(ws, savedOk(good).path), "utf8");
@@ -139,17 +143,22 @@ describe("persistPlan other commit subjects", () => {
       "docs: document docs/roadmaps",
       "docs: note plans, roadmaps: split",
     ]) {
-      const ok = persistPlan({ content: `commit: ${subject}\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
+      const ok = saveFree(`commit: ${subject}\n${VALID_PLAN}`, ws);
+
       expect(ok.ok, subject).toBe(true);
     }
   });
 
   it("rejects a bad subject", () => {
     const ws = tmpWs();
-    const bad = persistPlan({ content: `commit: Feat: Nope.\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
+
+    const bad = saveFree(`commit: Feat: Nope.\n${VALID_PLAN}`, ws);
+
     expect(bad.ok).toBe(false);
     expect(bad.errors).toContain("commit");
-    const period = persistPlan({ content: `commit: feat: nope.\n${VALID_PLAN}`, created: CREATED, workspaceRoot: ws });
+
+    const period = saveFree(`commit: feat: nope.\n${VALID_PLAN}`, ws);
+
     expect(period.ok).toBe(false);
     expect(period.errors).toContain("commit");
   });
@@ -161,6 +170,7 @@ describe("persistPlan refusals and location", () => {
 
     const r = persistPlan({
       content: "PLAN_NAME: nope\n\n# nope\n\nnot a plan\n",
+      strategy: "free",
       workspaceRoot: ws,
     });
 
@@ -174,6 +184,7 @@ describe("persistPlan refusals and location", () => {
     const r = persistPlan({
       content: VALID_PLAN,
       created: "2026-08-26T14:30:00Z",
+      strategy: "free",
       workspaceRoot: ws,
     });
 

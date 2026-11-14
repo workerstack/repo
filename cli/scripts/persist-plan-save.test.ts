@@ -29,7 +29,7 @@ describe("persistPlan names", () => {
   it("cuts a long plan name to a 50-character slug in the saved filename", () => {
     const ws = tmpWs();
     const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", `PLAN_NAME: ${"abcdefghi ".repeat(8)}`);
-    const r = persistPlan({ content, created: CREATED, workspaceRoot: ws });
+    const r = persistPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.filename).toBe("1-abcdefghi-abcdefghi-abcdefghi-abcdefghi-abcdefghi-20260826T143000Z.md");
   });
@@ -39,14 +39,15 @@ describe("persistPlan names", () => {
       content: VALID_PLAN,
       created: CREATED,
       source: "typed by hand",
+      strategy: "free",
       workspaceRoot: tmpWs(),
     });
 
     expect(named.content).toContain('source: "typed by hand"');
-    const byName = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: tmpWs() });
+    const byName = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
     expect(byName.content).toContain('source: "add tmp ignore"');
     const unnamed = VALID_PLAN.replace(/^PLAN_NAME: .*\n/, "").replace("# add-tmp-ignore\n", "");
-    const byGoal = persistPlan({ content: unnamed, created: CREATED, workspaceRoot: tmpWs() });
+    const byGoal = persistPlan({ content: unnamed, created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
     expect(byGoal.ok, byGoal.error).toBe(true);
     expect(byGoal.filename).toBe("1-unnamed-20260826T143000Z.md");
 
@@ -60,21 +61,21 @@ describe("persistPlan names", () => {
 describe("persistPlan denials", () => {
   it("denies a body with no name, title or Goal and writes nothing", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: "just words", workspaceRoot: ws });
+    const r = persistPlan({ content: "just words", strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("denies a save whose frontmatter never closes", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: `---\nserial: 1\n${VALID_PLAN}`, workspaceRoot: ws });
+    const r = persistPlan({ content: `---\nserial: 1\n${VALID_PLAN}`, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("denies an empty save the same way", () => {
     const ws = tmpWs();
-    expect(persistPlan({ workspaceRoot: ws }).ok).toBe(false);
+    expect(persistPlan({ strategy: "free", workspaceRoot: ws }).ok).toBe(false);
     expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 });
@@ -88,7 +89,7 @@ describe("persistPlan serials", () => {
     const planted = path.join(dir, "9007199254740992-demo-20260826T143000Z.md");
     fs.writeFileSync(planted, "keep me");
     const content = VALID_PLAN.replace("PLAN_NAME: add tmp ignore", "PLAN_NAME: demo");
-    const r = persistPlan({ content, created: CREATED, workspaceRoot: ws });
+    const r = persistPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(r).toStrictEqual({ error: "serial collision", ok: false });
     expect(fs.readFileSync(planted, "utf8")).toBe("keep me");
   });
@@ -97,20 +98,20 @@ describe("persistPlan serials", () => {
 describe("persistPlan without a workspace argument", () => {
   it("saves under the root the environment names", () => {
     const ws = envWorkspace();
-    const r = persistPlan({ content: VALID_PLAN, created: CREATED });
+    const r = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free" });
     expect(r.ok, r.error).toBe(true);
     expect(fs.existsSync(path.join(ws, ".repo/plans", String(r.filename)))).toBe(true);
   });
 
   it("denies an empty call and still prepares that root's plans dir", () => {
     const ws = envWorkspace();
-    expect(persistPlan().ok).toBe(false);
+    expect(persistPlan({ strategy: "free" }).ok).toBe(false);
     expect(fs.readdirSync(path.join(ws, ".repo/plans"))).toStrictEqual([]);
   });
 
   it("validates an update of a saved plan against that root", () => {
     const ws = envWorkspace();
-    const first = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+    const first = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws });
     const r = preparePlanUpdate({ content: String(first.content), filePath: String(first.path) });
     expect(r.ok, r.error).toBe(true);
     expect(r.path).toBe(first.path);
@@ -118,7 +119,7 @@ describe("persistPlan without a workspace argument", () => {
 });
 
 function savedPlan(ws: string): string {
-  const r = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+  const r = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws });
 
   return path.join(ws, String(r.path));
 }
@@ -155,7 +156,7 @@ describe("lesson citations without a Watch-outs section", () => {
       "",
     );
 
-    const r = persistPlan({ content, workspaceRoot: ws });
+    const r = persistPlan({ content, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain("cite this matched lesson in Watch-outs: .repo/lessons/plan-forks.md");
   });

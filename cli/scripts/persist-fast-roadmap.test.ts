@@ -46,7 +46,7 @@ describe("fast roadmap save", () => {
 describe("fast roadmap serials", () => {
   it("counts serials in roadmaps-fast only", () => {
     const ws = tmpWs();
-    expect(persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws }).ok).toBe(true);
     expect(saveRoadmap(SENT, ws).serial).toBe(1);
     expect(saveRoadmap(SENT.replace("tidy ignores", "second one"), ws).serial).toBe(2);
     expect(fs.readdirSync(path.join(ws, ".repo/roadmaps-fast"))).toHaveLength(2);

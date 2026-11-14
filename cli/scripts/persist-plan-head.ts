@@ -15,9 +15,11 @@ import {
   stripBom,
 } from "./persist-doc.ts";
 import {
+  extractAdvice,
   extractApproval,
   extractRetiredMode,
   extractStrategy,
+  stripAdviceLine,
   stripApprovalLine,
   stripStrategyLine,
 } from "./persist-keys.ts";
@@ -85,6 +87,7 @@ export type FrontmatterInput = {
   created?: string;
   commit?: string | undefined;
   strategy?: string | undefined;
+  advice?: string | undefined;
   approval?: string | undefined;
   /** The retired `mode:` a save sent; written so validation refuses it. */
   mode?: string | undefined;
@@ -98,12 +101,15 @@ export function injectFrontmatter({
   created,
   commit,
   strategy,
+  advice,
   approval,
   mode,
 }: FrontmatterInput): string {
   const optional = [
     commit != null && commit !== "" ? `commit: ${commit}` : "",
     strategy != null && strategy !== "" ? `strategy: ${strategy}` : "",
+    // An empty `advice:` is sent too, so validation denies it.
+    advice === undefined ? "" : `advice: ${advice}`,
     // An empty `approval:` is still sent, so validation denies it rather than dropping it.
     approval === undefined ? "" : `approval: ${approval}`,
     mode === undefined ? "" : `mode: ${mode}`,
@@ -144,6 +150,7 @@ export function withSavedFrontmatter(previous: string, raw: string): string {
   const sent: [string, string | undefined][] = [
     ["commit", extractCommit(raw)],
     ["strategy", extractStrategy(raw)],
+    ["advice", extractAdvice(raw)],
     ["approval", extractApproval(raw)],
     ["mode", extractRetiredMode(raw)],
   ];
@@ -152,7 +159,33 @@ export function withSavedFrontmatter(previous: string, raw: string): string {
 
   for (const [key, value] of sent) nextHead = setHeadKey(nextHead, key, value);
 
-  const rest = retitled(stripApprovalLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))), String(fm.map.name));
+  const rest = retitled(
+    stripApprovalLine(stripAdviceLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))))),
+    String(fm.map.name),
+  );
 
   return `${nextHead}\n${rest}`;
+}
+
+const AFTER_ADVICE_RE = /^(approval|mode):/;
+
+/**
+ * A full-frontmatter rewrite `text` with the `strategy:` and `advice:` the saved `previous` holds and it does not send,
+ * each put before `approval:` so the saved order stays; unchanged when it sends both or the frontmatter is unreadable.
+ */
+export function keepSavedKeys(previous: string, text: string): string {
+  const sent = parseFrontmatter(text);
+  const saved = parseFrontmatter(previous);
+
+  if (sent.error !== undefined || saved.error !== undefined) return text;
+  const lines = text.split("\n");
+
+  for (const key of ["strategy", "advice"]) {
+    if (hasKey(sent.map, key) || !hasKey(saved.map, key)) continue;
+    const end = lines.indexOf("---", 1);
+    const before = lines.findIndex((l, i) => i < end && AFTER_ADVICE_RE.test(l));
+    lines.splice(before === NOT_FOUND ? end : before, 0, `${key}: ${saved.map[key]}`);
+  }
+
+  return lines.join("\n");
 }

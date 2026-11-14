@@ -45,7 +45,7 @@ function naming(file: string, { cite = false } = {}) {
 describe("lesson citations", () => {
   it("denies a new plan that touches a file a lesson matches and names the lesson", () => {
     const ws = wsWithLesson();
-    const r = persistPlan({ content: naming(path.join(ws, "src/a.ts")), workspaceRoot: ws });
+    const r = persistPlan({ content: naming(path.join(ws, "src/a.ts")), strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toContain(".repo/lessons/plan-forks.md");
     expect(r.error).toMatch(/Watch-outs/);
@@ -53,13 +53,19 @@ describe("lesson citations", () => {
 
   it("accepts the plan once Watch-outs cites the lesson", () => {
     const ws = wsWithLesson();
-    const r = persistPlan({ content: naming(path.join(ws, "src/a.ts"), { cite: true }), workspaceRoot: ws });
+
+    const r = persistPlan({
+      content: naming(path.join(ws, "src/a.ts"), { cite: true }),
+      strategy: "free",
+      workspaceRoot: ws,
+    });
+
     expect(r.ok, r.error).toBe(true);
   });
 
   it("never checks citations on an update", () => {
     const ws = wsWithLesson();
-    const plain = persistPlan({ content: VALID_PLAN, workspaceRoot: ws });
+    const plain = persistPlan({ content: VALID_PLAN, strategy: "free", workspaceRoot: ws });
     expect(plain.ok, plain.error).toBe(true);
     const abs = path.join(ws, savedOk(plain).path);
     const r = update(ws, abs, naming(path.join(ws, "src/a.ts")));
@@ -71,23 +77,27 @@ describe("lesson citations across worktrees", () => {
   it("denies a plan naming a worktree file until it cites the lesson that worktree holds", () => {
     const { ws, w } = committedWithLesson();
     const file = path.join(w, "src/a.ts");
-    const denied = persistPlan({ content: naming(file), workspaceRoot: ws });
+    const denied = persistPlan({ content: naming(file), strategy: "free", workspaceRoot: ws });
     expect(denied.ok).toBe(false);
     expect(denied.error).toContain(".repo/lessons/plan-forks.md");
-    expect(persistPlan({ content: naming(file, { cite: true }), workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: naming(file, { cite: true }), strategy: "free", workspaceRoot: ws }).ok).toBe(true);
   });
 
   it("denies a plan naming a repo-relative file a lesson matches until it cites the lesson", () => {
     const { ws } = committedWithLesson();
-    const denied = persistPlan({ content: naming("src/a.ts"), workspaceRoot: ws });
+    const denied = persistPlan({ content: naming("src/a.ts"), strategy: "free", workspaceRoot: ws });
     expect(denied.ok).toBe(false);
     expect(denied.error).toContain(".repo/lessons/plan-forks.md");
-    expect(persistPlan({ content: naming("src/a.ts", { cite: true }), workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: naming("src/a.ts", { cite: true }), strategy: "free", workspaceRoot: ws }).ok).toBe(
+      true,
+    );
   });
 
   it("matches the worktree's own lessons, not the root's", () => {
     const { ws, w } = committedWithLesson();
     fs.rmSync(path.join(w, ".repo/lessons/plan-forks.md"));
-    expect(persistPlan({ content: naming(path.join(w, "src/a.ts")), workspaceRoot: ws }).ok).toBe(true);
+    expect(persistPlan({ content: naming(path.join(w, "src/a.ts")), strategy: "free", workspaceRoot: ws }).ok).toBe(
+      true,
+    );
   });
 });

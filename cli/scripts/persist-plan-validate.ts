@@ -14,7 +14,7 @@ import {
   when,
 } from "./persist-doc-checks.ts";
 import { parseFrontmatter } from "./persist-doc.ts";
-import { approvalErrors, strategyError } from "./persist-keys.ts";
+import { adviceErrors, approvalErrors, strategyError } from "./persist-keys.ts";
 import { reviewErrors } from "./persist-mistakes.ts";
 import { BODY_CHECKS, type Doc } from "./persist-plan-body-checks.ts";
 import {
@@ -55,6 +55,10 @@ function approvalChecks({ map }: Doc): string[] {
   return approvalErrors(map);
 }
 
+function adviceChecks({ map }: Doc): string[] {
+  return adviceErrors(map);
+}
+
 function reviewChecks({ map, previous }: Doc): string[] {
   return reviewErrors(map, (previous == null ? null : parseFrontmatter(previous))?.map ?? null, {
     gates: reviewsToEnter,
@@ -71,6 +75,7 @@ const HEAD_CHECKS: Check[] = [
   sourceLengthCheck,
   commitCheck,
   strategyErrors,
+  adviceChecks,
   approvalChecks,
   slugCheck,
   h1Check,

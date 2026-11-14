@@ -28,20 +28,20 @@ function roadmapFile(ws: string): string {
 describe("roadmap names", () => {
   it("names a roadmap from its title when ROADMAP_NAME is absent", () => {
     const content = DRAFT_ROADMAP.replace(/^ROADMAP_NAME: .*\n/, "");
-    const r = persistRoadmap({ content, created: CREATED, workspaceRoot: tmpWs() });
+    const r = persistRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.filename).toBe(FILE);
   });
 
   it("gives an untitled roadmap its slug as the title and denies it for missing slices", () => {
-    const r = persistRoadmap({ content: "just words", created: CREATED, workspaceRoot: tmpWs() });
+    const r = persistRoadmap({ content: "just words", created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
     expect(r.ok).toBe(false);
     expect(r.errors).toContain("slices");
   });
 
   it("titles a save that has a name but no title line", () => {
     const content = DRAFT_ROADMAP.replace("# auth-program\n", "");
-    const r = persistRoadmap({ content, created: CREATED, workspaceRoot: tmpWs() });
+    const r = persistRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot: tmpWs() });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toContain("\n---\n\n# auth-program\n\nWHAT");
   });
@@ -72,24 +72,24 @@ describe("roadmap serials and empty saves", () => {
     fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(path.join(dir, "notes.md"), "n");
     fs.writeFileSync(path.join(dir, "7-old-20260101T000000Z.md"), "old");
-    const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const r = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(r.serial).toBe(8);
     expect(fs.readFileSync(path.join(dir, "7-old-20260101T000000Z.md"), "utf8")).toBe("old");
   });
 
   it("denies a save with no content", () => {
     const ws = tmpWs();
-    expect(persistRoadmap({ workspaceRoot: ws }).ok).toBe(false);
+    expect(persistRoadmap({ strategy: "free", workspaceRoot: ws }).ok).toBe(false);
     expect(fs.readdirSync(path.join(ws, ".repo/roadmaps"))).toStrictEqual([]);
   });
 
   it("denies an unclosed fence in a save and in an update", () => {
     const ws = tmpWs();
     const bad = "```\nopen\n";
-    expect(persistRoadmap({ content: bad, workspaceRoot: ws }).errors).toStrictEqual([
+    expect(persistRoadmap({ content: bad, strategy: "free", workspaceRoot: ws }).errors).toStrictEqual([
       "unclosed code fence at line 1: close it with the same fence",
     ]);
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     const r = prepareRoadmapUpdate({ content: bad, filePath: path.join(ws, String(first.path)), workspaceRoot: ws });
     expect(r.errors).toStrictEqual(["unclosed code fence at line 1: close it with the same fence"]);
   });
@@ -98,7 +98,7 @@ describe("roadmap serials and empty saves", () => {
 describe("roadmap update fallbacks", () => {
   it("denies an update with no content", () => {
     const ws = tmpWs();
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, workspaceRoot: ws });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free", workspaceRoot: ws });
     const r = prepareRoadmapUpdate({ filePath: path.join(ws, String(first.path)), workspaceRoot: ws });
     expect(r.ok).toBe(false);
   });
@@ -106,7 +106,7 @@ describe("roadmap update fallbacks", () => {
   it("falls back to now and a draft status for a saved file with no created or status", () => {
     const ws = tmpWs();
     const abs = roadmapFile(ws);
-    fs.writeFileSync(abs, "---\nserial: 1\nname: auth-program\n---\n\n# auth-program\n");
+    fs.writeFileSync(abs, "---\nserial: 1\nname: auth-program\nstrategy: free\n---\n\n# auth-program\n");
     const r = prepareRoadmapUpdate({ content: DRAFT_ROADMAP, filePath: abs, workspaceRoot: ws });
     expect(r.ok, r.error).toBe(true);
     expect(r.content).toMatch(/^status: draft\n/m);
@@ -120,9 +120,9 @@ describe("roadmap root and locations", () => {
     const ws = tmpWs();
     vi.stubEnv("CLAUDE_PROJECT_DIR", ws);
     vi.stubEnv("GROK_WORKSPACE_ROOT", ws);
-    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED });
+    const first = persistRoadmap({ content: DRAFT_ROADMAP, created: CREATED, strategy: "free" });
     expect(fs.existsSync(path.join(ws, String(first.path)))).toBe(true);
-    expect(persistRoadmap().ok).toBe(false);
+    expect(persistRoadmap({ strategy: "free" }).ok).toBe(false);
     const r = prepareRoadmapUpdate({ content: DRAFT_ROADMAP, filePath: String(first.path) });
     expect(r.ok, r.error).toBe(true);
   });
@@ -137,7 +137,7 @@ describe("an empty ROADMAP_NAME line", () => {
     const ws = tmpWs();
     const content = DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "ROADMAP_NAME:\n");
 
-    const r = persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+    const r = persistRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
 
     expect(r.ok, r.error).toBe(true);
     expect(r.filename).toBe(FILE);

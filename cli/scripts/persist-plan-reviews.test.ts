@@ -10,7 +10,7 @@ import { persistPlan } from "./persist-plan.ts";
 const tmpWs = useTmpWs();
 
 function fresh(ws: string) {
-  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", workspaceRoot: ws });
+  const r = persistPlan({ content: VALID_PLAN, created: "2026-08-26T14:30:00Z", strategy: "free", workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
 
   return path.join(ws, savedOk(r).path);

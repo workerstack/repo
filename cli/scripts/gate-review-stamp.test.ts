@@ -146,11 +146,16 @@ it("fails open when the stamp cannot be written", () => {
 
 /** The plan Grok's persist hook would save, written the way the host does. */
 function savedPlan(w: string, strategy: string) {
-  const body = VALID_PLAN.replace("strategy: free", `strategy: ${strategy}`);
-  const saved = grokReply(w, { input: { content: body, file_path: ".repo/plans/x.md" }, tool: "Write" });
+  const saved = grokReply(w, { input: { content: VALID_PLAN, file_path: ".repo/plans/x.md" }, tool: "Write" });
   const filePath = jsonText(saved?.hookSpecificOutput?.updatedInput?.file_path);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const content = jsonText(saved?.hookSpecificOutput?.updatedInput?.content);
+
+  // The session holds the default; the file is left as an approval would leave it, with the strategy asked for.
+  const content = jsonText(saved?.hookSpecificOutput?.updatedInput?.content).replace(
+    "strategy: free",
+    `strategy: ${strategy}`,
+  );
+
   fs.writeFileSync(filePath, content);
 
   return { content, file_path: filePath };

@@ -260,7 +260,7 @@
     "efab76f90ef41f2e",
     "f01909910bdbeac9"
   ],
-  ".agents/skills/implement-plan-deep/SKILL.md": ["1632789dd06220ae"],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["8af288f2269b706e"],
   ".agents/skills/implement-plan-fast/SKILL.md": ["8f71c61551d7af2e"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
@@ -282,7 +282,7 @@
     "fd12b52d1aa68e91",
     "ff317d44d9986d6a"
   ],
-  ".agents/skills/implement-roadmap-deep/SKILL.md": ["f3c378aa2c60cdaa"],
+  ".agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260"],
   ".agents/skills/implement-roadmap-fast/SKILL.md": ["c52179e71ef7184c"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
@@ -419,7 +419,7 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["e55ffcf52d8aa01d"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["c3f7f68d8c2d9a34"],
   ".agents/skills/write-plan-fast/SKILL.md": ["d56078320f4fc34e"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
@@ -444,7 +444,7 @@
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-deep/SKILL.md": ["46328cb6579fbc65"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["78739a0b5bd2b680"],
   ".agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1"],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
@@ -2245,7 +2245,12 @@
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
   "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff", "f01909910bdbeac9"],
-  "agents/skills/implement-plan-deep/SKILL.md": ["1632789dd06220ae", "292f5b0c8de32f1d", "3f1c199de368543d"],
+  "agents/skills/implement-plan-deep/SKILL.md": [
+    "1632789dd06220ae",
+    "292f5b0c8de32f1d",
+    "3f1c199de368543d",
+    "8af288f2269b706e"
+  ],
   "agents/skills/implement-plan-fast/SKILL.md": ["4fa5d8c08371513e", "8f71c61551d7af2e", "9595d7dbe4d73698"],
   "agents/skills/implement-plan/SKILL.md": [
     "06f2b1eae4ddd427",
@@ -2255,7 +2260,7 @@
     "9aeed4ef2520f469",
     "cd9ce6d76c9c6a6d"
   ],
-  "agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f", "f3c378aa2c60cdaa"],
+  "agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260", "c240aa668b4d478f", "f3c378aa2c60cdaa"],
   "agents/skills/implement-roadmap-fast/SKILL.md": ["a982fa72dddc6e87", "c52179e71ef7184c"],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
@@ -2312,6 +2317,7 @@
     "3ddd8c267267a72d",
     "98c81331e3815f5f",
     "abde0d45b94341d5",
+    "c3f7f68d8c2d9a34",
     "e55ffcf52d8aa01d"
   ],
   "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e"],
@@ -2326,7 +2332,12 @@
     "d37f2553e7b8e1bc",
     "ee7e143018db8227"
   ],
-  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8", "46328cb6579fbc65", "c8d6f91094ef6817"],
+  "agents/skills/write-roadmap-deep/SKILL.md": [
+    "1c3f3504084900f8",
+    "46328cb6579fbc65",
+    "78739a0b5bd2b680",
+    "c8d6f91094ef6817"
+  ],
   "agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1", "f18dd93a01bf07ab"],
   "agents/skills/write-roadmap/SKILL.md": [
     "0001e66dc0806396",
@@ -2442,6 +2453,7 @@
     "d1a847a62a2a506f"
   ],
   "cli/scripts/__fixtures__/persist-bodies.ts": [
+    "1da10801a1a507b0",
     "21324b80b55d46cb",
     "6527899fef427862",
     "ca631d8846a42277",
@@ -2451,9 +2463,19 @@
   "cli/scripts/__fixtures__/persist-fast-plan-kit.ts": ["1043ae98f3fef61f"],
   "cli/scripts/__fixtures__/persist-fast-roadmap-kit.ts": ["43666b0cdfe4ed42"],
   "cli/scripts/__fixtures__/persist-lesson-kit.ts": ["77fc1d7ae2b17848"],
-  "cli/scripts/__fixtures__/persist-plan-kit.ts": ["26af0e9ed3f886b0", "5a98f524bfc822bf", "b5295c3eeb937ede"],
-  "cli/scripts/__fixtures__/persist-plan-rules-kit.ts": ["8d4b3c119c04a7e4"],
-  "cli/scripts/__fixtures__/persist-roadmap-kit.ts": ["0277bff914c4bd2f", "37de40a318a30eef", "3d7f28a11595dfc2"],
+  "cli/scripts/__fixtures__/persist-plan-kit.ts": [
+    "26af0e9ed3f886b0",
+    "5a98f524bfc822bf",
+    "b5295c3eeb937ede",
+    "f9bc494b12acf5d9"
+  ],
+  "cli/scripts/__fixtures__/persist-plan-rules-kit.ts": ["8d4b3c119c04a7e4", "caed7d65df959ebc"],
+  "cli/scripts/__fixtures__/persist-roadmap-kit.ts": [
+    "0277bff914c4bd2f",
+    "37de40a318a30eef",
+    "3d7f28a11595dfc2",
+    "6f3e22d7e1deeae3"
+  ],
   "cli/scripts/__fixtures__/persist-save-kit.ts": ["5e7c942870e4b20c", "a7826cb3bb0240b2"],
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["80587781aa9e7065", "980563ab7af07d10"],
@@ -2478,6 +2500,8 @@
   ],
   "cli/scripts/__fixtures__/run-hook.ts": ["44481883c6e6cf97", "9d4322ef51dfba86"],
   "cli/scripts/__fixtures__/run-persist-cli.ts": ["51360b04801d42cb"],
+  "cli/scripts/__fixtures__/run-persist-main.ts": ["675597892d673a16"],
+  "cli/scripts/__fixtures__/save-strategy-kit.ts": ["4662e7952173c5d2"],
   "cli/scripts/__fixtures__/scrub-kit.ts": ["cf6cc15b999f422d"],
   "cli/scripts/__fixtures__/session-map-kit.ts": ["7a6f8d0c12fd096e", "dd73aa8f6f1a666a"],
   "cli/scripts/__fixtures__/setup-kit.ts": [
@@ -4286,6 +4310,7 @@
     "5f10c2a06433e12c",
     "8cac3b43efa430bf",
     "a97b03aaf4e4e14d",
+    "ac4dc8f2f07e12db",
     "b34255f543dd525c",
     "c7a1dd09ed1815dc",
     "e5d87385c57469e8"
@@ -4806,6 +4831,7 @@
   "cli/scripts/interactive.ts": ["2297befde6cbb190", "649fcc09a9963bae", "77a5453588251e23", "f24385027c4f9442"],
   "cli/scripts/is-interactive.test.ts": ["ecb7c6e61376e003"],
   "cli/scripts/is-interactive.ts": ["0cda8472eb7f5bd9", "23658b83273379a3", "eaf779a47b54c862"],
+  "cli/scripts/item-value.ts": ["6c2a58ea275eff05"],
   "cli/scripts/jev-answers.test.ts": [
     "3060104326038514",
     "5b053cdf50f4c4fb",
@@ -5882,6 +5908,7 @@
     "484e2692cc80ca46",
     "568892629636fc72",
     "876dd71b18b63468",
+    "8a8836c96069fe70",
     "ab7afbc4eebad2db",
     "aff250c687a85494",
     "b24383a7921a0cd0",
@@ -5897,6 +5924,7 @@
     "603184da032f21e7",
     "65a36ffc09c81c54",
     "71327be6457e8751",
+    "771f1ae309aeb9dd",
     "8d9b2a8722c927a8",
     "a7f9313a27873ecc",
     "d87a810068457f8c",
@@ -5914,7 +5942,12 @@
     "d0bea5cd5a2b0e74",
     "ec7e3df750cc2caf"
   ],
-  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538", "6e482f691e375ae2", "f0acdf12c42974d1"],
+  "cli/scripts/orchestrate-parent-defaults.test.ts": [
+    "3d1bef5cf805a538",
+    "6e482f691e375ae2",
+    "e8f371ebd2239dd2",
+    "f0acdf12c42974d1"
+  ],
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5", "d9c6d340e898848a"],
   "cli/scripts/orchestrate-parent-fast.test.ts": [
@@ -6011,6 +6044,9 @@
     "a96051e8ab637f98",
     "e377c71af4b453f9"
   ],
+  "cli/scripts/orchestrate-parent-save-advice.test.ts": ["cf29eb52dc284f7b"],
+  "cli/scripts/orchestrate-parent-save-strategy-deny.test.ts": ["1d29dac78ee77bec"],
+  "cli/scripts/orchestrate-parent-save-strategy.test.ts": ["17e990bfa4d75507"],
   "cli/scripts/orchestrate-parent-settings.test.ts": ["3a0212fb89a2130d"],
   "cli/scripts/orchestrate-parent-stop.test.ts": [
     "09f533da91757fd9",
@@ -6063,6 +6099,7 @@
     "f6dfaa7ae98e41cb"
   ],
   "cli/scripts/orchestrate-parent-yes.test.ts": [
+    "341545520345edf4",
     "47860cea9187caa2",
     "595d7fe6dc1e8177",
     "5c6bf0d1b37b218f",
@@ -6184,6 +6221,7 @@
     "20c41eda7015de67",
     "26d41e3d50e3859c",
     "322f69607db4838f",
+    "5ceba630341dde82",
     "66d41b853e4af5f0",
     "89e318956284f1b8",
     "97c079e50cebc18b",
@@ -6196,6 +6234,7 @@
   ],
   "cli/scripts/orchestrate.constants.ts": [
     "209e0aec04b5ac3b",
+    "47f6563e83907759",
     "50b0ece65ccf2591",
     "555ef3c518afa9ba",
     "5c40357b6d89fb66",
@@ -6302,14 +6341,15 @@
     "1ac62df390dd1baf",
     "5df71208d0478e12",
     "5ff620d6179a3e0b",
-    "b69ce4a040ad188e"
+    "b69ce4a040ad188e",
+    "c8fb8cc0d7732378"
   ],
   "cli/scripts/persist-fast-plan.ts": ["12ad72530ad8e0fc", "59167533e3b9bbba", "6b6294e195416e5e"],
   "cli/scripts/persist-fast-roadmap-denials.test.ts": ["3896263981e9a427", "5797a8cd782a2dd8", "77b46223832337bb"],
   "cli/scripts/persist-fast-roadmap-update.test.ts": ["66beb3d8ae6038bf", "dc8084200755a9dc", "fd860e444ed2595a"],
   "cli/scripts/persist-fast-roadmap-validate.ts": ["5a3e3efda6860a7c", "c6c4640274e4b11f"],
   "cli/scripts/persist-fast-roadmap.constants.ts": ["6d7f23c4c1ee8357", "76cb98bb79513eb8", "a8da5daa0079dd0e"],
-  "cli/scripts/persist-fast-roadmap.test.ts": ["918aef04148c07aa"],
+  "cli/scripts/persist-fast-roadmap.test.ts": ["918aef04148c07aa", "ae729cdaa62a58fd"],
   "cli/scripts/persist-fast-roadmap.ts": ["84fd9bd633a044c6", "c872e4b4b1f73952"],
   "cli/scripts/persist-fast-save.ts": ["564f93b715fcfdd2"],
   "cli/scripts/persist-fast-validate.ts": ["2014e9501e291a71", "cc185b0e75f0dd4d"],
@@ -6448,7 +6488,8 @@
     "b8e06b670834d4d0",
     "c93635b2a307b261",
     "d03a97f2807ece94",
-    "d8be7cb8f79b1e60"
+    "d8be7cb8f79b1e60",
+    "e8287260cf1a72f6"
   ],
   "cli/scripts/persist-mistakes.test.ts": [
     "5de0dfd513e97468",
@@ -6503,6 +6544,7 @@
     "256c6e9c190b07fb",
     "2817a55e99cef277",
     "702079a486566005",
+    "92caf8c39e994428",
     "a6c2ba9ec6594d25",
     "c74c7b1c6e95a528",
     "cf36bf1a2abb8875",
@@ -6527,7 +6569,8 @@
     "a368064b29a66b14",
     "c42200d4974e535b",
     "d290b89baa9cd0e0",
-    "defd9c7c09363e76"
+    "defd9c7c09363e76",
+    "e5018f0e00105911"
   ],
   "cli/scripts/persist-plan-helpers.test.ts": [
     "016fc3f2b1c811f9",
@@ -6551,6 +6594,7 @@
     "9df2ed5d74db0434",
     "b2e709bba5aeb852",
     "d4c29e145efa1c70",
+    "d8842c354c31f666",
     "fc7966f2d117ec72",
     "fcb9d04e83808d2f"
   ],
@@ -6559,6 +6603,7 @@
     "105354e65ddc2377",
     "29093820bd3fa45b",
     "2bc2585d767063d0",
+    "355943c37ba15408",
     "39bc6ed1a933059d",
     "8b4b66ede3a0750d",
     "c273a30adcb08377",
@@ -6576,6 +6621,7 @@
     "0893a43c296bca2f",
     "507d5d202fa62fad",
     "b7c57f7e5fc44025",
+    "ca4ce2721d95d245",
     "e75b4495e1800d39",
     "edddf64d8c647002"
   ],
@@ -6583,6 +6629,7 @@
     "1ff00bb26d20829d",
     "5386da853184574a",
     "7454068faac749a8",
+    "8d7b1f47754744be",
     "a59142fb0688bfa7",
     "a67586e846832fbe",
     "b3f71a885f2389dc",
@@ -6601,6 +6648,7 @@
     "2565cc90dee726b3",
     "6d88fe605cdaad67",
     "7d375dfa3724bb0a",
+    "8474a6f0bca035d4",
     "a30e5e5dc51431fe",
     "af0687a4b9582724",
     "af8acd5d92c7cc57",
@@ -6614,6 +6662,7 @@
     "b30b1639d24b2de4",
     "c10e2b578d60c46f",
     "e72086ca55c48950",
+    "e955ebe7ecfce56a",
     "f4ae95ec1763b5be"
   ],
   "cli/scripts/persist-plan-usage.test.ts": [
@@ -6622,6 +6671,7 @@
     "84dc7646c4e8d60f",
     "8a071f1141647329",
     "a32cd54c21bc3b65",
+    "a75885dde4bcabff",
     "e5286c240a6a0786"
   ],
   "cli/scripts/persist-plan-validate.test.ts": ["247f5a5b307ac9b0", "368a2eb636091a20", "d7842b9460f8202c"],
@@ -6629,6 +6679,7 @@
     "0443af08febb9ca6",
     "0f262cd845c76829",
     "261ad92df40243c1",
+    "3fa8ec164e0d7623",
     "59e9f98935f6a994",
     "62839ec653fd5808",
     "6ca48a3e5a20a35a",
@@ -6647,6 +6698,7 @@
   ],
   "cli/scripts/persist-plan.test.ts": [
     "02297d38e4b1bd8f",
+    "174f96d433f1baed",
     "2ab97710531d97ec",
     "6ace7fbfd4c52933",
     "6f4f4a6ed63d8dc8",
@@ -6662,6 +6714,7 @@
     "27d19c574c4bcff5",
     "29de3d0ce6e517cb",
     "34de5f4824c03014",
+    "373f191818b83927",
     "4d4dec0828cc62f6",
     "4f54503f0d96ab32",
     "6164f9ac381bfb72",
@@ -6676,9 +6729,10 @@
     "e68f4d9c6c5fd870",
     "fdf533e7dc3d71ce"
   ],
-  "cli/scripts/persist-retired-mode.test.ts": ["b70804250a994778"],
+  "cli/scripts/persist-retired-mode.test.ts": ["921c97979cc15347", "b70804250a994778"],
   "cli/scripts/persist-roadmap-edges.test.ts": [
     "290c25e873f4387a",
+    "389861c0512b0084",
     "54aad5796f6beb11",
     "65be74719e44872b",
     "7b1b269c169b9b4c",
@@ -6690,6 +6744,7 @@
     "fef5a2c80ce91cdc"
   ],
   "cli/scripts/persist-roadmap-keys.test.ts": [
+    "041bcfbf5cdd7e77",
     "3ddd5721f32559be",
     "3e9f71e1b8e6b0a8",
     "78c399f733c527df",
@@ -6717,12 +6772,14 @@
     "46c8b6fea535bfbe",
     "72fb1e049a1c3cbb",
     "801b749862520775",
+    "81ef13814179eda5",
     "8c303a05405f1217",
     "aa5582d9778e6033",
     "b85ece3b8df2b966"
   ],
   "cli/scripts/persist-roadmap-mistakes.test.ts": [
     "3085bd717c4352d7",
+    "5815b18ff14b45f4",
     "5dfda8de9af3574b",
     "64c19314fb04abb2",
     "8624dca7748f03fe",
@@ -6740,6 +6797,7 @@
     "297e5bbe0b4c417f",
     "62d213ba1e3e6450",
     "8903ca55cf90d29e",
+    "964a9740ecaa1c47",
     "c251980177101b46",
     "e2f7f2df6b3bd0cc",
     "f07215a6bef626a7"
@@ -6747,6 +6805,7 @@
   "cli/scripts/persist-roadmap-rules.test.ts": [
     "10e3bc86e63cd6bb",
     "28bc939106d4c652",
+    "45a2fdb791465976",
     "6c99c23433fe2266",
     "785be4ddcdcf9459",
     "daf0ffea59324ff6",
@@ -6778,6 +6837,7 @@
     "9829cd497faab18e",
     "b688a950c570120d",
     "c1856474bbb65268",
+    "cd08621f5af3ecee",
     "fd0d2f49c23fb681"
   ],
   "cli/scripts/persist-roadmap.constants.ts": [
@@ -6797,11 +6857,13 @@
     "580fa07a1ed65711",
     "670b17e91f863367",
     "75e1d3fb5071a670",
-    "c422cf60dc728453"
+    "c422cf60dc728453",
+    "f04fdcd6e5644d70"
   ],
   "cli/scripts/persist-roadmap.ts": [
     "0f09a482ec439c3c",
     "27b8da689ffa67b8",
+    "58481e03a8d6b46f",
     "5d13603e51cf4cf2",
     "63f4af9bd6152737",
     "6b2ec36cf6fda68c",
@@ -6816,7 +6878,13 @@
     "d1733228c1d4d5a3",
     "fc5c14b11827695f"
   ],
-  "cli/scripts/persist-save.ts": ["0728a1ae789d4cc5", "0c533041d562b850", "1db7e27197089442", "ffda19c48d12e6c6"],
+  "cli/scripts/persist-save.ts": [
+    "0728a1ae789d4cc5",
+    "0c533041d562b850",
+    "1db7e27197089442",
+    "8ecd92a564ca2e4b",
+    "ffda19c48d12e6c6"
+  ],
   "cli/scripts/persist-sections.test.ts": [
     "0b62a5accc35e669",
     "2bfe25656419ff0d",
@@ -6836,6 +6904,7 @@
     "f1314fd085f00989",
     "f5d69e49c942349c"
   ],
+  "cli/scripts/persist-strategy.test.ts": ["69007a0daf72f32a"],
   "cli/scripts/persist-tmp-owner.test.ts": [
     "21d1dc49df97abdc",
     "2f3d905b36db6d16",
@@ -6894,6 +6963,7 @@
     "767aecf21f29ff85",
     "942793c032a723ef",
     "a23f97f7bf883b75",
+    "c4bb57ad446bc5dc",
     "e1948828fd6dcb5f",
     "eb5fed8c2f775147"
   ],
@@ -6902,6 +6972,7 @@
     "6e042d4e766e3f39",
     "921b1c935fe02746",
     "a075dc84d76622ca",
+    "c641f38152319557",
     "ca2c9c5de373b863",
     "dd3845ae094dc98e",
     "f59703a561cc3adf"
@@ -7217,7 +7288,7 @@
   ],
   "cli/scripts/session-settings-effective.test.ts": ["e8db0fc613e58cdb"],
   "cli/scripts/session-settings.test.ts": ["3d2e13a418430cf1"],
-  "cli/scripts/session-settings.ts": ["3a0ed96243a46ee3"],
+  "cli/scripts/session-settings.ts": ["044f8696e357fd73", "3a0ed96243a46ee3"],
   "cli/scripts/set.constants.ts": ["f01fdd793583de40"],
   "cli/scripts/set.test.ts": ["cb3a19074ea7cc5f"],
   "cli/scripts/set.ts": ["0f5bb27f1fbd3351"],
@@ -8534,6 +8605,7 @@
     "bce9480e50fc9c75",
     "be99ba4bbf55ee14",
     "c12ef20414c9ae05",
+    "d5e957685e541db5",
     "d92570bc93ab6cd8",
     "daaa9c4b325a9b29",
     "db5b66e69e2f4423",
@@ -8559,6 +8631,7 @@
     "71993ad32e4415fd",
     "93b5154bc7dd725c",
     "98565802b83268f5",
+    "9c69a0ba989f72fc",
     "a3efd593a4fc382b",
     "c6179e8588309d6e",
     "c71beda324fb785e",
@@ -8578,6 +8651,7 @@
     "0e879896d6b9f135",
     "2651635e65eb4d95",
     "2939a780d5f02c50",
+    "3a23ddd9fbb54f06",
     "4a1f34c9e353962f",
     "51deefc4b794d3d7",
     "6996928b19a20977",
@@ -8600,6 +8674,7 @@
     "2e6941901ff909d3",
     "3447cf3911d08fdd",
     "457f2eb8443c8e88",
+    "6d7323587e18b72f",
     "7adca70bec40b015",
     "96f952d35af99ba0",
     "9b601f0b67b953d0",

@@ -14,7 +14,7 @@ const CREATED = "2026-08-26T14:30:00Z";
 const ENTRY = "- feedback: ignore entry lacked the slash → writes `.tmp/`";
 
 function saved(ws: string) {
-  const r = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+  const r = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws });
   expect(r.ok, r.error).toBe(true);
 
   return { ...r, abs: path.join(ws, savedOk(r).path) };
@@ -70,6 +70,7 @@ describe("plan updates keeping the saved head", () => {
 
     const r = persistPlan({
       content: VALID_PLAN.replace(/\n## Previous mistakes\n\(none\)\n$/, "\n"),
+      strategy: "free",
       workspaceRoot: ws,
     });
 
@@ -148,7 +149,7 @@ describe("plan entry kinds", () => {
   it("rejects a roadmap-only slice entry on a plan", () => {
     const ws = tmpWs();
     const body = VALID_PLAN.replace("## Previous mistakes\n(none)", "## Previous mistakes\n- slice: a → b");
-    const r = persistPlan({ content: body, workspaceRoot: ws });
+    const r = persistPlan({ content: body, strategy: "free", workspaceRoot: ws });
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/feedback\|verify\|review\|premise\|decision\}/);
   });

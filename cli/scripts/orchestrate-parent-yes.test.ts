@@ -24,12 +24,11 @@ function claude(ws: string, sid: string): HookSession {
   return hookSession(kit, { casing: "claude", env: { CLAUDE_PROJECT_DIR: ws }, sid, ws });
 }
 
-function withStrategy(s: string) {
-  return VALID_PLAN.replace("strategy: free", `strategy: ${s}`);
-}
+/** Saves a reviewed plan or roadmap in a session that holds `strategy`, as a person's `/set` would leave it. */
+function reviewedAs(s: HookSession, dir: "plans" | "roadmaps", strategy: string) {
+  s.say(`/set ${strategy}`);
 
-function roadmapWith(s: string) {
-  return DRAFT_ROADMAP.replace("strategy: free", `strategy: ${s}`);
+  return s.reviewed(dir, dir === "plans" ? VALID_PLAN : DRAFT_ROADMAP);
 }
 
 function lines(s: string) {
@@ -46,12 +45,12 @@ function plan1Line(ws: string) {
 }
 
 /** A session in a fresh workspace that saved one reviewed plan with `body`. */
-function onePlan(sid: string, body = VALID_PLAN) {
+function onePlan(sid: string, strategy = "free") {
   const ws = kit.temp();
   const s = claude(ws, sid);
   s.say("plan it");
 
-  return { plan: s.reviewed("plans", body), s, ws };
+  return { plan: reviewedAs(s, "plans", strategy), s, ws };
 }
 
 it("approves exactly what the approval block names, and leaves the file's bytes and strategy alone", () => {
@@ -94,7 +93,7 @@ it("on a default plan the context is today's, byte for byte", () => {
 });
 
 it("a bare i does not approve a block whose strategy differs from the file's", () => {
-  const { ws, s, plan } = onePlan("d2", withStrategy("spawn-fast"));
+  const { ws, s, plan } = onePlan("d2", "spawn-fast");
   expect(s.say("y", plan1Line(ws))).not.toContain("i approves");
 
   const truthful = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
@@ -104,7 +103,7 @@ it("a bare i does not approve a block whose strategy differs from the file's", (
 });
 
 it("isf and implement fere write the strategy they name, and hsd is no approval", () => {
-  const { ws, s, plan } = onePlan("c1", withStrategy("spawn-fast"));
+  const { ws, s, plan } = onePlan("c1", "spawn-fast");
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
   expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
@@ -145,9 +144,9 @@ function written(kind: string): string {
 }
 
 it("y free rewrites every item of a queue, a plan and a roadmap", () => {
-  const { ws, s, plan: p1 } = onePlan("r2", withStrategy("spawn-fast"));
-  const p2 = s.reviewed("plans", withStrategy("spawn-deep"));
-  const rm = s.reviewed("roadmaps", roadmapWith("spawn-fast"));
+  const { ws, s, plan: p1 } = onePlan("r2", "spawn-fast");
+  const p2 = reviewedAs(s, "plans", "spawn-deep");
+  const rm = reviewedAs(s, "roadmaps", "spawn-fast");
 
   const tp = transcript(
     ws,

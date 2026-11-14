@@ -18,7 +18,7 @@ import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-repl
 import { kindAt } from "./orchestrate-reviews.ts";
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
 import { firstNonEmptyStripped } from "./orchestrate-transcript.ts";
-import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
+import { DENY_REASON, PLAN_KIND, RECEIPT_HEAD_CHARS, ROADMAP_KIND } from "./orchestrate.constants.ts";
 import type { HookResult, ItemKind, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
 import { validateFastPlan } from "./persist-fast-plan-validate.ts";
 import { persistFastPlan, prepareFastPlanUpdate } from "./persist-fast-plan.ts";
@@ -27,12 +27,15 @@ import { persistFastRoadmap, prepareFastRoadmapUpdate } from "./persist-fast-roa
 import { persistHandoff } from "./persist-handoff.ts";
 import { validateImplementation } from "./persist-implementation-validate.ts";
 import { isFullImplementationBody, persistImplementation } from "./persist-implementation.ts";
+import { agentStrategyError, extractStrategy } from "./persist-keys.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
 import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { isUnderRepoDir, isUnderTmp, persistTmp } from "./persist-tmp.ts";
-import { stampPath as strategyStampPath } from "./strategy.ts";
+import { saveStrategy } from "./session-settings.ts";
+import { parseStrategy, stampPath as strategyStampPath } from "./strategy.ts";
+import type { Strategy } from "./strategy.types.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords } from "./worktree-guards.ts";
 
@@ -46,8 +49,8 @@ type Prepare = (args: Parameters<Persist>[0] & { filePath: string }) => PersistO
 
 type Validate = (name: string, text: string, opts: { fresh: boolean; previous: string }) => string[];
 
-/** A fresh save of an item; a full plan or roadmap sent without a `strategy:` line gets the default one. */
-type Fresh = (args: Parameters<Persist>[0], defaults: AgentDefaults) => PersistOutcome;
+/** A fresh save of an item; a plan or roadmap takes the strategy the session, the parent roadmap or the config sets. */
+type Fresh = (args: Parameters<Persist>[0], strategy: Strategy) => PersistOutcome;
 
 /** How a saved plan or roadmap is checked, updated in place, and saved fresh. */
 const IMPL_NAME_LINE = /^\s*IMPL_NAME:/m;
@@ -65,12 +68,12 @@ const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; p
     validate: validateFastRoadmap,
   },
   plan: {
-    persist: (args, { defaultStrategy }) => persistPlan({ ...args, defaultStrategy }),
+    persist: (args, strategy) => persistPlan({ ...args, strategy }),
     prepare: preparePlanUpdate,
     validate: validatePlan,
   },
   roadmap: {
-    persist: (args, { defaultStrategy }) => persistRoadmap({ ...args, defaultStrategy }),
+    persist: (args, strategy) => persistRoadmap({ ...args, strategy }),
     prepare: prepareRoadmapUpdate,
     validate: validateRoadmap,
   },
@@ -84,13 +87,29 @@ function isFile(abs: string): boolean {
   }
 }
 
+/** Whether `kind` saves a `strategy:`; a fast plan or fast roadmap carries none. */
+function hasSavedStrategy(kind: ItemKind): boolean {
+  return kind === PLAN_KIND || kind === ROADMAP_KIND;
+}
+
+/** The refusal for a `strategy:` the agent sends in `content`, set against `previous` (null on a fresh save). */
+function strategyDeny(write: WriteCase, content: string, previous: string | null): HookResult | null {
+  const saved = previous === null ? null : parseStrategy(extractStrategy(previous));
+  const error = agentStrategyError(content, saved);
+
+  return error === null ? null : denyWith(write.data, error);
+}
+
 // An Edit of a saved plan or roadmap is checked against the text it would produce; a valid one runs as sent.
-function savedEdit(write: WriteCase, abs: string, validate: Validate): HookResult | null {
+function savedEdit(write: WriteCase, abs: string, kind: ItemKind): HookResult | null {
   const previous = fs.readFileSync(abs, "utf8");
   const next = projectEdit(previous, write.toolInput);
 
   if (next == null) return null;
-  const errors = validate(path.basename(abs), next, { fresh: false, previous });
+  const strategy = hasSavedStrategy(kind) ? strategyDeny(write, next, previous) : null;
+
+  if (strategy !== null) return strategy;
+  const errors = SAVED[kind].validate(path.basename(abs), next, { fresh: false, previous });
 
   return errors.length > 0 ? denyWith(write.data, errors.join("; ")) : null;
 }
@@ -102,16 +121,21 @@ function savedRoute(write: WriteCase, kind: ItemKind, defaults: AgentDefaults): 
   const saved = SAVED[kind];
 
   if (exists && !isString(write.toolInput.content)) {
-    const denied = savedEdit(write, abs, saved.validate);
+    const denied = savedEdit(write, abs, kind);
 
     if (denied === null) recordApproval(write.data, abs);
 
     return { done: denied };
   }
 
+  const previous = exists ? fs.readFileSync(abs, "utf8") : null;
+  const refused = hasSavedStrategy(kind) ? strategyDeny(write, contentOf(write.toolInput), previous) : null;
+
+  if (refused !== null) return { done: refused };
+
   const persist: Persist = exists
     ? (args) => saved.prepare({ ...args, filePath: abs })
-    : (args) => saved.persist(args, defaults);
+    : (args) => saved.persist(args, saveStrategy(write.data, defaults, kind));
 
   return { approvable: true, persist };
 }

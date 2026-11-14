@@ -24,15 +24,16 @@ export type AgentsConfig = {
    */
   skills?: readonly SkillPack[] | undefined;
   /**
-   * Who runs the steps of a plan that names no strategy. `"free"`: the session does them itself. `"spawn-fast"`:
-   * fast helper agents do each phase and the session reviews. `"spawn-deep"`: the same with deep helper agents.
+   * Who runs a new plan's or roadmap's steps when the session and the parent roadmap name none. `"free"`: the
+   * session does them itself. `"spawn-fast"`: fast helper agents do each phase and the session reviews.
+   * `"spawn-deep"`: the same with deep helper agents.
    *
    * @default "free"
    */
   defaultStrategy?: Strategy | undefined;
   /**
-   * How a session runs when nothing else names a mode. `"ask"`: it stops once for plan approval. `"away"`: it
-   * decides instead of asking and logs each choice.
+   * Whether a session asks when no session approval and no in-progress plan or roadmap sets it. `"ask"`: it stops
+   * once for plan approval. `"away"`: it decides instead of asking and logs each choice.
    *
    * @default "ask"
    */

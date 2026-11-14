@@ -50,7 +50,7 @@ export const withSteps = (t: string, steps: string[], verify: string[]): string 
 
 /** The save/saved/legacy helpers of the lean-format suites, bound to one workspace maker. */
 export function leanKit(tmpWs: () => string) {
-  const save = (content: string, ws = tmpWs()) => persistPlan({ workspaceRoot: ws, content, created: CREATED });
+  const save = (content: string, ws = tmpWs()) => persistPlan({ strategy: "free", workspaceRoot: ws, content, created: CREATED });
   function saved(content = CARDED) {
     const ws = tmpWs();
     const r = save(content, ws);

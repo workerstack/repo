@@ -14,7 +14,7 @@ const CREATED = "2026-11-09T10:15:00Z";
 const ROADMAPS = ".repo/roadmaps";
 
 function save(content: string, ws = tmpWs()) {
-  return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+  return persistRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
 }
 
 function sliceRule(n: number) {

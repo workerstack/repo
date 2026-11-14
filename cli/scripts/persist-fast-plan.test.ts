@@ -88,7 +88,7 @@ describe("fast plan save", () => {
 describe("fast plan serials and paths", () => {
   it("counts serials in plans-fast only", () => {
     const ws = tmpWs();
-    const full = persistPlan({ content: VALID_PLAN, created: CREATED, workspaceRoot: ws });
+    const full = persistPlan({ content: VALID_PLAN, created: CREATED, strategy: "free", workspaceRoot: ws });
     expect(full.ok, full.error).toBe(true);
     expect(save(SENT, ws).serial).toBe(1);
     expect(save(SENT.replace("add tmp ignore", "second one"), ws).serial).toBe(2);

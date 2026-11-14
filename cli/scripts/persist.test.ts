@@ -8,6 +8,7 @@ import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { DRAFT_ROADMAP, VALID_HANDOFF, VALID_IMPL, VALID_PLAN, VALID_TMP } from "./__fixtures__/persist-bodies.ts";
 import { parsePersistCliJson, runPersistCli } from "./__fixtures__/run-persist-cli.ts";
+import { run } from "./__fixtures__/run-persist-main.ts";
 import type { HookIo } from "./hook-io.ts";
 import { main } from "./persist.ts";
 
@@ -15,38 +16,6 @@ const { tempDir, track } = useTempDirs("persist-main-");
 
 function tmpDir(): string {
   return fs.realpathSync(tempDir());
-}
-
-/** An io that hands `body` out in 100-byte chunks, then reports the stream closed; `out` collects stdout. */
-function fakeIo(body: string) {
-  const bytes = Buffer.from(body, "utf8");
-  let at = 0;
-  const out: string[] = [];
-
-  const io: HookIo = {
-    readChunk: () => {
-      if (at >= bytes.length) return null;
-      const chunk = bytes.subarray(at, at + 100);
-      at += 100;
-
-      return chunk;
-    },
-    write: (text) => {
-      out.push(text);
-    },
-  };
-
-  return { io, out };
-}
-
-/** Runs `main`, capturing what it writes to stderr. */
-async function run(argv: string[], body = "") {
-  const { io, out } = fakeIo(body);
-  const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-  const code = await main(argv, io);
-  const stderr = err.mock.calls.map((c) => String(c[0])).join("");
-
-  return { code, stderr, stdout: out.join("") };
 }
 
 const KINDS = [
@@ -76,24 +45,6 @@ describe("repo persist <kind>", () => {
     const r = await run(["handoff", "--workspace", ws], VALID_HANDOFF);
     expect(fs.readFileSync(parsePersistCliJson(r.stdout).absPath, "utf8")).toContain("sync skills to hosts");
   });
-});
-
-describe("repo persist defaults", () => {
-  it.each([
-    ["plan", VALID_PLAN],
-    ["roadmap", DRAFT_ROADMAP],
-  ] as const)(
-    "fills a %s sent without strategy from agents.defaultStrategy in the workspace config",
-    async (kind, body) => {
-      const ws = tmpDir();
-      const config = 'export default { packs: ["agents"], agents: { defaultStrategy: "spawn-fast" } };\n';
-      fs.writeFileSync(path.join(ws, "repo.config.ts"), config);
-      const r = await run([kind, "--workspace", ws], body.replace(/^strategy:.*\n/m, ""));
-      expect(r.code, r.stderr).toBe(0);
-      const saved = fs.readFileSync(parsePersistCliJson(r.stdout).absPath, "utf8");
-      expect(saved.match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-fast"]);
-    },
-  );
 });
 
 describe("repo persist root", () => {

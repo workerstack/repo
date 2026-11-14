@@ -3,15 +3,15 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { matchLessons } from "./lessons-ops.ts";
 import { type Roots } from "./lessons.types.ts";
 import { extractH1, slugify, stripFrontmatter } from "./persist-doc.ts";
 import {
+  extractAdvice,
   extractApproval,
   extractRetiredMode,
-  extractStrategy,
+  stripAdviceLine,
   stripApprovalLine,
   stripStrategyLine,
 } from "./persist-keys.ts";
@@ -44,8 +44,8 @@ type SaveInput = {
   content?: string;
   source?: string;
   created?: string;
-  /** The strategy a save without a `strategy:` line gets; `free` when not given. */
-  defaultStrategy?: Strategy;
+  /** The strategy the new plan is saved with: the session's, the roadmap's or the config's. */
+  strategy: Strategy;
 };
 
 /** Lessons matching files a new plan names, held by the checkout of each file, that Watch-outs does not cite. */
@@ -64,7 +64,7 @@ export function preparePlanUpdate(input: Rewrite): PlanResult {
 }
 
 type Parts = {
-  defaultStrategy: Strategy;
+  strategy: Strategy;
   serial: number;
   slug: string;
   createdAt: string;
@@ -73,10 +73,11 @@ type Parts = {
 
 /** The plan text a save writes: frontmatter on the body, with the keys read from what the caller sent. */
 function draftPlan(raw: string, source: string | undefined, parts: Parts) {
-  const { serial, slug, createdAt, planName, defaultStrategy } = parts;
-  const body = stripApprovalLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
+  const { serial, slug, createdAt, planName, strategy } = parts;
+  const body = stripApprovalLine(stripAdviceLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))));
 
   return injectFrontmatter({
+    advice: extractAdvice(raw),
     approval: extractApproval(raw),
     body,
     commit: extractCommit(raw),
@@ -86,11 +87,11 @@ function draftPlan(raw: string, source: string | undefined, parts: Parts) {
     slug,
     // The `source:` line: what the caller sent, else the plan name, else the Goal squeezed to one line, else the slug.
     source: persistSource([source, planName], GOAL_SECTION_RE.exec(stripFrontmatter(body)), slug),
-    strategy: extractStrategy(raw) ?? defaultStrategy,
+    strategy,
   });
 }
 
-export function persistPlan(input: SaveInput = {}): PlanResult {
+export function persistPlan(input: SaveInput): PlanResult {
   const { ws, raw } = saveTarget(input.workspaceRoot, input.content);
   // Lesson citations read tracked lessons, which live in the checkout that holds each file the plan names.
   const lessonRoots = { checkout: firstNonEmpty(input.checkout) ?? ws, cwd: ws, root: ws };
@@ -103,8 +104,7 @@ export function persistPlan(input: SaveInput = {}): PlanResult {
   const { createdAt, serial, filename, dest } = allocate(path.join(ws, PLAN_DIR), slug, input.created);
 
   if (fs.existsSync(dest)) return { error: "serial collision", ok: false };
-  const defaultStrategy = input.defaultStrategy ?? AGENT_DEFAULTS.defaultStrategy;
-  const full = draftPlan(raw, input.source, { createdAt, defaultStrategy, planName, serial, slug });
+  const full = draftPlan(raw, input.source, { createdAt, planName, serial, slug, strategy: input.strategy });
   const errors = validatePlan(filename, full);
 
   for (const r of uncitedLessons(lessonRoots, full))

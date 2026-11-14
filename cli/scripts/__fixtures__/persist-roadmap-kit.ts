@@ -36,7 +36,7 @@ export function savedLegacy(ws: string, body = LEGACY_ROADMAP, head = "status: d
 
 /** Saves `content` as a new roadmap in `ws` and returns its absolute path. */
 export function savedRoadmap(ws: string, content = DRAFT_ROADMAP): string {
-  const r = persistRoadmap({ workspaceRoot: ws, content, created: CREATED });
+  const r = persistRoadmap({ strategy: "free", workspaceRoot: ws, content, created: CREATED });
   expect(r.ok, r.error).toBe(true);
   return path.join(ws, savedOk(r).path);
 }

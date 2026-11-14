@@ -26,15 +26,18 @@ reviews: 0             # settled /review-roadmap rounds; never lowered or remove
 created: 2026-10-25T18:00:00Z
 source: "<≤120 chars>"
 strategy: free          # free | spawn-fast | spawn-deep
+advice: spawn-fast because the slices are small   # optional, ≤100 chars
 approval: away             # optional: ask | away
 ---
 ```
 
 `draft` → `locked` → `in-progress` → `done` | `blocked`.
 
-`strategy` is optional: `free`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). On a roadmap it is the default its slices copy: each slice plan starts with the roadmap's value, unless that slice's scope argues for another. A save with no `strategy` gets `agents.defaultStrategy`, else `free`. An unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body-only save may send a bare `strategy: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
+`strategy` is `free`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). The save sets it, never the agent: the session value (`/set`, `bun repo set`), then `agents.defaultStrategy`, then `free`; a save that omits it keeps the saved value. A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. On a roadmap it is the default its slices take: a slice plan gets the session value, then the roadmap's, then the config. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`approval` is optional: `ask` or `away`, as in a plan (see `plan-format.md`); the order is the session stamp, then the in-progress `approval`, then `agents.defaultApproval`, then `ask`. A body-only save may send a bare `approval: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `approval: ask|away`.
+`advice` is optional, as in a plan (see `plan-format.md`): a body-only save sends a bare `advice: {free|spawn-fast|spawn-deep} because {reason}` line, at most 100 characters, above `ROADMAP_NAME:`, and a save that omits it keeps the saved one. A bad line is denied with `advice: {free|spawn-fast|spawn-deep} because {reason}, at most 100 characters`.
+
+`approval` is optional: `ask` or `away`, as in a plan (see `plan-format.md`); the order is the session approval, then the in-progress `approval`, then `agents.defaultApproval`, then `ask`. A body-only save may send a bare `approval: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `approval: ask|away`.
 
 `/implement-roadmap-deep` refuses `draft`.
 
@@ -98,7 +101,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 ## Validation checklist
 
 - filename stamped and unpadded; `name` equals the slug
-- `status` is one of the five values; `source` ≤120; `strategy` is one of the three values; `approval`, when present, is `ask` or `away`
+- `status` is one of the five values; `source` ≤120; `strategy` is one of the three values; `advice`, when present, is `{strategy} because {reason}` within 100 characters; `approval`, when present, is `ask` or `away`
 - a new roadmap: the card; only Order, Verify and Previous mistakes, in that order; ≥2 one-line slices, title 2–6 words, one sentence; at most 60 lines above Previous mistakes without `Location:` lines
 - an update keeps the saved file's shape; an old-shape one keeps the old checks: headings in order, Goal 1–3 sentences, bulleted Context, Decisions and Watch-outs, ≥2 slices each with Title (2–6 words), one-sentence Goal and Why (1–2 sentences)
 - Location, when present, is the absolute plan path (a relative `.repo/plans/{file}` still resolves)

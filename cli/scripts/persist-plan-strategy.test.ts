@@ -5,34 +5,28 @@ import { describe, expect, it } from "vitest";
 
 import { VALID_PLAN, savedOk } from "./__fixtures__/persist-bodies.ts";
 import { read, update, useTmpWs } from "./__fixtures__/persist-plan-kit.ts";
-import { expectNothingSaved } from "./__fixtures__/persist-save-kit.ts";
 import { validatePlan } from "./persist-plan-validate.ts";
-import { PLAN_DIR } from "./persist-plan.constants.ts";
 import { persistPlan } from "./persist-plan.ts";
+import type { Strategy } from "./strategy.types.ts";
 
 const tmpWs = useTmpWs();
 
 const CREATED = "2026-08-26T14:30:00Z";
 const NO_KEY = "strategy: free|spawn-fast|spawn-deep";
 
-function without(body: string) {
-  return body.replace(/^strategy:.*\n/m, "");
-}
-
+/** `body` with a `strategy:` line after its name line: the update path still reads one. */
 function withStrategy(body: string, value: string) {
-  return body.replace(/^strategy:.*$/m, `strategy: ${value}`);
+  return body.replace(/^PLAN_NAME:.*$/m, (l) => `${l}\nstrategy: ${value}`);
 }
 
-describe("plan strategy moves and fences", () => {
-  it("moves a body strategy line into the frontmatter after commit and out of the body", () => {
+function save(strategy: Strategy, content = VALID_PLAN, ws = tmpWs()) {
+  return persistPlan({ content, created: CREATED, strategy, workspaceRoot: ws });
+}
+
+describe("plan strategy on a new save", () => {
+  it("writes the strategy it is given into the frontmatter after commit and none in the body", () => {
     const ws = tmpWs();
-
-    const r = persistPlan({
-      content: `commit: feat: add the thing\n${withStrategy(VALID_PLAN, "spawn-deep")}`,
-      created: CREATED,
-      workspaceRoot: ws,
-    });
-
+    const r = save("spawn-deep", `commit: feat: add the thing\n${VALID_PLAN}`, ws);
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     const [head, ...body] = text.split("\n---\n");
@@ -42,91 +36,60 @@ describe("plan strategy moves and fences", () => {
   });
 
   it("leaves a strategy line inside a code fence alone", () => {
-    const ws = tmpWs();
     const fenced = VALID_PLAN.replace("## Context", "```console\nstrategy: spawn-fast\n```\n\n## Context");
-    const r = persistPlan({ content: fenced, created: CREATED, workspaceRoot: ws });
+    const ws = tmpWs();
+    const r = save("free", fenced, ws);
     expect(r.ok, r.error).toBe(true);
     const text = read(path.join(ws, savedOk(r).path));
     expect(text).toMatch(/^strategy: free$/m);
     expect(text).toMatch(/^```console\nstrategy: spawn-fast\n```$/m);
   });
-});
 
-describe("plan strategy default", () => {
-  it("fills free on a new save without it when no default is given", () => {
+  it.each(["free", "spawn-fast", "spawn-deep"] as const)("takes %s as given", (strategy) => {
     const ws = tmpWs();
-    const r = persistPlan({ content: without(VALID_PLAN), created: CREATED, workspaceRoot: ws });
+    const r = save(strategy, VALID_PLAN, ws);
     expect(r.ok, r.error).toBe(true);
-    expect(read(path.join(ws, savedOk(r).path))).toMatch(/^source: .*\nstrategy: free\n---$/m);
-  });
-
-  it("fills the given default on a new save without it, and a body line beats the default", () => {
-    const ws = tmpWs();
-
-    const filled = persistPlan({
-      content: without(VALID_PLAN),
-      created: CREATED,
-      defaultStrategy: "spawn-deep",
-      workspaceRoot: ws,
-    });
-
-    expect(filled.ok, filled.error).toBe(true);
-    expect(read(path.join(ws, savedOk(filled).path))).toMatch(/^strategy: spawn-deep$/m);
-
-    const sent = persistPlan({
-      content: withStrategy(VALID_PLAN, "spawn-fast"),
-      created: CREATED,
-      defaultStrategy: "spawn-deep",
-      workspaceRoot: ws,
-    });
-
-    expect(sent.ok, sent.error).toBe(true);
-    expect(read(path.join(ws, savedOk(sent).path)).match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-fast"]);
+    expect(read(path.join(ws, savedOk(r).path))).toMatch(new RegExp(`^source: .*\\nstrategy: ${strategy}\\n---$`, "m"));
   });
 });
 
-describe("plan strategy denials", () => {
-  it("denies an empty value even with a default", () => {
+describe("plan strategy kept", () => {
+  it("keeps the saved key on an update whose frontmatter omits it", () => {
     const ws = tmpWs();
-
-    const r = persistPlan({
-      content: withStrategy(VALID_PLAN, ""),
-      created: CREATED,
-      defaultStrategy: "spawn-fast",
-      workspaceRoot: ws,
-    });
-
-    expect(r.ok).toBe(false);
-    expect(r.errors).toContain(NO_KEY);
-    expectNothingSaved(path.join(ws, PLAN_DIR));
-  });
-
-  it("denies an unknown or empty value", () => {
-    const ws = tmpWs();
-
-    for (const v of ["review-fast", "review-deep", "review-medium", "Default", ""]) {
-      const r = persistPlan({ content: withStrategy(VALID_PLAN, v), created: CREATED, workspaceRoot: ws });
-      expect(r.ok, v).toBe(false);
-      expect(r.errors, v).toContain(NO_KEY);
-    }
-  });
-
-  it("denies an update whose frontmatter drops the key", () => {
-    const ws = tmpWs();
-    const r = persistPlan({ content: withStrategy(VALID_PLAN, "spawn-fast"), created: CREATED, workspaceRoot: ws });
+    const r = save("spawn-fast", VALID_PLAN, ws);
     const abs = path.join(ws, savedOk(r).path);
-    const u = update(ws, abs, without(read(abs).replace(/^strategy:.*\n/m, "")));
+    const u = update(ws, abs, read(abs).replace(/^strategy:.*\n/m, ""));
+    expect(u.ok, u.error).toBe(true);
+    expect(u.content).toMatch(/^strategy: spawn-fast$/m);
+  });
+});
+
+describe("plan strategy and advice kept beside approval", () => {
+  it("puts the kept strategy and advice before approval when a full frontmatter omits them", () => {
+    const ws = tmpWs();
+    const named = VALID_PLAN.replace(/^PLAN_NAME:.*$/m, (l) => `${l}\nadvice: free because small\napproval: away`);
+    const abs = path.join(ws, savedOk(save("spawn-fast", named, ws)).path);
+    const u = update(ws, abs, read(abs).replaceAll(/^(?:strategy|advice):.*\n/gm, ""));
+    expect(u.ok, u.error).toBe(true);
+    expect(u.content).toMatch(/^strategy: spawn-fast\nadvice: free because small\napproval: away\n---$/m);
+  });
+
+  it("gives the same refusal as before for a frontmatter that is not closed", () => {
+    const ws = tmpWs();
+    const abs = path.join(ws, savedOk(save("free", VALID_PLAN, ws)).path);
+    const unclosed = read(abs).replace("\n---\n", "\n");
+    const u = update(ws, abs, unclosed);
     expect(u.ok).toBe(false);
-    expect(u.errors).toContain(NO_KEY);
+    expect(u.errors).toContain("unterminated frontmatter");
   });
 });
 
 describe("plan strategy updates", () => {
   it("keeps the key on a body-only update and takes a new one from a body line", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withStrategy(VALID_PLAN, "spawn-fast"), created: CREATED, workspaceRoot: ws });
+    const r = save("spawn-fast", VALID_PLAN, ws);
     const abs = path.join(ws, savedOk(r).path);
-    const kept = update(ws, abs, without(VALID_PLAN).replace("Existing ignore entries stay.", "Other entries stay."));
+    const kept = update(ws, abs, VALID_PLAN.replace("Existing ignore entries stay.", "Other entries stay."));
     expect(kept.ok, kept.error).toBe(true);
     expect(read(abs)).toMatch(/^strategy: spawn-fast$/m);
     const changed = update(ws, abs, withStrategy(VALID_PLAN, "spawn-deep"));
@@ -140,10 +103,10 @@ describe("plan strategy updates", () => {
 
   it("adds the key to a saved head that lacks it only from a body line", () => {
     const ws = tmpWs();
-    const r = persistPlan({ content: withStrategy(VALID_PLAN, "free"), created: CREATED, workspaceRoot: ws });
+    const r = save("free", VALID_PLAN, ws);
     const abs = path.join(ws, savedOk(r).path);
     fs.writeFileSync(abs, read(abs).replace(/^strategy:.*\n/m, ""));
-    expect(update(ws, abs, without(VALID_PLAN)).errors).toContain(NO_KEY);
+    expect(update(ws, abs, VALID_PLAN).errors).toContain(NO_KEY);
     const ok = update(ws, abs, withStrategy(VALID_PLAN, "spawn-fast"));
     expect(ok.ok, ok.error).toBe(true);
     expect(read(abs)).toMatch(/^source: .*\nstrategy: spawn-fast\n---$/m);

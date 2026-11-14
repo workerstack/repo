@@ -86,15 +86,15 @@ it("blocks a block that is followed by more text", () => {
 
 it("blocks when the block shows a strategy the file does not hold, and names the block the files render", () => {
   const s = claude(kit.temp(), "mis");
-  const fast = VALID_PLAN.replace("strategy: free", "strategy: spawn-fast");
+  s.say("/set spawn-fast");
   s.say("plan it");
-  s.reviewed("plans", fast);
+  s.reviewed("plans", VALID_PLAN);
   expect(s.stop(`Saved.\n\n${closing(plan(1))}`)).toStrictEqual({
     decision: "block",
     reason: `end with this block:\n${closing(plan(1, "spawn-fast"))}`,
   });
   s.say("again");
-  s.reviewed("plans", fast);
+  s.reviewed("plans", VALID_PLAN);
   expect(s.stop(closing(plan(1, "spawn-fast"), plan(2, "spawn-fast")))).toBeNull();
 });
 
