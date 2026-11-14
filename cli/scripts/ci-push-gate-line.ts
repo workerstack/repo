@@ -66,7 +66,7 @@ function settledByLater(deps: GateDeps, ctx: LineCtx, push: Push): boolean {
 
 /**
  * The Stop line for one branch's pushes, or null when its newest landed commit is settled: by its own terminal record,
- * or, with no record or a superseded one, by a later passed commit that contains it.
+ * or by a later passed commit that contains it, which also proves a failure it had is fixed on the branch.
  */
 export function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Push[]): string | null {
   const branch = String(pushed[0]?.branch);
@@ -81,9 +81,8 @@ export function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Push[]): string | 
   const record = readRecord(deps, ctx.root, newest.sha);
 
   if (record !== null && TERMINAL.includes(record.outcome)) return null;
-  const isOpen = record === null || record.outcome === "superseded";
 
-  if (isOpen && settledByLater(deps, ctx, newest)) return null;
+  if (settledByLater(deps, ctx, newest)) return null;
   const short = newest.sha.slice(0, SHA_SHOWN);
   const wait = `\`bun repo ci wait ${branch}\``;
 
