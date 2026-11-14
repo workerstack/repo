@@ -85,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Bash gates now read a script a line writes with `cat > x.sh <<EOF` (or `<<<`) and then runs, so `bash x.sh` is judged on that text instead of an unread-script deny; any other write to that file before it runs (`>>`, `printf > x.sh`, a write in only one branch) leaves it unread. A shell name another program takes as a word (`echo sh x.sh`) runs no script.
 - `repo mutate` gives each Stryker mutant 60 s past its normal time, not 5 s: a machine that stalled 5 s turned a surviving mutant into a `Timeout`, which counts as a kill, so a weak test passed its floor. A failed `git ls-tree` now fails with `repo mutate: git ls-tree failed in <root>: <stderr>` instead of saying no tracked file matches.
 - `repo lint`, `repo fmt` and every captured oxlint or bun fmt run (`repo turn` among them) kill the tool after 90 s and fail with `repo lint: oxlint ran past its 90 s limit and was stopped` (`repo fmt: bun fmt …` for the formatter), so a hung oxlint no longer holds a commit gate until its test times out.
+- repo release consumer prints publint's messages as plain text in CI, where publint turned color on and wrote escape codes into the lines.
 
 ## [0.2.0-rc.0] - 2026-11-13
 
