@@ -182,17 +182,17 @@ export function isCheckedOut(root: string, target: string): boolean {
 
 /**
  * Delete origin's copy of `branch`, and with it the tracking ref, when origin's tracking ref of it exists. It never
- * prompts, waits at most `REMOTE_TIMEOUT_MS` and skips the pre-push hook (a delete sends no commits); a failure only
+ * prompts, waits at most `timeoutMs` and skips the pre-push hook (a delete sends no commits); a failure only
  * warns on stderr.
  */
-export function dropRemoteBranch(root: string, branch: string): void {
+export function dropRemoteBranch(root: string, branch: string, timeoutMs: number = REMOTE_TIMEOUT_MS): void {
   if (!git(root, ["show-ref", "--verify", "-q", `${REMOTES_REF}${branch}`]).ok) return;
 
   const r = spawnSync("git", ["push", "--no-verify", "origin", "--delete", branch], {
     cwd: root,
     encoding: "utf8",
     env: childEnv({ GIT_TERMINAL_PROMPT: "0" }),
-    timeout: REMOTE_TIMEOUT_MS,
+    timeout: timeoutMs,
   });
 
   if (r.status === 0) return;
