@@ -157,7 +157,8 @@ export default defineConfig({
       },
     ],
   },
-  nightly: { shards: 8 },
+  // On 8 shards a shard ran 1h37m to 2h31m and the slowest passed the 3 hour limit, so each shard gets half that.
+  nightly: { shards: 16 },
   owner: { github: "lovrozagar", name: "Lovro Žagar" },
   packs: ["agents", "standards", "docs", "release", "benchmark", "evals"],
 });
