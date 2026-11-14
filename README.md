@@ -165,13 +165,15 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 `repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it. `workflow` says how changes reach the default branch: `"worktree"` (the default), `"pull-request"` or `"main"`; `workflow.md` says what each mode does.
 
+Hover any key in `defineConfig({ ... })` to see what it does, the values it takes, its default and an example, at every depth. A section whose pack is off is a type error that names the pack to add, like `add "release" to packs to set this` on `nightly`. The types also refuse what the schema would refuse at load: an empty `ci.checks` command, a check named after a built-in one, an empty `lint.skip` list of files or rules, a `knip.ignore` entry that names two of `file`, `dependency` and `binary`, and a turbo task named `typecheck` or `test`.
+
 ```ts
 import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
   packs: ["agents", "standards", "docs", "release"],
   lint: {
-    skip: [{ files: ["src/legacy/**"], rules: ["max-lines"], reason: "split in #12" }],
+    skip: [{ files: ["src/legacy/**"], rules: ["eslint/max-lines"], reason: "split in issue 12" }],
     boundaries: {
       tags: { "@app/web": "app", "@app/ui": "ui", "@app/lib": "lib" },
       allow: { app: ["ui", "lib"], ui: ["lib"], lib: [] },

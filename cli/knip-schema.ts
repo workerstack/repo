@@ -22,8 +22,8 @@ export type KnipIgnore =
       reason: string;
     };
 
-/** A `knip.ignore` entry as written: the schema refuses any that does not name exactly one of the three. */
-export type KnipIgnoreEntry = {
+/** A `knip.ignore` entry as the schema reads it, before it refuses one that does not name exactly one of the three. */
+type WrittenEntry = {
   /** Why knip cannot see the use; the check fails the entry once knip would report nothing. */
   reason: string;
   /** The file knip is not to report as unused. */
@@ -58,7 +58,7 @@ type EntrySchema = z.ZodPipe<
     },
     z.core.$strict
   >,
-  z.ZodTransform<KnipIgnore, KnipIgnoreEntry>
+  z.ZodTransform<KnipIgnore, WrittenEntry>
 >;
 
 type KnipSchema = z.ZodObject<{ ignore: z.ZodOptional<z.ZodReadonly<z.ZodArray<EntrySchema>>> }, z.core.$strict>;

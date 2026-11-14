@@ -1,7 +1,11 @@
 /** The texts and names of the `turbo` config section. */
 
 /** The tasks sync generates itself, so a config cannot name them. */
-export const GENERATED_TASKS: readonly string[] = ["typecheck", "test"];
+export const GENERATED_TASKS = ["typecheck", "test"] as const;
+
+/** One of `GENERATED_TASKS`: a name `turbo.tasks` cannot take. */
+export type GeneratedTask = (typeof GENERATED_TASKS)[number];
+
 export const SECTION_ERROR = "must be an object like { tasks: { deploy: { cache: false } } }";
 export const TASKS_ERROR = "must be an object of turbo tasks, each like { cache: false, dependsOn: [...] }";
 export const TASK_ERROR = 'must be an object like { cache: false, dependsOn: ["^build"] }';

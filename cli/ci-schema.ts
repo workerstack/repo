@@ -24,7 +24,7 @@ export function ciSchema(): CiSchema {
 
   const checks = z.record(z.string(), argv, { error: CI_CHECKS_ERROR }).superRefine((map, ctx) => {
     for (const name of Object.keys(map)) {
-      if (BUILT_IN_LABELS.includes(name)) ctx.addIssue({ code: "custom", message: builtIn(name) });
+      if (BUILT_IN_LABELS.some((label) => label === name)) ctx.addIssue({ code: "custom", message: builtIn(name) });
       else if (!KEBAB_NAME.test(name)) ctx.addIssue({ code: "custom", message: notKebab(name) });
     }
   });

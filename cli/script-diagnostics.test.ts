@@ -70,7 +70,7 @@ function checkout(files: Record<string, string>, config: RepoConfig): string {
 }
 
 it("checkScriptsAt gives every hit of the checkout and those its skips leave", async () => {
-  const skip = { files: ["src/a.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] };
+  const skip = { files: ["src/a.ts"], reason: "tuning lives here", rules: ["repo/magic-number"] } as const;
 
   const root = checkout(
     { "src/a.ts": "export const f = () => 5000;\n", "src/b.ts": "export const g = () => 7;\n" },

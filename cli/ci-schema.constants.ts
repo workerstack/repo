@@ -1,5 +1,8 @@
 /** The gate labels `repo ci` prints itself; a check cannot take one, or two lines would read the same. */
-export const BUILT_IN_LABELS: readonly string[] = ["check", "fmt", "typecheck", "tests", "packages"];
+export const BUILT_IN_LABELS = ["check", "fmt", "typecheck", "tests", "packages"] as const;
+
+/** One of `BUILT_IN_LABELS`: a name `ci.checks` cannot take. */
+export type BuiltInLabel = (typeof BUILT_IN_LABELS)[number];
 
 /** A check name: lowercase words and digits joined by single hyphens. */
 export const KEBAB_NAME: RegExp = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;

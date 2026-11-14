@@ -38,7 +38,7 @@ type CoverageSchema = z.ZodObject<
   {
     floors: FileSchema;
     knownFailures: FileSchema;
-    mutate: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    mutate: z.ZodOptional<z.ZodReadonly<z.ZodArray<z.ZodString>>>;
     mutationFloors: FileSchema;
   },
   z.core.$strict
@@ -50,6 +50,7 @@ function buildSchema(): CoverageSchema {
   const globs = z
     .array(z.string({ error: GLOBS_ERROR }).min(1, { error: GLOBS_ERROR }), { error: GLOBS_ERROR })
     .min(1, { error: GLOBS_ERROR })
+    .readonly()
     .optional();
 
   return z.strictObject(
