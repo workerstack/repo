@@ -35,7 +35,7 @@ function isEsmOnly(manifest: Manifest): boolean {
 /**
  * Runs publint (strict, suggestions included) and attw on a packed tarball.
  * The attw resolution kinds an ESM-only package cannot satisfy are ignored.
- * Returns one line per remaining problem; empty when the tarball is clean.
+ * Returns one plain line per remaining problem, with no color even where CI turns publint's on; empty when clean.
  */
 export async function tarballLint(tarball: string): Promise<string[]> {
   const data = fs.readFileSync(tarball);
@@ -47,7 +47,7 @@ export async function tarballLint(tarball: string): Promise<string[]> {
   const problems: Problem[] = "problems" in analysis ? analysis.problems : [];
 
   return [
-    ...linted.messages.map((message) => publintLine(String(formatMessage(message, manifest)))),
+    ...linted.messages.map((message) => publintLine(String(formatMessage(message, manifest, { color: false })))),
     ...problems
       .filter((problem) => !ignored.includes(problem.resolutionKind ?? ""))
       .map((problem) =>

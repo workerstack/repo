@@ -1,3 +1,6 @@
+import { spawnSync } from "node:child_process";
+import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
@@ -63,6 +66,24 @@ describe("tarballLint", () => {
     const got = await tarballLint(fixtureTarball(cleanManifest({ repository })));
     expect(got).toHaveLength(1);
     expect(got[0]).toMatch(/^publint: pkg\.repository\.url/);
+  });
+});
+
+describe("tarballLint in CI", () => {
+  it("prints plain text where a CI environment would turn color on", { timeout: TIMEOUT }, () => {
+    const repository = { type: "git", url: "https://github.com/acme/fx.git" };
+    const tarball = JSON.stringify(fixtureTarball(cleanManifest({ repository })));
+    const lint = JSON.stringify(path.join(import.meta.dirname, "tarball-lint.ts"));
+    const load = `const { tarballLint } = await import(${lint});`;
+    const script = `${load} console.log(JSON.stringify(await tarballLint(${tarball})));`;
+
+    const env = { CI: "true", FORCE_COLOR: "1" };
+    const run = spawnSync(process.execPath, ["-e", script], { encoding: "utf8", env });
+
+    expect(JSON.parse(run.stdout)).toStrictEqual([
+      "publint: pkg.repository.url is https://github.com/acme/fx.git " +
+        'but could be a full git URL like "git+https://github.com/acme/fx.git".',
+    ]);
   });
 });
 
