@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo worktree finish` and `prune` now delete origin's `wt/<name>` before the local branch, when `refs/remotes/origin/wt/<name>` exists, so the push gate no longer holds a Stop on the old failed run of a branch that landed. The delete never prompts and stops after 30s; on failure it warns `could not delete origin's wt/<name>: <git's reason>; run git push origin --delete wt/<name>` and the command still exits 0.
 - After it lands a branch on the default branch the root has checked out, `bun repo worktree finish` runs `bun repo sync` in the root, output on stderr, so ignored generated configs such as `.oxlintrc.json`, `knip.json` and `.oxfmtrc.jsonc` match the new tree. It skips a root with no `repo` script or bin, and on failure warns `could not sync <root>: run bun repo sync there` and still exits 0.
 - Sync writes knip.jsonc and .oxlintrc.jsonc with a // @generated header in place of knip.json and .oxlintrc.json. The next sync removes the old files, so a script or editor setting that names them must follow.
+- `/do` is now `/rn`: it makes no plan review or question and runs no test of its own; it keeps its own worktree the commit hook's gate and finish and sync rewrites `/do` in saved files under .repo
 
 ### Fixed
 

@@ -20,20 +20,20 @@ describe("renameSkills", () => {
   it("adds -deep to each of the four names and leaves the fast skills and other words", () => {
     const text = "run /write-plan, then `implement-plan 4`; write-roadmap and implement-roadmap.\n";
 
-    expect(renameSkills(text)).toBe(
+    expect(renameSkills(text, "a.md")).toBe(
       "run /write-plan-deep, then `implement-plan-deep 4`; write-roadmap-deep and implement-roadmap-deep.\n",
     );
-    expect(renameSkills("write-plan-fast implement-roadmap-fast rewrite-plan write-plans\n")).toBe(
+    expect(renameSkills("write-plan-fast implement-roadmap-fast rewrite-plan write-plans\n", "a.md")).toBe(
       "write-plan-fast implement-roadmap-fast rewrite-plan write-plans\n",
     );
-    expect(renameSkills(renameSkills(text))).toBe(renameSkills(text));
+    expect(renameSkills(renameSkills(text, "a.md"), "a.md")).toBe(renameSkills(text, "a.md"));
   });
 });
 
 /** The line the rename prints for `count` files. */
 function renamed(count: string): string {
   return (
-    "renamed write-plan, write-roadmap, implement-plan and implement-roadmap to their -deep names " +
+    "renamed write-plan, write-roadmap, implement-plan and implement-roadmap to their -deep names and /do to /rn " +
     `in ${count} under .repo`
   );
 }
@@ -115,5 +115,50 @@ describe("planSkillRename with both skill dirs", () => {
       "---\nname: implement-plan\n---\nold\n",
       "---\nname: implement-plan-deep\n---\nnew\n",
     ]);
+  });
+});
+
+describe("renameSkills of /do", () => {
+  it("renames the slash skill and leaves paths, URLs, longer words and the bare word", () => {
+    const text = "/do\nRun /do.\nrun /do now.\nuse `/do` or (/do) here\n";
+
+    expect(renameSkills(text, "a.md")).toBe("/rn\nRun /rn.\nrun /rn now.\nuse `/rn` or (/rn) here\n");
+    const kept = "see /do.md /do.ts a/do ./do https://x/do /docs undo do it ../do /do-it /do/x\n";
+
+    expect(renameSkills(kept, "a.md")).toBe(kept);
+    expect(renameSkills(renameSkills(text, "a.md"), "a.md")).toBe(renameSkills(text, "a.md"));
+  });
+
+  it("rewrites the name and overrides lines only in a SKILL.md", () => {
+    const text = "---\nname: do\noverrides: do\n---\n";
+
+    expect(renameSkills(text, ".repo/skills/do/SKILL.md")).toBe("---\nname: rn\noverrides: rn\n---\n");
+    expect(renameSkills(text, ".repo/plans/do.md")).toBe(text);
+  });
+});
+
+describe("planSkillRename of /do", () => {
+  it("renames /do in a plan and a handoff and a rerun plans nothing", async () => {
+    const root = tempDir();
+    put(root, ".repo/plans/1-a.md", "name: do\nrun /do now.\nsee `/do` and a/do and /docs\n");
+    put(root, ".repo/handoffs/h.md", "next: /do\n");
+
+    expect(await applyMigration(root, planSkillRename(root))).toStrictEqual([`repo sync: ${renamed("2 files")}`]);
+    expect(read(root, ".repo/plans/1-a.md")).toBe("name: do\nrun /rn now.\nsee `/rn` and a/do and /docs\n");
+    expect(read(root, ".repo/handoffs/h.md")).toBe("next: /rn\n");
+    expect(planSkillRename(root)).toStrictEqual([]);
+  });
+
+  it("moves .repo/skills/do to rn with its name and overrides lines rewritten", async () => {
+    const root = tempDir();
+    put(root, ".repo/skills/do/SKILL.md", "---\nname: do\noverrides: do\n---\nRun /do now.\n");
+    const lines = await applyMigration(root, planSkillRename(root));
+
+    expect(lines).toStrictEqual([
+      `repo sync: ${renamed("1 file")}`,
+      "repo sync: moved .repo/skills/do to .repo/skills/rn",
+    ]);
+    expect(read(root, ".repo/skills/rn/SKILL.md")).toBe("---\nname: rn\noverrides: rn\n---\nRun /rn now.\n");
+    expect(planSkillRename(root)).toStrictEqual([]);
   });
 });

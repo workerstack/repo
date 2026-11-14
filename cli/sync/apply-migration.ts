@@ -28,7 +28,7 @@ type Actions = { [K in Acting["kind"]]: (run: Run, step: StepOf<K>) => Promise<v
 
 /** `text` of the file at root-relative `rel` with the rename `rename` applied. */
 function renamed(rename: StepOf<"rename-text">["rename"], text: string, rel: string): string {
-  if (rename === "skills") return renameSkills(text);
+  if (rename === "skills") return renameSkills(text, rel);
 
   return rename === "mode" ? renameMode(text) : renameStrategies(text, kindOf(rel));
 }
