@@ -23,6 +23,8 @@ export default defineConfig({
         },
       },
     },
+    // Refuses a run under Node before any test starts.
+    globalSetup: ["dev/refuse-node.ts"],
     include: ["cli/**/*.test.ts", "dev/**/*.test.ts", "evals/**/*.test.ts", "presets/**/*.test.ts"],
     setupFiles: ["dev/vitest-setup.ts"],
     unstubEnvs: true,
