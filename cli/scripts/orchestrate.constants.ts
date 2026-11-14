@@ -4,17 +4,11 @@ import type { ItemKind, ItemSpec } from "./orchestrate.types.ts";
 /** Where the parent hook keeps its per-session stamps. */
 export const ORCHESTRATOR_LOGS_DIR: string = `${REPO}/${STATE}/orchestrator-logs`;
 
-/** One-release dual-read; drop next release. */
-export const LEGACY_ORCHESTRATOR_LOGS_DIR = ".tmp/orchestrator-logs";
-
 /** The deny a write with no tool input gets. */
 export const DENY_REASON = "denied";
 
 /** The stamp holding this session's /ask or /away. */
 export const SESSION_GATE_STAMP = "session-gate";
-
-/** One-release dual-read of 0.5 leftover stamp. */
-export const AUTO_ASK_STAMP = "auto-ask";
 
 export const AWAY_STOP_REASON =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';

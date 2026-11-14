@@ -59,13 +59,6 @@ describe("the ask-mode stop", () => {
 });
 
 describe("the away-mode stop block", () => {
-  it("stops blocking at the cap held in the legacy stamp", () => {
-    const ws = hook.temp();
-    away(ws, "a5");
-    plantFile(ws, ".tmp/orchestrator-logs/stop-block-a5", "3");
-    expect(hook.stop(ws, "a5", { last_assistant_message: "Keep it?" })).toBeNull();
-  });
-
   it("counts from zero when the stop-block stamp holds no number", () => {
     const ws = hook.temp();
     away(ws, "a4");
