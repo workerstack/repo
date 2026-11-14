@@ -53,6 +53,12 @@ async function workIn(sb: Sandbox, name: string): Promise<{ dir: string; tip: st
   return { dir, tip: await tipOf(sb, `refs/heads/wt/${name}`) };
 }
 
+/** Asserts finish removed `dir`; a failure names what is left in it and what finish printed. */
+function expectGone(dir: string, out: string): void {
+  const left = fs.existsSync(dir) ? fs.readdirSync(dir, { recursive: true }).slice(0, 20).join(", ") : "";
+  expect(fs.existsSync(dir), `left in ${dir}: [${left}]; finish printed: ${out}`).toBe(false);
+}
+
 function finish(sb: Sandbox, name: string) {
   return sb.run("bun", ["repo", "worktree", "finish", name], { env: ghEnv(sb) });
 }
@@ -79,10 +85,11 @@ export function worktreeCase(get: GetSandbox) {
     expect(await gateReason(sb, PUSH)).toBeNull();
     const before = await originTip(sb, MAIN);
     const { dir, tip } = await workIn(sb, "a");
-    expectClean(sb, await finish(sb, "a"));
+    const landed = await finish(sb, "a");
+    expectClean(sb, landed);
     expect(await tipOf(sb, MAIN)).toBe(tip);
     expect(await originTip(sb, MAIN)).toBe(before);
-    expect(fs.existsSync(dir)).toBe(false);
+    expectGone(dir, landed.out);
     expect(ghCalls(sb)).toStrictEqual([]);
   });
 }
@@ -108,11 +115,12 @@ export function pullRequestCase(get: GetSandbox) {
     expect(await originTip(sb, MAIN)).toBe(before);
     await squashOnOrigin(sb, "b");
     markMerged(sb);
-    expectClean(sb, await finish(sb, "b"));
+    const merged = await finish(sb, "b");
+    expectClean(sb, merged);
     const landed = await originTip(sb, MAIN);
     expect(landed).not.toBe(before);
     expect(await tipOf(sb, MAIN)).toBe(landed);
-    expect(fs.existsSync(dir)).toBe(false);
+    expectGone(dir, merged.out);
     expect(await tipOf(sb, "refs/heads/wt/b")).toBe("");
     expect(await originTip(sb, "refs/heads/wt/b")).toBe("");
   });
