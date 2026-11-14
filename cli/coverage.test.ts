@@ -1,38 +1,23 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
-import { expect, it } from "vitest";
-import { z } from "zod";
+import { expect, it, vi } from "vitest";
 
 import { useCapturedRun } from "./__fixtures__/captured-run.ts";
-import { main } from "./coverage.ts";
-import { type JsonObject, readJson } from "./json.ts";
+import {
+  coverage,
+  FLOORS,
+  floorsOf,
+  MEASURED,
+  PASSING,
+  project,
+  REPO_ROOT,
+  RUN_MS,
+} from "./__fixtures__/coverage-project.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const RUN_MS = 60_000;
-const FLOORS = "coverage-floors.json";
 const { err, out, temps } = useCapturedRun();
-
-const SOURCE = `export function sign(n: number): string {
-  if (n < 0) return "neg";
-  return "pos";
-}
-
-export function unused(): number {
-  return 1;
-}
-`;
-
-const PASSING = `import { expect, it } from "vitest";
-import { sign } from "./a.ts";
-
-it("signs a positive number", () => {
-  expect(sign(1)).toBe("pos");
-});
-`;
 
 const FAILING = PASSING.replace('"pos"', '"neg"');
 const SECOND_SOURCE = "export const answer = (): number => 42;\n";
@@ -45,48 +30,13 @@ it("answers", () => {
 });
 `;
 
-/** What `SOURCE` measures with `PASSING`: lines are 2 of 3 (66.67), so the floor is 66, not 67. */
-const MEASURED = { branches: 50, functions: 50, lines: 66, statements: 50 };
-
-/** A tiny vitest project in a temp dir, with the repo's installed packages linked in; `config` is its repo config. */
-function project(config = "export default {};\n"): string {
-  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-coverage-")));
-  temps.push(root);
-  fs.symlinkSync(path.join(REPO_ROOT, "node_modules"), path.join(root, "node_modules"), "junction");
-  const preset = JSON.stringify(path.join(REPO_ROOT, "presets", "vitest.ts"));
-
-  const vitest = `import { defineConfig } from ${preset};
-export default defineConfig({ test: { include: ["src/**/*.test.ts"], coverage: { include: ["src/**"] } } });
-`;
-
-  const files = {
-    "repo.config.ts": config,
-    "src/a.test.ts": PASSING,
-    "src/a.ts": SOURCE,
-    "vitest.config.ts": vitest,
-  };
-
-  for (const [name, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
-    fs.writeFileSync(path.join(root, name), text);
-  }
-
-  return root;
-}
-
-function floorsOf(root: string, file = FLOORS): JsonObject {
-  return readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(root, file), "utf8"));
-}
-
-/** Runs `repo coverage` in `root`; `run` stands in for cargo. */
-function coverage(root: string, run?: CargoRun): Promise<number> {
-  process.chdir(root);
-
-  return main([], run);
-}
-
 it("repo coverage: writes a floor for every measured file on the first run", { timeout: RUN_MS }, async () => {
-  const root = project();
+  // A temp dir of its own: other files' runs share the run's temp root, so their measuring dirs show up there.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-coverage-tmp-"));
+  temps.push(tmp);
+
+  for (const name of ["TMPDIR", "TEMP", "TMP"]) vi.stubEnv(name, tmp);
+  const root = project(temps);
   expect(await coverage(root)).toBe(0);
   expect(floorsOf(root)).toStrictEqual({ "src/a.ts": MEASURED });
   const lines = ["statements new → 50", "branches new → 50", "functions new → 50", "lines new → 66"];
@@ -95,7 +45,7 @@ it("repo coverage: writes a floor for every measured file on the first run", { t
 });
 
 it("repo coverage: floors every file the suite measures, sorted by path", { timeout: RUN_MS }, async () => {
-  const root = project();
+  const root = project(temps);
   fs.writeFileSync(path.join(root, "src/b.ts"), SECOND_SOURCE);
   fs.writeFileSync(path.join(root, "src/b.test.ts"), SECOND_TEST);
   expect(await coverage(root)).toBe(0);
@@ -108,7 +58,7 @@ it(
   "repo coverage: prints each raised floor with its old and new value and writes the file",
   { timeout: RUN_MS },
   async () => {
-    const root = project();
+    const root = project(temps);
     fs.writeFileSync(path.join(root, FLOORS), JSON.stringify({ "src/a.ts": { ...MEASURED, branches: 40, lines: 30 } }));
     expect(await coverage(root)).toBe(0);
     expect(out.join("")).toBe(`src/a.ts branches 40 → 50\nsrc/a.ts lines 30 → 66\nwrote ${FLOORS}\n`);
@@ -117,7 +67,7 @@ it(
 );
 
 it("repo coverage: prints only the wrote line when nothing rises", { timeout: RUN_MS }, async () => {
-  const root = project();
+  const root = project(temps);
   await coverage(root);
   out.length = 0;
   expect(await coverage(root)).toBe(0);
@@ -136,7 +86,7 @@ it(
     fs.writeFileSync(sentinel, "");
 
     try {
-      expect(await coverage(project())).toBe(0);
+      expect(await coverage(project(temps))).toBe(0);
       expect(fs.existsSync(sentinel)).toBe(true);
     } finally {
       fs.rmSync(sentinel, { force: true });
@@ -145,7 +95,7 @@ it(
 );
 
 it("repo coverage: fails a drop with its line and writes nothing", { timeout: RUN_MS }, async () => {
-  const root = project();
+  const root = project(temps);
   const floors = JSON.stringify({ "src/a.ts": { ...MEASURED, branches: 100, lines: 75 } });
   fs.writeFileSync(path.join(root, FLOORS), floors);
   expect(await coverage(root)).toBe(1);
@@ -160,7 +110,7 @@ it(
   "repo coverage: fails a failing test as a test, not as a drop, and writes nothing",
   { timeout: RUN_MS },
   async () => {
-    const root = project();
+    const root = project(temps);
     fs.writeFileSync(path.join(root, "src/a.test.ts"), FAILING);
     expect(await coverage(root)).toBe(1);
     expect(err.join("")).toContain("coverage: the tests failed; fix them before raising floors");
@@ -170,7 +120,7 @@ it(
 );
 
 it("repo coverage: writes the file coverage.floors names in the config", { timeout: RUN_MS }, async () => {
-  const root = project('export default { coverage: { floors: "ratchets/floors.json" } };\n');
+  const root = project(temps, 'export default { coverage: { floors: "ratchets/floors.json" } };\n');
   expect(await coverage(root)).toBe(0);
   expect(floorsOf(root, "ratchets/floors.json")).toStrictEqual({ "src/a.ts": MEASURED });
   expect(out.join("")).toContain("wrote ratchets/floors.json\n");
@@ -178,14 +128,14 @@ it("repo coverage: writes the file coverage.floors names in the config", { timeo
 });
 
 it("repo coverage: fails, saying so, when the floors file cannot be formatted", { timeout: RUN_MS }, async () => {
-  const root = project('export default { coverage: { floors: "floors.txt" } };\n');
+  const root = project(temps, 'export default { coverage: { floors: "floors.txt" } };\n');
   expect(await coverage(root)).toBe(1);
   expect(err.join("")).toContain("coverage: could not format floors.txt\n");
   expect(out.join("")).toBe("");
 });
 
 it("repo coverage: fails before running anything when the repo config is invalid", async () => {
-  const root = project("export default { coverage: { floor: 'a.json' } };\n");
+  const root = project(temps, "export default { coverage: { floor: 'a.json' } };\n");
   expect(await coverage(root)).toBe(1);
   expect(err.join("")).toBe('repo coverage: repo.config.ts: coverage: unknown key "floor"\n');
 });
@@ -198,7 +148,7 @@ it("repo coverage: names a missing repo config", async () => {
 });
 
 it("repo coverage: floors TypeScript and Rust files side by side", { timeout: RUN_MS }, async () => {
-  const root = project();
+  const root = project(temps);
   fs.writeFileSync(path.join(root, "Cargo.toml"), "[workspace]\nmembers = []\n");
   const row = { summary: { functions: { percent: 66.7 }, lines: { percent: 66.7 }, regions: { percent: 58.3 } } };
   const files = [{ filename: path.join(root, "a/src/lib.rs"), ...row }];
@@ -218,7 +168,7 @@ it(
   "repo coverage: a vitest project with no tests passes and floors no TypeScript file",
   { timeout: RUN_MS },
   async () => {
-    const root = project();
+    const root = project(temps);
     fs.rmSync(path.join(root, "src"), { recursive: true });
     expect(await coverage(root)).toBe(0);
     expect(floorsOf(root)).toStrictEqual({});
