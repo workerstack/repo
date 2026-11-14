@@ -1,4 +1,4 @@
-import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+import { AST_TOKEN_TYPES } from "@typescript-eslint/types";
 
 import { asNode, type SyntaxNode, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { docFault } from "./doc-fault.ts";

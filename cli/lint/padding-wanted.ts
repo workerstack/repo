@@ -2,9 +2,11 @@
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/require-readable-spacing.ts`, its policy over
  * eslint-stylistic's `padding-line-between-statements` statement kinds (MIT, see eslint-stylistic.LICENSE).
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { isBlockLikeStatement } from "./is-block-like-statement.ts";
+import { nullThrows } from "./null-throws.ts";
 import {
   BINDING_KEYWORDS,
   CONTROL_KINDS,
@@ -42,10 +44,7 @@ function unexported(node: TSESTree.Node): TSESTree.Node | null {
 function isMultilineBinding(node: TSESTree.Node, sourceCode: Source): boolean {
   if (node.type !== AST_NODE_TYPES.VariableDeclaration || isSingleLine(node)) return false;
 
-  const first = ESLintUtils.nullThrows(
-    sourceCode.getFirstToken(node),
-    ESLintUtils.NullThrowsReasons.MissingToken("first token", node.type),
-  );
+  const first = nullThrows(sourceCode.getFirstToken(node), `Expected to find a first token for ${node.type}`);
 
   return USING_KINDS.includes(node.kind) || BINDING_KEYWORDS.includes(first.value);
 }

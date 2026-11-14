@@ -2,10 +2,12 @@
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/require-readable-spacing.ts`, with the sibling walk,
  * report and fix of eslint-stylistic's `padding-line-between-statements` (MIT, see eslint-stylistic.LICENSE).
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { actualLastToken } from "./actual-last-token.ts";
 import { hasPaddingLine } from "./has-padding-line.ts";
+import { nullThrows } from "./null-throws.ts";
 import { paddingWanted } from "./padding-wanted.ts";
 import { NEWLINE, STATEMENT_SUFFIXES, TWO_NEWLINES } from "./readable-spacing.constants.ts";
 import type { RepoRule } from "./rule.types.ts";
@@ -27,7 +29,7 @@ function reportLoc(node: TSESTree.Node, sourceCode: Source): TSESTree.SourceLoca
 
   if (start.line === node.loc.end.line) return node.loc;
 
-  const line = ESLintUtils.nullThrows(sourceCode.lines[start.line - 1], `line ${start.line} of the source`);
+  const line = nullThrows(sourceCode.lines[start.line - 1], `line ${start.line} of the source`);
 
   return { end: { column: line.length, line: start.line }, start };
 }

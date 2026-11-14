@@ -1,5 +1,6 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-widen-then-assert.ts`. */
-import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { resolveVariable } from "./resolve-variable.ts";
 import type { RepoRule } from "./rule.types.ts";

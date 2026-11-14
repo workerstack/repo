@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A session's review stamp now holds every spawn plan and spawn fast plan it saved, one file each under the session's reviews folder; a Write that saves one done, blocked or free drops its stamp, and the parent-write deny names each running plan and its implementer.
 - `bun repo turn [<path>]` runs no tests, so an agent turn after a one-line edit skips the related tests (21 s of a 32 s turn here); the commit still runs them through `repo precommit`. A json sort refusal from fmt no longer starts with `repo turn:`, since `repo update` and the stock history write print it too.
 - Fast plans and fast roadmaps save a strategy like plans do: the save sets `strategy:` from the session, the in-progress fast roadmap or the config, an optional `advice:` line is kept, and both stay outside the line cap. Their approval block and picker are the plan's, with strategy words, and `/implement-plan-fast` hands steps to implementers under spawn-fast or spawn-deep.
+- The repo lint plugin loads no eslint, so each lint run starts about 120 ms sooner. It adds `@typescript-eslint/types` and `@typescript-eslint/scope-manager` as dependencies, and the `@typescript-eslint/utils` peer is now optional.
 
 ### Removed
 

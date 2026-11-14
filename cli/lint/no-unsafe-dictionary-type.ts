@@ -1,8 +1,10 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-unsafe-dictionary-type.ts`. */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { classifyUnsafeDictionary, classifyUnsafeDictionaryValue, type UnsafeValue } from "./dictionary-types.ts";
 import { createTypeEnvironment, referenceName, type TypeEnvironment } from "./dictionary-walk.ts";
+import { nullThrows } from "./null-throws.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { visibleTypeAlias } from "./type-aliases.ts";
 
@@ -82,7 +84,7 @@ export const noUnsafeDictionaryType: RepoRule<"unsafeDictionary"> = {
     }
 
     function check(node: DictionaryCandidate): void {
-      const types = ESLintUtils.nullThrows(environment, "the Program visitor runs first");
+      const types = nullThrows(environment, "the Program visitor runs first");
       const value = classifyUnsafeDictionary(node, types);
 
       if (value === undefined || isInConstraint(node) || isPlainAliasUse(node, types)) return;
@@ -95,7 +97,7 @@ export const noUnsafeDictionaryType: RepoRule<"unsafeDictionary"> = {
         environment = createTypeEnvironment(program, context.sourceCode.visitorKeys);
       },
       TSIndexSignature(node) {
-        const types = ESLintUtils.nullThrows(environment, "the Program visitor runs first");
+        const types = nullThrows(environment, "the Program visitor runs first");
         const annotation = node.typeAnnotation ?? undefined;
 
         if (annotation === undefined || node.parent.type === AST_NODE_TYPES.TSTypeLiteral) return;

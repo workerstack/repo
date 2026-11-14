@@ -2,7 +2,8 @@
  * The type-syntax predicates of `repo/no-widen-then-assert`: which annotations widen, and which assertions narrow
  * back. Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-widen-then-assert.ts`.
  */
-import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { PROPERTY_KEY, READONLY, RECORD, RECORD_ARITY } from "./widen-types.constants.ts";
 

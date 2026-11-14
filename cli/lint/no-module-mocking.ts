@@ -1,8 +1,10 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-module-mocking.ts`. */
-import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { isStringLiteral } from "../syntax-node.ts";
 import { FRAMEWORK_SOURCES, MODULE_MOCK_METHODS } from "./no-module-mocking.constants.ts";
+import { nullThrows } from "./null-throws.ts";
 import { resolveVariable } from "./resolve-variable.ts";
 import type { RepoRule } from "./rule.types.ts";
 
@@ -20,7 +22,7 @@ function isFrameworkImport(definition: TSESLint.Scope.Definition): boolean {
   if (definition.node.type !== AST_NODE_TYPES.ImportSpecifier) return false;
   const { imported, parent } = definition.node;
   const name = imported.type === AST_NODE_TYPES.Identifier ? imported.name : imported.value;
-  const source = ESLintUtils.nullThrows(parent.source, "an import specifier's declaration has a source");
+  const source = nullThrows(parent.source, "an import specifier's declaration has a source");
 
   return isFrameworkName(name) && FRAMEWORK_SOURCES[name] === source.value;
 }

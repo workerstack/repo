@@ -3,7 +3,9 @@
  * Whether an expression's value is known where it is written, by its own syntax or a const that holds one, and
  * whether an argument to a type predicate carries a type more informative than the predicate's `unknown`.
  */
-import { AST_NODE_TYPES, TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { DefinitionType } from "@typescript-eslint/scope-manager";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { classifyUnsafeDictionaryValue } from "./dictionary-types.ts";
 import type { TypeEnvironment } from "./dictionary-walk.ts";
@@ -35,8 +37,6 @@ const WRAPPERS: readonly string[] = [
   AST_NODE_TYPES.TSSatisfiesExpression,
   AST_NODE_TYPES.TSTypeAssertion,
 ];
-
-const { DefinitionType } = TSESLint.Scope;
 
 function isWrapper(node: TSESTree.Node): node is Wrapper {
   return WRAPPERS.includes(node.type);

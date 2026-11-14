@@ -1,6 +1,8 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-unknown-type-aliases.ts`. */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
+import { nullThrows } from "./null-throws.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { typeAliasEnvironmentOf, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
 
@@ -33,7 +35,7 @@ export const noUnknownTypeAliases: RepoRule<"unknownAlias"> = {
         environment = typeAliasEnvironmentOf(program, context.sourceCode.visitorKeys);
       },
       TSTypeAliasDeclaration(node) {
-        const aliases = ESLintUtils.nullThrows(environment, "the Program visitor runs first");
+        const aliases = nullThrows(environment, "the Program visitor runs first");
 
         if (!resolvesToUnknown(node.typeAnnotation, aliases)) return;
         context.report({ data: { alias: node.id.name }, messageId: "unknownAlias", node: node.id });

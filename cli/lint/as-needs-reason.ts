@@ -1,4 +1,5 @@
-import { AST_NODE_TYPES, AST_TOKEN_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES, AST_TOKEN_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { CONST_TYPE } from "./const-type.constants.ts";
 import { isReason } from "./is-reason.ts";

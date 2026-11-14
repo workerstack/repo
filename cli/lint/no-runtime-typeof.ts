@@ -1,5 +1,6 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-runtime-typeof.ts`. */
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import type { RepoRule } from "./rule.types.ts";
 import { UNDEFINED } from "./skip-on-platform.constants.ts";

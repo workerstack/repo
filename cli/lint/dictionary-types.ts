@@ -4,7 +4,8 @@
  * through `Readonly`-like wrappers, `Pick`, `Omit` and visible local aliases) and names the escape hatch a value type
  * is: `unknown`, `any`, `object`, `{}` or a union holding one.
  */
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import {
   expandAlias,

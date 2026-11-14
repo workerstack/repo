@@ -1,4 +1,4 @@
-import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+import { AST_TOKEN_TYPES } from "@typescript-eslint/types";
 
 import { DEPRECATED, MESSAGE, NEXT_TAG, REPLACEMENT } from "./deprecated-replacement.constants.ts";
 import type { RepoRule } from "./rule.types.ts";

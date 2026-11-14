@@ -1,4 +1,5 @@
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { declarationOf, moveReport, type Statement } from "./names.ts";
 import type { RepoRule } from "./rule.types.ts";

@@ -1,4 +1,5 @@
-import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { PARENT_KEY } from "./max-line-width.constants.ts";
 import type { RepoRule } from "./rule.types.ts";

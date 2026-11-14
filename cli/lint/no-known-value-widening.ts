@@ -1,5 +1,6 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-known-value-widening.ts`. */
-import { AST_NODE_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { createTypeEnvironment, type TypeEnvironment } from "./dictionary-walk.ts";
 import { containsUnknownType } from "./function-parameters.ts";
@@ -12,6 +13,7 @@ import {
   variableDeclarator,
 } from "./known-value-arguments.ts";
 import { classifyWideningTarget, type WideningTarget } from "./known-value-targets.ts";
+import { nullThrows } from "./null-throws.ts";
 import { resolveVariable } from "./resolve-variable.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { functionBoundary } from "./widen-evidence.ts";
@@ -155,7 +157,7 @@ export const noKnownValueWidening: RepoRule<"widening"> = {
     let environment: TypeEnvironment | null = null;
 
     function types(): TypeEnvironment {
-      return ESLintUtils.nullThrows(environment, "the Program visitor runs first");
+      return nullThrows(environment, "the Program visitor runs first");
     }
 
     function report(node: TSESTree.Expression, subject: string, target: WideningTarget): void {

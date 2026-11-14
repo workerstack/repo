@@ -1,4 +1,5 @@
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { asNode, isBooleanLiteral, type SyntaxValue, textOf } from "../syntax-node.ts";
 import { NAMING_SYNTAX as SYNTAX } from "./naming-syntax.constants.ts";

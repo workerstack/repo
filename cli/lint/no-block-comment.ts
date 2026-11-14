@@ -1,4 +1,4 @@
-import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+import { AST_TOKEN_TYPES } from "@typescript-eslint/types";
 
 import { commentLines } from "./comment-lines.ts";
 import { BANNER, CONFIG, CRLF, DOC, LF, MESSAGE } from "./no-block-comment.constants.ts";

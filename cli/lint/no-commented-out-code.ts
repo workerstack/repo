@@ -1,4 +1,4 @@
-import { AST_TOKEN_TYPES } from "@typescript-eslint/utils";
+import { AST_TOKEN_TYPES } from "@typescript-eslint/types";
 import { parseSync } from "oxc-parser";
 
 import { asNode, isSyntaxList, isSyntaxString, type SyntaxValue } from "../syntax-node.ts";

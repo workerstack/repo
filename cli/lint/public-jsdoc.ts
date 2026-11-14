@@ -1,6 +1,7 @@
-import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 import { asNode, type SyntaxNode, textOf } from "../syntax-node.ts";
+import { nullThrows } from "./null-throws.ts";
 import { FAULTS, FORMS, NODE_TYPES, UNKNOWN_FAULT } from "./public-jsdoc.constants.ts";
 import { check, type Source, visitorOf, type Walk } from "./public-jsdoc.members.ts";
 import { declarationOf, declaredNames, get, nodesOf, walkPublic } from "./public-surface.syntax.ts";
@@ -19,7 +20,7 @@ function isLinted(node: SyntaxNode): node is SyntaxNode & TSESTree.Node {
 
 /** The node as the linter built it, as every node the walk reads is; throws on one that is not, a broken invariant. */
 function linted(node: SyntaxNode): TSESTree.Node {
-  return ESLintUtils.nullThrows([node].find(isLinted), "the walk reads only nodes the linter built");
+  return nullThrows([node].find(isLinted), "the walk reads only nodes the linter built");
 }
 
 /** One file being checked: the names a public entry reaches in it, and how to report a fault on a node. */

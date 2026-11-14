@@ -1,6 +1,7 @@
 import path from "node:path";
 
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { ENV_FILE, ENV_PROPERTY, IMPORT_KEYWORD } from "../env.constants.ts";
 import { isStringLiteral } from "../syntax-node.ts";

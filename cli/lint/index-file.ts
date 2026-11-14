@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { AST_NODE_TYPES } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
 
 import type { RepoRule } from "./rule.types.ts";
 

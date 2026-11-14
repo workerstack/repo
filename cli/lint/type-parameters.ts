@@ -2,7 +2,8 @@
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/shared/lexical-type-parameters.ts`. The type binders in
  * scope at a node, which shadow a module type alias of the same name.
  */
-import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 /** The linter's child keys per node type, as `context.sourceCode.visitorKeys` hands them to a rule. */
 export type VisitorKeys = TSESLint.SourceCode.VisitorKeys;

@@ -108,6 +108,8 @@
     "@arethetypeswrong/core": "0.18.5",
     "@clack/prompts": "^0.11.0",
     "@dreamsicle.io/stylelint-config-tailwindcss": "1.2.2",
+    "@typescript-eslint/scope-manager": "8.72.2",
+    "@typescript-eslint/types": "8.72.2",
     "@workerstack/references": "^0.1.1",
     "age-encryption": "0.3.1",
     "cross-spawn": "^7.0.6",
@@ -169,6 +171,9 @@
       "optional": true
     },
     "@stryker-mutator/vitest-runner": {
+      "optional": true
+    },
+    "@typescript-eslint/utils": {
       "optional": true
     },
     "@vitest/coverage-istanbul": {

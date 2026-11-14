@@ -4,7 +4,7 @@
  * `padding-line-between-statements` (MIT, see eslint-stylistic.LICENSE). Each kind record maps a node type to the
  * keyword its first token must be, or to null for none.
  */
-import { AST_NODE_TYPES } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
 
 /** An import declaration. */
 export const IMPORT_KIND: Partial<Record<AST_NODE_TYPES, string | null>> = {

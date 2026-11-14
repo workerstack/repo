@@ -1,7 +1,8 @@
 import { builtinModules } from "node:module";
 import path from "node:path";
 
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { isStringLiteral } from "../syntax-node.ts";
 import { TAG_MESSAGE, type Tags, TAGS_SCHEMA, type TagsOptions, tagProblem, tagsOf } from "./boundaries-tags.ts";

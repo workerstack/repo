@@ -3,8 +3,10 @@
  * `src/shared/dictionary-types.ts`. A dictionary walk follows type references through the type parameters, local
  * aliases and unshadowed built-ins visible at them.
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
+import { nullThrows } from "./null-throws.ts";
 import {
   typeAliasEnvironmentOf,
   hasVisibleTypeBinding,
@@ -73,7 +75,7 @@ export function isBuiltIn(
 export function unwrapped(type: TypeNode): TypeNode {
   if (type.type !== AST_NODE_TYPES.TSTypeOperator || type.operator !== "readonly") return type;
 
-  return unwrapped(ESLintUtils.nullThrows(type.typeAnnotation, "a readonly operator has an operand"));
+  return unwrapped(nullThrows(type.typeAnnotation, "a readonly operator has an operand"));
 }
 
 /** Whether `type` is a bare reference to the type parameter `name`, which a substitution maps to itself. */

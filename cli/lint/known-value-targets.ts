@@ -4,7 +4,8 @@
  * (a `Record` or mapped type with a `string`, `number`, `symbol` or `PropertyKey` key, or an index signature), an
  * anonymous object literal type, or a generic alias that opens into a dictionary.
  */
-import { AST_NODE_TYPES, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import {
   expandAlias,

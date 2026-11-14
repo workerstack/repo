@@ -3,7 +3,8 @@
  * type annotation and the name it binds, through a parameter property, a default and a rest, and whether a type is or
  * holds `unknown`.
  */
-import { AST_NODE_TYPES, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
 /** A parameter, or the binding a parameter property, default or rest wraps. */
 type Binding = TSESTree.Parameter | TSESTree.DestructuringPattern;

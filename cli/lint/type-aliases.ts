@@ -4,8 +4,10 @@
  * match what an alias stands for. The environment is made once per program, for the first rule that asks in its
  * `Program` visitor.
  */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
+import { nullThrows } from "./null-throws.ts";
 import { childNodes, lexicalTypeParameterNames, type VisitorKeys } from "./type-parameters.ts";
 
 type Alias = TSESTree.TSTypeAliasDeclaration;
@@ -42,7 +44,7 @@ function enclosingTypeScope(node: TSESTree.Node): TSESTree.Node {
 
   while (current !== undefined && !SCOPES.includes(current.type)) current = current.parent;
 
-  return ESLintUtils.nullThrows(current, "every declaration sits under the program");
+  return nullThrows(current, "every declaration sits under the program");
 }
 
 /** The interfaces, enums and classes, which bind a type name without being an alias. */

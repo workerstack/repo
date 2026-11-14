@@ -1,5 +1,5 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-unknown-parameters.ts`. */
-import { AST_NODE_TYPES } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
 
 import { CAUSE } from "./cause.constants.ts";
 import {

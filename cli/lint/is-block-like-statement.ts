@@ -2,8 +2,10 @@
  * Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/vendor/eslint-stylistic/padding-line-between-statements.ts`
  * `isBlockLikeStatement` and `isIIFEStatement`, from eslint-stylistic (MIT, see eslint-stylistic.LICENSE).
  */
-import { AST_NODE_TYPES, AST_TOKEN_TYPES, ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES, AST_TOKEN_TYPES } from "@typescript-eslint/types";
+import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
+import { nullThrows } from "./null-throws.ts";
 import { BLOCK_OWNERS, CLOSING_BRACE, FUNCTION_TYPES, SEMICOLON } from "./readable-spacing.constants.ts";
 
 /** `node` without an optional chain around it. */
@@ -23,7 +25,7 @@ function isIIFEStatement(node: TSESTree.Node): boolean {
 
   while (callee.type === AST_NODE_TYPES.SequenceExpression) {
     const expressions: readonly TSESTree.Expression[] = callee.expressions;
-    callee = ESLintUtils.nullThrows(expressions[expressions.length - 1], "a sequence expression has expressions");
+    callee = nullThrows(expressions[expressions.length - 1], "a sequence expression has expressions");
   }
 
   return FUNCTION_TYPES.includes(callee.type);

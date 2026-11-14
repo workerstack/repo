@@ -1,7 +1,9 @@
 /** Ported from anti-slop (MIT, see anti-slop.LICENSE): `src/rules/no-unknown-returns.ts`. */
-import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/utils";
 
 import { type FunctionOwner, functionVisitors } from "./function-visitors.ts";
+import { nullThrows } from "./null-throws.ts";
 import type { RepoRule } from "./rule.types.ts";
 import { typeAliasEnvironmentOf, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
 
@@ -43,7 +45,7 @@ export const noUnknownReturns: RepoRule<"unknownReturn"> = {
     let environment: TypeAliasEnvironment | null = null;
 
     function check(node: FunctionOwner): void {
-      const aliases = ESLintUtils.nullThrows(environment, "the Program visitor runs first");
+      const aliases = nullThrows(environment, "the Program visitor runs first");
       const annotation = node.returnType ?? undefined;
 
       if (annotation === undefined || !resolvesToUnknown(annotation.typeAnnotation, aliases)) return;
