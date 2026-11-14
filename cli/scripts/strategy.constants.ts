@@ -26,11 +26,6 @@ export const ENFORCED_HARNESSES: ReadonlySet<"claude" | "codex" | "antigravity" 
 export const IMPLEMENTER_FAST = "implementer-fast";
 export const IMPLEMENTER_DEEP = "implementer-deep";
 
-export const PLAN = "plan";
-export const ROADMAP = "roadmap";
-export const FAST_PLAN = "fast-plan";
-export const FAST_ROADMAP = "fast-roadmap";
-
 /** The words after `h` that pick a spawn strategy for the fresh session. */
 const FAST = "fast";
 const DEEP = "deep";
@@ -43,17 +38,17 @@ export const ITEM_SEP = ", then ";
 /** The approval block: a fence, the header, then rows that never change. */
 export const BLOCK_FENCE = "```";
 
+/** What a reply that is no choice is told to send instead. */
+export const NOT_A_CHOICE = "reply i or h, alone or with free, fast or deep";
+
 export const BLOCK_ROWS: readonly string[] = [
   "  i  implement    i free · i fast · i deep",
   "  h  hand off     h free · h fast · h deep",
   "     or reply to revise",
 ];
 
-/** The rows of a block that names only fast plans: no strategy words, because a fast plan has no strategy. */
-export const FAST_BLOCK_ROWS: readonly string[] = ["  i  implement", "  h  hand off", "     or reply to revise"];
-
 /** One advice row under the header: `  plan 4 advice: spawn-deep because ...`. */
-export const ADVICE_ROW_RE: RegExp = /^ {2}(plan|roadmap) (\d+) advice: (.+)$/;
+export const ADVICE_ROW_RE: RegExp = /^ {2}(plan|roadmap|fast-plan|fast-roadmap) (\d+) advice: (.+)$/;
 
 /** Where a block's header and the rows after it sit, counted from its opening fence. */
 export const HEADER_AT = 1;
@@ -61,11 +56,8 @@ export const AFTER_HEADER = 2;
 
 export const HEADER_SEP = " · ";
 
-/**
- * One header item: `plan 4 · spawn-fast` or `fast-plan 3`. The kind and whether a strategy follows stay open here;
- * `parseClosingBlock` narrows both.
- */
-export const HEADER_ITEM_RE: RegExp = /^([a-z]+(?:-[a-z]+)*) (\d+)(?: · ([a-z-]+))?$/;
+/** One header item, such as `plan 4 · spawn-fast`. The kind and strategy words stay open; `headerItem` narrows both. */
+export const HEADER_ITEM_RE: RegExp = /^([a-z]+(?:-[a-z]+)*) (\d+) · ([a-z-]+)$/;
 
 export const LINE_END_WS_RE: RegExp = /[^\S\n]+$/;
 

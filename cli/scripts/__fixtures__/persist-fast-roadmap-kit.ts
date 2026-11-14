@@ -26,7 +26,7 @@ export const BODY = [
 export const SENT = `FAST_ROADMAP_NAME: tidy ignores\n${BODY}`;
 
 export function saveRoadmap(content: string, workspaceRoot: string) {
-  return persistFastRoadmap({ content, created: CREATED, workspaceRoot });
+  return persistFastRoadmap({ content, created: CREATED, strategy: "free", workspaceRoot });
 }
 
 /** Saves the Usage roadmap into `ws`: its file, its saved result and the workspace. */

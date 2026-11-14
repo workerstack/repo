@@ -21,7 +21,7 @@ import {
   STRATEGY_MEANING,
   STRATEGY_QUESTION,
 } from "./strategy.constants.ts";
-import { hasStrategy, parseStrategy } from "./strategy.ts";
+import { parseStrategy } from "./strategy.ts";
 import type { Approvable, ApprovalAction, Strategy } from "./strategy.types.ts";
 
 function inputSchema() {
@@ -54,8 +54,6 @@ type Question = AskInput["questions"][number];
 
 type Option = Question["options"][number];
 
-type Strategic = Extract<Approvable, { strategy: Strategy }>;
-
 /** What a click or a typed answer means: a reply on the items the picker named, or revision feedback on them. */
 type PickerAnswer = { named: Approvable[]; reply: KnownApproval } | { named: Approvable[]; feedback: string };
 
@@ -74,7 +72,7 @@ function option(label: string, description: string): Option {
 }
 
 /** The advice an item's file holds as the strategy it names and its reason; null for none or another shape. */
-function advised(item: Strategic): { strategy: Strategy; reason: string } | null {
+function advised(item: Approvable): { strategy: Strategy; reason: string } | null {
   const [, word, reason] = ADVICE_BECAUSE_RE.exec(item.advice ?? "") ?? [];
   const strategy = parseStrategy(word);
 
@@ -82,7 +80,7 @@ function advised(item: Strategic): { strategy: Strategy; reason: string } | null
 }
 
 /** The advice lines that name `strategy`; each names its item when the queue has several. */
-function adviceNotes(items: Strategic[], strategy: Strategy): string[] {
+function adviceNotes(items: Approvable[], strategy: Strategy): string[] {
   return items.flatMap((i) => {
     const a = advised(i);
     const who = items.length > 1 ? ` for ${i.kind} ${i.serial}` : "";
@@ -91,27 +89,20 @@ function adviceNotes(items: Strategic[], strategy: Strategy): string[] {
   });
 }
 
-function strategyOption(items: Strategic[], strategy: Strategy, opts: { saved: boolean }): Option {
+function strategyOption(items: Approvable[], strategy: Strategy, opts: { saved: boolean }): Option {
   const notes = [...(opts.saved ? [SAVED_NOTE] : []), ...adviceNotes(items, strategy)];
 
   return option(strategy, notes.length === 0 ? STRATEGY_MEANING[strategy] : notes.join(ADVICE_NOTE_SEP));
-}
-
-/** The queue's saved values, in order, each once. */
-function savedOf(items: Strategic[]): Strategy[] {
-  return [...new Set(items.map((i) => i.strategy))];
 }
 
 /**
  * The strategy options: the saved value, then the advised ones, then the rest in `OPTION_ORDER`. A queue whose items
  * hold different values leads with `as saved` and the three strategies, four options in all.
  */
-function strategyOptions(items: Strategic[]): Option[] {
-  const [saved, ...mixed] = savedOf(items);
+function strategyOptions(first: Approvable, items: Approvable[]): Option[] {
+  const saved = first.strategy;
 
-  if (saved === undefined) return [];
-
-  if (mixed.length > 0) {
+  if (items.some((i) => i.strategy !== saved)) {
     const held = items.map((i) => `${i.kind} ${i.serial} ${i.strategy}`).join(", ");
 
     return [option(AS_SAVED_LABEL, held), ...OPTION_ORDER.map((s) => strategyOption(items, s, { saved: false }))];
@@ -135,18 +126,20 @@ function question(header: string, text: string, options: Option[]): Question {
   };
 }
 
-/** The picker for `items`: implement or hand off, and, unless every item is a fast one, which strategy. */
+/** The picker for `items`: implement or hand off, and which strategy. */
 export function pickerInput(items: Approvable[]): AskInput {
+  const [first] = items;
+
+  if (first === undefined) throw new Error("pickerInput needs at least one item");
+
   const approval = question(APPROVAL_HEADER, `${closingHeader(items)}${APPROVAL_ASK}`, [
     option(IMPLEMENT_LABEL, "run it in this session"),
     option(HANDOFF_LABEL, "write a handoff to run in a fresh session"),
   ]);
 
-  const options = strategyOptions(items.filter(hasStrategy));
+  const strategy = question(STRATEGY_HEADER, STRATEGY_QUESTION, strategyOptions(first, items));
 
-  const strategy = question(STRATEGY_HEADER, STRATEGY_QUESTION, options);
-
-  return { questions: options.length === 0 ? [approval] : [approval, strategy] };
+  return { questions: [approval, strategy] };
 }
 
 /** True when a question asks for approval: the picker's own header, so any other picker is none of ours. */
@@ -157,9 +150,8 @@ export function isApprovalPicker(input: AskInput): boolean {
 /** The strategy a click names: null for `as saved` and for the value every named item already holds. */
 function pickedStrategy(label: string, named: Approvable[]): Strategy | null {
   const strategy = parseStrategy(label);
-  const held = named.filter(hasStrategy);
 
-  return strategy === null || held.every((i) => i.strategy === strategy) ? null : strategy;
+  return strategy === null || named.every((i) => i.strategy === strategy) ? null : strategy;
 }
 
 type Answered = { q: Question; text: string };

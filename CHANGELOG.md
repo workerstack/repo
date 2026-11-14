@@ -61,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo turn` drops a file from the change set once a step such as fmt or `lint --fix` returns it to the base (HEAD, or the index under `--staged`), so later steps gate only real changes. When none is left it stops and prints `turn: 1 file · fmt 1 fixed · no changes left`, so a whitespace-only edit takes well under a second instead of a full typecheck and test run. A path still gates every file of its package.
 - A session's review stamp now holds every spawn plan and spawn fast plan it saved, one file each under the session's reviews folder; a Write that saves one done, blocked or free drops its stamp, and the parent-write deny names each running plan and its implementer.
 - `bun repo turn [<path>]` runs no tests, so an agent turn after a one-line edit skips the related tests (21 s of a 32 s turn here); the commit still runs them through `repo precommit`. A json sort refusal from fmt no longer starts with `repo turn:`, since `repo update` and the stock history write print it too.
+- Fast plans and fast roadmaps save a strategy like plans do: the save sets `strategy:` from the session, the in-progress fast roadmap or the config, an optional `advice:` line is kept, and both stay outside the line cap. Their approval block and picker are the plan's, with strategy words, and `/implement-plan-fast` hands steps to implementers under spawn-fast or spawn-deep.
 
 ### Removed
 

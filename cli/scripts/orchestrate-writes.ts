@@ -18,7 +18,7 @@ import { contentOf, denyWith, savedReply, writeTarget } from "./orchestrate-repl
 import { kindAt } from "./orchestrate-reviews.ts";
 import { countsLine, isRealSession, recordApproval, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
 import { firstNonEmptyStripped } from "./orchestrate-transcript.ts";
-import { DENY_REASON, PLAN_KIND, RECEIPT_HEAD_CHARS, ROADMAP_KIND } from "./orchestrate.constants.ts";
+import { DENY_REASON, RECEIPT_HEAD_CHARS } from "./orchestrate.constants.ts";
 import type { HookResult, ItemKind, Persist, PersistOutcome, WriteCase } from "./orchestrate.types.ts";
 import { validateFastPlan } from "./persist-fast-plan-validate.ts";
 import { persistFastPlan, prepareFastPlanUpdate } from "./persist-fast-plan.ts";
@@ -50,7 +50,7 @@ type Prepare = (args: Parameters<Persist>[0] & { filePath: string }) => PersistO
 
 type Validate = (name: string, text: string, opts: { fresh: boolean; previous: string }) => string[];
 
-/** A fresh save of an item; a plan or roadmap takes the strategy the session, the parent roadmap or the config sets. */
+/** A fresh save of an item, with the strategy the session, the parent roadmap or the config sets. */
 type Fresh = (args: Parameters<Persist>[0], strategy: Strategy) => PersistOutcome;
 
 /** How a saved plan or roadmap is checked, updated in place, and saved fresh. */
@@ -59,12 +59,12 @@ const SID_UNSAFE = /[^\w-]/g;
 
 const SAVED: Readonly<Record<ItemKind, { validate: Validate; prepare: Prepare; persist: Fresh }>> = {
   "fast-plan": {
-    persist: (args) => persistFastPlan(args),
+    persist: (args, strategy) => persistFastPlan({ ...args, strategy }),
     prepare: prepareFastPlanUpdate,
     validate: (name, text, { fresh }) => validateFastPlan(name, text, { fresh }),
   },
   "fast-roadmap": {
-    persist: (args) => persistFastRoadmap(args),
+    persist: (args, strategy) => persistFastRoadmap({ ...args, strategy }),
     prepare: prepareFastRoadmapUpdate,
     validate: validateFastRoadmap,
   },
@@ -88,11 +88,6 @@ function isFile(abs: string): boolean {
   }
 }
 
-/** Whether `kind` saves a `strategy:`; a fast plan or fast roadmap carries none. */
-function hasSavedStrategy(kind: ItemKind): boolean {
-  return kind === PLAN_KIND || kind === ROADMAP_KIND;
-}
-
 /** The refusal for a `strategy:` the agent sends in `content`, set against `previous` (null on a fresh save). */
 function strategyDeny(write: WriteCase, content: string, previous: string | null): HookResult | null {
   const saved = previous === null ? null : parseStrategy(extractStrategy(previous));
@@ -107,7 +102,7 @@ function savedEdit(write: WriteCase, abs: string, kind: ItemKind): HookResult | 
   const next = projectEdit(previous, write.toolInput);
 
   if (next == null) return null;
-  const strategy = hasSavedStrategy(kind) ? strategyDeny(write, next, previous) : null;
+  const strategy = strategyDeny(write, next, previous);
 
   if (strategy !== null) return strategy;
   const errors = SAVED[kind].validate(path.basename(abs), next, { fresh: false, previous });
@@ -130,7 +125,7 @@ function savedRoute(write: WriteCase, kind: ItemKind, defaults: AgentDefaults): 
   }
 
   const previous = exists ? fs.readFileSync(abs, "utf8") : null;
-  const refused = hasSavedStrategy(kind) ? strategyDeny(write, contentOf(write.toolInput), previous) : null;
+  const refused = strategyDeny(write, contentOf(write.toolInput), previous);
 
   if (refused !== null) return { done: refused };
 
@@ -197,19 +192,19 @@ function writeCaseOf(data: HookInput, toolInput: ToolArgs): WriteCase | null {
   return { canon: canonicalPath(rawPath), data, rawPath, roots, toolInput };
 }
 
-/** Whether a write saves a new full plan or roadmap: the one write whose answer reads the agents defaults. */
+/** Whether a write saves a new plan or roadmap, fast or not: the one write whose answer reads the agents defaults. */
 export function savesNewItem(data: HookInput, toolInput: ToolArgs | undefined): boolean {
   const write = toolInput === undefined ? null : writeCaseOf(data, toolInput);
 
   if (write === null) return false;
   const kind = kindAt(write.canon, write.roots.root);
 
-  return (kind === "plan" || kind === "roadmap") && !isFile(path.resolve(write.rawPath));
+  return kind !== null && !isFile(path.resolve(write.rawPath));
 }
 
 /**
  * The answer to a parent Write or Edit under `.repo` or a lessons dir; null when the host should run it as sent. A
- * new plan or roadmap without a `strategy:` line is saved with the default one.
+ * new plan or roadmap, fast or not, is saved with the strategy `saveStrategy` picks.
  */
 export function parentWrite(
   data: HookInput,

@@ -16,7 +16,7 @@ import type { Result } from "../result.ts";
 import type { HookInput } from "./hook-input.ts";
 import { itemValue } from "./item-value.ts";
 import { countsLine, isRealSession, sessionDir, sessionIdOf } from "./orchestrate-session.ts";
-import { ITEM_KIND_LIST, PLAN_KIND, ROADMAP_KIND } from "./orchestrate.constants.ts";
+import { ITEM_KIND_LIST } from "./orchestrate.constants.ts";
 import type { ItemKind } from "./orchestrate.types.ts";
 import { APPROVALS, EFFORTS, STRATEGIES } from "./strategy.constants.ts";
 import { parseApprovalSetting, parseStrategy } from "./strategy.ts";
@@ -136,14 +136,23 @@ export function writeSessionSettings(root: string, sid: string, change: SessionS
   }
 }
 
+/** The roadmap kind whose in-progress item gives a new plan of each kind its strategy; a roadmap has none. */
+const PARENT_OF: Readonly<Record<ItemKind, ItemKind | null>> = {
+  "fast-plan": "fast-roadmap",
+  "fast-roadmap": null,
+  plan: "roadmap",
+  roadmap: null,
+};
+
 /**
- * The strategy a new item of `kind` is saved with: the session value, then (a plan only) the `strategy:` of the newest
- * in-progress roadmap this session saved, then `defaults`.
+ * The strategy a new item of `kind` is saved with: the session value, then (a plan or fast plan only) the `strategy:`
+ * of the newest in-progress roadmap of its parent kind this session saved, then `defaults`.
  */
 export function saveStrategy(data: HookInput, defaults: AgentDefaults, kind: ItemKind): Strategy {
   const sid = sessionIdOf(data);
   const saved = isRealSession(sid) ? readSessionSettings(resolveRoots(data).root, sid).strategy : undefined;
-  const parent = kind === PLAN_KIND ? itemValue(data, (fm) => parseStrategy(fm.strategy), [ROADMAP_KIND]) : null;
+  const parentKind = PARENT_OF[kind];
+  const parent = parentKind === null ? null : itemValue(data, (fm) => parseStrategy(fm.strategy), [parentKind]);
 
   return saved ?? parent ?? defaults.defaultStrategy;
 }

@@ -30,7 +30,7 @@ const BODY = [
 ].join("\n");
 
 function save(content: string, ws = tmpWs()) {
-  return persistFastPlan({ content, created: CREATED, workspaceRoot: ws });
+  return persistFastPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
 }
 
 /** The body padded so the saved plan is exactly `40 + extra` lines. */

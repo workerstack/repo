@@ -19,6 +19,8 @@ import { askReason } from "./__fixtures__/picker-kit.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 
+const CHOICES = "reply i or h, alone or with free, fast or deep";
+
 const kit = orchestrateKit();
 
 const ROADMAP_BODY = [
@@ -72,12 +74,17 @@ function moved(roadmap: string, status: string, location?: string) {
   return location === undefined ? next : next.replace(LINE_ONE, `${LINE_ONE}\n      Location: ${location}`);
 }
 
-it("saves a fast roadmap under roadmaps-fast with no strategy or reviews key, and Stop asks for the fast block", () => {
+it("saves a fast roadmap under roadmaps-fast with a strategy and no reviews key, and Stop asks for its block", () => {
   const { roadmap, s, ws } = oneRoadmap("r1");
   expect(path.relative(ws, roadmap)).toMatch(/^\.repo[\\/]roadmaps-fast[\\/]1-tidy-ignores-\d{8}T\d{6}Z\.md$/);
-  expect(read(roadmap)).not.toMatch(/^(reviews|strategy):/m);
+  expect(read(roadmap)).not.toMatch(/^reviews:/m);
+  expect(read(roadmap)).toMatch(/^strategy: free$/m);
   const block = closing(fastRoadmapItem(1));
-  expect(block).toBe("```\nfast-roadmap 1\n  i  implement\n  h  hand off\n     or reply to revise\n```");
+  expect(block.split("\n").slice(1, 4)).toStrictEqual([
+    "fast-roadmap 1 · free",
+    "  i  implement    i free · i fast · i deep",
+    "  h  hand off     h free · h fast · h deep",
+  ]);
   expect(s.stop("Saved. Shall I start?")).toStrictEqual({
     decision: "block",
     reason: askReason(fastRoadmapItem(1)),
@@ -85,7 +92,7 @@ it("saves a fast roadmap under roadmaps-fast with no strategy or reviews key, an
   expect(s.stop(`Saved.\n\n${block}`)).toBeNull();
 });
 
-it("i approves a fast roadmap with the lock text, and no code is a choice", () => {
+it("i approves a fast roadmap with the lock text, i fast writes its strategy, and no letter code is a choice", () => {
   const { roadmap, s, ws } = oneRoadmap("r2");
   const block = closing(fastRoadmapItem(1));
   const tp = transcript(ws, `Saved.\n\n${block}`);
@@ -95,10 +102,15 @@ it("i approves a fast roadmap with the lock text, and no code is a choice", () =
     `i approves fast-roadmap 1: fast-roadmap 1: set status locked, then run /implement-roadmap-fast 1 (${roadmap})`,
   );
 
-  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd", "i fast"])
-    expect(s.say(code, tp)).toContain(`"${code}" is not a choice; reply i or h; end with this block again:\n${block}`);
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd"]) {
+    const again = `"${code}" is not a choice; ${CHOICES}; end with this block again:`;
+
+    expect(s.say(code, tp)).toContain(`${again}\n${block}`);
+  }
 
   expect(read(roadmap)).toBe(before);
+  expect(s.say("i fast", tp)).toContain("fast-roadmap 1: strategy spawn-fast was written to its frontmatter");
+  expect(read(roadmap)).toMatch(/^strategy: spawn-fast$/m);
 });
 
 it("h hands a fast roadmap off with State and Next naming it", () => {
@@ -108,9 +120,9 @@ it("h hands a fast roadmap off with State and Next naming it", () => {
   const file = path.join(dir, must(fs.readdirSync(dir)[0]));
   const text = read(file);
   expect(validateHandoff(path.basename(file), text)).toStrictEqual([]);
-  expect(ctx).toContain(`h handed off fast-roadmap 1 to ${file}`);
+  expect(ctx).toContain(`h handed off fast-roadmap 1 (strategy free) to ${file}`);
   expect(lines(text)).toContain("# run-fast-roadmap-1");
-  expect(lines(text)).toContain(`- fast-roadmap 1: ${roadmap}`);
+  expect(lines(text)).toContain(`- fast-roadmap 1: ${roadmap} (strategy: free)`);
   expect(lines(text)).toContain("1.1 [ ] set status locked, then /implement-roadmap-fast 1");
 });
 
@@ -185,15 +197,15 @@ it("saves a worktree session's fast roadmap at the main checkout's roadmaps-fast
 it("checks an Edit of a saved fast roadmap against the text it would produce", () => {
   const { roadmap, s } = oneRoadmap("r9");
 
-  function edit(to: string) {
+  function edit(from: string, to: string) {
     return s.call("PreToolUse", {
-      input: { file_path: roadmap, new_string: to, old_string: "status: draft" },
+      input: { file_path: roadmap, new_string: to, old_string: from },
       tool: "Edit",
     });
   }
 
-  expect(edit("status: locked")).toBeNull();
-  const denied = edit("strategy: free");
+  expect(edit("status: draft", "status: locked")).toBeNull();
+  const denied = edit("strategy: free", "strategy: spawn-deep");
   expect(denied?.hookSpecificOutput.permissionDecision).toBe("deny");
-  expect(denied?.hookSpecificOutput.permissionDecisionReason).toContain("a fast roadmap has no strategy");
+  expect(denied?.hookSpecificOutput.permissionDecisionReason).toContain("strategy: is set from the session");
 });

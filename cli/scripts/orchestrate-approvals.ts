@@ -6,7 +6,7 @@ import fs from "node:fs";
 
 import type { AgentDefaults } from "../config-resolved.types.ts";
 import { pickerInput } from "./approval-picker.ts";
-import { approvalFor, closingBlock, notAChoice, parseClosingBlock } from "./closing-line.ts";
+import { closingBlock, notAChoice, parseApprovalReply, parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
@@ -14,7 +14,6 @@ import {
   inProgressRoadmaps,
   isSliceOf,
   itemKey,
-  itemStrategy,
   kindAt,
   queueText,
   readReviewsOpen,
@@ -40,7 +39,7 @@ import type {
 } from "./orchestrate.types.ts";
 import { setSessionStrategy } from "./session-settings.ts";
 import { PICKER_LINE } from "./strategy.constants.ts";
-import { hasStrategy, kindHasStrategy, parseStrategy } from "./strategy.ts";
+import { parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** What every saved item is judged against: the workspace, its running roadmaps and the open reviews. */
@@ -79,11 +78,10 @@ function waitsForI(scan: Scan, abs: string, saved: { ref: ItemRef; fm: Record<st
 }
 
 /**
- * The item a ref names with the strategy and advice its file holds; null when the strategy is none. A fast item has
- * neither, and a file with no `advice:` has none (null).
+ * The item a ref names with the strategy and advice its file holds; null when the strategy is none. A file with no
+ * `advice:` has none (null).
  */
 function itemOf(ref: ItemRef, at: { path: string; mtime: number }, fm: Record<string, string>): ApprovalItem | null {
-  if (!kindHasStrategy(ref.kind)) return { ...at, kind: ref.kind, serial: ref.serial };
   const strategy = parseStrategy(fm.strategy);
   const advice = fm.advice === undefined || fm.advice === "" ? null : fm.advice;
 
@@ -113,11 +111,6 @@ export function approvableItems(data: HookInput): ApprovalItem[] {
   return readLines(file).flatMap((abs) => approvalItemAt(scan, abs) ?? []);
 }
 
-/** The advice a block item shows: none for a fast item. */
-function adviceOf(item: Approvable): string | null {
-  return hasStrategy(item) ? item.advice : null;
-}
-
 /**
  * True when the approval block names every pending item, and only known items with the strategy and advice each file
  * holds.
@@ -128,9 +121,7 @@ function covers(named: Approvable[] | null, items: ApprovalItem[], pending: Appr
 
   // The strategy and advice a block shows must be the file's, so a bare `i` never runs one the person did not see.
   function shownTruly(n: Approvable): boolean {
-    return items.some(
-      (i) => itemKey(i) === itemKey(n) && itemStrategy(i) === itemStrategy(n) && adviceOf(i) === adviceOf(n),
-    );
+    return items.some((i) => itemKey(i) === itemKey(n) && i.strategy === n.strategy && i.advice === n.advice);
   }
 
   return (
@@ -187,7 +178,7 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
     const hit = items.find((i) => itemKey(i) === itemKey(n));
 
     // A bare reply runs the strategy each file holds, so it must be the one the block showed.
-    if (hit === undefined || (wanted === null && itemStrategy(hit) !== itemStrategy(n))) return null;
+    if (hit === undefined || (wanted === null && hit.strategy !== n.strategy)) return null;
     resolved.push(hit);
   }
 
@@ -247,7 +238,7 @@ export function settledReply(
   if (reply.kind === "handoff") {
     const queue = writes.map((w) => ({
       item: w.item,
-      strategy: itemStrategy(w.item) === null ? null : (wanted ?? itemStrategy(w.item)),
+      strategy: wanted ?? w.item.strategy,
       written: w.content !== null,
     }));
 
@@ -269,7 +260,7 @@ export function approvalContext(data: HookInput, prompt: string, defaults: Agent
   const named = parseClosingBlock(lastAssistantFromTranscript(tp));
 
   if (named === null) return "";
-  const reply = approvalFor(prompt, named);
+  const reply = parseApprovalReply(prompt);
 
   if (reply === null) return "";
 

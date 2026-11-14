@@ -35,7 +35,7 @@ type Case = {
   item: Approvable;
   save: (s: HookSession) => string;
   step: (file: string) => string;
-  strategy?: string;
+  strategy: string;
   validate: (filename: string, text: string, opts: { fresh: boolean }) => string[];
 };
 
@@ -61,6 +61,7 @@ const CASES: readonly Case[] = [
     key: "fast-plan 1",
     save: (s) => s.save(".repo/plans-fast/x.md", FAST_PLAN_BODY),
     step: (f) => `run /implement-plan-fast 1 (${f})`,
+    strategy: "free",
     validate: validateFastPlan,
   },
   {
@@ -68,6 +69,7 @@ const CASES: readonly Case[] = [
     key: "fast-roadmap 1",
     save: (s) => s.save(".repo/roadmaps-fast/x.md", FAST_ROADMAP_BODY),
     step: (f) => `set status locked, then run /implement-roadmap-fast 1 (${f})`,
+    strategy: "free",
     validate: validateFastRoadmap,
   },
 ];

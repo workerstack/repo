@@ -6,7 +6,7 @@ import {
   FAST_LINE_CAP,
   FINAL_NEWLINE_RE,
   FAST_REQUIRED_KEYS,
-  NO_STRATEGY,
+  SAVED_KEY_LINE_RE,
   ONLY_OPEN_BOXES,
   ONLY_SECTIONS,
   TOO_LONG,
@@ -34,13 +34,13 @@ function linesAboveLog(lines: string[]): string[] {
 }
 
 /**
- * The line cap counts the saved file, frontmatter included, without the newline that ends it and without a
- * trailing `## Previous mistakes` log; lines matching `skip` are not counted.
+ * The line cap counts the saved file, frontmatter included, without the newline that ends it, without a trailing
+ * `## Previous mistakes` log, and without the `strategy:` and `advice:` lines; lines matching `skip` are not counted.
  */
 export function fastPlanLineCount(text: string, skip?: RegExp): number {
   const lines = linesAboveLog(text.replace(FINAL_NEWLINE_RE, "").split("\n"));
 
-  return skip === undefined ? lines.length : lines.filter((l) => !skip.test(l)).length;
+  return lines.filter((l) => !SAVED_KEY_LINE_RE.test(l) && skip?.test(l) !== true).length;
 }
 
 const RULES: FastRules = {
@@ -49,7 +49,6 @@ const RULES: FastRules = {
   headings: FAST_H2,
   lineCap: FAST_LINE_CAP,
   lineCount: (text) => fastPlanLineCount(text),
-  noStrategy: NO_STRATEGY,
   onlyOpenBoxes: ONLY_OPEN_BOXES,
   onlySections: ONLY_SECTIONS,
   requiredKeys: FAST_REQUIRED_KEYS,

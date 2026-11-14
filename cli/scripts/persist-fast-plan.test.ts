@@ -37,7 +37,7 @@ const HEAD = "FAST_PLAN_NAME: add tmp ignore\ncommit: chore: ignore .tmp\n";
 const SENT = `${HEAD}${BODY}`;
 
 function save(content: string, ws = tmpWs()) {
-  return persistFastPlan({ content, created: CREATED, workspaceRoot: ws });
+  return persistFastPlan({ content, created: CREATED, strategy: "free", workspaceRoot: ws });
 }
 
 function saved(ws = tmpWs()) {
@@ -60,19 +60,32 @@ describe("fast plan save", () => {
 
     const head = `---\nserial: 1\nname: add-tmp-ignore\nstatus: ready\ncreated: 2026-11-13T03:00:00Z\n`;
     expect(
-      r.content.startsWith(`${head}source: "add tmp ignore"\ncommit: chore: ignore .tmp\n---\n\n# add-tmp-ignore`),
+      r.content.startsWith(
+        `${head}source: "add tmp ignore"\ncommit: chore: ignore .tmp\nstrategy: free\n---\n\n# add-tmp-ignore`,
+      ),
     ).toBe(true);
-    expect(r.content).not.toMatch(/^(reviews|strategy):/m);
+    expect(r.content).not.toMatch(/^(reviews|advice):/m);
     expect(r.content).not.toContain("FAST_PLAN_NAME");
   });
 
-  it("names the plan from its heading and the source from the caller when sent, and omits an absent commit", () => {
+  it("names the plan and source from its heading, and omits an absent commit", () => {
     const r = save(BODY.replace("# anything", "# from heading"));
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("from-heading");
     expect(r.content).not.toMatch(/^commit:/m);
     expect(r.content).toContain('source: "Ignore `.tmp/` in git."');
-    const named = persistFastPlan({ content: SENT, source: "the person asked", workspaceRoot: tmpWs() });
+  });
+});
+
+describe("fast plan names and sources", () => {
+  it("takes the source from the caller when sent", () => {
+    const named = persistFastPlan({
+      content: SENT,
+      source: "the person asked",
+      strategy: "free",
+      workspaceRoot: tmpWs(),
+    });
+
     expect(named.content).toContain('source: "the person asked"');
   });
 
@@ -80,6 +93,7 @@ describe("fast plan save", () => {
     const r = save(`\n\nFAST_PLAN_NAME: first\n\n\n${BODY}`);
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("first");
+
     const bare = save("FAST_PLAN_NAME: only\n");
     expect(bare.ok).toBe(false);
   });
@@ -117,14 +131,6 @@ describe("fast plan fence", () => {
     const r = save(`${SENT}\n\`\`\`\n`);
     expect(r.ok).toBe(false);
     expect(r.error).toMatch(/unclosed code fence/);
-  });
-});
-
-describe("fast plan denials", () => {
-  it("denies a strategy line", () => {
-    const r = save(`${HEAD}strategy: spawn-fast\n${BODY}`);
-    expect(r.ok).toBe(false);
-    expect(r.errors).toContain("a fast plan has no strategy");
   });
 });
 
@@ -189,10 +195,8 @@ describe("fast plan revisions", () => {
     expect(text).toContain("Hide `.tmp/`");
   });
 
-  it("denies a strategy added by an update and an unclosed fence", () => {
+  it("denies an unclosed fence in an update", () => {
     const { abs, ws } = saved();
-    const r = update(ws, abs, read(abs).replace("status: ready", "status: ready\nstrategy: spawn-fast"));
-    expect(r.errors).toContain("a fast plan has no strategy");
     expect(update(ws, abs, `${read(abs)}\n\`\`\`\n`).ok).toBe(false);
   });
 

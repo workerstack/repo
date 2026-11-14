@@ -21,7 +21,7 @@ export function prepareFastRoadmapUpdate(input: Rewrite): PlanResult {
   );
 }
 
-/** Saves a new fast roadmap: serial counted in `roadmaps-fast` only, frontmatter without reviews or strategy. */
+/** Saves a new fast roadmap: serial counted in `roadmaps-fast` only, frontmatter with a strategy and no reviews. */
 export function persistFastRoadmap(input: FastSaveInput): PlanResult {
   return saveFast(input, FAST_ROADMAP);
 }

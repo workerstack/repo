@@ -3,17 +3,15 @@ import fs from "node:fs";
 
 import type { Result } from "../result.ts";
 import { itemKey } from "./orchestrate-reviews.ts";
-import type { ApprovalItem, Strategy, StrategyChange, StrategyItem, StrategyWrite } from "./orchestrate.types.ts";
-import { preparePlanUpdate } from "./persist-plan.ts";
-import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import { hasStrategy } from "./strategy.ts";
+import type { ApprovalItem, Strategy, StrategyChange, StrategyWrite } from "./orchestrate.types.ts";
+import { prepareItemUpdate } from "./prepare-item-update.ts";
 
 const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/;
 const STRATEGY_LINE = /^strategy:.*$/m;
 
 // The file's text with its `strategy:` frontmatter line set, validated through the persist module;
 // null when nothing would change.
-function strategyWrite(ws: string, item: StrategyItem, strategy: Strategy): StrategyWrite {
+function strategyWrite(ws: string, item: ApprovalItem, strategy: Strategy): StrategyWrite {
   const previous = fs.readFileSync(item.path, "utf8");
   const m = FRONTMATTER_BLOCK.exec(previous);
 
@@ -21,8 +19,7 @@ function strategyWrite(ws: string, item: StrategyItem, strategy: Strategy): Stra
   const next = m[0].replace(STRATEGY_LINE, `strategy: ${strategy}`) + previous.slice(m[0].length);
 
   if (next === previous) return { content: null, ok: true };
-  const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
-  const result = prepare({ content: next, filePath: item.path, workspaceRoot: ws });
+  const result = prepareItemUpdate(item.kind, { content: next, filePath: item.path, workspaceRoot: ws });
 
   if (!result.ok) return { error: result.error, ok: false };
 
@@ -36,9 +33,7 @@ export function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strateg
   const writes: StrategyChange[] = [];
 
   for (const i of resolved) {
-    // A fast plan or roadmap has no strategy, so a strategy word leaves it alone.
-    const w: StrategyWrite =
-      wanted === null || !hasStrategy(i) ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
+    const w: StrategyWrite = wanted === null ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
 
     if (!w.ok) return { error: `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`, ok: false };
     writes.push({ content: w.content, item: i });

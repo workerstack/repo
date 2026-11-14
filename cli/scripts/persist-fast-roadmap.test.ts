@@ -11,15 +11,18 @@ import { persistPlan } from "./persist-plan.ts";
 
 const tmpWs = useTmpWs("persist-fast-roadmap-");
 
+const HEAD =
+  `---\nserial: 1\nname: tidy-ignores\nstatus: draft\ncreated: ${CREATED}\n` +
+  `source: "tidy ignores"\nstrategy: free\n---`;
+
 describe("fast roadmap save", () => {
   it("saves the Usage roadmap under roadmaps-fast with only the frontmatter keys it needs", () => {
     const { abs, r } = savedRoadmap(tmpWs());
-    const head = `---\nserial: 1\nname: tidy-ignores\nstatus: draft\ncreated: ${CREATED}\nsource: "tidy ignores"\n---`;
     expect(r.path).toBe(".repo/roadmaps-fast/1-tidy-ignores-20261113T040000Z.md");
     expect(r.serial).toBe(1);
     expect(read(abs)).toBe(r.content);
-    expect(r.content.startsWith(`${head}\n\n# tidy-ignores`)).toBe(true);
-    expect(r.content).not.toMatch(/^(reviews|strategy|commit):/m);
+    expect(r.content.startsWith(`${HEAD}\n\n# tidy-ignores`)).toBe(true);
+    expect(r.content).not.toMatch(/^(reviews|advice|commit):/m);
     expect(r.content).not.toContain("FAST_ROADMAP_NAME");
   });
 
@@ -28,7 +31,7 @@ describe("fast roadmap save", () => {
     expect(r.ok, r.error).toBe(true);
     expect(r.slug).toBe("from-heading");
     expect(r.content).toContain('source: "1 [ ] ignore tmp: add .tmp/');
-    const named = persistFastRoadmap({ content: SENT, source: "asked", workspaceRoot: tmpWs() });
+    const named = persistFastRoadmap({ content: SENT, source: "asked", strategy: "free", workspaceRoot: tmpWs() });
     expect(named.content).toContain('source: "asked"');
   });
 

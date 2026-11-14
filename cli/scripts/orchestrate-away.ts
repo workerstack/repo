@@ -9,31 +9,18 @@ import { errorMessage } from "../sync-errors.ts";
 import { parseClosingBlock } from "./closing-line.ts";
 import type { HookInput } from "./hook-input.ts";
 import { approvableItems, approvedText } from "./orchestrate-approvals.ts";
-import { itemKey, itemStrategy } from "./orchestrate-reviews.ts";
+import { itemKey } from "./orchestrate-reviews.ts";
 import { resolveStamp, stampMtime, writeStamp } from "./orchestrate-stamps.ts";
 import { APPROVAL_BLOCK_STAMP, AWAY_RUN_REASON, AWAY_RUN_STAMP, TURN_START_STAMP } from "./orchestrate.constants.ts";
-import type { ApprovalItem, ItemKind } from "./orchestrate.types.ts";
-import type { PersistResult } from "./persist-doc.ts";
-import { prepareFastPlanUpdate } from "./persist-fast-plan.ts";
-import { prepareFastRoadmapUpdate } from "./persist-fast-roadmap.ts";
+import type { ApprovalItem } from "./orchestrate.types.ts";
 import { withEntry } from "./persist-mistakes.ts";
-import { preparePlanUpdate } from "./persist-plan.ts";
-import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
-import type { Rewrite } from "./persist-save.ts";
+import { prepareItemUpdate } from "./prepare-item-update.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const AWAY_RUN_WHY = "away runs the block's header choice once the review settled";
 
 /** What each run left: the item's key and its file's mtime after the write. */
 type AwayRuns = Record<string, number>;
-
-/** Each kind's rewrite through its persist module, so a new kind fails to compile until it has one. */
-const PREPARE: Readonly<Record<ItemKind, (input: Rewrite) => PersistResult<{ content: string }>>> = {
-  "fast-plan": prepareFastPlanUpdate,
-  "fast-roadmap": prepareFastRoadmapUpdate,
-  plan: preparePlanUpdate,
-  roadmap: prepareRoadmapUpdate,
-};
 
 function awayRunsSchema() {
   return z.record(z.string(), z.number());
@@ -59,17 +46,14 @@ function dueItems(data: HookInput, msg: string, runs: AwayRuns): ApprovalItem[] 
 }
 
 function decisionLine(i: ApprovalItem): string {
-  const strategy = itemStrategy(i);
-  const choice = strategy === null ? "i" : `i (strategy ${strategy})`;
-
-  return `- decision: approval of ${itemKey(i)} under /away → ${choice}, because ${AWAY_RUN_WHY}`;
+  return `- decision: approval of ${itemKey(i)} under /away → i (strategy ${i.strategy}), because ${AWAY_RUN_WHY}`;
 }
 
 /** Logs the run in the item's file through its kind's persist module: the file's new mtime, or why it was refused. */
 function logRun(ws: string, i: ApprovalItem): Result<number, string> {
   try {
     const content = withEntry(fs.readFileSync(i.path, "utf8"), decisionLine(i));
-    const result = PREPARE[i.kind]({ content, filePath: i.path, workspaceRoot: ws });
+    const result = prepareItemUpdate(i.kind, { content, filePath: i.path, workspaceRoot: ws });
 
     if (!result.ok) return { error: result.error, ok: false };
     fs.writeFileSync(i.path, result.content);

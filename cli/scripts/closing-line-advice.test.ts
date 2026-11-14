@@ -13,7 +13,7 @@ const WITH_ADVICE: Approvable = { advice: PLAN_ADVICE, kind: "plan", serial: 4, 
 const NO_ADVICE: Approvable = { advice: null, kind: "plan", serial: 5, strategy: "free" };
 const ROADMAP: Approvable = { advice: "free because it is small", kind: "roadmap", serial: 10, strategy: "spawn-deep" };
 
-const FAST: Approvable = { kind: "fast-plan", serial: 3 };
+const FAST: Approvable = { advice: "free because one file", kind: "fast-plan", serial: 3, strategy: "spawn-fast" };
 
 const ONE = `\`\`\`\nplan 4 · spawn-fast\n  plan 4 advice: ${PLAN_ADVICE}\n${ROWS}`;
 
@@ -32,10 +32,10 @@ it("renders one advice row per item that has advice, in header order", () => {
   );
 });
 
-it("leaves a fast-only block unchanged", () => {
-  const fast: Approvable = { kind: "fast-plan", serial: 3 };
-
-  expect(closingBlock([fast])).toBe("```\nfast-plan 3\n  i  implement\n  h  hand off\n     or reply to revise\n```");
+it("renders a fast item with its strategy and advice as a plan's", () => {
+  expect(closingBlock([FAST])).toBe(
+    `\`\`\`\nfast-plan 3 · spawn-fast\n  fast-plan 3 advice: free because one file\n${ROWS}`,
+  );
 });
 
 it("reads the advice back from a block, alone, in a queue and after prose", () => {
@@ -72,7 +72,7 @@ it("is not a block when the advice row is doubled or names another item", () => 
   ]);
 });
 
-it("is not a block when an advice row is shown for a fast item", () => {
+it("is not a block when a fast item shows no strategy", () => {
   expect(
     parseClosingBlock(
       "```\nfast-plan 3\n  fast-plan 3 advice: free because x\n" +

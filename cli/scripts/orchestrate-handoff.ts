@@ -15,15 +15,11 @@ function handoffLeaf(i: ApprovalItem): string {
 }
 
 function stateLine(q: HandoffEntry): string {
-  const strategy = q.strategy === null ? "" : ` (strategy: ${q.strategy})`;
-
-  return `- ${itemKey(q.item)}: ${q.item.path}${strategy}`;
+  return `- ${itemKey(q.item)}: ${q.item.path} (strategy: ${q.strategy})`;
 }
 
 function shownEntry(q: HandoffEntry): string {
-  const strategy = q.strategy === null ? "" : ` (strategy ${q.strategy}${q.written ? " written" : ""})`;
-
-  return `${itemKey(q.item)}${strategy}`;
+  return `${itemKey(q.item)} (strategy ${q.strategy}${q.written ? " written" : ""})`;
 }
 
 // One handoff for the whole queue line, in its order; Watch-outs stay empty because the files carry their own.

@@ -59,11 +59,15 @@ describe("pickerInput", () => {
     expect(options?.length).toBeLessThanOrEqual(4);
   });
 
-  it("asks one question for a queue of only fast items", () => {
-    const input = pickerInput([fastPlan(1)]);
+  it("asks the strategy question for a queue of only fast items, saved value then advice first", () => {
+    const input = pickerInput([fastPlan(1, "spawn-fast", "free because one file")]);
 
-    expect(input.questions).toHaveLength(1);
-    expect(input.questions[0]?.header).toBe("Approval");
+    expect(input.questions.map((q) => q.header)).toStrictEqual(["Approval", "Strategy"]);
+    expect(input.questions[1]?.options.map((o) => o.label)).toStrictEqual(["spawn-fast", "free", "spawn-deep"]);
+  });
+
+  it("refuses an empty queue", () => {
+    expect(() => pickerInput([])).toThrow("pickerInput needs at least one item");
   });
 });
 
@@ -95,10 +99,10 @@ describe("pickerReply for queues and typed answers", () => {
     expect(out).toStrictEqual({ named: items, reply: { kind: "approve", strategy: null } });
   });
 
-  it("reads a fast-only click, which has no strategy question, as a bare reply", () => {
-    const out = pickerReply(clicked([fastPlan(1)], { approval: "Hand off" }));
+  it("reads a fast-only click on another strategy as that strategy word", () => {
+    const out = pickerReply(clicked([fastPlan(1)], { approval: "Hand off", strategy: "spawn-deep" }));
 
-    expect(out).toStrictEqual({ named: [fastPlan(1)], reply: { kind: "handoff", strategy: null } });
+    expect(out).toStrictEqual({ named: [fastPlan(1)], reply: { kind: "handoff", strategy: "spawn-deep" } });
   });
 
   it("reads a typed answer that is no option as feedback on the named items", () => {

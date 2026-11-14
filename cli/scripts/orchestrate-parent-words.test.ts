@@ -6,7 +6,6 @@ import { expect, it } from "vitest";
 import { hookSession, type HookSession } from "./__fixtures__/hook-session.ts";
 import {
   closing,
-  fastPlan,
   orchestrateKit,
   parseJson,
   plan as planItem,
@@ -62,20 +61,6 @@ it("a retired code gets the Usage line and the block again, and approves nothing
 
   expect(fs.readFileSync(plan, "utf8")).toBe(before);
   expect(stored(ws, "w1")).toBe("free");
-});
-
-it("on a fast-only block a code and a strategy word get the short Usage line", () => {
-  const ws = kit.temp();
-  const s = claude(ws, "w2");
-  s.say("do the small thing");
-  const block = closing(fastPlan(1));
-  const tp = transcript(ws, `Saved.\n\n${block}`);
-
-  for (const reply of ["isf", "i fast"]) {
-    const line = `"${reply}" is not a choice; reply i or h; end with this block again:`;
-
-    expect(s.say(reply, tp)).toContain(`${line}\n${block}`);
-  }
 });
 
 it("i fast writes spawn-fast to the plan and the session, and the context says so", () => {

@@ -12,15 +12,11 @@ export type Approval = "ask" | "away";
 /** How much process a change gets when no skill is named: the fast or the deep plan skills. */
 export type Effort = "fast" | "deep";
 
-/**
- * What an approval block can name: a full plan or roadmap, with its strategy and its advice (null when the file has
- * none), or a fast plan or roadmap, which have neither.
- */
+/** What an approval block can name: a plan, a roadmap, a fast plan or a fast roadmap. */
 export type ItemKind = "plan" | "roadmap" | "fast-plan" | "fast-roadmap";
 
-export type Approvable =
-  | { kind: "plan" | "roadmap"; serial: number; strategy: Strategy; advice: string | null }
-  | { kind: "fast-plan" | "fast-roadmap"; serial: number };
+/** An item the approval block names, with its strategy and its advice (null when the file has none). */
+export type Approvable = { kind: ItemKind; serial: number; strategy: Strategy; advice: string | null };
 
 export type ApprovalReply =
   | { kind: "approve"; strategy: Strategy | null }

@@ -12,7 +12,6 @@ import {
   FAST_ROADMAP_REQUIRED_KEYS,
   FAST_SLICES_MIN,
   LOCATION_NOT_FAST_PLAN,
-  NO_STRATEGY,
   ONLY_OPEN_BOXES,
   ONLY_SECTIONS,
   PATH_SEPARATOR_RE,
@@ -60,7 +59,7 @@ function sliceErrors(order: string): string[] {
   ];
 }
 
-/** The saved file's line count for the cap: frontmatter included, Location lines and a Previous mistakes log not. */
+/** The saved file's line count for the cap: frontmatter in, Location lines and what fastPlanLineCount skips out. */
 export function fastRoadmapLineCount(text: string): number {
   return fastPlanLineCount(text, LOCATION_LINE_RE);
 }
@@ -71,7 +70,6 @@ const RULES: FastRules = {
   headings: FAST_ROADMAP_H2,
   lineCap: FAST_ROADMAP_LINE_CAP,
   lineCount: fastRoadmapLineCount,
-  noStrategy: NO_STRATEGY,
   onlyOpenBoxes: ONLY_OPEN_BOXES,
   onlySections: ONLY_SECTIONS,
   requiredKeys: FAST_ROADMAP_REQUIRED_KEYS,

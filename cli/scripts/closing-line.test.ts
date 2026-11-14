@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { approvalFor, closingBlock, parseApprovalReply, parseClosingBlock } from "./closing-line.ts";
+import { closingBlock, parseApprovalReply, parseClosingBlock } from "./closing-line.ts";
 import type { Approvable } from "./strategy.types.ts";
 
 it("maps y in any case with no strategy to keep each file's value", () => {
@@ -169,73 +169,40 @@ it("is null for a revision", () => {
     expect(parseApprovalReply(p)).toBeNull();
 });
 
-const FAST_ONE = "```\nfast-plan 3\n  i  implement\n  h  hand off\n     or reply to revise\n```";
-
-const FAST: Approvable = { kind: "fast-plan", serial: 3 };
+const FAST: Approvable = { advice: null, kind: "fast-plan", serial: 3, strategy: "free" };
 const FULL: Approvable = { advice: null, kind: "plan", serial: 4, strategy: "spawn-fast" };
 
-const MIXED =
-  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    i free · i fast · i deep\n" +
+const FAST_ROADMAP: Approvable = {
+  advice: "spawn-deep because two slices",
+  kind: "fast-roadmap",
+  serial: 2,
+  strategy: "free",
+};
+
+const FAST_ONE =
+  "```\nfast-plan 3 · free\n  i  implement    i free · i fast · i deep\n" +
   "  h  hand off     h free · h fast · h deep\n     or reply to revise\n```";
 
-it("renders and reads the all-fast block with only the i and h rows", () => {
+it("renders and reads a fast plan's block as a plan's, with its strategy and the word rows", () => {
   expect(closingBlock([FAST])).toBe(FAST_ONE);
-  expect(closingBlock([FAST, { kind: "fast-plan", serial: 5 }]).split("\n")[1]).toBe("fast-plan 3, then fast-plan 5");
   expect(parseClosingBlock(`Saved.\n\n${FAST_ONE}\n`)).toStrictEqual([FAST]);
+  expect(closingBlock([FULL, FAST]).split("\n")[1]).toBe("plan 4 · spawn-fast, then fast-plan 3 · free");
+  expect(parseClosingBlock(closingBlock([FULL, FAST]))).toStrictEqual([QUEUE[0], FAST]);
 });
 
-it("renders and reads a mixed queue with the full rows", () => {
-  expect(closingBlock([FULL, FAST])).toBe(MIXED);
-  expect(parseClosingBlock(MIXED)).toStrictEqual([QUEUE[0], FAST]);
+it("renders and reads a fast roadmap's advice row", () => {
+  const block = closingBlock([FAST_ROADMAP, FAST]);
+  expect(block.split("\n").slice(1, 3)).toStrictEqual([
+    "fast-roadmap 2 · free, then fast-plan 3 · free",
+    "  fast-roadmap 2 advice: spawn-deep because two slices",
+  ]);
+  expect(parseClosingBlock(block)).toStrictEqual([FAST_ROADMAP, FAST]);
 });
 
-it("refuses a fast block with a strategy, a full item without one, or the wrong rows", () => {
-  expect(parseClosingBlock(FAST_ONE.replace("fast-plan 3", "fast-plan 3 · default"))).toBeNull();
+it("refuses a fast item without a strategy, with an unknown one, or with the bare rows", () => {
+  expect(parseClosingBlock(FAST_ONE.replace(" · free", ""))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace(" · free", " · default"))).toBeNull();
   expect(parseClosingBlock(ONE.replace(" · spawn-fast", ""))).toBeNull();
-  expect(parseClosingBlock(FAST_ONE.replace("hand off", "handoff"))).toBeNull();
-  expect(parseClosingBlock(MIXED.replace("plan 4", "fast-plan 4"))).toBeNull();
   expect(parseClosingBlock(FAST_ONE.replace("fast-plan", "fast-slice"))).toBeNull();
-  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    i free · i fast · i deep"))).toBeNull();
-});
-
-it("on an all-fast block a bare approval or handoff stands and every code or strategy word is unknown", () => {
-  for (const p of ["i", "y", "yes", "go", "do it", "implement"])
-    expect(approvalFor(p, [FAST])).toStrictEqual(approve(null));
-
-  expect(approvalFor("h", [FAST])).toStrictEqual(handoff(null));
-
-  for (const p of ["if", "isf", "isd", "hf", "hsf", "hsd", "i fast", "h fast", "y spawn-deep"])
-    expect(approvalFor(p, [FAST]), p).toStrictEqual(unknown(p));
-});
-
-it("on a block with a strategy item every word reply stands, and a revision stays null", () => {
-  expect(approvalFor("i fast", [FAST, FULL])).toStrictEqual(approve("spawn-fast"));
-  expect(approvalFor("i fast", QUEUE)).toStrictEqual(approve("spawn-fast"));
-  expect(approvalFor("isf", QUEUE)).toStrictEqual(unknown("isf"));
-  expect(approvalFor("keep it", [FAST])).toBeNull();
-  expect(approvalFor("isx", [FAST])).toStrictEqual(unknown("isx"));
-});
-
-const FAST_ROADMAP: Approvable = { kind: "fast-roadmap", serial: 2 };
-const FAST_ROADMAP_BLOCK = "```\nfast-roadmap 2\n  i  implement\n  h  hand off\n     or reply to revise\n```";
-
-it("renders and reads a fast roadmap block with only the i and h rows, alone or with fast plans", () => {
-  expect(closingBlock([FAST_ROADMAP])).toBe(FAST_ROADMAP_BLOCK);
-  expect(parseClosingBlock(FAST_ROADMAP_BLOCK)).toStrictEqual([FAST_ROADMAP]);
-  expect(closingBlock([FAST_ROADMAP, FAST]).split("\n")[1]).toBe("fast-roadmap 2, then fast-plan 3");
-  expect(parseClosingBlock(closingBlock([FAST_ROADMAP, FAST]))).toStrictEqual([FAST_ROADMAP, FAST]);
-  expect(parseClosingBlock(FAST_ROADMAP_BLOCK.replace("fast-roadmap 2", "fast-roadmap 2 · default"))).toBeNull();
-  expect(approvalFor("isf", [FAST_ROADMAP])).toStrictEqual(unknown("isf"));
-  expect(approvalFor("i fast", [FAST_ROADMAP])).toStrictEqual(unknown("i fast"));
-  expect(approvalFor("i", [FAST_ROADMAP])).toStrictEqual(approve(null));
-});
-
-it("renders the full rows when a full plan joins a fast roadmap", () => {
-  const block = closingBlock([FAST_ROADMAP, FULL]);
-  expect(block).toBe(
-    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    i free · i fast · i deep\n" +
-      "  h  hand off     h free · h fast · h deep\n     or reply to revise\n```",
-  );
-  expect(parseClosingBlock(block)).toStrictEqual([FAST_ROADMAP, FULL]);
-  expect(approvalFor("i fast", [FAST_ROADMAP, FULL])).toStrictEqual(approve("spawn-fast"));
+  expect(parseClosingBlock(FAST_ONE.replace("    i free · i fast · i deep", ""))).toBeNull();
 });

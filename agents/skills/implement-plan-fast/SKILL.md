@@ -4,7 +4,9 @@ description: 'Execute a .repo/plans-fast checklist inline in this session.'
 ---
 # implement-plan-fast
 
-`/implement-plan-fast {n|path}`. Do the plan here: no subagents, no journal. Empty arg: the unique in-progress, else unique ready fast plan, else list serials.
+`/implement-plan-fast {n|path}`. Do the plan here, with no journal.
+
+strategy spawn-fast or spawn-deep: read node_modules/@workerstack/repo/references/review-loop.md first; each step goes to an implementer as a phase does, and steps that write disjoint files run at once. free: no subagents; ignore this line. Empty arg: the unique in-progress, else unique ready fast plan, else list serials.
 
 1. Set frontmatter `status: in-progress` (Edit the saved file).
 2. `bun repo worktree add fast-{serial}-{name}`. Edit and test only there.

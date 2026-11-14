@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  BODY,
   NO_LOCATION,
   PLAN_ABS,
   SENT,
@@ -19,10 +18,6 @@ function errorsOf(content: string) {
 }
 
 describe("fast roadmap denials", () => {
-  it("denies a strategy line", () => {
-    expect(errorsOf(`FAST_ROADMAP_NAME: x\nstrategy: spawn-fast\n${BODY}`)).toContain("a fast roadmap has no strategy");
-  });
-
   it("denies sections beyond Order and Verify, and a missing one", () => {
     const only = "a fast roadmap holds only Order and Verify, then an optional Previous mistakes";
     expect(errorsOf(`${SENT}\n## Goal\nx\n`)).toContain(only);

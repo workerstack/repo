@@ -15,10 +15,11 @@ import {
 import { LAST, MISTAKES_H2 } from "./persist-doc.constants.ts";
 import { type Sections, parseFrontmatter, stripFrontmatter } from "./persist-doc.ts";
 import { FAST_TICKED_RE } from "./persist-fast-plan.constants.ts";
-import { extractStrategy } from "./persist-keys.ts";
+import { adviceErrors, strategyError } from "./persist-keys.ts";
 import { mistakeLogErrors } from "./persist-mistakes.ts";
 import { FILENAME_RE } from "./persist-plan.constants.ts";
 import { sectionBodies, unclosedFenceErrors } from "./persist-sections.ts";
+import { parseStrategy } from "./strategy.ts";
 
 /** What one kind of fast doc is checked against. */
 export type FastRules = {
@@ -32,7 +33,6 @@ export type FastRules = {
   sources: readonly string[];
   lineCap: number;
   lineCount: (text: string) => number;
-  noStrategy: string;
   onlySections: string;
   tooLong: string;
   onlyOpenBoxes: string;
@@ -40,7 +40,7 @@ export type FastRules = {
   content: (sections: Sections) => string[];
 };
 
-/** The head denials: serial line, required keys, status, created, source, name and heading. */
+/** The head denials: serial line, required keys, status, created, source, strategy, advice, name and heading. */
 function headErrors(doc: Doc, rules: FastRules): string[] {
   const checks: HeadCheck[] = [
     serialLineCheck,
@@ -48,6 +48,8 @@ function headErrors(doc: Doc, rules: FastRules): string[] {
     (d) => patternErrors(d, "status", rules.status),
     createdCheck,
     sourceLengthCheck,
+    ({ map }) => when({ bad: parseStrategy(map.strategy) === null, error: strategyError() }),
+    ({ map }) => adviceErrors(map),
     ...rules.extraHead,
     slugCheck,
     h1Check,
@@ -100,9 +102,8 @@ export function validateFastDoc(
 
   if (fm.error !== undefined) return [...errors, fm.error];
   const head = headErrors({ body: fm.body, filename, map: fm.map, text }, rules);
-  const strategy = when({ bad: extractStrategy(text) !== undefined, error: rules.noStrategy });
   const fence = unclosedFenceErrors(text);
   const rest = fence.length > 0 ? fence : bodyErrors({ body: fm.body, fresh, previous, text }, rules);
 
-  return [...new Set([...errors, ...head, ...strategy, ...rest])];
+  return [...new Set([...errors, ...head, ...rest])];
 }

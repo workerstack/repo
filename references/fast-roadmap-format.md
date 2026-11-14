@@ -13,19 +13,24 @@ A short ordered program of fast plans, for work the person chose to do fast. Sav
 
 ## Frontmatter
 
-`serial`, `name`, `status` (`draft | locked | in-progress | done`), `created`, `source`. No `strategy`, no `reviews`.
+`serial`, `name`, `status` (`draft | locked | in-progress | done`), `created`, `source`, `strategy`, and optional `advice`. No `reviews`.
+
+## Strategy
+
+`strategy` is `free`, `spawn-fast` or `spawn-deep`, with the meanings in `plan-format.md`. The save sets it from the session value, then `agents.defaultStrategy`, then `free`. A sent `strategy:` line that differs from that value is denied with the plan's text. A rewrite that omits it keeps it, and an unknown value is invalid with `strategy: free|spawn-fast|spawn-deep`.
+
+`advice` is optional: `advice: {free|spawn-fast|spawn-deep} because {reason}`, at most 100 characters, sent beside the name line. It moves into the frontmatter after `strategy:`. A rewrite that omits it keeps it. A bad line is denied with `advice: {free|spawn-fast|spawn-deep} because {reason}, at most 100 characters`. A fast plan written for a slice takes the fast roadmap's strategy unless the session has one.
 
 ## Body
 
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`, each optionally ending `(parallel: <path>, …)` with the rules in `roadmap-format.md` Parallel slices; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+The first line is `FAST_ROADMAP_NAME: <name>`, then `advice:`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`, each optionally ending `(parallel: <path>, …)` with the rules in `roadmap-format.md` Parallel slices; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
 
 ## Cap and Location
 
-At most 20 lines, frontmatter included; Location lines and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
+At most 20 lines, frontmatter included; Location lines, the `strategy:` and `advice:` lines, and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
 
 ## Denials
 
-- `a fast roadmap has no strategy`
 - `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
 - `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)`
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
@@ -38,7 +43,7 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 
 ## Approval
 
-Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy words. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
+The plan's block (`plan-format.md`): header `fast-roadmap {n} · {strategy}`, an advice row when the file has `advice:`, then the `i` and `h` rows with their strategy words. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; a strategy word writes that value first; `h` hands off with that as Next.
 
 ## Run
 

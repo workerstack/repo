@@ -57,12 +57,10 @@ describe("fast roadmap status moves", () => {
 });
 
 describe("fast roadmap status and revisions", () => {
-  it("allows blocked and denies an unknown status or a strategy", () => {
+  it("allows blocked and denies an unknown status", () => {
     const { abs, ws } = savedRoadmap(tmpWs());
     expect(updateRoadmap(ws, abs, read(abs).replace("status: draft", "status: blocked")).ok).toBe(true);
     expect(updateRoadmap(ws, abs, read(abs).replace("status: blocked", "status: ready")).errors).toContain("status");
-    const strategic = read(abs).replace("status: blocked", "status: draft\nstrategy: spawn-fast");
-    expect(updateRoadmap(ws, abs, strategic).errors).toContain("a fast roadmap has no strategy");
   });
 
   it("keeps the saved head when a revision sends only the body", () => {

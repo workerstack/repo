@@ -21,7 +21,7 @@ export function prepareFastPlanUpdate(input: Rewrite): PlanResult {
   );
 }
 
-/** Saves a new fast plan: serial counted in `plans-fast` only, frontmatter without reviews or strategy. */
+/** Saves a new fast plan: serial counted in `plans-fast` only, frontmatter with a strategy and no reviews. */
 export function persistFastPlan(input: FastSaveInput): PlanResult {
   return saveFast(input, FAST_PLAN);
 }

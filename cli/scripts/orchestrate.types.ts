@@ -37,9 +37,6 @@ export type ApprovalItem = {
   mtime: number;
 } & Approvable;
 
-/** A saved item that has a strategy to write: a full plan or roadmap. */
-export type StrategyItem = Extract<ApprovalItem, { strategy: Strategy }>;
-
 /** A reply of `i` or `h`, with or without a strategy. */
 export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApprovalReply>>, { kind: "unknown" }>;
 
@@ -69,7 +66,7 @@ export type StrategyWrite = { ok: true; content: string | null } | { ok: false; 
 export type StrategyChange = { item: ApprovalItem; content: string | null };
 
 /** One handoff queue entry: the item, the strategy it runs (none for a fast item) and whether that was written. */
-export type HandoffEntry = { item: ApprovalItem; strategy: Strategy | null; written: boolean };
+export type HandoffEntry = { item: ApprovalItem; strategy: Strategy; written: boolean };
 
 /**
  * A review's lifecycle, per item:

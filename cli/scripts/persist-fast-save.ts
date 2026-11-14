@@ -4,9 +4,11 @@ import path from "node:path";
 
 import { firstNonEmpty } from "./first-non-empty.ts";
 import { createdLine, extractH1, injectFrontmatter, slugify, sourceLine, stripFrontmatter } from "./persist-doc.ts";
+import { extractAdvice, stripAdviceLine, stripStrategyLine } from "./persist-keys.ts";
 import { extractCommit, stripCommitLine } from "./persist-plan-head.ts";
 import { type PlanResult, allocate, persistSource, refused, saveTarget } from "./persist-save.ts";
 import { unclosedFenceErrors } from "./persist-sections.ts";
+import type { Strategy } from "./strategy.types.ts";
 
 /** What one kind of fast doc is saved with. */
 export type FastKind = {
@@ -28,6 +30,8 @@ export type FastSaveInput = {
   content?: string;
   source?: string;
   created?: string;
+  /** The strategy the new doc is saved with: the session's, the parent fast roadmap's or the config's. */
+  strategy: Strategy;
 };
 
 /** A name line above the first `## `, and the text without it and the blanks after it. */
@@ -47,17 +51,35 @@ function splitName(raw: string, nameRe: RegExp) {
   };
 }
 
-/** Saves a new fast doc: serial counted in its own directory only, frontmatter without reviews or strategy. */
+/**
+ * The keys after the source: the commit sent when the kind takes one, the strategy given, and the advice sent. An
+ * empty advice is kept so validation denies it.
+ */
+function keyLines(raw: string, strategy: Strategy, kind: FastKind): string[] {
+  const commit = kind.commit ? extractCommit(raw) : undefined;
+  const advice = extractAdvice(raw);
+
+  return [
+    ...(commit === undefined ? [] : [`commit: ${commit}`]),
+    `strategy: ${strategy}`,
+    ...(advice === undefined ? [] : [`advice: ${advice}`]),
+  ];
+}
+
+/**
+ * Saves a new fast doc: serial counted in its own directory only, frontmatter with the strategy it is given and the
+ * advice it was sent, and no reviews.
+ */
 export function saveFast(input: FastSaveInput, kind: FastKind): PlanResult {
   const { ws, raw } = saveTarget(input.workspaceRoot, input.content);
   const fence = unclosedFenceErrors(raw);
 
   if (fence.length > 0) return refused(fence);
   const { name, rest } = splitName(raw, kind.nameRe);
-  const body = kind.commit ? stripCommitLine(rest) : rest;
+  const keyed = stripAdviceLine(stripStrategyLine(rest));
+  const body = kind.commit ? stripCommitLine(keyed) : keyed;
   const slug = slugify(firstNonEmpty(name) ?? extractH1(stripFrontmatter(body)));
   const { createdAt, serial, filename, dest } = allocate(path.join(ws, kind.dir), slug, input.created);
-  const commit = kind.commit ? extractCommit(raw) : undefined;
 
   const lines = [
     `serial: ${serial}`,
@@ -65,7 +87,7 @@ export function saveFast(input: FastSaveInput, kind: FastKind): PlanResult {
     `status: ${kind.status}`,
     createdLine(createdAt),
     sourceLine(persistSource([input.source, name], kind.sourceRe.exec(stripFrontmatter(body)), slug)),
-    ...(commit === undefined ? [] : [`commit: ${commit}`]),
+    ...keyLines(raw, input.strategy, kind),
   ];
 
   const full = injectFrontmatter(lines, slug, stripFrontmatter(body));

@@ -108,6 +108,14 @@ it("precommit refuses any argument", async () => {
   expect(await precommit(root, undefined, ["--staged"])).toStrictEqual(refused);
 });
 
+it("precommit run with no deps writes its refusal to the process stderr", async () => {
+  const err = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+  expect(await precommitMain(["src"])).toBe(1);
+  expect(err).toHaveBeenCalledWith("repo precommit: takes no arguments; use repo precommit\n");
+  err.mockRestore();
+});
+
 it("a failed restage fails precommit and says what to stage", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" }, NO_DEPS);
   write(root, { "src/a.ts": "export const a = 2;\n" });

@@ -10,9 +10,8 @@ import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import { frontmatterOf, sessionFile } from "./orchestrate-session.ts";
 import { IN_PROGRESS, ITEM_KINDS, ITEM_KIND_LIST, PLAN_KIND } from "./orchestrate.constants.ts";
-import type { Approvable, ItemKind, ItemRef, ReviewState, ReviewsOpen, Strategy } from "./orchestrate.types.ts";
+import type { Approvable, ItemKind, ItemRef, ReviewState, ReviewsOpen } from "./orchestrate.types.ts";
 import { isUnderRepoDir } from "./persist-tmp.ts";
-import { hasStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
@@ -26,11 +25,6 @@ export function itemKey(item: ItemRef): string {
 /** The kind whose dir holds `abs`; null for a path no item kind owns. */
 export function kindAt(abs: string, ws: string): ItemKind | null {
   return ITEM_KIND_LIST.find((kind) => isUnderRepoDir(abs, ws, ITEM_KINDS[kind].dir)) ?? null;
-}
-
-/** The strategy an item runs; null for a fast plan or fast roadmap, which have none. */
-export function itemStrategy(item: Approvable): Strategy | null {
-  return hasStrategy(item) ? item.strategy : null;
 }
 
 export function queueText(items: Approvable[]): string {

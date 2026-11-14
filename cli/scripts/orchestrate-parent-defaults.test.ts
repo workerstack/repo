@@ -175,7 +175,7 @@ describe("agents.defaultApproval with no usable config", () => {
 });
 
 describe("agents.defaultStrategy", () => {
-  it("fills a new plan and a new roadmap written without strategy, and leaves a fast plan without one", async () => {
+  it("fills a new plan and a new roadmap written without strategy, and a fast plan", async () => {
     const ws = workspace('{ defaultStrategy: "spawn-deep" }');
 
     const planText = await write(ws, "s1", {
@@ -193,7 +193,7 @@ describe("agents.defaultStrategy", () => {
     expect(roadmapText).toMatch(/^strategy: spawn-deep$/m);
     const fast = await write(ws, "s1", { content: FAST_BODY, file: ".repo/plans-fast/x.md" });
     expect(fast).toMatch(/^serial: 1$/m);
-    expect(fast).not.toMatch(/^strategy:/m);
+    expect(fast).toMatch(/^strategy: spawn-deep$/m);
   });
 
   it("refuses a sent strategy line instead of keeping it over the default", async () => {

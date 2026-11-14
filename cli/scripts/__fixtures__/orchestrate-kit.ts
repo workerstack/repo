@@ -131,11 +131,21 @@ export const roadmap = (serial: number, strategy: Strategy = "free", advice: str
   advice,
 });
 
-/** A fast plan item as the approval block names it: no strategy. */
-export const fastPlan = (serial: number): Approvable => ({ kind: "fast-plan", serial });
+/** A fast plan item as the approval block names it; the strategy is the default and the advice none unless given. */
+export const fastPlan = (serial: number, strategy: Strategy = "free", advice: string | null = null): Approvable => ({
+  kind: "fast-plan",
+  serial,
+  strategy,
+  advice,
+});
 
-/** A fast roadmap item as the approval block names it: no strategy. */
-export const fastRoadmap = (serial: number): Approvable => ({ kind: "fast-roadmap", serial });
+/** A fast roadmap item as the approval block names it; the strategy is the default and the advice none unless given. */
+export const fastRoadmap = (serial: number, strategy: Strategy = "free", advice: string | null = null): Approvable => ({
+  kind: "fast-roadmap",
+  serial,
+  strategy,
+  advice,
+});
 
 /** The `strategy:` a saved file holds. */
 export const strategyOf = (file: string): string | undefined =>

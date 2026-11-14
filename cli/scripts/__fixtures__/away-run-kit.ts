@@ -54,10 +54,8 @@ export function runBlock(key: string, step: string): { decision: string; reason:
 }
 
 /** The decision line an away run logs for `key`; `strategy` only for a full plan or roadmap. */
-export function decisionLine(key: string, strategy?: string): string {
-  const choice = strategy === undefined ? "i" : `i (strategy ${strategy})`;
-
-  return `- decision: approval of ${key} under /away → ${choice}, because ${WHY}`;
+export function decisionLine(key: string, strategy: string): string {
+  return `- decision: approval of ${key} under /away → i (strategy ${strategy}), because ${WHY}`;
 }
 
 /** The away run stamp of session `sid` in `ws`. */
