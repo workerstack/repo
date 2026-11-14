@@ -58,10 +58,21 @@ export function releaseTag(t: Tools, name: string, version: string): string | nu
   return [TAG_OF(name, version), BARE_TAG_OF(version)].find((tag) => read(t, GIT_TAG_REF(tag)) !== "") ?? null;
 }
 
-/** The sha of the commit in HEAD's history whose subject is exactly `subject`; null when there is none. */
+/** What may follow a release subject: nothing, or the ` (#<n>)` GitHub adds to a squash-merged pull request's. */
+const PULL_REQUEST_SUFFIX = /^(?: \(#\d+\))?$/;
+
+/** Whether `found` is `subject`, or `subject (#<n>)` as a squash merge names it. */
+function isSubject(found: string, subject: string): boolean {
+  return found.startsWith(subject) && PULL_REQUEST_SUFFIX.test(found.slice(subject.length));
+}
+
+/**
+ * The sha of the newest commit in HEAD's history whose subject is `subject`, or `subject (#<n>)` as a squash merge
+ * names it; null when there is none.
+ */
 export function commitWithSubject(t: Tools, subject: string): string | null {
   const lines = read(t, GIT_RELEASE_LOG(subject)).split("\n");
-  const hit = lines.map((line) => line.split("\t")).find(([, found]) => found === subject);
+  const hit = lines.map((line) => line.split("\t")).find(([, found = ""]) => isSubject(found, subject));
 
   return hit?.[0] ?? null;
 }
