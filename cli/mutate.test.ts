@@ -52,6 +52,7 @@ it("writes a Stryker config with the shard's files and the options this repo nee
   expect(config).toStrictEqual({
     coverageAnalysis: "perTest",
     disableTypeChecks: false,
+    dryRunTimeoutMinutes: 30,
     ignoreStatic: true,
     inPlace: true,
     jsonReporter: { fileName: path.join(BASE, "stryker-report.json") },
