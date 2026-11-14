@@ -8,6 +8,9 @@ export const URL_TEXT: RegExp = /https?:\/\/\S+/g;
 export const SEALED_CALLEE = "sealed";
 export const CALL_EXPRESSION = "CallExpression";
 export const IDENTIFIER = "Identifier";
+
+/** A line of ASCII only, where every character takes one column. */
+export const ASCII_TEXT: RegExp = /^\p{ASCII}*$/u;
 export const TRAILING_CR: RegExp = /\r$/;
 
 /** The key every node holds its parent under; a walk of the children skips it. */

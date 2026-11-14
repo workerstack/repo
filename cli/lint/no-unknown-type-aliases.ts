@@ -2,7 +2,7 @@
 import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 
 import type { RepoRule } from "./rule.types.ts";
-import { createTypeAliasEnvironment, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
+import { typeAliasEnvironmentOf, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
 
 const MESSAGE =
   "Type alias `{{alias}}` hides `unknown`. Keep `unknown` explicit at the parsing boundary or on an allowed " +
@@ -30,7 +30,7 @@ export const noUnknownTypeAliases: RepoRule<"unknownAlias"> = {
 
     return {
       Program(program) {
-        environment = createTypeAliasEnvironment(program, context.sourceCode.visitorKeys);
+        environment = typeAliasEnvironmentOf(program, context.sourceCode.visitorKeys);
       },
       TSTypeAliasDeclaration(node) {
         const aliases = ESLintUtils.nullThrows(environment, "the Program visitor runs first");

@@ -14,12 +14,10 @@ function isNode(value: unknown): value is TSESTree.Node {
 
 /** The child nodes of `node`, read through the fields its visitor keys name; a type with no keys has none. */
 export function childNodes(node: TSESTree.Node, visitorKeys: VisitorKeys): TSESTree.Node[] {
-  const keys = new Set(visitorKeys[node.type]);
-  const fields: [string, unknown][] = Object.entries(node);
-
-  return fields
-    .filter(([key]) => keys.has(key))
-    .flatMap(([, value]) => [value].flat())
+  return (visitorKeys[node.type] ?? [])
+    .flatMap((key): unknown[] =>
+      [node[key /* a visitor key names a field of its node type */ as keyof typeof node]].flat(),
+    )
     .filter(isNode);
 }
 

@@ -12,14 +12,25 @@ import ts from "typescript";
 import { codeOf, GUARD_REJECTS } from "./lint/script-rules.ts";
 import type { Result } from "./result.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
-import { isChecked, isTest, ownerOf, posix, setupOf } from "./ts-program.ts";
-import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
+import {
+  byOwner,
+  isChecked,
+  isTest,
+  type Owner,
+  ownerOf,
+  ownerProgram,
+  posix,
+  type SharedSources,
+} from "./ts-program.ts";
 
 /** An exported guard: its declared name node and the symbol a call resolves to. */
 type Guard = { name: ts.Identifier; symbol: ts.Symbol };
 
-/** One tsconfig's files, as program paths: the sources to report in and the changed tests whose imports join them. */
-type Group = { root: string; dir: string | null; sources: string[]; tests: string[] };
+/**
+ * One tsconfig's files, as program paths: the sources to report in and the changed tests whose imports join them; and
+ * the source files the run's programs share.
+ */
+type Group = Owner & { sources: string[]; tests: string[] };
 
 type FunctionLike = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
 
@@ -184,16 +195,15 @@ function guardsIn(program: ts.Program, targets: readonly string[]): Guard[] {
  * adds the tests that could assert one false, reusing what the first parsed.
  */
 function groupGuards(group: Group): Result<Guard[]> {
-  const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
+  const opened = ownerProgram(group, [...group.sources, ...group.tests]);
 
-  if (!setup.ok) return setup;
-  const { options } = setup.value;
-  const first = ts.createProgram({ options, rootNames: [...group.sources, ...group.tests] });
+  if (!opened.ok) return opened;
+  const { program: first, setup, widen } = opened.value;
   const targets = targetsOf(group, first);
 
   if (guardsIn(first, targets).length === 0) return { ok: true, value: [] };
-  const tests = [...new Set([...falseTests(group, setup.value.fileNames), ...group.tests])];
-  const program = ts.createProgram({ oldProgram: first, options, rootNames: [...targets, ...tests] });
+  const tests = [...new Set([...falseTests(group, setup.fileNames), ...group.tests])];
+  const program = widen([...targets, ...tests]);
   const checker = program.getTypeChecker();
   const testFiles = program.getSourceFiles().filter((file) => tests.includes(file.fileName));
   const asserted = new Set(testFiles.flatMap((file) => assertedFalse(file, checker)));
@@ -212,22 +222,25 @@ function diagnosticOf(root: string, { name }: Guard): Diagnostic {
 /**
  * The untested exported guards of the checked sources among `files` (root-relative POSIX paths), and of the sources
  * the tests among them import, in oxlint's line form; or why a tsconfig.json could not be read. A guard passes when a
- * test of its tsconfig asserts a call of it false.
+ * test of its tsconfig asserts a call of it false. `shared` holds the source files parsed for another check of the
+ * same run.
  */
-export function guardDiagnostics(root: string, files: readonly string[]): Result<Diagnostic[]> {
+export function guardDiagnostics(
+  root: string,
+  files: readonly string[],
+  shared: SharedSources = new Map(),
+): Result<Diagnostic[]> {
   const real = posix(fs.realpathSync(root));
-  const groups = new Map<string | null, Group>();
-
-  for (const rel of files.filter((file) => isChecked(file) || isTest(file))) {
-    const dir = ownerOf(real, rel);
-    const group = groups.get(dir) ?? { dir, root: real, sources: [], tests: [] };
-    (isTest(rel) ? group.tests : group.sources).push(path.posix.join(real, rel));
-    groups.set(dir, group);
-  }
-
   const diagnostics: Diagnostic[] = [];
 
-  for (const group of groups.values()) {
+  for (const [dir, owned] of byOwner(
+    real,
+    files.filter((file) => isChecked(file) || isTest(file)),
+  )) {
+    const group: Group = { dir, root: real, shared, sources: [], tests: [] };
+
+    for (const fileName of owned)
+      (isTest(path.posix.relative(real, fileName)) ? group.tests : group.sources).push(fileName);
     const found = groupGuards(group);
 
     if (!found.ok) return found;

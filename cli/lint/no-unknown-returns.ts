@@ -3,7 +3,7 @@ import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/u
 
 import { type FunctionOwner, functionVisitors } from "./function-visitors.ts";
 import type { RepoRule } from "./rule.types.ts";
-import { createTypeAliasEnvironment, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
+import { typeAliasEnvironmentOf, resolvedTypeMatches, type TypeAliasEnvironment } from "./type-aliases.ts";
 
 const MESSAGE =
   "This function exposes `unknown` to its caller. Parse the value at its boundary and return a named domain type.";
@@ -53,7 +53,7 @@ export const noUnknownReturns: RepoRule<"unknownReturn"> = {
     return {
       ...functionVisitors(check),
       Program(program) {
-        environment = createTypeAliasEnvironment(program, context.sourceCode.visitorKeys);
+        environment = typeAliasEnvironmentOf(program, context.sourceCode.visitorKeys);
       },
     };
   },

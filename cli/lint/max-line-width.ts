@@ -2,6 +2,7 @@ import { eastAsianWidth } from "get-east-asian-width";
 
 import { asNode, isSyntaxList, isSyntaxString, type SyntaxValue } from "../syntax-node.ts";
 import {
+  ASCII_TEXT,
   CALL_EXPRESSION,
   CODE_HINT,
   COMMENT_HINT,
@@ -19,7 +20,7 @@ import {
   URL_TEXT,
   ZERO_WIDTH,
 } from "./max-line-width.constants.ts";
-import type { RepoRule } from "./rule.types.ts";
+import type { RepoRule, RuleComment } from "./rule.types.ts";
 
 type Range = { start: number; end: number; hint: string };
 
@@ -176,36 +177,64 @@ function overflowAt(line: string): number | undefined {
   return undefined;
 }
 
-/** Fails each line wider than `PRINT_WIDTH` columns as bun fmt counts them, reported at column 121. */
+/** The hinted ranges and sealed ciphers of `program`, its comments among the ranges. */
+function gathered(program: SyntaxValue, comments: readonly RuleComment[]): Gathered {
+  const found: Gathered = { exempt: [], ranges: [] };
+  gather(program, found);
+
+  for (const comment of comments)
+    found.ranges.push({ end: comment.range[1], hint: COMMENT_HINT, start: comment.range[0] });
+
+  return found;
+}
+
+/** Whether `line` fits for sure without counting graphemes: ASCII only, one column a character, short enough. */
+function plainlyFits(line: string): boolean {
+  return line.length <= PRINT_WIDTH && ASCII_TEXT.test(line);
+}
+
+/** One source line: its text without the carriage return, its 0-based index and the source offset it starts at. */
+type Line = { text: string; index: number; start: number };
+
+/** The report of `line` when it is wider than `PRINT_WIDTH` past its exempt spans and URLs, or null. */
+function wideReport({ text, index, start }: Line, { exempt, ranges }: Gathered) {
+  const kept = keptOf(text, start, exempt);
+  const overflow = overflowAt(kept.text);
+
+  if (overflow === undefined || widthOf(kept.text.replaceAll(URL_TEXT, "")) <= PRINT_WIDTH) return null;
+  const column = lineOffset(kept, overflow);
+
+  return {
+    data: { hint: hintAt(ranges, start, start + text.length), width: String(widthOf(kept.text)) },
+    loc: { end: { column: text.length, line: index + 1 }, start: { column, line: index + 1 } },
+    messageId: "wide" as const,
+  };
+}
+
+/**
+ * Fails each line wider than `PRINT_WIDTH` columns as bun fmt counts them, reported at column 121. Exempt spans only
+ * take columns away, so a line that fits whole is passed before the program is walked for them, and a file with no
+ * wide line is never walked.
+ */
 export const maxLineWidth: RepoRule<"wide"> = {
   create(context) {
     return {
       Program(program) {
-        const found: Gathered = { exempt: [], ranges: [] };
-        gather(asNode(program), found);
-        const { exempt, ranges } = found;
+        const { sourceCode } = context;
+        let found: Gathered | null = null;
+        let start = 0;
 
-        for (const comment of context.sourceCode.getAllComments())
-          ranges.push({ end: comment.range[1], hint: COMMENT_HINT, start: comment.range[0] });
+        for (const [index, raw] of sourceCode.text.split("\n").entries()) {
+          const text = raw.replace(TRAILING_CR, "");
 
-        let lineStart = 0;
+          if (!plainlyFits(text) && overflowAt(text) !== undefined) {
+            found ??= gathered(asNode(program), sourceCode.getAllComments());
+            const report = wideReport({ index, start, text }, found);
 
-        for (const [index, raw] of context.sourceCode.text.split("\n").entries()) {
-          const line = raw.replace(TRAILING_CR, "");
-          const kept = keptOf(line, lineStart, exempt);
-          const overflow = overflowAt(kept.text);
-
-          if (overflow !== undefined && widthOf(kept.text.replaceAll(URL_TEXT, "")) > PRINT_WIDTH) {
-            const hint = hintAt(ranges, lineStart, lineStart + line.length);
-            const column = lineOffset(kept, overflow);
-            context.report({
-              data: { hint, width: String(widthOf(kept.text)) },
-              loc: { end: { column: line.length, line: index + 1 }, start: { column, line: index + 1 } },
-              messageId: "wide",
-            });
+            if (report !== null) context.report(report);
           }
 
-          lineStart += raw.length + 1;
+          start += raw.length + 1;
         }
       },
     };

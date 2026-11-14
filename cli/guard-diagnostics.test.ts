@@ -1,9 +1,11 @@
 import { afterEach, expect, it } from "vitest";
 
+import { magicDiagnostics } from "./check-magic.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import { cleanTemps, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
 import { cleanTemps as cleanRepos, consumer, SLOW as TURN, turn, write } from "./scripts/__fixtures__/turn-repo.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
+import type { SharedSources } from "./ts-program.ts";
 
 afterEach(() => {
   cleanTemps();
@@ -180,4 +182,19 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
   );
   expect(result.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint 1 over baseline · /);
   expect(result.code).toBe(1);
+});
+
+it("finds the same guards in sources the magic check of the run already parsed and bound", { timeout: SLOW }, () => {
+  const files = {
+    "src/other.ts": OTHER,
+    "src/user.test.ts": test('import { isUser } from "./user.ts";', ""),
+    "src/user.ts": USER,
+  };
+
+  const root = plant({ "tsconfig.json": TSCONFIG, ...files });
+  const checked = Object.keys(files);
+  const shared: SharedSources = new Map();
+
+  expect(magicDiagnostics(root, checked, shared).ok).toBe(true);
+  expect(guardDiagnostics(root, checked, shared)).toStrictEqual(guardDiagnostics(root, checked));
 });

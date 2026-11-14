@@ -6,7 +6,7 @@
 import { AST_NODE_TYPES, ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 
 import {
-  createTypeAliasEnvironment,
+  typeAliasEnvironmentOf,
   hasVisibleTypeBinding,
   visibleTypeAlias,
   type TypeAliasEnvironment,
@@ -50,7 +50,7 @@ export function createTypeEnvironment(program: TSESTree.Program, visitorKeys: Vi
     interfaces.set(declaration.id.name, [...(interfaces.get(declaration.id.name) ?? []), declaration]);
   }
 
-  return { interfaces, typeAliases: createTypeAliasEnvironment(program, visitorKeys) };
+  return { interfaces, typeAliases: typeAliasEnvironmentOf(program, visitorKeys) };
 }
 
 /** The name `reference` uses, or null for a qualified name such as `Namespace.Type`. */

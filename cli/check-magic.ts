@@ -21,8 +21,16 @@ import { magicStrings } from "./magic/magic-strings.ts";
 import type { Result } from "./result.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { skipFiles } from "./scripts/lint-skips.ts";
-import { isChecked, ownerOf, posix, setupOf, type Setup } from "./ts-program.ts";
-import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
+import {
+  byOwner,
+  isChecked,
+  type Owner,
+  ownerOf,
+  ownerProgram,
+  posix,
+  type Setup,
+  type SharedSources,
+} from "./ts-program.ts";
 
 function byKey(a: string, b: string) {
   return Number(a > b) - Number(a < b);
@@ -42,8 +50,11 @@ function copyNames(file: ts.SourceFile): string[] {
   return names;
 }
 
-/** One group's files: its tsconfig dir (null for none), the root and the files to report in, as program paths. */
-type Group = { root: string; dir: string | null; targets: readonly string[] };
+/**
+ * One group's files: its tsconfig dir (null for none), the root and the files to report in, as program paths; and the
+ * source files the run's programs share.
+ */
+type Group = Owner & { targets: readonly string[] };
 
 /**
  * The tsconfig's other checked files that mention a `const` string of the targets: a comparison there makes it a
@@ -72,14 +83,13 @@ function extrasOf(group: Group, setup: Setup, program: ts.Program): string[] {
 
 /** Every hit in one group's targets, from one program over them and the files that may compare to their copies. */
 function groupHits(group: Group): Result<MagicHit[]> {
-  const setup = setupOf(group.root, group.dir, RUNTIME_CONFIG);
+  const opened = ownerProgram(group, group.targets);
 
-  if (!setup.ok) return setup;
-  const { options } = setup.value;
-  const first = ts.createProgram({ options, rootNames: group.targets });
-  const extras = extrasOf(group, setup.value, first);
+  if (!opened.ok) return opened;
+  const { program: first, setup, widen } = opened.value;
+  const extras = extrasOf(group, setup, first);
   const roots = [...group.targets, ...extras];
-  const program = extras.length === 0 ? first : ts.createProgram({ oldProgram: first, options, rootNames: roots });
+  const program = extras.length === 0 ? first : widen(roots);
 
   function owns(fileName: string) {
     return isChecked(path.posix.relative(group.root, fileName));
@@ -122,21 +132,19 @@ function diagnosticsOf(root: string, hits: readonly MagicHit[]): Diagnostic[] {
 
 /**
  * The magic hits in the checked files among `files` (root-relative POSIX paths), in oxlint's line form, sorted by file
- * and position; or why a tsconfig.json could not be read.
+ * and position; or why a tsconfig.json could not be read. `shared` holds the source files parsed for another check of
+ * the same run.
  */
-export function magicDiagnostics(root: string, files: readonly string[]): Result<Diagnostic[]> {
+export function magicDiagnostics(
+  root: string,
+  files: readonly string[],
+  shared: SharedSources = new Map(),
+): Result<Diagnostic[]> {
   const real = posix(fs.realpathSync(root));
-  const groups = new Map<string | null, string[]>();
-
-  for (const rel of files.filter(isChecked)) {
-    const dir = ownerOf(real, rel);
-    groups.set(dir, [...(groups.get(dir) ?? []), path.posix.join(real, rel)]);
-  }
-
   const hits: MagicHit[] = [];
 
-  for (const [dir, targets] of groups) {
-    const found = groupHits({ dir, root: real, targets });
+  for (const [dir, targets] of byOwner(real, files.filter(isChecked))) {
+    const found = groupHits({ dir, root: real, shared, targets });
 
     if (!found.ok) return found;
     hits.push(...found.value);

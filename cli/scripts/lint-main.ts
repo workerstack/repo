@@ -1,11 +1,11 @@
 /**
- * `repo lint`: oxlint with the arguments given (the CSS paths left out; none but those: no oxlint), then the script
+ * `repo lint`: oxlint with the arguments given (the CSS paths left out; none but those: no oxlint), and the script
  * checks (magic literals, untested guards, Stylelint, Rust source rules) on the paths among them, or on the whole repo
  * with none, and with no argument at all clippy too; with `--fix` oxlint reruns until a pass rewrites no file it
  * lints, and Stylelint fixes the stylesheets before it reports.
- * Plain lint loads typescript for those checks, so one file takes about 0.6s and the whole repo about 2.5s more than
- * oxlint alone; a machine `--format` skips them. `--baseline` alone lowers and seeds the baseline from oxlint's and
- * the script checks' hits.
+ * The script checks load typescript and run while oxlint works (after it, with `--fix`), so the whole repo takes
+ * about as long as the slower of the two; a machine `--format` skips them. `--baseline` alone lowers and seeds the
+ * baseline from oxlint's and the script checks' hits.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -71,18 +71,22 @@ function oxlintOf(argv: readonly string[], named: readonly string[]): Promise<nu
 }
 
 /**
- * oxlint with `argv`, then the script hits no `lint.skip` entry turns off: of the arguments that name an existing file
- * or directory, or the whole repo when none does; clippy runs for a lint of no arguments only. Each hit is printed and
- * one hit or problem fails the run.
+ * oxlint with `argv` and, while it runs (after it, with `--fix`), the script hits no `lint.skip` entry turns off: of
+ * the arguments that name an existing file or directory, or the whole repo when none does; clippy runs for a lint of
+ * no arguments only. Each hit is printed once oxlint is done, and one hit or problem fails the run.
  */
 async function lintAndScripts(argv: string[]): Promise<number> {
   const named = argv.filter((arg) => fs.existsSync(path.resolve(process.cwd(), arg)));
-  const code = await oxlintOf(argv, named);
+  const fix = argv.includes(FIX_FLAG);
+  // Without --fix the script checks read no file oxlint writes, so they run while it works.
+  const oxlint = oxlintOf(argv, named);
 
-  if (machineFormat(argv)) return code;
+  if (machineFormat(argv)) return oxlint;
+  const fixed = fix ? await oxlint : null;
   const { scriptLintAt } = await import("../script-diagnostics.ts");
-  const scope = { clippy: argv.length === 0, fix: argv.includes(FIX_FLAG), paths: named.length === 0 ? null : named };
+  const scope = { clippy: argv.length === 0, fix, paths: named.length === 0 ? null : named };
   const found = await scriptLintAt(process.cwd(), scope);
+  const code = fixed ?? (await oxlint);
 
   for (const line of found.lines) process.stdout.write(`${line}\n`);
 
