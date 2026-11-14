@@ -1,4 +1,5 @@
 /** Temp consumer repos for the `repo turn` tests: committed, synced, with the standards pack. */
+import type { Captured } from "../lint.ts";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -122,3 +123,23 @@ export const srcConfig = (dir = ""): Record<string, string> => ({
   [path.posix.join(dir, "tsconfig.src.json")]:
     '{\n  "exclude": ["**/*.test.ts"],\n  "extends": ["./tsconfig.json", "./strict.json"]\n}\n',
 });
+
+/** A tool run that passed with no output. */
+export const OK: Captured = { code: 0, stderr: "", stdout: "" };
+
+/** The `packageManager` pin of the running bun. */
+export const PIN = `bun@${Bun.version}`;
+
+/** A private app's manifest fields. */
+export const APP = { main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
+
+/** `APP` as its package.json text. */
+export const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
+
+/** A source file with one export. */
+export const ANSWER = "export const answer = 42;\n";
+
+/** A passing test of `ANSWER`. */
+export const ANSWER_TEST =
+  'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\n' +
+  'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';

@@ -2588,6 +2588,7 @@
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
   "cli/scripts/__fixtures__/turn-repo.ts": [
     "56c3ec22d64b1b5b",
+    "6582821c714e027f",
     "674678a101b27cd8",
     "6f992e3831a68c1c",
     "8f9c8a10a45e9d89",
@@ -3084,6 +3085,7 @@
     "24a68ef7c14087b2",
     "3c4a8ad48373337f",
     "49597ea00588d08c",
+    "4c75c39a064fbb49",
     "4f94b2b98bf40e0c",
     "5b20f92b4455c827",
     "76fb88d4e9596ca7",
@@ -7193,6 +7195,7 @@
     "b48352dcb06cf746",
     "eb9862d9d36b826f"
   ],
+  "cli/scripts/precommit.test.ts": ["6463d99309edd348"],
   "cli/scripts/precommit.ts": ["8f7d6fd6161f57be"],
   "cli/scripts/prepare-item-update.ts": ["5071cd4908e7bd24"],
   "cli/scripts/prompt.ts": [
@@ -7323,6 +7326,7 @@
     "51083e98b4886c83",
     "58311a94017095c2",
     "66d296b5faf8527f",
+    "ab956b32a2401e03",
     "bb60c5eefe12f31e",
     "bd38e5e29223df5b"
   ],
@@ -8195,6 +8199,7 @@
   "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1", "f170ae4fd9909abe"],
   "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5f85051e432b3834", "ca23417ead3b41df"],
   "cli/scripts/turn-reverted.test.ts": ["c3828222a972774b", "faeee95c01e0557c"],
+  "cli/scripts/turn-scope.test.ts": ["44ad64cd311d360a"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": [
     "1185b24a2a30bcd3",
@@ -8244,6 +8249,7 @@
     "9a00d7630d5dfbfc",
     "a7e5c5170dc5bac4",
     "c278bd675e1f6a9f",
+    "ce1ccd4cab77fe30",
     "dc339a39ee7084dc",
     "de703648a043e16d",
     "edd2c41d667803d8",
@@ -8290,6 +8296,7 @@
     "27246217be7d322d",
     "3bd85dd37891a7e8",
     "508b3072c8c57750",
+    "647d7df30a43c573",
     "866af4447d748118",
     "b0fd68fc4468701c",
     "c774345e16f12f13",

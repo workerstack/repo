@@ -1,6 +1,6 @@
 ---
 name: temp-consumer-untyped-globals
-paths: ["cli/scripts/lint-plugin.test.ts","cli/guard-diagnostics.test.ts","cli/scripts/turn.test.ts","cli/scripts/lint-main.test.ts","cli/scripts/lint-repo-rules.test.ts"]
+paths: ["cli/scripts/lint-plugin.test.ts","cli/guard-diagnostics.test.ts","cli/scripts/turn.test.ts","cli/scripts/precommit.test.ts","cli/scripts/turn-scope.test.ts","cli/scripts/lint-main.test.ts","cli/scripts/lint-repo-rules.test.ts"]
 hits: 5
 last-hit: 2026-11-11
 evidence: ["plan 95","plan 97","roadmap 6","plan 150","plan 150"]

@@ -1,36 +1,20 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { afterEach, expect, it } from "vitest";
 
 import {
+  ANSWER,
+  ANSWER_TEST,
   cleanTemps,
   consumer,
-  git,
-  precommit,
   read,
   SLOW,
+  srcConfig,
   staged,
+  TSCONFIG,
   turn,
-  unstaged,
   write,
 } from "./__fixtures__/turn-repo.ts";
-import type { Captured } from "./lint.ts";
-import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
-
-import { recording, srcConfig, TSCONFIG } from "./__fixtures__/turn-repo.ts";
-
-const OK: Captured = { code: 0, stderr: "", stdout: "" };
-const PIN = `bun@${Bun.version}`;
-const APP = { main: "src/a.ts", name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
-const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
-const ANSWER = "export const answer = 42;\n";
-
-const ANSWER_TEST =
-  'import { expect, it } from "vitest";\nimport { answer } from "./answer.ts";\n\n' +
-  'it("answers", () => {\n  expect(answer).toBe(42);\n});\n';
 
 it("a clean tree has no changes", { timeout: SLOW }, async () => {
   expect(await turn(consumer({}), [])).toStrictEqual({ code: 0, err: "", out: "turn: no changes\n" });
@@ -61,69 +45,6 @@ it(
   },
 );
 
-it("precommit refuses a file with staged and unstaged changes before running anything", { timeout: SLOW }, async () => {
-  const root = consumer({ "src/a.ts": "export const a = 1;\n" });
-  write(root, { "src/a.ts": "export const a = {b:1}\n" });
-  git(root, "add", "src/a.ts");
-  write(root, { "src/a.ts": "export const a = {b:2}\n" });
-  expect(await precommit(root)).toStrictEqual({
-    code: 1,
-    err: "repo precommit: src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it\n",
-    out: "",
-  });
-  expect(read(root, "src/a.ts")).toBe("export const a = {b:2}\n");
-});
-
-it("precommit restages what fmt fixed, and an unstaged file stays out", { timeout: SLOW }, async () => {
-  const root = consumer({ "src/a.ts": "export const a = 1;\n", "src/b.ts": "export const b = 1;\n" });
-  write(root, { "src/a.ts": "export const a = {b:1}\n", "src/b.ts": "export const b = {c:1}\n" });
-  git(root, "add", "src/a.ts");
-  const result = await precommit(root);
-  expect(result.out).toMatch(/^precommit: 1 file · fmt 1 fixed · comments ok · lint ok · /);
-  expect(result.code).toBe(0);
-  expect(staged(root)).toStrictEqual(["src/a.ts"]);
-  expect(unstaged(root)).toStrictEqual(["src/b.ts"]);
-  expect(git(root, "show", ":src/a.ts")).toBe("export const a = { b: 1 };\n");
-  expect(read(root, "src/b.ts")).toBe("export const b = {c:1}\n");
-});
-
-it("a manifest change runs sync and check; a references change runs sync alone", { timeout: SLOW }, async () => {
-  const root = consumer({ "references/a.md": "# A\n" });
-  write(root, { "package.json": APP_MANIFEST });
-  const manifest = await turn(root, []);
-  expect(manifest.out).toMatch(/ · sync ok · check ok\n$/);
-  expect(manifest.code).toBe(0);
-  git(root, "checkout", "--", "package.json");
-  fs.rmSync(path.join(root, "references/a.md"));
-  const references = await turn(root, []);
-  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok\n$/);
-});
-
-it("precommit restages what lint --fix and sync rewrote, the fix formatted", { timeout: SLOW }, async () => {
-  const root = consumer({ "src/a.ts": "export const a = 1;\n" });
-  const attributes = read(root, ".gitattributes");
-  write(root, {
-    // A line dropped from the region comes back; one added there would be moved below it.
-    ".gitattributes": `${attributes}*.bin binary\n`.replace("bunfig.toml linguist-generated\n", ""),
-    "package.json": APP_MANIFEST,
-    "src/a.ts": [
-      "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n",
-      "  } else {\n    return 0;\n  }\n}\n",
-    ].join(""),
-  });
-  git(root, "add", "src/a.ts", "package.json", ".gitattributes");
-  const result = await precommit(root);
-  expect(result.out).toMatch(
-    /^precommit: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · 0 related tests · check ok\n$/,
-  );
-  expect(git(root, "show", ":src/a.ts")).toBe(
-    "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
-      "  }\n\n  return 0;\n}\n",
-  );
-  expect(git(root, "show", ":.gitattributes")).toBe(`${attributes}*.bin binary\n`);
-  expect(unstaged(root)).toStrictEqual([]);
-});
-
 it(
   "a magic number over the baseline fails lint with its line and fix; a lint.skip lets its file through",
   { timeout: SLOW },
@@ -152,61 +73,6 @@ it(
     expect(result.code).toBe(1);
   },
 );
-
-it("a sync refusal fails sync and check and prints their output", { timeout: SLOW }, async () => {
-  const root = consumer({});
-  write(root, { "package.json": APP_MANIFEST, "src/.gitignore": "x\n" });
-  const result = await turn(root, []);
-  expect(result.out).toMatch(/ · sync failed · check failed\n$/);
-  expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
-  expect(result.code).toBe(1);
-});
-
-// The fields in the order bun fmt's sortPackageJson writes them, so the planted package passes fmt.
-const WORKSPACE_ROOT = { main: "src/root.ts", name: "app", packageManager: PIN, private: true, type: "module" };
-
-const API_MANIFEST =
-  '{\n  "name": "api",\n  "private": true,\n  "type": "module",\n  "sideEffects": false,\n' +
-  '  "exports": {\n    "./a": "./src/a.ts",\n    "./b": "./src/b.ts"\n  }\n}\n';
-
-it("a path is the whole package owning it, typechecked on its own tsconfig", { timeout: SLOW }, async () => {
-  const root = consumer({
-    "package.json": `${JSON.stringify({ ...WORKSPACE_ROOT, workspaces: ["packages/*"] }, null, 2)}\n`,
-    "packages/api/package.json": API_MANIFEST,
-    "packages/api/tsconfig.json": TSCONFIG,
-    ...srcConfig("packages/api"),
-    "packages/api/src/a.ts": "export const a = 42;\n",
-    "packages/api/src/b.ts": "export const b = 42;\n",
-    "src/root.ts": "export const root = 42;\n",
-  });
-
-  const { bins, calls } = recording(root);
-  const result = await turn(root, ["packages/api/src"], bins);
-  expect(result.out).toBe(
-    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · check ok\n",
-  );
-  expect(calls).toStrictEqual(["tsc . --noEmit -p packages/api", "tsc . --noEmit -p packages/api/tsconfig.src.json"]);
-});
-
-it("a failing typecheck and failing tests print their output and fail precommit", { timeout: SLOW }, async () => {
-  const root = consumer({ "tsconfig.json": TSCONFIG, ...srcConfig(), "src/a.ts": "export const a = 42;\n" });
-  write(root, { "src/a.ts": "export const a = 41;\n" });
-  git(root, "add", "src/a.ts");
-
-  const bins: Bins = {
-    tsc: (args): Captured =>
-      args.includes("tsconfig.src.json") ? OK : { code: 2, stderr: "", stdout: "src/a.ts(1,7): error TS2322: no.\n" },
-    vitest: (): Captured => ({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
-  };
-
-  const result = await precommit(root, bins);
-  expect(result.out).toBe(
-    "precommit: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · " +
-      "4 related tests, 1 failed\n",
-  );
-  expect(result.err).toBe("src/a.ts(1,7): error TS2322: no.\n Tests  1 failed | 3 passed (4)\n");
-  expect(result.code).toBe(1);
-});
 
 it("refuses unknown flags and a repo without the standards pack", { timeout: SLOW }, async () => {
   const root = consumer({});

@@ -1,12 +1,9 @@
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, consumer, git, SLOW, turn, write } from "./__fixtures__/turn-repo.ts";
-import type { Captured } from "./lint.ts";
+import { cleanTemps, consumer, git, OK, SLOW, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
-
-const OK: Captured = { code: 0, stderr: "", stdout: "" };
 
 it(
   "a source change that widens a type fails the owner's reject file; once it rejects again the step is ok",

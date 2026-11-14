@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, consumer, SLOW, srcConfig, TSCONFIG, turn, write } from "./__fixtures__/turn-repo.ts";
+import { cleanTemps, consumer, OK, SLOW, srcConfig, TSCONFIG, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);
@@ -15,8 +15,6 @@ function noSrc(dir: string): string {
     "and adds the tests\n"
   );
 }
-
-const OK: Captured = { code: 0, stderr: "", stdout: "" };
 
 const WORKSPACE = `${JSON.stringify({
   name: "app",

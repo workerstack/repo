@@ -1,14 +1,23 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-import { cleanTemps, consumer, read, SLOW, srcConfig, tempDir, TSCONFIG, write } from "./__fixtures__/turn-repo.ts";
+import {
+  ANSWER,
+  cleanTemps,
+  consumer,
+  PIN,
+  read,
+  SLOW,
+  srcConfig,
+  tempDir,
+  TSCONFIG,
+  write,
+} from "./__fixtures__/turn-repo.ts";
 import { main } from "./ci.ts";
 
 afterEach(() => {
   cleanTemps();
   vi.restoreAllMocks();
 });
-
-const PIN = `bun@${Bun.version}`;
 
 const MANIFEST = `${JSON.stringify(
   {
@@ -29,7 +38,6 @@ const MANIFEST = `${JSON.stringify(
 /** The two lint findings a test that skips itself at runtime has, which the baseline allows. */
 const SKIP_FINDINGS = { "repo(skip-on-platform)": 1, "vitest(expect-expect)": 1 };
 const BASELINE = `${JSON.stringify({ "src/answer.test.ts": SKIP_FINDINGS }, null, 2)}\n`;
-const ANSWER = "export const answer = 42;\n";
 
 const ANSWER_TEST =
   'import { expect, it } from "vitest";\n\nimport { answer } from "./answer.ts";\n\n' +
