@@ -1,6 +1,6 @@
 import { globToRegExp } from "./lesson-file.ts";
 /**
- * `(parallel: …)` groups on plan phases and roadmap slices: the marker's entries and the checks a
+ * `(parallel: …)` groups on plan phases, fast plan steps and roadmap slices: the marker's entries and the checks a
  * group must pass. An entry is a file, a folder ending `/`, or a glob; two entries overlap when one
  * path could match both.
  */
@@ -77,6 +77,7 @@ type Group = {
 const WORDS = {
   phase: { items: "files", list: "list the files it writes after parallel:" },
   slice: { items: "paths", list: "list the paths it changes after parallel:" },
+  step: { items: "files", list: "list the files it writes after parallel:" },
 } as const;
 
 type Kind = keyof typeof WORDS;
@@ -119,7 +120,7 @@ function groupErrors(group: Group, kind: Kind): string[] {
 }
 
 /**
- * Adjacent marked phases or slices form a group that may run at once, so their entries must not
+ * Adjacent marked phases, steps or slices form a group that may run at once, so their entries must not
  * overlap. A group needs two or more members, and each member must list what it writes.
  */
 export function parallelGroupErrors(members: readonly Member[], kind: Kind): string[] {

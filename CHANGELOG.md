@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Roadmap and fast roadmap slices may end `(parallel: <path>, …)`; the save denies a lone, empty, shared or overlapping group, and the roadmap writers and /review-roadmap mark and check groups. Parallel entries on plan phases and slices may be folders ending `/` or globs, phases whose entries overlap are denied, and `bun repo phase-files` owns a file under a folder or glob entry.
 - On Claude Code, approve, hand off or revise a plan or roadmap by clicking an AskUserQuestion picker the Stop hook renders from the files; a gate holds the agent to the exact input, and Codex, Cursor, Antigravity, Grok and away keep the typed block.
 - `bun repo precommit` gates the index for a commit: fmt, disable comments, lint and its baseline, typecheck, reject files, sync, stock history, related tests and check, prefixing every line with `repo precommit:` and its summary with `precommit:`. It takes no arguments.
+- Fast plan steps may end with `(parallel: <path>, …)`: the save denies a lone, empty, shared or overlapping group and a marker on a Verify box, and spawn runs of /implement-plan-fast run a marked group at once and check it with `bun repo phase-files` on the fast plan's path.
 
 ### Changed
 

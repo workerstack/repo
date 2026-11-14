@@ -27,3 +27,8 @@ export const FINAL_NEWLINE_RE: RegExp = /\n$/;
 export const ONLY_SECTIONS = "a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes";
 export const TOO_LONG = "a fast plan is at most 40 lines; write a plan (/write-plan-deep)";
 export const ONLY_OPEN_BOXES = "a new fast plan has only [ ] boxes";
+
+/** The denial of a Verify box that ends with `(parallel: …)`. */
+export function verifyParallelError(id: string): string {
+  return `verify box ${id} ends with parallel:; only steps may run at once`;
+}

@@ -262,7 +262,7 @@
     "f01909910bdbeac9"
   ],
   ".agents/skills/implement-plan-deep/SKILL.md": ["8af288f2269b706e"],
-  ".agents/skills/implement-plan-fast/SKILL.md": ["fed5763853f9f532"],
+  ".agents/skills/implement-plan-fast/SKILL.md": ["fdb2059dfdf1e7ce"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
     "19b9a67082b5ffc4",
@@ -421,7 +421,7 @@
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
   ".agents/skills/write-plan-deep/SKILL.md": ["7f6e5bc26e86d5c0"],
-  ".agents/skills/write-plan-fast/SKILL.md": ["36f97168fab6538e"],
+  ".agents/skills/write-plan-fast/SKILL.md": ["763fb822979db4fc"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
     "1d2cfbedeea5a019",
@@ -2265,6 +2265,7 @@
     "4fa5d8c08371513e",
     "8f71c61551d7af2e",
     "9595d7dbe4d73698",
+    "fdb2059dfdf1e7ce",
     "fed5763853f9f532"
   ],
   "agents/skills/implement-plan/SKILL.md": [
@@ -2341,6 +2342,7 @@
   "agents/skills/write-plan-fast/SKILL.md": [
     "1526693b464d404e",
     "36f97168fab6538e",
+    "763fb822979db4fc",
     "d56078320f4fc34e",
     "f5e15f2148b40d71"
   ],
@@ -6374,7 +6376,7 @@
   "cli/scripts/package-bin.ts": ["273e4ba2646739e6", "7747021102b0ddaa", "97def7091f80ed3d", "9c46a6e356d560bd"],
   "cli/scripts/parallel-groups.constants.ts": ["505ffb7a469ab32d"],
   "cli/scripts/parallel-groups.test.ts": ["d9830c59b556b81b"],
-  "cli/scripts/parallel-groups.ts": ["d1904d21c26b8145"],
+  "cli/scripts/parallel-groups.ts": ["d1904d21c26b8145", "e7be69b1676010f0"],
   "cli/scripts/parse-need-fields.test.ts": [
     "090498f6ddab753b",
     "09e3ef50fa3b3720",
@@ -6447,15 +6449,18 @@
     "e78d7df14c2503fa"
   ],
   "cli/scripts/persist-fast-plan-mistakes.test.ts": ["2ea5784e4a8aa5cc", "4f96434b298d1475", "6f0e0effb10cd99d"],
+  "cli/scripts/persist-fast-plan-parallel.test.ts": ["b11f8cc0cdfdf206"],
   "cli/scripts/persist-fast-plan-validate.ts": [
     "5a0a9c583c20d19a",
     "79925e487e0658ed",
     "8a632410bc6ee827",
-    "f069acaa227cfcbe"
+    "f069acaa227cfcbe",
+    "fb4d2d4f637f3108"
   ],
   "cli/scripts/persist-fast-plan.constants.ts": [
     "4a14fe0b2f9a0706",
     "739ca703c4c3a7c4",
+    "8c626d3614c29fa9",
     "e394f422cef72059",
     "eced50987d39de01"
   ],
@@ -7145,7 +7150,8 @@
     "99b1c6b6fdab0af8",
     "a3a127a9b476e02c",
     "a4ba880a0eff338a",
-    "a8079398310ecfb4"
+    "a8079398310ecfb4",
+    "e3514b6d5b62681f"
   ],
   "cli/scripts/phase-files.ts": [
     "1f203620b68970bd",
@@ -8727,6 +8733,7 @@
     "62d5c6025beba6ed",
     "84ecd882159e2323",
     "b7a8ee54bb338394",
+    "d0480b6bdfd92f4d",
     "d9bb9889b4354f5d"
   ],
   "references/fast-roadmap-format.md": [
@@ -8872,6 +8879,7 @@
     "6d87ca841c845b70",
     "7bb47085b4231e88",
     "854dcaac0df8fdbf",
+    "a4e30794ca38a1bd",
     "a6800e14137b58cc"
   ],
   "references/roadmap-format.md": [

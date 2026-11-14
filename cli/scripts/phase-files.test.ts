@@ -209,3 +209,23 @@ describe("phase-files", () => {
     expect(err.join("")).toContain("git status failed");
   });
 });
+
+describe("phase-files on a fast plan", () => {
+  it("maps changed files to the steps of a fast plan path", () => {
+    const fast = path.join(mainRepo, ".repo/plans-fast/3-y-20260101T000000Z.md");
+
+    const steps = [
+      "1 [ ] parse (parallel: src/a.ts)",
+      "2 [ ] print (parallel: docs/b.md)",
+      "",
+      "## Verify",
+      "3 [ ] ok",
+    ];
+
+    fs.mkdirSync(path.dirname(fast), { recursive: true });
+    fs.writeFileSync(fast, ["---", "serial: 3", "name: y", "---", "", "# y", "", "## Steps", ...steps, ""].join("\n"));
+    write("src/a.ts", "changed\n");
+    write("docs/b.md");
+    expect(run(fast, "1,2")).toStrictEqual({ code: 0, err: "", out: "phase 1  src/a.ts\nphase 2  docs/b.md\n" });
+  });
+});

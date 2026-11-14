@@ -1,4 +1,5 @@
 /** `validateFastPlan`: the head checks a plan shares, then the four fast plan denials. */
+import { parallelGroupErrors, parallelList } from "./parallel-groups.ts";
 import { commitCheck } from "./persist-doc-checks.ts";
 import { LAST, MISTAKES_H2, NOT_FOUND } from "./persist-doc.constants.ts";
 import {
@@ -10,9 +11,11 @@ import {
   ONLY_OPEN_BOXES,
   ONLY_SECTIONS,
   TOO_LONG,
+  verifyParallelError,
 } from "./persist-fast-plan.constants.ts";
 import { type FastRules, validateFastDoc } from "./persist-fast-validate.ts";
 import { PLAN_MISTAKE_SOURCES } from "./persist-mistakes.ts";
+import { planBoxes } from "./persist-plan-boxes.ts";
 import { STATUS_RE } from "./persist-plan.constants.ts";
 import { lastHeadingIndex } from "./persist-sections.ts";
 
@@ -43,8 +46,16 @@ export function fastPlanLineCount(text: string, skip?: RegExp): number {
   return lines.filter((l) => !SAVED_KEY_LINE_RE.test(l) && skip?.test(l) !== true).length;
 }
 
+/** The Steps' `(parallel: …)` groups, and a marker on a Verify box, which never runs at once. */
+function parallelStepErrors({ Steps = "", Verify = "" }: Record<string, string>): string[] {
+  const steps = planBoxes(Steps).map((b) => ({ files: parallelList(b.text), id: b.id }));
+  const marked = planBoxes(Verify).filter((b) => parallelList(b.text) !== null);
+
+  return [...parallelGroupErrors(steps, "step"), ...marked.map((b) => verifyParallelError(b.id))];
+}
+
 const RULES: FastRules = {
-  content: () => [],
+  content: ({ bodies }) => parallelStepErrors(bodies),
   extraHead: [commitCheck],
   headings: FAST_H2,
   lineCap: FAST_LINE_CAP,

@@ -10,7 +10,7 @@ Persist under `.repo/plans-fast/` via Write (hook runs `cli/scripts/persist-fast
 
 Empty task → ask for a task and stop.
 
-Body's first line is `FAST_PLAN_NAME: <3-6 word name>`, then `commit: type(scope): subject` and `advice:`, `# {slug}`, and `## Goal`, `## Steps`, `## Verify`. Nothing else: no card, Usage, Context, review, principle leaf or lesson. Steps and Verify are flat `N [ ] text` boxes. The whole file, frontmatter included and the `strategy:` and `advice:` lines not counted, is at most 40 lines; work over that is `/write-plan-deep`.
+Body's first line is `FAST_PLAN_NAME: <3-6 word name>`, then `commit: type(scope): subject` and `advice:`, `# {slug}`, and `## Goal`, `## Steps`, `## Verify`. Nothing else: no card, Usage, Context, review, principle leaf or lesson. Steps and Verify are flat `N [ ] text` boxes. When adjacent steps write disjoint files and need nothing from each other, end each with `(parallel: <path>, …)` listing every file it writes, so a spawn run can do them at once; never mark a Verify box. The whole file, frontmatter included and the `strategy:` and `advice:` lines not counted, is at most 40 lines; work over that is `/write-plan-deep`.
 
 Never write a `strategy:` line: the save sets it from the session value (`/set`, `bun repo set`), then the newest in-progress fast roadmap this session saved, then `agents.defaultStrategy`, then `free`; a line that differs is denied. Send `advice: {free|spawn-fast|spawn-deep} because {reason}` (at most 100 characters) on its own line beside `commit:` with the value the scope argues for: `free` for one file or docs, `spawn-fast` for code across several files, `spawn-deep` for a hook, a gate or hard-to-undo work.
 
