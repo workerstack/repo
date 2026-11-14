@@ -39,8 +39,9 @@ it("precommit writes and stages the table with the staged, formatted stock file"
   expect(readStockHistory(path.join(root, TABLE))[HOOKS]).toStrictEqual([hashText(formatted)]);
   expect(fs.readFileSync(STOCK_HISTORY_FILE, "utf8")).toBe(own);
 
+  // The table joined after fmt and lint passed, so only they run again.
   const again = await precommit(root);
-  expect(again.out).toMatch(/ · stock history ok · /);
+  expect(again.out).toBe("precommit: 2 files · fmt ok · lint ok · 4 cached\n");
   expect(again.code).toBe(0);
   expect(git(root, "diff", "--name-only")).toBe("");
 });
@@ -50,10 +51,16 @@ it("turn writes the table from the working tree and stages nothing", { timeout: 
   const rule = "agents/rules/a.md";
   write(root, { [rule]: "# A\n" });
   const result = await turn(root, []);
-  expect(result.out).toMatch(/ · stock history written\n$/);
+  expect(result.out).toMatch(/ · stock history written · /);
   expect(result.code).toBe(0);
   expect(staged(root)).toStrictEqual([]);
   expect(readStockHistory(path.join(root, TABLE))[rule]).toStrictEqual([hashText("# A\n")]);
+
+  // Another edit keeps the rule and the table it already wrote, so the table stays as it is.
+  write(root, { "docs/a.md": "# A\n" });
+  const next = await turn(root, []);
+  expect(next.out).toMatch(/ · stock history ok · /);
+  expect(next.code).toBe(0);
 });
 
 it("fails the turn and stages no table when the formatter cannot run", { timeout: SLOW }, async () => {

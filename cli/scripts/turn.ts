@@ -4,7 +4,8 @@
  * checkout) and check, precommit also with related tests before check, each step only when its inputs changed, then
  * prints one summary line. Only precommit restages, only what it rewrote, and right after the step that rewrote it, so
  * a later step reads the index as the commit will hold it. A file a step returned to the base leaves the change set
- * before the next step, and a gate with no change left runs no more steps.
+ * before the next step, and a gate with no change left runs no more steps. A step a passing gate ran is recorded
+ * under its key, and a later gate skips it while the key holds.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -16,10 +17,12 @@ import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import type { Result } from "../result.ts";
 import { nodeRange } from "../sync/node-range.ts";
 import { readWorkspace } from "../sync/workspace.ts";
+import type { Workspace } from "../sync/workspace.ts";
 import { changeSet, type Change, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { capture, captureBun, type Captured } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
+import { hasPass, passKeys, recordPasses } from "./pass-cache.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { stockHistoryStep } from "./stock-history-step.ts";
 import {
@@ -121,26 +124,26 @@ function parseTurn(argv: readonly string[], cwd: string, root: string): Parsed {
   return { ok: true, scope: { kind: "package", rel } };
 }
 
-/** The steps both gates run before related tests. */
+/** The steps both gates run before related tests: the ones that write files, then the ones that only read. */
 export const BEFORE_TESTS: readonly Step[] = [
   fmtStep,
-  commentsStep,
   lintStep,
-  typecheckStep,
-  rejectionsStep,
   syncStep,
   stockHistoryStep,
+  commentsStep,
+  typecheckStep,
+  rejectionsStep,
 ];
 
 /** The agent's gate runs no tests. */
 const TURN: Gate = { name: "turn", parse: parseTurn, steps: [...BEFORE_TESTS, checkStep] };
 
-/** The root, its packages and the change set, or why turn cannot start. */
+/** The root, its packages and the change set with the workspace read, or why turn cannot start. */
 async function prepare(
   gate: Gate,
   argv: readonly string[],
   { cwd, bins }: { cwd: string; bins: Bins },
-): Promise<{ ok: true; turn: Turn } | { ok: false; errors: string[] }> {
+): Promise<{ ok: true; turn: Turn; workspace: Workspace } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
 
   if (root === null) return { errors: [missingConfig(cwd)], ok: false };
@@ -163,7 +166,7 @@ async function prepare(
   const { skip: skips } = loaded.config.lint;
   const turn = { bins, changes: changes.changes, command: gate.name, packages, root, scope: parsed.scope, skips };
 
-  return { ok: true, turn };
+  return { ok: true, turn, workspace: workspace.workspace };
 }
 
 /**
@@ -180,53 +183,82 @@ function restage(turn: Turn, touched: readonly string[], stderr: (s: string) => 
 }
 
 /**
- * The steps' results, false for `isRestaged` when a restage under precommit failed, and true for `isEmptied` when a
- * step returned every change to the base.
+ * The steps' results, false for `isRestaged` when a restage under precommit failed, true for `isEmptied` when a
+ * step returned every change to the base, the keys of the steps that passed, and how many steps a key skipped.
  */
-type Ran = { results: StepResult[]; isRestaged: boolean; isEmptied: boolean };
+type Ran = { results: StepResult[]; isRestaged: boolean; isEmptied: boolean; passes: string[]; cached: number };
 
 /**
- * The changes git still lists after a step rewrote files: one the step returned to the base leaves, and none joins.
- * The package scope gates every file, so it keeps them all. A failed read keeps the set: under precommit it fails
- * only after a failed restage, which has already failed the turn and said what to stage.
+ * The changes git still lists after a step rewrote files: one the step returned to the base leaves, one it wrote
+ * joins, and no other joins. The package scope gates every file, so it keeps them all. A failed read keeps the set:
+ * under precommit it fails only after a failed restage, which has already failed the turn and said what to stage.
  */
-function remaining(turn: Turn): readonly Change[] {
+function remaining(turn: Turn, touched: readonly string[]): readonly Change[] {
   if (turn.scope.kind === "package") return turn.changes;
   const now = changeSet(turn.root, turn.scope, turn.packages);
 
   if (!now.ok) return turn.changes;
-  const listed = new Set(now.changes.map((change) => change.rel));
+  const gated = new Set([...turn.changes.map((change) => change.rel), ...touched]);
 
-  return turn.changes.filter((change) => listed.has(change.rel));
+  return now.changes.filter((change) => gated.has(change.rel));
+}
+
+/** The changes left after a step that ran, with the keys moved to the files it left. */
+function settle(turn: Turn, result: StepResult, keys: { moved: () => void }): readonly Change[] {
+  keys.moved();
+
+  return result.touched.length === 0 ? turn.changes : remaining(turn, result.touched);
+}
+
+/** Prints a step's output and, under precommit, restages what it rewrote; false when that restage failed. */
+function report(turn: Turn, result: StepResult, stderr: (s: string) => void): boolean {
+  for (const chunk of result.output) stderr(chunk);
+
+  return turn.scope.kind !== "staged" || restage(turn, result.touched, stderr);
 }
 
 /**
- * Runs every step whose inputs changed, printing a failed step's output as it ends, under precommit restaging what
- * it rewrote, and after a rewrite dropping the changes it returned to the base, before the next step.
+ * Runs every step whose inputs changed and whose key has no pass, printing a failed step's output as it ends, under
+ * precommit restaging what it rewrote, and after a rewrite dropping the changes it returned to the base, before the
+ * next step. A step's pass is keyed on the files right after it ran, its own rewrites in.
  */
-async function runSteps(steps: readonly Step[], start: Turn, stderr: (s: string) => void): Promise<Ran> {
+async function runSteps(
+  steps: readonly Step[],
+  { turn: start, workspace }: { turn: Turn; workspace: Workspace },
+  stderr: (s: string) => void,
+): Promise<Ran> {
   let changes = start.changes;
   let isRestaged = true;
+  let cached = 0;
   const results: StepResult[] = [];
+  const passes: string[] = [];
+  const keys = passKeys(workspace);
 
   for (const step of steps) {
     const turn: Turn = { ...start, changes };
+    const before = keys.key(step.name, changes);
+
+    if (before !== null && hasPass(turn.root, before)) {
+      cached += 1;
+      continue;
+    }
+
     const result = await step(turn);
 
     if (result === null) continue;
 
-    for (const chunk of result.output) stderr(chunk);
-
-    if (turn.scope.kind === "staged" && !restage(turn, result.touched, stderr)) isRestaged = false;
+    if (!report(turn, result, stderr)) isRestaged = false;
     results.push(result);
 
-    if (result.touched.length === 0) continue;
-    changes = remaining(turn);
+    changes = settle(turn, result, keys);
+    const after = keys.key(step.name, changes);
 
-    if (changes.length === 0) return { isEmptied: true, isRestaged, results };
+    if (result.ok && after !== null) passes.push(after);
+
+    if (changes.length === 0) return { cached, isEmptied: true, isRestaged, passes, results };
   }
 
-  return { isEmptied: false, isRestaged, results };
+  return { cached, isEmptied: false, isRestaged, passes, results };
 }
 
 /** The deps with the process's own for each one left out. */
@@ -258,12 +290,16 @@ export async function gateMain(gate: Gate, argv: readonly string[], deps: TurnDe
     return 0;
   }
 
-  const { results, isRestaged, isEmptied } = await runSteps(gate.steps, turn, stderr);
+  const { results, isRestaged, isEmptied, passes, cached } = await runSteps(gate.steps, prepared, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
-  const labels = [...results.map((result) => result.label), ...(isEmptied ? ["no changes left"] : [])];
+  const ran = results.map((result) => result.label);
+  const labels = [...ran, ...(cached > 0 ? [`${cached} cached`] : []), ...(isEmptied ? ["no changes left"] : [])];
   stdout(`${gate.name}: ${files} · ${labels.join(" · ")}\n`);
+  const isPassed = isRestaged && results.every((result) => result.ok);
 
-  return isRestaged && results.every((result) => result.ok) ? 0 : 1;
+  if (isPassed) recordPasses(turn.root, passes);
+
+  return isPassed ? 0 : 1;
 }
 
 /** `repo turn [<path>]`: the agent's gate over the working tree or one package, without tests. */

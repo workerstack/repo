@@ -71,6 +71,6 @@ it("precommit reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets
   expect(unset.out).toBe("precommit: no changes\n");
   vi.stubEnv("GIT_INDEX_FILE", index);
   const named = await precommit(root);
-  expect(named.out).toMatch(/^precommit: 1 file · fmt ok · comments ok · lint ok · /);
+  expect(named.out).toMatch(/^precommit: 1 file · fmt ok · lint ok · comments ok · /);
   expect(read(root, "src/b.ts")).toBe("export const b = 1;\n");
 });

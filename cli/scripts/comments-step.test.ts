@@ -62,7 +62,7 @@ it(
     write(root, { "package.json": APP_MANIFEST, "src/a.ts": "export const a = 1;\n// @ts-ignore\n" });
     const result = await turn(root, []);
     expect(result.code).toBe(1);
-    expect(result.out).toMatch(/^turn: 2 files · fmt [^·]+ · comments 1 refused · .* · check failed\n$/);
+    expect(result.out).toMatch(/^turn: 2 files · fmt [^·]+ · lint ok · .* · comments 1 refused · .* · check failed\n$/);
     expect(result.err).toContain(`src/a.ts:2: ${IGNORE}\n`);
     expect(result.err).toContain(`repo check: src/a.ts:2: ${IGNORE}\n`);
   },

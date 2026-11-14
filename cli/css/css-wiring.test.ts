@@ -88,7 +88,7 @@ it("repo precommit fixes and restages a sheet, then fails on a hit no fix remove
   write(root, { "src/bad.css": BAD_CSS });
   git(root, "add", "src/bad.css");
   const fixed = await precommit(root);
-  expect(fixed.out).toMatch(/^precommit: 1 file · fmt ok · comments ok · lint ok · /);
+  expect(fixed.out).toMatch(/^precommit: 1 file · fmt ok · lint ok · comments ok · /);
   expect(fixed.code).toBe(0);
   expect(read(root, "src/bad.css")).toBe(FIXED_CSS);
   expect(git(root, "show", ":src/bad.css")).toBe(FIXED_CSS);

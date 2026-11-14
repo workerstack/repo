@@ -2596,6 +2596,7 @@
     "fbaa73dc781f31f1"
   ],
   "cli/scripts/__fixtures__/throw-on-write.ts": ["f660f96f83fb0082"],
+  "cli/scripts/__fixtures__/turn-cache-kit.ts": ["3210c8aa32dee287"],
   "cli/scripts/__fixtures__/turn-repo.ts": [
     "53dbda6d5d9c26be",
     "56c3ec22d64b1b5b",
@@ -3472,6 +3473,7 @@
     "03ba45a93f3e38fc",
     "3c191042192fa44c",
     "4737aa54f64c83b4",
+    "76fdcf360347a11d",
     "86ac7fdac67ab50b",
     "b3be7dc4a6ffbac0",
     "c8c8b3b1b1b1b172",
@@ -3534,6 +3536,7 @@
     "50d50e278be2600d",
     "561f7348eae43150",
     "5c242be107a2a5a5",
+    "5da697e4496e33cf",
     "9789e2ed64838739",
     "a2d666af55261fc7",
     "bcb7b41ce4c56b46",
@@ -6498,6 +6501,8 @@
   "cli/scripts/parsed-argv.types.ts": ["57795d6b5f3a280d"],
   "cli/scripts/parsed-fetch.test.ts": ["95bdc9ad8d49d8f1"],
   "cli/scripts/parsed-fetch.ts": ["92fe17d467946539"],
+  "cli/scripts/pass-cache.constants.ts": ["a9b2f6dd1c54f728"],
+  "cli/scripts/pass-cache.ts": ["9a1a83ad7e3ef9c5"],
   "cli/scripts/pattern-words.constants.ts": ["9f1af84f047b571d"],
   "cli/scripts/pattern-words.ts": ["4778b5d486d984d1"],
   "cli/scripts/persist-doc-checks.ts": [
@@ -7255,7 +7260,7 @@
     "b48352dcb06cf746",
     "eb9862d9d36b826f"
   ],
-  "cli/scripts/precommit.test.ts": ["6463d99309edd348", "9528cac7cd14b5b2"],
+  "cli/scripts/precommit.test.ts": ["6463d99309edd348", "9528cac7cd14b5b2", "d633c1524e997804"],
   "cli/scripts/precommit.ts": ["8f7d6fd6161f57be"],
   "cli/scripts/prepare-item-update.ts": ["5071cd4908e7bd24"],
   "cli/scripts/prompt.ts": [
@@ -7390,7 +7395,8 @@
     "66d296b5faf8527f",
     "ab956b32a2401e03",
     "bb60c5eefe12f31e",
-    "bd38e5e29223df5b"
+    "bd38e5e29223df5b",
+    "c5f8e07ac9758841"
   ],
   "cli/scripts/rejections-step.ts": [
     "156fa39c0866e6e8",
@@ -8006,7 +8012,7 @@
   "cli/scripts/stock-history-collect.constants.ts": ["c6dbf4569ab0e723"],
   "cli/scripts/stock-history-collect.test.ts": ["024508ff88661750", "8435a5cc3bec0bbe"],
   "cli/scripts/stock-history-collect.ts": ["dfa30aa05cf89526", "e16d34c8dce85cf1"],
-  "cli/scripts/stock-history-step.test.ts": ["6ea68c4ce979a37d", "c34df25e6d0f1f16"],
+  "cli/scripts/stock-history-step.test.ts": ["6ea68c4ce979a37d", "70f7276f0de697aa", "c34df25e6d0f1f16"],
   "cli/scripts/stock-history-step.ts": ["07a344b7740c0375", "5dc0caf8db7c966c", "91ed01dd067f81db", "dcf803bc4ef639a2"],
   "cli/scripts/strategy-stamp.test.ts": [
     "0cdc3b188a4e17dd",
@@ -8225,6 +8231,7 @@
     "378a3313cc2e22f8",
     "466152b48d520179",
     "4cbd395a23030473",
+    "5b553971398c10cc",
     "64cd8c85e9b59e6a",
     "737cdbd5cd16ff0c",
     "7f11911a18412fdc",
@@ -8233,6 +8240,8 @@
     "ef0912258ae33a70",
     "ff9a7a12e0084b3c"
   ],
+  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c"],
+  "cli/scripts/turn-cache.test.ts": ["101990a687eeb816", "4c690abadeec153d"],
   "cli/scripts/turn-edges.test.ts": [
     "118e2e6c40512b34",
     "1d1a2df75d51169e",
@@ -8242,6 +8251,7 @@
     "4f8aa590bab79b05",
     "7d6ee465f2ba42e2",
     "aefc97e9b853e7de",
+    "bd194e061d8968a8",
     "c05a2b8c5cb398ef",
     "c154f75854967a57",
     "cffaead7383728e5",
@@ -8252,6 +8262,7 @@
     "16394af68046a081",
     "1a15087a8f85d69d",
     "2c305a2049ce243c",
+    "2e503d1c4275ec04",
     "444edade40c240ce",
     "4b7a35e52b3794d0",
     "4bd82cd84e82c8a4",
@@ -8260,10 +8271,10 @@
     "bd13bdb0892fac4d",
     "f7f095d24a461ce1"
   ],
-  "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1", "f170ae4fd9909abe"],
+  "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1", "e0874963acbfc1b5", "f170ae4fd9909abe"],
   "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5b23a8e41551cfe9", "5f85051e432b3834", "ca23417ead3b41df"],
-  "cli/scripts/turn-reverted.test.ts": ["4df7f5ff2661bef9", "c3828222a972774b", "faeee95c01e0557c"],
-  "cli/scripts/turn-scope.test.ts": ["0c57cd0b0fd9ae4c", "44ad64cd311d360a"],
+  "cli/scripts/turn-reverted.test.ts": ["0bea80142d57c1e2", "4df7f5ff2661bef9", "c3828222a972774b", "faeee95c01e0557c"],
+  "cli/scripts/turn-scope.test.ts": ["0c57cd0b0fd9ae4c", "44ad64cd311d360a", "7c82258cfb205adc"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": [
     "1185b24a2a30bcd3",
@@ -8313,6 +8324,7 @@
     "945c05195d9fd5e7",
     "9a00d7630d5dfbfc",
     "a7e5c5170dc5bac4",
+    "b2f4940db1644803",
     "c278bd675e1f6a9f",
     "ce1ccd4cab77fe30",
     "dc339a39ee7084dc",
@@ -8339,6 +8351,7 @@
     "9632b943517fdb59",
     "9be4e014defe4631",
     "ac2d859aca6fcb51",
+    "c00ab86ea2dee47b",
     "e1a08ae9074cfd28",
     "ea10ad0dfba620fd",
     "ec9eb89952f047ca"
@@ -8370,6 +8383,7 @@
     "81c4726f5ce0601b",
     "866af4447d748118",
     "b0fd68fc4468701c",
+    "be09c1afc1e3fda5",
     "c774345e16f12f13",
     "d4651b697ad5c8bf",
     "d91f19e01c621721",

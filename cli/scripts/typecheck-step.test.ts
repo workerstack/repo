@@ -127,7 +127,7 @@ it(
 
     write(root, { "src/size.ts": "export function size(s: string) {\n  return s.length;\n}\n" });
     const result = await turn(root, []);
-    expect(result.out).toBe("turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.src.json)\n");
+    expect(result.out).toBe("turn: 1 file · fmt ok · lint ok · comments ok · typecheck failed (tsconfig.src.json)\n");
     // tsc ends its lines with the platform's EOL.
     expect(result.err.replaceAll("\r\n", "\n")).toBe(
       "src/size.ts(1,17): error TS9007: Function must have an explicit return type annotation " +
@@ -151,7 +151,7 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
   const fake = fakeTsc([]);
   const result = await turn(root, [], fake.bins);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (packages/api/tsconfig.src.json missing)\n",
+    "turn: 1 file · fmt ok · lint ok · comments ok · typecheck failed (packages/api/tsconfig.src.json missing)\n",
   );
   expect(result.err).toBe(noSrc("packages/api"));
   expect(fake.projects()).toStrictEqual(["packages/api/tsconfig.json"]);
@@ -167,6 +167,8 @@ it("typecheck runs both configs per owner and names each failing config by path"
   expect(pass.projects()).toStrictEqual(CONFIGS);
   expect(passed.code).toBe(0);
 
+  // Turn passed this tree, so the next run edits a file to make typecheck run again; a failed run records nothing.
+  write(root, { "src/root.ts": "export const root = 40;\n" });
   const one = await turn(root, [], fakeTsc(["packages/api/tsconfig.src.json"]).bins);
   expect(label(one.out)).toBe("typecheck failed (packages/api/tsconfig.src.json)");
   expect(one.err).toBe("packages/api/tsconfig.src.json: error TS1.\n");

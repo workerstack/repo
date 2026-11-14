@@ -38,7 +38,7 @@ it("precommit restages what fmt fixed, and an unstaged file stays out", { timeou
   write(root, { "src/a.ts": "export const a = {b:1}\n", "src/b.ts": "export const b = {c:1}\n" });
   git(root, "add", "src/a.ts");
   const result = await precommit(root);
-  expect(result.out).toMatch(/^precommit: 1 file · fmt 1 fixed · comments ok · lint ok · /);
+  expect(result.out).toMatch(/^precommit: 1 file · fmt 1 fixed · lint ok · comments ok · /);
   expect(result.code).toBe(0);
   expect(staged(root)).toStrictEqual(["src/a.ts"]);
   expect(unstaged(root)).toStrictEqual(["src/b.ts"]);
@@ -61,7 +61,7 @@ it("precommit restages what lint --fix and sync rewrote, the fix formatted", { t
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
   const result = await precommit(root);
   expect(result.out).toMatch(
-    /^precommit: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · 0 related tests · check ok\n$/,
+    /^precommit: 3 files · fmt 1 fixed · lint ok · sync ok · comments ok · .* · 0 related tests · check ok\n$/,
   );
   expect(git(root, "show", ":src/a.ts")).toBe(
     "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
@@ -87,7 +87,7 @@ it("a failing typecheck and failing tests print their output and fail precommit"
 
   const result = await precommit(root, bins);
   expect(result.out).toBe(
-    "precommit: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · " +
+    "precommit: 1 file · fmt ok · lint ok · comments ok · typecheck failed (tsconfig.json) · " +
       "4 related tests, 1 failed\n",
   );
   expect(result.err).toBe("src/a.ts(1,7): error TS2322: no.\n Tests  1 failed | 3 passed (4)\n");

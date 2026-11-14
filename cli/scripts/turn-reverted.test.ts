@@ -56,7 +56,7 @@ it("a reverted file beside a real change: the later steps gate only the real one
   const { bins, calls } = recording(root);
   write(root, { "src/a.ts": "export const a = 1;   \n", "src/b.ts": "export const b = 2;\n" });
   const result = await turn(root, [], bins);
-  expect(result.out).toBe("turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
+  expect(result.out).toBe("turn: 2 files · fmt 1 fixed · lint ok · comments ok · typecheck .\n");
   expect(result.code).toBe(0);
   expect(calls).toStrictEqual([tscCall("tsconfig.json"), tscCall("tsconfig.src.json")]);
 });
@@ -76,7 +76,7 @@ it("an else lint --fix turns back into the committed text leaves no changes", { 
   expect(await turn(root, [], bins)).toStrictEqual({
     code: 0,
     err: "",
-    out: "turn: 1 file · fmt ok · comments ok · lint ok · no changes left\n",
+    out: "turn: 1 file · fmt ok · lint ok · no changes left\n",
   });
   expect(calls).toStrictEqual([]);
 });
@@ -86,7 +86,7 @@ it("a new untracked file fmt fixes stays in the change set", { timeout: SLOW }, 
   const { bins, calls } = recording(root);
   write(root, { "src/c.ts": "export const c = {d:1}\n" });
   const result = await turn(root, [], bins);
-  expect(result.out).toBe("turn: 1 file · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
+  expect(result.out).toBe("turn: 1 file · fmt 1 fixed · lint ok · comments ok · typecheck .\n");
   expect(calls).toStrictEqual([tscCall("tsconfig.json"), tscCall("tsconfig.src.json")]);
 });
 
@@ -106,6 +106,6 @@ it("a path gates every file of its package, a reverted one too", { timeout: SLOW
   const { bins, calls } = recording(root);
   write(root, { "packages/api/src/a.ts": "export const a = 1;   \n" });
   const result = await turn(root, ["packages/api/src"], bins);
-  expect(result.out).toMatch(/ · fmt 1 fixed · comments ok · lint ok · typecheck packages\/api · /);
+  expect(result.out).toMatch(/ · fmt 1 fixed · lint ok · sync ok · comments ok · typecheck packages\/api · /);
   expect(calls).toContain(tscCall("packages/api/tsconfig.json"));
 });

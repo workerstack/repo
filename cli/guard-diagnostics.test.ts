@@ -187,7 +187,7 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
     `${untested("src/user.ts:3:17", "isUser").line}\n` +
       "repo turn: src/user.ts has 1 repo(guard-rejects), the baseline allows 0; fix the new one\n",
   );
-  expect(result.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint 1 over baseline · /);
+  expect(result.out).toMatch(/^turn: 1 file · fmt ok · lint 1 over baseline · comments ok · /);
   expect(result.code).toBe(1);
 });
 

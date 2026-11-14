@@ -39,7 +39,7 @@ it(
     expect(await turn(root, [])).toStrictEqual({
       code: 0,
       err: "",
-      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck .\n",
+      out: "turn: 2 files · fmt 1 fixed · lint ok · comments ok · typecheck .\n",
     });
     expect(read(root, "src/answer.ts")).toBe("export const answer: number = 40 + 2;\n");
     expect(staged(root)).toStrictEqual([]);
@@ -63,7 +63,7 @@ it(
       "src/wait.ts": "export function wait(): number {\n  return 5000;\n}\n",
     });
     const result = await turn(root, [], TSC_PASSES);
-    expect(result.out).toMatch(/^turn: 2 files · fmt ok · comments ok · lint 1 over baseline · /);
+    expect(result.out).toMatch(/^turn: 2 files · fmt ok · lint 1 over baseline · comments ok · /);
     expect(result.err).toBe(
       [
         "src/wait.ts:2:10: error repo(magic-number): 5000 names nothing; give it a named const",

@@ -31,6 +31,8 @@ describe("IGNORED_DIRS", () => {
     expect(STATE_DIRS.has("sessions")).toBe(true);
     expect(CHECKOUT_STATE.has("sync.json")).toBe(true);
     expect(CHECKOUT_STATE.has("tsbuildinfo")).toBe(true);
+    expect(STATE_DIRS.has("turn")).toBe(true);
+    expect(CHECKOUT_STATE.has("turn")).toBe(true);
   });
 });
 
@@ -64,6 +66,7 @@ describe("routesToRoot", () => {
     ".repo/tmp/stage/x",
     ".repo/tmp/stage",
     ".repo/tmp/tsbuildinfo/x",
+    ".repo/tmp/turn/x",
     ".repo/lessons/x",
   ])("is false for %s", (rel) => {
     expect(routesToRoot(ROOT, path.join(ROOT, rel))).toBe(false);

@@ -15,7 +15,7 @@ it("precommit gates a .ts file beside a staged symlink to a directory", { timeou
   git(root, "add", "src/a.ts", ".claude/skills/x");
   const result = await precommit(root);
   expect(result.err).toBe("");
-  expect(result.out).toMatch(/^precommit: 2 files · fmt 1 fixed · comments ok · lint ok · /);
+  expect(result.out).toMatch(/^precommit: 2 files · fmt 1 fixed · lint ok · comments ok · /);
   expect(result.code).toBe(0);
   expect(git(root, "show", ":src/a.ts")).toBe("export const a = { b: 1 };\n");
 });
@@ -26,6 +26,6 @@ it("a sync run beside an untracked symlink to a directory does not read the link
   fs.rmSync(path.join(root, "references/a.md"));
   const result = await turn(root, []);
   expect(result.err).toBe("");
-  expect(result.out).toMatch(/ · sync ok\n$/);
+  expect(result.out).toMatch(/ · sync ok · /);
   expect(result.code).toBe(0);
 });

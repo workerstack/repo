@@ -29,18 +29,17 @@ it(
     expect(await turn(root, [])).toStrictEqual({
       code: 0,
       err: "",
-      out: "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json)\n",
+      out: "turn: 1 file · fmt ok · lint ok · comments ok · typecheck skipped (no tsconfig.json)\n",
     });
     git(root, "add", "-A");
     const first = await precommit(root);
-    expect(first.out).toBe(
-      "precommit: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · 0 related tests\n",
-    );
+    // Turn passed this tree, so only the tests step runs.
+    expect(first.out).toBe("precommit: 1 file · 0 related tests · 4 cached\n");
     write(root, { "src/b.ts": "export const b = 2;\n" });
     git(root, "add", "-A");
     const second = await precommit(root);
     expect(second.out).toBe(
-      "precommit: 2 files · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · " +
+      "precommit: 2 files · fmt ok · lint ok · comments ok · typecheck skipped (no tsconfig.json) · " +
         "related tests skipped (no vitest in .)\n",
     );
   },
@@ -60,7 +59,7 @@ it("vitest failing without a test count fails precommit's related tests", { time
     code: 1,
     err: "Error: no config\n",
     out:
-      "precommit: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · " +
+      "precommit: 1 file · fmt ok · lint ok · comments ok · typecheck skipped (no tsconfig.json) · " +
       "related tests failed\n",
   });
 });

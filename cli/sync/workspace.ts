@@ -23,7 +23,8 @@ function catalogFields() {
   };
 }
 
-const packageJsonSchema: z.ZodObject<{
+/** The manifest fields a workspace read checks; other keys pass through. */
+export const packageJsonSchema: z.ZodObject<{
   name: z.ZodOptional<z.ZodString>;
   private: z.ZodOptional<z.ZodBoolean>;
   version: z.ZodOptional<z.ZodJSONSchema>;

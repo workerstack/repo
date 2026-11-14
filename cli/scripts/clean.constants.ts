@@ -66,6 +66,7 @@ const POLICY = {
   stash: "per-receipt",
   tmp: "state",
   tsbuildinfo: "keep",
+  turn: "keep",
 } as const satisfies Readonly<Record<string, Policy>>;
 
 function hasPolicy(dir: string): dir is keyof typeof POLICY {

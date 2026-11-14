@@ -30,19 +30,21 @@ it("a manifest change runs sync and check; a references change runs sync alone",
   const root = consumer({ "references/a.md": "# A\n" });
   write(root, { "package.json": APP_MANIFEST });
   const manifest = await turn(root, []);
-  expect(manifest.out).toMatch(/ · sync ok · check ok\n$/);
+  expect(manifest.out).toMatch(/ · sync ok · .* · check ok\n$/);
   expect(manifest.code).toBe(0);
   git(root, "checkout", "--", "package.json");
   fs.rmSync(path.join(root, "references/a.md"));
   const references = await turn(root, []);
-  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok\n$/);
+  expect(references.out).toBe(
+    "turn: 1 file · fmt ok · lint ok · sync ok · comments ok · typecheck skipped (no tsconfig.json)\n",
+  );
 });
 
 it("a sync refusal fails sync and check and prints their output", { timeout: SLOW }, async () => {
   const root = consumer({});
   write(root, { "package.json": APP_MANIFEST, "src/.gitignore": "x\n" });
   const result = await turn(root, []);
-  expect(result.out).toMatch(/ · sync failed · check failed\n$/);
+  expect(result.out).toMatch(/ · sync failed · .* · check failed\n$/);
   expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
   expect(result.code).toBe(1);
 });
@@ -63,7 +65,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   const { bins, calls } = recording(root);
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · check ok\n",
+    "turn: 6 files · fmt ok · lint ok · sync ok · comments ok · typecheck packages/api · check ok\n",
   );
   expect(calls).toStrictEqual([tscCall("packages/api/tsconfig.json"), tscCall("packages/api/tsconfig.src.json")]);
 });

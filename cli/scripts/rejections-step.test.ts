@@ -30,7 +30,7 @@ it(
     write(root, { "src/user.ts": user.replace(' & { readonly brand: "UserId" }', "") });
     const widened = await turn(root, [], bins);
     expect(widened.out).toBe(
-      "turn: 1 file · fmt ok · comments ok · lint ok · typecheck skipped (no tsconfig.json) · rejections 1 failed\n",
+      "turn: 1 file · fmt ok · lint ok · comments ok · typecheck skipped (no tsconfig.json) · rejections 1 failed\n",
     );
     expect(widened.err).toBe(`repo turn: rejections: src/user.reject.ts: line 4 compiles; it must reject: ${mark}\n`);
     expect(widened.code).toBe(1);
