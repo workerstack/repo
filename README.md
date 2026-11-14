@@ -274,6 +274,8 @@ The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its s
 
 Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), and, only over the size limit, one why-line. Merge commits pass. The subject takes the types `feat fix perf refactor test docs build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
 
+On Linux, `git commit --amend` (an alias for it too) is judged as the whole commit it makes: the size limit, the test and CHANGELOG rules and red-proof read the change from `HEAD^`, not only the newly staged lines. Elsewhere an amend is judged on its staged lines, as a plain commit is.
+
 ```console
 $ git commit -m "feat: add x" -m "Co-Authored-By: A <a@b.c>"
 commit-msg: the message was refused

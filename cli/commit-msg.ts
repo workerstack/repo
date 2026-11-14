@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { amendBase, amending, type Base, PLAIN_BASE } from "./commit-amend.ts";
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
 import {
   ATTRIBUTION,
@@ -18,7 +19,13 @@ import { NAME_A_SOURCE } from "./commit-range.constants.ts";
 import { commitPush, commitRange, sourceOf } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
 import { BREAKING_FOOTER, HEADER, isBreaking, TYPES } from "./conventional.ts";
-import { type NameStatus, parseNameStatus, redProof as realRedProof, type RedProofResult } from "./red-proof.ts";
+import {
+  type NameStatus,
+  parseNameStatus,
+  redProof as realRedProof,
+  type RedProofDeps,
+  type RedProofResult,
+} from "./red-proof.ts";
 import { scopesOf } from "./scopes-of.ts";
 import { processHookIo, readAllText } from "./scripts/hook-io.ts";
 import { stagedChange } from "./staged-change.ts";
@@ -54,14 +61,16 @@ export type CommitRules = {
 };
 
 /**
- * Where `repo commit-msg` runs and prints; `stdin` reads git's pre-push ref lines and `redProof` is the red-proof
- * runner, both replaceable in tests.
+ * Where `repo commit-msg` runs and prints; `stdin` reads git's pre-push ref lines, `redProof` is the red-proof
+ * runner, and `amending` says whether git runs the hook for `git commit --amend` (unset: a plain commit), all
+ * replaceable in tests.
  */
 export type CommitMsgIo = {
   cwd: string;
   stderr: (text: string) => void;
   stdin?: () => string;
-  redProof?: (root: string, change: NameStatus[]) => RedProofResult;
+  redProof?: (root: string, change: NameStatus[], deps: RedProofDeps) => RedProofResult;
+  amending?: () => boolean;
 };
 
 /** The scope problem, if any: kebab-case always, and one of `scopes` or the repo scopes when `scopes` is given. */
@@ -212,22 +221,24 @@ async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   return { maxChangedLines: commit.maxChangedLines, owners, scopes: scopesOf(workspace.workspace), tdd };
 }
 
-/** The red-proof result for the staged change, or null when it does not apply to it. */
-function proveRed(rules: CommitRules, io: CommitMsgIo): RedProofResult | null {
-  const diff = runGit(io.cwd, ["diff", "--cached", "--name-status", "--no-renames", "-z"]);
+/** The red-proof result for the change from `base`, or null when it does not apply to it. */
+function proveRed(rules: CommitRules, io: CommitMsgIo, base: Base): RedProofResult | null {
+  const since = base.diff === undefined ? [] : [base.diff];
+  const diff = runGit(io.cwd, ["diff", "--cached", "--name-status", "--no-renames", "-z", ...since]);
   const change = parseNameStatus(diff.stdout);
 
-  return proofApplies(change, rules) ? (io.redProof ?? realRedProof)(io.cwd, change) : null;
+  return proofApplies(change, rules) ? (io.redProof ?? realRedProof)(io.cwd, change, { base: base.proof }) : null;
 }
 
-/** Every problem with `message` against the staged change, and the red-proof result when it ran. */
+/** Every problem with `message` against the commit it makes, and the red-proof result when it ran. */
 function judge(message: string, rules: CommitRules, io: CommitMsgIo) {
-  const staged = stagedChange(io.cwd);
+  const base = io.amending?.() === true ? amendBase(io.cwd) : PLAIN_BASE;
+  const staged = stagedChange(io.cwd, runGit, base.diff);
   const facts = { ...rules, changedLines: staged.changedLines, stagedFiles: staged.files };
   const { problems, kind } = inspect(message, facts);
 
   const proof =
-    kind !== undefined && problems.length === 0 && NEEDS_TEST.includes(kind.type) ? proveRed(rules, io) : null;
+    kind !== undefined && problems.length === 0 && NEEDS_TEST.includes(kind.type) ? proveRed(rules, io, base) : null;
 
   if (kind !== undefined) problems.push(...changelogProblems(kind, staged.files, rules.owners));
 
@@ -265,6 +276,7 @@ export function runCommitMsgHook(messageFile: string, rules: CommitRules, io: Co
 export async function main(
   argv: string[],
   io: CommitMsgIo = {
+    amending,
     cwd: process.cwd(),
     stderr: (text) => process.stderr.write(text),
     stdin: readAllText.bind(undefined, processHookIo()),
