@@ -2322,6 +2322,7 @@
   "cli/scripts/__fixtures__/board-kit.ts": ["28cc65f3b7765fa9"],
   "cli/scripts/__fixtures__/browser-kit.ts": [
     "0f2297eeb3ee7fb6",
+    "424ac61b2f987935",
     "5f6f16668ff571ef",
     "724c8a9721086640",
     "cbb5f7b37782c2d7"
@@ -2363,7 +2364,7 @@
   "cli/scripts/__fixtures__/jev-kit.ts": ["3aa91921de4a6986", "9bf3497a2822ca25", "ec7c7851b0011da7"],
   "cli/scripts/__fixtures__/job-http-server.ts": ["d4a8026dee635432"],
   "cli/scripts/__fixtures__/job-kit.constants.ts": ["2c86c5ce622b96d4"],
-  "cli/scripts/__fixtures__/job-kit.ts": ["4c09695f874dee98", "a3ad72e2760b98c5"],
+  "cli/scripts/__fixtures__/job-kit.ts": ["4c09695f874dee98", "763bdb997034c579", "a3ad72e2760b98c5"],
   "cli/scripts/__fixtures__/json-dirs.ts": ["71f968b133ef2302"],
   "cli/scripts/__fixtures__/lessons-kit.ts": ["14976cb04c55c1b2", "d4f284c6eb69d05b"],
   "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
@@ -2374,7 +2375,8 @@
     "16fd1c18f718d137",
     "215dd279c1180218",
     "e06540719b9d2a37",
-    "ed4986a7653c806f"
+    "ed4986a7653c806f",
+    "f301d8edd8dae2d0"
   ],
   "cli/scripts/__fixtures__/mcp-base-policy.ts": ["4c75b546d03187b2"],
   "cli/scripts/__fixtures__/mcp-policy-kit.ts": ["0c1fb5e8c85a962a", "20e6cef7387de308", "e3b71c080e827a67"],
@@ -2442,7 +2444,7 @@
   ],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
   "cli/scripts/__fixtures__/vscode-tasks-kit.ts": ["7c4d80d722a9c303"],
-  "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "ee0c1c5f02d43e6e"],
+  "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "c116a6c95caadfdb", "ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": [
     "1531dd871777c4bb",
@@ -3115,6 +3117,7 @@
     "d9659161b3890118"
   ],
   "cli/scripts/ci.ts": [
+    "059a91719f7384a4",
     "17365872ee1b1635",
     "1d601e44dd81f823",
     "299962bfa8704db3",
@@ -3161,6 +3164,7 @@
     "ffc85fe082084e43"
   ],
   "cli/scripts/clean-edges.test.ts": [
+    "1544941ebaa25cf5",
     "1798d050fd681145",
     "23e0fed31889371a",
     "4eb216029d016f5f",
@@ -3203,6 +3207,7 @@
     "d991e71c6388b158"
   ],
   "cli/scripts/clean-run.ts": [
+    "0765609d3ce31899",
     "1d58168a2e6bd4f7",
     "6cffac52bdd60afa",
     "704a75c54cb8a8fc",
@@ -3232,6 +3237,7 @@
   "cli/scripts/clean.constants.ts": [
     "02d734ca4539af59",
     "3c191042192fa44c",
+    "4737aa54f64c83b4",
     "86ac7fdac67ab50b",
     "b3be7dc4a6ffbac0",
     "c8c8b3b1b1b1b172",
@@ -5345,6 +5351,7 @@
     "8da4c42722bde7b5",
     "8f4b17207923c4ec",
     "9f0e7f458604b84d",
+    "a4ffdb5c62121364",
     "a9766b2f8fc6f2ab",
     "cdd7fc707fa93dc1",
     "cf25d9c7d89c0af4",
@@ -5457,6 +5464,7 @@
     "4d19cefb2f9c6a2e",
     "51e1bca1c997af10",
     "74764c458a44a521",
+    "849a69ae409be4b1",
     "920d082332c8ff4f",
     "c02329cd27479aa1",
     "c188fdbebb5d23e6",
@@ -6745,7 +6753,7 @@
   "cli/scripts/push.test.ts": ["30895fc0bf7b1f9a", "cb4a4248d04efcc8", "f0b85a34b3a34700"],
   "cli/scripts/push.ts": ["56f273cb9ab4acb4", "f8b7cff9f3d8fa69"],
   "cli/scripts/redundant-ignore-lines.test.ts": ["4440a3dbfa8fc8d3", "4725b0b83d50ac1d", "48e4ccc99bb0f6f2"],
-  "cli/scripts/redundant-ignore-lines.ts": ["805a6a11cfcc93ae", "def83def5804afad"],
+  "cli/scripts/redundant-ignore-lines.ts": ["2fac0b7ba80b89d5", "805a6a11cfcc93ae", "def83def5804afad"],
   "cli/scripts/reference-docs.test.ts": [
     "01cac426b02d8c49",
     "2436be97ae2d8cfe",
