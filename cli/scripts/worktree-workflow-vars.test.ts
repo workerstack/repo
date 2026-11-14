@@ -11,9 +11,11 @@ const { repoWithWorktree } = useGuardRepos();
 /** The start of a push deny the gate gives for a dir or word it cannot read. */
 const UNREAD = /, which the gate cannot read before the shell runs, and main takes changes only through pull requests/;
 
-/** `line` under pull-request from the root of a fresh repo, with `<out>` a dir outside it and `<root>` the root. */
-function pushFromRoot(line: string): string | null {
-  const r = repoWithWorktree();
+/**
+ * `line` under pull-request from the root of repo `r`, with `<out>` a dir outside it and `<root>` the root. The gate
+ * only reads the repo, so one repo serves every line of a test.
+ */
+function pushFromRoot(r: string, line: string): string | null {
   const cmd = line.replaceAll("<out>", `'${path.dirname(r)}'`).replaceAll("<root>", `'${r}'`);
 
   return sharedAs("pull-request", { cmd, place: at(r) });
@@ -60,11 +62,15 @@ const sendingMain = [
 
 describe("pushes after variables the line sets", () => {
   it("follows a dir or a ref the line sets to a value it can read", () => {
-    for (const line of followed) expect(pushFromRoot(line), line).toBeNull();
+    const r = repoWithWorktree();
+
+    for (const line of followed) expect(pushFromRoot(r, line), line).toBeNull();
   });
 
   it("denies a push of main that a value the line sets names", () => {
-    for (const line of sendingMain) expect(pushFromRoot(line), line).toBe(pushDeny("pull-request"));
+    const r = repoWithWorktree();
+
+    for (const line of sendingMain) expect(pushFromRoot(r, line), line).toBe(pushDeny("pull-request"));
   });
 });
 
@@ -84,7 +90,9 @@ describe("pushes whose value the line loses", () => {
       "CDPATH=<out>; cd x && git push origin main",
     ];
 
-    for (const line of unread) expect(pushFromRoot(line), line).toMatch(UNREAD);
+    const r = repoWithWorktree();
+
+    for (const line of unread) expect(pushFromRoot(r, line), line).toMatch(UNREAD);
   });
 });
 
