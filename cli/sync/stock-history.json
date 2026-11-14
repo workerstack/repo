@@ -8252,7 +8252,7 @@
   "cli/scripts/worktree-workflow-delete.test.ts": ["17dd76e6ed0a02d2"],
   "cli/scripts/worktree-workflow-flow.test.ts": ["3cf9dca00277877d", "3f9a5dd2e473d4d1", "6791c0fd3ffe1e6c"],
   "cli/scripts/worktree-workflow-refs.test.ts": ["1ef86fc73369b5f7", "64f7f5333540ab9a"],
-  "cli/scripts/worktree-workflow-vars.test.ts": ["d5b20eae17ecdbed", "f2f8bdcaae2a071a"],
+  "cli/scripts/worktree-workflow-vars.test.ts": ["52ce3356ed64440a", "d5b20eae17ecdbed", "f2f8bdcaae2a071a"],
   "cli/scripts/worktree-workflow.test.ts": [
     "17e3aaf05aadaa7d",
     "5bb0b4d997799b3d",
