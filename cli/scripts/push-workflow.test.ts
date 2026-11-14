@@ -5,13 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { WorkflowRead } from "../workflow.ts";
 import { usePushRepos, type PushRepo } from "./__fixtures__/push-repo.ts";
+import { pushDeny, STRICT } from "./__fixtures__/workflow-guards.ts";
 import type { RecordFs } from "./ci-wait-record.ts";
 import type { Runner } from "./ci-wait-run.ts";
 import { main, type PushDeps } from "./push.ts";
 
 const NOW = Date.parse("2026-11-12T12:00:00Z");
 const { repo } = usePushRepos();
-const STRICT = ["pull-request", "unreadable"] as const;
 
 function done(stdout: string) {
   return { code: 0, stderr: "", stdout };
@@ -63,12 +63,7 @@ async function push(cwd: string, argv: string[], deps: PushDeps = {}) {
 }
 
 function deny(read: WorkflowRead): string {
-  const why = read === "unreadable" ? "repo.config.ts failed to load" : `workflow is ${read}`;
-
-  return (
-    `repo push: main takes changes only through pull requests (${why}): ` +
-    "push your wt/<name> branch and open a pull request\n"
-  );
+  return `repo push: ${pushDeny(read)}\n`;
 }
 
 /** A push repo with a commit on main that origin does not hold, and a managed worktree `x` on `wt/x`. */
@@ -119,5 +114,30 @@ describe("repo push of what a workflow lets through", () => {
     const result = await push(r.dir, ["main"], { workflow: () => read });
     expect(result.code).toBe(0);
     expect(r.originSha("main")).toBe(tip);
+  });
+});
+
+describe("repo push of a managed worktree's branch", () => {
+  const finishing =
+    "repo push: wt/x is a managed worktree; run bun repo worktree finish x: " +
+    "it pushes the branch and opens its pull request\n";
+
+  it("sends it to finish under pull-request, named or picked in the worktree", async () => {
+    const { r, tree } = ahead();
+    const workflow = vi.fn<(root: string) => WorkflowRead>(() => "pull-request");
+    expect(await push(r.dir, ["wt/x"], { workflow })).toStrictEqual({ code: 1, out: finishing });
+    expect(await push(tree, [], { workflow })).toStrictEqual({ code: 1, out: finishing });
+    expect(workflow.mock.calls).toStrictEqual([[fs.realpathSync(r.dir)], [fs.realpathSync(r.dir)]]);
+    expect(r.originSha("wt/x")).toBeNull();
+  });
+
+  it.each(["worktree", "main", "unreadable"] as const)("keeps the push-from-the-root text under %s", async (read) => {
+    const { r } = ahead();
+
+    const text =
+      "repo push: wt/x is a managed worktree; " +
+      "run `bun repo worktree finish x` from the root, then `bun repo push` there\n";
+
+    expect(await push(r.dir, ["wt/x"], { workflow: () => read })).toStrictEqual({ code: 1, out: text });
   });
 });

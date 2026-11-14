@@ -1,13 +1,18 @@
 /**
- * Reads the `git push` and `repo push` forms out of a shell command: where each runs, and which branch and commit it
- * names.
+ * Reads the `git push`, `repo push` and pull-request `repo worktree finish` forms out of a shell command: where each
+ * runs, and which branch and commit it names.
  */
 import path from "node:path";
 
+import { readWorkflow } from "../workflow.ts";
 import { CD, CONFIG_OPTION, DIR_OPTION, GIT, HEAD, PUSH } from "./ci-push-parse.constants.ts";
+import { recordRoot } from "./ci-wait-record.ts";
 import type { Runner } from "./ci-wait-run.ts";
 import { pickTarget } from "./push-target.ts";
 import { BUN, REPO } from "./push.constants.ts";
+import { canonicalPath } from "./workspace-root.ts";
+import { worktreeName } from "./worktree-git.ts";
+import { BRANCH_PREFIX, FINISH_CMD, WORKTREE_SUB } from "./worktree.constants.ts";
 
 const SEGMENT = /&&|\|\||[;|\n]/;
 const WORD = /"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<bare>\S+)/g;
@@ -67,7 +72,31 @@ function parseRepoPush(git: Runner, words: string[], dir: string): Push | null {
 }
 
 /**
- * Every `git push` and `repo push` in a shell command, each with the directory it runs in after the `cd`s before it.
+ * The push in `[bun] repo worktree finish [<name>]` from `dir` when the main root's workflow is pull-request, where
+ * finish pushes `wt/<name>`: the name given, else the `wt/` branch `dir` has out; null otherwise. It resolves in the
+ * main root, which outlives the worktree a landed finish removes.
+ */
+function parseFinish(git: Runner, words: string[], dir: string): Push | null {
+  const [bin, verb, sub, named] = words[0] === BUN ? words.slice(1) : words;
+
+  if (bin !== REPO || verb !== WORKTREE_SUB || sub !== FINISH_CMD) return null;
+  const root = canonicalPath(recordRoot(git, dir));
+
+  if (readWorkflow(root) !== "pull-request") return null;
+  const name = named === undefined ? null : worktreeName(named);
+  const branch = name === null ? git(["rev-parse", "--abbrev-ref", HEAD], dir).stdout.trim() : BRANCH_PREFIX + name;
+
+  return branch.startsWith(BRANCH_PREFIX) ? { dir: root, refs: [branch] } : null;
+}
+
+/** The push in a `repo` command line: `repo push`, or `repo worktree finish` under pull-request; null for others. */
+function parseRepo(git: Runner, words: string[], dir: string): Push | null {
+  return parseRepoPush(git, words, dir) ?? parseFinish(git, words, dir);
+}
+
+/**
+ * Every `git push`, `repo push` and pull-request `repo worktree finish` in a shell command, each with the directory it
+ * runs in after the `cd`s before it.
  */
 function pushesIn(git: Runner, command: string, cwd: string): Push[] {
   const found: Push[] = [];
@@ -79,7 +108,7 @@ function pushesIn(git: Runner, command: string, cwd: string): Push[] {
     while (ENV_ASSIGN.test(words[0] ?? "")) words.shift();
 
     if (words[0] === CD && words[1] !== undefined && words[1] !== "") here = resolveDir(here, words[1]);
-    const push = words[0] === GIT ? parsePush(words.slice(1), here) : parseRepoPush(git, words, here);
+    const push = words[0] === GIT ? parsePush(words.slice(1), here) : parseRepo(git, words, here);
 
     if (push !== null) found.push(push);
   }
@@ -100,7 +129,7 @@ function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
-/** Every branch ref the `git push` and `repo push` forms in `command` update, resolved where each push runs. */
+/** Every branch ref the push forms in `command` update, resolved where each push runs. */
 export function pushedRefs(git: Runner, command: string, cwd: string): PushedRef[] {
   return pushesIn(git, command, cwd).flatMap((p) =>
     (p.refs.length > 0 ? p.refs : [HEAD]).flatMap((spec) => resolveSpec(git, p.dir, spec) ?? []),

@@ -2491,6 +2491,7 @@
   ],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
   "cli/scripts/__fixtures__/vscode-tasks-kit.ts": ["7c4d80d722a9c303", "fd75fde3503e811b"],
+  "cli/scripts/__fixtures__/workflow-guards.ts": ["44551a8016381a4f"],
   "cli/scripts/__fixtures__/worktree-pr.ts": ["9b6aabcd978d29b6"],
   "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "c116a6c95caadfdb", "ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
@@ -2937,6 +2938,7 @@
     "bcc3eace062f0cc5",
     "db006dbedeeeb9fa"
   ],
+  "cli/scripts/ci-push-parse-finish.test.ts": ["04410c7119ff13e6"],
   "cli/scripts/ci-push-parse.constants.ts": ["52076bdda8d0275a", "bd0c7892e1f928b2"],
   "cli/scripts/ci-push-parse.test.ts": ["276e87755bcda98e", "be5b5c51be56febe"],
   "cli/scripts/ci-push-parse.ts": [
@@ -2944,6 +2946,7 @@
     "32ca316a24ae5235",
     "3c5be79ca91a9f1d",
     "920c9a0b66aaac02",
+    "d7a6b05784deac11",
     "eb92710a12a9dd40"
   ],
   "cli/scripts/ci-real.test.ts": [
@@ -6917,10 +6920,10 @@
     "dc3ecab5d725de0a"
   ],
   "cli/scripts/push-target.ts": ["a525b270004a6945", "f91c97ee3a2dad44"],
-  "cli/scripts/push-workflow.test.ts": ["bd67d11d5a5f03b5"],
+  "cli/scripts/push-workflow.test.ts": ["7bec88042625082a", "bd67d11d5a5f03b5"],
   "cli/scripts/push.constants.ts": ["7a014523add81904", "d8e6f8b4b1a99b1e"],
   "cli/scripts/push.test.ts": ["30895fc0bf7b1f9a", "cb4a4248d04efcc8", "f0b85a34b3a34700"],
-  "cli/scripts/push.ts": ["3e1d5fcfec80f02e", "56f273cb9ab4acb4", "f8b7cff9f3d8fa69"],
+  "cli/scripts/push.ts": ["05a59e139945c92d", "3e1d5fcfec80f02e", "56f273cb9ab4acb4", "f8b7cff9f3d8fa69"],
   "cli/scripts/redundant-ignore-lines.test.ts": ["4440a3dbfa8fc8d3", "4725b0b83d50ac1d", "48e4ccc99bb0f6f2"],
   "cli/scripts/redundant-ignore-lines.ts": ["2fac0b7ba80b89d5", "805a6a11cfcc93ae", "def83def5804afad"],
   "cli/scripts/reference-docs.test.ts": [
@@ -8008,7 +8011,12 @@
     "c69bf870d71b7d5d",
     "c78b08a5b9e171aa"
   ],
-  "cli/scripts/worktree-guards.constants.ts": ["099ae5ca99d29b35", "7a75b2f98f0ba368", "7e78ba36e3349944"],
+  "cli/scripts/worktree-guards.constants.ts": [
+    "099ae5ca99d29b35",
+    "2c65d81a30a536e6",
+    "7a75b2f98f0ba368",
+    "7e78ba36e3349944"
+  ],
   "cli/scripts/worktree-guards.test.ts": [
     "0cd24d69d68e9922",
     "20ae62e05a046397",
@@ -8023,6 +8031,7 @@
   "cli/scripts/worktree-guards.ts": [
     "06803a7d1e0b56fc",
     "155ded919c4f973a",
+    "1965d1fc30564a92",
     "3a2cc354aa7f7557",
     "549d27cf591be3bf",
     "b2ddf2e58b6a58a6",
@@ -8115,7 +8124,8 @@
     "e3d4222f6458cfe5"
   ],
   "cli/scripts/worktree-usage-error.ts": ["b243172b5727e077"],
-  "cli/scripts/worktree-workflow.test.ts": ["17e3aaf05aadaa7d", "603d0f7b0c2e1ffe"],
+  "cli/scripts/worktree-workflow-delete.test.ts": ["17dd76e6ed0a02d2"],
+  "cli/scripts/worktree-workflow.test.ts": ["17e3aaf05aadaa7d", "5e60976d0f4ef23b", "603d0f7b0c2e1ffe"],
   "cli/scripts/worktree-write-guards.test.ts": [
     "27278365885109fb",
     "28596317ffe17b99",
