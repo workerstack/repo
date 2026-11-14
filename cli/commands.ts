@@ -166,7 +166,8 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
   mutate: { load: () => import("./mutate.ts"), summary: MUTATE_SUMMARY, usage: MUTATE_USAGE },
   turn: {
     load: () => import("./scripts/turn.ts"),
-    summary: "Gate the changed files: fmt, lint, typecheck, related tests, sync, check (--staged: the index)",
+    summary:
+      "Gate the changed files: fmt, lint, typecheck, sync, stock history, related tests, check (--staged: the index)",
     usage: TURN_USAGE,
   },
 

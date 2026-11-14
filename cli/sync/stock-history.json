@@ -3353,6 +3353,7 @@
     "15d17357ce521a90",
     "23043b31ef0dbbfd",
     "5c242be107a2a5a5",
+    "9789e2ed64838739",
     "a2d666af55261fc7",
     "bcb7b41ce4c56b46",
     "ce5e7627a43cb84b",
@@ -5041,6 +5042,7 @@
     "87a3eecfd7abbfe7",
     "9864b5f14204000a",
     "c0fe7c0b0b6364db",
+    "d870363cbd70815f",
     "f8a6a06d07d4c0ea"
   ],
   "cli/scripts/json-keys.constants.ts": [
@@ -6940,6 +6942,7 @@
     "8b68db8a3a5a161f",
     "9a666063eff51418",
     "c4df638579be4d80",
+    "f7fe96b8e7e22cd0",
     "fd6f9cdfcb62975a"
   ],
   "cli/scripts/rejections-step.test.ts": [
@@ -7481,6 +7484,11 @@
     "d634b01d8d0d547e"
   ],
   "cli/scripts/staged-flag.constants.ts": ["f14b1146f030c9ed"],
+  "cli/scripts/stock-history-collect.constants.ts": ["c6dbf4569ab0e723"],
+  "cli/scripts/stock-history-collect.test.ts": ["8435a5cc3bec0bbe"],
+  "cli/scripts/stock-history-collect.ts": ["dfa30aa05cf89526"],
+  "cli/scripts/stock-history-step.test.ts": ["c34df25e6d0f1f16"],
+  "cli/scripts/stock-history-step.ts": ["91ed01dd067f81db"],
   "cli/scripts/strategy-stamp.test.ts": [
     "0cdc3b188a4e17dd",
     "1fc7fc58b28b3c2e",
@@ -7706,7 +7714,7 @@
     "bd13bdb0892fac4d",
     "f7f095d24a461ce1"
   ],
-  "cli/scripts/turn-links.test.ts": ["74d3128b4655e5f1"],
+  "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1"],
   "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5f85051e432b3834", "ca23417ead3b41df"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": ["1185b24a2a30bcd3", "13127ab245837357", "6a271617c14e7eaa", "c89acccabc45f07c"],
@@ -7725,6 +7733,7 @@
     "aa660528fab1472e",
     "aae0d4c430ea5890",
     "bdcfe41619301dac",
+    "c3edd9534c917be2",
     "dbe3b2a645f7a49a",
     "e5b5953e3b8cf9a0",
     "fe6e131ccbe19188",
@@ -7735,6 +7744,7 @@
     "0b2d94c53a062ee4",
     "18ff7a311dc12a81",
     "2614d05d4d25e311",
+    "283ff13d352edfe8",
     "2899d12e38f83c66",
     "35ea85659aebc540",
     "6899e0272e484847",
@@ -7757,6 +7767,7 @@
     "42e0a56d9b0d3a37",
     "4d724a31174c57f9",
     "6ab04a8f5ddadee2",
+    "712999bfabd39d9b",
     "756d5670aca5bc88",
     "791a49eedca4a8b5",
     "934d96ec8b31e464",

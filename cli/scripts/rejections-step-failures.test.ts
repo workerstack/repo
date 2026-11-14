@@ -19,6 +19,7 @@ function turnOf(root: string, packages: string[], owner: string): Turn {
   return {
     bins: { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
     changes: [{ deleted: false, owner, rel: `${owner}/a.ts` }],
+    isStaged: false,
     packages,
     root,
     skips: [],

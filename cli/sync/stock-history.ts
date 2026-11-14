@@ -9,8 +9,8 @@ import { readJsonFile } from "../package-json.ts";
 import { COMMAND_KEY, HASH_HEX_DIGITS } from "./stock-history.constants.ts";
 
 /**
- * Hashes of every version of each stock path a copied install can hold, by repo-relative path; see
- * `dev/stock-history.ts`.
+ * Hashes of every version of each stock path a copied install can hold, by repo-relative path; written by
+ * `cli/scripts/stock-history-collect.ts`.
  */
 export type StockHistory = Record<string, readonly string[]>;
 

@@ -1,7 +1,9 @@
 /**
  * `repo turn [--staged] [<path>]`: gates a change set (the working tree, the index, or one package) with fmt, disable
- * comments, lint and its baseline, typecheck, reject files, related tests, and sync and check when their inputs
- * changed, then prints one summary line. Only `--staged` restages, and only what turn itself rewrote.
+ * comments, lint and its baseline, typecheck, reject files, sync, the stock history table (in this package's own
+ * checkout), related tests and check, each step only when its inputs changed, then prints one summary line. Only
+ * `--staged` restages, only what turn itself rewrote, and right after the step that rewrote it, so a later step reads
+ * the index as the commit will hold it.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -19,6 +21,7 @@ import { capture, captureBun } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { STAGED_FLAG } from "./staged-flag.constants.ts";
+import { stockHistoryStep } from "./stock-history-step.ts";
 import { testsStep } from "./tests-step.ts";
 import {
   checkStep,
@@ -42,8 +45,9 @@ const STEPS: readonly Step[] = [
   lintStep,
   typecheckStep,
   rejectionsStep,
-  testsStep,
   syncStep,
+  stockHistoryStep,
+  testsStep,
   checkStep,
 ];
 
@@ -123,7 +127,7 @@ async function prepare(
   argv: readonly string[],
   cwd: string,
   bins: Bins,
-): Promise<{ ok: true; turn: Turn; staged: boolean } | { ok: false; errors: string[] }> {
+): Promise<{ ok: true; turn: Turn } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
 
   if (root === null) return { errors: [missingConfig(cwd)], ok: false };
@@ -143,9 +147,10 @@ async function prepare(
   const changes = changeSet(root, parsed.scope, packages);
 
   if (!changes.ok) return changes;
-  const turn = { bins, changes: changes.changes, packages, root, skips: loaded.config.lint.skip };
+  const isStaged = parsed.scope.kind === "staged";
+  const turn = { bins, changes: changes.changes, isStaged, packages, root, skips: loaded.config.lint.skip };
 
-  return { ok: true, staged: parsed.scope.kind === "staged", turn };
+  return { ok: true, turn };
 }
 
 /**
@@ -161,17 +166,29 @@ function restage(root: string, touched: readonly string[], stderr: (s: string) =
   return false;
 }
 
-/** Runs every step whose inputs changed, printing a failed step's output as it ends. */
-function runSteps(turn: Turn, stderr: (s: string) => void): StepResult[] {
-  return STEPS.flatMap((step) => {
+/** The steps' results, and false for `isRestaged` when a restage under `--staged` failed. */
+type Ran = { results: StepResult[]; isRestaged: boolean };
+
+/**
+ * Runs every step whose inputs changed, printing a failed step's output as it ends and, under `--staged`, restaging
+ * what it rewrote before the next step.
+ */
+function runSteps(turn: Turn, stderr: (s: string) => void): Ran {
+  let isRestaged = true;
+
+  const results = STEPS.flatMap((step) => {
     const result = step(turn);
 
     if (result === null) return [];
 
     for (const chunk of result.output) stderr(chunk);
 
+    if (turn.isStaged && !restage(turn.root, result.touched, stderr)) isRestaged = false;
+
     return [result];
   });
+
+  return { isRestaged, results };
 }
 
 /** The deps with the process's own for each one left out. */
@@ -194,7 +211,7 @@ export async function main(argv: string[], deps: TurnDeps = {}): Promise<number>
     return 1;
   }
 
-  const { turn, staged } = prepared;
+  const { turn } = prepared;
 
   if (turn.changes.length === 0) {
     stdout("turn: no changes\n");
@@ -202,11 +219,9 @@ export async function main(argv: string[], deps: TurnDeps = {}): Promise<number>
     return 0;
   }
 
-  const results = runSteps(turn, stderr);
-  const touched = [...new Set(results.flatMap((result) => result.touched))];
-  const restaged = !staged || restage(turn.root, touched, stderr);
+  const { results, isRestaged } = runSteps(turn, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
   stdout(`turn: ${files} · ${results.map((result) => result.label).join(" · ")}\n`);
 
-  return restaged && results.every((result) => result.ok) ? 0 : 1;
+  return isRestaged && results.every((result) => result.ok) ? 0 : 1;
 }

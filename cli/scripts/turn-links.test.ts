@@ -26,6 +26,6 @@ it("a sync run beside an untracked symlink to a directory does not read the link
   fs.rmSync(path.join(root, "references/a.md"));
   const result = await turn(root, []);
   expect(result.err).toBe("");
-  expect(result.out).toMatch(/ · sync ok\n$/);
+  expect(result.out).toMatch(/ · sync ok · 0 related tests\n$/);
   expect(result.code).toBe(0);
 });

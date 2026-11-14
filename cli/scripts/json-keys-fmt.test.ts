@@ -4,7 +4,6 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
-import { collectHistory, historyText } from "../../dev/stock-history.ts";
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { writeFloors } from "../coverage.ts";
@@ -13,6 +12,7 @@ import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./__
 import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
 import { fmt, type RunTool } from "./lint.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
+import { collectHistory, historyText } from "./stock-history-collect.ts";
 
 afterEach(() => {
   cleanJsonDirs();
