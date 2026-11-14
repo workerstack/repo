@@ -4185,6 +4185,7 @@
   ],
   "cli/scripts/gate-paths-expansions.test.ts": ["30ef61a1d867f65a", "a0d141a7ac74dfb9"],
   "cli/scripts/gate-paths-flow.test.ts": [
+    "26acc3d422b564b8",
     "98b54aef40d44684",
     "aa69f5eec342cc15",
     "b2defd4eecf298cd",
@@ -7040,8 +7041,8 @@
     "db30e8a10d00b7de",
     "e06e4dafc480f7c4"
   ],
-  "cli/scripts/script-file.test.ts": ["78b0908101f4ee8c"],
-  "cli/scripts/script-file.ts": ["d1d1bdab5fba9374"],
+  "cli/scripts/script-file.test.ts": ["3faa94a3d853d19c", "78b0908101f4ee8c"],
+  "cli/scripts/script-file.ts": ["4ac0d9dbd7c23633", "d1d1bdab5fba9374"],
   "cli/scripts/scrub-spawn-prompt-cap.test.ts": [
     "3b8d1d7deb042a33",
     "5a318896e83ddc90",
@@ -7376,6 +7377,7 @@
   "cli/scripts/shell-flow.test.ts": ["1b990a622f8a9ddf", "849f1d3a78d07824", "9a0cd96fd9d2bbb6"],
   "cli/scripts/shell-flow.ts": [
     "23e0f3dbb9762199",
+    "2aee247351928793",
     "85d2b232ab92a4f6",
     "a5c3020ed5888d3b",
     "fb257f5ae0aebf29",
@@ -7392,11 +7394,17 @@
   "cli/scripts/shell-parse.test.ts": ["10c8a3ed8cd9a26a", "6dbf16c654f51081", "ee79d16a003764ed"],
   "cli/scripts/shell-parse.ts": ["81466ff6fba739d5", "af7bccf416d94c8f", "fbd3b6f2c3e64746"],
   "cli/scripts/shell-scripts.test.ts": ["5b83bb4ed26df79e", "8647042292069a40", "dfe7a49246cebee5"],
-  "cli/scripts/shell-scripts.ts": ["267318e87917da82", "353cef75faeb8e8e", "90737d0be8eacf1b", "ef5d35662296b2bc"],
+  "cli/scripts/shell-scripts.ts": [
+    "1e38c5b73fa61a7f",
+    "267318e87917da82",
+    "353cef75faeb8e8e",
+    "90737d0be8eacf1b",
+    "ef5d35662296b2bc"
+  ],
   "cli/scripts/shell-spans.constants.ts": ["33657cadf2e983be"],
   "cli/scripts/shell-spans.ts": ["1ab0c6f7f6b92db4", "6314d8d8a74f66d2", "dd44831e9bf05a2e"],
-  "cli/scripts/shell-vars.test.ts": ["2ee40cb629990587", "378261cf3e0229d8", "c1fbeca8109d8dba"],
-  "cli/scripts/shell-vars.ts": ["31e324299abb6478", "4a654c072b559cb4", "b7d89a6a1a0dcbc7"],
+  "cli/scripts/shell-vars.test.ts": ["2ee40cb629990587", "378261cf3e0229d8", "8fbcda18f1296a8c", "c1fbeca8109d8dba"],
+  "cli/scripts/shell-vars.ts": ["31e324299abb6478", "4a654c072b559cb4", "b7d89a6a1a0dcbc7", "dc86644592a861f8"],
   "cli/scripts/shell-words.test.ts": [
     "0bd6342383239d87",
     "58f563b5c4818f02",
@@ -7415,6 +7423,7 @@
   "cli/scripts/shell.constants.ts": [
     "36c1ebf91407a6fd",
     "414824a62ed74fe7",
+    "53f8fc9047dcf558",
     "6f045e50c3693ea5",
     "d9d534375af41df1",
     "df0c78a3faf37402"

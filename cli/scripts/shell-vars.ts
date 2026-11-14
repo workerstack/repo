@@ -2,11 +2,14 @@
 import os from "node:os";
 
 import { repoEnv } from "../repo-env.ts";
-import type { Dir, ShellWord, Simple, StartEnv, Value, Vars } from "./shell-ast.types.ts";
+import type { Dir, ShellNode, ShellWord, Simple, StartEnv, Value, Vars } from "./shell-ast.types.ts";
 import { expandValue, lookup } from "./shell-expand.ts";
 import { readWord } from "./shell-fields.ts";
 import { programAt, programBase } from "./shell-scripts.ts";
 import { ASSIGNMENT_RE, END_OF_OPTIONS, PRINTF, PRINTF_VAR_OPTION, SETTERS, UNSET } from "./shell.constants.ts";
+
+/** The most values a `for` list is walked with, one pass each. */
+const MAX_FOR_VALUES = 8;
 
 /** The head of an assignment word: its `NAME=` text, the name, whether it sets an array entry, and whether `+=`. */
 type AssignHead = { head: string; name: string; isEntry: boolean; isAppend: boolean };
@@ -57,14 +60,13 @@ export function processEnv(): StartEnv {
 }
 
 /**
- * The variables a walk starts with: `HOME`, `CDPATH` and `PATH` from `env`, `PWD` as the start dir, and bash's own
- * `IFS`.
+ * The variables a walk starts with: `HOME` and `CDPATH` from `env`, `PWD` as the start dir, and bash's own `IFS`.
+ * `PATH` stays unknown in words, where its dirs would read as paths the command names; only the script lookup reads it.
  */
 export function seedVars(env: StartEnv, cwd: string): Vars {
   return new Map([
     ["HOME", known(env.home)],
     ["CDPATH", known(env.cdpath)],
-    ["PATH", known(env.path)],
     ["PWD", known(cwd)],
     ["IFS", known(DEFAULT_IFS)],
   ]);
@@ -198,4 +200,15 @@ export function varsAfter(c: Simple, vars: Vars): Vars {
     (name === PRINTF && c.words.some((w) => readWord(w).text === PRINTF_VAR_OPTION))
     ? new Map()
     : vars;
+}
+
+/**
+ * The values a `for` gives its name from the fields of its list; null when one is unknown, `select` picks, or there
+ * are too many.
+ */
+export function forValues(node: Extract<ShellNode, { kind: "for" }>, list: Simple | undefined): string[] | null {
+  if (node.select === true || list === undefined || list.words.length > MAX_FOR_VALUES) return null;
+  const read = list.words.map(readWord);
+
+  return read.every((r) => r.literal) ? read.map((r) => r.text) : null;
 }

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { fileTree } from "./__fixtures__/file-tree.ts";
 import { bashTargetsDenylist } from "./gate-paths.ts";
@@ -118,4 +118,18 @@ it("bashTargetsDenylist: judges the reads in a script file a shell runs, from th
 
   for (const cmd of reads) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
   expect(bashTargetsDenylist(`cd '${dir}/s' && bash ok.sh`, NO_DIR)).toBe(false);
+});
+
+/** A line that, from `dir`, writes a script reading `read` and runs it. */
+function writesAndRuns(dir: string, read: string): string {
+  return `cd '${dir}' && cat > w.sh <<'EOF'\ncat ${read}\nEOF\nbash w.sh`;
+}
+
+it("bashTargetsDenylist: judges the text a line writes to a script, not the PATH dirs it starts with", () => {
+  const dir = fileTree(["s/"]);
+  vi.stubEnv("PATH", `/a/${nmDir}/.bin`);
+
+  expect(bashTargetsDenylist(writesAndRuns(dir, "dist/x"), NO_DIR)).toBe(true);
+  expect(bashTargetsDenylist(writesAndRuns(dir, "src/x"), NO_DIR)).toBe(false);
+  expect(bashTargetsDenylist("echo $PATH | grep -v cargo", NO_DIR)).toBe(false);
 });
