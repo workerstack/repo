@@ -30,6 +30,7 @@ describe("IGNORED_DIRS", () => {
     );
     expect(STATE_DIRS.has("sessions")).toBe(true);
     expect(CHECKOUT_STATE.has("sync.json")).toBe(true);
+    expect(CHECKOUT_STATE.has("tsbuildinfo")).toBe(true);
   });
 });
 
@@ -58,12 +59,15 @@ describe("routesToRoot", () => {
     expect(routesToRoot(ROOT, path.join(ROOT, rel))).toBe(true);
   });
 
-  it.each([".repo/tmp/sync.json", ".repo/tmp/stage/x", ".repo/tmp/stage", ".repo/lessons/x"])(
-    "is false for %s",
-    (rel) => {
-      expect(routesToRoot(ROOT, path.join(ROOT, rel))).toBe(false);
-    },
-  );
+  it.each([
+    ".repo/tmp/sync.json",
+    ".repo/tmp/stage/x",
+    ".repo/tmp/stage",
+    ".repo/tmp/tsbuildinfo/x",
+    ".repo/lessons/x",
+  ])("is false for %s", (rel) => {
+    expect(routesToRoot(ROOT, path.join(ROOT, rel))).toBe(false);
+  });
 
   it("reads a C:\\ spelling", () => {
     const w = path.win32;

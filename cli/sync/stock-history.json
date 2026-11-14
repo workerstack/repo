@@ -3429,6 +3429,7 @@
     "398d2d3bd0b58474",
     "45dc1a5a9cfab839",
     "a5796d8065a8c793",
+    "d5e1bdd015d3b733",
     "e16af6180aa7a0e8",
     "f6615107c72ae119"
   ],
@@ -8417,7 +8418,8 @@
     "99055141b02b1e00",
     "aa860df3737e4d0b",
     "c43a086b7383b507",
-    "da8fd9f3f8dc1990"
+    "da8fd9f3f8dc1990",
+    "f80d48fbf5b56573"
   ],
   "cli/scripts/worktree-cli-add.test.ts": [
     "17397835647ab57f",
@@ -8545,6 +8547,7 @@
     "ed9fff3d51834b16"
   ],
   "cli/scripts/worktree-lifecycle.ts": [
+    "063af34b29ba0c5b",
     "170e3a574a2f80e4",
     "1e4ce18cd225ae88",
     "3186b0b5a2304524",
@@ -8584,7 +8587,7 @@
   ],
   "cli/scripts/worktree-pr.ts": ["c5774f039006e713"],
   "cli/scripts/worktree-remote-sync.test.ts": ["d22f25ccf78ae94c"],
-  "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871", "e920e2d3def0a510"],
+  "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "6705ce7466ce301a", "cce0db88c3a59871", "e920e2d3def0a510"],
   "cli/scripts/worktree-shared-shell.test.ts": [
     "0d4f8d30e9d21631",
     "14b07ccf8b960cb4",

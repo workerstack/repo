@@ -94,6 +94,7 @@ it("repo clean keeps the committed .repo files and reports an empty sweep agains
     ".repo/settings/s.json",
     ".repo/tmp/sync.json",
     ".repo/tmp/stage/x",
+    ".repo/tmp/tsbuildinfo/tsconfig.json.tsbuildinfo",
   ];
 
   for (const rel of committed) put(rel, 90 * 24 * HOUR);

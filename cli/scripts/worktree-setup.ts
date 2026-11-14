@@ -5,7 +5,9 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
-import { branchExists, git } from "./worktree-git.ts";
+import { TSBUILDINFO_DIR } from "./ci.constants.ts";
+import { canonicalPath } from "./workspace-root.ts";
+import { branchExists, git, worktreeEntries } from "./worktree-git.ts";
 import {
   BIN_DIR,
   INSTALL_TIMEOUT_MS,
@@ -36,6 +38,40 @@ export function copyIncluded(root: string, dest: string): void {
     fs.mkdirSync(path.dirname(to), { recursive: true });
     fs.copyFileSync(path.join(root, rel), to);
   }
+}
+
+/** The newest mtime among the files of `dir`, or undefined when it has none. */
+function newestFile(dir: string): number | undefined {
+  if (!fs.existsSync(dir)) return undefined;
+  const times = fs.readdirSync(dir).map((name) => fs.statSync(path.join(dir, name)).mtimeMs);
+
+  return times.length === 0 ? undefined : Math.max(...times);
+}
+
+/**
+ * Copy into `dest` the typecheck store of the checkout whose store changed last, so its first typecheck is warm; never
+ * overwrite. tsc drops a store it cannot read or whose files changed, so a torn or stale copy costs one cold run.
+ */
+export function seedTypecheckState(root: string, dest: string): void {
+  const self = canonicalPath(dest);
+
+  const stores = worktreeEntries(root)
+    .filter((entry) => entry.path !== self)
+    .flatMap((entry) => {
+      const dir = path.join(entry.path, TSBUILDINFO_DIR);
+      const newest = newestFile(dir);
+
+      return newest === undefined ? [] : [{ dir, newest }];
+    });
+
+  const from = stores.toSorted((a, b) => b.newest - a.newest)[0];
+
+  if (from === undefined) return;
+  const to = path.join(dest, TSBUILDINFO_DIR);
+  fs.mkdirSync(to, { recursive: true });
+
+  for (const name of fs.readdirSync(from.dir))
+    if (!fs.existsSync(path.join(to, name))) fs.copyFileSync(path.join(from.dir, name), path.join(to, name));
 }
 
 export function createWorktree(root: string, dest: string, branch: string): void {

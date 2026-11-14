@@ -34,7 +34,7 @@ import {
   worktreeOf,
 } from "./worktree-git.ts";
 import { finishByPullRequest } from "./worktree-pr.ts";
-import { copyIncluded, createWorktree, installDependencies } from "./worktree-setup.ts";
+import { copyIncluded, createWorktree, installDependencies, seedTypecheckState } from "./worktree-setup.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import { BRANCH_PREFIX, HEADS_REF, MAX_FINISH_TRIES, NO_BRANCH, WORKTREES_DIR } from "./worktree.constants.ts";
 import type {
@@ -59,6 +59,7 @@ export function addWorktree(root: string, raw: string | undefined): WorktreeMade
 
   if (isNew) createWorktree(root, dest, branch);
   copyIncluded(root, dest);
+  seedTypecheckState(root, dest);
 
   if (isNew) installDependencies(root, dest);
 

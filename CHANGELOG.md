@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The repo lint plugin loads no eslint, so each lint run starts about 120 ms sooner. It adds `@typescript-eslint/types` and `@typescript-eslint/scope-manager` as dependencies, and the `@typescript-eslint/utils` peer is now optional.
 - /implement-roadmap-deep writes and reviews every parallel group plan at once, runs spawn groups together, and lands each plan in slice order after slice-files, a rebase and ci; /review-plan flags a path outside the slice's list; /implement-plan-deep takes commit only
 - Runners send read-only Verify checks (lint, fmt --check, tsc --noEmit, sync --check, docs --check) in one message and run tests, coverage and ci alone
+- `bun repo worktree add` copies the typecheck state of the checkout that typechecked last into the new worktree and never overwrites a file there, so its first typecheck is warm: 1.4 s against 5.7 s cold in this repo. `.repo/tmp/tsbuildinfo` is now state of each checkout, so a write under it from a worktree stays in that worktree.
 
 ### Removed
 

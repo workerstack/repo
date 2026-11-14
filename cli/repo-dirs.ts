@@ -9,7 +9,7 @@ export { IGNORED_DIRS, RED_PROOF, REPO, SCRATCH, STATE, WORK_DIRS } from "./repo
 export type RepoDir = (typeof IGNORED_DIRS)[number];
 
 /** Entries of `.repo/tmp` that belong to one checkout and never route to the root. */
-export const CHECKOUT_STATE: ReadonlySet<string> = /* @__PURE__ */ new Set(["sync.json", "stage"]);
+export const CHECKOUT_STATE: ReadonlySet<string> = /* @__PURE__ */ new Set(["sync.json", "stage", "tsbuildinfo"]);
 
 /** Dirs that live under `.repo/tmp`. */
 export const STATE_DIRS: ReadonlySet<string> = /* @__PURE__ */ new Set([

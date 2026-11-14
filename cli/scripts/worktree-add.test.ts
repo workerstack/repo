@@ -142,3 +142,54 @@ it("makes the worktree when .worktreeinclude matches no file at all", () => {
   expect(addWorktree(r, "bare").created).toBe(true);
   expect(fs.existsSync(path.join(wt(r, "bare"), ".env"))).toBe(false);
 });
+
+const STORE = ".repo/tmp/tsbuildinfo";
+const INFO = "tsconfig.json.tsbuildinfo";
+
+/** Writes `text` as `dir`'s store file, last changed `ageS` seconds ago. */
+function store(dir: string, text: string, ageS: number): void {
+  const file = path.join(dir, STORE, INFO);
+  write(file, text);
+  const at = new Date(Date.now() - ageS * 1000);
+  fs.utimesSync(file, at, at);
+}
+
+function readStore(dir: string): string {
+  return fs.readFileSync(path.join(dir, STORE, INFO), "utf8");
+}
+
+it("starts a new worktree with the typecheck store that changed last, and skips an empty one", () => {
+  const r = tmp.repo();
+  store(r, "root", 100);
+  addWorktree(r, "a");
+  store(wt(r, "a"), "a", 10);
+  addWorktree(r, "empty");
+  fs.rmSync(path.join(wt(r, "empty"), STORE, INFO));
+  addWorktree(r, "b");
+  expect(readStore(wt(r, "b"))).toBe("a");
+});
+
+it("never overwrites a typecheck store file the worktree has, even when another is newer", () => {
+  const r = tmp.repo();
+  addWorktree(r, "b");
+  store(wt(r, "b"), "mine", 100);
+  store(r, "root", 10);
+  addWorktree(r, "b");
+  expect(readStore(wt(r, "b"))).toBe("mine");
+});
+
+it("copies no typecheck store when the worktree itself holds the newest", () => {
+  const r = tmp.repo();
+  store(r, "root", 100);
+  addWorktree(r, "b");
+  store(wt(r, "b"), "b", 10);
+  addWorktree(r, "b");
+  expect(readStore(wt(r, "b"))).toBe("b");
+  expect(fs.readdirSync(path.join(wt(r, "b"), STORE))).toStrictEqual([INFO]);
+});
+
+it("makes no typecheck store when no checkout has one", () => {
+  const r = tmp.repo();
+  addWorktree(r, "b");
+  expect(fs.existsSync(path.join(wt(r, "b"), STORE))).toBe(false);
+});
