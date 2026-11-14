@@ -2442,7 +2442,7 @@
   ],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
   "cli/scripts/__fixtures__/vscode-tasks-kit.ts": ["7c4d80d722a9c303"],
-  "cli/scripts/__fixtures__/worktree-repo.ts": ["ee0c1c5f02d43e6e"],
+  "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": [
     "1531dd871777c4bb",
@@ -2852,6 +2852,7 @@
     "07ba9e42945d9700",
     "1b7ac0472977254e",
     "1eecc46128b18fe2",
+    "2d27a6f361c82c49",
     "33ee0ec95f5aa33f",
     "4d736568f3fa0e26",
     "dae457f7e3fc2e32",
@@ -7722,7 +7723,9 @@
     "9f9e49c250434637",
     "ef0470f234848706"
   ],
+  "cli/scripts/worktree-cli-finish-sync.test.ts": ["ac3cff6ad1d5c163"],
   "cli/scripts/worktree-cli-finish.test.ts": [
+    "019320935af85552",
     "080aa17fccb1abfb",
     "3195398876bcf15d",
     "3d63c2e02117e072",
@@ -7752,6 +7755,7 @@
     "4125dfd51c24bd36",
     "41639b036d28e859",
     "470e15ba681bb70e",
+    "66653259e2e8133f",
     "6a5e5976c1c3c348",
     "ed8273157dadfc46",
     "ff919a43cb25a45d"
@@ -7782,6 +7786,7 @@
     "64e22282e2bde8dc",
     "67df719b7dbb9d5c",
     "6b897361a05a1b6c",
+    "bbf0b633258416df",
     "c78b08a5b9e171aa"
   ],
   "cli/scripts/worktree-guards.constants.ts": ["099ae5ca99d29b35", "7a75b2f98f0ba368"],
@@ -7818,6 +7823,7 @@
   "cli/scripts/worktree-lifecycle.ts": [
     "170e3a574a2f80e4",
     "1e4ce18cd225ae88",
+    "3186b0b5a2304524",
     "3bcecd7fdc78908c",
     "58af7a35a3088386",
     "72e30d7c5b33e6b8",
@@ -7850,7 +7856,7 @@
     "785ea122fdcf219f",
     "9ba86ce6be1adaa1"
   ],
-  "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871"],
+  "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871", "e920e2d3def0a510"],
   "cli/scripts/worktree-shared-shell.test.ts": [
     "14b07ccf8b960cb4",
     "2826730ca2a811b5",
@@ -7894,7 +7900,7 @@
     "b41d49eb64549447",
     "f570f8242356c6ed"
   ],
-  "cli/scripts/worktree.constants.ts": ["21c793adb304f28a", "73baed1f449219f5"],
+  "cli/scripts/worktree.constants.ts": ["21c793adb304f28a", "73baed1f449219f5", "79fe23de93899a7e"],
   "cli/scripts/worktree.test.ts": [
     "04f29f4029874c92",
     "09ecd5cab49f8f70",
@@ -7906,6 +7912,7 @@
     "e0b195d22bf29785"
   ],
   "cli/scripts/worktree.ts": [
+    "1600322c5bfc6525",
     "39fe708a8275f215",
     "3e4fd65b76ee59b3",
     "5006500bd27d7fd4",
@@ -7980,6 +7987,7 @@
     "093ed3a655f55cd3",
     "1944509e7d5d4e7a",
     "26b08d2101d7cd58",
+    "3078e2cf628d55f9",
     "37424abba0611db9",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
