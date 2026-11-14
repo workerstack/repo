@@ -36,7 +36,7 @@ After 3 failed rounds, a missing report or a status other than `done`, spawn `im
 
 ## Commit
 
-One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then lands it the way `AGENTS.md` says (by default `finish` from the root). It holds only this plan's files.
+One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then lands it the way `AGENTS.md` says (by default `finish` from the root). It holds only this plan's files. Under `commit only` the plan commits and stops; `/implement-roadmap-deep` lands it.
 
 ## Dumps
 

@@ -98,7 +98,8 @@ A slice line may end `(parallel: <path>, …)`, listing every path its plan chan
 - The marker is cut before the one-sentence check, so it never counts as a second sentence. A `(parallel: …)` mid-line is sentence text.
 - Old-shape roadmaps take no marker.
 - Denies: `slice 3 is parallel alone; parallel needs two or more adjacent slices`, `slice 1 is parallel with no paths; list the paths it changes after parallel:`, `parallel slices 1 and 2 both list cli/init.ts; parallel slices need disjoint paths`, `parallel slices 1 and 2 overlap at agents/skills/ and agents/skills/commit/SKILL.md; parallel slices need disjoint paths`.
-- The save cannot see whether a slice's plan stays inside its list; `/review-roadmap` checks the sentence against it.
+- The save cannot see whether a slice's plan stays inside its list: `/review-roadmap` checks the sentence against it, `/review-plan` checks a deep plan's Steps, and `bun repo slice-files <roadmap path> <slice>` checks the branch's changed files before it lands.
+- `/implement-roadmap-deep` writes every group plan, reviews them in one message, and runs a group of spawn plans together from the session; a free, mixed or pull-request group runs in order. Each group plan commits only and lands in slice order after slice-files, a rebase onto the default branch and `bun repo ci`.
 
 ## Previous mistakes
 

@@ -171,7 +171,7 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 |---|---|
 | Goal | 1–3 sentences. What “done” means. |
 | Usage | What a person or agent types and sees once the plan lands: each new or changed command, flag, output, error message, or file, in fenced blocks, with the before for each changed one. Internal steps nobody types or reads need none. A plan with no visible change writes one line: `No visible change:` and why. |
-| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `node_modules/@workerstack/repo/references/scope.md` ## Types, and a skip-with-reason when a named check is dropped. |
+| Context / Constraints / Watch-outs | bullets only. Watch-outs: non-obvious footguns; empty allowed (`(none)`). A new plan that names a file a lesson matches cites that lesson path in Watch-outs, or the save is denied. Context includes `Task type:`, `Named checks:` from `node_modules/@workerstack/repo/references/scope.md` ## Types, and a skip-with-reason when a named check is dropped. A roadmap slice plan holds `Roadmap: <abs roadmap path> slice N` with the slice's why. |
 | Steps | bulk of the file; each leaf = one coherent edit or one file-level action |
 | Verify | 1–5 runnable leaves (cmd or observable) |
 

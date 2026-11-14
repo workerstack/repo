@@ -10,6 +10,8 @@ strategy spawn-fast or spawn-deep: read node_modules/@workerstack/repo/reference
 
 Arg `{n|path}` picks that file. Empty arg: unique in-progress, else unique ready, else list serials.
 
+`commit only` after the arg (`/implement-roadmap-deep` says it for a parallel group's plan): after Verify run the `/commit` diff pass and `git commit` with the `commit:` subject in the worktree, never `worktree finish`, leave the plan `in-progress`, and set the journal `done`; the runner checks, lands and sets the plan `done`. End the reply with `worktree: <abs path>` and `commit: <short sha>` on their own lines.
+
 Worktree: before the first open leaf, run `bun repo worktree add {serial}-{name}` (serial and name from the frontmatter; it prints `.worktrees/{serial}-{name}` and reuses one that exists). Every product edit, test run and commit happens there; the gate denies product writes and commits in the main checkout unless `workflow` is `main`. The plan, the journal and `.repo/scratch/` stay in the root. A subagent starts in the root, so its prompt names the worktree path.
 
 Format: `node_modules/@workerstack/repo/references/plan-format.md`. Write-allowlist = paths listed in the plan, repo-relative to the worktree; an absolute path under the root names the same path there. Run Verify leaves. Do not skip a test leaf. Do not flip a behavior leaf `[x]` until its test ran.

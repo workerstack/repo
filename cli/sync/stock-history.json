@@ -261,7 +261,7 @@
     "efab76f90ef41f2e",
     "f01909910bdbeac9"
   ],
-  ".agents/skills/implement-plan-deep/SKILL.md": ["8af288f2269b706e"],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["b708f70cdf390ba8"],
   ".agents/skills/implement-plan-fast/SKILL.md": ["5ce4d643499e3d98"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
@@ -283,7 +283,7 @@
     "fd12b52d1aa68e91",
     "ff317d44d9986d6a"
   ],
-  ".agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260"],
+  ".agents/skills/implement-roadmap-deep/SKILL.md": ["5d2db7a4eb01d313"],
   ".agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
@@ -358,10 +358,10 @@
   ".agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
   ".agents/skills/review-plan/SKILL.md": [
     "098470de41694978",
-    "1f96e707bb73cca0",
     "3638009f06c3c414",
     "419c736dd6d7a1ab",
     "5dc75175807fa513",
+    "8c18afa23a4fc876",
     "90bcc58596518fa7",
     "986b1a493c980983",
     "afa96d717f27b680",
@@ -420,7 +420,7 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["7f6e5bc26e86d5c0"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["0b89717b68be4721"],
   ".agents/skills/write-plan-fast/SKILL.md": ["763fb822979db4fc"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
@@ -2259,7 +2259,8 @@
     "1632789dd06220ae",
     "292f5b0c8de32f1d",
     "3f1c199de368543d",
-    "8af288f2269b706e"
+    "8af288f2269b706e",
+    "b708f70cdf390ba8"
   ],
   "agents/skills/implement-plan-fast/SKILL.md": [
     "4fa5d8c08371513e",
@@ -2277,7 +2278,12 @@
     "9aeed4ef2520f469",
     "cd9ce6d76c9c6a6d"
   ],
-  "agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260", "c240aa668b4d478f", "f3c378aa2c60cdaa"],
+  "agents/skills/implement-roadmap-deep/SKILL.md": [
+    "35fbb27fd12d5260",
+    "5d2db7a4eb01d313",
+    "c240aa668b4d478f",
+    "f3c378aa2c60cdaa"
+  ],
   "agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa", "a982fa72dddc6e87", "c52179e71ef7184c"],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
@@ -2311,7 +2317,8 @@
     "19d5b003103c9085",
     "1f96e707bb73cca0",
     "553005bf5d6c4571",
-    "5dc75175807fa513"
+    "5dc75175807fa513",
+    "8c18afa23a4fc876"
   ],
   "agents/skills/review-roadmap/SKILL.md": [
     "53f5034d8be7143c",
@@ -2332,6 +2339,7 @@
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
   "agents/skills/write-plan-deep/SKILL.md": [
+    "0b89717b68be4721",
     "3ddd8c267267a72d",
     "6d68c5797975527f",
     "7f6e5bc26e86d5c0",
@@ -8867,6 +8875,7 @@
     "1656111787ae22a8",
     "1b791f542ea9a9b7",
     "1e647b302821c533",
+    "2c6b17560b982127",
     "2e65982b83dfc36d",
     "364900ae840f6753",
     "44647dc5a88f38e9",
@@ -8896,7 +8905,8 @@
     "7bb47085b4231e88",
     "854dcaac0df8fdbf",
     "a4e30794ca38a1bd",
-    "a6800e14137b58cc"
+    "a6800e14137b58cc",
+    "d14131adcd259e00"
   ],
   "references/roadmap-format.md": [
     "05119661b62dcd5b",
@@ -8907,6 +8917,7 @@
     "4a1f34c9e353962f",
     "51deefc4b794d3d7",
     "6369b7edfbcaadee",
+    "664ab614c6520cd4",
     "6996928b19a20977",
     "8be239c0c8a8f6a9",
     "915f300b8b9d042a",
