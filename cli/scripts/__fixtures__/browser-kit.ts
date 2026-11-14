@@ -15,6 +15,7 @@ import type {
   RunOpts,
 } from "../browser.types.ts";
 import { bunPath } from "../../../dev/test-paths.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 import { plantStub } from "../../__fixtures__/stub-bin.ts";
 import { childEnv } from "../../env.ts";
 import { repoEnv } from "../../repo-env.ts";
@@ -49,26 +50,6 @@ export function killPid(pid: number): void {
   quiet(() => process.kill(pid, "SIGTERM"));
 }
 
-function pause(ms: number): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-
-function rmRetry(dir: string, tries = 6): void {
-  try {
-    fs.rmSync(dir, { recursive: true, force: true });
-  } catch (err) {
-    const code = (err as /* rmSync throws errno errors */ NodeJS.ErrnoException)
-      .code;
-    if (
-      tries <= 1 ||
-      (code !== "EBUSY" && code !== "ENOTEMPTY" && code !== "EPERM")
-    )
-      throw err;
-    pause(25 * (7 - tries));
-    rmRetry(dir, tries - 1);
-  }
-}
-
 export function sessionPath(cwd: string): string {
   return path.join(cwd, ".repo/tmp/browser/session.json");
 }
@@ -76,7 +57,8 @@ export function sessionPath(cwd: string): string {
 /** Ends every engine, socket and stand-in the case started, then removes its dirs. */
 export function cleanBrowser(): void {
   for (const f of stopFns.splice(0)) f();
-  for (const d of tmpDirs.splice(0)) {
+  const dirs = tmpDirs.splice(0);
+  for (const d of dirs) {
     try {
       const s = JSON.parse(
         fs.readFileSync(sessionPath(d), "utf8"),
@@ -85,8 +67,8 @@ export function cleanBrowser(): void {
     } catch {
       // no session
     }
-    rmRetry(d);
   }
+  removeTemps(dirs);
 }
 
 /** Runs `fn` when the case ends. */

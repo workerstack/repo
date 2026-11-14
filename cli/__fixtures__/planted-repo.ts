@@ -3,22 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { childEnv } from "../env.ts";
-import { removeOrExplain } from "./remove-or-explain.ts";
+import { removeTemps } from "./remove-temps.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
 
 const dirs: string[] = [];
 
 /** Removes every repo `tempDir` made; call it from an `afterEach`. */
 export function removePlanted(): void {
-  const errors: Error[] = [];
-  for (const dir of dirs.splice(0)) {
-    try {
-      removeOrExplain(dir);
-    } catch (error) {
-      errors.push(error as Error);
-    }
-  }
-  if (errors.length) throw new AggregateError(errors, errors.map((e) => e.message).join("\n"));
+  removeTemps(dirs.splice(0));
 }
 
 const env = toolEnv(childEnv());

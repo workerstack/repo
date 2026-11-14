@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 
 import { latestRegistry } from "../check-latest.ts";
+import { removeTree } from "../remove-tree.ts";
 import { repoEnv } from "../repo-env.ts";
 import { runCargo } from "../rust/clippy.ts";
 import { inheritRunner, realSleep, spawnRunner } from "../scripts/ci-wait-run.ts";
@@ -29,7 +30,7 @@ import { releaseMain } from "./release.ts";
 import { releaseWait } from "./wait.ts";
 
 function removeDir(dir: string): void {
-  return fs.rmSync(dir, { force: true, recursive: true });
+  return removeTree(dir);
 }
 
 function packTools() {

@@ -20,6 +20,17 @@ import { NEED_FFMPEG } from "./listen.constants.ts";
 
 afterEach(cleanupTmp);
 
+/** Whether `pid` is still a live process; signal 0 checks without sending anything. */
+function running(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+
+    return true;
+  } catch (error) {
+    return (error /* process.kill throws a system error with a code */ as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
 describe("start", () => {
   it("needs ffmpeg", async () => {
     const r = await run(["start"], { whichFn: which({}) });
@@ -117,5 +128,8 @@ fs.renameSync(${JSON.stringify(`${argsFile}.tmp`)}, ${JSON.stringify(argsFile)})
     const got = fs.readFileSync(argsFile, "utf8").split("\n").slice(0, 6);
     expect(r.code).toBe(0);
     expect(got).toStrictEqual([repoBin(), "listen", "_record", "--out", wav, "--cwd"]);
+    // The recorder runs from `dir`, and Windows will not remove a running program's file, so it must exit first.
+    const pid = Number(readSession(r.cwd).pid);
+    await vi.waitFor(() => expect(running(pid)).toBe(false), { timeout: 10_000 });
   }, 60_000);
 });

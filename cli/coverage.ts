@@ -15,6 +15,7 @@ import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
+import { removeTree } from "./remove-tree.ts";
 import { type CargoRun, runCargo } from "./rust/clippy.ts";
 import { type Floors, readFloorsFile } from "./rust/floors.ts";
 import { rustCoverage } from "./rust/rust-coverage.ts";
@@ -103,7 +104,7 @@ function measure(root: string): Measured {
 
     return { ok: false };
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

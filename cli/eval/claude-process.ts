@@ -6,6 +6,7 @@ import path from "node:path";
 import crossSpawn from "cross-spawn";
 
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import type { ClaudeCall, RunClaude } from "./session-client.ts";
 
 /** Whether a variable leaks a key, a parent session, an effort or a base URL; the login token and config dir do not. */
@@ -56,6 +57,6 @@ export async function claudeProcess(call: ClaudeCall): ReturnType<RunClaude> {
   try {
     return await start(call, dir);
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }

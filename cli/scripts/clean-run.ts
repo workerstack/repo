@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { removeTree } from "../remove-tree.ts";
 import { repoPath } from "../repo-dirs.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { boardHome } from "./board-files.ts";
@@ -9,18 +10,7 @@ import { readBootId } from "./board-process.ts";
 import { sweep } from "./board.ts";
 import { cleanPlan } from "./clean-plan.ts";
 import { nestedRepoDirs, stats } from "./clean-scan.ts";
-import {
-  DURABLE,
-  GB,
-  KB,
-  KEEP_ORDER,
-  KEEP_PLURAL,
-  MB,
-  NESTED_KIND,
-  PLURAL,
-  REMOVE_ORDER,
-  RM_RETRIES,
-} from "./clean.constants.ts";
+import { DURABLE, GB, KB, KEEP_ORDER, KEEP_PLURAL, MB, NESTED_KIND, PLURAL, REMOVE_ORDER } from "./clean.constants.ts";
 import type { CleanRun, KeepItem, RemoveItem } from "./clean.types.ts";
 
 /** "n kind" for each kind in `order` that `items` hold, plural past one. */
@@ -73,7 +63,7 @@ function removeAll(run: CleanRun, remove: RemoveItem[], relOf: (p: string) => st
       out(relOf(item.path));
     } else {
       try {
-        rm(item.path, { force: true, maxRetries: RM_RETRIES, recursive: true });
+        removeTree(item.path, rm);
       } catch (err) {
         failed += 1;
         const { code } = err /* rm throws an fs error that carries a code */ as NodeJS.ErrnoException;

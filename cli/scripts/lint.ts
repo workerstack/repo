@@ -7,6 +7,7 @@ import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { findRoot, loadConfig, missingConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import { repoEnv } from "../repo-env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
 import type { CargoRun } from "../rust/clippy.ts";
@@ -245,7 +246,7 @@ export function capture(bin: string, args: string[], options: CaptureOptions): C
   } finally {
     fs.closeSync(out);
     fs.closeSync(err);
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

@@ -9,6 +9,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import type { Result } from "../result.ts";
 import { newestFirst, ghJson } from "../scripts/ci-wait-poll.ts";
 import type { Runner } from "../scripts/ci-wait-run.ts";
@@ -200,7 +201,7 @@ function download(io: RemoteIo, run: Listed, target: Target): Remote {
 
     return { ok: true, results };
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { bunPath } from "../../../dev/test-paths.ts";
 import { main } from "../job.ts";
 import { NO_SUCH_PROCESS, PID_FILE, STUB_EXIT_POLL_MS, STUB_EXIT_WAIT_MS } from "./job-kit.constants.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const realPath = process.env.PATH ?? "";
 const planted: string[] = [];
@@ -28,7 +29,7 @@ export function useJobEnv(): void {
   afterEach(async () => {
     // A stub a killed shim left running holds its dir (EBUSY on Windows): end every recorded pid first, on every OS.
     await Promise.all(planted.flatMap((d) => stubPids(d)).map(endProcess));
-    for (const d of planted.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+    removeTemps(planted.splice(0));
   });
 }
 

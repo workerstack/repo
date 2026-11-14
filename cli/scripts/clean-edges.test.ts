@@ -65,13 +65,13 @@ describe("clean report", () => {
     put(root, ".repo/scratch/b.log", "b");
 
     const rm = ((p: string) => {
-      if (p.endsWith("a.log")) throw Object.assign(new Error("busy"), { code: "EBUSY" });
+      if (p.endsWith("a.log")) throw Object.assign(new Error("denied"), { code: "EACCES" });
       fs.rmSync(p, { force: true });
     }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
 
     const { code, lines } = run(root, { dryRun: false, rm });
     expect(code).toBe(1);
-    expect(lines).toContain("skipped .repo/scratch/a.log: EBUSY");
+    expect(lines).toContain("skipped .repo/scratch/a.log: EACCES");
     expect(lines).toContain("removed 1 file (1 B)");
     expect(fs.existsSync(path.join(root, ".repo/scratch/a.log"))).toBe(true);
     expect(fs.existsSync(path.join(root, ".repo/scratch/b.log"))).toBe(false);

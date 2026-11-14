@@ -6,7 +6,7 @@ import path from "node:path";
 import { vi } from "vitest";
 import { bunPath } from "../../../dev/test-paths";
 import { childEnv } from "../../env.ts";
-import { removeOrExplain } from "../../__fixtures__/remove-or-explain.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 import type { HookIo } from "../hook-io.ts";
 import { sharedGitReason } from "../worktree-guards.ts";
 import type { ShellAt } from "../worktree.types.ts";
@@ -168,11 +168,7 @@ export function scratch(): Scratch {
     process.chdir(home);
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
-    for (const d of dirs.splice(0)) {
-      for (const x of [d, `${d}-alias`, `${d}-outside`]) {
-        removeOrExplain(x);
-      }
-    }
+    removeTemps(dirs.splice(0).flatMap((d) => [d, `${d}-alias`, `${d}-outside`]));
   };
   return { dir, repo, cleanup };
 }
