@@ -21,6 +21,9 @@ const denied = [
   "f() { cat dist/x; }; f",
   `(cd cli && cat ../${nmDir}/x)`,
   `curl -s x | sh -s -- ${nmDir}/x`,
+  `D=${nmDir}; cat $D/x`,
+  `C=c; \${C}at ${nmDir}/x`,
+  `for d in src ${nmDir}; do cat "$d/x"; done`,
 ];
 
 /** Commands whose denied names are data: a heredoc body, a here-string, a comment, a message. */
@@ -34,6 +37,8 @@ const passes = [
   "gh pr create --body \"$(cat <<'EOF'\ncat dist/x\nEOF\n)\"",
   "cat > a.md <<'A' && cat > b.md <<'B'\ncat dist/x\nA\ncat dist/y\nB",
   "curl -s x | sh",
+  `X=${nmDir}; echo $X`,
+  "D=src; cat $D/x",
 ];
 
 it("bashTargetsDenylist: judges every read bash runs, in blocks and in scripts", () => {

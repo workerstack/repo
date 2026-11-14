@@ -128,14 +128,18 @@ function ifRest(ps: Parser): ShellNode {
   return orElse === null ? { body, cond, kind: "if" } : { body, cond, kind: "if", orElse };
 }
 
-/** `do list done` after a loop head. */
-function loopBody(ps: Parser, cond: ShellNode): ShellNode {
+/** The list of `do list done` after a loop head. */
+function doBody(ps: Parser): ShellNode {
   skipSeparators(ps);
   take(ps, "do");
   const body = list(ps);
   take(ps, "done");
 
-  return { body, cond, kind: "loop" };
+  return body;
+}
+
+function loopBody(ps: Parser, cond: ShellNode): ShellNode {
+  return { body: doBody(ps), cond, kind: "loop" };
 }
 
 function whileLoop(ps: Parser): ShellNode {
@@ -158,21 +162,30 @@ function arithHead(ps: Parser): Simple {
   });
 }
 
-/** The words of `name [in words]`: after `in`, to the next operator; none without it. */
-function nameHead(ps: Parser): Simple {
-  ps.i++;
-  skipLines(ps);
-
-  return take(ps, "in") ? dataWords(ps, (t) => t.kind === "op") : dataWords(ps, () => true);
-}
-
-/** `for name [in words]` or `for (( … ))`, then its body; the head's words are data. */
-function forLoop(ps: Parser): ShellNode {
-  ps.i++;
-  const head = isOp(ps, "(") ? arithHead(ps) : nameHead(ps);
+/** `for (( … ))` and its body: a loop whose head's words are data. */
+function arithFor(ps: Parser): ShellNode {
+  const head = arithHead(ps);
   take(ps, ")");
 
   return { items: [head, loopBody(ps, EMPTY)], kind: "seq" };
+}
+
+/**
+ * `for name [in words]` or `select name [in words]`, then its body; the words are data, and `"$@"` (null) without
+ * `in`.
+ */
+function forLoop(ps: Parser): ShellNode {
+  const isSelect = isWord(ps, "select");
+  ps.i++;
+
+  if (isOp(ps, "(")) return arithFor(ps);
+  const name = wordOf(peek(ps))?.raw ?? "";
+  ps.i++;
+  skipLines(ps);
+  const words = take(ps, "in") ? dataWords(ps, (t) => t.kind === "op") : null;
+  const body = doBody(ps);
+
+  return isSelect ? { body, kind: "for", name, select: true, words } : { body, kind: "for", name, words };
 }
 
 /** `case word in (pattern | …) list ;; … esac`; the word is data and each arm a branch. */

@@ -1,17 +1,19 @@
 /** The simple commands bash would run for a shell command, each as the words the path gate judges. */
 import path from "node:path";
 
-import type { Part, ShellWord, Simple } from "./shell-ast.types.ts";
+import type { ReadWord, Scope, Simple } from "./shell-ast.types.ts";
+import { expandWord } from "./shell-expand.ts";
 import { shellFlow } from "./shell-flow.ts";
+import { processEnv } from "./shell-vars.ts";
 
 /** Redirects whose word is no file: a heredoc's delimiter and a here-string's text. */
 const DATA_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["<<", "<<-", "<<<"]);
 
 /**
- * A simple command: its words, then the files its redirects read or write; each word as bash reads it, which drops a
- * backslash outside quotes that `words` keeps for a Windows path; the indices of the redirect files; and the indices
- * of the words that hold an expansion (`$name`, `${…}`, `$(…)` or a backtick), whose value the gate cannot know. A
- * substitution reads as empty: its own commands are commands of their own.
+ * A simple command: its words, then the files its redirects read or write, each with the values the line set; each
+ * word as bash reads it, which drops a backslash outside quotes that `words` keeps for a Windows path; the indices of
+ * the redirect files; and the indices of the words that hold an expansion the gate cannot read (`$name` the line did
+ * not set, `${…}`, `$(…)` or a backtick). A substitution reads as empty: its own commands are commands of their own.
  */
 export type ShellCommand = {
   bashWords: string[];
@@ -23,34 +25,21 @@ export type ShellCommand = {
 /** Every simple command a shell command runs, and whether it also runs a script the gate cannot read. */
 export type ShellWords = { commands: ShellCommand[]; hasUnreadScript: boolean };
 
-type Lit = Extract<Part, { kind: "lit" }>;
-
-/** A part as the gate reads it: a literal by `pick`, a parameter as typed, a substitution as empty. */
-function partText(part: Part, pick: (lit: Lit) => string): string {
-  if (part.kind === "lit") return pick(part);
-
-  return part.kind === "param" ? part.raw : "";
-}
-
-function spelled(word: ShellWord, pick: (lit: Lit) => string): string {
-  return word.parts.map((part) => partText(part, pick)).join("");
-}
-
 /** The indices of `words` that `keep` picks. */
-function indicesWhere(words: readonly ShellWord[], keep: (w: ShellWord, i: number) => boolean): Set<number> {
+function indicesWhere(words: readonly ReadWord[], keep: (w: ReadWord, i: number) => boolean): Set<number> {
   return new Set(words.flatMap((w, i) => (keep(w, i) ? [i] : [])));
 }
 
-/** `c` as the words the path gate judges. */
-function commandOf(c: Simple): ShellCommand {
+/** `c` as the words the path gate judges, read with the variables of `scope`. */
+function commandOf(c: Simple, { vars }: Scope): ShellCommand {
   const files = c.redirects.filter((r) => !DATA_REDIRECTS.has(r.op)).map((r) => r.target);
-  const all = [...c.words, ...files];
+  const all = [...c.words, ...files].map((w) => expandWord(w, vars));
 
   return {
-    bashWords: all.map((w) => spelled(w, (lit) => lit.bash)),
-    expanded: indicesWhere(all, (w) => w.parts.some((part) => part.kind !== "lit")),
+    bashWords: all.map((w) => w.pathBash),
+    expanded: indicesWhere(all, (w) => !w.literal),
     redirects: indicesWhere(all, (_w, i) => i >= c.words.length),
-    words: all.map((w) => spelled(w, (lit) => lit.text)),
+    words: all.map((w) => w.pathText),
   };
 }
 
@@ -62,14 +51,14 @@ function commandOf(c: Simple): ShellCommand {
 export function shellWords(cmd: string): ShellWords {
   const got: ShellWords = { commands: [], hasUnreadScript: false };
 
-  shellFlow(cmd, { cwd: path.sep, p: path }, (v) => {
+  shellFlow(cmd, { cwd: path.sep, env: processEnv(), p: path }, (v) => {
     if (v.kind === "opaque") {
       got.hasUnreadScript = true;
 
       return;
     }
 
-    const c = commandOf(v);
+    const c = commandOf(v, v);
 
     if (c.words.length > 0) got.commands.push(c);
   });

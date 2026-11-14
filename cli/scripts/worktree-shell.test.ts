@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
@@ -74,7 +75,15 @@ it("moves git's dir by -C, --git-dir, --work-tree and the variables before it, u
   expect(dirsOf("git --git-dir=/x/.git push")).toStrictEqual([["/x/.git", "push"]]);
   expect(dirsOf("GIT_WORK_TREE=sub git -C /a status")).toStrictEqual([["/a", "status"]]);
   expect(dirsOf("GIT_DIR=sub git status")).toStrictEqual([["/r/sub", "status"]]);
-  expect(dirsOf("GIT_DIR=~/x git push")).toStrictEqual([["?~/x", "push"]]);
+  expect(dirsOf("GIT_DIR=~/x git push")).toStrictEqual([[path.posix.join(os.homedir(), "x"), "push"]]);
+  expect(dirsOf("D=/d GIT_DIR=$D/g git push")).toStrictEqual([["/d/g", "push"]]);
+  expect(dirsOf("GIT_DIR=a:~/x git push")).toStrictEqual([["?a:~/x", "push"]]);
+  expect(dirsOf("git --git-dir=~/x push")).toStrictEqual([["?~/x", "push"]]);
+  expect(dirsOf("G=git; $G -C /a push; $X push")).toStrictEqual([
+    ["/a", "push"],
+    ["/r", "push"],
+  ]);
+  expect(dirsOf("G=gh; $G push")).toStrictEqual([]);
   expect(dirsOf('git --work-tree="$W" status')).toStrictEqual([['?"$W"', "status"]]);
   expect(dirsOf("git -C")).toStrictEqual([]);
 });

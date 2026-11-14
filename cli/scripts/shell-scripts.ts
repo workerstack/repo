@@ -17,9 +17,9 @@ import {
   SPLIT_STRING_OPTION,
   STDIN_OPERAND,
   WATCH_VALUE_OPTS,
+  ASSIGNMENT_RE,
 } from "./shell.constants.ts";
 
-const ASSIGNMENT_RE = /^[A-Za-z_]\w*=/;
 const SHORT_CLUSTER_RE = /^-[A-Za-z]+$/;
 const PATH_SEP_RE = /[\\/]/;
 const EXE_RE = /\.exe$/i;
@@ -34,9 +34,14 @@ type Finder = (cmd: Cmd, at: number) => Script[] | null;
 /** A shell's options read from the word after it: where its operands start, and whether `-c` or `-s` was given. */
 type ShellOptions = { operand: number; hasCommand: boolean; hasStdinFlag: boolean };
 
+/** The name a program path runs as: its last path part, without `.exe`. */
+export function programBase(text: string): string {
+  return String(text.split(PATH_SEP_RE).at(LAST)).replace(EXE_RE, "");
+}
+
 /** The name a word runs as a program: its last path part, without `.exe`. */
 export function programName(word: ShellWord | undefined): string {
-  return word === undefined ? "" : String(scriptText(word).split(PATH_SEP_RE).at(LAST)).replace(EXE_RE, "");
+  return word === undefined ? "" : programBase(scriptText(word));
 }
 
 function textOf(word: ShellWord | undefined): string {

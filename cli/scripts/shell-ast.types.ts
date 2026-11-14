@@ -2,23 +2,44 @@
 
 /**
  * A piece of a word. `lit` is text in the spelling the path gate keeps (`text`, a backslash before a plain character
- * kept for a Windows separator) and in bash's (`bash`). `param` is an expansion whose value the parse cannot know
- * (`$x`, `${…}`, `$((…))`), with the bodies of the `$(…)` inside it. `subst` is a command substitution (`$(…)`, a
- * backtick, `<(…)` or `>(…)`) with the script it runs.
+ * kept for a Windows separator) and in bash's (`bash`). `param` is an expansion (`$x`, `${…}`, `$((…))`), with the
+ * bodies of the `$(…)` inside it and whether double quotes (or a heredoc body) keep it from being split. `subst` is a
+ * command substitution (`$(…)`, a backtick, `<(…)` or `>(…)`) with the script it runs.
  */
 export type Part =
   | { kind: "lit"; text: string; bash: string }
-  | { kind: "param"; raw: string; substs: readonly string[] }
+  | { kind: "param"; raw: string; substs: readonly string[]; quoted: boolean }
   | { kind: "subst"; raw: string; body: string };
 
 /** One shell word: its parts, and its text as typed. */
 export type ShellWord = { parts: readonly Part[]; raw: string };
 
 /**
- * A word as a gate judges it: the text bash gives it, the text as typed, and whether that text is its value (no
- * expansion and no leading `~`).
+ * A word as a gate judges it, expanded by the variables the line sets: the text bash gives it (an unknown part as
+ * typed); the path gate's two spellings of it, a substitution as empty (`pathText` with the backslashes a Windows path
+ * keeps, `pathBash` as bash reads them); the text as typed; whether every part is known; and the known text around
+ * each unknown part (`pieces`, one item when all is known).
  */
-export type ReadWord = { text: string; raw: string; literal: boolean };
+export type ReadWord = {
+  text: string;
+  pathText: string;
+  pathBash: string;
+  raw: string;
+  literal: boolean;
+  pieces: readonly string[];
+};
+
+/** A variable's value: known text, or unknown with the text that lost it. */
+export type Value = { known: true; text: string } | { known: false; cause: string };
+
+/** The variables a walk knows; a name not here is unknown. */
+export type Vars = ReadonlyMap<string, Value>;
+
+/** The variables a line starts with from the shell that runs it: the home folder and the `cd` search path. */
+export type StartEnv = { home: string; cdpath: string };
+
+/** Where a command runs: its dir and the variables it sees. */
+export type Scope = { dir: Dir; vars: Vars };
 
 /** A word read from a text, and the index past it. */
 export type WordSpan = { word: ShellWord; end: number };
@@ -35,10 +56,11 @@ export type Token =
 export type Simple = { kind: "simple"; words: readonly ShellWord[]; redirects: readonly Redirect[]; data?: true };
 
 /**
- * A command node. `seq` runs its items in order in one state (`;`, a newline, `&&`, `{ }`); `or` runs `right` after
- * `left` and joins both outcomes; `pipe` runs each item in a copy, fed by the one before; `async` and `subshell` run
- * in a copy; `if` (`body` or `orElse`), `loop` and `case` join their branches; `func` defines `name`; `redir` runs
- * `body` with the redirects written after it.
+ * A command node. `for` runs `body` once per word of `words` (`"$@"` when null) with `name` set to it, or for
+ * `select` to a word the user picks. `seq` runs its items in order in one state (`;`, a newline, `&&`, `{ }`), each
+ * command taken to succeed; `or` runs `right` after `left` and joins both outcomes; `pipe` runs each item in a copy,
+ * fed by the one before; `async` and `subshell` run in a copy; `if` (`body` or `orElse`), `loop` and `case` join
+ * their branches; `func` defines `name`; `redir` runs `body` with the redirects written after it.
  */
 export type ShellNode =
   | Simple
@@ -49,6 +71,7 @@ export type ShellNode =
   | { kind: "subshell"; body: ShellNode }
   | { kind: "if"; cond: ShellNode; body: ShellNode; orElse?: ShellNode }
   | { kind: "loop"; cond: ShellNode; body: ShellNode }
+  | { kind: "for"; name: string; words: Simple | null; body: ShellNode; select?: true }
   | { kind: "case"; word: Simple; arms: readonly ShellNode[] }
   | { kind: "func"; name: string; body: ShellNode }
   | { kind: "redir"; body: ShellNode; redirects: readonly Redirect[] };
@@ -59,8 +82,11 @@ export type Stdin = { kind: "none" } | { kind: "text"; text: string } | { kind: 
 /** The dir a command runs in: a path, or unknown with the text that lost it, named in a deny reason. */
 export type Dir = { known: true; path: string } | { known: false; cause: string };
 
-/** What a walk hands its visitor: a simple command with its dir, or a script a shell reads that the gate cannot. */
-export type Visited = (Simple & { dir: Dir }) | { kind: "opaque"; cause: string; dir: Dir };
+/**
+ * What a walk hands its visitor: a simple command with its dir and variables, or a script a shell reads that the gate
+ * cannot.
+ */
+export type Visited = (Simple & Scope) | { kind: "opaque"; cause: string; dir: Dir };
 
 /** A script a command makes bash run: its text and whether it runs in the caller's state, or an unreadable one. */
 export type Script = { kind: "text"; text: string; inherits: boolean } | { kind: "opaque"; cause: string };

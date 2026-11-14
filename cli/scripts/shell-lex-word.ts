@@ -1,5 +1,5 @@
 /** Reads one shell word, or a heredoc body, into its literal, expansion and substitution parts. */
-import type { Part, ReadWord, ShellWord, WordSpan } from "./shell-ast.types.ts";
+import type { Part, ShellWord, WordSpan } from "./shell-ast.types.ts";
 import { ansiCEnd, backtickEnd, braceEnd, decodeAnsiC, substitutionEnd } from "./shell-spans.ts";
 
 /**
@@ -60,35 +60,47 @@ function substsIn(text: string): string[] {
   });
 }
 
+/** A `$` in `src` at `i`, `quoted` when quotes keep what it expands whole. */
+type DollarPlace = { src: string; i: number; quoted: boolean };
+
 /** `$((…))` from the `$` at `i`: an expansion, with the substitutions inside it. */
-function arithmetic(src: string, i: number): DollarSpan {
+function arithmetic({ src, i, quoted }: DollarPlace): DollarSpan {
   const end = substitutionEnd(src, i + PAIR);
   const substs = substsIn(src.slice(i + ARITH_OPEN, end));
 
-  return { end: end + 1, part: { kind: "param", raw: src.slice(i, end + 1), substs } };
+  return { end: end + 1, part: { kind: "param", quoted, raw: src.slice(i, end + 1), substs } };
 }
 
 /** `$(…)` or `${…}` from the `$` at `i`: a substitution, or an expansion with the substitutions inside it. */
-function bracketed(src: string, i: number): DollarSpan {
+function bracketed({ src, i, quoted }: DollarPlace): DollarSpan {
   const isSubst = src.charAt(i + 1) === "(";
   const end = (isSubst ? substitutionEnd : braceEnd)(src, i + PAIR);
   const raw = src.slice(i, end + 1);
   const inner = src.slice(i + PAIR, end);
-  const part: Part = isSubst ? { body: inner, kind: "subst", raw } : { kind: "param", raw, substs: substsIn(inner) };
+
+  const part: Part = isSubst
+    ? { body: inner, kind: "subst", raw }
+    : { kind: "param", quoted, raw, substs: substsIn(inner) };
 
   return { end: end + 1, part };
 }
 
-/** The `$` form at `i` and where it ends: a substitution, arithmetic, or a parameter; null for a literal `$`. */
-function dollarAt(src: string, i: number): DollarSpan | null {
+/**
+ * The `$` form at `i` and where it ends: a substitution, arithmetic, or a parameter, `quoted` when quotes keep it
+ * whole; null for a literal `$`.
+ */
+function dollarAt(at: DollarPlace): DollarSpan | null {
+  const { src, i, quoted } = at;
   const next = src.charAt(i + 1);
 
-  if (src.startsWith("((", i + 1)) return arithmetic(src, i);
+  if (src.startsWith("((", i + 1)) return arithmetic(at);
 
-  if (next === "(" || next === "{") return bracketed(src, i);
+  if (next === "(" || next === "{") return bracketed(at);
   const name = NAME_RE.exec(src.slice(i + 1))?.[0] ?? (SPECIAL_PARAMS.includes(next) && next !== "" ? next : "");
 
-  return name === "" ? null : { end: i + 1 + name.length, part: { kind: "param", raw: `$${name}`, substs: [] } };
+  return name === ""
+    ? null
+    : { end: i + 1 + name.length, part: { kind: "param", quoted, raw: `$${name}`, substs: [] } };
 }
 
 /** A backticked substitution from the backtick at `i`; the index past its close. */
@@ -112,7 +124,7 @@ function quotedChar(rd: Reader, at: number, escapable: ReadonlySet<string>): num
   }
 
   if (ch === "`") return backticked(rd, at);
-  const dollar = ch === "$" ? dollarAt(rd.src, at) : null;
+  const dollar = ch === "$" ? dollarAt({ i: at, quoted: escapable !== ESCAPABLE, src: rd.src }) : null;
 
   if (dollar === null) {
     addLit(rd, ch);
@@ -245,9 +257,4 @@ export function scriptText(word: ShellWord): string {
 /** True when every part of `word` is literal, so `scriptText` is its value. */
 export function isLiteral(word: ShellWord): boolean {
   return word.parts.every((part) => part.kind === "lit");
-}
-
-/** `word` as a gate judges it; a leading `~` makes it not literal, since bash turns it into a home folder. */
-export function readWord(word: ShellWord): ReadWord {
-  return { literal: isLiteral(word) && !word.raw.startsWith("~"), raw: word.raw, text: scriptText(word) };
 }

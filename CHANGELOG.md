@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Under `workflow: "pull-request"` a push with a word the shell sets as it runs, such as `git push origin $B` (unset, it pushes the current branch), is denied: `git push names $B, which the gate cannot read before the shell runs, and main takes changes only through pull requests (workflow is pull-request): name the branch, such as git push origin wt/<name>, or run bun repo worktree finish <name>`. `git push origin @` and `git push origin heads/main` now count as pushes of `main`, for that deny and for the push gate.
 - `bun repo browser nav` stops waiting as soon as the engine exits before it answers, instead of after the full 4 s wait. When the Chromium fallback exits this way, it prints `engine exited before it was ready (exit code N)`, or `(signal S)` when a signal ended it.
 - The Bash path gate and the pull-request push gate now judge every command bash runs, including commands in blocks, loops, functions, substitutions and scripts a shell reads, and no longer judge heredoc bodies, comments or commit messages as commands
+- The Bash gates read the variables, `~` and `cd` a line sets before they judge it: `S=/abs; cd $S && git push` is judged in `/abs`, `D=node_modules; cat $D/x` is denied, and a value the gate cannot read gets the strict answer.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

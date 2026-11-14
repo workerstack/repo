@@ -15,7 +15,7 @@ function show(v: Visited): string {
 /** Each command the walk visits from `/r`. */
 function visits(src: string): string[] {
   const out: string[] = [];
-  shellFlow(src, { cwd: "/r", p: path.posix }, (v) => out.push(show(v)));
+  shellFlow(src, { cwd: "/r", env: { cdpath: "", home: "/h" }, p: path.posix }, (v) => out.push(show(v)));
 
   return out;
 }

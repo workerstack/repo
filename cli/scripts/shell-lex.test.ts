@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Part, Token } from "./shell-ast.types.ts";
-import { isLiteral, quotedBody, readWord, scriptText, unquotedBody, wordAt } from "./shell-lex-word.ts";
+import { isLiteral, quotedBody, scriptText, unquotedBody, wordAt } from "./shell-lex-word.ts";
 import { lex, wordOf } from "./shell-lex.ts";
 
 /** A token as short text: a word as typed, an operator, or a redirect with its target and any body. */
@@ -93,7 +93,7 @@ describe("lex lines and heredocs", () => {
       redirect: {
         body: {
           parts: [
-            { kind: "param", raw: "$y" },
+            { kind: "param", quoted: true, raw: "$y" },
             { kind: "lit", text: "\n" },
           ],
         },
@@ -101,6 +101,11 @@ describe("lex lines and heredocs", () => {
     });
   });
 });
+
+/** Whether each expansion of the word `src` is quoted. */
+function quoted(src: string): boolean[] {
+  return wordAt(src, 0).word.parts.flatMap((part) => (part.kind === "param" ? [part.quoted] : []));
+}
 
 describe("lex heredoc forms", () => {
   it("strips leading tabs for <<-, drops a CR, and reads an unclosed body to the end", () => {
@@ -189,9 +194,8 @@ describe("word helpers", () => {
     expect(isLiteral(wordAt("a$b", 0).word)).toBe(false);
   });
 
-  it("reads a word as a gate judges it, a leading ~ making it unknown", () => {
-    expect(readWord(wordAt("'a'b", 0).word)).toStrictEqual({ literal: true, raw: "'a'b", text: "ab" });
-    expect(readWord(wordAt("~/x", 0).word).literal).toBe(false);
-    expect(readWord(wordAt("a~", 0).word).literal).toBe(true);
+  it("marks an expansion inside double quotes as quoted, so bash does not split it", () => {
+    expect(quoted('$a"$b"${c}"${d}"')).toStrictEqual([false, true, false, true]);
+    expect(quoted('$((1))"$((2))"')).toStrictEqual([false, true]);
   });
 });
