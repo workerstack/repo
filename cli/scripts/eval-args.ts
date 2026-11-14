@@ -6,7 +6,7 @@ import type { Via } from "../eval/estimate.ts";
 import { VIAS } from "../eval/price.constants.ts";
 import {
   CHANGED_FLAG,
-  DEFAULT_CAP,
+  DEFAULT_CAPS,
   DRY_RUN_FLAG,
   EVAL_USAGE,
   EXIT_USAGE,
@@ -72,7 +72,7 @@ export function parseArgs(argv: readonly string[]): Parsed {
   if (via === null) return refuse(VIA_LINE);
   const at = argv.indexOf(MAX_COST_FLAG);
   const value = argv[at + 1] ?? "";
-  const cap = at === NOT_FOUND ? DEFAULT_CAP : capOf(value);
+  const cap = at === NOT_FOUND ? DEFAULT_CAPS[via] : capOf(value);
 
   if (Number.isNaN(cap))
     return refuse(`eval: ${MAX_COST_FLAG} needs a positive number of dollars, got ${JSON.stringify(value)}`);

@@ -16,7 +16,7 @@ const ROOT = join(import.meta.dirname, "..");
 const CONTROL_SUFFIX = /-control$/;
 const VERDICT = /^(?:pass|fail) \S+/;
 
-/** Samples a case gets, by eval: the rules eval runs on sonnet, so it takes fewer to stay under the cap. */
+/** Samples a case gets, by eval: the rules eval runs on sonnet, so it takes fewer to stay under the API cap. */
 const SAMPLES = { "rules-compliance": 2, "skill-routing": 3 } as const;
 const VIAS: Via[] = ["api", "session"];
 const { run } = useEvalRun();

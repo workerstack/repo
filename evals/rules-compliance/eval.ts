@@ -5,7 +5,7 @@ import { defineEval, type EvalSpec } from "../../cli/eval/spec.ts";
 import { cases } from "./cases.ts";
 import { rulesSystem } from "./rules-system.ts";
 
-/** Samples a case gets: sonnet bills 20x haiku, and 3 would bound over the $1.00 cap. */
+/** Samples a case gets: sonnet bills 20x haiku, and 3 would bound over the $1.00 API cap. */
 const SAMPLES = 2;
 
 /** Room for one step name and nothing more. */

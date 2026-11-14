@@ -1,3 +1,4 @@
+import type { Via } from "../eval/estimate.ts";
 import { REPO, STATE } from "../repo-dirs.ts";
 
 /** What `repo eval` prints and exits with. */
@@ -12,8 +13,11 @@ export const CHANGED_FLAG = "--changed";
 export const VIA_FLAG = "--via";
 export const VIA_LINE: string = `eval: ${VIA_FLAG} takes session or api`;
 
-/** The cap in USD when `--max-cost` is not given. */
-export const DEFAULT_CAP = 1;
+/**
+ * The cap in USD per via when `--max-cost` is not given: a session run spends plan usage, not dollars, and its bound
+ * cannot be sound, so it gets room; an API run spends dollars against a sound bound, so it keeps $1.00.
+ */
+export const DEFAULT_CAPS: Readonly<Record<Via, number>> = { api: 1, session: 5 };
 export const EXIT_OK = 0;
 export const EXIT_FAILED = 1;
 export const EXIT_USAGE = 4;

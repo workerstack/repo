@@ -22,11 +22,12 @@ function summaryOf(out: string): Summary {
   return JSON.parse(fs.readFileSync(file, "utf8")) /* written by writeSummary */ as ReturnType<typeof summaryOf>;
 }
 
+/** The estimate at the cap a run takes with no --max-cost: $5.00 for a session run, $1.00 for an API run. */
 async function worst(via: Via = "session") {
   const loaded = await loadEval(ROOT, "sample");
 
   if (!loaded.ok) throw new Error(loaded.message);
-  const found = estimate("sample", loaded.spec, { cap: 1, via });
+  const found = estimate("sample", loaded.spec, { cap: via === "session" ? 5 : 1, via });
 
   if (!found.ok) throw new Error(found.message);
 
@@ -39,7 +40,7 @@ it("--dry-run prints the estimate, never reads the key and never calls the API o
 
   expect(got).toMatchObject({ claudeCalls: 0, code: 0, err: "", fetches: 0, keyReads: 0, out: `${found.text}\n` });
   expect(found.text).toBe(
-    "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5 via session, at most $0.0017 (cap $1.00)",
+    "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5 via session, at most $0.0017 (cap $5.00)",
   );
 });
 
@@ -122,7 +123,7 @@ it("runs the cases and prints pass or fail per case, controls marked, then the s
 
   const file = SUMMARY_LINE.exec(got.out)?.groups?.file ?? "";
 
-  expect(got.out).toBe(`${found.text}\npass yes\nfail no (control)\nspent $0.0007 of $1.00\nsummary ${file}\n`);
+  expect(got.out).toBe(`${found.text}\npass yes\nfail no (control)\nspent $0.0007 of $5.00\nsummary ${file}\n`);
   expect(path.isAbsolute(file)).toBe(true);
   expect(summaryOf(got.out)).toMatchObject({ cached: 0, calls: 6, end: { kind: "done" } });
 });
@@ -131,10 +132,10 @@ it("answers a rerun of unchanged text from the cache for $0", async () => {
   await run(["sample"]);
   const again = await run(["sample"]);
   const count = "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5 via session";
-  const head = `${count}, 6 cached, at most $0.0000 (cap $1.00)`;
+  const head = `${count}, 6 cached, at most $0.0000 (cap $5.00)`;
 
   expect(again).toMatchObject({ claudeCalls: 0, code: 0, err: "", fetches: 0 });
-  expect(again.out).toContain(`${head}\npass yes\nfail no (control)\nspent $0.0000 of $1.00, 6 of 6 calls cached\n`);
+  expect(again.out).toContain(`${head}\npass yes\nfail no (control)\nspent $0.0000 of $5.00, 6 of 6 calls cached\n`);
   expect(summaryOf(again.out)).toMatchObject({ cached: 6, calls: 0, end: { kind: "done" } });
   expect(summaries()).toHaveLength(2);
 });
@@ -195,9 +196,9 @@ it("stamps the summary with the real clock by default", async () => {
 });
 
 it("accepts --max-cost before the name", async () => {
-  const got = await run(["--max-cost", "5", "sample", "--dry-run"]);
+  const got = await run(["--max-cost", "3", "sample", "--dry-run"]);
 
-  expect(got.out).toContain("(cap $5.00)");
+  expect(got.out).toContain("(cap $3.00)");
 });
 
 it("names a missing eval", async () => {
