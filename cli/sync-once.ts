@@ -6,7 +6,7 @@ import { computeOutputs } from "./sync-outputs.ts";
 import { CHECK_FLAG, POSTINSTALL_FLAG, SYNC_PREFIX } from "./sync.constants.ts";
 import type { SyncDeps, SyncIo } from "./sync.ts";
 import { applyMigration } from "./sync/apply-migration.ts";
-import { ignoreBlockLines, strayIgnoreFiles, untrackedEntries } from "./sync/git-files.ts";
+import { ignoreBlockLines, strayIgnoreFiles, trackedIgnoredFiles, untrackedEntries } from "./sync/git-files.ts";
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
 import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
 import { planModeRename } from "./sync/migrate-mode-name.ts";
@@ -291,5 +291,12 @@ export async function syncOnce(args: string[], io: SyncIo, deps: SyncDeps): Prom
 
   if (!run.ok) return run.error;
 
-  return (await prepare(run.value)) ?? writeOutputs(run.value);
+  const refused = await prepare(run.value);
+
+  if (refused !== null) return refused;
+  // After `prepare`: migrate and adopt untrack a committed tree first.
+  const { root, workspace, resolved, outputs } = run.value;
+  const tracked = trackedIgnoredFiles(root, ignoreBlockLines(workspace.manifest.name, resolved.agents.hosts, outputs));
+
+  return tracked.length > 0 ? refuse(run.value, tracked) : writeOutputs(run.value);
 }
