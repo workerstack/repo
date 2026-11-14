@@ -13,16 +13,6 @@ const SOURCE_RE = /\.(?:ts|mts|cts|tsx)$/u;
 /** The one module that may remove recursively: the rest go through it. */
 const REMOVE_TREE = "cli/remove-tree.ts";
 
-/** Files a parallel session owns; they move to removeTree when it lands (see the backlog), and this list goes. */
-const EXEMPT: ReadonlySet<string> = /* @__PURE__ */ new Set([
-  "cli/scripts/__fixtures__/persist-plan-kit.ts",
-  "cli/scripts/__fixtures__/push-gate-rig.ts",
-  "cli/scripts/ci-push-gate-backlog.test.ts",
-  "cli/scripts/ci-wait-branch.test.ts",
-  "cli/scripts/ci-wait-record.test.ts",
-  "cli/scripts/persist-roadmap-keys.test.ts",
-]);
-
 /** Every TypeScript file in the checkout, tracked or new, as a `/` path from the root. */
 function sources(): string[] {
   const listed = execFileSync("git", ["ls-files", "-co", "--exclude-standard"], { cwd: ROOT, encoding: "utf8" });
@@ -50,7 +40,7 @@ it("finds a member, a bare and a split-line recursive remove, and no text in a s
 
 it("finds no recursive remove outside cli/remove-tree.ts; use removeTree, or removeTemps in a test", () => {
   const found = sources()
-    .filter((rel) => rel !== REMOVE_TREE && !EXEMPT.has(rel))
+    .filter((rel) => rel !== REMOVE_TREE)
     .flatMap((rel) => recursiveRemoves(rel, fs.readFileSync(path.join(ROOT, rel), "utf8")).map((n) => `${rel}:${n}`));
 
   expect(found).toStrictEqual([]);

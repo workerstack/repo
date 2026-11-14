@@ -1,12 +1,14 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { A, B, C, cleanRigs, failedLine, rig } from "./__fixtures__/push-gate-rig.ts";
 
 afterEach(cleanRigs);
+
+const { tempDir: otherDir } = useTempDirs("push-gate-wt-");
 
 const CONSUMER = "consumer";
 const UBUNTU = "test (ubuntu-latest 1/2)";
@@ -60,14 +62,8 @@ it("still blocks a failed run when the backlog is missing or unreadable", () => 
 
 it("reads only the root's backlog, not a copy in another checkout", () => {
   const r = failedOn([CONSUMER]);
-  const other = fs.mkdtempSync(path.join(os.tmpdir(), "push-gate-wt-"));
-
-  try {
-    r.backlog(`- [ ] blocked: \`${CONSUMER}\` why\n`, other);
-    expect(r.gate()).toBe(failedLine(A, CONSUMER));
-  } finally {
-    fs.rmSync(other, { force: true, recursive: true });
-  }
+  r.backlog(`- [ ] blocked: \`${CONSUMER}\` why\n`, otherDir());
+  expect(r.gate()).toBe(failedLine(A, CONSUMER));
 });
 
 it("never releases a failed record with an empty job list", () => {

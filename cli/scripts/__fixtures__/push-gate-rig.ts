@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 import { pushStopBlock, recordPush, type GateDeps } from "../ci-push-gate.ts";
 import { recordPath, type WaitRecord } from "../ci-wait-record.ts";
 import type { Runner } from "../ci-wait-run.ts";
@@ -86,7 +87,7 @@ function files(main: string) {
 
 const dirs: string[] = [];
 export const cleanRigs = () => {
-  for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+  removeTemps(dirs.splice(0));
 };
 
 export function rig(over: Partial<World> = {}) {

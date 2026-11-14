@@ -1,11 +1,12 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import { recordPath, recordRoot, recordSchema, writeRecord, type RecordFs, type WaitRecord } from "./ci-wait-record.ts";
 
+const { tempDir } = useTempDirs("ci-wait-record-");
 const SHA = "b3f5e8a0123456789abcdef0123456789abcdef0";
 const ROOT = path.join(path.sep, "main");
 
@@ -75,14 +76,9 @@ it("a failed write leaves no final file, removes the temp and says so", () => {
 });
 
 it("writes with node's fs when none is given", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-record-"));
-
-  try {
-    expect(writeRecord({ root: dir, sha: SHA }, record("nothing"))).toBe(true);
-    expect(fs.readdirSync(path.join(dir, ".repo", "tmp", "ci"))).toStrictEqual([`${SHA}.json`]);
-  } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
-  }
+  const dir = tempDir();
+  expect(writeRecord({ root: dir, sha: SHA }, record("nothing"))).toBe(true);
+  expect(fs.readdirSync(path.join(dir, ".repo", "tmp", "ci"))).toStrictEqual([`${SHA}.json`]);
 });
 
 it("the root is the parent of the common git dir, so a worktree and the root meet; cwd outside git", () => {

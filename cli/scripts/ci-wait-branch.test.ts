@@ -1,9 +1,6 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
 import { expect, it } from "vitest";
 
+import { useTempDirs } from "../__fixtures__/temp-dirs.ts";
 import {
   GH,
   GIT,
@@ -20,6 +17,7 @@ import {
 } from "./__fixtures__/ci-wait-world.ts";
 import { waitMain } from "./ci-wait.ts";
 
+const { tempDir } = useTempDirs("ci-wait-real-");
 const NONE = { ...GH, [`${LIST} ${SHA}`]: ok("[]") };
 
 function tip(branch: string) {
@@ -158,16 +156,10 @@ it("a record that cannot be written is said on stderr and does not change the ex
 const errs: string[] = [];
 
 it("with no runners injected it uses the real git, gh, clock and sleep, and outside a checkout says so", async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ci-wait-real-"));
   const err: string[] = [];
-
-  try {
-    const code = await waitMain({ cwd: dir, stderr: (s) => err.push(s), stdout: () => {} });
-    expect(code).toBe(4);
-    expect(err.join("")).toMatch(/^repo ci wait: cannot read HEAD \(.*\); run it inside a git checkout\n$/s);
-  } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
-  }
+  const code = await waitMain({ cwd: tempDir(), stderr: (s) => err.push(s), stdout: () => {} });
+  expect(code).toBe(4);
+  expect(err.join("")).toMatch(/^repo ci wait: cannot read HEAD \(.*\); run it inside a git checkout\n$/s);
 });
 
 it("a HEAD that git answers with nothing is unreadable too", async () => {
