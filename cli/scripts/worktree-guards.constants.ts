@@ -3,7 +3,8 @@ import type path from "node:path";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import type { WorkflowRead } from "../workflow.ts";
-import { WORKTREE_CMD, WORKTREES_DIR } from "./worktree.constants.ts";
+import { HEADS_REF, WORKTREE_CMD, WORKTREES_DIR } from "./worktree.constants.ts";
+import type { Word } from "./worktree.types.ts";
 
 /** Patterns the git guards match shell words and the user's message against. */
 export const WT_BRANCH_PREFIX: RegExp = /^wt\//;
@@ -13,7 +14,7 @@ export const BRANCH_MOVE_FLAG: RegExp = /^-[A-Za-z]*[dDmM][A-Za-z]*$|^--(?:delet
 export const BRANCH_FORCE_FLAG: RegExp = /^-[A-Za-z]*f[A-Za-z]*$|^--force$/;
 
 /** A push word that sends every branch, the default one with them. */
-export const PUSH_EVERY_REF: RegExp = /^--(?:all|mirror)$/;
+const PUSH_EVERY_REF: RegExp = /^--(?:all|mirror)$/;
 
 /** A word the user's message can name to grant one git command. */
 export type GitGrant =
@@ -92,12 +93,34 @@ export function shellQuoted(word: string): string {
   return word.includes("'") ? `"${word}"` : `'${word}'`;
 }
 
-/** Why a push of the default branch is refused under `read`, a workflow that keeps it for pull requests. */
+/** A push word that deletes the remote refs its other words name. */
+const PUSH_DELETE_FLAG = /^(?:--delete|-d)$/;
+
+/** A refspec with an empty source: `[+]:<dst>` deletes `<dst>` on the remote; group 1 is `<dst>`. */
+const DELETE_REFSPEC = /^\+?:(.+)$/;
+
+/**
+ * Whether the words after `git push` reach `branch` in a form the ref resolver never reads: `--all` or `--mirror`,
+ * a `:<branch>` or `+:<branch>` delete refspec, or `--delete`/`-d` with `<branch>`; bare or as `refs/heads/<branch>`.
+ */
+export function hitsUnresolved(rest: readonly Word[], branch: string): boolean {
+  const names = new Set([branch, HEADS_REF + branch]);
+  const words = rest.map((w) => w.text);
+
+  if (words.some((w) => PUSH_EVERY_REF.test(w) || names.has(DELETE_REFSPEC.exec(w)?.[1] ?? ""))) return true;
+
+  return words.some((w) => PUSH_DELETE_FLAG.test(w)) && words.some((w) => names.has(w));
+}
+
+/**
+ * Why a push or a delete push of the default branch is refused under `read`, a workflow that keeps it for pull
+ * requests, naming finish as the way to send work.
+ */
 export function defaultBranchPushReason(branch: string, read: WorkflowRead): string {
   const why = read === "unreadable" ? `${CONFIG_FILE} failed to load` : `workflow is ${read}`;
 
   return (
     `${branch} takes changes only through pull requests (${why}): ` +
-    "push your wt/<name> branch and open a pull request"
+    `run ${WORKTREE_CMD} finish <name> to push wt/<name> and open its pull request`
   );
 }

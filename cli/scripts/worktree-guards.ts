@@ -15,9 +15,9 @@ import {
   FORCE_OR_LONG_FORCE,
   FORCE_PUSH_REASON,
   GIT_ASKED,
+  hitsUnresolved,
   mainCheckoutWriteText,
   PLUS_REFSPEC,
-  PUSH_EVERY_REF,
   shellQuoted,
   WT_BRANCH_PREFIX,
 } from "./worktree-guards.constants.ts";
@@ -200,8 +200,9 @@ function isSharedSub(sub: string): sub is keyof typeof SHARED_GIT {
 
 /**
  * The deny reason for the pushes in `commands` under the root when the workflow keeps the default branch for pull
- * requests and one sends it, `--all` or `--mirror`, else null; the workflow is read only when one exists. The pushes
- * are read back as one shell line, so a prefix or a heredoc never hides one; a throw while resolving their refs denies.
+ * requests and one sends or deletes it, `--all` or `--mirror`, else null; the workflow is read only when one exists.
+ * The pushes are read back as one shell line, so a prefix or a heredoc never hides one; a throw while resolving their
+ * refs denies.
  */
 function defaultPushReason(commands: GitCommand[], c: SharedContext): string | null {
   const { p, root } = c;
@@ -210,7 +211,7 @@ function defaultPushReason(commands: GitCommand[], c: SharedContext): string | n
   if (pushes.length === 0 || !c.committed() || rulesOf(c.read()).pushDefaultBranch) return null;
   const reason = defaultBranchPushReason(c.defaultBranch(), c.read());
 
-  if (pushes.some((g) => g.rest.some((w) => PUSH_EVERY_REF.test(w.text)))) return reason;
+  if (pushes.some((g) => hitsUnresolved(g.rest, c.defaultBranch()))) return reason;
   const words = pushes.map((g) => ["git", "-C", g.at, PUSH_SUB, ...g.rest.map((w) => w.text)].map(shellQuoted));
 
   try {
@@ -238,8 +239,8 @@ function ruleReason(g: GitCommand, at: SharedAt, c: SharedContext): string | nul
  * The deny reason for a git command that commits or destroys work in the main checkout, or that hits shared refs
  * from anywhere in the repo, else null. Inside your own managed worktree every other command runs.
  * `at.asked` holds the grant words (`GIT_ASKED`) the user's latest message named; a named subcommand passes.
- * A push of the default branch, `--all` or `--mirror` under the root is denied first, grant or not, when the root's
- * workflow keeps the default branch for pull requests; the workflow is read only when the line pushes.
+ * A push or delete push of the default branch, `--all` or `--mirror` under the root is denied first, grant or not,
+ * when the root's workflow keeps the default branch for pull requests; the workflow is read only when the line pushes.
  * Null as well when the root is not a git repo or has no commit yet. `guard.committed` is the git check,
  * `guard.workflow` the workflow read and `guard.git` the push's ref resolver, injectable for foreign-path tests.
  */

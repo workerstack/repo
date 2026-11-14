@@ -1,56 +1,25 @@
 import path from "node:path";
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import type { WorkflowRead } from "../workflow.ts";
-import { NONE, at, git, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
+import { FORCE, pushDeny, reading, sharedAs, STRICT, useGuardRepos } from "./__fixtures__/workflow-guards.ts";
+import { NONE, at, git, write, wt } from "./__fixtures__/worktree-repo.ts";
 import type { Runner } from "./ci-wait-run.ts";
 import { mainCheckoutRefusal } from "./lessons-ops.ts";
 import { mainCheckoutWriteReason, sharedGitReason } from "./worktree-guards.ts";
-import type { GuardEnv, ShellAt } from "./worktree.types.ts";
+import type { ShellAt } from "./worktree.types.ts";
 
-const tmp = scratch();
+const { repoWithWorktree, tmp } = useGuardRepos();
 
-afterEach(() => tmp.cleanup());
-
-const STRICT: readonly WorkflowRead[] = ["pull-request", "unreadable"];
-const FORCE: ReadonlySet<string> = new Set(["force"]);
 const SHARED_WRITE = /^the main checkout is shared: run bun repo worktree add <name> /;
 const PR_ONLY = / takes changes only through pull requests /;
 const WIN_GUARD = { committed: () => true, p: path.win32 };
 const ASKS = "run it only when the user's message asks for git ";
 
-/** A workflow read that answers `read`, its calls counted. */
-function reading(read: WorkflowRead) {
-  return vi.fn<(root: string) => WorkflowRead>(() => read);
-}
-
-/** What one `sharedGitReason` call runs: the line, where, the grant words and any other guard swaps. */
-type Line = { cmd: string; place: ShellAt; asked?: ReadonlySet<string>; more?: GuardEnv };
-
-function sharedAs(read: WorkflowRead, { cmd, place, asked = NONE, more = {} }: Line): string | null {
-  return sharedGitReason(cmd, { ...place, asked }, { workflow: reading(read), ...more });
-}
-
-/** The push deny text for `read` with default branch `main`. */
-function pushDeny(read: WorkflowRead): string {
-  const why = read === "unreadable" ? "repo.config.ts failed to load" : `workflow is ${read}`;
-
-  return `main takes changes only through pull requests (${why}): push your wt/<name> branch and open a pull request`;
-}
-
 /** `mainCheckoutWriteReason` for a win32 write into the main checkout `C:\\r` under `read`. */
 function check(read: WorkflowRead) {
   return mainCheckoutWriteReason("C:\\r\\src\\x.ts", at("C:\\r").roots, { ...WIN_GUARD, workflow: reading(read) });
-}
-
-/** A repo on main with a managed worktree `a` on `wt/a` and a branch `wt/x`. */
-function repoWithWorktree(): string {
-  const r = tmp.repo();
-  git(r, "worktree", "add", "-q", wt(r, "a"), "-b", "wt/a");
-  git(r, "branch", "wt/x");
-
-  return r;
 }
 
 function boom(): never {
@@ -239,7 +208,7 @@ describe("win32 pushes of the default branch", () => {
   }
 
   it("reads win32 spellings of the root and its worktrees", () => {
-    expect(winShared("git push origin --all")).toMatch(/ \(workflow is pull-request\): push your wt\/<name> branch/);
+    expect(winShared("git push origin --all")).toMatch(/ \(workflow is pull-request\): run bun repo worktree finish /);
     expect(winShared("git -C C:/r/.worktrees/a push --mirror")).toMatch(PR_ONLY);
     expect(winShared("git -C 'C:\\r\\.worktrees\\a' push origin --all")).toMatch(PR_ONLY);
     expect(winShared("git push origin wt/x", winInA)).toBeNull();

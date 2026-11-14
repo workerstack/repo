@@ -12,7 +12,10 @@ import { EXIT_ASK, EXIT_NO_BRANCH, EXIT_REFUSED, gitUpstream, REMOTE, USAGE } fr
 import { resolveRoots } from "./workspace-root.ts";
 import { defaultBranch } from "./worktree-git.ts";
 import { defaultBranchPushReason } from "./worktree-guards.constants.ts";
-import { BRANCH_PREFIX } from "./worktree.constants.ts";
+import { BRANCH_PREFIX, FINISH_CMD, WORKTREE_CMD } from "./worktree.constants.ts";
+
+/** What finish does with a managed worktree's branch under pull-request. */
+const PR_FINISH = "it pushes the branch and opens its pull request";
 
 /**
  * Where `repo push` runs, what it prints to, its clock in milliseconds (the recent-branch table's too), the workflow
@@ -23,8 +26,28 @@ export type PushDeps = Partial<Omit<WaitDeps, "branch" | "target"> & { workflow:
 
 type Refusal = Exclude<PushTarget, { kind: "branch" }>;
 
-/** Why `repo push` pushes nothing, and its exit code. */
-function refusal(target: Refusal): [string, number] {
+/** The main root `cwd` is in, from `cwd` alone, so a worktree's own repo.config.ts never counts. */
+function mainRoot(cwd: string): string {
+  return resolveRoots({}, { cwd, env: {} }).root;
+}
+
+/**
+ * Why `repo push` leaves a managed worktree's branch to finish: under pull-request finish pushes it itself, else it
+ * merges it into the default branch for `repo push` to send from the root.
+ */
+function worktreeRefusal(target: { branch: string; name: string }, read: WorkflowRead): string {
+  const finish = `${WORKTREE_CMD} ${FINISH_CMD} ${target.name}`;
+
+  if (read === "pull-request") return `${target.branch} is a managed worktree; run ${finish}: ${PR_FINISH}`;
+
+  return `${target.branch} is a managed worktree; run \`${finish}\` from the root, then \`bun repo push\` there`;
+}
+
+/**
+ * Why `repo push` pushes nothing, and its exit code; `read` reads the main root's workflow, asked only for a managed
+ * worktree's branch.
+ */
+function refusal(target: Refusal, read: () => WorkflowRead): [string, number] {
   if (target.kind === "ask") {
     const { base, branches } = target;
     const line = `${base} has ${branches.length} recent branches (${branches.join(", ")})`;
@@ -32,11 +55,7 @@ function refusal(target: Refusal): [string, number] {
     return [`${line}; run \`bun repo push <branch>\` with the one to push`, EXIT_ASK];
   }
 
-  if (target.kind === "worktree") {
-    const finish = `run \`bun repo worktree finish ${target.name}\` from the root, then \`bun repo push\` there`;
-
-    return [`${target.branch} is a managed worktree; ${finish}`, EXIT_REFUSED];
-  }
+  if (target.kind === "worktree") return [worktreeRefusal(target, read()), EXIT_REFUSED];
 
   if (target.kind === "detached")
     return ["HEAD is detached; check out the branch to push, or run `bun repo push <branch>`", EXIT_NO_BRANCH];
@@ -53,10 +72,10 @@ function named(branch: string): PushTarget {
 
 /**
  * Why `branch` may not be pushed from `cwd`, else null: it is the default branch and the workflow of the main root
- * (from `cwd` alone, so a worktree's own repo.config.ts never counts) keeps the default branch for pull requests.
+ * keeps the default branch for pull requests.
  */
 function workflowRefusal(branch: string, cwd: string, workflow: (root: string) => WorkflowRead): string | null {
-  const { root } = resolveRoots({}, { cwd, env: {} });
+  const root = mainRoot(cwd);
   const read = workflow(root);
 
   if (rulesOf(read).pushDefaultBranch) return null;
@@ -88,16 +107,17 @@ export async function main(argv: string[], deps: PushDeps = {}): Promise<number>
 
   const [given] = argv;
   const target = given === undefined ? pickTarget(git, cwd, io.now()) : named(given);
+  const workflow = deps.workflow ?? readWorkflow;
 
   if (target.kind !== "branch") {
-    const [line, code] = refusal(target);
+    const [line, code] = refusal(target, () => workflow(mainRoot(cwd)));
     stderr(`repo push: ${line}\n`);
 
     return code;
   }
 
   const { branch } = target;
-  const refused = workflowRefusal(branch, cwd, deps.workflow ?? readWorkflow);
+  const refused = workflowRefusal(branch, cwd, workflow);
 
   if (refused !== null) {
     stderr(`repo push: ${refused}\n`);

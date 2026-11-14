@@ -22,3 +22,4 @@
 - `local-ci-load-hides-failures` (hits 1): A loaded local ci hides real failures and makes fake ones
 - `one-spelling-per-path` (hits 1): Compare paths only after canonicalPath or resolveTyped
 - `path-move-rewrites-every-text-file` (hits 1): A dir move rewrites paths in every moved text file, not bare names
+- `quote-paths-in-test-commands` (hits 1): Single-quote every temp path a test puts in a shell command
