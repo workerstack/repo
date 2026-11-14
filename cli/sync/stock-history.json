@@ -262,7 +262,7 @@
     "f01909910bdbeac9"
   ],
   ".agents/skills/implement-plan-deep/SKILL.md": ["8af288f2269b706e"],
-  ".agents/skills/implement-plan-fast/SKILL.md": ["fdb2059dfdf1e7ce"],
+  ".agents/skills/implement-plan-fast/SKILL.md": ["5ce4d643499e3d98"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
     "19b9a67082b5ffc4",
@@ -284,7 +284,7 @@
     "ff317d44d9986d6a"
   ],
   ".agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260"],
-  ".agents/skills/implement-roadmap-fast/SKILL.md": ["c52179e71ef7184c"],
+  ".agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
     "25a307e0751b0be4",
@@ -2263,6 +2263,7 @@
   ],
   "agents/skills/implement-plan-fast/SKILL.md": [
     "4fa5d8c08371513e",
+    "5ce4d643499e3d98",
     "8f71c61551d7af2e",
     "9595d7dbe4d73698",
     "fdb2059dfdf1e7ce",
@@ -2277,7 +2278,7 @@
     "cd9ce6d76c9c6a6d"
   ],
   "agents/skills/implement-roadmap-deep/SKILL.md": ["35fbb27fd12d5260", "c240aa668b4d478f", "f3c378aa2c60cdaa"],
-  "agents/skills/implement-roadmap-fast/SKILL.md": ["a982fa72dddc6e87", "c52179e71ef7184c"],
+  "agents/skills/implement-roadmap-fast/SKILL.md": ["00d7a85242604dfa", "a982fa72dddc6e87", "c52179e71ef7184c"],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
   "agents/skills/listen/SKILL.md": ["64a0306494a23729", "f1a932afddb5e8d1"],
@@ -2437,6 +2438,7 @@
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68", "d9c16a15af947dd6"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
   "cli/scripts/__fixtures__/gate-workspace.ts": ["f3f39ad0fef39b06", "fe6b45a1b4405eac"],
+  "cli/scripts/__fixtures__/git-command-kit.ts": ["c2cc58de32087b5b"],
   "cli/scripts/__fixtures__/google-workspace-kit.ts": [
     "5bfb0752c4cc4320",
     "8e8fa59fd7e8b8fd",
@@ -4483,6 +4485,7 @@
   ],
   "cli/scripts/gate.constants.ts": ["0b23eb557feabb67", "84f1a9240f257e2a", "b152625cf69f41e2", "c15e082933e60a95"],
   "cli/scripts/git-dir-name.constants.ts": ["3a6b352465fa0fb9"],
+  "cli/scripts/git-output.ts": ["163fc66173f564aa"],
   "cli/scripts/gitignore-guard-patch.test.ts": [
     "27506c085a4f6eda",
     "4a2b2e7af72d55be",
@@ -7139,9 +7142,15 @@
     "c7d26843e8539e61",
     "d1eda4a9e0eaee91"
   ],
-  "cli/scripts/phase-files.constants.ts": ["403e1c47ddd29f13", "8220564622b10c7c", "91e3ae2c44fced46"],
+  "cli/scripts/phase-files.constants.ts": [
+    "33bb665a22f8b8cc",
+    "403e1c47ddd29f13",
+    "8220564622b10c7c",
+    "91e3ae2c44fced46"
+  ],
   "cli/scripts/phase-files.test.ts": [
     "109adb5b2e271424",
+    "169fe964a4094819",
     "3151195cff192f99",
     "4789d3022678437c",
     "55a5f0524968331d",
@@ -7163,6 +7172,7 @@
     "9c2d651e550890af",
     "a21b6e4b33f69b14",
     "a360597d8492dba6",
+    "ae2baacf8f11e95a",
     "b48352dcb06cf746",
     "eb9862d9d36b826f"
   ],
@@ -7784,6 +7794,9 @@
     "f8513eab4569137b",
     "fa0e1b74d8f28526"
   ],
+  "cli/scripts/slice-files.constants.ts": ["0a1bd91b7c65be86"],
+  "cli/scripts/slice-files.test.ts": ["ffd7a0b0a3f58d92"],
+  "cli/scripts/slice-files.ts": ["1685c41d072512a7"],
   "cli/scripts/sorted-json-text.constants.ts": ["1efb5de0324f4ccc", "6bfab20319884e0f"],
   "cli/scripts/sorted-json-text.test.ts": [
     "3593c601283f8164",
@@ -8730,6 +8743,7 @@
   "references/fast-plan-format.md": [
     "0a08c65f5c53b51c",
     "0ab67c7bb5eaaf1b",
+    "26cf2c0d28278e9b",
     "2d689fcc97087c95",
     "62d5c6025beba6ed",
     "84ecd882159e2323",
@@ -8743,6 +8757,7 @@
     "69c42cf408e28eb0",
     "8a21d1043d10934a",
     "a71f7d28912fdd0e",
+    "b84bdd18bef7728c",
     "ca01396cb5fe5d51",
     "f8bc3a574edec9dd"
   ],

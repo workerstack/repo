@@ -144,6 +144,7 @@ main
 dir])
   phase-files       Map a parallel group's unstaged changes to its phases
   set               Set this session's approval, effort or strategy (the hook adds --session for an agent)
+  slice-files       Check the branch's changes against a parallel roadmap slice's path list
   speak             Text-to-speech
   su                List a session's plans and roadmaps, or all changed in a window, with boxes and blockers
   worktree          Managed worktrees: add, finish, list, prune, hook

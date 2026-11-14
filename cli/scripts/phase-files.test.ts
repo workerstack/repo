@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { removeTemps } from "../__fixtures__/remove-temps.ts";
+import { captureMain, gitIn } from "./__fixtures__/git-command-kit.ts";
 import { main } from "./phase-files.ts";
 
 const PLAN = `---
@@ -39,12 +39,8 @@ name: x
 const tmpDirs: string[] = [];
 let mainRepo: string;
 let wt: string;
-let out: string[];
-let err: string[];
 
-function git(cwd: string, ...args: string[]) {
-  return execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", ...args], { cwd, encoding: "utf8" }).trim();
-}
+const git = gitIn;
 
 function write(rel: string, text = "x\n") {
   const file = path.join(wt, rel);
@@ -53,13 +49,7 @@ function write(rel: string, text = "x\n") {
 }
 
 function run(...argv: string[]) {
-  out = [];
-  err = [];
-  vi.spyOn(process.stdout, "write").mockImplementation((s) => (out.push(String(s)), true));
-  vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
-  const code = main(argv, wt);
-
-  return { code, err: err.join(""), out: out.join("") };
+  return captureMain(() => main(argv, wt));
 }
 
 beforeEach(() => {
@@ -202,11 +192,9 @@ describe("phase-files", () => {
     const plain = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "phase-files-plain-")));
     tmpDirs.push(plain);
     const plan = path.join(mainRepo, ".repo/plans/7-x-20260101T000000Z.md");
-    out = [];
-    err = [];
-    vi.spyOn(process.stderr, "write").mockImplementation((s) => (err.push(String(s)), true));
-    expect(main([plan, "2"], plain)).toBe(2);
-    expect(err.join("")).toContain("git status failed");
+    const r = captureMain(() => main([plan, "2"], plain));
+    expect(r.code).toBe(2);
+    expect(r.err).toContain("git status failed");
   });
 });
 

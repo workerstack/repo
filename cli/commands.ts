@@ -41,11 +41,12 @@ import { GOOGLE_WORKSPACE_ARGS } from "./scripts/google-workspace.constants.ts";
 import { JEV_ARGS } from "./scripts/jev.constants.ts";
 import { LESSONS_ARGS } from "./scripts/lessons.constants.ts";
 import { LISTEN_ARGS } from "./scripts/listen.constants.ts";
-import { PHASE_FILES_USAGE } from "./scripts/phase-files.constants.ts";
+import { PHASE_FILES_USAGE as PHASE_USAGE, PHASE_SUMMARY } from "./scripts/phase-files.constants.ts";
 import { PUSH_SUMMARY, USAGE as PUSH_USAGE } from "./scripts/push.constants.ts";
 import { SET_SUMMARY, USAGE as SET_USAGE } from "./scripts/set.constants.ts";
 import { SETUP_TARGETS } from "./scripts/setup.constants.ts";
 import { SHIM_SUMMARY, USAGE as SHIM_USAGE } from "./scripts/shim.constants.ts";
+import { SLICE_SUMMARY, SLICE_USAGE } from "./scripts/slice-files.constants.ts";
 import { SPEAK_SUMMARY, SPEAK_USAGE } from "./scripts/speak.constants.ts";
 import { SU_SUMMARY, USAGE as SU_USAGE } from "./scripts/su.constants.ts";
 import { WORKTREE_ARGS, WORKTREE_SUBCOMMANDS } from "./scripts/worktree.constants.ts";
@@ -124,12 +125,9 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary: "Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace dir])",
     usage: PERSIST_USAGE,
   },
-  "phase-files": {
-    load: () => import("./scripts/phase-files.ts"),
-    summary: "Map a parallel group's unstaged changes to its phases",
-    usage: PHASE_FILES_USAGE,
-  },
+  "phase-files": { load: () => import("./scripts/phase-files.ts"), summary: PHASE_SUMMARY, usage: PHASE_USAGE },
   set: { load: () => import("./scripts/set.ts"), summary: SET_SUMMARY, usage: SET_USAGE },
+  "slice-files": { load: () => import("./scripts/slice-files.ts"), summary: SLICE_SUMMARY, usage: SLICE_USAGE },
   speak: { load: () => import("./scripts/speak.ts"), summary: SPEAK_SUMMARY, usage: SPEAK_USAGE },
   su: { load: () => import("./scripts/su.ts"), summary: SU_SUMMARY, usage: SU_USAGE },
   worktree: {

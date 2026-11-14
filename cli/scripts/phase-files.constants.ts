@@ -1,12 +1,12 @@
 /** How to call `repo phase-files`. */
 export const PHASE_FILES_USAGE = "usage: repo phase-files <plan serial|path> <phases, e.g. 2,3>";
+
+/** The `repo --help` row. */
+export const PHASE_SUMMARY = "Map a parallel group's unstaged changes to its phases";
 export const USAGE: string = `${PHASE_FILES_USAGE}\n`;
 
 /** The exit code of a refused call: a bad argument, a missing plan or phase, or a failed git. */
 export const REFUSED_EXIT: number = 2;
-
-/** `git status` output may be large in a big tree; 256 MiB. */
-export const GIT_MAX_BUFFER: number = 268_435_456;
 
 /** A porcelain entry is two status letters, a space and a path of at least one character. */
 export const MIN_ENTRY_LENGTH: number = 4;

@@ -1245,6 +1245,8 @@ At most 40 lines, frontmatter included; the `strategy:` and `advice:` lines, `##
 
 The plan's block (`plan-format.md`): header `fast-plan {n} · {strategy}`, an advice row when the file has `advice:`, then the `i` and `h` rows with their strategy words. On Claude Code the picker asks the Strategy question too. `i` runs `/implement-plan-fast {n}`; `i fast` writes `spawn-fast` first and sets the session strategy; `h` hands off with `/implement-plan-fast {n}` as Next.
 
+`/implement-plan-fast {n|path} commit only` is the fast roadmap runner's subagent form: it commits in the worktree, never finishes, leaves `status: in-progress`, and ends with `worktree: <abs path>` and `commit: <short sha>` lines.
+
 A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
 
 ## Fast roadmap format (SSOT)
@@ -1291,7 +1293,7 @@ The plan's block (`plan-format.md`): header `fast-roadmap {n} · {strategy}`, an
 
 ### Run
 
-`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`.
+`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`. A parallel group writes all its plans first, then runs free plans in commit-only `claude` subagents spawned in one message and spawn plans from the session, and runs mixed groups or any group under `workflow: "pull-request"` in order. It lands each plan in slice order after `bun repo slice-files` (a file outside the list moves that plan last), a rebase onto the default branch and `bun repo ci`.
 
 ## Lessons
 

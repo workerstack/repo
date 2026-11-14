@@ -22,6 +22,7 @@ export type CommandName =
   | "worktree"
   | "persist"
   | "phase-files"
+  | "slice-files"
   | "lessons"
   | "backlog"
   | "bench"

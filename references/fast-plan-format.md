@@ -55,4 +55,6 @@ At most 40 lines, frontmatter included; the `strategy:` and `advice:` lines, `##
 
 The plan's block (`plan-format.md`): header `fast-plan {n} · {strategy}`, an advice row when the file has `advice:`, then the `i` and `h` rows with their strategy words. On Claude Code the picker asks the Strategy question too. `i` runs `/implement-plan-fast {n}`; `i fast` writes `spawn-fast` first and sets the session strategy; `h` hands off with `/implement-plan-fast {n}` as Next.
 
+`/implement-plan-fast {n|path} commit only` is the fast roadmap runner's subagent form: it commits in the worktree, never finishes, leaves `status: in-progress`, and ends with `worktree: <abs path>` and `commit: <short sha>` lines.
+
 A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.

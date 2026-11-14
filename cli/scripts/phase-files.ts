@@ -1,14 +1,13 @@
 /** `repo phase-files <plan> <phases>`: map a parallel group's unstaged changes to its phases. */
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 import { byCodeUnit } from "../sync/by-code-unit.ts";
+import { gitOutput } from "./git-output.ts";
 import { owns } from "./parallel-groups.ts";
 import { parallelFiles, planBoxes, planPhases, type PlanPhase } from "./persist-plan-boxes.ts";
 import { PLAN_DIR } from "./persist-plan.constants.ts";
 import {
-  GIT_MAX_BUFFER,
   LAST,
   MIN_ENTRY_LENGTH,
   MOVE_STATUSES,
@@ -27,15 +26,8 @@ type Refusal = { error: string };
 /** The phases asked for, and the files each declares. */
 type Request = { wanted: PlanPhase[]; declaredBy: Map<string, string[]> };
 
-/** Paths with unstaged or untracked changes, as git prints them; the new side of a rename. */
-function unstagedPaths(cwd: string): string[] {
-  const raw = execFileSync("git", ["status", "--porcelain=v1", "-z", "--untracked-files=all"], {
-    cwd,
-    encoding: "utf8",
-    maxBuffer: GIT_MAX_BUFFER,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-
+/** Paths with unstaged or untracked changes in git's `status -z` output; the new side of a rename. */
+function unstagedPaths(raw: string): string[] {
   const fields = raw.split("\0")[Symbol.iterator]();
   const paths: string[] = [];
 
@@ -143,17 +135,9 @@ function parseRequest(argv: readonly string[], cwd: string): Request | Refusal {
 
 /** The unstaged paths in `cwd`, or why git could not list them. */
 function changedPaths(cwd: string): { paths: string[] } | Refusal {
-  try {
-    return { paths: unstagedPaths(cwd) };
-  } catch (e) {
-    const { stderr, message } = e /* execFileSync throws an Error carrying the child's stderr, if it ran */ as Error & {
-      stderr?: string | null;
-    };
+  const r = gitOutput(cwd, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
 
-    const why = stderr !== undefined && stderr !== null && stderr !== "" ? stderr : message;
-
-    return { error: `git status failed in ${cwd}: ${why.trim()}\n` };
-  }
+  return "why" in r ? { error: `git status failed in ${cwd}: ${r.why}\n` } : { paths: unstagedPaths(r.out) };
 }
 
 /** Prints each phase's changed files and every unowned one; 1 when any file is unowned. */
