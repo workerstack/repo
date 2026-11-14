@@ -6,8 +6,8 @@ export const SPAWN_FAST = "spawn-fast";
 const SPAWN_DEEP = "spawn-deep";
 export const STRATEGIES: readonly Strategy[] = [FREE_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
-export const ASK: Approval = "ask";
-export const AWAY: Approval = "away";
+const ASK: Approval = "ask";
+const AWAY: Approval = "away";
 
 export const APPROVALS: readonly Approval[] = [ASK, AWAY];
 

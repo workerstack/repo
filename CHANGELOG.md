@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Under `workflow: "pull-request"`, `bun repo worktree finish <name>` rebases `wt/<name>` onto origin, pushes it and opens or updates its pull request; once gh shows the pull request merged, finish fast-forwards the default branch to origin's, removes the worktree and both copies of the branch, and syncs the root. It refuses a closed pull request, a branch with commits its merged pull request lacks, and an origin branch with commits the local one lacks. The push gate waits on the pull request's CI after such a finish.
 - Under the pull-request workflow, bun repo release commits the bump in a release worktree and opens its pull request instead of pushing main; a rerun after the merge waits on CI and tags the merged release commit, and a squash-merged release commit counts as pending.
 - Hovering any key of `defineConfig({ ... })` in `repo.config.ts` shows what it does, the values it takes, its default and an example, at every depth. The section types are exported: `AgentsConfig`, `CiConfig`, `CleanConfig`, `CommitConfig`, `CoverageConfig`, `KnipConfig`, `KnipIgnoreEntry`, `LintConfig`, `LintSkipEntry`, `NightlyConfig`, `OwnerConfig` and `TurboConfig`.
+- `/set` and `bun repo set` save approval, effort and strategy per session
 
 ### Changed
 
@@ -48,6 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo sync` writes the change workflow paragraph of `AGENTS.md` for the repo's `workflow`: pull-request and main get their own steps, and worktree keeps today's text. Skills and references describe every mode, and the new `references/workflow.md` says what each one does.
 - `defineConfig` now refuses at type-check time what the schema refuses at load: a section whose pack is off (`nightly` without `release` reads `add "release" to packs to set this`), an empty `ci.checks` command or one named after a built-in check, an empty `lint.skip` `files` or `rules` list, an empty `coverage.mutate` or `agents.hosts`, a `knip.ignore` entry that names two of `file`, `dependency` and `binary`, and a turbo task named `typecheck` or `test`. A `lint.skip` list built in a variable needs `as const` or a `LintSkipEntry[]` type.
 - The plan and roadmap key `mode:` is now `approval:`. A save that sends `mode:` is refused with `mode: is now approval:; use approval: ask|away`. The hook context says `approval=ask` or `approval=away` instead of `sessionGate=`. `bun repo sync` rewrites saved `mode:` lines.
+- The hook context shows approval, effort and strategy, and the plan route in AGENTS.md follows the session effort
 
 ### Removed
 

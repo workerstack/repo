@@ -18,7 +18,7 @@ const WEB = "packages/web";
 
 /** The root `AGENTS.md` that `rules` render to under `workflow`, for codex alone. */
 function agents(rules: readonly Doc[], workflow: Workflow): string {
-  return renderRules(rules, { effort: "deep", hosts: ["codex"], scope: "", workflow }).get("AGENTS.md")?.text ?? "";
+  return renderRules(rules, { hosts: ["codex"], scope: "", workflow }).get("AGENTS.md")?.text ?? "";
 }
 
 function anchoredLines(text: string): string[] {
@@ -42,7 +42,7 @@ it.each(["pull-request", "main"] as const)("renders the %s paragraph in place of
 
 it("renders the worktree paragraph as this repo's committed AGENTS.md has it, byte for byte", () => {
   const committed = fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8");
-  const out = renderRules(STOCK, { effort: "deep", hosts: ["claude"], scope: "", workflow: "worktree" });
+  const out = renderRules(STOCK, { hosts: ["claude"], scope: "", workflow: "worktree" });
   expect(out.get("AGENTS.md")?.text).toBe(`${regionBody(committed, "<!--", "rules")}\n`);
 });
 
@@ -60,7 +60,7 @@ it("gives an override that keeps the anchor the mode paragraph, with CRLF lines 
 it("never changes a package scope", () => {
   const body = `${WORKFLOW_ANCHOR} Package text.`;
   const pkg: Doc = { ...rule("pkg.md", { overrides: "x" }, body), rel: `${WEB}/.repo/rules/pkg.md`, scope: WEB };
-  const out = renderRules([pkg], { effort: "deep", hosts: ["claude"], scope: WEB, workflow: "main" });
+  const out = renderRules([pkg], { hosts: ["claude"], scope: WEB, workflow: "main" });
   expect(out.get(`${WEB}/AGENTS.md`)?.text).toContain(`\n\n${body}\n`);
   expect(out.get(`.claude/rules/${WEB}/pkg.md`)?.text).toContain(`\n${body}\n`);
 });

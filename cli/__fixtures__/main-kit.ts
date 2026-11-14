@@ -143,6 +143,7 @@ main
   persist           Save a plan, roadmap, handoff, implementation or tmp body from stdin (persist <kind> [--workspace \
 dir])
   phase-files       Map a parallel group's unstaged changes to its phases
+  set               Set this session's approval, effort or strategy (the hook adds --session for an agent)
   speak             Text-to-speech
   su                List a session's plans and roadmaps, or all changed in a window, with boxes and blockers
   worktree          Managed worktrees: add, finish, list, prune, hook

@@ -5,12 +5,16 @@ import { expect, it } from "vitest";
 
 import { must, orchestrateKit, parseJson, replyOf } from "./__fixtures__/orchestrate-kit.ts";
 import { probeProcess, readBootId } from "./board-process.ts";
-import { SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 
 function stampAbs(ws: string, sid: string) {
-  return path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-${sid}`);
+  return path.join(ws, ".repo/tmp/sessions", sid, "settings.json");
+}
+
+/** The approval this session's settings file holds. */
+function stored(ws: string, sid: string): string | undefined {
+  return parseJson<{ approval?: string }>(fs.readFileSync(stampAbs(ws, sid), "utf8")).approval;
 }
 
 /** The context a Grok prompt gets in `ws` as session `sid`. */
@@ -43,7 +47,7 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   const env = { GROK_HOOK_EVENT: "user_prompt_submit", GROK_SESSION_ID: "self", GROK_WORKSPACE_ROOT: ws };
   const r = kit.run(call, { ...env, REPO_BOARD_HOME: board, REPO_BOARD_PROVIDER: "claude" });
   const ctx = must(replyOf(r)).hookSpecificOutput.additionalContext;
-  expect(ctx).toMatch(/approval=ask/);
+  expect(ctx).toMatch(/^approval=ask effort=deep strategy=free\. /);
   expect(ctx).toContain("sibling live work");
   expect(ctx).not.toContain("ship the auth fix");
 
@@ -60,23 +64,23 @@ it("with no stamp the session gate is ask", () => {
   expect(say(kit.temp(), "s1", "ship it")).toMatch(/^approval=ask\b/);
 });
 
-it("/ask stamps ask and /away stamps away", () => {
+it("/ask saves ask and /away saves away", () => {
   const ws = kit.temp();
   const sid = "g1";
   expect(say(ws, sid, "/away")).toMatch(/approval=away/);
-  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("away");
+  expect(stored(ws, sid)).toBe("away");
   expect(say(ws, sid, "/ask")).toMatch(/approval=ask/);
-  expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
+  expect(stored(ws, sid)).toBe("ask");
 });
 
-it("a stamp left holding auto reads as ask", () => {
+it("a settings file that is not JSON reads as no setting, so the session gate is ask", () => {
   const ws = kit.temp();
   fs.mkdirSync(path.dirname(stampAbs(ws, "g2")), { recursive: true });
-  fs.writeFileSync(stampAbs(ws, "g2"), "auto");
+  fs.writeFileSync(stampAbs(ws, "g2"), "{not json");
   expect(say(ws, "g2", "go")).toMatch(/^approval=ask\b/);
 });
 
-it("a prompt of exactly /auto writes no stamp", () => {
+it("a prompt of exactly /auto saves no settings", () => {
   const ws = kit.temp();
   say(ws, "g3", "/auto");
   expect(fs.existsSync(stampAbs(ws, "g3"))).toBe(false);
@@ -86,14 +90,14 @@ it.each([
   ["/away /write-roadmap-deep x", "away"],
   ["  /ask fix it", "ask"],
   ["/away then /ask", "away"],
-])("a prompt that starts with a flag stamps it: %j", (prompt, mode) => {
+])("a prompt that starts with a flag saves it: %j", (prompt, mode) => {
   const ws = kit.temp();
   say(ws, "lead", prompt);
-  expect(fs.readFileSync(stampAbs(ws, "lead"), "utf8").trim()).toBe(mode);
+  expect(stored(ws, "lead")).toBe(mode);
 });
 
 it.each(["please go /away", "/awayx", "/away-ish now", "/auto go"])(
-  "a prompt whose first word is not a flag writes no stamp: %j",
+  "a prompt whose first word is not a flag saves no settings: %j",
   (prompt) => {
     const ws = kit.temp();
     say(ws, "nolead", prompt);
@@ -101,10 +105,11 @@ it.each(["please go /away", "/awayx", "/away-ish now", "/auto go"])(
   },
 );
 
-it("sid-less /ask does not stamp", () => {
+it("sid-less /ask saves nothing", () => {
   const ws = kit.temp();
   kit.grok({ sid: "", ws }, "UserPromptSubmit", { prompt: "/ask" });
   expect(fs.existsSync(path.join(ws, ".repo/tmp/orchestrator-logs"))).toBe(false);
+  expect(fs.existsSync(path.join(ws, ".repo/tmp/sessions/settings.json"))).toBe(false);
 });
 
 it("ask Stop passes a reply with no question, with a question or with wait-scout", () => {

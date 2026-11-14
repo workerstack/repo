@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { camelCall, commandOf } from "./__fixtures__/hook-payload.ts";
@@ -33,4 +33,44 @@ it("passes compound bash through untouched", () => {
 
 it("single-quotes rewritten queries so backticks and $ stay literal", () => {
   expect(quoteQuery("a `su` $HOME it's")).toBe("'a `su` $HOME it'\\''s'");
+});
+
+function setBash(command: string, sid: string | null = "sess1") {
+  const extra = { workspaceRoot: tmp.dir("gate-set-"), ...(sid === null ? {} : { sessionId: sid }) };
+
+  return processFatTools(camelCall("Bash", { command }, extra));
+}
+
+describe("repo set", () => {
+  it.each(["bun repo set away", "rtk bun repo set away", "bun bin/repo.ts set away", "bun repo set away spawn-fast"])(
+    "appends the session id to %j",
+    (command) => {
+      expect(commandOf(setBash(command))).toBe(`${command} --session sess1`);
+    },
+  );
+
+  it("takes the id from the session the payload names", () => {
+    expect(commandOf(setBash("bun repo set deep", "abc-9"))).toBe("bun repo set deep --session abc-9");
+  });
+
+  it.each([
+    "bun repo set --session mine away",
+    "bun repo set away --session mine",
+    "bun repo set --session=mine away",
+    "cd x && bun repo set away",
+    "cd '/tmp/some dir' && bun repo set away",
+    "bun repo set away; echo done",
+    "echo bun repo set away | cat",
+  ])("leaves %j alone", (command) => {
+    expect(setBash(command)).toBeNull();
+  });
+
+  it("leaves the command alone when the call names no session", () => {
+    expect(setBash("bun repo set away", null)).toBeNull();
+  });
+
+  it("leaves other bun repo commands alone", () => {
+    expect(setBash("bun repo settings away")).toBeNull();
+    expect(setBash("bun repo setup away")).toBeNull();
+  });
 });

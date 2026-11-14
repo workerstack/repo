@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 import { hookSession, type HookSession, type Casing } from "./__fixtures__/hook-session.ts";
 import { closing, orchestrateKit, plan as planItem } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
-import { AWAY_RUN_REASON, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
+import { AWAY_RUN_REASON } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 const CASINGS: readonly Casing[] = ["claude", "grok"];
@@ -64,24 +64,24 @@ it.each(CASINGS)("/ask wins over an in-progress approval: away plan (%s payloads
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
-it.each(CASINGS)("an old auto stamp beats an in-progress approval: away plan (%s payloads)", (casing) => {
+it.each(CASINGS)("a saved approval: ask beats an in-progress approval: away plan (%s payloads)", (casing) => {
   const ws = kit.temp();
   const s = live(casing, ws, "m5");
-  const stamp = path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m5`);
+  const file = path.join(ws, ".repo/tmp/sessions/m5/settings.json");
   setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
-  fs.mkdirSync(path.dirname(stamp), { recursive: true });
-  fs.writeFileSync(stamp, "auto");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, '{"approval": "ask"}');
   expect(s.say("go")).toMatch(/^approval=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
 it.each(CASINGS)(
-  "an unreadable stamp names no approval, so an in-progress approval: away plan gives away (%s payloads)",
+  "an unreadable settings file names no approval, so an in-progress approval: away plan gives away (%s payloads)",
   (casing) => {
     const ws = kit.temp();
     const s = live(casing, ws, "m6");
     setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
-    fs.mkdirSync(path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m6`), { recursive: true });
+    fs.mkdirSync(path.join(ws, ".repo/tmp/sessions/m6/settings.json"), { recursive: true });
     expect(s.say("go")).toMatch(/^approval=away\b/);
     expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
   },

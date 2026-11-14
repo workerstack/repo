@@ -9,7 +9,6 @@ import { VALID_TMP } from "./__fixtures__/persist-bodies.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { main as gateMain } from "./gate-fat-tools.ts";
 import type { HookInput } from "./hook-input.ts";
-import { SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 
 const kit = orchestrateKit();
 
@@ -100,9 +99,9 @@ it("stop prints nothing for a completed turn, under the ask gate too", () => {
   const r = repo();
   const done = { loop_count: 0, status: "completed", transcript_path: null };
   expect(cursor(r, "stop", done)).toBeNull();
-  const stamp = path.join(r, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-cu`);
+  const stamp = path.join(r, ".repo/tmp/sessions/cu/settings.json");
   fs.mkdirSync(path.dirname(stamp), { recursive: true });
-  fs.writeFileSync(stamp, "ask");
+  fs.writeFileSync(stamp, '{"approval": "ask"}');
   expect(cursor(r, "stop", done)).toBeNull();
   expect(cursor(r, "stop", { ...done, last_assistant_message: "done. Continue?" })).toBeNull();
 });

@@ -91,14 +91,14 @@ async function write(ws: string, sid: string, item: { file: string; content: str
 describe("agents.defaultApproval", () => {
   it("away runs an unstamped session under away: the prompt context and Stop both", async () => {
     const ws = workspace('{ defaultApproval: "away" }');
-    expect(await say(ws, "d1", "go")).toMatch(/^approval=away\b/);
+    expect(await say(ws, "d1", "go")).toMatch(/^approval=away effort=deep strategy=free/);
     expect(await stop(ws, "d1", "Keep --json?")).toStrictEqual({ decision: "block", reason: AWAY_STOP_REASON });
   });
 
   it("an /ask stamp beats a default of away", async () => {
     const ws = workspace('{ defaultApproval: "away" }');
     expect(await say(ws, "d2", "/ask")).toMatch(/^approval=ask\b/);
-    expect(await say(ws, "d2", "go")).toMatch(/^approval=ask\b/);
+    expect(await say(ws, "d2", "go")).toMatch(/^approval=ask effort=deep strategy=free/);
     expect(await stop(ws, "d2", "Keep --json?")).toBeNull();
   });
 

@@ -16,14 +16,10 @@ import { renderSubagents } from "./subagents.ts";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FIXTURES = path.join(ROOT, "cli", "sync", "__fixtures__");
 
-const ROUTE = {
-  deep:
-    "When a change needs a plan and no skill was named, use /write-plan-deep and /implement-plan-deep, " +
-    "or /write-roadmap-deep and /implement-roadmap-deep for two or more slices.",
-  fast:
-    "When a change needs a plan and no skill was named, use /write-plan-fast and /implement-plan-fast, " +
-    "or /write-roadmap-fast and /implement-roadmap-fast for two or more slices.",
-} as const;
+const ROUTE =
+  "When a change needs a plan and no skill was named, use the plan skills of the effort the hook context names: " +
+  "/write-plan-{effort} and /implement-plan-{effort}, or /write-roadmap-{effort} and /implement-roadmap-{effort} " +
+  "for two or more slices.";
 
 function isRulesPath(rel: string) {
   return rel === "AGENTS.md" || /^\.(?:agents|claude|grok)\/rules\//.test(rel);
@@ -62,7 +58,7 @@ it("emits nothing with no host on", () => {
 it("folds stock pathless rules into AGENTS.md in source order and writes no file for them", () => {
   const stock = [BASE, stockRule("b.md", {}, "B."), stockRule("a.md", {}, "A.")];
   expect(Object.fromEntries(renderText(sourcesOf(stock), HOSTS))).toStrictEqual({
-    "AGENTS.md": `Base body.\n\nB.\n\nA.\n\n${ROUTE.deep}\n`,
+    "AGENTS.md": `Base body.\n\nB.\n\nA.\n\n${ROUTE}\n`,
   });
 });
 
@@ -72,14 +68,14 @@ it("renders a repo pathless rule only when it overrides a stock one, where that 
   expect(Object.fromEntries(renderText(sourcesOf(rules), ["codex"]))).toStrictEqual({
     "AGENTS.md":
       "Mine instead.\n\nB.\n\n## Rules by path\n" +
-      `- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE.deep}\n`,
+      `- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE}\n`,
   });
 });
 
 it.each([[["**/*"]], [["*"]], [[]]])("treats paths %j as pathless", (paths) => {
   const out = renderText(sourcesOf([BASE, stockRule("p.md", { paths }, "P.")]), HOSTS);
   expect([...out.keys()]).toStrictEqual(["AGENTS.md"]);
-  expect(out.get("AGENTS.md")).toBe(`Base body.\n\nP.\n\n${ROUTE.deep}\n`);
+  expect(out.get("AGENTS.md")).toBe(`Base body.\n\nP.\n\n${ROUTE}\n`);
 });
 
 it("renders a path rule for claude with a paths list and nothing else", () => {
@@ -110,7 +106,7 @@ it.each<Host>(["codex", "grok", "cursor"])(
     const out = renderText(sourcesOf([BASE, SCOPED]), [host]);
     expect([...out.keys()]).toStrictEqual(["AGENTS.md"]);
     expect(out.get("AGENTS.md")).toBe(
-      `Base body.\n\n## Rules by path\n- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE.deep}\n`,
+      `Base body.\n\n## Rules by path\n- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE}\n`,
     );
   },
 );
@@ -123,11 +119,11 @@ it("points a stock path rule into the installed package", () => {
 
 it("leaves the pointer list out when only claude or antigravity is on", () => {
   for (const host of ["claude", "antigravity"] as const)
-    expect(renderText(sourcesOf([BASE, SCOPED]), [host]).get("AGENTS.md")).toBe(`Base body.\n\n${ROUTE.deep}\n`);
+    expect(renderText(sourcesOf([BASE, SCOPED]), [host]).get("AGENTS.md")).toBe(`Base body.\n\n${ROUTE}\n`);
 });
 
 it("leaves the pointer list out when no rule has paths", () => {
-  expect(renderText(sourcesOf([BASE]), ["codex"]).get("AGENTS.md")).toBe(`Base body.\n\n${ROUTE.deep}\n`);
+  expect(renderText(sourcesOf([BASE]), ["codex"]).get("AGENTS.md")).toBe(`Base body.\n\n${ROUTE}\n`);
 });
 
 it("writes no .grok/rules for any host set", () => {
@@ -140,7 +136,7 @@ it("lists every path rule once, in source order", () => {
   const out = renderText(sourcesOf([BASE, SCOPED, rule("b.md", { paths: ["b/**"] }, "B.")]), HOSTS);
   const list = (out.get("AGENTS.md") ?? "").split("## Rules by path\n")[1];
   expect(list).toBe(
-    `- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n- \`b/**\`: read \`.repo/rules/b.md\`\n\n${ROUTE.deep}\n`,
+    `- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n- \`b/**\`: read \`.repo/rules/b.md\`\n\n${ROUTE}\n`,
   );
 });
 
@@ -160,9 +156,9 @@ it("is stripped from every host's subagent file", () => {
   for (const [rel, text] of out) expect(text, rel).not.toContain("overrides");
 });
 
-it.each(["fast", "deep"] as const)("ends the root AGENTS.md with the %s plan route, after the path list", (effort) => {
-  const out = renderRules([BASE, SCOPED], { effort, hosts: ["codex"], scope: "", workflow: "worktree" });
+it("ends the root AGENTS.md with the plan route, after the path list", () => {
+  const out = renderRules([BASE, SCOPED], { hosts: ["codex"], scope: "", workflow: "worktree" });
   expect(out.get("AGENTS.md")?.text).toBe(
-    `Base body.\n\n## Rules by path\n- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE[effort]}\n`,
+    `Base body.\n\n## Rules by path\n- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE}\n`,
   );
 });

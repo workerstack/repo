@@ -1,4 +1,4 @@
-<!-- repo:rules e956a50f -->
+<!-- repo:rules 8c38aa66 -->
 Write in en-US, in extremely plain words: short sentences, common words, one idea each. Say only what the person needs to act. One sentence is fine when that is the whole answer. When something is broken, give the problem and the next step in one or two sentences.
 
 Work as a partner who needs this to ship. Use "we" for the goal, "you" for their steps, "I" for yours.
@@ -21,5 +21,5 @@ Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matc
 
 Found work outside the task? Run `bun repo backlog add "<text>"`, don't do it now, and name it in your reply.
 
-When a change needs a plan and no skill was named, use /write-plan-deep and /implement-plan-deep, or /write-roadmap-deep and /implement-roadmap-deep for two or more slices.
+When a change needs a plan and no skill was named, use the plan skills of the effort the hook context names: /write-plan-{effort} and /implement-plan-{effort}, or /write-roadmap-{effort} and /implement-roadmap-{effort} for two or more slices.
 <!-- /repo:rules -->

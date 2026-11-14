@@ -18,10 +18,17 @@ import {
   REASON_LOCAL_CI,
   TEST_CMD,
 } from "./gate.constants.ts";
+import { isRealSession } from "./orchestrate-session.ts";
 import { activeReview } from "./strategy.ts";
 
 /** Leading blanks and an `rtk ` prefix, which a job query drops. */
 const LEADING_RTK_RE = /^\s*(rtk\s+)?/;
+
+/** One `bun repo set` or `bun bin/repo.ts set` command, with an optional `rtk ` prefix. */
+const REPO_SET_RE = /^\s*(?:rtk\s+)?bun\s+(?:repo|bin\/repo\.ts)\s+set(?:\s|$)/;
+
+/** A `--session` flag, spaced or with `=`. */
+const SESSION_FLAG_RE = /(?:^|\s)--session(?:=|\s|$)/;
 
 /** The call with its command swapped for `command`. */
 function withCommand({ input, field }: GateCall, command: string): GateResult {
@@ -91,6 +98,17 @@ export function dumpGuard(call: GateCall): GuardResult {
   const query = text.replace(LEADING_RTK_RE, "").trim();
 
   return withCommand(call, jobFor(call, BASH_SEARCH.test(text) ? "search" : "exec", query));
+}
+
+/** `repo set` with no `--session` gets the call's session id, so the setting lands in the session that ran it. */
+export function setSessionGuard(call: GateCall): GuardResult {
+  const { text, sid } = call;
+
+  const plain = call.tool.kind === "bash" && !SHELL_META.test(text) && REPO_SET_RE.test(text);
+
+  if (!isRealSession(sid) || !plain || SESSION_FLAG_RE.test(text)) return undefined;
+
+  return withCommand(call, `${text.trimEnd()} --session ${sid}`);
 }
 
 /** A plain `ls` or `tree` runs behind rtk. */

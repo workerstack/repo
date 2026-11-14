@@ -14,3 +14,4 @@
 {"bucket":"skills","from":9890,"to":9901,"reason":"rn skill"}
 {"bucket":"index","from":1679,"to":1727,"reason":"skills and the reference index name the pull-request and main workflows next to the worktree one (plan 217)"}
 {"bucket":"skills","from":9901,"to":9959,"reason":"skills and the reference index name the pull-request and main workflows next to the worktree one (plan 217)"}
+{"bucket":"skills","from":9959,"to":10114,"reason":"the new /set skill adds its description to the skills budget"}

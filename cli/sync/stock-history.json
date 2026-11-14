@@ -110,8 +110,8 @@
   ".agents/mcp_config.json": ["d8e397af03b5b032"],
   ".agents/skills/ask/SKILL.md": [
     "06a3ef753760f34f",
-    "11381750e16bbf45",
     "694ed0baa8e7d400",
+    "710b69dc4e01d857",
     "e2587dc23cd18e52",
     "ee7dce90c63920a1",
     "f3717a70dc301af9"
@@ -123,7 +123,7 @@
     "a91f1a00a2723607",
     "ced7c3eaf2356090"
   ],
-  ".agents/skills/away/SKILL.md": ["80a3f007243f1da5", "e9100f4b23565ac0"],
+  ".agents/skills/away/SKILL.md": ["55a036ea8c262983", "e9100f4b23565ac0"],
   ".agents/skills/backlog/SKILL.md": ["2cc7f10a67e378fd"],
   ".agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   ".agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
@@ -380,6 +380,7 @@
   ],
   ".agents/skills/rn/SKILL.md": ["789603e95b5f279d"],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
+  ".agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
   ".agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
     "0db2716e177b9fec",
@@ -2094,6 +2095,7 @@
     "fb927d10340ce946"
   ],
   "AGENTS.md": [
+    "13bb850c0f1a4606",
     "14c844ee08a1c765",
     "1d15db41a8cde68c",
     "2171c2864544f083",
@@ -2184,6 +2186,7 @@
   "agents/skills/ask/SKILL.md": [
     "06a3ef753760f34f",
     "11381750e16bbf45",
+    "710b69dc4e01d857",
     "9c8dce3c6696eb1e",
     "bc6ac1c8061ebb5e",
     "fd992d95ff08aa3a"
@@ -2191,6 +2194,7 @@
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e", "c6244630ffaa9593"],
   "agents/skills/away/SKILL.md": [
     "3c7997f0397f9508",
+    "55a036ea8c262983",
     "80a3f007243f1da5",
     "c4fe4ae187fc949f",
     "dfe96572d60369ec",
@@ -2295,6 +2299,7 @@
   ],
   "agents/skills/rn/SKILL.md": ["789603e95b5f279d", "aaf5aaeb50b095c1"],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
+  "agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
   "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
@@ -4084,6 +4089,7 @@
     "13b6de3c5c419724",
     "25f5534906f72e1d",
     "2909c7966a124734",
+    "3924bd570161c121",
     "478f52b94f1a5cbe",
     "65b88064798d9569",
     "7c1d05061c88f772",
@@ -4343,6 +4349,7 @@
   "cli/scripts/gate-shell.test.ts": [
     "1c6d99de3467ee71",
     "55e332b9fb2c72e8",
+    "5814a25637ec56a0",
     "9711bef031090566",
     "9b887444be85885c",
     "dcee0154e14fa8be",
@@ -4352,6 +4359,7 @@
   "cli/scripts/gate-shell.ts": [
     "10665df22f73344c",
     "37a8d1446cd4108a",
+    "676cad2e1f27b9e9",
     "6ba2498a53c8d0cc",
     "7a0cda2545aad169",
     "bc82923573819c86",
@@ -5850,6 +5858,7 @@
     "3409cba0dd8989a7",
     "4a3c6088e941be09",
     "502290e105e67c8e",
+    "596c9f12d20584c7",
     "751579352e2daf53",
     "a7c8b8cd34e27df0",
     "b3cb307812070200",
@@ -5874,6 +5883,7 @@
     "568892629636fc72",
     "876dd71b18b63468",
     "ab7afbc4eebad2db",
+    "aff250c687a85494",
     "b24383a7921a0cd0",
     "c5a0b2b268952535",
     "d46b36e2f5a235ac",
@@ -5904,7 +5914,7 @@
     "d0bea5cd5a2b0e74",
     "ec7e3df750cc2caf"
   ],
-  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538", "6e482f691e375ae2"],
+  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538", "6e482f691e375ae2", "f0acdf12c42974d1"],
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5", "d9c6d340e898848a"],
   "cli/scripts/orchestrate-parent-fast.test.ts": [
@@ -5923,6 +5933,7 @@
     "70065f19eee432ab",
     "80216253c307f51e",
     "88e1c06aa22a3f48",
+    "8bada3add7a11462",
     "8df9de37a2c27ffe",
     "bc8f3e57528a8118",
     "d353f14aa216a4fc",
@@ -5960,7 +5971,8 @@
     "838fda78142d035c",
     "904135ab3d1be339",
     "9a8fbad8554e8373",
-    "c00532c62b7bfa1a"
+    "c00532c62b7bfa1a",
+    "ce00b8641339830d"
   ],
   "cli/scripts/orchestrate-parent-intercept.test.ts": [
     "1ae55530d99944b6",
@@ -5983,6 +5995,7 @@
     "09177062677df2c8",
     "0be0b106440fd2f0",
     "117258364f83f9d8",
+    "1dfc96b86c5cecfe",
     "88b9f1f6b0fc2a13",
     "93889e7d41dc208d",
     "9493e936612eed5b",
@@ -5998,9 +6011,11 @@
     "a96051e8ab637f98",
     "e377c71af4b453f9"
   ],
+  "cli/scripts/orchestrate-parent-settings.test.ts": ["3a0212fb89a2130d"],
   "cli/scripts/orchestrate-parent-stop.test.ts": [
     "09f533da91757fd9",
     "2630f06f3c47df30",
+    "276883cb291f6c9c",
     "30f09b0f29d8db8a",
     "3a02669024b079c4",
     "46fdad3af87fccd1",
@@ -6129,6 +6144,7 @@
   ],
   "cli/scripts/orchestrate-stamps.ts": [
     "158880c13eb3497e",
+    "1fd82ed61ac7dfba",
     "36271fb572c36b7c",
     "4c1778be546b54b2",
     "55cea2bbe6f1c746",
@@ -6144,6 +6160,7 @@
     "6ec03dd840cfa0a1",
     "7d2c8ae74b4b9eaf",
     "8b91dc56e44dabee",
+    "966d17be6e4cc687",
     "a6ac6ebda5855155",
     "c91fa6447d50faee",
     "eda400872be1ee6a"
@@ -6184,6 +6201,7 @@
     "5c40357b6d89fb66",
     "637744e46013e57f",
     "6d0edc2fc7753517",
+    "a73266c0c24873d9",
     "bad802e750d27a80",
     "d289728cbbee0d37",
     "e3aa3fc922bead55",
@@ -7197,6 +7215,12 @@
     "db5166ba530a4d45",
     "e94925d451a395b9"
   ],
+  "cli/scripts/session-settings-effective.test.ts": ["e8db0fc613e58cdb"],
+  "cli/scripts/session-settings.test.ts": ["3d2e13a418430cf1"],
+  "cli/scripts/session-settings.ts": ["3a0ed96243a46ee3"],
+  "cli/scripts/set.constants.ts": ["f01fdd793583de40"],
+  "cli/scripts/set.test.ts": ["cb3a19074ea7cc5f"],
+  "cli/scripts/set.ts": ["0f5bb27f1fbd3351"],
   "cli/scripts/settings-table.test.ts": ["3ffc375b2614003b", "5dbddf8ed0586979"],
   "cli/scripts/settings-table.ts": ["2f255d4f3897e8ef", "d71e9b09289208df"],
   "cli/scripts/setup-argv.ts": [
@@ -7598,7 +7622,13 @@
     "f96f7d7b2bfb860a"
   ],
   "cli/scripts/speak-say.ts": ["56ca9f154743a472", "a9866059cf6ef5a8", "dcc1f1d261cc55a0"],
-  "cli/scripts/speak.constants.ts": ["1311dda047d31951", "30da74cdc3116379", "5be5e5795111e52e", "c8ac3d4584adf0b9"],
+  "cli/scripts/speak.constants.ts": [
+    "1311dda047d31951",
+    "30da74cdc3116379",
+    "5be5e5795111e52e",
+    "66cfc214d85cd0ec",
+    "c8ac3d4584adf0b9"
+  ],
   "cli/scripts/speak.test.ts": [
     "06188d5dc4fd8eb4",
     "2cd522def35322ca",
@@ -7653,6 +7683,7 @@
     "d0def68013924926"
   ],
   "cli/scripts/strategy.constants.ts": [
+    "0da234a6063870f6",
     "0eba0c6c38295182",
     "2560bccc2541d402",
     "27ccb68cac18b5f2",
@@ -8386,7 +8417,8 @@
     "b0b5570781aa673b",
     "c0d67d065ac5c177",
     "db54a2d4ae6de625",
-    "e6236424e7133581"
+    "e6236424e7133581",
+    "f35ce18963af4d01"
   ],
   "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf"],
   "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
@@ -8443,6 +8475,7 @@
     "7aa2cc5828e4127c",
     "7b468204e1ffda9d",
     "8816d7b0f28a1748",
+    "8c7c6b0015a6dc24",
     "97b8970430339866",
     "97b9a605ba9b5bd9",
     "acac21b89edafb2c",
@@ -8479,6 +8512,7 @@
     "036c9062b9c6e91f",
     "09b82728338f5a82",
     "0d56535a6e88785f",
+    "107f61e05890b54f",
     "114eae57cbb4b9bf",
     "18d5a2e051d75e98",
     "1be99b85fef64bbd",
@@ -8556,6 +8590,7 @@
   ],
   "references/rtk.md": ["67a7da2c4625191c", "d76ba0a5923edd2f"],
   "references/scope.md": [
+    "05b5030af870592f",
     "18c6b799d9a1a5e1",
     "191a397174c6f260",
     "22e19ce27e037919",

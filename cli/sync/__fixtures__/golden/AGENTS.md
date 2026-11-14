@@ -1,4 +1,4 @@
-<!-- repo:rules 70be587c -->
+<!-- repo:rules fb41680f -->
 Golden consumer instructions. This rule replaces the stock overview whole.
 
 Answer in plain sentences and name the files you touched.
@@ -7,5 +7,5 @@ Answer in plain sentences and name the files you touched.
 - `src/index.ts`: read `.repo/rules/review-notes.md`
 - `src/**`: read `.repo/rules/testing.md`
 
-When a change needs a plan and no skill was named, use /write-plan-deep and /implement-plan-deep, or /write-roadmap-deep and /implement-roadmap-deep for two or more slices.
+When a change needs a plan and no skill was named, use the plan skills of the effort the hook context names: /write-plan-{effort} and /implement-plan-{effort}, or /write-roadmap-{effort} and /implement-roadmap-{effort} for two or more slices.
 <!-- /repo:rules -->

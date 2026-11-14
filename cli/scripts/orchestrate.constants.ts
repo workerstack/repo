@@ -7,9 +7,6 @@ export const ORCHESTRATOR_LOGS_DIR: string = `${REPO}/${STATE}/orchestrator-logs
 /** The deny a write with no tool input gets. */
 export const DENY_REASON = "denied";
 
-/** The stamp holding this session's /ask or /away. */
-export const SESSION_GATE_STAMP = "session-gate";
-
 export const AWAY_STOP_REASON =
   'away: do not ask; decide, log "- decision: {question} → {choice}, because {why}" in the plan, and continue';
 

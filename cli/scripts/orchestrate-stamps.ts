@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { HookInput } from "./hook-input.ts";
-import { isRealSession, sessionIdOf, unlinkQuiet } from "./orchestrate-session.ts";
-import { DECIMAL, NO_SESSION, ORCHESTRATOR_LOGS_DIR, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
+import { sessionIdOf, unlinkQuiet } from "./orchestrate-session.ts";
+import { DECIMAL, NO_SESSION, ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 /** The stamp `prefix`, for this session or the default one. */
@@ -45,21 +45,4 @@ export function stampMtime(data: HookInput, prefix: string): number | null {
   const p = resolveStamp(data, prefix);
 
   return p === null ? null : fs.statSync(p).mtimeMs;
-}
-
-/** A session gate stamp in the new dir; null when the payload names no real session. */
-export function sessionGateStampPath(data: HookInput, prefix: string): string | null {
-  const root = resolveRoots(data).root;
-  const sid = sessionIdOf(data);
-
-  if (root === "" || !isRealSession(sid)) return null;
-
-  return path.join(root, ORCHESTRATOR_LOGS_DIR, `${prefix}-${sid}`);
-}
-
-/** The /ask or /away stamp this session holds; null when none. */
-export function resolveSessionGateStamp(data: HookInput): string | null {
-  const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
-
-  return p !== null && fs.existsSync(p) ? p : null;
 }

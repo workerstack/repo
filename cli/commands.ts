@@ -41,9 +41,10 @@ import { LESSONS_ARGS } from "./scripts/lessons.constants.ts";
 import { LISTEN_ARGS } from "./scripts/listen.constants.ts";
 import { PHASE_FILES_USAGE } from "./scripts/phase-files.constants.ts";
 import { PUSH_SUMMARY, USAGE as PUSH_USAGE } from "./scripts/push.constants.ts";
+import { SET_SUMMARY, USAGE as SET_USAGE } from "./scripts/set.constants.ts";
 import { SETUP_TARGETS } from "./scripts/setup.constants.ts";
 import { SHIM_SUMMARY, USAGE as SHIM_USAGE } from "./scripts/shim.constants.ts";
-import { SPEAK_ARGS } from "./scripts/speak.constants.ts";
+import { SPEAK_SUMMARY, SPEAK_USAGE } from "./scripts/speak.constants.ts";
 import { SU_SUMMARY, USAGE as SU_USAGE } from "./scripts/su.constants.ts";
 import { WORKTREE_ARGS, WORKTREE_SUBCOMMANDS } from "./scripts/worktree.constants.ts";
 import { UPDATE_SUMMARY, USAGE as UPDATE_USAGE } from "./update.constants.ts";
@@ -126,11 +127,8 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary: "Map a parallel group's unstaged changes to its phases",
     usage: PHASE_FILES_USAGE,
   },
-  speak: {
-    load: () => import("./scripts/speak.ts"),
-    summary: "Text-to-speech",
-    usage: `usage: repo speak ${SPEAK_ARGS}`,
-  },
+  set: { load: () => import("./scripts/set.ts"), summary: SET_SUMMARY, usage: SET_USAGE },
+  speak: { load: () => import("./scripts/speak.ts"), summary: SPEAK_SUMMARY, usage: SPEAK_USAGE },
   su: { load: () => import("./scripts/su.ts"), summary: SU_SUMMARY, usage: SU_USAGE },
   worktree: {
     load: () => import("./scripts/worktree.ts"),

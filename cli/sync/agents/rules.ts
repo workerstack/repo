@@ -9,7 +9,6 @@
  */
 import type { Host } from "../../config.ts";
 import { isString } from "../../json.ts";
-import type { Effort } from "../../scripts/strategy.types.ts";
 import type { Workflow } from "../../workflow.ts";
 import { PACKAGE_NAME } from "../package-name.constants.ts";
 import { emitYaml, finalize } from "./frontmatter.ts";
@@ -41,10 +40,10 @@ export type RuleFile = {
 const PACKAGE_POINTER = "Start at references/INDEX.md in this package.";
 
 /**
- * One scope's rules: its dir (`""` for the root and stock), the hosts that are on, the repo's default effort, and the
- * workflow the root `AGENTS.md` describes.
+ * One scope's rules: its dir (`""` for the root and stock), the hosts that are on, and the workflow the root
+ * `AGENTS.md` describes.
  */
-export type Scoped = { scope: string; hosts: readonly Host[]; effort: Effort; workflow: Workflow };
+export type Scoped = { scope: string; hosts: readonly Host[]; workflow: Workflow };
 
 /** A root section with each line that starts with the workflow anchor swapped for the paragraph of `workflow`. */
 function withWorkflow(body: string, workflow: Workflow): string {
@@ -57,10 +56,11 @@ function withWorkflow(body: string, workflow: Workflow): string {
 }
 
 /** The line that ends the root `AGENTS.md`: the plan skills a change gets when no skill was named. */
-function planRoute(effort: Effort): string {
+function planRoute(): string {
   return (
-    `When a change needs a plan and no skill was named, use /write-plan-${effort} and /implement-plan-${effort}, ` +
-    `or /write-roadmap-${effort} and /implement-roadmap-${effort} for two or more slices.`
+    "When a change needs a plan and no skill was named, use the plan skills of the effort the hook context names: " +
+    "/write-plan-{effort} and /implement-plan-{effort}, or /write-roadmap-{effort} and /implement-roadmap-{effort} " +
+    "for two or more slices."
   );
 }
 
@@ -71,9 +71,9 @@ function globsOf(doc: Doc, scope: string): string[] {
 
 /**
  * The `AGENTS.md` of a scope: its pathless sections, then a pointer per path rule when an unscoped host is on; the
- * root's ends with the plan route for the effort.
+ * root's ends with the plan route.
  */
-function agentsText(own: readonly Doc[], { scope, hosts, effort, workflow }: Scoped): string {
+function agentsText(own: readonly Doc[], { scope, hosts, workflow }: Scoped): string {
   const scoped = own.filter((doc) => scopeOf(doc).length > 0);
 
   const sections = own
@@ -88,7 +88,7 @@ function agentsText(own: readonly Doc[], { scope, hosts, effort, workflow }: Sco
     sections.push(`## Rules by path\n${lines.join("\n")}`);
   }
 
-  return finalize((scope === "" ? [...sections, planRoute(effort)] : [PACKAGE_POINTER, ...sections]).join("\n\n"));
+  return finalize((scope === "" ? [...sections, planRoute()] : [PACKAGE_POINTER, ...sections]).join("\n\n"));
 }
 
 /** The claude and antigravity files of one rule, under the scope's dir; a pathless one covers the whole dir. */
@@ -115,8 +115,8 @@ function hostFiles(doc: Doc, { scope, hosts }: Pick<Scoped, "hosts" | "scope">, 
  * The files of one scope's rules (`""` for the root and stock, a package dir for a package), given the hosts that are
  * on, by POSIX path. The root `AGENTS.md` holds the pathless stock rules and a pointer per path rule; a package's holds
  * the pointer line first, and its globs are prefixed with the dir. Every one of a package's rules, pathless ones as
- * `<dir>/**`, is written for claude and antigravity under `<dir>/`. The root `AGENTS.md` ends with the plan skills of
- * `effort`, and its workflow paragraph is the one of `workflow`.
+ * `<dir>/**`, is written for claude and antigravity under `<dir>/`. The root `AGENTS.md`
+ * ends with the plan route, and its workflow paragraph is the one of `workflow`.
  */
 export function renderRules(rules: readonly Doc[], scoped: Scoped): Map<string, RuleFile> {
   const { hosts, scope } = scoped;

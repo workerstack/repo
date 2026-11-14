@@ -33,8 +33,7 @@ import {
   TURN_START_STAMP,
 } from "./orchestrate.constants.ts";
 import type { HookResult } from "./orchestrate.types.ts";
-import { applySessionGateSlash, effectiveApprovalOf, effectiveSessionContext } from "./session-approval.ts";
-import type { Approval } from "./strategy.types.ts";
+import { applyPromptSettings, effectiveSettings, settingsContext } from "./session-settings.ts";
 
 const STOP_FEEDBACK = /^\s*Stop hook feedback:/;
 const BLOCKED_BY_STOP = /Blocked by stop hook/;
@@ -52,14 +51,14 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
 
 /**
  * What the turn's last reply is held to: a settled approval block, run under away, then the session's approval,
- * which is `defaultApproval` when nothing in the session names one.
+ * which is the config default when nothing in the session names one.
  */
-function replyVerdict(data: HookInput, msg: string, defaultApproval: Approval): HookResult {
+function replyVerdict(data: HookInput, msg: string, defaults: AgentDefaults): HookResult {
   const named = parseClosingBlock(msg);
   const reviewReason = closingReviewReason(data, named);
 
   if (reviewReason !== null) return blockWith(reviewReason);
-  const approval = effectiveApprovalOf(data, defaultApproval);
+  const approval = effectiveSettings(data, defaults).approval;
   // Under away the hook runs the block's header choice itself; that block is not one the stop-block cap counts.
   const ran = approval === "away" ? orchestrateAway(data, msg) : null;
 
@@ -92,7 +91,7 @@ function lastReply(data: HookInput): string {
   return lastAssistantFromTranscript(firstNonEmpty(data.transcript_path, data.transcriptPath) ?? "");
 }
 
-export function stop(data: HookInput, { defaultApproval }: AgentDefaults): HookResult {
+export function stop(data: HookInput, defaults: AgentDefaults): HookResult {
   if (firstNonEmpty(data.subagentType, data.subagent_type) !== undefined) return interceptNeed(data, "Stop");
   const held = pushHold(data);
 
@@ -102,7 +101,7 @@ export function stop(data: HookInput, { defaultApproval }: AgentDefaults): HookR
   const msg = lastReply(data);
   writeSessionReceipt(data, msg);
 
-  return isWaitScoutExact(msg) ? PASS : replyVerdict(data, msg, defaultApproval);
+  return isWaitScoutExact(msg) ? PASS : replyVerdict(data, msg, defaults);
 }
 
 function userPromptOf(data: HookInput): string {
@@ -134,7 +133,7 @@ function boardLines(data: HookInput): string {
   return others;
 }
 
-export function userPromptSubmit(data: HookInput, { defaultApproval }: AgentDefaults): HookResult {
+export function userPromptSubmit(data: HookInput, defaults: AgentDefaults): HookResult {
   const prompt = userPromptOf(data);
 
   if (isHostStopBanner(prompt)) return PASS;
@@ -148,8 +147,8 @@ export function userPromptSubmit(data: HookInput, { defaultApproval }: AgentDefa
     unlinkStamp(data, APPROVAL_BLOCK_STAMP);
   }
 
-  applySessionGateSlash(data, prompt);
-  const ctx = [effectiveSessionContext(data, defaultApproval), approval, boardLines(data)].filter(Boolean).join("\n");
+  const change = applyPromptSettings(data, prompt, defaults);
+  const ctx = [settingsContext(data, defaults), change, approval, boardLines(data)].filter(Boolean).join("\n");
 
   return replyWith({ hookSpecificOutput: { additionalContext: ctx, hookEventName: "UserPromptSubmit" } });
 }

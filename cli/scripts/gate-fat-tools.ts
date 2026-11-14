@@ -22,6 +22,7 @@ import {
   dumpGuard,
   jobScriptGuard,
   localCiGuard,
+  setSessionGuard,
   testRunGuard,
   treeGuard,
   webGuard,
@@ -138,6 +139,7 @@ const GUARDS: readonly Guard[] = [
   testRunGuard,
   webGuard,
   dumpGuard,
+  setSessionGuard,
   treeGuard,
 ];
 

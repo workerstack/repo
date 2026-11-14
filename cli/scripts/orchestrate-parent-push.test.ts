@@ -11,7 +11,7 @@ import type { HookInput } from "./hook-input.ts";
 const hook = claudeHook();
 
 function ask(ws: string, sid: string) {
-  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "ask");
+  return plantFile(ws, `.repo/tmp/sessions/${sid}/settings.json`, '{"approval": "ask"}');
 }
 
 function gitIn(cwd: string, ...args: string[]) {

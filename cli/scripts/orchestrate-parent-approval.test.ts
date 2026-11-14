@@ -53,9 +53,9 @@ describe("a prompt", () => {
     expect(say(ws, "b1", { prompt: "<task-notification>done</task-notification>" })).toStrictEqual([]);
   });
 
-  it("ignores a session gate in the old .tmp dir", () => {
+  it("ignores a session gate left in the old stamp dir", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/orchestrator-logs/session-gate-lg", "away");
+    plantFile(ws, ".repo/tmp/orchestrator-logs/session-gate-lg", "away");
     expect(say(ws, "lg", { prompt: "go on" })[0]).toMatch(/^approval=ask\b/);
   });
 });
@@ -130,7 +130,7 @@ describe("a reply of i", () => {
   it("approves nothing without a session", () => {
     const ws = hook.temp();
     const tp = transcript(ws, closing(planItem(1)));
-    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["approval=ask"]);
+    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["approval=ask effort=deep strategy=free"]);
   });
 
   it("refuses a strategy change when the plan has no frontmatter block to carry it", () => {

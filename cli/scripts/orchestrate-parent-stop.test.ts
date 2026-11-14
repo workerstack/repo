@@ -27,11 +27,11 @@ describe("a host that sends no stdin", () => {
 });
 
 function ask(ws: string, sid: string) {
-  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "ask");
+  return plantFile(ws, `.repo/tmp/sessions/${sid}/settings.json`, '{"approval": "ask"}');
 }
 
 function away(ws: string, sid: string) {
-  return plantFile(ws, `.repo/tmp/orchestrator-logs/session-gate-${sid}`, "away");
+  return plantFile(ws, `.repo/tmp/sessions/${sid}/settings.json`, '{"approval": "away"}');
 }
 
 describe("a Stop that is not the end of a turn", () => {
