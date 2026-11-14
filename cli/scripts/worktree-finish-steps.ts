@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { removeTree } from "../remove-tree.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import {
   dropRemoteBranch,
@@ -16,7 +17,11 @@ import { syncRoot } from "./worktree-setup.ts";
 import { HEADS_REF, NOTHING_AHEAD, WORKTREE_CMD } from "./worktree.constants.ts";
 import type { Finishing, LocalFinish, WorktreeEntry } from "./worktree.types.ts";
 
-/** Remove the worktree dir (never forced), or only unregister it when another session's prune got there first. */
+/**
+ * Remove the worktree dir (never forced), or only unregister it when another session's prune got there first. On win32
+ * `git worktree remove` exits 0 but leaves the directory links sync made (`.agents/skills/*`, `.claude/skills/*`)
+ * and their parents, so what git left after it judged the tree clean is removed without following any link.
+ */
 export function removeWorktreeDir(root: string, worktree: string): void {
   // win32 refuses to delete a dir that is any process's cwd, this one included when finish ran inside it.
   const fromInside = path.relative(canonicalPath(worktree), canonicalPath(process.cwd()));
@@ -33,6 +38,7 @@ export function removeWorktreeDir(root: string, worktree: string): void {
 
   if (!removed.ok)
     throw new Error(`could not remove ${worktree}: ${gitReason(removed.err)}; fix that, then run finish again`);
+  removeTree(worktree);
 }
 
 /** Delete `branch`: origin's copy first, so a crash between leaves the local one. */

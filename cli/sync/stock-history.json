@@ -7989,9 +7989,10 @@
     "b5100226f9d573a2",
     "f052ebd7a2e2e8b8"
   ],
+  "cli/scripts/worktree-finish-leftovers.test.ts": ["f9f9097a8658f055"],
   "cli/scripts/worktree-finish-pr-land.test.ts": ["7bbb3647cf0c8360"],
   "cli/scripts/worktree-finish-pr.test.ts": ["b9c407de2f023f54"],
-  "cli/scripts/worktree-finish-steps.ts": ["a87ede4da37df39f"],
+  "cli/scripts/worktree-finish-steps.ts": ["0a6ee1e5bfef4369", "a87ede4da37df39f"],
   "cli/scripts/worktree-finish.test.ts": [
     "13ab4b23b5bd5d7e",
     "4fbdc5f564c6a497",

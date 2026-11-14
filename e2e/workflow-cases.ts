@@ -8,6 +8,7 @@ import { defaultBranchPushReason, mainCheckoutWriteText } from "../cli/scripts/w
 import { WORKFLOW_ANCHOR, WORKFLOW_PARAGRAPHS } from "../cli/sync/agents/workflow-paragraph.constants.ts";
 import type { GetSandbox } from "./get-sandbox.types";
 import { expectClean, ROOT_VARS } from "./hosts-kit";
+import { PACKAGE_NAME } from "./registry";
 import type { Sandbox } from "./sandbox";
 import {
   agentsLines,
@@ -53,10 +54,14 @@ async function workIn(sb: Sandbox, name: string): Promise<{ dir: string; tip: st
   return { dir, tip: await tipOf(sb, `refs/heads/wt/${name}`) };
 }
 
-/** Asserts finish removed `dir`; a failure names what is left in it and what finish printed. */
-function expectGone(dir: string, out: string): void {
+/**
+ * Asserts finish removed `dir`, naming what is left in it and what finish printed, and that removing the worktree's
+ * links never reached the installed package's stock skills in the main checkout.
+ */
+function expectGone(sb: Sandbox, dir: string, out: string): void {
   const left = fs.existsSync(dir) ? fs.readdirSync(dir, { recursive: true }).slice(0, 20).join(", ") : "";
   expect(fs.existsSync(dir), `left in ${dir}: [${left}]; finish printed: ${out}`).toBe(false);
+  expect(fs.existsSync(path.join(sb.repo, "node_modules", PACKAGE_NAME, "agents/skills/commit/SKILL.md"))).toBe(true);
 }
 
 function finish(sb: Sandbox, name: string) {
@@ -89,7 +94,7 @@ export function worktreeCase(get: GetSandbox) {
     expectClean(sb, landed);
     expect(await tipOf(sb, MAIN)).toBe(tip);
     expect(await originTip(sb, MAIN)).toBe(before);
-    expectGone(dir, landed.out);
+    expectGone(sb, dir, landed.out);
     expect(ghCalls(sb)).toStrictEqual([]);
   });
 }
@@ -120,7 +125,7 @@ export function pullRequestCase(get: GetSandbox) {
     const landed = await originTip(sb, MAIN);
     expect(landed).not.toBe(before);
     expect(await tipOf(sb, MAIN)).toBe(landed);
-    expectGone(dir, merged.out);
+    expectGone(sb, dir, merged.out);
     expect(await tipOf(sb, "refs/heads/wt/b")).toBe("");
     expect(await originTip(sb, "refs/heads/wt/b")).toBe("");
   });
