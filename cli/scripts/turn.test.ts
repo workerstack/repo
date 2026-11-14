@@ -81,12 +81,12 @@ it("a manifest change runs sync and check; a references change runs sync alone",
   const root = consumer({ "references/a.md": "# A\n" });
   write(root, { "package.json": APP_MANIFEST });
   const manifest = await turn(root, []);
-  expect(manifest.out).toMatch(/ · sync ok · check ok\n$/);
+  expect(manifest.out).toMatch(/ · sync ok · 0 related tests · check ok\n$/);
   expect(manifest.code).toBe(0);
   git(root, "checkout", "--", "package.json");
   fs.rmSync(path.join(root, "references/a.md"));
   const references = await turn(root, []);
-  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok\n$/);
+  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok · 0 related tests\n$/);
 });
 
 it("--staged restages what lint --fix and sync rewrote, the fix formatted", { timeout: SLOW }, async () => {
@@ -103,7 +103,9 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
   const result = await turn(root, ["--staged"]);
-  expect(result.out).toMatch(/^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · check ok\n$/);
+  expect(result.out).toMatch(
+    /^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · 0 related tests · check ok\n$/,
+  );
   expect(git(root, "show", ":src/a.ts")).toBe(
     "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
       "  }\n\n  return 0;\n}\n",
@@ -145,7 +147,7 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
   const root = consumer({});
   write(root, { "package.json": APP_MANIFEST, "src/.gitignore": "x\n" });
   const result = await turn(root, []);
-  expect(result.out).toMatch(/ · sync failed · check failed\n$/);
+  expect(result.out).toMatch(/ · sync failed · 0 related tests · check failed\n$/);
   expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
   expect(result.code).toBe(1);
 });
@@ -181,8 +183,8 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
 
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · " +
-      "related tests skipped (no vitest in packages/api) · sync ok · check ok\n",
+    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · " +
+      "related tests skipped (no vitest in packages/api) · check ok\n",
   );
   expect(calls).toStrictEqual([
     "tsc . --noEmit -p packages/api",

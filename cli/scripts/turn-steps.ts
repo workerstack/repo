@@ -1,7 +1,7 @@
 /**
- * The steps of `repo turn`, each over the change set: fmt, lint with the baseline gate, typecheck, related tests,
- * then sync and check when their inputs changed. A step reports a summary label, whether it passed, the tool output
- * to print when it failed, and the files it rewrote, which `--staged` restages.
+ * The steps of `repo turn`, each over the change set: fmt, lint with the baseline gate, typecheck, sync when its
+ * inputs changed, related tests, then check. A step reports a summary label, whether it passed, the tool output to
+ * print when it failed, and the files it rewrote, which `--staged` restages.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -40,13 +40,17 @@ export type Bins = {
   vitest: (args: string[], cwd: string) => Captured | null;
 };
 
-/** A change set to gate, with the root's packages, the bins it runs and the config's `lint.skip` entries. */
+/**
+ * A change set to gate, with the root's packages, the bins it runs, the config's `lint.skip` entries, and whether it
+ * is the index (`--staged`), which turn restages after each step.
+ */
 export type Turn = {
   root: string;
   changes: readonly Change[];
   packages: readonly string[];
   bins: Bins;
   skips: readonly LintSkip[];
+  isStaged: boolean;
 };
 
 export type StepResult = { label: string; ok: boolean; output: string[]; touched: string[] };

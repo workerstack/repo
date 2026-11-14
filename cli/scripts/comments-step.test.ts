@@ -19,7 +19,7 @@ function step(files: Record<string, string>, deleted: readonly string[] = []) {
   write(root, files);
   const changes: Change[] = Object.keys(files).map((rel) => ({ deleted: deleted.includes(rel), owner: "", rel }));
 
-  return commentsStep({ bins: UNUSED, changes, packages: [], root, skips: [] });
+  return commentsStep({ bins: UNUSED, changes, isStaged: false, packages: [], root, skips: [] });
 }
 
 it("passes files with no refused comment", () => {

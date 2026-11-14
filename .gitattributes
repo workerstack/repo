@@ -53,5 +53,5 @@ README.md linguist-generated
 SECURITY.md linguist-generated
 bunfig.toml linguist-generated
 # /repo:generated
-# Written by bun dev/stock-history.ts, not sync, so it is marked here, outside the block.
+# Written by the commit gate (repo turn) and bun dev/stock-history.ts, not sync, so it is marked here, outside the block.
 cli/sync/stock-history.json linguist-generated
