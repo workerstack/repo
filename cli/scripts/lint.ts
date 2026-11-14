@@ -3,12 +3,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { WINDOWS_PLATFORM } from "../actionlint.constants.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { findRoot, loadConfig, missingConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
 import { removeTree } from "../remove-tree.ts";
-import { repoEnv } from "../repo-env.ts";
 import { cargoFmt } from "../rust/cargo-fmt.ts";
 import type { CargoRun } from "../rust/clippy.ts";
 import { CARGO_MANIFEST } from "../rust/rust-hits.constants.ts";
@@ -18,8 +16,16 @@ import { FIX_HINT } from "./json-keys.constants.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
-import { BUN_FMT_ARGS, CHECK_FLAG, INIT_FLAG, INIT_REFUSAL, MODULES_DIR, NOT_FOUND } from "./lint.constants.ts";
-import { packageBin } from "./package-bin.ts";
+import {
+  CHECK_FLAG,
+  INIT_FLAG,
+  INIT_REFUSAL,
+  MS_PER_SECOND,
+  NOT_FOUND,
+  TIMED_OUT,
+  TOOL_TIME_LIMIT_MS,
+} from "./lint.constants.ts";
+import { toolCommand } from "./tool-command.ts";
 import { toolEnv } from "./tool-env.ts";
 
 /** The tools the standards pack runs: the pinned oxlint, and the formatter of the bun running this. */
@@ -28,13 +34,17 @@ export type Tool = "oxlint" | "bun fmt";
 /** Runs `tool` with `args` in `root` and returns its exit code, or a promise of it for a tool still running. */
 export type RunTool = (tool: Tool, args: string[], root: string) => number | Promise<number>;
 
-/** `cargo` runs `cargo fmt`; tests hand their own, and `stdout` receives its diff. */
+/**
+ * `cargo` runs `cargo fmt`; tests hand their own, and `stdout` receives its diff. `limitMs` is how long the spawned
+ * tool may run before it is killed (`TOOL_TIME_LIMIT_MS` when not given).
+ */
 export type ToolDeps = {
   cwd?: string;
   stderr?: (s: string) => void;
   stdout?: (s: string) => void;
   run?: RunTool;
   cargo?: CargoRun;
+  limitMs?: number;
 };
 
 const COMMAND: Record<Tool, string> = { "bun fmt": "fmt", oxlint: "lint" };
@@ -100,7 +110,8 @@ function writeStderr(s: string): void {
  * `cargo fmt --all` (with `--check` when given), and fails on its exit code when bun fmt passed.
  */
 export async function runTool(tool: Tool, args: string[], deps: ToolDeps = {}): Promise<number> {
-  const { cwd = process.cwd(), stderr = writeStderr, run = spawnTool } = deps;
+  const { cwd = process.cwd(), stderr = writeStderr } = deps;
+  const run = deps.run ?? spawner(deps.limitMs, stderr);
 
   function fail(lines: string[]): number {
     for (const line of lines) stderr(`repo ${COMMAND[tool]}: ${line}\n`);
@@ -154,63 +165,34 @@ export function fmt(argv: string[], deps: ToolDeps = {}): Promise<number> {
   return Promise.resolve(1);
 }
 
-/** The file a package export resolves to, from this package's install. */
-function resolved(specifier: string): string {
-  // Bun.resolveSync, not import.meta.resolve: vitest's transform drops the latter, and tests run this in-process.
-  return Bun.resolveSync(specifier, import.meta.dirname);
-}
-
-/** oxlint's bin script, read from its package.json; it is a node shim, so bun runs it. */
-function oxlintBin(): string {
-  return packageBin(resolved("oxlint/package.json"), "oxlint");
-}
-
 /** What a captured run printed and its exit code. */
 export type Captured = { code: number; stdout: string; stderr: string };
 
 /**
- * The node_modules dir holding `@workerstack/repo` for this package at `packageRoot`: the one its scope dir sits in
- * when installed (bunx, a consumer), else the root's own, which a dev checkout fills with a self-link.
+ * The runner `runTool` uses when none is injected: `spawnTool` with the limit (`TOOL_TIME_LIMIT_MS` when not given)
+ * and the stderr it got.
  */
-export function pluginModules(packageRoot: string): string {
-  const modules = path.dirname(path.dirname(packageRoot));
-
-  return path.basename(modules) === MODULES_DIR ? modules : path.join(packageRoot, MODULES_DIR);
+function spawner(limitMs = TOOL_TIME_LIMIT_MS, stderr: (s: string) => void): RunTool {
+  return (tool, args, root) => spawnTool(tool, args, { limitMs, root, stderr });
 }
 
-/** The package export of the native tsgolint binary for a platform and arch; Windows' ends in `.exe`. */
-export function tsgolintSpecifier(platform: NodeJS.Platform, arch: string): string {
-  return `@oxlint-tsgolint/${platform}-${arch}/tsgolint${platform === WINDOWS_PLATFORM ? ".exe" : ""}`;
-}
-
-/**
- * What oxlint needs beyond the inherited environment: the native tsgolint binary, which its own lookup would reach
- * through a node shim, and a NODE_PATH led by the node_modules holding this package, so the config's
- * `@workerstack/repo/lint` plugin loads in a repo with no install of its own.
- */
-function oxlintEnv(): NodeJS.ProcessEnv {
-  const modules = pluginModules(path.resolve(import.meta.dirname, "..", ".."));
-  const inherited = repoEnv.process.NODE_PATH;
-
-  return {
-    NODE_PATH: inherited !== undefined && inherited !== "" ? `${modules}${path.delimiter}${inherited}` : modules,
-    OXLINT_TSGOLINT_PATH: resolved(tsgolintSpecifier(process.platform, process.arch)),
-  };
-}
-
-/** The bun command line and environment that run `tool`: oxlint's bin, or bun's own formatter past any `fmt` script. */
-function commandOf(tool: Tool) {
-  if (tool === "bun fmt") return { args: [...BUN_FMT_ARGS], env: childEnv() };
-
-  return { args: [oxlintBin()], env: childEnv(oxlintEnv()) };
+/** The line a tool run killed at its limit of `ms` fails with. */
+function stoppedLine(tool: Tool, ms: number): string {
+  return `repo ${COMMAND[tool]}: ${tool} ran past its ${ms / MS_PER_SECOND} s limit and was stopped\n`;
 }
 
 /**
  * Spawns bun on the tool's command line, output straight to the terminal, without blocking: `repo lint` runs its
- * script checks while oxlint works. A tool that cannot start or ends on a signal exits 1.
+ * script checks while oxlint works. A tool that cannot start or ends on a signal exits 1; one still running at the
+ * limit is killed (SIGKILL: a hung oxlint waits in futex) and exits 1 with the line that names it.
  */
-function spawnTool(tool: Tool, args: string[], root: string): Promise<number> {
-  const command = commandOf(tool);
+function spawnTool(
+  tool: Tool,
+  args: string[],
+  at: { root: string; limitMs: number; stderr: (s: string) => void },
+): Promise<number> {
+  const { root, limitMs, stderr } = at;
+  const command = toolCommand(tool);
 
   const child = spawn(process.execPath, [...command.args, ...args], {
     cwd: root,
@@ -218,9 +200,24 @@ function spawnTool(tool: Tool, args: string[], root: string): Promise<number> {
     stdio: "inherit",
   });
 
+  let isStopped = false;
+
+  const timer = setTimeout(() => {
+    isStopped = true;
+    child.kill("SIGKILL");
+  }, limitMs);
+
   return new Promise((resolve) => {
-    child.on("error", () => resolve(1));
-    child.on("close", (code) => resolve(code ?? 1));
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve(1);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+
+      if (isStopped) stderr(stoppedLine(tool, limitMs));
+      resolve(isStopped ? 1 : (code ?? 1));
+    });
   });
 }
 
@@ -228,8 +225,16 @@ function readUtf8(file: string): string {
   return fs.readFileSync(file, "utf8");
 }
 
-/** Where `capture` runs a command: its dir, its environment, and the line it fails with when the bin is not found. */
-type CaptureOptions = { cwd: string; env: NodeJS.ProcessEnv; missing?: string };
+/**
+ * Where `capture` runs a command: its dir, its environment, the line it fails with when the bin is not found, and the
+ * time it may take, with the line it fails with when it is killed at that time.
+ */
+type CaptureOptions = {
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  missing?: string;
+  limit?: { ms: number; line: string };
+};
 
 /**
  * Runs `bin` with `args` in `cwd`, its output captured instead of printed, with no `GIT_*` variable (`toolEnv`); a
@@ -241,12 +246,15 @@ export function capture(bin: string, args: string[], options: CaptureOptions): C
   const files = { stderr: path.join(dir, "stderr"), stdout: path.join(dir, "stdout") };
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
-  const { cwd, env, missing } = options;
+  const { cwd, env, missing, limit } = options;
+  const killAt = limit === undefined ? {} : { killSignal: "SIGKILL" as const, timeout: limit.ms };
 
   try {
-    const result = spawnSync(bin, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
+    const result = spawnSync(bin, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err], ...killAt });
 
     if (missing !== undefined && isMissing(result.error)) return { code: 1, stderr: `${missing}\n`, stdout: "" };
+
+    if (limit !== undefined && hasCode(result.error, TIMED_OUT)) return { code: 1, stderr: limit.line, stdout: "" };
 
     return { code: result.status ?? 1, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
   } finally {
@@ -256,9 +264,14 @@ export function capture(bin: string, args: string[], options: CaptureOptions): C
   }
 }
 
+/** Whether a spawn failed with the error `code`. */
+function hasCode(error: Error | undefined, code: string): boolean {
+  return error !== undefined && "code" in error && error.code === code;
+}
+
 /** Whether a spawn failed because its bin is not on PATH. */
 function isMissing(error: Error | undefined): boolean {
-  return error !== undefined && "code" in error && error.code === NOT_FOUND;
+  return hasCode(error, NOT_FOUND);
 }
 
 /** Runs bun with `args` in `cwd` as `capture` does. */
@@ -266,11 +279,16 @@ export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv =
   return capture(process.execPath, args, { cwd, env });
 }
 
-/** The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed. */
-export function captureTool(tool: Tool, args: string[], root: string): Captured {
-  const command = commandOf(tool);
+/**
+ * The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed; one still
+ * running after `limitMs` is killed and fails with the line that names it.
+ */
+export function captureTool(tool: Tool, args: string[], at: { root: string; limitMs?: number }): Captured {
+  const { root, limitMs = TOOL_TIME_LIMIT_MS } = at;
+  const command = toolCommand(tool);
+  const limit = { line: stoppedLine(tool, limitMs), ms: limitMs };
 
-  return captureBun([...command.args, ...args], root, command.env);
+  return capture(process.execPath, [...command.args, ...args], { cwd: root, env: command.env, limit });
 }
 
 /**
@@ -283,5 +301,5 @@ export function captureSorted(files: readonly string[], root: string): Captured 
 
   if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
 
-  return captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], root);
+  return captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], { root });
 }

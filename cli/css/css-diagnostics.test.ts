@@ -61,7 +61,7 @@ it("fixes the sheet clean, which bun fmt then leaves as it is", { timeout: SLOW 
   const root = cssKit({ "src/bad.css": BAD_CSS });
   expect(cssDiagnostics(root, ["src/bad.css"], { fix: true })).toStrictEqual({ ok: true, value: [] });
   expect(read(root, "src/bad.css")).toBe(FIXED_CSS);
-  expect(captureTool("bun fmt", ["--check", "src/bad.css"], root).code).toBe(0);
+  expect(captureTool("bun fmt", ["--check", "src/bad.css"], { root }).code).toBe(0);
 });
 
 it("returns a runner that fails as the problem line with its stderr's first line", () => {

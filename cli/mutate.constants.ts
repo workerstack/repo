@@ -61,7 +61,11 @@ export const EXCLUDED: readonly RegExp[] = [
   /\.d\.ts$/,
 ];
 
-/** The Stryker options this repo needs; see plan 55's Context for why each is set. */
+/**
+ * The Stryker options this repo needs; see plan 55's Context for why each is set. `timeoutMS` is 60 s, not Stryker's
+ * 5 s: a mutant past its limit scores `Timeout`, a kill, so a machine that stalls 5 s would turn a survivor into a
+ * kill and raise a floor; a mutant that truly hangs only costs 60 s.
+ */
 export const STRYKER_OPTIONS = {
   coverageAnalysis: "perTest",
   disableTypeChecks: false,
@@ -69,6 +73,7 @@ export const STRYKER_OPTIONS = {
   inPlace: true,
   reporters: ["json"],
   testRunner: "vitest",
+  timeoutMS: 60_000,
   vitest: { pool: "forks" },
 } as const;
 

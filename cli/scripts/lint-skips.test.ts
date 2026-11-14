@@ -110,9 +110,9 @@ it("checkLintSkips lints with the skip-free config at the root and drops it afte
   const unskipped = oxlintConfig(ws, { skip: [] });
   const seen: string[] = [];
 
-  function throwing(_tool: "oxlint" | "bun fmt", args: string[], root: string): never {
+  function throwing(_tool: "oxlint" | "bun fmt", args: string[], at: { root: string }): never {
     const config = args[args.indexOf("-c") + 1] ?? "";
-    seen.push(fs.readFileSync(path.join(root, config), "utf8"));
+    seen.push(fs.readFileSync(path.join(at.root, config), "utf8"));
     throw new Error("oxlint was killed");
   }
 
@@ -207,7 +207,7 @@ describe("skipFiles agrees with oxlint's override matching", () => {
 
     if (!built.ok) throw new Error(built.errors.join("\n"));
     fs.writeFileSync(path.join(ws.root, ".oxlintrc.jsonc"), built.value);
-    const out = captureTool("oxlint", ["-f", "json"], ws.root).stdout;
+    const out = captureTool("oxlint", ["-f", "json"], { root: ws.root }).stdout;
 
     const report = JSON.parse(out) /* oxlint's json report, as lintReport reads it */ as {
       diagnostics: { filename: string; code?: string }[];

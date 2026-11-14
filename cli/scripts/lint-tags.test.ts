@@ -39,7 +39,7 @@ it("a tagged workspace fails only lib's import of ui, under the options sync wri
   const text = fs.readFileSync(path.join(root, ".oxlintrc.jsonc"), "utf8");
   const written = readJson(z.object({ rules: z.record(z.string(), z.json()) }), text);
   expect(written.rules["repo/boundaries"]).toStrictEqual(["error", TAGGED_BOUNDARIES]);
-  const run = captureTool("oxlint", ["-f", "unix"], root);
+  const run = captureTool("oxlint", ["-f", "unix"], { root });
   expect(run.stdout.split("\n").filter((line) => line.endsWith(RULE))).toStrictEqual([
     'packages/lib/src/lib.ts:1:1: "@tagged/ui" is a ui package, and a lib package may import only lib; move what it ' +
       `needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts ${RULE}`,

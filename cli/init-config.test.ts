@@ -96,7 +96,7 @@ it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
       }
     }
 
-    const run = captureTool("bun fmt", ["--check"], dest);
+    const run = captureTool("bun fmt", ["--check"], { root: dest });
     expect(run.stdout + run.stderr).toContain("All matched files use the correct format");
     expect(run.code).toBe(0);
   },

@@ -47,7 +47,7 @@ describe("bun fmt, past a package.json fmt script", () => {
 
   it("captureTool formats the file it is given", { timeout: SLOW }, () => {
     const root = consumer({ "src/b.ts": "export const a = {b:1}\n" });
-    expect(captureTool("bun fmt", ["src/b.ts"], root).code).toBe(0);
+    expect(captureTool("bun fmt", ["src/b.ts"], { root }).code).toBe(0);
     expect(fs.readFileSync(path.join(root, "src/b.ts"), "utf8")).toBe("export const a = { b: 1 };\n");
   });
 });

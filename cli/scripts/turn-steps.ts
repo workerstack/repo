@@ -147,7 +147,7 @@ function lintFix(root: string, files: readonly string[]) {
 
   const fixed = rewritten();
 
-  if (fixed.length > 0) captureTool("bun fmt", fixed, root);
+  if (fixed.length > 0) captureTool("bun fmt", fixed, { root });
 
   return { fixed, report };
 }

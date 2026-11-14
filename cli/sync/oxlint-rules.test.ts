@@ -17,7 +17,7 @@ function installedCatalog(): Record<string, string> {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-oxlint-rules-"));
 
   try {
-    return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], root).stdout);
+    return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], { root }).stdout);
   } finally {
     removeTree(root);
   }

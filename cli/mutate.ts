@@ -50,9 +50,12 @@ function headOf(config: MutateConfig, deps: MutateDeps): Result<{ sha: string; t
   const sha = head.stdout.trim();
   const isDirty = deps.git(config.root, ["status", "--porcelain"]).stdout.trim() !== "";
   deps.out(`mutate: HEAD ${sha.slice(0, SHORT_SHA)}${isDirty ? ` ${NOTE}` : ""}${NEWLINE}`);
-  const tracked = deps.git(config.root, ["ls-tree", "-r", "--name-only", "HEAD"]).stdout.split(NEWLINE);
+  const tree = deps.git(config.root, ["ls-tree", "-r", "--name-only", "HEAD"]);
 
-  return { ok: true, value: { sha, tracked } };
+  if (tree.code !== 0)
+    return { error: fail(deps, `git ls-tree failed in ${config.root}: ${tree.stderr.trim()}`), ok: false };
+
+  return { ok: true, value: { sha, tracked: tree.stdout.split(NEWLINE) } };
 }
 
 /**

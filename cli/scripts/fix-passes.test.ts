@@ -37,10 +37,10 @@ it(
   },
   () => {
     const once = tree(INTERACTING);
-    captureTool("oxlint", ["--fix", "src/a.ts"], once);
+    captureTool("oxlint", ["--fix", "src/a.ts"], { root: once });
     expect(read(once)).toBe(FIXED.replace("}\n\n", "}\n"));
     const root = tree(INTERACTING);
-    const last = fixPasses(root, ["src/a.ts"], () => captureTool("oxlint", ["--fix", "src/a.ts"], root));
+    const last = fixPasses(root, ["src/a.ts"], () => captureTool("oxlint", ["--fix", "src/a.ts"], { root }));
     expect(read(root)).toBe(FIXED);
     expect(last.code).toBe(0);
   },
