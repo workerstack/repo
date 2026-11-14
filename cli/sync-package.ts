@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { isString } from "./json.ts";
+import { linkDependencies } from "./link-dependencies.ts";
 import { installedDir, requireManifest, type Manifest, type Marker } from "./link-installed.ts";
 import type { LinkTarget } from "./link-io.types.ts";
 import {
@@ -74,8 +75,8 @@ function place(dest: string, fresh: string, temp: string): void {
 /**
  * Packs `target` with `bun pm pack`, extracts it (in process, with no `tar` to resolve) under the install dir's
  * staging dir and renames it over the package's dir, so a failed pack or unpack leaves the last good copy. The copy
- * keeps the old one's own nested install dir and gets a marker naming where it came from. Returns the packed
- * manifest.
+ * keeps the old one's own nested install dir, gets a marker naming where it came from, and gets links to the
+ * dependencies only the checkout installs. Returns the packed manifest.
  */
 export async function syncPackage(root: string, target: LinkTarget): Promise<Manifest> {
   const staging = path.join(root, STAGING_DIR);
@@ -85,6 +86,7 @@ export async function syncPackage(root: string, target: LinkTarget): Promise<Man
   try {
     const { fresh, manifest } = await prepare(target, temp);
     place(installedDir(root, target.name), fresh, temp);
+    linkDependencies(root, target, manifest);
     linkBins(root, manifest);
 
     return manifest;

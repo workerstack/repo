@@ -1,12 +1,8 @@
-import { installedDir, readVersion, type Manifest } from "./link-installed.ts";
+import { isSemverRange, resolvedVersion } from "./link-dependencies.ts";
+import { installedDir, type Manifest } from "./link-installed.ts";
 import { checkoutHolds, needsDependency } from "./link.constants.ts";
 
-/** npm:, file:, git and URL specifiers are not semver ranges, so they are not judged. */
-function isSemverRange(range: string): boolean {
-  return !range.includes(":") && !range.includes("/");
-}
-
-/** One warning per dependency or required peer the checkout lacks or holds at a version outside its range. */
+/** One warning per dependency or required peer the linked copy does not resolve, or resolves outside its range. */
 export function depWarnings(root: string, manifest: Manifest): string[] {
   const optional = manifest.peerDependenciesMeta ?? {};
 
@@ -15,11 +11,12 @@ export function depWarnings(root: string, manifest: Manifest): string[] {
     ...Object.entries(manifest.peerDependencies ?? {}).filter(([dep]) => optional[dep]?.optional !== true),
   ];
 
+  const copy = installedDir(root, manifest.name);
   const warnings: string[] = [];
 
   for (const [dep, range] of wanted) {
     if (!isSemverRange(range)) continue;
-    const installed = readVersion(installedDir(root, dep));
+    const installed = resolvedVersion(copy, root, dep);
 
     if (installed === null || !Bun.semver.satisfies(installed, range))
       warnings.push(`${needsDependency(manifest.name, dep, range)} ${checkoutHolds(installed)}`);

@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import { z } from "zod";
 import type { LinkIo } from "../link-io.types.ts";
+import { removeTree } from "../remove-tree.ts";
 import { removeTemps } from "./remove-temps.ts";
 
 const MODULES = "node_modules";
@@ -109,6 +110,29 @@ export const read = (...parts: string[]): string => fs.readFileSync(path.join(..
 /** The version in the installed copy of `name`. */
 export function versionIn(root: string, name: string): string {
   return z.object({ version: z.string() }).parse(JSON.parse(read(mod(root, name), "package.json"))).version;
+}
+
+/** An install under `dir` of `name` at `version`. */
+export function installs(dir: string, name: string, version: string): void {
+  put(dir, { [`${MODULES}/${name}/package.json`]: JSON.stringify({ name, version }) });
+}
+
+/** The package.json of `dep` the linked copy of `NAME` in `root` resolves, by its real path, as the runtime finds it. */
+export function resolvedFrom(root: string, dep: string): string {
+  return Bun.resolveSync(`${dep}/package.json`, mod(root, NAME));
+}
+
+/** The package.json of `dep` in the install under `dir`. */
+export const installedFile = (dir: string, dep: string): string => path.join(dir, MODULES, dep, "package.json");
+
+/** In place of flare: a git workspace `<base>/suite` publishing `NAME`, with zod 4.2.0 hoisted to its root. */
+export function hoistingSuite(w: World): string {
+  const suite = path.join(w.base, "suite");
+  workspace(suite, [[NAME, "flare"]]);
+  put(suite, { ".git/HEAD": "ref: refs/heads/main\n" });
+  installs(suite, "zod", "4.2.0");
+  removeTree(w.flare);
+  return suite;
 }
 
 /** The parsed state file of an install root. */
