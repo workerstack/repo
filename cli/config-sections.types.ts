@@ -3,7 +3,7 @@ import type { BuiltInLabel } from "./ci-schema.constants.ts";
 import type { NonEmpty, Taken } from "./config-helpers.types.ts";
 import type { LintBoundaries, LintTailwind } from "./config-resolved.types.ts";
 import type { Host, SkillPack } from "./config-schema.ts";
-import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
+import type { Effort, Approval, Strategy } from "./scripts/strategy.types.ts";
 import type { GeneratedTask } from "./turbo-config.constants.ts";
 import type { TurboTask } from "./turbo-config.ts";
 
@@ -36,7 +36,7 @@ export type AgentsConfig = {
    *
    * @default "ask"
    */
-  defaultMode?: Mode | undefined;
+  defaultApproval?: Approval | undefined;
   /**
    * How much process a change gets when no skill is named. `"deep"`: a reviewed plan of up to 100 lines. `"fast"`:
    * a short plan with no review.

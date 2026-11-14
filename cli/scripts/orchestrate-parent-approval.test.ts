@@ -41,10 +41,10 @@ describe("a prompt", () => {
 
     for (const field of ["userPrompt", "user_prompt", "content"]) {
       const sid = `f-${field}`;
-      expect(say(ws, sid, { [field]: "/ask" })[0], field).toMatch(/^sessionGate=ask\b/);
+      expect(say(ws, sid, { [field]: "/ask" })[0], field).toMatch(/^approval=ask\b/);
     }
 
-    expect(say(ws, "f-none", {})[0]).toMatch(/^sessionGate=ask\b/);
+    expect(say(ws, "f-none", {})[0]).toMatch(/^approval=ask\b/);
   });
 
   it("is ignored when it is a host banner", () => {
@@ -56,7 +56,7 @@ describe("a prompt", () => {
   it("ignores a session gate in the old .tmp dir", () => {
     const ws = hook.temp();
     plantFile(ws, ".tmp/orchestrator-logs/session-gate-lg", "away");
-    expect(say(ws, "lg", { prompt: "go on" })[0]).toMatch(/^sessionGate=ask\b/);
+    expect(say(ws, "lg", { prompt: "go on" })[0]).toMatch(/^approval=ask\b/);
   });
 });
 
@@ -130,7 +130,7 @@ describe("a reply of i", () => {
   it("approves nothing without a session", () => {
     const ws = hook.temp();
     const tp = transcript(ws, closing(planItem(1)));
-    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["sessionGate=ask"]);
+    expect(say(ws, "", { prompt: "y", transcript_path: tp })).toStrictEqual(["approval=ask"]);
   });
 
   it("refuses a strategy change when the plan has no frontmatter block to carry it", () => {

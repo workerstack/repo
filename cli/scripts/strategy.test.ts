@@ -6,13 +6,13 @@ import { expect, it } from "vitest";
 import { aliasOf } from "../../dev/test-paths";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { realDir } from "./__fixtures__/real-dir.ts";
-import { ENFORCED_HARNESSES, MODES, STRATEGIES } from "./strategy.constants.ts";
+import { ENFORCED_HARNESSES, APPROVALS, STRATEGIES } from "./strategy.constants.ts";
 import {
   activeReview,
   hasStrategy,
   implementerOf,
   kindHasStrategy,
-  parseMode,
+  parseApprovalSetting,
   parseStrategy,
   stampPath,
   writeStamp,
@@ -55,11 +55,11 @@ it("spawn-fast starts fast then goes deep; spawn-deep is deep both times", () =>
 });
 
 it("accepts exactly ask and away", () => {
-  expect(MODES).toStrictEqual(["ask", "away"]);
+  expect(APPROVALS).toStrictEqual(["ask", "away"]);
 
-  for (const m of MODES) expect(parseMode(m)).toBe(m);
+  for (const m of APPROVALS) expect(parseApprovalSetting(m)).toBe(m);
 
-  for (const bad of ["auto", "Away", " ask", "", "review", undefined]) expect(parseMode(bad)).toBeNull();
+  for (const bad of ["auto", "Away", " ask", "", "review", undefined]) expect(parseApprovalSetting(bad)).toBeNull();
 });
 
 it("stampPath keeps the sid inside the sessions dir", () => {

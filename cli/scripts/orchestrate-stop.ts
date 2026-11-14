@@ -12,7 +12,6 @@ import type { HookInput } from "./hook-input.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
 import { orchestrateAway } from "./orchestrate-away.ts";
 import { interceptNeed, isStopActive } from "./orchestrate-intercept.ts";
-import { applySessionGateSlash, effectiveModeOf, effectiveSessionContext } from "./orchestrate-mode.ts";
 import { blockWith, PASS, replyWith } from "./orchestrate-reply.ts";
 import { closingReviewReason } from "./orchestrate-reviews.ts";
 import { approvalsFile } from "./orchestrate-session.ts";
@@ -34,7 +33,8 @@ import {
   TURN_START_STAMP,
 } from "./orchestrate.constants.ts";
 import type { HookResult } from "./orchestrate.types.ts";
-import type { Mode } from "./strategy.types.ts";
+import { applySessionGateSlash, effectiveApprovalOf, effectiveSessionContext } from "./session-approval.ts";
+import type { Approval } from "./strategy.types.ts";
 
 const STOP_FEEDBACK = /^\s*Stop hook feedback:/;
 const BLOCKED_BY_STOP = /Blocked by stop hook/;
@@ -51,17 +51,17 @@ function cappedStopBlock(data: HookInput, reason: string): HookResult {
 }
 
 /**
- * What the turn's last reply is held to: a settled approval block, run under away, then the session's mode, which is
- * `defaultMode` when nothing in the session names one.
+ * What the turn's last reply is held to: a settled approval block, run under away, then the session's approval,
+ * which is `defaultApproval` when nothing in the session names one.
  */
-function replyVerdict(data: HookInput, msg: string, defaultMode: Mode): HookResult {
+function replyVerdict(data: HookInput, msg: string, defaultApproval: Approval): HookResult {
   const named = parseClosingBlock(msg);
   const reviewReason = closingReviewReason(data, named);
 
   if (reviewReason !== null) return blockWith(reviewReason);
-  const mode = effectiveModeOf(data, defaultMode);
+  const approval = effectiveApprovalOf(data, defaultApproval);
   // Under away the hook runs the block's header choice itself; that block is not one the stop-block cap counts.
-  const ran = mode === "away" ? orchestrateAway(data, msg) : null;
+  const ran = approval === "away" ? orchestrateAway(data, msg) : null;
 
   if (ran !== null) return blockWith(ran);
   const approvalReason = approvalBlockReason(data, msg);
@@ -72,7 +72,7 @@ function replyVerdict(data: HookInput, msg: string, defaultMode: Mode): HookResu
     return blockWith(approvalReason);
   }
 
-  if (mode === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
+  if (approval === "away" && named === null && endsWithQuestion(msg)) return cappedStopBlock(data, AWAY_STOP_REASON);
 
   return PASS;
 }
@@ -92,7 +92,7 @@ function lastReply(data: HookInput): string {
   return lastAssistantFromTranscript(firstNonEmpty(data.transcript_path, data.transcriptPath) ?? "");
 }
 
-export function stop(data: HookInput, { defaultMode }: AgentDefaults): HookResult {
+export function stop(data: HookInput, { defaultApproval }: AgentDefaults): HookResult {
   if (firstNonEmpty(data.subagentType, data.subagent_type) !== undefined) return interceptNeed(data, "Stop");
   const held = pushHold(data);
 
@@ -102,7 +102,7 @@ export function stop(data: HookInput, { defaultMode }: AgentDefaults): HookResul
   const msg = lastReply(data);
   writeSessionReceipt(data, msg);
 
-  return isWaitScoutExact(msg) ? PASS : replyVerdict(data, msg, defaultMode);
+  return isWaitScoutExact(msg) ? PASS : replyVerdict(data, msg, defaultApproval);
 }
 
 function userPromptOf(data: HookInput): string {
@@ -134,7 +134,7 @@ function boardLines(data: HookInput): string {
   return others;
 }
 
-export function userPromptSubmit(data: HookInput, { defaultMode }: AgentDefaults): HookResult {
+export function userPromptSubmit(data: HookInput, { defaultApproval }: AgentDefaults): HookResult {
   const prompt = userPromptOf(data);
 
   if (isHostStopBanner(prompt)) return PASS;
@@ -149,7 +149,7 @@ export function userPromptSubmit(data: HookInput, { defaultMode }: AgentDefaults
   }
 
   applySessionGateSlash(data, prompt);
-  const ctx = [effectiveSessionContext(data, defaultMode), approval, boardLines(data)].filter(Boolean).join("\n");
+  const ctx = [effectiveSessionContext(data, defaultApproval), approval, boardLines(data)].filter(Boolean).join("\n");
 
   return replyWith({ hookSpecificOutput: { additionalContext: ctx, hookEventName: "UserPromptSubmit" } });
 }

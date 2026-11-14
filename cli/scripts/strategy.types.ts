@@ -7,7 +7,7 @@ export type Strategy = "free" | "spawn-fast" | "spawn-deep";
 export type SpawnStrategy = Exclude<Strategy, "free">;
 
 /** Whether the session asks the user its questions or decides them and runs on. */
-export type Mode = "ask" | "away";
+export type Approval = "ask" | "away";
 
 /** How much process a change gets when no skill is named: the fast or the deep plan skills. */
 export type Effort = "fast" | "deep";
@@ -22,7 +22,7 @@ export type Approvable =
   | { kind: "plan" | "roadmap"; serial: number; strategy: Strategy }
   | { kind: "fast-plan" | "fast-roadmap"; serial: number };
 
-export type Approval =
+export type ApprovalReply =
   | { kind: "approve"; strategy: Strategy | null }
   | { kind: "handoff"; strategy: Strategy | null }
   | { kind: "unknown"; word: string };

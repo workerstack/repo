@@ -8,8 +8,8 @@ import type { SyncDeps, SyncIo } from "./sync.ts";
 import { applyMigration } from "./sync/apply-migration.ts";
 import { ignoreBlockLines, strayIgnoreFiles, trackedIgnoredFiles, untrackedEntries } from "./sync/git-files.ts";
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
-import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
-import { planModeRename } from "./sync/migrate-mode-name.ts";
+import { planApprovalRename } from "./sync/migrate-approval-name.ts";
+import { KEY_RENAMED, moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
 import { planSkillRename } from "./sync/migrate-skill-names.ts";
 import { planStrategyRename } from "./sync/migrate-strategy-name.ts";
@@ -69,9 +69,12 @@ function moveConfig(early: Mode & { io: SyncIo }): number | null {
 
   if (moved === null) return null;
 
-  if ("error" in moved) return refuse(early, [moved.error]);
+  if (moved.kind === "error") return refuse(early, [moved.error]);
 
-  for (const line of moveLines(moved.rewritten)) early.io.stdout(`${SYNC_PREFIX}${line}\n`);
+  const lines = moved.kind === "key-renamed" ? [KEY_RENAMED] : moveLines(moved.rewritten);
+
+  for (const line of moved.kind === "moved" && moved.keyRenamed ? [...lines, KEY_RENAMED] : lines)
+    early.io.stdout(`${SYNC_PREFIX}${line}\n`);
 
   return null;
 }
@@ -233,9 +236,9 @@ async function adopt(run: Run, blocks: StepRun): Promise<number | null> {
 }
 
 /**
- * The relocation of `.tmp/repo` and the strategy, skill and mode renames, each planned after the one before applied,
- * before anything is planned from them; the skill rename comes before the first plan, which refuses a `.repo/skills`
- * skill whose name or `overrides:` the stock no longer has. The exit code when one stops.
+ * The relocation of `.tmp/repo` and the strategy, skill and approval renames, each planned after the one before
+ * applied, before anything is planned from them; the skill rename comes before the first plan, which refuses a
+ * `.repo/skills` skill whose name or `overrides:` the stock no longer has. The exit code when one stops.
  */
 async function renameOld(run: Run, blocks: StepRun): Promise<number | null> {
   const relocation = await stepBlock({ noun: "relocation", steps: planTmpRepo(run.root) }, blocks);
@@ -247,9 +250,9 @@ async function renameOld(run: Run, blocks: StepRun): Promise<number | null> {
   const skills = await stepBlock({ noun: "skill", steps: planSkillRename(run.root) }, blocks);
 
   if ("exit" in skills) return skills.exit;
-  const modes = await stepBlock({ noun: "mode", steps: planModeRename(run.root) }, blocks);
+  const approvals = await stepBlock({ noun: "approval", steps: planApprovalRename(run.root) }, blocks);
 
-  return "exit" in modes ? modes.exit : null;
+  return "exit" in approvals ? approvals.exit : null;
 }
 
 /**

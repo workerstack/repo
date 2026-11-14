@@ -30,70 +30,70 @@ function setKey(file: string, key: string, value: string) {
   );
 }
 
-function withMode(mode: string) {
-  return VALID_PLAN.replace("strategy: free", `strategy: free\nmode: ${mode}`);
+function withApproval(approval: string) {
+  return VALID_PLAN.replace("strategy: free", `strategy: free\napproval: ${approval}`);
 }
 
-it.each(CASINGS)("/away gives sessionGate=away, then /ask gives sessionGate=ask (%s payloads)", (casing) => {
+it.each(CASINGS)("/away gives approval=away, then /ask gives approval=ask (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "a1");
-  expect(s.say("/away")).toMatch(/^sessionGate=away\b/);
-  expect(s.say("go on")).toMatch(/^sessionGate=away\b/);
-  expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
+  expect(s.say("/away")).toMatch(/^approval=away\b/);
+  expect(s.say("go on")).toMatch(/^approval=away\b/);
+  expect(s.say("/ask")).toMatch(/^approval=ask\b/);
 });
 
-it.each(CASINGS)("/away wins over an in-progress mode: ask plan this session saved (%s payloads)", (casing) => {
+it.each(CASINGS)("/away wins over an in-progress approval: ask plan this session saved (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "m1");
   s.say("/away");
-  setKey(s.reviewed("plans", withMode("ask")), "status", "in-progress");
-  expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+  setKey(s.reviewed("plans", withApproval("ask")), "status", "in-progress");
+  expect(s.say("go")).toMatch(/^approval=away\b/);
   expect(s.stop("Keep --json?")).toStrictEqual({ decision: "block", reason: AWAY });
 });
 
-it.each(CASINGS)("an unstamped session's in-progress mode: away plan gives away (%s payloads)", (casing) => {
+it.each(CASINGS)("an unstamped session's in-progress approval: away plan gives away (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "m3");
-  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
-  expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+  setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
+  expect(s.say("go")).toMatch(/^approval=away\b/);
   expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
 });
 
-it.each(CASINGS)("/ask wins over an in-progress mode: away plan (%s payloads)", (casing) => {
+it.each(CASINGS)("/ask wins over an in-progress approval: away plan (%s payloads)", (casing) => {
   const s = live(casing, kit.temp(), "m4");
-  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
-  expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
-  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
+  setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
+  expect(s.say("/ask")).toMatch(/^approval=ask\b/);
+  expect(s.say("go")).toMatch(/^approval=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
-it.each(CASINGS)("an old auto stamp beats an in-progress mode: away plan (%s payloads)", (casing) => {
+it.each(CASINGS)("an old auto stamp beats an in-progress approval: away plan (%s payloads)", (casing) => {
   const ws = kit.temp();
   const s = live(casing, ws, "m5");
   const stamp = path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m5`);
-  setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+  setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
   fs.mkdirSync(path.dirname(stamp), { recursive: true });
   fs.writeFileSync(stamp, "auto");
-  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
+  expect(s.say("go")).toMatch(/^approval=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
 });
 
 it.each(CASINGS)(
-  "an unreadable stamp names no mode, so an in-progress mode: away plan gives away (%s payloads)",
+  "an unreadable stamp names no approval, so an in-progress approval: away plan gives away (%s payloads)",
   (casing) => {
     const ws = kit.temp();
     const s = live(casing, ws, "m6");
-    setKey(s.reviewed("plans", withMode("away")), "status", "in-progress");
+    setKey(s.reviewed("plans", withApproval("away")), "status", "in-progress");
     fs.mkdirSync(path.join(ws, ".repo/tmp/orchestrator-logs", `${SESSION_GATE_STAMP}-m6`), { recursive: true });
-    expect(s.say("go")).toMatch(/^sessionGate=away\b/);
+    expect(s.say("go")).toMatch(/^approval=away\b/);
     expect(s.stop("Keep --json?")?.reason).toBe(AWAY);
   },
 );
 
-it.each(CASINGS)("another session's mode: away plan leaves this session's mode alone (%s payloads)", (casing) => {
+it.each(CASINGS)("another session's away plan leaves this session's approval alone (%s payloads)", (casing) => {
   const ws = kit.temp();
-  setKey(live(casing, ws, "other").reviewed("plans", withMode("away")), "status", "in-progress");
+  setKey(live(casing, ws, "other").reviewed("plans", withApproval("away")), "status", "in-progress");
   const s = live(casing, ws, "m2");
-  expect(s.say("go")).toMatch(/^sessionGate=ask\b/);
+  expect(s.say("go")).toMatch(/^approval=ask\b/);
   expect(s.stop("Keep --json?")).toBeNull();
-  expect(s.say("/ask")).toMatch(/^sessionGate=ask\b/);
+  expect(s.say("/ask")).toMatch(/^approval=ask\b/);
   expect(s.stop("wrote src/a.ts")).toBeNull();
 });
 

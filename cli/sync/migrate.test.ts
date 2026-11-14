@@ -121,7 +121,13 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
   await migrate(root);
   expect(await loadConfig(root)).toStrictEqual({
     config: {
-      agents: { defaultEffort: "deep", defaultMode: "ask", defaultStrategy: "free", hosts: HOSTS, skills: ["listen"] },
+      agents: {
+        defaultApproval: "ask",
+        defaultEffort: "deep",
+        defaultStrategy: "free",
+        hosts: HOSTS,
+        skills: ["listen"],
+      },
       ci: { checks: {} },
       clean: undefined,
       commit: { maxChangedLines: 1000 },

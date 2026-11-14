@@ -1,15 +1,15 @@
 /** The strategy domain's values, approval-block and reply patterns, and stamp layout. */
-import type { Approval, ApprovalAction, Effort, Mode, Strategy } from "./strategy.types.ts";
+import type { ApprovalReply, ApprovalAction, Effort, Approval, Strategy } from "./strategy.types.ts";
 
 export const FREE_STRATEGY = "free";
 export const SPAWN_FAST = "spawn-fast";
 const SPAWN_DEEP = "spawn-deep";
 export const STRATEGIES: readonly Strategy[] = [FREE_STRATEGY, SPAWN_FAST, SPAWN_DEEP];
 
-export const ASK_MODE: Mode = "ask";
-export const AWAY_MODE: Mode = "away";
+export const ASK: Approval = "ask";
+export const AWAY: Approval = "away";
 
-export const MODES: readonly Mode[] = [ASK_MODE, AWAY_MODE];
+export const APPROVALS: readonly Approval[] = [ASK, AWAY];
 
 /**
  * Harnesses whose child and parent payloads differ by a marker the gate reads, so the review deny is enforced.
@@ -76,7 +76,7 @@ export const INFER_MIN_LENGTH = 4;
 export const IMPLEMENT_LETTERS: readonly string[] = ["i", "y"];
 
 /** Every whole reply that needs no inference. */
-export const EXACT_REPLIES: ReadonlyMap<string, Approval> = /* @__PURE__ */ new Map<string, Approval>([
+export const EXACT_REPLIES: ReadonlyMap<string, ApprovalReply> = /* @__PURE__ */ new Map<string, ApprovalReply>([
   ["i", { kind: "approve", strategy: null }],
   ["y", { kind: "approve", strategy: null }],
   ["yes", { kind: "approve", strategy: null }],

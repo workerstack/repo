@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { expect, it, vi } from "vitest";
 
-import { fixture, read, sync, useSyncKit, write } from "../__fixtures__/sync-kit.ts";
+import { fixture, read, snapshot, sync, useSyncKit, write } from "../__fixtures__/sync-kit.ts";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { main as coverageMain } from "../coverage.ts";
 import { childEnv } from "../env.ts";
@@ -99,4 +99,40 @@ it("every root lookup names the move, and init refuses", async () => {
   );
   expect(() => init(root, { execFileSync: never, skipGlobals: true })).toThrow(HINT);
   expect(fs.existsSync(path.join(root, CONFIG_FILE))).toBe(false);
+});
+
+const OLD_KEY = 'export default { packs: ["agents"], agents: { defaultMode: "away" } };\n';
+const NEW_KEY = 'export default { packs: ["agents"], agents: { defaultApproval: "away" } };\n';
+const KEY_RENAMED = "repo sync: renamed agents.defaultMode to agents.defaultApproval in repo.config.ts\n";
+const KEY_HINT = "repo.config.ts: agents.defaultMode is now agents.defaultApproval; run bun repo sync";
+
+it("sync rewrites defaultMode to defaultApproval before it loads the config, and a rerun prints nothing", async () => {
+  const root = fixture(OLD_KEY);
+  const first = await sync(root);
+
+  expect([first.code, first.stderr]).toStrictEqual([0, ""]);
+  expect(`${first.stdout.split("\n")[0]}\n`).toBe(KEY_RENAMED);
+  expect(read(root, CONFIG_FILE)).toBe(NEW_KEY);
+  const again = await sync(root);
+
+  expect(again.code).toBe(0);
+  expect(again.stdout).not.toContain("renamed agents.defaultMode");
+});
+
+it("sync --check names the rename, exits 1 and changes nothing", async () => {
+  const root = fixture(OLD_KEY);
+  const before = snapshot(root);
+
+  expect(await sync(root, "--check")).toStrictEqual({ code: 1, stderr: `repo sync: ${KEY_HINT}\n`, stdout: "" });
+  expect(snapshot(root)).toStrictEqual(before);
+});
+
+it("sync of an old-named config holding defaultMode moves it and renames the key, both lines printed", async () => {
+  const root = fixture('export default { packs: ["agents"], agents: { defaultMode: "away" } };\n');
+  fs.renameSync(path.join(root, CONFIG_FILE), path.join(root, OLD));
+  const run = await sync(root);
+
+  expect([run.code, run.stderr]).toStrictEqual([0, ""]);
+  expect(run.stdout.split("\n").slice(0, 2)).toStrictEqual([MOVED, KEY_RENAMED.trimEnd()]);
+  expect(read(root, CONFIG_FILE)).toBe(NEW_KEY);
 });

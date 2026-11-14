@@ -9,7 +9,7 @@ import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 export const REPO_ROOT: string = path.join(import.meta.dirname, "..", "..");
 export const AGENTS = {
   defaultEffort: "deep",
-  defaultMode: "ask",
+  defaultApproval: "ask",
   defaultStrategy: "free",
   hosts: ["claude", "codex", "antigravity", "grok", "cursor"],
   skills: [],

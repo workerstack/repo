@@ -18,7 +18,13 @@ import {
   slugify,
   stripBom,
 } from "./persist-doc.ts";
-import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
+import {
+  extractApproval,
+  extractRetiredMode,
+  extractStrategy,
+  stripApprovalLine,
+  stripStrategyLine,
+} from "./persist-keys.ts";
 import { splitFrontmatter, validateRoadmap } from "./persist-roadmap-validate.ts";
 import {
   DRAFT_STATUS,
@@ -38,6 +44,7 @@ type Preamble = {
   status: string;
   reviews: string | undefined;
   strategy: string | undefined;
+  approval: string | undefined;
   mode: string | undefined;
   fullFrontmatter: boolean;
   name: string;
@@ -54,7 +61,8 @@ type RenderInput = {
   created: string;
   source: string;
   strategy: string | undefined;
-  mode: string | undefined;
+  approval: string | undefined;
+  mode?: string | undefined;
   body: string;
 };
 
@@ -80,14 +88,15 @@ function preamble(raw: string): Preamble {
   const reviews = takeLine(status.text, "reviews");
   const strategy = stripped.map.strategy ?? extractStrategy(reviews.text);
   const unstrategized = stripStrategyLine(reviews.text);
-  const mode = stripped.map.mode ?? extractMode(unstrategized);
-  const body = stripModeLine(unstrategized);
+  const approval = stripped.map.approval ?? extractApproval(unstrategized);
+  const body = stripApprovalLine(unstrategized);
 
   return {
+    approval,
     body,
     // A sent frontmatter is the whole frontmatter: a missing key there is dropped, not kept.
     fullFrontmatter: stripped.body !== stripBom(raw),
-    mode,
+    mode: stripped.map.mode ?? extractRetiredMode(unstrategized),
     name: nameOf(trimmed, body),
     reviews: stripped.map.reviews ?? reviews.value,
     status: firstNonEmpty(stripped.map.status, status.value) ?? "",
@@ -95,7 +104,18 @@ function preamble(raw: string): Preamble {
   };
 }
 
-function render({ serial, slug, status, reviews, created, source, strategy, mode, body }: RenderInput): string {
+function render({
+  serial,
+  slug,
+  status,
+  reviews,
+  created,
+  source,
+  strategy,
+  approval,
+  mode,
+  body,
+}: RenderInput): string {
   const head = [
     `serial: ${serial}`,
     `name: ${slug}`,
@@ -104,6 +124,7 @@ function render({ serial, slug, status, reviews, created, source, strategy, mode
     `created: ${created}`,
     `source: ${JSON.stringify(source.slice(0, SOURCE_MAX))}`,
     ...(firstNonEmpty(strategy) === undefined ? [] : [`strategy: ${strategy}`]),
+    ...(approval === undefined ? [] : [`approval: ${approval}`]),
     ...(mode === undefined ? [] : [`mode: ${mode}`]),
   ];
 
@@ -111,13 +132,13 @@ function render({ serial, slug, status, reviews, created, source, strategy, mode
 }
 
 /** The saved frontmatter an update keeps for each key it does not send; a full frontmatter drops them. */
-function keptKeys(pre: Preamble, prev: FrontmatterMap): Pick<RenderInput, "reviews" | "strategy" | "mode"> {
+function keptKeys(pre: Preamble, prev: FrontmatterMap): Pick<RenderInput, "reviews" | "strategy" | "approval"> {
   function keep(sent: string | undefined, saved: string | undefined) {
     return sent ?? (pre.fullFrontmatter ? undefined : saved);
   }
 
   return {
-    mode: keep(pre.mode, prev.mode),
+    approval: keep(pre.approval, prev.approval),
     reviews: keep(pre.reviews, prev.reviews),
     strategy: keep(pre.strategy, prev.strategy),
   };
@@ -137,6 +158,7 @@ function updatedFile(filename: string, content: string, previous: string): strin
     ...keptKeys(pre, prev),
     body: pre.body,
     created: createdAtOf(prev.created),
+    mode: pre.mode,
     serial: serialOf(filename),
     slug,
     source: persistSource([prev.source, pre.name], pre.body.match(GOAL_SECTION_RE), slug),
@@ -173,6 +195,7 @@ function newFile(dir: string, pre: Preamble, { created, defaultStrategy }: NewIn
   const filename = `${serial}-${slug}-${compactCreatedStamp(createdAt)}.md`;
 
   const full = render({
+    approval: pre.approval,
     body: pre.body,
     created: createdAt,
     mode: pre.mode,

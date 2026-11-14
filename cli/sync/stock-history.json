@@ -110,8 +110,8 @@
   ".agents/mcp_config.json": ["d8e397af03b5b032"],
   ".agents/skills/ask/SKILL.md": [
     "06a3ef753760f34f",
+    "11381750e16bbf45",
     "694ed0baa8e7d400",
-    "bc6ac1c8061ebb5e",
     "e2587dc23cd18e52",
     "ee7dce90c63920a1",
     "f3717a70dc301af9"
@@ -123,7 +123,7 @@
     "a91f1a00a2723607",
     "ced7c3eaf2356090"
   ],
-  ".agents/skills/away/SKILL.md": ["e9100f4b23565ac0", "f6740f3730564f16"],
+  ".agents/skills/away/SKILL.md": ["80a3f007243f1da5", "e9100f4b23565ac0"],
   ".agents/skills/backlog/SKILL.md": ["2cc7f10a67e378fd"],
   ".agents/skills/benchmark/SKILL.md": ["55482cb829870b4b"],
   ".agents/skills/benchmark/catalog.md": ["59bfacd1ea16e473"],
@@ -260,7 +260,7 @@
     "efab76f90ef41f2e",
     "f01909910bdbeac9"
   ],
-  ".agents/skills/implement-plan-deep/SKILL.md": ["292f5b0c8de32f1d"],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["1632789dd06220ae"],
   ".agents/skills/implement-plan-fast/SKILL.md": ["8f71c61551d7af2e"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
@@ -418,7 +418,7 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["3ddd8c267267a72d"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["e55ffcf52d8aa01d"],
   ".agents/skills/write-plan-fast/SKILL.md": ["d56078320f4fc34e"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
@@ -443,7 +443,7 @@
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-deep/SKILL.md": ["c8d6f91094ef6817"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["46328cb6579fbc65"],
   ".agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1"],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
@@ -2181,10 +2181,17 @@
     "f418280b4c3225ed"
   ],
   "agents/settings/claude.json": ["bfc78d8fc65d4afe"],
-  "agents/skills/ask/SKILL.md": ["06a3ef753760f34f", "9c8dce3c6696eb1e", "bc6ac1c8061ebb5e", "fd992d95ff08aa3a"],
+  "agents/skills/ask/SKILL.md": [
+    "06a3ef753760f34f",
+    "11381750e16bbf45",
+    "9c8dce3c6696eb1e",
+    "bc6ac1c8061ebb5e",
+    "fd992d95ff08aa3a"
+  ],
   "agents/skills/auto/SKILL.md": ["29aa49390a83a16e", "c6244630ffaa9593"],
   "agents/skills/away/SKILL.md": [
     "3c7997f0397f9508",
+    "80a3f007243f1da5",
     "c4fe4ae187fc949f",
     "dfe96572d60369ec",
     "e9100f4b23565ac0",
@@ -2234,7 +2241,7 @@
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
   "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff", "f01909910bdbeac9"],
-  "agents/skills/implement-plan-deep/SKILL.md": ["292f5b0c8de32f1d", "3f1c199de368543d"],
+  "agents/skills/implement-plan-deep/SKILL.md": ["1632789dd06220ae", "292f5b0c8de32f1d", "3f1c199de368543d"],
   "agents/skills/implement-plan-fast/SKILL.md": ["4fa5d8c08371513e", "8f71c61551d7af2e", "9595d7dbe4d73698"],
   "agents/skills/implement-plan/SKILL.md": [
     "06f2b1eae4ddd427",
@@ -2296,7 +2303,12 @@
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  "agents/skills/write-plan-deep/SKILL.md": ["3ddd8c267267a72d", "98c81331e3815f5f", "abde0d45b94341d5"],
+  "agents/skills/write-plan-deep/SKILL.md": [
+    "3ddd8c267267a72d",
+    "98c81331e3815f5f",
+    "abde0d45b94341d5",
+    "e55ffcf52d8aa01d"
+  ],
   "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e"],
   "agents/skills/write-plan/SKILL.md": [
     "0f1b19182c479cc3",
@@ -2309,7 +2321,7 @@
     "d37f2553e7b8e1bc",
     "ee7e143018db8227"
   ],
-  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8", "c8d6f91094ef6817"],
+  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8", "46328cb6579fbc65", "c8d6f91094ef6817"],
   "agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1", "f18dd93a01bf07ab"],
   "agents/skills/write-roadmap/SKILL.md": [
     "0001e66dc0806396",
@@ -3364,6 +3376,7 @@
   "cli/scripts/clean.types.ts": ["83ed408b054d8baf", "99cd973a989e440b", "b5f2958509afae86", "efac0ae9683e4a2e"],
   "cli/scripts/closing-line.test.ts": [
     "07d581e41c343f47",
+    "0e0451707f95946f",
     "50f1caeaaed99a1e",
     "59aa4624a27cb2d2",
     "a495054b05e73564",
@@ -3371,6 +3384,7 @@
     "d1b6f97aac2d54cf"
   ],
   "cli/scripts/closing-line.ts": [
+    "5b2b1015fd2da629",
     "8d86aaa65e20d301",
     "95a9fed71c26d059",
     "b48d099d9e87265e",
@@ -5843,6 +5857,7 @@
     "bd6ce6b8d7f955a9",
     "c3584edc38bdcfa0",
     "cbabdef364b33a8b",
+    "d004b0a5a2099f49",
     "e5cabb2801ac89df"
   ],
   "cli/scripts/orchestrate-parent-away-run-fast.test.ts": ["160c225517659611", "d5bf2af933968c6b"],
@@ -5857,6 +5872,7 @@
     "3e0b414d3730a74f",
     "484e2692cc80ca46",
     "568892629636fc72",
+    "876dd71b18b63468",
     "ab7afbc4eebad2db",
     "b24383a7921a0cd0",
     "c5a0b2b268952535",
@@ -5888,7 +5904,7 @@
     "d0bea5cd5a2b0e74",
     "ec7e3df750cc2caf"
   ],
-  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538"],
+  "cli/scripts/orchestrate-parent-defaults.test.ts": ["3d1bef5cf805a538", "6e482f691e375ae2"],
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5", "d9c6d340e898848a"],
   "cli/scripts/orchestrate-parent-fast.test.ts": [
@@ -5902,6 +5918,7 @@
     "145b3f433667be4e",
     "23fde34f3223f374",
     "3c530ea399a45ac6",
+    "3de010d6616effbb",
     "5111e1097fa53965",
     "70065f19eee432ab",
     "80216253c307f51e",
@@ -6123,6 +6140,7 @@
     "2b5426a37dd0173a",
     "3db20a7b8a643212",
     "568a3fd2237ec95a",
+    "67006c76bfcf8c5c",
     "6ec03dd840cfa0a1",
     "7d2c8ae74b4b9eaf",
     "8b91dc56e44dabee",
@@ -6180,6 +6198,7 @@
     "ab734bea0eb61b78",
     "d46d4aed3b621c34",
     "d8eea68ceda4d5d5",
+    "da01eeef2f037cfd",
     "f25b82254bd227ea",
     "f6a7ba8bb8d28eab"
   ],
@@ -6397,6 +6416,7 @@
   ],
   "cli/scripts/persist-keys.test.ts": [
     "263e2bb1f1e860d8",
+    "283d3f0f6139497e",
     "460867c91658df79",
     "49de289a9019ac87",
     "5f881bf9c34bc06f",
@@ -6409,7 +6429,8 @@
     "a7ecccb4213be6cc",
     "b8e06b670834d4d0",
     "c93635b2a307b261",
-    "d03a97f2807ece94"
+    "d03a97f2807ece94",
+    "d8be7cb8f79b1e60"
   ],
   "cli/scripts/persist-mistakes.test.ts": [
     "5de0dfd513e97468",
@@ -6485,6 +6506,7 @@
     "0eb6b6b8e2657f4e",
     "4a1a1e8fd010d3f2",
     "860c787744f9fab7",
+    "a368064b29a66b14",
     "c42200d4974e535b",
     "d290b89baa9cd0e0",
     "defd9c7c09363e76"
@@ -6493,6 +6515,7 @@
     "016fc3f2b1c811f9",
     "04882d49c8f58971",
     "0d43864c7458d303",
+    "0ec33a157716d9c4",
     "1fbc0f364170a65a",
     "502167e5ebeb6976",
     "603bb43ba13ad67a",
@@ -6515,6 +6538,7 @@
   ],
   "cli/scripts/persist-plan-mode.test.ts": [
     "08ca84bbd011de39",
+    "105354e65ddc2377",
     "29093820bd3fa45b",
     "2bc2585d767063d0",
     "39bc6ed1a933059d",
@@ -6587,6 +6611,7 @@
     "0443af08febb9ca6",
     "0f262cd845c76829",
     "261ad92df40243c1",
+    "59e9f98935f6a994",
     "62839ec653fd5808",
     "6ca48a3e5a20a35a",
     "9e6957b8e7a5987a",
@@ -6618,6 +6643,7 @@
   "cli/scripts/persist-plan.ts": [
     "27d19c574c4bcff5",
     "29de3d0ce6e517cb",
+    "34de5f4824c03014",
     "4d4dec0828cc62f6",
     "4f54503f0d96ab32",
     "6164f9ac381bfb72",
@@ -6632,6 +6658,7 @@
     "e68f4d9c6c5fd870",
     "fdf533e7dc3d71ce"
   ],
+  "cli/scripts/persist-retired-mode.test.ts": ["b70804250a994778"],
   "cli/scripts/persist-roadmap-edges.test.ts": [
     "290c25e873f4387a",
     "54aad5796f6beb11",
@@ -6655,6 +6682,7 @@
     "c8d5e21eda86634d",
     "d0c572cc8eace6f3",
     "e984254b419d7b24",
+    "eb5b8831fea329e8",
     "f44b28111ef5d4b4"
   ],
   "cli/scripts/persist-roadmap-legacy.test.ts": [
@@ -6729,6 +6757,7 @@
     "1a38aaf410fbf009",
     "6b77384ef5239c77",
     "6fe2afdd28b35de7",
+    "9829cd497faab18e",
     "b688a950c570120d",
     "c1856474bbb65268",
     "fd0d2f49c23fb681"
@@ -6756,6 +6785,7 @@
     "0f09a482ec439c3c",
     "27b8da689ffa67b8",
     "5d13603e51cf4cf2",
+    "63f4af9bd6152737",
     "6b2ec36cf6fda68c",
     "791198acc5171575",
     "8af8efe15a597591",
@@ -7125,6 +7155,7 @@
     "c269275dc024de97"
   ],
   "cli/scripts/scrub-text.test.ts": ["0f5b79173d39fbaa", "5dfeaf3f5e9e49ba", "6e85f722229b7eca", "fa1411df45d31ce2"],
+  "cli/scripts/session-approval.ts": ["f9b0bef611a62912"],
   "cli/scripts/session-map-worktree.test.ts": [
     "362c9bbd6b2287e8",
     "52e2648dbdfcaed0",
@@ -7628,6 +7659,7 @@
     "5c1e7674533f1765",
     "692115f578bbb364",
     "8c3eba9135ccc522",
+    "a8c7562b5db0aa5e",
     "d020949a9298fe2a",
     "e40ce7f6fa70ee32",
     "fc72142776145146",
@@ -7635,6 +7667,7 @@
   ],
   "cli/scripts/strategy.test.ts": [
     "033dfde60e453a0a",
+    "1d757745dbee07a5",
     "1ea4a3ecaf06fe52",
     "3f7d567512462665",
     "50421f145efd3ba0",
@@ -7652,6 +7685,7 @@
   ],
   "cli/scripts/strategy.ts": [
     "02a2ff289f1f6670",
+    "06238ea7beff804b",
     "23a0f4f24f6ca50f",
     "2956a41cdc340f18",
     "37be4b9a772cfc3f",
@@ -7671,6 +7705,7 @@
   ],
   "cli/scripts/strategy.types.ts": [
     "0fb618f390e9c0ee",
+    "2c4a0a4f67490311",
     "4688c86e6027fbef",
     "7d49e1d966dc7afc",
     "7e26716ded9495c4",
@@ -8345,6 +8380,7 @@
   "references/cascade.md": [
     "3943d2650103ed3b",
     "469ffa9cb8f081f5",
+    "63e31a5b05e72255",
     "8a8b498a28fdeb92",
     "92cfceeca9b71d56",
     "b0b5570781aa673b",
@@ -8391,6 +8427,7 @@
     "093ed3a655f55cd3",
     "1944509e7d5d4e7a",
     "26b08d2101d7cd58",
+    "2899ca86fc085154",
     "3078e2cf628d55f9",
     "37424abba0611db9",
     "392acb49fd80d032",
@@ -8457,6 +8494,7 @@
     "7c29c1dd0d29d4a9",
     "8f882b3c72fa4553",
     "9fe17276fb13e9f1",
+    "a86bc52ad4f4bca9",
     "ac0d0d4c2036f1e6",
     "b78cfac44c3cde82",
     "bce9480e50fc9c75",
@@ -8482,6 +8520,7 @@
     "49aecab0ad4c11b1",
     "5b8d9a46ebe4777c",
     "623a929f50a645c3",
+    "632ee841d518c779",
     "67525ea6dcbb0ef2",
     "71993ad32e4415fd",
     "93b5154bc7dd725c",
@@ -8503,6 +8542,7 @@
   "references/roadmap-format.md": [
     "05119661b62dcd5b",
     "0e879896d6b9f135",
+    "2651635e65eb4d95",
     "2939a780d5f02c50",
     "4a1f34c9e353962f",
     "51deefc4b794d3d7",
@@ -8524,6 +8564,7 @@
     "2e2740608cdd63a5",
     "2e6941901ff909d3",
     "3447cf3911d08fdd",
+    "457f2eb8443c8e88",
     "7adca70bec40b015",
     "96f952d35af99ba0",
     "9b601f0b67b953d0",
