@@ -104,13 +104,13 @@ export const cleanRigs = () => {
   removeTemps(dirs.splice(0));
 };
 
-export function rig(over: Partial<World> = {}) {
+export function rig(over: Partial<World> = {}, p: typeof path = path) {
   const main = fs.mkdtempSync(path.join(os.tmpdir(), "push-gate-"));
   dirs.push(main);
   const asked: string[] = [];
   const tips = { [main]: { branch: "main", sha: A }, [WIN]: { branch: "feat", sha: B } };
   const world: World = { tips, refs: { main: A, x: C }, landed: { main: [A, B, C, D], x: [C], feat: [B] }, ...over };
-  const deps: GateDeps = { git: fakeGit(main, world, asked), fs, now: () => new Date(AT) };
+  const deps: GateDeps = { git: fakeGit(main, world, asked), fs, now: () => new Date(AT), p };
   return {
     main,
     deps,

@@ -10,7 +10,7 @@ import { spawnRunner } from "./ci-wait-run.ts";
 
 afterEach(cleanRigs);
 
-const git = spawnRunner("git");
+const host = { git: spawnRunner("git"), p: path };
 const { repo } = usePushRepos();
 
 /** `export default { workflow: <workflow> }` as `dir`'s repo.config.ts, or a config that throws as it loads. */
@@ -44,40 +44,40 @@ describe("pushedRefs reads worktree finish as a push under pull-request", () => 
     "notes wt/a for %s from the root",
     (command) => {
       const { r } = withWorktree("pull-request");
-      expect(pushedRefs(git, command, r.dir)).toStrictEqual(finishOfA(r));
+      expect(pushedRefs(host, command, r.dir)).toStrictEqual(finishOfA(r));
     },
   );
 
   it("takes the branch from the worktree a nameless finish runs in", () => {
     const { r, tree } = withWorktree("pull-request");
-    expect(pushedRefs(git, "repo worktree finish", tree)).toStrictEqual(finishOfA(r));
-    expect(pushedRefs(git, `cd '${tree}' && bun repo worktree finish`, r.dir)).toStrictEqual(finishOfA(r));
+    expect(pushedRefs(host, "repo worktree finish", tree)).toStrictEqual(finishOfA(r));
+    expect(pushedRefs(host, `cd '${tree}' && bun repo worktree finish`, r.dir)).toStrictEqual(finishOfA(r));
   });
 
   it("notes nothing for a nameless finish in the root on main, or a finish of a missing branch", () => {
     const { r } = withWorktree("pull-request");
-    expect(pushedRefs(git, "bun repo worktree finish", r.dir)).toStrictEqual([]);
-    expect(pushedRefs(git, "bun repo worktree finish nope", r.dir)).toStrictEqual([]);
+    expect(pushedRefs(host, "bun repo worktree finish", r.dir)).toStrictEqual([]);
+    expect(pushedRefs(host, "bun repo worktree finish nope", r.dir)).toStrictEqual([]);
   });
 
   it("notes nothing for other worktree verbs", () => {
     const { r } = withWorktree("pull-request");
-    expect(pushedRefs(git, "bun repo worktree add a", r.dir)).toStrictEqual([]);
-    expect(pushedRefs(git, "bun repo worktree", r.dir)).toStrictEqual([]);
+    expect(pushedRefs(host, "bun repo worktree add a", r.dir)).toStrictEqual([]);
+    expect(pushedRefs(host, "bun repo worktree", r.dir)).toStrictEqual([]);
   });
 });
 
 describe("pushedRefs reads worktree finish as nothing outside pull-request", () => {
   it.each(["worktree", "main", null])("notes nothing under %s", (workflow) => {
     const { r, tree } = withWorktree(workflow);
-    expect(pushedRefs(git, "bun repo worktree finish a", r.dir)).toStrictEqual([]);
-    expect(pushedRefs(git, "repo worktree finish", tree)).toStrictEqual([]);
+    expect(pushedRefs(host, "bun repo worktree finish a", r.dir)).toStrictEqual([]);
+    expect(pushedRefs(host, "repo worktree finish", tree)).toStrictEqual([]);
   });
 
   it("reads the main root's repo.config.ts, never the worktree's own", () => {
     const { tree } = withWorktree("main");
     configure(tree, "pull-request");
-    expect(pushedRefs(git, "repo worktree finish", tree)).toStrictEqual([]);
+    expect(pushedRefs(host, "repo worktree finish", tree)).toStrictEqual([]);
   });
 });
 

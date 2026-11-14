@@ -31,6 +31,7 @@ function realDeps(): GateDeps {
     fs: nodeFs,
     git: spawnRunner("git"),
     now: () => new Date(),
+    p: path,
   };
 }
 
@@ -104,7 +105,7 @@ export function recordPush(input: { command: string; cwd: string; session: strin
     const file = sessionFile(recordRoot(deps.git, input.cwd), input.session);
     const rows = loadPushed(deps, file);
     const at = deps.now().toISOString();
-    const noted = pushedRefs(deps.git, input.command, input.cwd).map((r) => ({ ...r, at, pending: true }));
+    const noted = pushedRefs(deps, input.command, input.cwd).map((r) => ({ ...r, at, pending: true }));
 
     if (noted.length > 0) save(deps, file, [...rows, ...noted]);
   } catch {

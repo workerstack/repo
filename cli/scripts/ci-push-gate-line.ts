@@ -1,5 +1,6 @@
 /** The push gate's Stop line for one branch: what the records of its pushed commits say is still open. */
 import type nodeFs from "node:fs";
+import type path from "node:path";
 
 import { tryJson } from "../json.ts";
 import { recordPath, recordSchema, type WaitRecord } from "./ci-wait-record.ts";
@@ -16,6 +17,7 @@ const BLOCKED_HINT =
 /** What the gate reads, writes and asks; the real ones by default. */
 export type GateDeps = {
   git: Runner;
+  p: typeof path;
   fs: Pick<typeof nodeFs, "readFileSync" | "writeFileSync" | "mkdirSync">;
   now: () => Date;
 };

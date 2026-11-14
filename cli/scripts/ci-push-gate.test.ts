@@ -42,19 +42,19 @@ it("resolves the directory a cd names", () => {
   expect(r.pushed()).toStrictEqual(row("feat", B));
 });
 
-it.each([`git -C "${WIN}" push`, `cd ${WIN} && git push`, `cd "${WIN}" && echo hi && git push`])(
+it.each([`git -C "${WIN}" push`, `cd '${WIN}' && git push`, `cd "${WIN}" && echo hi && git push`])(
   "resolves the Windows directory in %s",
   (command) => {
-    const r = rig();
+    const r = rig({}, path.win32);
     r.note(command);
     expect(r.pushed()).toStrictEqual(row("feat", B));
   },
 );
 
 it("resolves a relative -C from a Windows working directory", () => {
-  const r = rig();
+  const r = rig({}, path.win32);
   r.world.tips["C:\\work\\other"] = { branch: "feat", sha: D };
-  r.note("git -C ..\\other push", WIN);
+  r.note("git -C '..\\other' push", WIN);
   expect(r.pushed()).toStrictEqual(row("feat", D));
 });
 

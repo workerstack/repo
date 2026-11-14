@@ -117,7 +117,7 @@ function prefixDir(words: readonly ShellWord[], { dir, vars }: Scope, p: typeof 
 }
 
 /** The git command of one simple command run in `scope`, its dir moved by the assignments before git; else null. */
-function gitCommandOf(words: readonly ShellWord[], scope: Scope, p: typeof path): GitCommand | null {
+export function gitCommandOf(words: readonly ShellWord[], scope: Scope, p: typeof path): GitCommand | null {
   const read = words.map(readWord);
   const at = gitAt(words, read);
 
