@@ -3011,6 +3011,7 @@
   "cli/scripts/ci-wait-branch.test.ts": [
     "0f7403690fe371ed",
     "22eff89cc023fe56",
+    "2450350c2ce39ac7",
     "5d468690fd9d309f",
     "8b958cbcc3058402",
     "c60043035d1e14ab",
@@ -3018,6 +3019,7 @@
     "cfa47e924073fb4f",
     "f5c599f002ce680f"
   ],
+  "cli/scripts/ci-wait-dispatch.test.ts": ["71a4d8919406e564"],
   "cli/scripts/ci-wait-poll.test.ts": [
     "00e9ae506b1719be",
     "01370045e28557c2",
@@ -3063,12 +3065,14 @@
     "2c82466472848f8b",
     "4f101dc833af998f",
     "7033fe8d3604ac09",
+    "93a0e8853e97ab8b",
     "cd2d004291927037",
     "d34f7f1f30a3c948",
     "e9beba5d318a2fef",
     "f578c326ae880013"
   ],
   "cli/scripts/ci-wait.constants.ts": [
+    "035a87fc437b0569",
     "2152c5d645b2c1af",
     "2201514fb3aa2d78",
     "63090fdf82ad275d",
@@ -3086,6 +3090,7 @@
   "cli/scripts/ci-wait.ts": [
     "29bb1a546c9c4bf8",
     "36d85cd3183ac879",
+    "40e8ad82c5bc6c2c",
     "46cec73500591d2a",
     "7d8c2b8f4bc2a0db",
     "8acfbd57100b2eda",
