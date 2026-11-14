@@ -34,7 +34,7 @@ export type RepoConfig<P extends Pack = Pack> = {
   /**
    * What `bun repo sync` writes for coding agents, and how a session runs by default. Needs the `agents` pack.
    *
-   * @example agents: { hosts: ["claude", "codex"], skills: ["speak"], defaultMode: "away" }
+   * @example agents: { hosts: ["claude", "codex"], skills: ["speak"], defaultApproval: "away" }
    */
   agents?: Gated<P, "agents", AgentsConfig> | undefined;
   /**

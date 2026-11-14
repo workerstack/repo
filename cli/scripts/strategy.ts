@@ -22,13 +22,13 @@ import {
   IMPLEMENTER_FAST,
   IN_PROGRESS,
   LINE_BREAK_RE,
-  MODES,
+  APPROVALS,
   SPAWN_FAST,
   STAMP_FILE,
   STRATEGIES,
   UNSAFE_SID_RE,
 } from "./strategy.constants.ts";
-import type { ActiveReview, Approvable, ItemKind, Mode, SpawnStrategy, Strategy } from "./strategy.types.ts";
+import type { ActiveReview, Approvable, ItemKind, Approval, SpawnStrategy, Strategy } from "./strategy.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
 
 /** True for a kind that has a strategy: a full plan or roadmap. A fast plan or fast roadmap has none. */
@@ -41,8 +41,8 @@ export function hasStrategy<T extends Approvable>(item: T): item is Extract<T, {
   return kindHasStrategy(item.kind);
 }
 
-export function parseMode(v: string | undefined): Mode | null {
-  return MODES.find((m) => m === v) ?? null;
+export function parseApprovalSetting(v: string | undefined): Approval | null {
+  return APPROVALS.find((m) => m === v) ?? null;
 }
 
 export function parseStrategy(v: string | undefined): Strategy | null {

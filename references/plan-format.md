@@ -58,7 +58,7 @@ created: 2026-08-26T14:30:00Z    # UTC ISO-8601 seconds + Z; no milliseconds
 source: "<≤120 chars of user task>"
 commit: feat: <subject>
 strategy: free          # free | spawn-fast | spawn-deep
-mode: away             # optional: ask | auto | away
+approval: away             # optional: ask | away
 ---
 ```
 
@@ -72,7 +72,7 @@ mode: away             # optional: ask | auto | away
 
 A save with no `strategy` gets `agents.defaultStrategy`, else `free`. An unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/ask` or `/away` stamp, for the session that saved it only. The order is the session stamp, then the in-progress `mode`, then `agents.defaultMode`, then `ask`. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|away`.
+`approval` is optional: `ask` or `away`. While the plan is `in-progress`, its `approval` applies only when the session has no `/ask` or `/away` stamp, for the session that saved it only. The order is the session stamp, then the in-progress `approval`, then `agents.defaultApproval`, then `ask`. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for an approval. A body line `approval: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `approval: ask|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 
@@ -179,7 +179,7 @@ Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree 
 
 - filename matches new stamped regex or legacy unstamped; new writes unpadded + stamp (`1-foo-20260826T143000Z.md` not `0001-foo.md`); serial int equals leading digits; `name` equals slug after stripping optional trailing `-\d{8}T\d{6}Z`
 - frontmatter `serial` line matches `^serial: [1-9][0-9]*$` (unpadded decimal ≥ 1; reject `0001`, `"0001"`, `0`, `01`)
-- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is optional and is `free`, `spawn-fast` or `spawn-deep`; a save without it takes `agents.defaultStrategy`, else `free`, and another value is invalid. Optional `mode` is `ask`, `auto` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
+- frontmatter keys: `serial`, `name`, `status`, `reviews`, `created`, `source`, `strategy`. `strategy` is optional and is `free`, `spawn-fast` or `spawn-deep`; a save without it takes `agents.defaultStrategy`, else `free`, and another value is invalid. Optional `approval` is `ask` or `away`; another value is invalid. `reviews` matches `^(0|[1-9][0-9]*)$`, is `0` on a fresh write, is not lowered or removed on an update, and is ≥ 1 for a change into `in-progress`; a legacy plan without it stays valid. Optional `commit:` is a Conventional Commits subject (`type(scope): subject`, scope optional, imperative lowercase, no trailing period). A new plan includes it. A plan with no `commit` key stays valid. A present `commit` that is not that subject is invalid
 - `status` ∈ `ready` | `in-progress` | `done` | `blocked`; `created` `YYYY-MM-DDTHH:MM:SSZ` (new writes) or legacy `YYYY-MM-DD`; `source` ≤120
 - headings in order only; no extra `##`; `## Usage` right after `## Goal`, required on a fresh write and optional on an update to a plan saved without it, holding a fenced block or a `No visible change:` line; lines inside code fences are never headings or checkboxes; `## Previous mistakes` last and required on a fresh write, entries valid and append-only on an update; fresh write cites every matched lesson in Watch-outs; no required Why heading (optional footnote only)
 - ≥1 `N.M [ ]` leaf; every phase has ≥1 leaf; Verify is last numbered phase

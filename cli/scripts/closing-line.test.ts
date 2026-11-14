@@ -1,16 +1,16 @@
 import { expect, it } from "vitest";
 
-import { approvalFor, closingBlock, parseApproval, parseClosingBlock } from "./closing-line.ts";
+import { approvalFor, closingBlock, parseApprovalReply, parseClosingBlock } from "./closing-line.ts";
 import type { Approvable } from "./strategy.types.ts";
 
 it("maps y in any case with no strategy to keep each file's value", () => {
-  expect(parseApproval("y")).toStrictEqual({ kind: "approve", strategy: null });
-  expect(parseApproval("Y")).toStrictEqual({ kind: "approve", strategy: null });
+  expect(parseApprovalReply("y")).toStrictEqual({ kind: "approve", strategy: null });
+  expect(parseApprovalReply("Y")).toStrictEqual({ kind: "approve", strategy: null });
 });
 
 it("maps a strategy word, ignoring extra spaces", () => {
-  expect(parseApproval("y spawn-deep")).toStrictEqual({ kind: "approve", strategy: "spawn-deep" });
-  expect(parseApproval("y  free ")).toStrictEqual({ kind: "approve", strategy: "free" });
+  expect(parseApprovalReply("y spawn-deep")).toStrictEqual({ kind: "approve", strategy: "spawn-deep" });
+  expect(parseApprovalReply("y  free ")).toStrictEqual({ kind: "approve", strategy: "free" });
 });
 
 function approve(strategy: string | null) {
@@ -78,66 +78,67 @@ it("is null for a changed row, a missing fence, text after, an unknown strategy 
 
 it("approves with the header strategies on a short yes, in any case, ignoring . and !", () => {
   for (const p of ["i", "y", "yes", "go", "do it", "I", "Go!", "yes.", " Do   it! ", "y!!"])
-    expect(parseApproval(p)).toStrictEqual(approve(null));
+    expect(parseApprovalReply(p)).toStrictEqual(approve(null));
 });
 
 it("hands off with the header strategies on h or hand off", () => {
-  for (const p of ["h", "H", "hand off", "handoff", "Hand off."]) expect(parseApproval(p)).toStrictEqual(handoff(null));
-  expect(parseApproval("implement")).toStrictEqual(approve(null));
+  for (const p of ["h", "H", "hand off", "handoff", "Hand off."])
+    expect(parseApprovalReply(p)).toStrictEqual(handoff(null));
+  expect(parseApprovalReply("implement")).toStrictEqual(approve(null));
 });
 
 it("maps each exact code", () => {
-  expect(parseApproval("if")).toStrictEqual(approve("free"));
-  expect(parseApproval("isf")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApproval("ISF")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApproval("isd!")).toStrictEqual(approve("spawn-deep"));
-  expect(parseApproval("hf")).toStrictEqual(handoff("free"));
-  expect(parseApproval("hsf")).toStrictEqual(handoff("spawn-fast"));
-  expect(parseApproval("hsd")).toStrictEqual(handoff("spawn-deep"));
+  expect(parseApprovalReply("if")).toStrictEqual(approve("free"));
+  expect(parseApprovalReply("isf")).toStrictEqual(approve("spawn-fast"));
+  expect(parseApprovalReply("ISF")).toStrictEqual(approve("spawn-fast"));
+  expect(parseApprovalReply("isd!")).toStrictEqual(approve("spawn-deep"));
+  expect(parseApprovalReply("hf")).toStrictEqual(handoff("free"));
+  expect(parseApprovalReply("hsf")).toStrictEqual(handoff("spawn-fast"));
+  expect(parseApprovalReply("hsd")).toStrictEqual(handoff("spawn-deep"));
 });
 
 it("infers a misspelled action and strategy after an action word", () => {
-  expect(parseApproval("implement fere")).toStrictEqual(approve("free"));
-  expect(parseApproval("i free")).toStrictEqual(approve("free"));
-  expect(parseApproval("h free")).toStrictEqual(handoff("free"));
-  expect(parseApproval("y spawn fats")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApproval("y spawn-deep")).toStrictEqual(approve("spawn-deep"));
-  expect(parseApproval("y  free ")).toStrictEqual(approve("free"));
-  expect(parseApproval("h fast")).toStrictEqual(handoff("spawn-fast"));
-  expect(parseApproval(" H  Deep ")).toStrictEqual(handoff("spawn-deep"));
-  expect(parseApproval("hand of deep")).toStrictEqual(handoff("spawn-deep"));
-  expect(parseApproval("hand off spawn-fast")).toStrictEqual(handoff("spawn-fast"));
-  expect(parseApproval("implemnt fast")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApproval("h spawn-fast")).toStrictEqual(handoff("spawn-fast"));
+  expect(parseApprovalReply("implement fere")).toStrictEqual(approve("free"));
+  expect(parseApprovalReply("i free")).toStrictEqual(approve("free"));
+  expect(parseApprovalReply("h free")).toStrictEqual(handoff("free"));
+  expect(parseApprovalReply("y spawn fats")).toStrictEqual(approve("spawn-fast"));
+  expect(parseApprovalReply("y spawn-deep")).toStrictEqual(approve("spawn-deep"));
+  expect(parseApprovalReply("y  free ")).toStrictEqual(approve("free"));
+  expect(parseApprovalReply("h fast")).toStrictEqual(handoff("spawn-fast"));
+  expect(parseApprovalReply(" H  Deep ")).toStrictEqual(handoff("spawn-deep"));
+  expect(parseApprovalReply("hand of deep")).toStrictEqual(handoff("spawn-deep"));
+  expect(parseApprovalReply("hand off spawn-fast")).toStrictEqual(handoff("spawn-fast"));
+  expect(parseApprovalReply("implemnt fast")).toStrictEqual(approve("spawn-fast"));
+  expect(parseApprovalReply("h spawn-fast")).toStrictEqual(handoff("spawn-fast"));
 });
 
 it("resolves i spwan-dep to spawn-deep (a transposition and a missing letter are two edits)", () => {
-  expect(parseApproval("i spwan-dep")).toStrictEqual(approve("spawn-deep"));
+  expect(parseApprovalReply("i spwan-dep")).toStrictEqual(approve("spawn-deep"));
 });
 
 it("is a revision when the action resolves and the strategy words match nothing", () => {
   for (const r of ["h slow", "y review-medium", "h constructor", "h fast now", " Implement Slow! ", "y spawn deep now"])
-    expect(parseApproval(r), r).toBeNull();
+    expect(parseApprovalReply(r), r).toBeNull();
 
   for (const r of ["i think so", "i have a question", "i like it", "i guess", "implement this", "h no"])
-    expect(parseApproval(r), r).toBeNull();
+    expect(parseApprovalReply(r), r).toBeNull();
 });
 
 it("is unknown when a strategy inference is ambiguous", () => {
-  expect(parseApproval("i daet")).toStrictEqual(unknown("i daet"));
+  expect(parseApprovalReply("i daet")).toStrictEqual(unknown("i daet"));
 });
 
 it("is unknown for the retired id and hd codes, and a revision for i default", () => {
-  expect(parseApproval("id")).toStrictEqual(unknown("id"));
-  expect(parseApproval("hd")).toStrictEqual(unknown("hd"));
-  expect(parseApproval("i default")).toBeNull();
+  expect(parseApprovalReply("id")).toStrictEqual(unknown("id"));
+  expect(parseApprovalReply("hd")).toStrictEqual(unknown("hd"));
+  expect(parseApprovalReply("i default")).toBeNull();
 });
 
 it("is unknown for a code-shaped word that is no code", () => {
-  expect(parseApproval("isx")).toStrictEqual(unknown("isx"));
-  expect(parseApproval("hs")).toStrictEqual(unknown("hs"));
-  expect(parseApproval("is")).toStrictEqual(unknown("is"));
-  expect(parseApproval("HSX!")).toStrictEqual(unknown("HSX!"));
+  expect(parseApprovalReply("isx")).toStrictEqual(unknown("isx"));
+  expect(parseApprovalReply("hs")).toStrictEqual(unknown("hs"));
+  expect(parseApprovalReply("is")).toStrictEqual(unknown("is"));
+  expect(parseApprovalReply("HSX!")).toStrictEqual(unknown("HSX!"));
 });
 
 it("is null for a revision", () => {
@@ -161,7 +162,7 @@ it("is null for a revision", () => {
     "one two three four five",
     "Please change the plan to use a queue instead of a list",
   ])
-    expect(parseApproval(p)).toBeNull();
+    expect(parseApprovalReply(p)).toBeNull();
 });
 
 const FAST_ONE = "```\nfast-plan 3\n  i  implement\n  h  hand off\n     or reply to revise\n```";

@@ -6,7 +6,7 @@ description: 'Deep: write an ordered program of plans under .repo/roadmaps/. Sto
 
 You author the roadmap. First read `principle-sequence-verifiable-units` and follow it. Persist under `.repo/roadmaps/` via Write (hook runs `cli/scripts/persist-roadmap.ts`). All boxes `[ ]`. Status stays `draft` until the user approves with `i`.
 
-Omit the `strategy:` line to take `agents.defaultStrategy`. Author a bare `strategy: {value}` line above `ROADMAP_NAME:` only when the roadmap's scope argues for another value. Values and the heuristic: `/write-plan-deep`. Add a bare `mode: {value}` line beside it on the same terms as `/write-plan-deep`: `away` when this session runs `/away`, or the mode the person asked for. Under away the Stop hook runs the approval block's `i` once the review settles.
+Omit the `strategy:` line to take `agents.defaultStrategy`. Author a bare `strategy: {value}` line above `ROADMAP_NAME:` only when the roadmap's scope argues for another value. Values and the heuristic: `/write-plan-deep`. Add a bare `approval: {value}` line beside it on the same terms as `/write-plan-deep`: `away` when this session runs `/away`, or the approval the person asked for. Under away the Stop hook runs the approval block's `i` once the review settles.
 
 Before you ask the user, read `principle-never-block-on-the-human`. Ask only when the user alone can answer.
 

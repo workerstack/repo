@@ -79,6 +79,8 @@ it("rewrites both old names in every listed text file, then moves the config", (
   const moved = moveOldConfig(root, { check: false });
   expect(moved).toStrictEqual({
     dir: path.resolve(root),
+    keyRenamed: false,
+    kind: "moved",
     rewritten: ["README.md", "packages/api/src/config.ts", OLD],
   });
   expect(fs.existsSync(path.join(root, OLD))).toBe(false);
@@ -117,14 +119,24 @@ it("finishes a run that crashed after the rewrite by moving the file", () => {
   put(root, OLD, NEW_CONFIG);
   put(root, "README.md", "Edit repo.config.ts.\n");
   put(root, "packages/api/src/config.ts", "// read from ../../repo.config.ts\n");
-  expect(moveOldConfig(root, { check: false })).toStrictEqual({ dir: path.resolve(root), rewritten: [] });
+  expect(moveOldConfig(root, { check: false })).toStrictEqual({
+    dir: path.resolve(root),
+    keyRenamed: false,
+    kind: "moved",
+    rewritten: [],
+  });
   expect(read(root, NEW)).toBe(NEW_CONFIG);
   expect(fs.existsSync(path.join(root, OLD))).toBe(false);
 });
 
 it("outside a git repo still rewrites and moves the config itself", () => {
   const root = consumer({ git: false });
-  expect(moveOldConfig(root, { check: false })).toStrictEqual({ dir: path.resolve(root), rewritten: [OLD] });
+  expect(moveOldConfig(root, { check: false })).toStrictEqual({
+    dir: path.resolve(root),
+    keyRenamed: false,
+    kind: "moved",
+    rewritten: [OLD],
+  });
   expect(read(root, NEW)).toBe(NEW_CONFIG);
   expect(read(root, "README.md")).toBe(DOC);
 });
@@ -135,6 +147,7 @@ it("under --check names the move and writes nothing", () => {
   expect(moveOldConfig(path.join(root, "packages"), { check: true })).toStrictEqual({
     dir: path.resolve(root),
     error: IS_NOW,
+    kind: "error",
   });
   expect(snapshot(root)).toStrictEqual(before);
 });
@@ -145,7 +158,7 @@ it("refuses when both files exist and writes nothing", () => {
   const before = snapshot(root);
 
   for (const check of [false, true])
-    expect(moveOldConfig(root, { check })).toStrictEqual({ dir: path.resolve(root), error: BOTH });
+    expect(moveOldConfig(root, { check })).toStrictEqual({ dir: path.resolve(root), error: BOTH, kind: "error" });
   expect(snapshot(root)).toStrictEqual(before);
 });
 
@@ -175,4 +188,27 @@ it("prints the rewrite only when a file changed, then the move", () => {
     "rewrote WorkerstackConfig and workerstack.config.ts in 2 files",
     moved,
   ]);
+});
+
+it("under --check names the defaultMode rename in repo.config.ts and writes nothing", () => {
+  const root = tempDir("workerstack-config-name-");
+  put(root, NEW, 'export default { agents: { defaultMode: "away" } };\n');
+  const before = snapshot(root);
+
+  expect(moveOldConfig(root, { check: true })).toStrictEqual({
+    dir: path.resolve(root),
+    error: "repo.config.ts: agents.defaultMode is now agents.defaultApproval; run bun repo sync",
+    kind: "error",
+  });
+  expect(snapshot(root)).toStrictEqual(before);
+});
+
+it("rewrites defaultMode to defaultApproval in repo.config.ts and leaves other text alone", () => {
+  const root = tempDir("workerstack-config-name-");
+  put(root, NEW, '// defaultMode stays here\nexport default { agents: { defaultMode: "away", hosts: ["claude"] } };\n');
+  expect(moveOldConfig(root, { check: false })).toStrictEqual({ dir: path.resolve(root), kind: "key-renamed" });
+
+  expect(read(root, NEW)).toBe(
+    '// defaultMode stays here\nexport default { agents: { defaultApproval: "away", hosts: ["claude"] } };\n',
+  );
 });

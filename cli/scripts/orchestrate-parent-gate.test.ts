@@ -43,7 +43,7 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
   const env = { GROK_HOOK_EVENT: "user_prompt_submit", GROK_SESSION_ID: "self", GROK_WORKSPACE_ROOT: ws };
   const r = kit.run(call, { ...env, REPO_BOARD_HOME: board, REPO_BOARD_PROVIDER: "claude" });
   const ctx = must(replyOf(r)).hookSpecificOutput.additionalContext;
-  expect(ctx).toMatch(/sessionGate=ask/);
+  expect(ctx).toMatch(/approval=ask/);
   expect(ctx).toContain("sibling live work");
   expect(ctx).not.toContain("ship the auth fix");
 
@@ -57,15 +57,15 @@ it("UserPromptSubmit refreshes the row and appends other live lines", () => {
 });
 
 it("with no stamp the session gate is ask", () => {
-  expect(say(kit.temp(), "s1", "ship it")).toMatch(/^sessionGate=ask\b/);
+  expect(say(kit.temp(), "s1", "ship it")).toMatch(/^approval=ask\b/);
 });
 
 it("/ask stamps ask and /away stamps away", () => {
   const ws = kit.temp();
   const sid = "g1";
-  expect(say(ws, sid, "/away")).toMatch(/sessionGate=away/);
+  expect(say(ws, sid, "/away")).toMatch(/approval=away/);
   expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("away");
-  expect(say(ws, sid, "/ask")).toMatch(/sessionGate=ask/);
+  expect(say(ws, sid, "/ask")).toMatch(/approval=ask/);
   expect(fs.readFileSync(stampAbs(ws, sid), "utf8")).toBe("ask");
 });
 
@@ -73,7 +73,7 @@ it("a stamp left holding auto reads as ask", () => {
   const ws = kit.temp();
   fs.mkdirSync(path.dirname(stampAbs(ws, "g2")), { recursive: true });
   fs.writeFileSync(stampAbs(ws, "g2"), "auto");
-  expect(say(ws, "g2", "go")).toMatch(/^sessionGate=ask\b/);
+  expect(say(ws, "g2", "go")).toMatch(/^approval=ask\b/);
 });
 
 it("a prompt of exactly /auto writes no stamp", () => {

@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { AGENT_DEFAULTS } from "./agent-defaults.constants.ts";
 import { LAST } from "./config.constants.ts";
-import { EFFORTS, MODES, STRATEGIES } from "./scripts/strategy.constants.ts";
-import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
+import { APPROVALS, EFFORTS, STRATEGIES } from "./scripts/strategy.constants.ts";
+import type { Approval, Effort, Strategy } from "./scripts/strategy.types.ts";
 
 /** One of `values`, `fallback` when omitted; another value is refused with the quoted values it takes. */
 function oneOf<const T extends string>(values: readonly T[], fallback: T) {
@@ -21,23 +21,25 @@ type DefaultKey<T extends string> = z.ZodDefault<z.ZodCustom<T, T>>;
 
 /** The schema of each `agents` default key. */
 export type AgentDefaultKeys = {
+  readonly defaultApproval: DefaultKey<Approval>;
   readonly defaultEffort: DefaultKey<Effort>;
-  readonly defaultMode: DefaultKey<Mode>;
   readonly defaultStrategy: DefaultKey<Strategy>;
 };
 
 /** The schema of each default key, to spread into the `agents` object schema. */
 export function agentDefaultKeys(): AgentDefaultKeys {
   return {
+    defaultApproval: oneOf(APPROVALS, AGENT_DEFAULTS.defaultApproval),
     defaultEffort: oneOf(EFFORTS, AGENT_DEFAULTS.defaultEffort),
-    defaultMode: oneOf(MODES, AGENT_DEFAULTS.defaultMode),
     defaultStrategy: oneOf(STRATEGIES, AGENT_DEFAULTS.defaultStrategy),
   };
 }
 
 /** The default keys as the `agents` example of a config error shows them, each with its built-in value. */
 export function agentDefaultsExample(): string {
-  const { defaultEffort, defaultMode, defaultStrategy } = AGENT_DEFAULTS;
+  const { defaultApproval, defaultEffort, defaultStrategy } = AGENT_DEFAULTS;
 
-  return `defaultStrategy: "${defaultStrategy}", defaultMode: "${defaultMode}", defaultEffort: "${defaultEffort}"`;
+  const strategy = `defaultStrategy: "${defaultStrategy}"`;
+
+  return `${strategy}, defaultApproval: "${defaultApproval}", defaultEffort: "${defaultEffort}"`;
 }

@@ -1,5 +1,5 @@
 import type { RepoDir } from "../repo-dirs.ts";
-import type { parseApproval } from "./closing-line.ts";
+import type { parseApprovalReply } from "./closing-line.ts";
 import type { HookOutput, ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
 import type { STRATEGIES } from "./strategy.constants.ts";
@@ -41,7 +41,7 @@ export type ApprovalItem = {
 export type StrategyItem = Extract<ApprovalItem, { strategy: Strategy }>;
 
 /** A reply of `i` or `h`, with or without a strategy. */
-export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApproval>>, { kind: "unknown" }>;
+export type KnownApproval = Exclude<NonNullable<ReturnType<typeof parseApprovalReply>>, { kind: "unknown" }>;
 
 /** Context the host adds for one event, blocking it when `decision` is set. */
 export type ContextReply = {

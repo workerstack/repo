@@ -2,7 +2,7 @@ import { patternErrors, when } from "./persist-doc-checks.ts";
 import { FM_CLOSE, FM_LINE_LOOSE_RE, FM_OPEN, GOAL_H2, NOT_FOUND } from "./persist-doc.constants.ts";
 /** `validateRoadmap`: an ordered table of small checks, so the errors keep their order. */
 import { type FrontmatterMap, type Sections, frontmatterMap, slugFromFilename, stripBom } from "./persist-doc.ts";
-import { modeErrors, strategyError } from "./persist-keys.ts";
+import { approvalErrors, strategyError } from "./persist-keys.ts";
 import { mistakeLogErrors, reviewErrors } from "./persist-mistakes.ts";
 import { legacyErrors, pointerErrors } from "./persist-roadmap-shape.ts";
 import {
@@ -58,7 +58,7 @@ const HEAD_CHECKS: HeadCheck[] = [
   ({ map }) => when({ bad: REQUIRED_KEYS.some((k) => (map[k] ?? "") === ""), error: "frontmatter" }),
   (r) => patternErrors(r, "status", STATUS_RE),
   ({ map }) => when({ bad: parseStrategy(map.strategy) === null, error: strategyError() }),
-  ({ map }) => modeErrors(map),
+  ({ map }) => approvalErrors(map),
   ({ map, prev }) =>
     reviewErrors(map, prev === null ? null : prev.map, { gates: reviewsToEnter, review: REVIEW_COMMAND }),
   ({ map, slug }) => when({ bad: (map.name ?? "") !== "" && map.name !== slug, error: "name" }),

@@ -88,35 +88,35 @@ async function write(ws: string, sid: string, item: { file: string; content: str
   return out?.hookSpecificOutput.updatedInput.content ?? "";
 }
 
-describe("agents.defaultMode", () => {
+describe("agents.defaultApproval", () => {
   it("away runs an unstamped session under away: the prompt context and Stop both", async () => {
-    const ws = workspace('{ defaultMode: "away" }');
-    expect(await say(ws, "d1", "go")).toMatch(/^sessionGate=away\b/);
+    const ws = workspace('{ defaultApproval: "away" }');
+    expect(await say(ws, "d1", "go")).toMatch(/^approval=away\b/);
     expect(await stop(ws, "d1", "Keep --json?")).toStrictEqual({ decision: "block", reason: AWAY_STOP_REASON });
   });
 
   it("an /ask stamp beats a default of away", async () => {
-    const ws = workspace('{ defaultMode: "away" }');
-    expect(await say(ws, "d2", "/ask")).toMatch(/^sessionGate=ask\b/);
-    expect(await say(ws, "d2", "go")).toMatch(/^sessionGate=ask\b/);
+    const ws = workspace('{ defaultApproval: "away" }');
+    expect(await say(ws, "d2", "/ask")).toMatch(/^approval=ask\b/);
+    expect(await say(ws, "d2", "go")).toMatch(/^approval=ask\b/);
     expect(await stop(ws, "d2", "Keep --json?")).toBeNull();
   });
 
-  it("an in-progress plan's mode: ask beats a default of away", async () => {
-    const ws = workspace('{ defaultMode: "away" }');
+  it("an in-progress plan's approval: ask beats a default of away", async () => {
+    const ws = workspace('{ defaultApproval: "away" }');
     const s = claudeSession(kit, ws, "d3");
-    const saved = s.save(".repo/plans/x.md", VALID_PLAN.replace("strategy: free", "strategy: free\nmode: ask"));
+    const saved = s.save(".repo/plans/x.md", VALID_PLAN.replace("strategy: free", "strategy: free\napproval: ask"));
     fs.writeFileSync(saved, fs.readFileSync(saved, "utf8").replace(/^status: .*$/m, "status: in-progress"));
-    expect(await say(ws, "d3", "go")).toMatch(/^sessionGate=ask\b/);
+    expect(await say(ws, "d3", "go")).toMatch(/^approval=ask\b/);
     expect(await stop(ws, "d3", "Keep --json?")).toBeNull();
   });
 
   it.each([
     ["no config", null],
-    ["an invalid config", '{ defaultMode: "later" }'],
+    ["an invalid config", '{ defaultApproval: "later" }'],
   ])("%s gives ask and the hook still answers", async (_name, agents) => {
     const ws = workspace(agents);
-    expect(await say(ws, "d4", "go")).toMatch(/^sessionGate=ask\b/);
+    expect(await say(ws, "d4", "go")).toMatch(/^approval=ask\b/);
     expect(await stop(ws, "d4", "Keep --json?")).toBeNull();
   });
 });

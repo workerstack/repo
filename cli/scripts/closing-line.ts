@@ -32,7 +32,7 @@ import {
  * else; and what a reply to it means.
  */
 import { hasStrategy, parseStrategy } from "./strategy.ts";
-import type { Approval, ApprovalAction, Approvable } from "./strategy.types.ts";
+import type { ApprovalReply, ApprovalAction, Approvable } from "./strategy.types.ts";
 
 /** True when no item has a strategy, so the block has no codes to offer. */
 function noneHasStrategy(items: Approvable[]): boolean {
@@ -130,7 +130,7 @@ function actionOf(words: string[]): { kind: ApprovalAction; used: number } | nul
  * `hand off` inferred) with optional strategy words, inferred when misspelled. Null for a revision; `unknown`
  * (carrying the whole reply) for a near-miss code or a strategy word close to several.
  */
-export function parseApproval(prompt: string): Approval | null {
+export function parseApprovalReply(prompt: string): ApprovalReply | null {
   const whole = prompt.trim();
   const words = whole.toLowerCase().replace(TRAILING_PUNCT_RE, "").trim().split(WORD_SEP_RE);
   const text = words.join(" ");
@@ -160,8 +160,8 @@ export function parseApproval(prompt: string): Approval | null {
  * What a reply means to the block it answers. A block of only fast plans offers no codes, so a code or a strategy
  * word is `unknown` there; a bare `i` or `h` stands.
  */
-export function approvalFor(prompt: string, items: Approvable[]): Approval | null {
-  const reply = parseApproval(prompt);
+export function approvalFor(prompt: string, items: Approvable[]): ApprovalReply | null {
+  const reply = parseApprovalReply(prompt);
 
   if (reply === null || reply.kind === "unknown" || reply.strategy === null || !noneHasStrategy(items)) return reply;
 

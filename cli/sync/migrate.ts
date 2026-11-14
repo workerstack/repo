@@ -42,7 +42,7 @@ export type MigrationStep =
    * Renames old names in the text of each of `paths`: the old strategies, the old stock skills that took a `-deep`
    * name, or the saved mode `auto` that became `ask`. `note` is the line printed.
    */
-  | { kind: "rename-text"; rename: "strategy" | "skills" | "mode"; paths: string[]; note: string }
+  | { kind: "rename-text"; rename: "strategy" | "skills" | "approval"; paths: string[]; note: string }
   /** Prints a line for something the user must do by hand. */
   | { kind: "note"; note: string }
   /**

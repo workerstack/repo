@@ -11,7 +11,7 @@ export async function agentDefaults(root: string): Promise<AgentDefaults> {
   const loaded = await loadConfig(root);
 
   if (!loaded.ok) return AGENT_DEFAULTS;
-  const { defaultEffort, defaultMode, defaultStrategy } = loaded.config.agents;
+  const { defaultApproval, defaultEffort, defaultStrategy } = loaded.config.agents;
 
-  return { defaultEffort, defaultMode, defaultStrategy };
+  return { defaultApproval, defaultEffort, defaultStrategy };
 }

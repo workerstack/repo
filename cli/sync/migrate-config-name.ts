@@ -19,13 +19,20 @@ const SNIFF_BYTES = 8000;
 const OWNER_WRITE = 0o200;
 
 const IS_NOW = `${OLD_CONFIG_FILE} is now ${CONFIG_FILE}; run bun repo sync`;
+const OLD_KEY = /\bdefaultMode(?=\s*:)/g;
+const NEW_KEY = "defaultApproval";
+const KEY_IS_NOW = `${CONFIG_FILE}: agents.defaultMode is now agents.defaultApproval; run bun repo sync`;
 const BOTH = `both ${OLD_CONFIG_FILE} and ${CONFIG_FILE} exist; delete one`;
 
 /**
  * What `moveOldConfig` did in `dir`: the files it rewrote before the move, or why it did not move; null when there
  * was nothing to move.
  */
-export type ConfigMove = { dir: string; rewritten: string[] } | { dir: string; error: string } | null;
+export type ConfigMove =
+  | { kind: "moved"; dir: string; rewritten: string[]; keyRenamed: boolean }
+  | { kind: "key-renamed"; dir: string }
+  | { kind: "error"; dir: string; error: string }
+  | null;
 
 /** The nearest dir at or above a cwd holding either name, and which names it holds. */
 type Found = { dir: string; old: boolean; current: boolean };
@@ -66,6 +73,19 @@ function rewriteFile(dir: string, rel: string): boolean {
   return true;
 }
 
+/** Rewrites `defaultMode` to `defaultApproval` in the config at `dir`; whether its text changed. */
+function renameDefaultKey(dir: string, { check }: { check: boolean }): boolean {
+  const file = path.join(dir, CONFIG_FILE);
+  const text = fs.readFileSync(file, "utf8");
+  const next = text.replaceAll(OLD_KEY, NEW_KEY);
+
+  if (next === text) return false;
+
+  if (!check) fs.writeFileSync(file, next);
+
+  return true;
+}
+
 /**
  * Moves the old config at or above `cwd` to `CONFIG_FILE`: first rewrites both old names in every text file git
  * lists there, then renames the file, so a run that stops before the rename finishes on the next. A changelog keeps
@@ -75,18 +95,26 @@ function rewriteFile(dir: string, rel: string): boolean {
 export function moveOldConfig(cwd: string, { check }: { check: boolean }): ConfigMove {
   const found = nearest(cwd);
 
-  if (found === null || !found.old) return null;
+  if (found === null) return null;
   const { dir } = found;
 
-  if (found.current) return { dir, error: BOTH };
+  if (!found.old) {
+    if (!renameDefaultKey(dir, { check })) return null;
 
-  if (check) return { dir, error: IS_NOW };
+    return check ? { dir, error: KEY_IS_NOW, kind: "error" } : { dir, kind: "key-renamed" };
+  }
+
+  if (found.current) return { dir, error: BOTH, kind: "error" };
+
+  if (check) return { dir, error: IS_NOW, kind: "error" };
   // Outside git nothing is listed, so the config itself is always rewritten.
   const listed = new Set([...listFiles(dir), OLD_CONFIG_FILE]);
   const rewritten = [...listed].filter((rel) => rewriteFile(dir, rel));
   fs.renameSync(path.join(dir, OLD_CONFIG_FILE), path.join(dir, CONFIG_FILE));
 
-  return { dir, rewritten };
+  const keyRenamed = renameDefaultKey(dir, { check: false });
+
+  return { dir, keyRenamed, kind: "moved", rewritten };
 }
 
 /** The lines a move prints: the rewrite, left out when no file changed, then the rename. */
@@ -97,6 +125,9 @@ export function moveLines(rewritten: readonly string[]): string[] {
 
   return [...rewrote, `moved ${OLD_CONFIG_FILE} to ${CONFIG_FILE}`];
 }
+
+/** The line a rewrite of the config's `defaultMode` prints. */
+export const KEY_RENAMED: string = `renamed agents.defaultMode to agents.defaultApproval in ${CONFIG_FILE}`;
 
 /** The line that tells a repo whose nearest config has the old name to sync; null for any other repo. */
 export function oldConfigHint(cwd: string): string | null {

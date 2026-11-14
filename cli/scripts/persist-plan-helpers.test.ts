@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
-import { extractMode, extractStrategy } from "./persist-keys.ts";
+import { extractApproval, extractStrategy } from "./persist-keys.ts";
 import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
 import { extractCommit, injectFrontmatter, stripCommitLine } from "./persist-plan-head.ts";
 import { reviewsToEnter } from "./persist-plan.constants.ts";
@@ -35,14 +35,14 @@ describe("plan name and serial helpers", () => {
     expect(nextSerial(ws)).toBe(8);
   });
 
-  it("reads commit, strategy and mode from the frontmatter first, then a body line", () => {
-    const fm = "---\ncommit: feat: add x\nstrategy: spawn-fast\nmode: away\n---\n\n# t\n";
+  it("reads commit, strategy and approval from the frontmatter first, then a body line", () => {
+    const fm = "---\ncommit: feat: add x\nstrategy: spawn-fast\napproval: away\n---\n\n# t\n";
     expect(extractCommit(fm)).toBe("feat: add x");
     expect(extractStrategy(fm)).toBe("spawn-fast");
-    expect(extractMode(fm)).toBe("away");
-    const bare = "---\nserial: 1\n---\n\ncommit: fix: y\nmode: away\n";
+    expect(extractApproval(fm)).toBe("away");
+    const bare = "---\nserial: 1\n---\n\ncommit: fix: y\napproval: away\n";
     expect(extractCommit(bare)).toBe("fix: y");
-    expect(extractMode(bare)).toBe("away");
+    expect(extractApproval(bare)).toBe("away");
     expect(extractStrategy(bare)).toBeUndefined();
     expect(extractCommit("---\ncommit: a: b")).toBe("a: b");
     expect(extractCommit("no commit here")).toBeUndefined();

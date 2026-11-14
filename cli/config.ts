@@ -202,6 +202,11 @@ function isIndex(key: PropertyKey): key is number {
   return typeof key === "number";
 }
 
+/** Config paths whose old key was renamed, with the text that says so; the old key is refused, never read. */
+const RENAMED_KEYS: ReadonlyMap<string, string> = /* @__PURE__ */ new Map([
+  ["agents.defaultMode", "agents.defaultMode is now agents.defaultApproval; run bun repo sync"],
+]);
+
 function describeIssue(issue: z.core.$ZodIssue): string[] {
   // ["packs", 1] reads packs[1]; a config path always starts at a top-level key.
   const at = issue.path
@@ -211,7 +216,8 @@ function describeIssue(issue: z.core.$ZodIssue): string[] {
 
   const prefix = at === "" ? "" : `${at}: `;
 
-  if (issue.code === "unrecognized_keys") return issue.keys.map((key) => `${prefix}unknown key ${JSON.stringify(key)}`);
+  if (issue.code === "unrecognized_keys")
+    return issue.keys.map((key) => RENAMED_KEYS.get(`${at}.${key}`) ?? `${prefix}unknown key ${JSON.stringify(key)}`);
 
   return [`${prefix}${issue.message}`];
 }

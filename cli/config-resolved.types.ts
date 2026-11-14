@@ -3,7 +3,7 @@ import type { ResolvedCoverage } from "./coverage-config.ts";
 import type { ResolvedKnip } from "./knip-schema.ts";
 import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
-import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
+import type { Effort, Approval, Strategy } from "./scripts/strategy.types.ts";
 import type { ResolvedTurbo } from "./turbo-config.ts";
 import type { Workflow } from "./workflow.ts";
 
@@ -12,7 +12,7 @@ export type AgentDefaults = {
   /** The strategy a new plan or roadmap saved without a `strategy:` line gets. */
   readonly defaultStrategy: Strategy;
   /** The mode a session runs when no /ask or /away stamp and no in-progress item names one. */
-  readonly defaultMode: Mode;
+  readonly defaultApproval: Approval;
   /** The plan skills the root `AGENTS.md` points a change at when no skill was named. */
   readonly defaultEffort: Effort;
 };

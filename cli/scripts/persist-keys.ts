@@ -1,9 +1,9 @@
 import { FM_OPEN, NOT_FOUND } from "./persist-doc.constants.ts";
-/** The `strategy:` and `mode:` keys a plan or roadmap save sends in its frontmatter or as a body line. */
+/** The `strategy:` and `approval:` keys a plan or roadmap save sends in its frontmatter or as a body line. */
 import { hasKey, parseFrontmatter, type FrontmatterMap, stripBom } from "./persist-doc.ts";
 import { fencedLineSet } from "./persist-sections.ts";
-import { MODES, STRATEGIES } from "./strategy.constants.ts";
-import { parseMode } from "./strategy.ts";
+import { APPROVALS, STRATEGIES } from "./strategy.constants.ts";
+import { parseApprovalSetting } from "./strategy.ts";
 
 /** Index of the first `{key}:` line outside a code fence, else -1. */
 function keyLineAt(lines: string[], key: string): number {
@@ -56,26 +56,33 @@ export function stripStrategyLine(content: string): string {
   return stripKeyLine(content, "strategy");
 }
 
-/** The `mode:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
-export function extractMode(content: string): string | undefined {
+/** The `approval:` value a save sends, in its frontmatter or as a body line; undefined when absent. */
+export function extractApproval(content: string): string | undefined {
+  return extractKey(content, "approval");
+}
+
+/** `content` without its first `approval:` line outside a code fence. */
+export function stripApprovalLine(content: string): string {
+  return stripKeyLine(content, "approval");
+}
+
+/** The retired `mode:` value a save sends; kept so validation can refuse it with what replaced it. */
+export function extractRetiredMode(content: string): string | undefined {
   return extractKey(content, "mode");
 }
 
-/** `content` without its first `mode:` line outside a code fence. */
-export function stripModeLine(content: string): string {
-  return stripKeyLine(content, "mode");
+/** `approval` is optional; when sent it must be one of APPROVALS. */
+function approvalError(): string {
+  return `approval: ${APPROVALS.join("|")}`;
 }
 
-/** `mode` is optional; when sent it must be one of the three values. */
-function modeError(): string {
-  return `mode: ${MODES.join("|")}`;
-}
+/** Errors for a frontmatter's approval: the old `mode` key says what replaced it; else a bad value, none if absent. */
+export function approvalErrors(map: FrontmatterMap): string[] {
+  if (hasKey(map, "mode")) return [`mode: is now approval:; use ${approvalError()}`];
 
-/** Errors for a frontmatter's `mode`: none when absent, the mode error when present and not one of MODES. */
-export function modeErrors(map: FrontmatterMap): string[] {
-  if (!hasKey(map, "mode")) return [];
+  if (!hasKey(map, "approval")) return [];
 
-  return parseMode(map.mode) === null ? [modeError()] : [];
+  return parseApprovalSetting(map.approval) === null ? [approvalError()] : [];
 }
 
 /** `strategy` must be one of the three values. */

@@ -14,7 +14,13 @@ import {
   stripFrontmatter,
   stripBom,
 } from "./persist-doc.ts";
-import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
+import {
+  extractApproval,
+  extractRetiredMode,
+  extractStrategy,
+  stripApprovalLine,
+  stripStrategyLine,
+} from "./persist-keys.ts";
 import { COMMIT_LINE_RE, COMMIT_STRIP_RE, PLAN_NAME_RE } from "./persist-plan.constants.ts";
 import { fencedLineSet } from "./persist-sections.ts";
 
@@ -79,6 +85,8 @@ export type FrontmatterInput = {
   created?: string;
   commit?: string | undefined;
   strategy?: string | undefined;
+  approval?: string | undefined;
+  /** The retired `mode:` a save sent; written so validation refuses it. */
   mode?: string | undefined;
 };
 
@@ -90,12 +98,14 @@ export function injectFrontmatter({
   created,
   commit,
   strategy,
+  approval,
   mode,
 }: FrontmatterInput): string {
   const optional = [
     commit != null && commit !== "" ? `commit: ${commit}` : "",
     strategy != null && strategy !== "" ? `strategy: ${strategy}` : "",
-    // An empty `mode:` is still sent, so validation denies it rather than dropping it.
+    // An empty `approval:` is still sent, so validation denies it rather than dropping it.
+    approval === undefined ? "" : `approval: ${approval}`,
     mode === undefined ? "" : `mode: ${mode}`,
   ].filter(Boolean);
 
@@ -130,13 +140,19 @@ export function withSavedFrontmatter(previous: string, raw: string): string {
   if (fm.error !== undefined) return raw;
   const head = previous.slice(0, previous.length - fm.body.length);
 
-  const nextHead = setHeadKey(
-    setHeadKey(setHeadKey(head, "commit", extractCommit(raw)), "strategy", extractStrategy(raw)),
-    "mode",
-    extractMode(raw),
-  );
+  // A retired `mode:` is written into the head too, so validation refuses it rather than leaving it in the body.
+  const sent: [string, string | undefined][] = [
+    ["commit", extractCommit(raw)],
+    ["strategy", extractStrategy(raw)],
+    ["approval", extractApproval(raw)],
+    ["mode", extractRetiredMode(raw)],
+  ];
 
-  const rest = retitled(stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))), String(fm.map.name));
+  let nextHead = head;
+
+  for (const [key, value] of sent) nextHead = setHeadKey(nextHead, key, value);
+
+  const rest = retitled(stripApprovalLine(stripStrategyLine(stripCommitLine(stripPlanName(raw)))), String(fm.map.name));
 
   return `${nextHead}\n${rest}`;
 }

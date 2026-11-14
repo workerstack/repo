@@ -8,7 +8,13 @@ import { firstNonEmpty } from "./first-non-empty.ts";
 import { matchLessons } from "./lessons-ops.ts";
 import { type Roots } from "./lessons.types.ts";
 import { extractH1, slugify, stripFrontmatter } from "./persist-doc.ts";
-import { extractMode, extractStrategy, stripModeLine, stripStrategyLine } from "./persist-keys.ts";
+import {
+  extractApproval,
+  extractRetiredMode,
+  extractStrategy,
+  stripApprovalLine,
+  stripStrategyLine,
+} from "./persist-keys.ts";
 import {
   extractCommit,
   extractPlanName,
@@ -68,13 +74,14 @@ type Parts = {
 /** The plan text a save writes: frontmatter on the body, with the keys read from what the caller sent. */
 function draftPlan(raw: string, source: string | undefined, parts: Parts) {
   const { serial, slug, createdAt, planName, defaultStrategy } = parts;
-  const body = stripModeLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
+  const body = stripApprovalLine(stripStrategyLine(stripCommitLine(stripPlanName(raw))));
 
   return injectFrontmatter({
+    approval: extractApproval(raw),
     body,
     commit: extractCommit(raw),
     created: createdAt,
-    mode: extractMode(raw),
+    mode: extractRetiredMode(raw),
     serial,
     slug,
     // The `source:` line: what the caller sent, else the plan name, else the Goal squeezed to one line, else the slug.
