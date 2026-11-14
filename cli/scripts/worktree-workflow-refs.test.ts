@@ -22,7 +22,7 @@ const UNREAD = [
   ["git push $R", "$R"],
   ['git push origin "HEAD:$B"', "HEAD:$B"],
   ['git push origin "$B"', "$B"],
-  ["git push origin `echo main`", "`echo"],
+  ["git push origin `echo main`", "`echo main`"],
 ] as const;
 
 describe("pushes the gate cannot read", () => {

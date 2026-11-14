@@ -61,7 +61,6 @@ export const REMOVE_EVENT = "WorktreeRemove";
 
 /** The shell words the guards read. */
 export const GIT_BIN = "git";
-export const CD_WORD = "cd";
 export const DIR_FLAG = "-C";
 export const CONFIG_FLAG = "-c";
 export const WORKTREE_SUB = "worktree";
@@ -71,12 +70,17 @@ export const DETACH_FLAG = "--detach";
 export const DETACH_SHORT = "-d";
 export const MESSAGE_FLAG = "-m";
 
+/** The git options of `DIR_OPTIONS` that also take `=value`. */
+export const LONG_DIR_OPTIONS: ReadonlySet<string> = /* @__PURE__ */ new Set(["--git-dir", "--work-tree"]);
+
+/** The git options that set where git runs, each with a value: `-C dir`, `--git-dir dir`, `--work-tree dir`. */
+export const DIR_OPTIONS: ReadonlySet<string> = /* @__PURE__ */ new Set([DIR_FLAG, ...LONG_DIR_OPTIONS]);
+
+/** The variables that set where git runs, as `NAME=value` before it. */
+export const DIR_VARIABLES: ReadonlySet<string> = /* @__PURE__ */ new Set(["GIT_DIR", "GIT_WORK_TREE"]);
+
 /** The `git worktree add` flags that take a value. */
 export const ADD_VALUE_FLAGS: readonly string[] = ["-b", "-B", REASON_FLAG];
 
 /** The grant word a force push needs. */
 export const FORCE_GRANT = "force";
-
-/** A here-string, which opens no heredoc, and the heredoc operator. */
-export const HERE_STRING = "<<<";
-export const HEREDOC = "<<";

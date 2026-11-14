@@ -3,8 +3,8 @@ import type path from "node:path";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import type { WorkflowRead } from "../workflow.ts";
+import type { ReadWord } from "./shell-ast.types.ts";
 import { HEADS_REF, WORKTREE_CMD, WORKTREES_DIR } from "./worktree.constants.ts";
-import type { Word } from "./worktree.types.ts";
 
 /** Patterns the git guards match shell words and the user's message against. */
 export const WT_BRANCH_PREFIX: RegExp = /^wt\//;
@@ -88,11 +88,6 @@ export function destroyText(sub: string, { mainWrites }: { mainWrites: boolean }
 export const FORCE_PUSH_REASON =
   "a force push rewrites shared history: run it only when the user's message asks for a force push";
 
-/** `word` quoted so the push parser reads it back as one word: in double quotes when it holds a single quote. */
-export function shellQuoted(word: string): string {
-  return word.includes("'") ? `"${word}"` : `'${word}'`;
-}
-
 /** A push word that deletes the remote refs its other words name. */
 const PUSH_DELETE_FLAG = /^(?:--delete|-d)$/;
 
@@ -103,7 +98,7 @@ const DELETE_REFSPEC = /^\+?:(.+)$/;
  * Whether the words after `git push` reach `branch` in a form the ref resolver never reads: `--all` or `--mirror`,
  * a `:<branch>` or `+:<branch>` delete refspec, or `--delete`/`-d` with `<branch>`; bare or as `refs/heads/<branch>`.
  */
-export function hitsUnresolved(rest: readonly Word[], branch: string): boolean {
+export function hitsUnresolved(rest: readonly ReadWord[], branch: string): boolean {
   const names = new Set([branch, HEADS_REF + branch]);
   const words = rest.map((w) => w.text);
 
@@ -129,12 +124,19 @@ export function defaultBranchPushReason(branch: string, read: WorkflowRead): str
 }
 
 /**
- * Why a push with `word`, whose value the shell sets only as it runs (`$B` unset pushes the current branch), is
- * refused under `read`, a workflow that keeps the default branch for pull requests.
+ * What the gate cannot read about a push, as its deny names it: a word the shell sets only as it runs (`$B` unset
+ * pushes the current branch), the dir it runs in, or a script a shell runs that may push.
  */
-export function unresolvedPushReason(word: string, branch: string, read: WorkflowRead): string {
+export const UNREAD_PUSH = {
+  dir: (cause: string): string => `git push runs in ${cause}`,
+  script: (cause: string): string => `a shell runs a script from ${cause}`,
+  word: (word: string): string => `git push names ${word}`,
+} as const;
+
+/** Why a push the gate cannot read (`unread`, from `UNREAD_PUSH`) is refused under `read`, a pull-request workflow. */
+export function unreadPushReason(unread: string, branch: string, read: WorkflowRead): string {
   return (
-    `git push names ${word}, which the gate cannot read before the shell runs, and ${branch} takes changes only ` +
+    `${unread}, which the gate cannot read before the shell runs, and ${branch} takes changes only ` +
     `through pull requests (${strictWhy(read)}): name the branch, such as git push origin wt/<name>, ` +
     `or run ${WORKTREE_CMD} finish <name>`
   );

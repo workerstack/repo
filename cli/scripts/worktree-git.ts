@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { childEnv } from "../env.ts";
+import type { Dir } from "./shell-ast.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import { HEADS_REF, NO_BRANCH, REMOTE_TIMEOUT_MS, WORKTREES_DIR } from "./worktree.constants.ts";
 import type { GitRun, WorktreeEntry } from "./worktree.types.ts";
@@ -78,6 +79,17 @@ export function relIn(abs: string, dir: string, p: typeof path): string | null {
   const rel = p.relative(dir, abs);
 
   return rel === ".." || rel.startsWith(`..${p.sep}`) || p.isAbsolute(rel) ? null : rel;
+}
+
+/**
+ * The dir a git command runs in, canonical, when it lies under `root`, else null. An unknown dir is judged as `root`,
+ * the main checkout, since the shell may move there.
+ */
+export function dirUnder(at: Dir, root: string, p: typeof path): string | null {
+  if (!at.known) return root;
+  const dir = canonicalPath(at.path, p);
+
+  return relIn(dir, root, p) === null ? null : dir;
 }
 
 /** The `<name>` of the managed worktree under `root` that holds `abs`, else null. */

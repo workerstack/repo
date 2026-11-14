@@ -2813,6 +2813,8 @@
     "acd7fac16d567045",
     "c6c40f6429a5c7c0"
   ],
+  "cli/scripts/cd-effect.test.ts": ["7ee1ee876c8f8217"],
+  "cli/scripts/cd-effect.ts": ["dae7bb80251c2a3d"],
   "cli/scripts/change-set.constants.ts": ["0db639a7ddc41ea5", "e89276a65ff0e39d"],
   "cli/scripts/change-set.test.ts": [
     "0684410b32c78533",
@@ -2957,6 +2959,7 @@
     "2be1eee9b97c7750",
     "32ca316a24ae5235",
     "3c5be79ca91a9f1d",
+    "5f41e8048f58541b",
     "920c9a0b66aaac02",
     "bf3b48c72ad30d2c",
     "d7a6b05784deac11",
@@ -3368,6 +3371,8 @@
     "dd4677285620df8c",
     "f6f21587c00c7858"
   ],
+  "cli/scripts/command-at.test.ts": ["ea1e44371e75cbaf"],
+  "cli/scripts/command-at.ts": ["f88119c45bac928c"],
   "cli/scripts/comments-step.test.ts": [
     "15d17357ce521a90",
     "23043b31ef0dbbfd",
@@ -3410,7 +3415,7 @@
     "bd8628f517483c93",
     "c27449ba25f67b70"
   ],
-  "cli/scripts/default-push-reason.ts": ["2a739d1d5bee789b"],
+  "cli/scripts/default-push-reason.ts": ["2a739d1d5bee789b", "410ced593e38f9bf"],
   "cli/scripts/doctor-agents.test.ts": [
     "591d62f3eb068eae",
     "9bf2430d789f8aea",
@@ -4171,6 +4176,7 @@
     "a97073a895e199a3"
   ],
   "cli/scripts/gate-paths-expansions.test.ts": ["30ef61a1d867f65a"],
+  "cli/scripts/gate-paths-flow.test.ts": ["aa69f5eec342cc15"],
   "cli/scripts/gate-paths.test.ts": [
     "0ebdec1f8bc8ec1f",
     "14ef575950db3c3b",
@@ -4183,6 +4189,7 @@
     "97962b6d9ccdc467"
   ],
   "cli/scripts/gate-paths.ts": [
+    "0cada56125626bfa",
     "1fd94d3658291a12",
     "21ea01722475cfe4",
     "2534df69877b6fba",
@@ -7339,12 +7346,24 @@
     "e7e84dbae26949ec"
   ],
   "cli/scripts/setup.types.ts": ["7bc3f52693cda8bf", "8c14ed54287dd9d7", "b0a51ce6b58f85a8", "ff203ec26cc56945"],
+  "cli/scripts/shell-ast.types.ts": ["fe828279fc8fa7bd"],
+  "cli/scripts/shell-flow.test.ts": ["1b990a622f8a9ddf"],
+  "cli/scripts/shell-flow.ts": ["85d2b232ab92a4f6"],
   "cli/scripts/shell-ignore-edits.test.ts": ["92b2aa388e7f3ec9", "b8524d4e9fc06504", "bc464ef1007d0f8c"],
   "cli/scripts/shell-ignore-edits.ts": ["a9e50dd2aafd4916", "de77201fd68dcad7", "f764a56267034eac"],
+  "cli/scripts/shell-lex-word.ts": ["746eb7cbb5182a17"],
+  "cli/scripts/shell-lex.test.ts": ["3e7fffca603510d1"],
+  "cli/scripts/shell-lex.ts": ["edc539038fbe8b75"],
+  "cli/scripts/shell-parse-cursor.ts": ["645ee4c766fe4af9"],
+  "cli/scripts/shell-parse.test.ts": ["6dbf16c654f51081"],
+  "cli/scripts/shell-parse.ts": ["81466ff6fba739d5"],
+  "cli/scripts/shell-scripts.test.ts": ["8647042292069a40"],
+  "cli/scripts/shell-scripts.ts": ["267318e87917da82"],
   "cli/scripts/shell-spans.constants.ts": ["33657cadf2e983be"],
-  "cli/scripts/shell-spans.ts": ["dd44831e9bf05a2e"],
-  "cli/scripts/shell-words.test.ts": ["0bd6342383239d87", "7085ca00517e66a0", "8310092f11d94c0d"],
-  "cli/scripts/shell-words.ts": ["b0ada64c296bf750", "bc9748cf8b627ac5", "d111421729db2124"],
+  "cli/scripts/shell-spans.ts": ["6314d8d8a74f66d2", "dd44831e9bf05a2e"],
+  "cli/scripts/shell-words.test.ts": ["0bd6342383239d87", "58f563b5c4818f02", "7085ca00517e66a0", "8310092f11d94c0d"],
+  "cli/scripts/shell-words.ts": ["639dfa9c953c4d54", "b0ada64c296bf750", "bc9748cf8b627ac5", "d111421729db2124"],
+  "cli/scripts/shell.constants.ts": ["36c1ebf91407a6fd"],
   "cli/scripts/shim-launcher.d.mts": ["af27b05d6e1e1c22"],
   "cli/scripts/shim-launcher.mjs": ["795de8711c692e49"],
   "cli/scripts/shim-launcher.test.ts": ["1d0bb838e203838f"],
@@ -8023,6 +8042,7 @@
   "cli/scripts/worktree-git.ts": [
     "1a4af07379d6e08c",
     "264d70876e560b21",
+    "45fc57c669c60600",
     "55aab7b9574b4953",
     "64e22282e2bde8dc",
     "67df719b7dbb9d5c",
@@ -8033,6 +8053,7 @@
     "c78b08a5b9e171aa"
   ],
   "cli/scripts/worktree-guards.constants.ts": [
+    "0846577c085aa6c7",
     "099ae5ca99d29b35",
     "1858c73bf3919d14",
     "2c65d81a30a536e6",
@@ -8055,6 +8076,7 @@
     "0d4abc0cee8fbe29",
     "155ded919c4f973a",
     "1965d1fc30564a92",
+    "2115d20187f18ff0",
     "3a2cc354aa7f7557",
     "549d27cf591be3bf",
     "b2ddf2e58b6a58a6",
@@ -8115,6 +8137,7 @@
   "cli/scripts/worktree-remote-sync.test.ts": ["d22f25ccf78ae94c"],
   "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871", "e920e2d3def0a510"],
   "cli/scripts/worktree-shared-shell.test.ts": [
+    "0d4f8d30e9d21631",
     "14b07ccf8b960cb4",
     "2826730ca2a811b5",
     "9283fb0298b7751f",
@@ -8127,6 +8150,7 @@
     "1a407aa72efb4cd6",
     "2c01bdf07fb88e63",
     "31320c1c3824b59f",
+    "4578f5b2b351d13c",
     "6646f6513d037d31"
   ],
   "cli/scripts/worktree-shell.test.ts": [
@@ -8135,7 +8159,8 @@
     "3fa87da9385d0507",
     "6517dea7c9e01dc0",
     "b27200ab46028644",
-    "b6e9f119f0dac62c"
+    "b6e9f119f0dac62c",
+    "c0318e62f78a35a3"
   ],
   "cli/scripts/worktree-shell.ts": [
     "148e54629c11b694",
@@ -8144,11 +8169,13 @@
     "37a76e8836c3ccfb",
     "b16caaab91bb8fc0",
     "c33e2ecbe896758d",
+    "c83c6bb82b0b29e0",
     "e3d4222f6458cfe5"
   ],
   "cli/scripts/worktree-usage-error.ts": ["b243172b5727e077"],
   "cli/scripts/worktree-workflow-delete.test.ts": ["17dd76e6ed0a02d2"],
-  "cli/scripts/worktree-workflow-refs.test.ts": ["1ef86fc73369b5f7"],
+  "cli/scripts/worktree-workflow-flow.test.ts": ["3f9a5dd2e473d4d1"],
+  "cli/scripts/worktree-workflow-refs.test.ts": ["1ef86fc73369b5f7", "64f7f5333540ab9a"],
   "cli/scripts/worktree-workflow.test.ts": [
     "17e3aaf05aadaa7d",
     "5bb0b4d997799b3d",
@@ -8165,7 +8192,7 @@
     "b41d49eb64549447",
     "f570f8242356c6ed"
   ],
-  "cli/scripts/worktree.constants.ts": ["21c793adb304f28a", "73baed1f449219f5", "79fe23de93899a7e"],
+  "cli/scripts/worktree.constants.ts": ["21c793adb304f28a", "3b5eb8f15f11ea55", "73baed1f449219f5", "79fe23de93899a7e"],
   "cli/scripts/worktree.test.ts": [
     "04f29f4029874c92",
     "09ecd5cab49f8f70",
@@ -8193,6 +8220,7 @@
   "cli/scripts/worktree.types.ts": [
     "1343f6ad090172f1",
     "79b60437c44cd175",
+    "8b2fa02524348dba",
     "c57765ec0e1d162c",
     "dbad01cf0c8356df",
     "dd2ca21ed7be8ef0"

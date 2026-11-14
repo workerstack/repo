@@ -2,6 +2,7 @@ import type path from "node:path";
 
 import type { WorkflowRead } from "../workflow.ts";
 import type { Runner } from "./ci-wait-run.ts";
+import type { Dir, ReadWord } from "./shell-ast.types.ts";
 import type { Roots } from "./workspace-root.ts";
 
 /** One git run: whether it exited 0, and its trimmed stdout and stderr. */
@@ -101,23 +102,29 @@ export type GuardEnv = {
   git?: Runner;
 };
 
-/** One shell word and whether it is free of `$`, backticks and a leading `~`. */
-export type Word = {
-  text: string;
-  literal: boolean;
-};
-
 /** A git command found in a shell line: the dir it runs in, its subcommand and the words after it. */
 export type GitCommand = {
-  at: string;
+  at: Dir;
   sub: string;
-  rest: Word[];
+  rest: ReadWord[];
+};
+
+/** A script a shell in the line runs that the gate cannot read: where it runs, and what feeds it. */
+export type UnreadScript = {
+  at: Dir;
+  cause: string;
+};
+
+/** What a shell line runs that the git guards judge. */
+export type GitLine = {
+  commands: GitCommand[];
+  unread: UnreadScript[];
 };
 
 /** A parsed `git worktree add`. */
 export type WorktreeAdd = {
-  at: string;
-  target: Word | null;
+  at: Dir;
+  target: ReadWord | null;
   branch: string | null;
   commitish: string | null;
   detach: boolean;
@@ -145,21 +152,6 @@ export type SharedContext = Omit<GitContext, "inMain"> & {
 
 /** The deny reason one git subcommand earns, else null. */
 export type SharedRule = (g: GitCommand, c: GitContext) => string | null;
-
-/** A heredoc a line opened: its terminator word and whether `<<-` lets tabs lead it. */
-export type Heredoc = {
-  word: string;
-  indented: boolean;
-};
-
-/** The shell lexer's place: the text, the index, the segments so far, the open segment and word. */
-export type ShellLexer = {
-  s: string;
-  i: number;
-  segments: Word[][];
-  seg: Word[];
-  word: Word | null;
-};
 
 /** A `finish` in progress: the root, the worktree dir, its branch and the default branch. */
 export type Finishing = {

@@ -6,7 +6,7 @@ import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { patternWords } from "./pattern-words.ts";
-import { holdsCommand, type ShellCommand, simpleCommands } from "./shell-words.ts";
+import { type ShellCommand, shellWords } from "./shell-words.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
 export const DENY_PATH_SEGMENTS: ReadonlySet<string> = /* @__PURE__ */ new Set([
@@ -85,14 +85,15 @@ export function pathIsDenied(p: string | null | undefined): boolean {
 }
 
 /**
- * True when a dump or search command names a denied path, a lockfile or `.git`. A line with no dump or search name is
- * judged too when a command's program is an expansion, since it may run any of them.
+ * True when a command bash would run, in a block, a substitution or a script a shell runs, dumps or searches a denied
+ * path, a lockfile or `.git`. A line with no dump or search name is judged too when a program is an expansion or a
+ * shell runs a script the gate cannot read, since either may run any of them.
  */
 export function bashTargetsDenylist(command: string | undefined): boolean {
   const cmd = command ?? "";
-  const commands = simpleCommands(cmd);
+  const { commands, hasUnreadScript } = shellWords(cmd);
 
-  if (!BASH_DUMP_CMDS.test(cmd) && !commands.some((c) => runsUnknown(c))) return false;
+  if (!BASH_DUMP_CMDS.test(cmd) && !hasUnreadScript && !commands.some((c) => programExpanded(c))) return false;
 
   return commands.some((c) => readsDeniedPath(c));
 }
@@ -100,11 +101,6 @@ export function bashTargetsDenylist(command: string | undefined): boolean {
 /** True when the program word of `c`, the first that sets no variable, holds an expansion. */
 function programExpanded({ words, expanded }: ShellCommand): boolean {
   return expanded.has(words.findIndex((w) => !ASSIGNMENT_RE.test(w)));
-}
-
-/** True when `c`, or a command a word of it holds (`sh -c '…'`), runs a program the gate cannot name. */
-function runsUnknown(c: ShellCommand): boolean {
-  return programExpanded(c) || c.words.some((w) => holdsCommand(w) && simpleCommands(w).some((n) => runsUnknown(n)));
 }
 
 /** True when one spelling of a word names the lockfile, a `.git` dir, or (judged as a path) a denied path. */
@@ -117,22 +113,17 @@ function namesDenied(word: string, { asPath }: { asPath: boolean }): boolean {
  * `words` keeps and the one bash reads: in a command that runs a dump or search, as a path; in any other, when it holds
  * a slash; in every command, for the lockfile or a `.git` dir. A pattern its program never opens is skipped
  * (`patternWords`), and so is nothing a redirect names. A command that holds an expansion skips no pattern, since the
- * value may turn one into a path (`-e x`, `--files`), and one whose program is an expansion is judged as a dump. A
- * word that holds a command is judged the same way, skipped or not. Each nested word is shorter than its command,
- * since quotes or escapes were removed to keep it whole, so the recursion ends.
+ * value may turn one into a path (`-e x`, `--files`), and one whose program is an expansion is judged as a dump.
  */
 function readsDeniedPath(c: ShellCommand): boolean {
   const { words, bashWords, redirects, expanded } = c;
   const isDump = programExpanded(c) || words.some((w) => isDumpName(w));
   const skipped = expanded.size > 0 ? new Set<number>() : skippedWords(words, redirects);
 
-  return words.some((w, i) => {
-    if (holdsCommand(w) && simpleCommands(w).some((n) => readsDeniedPath(n))) return true;
-
-    if (skipped.has(i)) return false;
-
-    return namesDenied(w, { asPath: isDump }) || namesDenied(String(bashWords[i]), { asPath: isDump });
-  });
+  return words.some(
+    (w, i) =>
+      !skipped.has(i) && (namesDenied(w, { asPath: isDump }) || namesDenied(String(bashWords[i]), { asPath: isDump })),
+  );
 }
 
 /** The indices of `words` that are a pattern its program never opens; a redirect target is never one. */

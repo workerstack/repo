@@ -1,28 +1,17 @@
-/** A quote-aware split of a shell command into its simple commands and their words. */
-import { ansiCEnd, backtickEnd, decodeAnsiC, substitutionEnd } from "./shell-spans.ts";
+/** The simple commands bash would run for a shell command, each as the words the path gate judges. */
+import path from "node:path";
 
-/** Characters a backslash outside quotes escapes; before any other, the backslash stays (a Windows separator). */
-const ESCAPABLE: ReadonlySet<string> = /* @__PURE__ */ new Set(" \t\n'\"\\$`|&;()<>");
+import type { Part, ShellWord, Simple } from "./shell-ast.types.ts";
+import { shellFlow } from "./shell-flow.ts";
 
-/** Characters a backslash inside double quotes escapes. */
-const DQ_ESCAPABLE: ReadonlySet<string> = /* @__PURE__ */ new Set('"\\$`\n');
-
-/** A blank or shell operator: a word holding one was quoted or escaped whole, such as an `sh -c` script. */
-const HOLDS_COMMAND_RE = /[\s|&;()<>`]/;
-
-/** A backslash and the character it escapes, or `$(`. */
-const PAIR_LENGTH = 2;
-
-/** The character after a `$` that makes it a parameter expansion: a name, a digit, `{` or a special parameter. */
-const PARAMETER_RE = /[\w{@*#?$!-]/;
-
-/** A backslash before a backtick, a backslash or a `$` inside backticks, which bash drops. */
-const BACKTICK_ESCAPE_RE = /\\([`\\$])/g;
+/** Redirects whose word is no file: a heredoc's delimiter and a here-string's text. */
+const DATA_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["<<", "<<-", "<<<"]);
 
 /**
- * A simple command: its words; each word as bash reads it, which drops a backslash outside quotes that `words` keeps
- * for a Windows path and decodes `$'…'`; the indices of the words a `<` or `>` redirects to or from; and the indices
- * of the words that hold an expansion (`$name`, `${…}`, `$(…)` or a backtick), whose value the gate cannot know.
+ * A simple command: its words, then the files its redirects read or write; each word as bash reads it, which drops a
+ * backslash outside quotes that `words` keeps for a Windows path; the indices of the redirect files; and the indices
+ * of the words that hold an expansion (`$name`, `${…}`, `$(…)` or a backtick), whose value the gate cannot know. A
+ * substitution reads as empty: its own commands are commands of their own.
  */
 export type ShellCommand = {
   bashWords: string[];
@@ -31,253 +20,59 @@ export type ShellCommand = {
   words: string[];
 };
 
-/**
- * The commands read so far, the open command's words, their bash reading, redirect targets and expanded words, the
- * open word in both readings, whether it holds an expansion, and whether the next word is a redirect target.
- */
-type Lexer = {
-  bash: string;
-  bashWords: string[];
-  commands: ShellCommand[];
-  expanded: Set<number>;
-  isExpanded: boolean;
-  isInWord: boolean;
-  isRedirectNext: boolean;
-  redirects: Set<number>;
-  word: string;
-  words: string[];
-};
+/** Every simple command a shell command runs, and whether it also runs a script the gate cannot read. */
+export type ShellWords = { commands: ShellCommand[]; hasUnreadScript: boolean };
 
-/** Reads the token at `i` into the lexer and returns the index of the next unread character. */
-type Handler = (lx: Lexer, cmd: string, i: number) => number;
+type Lit = Extract<Part, { kind: "lit" }>;
 
-/** Adds `text` to the open word, read by bash as `bash`. */
-function append(lx: Lexer, text: string, bash: string = text): void {
-  lx.word += text;
-  lx.bash += bash;
-  lx.isInWord = true;
+/** A part as the gate reads it: a literal by `pick`, a parameter as typed, a substitution as empty. */
+function partText(part: Part, pick: (lit: Lit) => string): string {
+  if (part.kind === "lit") return pick(part);
+
+  return part.kind === "param" ? part.raw : "";
 }
 
-function endWord(lx: Lexer): void {
-  if (lx.isInWord) {
-    if (lx.isRedirectNext) lx.redirects.add(lx.words.length);
-
-    if (lx.isExpanded) lx.expanded.add(lx.words.length);
-    lx.isRedirectNext = false;
-    lx.words.push(lx.word);
-    lx.bashWords.push(lx.bash);
-  }
-
-  lx.word = "";
-  lx.bash = "";
-  lx.isInWord = false;
-  lx.isExpanded = false;
+function spelled(word: ShellWord, pick: (lit: Lit) => string): string {
+  return word.parts.map((part) => partText(part, pick)).join("");
 }
 
-function endCommand(lx: Lexer): void {
-  endWord(lx);
-  const { bashWords, expanded, redirects, words } = lx;
-
-  if (words.length > 0) lx.commands.push({ bashWords, expanded, redirects, words });
-  lx.words = [];
-  lx.bashWords = [];
-  lx.redirects = new Set<number>();
-  lx.expanded = new Set<number>();
-  lx.isRedirectNext = false;
+/** The indices of `words` that `keep` picks. */
+function indicesWhere(words: readonly ShellWord[], keep: (w: ShellWord, i: number) => boolean): Set<number> {
+  return new Set(words.flatMap((w, i) => (keep(w, i) ? [i] : [])));
 }
 
-/**
- * Reads the commands of a `$(…)` or backtick body as commands of their own, and leaves an empty piece of unknown
- * value in the open word, so the words around the substitution stay in the command that holds it.
- */
-function substituted(lx: Lexer, body: string): void {
-  lx.commands.push(...simpleCommands(body));
-  append(lx, "");
-  lx.isExpanded = true;
-}
+/** `c` as the words the path gate judges. */
+function commandOf(c: Simple): ShellCommand {
+  const files = c.redirects.filter((r) => !DATA_REDIRECTS.has(r.op)).map((r) => r.target);
+  const all = [...c.words, ...files];
 
-/** `$(…)` from the `$` at `i`, read to its `)` or to the end. */
-function substitution(lx: Lexer, cmd: string, i: number): number {
-  const end = substitutionEnd(cmd, i + PAIR_LENGTH);
-  substituted(lx, cmd.slice(i + PAIR_LENGTH, end));
-
-  return end + 1;
-}
-
-/** A backticked substitution from the backtick at `i`, read to its closing backtick or to the end. */
-function backticked(lx: Lexer, cmd: string, i: number): number {
-  const end = backtickEnd(cmd, i + 1);
-  substituted(lx, cmd.slice(i + 1, end).replaceAll(BACKTICK_ESCAPE_RE, "$1"));
-
-  return end + 1;
-}
-
-/** The `$` of a parameter expansion: kept in the word, which now holds a value the gate cannot know. */
-function parameter(lx: Lexer, cmd: string, i: number): number {
-  lx.isExpanded = true;
-
-  return literal(lx, cmd, i);
-}
-
-function literal(lx: Lexer, cmd: string, i: number): number {
-  append(lx, cmd.charAt(i));
-
-  return i + 1;
-}
-
-/** A single-quoted span, literal to its closing quote or to the end when it never closes. */
-function singleQuoted(lx: Lexer, cmd: string, i: number): number {
-  const at = cmd.indexOf("'", i + 1);
-  const end = at < 0 ? cmd.length : at;
-  append(lx, cmd.slice(i + 1, end));
-
-  return end + 1;
-}
-
-/** One character of a double-quoted span at `at`: an escape, a substitution, an expansion or a literal. */
-function inDoubleQuotes(lx: Lexer, cmd: string, at: number): number {
-  const ch = cmd.charAt(at);
-  const next = cmd.charAt(at + 1);
-
-  if (ch === "\\" && DQ_ESCAPABLE.has(next)) {
-    append(lx, next);
-
-    return at + PAIR_LENGTH;
-  }
-
-  if (ch === "`") return backticked(lx, cmd, at);
-
-  if (ch === "$" && next === "(") return substitution(lx, cmd, at);
-
-  return ch === "$" && PARAMETER_RE.test(next) ? parameter(lx, cmd, at) : literal(lx, cmd, at);
-}
-
-/** A double-quoted span with its escapes removed, read to its closing quote or to the end. */
-function doubleQuoted(lx: Lexer, cmd: string, i: number): number {
-  let at = i + 1;
-  append(lx, "");
-
-  while (at < cmd.length && cmd[at] !== '"') at = inDoubleQuotes(lx, cmd, at);
-
-  return at + 1;
-}
-
-/**
- * A backslash outside quotes. Before a shell character both readings drop it. Before any other, `words` keeps it (a
- * Windows separator) and bash drops it, so `bun\.lock` is the lockfile to bash.
- */
-function backslash(lx: Lexer, cmd: string, i: number): number {
-  const next = cmd.charAt(i + 1);
-
-  if (ESCAPABLE.has(next)) append(lx, next);
-  else append(lx, `\\${next}`, next === "" ? "\\" : next);
-
-  return i + PAIR_LENGTH;
-}
-
-/** An ANSI-C `$'…'` span from the `$` at `i`, decoded in both readings. */
-function ansiC(lx: Lexer, cmd: string, i: number): number {
-  const end = ansiCEnd(cmd, i + PAIR_LENGTH);
-  const text = decodeAnsiC(cmd.slice(i + PAIR_LENGTH, end));
-  append(lx, text);
-
-  return end + 1;
-}
-
-/**
- * `$(` and `$'` open a span; `$"` is a double-quoted span; a `$` before a name, a digit, `{` or a special parameter is
- * an expansion; any other `$` is part of the word.
- */
-function dollar(lx: Lexer, cmd: string, i: number): number {
-  const next = cmd.charAt(i + 1);
-
-  if (next === "(") return substitution(lx, cmd, i);
-
-  if (next === "'") return ansiC(lx, cmd, i);
-
-  if (next === '"') return i + 1;
-
-  return PARAMETER_RE.test(next) ? parameter(lx, cmd, i) : literal(lx, cmd, i);
-}
-
-/** `>&` and `&>` are redirects inside one command; any other `&` ends the command. */
-function ampersand(lx: Lexer, cmd: string, i: number): number {
-  if (cmd[i - 1] === ">" || cmd[i + 1] === ">") endWord(lx);
-  else endCommand(lx);
-
-  return i + 1;
-}
-
-function commandEnd(lx: Lexer, _cmd: string, i: number): number {
-  endCommand(lx);
-
-  return i + 1;
-}
-
-function wordEnd(lx: Lexer, _cmd: string, i: number): number {
-  endWord(lx);
-
-  return i + 1;
-}
-
-/** `<` or `>` ends the open word, and the next word is the file it reads or writes. */
-function redirect(lx: Lexer, _cmd: string, i: number): number {
-  endWord(lx);
-  lx.isRedirectNext = true;
-
-  return i + 1;
-}
-
-const HANDLERS: ReadonlyMap<string, Handler> = /* @__PURE__ */ new Map<string, Handler>([
-  ["'", singleQuoted],
-  ['"', doubleQuoted],
-  ["\\", backslash],
-  ["$", dollar],
-  ["&", ampersand],
-  ["|", commandEnd],
-  [";", commandEnd],
-  ["\n", commandEnd],
-  ["(", commandEnd],
-  [")", commandEnd],
-  ["`", backticked],
-  [" ", wordEnd],
-  ["\t", wordEnd],
-  ["<", redirect],
-  [">", redirect],
-]);
-
-/**
- * The simple commands of `cmd` (see {@link ShellCommand}), with quotes and escapes removed. Outside quotes, `|`, `||`,
- * `&&`, `&` (not in `>&` or `&>`), `;`, newlines, `(` and `)` end a command; blanks, `<` and `>` end a word. The body
- * of a `$(…)` or backtick substitution, in or out of double quotes, adds its own commands and leaves the one around
- * it whole. An unclosed quote or substitution reads to the end.
- */
-export function simpleCommands(cmd: string): ShellCommand[] {
-  const lx: Lexer = {
-    bash: "",
-    bashWords: [],
-    commands: [],
-    expanded: new Set<number>(),
-    isExpanded: false,
-    isInWord: false,
-    isRedirectNext: false,
-    redirects: new Set<number>(),
-    word: "",
-    words: [],
+  return {
+    bashWords: all.map((w) => spelled(w, (lit) => lit.bash)),
+    expanded: indicesWhere(all, (w) => w.parts.some((part) => part.kind !== "lit")),
+    redirects: indicesWhere(all, (_w, i) => i >= c.words.length),
+    words: all.map((w) => spelled(w, (lit) => lit.text)),
   };
-
-  let i = 0;
-
-  while (i < cmd.length) i = (HANDLERS.get(cmd.charAt(i)) ?? literal)(lx, cmd, i);
-  endCommand(lx);
-
-  return lx.commands;
 }
 
 /**
- * True when a word of {@link simpleCommands} holds a blank or a shell operator, so it reads as a command of its own.
- * Such a word lost the quotes or escapes that kept it whole, so it is shorter than the command it came from.
+ * The simple commands of `cmd` that bash would run (see {@link ShellCommand}): those of blocks, branches, loops,
+ * functions, substitutions and the scripts a command makes bash run, with heredoc bodies and comments left out as
+ * data. A command with no word and no redirect file is left out.
  */
-export function holdsCommand(word: string): boolean {
-  return HOLDS_COMMAND_RE.test(word);
+export function shellWords(cmd: string): ShellWords {
+  const got: ShellWords = { commands: [], hasUnreadScript: false };
+
+  shellFlow(cmd, { cwd: path.sep, p: path }, (v) => {
+    if (v.kind === "opaque") {
+      got.hasUnreadScript = true;
+
+      return;
+    }
+
+    const c = commandOf(v);
+
+    if (c.words.length > 0) got.commands.push(c);
+  });
+
+  return got;
 }
