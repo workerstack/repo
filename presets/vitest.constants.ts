@@ -31,5 +31,8 @@ export const REPORT_REPORTERS: readonly string[] = ["default", "json"];
 /** A test or hook's timeout on Windows, whose runner spawns bun and git 25-35x slower than Linux. */
 export const WINDOWS_TIMEOUT: number = 60_000;
 
+/** A `REPO_VITEST_TIMEOUT` value: a positive whole number of milliseconds. */
+export const WHOLE_MS_RE: RegExp = /^[1-9]\d*$/u;
+
 /** A test or hook's timeout on every other platform. */
 export const DEFAULT_TIMEOUT: number = 5_000;

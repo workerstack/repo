@@ -11,7 +11,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { findRoot, loadConfig, missingConfig } from "./config.ts";
-import { JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
+import { COVERAGE_TIMEOUT_MS, JSON_INDENT, TOTAL_KEY } from "./coverage.constants.ts";
 import { childEnv } from "./env.ts";
 import { readJson } from "./json.ts";
 import { NESTED_VITEST_FLAGS } from "./nested-vitest-flags.ts";
@@ -94,7 +94,8 @@ function measure(root: string): Measured {
       `--coverage.reportsDirectory=${dir}`,
     ];
 
-    const ran = captureBun(args, root, childEnv());
+    // An env default, not --testTimeout: the preset merges it under the project's config, so its own timeouts win.
+    const ran = captureBun(args, root, childEnv({ REPO_VITEST_TIMEOUT: String(COVERAGE_TIMEOUT_MS) }));
 
     if (ran.code === PASSED)
       return { ok: true, summary: readJson(summarySchema(), fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8")) };

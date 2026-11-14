@@ -5,11 +5,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { ViteUserConfig } from "vitest/config";
 
 import { useTempDirs } from "../cli/__fixtures__/temp-dirs.ts";
+import { usePresetDefaults } from "./__fixtures__/platform.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { defineConfig, defineProject } from "./vitest.ts";
 
-const platform = process.platform;
 const cwd = process.cwd();
 const { tempDir } = useTempDirs("workerstack-preset-");
 const NO_FLOORS = { floors: "no-such-floors.json" };
@@ -35,39 +35,13 @@ function thresholds({ test }: ViteUserConfig): Coverage["thresholds"] {
   return test?.coverage !== undefined && "thresholds" in test.coverage ? test.coverage.thresholds : undefined;
 }
 
-function setPlatform(value: NodeJS.Platform) {
-  Object.defineProperty(process, "platform", { configurable: true, enumerable: true, value });
-}
+const setPlatform = usePresetDefaults();
 
 afterEach(() => {
-  setPlatform(platform);
   process.chdir(cwd);
 });
 
 describe("defineProject", () => {
-  it.each([
-    ["win32", 60_000],
-    ["linux", 5_000],
-  ] as const)("on %s gives %d ms timeouts and the forks pool", (os, ms) => {
-    setPlatform(os);
-    expect(defineProject({})).toStrictEqual({
-      test: {
-        deps: { interopDefault: false },
-        hookTimeout: ms,
-        pool: "forks",
-        testTimeout: ms,
-      },
-    });
-  });
-
-  it("keeps a timeout the caller passes", () => {
-    setPlatform("linux");
-    expect(defineProject({ test: { testTimeout: 1_234 } }).test).toMatchObject({
-      hookTimeout: 5_000,
-      testTimeout: 1_234,
-    });
-  });
-
   it("keeps an include the caller passes", () => {
     expect(defineProject({ test: { include: ["src/**/*.test.ts"] } }).test?.include).toStrictEqual([
       "src/**/*.test.ts",

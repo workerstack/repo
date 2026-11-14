@@ -13,7 +13,9 @@ import {
   COVERAGE_ON,
   DEFAULT_TIMEOUT,
   GUARD_NAME,
+  MESSAGE_PREFIX,
   REPORT_REPORTERS,
+  WHOLE_MS_RE,
   WINDOWS_TIMEOUT,
   WRANGLER_FILES,
 } from "./vitest.constants.ts";
@@ -39,10 +41,23 @@ function wranglerFile(root: string): string | undefined {
   return WRANGLER_FILES.find((name) => fs.existsSync(path.join(root, name)));
 }
 
-// A Windows runner spawns bun and git 25-35x slower than Linux. The platform is read per call, not at module
-// load, so one OS can exercise both branches.
+/**
+ * The default test and hook timeout: `REPO_VITEST_TIMEOUT` in whole milliseconds when set, else the platform's. A
+ * Windows runner spawns bun and git 25-35x slower than Linux. Both are read per call, not at module load, so one OS
+ * can exercise every branch.
+ */
+function defaultTimeout(): number {
+  const { REPO_VITEST_TIMEOUT: value } = repoEnv.process;
+
+  if (value === undefined || value === "") return process.platform === "win32" ? WINDOWS_TIMEOUT : DEFAULT_TIMEOUT;
+
+  if (WHOLE_MS_RE.test(value)) return Number(value);
+
+  throw new Error(`${MESSAGE_PREFIX}: REPO_VITEST_TIMEOUT must be a whole number of milliseconds, got "${value}"`);
+}
+
 function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
-  const timeout = process.platform === "win32" ? WINDOWS_TIMEOUT : DEFAULT_TIMEOUT;
+  const timeout = defaultTimeout();
   const root = rootOf(config);
   const file = wranglerFile(root);
   // Bun module namespaces carry `__esModule`, so vitest's default interop would swap a namespace for its default.
@@ -77,7 +92,8 @@ function ciEnv(coverage: string | undefined): ViteUserConfig {
 }
 
 /**
- * A package's vitest project: the shared timeouts and the forks pool, or the Workers runtime beside a wrangler file.
+ * A package's vitest project: the shared timeouts (`REPO_VITEST_TIMEOUT` replaces the default, as `repo coverage`
+ * sets it) and the forks pool, or the Workers runtime beside a wrangler file.
  * `repo ci` asks for coverage through the environment: `REPO_COVERAGE=1` turns it on (istanbul, as `defineConfig`
  * uses, unless the config names a provider) so the package's thresholds run, `0` turns it off, and `--report` adds the
  * json report the skip check reads. Without the variables the config is the caller's.

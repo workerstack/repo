@@ -46,6 +46,7 @@ const config = {
     REPO_E2E_TARBALL: "optional",
     REPO_VITEST_REPORT: "optional",
     REPO_VITEST_SHARD: "optional",
+    REPO_VITEST_TIMEOUT: "optional",
     RUNNER_TEMP: "optional",
     SPEAK_PROVIDER: "optional",
     TURN_RECORD: "optional",
