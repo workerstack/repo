@@ -4,6 +4,9 @@ import { REPO, STATE } from "../repo-dirs.ts";
 export const POLL_MS = 10_000;
 export const GIVE_UP_MS = 120_000;
 
+/** How long a branch ci runs on only by dispatch is looked at: `gh workflow run` returns before its run is listed. */
+export const DISPATCH_GRACE_MS = 30_000;
+
 /** How long the whole wait, finding the run and watching it, may take; the ci job's own timeout is 40 minutes. */
 export const WAIT_BOUND_MS: number = 45 * 60_000;
 export const WAIT_BOUND_LABEL = "45m";
