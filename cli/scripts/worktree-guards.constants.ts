@@ -112,15 +112,30 @@ export function hitsUnresolved(rest: readonly Word[], branch: string): boolean {
   return words.some((w) => PUSH_DELETE_FLAG.test(w)) && words.some((w) => names.has(w));
 }
 
+/** Why `read` keeps the default branch for pull requests: the workflow it names, or a config that failed to load. */
+function strictWhy(read: WorkflowRead): string {
+  return read === "unreadable" ? `${CONFIG_FILE} failed to load` : `workflow is ${read}`;
+}
+
 /**
  * Why a push or a delete push of the default branch is refused under `read`, a workflow that keeps it for pull
  * requests, naming finish as the way to send work.
  */
 export function defaultBranchPushReason(branch: string, read: WorkflowRead): string {
-  const why = read === "unreadable" ? `${CONFIG_FILE} failed to load` : `workflow is ${read}`;
-
   return (
-    `${branch} takes changes only through pull requests (${why}): ` +
+    `${branch} takes changes only through pull requests (${strictWhy(read)}): ` +
     `run ${WORKTREE_CMD} finish <name> to push wt/<name> and open its pull request`
+  );
+}
+
+/**
+ * Why a push with `word`, whose value the shell sets only as it runs (`$B` unset pushes the current branch), is
+ * refused under `read`, a workflow that keeps the default branch for pull requests.
+ */
+export function unresolvedPushReason(word: string, branch: string, read: WorkflowRead): string {
+  return (
+    `git push names ${word}, which the gate cannot read before the shell runs, and ${branch} takes changes only ` +
+    `through pull requests (${strictWhy(read)}): name the branch, such as git push origin wt/<name>, ` +
+    `or run ${WORKTREE_CMD} finish <name>`
   );
 }

@@ -65,6 +65,11 @@ export function fakeGit(main: string, world: World, asked: string[]): Runner {
     }
     if (args.includes("--abbrev-ref")) return tip ? ok(tip.branch) : no;
     const ref = String(args.at(-1));
+    if (args.includes("--symbolic-full-name")) {
+      const branch = ref === "HEAD" ? tip?.branch : world.refs[ref] && ref;
+      if (branch === "HEAD") return ok("HEAD");
+      return branch ? ok(`refs/heads/${branch}`) : no;
+    }
     const sha = ref === "HEAD" ? tip?.sha : world.refs[ref];
     return sha ? ok(sha) : no;
   };
