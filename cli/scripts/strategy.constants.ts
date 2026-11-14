@@ -1,5 +1,5 @@
 /** The strategy domain's values, approval-block and reply patterns, and stamp layout. */
-import type { ApprovalReply, ApprovalAction, Effort, Approval, Strategy } from "./strategy.types.ts";
+import type { ApprovalReply, ApprovalAction, Effort, Approval, ReviewKind, Strategy } from "./strategy.types.ts";
 
 export const FREE_STRATEGY = "free";
 export const SPAWN_FAST = "spawn-fast";
@@ -108,7 +108,15 @@ export const STRATEGY_WORDS: readonly (readonly [string, Strategy])[] = [
   [DEEP, SPAWN_DEEP],
 ];
 
-export const STAMP_FILE = "strategy.json";
+/** The folder under a session dir that holds one review stamp per spawn plan the session saved. */
+export const REVIEWS_DIR = "reviews";
+export const STAMP_EXT = ".json";
+
+/** The order the deny names running reviews in: plans, then fast plans. */
+export const REVIEW_KIND_ORDER: Readonly<Record<ReviewKind, number>> = { "fast-plan": 1, plan: 0 };
+
+/** The plan folders a review stamp may point into, by the kind of plan each holds. */
+export const PLAN_DIRS = { "fast-plan": "plans-fast", plan: "plans" } as const;
 export const UNSAFE_SID_RE: RegExp = /[^\w-]/g;
 export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
 export const LINE_BREAK_RE: RegExp = /\r?\n/;
@@ -137,3 +145,6 @@ export const STRATEGY_MEANING: Readonly<Record<Strategy, string>> = {
   "spawn-deep": "deep agents do each phase",
   "spawn-fast": "fast agents do each phase and escalate to deep when stuck",
 };
+
+/** The statuses a stamped plan keeps its stamp at; any other prunes it. */
+export const STAMP_STATUSES: ReadonlySet<string> = /* @__PURE__ */ new Set(["ready", IN_PROGRESS]);

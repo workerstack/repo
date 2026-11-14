@@ -9,7 +9,7 @@ Read this when the plan's `strategy` is `spawn-fast` or `spawn-deep`. You are th
 
 ## Start
 
-The first action, at start or on resume, is a plan save (a status or box edit). It stamps the session. Until it runs, the gate does not know this session reviews.
+The first action, at start or on resume, is a plan save (a status or box edit). It stamps the session with that plan. Until it runs, the gate does not know this session reviews. Each spawn plan or fast plan the session saves gets its own stamp, so a session can review several at once, and the parent-write deny names each running one. A Write that saves a plan `done`, `blocked` or `free` drops its stamp; after an Edit that sets `done`, the next plan save drops it.
 
 ## Phases
 

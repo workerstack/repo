@@ -2519,6 +2519,7 @@
     "8d882adc88cfe399",
     "9aba6d098a569a99",
     "9f30ff17d752d89a",
+    "aa2d97b624f6dc4c",
     "b47b7e1278f9e275",
     "d6318a681e3eecb7"
   ],
@@ -4029,6 +4030,7 @@
     "08bfd40f4b5ccd67",
     "1eb7818456a27b30",
     "5fe7d3d2712a3dbb",
+    "8bc66d78ea3040b4",
     "8beac3333894b64a",
     "cbc632670c949e6d",
     "cd50f8b01b998171",
@@ -4299,6 +4301,7 @@
     "fcede47cf49c7795",
     "fee33c50098ec6b3"
   ],
+  "cli/scripts/gate-review-deny-many.test.ts": ["efa4ec2e03b1a5db"],
   "cli/scripts/gate-review-deny.test.ts": [
     "36b99c1df1c40857",
     "4ec6f1d52653eb74",
@@ -4311,6 +4314,7 @@
     "d3209fa9701b8f38",
     "e2f7abc2d37adf15",
     "e5939607d87c3930",
+    "f1c5cb46e2bae026",
     "f44f0ce19c63e782"
   ],
   "cli/scripts/gate-review-git.test.ts": [
@@ -4330,6 +4334,7 @@
     "19916b831424d1e0",
     "1d37d2d4996a77e8",
     "2732415a3ce949a4",
+    "418f2a9a3ec687bc",
     "44f60244dd988c41",
     "579c24692ebdd564",
     "602cf72b791296be",
@@ -4337,7 +4342,9 @@
     "cb3d65c1e16fa25e",
     "de477c537f7d4556"
   ],
+  "cli/scripts/gate-review-stamp-many.test.ts": ["4e6207c0793b8194"],
   "cli/scripts/gate-review-stamp.test.ts": [
+    "0609f041c6e02e26",
     "30fc3b51742527c2",
     "42debbfbc9de0e41",
     "4acaf915c7ead043",
@@ -4353,6 +4360,7 @@
   "cli/scripts/gate-review-tests.test.ts": [
     "131aebe09c79ccaa",
     "18f765abde38f3e5",
+    "214dcba6288fc8a0",
     "3a223682bdf3b041",
     "663f6f1a06d36f2f",
     "86b63d37244e5f0c",
@@ -4364,6 +4372,7 @@
   "cli/scripts/gate-review.ts": [
     "11035884c81fe41a",
     "203b911ee4d4c62f",
+    "2276d245f450244a",
     "339c912238595a02",
     "385203ec1f2fa9c7",
     "60a91c7a016cc23d",
@@ -4423,6 +4432,7 @@
     "6ba2498a53c8d0cc",
     "7a0cda2545aad169",
     "bc82923573819c86",
+    "e0ba4893d08d1110",
     "ef31bdab0a5d6d05"
   ],
   "cli/scripts/gate-worktree.test.ts": [
@@ -5858,8 +5868,6 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
-  "cli/scripts/node_modules/.vite/vitest/CACHEDIR.TAG": ["27152e3a202f6ad0"],
-  "cli/scripts/node_modules/.vite/vitest/da39a3ee5e6b4b0d3255bfef95601890afd80709/results.json": ["7859909972b0fe60"],
   "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
     "16ab81522c4f32c6",
@@ -6025,6 +6033,7 @@
     "fa122c29ceae050c"
   ],
   "cli/scripts/orchestrate-parent-git-asked.test.ts": [
+    "14ca78b737b32f0c",
     "14cfdd050725e994",
     "312d81d08e5f37b8",
     "32a31dc6da748175",
@@ -6282,6 +6291,7 @@
     "123221a221f07668",
     "20c41eda7015de67",
     "26d41e3d50e3859c",
+    "2925e6aae021b3a6",
     "322f69607db4838f",
     "5ceba630341dde82",
     "66d41b853e4af5f0",
@@ -7219,6 +7229,9 @@
     "c8f919f3fce81664",
     "fcdc47b8faf8da8a"
   ],
+  "cli/scripts/review-deny-reason.ts": ["9a79d02dd3f35a30"],
+  "cli/scripts/review-stamps.test.ts": ["cb4818d93ef427d3"],
+  "cli/scripts/review-stamps.ts": ["f7eade1d613922a8"],
   "cli/scripts/root-anchor.constants.ts": ["a0f779de3035a0ac"],
   "cli/scripts/rtk-grok.constants.ts": ["718e5365f3b0b1c8", "b4a1cb29c60c7af9"],
   "cli/scripts/rtk-grok.test.ts": [
@@ -7838,6 +7851,7 @@
     "692115f578bbb364",
     "8c3eba9135ccc522",
     "a8c7562b5db0aa5e",
+    "bfe93583b39c17d7",
     "d020949a9298fe2a",
     "e40ce7f6fa70ee32",
     "f53e60f6c939c922",
@@ -7851,6 +7865,7 @@
     "3f7d567512462665",
     "50421f145efd3ba0",
     "60e5e8f32f1af693",
+    "8bc18212b796a42c",
     "966fa14b5de5005c",
     "9bea4cb5f19f1499",
     "a03115791fff9c63",
@@ -7869,6 +7884,7 @@
     "23a0f4f24f6ca50f",
     "2956a41cdc340f18",
     "37be4b9a772cfc3f",
+    "3d333caed4de4de9",
     "75b279a8e880e966",
     "92be6c51e765c31f",
     "92cea0617b670209",
@@ -7887,6 +7903,7 @@
     "088b5d4f7238c758",
     "0fb618f390e9c0ee",
     "2c4a0a4f67490311",
+    "37d53c5a5ff42ea6",
     "4688c86e6027fbef",
     "7d49e1d966dc7afc",
     "7e26716ded9495c4",
@@ -8631,6 +8648,7 @@
     "079e3d23d213aed6",
     "093ed3a655f55cd3",
     "1944509e7d5d4e7a",
+    "1f22c6ccecac01e8",
     "26b08d2101d7cd58",
     "2899ca86fc085154",
     "2e6528aec221b2ac",
@@ -8753,6 +8771,7 @@
     "289676afb54b4777",
     "30e2ae0a2e490bd5",
     "33cc0b0817305aa2",
+    "41776e17390a0bda",
     "6d87ca841c845b70",
     "7bb47085b4231e88",
     "854dcaac0df8fdbf",

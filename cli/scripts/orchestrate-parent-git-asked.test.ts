@@ -4,7 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { orchestrateKit, parseJson } from "./__fixtures__/orchestrate-kit.ts";
-import { stampPath } from "./strategy.ts";
+import { sessionDir } from "./review-stamps.ts";
 
 const kit = orchestrateKit();
 
@@ -82,9 +82,9 @@ it("writes nothing without a session id, and still stamps the prompt gate as bef
 it("writes where the gate reads, however odd the session id", () => {
   const ws = workspace();
 
-  // The gate reads git-asked.json beside strategy.json, under the sid with every non-word character removed.
+  // The gate reads git-asked.json in the session dir, under the sid with every non-word character removed.
   function readerFile(sid: string) {
-    return path.join(path.dirname(stampPath(ws, sid)), "git-asked.json");
+    return path.join(sessionDir(ws, sid), "git-asked.json");
   }
 
   submit(ws, "../escape", "stash it");

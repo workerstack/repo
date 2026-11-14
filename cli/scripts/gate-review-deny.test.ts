@@ -28,8 +28,8 @@ import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
 import { isOutsideRootRepoDirs } from "./gate-review.ts";
 import type { HookInput } from "./hook-input.ts";
+import { activeReviews } from "./review-stamps.ts";
 import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
-import { activeReview } from "./strategy.ts";
 
 const tmp = useTmp();
 
@@ -197,7 +197,7 @@ it("judges by the canonical path through an alias of the root, and for a path.wi
       expect(notDenied(send(kind, alias, target)), `${kind} ${target}`).toBe(true);
   }
 
-  expect(activeReview(alias, REVIEW_SID)?.plan).toBe(plan);
+  expect(activeReviews(alias, REVIEW_SID).map((r) => r.plan)).toStrictEqual([plan]);
   const root = "C:\\r";
   expect(isOutsideRootRepoDirs("C:\\r\\src\\x.ts", root, path.win32)).toBe(true);
   expect(isOutsideRootRepoDirs("C:\\r\\.tmp\\x", root, path.win32)).toBe(true);

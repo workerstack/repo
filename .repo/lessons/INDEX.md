@@ -2,9 +2,9 @@
 
 # Lessons
 
+- `turn-green-is-not-coverage-green` (hits 6): A green turn still misses the 100% coverage floor
 - `posix-only-path-parsing` (hits 5): A path regex that only knows `/` silently skips Windows
 - `temp-consumer-untyped-globals` (hits 5): A new lint rule or type-aware rule trips the sources lint tests plant
-- `turn-green-is-not-coverage-green` (hits 5): A green turn still misses the 100% coverage floor
 - `migration-proved-on-packed-consumer` (hits 4): Prove a sync migration on a consumer built from the old packed tgz
 - `shipped-source-es2022-lib` (hits 4): Code an export reaches must type-check under ES2022, not ESNext
 - `knip-unused-exported-type` (hits 3): Export a name only when another file imports it

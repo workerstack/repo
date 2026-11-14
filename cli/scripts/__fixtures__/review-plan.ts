@@ -3,12 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { expect } from "vitest";
 import type { HookOutput, ToolArgs } from "../gate-harness.ts";
-import { z } from "zod";
-import { isRecord, readJson } from "../../json.ts";
 import type { HookInput } from "../hook-input.ts";
 import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import { mainWith } from "../orchestrate-parent.ts";
-import { stampPath, writeStamp } from "../strategy.ts";
+import { stampPlan, stampedPlans } from "../review-stamps.ts";
 import { camelCall, inSession, kindWrite, replyOf, type WriteKind } from "./hook-payload.ts";
 import { runHook } from "./run-hook.ts";
 
@@ -28,24 +26,32 @@ export function reviewReason(strategy: string): string {
   return `plan 3 runs strategy ${strategy}: this session reviews. Spawn ${implementer} for product writes; the plan, the journal and .repo/ work dirs stay writable.`;
 }
 
-/** Plan 3 with `strategy` and `status` in its front matter. */
-export function planText(strategy: string, status: string): string {
-  return `---\nserial: 3\nname: review-plan\nstatus: ${status}\nreviews: 1\ncreated: 2026-11-07T18:19:01Z\nsource: "t"\ncommit: feat: x\nstrategy: ${strategy}\n---\n\n# review-plan\n\n1.1 [ ] a\n`;
+/** Plan `serial` (default 3) with `strategy` and `status` in its front matter. */
+export function planText(strategy: string, status: string, serial = 3): string {
+  return `---\nserial: ${serial}\nname: review-plan\nstatus: ${status}\nreviews: 1\ncreated: 2026-11-07T18:19:01Z\nsource: "t"\ncommit: feat: x\nstrategy: ${strategy}\n---\n\n# review-plan\n\n1.1 [ ] a\n`;
 }
 
-/** Writes plan 3 under `root` and returns its path and text. */
-export function planFile(root: string, strategy: string, status = "in-progress") {
-  const file = path.join(root, ".repo/plans/3-review-plan-20261107T181901Z.md");
+/** Where a plan or fast plan lives, and its serial; plan 3 when left out. */
+export type PlanAt = { fast?: boolean; serial?: number };
+
+/** Writes plan 3, or the plan or fast plan `at` names, under `root` and returns its path and text. */
+export function planFile(root: string, strategy: string, status = "in-progress", at: PlanAt = {}) {
+  const serial = at.serial ?? 3;
+  const name = at.fast === true ? `plans-fast/${serial}-review-plan-20261113T030000Z.md` : `plans/${serial}-review-plan-20261107T181901Z.md`;
+  const file = path.join(root, ".repo", name);
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const text = planText(strategy, status);
+  const text = planText(strategy, status, serial);
   fs.writeFileSync(file, text);
   return { file, text };
 }
 
-/** A session (default: the review suites') stamped to a plan holding `strategy` at `status`; returns the plan's path. */
-export function startReview(root: string, spec: { strategy?: string; status?: string; sid?: string } = {}): string {
-  const { file } = planFile(root, spec.strategy ?? "spawn-fast", spec.status ?? "in-progress");
-  writeStamp(root, spec.sid ?? REVIEW_SID, file);
+/** A session (default: the review suites') stamped to a plan (default: plan 3) holding `strategy` at `status`; returns the plan's path. */
+export function startReview(
+  root: string,
+  spec: { strategy?: string; status?: string; sid?: string } & PlanAt = {},
+): string {
+  const { file } = planFile(root, spec.strategy ?? "spawn-fast", spec.status ?? "in-progress", spec);
+  stampPlan(root, spec.sid ?? REVIEW_SID, file);
   return file;
 }
 
@@ -56,13 +62,7 @@ export function reviewWrite(kind: WriteKind, spec: { cwd: string; target: string
 
 /** Whether the review session has a stamp under `root`. */
 export function stamped(root: string): boolean {
-  return fs.existsSync(stampPath(root, REVIEW_SID));
-}
-
-/** What the review session's stamp file holds. */
-export function stampContent(root: string): ToolArgs {
-  const stamp = readJson(z.json(), fs.readFileSync(stampPath(root, REVIEW_SID), "utf8"));
-  return isRecord(stamp) ? stamp : {};
+  return stampedPlans(root, REVIEW_SID).length > 0;
 }
 
 /** A Write, Edit or other call as Grok sends it through orchestrate-parent, answered in `root`. */

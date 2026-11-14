@@ -1,9 +1,9 @@
 ---
 name: turn-green-is-not-coverage-green
 paths: ["cli/**/*.ts","coverage-floors.json","cli/json.ts"]
-hits: 5
+hits: 6
 last-hit: 2026-11-14
-evidence: ["plan 149","roadmap 9","plan 154","plan 154","plan 235"]
+evidence: ["roadmap 9","plan 154","plan 154","plan 235","plan 237"]
 ---
 
 # A green turn still misses the 100% coverage floor

@@ -33,8 +33,9 @@ import { persistPlan, preparePlanUpdate } from "./persist-plan.ts";
 import { validateRoadmap } from "./persist-roadmap-validate.ts";
 import { persistRoadmap, prepareRoadmapUpdate } from "./persist-roadmap.ts";
 import { isUnderRepoDir, isUnderTmp, persistTmp } from "./persist-tmp.ts";
+import { sessionDir as cleanSessionDir } from "./review-stamps.ts";
 import { saveStrategy } from "./session-settings.ts";
-import { parseStrategy, stampPath as strategyStampPath } from "./strategy.ts";
+import { parseStrategy } from "./strategy.ts";
 import type { Strategy } from "./strategy.types.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords } from "./worktree-guards.ts";
@@ -248,11 +249,11 @@ export function writeSessionReceipt(data: HookInput, msg: string): void {
 export function writeGitAsked(data: HookInput, prompt: string): void {
   const sid = sessionIdOf(data);
 
-  // The gate finds this file beside the session's strategy stamp, with the sid cleaned the same way.
+  // The gate finds this file in the session's dir, with the sid cleaned the same way.
   if (sid.replaceAll(SID_UNSAFE, "") === "") return;
 
   try {
-    const dir = path.dirname(strategyStampPath(resolveRoots(data).root, sid));
+    const dir = cleanSessionDir(resolveRoots(data).root, sid);
     fs.mkdirSync(dir, { recursive: true });
     const dest = path.join(dir, "git-asked.json");
     const tmp = `${dest}.${process.pid}.tmp`;

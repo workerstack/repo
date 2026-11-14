@@ -29,4 +29,8 @@ export type ApprovalReply =
 
 export type ApprovalAction = "approve" | "handoff";
 
-export type ActiveReview = { plan: string; serial: number; strategy: SpawnStrategy };
+/** The kinds of plan a review stamp points at. */
+export type ReviewKind = "plan" | "fast-plan";
+
+/** A stamped plan whose own frontmatter says in-progress with a spawn strategy. */
+export type ActiveReview = { kind: ReviewKind; plan: string; serial: number; strategy: SpawnStrategy };

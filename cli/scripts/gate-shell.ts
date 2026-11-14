@@ -19,7 +19,7 @@ import {
   TEST_CMD,
 } from "./gate.constants.ts";
 import { isRealSession } from "./orchestrate-session.ts";
-import { activeReview } from "./strategy.ts";
+import { activeReviews } from "./review-stamps.ts";
 
 /** Leading blanks and an `rtk ` prefix, which a job query drops. */
 const LEADING_RTK_RE = /^\s*(rtk\s+)?/;
@@ -77,7 +77,7 @@ export function testRunGuard(call: GateCall): GuardResult {
   const shadowed = text === call.text ? undefined : withCommand(call, text);
 
   if (!TEST_CMD.test(text) || SHELL_META.test(text)) return shadowed;
-  const isReviewing = parent && sid !== "" && activeReview(roots.root, sid) !== null;
+  const isReviewing = parent && sid !== "" && activeReviews(roots.root, sid).length > 0;
 
   return isImplementer(sub) || isReviewing ? withCommand(call, jobFor(call, "test", text.trim())) : shadowed;
 }

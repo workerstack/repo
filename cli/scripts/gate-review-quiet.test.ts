@@ -9,7 +9,7 @@ import { planFile, REVIEW_SID, reviewWrite, startReview } from "./__fixtures__/r
 import { processFatTools } from "./gate-fat-tools.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
-import { stampPath, writeStamp } from "./strategy.ts";
+import { sessionDir, stampPlan } from "./review-stamps.ts";
 
 const tmp = useTmp();
 
@@ -70,15 +70,15 @@ const states: [string, (w: string) => void][] = [
   ["ready", (w) => startReview(w, { status: "ready" })],
   ["done", (w) => startReview(w, { status: "done", strategy: "spawn-deep" })],
   ["blocked", (w) => startReview(w, { status: "blocked" })],
-  ["stamp of a missing plan", (w) => writeStamp(w, REVIEW_SID, path.join(w, ".repo/plans/gone.md"))],
+  ["stamp of a missing plan", (w) => stampPlan(w, REVIEW_SID, path.join(w, ".repo/plans/gone.md"))],
   [
     "corrupt stamp",
     (w) => {
-      fs.mkdirSync(path.dirname(stampPath(w, REVIEW_SID)), { recursive: true });
-      fs.writeFileSync(stampPath(w, REVIEW_SID), "{");
+      fs.mkdirSync(path.join(sessionDir(w, REVIEW_SID), "reviews"), { recursive: true });
+      fs.writeFileSync(path.join(sessionDir(w, REVIEW_SID), "reviews/plan-3-review-plan-20261107T181901Z.json"), "{");
     },
   ],
-  ["stamp for another session", (w) => writeStamp(w, "other", planFile(w, "spawn-fast").file)],
+  ["stamp for another session", (w) => stampPlan(w, "other", planFile(w, "spawn-fast").file)],
 ];
 
 it(

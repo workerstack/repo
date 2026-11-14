@@ -11,8 +11,8 @@ import { isParentOrchestrator, sessionIdOf, subagentTypeOf } from "./gate-agents
 import { processFatTools } from "./gate-fat-tools.ts";
 import { harnessOf } from "./gate-harness.ts";
 import type { HookInput } from "./hook-input.ts";
+import { stampPlan } from "./review-stamps.ts";
 import { ENFORCED_HARNESSES } from "./strategy.constants.ts";
-import { writeStamp } from "./strategy.ts";
 
 type Captured = {
   parent: (file: string) => HookInput;
@@ -99,7 +99,7 @@ it.each([
   "%s: the child carries a marker the gate reads, so the parent is denied and the child is not",
   (name, c) => {
     const w = tmp.dir("gate-captured-");
-    writeStamp(w, c.sid[0], planFile(w, "spawn-fast").file);
+    stampPlan(w, c.sid[0], planFile(w, "spawn-fast").file);
     const parent = c.parent(path.join(w, "src/x.ts"));
     const child = c.child(path.join(w, "src/x.ts"));
     expect(harnessOf(parent)).toBe(name === "codex" ? "codex" : "claude");
@@ -135,7 +135,7 @@ it("Antigravity sends its session id only as conversationId, and its child carri
   expect(ENFORCED_HARNESSES.has("antigravity")).toBe(false);
   // A review is running for the parent's conversation; an unenforced harness is still let through.
   const w = tmp.dir("gate-captured-");
-  writeStamp(w, "d1398f48", planFile(w, "spawn-fast").file);
+  stampPlan(w, "d1398f48", planFile(w, "spawn-fast").file);
   const product = path.join(w, "src/x.ts");
   const args = { Content: "x", Path: product };
   const write = { ...parent, toolCall: { args, name: "write_file" }, workspacePaths: [w] };
@@ -145,7 +145,7 @@ it("Antigravity sends its session id only as conversationId, and its child carri
 
 it("Antigravity's edit in a committed repo is denied by the main-checkout guard though it is not enforced", () => {
   const w = tmp.committed("gate-captured-");
-  writeStamp(w, "d1398f48", planFile(w, "spawn-fast").file);
+  stampPlan(w, "d1398f48", planFile(w, "spawn-fast").file);
 
   function put(target: string) {
     return inSession(kindWrite("antigravity", { cwd: w, target }), "d1398f48");

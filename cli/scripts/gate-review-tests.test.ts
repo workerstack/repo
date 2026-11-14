@@ -8,7 +8,7 @@ import { planFile, planText, REVIEW_SID, startReview } from "./__fixtures__/revi
 import { processFatTools, processHookPayload } from "./gate-fat-tools.ts";
 import { jobCommand, quoteQuery } from "./gate-job.ts";
 import type { HookInput } from "./hook-input.ts";
-import { writeStamp } from "./strategy.ts";
+import { stampPlan } from "./review-stamps.ts";
 
 const tmp = useTmp();
 
@@ -114,6 +114,15 @@ it("leaves a scout child's command and a stampless default session unchanged", (
   startReview(w);
   expect(processFatTools(claudeSh(w, "bun run test x", implementer("scout")))).toBeNull();
   const other = tmp.dir("gate-review-");
-  writeStamp(other, REVIEW_SID, planFile(other, "free").file);
+  stampPlan(other, REVIEW_SID, planFile(other, "free").file);
   expect(processFatTools(claudeSh(other, "bun run test x"))).toBeNull();
+});
+
+it("rewrites a parent's test run while only the second of two stamped plans is in progress", () => {
+  const w = tmp.dir("gate-review-");
+  const cmd = "bun run test x.test.ts";
+  startReview(w, { status: "done" });
+  expect(processFatTools(claudeSh(w, cmd))).toBeNull();
+  startReview(w, { fast: true, serial: 4, strategy: "spawn-deep" });
+  expect(processFatTools(claudeSh(w, cmd))).toStrictEqual(rewrite(w, cmd));
 });

@@ -11,17 +11,11 @@ import type { GateCall, GuardResult } from "./gate-call.ts";
 import { TOOLS, isHookObject, toolCallOf, type Payload } from "./gate-harness.ts";
 import { writeTargets } from "./gate-rewrites.ts";
 import { BASH_GIT, GIT_STAGE, MD_EXT, REASON_IMPLEMENTER_GIT, REASON_IMPLEMENTER_WRITE } from "./gate.constants.ts";
-import { ENFORCED_HARNESSES, FREE_STRATEGY } from "./strategy.constants.ts";
-import { activeReview, implementerOf, parseStrategy, stampPath, writeStamp } from "./strategy.ts";
-import type { ActiveReview } from "./strategy.types.ts";
+import { reviewDenyReason } from "./review-deny-reason.ts";
+import { activeReviews, keepsStamp, pruneStamps, sessionDir, stampPlan, unstampPlan } from "./review-stamps.ts";
+import { ENFORCED_HARNESSES, PLAN_DIRS } from "./strategy.constants.ts";
 import { canonicalPath, resolveRoots } from "./workspace-root.ts";
 import { gitAskedWords, mainCheckoutWriteReason, sharedGitReason } from "./worktree-guards.ts";
-
-/** A plan's frontmatter block; group 1 is its body. */
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
-
-/** The `strategy:` line of a frontmatter body; group 1 is its value. */
-const STRATEGY_LINE_RE = /^strategy:[ \t]*(\S+)/m;
 
 /** True when the call carries a patch to apply. */
 function holdsPatch(patch: string | null): boolean {
@@ -40,33 +34,31 @@ export function isOutsideRootRepoDirs(target: string, root: string, p: typeof pa
   return !isIgnoredRepoPath(canonicalPath(root, p), canonicalPath(target, p), p);
 }
 
-/** True when a plan's frontmatter holds a spawn strategy. */
-function isReviewPlanText(text: string): boolean {
-  const front = FRONTMATTER_RE.exec(text);
-  const line = STRATEGY_LINE_RE.exec(front?.[1] ?? "");
-  const strategy = parseStrategy(line?.[1]);
-
-  return strategy !== null && strategy !== FREE_STRATEGY;
-}
-
 /** What a stamp needs to know of a plan save: the tool, its input, and the session it belongs to. */
 type StampSite = Pick<GateCall, "tool" | "input" | "roots" | "sid">;
 
-/** True when the save of `target` holds a review plan: the Write content, else the file on disk. */
-function savesReviewPlan({ tool, input }: StampSite, target: string): boolean {
+/** The text a save of `target` leaves: the Write content, else the file on disk. */
+function savedText({ tool, input }: StampSite, target: string): string {
   const given = [input.content, input.Content, input.contents, input.file_text].find(
     (v): v is string => typeof v === "string",
   );
 
-  return isReviewPlanText(tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8"));
+  return tool.kind === "write" && given !== undefined ? given : fs.readFileSync(target, "utf8");
 }
 
-/** A parent's save of a plan that holds a spawn strategy points the session at it. */
+/**
+ * A parent's save of a plan or fast plan prunes every stamp whose plan ended, then stamps each saved plan that keeps
+ * a spawn strategy at ready or in-progress and unstamps each that does not.
+ */
 function stampReviewPlan(site: StampSite, targets: string[]): void {
-  const plans = canonicalPath(repoPath(site.roots.root, "plans"));
-  const plan = targets.find((t) => path.dirname(t) === plans && path.extname(t) === MD_EXT && savesReviewPlan(site, t));
+  const { root } = site.roots;
+  const dirs = Object.values(PLAN_DIRS).map((d) => canonicalPath(repoPath(root, d)));
+  const plans = targets.filter((t) => dirs.includes(path.dirname(t)) && path.extname(t) === MD_EXT);
 
-  if (plan !== undefined) writeStamp(site.roots.root, site.sid, plan);
+  if (plans.length === 0) return;
+  pruneStamps(root, site.sid);
+
+  for (const t of plans) (keepsStamp(savedText(site, t)) ? stampPlan : unstampPlan)(root, site.sid, t);
 }
 
 /**
@@ -98,7 +90,7 @@ function gitAskedBy(root: string, sid: string): Set<string> {
   try {
     if (sid === "") return new Set();
 
-    const text = fs.readFileSync(path.join(path.dirname(stampPath(root, sid)), "git-asked.json"), "utf8");
+    const text = fs.readFileSync(path.join(sessionDir(root, sid), "git-asked.json"), "utf8");
 
     return new Set(tryJson(z.looseObject({ words: z.array(z.string()) }), text)?.words);
   } catch {
@@ -141,14 +133,6 @@ export function sharedCheckoutGuard(call: GateCall): GuardResult {
   }
 }
 
-function reviewDenyReason(review: ActiveReview): string {
-  return (
-    `plan ${review.serial} runs strategy ${review.strategy}: this session reviews. ` +
-    `Spawn ${implementerOf(review.strategy, 1)} for product writes; ` +
-    "the plan, the journal and .repo/ work dirs stay writable."
-  );
-}
-
 /** The deny for an implementer's write to the plan or the journal. */
 function implementerWriteDeny(call: GateCall): GuardResult {
   const { roots } = call;
@@ -166,10 +150,10 @@ function parentWriteDeny(call: GateCall): GuardResult {
   const { roots, sid, harness } = call;
   const targets = writeTargets(call);
   stampReviewPlan(call, targets);
-  const review = ENFORCED_HARNESSES.has(harness) ? activeReview(roots.root, sid) : null;
+  const [first, ...rest] = ENFORCED_HARNESSES.has(harness) ? activeReviews(roots.root, sid) : [];
 
-  if (review !== null && targets.some((t) => isOutsideRootRepoDirs(t, roots.root)))
-    return { reason: reviewDenyReason(review), type: "deny" };
+  if (first !== undefined && targets.some((t) => isOutsideRootRepoDirs(t, roots.root)))
+    return { reason: reviewDenyReason([first, ...rest]), type: "deny" };
 
   return undefined;
 }
@@ -178,7 +162,7 @@ function parentWriteDeny(call: GateCall): GuardResult {
  * What a spawn strategy asks of a write, and of an implementer's shell. Ahead of the write branch and the scout
  * return, so no early return skips it. An error in here lets the call through, as the gate does everywhere else.
  *   implementer-*  never writes the plan or the journal, never runs git add or git commit (every strategy)
- *   parent         a save of a review plan stamps the session; while that plan runs, no write outside
+ *   parent         a save of a spawn plan or fast plan stamps the session; while one runs, no write outside
  *                  `<root>/.repo/<ignored dir>`
  */
 export function reviewGuard(call: GateCall): GuardResult {
