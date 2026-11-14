@@ -15,19 +15,47 @@ import {
 
 /** One turbo task, as `turbo.json` takes it. */
 export type TurboTask = {
-  /** Whether turbo caches the task; `false` for a task that must always run. */
+  /**
+   * Whether turbo caches the task; `false` for a task that must always run.
+   *
+   * @default true
+   */
   cache?: boolean | undefined;
-  /** The tasks that run first, like `^build` for the dependencies' builds. */
+  /**
+   * The tasks that run first, like `^build` for the dependencies' builds.
+   *
+   * @default []
+   */
   dependsOn?: readonly string[] | undefined;
-  /** The environment variables that are part of the task's cache key. */
+  /**
+   * The environment variables that are part of the task's cache key.
+   *
+   * @default []
+   */
   env?: readonly string[] | undefined;
-  /** The files that are part of the task's cache key; all of the package's files when omitted. */
+  /**
+   * The files that are part of the task's cache key, as globs relative to the package.
+   *
+   * @default all of the package's files that git tracks
+   */
   inputs?: readonly string[] | undefined;
-  /** The files turbo caches and restores for the task. */
+  /**
+   * The files turbo caches and restores for the task, like `dist/**`.
+   *
+   * @default []
+   */
   outputs?: readonly string[] | undefined;
-  /** The environment variables the task sees without them being part of its cache key. */
+  /**
+   * The environment variables the task sees without them being part of its cache key.
+   *
+   * @default []
+   */
   passThroughEnv?: readonly string[] | undefined;
-  /** Whether the task never exits, like a dev server. */
+  /**
+   * Whether the task never exits, like a dev server. Other tasks cannot depend on it.
+   *
+   * @default false
+   */
   persistent?: boolean | undefined;
 };
 
@@ -83,7 +111,7 @@ export const turboSchema: TurboSchema = /* @__PURE__ */ buildSchema();
 
 /** The task names of a parsed `turbo` section that sync generates itself. */
 export function generatedNames(turbo: z.output<typeof turboSchema> | undefined): string[] {
-  return Object.keys(turbo?.tasks ?? {}).filter((name) => GENERATED_TASKS.includes(name));
+  return Object.keys(turbo?.tasks ?? {}).filter((name) => GENERATED_TASKS.some((task) => task === name));
 }
 
 /** The parsed config's `turbo` section with its tasks filled in; undefined when the config has none. */

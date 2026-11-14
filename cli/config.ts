@@ -1,55 +1,35 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { z } from "zod";
+import type { z } from "zod";
 
-import { agentDefaultsExample, agentDefaultKeys } from "./agent-defaults-schema.ts";
-import { ciOf, ciSchema } from "./ci-schema.ts";
-import { cleanSchema } from "./clean-schema.ts";
-import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
-import type { ResolvedAgents, ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
-import { CONFIG_FILE, LAST } from "./config.constants.ts";
-import { coverageOf, coverageSchema } from "./coverage-config.ts";
+import { ciOf } from "./ci-schema.ts";
+import { DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
+import type { ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
+import { configSchema, DEFAULT_PACKS, NO_AGENTS, type Pack, type SkillPack, SKILL_PACKS } from "./config-schema.ts";
+import { CONFIG_FILE } from "./config.constants.ts";
+import { coverageOf } from "./coverage-config.ts";
 import { type ConfigModule, importConfig, type ImportConfig } from "./import-config.ts";
-import { knipSchema } from "./knip-schema.ts";
-import { linkSchema } from "./link-schema.ts";
-import { lintOf, lintSchema } from "./lint-schema.ts";
-import { nightlyOf, nightlySchema } from "./nightly-config.ts";
-import { ownerSchema } from "./owner-config.ts";
-import type { RepoConfig } from "./repo-config.types.ts";
-import { reportRepeats } from "./report-repeats.ts";
+import { lintOf } from "./lint-schema.ts";
+import { nightlyOf } from "./nightly-config.ts";
+import type { DefaultPack, RepoConfig } from "./repo-config.types.ts";
 import { oldConfigHint } from "./sync/migrate-config-name.ts";
-import { generatedTask } from "./turbo-config.constants.ts";
-import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
-import { DEFAULT_WORKFLOW, workflowSchema } from "./workflow.ts";
+import { turboOf } from "./turbo-config.ts";
+import { DEFAULT_WORKFLOW } from "./workflow.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
 
 export { CONFIG_FILE } from "./config.constants.ts";
 
+export { HOSTS, PACKS, SKILL_PACKS } from "./config-schema.ts";
+
+export type { Host, Pack, SkillPack } from "./config-schema.ts";
+
 export type { ConfigModule, ImportConfig } from "./import-config.ts";
-
-/** Config packs a repo can turn on in repo.config.ts. */
-export const PACKS = ["agents", "standards", "docs", "release", "workspace", "benchmark", "evals"] as const;
-
-/** One of `PACKS`: the name `packs` in repo.config.ts takes. */
-export type Pack = (typeof PACKS)[number];
 
 /** The package a config imports `defineConfig` from, and the import error that says nothing provides it. */
 const SELF = "@workerstack/repo";
 const MISSING_SELF = /Cannot find (?:package|module) '@workerstack\/repo'/;
-
-/** Agent hosts repo sync can lay a tree out for. */
-export const HOSTS = ["claude", "codex", "antigravity", "grok", "cursor"] as const;
-
-/** One of `HOSTS`: a name `agents.hosts` takes. */
-export type Host = (typeof HOSTS)[number];
-
-/** Optional skill packs a repo can ship to its agents. */
-export const SKILL_PACKS = ["google-workspace", "listen", "speak", "clasp"] as const;
-
-/** One of `SKILL_PACKS`: a name `agents.skills` takes. */
-export type SkillPack = (typeof SKILL_PACKS)[number];
 
 /** Stock skills gated by a config pack: on only while the pack is in `packs`. */
 export const PACK_SKILLS: Readonly<Partial<Record<Pack, readonly string[]>>> = { benchmark: ["benchmark"] };
@@ -63,102 +43,22 @@ export function offSkills(config: Pick<ResolvedConfig, "agents" | "packs">): str
   return [...SKILL_PACKS.filter((pack) => !config.agents.skills.includes(pack)), ...packSkills];
 }
 
-function listOf(names: readonly string[]) {
-  return `${names.slice(0, LAST).join(", ")} or ${names.at(LAST)}`;
-}
-
-const packSchema = /* @__PURE__ */ z.enum(PACKS, {
-  error: (issue) => `${JSON.stringify(issue.input)} is not a pack; use ${listOf(PACKS)}`,
-});
-
-const hostSchema = /* @__PURE__ */ z.enum(HOSTS, {
-  error: (issue) => `${JSON.stringify(issue.input)} is not a host; use ${listOf(HOSTS)}`,
-});
-
-const skillSchema = /* @__PURE__ */ z.enum(SKILL_PACKS, {
-  error: (issue) => `${JSON.stringify(issue.input)} is not a skill pack; use ${listOf(SKILL_PACKS)}`,
-});
-
-/** A list of unique names; a repeat is reported with its count. */
-function uniqueList<S extends z.ZodType<string>>(item: S, error: string) {
-  return z.array(item, { error }).readonly().superRefine(reportRepeats);
-}
-
-function buildAgentsSchema() {
-  return z.strictObject(
-    {
-      ...agentDefaultKeys(),
-      hosts: uniqueList(hostSchema, "must be a list of host names")
-        .refine((hosts) => hosts.length > 0, { error: "list at least one host" })
-        .default(HOSTS),
-      skills: uniqueList(skillSchema, "must be a list of skill pack names").default([]),
-    },
-    { error: `must be an object like { hosts: [...], skills: [...], ${agentDefaultsExample()} }` },
-  );
-}
-
-const agentsSchema = /* @__PURE__ */ buildAgentsSchema();
-
-/** The agents an omitted `agents` key turns on: every host, no skills and each built-in default. */
-const NO_AGENTS: ResolvedAgents = /* @__PURE__ */ agentsSchema.parse({});
-
-/** A config section that only means something with its pack on. */
-function needsPack(key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) {
-  return {
-    error: `set only with the ${pack} pack; add "${pack}" to packs or delete ${key}`,
-    path: [key],
-  };
-}
-
-/** Whether the config turns `pack` on, by its `packs` or the default ones. */
-function hasPack(config: { packs?: readonly Pack[] | undefined }, pack: Pack) {
-  return (config.packs ?? defaultPacks()).includes(pack);
-}
-
-/** The sections a config's default export may hold, each parsed on its own. */
-function baseConfigSchema() {
-  return z.strictObject(
-    {
-      agents: agentsSchema.optional(),
-      ci: ciSchema().optional(),
-      clean: cleanSchema().optional(),
-      commit: commitSchema().optional(),
-      coverage: coverageSchema.optional(),
-      knip: knipSchema().optional(),
-      link: linkSchema().optional(),
-      lint: lintSchema().optional(),
-      nightly: nightlySchema.optional(),
-      owner: ownerSchema().optional(),
-      packs: uniqueList(packSchema, "must be a list of pack names").optional(),
-      tdd: z.boolean({ error: "must be true or false" }).optional(),
-      turbo: turboSchema.optional(),
-      workflow: workflowSchema().optional(),
-    },
-    { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
-  );
-}
-
-/** The schema of a config's default export, each section checked against the packs it needs. */
-function buildConfigSchema() {
-  return baseConfigSchema()
-    .refine((config) => config.agents === undefined || hasPack(config, "agents"), needsPack("agents", "agents"))
-    .refine((config) => config.commit === undefined || hasPack(config, "standards"), needsPack("commit", "standards"))
-    .refine((config) => config.lint === undefined || hasPack(config, "standards"), needsPack("lint", "standards"))
-    .refine((config) => config.knip === undefined || hasPack(config, "standards"), needsPack("knip", "standards"))
-    .refine((config) => config.nightly === undefined || hasPack(config, "release"), needsPack("nightly", "release"))
-    .refine((config) => config.turbo === undefined || hasPack(config, "workspace"), needsPack("turbo", "workspace"))
-    .superRefine((config, ctx) => {
-      for (const name of generatedNames(config.turbo)) ctx.addIssue({ code: "custom", message: generatedTask(name) });
-    })
-    .refine(
-      (config) => config.tdd === undefined || hasPack(config, "standards"),
-      needsPack("tdd", "standards"),
-    ) satisfies z.ZodType<unknown, RepoConfig>;
-}
-
-const configSchema = /* @__PURE__ */ buildConfigSchema();
-
 export type { RepoConfig };
+
+export type {
+  AgentsConfig,
+  CiConfig,
+  CleanConfig,
+  CommitConfig,
+  CoverageConfig,
+  KnipConfig,
+  KnipIgnoreEntry,
+  LintConfig,
+  LintSkipEntry,
+  NightlyConfig,
+  OwnerConfig,
+  TurboConfig,
+} from "./config-sections.types.ts";
 
 export type {
   LintBoundaries,
@@ -173,14 +73,43 @@ export type {
 /** The commit rules a config gets when it omits `commit`. */
 export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
 
-/** Types a repo.config.ts default export. */
-export function defineConfig(config: RepoConfig): RepoConfig {
+/**
+ * Types the default export of repo.config.ts, so the editor completes every key and shows what it does. Hover a key
+ * for its values, default and an example. A section whose pack is off in `packs` is an error here.
+ *
+ * - `packs`: the feature packs to turn on
+ * - `agents`: what agents get, and how a session runs by default (agents pack)
+ * - `commit`: the commit size limit (standards pack)
+ * - `tdd`: test-first for private packages too (standards pack)
+ * - `lint`: lint exceptions, package layers, the Tailwind sheet (standards pack)
+ * - `knip`: what the unused-code check may skip (standards pack)
+ * - `coverage`: the ratchet files and what mutation testing changes
+ * - `nightly`: the nightly run's shards and secrets (release pack)
+ * - `turbo`: extra turbo tasks (workspace pack)
+ * - `workflow`: how changes reach the default branch
+ * - `owner`: who public packages name as author
+ * - `ci`: extra commands `bun repo ci` runs
+ * - `clean`: extra folders `bun repo clean --build` removes
+ * - `link`: local checkouts `bun repo link` packs from
+ *
+ * @example
+ * ```ts
+ * import { defineConfig } from "@workerstack/repo";
+ *
+ * export default defineConfig({
+ *   packs: ["agents", "standards", "docs", "release"],
+ *   nightly: { shards: 4 },
+ *   ci: { checks: { e2e: ["bun", "run", "test:e2e"] } },
+ * });
+ * ```
+ */
+export function defineConfig<const P extends Pack = DefaultPack>(config: RepoConfig<P>): RepoConfig<P> {
   return config;
 }
 
 /** The packs a repo gets when its config omits `packs`. */
 export function defaultPacks(): Pack[] {
-  return ["agents", "standards", "docs"];
+  return [...DEFAULT_PACKS];
 }
 
 /** The nearest directory at or above `cwd` that holds repo.config.ts, or null. */
