@@ -51,6 +51,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       packs: ["agents", "standards"],
       tdd: false,
       turbo: undefined,
+      workflow: "worktree",
     },
     ok: true,
   });

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config keys agents.defaultStrategy (free, spawn-fast or spawn-deep; default free), agents.defaultMode (ask or away; default ask) and agents.defaultEffort (fast or deep; default deep). A plan or roadmap saved without a strategy: line now gets the default instead of being refused, and the effort picks the skill pair the rules name.
 - sync and sync --check now refuse when git tracks a file the ignore block covers, and print the git rm --cached command to run. A consumer that tracks such a file must untrack it first.
 - `bun repo su [--session <id>] [window]` lists a session's plans and roadmaps, or every one changed in a window such as 30m, 4h or overnight, plus the main commits, with status, boxes done and blockers; `/su` runs it
+- repo.config.ts takes `workflow`: "worktree" (the default), "pull-request" or "main". Under "main" agents may write and commit in the main checkout. Under "pull-request" `git push` and `bun repo push` refuse the default branch. A config that fails to load keeps both denies.
 
 ### Changed
 

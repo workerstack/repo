@@ -1,20 +1,25 @@
 /**
  * `repo push [<branch>]`: pushes the named branch, or the one the recent-branch table picks, with `-u origin` when it
  * has no upstream, then waits on its ci run and exits with `repo ci wait`'s code. Exits 5 when the default branch has
- * several recent branches to choose from, 4 on a detached HEAD or no default branch, 1 on a managed worktree's branch
- * or a push git refused.
+ * several recent branches to choose from, 4 on a detached HEAD or no default branch, 1 on a managed worktree's branch,
+ * the default branch under a workflow that keeps it for pull requests, or a push git refused.
  */
+import { readWorkflow, rulesOf, type WorkflowRead } from "../workflow.ts";
 import { inheritRunner, spawnRunner } from "./ci-wait-run.ts";
 import { waitMain, type WaitDeps } from "./ci-wait.ts";
 import { pickTarget, type PushTarget } from "./push-target.ts";
 import { EXIT_ASK, EXIT_NO_BRANCH, EXIT_REFUSED, gitUpstream, REMOTE, USAGE } from "./push.constants.ts";
+import { resolveRoots } from "./workspace-root.ts";
+import { defaultBranch } from "./worktree-git.ts";
+import { defaultBranchPushReason } from "./worktree-guards.constants.ts";
 import { BRANCH_PREFIX } from "./worktree.constants.ts";
 
 /**
- * Where `repo push` runs, what it prints to, its clock in milliseconds (the recent-branch table's too), and the
- * runners, sleep and record fs of the ci wait it ends with; each defaults to the real one.
+ * Where `repo push` runs, what it prints to, its clock in milliseconds (the recent-branch table's too), the workflow
+ * read of the main root, and the runners, sleep and record fs of the ci wait it ends with; each defaults to the real
+ * one.
  */
-export type PushDeps = Partial<Omit<WaitDeps, "branch" | "target">>;
+export type PushDeps = Partial<Omit<WaitDeps, "branch" | "target"> & { workflow: (root: string) => WorkflowRead }>;
 
 type Refusal = Exclude<PushTarget, { kind: "branch" }>;
 
@@ -44,6 +49,20 @@ function named(branch: string): PushTarget {
   if (!branch.startsWith(BRANCH_PREFIX)) return { branch, kind: "branch" };
 
   return { branch, kind: "worktree", name: branch.slice(BRANCH_PREFIX.length) };
+}
+
+/**
+ * Why `branch` may not be pushed from `cwd`, else null: it is the default branch and the workflow of the main root
+ * (from `cwd` alone, so a worktree's own repo.config.ts never counts) keeps the default branch for pull requests.
+ */
+function workflowRefusal(branch: string, cwd: string, workflow: (root: string) => WorkflowRead): string | null {
+  const { root } = resolveRoots({}, { cwd, env: {} });
+  const read = workflow(root);
+
+  if (rulesOf(read).pushDefaultBranch) return null;
+  const base = defaultBranch(root);
+
+  return branch === base ? defaultBranchPushReason(base, read) : null;
 }
 
 /** The deps `repo push` reads itself, each the given one or the real one. */
@@ -78,6 +97,14 @@ export async function main(argv: string[], deps: PushDeps = {}): Promise<number>
   }
 
   const { branch } = target;
+  const refused = workflowRefusal(branch, cwd, deps.workflow ?? readWorkflow);
+
+  if (refused !== null) {
+    stderr(`repo push: ${refused}\n`);
+
+    return EXIT_REFUSED;
+  }
+
   const hasUpstream = git(gitUpstream(branch), cwd).code === 0;
   const pushed = inheritRunner("git")(["push", ...(hasUpstream ? [] : ["-u"]), REMOTE, branch], cwd);
 

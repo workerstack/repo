@@ -1,9 +1,19 @@
+import type path from "node:path";
+
+import { CONFIG_FILE } from "../config.constants.ts";
+import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
+import type { WorkflowRead } from "../workflow.ts";
+import { WORKTREE_CMD, WORKTREES_DIR } from "./worktree.constants.ts";
+
 /** Patterns the git guards match shell words and the user's message against. */
 export const WT_BRANCH_PREFIX: RegExp = /^wt\//;
 export const FORCE_OR_LONG_FORCE: RegExp = /^-[A-Za-z]*f[A-Za-z]*$|^--force/;
 export const PLUS_REFSPEC: RegExp = /^\+./;
 export const BRANCH_MOVE_FLAG: RegExp = /^-[A-Za-z]*[dDmM][A-Za-z]*$|^--(?:delete|move)$/;
 export const BRANCH_FORCE_FLAG: RegExp = /^-[A-Za-z]*f[A-Za-z]*$|^--force$/;
+
+/** A push word that sends every branch, the default one with them. */
+export const PUSH_EVERY_REF: RegExp = /^--(?:all|mirror)$/;
 
 /** A word the user's message can name to grant one git command. */
 export type GitGrant =
@@ -43,3 +53,51 @@ export const GIT_ASKED: Readonly<Record<GitGrant, RegExp>> = {
   switch: /\bgit\s+switch\b/i,
   "update-ref": /\bgit\s+update-ref\b/i,
 };
+
+/** Why a write into the main checkout of `root` is refused, naming where to write instead. */
+export function mainCheckoutWriteText(root: string, p: typeof path): string {
+  return (
+    `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ` +
+    `${p.join(root, WORKTREES_DIR, "<name>")}; ` +
+    `only ${p.join(root, REPO)}${p.sep}{${IGNORED_DIRS.join(",")}}${p.sep} is writable here`
+  );
+}
+
+/** Why git `sub` moving the default `branch` is refused. */
+export function defaultBranchReason(branch: string, sub: string): string {
+  return (
+    `${branch} is the shared default branch: move it only with ${WORKTREE_CMD} finish <name>, ` +
+    `or when the user's message asks for git ${sub}`
+  );
+}
+
+/**
+ * Why git `sub` in the main checkout is refused: it risks uncommitted work when the workflow lets the main checkout
+ * take writes, and other sessions' work when it does not.
+ */
+export function destroyText(sub: string, { mainWrites }: { mainWrites: boolean }): string {
+  const what = mainWrites
+    ? "uncommitted work: run it"
+    : "other sessions' work: do it inside your worktree, or run it here";
+
+  return `git ${sub} in the main checkout can destroy ${what} only when the user's message asks for git ${sub}`;
+}
+
+/** Why a force push is refused. */
+export const FORCE_PUSH_REASON =
+  "a force push rewrites shared history: run it only when the user's message asks for a force push";
+
+/** `word` quoted so the push parser reads it back as one word: in double quotes when it holds a single quote. */
+export function shellQuoted(word: string): string {
+  return word.includes("'") ? `"${word}"` : `'${word}'`;
+}
+
+/** Why a push of the default branch is refused under `read`, a workflow that keeps it for pull requests. */
+export function defaultBranchPushReason(branch: string, read: WorkflowRead): string {
+  const why = read === "unreadable" ? `${CONFIG_FILE} failed to load` : `workflow is ${read}`;
+
+  return (
+    `${branch} takes changes only through pull requests (${why}): ` +
+    "push your wt/<name> branch and open a pull request"
+  );
+}

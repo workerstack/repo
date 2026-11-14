@@ -3,7 +3,7 @@ import { DEFAULT_NIGHTLY } from "../nightly-config.ts";
 import { DEFAULT_COVERAGE } from "../coverage-config.ts";
 
 /** The resolved-config keys a test rarely varies: the default commit limit, no lint.skip, no knip.ignore and the default coverage paths. */
-export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "coverage" | "nightly" | "tdd" | "ci"> = {
+export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "coverage" | "nightly" | "tdd" | "ci" | "workflow"> = {
   commit: DEFAULT_COMMIT,
   lint: { skip: [] },
   knip: { ignore: [] },
@@ -11,4 +11,5 @@ export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "cov
   nightly: DEFAULT_NIGHTLY,
   tdd: false,
   ci: { checks: {} },
+  workflow: "worktree",
 };

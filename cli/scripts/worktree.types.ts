@@ -1,5 +1,7 @@
 import type path from "node:path";
 
+import type { WorkflowRead } from "../workflow.ts";
+import type { Runner } from "./ci-wait-run.ts";
 import type { Roots } from "./workspace-root.ts";
 
 /** One git run: whether it exited 0, and its trimmed stdout and stderr. */
@@ -59,10 +61,14 @@ export type SharedAt = {
   asked: ReadonlySet<string>;
 } & ShellAt;
 
-/** What a guard may swap for tests: the path flavor and the has-a-commit check. */
+/** What a guard may swap for tests: the path flavor, the has-a-commit check, the workflow read and the push's git. */
 export type GuardEnv = {
   p?: typeof path;
   committed?: (root: string) => boolean;
+  /** The workflow the root's repo.config.ts names; read only on a path that would deny without it. */
+  workflow?: (root: string) => WorkflowRead;
+  /** The git the default-branch push check resolves pushed refs with. */
+  git?: Runner;
 };
 
 /** One shell word and whether it is free of `$`, backticks and a leading `~`. */
@@ -93,6 +99,18 @@ export type GitContext = {
   root: string;
   inMain: boolean;
   defaultBranch: () => string;
+  /** Whether the workflow lets the main checkout take writes and commits, read on first ask. */
+  mainWrites: () => boolean;
+};
+
+/**
+ * What `sharedGitReason` knows about the root before a command's place is known: the rule context, the has-a-commit
+ * check, the workflow read and the git the push check resolves refs with.
+ */
+export type SharedContext = Omit<GitContext, "inMain"> & {
+  committed: () => boolean;
+  read: () => WorkflowRead;
+  git: Runner;
 };
 
 /** The deny reason one git subcommand earns, else null. */

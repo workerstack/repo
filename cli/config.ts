@@ -21,6 +21,7 @@ import { reportRepeats } from "./report-repeats.ts";
 import { oldConfigHint } from "./sync/migrate-config-name.ts";
 import { generatedTask } from "./turbo-config.constants.ts";
 import { generatedNames, turboOf, turboSchema } from "./turbo-config.ts";
+import { DEFAULT_WORKFLOW, workflowSchema } from "./workflow.ts";
 
 export { DEFAULT_MAX_CHANGED_LINES };
 
@@ -131,6 +132,7 @@ function baseConfigSchema() {
       packs: uniqueList(packSchema, "must be a list of pack names").optional(),
       tdd: z.boolean({ error: "must be true or false" }).optional(),
       turbo: turboSchema.optional(),
+      workflow: workflowSchema().optional(),
     },
     { error: "the default export must be an object; use `export default defineConfig({ ... })`" },
   );
@@ -200,10 +202,7 @@ export function missingConfig(cwd: string): string {
 }
 
 function fail(messages: string[]): LoadResult {
-  return {
-    errors: messages.map((message) => `${CONFIG_FILE}: ${message}`),
-    ok: false,
-  };
+  return { errors: messages.map((message) => `${CONFIG_FILE}: ${message}`), ok: false };
 }
 
 /**
@@ -246,6 +245,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
     packs: d.packs ?? defaultPacks(),
     tdd: d.tdd ?? false,
     turbo: turboOf(d.turbo),
+    workflow: d.workflow ?? DEFAULT_WORKFLOW,
     ...ciOf(d),
     ...coverageOf(d),
     ...nightlyOf(d),

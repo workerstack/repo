@@ -3,6 +3,7 @@ import type { Host, LintBoundaries, LintSkip, Pack, SkillPack } from "./config.t
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
 import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
 import type { TurboTask } from "./turbo-config.ts";
+import type { Workflow } from "./workflow.ts";
 
 /** What repo.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
 export type RepoConfig = {
@@ -57,6 +58,13 @@ export type RepoConfig = {
    * do.
    */
   tdd?: boolean | undefined;
+  /**
+   * Where changes are made and how they reach main; omit it for `worktree`. `worktree`: each change is made in a
+   * worktree that `bun repo worktree finish` merges into main locally, then main is pushed. `pull-request`: each
+   * change is made in a worktree whose branch is merged on the remote through a pull request; main is never pushed.
+   * `main`: changes are committed on the default branch in the main checkout and pushed.
+   */
+  workflow?: Workflow | undefined;
   /** Who a public package names as its author, LICENSE holder and code owner. */
   owner?:
     | {
