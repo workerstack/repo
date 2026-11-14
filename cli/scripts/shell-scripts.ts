@@ -12,6 +12,7 @@ import {
   EXEC_OPTION,
   PRINTERS,
   REBASE_SUB,
+  RUNNER_SPECS,
   RUNNERS,
   SHELL_VALUE_OPTS,
   SHELLS,
@@ -96,7 +97,8 @@ function shellOptions(words: readonly ShellWord[], at: number): ShellOptions {
 
 /**
  * A shell at `at`: its `-c` script, the stdin it reads with `-s` or no operand, or the script file it runs when it is
- * a shell by name; an expanded program word with an operand runs no script the gate reads.
+ * a shell by name that runs, at program position or behind a runner (`echo sh x` runs none); an expanded program word
+ * with an operand runs no script the gate reads.
  */
 function shellScripts(cmd: Cmd, at: number): Script[] {
   const { operand, hasCommand, hasStdinFlag } = shellOptions(cmd.words, at);
@@ -106,7 +108,9 @@ function shellScripts(cmd: Cmd, at: number): Script[] {
 
   if (word === undefined || hasStdinFlag) return stdinScript(cmd, at);
 
-  return SHELLS.has(programName(cmd.words[at])) ? [{ inherits: false, kind: "file", word }] : [];
+  const isRun = at === cmd.prog || RUNNER_SPECS.has(programName(cmd.words[cmd.prog]));
+
+  return isRun && SHELLS.has(programName(cmd.words[at])) ? [{ inherits: false, kind: "file", word }] : [];
 }
 
 /** `source [--] file` or `. file` at program position: the file, read in the caller's state. */

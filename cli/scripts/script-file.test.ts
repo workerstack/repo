@@ -32,6 +32,11 @@ function visits(src: string, cwd: string, { pathVar = "", p = path } = {}): stri
   return out;
 }
 
+/** Only the opaque visits of `src` run from `cwd`. */
+function opaques(src: string, cwd: string): string[] {
+  return visits(src, cwd).filter((v) => v.startsWith("opaque"));
+}
+
 describe("script files a shell runs", () => {
   it("walks a file in the run dir in a copy, a name with a slash from the run dir only", () => {
     const r = tree({ "sub/s.sh": "cd ..; git push\n", "x.sh": "cd sub\ngit push\n" });
@@ -43,6 +48,13 @@ describe("script files a shell runs", () => {
       "cd .. @.",
       "git push @..",
     ]);
+  });
+
+  it("reads the file of a shell behind a runner, and none for a shell name another program takes as a word", () => {
+    const r = tree({ "x.sh": "git push\n" });
+
+    expect(visits("timeout 5 bash x.sh", r)).toStrictEqual(["timeout 5 bash x.sh @.", "git push @."]);
+    expect(visits("echo sh x.sh; grep -n bash x.sh", r)).toStrictEqual(["echo sh x.sh @.", "grep -n bash x.sh @."]);
   });
 
   it("looks on PATH when the run dir has no such file, and not for a name with a slash", () => {
@@ -67,6 +79,12 @@ describe("script files a shell cannot read", () => {
     expect(visits(`cd "$D"; bash '${abs}'`, r)).toContain("git push @?");
     expect(visits(`cd "$D"; bash x.sh`, r)).toContain("opaque(x.sh)");
     expect(visits(`bash '${path.join(r, "no.sh")}'`, r)).toContain(`opaque('${path.join(r, "no.sh")}')`);
+    expect(visits(`bash "$S"; bash -c 'git log'`, r)).toStrictEqual([
+      'bash "$S" @.',
+      'opaque("$S")',
+      "bash -c 'git log' @.",
+      "git log @.",
+    ]);
   });
 
   it("hands on a dir, a file over 256 KiB, and a file it fails to read", () => {
@@ -96,6 +114,12 @@ describe("script files source reads", () => {
     expect(visits("source a.sh", r, { pathVar })).toStrictEqual(["source a.sh @.", "cd sub @."]);
   });
 
+  it("looks on a PATH the line sets", () => {
+    const r = tree({ "bin/b.sh": "git log\n" });
+
+    expect(visits(`PATH='${path.join(r, "bin")}'; source b.sh`, r)).toContain("git log @.");
+  });
+
   it("hands on a source when PATH is unknown, which a shell does not need for a file in the run dir", () => {
     const r = tree({ "b.sh": "git status\n" });
 
@@ -107,6 +131,41 @@ describe("script files source reads", () => {
     const r = tree({ "loop.sh": "source loop.sh\ngit push\n" });
 
     expect(visits("source loop.sh", r)).toStrictEqual(["source loop.sh @.", "source loop.sh @.", "git push @."]);
+  });
+});
+
+describe("script files the line writes", () => {
+  it("walks the text a cat heredoc or here-string wrote, in place of the file on disk", () => {
+    const r = tree({ "x.sh": "true\n" });
+    const abs = path.join(r, "y.sh");
+
+    expect(visits("cat > x.sh <<'EOF'\ngit push\nEOF\nbash x.sh", r)).toStrictEqual([
+      "cat @.",
+      "bash x.sh @.",
+      "git push @.",
+    ]);
+    expect(visits(`cat >| '${abs}' <<< 'git log'; cd "$D"; source '${abs}'`, r)).toContain("git log @?");
+  });
+
+  it("hands on a file another write left, a file one branch wrote, and a write the cat does not make", () => {
+    const r = tree({ "x.sh": "true\n" });
+
+    expect(opaques("echo hi >> x.sh; bash x.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques("printf 'git push' > x.sh; bash x.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques("cat > x.sh > y.sh <<< 'git log'; bash x.sh; bash y.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques("cat a > x.sh <<< 'git log'; bash x.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques("if true; then cat > x.sh <<< 'git log'; fi; bash x.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques("if true; then :; else cat > x.sh <<< 'git log'; fi; bash x.sh", r)).toStrictEqual(["opaque(x.sh)"]);
+    expect(opaques(`cat > x.sh <<< '${"#".repeat(256 * 1024)}'; bash x.sh`, r)).toStrictEqual(["opaque(x.sh)"]);
+  });
+
+  it("keeps a file both branches wrote the same, and skips a write it cannot place", () => {
+    const r = tree({ "x.sh": "true\n" });
+    const both = "if true; then cat > x.sh <<< 'git log'; else cat > x.sh <<< 'git log'; fi; bash x.sh";
+
+    expect(visits(both, r)).toContain("git log @.");
+    expect(visits("cat > \"$F\" <<< 'git log'; bash x.sh", r)).toContain("true @.");
+    expect(visits(`cd "$D"; cat > x.sh <<< 'git log'; cd '${r}'; bash x.sh`, r)).toContain("true @.");
   });
 });
 

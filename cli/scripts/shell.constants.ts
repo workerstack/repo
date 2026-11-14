@@ -18,6 +18,15 @@ export const SETTERS: ReadonlySet<string> = /* @__PURE__ */ new Set(["export", "
 /** Redirects whose word is no file: a heredoc's delimiter and a here-string's text. */
 export const DATA_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["<<", "<<-", "<<<"]);
 
+/** The redirect operators that write their target file. */
+export const WRITE_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set([">", ">|", ">>", "&>", "&>>", "<>"]);
+
+/** The write operators that replace the file with what the command prints. */
+export const REPLACE_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set([">", ">|"]);
+
+/** The program that copies its stdin to stdout when it has no operand. */
+export const CAT = "cat";
+
 /**
  * A word bash reads as an assignment before the program: `NAME=`, `NAME+=`, or with a subscript (`NAME[k]=`), which
  * bash refuses as a prefix but still runs the program after. Group 1 is the name, 2 the subscript, 3 the `+`.

@@ -6,14 +6,14 @@ import type path from "node:path";
 
 import { cdEffect } from "./cd-effect.ts";
 import { runDir } from "./command-at.ts";
-import { type ReadScript, readScripts } from "./script-file.ts";
+import { joinWritten, type ReadScript, readScripts, type Written, writtenAfter } from "./script-file.ts";
 import type { Dir, ShellNode, ShellWord, Simple, StartEnv, Stdin, Vars, Visited } from "./shell-ast.types.ts";
-import { expandCommand, readWord } from "./shell-fields.ts";
+import { expandCommand } from "./shell-fields.ts";
 import { scriptText } from "./shell-lex-word.ts";
 import { lex } from "./shell-lex.ts";
 import { shellParse } from "./shell-parse.ts";
 import { pipedStdin, programAt, redirectStdin, scriptsOf } from "./shell-scripts.ts";
-import { joinVars, sameVars, seedVars, varsAfter, withDir, withVar } from "./shell-vars.ts";
+import { forValues, joinVars, sameVars, seedVars, varsAfter, withDir, withVar } from "./shell-vars.ts";
 
 /**
  * Where a walk stands: the dir, the variables, the functions defined so far, the calls and script files being walked
@@ -26,10 +26,11 @@ type State = {
   calls: readonly string[];
   files: readonly string[];
   stdin: Stdin;
+  written: Written;
 };
 
 /** What stays fixed through a walk: the path module and the visitor. */
-type Walker = { p: typeof path; visit: (v: Visited) => void };
+type Walker = { p: typeof path; path: string; visit: (v: Visited) => void };
 
 /** Where a walk starts: the dir, the variables the shell starts with, and the path module that resolves dirs. */
 export type FlowStart = { cwd: string; env: StartEnv; p: typeof path };
@@ -44,9 +45,6 @@ const LOOP_PASSES = 2;
 
 const BRANCH_CAUSE = "a folder set in a branch";
 
-/** The most values a `for` list is walked with, one pass each. */
-const MAX_FOR_VALUES = 8;
-
 /** Why the gate cannot read a command whose braces make more words than it reads. */
 const BRACES_CAUSE = "braces that make too many words";
 
@@ -59,13 +57,15 @@ function sameDir(a: Dir, b: Dir): boolean {
 }
 
 /**
- * The state after one of two branches ran: the dir and the variables both agree on, else unknown, and the functions
- * of both.
+ * The state after one of two branches ran: the dir, the variables and the written files both agree on, else unknown,
+ * and the functions of both.
  */
 function join(a: State, b: State): State {
   const dir: Dir = sameDir(a.dir, b.dir) ? a.dir : { cause: BRANCH_CAUSE, known: false };
 
-  return { ...a, dir, funcs: new Map([...a.funcs, ...b.funcs]), vars: joinVars(a.vars, b.vars) };
+  const funcs = new Map([...a.funcs, ...b.funcs]);
+
+  return { ...a, dir, funcs, vars: joinVars(a.vars, b.vars), written: joinWritten(a.written, b.written) };
 }
 
 /** `st` with nothing on stdin, as a substitution, a script or a function body starts. */
@@ -144,7 +144,8 @@ function walkSimple(w: Walker, c: Simple, st: State): State {
   const called = callOf(w, ran, st);
 
   if (called !== null) return called;
-  const scripts = readScripts(scriptsOf(ran, st.stdin), { dir: at, vars: st.vars }, w.p);
+  const scope = { dir: at, path: w.path, vars: st.vars, written: st.written };
+  const scripts = readScripts(scriptsOf(ran, st.stdin), scope, w.p);
 
   let now = st;
 
@@ -153,7 +154,9 @@ function walkSimple(w: Walker, c: Simple, st: State): State {
   const dir = cdEffect(ran.words, now, w.p);
   const moved = dir === null ? now : { ...now, dir, vars: withDir(now.vars, dir) };
 
-  return { ...moved, vars: varsAfter(ran, moved.vars) };
+  const written = writtenAfter(ran, { dir: st.dir, written: now.written }, w.p);
+
+  return { ...moved, vars: varsAfter(ran, moved.vars), written };
 }
 
 /**
@@ -250,17 +253,6 @@ function walkApart(w: Walker, node: Of<"async" | "subshell">, st: State): State 
 }
 
 /**
- * The values a `for` gives its name from the fields of its list; null when one is unknown, `select` picks, or there
- * are too many.
- */
-function forValues(node: Of<"for">, list: Simple | undefined): string[] | null {
-  if (node.select === true || list === undefined || list.words.length > MAX_FOR_VALUES) return null;
-  const read = list.words.map(readWord);
-
-  return read.every((r) => r.literal) ? read.map((r) => r.text) : null;
-}
-
-/**
  * A `for` or `select`: its list, then the body once per known value with the name set to it, in turn, any pass the
  * last; when the values are not known, a loop with the name unknown.
  */
@@ -334,5 +326,6 @@ function parse(src: string): ShellNode {
 export function shellFlow(src: string, start: FlowStart, visit: (v: Visited) => void): void {
   const dir: Dir = { known: true, path: start.cwd };
   const vars = seedVars(start.env, start.cwd);
-  walkNode({ p: start.p, visit }, parse(src), { calls: [], dir, files: [], funcs: new Map(), stdin: NO_STDIN, vars });
+  const st: State = { calls: [], dir, files: [], funcs: new Map(), stdin: NO_STDIN, vars, written: new Map() };
+  walkNode({ p: start.p, path: start.env.path, visit }, parse(src), st);
 }

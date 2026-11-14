@@ -35,11 +35,10 @@ function after(src: string, name: string, vars: Vars = START): string {
 }
 
 describe("seedVars and processEnv", () => {
-  it("starts with the home, the cd path, the search path, the dir and bash's IFS", () => {
+  it("starts with the home, the cd path, the dir and bash's IFS, and leaves PATH unknown", () => {
     expect([...START]).toStrictEqual([
       ["HOME", v("/h")],
       ["CDPATH", v("")],
-      ["PATH", v("/bin")],
       ["PWD", v("/r")],
       ["IFS", v(" \t\n")],
     ]);
