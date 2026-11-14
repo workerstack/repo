@@ -143,7 +143,7 @@ describe("fast plan section and size denials", () => {
     const room = 40 - fastPlanLineCount(save(SENT).content ?? "");
     expect(save(`${HEAD}${filler(room)}`).ok).toBe(true);
     const over = save(`${HEAD}${filler(room + 1)}`);
-    expect(over.errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan)");
+    expect(over.errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan-deep)");
   });
 
   it("denies a ticked box on a new plan", () => {

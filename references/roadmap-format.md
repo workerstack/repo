@@ -36,13 +36,13 @@ mode: away             # optional: ask | auto | away
 
 `mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`); any session stamp beats it. A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 
-`/implement-roadmap` refuses `draft`.
+`/implement-roadmap-deep` refuses `draft`.
 
 `reviews` counts the `/review-roadmap` rounds whose findings the writer settled. It starts at `0`, never goes down, and once present cannot be removed. A body-only save sends it as a bare `reviews: {n}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved count. Moving into `locked` needs `reviews` ≥ 1; a missing key counts as 0. A roadmap already past `draft` without the key stays editable.
 
 ## Body (this order only)
 
-A roadmap is pointers: what each slice ships, in order. Decisions, Usage, context and the why of each slice go into that slice's plan, which `/implement-roadmap` writes.
+A roadmap is pointers: what each slice ships, in order. Decisions, Usage, context and the why of each slice go into that slice's plan, which `/implement-roadmap-deep` writes.
 
 ```
 # auth-program
@@ -69,13 +69,13 @@ DONE   both slices done; repo init lists auth-types
 - **Card:** the 5 lines after `# {slug}` and one blank line, as in a plan (`plan-format.md`): WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
 - **Headings:** `## Order`, `## Verify`, `## Previous mistakes`, nothing else. Lines inside a code fence are never headings. A new roadmap with any other `##` is denied with `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## {heading} into the slice plans`.
 - **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`. The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
-- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
+- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap-deep` sets it to the absolute plan path `/write-plan-deep` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
 - `[x]` only after that child plan's Verify is done.
 - **Verify:** 1–5 runnable program gates, same `N.M [ ]` grammar as plans.
 - **Previous mistakes:** `(none)`, or one entry per line. Append-only.
 - **Cap:** at most 60 lines above `## Previous mistakes`, frontmatter included, `Location:` lines not counted, so filling them in mid-run never trips it. A fresh save past 60 is denied with `{n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`; an update only when it grows past both 60 and the saved file.
 
-A roadmap has at least two slices. One slice is `/write-plan`.
+A roadmap has at least two slices. One slice is `/write-plan-deep`.
 
 ### Roadmaps saved before pointers
 
@@ -93,7 +93,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 - `feedback`, `review`, `premise` and `decision` mean what they mean in a plan. `verify` is a failed program Verify gate.
 - `slice` is roadmap-only: what child plan N found that changed the Order or a later slice (or a Decision on an old-shape roadmap). The same save makes that change.
 - Optional ` (lesson: {slug})` at the end when the entry is also a lesson.
-- `/implement-roadmap` copies each entry that touches a slice into that slice's plan Watch-outs, and promotes entries that outlive the program to lessons before `done`.
+- `/implement-roadmap-deep` copies each entry that touches a slice into that slice's plan Watch-outs, and promotes entries that outlive the program to lessons before `done`.
 
 ## Validation checklist
 

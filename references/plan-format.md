@@ -72,7 +72,7 @@ mode: away             # optional: ask | auto | away
 
 A save with no `strategy` or an unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 
@@ -114,7 +114,7 @@ DONE   bun run test; --json | JSON.parse ok
 
 ## Size
 
-At most 100 lines above `## Previous mistakes`, frontmatter included. More than that is two or more slices: write a roadmap with `/write-roadmap`. A fresh save over the cap is denied with `131 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`. An update over 100 lines is denied only when it is longer than the saved file, so a legacy plan can still flip boxes. `## Previous mistakes` never counts: it grows during the run.
+At most 100 lines above `## Previous mistakes`, frontmatter included. More than that is two or more slices: write a roadmap with `/write-roadmap-deep`. A fresh save over the cap is denied with `131 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap-deep)`. An update over 100 lines is denied only when it is longer than the saved file, so a legacy plan can still flip boxes. `## Previous mistakes` never counts: it grows during the run.
 
 ## Previous mistakes
 
@@ -173,7 +173,7 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 
 Tests live in Steps (not a new heading). New behavior or a bug: a failing test leaf before the impl leaf. Other behavior change: a test leaf immediately after the impl leaf. Docs, rename-only, config-only, generated: no test leaf. Verify is the end gate (project cmd or named subset), not a substitute for those leaves. Do not re-run the whole suite after every leaf unless it is cheap.
 
-Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
+Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan-deep` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
 
 ## Validation checklist
 

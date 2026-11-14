@@ -122,3 +122,38 @@ it("treats a skill whose file list differs as edited", () => {
   const m = mini({ ".agents/skills/ask/SKILL.md": "ask\n", ".agents/skills/ask/extra.md": "extra\n" });
   expect(planOf(m)[0]).toMatchObject({ from: ".agents/skills/ask", kind: "move" });
 });
+
+const OLD_COPY = { ".agents/skills/write-plan/SKILL.md": "---\nname: write-plan\n---\nedited; then /implement-plan\n" };
+const OLD_FROM = ".agents/skills/write-plan";
+const NEW_TO = ".repo/skills/write-plan-deep";
+
+describe("planSkills of an old stock skill name", () => {
+  it("moves an edited copy to the new name as an override, its SKILL.md renamed", () => {
+    const m = mini(OLD_COPY, { stock: { "agents/skills/write-plan-deep/SKILL.md": "stock\n" } });
+    expect(planOf(m)[0]).toStrictEqual({
+      from: OLD_FROM,
+      kind: "move",
+      mark: {
+        content: "---\noverrides: write-plan-deep\nname: write-plan-deep\n---\nedited; then /implement-plan-deep\n",
+        note: `marked ${NEW_TO}/SKILL.md with overrides: write-plan-deep (it replaces the stock skill)`,
+        path: `${OLD_FROM}/SKILL.md`,
+      },
+      note: `moved your edited ${OLD_FROM} to ${NEW_TO} (it now replaces the stock skill)`,
+      to: NEW_TO,
+    });
+  });
+
+  it("moves a copy the stock lacks to the new name with its SKILL.md renamed and no override", () => {
+    expect(planOf(mini(OLD_COPY))[0]).toStrictEqual({
+      from: OLD_FROM,
+      kind: "move",
+      mark: {
+        content: "---\nname: write-plan-deep\n---\nedited; then /implement-plan-deep\n",
+        note: `renamed the old skill names in ${NEW_TO}/SKILL.md`,
+        path: `${OLD_FROM}/SKILL.md`,
+      },
+      note: `moved ${OLD_FROM} to ${NEW_TO}`,
+      to: NEW_TO,
+    });
+  });
+});

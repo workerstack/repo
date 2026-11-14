@@ -4,13 +4,13 @@ description: 'Write a short fast plan under .repo/plans-fast/. Then /implement-p
 ---
 # write-plan-fast
 
-Only when the person asks for a fast plan (`/write-plan-fast` or in words). Never pick it yourself: the default is `/write-plan`.
+Only when the person asks for a fast plan (`/write-plan-fast` or in words). Never pick it yourself: the default is `/write-plan-deep`.
 
 Persist under `.repo/plans-fast/` via Write (hook runs `cli/scripts/persist-fast-plan.ts`). Format: `node_modules/@workerstack/repo/references/fast-plan-format.md`.
 
 Empty task → ask for a task and stop.
 
-Body's first line is `FAST_PLAN_NAME: <3-6 word name>`, then `commit: type(scope): subject`, `# {slug}`, and `## Goal`, `## Steps`, `## Verify`. Nothing else: no card, Usage, Context, review, principle leaf, lesson or strategy. Steps and Verify are flat `N [ ] text` boxes. The whole file, frontmatter included, is at most 40 lines; work over that is `/write-plan`.
+Body's first line is `FAST_PLAN_NAME: <3-6 word name>`, then `commit: type(scope): subject`, `# {slug}`, and `## Goal`, `## Steps`, `## Verify`. Nothing else: no card, Usage, Context, review, principle leaf, lesson or strategy. Steps and Verify are flat `N [ ] text` boxes. The whole file, frontmatter included, is at most 40 lines; work over that is `/write-plan-deep`.
 
 Research until every step is defensible. Ask only what the person alone can answer.
 

@@ -44,7 +44,7 @@ const CASES: readonly Case[] = [
     item: planItem(1),
     key: "plan 1",
     save: (s) => s.reviewed("plans", VALID_PLAN),
-    step: (f) => `run /implement-plan 1 (${f})`,
+    step: (f) => `run /implement-plan-deep 1 (${f})`,
     strategy: "free",
     validate: validatePlan,
   },
@@ -52,7 +52,7 @@ const CASES: readonly Case[] = [
     item: roadmapItem(1),
     key: "roadmap 1",
     save: (s) => s.reviewed("roadmaps", DRAFT_ROADMAP),
-    step: (f) => `set status locked, then run /implement-roadmap 1 (${f})`,
+    step: (f) => `set status locked, then run /implement-roadmap-deep 1 (${f})`,
     strategy: "free",
     validate: validateRoadmap,
   },
@@ -99,7 +99,7 @@ it("runs a plan and a fast plan saved in one turn in one block, in save order", 
     "away: ran the approval block's header choice and logged it in each file, " +
       "so re-read each file before you edit it; " +
       "i approves plan 1, then fast-plan 1: " +
-      `plan 1: run /implement-plan 1 (${plan}); fast-plan 1: run /implement-plan-fast 1 (${fast})`,
+      `plan 1: run /implement-plan-deep 1 (${plan}); fast-plan 1: run /implement-plan-fast 1 (${fast})`,
   );
   expect(s.stop("Saved.")).toBeNull();
 });
@@ -107,10 +107,10 @@ it("runs a plan and a fast plan saved in one turn in one block, in save order", 
 it("runs a plan again once it is revised after its run", () => {
   const { s } = modeSession(kit, "k3", "/away");
   const plan = s.reviewed("plans", VALID_PLAN);
-  expect(s.stop("Saved.")).toStrictEqual(runBlock("plan 1", `run /implement-plan 1 (${plan})`));
+  expect(s.stop("Saved.")).toStrictEqual(runBlock("plan 1", `run /implement-plan-deep 1 (${plan})`));
   s.say("revise the goal");
   s.save(plan, read(plan).replace("reviews: 1", "reviews: 2"));
-  expect(s.stop("Revised.")).toStrictEqual(runBlock("plan 1", `run /implement-plan 1 (${plan})`));
+  expect(s.stop("Revised.")).toStrictEqual(runBlock("plan 1", `run /implement-plan-deep 1 (${plan})`));
   expect(lines(read(plan)).filter((l) => l === decisionLine("plan 1", "free"))).toHaveLength(2);
 });
 
@@ -121,7 +121,7 @@ it("a plan saved in an earlier turn runs only when the reply's block names it", 
   s.say("go on");
   expect(s.stop("Nothing new.")).toBeNull();
   expect(s.stop(`Saved.\n\n${closing(planItem(1))}`)).toStrictEqual(
-    runBlock("plan 1", `run /implement-plan 1 (${plan})`),
+    runBlock("plan 1", `run /implement-plan-deep 1 (${plan})`),
   );
 });
 
@@ -130,5 +130,5 @@ it("a bad away run stamp reads as empty", () => {
   const plan = s.reviewed("plans", VALID_PLAN);
   fs.mkdirSync(path.dirname(awayRunStamp(ws, "k5")), { recursive: true });
   fs.writeFileSync(awayRunStamp(ws, "k5"), "not json");
-  expect(s.stop("Saved.")).toStrictEqual(runBlock("plan 1", `run /implement-plan 1 (${plan})`));
+  expect(s.stop("Saved.")).toStrictEqual(runBlock("plan 1", `run /implement-plan-deep 1 (${plan})`));
 });

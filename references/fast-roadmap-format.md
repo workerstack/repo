@@ -26,7 +26,7 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 
 - `a fast roadmap has no strategy`
 - `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
-- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)`
+- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)`
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`
 - `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`

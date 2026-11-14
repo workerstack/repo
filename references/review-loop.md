@@ -35,7 +35,7 @@ After 3 failed rounds, a missing report or a status other than `done`, spawn `im
 
 ## Commit
 
-One commit at the end, in the worktree, as `implement-plan` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
+One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
 
 ## Dumps
 

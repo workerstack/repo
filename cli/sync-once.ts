@@ -10,6 +10,7 @@ import { ignoreBlockLines, strayIgnoreFiles, untrackedEntries } from "./sync/git
 import { normalizeRel, readManifest } from "./sync/manifest.ts";
 import { moveLines, moveOldConfig } from "./sync/migrate-config-name.ts";
 import { planRuleUpgrade } from "./sync/migrate-rules.ts";
+import { planSkillRename } from "./sync/migrate-skill-names.ts";
 import { planStrategyRename } from "./sync/migrate-strategy-name.ts";
 import { generatedFiles, planAdoption, planMigration } from "./sync/migrate.ts";
 import { planHandover } from "./sync/migration-handover.ts";
@@ -208,7 +209,13 @@ async function migrate(run: Run, blocks: StepRun): Promise<Result<boolean, numbe
   const steps = planMigration(run.root, { generated, ignored, stock: stockRoot(run.root) });
   const migration = await stepBlock({ noun: "migration", reload: true, steps }, blocks);
 
-  return "exit" in migration ? { error: migration.exit, ok: false } : { ok: true, value: migration.applied };
+  if ("exit" in migration) return { error: migration.exit, ok: false };
+
+  if (!migration.applied) return { ok: true, value: false };
+  // The migration brought the install's own text into .repo, with the old skill names still in it.
+  const skills = await stepBlock({ noun: "skill", steps: planSkillRename(run.root) }, blocks);
+
+  return "exit" in skills ? { error: skills.exit, ok: false } : { ok: true, value: true };
 }
 
 /**
@@ -225,17 +232,31 @@ async function adopt(run: Run, blocks: StepRun): Promise<number | null> {
 }
 
 /**
- * The relocation of `.tmp/repo`, the rule upgrade, the handover, the first plan, the migration and the adoption; the
- * exit code when one stops.
+ * The relocation of `.tmp/repo` and the strategy and skill renames, each planned after the one before applied, before
+ * anything is planned from them; the skill rename comes before the first plan, which refuses a `.repo/skills` skill
+ * whose name or `overrides:` the stock no longer has. The exit code when one stops.
  */
-async function prepare(run: Run): Promise<number | null> {
-  const blocks = blocksOf(run);
+async function renameOld(run: Run, blocks: StepRun): Promise<number | null> {
   const relocation = await stepBlock({ noun: "relocation", steps: planTmpRepo(run.root) }, blocks);
 
   if ("exit" in relocation) return relocation.exit;
-  const renamed = await stepBlock({ noun: "strategy", steps: planStrategyRename(run.root) }, blocks);
+  const strategies = await stepBlock({ noun: "strategy", steps: planStrategyRename(run.root) }, blocks);
 
-  if ("exit" in renamed) return renamed.exit;
+  if ("exit" in strategies) return strategies.exit;
+  const skills = await stepBlock({ noun: "skill", steps: planSkillRename(run.root) }, blocks);
+
+  return "exit" in skills ? skills.exit : null;
+}
+
+/**
+ * The relocation of `.tmp/repo`, the strategy and skill renames, the rule upgrade, the handover, the first plan, the
+ * migration and the adoption; the exit code when one stops.
+ */
+async function prepare(run: Run): Promise<number | null> {
+  const blocks = blocksOf(run);
+  const renamed = await renameOld(run, blocks);
+
+  if (renamed !== null) return renamed;
   const upgraded = await upgradeRules(run);
 
   if (upgraded !== null) return upgraded;

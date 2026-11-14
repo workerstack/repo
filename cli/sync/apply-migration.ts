@@ -7,6 +7,7 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import { loadConfig, SKILL_PACKS } from "../config.ts";
 import { readJson } from "../json.ts";
 import { isDir, moveTree, removeAll, untrack, writeAtomic } from "./migrate-fs.ts";
+import { renameSkills } from "./migrate-skill-names.ts";
 import { kindOf, renameStrategies } from "./migrate-strategy-name.ts";
 import { COPIED_DIR, PREFIX } from "./migrate.constants.ts";
 import { conflictLines, type MigrateDeps, type MigrationStep } from "./migrate.ts";
@@ -81,11 +82,12 @@ const ACTIONS: Actions = {
     removeAll(run.root, step.paths);
     run.removed = true;
   },
-  "rename-strategy"(run, step) {
+  "rename-text"(run, step) {
     for (const rel of step.paths) {
       const file = path.join(run.root, rel);
+      const text = fs.readFileSync(file, "utf8");
 
-      writeAtomic(file, renameStrategies(fs.readFileSync(file, "utf8"), kindOf(rel)));
+      writeAtomic(file, step.rename === "skills" ? renameSkills(text) : renameStrategies(text, kindOf(rel)));
     }
 
     run.lines.push(`${PREFIX}${step.note}`);

@@ -102,7 +102,7 @@ describe("fast roadmap Previous mistakes saves", () => {
     const r = saveRoadmap(`${atCap()}${LOG}`, tmpWs());
     expect(r.ok, r.error).toBe(true);
     expect(saveRoadmap(`${atCap(1)}${LOG}`, tmpWs()).errors).toContain(
-      "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)",
+      "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)",
     );
   });
 

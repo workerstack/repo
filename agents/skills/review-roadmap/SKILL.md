@@ -6,11 +6,11 @@ description: Review a roadmap in a fresh agent before lock. Use for /review-road
 
 You review one roadmap under `.repo/roadmaps/` that someone else wrote. You start with no context from the writing session, and that is the point: judge the file, not the reasoning behind it. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`. Lessons: `node_modules/@workerstack/repo/references/lessons.md`.
 
-Slash `/review-roadmap {n|path}` only. Not a session flag. `/write-roadmap` runs it in a fresh agent after every write or revision. Run it yourself on any roadmap.
+Slash `/review-roadmap {n|path}` only. Not a session flag. `/write-roadmap-deep` runs it in a fresh agent after every write or revision. Run it yourself on any roadmap.
 
 Read-only. Write nothing: not the roadmap, not a plan, not a lesson. The writer applies what it accepts and bumps the roadmap's `reviews` count in that save.
 
-Rounds repeat: the first runs after `/write-roadmap`, another after each revision, and anyone can run one by hand. The count proves a round ran and was settled, not that it was good. A roadmap cannot move to `locked` until `reviews` is at least 1.
+Rounds repeat: the first runs after `/write-roadmap-deep`, another after each revision, and anyone can run one by hand. The count proves a round ran and was settled, not that it was good. A roadmap cannot move to `locked` until `reviews` is at least 1.
 
 Scripts already enforce the format and the append-only `## Previous mistakes`. Do not re-check those. Check what a script cannot:
 

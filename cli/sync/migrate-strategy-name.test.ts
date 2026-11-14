@@ -104,7 +104,7 @@ describe("planStrategyRename", () => {
 
     expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({
-      kind: "rename-strategy",
+      kind: "rename-text",
       note:
         "renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in 4 files " +
         "under .repo",
@@ -133,7 +133,7 @@ describe("planStrategyRename with nothing to change", () => {
   });
 });
 
-describe("the rename-strategy step", () => {
+describe("the rename-text strategy step", () => {
   it("applies the step and plans nothing the second time", async () => {
     const root = tempDir();
     put(root, ".repo/plans/a.md", "---\nstrategy: review-deep\n---\nstrategy: review-deep\n");

@@ -74,7 +74,7 @@ it.each(CASINGS)(
     );
     expect(text).toContain(plan);
     expect(text).toContain("h1");
-    expect(text).toMatch(/^1\.1 \[ \] \/implement-plan 1$/m);
+    expect(text).toMatch(/^1\.1 \[ \] \/implement-plan-deep 1$/m);
     expect(strategyOf(plan)).toBe("spawn-fast");
   },
 );
@@ -97,7 +97,10 @@ it.each(CASINGS)(
     expect(text).toContain(plan);
     expect(text).toContain(roadmap);
     const leaves = text.split("\n").filter((l) => /^\d+\.\d+ \[ \] /.test(l));
-    expect(leaves).toStrictEqual(["1.1 [ ] /implement-plan 1", "1.2 [ ] set status locked, then /implement-roadmap 1"]);
+    expect(leaves).toStrictEqual([
+      "1.1 [ ] /implement-plan-deep 1",
+      "1.2 [ ] set status locked, then /implement-roadmap-deep 1",
+    ]);
     expect([strategyOf(plan), strategyOf(roadmap)]).toStrictEqual(["free", "free"]);
   },
 );

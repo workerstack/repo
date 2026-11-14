@@ -87,7 +87,7 @@ export const cases: RoutingCase[] = [
   { expect: "do", id: "do-no-plan", input: "fix all of it right now, no plan", source: "transcript 2026-11-08" },
   {
     control: true,
-    expect: "write-plan",
+    expect: "write-plan-deep",
     id: "do-no-plan-control",
     input: "write a plan to fix all of it",
     source: "control of do-no-plan",
@@ -101,7 +101,7 @@ export const cases: RoutingCase[] = [
     source: "control of do-remove-worktree",
   },
   {
-    expect: "write-plan",
+    expect: "write-plan-deep",
     id: "plan-open-issues",
     input: "write a plan for these **3 open issues**",
     source: "transcript 2026-11-12",

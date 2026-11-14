@@ -13,7 +13,7 @@ Cheap outline. Not a file dump.
 - `node_modules/@workerstack/repo/references/hooks.md` — hook policy
 - `node_modules/@workerstack/repo/references/map.md` — this file
 - `node_modules/@workerstack/repo/references/output.md` — default voice
-- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan` → approval → `/implement-plan`; two or more slices → `/write-roadmap`
+- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan-deep` → approval → `/implement-plan-deep`; two or more slices → `/write-roadmap-deep`
 - `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the generated `repo:refs` (one line per reference doc), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
 
 ## Agent SSOT

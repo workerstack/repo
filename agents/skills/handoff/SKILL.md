@@ -71,7 +71,7 @@ Do not dump the handoff body.
 
 ## Picking one up
 
-`/pickup {serial}` owns pickup. Load the file, set `status: resumed`, work `Next` leaves in order, flip only the box. All `[x]` → `status: done`. Do not re-plan; a stale leaf → `/write-plan` a follow-up.
+`/pickup {serial}` owns pickup. Load the file, set `status: resumed`, work `Next` leaves in order, flip only the box. All `[x]` → `status: done`. Do not re-plan; a stale leaf → `/write-plan-deep` a follow-up.
 
 ## Rules
 

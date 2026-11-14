@@ -15,7 +15,7 @@ description: 'Do a small task now: no plan, no review. Worktree, nearest test an
 A change that needs a decision stops before the first edit. Reply exactly:
 
 ```
-this needs a decision; write a plan with /write-plan
+this needs a decision; write a plan with /write-plan-deep
 ```
 
 Empty task → ask for a task and stop.

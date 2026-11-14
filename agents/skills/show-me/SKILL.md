@@ -16,6 +16,6 @@ Example Usage line:
 Before: `notes export --json` → error: unknown flag   After: prints [{"id":1,…}]   Files: src/cli.ts, src/export.ts
 ```
 
-When a reviewed plan or roadmap waits for approval, end with the exact approval block `/write-plan` defines. Otherwise add nothing extra.
+When a reviewed plan or roadmap waits for approval, end with the exact approval block `/write-plan-deep` defines. Otherwise add nothing extra.
 
 Slash `/show-me` only.

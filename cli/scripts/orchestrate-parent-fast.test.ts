@@ -131,7 +131,7 @@ it("a code on a mixed queue writes the strategy only to the full plan", () => {
 
   expect(lines(s.say("isd", tp))).toContain(
     "i approves plan 1, then fast-plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
-      `re-read the plan, then run /implement-plan 1 (${full}); ` +
+      `re-read the plan, then run /implement-plan-deep 1 (${full}); ` +
       `fast-plan 1: run /implement-plan-fast 1 (${fast})`,
   );
 
@@ -150,7 +150,7 @@ it("a bare i on a mixed queue approves both, and the block must show the file's 
   const full = s.reviewed("plans", VALID_PLAN);
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1), fastItem(1))}`);
   expect(s.say("i", tp)).toContain(
-    `plan 1: run /implement-plan 1 (${full}); fast-plan 1: run /implement-plan-fast 1 (${fast})`,
+    `plan 1: run /implement-plan-deep 1 (${full}); fast-plan 1: run /implement-plan-fast 1 (${fast})`,
   );
   expect(s.say("i", transcript(ws, closing(planItem(1, "spawn-fast"), fastItem(1))))).not.toContain("approves");
 });

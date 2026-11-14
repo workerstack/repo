@@ -17,7 +17,7 @@ export interface HookSession {
   stop: (msg: string) => HookOut | null;
   /** A Write sent through the hook and landed as the host would; returns the saved path. */
   save: (file: string, content: string) => string;
-  /** A new save, then the review-bump re-save, as /write-plan does it. */
+  /** A new save, then the review-bump re-save, as /write-plan-deep does it. */
   reviewed: (dir: "plans" | "roadmaps", body: string) => string;
   spawnReview: (text: string) => HookOut | null;
 }

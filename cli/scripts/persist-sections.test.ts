@@ -110,7 +110,7 @@ describe("capErrors", () => {
   it("holds a fresh save to the cap", () => {
     expect(capErrors(numbered(100), { fresh: true })).toStrictEqual([]);
     expect(capErrors(numbered(101), { fresh: true })).toStrictEqual([
-      "101 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)",
+      "101 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap-deep)",
     ]);
   });
 

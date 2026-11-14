@@ -173,3 +173,23 @@ it("never migrates this repo, whatever files it holds", async () => {
   expect(result.err.join("")).not.toContain("migration");
   expect(exists(root, COPIED_MARKER)).toBe(true);
 });
+
+it(
+  "moves an edited old copy of write-plan to .repo/skills/write-plan-deep under its new name in one sync",
+  async () => {
+    const root = copied();
+    const own = read(root, ".agents/skills/write-plan/SKILL.md");
+    write(root, ".agents/skills/write-plan/SKILL.md", `${own}\nOur own step: run /write-plan twice.\n`);
+    const result = await sync(root, [], true);
+    expect([result.code, result.err.filter((line) => !CONVERTED.includes(line))]).toStrictEqual([0, []]);
+    const moved = read(root, ".repo/skills/write-plan-deep/SKILL.md");
+    expect(moved).toMatch(/^name: write-plan-deep$/m);
+    expect(moved).toContain("Our own step: run /write-plan-deep twice.\n");
+    // an override only once the stock ships the skill under its new name
+    const shipped = exists(SELF_ROOT, "agents/skills/write-plan-deep");
+    expect(/^overrides: write-plan-deep$/m.test(moved)).toBe(shipped);
+    expect(exists(root, ".repo/skills/write-plan")).toBe(false);
+    expect(await sync(root, ["--check"], true)).toMatchObject({ code: 0, out: ["repo sync: up to date\n"] });
+  },
+  SLOW,
+);

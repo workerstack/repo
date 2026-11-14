@@ -53,7 +53,7 @@ describe("fast plan Previous mistakes saves", () => {
   it("saves a new plan at its 40-line cap with a trailing log, and still caps the lines above it", () => {
     savedAtCap();
     const over = save(`${atCap(1)}${LOG}`);
-    expect(over.errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan)");
+    expect(over.errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan-deep)");
   });
 
   it("adds a log to a saved plan at its cap and appends to it", () => {
@@ -81,7 +81,7 @@ describe("fast plan Previous mistakes fenced heading", () => {
   });
 
   it("denies a plan over the cap whose only Previous mistakes heading is fenced", () => {
-    expect(save(fencedLog(40)).errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan)");
+    expect(save(fencedLog(40)).errors).toContain("a fast plan is at most 40 lines; write a plan (/write-plan-deep)");
   });
 });
 
