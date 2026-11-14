@@ -7787,6 +7787,7 @@
     "67df719b7dbb9d5c",
     "6b897361a05a1b6c",
     "bbf0b633258416df",
+    "c69bf870d71b7d5d",
     "c78b08a5b9e171aa"
   ],
   "cli/scripts/worktree-guards.constants.ts": ["099ae5ca99d29b35", "7a75b2f98f0ba368"],
@@ -7856,6 +7857,7 @@
     "785ea122fdcf219f",
     "9ba86ce6be1adaa1"
   ],
+  "cli/scripts/worktree-remote-sync.test.ts": ["d22f25ccf78ae94c"],
   "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871", "e920e2d3def0a510"],
   "cli/scripts/worktree-shared-shell.test.ts": [
     "14b07ccf8b960cb4",
