@@ -35,6 +35,44 @@ describe("bashTargetsDenylist", () => {
   });
 });
 
+/** Commands that hand a bare denied dir name to a command that dumps nothing. */
+const passes = [
+  "bun repo coverage 2>&1 | tail -5",
+  "bun run build | head -20",
+  'bun repo changelog add Fixed "repo coverage takes a timeout" && git log | head -3',
+  "ls dist; cat src/a.ts",
+  'echo "coverage | head" | cat',
+];
+
+/** Commands that dump a denied path: bare, quoted, redirected, wrapped or nested. */
+const denies = [
+  "head -5 dist",
+  'head -5 "dist"',
+  "cat <coverage",
+  "cat coverage",
+  "grep -E 'a|b' dist",
+  "bun x coverage/lcov.info | head",
+  "ls | xargs grep foo build",
+  "sudo -u root cat build",
+  "timeout 5 cat dist",
+  "xargs -I {} cat build",
+  "nice -n 10 head dist",
+  "sh -c 'cat dist'",
+  "cd x && find build -name a",
+  'echo "$(cat dist/x)"',
+  "cat 'dist",
+  "/usr/bin/cat dist",
+  "C:\\tools\\grep.exe x build",
+];
+
+it("bashTargetsDenylist: passes a bare dir name handed to a command that dumps nothing", () => {
+  for (const cmd of passes) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+});
+
+it("bashTargetsDenylist: denies a dump of a denied path, bare, quoted, redirected, wrapped or nested", () => {
+  for (const cmd of denies) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+});
+
 type Run = (arg: string) => GateResult;
 
 const nm = ["node", "modules"].join("_");
