@@ -134,7 +134,7 @@ it("folds a fix into an untagged merged release through a second pull request un
   const red = await release(w, [], fake.gh);
   expect(red.code).toBe(1);
   const stamped = fs.readFileSync(path.join(w.work, "CHANGELOG.md"), "utf8");
-  const fixed = stamped.replace("## [Unreleased]\n", "## [Unreleased]\n\n### Fixed\n\n- y\n");
+  const fixed = stamped.replace(/## \[Unreleased\]\r?\n/u, "## [Unreleased]\n\n### Fixed\n\n- y\n");
   commit(w, "fix: y", { "CHANGELOG.md": fixed });
   const got = await release(w, [], fake.gh);
   expect(got).toStrictEqual({ code: 0, err: "", out: `repo release: opened ${PR_BASE}10 for ${TAG}; ${AGAIN}\n` });
