@@ -5,6 +5,7 @@ import path from "node:path";
 import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
+import { patternWords } from "./pattern-words.ts";
 import { holdsCommand, simpleCommands } from "./shell-words.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
@@ -86,24 +87,37 @@ export function bashTargetsDenylist(command: string | undefined): boolean {
 
   if (cmd.trim() === "" || !BASH_DUMP_CMDS.test(cmd)) return false;
 
-  if (BUN_LOCK_RE.test(cmd) || gitDirIn(cmd)) return true;
-
   return readsDeniedPath(cmd);
 }
 
 /**
- * True when a simple command of `cmd` reads a denied path: any word of one that runs a dump or search, a slash word
- * of any other. A word that holds a command is judged the same way. Each nested word is shorter than its command,
- * since quotes or escapes were removed to keep it whole, so the recursion ends.
+ * True when a simple command of `cmd` reads a denied path. Each word its program may open is judged: in a command that
+ * runs a dump or search, as a path; in any other, when it holds a slash; in every command, for the lockfile or a
+ * `.git` dir. A pattern its program never opens is skipped (`patternWords`), and so is nothing a redirect names. A word
+ * that holds a command is judged the same way, skipped or not. Each nested word is shorter than its command, since
+ * quotes or escapes were removed to keep it whole, so the recursion ends.
  */
 function readsDeniedPath(cmd: string): boolean {
-  return simpleCommands(cmd).some((words) => {
+  return simpleCommands(cmd).some(({ words, redirects }) => {
     const isDump = words.some((w) => isDumpName(w));
+    const skipped = skippedWords(words, redirects);
 
-    return words.some(
-      (w) => ((isDump || w.includes("/")) && pathIsDenied(w)) || (holdsCommand(w) && readsDeniedPath(w)),
-    );
+    return words.some((w, i) => {
+      if (holdsCommand(w) && readsDeniedPath(w)) return true;
+
+      if (skipped.has(i)) return false;
+
+      return BUN_LOCK_RE.test(w) || gitDirIn(w) || ((isDump || w.includes("/")) && pathIsDenied(w));
+    });
   });
+}
+
+/** The indices of `words` that are a pattern its program never opens; a redirect target is never one. */
+function skippedWords(words: readonly string[], redirects: ReadonlySet<number>): Set<number> {
+  const kept = words.flatMap((word, i) => (redirects.has(i) ? [] : [{ i, word }]));
+  const pattern = patternWords(kept.map(({ word }) => word));
+
+  return new Set(kept.flatMap(({ i }, at) => (pattern.has(at) ? [i] : [])));
 }
 
 /**

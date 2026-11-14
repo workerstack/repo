@@ -65,6 +65,60 @@ const denies = [
   "C:\\tools\\grep.exe x build",
 ];
 
+const nmDir = ["node", "modules"].join("_");
+
+/** A search pattern or a find name-test value that spells a denied name: never opened, so it passes. */
+const patterns = [
+  `rg -n ${nmDir} cli`,
+  "ls | grep -v dist",
+  "grep -rn --fixed-strings coverage docs",
+  `find . -name ${nmDir} -prune -o -name '*.ts' -print`,
+  "find . -name .git -prune",
+  "fd -H build src",
+  "rg -n bun.lock cli",
+  "grep -in --color=never -- build src",
+  `C:\\tools\\rg.exe -- ${nmDir}`,
+  `find . -exec echo {} + -name ${nmDir}`,
+  `find . -exec echo {} ';' -iname dist`,
+  "rg -n -- build src",
+];
+
+/** Words a search may open, beside or around a pattern: still judged, so each is denied. */
+const stillDenied = [
+  `rg foo ${nmDir}`,
+  "grep -e x dist",
+  "rg -f build cli",
+  "rg --files coverage",
+  "find dist -name x",
+  "xargs grep foo build",
+  "grep < bun.lock x",
+  'F=bun.lock; cat "$F"',
+  `rg "$(cat ${nmDir}/a/package.json)" cli`,
+  `rg -n -e x ${nmDir}`,
+  `rg ${nmDir} cli -e x`,
+  "grep --reg=x dist",
+  `rg -g x ${nmDir} cli`,
+  "grep -A 3 x dist",
+  "grep --line x dist",
+  `find . -exec grep -name ${nmDir} {} \\;`,
+  `grep <${nmDir}/a/b.js foo`,
+  "grep -n -- <dist",
+  "rg -n <dist",
+  "grep - coverage",
+  "grep -- x dist",
+  "fd --exclude x build",
+  "find dist -name",
+  "grep x src; <dist/a",
+];
+
+it("bashTargetsDenylist: passes a pattern that spells a denied name", () => {
+  for (const cmd of patterns) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+});
+
+it("bashTargetsDenylist: still denies every word a search may open", () => {
+  for (const cmd of stillDenied) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+});
+
 it("bashTargetsDenylist: passes a bare dir name handed to a command that dumps nothing", () => {
   for (const cmd of passes) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
 });
