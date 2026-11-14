@@ -82,6 +82,25 @@ it("a prompt of exactly /auto writes no stamp", () => {
   expect(fs.existsSync(stampAbs(ws, "g3"))).toBe(false);
 });
 
+it.each([
+  ["/away /write-roadmap-deep x", "away"],
+  ["  /ask fix it", "ask"],
+  ["/away then /ask", "away"],
+])("a prompt that starts with a flag stamps it: %j", (prompt, mode) => {
+  const ws = kit.temp();
+  say(ws, "lead", prompt);
+  expect(fs.readFileSync(stampAbs(ws, "lead"), "utf8").trim()).toBe(mode);
+});
+
+it.each(["please go /away", "/awayx", "/away-ish now", "/auto go"])(
+  "a prompt whose first word is not a flag writes no stamp: %j",
+  (prompt) => {
+    const ws = kit.temp();
+    say(ws, "nolead", prompt);
+    expect(fs.existsSync(stampAbs(ws, "nolead"))).toBe(false);
+  },
+);
+
 it("sid-less /ask does not stamp", () => {
   const ws = kit.temp();
   kit.grok({ sid: "", ws }, "UserPromptSubmit", { prompt: "/ask" });

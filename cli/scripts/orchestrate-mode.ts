@@ -20,11 +20,11 @@ import { parseMode } from "./strategy.ts";
 import type { Mode } from "./strategy.types.ts";
 
 const SLASHES: readonly (readonly [RegExp, Mode])[] = [
-  [/^\s*\/ask\s*$/, "ask"],
-  [/^\s*\/away\s*$/, "away"],
+  [/^\s*\/ask(?=\s|$)/, "ask"],
+  [/^\s*\/away(?=\s|$)/, "away"],
 ];
 
-/** A prompt of exactly /ask or /away stamps that mode as this session's gate. */
+/** A prompt that starts with /ask or /away stamps that mode as this session's gate. */
 export function applySessionGateSlash(data: HookInput, prompt: string): void {
   const slash = SLASHES.find(([re]) => re.test(prompt))?.[1];
 

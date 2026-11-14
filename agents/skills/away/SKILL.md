@@ -4,7 +4,7 @@ description: 'Session flag. Nobody is watching: approve the plan yourself, decid
 ---
 # away
 
-Session flag. Slash `/away` stamps this session away.
+Session flag. A prompt that starts with `/away` stamps this session `away`.
 
 Never ask. When a question comes up, decide it, log it, and continue. Log each choice in the plan's (or roadmap's) `## Previous mistakes` as `- decision: {question} → {choice}, because {why}`. Entries are append-only and sit outside the cap.
 
