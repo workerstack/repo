@@ -16,6 +16,9 @@ export const MODULES_DIR = "node_modules";
 /** The spawn error code of a bin that is not on PATH. */
 export const NOT_FOUND = "ENOENT";
 
+/** The spawn error code of a run killed at its time limit. */
+export const TIMED_OUT = "ETIMEDOUT";
+
 /** bun fmt's flag that writes a `[fmt]` section into bunfig.toml, which `repo fmt` refuses. */
 export const INIT_FLAG = "--init";
 
@@ -24,3 +27,11 @@ export const INIT_REFUSAL = "--init writes bunfig.toml, which repo sync owns; ed
 
 /** The bun arguments that run its formatter, never a package.json `fmt` script of the same name. */
 export const BUN_FMT_ARGS: readonly string[] = ["fmt", "--no-script"];
+
+/**
+ * How long one oxlint or bun fmt run may take before it is killed: 30 times a full lint of this repo, and under a
+ * test's 120 s limit, so a hung run fails the gate with a line that names the tool.
+ */
+export const TOOL_TIME_LIMIT_MS = 90_000;
+
+export const MS_PER_SECOND = 1000;

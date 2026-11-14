@@ -58,6 +58,7 @@ it("writes a Stryker config with the shard's files and the options this repo nee
     mutate: ["src/a.ts"],
     reporters: ["json"],
     testRunner: "vitest",
+    timeoutMS: 60_000,
     vitest: { pool: "forks" },
   });
 });
@@ -187,4 +188,10 @@ it("says so when the directory is no git repository", async () => {
   const f = fakes(sim({ gitFails: "rev-parse" }));
   expect(await runMutate(SHARD, f.deps)).toBe(1);
   expect(f.err.join("")).toBe(`repo mutate: ${ROOT} has no commit to mutate: boom\n`);
+});
+
+it("names a failed git ls-tree instead of saying no tracked file matches", async () => {
+  const f = fakes(sim({ gitFails: "ls-tree" }));
+  expect(await runMutate(SHARD, f.deps)).toBe(1);
+  expect(f.err.join("")).toBe(`repo mutate: git ls-tree failed in ${ROOT}: boom\n`);
 });

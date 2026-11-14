@@ -208,7 +208,7 @@ describe("runTool", () => {
 
 it("captureTool returns oxlint's json report and exit code instead of printing them", { timeout: SLOW }, () => {
   const root = standardsRepo({ "src/a.ts": NON_NULL, "src/ok.ts": "export const ok = 1;\n" });
-  const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], root);
+  const failing = captureTool("oxlint", ["-f", "json", "src/a.ts"], { root });
 
   const report = JSON.parse(failing.stdout) /* oxlint -f json prints one report object */ as {
     diagnostics: { filename: string; code: string }[];
@@ -218,7 +218,7 @@ it("captureTool returns oxlint's json report and exit code instead of printing t
     1,
     ["src/a.ts typescript(no-non-null-assertion)"],
   ]);
-  expect(JSON.parse(captureTool("oxlint", ["-f", "json", "src/ok.ts"], root).stdout)).toMatchObject({
+  expect(JSON.parse(captureTool("oxlint", ["-f", "json", "src/ok.ts"], { root }).stdout)).toMatchObject({
     diagnostics: [],
   });
 });

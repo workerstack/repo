@@ -135,7 +135,7 @@ function formatManifest(dest: string): void {
   try {
     const config = path.join(dir, OXFMT_CONFIG_PATH);
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
-    captureTool("bun fmt", ["--config", config, "package.json"], dest);
+    captureTool("bun fmt", ["--config", config, "package.json"], { root: dest });
   } finally {
     removeTree(dir);
   }

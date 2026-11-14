@@ -41,6 +41,25 @@ const STR_TEST = [
   "",
 ].join("\n");
 
+/**
+ * A pause that waits no time; its `Math.max` mutant waits `ms`, past Stryker's default 5 s mutant limit, which is how a
+ * stalled machine slows any mutant. That mutant must survive, not count as a Timeout kill.
+ */
+const PAUSE = [
+  "const SLOT = new Int32Array(new SharedArrayBuffer(4));",
+  "export function pause(ms: number): void {",
+  "  Atomics.wait(SLOT, 0, 0, Math.min(ms, 0));",
+  "}",
+  "",
+].join("\n");
+
+const PAUSE_TEST = [
+  'import { expect, it } from "vitest";',
+  'import { pause } from "./pause.ts";',
+  'it("pauses", { timeout: 60_000 }, () => expect(pause(8_000)).toBeUndefined());',
+  "",
+].join("\n");
+
 const MANIFEST = {
   devDependencies: { "@stryker-mutator/core": TOOL, "@stryker-mutator/vitest-runner": TOOL, vitest: VITEST },
   name: "planted",
@@ -49,8 +68,8 @@ const MANIFEST = {
 };
 
 /**
- * Two sources and one weak test, committed with a lockfile and no installed packages: `repo mutate` installs frozen in
- * its own clone, so a tree here would only cost a second install and its removal.
+ * Three sources, a weak test and a slow mutant, committed with a lockfile and no installed packages: `repo mutate`
+ * installs frozen in its own clone, so a tree here would only cost a second install and its removal.
  */
 function plantedRepo(): string {
   const dir = tempDir();
@@ -61,6 +80,8 @@ function plantedRepo(): string {
     "repo.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
     "src/math.test.ts": MATH_TEST,
     "src/math.ts": MATH,
+    "src/pause.test.ts": PAUSE_TEST,
+    "src/pause.ts": PAUSE,
     "src/str.test.ts": STR_TEST,
     "src/str.ts": STR,
   });
@@ -86,8 +107,8 @@ function clones(): string[] {
 }
 
 it(
-  "runs real Stryker through repo mutate: reports the weak test's survivor and score, fails a floor above " +
-    "it, leaves the tree clean",
+  "runs real Stryker through repo mutate: reports the weak test's and the slow mutant's survivors and score, " +
+    "fails a floor above it, leaves the tree clean",
   { timeout: SLOW },
   async () => {
     const dir = plantedRepo();
@@ -96,11 +117,11 @@ it(
     const err: string[] = [];
     const deps = { ...realDeps(dir), err: (t: string) => err.push(t), out: (t: string) => out.push(t) };
     const code = await runMutate([], deps);
-    expect(err.join(""), out.join("")).toMatch(
+    expect(err.join(""), `${err.join("")}${out.join("")}`).toMatch(
       /^repo mutate: \. scored \d+\.\d\d%, below its floor of 99 in mutation-floors\.json/,
     );
     expect(code).toBe(1);
-    expect(out.join("")).toMatch(/mutate: 2 files, shard 1\/1\nmutate: \. \d+\.\d\d% \(floor 99\), 1 survivor in /);
+    expect(out.join("")).toMatch(/mutate: 3 files, shard 1\/1\nmutate: \. \d+\.\d\d% \(floor 99\), 3 survivors in /);
     const text = fs.readFileSync(path.join(dir, REPORT), "utf8");
     const report = JSON.parse(text) /* the shard report this command wrote */ as Report;
 
@@ -109,6 +130,10 @@ it(
     }
 
     expect(survivors("src/math.ts")).toStrictEqual([[2, "ArithmeticOperator"]]);
+    expect(survivors("src/pause.ts")).toStrictEqual([
+      [2, "BlockStatement"],
+      [3, "MethodExpression"],
+    ]);
     expect(survivors("src/str.ts")).toStrictEqual([]);
     expect(git(dir, "status", "--porcelain")).toBe("");
     expect(clones()).toStrictEqual(before);

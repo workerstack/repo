@@ -211,7 +211,7 @@ export function lintReport(
   args: readonly string[],
   run: typeof captureTool = captureTool,
 ): Result<Diagnostic[]> {
-  const ran = run("oxlint", ["-f", "json", ...args], root);
+  const ran = run("oxlint", ["-f", "json", ...args], { root });
   const report = tryJson(reportSchema(), ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
 
   if (report === undefined)

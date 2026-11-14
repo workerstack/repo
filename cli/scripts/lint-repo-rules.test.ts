@@ -173,7 +173,7 @@ const FLOW_FINDINGS = [
 ];
 
 it("oxlint runs the repo plugin's rules with their options, from the linted repo's cwd", { timeout: SLOW }, () => {
-  const linted = captureTool("oxlint", ["-f", "json"], tree(REPO_RULES));
+  const linted = captureTool("oxlint", ["-f", "json"], { root: tree(REPO_RULES) });
 
   const report = JSON.parse(linted.stdout) /* oxlint -f json prints one report object */ as {
     diagnostics: { filename: string; code: string; message: string; labels: { span: { line: number } }[] }[];

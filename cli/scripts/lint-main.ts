@@ -52,7 +52,7 @@ function lintedFiles(root: string, args: readonly string[]): string[] {
 
 /** oxlint's `--fix` in `root` rerun until a pass rewrites none of the files it lints; the last pass printed. */
 function fixedOxlint(tool: Tool, args: string[], root: string): number {
-  const last = fixPasses(root, lintedFiles(root, args), () => captureTool(tool, args, root));
+  const last = fixPasses(root, lintedFiles(root, args), () => captureTool(tool, args, { root }));
   process.stdout.write(last.stdout);
   process.stderr.write(last.stderr);
 

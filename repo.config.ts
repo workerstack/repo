@@ -19,7 +19,7 @@ export default defineConfig({
       },
       {
         dependency: "oxlint",
-        reason: "cli/scripts/lint.ts resolves its package.json with Bun.resolveSync and spawns its bin script by path",
+        reason: "cli/scripts/tool-command.ts resolves its package.json with Bun.resolveSync and runs its bin by path",
       },
       {
         dependency: "jscpd",
@@ -28,7 +28,7 @@ export default defineConfig({
       },
       {
         dependency: "oxlint-tsgolint",
-        reason: "oxlint runs its native binary through OXLINT_TSGOLINT_PATH, resolved by name in cli/scripts/lint.ts",
+        reason: "oxlint runs its native binary through OXLINT_TSGOLINT_PATH, resolved in cli/scripts/tool-command.ts",
       },
       {
         dependency: "turbo",

@@ -1763,6 +1763,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/scripts/tool-command.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/scripts/turn-steps.constants.ts": {
     "branches": 100,
     "functions": 100,
