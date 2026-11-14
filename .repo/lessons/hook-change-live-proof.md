@@ -1,9 +1,9 @@
 ---
 name: hook-change-live-proof
 paths: ["cli/scripts/orchestrate*.ts","cli/scripts/persist-*.ts"]
-hits: 2
+hits: 3
 last-hit: 2026-11-14
-evidence: ["roadmap 8","roadmap 15"]
+evidence: ["roadmap 8","roadmap 15","roadmap 16"]
 ---
 
 # Prove a hook or persist change live, not only in unit suites

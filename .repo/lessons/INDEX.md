@@ -2,24 +2,24 @@
 
 # Lessons
 
-- `turn-green-is-not-coverage-green` (hits 8): A green turn still misses the 100% coverage floor
-- `posix-only-path-parsing` (hits 5): A path regex that only knows `/` silently skips Windows
+- `turn-green-is-not-coverage-green` (hits 9): A green turn still misses the 100% coverage floor
+- `posix-only-path-parsing` (hits 6): A path regex that only knows `/` silently skips Windows
 - `temp-consumer-untyped-globals` (hits 5): A new lint rule or type-aware rule trips the sources lint tests plant
 - `migration-proved-on-packed-consumer` (hits 4): Prove a sync migration on a consumer built from the old packed tgz
+- `parallel-phase-skips-coverage` (hits 4): Parallel phases pass their own tests and still fail the 100% floor
 - `shipped-source-es2022-lib` (hits 4): Code an export reaches must type-check under ES2022, not ESNext
+- `hook-change-live-proof` (hits 3): Prove a hook or persist change live, not only in unit suites
 - `knip-unused-exported-type` (hits 3): Export a name only when another file imports it
-- `parallel-phase-skips-coverage` (hits 3): Parallel phases pass their own tests and still fail the 100% floor
 - `rebase-then-regenerate-before-verify` (hits 3): Rebase and regenerate before Verify, not after
+- `verify-in-session-env` (hits 3): Unset repo's session root vars in every Verify and spawned test
 - `windows-paths-from-tools` (hits 3): A path passed to or read from another tool breaks on Windows
 - `commit-msg-size-limits` (hits 2): Keep the commit subject under 100 chars; add a body only past 1000 lines
-- `hook-change-live-proof` (hits 2): Prove a hook or persist change live, not only in unit suites
 - `hook-events-in-hooks-jsonc` (hits 2): Declare hook events in agents/hooks.jsonc, not the hooks-union overlay
+- `one-spelling-per-path` (hits 2): Compare paths only after canonicalPath or resolveTyped
 - `oxlint-ast-null-children` (hits 2): oxlint's AST has null where typescript-eslint's has undefined
-- `verify-in-session-env` (hits 2): Unset repo's session root vars in every Verify and spawned test
 - `heading-scan-skips-fences` (hits 1): A Markdown heading scan must skip fenced code
 - `hook-writes-target-file` (hits 1): A pre-tool hook must not write the file the tool is about to write
 - `lint-fix-breaks-tsc` (hits 1): Run tsc after every lint autofix; a safe fix can still break types
 - `local-ci-load-hides-failures` (hits 1): A loaded local ci hides real failures and makes fake ones
-- `one-spelling-per-path` (hits 1): Compare paths only after canonicalPath or resolveTyped
 - `path-move-rewrites-every-text-file` (hits 1): A dir move rewrites paths in every moved text file, not bare names
 - `quote-paths-in-test-commands` (hits 1): Single-quote every temp path a test puts in a shell command

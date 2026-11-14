@@ -1,9 +1,9 @@
 ---
 name: verify-in-session-env
 paths: ["cli/scripts/workspace-root.ts","cli/scripts/gate-fat-tools.ts","cli/scripts/worktree.ts","cli/scripts/clean.ts","cli/scripts/doctor.ts"]
-hits: 2
-last-hit: 2026-11-10
-evidence: ["roadmap 1","plan 68"]
+hits: 3
+last-hit: 2026-11-14
+evidence: ["roadmap 1","plan 68","roadmap 16"]
 ---
 
 # Unset repo's session root vars in every Verify and spawned test

@@ -1,9 +1,9 @@
 ---
 name: posix-only-path-parsing
 paths: ["cli/scripts/persist-*.ts","cli/scripts/lessons*.ts","cli/scripts/orchestrate*.ts","cli/scripts/worktree-shell*.ts","cli/scripts/cd-effect*.ts"]
-hits: 5
+hits: 6
 last-hit: 2026-11-14
-evidence: ["v0.13.0 test-windows","roadmap 1","v0.16.0 test-windows","roadmap 10","plan 222"]
+evidence: ["roadmap 1","v0.16.0 test-windows","roadmap 10","plan 222","roadmap 16"]
 ---
 
 # A path regex that only knows `/` silently skips Windows
