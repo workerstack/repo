@@ -5072,6 +5072,7 @@
     "9dc59dbd3f07e7d8",
     "a131c5d2a3b52d3e",
     "a2041f0c8698b88d",
+    "a9afcac75e1b14ef",
     "ac548c227b535200",
     "ae766a1791d62ed9",
     "f470cdcbfb9d0dbd"
@@ -5438,6 +5439,7 @@
     "b80b74e52c7ce5d5",
     "c432d8093a2a369c",
     "c48e95eb0048d7e8",
+    "d3faf289b868f5b5",
     "d97570caeea7c28d",
     "f6e1a339e4645f1c"
   ],
@@ -7673,7 +7675,7 @@
   ],
   "cli/scripts/sync-global-settings.types.ts": ["414c6a5f5293271a", "7d9fdbe4d76b1367", "dfa6c3432a65af40"],
   "cli/scripts/tests-step.ts": ["0db8ddc117fe748d", "ec5fed3643669bfa"],
-  "cli/scripts/tool-env.ts": ["c0424b41c8d1a44d"],
+  "cli/scripts/tool-env.ts": ["c0424b41c8d1a44d", "fb9d5ec7ad1113d1"],
   "cli/scripts/turbo-bin.constants.ts": [
     "600af6c5002249c8",
     "6ec9aebb4492b032",

@@ -1,0 +1,4 @@
+# The system git config of Linux and macOS test runs (dev/test-env.ts). The Windows runner's git sets this, so a
+# file git checks out there ends its lines in CRLF; here it does too, and a test that matches LF only fails first.
+[core]
+	autocrlf = true

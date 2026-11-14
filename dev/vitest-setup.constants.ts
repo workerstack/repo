@@ -6,6 +6,11 @@ export const QUIET_GIT: ReadonlyArray<readonly [string, string]> = [
 ];
 
 export const GIT_CONFIG_COUNT = "GIT_CONFIG_COUNT";
+export const GIT_CONFIG_GLOBAL = "GIT_CONFIG_GLOBAL";
+export const GIT_CONFIG_SYSTEM = "GIT_CONFIG_SYSTEM";
+
+/** The system git config of Linux and macOS test runs: `core.autocrlf=true`, as the Windows runner's git sets. */
+export const AUTOCRLF_CONFIG = "autocrlf.gitconfig";
 export const GIT_CONFIG_KEY = "GIT_CONFIG_KEY_";
 export const GIT_CONFIG_VALUE = "GIT_CONFIG_VALUE_";
 export const BUN_CACHE_VAR = "BUN_RUNTIME_TRANSPILER_CACHE_PATH";
