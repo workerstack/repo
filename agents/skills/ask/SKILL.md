@@ -4,7 +4,7 @@ description: 'Session flag. Default. Stop once for plan approval then run to don
 ---
 # ask
 
-Session flag. Default. Slash `/ask` stamps this session `ask`.
+Session flag. Default. A prompt that starts with `/ask` stamps this session `ask`.
 
 Write and review the plan, stop once for approval, then run to done. Ask only on a blocker or a real choice. Do not pause after each step.
 
