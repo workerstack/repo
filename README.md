@@ -6,156 +6,142 @@ Agent workflow, code standards, gates, workspace and docs checks for workerstack
 
 ## Contents
 
-- [Browser](#browser)
-- [Protocol](#protocol)
-- [Clasp](#clasp)
-- [Cloudflare](#cloudflare)
+- [Scope](#scope)
+- [Change workflow](#change-workflow)
 - [Exports](#exports)
+- [Sync](#sync)
+- [Hooks](#hooks)
+- [Plan format (SSOT)](#plan-format-ssot)
+- [Roadmap format (SSOT)](#roadmap-format-ssot)
+- [Review loop](#review-loop)
+- [Implementation format (SSOT)](#implementation-format-ssot)
 - [Fast plan format (SSOT)](#fast-plan-format-ssot)
 - [Fast roadmap format (SSOT)](#fast-roadmap-format-ssot)
-- [google-workspace](#google-workspace)
-- [Hooks](#hooks)
-- [Implementation format (SSOT)](#implementation-format-ssot)
-- [Jev](#jev)
 - [Lessons](#lessons)
-- [Listen](#listen)
-- [Map](#map)
 - [Output](#output)
-- [Plan format (SSOT)](#plan-format-ssot)
-- [Review loop](#review-loop)
-- [Roadmap format (SSOT)](#roadmap-format-ssot)
-- [RTK](#rtk-1)
-- [Scope](#scope)
+- [Map](#map)
+- [Protocol](#protocol-1)
+- [RTK](#rtk)
 - [Setup](#setup)
+- [Browser](#browser)
+- [Jev](#jev)
+- [Cloudflare](#cloudflare)
+- [google-workspace](#google-workspace)
+- [Clasp](#clasp)
+- [Listen](#listen)
 - [Speak](#speak)
-- [Sync](#sync)
-- [Change workflow](#change-workflow)
 
-## Browser
+## Scope
 
-Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked.
+Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This file is the size-gate SSOT.
 
-```
-bun repo browser nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure
-```
+### Gate
 
-Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule below requires it. Never report "can't browse" while Chromium is available.
+Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes unless `workflow` is `main`. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
 
-### Verbs
+Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit. "Just" or "should be easy" on a goal is not "just do it": only words that skip the plan itself, such as "just do it" or "no plan", do.
 
-| verb | purpose |
+`/ask` is this loop: it stops once for plan approval, then runs to done. It does not skip approval. `/away` decides instead of asking and logs each choice as a `decision` entry; under away the Stop hook runs the approval block's header choice once the review settles and logs it. A session value (`/ask`, `/away`, `/set`) beats a saved `approval: ask|away`, which applies only when the session has no value. With no session value and no in-progress `approval:`, `agents.defaultApproval` applies, else `ask`. A fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`) or a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`) runs when the person asks for it or when the session effort is `fast`; otherwise the process here stays the default. `/set` saves approval, effort and strategy for the session (`ask away`, `fast deep`, `free spawn-fast spawn-deep`). The effort in the hook context picks the plan skills (`/write-plan-{effort}`). Run `bun repo set <words>` only when the person asks in plain words, never on your own judgment, and say what changed. `/rn <task>` skips the plan, the review, questions and its own test run, never the worktree or the commit gate.
+
+### Research
+
+Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.repo/scratch/`.
+
+### Questions
+
+Ask only what research cannot settle and what changes the plan's shape: intent, scope, a trade-off the user owns. Batch them into one round, each with your recommendation. Research again on each answer, and ask again only if a new plan-shaping gap appears. When research settles everything, skip this step and write the plan in one shot.
+
+### Plan
+
+`/write-plan-deep`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. A plan over 100 lines above `## Previous mistakes`, frontmatter included, is a roadmap: split it with `/write-roadmap-deep`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Write `approval:` beside `advice:` only when the session runs `/away` or the person asked for an approval. Report the goal, phases, top risks, open assumptions and path, then stop with the approval block (`/write-plan-deep` has the full form). The block comes only after the review settled, with `reviews` bumped since the review spawn; the Stop hook blocks it before that.
+
+### Approval
+
+Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or a code such as `isf`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap-deep` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `hf`, `hsf` and `hsd` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
+
+### Implement
+
+`/implement-plan-deep` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap-deep` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.repo/implementations/` (create on start; not for straight shots). Straight shot (`/rn` is exempt from the test and proof steps; the commit hook's gate runs the related tests): run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
+
+### Types
+
+One type per plan. Pick the strongest match. A feature that crosses an ownership, package, or API boundary is `cross-cut`. Straight shots skip this table and follow the straight-shot rule in ## Implement. Skip a named check only with a reason in Context. Approval of the plan is the select.
+
+`/write-plan-deep` copies the row into Steps or Verify, including a Read leaf for each named principle. Each Read leaf sits in the phase it gates, not in a phase of its own. `/implement-plan-deep` reads that skill and follows it.
+
+A slice is one child plan, not a phase. Two or more ordered slices are a roadmap (`/write-roadmap-deep`, then `/implement-roadmap-deep`), not one plan. `/write-roadmap-deep` runs `/review-roadmap {n}` in a fresh agent after each save, the same way plans are reviewed, and a roadmap with `reviews: 0` cannot be locked. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
+
+| type | checks |
 | --- | --- |
-| `nav <url>` | launch or reuse session; go to URL |
-| `snap` | markdown + numbered AX refs (default read) |
-| `click <ref>` | click a ref from last `snap` |
-| `fill <ref> <text>` | fill a ref from last `snap` |
-| `scroll [ref|down|up|N]` | scroll a snap ref into view, or the window |
-| `wait [ms]` | pause (default 1000, cap 15000) |
-| `hover <ref>` | hover a snap ref |
-| `select <ref> <value>` | set a select/option value |
-| `shot` | screenshot (Chromium paint) |
-| `pdf` | PDF (Chromium paint) |
-| `stop` | reap engine pid; clear session; idempotent |
-| `doctor` | unified prereq doctor (`bun repo doctor`); alias `ensure` |
-| `ensure` | alias of `doctor` |
+| bug | repro; failing test before impl; read `principle-fix-root-causes`; read `principle-test-behavior-not-implementation` |
+| feature | failing test before impl; read `principle-test-behavior-not-implementation` |
+| docs | no test leaf; no browser unless the doc is a live page; Verify reads the page or runs the generator |
+| perf | Verify states the measurement and what limits it; read `principle-explain-the-number` |
+| refactor | existing suite or characterization tests; no feature leaves; read `principle-laziness-protocol`; read `principle-subtract-before-you-add`; read `principle-minimize-reader-load`; read `principle-test-behavior-not-implementation` |
+| cross-cut | Context holds architect lite (types, signatures, module map, rejected shape); a `/blast-radius` leaf; read `principle-foundational-thinking`; read `principle-type-system-discipline` |
+| chore | no test leaf unless a check already exists |
 
-Session + profile + artifacts: `.repo/tmp/browser/` only.
+### Facts
 
-### Install
+`/write-plan-deep` adds a Read leaf for each fact that is true, in the phase that fact gates. No fact, no leaf. `/implement-plan-deep` reads that skill and follows it.
 
-Run `bun repo doctor`. Handheld engine hints (no keys): `bun repo setup browser`. Doctor/setup is enough. Do not read a README unless those are missing; then https://github.com/workerstack/repo#prerequisites (not the consumer README).
+| fact | read |
+| --- | --- |
+| a guard, parser, or adapter at a CLI, config, or network edge | `principle-boundary-discipline` |
+| a new internal API while old callers still exist | `principle-migrate-callers-then-delete-legacy-apis` |
+| a command or loop that must survive crash and retry | `principle-make-operations-idempotent` |
+| two actors can write the same file, branch, or key | `principle-separate-before-serializing-shared-state` |
+| stateful logic, or the same shape copied across files | `principle-model-the-domain` |
+| a sweep of similar edits | `principle-build-the-lever` |
+| a rewrite with phase boundaries | `principle-outcome-oriented-execution` |
+| a person will see the output, the error text, or the default | `principle-experience-first` |
+| the requirement does not fit without a special-case branch | `principle-redesign-from-first-principles` |
+| research left two or more live options and the choice is hard to undo | `principle-exhaust-the-design-space` |
 
-### Engine
+`/implement-plan-deep` reads a principle only when the type row names it, a true fact names it, the next sentence names it, or an already-read principle cites it. Do not open the rest of the catalog.
 
-Lightpanda first (`lightpanda serve` internally, CDP, `LP.getMarkdown` + AX refs).
+Verify of every plan reads `principle-prove-it-works`. After two fixes that share a premise fail the same gate, read `principle-attack-the-premise` before a third try. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
-Chromium immediately when any of:
+`/write-roadmap-deep` reads `principle-sequence-verifiable-units`. `/correct` reads `principle-encode-lessons-in-structure`.
 
-- verb is `shot` | `pdf` | `trace`
-- `process.platform === "win32"`
-- Chromium-first host: figma, Google docs / sheets / slides, mail.google, earth, amazon
-- `lightpanda` missing from PATH and a Chromium binary is present
-- Lightpanda probe fails **once** → one Chromium replay of last URL; no loop
-- `snap` on Lightpanda is empty, a bot/JS wall, or client-rendered junk → one Chromium replay, then snap again
+## Change workflow
 
-The session agent does not invent a "can't" for Amazon or other client-rendered sites. The rail swaps. One swap cap. App e2e stays Playwright (`playwright test`), not this CLI.
+`workflow` in `repo.config.ts` says where changes are made and how they reach the default branch: `"worktree"` (the default, also when the key or the config is missing), `"pull-request"` or `"main"`. `bun repo sync` writes the mode's steps into the workflow paragraph of `AGENTS.md`, so that paragraph is the one to follow. This file says what each command and gate does under each mode. `hooks.md` has the gate details, `exports.md` the `bun repo push` table.
 
-No user env. Never `REPO_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
+### worktree
 
-### Non-goals
+Every change is made in a managed worktree: `bun repo worktree add <name>` makes `.worktrees/<name>` on branch `wt/<name>`. Edit, test and commit there.
 
-- MCP browser servers
-- user env knobs
-- raw Playwright as the browse tool (Playwright is the app e2e runner)
-- repo `job:browse`
-- teaching thinker / orchestrator to browse
+- `bun repo worktree finish <name>`, run from the root, rebases `wt/<name>` onto the default branch, fast-forwards the default branch to it, removes the worktree and deletes the branch, and origin's copy when there is one. It pushes nothing else.
+- `bun repo push` from the root then pushes the default branch and waits on CI. On a `wt/*` branch it exits 1: finish first.
+- `bun repo release` runs in the main checkout on the default branch: it commits the release, pushes it, waits on CI, then tags.
+- Gates: a write into the main checkout is denied, outside `.worktrees/` and the ignored `.repo/` dirs. A commit, merge, cherry-pick, revert, am or pull there is denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run bun repo worktree finish <name>`. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to other sessions' work.
 
-### RTK
+### pull-request
 
-`playwright` on the RTK command list is the **test-runner family only**. Browser rail is `lightpanda` + `bun repo browser`.
+Changes are made in a managed worktree as under worktree, and the default branch takes them only through pull requests. It needs `gh`, logged in.
 
-## Protocol
+- `bun repo worktree finish <name>`, run from the root, fetches origin and reads the branch's pull request. With none open, it rebases `wt/<name>` onto `origin/<default>`, pushes it and opens its pull request. Run again after more commits, it pushes them to the open pull request. Once the pull request merged, it fast-forwards the default branch to origin's, removes the worktree and deletes both copies of the branch. A closed pull request is refused: `reopen it with gh pr reopen <number>, then run finish again`.
+- `bun repo push` refuses the default branch with `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`. On a `wt/*` branch it exits 1 and names finish, which pushes the branch itself.
+- `bun repo release` never pushes the default branch. It commits the release in a `release-<version>-<short HEAD>` worktree and opens its pull request, then stops: `run bun repo release again once it merges`. That rerun lands the merged release commit, waits on CI for it and tags it. Run before the merge, it says the pull request is not merged yet.
+- Gates: the worktree ones, plus a push or delete push of the default branch (also `--all` and `--mirror`) is denied from anywhere in the repo with the same text `bun repo push` prints. A word in the user's message does not lift this deny.
 
-The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `<root>/node_modules/.bin/repo job` (squeez + stash). Isolation facts stay ≤8 lines.
+### main
 
-Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact; spawn researcher for heavy web or browser research that returns facts with sources. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
+Changes are made in the main checkout, on the default branch. There is no worktree step.
 
-`need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
+- Edit, test and commit in the main checkout, then run `bun repo push`, which pushes the default branch and waits on CI.
+- `bun repo worktree add` and `finish` still work as under worktree, for a change you want apart.
+- `bun repo release` works as under worktree.
+- Gates: writes and commits in the main checkout pass. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to uncommitted work, unless the user's message asks for them.
 
-Session settings: `/ask` (default) stops once for plan approval, then runs to done; it asks only on a blocker or a real choice. `/away` approves the plan itself once the review settles, decides instead of asking, and logs each choice as a `- decision:` entry in the plan. A prompt that starts with `/ask`, `/away` or `/set <words>` saves the session's approval, effort and strategy in `.repo/tmp/sessions/<sid>/settings.json` (`/set`: `ask away`, `fast deep`, `free spawn-fast spawn-deep`, any subset in any order; `bun repo set <words>` does the same when the person asks in plain words). A session value beats a plan or roadmap `approval:`, which applies only with no session value. Under away the Stop hook runs the approval block's header choice once the review settles and logs the decision.
+### Every mode
 
-Scratch: `.repo/scratch/`. Stash: `.repo/tmp/stash/`. Sessions: `.repo/tmp/sessions/{sid}/`. Browser: `.repo/tmp/browser/`.
+A force push, and moving or deleting the default branch with `git branch` or `git update-ref`, are denied in every mode unless the user's message asks for them.
 
-## Clasp
+### A config that fails to load
 
-Low-level Apps Script CLI. Optional. Doctor reports it.
-
-For create/edit sheet, doc, slide, meeting, or mail, use **google-workspace**: `node_modules/@workerstack/repo/references/google-workspace.md` and `bun repo google-workspace`. Do not start from clasp.
-
-```
-bun add -g @google/clasp
-clasp login
-clasp create --type standalone --title <name>
-clasp pull
-clasp push
-clasp run <function>
-clasp status
-```
-
-Script files live next to `appsscript.json`. Git tracks them. `clasp run` needs the Apps Script API and an API-executable deployment. That path is for custom `.gs`, not day-to-day Workspace.
-
-## Cloudflare
-
-Use `cf` for every Cloudflare task. Do not run `wrangler` yourself and do not add it to a project that has none.
-
-### Find the command
-
-```
-cf cli search "<describe the task>"
-<command from the result> --help
-cf schema <command from the result, without the leading cf>
-```
-
-`cf cli search` returns five matches. Pick one instead of repeating the search. Write the query as the action and resource type only: no names, domains, emails, account or resource IDs, or tokens. `cf schema` shows the API request detail for a command.
-
-### Project commands
-
-- `cf dev` runs the dev server (`--local` uses local resource simulations).
-- `cf deploy` deploys (`--dry-run` builds and checks without uploading).
-- `cf build` builds the project.
-- `cf workers types` generates types from `cloudflare.config.ts`.
-- `cf init workers [directory]` creates or sets up a Workers project.
-- `cf auth` manages login and profiles; `--profile <name>` picks one on any command.
-
-`cf dev` and `cf deploy` run the dev server the project declares in `package.json`: `@cloudflare/vite-plugin` (recommended), or `wrangler` for a legacy Worker project that keeps `wrangler.jsonc`. With none declared they print the install choices and stop. Ask before adding a dependency.
-
-### Docs
-
-Product docs: https://developers.cloudflare.com/ . Machine-readable index: https://developers.cloudflare.com/llms.txt .
-
-### Status
-
-`cf` is in beta, so commands and config can still change. Wrangler is not deprecated yet; Cloudflare plans to maintain it for 18 months after the `cf` beta ends.
+When `repo.config.ts` throws as it loads, or `workflow` holds another value, each gate takes its strictest rule: the main checkout takes no writes or commits, and the default branch is not pushed (`(repo.config.ts failed to load)` in the deny). `bun repo worktree finish` refuses with `repo.config.ts failed to load: fix it, then run finish again`.
 
 ## Exports
 
@@ -495,149 +481,29 @@ variants:
 tier: implementer
 ```
 
-## Fast plan format (SSOT)
+## Sync
 
-A short checklist for work the person chose to do fast. Saved by `cli/scripts/persist-fast-plan.ts`. Default is a plan (`plan-format.md`).
+### Skills naming
 
-### Path
+Do not reuse a repo skill name for a consumer custom skill: a repo-owned skill of the same name in `.repo/skills/` replaces the stock one. Pack names stay reserved when their directory is absent.
 
-`.repo/plans-fast/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`, named like a plan.
+`bun repo sync` links the stock skills from the installed package into each host tree and writes the rest; it never copies stock references or scripts. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
 
-### Frontmatter
+Upgrading is running `bun repo update '@workerstack/*'`: it bumps every `@workerstack/*` package to its npm latest, installs, and prints what that install's sync wrote and removed, plus each package's CHANGELOG sections between the installed and the new version. The first sync in a repo an older `bun repo init` copied moves your own rules, subagents, skills, settings keys, lessons, hooks and references into `.repo/` and `references/`, untracks the generated paths, removes the copied `.rulesync/`, and prints one moved line per move. Commit the result.
 
-`serial`, `name`, `status` (`ready | in-progress | done | blocked`), `created`, `source`, and optional `commit:`. No `strategy`, no `reviews`.
+Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.
 
-### Body
+### Untracked outputs
 
-The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order, then an optional `## Previous mistakes`. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
+In a consumer, sync rebuilds these files from the installed package on every install. The skill links point into `node_modules`. A committed copy drifts from the package and conflicts on each upgrade. So sync keeps them in the `repo:ignore` block of `.gitignore`.
 
-### Cap and denials
+`bun repo sync` and `bun repo sync --check` refuse when git tracks a file the block covers. They print one line per block line, with the `git rm --cached` command to run. Migrate and adopt untrack a committed tree themselves.
 
-At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are outside the cap. It is append-only, and under `/away` it holds the `- decision:` lines. Replies:
+### References
 
-- `a fast plan has no strategy`
-- `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
-- `a fast plan is at most 40 lines; write a plan (/write-plan-deep)`
-- `a new fast plan has only [ ] boxes`
+Each `references/**/*.md` needs a frontmatter `description:` of at most 32 characters. It may also set `order:`, a whole number. Sync lists the files in the `repo:refs` block of that folder's `INDEX.md`: lowest `order` first, then the files without one, ties by path. The README's Contents and sections follow that list.
 
-### Approval
-
-All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy codes. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
-
-A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
-
-## Fast roadmap format (SSOT)
-
-A short ordered program of fast plans, for work the person chose to do fast. Saved by `cli/scripts/persist-fast-roadmap.ts`. Default is a roadmap (`roadmap-format.md`).
-
-### Path
-
-`.repo/roadmaps-fast/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. Serials count in `roadmaps-fast` only.
-
-### Frontmatter
-
-`serial`, `name`, `status` (`draft | locked | in-progress | done`), `created`, `source`. No `strategy`, no `reviews`.
-
-### Body
-
-The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
-
-### Cap and Location
-
-At most 20 lines, frontmatter included; Location lines and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
-
-### Denials
-
-- `a fast roadmap has no strategy`
-- `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
-- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)`
-- `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
-- `a new fast roadmap has only [ ] boxes`
-- `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
-
-### Approval
-
-Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy codes. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
-
-### Run
-
-`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`.
-
-## google-workspace
-
-Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session.
-
-```
-bun repo google-workspace whoami
-bun repo google-workspace scopes
-bun repo google-workspace login
-bun repo google-workspace sheet create --title "Q3" --csv "item,qty\nA,2"
-bun repo google-workspace sheet set --id ID --cell A1 --value x
-bun repo google-workspace sheet get --id ID --range A1:B10
-bun repo google-workspace sheet append --id ID --csv "c,3"
-bun repo google-workspace sheet clear --id ID --range A1:Z
-bun repo google-workspace doc create --title "Notes" --body "hello"
-bun repo google-workspace doc append --id ID --body "more"
-bun repo google-workspace drive list --query "mimeType='application/vnd.google-apps.spreadsheet'"
-bun repo google-workspace slide create --title "Deck"
-bun repo google-workspace meeting create --title "Standup" --start 2026-09-15T09:00:00Z --end 2026-09-15T09:15:00Z --attendees a@x.com,b@y.com
-bun repo google-workspace mail send --to you@example.com --subject hi --body hello
-bun repo google-workspace mail list
-```
-
-Each person has their own Google Cloud app. Creds stay in `~/.workerstack/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
-
-Handheld (any OS): `bun repo setup google-workspace` or `bun repo setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.workerstack/workspace/default/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
-
-Doctor reports google-workspace as optional: `ok` when Desktop OAuth JSON, tokens, gcloud ADC, or `~/.clasprc.json` exists, else `missing (optional)`. It prints source names (`oauth` `tokens` `adc` `clasprc`), not secrets. `clasprc` is Drive-only.
-
-Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Each account, `default` included, uses `~/.workerstack/workspace/NAME/`.
-
-```
-bun repo google-workspace --account work login
-bun repo google-workspace --account work whoami
-bun repo google-workspace accounts
-```
-
-Each account needs its own Desktop JSON in that folder (`google-oauth.json`) and its own `login`.
-
-Clasp’s public OAuth client is Drive-only. Calendar and Gmail are restricted; Google blocks extra scopes on that app. Use **your** Desktop OAuth client.
-
-### Agent: setup e2e
-
-If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `bun repo setup google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
-
-Local dir is created by setup (`~/.workerstack/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.workerstack" && chmod 700 "$HOME/.workerstack"` then:
-
-1. Open `https://console.cloud.google.com/projectcreate` — **Create**. Org can be their Workspace org. Note **Project ID** from the dashboard URL (`?project=`).
-2. Open `https://console.cloud.google.com/auth/overview/create?project=PROJECT_ID` (or **Google Auth Platform → Branding**).
-   - App name: anything (`autorun` is fine). That string is only the Allow screen.
-   - User support email: their address.
-   - Audience: **Internal** if the Google account is a paid Workspace org (e.g. `@rearm.co`). **Testing** + add their own address as a test user if it is a personal `@gmail.com` (Internal is not offered). APIs work on both; only this consent type changes.
-   - Next / Create through the wizard.
-3. Open `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=PROJECT_ID` — **Enable**.
-4. Open `https://console.cloud.google.com/auth/clients/create?project=PROJECT_ID`.
-   - Application type: **Desktop app**.
-   - Create → **Download JSON**.
-5. Copy the download to `$HOME/.workerstack/workspace/default/google-oauth.json` (Windows: `%USERPROFILE%\.workerstack\workspace\default\google-oauth.json`). chmod 600 on Unix. Confirm it has `"installed"` and `client_id`. For `--account NAME`, use `$HOME/.workerstack/workspace/NAME/google-oauth.json`.
-6. From the repo: `bun repo google-workspace login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace/NAME/tokens.json`).
-7. Smoke:
-
-```
-bun repo google-workspace whoami
-bun repo google-workspace scopes
-bun repo google-workspace sheet create --title smoke-sheet --csv "k,v\nok,1"
-bun repo google-workspace doc create --title smoke-doc --body ok
-bun repo google-workspace slide create --title smoke-slide
-bun repo google-workspace meeting create --title smoke-meeting --start 2026-09-16T09:00:00Z --end 2026-09-16T09:15:00Z
-bun repo google-workspace mail send --to THEIR_EMAIL --subject smoke --body ok
-```
-
-`scopes` must include `calendar`, `gmail.modify` or `gmail.send`, `spreadsheets`, `documents`, `drive`. If login times out, they did not finish Allow; re-run `login`.
-
-If `google-oauth.json` is missing, `login` prints `setup: bun repo setup google-workspace`. Prefer the handheld setup (it opens the Project ID URLs). Manual steps above still work.
-
-`gcloud` on PATH is an alternate login (`gcloud auth application-default login` with the extra scopes). Still per person, still local.
+This holds in every repo with the docs pack and in each workspace package. A bad value fails sync and names the file.
 
 ## Hooks
 
@@ -767,500 +633,6 @@ The rules follow the root's `workflow` (`workflow.md`), read from `repo.config.t
 `bun repo doctor` lists a managed worktree with commits the default lacks and a last commit 7 or more days old as `stale worktree <path> (wt/<name>, last commit <n> days ago)` with the `finish <name>` command. Younger ones are live work and are not listed.
 
 `bun repo doctor` `agent models` checks that each model a generated agent names is still offered by its CLI: `.codex/agents/*.toml`, `.grok/agents/*.md`, `.grok/roles/*.toml` and `[subagents.models]` in `agents/global-settings/grok.toml`, `.agents/agents/*.md` (Antigravity) and `.cursor/agents/*.md`. Claude agents use the aliases `haiku`, `sonnet`, `opus` and are not checked. Cursor agents use `model: inherit` (the parent session's model, which any Cursor plan can run; a pinned Claude id is listed on a Free plan but refused), and `inherit` is not checked. Codex and agy are checked without running a command. Codex's list comes from `~/.codex/models_cache.json` `models[].slug` (a file). Agy's is a fixed set, the only values agy accepts for an agent's `model:`: `inherit`, `flash`, `pro` and `flash_lite`. `agy models` lists session models, which an agent file cannot name, and agy silently drops an agent whose `model:` is anything else. An agy main agent's `model:` is ignored (it runs on the session model), so the orchestrator uses `inherit`. An agy agent with no `tools:` gets a read-only default, so the orchestrator lists its tools. Grok's and Cursor's lists come from `grok models` and `cursor-agent --list-models`; those two commands run in parallel under one 20 s cap. A dropped model prints `<file>: model <id> is not offered by <cli>; offered: <ids>`. Grok or Cursor is skipped with its reason when it is not installed or its list fails or takes over 20 s, and codex when its cache is missing or malformed (`agent models  ok (skipped: ...)`). Agy is never skipped. Report only: the row never fails the run.
-
-## Implementation format (SSOT)
-
-Local session journal for `/implement-plan-deep`. Not a plan, handoff, or git commit.
-
-Created when `/implement-plan-deep` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
-
-### Path
-
-`.repo/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
-
-- **serial:** own counter (not plan serials). Unpadded decimal int ≥ 1. Never `0001`.
-- **filename:** unpadded serial, slug, UTC datetime stamp. Same regex as new plans: `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
-- **lookup:** integer equality on leading digits.
-- Frontmatter `serial:` line must match `^serial: [1-9][0-9]*$`.
-- New writes always stamped. Collision: increment serial, same stamp.
-
-### Link
-
-Frontmatter `plan:` is the plan serial (`6`) or `none`. Own serial stays independent.
-
-### Slugify / allocate
-
-Same as plans (`slugify`, `nextSerial` on this dir). Body line 1: `IMPL_NAME: <3-6 word name>`. Optional `IMPL_PLAN: <n|none>` (default `none`).
-
-### Frontmatter (required)
-
-```yaml
----
-serial: 1
-plan: 6                 # unpadded int or none
-name: add-auth
-status: in-progress     # in-progress | done | blocked
-created: 2026-08-26T14:30:00Z
-source: "<≤120 chars of user task>"
----
-```
-
-#### Status machine
-
-`in-progress` → `done` | `blocked`
-
-- Fresh write: `in-progress`
-- Plan Verify done and journal caught up: `done`
-- Cannot finish: `blocked` (`## Blockers` must not be `(none)`)
-
-### Body headings (this order only)
-
-`# {slug}`, `## Done`, `## Issue`, `## Files`, `## Log`, `## Blockers`, `## Notes`
-
-No other `##` headings.
-
-| Section | Amount |
-|---|---|
-| Done | bullets. What landed and why. Past tense. Fresh: `(none)` |
-| Issue | bug root cause bullets, or `(none)` |
-| Files | repo-relative product paths as `- path` bullets. Default `/commit` stage set. No abs paths. No `.tmp/`. Fresh: `(none)` |
-| Log | append-only. Fresh: `(none)`. After each plan leaf: `N.M [x] one line` (notes, fail, skip). `[x]` allowed |
-| Blockers | open problems. `(none)` unless `status: blocked` |
-| Notes | short leftovers, or `(none)` |
-
-### Write
-
-Write under `.repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-implementation.ts` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
-
-Host without that hook: name the file per **Path**, or pipe the body to `bun repo persist implementation --workspace {repo}` and use its `absPath`.
-
-Never allocate a new serial to log a leaf. Append Log, update Files/Done, flip the plan box.
-
-### Validation checklist
-
-- filename stamped unpadded; serial int equals leading digits; `name` equals slug
-- frontmatter keys: `serial`, `plan`, `name`, `status`, `created`, `source`
-- `plan` is `none` or unpadded int ≥ 1; `status` ∈ `in-progress` | `done` | `blocked`
-- headings in order only; no extra `##`
-- Done / Issue / Files / Log / Blockers / Notes: bullets and/or `(none)`; none of those sections empty
-- Files: repo-relative; reject abs and `.tmp/`
-- `status: blocked` ⇒ Blockers is not only `(none)`
-
-### Worked example
-
-File: `.repo/implementations/1-notes-export-json-20260826T143000Z.md`
-
-```markdown
----
-serial: 1
-plan: 1
-name: notes-export-json
-status: in-progress
-created: 2026-08-26T14:30:00Z
-source: "add --json to notes export"
----
-
-# notes-export-json
-
-## Done
-- `notes export --json` prints every note as one JSON array; the text table stays the default
-
-## Issue
-(none)
-
-## Files
-- src/cli.ts
-- src/export.ts
-- src/export.test.ts
-
-## Log
-1.1 [x] read principle-test-behavior-not-implementation
-2.1 [x] export tests for two notes and for none
-2.2 [x] new cases fail on the unknown flag
-3.1 [x] parse --json in cli.ts
-3.2 [x] print JSON.stringify of the notes in export.ts
-3.3 [x] export tests pass
-
-## Blockers
-(none)
-
-## Notes
-(none)
-```
-
-## Jev
-
-Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not open research. Not code. Not job.
-
-### Availability
-
-```
-bun repo jev --available
-```
-
-Prints `yes` or `no` and exits 0. No request. No setup line.
-
-`no`: the session answers the question itself. Do not run the decision command. Do not mention Jev, a missing key, or setup.
-
-`yes`: continue below.
-
-A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun repo setup jev`. Spec: `node_modules/@workerstack/repo/references/setup.md`.
-
-### Decision
-
-Write `.repo/scratch/jev/<slug>-state.txt` (plain text or a JSON object) and `.repo/scratch/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
-
-```
-bun repo jev --state .repo/scratch/jev/<slug>-state.txt --questions .repo/scratch/jev/<slug>-questions.json
-```
-
-Yes/no:
-
-```json
-{ "keep": { "type": "noul", "instructions": "Does this passage promise zero retention on the default plan?" } }
-```
-
-Named choice:
-
-```json
-{
-  "endpoint": {
-    "type": "choice",
-    "instructions": "Which endpoint should the app call?",
-    "criteria": {
-      "typesafe": "Vendor host, path, and key",
-      "other": "A different host, path, or key"
-    }
-  }
-}
-```
-
-Model is `jev-1.13.0`. Stdout is at most 8 lines: model, input tokens, then one label line. Exit 0. Use that label and confidence. A low confidence is the result. Do not rephrase and call again.
-
-One request per process. UTC-day ledger `~/.workerstack/jev-usage.json` stops at 40 requests or 1000000 input tokens. A 429 or 529 retries once only when `Retry-After` is at most 2 seconds.
-
-Exit 2 means the decision call did not return a label. Answer from the sources. Do not invent a label. Do not print the key or the state.
-
-## Lessons
-
-Mistakes that outlive one task. One committed file per mistake under `.repo/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
-
-### Three layers
-
-- **Plan:** `## Previous mistakes` in each plan holds that task's details: rejected approaches, failed Verify, accepted review findings. It stays with the plan in `.tmp/`. Format: `node_modules/@workerstack/repo/references/plan-format.md`.
-- **Roadmap:** `## Previous mistakes` in a roadmap holds mistakes about the program: slice order, slice boundaries, and `slice` entries for what a child plan found that changed later slices. A roadmap saved in the old shape also logs its Decisions there; a pointer roadmap's decisions live in the slice plans. It lasts as long as the program, in `.tmp/`. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
-- **Repo:** a lesson holds a mistake our normal workflow will hit again on other tasks. A one-time issue stays in the plan's Previous mistakes. A plan entry that generalizes becomes a lesson, and the entry ends with `(lesson: {slug})`.
-
-### File
-
-`.repo/lessons/{slug}.md`: a title (the rule, at most 72 chars), `## Mistake` (at most 280) and `## Fix` (at most 360), with nothing between the title and `## Mistake`. Every save, `bun repo lessons check` and `bun repo sync --check` refuse a lesson over a cap or with a line under the title.
-
-```markdown
----
-name: plan-forks
-paths: ["cli/scripts/persist-plan.ts", "agents/grok/hooks/**"]
-hits: 1
-last-hit: 2026-11-01
-evidence: ["plan 16"]
----
-
-# Plan rewrites fork serials
-
-## Mistake
-What went wrong, concretely.
-
-## Fix
-What to do instead.
-```
-
-- `name` is the filename slug. `paths` are repo-relative globs (`**` spans dirs; `*` and `?` stay in one segment) and each must match a file that exists.
-- `hits` counts occurrences. `evidence` keeps the 5 most recent plan serials or commits.
-- A new lesson may leave out `hits` and `last-hit`; the save fills `1` and today.
-
-### Index
-
-`.repo/lessons/INDEX.md` is generated: one line per lesson (`- \`slug\` (hits N): title`), sorted by hits. It opens with the `@generated by @workerstack/repo` header and is left read-only (0444); to change it, edit the lessons in `.repo/lessons/`. Every lesson save, `hit`, and `rm` rewrites it, and `bun repo sync` rewrites it too. `bun repo sync --check` fails on index drift, an invalid lesson, or a glob that matches no file.
-
-### Write
-
-- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). Under `workflow: "main"` the main checkout takes them too. Under the other modes, in the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.repo/{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
-- Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
-- `bun repo lessons hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
-- `bun repo lessons rm <slug>` deletes a lesson and reindexes.
-- `bun repo lessons index` rebuilds the index. `check` runs the checks and, like `match`, is read-only, so it runs anywhere.
-
-### When to write
-
-Write a lesson only for a mistake our normal workflow will hit again on other tasks. A one-time issue stays in the plan's Previous mistakes.
-
-After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `bun repo lessons match` on the files involved first, then `hit` the matching lesson or write a new one.
-
-- Plan feedback from the user (`/write-plan-deep`).
-- A failed Verify, or a test that failed after a fix (`/implement-plan-deep`).
-- `principle-attack-the-premise` firing (`/implement-plan-deep`).
-- An accepted `/review-plan` finding (`/write-plan-deep`).
-- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap-deep`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap-deep`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
-- An operator correction (`/correct`).
-
-At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `bun repo lessons rm`.
-
-### When to read
-
-- `bun repo lessons match <file...>` prints the lessons whose globs match, most hits first, 10 at most. It reads the lesson files, not `INDEX.md`; a lesson it cannot read is named on stderr (`.repo/lessons/x.md: invalid, run bun repo lessons check`) and skipped. Each file is matched against the lessons of the checkout that holds it: the root or a managed worktree; a file in an unmanaged linked worktree uses the checkout you run it from.
-- A new plan that names a matched file must cite that lesson's path in Watch-outs, or the save is denied with the lesson listed.
-- The first time a session edits a matched file, the hook adds that lesson's title and path to the context. Each lesson is shown once per session.
-- `/review-plan` reads the matched lessons and flags one that no leaf acts on.
-
-## Listen
-
-Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP.
-
-```
-bun repo listen whoami
-bun repo listen devices
-bun repo listen rec [--seconds 8] [--device D] [--clip]
-bun repo listen start [--device D]
-bun repo listen stop [--clip]
-bun repo listen toggle [--clip]
-bun repo listen status
-bun repo listen file --path clip.wav [--clip]
-bun repo listen latest
-```
-
-`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.repo/tmp/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
-
-### Auth and capture
-
-Handheld (any OS): `bun repo setup listen` or `bun repo setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.workerstack/whisper/`, OpenAI fallback key if local STT is missing.
-
-If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: bun repo setup listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
-
-STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.workerstack/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.workerstack/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys.
-
-| | env | `~/.workerstack/speak.json` |
-| --- | --- | --- |
-| Local model | `WHISPER_MODEL` | `listen.whisperModel` |
-| Force engine | `LISTEN_STT` | `listen.stt` (`auto` / `local` / `openai`) |
-| OpenAI key | `OPENAI_API_KEY` | `openai.apiKey` |
-| OpenAI model | `LISTEN_MODEL` | `listen.model` (default `whisper-1`) |
-| Device | `LISTEN_DEVICE` | `listen.device` |
-| Seconds | `LISTEN_SECONDS` | `listen.seconds` |
-
-#### Local Whisper (preferred)
-
-One install:
-
-- mac: `brew install whisper-cpp` (provides `whisper-cli`)
-- linux: build https://github.com/ggml-org/whisper.cpp (`whisper-cli` on PATH)
-- win: whisper.cpp release `whisper-cli.exe` on PATH
-
-Then `bun repo listen whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.workerstack/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
-
-Larger models: put another `ggml-*.bin` in that folder or set `WHISPER_MODEL`. Doctor reports `whisper-cli` as optional. `whoami` prints `stt=local` or `stt=openai`.
-
-#### ffmpeg (mic only)
-
-- mac: `brew install ffmpeg`
-- linux: `sudo apt install ffmpeg`
-- win: `winget install Gyan.FFmpeg`
-
-`file` and `latest` work without a mic. Doctor reports ffmpeg as optional.
-
-`rec` detaches ffmpeg and does not attach it to the IDE TTY. AVFoundation can stall forever on a VS Code / Electron PTY even when Visual Studio Code already has Microphone access.
-
-Default devices: mac `:0` (AVFoundation audio 0), linux Pulse `default` (ALSA if the id is `hw:…`), Windows requires `--device` or `LISTEN_DEVICE` from `listen devices`.
-
-### Hotkeys
-
-Bind one key to toggle. Include `--clip` so the transcript is on the clipboard as well as `latest.txt`.
-
-```
-bun --cwd /ABS/repo repo listen toggle --clip
-```
-
-Replace `/ABS/repo` with the repo root.
-
-- **mac:** Shortcuts (Run Shell Script) or skhd: `hyper - r : bun --cwd /ABS/repo repo listen toggle --clip`
-- **win:** PowerToys Keyboard Manager or AutoHotkey: `^!r:: Run, bun --cwd C:\ABS\repo repo listen toggle --clip, C:\ABS\repo, Hide`
-- **linux:** desktop custom shortcut or sxhkd to the same command.
-
-No daemon. Each keypress is one CLI. First press records; second press transcribes.
-
-`--clip` uses `pbcopy` (mac), `clip` (win), or `wl-copy` / `xclip` / `xsel` (linux).
-
-## Map
-
-Cheap outline. Not a file dump.
-
-### Protocol
-- `node_modules/@workerstack/repo/references/cascade.md` — session agent tools; job first; spawn scout when the dump needs judgment
-- `node_modules/@workerstack/repo/references/rtk.md` — shell compression
-- `node_modules/@workerstack/repo/references/browser.md` — Lightpanda-first session CLI (`nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop`); not MCP
-- `node_modules/@workerstack/repo/references/hooks.md` — hook policy
-- `node_modules/@workerstack/repo/references/map.md` — this file
-- `node_modules/@workerstack/repo/references/output.md` — default voice
-- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan-deep` → approval → `/implement-plan-deep`; two or more slices → `/write-roadmap-deep`
-- `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the generated `repo:refs` (one line per reference doc), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
-
-### Agent SSOT
-- Docs SoT: `agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` and `.agents/skills/<name>` are generated links to `agents/skills/<name>`, not SoT; no mirror scan
-- The trees come from `cli/sync/agents/` (`sources` `frontmatter` `rules` `subagents` `hooks`) via `bun repo sync`, reading the stock sources in `agents/` (exported as `@workerstack/repo/agents/*`)
-- `agents/subagents/{orchestrator,repo}.md`
-- `agents/rules/overview.md` → `AGENTS.md`
-- A consumer's own content lives in `.repo/` (below) and `references/`; both are committed, and `bun repo sync` merges them over the package's
-- Default output: `node_modules/@workerstack/repo/references/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
-
-### Skills layout
-- Source: `agents/skills/<name>/SKILL.md`, the one copy (`STOCK_SKILLS_REL` in `cli/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
-- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them, and a config pack can gate a stock skill the same way (the `benchmark` pack links `/benchmark`). In this repo sync links both `.claude/skills/<name>` and `.agents/skills/<name>` straight to `agents/skills/<name>` with a relative link. The package ships no generated trees, so each consumer's sync makes its links
-- Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
-- There is no skills generator step: `bun repo sync` only links skills; nothing wipes `.agents/skills`
-
-### Grok hand files
-- `cli/scripts/orchestrate-parent.ts` + `agents/grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
-- `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
-- `agents/grok/hooks/rtk.json` — RTK
-- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor` `opencode`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json` `opencode.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
-- `agents/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
-- `agents/grok/{roles,hooks}/` — grok's static roles and hook configs; `bun repo sync` copies them into `.grok/roles` and `.grok/hooks`
-- `agents/skills/<name>/` — the one skills source; `bun repo sync` links each into the host skill dirs
-
-### Scripts
-- `cli/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in `bun repo sync --check`: `bun cli/scripts/check-globals.ts` in this repo and the `bun repo doctor` `globals` row everywhere
-- `cli/scripts/gate-fat-tools.ts`
-- `cli/scripts/scrub-spawn-prompt.ts`
-- `cli/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
-- `cli/scripts/parse-need.ts`
-- `cli/scripts/persist-handoff.ts` — `.repo/handoffs/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
-- `cli/scripts/persist-plan.ts`
-- `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
-- `cli/scripts/sync-global-settings.ts` — applies by default, `--dry-run` previews, `--check` reports drift, `--host <id>`; report line `{action} {id} {dest}`, or `skip {id} {dest}: <reason>` for a dest it leaves as it is
-- `cli/scripts/purge-global-mcps.ts`
-- `cli/scripts/emit-mcp-policy.ts`
-- `cli/scripts/emit-agent-shell-tools.ts`
-- `cli/scripts/browser.ts` — session browser rail
-- `cli/scripts/google-workspace.ts` — Sheets Docs Slides Calendar Gmail Drive
-- `cli/scripts/speak.ts` — TTS
-- `cli/scripts/listen.ts` — STT
-- `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
-- `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
-- `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
-- `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
-- `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
-- `cli/scripts/env-command.ts` (+ `.constants.ts`) — `bun repo env` dispatch, usage and exit codes; `env-args.ts` parses the flags; `env-io.ts` is the deps (cwd, stdin, stdout, gh) and the one-line refusal
-- `cli/scripts/env-files.ts` — finds the `defineEnv` files, picks one (`--file`, the one declaring the key, the only one) and lists USED BY
-- `cli/scripts/env-edit.ts` — `env set`: the AST edit that seals or writes a value into the scope block in place
-- `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
-- `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
-- `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
-- `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
-- `cli/check-deps.ts` (+ `.constants.ts`) — the `bun repo check` deps rule per public package: a used dep outside `peerDependencies`, any dep of a library (no `bin`), missing export types, an unreadable surface
-- `cli/type-surface.ts` (+ `.constants.ts`) — the in-memory declaration emit of a package's typed exports over a virtual host, and the packages its declarations use, keyed to the export that reaches each file
-- `cli/type-surface-entries.ts` — the files the types of `exports` start from: exact keys, `*` patterns, `null` exclusions, tsconfig `files`, the `types`/`typings`/`main` fallback, and the keys whose types are missing
-- `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
-- `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
-- `cli/build-outputs.ts` — maps each `tsconfig.build.json` output to its source; none for a missing or unparsable config
-- `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
-- `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
-- `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
-
-### Tmp
-- `.repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
-- `.repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
-- `.repo/tmp/sessions/<sid>/settings.json` — the session's approval, effort and strategy
-- `.repo/tmp/orchestrator-logs/` — need-intercept, stop-block stamps
-- `.repo/scratch/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
-- `.repo/tmp/browser/` — browser session/profile/shot/pdf (not MCP)
-- `.repo/handoffs/` — persist-handoff / `/handoff`
-- `.repo/tmp/stash/` — job / snap overflow
-- `.repo/tmp/sessions/{sid}/` — wrote/read/receipt
-- `.repo/tmp/speak/` — TTS mp3
-- `.repo/tmp/listen/` — STT wav + `latest.txt`
-
-### `.repo/` layout
-Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ignored `tmp/`.
-- `lessons/` — one file per lesson plus the generated `INDEX.md`
-- `rules/` — path-scoped rules only (each has `paths`), written to the host rule trees; a rule without `paths` is moved by one sync below the `repo:rules` region of its scope's `AGENTS.md` (except one with `overrides`); a stock rule's extra sections go to `<name>-local.md` so the stock text stays live
-- `subagents/` — extra agents; one named like a stock agent replaces it
-- `skills/` — extra skills, linked into each host tree (a real skill dir found under `.agents/skills` or `.claude/skills` moves here)
-- `settings/claude.json` — keys deep-merged into the generated `.claude/settings.json`
-- `hooks.jsonc` — replaces the stock hooks whole
-- `mcp-policy.jsonc` — deep-merged over the stock MCP policy
-- `permissions.json` — path deny rules added to the generated hooks
-- `lint-baseline.json` — per file, per rule, the lint problems still allowed; read by `bun repo turn` and `bun repo check`
-- `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
-- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`, `opencode.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
-- `bench/` — `<name>.bench.ts` specs, a `defineBench` default export each; read by `bun repo bench <name>`, not by sync; root only
-- `env.keys.json` — `{ "recipient": "age1…", "repo": "<name>" }`: the age public key `sealed(...)` values are sealed for, and the name of the key file `~/.workerstack/keys/<repo>.key`
-- `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
-
-### Generated (do not hand-edit)
-`bun repo sync` writes these from `node_modules/@workerstack/repo` plus `.repo/` for the hosts in `agents.hosts` (default: all five; `HOST_TREES` in `cli/sync/hosts.ts` is the one table). In a consumer they are gitignored and recreated by every `bun install`; in this repo they are committed. `bun repo sync --check` reports drift. Three more `agents` keys in `repo.config.ts`: `defaultStrategy` (`free`, `spawn-fast` or `spawn-deep`; default `free`) is the `strategy:` a new plan or roadmap gets when the session holds none (and, for a plan, no in-progress roadmap this session saved has one), read by the saves and `bun repo persist`; `defaultApproval` (`ask` or `away`; default `ask`) applies when the session has no session approval and no in-progress plan or roadmap with an `approval:`, read by the hook; `defaultEffort` (`fast` or `deep`; default `deep`) is the session effort when none was set, shown in the hook context, which picks the plan skills the last line of the root `AGENTS.md` names. Example: `agents: { defaultStrategy: "spawn-deep", defaultApproval: "away", defaultEffort: "fast" }`. Each file sync writes whole opens with a `@generated by @workerstack/repo` header line where its format takes a comment and is left read-only (0444, 0555 for a hook) by every sync; to change one, edit its source in `.repo/` (the layout above) or in the package, then sync. A tracked file with that header that no output names any more is removed, even with no manifest; one under a `__fixtures__` folder is kept, and changing the header line keeps a copy. Files where sync owns only regions (`.gitignore`, `.gitattributes`, `references/INDEX.md`) stay writable. A region opens with `# repo:<name> <hash>` and closes with `# /repo:<name>` (`<!-- repo:<name> <hash> -->` and `<!-- /repo:<name> -->` in markdown); the hash is the first 8 hex of the sha256 of the body sync wrote. Sync never fails on a shared file: it prints one `<path>: <repair>` line on stderr per repair (`converted the old markers to repo:ignore` for the old `# >>> @workerstack/repo` pair, `added the hash to`, `closed`, `opened`, `reordered the markers of`, `rewrote the markers of`, `dropped 1 extra`, `dropped 1 stray marker of`, `moved 1 edited line out of` (kept just below the region), `cut` for a region no version writes any more). A shared path no output names any more has its regions cut and keeps the rest (`--check`: `<path> has regions no output writes`), removed only when nothing but whitespace is left. An invalid or non-object `.vscode/settings.json` is left as is with a warning. `bun repo sync` and `--check` refuse when git tracks a file the `repo:ignore` block of `.gitignore` covers, and print the `git rm --cached` command to run.
-- `AGENTS.md` (the root and each package's) — shared: sync writes only the hashed `repo:rules` region at the top; everything else is your text, tracked and committed. There is no package `CLAUDE.md`. The always-on text over 12 KiB is a warning
-- Not written by sync: `.mcp.json` is your tracked file (`bun repo init` writes the first one; sync never writes or deletes it). Every other host's MCP file is built from it, filtered by the MCP policy allow list; a `.repo/mcp.json` or a policy `servers` key is moved into `.mcp.json` by one sync, and `.mcp.json`'s own server wins on a name collision
-- claude → `.claude/`: `agents/*`, `settings.json` (MCP keys, hooks, the `.repo/settings/claude.json` merge), `skills/<name>` links
-- codex → `.codex/` (`agents/*`, `config.toml` `mcp_servers`, absent when allow empty) and `.agents/skills/<name>` links
-- antigravity → `.agents/`: `agents/*`, `skills/<name>` links, `mcp_config.json`, hooks
-- grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml` and `hooks/*.json` copied from `agents/grok/`; the hook scripts stay in the package's `cli/scripts/`
-- cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
-- release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); also, for a public root with a config `owner` and a GitHub `repository`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/{bug_report,config}.yml` (tracked, whole-file); a hand-written one is refused
-- benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused; also the `/benchmark` skill links in `.agents/skills` and `.claude/skills`
-- evals pack: `.github/workflows/eval.yml` (tracked, whole-file), dispatched by hand with an eval name and a cost cap, and the evals environment `bun repo github` manages; a hand-written eval.yml is refused
-- standards pack, editor: keys the file lacks are added to `.vscode/settings.json`, and ids it lacks to `recommendations` in `.vscode/extensions.json`, never changing what you set: Bun formats on save through the Simple LSP Client extension (`bun fmt --no-script --stdin-filepath`), the oxc extension only lints (`oxc.enable.oxfmt: false`, fix-all on save), the workspace TypeScript (`js/ts.tsdk.path`, with the TypeScript 7 extension for 7 or later; a deprecated `typescript.tsdk` moves to `js/ts.tsdk.path`), `.css` as `tailwindcss` with a Tailwind entry sheet, the Vitest extension when vitest is installed
-- always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
-
-### Generator divergences
-Where `cli/sync/agents/` differs from the rulesync 43.7.0 it replaced:
-- YAML 1.2 parsing: `yes` stays a string
-- No 80-column folding of long values
-- The `agentsmd` and `codexcli` rule targets both fold into `AGENTS.md` only
-- A leading `./` in a claude hook command becomes `"$CLAUDE_PROJECT_DIR"/`
-- A bad subagent, or a rule without frontmatter, fails sync
-
-## Output
-
-en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape.
-
-Cue names are examples too: example, e.g., for instance, such as, and so on, `…`, `etc.`, a sketched sentence, or one labeled case. Do not reuse one reply for every turn. Pick the count and the form for this case.
-
-A closed instruction stays literal. Cues of that kind include only, exactly, just these, verbatim, no others, a schema, an identifier, a command, or quoted text. When an open cue and a closed cue both apply, the closed cue wins.
-
-Do not invent a question or let the close introduce new numbers. Completed work uses past verbs and paths. If more work remains, say what. Ask in English when a choice is real.
-
-`/su`, `/bro`, `/unslop`, `/blast-radius`, `/correct`, `/teach`, plan files, commit subjects, and job stdout keep their own shape. `/bro` restates a reply that missed the voice in `overview.md`. `/explain` keeps the shape and may lengthen the middle. Repo children do not talk to the user.
-
-Job stdout is a sentence plus up to 6 dash facts, cap 8 lines, and an optional `stash=` receipt.
-
-### Example: waiting on the user
-
-One case of the class "the user must act before we can finish". Copy the shape, not the words.
-
-Cold:
-
-> We're waiting on four things, and only the first is mine to do now.
->
-> 1. Local main isn't pushed. It's 10 commits ahead of origin, including my test fix. Nothing below can start until those commits reach origin.
-> 2. The first public-sync run after that push. It should copy the generated code into each public repo.
-> 3. Publish secrets. None of the public repos I checked has its own secrets or variables. They may be set at the org level, but my token can't read org settings.
-> 4. Your go to publish.
->
-> Should I push main myself, or keep waiting?
-
-Partner:
-
-> We're one push away from the first releases, and most of what's left is yours.
->
-> **You**
-> - Push main, or tell me to. It's 10 commits ahead, including another session's work.
-> - NuGet (`org/sdk-csharp`): add a trusted publishing policy for `release.yml`, and the repo variable `NUGET_USER`.
-> - Maven (`org/sdk-java`): add the user token as `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`, and the GPG key as `MAVEN_GPG_PRIVATE_KEY` plus `MAVEN_GPG_PASSPHRASE`. Skip any already set at the org level; my token can't see org settings.
->
-> **Me**: writing the test that blocks a release when the spec differs from prod, now. After the push I run the public sync, cut the releases, and verify each registry on Linux, macOS and Windows.
->
-> Say "publish" when the secrets are in.
-
-The partner reply opens on the goal, groups the user's steps by where they do them, says what the agent does next, and ends on one action.
 
 ## Plan format (SSOT)
 
@@ -1530,51 +902,6 @@ $ notes export
 (none)
 ````
 
-## Review loop
-
-Read this when the plan's `strategy` is `spawn-fast` or `spawn-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
-
-### Start
-
-The first action, at start or on resume, is a plan save (a status or box edit). It stamps the session. Until it runs, the gate does not know this session reviews.
-
-### Phases
-
-- Phases run in order; each goes to one implementer: `implementer-fast` first on `spawn-fast`, `implementer-deep` on `spawn-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
-- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write unless `workflow` is `main`. Run `bun repo worktree add {serial}-{name}` first if it is missing.
-- A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
-- Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
-- Only you tick boxes and write the journal. Write one entry per round.
-
-### Review
-
-- Read the implementer's report: `changed:`, `tests:`, `status:`. A missing report or a status other than `done` is a failed round.
-- Read the real `git diff` in the worktree and rerun the phase's tests yourself. Do not trust the report.
-- Send findings back to the same implementer. Continue it where the harness allows. Otherwise respawn it with the findings and the current diff.
-- A phase passes when the diff matches its leaves and your test run is green.
-
-### Baseline
-
-The index is the baseline. After a phase passes, stage only the implementer's `changed:` files that the phase's leaves name: `git add -- <files>`. Never `git add -A` on this shared tree. The next phase's `git diff` (unstaged) then shows only that phase. The implementer never stages or commits.
-
-### Escalate
-
-After 3 failed rounds, a missing report or a status other than `done`, spawn `implementerOf(strategy, 2)` fresh with the findings. If that one fails the same way, set the plan `blocked` and add a `- blocked:` journal entry.
-
-### Commit
-
-One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then lands it the way `AGENTS.md` says (by default `finish` from the root). It holds only this plan's files.
-
-### Dumps
-
-You and the implementer send big output through `bun repo job`. The gate rewrites a plain test run to `--job test`. Use `--job exec` for any other large command. Neither of you spawns scout for the implementer's work.
-
-### Not enforced
-
-The gate denies your product writes on claude (Grok runs through it) and codex.
-
-Not enforced on: antigravity, cursor. There, make no product writes yourself; every product edit goes through the implementer.
-
 ## Roadmap format (SSOT)
 
 Ordered program of child plans. Not a plan, a handoff, or a design doc.
@@ -1683,6 +1010,495 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 - `reviews` is a whole number, never lower than the saved one; `locked` needs at least 1
 - a fresh create is `draft`, `reviews: 0`, and has no `[x]`
 
+## Review loop
+
+Read this when the plan's `strategy` is `spawn-fast` or `spawn-deep`. You are the reviewer. An implementer agent writes the product code. Values: `plan-format.md`. Gate rules: `hooks.md`.
+
+### Start
+
+The first action, at start or on resume, is a plan save (a status or box edit). It stamps the session. Until it runs, the gate does not know this session reviews.
+
+### Phases
+
+- Phases run in order; each goes to one implementer: `implementer-fast` first on `spawn-fast`, `implementer-deep` on `spawn-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
+- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write unless `workflow` is `main`. Run `bun repo worktree add {serial}-{name}` first if it is missing.
+- A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
+- Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
+- Only you tick boxes and write the journal. Write one entry per round.
+
+### Review
+
+- Read the implementer's report: `changed:`, `tests:`, `status:`. A missing report or a status other than `done` is a failed round.
+- Read the real `git diff` in the worktree and rerun the phase's tests yourself. Do not trust the report.
+- Send findings back to the same implementer. Continue it where the harness allows. Otherwise respawn it with the findings and the current diff.
+- A phase passes when the diff matches its leaves and your test run is green.
+
+### Baseline
+
+The index is the baseline. After a phase passes, stage only the implementer's `changed:` files that the phase's leaves name: `git add -- <files>`. Never `git add -A` on this shared tree. The next phase's `git diff` (unstaged) then shows only that phase. The implementer never stages or commits.
+
+### Escalate
+
+After 3 failed rounds, a missing report or a status other than `done`, spawn `implementerOf(strategy, 2)` fresh with the findings. If that one fails the same way, set the plan `blocked` and add a `- blocked:` journal entry.
+
+### Commit
+
+One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then lands it the way `AGENTS.md` says (by default `finish` from the root). It holds only this plan's files.
+
+### Dumps
+
+You and the implementer send big output through `bun repo job`. The gate rewrites a plain test run to `--job test`. Use `--job exec` for any other large command. Neither of you spawns scout for the implementer's work.
+
+### Not enforced
+
+The gate denies your product writes on claude (Grok runs through it) and codex.
+
+Not enforced on: antigravity, cursor. There, make no product writes yourself; every product edit goes through the implementer.
+
+## Implementation format (SSOT)
+
+Local session journal for `/implement-plan-deep`. Not a plan, handoff, or git commit.
+
+Created when `/implement-plan-deep` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
+
+### Path
+
+`.repo/implementations/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`
+
+- **serial:** own counter (not plan serials). Unpadded decimal int ≥ 1. Never `0001`.
+- **filename:** unpadded serial, slug, UTC datetime stamp. Same regex as new plans: `^[0-9]+-[a-z0-9]+(-[a-z0-9]+)*-\d{8}T\d{6}Z\.md$`
+- **lookup:** integer equality on leading digits.
+- Frontmatter `serial:` line must match `^serial: [1-9][0-9]*$`.
+- New writes always stamped. Collision: increment serial, same stamp.
+
+### Link
+
+Frontmatter `plan:` is the plan serial (`6`) or `none`. Own serial stays independent.
+
+### Slugify / allocate
+
+Same as plans (`slugify`, `nextSerial` on this dir). Body line 1: `IMPL_NAME: <3-6 word name>`. Optional `IMPL_PLAN: <n|none>` (default `none`).
+
+### Frontmatter (required)
+
+```yaml
+---
+serial: 1
+plan: 6                 # unpadded int or none
+name: add-auth
+status: in-progress     # in-progress | done | blocked
+created: 2026-08-26T14:30:00Z
+source: "<≤120 chars of user task>"
+---
+```
+
+#### Status machine
+
+`in-progress` → `done` | `blocked`
+
+- Fresh write: `in-progress`
+- Plan Verify done and journal caught up: `done`
+- Cannot finish: `blocked` (`## Blockers` must not be `(none)`)
+
+### Body headings (this order only)
+
+`# {slug}`, `## Done`, `## Issue`, `## Files`, `## Log`, `## Blockers`, `## Notes`
+
+No other `##` headings.
+
+| Section | Amount |
+|---|---|
+| Done | bullets. What landed and why. Past tense. Fresh: `(none)` |
+| Issue | bug root cause bullets, or `(none)` |
+| Files | repo-relative product paths as `- path` bullets. Default `/commit` stage set. No abs paths. No `.tmp/`. Fresh: `(none)` |
+| Log | append-only. Fresh: `(none)`. After each plan leaf: `N.M [x] one line` (notes, fail, skip). `[x]` allowed |
+| Blockers | open problems. `(none)` unless `status: blocked` |
+| Notes | short leftovers, or `(none)` |
+
+### Write
+
+Write under `.repo/implementations/` (any filename in that dir). Grok `orchestrate-parent.ts` runs `cli/scripts/persist-implementation.ts` on create (`IMPL_NAME:`): serial/slug from the name, injects frontmatter, rewrites path + content. Updates to an existing file keep the path; full-body writes are validated in place. Invalid create/update denies — fix the body, do not retry elsewhere.
+
+Host without that hook: name the file per **Path**, or pipe the body to `bun repo persist implementation --workspace {repo}` and use its `absPath`.
+
+Never allocate a new serial to log a leaf. Append Log, update Files/Done, flip the plan box.
+
+### Validation checklist
+
+- filename stamped unpadded; serial int equals leading digits; `name` equals slug
+- frontmatter keys: `serial`, `plan`, `name`, `status`, `created`, `source`
+- `plan` is `none` or unpadded int ≥ 1; `status` ∈ `in-progress` | `done` | `blocked`
+- headings in order only; no extra `##`
+- Done / Issue / Files / Log / Blockers / Notes: bullets and/or `(none)`; none of those sections empty
+- Files: repo-relative; reject abs and `.tmp/`
+- `status: blocked` ⇒ Blockers is not only `(none)`
+
+### Worked example
+
+File: `.repo/implementations/1-notes-export-json-20260826T143000Z.md`
+
+```markdown
+---
+serial: 1
+plan: 1
+name: notes-export-json
+status: in-progress
+created: 2026-08-26T14:30:00Z
+source: "add --json to notes export"
+---
+
+# notes-export-json
+
+## Done
+- `notes export --json` prints every note as one JSON array; the text table stays the default
+
+## Issue
+(none)
+
+## Files
+- src/cli.ts
+- src/export.ts
+- src/export.test.ts
+
+## Log
+1.1 [x] read principle-test-behavior-not-implementation
+2.1 [x] export tests for two notes and for none
+2.2 [x] new cases fail on the unknown flag
+3.1 [x] parse --json in cli.ts
+3.2 [x] print JSON.stringify of the notes in export.ts
+3.3 [x] export tests pass
+
+## Blockers
+(none)
+
+## Notes
+(none)
+```
+
+## Fast plan format (SSOT)
+
+A short checklist for work the person chose to do fast. Saved by `cli/scripts/persist-fast-plan.ts`. Default is a plan (`plan-format.md`).
+
+### Path
+
+`.repo/plans-fast/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`, named like a plan.
+
+### Frontmatter
+
+`serial`, `name`, `status` (`ready | in-progress | done | blocked`), `created`, `source`, and optional `commit:`. No `strategy`, no `reviews`.
+
+### Body
+
+The first line is `FAST_PLAN_NAME: <name>`, then `commit:`, then `# {slug}`, then `## Goal`, `## Steps`, `## Verify`, in that order, then an optional `## Previous mistakes`. Steps and Verify are flat `N [ ] text` boxes; a new plan has only `[ ]`. No review, so `in-progress` needs none.
+
+### Cap and denials
+
+At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are outside the cap. It is append-only, and under `/away` it holds the `- decision:` lines. Replies:
+
+- `a fast plan has no strategy`
+- `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
+- `a fast plan is at most 40 lines; write a plan (/write-plan-deep)`
+- `a new fast plan has only [ ] boxes`
+
+### Approval
+
+All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy codes. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
+
+A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
+
+## Fast roadmap format (SSOT)
+
+A short ordered program of fast plans, for work the person chose to do fast. Saved by `cli/scripts/persist-fast-roadmap.ts`. Default is a roadmap (`roadmap-format.md`).
+
+### Path
+
+`.repo/roadmaps-fast/{serial}-{slug}-{YYYYMMDDTHHMMSSZ}.md`. Serials count in `roadmaps-fast` only.
+
+### Frontmatter
+
+`serial`, `name`, `status` (`draft | locked | in-progress | done`), `created`, `source`. No `strategy`, no `reviews`.
+
+### Body
+
+The first line is `FAST_ROADMAP_NAME: <name>`, then `# {slug}`, then `## Order` and `## Verify`, in that order, then an optional `## Previous mistakes`. Order has two or more slices, `N [ ] title: sentence`; Verify is flat `N [ ] text` boxes numbered after the slices. A new roadmap has only `[ ]`.
+
+### Cap and Location
+
+At most 20 lines, frontmatter included; Location lines and `## Previous mistakes` with its lines are not counted. Previous mistakes is append-only and holds the `- decision:` lines under `/away`. A slice may carry an indented `Location: <abs path>` line: an absolute path to a fast plan under `.repo/plans-fast/`.
+
+### Denials
+
+- `a fast roadmap has no strategy`
+- `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
+- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)`
+- `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
+- `a new fast roadmap has only [ ] boxes`
+- `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
+
+### Approval
+
+Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy codes. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
+
+### Run
+
+`/implement-roadmap-fast {n}` refuses a draft, sets `in-progress`, runs `/write-plan-fast` then `/implement-plan-fast` per open slice (no stop between), ticks each slice after its plan, runs Verify and sets `done`.
+
+## Lessons
+
+Mistakes that outlive one task. One committed file per mistake under `.repo/lessons/`, with a generated index. Not host memory: everything is in the repo and reaches every machine through git.
+
+### Three layers
+
+- **Plan:** `## Previous mistakes` in each plan holds that task's details: rejected approaches, failed Verify, accepted review findings. It stays with the plan in `.tmp/`. Format: `node_modules/@workerstack/repo/references/plan-format.md`.
+- **Roadmap:** `## Previous mistakes` in a roadmap holds mistakes about the program: slice order, slice boundaries, and `slice` entries for what a child plan found that changed later slices. A roadmap saved in the old shape also logs its Decisions there; a pointer roadmap's decisions live in the slice plans. It lasts as long as the program, in `.tmp/`. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
+- **Repo:** a lesson holds a mistake our normal workflow will hit again on other tasks. A one-time issue stays in the plan's Previous mistakes. A plan entry that generalizes becomes a lesson, and the entry ends with `(lesson: {slug})`.
+
+### File
+
+`.repo/lessons/{slug}.md`: a title (the rule, at most 72 chars), `## Mistake` (at most 280) and `## Fix` (at most 360), with nothing between the title and `## Mistake`. Every save, `bun repo lessons check` and `bun repo sync --check` refuse a lesson over a cap or with a line under the title.
+
+```markdown
+---
+name: plan-forks
+paths: ["cli/scripts/persist-plan.ts", "agents/grok/hooks/**"]
+hits: 1
+last-hit: 2026-11-01
+evidence: ["plan 16"]
+---
+
+# Plan rewrites fork serials
+
+## Mistake
+What went wrong, concretely.
+
+## Fix
+What to do instead.
+```
+
+- `name` is the filename slug. `paths` are repo-relative globs (`**` spans dirs; `*` and `?` stay in one segment) and each must match a file that exists.
+- `hits` counts occurrences. `evidence` keeps the 5 most recent plan serials or commits.
+- A new lesson may leave out `hits` and `last-hit`; the save fills `1` and today.
+
+### Index
+
+`.repo/lessons/INDEX.md` is generated: one line per lesson (`- \`slug\` (hits N): title`), sorted by hits. It opens with the `@generated by @workerstack/repo` header and is left read-only (0444); to change it, edit the lessons in `.repo/lessons/`. Every lesson save, `hit`, and `rm` rewrites it, and `bun repo sync` rewrites it too. `bun repo sync --check` fails on index drift, an invalid lesson, or a glob that matches no file.
+
+### Write
+
+- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). Under `workflow: "main"` the main checkout takes them too. Under the other modes, in the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.repo/{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
+- Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
+- `bun repo lessons hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
+- `bun repo lessons rm <slug>` deletes a lesson and reindexes.
+- `bun repo lessons index` rebuilds the index. `check` runs the checks and, like `match`, is read-only, so it runs anywhere.
+
+### When to write
+
+Write a lesson only for a mistake our normal workflow will hit again on other tasks. A one-time issue stays in the plan's Previous mistakes.
+
+After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `bun repo lessons match` on the files involved first, then `hit` the matching lesson or write a new one.
+
+- Plan feedback from the user (`/write-plan-deep`).
+- A failed Verify, or a test that failed after a fix (`/implement-plan-deep`).
+- `principle-attack-the-premise` firing (`/implement-plan-deep`).
+- An accepted `/review-plan` finding (`/write-plan-deep`).
+- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap-deep`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap-deep`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
+- An operator correction (`/correct`).
+
+At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `bun repo lessons rm`.
+
+### When to read
+
+- `bun repo lessons match <file...>` prints the lessons whose globs match, most hits first, 10 at most. It reads the lesson files, not `INDEX.md`; a lesson it cannot read is named on stderr (`.repo/lessons/x.md: invalid, run bun repo lessons check`) and skipped. Each file is matched against the lessons of the checkout that holds it: the root or a managed worktree; a file in an unmanaged linked worktree uses the checkout you run it from.
+- A new plan that names a matched file must cite that lesson's path in Watch-outs, or the save is denied with the lesson listed.
+- The first time a session edits a matched file, the hook adds that lesson's title and path to the context. Each lesson is shown once per session.
+- `/review-plan` reads the matched lessons and flags one that no leaf acts on.
+
+## Output
+
+en-US default. Detail behind the reply rules in `overview.md`, which stays the source for voice and shape.
+
+Cue names are examples too: example, e.g., for instance, such as, and so on, `…`, `etc.`, a sketched sentence, or one labeled case. Do not reuse one reply for every turn. Pick the count and the form for this case.
+
+A closed instruction stays literal. Cues of that kind include only, exactly, just these, verbatim, no others, a schema, an identifier, a command, or quoted text. When an open cue and a closed cue both apply, the closed cue wins.
+
+Do not invent a question or let the close introduce new numbers. Completed work uses past verbs and paths. If more work remains, say what. Ask in English when a choice is real.
+
+`/su`, `/bro`, `/unslop`, `/blast-radius`, `/correct`, `/teach`, plan files, commit subjects, and job stdout keep their own shape. `/bro` restates a reply that missed the voice in `overview.md`. `/explain` keeps the shape and may lengthen the middle. Repo children do not talk to the user.
+
+Job stdout is a sentence plus up to 6 dash facts, cap 8 lines, and an optional `stash=` receipt.
+
+### Example: waiting on the user
+
+One case of the class "the user must act before we can finish". Copy the shape, not the words.
+
+Cold:
+
+> We're waiting on four things, and only the first is mine to do now.
+>
+> 1. Local main isn't pushed. It's 10 commits ahead of origin, including my test fix. Nothing below can start until those commits reach origin.
+> 2. The first public-sync run after that push. It should copy the generated code into each public repo.
+> 3. Publish secrets. None of the public repos I checked has its own secrets or variables. They may be set at the org level, but my token can't read org settings.
+> 4. Your go to publish.
+>
+> Should I push main myself, or keep waiting?
+
+Partner:
+
+> We're one push away from the first releases, and most of what's left is yours.
+>
+> **You**
+> - Push main, or tell me to. It's 10 commits ahead, including another session's work.
+> - NuGet (`org/sdk-csharp`): add a trusted publishing policy for `release.yml`, and the repo variable `NUGET_USER`.
+> - Maven (`org/sdk-java`): add the user token as `MAVEN_CENTRAL_USERNAME` and `MAVEN_CENTRAL_PASSWORD`, and the GPG key as `MAVEN_GPG_PRIVATE_KEY` plus `MAVEN_GPG_PASSPHRASE`. Skip any already set at the org level; my token can't see org settings.
+>
+> **Me**: writing the test that blocks a release when the spec differs from prod, now. After the push I run the public sync, cut the releases, and verify each registry on Linux, macOS and Windows.
+>
+> Say "publish" when the secrets are in.
+
+The partner reply opens on the goal, groups the user's steps by where they do them, says what the agent does next, and ends on one action.
+
+## Map
+
+Cheap outline. Not a file dump.
+
+### Protocol
+- `node_modules/@workerstack/repo/references/cascade.md` — session agent tools; job first; spawn scout when the dump needs judgment
+- `node_modules/@workerstack/repo/references/rtk.md` — shell compression
+- `node_modules/@workerstack/repo/references/browser.md` — Lightpanda-first session CLI (`nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop`); not MCP
+- `node_modules/@workerstack/repo/references/hooks.md` — hook policy
+- `node_modules/@workerstack/repo/references/map.md` — this file
+- `node_modules/@workerstack/repo/references/output.md` — default voice
+- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan-deep` → approval → `/implement-plan-deep`; two or more slices → `/write-roadmap-deep`
+- `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the generated `repo:refs` (one line per reference doc), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
+
+### Agent SSOT
+- Docs SoT: `agents/skills` + `references/` (shipped in the package; a consumer reads `node_modules/@workerstack/repo/references/`). `bun repo sync` maps anything placed there. `.claude/skills/<name>` and `.agents/skills/<name>` are generated links to `agents/skills/<name>`, not SoT; no mirror scan
+- The trees come from `cli/sync/agents/` (`sources` `frontmatter` `rules` `subagents` `hooks`) via `bun repo sync`, reading the stock sources in `agents/` (exported as `@workerstack/repo/agents/*`)
+- `agents/subagents/{orchestrator,repo}.md`
+- `agents/rules/overview.md` → `AGENTS.md`
+- A consumer's own content lives in `.repo/` (below) and `references/`; both are committed, and `bun repo sync` merges them over the package's
+- Default output: `node_modules/@workerstack/repo/references/output.md` (overview.md → AGENTS.md; also agent bodies, not auto-injected)
+
+### Skills layout
+- Source: `agents/skills/<name>/SKILL.md`, the one copy (`STOCK_SKILLS_REL` in `cli/scripts/skill-conflicts.ts`) in this repo. A consumer's own skills go to `.repo/skills/<name>/`, and one named like a stock skill replaces it
+- A consumer's `bun repo sync` links each stock skill (and each `.repo/skills/<name>`) into `.agents/skills/<name>` for codex and antigravity and into `.claude/skills/<name>` for claude, as a directory symlink (a junction with an absolute target on Windows): to the generated `.agents/skills/<name>` when there is one, else straight to the skill. Optional packs (`google-workspace` `listen` `speak` `clasp`) are linked only when `agents.skills` names them, and a config pack can gate a stock skill the same way (the `benchmark` pack links `/benchmark`). In this repo sync links both `.claude/skills/<name>` and `.agents/skills/<name>` straight to `agents/skills/<name>` with a relative link. The package ships no generated trees, so each consumer's sync makes its links
+- Read directly: Codex and Antigravity read `.agents/skills`; Grok reads `.grok/skills`, `.agents/skills` and `.claude/skills` (deduplicated by name); Cursor reads `.cursor/skills`, `.claude/skills`, `.codex/skills`, `.grok/skills` and `.agents/skills` (follows symlinks, deduplicates by realpath)
+- There is no skills generator step: `bun repo sync` only links skills; nothing wipes `.agents/skills`
+
+### Grok hand files
+- `cli/scripts/orchestrate-parent.ts` + `agents/grok/hooks/orchestrate-parent.json` — spawn/fat/stop/persist / SubagentStop intercept / session receipt
+- `bun repo sync` prunes what it wrote last run and no longer plans (the `.repo/tmp/sync.json` manifest); a path outside the manifest is never removed
+- `agents/grok/hooks/rtk.json` — RTK
+- `agents/global-settings/` — `manifest.json` (hosts `claude` `codex` `grok` `antigravity` `cursor` `opencode`: `format`, `payload`, `dest` under `$HOME`) and one payload per host (`claude.json` `codex.toml` `grok.toml` `antigravity.json` `cursor.json` `opencode.json`); `sync-global-settings.ts` (`bun repo yolo`) merges each into its dest (not auto-loaded; project `.grok/config.toml` cannot set `[features]`)
+- `agents/mcp-policy.jsonc` — MCP deny-default SSOT (`default: deny`, `allow: []`)
+- `agents/grok/{roles,hooks}/` — grok's static roles and hook configs; `bun repo sync` copies them into `.grok/roles` and `.grok/hooks`
+- `agents/skills/<name>/` — the one skills source; `bun repo sync` links each into the host skill dirs
+
+### Scripts
+- `cli/scripts/check-globals.ts` — every manifest payload key (minus `skipKeyPattern`) must be present in its `$HOME` dest; project `.grok/config.toml` sets no `[features]` or `[agent]`. Not in `bun repo sync --check`: `bun cli/scripts/check-globals.ts` in this repo and the `bun repo doctor` `globals` row everywhere
+- `cli/scripts/gate-fat-tools.ts`
+- `cli/scripts/scrub-spawn-prompt.ts`
+- `cli/scripts/job.ts` — flags `--job` `--query` `--path` `--glob` (repeatable) `--cwd`; regex in `--query` OK; never `cd &&`; unknown flags / exec shell-meta → FALLBACK
+- `cli/scripts/parse-need.ts`
+- `cli/scripts/persist-handoff.ts` — `.repo/handoffs/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/persist-tmp.ts` — `.repo/scratch/{serial}-{slug}-{stamp}.{ext}` root files
+- `cli/scripts/persist-plan.ts`
+- `cli/scripts/persist-implementation.ts` — `.repo/implementations/{serial}-{slug}-{stamp}.md`
+- `cli/scripts/sync-global-settings.ts` — applies by default, `--dry-run` previews, `--check` reports drift, `--host <id>`; report line `{action} {id} {dest}`, or `skip {id} {dest}: <reason>` for a dest it leaves as it is
+- `cli/scripts/purge-global-mcps.ts`
+- `cli/scripts/emit-mcp-policy.ts`
+- `cli/scripts/emit-agent-shell-tools.ts`
+- `cli/scripts/browser.ts` — session browser rail
+- `cli/scripts/google-workspace.ts` — Sheets Docs Slides Calendar Gmail Drive
+- `cli/scripts/speak.ts` — TTS
+- `cli/scripts/listen.ts` — STT
+- `cli/scripts/setup.ts` — handheld speak / listen / google-workspace / browser (`~/.workerstack/`)
+- `cli/scripts/doctor.ts` — unified prereqs; `globals` row (ok or first drift line); optional google-workspace (`oauth` `tokens` `adc` `clasprc`), speak, clasp, ffmpeg, whisper-cli
+- `cli/env/` — the `@workerstack/repo/env` module (`index` exports; `define` merge and views; `keys` identities and the keys file; `age` encrypt and decrypt); `cli/env.ts` holds `defineEnv` and `sealed`, which decrypt in a bun child
+- `cli/repo-env.ts` — this repo's own env (`repoEnv`): its process variables; add a name there to read one
+- `cli/secret-reason.ts` — the secret-shape detection (`sk_` prefix, high entropy, credential name) the env check uses
+- `cli/scripts/env-command.ts` (+ `.constants.ts`) — `bun repo env` dispatch, usage and exit codes; `env-args.ts` parses the flags; `env-io.ts` is the deps (cwd, stdin, stdout, gh) and the one-line refusal
+- `cli/scripts/env-files.ts` — finds the `defineEnv` files, picks one (`--file`, the one declaring the key, the only one) and lists USED BY
+- `cli/scripts/env-edit.ts` — `env set`: the AST edit that seals or writes a value into the scope block in place
+- `cli/scripts/env-keys.ts` — `env init`, `key import`, `key ci`: the key pair, the keys file and the `gh secret set`
+- `cli/scripts/env-values.ts` — `env ls`, `get`, `run`, `export`: masked reads, the child env and dotenv quoting
+- `cli/__fixtures__/env-repo.ts` — builds a scratch git repo with a keys file and an env file for the `env-*.test.ts` files
+- `cli/check-env-values.ts` (+ `.constants.ts`) — the three `bun repo check` env rules over every file that calls `defineEnv(`: plain secret, key one scope lacks, undeclared process read
+- `cli/check-deps.ts` (+ `.constants.ts`) — the `bun repo check` deps rule per public package: a used dep outside `peerDependencies`, any dep of a library (no `bin`), missing export types, an unreadable surface
+- `cli/type-surface.ts` (+ `.constants.ts`) — the in-memory declaration emit of a package's typed exports over a virtual host, and the packages its declarations use, keyed to the export that reaches each file
+- `cli/type-surface-entries.ts` — the files the types of `exports` start from: exact keys, `*` patterns, `null` exclusions, tsconfig `files`, the `types`/`typings`/`main` fallback, and the keys whose types are missing
+- `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
+- `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
+- `cli/build-outputs.ts` — maps each `tsconfig.build.json` output to its source; none for a missing or unparsable config
+- `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
+- `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
+- `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
+
+### Tmp
+- `.repo/plans/` — persist-plan; format SSOT = `node_modules/@workerstack/repo/references/plan-format.md`
+- `.repo/implementations/` — persist-implementation; format SSOT = `node_modules/@workerstack/repo/references/implementation-format.md`
+- `.repo/tmp/sessions/<sid>/settings.json` — the session's approval, effort and strategy
+- `.repo/tmp/orchestrator-logs/` — need-intercept, stop-block stamps
+- `.repo/scratch/` — scratch + `/tmp` dumps `{serial}-{slug}-{stamp}.{ext}` at root (not nested `tmp/`)
+- `.repo/tmp/browser/` — browser session/profile/shot/pdf (not MCP)
+- `.repo/handoffs/` — persist-handoff / `/handoff`
+- `.repo/tmp/stash/` — job / snap overflow
+- `.repo/tmp/sessions/{sid}/` — wrote/read/receipt
+- `.repo/tmp/speak/` — TTS mp3
+- `.repo/tmp/listen/` — STT wav + `latest.txt`
+
+### `.repo/` layout
+Repo-owned content, committed. In this repo `.repo/` holds `lessons/` and the ignored `tmp/`.
+- `lessons/` — one file per lesson plus the generated `INDEX.md`
+- `rules/` — path-scoped rules only (each has `paths`), written to the host rule trees; a rule without `paths` is moved by one sync below the `repo:rules` region of its scope's `AGENTS.md` (except one with `overrides`); a stock rule's extra sections go to `<name>-local.md` so the stock text stays live
+- `subagents/` — extra agents; one named like a stock agent replaces it
+- `skills/` — extra skills, linked into each host tree (a real skill dir found under `.agents/skills` or `.claude/skills` moves here)
+- `settings/claude.json` — keys deep-merged into the generated `.claude/settings.json`
+- `hooks.jsonc` — replaces the stock hooks whole
+- `mcp-policy.jsonc` — deep-merged over the stock MCP policy
+- `permissions.json` — path deny rules added to the generated hooks
+- `lint-baseline.json` — per file, per rule, the lint problems still allowed; read by `bun repo turn` and `bun repo check`
+- `test-times.json` — whole milliseconds per test file, written by `bun repo ci times`; read by the vitest shard sequencer
+- `global-settings/` — a payload of the stock's name here (`claude.json`, `codex.toml`, `grok.toml`, `antigravity.json`, `cursor.json`, `opencode.json`) replaces that stock payload whole in `bun repo yolo` and the `globals` check; the stock manifest stays
+- `bench/` — `<name>.bench.ts` specs, a `defineBench` default export each; read by `bun repo bench <name>`, not by sync; root only
+- `env.keys.json` — `{ "recipient": "age1…", "repo": "<name>" }`: the age public key `sealed(...)` values are sealed for, and the name of the key file `~/.workerstack/keys/<repo>.key`
+- `tmp/` — ignored: `sync.json` (the manifest) and `stage/` (the build dir, removed after each sync)
+
+### Generated (do not hand-edit)
+`bun repo sync` writes these from `node_modules/@workerstack/repo` plus `.repo/` for the hosts in `agents.hosts` (default: all five; `HOST_TREES` in `cli/sync/hosts.ts` is the one table). In a consumer they are gitignored and recreated by every `bun install`; in this repo they are committed. `bun repo sync --check` reports drift. Three more `agents` keys in `repo.config.ts`: `defaultStrategy` (`free`, `spawn-fast` or `spawn-deep`; default `free`) is the `strategy:` a new plan or roadmap gets when the session holds none (and, for a plan, no in-progress roadmap this session saved has one), read by the saves and `bun repo persist`; `defaultApproval` (`ask` or `away`; default `ask`) applies when the session has no session approval and no in-progress plan or roadmap with an `approval:`, read by the hook; `defaultEffort` (`fast` or `deep`; default `deep`) is the session effort when none was set, shown in the hook context, which picks the plan skills the last line of the root `AGENTS.md` names. Example: `agents: { defaultStrategy: "spawn-deep", defaultApproval: "away", defaultEffort: "fast" }`. Each file sync writes whole opens with a `@generated by @workerstack/repo` header line where its format takes a comment and is left read-only (0444, 0555 for a hook) by every sync; to change one, edit its source in `.repo/` (the layout above) or in the package, then sync. A tracked file with that header that no output names any more is removed, even with no manifest; one under a `__fixtures__` folder is kept, and changing the header line keeps a copy. Files where sync owns only regions (`.gitignore`, `.gitattributes`, `references/INDEX.md`) stay writable. A region opens with `# repo:<name> <hash>` and closes with `# /repo:<name>` (`<!-- repo:<name> <hash> -->` and `<!-- /repo:<name> -->` in markdown); the hash is the first 8 hex of the sha256 of the body sync wrote. Sync never fails on a shared file: it prints one `<path>: <repair>` line on stderr per repair (`converted the old markers to repo:ignore` for the old `# >>> @workerstack/repo` pair, `added the hash to`, `closed`, `opened`, `reordered the markers of`, `rewrote the markers of`, `dropped 1 extra`, `dropped 1 stray marker of`, `moved 1 edited line out of` (kept just below the region), `cut` for a region no version writes any more). A shared path no output names any more has its regions cut and keeps the rest (`--check`: `<path> has regions no output writes`), removed only when nothing but whitespace is left. An invalid or non-object `.vscode/settings.json` is left as is with a warning. `bun repo sync` and `--check` refuse when git tracks a file the `repo:ignore` block of `.gitignore` covers, and print the `git rm --cached` command to run.
+- `AGENTS.md` (the root and each package's) — shared: sync writes only the hashed `repo:rules` region at the top; everything else is your text, tracked and committed. There is no package `CLAUDE.md`. The always-on text over 12 KiB is a warning
+- Not written by sync: `.mcp.json` is your tracked file (`bun repo init` writes the first one; sync never writes or deletes it). Every other host's MCP file is built from it, filtered by the MCP policy allow list; a `.repo/mcp.json` or a policy `servers` key is moved into `.mcp.json` by one sync, and `.mcp.json`'s own server wins on a name collision
+- claude → `.claude/`: `agents/*`, `settings.json` (MCP keys, hooks, the `.repo/settings/claude.json` merge), `skills/<name>` links
+- codex → `.codex/` (`agents/*`, `config.toml` `mcp_servers`, absent when allow empty) and `.agents/skills/<name>` links
+- antigravity → `.agents/`: `agents/*`, `skills/<name>` links, `mcp_config.json`, hooks
+- grok → `.grok/`: `agents/*`, `config.toml` (project MCP `[[permissions]]` + `[plugins] deny_default`; no `[features]`), `roles/scout.toml` and `hooks/*.json` copied from `agents/grok/`; the hook scripts stay in the package's `cli/scripts/`
+- cursor → `.cursor/`: `hooks.json` (hooks-union adds consumer extras), `agents/scout.md`; a real dir, not shipped in the package
+- release pack: `.github/workflows/ci.yml` (tracked, whole-file; the e2e job only when the root has a `test:e2e` script, the `consumer` job only for a named public root); also, for a public root with a config `owner` and a GitHub `repository`, `SECURITY.md`, `CONTRIBUTING.md`, `.github/CODEOWNERS`, `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/{bug_report,config}.yml` (tracked, whole-file); a hand-written one is refused
+- benchmark pack: `.github/workflows/bench.yml` (tracked, whole-file), which `bun repo bench --remote` dispatches with the spec, the OSes and the sha; a hand-written one is refused; also the `/benchmark` skill links in `.agents/skills` and `.claude/skills`
+- evals pack: `.github/workflows/eval.yml` (tracked, whole-file), dispatched by hand with an eval name and a cost cap, and the evals environment `bun repo github` manages; a hand-written eval.yml is refused
+- standards pack, editor: keys the file lacks are added to `.vscode/settings.json`, and ids it lacks to `recommendations` in `.vscode/extensions.json`, never changing what you set: Bun formats on save through the Simple LSP Client extension (`bun fmt --no-script --stdin-filepath`), the oxc extension only lints (`oxc.enable.oxfmt: false`, fix-all on save), the workspace TypeScript (`js/ts.tsdk.path`, with the TypeScript 7 extension for 7 or later; a deprecated `typescript.tsdk` moves to `js/ts.tsdk.path`), `.css` as `tailwindcss` with a Tailwind entry sheet, the Vitest extension when vitest is installed
+- always: `bunfig.toml`, the `repo:ignore` region of `.gitignore`, the `repo:generated` region of `.gitattributes`, `references/INDEX.md` regions `repo:refs`, `repo:packages`, `repo:stack` and `repo:available`, `.repo/lessons/INDEX.md` when lessons exist, `.vscode/tasks.json` (committed in a consumer too)
+
+### Generator divergences
+Where `cli/sync/agents/` differs from the rulesync 43.7.0 it replaced:
+- YAML 1.2 parsing: `yes` stays a string
+- No 80-column folding of long values
+- The `agentsmd` and `codexcli` rule targets both fold into `AGENTS.md` only
+- A leading `./` in a claude hook command becomes `"$CLAUDE_PROJECT_DIR"/`
+- A bad subagent, or a rule without frontmatter, fails sync
+
+## Protocol
+
+The session agent has tools. Fat Read/Grep/Bash dumps are rewritten to `<root>/node_modules/.bin/repo job` (squeez + stash). Isolation facts stay ≤8 lines.
+
+Run `bun repo job --job search|exec|slice|fetch|test` first. Spawn scout when the dump needs judgment (browse snap, messy test log) and the return is a short isolation fact; spawn researcher for heavy web or browser research that returns facts with sources. Use a host agent or a fan-out when that split is cheaper for the task, or when the user asks for it.
+
+`need:` JSON (search|exec|slice|fetch) may be intercepted in-hook (cap 4). Peek/kill if a child is running: Grok `get_command_or_subagent_output` `timeout_ms=60000`. Other hosts: block on spawn return.
+
+Session settings: `/ask` (default) stops once for plan approval, then runs to done; it asks only on a blocker or a real choice. `/away` approves the plan itself once the review settles, decides instead of asking, and logs each choice as a `- decision:` entry in the plan. A prompt that starts with `/ask`, `/away` or `/set <words>` saves the session's approval, effort and strategy in `.repo/tmp/sessions/<sid>/settings.json` (`/set`: `ask away`, `fast deep`, `free spawn-fast spawn-deep`, any subset in any order; `bun repo set <words>` does the same when the person asks in plain words). A session value beats a plan or roadmap `approval:`, which applies only with no session value. Under away the Stop hook runs the approval block's header choice once the review settles and logs the decision.
+
+Scratch: `.repo/scratch/`. Stash: `.repo/tmp/stash/`. Sessions: `.repo/tmp/sessions/{sid}/`. Browser: `.repo/tmp/browser/`.
+
 ## RTK
 
 Shell stdout compression. PreToolUse: Bash → `rtk <cmd>`. Not Read/Grep/Glob/prompts/images.
@@ -1706,79 +1522,6 @@ Unknown cmds passthrough. `rtk run` unfiltered.
 
 **playwright:** test-runner family only — not the browser rail.
 **lightpanda:** browser-rail CDP via `bun repo browser` (not MCP, not env).
-
-## Scope
-
-Plan by default. A straight shot is the exception. The plan caps the result, so its depth scales with the work. This file is the size-gate SSOT.
-
-### Gate
-
-Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes unless `workflow` is `main`. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
-
-Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit. "Just" or "should be easy" on a goal is not "just do it": only words that skip the plan itself, such as "just do it" or "no plan", do.
-
-`/ask` is this loop: it stops once for plan approval, then runs to done. It does not skip approval. `/away` decides instead of asking and logs each choice as a `decision` entry; under away the Stop hook runs the approval block's header choice once the review settles and logs it. A session value (`/ask`, `/away`, `/set`) beats a saved `approval: ask|away`, which applies only when the session has no value. With no session value and no in-progress `approval:`, `agents.defaultApproval` applies, else `ask`. A fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`) or a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`) runs when the person asks for it or when the session effort is `fast`; otherwise the process here stays the default. `/set` saves approval, effort and strategy for the session (`ask away`, `fast deep`, `free spawn-fast spawn-deep`). The effort in the hook context picks the plan skills (`/write-plan-{effort}`). Run `bun repo set <words>` only when the person asks in plain words, never on your own judgment, and say what changed. `/rn <task>` skips the plan, the review, questions and its own test run, never the worktree or the commit gate.
-
-### Research
-
-Read and search until every leaf is defensible and needs no re-planning. Depth scales with stakes and ambiguity: a clear task needs enough to write the leaves; an unclear, cross-cutting, or hard-to-undo one needs the alternatives checked against the code, docs, and data. Fat notes go under `.repo/scratch/`.
-
-### Questions
-
-Ask only what research cannot settle and what changes the plan's shape: intent, scope, a trade-off the user owns. Batch them into one round, each with your recommendation. Research again on each answer, and ask again only if a new plan-shaping gap appears. When research settles everything, skip this step and write the plan in one shot.
-
-### Plan
-
-`/write-plan-deep`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. A plan over 100 lines above `## Previous mistakes`, frontmatter included, is a roadmap: split it with `/write-roadmap-deep`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Write `approval:` beside `advice:` only when the session runs `/away` or the person asked for an approval. Report the goal, phases, top risks, open assumptions and path, then stop with the approval block (`/write-plan-deep` has the full form). The block comes only after the review settled, with `reviews` bumped since the review spawn; the Stop hook blocks it before that.
-
-### Approval
-
-Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or a code such as `isf`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap-deep` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `hf`, `hsf` and `hsd` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
-
-### Implement
-
-`/implement-plan-deep` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap-deep` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.repo/implementations/` (create on start; not for straight shots). Straight shot (`/rn` is exempt from the test and proof steps; the commit hook's gate runs the related tests): run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
-
-### Types
-
-One type per plan. Pick the strongest match. A feature that crosses an ownership, package, or API boundary is `cross-cut`. Straight shots skip this table and follow the straight-shot rule in ## Implement. Skip a named check only with a reason in Context. Approval of the plan is the select.
-
-`/write-plan-deep` copies the row into Steps or Verify, including a Read leaf for each named principle. Each Read leaf sits in the phase it gates, not in a phase of its own. `/implement-plan-deep` reads that skill and follows it.
-
-A slice is one child plan, not a phase. Two or more ordered slices are a roadmap (`/write-roadmap-deep`, then `/implement-roadmap-deep`), not one plan. `/write-roadmap-deep` runs `/review-roadmap {n}` in a fresh agent after each save, the same way plans are reviewed, and a roadmap with `reviews: 0` cannot be locked. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
-
-| type | checks |
-| --- | --- |
-| bug | repro; failing test before impl; read `principle-fix-root-causes`; read `principle-test-behavior-not-implementation` |
-| feature | failing test before impl; read `principle-test-behavior-not-implementation` |
-| docs | no test leaf; no browser unless the doc is a live page; Verify reads the page or runs the generator |
-| perf | Verify states the measurement and what limits it; read `principle-explain-the-number` |
-| refactor | existing suite or characterization tests; no feature leaves; read `principle-laziness-protocol`; read `principle-subtract-before-you-add`; read `principle-minimize-reader-load`; read `principle-test-behavior-not-implementation` |
-| cross-cut | Context holds architect lite (types, signatures, module map, rejected shape); a `/blast-radius` leaf; read `principle-foundational-thinking`; read `principle-type-system-discipline` |
-| chore | no test leaf unless a check already exists |
-
-### Facts
-
-`/write-plan-deep` adds a Read leaf for each fact that is true, in the phase that fact gates. No fact, no leaf. `/implement-plan-deep` reads that skill and follows it.
-
-| fact | read |
-| --- | --- |
-| a guard, parser, or adapter at a CLI, config, or network edge | `principle-boundary-discipline` |
-| a new internal API while old callers still exist | `principle-migrate-callers-then-delete-legacy-apis` |
-| a command or loop that must survive crash and retry | `principle-make-operations-idempotent` |
-| two actors can write the same file, branch, or key | `principle-separate-before-serializing-shared-state` |
-| stateful logic, or the same shape copied across files | `principle-model-the-domain` |
-| a sweep of similar edits | `principle-build-the-lever` |
-| a rewrite with phase boundaries | `principle-outcome-oriented-execution` |
-| a person will see the output, the error text, or the default | `principle-experience-first` |
-| the requirement does not fit without a special-case branch | `principle-redesign-from-first-principles` |
-| research left two or more live options and the choice is hard to undo | `principle-exhaust-the-design-space` |
-
-`/implement-plan-deep` reads a principle only when the type row names it, a true fact names it, the next sentence names it, or an already-read principle cites it. Do not open the rest of the catalog.
-
-Verify of every plan reads `principle-prove-it-works`. After two fixes that share a premise fail the same gate, read `principle-attack-the-premise` before a third try. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
-
-`/write-roadmap-deep` reads `principle-sequence-verifiable-units`. `/correct` reads `principle-encode-lessons-in-structure`.
 
 ## Setup
 
@@ -1822,6 +1565,326 @@ opencode (V2) has no yolo flag: its payload is one allow-all rule in `permission
 `bun repo shim` installs a bare `repo` launcher once per machine, so a command runs without the `bun` prefix. It writes a launcher into `~/.local/bin` (Windows: `%LOCALAPPDATA%\workerstack\bin`, with `repo.mjs` and `repo.cmd` beside it for cmd.exe and PowerShell). From any directory the launcher runs the nearest parent's `node_modules/@workerstack/repo`, so each project keeps its own version; outside a project it prints `repo: no @workerstack/repo found above <dir>; run \`bun install\` in the project` and exits 1. `--dry-run` previews, `--check` exits 1 on a missing or stale file, `--dir <path>` installs elsewhere. When the directory is not on PATH it prints the line to add (bash and zsh, fish, or PowerShell); it never edits PATH or a shell rc file. Rerun it after upgrading the package: `bun repo doctor` shows a `shim` row (`ok`, `not installed` or `stale`). bun must be on PATH, as for `bun repo`.
 
 Do not invent keys. If the session is not a TTY, tell the user to run `bun repo setup` in their terminal. This spec is enough. Do not read https://github.com/workerstack/repo#readme unless this file is missing.
+
+## Browser
+
+Zero-config in-tree session rail. Not MCP. Not env. Not raw Playwright. Lightpanda first; swap to Chromium when blocked.
+
+```
+bun repo browser nav|snap|click|fill|scroll|wait|hover|select|shot|pdf|stop|doctor|ensure
+```
+
+Default engine: **Lightpanda** (`lightpanda` on PATH). Chromium when a rule below requires it. Never report "can't browse" while Chromium is available.
+
+### Verbs
+
+| verb | purpose |
+| --- | --- |
+| `nav <url>` | launch or reuse session; go to URL |
+| `snap` | markdown + numbered AX refs (default read) |
+| `click <ref>` | click a ref from last `snap` |
+| `fill <ref> <text>` | fill a ref from last `snap` |
+| `scroll [ref|down|up|N]` | scroll a snap ref into view, or the window |
+| `wait [ms]` | pause (default 1000, cap 15000) |
+| `hover <ref>` | hover a snap ref |
+| `select <ref> <value>` | set a select/option value |
+| `shot` | screenshot (Chromium paint) |
+| `pdf` | PDF (Chromium paint) |
+| `stop` | reap engine pid; clear session; idempotent |
+| `doctor` | unified prereq doctor (`bun repo doctor`); alias `ensure` |
+| `ensure` | alias of `doctor` |
+
+Session + profile + artifacts: `.repo/tmp/browser/` only.
+
+### Install
+
+Run `bun repo doctor`. Handheld engine hints (no keys): `bun repo setup browser`. Doctor/setup is enough. Do not read a README unless those are missing; then https://github.com/workerstack/repo#prerequisites (not the consumer README).
+
+### Engine
+
+Lightpanda first (`lightpanda serve` internally, CDP, `LP.getMarkdown` + AX refs).
+
+Chromium immediately when any of:
+
+- verb is `shot` | `pdf` | `trace`
+- `process.platform === "win32"`
+- Chromium-first host: figma, Google docs / sheets / slides, mail.google, earth, amazon
+- `lightpanda` missing from PATH and a Chromium binary is present
+- Lightpanda probe fails **once** → one Chromium replay of last URL; no loop
+- `snap` on Lightpanda is empty, a bot/JS wall, or client-rendered junk → one Chromium replay, then snap again
+
+The session agent does not invent a "can't" for Amazon or other client-rendered sites. The rail swaps. One swap cap. App e2e stays Playwright (`playwright test`), not this CLI.
+
+No user env. Never `REPO_BROWSER*`. Never `LIGHTPANDA_CDP_URL`.
+
+### Non-goals
+
+- MCP browser servers
+- user env knobs
+- raw Playwright as the browse tool (Playwright is the app e2e runner)
+- repo `job:browse`
+- teaching thinker / orchestrator to browse
+
+### RTK
+
+`playwright` on the RTK command list is the **test-runner family only**. Browser rail is `lightpanda` + `bun repo browser`.
+
+## Jev
+
+Closed external decision. The source text is already saved. The question is a yes/no or a named choice. One call. Not open research. Not code. Not job.
+
+### Availability
+
+```
+bun repo jev --available
+```
+
+Prints `yes` or `no` and exits 0. No request. No setup line.
+
+`no`: the session answers the question itself. Do not run the decision command. Do not mention Jev, a missing key, or setup.
+
+`yes`: continue below.
+
+A key is `TYPESAFE_API_KEY` or `apiKey` in `~/.workerstack/jev.json` (mode 0600). Env wins. Setup, when a person asks for it: `bun repo setup jev`. Spec: `node_modules/@workerstack/repo/references/setup.md`.
+
+### Decision
+
+Write `.repo/scratch/jev/<slug>-state.txt` (plain text or a JSON object) and `.repo/scratch/jev/<slug>-questions.json` (the System One questions map). Put every label for that study in the one map. At most 8 questions. State at most 64000 characters.
+
+```
+bun repo jev --state .repo/scratch/jev/<slug>-state.txt --questions .repo/scratch/jev/<slug>-questions.json
+```
+
+Yes/no:
+
+```json
+{ "keep": { "type": "noul", "instructions": "Does this passage promise zero retention on the default plan?" } }
+```
+
+Named choice:
+
+```json
+{
+  "endpoint": {
+    "type": "choice",
+    "instructions": "Which endpoint should the app call?",
+    "criteria": {
+      "typesafe": "Vendor host, path, and key",
+      "other": "A different host, path, or key"
+    }
+  }
+}
+```
+
+Model is `jev-1.13.0`. Stdout is at most 8 lines: model, input tokens, then one label line. Exit 0. Use that label and confidence. A low confidence is the result. Do not rephrase and call again.
+
+One request per process. UTC-day ledger `~/.workerstack/jev-usage.json` stops at 40 requests or 1000000 input tokens. A 429 or 529 retries once only when `Retry-After` is at most 2 seconds.
+
+Exit 2 means the decision call did not return a label. Answer from the sources. Do not invent a label. Do not print the key or the state.
+
+## Cloudflare
+
+Use `cf` for every Cloudflare task. Do not run `wrangler` yourself and do not add it to a project that has none.
+
+### Find the command
+
+```
+cf cli search "<describe the task>"
+<command from the result> --help
+cf schema <command from the result, without the leading cf>
+```
+
+`cf cli search` returns five matches. Pick one instead of repeating the search. Write the query as the action and resource type only: no names, domains, emails, account or resource IDs, or tokens. `cf schema` shows the API request detail for a command.
+
+### Project commands
+
+- `cf dev` runs the dev server (`--local` uses local resource simulations).
+- `cf deploy` deploys (`--dry-run` builds and checks without uploading).
+- `cf build` builds the project.
+- `cf workers types` generates types from `cloudflare.config.ts`.
+- `cf init workers [directory]` creates or sets up a Workers project.
+- `cf auth` manages login and profiles; `--profile <name>` picks one on any command.
+
+`cf dev` and `cf deploy` run the dev server the project declares in `package.json`: `@cloudflare/vite-plugin` (recommended), or `wrangler` for a legacy Worker project that keeps `wrangler.jsonc`. With none declared they print the install choices and stop. Ask before adding a dependency.
+
+### Docs
+
+Product docs: https://developers.cloudflare.com/ . Machine-readable index: https://developers.cloudflare.com/llms.txt .
+
+### Status
+
+`cf` is in beta, so commands and config can still change. Wrangler is not deprecated yet; Cloudflare plans to maintain it for 18 months after the `cf` beta ends.
+
+## google-workspace
+
+Create and edit Google Sheets, Docs, Slides, Calendar events, and Gmail from the session.
+
+```
+bun repo google-workspace whoami
+bun repo google-workspace scopes
+bun repo google-workspace login
+bun repo google-workspace sheet create --title "Q3" --csv "item,qty\nA,2"
+bun repo google-workspace sheet set --id ID --cell A1 --value x
+bun repo google-workspace sheet get --id ID --range A1:B10
+bun repo google-workspace sheet append --id ID --csv "c,3"
+bun repo google-workspace sheet clear --id ID --range A1:Z
+bun repo google-workspace doc create --title "Notes" --body "hello"
+bun repo google-workspace doc append --id ID --body "more"
+bun repo google-workspace drive list --query "mimeType='application/vnd.google-apps.spreadsheet'"
+bun repo google-workspace slide create --title "Deck"
+bun repo google-workspace meeting create --title "Standup" --start 2026-09-15T09:00:00Z --end 2026-09-15T09:15:00Z --attendees a@x.com,b@y.com
+bun repo google-workspace mail send --to you@example.com --subject hi --body hello
+bun repo google-workspace mail list
+```
+
+Each person has their own Google Cloud app. Creds stay in `~/.workerstack/` on that machine. Do not share OAuth JSON or tokens. Do not commit them. Inviting others to a meeting is attendee emails, not shared creds.
+
+Handheld (any OS): `bun repo setup google-workspace` or `bun repo setup` → google-workspace. Opens each Cloud Console page, waits, copies the Desktop JSON into `~/.workerstack/workspace/default/google-oauth.json`, then browser Allow. Non-TTY: `--creds PATH` to a Desktop download. `--account NAME` for a second Google user.
+
+Doctor reports google-workspace as optional: `ok` when Desktop OAuth JSON, tokens, gcloud ADC, or `~/.clasprc.json` exists, else `missing (optional)`. It prints source names (`oauth` `tokens` `adc` `clasprc`), not secrets. `clasprc` is Drive-only.
+
+Two Google accounts on one machine: `--account NAME` (or `WORKSPACE_ACCOUNT`). Each account, `default` included, uses `~/.workerstack/workspace/NAME/`.
+
+```
+bun repo google-workspace --account work login
+bun repo google-workspace --account work whoami
+bun repo google-workspace accounts
+```
+
+Each account needs its own Desktop JSON in that folder (`google-oauth.json`) and its own `login`.
+
+Clasp’s public OAuth client is Drive-only. Calendar and Gmail are restricted; Google blocks extra scopes on that app. Use **your** Desktop OAuth client.
+
+### Agent: setup e2e
+
+If `whoami` works but `meeting` / `mail` / `sheet set` fail with missing scope or “app is blocked”, run **this user** through `bun repo setup google-workspace` (TTY). Do not reuse another person’s JSON. Do not invent a client JSON.
+
+Local dir is created by setup (`~/.workerstack/`, mode 700 on Unix). Manual equivalent: `mkdir -p "$HOME/.workerstack" && chmod 700 "$HOME/.workerstack"` then:
+
+1. Open `https://console.cloud.google.com/projectcreate` — **Create**. Org can be their Workspace org. Note **Project ID** from the dashboard URL (`?project=`).
+2. Open `https://console.cloud.google.com/auth/overview/create?project=PROJECT_ID` (or **Google Auth Platform → Branding**).
+   - App name: anything (`autorun` is fine). That string is only the Allow screen.
+   - User support email: their address.
+   - Audience: **Internal** if the Google account is a paid Workspace org (e.g. `@rearm.co`). **Testing** + add their own address as a test user if it is a personal `@gmail.com` (Internal is not offered). APIs work on both; only this consent type changes.
+   - Next / Create through the wizard.
+3. Open `https://console.cloud.google.com/flows/enableapi?apiid=calendar-json.googleapis.com,gmail.googleapis.com,sheets.googleapis.com,docs.googleapis.com,drive.googleapis.com&project=PROJECT_ID` — **Enable**.
+4. Open `https://console.cloud.google.com/auth/clients/create?project=PROJECT_ID`.
+   - Application type: **Desktop app**.
+   - Create → **Download JSON**.
+5. Copy the download to `$HOME/.workerstack/workspace/default/google-oauth.json` (Windows: `%USERPROFILE%\.workerstack\workspace\default\google-oauth.json`). chmod 600 on Unix. Confirm it has `"installed"` and `client_id`. For `--account NAME`, use `$HOME/.workerstack/workspace/NAME/google-oauth.json`.
+6. From the repo: `bun repo google-workspace login` (or `--account NAME`) — browser Allow. Tokens write beside the JSON (`workspace/NAME/tokens.json`).
+7. Smoke:
+
+```
+bun repo google-workspace whoami
+bun repo google-workspace scopes
+bun repo google-workspace sheet create --title smoke-sheet --csv "k,v\nok,1"
+bun repo google-workspace doc create --title smoke-doc --body ok
+bun repo google-workspace slide create --title smoke-slide
+bun repo google-workspace meeting create --title smoke-meeting --start 2026-09-16T09:00:00Z --end 2026-09-16T09:15:00Z
+bun repo google-workspace mail send --to THEIR_EMAIL --subject smoke --body ok
+```
+
+`scopes` must include `calendar`, `gmail.modify` or `gmail.send`, `spreadsheets`, `documents`, `drive`. If login times out, they did not finish Allow; re-run `login`.
+
+If `google-oauth.json` is missing, `login` prints `setup: bun repo setup google-workspace`. Prefer the handheld setup (it opens the Project ID URLs). Manual steps above still work.
+
+`gcloud` on PATH is an alternate login (`gcloud auth application-default login` with the extra scopes). Still per person, still local.
+
+## Clasp
+
+Low-level Apps Script CLI. Optional. Doctor reports it.
+
+For create/edit sheet, doc, slide, meeting, or mail, use **google-workspace**: `node_modules/@workerstack/repo/references/google-workspace.md` and `bun repo google-workspace`. Do not start from clasp.
+
+```
+bun add -g @google/clasp
+clasp login
+clasp create --type standalone --title <name>
+clasp pull
+clasp push
+clasp run <function>
+clasp status
+```
+
+Script files live next to `appsscript.json`. Git tracks them. `clasp run` needs the Apps Script API and an API-executable deployment. That path is for custom `.gs`, not day-to-day Workspace.
+
+## Listen
+
+Speech-to-text from the session. Input only. Not TTS. Not a live voice agent. Not MCP.
+
+```
+bun repo listen whoami
+bun repo listen devices
+bun repo listen rec [--seconds 8] [--device D] [--clip]
+bun repo listen start [--device D]
+bun repo listen stop [--clip]
+bun repo listen toggle [--clip]
+bun repo listen status
+bun repo listen file --path clip.wav [--clip]
+bun repo listen latest
+```
+
+`rec` records then transcribes (default 8s, cap 120s). `toggle` is the hotkey verb: first run starts, second run stops and prints the transcript. Audio and `latest.txt` live under `.repo/tmp/listen/`. `--cwd /path/to/repo` when the hotkey does not already run in the repo.
+
+### Auth and capture
+
+Handheld (any OS): `bun repo setup listen` or `bun repo setup` → listen. Prints OS install commands for ffmpeg / whisper-cli (does not run them), optional ggml download into `~/.workerstack/whisper/`, OpenAI fallback key if local STT is missing.
+
+If ffmpeg, whisper-cli, a ggml model, or `OPENAI_API_KEY` is missing, the CLI prints `setup: bun repo setup listen` and exits 1. Agents should show that line, not a stack or JSON. Do not invent a key.
+
+STT prefers **local whisper.cpp**. Install the binary; the first `listen` downloads `ggml-base.en.bin` (~142MB) into `~/.workerstack/whisper/`. No API cost after that. If the binary or download is missing, it falls back to OpenAI `whisper-1` (`OPENAI_API_KEY` or `~/.workerstack/speak.json`). Force with `LISTEN_STT=local` or `LISTEN_STT=openai`. Never commit keys.
+
+| | env | `~/.workerstack/speak.json` |
+| --- | --- | --- |
+| Local model | `WHISPER_MODEL` | `listen.whisperModel` |
+| Force engine | `LISTEN_STT` | `listen.stt` (`auto` / `local` / `openai`) |
+| OpenAI key | `OPENAI_API_KEY` | `openai.apiKey` |
+| OpenAI model | `LISTEN_MODEL` | `listen.model` (default `whisper-1`) |
+| Device | `LISTEN_DEVICE` | `listen.device` |
+| Seconds | `LISTEN_SECONDS` | `listen.seconds` |
+
+#### Local Whisper (preferred)
+
+One install:
+
+- mac: `brew install whisper-cpp` (provides `whisper-cli`)
+- linux: build https://github.com/ggml-org/whisper.cpp (`whisper-cli` on PATH)
+- win: whisper.cpp release `whisper-cli.exe` on PATH
+
+Then `bun repo listen whoami` or `rec`. The first run fetches `ggml-base.en.bin` to `~/.workerstack/whisper/`. Do not pip-install OpenAI Whisper. Do not curl the model yourself unless the auto-download fails.
+
+Larger models: put another `ggml-*.bin` in that folder or set `WHISPER_MODEL`. Doctor reports `whisper-cli` as optional. `whoami` prints `stt=local` or `stt=openai`.
+
+#### ffmpeg (mic only)
+
+- mac: `brew install ffmpeg`
+- linux: `sudo apt install ffmpeg`
+- win: `winget install Gyan.FFmpeg`
+
+`file` and `latest` work without a mic. Doctor reports ffmpeg as optional.
+
+`rec` detaches ffmpeg and does not attach it to the IDE TTY. AVFoundation can stall forever on a VS Code / Electron PTY even when Visual Studio Code already has Microphone access.
+
+Default devices: mac `:0` (AVFoundation audio 0), linux Pulse `default` (ALSA if the id is `hw:…`), Windows requires `--device` or `LISTEN_DEVICE` from `listen devices`.
+
+### Hotkeys
+
+Bind one key to toggle. Include `--clip` so the transcript is on the clipboard as well as `latest.txt`.
+
+```
+bun --cwd /ABS/repo repo listen toggle --clip
+```
+
+Replace `/ABS/repo` with the repo root.
+
+- **mac:** Shortcuts (Run Shell Script) or skhd: `hyper - r : bun --cwd /ABS/repo repo listen toggle --clip`
+- **win:** PowerToys Keyboard Manager or AutoHotkey: `^!r:: Run, bun --cwd C:\ABS\repo repo listen toggle --clip, C:\ABS\repo, Hide`
+- **linux:** desktop custom shortcut or sxhkd to the same command.
+
+No daemon. Each keypress is one CLI. First press records; second press transcribes.
+
+`--clip` uses `pbcopy` (mac), `clip` (win), or `wl-copy` / `xclip` / `xsel` (linux).
 
 ## Speak
 
@@ -1878,66 +1941,3 @@ Env wins over the file. Default provider is `SPEAK_PROVIDER` else the first conf
 Create an ElevenLabs key at https://elevenlabs.io/app/settings/api-keys. OpenAI at https://platform.openai.com/api-keys.
 
 Doctor reports speak as optional: `ok` when a key or `~/.workerstack/speak.json` exists, else `missing (optional)`. It prints the provider name, not the secret.
-
-## Sync
-
-### Skills naming
-
-Do not reuse a repo skill name for a consumer custom skill: a repo-owned skill of the same name in `.repo/skills/` replaces the stock one. Pack names stay reserved when their directory is absent.
-
-`bun repo sync` links the stock skills from the installed package into each host tree and writes the rest; it never copies stock references or scripts. doctor/listen/speak call the consumer's root `scripts/lib/env.mjs` `loadEnv` when that file exists.
-
-Upgrading is running `bun repo update '@workerstack/*'`: it bumps every `@workerstack/*` package to its npm latest, installs, and prints what that install's sync wrote and removed, plus each package's CHANGELOG sections between the installed and the new version. The first sync in a repo an older `bun repo init` copied moves your own rules, subagents, skills, settings keys, lessons, hooks and references into `.repo/` and `references/`, untracks the generated paths, removes the copied `.rulesync/`, and prints one moved line per move. Commit the result.
-
-Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `.gitattributes`, sits between an opening and a closing comment that name it, and the opening one carries a short hash of the text sync wrote. Keep your own lines outside them: a line added or edited inside is moved just below the section by the next sync. A missing, doubled, misplaced or mangled comment is repaired rather than failing sync, each repair printing one line that names the file. A section a new version no longer writes is cut, and a shared file nothing writes any more keeps your lines with its sections cut, removed only when nothing else is left.
-
-### Untracked outputs
-
-In a consumer, sync rebuilds these files from the installed package on every install. The skill links point into `node_modules`. A committed copy drifts from the package and conflicts on each upgrade. So sync keeps them in the `repo:ignore` block of `.gitignore`.
-
-`bun repo sync` and `bun repo sync --check` refuse when git tracks a file the block covers. They print one line per block line, with the `git rm --cached` command to run. Migrate and adopt untrack a committed tree themselves.
-
-### References
-
-Each `references/**/*.md` needs a frontmatter `description:` of at most 32 characters. It may also set `order:`, a whole number. Sync lists the files in the `repo:refs` block of that folder's `INDEX.md`: lowest `order` first, then the files without one, ties by path. The README's Contents and sections follow that list.
-
-This holds in every repo with the docs pack and in each workspace package. A bad value fails sync and names the file.
-
-## Change workflow
-
-`workflow` in `repo.config.ts` says where changes are made and how they reach the default branch: `"worktree"` (the default, also when the key or the config is missing), `"pull-request"` or `"main"`. `bun repo sync` writes the mode's steps into the workflow paragraph of `AGENTS.md`, so that paragraph is the one to follow. This file says what each command and gate does under each mode. `hooks.md` has the gate details, `exports.md` the `bun repo push` table.
-
-### worktree
-
-Every change is made in a managed worktree: `bun repo worktree add <name>` makes `.worktrees/<name>` on branch `wt/<name>`. Edit, test and commit there.
-
-- `bun repo worktree finish <name>`, run from the root, rebases `wt/<name>` onto the default branch, fast-forwards the default branch to it, removes the worktree and deletes the branch, and origin's copy when there is one. It pushes nothing else.
-- `bun repo push` from the root then pushes the default branch and waits on CI. On a `wt/*` branch it exits 1: finish first.
-- `bun repo release` runs in the main checkout on the default branch: it commits the release, pushes it, waits on CI, then tags.
-- Gates: a write into the main checkout is denied, outside `.worktrees/` and the ignored `.repo/` dirs. A commit, merge, cherry-pick, revert, am or pull there is denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run bun repo worktree finish <name>`. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to other sessions' work.
-
-### pull-request
-
-Changes are made in a managed worktree as under worktree, and the default branch takes them only through pull requests. It needs `gh`, logged in.
-
-- `bun repo worktree finish <name>`, run from the root, fetches origin and reads the branch's pull request. With none open, it rebases `wt/<name>` onto `origin/<default>`, pushes it and opens its pull request. Run again after more commits, it pushes them to the open pull request. Once the pull request merged, it fast-forwards the default branch to origin's, removes the worktree and deletes both copies of the branch. A closed pull request is refused: `reopen it with gh pr reopen <number>, then run finish again`.
-- `bun repo push` refuses the default branch with `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`. On a `wt/*` branch it exits 1 and names finish, which pushes the branch itself.
-- `bun repo release` never pushes the default branch. It commits the release in a `release-<version>-<short HEAD>` worktree and opens its pull request, then stops: `run bun repo release again once it merges`. That rerun lands the merged release commit, waits on CI for it and tags it. Run before the merge, it says the pull request is not merged yet.
-- Gates: the worktree ones, plus a push or delete push of the default branch (also `--all` and `--mirror`) is denied from anywhere in the repo with the same text `bun repo push` prints. A word in the user's message does not lift this deny.
-
-### main
-
-Changes are made in the main checkout, on the default branch. There is no worktree step.
-
-- Edit, test and commit in the main checkout, then run `bun repo push`, which pushes the default branch and waits on CI.
-- `bun repo worktree add` and `finish` still work as under worktree, for a change you want apart.
-- `bun repo release` works as under worktree.
-- Gates: writes and commits in the main checkout pass. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to uncommitted work, unless the user's message asks for them.
-
-### Every mode
-
-A force push, and moving or deleting the default branch with `git branch` or `git update-ref`, are denied in every mode unless the user's message asks for them.
-
-### A config that fails to load
-
-When `repo.config.ts` throws as it loads, or `workflow` holds another value, each gate takes its strictest rule: the main checkout takes no writes or commits, and the default branch is not pushed (`(repo.config.ts failed to load)` in the deny). `bun repo worktree finish` refuses with `repo.config.ts failed to load: fix it, then run finish again`.

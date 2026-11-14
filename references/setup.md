@@ -1,5 +1,6 @@
 ---
 description: Set up integrations
+order: 170
 ---
 
 # Setup

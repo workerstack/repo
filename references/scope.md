@@ -1,5 +1,6 @@
 ---
 description: When and how to plan
+order: 10
 ---
 
 # Scope

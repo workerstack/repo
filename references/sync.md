@@ -1,5 +1,6 @@
 ---
 description: How sync writes files
+order: 40
 ---
 
 # Sync

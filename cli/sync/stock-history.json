@@ -8479,13 +8479,15 @@
     "b7d997fa071aaa53",
     "bad6e0f18260f806",
     "d201291d7f416c2d",
+    "f626dd145f340e4a",
     "fa623365383c13e5"
   ],
-  "references/browser.md": ["0ebbff0224a7dd44", "607c3f41f8823196", "9dd0425d48c70e29"],
+  "references/browser.md": ["0ebbff0224a7dd44", "607c3f41f8823196", "9dd0425d48c70e29", "d4ad1e70a91cac16"],
   "references/cascade.md": [
     "3943d2650103ed3b",
     "469ffa9cb8f081f5",
     "63e31a5b05e72255",
+    "7ec94d1db7689483",
     "8a8b498a28fdeb92",
     "92cfceeca9b71d56",
     "b0b5570781aa673b",
@@ -8494,8 +8496,8 @@
     "e6236424e7133581",
     "f35ce18963af4d01"
   ],
-  "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf"],
-  "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
+  "references/clasp.md": ["8a66188441a6074f", "ac7289c627e699cf", "e1401e5d5f9e039e"],
+  "references/cloudflare.md": ["54efeca7d34946d0", "9d26d71227fdfc29", "9f4764cadd23d5b1"],
   "references/exports.md": [
     "040cef985f3738a6",
     "118f75027b557f07",
@@ -8512,6 +8514,7 @@
     "533cb1f40f54d8a9",
     "7202105da1130c30",
     "77895c578e57d302",
+    "7a7e686feef08b7a",
     "848935de803d48f6",
     "9aec093f52641cd3",
     "ab620e6def73c99a",
@@ -8525,9 +8528,15 @@
     "f30123d8dff4d425",
     "fdda2838f9f06a54"
   ],
-  "references/fast-plan-format.md": ["0a08c65f5c53b51c", "2d689fcc97087c95", "84ecd882159e2323", "d9bb9889b4354f5d"],
-  "references/fast-roadmap-format.md": ["2df8c000c8316f25", "a71f7d28912fdd0e", "f8bc3a574edec9dd"],
-  "references/google-workspace.md": ["48a0a8dd31c8250b", "db455dc3b114ef70"],
+  "references/fast-plan-format.md": [
+    "0a08c65f5c53b51c",
+    "0ab67c7bb5eaaf1b",
+    "2d689fcc97087c95",
+    "84ecd882159e2323",
+    "d9bb9889b4354f5d"
+  ],
+  "references/fast-roadmap-format.md": ["2df8c000c8316f25", "69c42cf408e28eb0", "a71f7d28912fdd0e", "f8bc3a574edec9dd"],
+  "references/google-workspace.md": ["48a0a8dd31c8250b", "d5398e907adf37e2", "db455dc3b114ef70"],
   "references/hooks.md": [
     "079e3d23d213aed6",
     "093ed3a655f55cd3",
@@ -8548,6 +8557,7 @@
     "74b9363f7ebd9587",
     "7aa2cc5828e4127c",
     "7b468204e1ffda9d",
+    "85ce793ac53c29eb",
     "8816d7b0f28a1748",
     "8c7c6b0015a6dc24",
     "97b8970430339866",
@@ -8566,10 +8576,11 @@
     "3702b03d170d2710",
     "374e39dc02ef33f0",
     "4f550f2dbd5bdaae",
+    "afb01f03d0c949bd",
     "b9281e1650887eff",
     "fe8b0f833551773b"
   ],
-  "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca", "aafda63bc80ad4d6"],
+  "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca", "90b97b3c4bbb1a4d", "aafda63bc80ad4d6"],
   "references/lessons.md": [
     "1f530ca8c5017435",
     "26f7f71b3519bf34",
@@ -8577,11 +8588,12 @@
     "6b3eae256df3cc84",
     "7415612eb6c7e246",
     "937cee73491e374e",
+    "a0973d7351c34b39",
     "d51504a3685b8749",
     "d82f28a5346a5f6c",
     "db5b43a73c0dfb7b"
   ],
-  "references/listen.md": ["53783d65923e6731", "5c1f2e5f8eade499", "cae54e3f489aab38"],
+  "references/listen.md": ["18531e5c358d48a8", "53783d65923e6731", "5c1f2e5f8eade499", "cae54e3f489aab38"],
   "references/map.md": [
     "036c9062b9c6e91f",
     "09b82728338f5a82",
@@ -8594,6 +8606,7 @@
     "27fb844347c693f0",
     "2899648d7103c529",
     "3665b9291d607f50",
+    "3ecc2d57fc00efb9",
     "4b9692cd9139f976",
     "58a7e63afaf899b4",
     "5bff702015ecc71f",
@@ -8619,13 +8632,14 @@
     "f84ecd892cca03ec",
     "fdab4a0447b8871e"
   ],
-  "references/output.md": ["017364ce9c76c2a4", "3042f30880b6975e"],
+  "references/output.md": ["017364ce9c76c2a4", "3042f30880b6975e", "d75c77fa9cae8566"],
   "references/plan-format.md": [
     "1656111787ae22a8",
     "1b791f542ea9a9b7",
     "1e647b302821c533",
     "2e65982b83dfc36d",
     "364900ae840f6753",
+    "44647dc5a88f38e9",
     "49aecab0ad4c11b1",
     "5b8d9a46ebe4777c",
     "623a929f50a645c3",
@@ -8642,6 +8656,7 @@
   ],
   "references/review-loop.md": [
     "21b52d81d3fb3344",
+    "289676afb54b4777",
     "30e2ae0a2e490bd5",
     "33cc0b0817305aa2",
     "6d87ca841c845b70",
@@ -8660,12 +8675,13 @@
     "6996928b19a20977",
     "8be239c0c8a8f6a9",
     "915f300b8b9d042a",
+    "a0313a3d7c796cd0",
     "b3496ee8ab0a6b1c",
     "eb9b880327b1d54e",
     "f029319acb117a92",
     "fa727acd883ec353"
   ],
-  "references/rtk.md": ["67a7da2c4625191c", "d76ba0a5923edd2f"],
+  "references/rtk.md": ["67a7da2c4625191c", "78c1b0b0bbee047f", "d76ba0a5923edd2f"],
   "references/scope.md": [
     "05b5030af870592f",
     "18c6b799d9a1a5e1",
@@ -8677,6 +8693,7 @@
     "2e6941901ff909d3",
     "3447cf3911d08fdd",
     "457f2eb8443c8e88",
+    "527f6ba0e0fa23a0",
     "6d7323587e18b72f",
     "7adca70bec40b015",
     "96f952d35af99ba0",
@@ -8691,12 +8708,13 @@
   "references/setup.md": [
     "2315bc708e31ce43",
     "41e06da9597b7138",
+    "7dde5d5a4a218bb7",
     "86592fb5319f20b3",
     "ac0e14fdea20df33",
     "b470fc4030393cd3",
     "fed457b202f6f0ca"
   ],
-  "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4"],
-  "references/sync.md": ["7e389acc08c15554", "a21ca531b861689e", "e27cec0b466c1dca"],
-  "references/workflow.md": ["6c8b827f6f52fe9b"]
+  "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4", "e0d1a1b48986c54c"],
+  "references/sync.md": ["67c2caa5d4463b0b", "7e389acc08c15554", "a21ca531b861689e", "e27cec0b466c1dca"],
+  "references/workflow.md": ["6c8b827f6f52fe9b", "86bf876f4428f204"]
 }

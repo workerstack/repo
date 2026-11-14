@@ -1,5 +1,6 @@
 ---
 description: Fast plan file format
+order: 100
 ---
 
 # Fast plan format (SSOT)

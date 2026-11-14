@@ -2,31 +2,31 @@
 
 Files are in `node_modules/@workerstack/repo/references/`. Read one in full when its line matches the work.
 
-<!-- repo:refs 6b8f8387 -->
-- `browser.md`: Browse web pages
-- `cascade.md`: Shrink big tool output
-- `clasp.md`: Apps Script CLI
-- `cloudflare.md`: Cloudflare work via cf
+<!-- repo:refs 0cb21cbd -->
+- `scope.md`: When and how to plan
+- `workflow.md`: How changes land, per workflow
 - `exports.md`: What the package exports
+- `sync.md`: How sync writes files
+- `hooks.md`: What each hook does
+- `plan-format.md`: Plan file format
+- `roadmap-format.md`: Roadmap file format
+- `review-loop.md`: Review an implementer
+- `implementation-format.md`: Implement journal format
 - `fast-plan-format.md`: Fast plan file format
 - `fast-roadmap-format.md`: Fast roadmap file format
-- `google-workspace.md`: Google Sheets, Docs, Gmail
-- `hooks.md`: What each hook does
-- `implementation-format.md`: Implement journal format
-- `jev.md`: One outside yes/no decision
 - `lessons.md`: Record repeated mistakes
-- `listen.md`: Speech to text
-- `map.md`: Folder and file outline
 - `output.md`: Reply style details
-- `plan-format.md`: Plan file format
-- `review-loop.md`: Review an implementer
-- `roadmap-format.md`: Roadmap file format
+- `map.md`: Folder and file outline
+- `cascade.md`: Shrink big tool output
 - `rtk.md`: Shrink shell output
-- `scope.md`: When and how to plan
 - `setup.md`: Set up integrations
+- `browser.md`: Browse web pages
+- `jev.md`: One outside yes/no decision
+- `cloudflare.md`: Cloudflare work via cf
+- `google-workspace.md`: Google Sheets, Docs, Gmail
+- `clasp.md`: Apps Script CLI
+- `listen.md`: Speech to text
 - `speak.md`: Text to speech
-- `sync.md`: How sync writes files
-- `workflow.md`: How changes land, per workflow
 <!-- /repo:refs -->
 
 <!-- repo:stack e4fdfa05 -->

@@ -1,5 +1,6 @@
 ---
 description: Implement journal format
+order: 90
 ---
 
 # Implementation format (SSOT)

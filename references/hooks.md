@@ -1,5 +1,6 @@
 ---
 description: What each hook does
+order: 50
 ---
 
 # Hooks

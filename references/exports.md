@@ -1,5 +1,6 @@
 ---
 description: What the package exports
+order: 30
 ---
 
 # Exports

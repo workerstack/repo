@@ -1,5 +1,6 @@
 ---
 description: Plan file format
+order: 60
 ---
 
 # Plan format (SSOT)
