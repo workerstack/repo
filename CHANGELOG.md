@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo coverage` no longer fails on 5 second test timeouts when the machine is busy: its run gives each test and hook 60 seconds by default, and a timeout the project sets still wins.
 - `repo clean`, `repo sync`, `repo init` and the vitest preset's temp root now retry a busy dir with backoff before they give up, instead of failing or skipping it on the first error; on Windows a file held for a moment no longer leaves the dir behind.
 - An empty key line no longer takes the next line as its value. A `HANDOFF_NAME:` or `ROADMAP_NAME:` line with no name now names the save after its H1 and is dropped, an empty `TMP_NAME:` is refused as `missing TMP_NAME`, an empty `IMPL_PLAN:` or `TMP_EXT:` is read as unset and dropped, and `need:` with its array on the next line is no need line. The same fix covers the key lines `repo bench`, `repo ci`, `repo clean`, `repo map` and the orchestrate review count read.
+- `repo sync` removes the `.oxlintrc.unskipped-<pid>` and `knip.unignored-<pid>` copies a killed `repo check` left at the root, in the `.jsonc` names and the `.json` names 0.1.0 and 0.2.0-rc.0 wrote, once no process holds that pid. It prints `repo sync: removed <name>, left by a repo check that stopped` for each one, keeps a copy whose check still runs, and removes nothing under `--check`.
 
 ## [0.2.0-rc.0] - 2026-11-13
 
