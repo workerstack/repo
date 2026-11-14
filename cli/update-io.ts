@@ -4,8 +4,8 @@ import { captureSorted } from "./scripts/lint.ts";
 import type { ToolResult, UpdateIo } from "./update-io.types.ts";
 
 /** Sorts the json keys of `files` under `root` and formats them with bun fmt, as `repo fmt` does. */
-export function formatFiles(root: string, files: string[]): ToolResult {
-  const result = captureSorted(files, root);
+export async function formatFiles(root: string, files: string[]): Promise<ToolResult> {
+  const result = await captureSorted(files, root);
 
   return { code: result.code, output: result.stdout + result.stderr };
 }

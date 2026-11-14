@@ -7,12 +7,12 @@ import { expect, it } from "vitest";
 import { removeTree } from "./remove-tree.ts";
 import { formatFiles, updateIo } from "./update-io.ts";
 
-it("formats files and reports the tool's code and output", () => {
+it("formats files and reports the tool's code and output", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "repo-update-io-"));
 
   try {
     fs.writeFileSync(path.join(root, "a.json"), '{"b":1,"a":2}');
-    const result = formatFiles(root, ["a.json"]);
+    const result = await formatFiles(root, ["a.json"]);
     expect(result.code).toBeTypeOf("number");
     expect(result.output).toBeTypeOf("string");
   } finally {

@@ -37,7 +37,7 @@ function syncLines(io: UpdateIo, result: ToolResult): void {
  * Installs, prints the `repo sync:` lines it printed, then formats what `repo fmt` would (only when the root has an
  * oxfmt config); a failed step prints why and returns the exit code.
  */
-export function finish(run: Run, files: string[]): number {
+export async function finish(run: Run, files: string[]): Promise<number> {
   const { io, command, root } = run;
   const installed = io.install(root);
 
@@ -45,7 +45,7 @@ export function finish(run: Run, files: string[]): number {
   syncLines(io, installed);
 
   if (!fs.existsSync(path.join(root, OXFMT_CONFIG_PATH))) return 0;
-  const formatted = io.format(root, files);
+  const formatted = await io.format(root, files);
 
   if (formatted.code === 0) return 0;
   const shown = files.map((file) => file.split(path.sep).join(POSIX)).join(", ");

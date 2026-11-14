@@ -27,9 +27,9 @@ it("--shard parses with or without --no-coverage", () => {
   });
 });
 
-it("times <dir> runs from main and writes the table at the root", () => {
+it("times <dir> runs from main and writes the table at the root", async () => {
   const root = plant({ "reports/ci-report-linux.json": '{"durations":{"a.test.ts":4},"os":"linux","skipped":[]}' });
-  const run = ci(root, ["times", "reports"]);
+  const run = await ci(root, ["times", "reports"]);
   expect(run).toMatchObject({
     code: 0,
     err: "",

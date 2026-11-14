@@ -31,7 +31,7 @@ export const report = (...issues: Record<string, unknown>[]): string => JSON.str
 /** A runner that answers with `stdout`, `code` and `stderr`, and records the arguments and cwd it was called with. */
 export function answering(stdout: string, code = 0, stderr = ""): KnipRun & { calls: [string[], string][] } {
   const calls: [string[], string][] = [];
-  const run = (args: string[], cwd: string) => {
+  const run = async (args: string[], cwd: string) => {
     calls.push([args, cwd]);
     return { code, stdout, stderr };
   };

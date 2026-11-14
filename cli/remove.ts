@@ -40,7 +40,7 @@ function partOf(name: string, removals: readonly Removal[]): string {
 }
 
 /** Removes each name from every dependency field, catalog, override, resolution, trust list and patch entry. */
-export function main(argv: string[], io: UpdateIo = updateIo()): number {
+export async function main(argv: string[], io: UpdateIo = updateIo()): Promise<number> {
   if (argv.length === 0 || argv.some((arg) => arg.startsWith(OPTION_PREFIX)))
     return fail(io, [said(REMOVE_COMMAND, REMOVE_USAGE)], EXIT_USAGE);
 
@@ -69,5 +69,5 @@ export function main(argv: string[], io: UpdateIo = updateIo()): number {
 
   io.out(removedLine(argv.map((name) => partOf(name, removals))));
 
-  return finish({ command: REMOVE_COMMAND, io, root }, files);
+  return await finish({ command: REMOVE_COMMAND, io, root }, files);
 }

@@ -36,8 +36,8 @@ import { BUNFIG_FILE, LOCKFILES, MANIFEST_FILE } from "./turn-steps.constants.ts
 
 /** typescript, a dependency, and vitest, an optional peer: null when the package at `cwd` cannot resolve it. */
 export type Bins = {
-  tsc: (args: string[], cwd: string) => Captured;
-  vitest: (args: string[], cwd: string) => Captured | null;
+  tsc: (args: string[], cwd: string) => Promise<Captured>;
+  vitest: (args: string[], cwd: string) => Promise<Captured> | null;
 };
 
 /** The command that gates a change set, which names it in every line it prints. */
@@ -57,10 +57,13 @@ export type Turn = {
   scope: Scope;
 };
 
+/** oxlint's or the script checks' diagnostics, or why they could not be had. */
+type Report = Result<Diagnostic[]>;
+
 export type StepResult = { label: string; ok: boolean; output: string[]; touched: string[] };
 
 /** A step; null when its inputs did not change. */
-export type Step = (turn: Turn) => StepResult | null;
+export type Step = (turn: Turn) => Promise<StepResult | null>;
 
 const TESTS_LINE = /^\s*Tests\s+(.*)$/m;
 const FAILED_COUNT = /(\d+) failed/;
@@ -107,12 +110,12 @@ function watch(root: string, files: readonly string[]): () => string[] {
   return () => files.filter((rel) => text(root, rel) !== before.get(rel));
 }
 
-export function fmtStep(turn: Turn): StepResult {
+export async function fmtStep(turn: Turn): Promise<StepResult> {
   const files = present(turn);
 
   if (files.length === 0) return passed("fmt ok");
   const rewritten = watch(turn.root, files);
-  const run = captureSorted(files, turn.root);
+  const run = await captureSorted(files, turn.root);
   const touched = rewritten();
 
   if (run.code !== 0) return failed("fmt failed", [`${run.stdout}${run.stderr}`], touched);
@@ -139,19 +142,19 @@ function overOutput(command: GateName, over: readonly Excess[], diagnostics: rea
  * Stylelint's fix on the stylesheets, `lint --fix -f json` on the lintable files until a pass rewrites none, then
  * bun fmt on what a fix rewrote.
  */
-function lintFix(root: string, files: readonly string[]) {
+async function lintFix(root: string, files: readonly string[]) {
   const rewritten = watch(root, files);
-  cssDiagnostics(root, files, { fix: true });
+  await cssDiagnostics(root, files, { fix: true });
   const lintable = files.filter((rel) => LINTABLE.test(rel));
 
   const report =
     lintable.length > 0
-      ? fixPasses(root, lintable, () => lintReport(root, ["--fix", ...lintable]))
+      ? await fixPasses(root, lintable, async () => await lintReport(root, ["--fix", ...lintable]))
       : { ok: true as const, value: [] };
 
   const fixed = rewritten();
 
-  if (fixed.length > 0) captureTool("bun fmt", fixed, { root });
+  if (fixed.length > 0) await captureTool("bun fmt", fixed, { root });
 
   return { fixed, report };
 }
@@ -161,9 +164,9 @@ function lintFix(root: string, files: readonly string[]) {
  * include the guards of sources a changed test imports, which may lie outside `files`; a clone's other side is looked
  * for in every source of the checkout.
  */
-function withScripts(turn: Turn, files: readonly string[], report: Result<Diagnostic[]>): Result<Diagnostic[]> {
+async function withScripts(turn: Turn, files: readonly string[], report: Report): Promise<Report> {
   const listed = report.ok ? sourceFiles(turn.root) : report;
-  const scripts = listed.ok ? scriptDiagnostics(turn.root, { files, sources: listed.value }) : listed;
+  const scripts = listed.ok ? await scriptDiagnostics(turn.root, { files, sources: listed.value }) : listed;
 
   if (!report.ok || !scripts.ok) return scripts;
   const reported = [...new Set([...files, ...scripts.value.map((d) => d.file)])];
@@ -186,9 +189,9 @@ function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], lin
  * Stylelint's and oxlint's fixes, the script checks on the lintable files, stylesheets and Rust sources, then the
  * baseline gate over those and the deleted ones.
  */
-export function lintStep(turn: Turn): StepResult {
-  const { report: oxlint, fixed } = lintFix(turn.root, present(turn).filter(gated));
-  const report = withScripts(turn, present(turn).filter(gated), oxlint);
+export async function lintStep(turn: Turn): Promise<StepResult> {
+  const { report: oxlint, fixed } = await lintFix(turn.root, present(turn).filter(gated));
+  const report = await withScripts(turn, present(turn).filter(gated), oxlint);
   const baseline = readBaseline(turn.root);
 
   if (!report.ok || !baseline.ok) {
@@ -284,28 +287,28 @@ function dirty(root: string): Map<string, string | null> {
 }
 
 /** `repo sync` in the root, and the files it changed that git would stage. */
-function sync(root: string) {
+async function sync(root: string) {
   const before = dirty(root);
-  const run = captureBun([BIN, "sync"], root);
+  const run = await captureBun([BIN, "sync"], root);
   const after = dirty(root);
 
   return { run, touched: [...after].filter(([rel, now]) => before.get(rel) !== now).map(([rel]) => rel) };
 }
 
 /** `repo sync` when a file it reads changed; precommit restages the files it rewrote. */
-export function syncStep(turn: Turn): StepResult | null {
+export async function syncStep(turn: Turn): Promise<StepResult | null> {
   if (!turn.changes.some((change) => syncReads(turn, change.rel))) return null;
-  const { run, touched } = sync(turn.root);
+  const { run, touched } = await sync(turn.root);
 
   return run.code === 0 ? passed("sync ok", touched) : failed("sync failed", [`${run.stdout}${run.stderr}`], touched);
 }
 
 /** `repo check` when a file it holds changed. */
-export function checkStep(turn: Turn): StepResult | null {
+export async function checkStep(turn: Turn): Promise<StepResult | null> {
   const outputs = new Set(readManifest(turn.root).paths);
 
   if (!turn.changes.some((change) => checkReads(turn, change.rel, outputs))) return null;
-  const run = captureBun([BIN, "check"], turn.root);
+  const run = await captureBun([BIN, "check"], turn.root);
 
   return run.code === 0 ? passed("check ok") : failed("check failed", [`${run.stdout}${run.stderr}`]);
 }

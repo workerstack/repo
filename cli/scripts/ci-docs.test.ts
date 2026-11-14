@@ -11,20 +11,20 @@ import type { Captured } from "./lint.ts";
 afterEach(cleanTemps);
 
 /** `repo ci` over fakes, under `packs`, with `docs` answering `repo docs --check`. */
-function ciWith(packs: Pack[], docs: Captured) {
+async function ciWith(packs: Pack[], docs: Captured) {
   const out: string[] = [];
   const repoCalls: string[] = [];
   let clock = 0;
 
-  const code = main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
+  const code = await main([], {
+    bins: { tsc: () => Promise.resolve(OK), vitest: () => Promise.resolve(PASSED) },
     cwd: plant(),
     now: () => (clock += 500),
     packs,
     repo: (args) => {
       repoCalls.push(args.join(" "));
 
-      return args[0] === "docs" ? docs : OK;
+      return Promise.resolve(args[0] === "docs" ? docs : OK);
     },
     stderr: () => {},
     stdout: (s) => out.push(s),
@@ -34,8 +34,8 @@ function ciWith(packs: Pack[], docs: Captured) {
   return { code, out: out.join(""), repoCalls };
 }
 
-it("under the docs pack a passing docs gate follows check and is counted in the summary", () => {
-  const run = ciWith(["docs"], OK);
+it("under the docs pack a passing docs gate follows check and is counted in the summary", async () => {
+  const run = await ciWith(["docs"], OK);
   expect(run.code).toBe(0);
   expect(run.out).toBe(
     "ci: check ok (0.5s)\nci: docs ok (0.5s)\nci: fmt ok (0.5s)\nci: typecheck 2 configs (0.5s)\n" +
@@ -44,21 +44,21 @@ it("under the docs pack a passing docs gate follows check and is counted in the 
   expect(run.repoCalls).toStrictEqual(["check", "docs --check", "fmt --check"]);
 });
 
-it("a failing docs gate prints the findings under its line, later gates still run, exit 1", () => {
+it("a failing docs gate prints the findings under its line, later gates still run, exit 1", async () => {
   const finding = "references/auth.md:14: example 2 fails to type-check: Property 'tokn' does not exist\n";
-  const run = ciWith(["docs"], bad(finding));
+  const run = await ciWith(["docs"], bad(finding));
   expect(run.code).toBe(1);
   expect(run.out).toContain(`ci: docs failed (0.5s)\n${finding}ci: fmt ok`);
   expect(run.out).toContain("ci: 4 tests passed");
 });
 
-it("a failing docs gate shows the command's stderr too", () => {
-  const run = ciWith(["docs"], { code: 1, stderr: "boom\n", stdout: "" });
+it("a failing docs gate shows the command's stderr too", async () => {
+  const run = await ciWith(["docs"], { code: 1, stderr: "boom\n", stdout: "" });
   expect(run.out).toContain("ci: docs failed (0.5s)\nboom\n");
 });
 
-it("without the docs pack there is no docs gate and the command is not run", () => {
-  const run = ciWith(["agents", "workspace"], bad("never shown\n"));
+it("without the docs pack there is no docs gate and the command is not run", async () => {
+  const run = await ciWith(["agents", "workspace"], bad("never shown\n"));
   expect(run.out).not.toContain("docs");
   expect(run.repoCalls).toStrictEqual(["check", "fmt --check"]);
   expect(run.code).toBe(0);
@@ -77,7 +77,7 @@ it("reads the docs pack from the config, so the docs gate runs when the config t
     repo: (args) => {
       seen.push(args.join(" "));
 
-      return OK;
+      return Promise.resolve(OK);
     },
   });
 

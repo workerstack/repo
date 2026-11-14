@@ -44,9 +44,9 @@ export const hit = (at: string, rule: string, message: string): Diagnostic => ({
 });
 
 /** The magic rules' hits of the planted `files`, all of them checked; the other script rules' hits left out. */
-export function magicOf(files: Record<string, string>): Diagnostic[] {
+export async function magicOf(files: Record<string, string>): Promise<Diagnostic[]> {
   const planted = Object.keys(files);
-  const found = scriptDiagnostics(plant(files), { files: planted, sources: planted });
+  const found = await scriptDiagnostics(plant(files), { files: planted, sources: planted });
   if (!found.ok) throw new Error(found.error.join("\n"));
   return found.value.filter((d) => MAGIC_RULES.includes(d.rule));
 }

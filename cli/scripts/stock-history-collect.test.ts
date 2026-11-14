@@ -132,10 +132,10 @@ describe("collectHistory, from the index, through symlinks", () => {
 });
 
 describe("writeStockHistory", () => {
-  it("returns git's failure as the error and leaves the table as it was", () => {
+  it("returns git's failure as the error and leaves the table as it was", async () => {
     const root = initDefaultBranchRepo();
     put(root, STOCK_HISTORY_REL, "{}\n");
-    const written = writeStockHistory(root, ["nope"], "tree");
+    const written = await writeStockHistory(root, ["nope"], "tree");
     expect(written.ok).toBe(false);
     expect(written.ok ? [] : written.error.join("")).toMatch(/git log nope failed/);
     expect(fs.readFileSync(path.join(root, STOCK_HISTORY_REL), "utf8")).toBe("{}\n");

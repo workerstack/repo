@@ -39,11 +39,11 @@ it("refuses a name that is not a pack", () => {
 });
 
 it(`a fresh init writes only repo.config.ts, package.json and an empty .mcp.json, installs, then syncs \
-globals`, () => {
+globals`, async () => {
   const dest = tmp("repo-dest-");
   const exec = fakeExec();
   const out: string[] = [];
-  init(dest, {
+  await init(dest, {
     execFileSync: exec,
     pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }),
     stdout: (s) => out.push(s),
@@ -63,7 +63,7 @@ globals`, () => {
     expect(call[2]).toStrictEqual({ cwd: dest, stdio: "inherit" });
 });
 
-it("outside a git work tree runs git init in the dest before the install and says so", () => {
+it("outside a git work tree runs git init in the dest before the install and says so", async () => {
   const dest = tmp("repo-dest-");
   const out: string[] = [];
 
@@ -71,7 +71,7 @@ it("outside a git work tree runs git init in the dest before the install and say
     if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
   });
 
-  init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
+  await init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
   expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
     ["git", ["init", "-q"]],
@@ -81,11 +81,11 @@ it("outside a git work tree runs git init in the dest before the install and say
   expect(out).toContain("repo init: ran git init\n");
 });
 
-it("inside a git work tree does not run git init or print it", () => {
+it("inside a git work tree does not run git init or print it", async () => {
   const dest = tmp("repo-dest-");
   const out: string[] = [];
   const exec = fakeExec();
-  init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
+  await init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true, stdout: (s) => out.push(s) });
   expect(exec.mock.calls.map(([cmd, args]) => [cmd, args])).toStrictEqual([
     ["git", ["rev-parse", "--is-inside-work-tree"]],
     ["bun", ["install"]],
@@ -93,7 +93,7 @@ it("inside a git work tree does not run git init or print it", () => {
   expect(out.join("")).not.toContain("ran git init");
 });
 
-it("prints that it ran git init on the process's stdout when given no stdout", () => {
+it("prints that it ran git init on the process's stdout when given no stdout", async () => {
   const dest = tmp("repo-git-stdout-");
   const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
 
@@ -101,24 +101,24 @@ it("prints that it ran git init on the process's stdout when given no stdout", (
     if (cmd === "git" && args[0] === "rev-parse") throw new Error("not a git repository");
   });
 
-  init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
+  await init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
   expect(write.mock.calls.map(([chunk]) => String(chunk))).toContain("repo init: ran git init\n");
   write.mockRestore();
 });
 
-it("keeps a .mcp.json the repo already has and says nothing of it", () => {
+it("keeps a .mcp.json the repo already has and says nothing of it", async () => {
   const dest = tmp("repo-mcp-kept-");
   fs.writeFileSync(path.join(dest, ".mcp.json"), "mine\n");
   const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-  init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, ".mcp.json"), "utf8")).toBe("mine\n");
   expect(write).not.toHaveBeenCalled();
   write.mockRestore();
 });
 
-it("--packs listen writes agents.skills into a new config", () => {
+it("--packs listen writes agents.skills into a new config", async () => {
   const dest = tmp("repo-packs-");
-  init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toContain(
     `agents: { hosts: [${hostsList()}], skills: ["listen"] }`,
   );

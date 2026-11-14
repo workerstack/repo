@@ -46,13 +46,13 @@ function failedInstall() {
 }
 
 function failedFormat() {
-  return { code: 1, output: "bad\n" };
+  return Promise.resolve({ code: 1, output: "bad\n" });
 }
 
-it("removes a name from every field, catalog, override and patch, and says where", () => {
+it("removes a name from every field, catalog, override and patch, and says where", async () => {
   const w = world(everywhere("left-pad"), {});
   patches(w.root);
-  expect(main(["left-pad"], w.io())).toBe(0);
+  expect(await main(["left-pad"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([
     "removed left-pad from package.json (devDependencies, overrides, resolutions, trustedDependencies, " +
       "patchedDependencies) and packages/api (dependencies, devDependencies, peerDependencies, " +
@@ -77,17 +77,17 @@ it("removes a name from every field, catalog, override and patch, and says where
   expect(w.installs).toStrictEqual([w.root]);
 });
 
-it("matches the name part of a scoped name@version patch key", () => {
+it("matches the name part of a scoped name@version patch key", async () => {
   const files = { "package.json": { name: "r", patchedDependencies: { "@s/p@2.0.0": "patches/s.patch" } } };
   const w = world(files, {});
   fs.mkdirSync(path.join(w.root, "patches"));
   fs.writeFileSync(path.join(w.root, "patches", "s.patch"), "diff\n");
-  expect(main(["@s/p"], w.io())).toBe(0);
+  expect(await main(["@s/p"], w.io())).toBe(0);
   expect(w.out).toStrictEqual(["removed @s/p from package.json (patchedDependencies)"]);
   expect(fs.existsSync(path.join(w.root, "patches", "s.patch"))).toBe(false);
 });
 
-it("removes several names at once through one format and one install", () => {
+it("removes several names at once through one format and one install", async () => {
   const files = {
     "package.json": { name: "r", overrides: { b: "1.0.0" }, workspaces: { catalog: { a: "1.0.0" } } },
     "packages/x/package.json": { dependencies: { a: "catalog:" }, name: "x" },
@@ -101,7 +101,7 @@ it("removes several names at once through one format and one install", () => {
     {},
   );
 
-  expect(main(["a", "b"], w.io())).toBe(0);
+  expect(await main(["a", "b"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([
     "removed a from packages/x (dependencies) and the catalog; b from package.json (overrides)",
   ]);
@@ -109,24 +109,24 @@ it("removes several names at once through one format and one install", () => {
   expect(w.installs).toStrictEqual([w.root]);
 });
 
-it("an absent name exits 1 and writes nothing", () => {
+it("an absent name exits 1 and writes nothing", async () => {
   const w = world(everywhere("left-pad"), {});
-  expect(main(["left-pad", "nope"], w.io())).toBe(1);
+  expect(await main(["left-pad", "nope"], w.io())).toBe(1);
   expect(w.err).toStrictEqual(['repo remove: nothing here depends on "nope"']);
   expect(w.read("package.json").devDependencies).toStrictEqual({ "left-pad": "1.0.0", "left-pad-extra": "1.0.0" });
   expect(w.formats).toStrictEqual([]);
   expect(w.installs).toStrictEqual([]);
 });
 
-it("a root without a package.json depends on nothing", () => {
+it("a root without a package.json depends on nothing", async () => {
   const w = world({}, {});
-  expect(main(["x"], w.io())).toBe(1);
+  expect(await main(["x"], w.io())).toBe(1);
   expect(w.err).toStrictEqual(['repo remove: nothing here depends on "x"']);
 });
 
-it("a failed install prints the install line with the way back", () => {
+it("a failed install prints the install line with the way back", async () => {
   const w = world(everywhere("left-pad"), {});
-  expect(main(["left-pad"], w.io({ install: failedInstall }))).toBe(1);
+  expect(await main(["left-pad"], w.io({ install: failedInstall }))).toBe(1);
   expect(w.err).toStrictEqual([
     "repo remove: bun install failed (exit 1); the manifests hold the new versions, " +
       "so run `bun install` once it is fixed:",
@@ -134,62 +134,62 @@ it("a failed install prints the install line with the way back", () => {
   ]);
 });
 
-it("without an .oxfmtrc.jsonc nothing is formatted and the install still runs", () => {
+it("without an .oxfmtrc.jsonc nothing is formatted and the install still runs", async () => {
   const w = world(everywhere("left-pad"), {});
   fs.rmSync(path.join(w.root, ".oxfmtrc.jsonc"));
-  expect(main(["left-pad"], w.io())).toBe(0);
+  expect(await main(["left-pad"], w.io())).toBe(0);
   expect(w.formats).toStrictEqual([]);
   expect(w.installs).toStrictEqual([w.root]);
 });
 
-it("a failed format after a good install says the versions are installed", () => {
+it("a failed format after a good install says the versions are installed", async () => {
   const w = world(everywhere("left-pad"), {});
-  expect(main(["left-pad"], w.io({ format: failedFormat }))).toBe(1);
+  expect(await main(["left-pad"], w.io({ format: failedFormat }))).toBe(1);
   expect(w.err[0]).toContain("repo remove: could not format package.json");
   expect(w.err[0]).toContain("the new versions are installed");
   expect(w.installs).toStrictEqual([w.root]);
 });
 
-it("names nothing or an option: usage, exit 2", () => {
+it("names nothing or an option: usage, exit 2", async () => {
   const w = world({}, {});
-  expect(main([], w.io())).toBe(2);
-  expect(main(["--x"], w.io())).toBe(2);
+  expect(await main([], w.io())).toBe(2);
+  expect(await main(["--x"], w.io())).toBe(2);
   expect(w.err).toStrictEqual(["repo remove: usage: repo remove <name>…", "repo remove: usage: repo remove <name>…"]);
 });
 
-it("reports an unreadable manifest", () => {
+it("reports an unreadable manifest", async () => {
   const w = world({ "package.json": { name: 1 } }, {});
-  expect(main(["x"], w.io())).toBe(1);
+  expect(await main(["x"], w.io())).toBe(1);
   expect(w.err[0]).toMatch(/^repo remove: /);
 });
 
-it("runs on the process streams when no io is given", () => {
+it("runs on the process streams when no io is given", async () => {
   const spy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
 
   try {
-    expect(main(["--nope"])).toBe(2);
+    expect(await main(["--nope"])).toBe(2);
     expect(spy.mock.calls).toStrictEqual([["repo remove: usage: repo remove <name>…\n"]]);
   } finally {
     spy.mockRestore();
   }
 });
 
-it("prints the install's repo sync lines right after the removed line, and none when the install fails", () => {
+it("prints the install's repo sync lines right after the removed line, and none when the install fails", async () => {
   const files = { "package.json": { dependencies: { a: "1.0.0" }, name: "r" } };
   const output = "bun install v1\nrepo sync: wrote AGENTS.md\n 1 package installed\n";
   const ok = world(files, {}, { output });
-  expect(main(["a"], ok.io())).toBe(0);
+  expect(await main(["a"], ok.io())).toBe(0);
   expect(ok.out).toStrictEqual(["removed a from package.json (dependencies)", "repo sync: wrote AGENTS.md"]);
   const bad = world(files, {});
-  expect(main(["a"], bad.io({ install: () => ({ code: 1, output }) }))).toBe(1);
+  expect(await main(["a"], bad.io({ install: () => ({ code: 1, output }) }))).toBe(1);
   expect(bad.out).toStrictEqual(["removed a from package.json (dependencies)"]);
 });
 
-it("drops a patchedDependencies entry that is not a path and removes no patch file for it", () => {
+it("drops a patchedDependencies entry that is not a path and removes no patch file for it", async () => {
   const patched = { "a@1.0.0": 5, keep: "patches/a.patch" };
   const w = world({ "package.json": { name: "r", patchedDependencies: patched } }, {});
   patches(w.root);
-  expect(main(["a"], w.io())).toBe(0);
+  expect(await main(["a"], w.io())).toBe(0);
 
   const root = readJson(z.record(z.string(), z.json()), fs.readFileSync(path.join(w.root, "package.json"), "utf8"));
   expect(root["patchedDependencies"]).toStrictEqual({ keep: "patches/a.patch" });

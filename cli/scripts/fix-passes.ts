@@ -18,23 +18,23 @@ function texts(root: string, files: readonly string[]): (string | null)[] {
 }
 
 /** A `--fix` run over `files`, relative to `root`. */
-type Fix<T> = { root: string; files: readonly string[]; pass: () => T };
+type Fix<T> = { root: string; files: readonly string[]; pass: () => Promise<T> };
 
 /** The pass rerun while it rewrites one of the files, at most `left` more times; the last pass's result. */
-function rerun<T>(fix: Fix<T>, left: number): T {
+async function rerun<T>(fix: Fix<T>, left: number): Promise<T> {
   const before = texts(fix.root, fix.files);
-  const result = fix.pass();
+  const result = await fix.pass();
   const after = texts(fix.root, fix.files);
 
   if (left <= 1 || after.every((content, at) => content === before[at])) return result;
 
-  return rerun(fix, left - 1);
+  return await rerun(fix, left - 1);
 }
 
 /**
  * `pass`, a `--fix` run over `files` (relative to `root`), rerun until it rewrites none of them, at most
  * MAX_FIX_PASSES times; the result of the last pass, whose report is the tree as left.
  */
-export function fixPasses<T>(root: string, files: readonly string[], pass: () => T): T {
-  return rerun({ files, pass, root }, MAX_FIX_PASSES);
+export async function fixPasses<T>(root: string, files: readonly string[], pass: () => Promise<T>): Promise<T> {
+  return await rerun({ files, pass, root }, MAX_FIX_PASSES);
 }

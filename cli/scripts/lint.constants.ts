@@ -16,9 +16,6 @@ export const MODULES_DIR = "node_modules";
 /** The spawn error code of a bin that is not on PATH. */
 export const NOT_FOUND = "ENOENT";
 
-/** The spawn error code of a run killed at its time limit. */
-export const TIMED_OUT = "ETIMEDOUT";
-
 /** bun fmt's flag that writes a `[fmt]` section into bunfig.toml, which `repo fmt` refuses. */
 export const INIT_FLAG = "--init";
 

@@ -131,7 +131,11 @@ function sourcesOf(root: string): Result<string[]> {
  * package tags and the tailwind entry stay, so a skipped tag or class hit counts. A tag map or entry sync would refuse
  * returns sync's errors.
  */
-function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run }: Unskipped): Result<Diagnostic[]> {
+async function unskippedReport(
+  workspace: Workspace,
+  lint: ResolvedLint,
+  { files, run }: Unskipped,
+): Promise<Result<Diagnostic[]>> {
   const tailwind = withTailwindEntry(workspace.root, lint);
 
   if (!tailwind.ok) return { error: tailwind.errors, ok: false };
@@ -143,7 +147,7 @@ function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run 
   fs.writeFileSync(file, built.value);
 
   try {
-    return lintReport(workspace.root, ["-c", rel, ...files], run);
+    return await lintReport(workspace.root, ["-c", rel, ...files], run);
   } finally {
     fs.rmSync(file, { force: true });
   }
@@ -154,7 +158,7 @@ function unskippedReport(workspace: Workspace, lint: ResolvedLint, { files, run 
  * per rule, and a problem for a glob that matches no source file and for a rule with no hit in its entry's files. The
  * hits are oxlint's without skips (`lint.boundaries` kept) and the script checks' ones `deps` hands over.
  */
-export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: SkipDeps): SkipCheck {
+export async function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: SkipDeps): Promise<SkipCheck> {
   const { scripts, run = captureTool } = deps;
   const skips = lint.skip;
 
@@ -169,7 +173,7 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
   const linted =
     oxlinted.length === 0
       ? { ok: true as const, value: [] }
-      : unskippedReport(workspace, lint, { files: oxlinted, run });
+      : await unskippedReport(workspace, lint, { files: oxlinted, run });
 
   if (!linted.ok) return { problems: linted.error, report: [] };
   const diagnostics = [...linted.value, ...scripts];
@@ -200,5 +204,5 @@ export function checkLintSkips(workspace: Workspace, lint: ResolvedLint, deps: S
 export async function checkLintSkipsAt(cwd: string, scripts: readonly Diagnostic[]): Promise<SkipCheck> {
   const found = await standardsWorkspace(cwd);
 
-  return found === null ? NONE : checkLintSkips(found.workspace, found.config.lint, { scripts });
+  return found === null ? NONE : await checkLintSkips(found.workspace, found.config.lint, { scripts });
 }

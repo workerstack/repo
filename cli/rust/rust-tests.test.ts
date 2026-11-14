@@ -210,11 +210,11 @@ async function ciWith(files: Record<string, string>) {
   const [out, seen]: [string[], string[]] = [[], []];
 
   const code = await main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
+    bins: { tsc: () => Promise.resolve(OK), vitest: () => Promise.resolve(PASSED) },
     cargo: fakeCargo(root, {}, seen),
     cwd: root,
     now: () => 0,
-    repo: () => OK,
+    repo: () => Promise.resolve(OK),
     stdout: (text) => out.push(text),
   });
 

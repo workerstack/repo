@@ -27,19 +27,19 @@ export function plant(files: Record<string, string> = {}): string {
 }
 
 /** Runs `repo ci` in `root` against fakes whose results `fail` overrides by name; each gate takes half a second. */
-export function ci(root: string, argv: string[] = [], fail: Partial<Record<string, Captured | null>> = {}) {
-  return runCi(root, argv, fail, { packs: [] });
+export async function ci(root: string, argv: string[] = [], fail: Partial<Record<string, Captured | null>> = {}) {
+  return await runCi(root, argv, fail, { packs: [] });
 }
 
 /** Runs `repo ci` under the workspace pack with `turbo` as the injected runner, and records what it was given. */
-export function ciPacked(
+export async function ciPacked(
   root: string,
   argv: string[],
   turbo: TurboRun,
   fail: Partial<Record<string, Captured | null>> = {},
 ) {
   const calls: Calls["turbo"] = [];
-  const run = runCi(root, argv, fail, { packs: ["workspace"], turbo: recording(turbo, calls) });
+  const run = await runCi(root, argv, fail, { packs: ["workspace"], turbo: recording(turbo, calls) });
   run.calls.turbo = calls;
   return run;
 }
@@ -47,10 +47,9 @@ export function ciPacked(
 /** Runs `repo ci` with the packs read from the repo's own config, and `turbo` injected and recorded. */
 export async function ciConfigured(root: string, turbo: TurboRun) {
   const calls: Calls["turbo"] = [];
-  const run = runCi(root, [], {}, { turbo: recording(turbo, calls) });
+  const run = await runCi(root, [], {}, { turbo: recording(turbo, calls) });
   run.calls.turbo = calls;
-  const code = await run.code;
-  return { ...run, code };
+  return run;
 }
 
 function recording(turbo: TurboRun, calls: Calls["turbo"]): TurboRun {
@@ -60,20 +59,21 @@ function recording(turbo: TurboRun, calls: Calls["turbo"]): TurboRun {
   };
 }
 
-function runCi(root: string, argv: string[], fail: Partial<Record<string, Captured | null>>, extra: Partial<CiDeps>) {
+async function runCi(root: string, argv: string[], fail: Partial<Record<string, Captured | null>>, extra: Partial<CiDeps>) {
   const out: string[] = [];
   const err: string[] = [];
   const calls: Calls = { repo: [], tsc: [], vitest: [], turbo: [] };
   let clock = 0;
   const bins: Bins = {
-    tsc: (args) => {
+    tsc: async (args) => {
       calls.tsc.push(args.join(" "));
       return fail[args.at(-1) ?? ""] ?? OK;
     },
     vitest: (args) => {
       calls.vitest.push(args.join(" "));
       writeJson(args, fail.json);
-      return fail.tests === undefined ? PASSED : fail.tests;
+      const run = fail.tests === undefined ? PASSED : fail.tests;
+      return run === null ? null : Promise.resolve(run);
     },
   };
   const deps: CiDeps = {
@@ -83,14 +83,13 @@ function runCi(root: string, argv: string[], fail: Partial<Record<string, Captur
     now: () => (clock += 500),
     ...extra,
     bins,
-    repo: (args) => {
+    repo: async (args) => {
       calls.repo.push(args.join(" "));
       const [name = ""] = args;
       return fail[name] ?? OK;
     },
   };
-  const code = main(argv, deps);
-  // Read when asked, so an async run shows what it wrote after it finished.
+  const code = await main(argv, deps);
   return {
     code,
     get out() {

@@ -27,13 +27,13 @@ type InitRun = { skipGlobals: boolean; interactive: boolean; packs: string[] | u
 /** `repo init` on cwd; in a TTY it first asks whether to apply the global settings and shows each phase. */
 async function runInit({ skipGlobals, interactive, packs }: InitRun, { init, prompts }: CliDeps): Promise<void> {
   if (!interactive) {
-    init(process.cwd(), initOpts({ skipGlobals }, packs));
+    await init(process.cwd(), initOpts({ skipGlobals }, packs));
 
     return;
   }
 
   const applyGlobals = await prompts.confirm({ initialValue: !skipGlobals, message: APPLY_GLOBALS_CONFIRM });
-  init(process.cwd(), initOpts({ onPhase: bindSpinner(prompts.spinner), skipGlobals: !applyGlobals }, packs));
+  await init(process.cwd(), initOpts({ onPhase: bindSpinner(prompts.spinner), skipGlobals: !applyGlobals }, packs));
 }
 
 /** No command, or an empty one, as `!cmd` read it. */

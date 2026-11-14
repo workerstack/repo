@@ -73,7 +73,7 @@ function indexLines(root: string, { dir, manifest }: DocRoot, texts: ReadonlyMap
 }
 
 /** Every check for one doc root; the tarball and export checks only for a public manifest. */
-export function checkDocRoot(root: string, docRoot: DocRoot, tools: DocsTools): RootReport {
+export async function checkDocRoot(root: string, docRoot: DocRoot, tools: DocsTools): Promise<RootReport> {
   const { dir, manifest } = docRoot;
   const texts = readReferences(root, dir);
   const { lines, wanted } = indexLines(root, docRoot, texts);
@@ -84,7 +84,7 @@ export function checkDocRoot(root: string, docRoot: DocRoot, tools: DocsTools): 
   const report: RootReport = {
     examples: blocks.length,
     exports: 0,
-    findings: [...lines, ...checkExamples(ctx, blocks, tools)],
+    findings: [...lines, ...(await checkExamples(ctx, blocks, tools))],
     packed: false,
     references: texts.size,
   };
@@ -92,7 +92,8 @@ export function checkDocRoot(root: string, docRoot: DocRoot, tools: DocsTools): 
   if (!isPublic(manifest)) return report;
   const exported = exportFindings(dir, manifest, [...texts.values()].join("\n"));
   const unique = wanted.filter((one, at) => wanted.findIndex((other) => other.file === one.file) === at);
-  report.findings.push(...exported.findings, ...tarballFindings(dir, unique, () => tools.pack(path.join(root, dir))));
+  const packed = await tarballFindings(dir, unique, async () => await tools.pack(path.join(root, dir)));
+  report.findings.push(...exported.findings, ...packed);
 
   return { ...report, exports: exported.checked, packed: true };
 }

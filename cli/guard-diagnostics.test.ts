@@ -3,7 +3,14 @@ import { afterEach, expect, it } from "vitest";
 import { magicDiagnostics } from "./check-magic.ts";
 import { guardDiagnostics } from "./guard-diagnostics.ts";
 import { cleanTemps, plant, SLOW } from "./magic/__fixtures__/magic-repo.ts";
-import { cleanTemps as cleanRepos, consumer, SLOW as TURN, turn, write } from "./scripts/__fixtures__/turn-repo.ts";
+import {
+  cleanTemps as cleanRepos,
+  consumer,
+  SLOW as TURN,
+  TSC_PASSES,
+  turn,
+  write,
+} from "./scripts/__fixtures__/turn-repo.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import type { SharedSources } from "./ts-program.ts";
 
@@ -175,7 +182,7 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
   write(root, {
     "src/user.test.ts": asserted.replace("expect(isUser(1)).toBe(false)", "expect(isUser(1)).toBe(true)"),
   });
-  const result = await turn(root, [], { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null });
+  const result = await turn(root, [], TSC_PASSES);
   expect(result.err).toBe(
     `${untested("src/user.ts:3:17", "isUser").line}\n` +
       "repo turn: src/user.ts has 1 repo(guard-rejects), the baseline allows 0; fix the new one\n",

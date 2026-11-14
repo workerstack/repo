@@ -23,7 +23,11 @@ import {
 } from "./update.constants.ts";
 
 /** Writes the behind versions, prints what changed and which named dependencies were already current. */
-function write(io: UpdateIo, root: string, run: { names: readonly string[]; assessed: Assessed }): number {
+async function write(
+  io: UpdateIo,
+  root: string,
+  run: { names: readonly string[]; assessed: Assessed },
+): Promise<number> {
   const { names, assessed } = run;
   const { checked, behind } = assessed;
 
@@ -45,7 +49,7 @@ function write(io: UpdateIo, root: string, run: { names: readonly string[]; asse
   const files = updateWrite(root, behind);
   io.out(updatedLine(behind));
   const changes = updateChanges(root, behind);
-  const code = finish({ command: "update", io, root }, files);
+  const code = await finish({ command: "update", io, root }, files);
 
   if (code === 0) for (const line of changes()) io.out(line);
 
@@ -74,7 +78,7 @@ export async function main(argv: string[], io: UpdateIo = updateIo()): Promise<n
   if (answers.failure !== null) return fail(io, [answers.failure]);
   const assessed = assess(found, answers);
 
-  if (!check) return write(io, root, { assessed, names });
+  if (!check) return await write(io, root, { assessed, names });
 
   for (const line of checkLines(assessed)) io.out(line);
 

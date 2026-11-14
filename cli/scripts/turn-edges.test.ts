@@ -52,8 +52,8 @@ it("vitest failing without a test count fails precommit's related tests", { time
   git(root, "add", "src/a.ts");
 
   const bins: Bins = {
-    tsc: () => ({ code: 0, stderr: "", stdout: "" }),
-    vitest: () => ({ code: 1, stderr: "Error: no config\n", stdout: "" }),
+    tsc: () => Promise.resolve({ code: 0, stderr: "", stdout: "" }),
+    vitest: () => Promise.resolve({ code: 1, stderr: "Error: no config\n", stdout: "" }),
   };
 
   expect(await precommit(root, bins)).toStrictEqual({

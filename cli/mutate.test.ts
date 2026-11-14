@@ -152,7 +152,7 @@ it("refuses a report Stryker did not write, naming why", async () => {
   expect(await runMutate(SHARD, f.deps)).toBe(1);
   expect(f.err.join("")).toMatch(/^repo mutate: Stryker wrote no readable report: .+\n$/);
   const none = fakes();
-  none.deps.run = () => ({ code: 0, stderr: "", stdout: "" });
+  none.deps.run = () => Promise.resolve({ code: 0, stderr: "", stdout: "" });
   expect(await runMutate(SHARD, none.deps)).toBe(1);
   expect(none.err.join("")).toContain("Stryker wrote no readable report: the report file is missing");
 });

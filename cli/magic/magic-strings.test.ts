@@ -4,7 +4,7 @@ import { cleanTemps, COMPARED, COPIES, hit, magicOf, STRING } from "./__fixtures
 
 afterEach(cleanTemps);
 
-it("refuses a string compared to string | undefined, unknown or any, from either side", () => {
+it("refuses a string compared to string | undefined, unknown or any, from either side", async () => {
   const kinds = [
     "export function k(a: string | undefined, b: 'a' | null, c: unknown, d: any): boolean {",
     "  return a === 'on' || b === 'a' || 'on' !== c || d != `on`;",
@@ -12,14 +12,14 @@ it("refuses a string compared to string | undefined, unknown or any, from either
     "",
   ].join("\n");
 
-  expect(magicOf({ "src/kinds.ts": kinds })).toStrictEqual([
+  expect(await magicOf({ "src/kinds.ts": kinds })).toStrictEqual([
     hit("src/kinds.ts:2:16", STRING, COMPARED("on")),
     hit("src/kinds.ts:2:37", STRING, COMPARED("on")),
     hit("src/kinds.ts:2:56", STRING, COMPARED("on")),
   ]);
 });
 
-it("reports a const copy once at its declaration, through an import alias, and not one in a constants file", () => {
+it("reports a const copy once at its declaration, through an import alias, not one in a constants file", async () => {
   const files = {
     "src/modes.constants.ts": 'export const QUICK = "quick";\n',
     "src/modes.ts": 'export const SLOW = "slow";\nexport const LAZY = ("lazy") as const;\nexport const SEP = "/";\n',
@@ -34,7 +34,7 @@ it("reports a const copy once at its declaration, through an import alias, and n
     ].join("\n"),
   };
 
-  expect(magicOf(files)).toStrictEqual([
+  expect(await magicOf(files)).toStrictEqual([
     hit("src/modes.ts:1:14", STRING, COPIES("SLOW", "slow")),
     hit("src/modes.ts:2:14", STRING, COPIES("LAZY", "lazy")),
   ]);

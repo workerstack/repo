@@ -40,8 +40,8 @@ const RETRY = [
   "",
 ].join("\n");
 
-it("reports each Usage hit at its line and column, in file and position order", { timeout: SLOW }, () => {
-  expect(magicOf({ "src/retry.ts": RETRY, "src/schema.ts": SCHEMA })).toStrictEqual([
+it("reports each Usage hit at its line and column, in file and position order", { timeout: SLOW }, async () => {
+  expect(await magicOf({ "src/retry.ts": RETRY, "src/schema.ts": SCHEMA })).toStrictEqual([
     hit("src/retry.ts:3:7", STRING, COPIES("FAST", "fast")),
     hit("src/retry.ts:4:21", NUMBER, NAMES_NOTHING("5000")),
     hit("src/retry.ts:9:14", NUMBER, BOUND(".max(2048)")),
@@ -97,7 +97,7 @@ it(
   },
 );
 
-it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2e or vendored code", () => {
+it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2e or vendored code", async () => {
   const body = "export const f = () => 5000;\n";
 
   const skipped = [
@@ -116,7 +116,8 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
 
   const checked = ["src/a.ts", "src/b.tsx", "src/c.mts", "src/d.cts"];
   const files = Object.fromEntries([...skipped, ...checked].map((rel) => [rel, body]));
-  expect(magicOf(files).map((d) => d.file)).toStrictEqual(checked);
+  const found = await magicOf(files);
+  expect(found.map((d) => d.file)).toStrictEqual(checked);
 });
 
 it("parses a file edited between two runs that share their sources again", { timeout: SLOW }, () => {
@@ -154,12 +155,12 @@ it("withoutSkipped drops only the hits of the rule a skip names, in the files it
 
 const SHARDS = "export default { nightly: { shards: 8 } };\n";
 
-it("reports no magic number in the root repo.config.ts, which holds values, but does elsewhere", () => {
-  const found = magicOf({ "repo.config.ts": SHARDS, "src/shards.ts": SHARDS });
+it("reports no magic number in the root repo.config.ts, which holds values, but does elsewhere", async () => {
+  const found = await magicOf({ "repo.config.ts": SHARDS, "src/shards.ts": SHARDS });
   expect(found).toStrictEqual([hit("src/shards.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });
 
-it("reports a magic number in a repo.config.ts below the root", () => {
-  const found = magicOf({ "pkg/repo.config.ts": SHARDS });
+it("reports a magic number in a repo.config.ts below the root", async () => {
+  const found = await magicOf({ "pkg/repo.config.ts": SHARDS });
   expect(found).toStrictEqual([hit("pkg/repo.config.ts:1:37", NUMBER, NAMES_NOTHING("8"))]);
 });

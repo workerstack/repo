@@ -5,16 +5,16 @@ import { fail, pass, textOf, type Gate } from "./ci-gate.ts";
 import type { Captured } from "./lint.ts";
 
 /** What the gate runs with: the repo root and the `repo <args>` runner. */
-export type DocsCtx = { root: string; repo: (args: string[], cwd: string) => Captured };
+export type DocsCtx = { root: string; repo: (args: string[], cwd: string) => Promise<Captured> };
 
 /** `repo docs --check` as the gate `docs`. */
-function docsGate(ctx: DocsCtx): Gate {
-  const run = ctx.repo([...DOCS_ARGS], ctx.root);
+async function docsGate(ctx: DocsCtx): Promise<Gate> {
+  const run = await ctx.repo([...DOCS_ARGS], ctx.root);
 
   return run.code === 0 ? pass(`${DOCS_GATE} ok`) : fail(`${DOCS_GATE} failed`, [textOf(run)]);
 }
 
 /** The docs gate when the docs pack is on, none otherwise. */
-export function docsGates(packs: readonly Pack[]): ((ctx: DocsCtx) => Gate)[] {
+export function docsGates(packs: readonly Pack[]): ((ctx: DocsCtx) => Promise<Gate>)[] {
   return packs.includes(DOCS_PACK) ? [docsGate] : [];
 }

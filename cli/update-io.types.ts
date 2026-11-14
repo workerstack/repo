@@ -18,5 +18,5 @@ export type UpdateIo = {
   /** Runs `bun install` in a directory, capturing what it prints. */
   install: (root: string) => ToolResult;
   /** Formats root-relative files in a directory the way `repo fmt` does. */
-  format: (root: string, files: string[]) => ToolResult;
+  format: (root: string, files: string[]) => Promise<ToolResult>;
 };

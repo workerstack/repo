@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -16,15 +16,7 @@ import { FIX_HINT } from "./json-keys.constants.ts";
 import { repoJson, sortJson } from "./json-keys.ts";
 import { OWN_LINE_MESSAGE } from "./jsonc-comments.constants.ts";
 import { convertJsonc, type OwnLine } from "./jsonc-comments.ts";
-import {
-  CHECK_FLAG,
-  INIT_FLAG,
-  INIT_REFUSAL,
-  MS_PER_SECOND,
-  NOT_FOUND,
-  TIMED_OUT,
-  TOOL_TIME_LIMIT_MS,
-} from "./lint.constants.ts";
+import { CHECK_FLAG, INIT_FLAG, INIT_REFUSAL, MS_PER_SECOND, NOT_FOUND, TOOL_TIME_LIMIT_MS } from "./lint.constants.ts";
 import { toolCommand } from "./tool-command.ts";
 import { toolEnv } from "./tool-env.ts";
 
@@ -186,7 +178,7 @@ function stoppedLine(tool: Tool, ms: number): string {
  * script checks while oxlint works. A tool that cannot start or ends on a signal exits 1; one still running at the
  * limit is killed (SIGKILL: a hung oxlint waits in futex) and exits 1 with the line that names it.
  */
-function spawnTool(
+async function spawnTool(
   tool: Tool,
   args: string[],
   at: { root: string; limitMs: number; stderr: (s: string) => void },
@@ -200,25 +192,13 @@ function spawnTool(
     stdio: "inherit",
   });
 
-  let isStopped = false;
+  const exit = await exitOf(child, limitMs);
 
-  const timer = setTimeout(() => {
-    isStopped = true;
-    child.kill("SIGKILL");
-  }, limitMs);
+  if (exit.error !== undefined) return 1;
 
-  return new Promise((resolve) => {
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(1);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
+  if (exit.stopped) stderr(stoppedLine(tool, limitMs));
 
-      if (isStopped) stderr(stoppedLine(tool, limitMs));
-      resolve(isStopped ? 1 : (code ?? 1));
-    });
-  });
+  return exit.stopped ? 1 : exit.code;
 }
 
 function readUtf8(file: string): string {
@@ -241,27 +221,54 @@ type CaptureOptions = {
  * `bin` not on PATH fails with the `missing` line. The output goes to files, not pipes: a node script that exits right
  * after writing (oxlint's json report) loses what a pipe had not yet taken.
  */
-export function capture(bin: string, args: string[], options: CaptureOptions): Captured {
+export async function capture(bin: string, args: string[], options: CaptureOptions): Promise<Captured> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-capture-"));
   const files = { stderr: path.join(dir, "stderr"), stdout: path.join(dir, "stdout") };
   const out = fs.openSync(files.stdout, "w");
   const err = fs.openSync(files.stderr, "w");
   const { cwd, env, missing, limit } = options;
-  const killAt = limit === undefined ? {} : { killSignal: "SIGKILL" as const, timeout: limit.ms };
 
   try {
-    const result = spawnSync(bin, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err], ...killAt });
+    const child = spawn(bin, args, { cwd, env: toolEnv(env), stdio: ["ignore", out, err] });
+    const exit = await exitOf(child, limit?.ms);
 
-    if (missing !== undefined && isMissing(result.error)) return { code: 1, stderr: `${missing}\n`, stdout: "" };
+    if (missing !== undefined && isMissing(exit.error)) return { code: 1, stderr: `${missing}\n`, stdout: "" };
 
-    if (limit !== undefined && hasCode(result.error, TIMED_OUT)) return { code: 1, stderr: limit.line, stdout: "" };
+    if (limit !== undefined && exit.stopped) return { code: 1, stderr: limit.line, stdout: "" };
 
-    return { code: result.status ?? 1, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
+    return { code: exit.code, stderr: readUtf8(files.stderr), stdout: readUtf8(files.stdout) };
   } finally {
     fs.closeSync(out);
     fs.closeSync(err);
     removeTree(dir);
   }
+}
+
+/** How a child ended: its code, the error when it could not start, and whether it was killed at `limitMs`. */
+type Exit = { code: number; error?: Error; stopped: boolean };
+
+/** Waits for `child` to end, killing it once `limitMs` passes. */
+function exitOf(child: ChildProcess, limitMs: number | undefined): Promise<Exit> {
+  return new Promise((resolve) => {
+    let isStopped = false;
+
+    const timer =
+      limitMs === undefined
+        ? undefined
+        : setTimeout(() => {
+            isStopped = true;
+            child.kill("SIGKILL");
+          }, limitMs);
+
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      resolve({ code: 1, error, stopped: isStopped });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ code: code ?? 1, stopped: isStopped });
+    });
+  });
 }
 
 /** Whether a spawn failed with the error `code`. */
@@ -275,31 +282,34 @@ function isMissing(error: Error | undefined): boolean {
 }
 
 /** Runs bun with `args` in `cwd` as `capture` does. */
-export function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Captured {
-  return capture(process.execPath, args, { cwd, env });
+export async function captureBun(args: string[], cwd: string, env: NodeJS.ProcessEnv = childEnv()): Promise<Captured> {
+  return await capture(process.execPath, args, { cwd, env });
 }
+
+/** Where `captureTool` runs its tool, and how long it may take (`TOOL_TIME_LIMIT_MS` when not given). */
+type ToolAt = { root: string; limitMs?: number };
 
 /**
  * The tool run as `repo lint` or `repo fmt` runs it, in `root`, its output captured instead of printed; one still
  * running after `limitMs` is killed and fails with the line that names it.
  */
-export function captureTool(tool: Tool, args: string[], at: { root: string; limitMs?: number }): Captured {
+export async function captureTool(tool: Tool, args: string[], at: ToolAt): Promise<Captured> {
   const { root, limitMs = TOOL_TIME_LIMIT_MS } = at;
   const command = toolCommand(tool);
   const limit = { line: stoppedLine(tool, limitMs), ms: limitMs };
 
-  return capture(process.execPath, [...command.args, ...args], { cwd: root, env: command.env, limit });
+  return await capture(process.execPath, [...command.args, ...args], { cwd: root, env: command.env, limit });
 }
 
 /**
  * The comment conversion, the sort of json keys, then bun fmt, on `files` as `repo turn` and `repo precommit` run
  * them; a refusal to sort fails.
  */
-export function captureSorted(files: readonly string[], root: string): Captured {
+export async function captureSorted(files: readonly string[], root: string): Promise<Captured> {
   convertJsonc(root, files, { check: false });
   const sorted = sortJson(root, files, { check: false });
 
   if (!sorted.ok) return { code: 1, stderr: `${sorted.error}\n`, stdout: "" };
 
-  return captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], { root });
+  return await captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], { root });
 }

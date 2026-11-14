@@ -115,13 +115,13 @@ function strykerEnv(exclude: readonly string[]): Readonly<Record<string, string>
 }
 
 /** Stryker over `files` in the clone: its per-file scores, or null after printing why it gave none. */
-function stryker(base: string, run: StrykerRun, deps: MutateDeps): ShardReport["files"] | null {
+async function stryker(base: string, run: StrykerRun, deps: MutateDeps): Promise<ShardReport["files"] | null> {
   const { files, bin, exclude } = run;
   const clone = path.join(base, CLONE_DIR);
   const config = path.join(base, CONFIG_NAME);
   const raw = path.join(base, RAW_REPORT_NAME);
   deps.fs.write(config, configOf(files, raw));
-  const ran = deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone, strykerEnv(exclude));
+  const ran = await deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone, strykerEnv(exclude));
 
   if (ran.code !== 0)
     return refuse(deps, "the tests failed before any mutant ran; fix them first", ran.stdout + ran.stderr);
@@ -139,7 +139,7 @@ function stryker(base: string, run: StrykerRun, deps: MutateDeps): ShardReport["
 /** A finished run: the shard's report and how many files it took. */
 export type Ran = { report: ShardReport; files: number };
 
-function mutateIn(base: string, plan: StrykerPlan, deps: MutateDeps): Ran | null {
+async function mutateIn(base: string, plan: StrykerPlan, deps: MutateDeps): Promise<Ran | null> {
   const clone = path.join(base, CLONE_DIR);
 
   if (!checkout(clone, plan, deps)) return null;
@@ -153,31 +153,31 @@ function mutateIn(base: string, plan: StrykerPlan, deps: MutateDeps): Ran | null
   }
 
   if (mine.length === 0) return ran({});
-  const installed = deps.run([...INSTALL_ARGS], clone);
+  const installed = await deps.run([...INSTALL_ARGS], clone);
 
   if (installed.code !== 0) return refuse(deps, `${INSTALL_COMMAND} failed in the clone: ${detail(installed)}`);
   const bin = strykerBin(clone, deps);
-  const scores = bin === null ? null : stryker(base, { bin, exclude: plan.exclude, files: mine }, deps);
+  const scores = bin === null ? null : await stryker(base, { bin, exclude: plan.exclude, files: mine }, deps);
 
   return scores === null ? null : ran(scores);
 }
 
 /** `mutate`'s result for the plan, run in a fresh dir under the OS temp dir, removed whether the run ends or throws. */
-export function inTempDir<P extends Plan>(
+export async function inTempDir<P extends Plan>(
   plan: P,
   deps: MutateDeps,
-  mutate: (base: string, plan: P, deps: MutateDeps) => Ran | null,
-): Ran | null {
+  mutate: (base: string, plan: P, deps: MutateDeps) => Ran | null | Promise<Ran | null>,
+): Promise<Ran | null> {
   const base = deps.fs.mkdtemp(TEMP_PREFIX);
 
   try {
-    return mutate(base, plan, deps);
+    return await mutate(base, plan, deps);
   } finally {
     deps.fs.rm(base);
   }
 }
 
 /** The shard's scores from a run in a fresh clone under the OS temp dir, removed whether the run ends or throws. */
-export function runInClone(plan: StrykerPlan, deps: MutateDeps): Ran | null {
-  return inTempDir(plan, deps, mutateIn);
+export async function runInClone(plan: StrykerPlan, deps: MutateDeps): Promise<Ran | null> {
+  return await inTempDir(plan, deps, mutateIn);
 }

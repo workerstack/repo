@@ -25,25 +25,25 @@ useInitKit();
 /** A resolved config's agents with no host and no skill. */
 const NO_AGENTS = { ...AGENT_DEFAULTS, hosts: [], skills: [] };
 
-it("writes the default packs and all five hosts when the repo has no config", () => {
+it("writes the default packs and all five hosts when the repo has no config", async () => {
   const dest = tmp("repo-config-");
-  init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
   expect(HOSTS).toStrictEqual(["claude", "codex", "antigravity", "grok", "cursor"]);
 });
 
-it("writes the same default packs when package.json declares workspaces", () => {
+it("writes the same default packs when package.json declares workspaces", async () => {
   const dest = tmp("repo-config-ws-");
   fs.writeFileSync(path.join(dest, "package.json"), JSON.stringify({ name: "app", workspaces: ["packages/*"] }));
-  init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(config(defaultBody()));
 });
 
-it("keeps a config the repo already has", () => {
+it("keeps a config the repo already has", async () => {
   const dest = tmp("repo-config-keep-");
   const own = 'export default { packs: ["docs"] }\n';
   fs.writeFileSync(path.join(dest, "repo.config.ts"), own);
-  init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), packs: ["listen"], pkgRoot: stubPkgRoot() });
   expect(fs.readFileSync(path.join(dest, "repo.config.ts"), "utf8")).toBe(own);
 });
 
@@ -74,13 +74,13 @@ it("breaks agents over lines when one line would pass 120 columns", () => {
 
 it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
   "writes files bun fmt finds formatted under the standards config (skills %j)",
-  (skills) => {
+  async (skills) => {
     const dest = tmp("repo-config-fmt-");
     fs.writeFileSync(
       path.join(dest, "package.json"),
       JSON.stringify({ name: "app", scripts: { build: "tsc" }, workspaces: ["packages/*"] }),
     );
-    init(dest, { execFileSync: fakeExec(), packs: skills, pkgRoot: stubPkgRoot() });
+    await init(dest, { execFileSync: fakeExec(), packs: skills, pkgRoot: stubPkgRoot() });
 
     const ctx = {
       config: { agents: NO_AGENTS, packs: ["standards" as const], ...BASE_CONFIG },
@@ -96,7 +96,7 @@ it.each([[[]], [["listen"]], [[...SKILL_PACKS]]])(
       }
     }
 
-    const run = captureTool("bun fmt", ["--check"], { root: dest });
+    const run = await captureTool("bun fmt", ["--check"], { root: dest });
     expect(run.stdout + run.stderr).toContain("All matched files use the correct format");
     expect(run.code).toBe(0);
   },

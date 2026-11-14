@@ -15,9 +15,9 @@ const { tempDir } = useTempDirs("workerstack-lint-spawn-");
 afterEach(() => vi.unstubAllEnvs());
 
 describe("the oxlint environment", () => {
-  it("keeps an inherited NODE_PATH behind the plugin modules dir", { timeout: SLOW }, () => {
+  it("keeps an inherited NODE_PATH behind the plugin modules dir", { timeout: SLOW }, async () => {
     vi.stubEnv("NODE_PATH", path.join(tempDir(), "modules"));
-    const run = captureTool("oxlint", ["--version"], { root: tempDir() });
+    const run = await captureTool("oxlint", ["--version"], { root: tempDir() });
     expect(run.code).toBe(0);
     expect(run.stdout).toMatch(/\d+\.\d+/);
   });

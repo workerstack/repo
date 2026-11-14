@@ -87,7 +87,7 @@ it.each([
   expect(problemsOf(text)).toStrictEqual([]);
 });
 
-it("reads the multi-line block form as real tsc does: honored only on the block's last line", () => {
+it("reads the multi-line block form as real tsc does: honored only on the block's last line", async () => {
   const root = plant({
     "first.ts": "/** @ts-ignore\n * more prose\n */\nexport const b: number = 'b';\n",
     "last.ts": "/**\n * Some prose first.\n * @ts-ignore */\nexport const a: number = 'a';\n",
@@ -95,11 +95,13 @@ it("reads the multi-line block form as real tsc does: honored only on the block'
 
   const tsc = path.join(path.dirname(Bun.resolveSync("typescript/package.json", import.meta.dirname)), "bin/tsc");
 
-  function run(rel: string) {
-    return captureBun([tsc, "--noEmit", "--strict", rel], root).code;
+  async function run(rel: string) {
+    const ran = await captureBun([tsc, "--noEmit", "--strict", rel], root);
+
+    return ran.code;
   }
 
-  expect({ first: run("first.ts"), last: run("last.ts") }).toStrictEqual({ first: 2, last: 0 });
+  expect({ first: await run("first.ts"), last: await run("last.ts") }).toStrictEqual({ first: 2, last: 0 });
   expect(commentProblems(root, ["last.ts", "first.ts"])).toStrictEqual([`last.ts:3: ${IGNORE}`]);
 }, 30_000);
 

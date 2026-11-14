@@ -87,7 +87,7 @@ export function world(files: Record<string, unknown>, replies: Record<string, Re
       put(dir, disk.writes ?? {});
       return { code: 0, output: disk.output ?? "" };
     },
-    format: (dir, list) => {
+    format: async (dir, list) => {
       state.formats.push({ root: dir, files: list, seen: list.map((f) => fs.readFileSync(path.join(dir, f), "utf8")) });
       return { code: 0, output: "" };
     },

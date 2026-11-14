@@ -61,11 +61,11 @@ function byPlace(a: Diagnostic, b: Diagnostic): number {
  * with a root Cargo.toml; and Stylelint's on the stylesheets among them, fixed first with `options.fix`. Or why a
  * tsconfig.json could not be read, or jscpd (for `options.target`) or Stylelint (`options.runner`) could not run.
  */
-export function scriptDiagnostics(
+export async function scriptDiagnostics(
   root: string,
   scope: CloneScope,
   options: ScriptOptions = { fix: false },
-): Result<Diagnostic[]> {
+): Promise<Result<Diagnostic[]>> {
   const { files } = scope;
   const { target, ...css } = options;
   const shared: SharedSources = new Map();
@@ -78,7 +78,7 @@ export function scriptDiagnostics(
   const clones = duplicateDiagnostics(root, scope, target);
 
   if (!clones.ok) return clones;
-  const sheets = cssDiagnostics(root, files, css);
+  const sheets = await cssDiagnostics(root, files, css);
 
   if (!sheets.ok) return sheets;
 
@@ -97,8 +97,8 @@ export function scriptDiagnostics(
  * The checkout's script diagnostics: those of its JS/TS `files` and stylesheets, then the Rust ones with clippy
  * (a root Cargo.toml).
  */
-function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
-  const found = scriptDiagnostics(checkout.root, { files: [...files, ...checkout.css], sources: files });
+async function allDiagnostics(checkout: NonNullable<Checkout>, files: readonly string[], run?: CargoRun) {
+  const found = await scriptDiagnostics(checkout.root, { files: [...files, ...checkout.css], sources: files });
 
   if (!found.ok) return found;
   const rust = rustHitsAt(checkout.root, checkout.rust, { clippy: true, run });
@@ -126,7 +126,7 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
   if (checkout === null) return NONE;
 
   if (!checkout.files.ok) return { ...NONE, problems: checkout.files.error };
-  const found = allDiagnostics(checkout, checkout.files.value, run);
+  const found = await allDiagnostics(checkout, checkout.files.value, run);
 
   if (!found.ok) return { ...NONE, problems: found.error };
   const matched = [...checkout.files.value, ...checkout.rust, ...checkout.css];
@@ -155,9 +155,10 @@ function filesUnder(at: { root: string; cwd: string }, paths: readonly string[],
  * checkout's) on the JS/TS ones, Stylelint on the stylesheets (fixed first with `options.fix`), the Rust source rules
  * (and clippy) on the `.rs`.
  */
-function lintHits(root: string, scope: CloneScope, options: RustOptions & CssFix) {
+async function lintHits(root: string, scope: CloneScope, options: RustOptions & CssFix) {
   const { files, sources } = scope;
-  const found = scriptDiagnostics(root, { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources }, options);
+  const scripted = { files: files.filter((rel) => !RUST_SOURCE.test(rel)), sources };
+  const found = await scriptDiagnostics(root, scripted, options);
 
   if (!found.ok) return found;
 
@@ -184,7 +185,8 @@ export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun
   const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
   const sources = checkout.files.value;
-  const found = lintHits(checkout.root, { files, sources }, { clippy: scope.clippy, fix: scope.fix === true, run });
+  const options = { clippy: scope.clippy, fix: scope.fix === true, run };
+  const found = await lintHits(checkout.root, { files, sources }, options);
 
   if (!found.ok) return { lines: [], problems: found.error };
   const matched = [...files, ...found.value.map((d) => d.file)];

@@ -49,7 +49,7 @@ function mergeArgs(dir: string): string[] {
 }
 
 /** `repo ci merge <dir>`: 0 when vitest merges the blobs and every floor is met; 1, with the reason, otherwise. */
-export function mergeMain(dir: string, io: MergeIo): number {
+export async function mergeMain(dir: string, io: MergeIo): Promise<number> {
   function fail(line: string): number {
     io.stderr(`repo ci merge: ${line}\n`);
 
@@ -65,7 +65,7 @@ export function mergeMain(dir: string, io: MergeIo): number {
   if (names.length === 0) return fail(`no blob-*.json in ${dir}`);
 
   if (!isWholeSet(names)) return fail(`${dir} holds ${names.join(", ")}; want blob-1-n … blob-n-n of one n`);
-  const run = io.bins.vitest(mergeArgs(at), root);
+  const run = await io.bins.vitest(mergeArgs(at), root);
 
   if (run === null) return fail(`no blob-*.json in ${dir}`);
   io.stdout(textOf(run));

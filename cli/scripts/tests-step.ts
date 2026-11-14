@@ -23,22 +23,26 @@ function testsLabel(counts: Counts, skipped: readonly string[], bad: readonly Ca
 }
 
 /** One `vitest related --run` per owning package on its changed code files; null where vitest is not installed. */
-function relatedRuns(turn: Turn): { owner: string; run: Captured | null }[] {
-  return owners(turn).flatMap((owner) => {
+async function relatedRuns(turn: Turn): Promise<{ owner: string; run: Captured | null }[]> {
+  const runs: { owner: string; run: Captured | null }[] = [];
+
+  for (const owner of owners(turn)) {
     const own = turn.changes
       .filter((change) => !change.deleted && change.owner === owner && LINTABLE.test(change.rel))
       .map((change) => path.posix.relative(owner, change.rel));
 
-    if (own.length === 0) return [];
+    if (own.length === 0) continue;
     const args = ["related", "--run", "--passWithNoTests", ...own];
 
-    return [{ owner, run: turn.bins.vitest(args, path.join(turn.root, owner)) }];
-  });
+    runs.push({ owner, run: await turn.bins.vitest(args, path.join(turn.root, owner)) });
+  }
+
+  return runs;
 }
 
 /** The related tests of the change set, their counts summed over the packages. */
-export function testsStep(turn: Turn): StepResult {
-  const runs = relatedRuns(turn);
+export async function testsStep(turn: Turn): Promise<StepResult> {
+  const runs = await relatedRuns(turn);
   const skipped = runs.filter(({ run }) => run === null).map(({ owner }) => dirName(owner));
   const ran = runs.flatMap(({ run }) => (run === null ? [] : [run]));
   const counts: Counts = { failed: 0, passed: 0, total: 0 };

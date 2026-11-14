@@ -22,7 +22,7 @@ function total(reports: readonly RootReport[]): Parameters<typeof okLine>[0] {
 }
 
 /** Checks every doc root under the repo root `io.cwd` belongs to; prints each finding, or the ok line. */
-function checkAll(io: DocsIo): number {
+async function checkAll(io: DocsIo): Promise<number> {
   const root = findRoot(io.cwd) ?? io.cwd;
   const read = readWorkspace(root);
 
@@ -34,7 +34,9 @@ function checkAll(io: DocsIo): number {
 
   const { workspace } = read;
   const roots = docRootsOf(root, [{ dir: "", manifest: workspace.manifest }, ...workspace.packages]);
-  const reports = roots.map((docRoot) => checkDocRoot(root, docRoot, io.tools));
+  const reports: RootReport[] = [];
+
+  for (const docRoot of roots) reports.push(await checkDocRoot(root, docRoot, io.tools));
   const findings = reports.flatMap((one) => one.findings);
 
   for (const finding of findings) io.err(`${finding}\n`);
@@ -54,5 +56,5 @@ export async function main(argv: string[], io: DocsIo = docsIo()): Promise<numbe
 
   const synced = argv.includes(FLAG_CHECK) ? 0 : await io.sync(io.cwd);
 
-  return synced === 0 ? checkAll(io) : synced;
+  return synced === 0 ? await checkAll(io) : synced;
 }

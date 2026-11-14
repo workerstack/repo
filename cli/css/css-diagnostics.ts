@@ -122,12 +122,16 @@ function byPlace(a: Diagnostic, b: Diagnostic): number {
  * `options.fix`, in file then position order. No child runs when none is left. Or the problem line: the runner failed
  * (its stderr's first line), printed what is not its results, or found an invalid option in the config.
  */
-export function cssDiagnostics(root: string, files: readonly string[], options: CssOptions): Result<Diagnostic[]> {
+export async function cssDiagnostics(
+  root: string,
+  files: readonly string[],
+  options: CssOptions,
+): Promise<Result<Diagnostic[]>> {
   const sheets = files.filter(isLintedCss);
 
   if (sheets.length === 0) return { ok: true, value: [] };
   const runner = pathToFileURL(options.runner ?? runnerPath()).href;
-  const run = captureBun(["--eval", RUNNER_EVAL, runner, ...(options.fix ? [FIX_FLAG] : []), ...sheets], root);
+  const run = await captureBun(["--eval", RUNNER_EVAL, runner, ...(options.fix ? [FIX_FLAG] : []), ...sheets], root);
 
   if (run.code !== 0) return cannotRun(firstLine(run.stderr));
   const results = parsedResults(run.stdout);

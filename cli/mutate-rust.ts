@@ -85,6 +85,6 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
  * The shard's scores from cargo-mutants in a fresh clone under the OS temp dir, removed whether the run ends or
  * throws; `files` counts the mutants it scored.
  */
-export function runRust(plan: Plan, deps: MutateDeps): Ran | null {
-  return inTempDir(plan, deps, mutateIn);
+export async function runRust(plan: Plan, deps: MutateDeps): Promise<Ran | null> {
+  return await inTempDir(plan, deps, mutateIn);
 }

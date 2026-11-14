@@ -13,8 +13,8 @@ import { processIo } from "./process-io.ts";
 export type Io = { out: (line: string) => void; err: (line: string) => void };
 
 /** Writes the table of the checkout at `root` (this one by default) and prints its path count, or the failure. */
-export function run(io: Io, root: string = path.resolve(import.meta.dirname, "..")): number {
-  const written = writeStockHistory(root, DEFAULT_REFS, "tree");
+export async function run(io: Io, root: string = path.resolve(import.meta.dirname, "..")): Promise<number> {
+  const written = await writeStockHistory(root, DEFAULT_REFS, "tree");
 
   if (!written.ok) {
     for (const line of written.error) io.err(line.trimEnd());
@@ -27,4 +27,4 @@ export function run(io: Io, root: string = path.resolve(import.meta.dirname, "..
   return 0;
 }
 
-if (import.meta.main) process.exitCode = run(processIo);
+if (import.meta.main) process.exitCode = await run(processIo);

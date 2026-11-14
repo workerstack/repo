@@ -74,6 +74,8 @@ it("TTY init confirms globals; spinner onPhase stop before inherit", async () =>
       opts?.onPhase?.(name, "start");
       opts?.onPhase?.(name, "stop");
     }
+
+    return Promise.resolve();
   });
   await startTty("init");
   expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ message: APPLY_GLOBALS_CONFIRM }));

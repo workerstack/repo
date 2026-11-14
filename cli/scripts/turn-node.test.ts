@@ -51,9 +51,9 @@ function workspace(root: Record<string, string>, api: Record<string, string>, ex
 describe("vitestBin", () => {
   it.skipIf(process.platform === "win32")(
     "spawns node on the vitest bin with the nested flags when a range is set",
-    () => {
+    async () => {
       vi.stubEnv("PATH", FAKE_NODE);
-      expect(vitestBin(">=22")(["run", "a.test.ts"], REPO)).toStrictEqual({
+      expect(await vitestBin(">=22")(["run", "a.test.ts"], REPO)).toStrictEqual({
         code: 0,
         stderr: "",
         stdout: `fake-node ${VITEST} --fsModuleCache=false run a.test.ts\n`,
@@ -64,18 +64,18 @@ describe("vitestBin", () => {
   it.skipIf(process.platform === "win32")(
     "keeps bun when no range is set, with node on PATH",
     { timeout: SLOW },
-    () => {
+    async () => {
       vi.stubEnv("PATH", FAKE_NODE);
-      const run = vitestBin(undefined)(["--version"], REPO);
+      const run = await vitestBin(undefined)(["--version"], REPO);
       expect(run?.code).toBe(0);
       expect(run?.stdout).toContain("vitest/");
       expect(run?.stdout).not.toContain("fake-node");
     },
   );
 
-  it("fails with the install hint when a range is set and node is not on PATH", () => {
+  it("fails with the install hint when a range is set and node is not on PATH", async () => {
     vi.stubEnv("PATH", NO_NODE);
-    const run = vitestBin(">=22")(["run"], REPO);
+    const run = await vitestBin(">=22")(["run"], REPO);
     expect(run?.code).toBe(1);
     expect(run?.stderr).toContain("repo ci: engines.node is set (>=22) but node is not on PATH; install node >=22");
   });
@@ -85,33 +85,33 @@ describe("BINS.vitest reads the range from the workspace", () => {
   it.skipIf(process.platform === "win32").each<[string, Record<string, string>, Record<string, string>]>([
     ["the root", { node: ">=22" }, {}],
     ["a workspace package only", {}, { node: ">=22" }],
-  ])("spawns node when %s declares engines.node", (_, root, api) => {
+  ])("spawns node when %s declares engines.node", async (_, root, api) => {
     vi.stubEnv("PATH", FAKE_NODE);
-    const run = BINS.vitest(["run"], workspace(root, api));
+    const run = await BINS.vitest(["run"], workspace(root, api));
     expect(run?.stdout).toMatch(/^fake-node \S+ --fsModuleCache=false run\n$/);
   });
 
   it.skipIf(process.platform === "win32")(
     "spawns node in a package dir when its sibling root declares the range",
-    () => {
+    async () => {
       vi.stubEnv("PATH", FAKE_NODE);
       const root = workspace({ node: ">=22" }, {}, { "repo.config.ts": "export default {};\n" });
-      const run = BINS.vitest(["run"], path.join(root, "packages/api"));
+      const run = await BINS.vitest(["run"], path.join(root, "packages/api"));
       expect(run?.stdout).toMatch(/^fake-node \S+ --fsModuleCache=false run\n$/);
     },
   );
 });
 
 describe("BINS.vitest refuses a workspace sync would refuse", () => {
-  it("refuses to run, as sync does, when a package's engines.node is not a range", () => {
+  it("refuses to run, as sync does, when a package's engines.node is not a range", async () => {
     const api = { "packages/api/package.json": JSON.stringify({ engines: { node: 22 }, name: "api" }) };
-    const run = BINS.vitest(["run"], workspace({}, {}, api));
+    const run = await BINS.vitest(["run"], workspace({}, {}, api));
     expect(run?.code).toBe(1);
     expect(run?.stderr).toMatch(/^repo ci: packages\/api\/package\.json: .*engines\.node.*must be a version range\n$/);
   });
 
-  it("refuses to run when the packages declare different ranges", () => {
-    expect(BINS.vitest(["run"], workspace({ node: ">=22" }, { node: ">=20" }))).toStrictEqual({
+  it("refuses to run when the packages declare different ranges", async () => {
+    expect(await BINS.vitest(["run"], workspace({ node: ">=22" }, { node: ">=20" }))).toStrictEqual({
       code: 1,
       stderr: "repo ci: engines.node differs across packages (. >=22, packages/api >=20); set one range in each\n",
       stdout: "",

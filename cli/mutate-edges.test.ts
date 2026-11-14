@@ -144,7 +144,7 @@ it("refuses a raw report that is no JSON", async () => {
   f.deps.run = (a) => {
     if (a[0] !== "install") f.deps.fs.write(path.join(BASE, "stryker-report.json"), "{");
 
-    return { code: 0, stderr: "", stdout: "" };
+    return Promise.resolve({ code: 0, stderr: "", stdout: "" });
   };
 
   expect(await runMutate(args, f.deps)).toBe(1);
@@ -153,7 +153,7 @@ it("refuses a raw report that is no JSON", async () => {
 
 it("says a failed install's stdout when its stderr is empty", async () => {
   const f = fakes(sim());
-  f.deps.run = () => ({ code: 1, stderr: "", stdout: "lockfile had changes\n" });
+  f.deps.run = () => Promise.resolve({ code: 1, stderr: "", stdout: "lockfile had changes\n" });
   expect(await runMutate(args, f.deps)).toBe(1);
   expect(f.err.join("")).toBe("repo mutate: bun install --frozen-lockfile failed in the clone: lockfile had changes\n");
 });
@@ -203,7 +203,7 @@ current directory, the default report against the root`, async () => {
   expect(check.out.join("")).toContain("1 shard of 09ed564");
 });
 
-it("runs bun with the given variables over its own, and with its own when given none", () => {
+it("runs bun with the given variables over its own, and with its own when given none", async () => {
   const root = tempDir();
 
   const script = [
@@ -211,8 +211,8 @@ it("runs bun with the given variables over its own, and with its own when given 
     "process.stdout.write(`${process.env.MUTATE_EDGES_PROBE ?? 'unset'} ${process.env.PATH ? 'path' : ''}`)",
   ];
 
-  const given = realDeps(root).run(script, root, { MUTATE_EDGES_PROBE: "set" });
-  const none = realDeps(root).run(script, root);
+  const given = await realDeps(root).run(script, root, { MUTATE_EDGES_PROBE: "set" });
+  const none = await realDeps(root).run(script, root);
 
   expect(given.stdout).toBe("set path");
   expect(none.stdout).toBe("unset path");

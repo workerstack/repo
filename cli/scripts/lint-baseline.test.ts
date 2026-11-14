@@ -123,7 +123,7 @@ it("the check counts the magic hits it is handed beside oxlint's", { timeout: SL
   expect(await checkLintBaseline(root, magic)).toStrictEqual([]);
 });
 
-it("a run over only ignored paths lints nothing and reports no problems", { timeout: SLOW }, () => {
+it("a run over only ignored paths lints nothing and reports no problems", { timeout: SLOW }, async () => {
   const root = consumer({ "src/__fixtures__/a.ts": nonNull(1) });
-  expect(lintReport(root, ["--fix", "src/__fixtures__/a.ts"])).toStrictEqual({ ok: true, value: [] });
+  expect(await lintReport(root, ["--fix", "src/__fixtures__/a.ts"])).toStrictEqual({ ok: true, value: [] });
 });

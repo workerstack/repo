@@ -77,9 +77,12 @@ it("a failing typecheck and failing tests print their output and fail precommit"
   git(root, "add", "src/a.ts");
 
   const bins: Bins = {
-    tsc: (args): Captured =>
-      args.includes("tsconfig.src.json") ? OK : { code: 2, stderr: "", stdout: "src/a.ts(1,7): error TS2322: no.\n" },
-    vitest: (): Captured => ({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
+    tsc: (args): Promise<Captured> =>
+      Promise.resolve(
+        args.includes("tsconfig.src.json") ? OK : { code: 2, stderr: "", stdout: "src/a.ts(1,7): error TS2322: no.\n" },
+      ),
+    vitest: (): Promise<Captured> =>
+      Promise.resolve({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
   };
 
   const result = await precommit(root, bins);

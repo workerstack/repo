@@ -87,7 +87,7 @@ it("every root lookup names the move, and init refuses", async () => {
   const io = { cwd, stderr: (s: string) => err.push(s), stdout: never };
   expect(await turnMain([], { cwd, stderr: io.stderr })).toBe(1);
   expect(await ciMain([], { cwd, stderr: io.stderr })).toBe(1);
-  expect(mergeMain("blobs", { ...io, bins: { tsc: never, vitest: never } })).toBe(1);
+  expect(await mergeMain("blobs", { ...io, bins: { tsc: never, vitest: never } })).toBe(1);
   expect(timesMain("reports", io)).toBe(1);
   expect(await runTool("bun fmt", [], { cwd, run: never, stderr: io.stderr })).toBe(1);
   expect(await realDeps(cwd).config(cwd)).toStrictEqual([HINT]);
@@ -97,7 +97,7 @@ it("every root lookup names the move, and init refuses", async () => {
   expect(err).toStrictEqual(
     ["turn", "ci", "ci merge", "ci times", "fmt", "coverage"].map((name) => `repo ${name}: ${HINT}\n`),
   );
-  expect(() => init(root, { execFileSync: never, skipGlobals: true })).toThrow(HINT);
+  await expect(init(root, { execFileSync: never, skipGlobals: true })).rejects.toThrow(HINT);
   expect(fs.existsSync(path.join(root, CONFIG_FILE))).toBe(false);
 });
 

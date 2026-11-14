@@ -98,6 +98,21 @@ export default defineConfig({
         rules: ["eslint/no-await-in-loop"],
       },
       {
+        files: [
+          "cli/docs-examples.ts",
+          "cli/docs.ts",
+          "cli/scripts/ci.ts",
+          "cli/scripts/tests-step.ts",
+          "cli/scripts/turn.ts",
+          "cli/scripts/typecheck-gate.ts",
+          "cli/scripts/typecheck-step.ts",
+        ],
+        reason:
+          "each loop runs a tool process per step, gate, package or config in order and prints as each ends, " +
+          "as the blocking runs before it did; running them at once would change the output and the load",
+        rules: ["eslint/no-await-in-loop"],
+      },
+      {
         files: ["cli/scripts/workspace-root.ts"],
         reason:
           "a process-wide git rev-parse cache that every hook entry point shares; " +

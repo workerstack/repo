@@ -37,17 +37,17 @@ it("finds the package name a block imports, quoted, with or without a subpath", 
   expect(importsName(blocks, "@ws/a/li")).toBe(false);
 });
 
-it("does nothing without examples", () => {
+it("does nothing without examples", async () => {
   const fake = exampleTools();
-  expect(checkExamples(ctx(tempRoot()), [], fake.tools)).toStrictEqual([]);
+  expect(await checkExamples(ctx(tempRoot()), [], fake.tools)).toStrictEqual([]);
   expect(fake.calls).toStrictEqual([]);
 });
 
-it("writes each block with an export and a tsconfig that extends the stock bun one", () => {
+it("writes each block with an export and a tsconfig that extends the stock bun one", async () => {
   const root = tempRoot();
   const fake = exampleTools();
   const blocks = doc(fence("ts", "const a = 1;"), fence("tsx", "const b = <i />;"));
-  expect(checkExamples(ctx(root), blocks, fake.tools)).toStrictEqual([]);
+  expect(await checkExamples(ctx(root), blocks, fake.tools)).toStrictEqual([]);
   const scratch = path.join(root, ".repo/scratch/docs");
   expect(read(path.join(scratch, "references/auth.md-1.ts"))).toBe("const a = 1;\nexport {};\n");
   expect(fs.existsSync(path.join(scratch, "references/auth.md-2.tsx"))).toBe(true);
@@ -60,11 +60,11 @@ it("writes each block with an export and a tsconfig that extends the stock bun o
   ]);
 });
 
-it("extends the doc root's own tsconfig and runs from the package folder", () => {
+it("extends the doc root's own tsconfig and runs from the package folder", async () => {
   const root = tempRoot({ "packages/a/tsconfig.json": "{}" });
   const fake = exampleTools();
   const blocks = blocksOf("packages/a", "references/x.md", fence("ts run", "const a = 1;"));
-  expect(checkExamples(ctx(root, { dir: "packages/a" }), blocks, fake.tools)).toStrictEqual([]);
+  expect(await checkExamples(ctx(root, { dir: "packages/a" }), blocks, fake.tools)).toStrictEqual([]);
   const scratch = path.join(root, ".repo/scratch/docs/packages/a");
   const own = path.join(root, "packages/a/tsconfig.json").replaceAll("\\", "/");
   expect(read(path.join(scratch, "tsconfig.json"))).toContain(`"extends": ${JSON.stringify(own)}`);
@@ -75,7 +75,7 @@ it("extends the doc root's own tsconfig and runs from the package folder", () =>
   });
 });
 
-it("maps each tsc error, printed with backslashes, to its markdown line", () => {
+it("maps each tsc error, printed with backslashes, to its markdown line", async () => {
   const fake = exampleTools(() => ({
     code: 2,
     stdout: [
@@ -86,25 +86,25 @@ it("maps each tsc error, printed with backslashes, to its markdown line", () => 
   }));
 
   const blocks = doc(fence("ts", "const a = 1;"), "", fence("ts", "const s = 1;", "s.tokn;"));
-  expect(checkExamples(ctx(tempRoot()), blocks, fake.tools)).toStrictEqual([
+  expect(await checkExamples(ctx(tempRoot()), blocks, fake.tools)).toStrictEqual([
     "references/auth.md:8: example 2 fails to type-check: Property 'tokn' does not exist on type 'Session'.",
     "references/auth.md:3: example 1 fails to type-check: Unterminated string.",
   ]);
 });
 
-it("reports tsc output no block owns", () => {
+it("reports tsc output no block owns", async () => {
   const blocks = doc(fence("ts", "const a = 1;"));
   const stderr = "error TS5083: Cannot read file 'x'.\nsrc/y.ts(1,1): error TS1: bad";
   const fake = exampleTools(() => ({ code: 1, stderr }));
-  expect(checkExamples(ctx(tempRoot(), { dir: "packages/a" }), blocks, fake.tools)).toStrictEqual([
+  expect(await checkExamples(ctx(tempRoot(), { dir: "packages/a" }), blocks, fake.tools)).toStrictEqual([
     "tsc failed in packages/a: error TS5083: Cannot read file 'x'.",
     "tsc failed in packages/a: src/y.ts(1,1): error TS1: bad",
   ]);
 });
 
-it("reports a tsc failure that printed nothing", () => {
+it("reports a tsc failure that printed nothing", async () => {
   const fake = exampleTools(() => ({ code: 1 }));
-  expect(checkExamples(ctx(tempRoot()), doc(fence("ts", "const a = 1;")), fake.tools)).toStrictEqual([
+  expect(await checkExamples(ctx(tempRoot()), doc(fence("ts", "const a = 1;")), fake.tools)).toStrictEqual([
     "tsc failed in .: no output",
   ]);
 });

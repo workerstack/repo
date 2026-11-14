@@ -9,7 +9,7 @@ import { PACKAGE_NAME } from "./sync/package-name.constants.ts";
 
 useInitKit();
 
-it("over a copied consumer removes old default repo: scripts, keeps edited ones, copies nothing", () => {
+it("over a copied consumer removes old default repo: scripts, keeps edited ones, copies nothing", async () => {
   const dest = tmp("repo-copied-");
   fs.mkdirSync(path.join(dest, ".rulesync"));
   fs.writeFileSync(
@@ -20,7 +20,7 @@ it("over a copied consumer removes old default repo: scripts, keeps edited ones,
       scripts: { "repo:clean": "repo clean && rm -rf dist", "repo:doctor": "bun ./.rulesync/scripts/doctor.ts" },
     }),
   );
-  init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }) });
+  await init(dest, { execFileSync: fakeExec(), pkgRoot: stubPkgRoot({ name: PACKAGE_NAME, version: "0.7.0" }) });
   expect(readPkg(dest).scripts).toStrictEqual({
     postinstall: "repo sync --postinstall",
     "repo:clean": "repo clean && rm -rf dist",
@@ -29,17 +29,17 @@ it("over a copied consumer removes old default repo: scripts, keeps edited ones,
   expect(fs.readdirSync(path.join(dest, ".rulesync"))).toStrictEqual([]);
 });
 
-it("--skip-globals only installs", () => {
+it("--skip-globals only installs", async () => {
   const dest = tmp("repo-skip-globals-");
   const exec = fakeExec();
-  init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
+  await init(dest, { execFileSync: exec, pkgRoot: stubPkgRoot(), skipGlobals: true });
   expect(exec.mock.calls.map((c) => c[1])).toStrictEqual([["rev-parse", "--is-inside-work-tree"], ["install"]]);
 });
 
-it("onPhase reports merge, install and yolo, each stopped before its exec", () => {
+it("onPhase reports merge, install and yolo, each stopped before its exec", async () => {
   const dest = tmp("repo-onphase-");
   const onPhase = fakeOnPhase();
-  init(dest, { execFileSync: fakeExec(), onPhase, pkgRoot: stubPkgRoot() });
+  await init(dest, { execFileSync: fakeExec(), onPhase, pkgRoot: stubPkgRoot() });
   expect(onPhase.mock.calls).toStrictEqual([
     ["merge", "start"],
     ["merge", "stop"],
@@ -50,33 +50,33 @@ it("onPhase reports merge, install and yolo, each stopped before its exec", () =
   ]);
 });
 
-it("omitted pkgRoot uses the built-in package root", () => {
+it("omitted pkgRoot uses the built-in package root", async () => {
   const dest = tmp("repo-realroot-");
-  init(dest, { execFileSync: fakeExec() });
+  await init(dest, { execFileSync: fakeExec() });
   expect(readPkg(dest).devDependencies[PACKAGE_NAME]).toBe(readPkg(checkoutRoot()).version);
   expect(fs.readdirSync(dest).toSorted()).toStrictEqual([".mcp.json", "package.json", "repo.config.ts"]);
 });
 
-it("self init changes nothing and runs nothing", () => {
+it("self init changes nothing and runs nothing", async () => {
   const pkgRoot = stubPkgRoot({ name: "fixture-pkg", scripts: { test: "x" }, version: "1.2.3" });
   const before = fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8");
   const exec = fakeExec();
   const onPhase = fakeOnPhase();
-  init(pkgRoot, { execFileSync: exec, onPhase, pkgRoot });
+  await init(pkgRoot, { execFileSync: exec, onPhase, pkgRoot });
   expect(exec).not.toHaveBeenCalled();
   expect(fs.readFileSync(path.join(pkgRoot, "package.json"), "utf8")).toBe(before);
   expect(fs.readdirSync(pkgRoot)).toStrictEqual(["package.json"]);
   expect(onPhase).not.toHaveBeenCalled();
 });
 
-it("with no options, init on this package changes nothing", () => {
+it("with no options, init on this package changes nothing", async () => {
   const pkgPath = path.join(checkoutRoot(), "package.json");
   const before = fs.readFileSync(pkgPath, "utf8");
-  init(checkoutRoot());
+  await init(checkoutRoot());
   expect(fs.readFileSync(pkgPath, "utf8")).toBe(before);
 });
 
-it("omitted execFileSync uses the default; self never invokes it", () => {
+it("omitted execFileSync uses the default; self never invokes it", async () => {
   const pkgRoot = stubPkgRoot();
-  expect(() => init(pkgRoot, { pkgRoot })).not.toThrow();
+  await expect(init(pkgRoot, { pkgRoot })).resolves.toBeUndefined();
 });

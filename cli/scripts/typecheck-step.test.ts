@@ -63,11 +63,13 @@ function twoOwners(): string {
 function fakeTsc(failing: readonly string[]) {
   const projects: string[] = [];
 
-  function tsc(args: string[]): Captured {
+  function tsc(args: string[]): Promise<Captured> {
     const project = args.at(-1) ?? "";
     projects.push(project);
 
-    return failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK;
+    return Promise.resolve(
+      failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK,
+    );
   }
 
   return { bins: { tsc, vitest: () => null }, projects };

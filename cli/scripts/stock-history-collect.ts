@@ -225,7 +225,11 @@ export type Written = { paths: number; changed: boolean };
  * Writes the table of `root`'s checkout from `refs` and `source`, formatted as `repo turn` formats it, so `repo fmt
  * --check` and this write agree on the bytes; a git or formatter failure is the error's lines.
  */
-export function writeStockHistory(root: string, refs: readonly string[], source: CurrentSource): Result<Written> {
+export async function writeStockHistory(
+  root: string,
+  refs: readonly string[],
+  source: CurrentSource,
+): Promise<Result<Written>> {
   const file = path.join(root, STOCK_HISTORY_REL);
   const before = fs.readFileSync(file, "utf8");
   let history: StockHistory;
@@ -237,7 +241,7 @@ export function writeStockHistory(root: string, refs: readonly string[], source:
   }
 
   fs.writeFileSync(file, historyText(history));
-  const fmt = captureSorted([STOCK_HISTORY_REL], root);
+  const fmt = await captureSorted([STOCK_HISTORY_REL], root);
 
   if (fmt.code !== 0) return { error: [`${fmt.stdout}${fmt.stderr}`], ok: false };
 

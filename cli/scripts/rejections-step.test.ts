@@ -26,7 +26,7 @@ it(
       "src/user.ts": user,
     });
 
-    const bins: Bins = { tsc: () => OK, vitest: () => null };
+    const bins: Bins = { tsc: () => Promise.resolve(OK), vitest: () => null };
     write(root, { "src/user.ts": user.replace(' & { readonly brand: "UserId" }', "") });
     const widened = await turn(root, [], bins);
     expect(widened.out).toBe(

@@ -18,9 +18,9 @@ function isStock(rel: string): boolean {
  * `stock history written` when the table's bytes changed, else `stock history ok`; under precommit it hashes the
  * index, which precommit has restaged with every earlier step's rewrites, else the working tree.
  */
-export function stockHistoryStep(turn: Turn): StepResult | null {
+export async function stockHistoryStep(turn: Turn): Promise<StepResult | null> {
   if (!turn.changes.some((change) => isStock(change.rel)) || !isSelf(turn.root)) return null;
-  const written = writeStockHistory(turn.root, REFS, turn.scope.kind === "staged" ? "index" : "tree");
+  const written = await writeStockHistory(turn.root, REFS, turn.scope.kind === "staged" ? "index" : "tree");
 
   if (!written.ok) return failed("stock history failed", written.error);
 

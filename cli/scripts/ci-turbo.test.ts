@@ -29,8 +29,8 @@ function projectOf(call: string) {
   return call.split(" -p ").at(-1);
 }
 
-it("under the pack typechecks only the root tsconfigs, runs turbo and prints the packages line", () => {
-  const run = ciPacked(plant({ "tsconfig.build.json": "{}\n" }), [], done(4, 0));
+it("under the pack typechecks only the root tsconfigs, runs turbo and prints the packages line", async () => {
+  const run = await ciPacked(plant({ "tsconfig.build.json": "{}\n" }), [], done(4, 0));
   expect(run).toMatchObject({
     code: 0,
     out:
@@ -43,53 +43,54 @@ it("under the pack typechecks only the root tsconfigs, runs turbo and prints the
   expect(run.calls.turbo).toStrictEqual([{ args: ARGS, env: { REPO_COVERAGE: "1" } }]);
 });
 
-it("counts the cached tasks of a rerun", () => {
-  expect(ciPacked(plant(), [], done(4, 4)).out).toContain("ci: packages 4 tasks, 4 cached (0.5s)\n");
+it("counts the cached tasks of a rerun", async () => {
+  const run = await ciPacked(plant(), [], done(4, 4));
+  expect(run.out).toContain("ci: packages 4 tasks, 4 cached (0.5s)\n");
 });
 
-it("says only that the packages passed when turbo prints no summary", () => {
-  const run = ciPacked(plant(), [], () => ({ code: 0, stderr: "", stdout: "" }));
+it("says only that the packages passed when turbo prints no summary", async () => {
+  const run = await ciPacked(plant(), [], () => ({ code: 0, stderr: "", stdout: "" }));
   expect(run.out).toContain("ci: packages ok (0.5s)\n");
 });
 
-it("--no-coverage sets REPO_COVERAGE=0 and --report sets REPO_VITEST_REPORT", () => {
+it("--no-coverage sets REPO_COVERAGE=0 and --report sets REPO_VITEST_REPORT", async () => {
   const root = plant();
-  const first = ciPacked(root, ["--no-coverage"], done(2, 0));
+  const first = await ciPacked(root, ["--no-coverage"], done(2, 0));
   expect(first.calls.turbo[0]?.env).toStrictEqual({ REPO_COVERAGE: "0" });
-  const second = ciPacked(root, ["--report", "r.json"], done(2, 0));
+  const second = await ciPacked(root, ["--report", "r.json"], done(2, 0));
   expect(second.calls.turbo[0]?.env).toStrictEqual({
     REPO_COVERAGE: "1",
     REPO_VITEST_REPORT: ".turbo/vitest-report.json",
   });
-  const both = ciPacked(root, ["--report", "r.json", "--no-coverage"], done(2, 0));
+  const both = await ciPacked(root, ["--report", "r.json", "--no-coverage"], done(2, 0));
   expect(both.calls.turbo[0]?.env).toStrictEqual({
     REPO_COVERAGE: "0",
     REPO_VITEST_REPORT: ".turbo/vitest-report.json",
   });
 });
 
-it("--shard 2/3 --no-coverage sets REPO_VITEST_SHARD, and the packages line names the slice", () => {
-  const run = ciPacked(plant(), ["--shard", "2/3", "--no-coverage"], done(4, 0));
+it("--shard 2/3 --no-coverage sets REPO_VITEST_SHARD, and the packages line names the slice", async () => {
+  const run = await ciPacked(plant(), ["--shard", "2/3", "--no-coverage"], done(4, 0));
   expect(run.code).toBe(0);
   expect(run.calls.turbo).toStrictEqual([{ args: ARGS, env: { REPO_COVERAGE: "0", REPO_VITEST_SHARD: "2/3" } }]);
   expect(run.out).toContain("ci: packages 4 tasks, 0 cached (shard 2/3) (0.5s)\n");
   expect(run.out).toContain(" · packages 4 tasks, 0 cached (shard 2/3)\n");
 });
 
-it("a failing sharded turbo names the slice on the failed line", () => {
-  const run = ciPacked(plant(), ["--no-coverage", "--shard", "1/2"], () => ({ code: 1, stderr: "", stdout: "" }));
+it("a failing sharded turbo names the slice on the failed line", async () => {
+  const run = await ciPacked(plant(), ["--no-coverage", "--shard", "1/2"], () => ({ code: 1, stderr: "", stdout: "" }));
   expect(run.out).toContain("ci: packages failed (shard 1/2) (0.5s)\n");
 });
 
-it("a package's project, given the env of a sharded turbo run, runs that slice and passes an empty one", () => {
-  const run = ciPacked(plant(), ["--shard", "2/3", "--no-coverage"], done(4, 0));
+it("a package's project, given the env of a sharded turbo run, runs that slice and passes an empty one", async () => {
+  const run = await ciPacked(plant(), ["--shard", "2/3", "--no-coverage"], done(4, 0));
 
   for (const [name, value] of Object.entries(run.calls.turbo[0]?.env ?? {})) vi.stubEnv(name, value);
   expect({ ...defineProject({}).test }).toMatchObject({ passWithNoTests: true, shard: "2/3" });
 });
 
-it("--shard 1/1 sets no shard variable, and a project without it runs every file", () => {
-  const run = ciPacked(plant(), ["--shard", "1/1"], done(4, 0));
+it("--shard 1/1 sets no shard variable, and a project without it runs every file", async () => {
+  const run = await ciPacked(plant(), ["--shard", "1/1"], done(4, 0));
   expect(run.calls.turbo[0]?.env).toStrictEqual({ REPO_COVERAGE: "1" });
   vi.stubEnv("REPO_VITEST_SHARD", "");
   const test = { ...defineProject({}).test };
@@ -114,7 +115,7 @@ function report(name: string, status: string) {
   };
 }
 
-it("merges each package's report into the --report file after turbo", () => {
+it("merges each package's report into the --report file after turbo", async () => {
   const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
 
   function turbo(): Captured {
@@ -127,7 +128,7 @@ it("merges each package's report into the --report file after turbo", () => {
     return { code: 0, stderr: "", stdout: summary(4, 0) };
   }
 
-  const run = ciPacked(root, ["--report", "r.json"], turbo);
+  const run = await ciPacked(root, ["--report", "r.json"], turbo);
   expect(run.code).toBe(0);
   expect(JSON.parse(fs.readFileSync(path.join(root, "r.json"), "utf8"))).toStrictEqual({
     durations: {},
@@ -136,11 +137,11 @@ it("merges each package's report into the --report file after turbo", () => {
   });
 });
 
-it("a package that wrote no report, or an unreadable one, adds no skips", () => {
+it("a package that wrote no report, or an unreadable one, adds no skips", async () => {
   const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
   fs.mkdirSync(path.join(root, "packages/b/.turbo"), { recursive: true });
   fs.writeFileSync(path.join(root, "packages/b/.turbo/vitest-report.json"), "{ nope");
-  ciPacked(root, ["--report", "r.json"], done(2, 0));
+  await ciPacked(root, ["--report", "r.json"], done(2, 0));
   expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
@@ -151,34 +152,34 @@ it("mergeReports concatenates testResults and sums the counts", () => {
   expect(mergeReports([])).toStrictEqual({ success: true, testResults: [] });
 });
 
-it("a failing package task prints its id and turbo's output under the line, exit 1", () => {
+it("a failing package task prints its id and turbo's output under the line, exit 1", async () => {
   const failed: Captured = { code: 1, stderr: ` Failed:    b#test, a#typecheck\n`, stdout: "b:test: AssertionError\n" };
-  const run = ciPacked(plant(), [], () => failed);
+  const run = await ciPacked(plant(), [], () => failed);
   expect(run.code).toBe(1);
   expect(run.out).toContain("ci: packages failed (b#test, a#typecheck) (0.5s)\nb:test: AssertionError\n Failed:");
   expect(run.out).toContain(" · packages failed (b#test, a#typecheck)\n");
 });
 
-it("a failing turbo with no Failed line says only that it failed", () => {
-  const run = ciPacked(plant(), [], () => ({ code: 1, stderr: "boom\n", stdout: "" }));
+it("a failing turbo with no Failed line says only that it failed", async () => {
+  const run = await ciPacked(plant(), [], () => ({ code: 1, stderr: "boom\n", stdout: "" }));
   expect(run.out).toContain("ci: packages failed (0.5s)\nboom\n");
 });
 
-it("a missing platform binary prints the fix, without a time, exit 1", () => {
+it("a missing platform binary prints the fix, without a time, exit 1", async () => {
   const line = "turbo has no @turbo/linux-arm64 binary; run `bun install` so its optional dependency installs";
-  const run = ciPacked(plant(), [], () => ({ missing: line }));
+  const run = await ciPacked(plant(), [], () => ({ missing: line }));
   expect(run.code).toBe(1);
   expect(run.out).toContain(`ci: packages failed: ${line}\n`);
 });
 
-it("the report is still written after a failing turbo", () => {
+it("the report is still written after a failing turbo", async () => {
   const root = plant();
-  ciPacked(root, ["--report", "r.json"], () => ({ code: 1, stderr: "", stdout: "" }));
+  await ciPacked(root, ["--report", "r.json"], () => ({ code: 1, stderr: "", stdout: "" }));
   expect(fs.existsSync(path.join(root, "r.json"))).toBe(true);
 });
 
-it("without the pack the gates are unchanged and turbo never runs", () => {
-  const run = ci(plant());
+it("without the pack the gates are unchanged and turbo never runs", async () => {
+  const run = await ci(plant());
   expect({ ...run.calls, tsc: run.calls.tsc.map(projectOf) }).toStrictEqual({
     repo: ["check", "fmt --check"],
     tsc: ["tsconfig.json", "packages/a/tsconfig.json"],
@@ -187,17 +188,17 @@ it("without the pack the gates are unchanged and turbo never runs", () => {
   });
 });
 
-it("a package report that is JSON but not a report adds no skips", () => {
+it("a package report that is JSON but not a report adds no skips", async () => {
   const root = plant({ "packages/b/package.json": '{ "name": "b" }\n' });
   fs.mkdirSync(path.join(root, "packages/b/.turbo"), { recursive: true });
   fs.writeFileSync(path.join(root, "packages/b/.turbo/vitest-report.json"), "5");
-  ciPacked(root, ["--report", "r.json"], done(2, 0));
+  await ciPacked(root, ["--report", "r.json"], done(2, 0));
   expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
-it("a workspace that cannot be read adds no package reports", () => {
+it("a workspace that cannot be read adds no package reports", async () => {
   const root = plant({ "packages/a/package.json": "{ nope" });
-  ciPacked(root, ["--report", "r.json"], done(2, 0));
+  await ciPacked(root, ["--report", "r.json"], done(2, 0));
   expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 

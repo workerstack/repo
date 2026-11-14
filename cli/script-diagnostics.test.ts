@@ -19,28 +19,36 @@ function untested(name: string) {
   return `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
 }
 
-it("scriptDiagnostics joins the magic hits and the untested guards, in file and line order", { timeout: SLOW }, () => {
-  const source =
-    "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\n" +
-    "export const n = (): number => 7;\n";
+it(
+  "scriptDiagnostics joins the magic hits and the untested guards, in file and line order",
+  { timeout: SLOW },
+  async () => {
+    const source =
+      "export const isList = (value: unknown): value is unknown[] => Array.isArray(value);\n" +
+      "export const n = (): number => 7;\n";
 
-  const root = plant({ "src/a.ts": source });
-  expect(scriptDiagnostics(root, { files: ["src/a.ts"], sources: ["src/a.ts"] })).toStrictEqual({
-    ok: true,
-    value: [hit("src/a.ts:1:14", GUARD, untested("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
-  });
-});
+    const root = plant({ "src/a.ts": source });
+    expect(await scriptDiagnostics(root, { files: ["src/a.ts"], sources: ["src/a.ts"] })).toStrictEqual({
+      ok: true,
+      value: [hit("src/a.ts:1:14", GUARD, untested("isList")), hit("src/a.ts:2:32", NUMBER, NAMES_NOTHING("7"))],
+    });
+  },
+);
 
-it("scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file", { timeout: SLOW }, () => {
-  const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
-  const found = scriptDiagnostics(root, { files: ["pkg/a.test.ts"], sources: ["pkg/a.test.ts"] });
-  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
-});
+it(
+  "scriptDiagnostics reports a tsconfig.json that only the guards read, over a test file",
+  { timeout: SLOW },
+  async () => {
+    const root = plant({ "pkg/a.test.ts": "export {};\n", "pkg/tsconfig.json": "{" });
+    const found = await scriptDiagnostics(root, { files: ["pkg/a.test.ts"], sources: ["pkg/a.test.ts"] });
+    expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  },
+);
 
-it("scriptDiagnostics returns jscpd's missing binary for a platform it ships none for", () => {
+it("scriptDiagnostics returns jscpd's missing binary for a platform it ships none for", async () => {
   const root = plant({ "src/a.ts": "export const a = 1;\n" });
 
-  const found = scriptDiagnostics(
+  const found = await scriptDiagnostics(
     root,
     { files: ["src/a.ts"], sources: ["src/a.ts"] },
     {
@@ -54,10 +62,10 @@ it("scriptDiagnostics returns jscpd's missing binary for a platform it ships non
   ]);
 });
 
-it("scriptDiagnostics returns why Stylelint could not lint a sheet", () => {
+it("scriptDiagnostics returns why Stylelint could not lint a sheet", async () => {
   const runner = fakeRunner({ code: 1, stderr: "Error: no config\n    at load\n", stdout: "" });
   const root = plant({ "src/a.ts": "export const a = 1;\n" });
-  const found = scriptDiagnostics(root, { files: ["src/a.css"], sources: [] }, { fix: false, runner });
+  const found = await scriptDiagnostics(root, { files: ["src/a.css"], sources: [] }, { fix: false, runner });
   expect(found).toStrictEqual({ error: ["stylelint could not run: Error: no config"], ok: false });
 });
 

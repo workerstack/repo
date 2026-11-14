@@ -9,8 +9,8 @@ import { main } from "./ci.ts";
 
 afterEach(cleanTemps);
 
-it("every gate passing prints each gate line, then the summary, and exits 0", () => {
-  const run = ci(plant());
+it("every gate passing prints each gate line, then the summary, and exits 0", async () => {
+  const run = await ci(plant());
   expect(run).toMatchObject({
     code: 0,
     err: "",
@@ -43,8 +43,8 @@ const FAILING = {
 
 it.each(Object.entries(FAILING))(
   "a failing %s gate prints its output under its line, later gates still run, exit 1",
-  (_, { label, fail, shown }) => {
-    const run = ci(plant(), [], fail);
+  async (_, { label, fail, shown }) => {
+    const run = await ci(plant(), [], fail);
     const lines = run.out.split("\n");
     const at = lines.findIndex((line) => line.startsWith(`ci: ${label}`));
     expect(at).toBeGreaterThanOrEqual(0);
@@ -55,13 +55,13 @@ it.each(Object.entries(FAILING))(
   },
 );
 
-it("a test run that fails without counts says only that it failed", () => {
-  const run = ci(plant(), [], { tests: { code: 1, stderr: "boom\n", stdout: "" } });
+it("a test run that fails without counts says only that it failed", async () => {
+  const run = await ci(plant(), [], { tests: { code: 1, stderr: "boom\n", stdout: "" } });
   expect(run.out).toContain("ci: tests failed (0.5s)\nboom\n");
   expect(run.code).toBe(1);
 });
 
-it("typechecks every tsconfig in the root and each package, not fixtures or installs", () => {
+it("typechecks every tsconfig in the root and each package, not fixtures or installs", async () => {
   const root = plant({
     "__fixtures__/f/package.json": '{ "name": "f" }\n',
     "__fixtures__/f/tsconfig.json": "{}\n",
@@ -76,7 +76,7 @@ it("typechecks every tsconfig in the root and each package, not fixtures or inst
     "vendor/x/y/package.json": '{ "name": "y" }\n',
   });
 
-  const run = ci(root);
+  const run = await ci(root);
   expect(run.calls.tsc.map((call) => call.split(" -p ").at(-1))).toStrictEqual([
     "tsconfig.build.json",
     "tsconfig.json",
@@ -87,32 +87,32 @@ it("typechecks every tsconfig in the root and each package, not fixtures or inst
   expect(run.out).toContain("typecheck 5 configs");
 });
 
-it("a workspace that cannot be read fails the typecheck gate with the reason", () => {
-  const run = ci(plant({ "packages/a/package.json": "{ nope" }));
+it("a workspace that cannot be read fails the typecheck gate with the reason", async () => {
+  const run = await ci(plant({ "packages/a/package.json": "{ nope" }));
   expect(run.code).toBe(1);
   expect(run.out).toMatch(/ci: typecheck failed \(0\.5s\)\n.*packages\/a\/package\.json/);
   expect(run.calls.tsc).toStrictEqual([]);
 });
 
-it("when vitest is absent the tests gate is skipped and the run still passes", () => {
-  const run = ci(plant(), [], { tests: null });
+it("when vitest is absent the tests gate is skipped and the run still passes", async () => {
+  const run = await ci(plant(), [], { tests: null });
   expect(run.code).toBe(0);
   expect(run.out).toContain("ci: tests skipped (no vitest in .)\n");
   expect(run.out).toContain(" · tests skipped (no vitest in .)\n");
 });
 
-it("a repo with no tsconfig skips the typecheck gate without a time", () => {
+it("a repo with no tsconfig skips the typecheck gate without a time", async () => {
   const root = tempDir("workerstack-ci-bare-");
   write(root, { "package.json": '{ "name": "app" }\n', "repo.config.ts": "export default {};\n" });
-  const run = ci(root);
+  const run = await ci(root);
   expect(run.code).toBe(0);
   expect(run.out).toContain("ci: typecheck skipped (no tsconfig.json)\n");
   expect(run.out).toContain(" · typecheck skipped (no tsconfig.json) · ");
   expect(run.calls.tsc).toStrictEqual([]);
 });
 
-it("outside a repo the run is refused", () => {
-  const run = ci(tempDir("workerstack-ci-empty-"));
+it("outside a repo the run is refused", async () => {
+  const run = await ci(tempDir("workerstack-ci-empty-"));
   expect(run.code).toBe(1);
   expect(run.err).toMatch(/^repo ci: no repo\.config\.ts in .* or any parent; run `bun repo init`\n$/);
 });
@@ -126,19 +126,19 @@ const CHECKS = {
 };
 
 /** `repo ci` with the gates faked and the config's checks run by a fake spawner that answers by command. */
-function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) {
+async function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) {
   const root = plant();
   const out: string[] = [];
   const spawned: { cmd: string; args: string[]; cwd: unknown }[] = [];
   let clock = 0;
 
-  const code = main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
+  const code = await main([], {
+    bins: { tsc: () => Promise.resolve(OK), vitest: () => Promise.resolve(PASSED) },
     checks: CHECKS,
     cwd: root,
     now: () => (clock += 500),
     packs: [],
-    repo: () => OK,
+    repo: () => Promise.resolve(OK),
     spawn: (cmd, args, opts) => {
       spawned.push({ args, cmd, cwd: opts.cwd });
 
@@ -151,8 +151,8 @@ function withChecks(answers: Record<string, Partial<SpawnSyncReturns<string>>>) 
   return { code, out: out.join(""), root, spawned };
 }
 
-it("runs ci.checks after the gates, in config order, each timed and counted in the summary", () => {
-  const run = withChecks({
+it("runs ci.checks after the gates, in config order, each timed and counted in the summary", async () => {
+  const run = await withChecks({
     "infra-gen-cli": { error: Object.assign(new Error("ENOENT"), { code: "ENOENT" }), status: null },
     "scripts/check/product-tree.ts": { status: 1, stdout: "projects/x has no project.yaml\n" },
   });
@@ -174,8 +174,9 @@ it("runs ci.checks after the gates, in config order, each timed and counted in t
   expect(run.spawned.every((call) => call.cwd === run.root)).toBe(true);
 });
 
-it("passing checks leave the exit code 0", () => {
-  expect(withChecks({}).code).toBe(0);
+it("passing checks leave the exit code 0", async () => {
+  const run = await withChecks({});
+  expect(run.code).toBe(0);
 });
 
 it("reads ci.checks from the config when no deps give them", async () => {

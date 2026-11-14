@@ -19,12 +19,12 @@ function configRun(name: string, run: Captured): ConfigRun {
 }
 
 /** The owner's tsconfig.json, then its tsconfig.src.json, which is a failure with check's message when missing. */
-function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
-  function tsc(project: string) {
-    return turn.bins.tsc(["--noEmit", "-p", project], turn.root);
+async function typecheckOwner(turn: Turn, owner: string): Promise<ConfigRun[]> {
+  async function tsc(project: string) {
+    return await turn.bins.tsc(["--noEmit", "-p", project], turn.root);
   }
 
-  const runtime = configRun(path.posix.join(owner, RUNTIME_CONFIG), tsc(dirName(owner)));
+  const runtime = configRun(path.posix.join(owner, RUNTIME_CONFIG), await tsc(dirName(owner)));
   const src = path.posix.join(owner, SRC_CONFIG);
 
   if (!fs.existsSync(path.join(turn.root, src))) {
@@ -33,18 +33,21 @@ function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
     return [runtime, { name: `${src} missing`, ok: false, output }];
   }
 
-  return [runtime, configRun(src, tsc(src))];
+  return [runtime, configRun(src, await tsc(src))];
 }
 
 /**
  * `tsc --noEmit -p` on the tsconfig.json and the strict tsconfig.src.json of each owning package with a
  * tsconfig.json, the root for files outside packages. A failure names each failing config by path.
  */
-export function typecheckStep(turn: Turn): StepResult | null {
+export async function typecheckStep(turn: Turn): Promise<StepResult | null> {
   const checked = owners(turn).filter((owner) => fs.existsSync(path.join(turn.root, owner, RUNTIME_CONFIG)));
 
   if (checked.length === 0) return passed("typecheck skipped (no tsconfig.json)");
-  const bad = checked.flatMap((owner) => typecheckOwner(turn, owner)).filter((run) => !run.ok);
+  const runs: ConfigRun[] = [];
+
+  for (const owner of checked) runs.push(...(await typecheckOwner(turn, owner)));
+  const bad = runs.filter((run) => !run.ok);
 
   if (bad.length === 0) return passed(`typecheck ${checked.map(dirName).join(", ")}`);
   const names = bad.map(({ name }) => name).toSorted();

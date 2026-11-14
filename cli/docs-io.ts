@@ -16,8 +16,8 @@ export type DocsIo = {
 
 /** tsc from this package's install, bun, and `bun pm pack --dry-run`, each with the tool environment. */
 export const REAL_TOOLS: DocsTools = {
-  bun: (args, cwd) => captureBun(args, cwd),
-  pack: (cwd) => captureBun([...PACK_ARGS], cwd),
+  bun: async (args, cwd) => await captureBun(args, cwd),
+  pack: async (cwd) => await captureBun([...PACK_ARGS], cwd),
   tsc: BINS.tsc,
 };
 

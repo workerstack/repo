@@ -99,7 +99,7 @@ function failingInstall() {
 }
 
 function failingFormat() {
-  return { code: 1, output: "bad\n" };
+  return Promise.resolve({ code: 1, output: "bad\n" });
 }
 
 it("a failed install exits 1 with the way back and install's output", async () => {

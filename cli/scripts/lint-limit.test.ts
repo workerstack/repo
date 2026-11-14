@@ -29,10 +29,10 @@ it.skipIf(process.platform === "win32")("stops a repo lint whose oxlint runs pas
   expect(written.join("")).toBe(STOPPED);
 });
 
-it.skipIf(process.platform === "win32")("stops a captured oxlint run past the limit and names it", () => {
+it.skipIf(process.platform === "win32")("stops a captured oxlint run past the limit and names it", async () => {
   const root = tempDir();
   hungBun();
-  expect(captureTool("oxlint", [], { limitMs: LIMIT_MS, root })).toStrictEqual({
+  expect(await captureTool("oxlint", [], { limitMs: LIMIT_MS, root })).toStrictEqual({
     code: 1,
     stderr: STOPPED,
     stdout: "",

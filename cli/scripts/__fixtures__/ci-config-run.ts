@@ -20,10 +20,10 @@ export function spawnReply(over: Partial<SpawnSyncReturns<string>> = {}): SpawnS
 export async function ciFromConfig(root: string, fakes: Pick<CiDeps, "repo" | "spawn">) {
   const out: string[] = [];
   const code = await main([], {
-    bins: { tsc: () => OK, vitest: () => PASSED },
+    bins: { tsc: async () => OK, vitest: async () => PASSED },
     cwd: root,
     now: () => 0,
-    repo: () => OK,
+    repo: async () => OK,
     ...fakes,
     stdout: (s) => out.push(s),
   });

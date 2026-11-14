@@ -95,14 +95,14 @@ function paths(run: Run, config: MutateConfig, deps: MutateDeps) {
 }
 
 /** Runs the tool over the commit in a clone, writes its report and, for a whole run, judges it; the exit code. */
-function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: MutateDeps): number {
+async function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: MutateDeps): Promise<number> {
   const { config, found } = setup;
   const isRust = run.tool === "cargo-mutants";
   const { shard } = run;
 
   if (whole(shard) && !isRust) deps.out(`mutate: ${plural(found.files.length, "file")}, shard 1/1${NEWLINE}`);
   const plan = { files: found.files, root: config.root, sha: found.sha, shard };
-  const ran = isRust ? runRust(plan, deps) : runInClone({ ...plan, exclude: config.exclude }, deps);
+  const ran = isRust ? await runRust(plan, deps) : await runInClone({ ...plan, exclude: config.exclude }, deps);
 
   if (ran === null) return FAILED;
   const where = paths(run, config, deps);
@@ -129,7 +129,7 @@ async function runShard(run: Run, deps: MutateDeps): Promise<number> {
 
   const found = target(config, run, deps);
 
-  return found.ok ? execute(run, { config, found: found.value }, deps) : found.error;
+  return found.ok ? await execute(run, { config, found: found.value }, deps) : found.error;
 }
 
 /** `repo mutate` with its collaborators injected; the exit code. */

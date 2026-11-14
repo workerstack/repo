@@ -206,12 +206,12 @@ export function writeBaseline(root: string, counts: Counts): void {
  * oxlint's json report on `args` in `root` (no paths: the whole tree), one diagnostic per problem; `run` runs oxlint,
  * `captureTool` unless a caller injects another.
  */
-export function lintReport(
+export async function lintReport(
   root: string,
   args: readonly string[],
   run: typeof captureTool = captureTool,
-): Result<Diagnostic[]> {
-  const ran = run("oxlint", ["-f", "json", ...args], { root });
+): Promise<Result<Diagnostic[]>> {
+  const ran = await run("oxlint", ["-f", "json", ...args], { root });
   const report = tryJson(reportSchema(), ran.stdout.slice(Math.max(ran.stdout.search(REPORT_START), 0)));
 
   if (report === undefined)
@@ -241,11 +241,14 @@ export function countsOf(diagnostics: readonly Diagnostic[]): Counts {
 }
 
 /** The whole tree's counts, oxlint's and the `scripts` hits no skip turns off, and the baseline under `root`. */
-function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baseline: Counts; actual: Counts }> {
+async function measure(
+  root: string,
+  scripts: readonly Diagnostic[],
+): Promise<Result<{ baseline: Counts; actual: Counts }>> {
   const baseline = readBaseline(root);
 
   if (!baseline.ok) return baseline;
-  const report = lintReport(root, []);
+  const report = await lintReport(root, []);
 
   if (!report.ok) return report;
 
@@ -256,8 +259,8 @@ function measure(root: string, scripts: readonly Diagnostic[]): Result<{ baselin
  * `repo lint --baseline` in `root`: every entry lowered to the real count, oxlint's and the `scripts` hits no skip
  * turns off, a gone file dropped and a rule a file lacks seeded; the exit code.
  */
-export function seedBaseline(root: string, scripts: readonly Diagnostic[]): number {
-  const measured = measure(root, scripts);
+export async function seedBaseline(root: string, scripts: readonly Diagnostic[]): Promise<number> {
+  const measured = await measure(root, scripts);
 
   if (!measured.ok) {
     for (const line of measured.error) process.stderr.write(`repo lint: ${line}\n`);
@@ -286,7 +289,7 @@ export async function checkLintBaseline(cwd: string, scripts: readonly Diagnosti
   const { root } = found;
 
   if (!fs.existsSync(path.join(root, OXLINT_CONFIG_PATH))) return [];
-  const measured = measure(root, scripts);
+  const measured = await measure(root, scripts);
 
   if (!measured.ok) return measured.error;
   const top = root;

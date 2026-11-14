@@ -31,13 +31,15 @@ export function oxlintCatalog(listing: string): Record<string, string> {
 }
 
 /** Lists the installed oxlint's rules, writes the catalog and formats it; returns the exit code. */
-function run(root: string): number {
-  const listing = captureTool("oxlint", ["--rules", "--format=json"], { root });
+async function run(root: string): Promise<number> {
+  const listing = await captureTool("oxlint", ["--rules", "--format=json"], { root });
 
   if (listing.code !== 0) return listing.code;
   fs.writeFileSync(path.join(root, CATALOG), JSON.stringify(oxlintCatalog(listing.stdout)));
 
-  return captureTool("bun fmt", [CATALOG], { root }).code;
+  const formatted = await captureTool("bun fmt", [CATALOG], { root });
+
+  return formatted.code;
 }
 
-if (import.meta.main) process.exitCode = run(ROOT);
+if (import.meta.main) process.exitCode = await run(ROOT);

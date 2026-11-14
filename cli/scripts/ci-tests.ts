@@ -66,9 +66,9 @@ function shardNote(ctx: TestsCtx): string {
 }
 
 /** One `vitest run`; a Rust repo with no vitest test file passes, and a slice's line names it. */
-export function testsGate(ctx: TestsCtx): Gate {
+export async function testsGate(ctx: TestsCtx): Promise<Gate> {
   const rustRepo = fs.existsSync(path.join(ctx.root, RUST_MANIFEST));
-  const run = ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root);
+  const run = await ctx.bins.vitest(vitestArgs(ctx, { rustRepo }), ctx.root);
 
   if (run === null) return skip("tests skipped (no vitest in .)");
   const counts = countsOfRun(run);

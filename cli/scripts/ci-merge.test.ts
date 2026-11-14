@@ -16,19 +16,19 @@ function blobs(...names: string[]): Record<string, string> {
 
 const MERGED: Captured = { code: 0, stderr: "", stdout: " Tests  6649 passed (6649)\n" };
 
-function merge(files: Record<string, string>, result: Captured | null = MERGED, dir = "blobs") {
+async function merge(files: Record<string, string>, result: Captured | null = MERGED, dir = "blobs") {
   const root = plant(files);
   const calls: { args: string[]; cwd: string }[] = [];
   const out: string[] = [];
   const err: string[] = [];
 
-  const code = mergeMain(dir, {
+  const code = await mergeMain(dir, {
     bins: {
-      tsc: () => MERGED,
+      tsc: () => Promise.resolve(MERGED),
       vitest: (args, cwd) => {
         calls.push({ args, cwd });
 
-        return result;
+        return result === null ? null : Promise.resolve(result);
       },
     },
     cwd: root,
@@ -39,8 +39,8 @@ function merge(files: Record<string, string>, result: Captured | null = MERGED, 
   return { calls, code, err: err.join(""), out: out.join(""), root };
 }
 
-it("runs the merged report with the floors on the blobs, prints vitest's output then the summary, exit 0", () => {
-  const run = merge(blobs("blob-1-2.json", "blob-2-2.json"));
+it("runs the merged report with the floors on the blobs, prints vitest's output then the summary, exit 0", async () => {
+  const run = await merge(blobs("blob-1-2.json", "blob-2-2.json"));
   expect(run.calls).toStrictEqual([
     { args: ["run", `--merge-reports=${path.join(run.root, "blobs")}`, "--coverage"], cwd: run.root },
   ]);
@@ -51,9 +51,9 @@ it("runs the merged report with the floors on the blobs, prints vitest's output 
   });
 });
 
-it("exits 1 with the failure line on stdout when vitest does, after its own output", () => {
+it("exits 1 with the failure line on stdout when vitest does, after its own output", async () => {
   const bad = { code: 1, stderr: "ERROR: Coverage for lines (99%) does not meet threshold\n", stdout: "" };
-  const run = merge(blobs("blob-1-2.json", "blob-2-2.json"), bad);
+  const run = await merge(blobs("blob-1-2.json", "blob-2-2.json"), bad);
   expect(run).toMatchObject({
     code: 1,
     err: "",
@@ -61,20 +61,20 @@ it("exits 1 with the failure line on stdout when vitest does, after its own outp
   });
 });
 
-it("a single blob of 1 is a whole set", () => {
-  expect(merge(blobs("blob-1-1.json"))).toMatchObject({ code: 0 });
+it("a single blob of 1 is a whole set", async () => {
+  expect(await merge(blobs("blob-1-1.json"))).toMatchObject({ code: 0 });
 });
 
 it.each([
   ["a missing dir", {}],
   ["a dir with no blob", { "blobs/other.json": "[]" }],
-])("%s: no blob-*.json, exit 1, vitest not run", (_name, files) => {
-  const run = merge(files);
+])("%s: no blob-*.json, exit 1, vitest not run", async (_name, files) => {
+  const run = await merge(files);
   expect(run).toMatchObject({ calls: [], code: 1, err: "repo ci merge: no blob-*.json in blobs\n", out: "" });
 });
 
-it("no vitest in the root reads as no blob, exit 1", () => {
-  const run = merge(blobs("blob-1-2.json", "blob-2-2.json"), null);
+it("no vitest in the root reads as no blob, exit 1", async () => {
+  const run = await merge(blobs("blob-1-2.json", "blob-2-2.json"), null);
   expect(run).toMatchObject({ code: 1, err: "repo ci merge: no blob-*.json in blobs\n", out: "" });
 });
 
@@ -84,8 +84,8 @@ it.each([
   [["blob-1-2.json", "blob-2-2.json", "blob-2-3.json"], "blob-1-2.json, blob-2-2.json, blob-2-3.json"],
   [["blob-1-2.json", "blob-x.json"], "blob-1-2.json, blob-x.json"],
   [["blob-2-2.json", "blob-3-2.json"], "blob-2-2.json, blob-3-2.json"],
-])("blobs %j are not one whole set: refused, vitest not run", (names, shown) => {
-  const run = merge(blobs(...names));
+])("blobs %j are not one whole set: refused, vitest not run", async (names, shown) => {
+  const run = await merge(blobs(...names));
   expect(run).toMatchObject({
     calls: [],
     code: 1,
@@ -93,11 +93,11 @@ it.each([
   });
 });
 
-it("is refused outside a repo", () => {
+it("is refused outside a repo", async () => {
   const err: string[] = [];
 
-  const code = mergeMain("blobs", {
-    bins: { tsc: () => MERGED, vitest: () => MERGED },
+  const code = await mergeMain("blobs", {
+    bins: { tsc: () => Promise.resolve(MERGED), vitest: () => Promise.resolve(MERGED) },
     cwd: "/",
     stderr: (s) => err.push(s),
     stdout: (s) => err.push(s),
@@ -107,19 +107,19 @@ it("is refused outside a repo", () => {
   expect(err.join("")).toMatch(/^repo ci merge: no repo\.config\.ts in \//);
 });
 
-it("repo ci merge <dir> is dispatched from main to the root's vitest", () => {
+it("repo ci merge <dir> is dispatched from main to the root's vitest", async () => {
   const root = plant(blobs("blob-1-2.json", "blob-2-2.json"));
-  const run = ci(root, ["merge", "blobs"]);
+  const run = await ci(root, ["merge", "blobs"]);
   expect(run.code).toBe(0);
   expect(run.calls.vitest).toStrictEqual([`run --merge-reports=${path.join(root, "blobs")} --coverage`]);
   expect(run.out).toContain("repo ci merge: 2 blobs, 4 tests, every floor met\n");
 });
 
-it("repo ci merge <dir> without injected bins uses the real ones, which never run on a dir with no blob", () => {
+it("repo ci merge <dir> without injected bins uses the real ones, which never run on a dir with no blob", async () => {
   const root = plant();
   const out: string[] = [];
   const err: string[] = [];
-  const code = main(["merge", "blobs"], { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
+  const code = await main(["merge", "blobs"], { cwd: root, stderr: (s) => err.push(s), stdout: (s) => out.push(s) });
   expect(code).toBe(1);
   expect(err.join("")).toBe("repo ci merge: no blob-*.json in blobs\n");
   expect(out).toStrictEqual([]);

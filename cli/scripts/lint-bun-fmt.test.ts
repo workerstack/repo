@@ -45,9 +45,10 @@ describe("bun fmt, past a package.json fmt script", () => {
     expect(await runTool("bun fmt", ["--check", "src/b.ts"], { cwd: messy, stderr: io.stderr })).toBe(1);
   });
 
-  it("captureTool formats the file it is given", { timeout: SLOW }, () => {
+  it("captureTool formats the file it is given", { timeout: SLOW }, async () => {
     const root = consumer({ "src/b.ts": "export const a = {b:1}\n" });
-    expect(captureTool("bun fmt", ["src/b.ts"], { root }).code).toBe(0);
+    const formatted = await captureTool("bun fmt", ["src/b.ts"], { root });
+    expect(formatted.code).toBe(0);
     expect(fs.readFileSync(path.join(root, "src/b.ts"), "utf8")).toBe("export const a = { b: 1 };\n");
   });
 });

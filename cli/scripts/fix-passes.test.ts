@@ -9,6 +9,7 @@ import { captureTool } from "./lint.ts";
 import { MAX_FIX_PASSES } from "./max-fix-passes.constants.ts";
 
 const SLOW = 60_000;
+const FIX_ARGS = ["--fix", "src/a.ts"];
 const tree = useTempTree("workerstack-fix-passes-");
 
 /** no-else-return's fix drops the `else`, after which require-readable-spacing wants a blank line before the return. */
@@ -35,18 +36,18 @@ it(
   {
     timeout: SLOW,
   },
-  () => {
+  async () => {
     const once = tree(INTERACTING);
-    captureTool("oxlint", ["--fix", "src/a.ts"], { root: once });
+    await captureTool("oxlint", FIX_ARGS, { root: once });
     expect(read(once)).toBe(FIXED.replace("}\n\n", "}\n"));
     const root = tree(INTERACTING);
-    const last = fixPasses(root, ["src/a.ts"], () => captureTool("oxlint", ["--fix", "src/a.ts"], { root }));
+    const last = await fixPasses(root, ["src/a.ts"], async () => await captureTool("oxlint", FIX_ARGS, { root }));
     expect(read(root)).toBe(FIXED);
     expect(last.code).toBe(0);
   },
 );
 
-it("stops after MAX_FIX_PASSES when every pass rewrites a file, and after one when none does", () => {
+it("stops after MAX_FIX_PASSES when every pass rewrites a file, and after one when none does", async () => {
   const root = tree({ "a.ts": "" });
   const runs: number[] = [];
 
@@ -54,9 +55,9 @@ it("stops after MAX_FIX_PASSES when every pass rewrites a file, and after one wh
     fs.appendFileSync(path.join(root, "a.ts"), "x");
     runs.push(runs.length);
 
-    return runs.length;
+    return Promise.resolve(runs.length);
   }
 
-  expect(fixPasses(root, ["a.ts", "gone.ts"], grow)).toBe(MAX_FIX_PASSES);
-  expect(fixPasses(root, ["a.ts"], () => "same")).toBe("same");
+  expect(await fixPasses(root, ["a.ts", "gone.ts"], grow)).toBe(MAX_FIX_PASSES);
+  expect(await fixPasses(root, ["a.ts"], () => Promise.resolve("same"))).toBe("same");
 });

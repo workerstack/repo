@@ -31,7 +31,7 @@ export type MutateDeps = {
   /** `git <args>` in `cwd`, run with no `GIT_*` variable. */
   git: (cwd: string, args: string[]) => Captured;
   /** `bun <args>` in `cwd`, run with no `GIT_*` variable and with `env` over the rest. */
-  run: (args: string[], cwd: string, env?: Readonly<Record<string, string>>) => Captured;
+  run: (args: string[], cwd: string, env?: Readonly<Record<string, string>>) => Promise<Captured>;
   /** `cargo <args>` in `cwd`, run with no `GIT_*` variable. */
   cargo: CargoRun;
   fs: MutateFs;

@@ -207,10 +207,10 @@ it("turn fails the fmt step when the oxfmt config is missing", { timeout: SLOW }
   expect(result.code).toBe(1);
 });
 
-it("writeFloors writes paths and metrics in code-unit order, deep", () => {
+it("writeFloors writes paths and metrics in code-unit order, deep", async () => {
   const root = jsonDir({}, false);
   const floor = { branches: 2, functions: 3, lines: 4, statements: 1 };
-  expect(writeFloors(root, "floors.json", { "B.ts": floor, "_x.ts": floor, "a.ts": floor })).toBe(true);
+  expect(await writeFloors(root, "floors.json", { "B.ts": floor, "_x.ts": floor, "a.ts": floor })).toBe(true);
   expect(keysOf(readText(root, "floors.json"))).toStrictEqual(["B.ts", "_x.ts", "a.ts"]);
   expect(sortedJsonText(readText(root, "floors.json"))).toBeNull();
 });

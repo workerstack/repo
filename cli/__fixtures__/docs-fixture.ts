@@ -42,7 +42,7 @@ export function docsRun(root: string, tools: Partial<DocsTools> = {}, sync = 0):
     cwd: root,
     out: (text) => out.push(text),
     err: (text) => err.push(text),
-    tools: { tsc: () => OK, bun: () => OK, pack: () => OK, ...tools },
+    tools: { tsc: async () => OK, bun: async () => OK, pack: async () => OK, ...tools },
     sync: (cwd) => {
       synced.push(cwd);
       return Promise.resolve(sync);
@@ -70,7 +70,7 @@ export function exampleTools(answer: (call: Call) => Partial<typeof OK> = () => 
   tools: ExampleTools;
 } {
   const calls: Call[] = [];
-  const run = (tool: Call["tool"]) => (args: string[], cwd: string) => {
+  const run = (tool: Call["tool"]) => async (args: string[], cwd: string) => {
     const call = { tool, args, cwd };
     calls.push(call);
     return { ...OK, ...answer(call) };

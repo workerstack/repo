@@ -90,6 +90,6 @@ export function realDeps(cwd: string): MutateDeps {
     out: (text) => process.stdout.write(text),
     packages: packagesWith(runCargo),
     preload: path.join(import.meta.dirname, "stryker-preload.ts"),
-    run: (args, where, env) => captureBun(args, where, { ...childEnv(), ...env }),
+    run: async (args, where, env) => await captureBun(args, where, { ...childEnv(), ...env }),
   };
 }

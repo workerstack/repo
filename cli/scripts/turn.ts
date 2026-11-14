@@ -18,7 +18,7 @@ import { nodeRange } from "../sync/node-range.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import { changeSet, type Change, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
-import { capture, captureBun } from "./lint.ts";
+import { capture, captureBun, type Captured } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { stockHistoryStep } from "./stock-history-step.ts";
@@ -51,6 +51,16 @@ const TURN_USE = "use repo turn [<path>]";
 /** Where a flag given to turn should go; an old hook that still passes `--staged` is fixed by a sync. */
 const INDEX_HINT = `${TURN_USE}, or repo precommit for the index (bun repo sync updates an old pre-commit hook)`;
 
+/** `command` run on node when `range` is set (failing with an install hint when node is not on PATH), else on bun. */
+async function runVitest(range: string | undefined, command: string[], cwd: string): Promise<Captured> {
+  const env = childEnv({ NO_COLOR: "1" });
+
+  if (range === undefined) return await captureBun(["--bun", ...command], cwd, env);
+  const missing = `repo ci: engines.node is set (${range}) but node is not on PATH; install node ${range}`;
+
+  return await capture("node", command, { cwd, env, missing });
+}
+
 /**
  * Vitest from the package being tested, as its own tests would run: on node when the packages declare `range` as
  * engines.node (failing with an install hint when node is not on PATH), else on bun.
@@ -65,13 +75,7 @@ export function vitestBin(range: string | undefined): Bins["vitest"] {
       return null;
     }
 
-    const command = [packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args];
-    const env = childEnv({ NO_COLOR: "1" });
-
-    if (range === undefined) return captureBun(["--bun", ...command], cwd, env);
-    const missing = `repo ci: engines.node is set (${range}) but node is not on PATH; install node ${range}`;
-
-    return capture("node", command, { cwd, env, missing });
+    return runVitest(range, [packageBin(manifest, "vitest"), ...NESTED_VITEST_FLAGS, ...args], cwd);
   };
 }
 
@@ -87,12 +91,15 @@ function rangeAt(cwd: string): Result<string | undefined, string> {
 
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
 export const BINS: Bins = {
-  tsc: (args, cwd) =>
-    captureBun([packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args], cwd),
+  tsc: async (args, cwd) =>
+    await captureBun(
+      [packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args],
+      cwd,
+    ),
   vitest: (args, cwd) => {
     const range = rangeAt(cwd);
 
-    if (!range.ok) return { code: 1, stderr: `repo ci: ${range.error}\n`, stdout: "" };
+    if (!range.ok) return Promise.resolve({ code: 1, stderr: `repo ci: ${range.error}\n`, stdout: "" });
 
     return vitestBin(range.value)(args, cwd);
   },
@@ -197,14 +204,14 @@ function remaining(turn: Turn): readonly Change[] {
  * Runs every step whose inputs changed, printing a failed step's output as it ends, under precommit restaging what
  * it rewrote, and after a rewrite dropping the changes it returned to the base, before the next step.
  */
-function runSteps(steps: readonly Step[], start: Turn, stderr: (s: string) => void): Ran {
+async function runSteps(steps: readonly Step[], start: Turn, stderr: (s: string) => void): Promise<Ran> {
   let changes = start.changes;
   let isRestaged = true;
   const results: StepResult[] = [];
 
   for (const step of steps) {
     const turn: Turn = { ...start, changes };
-    const result = step(turn);
+    const result = await step(turn);
 
     if (result === null) continue;
 
@@ -251,7 +258,7 @@ export async function gateMain(gate: Gate, argv: readonly string[], deps: TurnDe
     return 0;
   }
 
-  const { results, isRestaged, isEmptied } = runSteps(gate.steps, turn, stderr);
+  const { results, isRestaged, isEmptied } = await runSteps(gate.steps, turn, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
   const labels = [...results.map((result) => result.label), ...(isEmptied ? ["no changes left"] : [])];
   stdout(`${gate.name}: ${files} · ${labels.join(" · ")}\n`);

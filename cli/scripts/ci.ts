@@ -50,7 +50,7 @@ export type CiDeps = {
   now?: () => number;
   bins?: Bins;
   /** Runs `repo <args>` in a directory. */
-  repo?: (args: string[], cwd: string) => Captured;
+  repo?: (args: string[], cwd: string) => Promise<Captured>;
   /** The packs that are on; read from the config when omitted. */
   packs?: readonly Pack[];
   /** Runs turbo under the workspace pack. */
@@ -77,13 +77,13 @@ type Ctx = Required<Pick<CiDeps, "bins" | "repo" | "turbo" | "checks" | "spawn" 
 };
 
 /** `repo <args>` run by this checkout's bin. */
-function runRepo(args: string[], cwd: string): Captured {
-  return captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
+async function runRepo(args: string[], cwd: string): Promise<Captured> {
+  return await captureBun([path.join(import.meta.dirname, "../../bin/repo.ts"), ...args], cwd);
 }
 
 /** `repo <args>` as the gate `name`. */
-function repoGate(name: string, args: string[], ctx: Ctx): Gate {
-  const run = ctx.repo(args, ctx.root);
+async function repoGate(name: string, args: string[], ctx: Ctx): Promise<Gate> {
+  const run = await ctx.repo(args, ctx.root);
 
   return run.code === 0 ? pass(`${name} ok`) : fail(`${name} failed`, [textOf(run)]);
 }
@@ -99,10 +99,10 @@ function rustGates(root: string): ((ctx: Ctx) => Gate)[] {
 }
 
 /** Runs each gate in order, printing its line as it ends and its output under it when it failed. */
-function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gate[] {
+async function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Promise<Gate[]> {
   const turboOn = ctx.packs.includes("workspace");
 
-  const gates: ((ctx: Ctx) => Gate)[] = [
+  const gates: ((ctx: Ctx) => Gate | Promise<Gate>)[] = [
     (c) => repoGate("check", ["check"], c),
     ...docsGates(ctx.packs),
     (c) => repoGate("fmt", ["fmt", "--check"], c),
@@ -117,16 +117,19 @@ function runGates(ctx: Ctx, now: () => number, stdout: (s: string) => void): Gat
         checkGate(name, argv, c),
   );
 
-  return [...gates, ...checks].map((run) => {
+  const ran: Gate[] = [];
+
+  for (const run of [...gates, ...checks]) {
     const started = now();
-    const gate = run(ctx);
+    const gate = await run(ctx);
     const seconds = ((now() - started) / MS_PER_SECOND).toFixed(1);
     stdout(`ci: ${gate.label}${gate.ran ? ` (${seconds}s)` : ""}\n`);
 
     for (const chunk of gate.output) stdout(chunk.endsWith("\n") ? chunk : `${chunk}\n`);
+    ran.push(gate);
+  }
 
-    return gate;
-  });
+  return ran;
 }
 
 /** Why a slice with coverage cannot run: under the workspace pack turbo runs a vitest per package, not one. */
@@ -156,11 +159,11 @@ function prepare(
 }
 
 /** Runs the gates, and writes the skip report to `report` after them when asked for one. */
-function gatesMain(
+async function gatesMain(
   { report, coverage, shard }: { report?: string; coverage: boolean; shard?: string | undefined },
   run: { packs: readonly Pack[]; deps: CiDeps },
   io: Io,
-): number {
+): Promise<number> {
   const { packs, deps } = run;
   const temp = report === undefined ? undefined : fs.mkdtempSync(path.join(os.tmpdir(), REPORT_TEMP_PREFIX));
   const json = temp === undefined ? undefined : path.join(temp, REPORT_JSON_FILE);
@@ -174,7 +177,7 @@ function gatesMain(
       return 1;
     }
 
-    const gates = runGates(prepared.ctx, deps.now ?? Date.now, io.stdout);
+    const gates = await runGates(prepared.ctx, deps.now ?? Date.now, io.stdout);
     io.stdout(`ci: ${gates.map((gate) => gate.label).join(SUMMARY_SEPARATOR)}\n`);
 
     if (report !== undefined && json !== undefined && !writeTo({ json, report, root: prepared.ctx.root }, io)) return 1;
@@ -200,12 +203,11 @@ function writeTo({ report, json, root }: { report: string; json: string; root: s
 }
 
 /** Runs the gates once the packs and checks are known: injected, else read from the config. */
-function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): number | Promise<number> {
-  if (deps.packs !== undefined) return gatesMain(command, { deps, packs: deps.packs }, io);
+async function withPacks(command: Extract<Command, { kind: "gates" }>, deps: CiDeps, io: Io): Promise<number> {
+  if (deps.packs !== undefined) return await gatesMain(command, { deps, packs: deps.packs }, io);
+  const { packs, checks, floors } = await configOf(io.cwd);
 
-  return configOf(io.cwd).then(({ packs, checks, floors }) =>
-    gatesMain(command, { deps: { checks, floors, ...deps }, packs }, io),
-  );
+  return await gatesMain(command, { deps: { checks, floors, ...deps }, packs }, io);
 }
 
 /**

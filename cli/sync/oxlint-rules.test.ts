@@ -13,11 +13,13 @@ import { OFF_RULES } from "./oxlint-rules.ts";
 const SLOW = 60_000;
 
 /** The rules oxlint lists in the catalog's scopes, each with its category. */
-function installedCatalog(): Record<string, string> {
+async function installedCatalog(): Promise<Record<string, string>> {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-oxlint-rules-"));
 
   try {
-    return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], { root }).stdout);
+    const listing = await captureTool("oxlint", ["--rules", "--format=json"], { root });
+
+    return oxlintCatalog(listing.stdout);
   } finally {
     removeTree(root);
   }
@@ -36,8 +38,8 @@ it("the catalog maps a rule outside the base categories to its category", () => 
 
 it(
   "the catalog lists exactly the rules the installed oxlint has",
-  () => {
-    expect(catalog, "the catalog is stale: run `bun dev/oxlint-catalog.ts`").toStrictEqual(installedCatalog());
+  async () => {
+    expect(catalog, "the catalog is stale: run `bun dev/oxlint-catalog.ts`").toStrictEqual(await installedCatalog());
   },
   SLOW,
 );

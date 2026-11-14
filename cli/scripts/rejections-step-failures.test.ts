@@ -17,7 +17,7 @@ afterEach(() => {
 
 function turnOf(root: string, packages: string[], owner: string): Turn {
   return {
-    bins: { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
+    bins: { tsc: () => Promise.resolve({ code: 0, stderr: "", stdout: "" }), vitest: () => null },
     changes: [{ deleted: false, owner, rel: `${owner}/a.ts` }],
     command: "turn",
     packages,
@@ -33,12 +33,12 @@ function clearGitEnv() {
     vi.stubEnv(name, undefined);
 }
 
-it("a root git cannot list fails the step with git's reason", () => {
+it("a root git cannot list fails the step with git's reason", async () => {
   clearGitEnv();
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "rej-nogit-"));
 
   try {
-    const result = rejectionsStep(turnOf(root, [], ""));
+    const result = await rejectionsStep(turnOf(root, [], ""));
     expect(result?.ok).toBe(false);
     expect(result?.label).toBe("rejections failed");
     expect(result?.output[0]).toMatch(/^repo turn: git ls-files failed: .*not a git repository/);
@@ -47,23 +47,23 @@ it("a root git cannot list fails the step with git's reason", () => {
   }
 });
 
-it("a problem that names no reject file fails the step without a count", () => {
+it("a problem that names no reject file fails the step without a count", async () => {
   clearGitEnv();
   const root = tempDir("rej-notsconfig-");
   spawnSync("git", ["init", "-q"], { cwd: root });
   write(root, { "pkg/a.reject.ts": "export {};\n", "pkg/package.json": "{}\n" });
   fs.mkdirSync(path.join(root, "pkg/tsconfig.json"));
-  const result = rejectionsStep(turnOf(root, ["pkg"], "pkg"));
+  const result = await rejectionsStep(turnOf(root, ["pkg"], "pkg"));
   expect(result?.ok).toBe(false);
   expect(result?.label).toBe("rejections failed");
   expect(result?.output).toHaveLength(1);
   expect(result?.output[0]).toMatch(/^repo turn: rejections: pkg\/tsconfig\.json: /);
 });
 
-it("a touched package without reject files is absent", () => {
+it("a touched package without reject files is absent", async () => {
   clearGitEnv();
   const root = tempDir("rej-none-");
   spawnSync("git", ["init", "-q"], { cwd: root });
   write(root, { "pkg/a.ts": "export {};\n" });
-  expect(rejectionsStep(turnOf(root, ["pkg"], "pkg"))).toBeNull();
+  expect(await rejectionsStep(turnOf(root, ["pkg"], "pkg"))).toBeNull();
 });

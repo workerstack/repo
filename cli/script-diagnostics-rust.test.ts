@@ -99,12 +99,12 @@ it("a repo with no Cargo.toml gets the same result with Rust files in it, and no
   expect(run).not.toHaveBeenCalled();
 });
 
-it("scriptDiagnostics runs only the Rust source rules on the .rs files it is given, never cargo", () => {
+it("scriptDiagnostics runs only the Rust source rules on the .rs files it is given, never cargo", async () => {
   const root = plant({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB });
-  const found = scriptDiagnostics(root, { files: ["src/lib.rs", "src/gone.rs"], sources: [] });
+  const found = await scriptDiagnostics(root, { files: ["src/lib.rs", "src/gone.rs"], sources: [] });
   expect(found.ok ? found.value.map((d) => d.line) : found).toStrictEqual([BLOCK_LINE]);
   const none = plant({ "src/lib.rs": LIB });
-  expect(scriptDiagnostics(none, { files: ["src/lib.rs"], sources: [] })).toStrictEqual({ ok: true, value: [] });
+  expect(await scriptDiagnostics(none, { files: ["src/lib.rs"], sources: [] })).toStrictEqual({ ok: true, value: [] });
 });
 
 const WHOLE = { clippy: true, paths: null };

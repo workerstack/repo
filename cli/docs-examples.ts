@@ -34,8 +34,8 @@ import type { Captured } from "./scripts/lint.ts";
 
 /** The tools an example check runs: `tsc` with its arguments, and `bun`. Each runs in `cwd` and is captured. */
 export type ExampleTools = {
-  tsc: (args: string[], cwd: string) => Captured;
-  bun: (args: string[], cwd: string) => Captured;
+  tsc: (args: string[], cwd: string) => Promise<Captured>;
+  bun: (args: string[], cwd: string) => Promise<Captured>;
 };
 
 /** A `ts`, `typescript` or `tsx` fence: where it sits and what it holds. `n` counts the file's examples from 1. */
@@ -142,22 +142,26 @@ function typeFindings(ctx: ExampleRoot, blocks: readonly Block[], run: Captured)
  * Type-checks every example of a doc root in one tsc run and runs the `ts run` ones with bun from the doc root.
  * A doc root whose build script produces what its examples import is built first; a failed build ends the check.
  */
-export function checkExamples(ctx: ExampleRoot, blocks: readonly Block[], tools: ExampleTools): string[] {
+export async function checkExamples(
+  ctx: ExampleRoot,
+  blocks: readonly Block[],
+  tools: ExampleTools,
+): Promise<string[]> {
   if (blocks.length === 0) return [];
   const docRoot = path.join(ctx.root, ctx.dir);
 
   if (ctx.build && importsName(blocks, ctx.name)) {
-    const built = tools.bun([...BUN_BUILD_ARGS], docRoot);
+    const built = await tools.bun([...BUN_BUILD_ARGS], docRoot);
 
     if (built.code !== 0) return [buildFailed(ctx.dir, built.code, detailOf(built))];
   }
 
   const scratch = writeScratch(ctx, blocks);
-  const typed = tools.tsc([...TSC_ARGS, path.join(scratch, TSCONFIG_FILE)], scratch);
+  const typed = await tools.tsc([...TSC_ARGS, path.join(scratch, TSCONFIG_FILE)], scratch);
   const findings = typed.code === 0 ? [] : typeFindings(ctx, blocks, typed);
 
   for (const block of blocks.filter((one) => one.run)) {
-    const ran = tools.bun([path.join(scratch, fileOf(block))], docRoot);
+    const ran = await tools.bun([path.join(scratch, fileOf(block))], docRoot);
 
     if (ran.code !== 0)
       findings.push(runError(`${block.md}:${block.line}`, block.n, { code: ran.code, detail: detailOf(ran) }));

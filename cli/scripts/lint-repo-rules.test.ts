@@ -172,36 +172,40 @@ const FLOW_FINDINGS = [
     "a named domain type before reading it.",
 ];
 
-it("oxlint runs the repo plugin's rules with their options, from the linted repo's cwd", { timeout: SLOW }, () => {
-  const linted = captureTool("oxlint", ["-f", "json"], { root: tree(REPO_RULES) });
+it(
+  "oxlint runs the repo plugin's rules with their options, from the linted repo's cwd",
+  { timeout: SLOW },
+  async () => {
+    const linted = await captureTool("oxlint", ["-f", "json"], { root: tree(REPO_RULES) });
 
-  const report = JSON.parse(linted.stdout) /* oxlint -f json prints one report object */ as {
-    diagnostics: { filename: string; code: string; message: string; labels: { span: { line: number } }[] }[];
-  };
+    const report = JSON.parse(linted.stdout) /* oxlint -f json prints one report object */ as {
+      diagnostics: { filename: string; code: string; message: string; labels: { span: { line: number } }[] }[];
+    };
 
-  const findings = report.diagnostics.map(
-    ({ filename, code, message, labels }) => `${filename}:${labels[0]?.span.line} ${code} ${message}`,
-  );
+    const findings = report.diagnostics.map(
+      ({ filename, code, message, labels }) => `${filename}:${labels[0]?.span.line} ${code} ${message}`,
+    );
 
-  const index = "packages/lib/src/index.ts";
-  const missing = "has no JSDoc: add a /** */ block that says what a caller needs and the type does not";
-  expect(findings.toSorted()).toStrictEqual([
-    ...FLOW_FINDINGS,
-    `${index}:1 repo(boundaries) "@app/ui" is a ui package, and a lib package may import only lib; move what it ` +
-      'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts',
-    `${index}:12 repo(public-jsdoc) \`Size.Small\` is public through "." and ${missing}`,
-    `${index}:2 repo(boundaries) "left-pad" is not declared in packages/lib/package.json; add it to its dependencies`,
-    `${index}:5 repo(max-line-width) this line is 121 columns, over 120; split the string with + or a join`,
-    `${index}:7 repo(no-v8-ignore) coverage ignore comments hide untested code; delete the code or add a test ` +
-      "that runs it",
-    `${index}:8 repo(public-jsdoc) \`bare\` is public through "." and ${missing}`,
-    `packages/lib/src/known.ts:1 ${widening("open dictionary", "binding `OS_NAMES`")}`,
-    "packages/lib/src/probe.ts:3 repo(no-runtime-typeof) A `typeof` check narrows a representation without " +
-      "establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
-    "packages/lib/src/spacing.ts:3 repo(require-readable-spacing) Expected blank line before this statement.",
-    "packages/lib/src/untyped.ts:1 TS(1021) An index signature must have a type annotation.",
-    'packages/lib/vite.config.ts:1 repo(config-file) a config file holds only imports and exports; move "plugins" ' +
-      "into a module it imports",
-  ]);
-  expect(linted.code).toBe(1);
-});
+    const index = "packages/lib/src/index.ts";
+    const missing = "has no JSDoc: add a /** */ block that says what a caller needs and the type does not";
+    expect(findings.toSorted()).toStrictEqual([
+      ...FLOW_FINDINGS,
+      `${index}:1 repo(boundaries) "@app/ui" is a ui package, and a lib package may import only lib; move what it ` +
+        'needs into a package lib may import, or add "ui" to lint.boundaries.allow.lib in repo.config.ts',
+      `${index}:12 repo(public-jsdoc) \`Size.Small\` is public through "." and ${missing}`,
+      `${index}:2 repo(boundaries) "left-pad" is not declared in packages/lib/package.json; add it to its dependencies`,
+      `${index}:5 repo(max-line-width) this line is 121 columns, over 120; split the string with + or a join`,
+      `${index}:7 repo(no-v8-ignore) coverage ignore comments hide untested code; delete the code or add a test ` +
+        "that runs it",
+      `${index}:8 repo(public-jsdoc) \`bare\` is public through "." and ${missing}`,
+      `packages/lib/src/known.ts:1 ${widening("open dictionary", "binding `OS_NAMES`")}`,
+      "packages/lib/src/probe.ts:3 repo(no-runtime-typeof) A `typeof` check narrows a representation without " +
+        "establishing its contract. Parse input at its I/O boundary, then branch on the domain value.",
+      "packages/lib/src/spacing.ts:3 repo(require-readable-spacing) Expected blank line before this statement.",
+      "packages/lib/src/untyped.ts:1 TS(1021) An index signature must have a type annotation.",
+      'packages/lib/vite.config.ts:1 repo(config-file) a config file holds only imports and exports; move "plugins" ' +
+        "into a module it imports",
+    ]);
+    expect(linted.code).toBe(1);
+  },
+);

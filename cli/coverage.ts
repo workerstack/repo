@@ -77,7 +77,7 @@ function hasVitest(root: string): boolean {
  * a temp dir that is removed after. No vitest installed means no summary, which is no failure; vitest writes the
  * report even with no tests. A failing test prints vitest's own output and its own line.
  */
-function measure(root: string): Measured {
+async function measure(root: string): Promise<Measured> {
   if (!hasVitest(root)) return { ok: true, summary: null };
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), TEMP_PREFIX));
 
@@ -95,7 +95,7 @@ function measure(root: string): Measured {
     ];
 
     // An env default, not --testTimeout: the preset merges it under the project's config, so its own timeouts win.
-    const ran = captureBun(args, root, childEnv({ REPO_VITEST_TIMEOUT: String(COVERAGE_TIMEOUT_MS) }));
+    const ran = await captureBun(args, root, childEnv({ REPO_VITEST_TIMEOUT: String(COVERAGE_TIMEOUT_MS) }));
 
     if (ran.code === PASSED)
       return { ok: true, summary: readJson(summarySchema(), fs.readFileSync(path.join(dir, SUMMARY_FILE), "utf8")) };
@@ -144,11 +144,11 @@ function compare(rows: Rows, old: Floors): Comparison {
  * Writes `floors` to `file` with every key sorted by code unit, then formats it with `repo fmt`'s tool; false,
  * after printing why, if that fails.
  */
-export function writeFloors(root: string, file: string, floors: Rows): boolean {
+export async function writeFloors(root: string, file: string, floors: Rows): Promise<boolean> {
   const full = path.join(root, file);
   fs.mkdirSync(path.dirname(full), { recursive: true });
   fs.writeFileSync(full, sortedJsonValue(floors, JSON_INDENT));
-  const formatted = captureTool("bun fmt", [file], { root });
+  const formatted = await captureTool("bun fmt", [file], { root });
 
   if (formatted.code === PASSED) return true;
   process.stderr.write(formatted.stdout + formatted.stderr);
@@ -207,7 +207,7 @@ export async function main(_argv: string[], run: CargoRun = runCargo): Promise<n
   const old = oldFloors(path.join(root, floors));
 
   if (old === null) return FAILED;
-  const measured = measure(root);
+  const measured = await measure(root);
 
   if (!measured.ok) return FAILED;
   const rust = rustRows(root, run);
@@ -222,7 +222,7 @@ export async function main(_argv: string[], run: CargoRun = runCargo): Promise<n
     return FAILED;
   }
 
-  if (!writeFloors(root, floors, next)) return FAILED;
+  if (!(await writeFloors(root, floors, next))) return FAILED;
   write(process.stdout, [...raised, `wrote ${floors}`]);
 
   return PASSED;

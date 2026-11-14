@@ -9,6 +9,7 @@ import {
   SLOW,
   srcConfig,
   staged,
+  TSC_PASSES,
   TSCONFIG,
   turn,
   write,
@@ -61,7 +62,7 @@ it(
       "src/retry.ts": "export function retry(): number {\n  return 3;\n}\n",
       "src/wait.ts": "export function wait(): number {\n  return 5000;\n}\n",
     });
-    const result = await turn(root, [], { tsc: () => ({ code: 0, stderr: "", stdout: "" }), vitest: () => null });
+    const result = await turn(root, [], TSC_PASSES);
     expect(result.out).toMatch(/^turn: 2 files · fmt ok · comments ok · lint 1 over baseline · /);
     expect(result.err).toBe(
       [

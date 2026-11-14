@@ -43,50 +43,51 @@ function git(...args: string[]): string {
 it(
   "reports each warning of the sheets as one line, none for a clean sheet or a fixtures dir",
   { timeout: SLOW },
-  () => {
-    expect(cssDiagnostics(cssKit(), ALL, { fix: false })).toStrictEqual({ ok: true, value: EXPECTED });
+  async () => {
+    expect(await cssDiagnostics(cssKit(), ALL, { fix: false })).toStrictEqual({ ok: true, value: EXPECTED });
   },
 );
 
-it("runs no Stylelint and reports nothing for no CSS file", () => {
+it("runs no Stylelint and reports nothing for no CSS file", async () => {
   const runner = fakeRunner({ code: 1, stderr: "never run\n", stdout: "" });
   const root = path.dirname(runner);
-  expect(cssDiagnostics(root, ["src/a.ts", "__fixtures__/x.css"], { fix: false, runner })).toStrictEqual({
+  expect(await cssDiagnostics(root, ["src/a.ts", "__fixtures__/x.css"], { fix: false, runner })).toStrictEqual({
     ok: true,
     value: [],
   });
 });
 
-it("fixes the sheet clean, which bun fmt then leaves as it is", { timeout: SLOW }, () => {
+it("fixes the sheet clean, which bun fmt then leaves as it is", { timeout: SLOW }, async () => {
   const root = cssKit({ "src/bad.css": BAD_CSS });
-  expect(cssDiagnostics(root, ["src/bad.css"], { fix: true })).toStrictEqual({ ok: true, value: [] });
+  expect(await cssDiagnostics(root, ["src/bad.css"], { fix: true })).toStrictEqual({ ok: true, value: [] });
   expect(read(root, "src/bad.css")).toBe(FIXED_CSS);
-  expect(captureTool("bun fmt", ["--check", "src/bad.css"], { root }).code).toBe(0);
+  const formatted = await captureTool("bun fmt", ["--check", "src/bad.css"], { root });
+  expect(formatted.code).toBe(0);
 });
 
-it("returns a runner that fails as the problem line with its stderr's first line", () => {
+it("returns a runner that fails as the problem line with its stderr's first line", async () => {
   const runner = fakeRunner({ code: 1, stderr: "Error: no config\n    at load\n", stdout: "" });
-  expect(cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
+  expect(await cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
     error: ["stylelint could not run: Error: no config"],
     ok: false,
   });
 });
 
-it("returns output that is not the results as a problem line", () => {
+it("returns output that is not the results as a problem line", async () => {
   const runner = fakeRunner({ code: 0, stderr: "", stdout: '{"results":1}' });
-  const found = cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner });
+  const found = await cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner });
   expect(found.ok ? [] : found.error.map((line) => line.split(":")[0])).toStrictEqual(["stylelint could not run"]);
 });
 
-it("returns output that is no json as a problem line with the parse error", () => {
+it("returns output that is no json as a problem line with the parse error", async () => {
   const runner = fakeRunner({ code: 0, stderr: "", stdout: "Done in 3 ms" });
-  expect(cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
+  expect(await cssDiagnostics(path.dirname(runner), ["src/a.css"], { fix: false, runner })).toStrictEqual({
     error: [expect.stringMatching(/^stylelint could not run: SyntaxError: /)],
     ok: false,
   });
 });
 
-it("returns each invalid option the config holds as a problem line, and no warning", () => {
+it("returns each invalid option the config holds as a problem line, and no warning", async () => {
   const warning = { column: 1, line: 1, rule: "color-named", severity: "error", text: "x (color-named)" };
 
   const results = [
@@ -99,7 +100,7 @@ it("returns each invalid option the config holds as a problem line, and no warni
   ];
 
   const runner = fakeRunner({ code: 0, stderr: "", stdout: JSON.stringify(results) });
-  expect(cssDiagnostics(path.dirname(runner), ["src/a.css", "src/b.css"], { fix: false, runner })).toStrictEqual({
+  expect(await cssDiagnostics(path.dirname(runner), ["src/a.css", "src/b.css"], { fix: false, runner })).toStrictEqual({
     error: [
       'stylelint could not run: Invalid option value "sometimes" for rule "color-named"',
       'stylelint could not run: Invalid option name "max" for rule "order/order"',
@@ -108,15 +109,19 @@ it("returns each invalid option the config holds as a problem line, and no warni
   });
 });
 
-it("still lints the kit with this repo's GIT_DIR and GIT_INDEX_FILE set, as in a git hook", { timeout: SLOW }, () => {
-  const root = cssKit();
-  const head = git("rev-parse", "HEAD");
-  vi.stubEnv("GIT_DIR", path.resolve(git("rev-parse", "--git-dir")));
-  vi.stubEnv("GIT_INDEX_FILE", path.resolve(git("rev-parse", "--git-path", "index")));
-  expect(cssDiagnostics(root, ALL, { fix: false })).toStrictEqual({ ok: true, value: EXPECTED });
-  vi.unstubAllEnvs();
-  expect(git("rev-parse", "HEAD")).toBe(head);
-});
+it(
+  "still lints the kit with this repo's GIT_DIR and GIT_INDEX_FILE set, as in a git hook",
+  { timeout: SLOW },
+  async () => {
+    const root = cssKit();
+    const head = git("rev-parse", "HEAD");
+    vi.stubEnv("GIT_DIR", path.resolve(git("rev-parse", "--git-dir")));
+    vi.stubEnv("GIT_INDEX_FILE", path.resolve(git("rev-parse", "--git-path", "index")));
+    expect(await cssDiagnostics(root, ALL, { fix: false })).toStrictEqual({ ok: true, value: EXPECTED });
+    vi.unstubAllEnvs();
+    expect(git("rev-parse", "HEAD")).toBe(head);
+  },
+);
 
 it(
   "runs Stylelint in the cwd and gives each sheet's path, warnings and invalid options as json",

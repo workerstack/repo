@@ -26,25 +26,25 @@ it.each([
   ["times", "a", "b"],
   ["merge"],
   ["merge", "a", "b"],
-])("the arguments %j are refused with the usage line, and no gate runs", (...argv) => {
-  const run = ci(plant(), argv);
+])("the arguments %j are refused with the usage line, and no gate runs", async (...argv) => {
+  const run = await ci(plant(), argv);
   expect(run).toMatchObject({ calls: { repo: [], tsc: [], vitest: [] }, code: 1, err: USAGE, out: "" });
 });
 
-it("--report to a directory that does not exist fails with the file named", () => {
-  const run = ci(plant(), ["--report", "missing/r.json"]);
+it("--report to a directory that does not exist fails with the file named", async () => {
+  const run = await ci(plant(), ["--report", "missing/r.json"]);
   expect(run.code).toBe(1);
   expect(run.err).toMatch(/^repo ci: cannot write missing\/r\.json: .+\n$/);
 });
 
-it("--report writes the file after the gates, and the stdout is still the gate lines", () => {
+it("--report writes the file after the gates, and the stdout is still the gate lines", async () => {
   const root = plant();
 
   const json = JSON.stringify({
     testResults: [{ assertionResults: [{ fullName: "t", status: "todo" }], name: path.join(root, "src/a.test.ts") }],
   });
 
-  const run = ci(root, ["--report", "r.json"], { json: { code: 0, stderr: "", stdout: json } });
+  const run = await ci(root, ["--report", "r.json"], { json: { code: 0, stderr: "", stdout: json } });
   expect(run.code).toBe(0);
   expect(run.out.split("\n")).toHaveLength(6);
   expect(run.calls.vitest[0]).toMatch(
@@ -57,20 +57,20 @@ it("--report writes the file after the gates, and the stdout is still the gate l
   });
 });
 
-it("--report with vitest absent still writes a report with no skips", () => {
+it("--report with vitest absent still writes a report with no skips", async () => {
   const root = plant();
-  const run = ci(root, ["--report", "r.json"], { tests: null });
+  const run = await ci(root, ["--report", "r.json"], { tests: null });
   expect(run.code).toBe(0);
   expect(reportAt(root)).toStrictEqual(NO_SKIPS);
 });
 
-it("skips <dir> reads the reports in the directory relative to the working directory", () => {
+it("skips <dir> reads the reports in the directory relative to the working directory", async () => {
   const root = plant({
     "reports/ci-report-a.json": '{"os":"a","skipped":["x > t"]}',
     "reports/ci-report-b.json": '{"os":"b","skipped":["x > t"]}',
   });
 
-  const run = ci(root, ["skips", "reports"]);
+  const run = await ci(root, ["skips", "reports"]);
   expect(run).toMatchObject({
     calls: { repo: [], tsc: [], vitest: [] },
     code: 1,
@@ -94,8 +94,8 @@ it("wait is routed to the wait command with the injected runners", async () => {
   expect(err.join("")).toBe("repo ci wait: cannot read HEAD (no git); run it inside a git checkout\n");
 });
 
-it("--no-coverage runs vitest without --coverage, and passes the other gates unchanged", () => {
-  const run = ci(plant(), ["--no-coverage"]);
+it("--no-coverage runs vitest without --coverage, and passes the other gates unchanged", async () => {
+  const run = await ci(plant(), ["--no-coverage"]);
   expect(run.code).toBe(0);
   expect(run.calls.vitest).toStrictEqual(["run"]);
   expect(run.calls.tsc).toHaveLength(2);
@@ -104,9 +104,9 @@ it("--no-coverage runs vitest without --coverage, and passes the other gates unc
 it.each([
   ["--no-coverage", "--report", "r.json"],
   ["--report", "r.json", "--no-coverage"],
-])("--no-coverage combines with --report in the order %j, and the report is still written", (...argv) => {
+])("--no-coverage combines with --report in the order %j, and the report is still written", async (...argv) => {
   const root = plant();
-  const run = ci(root, argv);
+  const run = await ci(root, argv);
   expect(run.code).toBe(0);
   expect(run.calls.vitest[0]).toMatch(/^run --reporter=default --reporter=json --outputFile\.json=.+vitest\.json$/);
   expect(reportAt(root)).toStrictEqual(NO_SKIPS);

@@ -15,7 +15,7 @@ function files(manifest: Json, example: string) {
 it("builds a package before checking examples that import its name, when it has a build script", async () => {
   const manifest = { name: "@ws/app", private: true, scripts: { build: "bun build" } };
   const root = tempRoot(files(manifest, 'import "@ws/app/vitest";'));
-  const bun = vi.fn<() => typeof OK>(() => OK);
+  const bun = vi.fn<() => Promise<typeof OK>>(() => Promise.resolve(OK));
   expect(await main(["--check"], docsRun(root, { bun }).io)).toBe(0);
   expect(bun).toHaveBeenCalledWith(["run", "build"], root);
 });
@@ -23,7 +23,7 @@ it("builds a package before checking examples that import its name, when it has 
 /** Checks a package with `manifest` and `example`; the exit code and the build runner. */
 async function checked(manifest: Json, example: string) {
   const root = tempRoot(files(manifest, example));
-  const bun = vi.fn<() => typeof OK>(() => OK);
+  const bun = vi.fn<() => Promise<typeof OK>>(() => Promise.resolve(OK));
   const code = await main(["--check"], docsRun(root, { bun }).io);
 
   return { bun, code };

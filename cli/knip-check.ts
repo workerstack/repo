@@ -30,7 +30,7 @@ import type { Workspace } from "./sync/workspace.ts";
 export type KnipCheck = { report: string[]; problems: string[] };
 
 /** Runs knip with `args` in `cwd`; the default spawns the knip this package installs. */
-export type KnipRun = (args: string[], cwd: string) => Captured;
+export type KnipRun = (args: string[], cwd: string) => Promise<Captured>;
 
 /** The knip runner `checkKnipAt` uses unless a test injects another. */
 export type KnipDeps = { run?: KnipRun };
@@ -66,8 +66,8 @@ function knipBin(): string {
 }
 
 /** The knip runner for real: the resolved bin under bun, with no `GIT_*` variable. */
-function runKnip(args: string[], cwd: string): Captured {
-  return captureBun([knipBin(), ...args], cwd);
+async function runKnip(args: string[], cwd: string): Promise<Captured> {
+  return await captureBun([knipBin(), ...args], cwd);
 }
 
 /** The issues in knip's json report, in its order; null when `stdout` is not that report. */
@@ -140,14 +140,14 @@ function tail(stderr: string): string {
 }
 
 /** Runs knip on the unignored config, written for the run only. */
-function runUnignored(workspace: Workspace, run: KnipRun): Captured {
+async function runUnignored(workspace: Workspace, run: KnipRun): Promise<Captured> {
   const name = unignoredPath();
   const file = path.join(workspace.root, name);
 
   try {
     fs.writeFileSync(file, knipConfig(workspace, []));
 
-    return run(["--config", name, "--no-exit-code", "--reporter", "json"], workspace.root);
+    return await run(["--config", name, "--no-exit-code", "--reporter", "json"], workspace.root);
   } finally {
     fs.rmSync(file, { force: true });
   }
@@ -180,10 +180,14 @@ function ignoreLines(ignores: readonly KnipIgnore[], hits: readonly number[], st
  * Every issue knip finds in `workspace` is a problem unless an entry of `ignores` covers it. Each covering entry is
  * reported with its reason; one that matches nothing, before or after the run, is a problem.
  */
-export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], run: KnipRun): KnipCheck {
+export async function checkKnip(
+  workspace: Workspace,
+  ignores: readonly KnipIgnore[],
+  run: KnipRun,
+): Promise<KnipCheck> {
   const before = ignores.map((ignore) => staleBefore(workspace, ignore));
   const stale = before.flatMap((why, i) => (why === null ? [] : [`knip.ignore[${i}]: ${why}`]));
-  const ran = runUnignored(workspace, run);
+  const ran = await runUnignored(workspace, run);
   const issues = issuesOf(ran.stdout);
 
   if (ran.code === EXIT_BAD_CONFIG || issues === null)
@@ -201,5 +205,5 @@ export function checkKnip(workspace: Workspace, ignores: readonly KnipIgnore[], 
 export async function checkKnipAt(cwd: string, deps: KnipDeps = {}): Promise<KnipCheck> {
   const found = await standardsWorkspace(cwd);
 
-  return found === null ? NONE : checkKnip(found.workspace, found.config.knip.ignore, deps.run ?? runKnip);
+  return found === null ? NONE : await checkKnip(found.workspace, found.config.knip.ignore, deps.run ?? runKnip);
 }

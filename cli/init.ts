@@ -97,7 +97,7 @@ function defaultManifestKeys(pkg: PackageJson) {
  * package.json, default `private`, `sideEffects` and `packageManager` when absent, and drop the `repo:*` scripts an
  * older init copied while they still hold a value it wrote.
  */
-export function mergePackageJson(dest: string, pkgRoot: string): void {
+export async function mergePackageJson(dest: string, pkgRoot: string): Promise<void> {
   const destPath = path.join(dest, "package.json");
   let destPkg: PackageJson = {};
 
@@ -120,7 +120,7 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
   destPkg.scripts = sortKeys(destScripts);
   destPkg.devDependencies = sortKeys(devDeps);
   fs.writeFileSync(destPath, `${JSON.stringify(destPkg, null, JSON_INDENT)}\n`);
-  formatManifest(dest);
+  await formatManifest(dest);
 }
 
 /**
@@ -129,13 +129,13 @@ export function mergePackageJson(dest: string, pkgRoot: string): void {
  * bun fmt reads any other `--config` file as its own format and drops `sortPackageJson`. A failure leaves the file as
  * written; `repo fmt` fixes it.
  */
-function formatManifest(dest: string): void {
+async function formatManifest(dest: string): Promise<void> {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-init-fmt-"));
 
   try {
     const config = path.join(dir, OXFMT_CONFIG_PATH);
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
-    captureTool("bun fmt", ["--config", config, "package.json"], { root: dest });
+    await captureTool("bun fmt", ["--config", config, "package.json"], { root: dest });
   } finally {
     removeTree(dir);
   }
@@ -156,7 +156,7 @@ export type InitOptions = {
  * Writes the package.json entries, the config and `.mcp.json` when missing, and runs `git init` outside a work
  * tree.
  */
-function prepareDir(
+async function prepareDir(
   dest: string,
   pkgRoot: string,
   {
@@ -168,8 +168,8 @@ function prepareDir(
     stdout: ((s: string) => void) | undefined;
     exec: NonNullable<InitOptions["execFileSync"]>;
   },
-): void {
-  mergePackageJson(dest, pkgRoot);
+): Promise<void> {
+  await mergePackageJson(dest, pkgRoot);
   writeConfigIfMissing(dest, packs);
   initMcpJson(dest, stdout);
   initGit(dest, exec, stdout);
@@ -182,7 +182,7 @@ function prepareDir(
  * @param [options]
  * @returns
  */
-export function init(
+export async function init(
   target: string,
   {
     pkgRoot: pkgRootOpt,
@@ -192,7 +192,7 @@ export function init(
     packs,
     stdout,
   }: InitOptions = {},
-): void {
+): Promise<void> {
   const dest = path.resolve(target);
   const pkgRoot = path.resolve(pkgRootOpt ?? builtInRoot());
 
@@ -206,7 +206,7 @@ export function init(
   onPhase?.("merge", "start");
 
   try {
-    prepareDir(dest, pkgRoot, { exec, packs, stdout });
+    await prepareDir(dest, pkgRoot, { exec, packs, stdout });
   } finally {
     onPhase?.("merge", "stop");
   }

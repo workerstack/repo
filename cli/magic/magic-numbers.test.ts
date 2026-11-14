@@ -42,8 +42,8 @@ const PASS = [
   "",
 ].join("\n");
 
-it("passes identity values, scaling 2, named numbers, literal types and typed or punctuation strings", () => {
-  expect(magicOf({ "src/pass.ts": PASS })).toStrictEqual([]);
+it("passes identity values, scaling 2, named numbers, literal types and typed or punctuation strings", async () => {
+  expect(await magicOf({ "src/pass.ts": PASS })).toStrictEqual([]);
 });
 
 const REFUSED = [
@@ -65,9 +65,9 @@ const REFUSED = [
   "",
 ].join("\n");
 
-it("refuses -1, a 2 that does not scale, a local const bound, a string case and a bound off a schema", () => {
+it("refuses -1, a 2 that does not scale, a local const bound, a string case and a bound off a schema", async () => {
   expect(
-    magicOf({
+    await magicOf({
       "src/limits.constants.ts": "export const NAME_MAX = 2048;\n",
       "src/refused.ts": REFUSED,
       "src/schema.ts": SCHEMA,
@@ -81,7 +81,7 @@ it("refuses -1, a 2 that does not scale, a local const bound, a string case and 
   ]);
 });
 
-it("refuses a bound imported from a module that is not a constants file or package", () => {
+it("refuses a bound imported from a module that is not a constants file or package", async () => {
   const files = {
     "src/a.ts": [
       'import { Schema } from "./schema.ts";',
@@ -94,7 +94,7 @@ it("refuses a bound imported from a module that is not a constants file or packa
     "src/schema.ts": SCHEMA,
   };
 
-  expect(magicOf(files)).toStrictEqual([
+  expect(await magicOf(files)).toStrictEqual([
     hit("src/a.ts:4:39", NUMBER, BOUND(".max(MAX)")),
     hit("src/a.ts:4:48", NUMBER, BOUND(".max(TOP)")),
   ]);

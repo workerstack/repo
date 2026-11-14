@@ -113,9 +113,9 @@ type Report = { diagnostics: { filename: string; code: string; message: string }
 it(
   "repo lint loads the plugin with no install beside the config: each planted file fails its rule, clean passes",
   { timeout: SLOW },
-  () => {
+  async () => {
     const root = consumer(PLANTED, MANIFEST);
-    const run = captureTool("oxlint", ["-f", "json"], { root });
+    const run = await captureTool("oxlint", ["-f", "json"], { root });
     const report = JSON.parse(run.stdout) /* oxlint's json format has this shape */ as Report;
 
     const lines = report.diagnostics
@@ -124,8 +124,10 @@ it(
       .toSorted();
 
     expect([run.code, lines]).toStrictEqual([1, LINT_PLUGIN_EXPECTED]);
-    expect(captureTool("oxlint", ["src/clean.ts"], { root }).code).toBe(0);
-    expect(captureTool("oxlint", ["-f", "unix", "src/wide.ts"], { root }).stdout).toContain(
+    const clean = await captureTool("oxlint", ["src/clean.ts"], { root });
+    expect(clean.code).toBe(0);
+    const wide = await captureTool("oxlint", ["-f", "unix", "src/wide.ts"], { root });
+    expect(wide.stdout).toContain(
       "src/wide.ts:1:121: this line is 121 columns, over 120; split the string with + or a join " +
         "[Error/repo(max-line-width)]",
     );
@@ -135,7 +137,7 @@ it(
 it(
   "oxlint --fix applies the fix of repo/no-block-comment: own-line blocks become //, inline and doc blocks stay",
   { timeout: SLOW },
-  () => {
+  async () => {
     const before = [
       "/**",
       " * A doc stays.",
@@ -156,7 +158,7 @@ it(
     ].join("\n");
 
     const root = consumer({ "src/fixed.ts": before });
-    const run = captureTool("oxlint", ["--fix", "src/fixed.ts"], { root });
+    const run = await captureTool("oxlint", ["--fix", "src/fixed.ts"], { root });
     const after = fs.readFileSync(path.join(root, "src/fixed.ts"), "utf8");
     expect(after).toBe(
       before
@@ -167,21 +169,25 @@ it(
   },
 );
 
-it("loads the plugin when NODE_PATH is already set, the inherited dirs kept after its own", { timeout: SLOW }, () => {
-  const root = consumer({ "src/state.ts": PLANTED["src/state.ts"] });
-  vi.stubEnv("NODE_PATH", path.join(root, "elsewhere"));
-  const run = captureTool("oxlint", ["src/state.ts"], { root });
-  expect([run.code, run.stdout.includes("repo(no-module-state)")]).toStrictEqual([1, true]);
-});
+it(
+  "loads the plugin when NODE_PATH is already set, the inherited dirs kept after its own",
+  { timeout: SLOW },
+  async () => {
+    const root = consumer({ "src/state.ts": PLANTED["src/state.ts"] });
+    vi.stubEnv("NODE_PATH", path.join(root, "elsewhere"));
+    const run = await captureTool("oxlint", ["src/state.ts"], { root });
+    expect([run.code, run.stdout.includes("repo(no-module-state)")]).toStrictEqual([1, true]);
+  },
+);
 
-it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, () => {
+it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, async () => {
   const root = consumer({ "src/clean.ts": PLANTED["src/clean.ts"] });
   const skip = { files: ["src/clean.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
   const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, { skip: [skip] });
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), built.value);
-  const run = captureTool("oxlint", ["src/clean.ts"], { root });
+  const run = await captureTool("oxlint", ["src/clean.ts"], { root });
   expect([run.code, run.stderr]).toStrictEqual([0, ""]);
 });
 

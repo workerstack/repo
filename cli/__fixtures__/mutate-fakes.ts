@@ -86,7 +86,7 @@ function gitOf(state: Sim, calls: string[]): MutateDeps["git"] {
 }
 
 function runOf(state: Sim, calls: string[], files: Map<string, string>): MutateDeps["run"] {
-  return (args, cwd, env) => {
+  return async (args, cwd, env) => {
     calls.push(`bun ${args.join(" ")} @${cwd}${env === undefined ? "" : ` env ${JSON.stringify(env)}`}`);
     if (args[0] === "install") return state.installFails ? { code: 1, stdout: "", stderr: "lock\n" } : OK;
     leave(state, files, args.at(-1) ?? "");

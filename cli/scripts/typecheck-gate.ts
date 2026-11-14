@@ -11,6 +11,7 @@ import {
   TSC_ARGS,
   TSC_PROJECT_FLAG,
 } from "./ci.constants.ts";
+import type { Captured } from "./lint.ts";
 
 type Found = { ok: true; files: string[] } | { ok: false; errors: string[] };
 
@@ -49,7 +50,7 @@ function tscArgs(file: string): string[] {
  * `tsc --noEmit` on every tsconfig of the root and each package; under the pack only the root's, since turbo
  * typechecks the packages.
  */
-export function typecheckGate(ctx: GateCtx, { rootOnly }: { rootOnly: boolean }): Gate {
+export async function typecheckGate(ctx: GateCtx, { rootOnly }: { rootOnly: boolean }): Promise<Gate> {
   const found = tsconfigs(ctx.root, { rootOnly });
 
   if (!found.ok) {
@@ -60,7 +61,9 @@ export function typecheckGate(ctx: GateCtx, { rootOnly }: { rootOnly: boolean })
   }
 
   if (found.files.length === 0) return skip("typecheck skipped (no tsconfig.json)");
-  const runs = found.files.map((file) => ({ file, run: ctx.bins.tsc(tscArgs(file), ctx.root) }));
+  const runs: { file: string; run: Captured }[] = [];
+
+  for (const file of found.files) runs.push({ file, run: await ctx.bins.tsc(tscArgs(file), ctx.root) });
   const bad = runs.filter(({ run }) => run.code !== 0);
 
   if (bad.length === 0) return pass(`typecheck ${plural(found.files.length, "config")}`);

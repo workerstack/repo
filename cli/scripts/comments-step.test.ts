@@ -11,15 +11,15 @@ const IGNORE = '"@ts-ignore" hides a type error; fix the type, or write @ts-expe
 const PIN = `bun@${Bun.version}`;
 const APP = { name: "app", packageManager: PIN, private: true, sideEffects: false, type: "module" };
 const APP_MANIFEST = `${JSON.stringify(APP)}\n`;
-const UNUSED: Bins = { tsc: () => ({ code: 1, stderr: "", stdout: "" }), vitest: () => null };
+const UNUSED: Bins = { tsc: () => Promise.resolve({ code: 1, stderr: "", stdout: "" }), vitest: () => null };
 
 /** The comments step over `files` written to a temp root, each changed, or deleted when listed in `deleted`. */
-function step(files: Record<string, string>, deleted: readonly string[] = []) {
+async function step(files: Record<string, string>, deleted: readonly string[] = []) {
   const root = tempDir("workerstack-comments-step-");
   write(root, files);
   const changes: Change[] = Object.keys(files).map((rel) => ({ deleted: deleted.includes(rel), owner: "", rel }));
 
-  return commentsStep({
+  return await commentsStep({
     bins: UNUSED,
     changes,
     command: "turn",
@@ -30,9 +30,9 @@ function step(files: Record<string, string>, deleted: readonly string[] = []) {
   });
 }
 
-it("passes files with no refused comment", () => {
+it("passes files with no refused comment", async () => {
   expect(
-    step({ "README.md": "// @ts-ignore\n", "src/a.ts": '// @ts-expect-error "lint" is not a pack\n' }),
+    await step({ "README.md": "// @ts-ignore\n", "src/a.ts": '// @ts-expect-error "lint" is not a pack\n' }),
   ).toStrictEqual({
     label: "comments ok",
     ok: true,
@@ -41,8 +41,8 @@ it("passes files with no refused comment", () => {
   });
 });
 
-it("fails on each refused comment, naming its file and line", () => {
-  expect(step({ "src/a.ts": "export const a = 1;\n// @ts-ignore\n" })).toStrictEqual({
+it("fails on each refused comment, naming its file and line", async () => {
+  expect(await step({ "src/a.ts": "export const a = 1;\n// @ts-ignore\n" })).toStrictEqual({
     label: "comments 1 refused",
     ok: false,
     output: [`src/a.ts:2: ${IGNORE}\n`],
@@ -50,8 +50,8 @@ it("fails on each refused comment, naming its file and line", () => {
   });
 });
 
-it("skips a file the change deletes, though it is still on disk, as after git rm --cached", () => {
-  expect(step({ "src/a.ts": "// @ts-ignore\n" }, ["src/a.ts"])).toMatchObject({ label: "comments ok", ok: true });
+it("skips a file the change deletes, though it is still on disk, as after git rm --cached", async () => {
+  expect(await step({ "src/a.ts": "// @ts-ignore\n" }, ["src/a.ts"])).toMatchObject({ label: "comments ok", ok: true });
 });
 
 it(

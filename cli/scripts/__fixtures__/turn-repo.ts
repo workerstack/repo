@@ -100,7 +100,7 @@ export function recording(root: string) {
   }
 
   const bins: Bins = {
-    tsc: (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
+    tsc: async (args, cwd) => (called("tsc", args, cwd), { code: 0, stderr: "", stdout: "" }),
     vitest: (args, cwd) => (called("vitest", args, cwd), null),
   };
 
@@ -126,6 +126,9 @@ export const srcConfig = (dir = ""): Record<string, string> => ({
 
 /** A tool run that passed with no output. */
 export const OK: Captured = { code: 0, stderr: "", stdout: "" };
+
+/** Bins whose tsc passes with no output and that have no vitest. */
+export const TSC_PASSES: Bins = { tsc: () => Promise.resolve(OK), vitest: () => null };
 
 /** The `packageManager` pin of the running bun. */
 export const PIN = `bun@${Bun.version}`;

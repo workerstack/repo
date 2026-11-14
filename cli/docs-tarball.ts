@@ -3,7 +3,7 @@ import { LINE_BREAK, notPacked, packFailed } from "./docs.constants.ts";
 import type { Captured } from "./scripts/lint.ts";
 
 /** Runs `bun pm pack --dry-run --ignore-scripts` in a package folder, captured. */
-export type Pack = (cwd: string) => Captured;
+export type Pack = (cwd: string) => Promise<Captured>;
 
 /** A listed file or INDEX a package must carry: its path from the package folder and the INDEX that wants it. */
 export type Wanted = { file: string; index: string };
@@ -34,8 +34,12 @@ export function packedPaths(output: string): Set<string> {
  * INDEX stands for the files it lists. `pack` runs in that folder and `wanted` holds root-relative paths; the tarball
  * lists paths from the package folder. A failed pack is one finding.
  */
-export function tarballFindings(dir: string, wanted: readonly Wanted[], pack: () => Captured): string[] {
-  const packed = pack();
+export async function tarballFindings(
+  dir: string,
+  wanted: readonly Wanted[],
+  pack: () => Promise<Captured>,
+): Promise<string[]> {
+  const packed = await pack();
 
   if (packed.code !== 0)
     return [packFailed(dir, packed.code, `${packed.stderr}${packed.stdout}`.trim().split(LINE_BREAK, 1).join(""))];

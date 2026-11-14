@@ -43,7 +43,7 @@ describe("the shipped table", () => {
 });
 
 describe("bun dev/stock-history.ts", () => {
-  it("writes the table from main, HEAD and the working tree and prints its path count", () => {
+  it("writes the table from main, HEAD and the working tree and prints its path count", async () => {
     const root = tempDir();
     git(root, "init", "-q", "-b", "main");
     fs.copyFileSync(path.join(REPO, OXFMT_CONFIG_PATH), path.join(root, OXFMT_CONFIG_PATH));
@@ -52,7 +52,7 @@ describe("bun dev/stock-history.ts", () => {
     git(root, "commit", "-q", "-m", "one");
     write(root, { "AGENTS.md": "# A\n" });
     const { io, out, err } = lines();
-    expect(run(io, root)).toBe(0);
+    expect(await run(io, root)).toBe(0);
     expect(err).toStrictEqual([]);
     expect(out).toStrictEqual([`wrote ${STOCK_HISTORY_REL}: 2 paths`]);
 
@@ -62,11 +62,11 @@ describe("bun dev/stock-history.ts", () => {
     });
   });
 
-  it("prints git's failure and exits 1 outside a git repo", () => {
+  it("prints git's failure and exits 1 outside a git repo", async () => {
     const root = tempDir();
     write(root, { [STOCK_HISTORY_REL]: "{}\n" });
     const { io, out, err } = lines();
-    expect(run(io, root)).toBe(1);
+    expect(await run(io, root)).toBe(1);
     expect(out).toStrictEqual([]);
     expect(err.join("\n")).toMatch(/git log main failed/);
   });

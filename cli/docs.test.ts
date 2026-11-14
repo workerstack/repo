@@ -34,7 +34,7 @@ it("prints the ok line when the references hold up", async () => {
     "references/auth.md": ["# Auth", 'Use "@workerstack/demo".', fence("ts", "const a = 1;")].join("\n"),
   });
 
-  const run = docsRun(root, { pack: () => packed("references/INDEX.md", "references/auth.md") });
+  const run = docsRun(root, { pack: () => Promise.resolve(packed("references/INDEX.md", "references/auth.md")) });
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
   expect(run.err).toStrictEqual([]);
@@ -43,9 +43,9 @@ it("prints the ok line when the references hold up", async () => {
 
 it("prints every finding with its line and exits 1", async () => {
   const run = docsRun(tempRoot(BROKEN), {
-    bun: () => ({ code: 1, stderr: "Error: boom\n", stdout: "" }),
-    pack: () => packed("references/INDEX.md"),
-    tsc: () => ({ code: 2, stderr: "", stdout: TSC_ERROR }),
+    bun: () => Promise.resolve({ code: 1, stderr: "Error: boom\n", stdout: "" }),
+    pack: () => Promise.resolve(packed("references/INDEX.md")),
+    tsc: () => Promise.resolve({ code: 2, stderr: "", stdout: TSC_ERROR }),
   });
 
   expect(await main(["--check"], run.io)).toBe(1);
@@ -71,7 +71,7 @@ it("skips the export and tarball checks of a private manifest", async () => {
     "references/a.md": "# A\n",
   });
 
-  const pack = vi.fn<() => ReturnType<typeof packed>>(() => packed());
+  const pack = vi.fn<() => Promise<ReturnType<typeof packed>>>(() => Promise.resolve(packed()));
   const run = docsRun(root, { pack });
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 0 examples, 0 exports\n"]);
@@ -91,7 +91,7 @@ it("prefixes each package's paths with its folder, and checks only the roots wit
   });
 
   const run = docsRun(root, {
-    pack: (cwd) => packed("references/INDEX.md", path.basename(cwd) === "a" ? "references/x.md" : ""),
+    pack: (cwd) => Promise.resolve(packed("references/INDEX.md", path.basename(cwd) === "a" ? "references/x.md" : "")),
   });
 
   expect(await main(["--check"], run.io)).toBe(1);
