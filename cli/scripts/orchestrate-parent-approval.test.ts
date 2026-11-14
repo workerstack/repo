@@ -53,9 +53,9 @@ describe("a prompt", () => {
     expect(say(ws, "b1", { prompt: "<task-notification>done</task-notification>" })).toStrictEqual([]);
   });
 
-  it("keeps a session gate left by the previous release", () => {
+  it("ignores a session gate in the old .tmp dir", () => {
     const ws = hook.temp();
-    plantFile(ws, ".tmp/orchestrator-logs/session-gate-lg", "ask");
+    plantFile(ws, ".tmp/orchestrator-logs/session-gate-lg", "away");
     expect(say(ws, "lg", { prompt: "go on" })[0]).toMatch(/^sessionGate=ask\b/);
   });
 });

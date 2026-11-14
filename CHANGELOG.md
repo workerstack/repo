@@ -37,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sync writes knip.jsonc and .oxlintrc.jsonc with a // @generated header in place of knip.json and .oxlintrc.json. The next sync removes the old files, so a script or editor setting that names them must follow.
 - `/do` is now `/rn`: it makes no plan review or question and runs no test of its own; it keeps its own worktree the commit hook's gate and finish and sync rewrites `/do` in saved files under .repo
 
+### Removed
+
+- The hooks no longer read a 0.5 `auto-ask` stamp or stamps in `.tmp/orchestrator-logs`. You can delete `.tmp/orchestrator-logs`.
+
 ### Fixed
 
 - `repo eval --via session` reports `eval: claude: exit N` when `claude` exits before it reads its input, instead of failing with `EPIPE: broken pipe`.

@@ -12,10 +12,9 @@ import {
   readLines,
   sessionDir,
   sessionIdOf,
-  unlinkQuiet,
 } from "./orchestrate-session.ts";
 import { resolveSessionGateStamp, sessionGateStampPath } from "./orchestrate-stamps.ts";
-import { AUTO_ASK_STAMP, IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
+import { IN_PROGRESS, SESSION_GATE_STAMP } from "./orchestrate.constants.ts";
 import { ASK_MODE, AWAY_MODE } from "./strategy.constants.ts";
 import { parseMode } from "./strategy.ts";
 import type { Mode } from "./strategy.types.ts";
@@ -25,16 +24,14 @@ const SLASHES: readonly (readonly [RegExp, Mode])[] = [
   [/^\s*\/away\s*$/, "away"],
 ];
 
-/** A prompt of exactly /ask or /away stamps that mode as this session's gate and drops the legacy stamp. */
+/** A prompt of exactly /ask or /away stamps that mode as this session's gate. */
 export function applySessionGateSlash(data: HookInput, prompt: string): void {
   const slash = SLASHES.find(([re]) => re.test(prompt))?.[1];
 
   if (slash === undefined) return;
   const p = sessionGateStampPath(data, SESSION_GATE_STAMP);
-  const legacy = sessionGateStampPath(data, AUTO_ASK_STAMP);
 
-  if (p === null || legacy === null) return;
-  unlinkQuiet(legacy);
+  if (p === null) return;
   fs.mkdirSync(path.dirname(p), { recursive: true });
   fs.writeFileSync(p, slash);
 }
