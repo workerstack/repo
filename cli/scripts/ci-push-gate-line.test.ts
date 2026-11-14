@@ -31,10 +31,17 @@ it("an older passed commit does not settle a superseded push", () => {
   expect(r.gate()).toBe(noResult(C));
 });
 
-it("a later passed commit does not hide the push's own failure", () => {
+it("settles a failed push by a later passed commit that contains it", () => {
   const r = pushed([["main", A]]);
   r.result(A, "failed", TEST);
   r.result(B, "passed");
+  expect(r.gate()).toBeNull();
+});
+
+it("a later failed commit does not settle a failed push", () => {
+  const r = pushed([["main", A]]);
+  r.result(A, "failed", TEST);
+  r.result(B, "failed", TEST);
   expect(r.gate()).toBe(failedLine(A, TEST.join(", ")));
 });
 
