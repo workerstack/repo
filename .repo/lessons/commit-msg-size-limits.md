@@ -1,9 +1,9 @@
 ---
 name: commit-msg-size-limits
 paths: ["cli/commit-msg.ts","cli/commit-msg.constants.ts"]
-hits: 1
-last-hit: 2026-11-12
-evidence: ["roadmap 8"]
+hits: 2
+last-hit: 2026-11-14
+evidence: ["roadmap 8","roadmap 12"]
 ---
 
 # Keep the commit subject under 100 chars; add a body only past 1000 lines
