@@ -61,7 +61,8 @@ it("warns and exits 0 when the sync fails", () => {
   expect(out.stdout).toContain("merged wt/a into main at ");
 });
 
-it("syncs through the repo bin when the root has one and no repo script", () => {
+// A win32 bin is the repo.exe shim bun writes on install, which a test cannot write; the shebang file runs elsewhere.
+it.skipIf(process.platform === "win32")("syncs through the repo bin when the root has one and no repo script", () => {
   const body = "#!/usr/bin/env node\nrequire('fs').writeFileSync('synced.marker', process.argv.slice(2).join(' '))\n";
 
   const { r } = finishing({}, (root) => {
