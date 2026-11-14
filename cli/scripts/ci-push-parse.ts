@@ -21,6 +21,9 @@ const WINDOWS_PATH = /^([A-Za-z]:[\\/]|\\\\)/;
 const HEADS = "refs/heads/";
 const FORCE_PREFIX = /^\+/;
 
+/** The `heads/` a destination may start with, which git reads as `refs/heads/`. */
+const SHORT_HEADS = /^heads\//;
+
 /**
  * One ref a push names: the branch it updates, the ref it sends, the commit that ref is now, and the directory it runs
  * in.
@@ -116,17 +119,33 @@ function pushesIn(git: Runner, command: string, cwd: string): Push[] {
   return found;
 }
 
+/** Git's full name for `name` in `dir`: `refs/heads/main` for `@`, or `HEAD` for a detached HEAD. */
+function fullName(git: Runner, dir: string, name: string): string {
+  return git(["rev-parse", "--symbolic-full-name", name], dir).stdout.trim();
+}
+
+/**
+ * The branch a refspec's destination names, without `refs/heads/` or `heads/`. A lone source, or a `HEAD`
+ * destination, is read as git's full name for it in `dir`, so `@`, `HEAD` and `heads/main` are `main`. Null for a tag
+ * or another `refs/` name, a detached HEAD, and a lone source git does not read as a branch.
+ */
+function branchOf(git: Runner, dir: string, dst: { name: string; isLone: boolean }): string | null {
+  const isRead = dst.isLone || dst.name === HEAD;
+  const ref = isRead ? fullName(git, dir, dst.name) : dst.name;
+
+  if (ref.startsWith(HEADS)) return ref.slice(HEADS.length);
+
+  return isRead || ref.startsWith("refs/") ? null : ref.replace(SHORT_HEADS, "");
+}
+
 /** The ref one refspec of a push names, in `dir`; null for a delete, a tag, a detached HEAD or an unknown ref. */
 function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   const [given, target] = spec.replace(FORCE_PREFIX, "").split(":");
   const src = given === "" || given === undefined ? HEAD : given;
-  const dst = target ?? src;
-  const head = dst === HEAD ? git(["rev-parse", "--abbrev-ref", HEAD], dir).stdout.trim() : dst;
-  const branch = head.startsWith(HEADS) ? head.slice(HEADS.length) : head;
+  const branch = branchOf(git, dir, { isLone: target === undefined, name: target ?? src });
   const sha = git(["rev-parse", "--verify", src], dir);
-  const skip = given === "" || branch === HEAD || branch.startsWith("refs/") || sha.code !== 0;
 
-  return skip ? null : { branch, dir, sha: sha.stdout.trim(), src };
+  return given === "" || branch === null || sha.code !== 0 ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
 /** Every branch ref the push forms in `command` update, resolved where each push runs. */

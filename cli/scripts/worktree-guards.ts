@@ -2,23 +2,20 @@ import path from "node:path";
 
 import { isIgnoredRepoPath } from "../repo-dirs.ts";
 import { readWorkflow, rulesOf, type WorkflowRead } from "../workflow.ts";
-import { pushedRefs } from "./ci-push-parse.ts";
 import { spawnRunner } from "./ci-wait-run.ts";
+import { defaultPushReason } from "./default-push-reason.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import { defaultBranch, hasCommit, isManaged, relIn, textOf, worktreeName, worktreeOf } from "./worktree-git.ts";
 import {
   BRANCH_FORCE_FLAG,
   BRANCH_MOVE_FLAG,
-  defaultBranchPushReason,
   defaultBranchReason,
   destroyText,
   FORCE_OR_LONG_FORCE,
   FORCE_PUSH_REASON,
   GIT_ASKED,
-  hitsUnresolved,
   mainCheckoutWriteText,
   PLUS_REFSPEC,
-  shellQuoted,
   WT_BRANCH_PREFIX,
 } from "./worktree-guards.constants.ts";
 import { gitCommands, worktreeAddOf } from "./worktree-shell.ts";
@@ -196,31 +193,6 @@ const SHARED_GIT = {
 
 function isSharedSub(sub: string): sub is keyof typeof SHARED_GIT {
   return Object.hasOwn(SHARED_GIT, sub);
-}
-
-/**
- * The deny reason for the pushes in `commands` under the root when the workflow keeps the default branch for pull
- * requests and one sends or deletes it, `--all` or `--mirror`, else null; the workflow is read only when one exists.
- * The pushes are read back as one shell line, so a prefix or a heredoc never hides one; a throw while resolving their
- * refs denies.
- */
-function defaultPushReason(commands: GitCommand[], c: SharedContext): string | null {
-  const { p, root } = c;
-  const pushes = commands.filter((g) => g.sub === PUSH_SUB && relIn(canonicalPath(g.at, p), root, p) !== null);
-
-  if (pushes.length === 0 || !c.committed() || rulesOf(c.read()).pushDefaultBranch) return null;
-  const reason = defaultBranchPushReason(c.defaultBranch(), c.read());
-
-  if (pushes.some((g) => hitsUnresolved(g.rest, c.defaultBranch()))) return reason;
-  const words = pushes.map((g) => ["git", "-C", g.at, PUSH_SUB, ...g.rest.map((w) => w.text)].map(shellQuoted));
-
-  try {
-    const refs = pushedRefs(c.git, words.map((line) => line.join(" ")).join("\n"), root);
-
-    return refs.some((ref) => ref.branch === c.defaultBranch()) ? reason : null;
-  } catch {
-    return reason;
-  }
 }
 
 /** The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. */

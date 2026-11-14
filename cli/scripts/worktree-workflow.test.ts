@@ -26,9 +26,18 @@ function boom(): never {
   throw new Error("git is gone");
 }
 
-/** A git that resolves every ref to one commit and HEAD to `wt/a`. */
+/** What the fake git prints for `args`: HEAD is `wt/a`, every name its own branch, and every ref one commit. */
+function fakeOut(args: string[]): string {
+  const ref = String(args.at(-1));
+
+  if (args.includes("--abbrev-ref")) return "wt/a\n";
+
+  return args.includes("--symbolic-full-name") ? `refs/heads/${ref === "HEAD" ? "wt/a" : ref}\n` : "abc123\n";
+}
+
+/** A git that answers {@link fakeOut}. */
 function fakeGit(args: string[]) {
-  return { code: 0, stderr: "", stdout: args.includes("--abbrev-ref") ? "wt/a\n" : "abc123\n" };
+  return { code: 0, stderr: "", stdout: fakeOut(args) };
 }
 
 describe("main checkout writes follow the workflow", () => {

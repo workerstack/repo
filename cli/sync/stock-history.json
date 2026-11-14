@@ -2440,6 +2440,7 @@
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["80587781aa9e7065", "980563ab7af07d10"],
   "cli/scripts/__fixtures__/push-gate-rig.ts": [
+    "71dedaa578bd5d09",
     "73748908dc082ada",
     "bea88a067253171c",
     "c597f8fef6bc1cda",
@@ -2949,6 +2950,7 @@
     "32ca316a24ae5235",
     "3c5be79ca91a9f1d",
     "920c9a0b66aaac02",
+    "bf3b48c72ad30d2c",
     "d7a6b05784deac11",
     "eb92710a12a9dd40"
   ],
@@ -3400,6 +3402,7 @@
     "bd8628f517483c93",
     "c27449ba25f67b70"
   ],
+  "cli/scripts/default-push-reason.ts": ["2a739d1d5bee789b"],
   "cli/scripts/doctor-agents.test.ts": [
     "591d62f3eb068eae",
     "9bf2430d789f8aea",
@@ -8021,6 +8024,7 @@
   ],
   "cli/scripts/worktree-guards.constants.ts": [
     "099ae5ca99d29b35",
+    "1858c73bf3919d14",
     "2c65d81a30a536e6",
     "7a75b2f98f0ba368",
     "7e78ba36e3349944"
@@ -8038,6 +8042,7 @@
   ],
   "cli/scripts/worktree-guards.ts": [
     "06803a7d1e0b56fc",
+    "0d4abc0cee8fbe29",
     "155ded919c4f973a",
     "1965d1fc30564a92",
     "3a2cc354aa7f7557",
@@ -8133,7 +8138,13 @@
   ],
   "cli/scripts/worktree-usage-error.ts": ["b243172b5727e077"],
   "cli/scripts/worktree-workflow-delete.test.ts": ["17dd76e6ed0a02d2"],
-  "cli/scripts/worktree-workflow.test.ts": ["17e3aaf05aadaa7d", "5e60976d0f4ef23b", "603d0f7b0c2e1ffe"],
+  "cli/scripts/worktree-workflow-refs.test.ts": ["1ef86fc73369b5f7"],
+  "cli/scripts/worktree-workflow.test.ts": [
+    "17e3aaf05aadaa7d",
+    "5bb0b4d997799b3d",
+    "5e60976d0f4ef23b",
+    "603d0f7b0c2e1ffe"
+  ],
   "cli/scripts/worktree-write-guards.test.ts": [
     "27278365885109fb",
     "28596317ffe17b99",
