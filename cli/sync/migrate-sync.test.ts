@@ -148,6 +148,8 @@ it(
     expect(code).toBe(1);
     expect(err).toStrictEqual(["repo sync: forced failure\n", "repo sync: nothing written\n"]);
     expect(exists(root, ".rulesync")).toBe(false);
+    // The failing run planned no outputs, so it untracked none, and the next sync would refuse the tracked trees.
+    spawnSync("git", ["rm", "-r", "-q", "--cached", ".agents", ".claude", ".codex", ".cursor", ".grok"], { cwd: root });
 
     const second = await sync(root, [], true);
     expect(second.err).toStrictEqual(CONVERTED);

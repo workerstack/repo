@@ -172,16 +172,17 @@ function extensions(ctx: SyncContext): Result {
  * so it is listed too. Null outside a git repo or when git fails.
  */
 export function listedFiles(root: string, extraIgnores: readonly string[]): string[] | null {
+  return gitPaths(root, ["--cached", "--others", "--exclude-standard"], extraIgnores);
+}
+
+/** The paths `git ls-files` prints for `flags`, each `extraIgnores` line an `-x` pattern; null when git fails. */
+function gitPaths(root: string, flags: readonly string[], extraIgnores: readonly string[]): string[] | null {
   try {
-    const listed = execFileSync(
-      "git",
-      ["ls-files", "--cached", "--others", "--exclude-standard", ...extraIgnores.flatMap((line) => ["-x", line]), "-z"],
-      {
-        cwd: root,
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "ignore"],
-      },
-    );
+    const listed = execFileSync("git", ["ls-files", ...flags, ...extraIgnores.flatMap((line) => ["-x", line]), "-z"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
 
     // An unmerged path is listed once per stage.
     return [...new Set(listed.split("\0").filter((rel) => rel !== ""))].toSorted(byCodeUnit);
@@ -215,6 +216,44 @@ export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: re
 
     if ((name === NPM_IGNORE_FILE || nested) && fs.existsSync(path.join(root, rel)))
       lines.push(`${rel}: ${name === NPM_IGNORE_FILE ? NPM_IGNORE : NESTED_IGNORE}`);
+  }
+
+  return lines;
+}
+
+/** The `repo sync:` line for one ignore line and the `files` git tracks under it. */
+function trackedLine(line: string, files: readonly string[]): string {
+  const isMany = files.length > 1;
+  const count = `${files.length} file${isMany ? "s" : ""}`;
+  const keeps = `but sync keeps ${isMany ? "them" : "it"} untracked`;
+  const matches = `that match${isMany ? "" : "es"} it`;
+
+  if (line.includes("*"))
+    return `${line}: git tracks ${count} ${matches}, ${keeps}; run \`git rm --cached ${files.join(" ")}\``;
+
+  if (line.endsWith("/")) return `${line}: git tracks ${count} under it, ${keeps}; run \`git rm -r --cached ${line}\``;
+
+  return `${line}: git tracks it, but sync keeps it untracked; run \`git rm --cached ${line}\``;
+}
+
+/** The files git tracks that any of `lines` ignores; none when git fails. */
+function trackedBy(root: string, lines: readonly string[]): string[] {
+  return gitPaths(root, ["--cached", "--ignored"], lines) ?? [];
+}
+
+/**
+ * One `path: reason` line per `ignored` line (the lines of the `.gitignore` block sync is about to write) that covers
+ * files git tracks, in block order, each with the one `git rm --cached` command that fixes it. One git call asks
+ * whether any are tracked; only then does one call per line group them. None outside a git repo or when git fails.
+ */
+export function trackedIgnoredFiles(root: string, ignored: readonly string[]): string[] {
+  if (trackedBy(root, ignored).length === 0) return [];
+  const lines: string[] = [];
+
+  for (const line of ignored) {
+    const files = trackedBy(root, [line]);
+
+    if (files.length > 0) lines.push(trackedLine(line, files));
   }
 
   return lines;

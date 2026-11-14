@@ -119,10 +119,10 @@ export function linkStock(root: string): void {
   fs.symlinkSync(SELF_ROOT, path.join(root, "node_modules", "@workerstack", "repo"), "dir");
 }
 
-/** Commits everything in `root` but node_modules as one commit. */
+/** Commits everything in `root` but node_modules and the sync manifest dir, which no real install commits. */
 export function commitAll(root: string, message: string): void {
   git(root, "init", "-q");
-  fs.appendFileSync(path.join(root, ".git", "info", "exclude"), "node_modules/\n");
+  fs.appendFileSync(path.join(root, ".git", "info", "exclude"), "node_modules/\n.repo/tmp/\n");
   git(root, "add", "-A");
   git(root, "commit", "-q", "-m", message);
 }
