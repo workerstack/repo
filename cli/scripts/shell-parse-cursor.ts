@@ -1,5 +1,5 @@
 /** Reads the tokens of a shell command one at a time for the parser: peeks, matches and consumes them. */
-import type { ShellWord, Simple, Token } from "./shell-ast.types.ts";
+import type { DataRead, ShellWord, Simple, Token } from "./shell-ast.types.ts";
 import { wordOf } from "./shell-lex.ts";
 
 /** Reserved words that end a list in command position, and the operators that do. */
@@ -75,7 +75,7 @@ export function atStop(ps: Parser): boolean {
 }
 
 /** The words of a head that runs nothing: up to the token `isEnd` stops at, keeping redirect targets as words. */
-export function dataWords(ps: Parser, isEnd: (t: Token) => boolean): Simple {
+export function dataWords(ps: Parser, isEnd: (t: Token) => boolean, data: DataRead = "value"): Simple {
   const words: ShellWord[] = [];
 
   for (let t = peek(ps); t !== undefined && !isEnd(t); ps.i++, t = peek(ps)) {
@@ -83,5 +83,5 @@ export function dataWords(ps: Parser, isEnd: (t: Token) => boolean): Simple {
     else if (t.kind === "redirect") words.push(t.redirect.target);
   }
 
-  return { data: true, kind: "simple", redirects: [], words };
+  return { data, kind: "simple", redirects: [], words };
 }

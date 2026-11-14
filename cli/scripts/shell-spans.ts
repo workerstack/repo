@@ -3,7 +3,7 @@
 import { CONTROL_LEAD, HEX_LEADS } from "./shell-spans.constants.ts";
 
 /** A backslash and the character it escapes. */
-const PAIR_LENGTH = 2;
+export const PAIR_LENGTH = 2;
 
 /**
  * One ANSI-C escape after its backslash: `\x`, `\u` or `\U` and hex digits, `\c` and a character, octal digits, or
@@ -43,7 +43,7 @@ function unescaped(cmd: string, from: number, close: string): number {
 }
 
 /** The index just past a quoted or backticked span that opens at `at`, or the end of `cmd`. */
-function pastQuoted(cmd: string, at: number): number {
+export function pastQuoted(cmd: string, at: number): number {
   const close = cmd.charAt(at);
   const end = close === "'" ? cmd.indexOf("'", at + 1) : unescaped(cmd, at + 1, close);
 
@@ -51,7 +51,7 @@ function pastQuoted(cmd: string, at: number): number {
 }
 
 /** The index of the `close` that pairs with an `open` before `from`, or the end of `cmd`; skips quotes and escapes. */
-function pairEnd(cmd: string, from: number, [open, close]: string): number {
+export function pairEnd(cmd: string, from: number, [open, close]: string): number {
   let depth = 1;
   let at = from;
 
@@ -67,14 +67,6 @@ function pairEnd(cmd: string, from: number, [open, close]: string): number {
   }
 
   return cmd.length;
-}
-
-/**
- * The index of the `)` that closes a `$(` whose body starts at `from`, or the end of `cmd` when none does. Quotes,
- * backticks and escapes are skipped whole, and each `(` inside needs its own `)`.
- */
-export function substitutionEnd(cmd: string, from: number): number {
-  return pairEnd(cmd, from, "()");
 }
 
 /** The index of the `}` that closes a `${` whose body starts at `from`, or the end of `cmd`. */

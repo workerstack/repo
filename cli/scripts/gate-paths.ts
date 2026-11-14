@@ -6,6 +6,7 @@ import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
 import { patternWords } from "./pattern-words.ts";
+import { segmentRegExp } from "./shell-glob.ts";
 import { type ShellCommand, shellWords } from "./shell-words.ts";
 import { ASSIGNMENT_RE } from "./shell.constants.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
@@ -19,6 +20,9 @@ export const DENY_PATH_SEGMENTS: ReadonlySet<string> = /* @__PURE__ */ new Set([
 ]);
 
 const DENY_LOCKFILES: ReadonlySet<string> = /* @__PURE__ */ new Set(["bun.lock"]);
+
+/** The dir names a glob segment may not match: the denied segments and `.git`. */
+const DENY_GLOB_DIRS: readonly string[] = [...DENY_PATH_SEGMENTS, ".git"];
 
 /**
  * A package's shipped `references/` dir under any `node_modules/@workerstack/<pkg>/`; the one `node_modules` path
@@ -87,9 +91,9 @@ export function pathIsDenied(p: string | null | undefined): boolean {
  * path, a lockfile or `.git`. A line with no dump or search name is judged too when a value it sets spells one, when a
  * program is an expansion it cannot read, or when a shell runs a script it cannot read, since either may run any.
  */
-export function bashTargetsDenylist(command: string | undefined): boolean {
+export function bashTargetsDenylist(command: string | undefined, cwd: string): boolean {
   const cmd = command ?? "";
-  const { commands, hasUnreadScript } = shellWords(cmd);
+  const { commands, hasUnreadScript } = shellWords(cmd, cwd);
 
   if (!BASH_DUMP_CMDS.test(cmd) && !hasUnreadScript && !commands.some((c) => programExpanded(c) || dumps(c)))
     return false;
@@ -113,20 +117,41 @@ function namesDenied(word: string, { asPath }: { asPath: boolean }): boolean {
 }
 
 /**
+ * True when a glob the walk could not match may match a denied path: a segment that may match a denied name or `.git`,
+ * or a last one that may match the lockfile, past a stock references dir. Judged as a path, or when it holds a slash.
+ */
+function globDenied(glob: string | null, { asPath }: { asPath: boolean }): boolean {
+  if (glob === null || !(asPath || glob.includes("/"))) return false;
+  const stock = STOCK_REFERENCES.exec(glob);
+  const segments = (stock === null ? glob : glob.slice(stock.index + stock[0].length)).split("/");
+
+  return segments.some((seg, i) => {
+    const re = segmentRegExp(seg);
+    const names = i === segments.length - 1 ? [...DENY_GLOB_DIRS, ...DENY_LOCKFILES] : DENY_GLOB_DIRS;
+
+    return re !== null && names.some((n) => re.test(n));
+  });
+}
+
+/**
  * True when the simple command `c` reads a denied path. Each word its program may open is judged, in both the spelling
  * `words` keeps and the one bash reads: in a command that runs a dump or search, as a path; in any other, when it holds
  * a slash; in every command, for the lockfile or a `.git` dir. A pattern its program never opens is skipped
  * (`patternWords`), and so is nothing a redirect names. A command that holds an expansion skips no pattern, since the
- * value may turn one into a path (`-e x`, `--files`), and one whose program is an expansion is judged as a dump.
+ * value may turn one into a path (`-e x`, `--files`), and one whose program is an expansion is judged as a dump. A glob
+ * the walk could not match is judged by the names it may match.
  */
 function readsDeniedPath(c: ShellCommand): boolean {
-  const { words, bashWords, redirects, expanded } = c;
+  const { words, bashWords, redirects, expanded, globs } = c;
   const isDump = programExpanded(c) || dumps(c);
   const skipped = expanded.size > 0 ? new Set<number>() : skippedWords(words, redirects);
 
   return words.some(
     (w, i) =>
-      !skipped.has(i) && (namesDenied(w, { asPath: isDump }) || namesDenied(String(bashWords[i]), { asPath: isDump })),
+      !skipped.has(i) &&
+      (namesDenied(w, { asPath: isDump }) ||
+        namesDenied(String(bashWords[i]), { asPath: isDump }) ||
+        globDenied(globs[i] ?? null, { asPath: isDump })),
   );
 }
 

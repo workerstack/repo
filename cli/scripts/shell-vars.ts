@@ -3,15 +3,13 @@ import os from "node:os";
 
 import { repoEnv } from "../repo-env.ts";
 import type { Dir, ShellWord, Simple, StartEnv, Value, Vars } from "./shell-ast.types.ts";
-import { expandWord, lookup } from "./shell-expand.ts";
+import { expandValue, lookup } from "./shell-expand.ts";
+import { readWord } from "./shell-fields.ts";
 import { programAt, programBase } from "./shell-scripts.ts";
-import { ASSIGNMENT_RE, END_OF_OPTIONS, PRINTF, PRINTF_VAR_OPTION, UNSET } from "./shell.constants.ts";
+import { ASSIGNMENT_RE, END_OF_OPTIONS, PRINTF, PRINTF_VAR_OPTION, SETTERS, UNSET } from "./shell.constants.ts";
 
 /** The head of an assignment word: its `NAME=` text, the name, whether it sets an array entry, and whether `+=`. */
 type AssignHead = { head: string; name: string; isEntry: boolean; isAppend: boolean };
-
-/** Builtins that set the variables their `NAME=value` words name. */
-const SETTERS: ReadonlySet<string> = /* @__PURE__ */ new Set(["export", "readonly"]);
 
 /**
  * Builtins that set or drop variables in ways the gate does not follow (a local scope, a value read from input, a
@@ -125,7 +123,7 @@ function assignedValue(word: ShellWord, { head, name, isEntry, isAppend }: Assig
     raw,
   };
 
-  const read = expandWord(value, vars, { split: false });
+  const read = readWord(expandValue(value, vars));
   const old = isAppend ? lookup(vars, name) : known("");
 
   return read.literal && old.known ? known(old.text + read.text) : { cause: raw, known: false };
@@ -151,7 +149,7 @@ function assigned(words: readonly ShellWord[], vars: Vars): Vars {
  * forgets every variable.
  */
 function unsetVars(args: readonly ShellWord[], vars: Vars): Vars {
-  const read = args.map((w) => expandWord(w, vars));
+  const read = args.map(readWord);
 
   if (read.some((r) => !r.literal)) return new Map();
   const words = read.map((r) => r.text);
@@ -184,14 +182,16 @@ export function varsAfter(c: Simple, vars: Vars): Vars {
   if (assignsInWord(c)) return new Map();
 
   if (prog === undefined) return assigned(c.words, vars);
-  const read = expandWord(prog, vars);
+  const read = readWord(prog);
   const name = read.literal ? programBase(read.text) : "";
 
   if (SETTERS.has(name)) return assigned(c.words.slice(at + 1), vars);
 
   if (name === UNSET) return unsetVars(c.words.slice(at + 1), vars);
 
-  return name === "" || FORGETTERS.has(name) || (name === PRINTF && c.words.some((w) => w.raw === PRINTF_VAR_OPTION))
+  return name === "" ||
+    FORGETTERS.has(name) ||
+    (name === PRINTF && c.words.some((w) => readWord(w).text === PRINTF_VAR_OPTION))
     ? new Map()
     : vars;
 }

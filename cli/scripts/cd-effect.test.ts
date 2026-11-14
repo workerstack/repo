@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { cdEffect } from "./cd-effect.ts";
 import type { Dir, Vars } from "./shell-ast.types.ts";
+import { expandCommand } from "./shell-fields.ts";
 import { wordAt } from "./shell-lex-word.ts";
 import { seedVars, withVar } from "./shell-vars.ts";
 
@@ -14,7 +15,10 @@ const START = seedVars({ cdpath: "", home: "/h" }, "/r");
 /** The dir after the command `src` run from `dir` with `vars`, as a path, `?cause`, or null when it changes none. */
 function after(src: string, dir: Dir = HERE, vars: Vars = START): string | null {
   const words = src.split(" ").map((w) => wordAt(w, 0).word);
-  const got = cdEffect(words, { dir, vars }, path.posix);
+  const ran = expandCommand({ kind: "simple", redirects: [], words }, { dir, vars }, path.posix);
+
+  if (ran === null) throw new Error(`no fields for ${src}`);
+  const got = cdEffect(ran.words, { dir, vars }, path.posix);
 
   if (got === null) return null;
 

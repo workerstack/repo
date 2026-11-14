@@ -6,7 +6,7 @@ import type path from "node:path";
 
 import { cdEffect } from "./cd-effect.ts";
 import type { Dir, ShellNode, ShellWord, Simple, StartEnv, Stdin, Vars, Visited } from "./shell-ast.types.ts";
-import { expandWord } from "./shell-expand.ts";
+import { expandCommand, readWord } from "./shell-fields.ts";
 import { scriptText } from "./shell-lex-word.ts";
 import { lex } from "./shell-lex.ts";
 import { shellParse } from "./shell-parse.ts";
@@ -38,8 +38,10 @@ const BRANCH_CAUSE = "a folder set in a branch";
 /** The most values a `for` list is walked with, one pass each. */
 const MAX_FOR_VALUES = 8;
 
-/** The characters an unquoted list word expands as a file pattern. */
-const GLOB_RE = /[*?[]/;
+/** Why the gate cannot read a command whose braces make more words than it reads. */
+const BRACES_CAUSE = "braces that make too many words";
+
+const LOST_DIR: Dir = { cause: BRACES_CAUSE, known: false };
 
 const EMPTY: ShellNode = { items: [], kind: "seq" };
 
@@ -73,6 +75,11 @@ function walkSubsts(w: Walker, word: ShellWord, st: State): void {
   for (const body of bodies) walkNode(w, parse(body), unfed(st));
 }
 
+/** The command bash runs for `c` in `st`. */
+function run(w: Walker, c: Simple, st: State): Simple | null {
+  return expandCommand(c, st, w.p);
+}
+
 function wordsOf(c: Simple): ShellWord[] {
   return [...c.words, ...c.redirects.flatMap((r) => (r.body === undefined ? [r.target] : [r.target, r.body]))];
 }
@@ -94,29 +101,51 @@ function callOf(w: Walker, c: Simple, st: State): State | null {
 }
 
 /**
+ * Visits `c` as bash runs it in `st`, after the scripts of its substitutions: its fields, or a command the gate cannot
+ * read when its braces make too many words, which gives null.
+ */
+function visitSimple(w: Walker, c: Simple, st: State): Simple | null {
+  for (const word of wordsOf(c)) walkSubsts(w, word, st);
+  const ran = run(w, c, st);
+
+  w.visit(ran === null ? { cause: BRACES_CAUSE, dir: st.dir, kind: "opaque" } : { ...ran, dir: st.dir, vars: st.vars });
+
+  return ran;
+}
+
+/**
  * One simple command: its substitutions, itself, then the function it calls, else its scripts, its `cd` (which sets
- * `PWD`) and the variables it sets.
+ * `PWD`) and the variables it sets. A command the gate cannot read leaves the dir and every variable unknown.
  */
 function walkSimple(w: Walker, c: Simple, st: State): State {
-  for (const word of wordsOf(c)) walkSubsts(w, word, st);
-  w.visit({ ...c, dir: st.dir, vars: st.vars });
+  const ran = visitSimple(w, c, st);
 
-  if (c.data === true) return st;
-  const called = callOf(w, c, st);
+  if (ran === null) return { ...st, dir: LOST_DIR, vars: new Map() };
+
+  if (c.data !== undefined) return st;
+  const called = callOf(w, ran, st);
 
   if (called !== null) return called;
   let now = st;
 
-  for (const s of scriptsOf(c, st.stdin)) {
+  for (const s of scriptsOf(ran, st.stdin)) {
     if (s.kind === "opaque") w.visit({ cause: s.cause, dir: now.dir, kind: "opaque" });
     else if (s.inherits) now = { ...walkNode(w, parse(s.text), unfed(now)), stdin: now.stdin };
     else walkNode(w, parse(s.text), unfed(now));
   }
 
-  const dir = cdEffect(c.words, now, w.p);
+  const dir = cdEffect(ran.words, now, w.p);
   const moved = dir === null ? now : { ...now, dir, vars: withDir(now.vars, dir) };
 
-  return { ...moved, vars: varsAfter(c, moved.vars) };
+  return { ...moved, vars: varsAfter(ran, moved.vars) };
+}
+
+/** What `item` writes to the next item of a pipe run in `st`: the line an `echo` or `printf` prints, else opaque. */
+function pipedFrom(w: Walker, item: ShellNode, st: State): Stdin {
+  if (item.kind !== "simple") return BLOCK_STDIN;
+  const ran = run(w, item, st);
+
+  return ran === null ? { cause: BRACES_CAUSE, kind: "opaque" } : pipedStdin(ran);
 }
 
 /** Each item of a pipe in a copy of the state, fed what the item before it writes. */
@@ -125,7 +154,7 @@ function walkPipe(w: Walker, node: Of<"pipe">, st: State): State {
 
   for (const item of node.items) {
     walkNode(w, item, { ...st, stdin });
-    stdin = item.kind === "simple" ? pipedStdin(item) : BLOCK_STDIN;
+    stdin = pipedFrom(w, item, { ...st, stdin });
   }
 
   return st;
@@ -188,12 +217,15 @@ function walkApart(w: Walker, node: Of<"async" | "subshell">, st: State): State 
   return node.kind === "subshell" && node.body.kind === "subshell" ? { ...st, vars: new Map() } : st;
 }
 
-/** The values a `for` gives its name; null when one is unknown or a pattern, `select` picks, or there are too many. */
-function forValues(node: Of<"for">, vars: Vars): string[] | null {
-  if (node.select === true || node.words === null || node.words.words.length > MAX_FOR_VALUES) return null;
-  const read = node.words.words.map((word) => expandWord(word, vars));
+/**
+ * The values a `for` gives its name from the fields of its list; null when one is unknown, `select` picks, or there
+ * are too many.
+ */
+function forValues(node: Of<"for">, list: Simple | null): string[] | null {
+  if (node.select === true || list === null || list.words.length > MAX_FOR_VALUES) return null;
+  const read = list.words.map(readWord);
 
-  return read.every((r) => r.literal && !GLOB_RE.test(r.raw)) ? read.map((r) => r.text) : null;
+  return read.every((r) => r.literal) ? read.map((r) => r.text) : null;
 }
 
 /**
@@ -201,17 +233,16 @@ function forValues(node: Of<"for">, vars: Vars): string[] | null {
  * last; when the values are not known, a loop with the name unknown.
  */
 function walkFor(w: Walker, node: Of<"for">, st: State): State {
-  const entry = node.words === null ? st : walkSimple(w, node.words, st);
-  const values = forValues(node, entry.vars);
+  const values = forValues(node, node.words === null ? null : visitSimple(w, node.words, st));
 
   if (values === null) {
-    const vars = withVar(entry.vars, node.name, { cause: `$${node.name}`, known: false });
+    const vars = withVar(st.vars, node.name, { cause: `$${node.name}`, known: false });
 
-    return walkLoop(w, { body: node.body, cond: EMPTY, kind: "loop" }, { ...entry, vars });
+    return walkLoop(w, { body: node.body, cond: EMPTY, kind: "loop" }, { ...st, vars });
   }
 
-  let pass = entry;
-  let got = entry;
+  let pass = st;
+  let got = st;
 
   for (const [i, text] of values.entries()) {
     pass = walkNode(w, node.body, { ...pass, vars: withVar(pass.vars, node.name, { known: true, text }) });

@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 
+import { fileTree } from "./__fixtures__/file-tree.ts";
 import { bashTargetsDenylist } from "./gate-paths.ts";
+
+/** A dir that does not exist, so a glob in a command matches nothing, as in an empty dir. */
+const NO_DIR = "/no-such-gate-dir";
 
 const nmDir = ["node", "modules"].join("_");
 
@@ -42,9 +46,62 @@ const passes = [
 ];
 
 it("bashTargetsDenylist: judges every read bash runs, in blocks and in scripts", () => {
-  for (const cmd of denied) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+  for (const cmd of denied) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
 });
 
 it("bashTargetsDenylist: passes denied names that are only data", () => {
-  for (const cmd of passes) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+  for (const cmd of passes) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(false);
+});
+
+/** A temp dir with a `dist` dir, a lockfile and `src/a.ts`, for globs bash matches on disk. */
+function globDir(): string {
+  return fileTree(["bun.lock", "src/a.ts", "dist/x"]);
+}
+
+it("bashTargetsDenylist: judges the words braces, split values and globs make", () => {
+  const dir = globDir();
+
+  const deniedWords = [
+    "cat {dist,src}/x.js",
+    "cat {a,{b,dist}}/x",
+    "cat dis{s..u}/x",
+    `F="a ${nmDir}/x"; cat $F`,
+    `IFS=:; F="a:${nmDir}/x"; cat $F`,
+    "cat $X/*",
+    "cat *",
+    "cat bun.l*",
+    'X="*"; cat $X',
+    `cd '${dir}' && cat d?st/x`,
+  ];
+
+  const passing = [
+    "cat src/*",
+    `cat ./${nmDir}/@workerstack/repo/references/*.md`,
+    "(( x * 2 ))",
+    "echo {1..3}",
+    'cat "*"',
+    "cat \\*",
+    'X="*"; cat "$X"',
+    "T=$(for f in a; do case $f in *.ts) echo $f;; *) :;; esac; done | sort -u); cat a",
+  ];
+
+  for (const cmd of deniedWords) expect(bashTargetsDenylist(cmd, dir), cmd).toBe(true);
+
+  for (const cmd of passing) expect(bashTargetsDenylist(cmd, dir), cmd).toBe(false);
+});
+
+it("bashTargetsDenylist: denies a glob it cannot match when a segment could name a denied dir or file", () => {
+  const unmatched = ["cat src/*", "cat bun.l*", "cat .gi?/x", "cat a; echo src/*"];
+
+  const passing = [
+    `cat ${nmDir}/@workerstack/repo/references/*.md`,
+    "cat bun.l*/x",
+    "cat a; echo *",
+    "cat src/*.ts",
+    "cat ?git/x",
+  ];
+
+  for (const cmd of unmatched) expect(bashTargetsDenylist(`cd $D && ${cmd}`, NO_DIR), cmd).toBe(true);
+
+  for (const cmd of passing) expect(bashTargetsDenylist(`cd $D && ${cmd}`, NO_DIR), cmd).toBe(false);
 });

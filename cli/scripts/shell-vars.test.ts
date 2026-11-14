@@ -1,8 +1,10 @@
 import os from "node:os";
+import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import type { Simple, Value, Vars } from "./shell-ast.types.ts";
+import { expandCommand } from "./shell-fields.ts";
 import { wordAt } from "./shell-lex-word.ts";
 import { assignment, joinVars, processEnv, sameVars, seedVars, varsAfter, withDir, withVar } from "./shell-vars.ts";
 
@@ -12,14 +14,20 @@ function v(text: string): Value {
   return { known: true, text };
 }
 
-/** A simple command of words split on blanks. */
-function simple(src: string): Simple {
-  return { kind: "simple", redirects: [], words: src.split(" ").map((w) => wordAt(w, 0).word) };
+/** A simple command of words split on blanks, as the fields bash runs with `vars` in `/r`. */
+function simple(src: string, vars: Vars = START): Simple {
+  const c: Simple = { kind: "simple", redirects: [], words: src.split(" ").map((w) => wordAt(w, 0).word) };
+
+  const ran = expandCommand(c, { dir: { known: true, path: "/r" }, vars }, path.posix);
+
+  if (ran === null) throw new Error(`no fields for ${src}`);
+
+  return ran;
 }
 
 /** `name` after `src` ran with `vars`: its text, `?cause`, or `-` when it is not held. */
 function after(src: string, name: string, vars: Vars = START): string {
-  const got = varsAfter(simple(src), vars).get(name);
+  const got = varsAfter(simple(src, vars), vars).get(name);
 
   if (got === undefined) return "-";
 

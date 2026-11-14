@@ -103,7 +103,8 @@ describe("scriptsOf trap and git", () => {
   });
 
   it("runs nothing for data words or a plain command", () => {
-    expect(scriptsOf({ ...simple("eval a"), data: true }, NONE)).toStrictEqual([]);
+    expect(scriptsOf({ ...simple("eval a"), data: "fields" }, NONE)).toStrictEqual([]);
+    expect(scriptsOf({ ...simple("eval a"), data: "value" }, NONE)).toStrictEqual([]);
     expect(scripts("ls -la")).toStrictEqual([]);
   });
 });

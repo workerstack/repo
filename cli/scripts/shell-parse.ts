@@ -182,7 +182,7 @@ function forLoop(ps: Parser): ShellNode {
   const name = wordOf(peek(ps))?.raw ?? "";
   ps.i++;
   skipLines(ps);
-  const words = take(ps, "in") ? dataWords(ps, (t) => t.kind === "op") : null;
+  const words = take(ps, "in") ? dataWords(ps, (t) => t.kind === "op", "fields") : null;
   const body = doBody(ps);
 
   return isSelect ? { body, kind: "for", name, select: true, words } : { body, kind: "for", name, words };

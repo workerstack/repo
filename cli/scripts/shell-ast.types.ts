@@ -2,23 +2,28 @@
 
 /**
  * A piece of a word. `lit` is text in the spelling the path gate keeps (`text`, a backslash before a plain character
- * kept for a Windows separator) and in bash's (`bash`). `param` is an expansion (`$x`, `${…}`, `$((…))`), with the
+ * kept for a Windows separator) and in bash's (`bash`), `quoted` when quotes or a backslash keep bash from reading a
+ * brace or a pattern in it. `param` is an expansion (`$x`, `${…}`, `$((…))`), with the
  * bodies of the `$(…)` inside it and whether double quotes (or a heredoc body) keep it from being split. `subst` is a
  * command substitution (`$(…)`, a backtick, `<(…)` or `>(…)`) with the script it runs.
  */
 export type Part =
-  | { kind: "lit"; text: string; bash: string }
+  | { kind: "lit"; text: string; bash: string; quoted: boolean }
   | { kind: "param"; raw: string; substs: readonly string[]; quoted: boolean }
   | { kind: "subst"; raw: string; body: string };
 
-/** One shell word: its parts, and its text as typed. */
+/**
+ * One shell word: its parts, and its text as typed. A field, a word after expansion, keeps the raw of the word it came
+ * from, so an assignment is still found as bash finds it, before expansion.
+ */
 export type ShellWord = { parts: readonly Part[]; raw: string };
 
 /**
  * A word as a gate judges it, expanded by the variables the line sets: the text bash gives it (an unknown part as
  * typed); the path gate's two spellings of it, a substitution as empty (`pathText` with the backslashes a Windows path
  * keeps, `pathBash` as bash reads them); the text as typed; whether every part is known; and the known text around
- * each unknown part (`pieces`, one item when all is known).
+ * each unknown part (`pieces`, one item when all is known); and for a pattern bash would match on disk, the pattern
+ * with each character that matches only itself escaped (`glob`), else null. A pattern character is an unknown part.
  */
 export type ReadWord = {
   text: string;
@@ -27,6 +32,7 @@ export type ReadWord = {
   raw: string;
   literal: boolean;
   pieces: readonly string[];
+  glob: string | null;
 };
 
 /** A variable's value: known text, or unknown with the text that lost it. */
@@ -52,8 +58,14 @@ export type Token =
   | { kind: "op"; op: string }
   | { kind: "redirect"; redirect: Redirect };
 
+/**
+ * How bash reads the words of a command that runs nothing: `fields` makes each word its fields as for a command (a
+ * `for` list), `value` reads each as one value (a `case` word, an arithmetic head).
+ */
+export type DataRead = "fields" | "value";
+
 /** A simple command; `data` marks the words of a `for` list, a `case` word or an arithmetic head, which run nothing. */
-export type Simple = { kind: "simple"; words: readonly ShellWord[]; redirects: readonly Redirect[]; data?: true };
+export type Simple = { kind: "simple"; words: readonly ShellWord[]; redirects: readonly Redirect[]; data?: DataRead };
 
 /**
  * A command node. `for` runs `body` once per word of `words` (`"$@"` when null) with `name` set to it, or for

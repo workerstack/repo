@@ -1,5 +1,8 @@
 /** Program names and option sets the shared bash walk reads commands by. */
 
+/** The index `at` takes for the last item. */
+export const LAST = -1;
+
 /** The builtin that prints by a format, and can write its output into a variable. */
 export const PRINTF = "printf";
 
@@ -8,6 +11,12 @@ export const PRINTF_VAR_OPTION = "-v";
 
 /** The builtin that drops the variables, or with `-f` the functions, its words name. */
 export const UNSET = "unset";
+
+/** Builtins that set the variables their `NAME=value` words name, which bash reads as assignments, not as fields. */
+export const SETTERS: ReadonlySet<string> = /* @__PURE__ */ new Set(["export", "readonly"]);
+
+/** Redirects whose word is no file: a heredoc's delimiter and a here-string's text. */
+export const DATA_REDIRECTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["<<", "<<-", "<<<"]);
 
 /**
  * A word bash reads as an assignment before the program: `NAME=`, `NAME+=`, or with a subscript (`NAME[k]=`), which

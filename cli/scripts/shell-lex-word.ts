@@ -1,6 +1,8 @@
 /** Reads one shell word, or a heredoc body, into its literal, expansion and substitution parts. */
 import type { Part, ShellWord, WordSpan } from "./shell-ast.types.ts";
-import { ansiCEnd, backtickEnd, braceEnd, decodeAnsiC, substitutionEnd } from "./shell-spans.ts";
+import { ansiCEnd, backtickEnd, braceEnd, decodeAnsiC } from "./shell-spans.ts";
+import { LAST } from "./shell.constants.ts";
+import { substitutionEnd } from "./substitution-end.ts";
 
 /**
  * Characters a backslash outside quotes escapes. Before any other, `text` keeps the backslash (a Windows
@@ -29,26 +31,30 @@ const PAIR = 2;
 /** `$((` opens arithmetic: the index of its first inner character. */
 const ARITH_OPEN = 3;
 
-/** The index `at` takes for the last item. */
-const LAST = -1;
-
 /** A read in progress: the text and the parts read from it so far. */
 type Reader = { src: string; parts: Part[] };
 
 /** A `$` form read from the text, and the index past it. */
 type DollarSpan = { part: Part; end: number };
 
-function addLit(rd: Reader, text: string, bash: string = text): void {
+/** Text bash reads with no brace or pattern in it: in quotes, after a backslash, in a heredoc body. */
+const QUOTED = true;
+
+/** Literal text to add: as typed, as bash reads it (the typed text when absent), and whether it was quoted. */
+type LitPiece = { text: string; bash?: string; quoted: boolean };
+
+/** Adds literal text, joined to the literal before it when both have the same quoting. */
+function addLit(rd: Reader, { text, bash = text, quoted }: LitPiece): void {
   const last = rd.parts.at(LAST);
 
-  if (last?.kind !== "lit") {
-    rd.parts.push({ bash, kind: "lit", text });
+  if (last?.kind !== "lit" || last.quoted !== quoted) {
+    rd.parts.push({ bash, kind: "lit", quoted, text });
 
     return;
   }
 
   rd.parts.pop();
-  rd.parts.push({ bash: last.bash + bash, kind: "lit", text: last.text + text });
+  rd.parts.push({ bash: last.bash + bash, kind: "lit", quoted, text: last.text + text });
 }
 
 /** The `$(…)` bodies a span of text runs: its substitutions, and those inside its expansions. */
@@ -118,7 +124,7 @@ function quotedChar(rd: Reader, at: number, escapable: ReadonlySet<string>): num
   const next = rd.src.charAt(at + 1);
 
   if (ch === "\\" && escapable.has(next)) {
-    if (next !== "\n") addLit(rd, next);
+    if (next !== "\n") addLit(rd, { quoted: QUOTED, text: next });
 
     return at + PAIR;
   }
@@ -127,7 +133,7 @@ function quotedChar(rd: Reader, at: number, escapable: ReadonlySet<string>): num
   const dollar = ch === "$" ? dollarAt({ i: at, quoted: escapable !== ESCAPABLE, src: rd.src }) : null;
 
   if (dollar === null) {
-    addLit(rd, ch);
+    addLit(rd, { quoted: escapable !== ESCAPABLE, text: ch });
 
     return at + 1;
   }
@@ -140,7 +146,7 @@ function quotedChar(rd: Reader, at: number, escapable: ReadonlySet<string>): num
 /** A double-quoted span from the quote at `i`, to its close or the end; the index past it. */
 function doubleQuoted(rd: Reader, i: number): number {
   let at = i + 1;
-  addLit(rd, "");
+  addLit(rd, { quoted: QUOTED, text: "" });
 
   while (at < rd.src.length && rd.src[at] !== '"') at = quotedChar(rd, at, DQ_ESCAPABLE);
 
@@ -154,8 +160,8 @@ function doubleQuoted(rd: Reader, i: number): number {
 function backslash(rd: Reader, i: number): number {
   const next = rd.src.charAt(i + 1);
 
-  if (!ESCAPABLE.has(next)) addLit(rd, `\\${next}`, next === "" ? "\\" : next);
-  else if (next !== "\n") addLit(rd, next);
+  if (!ESCAPABLE.has(next)) addLit(rd, { bash: next === "" ? "\\" : next, quoted: QUOTED, text: `\\${next}` });
+  else if (next !== "\n") addLit(rd, { quoted: QUOTED, text: next });
 
   return i + PAIR;
 }
@@ -166,7 +172,7 @@ function unquotedDollar(rd: Reader, i: number): number {
 
   if (next === "'") {
     const end = ansiCEnd(rd.src, i + PAIR);
-    addLit(rd, decodeAnsiC(rd.src.slice(i + PAIR, end)));
+    addLit(rd, { quoted: QUOTED, text: decodeAnsiC(rd.src.slice(i + PAIR, end)) });
 
     return end + 1;
   }
@@ -193,7 +199,7 @@ export function opensProcess(src: string, i: number): boolean {
 function singleQuoted(rd: Reader, at: number): number {
   const close = rd.src.indexOf("'", at + 1);
   const end = close < 0 ? rd.src.length : close;
-  addLit(rd, rd.src.slice(at + 1, end));
+  addLit(rd, { quoted: QUOTED, text: rd.src.slice(at + 1, end) });
 
   return end + 1;
 }
@@ -237,7 +243,7 @@ export function wordAt(src: string, i: number): WordSpan {
 
 /** The body of a heredoc whose delimiter was quoted: literal text. */
 export function quotedBody(text: string): ShellWord {
-  return { parts: [{ bash: text, kind: "lit", text }], raw: text };
+  return { parts: [{ bash: text, kind: "lit", quoted: QUOTED, text }], raw: text };
 }
 
 /** The body of a heredoc whose delimiter was not quoted: read like double-quoted text, a backslash escaping less. */

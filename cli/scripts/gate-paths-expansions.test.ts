@@ -2,6 +2,9 @@ import { expect, it } from "vitest";
 
 import { bashTargetsDenylist } from "./gate-paths.ts";
 
+/** A dir that does not exist, so a glob in a command matches nothing, as in an empty dir. */
+const NO_DIR = "/no-such-gate-dir";
+
 const nmDir = ["node", "modules"].join("_");
 
 /** Commands bash reads past a substitution, an expansion, an ANSI-C quote or an escape into a denied path. */
@@ -32,9 +35,9 @@ const passes = [
 ];
 
 it("bashTargetsDenylist: judges a command by every reading bash may give it", () => {
-  for (const cmd of denied) expect(bashTargetsDenylist(cmd), cmd).toBe(true);
+  for (const cmd of denied) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(true);
 });
 
 it("bashTargetsDenylist: passes an expansion or an escape that reads no denied path", () => {
-  for (const cmd of passes) expect(bashTargetsDenylist(cmd), cmd).toBe(false);
+  for (const cmd of passes) expect(bashTargetsDenylist(cmd, NO_DIR), cmd).toBe(false);
 });

@@ -39,7 +39,7 @@ function takesJob(cmd: string): boolean {
 }
 
 export function denylistShellGuard(call: GateCall): GuardResult {
-  return bashTargetsDenylist(call.text) ? { reason: REASON_DENYLIST, type: "deny" } : undefined;
+  return bashTargetsDenylist(call.text, call.shellCwd) ? { reason: REASON_DENYLIST, type: "deny" } : undefined;
 }
 
 /** A call to the job command itself runs as it is. */
