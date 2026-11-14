@@ -2591,6 +2591,7 @@
     "56c3ec22d64b1b5b",
     "6582821c714e027f",
     "674678a101b27cd8",
+    "69516afa65837648",
     "6f992e3831a68c1c",
     "8f9c8a10a45e9d89",
     "a41ab18e37a943f4",
@@ -8251,8 +8252,8 @@
   ],
   "cli/scripts/turn-links.test.ts": ["2bd031ce51dd035b", "74d3128b4655e5f1", "f170ae4fd9909abe"],
   "cli/scripts/turn-node.test.ts": ["10b993c44fae4b77", "5b23a8e41551cfe9", "5f85051e432b3834", "ca23417ead3b41df"],
-  "cli/scripts/turn-reverted.test.ts": ["c3828222a972774b", "faeee95c01e0557c"],
-  "cli/scripts/turn-scope.test.ts": ["44ad64cd311d360a"],
+  "cli/scripts/turn-reverted.test.ts": ["4df7f5ff2661bef9", "c3828222a972774b", "faeee95c01e0557c"],
+  "cli/scripts/turn-scope.test.ts": ["0c57cd0b0fd9ae4c", "44ad64cd311d360a"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": [
     "1185b24a2a30bcd3",
@@ -8340,6 +8341,7 @@
     "e07603cd790ed4fc"
   ],
   "cli/scripts/typecheck-gate.ts": [
+    "173510d8885be030",
     "41517f4abba3f224",
     "6ba5f086529e2a04",
     "a8d8e468c2fa1258",
@@ -8355,6 +8357,7 @@
     "3bd85dd37891a7e8",
     "508b3072c8c57750",
     "647d7df30a43c573",
+    "81c4726f5ce0601b",
     "866af4447d748118",
     "b0fd68fc4468701c",
     "c774345e16f12f13",
@@ -8365,6 +8368,7 @@
   ],
   "cli/scripts/typecheck-step.ts": [
     "220a8343fbb9cdc2",
+    "2210ccb08ccb0900",
     "63c30132a0abbbb5",
     "82754639735b74d0",
     "bdc0d93809758107",

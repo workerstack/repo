@@ -105,7 +105,6 @@ export default defineConfig({
           "cli/scripts/tests-step.ts",
           "cli/scripts/turn.ts",
           "cli/scripts/typecheck-gate.ts",
-          "cli/scripts/typecheck-step.ts",
         ],
         reason:
           "each loop runs a tool process per step, gate, package or config in order and prints as each ends, " +

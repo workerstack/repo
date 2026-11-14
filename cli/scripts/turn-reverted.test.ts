@@ -12,6 +12,7 @@ import {
   TSCONFIG,
   turn,
   write,
+  tscCall,
 } from "./__fixtures__/turn-repo.ts";
 
 afterEach(cleanTemps);
@@ -57,7 +58,7 @@ it("a reverted file beside a real change: the later steps gate only the real one
   const result = await turn(root, [], bins);
   expect(result.out).toBe("turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
   expect(result.code).toBe(0);
-  expect(calls).toStrictEqual(["tsc . --noEmit -p .", "tsc . --noEmit -p tsconfig.src.json"]);
+  expect(calls).toStrictEqual([tscCall("tsconfig.json"), tscCall("tsconfig.src.json")]);
 });
 
 const FIXED =
@@ -86,7 +87,7 @@ it("a new untracked file fmt fixes stays in the change set", { timeout: SLOW }, 
   write(root, { "src/c.ts": "export const c = {d:1}\n" });
   const result = await turn(root, [], bins);
   expect(result.out).toBe("turn: 1 file · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
-  expect(calls).toStrictEqual(["tsc . --noEmit -p .", "tsc . --noEmit -p tsconfig.src.json"]);
+  expect(calls).toStrictEqual([tscCall("tsconfig.json"), tscCall("tsconfig.src.json")]);
 });
 
 const WORKSPACE = { name: "app", private: true, type: "module", workspaces: ["packages/*"] };
@@ -106,5 +107,5 @@ it("a path gates every file of its package, a reverted one too", { timeout: SLOW
   write(root, { "packages/api/src/a.ts": "export const a = 1;   \n" });
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toMatch(/ · fmt 1 fixed · comments ok · lint ok · typecheck packages\/api · /);
-  expect(calls).toContain("tsc . --noEmit -p packages/api");
+  expect(calls).toContain(tscCall("packages/api/tsconfig.json"));
 });

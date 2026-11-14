@@ -15,6 +15,7 @@ import {
   TSCONFIG,
   turn,
   write,
+  tscCall,
 } from "./__fixtures__/turn-repo.ts";
 
 afterEach(cleanTemps);
@@ -64,5 +65,5 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   expect(result.out).toBe(
     "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · check ok\n",
   );
-  expect(calls).toStrictEqual(["tsc . --noEmit -p packages/api", "tsc . --noEmit -p packages/api/tsconfig.src.json"]);
+  expect(calls).toStrictEqual([tscCall("packages/api/tsconfig.json"), tscCall("packages/api/tsconfig.src.json")]);
 });

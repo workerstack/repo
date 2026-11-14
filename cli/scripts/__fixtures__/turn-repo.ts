@@ -107,6 +107,16 @@ export function recording(root: string) {
   return { bins, calls };
 }
 
+/** The store file ci and turn keep for the tsconfig at root-relative `config`. */
+export function tsbuildinfo(config: string): string {
+  return `.repo/tmp/tsbuildinfo/${config.replaceAll("/", "-")}.tsbuildinfo`;
+}
+
+/** The call `recording` holds for turn's incremental typecheck of `config` in the root. */
+export function tscCall(config: string): string {
+  return `tsc . --noEmit --incremental --tsBuildInfoFile ${tsbuildinfo(config)} -p ${config}`;
+}
+
 export const staged = (root: string) => git(root, "diff", "--cached", "--name-only").split("\n").filter(Boolean);
 export const unstaged = (root: string) => git(root, "diff", "--name-only").split("\n").filter(Boolean);
 

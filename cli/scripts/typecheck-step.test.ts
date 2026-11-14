@@ -3,7 +3,17 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, consumer, OK, SLOW, srcConfig, TSCONFIG, turn, write } from "./__fixtures__/turn-repo.ts";
+import {
+  cleanTemps,
+  consumer,
+  OK,
+  SLOW,
+  srcConfig,
+  TSCONFIG,
+  tsbuildinfo,
+  turn,
+  write,
+} from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 
 afterEach(cleanTemps);
@@ -45,6 +55,9 @@ function label(out: string): string | undefined {
   return / · (typecheck [^·\n]*)/.exec(out)?.[1]?.trimEnd();
 }
 
+/** The configs of `twoOwners`, owner by owner, the runtime config first. */
+const CONFIGS = ["tsconfig.json", "tsconfig.src.json", "packages/api/tsconfig.json", "packages/api/tsconfig.src.json"];
+
 /** A root with an app and one package, each with both configs. */
 function twoOwners(): string {
   return consumer({
@@ -59,20 +72,45 @@ function twoOwners(): string {
   });
 }
 
-/** Bins whose tsc fails the configs in `failing`, by the `-p` argument it got, and records every tsc call. */
+/** How much later each tsc call ends than the one after it, so calls that overlap end in reverse order. */
+const STAGGER_MS = 10;
+
+/** The tsc calls a turn of `twoOwners` makes. */
+const CALLS = 4;
+
+/**
+ * Bins whose tsc fails the configs in `failing`, by the `-p` argument it got, and records each call's args and the
+ * most calls in flight at once; each call ends later than the one after it.
+ */
 function fakeTsc(failing: readonly string[]) {
-  const projects: string[] = [];
+  const calls: string[][] = [];
+  let running = 0;
+  let most = 0;
 
   function tsc(args: string[]): Promise<Captured> {
     const project = args.at(-1) ?? "";
-    projects.push(project);
+    calls.push(args);
+    running += 1;
+    most = Math.max(most, running);
+    const result = failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK;
 
-    return Promise.resolve(
-      failing.includes(project) ? { code: 2, stderr: "", stdout: `${project}: error TS1.\n` } : OK,
-    );
+    return new Promise((resolve) => {
+      setTimeout(
+        () => {
+          running -= 1;
+          resolve(result);
+        },
+        (CALLS - calls.length) * STAGGER_MS,
+      );
+    });
   }
 
-  return { bins: { tsc, vitest: () => null }, projects };
+  return {
+    bins: { tsc, vitest: () => null },
+    calls,
+    most: () => most,
+    projects: () => calls.map((args) => args.at(-1)),
+  };
 }
 
 it(
@@ -96,6 +134,8 @@ it(
         "with --isolatedDeclarations.\n",
     );
     expect(result.code).toBe(1);
+    const store = fs.readdirSync(path.join(root, ".repo/tmp/tsbuildinfo")).toSorted();
+    expect(store).toStrictEqual(["tsconfig.json.tsbuildinfo", "tsconfig.src.json.tsbuildinfo"]);
   },
 );
 
@@ -108,13 +148,13 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
   });
 
   write(root, { "packages/api/src/a.ts": "export const a = 41;\n" });
-  const { bins, projects } = fakeTsc([]);
-  const result = await turn(root, [], bins);
+  const fake = fakeTsc([]);
+  const result = await turn(root, [], fake.bins);
   expect(result.out).toBe(
     "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (packages/api/tsconfig.src.json missing)\n",
   );
   expect(result.err).toBe(noSrc("packages/api"));
-  expect(projects).toStrictEqual(["packages/api"]);
+  expect(fake.projects()).toStrictEqual(["packages/api/tsconfig.json"]);
   expect(result.code).toBe(1);
 });
 
@@ -124,20 +164,31 @@ it("typecheck runs both configs per owner and names each failing config by path"
   const pass = fakeTsc([]);
   const passed = await turn(root, [], pass.bins);
   expect(label(passed.out)).toBe("typecheck ., packages/api");
-  expect(pass.projects).toStrictEqual([".", "tsconfig.src.json", "packages/api", "packages/api/tsconfig.src.json"]);
+  expect(pass.projects()).toStrictEqual(CONFIGS);
   expect(passed.code).toBe(0);
 
   const one = await turn(root, [], fakeTsc(["packages/api/tsconfig.src.json"]).bins);
   expect(label(one.out)).toBe("typecheck failed (packages/api/tsconfig.src.json)");
   expect(one.err).toBe("packages/api/tsconfig.src.json: error TS1.\n");
 
-  const two = await turn(root, [], fakeTsc(["packages/api", "tsconfig.src.json"]).bins);
+  const two = await turn(root, [], fakeTsc(["packages/api/tsconfig.json", "tsconfig.src.json"]).bins);
   expect(label(two.out)).toBe("typecheck failed (packages/api/tsconfig.json, tsconfig.src.json)");
-  expect(two.err).toBe("tsconfig.src.json: error TS1.\npackages/api: error TS1.\n");
+  expect(two.err).toBe("tsconfig.src.json: error TS1.\npackages/api/tsconfig.json: error TS1.\n");
   expect(two.code).toBe(1);
 
   fs.rmSync(path.join(root, "tsconfig.src.json"));
-  const missing = await turn(root, [], fakeTsc(["packages/api"]).bins);
+  const missing = await turn(root, [], fakeTsc(["packages/api/tsconfig.json"]).bins);
   expect(label(missing.out)).toBe("typecheck failed (packages/api/tsconfig.json, tsconfig.src.json missing)");
-  expect(missing.err).toBe(`${noSrc(".")}packages/api: error TS1.\n`);
+  expect(missing.err).toBe(`${noSrc(".")}packages/api/tsconfig.json: error TS1.\n`);
+});
+
+it("typecheck runs every config at once, with ci's incremental args and store", { timeout: SLOW }, async () => {
+  const root = twoOwners();
+  write(root, { "packages/api/src/a.ts": "export const a = 41;\n", "src/root.ts": "export const root = 41;\n" });
+  const fake = fakeTsc([]);
+  const result = await turn(root, [], fake.bins);
+  expect(result.code).toBe(0);
+  const incremental = ["--noEmit", "--incremental", "--tsBuildInfoFile"];
+  expect(fake.calls).toStrictEqual(CONFIGS.map((config) => [...incremental, tsbuildinfo(config), "-p", config]));
+  expect(fake.most()).toBe(CALLS);
 });

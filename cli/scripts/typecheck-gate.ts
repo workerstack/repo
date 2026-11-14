@@ -37,7 +37,7 @@ function tsconfigs(root: string, { rootOnly }: { rootOnly: boolean }): Found {
 }
 
 /** tsc's args for `file`: incremental, its build info named after its root-relative path with `/` as `-`. */
-function tscArgs(file: string): string[] {
+export function tscArgs(file: string): string[] {
   return [
     ...TSC_ARGS,
     path.posix.join(TSBUILDINFO_DIR, `${file.replaceAll("/", "-")}${TSBUILDINFO_EXTENSION}`),
