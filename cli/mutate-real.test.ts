@@ -41,32 +41,36 @@ const STR_TEST = [
   "",
 ].join("\n");
 
-/** Two sources and one weak test, committed with an installed lockfile, so a clone installs frozen from bun's cache. */
+const MANIFEST = {
+  devDependencies: { "@stryker-mutator/core": TOOL, "@stryker-mutator/vitest-runner": TOOL, vitest: VITEST },
+  name: "planted",
+  private: true,
+  type: "module",
+};
+
+/**
+ * Two sources and one weak test, committed with a lockfile and no installed packages: `repo mutate` installs frozen in
+ * its own clone, so a tree here would only cost a second install and its removal.
+ */
 function plantedRepo(): string {
   const dir = tempDir();
-
-  const manifest = {
-    devDependencies: {
-      "@stryker-mutator/core": TOOL,
-      "@stryker-mutator/vitest-runner": TOOL,
-      vitest: VITEST,
-    },
-    name: "planted",
-    private: true,
-    type: "module",
-  };
-
   write(dir, {
     ".gitignore": "node_modules\n.repo/tmp/\n",
     "mutation-floors.json": { ".": 99 },
-    "package.json": manifest,
+    "package.json": MANIFEST,
     "repo.config.ts": 'export default { packs: [], coverage: { mutate: ["src/**/*.ts"] } };\n',
     "src/math.test.ts": MATH_TEST,
     "src/math.ts": MATH,
     "src/str.test.ts": STR_TEST,
     "src/str.ts": STR,
   });
-  const installed = spawnSync(process.execPath, ["install"], { cwd: dir, encoding: "utf8", env: toolEnv(childEnv()) });
+
+  const installed = spawnSync(process.execPath, ["install", "--lockfile-only"], {
+    cwd: dir,
+    encoding: "utf8",
+    env: toolEnv(childEnv()),
+  });
+
   expect(installed.status, installed.stderr).toBe(0);
   git(dir, "init", "-q", "-b", "main");
   git(dir, "add", "-A");
