@@ -2654,7 +2654,13 @@
     "6822da4030326f64",
     "d8670aa90c94bc54"
   ],
-  "cli/scripts/browser-engine.ts": ["1649dd40961c5077", "5e9d199e9aab7080", "96b5555d79999c9e", "caec6a2f3abbfe03"],
+  "cli/scripts/browser-engine.ts": [
+    "1649dd40961c5077",
+    "45979e67c6e5d234",
+    "5e9d199e9aab7080",
+    "96b5555d79999c9e",
+    "caec6a2f3abbfe03"
+  ],
   "cli/scripts/browser-input.test.ts": [
     "499efade503f6568",
     "4a974b2329bfd135",
@@ -2665,6 +2671,7 @@
   "cli/scripts/browser-launch.test.ts": [
     "812110c31b8bbb61",
     "93c36d0c809d0fee",
+    "9eb12027dfbf6d4e",
     "aec51ce560ee45f8",
     "eee0e619175b93bf"
   ],
@@ -2742,6 +2749,7 @@
   "cli/scripts/browser-ws.test.ts": ["47bac442a93623eb", "6f8ae536c1e025ea", "a83f19fdecd46db4", "e887a45b5d7ea521"],
   "cli/scripts/browser-ws.ts": ["1a95333c60c385c7", "2098a0dbb4bd6179", "29487c83fe8b84e5", "4e268c55d01d866b"],
   "cli/scripts/browser.constants.ts": [
+    "5cbc8c95da25d32c",
     "8a3f2ed36b16a95a",
     "9c4bc5ee0dfd2602",
     "9f1da252f69ab811",

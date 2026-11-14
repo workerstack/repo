@@ -72,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - On Windows, bun repo worktree finish removes the skill links and folders that git worktree remove left behind, so the worktree folder is gone after finish.
 - The Bash gate reads a command substitution, a backtick, a variable, an ANSI-C quote and a backslash escape as bash does. `rg foo $(echo) <dir>`, `cat bun\.lock` and `cat $'\x64ist/a'` are now denied; a command that holds an expansion skips no search pattern, and one whose program is an expansion is judged as a dump.
 - Under `workflow: "pull-request"` a push with a word the shell sets as it runs, such as `git push origin $B` (unset, it pushes the current branch), is denied: `git push names $B, which the gate cannot read before the shell runs, and main takes changes only through pull requests (workflow is pull-request): name the branch, such as git push origin wt/<name>, or run bun repo worktree finish <name>`. `git push origin @` and `git push origin heads/main` now count as pushes of `main`, for that deny and for the push gate.
+- `bun repo browser nav` stops waiting as soon as the engine exits before it answers, instead of after the full 4 s wait. When the Chromium fallback exits this way, it prints `engine exited before it was ready (exit code N)`, or `(signal S)` when a signal ended it.
 
 ## [0.2.0-rc.0] - 2026-11-13
 
