@@ -224,7 +224,7 @@
     "ef3a3a2ae5ef78c7",
     "f68d49b2f3e073ab"
   ],
-  ".agents/skills/do/SKILL.md": ["61318e4e8c16c61f", "8ccf5f385606175c"],
+  ".agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
   ".agents/skills/explain/SKILL.md": [
     "17f86a6158990e70",
     "20ff0e288484ca3c",
@@ -378,6 +378,7 @@
     "bcc9cf64c2517c2f",
     "cbba526722cdac95"
   ],
+  ".agents/skills/rn/SKILL.md": ["aaf5aaeb50b095c1"],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   ".agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
@@ -2276,6 +2277,7 @@
     "b6b1ea7e37810ec4",
     "d99d89399f729857"
   ],
+  "agents/skills/rn/SKILL.md": ["aaf5aaeb50b095c1"],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
@@ -8190,6 +8192,7 @@
     "96f952d35af99ba0",
     "9b601f0b67b953d0",
     "b00b7bd03e4916bc",
+    "ba9c074258146304",
     "c0f41149b220d305",
     "c7ef31ef5e5babe5",
     "ecf370b8f3df1ced"

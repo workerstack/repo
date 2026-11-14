@@ -108,7 +108,7 @@ function renamedMark(
   const text = mark?.content ?? state.read(file.from);
 
   if (text === null) return mark;
-  const content = renameSkills(text);
+  const content = renameSkills(text, file.from);
 
   if (content === text) return mark;
 

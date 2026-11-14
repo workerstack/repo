@@ -7,7 +7,7 @@ useTempDirs();
 
 const RENAMED =
   "repo sync: renamed write-plan, write-roadmap, implement-plan and implement-roadmap to their -deep names " +
-  "in 2 files under .repo\n";
+  "and /do to /rn in 2 files under .repo\n";
 
 const MOVED = "repo sync: moved .repo/skills/write-roadmap to .repo/skills/write-roadmap-deep\n";
 
