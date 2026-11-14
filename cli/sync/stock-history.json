@@ -7375,7 +7375,7 @@
     "bc9748cf8b627ac5",
     "d111421729db2124"
   ],
-  "cli/scripts/shell.constants.ts": ["36c1ebf91407a6fd", "6f045e50c3693ea5"],
+  "cli/scripts/shell.constants.ts": ["36c1ebf91407a6fd", "414824a62ed74fe7", "6f045e50c3693ea5"],
   "cli/scripts/shim-launcher.d.mts": ["af27b05d6e1e1c22"],
   "cli/scripts/shim-launcher.mjs": ["795de8711c692e49"],
   "cli/scripts/shim-launcher.test.ts": ["1d0bb838e203838f"],
@@ -8170,6 +8170,7 @@
     "1b470d473a4c8fe1",
     "22b09317a1c13508",
     "3fa87da9385d0507",
+    "4d5ea287097a59e1",
     "6517dea7c9e01dc0",
     "b27200ab46028644",
     "b6e9f119f0dac62c",
@@ -8207,7 +8208,13 @@
     "b41d49eb64549447",
     "f570f8242356c6ed"
   ],
-  "cli/scripts/worktree.constants.ts": ["21c793adb304f28a", "3b5eb8f15f11ea55", "73baed1f449219f5", "79fe23de93899a7e"],
+  "cli/scripts/worktree.constants.ts": [
+    "21c793adb304f28a",
+    "3b5eb8f15f11ea55",
+    "73baed1f449219f5",
+    "79fe23de93899a7e",
+    "9ff3eb7db50df5b3"
+  ],
   "cli/scripts/worktree.test.ts": [
     "04f29f4029874c92",
     "09ecd5cab49f8f70",

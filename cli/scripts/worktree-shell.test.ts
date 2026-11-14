@@ -66,6 +66,11 @@ it("skips global flags to find the subcommand, and passes a line with none", () 
   expect(reasonFor("echo hi && git commit", r)).toMatch(COMMIT);
 });
 
+/** Where git runs for `GIT_DIR=~/x git push`, read with this platform's paths, as the hook reads its own home. */
+function homeGitDir(): string[] {
+  return gitLine("GIT_DIR=~/x git push", os.tmpdir(), path).commands.map((g) => (g.at.known ? g.at.path : "?"));
+}
+
 /** The dir and subcommand of each git command in `command`, run from `/r`. */
 function dirsOf(command: string): [string, string][] {
   return gitLine(command, "/r", path.posix).commands.map((g) => [g.at.known ? g.at.path : `?${g.at.cause}`, g.sub]);
@@ -75,7 +80,7 @@ it("moves git's dir by -C, --git-dir, --work-tree and the variables before it, u
   expect(dirsOf("git --git-dir=/x/.git push")).toStrictEqual([["/x/.git", "push"]]);
   expect(dirsOf("GIT_WORK_TREE=sub git -C /a status")).toStrictEqual([["/a", "status"]]);
   expect(dirsOf("GIT_DIR=sub git status")).toStrictEqual([["/r/sub", "status"]]);
-  expect(dirsOf("GIT_DIR=~/x git push")).toStrictEqual([[path.posix.join(os.homedir(), "x"), "push"]]);
+  expect(homeGitDir()).toStrictEqual([path.join(os.homedir(), "x")]);
   expect(dirsOf("D=/d GIT_DIR=$D/g git push")).toStrictEqual([["/d/g", "push"]]);
   expect(dirsOf("GIT_DIR=a:~/x git push")).toStrictEqual([["?a:~/x", "push"]]);
   expect(dirsOf("git --git-dir=~/x push")).toStrictEqual([["?~/x", "push"]]);

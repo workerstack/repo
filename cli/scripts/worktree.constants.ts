@@ -61,7 +61,7 @@ export const REMOVE_EVENT = "WorktreeRemove";
 
 /** The shell words the guards read. */
 export const GIT_BIN = "git";
-export const DIR_FLAG = "-C";
+const DIR_FLAG = "-C";
 export const CONFIG_FLAG = "-c";
 export const WORKTREE_SUB = "worktree";
 export const PUSH_SUB = "push";

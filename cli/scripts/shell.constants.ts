@@ -90,7 +90,7 @@ export const STDIN_OPERAND = "-";
 
 /** `cd` and the other commands that change the dir. */
 export const CD = "cd";
-export const PUSHD = "pushd";
+const PUSHD = "pushd";
 export const POPD = "popd";
 export const DIR_CHANGERS: ReadonlySet<string> = /* @__PURE__ */ new Set([CD, PUSHD, POPD]);
 
