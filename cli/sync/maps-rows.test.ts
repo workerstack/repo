@@ -7,7 +7,7 @@ import { refsSection } from "./maps.ts";
 useTempDirs();
 
 function rows(ws: string): string[] {
-  const { body, errors } = refsSection(ws);
+  const { body, errors } = refsSection(ws, "");
   expect(errors).toStrictEqual([]);
 
   return body.split("\n");
@@ -32,7 +32,7 @@ it("skips INDEX.md, dotfiles, dot folders and non-markdown", () => {
 });
 
 it("is empty for a repo with no references", () => {
-  expect(refsSection(tempDir("maps-empty-"))).toStrictEqual({ body: "", errors: [] });
+  expect(refsSection(tempDir("maps-empty-"), "")).toStrictEqual({ body: "", errors: [] });
 });
 
 it("reads quoted and folded descriptions as one line", () => {
@@ -60,13 +60,13 @@ it.each([
 ])("fails a ref with %s", (_name, text) => {
   const ws = selfWs("maps-bad-");
   put(ws, "references/x.md", text);
-  expect(refsSection(ws).errors).toStrictEqual(["references/x.md: description: missing or over 32 characters"]);
+  expect(refsSection(ws, "").errors).toStrictEqual(["references/x.md: description: missing or over 32 characters"]);
 });
 
 it("names a nested ref by its path from the repo root in the error", () => {
   const ws = selfWs("maps-bad-nested-");
   put(ws, "references/n/x.md", "# X\n");
-  expect(refsSection(ws).errors).toStrictEqual(["references/n/x.md: description: missing or over 32 characters"]);
+  expect(refsSection(ws, "").errors).toStrictEqual(["references/n/x.md: description: missing or over 32 characters"]);
 });
 
 it("names every bad ref, in path order, and keeps the good rows", () => {
@@ -74,7 +74,7 @@ it("names every bad ref, in path order, and keeps the good rows", () => {
   put(ws, "references/b.md", "# B\n");
   put(ws, "references/a.md", `---\ndescription: ${"x".repeat(33)}\n---\n`);
   put(ws, "references/ok.md", "---\ndescription: Fine\n---\n");
-  expect(refsSection(ws)).toStrictEqual({
+  expect(refsSection(ws, "")).toStrictEqual({
     body: "- `ok.md`: Fine",
     errors: [
       "references/a.md: description: missing or over 32 characters",

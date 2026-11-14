@@ -88,7 +88,8 @@ it("writes the package files, links and deps, ignores them, and is then clean", 
   expect(read(root, "AGENTS.md")).not.toContain("Components live");
   const deps = "- [@acme/api](../../api/references/INDEX.md)\n";
   expect(read(root, "packages/web/references/INDEX.md")).toBe(
-    `# Web\n\n${region("<!-- ", " -->", ["deps", `${deps}- [@workerstack/ui](${UI_INDEX})`])}`,
+    `# Web\n\n${region("<!-- ", " -->", ["deps", `${deps}- [@workerstack/ui](${UI_INDEX})`])}\n` +
+      "<!-- repo:refs e3b0c442 -->\n<!-- /repo:refs -->\n",
   );
 
   const ignored = execFileSync(

@@ -5,12 +5,12 @@ import { z } from "zod";
 import { isPublic } from "../docs-exports.ts";
 import { SECOND_GROUP } from "../docs-fences.constants.ts";
 import { group, splitMarkdown } from "../docs-fences.ts";
-import { listedFiles } from "../docs-index.ts";
 import { INDEX_FILE, MARKDOWN_EXT, REFERENCES_DIR, under } from "../docs.constants.ts";
 import { tryJson } from "../json.ts";
 import { splitFrontmatter } from "../scripts/emit-agent-shell-tools.ts";
 import { lines } from "../scripts/lines.ts";
 import { hasOwnedHeader } from "./header.ts";
+import { refPaths } from "./maps.ts";
 import type { Generator, Output, SyncContext } from "./outputs.ts";
 import { CONTENTS_TITLE, MAX_HEADING, PACKAGE_FILE, handWritten, readmePath } from "./readme.constants.ts";
 import type { PackageJson } from "./workspace.ts";
@@ -70,20 +70,15 @@ export function readme(ctx: SyncContext): ReturnType<Generator> {
 function renderReadme(root: DocRoot, read: (rel: string) => string | null, repoRoot: string): string {
   const { dir, manifest } = root;
   const indexPath = under(dir, `${REFERENCES_DIR}/${INDEX_FILE}`);
-  const prefix = under(dir, `${REFERENCES_DIR}/`);
+  const indexText = read(indexPath) /* the caller found it */ as string;
+  const listed = refPaths(indexText).map((name) => under(dir, `${REFERENCES_DIR}/${name}`));
 
-  function exists(rel: string) {
-    return read(rel) !== null;
-  }
+  const parsed = listed.flatMap((file) => {
+    const source = read(file);
 
-  const index = {
-    name: manifest.name ?? "",
-    path: indexPath,
-    text: read(indexPath) /* the caller found it */ as string,
-  };
+    return source === null ? [] : [parseDoc(file, source)];
+  });
 
-  const listed = listedFiles(index, exists).filter((one) => one.path.startsWith(prefix));
-  const parsed = listed.map(({ path: file }) => parseDoc(file, read(file) /* listed files exist */ as string));
   const title = manifest.name ?? path.posix.basename(dir === "" ? repoRoot.replaceAll("\\", "/") : dir);
   const used = new Set<string>();
   uniqueSlug(used, title);

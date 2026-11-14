@@ -57,6 +57,7 @@ export const PACKAGES_SECTION = section(
 export const REPO_STACK = section("stack", "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)");
 export const EMPTY_STACK = section("stack", "");
 export const EMPTY_DEPS = section("deps", "");
+export const EMPTY_REFS = section("refs", "");
 /** The repairs the index generator reports on `rel`. */
 export function repairsOf(ctx: SyncContext, rel: string) {
   const found = index(ctx).outputs.find((output) => output.path === rel);

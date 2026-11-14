@@ -8,3 +8,8 @@ export const REFS_REL: string = "references";
 
 /** Reference files the refs list leaves out. */
 export const SKIP_REF_NAMES: ReadonlySet<string> = /* @__PURE__ */ new Set(["INDEX.md"]);
+
+/** The error for a reference whose frontmatter `order:` is not a whole number. */
+export function orderError(rel: string): string {
+  return `${rel}: order: must be a whole number`;
+}

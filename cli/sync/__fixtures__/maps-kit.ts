@@ -7,6 +7,7 @@ import * as tar from "tar";
 import { expect } from "vitest";
 import { BASE_CONFIG } from "../../__fixtures__/base-config.ts";
 import { index, type Output, type SyncContext } from "../outputs.ts";
+import type { WorkspacePackage } from "../workspace.ts";
 import { put, tempDir } from "./temp-dirs.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -32,8 +33,8 @@ export function copyFixtureWs(): string {
   return dest;
 }
 
-/** A context over the real files of `ws`, named like this package or not. */
-export function context(ws: string, name = "@workerstack/repo"): SyncContext {
+/** A context over the real files of `ws`, named like this package or not, with these workspace packages. */
+export function context(ws: string, name = "@workerstack/repo", packages: WorkspacePackage[] = []): SyncContext {
   return {
     root: ws,
     config: {
@@ -41,7 +42,7 @@ export function context(ws: string, name = "@workerstack/repo"): SyncContext {
       agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
       ...BASE_CONFIG,
     },
-    workspace: { root: ws, manifest: { name }, packages: [] },
+    workspace: { root: ws, manifest: { name }, packages },
     read: (rel) => {
       try {
         return fs.readFileSync(path.join(ws, rel), "utf8");

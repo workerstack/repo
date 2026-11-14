@@ -34,7 +34,8 @@ const API_ENTRY = "- [@acme/api](../packages/api/references/INDEX.md): API worke
 const STACK_ENTRY = "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)";
 const PACKAGES_REGION = region("<!-- ", " -->", ["packages", API_ENTRY]);
 const STACK_REGION = region("<!-- ", " -->", ["stack", STACK_ENTRY]);
-const INDEX = `# References\n\n${PACKAGES_REGION}\n${STACK_REGION}`;
+const REFS_REGION = "<!-- repo:refs e3b0c442 -->\n<!-- /repo:refs -->\n";
+const INDEX = `# References\n\n${PACKAGES_REGION}\n${STACK_REGION}\n${REFS_REGION}`;
 
 it("writes every output under the root on the first run, then reports up to date, touching nothing", async () => {
   const root = fixture();

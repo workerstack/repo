@@ -8,8 +8,9 @@ import { removeTree } from "../remove-tree.ts";
 import { VALID_LESSON } from "../scripts/__fixtures__/persist-bodies.ts";
 import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./__fixtures__/maps-kit.ts";
 import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
-import { sectionBody } from "./maps.ts";
+import { refPaths, sectionBody } from "./maps.ts";
 import { index, lessons } from "./outputs.ts";
+import type { WorkspacePackage } from "./workspace.ts";
 
 useTempDirs();
 
@@ -61,11 +62,82 @@ it("creates the section when INDEX.md is missing", () => {
   expect(indexText(ws)).toMatch(/^<!-- repo:refs [\da-f]{8} -->$/m);
 });
 
-it("another package gets no refs map", () => {
+it("a consumer gets the refs map too", () => {
   const ws = copyFixtureWs();
-  const result = index(context(ws, "consumer"));
-  const output = result.outputs[0];
-  expect(output?.kind === "file" && output.content).not.toContain("alpha.md");
+  const output = index(context(ws, "consumer")).outputs[0];
+  expect(output?.kind === "file" && output.content).toContain("- `alpha.md`: Alpha ref");
+});
+
+/** The refs rows of the index `ws` renders, in order. */
+function refRows(ws: string): string[] {
+  return indexText(ws)
+    .split("\n")
+    .filter((line) => /^- `[^`]+\.md`: /.test(line))
+    .map((line) => line.slice(3, line.indexOf("`", 3)));
+}
+
+function ref(ws: string, rel: string, front: string): void {
+  put(ws, `references/${rel}`, `---\ndescription: D\n${front}---\n# T\n`);
+}
+
+it("puts a ref with a lower order first", () => {
+  const ws = copyFixtureWs();
+  ref(ws, "nested/beta.md", "order: 1\n");
+  expect(refRows(ws)).toStrictEqual(["nested/beta.md", "alpha.md"]);
+});
+
+it("sorts equal orders by path", () => {
+  const ws = copyFixtureWs();
+  ref(ws, "nested/beta.md", "order: 2\n");
+  ref(ws, "alpha.md", "order: 2\n");
+  ref(ws, "zed.md", "order: 1\n");
+  expect(refRows(ws)).toStrictEqual(["zed.md", "alpha.md", "nested/beta.md"]);
+});
+
+it("lists refs without order after the ordered ones, by path", () => {
+  const ws = copyFixtureWs();
+  ref(ws, "zed.md", "order: 5\n");
+  expect(refRows(ws)).toStrictEqual(["zed.md", "alpha.md", "nested/beta.md"]);
+});
+
+it.each(["x", "1.5"])("reports order: %s as a sync error and writes nothing", (value) => {
+  const ws = copyFixtureWs();
+  ref(ws, "x.md", `order: ${value}\n`);
+  const result = index(context(ws));
+  expect(result.errors).toStrictEqual(["references/x.md: order: must be a whole number"]);
+  expect(result.outputs).toStrictEqual([]);
+});
+
+function withPackage() {
+  const ws = copyFixtureWs();
+  put(ws, "packages/a/package.json", '{ "name": "@acme/a" }\n');
+  put(ws, "packages/a/references/INDEX.md", "# A\n");
+  put(ws, "packages/a/references/two.md", "---\ndescription: Two\norder: 2\n---\n");
+  put(ws, "packages/a/references/one.md", "---\ndescription: One\norder: 1\n---\n");
+
+  const packages = [{ dir: "packages/a", manifest: { name: "@acme/a" } }] satisfies WorkspacePackage[];
+
+  return { packages, ws };
+}
+
+describe("workspace packages", () => {
+  it("gives each package INDEX its own repo:refs block", () => {
+    const { packages, ws } = withPackage();
+    const result = index(context(ws, "@workerstack/repo", packages));
+    expect(result.errors).toStrictEqual([]);
+    const out = result.outputs.find((one) => one.path === "packages/a/references/INDEX.md");
+    const text = out?.kind === "file" ? out.content : "";
+    expect(sectionBody(text, "refs")).toStrictEqual(["- `one.md`: One", "- `two.md`: Two"]);
+    expect(text).not.toContain("alpha.md");
+  });
+
+  it("names a bad package ref with its folder", () => {
+    const { packages, ws } = withPackage();
+    put(ws, "packages/a/references/x.md", "# X\n");
+    const result = index(context(ws, "@workerstack/repo", packages));
+    expect(result.errors).toStrictEqual(["packages/a/references/x.md: description: missing or over 32 characters"]);
+    expect(result.outputs).toStrictEqual([]);
+  });
 });
 
 it("includes extra refs next to the fixture refs", () => {
@@ -123,5 +195,16 @@ describe("sectionBody", () => {
     expect(sectionBody("a\n", "x")).toBeNull();
     expect(sectionBody("<!-- repo:x -->\nrest", "x")).toBeNull();
     expect(sectionBody("<!-- /repo:x -->\n<!-- repo:x -->\n", "x")).toBeNull();
+  });
+});
+
+describe("refPaths", () => {
+  it("is empty for an INDEX with no repo:refs block", () => {
+    expect(refPaths("# References\n\n- `a.md`: A\n")).toStrictEqual([]);
+  });
+
+  it("skips a block line that is not a code-span row", () => {
+    const text = "<!-- repo:refs -->\n- `a.md`: A\nstray text\n- [b](b.md)\n- `c/d.md`: D\n<!-- /repo:refs -->\n";
+    expect(refPaths(text)).toStrictEqual(["a.md", "c/d.md"]);
   });
 });

@@ -3499,11 +3499,12 @@
     "cd3fa6625ea21d90",
     "d30e11893bd9643e"
   ],
-  "cli/scripts/doctor-maps.test.ts": ["104e43068c95b1a5", "a97d22dc03abf183", "d9884bb58a3c115e"],
+  "cli/scripts/doctor-maps.test.ts": ["104e43068c95b1a5", "a97d22dc03abf183", "d9884bb58a3c115e", "e3280b270d622ba6"],
   "cli/scripts/doctor-models-skip.test.ts": ["655f5d0fe469a037", "e3c8162f0b0a91b8", "ff17136673aa691e"],
   "cli/scripts/doctor-models.test.ts": ["3d3a153c15f8c9d2", "de0b3862ac25cf0d", "df655ff888fd4f44", "e60e7105828c9923"],
   "cli/scripts/doctor-rows.ts": [
     "30351a48ac0251bf",
+    "4934a2f202da96a7",
     "7ba7b10a36efdede",
     "8356ef186cdc5a08",
     "bb1cfb603a34e96e",
@@ -3524,6 +3525,7 @@
   ],
   "cli/scripts/doctor-shim.test.ts": ["59f13339deaa45dd"],
   "cli/scripts/doctor-status.test.ts": [
+    "0ec64972ebb57188",
     "29e929273f9ecbac",
     "38e4571932d2298c",
     "4c1116a4796306a3",
@@ -3589,6 +3591,7 @@
   ],
   "cli/scripts/doctor.ts": [
     "0636c95b215ddd33",
+    "144f2a24756d2615",
     "176dbd060800f8d0",
     "1cbebcbb0662beb8",
     "55f372993fbbdbda",
@@ -3606,7 +3609,7 @@
     "ec58c6574aab77a1",
     "f6c483f8f196ed4f"
   ],
-  "cli/scripts/doctor.types.ts": ["0269e4b5432f009e", "a50f93995418f14a", "a7ec8b3844a2ab02"],
+  "cli/scripts/doctor.types.ts": ["0269e4b5432f009e", "840cdd50c628fc00", "a50f93995418f14a", "a7ec8b3844a2ab02"],
   "cli/scripts/emit-agent-shell-tools.test.ts": [
     "369291d1ffb33595",
     "582fcbca246939ac",
@@ -8694,6 +8697,6 @@
     "fed457b202f6f0ca"
   ],
   "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4"],
-  "references/sync.md": ["7e389acc08c15554", "e27cec0b466c1dca"],
+  "references/sync.md": ["7e389acc08c15554", "a21ca531b861689e", "e27cec0b466c1dca"],
   "references/workflow.md": ["6c8b827f6f52fe9b"]
 }

@@ -176,7 +176,7 @@ it(
 it(
   "hands it over in the same sync that migrates it, and the next sync is up to date",
   async () => {
-    const root = copied();
+    const root = copied({ docs: false });
     const result = await sync(root, [], true);
     expect(result.code, result.err.join("")).toBe(0);
 

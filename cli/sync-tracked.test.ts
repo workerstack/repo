@@ -134,7 +134,7 @@ it("passes when git tracks nothing the block covers", async () => {
 });
 
 it("passes a copied install with a tracked .claude/, which migration untracks", async () => {
-  const root = copied();
+  const root = copied({ docs: false });
 
   expect(hostFiles(root)).not.toStrictEqual([]);
   expect(await syncedInstall(root)).toStrictEqual({ code: 0, left: [], refused: false });

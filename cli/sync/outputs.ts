@@ -21,7 +21,6 @@ import { releaseWorkflow } from "./release-workflow.ts";
 import { release } from "./release.ts";
 import { rust } from "./rust.ts";
 import { depsLines, stackNames } from "./stack-deps.ts";
-import { isSelfName } from "./stock.ts";
 import { renderTrees } from "./trees.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
@@ -86,7 +85,7 @@ export function bunfig(ctx: SyncContext): GeneratorResult {
 
 /**
  * The repo:packages, repo:stack and (with the references index installed) repo:available sections of
- * references/INDEX.md, under the docs pack; in this repo also the repo:refs list of its own references.
+ * references/INDEX.md, under the docs pack, and the repo:refs list of the references beside it.
  */
 export function index(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("docs")) return { errors: [], outputs: [] };
@@ -99,11 +98,9 @@ export function index(ctx: SyncContext): GeneratorResult {
   const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
   sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
 
-  if (isSelfName(ctx.workspace.manifest.name)) {
-    const refs = refsSection(ctx.root);
-    sections.push(section("refs", refs.body));
-    errors.push(...refs.errors);
-  }
+  const refs = refsSection(ctx.root, "");
+  sections.push(section("refs", refs.body));
+  errors.push(...refs.errors);
 
   if (errors.length > 0) return { errors, outputs: [] };
   const text = writeRegions(ctx.read(INDEX_PATH) ?? INDEX_NEW, syntaxOf(INDEX_PATH), sections);
@@ -111,7 +108,10 @@ export function index(ctx: SyncContext): GeneratorResult {
   return { errors: [], outputs: [blockOutput(INDEX_PATH, text), ...packageIndexes.indexes] };
 }
 
-/** The repo:packages lines, each package's INDEX with its repo:deps, and a line per package without an INDEX. */
+/**
+ * The repo:packages lines, each package's INDEX with its repo:deps and repo:refs, and a line per package without an
+ * INDEX.
+ */
 type PackageIndexes = { entries: string[]; errors: string[]; indexes: Output[] };
 
 function packageIndexesOf(ctx: SyncContext): PackageIndexes {
@@ -135,7 +135,11 @@ function packageIndexesOf(ctx: SyncContext): PackageIndexes {
     const label = manifest.name === undefined || manifest.name === "" ? dir : manifest.name;
     out.entries.push(`- [${label}](../${rel})${description}`);
     const deps = depsLines(dir, manifest, packages).join("\n");
-    out.indexes.push(blockOutput(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps)])));
+    const refs = refsSection(ctx.root, dir);
+    out.errors.push(...refs.errors);
+    out.indexes.push(
+      blockOutput(rel, writeRegions(text, syntaxOf(rel), [section("deps", deps), section("refs", refs.body)])),
+    );
   }
 
   return out;

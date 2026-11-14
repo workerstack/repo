@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { context, PUBLIC, textOf } from "./__fixtures__/readme-kit.ts";
+import { context, PUBLIC, refsIndex, textOf } from "./__fixtures__/readme-kit.ts";
 import { GENERATORS } from "./outputs.ts";
 import { readme } from "./readme.ts";
 import type { PackageJson } from "./workspace.ts";
@@ -13,7 +13,7 @@ function render(files: Record<string, string>, manifest: PackageJson = PUBLIC): 
   return textOf(result);
 }
 
-const INDEX = "# References\n\n- [Auth](auth.md)\n- [Hooks](hooks.md)\n";
+const INDEX = refsIndex("auth.md", "hooks.md");
 
 it("is registered right after index", () => {
   expect(GENERATORS.indexOf(readme)).toBe(2);
@@ -48,7 +48,7 @@ it(
 );
 
 it("leaves out the description when package.json has none, is unreadable or is missing", () => {
-  const base = { "references/INDEX.md": "- [A](a.md)\n", "references/a.md": "# A\n" };
+  const base = { "references/INDEX.md": refsIndex("a.md"), "references/a.md": "# A\n" };
   const expected = `\n# @acme/lib\n\n## Contents\n\n- [A](#a)\n\n## A\n`;
   expect(render({ ...base, "package.json": '{"name":"@acme/lib"}' })).toBe(expected);
   expect(render({ ...base, "package.json": "{" })).toBe(expected);
@@ -72,7 +72,7 @@ it("is byte for byte stable and ends with one newline", () => {
 
 it("demotes every heading one level except inside fenced blocks, capped at six", () => {
   const files = {
-    "references/INDEX.md": "- [A](a.md)\n",
+    "references/INDEX.md": refsIndex("a.md"),
     "references/a.md":
       "# A\n\n## Sub\n\n###### Deep\n\n# Second h1\n\n```md\n# not a heading\n## nor this\n```\n" +
       "\n    # indented is no heading\n",
@@ -85,14 +85,14 @@ it("demotes every heading one level except inside fenced blocks, capped at six",
 });
 
 it("labels a file without an H1 by its file name and keeps its text", () => {
-  const files = { "references/INDEX.md": "- [x](notes.md)\n", "references/notes.md": "Just text.\n\n## Part\n" };
+  const files = { "references/INDEX.md": refsIndex("notes.md"), "references/notes.md": "Just text.\n\n## Part\n" };
   expect(render(files)).toContain("- [notes](#notes)\n\n## notes\n\nJust text.\n\n### Part\n");
   expect(render({ ...files, "references/notes.md": "# E\n" }).endsWith("## E\n")).toBe(true);
 });
 
 it("gives duplicate headings -1 and -2 anchors, with the title and Contents taking theirs first", () => {
   const files = {
-    "references/INDEX.md": "- [a](a.md)\n- [b](b.md)\n- [c](c.md)\n",
+    "references/INDEX.md": refsIndex("a.md", "b.md", "c.md"),
     "references/a.md": "# Setup\n\n## Contents\n",
     "references/b.md": "# Setup\n",
     "references/c.md": "# Setup\n",
@@ -108,7 +108,7 @@ it("gives duplicate headings -1 and -2 anchors, with the title and Contents taki
 
 it("makes GitHub-style anchors: lowercase, punctuation dropped but - and _, spaces to -", () => {
   const files = {
-    "references/INDEX.md": "- [a](a.md)\n- [b](b.md)\n",
+    "references/INDEX.md": refsIndex("a.md", "b.md"),
     "references/a.md": "# The `repo` CLI: what's [new](x.md)? v2_x-y\n",
     "references/b.md": "# Über  Größe\n",
   };
@@ -120,7 +120,7 @@ it("makes GitHub-style anchors: lowercase, punctuation dropped but - and _, spac
 
 it("turns a link to a glued file into its anchor, mapping a fragment when it can", () => {
   const files = {
-    "references/INDEX.md": "- [a](a.md)\n- [b](b.md)\n",
+    "references/INDEX.md": refsIndex("a.md", "b.md"),
     "references/a.md":
       "# A\n\nSee [b](b.md), [its part](b.md#part), [gone](b.md#nope), " +
       "[self](#mine) and [lost](#nowhere).\n\n## Mine\n",
@@ -134,7 +134,7 @@ it("turns a link to a glued file into its anchor, mapping a fragment when it can
 
 it("maps a fragment to the global anchor when another file took the heading first", () => {
   const files = {
-    "references/INDEX.md": "- [a](a.md)\n- [b](b.md)\n",
+    "references/INDEX.md": refsIndex("a.md", "b.md"),
     "references/a.md": "# A\n\n## Usage\n",
     "references/b.md": "# B\n\n## Usage\n\n[a](a.md#usage) [me](#usage)\n",
   };
@@ -144,7 +144,7 @@ it("maps a fragment to the global anchor when another file took the heading firs
 
 it("rewrites another relative link to the README's folder and leaves external ones alone", () => {
   const files = {
-    "references/INDEX.md": "- [a](a.md)\n",
+    "references/INDEX.md": refsIndex("a.md"),
     "references/a.md":
       "# A\n\n[src](../src/a.ts#L3) [idx](INDEX.md) [web](https://x.dev/a.md) [abs](/x) [mail](mailto:a@b.c) " +
       '[q](?x=1) [home](../) ![img](img/p.png "t")\n\n```md\n[no](b.md)\n```\n',
@@ -156,10 +156,31 @@ it("rewrites another relative link to the README's folder and leaves external on
   );
 });
 
+it("takes sections from the refs block only: hand links around it add and reorder nothing", () => {
+  const files = {
+    "references/INDEX.md":
+      "# References\n\n- [Hooks](hooks.md)\n- [Auth](auth.md)\n- [Extra](extra.md)\n\n" +
+      "<!-- repo:refs -->\n- `auth.md`: Auth\n- `hooks.md`: Hooks\n<!-- /repo:refs -->\n",
+    "references/auth.md": "# Authentication\n\nLog in.\n",
+    "references/extra.md": "# Extra\n\nNot listed.\n",
+    "references/hooks.md": "# Hooks\n\nRun them.\n",
+  };
+
+  expect(render(files)).toBe(
+    "\n# @acme/lib\n\n## Contents\n\n- [Authentication](#authentication)\n- [Hooks](#hooks)\n" +
+      "\n## Authentication\n\nLog in.\n\n## Hooks\n\nRun them.\n",
+  );
+});
+
+it("skips a refs block row whose file does not exist", () => {
+  const files = { "references/INDEX.md": refsIndex("gone.md", "a.md"), "references/a.md": "# A\n" };
+  expect(render(files)).toBe("\n# @acme/lib\n\n## Contents\n\n- [A](#a)\n\n## A\n");
+});
+
 it("drops a reference's leading frontmatter from its section", () => {
   const text = render({
     "package.json": JSON.stringify({ name: "@acme/lib" }),
-    "references/INDEX.md": "# References\n\n- [Auth](auth.md)\n",
+    "references/INDEX.md": refsIndex("auth.md"),
     "references/auth.md": "---\ndescription: X\n---\n# Title\n\nBody.\n",
   });
 

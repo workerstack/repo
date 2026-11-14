@@ -18,6 +18,9 @@ import { readWorkspace } from "../workspace.ts";
 import { tempDir } from "./temp-dirs.ts";
 import { removeTree } from "../../remove-tree.ts";
 
+/** The config of a copied install synced without the docs pack. */
+const SYNC_CONFIG = 'import { defineConfig } from "@workerstack/repo"\n\nexport default defineConfig({\n  packs: ["agents"],\n})\n';
+
 /** This repo's root, linked into each consumer as the stock package. */
 export const SELF_ROOT: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FIXTURE_TGZ = path.join(SELF_ROOT, "cli", "sync", "__fixtures__", "copied.tgz");
@@ -129,9 +132,12 @@ export function commitAll(root: string, message: string): void {
 }
 
 /** The recorded copied install in a temp dir: the fixture, this repo linked as the stock package, one commit. */
-export function copied(options: { git?: boolean } = {}): string {
+export function copied(options: { git?: boolean; docs?: boolean } = {}): string {
   const root = tempDir("workerstack-migrate-");
   fs.cpSync(fixtureDir(), root, { recursive: true, verbatimSymlinks: true });
+  // a migrated reference has no description yet, which the docs pack's refs list refuses; a suite that syncs
+  // the whole install leaves that pack off
+  if (options.docs === false) write(root, "repo.config.ts", SYNC_CONFIG);
   linkStock(root);
   if (options.git !== false) commitAll(root, "copied install");
   return root;

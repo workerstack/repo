@@ -32,7 +32,7 @@ it("consumer with .agents/skills and no references/ gets no maps row", () => {
 it("@workerstack/repo with both markers → maps ok row, exit 0", () => {
   const { cwd, bin } = toolsCwd("doc-maps-ok-");
   writeRequiredMaps(cwd);
-  const r = linuxRun(cwd, bin);
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(0);
   expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:refs$/m);
 });
@@ -40,7 +40,7 @@ it("@workerstack/repo with both markers → maps ok row, exit 0", () => {
 it("@workerstack/repo with the hashed markers sync writes → maps ok row, exit 0", () => {
   const { cwd, bin } = toolsCwd("doc-maps-hashed-");
   writeRequiredMaps(cwd, BOTH_MARKERS.replaceAll(/<!-- repo:(\w+) -->/g, "<!-- repo:$1 e3b0c442 -->"));
-  const r = linuxRun(cwd, bin);
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(0);
   expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:refs$/m);
 });
@@ -49,7 +49,7 @@ it("@workerstack/repo missing repo:refs → exit 1 naming it", () => {
   const name = "refs";
   const { cwd, bin } = toolsCwd("doc-map-one-");
   writeRequiredMaps(cwd, BOTH_MARKERS.replace(`<!-- repo:${name} -->\n<!-- /repo:${name} -->\n`, ""));
-  const r = linuxRun(cwd, bin);
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(1);
   expect(r.stdout).toContain(`references/INDEX.md has no repo:${name} section; run bun repo sync`);
   expect(r.stdout).toMatch(/^maps\s+missing/m);
@@ -58,7 +58,8 @@ it("@workerstack/repo missing repo:refs → exit 1 naming it", () => {
 it("@workerstack/repo without references/INDEX.md → exit 1", () => {
   const { cwd, bin } = toolsCwd("doc-map-none-");
   writeSelfPackage(cwd);
-  const r = linuxRun(cwd, bin);
+  fs.mkdirSync(path.join(cwd, "references"));
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(1);
   expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md is missing; run bun repo sync$/m);
 });
@@ -67,7 +68,7 @@ it("skill content conflict vs packaged warns; exit still 0 when tools+maps ok", 
   const { cwd, bin } = toolsCwd("doc-sk-conflict-");
   writeRequiredMaps(cwd);
   writeSkillPair(cwd, "custom\n", "packaged\n");
-  const r = linuxRun(cwd, bin);
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(0);
   expect(r.stdout).toMatch(/skill conflicts \(warn/);
   expect(r.stdout).toMatch(/skill `parent` differs from packaged repo; re-init overwrites/);
@@ -77,7 +78,44 @@ it("identical packaged skill → no conflict lines", () => {
   const { cwd, bin } = toolsCwd("doc-sk-same-");
   writeRequiredMaps(cwd);
   writeSkillPair(cwd, "same\n", "same\n");
-  const r = linuxRun(cwd, bin);
+  const r = linuxRun(cwd, bin, { packs: ["docs"] });
   expect(r.code).toBe(0);
   expect(r.stdout).not.toMatch(/skill conflicts/);
+});
+
+const DOCS = { packs: ["docs"] };
+
+it("a consumer with the docs pack and references/ but no refs block gets maps missing", () => {
+  const { cwd, bin } = toolsCwd("doc-consumer-docs-");
+  writeRequiredMaps(cwd, "# Index\n");
+  writeSelfPackage(cwd, "some-consumer");
+  const r = linuxRun(cwd, bin, DOCS);
+  expect(r.code).toBe(1);
+  expect(r.stdout).toMatch(/^maps\s+missing\s+references\/INDEX\.md has no repo:refs section; run bun repo sync$/m);
+});
+
+it("a consumer whose INDEX has the refs block gets maps ok", () => {
+  const { cwd, bin } = toolsCwd("doc-consumer-ok-");
+  writeRequiredMaps(cwd, "# Index\n<!-- repo:refs -->\n<!-- /repo:refs -->\n");
+  writeSelfPackage(cwd, "some-consumer");
+  const r = linuxRun(cwd, bin, DOCS);
+  expect(r.code).toBe(0);
+  expect(r.stdout).toMatch(/^maps\s+ok\s+references\/INDEX\.md repo:refs$/m);
+});
+
+it("references/ without the docs pack gets no maps row", () => {
+  const { cwd, bin } = toolsCwd("doc-no-docs-");
+  writeRequiredMaps(cwd, "# Index\n");
+  writeSelfPackage(cwd, "some-consumer");
+  const r = linuxRun(cwd, bin, { packs: ["agents"] });
+  expect(r.code).toBe(0);
+  expect(r.stdout).not.toMatch(/^maps /m);
+});
+
+it("the docs pack without references/ gets no maps row", () => {
+  const { cwd, bin } = toolsCwd("doc-docs-no-refs-");
+  writeSelfPackage(cwd, "some-consumer");
+  const r = linuxRun(cwd, bin, DOCS);
+  expect(r.code).toBe(0);
+  expect(r.stdout).not.toMatch(/^maps /m);
 });

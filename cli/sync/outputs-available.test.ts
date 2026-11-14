@@ -7,6 +7,7 @@ import {
   PACKAGE_INDEXES,
   section,
   EMPTY_DEPS,
+  EMPTY_REFS,
   repairsOf,
 } from "./__fixtures__/context-kit.ts";
 import { AVAILABLE_INDEX_PATH } from "./available.constants.ts";
@@ -105,7 +106,7 @@ it("gives a package with no such dependency an empty section, and replaces a sta
   );
 
   expect(content).toMatch(/^# Web\n\n<!-- repo:deps [\da-f]{8} -->\n- \[@acme\/api\]/);
-  expect(content).toMatch(/<!-- \/repo:deps -->\n\nTail\.\n$/);
+  expect(content).toMatch(/<!-- \/repo:deps -->\n\nTail\.\n\n<!-- repo:refs [\da-f]{8} -->\n<!-- \/repo:refs -->\n$/);
   expect(content).not.toContain("stale");
 });
 
@@ -114,7 +115,7 @@ it("closes an unclosed deps section in a package INDEX and names that INDEX", ()
   const ctx = context({ files: broken, packages });
   expect(index(ctx).errors).toStrictEqual([]);
   expect(contentOf(index(ctx).outputs.find((o) => o.path === "packages/api/references/INDEX.md"))).toBe(
-    `# Api\n${EMPTY_DEPS}\n`,
+    `# Api\n${EMPTY_DEPS}\n\n${EMPTY_REFS}\n`,
   );
   expect(repairsOf(ctx, "packages/api/references/INDEX.md")).toStrictEqual(["closed repo:deps"]);
   expect(repairsOf(ctx, "packages/web/references/INDEX.md")).toBeUndefined();

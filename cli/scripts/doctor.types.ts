@@ -60,6 +60,8 @@ export type DoctorOpts = {
   globals?: string | null;
   /** The skill packs the repo enables (`agents.skills`); their tools get a row. */
   skills?: readonly string[];
+  /** The packs the repo enables; the `maps` row needs `docs`. */
+  packs?: readonly string[];
 };
 
 /** Every agent-models knob, each with a default. */

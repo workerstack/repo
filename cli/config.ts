@@ -181,17 +181,24 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
   };
 }
 
+/** The resolved config of the repo at or above `cwd`; null when there is no config or it is invalid. */
+export async function repoConfig(cwd: string): Promise<ResolvedConfig | null> {
+  const root = findRoot(cwd);
+
+  if (root === null) return null;
+  const loaded = await loadConfig(root);
+
+  return loaded.ok ? loaded.config : null;
+}
+
 /**
  * The skill packs `agents.skills` enables for the repo at or above `cwd`; none when there is no config or it is
  * invalid.
  */
 export async function enabledSkills(cwd: string): Promise<readonly SkillPack[]> {
-  const root = findRoot(cwd);
+  const config = await repoConfig(cwd);
 
-  if (root === null) return [];
-  const loaded = await loadConfig(root);
-
-  return loaded.ok ? loaded.config.agents.skills : [];
+  return config?.agents.skills ?? [];
 }
 
 /** The dot a config path starts with once its keys are joined. */

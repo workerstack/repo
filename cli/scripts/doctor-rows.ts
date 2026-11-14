@@ -3,9 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { INDEX_REL } from "../sync/maps.constants.ts";
+import { INDEX_REL, REFS_REL } from "../sync/maps.constants.ts";
 import { sectionBody } from "../sync/maps.ts";
-import { isSelf } from "../sync/stock.ts";
 import type * as checkGlobalsModule from "./check-globals.ts";
 import { GLOBALS_MANIFEST_REL, MAPS_SECTIONS, ROW_PAD } from "./doctor.constants.ts";
 import { shimState } from "./shim.ts";
@@ -81,11 +80,11 @@ function checkedRow(mod: typeof checkGlobalsModule, r: checkGlobalsModule.CheckR
 }
 
 /**
- * The `maps` row: null outside `@workerstack/repo`; otherwise ok when `references/INDEX.md` has both generated
- * marker pairs.
+ * The `maps` row: null unless the docs pack is on and `references/` exists under `root`; otherwise ok when
+ * `references/INDEX.md` has the generated `repo:refs` marker pair.
  */
-export function mapsRow(root: string): { line: string; ok: boolean } | null {
-  if (!isSelf(root)) return null;
+export function mapsRow(root: string, packs: readonly string[]): { line: string; ok: boolean } | null {
+  if (!packs.includes("docs") || !fs.existsSync(path.join(root, REFS_REL))) return null;
   const fix = "run bun repo sync";
   let text: string;
 

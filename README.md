@@ -1897,6 +1897,12 @@ In a consumer, sync rebuilds these files from the installed package on every ins
 
 `bun repo sync` and `bun repo sync --check` refuse when git tracks a file the block covers. They print one line per block line, with the `git rm --cached` command to run. Migrate and adopt untrack a committed tree themselves.
 
+### References
+
+Each `references/**/*.md` needs a frontmatter `description:` of at most 32 characters. It may also set `order:`, a whole number. Sync lists the files in the `repo:refs` block of that folder's `INDEX.md`: lowest `order` first, then the files without one, ties by path. The README's Contents and sections follow that list.
+
+This holds in every repo with the docs pack and in each workspace package. A bad value fails sync and names the file.
+
 ## Change workflow
 
 `workflow` in `repo.config.ts` says where changes are made and how they reach the default branch: `"worktree"` (the default, also when the key or the config is missing), `"pull-request"` or `"main"`. `bun repo sync` writes the mode's steps into the workflow paragraph of `AGENTS.md`, so that paragraph is the one to follow. This file says what each command and gate does under each mode. `hooks.md` has the gate details, `exports.md` the `bun repo push` table.

@@ -69,8 +69,8 @@ describe("speak and workspace rows read the process home and env by default", ()
 });
 
 describe("mapsRow", () => {
-  it("is null for a root that is not this package", () => {
-    expect(mapsRow(tmp())).toBeNull();
+  it("is null for a root with no references/ folder", () => {
+    expect(mapsRow(tmp(), ["docs"])).toBeNull();
   });
 });
 

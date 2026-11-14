@@ -23,3 +23,10 @@ export function context({ packs = ["docs"], manifest = PUBLIC, packages = [], fi
 export function textOf(result: { outputs: { kind: string; content?: string }[] }): string {
   return result.outputs[0]?.content ?? "";
 }
+
+/** An INDEX text whose `repo:refs` block lists these files, in this order, as sync writes it. */
+export function refsIndex(...names: string[]): string {
+  const rows = names.map((name) => `- \`${name}\`: ${name}`).join("\n");
+
+  return `# References\n\n<!-- repo:refs -->\n${rows}\n<!-- /repo:refs -->\n`;
+}

@@ -32,11 +32,10 @@ afterAll(dropFixture);
 const SLOW = 180_000;
 
 /**
- * What the first sync over the copied install prints: its old markers converted, an unhashed section hashed, and the
+ * What the first sync over the copied install prints: its old markers converted and the
  * stock rules the handover left in place in AGENTS.md replaced by the region.
  */
 const CONVERTED = [
-  "repo sync: references/INDEX.md: added the hash to repo:stack\n",
   "repo sync: AGENTS.md: replaced the old stock rules with repo:rules\n",
   "repo sync: .gitignore: converted the old markers to repo:ignore\n",
 ];
@@ -81,7 +80,7 @@ function bare(manifest: string): string {
 }
 
 it("--check prints the pending count, exits 1 and writes nothing", async () => {
-  const root = copied();
+  const root = copied({ docs: false });
   const before = snapshot(root);
   const plan = await copiedPlan(root);
   const count = plan.length;
@@ -93,7 +92,7 @@ it("--check prints the pending count, exits 1 and writes nothing", async () => {
 });
 
 it("runs the migration first and prints its lines before the sync summary", async () => {
-  const root = copied();
+  const root = copied({ docs: false });
   const result = await sync(root, [], true);
   expect(result.code).toBe(0);
   const migration = [...LINES, FINAL, ...HANDOVER];
@@ -105,7 +104,7 @@ it("runs the migration first and prints its lines before the sync summary", asyn
 it(
   "a full sync after the migration carries the consumer's own content into the trees",
   async () => {
-    const root = copied();
+    const root = copied({ docs: false });
     addOwnHook(root);
     const result = await sync(root, [], true);
     expect(result.err).toStrictEqual(CONVERTED);
@@ -131,7 +130,7 @@ it(
 it(
   "leaves no source to adopt again: the next sync succeeds with the settings key once",
   async () => {
-    const root = copied();
+    const root = copied({ docs: false });
 
     // fails only once the migration removed the copy, so the migration itself runs
     const failing = {
@@ -179,7 +178,7 @@ it("never migrates this repo, whatever files it holds", async () => {
 it(
   "moves an edited old copy of write-plan to .repo/skills/write-plan-deep under its new name in one sync",
   async () => {
-    const root = copied();
+    const root = copied({ docs: false });
     const own = read(root, ".agents/skills/write-plan/SKILL.md");
     write(root, ".agents/skills/write-plan/SKILL.md", `${own}\nOur own step: run /write-plan twice.\n`);
     const result = await sync(root, [], true);

@@ -3,7 +3,7 @@
 import os from "node:os";
 import path from "node:path";
 
-import { enabledSkills } from "../config.ts";
+import { repoConfig } from "../config.ts";
 import { repoEnv, type Env } from "../repo-env.ts";
 import { agentModelsLines } from "./agent-models-lines.ts";
 import { bunMinimum, versionAtLeast } from "./doctor-bun.ts";
@@ -25,6 +25,7 @@ import { resolveRoots } from "./workspace-root.ts";
 /** `DoctorOpts` with every default filled in, and the enabled packs as a set. */
 type Resolved = { cwd: string; pathEnv: string | undefined; platform: string; env: Env; home: string } & {
   enabled: Set<string>;
+  packs: readonly string[];
 };
 
 /** The required tools after `bun`, each on its own row. */
@@ -126,6 +127,7 @@ function resolveOpts(opts: DoctorOpts): Resolved {
     enabled: new Set<string>(opts.skills ?? []),
     env: opts.env ?? repoEnv.process,
     home: opts.home ?? os.homedir(),
+    packs: opts.packs ?? [],
     pathEnv: opts.pathEnv ?? repoEnv.process.PATH,
     platform: opts.platform ?? process.platform,
   };
@@ -137,7 +139,7 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
   const tools = toolRows(o);
   const setup = setupRows(o);
   const missingRequired = REQUIRED.filter((k) => tools.found[k] === "");
-  const maps = mapsRow(cwd);
+  const maps = mapsRow(cwd, o.packs);
 
   const lines = [
     ...tools.lines,
@@ -160,10 +162,13 @@ export function runDoctor(opts: DoctorOpts = {}): DoctorResult {
 export async function main(): Promise<number> {
   await loadOptionalConsumerEnv();
 
+  const config = await repoConfig(process.cwd());
+
   const r = runDoctor({
     extraLines: await agentModelsLines(),
     globals: await globalsRow(process.cwd(), os.homedir()),
-    skills: await enabledSkills(process.cwd()),
+    packs: config?.packs ?? [],
+    skills: config?.agents.skills ?? [],
   });
 
   process.stdout.write(r.stdout); // runDoctor reports on stdout only

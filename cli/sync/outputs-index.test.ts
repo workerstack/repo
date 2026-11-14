@@ -11,6 +11,7 @@ import {
   REPO_STACK,
   EMPTY_STACK,
   EMPTY_DEPS,
+  EMPTY_REFS,
   repairsOf,
 } from "./__fixtures__/context-kit.ts";
 import { index, type Output } from "./outputs.ts";
@@ -38,9 +39,9 @@ it("creates the file with both sections when it is missing, then each package IN
   expect(index(ctx)).toStrictEqual({
     errors: [],
     outputs: [
-      block("references/INDEX.md", `# References\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n`),
-      block("apps/web/references/INDEX.md", `Web app\n\n${EMPTY_DEPS}\n`),
-      block("packages/api/references/INDEX.md", `\n\n# API worker\n\nMore.\n\n${EMPTY_DEPS}\n`),
+      block("references/INDEX.md", `# References\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n\n${EMPTY_REFS}\n`),
+      block("apps/web/references/INDEX.md", `Web app\n\n${EMPTY_DEPS}\n\n${EMPTY_REFS}\n`),
+      block("packages/api/references/INDEX.md", `\n\n# API worker\n\nMore.\n\n${EMPTY_DEPS}\n\n${EMPTY_REFS}\n`),
     ],
   });
 });
@@ -48,7 +49,7 @@ it("creates the file with both sections when it is missing, then each package IN
 it("writes no packages section in a single-package repo, and keeps empty stack markers", () => {
   expect(index(context()).outputs).toStrictEqual([
     {
-      content: `# References\n\n${EMPTY_STACK}\n`,
+      content: `# References\n\n${EMPTY_STACK}\n\n${EMPTY_REFS}\n`,
       kind: "file",
       managed: "block",
       path: "references/INDEX.md",
@@ -64,7 +65,7 @@ it("hashes unhashed sections in place in one pass, one line each, and keeps the 
 
   const files = { ...PACKAGE_INDEXES, "references/INDEX.md": text };
   const ctx = context({ files, manifest: STACK_ROOT, packages: [WEB, API] });
-  const content = `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n`;
+  const content = `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n\n${EMPTY_REFS}\n`;
   expect(index(ctx).outputs.slice(0, 1)).toStrictEqual([
     {
       content,
@@ -97,7 +98,7 @@ it("appends absent sections at the end after a blank line", () => {
 
   expect(index(ctx).outputs.slice(0, 1)).toStrictEqual([
     {
-      content: `# Docs\n\nHand-written.\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n`,
+      content: `# Docs\n\nHand-written.\n\n${PACKAGES_SECTION}\n\n${REPO_STACK}\n\n${EMPTY_REFS}\n`,
       kind: "file",
       managed: "block",
       path: "references/INDEX.md",
@@ -162,7 +163,7 @@ it("closes a section opener with no closer, keeping the user's line below it, in
     errors: [],
     outputs: [
       {
-        content: `# Docs\n\n${EMPTY_STACK}\n- mine\n`,
+        content: `# Docs\n\n${EMPTY_STACK}\n- mine\n\n${EMPTY_REFS}\n`,
         kind: "file",
         managed: "block",
         path: "references/INDEX.md",
@@ -176,7 +177,7 @@ it("closes a section opener with no closer, keeping the user's line below it, in
 it("repairs a stray closer and a duplicate section, one line each", () => {
   const text = `# Docs\n\n<!-- /repo:stack -->\n\n${EMPTY_STACK}\n\n${EMPTY_STACK}\n`;
   const ctx = context({ files: { "references/INDEX.md": text } });
-  expect(contentOf(index(ctx).outputs[0])).toBe(`# Docs\n\n${EMPTY_STACK}\n`);
+  expect(contentOf(index(ctx).outputs[0])).toBe(`# Docs\n\n${EMPTY_STACK}\n\n\n${EMPTY_REFS}\n`);
   expect(repairsOf(ctx, "references/INDEX.md")).toStrictEqual([
     "dropped 1 extra repo:stack",
     "dropped 1 stray marker of repo:stack",

@@ -19,3 +19,9 @@ Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `
 In a consumer, sync rebuilds these files from the installed package on every install. The skill links point into `node_modules`. A committed copy drifts from the package and conflicts on each upgrade. So sync keeps them in the `repo:ignore` block of `.gitignore`.
 
 `bun repo sync` and `bun repo sync --check` refuse when git tracks a file the block covers. They print one line per block line, with the `git rm --cached` command to run. Migrate and adopt untrack a committed tree themselves.
+
+## References
+
+Each `references/**/*.md` needs a frontmatter `description:` of at most 32 characters. It may also set `order:`, a whole number. Sync lists the files in the `repo:refs` block of that folder's `INDEX.md`: lowest `order` first, then the files without one, ties by path. The README's Contents and sections follow that list.
+
+This holds in every repo with the docs pack and in each workspace package. A bad value fails sync and names the file.
