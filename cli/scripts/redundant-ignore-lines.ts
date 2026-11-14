@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import {
   CHECK_IGNORE_ROW_RE,
   COMMENT_MARK,
@@ -161,7 +162,7 @@ export function redundantIgnoreLines(
       lines.map((l) => probesOf(l, dir)),
     );
   } finally {
-    fs.rmSync(s.tmp, { force: true, recursive: true });
+    removeTree(s.tmp);
   }
 }
 

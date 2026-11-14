@@ -3,13 +3,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, vi } from "vitest";
+import { removeTemps } from "./remove-temps.ts";
 
 /** Registers the cleanup; `tempDir` makes a directory with `prefix`, `track` adds a path to remove. */
 export function useTempDirs(prefix: string): { track: (file: string) => void; tempDir: () => string } {
   const temps: string[] = [];
   afterEach(() => {
     vi.restoreAllMocks();
-    for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+    removeTemps(temps.splice(0));
   });
   return {
     tempDir: () => {

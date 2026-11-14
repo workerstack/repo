@@ -1,6 +1,6 @@
-import fs from "node:fs";
 
 import { afterEach, beforeEach, vi } from "vitest";
+import { removeTemps } from "./remove-temps.ts";
 
 /** What a test run wrote to stdout and stderr, and the temp dirs it made and the hooks remove. */
 export type CapturedRun = { out: string[]; err: string[]; temps: string[] };
@@ -18,7 +18,7 @@ export function useCapturedRun(): CapturedRun {
   afterEach(() => {
     vi.restoreAllMocks();
     process.chdir(saved);
-    for (const dir of run.temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+    removeTemps(run.temps.splice(0));
   });
   return run;
 }

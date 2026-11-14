@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const made: string[] = [];
 
@@ -16,7 +17,7 @@ export function tempDir(prefix: string): string {
 /** Registers the removal of every dir `tempDir` made in the calling test file. */
 export function useTempDirs(): void {
   afterEach(() => {
-    for (const dir of made.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+    removeTemps(made.splice(0));
   });
 }
 

@@ -13,6 +13,7 @@ import path from "node:path";
 
 import { DEFAULT_FLOORS } from "../check-ratchets.constants.ts";
 import { findRoot, loadConfig, missingConfig, type Pack } from "../config.ts";
+import { removeTree } from "../remove-tree.ts";
 import { runCargo, type CargoRun } from "../rust/clippy.ts";
 import { RUST_MANIFEST } from "../rust/rust-tests.constants.ts";
 import { rustTests } from "../rust/rust-tests.ts";
@@ -180,7 +181,7 @@ function gatesMain(
 
     return gates.every((gate) => gate.ok) ? 0 : 1;
   } finally {
-    if (temp !== undefined) fs.rmSync(temp, { force: true, recursive: true });
+    if (temp !== undefined) removeTree(temp);
   }
 }
 

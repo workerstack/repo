@@ -104,9 +104,6 @@ export const LOCATION_RE: RegExp = /^\s*Location:\s*(\S+)\s*$/gm;
 /** git lists every ignored dir in one call; its output may be large. */
 export const GIT_MAX_BUFFER: number = 256 * 1024 * 1024;
 
-/** How often a delete retries a busy path. */
-export const RM_RETRIES = 3;
-
 /** The exit code of a bad flag combination. */
 export const USAGE_EXIT = 2;
 export const BUILD_FLAG = "--build";

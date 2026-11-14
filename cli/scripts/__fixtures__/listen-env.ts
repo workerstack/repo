@@ -21,6 +21,7 @@ import type {
 import { z } from "zod";
 import { isRecord, type Json, type JsonObject, readJson } from "../../json.ts";
 import { fetchResult } from "./fetch-result.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** The listeners a fake child was handed, by event. */
 export type Handlers = { error?: ErrorListener; exit?: ExitListener };
@@ -48,7 +49,7 @@ export function cleanupTmp() {
   vi.useRealTimers();
   vi.restoreAllMocks();
   // A planted Windows program stays locked for a moment after its detached process exits, so the remove retries.
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 });
+  removeTemps(tmpDirs.splice(0));
 }
 
 export function tmp(prefix: string): string {

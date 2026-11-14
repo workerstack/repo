@@ -5,6 +5,7 @@ import path from "node:path";
 import { z } from "zod";
 
 import { tryJson } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import type { Result } from "../result.ts";
 import { quote } from "./cargo-tools.ts";
 import { MISSING_CARGO } from "./clippy.constants.ts";
@@ -99,7 +100,7 @@ export function rustCoverage(root: string, run: CargoRun): Result<Record<string,
 
     return parse(fs.readFileSync(output, "utf8"), root);
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

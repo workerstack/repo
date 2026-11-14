@@ -15,6 +15,7 @@ import { childEnv } from "../env.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { readJson } from "../json.ts";
 import { codeOf, DUPLICATE_CODE } from "../lint/script-rules.ts";
+import { removeTree } from "../remove-tree.ts";
 import type { Result } from "../result.ts";
 import type { Diagnostic } from "../scripts/lint-baseline.ts";
 import { toolEnv } from "../scripts/tool-env.ts";
@@ -134,7 +135,7 @@ function scan(bin: string, root: string, sources: readonly string[]): Report {
 
     return readJson(reportSchema(), fs.readFileSync(path.join(out, REPORT), "utf8"));
   } finally {
-    fs.rmSync(temp, { force: true, recursive: true });
+    removeTree(temp);
   }
 }
 
