@@ -1,38 +1,51 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { CONFIG_FILE } from "../config.constants.ts";
+import { readWorkflow } from "../workflow.ts";
+import { spawnRunner } from "./ci-wait-run.ts";
 import { canonicalPath } from "./workspace-root.ts";
+import {
+  checkReady,
+  dropBranch,
+  finished,
+  isAhead,
+  noWorktree,
+  nothingNamed,
+  retire,
+  retired,
+  shortTip,
+  syncIfOut,
+} from "./worktree-finish-steps.ts";
 import {
   branchExists,
   defaultBranch,
-  dropRemoteBranch,
   fastForward,
   git,
   gitReason,
   hasOwnCommits,
-  isCheckedOut,
   isManaged,
   isMerged,
   liveEntry,
-  rebaseInProgress,
   rebaseOnto,
   requireName,
   tipOf,
   worktreeEntries,
   worktreeOf,
 } from "./worktree-git.ts";
-import { copyIncluded, createWorktree, installDependencies, syncRoot } from "./worktree-setup.ts";
+import { finishByPullRequest } from "./worktree-pr.ts";
+import { copyIncluded, createWorktree, installDependencies } from "./worktree-setup.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
-import {
-  BRANCH_PREFIX,
-  HEADS_REF,
-  MAX_FINISH_TRIES,
-  NO_BRANCH,
-  NOTHING_AHEAD,
-  WORKTREE_CMD,
-  WORKTREES_DIR,
-} from "./worktree.constants.ts";
-import type { FinishResult, Finishing, Pruned, WorktreeEntry, WorktreeInfo } from "./worktree.types.ts";
+import { BRANCH_PREFIX, HEADS_REF, MAX_FINISH_TRIES, NO_BRANCH, WORKTREES_DIR } from "./worktree.constants.ts";
+import type {
+  FinishDeps,
+  FinishResult,
+  Finishing,
+  LocalFinish,
+  Pruned,
+  WorktreeEntry,
+  WorktreeInfo,
+} from "./worktree.types.ts";
 
 /** The worktree `addWorktree` made or reused, its branch, and whether it is new. */
 export type WorktreeMade = { path: string; branch: string; created: boolean };
@@ -68,39 +81,6 @@ export function listWorktrees(root: string): WorktreeInfo[] {
     });
 }
 
-/** Remove the worktree dir (never forced), or only unregister it when another session's prune got there first. */
-function removeWorktreeDir(root: string, worktree: string): void {
-  // win32 refuses to delete a dir that is any process's cwd, this one included when finish ran inside it.
-  const fromInside = path.relative(canonicalPath(worktree), canonicalPath(process.cwd()));
-
-  if (!fromInside.startsWith("..") && !path.isAbsolute(fromInside)) process.chdir(root);
-
-  if (!fs.existsSync(worktree)) {
-    git(root, ["worktree", "prune"]);
-
-    return;
-  }
-
-  const removed = git(root, ["worktree", "remove", worktree]);
-
-  if (!removed.ok)
-    throw new Error(`could not remove ${worktree}: ${gitReason(removed.err)}; fix that, then run finish again`);
-}
-
-/** Delete `branch` once the default branch holds it: origin's copy first, so a crash between leaves the local one. */
-function dropBranch(root: string, branch: string): boolean {
-  dropRemoteBranch(root, branch);
-
-  return git(root, ["branch", "-D", branch]).ok;
-}
-
-/** Remove the worktree, if any, then delete the branch once the default branch holds it. */
-function retire(root: string, worktree: string | undefined, branch: string): void {
-  if (worktree !== undefined) removeWorktreeDir(root, worktree);
-
-  if (isMerged(root, branch)) dropBranch(root, branch);
-}
-
 /** The name `finish` works on: `raw`, or the worktree `cwd` is in when `raw` is undefined. */
 function finishName(root: string, raw: string | undefined, cwd: string): string {
   const name = raw === undefined ? worktreeOf(canonicalPath(path.resolve(cwd)), root, path) : requireName(raw);
@@ -109,42 +89,6 @@ function finishName(root: string, raw: string | undefined, cwd: string): string 
     throw new WorktreeUsageError("run finish inside .worktrees/<name> or pass its name");
 
   return name;
-}
-
-/** Throw when the worktree cannot be rebased: mid-rebase, another branch out, or uncommitted changes. */
-function checkReady(f: Finishing, entry: WorktreeEntry): void {
-  const { dest, branch } = f;
-
-  if (rebaseInProgress(dest)) {
-    throw new Error(
-      `${dest} is mid-rebase: finish it with git -C ${dest} rebase --continue (or --abort), then run finish again`,
-    );
-  }
-
-  if (entry.branch !== branch) {
-    throw new Error(
-      `${dest} has ${entry.branch ?? "a detached HEAD"} checked out, not ${branch}: ` +
-        `run git -C ${dest} switch ${branch}, then run finish again`,
-    );
-  }
-
-  const dirty = git(dest, ["status", "--porcelain"]).out.split("\n").filter(Boolean).length;
-
-  if (dirty > 0) {
-    throw new Error(
-      `${dest} has uncommitted changes in ${dirty} ${dirty === 1 ? "file" : "files"}: ` +
-        "commit or drop them, then run finish again",
-    );
-  }
-}
-
-/** True when the branch has commits the default branch lacks. */
-function isAhead(f: Finishing): boolean {
-  const ahead = git(f.root, ["rev-list", "--count", `${f.target}..${f.branch}`]);
-
-  if (!ahead.ok) throw new Error(`could not compare ${f.branch} with ${f.target}: ${gitReason(ahead.err)}`);
-
-  return ahead.out !== NOTHING_AHEAD;
 }
 
 /** Rebase and fast-forward until the default branch holds the branch, retrying while the default branch moves. */
@@ -164,58 +108,69 @@ function land(f: Finishing): void {
   }
 }
 
-function shortSha(f: Finishing): string {
-  return git(f.root, ["rev-parse", "--short", HEADS_REF + f.branch]).out;
-}
-
 /** Land the branch, retire it, and sync the root when it has the default branch out; the landed short sha. */
 function landAndRetire(f: Finishing): string {
   land(f);
-  const sha = shortSha(f);
+  const sha = shortTip(f.root, f.branch);
   retire(f.root, f.dest, f.branch);
-
-  if (isCheckedOut(f.root, f.target)) syncRoot(f.root);
+  syncIfOut(f.root, f.target);
 
   return sha;
 }
 
-/**
- * Land `wt/<name>` on the default branch and remove it: rebase inside the worktree, fast-forward the default branch,
- * remove worktree and branch, delete origin's copy, sync the root. A rerun converges from any crash point.
- * `rootArg` is the main checkout; an undefined `raw` takes the name from the worktree `cwd` is in.
- */
-export function finishWorktree(rootArg: string, raw: string | undefined, cwd: string = rootArg): FinishResult {
-  const root = canonicalPath(rootArg);
-  const name = finishName(root, raw, cwd);
-  const [dest, branch] = [path.join(root, WORKTREES_DIR, name), BRANCH_PREFIX + name];
-  const entry = liveEntry(root, dest);
-
-  if (entry === undefined && !branchExists(root, branch))
-    throw new Error(`no worktree or branch named ${name}: ${WORKTREE_CMD} list shows them`);
+/** The finish `f` of the worktree and default branch, once `name`'s worktree or branch is known to exist. */
+function finishing(root: string, dest: string, branch: string): Finishing {
   const target = defaultBranch(root);
 
   if (target === NO_BRANCH)
     throw new Error(`${root} has no branch checked out and no origin/HEAD; check out the default branch there`);
-  const f: Finishing = { branch, dest, root, target };
 
+  return { branch, dest, root, target };
+}
+
+/** Land `f` on the default branch locally, or retire it when nothing is ahead. */
+function finishLocally(f: Finishing, entry: WorktreeEntry | undefined): LocalFinish {
   if (entry !== undefined) checkReady(f, entry);
-  const done = { branch: f.branch, defaultBranch: f.target, path: f.dest };
 
-  if (!isAhead(f)) {
-    const sha = hasOwnCommits(root, f.branch) ? shortSha(f) : null;
-    retire(root, entry === undefined ? undefined : f.dest, f.branch);
+  if (!isAhead(f)) return retired(f, entry);
 
-    return { ...done, sha };
-  }
+  if (entry === undefined) throw noWorktree(f);
 
-  if (entry === undefined) {
-    throw new Error(
-      `${f.branch} has commits that ${f.target} lacks and no worktree: ` +
-        `run ${WORKTREE_CMD} add ${name} to bring it back, then run finish again`,
-    );
-  }
+  return { ...finished(f), sha: landAndRetire(f) };
+}
 
-  return { ...done, sha: landAndRetire(f) };
+/** `finishWorktree` with its gh and workflow read swapped: `rootArg`, the name `raw` and the `cwd` it runs in. */
+export type Finish = (rootArg: string, raw: string | undefined, cwd?: string) => FinishResult;
+
+/**
+ * Finish `wt/<name>` the way the root's workflow says, with `deps` for gh and the workflow read. Under worktree and
+ * main, land it on the default branch and remove it: rebase inside the worktree, fast-forward the default branch,
+ * remove worktree and branch, delete origin's copy, sync the root. Under pull-request, push it and open its pull
+ * request, or clean up once that merged (`finishByPullRequest`). A rerun converges from any crash point. `rootArg` is
+ * the main checkout; an undefined `raw` takes the name from the worktree `cwd` is in.
+ */
+export function finishWith(deps: FinishDeps): Finish {
+  return (rootArg, raw, cwd = rootArg) => {
+    const root = canonicalPath(rootArg);
+    const name = finishName(root, raw, cwd);
+    const read = (deps.workflow ?? readWorkflow)(root);
+
+    if (read === "unreadable") throw new Error(`${CONFIG_FILE} failed to load: fix it, then run finish again`);
+    const [dest, branch] = [path.join(root, WORKTREES_DIR, name), BRANCH_PREFIX + name];
+    const entry = liveEntry(root, dest);
+
+    if (read === "pull-request")
+      return finishByPullRequest(finishing(root, dest, branch), entry, deps.gh ?? spawnRunner("gh"));
+
+    if (entry === undefined && !branchExists(root, branch)) throw nothingNamed(name);
+
+    return finishLocally(finishing(root, dest, branch), entry);
+  };
+}
+
+/** `finishWith` the real gh and the root's repo.config.ts. */
+export function finishWorktree(rootArg: string, raw: string | undefined, cwd: string = rootArg): FinishResult {
+  return finishWith({})(rootArg, raw, cwd);
 }
 
 /** Remove clean managed worktrees whose commits reached the default branch, then merged `wt/*` branches left. */

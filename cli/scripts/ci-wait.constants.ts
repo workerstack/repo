@@ -52,6 +52,9 @@ export function GIT_REMOTES(sha: string): string[] {
 }
 
 export const GH_AUTH: readonly string[] = ["auth", "status"];
+
+/** What a failed gh run is taken to mean. */
+export const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 const GH_LIST_FIELDS = "databaseId,status,conclusion,event,headBranch,createdAt";
 const GH_BRANCH_FIELDS = "databaseId,createdAt";
 const GH_VIEW_FIELDS = "status,conclusion,jobs";

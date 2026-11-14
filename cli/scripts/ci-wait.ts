@@ -18,6 +18,7 @@ import {
   EXIT_SUPERSEDED,
   GH_AUTH,
   GH_LIST_COMMIT,
+  GH_LOGIN,
   GH_OPEN_PRS,
   GIT_BRANCH,
   GIT_DEFAULT_BRANCH,
@@ -70,8 +71,6 @@ function runsSchema() {
 function prsSchema() {
   return z.array(z.object({ number: z.number() }));
 }
-
-const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 
 /** The dispatch grace as the lines show it. */
 const GRACE = `${DISPATCH_GRACE_MS / MS_PER_SECOND}s`;

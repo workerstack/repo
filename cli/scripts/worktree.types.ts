@@ -26,12 +26,42 @@ export type WorktreeInfo = {
   managed: boolean;
 };
 
-/** What `finishWorktree` landed; `sha` is null when the branch had no commits of its own. */
-export type FinishResult = {
+/** What a local `finishWorktree` landed; `sha` is null when the branch had no commits of its own. */
+export type LocalFinish = {
   branch: string;
   path: string;
   defaultBranch: string;
   sha: string | null;
+};
+
+/** A pull request's state as gh names it. */
+export type PrState = "OPEN" | "MERGED" | "CLOSED";
+
+/** A branch's newest pull request: its state, URL, number and head commit (gh's `headRefOid`). */
+export type PullRequest = {
+  state: PrState;
+  url: string;
+  number: number;
+  head: string;
+};
+
+/**
+ * What a pull-request `finishWorktree` did: pushed the branch at `sha` and opened its pull request at `url` or updated
+ * it, or landed the merged one with the default branch now at `sha`.
+ */
+export type PullRequestFinish = Omit<LocalFinish, "sha"> & {
+  kind: "opened" | "updated" | "landed";
+  url: string;
+  sha: string;
+};
+
+/** What `finishWorktree` did: a local finish carries no `kind`, a pull-request one does. */
+export type FinishResult = LocalFinish | PullRequestFinish;
+
+/** What `finishWorktree` may swap for tests: the gh it asks about pull requests, and the workflow read. */
+export type FinishDeps = {
+  gh?: Runner;
+  workflow?: (root: string) => WorkflowRead;
 };
 
 /** What `pruneWorktrees` removed: a worktree and its branch, or a branch alone (`path` null). */

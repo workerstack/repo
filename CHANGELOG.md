@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - sync and sync --check now refuse when git tracks a file the ignore block covers, and print the git rm --cached command to run. A consumer that tracks such a file must untrack it first.
 - `bun repo su [--session <id>] [window]` lists a session's plans and roadmaps, or every one changed in a window such as 30m, 4h or overnight, plus the main commits, with status, boxes done and blockers; `/su` runs it
 - repo.config.ts takes `workflow`: "worktree" (the default), "pull-request" or "main". Under "main" agents may write and commit in the main checkout. Under "pull-request" `git push` and `bun repo push` refuse the default branch. A config that fails to load keeps both denies.
+- Under `workflow: "pull-request"`, `bun repo worktree finish <name>` rebases `wt/<name>` onto origin, pushes it and opens or updates its pull request; once gh shows the pull request merged, finish fast-forwards the default branch to origin's, removes the worktree and both copies of the branch, and syncs the root. It refuses a closed pull request, a branch with commits its merged pull request lacks, and an origin branch with commits the local one lacks. The push gate waits on the pull request's CI after such a finish.
 
 ### Changed
 
