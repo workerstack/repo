@@ -33,7 +33,7 @@ describe("fast roadmap denials", () => {
     const room = 20 - fastRoadmapLineCount(saveRoadmap(SENT, tmpWs()).content ?? "");
     expect(saveRoadmap(withExtraBoxes(room), tmpWs()).ok).toBe(true);
     expect(errorsOf(withExtraBoxes(room + 1))).toContain(
-      "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)",
+      "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)",
     );
   });
 

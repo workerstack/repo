@@ -2,7 +2,10 @@ import path from "node:path";
 
 import { extraH2Sections } from "./agents-text.ts";
 import { filesUnder, isDir, present, stockRel } from "./migrate-fs.ts";
+import { SKILL_RENAMES } from "./migrate-skill-names.constants.ts";
+import { renameSkills } from "./migrate-skill-names.ts";
 import { COPIED_DIR, MD, REPO_DIR, RULE_FRONTMATTER } from "./migrate.constants.ts";
+import type { MoveMark } from "./migrate.ts";
 import type { MigrationState } from "./migration-state.ts";
 
 const H2 = "## ";
@@ -93,21 +96,47 @@ export function editedSkill(state: MigrationState, from: string): boolean {
   });
 }
 
-/** Skill dirs the stock lacks or the consumer edited move to `.repo/skills`; the rest are stock copies to remove. */
+/**
+ * The mark of a copied skill that took a new name: `mark`, or the SKILL.md as it is, with the old skill names renamed,
+ * so the moved file already says its new name; `mark` when the rename changes nothing.
+ */
+function renamedMark(
+  state: MigrationState,
+  file: { from: string; to: string },
+  mark: MoveMark | undefined,
+): MoveMark | undefined {
+  const text = mark?.content ?? state.read(file.from);
+
+  if (text === null) return mark;
+  const content = renameSkills(text);
+
+  if (content === text) return mark;
+
+  return { content, note: mark?.note ?? `renamed the old skill names in ${file.to}`, path: file.from };
+}
+
+/**
+ * Skill dirs the stock lacks or the consumer edited move to `.repo/skills`, an old stock skill under its new name; the
+ * rest are stock copies to remove.
+ */
 export function planSkills(state: MigrationState): void {
   for (const name of state.names(".agents/skills")) {
     const from = `.agents/skills/${name}`;
 
     if (!isDir(path.join(state.root, from))) continue;
-    const to = `${REPO_DIR}/skills/${name}`;
+    const target = SKILL_RENAMES.get(name) ?? name;
+    const to = `${REPO_DIR}/skills/${target}`;
+    const file = { from: `${from}/SKILL.md`, to: `${to}/SKILL.md` };
 
     if (!editedSkill(state, from)) {
       state.drop.push(from);
-    } else if (present(path.join(state.stock, stockRel(from)))) {
-      const mark = state.mark(`${from}/SKILL.md`, `${to}/SKILL.md`, { kind: "skill", name });
+    } else if (present(path.join(state.stock, stockRel(`.agents/skills/${target}`)))) {
+      const marked = state.mark(file.from, file.to, { kind: "skill", name: target });
+      const mark = target === name ? marked : renamedMark(state, file, marked);
       state.move(from, to, { mark, note: `moved your edited ${from} to ${to} (it now replaces the stock skill)` });
     } else {
-      state.move(from, to, { note: `moved ${from} to ${to}` });
+      const mark = target === name ? undefined : renamedMark(state, file, undefined);
+      state.move(from, to, { mark, note: `moved ${from} to ${to}` });
     }
   }
 }

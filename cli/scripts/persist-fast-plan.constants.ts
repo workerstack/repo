@@ -23,5 +23,5 @@ export const FINAL_NEWLINE_RE: RegExp = /\n$/;
 
 export const NO_STRATEGY = "a fast plan has no strategy";
 export const ONLY_SECTIONS = "a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes";
-export const TOO_LONG = "a fast plan is at most 40 lines; write a plan (/write-plan)";
+export const TOO_LONG = "a fast plan is at most 40 lines; write a plan (/write-plan-deep)";
 export const ONLY_OPEN_BOXES = "a new fast plan has only [ ] boxes";

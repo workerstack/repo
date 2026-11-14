@@ -42,7 +42,7 @@ status done + explicit serial/path: warn; still load if the user named it.
 
 ## After unique path
 
-Read the file. Set `status: resumed`. Work in a worktree: the one the handoff names, else `bun repo worktree add <handoff slug>`; the gate denies product writes in the main checkout. Work Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan`. Edit in place. Never persist-handoff.ts on pickup.
+Read the file. Set `status: resumed`. Work in a worktree: the one the handoff names, else `bun repo worktree add <handoff slug>`; the gate denies product writes in the main checkout. Work Next leaves in order; flip only that box; all `[x]` → `status: done`; do not re-plan; stale → `/write-plan-deep`. Edit in place. Never persist-handoff.ts on pickup.
 
 ## Recap
 

@@ -109,14 +109,14 @@ export const ITEM_KINDS: Readonly<Record<ItemKind, ItemSpec>> = {
   },
   plan: {
     approvable: /* @__PURE__ */ new Set(["ready"]),
-    command: "/implement-plan",
+    command: "/implement-plan-deep",
     dir: "plans",
     needsReview: true,
     prefix: "",
   },
   roadmap: {
     approvable: /* @__PURE__ */ new Set(["draft", "locked"]),
-    command: "/implement-roadmap",
+    command: "/implement-roadmap-deep",
     dir: "roadmaps",
     needsReview: true,
     prefix: "set status locked, then ",

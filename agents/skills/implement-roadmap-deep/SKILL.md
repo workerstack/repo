@@ -1,10 +1,8 @@
 ---
-name: implement-roadmap
-description: >-
-  Run a locked roadmap in order. Use for /implement-roadmap. Writes each missing
-  plan, then /implement-plan. Refuses a draft.
+name: implement-roadmap-deep
+description: 'Deep: run a locked roadmap in order. Writes each missing plan, then /implement-plan-deep. Refuses a draft. Short one: /implement-roadmap-fast.'
 ---
-# implement-roadmap
+# implement-roadmap-deep
 
 You run the roadmap in this session. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
 
@@ -14,9 +12,9 @@ Accept `locked` or `in-progress`. Set `in-progress` when you start. Same session
 
 For each open slice, in order:
 
-1. If `Location` is absent, run `/write-plan` from that slice's line: its title and sentence on a pointer roadmap, its Title, Goal and Why on an old-shape one. Research the slice's decisions and Usage there; they go into the plan, not the roadmap. Read the roadmap's `## Previous mistakes` first and put each entry that touches this slice in the plan's Watch-outs. The lock is the approval: do not stop for plan approval. `/write-plan` picks the type and the `commit:` subject. The plan copies the roadmap's `strategy:` unless the slice's scope argues for another (heuristic in `/write-plan`). If it hits a plan-shaping question, stop and leave the roadmap `locked` or `in-progress`.
-2. Set `Location` to the absolute plan path `/write-plan` reported. Do not write a second plan when Location is already set.
-3. Run `/implement-plan` on that plan. It works in the plan's worktree `{serial}-{name}` and finishes it. Do not stop between slices.
+1. If `Location` is absent, run `/write-plan-deep` from that slice's line: its title and sentence on a pointer roadmap, its Title, Goal and Why on an old-shape one. Research the slice's decisions and Usage there; they go into the plan, not the roadmap. Read the roadmap's `## Previous mistakes` first and put each entry that touches this slice in the plan's Watch-outs. The lock is the approval: do not stop for plan approval. `/write-plan-deep` picks the type and the `commit:` subject. The plan copies the roadmap's `strategy:` unless the slice's scope argues for another (heuristic in `/write-plan-deep`). If it hits a plan-shaping question, stop and leave the roadmap `locked` or `in-progress`.
+2. Set `Location` to the absolute plan path `/write-plan-deep` reported. Do not write a second plan when Location is already set.
+3. Run `/implement-plan-deep` on that plan. It works in the plan's worktree `{serial}-{name}` and finishes it. Do not stop between slices.
 4. Mark the slice `[x]` only after that plan's Verify is done.
 5. Read that plan's `## Previous mistakes`. For each entry that changes the Order or a later slice (its sentence, or on an old-shape roadmap its Goal or Why, or a Decision), add `- slice: {what plan N found} → {what changed in the roadmap}` to the roadmap and make that change in the same save. Earlier entries stay.
 

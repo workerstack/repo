@@ -17,7 +17,7 @@ const tmpWs = useTmpWs();
 const { save, saved, legacy } = leanKit(tmpWs);
 
 function capError(n: number) {
-  return `${n} lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`;
+  return `${n} lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap-deep)`;
 }
 
 // Lines the saved frontmatter and the carded body put above Previous mistakes.

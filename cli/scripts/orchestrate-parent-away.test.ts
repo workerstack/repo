@@ -90,7 +90,7 @@ it.each(CASINGS)(
     s.say("plan it");
     const plan = s.reviewed("plans", VALID_PLAN);
     expect(s.stop(`Saved.\n\n${plan1}`)?.reason).toBe(
-      `${AWAY_RUN_REASON}; i approves plan 1: plan 1: run /implement-plan 1 (${plan})`,
+      `${AWAY_RUN_REASON}; i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`,
     );
   },
 );

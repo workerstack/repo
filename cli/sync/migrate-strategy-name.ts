@@ -66,11 +66,12 @@ export function planStrategyRename(root: string, p: typeof path = path): Migrati
 
   return [
     {
-      kind: "rename-strategy",
+      kind: "rename-text",
       note:
         `renamed strategy review-fast to spawn-fast, review-deep to spawn-deep and default to free in ${count} ` +
         `under ${REPO}`,
       paths,
+      rename: "strategy",
     },
   ];
 }

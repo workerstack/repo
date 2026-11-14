@@ -4,9 +4,9 @@ description: Implement journal format
 
 # Implementation format (SSOT)
 
-Local session journal for `/implement-plan`. Not a plan, handoff, or git commit.
+Local session journal for `/implement-plan-deep`. Not a plan, handoff, or git commit.
 
-Created when `/implement-plan` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
+Created when `/implement-plan-deep` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
 
 ## Path
 

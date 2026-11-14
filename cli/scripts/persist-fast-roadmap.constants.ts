@@ -28,7 +28,7 @@ export const PATH_SEPARATOR_RE: RegExp = /[\\/]/;
 
 export const NO_STRATEGY = "a fast roadmap has no strategy";
 export const ONLY_SECTIONS = "a fast roadmap holds only Order and Verify, then an optional Previous mistakes";
-export const TOO_LONG = "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)";
+export const TOO_LONG = "a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)";
 export const TOO_FEW_SLICES = "a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)";
 export const ONLY_OPEN_BOXES = "a new fast roadmap has only [ ] boxes";
 export const LOCATION_NOT_FAST_PLAN = "a fast roadmap slice's Location is a fast plan under .repo/plans-fast/";

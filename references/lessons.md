@@ -56,11 +56,11 @@ Write a lesson only for a mistake our normal workflow will hit again on other ta
 
 After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `bun repo lessons match` on the files involved first, then `hit` the matching lesson or write a new one.
 
-- Plan feedback from the user (`/write-plan`).
-- A failed Verify, or a test that failed after a fix (`/implement-plan`).
-- `principle-attack-the-premise` firing (`/implement-plan`).
-- An accepted `/review-plan` finding (`/write-plan`).
-- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
+- Plan feedback from the user (`/write-plan-deep`).
+- A failed Verify, or a test that failed after a fix (`/implement-plan-deep`).
+- `principle-attack-the-premise` firing (`/implement-plan-deep`).
+- An accepted `/review-plan` finding (`/write-plan-deep`).
+- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap-deep`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap-deep`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
 - An operator correction (`/correct`).
 
 At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `bun repo lessons rm`.

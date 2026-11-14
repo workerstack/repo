@@ -510,7 +510,7 @@ At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are
 
 - `a fast plan has no strategy`
 - `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
-- `a fast plan is at most 40 lines; write a plan (/write-plan)`
+- `a fast plan is at most 40 lines; write a plan (/write-plan-deep)`
 - `a new fast plan has only [ ] boxes`
 
 ### Approval
@@ -543,7 +543,7 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 
 - `a fast roadmap has no strategy`
 - `a fast roadmap holds only Order and Verify, then an optional Previous mistakes`
-- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap)`
+- `a fast roadmap is at most 20 lines; write a roadmap (/write-roadmap-deep)`
 - `a fast roadmap has two or more slices; write a fast plan (/write-plan-fast)`
 - `a new fast roadmap has only [ ] boxes`
 - `a fast roadmap slice's Location is a fast plan under .repo/plans-fast/`
@@ -703,7 +703,7 @@ Implementer guards apply under every strategy: the spawn prompt names the worktr
 
 Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `<root>/node_modules/.bin/repo job --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
 
-Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan {n} (<path>)` and leaves the file alone. A code or spelled-out strategy writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. A near-miss code (`isx`, or `id` with its `s` dropped), or a strategy word within two edits of several choices approves nothing: `"{reply}" is not a choice; end with this block again:` and the block. Any other reply gets no approval context.
+Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan-deep {n} (<path>)` and leaves the file alone. A code or spelled-out strategy writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. A near-miss code (`isx`, or `id` with its `s` dropped), or a strategy word within two edits of several choices approves nothing: `"{reply}" is not a choice; end with this block again:` and the block. Any other reply gets no approval context.
 
 The approval block `closingBlock` renders, for one plan, fenced as code:
 
@@ -718,7 +718,7 @@ A queue joins header items with `, then `; the rows never change. Replies are ca
 
 Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.repo/tmp/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks an approval block that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the approval block`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so an `i` or `h` on an unsettled item is refused too: `i did not approve plan {n}: its review has not settled; wait for it, then end with the approval block again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
 
-Handoff: `h` keeps each file's strategy; `hf`, `hsf` and `hsd` (or `h` with a strategy word) write that strategy through the same validated write as an `i` code. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan {n}`, or `set status locked, then /implement-roadmap {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
+Handoff: `h` keeps each file's strategy; `hf`, `hsf` and `hsd` (or `h` with a strategy word) write that strategy through the same validated write as an `i` code. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan-deep {n}`, or `set status locked, then /implement-roadmap-deep {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
 
 Enforcement, from the live probe of each harness's child payload:
 
@@ -761,9 +761,9 @@ The main checkout is `root` (`resolveRoots().root`), outside `<root>/.tmp` and `
 
 ## Implementation format (SSOT)
 
-Local session journal for `/implement-plan`. Not a plan, handoff, or git commit.
+Local session journal for `/implement-plan-deep`. Not a plan, handoff, or git commit.
 
-Created when `/implement-plan` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
+Created when `/implement-plan-deep` starts. Straight shots skip this file. Do not merge into the plan (plan = flip the box only).
 
 ### Path
 
@@ -986,11 +986,11 @@ Write a lesson only for a mistake our normal workflow will hit again on other ta
 
 After any of these, add a `## Previous mistakes` entry to the plan. If the mistake will happen again on other tasks, run `bun repo lessons match` on the files involved first, then `hit` the matching lesson or write a new one.
 
-- Plan feedback from the user (`/write-plan`).
-- A failed Verify, or a test that failed after a fix (`/implement-plan`).
-- `principle-attack-the-premise` firing (`/implement-plan`).
-- An accepted `/review-plan` finding (`/write-plan`).
-- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
+- Plan feedback from the user (`/write-plan-deep`).
+- A failed Verify, or a test that failed after a fix (`/implement-plan-deep`).
+- `principle-attack-the-premise` firing (`/implement-plan-deep`).
+- An accepted `/review-plan` finding (`/write-plan-deep`).
+- Roadmap feedback, an accepted `/review-roadmap` finding (`/write-roadmap-deep`), a child plan that changes the program, or a failed program Verify (`/implement-roadmap-deep`). These go to the roadmap's log. Before the roadmap is `done`, each entry that outlives the program becomes a lesson with `--evidence "roadmap {n}"`.
 - An operator correction (`/correct`).
 
 At `hits: 2` the mistake is a class. `/correct` encodes it as a check (architecture, type, lint, or test), then runs `bun repo lessons rm`.
@@ -1090,7 +1090,7 @@ Cheap outline. Not a file dump.
 - `node_modules/@workerstack/repo/references/hooks.md` — hook policy
 - `node_modules/@workerstack/repo/references/map.md` — this file
 - `node_modules/@workerstack/repo/references/output.md` — default voice
-- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan` → approval → `/implement-plan`; two or more slices → `/write-roadmap`
+- `node_modules/@workerstack/repo/references/scope.md` — size gate; plan by default: research → `/write-plan-deep` → approval → `/implement-plan-deep`; two or more slices → `/write-roadmap-deep`
 - `node_modules/@workerstack/repo/references/INDEX.md` — the catalog, read first: the generated `repo:refs` (one line per reference doc), `repo:stack` (the stack's installed packages) and `repo:available` (the published ones not installed) sections. INDEX always. Not if-maps-else
 
 ### Agent SSOT
@@ -1322,7 +1322,7 @@ mode: away             # optional: ask | auto | away
 
 A save with no `strategy` or an unknown value is denied with `strategy: free|spawn-fast|spawn-deep`. A body line `strategy: {value}` moves into the frontmatter after `commit:`, like `commit:`. A line inside a code fence is not moved. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
 
-`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
+`mode` is optional: `ask`, `auto` or `away`. While the plan is `in-progress`, its `mode` applies only when the session has no `/auto`, `/ask` or `/away` stamp, for the session that saved it only. `/write-plan-deep` writes it only when the session runs `/away` or the person asked for a mode. A body line `mode: {value}` moves into the frontmatter after `strategy:`, like `strategy:`; a line inside a code fence is not moved. Another value is denied with `mode: ask|auto|away`.
 
 `reviews` counts the `/review-plan` rounds whose findings the writer settled: a whole number with no sign or leading zero, `0` on a new plan. The writer bumps it in the same save that applies a round's findings, even a round with no findings. It never goes down, and once present it cannot be removed, so every Write that sends full frontmatter carries the current `reviews`. The count proves a round ran and was settled, not that the review was good.
 
@@ -1364,7 +1364,7 @@ DONE   bun run test; --json | JSON.parse ok
 
 ### Size
 
-At most 100 lines above `## Previous mistakes`, frontmatter included. More than that is two or more slices: write a roadmap with `/write-roadmap`. A fresh save over the cap is denied with `131 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap)`. An update over 100 lines is denied only when it is longer than the saved file, so a legacy plan can still flip boxes. `## Previous mistakes` never counts: it grows during the run.
+At most 100 lines above `## Previous mistakes`, frontmatter included. More than that is two or more slices: write a roadmap with `/write-roadmap-deep`. A fresh save over the cap is denied with `131 lines above ## Previous mistakes, the cap is 100; split it into a roadmap (/write-roadmap-deep)`. An update over 100 lines is denied only when it is longer than the saved file, so a legacy plan can still flip boxes. `## Previous mistakes` never counts: it grows during the run.
 
 ### Previous mistakes
 
@@ -1423,7 +1423,7 @@ A phase line may end `(parallel: <path>, <path>, …)`, listing every file its l
 
 Tests live in Steps (not a new heading). New behavior or a bug: a failing test leaf before the impl leaf. Other behavior change: a test leaf immediately after the impl leaf. Docs, rename-only, config-only, generated: no test leaf. Verify is the end gate (project cmd or named subset), not a substitute for those leaves. Do not re-run the whole suite after every leaf unless it is cheap.
 
-Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
+Thinker cites **repo-relative paths** (`cli/scripts/x.ts`). The plan's worktree `{serial}-{name}` does not exist until the serial is saved, so `/implement-plan-deep` applies each path inside that worktree; an absolute path under the root is accepted too and names the same path there. Leaves must be implementable without re-planning. Product fork → pick the narrowest default, state it under Constraints, still emit steps.
 
 ### Validation checklist
 
@@ -1550,7 +1550,7 @@ After 3 failed rounds, a missing report or a status other than `done`, spawn `im
 
 ### Commit
 
-One commit at the end, in the worktree, as `implement-plan` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
+One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
 
 ### Dumps
 
@@ -1596,13 +1596,13 @@ mode: away             # optional: ask | auto | away
 
 `mode` is optional: `ask`, `auto` or `away`, as in a plan (see `plan-format.md`); any session stamp beats it. A body-only save may send a bare `mode: {value}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved value. Another value is denied with `mode: ask|auto|away`.
 
-`/implement-roadmap` refuses `draft`.
+`/implement-roadmap-deep` refuses `draft`.
 
 `reviews` counts the `/review-roadmap` rounds whose findings the writer settled. It starts at `0`, never goes down, and once present cannot be removed. A body-only save sends it as a bare `reviews: {n}` line above `ROADMAP_NAME:`, and a save that omits it keeps the saved count. Moving into `locked` needs `reviews` ≥ 1; a missing key counts as 0. A roadmap already past `draft` without the key stays editable.
 
 ### Body (this order only)
 
-A roadmap is pointers: what each slice ships, in order. Decisions, Usage, context and the why of each slice go into that slice's plan, which `/implement-roadmap` writes.
+A roadmap is pointers: what each slice ships, in order. Decisions, Usage, context and the why of each slice go into that slice's plan, which `/implement-roadmap-deep` writes.
 
 ```
 # auth-program
@@ -1629,13 +1629,13 @@ DONE   both slices done; repo init lists auth-types
 - **Card:** the 5 lines after `# {slug}` and one blank line, as in a plan (`plan-format.md`): WHAT, WHY, RISK, TOUCH, DONE, text at column 8, at most 120 characters each.
 - **Headings:** `## Order`, `## Verify`, `## Previous mistakes`, nothing else. Lines inside a code fence are never headings. A new roadmap with any other `##` is denied with `a new roadmap has only ## Order, ## Verify and ## Previous mistakes; move ## {heading} into the slice plans`.
 - **Slice:** one line, `N [ ] {title, 2–6 words}: {one sentence}`. The sentence says what that slice's plan ships. A slice that breaks it is denied with `slice N needs "N [ ] {title, 2–6 words}: {one sentence}"`.
-- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap` sets it to the absolute plan path `/write-plan` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
+- **Location:** an optional indented line under the slice. Omit it in a draft. `/implement-roadmap-deep` sets it to the absolute plan path `/write-plan-deep` reported; a slice that has one does not get a second plan. A relative `.repo/plans/{file}` also resolves.
 - `[x]` only after that child plan's Verify is done.
 - **Verify:** 1–5 runnable program gates, same `N.M [ ]` grammar as plans.
 - **Previous mistakes:** `(none)`, or one entry per line. Append-only.
 - **Cap:** at most 60 lines above `## Previous mistakes`, frontmatter included, `Location:` lines not counted, so filling them in mid-run never trips it. A fresh save past 60 is denied with `{n} lines above ## Previous mistakes, the cap is 60; move detail into the slice plans`; an update only when it grows past both 60 and the saved file.
 
-A roadmap has at least two slices. One slice is `/write-plan`.
+A roadmap has at least two slices. One slice is `/write-plan-deep`.
 
 #### Roadmaps saved before pointers
 
@@ -1653,7 +1653,7 @@ Mistakes about the program: slice order, slice boundaries, a premise later slice
 - `feedback`, `review`, `premise` and `decision` mean what they mean in a plan. `verify` is a failed program Verify gate.
 - `slice` is roadmap-only: what child plan N found that changed the Order or a later slice (or a Decision on an old-shape roadmap). The same save makes that change.
 - Optional ` (lesson: {slug})` at the end when the entry is also a lesson.
-- `/implement-roadmap` copies each entry that touches a slice into that slice's plan Watch-outs, and promotes entries that outlive the program to lessons before `done`.
+- `/implement-roadmap-deep` copies each entry that touches a slice into that slice's plan Watch-outs, and promotes entries that outlive the program to lessons before `done`.
 
 ### Validation checklist
 
@@ -1701,7 +1701,7 @@ Straight shot: one file, one obvious edit, nothing to decide. Do it, starting wi
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit. "Just" or "should be easy" on a goal is not "just do it": only words that skip the plan itself, such as "just do it" or "no plan", do.
 
-`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/auto` stamps `auto`. `/away` decides instead of asking and logs each choice as a `decision` entry; under away the Stop hook runs the approval block's header choice once the review settles and logs it. Any stamp beats a saved `mode: ask|auto|away`, which applies only when the session has no stamp. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); Only the person picks a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan`.
+`/ask` is not this loop. `/ask` pauses after each execution step. This loop pauses on questions and on the plan. `/auto` continues after approval; it does not skip approval. `/auto` stamps `auto`. `/away` decides instead of asking and logs each choice as a `decision` entry; under away the Stop hook runs the approval block's header choice once the review settles and logs it. Any stamp beats a saved `mode: ask|auto|away`, which applies only when the session has no stamp. Only the person picks a fast plan (`/write-plan-fast`, at most 40 lines, no review: `fast-plan-format.md`); Only the person picks a fast roadmap (`/write-roadmap-fast`, at most 20 lines, no review: `fast-roadmap-format.md`); the process here stays the default. `/do <task>` skips the plan and its review, never the worktree, the nearest test or the commit gate; a change that needs a decision goes to `/write-plan-deep`.
 
 ### Research
 
@@ -1713,23 +1713,23 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ### Plan
 
-`/write-plan`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. A plan over 100 lines above `## Previous mistakes`, frontmatter included, is a roadmap: split it with `/write-roadmap`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Write `mode:` beside `strategy:` only when the session runs `/away` or the person asked for a mode. Report the goal, phases, top risks, open assumptions and path, then stop with the approval block (`/write-plan` has the full form). The block comes only after the review settled, with `reviews` bumped since the review spawn; the Stop hook blocks it before that.
+`/write-plan-deep`. Format: `node_modules/@workerstack/repo/references/plan-format.md`. A plan over 100 lines above `## Previous mistakes`, frontmatter included, is a roadmap: split it with `/write-roadmap-deep`. The plan is the proposal: the chosen approach and its rejected alternative sit in Context or Constraints. A minor open choice is written as the default plus "confirm"; a plan-shaping one goes back to Questions. Before writing, run `bun repo lessons match` on the files the plan touches and cite each match in Watch-outs. After saving, run `/review-plan {n}` in a fresh agent, settle each finding, add a `review` entry to `## Previous mistakes` for each one you accept, and bump frontmatter `reviews` in that save. Write `mode:` beside `strategy:` only when the session runs `/away` or the person asked for a mode. Report the goal, phases, top risks, open assumptions and path, then stop with the approval block (`/write-plan-deep` has the full form). The block comes only after the review settled, with `reviews` bumped since the review spawn; the Stop hook blocks it before that.
 
 ### Approval
 
-Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or a code such as `isf`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `hf`, `hsf` and `hsd` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
+Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or a code such as `isf`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap-deep` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `hf`, `hsf` and `hsd` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
 
 ### Implement
 
-`/implement-plan` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
+`/implement-plan-deep` after approval. Same turn when the request said "plan and do it", or when `/implement-roadmap-deep` is running a `locked` or `in-progress` roadmap. Skip `[x]`. Write-allowlist = paths listed in the plan, repo-relative to that worktree. Do not skip test leaves. Work in the plan's worktree `{serial}-{name}` (`worktree.ts add`). Before the first leaf, check the latest commits and read the plan's `## Previous mistakes`. A failed Verify, a test that failed after a fix, or `principle-attack-the-premise` firing adds a `verify` or `premise` entry. An entry that will happen again on other tasks also becomes a lesson, written in that worktree: `node_modules/@workerstack/repo/references/lessons.md`. Journal: `node_modules/@workerstack/repo/references/implementation-format.md` under `.repo/implementations/` (create on start; not for straight shots). Straight shot: run the nearest existing test when the repo has one, repro a bug before the edit, and scaffold a test file only for a bug. Before you call a straight shot done, read `principle-prove-it-works`. Before you ask the user, read `principle-never-block-on-the-human`. Under away, log a `decision` entry instead of asking. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
 ### Types
 
 One type per plan. Pick the strongest match. A feature that crosses an ownership, package, or API boundary is `cross-cut`. Straight shots skip this table and follow the straight-shot rule in ## Implement. Skip a named check only with a reason in Context. Approval of the plan is the select.
 
-`/write-plan` copies the row into Steps or Verify, including a Read leaf for each named principle. Each Read leaf sits in the phase it gates, not in a phase of its own. `/implement-plan` reads that skill and follows it.
+`/write-plan-deep` copies the row into Steps or Verify, including a Read leaf for each named principle. Each Read leaf sits in the phase it gates, not in a phase of its own. `/implement-plan-deep` reads that skill and follows it.
 
-A slice is one child plan, not a phase. Two or more ordered slices are a roadmap (`/write-roadmap`, then `/implement-roadmap`), not one plan. `/write-roadmap` runs `/review-roadmap {n}` in a fresh agent after each save, the same way plans are reviewed, and a roadmap with `reviews: 0` cannot be locked. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
+A slice is one child plan, not a phase. Two or more ordered slices are a roadmap (`/write-roadmap-deep`, then `/implement-roadmap-deep`), not one plan. `/write-roadmap-deep` runs `/review-roadmap {n}` in a fresh agent after each save, the same way plans are reviewed, and a roadmap with `reviews: 0` cannot be locked. Format: `node_modules/@workerstack/repo/references/roadmap-format.md`.
 
 | type | checks |
 | --- | --- |
@@ -1743,7 +1743,7 @@ A slice is one child plan, not a phase. Two or more ordered slices are a roadmap
 
 ### Facts
 
-`/write-plan` adds a Read leaf for each fact that is true, in the phase that fact gates. No fact, no leaf. `/implement-plan` reads that skill and follows it.
+`/write-plan-deep` adds a Read leaf for each fact that is true, in the phase that fact gates. No fact, no leaf. `/implement-plan-deep` reads that skill and follows it.
 
 | fact | read |
 | --- | --- |
@@ -1758,11 +1758,11 @@ A slice is one child plan, not a phase. Two or more ordered slices are a roadmap
 | the requirement does not fit without a special-case branch | `principle-redesign-from-first-principles` |
 | research left two or more live options and the choice is hard to undo | `principle-exhaust-the-design-space` |
 
-`/implement-plan` reads a principle only when the type row names it, a true fact names it, the next sentence names it, or an already-read principle cites it. Do not open the rest of the catalog.
+`/implement-plan-deep` reads a principle only when the type row names it, a true fact names it, the next sentence names it, or an already-read principle cites it. Do not open the rest of the catalog.
 
 Verify of every plan reads `principle-prove-it-works`. After two fixes that share a premise fail the same gate, read `principle-attack-the-premise` before a third try. Before you ask the user, read `principle-never-block-on-the-human`. Before a large dump or a fan-out, read `principle-guard-the-context-window`.
 
-`/write-roadmap` reads `principle-sequence-verifiable-units`. `/correct` reads `principle-encode-lessons-in-structure`.
+`/write-roadmap-deep` reads `principle-sequence-verifiable-units`. `/correct` reads `principle-encode-lessons-in-structure`.
 
 ## Setup
 

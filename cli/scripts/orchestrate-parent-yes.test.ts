@@ -64,8 +64,8 @@ it("approves exactly what the approval block names, and leaves the file's bytes 
 
   for (const text of ["i", "y", "Y ", "go", "Do it!"]) {
     expect(lines(s.say(text, tp))).toContain(
-      `i approves plan 1, then roadmap 1: plan 1: run /implement-plan 1 (${plan}); ` +
-        `roadmap 1: set status locked, then run /implement-roadmap 1 (${roadmap})`,
+      `i approves plan 1, then roadmap 1: plan 1: run /implement-plan-deep 1 (${plan}); ` +
+        `roadmap 1: set status locked, then run /implement-roadmap-deep 1 (${roadmap})`,
     );
   }
 
@@ -90,7 +90,7 @@ it("a reply that only starts like a choice is a revision and adds no approval co
 
 it("on a default plan the context is today's, byte for byte", () => {
   const { ws, s, plan } = onePlan("d1");
-  expect(lines(s.say("y", plan1Line(ws)))).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(lines(s.say("y", plan1Line(ws)))).toContain(`i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`);
 });
 
 it("a bare i does not approve a block whose strategy differs from the file's", () => {
@@ -99,14 +99,14 @@ it("a bare i does not approve a block whose strategy differs from the file's", (
 
   const truthful = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
 
-  expect(s.say("i", truthful)).toContain(`plan 1: run /implement-plan 1 (${plan})`);
+  expect(s.say("i", truthful)).toContain(`plan 1: run /implement-plan-deep 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
 it("isf and implement fere write the strategy they name, and hsd is no approval", () => {
   const { ws, s, plan } = onePlan("c1", withStrategy("spawn-fast"));
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
-  expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
   expect(s.say("isd", tp)).toContain("strategy spawn-deep was written to its frontmatter");
   expect(strategyOf(plan)).toBe("spawn-deep");
@@ -124,7 +124,7 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
 
   const want =
     "i approves plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
-    `re-read the plan, then run /implement-plan 1 (${plan})`;
+    `re-read the plan, then run /implement-plan-deep 1 (${plan})`;
 
   expect(lines(s.say("y spawn-deep", tp))).toContain(want);
   const after = read(plan);
@@ -132,7 +132,9 @@ it("y spawn-deep writes the strategy, tells the agent to re-read, and a second o
   expect(validatePlan(path.basename(plan), after, { fresh: false, previous: before })).toStrictEqual([]);
   const mtime = fs.statSync(plan).mtimeMs;
   // Nothing left to write: the context is the plain approval, with no claim of a change.
-  expect(lines(s.say("Y  Spawn-Deep ", tp))).toContain(`i approves plan 1: plan 1: run /implement-plan 1 (${plan})`);
+  expect(lines(s.say("Y  Spawn-Deep ", tp))).toContain(
+    `i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`,
+  );
   expect(read(plan)).toBe(after);
   expect(fs.statSync(plan).mtimeMs).toBe(mtime);
 });
@@ -153,9 +155,9 @@ it("y free rewrites every item of a queue, a plan and a roadmap", () => {
   );
 
   expect(s.say("y free", tp)).toContain(
-    `i approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan 1 (${p1}); ` +
-      `plan 2: ${written("plan")} run /implement-plan 2 (${p2}); ` +
-      `roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap 1 (${rm})`,
+    `i approves plan 1, then plan 2, then roadmap 1: plan 1: ${written("plan")} run /implement-plan-deep 1 (${p1}); ` +
+      `plan 2: ${written("plan")} run /implement-plan-deep 2 (${p2}); ` +
+      `roadmap 1: ${written("roadmap")} set status locked, then run /implement-roadmap-deep 1 (${rm})`,
   );
 
   for (const f of [p1, p2, rm]) expect(strategyOf(f)).toBe("free");
@@ -170,7 +172,7 @@ it("y with a Grok payload writes the strategy too", () => {
   const fields = { prompt: "y spawn-fast", transcriptPath: plan1Line(ws) };
   const out = must(replyOf(kit.grok({ sid: "g1", ws }, "UserPromptSubmit", fields)));
   expect(out.hookSpecificOutput.additionalContext).toContain(
-    `strategy spawn-fast was written to its frontmatter; re-read the plan, then run /implement-plan 1 (${plan})`,
+    `strategy spawn-fast was written to its frontmatter; re-read the plan, then run /implement-plan-deep 1 (${plan})`,
   );
   expect(strategyOf(plan)).toBe("spawn-fast");
 });

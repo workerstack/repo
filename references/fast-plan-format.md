@@ -24,7 +24,7 @@ At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are
 
 - `a fast plan has no strategy`
 - `a fast plan holds only Goal, Steps and Verify, then an optional Previous mistakes`
-- `a fast plan is at most 40 lines; write a plan (/write-plan)`
+- `a fast plan is at most 40 lines; write a plan (/write-plan-deep)`
 - `a new fast plan has only [ ] boxes`
 
 ## Approval

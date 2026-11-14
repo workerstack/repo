@@ -177,7 +177,7 @@ export function cardErrors(body: string): string[] {
 }
 
 const PLAN_LINE_CAP = 100;
-const PLAN_CAP_FIX = "split it into a roadmap (/write-roadmap)";
+const PLAN_CAP_FIX = "split it into a roadmap (/write-roadmap-deep)";
 
 /**
  * Lines above the first `## Previous mistakes` outside a fence, frontmatter included; the whole file

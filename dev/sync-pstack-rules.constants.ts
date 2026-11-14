@@ -84,7 +84,7 @@ const BODY_RULES = {
         "Don't ask preference on reversible execution. Make a reasonable call, do the work, and show the " +
         "result. Stop for plan approval (scope.md), real blockers, and irreversible actions (force-push, " +
         "delete production data, send external messages). A `locked` or `in-progress` roadmap that " +
-        "`/implement-roadmap` is running is already that approval.",
+        "`/implement-roadmap-deep` is running is already that approval.",
     },
   ],
   "principle-prove-it-works": [

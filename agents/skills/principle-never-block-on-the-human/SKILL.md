@@ -6,7 +6,7 @@ description: >-
 ---
 # Never Block on the Human
 
-Don't ask preference on reversible execution. Make a reasonable call, do the work, and show the result. Stop for plan approval (scope.md), real blockers, and irreversible actions (force-push, delete production data, send external messages). A `locked` or `in-progress` roadmap that `/implement-roadmap` is running is already that approval.
+Don't ask preference on reversible execution. Make a reasonable call, do the work, and show the result. Stop for plan approval (scope.md), real blockers, and irreversible actions (force-push, delete production data, send external messages). A `locked` or `in-progress` roadmap that `/implement-roadmap-deep` is running is already that approval.
 
 Slash `/principle-never-block-on-the-human` only. Not a session flag.
 

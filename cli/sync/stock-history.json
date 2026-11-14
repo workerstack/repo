@@ -225,7 +225,7 @@
     "ef3a3a2ae5ef78c7",
     "f68d49b2f3e073ab"
   ],
-  ".agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
+  ".agents/skills/do/SKILL.md": ["61318e4e8c16c61f", "8ccf5f385606175c"],
   ".agents/skills/explain/SKILL.md": [
     "17f86a6158990e70",
     "20ff0e288484ca3c",
@@ -258,13 +258,13 @@
     "c4e8edabc2b99b09",
     "c5bfa94eb2168b7a",
     "cd16b109924465c4",
-    "edef7d82b89669ff",
-    "efab76f90ef41f2e"
+    "efab76f90ef41f2e",
+    "f01909910bdbeac9"
   ],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["3f1c199de368543d"],
   ".agents/skills/implement-plan-fast/SKILL.md": ["9595d7dbe4d73698"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
-    "06f2b1eae4ddd427",
     "19b9a67082b5ffc4",
     "2b5636f9a2ff8ee7",
     "590599b1128b9e28",
@@ -283,11 +283,11 @@
     "fd12b52d1aa68e91",
     "ff317d44d9986d6a"
   ],
+  ".agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f"],
   ".agents/skills/implement-roadmap-fast/SKILL.md": ["c52179e71ef7184c"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
     "25a307e0751b0be4",
-    "2bdb264e5dac0c4a",
     "2d285214e264bf1d",
     "2ef9d274350f5c74",
     "52dcc438a52e2594",
@@ -319,7 +319,7 @@
   ".agents/skills/parent/SKILL.md": ["59dbeb51df656cfc", "73e094183c7fd665", "9c2b1760b782a7fa"],
   ".agents/skills/pickup/SKILL.md": [
     "430376b21904efe3",
-    "5db82549b1033bee",
+    "4423172c005b23b3",
     "818aee7f7110ea1f",
     "88ffc658c632280c",
     "9c204751c618a139",
@@ -347,7 +347,7 @@
   ".agents/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md": ["3a860765734ad68d"],
   ".agents/skills/principle-minimize-reader-load/SKILL.md": ["b6bc3af165c27f1d"],
   ".agents/skills/principle-model-the-domain/SKILL.md": ["79fb13fe20b48716"],
-  ".agents/skills/principle-never-block-on-the-human/SKILL.md": ["0623daf7a3e4cd3e"],
+  ".agents/skills/principle-never-block-on-the-human/SKILL.md": ["0623daf7a3e4cd3e", "4dcfacae5ed62645"],
   ".agents/skills/principle-outcome-oriented-execution/SKILL.md": ["e3a1e04445c45902"],
   ".agents/skills/principle-prove-it-works/SKILL.md": ["fedf4696cf0adce5"],
   ".agents/skills/principle-redesign-from-first-principles/SKILL.md": ["6a2f90b5711a619c"],
@@ -358,9 +358,9 @@
   ".agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
   ".agents/skills/review-plan/SKILL.md": [
     "098470de41694978",
+    "1f96e707bb73cca0",
     "3638009f06c3c414",
     "419c736dd6d7a1ab",
-    "553005bf5d6c4571",
     "5dc75175807fa513",
     "90bcc58596518fa7",
     "986b1a493c980983",
@@ -373,14 +373,14 @@
     "81aa26f2ef6a6d44",
     "875fefc60824ba66",
     "9ccba3f2549abf73",
+    "9f209b91b62c449f",
     "a331802812b38256",
     "b6b1ea7e37810ec4",
     "bcc9cf64c2517c2f",
-    "cbba526722cdac95",
-    "d99d89399f729857"
+    "cbba526722cdac95"
   ],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
-  ".agents/skills/show-me/SKILL.md": ["366ab3f1a21c0651", "e2c694b19fd544e0"],
+  ".agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
     "0db2716e177b9fec",
     "172f0ca5fbb95303",
@@ -418,7 +418,8 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["98c81331e3815f5f"],
+  ".agents/skills/write-plan-fast/SKILL.md": ["d56078320f4fc34e"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
     "1d2cfbedeea5a019",
@@ -438,14 +439,13 @@
     "a9d79f58afbad8b2",
     "c44819d9998a1913",
     "c953f84047551bbe",
-    "cb3714ff1044af78",
     "cc980f8323861750",
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-fast/SKILL.md": ["f18dd93a01bf07ab"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8"],
+  ".agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1"],
   ".agents/skills/write-roadmap/SKILL.md": [
-    "0001e66dc0806396",
     "05f45f6594036cb2",
     "1dc3f6f74b35a44b",
     "26c934c36c226a5e",
@@ -2220,10 +2220,11 @@
     "f3e7b2c8c3f3cd60"
   ],
   "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199", "884cbfed8585012c"],
-  "agents/skills/do/SKILL.md": ["61318e4e8c16c61f"],
+  "agents/skills/do/SKILL.md": ["61318e4e8c16c61f", "8ccf5f385606175c"],
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
-  "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff"],
+  "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff", "f01909910bdbeac9"],
+  "agents/skills/implement-plan-deep/SKILL.md": ["3f1c199de368543d"],
   "agents/skills/implement-plan-fast/SKILL.md": ["4fa5d8c08371513e", "9595d7dbe4d73698"],
   "agents/skills/implement-plan/SKILL.md": [
     "06f2b1eae4ddd427",
@@ -2233,11 +2234,12 @@
     "9aeed4ef2520f469",
     "cd9ce6d76c9c6a6d"
   ],
+  "agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f"],
   "agents/skills/implement-roadmap-fast/SKILL.md": ["a982fa72dddc6e87", "c52179e71ef7184c"],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
   "agents/skills/listen/SKILL.md": ["64a0306494a23729", "f1a932afddb5e8d1"],
-  "agents/skills/pickup/SKILL.md": ["5db82549b1033bee", "818aee7f7110ea1f"],
+  "agents/skills/pickup/SKILL.md": ["4423172c005b23b3", "5db82549b1033bee", "818aee7f7110ea1f"],
   "agents/skills/principle-attack-the-premise/SKILL.md": ["15684000f80ab2b1"],
   "agents/skills/principle-boundary-discipline/SKILL.md": ["3a0c8d6c907ffc2e"],
   "agents/skills/principle-build-the-lever/SKILL.md": ["3e3b282365fe79a0"],
@@ -2253,7 +2255,7 @@
   "agents/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md": ["3a860765734ad68d"],
   "agents/skills/principle-minimize-reader-load/SKILL.md": ["b6bc3af165c27f1d"],
   "agents/skills/principle-model-the-domain/SKILL.md": ["79fb13fe20b48716"],
-  "agents/skills/principle-never-block-on-the-human/SKILL.md": ["0623daf7a3e4cd3e"],
+  "agents/skills/principle-never-block-on-the-human/SKILL.md": ["0623daf7a3e4cd3e", "4dcfacae5ed62645"],
   "agents/skills/principle-outcome-oriented-execution/SKILL.md": ["e3a1e04445c45902"],
   "agents/skills/principle-prove-it-works/SKILL.md": ["fedf4696cf0adce5"],
   "agents/skills/principle-redesign-from-first-principles/SKILL.md": ["6a2f90b5711a619c"],
@@ -2262,10 +2264,20 @@
   "agents/skills/principle-subtract-before-you-add/SKILL.md": ["953ec35a7e52f656"],
   "agents/skills/principle-test-behavior-not-implementation/SKILL.md": ["80cbf74fcb6e16c5"],
   "agents/skills/principle-type-system-discipline/SKILL.md": ["402dcbea1f1e922a"],
-  "agents/skills/review-plan/SKILL.md": ["19d5b003103c9085", "553005bf5d6c4571", "5dc75175807fa513"],
-  "agents/skills/review-roadmap/SKILL.md": ["53f5034d8be7143c", "b6b1ea7e37810ec4", "d99d89399f729857"],
+  "agents/skills/review-plan/SKILL.md": [
+    "19d5b003103c9085",
+    "1f96e707bb73cca0",
+    "553005bf5d6c4571",
+    "5dc75175807fa513"
+  ],
+  "agents/skills/review-roadmap/SKILL.md": [
+    "53f5034d8be7143c",
+    "9f209b91b62c449f",
+    "b6b1ea7e37810ec4",
+    "d99d89399f729857"
+  ],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
-  "agents/skills/show-me/SKILL.md": ["366ab3f1a21c0651", "e2c694b19fd544e0"],
+  "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
@@ -2273,7 +2285,8 @@
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e"],
+  "agents/skills/write-plan-deep/SKILL.md": ["98c81331e3815f5f"],
+  "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e"],
   "agents/skills/write-plan/SKILL.md": [
     "0f1b19182c479cc3",
     "31e7527fd194ba62",
@@ -2285,7 +2298,8 @@
     "d37f2553e7b8e1bc",
     "ee7e143018db8227"
   ],
-  "agents/skills/write-roadmap-fast/SKILL.md": ["f18dd93a01bf07ab"],
+  "agents/skills/write-roadmap-deep/SKILL.md": ["1c3f3504084900f8"],
+  "agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1", "f18dd93a01bf07ab"],
   "agents/skills/write-roadmap/SKILL.md": [
     "0001e66dc0806396",
     "1b075dbcf503e91f",
@@ -2339,7 +2353,12 @@
     "c7b8918a421721b4"
   ],
   "cli/scripts/__fixtures__/hook-payload.ts": ["124d5a6cecf5be01", "665d3d2e20a4edbd"],
-  "cli/scripts/__fixtures__/hook-session.ts": ["4bc89d728ca4098d", "abffba7aed8b4a74", "b9ecd113fa8c32d4"],
+  "cli/scripts/__fixtures__/hook-session.ts": [
+    "4bc89d728ca4098d",
+    "aabbe2db5a2e81e4",
+    "abffba7aed8b4a74",
+    "b9ecd113fa8c32d4"
+  ],
   "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
   "cli/scripts/__fixtures__/ignore-kit.ts": ["9b61f61a57123cf7"],
   "cli/scripts/__fixtures__/jev-kit.ts": ["3aa91921de4a6986", "9bf3497a2822ca25", "ec7c7851b0011da7"],
@@ -5632,7 +5651,7 @@
     "e5cabb2801ac89df"
   ],
   "cli/scripts/orchestrate-parent-away-run-fast.test.ts": ["d5bf2af933968c6b"],
-  "cli/scripts/orchestrate-parent-away-run.test.ts": ["9d67e1a1ecde4939", "bf92b59c6853eee7"],
+  "cli/scripts/orchestrate-parent-away-run.test.ts": ["9d67e1a1ecde4939", "bf92b59c6853eee7", "f1550c6666076082"],
   "cli/scripts/orchestrate-parent-away.test.ts": [
     "0bfe3dc024180877",
     "251eb372d3610d45",
@@ -5644,7 +5663,8 @@
     "568892629636fc72",
     "ab7afbc4eebad2db",
     "b24383a7921a0cd0",
-    "c5a0b2b268952535"
+    "c5a0b2b268952535",
+    "ea46378e0910fed3"
   ],
   "cli/scripts/orchestrate-parent-closing.test.ts": [
     "155d6711cab56122",
@@ -5673,6 +5693,7 @@
   "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": ["3f0190f722c019cd", "a744718b241410f5", "d9c6d340e898848a"],
   "cli/scripts/orchestrate-parent-fast.test.ts": [
+    "131c48add97636bc",
     "17354fbdeca16e46",
     "20903c5a82e941aa",
     "a5096970f64b7026",
@@ -5698,6 +5719,7 @@
     "719b85da354d13ca"
   ],
   "cli/scripts/orchestrate-parent-handoff.test.ts": [
+    "086f8e525bd0eb06",
     "33ff4a362d562ebc",
     "34100aaadcc8188a",
     "65a0e783b3083221",
@@ -5810,6 +5832,7 @@
     "69cc1eaf8328c995",
     "9ed23018836ef7c7",
     "a9511b1def99c992",
+    "b35c485e875ce0da",
     "b62d030180dea8a4",
     "d2ae0b1c3faf0570",
     "f175314bc32133fe"
@@ -5925,6 +5948,7 @@
   "cli/scripts/orchestrate.constants.ts": [
     "50b0ece65ccf2591",
     "555ef3c518afa9ba",
+    "637744e46013e57f",
     "6d0edc2fc7753517",
     "d289728cbbee0d37",
     "e3aa3fc922bead55",
@@ -6014,15 +6038,20 @@
     "9f6d1c9af0b5b6bc",
     "e78d7df14c2503fa"
   ],
-  "cli/scripts/persist-fast-plan-mistakes.test.ts": ["4f96434b298d1475"],
+  "cli/scripts/persist-fast-plan-mistakes.test.ts": ["4f96434b298d1475", "6f0e0effb10cd99d"],
   "cli/scripts/persist-fast-plan-validate.ts": ["5a0a9c583c20d19a", "79925e487e0658ed", "f069acaa227cfcbe"],
-  "cli/scripts/persist-fast-plan.constants.ts": ["4a14fe0b2f9a0706", "739ca703c4c3a7c4"],
-  "cli/scripts/persist-fast-plan.test.ts": ["1ac62df390dd1baf", "5ff620d6179a3e0b", "b69ce4a040ad188e"],
+  "cli/scripts/persist-fast-plan.constants.ts": ["4a14fe0b2f9a0706", "739ca703c4c3a7c4", "eced50987d39de01"],
+  "cli/scripts/persist-fast-plan.test.ts": [
+    "1ac62df390dd1baf",
+    "5df71208d0478e12",
+    "5ff620d6179a3e0b",
+    "b69ce4a040ad188e"
+  ],
   "cli/scripts/persist-fast-plan.ts": ["12ad72530ad8e0fc", "59167533e3b9bbba", "6b6294e195416e5e"],
-  "cli/scripts/persist-fast-roadmap-denials.test.ts": ["3896263981e9a427", "77b46223832337bb"],
-  "cli/scripts/persist-fast-roadmap-update.test.ts": ["dc8084200755a9dc", "fd860e444ed2595a"],
+  "cli/scripts/persist-fast-roadmap-denials.test.ts": ["3896263981e9a427", "5797a8cd782a2dd8", "77b46223832337bb"],
+  "cli/scripts/persist-fast-roadmap-update.test.ts": ["66beb3d8ae6038bf", "dc8084200755a9dc", "fd860e444ed2595a"],
   "cli/scripts/persist-fast-roadmap-validate.ts": ["5a3e3efda6860a7c", "c6c4640274e4b11f"],
-  "cli/scripts/persist-fast-roadmap.constants.ts": ["6d7f23c4c1ee8357", "a8da5daa0079dd0e"],
+  "cli/scripts/persist-fast-roadmap.constants.ts": ["6d7f23c4c1ee8357", "76cb98bb79513eb8", "a8da5daa0079dd0e"],
   "cli/scripts/persist-fast-roadmap.test.ts": ["918aef04148c07aa"],
   "cli/scripts/persist-fast-roadmap.ts": ["84fd9bd633a044c6", "c872e4b4b1f73952"],
   "cli/scripts/persist-fast-save.ts": ["564f93b715fcfdd2"],
@@ -6285,6 +6314,7 @@
   ],
   "cli/scripts/persist-plan-steps.test.ts": [
     "3e41f09c46b04bec",
+    "48604a2e9661befe",
     "7e9d00e396ffa66e",
     "8cb8d66dacdd90cf",
     "9ded31f8496e5364",
@@ -6499,6 +6529,7 @@
     "2bfe25656419ff0d",
     "305bae5f557dc8b1",
     "93bb0f11490fd59f",
+    "a0cf25db49a89026",
     "f5bda216f9309174"
   ],
   "cli/scripts/persist-sections.ts": [
@@ -6508,6 +6539,7 @@
     "326096afa7418cd8",
     "8839cf6a555bdfac",
     "e8a4063635c1534b",
+    "ec1c16c8ec7ec091",
     "f1314fd085f00989",
     "f5d69e49c942349c"
   ],
@@ -7923,13 +7955,14 @@
     "f30123d8dff4d425",
     "fdda2838f9f06a54"
   ],
-  "references/fast-plan-format.md": ["0a08c65f5c53b51c", "2d689fcc97087c95", "d9bb9889b4354f5d"],
-  "references/fast-roadmap-format.md": ["a71f7d28912fdd0e", "f8bc3a574edec9dd"],
+  "references/fast-plan-format.md": ["0a08c65f5c53b51c", "2d689fcc97087c95", "84ecd882159e2323", "d9bb9889b4354f5d"],
+  "references/fast-roadmap-format.md": ["2df8c000c8316f25", "a71f7d28912fdd0e", "f8bc3a574edec9dd"],
   "references/google-workspace.md": ["48a0a8dd31c8250b", "db455dc3b114ef70"],
   "references/hooks.md": [
     "079e3d23d213aed6",
     "093ed3a655f55cd3",
     "1944509e7d5d4e7a",
+    "26b08d2101d7cd58",
     "37424abba0611db9",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
@@ -7938,12 +7971,12 @@
     "62b4a800725f6e8e",
     "64ea10c8a4c411b6",
     "6a2f0ed8af8bee90",
+    "6adf3254100054fc",
     "7aa2cc5828e4127c",
     "7b468204e1ffda9d",
     "8816d7b0f28a1748",
     "97b8970430339866",
     "acac21b89edafb2c",
-    "d107daf2a85c684f",
     "d206b3f0ff29c7f7",
     "d4ce8ce10f454ded",
     "f2e528eba65b0e50",
@@ -7956,10 +7989,12 @@
     "3702b03d170d2710",
     "374e39dc02ef33f0",
     "4f550f2dbd5bdaae",
+    "b9281e1650887eff",
     "fe8b0f833551773b"
   ],
   "references/jev.md": ["715031d31346edb7", "831d8a0f41ed98ca", "aafda63bc80ad4d6"],
   "references/lessons.md": [
+    "1f530ca8c5017435",
     "26f7f71b3519bf34",
     "3e41ff65b6a4c6df",
     "6b3eae256df3cc84",
@@ -7994,6 +8029,7 @@
     "d92570bc93ab6cd8",
     "daaa9c4b325a9b29",
     "db5b66e69e2f4423",
+    "e16cabac06368800",
     "e5be038a27b5a09b",
     "f4c8534b6651102f",
     "f68319591a3a6019",
@@ -8007,6 +8043,7 @@
     "1e647b302821c533",
     "2e65982b83dfc36d",
     "364900ae840f6753",
+    "49aecab0ad4c11b1",
     "623a929f50a645c3",
     "67525ea6dcbb0ef2",
     "71993ad32e4415fd",
@@ -8018,6 +8055,7 @@
   ],
   "references/review-loop.md": [
     "21b52d81d3fb3344",
+    "30e2ae0a2e490bd5",
     "33cc0b0817305aa2",
     "6d87ca841c845b70",
     "7bb47085b4231e88",
@@ -8026,6 +8064,7 @@
   "references/roadmap-format.md": [
     "05119661b62dcd5b",
     "0e879896d6b9f135",
+    "4a1f34c9e353962f",
     "51deefc4b794d3d7",
     "6996928b19a20977",
     "8be239c0c8a8f6a9",
@@ -8038,6 +8077,7 @@
   "references/scope.md": [
     "18c6b799d9a1a5e1",
     "191a397174c6f260",
+    "22e19ce27e037919",
     "2e2740608cdd63a5",
     "2e6941901ff909d3",
     "3447cf3911d08fdd",
