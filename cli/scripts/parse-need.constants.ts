@@ -12,4 +12,4 @@ export const NEED_JOBS: ReadonlySet<string> = /* @__PURE__ */ new Set([
 export const SLICE_JOB = "slice";
 
 /** A line `need: [ ... ]`; group 1 is the array's JSON. */
-export const NEED_LINE: RegExp = /^\s*need:\s*(\[[\s\S]*\])\s*$/m;
+export const NEED_LINE: RegExp = /^\s*need:[ \t]*(\[[\s\S]*\])\s*$/m;

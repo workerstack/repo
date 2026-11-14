@@ -25,7 +25,7 @@ const GLOB_LITERAL_RE = /[.+^${}()|[\]\\]/g;
 const GO_MODULE_RE = /^module\s+(\S+)/m;
 
 /** A TOML `name = "…"` line; group 1 is the name. */
-const TOML_NAME_RE = /^name\s*=\s*"([^"]+)"/m;
+const TOML_NAME_RE = /^name\s*=[ \t]*"([^"]+)"/m;
 
 /** `*` = one segment, `**` = any depth; matches the dir and everything under it. */
 function globRe(glob: string): RegExp {

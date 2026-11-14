@@ -16,7 +16,7 @@ import { hasStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 const REVIEW_SPAWN_RE = /^\s*\/review-(plan|roadmap)\s+(\d+)(?!\S)/;
-const LOCATION_LINE = /^\s*Location:\s*(.+?)\s*$/gm;
+const LOCATION_LINE = /^\s*Location:[ \t]*(.+?)\s*$/gm;
 const SETTLE_THEN_CLOSE = "settle its findings with reviews bumped, then end with the approval block";
 
 export function itemKey(item: ItemRef): string {

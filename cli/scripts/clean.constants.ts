@@ -98,8 +98,8 @@ export function oldKindOf(dir: string): string | undefined {
 
 export const SERIAL_RE: RegExp = /^([0-9]+)-/;
 export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
-export const STATUS_RE: RegExp = /^status:\s*(\S+)/m;
-export const LOCATION_RE: RegExp = /^\s*Location:\s*(\S+)\s*$/gm;
+export const STATUS_RE: RegExp = /^status:[ \t]*(\S+)/m;
+export const LOCATION_RE: RegExp = /^\s*Location:[ \t]*(\S+)\s*$/gm;
 
 /** git lists every ignored dir in one call; its output may be large. */
 export const GIT_MAX_BUFFER: number = 256 * 1024 * 1024;

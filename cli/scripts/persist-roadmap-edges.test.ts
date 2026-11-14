@@ -131,3 +131,16 @@ describe("roadmap root and locations", () => {
     expect(locationOk("")).toBe(false);
   });
 });
+
+describe("an empty ROADMAP_NAME line", () => {
+  it("names the roadmap from its title, not from the strategy line below, and strips the empty line", () => {
+    const ws = tmpWs();
+    const content = DRAFT_ROADMAP.replace("ROADMAP_NAME: auth program\n", "ROADMAP_NAME:\n");
+
+    const r = persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+
+    expect(r.ok, r.error).toBe(true);
+    expect(r.filename).toBe(FILE);
+    expect(fs.readFileSync(path.join(ws, ".repo/roadmaps", FILE), "utf8")).not.toContain("ROADMAP_NAME:");
+  });
+});

@@ -39,17 +39,21 @@ describe("persistTmp", () => {
 });
 
 describe("persistTmp extensions", () => {
-  it("defaults ext to md when TMP_EXT is omitted", () => {
+  it.each([
+    ["omitted", ""],
+    ["empty, never the line below", "TMP_EXT:\nsh\n"],
+  ])("defaults ext to md when TMP_EXT is %s", (_, line) => {
     const ws = tmpWs();
 
     const r = persistTmp({
-      content: "TMP_NAME: note only\n\nhello\n",
+      content: `TMP_NAME: note only\n${line}\nhello\n`,
       created: "2026-08-27T14:30:00Z",
       workspaceRoot: ws,
     });
 
     expect(r.ok).toBe(true);
     expect(r.filename).toBe("1-note-only-20260827T143000Z.md");
+    expect(fs.readFileSync(path.join(ws, savedOk(r).path), "utf8")).not.toContain("TMP_EXT:");
   });
 
   it("uses TMP_EXT for the filename", () => {
@@ -183,5 +187,16 @@ describe("persistTmp existing dump", () => {
       workspaceRoot: ws,
     });
     expect(fs.readFileSync(path.join(ws, savedOk(a).path), "utf8")).toBe(first);
+  });
+});
+
+describe("persistTmp with an empty TMP_NAME line", () => {
+  it("refuses as with no TMP_NAME line, and never takes the TMP_EXT line below as the name", () => {
+    const r = persistTmp({
+      content: VALID_TMP.replace("TMP_NAME: bank email draft\n", "TMP_NAME:\n"),
+      workspaceRoot: tmpWs(),
+    });
+
+    expect(r).toStrictEqual({ error: "missing TMP_NAME", ok: false });
   });
 });

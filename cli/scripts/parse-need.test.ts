@@ -65,3 +65,19 @@ describe("parseNeed", () => {
     expect(parseNeed("need: []").ok).toBe(false);
   });
 });
+
+describe("parseNeed across lines", () => {
+  it("reads no need from an empty need line with the array on the next line", () => {
+    expect(parseNeed('need:\n[{"job":"search","query":"foo"}]')).toStrictEqual({
+      error: "no json need array",
+      ok: false,
+    });
+  });
+
+  it("still reads an array that goes on over the next lines", () => {
+    expect(parseNeed('need: [\n{"job":"search","query":"foo"}\n]')).toStrictEqual({
+      jobs: [{ job: "search", query: "foo" }],
+      ok: true,
+    });
+  });
+});
