@@ -161,7 +161,7 @@ it("is stripped from every host's subagent file", () => {
 });
 
 it.each(["fast", "deep"] as const)("ends the root AGENTS.md with the %s plan route, after the path list", (effort) => {
-  const out = renderRules([BASE, SCOPED], { effort, hosts: ["codex"], scope: "" });
+  const out = renderRules([BASE, SCOPED], { effort, hosts: ["codex"], scope: "", workflow: "worktree" });
   expect(out.get("AGENTS.md")?.text).toBe(
     `Base body.\n\n## Rules by path\n- \`src/** lib/**\`: read \`.repo/rules/testing.md\`\n\n${ROUTE[effort]}\n`,
   );

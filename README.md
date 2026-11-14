@@ -29,6 +29,7 @@ Agent workflow, code standards, gates, workspace and docs checks for workerstack
 - [Setup](#setup)
 - [Speak](#speak)
 - [Sync](#sync)
+- [Change workflow](#change-workflow)
 
 ## Browser
 
@@ -162,7 +163,7 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 ### Config
 
-`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
+`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it. `workflow` says how changes reach the default branch: `"worktree"` (the default), `"pull-request"` or `"main"`; `workflow.md` says what each mode does.
 
 ```ts
 import { defineConfig } from "@workerstack/repo";
@@ -289,6 +290,8 @@ commit-msg: the message was refused
 | On | Result |
 | --- | --- |
 | a `wt/*` branch | exit 1: run `bun repo worktree finish <name>` from the root, then `bun repo push` there |
+| a `wt/*` branch, under pull-request | exit 1: run `bun repo worktree finish <name>`, which pushes the branch and opens its pull request |
+| the default branch it would push, under pull-request | exit 1: `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`; `(repo.config.ts failed to load)` when the config fails to load |
 | another non-default branch | pushes it |
 | the default branch, no recent branch | pushes the default branch |
 | the default branch, one recent branch | pushes that branch |
@@ -742,20 +745,22 @@ Main-session compaction window: a user setting, `modelSettings.<model>.autoCompa
 
 The main checkout is `root` (`resolveRoots().root`), outside `<root>/.tmp` and `<root>/.worktrees`. The gate (`gate-fat-tools.ts` `sharedCheckoutReason`, `worktree.ts` `mainCheckoutWriteReason` and `sharedGitReason`) answers for every caller, parent, scout and implementer alike, on every harness whose write tools it knows. It runs beside the `git worktree add` check, ahead of `reviewGuard` and every early return.
 
-- Write: a write whose canonical target (after the scratch redirect) is in the main checkout is denied: `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`. A lesson Write is answered by orchestrate-parent before the gate, so it calls `mainCheckoutWriteReason` itself. `lessons.ts` `persistLesson`, `hitLesson` and `removeLesson` return `{ ok: false, error }` with the same text, and the CLI `hit`, `rm` and `index` exit 1; `match` and `check` stay read-only, and `writeIndex` is unguarded because `bun repo init` and `bun repo sync` call it in a consumer's main checkout.
-- Git in the main checkout: `commit`, `merge`, `cherry-pick`, `revert`, `am` and `pull` are denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run cd <root> && bun repo worktree finish <name>`. `stash`, `reset`, `checkout`, `switch`, `restore`, `clean` and `rebase` are denied with `git <sub> in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git <sub>`.
-- Anywhere in the repo: a force push (`-f`, `--force`, `--force-with-lease`, `+ref`); `branch -d|-D|-f|-m|-M` of the default branch; `update-ref` of the default branch. The default branch is `origin/HEAD`, else `init.defaultBranch`, `main` or `master` when it exists locally, else the main checkout's current branch.
+The rules follow the root's `workflow` (`workflow.md`), read from `repo.config.ts` only when a rule needs it; a config that fails to load, or holds another value, takes the strictest rule of each.
+
+- Write: under worktree and pull-request, a write whose canonical target (after the scratch redirect) is in the main checkout is denied: `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.repo/{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}/ is writable here`. Under main it passes. A lesson Write is answered by orchestrate-parent before the gate, so it calls `mainCheckoutWriteReason` itself. `lessons.ts` `persistLesson`, `hitLesson` and `removeLesson` return `{ ok: false, error }` with the same text, and the CLI `hit`, `rm` and `index` exit 1; `match` and `check` stay read-only, and `writeIndex` is unguarded because `bun repo init` and `bun repo sync` call it in a consumer's main checkout.
+- Git in the main checkout: under worktree and pull-request, `commit`, `merge`, `cherry-pick`, `revert`, `am` and `pull` are denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run bun repo worktree finish <name>`, and `stash`, `reset`, `checkout`, `switch`, `restore`, `clean` and `rebase` with `git <sub> in the main checkout can destroy other sessions' work: do it inside your worktree, or run it here only when the user's message asks for git <sub>`. Under main the commit group passes, and the destroy group is denied with `git <sub> in the main checkout can destroy uncommitted work: run it only when the user's message asks for git <sub>`.
+- Anywhere in the repo, in every mode: a force push (`-f`, `--force`, `--force-with-lease`, `+ref`); `branch -d|-D|-f|-m|-M` of the default branch; `update-ref` of the default branch. Under pull-request a push or delete push of the default branch (`--delete`, `-d`, `:<branch>`), `--all` and `--mirror` are denied too, before any grant, with `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`; a config that fails to load gets the same deny with `(repo.config.ts failed to load)`. The default branch is `origin/HEAD`, else `init.defaultBranch`, `main` or `master` when it exists locally, else the main checkout's current branch.
 - Own worktree: inside the managed worktree the effective cwd is in (`cd` and `git -C` are followed), every other git command runs, `stash`, `reset --hard`, `checkout`, `rebase` and `commit --amend` included.
 - Exception: `.repo/tmp/sessions/<sid>/git-asked.json` holds `{ "words": [...] }`, rewritten on every user prompt (an empty list clears it) by orchestrate-parent on Claude, Codex and Grok `UserPromptSubmit` and on Cursor's `beforeSubmitPrompt`, and read by the gate by sid. A named word lets that subcommand run for the turn. Bare words grant only `stash`, `commit` (so `/commit` grants it), `rebase` and `cherry-pick`; a force push needs `force push`, `force-push`, `push -f` or `push --force`; every other subcommand needs the literal `git <sub>`, since "main checkout", "clean up" and "merge to main" are everyday phrases. A negation ("don't stash") matches too, so the `AGENTS.md` line still applies. Claude and Codex children share the parent's sid and so its grant; Grok and Cursor children do not. Antigravity (1.5.3) writes no file: every tool call carries the user's message as top-level `lastUserInput`, and the gate feeds it through the same word rules. Only the main agent's calls carry it; an agy subagent's calls carry `lastUserInput: ""`, so a child gets no grant and a spawn prompt cannot grant one. Antigravity's gated tools are `write_file {Path, Content}`, `edit_file {Path, Target, Replacement}` and `run_command {CommandLine}`; `read_file {Path, StartLine, EndLine}` is not gated. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt` either, so no prompt can grant a git subcommand there and the denies still apply; the Cursor IDE was not tested.
 - Fail-open: not a git repo, a repo with no commit yet, and an error inside the check let the call through. A missing `sid` or an unwritable `git-asked.json` means no grant, so the deny stands. `finish`, `prune` and the `WorktreeRemove` hook run git from node, never the shell, so the git deny cannot block them.
 - Not parsed: `bash -c '...'`, `$(...)` and `xargs git` hide a git command from the gate. An `rtk` or `env VAR=v` prefix and `cd <dir>` or `git -C <dir>` are parsed; a heredoc body is not a command.
 - Shell-write gap: `sed -i`, `>`, `tee` and `rm` write the main checkout past the write deny, and so do the `rm` hints in `bun repo doctor`. The commit deny is the backstop: the change cannot be committed there without the user's message naming commit.
-- `bun repo init` and `bun repo sync` rewrite tracked files from node, so run them inside a worktree. Run in the main checkout they leave it dirty, and only the user can commit that.
+- `bun repo init` and `bun repo sync` rewrite tracked files from node, so run them inside a worktree unless `workflow` is `main`. Run in the main checkout under the other modes they leave it dirty, and only the user can commit that.
 - Unmanaged linked worktrees outside `.worktrees` (T3 Code, Claude Desktop) are outside the root, so writes there pass, `finish` cannot land them, and `/commit` there only commits. They are not "own worktree" for the git rules.
 
 `bun repo worktree add <name>` makes `<root>/.worktrees/<name>` on `wt/<name>` and prints the path. When the root has `bun.lock` it also runs `bun install --frozen-lockfile` in the new worktree (output on stderr, sub-second on a warm cache; a failure prints one line naming the command and the path still prints), so tools that look up `<cwd>/node_modules/.bin`, such as pipeline, work there.
 
-`bun repo worktree finish [<name>]` lands the branch. With no name it takes the worktree its cwd is in; from the root it exits 2 (`run finish inside .worktrees/<name> or pass its name`). It refuses a dirty worktree (any `git status --porcelain` line, untracked files included) and one mid-rebase, rebases `wt/<name>` onto the default branch inside the worktree, fast-forwards the default (`merge --ff-only` when the root has it checked out, else `fetch . wt/<name>:<default>`), then runs `git worktree remove` (never `--force`) and deletes the branch once the default holds it. If the default moved since the rebase, it rebases again, at most 3 tries (`<default> kept moving while finishing wt/<name>; run finish again`); a fast-forward that fails with the default unchanged reports git's reason with no retry (the root's own changes to the same file do this). A conflict aborts the rebase, keeps the worktree and names the files: resolve them in the worktree, rerun the checks, run `finish` again. A branch with no commits of its own is removed with `wt/<name> has no commits of its own; removed <path>`. Before it deletes a branch the default holds, `finish` (and `prune`) deletes origin's copy when `refs/remotes/origin/wt/<name>` exists, with `git push --no-verify origin --delete wt/<name>`, no prompt and a 30s limit; on failure it warns `could not delete origin's wt/<name>: <git's reason>; run git push origin --delete wt/<name>` and goes on. With origin's branch and tracking ref gone, the push gate no longer holds a Stop on the old run of `wt/<name>`. A rerun after a crash converges: a merged branch with no worktree is deleted, origin's copy first. When the root has the default branch checked out and can run `bun repo` (a `repo` script in its `package.json`, or a `repo` bin in `node_modules/.bin`), `finish` then runs `bun repo sync` there, output on stderr, so the root's generated configs match the new tree; on failure it warns `could not sync <root>: run bun repo sync there` and still exits 0. On success it prints `merged wt/<name> into <default> at <sha> and removed <path>; your shell may still be in it: cd <root>`. Run it from the root: `cd <root> && bun repo worktree finish <name>`. Run inside the worktree it removes, the work succeeds but Claude's Bash reports exit 1 (its own `pwd` fails in the deleted directory); check the `merged …` line and do not rerun.
+`bun repo worktree finish [<name>]` lands the branch. Under pull-request it goes through the branch's pull request instead, as `workflow.md` says; with a config that fails to load it exits 1 with `repo.config.ts failed to load: fix it, then run finish again`. The rest of this paragraph is worktree and main. With no name it takes the worktree its cwd is in; from the root it exits 2 (`run finish inside .worktrees/<name> or pass its name`). It refuses a dirty worktree (any `git status --porcelain` line, untracked files included) and one mid-rebase, rebases `wt/<name>` onto the default branch inside the worktree, fast-forwards the default (`merge --ff-only` when the root has it checked out, else `fetch . wt/<name>:<default>`), then runs `git worktree remove` (never `--force`) and deletes the branch once the default holds it. If the default moved since the rebase, it rebases again, at most 3 tries (`<default> kept moving while finishing wt/<name>; run finish again`); a fast-forward that fails with the default unchanged reports git's reason with no retry (the root's own changes to the same file do this). A conflict aborts the rebase, keeps the worktree and names the files: resolve them in the worktree, rerun the checks, run `finish` again. A branch with no commits of its own is removed with `wt/<name> has no commits of its own; removed <path>`. Before it deletes a branch the default holds, `finish` (and `prune`) deletes origin's copy when `refs/remotes/origin/wt/<name>` exists, with `git push --no-verify origin --delete wt/<name>`, no prompt and a 30s limit; on failure it warns `could not delete origin's wt/<name>: <git's reason>; run git push origin --delete wt/<name>` and goes on. With origin's branch and tracking ref gone, the push gate no longer holds a Stop on the old run of `wt/<name>`. A rerun after a crash converges: a merged branch with no worktree is deleted, origin's copy first. When the root has the default branch checked out and can run `bun repo` (a `repo` script in its `package.json`, or a `repo` bin in `node_modules/.bin`), `finish` then runs `bun repo sync` there, output on stderr, so the root's generated configs match the new tree; on failure it warns `could not sync <root>: run bun repo sync there` and still exits 0. On success it prints `merged wt/<name> into <default> at <sha> and removed <path>; your shell may still be in it: cd <root>`. Run it from the root: `cd <root> && bun repo worktree finish <name>`. Run inside the worktree it removes, the work succeeds but Claude's Bash reports exit 1 (its own `pwd` fails in the deleted directory); check the `merged …` line and do not rerun.
 
 `bun repo doctor` lists a managed worktree with commits the default lacks and a last commit 7 or more days old as `stale worktree <path> (wt/<name>, last commit <n> days ago)` with the `finish <name>` command. Younger ones are live work and are not listed.
 
@@ -976,7 +981,7 @@ What to do instead.
 
 ### Write
 
-- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). In the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.tmp/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
+- Write, `hit`, `rm` and `index` run inside a worktree: the plan's `{serial}-{name}` (`bun repo worktree add {serial}-{name}` if it is missing), else `lesson-{slug}`, and `/correct` uses its `correct-{slug}`. The lesson then lands with that worktree's commit and `finish` (run from the root). Under `workflow: "main"` the main checkout takes them too. Under the other modes, in the main checkout the Write is denied, `hit`, `rm` and `index` exit 1 with `the main checkout is shared: run bun repo worktree add <name> and write under <root>/.worktrees/<name>; only <root>/.repo/{plans,plans-fast,roadmaps,roadmaps-fast,handoffs,implementations,scratch,tmp}/ is writable here`, and the library calls return `{ ok: false, error }` with that text.
 - Write the whole file. The hook validates it, renders the standard form, and reindexes; the host saves it. An Edit of a lesson is denied.
 - `bun repo lessons hit <slug> --evidence <text>` counts a repeat. The same evidence counts once.
 - `bun repo lessons rm <slug>` deletes a lesson and reindexes.
@@ -1530,7 +1535,7 @@ The first action, at start or on resume, is a plan save (a status or box edit). 
 ### Phases
 
 - Phases run in order; each goes to one implementer: `implementer-fast` first on `spawn-fast`, `implementer-deep` on `spawn-deep` (`implementerOf(strategy, 1)`). A parallel group spawns its implementers in one message. Each brief lists its phase's files as the only ones it writes; that list is guidance, and `bun repo phase-files` is the check. A parallel implementer runs only its phase's tests, never `sync` or the full suite. After the round, run `phase-files`, then stage each passed phase by name, one at a time, and run the full suite once. A failed phase reruns alone.
-- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write. Run `bun repo worktree add {serial}-{name}` first if it is missing.
+- The brief is that phase's leaves, plus the findings to fix. The agent file holds the rest of its rules. The spawn prompt names the plan's worktree path (`<root>/.worktrees/{serial}-{name}`): a Claude subagent starts in the parent's cwd, the root, where the gate denies a product write unless `workflow` is `main`. Run `bun repo worktree add {serial}-{name}` first if it is missing.
 - A Read leaf in a phase goes to that phase's implementer with the brief: it reads the principle, you do not. You read only `principle-prove-it-works`, before Verify.
 - Your own product writes are denied. The plan, the journal and `.tmp/` stay writable.
 - Only you tick boxes and write the journal. Write one entry per round.
@@ -1552,7 +1557,7 @@ After 3 failed rounds, a missing report or a status other than `done`, spawn `im
 
 ### Commit
 
-One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then runs `finish` from the root. It holds only this plan's files.
+One commit at the end, in the worktree, as `implement-plan-deep` says; `/commit` then lands it the way `AGENTS.md` says (by default `finish` from the root). It holds only this plan's files.
 
 ### Dumps
 
@@ -1699,7 +1704,7 @@ Plan by default. A straight shot is the exception. The plan caps the result, so 
 
 ### Gate
 
-Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
+Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes unless `workflow` is `main`. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit. "Just" or "should be easy" on a goal is not "just do it": only words that skip the plan itself, such as "just do it" or "no plan", do.
 
@@ -1882,3 +1887,42 @@ Each section `bun repo sync` writes below, like its blocks in `.gitignore` and `
 In a consumer, sync rebuilds these files from the installed package on every install. The skill links point into `node_modules`. A committed copy drifts from the package and conflicts on each upgrade. So sync keeps them in the `repo:ignore` block of `.gitignore`.
 
 `bun repo sync` and `bun repo sync --check` refuse when git tracks a file the block covers. They print one line per block line, with the `git rm --cached` command to run. Migrate and adopt untrack a committed tree themselves.
+
+## Change workflow
+
+`workflow` in `repo.config.ts` says where changes are made and how they reach the default branch: `"worktree"` (the default, also when the key or the config is missing), `"pull-request"` or `"main"`. `bun repo sync` writes the mode's steps into the workflow paragraph of `AGENTS.md`, so that paragraph is the one to follow. This file says what each command and gate does under each mode. `hooks.md` has the gate details, `exports.md` the `bun repo push` table.
+
+### worktree
+
+Every change is made in a managed worktree: `bun repo worktree add <name>` makes `.worktrees/<name>` on branch `wt/<name>`. Edit, test and commit there.
+
+- `bun repo worktree finish <name>`, run from the root, rebases `wt/<name>` onto the default branch, fast-forwards the default branch to it, removes the worktree and deletes the branch, and origin's copy when there is one. It pushes nothing else.
+- `bun repo push` from the root then pushes the default branch and waits on CI. On a `wt/*` branch it exits 1: finish first.
+- `bun repo release` runs in the main checkout on the default branch: it commits the release, pushes it, waits on CI, then tags.
+- Gates: a write into the main checkout is denied, outside `.worktrees/` and the ignored `.repo/` dirs. A commit, merge, cherry-pick, revert, am or pull there is denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run bun repo worktree finish <name>`. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to other sessions' work.
+
+### pull-request
+
+Changes are made in a managed worktree as under worktree, and the default branch takes them only through pull requests. It needs `gh`, logged in.
+
+- `bun repo worktree finish <name>`, run from the root, fetches origin and reads the branch's pull request. With none open, it rebases `wt/<name>` onto `origin/<default>`, pushes it and opens its pull request. Run again after more commits, it pushes them to the open pull request. Once the pull request merged, it fast-forwards the default branch to origin's, removes the worktree and deletes both copies of the branch. A closed pull request is refused: `reopen it with gh pr reopen <number>, then run finish again`.
+- `bun repo push` refuses the default branch with `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`. On a `wt/*` branch it exits 1 and names finish, which pushes the branch itself.
+- `bun repo release` never pushes the default branch. It commits the release in a `release-<version>-<short HEAD>` worktree and opens its pull request, then stops: `run bun repo release again once it merges`. That rerun lands the merged release commit, waits on CI for it and tags it. Run before the merge, it says the pull request is not merged yet.
+- Gates: the worktree ones, plus a push or delete push of the default branch (also `--all` and `--mirror`) is denied from anywhere in the repo with the same text `bun repo push` prints. A word in the user's message does not lift this deny.
+
+### main
+
+Changes are made in the main checkout, on the default branch. There is no worktree step.
+
+- Edit, test and commit in the main checkout, then run `bun repo push`, which pushes the default branch and waits on CI.
+- `bun repo worktree add` and `finish` still work as under worktree, for a change you want apart.
+- `bun repo release` works as under worktree.
+- Gates: writes and commits in the main checkout pass. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to uncommitted work, unless the user's message asks for them.
+
+### Every mode
+
+A force push, and moving or deleting the default branch with `git branch` or `git update-ref`, are denied in every mode unless the user's message asks for them.
+
+### A config that fails to load
+
+When `repo.config.ts` throws as it loads, or `workflow` holds another value, each gate takes its strictest rule: the main checkout takes no writes or commits, and the default branch is not pushed (`(repo.config.ts failed to load)` in the deny). `bun repo worktree finish` refuses with `repo.config.ts failed to load: fix it, then run finish again`.

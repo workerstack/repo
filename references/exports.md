@@ -8,7 +8,7 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 ## Config
 
-`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it.
+`repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it. `workflow` says how changes reach the default branch: `"worktree"` (the default), `"pull-request"` or `"main"`; `workflow.md` says what each mode does.
 
 ```ts
 import { defineConfig } from "@workerstack/repo";
@@ -135,6 +135,8 @@ commit-msg: the message was refused
 | On | Result |
 | --- | --- |
 | a `wt/*` branch | exit 1: run `bun repo worktree finish <name>` from the root, then `bun repo push` there |
+| a `wt/*` branch, under pull-request | exit 1: run `bun repo worktree finish <name>`, which pushes the branch and opens its pull request |
+| the default branch it would push, under pull-request | exit 1: `<default> takes changes only through pull requests (workflow is pull-request): run bun repo worktree finish <name> to push wt/<name> and open its pull request`; `(repo.config.ts failed to load)` when the config fails to load |
 | another non-default branch | pushes it |
 | the default branch, no recent branch | pushes the default branch |
 | the default branch, one recent branch | pushes that branch |

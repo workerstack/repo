@@ -6,13 +6,14 @@ description: >
 ---
 Run `/commit`'s procedure (its never-push line is `/commit`'s alone), then push:
 
-- Managed worktree: once `finish` landed it, run `bun repo push <default>` from the root, default = `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` without `origin/` (if that fails, ask). Name it: a bare push there picks a lone recent branch. If `finish` fails, resolve it as `/commit` says and push nothing.
+- Managed worktree, under `workflow: "pull-request"`: `finish` pushed `wt/<name>` and opened its pull request; push nothing more and give its URL.
+- Managed worktree, otherwise: once `finish` landed it, run `bun repo push <default>` from the root, default = `git symbolic-ref --quiet --short refs/remotes/origin/HEAD` without `origin/` (if that fails, ask). Name it: a bare push there picks a lone recent branch. If `finish` fails, resolve it as `/commit` says and push nothing.
 - Anywhere else: `bun repo push`, or `bun repo push <branch>` for the branch the user named.
 
 Run it with `run_in_background`, then read its exit:
 
 - 0: done.
-- 1, a managed worktree's branch refused: run `finish` for it and push from the root.
+- 1, a managed worktree's branch refused: run `finish` for it, then push from the root unless `workflow` is `pull-request`.
 - 1, push or CI failed: read the lines it printed, fix in a new worktree (`bun repo worktree add <name>`), commit, push again. Three failed rounds on one job: report the failure and its logs and stop.
 - 2: a newer push superseded it; run `bun repo ci wait <branch>` in the background again.
 - 3: nothing to wait on; done.

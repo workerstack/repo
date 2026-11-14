@@ -4,14 +4,17 @@
  * it renders where the stock one was. A rule with `paths` is written where the host scopes it: `.claude/rules/` with a
  * `paths:` list for claude and `.agents/rules/` with a glob trigger for antigravity. Codex, grok and cursor cannot
  * scope, so when any of them is on, `AGENTS.md` ends with a `## Rules by path` list that points at each path rule's
- * source file. `description` and `overrides` never render.
+ * source file. `description` and `overrides` never render. In the root `AGENTS.md`, a line that starts with the
+ * workflow anchor renders as the paragraph of the repo's `workflow`; under worktree it renders as written.
  */
 import type { Host } from "../../config.ts";
 import { isString } from "../../json.ts";
 import type { Effort } from "../../scripts/strategy.types.ts";
+import type { Workflow } from "../../workflow.ts";
 import { PACKAGE_NAME } from "../package-name.constants.ts";
 import { emitYaml, finalize } from "./frontmatter.ts";
 import type { Doc } from "./sources.types.ts";
+import { LINE_END, WORKFLOW_ANCHOR, WORKFLOW_PARAGRAPHS } from "./workflow-paragraph.constants.ts";
 
 /** Hosts that read only `AGENTS.md` and so need the path rules listed there. */
 const UNSCOPED_HOSTS: readonly Host[] = ["codex", "grok", "cursor"];
@@ -37,8 +40,21 @@ export type RuleFile = {
 /** The line that opens every package `AGENTS.md`. */
 const PACKAGE_POINTER = "Start at references/INDEX.md in this package.";
 
-/** One scope's rules: its dir (`""` for the root and stock), the hosts that are on, and the repo's default effort. */
-export type Scoped = { scope: string; hosts: readonly Host[]; effort: Effort };
+/**
+ * One scope's rules: its dir (`""` for the root and stock), the hosts that are on, the repo's default effort, and the
+ * workflow the root `AGENTS.md` describes.
+ */
+export type Scoped = { scope: string; hosts: readonly Host[]; effort: Effort; workflow: Workflow };
+
+/** A root section with each line that starts with the workflow anchor swapped for the paragraph of `workflow`. */
+function withWorkflow(body: string, workflow: Workflow): string {
+  if (workflow === "worktree") return body;
+
+  return body
+    .split(LINE_END)
+    .map((line) => (line.startsWith(WORKFLOW_ANCHOR) ? WORKFLOW_PARAGRAPHS[workflow] : line))
+    .join("\n");
+}
 
 /** The line that ends the root `AGENTS.md`: the plan skills a change gets when no skill was named. */
 function planRoute(effort: Effort): string {
@@ -57,14 +73,15 @@ function globsOf(doc: Doc, scope: string): string[] {
  * The `AGENTS.md` of a scope: its pathless sections, then a pointer per path rule when an unscoped host is on; the
  * root's ends with the plan route for the effort.
  */
-function agentsText(own: readonly Doc[], { scope, hosts, effort }: Scoped): string {
+function agentsText(own: readonly Doc[], { scope, hosts, effort, workflow }: Scoped): string {
   const scoped = own.filter((doc) => scopeOf(doc).length > 0);
 
   const sections = own
     .filter((doc) => scopeOf(doc).length === 0)
     .filter((doc) => doc.origin !== "repo" || isString(doc.data["overrides"]))
     .map((doc) => doc.body.trim())
-    .filter((body) => body !== "");
+    .filter((body) => body !== "")
+    .map((body) => (scope === "" ? withWorkflow(body, workflow) : body));
 
   if (scoped.length > 0 && hosts.some((host) => UNSCOPED_HOSTS.includes(host))) {
     const lines = scoped.map((doc) => `- \`${globsOf(doc, scope).join(" ")}\`: read \`${sourcePath(doc)}\``);
@@ -75,7 +92,7 @@ function agentsText(own: readonly Doc[], { scope, hosts, effort }: Scoped): stri
 }
 
 /** The claude and antigravity files of one rule, under the scope's dir; a pathless one covers the whole dir. */
-function hostFiles(doc: Doc, { scope, hosts }: Omit<Scoped, "effort">, out: Map<string, RuleFile>): void {
+function hostFiles(doc: Doc, { scope, hosts }: Pick<Scoped, "hosts" | "scope">, out: Map<string, RuleFile>): void {
   const globs = scopeOf(doc).length === 0 ? [`${scope}/**`] : globsOf(doc, scope);
   const nested = scope === "" ? doc.file : `${scope}/${doc.file}`;
 
@@ -99,7 +116,7 @@ function hostFiles(doc: Doc, { scope, hosts }: Omit<Scoped, "effort">, out: Map<
  * on, by POSIX path. The root `AGENTS.md` holds the pathless stock rules and a pointer per path rule; a package's holds
  * the pointer line first, and its globs are prefixed with the dir. Every one of a package's rules, pathless ones as
  * `<dir>/**`, is written for claude and antigravity under `<dir>/`. The root `AGENTS.md` ends with the plan skills of
- * `effort`.
+ * `effort`, and its workflow paragraph is the one of `workflow`.
  */
 export function renderRules(rules: readonly Doc[], scoped: Scoped): Map<string, RuleFile> {
   const { hosts, scope } = scoped;

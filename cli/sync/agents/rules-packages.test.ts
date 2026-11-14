@@ -68,11 +68,11 @@ function pkgSources(): Sources {
 }
 
 it("names the rule file's source, and renders a package without rules as the pointer line", () => {
-  const rendered = renderRules(sources.rules, { effort: "deep", hosts: ["claude"], scope: WEB });
+  const rendered = renderRules(sources.rules, { effort: "deep", hosts: ["claude"], scope: WEB, workflow: "worktree" });
   expect(rendered.get(".claude/rules/packages/web/api.md")?.source).toBe(`${WEB}/.repo/rules/api.md`);
   expect(renderText(sources, ["claude"], "packages/empty").get("packages/empty/AGENTS.md")).toBe(`${POINTER}\n`);
 });
 
 it("emits nothing with no host on", () => {
-  expect(renderRules(sources.rules, { effort: "deep", hosts: [], scope: WEB }).size).toBe(0);
+  expect(renderRules(sources.rules, { effort: "deep", hosts: [], scope: WEB, workflow: "worktree" }).size).toBe(0);
 });

@@ -8,7 +8,7 @@ Plan by default. A straight shot is the exception. The plan caps the result, so 
 
 ## Gate
 
-Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
+Straight shot: one file, one obvious edit, nothing to decide. Do it, starting with `bun repo worktree add <name>` like any other change: the main checkout takes no product writes unless `workflow` is `main`. Also skip planning for questions, lookups, commits, a follow-up inside an approved plan, and an explicit "just do it".
 
 Plan: two or more files, two or more items in the message, two or more valid approaches, cross-cutting or hard-to-undo work, or the user asked to plan. A named goal is not a named edit. "Just" or "should be easy" on a goal is not "just do it": only words that skip the plan itself, such as "just do it" or "no plan", do.
 

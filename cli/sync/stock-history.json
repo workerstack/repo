@@ -177,7 +177,6 @@
     "f3a84c021a149a9a"
   ],
   ".agents/skills/commit-push-release/SKILL.md": [
-    "08111d5eead38495",
     "25690b369797a0d2",
     "26cf05d51ce234ae",
     "4af96a03e84afdea",
@@ -188,7 +187,8 @@
     "b6325031e41b1270",
     "c5472740d80b135a",
     "d17d97a4400c58a1",
-    "db7b7bfb741c0dcf"
+    "db7b7bfb741c0dcf",
+    "de870883bb11ba92"
   ],
   ".agents/skills/commit-push/SKILL.md": [
     "330d3a137eeb7ae0",
@@ -198,7 +198,7 @@
     "813e033e5ac096af",
     "a05d83f710a541e5",
     "aa36a498285da52d",
-    "d64e879263b0efb1",
+    "b70c233265f6759b",
     "d6503a441ffec0e6"
   ],
   ".agents/skills/commit/SKILL.md": [
@@ -209,18 +209,18 @@
     "7a3f89770d37b4f7",
     "9227cf6c506c04f2",
     "92d4ea66fab36cd8",
-    "a281a4218262ceb0",
     "a759780ef8fdf27b",
     "aca653a9814b43b6",
+    "b53b5c79b3156ce6",
     "d8cc38429e6dd012",
     "f3e7b2c8c3f3cd60"
   ],
   ".agents/skills/correct/SKILL.md": [
     "39af172389b575ba",
     "6b080d7162076c1e",
-    "884cbfed8585012c",
     "ab24021014f4cdf3",
     "bfaba2cbf03ecdca",
+    "c712da450444fc44",
     "ef3a3a2ae5ef78c7",
     "f68d49b2f3e073ab"
   ],
@@ -260,8 +260,8 @@
     "efab76f90ef41f2e",
     "f01909910bdbeac9"
   ],
-  ".agents/skills/implement-plan-deep/SKILL.md": ["3f1c199de368543d"],
-  ".agents/skills/implement-plan-fast/SKILL.md": ["9595d7dbe4d73698"],
+  ".agents/skills/implement-plan-deep/SKILL.md": ["292f5b0c8de32f1d"],
+  ".agents/skills/implement-plan-fast/SKILL.md": ["8f71c61551d7af2e"],
   ".agents/skills/implement-plan/SKILL.md": [
     "051498c1bc108569",
     "19b9a67082b5ffc4",
@@ -282,7 +282,7 @@
     "fd12b52d1aa68e91",
     "ff317d44d9986d6a"
   ],
-  ".agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f"],
+  ".agents/skills/implement-roadmap-deep/SKILL.md": ["f3c378aa2c60cdaa"],
   ".agents/skills/implement-roadmap-fast/SKILL.md": ["c52179e71ef7184c"],
   ".agents/skills/implement-roadmap/SKILL.md": [
     "05947c3027d75c3a",
@@ -318,10 +318,10 @@
   ".agents/skills/parent/SKILL.md": ["59dbeb51df656cfc", "73e094183c7fd665", "9c2b1760b782a7fa"],
   ".agents/skills/pickup/SKILL.md": [
     "430376b21904efe3",
-    "4423172c005b23b3",
     "818aee7f7110ea1f",
     "88ffc658c632280c",
     "9c204751c618a139",
+    "bebd4da29cfd07ef",
     "c32df33df153677b",
     "c664dd273cf90783",
     "c93ab6ef3676ce32",
@@ -378,7 +378,7 @@
     "bcc9cf64c2517c2f",
     "cbba526722cdac95"
   ],
-  ".agents/skills/rn/SKILL.md": ["aaf5aaeb50b095c1"],
+  ".agents/skills/rn/SKILL.md": ["789603e95b5f279d"],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   ".agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
@@ -2210,29 +2210,32 @@
     "a2c7d80fdd85396e",
     "ae809773a897c993",
     "c268366f0b175885",
+    "de870883bb11ba92",
     "e7e7c9269c5b2a50",
     "e8947119140f1782"
   ],
   "agents/skills/commit-push/SKILL.md": [
     "8b8bbcfd4f5c687c",
     "a05d83f710a541e5",
+    "b70c233265f6759b",
     "d64e879263b0efb1",
     "f409c40c5a8c7f30"
   ],
   "agents/skills/commit/SKILL.md": [
     "94e2f88bad9a500b",
     "a281a4218262ceb0",
+    "b53b5c79b3156ce6",
     "cd8a216b424f6a38",
     "ef5fb026e92195c6",
     "f3e7b2c8c3f3cd60"
   ],
-  "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199", "884cbfed8585012c"],
+  "agents/skills/correct/SKILL.md": ["235b8b509eb5b0c3", "3a1f11357b599199", "884cbfed8585012c", "c712da450444fc44"],
   "agents/skills/do/SKILL.md": ["61318e4e8c16c61f", "8ccf5f385606175c"],
   "agents/skills/explain/SKILL.md": ["9bc63910d9a82c9e"],
   "agents/skills/google-workspace/SKILL.md": ["4d70c78239ce538f"],
   "agents/skills/handoff/SKILL.md": ["44eedd812d91e9af", "4c5014d86bf2c8d8", "edef7d82b89669ff", "f01909910bdbeac9"],
-  "agents/skills/implement-plan-deep/SKILL.md": ["3f1c199de368543d"],
-  "agents/skills/implement-plan-fast/SKILL.md": ["4fa5d8c08371513e", "9595d7dbe4d73698"],
+  "agents/skills/implement-plan-deep/SKILL.md": ["292f5b0c8de32f1d", "3f1c199de368543d"],
+  "agents/skills/implement-plan-fast/SKILL.md": ["4fa5d8c08371513e", "8f71c61551d7af2e", "9595d7dbe4d73698"],
   "agents/skills/implement-plan/SKILL.md": [
     "06f2b1eae4ddd427",
     "0f92dda0074aa9eb",
@@ -2241,12 +2244,12 @@
     "9aeed4ef2520f469",
     "cd9ce6d76c9c6a6d"
   ],
-  "agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f"],
+  "agents/skills/implement-roadmap-deep/SKILL.md": ["c240aa668b4d478f", "f3c378aa2c60cdaa"],
   "agents/skills/implement-roadmap-fast/SKILL.md": ["a982fa72dddc6e87", "c52179e71ef7184c"],
   "agents/skills/implement-roadmap/SKILL.md": ["2bdb264e5dac0c4a", "52dcc438a52e2594"],
   "agents/skills/jev/SKILL.md": ["26ed1924d69879b7", "ba541c351d8c64dc"],
   "agents/skills/listen/SKILL.md": ["64a0306494a23729", "f1a932afddb5e8d1"],
-  "agents/skills/pickup/SKILL.md": ["4423172c005b23b3", "5db82549b1033bee", "818aee7f7110ea1f"],
+  "agents/skills/pickup/SKILL.md": ["4423172c005b23b3", "5db82549b1033bee", "818aee7f7110ea1f", "bebd4da29cfd07ef"],
   "agents/skills/principle-attack-the-premise/SKILL.md": ["15684000f80ab2b1"],
   "agents/skills/principle-boundary-discipline/SKILL.md": ["3a0c8d6c907ffc2e"],
   "agents/skills/principle-build-the-lever/SKILL.md": ["3e3b282365fe79a0"],
@@ -2283,7 +2286,7 @@
     "b6b1ea7e37810ec4",
     "d99d89399f729857"
   ],
-  "agents/skills/rn/SKILL.md": ["aaf5aaeb50b095c1"],
+  "agents/skills/rn/SKILL.md": ["789603e95b5f279d", "aaf5aaeb50b095c1"],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
@@ -8172,6 +8175,7 @@
     "0bdfb9d313ef5858",
     "1b5c605be587f519",
     "2f03845cf48b1834",
+    "49f3d3dfc0ea9ee5",
     "4bd073ffae8a95e9",
     "58fe4af32f7c0f0b",
     "6e55b71c5520c859",
@@ -8201,6 +8205,7 @@
   "references/cloudflare.md": ["9d26d71227fdfc29", "9f4764cadd23d5b1"],
   "references/exports.md": [
     "040cef985f3738a6",
+    "118f75027b557f07",
     "1e82ef046ca82fa0",
     "28c733238c8ebeff",
     "2fca3761756a65e1",
@@ -8236,6 +8241,7 @@
     "26b08d2101d7cd58",
     "3078e2cf628d55f9",
     "37424abba0611db9",
+    "392acb49fd80d032",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
     "5d88701e5c326101",
@@ -8273,6 +8279,7 @@
     "26f7f71b3519bf34",
     "3e41ff65b6a4c6df",
     "6b3eae256df3cc84",
+    "7415612eb6c7e246",
     "937cee73491e374e",
     "d51504a3685b8749",
     "d82f28a5346a5f6c",
@@ -8338,7 +8345,8 @@
     "33cc0b0817305aa2",
     "6d87ca841c845b70",
     "7bb47085b4231e88",
-    "854dcaac0df8fdbf"
+    "854dcaac0df8fdbf",
+    "a6800e14137b58cc"
   ],
   "references/roadmap-format.md": [
     "05119661b62dcd5b",
@@ -8371,6 +8379,7 @@
     "ba9c074258146304",
     "c0f41149b220d305",
     "c7ef31ef5e5babe5",
+    "dd7b04462482896f",
     "ecf370b8f3df1ced"
   ],
   "references/setup.md": [
@@ -8382,5 +8391,6 @@
     "fed457b202f6f0ca"
   ],
   "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4"],
-  "references/sync.md": ["7e389acc08c15554", "e27cec0b466c1dca"]
+  "references/sync.md": ["7e389acc08c15554", "e27cec0b466c1dca"],
+  "references/workflow.md": ["6c8b827f6f52fe9b"]
 }
