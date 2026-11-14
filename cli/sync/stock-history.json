@@ -3710,17 +3710,30 @@
   "cli/scripts/env-values-run.test.ts": ["57e4bcd7045f93ad", "7b2137c815f26624"],
   "cli/scripts/env-values.ts": ["29f7583da417fbf3", "51e6418d29d80288"],
   "cli/scripts/eol.test.ts": ["0a1b1c7d25ebbb0f", "4bb280aeb71171fb", "4e6e8c22ccc74117", "ba19f6bfbc899f4e"],
-  "cli/scripts/eval-args.ts": ["41aace071acf0d0d", "5ce041381ff360a8", "8087ba618cad153d"],
-  "cli/scripts/eval-changed.test.ts": ["4832b2d041a61faf", "cd95840bc95219be"],
-  "cli/scripts/eval.constants.ts": ["00c075e847d457fe", "32c5ae825de134a3", "38e7aaf4e82299c1", "ffc8d6a0f97ecf02"],
+  "cli/scripts/eval-args.ts": ["0c7ee1d1b8fe7686", "41aace071acf0d0d", "5ce041381ff360a8", "8087ba618cad153d"],
+  "cli/scripts/eval-changed.test.ts": ["4832b2d041a61faf", "cd95840bc95219be", "dc7e4a8a037cab43"],
+  "cli/scripts/eval.constants.ts": [
+    "00c075e847d457fe",
+    "32c5ae825de134a3",
+    "38e7aaf4e82299c1",
+    "9374968b48da89b2",
+    "ffc8d6a0f97ecf02"
+  ],
   "cli/scripts/eval.test.ts": [
     "07557a58c26a56cc",
     "0d84533fe1fd3369",
+    "913afeadababac50",
     "c260e1eab388d777",
     "cd1d881254501443",
     "ebce96155e4029da"
   ],
-  "cli/scripts/eval.ts": ["ac165fdc280ec38e", "b436f0760df575c8", "e74174294ce13f24", "f2488668127824ea"],
+  "cli/scripts/eval.ts": [
+    "2bd23c9616b2d91f",
+    "ac165fdc280ec38e",
+    "b436f0760df575c8",
+    "e74174294ce13f24",
+    "f2488668127824ea"
+  ],
   "cli/scripts/first-non-empty.test.ts": ["3d09b826fbcec1df"],
   "cli/scripts/first-non-empty.ts": ["c1659547d42f31f1"],
   "cli/scripts/fix-passes.test.ts": ["48d81eab9bf3a5ac", "91a5308807ca23c7", "a7a67dd548c1aa1a"],
@@ -8146,6 +8159,7 @@
     "afe9efe70fd8047f",
     "bf798e8a41efb3f6",
     "c01c471098d8c32a",
+    "ef6e48d0ea4a9c61",
     "efa00621c5422da6",
     "f17e80cf143fe0fb",
     "f30123d8dff4d425",
