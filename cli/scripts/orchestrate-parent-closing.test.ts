@@ -6,6 +6,7 @@ import { expect, it } from "vitest";
 import { hookSession, type HookSession } from "./__fixtures__/hook-session.ts";
 import { closing, must, orchestrateKit, plan, replyOf, roadmap } from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
 
 const kit = orchestrateKit();
@@ -49,14 +50,14 @@ it("blocks once per turn until the reply ends with the block naming every pendin
   const s = claude(ws, "s2");
   turn(s, "plan it");
   const ask = s.stop("Plan 1 is saved.\nShall I start?");
-  expect(ask).toStrictEqual({ decision: "block", reason: `end with this block:\n${closing(plan(1))}` });
+  expect(ask).toStrictEqual({ decision: "block", reason: askReason(plan(1)) });
   const grokAgain = kit.grok({ sid: "s2", ws }, "Stop", { lastAssistantMessage: "Shall I start?", reason: "end_turn" });
   expect(grokAgain.stdout).toBe("");
   turn(s, "more");
-  expect(s.stop(`Plan 2 is saved.\n\n${closing(plan(1), plan(2))}`)).toBeNull();
+  expect(s.codexStop(`Plan 2 is saved.\n\n${closing(plan(1), plan(2))}`)).toBeNull();
   turn(s, "and a roadmap");
   s.reviewed("roadmaps", DRAFT_ROADMAP);
-  expect(s.stop("Saved.")?.reason).toBe(`end with this block:\n${closing(plan(1), plan(2), plan(3), roadmap(1))}`);
+  expect(s.stop("Saved.")?.reason).toBe(askReason(plan(1), plan(2), plan(3), roadmap(1)));
   turn(s, "again");
   expect(s.stop(`Saved.\n\n${closing(plan(1))}`)?.decision).toBe("block");
   turn(s, "again");
@@ -72,7 +73,7 @@ it("does not take the old Reply line for an ask, in any markdown wrapping", () =
   for (const old of [OLD_LINE, `**${OLD_LINE}**`, `\`${OLD_LINE}\``, 'Reply "y" to run plan 1.']) {
     const out = s.stop(`Saved.\n\n${old}`);
     expect(out?.decision).toBe("block");
-    expect(out?.reason).toBe(`end with this block:\n${closing(...saved)}`);
+    expect(out?.reason).toBe(askReason(...saved));
     turn(s, "again");
     saved.push(plan(saved.length + 1));
   }
@@ -91,11 +92,11 @@ it("blocks when the block shows a strategy the file does not hold, and names the
   s.reviewed("plans", VALID_PLAN);
   expect(s.stop(`Saved.\n\n${closing(plan(1))}`)).toStrictEqual({
     decision: "block",
-    reason: `end with this block:\n${closing(plan(1, "spawn-fast"))}`,
+    reason: askReason(plan(1, "spawn-fast")),
   });
   s.say("again");
   s.reviewed("plans", VALID_PLAN);
-  expect(s.stop(closing(plan(1, "spawn-fast"), plan(2, "spawn-fast")))).toBeNull();
+  expect(s.codexStop(closing(plan(1, "spawn-fast"), plan(2, "spawn-fast")))).toBeNull();
 });
 
 it("does not block on earlier turns or roadmap child plans", () => {

@@ -5,6 +5,7 @@
 import fs from "node:fs";
 
 import type { AgentDefaults } from "../config-resolved.types.ts";
+import { pickerInput } from "./approval-picker.ts";
 import { approvalFor, closingBlock, notAChoice, parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
@@ -38,6 +39,7 @@ import type {
   StrategyChange,
 } from "./orchestrate.types.ts";
 import { setSessionStrategy } from "./session-settings.ts";
+import { PICKER_LINE } from "./strategy.constants.ts";
 import { hasStrategy, kindHasStrategy, parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -137,8 +139,11 @@ function covers(named: Approvable[] | null, items: ApprovalItem[], pending: Appr
   );
 }
 
-// Stop reason when this turn saved a reviewed item and the reply does not end with an approval block covering it.
-export function approvalBlockReason(data: HookInput, msg: string): string | null {
+/**
+ * Stop reason when this turn saved a reviewed item and the reply does not end with an approval block covering it;
+ * with `picker` it leads with the picker the session is asked to call.
+ */
+export function approvalBlockReason(data: HookInput, msg: string, opts: { picker: boolean }): string | null {
   if (approvalsFile(data) === null || resolveStamp(data, APPROVAL_BLOCK_STAMP) !== null) return null;
   const turnStart = stampMtime(data, TURN_START_STAMP);
 
@@ -147,6 +152,9 @@ export function approvalBlockReason(data: HookInput, msg: string): string | null
   const pending = items.filter((i) => i.mtime >= turnStart);
 
   if (pending.length === 0) return null;
+
+  // A picker is asked for even when the reply already ends with the block; the stamp keeps it to once a turn.
+  if (opts.picker) return `${PICKER_LINE}\n${JSON.stringify(pickerInput(items))}\n${closingBlock(items)}`;
 
   return covers(parseClosingBlock(msg), items, pending) ? null : `end with this block:\n${closingBlock(items)}`;
 }
@@ -211,7 +219,8 @@ function approvedWith(data: HookInput, defaults: AgentDefaults, done: Done): str
   return wanted === null ? text : [text, setSessionStrategy(data, defaults, wanted)].filter(Boolean).join("\n");
 }
 
-function settledReply(
+/** The one approval path: a typed reply and a click both settle through it, so a refusal and a write read the same. */
+export function settledReply(
   data: HookInput,
   answer: { reply: KnownApproval; named: Approvable[] },
   defaults: AgentDefaults,

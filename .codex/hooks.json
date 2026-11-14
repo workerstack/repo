@@ -40,7 +40,7 @@
             "type": "command"
           }
         ],
-        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir"
+        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir|AskUserQuestion"
       }
     ],
     "SessionStart": [

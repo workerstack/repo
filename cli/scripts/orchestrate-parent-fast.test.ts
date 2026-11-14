@@ -15,6 +15,7 @@ import {
   transcript,
 } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 
 const kit = orchestrateKit();
@@ -71,7 +72,7 @@ it("saves a fast plan under plans-fast with no strategy or reviews key, and Stop
   expect(block).toBe("```\nfast-plan 1\n  i  implement\n  h  hand off\n     or reply to revise\n```");
   expect(s.stop("Saved. Shall I start?")).toStrictEqual({
     decision: "block",
-    reason: `end with this block:\n${block}`,
+    reason: askReason(fastItem(1)),
   });
   expect(s.stop(`Saved.\n\n${block}`)).toBeNull();
 });
@@ -175,7 +176,7 @@ it("a saved fast plan runs through its ticks to done with no reviews key", () =>
   const tp = transcript(ws, `Saved.\n\n${block}`);
 
   // Only a ready plan waits for an `i`; once started it is no longer approvable.
-  expect(s.stop(`Saved.\n\n${block}`)).toBeNull();
+  expect(s.codexStop(`Saved.\n\n${block}`)).toBeNull();
   expect(lines(s.say("i", tp))).toContain(`i approves fast-plan 1: fast-plan 1: run /implement-plan-fast 1 (${fast})`);
 
   function step(from: string, to: string) {

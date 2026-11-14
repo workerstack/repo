@@ -3,6 +3,7 @@ import { expect, it } from "vitest";
 import { claudeSession, read } from "./__fixtures__/fast-session.ts";
 import type { HookSession } from "./__fixtures__/hook-session.ts";
 import { closing, fastRoadmap as fastRoadmapItem, orchestrateKit, transcript } from "./__fixtures__/orchestrate-kit.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 
 const kit = orchestrateKit();
 
@@ -66,7 +67,7 @@ it("a two-slice fast roadmap runs through the hooks from save to done", () => {
 
   expect(s.stop("Saved. Shall I start?")).toStrictEqual({
     decision: "block",
-    reason: `end with this block:\n${block}`,
+    reason: askReason(fastRoadmapItem(1)),
   });
   expect(s.stop(`Saved.\n\n${block}`)).toBeNull();
   expect(s.say("i", transcript(ws, `Saved.\n\n${block}`))).toContain(

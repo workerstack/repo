@@ -133,7 +133,7 @@ it.each(CASINGS)(
 
     expect(s.stop(`Saved.\n\n${plan1}`)).toStrictEqual({ decision: "block", reason });
     setKey(plan, "reviews", "2");
-    expect(s.stop(`Saved.\n\n${plan1}`)).toBeNull();
+    expect(s.codexStop(`Saved.\n\n${plan1}`)).toBeNull();
   },
 );
 

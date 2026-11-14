@@ -17,11 +17,19 @@ import type { HookInput } from "./hook-input.ts";
 import { processHookIo, readHookInput, type HookIo } from "./hook-io.ts";
 import { interceptNeed } from "./orchestrate-intercept.ts";
 import { lessonNotice } from "./orchestrate-lessons.ts";
+import { pickerAnswer, pickerGate } from "./orchestrate-picker.ts";
 import { PASS, replyWith } from "./orchestrate-reply.ts";
 import { recordReviewSpawn } from "./orchestrate-reviews.ts";
 import { beforeSubmitPrompt, stop, userPromptSubmit } from "./orchestrate-stop.ts";
 import { parentWrite, savesNewItem } from "./orchestrate-writes.ts";
-import { DEFAULTS_EVENTS, PRE_TOOL_USE, SPAWN_TOOLS, WRITE_TOOLS } from "./orchestrate.constants.ts";
+import {
+  ASK_TOOL,
+  DEFAULTS_EVENTS,
+  POST_TOOL_USE,
+  PRE_TOOL_USE,
+  SPAWN_TOOLS,
+  WRITE_TOOLS,
+} from "./orchestrate.constants.ts";
 import type { HookResult } from "./orchestrate.types.ts";
 import { MAX_PROMPT_CHARS, rewriteSpawnToolInput, spawnCapReason } from "./scrub-spawn-prompt.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -81,6 +89,8 @@ function preToolUse(data: HookInput, defaults: AgentDefaults): HookResult {
   const toolInput = data.toolInput ?? data.tool_input;
 
   if (SPAWN_TOOLS.has(toolKey)) return spawnUse(data, toolInput);
+
+  if (toolKey === ASK_TOOL) return pickerGate(data, defaults) ?? gateUse(data, toolInput, { writes: false });
   const writes = WRITE_TOOLS.has(toolKey);
   const persisted = writes ? writeUse(data, toolInput, defaults) : null;
 
@@ -90,6 +100,7 @@ function preToolUse(data: HookInput, defaults: AgentDefaults): HookResult {
 /** The handler for each event, by eventKey of the event name. */
 const ROUTES: ReadonlyMap<string, (data: HookInput, defaults: AgentDefaults) => HookResult> = /* @__PURE__ */ new Map([
   [PRE_TOOL_USE, preToolUse],
+  [POST_TOOL_USE, pickerAnswer],
   ["userpromptsubmit", userPromptSubmit],
   ["beforesubmitprompt", beforeSubmitPrompt],
   ["stop", stop],
@@ -100,13 +111,19 @@ function eventOf(data: HookInput): string {
   return eventKey(firstNonEmpty(repoEnv.process.GROK_HOOK_EVENT, data.hookEventName, data.hook_event_name) ?? "");
 }
 
-/** Whether an event's answer reads the agents defaults: a prompt, a Stop, and a Write of a new plan or roadmap. */
+/**
+ * Whether an event's answer reads the agents defaults: a prompt, a Stop, a question asked or answered, and a Write of
+ * a new plan or roadmap. Any other finished tool call (Grok sends one per spawn) loads nothing.
+ */
 function readsDefaults(event: string, data: HookInput): boolean {
   if (DEFAULTS_EVENTS.has(event)) return true;
+  const tool = toolKeyOf(data);
 
-  return (
-    event === PRE_TOOL_USE && WRITE_TOOLS.has(toolKeyOf(data)) && savesNewItem(data, data.toolInput ?? data.tool_input)
-  );
+  if (event === POST_TOOL_USE) return tool === ASK_TOOL;
+
+  if (event !== PRE_TOOL_USE) return false;
+
+  return tool === ASK_TOOL || (WRITE_TOOLS.has(tool) && savesNewItem(data, data.toolInput ?? data.tool_input));
 }
 
 /** Answers one event on `defaults` and prints the reply; the exit code the host reads. */

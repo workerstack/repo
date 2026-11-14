@@ -125,5 +125,11 @@ export const ROADMAP_KIND = "roadmap";
 /** The event key of a tool call about to run. */
 export const PRE_TOOL_USE = "pretooluse";
 
+/** The event key of a finished tool call. */
+export const POST_TOOL_USE = "posttooluse";
+
+/** The tool key of the question picker. */
+export const ASK_TOOL = "askuserquestion";
+
 /** The event keys whose answer always reads the agents defaults: a prompt and a Stop. */
 export const DEFAULTS_EVENTS: ReadonlySet<string> = /* @__PURE__ */ new Set(["userpromptsubmit", "stop"]);

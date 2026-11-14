@@ -2,6 +2,10 @@
   "claudecode": {
     // Claude Code only: claude -w, EnterWorktree and worktree subagents land in .worktrees/<name> on wt/<name>.
     "hooks": {
+      // The approval picker's click: the answer settles as a typed i or h would.
+      "postToolUse": [
+        { "command": "repo hook orchestrate-parent", "matcher": "AskUserQuestion", "timeout": 30, "type": "command" }
+      ],
       "worktreeCreate": [{ "command": "repo hook worktree", "timeout": 60, "type": "command" }],
       "worktreeRemove": [{ "command": "repo hook worktree", "timeout": 60, "type": "command" }]
     }
@@ -35,7 +39,7 @@
       // Persist rewrite + fat-gate for session writes/reads. Grok json stays no-matcher (Read included).
       {
         "command": "repo hook orchestrate-parent",
-        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir",
+        "matcher": "Write|Edit|write|search_replace|Bash|Shell|run_terminal_command|Skill|skill|run_command|Read|read_file|Grep|grep|Glob|list_dir|AskUserQuestion",
         "timeout": 5,
         "type": "command"
       }

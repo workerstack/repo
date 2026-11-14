@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/set` and `bun repo set` save approval, effort and strategy per session
 - `coverage.mutateExclude` lists tests that `repo mutate` leaves out of its Stryker run, for tests that read the source a run rewrites in place; the vitest preset reads it from `REPO_VITEST_EXCLUDE`
 - Roadmap and fast roadmap slices may end `(parallel: <path>, …)`; the save denies a lone, empty, shared or overlapping group, and the roadmap writers and /review-roadmap mark and check groups. Parallel entries on plan phases and slices may be folders ending `/` or globs, phases whose entries overlap are denied, and `bun repo phase-files` owns a file under a folder or glob entry.
+- On Claude Code, approve, hand off or revise a plan or roadmap by clicking an AskUserQuestion picker the Stop hook renders from the files; a gate holds the agent to the exact input, and Codex, Cursor, Antigravity, Grok and away keep the typed block.
 
 ### Changed
 

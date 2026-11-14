@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { claudeHook } from "./__fixtures__/claude-hook.ts";
 import { closing, plan as planItem, roadmap } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
 import type { HookInput } from "./hook-input.ts";
 
@@ -122,7 +123,7 @@ describe("a turn that saved reviewed items", () => {
   it("asks for an approval block over only the items that can be approved", () => {
     const ws = hook.temp();
     stamped(ws, "p1");
-    expect(stop(ws, "p1", "Saved.")?.reason).toBe(`end with this block:\n${closing(planItem(7), roadmap(3))}`);
+    expect(stop(ws, "p1", "Saved.")?.reason).toBe(askReason(planItem(7), roadmap(3)));
   });
 });
 

@@ -114,3 +114,26 @@ export const FRONTMATTER_RE: RegExp = /^---\r?\n([\s\S]*?)\r?\n---/;
 export const LINE_BREAK_RE: RegExp = /\r?\n/;
 export const FM_LINE_RE: RegExp = /^([a-z]+):\s*(.*)$/;
 export const IN_PROGRESS = "in-progress";
+
+/** The approval picker: the Stop reason's lead line, the two questions and what each option says. */
+export const PICKER_LINE: string =
+  "call AskUserQuestion with exactly this input, then act on the answer; " +
+  "with no AskUserQuestion tool, end with this block:";
+
+export const APPROVAL_HEADER = "Approval";
+export const STRATEGY_HEADER = "Strategy";
+export const STRATEGY_QUESTION = "Which strategy?";
+export const APPROVAL_ASK = ": implement it here, or hand it off?";
+export const IMPLEMENT_LABEL = "Implement";
+export const HANDOFF_LABEL = "Hand off";
+export const AS_SAVED_LABEL = "as saved";
+export const SAVED_NOTE = "saved in the file";
+export const ADVICE_NOTE_SEP = "; ";
+export const ADVICE_BECAUSE_RE: RegExp = /^(\S+) because (.+)$/;
+export const OPTION_ORDER: readonly Strategy[] = [SPAWN_FAST, SPAWN_DEEP, FREE_STRATEGY];
+
+export const STRATEGY_MEANING: Readonly<Record<Strategy, string>> = {
+  free: "this session does every phase itself",
+  "spawn-deep": "deep agents do each phase",
+  "spawn-fast": "fast agents do each phase and escalate to deep when stuck",
+};

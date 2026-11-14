@@ -51,7 +51,9 @@ it("routes every shell tool and every persist-owned write to orchestrate-parent"
 it("hooks.jsonc routes Claude's WorktreeCreate and WorktreeRemove, no other harness's, to the worktree hook", () => {
   const sot = repoSsot();
   const entry = [{ command: WORKTREE, timeout: 60, type: "command" }];
-  expect(sot.claudecode.hooks).toStrictEqual({ worktreeCreate: entry, worktreeRemove: entry });
+  const click = [{ command: hookCommand(PARENT), matcher: "AskUserQuestion", timeout: 30, type: "command" }];
+
+  expect(sot.claudecode.hooks).toStrictEqual({ postToolUse: click, worktreeCreate: entry, worktreeRemove: entry });
   expect(JSON.stringify(sot.hooks)).not.toContain("hook worktree");
   const claude = readJson<ClaudeDoc>(REPO_ROOT, ".claude/settings.json");
   expect(claude.hooks.WorktreeCreate).toStrictEqual(group);

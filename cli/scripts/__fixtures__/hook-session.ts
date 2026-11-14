@@ -15,6 +15,8 @@ export interface HookSession {
   /** The context a prompt gets; "" when the hook stays silent. */
   say: (text: string, tp?: string) => string;
   stop: (msg: string) => HookOut | null;
+  /** The same Stop as a Codex session sends it (`turn_id` and `model`), which gets the typed approval block. */
+  codexStop: (msg: string) => HookOut | null;
   /** A Write sent through the hook and landed as the host would; returns the saved path. */
   save: (file: string, content: string) => string;
   /** A new save, then the review-bump re-save, as /write-plan-deep does it. */
@@ -62,6 +64,8 @@ export function hookSession(kit: OrchestrateKit, at: SessionAt): HookSession {
     call,
     say: (text, tp) => call("UserPromptSubmit", { prompt: text, tp })?.hookSpecificOutput.additionalContext ?? "",
     stop: (msg) => call("Stop", { msg }),
+    codexStop: (msg) =>
+      replyOf(kit.run({ ...payloadOf(at, "Stop", { msg }), model: "gpt-5", turn_id: "t1" }, at.env)),
     save,
     reviewed: (dir, body) => {
       const saved = save(`.repo/${dir}/x.md`, body);

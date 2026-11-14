@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest";
 
 import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { claudeSession } from "./__fixtures__/fast-session.ts";
-import { orchestrateKit, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
+import { orchestrateKit, plan as planItem, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
 import { DRAFT_ROADMAP, VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { clicked } from "./__fixtures__/picker-kit.ts";
 import { runHookAsync } from "./__fixtures__/run-hook.ts";
 import { main, mainWith } from "./orchestrate-parent.ts";
 import { AWAY_STOP_REASON } from "./orchestrate.constants.ts";
@@ -55,7 +56,7 @@ type Payload = {
   readonly prompt?: string;
   readonly last_assistant_message?: string;
   readonly tool_name?: string;
-  readonly tool_input?: { readonly content?: string; readonly file_path: string };
+  readonly tool_input?: object;
 };
 
 /** One event sent the way Claude Code sends it, through the hook's real entry. */
@@ -115,6 +116,51 @@ describe("agents.defaultApproval", () => {
     expect(await say(ws, "d3", "go")).toMatch(/^approval=ask\b/);
     expect(await stop(ws, "d3", "Keep --json?")).toBeNull();
   });
+});
+
+/** A Claude session in a workspace whose config sets `agents`, with one reviewed plan waiting. */
+async function waiting(agents: string, sid: string): Promise<string> {
+  const ws = workspace(agents);
+  const s = claudeSession(kit, ws, sid);
+  await say(ws, sid, "plan it");
+  s.reviewed("plans", VALID_PLAN);
+
+  return ws;
+}
+
+const ASK = "AskUserQuestion";
+
+describe("the approval picker reads the config defaults", () => {
+  it("a picker asked under a configured away is denied", async () => {
+    const ws = await waiting('{ defaultApproval: "away" }', "d6");
+    const toolInput = clicked([planItem(1)], {});
+    const out = await send(ws, "d6", { hook_event_name: "PreToolUse", tool_input: toolInput, tool_name: ASK });
+
+    expect(out?.hookSpecificOutput.permissionDecisionReason).toMatch(/^under away /);
+  });
+
+  it("a click sets the session strategy from the configured default", async () => {
+    const ws = await waiting('{ defaultStrategy: "spawn-fast" }', "d7");
+    const picked = { approval: "Implement", strategy: "spawn-deep" };
+    const toolInput = clicked([planItem(1, "spawn-fast")], picked);
+    const out = await send(ws, "d7", { hook_event_name: "PostToolUse", tool_input: toolInput, tool_name: ASK });
+
+    expect(out?.hookSpecificOutput.additionalContext).toContain("set strategy spawn-deep (was spawn-fast)");
+  });
+
+  it("another finished tool call answers nothing", async () => {
+    const ws = await waiting('{ defaultStrategy: "spawn-fast" }', "d8");
+    const toolInput = { prompt: "p" };
+    const out = await send(ws, "d8", { hook_event_name: "PostToolUse", tool_input: toolInput, tool_name: "Task" });
+
+    expect(out).toBeNull();
+  });
+});
+
+it("an event that is no prompt, Stop or tool call loads no config and answers nothing", async () => {
+  const ws = await waiting('{ defaultApproval: "away" }', "d9");
+
+  expect(await send(ws, "d9", { hook_event_name: "SubagentStop" })).toBeNull();
 });
 
 describe("agents.defaultApproval with no usable config", () => {

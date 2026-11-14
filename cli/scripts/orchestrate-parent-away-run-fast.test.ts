@@ -6,6 +6,7 @@ import { FAST_PLAN_BODY, FAST_ROADMAP_BODY, modeSession, runBlock } from "./__fi
 import { read } from "./__fixtures__/fast-session.ts";
 import { closing, orchestrateKit, plan as planItem } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_PLAN } from "./__fixtures__/persist-bodies.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 
 const kit = orchestrateKit();
 
@@ -73,6 +74,6 @@ it("an /ask session keeps the block ask", () => {
   const { s } = modeSession(kit, "u5", "/ask");
   const plan = s.reviewed("plans", VALID_PLAN);
   const before = read(plan);
-  expect(s.stop("Saved.")).toStrictEqual(ASK_PLAN_1);
+  expect(s.stop("Saved.")).toStrictEqual({ decision: "block", reason: askReason(planItem(1)) });
   expect(read(plan)).toBe(before);
 });

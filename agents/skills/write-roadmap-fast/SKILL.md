@@ -25,4 +25,4 @@ fast-roadmap {n}
      or reply to revise
 ```
 
-`i` sets `status: locked` on the same file, then runs `/implement-roadmap-fast {n}` in this session. `h` hands off to a fresh session (`/pickup`); do no work here. Any other reply is feedback: revise the same file and show the block again.
+`i` sets `status: locked` on the same file, then runs `/implement-roadmap-fast {n}` in this session. `h` hands off to a fresh session (`/pickup`); do no work here. Any other reply is feedback: revise the same file and show the block again. On Claude Code the Stop hook may name an approval picker instead: call AskUserQuestion with exactly its input and act on the answer's context; feedback revises the file and stops again.

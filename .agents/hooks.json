@@ -29,7 +29,7 @@
             "type": "command"
           }
         ],
-        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|run_command|Shell|run_terminal_command|Skill|skill|run_command|(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir"
+        "matcher": "(?:write_file|write_to_file)|(?:edit_file|replace_file_content)|write|search_replace|run_command|Shell|run_terminal_command|Skill|skill|run_command|(?:read_file|view_file)|read_file|Grep|grep|Glob|list_dir|AskUserQuestion"
       }
     ],
     "SessionStart": [

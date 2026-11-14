@@ -130,7 +130,8 @@ it("Stop asks for the real block when the advice row differs from the file's adv
   const wrong = closing(planItem(1, "free", "free because i say so"));
   const none = closing(planItem(1, "free"));
 
-  expect(onePlan("w8").s.stop(`Saved.\n\n${blockOf()}`)).toBeNull();
-  expect(onePlan("w8b").s.stop(`Saved.\n\n${wrong}`)?.reason).toBe(`end with this block:\n${blockOf()}`);
-  expect(onePlan("w8c").s.stop(`Saved.\n\n${none}`)?.reason).toBe(`end with this block:\n${blockOf()}`);
+  // The typed path is Codex's: a Claude Stop is asked for the picker whatever block it ends with.
+  expect(onePlan("w8").s.codexStop(`Saved.\n\n${blockOf()}`)).toBeNull();
+  expect(onePlan("w8b").s.codexStop(`Saved.\n\n${wrong}`)?.reason).toBe(`end with this block:\n${blockOf()}`);
+  expect(onePlan("w8c").s.codexStop(`Saved.\n\n${none}`)?.reason).toBe(`end with this block:\n${blockOf()}`);
 });

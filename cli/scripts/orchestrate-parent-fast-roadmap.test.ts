@@ -15,6 +15,7 @@ import {
   replyOf,
   transcript,
 } from "./__fixtures__/orchestrate-kit.ts";
+import { askReason } from "./__fixtures__/picker-kit.ts";
 import { isSliceOf } from "./orchestrate-reviews.ts";
 import { validateHandoff } from "./persist-handoff-validate.ts";
 
@@ -79,7 +80,7 @@ it("saves a fast roadmap under roadmaps-fast with no strategy or reviews key, an
   expect(block).toBe("```\nfast-roadmap 1\n  i  implement\n  h  hand off\n     or reply to revise\n```");
   expect(s.stop("Saved. Shall I start?")).toStrictEqual({
     decision: "block",
-    reason: `end with this block:\n${block}`,
+    reason: askReason(fastRoadmapItem(1)),
   });
   expect(s.stop(`Saved.\n\n${block}`)).toBeNull();
 });
@@ -139,7 +140,7 @@ it("a fast plan an in-progress fast roadmap does not name still asks for its blo
   s.save(".repo/plans-fast/x.md", PLAN_BODY);
   expect(s.stop("Saved.")).toStrictEqual({
     decision: "block",
-    reason: `end with this block:\n${closing(fastItem(1))}`,
+    reason: askReason(fastItem(1)),
   });
 });
 

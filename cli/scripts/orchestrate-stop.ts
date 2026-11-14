@@ -12,6 +12,7 @@ import type { HookInput } from "./hook-input.ts";
 import { approvalBlockReason, approvalContext } from "./orchestrate-approvals.ts";
 import { orchestrateAway } from "./orchestrate-away.ts";
 import { interceptNeed, isStopActive } from "./orchestrate-intercept.ts";
+import { offersPicker } from "./orchestrate-picker.ts";
 import { blockWith, PASS, replyWith } from "./orchestrate-reply.ts";
 import { closingReviewReason } from "./orchestrate-reviews.ts";
 import { approvalsFile } from "./orchestrate-session.ts";
@@ -63,7 +64,7 @@ function replyVerdict(data: HookInput, msg: string, defaults: AgentDefaults): Ho
   const ran = approval === "away" ? orchestrateAway(data, msg) : null;
 
   if (ran !== null) return blockWith(ran);
-  const approvalReason = approvalBlockReason(data, msg);
+  const approvalReason = approvalBlockReason(data, msg, { picker: offersPicker(data, approval) });
 
   if (approvalReason !== null) {
     writeStamp(data, APPROVAL_BLOCK_STAMP, "1");

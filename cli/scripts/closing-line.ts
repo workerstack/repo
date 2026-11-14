@@ -50,6 +50,11 @@ function headerOf(i: Approvable): string {
   return hasStrategy(i) ? `${i.kind} ${i.serial}${HEADER_SEP}${i.strategy}` : `${i.kind} ${i.serial}`;
 }
 
+/** The block's header line: each item with its strategy (a fast plan has none), joined in run order. */
+export function closingHeader(items: Approvable[]): string {
+  return items.map(headerOf).join(ITEM_SEP);
+}
+
 /**
  * The only renderer of the approval block: a fenced header naming each item and its strategy (a fast plan has none),
  * an advice row for each item that has advice, then fixed rows for implement and hand off, with their strategy words
@@ -59,9 +64,7 @@ export function closingBlock(items: Approvable[]): string {
   if (items.length === 0) throw new Error("closingBlock needs at least one item");
   const rows = noneHasStrategy(items) ? FAST_BLOCK_ROWS : BLOCK_ROWS;
 
-  const header = items.map(headerOf).join(ITEM_SEP);
-
-  return [BLOCK_FENCE, header, ...items.flatMap(adviceRow), ...rows, BLOCK_FENCE].join("\n");
+  return [BLOCK_FENCE, closingHeader(items), ...items.flatMap(adviceRow), ...rows, BLOCK_FENCE].join("\n");
 }
 
 function headerItem(part: string): Approvable | null {
@@ -77,6 +80,20 @@ function headerItem(part: string): Approvable | null {
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
 
   return { advice: null, kind, serial: Number(serial), strategy };
+}
+
+/** The items a header line names, with no advice; null when any part is no item. */
+export function parseClosingHeader(header: string): Approvable[] | null {
+  const items: Approvable[] = [];
+
+  for (const part of header.split(ITEM_SEP)) {
+    const item = headerItem(part);
+
+    if (item === null) return null;
+    items.push(item);
+  }
+
+  return items;
 }
 
 /** Sets each advice row's text on the full item it names; any other row is left for the re-render match to refuse. */
@@ -104,16 +121,9 @@ export function parseClosingBlock(msg: string): Approvable[] | null {
 
   if (lines[end] !== BLOCK_FENCE || start === NOT_FOUND) return null;
 
-  const items: Approvable[] = [];
+  const items = parseClosingHeader(String(lines[start + HEADER_AT]));
 
-  const header = String(lines[start + HEADER_AT]);
-
-  for (const part of header.split(ITEM_SEP)) {
-    const item = headerItem(part);
-
-    if (item === null) return null;
-    items.push(item);
-  }
+  if (items === null) return null;
 
   fillAdvice(items, lines.slice(start + AFTER_HEADER, end));
 

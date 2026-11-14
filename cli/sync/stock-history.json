@@ -99,6 +99,7 @@
     "3606fa5ef20756b5",
     "5f8896bf34aab2a3",
     "6850193c79af8555",
+    "6b8c6527bd182d7d",
     "720f859647b5dcc9",
     "8a1f5a568a0431e3",
     "9ad82821ca1e167d",
@@ -381,7 +382,7 @@
   ".agents/skills/rn/SKILL.md": ["789603e95b5f279d"],
   ".agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   ".agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
-  ".agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "e2c694b19fd544e0"],
+  ".agents/skills/show-me/SKILL.md": ["cd5ecedb0c43eac5", "e2c694b19fd544e0"],
   ".agents/skills/solo/SKILL.md": [
     "0db2716e177b9fec",
     "172f0ca5fbb95303",
@@ -419,8 +420,8 @@
   ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
   ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
-  ".agents/skills/write-plan-deep/SKILL.md": ["6d68c5797975527f"],
-  ".agents/skills/write-plan-fast/SKILL.md": ["d56078320f4fc34e"],
+  ".agents/skills/write-plan-deep/SKILL.md": ["7f6e5bc26e86d5c0"],
+  ".agents/skills/write-plan-fast/SKILL.md": ["f5e15f2148b40d71"],
   ".agents/skills/write-plan/SKILL.md": [
     "0447e8c59683f5d0",
     "1d2cfbedeea5a019",
@@ -444,8 +445,8 @@
     "e5bc5ff0d1e1164d",
     "fffd0e1a5f3c90e6"
   ],
-  ".agents/skills/write-roadmap-deep/SKILL.md": ["683c246259a44f2a"],
-  ".agents/skills/write-roadmap-fast/SKILL.md": ["b24b1ab1d462eaeb"],
+  ".agents/skills/write-roadmap-deep/SKILL.md": ["bd695939c8da6e25"],
+  ".agents/skills/write-roadmap-fast/SKILL.md": ["0b886d26da6be703"],
   ".agents/skills/write-roadmap/SKILL.md": [
     "05f45f6594036cb2",
     "1dc3f6f74b35a44b",
@@ -546,6 +547,7 @@
     "2145d3968c8903a7",
     "26df55da8cb87c76",
     "2a36474c73099b1e",
+    "36eb0d5dd8eeac6f",
     "43df596239b7b7b2",
     "50c2818e5f4930a4",
     "5cf9b28f02b16f76",
@@ -678,6 +680,7 @@
   ".codex/hooks.json": [
     "0d1ac1dbc0007b99",
     "17b7927f507b2c37",
+    "4cff90b2d8e09be7",
     "57ceb543e1782563",
     "5f5f7898277c7a69",
     "755d6bae0ac8090d",
@@ -722,6 +725,7 @@
   ".cursor/hooks.json": [
     "0637459dbf41e207",
     "1b8c2a3cbc21fb06",
+    "440111676744531d",
     "bd12a713e5c98aab",
     "c030ec5dcc4f6218",
     "c1fbf09cbee503ac",
@@ -2162,7 +2166,13 @@
   "agents/global-settings/grok.toml": ["8c40c25772a5f2bf"],
   "agents/global-settings/manifest.json": ["3202001ec47a97be", "a5222fd6cdbaf375", "d3b09100aa56f84a"],
   "agents/global-settings/opencode.json": ["b1fe11bb1bcfe952"],
-  "agents/hooks.jsonc": ["0bce1faa7ef41cfb", "3d3d46f83dcb0d76", "79eadf1f6862644f", "fdd40c82484396ab"],
+  "agents/hooks.jsonc": [
+    "0bce1faa7ef41cfb",
+    "3d3d46f83dcb0d76",
+    "79eadf1f6862644f",
+    "f75959e0d6138b4a",
+    "fdd40c82484396ab"
+  ],
   "agents/mcp-policy.jsonc": ["0c36c330f00d8ae3", "5441219fd8c0c35a", "b1532ee597c593f7"],
   "agents/rules/overview.md": [
     "2ddb09b6644abd31",
@@ -2306,7 +2316,7 @@
   "agents/skills/rn/SKILL.md": ["789603e95b5f279d", "aaf5aaeb50b095c1"],
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/set/SKILL.md": ["1430199869e3b0b5"],
-  "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
+  "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "cd5ecedb0c43eac5", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
   "agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
@@ -2317,12 +2327,13 @@
   "agents/skills/write-plan-deep/SKILL.md": [
     "3ddd8c267267a72d",
     "6d68c5797975527f",
+    "7f6e5bc26e86d5c0",
     "98c81331e3815f5f",
     "abde0d45b94341d5",
     "c3f7f68d8c2d9a34",
     "e55ffcf52d8aa01d"
   ],
-  "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e"],
+  "agents/skills/write-plan-fast/SKILL.md": ["1526693b464d404e", "d56078320f4fc34e", "f5e15f2148b40d71"],
   "agents/skills/write-plan/SKILL.md": [
     "0f1b19182c479cc3",
     "31e7527fd194ba62",
@@ -2340,9 +2351,15 @@
     "4f1ff76618ae16bc",
     "683c246259a44f2a",
     "78739a0b5bd2b680",
+    "bd695939c8da6e25",
     "c8d6f91094ef6817"
   ],
-  "agents/skills/write-roadmap-fast/SKILL.md": ["70f55655f36f1db1", "b24b1ab1d462eaeb", "f18dd93a01bf07ab"],
+  "agents/skills/write-roadmap-fast/SKILL.md": [
+    "0b886d26da6be703",
+    "70f55655f36f1db1",
+    "b24b1ab1d462eaeb",
+    "f18dd93a01bf07ab"
+  ],
   "agents/skills/write-roadmap/SKILL.md": [
     "0001e66dc0806396",
     "1b075dbcf503e91f",
@@ -2418,7 +2435,8 @@
     "4bc89d728ca4098d",
     "aabbe2db5a2e81e4",
     "abffba7aed8b4a74",
-    "b9ecd113fa8c32d4"
+    "b9ecd113fa8c32d4",
+    "c3dc264337319278"
   ],
   "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
   "cli/scripts/__fixtures__/ignore-kit.ts": ["9b61f61a57123cf7"],
@@ -2482,6 +2500,7 @@
     "6f3e22d7e1deeae3"
   ],
   "cli/scripts/__fixtures__/persist-save-kit.ts": ["5e7c942870e4b20c", "a7826cb3bb0240b2"],
+  "cli/scripts/__fixtures__/picker-kit.ts": ["358f1eab0e86ea39"],
   "cli/scripts/__fixtures__/plant-file.ts": ["e30b3a7dc44192a4"],
   "cli/scripts/__fixtures__/purge-kit.ts": ["80587781aa9e7065", "980563ab7af07d10"],
   "cli/scripts/__fixtures__/push-gate-rig.ts": [
@@ -2556,6 +2575,8 @@
     "df1f31a6f6c005c4",
     "f97a4724ca9dcc56"
   ],
+  "cli/scripts/approval-picker.test.ts": ["1197e42ba6490223"],
+  "cli/scripts/approval-picker.ts": ["d8e9055a273bdd46"],
   "cli/scripts/backlog-main.test.ts": ["b94231d679f03902"],
   "cli/scripts/backlog.constants.ts": ["9bd3801bc88c2a4f", "f0117487710f5ec4"],
   "cli/scripts/backlog.test.ts": ["1b04ad2372b9fc28"],
@@ -3429,6 +3450,7 @@
     "bb2551d9f338e1dd",
     "d2f1cc300c22d569",
     "dd4677285620df8c",
+    "def25f46d57d591d",
     "f6f21587c00c7858"
   ],
   "cli/scripts/command-at.test.ts": ["6e32b295e2748111", "ea1e44371e75cbaf"],
@@ -4793,6 +4815,7 @@
     "129982e5cf3aad1c",
     "2515991e9d234eea",
     "593166ca71ca2440",
+    "8d767f346fb9c19b",
     "d19167eca8124317",
     "df38d6fc1c8e80d5"
   ],
@@ -5835,6 +5858,8 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
+  "cli/scripts/node_modules/.vite/vitest/CACHEDIR.TAG": ["27152e3a202f6ad0"],
+  "cli/scripts/node_modules/.vite/vitest/da39a3ee5e6b4b0d3255bfef95601890afd80709/results.json": ["7859909972b0fe60"],
   "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
     "16ab81522c4f32c6",
@@ -5842,6 +5867,7 @@
     "35f2e09909cf7c22",
     "421ab09b9c43549e",
     "9f9b27dec5c16cab",
+    "a6e8be71f396e561",
     "b2d45e9f6f622629",
     "b43b71ca2a4f8a31",
     "bbf43371ec8b11c4",
@@ -5905,11 +5931,12 @@
     "b6f09fafdefeff5e",
     "bd6ce6b8d7f955a9",
     "c3584edc38bdcfa0",
+    "c80c6c96c1ba8359",
     "cbabdef364b33a8b",
     "d004b0a5a2099f49",
     "e5cabb2801ac89df"
   ],
-  "cli/scripts/orchestrate-parent-away-run-fast.test.ts": ["160c225517659611", "d5bf2af933968c6b"],
+  "cli/scripts/orchestrate-parent-away-run-fast.test.ts": ["160c225517659611", "c14c1a86201149a5", "d5bf2af933968c6b"],
   "cli/scripts/orchestrate-parent-away-run.test.ts": ["9d67e1a1ecde4939", "bf92b59c6853eee7", "f1550c6666076082"],
   "cli/scripts/orchestrate-parent-away.test.ts": [
     "0bfe3dc024180877",
@@ -5921,6 +5948,7 @@
     "3e0b414d3730a74f",
     "484e2692cc80ca46",
     "568892629636fc72",
+    "5bb3dc2a48e27210",
     "876dd71b18b63468",
     "8a8836c96069fe70",
     "ab7afbc4eebad2db",
@@ -5934,6 +5962,7 @@
     "05732a9e0b92c1d1",
     "155d6711cab56122",
     "270f045fbd3315cf",
+    "2ad55a8dabd92d67",
     "5aebebcc9c930dc8",
     "603184da032f21e7",
     "65a36ffc09c81c54",
@@ -5958,13 +5987,15 @@
   ],
   "cli/scripts/orchestrate-parent-defaults.test.ts": [
     "3d1bef5cf805a538",
+    "4ba278e6da686932",
     "6e482f691e375ae2",
     "e8f371ebd2239dd2",
     "f0acdf12c42974d1"
   ],
-  "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507"],
+  "cli/scripts/orchestrate-parent-fast-roadmap-run.test.ts": ["abfc47d766b96507", "b35c653f26cd860a"],
   "cli/scripts/orchestrate-parent-fast-roadmap.test.ts": [
     "3f0190f722c019cd",
+    "576260642ec85695",
     "a30fb93cabb1187d",
     "a744718b241410f5",
     "d9c6d340e898848a"
@@ -5972,6 +6003,7 @@
   "cli/scripts/orchestrate-parent-fast.test.ts": [
     "131c48add97636bc",
     "17354fbdeca16e46",
+    "183522fb30c133b2",
     "1bf8f22ab93ead87",
     "20903c5a82e941aa",
     "a5096970f64b7026",
@@ -6045,6 +6077,8 @@
     "e4615ea991c33aa2",
     "ffcb6d2438d668c5"
   ],
+  "cli/scripts/orchestrate-parent-picker-edges.test.ts": ["1d86c61fb66f674d"],
+  "cli/scripts/orchestrate-parent-picker.test.ts": ["20b9e574a96551aa"],
   "cli/scripts/orchestrate-parent-push.test.ts": [
     "09177062677df2c8",
     "0be0b106440fd2f0",
@@ -6100,7 +6134,7 @@
     "da3de1bcf6f9e8e2",
     "e3bb8f89fa69f1aa"
   ],
-  "cli/scripts/orchestrate-parent-words.test.ts": ["70676da2943dcc1d"],
+  "cli/scripts/orchestrate-parent-words.test.ts": ["65914372a74fcac5", "70676da2943dcc1d"],
   "cli/scripts/orchestrate-parent-worktree-lessons.test.ts": [
     "23c9493049877c4c",
     "4fbc12a196362db6",
@@ -6148,6 +6182,7 @@
   ],
   "cli/scripts/orchestrate-parent.ts": [
     "05dec1313f122d7d",
+    "0a0d5f5369f4a9be",
     "32119d1b955e191f",
     "4225aa0718360812",
     "48252996edbb5e90",
@@ -6167,6 +6202,7 @@
     "e79b942990a4cd11",
     "fbdd157ade37085f"
   ],
+  "cli/scripts/orchestrate-picker.ts": ["185861d1125f955d"],
   "cli/scripts/orchestrate-reply.ts": [
     "2bc659a36dc8aa79",
     "3a5d913bfbe715ca",
@@ -6217,6 +6253,7 @@
     "2b5426a37dd0173a",
     "3db20a7b8a643212",
     "568a3fd2237ec95a",
+    "66ec8fe9d9b29c46",
     "67006c76bfcf8c5c",
     "6ec03dd840cfa0a1",
     "7d2c8ae74b4b9eaf",
@@ -6258,6 +6295,7 @@
     "e11393352769064a"
   ],
   "cli/scripts/orchestrate.constants.ts": [
+    "16e93b5952cd4afa",
     "209e0aec04b5ac3b",
     "47f6563e83907759",
     "50b0ece65ccf2591",
@@ -7795,6 +7833,7 @@
     "0eba0c6c38295182",
     "2560bccc2541d402",
     "27ccb68cac18b5f2",
+    "493cc9a0b10826d0",
     "5c1e7674533f1765",
     "692115f578bbb364",
     "8c3eba9135ccc522",
@@ -8529,6 +8568,7 @@
     "3943d2650103ed3b",
     "469ffa9cb8f081f5",
     "63e31a5b05e72255",
+    "7bb4e1784cd2ce6c",
     "7ec94d1db7689483",
     "8a8b498a28fdeb92",
     "92cfceeca9b71d56",
@@ -8597,6 +8637,7 @@
     "3078e2cf628d55f9",
     "37424abba0611db9",
     "392acb49fd80d032",
+    "3dfd18a7a38764de",
     "44ba642a2e1cbcb6",
     "4a2e95cf07dbc088",
     "5d88701e5c326101",
@@ -8744,6 +8785,7 @@
     "22e19ce27e037919",
     "2323fc5b8314a5e4",
     "2511ab627f9c612d",
+    "2d2923ad1a69bc59",
     "2e2740608cdd63a5",
     "2e6941901ff909d3",
     "3447cf3911d08fdd",
