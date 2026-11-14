@@ -76,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Bash path gate and the pull-request push gate now judge every command bash runs, including commands in blocks, loops, functions, substitutions and scripts a shell reads, and no longer judge heredoc bodies, comments or commit messages as commands
 - The Bash gates read the variables, `~` and `cd` a line sets before they judge it: `S=/abs; cd $S && git push` is judged in `/abs`, `D=node_modules; cat $D/x` is denied, and a value the gate cannot read gets the strict answer.
 - The gates now judge the words bash makes: braces such as `{probe,main}`, unquoted values split by IFS, globs matched on disk, and a `case` inside `$(…)`. A glob the gate cannot read gets the strict answer.
+- The Bash gates now run the command after `env -C <dir>`, `env -C<dir>`, `env --chdir[=]<dir>`, `sudo -D <dir>` and `sudo --chdir[=]<dir>` in that dir, as the program does: under `workflow: "pull-request"`, `env -C <root> git push origin main` from another folder denies with the push text, `env -C /tmp git push origin main` from the root passes, and `env -C "$D" git push` names `"$D"` in the unread-push text.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

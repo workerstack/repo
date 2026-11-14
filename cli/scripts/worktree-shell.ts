@@ -4,7 +4,7 @@ import type path from "node:path";
 import { movedDir } from "./cd-effect.ts";
 import { commandAt } from "./command-at.ts";
 import type { Dir, ReadWord, Scope, ShellWord, Value, Vars } from "./shell-ast.types.ts";
-import { readWord, valueOf } from "./shell-fields.ts";
+import { optionValue, readWord, valueOf } from "./shell-fields.ts";
 import { shellFlow } from "./shell-flow.ts";
 import { programAt, programBase } from "./shell-scripts.ts";
 import { assignment, processEnv, withVar } from "./shell-vars.ts";
@@ -31,15 +31,6 @@ const OPTION_AND_VALUE = 2;
 
 /** A field a runner such as `env` reads as `NAME=value`: the name, and the text after the `=`. */
 const SET_TEXT_RE = /^([A-Za-z_]\w*)=(.*)$/s;
-
-/** The value of a `--name=value` option; unknown with a leading `~`, which bash leaves as typed past an option. */
-function afterEquals(w: ReadWord): Value {
-  const raw = w.raw.slice(w.raw.indexOf("=") + 1);
-
-  return w.literal && !raw.startsWith("~")
-    ? { known: true, text: w.text.slice(w.text.indexOf("=") + 1) }
-    : { cause: raw, known: false };
-}
 
 /** The name before the `=` of `w`, or "" when it has none. */
 function nameOf(w: ReadWord): string {
@@ -71,7 +62,7 @@ function gitOption(words: readonly ReadWord[], at: OptionStep, p: typeof path): 
   if (DIR_OPTIONS.has(w.text))
     return value === undefined ? null : { dir: movedDir(valueOf(value), dir, p), next: pastValue };
 
-  if (LONG_DIR_OPTIONS.has(nameOf(w))) return { dir: movedDir(afterEquals(w), dir, p), next: i + 1 };
+  if (LONG_DIR_OPTIONS.has(nameOf(w))) return { dir: movedDir(optionValue(w, `${nameOf(w)}=`), dir, p), next: i + 1 };
 
   return { dir, next: w.text === CONFIG_FLAG ? pastValue : i + 1 };
 }
