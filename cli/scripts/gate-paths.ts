@@ -5,6 +5,7 @@ import path from "node:path";
 import { isString, type Json } from "../json.ts";
 import type { ToolArgs } from "./gate-harness.ts";
 import { BASH_DUMP_CMDS, NODE_MODULES, PATH_FIELDS } from "./gate.constants.ts";
+import { holdsCommand, simpleCommands } from "./shell-words.ts";
 import { resolveTyped, type Roots } from "./workspace-root.ts";
 
 export const DENY_PATH_SEGMENTS: ReadonlySet<string> = /* @__PURE__ */ new Set([
@@ -29,8 +30,8 @@ const GIT_DIR_RE = /(^|[\s/])\.git(\/|$)/;
 /** The lockfile named as a word. */
 const BUN_LOCK_RE = /\bbun\.lock\b/;
 
-/** The blanks, quotes and shell operators that split a command into path-like tokens. */
-const SHELL_TOKEN_SEP_RE = /[\s'"`|&;$(){}<>]+/;
+/** A Windows program's `.exe` ending, dropped before a command name is matched. */
+const EXE_EXT_RE = /\.exe$/i;
 
 /** True when `abs` is `base` or lies under it, by the `..`-prefix test the scratch rules use. */
 export function isUnder(base: string, abs: string, p: typeof path = path): boolean {
@@ -87,7 +88,32 @@ export function bashTargetsDenylist(command: string | undefined): boolean {
 
   if (BUN_LOCK_RE.test(cmd) || gitDirIn(cmd)) return true;
 
-  return cmd.split(SHELL_TOKEN_SEP_RE).some((token) => pathIsDenied(token));
+  return readsDeniedPath(cmd);
+}
+
+/**
+ * True when a simple command of `cmd` reads a denied path: any word of one that runs a dump or search, a slash word
+ * of any other. A word that holds a command is judged the same way. Each nested word is shorter than its command,
+ * since quotes or escapes were removed to keep it whole, so the recursion ends.
+ */
+function readsDeniedPath(cmd: string): boolean {
+  return simpleCommands(cmd).some((words) => {
+    const isDump = words.some((w) => isDumpName(w));
+
+    return words.some(
+      (w) => ((isDump || w.includes("/")) && pathIsDenied(w)) || (holdsCommand(w) && readsDeniedPath(w)),
+    );
+  });
+}
+
+/**
+ * True when `word` names a dump or search command, bare or by path (`/usr/bin/cat`), read from the one pattern that
+ * lists them.
+ */
+function isDumpName(word: string): boolean {
+  const name = path.posix.basename(word.replaceAll("\\", "/")).replace(EXE_EXT_RE, "");
+
+  return BASH_DUMP_CMDS.exec(name)?.[0] === name;
 }
 
 /** Every path-like string field of a search or read input. */
