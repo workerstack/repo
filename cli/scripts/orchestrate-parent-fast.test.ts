@@ -95,14 +95,16 @@ it("i approves a fast plan with its run text, in any short yes", () => {
   expect(read(fast)).toBe(before);
 });
 
-it("every code on an all-fast block is no choice and shows the block again", () => {
+it("every code and strategy word on an all-fast block is no choice and shows the block again", () => {
   const { fast, s, ws } = oneFast("f4");
   const tp = transcript(ws, `Saved.\n\n${closing(fastItem(1))}`);
   const before = read(fast);
 
-  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd"]) {
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd", "i fast", "h deep"]) {
     const out = s.say(code, tp);
-    expect(out).toContain(`"${code}" is not a choice; end with this block again:\n${closing(fastItem(1))}`);
+    expect(out).toContain(
+      `"${code}" is not a choice; reply i or h; end with this block again:\n${closing(fastItem(1))}`,
+    );
     expect(out).not.toContain("approves");
   }
 
@@ -122,14 +124,14 @@ it("h hands a fast plan off with State and Next naming it", () => {
   expect(lines(text)).toContain("1.1 [ ] /implement-plan-fast 1");
 });
 
-it("a code on a mixed queue writes the strategy only to the full plan", () => {
+it("a strategy word on a mixed queue writes the strategy only to the full plan", () => {
   const { fast, s, ws } = oneFast("f6");
   const full = s.reviewed("plans", VALID_PLAN);
   const fastBefore = read(fast);
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1), fastItem(1))}`);
   expect(closing(planItem(1), fastItem(1)).split("\n")[1]).toBe("plan 1 · free, then fast-plan 1");
 
-  expect(lines(s.say("isd", tp))).toContain(
+  expect(lines(s.say("i deep", tp))).toContain(
     "i approves plan 1, then fast-plan 1: plan 1: strategy spawn-deep was written to its frontmatter; " +
       `re-read the plan, then run /implement-plan-deep 1 (${full}); ` +
       `fast-plan 1: run /implement-plan-fast 1 (${fast})`,
@@ -137,7 +139,7 @@ it("a code on a mixed queue writes the strategy only to the full plan", () => {
 
   expect(strategyOf(full)).toBe("spawn-deep");
   expect(read(fast)).toBe(fastBefore);
-  const ctx = s.say("hsf", tp);
+  const ctx = s.say("h fast", tp);
   const { file, text } = theHandoff(ws);
   expect(ctx).toContain(`h handed off plan 1 (strategy spawn-fast written), then fast-plan 1 to ${file}`);
   expect(lines(text)).toContain(`- plan 1: ${full} (strategy: spawn-fast)`);

@@ -105,9 +105,9 @@ it.each(CASINGS)(
   },
 );
 
-it.each(CASINGS)("hsd writes spawn-deep into the plan and hands it off (%s payloads)", (casing) => {
+it.each(CASINGS)("h deep writes spawn-deep into the plan and hands it off (%s payloads)", (casing) => {
   const { ws, s, plan } = onePlan(casing, "h3");
-  const ctx = s.say("hsd", transcript(ws, `Saved.\n\n${plan1}`));
+  const ctx = s.say("h deep", transcript(ws, `Saved.\n\n${plan1}`));
   const { file, serial } = theHandoff(ws);
   expect(ctx.split("\n")).toContain(
     `h handed off plan 1 (strategy spawn-deep written) to ${file}; ` +

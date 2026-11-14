@@ -94,8 +94,8 @@ it("i approves a fast roadmap with the lock text, and no code is a choice", () =
     `i approves fast-roadmap 1: fast-roadmap 1: set status locked, then run /implement-roadmap-fast 1 (${roadmap})`,
   );
 
-  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd"])
-    expect(s.say(code, tp)).toContain(`"${code}" is not a choice; end with this block again:\n${block}`);
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd", "i fast"])
+    expect(s.say(code, tp)).toContain(`"${code}" is not a choice; reply i or h; end with this block again:\n${block}`);
 
   expect(read(roadmap)).toBe(before);
 });

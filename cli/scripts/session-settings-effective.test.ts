@@ -1,9 +1,11 @@
+import fs from "node:fs";
+
 import { expect, it } from "vitest";
 
 import type { AgentDefaults } from "../config-resolved.types.ts";
 import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { plantFile } from "./__fixtures__/plant-file.ts";
-import { effectiveSettings, writeSessionSettings } from "./session-settings.ts";
+import { effectiveSettings, setSessionStrategy, writeSessionSettings } from "./session-settings.ts";
 
 const tmp = useTmp();
 
@@ -110,4 +112,16 @@ it("gives the defaults to a payload with no session", () => {
     effort: "deep",
     strategy: "free",
   });
+});
+
+it("sets the session strategy and says what changed", () => {
+  const ws = temp();
+  expect(setSessionStrategy(data(ws, "s1"), defaults, "spawn-fast")).toBe("set strategy spawn-fast (was free)");
+  expect(effectiveSettings(data(ws, "s1"), defaults).strategy).toBe("spawn-fast");
+});
+
+it("writes no session strategy for a payload with no session id", () => {
+  const ws = temp();
+  expect(setSessionStrategy(data(ws, ""), defaults, "spawn-fast")).toBe("");
+  expect(fs.existsSync(`${ws}/.repo/tmp/sessions`)).toBe(false);
 });

@@ -177,6 +177,21 @@ export function changeLine(before: Settings, named: SessionSettings): string {
 }
 
 /**
+ * An approved `i <word>` sets this session's strategy: the change line, from the effective settings, and the write.
+ * Empty, with no write, when the payload names no real session.
+ */
+export function setSessionStrategy(data: HookInput, defaults: AgentDefaults, strategy: Strategy): string {
+  const sid = sessionIdOf(data);
+
+  if (!isRealSession(sid)) return "";
+  const change = { strategy };
+  const line = changeLine(effectiveSettings(data, defaults), change);
+  writeSessionSettings(resolveRoots(data).root, sid, change);
+
+  return line;
+}
+
+/**
  * The parse, change line and write steps of `/set` and `repo set`: the words become settings, the line says what moved
  * from the session's effective settings, and the store takes the change. An error line writes nothing.
  */

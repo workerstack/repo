@@ -140,7 +140,7 @@ export function userPromptSubmit(data: HookInput, defaults: AgentDefaults): Hook
   writeGitAsked(data, prompt);
   unlinkStamp(data, STOP_BLOCK_STAMP);
   unlinkStamp(data, PUSH_BLOCK_STAMP);
-  const approval = approvalContext(data, prompt);
+  const approval = approvalContext(data, prompt, defaults);
 
   if (approvalsFile(data) !== null) {
     writeStamp(data, TURN_START_STAMP, String(Date.now()));

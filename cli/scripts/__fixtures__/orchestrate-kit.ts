@@ -115,14 +115,20 @@ export function transcript(ws: string, text: string): string {
 /** The approval block a reply ends with for `items`, as the hooks render it. */
 export const closing = (...items: Approvable[]): string => closingBlock(items);
 
-/** A plan item as the approval block names it; the strategy is the default unless given. */
-export const plan = (serial: number, strategy: Strategy = "free"): Approvable => ({ kind: "plan", serial, strategy });
+/** A plan item as the approval block names it; the strategy is the default and the advice none unless given. */
+export const plan = (serial: number, strategy: Strategy = "free", advice: string | null = null): Approvable => ({
+  kind: "plan",
+  serial,
+  strategy,
+  advice,
+});
 
-/** A roadmap item as the approval block names it; the strategy is the default unless given. */
-export const roadmap = (serial: number, strategy: Strategy = "free"): Approvable => ({
+/** A roadmap item as the approval block names it; the strategy is the default and the advice none unless given. */
+export const roadmap = (serial: number, strategy: Strategy = "free", advice: string | null = null): Approvable => ({
   kind: "roadmap",
   serial,
   strategy,
+  advice,
 });
 
 /** A fast plan item as the approval block names it: no strategy. */

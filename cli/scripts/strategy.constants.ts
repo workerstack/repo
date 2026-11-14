@@ -44,13 +44,20 @@ export const ITEM_SEP = ", then ";
 export const BLOCK_FENCE = "```";
 
 export const BLOCK_ROWS: readonly string[] = [
-  "  i  implement    if · isf · isd",
-  "  h  hand off     hf · hsf · hsd",
+  "  i  implement    i free · i fast · i deep",
+  "  h  hand off     h free · h fast · h deep",
   "     or reply to revise",
 ];
 
-/** The rows of a block that names only fast plans: no codes, because a fast plan has no strategy. */
+/** The rows of a block that names only fast plans: no strategy words, because a fast plan has no strategy. */
 export const FAST_BLOCK_ROWS: readonly string[] = ["  i  implement", "  h  hand off", "     or reply to revise"];
+
+/** One advice row under the header: `  plan 4 advice: spawn-deep because ...`. */
+export const ADVICE_ROW_RE: RegExp = /^ {2}(plan|roadmap) (\d+) advice: (.+)$/;
+
+/** Where a block's header and the rows after it sit, counted from its opening fence. */
+export const HEADER_AT = 1;
+export const AFTER_HEADER = 2;
 
 export const HEADER_SEP = " · ";
 
@@ -66,7 +73,7 @@ export const LINE_END_WS_RE: RegExp = /[^\S\n]+$/;
 export const TRAILING_PUNCT_RE: RegExp = /[.!]+$/;
 export const WORD_SEP_RE: RegExp = /\s+/;
 
-/** A word shaped like a code but none, such as `isx`, or a code with its `s` dropped (`id` for `isd`). */
+/** A retired letter code such as `isf` or `hd`, or one close to it: it is no choice, so the block comes back. */
 export const CODE_NEAR_MISS_RE: RegExp = /^[ih](?:s[a-z]?|[fd])$/;
 export const MAX_REPLY_WORDS = 4;
 export const MAX_STRATEGY_WORDS = 2;
@@ -75,7 +82,7 @@ export const INFER_MAX_DISTANCE = 2;
 export const INFER_MIN_LENGTH = 4;
 export const IMPLEMENT_LETTERS: readonly string[] = ["i", "y"];
 
-/** Every whole reply that needs no inference. */
+/** Every whole reply that needs no inference: a short yes or `h`, with no strategy word. */
 export const EXACT_REPLIES: ReadonlyMap<string, ApprovalReply> = /* @__PURE__ */ new Map<string, ApprovalReply>([
   ["i", { kind: "approve", strategy: null }],
   ["y", { kind: "approve", strategy: null }],
@@ -83,12 +90,6 @@ export const EXACT_REPLIES: ReadonlyMap<string, ApprovalReply> = /* @__PURE__ */
   ["go", { kind: "approve", strategy: null }],
   ["do it", { kind: "approve", strategy: null }],
   ["h", { kind: "handoff", strategy: null }],
-  ["if", { kind: "approve", strategy: "free" }],
-  ["isf", { kind: "approve", strategy: "spawn-fast" }],
-  ["isd", { kind: "approve", strategy: "spawn-deep" }],
-  ["hf", { kind: "handoff", strategy: "free" }],
-  ["hsf", { kind: "handoff", strategy: "spawn-fast" }],
-  ["hsd", { kind: "handoff", strategy: "spawn-deep" }],
 ]);
 
 /** Words that name an action, each exact or within the inference distance. */

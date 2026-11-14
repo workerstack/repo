@@ -26,16 +26,16 @@ function unknown(word: string) {
 }
 
 const ONE =
-  "```\nplan 4 · spawn-fast\n  i  implement    if · isf · isd\n" +
-  "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```";
+  "```\nplan 4 · spawn-fast\n  i  implement    i free · i fast · i deep\n" +
+  "  h  hand off     h free · h fast · h deep\n     or reply to revise\n```";
 
 const QUEUE: Approvable[] = [
-  { kind: "plan", serial: 4, strategy: "spawn-fast" },
-  { kind: "roadmap", serial: 10, strategy: "spawn-deep" },
+  { advice: null, kind: "plan", serial: 4, strategy: "spawn-fast" },
+  { advice: null, kind: "roadmap", serial: 10, strategy: "spawn-deep" },
 ];
 
 it("renders the block for one item", () => {
-  expect(closingBlock([{ kind: "plan", serial: 4, strategy: "spawn-fast" }])).toBe(ONE);
+  expect(closingBlock([{ advice: null, kind: "plan", serial: 4, strategy: "spawn-fast" }])).toBe(ONE);
 });
 
 it("joins a queue in the header and keeps the rows", () => {
@@ -65,7 +65,7 @@ it("ignores trailing whitespace on block lines", () => {
 
 it("is null for a changed row, a missing fence, text after, an unknown strategy or nothing", () => {
   expect(parseClosingBlock(ONE.replace("hand off", "handoff"))).toBeNull();
-  expect(parseClosingBlock(ONE.replace("if · isf · isd", "if · isf"))).toBeNull();
+  expect(parseClosingBlock(ONE.replace("i free · i fast · i deep", "i free · i fast"))).toBeNull();
   expect(parseClosingBlock(ONE.replace(/\n```$/, ""))).toBeNull();
   expect(parseClosingBlock(ONE.replace(/^```\n/, ""))).toBeNull();
   expect(parseClosingBlock(`${ONE}\nthanks`)).toBeNull();
@@ -87,14 +87,18 @@ it("hands off with the header strategies on h or hand off", () => {
   expect(parseApprovalReply("implement")).toStrictEqual(approve(null));
 });
 
-it("maps each exact code", () => {
-  expect(parseApprovalReply("if")).toStrictEqual(approve("free"));
-  expect(parseApprovalReply("isf")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApprovalReply("ISF")).toStrictEqual(approve("spawn-fast"));
-  expect(parseApprovalReply("isd!")).toStrictEqual(approve("spawn-deep"));
-  expect(parseApprovalReply("hf")).toStrictEqual(handoff("free"));
-  expect(parseApprovalReply("hsf")).toStrictEqual(handoff("spawn-fast"));
-  expect(parseApprovalReply("hsd")).toStrictEqual(handoff("spawn-deep"));
+it("maps each exact word reply", () => {
+  expect(parseApprovalReply("i free")).toStrictEqual(approve("free"));
+  expect(parseApprovalReply("I FAST")).toStrictEqual(approve("spawn-fast"));
+  expect(parseApprovalReply("i deep!")).toStrictEqual(approve("spawn-deep"));
+  expect(parseApprovalReply("h free")).toStrictEqual(handoff("free"));
+  expect(parseApprovalReply("h fast")).toStrictEqual(handoff("spawn-fast"));
+  expect(parseApprovalReply("h deep")).toStrictEqual(handoff("spawn-deep"));
+});
+
+it("is unknown for each of the six retired codes, with no alias", () => {
+  for (const code of ["if", "isf", "isd", "hf", "hsf", "hsd", "ISF", "isd!"])
+    expect(parseApprovalReply(code), code).toStrictEqual(unknown(code));
 });
 
 it("infers a misspelled action and strategy after an action word", () => {
@@ -168,11 +172,11 @@ it("is null for a revision", () => {
 const FAST_ONE = "```\nfast-plan 3\n  i  implement\n  h  hand off\n     or reply to revise\n```";
 
 const FAST: Approvable = { kind: "fast-plan", serial: 3 };
-const FULL: Approvable = { kind: "plan", serial: 4, strategy: "spawn-fast" };
+const FULL: Approvable = { advice: null, kind: "plan", serial: 4, strategy: "spawn-fast" };
 
 const MIXED =
-  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    if · isf · isd\n" +
-  "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```";
+  "```\nplan 4 · spawn-fast, then fast-plan 3\n  i  implement    i free · i fast · i deep\n" +
+  "  h  hand off     h free · h fast · h deep\n     or reply to revise\n```";
 
 it("renders and reads the all-fast block with only the i and h rows", () => {
   expect(closingBlock([FAST])).toBe(FAST_ONE);
@@ -191,7 +195,7 @@ it("refuses a fast block with a strategy, a full item without one, or the wrong 
   expect(parseClosingBlock(FAST_ONE.replace("hand off", "handoff"))).toBeNull();
   expect(parseClosingBlock(MIXED.replace("plan 4", "fast-plan 4"))).toBeNull();
   expect(parseClosingBlock(FAST_ONE.replace("fast-plan", "fast-slice"))).toBeNull();
-  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    if · isf · isd"))).toBeNull();
+  expect(parseClosingBlock(FAST_ONE.replace("i  implement", "i  implement    i free · i fast · i deep"))).toBeNull();
 });
 
 it("on an all-fast block a bare approval or handoff stands and every code or strategy word is unknown", () => {
@@ -200,13 +204,14 @@ it("on an all-fast block a bare approval or handoff stands and every code or str
 
   expect(approvalFor("h", [FAST])).toStrictEqual(handoff(null));
 
-  for (const p of ["if", "isf", "isd", "hf", "hsf", "hsd", "h fast", "y spawn-deep"])
+  for (const p of ["if", "isf", "isd", "hf", "hsf", "hsd", "i fast", "h fast", "y spawn-deep"])
     expect(approvalFor(p, [FAST]), p).toStrictEqual(unknown(p));
 });
 
-it("on a block with a strategy item every code stands, and a revision stays null", () => {
-  expect(approvalFor("isf", [FAST, FULL])).toStrictEqual(approve("spawn-fast"));
-  expect(approvalFor("isf", QUEUE)).toStrictEqual(approve("spawn-fast"));
+it("on a block with a strategy item every word reply stands, and a revision stays null", () => {
+  expect(approvalFor("i fast", [FAST, FULL])).toStrictEqual(approve("spawn-fast"));
+  expect(approvalFor("i fast", QUEUE)).toStrictEqual(approve("spawn-fast"));
+  expect(approvalFor("isf", QUEUE)).toStrictEqual(unknown("isf"));
   expect(approvalFor("keep it", [FAST])).toBeNull();
   expect(approvalFor("isx", [FAST])).toStrictEqual(unknown("isx"));
 });
@@ -221,15 +226,16 @@ it("renders and reads a fast roadmap block with only the i and h rows, alone or 
   expect(parseClosingBlock(closingBlock([FAST_ROADMAP, FAST]))).toStrictEqual([FAST_ROADMAP, FAST]);
   expect(parseClosingBlock(FAST_ROADMAP_BLOCK.replace("fast-roadmap 2", "fast-roadmap 2 · default"))).toBeNull();
   expect(approvalFor("isf", [FAST_ROADMAP])).toStrictEqual(unknown("isf"));
+  expect(approvalFor("i fast", [FAST_ROADMAP])).toStrictEqual(unknown("i fast"));
   expect(approvalFor("i", [FAST_ROADMAP])).toStrictEqual(approve(null));
 });
 
 it("renders the full rows when a full plan joins a fast roadmap", () => {
   const block = closingBlock([FAST_ROADMAP, FULL]);
   expect(block).toBe(
-    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    if · isf · isd\n" +
-      "  h  hand off     hf · hsf · hsd\n     or reply to revise\n```",
+    "```\nfast-roadmap 2, then plan 4 · spawn-fast\n  i  implement    i free · i fast · i deep\n" +
+      "  h  hand off     h free · h fast · h deep\n     or reply to revise\n```",
   );
   expect(parseClosingBlock(block)).toStrictEqual([FAST_ROADMAP, FULL]);
-  expect(approvalFor("isf", [FAST_ROADMAP, FULL])).toStrictEqual(approve("spawn-fast"));
+  expect(approvalFor("i fast", [FAST_ROADMAP, FULL])).toStrictEqual(approve("spawn-fast"));
 });

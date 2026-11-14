@@ -1,6 +1,8 @@
 import { osaDistance } from "./osa-distance.ts";
 import {
   ACTION_WORDS,
+  ADVICE_ROW_RE,
+  AFTER_HEADER,
   BLOCK_FENCE,
   BLOCK_ROWS,
   CODE_NEAR_MISS_RE,
@@ -9,6 +11,7 @@ import {
   FAST_PLAN,
   FAST_ROADMAP,
   HANDOFF_LETTER,
+  HEADER_AT,
   HEADER_ITEM_RE,
   HEADER_SEP,
   IMPLEMENT_LETTERS,
@@ -34,9 +37,13 @@ import {
 import { hasStrategy, parseStrategy } from "./strategy.ts";
 import type { ApprovalReply, ApprovalAction, Approvable } from "./strategy.types.ts";
 
-/** True when no item has a strategy, so the block has no codes to offer. */
+/** True when no item has a strategy, so the block has no strategy words to offer. */
 function noneHasStrategy(items: Approvable[]): boolean {
   return !items.some(hasStrategy);
+}
+
+function adviceRow(i: Approvable): string[] {
+  return hasStrategy(i) && i.advice !== null ? [`  ${i.kind} ${i.serial} advice: ${i.advice}`] : [];
 }
 
 function headerOf(i: Approvable): string {
@@ -45,13 +52,16 @@ function headerOf(i: Approvable): string {
 
 /**
  * The only renderer of the approval block: a fenced header naming each item and its strategy (a fast plan has none),
- * then fixed rows for implement and hand off, with their codes unless every item is a fast plan.
+ * an advice row for each item that has advice, then fixed rows for implement and hand off, with their strategy words
+ * unless every item is a fast plan.
  */
 export function closingBlock(items: Approvable[]): string {
   if (items.length === 0) throw new Error("closingBlock needs at least one item");
   const rows = noneHasStrategy(items) ? FAST_BLOCK_ROWS : BLOCK_ROWS;
 
-  return [BLOCK_FENCE, items.map(headerOf).join(ITEM_SEP), ...rows, BLOCK_FENCE].join("\n");
+  const header = items.map(headerOf).join(ITEM_SEP);
+
+  return [BLOCK_FENCE, header, ...items.flatMap(adviceRow), ...rows, BLOCK_FENCE].join("\n");
 }
 
 function headerItem(part: string): Approvable | null {
@@ -66,7 +76,17 @@ function headerItem(part: string): Approvable | null {
 
   if ((kind !== PLAN && kind !== ROADMAP) || strategy === null) return null;
 
-  return { kind, serial: Number(serial), strategy };
+  return { advice: null, kind, serial: Number(serial), strategy };
+}
+
+/** Sets each advice row's text on the full item it names; any other row is left for the re-render match to refuse. */
+function fillAdvice(items: Approvable[], rows: string[]): void {
+  for (const row of rows) {
+    const [, kind, serial, text] = ADVICE_ROW_RE.exec(row) ?? [];
+    const item = items.find((i) => i.kind === kind && i.serial === Number(serial));
+
+    if (item !== undefined && hasStrategy(item)) item.advice = String(text);
+  }
 }
 
 /**
@@ -86,7 +106,7 @@ export function parseClosingBlock(msg: string): Approvable[] | null {
 
   const items: Approvable[] = [];
 
-  const header = String(lines[start + 1]);
+  const header = String(lines[start + HEADER_AT]);
 
   for (const part of header.split(ITEM_SEP)) {
     const item = headerItem(part);
@@ -94,6 +114,8 @@ export function parseClosingBlock(msg: string): Approvable[] | null {
     if (item === null) return null;
     items.push(item);
   }
+
+  fillAdvice(items, lines.slice(start + AFTER_HEADER, end));
 
   return closingBlock(items) === lines.slice(start).join("\n") ? items : null;
 }
@@ -126,9 +148,9 @@ function actionOf(words: string[]): { kind: ApprovalAction; used: number } | nul
 }
 
 /**
- * What a reply means: a short yes, `h`, or a code, exactly; else an action (`i`, `y`, `h`, or `implement` /
+ * What a reply means: a short yes or `h`, exactly; else an action (`i`, `y`, `h`, or `implement` /
  * `hand off` inferred) with optional strategy words, inferred when misspelled. Null for a revision; `unknown`
- * (carrying the whole reply) for a near-miss code or a strategy word close to several.
+ * (carrying the whole reply) for a retired letter code, a near-miss of one, or a strategy word close to several.
  */
 export function parseApprovalReply(prompt: string): ApprovalReply | null {
   const whole = prompt.trim();
@@ -157,7 +179,7 @@ export function parseApprovalReply(prompt: string): ApprovalReply | null {
 }
 
 /**
- * What a reply means to the block it answers. A block of only fast plans offers no codes, so a code or a strategy
+ * What a reply means to the block it answers. A block of only fast plans offers no strategy words, so a strategy
  * word is `unknown` there; a bare `i` or `h` stands.
  */
 export function approvalFor(prompt: string, items: Approvable[]): ApprovalReply | null {
@@ -166,4 +188,11 @@ export function approvalFor(prompt: string, items: Approvable[]): ApprovalReply 
   if (reply === null || reply.kind === "unknown" || reply.strategy === null || !noneHasStrategy(items)) return reply;
 
   return { kind: "unknown", word: prompt.trim() };
+}
+
+/** The line that brings the block back for a reply that is no choice: the words it offers, then the block again. */
+export function notAChoice(reply: string, items: Approvable[]): string {
+  const choices = noneHasStrategy(items) ? "reply i or h" : "reply i or h, alone or with free, fast or deep";
+
+  return `"${reply}" is not a choice; ${choices}; end with this block again:\n${closingBlock(items)}`;
 }

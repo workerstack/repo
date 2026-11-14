@@ -1,8 +1,11 @@
-/** One approval block asks for approval; a bare `i` approves exactly what it names, and `h` hands it off. */
+/**
+ * One approval block asks for approval; a bare `i` approves exactly what it names, `i` with a strategy word writes that
+ * strategy first, and `h` hands it off.
+ */
 import fs from "node:fs";
 
-import type { Result } from "../result.ts";
-import { approvalFor, closingBlock, parseClosingBlock } from "./closing-line.ts";
+import type { AgentDefaults } from "../config-resolved.types.ts";
+import { approvalFor, closingBlock, notAChoice, parseClosingBlock } from "./closing-line.ts";
 import { firstNonEmpty } from "./first-non-empty.ts";
 import type { HookInput } from "./hook-input.ts";
 import { orchestrateHandoff } from "./orchestrate-handoff.ts";
@@ -21,6 +24,7 @@ import {
 } from "./orchestrate-reviews.ts";
 import { approvalsFile, frontmatterOf, readLines } from "./orchestrate-session.ts";
 import { resolveStamp, stampMtime } from "./orchestrate-stamps.ts";
+import { applyWrites, planWrites } from "./orchestrate-strategy-writes.ts";
 import { lastAssistantFromTranscript } from "./orchestrate-transcript.ts";
 import { APPROVAL_BLOCK_STAMP, ITEM_KINDS, TURN_START_STAMP } from "./orchestrate.constants.ts";
 import type {
@@ -32,11 +36,8 @@ import type {
   ReviewsOpen,
   Strategy,
   StrategyChange,
-  StrategyItem,
-  StrategyWrite,
 } from "./orchestrate.types.ts";
-import { preparePlanUpdate } from "./persist-plan.ts";
-import { prepareRoadmapUpdate } from "./persist-roadmap.ts";
+import { setSessionStrategy } from "./session-settings.ts";
 import { hasStrategy, kindHasStrategy, parseStrategy } from "./strategy.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
@@ -49,8 +50,6 @@ const SLICE_OF: Readonly<Partial<Record<ItemKind, RunningRoadmap["kind"]>>> = {
   plan: "roadmap",
 };
 
-const FRONTMATTER_BLOCK = /^---\r?\n[\s\S]*?\r?\n---(?=\r?\n)/;
-const STRATEGY_LINE = /^strategy:.*$/m;
 const WAIT_THEN_CLOSE = "wait for it, then end with the approval block again";
 
 function readItem(abs: string): { text: string; mtime: number } | null {
@@ -77,12 +76,16 @@ function waitsForI(scan: Scan, abs: string, saved: { ref: ItemRef; fm: Record<st
   return !scan.running.some((r) => r.kind === owner && isSliceOf(abs, r.text));
 }
 
-/** The item a ref names with the strategy its file holds; null when that is no strategy. A fast item has none. */
-function itemOf(ref: ItemRef, at: { path: string; mtime: number }, held: string | undefined): ApprovalItem | null {
+/**
+ * The item a ref names with the strategy and advice its file holds; null when the strategy is none. A fast item has
+ * neither, and a file with no `advice:` has none (null).
+ */
+function itemOf(ref: ItemRef, at: { path: string; mtime: number }, fm: Record<string, string>): ApprovalItem | null {
   if (!kindHasStrategy(ref.kind)) return { ...at, kind: ref.kind, serial: ref.serial };
-  const strategy = parseStrategy(held);
+  const strategy = parseStrategy(fm.strategy);
+  const advice = fm.advice === undefined || fm.advice === "" ? null : fm.advice;
 
-  return strategy === null ? null : { ...at, kind: ref.kind, serial: ref.serial, strategy };
+  return strategy === null ? null : { ...at, advice, kind: ref.kind, serial: ref.serial, strategy };
 }
 
 /** The saved item at `abs` when it waits for an `i`; null when it is not settled and approvable. */
@@ -94,7 +97,7 @@ function approvalItemAt(scan: Scan, abs: string): ApprovalItem | null {
   const fm = frontmatterOf(read.text);
   const ref = { kind, serial: Number(fm.serial) };
 
-  return waitsForI(scan, abs, { fm, ref }) ? itemOf(ref, { mtime: read.mtime, path: abs }, fm.strategy) : null;
+  return waitsForI(scan, abs, { fm, ref }) ? itemOf(ref, { mtime: read.mtime, path: abs }, fm) : null;
 }
 
 // Reviewed plans and roadmaps this session saved that still wait for an `i`, in first-save order.
@@ -108,14 +111,24 @@ export function approvableItems(data: HookInput): ApprovalItem[] {
   return readLines(file).flatMap((abs) => approvalItemAt(scan, abs) ?? []);
 }
 
-/** True when the approval block names every pending item, and only known items with the strategy each file holds. */
+/** The advice a block item shows: none for a fast item. */
+function adviceOf(item: Approvable): string | null {
+  return hasStrategy(item) ? item.advice : null;
+}
+
+/**
+ * True when the approval block names every pending item, and only known items with the strategy and advice each file
+ * holds.
+ */
 function covers(named: Approvable[] | null, items: ApprovalItem[], pending: ApprovalItem[]): boolean {
   if (named === null) return false;
   const known = new Set(items.map(itemKey));
 
-  // The strategy a block shows must be the one the file holds, so a bare `i` never runs one the person did not see.
+  // The strategy and advice a block shows must be the file's, so a bare `i` never runs one the person did not see.
   function shownTruly(n: Approvable): boolean {
-    return items.some((i) => itemKey(i) === itemKey(n) && itemStrategy(i) === itemStrategy(n));
+    return items.some(
+      (i) => itemKey(i) === itemKey(n) && itemStrategy(i) === itemStrategy(n) && adviceOf(i) === adviceOf(n),
+    );
   }
 
   return (
@@ -157,24 +170,6 @@ function strategyStep(i: ApprovalItem, strategy: Strategy): string {
   return `${itemKey(i)}: strategy ${strategy} was written to its frontmatter; re-read the ${i.kind}, then ${runOf(i)}`;
 }
 
-// The file's text with its `strategy:` frontmatter line set, validated through the persist module;
-// null when nothing would change.
-function strategyWrite(ws: string, item: StrategyItem, strategy: Strategy): StrategyWrite {
-  const previous = fs.readFileSync(item.path, "utf8");
-  const m = FRONTMATTER_BLOCK.exec(previous);
-
-  if (m === null) return { error: "no frontmatter", ok: false };
-  const next = m[0].replace(STRATEGY_LINE, `strategy: ${strategy}`) + previous.slice(m[0].length);
-
-  if (next === previous) return { content: null, ok: true };
-  const prepare = item.kind === "plan" ? preparePlanUpdate : prepareRoadmapUpdate;
-  const result = prepare({ content: next, filePath: item.path, workspaceRoot: ws });
-
-  if (!result.ok) return { error: result.error, ok: false };
-
-  return { content: result.content, ok: true };
-}
-
 /** The named items, each found among the approvable ones; null when one is missing or shows another strategy. */
 function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | null): ApprovalItem[] | null {
   const items = approvableItems(data);
@@ -191,33 +186,6 @@ function resolveNamed(data: HookInput, named: Approvable[], wanted: Strategy | n
   return resolved;
 }
 
-/** Each item's strategy change; the failure, as `kind N: why`, when one cannot be written. */
-function planWrites(ws: string, resolved: ApprovalItem[], wanted: Strategy | null): Result<StrategyChange[], string> {
-  const writes: StrategyChange[] = [];
-
-  for (const i of resolved) {
-    // A fast plan or roadmap has no strategy, so a code leaves it alone.
-    const w: StrategyWrite =
-      wanted === null || !hasStrategy(i) ? { content: null, ok: true } : strategyWrite(ws, i, wanted);
-
-    if (!w.ok) return { error: `${itemKey(i)}: strategy ${wanted} could not be written (${w.error})`, ok: false };
-    writes.push({ content: w.content, item: i });
-  }
-
-  return { ok: true, value: writes };
-}
-
-/** Writes each changed file; the error text when one fails. */
-function applyWrites(writes: StrategyChange[]): string | null {
-  try {
-    for (const w of writes) if (w.content !== null) fs.writeFileSync(w.item.path, w.content);
-
-    return null;
-  } catch (err) {
-    return String(err);
-  }
-}
-
 /** The first named item whose review has not settled; undefined when every one has or names no file. */
 function firstUnsettled(ws: string, open: ReviewsOpen, named: Approvable[]): Approvable | undefined {
   return named.find((n) => {
@@ -227,7 +195,28 @@ function firstUnsettled(ws: string, open: ReviewsOpen, named: Approvable[]): App
   });
 }
 
-function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]): string {
+/** The writes an approval made and the strategy word it carried, if any. */
+type Done = { writes: StrategyChange[]; wanted: Strategy | null };
+
+/** What an approving `i` says once its writes are done; with a strategy word it also sets the session strategy. */
+function approvedWith(data: HookInput, defaults: AgentDefaults, done: Done): string {
+  const { wanted, writes } = done;
+  const written = new Set(writes.flatMap((w) => (w.content === null ? [] : [w.item])));
+
+  const text = approvedText(
+    writes.map((w) => w.item),
+    (i) => (wanted === null || !written.has(i) ? approveStep(i) : strategyStep(i, wanted)),
+  );
+
+  return wanted === null ? text : [text, setSessionStrategy(data, defaults, wanted)].filter(Boolean).join("\n");
+}
+
+function settledReply(
+  data: HookInput,
+  answer: { reply: KnownApproval; named: Approvable[] },
+  defaults: AgentDefaults,
+): string {
+  const { named, reply } = answer;
   const refused = reply.kind === "handoff" ? "h did not hand off" : "i did not approve";
   const ws = resolveRoots(data).root;
   const unsettled = firstUnsettled(ws, readReviewsOpen(data), named);
@@ -256,13 +245,15 @@ function settledReply(data: HookInput, reply: KnownApproval, named: Approvable[]
     return orchestrateHandoff(data, ws, queue);
   }
 
-  const written = new Set(writes.flatMap((w) => (w.content === null ? [] : [w.item])));
-
-  return approvedText(resolved, (i) => (wanted === null || !written.has(i) ? approveStep(i) : strategyStep(i, wanted)));
+  return approvedWith(data, defaults, { wanted, writes });
 }
 
-// Context for a reply of `i`, a code, `h` or a spelled-out choice that answers the previous reply's approval block.
-export function approvalContext(data: HookInput, prompt: string): string {
+/**
+ * Context for a reply of `i` or `h`, alone or with a strategy word, or a spelled-out choice, that answers the
+ * previous reply's approval block. A retired letter code is no choice. An approving `i` with a strategy word that
+ * wrote its files also sets the session strategy; a handoff, a refusal and a failed write leave the session alone.
+ */
+export function approvalContext(data: HookInput, prompt: string, defaults: AgentDefaults): string {
   const tp = firstNonEmpty(data.transcript_path, data.transcriptPath);
 
   if (tp === undefined) return "";
@@ -273,7 +264,5 @@ export function approvalContext(data: HookInput, prompt: string): string {
 
   if (reply === null) return "";
 
-  if (reply.kind !== "unknown") return settledReply(data, reply, named);
-
-  return `"${reply.word}" is not a choice; end with this block again:\n${closingBlock(named)}`;
+  return reply.kind === "unknown" ? notAChoice(reply.word, named) : settledReply(data, { named, reply }, defaults);
 }

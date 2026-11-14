@@ -146,8 +146,8 @@ it("enforces the harnesses whose child payload carries a marker: claude (and Gro
 });
 
 it("tells an item that has a strategy from a fast plan or fast roadmap", () => {
-  expect(hasStrategy({ kind: "plan", serial: 1, strategy: "free" })).toBe(true);
-  expect(hasStrategy({ kind: "roadmap", serial: 1, strategy: "spawn-deep" })).toBe(true);
+  expect(hasStrategy({ advice: null, kind: "plan", serial: 1, strategy: "free" })).toBe(true);
+  expect(hasStrategy({ advice: null, kind: "roadmap", serial: 1, strategy: "spawn-deep" })).toBe(true);
   expect(hasStrategy({ kind: "fast-plan", serial: 1 })).toBe(false);
   expect(hasStrategy({ kind: "fast-roadmap", serial: 1 })).toBe(false);
   expect(kindHasStrategy("plan")).toBe(true);

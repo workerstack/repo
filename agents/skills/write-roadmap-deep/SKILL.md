@@ -18,7 +18,7 @@ After each save, spawn a fresh host agent whose prompt is only `/review-roadmap 
 
 On feedback, revise the same file (a Write of the saved path updates it in place), add a `- feedback: …` entry for what the user rejected and what changed, and run `/review-roadmap` again. Never edit or drop an earlier entry.
 
-On `i`, a short yes or an `i` code, set `status: locked` on the same file, then run `/implement-roadmap-deep {n}`. On `h` or an `h` code, the hook writes the handoff: tell the person to run the `/pickup {serial}` it names in a fresh session, and do no work here. The save denies the lock while `reviews` is 0. Do not run `/write-plan-deep` or `/implement-plan-deep` from this skill.
+On `i`, a short yes or `i` with a strategy word, set `status: locked` on the same file, then run `/implement-roadmap-deep {n}`. On `h`, alone or with a strategy word, the hook writes the handoff: tell the person to run the `/pickup {serial}` it names in a fresh session, and do no work here. The save denies the lock while `reviews` is 0. Do not run `/write-plan-deep` or `/implement-plan-deep` from this skill.
 
 Report the serial, the absolute path, the slice titles in order, the top risk, and the review findings you rejected with why. Stop and end the reply with the approval block from `/write-plan-deep` for this roadmap, headed `roadmap {n} · {s}`, in its queue form when other reviewed plans or roadmaps wait. Only after the review settled (`reviews` bumped since the review spawn); the Stop hook blocks it otherwise. Ask for approval no other way.
 

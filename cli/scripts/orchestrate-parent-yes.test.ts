@@ -102,18 +102,18 @@ it("a bare i does not approve a block whose strategy differs from the file's", (
   expect(strategyOf(plan)).toBe("spawn-fast");
 });
 
-it("isf and implement fere write the strategy they name, and hsd is no approval", () => {
+it("i fast and implement fere write the strategy they name, and h deep is no approval", () => {
   const { ws, s, plan } = onePlan("c1", "spawn-fast");
   const tp = transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-fast"))}`);
-  expect(s.say("isf", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`);
+  expect(s.say("i fast", tp)).toContain(`i approves plan 1: plan 1: run /implement-plan-deep 1 (${plan})`);
   expect(strategyOf(plan)).toBe("spawn-fast");
-  expect(s.say("isd", tp)).toContain("strategy spawn-deep was written to its frontmatter");
+  expect(s.say("i deep", tp)).toContain("strategy spawn-deep was written to its frontmatter");
   expect(strategyOf(plan)).toBe("spawn-deep");
   expect(s.say("implement fere", transcript(ws, `Saved.\n\n${closing(planItem(1, "spawn-deep"))}`))).toContain(
     "strategy free was written to its frontmatter",
   );
   expect(strategyOf(plan)).toBe("free");
-  expect(s.say("hsd", plan1Line(ws))).not.toContain("i approves");
+  expect(s.say("h deep", plan1Line(ws))).not.toContain("i approves");
 });
 
 it("y spawn-deep writes the strategy, tells the agent to re-read, and a second one changes no bytes", () => {
@@ -182,7 +182,8 @@ it("isx and i daet approve nothing and show the block again", () => {
 
   for (const reply of ["isx", "i daet"]) {
     const out = s.say(reply, plan1Line(ws));
-    expect(out).toContain(`"${reply}" is not a choice; end with this block again:\n${closing(planItem(1))}`);
+    const usage = "is not a choice; reply i or h, alone or with free, fast or deep; end with this block again:";
+    expect(out).toContain(`"${reply}" ${usage}\n${closing(planItem(1))}`);
     expect(out).not.toContain("i approves");
   }
 

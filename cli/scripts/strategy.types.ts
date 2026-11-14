@@ -13,13 +13,13 @@ export type Approval = "ask" | "away";
 export type Effort = "fast" | "deep";
 
 /**
- * What an approval block can name: a full plan or roadmap, with its strategy, or a fast plan or roadmap, which have
- * none.
+ * What an approval block can name: a full plan or roadmap, with its strategy and its advice (null when the file has
+ * none), or a fast plan or roadmap, which have neither.
  */
 export type ItemKind = "plan" | "roadmap" | "fast-plan" | "fast-roadmap";
 
 export type Approvable =
-  | { kind: "plan" | "roadmap"; serial: number; strategy: Strategy }
+  | { kind: "plan" | "roadmap"; serial: number; strategy: Strategy; advice: string | null }
   | { kind: "fast-plan" | "fast-roadmap"; serial: number };
 
 export type ApprovalReply =

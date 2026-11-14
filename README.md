@@ -57,7 +57,7 @@ Ask only what research cannot settle and what changes the plan's shape: intent, 
 
 ### Approval
 
-Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or a code such as `isf`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap-deep` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `hf`, `hsf` and `hsd` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
+Feedback revises the same plan file (a Write of a saved plan updates it in place) and adds a `feedback` entry to `## Previous mistakes`; research again if needed. Run `/review-plan` again on the revision. Stop again until the user approves. A plan with `reviews: 0` cannot move to `in-progress`; run `/review-plan {n}` first. Approval is the user replying `i` (or a short yes, or `i` with a word such as `fast`) to the approval block, an explicit "plan and do it" in the request, or `/implement-roadmap-deep` running a roadmap whose status is `locked` or `in-progress`. A plan-shaping question still stops and leaves that roadmap `locked` or `in-progress`. `h` hands the whole block to a fresh session and keeps each file's strategy; `h free`, `h fast` and `h deep` write `free`, `spawn-fast` or `spawn-deep` first. The hook writes one handoff and names the `/pickup {serial}` to run there; do no work in this session. An `i` or `h` on an item whose review has not settled is refused.
 
 ### Implement
 
@@ -576,22 +576,23 @@ Implementer guards apply under every strategy: the spawn prompt names the worktr
 
 Test runs: a plain `bun run test …` (or `vitest`, `npm test`, `pnpm test`) from an `implementer-*` child, or from a parent while a review is active, is rewritten to `<root>/node_modules/.bin/repo job --job test --query '<command>'`. The full log goes to the stash and the caller sees the failing lines. A compound command passes through.
 
-Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan-deep {n} (<path>)` and leaves the file alone. A code or spelled-out strategy writes that strategy into each approved plan or roadmap (validated through the persist module), and the context says to re-read the file before work. A near-miss code (`isx`, or `id` with its `s` dropped), or a strategy word within two edits of several choices approves nothing: `"{reply}" is not a choice; end with this block again:` and the block. Any other reply gets no approval context.
+Approval: the Stop hook blocks a reply that should ask for approval unless it ends with an approval block that names every pending item with the strategy its file holds. The block reason is `end with this block:` and the block `closingBlock` renders from the files. On the next prompt, `i` returns `i approves plan {n}: plan {n}: run /implement-plan-deep {n} (<path>)` and leaves the file alone. `i` with a strategy word (`i free`, `i fast`, `i deep`, or spelled out) writes that strategy into each approved plan or roadmap (validated through the persist module), and once the writes succeed it also sets the session strategy; the context adds `set strategy spawn-fast (was free)` and says to re-read the file before work. A retired letter code (`if`, `isf`, `isd`, `hf`, `hsf`, `hsd`, or one close to it), or a strategy word within two edits of several choices, approves nothing: `"{reply}" is not a choice; reply i or h, alone or with free, fast or deep; end with this block again:` and the block (`reply i or h` on a fast-only block, which takes no strategy word). Any other reply gets no approval context.
 
 The approval block `closingBlock` renders, for one plan, fenced as code:
 
 ```
 plan {n} · {s}
-  i  implement    if · isf · isd
-  h  hand off     hf · hsf · hsd
+  plan {n} advice: {advice}
+  i  implement    i free · i fast · i deep
+  h  hand off     h free · h fast · h deep
      or reply to revise
 ```
 
-A queue joins header items with `, then `; the rows never change. Replies are case-insensitive, and a trailing `.` or `!` is ignored. `i`, `y`, `yes`, `go` and `do it` approve with each file's strategy, and `h` hands off with it. The codes `if`, `isf`, `isd`, `hf`, `hsf` and `hsd` match exactly. Otherwise an action (`i`, `y`, `h`, or a word within two edits of `implement` or `hand off`) may take one or two strategy words, exact or within two edits of exactly one of `free`, `spawn-fast`, `spawn-deep`, `fast` or `deep`. Only words of four or more letters are inferred, A bare strategy word with no action, or strategy words that match nothing (`i think so`), is feedback.
+A queue joins header items with `, then `. A plan or roadmap whose file has `advice:` adds an advice row under the header, one per item in header order; the Stop hook blocks a block whose advice row differs from the file's. The fixed rows never change. Replies are case-insensitive, and a trailing `.` or `!` is ignored. `i`, `y`, `yes`, `go` and `do it` approve with each file's strategy, and `h` hands off with it. The six letter codes are retired with no alias. An action (`i`, `y`, `h`, or a word within two edits of `implement` or `hand off`) may take one or two strategy words, exact or within two edits of exactly one of `free`, `spawn-fast`, `spawn-deep`, `fast` or `deep`. Only words of four or more letters are inferred, A bare strategy word with no action, or strategy words that match nothing (`i think so`), is feedback.
 
 Settled review: a parent spawn whose prompt starts `/review-plan {n}` or `/review-roadmap {n}` records `{"plan {n}": <reviews at spawn>}` in `.repo/tmp/sessions/<sid>/reviews-open.json`, keyed by `plan {n}` or `roadmap {n}`, never by path. An item is settled when its file's `reviews` is above the recorded number, or nothing was recorded and `reviews` is at least 1. Stop blocks an approval block that names an unsettled item, before the approval and mode checks: `plan {n}'s review has not settled; wait for it, settle its findings with reviews bumped, then end with the approval block`, or on `reviews: 0`, `plan {n} has reviews: 0; run /review-plan {n} in a fresh agent first`. A Stop block fires once, so an `i` or `h` on an unsettled item is refused too: `i did not approve plan {n}: its review has not settled; wait for it, then end with the approval block again` (`h did not hand off …` for `h`). Unsettled items never count as pending.
 
-Handoff: `h` keeps each file's strategy; `hf`, `hsf` and `hsd` (or `h` with a strategy word) write that strategy through the same validated write as an `i` code. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan-deep {n}`, or `set status locked, then /implement-roadmap-deep {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
+Handoff: `h` keeps each file's strategy; `h` with a strategy word writes that strategy through the same validated write as `i` with one, and leaves the session strategy alone. The hook writes one handoff for the whole block through `persistHandoff`: H1 `run-plan-{n}` (or `run-{kind}-{n}-then-…`), Goal names the items, State their paths and strategies, Context the source session, Next one leaf per item in order (`/implement-plan-deep {n}`, or `set status locked, then /implement-roadmap-deep {n}`), Watch-outs `(none)`. The context: `h handed off plan {n} (strategy spawn-fast written) to <abs path>; tell the person to run /pickup {serial} in a fresh session, and do no work here`.
 
 Enforcement, from the live probe of each harness's child payload:
 
@@ -603,7 +604,7 @@ Enforcement, from the live probe of each harness's child payload:
 | antigravity | none; only a different `conversationId`, its only session-id key | no |
 | cursor | none; only a different `session_id` | no |
 
-An unenforced harness follows the rule as an instruction (`review-loop.md`). Cursor's `beforeSubmitPrompt` writes only `git-asked.json` in orchestrate-parent, so `i`, the codes and `h` have no effect there and no slash settings: `/away` is prompt-only in Cursor, though a saved `approval: away` still runs Cursor's Stop. Antigravity has no Stop hook, so the settled-review, away and approval-run rules are prompt-only there. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt`, so no prompt can grant a git subcommand there and the git denies still apply; the Cursor IDE was not tested.
+An unenforced harness follows the rule as an instruction (`review-loop.md`). Cursor's `beforeSubmitPrompt` writes only `git-asked.json` in orchestrate-parent, so `i`, `h` and their strategy words have no effect there and no slash settings: `/away` is prompt-only in Cursor, though a saved `approval: away` still runs Cursor's Stop. Antigravity has no Stop hook, so the settled-review, away and approval-run rules are prompt-only there. Headless `cursor-agent -p` (v2026.11.05) never fires `beforeSubmitPrompt`, so no prompt can grant a git subcommand there and the git denies still apply; the Cursor IDE was not tested.
 
 `git-asked.json` (Worktrees) is keyed by sid. Claude and Codex children share the parent's sid and so its grant; a Grok, Cursor or Antigravity child has its own sid and gets none. Antigravity has no `git-asked.json`: the gate reads `lastUserInput` from the tool call, and an agy subagent's calls carry an empty one, so a child gets no grant.
 
@@ -703,7 +704,7 @@ approval: away             # optional: ask | away
 - `spawn-fast`: the main session only reviews. Each phase goes to the `implementer-fast` agent. The reviewer reads the real diff, reruns the tests and sends findings back. A second attempt goes to `implementer-deep`.
 - `spawn-deep`: the same loop, with `implementer-deep` from the first attempt.
 
-A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. `bun repo persist plan` takes the config default and refuses the line the same way. An unknown saved value is invalid with `strategy: free|spawn-fast|spawn-deep`. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
+A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. `bun repo persist plan` takes the config default and refuses the line the same way. An unknown saved value is invalid with `strategy: free|spawn-fast|spawn-deep`. The person can change the value with a word such as `i fast` when approving, or `h fast` when handing off. `i` with a word also sets the session strategy.
 
 `advice` is optional: `advice: {free|spawn-fast|spawn-deep} because {reason}`, at most 100 characters, the strategy the agent would pick. A body line `advice: {value}` moves into the frontmatter after `strategy:` and before `approval:`, like `commit:`; a line inside a code fence is not moved. An update that omits it keeps it. A bad line is denied with `advice: {free|spawn-fast|spawn-deep} because {reason}, at most 100 characters`. `/write-plan-deep` always sends it on a new deep plan. It changes nothing by itself; the person picks at approval.
 
@@ -933,7 +934,7 @@ approval: away             # optional: ask | away
 
 `draft` → `locked` → `in-progress` → `done` | `blocked`.
 
-`strategy` is `free`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). The save sets it, never the agent: the session value (`/set`, `bun repo set`), then `agents.defaultStrategy`, then `free`; a save that omits it keeps the saved value. A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. On a roadmap it is the default its slices take: a slice plan gets the session value, then the roadmap's, then the config. The person can change the value with a code such as `isf` when approving, or `hsf` when handing off.
+`strategy` is `free`, `spawn-fast` or `spawn-deep`. It means what it means in a plan (see `plan-format.md`). The save sets it, never the agent: the session value (`/set`, `bun repo set`), then `agents.defaultStrategy`, then `free`; a save that omits it keeps the saved value. A `strategy:` line the agent sends is denied unless it equals the saved value: `strategy: is set from the session, the roadmap or the config; send advice: {free|spawn-fast|spawn-deep} because {reason}`. On a roadmap it is the default its slices take: a slice plan gets the session value, then the roadmap's, then the config. The person can change the value with a word such as `i fast` when approving, or `h fast` when handing off. `i` with a word also sets the session strategy.
 
 `advice` is optional, as in a plan (see `plan-format.md`): a body-only save sends a bare `advice: {free|spawn-fast|spawn-deep} because {reason}` line, at most 100 characters, above `ROADMAP_NAME:`, and a save that omits it keeps the saved one. A bad line is denied with `advice: {free|spawn-fast|spawn-deep} because {reason}, at most 100 characters`.
 
@@ -1202,7 +1203,7 @@ At most 40 lines, frontmatter included; `## Previous mistakes` and its lines are
 
 ### Approval
 
-All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy codes. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
+All-fast block: header `fast-plan {n}`, rows `i implement`, `h hand off`, `or reply to revise`. It has no strategy words. `i` runs `/implement-plan-fast {n}`; `h` hands off with `/implement-plan-fast {n}` as Next.
 
 A fast roadmap (`fast-roadmap-format.md`) runs its slices as fast plans.
 
@@ -1237,7 +1238,7 @@ At most 20 lines, frontmatter included; Location lines and `## Previous mistakes
 
 ### Approval
 
-Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy codes. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
+Block: header `fast-roadmap {n}`, rows `i implement`, `h hand off`, `or reply to revise`. No strategy words. `i` sets `status: locked`, then runs `/implement-roadmap-fast {n}`; `h` hands off with that as Next.
 
 ### Run
 
