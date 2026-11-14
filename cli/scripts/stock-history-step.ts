@@ -15,8 +15,8 @@ function isStock(rel: string): boolean {
 }
 
 /**
- * `stock history written` when the table's bytes changed, else `stock history ok`; under `--staged` it hashes the
- * index, which turn has restaged with every earlier step's rewrites, else the working tree.
+ * `stock history written` when the table's bytes changed, else `stock history ok`; under precommit it hashes the
+ * index, which precommit has restaged with every earlier step's rewrites, else the working tree.
  */
 export function stockHistoryStep(turn: Turn): StepResult | null {
   if (!turn.changes.some((change) => isStock(change.rel)) || !isSelf(turn.root)) return null;

@@ -1,7 +1,7 @@
 /**
- * The steps of `repo turn`, each over the change set: fmt, lint with the baseline gate, typecheck, sync when its
- * inputs changed, related tests, then check. A step reports a summary label, whether it passed, the tool output to
- * print when it failed, and the files it rewrote, which `--staged` restages.
+ * The steps of `repo turn` and `repo precommit`, each over the change set: fmt, lint with the baseline gate, typecheck,
+ * sync when its inputs changed, related tests (precommit only), then check. A step reports a summary label, whether it
+ * passed, the tool output to print when it failed, and the files it rewrote, which precommit restages.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -40,11 +40,15 @@ export type Bins = {
   vitest: (args: string[], cwd: string) => Captured | null;
 };
 
+/** The command that gates a change set, which names it in every line it prints. */
+export type GateName = "turn" | "precommit";
+
 /**
- * A change set to gate, with the root's packages, the bins it runs, the config's `lint.skip` entries, and its scope;
- * under the staged scope (`--staged`) turn restages after each step.
+ * A change set to gate, with the command gating it, the root's packages, the bins it runs, the config's `lint.skip`
+ * entries, and its scope; under the staged scope (precommit) the gate restages after each step.
  */
 export type Turn = {
+  command: GateName;
   root: string;
   changes: readonly Change[];
   packages: readonly string[];
@@ -117,7 +121,7 @@ export function fmtStep(turn: Turn): StepResult {
 }
 
 /** The lint lines of each excess's rule in its file, then what to do about it. */
-function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[]): string[] {
+function overOutput(command: GateName, over: readonly Excess[], diagnostics: readonly Diagnostic[]): string[] {
   const lines = diagnostics
     .filter((d) => over.some((e) => e.file === d.file && e.rule === d.rule))
     .map((d) => `${d.line}\n`);
@@ -125,7 +129,7 @@ function overOutput(over: readonly Excess[], diagnostics: readonly Diagnostic[])
   const fixes = over.map((e) => {
     const added = e.has - e.allows;
 
-    return `repo turn: ${excessText(e)}; fix the ${added === 1 ? "new one" : `${added} new ones`}\n`;
+    return `repo ${command}: ${excessText(e)}; fix the ${added === 1 ? "new one" : `${added} new ones`}\n`;
   });
 
   return [...lines, ...fixes];
@@ -189,7 +193,7 @@ export function lintStep(turn: Turn): StepResult {
 
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.error));
-    const output = errors.map((line) => `repo turn: ${line}\n`);
+    const output = errors.map((line) => `repo ${turn.command}: ${line}\n`);
 
     return failed("lint failed", output, fixed);
   }
@@ -206,7 +210,7 @@ export function lintStep(turn: Turn): StepResult {
 
     for (const e of over) count += e.has - e.allows;
 
-    return failed(`lint ${count} over baseline`, overOutput(over, report.value), touched);
+    return failed(`lint ${count} over baseline`, overOutput(turn.command, over, report.value), touched);
   }
 
   const lowered = result.lowered.map((l) => `${l.file} ${l.rule} ${l.from} → ${l.to}`).join(", ");
@@ -288,7 +292,7 @@ function sync(root: string) {
   return { run, touched: [...after].filter(([rel, now]) => before.get(rel) !== now).map(([rel]) => rel) };
 }
 
-/** `repo sync` when a file it reads changed; the files it rewrote are restaged under `--staged`. */
+/** `repo sync` when a file it reads changed; precommit restages the files it rewrote. */
 export function syncStep(turn: Turn): StepResult | null {
   if (!turn.changes.some((change) => syncReads(turn, change.rel))) return null;
   const { run, touched } = sync(turn.root);

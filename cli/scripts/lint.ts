@@ -292,14 +292,14 @@ export function captureTool(tool: Tool, args: string[], at: { root: string; limi
 }
 
 /**
- * The comment conversion, the sort of json keys, then bun fmt, on `files` as `repo turn` runs them; a refusal to sort
- * fails.
+ * The comment conversion, the sort of json keys, then bun fmt, on `files` as `repo turn` and `repo precommit` run
+ * them; a refusal to sort fails.
  */
 export function captureSorted(files: readonly string[], root: string): Captured {
   convertJsonc(root, files, { check: false });
   const sorted = sortJson(root, files, { check: false });
 
-  if (!sorted.ok) return { code: 1, stderr: `repo turn: ${sorted.error}\n`, stdout: "" };
+  if (!sorted.ok) return { code: 1, stderr: `${sorted.error}\n`, stdout: "" };
 
   return captureTool("bun fmt", ["--no-error-on-unmatched-pattern", ...files], { root });
 }

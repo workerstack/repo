@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { childEnv } from "../env.ts";
-import { cleanTemps, SLOW, consumer, git, read, tempDir, turn, write } from "./__fixtures__/turn-repo.ts";
+import { cleanTemps, consumer, git, precommit, read, SLOW, tempDir, write } from "./__fixtures__/turn-repo.ts";
 
 /**
  * Git hands a hook GIT_DIR, GIT_INDEX_FILE and the like. Turn's own git calls must follow them; the tools it runs
@@ -40,17 +40,18 @@ it("commits in its own repo", () => {
 `;
 
 it(
-  "runs the tools without the hook's GIT_* variables, so a test's own repo stays its own",
+  "precommit runs the tools without the hook's GIT_* variables, so a test's own repo stays its own",
   { timeout: SLOW },
   async () => {
     const root = consumer({ "src/x.test.ts": ENV_TEST, "src/x.ts": "export const x = 1;\n" });
     const before = { branches: git(root, "branch", "--list"), log: git(root, "log", "--format=%H") };
     write(root, { "src/x.ts": "export const x = 2;\n" });
+    git(root, "add", "src/x.ts");
     const record = path.join(tempDir("workerstack-turn-env-"), "names.json");
     vi.stubEnv("TURN_RECORD", record);
     vi.stubEnv("GIT_DIR", path.join(root, ".git"));
     vi.stubEnv("GIT_INDEX_FILE", path.join(root, ".git", "index"));
-    const result = await turn(root, []);
+    const result = await precommit(root);
     expect(result.out).toMatch(/ · 1 related test passed\n$/);
     expect(JSON.parse(fs.readFileSync(record, "utf8"))).toStrictEqual([]);
     vi.unstubAllEnvs();
@@ -59,17 +60,17 @@ it(
   },
 );
 
-it("--staged reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets it", { timeout: SLOW }, async () => {
+it("precommit reads the index GIT_INDEX_FILE names, as `git commit <paths>` sets it", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   write(root, { "src/b.ts": "export const b = 1;\n" });
   const index = path.join(tempDir("workerstack-turn-index-"), "index");
   const env = childEnv({ GIT_INDEX_FILE: index });
   execFileSync("git", ["read-tree", "HEAD"], { cwd: root, env });
   execFileSync("git", ["add", "src/b.ts"], { cwd: root, env });
-  const unset = await turn(root, ["--staged"]);
-  expect(unset.out).toBe("turn: no changes\n");
+  const unset = await precommit(root);
+  expect(unset.out).toBe("precommit: no changes\n");
   vi.stubEnv("GIT_INDEX_FILE", index);
-  const named = await turn(root, ["--staged"]);
-  expect(named.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint ok · /);
+  const named = await precommit(root);
+  expect(named.out).toMatch(/^precommit: 1 file · fmt ok · comments ok · lint ok · /);
   expect(read(root, "src/b.ts")).toBe("export const b = 1;\n");
 });

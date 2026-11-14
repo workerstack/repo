@@ -1,4 +1,4 @@
-/** The related-tests step of `repo turn`: `vitest related --run` in each owning package of the changed code. */
+/** The related-tests step of `repo precommit`: `vitest related --run` in each owning package of the changed code. */
 import path from "node:path";
 
 import type { Captured } from "./lint.ts";

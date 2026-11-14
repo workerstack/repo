@@ -166,7 +166,7 @@ it.each(["repo", "repo.exe"] as const)(
 
 /** What the bin `repoBinLookup(".")` finds from `cwd` prints, whatever project the agent env names. */
 function lookup(cwd: string, project: string) {
-  return spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" turn --staged`], {
+  return spawnSync("sh", ["-c", `${repoBinLookup(".")}; "$r" precommit`], {
     cwd,
     encoding: "utf8",
     env: { CLAUDE_PROJECT_DIR: project, GROK_WORKSPACE_ROOT: project, PATH: repoEnv.process.PATH },
@@ -178,9 +178,9 @@ it(
     "whatever project the agent env names",
   () => {
     const installed = setup("repo", "repo");
-    expect(lookup(installed.wt, installed.main)).toBe("own turn --staged\n");
+    expect(lookup(installed.wt, installed.main)).toBe("own precommit\n");
     const bare = setup("repo");
-    expect(lookup(bare.wt, bare.base)).toBe("main turn --staged\n");
+    expect(lookup(bare.wt, bare.base)).toBe("main precommit\n");
   },
 );
 

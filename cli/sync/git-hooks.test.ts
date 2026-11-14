@@ -78,10 +78,10 @@ it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync 
   expect(hooks(context(["agents", "docs"]))).toStrictEqual([]);
 });
 
-it("pre-commit runs repo turn --staged from the bin of the checkout git runs it in", () => {
+it("pre-commit runs repo precommit from the bin of the checkout git runs it in", () => {
   const r = runHook("pre-commit");
   expect(r.stderr).toBe("");
-  expect(r.stdout).toBe("repo turn --staged\n");
+  expect(r.stdout).toBe("repo precommit\n");
 });
 
 it("commit-msg runs repo commit-msg on the message file git passes", () => {

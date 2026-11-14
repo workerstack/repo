@@ -14,6 +14,8 @@ import {
   MUTATE_SUMMARY,
   MUTATE_USAGE,
   PERSIST_USAGE,
+  PRECOMMIT_SUMMARY,
+  PRECOMMIT_USAGE,
   PURGE_MCPS_USAGE,
   RELEASE_SUMMARY,
   TASKS_USAGE,
@@ -162,10 +164,10 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     usage: LINT_USAGE,
   },
   mutate: { load: () => import("./mutate.ts"), summary: MUTATE_SUMMARY, usage: MUTATE_USAGE },
+  precommit: { load: () => import("./scripts/precommit.ts"), summary: PRECOMMIT_SUMMARY, usage: PRECOMMIT_USAGE },
   turn: {
     load: () => import("./scripts/turn.ts"),
-    summary:
-      "Gate the changed files: fmt, lint, typecheck, sync, stock history, related tests, check (--staged: the index)",
+    summary: "Gate the changed files or one package: fmt, lint, typecheck, sync, stock history, check",
     usage: TURN_USAGE,
   },
 

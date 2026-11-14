@@ -1,10 +1,10 @@
 /**
- * `repo turn [--staged] [<path>]`: gates a change set (the working tree, the index, or one package) with fmt, disable
+ * `repo turn [<path>]` gates the working tree or one package, and `repo precommit` the index, with fmt, disable
  * comments, lint and its baseline, typecheck, reject files, sync, the stock history table (in this package's own
- * checkout), related tests and check, each step only when its inputs changed, then prints one summary line. Only
- * `--staged` restages, only what turn itself rewrote, and right after the step that rewrote it, so a later step reads
- * the index as the commit will hold it. A file a step returned to the base leaves the change set before the next step,
- * and a turn with no change left runs no more steps.
+ * checkout) and check, precommit also with related tests before check, each step only when its inputs changed, then
+ * prints one summary line. Only precommit restages, only what it rewrote, and right after the step that rewrote it, so
+ * a later step reads the index as the commit will hold it. A file a step returned to the base leaves the change set
+ * before the next step, and a gate with no change left runs no more steps.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -21,15 +21,14 @@ import { commentsStep } from "./comments-step.ts";
 import { capture, captureBun } from "./lint.ts";
 import { packageBin } from "./package-bin.ts";
 import { rejectionsStep } from "./rejections-step.ts";
-import { STAGED_FLAG } from "./staged-flag.constants.ts";
 import { stockHistoryStep } from "./stock-history-step.ts";
-import { testsStep } from "./tests-step.ts";
 import {
   checkStep,
   fmtStep,
   lintStep,
   syncStep,
   type Bins,
+  type GateName,
   type Step,
   type StepResult,
   type Turn,
@@ -38,21 +37,19 @@ import { typecheckStep } from "./typecheck-step.ts";
 
 export type TurnDeps = { cwd?: string; stdout?: (s: string) => void; stderr?: (s: string) => void; bins?: Bins };
 
-type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
+export type Parsed = { ok: true; scope: Scope } | { ok: false; errors: string[] };
 
-const STEPS: readonly Step[] = [
-  fmtStep,
-  commentsStep,
-  lintStep,
-  typecheckStep,
-  rejectionsStep,
-  syncStep,
-  stockHistoryStep,
-  testsStep,
-  checkStep,
-];
+/** A command that gates a change set: its name, its steps in order, and how it reads its arguments into a scope. */
+export type Gate = {
+  name: GateName;
+  steps: readonly Step[];
+  parse: (argv: readonly string[], cwd: string, root: string) => Parsed;
+};
 
-const USE = "use repo turn [--staged] [<path>]";
+const TURN_USE = "use repo turn [<path>]";
+
+/** Where a flag given to turn should go; an old hook that still passes `--staged` is fixed by a sync. */
+const INDEX_HINT = `${TURN_USE}, or repo precommit for the index (bun repo sync updates an old pre-commit hook)`;
 
 /**
  * Vitest from the package being tested, as its own tests would run: on node when the packages declare `range` as
@@ -101,38 +98,46 @@ export const BINS: Bins = {
   },
 };
 
-function parseArgs(argv: readonly string[], cwd: string, root: string): Parsed {
-  const flags = argv.filter((arg) => arg.startsWith("-"));
-  const paths = argv.filter((arg) => !arg.startsWith("-"));
-  const unknown = flags.find((flag) => flag !== STAGED_FLAG);
+/** At most one path, the package it names; none, the working tree. Turn takes no flags. */
+function parseTurn(argv: readonly string[], cwd: string, root: string): Parsed {
+  const flag = argv.find((arg) => arg.startsWith("-"));
 
-  if (unknown !== undefined) return { errors: [`unknown flag ${unknown}; ${USE}`], ok: false };
+  if (flag !== undefined) return { errors: [`unknown flag ${flag}; ${INDEX_HINT}`], ok: false };
 
-  if (paths.length > 1) return { errors: [`one path at most; ${USE}`], ok: false };
+  if (argv.length > 1) return { errors: [`one path at most; ${TURN_USE}`], ok: false };
 
-  if (flags.length > 0 && paths.length > 0)
-    return { errors: ["--staged gates the index, a path gates a package; pass one"], ok: false };
+  if (argv[0] === undefined) return { ok: true, scope: { kind: "tree" } };
+  const rel = path.relative(root, path.resolve(cwd, argv[0])).split(path.sep).join("/");
 
-  if (flags.length > 0) return { ok: true, scope: { kind: "staged" } };
-
-  if (paths[0] === undefined) return { ok: true, scope: { kind: "tree" } };
-  const rel = path.relative(root, path.resolve(cwd, paths[0])).split(path.sep).join("/");
-
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return { errors: [`${paths[0]} is outside ${root}`], ok: false };
+  if (rel.startsWith("..") || path.isAbsolute(rel)) return { errors: [`${argv[0]} is outside ${root}`], ok: false };
 
   return { ok: true, scope: { kind: "package", rel } };
 }
 
+/** The steps both gates run before related tests. */
+export const BEFORE_TESTS: readonly Step[] = [
+  fmtStep,
+  commentsStep,
+  lintStep,
+  typecheckStep,
+  rejectionsStep,
+  syncStep,
+  stockHistoryStep,
+];
+
+/** The agent's gate runs no tests. */
+const TURN: Gate = { name: "turn", parse: parseTurn, steps: [...BEFORE_TESTS, checkStep] };
+
 /** The root, its packages and the change set, or why turn cannot start. */
 async function prepare(
+  gate: Gate,
   argv: readonly string[],
-  cwd: string,
-  bins: Bins,
+  { cwd, bins }: { cwd: string; bins: Bins },
 ): Promise<{ ok: true; turn: Turn } | { ok: false; errors: string[] }> {
   const root = findRoot(cwd);
 
   if (root === null) return { errors: [missingConfig(cwd)], ok: false };
-  const parsed = parseArgs(argv, cwd, root);
+  const parsed = gate.parse(argv, cwd, root);
 
   if (!parsed.ok) return parsed;
   const loaded = await loadConfig(root);
@@ -148,7 +153,8 @@ async function prepare(
   const changes = changeSet(root, parsed.scope, packages);
 
   if (!changes.ok) return changes;
-  const turn = { bins, changes: changes.changes, packages, root, scope: parsed.scope, skips: loaded.config.lint.skip };
+  const { skip: skips } = loaded.config.lint;
+  const turn = { bins, changes: changes.changes, command: gate.name, packages, root, scope: parsed.scope, skips };
 
   return { ok: true, turn };
 }
@@ -157,24 +163,24 @@ async function prepare(
  * Stages the files turn rewrote, so the commit carries them as turn left them; when git refuses (a held index
  * lock), says so, since the index would otherwise go out with the content turn fixed only on disk.
  */
-function restage(root: string, touched: readonly string[], stderr: (s: string) => void): boolean {
+function restage(turn: Turn, touched: readonly string[], stderr: (s: string) => void): boolean {
   if (touched.length === 0) return true;
 
-  if (spawnSync("git", ["add", "-A", "--", ...touched], { cwd: root }).status === 0) return true;
-  stderr(`repo turn: git add failed for ${touched.join(" ")}; stage it yourself and commit again\n`);
+  if (spawnSync("git", ["add", "-A", "--", ...touched], { cwd: turn.root }).status === 0) return true;
+  stderr(`repo ${turn.command}: git add failed for ${touched.join(" ")}; stage it yourself and commit again\n`);
 
   return false;
 }
 
 /**
- * The steps' results, false for `isRestaged` when a restage under `--staged` failed, and true for `isEmptied` when a
+ * The steps' results, false for `isRestaged` when a restage under precommit failed, and true for `isEmptied` when a
  * step returned every change to the base.
  */
 type Ran = { results: StepResult[]; isRestaged: boolean; isEmptied: boolean };
 
 /**
  * The changes git still lists after a step rewrote files: one the step returned to the base leaves, and none joins.
- * The package scope gates every file, so it keeps them all. A failed read keeps the set: under `--staged` it fails
+ * The package scope gates every file, so it keeps them all. A failed read keeps the set: under precommit it fails
  * only after a failed restage, which has already failed the turn and said what to stage.
  */
 function remaining(turn: Turn): readonly Change[] {
@@ -188,15 +194,15 @@ function remaining(turn: Turn): readonly Change[] {
 }
 
 /**
- * Runs every step whose inputs changed, printing a failed step's output as it ends, under `--staged` restaging what
+ * Runs every step whose inputs changed, printing a failed step's output as it ends, under precommit restaging what
  * it rewrote, and after a rewrite dropping the changes it returned to the base, before the next step.
  */
-function runSteps(start: Turn, stderr: (s: string) => void): Ran {
+function runSteps(steps: readonly Step[], start: Turn, stderr: (s: string) => void): Ran {
   let changes = start.changes;
   let isRestaged = true;
   const results: StepResult[] = [];
 
-  for (const step of STEPS) {
+  for (const step of steps) {
     const turn: Turn = { ...start, changes };
     const result = step(turn);
 
@@ -204,7 +210,7 @@ function runSteps(start: Turn, stderr: (s: string) => void): Ran {
 
     for (const chunk of result.output) stderr(chunk);
 
-    if (turn.scope.kind === "staged" && !restage(turn.root, result.touched, stderr)) isRestaged = false;
+    if (turn.scope.kind === "staged" && !restage(turn, result.touched, stderr)) isRestaged = false;
     results.push(result);
 
     if (result.touched.length === 0) continue;
@@ -226,12 +232,13 @@ function withDefaults(deps: TurnDeps): Required<TurnDeps> {
   };
 }
 
-export async function main(argv: string[], deps: TurnDeps = {}): Promise<number> {
+/** Runs `gate` on its change set and prints one summary line; 0 when every step it ran passed. */
+export async function gateMain(gate: Gate, argv: readonly string[], deps: TurnDeps): Promise<number> {
   const { cwd, stdout, stderr, bins } = withDefaults(deps);
-  const prepared = await prepare(argv, cwd, bins);
+  const prepared = await prepare(gate, argv, { bins, cwd });
 
   if (!prepared.ok) {
-    for (const line of prepared.errors) stderr(`repo turn: ${line}\n`);
+    for (const line of prepared.errors) stderr(`repo ${gate.name}: ${line}\n`);
 
     return 1;
   }
@@ -239,15 +246,20 @@ export async function main(argv: string[], deps: TurnDeps = {}): Promise<number>
   const { turn } = prepared;
 
   if (turn.changes.length === 0) {
-    stdout("turn: no changes\n");
+    stdout(`${gate.name}: no changes\n`);
 
     return 0;
   }
 
-  const { results, isRestaged, isEmptied } = runSteps(turn, stderr);
+  const { results, isRestaged, isEmptied } = runSteps(gate.steps, turn, stderr);
   const files = `${turn.changes.length} file${turn.changes.length === 1 ? "" : "s"}`;
   const labels = [...results.map((result) => result.label), ...(isEmptied ? ["no changes left"] : [])];
-  stdout(`turn: ${files} · ${labels.join(" · ")}\n`);
+  stdout(`${gate.name}: ${files} · ${labels.join(" · ")}\n`);
 
   return isRestaged && results.every((result) => result.ok) ? 0 : 1;
+}
+
+/** `repo turn [<path>]`: the agent's gate over the working tree or one package, without tests. */
+export function main(argv: string[], deps: TurnDeps = {}): Promise<number> {
+  return gateMain(TURN, argv, deps);
 }

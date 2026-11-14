@@ -1,6 +1,7 @@
 /**
- * The files `repo turn` gates: the index (`--staged`), the working tree against HEAD with the untracked files git
- * does not ignore, or every file of one package. Each file carries the workspace package that owns it.
+ * The files `repo turn` and `repo precommit` gate: the index (precommit), the working tree against HEAD with the
+ * untracked files git does not ignore, or every file of one package. Each file carries the workspace package that owns
+ * it.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";

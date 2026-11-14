@@ -26,7 +26,7 @@ export function rejectionsStep(turn: Turn): StepResult | null {
   if (!listed.ok) {
     return failed(
       "rejections failed",
-      listed.error.map((line) => `repo turn: ${line}\n`),
+      listed.error.map((line) => `repo ${turn.command}: ${line}\n`),
     );
   }
 
@@ -39,6 +39,6 @@ export function rejectionsStep(turn: Turn): StepResult | null {
 
   return failed(
     label,
-    problems.map((line) => `repo turn: rejections: ${line}\n`),
+    problems.map((line) => `repo ${turn.command}: rejections: ${line}\n`),
   );
 }

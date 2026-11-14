@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect } from "vitest";
+import { main as precommitMain } from "../precommit.ts";
 import { main } from "../turn.ts";
 import { dirName, type Bins } from "../turn-steps.ts";
 import { fwd } from "../../../dev/test-paths.ts";
@@ -74,14 +75,20 @@ export function consumer(files: Record<string, string>, { deps = true } = {}): s
   return root;
 }
 
-/** `repo turn` in `root` with its output collected; `bins` replaces tsc and vitest. */
-export async function turn(root: string, argv: string[], bins?: Bins) {
+/** `run` in `root` with its output collected; `bins` replaces tsc and vitest. */
+async function collected(run: typeof main, root: string, argv: string[], bins?: Bins) {
   const out: string[] = [];
   const err: string[] = [];
   const io = { cwd: root, stdout: (s: string) => out.push(s), stderr: (s: string) => err.push(s) };
-  const code = await main(argv, bins === undefined ? io : { ...io, bins });
+  const code = await run(argv, bins === undefined ? io : { ...io, bins });
   return { code, out: out.join(""), err: err.join("") };
 }
+
+/** `repo turn` in `root` with its output collected; `bins` replaces tsc and vitest. */
+export const turn = (root: string, argv: string[], bins?: Bins) => collected(main, root, argv, bins);
+
+/** `repo precommit` in `root` with its output collected; `bins` replaces tsc and vitest. */
+export const precommit = (root: string, bins?: Bins, argv: string[] = []) => collected(precommitMain, root, argv, bins);
 
 /** Fake tsc and vitest that pass, recording each call in `calls` as `{bin} {dir} {args}`, the dir relative to `root`. */
 export function recording(root: string) {

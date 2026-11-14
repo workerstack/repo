@@ -45,6 +45,7 @@ export type CommandName =
   | "lint"
   | "fmt"
   | "turn"
+  | "precommit"
   | "ci"
   | "coverage"
   | "mutate"

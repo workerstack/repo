@@ -5,7 +5,7 @@ import { afterEach, expect, it } from "vitest";
 
 import { OXFMT_CONFIG_PATH } from "../sync/standards.ts";
 import { hashText, readStockHistory, STOCK_HISTORY_FILE } from "../sync/stock-history.ts";
-import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
+import { cleanTemps, consumer, git, precommit, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -22,13 +22,13 @@ function selfRepo(): string {
   return root;
 }
 
-it("--staged writes and stages the table with the staged, formatted stock file", { timeout: SLOW }, async () => {
+it("precommit writes and stages the table with the staged, formatted stock file", { timeout: SLOW }, async () => {
   const root = selfRepo();
   const own = fs.readFileSync(STOCK_HISTORY_FILE, "utf8");
   const raw = '{"b":1,"a":2}\n';
   write(root, { [HOOKS]: raw });
   git(root, "add", HOOKS);
-  const result = await turn(root, ["--staged"]);
+  const result = await precommit(root);
   expect(result.err).toBe("");
   expect(result.out).toMatch(/ · stock history written · /);
   expect(result.code).toBe(0);
@@ -39,18 +39,18 @@ it("--staged writes and stages the table with the staged, formatted stock file",
   expect(readStockHistory(path.join(root, TABLE))[HOOKS]).toStrictEqual([hashText(formatted)]);
   expect(fs.readFileSync(STOCK_HISTORY_FILE, "utf8")).toBe(own);
 
-  const again = await turn(root, ["--staged"]);
+  const again = await precommit(root);
   expect(again.out).toMatch(/ · stock history ok · /);
   expect(again.code).toBe(0);
   expect(git(root, "diff", "--name-only")).toBe("");
 });
 
-it("without --staged writes the table from the working tree and stages nothing", { timeout: SLOW }, async () => {
+it("turn writes the table from the working tree and stages nothing", { timeout: SLOW }, async () => {
   const root = selfRepo();
   const rule = "agents/rules/a.md";
   write(root, { [rule]: "# A\n" });
   const result = await turn(root, []);
-  expect(result.out).toMatch(/ · stock history written · /);
+  expect(result.out).toMatch(/ · stock history written\n$/);
   expect(result.code).toBe(0);
   expect(staged(root)).toStrictEqual([]);
   expect(readStockHistory(path.join(root, TABLE))[rule]).toStrictEqual([hashText("# A\n")]);
@@ -61,7 +61,7 @@ it("fails the turn and stages no table when the formatter cannot run", { timeout
   fs.rmSync(path.join(root, OXFMT_CONFIG_PATH));
   write(root, { [HOOKS]: "{}\n" });
   git(root, "add", HOOKS);
-  const result = await turn(root, ["--staged"]);
+  const result = await precommit(root);
   expect(result.out).toMatch(/ · stock history failed · /);
   expect(result.err).toContain(`${OXFMT_CONFIG_PATH} is missing`);
   expect(result.code).toBe(1);
@@ -72,7 +72,7 @@ it("skips the step in another package and for a change outside the stock paths",
   const other = consumer({});
   write(other, { [HOOKS]: "{}\n" });
   git(other, "add", HOOKS);
-  const consumerRun = await turn(other, ["--staged"]);
+  const consumerRun = await precommit(other);
   expect(consumerRun.code).toBe(0);
   expect(consumerRun.out).not.toContain("stock history");
   expect(fs.existsSync(path.join(other, TABLE))).toBe(false);
@@ -80,7 +80,7 @@ it("skips the step in another package and for a change outside the stock paths",
   const root = selfRepo();
   write(root, { "docs/a.md": "# A\n" });
   git(root, "add", "docs/a.md");
-  const docs = await turn(root, ["--staged"]);
+  const docs = await precommit(root);
   expect(docs.code).toBe(0);
   expect(docs.out).not.toContain("stock history");
 });

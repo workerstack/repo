@@ -9,7 +9,7 @@ import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { writeFloors } from "../coverage.ts";
 import { standards } from "../sync/standards.ts";
 import { cleanJsonDirs, jsonDir, keysOf, readText, SORTED, UNSORTED } from "./__fixtures__/json-dirs.ts";
-import { cleanTemps, consumer, git, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
+import { cleanTemps, consumer, git, precommit, SLOW, staged, turn, write } from "./__fixtures__/turn-repo.ts";
 import { fmt, type RunTool } from "./lint.ts";
 import { sortedJsonText } from "./sorted-json-text.ts";
 import { collectHistory, historyText } from "./stock-history-collect.ts";
@@ -180,8 +180,8 @@ it(
     const generated = '{"rules":{},"categories":{}}\n';
     write(root, { ".oxlintrc.jsonc": generated, "data.json": UNSORTED });
     git(root, "add", "-f", "data.json", ".oxlintrc.jsonc");
-    const result = await turn(root, ["--staged"]);
-    expect(result.out).toMatch(/^turn: 2 files · fmt 1 fixed · /);
+    const result = await precommit(root);
+    expect(result.out).toMatch(/^precommit: 2 files · fmt 1 fixed · /);
     expect(staged(root)).toStrictEqual([".oxlintrc.jsonc", "data.json"]);
     expect(git(root, "show", ":data.json")).toBe(SORTED);
     expect(git(root, "show", ":.oxlintrc.jsonc")).toBe(generated);
@@ -192,7 +192,7 @@ it("turn sorts a jsonc it is given, comments moving with their key", { timeout: 
   const root = consumer({ "a.jsonc": '{\n  "a": 1\n}\n' });
   write(root, { "a.jsonc": '{\n  "b": 1, // why\n  "a": 2\n}\n' });
   git(root, "add", "-f", "a.jsonc");
-  const result = await turn(root, ["--staged"]);
+  const result = await precommit(root);
   expect(result.out).toMatch(/fmt 1 fixed/);
   expect(git(root, "show", ":a.jsonc")).toBe('{\n  "a": 2,\n  "b": 1 // why\n}\n');
 });

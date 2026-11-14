@@ -4,6 +4,7 @@ import {
   cleanTemps,
   consumer,
   git,
+  precommit,
   recording,
   SLOW,
   srcConfig,
@@ -35,15 +36,15 @@ it("a whitespace edit fmt removes leaves no changes, and turn runs no later step
   expect(calls).toStrictEqual([]);
 });
 
-it("--staged drops a staged file fmt returned to HEAD and leaves nothing staged", { timeout: SLOW }, async () => {
+it("precommit drops a staged file fmt returned to HEAD and leaves nothing staged", { timeout: SLOW }, async () => {
   const root = typed({ "src/a.ts": A });
   const { bins, calls } = recording(root);
   write(root, { "src/a.ts": "export const a = 1;   \n" });
   git(root, "add", "src/a.ts");
-  expect(await turn(root, ["--staged"], bins)).toStrictEqual({
+  expect(await precommit(root, bins)).toStrictEqual({
     code: 0,
     err: "",
-    out: "turn: 1 file · fmt 1 fixed · no changes left\n",
+    out: "precommit: 1 file · fmt 1 fixed · no changes left\n",
   });
   expect(staged(root)).toStrictEqual([]);
   expect(calls).toStrictEqual([]);
@@ -54,13 +55,9 @@ it("a reverted file beside a real change: the later steps gate only the real one
   const { bins, calls } = recording(root);
   write(root, { "src/a.ts": "export const a = 1;   \n", "src/b.ts": "export const b = 2;\n" });
   const result = await turn(root, [], bins);
-  expect(result.out).toMatch(/^turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck \. · /);
+  expect(result.out).toBe("turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
   expect(result.code).toBe(0);
-  expect(calls).toStrictEqual([
-    "tsc . --noEmit -p .",
-    "tsc . --noEmit -p tsconfig.src.json",
-    "vitest . related --run --passWithNoTests src/b.ts",
-  ]);
+  expect(calls).toStrictEqual(["tsc . --noEmit -p .", "tsc . --noEmit -p tsconfig.src.json"]);
 });
 
 const FIXED =
@@ -88,12 +85,8 @@ it("a new untracked file fmt fixes stays in the change set", { timeout: SLOW }, 
   const { bins, calls } = recording(root);
   write(root, { "src/c.ts": "export const c = {d:1}\n" });
   const result = await turn(root, [], bins);
-  expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · comments ok · lint ok · typecheck \. · /);
-  expect(calls).toStrictEqual([
-    "tsc . --noEmit -p .",
-    "tsc . --noEmit -p tsconfig.src.json",
-    "vitest . related --run --passWithNoTests src/c.ts",
-  ]);
+  expect(result.out).toBe("turn: 1 file · fmt 1 fixed · comments ok · lint ok · typecheck .\n");
+  expect(calls).toStrictEqual(["tsc . --noEmit -p .", "tsc . --noEmit -p tsconfig.src.json"]);
 });
 
 const WORKSPACE = { name: "app", private: true, type: "module", workspaces: ["packages/*"] };

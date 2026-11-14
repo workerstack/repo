@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `coverage.mutateExclude` lists tests that `repo mutate` leaves out of its Stryker run, for tests that read the source a run rewrites in place; the vitest preset reads it from `REPO_VITEST_EXCLUDE`
 - Roadmap and fast roadmap slices may end `(parallel: <path>, …)`; the save denies a lone, empty, shared or overlapping group, and the roadmap writers and /review-roadmap mark and check groups. Parallel entries on plan phases and slices may be folders ending `/` or globs, phases whose entries overlap are denied, and `bun repo phase-files` owns a file under a folder or glob entry.
 - On Claude Code, approve, hand off or revise a plan or roadmap by clicking an AskUserQuestion picker the Stop hook renders from the files; a gate holds the agent to the exact input, and Codex, Cursor, Antigravity, Grok and away keep the typed block.
+- `bun repo precommit` gates the index for a commit: fmt, disable comments, lint and its baseline, typecheck, reject files, sync, stock history, related tests and check, prefixing every line with `repo precommit:` and its summary with `precommit:`. It takes no arguments.
 
 ### Changed
 
@@ -59,10 +60,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `i` or `h` with `free`, `fast` or `deep` replace the letter codes (`if`, `isf`, `isd`, `hf`, `hsf`, `hsd`) in the approval block, and the old codes get no alias: each brings the block back with `"{reply}" is not a choice; reply i or h, alone or with free, fast or deep; end with this block again:`. An `i` with a strategy word writes it to each plan and, once the writes succeed, sets the session strategy; `h` with a word writes the files only. The block shows each plan or roadmap `advice:` row under the header, and Stop asks for the block again when a row differs from the file.
 - `bun repo turn` drops a file from the change set once a step such as fmt or `lint --fix` returns it to the base (HEAD, or the index under `--staged`), so later steps gate only real changes. When none is left it stops and prints `turn: 1 file · fmt 1 fixed · no changes left`, so a whitespace-only edit takes well under a second instead of a full typecheck and test run. A path still gates every file of its package.
 - A session's review stamp now holds every spawn plan and spawn fast plan it saved, one file each under the session's reviews folder; a Write that saves one done, blocked or free drops its stamp, and the parent-write deny names each running plan and its implementer.
+- `bun repo turn [<path>]` runs no tests, so an agent turn after a one-line edit skips the related tests (21 s of a 32 s turn here); the commit still runs them through `repo precommit`. A json sort refusal from fmt no longer starts with `repo turn:`, since `repo update` and the stock history write print it too.
 
 ### Removed
 
 - The hooks no longer read a 0.5 `auto-ask` stamp or stamps in `.tmp/orchestrator-logs`. You can delete `.tmp/orchestrator-logs`.
+- **Breaking:** `bun repo turn --staged` is gone; `bun repo precommit` gates the index now, with every step turn runs plus related tests, and restages what it rewrote. The pre-commit hook `repo sync` writes runs `repo precommit`, and the `repo sync --postinstall` of your next `bun install` rewrites an old hook. Turn refuses any flag: `repo turn: unknown flag --staged; use repo turn [<path>], or repo precommit for the index (bun repo sync updates an old pre-commit hook)`.
 
 ### Fixed
 

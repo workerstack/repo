@@ -99,9 +99,9 @@ function commitAs(sb: Sandbox, message: string) {
   return sb.run("git", ["commit", "-q", "-m", message]);
 }
 
-/** The tracked git hooks run turn on a commit and check its message. */
+/** The tracked git hooks run precommit on a commit and check its message. */
 export function gitHooksCase(get: GetSandbox) {
-  it("points core.hooksPath at tracked, executable hooks, so git commit runs turn and the message check", async () => {
+  it("points core.hooksPath at tracked, executable hooks: a commit runs precommit and the message check", async () => {
     const sb = get();
     expect(await gitStdout(sb, "config", "core.hooksPath")).toBe(".githooks\n");
     expect(await gitStdout(sb, "ls-files", "-s", ".githooks")).toMatch(hooksListing());
@@ -110,7 +110,7 @@ export function gitHooksCase(get: GetSandbox) {
     const planted = await commitAs(sb, "chore: plant");
     expect(planted.status, tail(planted.out)).toBe(1);
     expect(planted.stderr).toContain(
-      "repo turn: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
+      "repo precommit: src/planted.ts has 1 typescript(no-non-null-assertion), the baseline allows 0; fix the new one",
     );
     await sb.git("rm", "-q", "--cached", "src/planted.ts");
     fs.rmSync(path.join(sb.repo, "src/planted.ts"));

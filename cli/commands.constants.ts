@@ -47,4 +47,8 @@ export const LINT_USAGE: string = "usage: repo lint [<oxlint args>…] | --basel
 export const MUTATE_USAGE: string =
   "usage: repo mutate [--shard <i>/<n>] [--report <file>] [--rust] | check <dir> [--write]";
 
-export const TURN_USAGE: string = "usage: repo turn [--staged | <path>]";
+export const PRECOMMIT_SUMMARY: string =
+  "Gate the index for a commit: fmt, lint, typecheck, sync, stock history, related tests, check";
+
+export const PRECOMMIT_USAGE: string = "usage: repo precommit";
+export const TURN_USAGE: string = "usage: repo turn [<path>]";

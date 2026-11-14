@@ -3,7 +3,18 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { cleanTemps, SLOW, git, write, read, consumer, turn, staged, unstaged } from "./__fixtures__/turn-repo.ts";
+import {
+  cleanTemps,
+  consumer,
+  git,
+  precommit,
+  read,
+  SLOW,
+  staged,
+  turn,
+  unstaged,
+  write,
+} from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
 import type { Bins } from "./turn-steps.ts";
 
@@ -26,7 +37,7 @@ it("a clean tree has no changes", { timeout: SLOW }, async () => {
 });
 
 it(
-  "the working tree: formats, lints, typechecks the root, runs the related tests and leaves the index alone",
+  "the working tree: formats, lints, typechecks the root, runs no tests and leaves the index alone",
   { timeout: SLOW },
   async () => {
     const root = consumer({
@@ -43,32 +54,32 @@ it(
     expect(await turn(root, [])).toStrictEqual({
       code: 0,
       err: "",
-      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck . · 1 related test passed\n",
+      out: "turn: 2 files · fmt 1 fixed · comments ok · lint ok · typecheck .\n",
     });
     expect(read(root, "src/answer.ts")).toBe("export const answer: number = 40 + 2;\n");
     expect(staged(root)).toStrictEqual([]);
   },
 );
 
-it("--staged refuses a file with staged and unstaged changes before running anything", { timeout: SLOW }, async () => {
+it("precommit refuses a file with staged and unstaged changes before running anything", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   write(root, { "src/a.ts": "export const a = {b:1}\n" });
   git(root, "add", "src/a.ts");
   write(root, { "src/a.ts": "export const a = {b:2}\n" });
-  expect(await turn(root, ["--staged"])).toStrictEqual({
+  expect(await precommit(root)).toStrictEqual({
     code: 1,
-    err: "repo turn: src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it\n",
+    err: "repo precommit: src/a.ts has staged and unstaged changes; stage the rest (git add src/a.ts) or undo it\n",
     out: "",
   });
   expect(read(root, "src/a.ts")).toBe("export const a = {b:2}\n");
 });
 
-it("--staged restages what fmt fixed, and an unstaged file stays out", { timeout: SLOW }, async () => {
+it("precommit restages what fmt fixed, and an unstaged file stays out", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n", "src/b.ts": "export const b = 1;\n" });
   write(root, { "src/a.ts": "export const a = {b:1}\n", "src/b.ts": "export const b = {c:1}\n" });
   git(root, "add", "src/a.ts");
-  const result = await turn(root, ["--staged"]);
-  expect(result.out).toMatch(/^turn: 1 file · fmt 1 fixed · comments ok · lint ok · /);
+  const result = await precommit(root);
+  expect(result.out).toMatch(/^precommit: 1 file · fmt 1 fixed · comments ok · lint ok · /);
   expect(result.code).toBe(0);
   expect(staged(root)).toStrictEqual(["src/a.ts"]);
   expect(unstaged(root)).toStrictEqual(["src/b.ts"]);
@@ -80,15 +91,15 @@ it("a manifest change runs sync and check; a references change runs sync alone",
   const root = consumer({ "references/a.md": "# A\n" });
   write(root, { "package.json": APP_MANIFEST });
   const manifest = await turn(root, []);
-  expect(manifest.out).toMatch(/ · sync ok · 0 related tests · check ok\n$/);
+  expect(manifest.out).toMatch(/ · sync ok · check ok\n$/);
   expect(manifest.code).toBe(0);
   git(root, "checkout", "--", "package.json");
   fs.rmSync(path.join(root, "references/a.md"));
   const references = await turn(root, []);
-  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok · 0 related tests\n$/);
+  expect(references.out).toMatch(/^turn: 1 file · fmt ok · .* · sync ok\n$/);
 });
 
-it("--staged restages what lint --fix and sync rewrote, the fix formatted", { timeout: SLOW }, async () => {
+it("precommit restages what lint --fix and sync rewrote, the fix formatted", { timeout: SLOW }, async () => {
   const root = consumer({ "src/a.ts": "export const a = 1;\n" });
   const attributes = read(root, ".gitattributes");
   write(root, {
@@ -101,9 +112,9 @@ it("--staged restages what lint --fix and sync rewrote, the fix formatted", { ti
     ].join(""),
   });
   git(root, "add", "src/a.ts", "package.json", ".gitattributes");
-  const result = await turn(root, ["--staged"]);
+  const result = await precommit(root);
   expect(result.out).toMatch(
-    /^turn: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · 0 related tests · check ok\n$/,
+    /^precommit: 3 files · fmt 1 fixed · comments ok · lint ok · .* · sync ok · 0 related tests · check ok\n$/,
   );
   expect(git(root, "show", ":src/a.ts")).toBe(
     "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
@@ -146,7 +157,7 @@ it("a sync refusal fails sync and check and prints their output", { timeout: SLO
   const root = consumer({});
   write(root, { "package.json": APP_MANIFEST, "src/.gitignore": "x\n" });
   const result = await turn(root, []);
-  expect(result.out).toMatch(/ · sync failed · 0 related tests · check failed\n$/);
+  expect(result.out).toMatch(/ · sync failed · check failed\n$/);
   expect(result.err).toContain("repo sync: src/.gitignore: ignore rules live in the root .gitignore");
   expect(result.code).toBe(1);
 });
@@ -172,19 +183,15 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   const { bins, calls } = recording(root);
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · " +
-      "related tests skipped (no vitest in packages/api) · check ok\n",
+    "turn: 6 files · fmt ok · comments ok · lint ok · typecheck packages/api · sync ok · check ok\n",
   );
-  expect(calls).toStrictEqual([
-    "tsc . --noEmit -p packages/api",
-    "tsc . --noEmit -p packages/api/tsconfig.src.json",
-    "vitest packages/api related --run --passWithNoTests src/a.ts src/b.ts",
-  ]);
+  expect(calls).toStrictEqual(["tsc . --noEmit -p packages/api", "tsc . --noEmit -p packages/api/tsconfig.src.json"]);
 });
 
-it("a failing typecheck and failing tests print their output and fail the turn", { timeout: SLOW }, async () => {
+it("a failing typecheck and failing tests print their output and fail precommit", { timeout: SLOW }, async () => {
   const root = consumer({ "tsconfig.json": TSCONFIG, ...srcConfig(), "src/a.ts": "export const a = 42;\n" });
   write(root, { "src/a.ts": "export const a = 41;\n" });
+  git(root, "add", "src/a.ts");
 
   const bins: Bins = {
     tsc: (args): Captured =>
@@ -192,28 +199,25 @@ it("a failing typecheck and failing tests print their output and fail the turn",
     vitest: (): Captured => ({ code: 1, stderr: "", stdout: " Tests  1 failed | 3 passed (4)\n" }),
   };
 
-  const result = await turn(root, [], bins);
+  const result = await precommit(root, bins);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · 4 related tests, 1 failed\n",
+    "precommit: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.json) · " +
+      "4 related tests, 1 failed\n",
   );
   expect(result.err).toBe("src/a.ts(1,7): error TS2322: no.\n Tests  1 failed | 3 passed (4)\n");
   expect(result.code).toBe(1);
 });
 
-it(
-  "refuses unknown flags, --staged with a path, and a repo without the standards pack",
-  { timeout: SLOW },
-  async () => {
-    const root = consumer({});
-    expect(await turn(root, ["--nope"])).toStrictEqual({
-      code: 1,
-      err: "repo turn: unknown flag --nope; use repo turn [--staged] [<path>]\n",
-      out: "",
-    });
-    const both = await turn(root, ["--staged", "src"]);
-    expect(both.err).toBe("repo turn: --staged gates the index, a path gates a package; pass one\n");
-    write(root, { "repo.config.ts": 'export default { packs: ["docs"] };\n' });
-    const off = await turn(root, []);
-    expect(off.err).toBe('repo turn: the standards pack is off; add "standards" to packs in repo.config.ts\n');
-  },
-);
+it("refuses unknown flags and a repo without the standards pack", { timeout: SLOW }, async () => {
+  const root = consumer({});
+  expect(await turn(root, ["--nope"])).toStrictEqual({
+    code: 1,
+    err:
+      "repo turn: unknown flag --nope; use repo turn [<path>], or repo precommit for the index " +
+      "(bun repo sync updates an old pre-commit hook)\n",
+    out: "",
+  });
+  write(root, { "repo.config.ts": 'export default { packs: ["docs"] };\n' });
+  const off = await turn(root, []);
+  expect(off.err).toBe('repo turn: the standards pack is off; add "standards" to packs in repo.config.ts\n');
+});

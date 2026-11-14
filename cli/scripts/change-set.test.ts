@@ -45,7 +45,7 @@ function rels(result: ReturnType<typeof changeSet>) {
   return result.ok ? result.changes : result.errors;
 }
 
-it("--staged is the index against HEAD, deletions included, leaving unstaged and untracked files out", () => {
+it("the staged scope is the index against HEAD, deletions included, leaving unstaged and untracked files out", () => {
   const root = repo(BASE);
   write(root, { "loose.ts": "l\n", "packages/api/src/new.ts": "n\n", "src/a.ts": "a2\n", "src/b.ts": "b2\n" });
   git(root, "add", "src/a.ts", "packages/api/src/new.ts");
@@ -57,7 +57,7 @@ it("--staged is the index against HEAD, deletions included, leaving unstaged and
   ]);
 });
 
-it("--staged and the working tree work before the first commit", () => {
+it("the staged scope and the working tree work before the first commit", () => {
   const root = fs.realpathSync(tempDir());
   git(root, "init", "-q");
   write(root, { "a.ts": "a\n" });

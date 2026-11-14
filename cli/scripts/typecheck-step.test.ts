@@ -44,7 +44,7 @@ const UNANNOTATED_TEST = [
 
 /** The typecheck label in a turn's summary line. */
 function label(out: string): string | undefined {
-  return / · (typecheck [^·]*) · /.exec(out)?.[1];
+  return / · (typecheck [^·\n]*)/.exec(out)?.[1]?.trimEnd();
 }
 
 /** A root with an app and one package, each with both configs. */
@@ -89,9 +89,7 @@ it(
 
     write(root, { "src/size.ts": "export function size(s: string) {\n  return s.length;\n}\n" });
     const result = await turn(root, []);
-    expect(result.out).toBe(
-      "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.src.json) · 1 related test passed\n",
-    );
+    expect(result.out).toBe("turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (tsconfig.src.json)\n");
     // tsc ends its lines with the platform's EOL.
     expect(result.err.replaceAll("\r\n", "\n")).toBe(
       "src/size.ts(1,17): error TS9007: Function must have an explicit return type annotation " +
@@ -113,8 +111,7 @@ it("a tsconfig.json without a tsconfig.src.json fails typecheck with check's mes
   const { bins, projects } = fakeTsc([]);
   const result = await turn(root, [], bins);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (packages/api/tsconfig.src.json missing) · " +
-      "related tests skipped (no vitest in packages/api)\n",
+    "turn: 1 file · fmt ok · comments ok · lint ok · typecheck failed (packages/api/tsconfig.src.json missing)\n",
   );
   expect(result.err).toBe(noSrc("packages/api"));
   expect(projects).toStrictEqual(["packages/api"]);

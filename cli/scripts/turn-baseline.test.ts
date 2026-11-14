@@ -1,7 +1,18 @@
 import { afterEach, expect, it } from "vitest";
 
 import { cargoLock } from "../rust/__fixtures__/cargo-lock.ts";
-import { cleanTemps, SLOW, git, write, read, nonNull, consumer, turn, staged } from "./__fixtures__/turn-repo.ts";
+import {
+  cleanTemps,
+  consumer,
+  git,
+  nonNull,
+  precommit,
+  read,
+  SLOW,
+  staged,
+  turn,
+  write,
+} from "./__fixtures__/turn-repo.ts";
 
 afterEach(cleanTemps);
 
@@ -17,8 +28,7 @@ it("a new lint problem over the baseline fails, naming it, and leaves the baseli
   expect(result.err).toContain(`: error ${NN}: Forbidden non-null assertion.\n`);
   expect(result.err).toContain(`repo turn: src/a.ts has 3 ${NN}, the baseline allows 2; fix the new one\n`);
   expect(result.out).toBe(
-    "turn: 1 file · fmt ok · comments ok · lint 1 over baseline · " +
-      "typecheck skipped (no tsconfig.json) · 0 related tests\n",
+    "turn: 1 file · fmt ok · comments ok · lint 1 over baseline · typecheck skipped (no tsconfig.json)\n",
   );
   expect(result.code).toBe(1);
   expect(read(root, BASELINE)).toBe(baseline);
@@ -28,7 +38,7 @@ it("a new lint problem over the baseline fails, naming it, and leaves the baseli
 });
 
 it(
-  "a fixed problem and a deleted file lower the baseline, which --staged restages and which triggers no sync",
+  "a fixed problem and a deleted file lower the baseline, which precommit restages and which triggers no sync",
   { timeout: SLOW },
   async () => {
     const baseline = { "src/a.ts": { [NN]: 2 }, "src/b.ts": { [NN]: 1 } };
@@ -42,11 +52,11 @@ it(
     write(root, { "src/a.ts": nonNull(1) });
     git(root, "rm", "-q", "src/b.ts");
     git(root, "add", "src/a.ts");
-    const result = await turn(root, ["--staged"]);
+    const result = await precommit(root);
     const rule = NN.replaceAll(/[()]/g, "\\$&");
     const lowered = `\\(src/a.ts ${rule} 2 → 1, src/b.ts ${rule} 1 → 0\\)`;
     expect(result.out).toMatch(
-      new RegExp(`^turn: 2 files · fmt ok · comments ok · lint ok, baseline lowered ${lowered} · typecheck`),
+      new RegExp(`^precommit: 2 files · fmt ok · comments ok · lint ok, baseline lowered ${lowered} · typecheck`),
     );
     expect(result.out).not.toContain("sync");
     expect(result.code).toBe(0);

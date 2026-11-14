@@ -9,7 +9,7 @@ import { HOOKS_DIR } from "./standards.constants.ts";
  */
 const GIT_HOOKS = {
   "commit-msg": '"$r" commit-msg "$1"',
-  "pre-commit": '"$r" turn --staged',
+  "pre-commit": '"$r" precommit',
   "pre-push":
     'input=$(cat)\n"$r" link --pre-push </dev/null && printf \'%s\\n\' "$input" | "$r" commit-msg --pre-push "$@"',
 } as const;

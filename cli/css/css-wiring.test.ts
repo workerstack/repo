@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { checkScriptsAt } from "../script-diagnostics.ts";
 import { skipIn, spies } from "../scripts/__fixtures__/lint-scripts-kit.ts";
-import { cleanTemps, git, read, SLOW, staged, turn, write } from "../scripts/__fixtures__/turn-repo.ts";
+import { cleanTemps, git, precommit, read, SLOW, staged, write } from "../scripts/__fixtures__/turn-repo.ts";
 import { checkLintBaseline } from "../scripts/lint-baseline.ts";
 import { lintMain } from "../scripts/lint-main.ts";
 import { checkLintSkipsAt } from "../scripts/lint-skips.ts";
@@ -83,22 +83,22 @@ it("a lint.skip of a Stylelint rule drops its line, and check reports the skip's
   });
 });
 
-it("repo turn --staged fixes and restages a sheet, then fails on a hit no fix removes", { timeout: SLOW }, async () => {
+it("repo precommit fixes and restages a sheet, then fails on a hit no fix removes", { timeout: SLOW }, async () => {
   const root = cssKit({ "src/app.css": APP_CSS });
   write(root, { "src/bad.css": BAD_CSS });
   git(root, "add", "src/bad.css");
-  const fixed = await turn(root, ["--staged"]);
-  expect(fixed.out).toMatch(/^turn: 1 file · fmt ok · comments ok · lint ok · /);
+  const fixed = await precommit(root);
+  expect(fixed.out).toMatch(/^precommit: 1 file · fmt ok · comments ok · lint ok · /);
   expect(fixed.code).toBe(0);
   expect(read(root, "src/bad.css")).toBe(FIXED_CSS);
   expect(git(root, "show", ":src/bad.css")).toBe(FIXED_CSS);
   expect(staged(root)).toStrictEqual(["src/bad.css"]);
   write(root, { "src/unknown.css": UNKNOWN_CSS });
   git(root, "add", "src/unknown.css");
-  const left = await turn(root, ["--staged"]);
+  const left = await precommit(root);
   expect(left.err).toContain(`${UNKNOWN_LINE}\n`);
   expect(left.err).toContain(
-    "repo turn: src/unknown.css has 1 stylelint(property-no-unknown), the baseline allows 0; fix the new one\n",
+    "repo precommit: src/unknown.css has 1 stylelint(property-no-unknown), the baseline allows 0; fix the new one\n",
   );
   expect(left.code).toBe(1);
 });

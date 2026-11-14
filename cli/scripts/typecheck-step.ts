@@ -27,8 +27,11 @@ function typecheckOwner(turn: Turn, owner: string): ConfigRun[] {
   const runtime = configRun(path.posix.join(owner, RUNTIME_CONFIG), tsc(dirName(owner)));
   const src = path.posix.join(owner, SRC_CONFIG);
 
-  if (!fs.existsSync(path.join(turn.root, src)))
-    return [runtime, { name: `${src} missing`, ok: false, output: `repo turn: ${missingSrcConfig(dirName(owner))}\n` }];
+  if (!fs.existsSync(path.join(turn.root, src))) {
+    const output = `repo ${turn.command}: ${missingSrcConfig(dirName(owner))}\n`;
+
+    return [runtime, { name: `${src} missing`, ok: false, output }];
+  }
 
   return [runtime, configRun(src, tsc(src))];
 }
