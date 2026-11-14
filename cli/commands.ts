@@ -44,6 +44,7 @@ import { PUSH_SUMMARY, USAGE as PUSH_USAGE } from "./scripts/push.constants.ts";
 import { SETUP_TARGETS } from "./scripts/setup.constants.ts";
 import { SHIM_SUMMARY, USAGE as SHIM_USAGE } from "./scripts/shim.constants.ts";
 import { SPEAK_ARGS } from "./scripts/speak.constants.ts";
+import { SU_SUMMARY, USAGE as SU_USAGE } from "./scripts/su.constants.ts";
 import { WORKTREE_ARGS, WORKTREE_SUBCOMMANDS } from "./scripts/worktree.constants.ts";
 import { UPDATE_SUMMARY, USAGE as UPDATE_USAGE } from "./update.constants.ts";
 
@@ -130,6 +131,7 @@ export const COMMANDS: Readonly<Record<CommandName, Entry>> = {
     summary: "Text-to-speech",
     usage: `usage: repo speak ${SPEAK_ARGS}`,
   },
+  su: { load: () => import("./scripts/su.ts"), summary: SU_SUMMARY, usage: SU_USAGE },
   worktree: {
     load: () => import("./scripts/worktree.ts"),
     summary: `Managed worktrees: ${/* @__PURE__ */ WORKTREE_SUBCOMMANDS.join(", ")}`,

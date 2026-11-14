@@ -31,6 +31,7 @@ export type CommandName =
   | "jev"
   | "listen"
   | "speak"
+  | "su"
   | "setup"
   | "doctor"
   | "env"

@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A failed ci job only the user can fix no longer holds every Stop: an open line ``- [ ] blocked: `<job>` <why>`` (or `- [-]`) from column 0 of the main checkout's `.repo/backlog.md`, as `bun repo backlog add 'blocked: `<job>` <why>'` writes it, releases that job from the push gate. A run whose jobs are all blocked lets the Stop go on, other jobs are still named, a run with no job names is never released, and ticking the line `[x]` re-arms the gate. The failed line now ends ``; if only the user can fix a job, run bun repo backlog add 'blocked: `<job>` <why>' and name that line in your reply``.
 - Config keys agents.defaultStrategy (free, spawn-fast or spawn-deep; default free), agents.defaultMode (ask or away; default ask) and agents.defaultEffort (fast or deep; default deep). A plan or roadmap saved without a strategy: line now gets the default instead of being refused, and the effort picks the skill pair the rules name.
 - sync and sync --check now refuse when git tracks a file the ignore block covers, and print the git rm --cached command to run. A consumer that tracks such a file must untrack it first.
+- `bun repo su [--session <id>] [window]` lists a session's plans and roadmaps, or every one changed in a window such as 30m, 4h or overnight, plus the main commits, with status, boxes done and blockers; `/su` runs it
 
 ### Changed
 

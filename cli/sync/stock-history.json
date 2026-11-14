@@ -399,7 +399,7 @@
     "9de85c9c2bf6d1e8",
     "a787281bd399c9e8"
   ],
-  ".agents/skills/su/SKILL.md": ["b5077f853232702d"],
+  ".agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
   ".agents/skills/teach/SKILL.md": ["a6701726c99971af"],
   ".agents/skills/tmp/SKILL.md": [
     "033449f140f31d75",
@@ -2279,7 +2279,7 @@
   "agents/skills/rust-best-practices/SKILL.md": ["1513c6829e66bf85"],
   "agents/skills/show-me/SKILL.md": ["2a006de7c96e6ce7", "366ab3f1a21c0651", "e2c694b19fd544e0"],
   "agents/skills/speak/SKILL.md": ["88b0d73d84db8b55"],
-  "agents/skills/su/SKILL.md": ["b5077f853232702d"],
+  "agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
   "agents/skills/tmp/SKILL.md": ["54f6eb139d94e99a", "e11fac7d3548cf2d", "eef6ab7e9e2df25a"],
   "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
@@ -2437,6 +2437,7 @@
   "cli/scripts/__fixtures__/spawn-transcript.txt": ["79d64e832f5c1eff", "ae73ebee0d2b90af"],
   "cli/scripts/__fixtures__/speak-kit.ts": ["82f6ce2c2fc6b02b", "9bb019111deb326c", "cd0e91c7f9ebf198"],
   "cli/scripts/__fixtures__/stub-process-stdio.ts": ["03b54bfc63a58f8b"],
+  "cli/scripts/__fixtures__/su-kit.ts": ["54a35903448c141c"],
   "cli/scripts/__fixtures__/sync-global-kit.ts": [
     "8397de75caeda08c",
     "d63287bd4d60ec6c",
@@ -5943,6 +5944,7 @@
     "3e87322d4260459f",
     "4df8ebc6f868d09e",
     "5964257d20d0a4cc",
+    "877b8aeacf8bf58e",
     "96e4c4b7dc63c549",
     "aac9c4741697ae2b",
     "ac894da41cebc4e3",
@@ -7428,6 +7430,11 @@
   "cli/scripts/stream-text.ts": ["3aa0f14a48dd5b56", "b802a67d5bc60b8d", "c598c576e6a3b72b"],
   "cli/scripts/strip-jsonc.test.ts": ["4aa6ab4ed928aebd", "f66c8b153a53e5b9"],
   "cli/scripts/strip-jsonc.ts": ["106c69d7f0f9d3a6", "2386a3ae3513618c", "97c8cfa6af36dba6", "cb67bcf5a72e177e"],
+  "cli/scripts/su-main.test.ts": ["bf1f6bb4222a84dd"],
+  "cli/scripts/su-window.test.ts": ["18a1581aaa55ac39"],
+  "cli/scripts/su.constants.ts": ["ff08d775c24cd907"],
+  "cli/scripts/su.test.ts": ["c3fe708ec87223e4"],
+  "cli/scripts/su.ts": ["09da4196ae2ccaf1"],
   "cli/scripts/subagents.test.ts": [
     "1a6fab05e29ed93c",
     "26c45ecea7430886",
