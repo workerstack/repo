@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { plantStub } from "../__fixtures__/stub-bin.ts";
 import {
   alive,
   cleanBrowser,
@@ -67,7 +68,7 @@ it("nav fails with the install hint when the engine never comes up", async () =>
     lightpanda: writeDud(path.join(cwd, "bin"), "lightpanda"),
   };
 
-  const r = await navResult(cwd, { bins, readyMs: 250 });
+  const r = await navResult(cwd, { bins, readyMs: 600_000 });
   expect(r.code).toBe(1);
   expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
   expect(r.hasSession).toBe(false);
@@ -102,7 +103,7 @@ it("nav fails with the install hint when chromium is forced and never comes up",
   const r = await exec(cwd, ["nav", "https://example.com/"], {
     bins,
     platform: "win32",
-    readyMs: 250,
+    readyMs: 600_000,
   });
 
   expect(r.stderr).toMatch(/^no browser engine; install lightpanda/);
@@ -121,22 +122,35 @@ it("nav fails with the install hint when lightpanda fails its probe and there is
   expect(r.hasSession).toBe(false);
 });
 
-it("nav reports 'engine not ready' when the chromium fallback never comes up either", async () => {
-  const cwd = tmp("browser-nav-probe2-");
-
+/** A nav whose Lightpanda fails its probe and whose Chromium fallback is the stub `chromium`. */
+function fallbackNav(cwd: string, chromium: string): Promise<BrowserResult> {
   const lightpanda = writeFake(path.join(cwd, "bin"), "lightpanda", {
     failProbe: true,
   });
 
-  const chromium = writeDud(path.join(cwd, "bin"), "chromium");
-
-  const r = await exec(cwd, ["nav", "https://example.com/"], {
+  return exec(cwd, ["nav", "https://example.com/"], {
     bins: { chromium, lightpanda },
-    readyMs: 250,
+    readyMs: 600_000,
   });
+}
 
-  expect(r).toStrictEqual(failure("engine not ready\n"));
+it("nav reports the exit when the chromium fallback exits before it answers", async () => {
+  const cwd = tmp("browser-nav-probe2-");
+  const r = await fallbackNav(cwd, writeDud(path.join(cwd, "bin"), "chromium"));
+
+  expect(r).toStrictEqual(failure("engine exited before it was ready (exit code 1)\n"));
 });
+
+it.skipIf(process.platform === "win32")(
+  "nav reports the signal when the chromium fallback is killed before it answers",
+  async () => {
+    const cwd = tmp("browser-nav-probe3-");
+    const chromium = plantStub(path.join(cwd, "bin"), "chromium", { cmd: "exit /b 1", sh: "kill -9 $$\n" });
+    const r = await fallbackNav(cwd, chromium);
+
+    expect(r).toStrictEqual(failure("engine exited before it was ready (signal SIGKILL)\n"));
+  },
+);
 
 it("nav fails when the engine refuses to navigate, but goes on when it only cannot enable pages", async () => {
   const cwd = tmp("browser-nav-refuse-");

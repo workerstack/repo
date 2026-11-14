@@ -7,7 +7,7 @@ import { connectCdp } from "./browser-cdp.ts";
 import { filled, newSession, sessionDir } from "./browser-session.ts";
 import { isPaintHost } from "./browser-snap.ts";
 import { freePort, waitVersion } from "./browser-wait.ts";
-import { CHROMIUM_VERBS, HOST, PROFILE_DIR, TASKKILL_MS } from "./browser.constants.ts";
+import { CHROMIUM_VERBS, engineExitedText, HOST, PROFILE_DIR, TASKKILL_MS } from "./browser.constants.ts";
 import type { Bins, Ctx, Engine, PickOpts, Picked, Session } from "./browser.types.ts";
 import { installHints, whichBin } from "./doctor-which.ts";
 import { CHROMIUM_BINS, LIGHTPANDA_REPO } from "./doctor.constants.ts";
@@ -138,10 +138,13 @@ async function launchEngine(engine: Engine, ctx: Ctx): Promise<Session> {
   const child = spawnEngine(bin, spawnArgs(engine, port, profile), ctx);
   child.unref();
   // An engine that cannot start (missing, not executable) reports through 'error'; unhandled it would crash the
-  // process.
+  // process. One that exits before it answers ends the wait at once; the first failure seen is the one reported.
   let spawnError: Error | undefined;
   child.once("error", (err) => {
-    spawnError = new Error(`engine failed to start: ${err.message}`);
+    spawnError ??= new Error(`engine failed to start: ${err.message}`);
+  });
+  child.once("exit", (code, signal) => {
+    spawnError ??= new Error(engineExitedText(code, signal));
   });
 
   try {

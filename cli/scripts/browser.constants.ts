@@ -26,6 +26,14 @@ export const NAV_USAGE = "nav <url>";
 export const UNKNOWN_VERB = "unknown verb";
 export const STOPPED = "stopped";
 export const ENGINE_NOT_READY = "engine not ready";
+
+/** What a launch prints when its engine exited before it answered: with the signal that ended it, else the code. */
+export function engineExitedText(code: number | null, signal: NodeJS.Signals | null): string {
+  const how = signal === null ? `exit code ${String(code)}` : `signal ${signal}`;
+
+  return `engine exited before it was ready (${how})`;
+}
+
 export const STALE = "stale";
 export const STALE_RE: RegExp = /stale|missing/i;
 export const ERROR_PREFIX: RegExp = /^Error:\s*/;
