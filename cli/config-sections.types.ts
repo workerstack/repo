@@ -104,6 +104,13 @@ export type CoverageConfig = {
    */
   mutate?: NonEmpty<string> | undefined;
   /**
+   * Globs of the test files `bun repo mutate` leaves out. A run writes every mutant into the source files at once, so a
+   * test that reads the repo's own source, such as a scan of every file, fails there and can kill no mutant.
+   *
+   * @default []
+   */
+  mutateExclude?: readonly string[] | undefined;
+  /**
    * The mutation score floors file, relative to the repo root. The nightly run fails when a score drops below it.
    *
    * @default "mutation-floors.json"

@@ -42,7 +42,9 @@ async function config(cwd: string): ReturnType<MutateDeps["config"]> {
 
   if (!loaded.ok) return loaded.errors;
 
-  return { floors: loaded.config.coverage.mutationFloors, mutate: loaded.config.coverage.mutate, root };
+  const { mutate, mutateExclude: exclude, mutationFloors: floors } = loaded.config.coverage;
+
+  return { exclude, floors, mutate, root };
 }
 
 /**
@@ -88,6 +90,6 @@ export function realDeps(cwd: string): MutateDeps {
     out: (text) => process.stdout.write(text),
     packages: packagesWith(runCargo),
     preload: path.join(import.meta.dirname, "stryker-preload.ts"),
-    run: (args, where) => captureBun(args, where, childEnv()),
+    run: (args, where, env) => captureBun(args, where, { ...childEnv(), ...env }),
   };
 }

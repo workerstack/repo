@@ -51,9 +51,13 @@ it("reads and writes files, lists a dir, and tells a missing file and dir from a
 
 it("finds the config of the repo above cwd, its errors, and no config", async () => {
   const root = tempDir();
-  fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { coverage: { mutate: ["lib/**"] } };\n');
+  fs.writeFileSync(
+    path.join(root, "repo.config.ts"),
+    'export default { coverage: { mutate: ["lib/**"], mutateExclude: ["t/x.test.ts"] } };\n',
+  );
   fs.mkdirSync(path.join(root, "deep"));
   expect(await realDeps(path.join(root, "deep")).config(path.join(root, "deep"))).toStrictEqual({
+    exclude: ["t/x.test.ts"],
     floors: "mutation-floors.json",
     mutate: ["lib/**"],
     root: fs.realpathSync(root),
@@ -197,4 +201,19 @@ current directory, the default report against the root`, async () => {
   check.files.set(at("sub", "reports", "mutation-1.json"), report);
   expect(await runMutate(["check", "reports"], check.deps)).toBe(0);
   expect(check.out.join("")).toContain("1 shard of 09ed564");
+});
+
+it("runs bun with the given variables over its own, and with its own when given none", () => {
+  const root = tempDir();
+
+  const script = [
+    "-e",
+    "process.stdout.write(`${process.env.MUTATE_EDGES_PROBE ?? 'unset'} ${process.env.PATH ? 'path' : ''}`)",
+  ];
+
+  const given = realDeps(root).run(script, root, { MUTATE_EDGES_PROBE: "set" });
+  const none = realDeps(root).run(script, root);
+
+  expect(given.stdout).toBe("set path");
+  expect(none.stdout).toBe("unset path");
 });

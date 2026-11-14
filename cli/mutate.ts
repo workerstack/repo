@@ -102,7 +102,7 @@ function execute(run: Run, setup: { config: MutateConfig; found: Found }, deps: 
 
   if (whole(shard) && !isRust) deps.out(`mutate: ${plural(found.files.length, "file")}, shard 1/1${NEWLINE}`);
   const plan = { files: found.files, root: config.root, sha: found.sha, shard };
-  const ran = isRust ? runRust(plan, deps) : runInClone(plan, deps);
+  const ran = isRust ? runRust(plan, deps) : runInClone({ ...plan, exclude: config.exclude }, deps);
 
   if (ran === null) return FAILED;
   const where = paths(run, config, deps);

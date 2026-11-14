@@ -1,7 +1,7 @@
 import { expect, it, vi } from "vitest";
 import type { UserWorkspaceConfig, ViteUserConfig } from "vitest/config";
 
-import { defineProject } from "./vitest.ts";
+import { defineConfig, defineProject } from "./vitest.ts";
 
 /** The `test` options of a config as the root config types them, for the run options the project type leaves out. */
 function testOf(config: UserWorkspaceConfig): NonNullable<ViteUserConfig["test"]> {
@@ -47,4 +47,36 @@ it("defineProject: reads the variables per call, not at load", () => {
   expect(testOf(defineProject({}))).not.toHaveProperty("outputFile");
   vi.stubEnv("REPO_VITEST_REPORT", "r.json");
   expect(testOf(defineProject({})).outputFile).toStrictEqual({ json: "r.json" });
+});
+
+/** A floors file no test writes, so `defineConfig` reads no floors. */
+const NO_FLOORS = { floors: "no-such-floors.json" };
+
+it("REPO_VITEST_EXCLUDE adds its globs to vitest's default excludes in both configs", () => {
+  vi.stubEnv("REPO_VITEST_EXCLUDE", '["a.test.ts"]');
+
+  for (const test of [defineConfig({}, NO_FLOORS).test, testOf(defineProject({}))]) {
+    expect(test?.exclude).toContain("a.test.ts");
+    expect(test?.exclude).toContain("**/node_modules/**");
+  }
+});
+
+it("REPO_VITEST_EXCLUDE keeps the caller's own excludes", () => {
+  vi.stubEnv("REPO_VITEST_EXCLUDE", '["a.test.ts"]');
+  const own = { test: { exclude: ["own/**"] } };
+  expect(defineConfig(own, NO_FLOORS).test?.exclude).toStrictEqual(expect.arrayContaining(["own/**", "a.test.ts"]));
+  expect(testOf(defineProject(own)).exclude).toStrictEqual(expect.arrayContaining(["own/**", "a.test.ts"]));
+});
+
+it.each([undefined, ""])("REPO_VITEST_EXCLUDE=%s adds no exclude", (value) => {
+  vi.stubEnv("REPO_VITEST_EXCLUDE", value);
+  expect(defineConfig({}, NO_FLOORS).test).not.toHaveProperty("exclude");
+  expect(testOf(defineProject({}))).not.toHaveProperty("exclude");
+});
+
+it.each(["nope", "[1]", '{"a":1}'])("REPO_VITEST_EXCLUDE=%s throws and names the value", (value) => {
+  vi.stubEnv("REPO_VITEST_EXCLUDE", value);
+  const message = `@workerstack/repo/vitest: REPO_VITEST_EXCLUDE must be a JSON list of globs, got "${value}"`;
+  expect(() => defineConfig({}, NO_FLOORS)).toThrow(message);
+  expect(() => defineProject({})).toThrow(message);
 });

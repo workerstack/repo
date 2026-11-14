@@ -6,6 +6,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { EXCLUDE_KEY } from "../presets/vitest.constants.ts";
 import type { Shard } from "./mutate-args.ts";
 import type { MutateDeps } from "./mutate-deps.ts";
 import { splitShards } from "./mutate-files.ts";
@@ -34,6 +35,9 @@ import type { Captured } from "./scripts/lint.ts";
 
 /** What a run mutates: the root, the commit, every selected file and the shard of them this run takes. */
 export type Plan = { root: string; sha: string; files: string[]; shard: Shard };
+
+/** A Stryker shard's plan: the tests its run leaves out beside the rest. */
+export type StrykerPlan = Plan & { exclude: readonly string[] };
 
 /** Stryker's manifest `bin`, a path or a map of names to paths, read as the path of its own bin. */
 function buildBinSchema() {
@@ -99,14 +103,25 @@ function lineCounts(clone: string, files: string[], deps: MutateDeps): Map<strin
   return new Map(files.map((file) => [file, count(file)]));
 }
 
+/** What one Stryker run needs: the files to mutate, its bin, and the tests its run leaves out. */
+type StrykerRun = { files: string[]; bin: string; exclude: readonly string[] };
+
+/**
+ * The variables Stryker's run gets: the tests it leaves out, as the vitest preset reads them, since the run rewrites
+ * the source in place and a test that reads it sees every mutant at once. None when it leaves out none.
+ */
+function strykerEnv(exclude: readonly string[]): Readonly<Record<string, string>> | undefined {
+  return exclude.length === 0 ? undefined : { [EXCLUDE_KEY]: JSON.stringify(exclude) };
+}
+
 /** Stryker over `files` in the clone: its per-file scores, or null after printing why it gave none. */
-function stryker(base: string, run: { files: string[]; bin: string }, deps: MutateDeps): ShardReport["files"] | null {
-  const { files, bin } = run;
+function stryker(base: string, run: StrykerRun, deps: MutateDeps): ShardReport["files"] | null {
+  const { files, bin, exclude } = run;
   const clone = path.join(base, CLONE_DIR);
   const config = path.join(base, CONFIG_NAME);
   const raw = path.join(base, RAW_REPORT_NAME);
   deps.fs.write(config, configOf(files, raw));
-  const ran = deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone);
+  const ran = deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone, strykerEnv(exclude));
 
   if (ran.code !== 0)
     return refuse(deps, "the tests failed before any mutant ran; fix them first", ran.stdout + ran.stderr);
@@ -124,7 +139,7 @@ function stryker(base: string, run: { files: string[]; bin: string }, deps: Muta
 /** A finished run: the shard's report and how many files it took. */
 export type Ran = { report: ShardReport; files: number };
 
-function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
+function mutateIn(base: string, plan: StrykerPlan, deps: MutateDeps): Ran | null {
   const clone = path.join(base, CLONE_DIR);
 
   if (!checkout(clone, plan, deps)) return null;
@@ -142,16 +157,16 @@ function mutateIn(base: string, plan: Plan, deps: MutateDeps): Ran | null {
 
   if (installed.code !== 0) return refuse(deps, `${INSTALL_COMMAND} failed in the clone: ${detail(installed)}`);
   const bin = strykerBin(clone, deps);
-  const scores = bin === null ? null : stryker(base, { bin, files: mine }, deps);
+  const scores = bin === null ? null : stryker(base, { bin, exclude: plan.exclude, files: mine }, deps);
 
   return scores === null ? null : ran(scores);
 }
 
 /** `mutate`'s result for the plan, run in a fresh dir under the OS temp dir, removed whether the run ends or throws. */
-export function inTempDir(
-  plan: Plan,
+export function inTempDir<P extends Plan>(
+  plan: P,
   deps: MutateDeps,
-  mutate: (base: string, plan: Plan, deps: MutateDeps) => Ran | null,
+  mutate: (base: string, plan: P, deps: MutateDeps) => Ran | null,
 ): Ran | null {
   const base = deps.fs.mkdtemp(TEMP_PREFIX);
 
@@ -163,6 +178,6 @@ export function inTempDir(
 }
 
 /** The shard's scores from a run in a fresh clone under the OS temp dir, removed whether the run ends or throws. */
-export function runInClone(plan: Plan, deps: MutateDeps): Ran | null {
+export function runInClone(plan: StrykerPlan, deps: MutateDeps): Ran | null {
   return inTempDir(plan, deps, mutateIn);
 }

@@ -23,6 +23,7 @@ export const COVERAGE = {
   floors: "coverage-floors.json",
   knownFailures: "known-failures.json",
   mutate: ["src/**/*.ts"],
+  mutateExclude: [],
   mutationFloors: "mutation-floors.json",
 };
 

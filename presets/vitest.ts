@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
+import { configDefaults, mergeConfig, type UserWorkspaceConfig, type ViteUserConfig } from "vitest/config";
+import { z } from "zod";
 
+import { tryJson } from "../cli/json.ts";
 import { repoEnv } from "../cli/repo-env.ts";
 import { isRustKey, readFloorsFile, type TsFloor } from "../cli/rust/floors.ts";
 import { ShardSequencer } from "./shard-sequencer.ts";
@@ -12,6 +14,7 @@ import {
   COVERAGE_OFF,
   COVERAGE_ON,
   DEFAULT_TIMEOUT,
+  EXCLUDE_KEY,
   GUARD_NAME,
   MESSAGE_PREFIX,
   REPORT_REPORTERS,
@@ -54,6 +57,30 @@ function defaultTimeout(): number {
   if (WHOLE_MS_RE.test(value)) return Number(value);
 
   throw new Error(`${MESSAGE_PREFIX}: REPO_VITEST_TIMEOUT must be a whole number of milliseconds, got "${value}"`);
+}
+
+/** A `REPO_VITEST_EXCLUDE` value: a JSON list of globs. */
+function buildExcludeSchema() {
+  return z.array(z.string()).readonly();
+}
+
+const excludeSchema = /* @__PURE__ */ buildExcludeSchema();
+
+/**
+ * The test globs `REPO_VITEST_EXCLUDE` leaves out, as `repo mutate` sets it for the tests that read the source a
+ * mutation run rewrites in place, beside vitest's default excludes, or none when it is unset or empty. Read per call.
+ */
+function excludeEnv(): ViteUserConfig {
+  const { REPO_VITEST_EXCLUDE: value } = repoEnv.process;
+
+  if (value === undefined || value === "") return {};
+
+  const globs = tryJson(excludeSchema, value);
+
+  if (globs === undefined)
+    throw new Error(`${MESSAGE_PREFIX}: ${EXCLUDE_KEY} must be a JSON list of globs, got "${value}"`);
+
+  return { test: { exclude: [...configDefaults.exclude, ...globs] } };
 }
 
 function projectDefaults(config: UserWorkspaceConfig): UserWorkspaceConfig {
@@ -102,7 +129,7 @@ export function defineProject(config: UserWorkspaceConfig): UserWorkspaceConfig 
   const { REPO_COVERAGE: coverage } = repoEnv.process;
   const provider: ViteUserConfig = coverage === COVERAGE_ON ? { test: { coverage: { provider: "istanbul" } } } : {};
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), provider);
-  const merged: ViteUserConfig = mergeConfig(mergeConfig(defaults, config), ciEnv(coverage));
+  const merged: ViteUserConfig = mergeConfig(mergeConfig(mergeConfig(defaults, config), ciEnv(coverage)), excludeEnv());
 
   // The run's own options (coverage reporters) sit beside the project ones: a package's run is the root run of its
   // own vitest so they stay on the project config although the project type leaves them out.
@@ -144,5 +171,5 @@ export function defineConfig(
   // Only test processes get the root: the runner's own tooling (miniflare) makes and removes temp dirs of its own.
   const defaults: ViteUserConfig = mergeConfig(projectDefaults(config), { test: { ...guard, env: rootEnv() } });
 
-  return mergeConfig(defaults, config);
+  return mergeConfig(mergeConfig(defaults, config), excludeEnv());
 }

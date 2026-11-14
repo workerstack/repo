@@ -45,6 +45,7 @@ const config = {
     REPO_E2E_KEEP: "optional",
     REPO_E2E_ROOT: "optional",
     REPO_E2E_TARBALL: "optional",
+    REPO_VITEST_EXCLUDE: "optional",
     REPO_VITEST_REPORT: "optional",
     REPO_VITEST_SHARD: "optional",
     REPO_VITEST_TIMEOUT: "optional",

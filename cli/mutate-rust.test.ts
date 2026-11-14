@@ -124,7 +124,8 @@ it("needs a Cargo.toml at the repo root, before any git call", async () => {
 
 it("needs no file under coverage.mutate", async () => {
   const f = rustFakes();
-  f.deps.config = () => Promise.resolve({ floors: "mutation-floors.json", mutate: ["src/**/*.nothing"], root: ROOT });
+  f.deps.config = () =>
+    Promise.resolve({ exclude: [], floors: "mutation-floors.json", mutate: ["src/**/*.nothing"], root: ROOT });
   expect(await runMutate(["--rust"], f.deps)).toBe(0);
 });
 

@@ -43,7 +43,7 @@ function unsharded(floors: Record<string, number> | string | null) {
     "src/y.ts": ["Killed", "NoCoverage"],
   });
 
-  const config = { floors: "mf.json", mutate: ["**/src/*.ts"], root: ROOT };
+  const config = { exclude: [], floors: "mf.json", mutate: ["**/src/*.ts"], root: ROOT };
 
   const f = fakes(sim({ config, sources: FILES, stryker: { code: 0, output: "", report }, tracked: TRACKED }), [
     "packages/a",

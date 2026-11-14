@@ -62,3 +62,25 @@ describe("coverage, mutation", () => {
     ]);
   });
 });
+
+describe("coverage, tests a mutation run leaves out", () => {
+  it("defaults to none and takes the globs as given, an empty list too", async () => {
+    expect(COVERAGE.mutateExclude).toStrictEqual([]);
+    const source = 'export default { coverage: { mutateExclude: ["dev/scan.test.ts"] } }\n';
+    expect(await loadConfig(repo(source))).toMatchObject({
+      config: { coverage: { ...COVERAGE, mutateExclude: ["dev/scan.test.ts"] } },
+      ok: true,
+    });
+    expect(await errors("mutateExclude: []")).toStrictEqual([]);
+  });
+
+  it("refuses a value that is not a list and a glob that is empty", async () => {
+    const message = 'must be a list of globs like ["dev/source.test.ts"]';
+    expect(await errors('mutateExclude: "dev/scan.test.ts"')).toStrictEqual([
+      `repo.config.ts: coverage.mutateExclude: ${message}`,
+    ]);
+    expect(await errors('mutateExclude: [""]')).toStrictEqual([
+      `repo.config.ts: coverage.mutateExclude[0]: ${message}`,
+    ]);
+  });
+});

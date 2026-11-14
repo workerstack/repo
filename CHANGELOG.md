@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Under the pull-request workflow, bun repo release commits the bump in a release worktree and opens its pull request instead of pushing main; a rerun after the merge waits on CI and tags the merged release commit, and a squash-merged release commit counts as pending.
 - Hovering any key of `defineConfig({ ... })` in `repo.config.ts` shows what it does, the values it takes, its default and an example, at every depth. The section types are exported: `AgentsConfig`, `CiConfig`, `CleanConfig`, `CommitConfig`, `CoverageConfig`, `KnipConfig`, `KnipIgnoreEntry`, `LintConfig`, `LintSkipEntry`, `NightlyConfig`, `OwnerConfig` and `TurboConfig`.
 - `/set` and `bun repo set` save approval, effort and strategy per session
+- `coverage.mutateExclude` lists tests that `repo mutate` leaves out of its Stryker run, for tests that read the source a run rewrites in place; the vitest preset reads it from `REPO_VITEST_EXCLUDE`
 
 ### Changed
 

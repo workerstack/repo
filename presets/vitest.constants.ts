@@ -36,3 +36,6 @@ export const WHOLE_MS_RE: RegExp = /^[1-9]\d*$/u;
 
 /** A test or hook's timeout on every other platform. */
 export const DEFAULT_TIMEOUT: number = 5_000;
+
+/** The variable `repo mutate` sets to a JSON list of test globs its run leaves out. */
+export const EXCLUDE_KEY = "REPO_VITEST_EXCLUDE";

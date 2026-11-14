@@ -2,8 +2,11 @@ import { FAILED, NEWLINE } from "./mutate.constants.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import type { Captured } from "./scripts/lint.ts";
 
-/** What `repo mutate` reads from repo.config.ts: the repo root, the globs to mutate, the floors file. */
-export type MutateConfig = { root: string; mutate: readonly string[]; floors: string };
+/**
+ * What `repo mutate` reads from repo.config.ts: the repo root, the globs to mutate, the tests a run leaves out, the
+ * floors file.
+ */
+export type MutateConfig = { root: string; mutate: readonly string[]; exclude: readonly string[]; floors: string };
 
 /** The file system `repo mutate` touches; paths are absolute. */
 export type MutateFs = {
@@ -27,8 +30,8 @@ export type MutateDeps = {
   packages: (root: string) => string[];
   /** `git <args>` in `cwd`, run with no `GIT_*` variable. */
   git: (cwd: string, args: string[]) => Captured;
-  /** `bun <args>` in `cwd`, run with no `GIT_*` variable. */
-  run: (args: string[], cwd: string) => Captured;
+  /** `bun <args>` in `cwd`, run with no `GIT_*` variable and with `env` over the rest. */
+  run: (args: string[], cwd: string, env?: Readonly<Record<string, string>>) => Captured;
   /** `cargo <args>` in `cwd`, run with no `GIT_*` variable. */
   cargo: CargoRun;
   fs: MutateFs;

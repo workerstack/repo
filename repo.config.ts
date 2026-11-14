@@ -2,7 +2,12 @@ import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
   agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
-  coverage: { mutate: ["cli/**/*.ts", "presets/**/*.ts"] },
+  coverage: {
+    mutate: ["cli/**/*.ts", "presets/**/*.ts"],
+    // A mutation run rewrites the source in place, and both read it: the scan greps every file for recursive removes,
+    // and the ES2022 check type-checks the package's own source.
+    mutateExclude: ["dev/recursive-removes.test.ts", "cli/release/exports-es2022.test.ts"],
+  },
   knip: {
     ignore: [
       {

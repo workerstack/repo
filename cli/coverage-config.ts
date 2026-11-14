@@ -17,6 +17,8 @@ export type ResolvedCoverage = {
   readonly knownFailures: string;
   /** The globs of the tracked files `repo mutate` mutates. */
   readonly mutate: readonly string[];
+  /** The globs of the test files `repo mutate` leaves out: tests that read the source a run rewrites. */
+  readonly mutateExclude: readonly string[];
   /** The mutation score floors file `repo mutate` ratchets. */
   readonly mutationFloors: string;
 };
@@ -26,11 +28,13 @@ export const DEFAULT_COVERAGE: ResolvedCoverage = {
   floors: "coverage-floors.json",
   knownFailures: "known-failures.json",
   mutate: ["src/**/*.ts"],
+  mutateExclude: [],
   mutationFloors: "mutation-floors.json",
 };
 
 const PATH_ERROR = `must be a file path like ${DEFAULT_COVERAGE.floors}`;
 const GLOBS_ERROR = 'must be a non-empty list of globs like ["src/**/*.ts"]';
+const EXCLUDE_ERROR = 'must be a list of globs like ["dev/source.test.ts"]';
 
 type FileSchema = z.ZodOptional<z.ZodString>;
 
@@ -39,6 +43,7 @@ type CoverageSchema = z.ZodObject<
     floors: FileSchema;
     knownFailures: FileSchema;
     mutate: z.ZodOptional<z.ZodReadonly<z.ZodArray<z.ZodString>>>;
+    mutateExclude: z.ZodOptional<z.ZodReadonly<z.ZodArray<z.ZodString>>>;
     mutationFloors: FileSchema;
   },
   z.core.$strict
@@ -53,8 +58,13 @@ function buildSchema(): CoverageSchema {
     .readonly()
     .optional();
 
+  const excluded = z
+    .array(z.string({ error: EXCLUDE_ERROR }).min(1, { error: EXCLUDE_ERROR }), { error: EXCLUDE_ERROR })
+    .readonly()
+    .optional();
+
   return z.strictObject(
-    { floors: file, knownFailures: file, mutate: globs, mutationFloors: file },
+    { floors: file, knownFailures: file, mutate: globs, mutateExclude: excluded, mutationFloors: file },
     { error: `must be an object like { floors: "${DEFAULT_COVERAGE.floors}" }` },
   );
 }
@@ -65,13 +75,14 @@ export const coverageSchema: CoverageSchema = /* @__PURE__ */ buildSchema();
 export function coverageOf(parsed: {
   coverage?: z.output<typeof coverageSchema> | undefined;
 }): Pick<ResolvedConfig, "coverage"> {
-  const { floors, knownFailures, mutate, mutationFloors } = parsed.coverage ?? {};
+  const { floors, knownFailures, mutate, mutateExclude, mutationFloors } = parsed.coverage ?? {};
 
   return {
     coverage: {
       floors: floors ?? DEFAULT_COVERAGE.floors,
       knownFailures: knownFailures ?? DEFAULT_COVERAGE.knownFailures,
       mutate: mutate ?? DEFAULT_COVERAGE.mutate,
+      mutateExclude: mutateExclude ?? DEFAULT_COVERAGE.mutateExclude,
       mutationFloors: mutationFloors ?? DEFAULT_COVERAGE.mutationFloors,
     },
   };

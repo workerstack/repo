@@ -39,6 +39,21 @@ it("runs the bin the clone's package names under bun with the preload, config ou
   );
 });
 
+it("hands Stryker's test run the tests the config leaves out, and no variable when it leaves out none", async () => {
+  const excluded = fakes(
+    sim({ config: { exclude: ["x.test.ts"], floors: "mutation-floors.json", mutate: ["src/**/*.ts"], root: ROOT } }),
+  );
+
+  await runMutate(SHARD, excluded.deps);
+  const env = ` env ${JSON.stringify({ REPO_VITEST_EXCLUDE: '["x.test.ts"]' })}`;
+  expect(excluded.calls.find((c) => c.includes("stryker.js"))?.endsWith(`@${CLONE}${env}`)).toBe(true);
+  expect(excluded.calls).toContain(`bun install --frozen-lockfile @${CLONE}`);
+
+  const none = fakes();
+  await runMutate(SHARD, none.deps);
+  expect(none.calls.find((c) => c.includes("stryker.js"))?.endsWith(`@${CLONE}`)).toBe(true);
+});
+
 it("writes a Stryker config with the shard's files and the options this repo needs", async () => {
   const f = fakes();
   let config: unknown;

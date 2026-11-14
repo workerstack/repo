@@ -52,7 +52,7 @@ export function sim(over: Partial<Sim> = {}): Sim {
     gitFails: null,
     installFails: false,
     stryker: { code: 0, output: "", report: rawReport({ "src/a.ts": ["Killed", "Survived"], "src/b.ts": ["Killed"] }) },
-    config: { root: ROOT, mutate: ["src/**/*.ts"], floors: "mutation-floors.json" },
+    config: { exclude: [], floors: "mutation-floors.json", mutate: ["src/**/*.ts"], root: ROOT },
     ...over,
   };
 }
@@ -86,8 +86,8 @@ function gitOf(state: Sim, calls: string[]): MutateDeps["git"] {
 }
 
 function runOf(state: Sim, calls: string[], files: Map<string, string>): MutateDeps["run"] {
-  return (args, cwd) => {
-    calls.push(`bun ${args.join(" ")} @${cwd}`);
+  return (args, cwd, env) => {
+    calls.push(`bun ${args.join(" ")} @${cwd}${env === undefined ? "" : ` env ${JSON.stringify(env)}`}`);
     if (args[0] === "install") return state.installFails ? { code: 1, stdout: "", stderr: "lock\n" } : OK;
     leave(state, files, args.at(-1) ?? "");
     return { code: state.stryker.code, stdout: state.stryker.output, stderr: "" };
