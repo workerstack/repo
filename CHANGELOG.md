@@ -42,6 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo --help` lists the `worktree` subcommands that run, `add, finish, list, prune, hook`, from the same list as the usage line, instead of naming a `remove` that exits 2.
 - `bun repo coverage`, `bun repo clean` and the other commands that remove their own temp dir after a tool ran in it (`ci`, `lint`, `eval`, `bench`, `release` and the duplicate-code and ignore-line checks) now retry that removal for up to about 4.5 s when Windows still holds a file in it, instead of ending with `EBUSY: resource busy or locked`. Bun ignores `maxRetries` in `fs.rmSync`, so the old retries in `repo clean` never ran. A dir still held after every try fails with the last error, as before.
 - A plan saved with an empty `commit:` line no longer takes the next line as its commit subject and drops it from the body.
+- `bun repo ci wait <branch>` right after `gh workflow run` now looks for the dispatched run for 30s and waits on it, instead of saying there is nothing to wait on.
 
 ## [0.2.0-rc.0] - 2026-11-13
 

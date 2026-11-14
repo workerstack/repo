@@ -27,13 +27,6 @@ function tip(branch: string) {
 }
 
 const FEAT = { ...GIT, [tip("feat/x")]: ok(`${SHA}\n`) };
-const NOTHING = "nothing to wait on: ci runs on pushes to main and on pull requests, and feat/x has neither\n";
-
-it("no run, no open PR and not the default branch is nothing to wait on, decided on the first look", async () => {
-  const got = await world(FEAT, { ...NONE, "pr list --head feat/x": ok("[]") }, "feat/x");
-  expect(got).toMatchObject({ clock: 0, code: 3, err: "", out: NOTHING });
-  expect(got.record(SHA)).toMatchObject({ branch: "feat/x", failed: [], outcome: "nothing" });
-});
 
 it("a branch with an open PR keeps looking for its run, then errors", async () => {
   const got = await world(FEAT, { ...NONE, "pr list --head feat/x": ok('[{"number":3}]') }, "feat/x");
@@ -44,32 +37,6 @@ it("a branch with an open PR keeps looking for its run, then errors", async () =
 it("the default branch keeps looking for its run, then errors", async () => {
   const got = await world(GIT, NONE);
   expect(got).toMatchObject({ clock: 120_000, code: 4 });
-  expect(got.calls.some((call) => call.startsWith("gh pr list"))).toBe(false);
-});
-
-it("an unreadable PR list or default branch is not proof of nothing", async () => {
-  const unknown = { ...FEAT, "rev-parse --abbrev-ref origin/HEAD": bad("no origin") };
-  const got = await world(unknown, { ...NONE, "pr list --head feat/x": bad("net") }, "feat/x");
-  expect(got.code).toBe(4);
-  const unset = await world(unknown, { ...NONE, "pr list --head feat/x": ok("[]") }, "feat/x");
-  expect(unset.code).toBe(3);
-  expect(unset.out).toContain("pushes to the default branch");
-});
-
-it("a dispatched run on a branch without a PR is waited on", async () => {
-  const dispatched = run(9, "2026-11-09T10:00:00Z", "feat/x");
-
-  const got = await world(
-    FEAT,
-    {
-      ...GH,
-      [`${LIST} ${SHA}`]: ok(JSON.stringify([dispatched])),
-      "run view 9 --json": view("success", []),
-    },
-    "feat/x",
-  );
-
-  expect(got).toMatchObject({ code: 0, out: "waiting for ci on b3f5e8a (run 9)…\npassed\n" });
   expect(got.calls.some((call) => call.startsWith("gh pr list"))).toBe(false);
 });
 

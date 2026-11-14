@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DISPATCH_GRACE_MS, MS_PER_SECOND } from "./ci-wait.constants.ts";
 import { waitFor } from "./ci-wait.ts";
 import type { Captured } from "./lint.ts";
 
@@ -88,7 +89,9 @@ describe("waitFor on a branch ci does not run on", () => {
     const got = await target(gh, "feat/x");
     expect(got.outcome).toStrictEqual({
       kind: "nothing",
-      line: "nothing to wait on: ci runs on pushes to the default branch and on pull requests, and feat/x has neither",
+      line:
+        "nothing to wait on: ci runs on pushes to the default branch, on pull requests and on gh workflow run, " +
+        `and feat/x has no pull request and no run after ${DISPATCH_GRACE_MS / MS_PER_SECOND}s`,
     });
   });
 });

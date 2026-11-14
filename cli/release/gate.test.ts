@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ghFor, runGate, tagRelease } from "../__fixtures__/gate-world.ts";
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { commit, gitIn, NAME, world } from "../__fixtures__/release-world.ts";
+import { DISPATCH_GRACE_MS, MS_PER_SECOND } from "../scripts/ci-wait.constants.ts";
 
 afterEach(removePlanted);
 
+const GRACE = `${DISPATCH_GRACE_MS / MS_PER_SECOND}s`;
 const LIST = "databaseId,status,conclusion,event,headBranch,createdAt";
 
 describe("repo release gate passes", () => {
@@ -75,8 +77,9 @@ describe("repo release gate on a branch ci does not run on", () => {
     gitIn(w.work, "remote", "set-head", "origin", "-d");
     const got = await runGate(w, [`${NAME}@0.2.0`], ghFor("main", { run: false }));
     expect(got.err).toBe(
-      `repo release gate: no CI will run for ${short} (nothing to wait on: ci runs on pushes to the default branch ` +
-        "and on pull requests, and main has neither); release from a branch ci runs on\n",
+      `repo release gate: no CI will run for ${short} (nothing to wait on: ci runs on pushes to the default branch, ` +
+        `on pull requests and on gh workflow run, and main has no pull request and no run after ${GRACE}); ` +
+        "release from a branch ci runs on\n",
     );
   });
 });

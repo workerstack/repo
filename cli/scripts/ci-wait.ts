@@ -1,8 +1,8 @@
 /**
  * `repo ci wait [<branch>]`: finds the newest `ci` run for the tip of the branch (default HEAD), waits for it, and
  * exits 0 when it passed, 1 when it failed (with the failed jobs and their logs), 2 when a newer run on the branch
- * superseded it, 3 when there is no run and ci does not run on the branch, 4 on an error. Each outcome is recorded by
- * sha.
+ * superseded it, 3 when ci runs on the branch only by dispatch and no run showed up within the grace, 4 on an error.
+ * Each outcome is recorded by sha.
  */
 import { z } from "zod";
 
@@ -10,6 +10,7 @@ import { finish, newestFirst, ghJson, type RunInfo, type RunOutcome } from "./ci
 import { recordRoot, writeRecord, type RecordFs } from "./ci-wait-record.ts";
 import { realSleep, spawnRunner, type Runner } from "./ci-wait-run.ts";
 import {
+  DISPATCH_GRACE_MS,
   EXIT_ERROR,
   EXIT_FAILED,
   EXIT_NOTHING,
@@ -72,6 +73,9 @@ function prsSchema() {
 
 const GH_LOGIN = "gh is not installed or not logged in; run `gh auth login`";
 
+/** The dispatch grace as the lines show it. */
+const GRACE = `${DISPATCH_GRACE_MS / MS_PER_SECOND}s`;
+
 /** The commit of `branch` on origin, as last fetched, and the branch; or why it cannot be waited on. */
 function remoteTip(io: Io, branch: string): Target | { error: string } {
   const tip = io.git(GIT_REMOTE_TIP(branch), io.cwd).stdout.trim();
@@ -107,7 +111,10 @@ function givenTarget(io: Io, target: Target): Target | { error: string } {
   return io.gh(GH_AUTH.slice(), io.cwd).code === 0 ? target : { error: GH_LOGIN };
 }
 
-/** The line that says ci has no run to wait on for the branch, or null when ci runs on it or that cannot be told. */
+/**
+ * The line that says ci has no run to wait on for the branch once the dispatch grace has passed, or null when ci runs
+ * on it or that cannot be told.
+ */
 function noTrigger(io: Io, branch: string): string | null {
   const named = io.git(GIT_DEFAULT_BRANCH.slice(), io.cwd);
   const main = named.code === 0 ? named.stdout.trim().replace(REMOTE_PREFIX, "") : "";
@@ -118,7 +125,10 @@ function noTrigger(io: Io, branch: string): string | null {
   if (prs === null || prs.length > 0) return null;
   const pushes = main === "" ? "the default branch" : main;
 
-  return `nothing to wait on: ci runs on pushes to ${pushes} and on pull requests, and ${branch} has neither`;
+  return (
+    `nothing to wait on: ci runs on pushes to ${pushes}, on pull requests and on gh workflow run, ` +
+    `and ${branch} has no pull request and no run after ${GRACE}`
+  );
 }
 
 /** The newest run of the target's commit on its branch, if there is one. */
@@ -128,17 +138,20 @@ function lookup(io: Io, target: Target): RunInfo | undefined {
   return newestFirst(runs.filter((run) => run.headBranch === target.branch))[0];
 }
 
-/** Looks every `POLL_MS` until `GIVE_UP_MS` have passed since `started`. */
-async function poll(io: Io, target: Target, started: number): Promise<RunInfo | null> {
+/** Looks every `POLL_MS` until the clock reaches `deadline`. */
+async function poll(io: Io, target: Target, deadline: number): Promise<RunInfo | null> {
   await io.sleep(POLL_MS);
   const found = lookup(io, target);
 
   if (found !== undefined) return found;
 
-  return io.now() - started >= GIVE_UP_MS ? null : poll(io, target, started);
+  return io.now() >= deadline ? null : poll(io, target, deadline);
 }
 
-/** Finds the target's run and waits for it. No run on the first look and no trigger for one is `nothing`. */
+/**
+ * Finds the target's run and waits for it. A branch with no trigger is looked at for the dispatch grace, since a run
+ * `gh workflow run` just asked for is not listed at once; no run by then is `nothing`.
+ */
 async function wait(io: Io, target: Target): Promise<Ended> {
   const started = io.now();
   let run = lookup(io, target);
@@ -146,8 +159,15 @@ async function wait(io: Io, target: Target): Promise<Ended> {
   if (run === undefined) {
     const line = noTrigger(io, target.branch);
 
-    if (line !== null) return { kind: "nothing", line };
-    run = (await poll(io, target, started)) ?? undefined;
+    if (line !== null) {
+      io.stdout(
+        `no ci run for ${target.sha.slice(0, SHA_SHOWN)} yet; looking for ${GRACE} in case one was dispatched…\n`,
+      );
+    }
+
+    run = (await poll(io, target, started + (line === null ? GIVE_UP_MS : DISPATCH_GRACE_MS))) ?? undefined;
+
+    if (run === undefined && line !== null) return { kind: "nothing", line };
   }
 
   if (run === undefined) {
