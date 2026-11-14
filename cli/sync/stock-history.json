@@ -7723,7 +7723,7 @@
     "9f9e49c250434637",
     "ef0470f234848706"
   ],
-  "cli/scripts/worktree-cli-finish-sync.test.ts": ["ac3cff6ad1d5c163"],
+  "cli/scripts/worktree-cli-finish-sync.test.ts": ["6d79477ae7afe7b6", "ac3cff6ad1d5c163"],
   "cli/scripts/worktree-cli-finish.test.ts": [
     "019320935af85552",
     "080aa17fccb1abfb",
