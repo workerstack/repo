@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { removeTemps } from "../../__fixtures__/remove-temps.ts";
-import { pushStopBlock, recordPush, type GateDeps } from "../ci-push-gate.ts";
+import type { GateDeps } from "../ci-push-gate-line.ts";
+import { pushStopBlock, recordPush } from "../ci-push-gate.ts";
 import { recordPath, type WaitRecord } from "../ci-wait-record.ts";
 import type { Runner } from "../ci-wait-run.ts";
 
@@ -40,6 +41,8 @@ export type World = {
   refs: Record<string, string>;
   /** Commits that reached origin/<branch>. */
   landed: Record<string, string[]>;
+  /** Commits whose `rev-list --ancestry-path` fails. */
+  revListFails?: string[];
 };
 
 const ok = (stdout: string) => ({ code: 0, stdout: `${stdout}\n`, stderr: "" });
@@ -53,6 +56,12 @@ export function fakeGit(main: string, world: World, asked: string[]): Runner {
     if (args.includes("--git-common-dir")) return ok(path.join(main, ".git"));
     if (args[0] === "merge-base") {
       return world.landed[String(args[3]).replace("origin/", "")]?.includes(String(args[2])) ? ok("") : no;
+    }
+    if (args[0] === "rev-list") {
+      const [from = "", to = ""] = String(args[2]).split("..");
+      const line = world.landed[to.replace("origin/", "")] ?? [];
+      if (world.revListFails?.includes(from) || !line.includes(from)) return no;
+      return ok(line.slice(line.indexOf(from) + 1).reverse().join("\n"));
     }
     if (args.includes("--abbrev-ref")) return tip ? ok(tip.branch) : no;
     const ref = String(args.at(-1));
@@ -106,4 +115,19 @@ export function rig(over: Partial<World> = {}) {
     note: (command: string, cwd = main, session = "s1") => recordPush({ command, cwd, session }, deps),
     gate: (session = "s1", active = false) => pushStopBlock({ root: main, cwd: main, session, active }, deps),
   };
+}
+
+/** The Stop line for a push of `sha` to `branch` that has no ci result. */
+export function noResult(sha: string, branch = "main") {
+  return (
+    `Stop: you pushed ${sha.slice(0, 7)} to ${branch} and its ci run has no result; ` +
+    `run ${wait(branch)} in the background and fix it if it fails`
+  );
+}
+
+/** A rig where the session pushed each of `rows`. */
+export function pushed(rows: [string, string][], over: Partial<World> = {}) {
+  const r = rig(over);
+  r.plant("s1", rows);
+  return r;
 }
