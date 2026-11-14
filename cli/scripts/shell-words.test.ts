@@ -7,10 +7,22 @@ function wordsOf(cmd: string): string[][] {
   return simpleCommands(cmd).map((command) => command.words);
 }
 
+/** The bash reading of each word of each simple command of `cmd`. */
+function bashOf(cmd: string): string[][] {
+  return simpleCommands(cmd).map((command) => command.bashWords);
+}
+
+/** The indices of the words with an expansion, per simple command of `cmd`. */
+function expandedOf(cmd: string): number[][] {
+  return simpleCommands(cmd).map((command) => [...command.expanded]);
+}
+
 it("simpleCommands: marks each word a redirect reads or writes, and no other", () => {
+  const words = ["grep", "a", "x", "b", "2", "1", "c"];
+
   expect(simpleCommands("grep < a x >b 2>&1 >>c; cat d")).toStrictEqual([
-    { redirects: new Set([1, 3, 5, 6]), words: ["grep", "a", "x", "b", "2", "1", "c"] },
-    { redirects: new Set(), words: ["cat", "d"] },
+    { bashWords: words, expanded: new Set(), redirects: new Set([1, 3, 5, 6]), words },
+    { bashWords: ["cat", "d"], expanded: new Set(), redirects: new Set(), words: ["cat", "d"] },
   ]);
 });
 
@@ -40,21 +52,77 @@ it("simpleCommands: removes a backslash before a shell character and keeps one b
   expect(wordsOf("cat a\\")).toStrictEqual([["cat", "a\\"]]);
 });
 
+it("simpleCommands: reads each word as bash does too, which drops every backslash outside quotes", () => {
+  expect(bashOf("cat bun\\.lock C:\\r\\x a\\ b a\\")).toStrictEqual([["cat", "bun.lock", "C:rx", "a b", "a\\"]]);
+  expect(bashOf("cat 'bun\\.lock' \"bun\\.lock\"")).toStrictEqual([["cat", "bun\\.lock", "bun\\.lock"]]);
+});
+
+it("simpleCommands: decodes an ANSI-C quote in both readings", () => {
+  const cmd = "echo $'\\x64\\u0069\\U00000073\\164\\cA\\n\\'\\q\\U7fffffff' $'open";
+
+  expect(wordsOf(cmd)).toStrictEqual([["echo", "dist\u0001\n'\\q\\U7fffffff", "open"]]);
+  expect(bashOf(cmd)).toStrictEqual(wordsOf(cmd));
+  expect(expandedOf(cmd)).toStrictEqual([[]]);
+});
+
+it("simpleCommands: marks the words that hold an expansion, and no single-quoted or bare dollar", () => {
+  const cmd = ["a", "$b", '"$c"', "${d}", "$1", "$?", "x$(y)", "z`w`", "'$e'", "$", '"$"', '$"f"'].join(" ");
+
+  expect(expandedOf(cmd)).toStrictEqual([[], [], [1, 2, 3, 4, 5, 6, 7]]);
+  expect(wordsOf('echo $"a b"')).toStrictEqual([["echo", "a b"]]);
+});
+
 it("simpleCommands: splits simple commands at each control operator", () => {
   const each = [["a"], ["b"], ["c"], ["d"], ["e"], ["f"], ["g"]];
   expect(wordsOf("a | b || c && d & e ; f\ng")).toStrictEqual(each);
   expect(wordsOf("a|b;c")).toStrictEqual([["a"], ["b"], ["c"]]);
 });
 
-it("simpleCommands: splits at a subshell, a command substitution and backticks", () => {
-  const each = [
+it("simpleCommands: splits at a subshell and reads a substitution as commands of its own", () => {
+  expect(wordsOf("(a x) $(b y) `c z`")).toStrictEqual([
     ["a", "x"],
     ["b", "y"],
     ["c", "z"],
-  ];
-
-  expect(wordsOf("(a x) $(b y) `c z`")).toStrictEqual(each);
+    ["", ""],
+  ]);
   expect(wordsOf("echo $HOME")).toStrictEqual([["echo", "$HOME"]]);
+});
+
+it("simpleCommands: keeps the words around a substitution in the command that holds it", () => {
+  expect(wordsOf("rg a $(b c) d")).toStrictEqual([
+    ["b", "c"],
+    ["rg", "a", "", "d"],
+  ]);
+  expect(wordsOf("rg a x$(b $(c) ')' \\) \"(\" `d`)y d")).toStrictEqual([
+    ["c"],
+    ["d"],
+    ["b", "", ")", ")", "(", ""],
+    ["rg", "a", "xy", "d"],
+  ]);
+  expect(wordsOf('rg a "$(b) `c \\`d\\``" e')).toStrictEqual([["b"], ["d"], ["c", ""], ["rg", "a", " ", "e"]]);
+  expect(wordsOf("echo $((1 + 2)) x")).toStrictEqual([
+    ["1", "+", "2"],
+    ["echo", "", "x"],
+  ]);
+});
+
+it("simpleCommands: reads an unclosed substitution to the end", () => {
+  expect(wordsOf("rg a $(b c")).toStrictEqual([
+    ["b", "c"],
+    ["rg", "a", ""],
+  ]);
+  expect(wordsOf("rg a `b 'c")).toStrictEqual([
+    ["b", "c"],
+    ["rg", "a", ""],
+  ]);
+  expect(wordsOf('rg a $(b "c')).toStrictEqual([
+    ["b", "c"],
+    ["rg", "a", ""],
+  ]);
+  expect(wordsOf("rg a $(b 'c")).toStrictEqual([
+    ["b", "c"],
+    ["rg", "a", ""],
+  ]);
 });
 
 it("simpleCommands: splits words at redirects and keeps 2>&1 and &> inside one command", () => {
