@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { Result } from "../result.ts";
 import { waitFor, type Runner, type WaitOutcome } from "../scripts/ci-wait.ts";
+import { readWorkflow, type WorkflowRead } from "../workflow.ts";
 import { stampChangelog } from "./changelog.ts";
 import { must, read, type Tools } from "./git.ts";
 import { writeVersion } from "./manifest.ts";
@@ -18,6 +19,7 @@ import {
   ciSuperseded,
   summary,
 } from "./release-messages.constants.ts";
+import { releaseByPullRequest } from "./release-pr.ts";
 import {
   ARROW,
   CHANGELOG_FILE,
@@ -49,6 +51,8 @@ export type ReleaseIo = {
   /** Milliseconds; the clock the wait for CI is measured on, and today's date in the changelog. */
   now: () => number;
   sleep: (ms: number) => Promise<void>;
+  /** The workflow the root's repo.config.ts names; `readWorkflow` when omitted. */
+  workflow?: (root: string) => WorkflowRead;
 };
 
 /** The mode the arguments ask for, or the usage line. */
@@ -108,9 +112,9 @@ export function ciLine(outcome: Exclude<WaitOutcome, { kind: "passed" }>, short:
   return outcome.kind === "nothing" ? ciNothing(short, outcome.line) : ciNoResult(short, outcome.detail);
 }
 
-/** Tags HEAD and pushes the tag; a tag that did not reach origin is deleted again, so a rerun makes it. */
-function publishTag(t: Tools, tag: string): void {
-  must(t, GIT_TAG(tag));
+/** Tags `sha` and pushes the tag; a tag that did not reach origin is deleted again, so a rerun makes it. */
+function publishTag(t: Tools, tag: string, sha: string): void {
+  must(t, [...GIT_TAG(tag), sha]);
 
   try {
     must(t, GIT_PUSH_TAG(tag));
@@ -120,8 +124,30 @@ function publishTag(t: Tools, tag: string): void {
   }
 }
 
+/** What the release did before the wait on CI (`steps`), and the release commit it tags once CI passed (`sha`). */
+type Done = { plan: Plan; steps: readonly string[]; sha: string };
+
+/** Waits on CI for HEAD and, when it passed, tags the release commit and prints the summary; the exit code. */
+async function waitAndTag(t: Tools, io: ReleaseIo, { plan, steps, sha }: Done): Promise<number> {
+  const short = read(t, GIT_HEAD).slice(0, SHA_SHOWN);
+  const printed: string[] = [];
+  const outcome = await waitFor({ ...io, cwd: t.cwd, gh: t.gh, git: t.git, stdout: (text) => printed.push(text) });
+
+  if (outcome.kind !== "passed") {
+    io.stdout(printed.join(""));
+
+    return refuse(io, ciLine(outcome, short));
+  }
+
+  publishTag(t, plan.tag, sha);
+  const move = plan.action === "bump" ? `${plan.from} ${ARROW} ${plan.version}` : plan.version;
+  io.stdout(`${summary({ move, name: plan.name, steps, tag: plan.tag })}\n`);
+
+  return 0;
+}
+
 /** Commits and pushes what the plan needs, waits on CI for HEAD, and tags it when CI passed. */
-async function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
+function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
   const steps: string[] = [];
 
   if (plan.action === "none") {
@@ -136,21 +162,18 @@ async function carryOut(t: Tools, io: ReleaseIo, plan: Plan): Promise<number> {
     steps.push("pushed");
   }
 
-  const short = read(t, GIT_HEAD).slice(0, SHA_SHOWN);
-  const printed: string[] = [];
-  const outcome = await waitFor({ ...io, cwd: t.cwd, gh: t.gh, git: t.git, stdout: (text) => printed.push(text) });
+  return waitAndTag(t, io, { plan, sha: read(t, GIT_HEAD), steps });
+}
 
-  if (outcome.kind !== "passed") {
-    io.stdout(printed.join(""));
-
-    return refuse(io, ciLine(outcome, short));
-  }
-
-  publishTag(t, plan.tag);
-  const move = plan.action === "bump" ? `${plan.from} ${ARROW} ${plan.version}` : plan.version;
-  io.stdout(`${summary({ move, name: plan.name, steps, tag: plan.tag })}\n`);
-
-  return 0;
+/** The release of the checkout `t` through a pull request, with the steps it shares with `carryOut`. */
+function throughPullRequest(t: Tools, io: ReleaseIo, mode: Mode): Promise<number> {
+  return releaseByPullRequest(t, {
+    commit: (cwd, plan) => commitRelease({ ...t, cwd }, io, plan),
+    plan: () => makePlan(t, mode),
+    stderr: io.stderr,
+    stdout: io.stdout,
+    tag: (plan, sha) => waitAndTag(t, io, { plan, sha, steps: ["already committed"] }),
+  });
 }
 
 /** `repo release [--stable | --pre <id>]`: the whole release of the root package, or the reason it stopped. */
@@ -164,6 +187,7 @@ export async function releaseMain(argv: readonly string[], io: ReleaseIo): Promi
   const tools: Tools = { cwd: root, gh: io.gh, git: io.git };
 
   try {
+    if ((io.workflow ?? readWorkflow)(root) === "pull-request") return await throughPullRequest(tools, io, mode.value);
     const plan = await makePlan(tools, mode.value);
 
     return plan.ok ? await carryOut(tools, io, plan.value) : refuse(io, plan.error);

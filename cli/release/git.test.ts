@@ -3,9 +3,9 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
-import { commit, world } from "../__fixtures__/release-world.ts";
+import { commit, gitIn, world } from "../__fixtures__/release-world.ts";
 import { spawnRunner } from "../scripts/ci-wait-run.ts";
-import { commitsAfter, type Tools } from "./git.ts";
+import { commitWithSubject, commitsAfter, type Tools } from "./git.ts";
 
 afterEach(removePlanted);
 
@@ -33,4 +33,14 @@ it("counts a crate's own commits since a time, and not another crate's", () => {
 it("counts nothing for commits older than the time", () => {
   const { w, tools } = crates();
   expect(commitsAfter(tools, { dir: path.join(w.work, "a"), since: FUTURE })).toStrictEqual([]);
+});
+
+it("finds a release commit whose subject a squash merge gave a pull request number, and no longer subject", () => {
+  const w = world({}, false);
+  commit(w, "chore: release x@0.1.10", { "a.txt": "a\n" }, false);
+  commit(w, "chore: release x@0.1.1 (#9)", { "b.txt": "b\n" }, false);
+  commit(w, "chore: release x@0.1.1 (#9) again", { "c.txt": "c\n" }, false);
+  const tools: Tools = { cwd: w.work, gh: spawnRunner("gh"), git: spawnRunner("git") };
+  expect(commitWithSubject(tools, "chore: release x@0.1.1")).toBe(gitIn(w.work, "rev-parse", "HEAD~1"));
+  expect(commitWithSubject(tools, "chore: release x@0.1.2")).toBeNull();
 });
