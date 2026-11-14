@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -61,11 +60,11 @@ describe("roadmap strategy default on a new save", () => {
     const sent = save(withStrategy(DRAFT_ROADMAP, "spawn-deep"), ws, "spawn-fast");
     expect(sent.ok, sent.error).toBe(true);
     expect(read(path.join(ws, savedOk(sent).path)).match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-deep"]);
-    fs.rmSync(path.join(ws, ROADMAP_DIR), { force: true, recursive: true });
-    const unknown = save(withStrategy(DRAFT_ROADMAP, "review-medium"), ws);
+    const fresh = tmpWs();
+    const unknown = save(withStrategy(DRAFT_ROADMAP, "review-medium"), fresh);
     expect(unknown.ok).toBe(false);
     expect(unknown.errors).toContain(NO_KEY);
-    expectNothingSaved(path.join(ws, ROADMAP_DIR));
+    expectNothingSaved(path.join(fresh, ROADMAP_DIR));
   });
 });
 

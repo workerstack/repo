@@ -1,25 +1,17 @@
 /** Temp workspaces, saved-plan helpers and the lean-format card pieces the plan save suites share. */
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, expect } from "vitest";
+import { expect } from "vitest";
+import { useTempDirs } from "../../__fixtures__/temp-dirs.ts";
 import { VALID_PLAN, savedOk } from "./persist-bodies.ts";
 import { persistPlan, preparePlanUpdate } from "../persist-plan.ts";
 
 export const CREATED = "2026-08-26T14:30:00Z";
 export const read = (p: string): string => fs.readFileSync(p, "utf8");
 
-/** A maker of temp workspaces for one suite; each is removed after the test that made it. */
+/** A maker of temp workspaces for one suite, under the plan saves' prefix unless given one; see `useTempDirs`. */
 export function useTmpWs(prefix = "persist-plan-"): () => string {
-  const dirs: string[] = [];
-  afterEach(() => {
-    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
-  });
-  return () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-    dirs.push(dir);
-    return dir;
-  };
+  return useTempDirs(prefix).tempDir;
 }
 
 /** The host side of a plan rewrite: validate through preparePlanUpdate, then write what it returns. */
