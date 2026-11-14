@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo release api` no longer reports an unchanged type as narrowed when it has a key typed `unique symbol`, such as the `Sealed` brand of `@workerstack/repo/env`, or when it holds, lists or returns one at any depth: each installed copy declares its own symbol, so the two copies never fit each other. It still compares the TypeScript library's own types, such as a returned `Promise`, by what they hold, so a changed `loadConfig` result is now reported.
 - `bun repo --help` lists the `worktree` subcommands that run, `add, finish, list, prune, hook`, from the same list as the usage line, instead of naming a `remove` that exits 2.
 - `bun repo coverage`, `bun repo clean` and the other commands that remove their own temp dir after a tool ran in it (`ci`, `lint`, `eval`, `bench`, `release` and the duplicate-code and ignore-line checks) now retry that removal for up to about 4.5 s when Windows still holds a file in it, instead of ending with `EBUSY: resource busy or locked`. Bun ignores `maxRetries` in `fs.rmSync`, so the old retries in `repo clean` never ran. A dir still held after every try fails with the last error, as before.
+- A plan saved with an empty `commit:` line no longer takes the next line as its commit subject and drops it from the body.
 
 ## [0.2.0-rc.0] - 2026-11-13
 
