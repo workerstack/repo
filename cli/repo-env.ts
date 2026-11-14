@@ -8,6 +8,7 @@ const config = {
   process: {
     ANTHROPIC_API_KEY: "optional",
     BUN_CONFIG_REGISTRY: "optional",
+    CDPATH: "optional",
     CI: "optional",
     CLAUDE_EFFORT: "optional",
     CLAUDE_PROJECT_DIR: "optional",

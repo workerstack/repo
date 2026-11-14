@@ -36,6 +36,12 @@ function showCompound(
 
   if (node.kind === "loop") return `loop(${show(node.cond)}, ${show(node.body)})`;
 
+  if (node.kind === "for") {
+    const words = node.words === null ? '"$@"' : showSimple(node.words);
+
+    return `${node.select === true ? "select" : "for"} ${node.name}(${words}; ${show(node.body)})`;
+  }
+
   if (node.kind === "case") return `case(${showSimple(node.word)}; ${node.arms.map(show).join("; ")})`;
 
   if (node.kind === "redir")
@@ -76,10 +82,13 @@ describe("parse compound commands", () => {
   it("reads while, until, for and select, the head of a for as data", () => {
     expect(tree("while read l; do p; done < f")).toBe("redir(<f; loop([read l], [p]))");
     expect(tree("until a\ndo b\ndone")).toBe("loop([a], [b])");
-    expect(tree("for f in a $b; do echo $f; done")).toBe("seq(data[a $b], loop(seq(), [echo $f]))");
-    expect(tree("for f\ndo x; done")).toBe("seq(data[], loop(seq(), [x]))");
+    expect(tree("for f in a $b; do echo $f; done")).toBe("for f(data[a $b]; [echo $f])");
+    expect(tree("for f in; do x; done")).toBe("for f(data[]; [x])");
+    expect(tree("for f\ndo x; done")).toBe('for f("$@"; [x])');
+    expect(tree("for f; do x; done")).toBe('for f("$@"; [x])');
+    expect(tree("for")).toBe('for ("$@"; seq())');
     expect(tree("for ((i=0; i<3; i++)); do x; done")).toBe("seq(data[i=0 i 3 i++], loop(seq(), [x]))");
-    expect(tree("select f in a; do x; done")).toBe("seq(data[a], loop(seq(), [x]))");
+    expect(tree("select f in a; do x; done")).toBe("select f(data[a]; [x])");
   });
 
   it("reads case arms with every arm end", () => {

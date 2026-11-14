@@ -1,5 +1,20 @@
 /** Program names and option sets the shared bash walk reads commands by. */
 
+/** The builtin that prints by a format, and can write its output into a variable. */
+export const PRINTF = "printf";
+
+/** The `printf` option that writes its output into a variable. */
+export const PRINTF_VAR_OPTION = "-v";
+
+/** The builtin that drops the variables, or with `-f` the functions, its words name. */
+export const UNSET = "unset";
+
+/**
+ * A word bash reads as an assignment before the program: `NAME=`, `NAME+=`, or with a subscript (`NAME[k]=`), which
+ * bash refuses as a prefix but still runs the program after. Group 1 is the name, 2 the subscript, 3 the `+`.
+ */
+export const ASSIGNMENT_RE: RegExp = /^([A-Za-z_]\w*)(\[[^\]]*\])?(\+?)=/;
+
 /** Programs that run a shell, by the name `programName` gives. */
 export const SHELLS: ReadonlySet<string> = /* @__PURE__ */ new Set(["sh", "bash", "zsh", "dash", "ksh", "mksh", "ash"]);
 

@@ -3,10 +3,11 @@ import type path from "node:path";
 
 import { movedDir } from "./cd-effect.ts";
 import { commandAt } from "./command-at.ts";
-import type { Dir, ReadWord, ShellWord } from "./shell-ast.types.ts";
+import type { Dir, ReadWord, Scope, ShellWord, Value, Vars } from "./shell-ast.types.ts";
+import { expandWord, valueOf } from "./shell-expand.ts";
 import { shellFlow } from "./shell-flow.ts";
-import { isLiteral, readWord } from "./shell-lex-word.ts";
-import { programName } from "./shell-scripts.ts";
+import { programBase } from "./shell-scripts.ts";
+import { assignment, processEnv, withVar } from "./shell-vars.ts";
 import {
   ADD_CMD,
   ADD_VALUE_FLAGS,
@@ -28,11 +29,13 @@ type OptionStep = { dir: Dir; next: number };
 /** The words an option and its value take. */
 const OPTION_AND_VALUE = 2;
 
-/** `NAME=value` or `--name=value` as its value, still literal only when the value has no leading `~`. */
-function afterEquals(w: ReadWord): ReadWord {
+/** The value of a `--name=value` option; unknown with a leading `~`, which bash leaves as typed past an option. */
+function afterEquals(w: ReadWord): Value {
   const raw = w.raw.slice(w.raw.indexOf("=") + 1);
 
-  return { literal: w.literal && !raw.startsWith("~"), raw, text: w.text.slice(w.text.indexOf("=") + 1) };
+  return w.literal && !raw.startsWith("~")
+    ? { known: true, text: w.text.slice(w.text.indexOf("=") + 1) }
+    : { cause: raw, known: false };
 }
 
 /** The name before the `=` of `w`, or "" when it has none. */
@@ -43,14 +46,14 @@ function nameOf(w: ReadWord): string {
 }
 
 /**
- * The index git runs at: the program past runners (`env`, `sudo`, `rtk`, …) when it is git or an expansion, which may
- * be git; null for any other program.
+ * The index git runs at: the program past runners (`env`, `sudo`, `rtk`, …) when its value is git or unknown, which
+ * may be git; null for any other program.
  */
-function gitAt(words: readonly ShellWord[]): number | null {
+function gitAt(words: readonly ShellWord[], read: readonly ReadWord[]): number | null {
   const at = commandAt(words);
-  const prog = words[at];
+  const prog = read[at];
 
-  return prog !== undefined && (!isLiteral(prog) || programName(prog) === GIT_BIN) ? at : null;
+  return prog !== undefined && (!prog.literal || programBase(prog.text) === GIT_BIN) ? at : null;
 }
 
 /** The git option at `at.next`: the dir it sets and where the scan goes on; null at the end or a missing value. */
@@ -62,7 +65,8 @@ function gitOption(words: readonly ReadWord[], at: OptionStep, p: typeof path): 
 
   if (w === undefined) return null;
 
-  if (DIR_OPTIONS.has(w.text)) return value === undefined ? null : { dir: movedDir(value, dir, p), next: pastValue };
+  if (DIR_OPTIONS.has(w.text))
+    return value === undefined ? null : { dir: movedDir(valueOf(value), dir, p), next: pastValue };
 
   if (LONG_DIR_OPTIONS.has(nameOf(w))) return { dir: movedDir(afterEquals(w), dir, p), next: i + 1 };
 
@@ -81,17 +85,32 @@ function afterOptions(words: readonly ReadWord[], start: Dir, p: typeof path): G
   return null;
 }
 
-/** The git command of one simple command, its dir moved by `GIT_DIR=` or `GIT_WORK_TREE=` before git; else null. */
-function gitCommandOf(words: readonly ShellWord[], dir: Dir, p: typeof path): GitCommand | null {
-  const at = gitAt(words);
-
-  if (at === null) return null;
-  const read = words.map(readWord);
+/**
+ * The dir `GIT_DIR=` or `GIT_WORK_TREE=` before git moves to from `dir`, each value read with the assignments before
+ * it set, as bash runs them left to right.
+ */
+function prefixDir(words: readonly ShellWord[], { dir, vars }: Scope, p: typeof path): Dir {
   let here = dir;
+  let seen: Vars = vars;
 
-  for (const w of read.slice(0, at)) if (DIR_VARIABLES.has(nameOf(w))) here = movedDir(afterEquals(w), here, p);
+  for (const w of words) {
+    const set = assignment(w, seen);
 
-  return afterOptions(read.slice(at + 1), here, p);
+    if (set === null) continue;
+    seen = withVar(seen, set.name, set.value);
+
+    if (DIR_VARIABLES.has(set.name)) here = movedDir(set.value, here, p);
+  }
+
+  return here;
+}
+
+/** The git command of one simple command run in `scope`, its dir moved by the assignments before git; else null. */
+function gitCommandOf(words: readonly ShellWord[], scope: Scope, p: typeof path): GitCommand | null {
+  const read = words.map((w) => expandWord(w, scope.vars));
+  const at = gitAt(words, read);
+
+  return at === null ? null : afterOptions(read.slice(at + 1), prefixDir(words.slice(0, at), scope, p), p);
 }
 
 /**
@@ -101,14 +120,14 @@ function gitCommandOf(words: readonly ShellWord[], dir: Dir, p: typeof path): Gi
 export function gitLine(command: string, cwd: string, p: typeof path): GitLine {
   const line: GitLine = { commands: [], unread: [] };
 
-  shellFlow(command, { cwd, p }, (v) => {
+  shellFlow(command, { cwd, env: processEnv(), p }, (v) => {
     if (v.kind === "opaque") {
       line.unread.push({ at: v.dir, cause: v.cause });
 
       return;
     }
 
-    const g = v.data === true ? null : gitCommandOf(v.words, v.dir, p);
+    const g = v.data === true ? null : gitCommandOf(v.words, v, p);
 
     if (g !== null) line.commands.push(g);
   });

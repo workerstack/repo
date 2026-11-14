@@ -2,9 +2,7 @@
 import type { ShellWord } from "./shell-ast.types.ts";
 import { isLiteral, scriptText } from "./shell-lex-word.ts";
 import { programAt, programName } from "./shell-scripts.ts";
-import { END_OF_OPTIONS, type Runner, RUNNER_SPECS } from "./shell.constants.ts";
-
-const ASSIGNMENT_RE = /^[A-Za-z_]\w*=/;
+import { ASSIGNMENT_RE, END_OF_OPTIONS, type Runner, RUNNER_SPECS } from "./shell.constants.ts";
 
 /** The words an option and its value take. */
 const OPTION_AND_VALUE = 2;
