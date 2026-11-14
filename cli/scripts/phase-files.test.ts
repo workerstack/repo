@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { main } from "./phase-files.ts";
 
 const PLAN = `---
@@ -73,7 +74,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
 
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 describe("phase-files", () => {

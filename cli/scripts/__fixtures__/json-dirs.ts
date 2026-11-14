@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** A json file with its keys out of order, first at "hooks", and the same file sorted. */
 export const UNSORTED = '{\n  "name": "x",\n  "hooks": {\n    "Stop": 1,\n    "Pre": 2\n  }\n}\n';
@@ -12,7 +13,7 @@ const temps: string[] = [];
 
 /** Removes every dir made since the last call; each test file runs it after each test. */
 export function cleanJsonDirs(): void {
-  for (const folder of temps.splice(0)) fs.rmSync(folder, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 }
 
 /** A temp dir with `files` written under it; `repo` makes it a git repo. */

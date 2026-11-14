@@ -12,6 +12,7 @@ import { JSON_INDENT, NO_PACKS, isOldDefaultScript, SYNC_COMMAND, SYNC_POSTINSTA
 import { PRINT_WIDTH } from "./lint/max-line-width.constants.ts";
 import { packageJsonSchema, readJsonFile, type PackageJson } from "./package-json.ts";
 import { placeDevDependency } from "./place-dev-dependency.ts";
+import { removeTree } from "./remove-tree.ts";
 import { captureTool } from "./scripts/lint.ts";
 import { execFileSync } from "./spawn.ts";
 import { oldConfigHint } from "./sync/migrate-config-name.ts";
@@ -136,7 +137,7 @@ function formatManifest(dest: string): void {
     fs.writeFileSync(config, JSON.stringify({ printWidth: PRINT_WIDTH, sortPackageJson: true }));
     captureTool("bun fmt", ["--config", config, "package.json"], dest);
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

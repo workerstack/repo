@@ -12,7 +12,7 @@ const locked: string[] = [];
 
 afterEach(() => {
   for (const dir of locked.splice(0)) fs.chmodSync(dir, 0o700);
-  for (const dir of made.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(made.splice(0));
 });
 
 function tmp(): string {

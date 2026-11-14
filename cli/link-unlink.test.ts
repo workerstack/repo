@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { linkedPair } from "./__fixtures__/link-two.ts";
 import { NAME, NONE, mod, npmCopy, scene, stateFile, stateOf } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
+import { removeTree } from "./remove-tree.ts";
 
 it("puts npm back and says which version", async () => {
   const w = scene();
@@ -86,7 +87,7 @@ it("prints the captured output to stderr and exits 1 when the install fails", as
 it("forgets a link whose copy is gone without installing", async () => {
   const w = scene();
   await main([NAME], w.io());
-  fs.rmSync(mod(w.main, NAME), { recursive: true });
+  removeTree(mod(w.main, NAME));
   w.out.length = 0;
   expect(await unlinkMain([NAME], w.io())).toBe(0);
   expect(w.installs).toStrictEqual([]);

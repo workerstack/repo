@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { indexText, lesson, repo, save } from "./__fixtures__/lessons-kit.ts";
 import { checkLessons } from "./lessons-check.ts";
@@ -108,7 +109,7 @@ describe("writeIndex and checkLessons", () => {
     expect(checkLessons({ workspaceRoot: ws }).join("; ")).toMatch(/INDEX\.md is out of date/);
     writeIndex({ workspaceRoot: ws });
     fs.writeFileSync(path.join(ws, LESSONS_DIR, "broken.md"), "no frontmatter\n");
-    fs.rmSync(path.join(ws, "src"), { recursive: true });
+    removeTree(path.join(ws, "src"));
     const errors = checkLessons({ workspaceRoot: ws }).join("; ");
     expect(errors).toMatch(/broken\.md/);
     expect(errors).toMatch(/src\/\*\* matches no file/);

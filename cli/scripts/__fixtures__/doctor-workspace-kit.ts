@@ -9,6 +9,7 @@ import { IGNORED_DIRS, REPO } from "../../repo-dirs.ts";
 import type { DoctorResult } from "../doctor.types.ts";
 import { addWorktree } from "../worktree-lifecycle.ts";
 import { cleanLater, runDoctor, tmp, writeRequired } from "./doctor-kit.ts";
+import { removeTree } from "../../remove-tree.ts";
 
 /** The ignore lines for the ignored `.repo` dirs. */
 export const REPO_IGNORES: string = IGNORED_DIRS.map((d) => `**/${REPO}/${d}/\n`).join("");
@@ -77,7 +78,7 @@ export function seedLeftovers(r: string) {
   cleanLater(outside);
   git(r, "worktree", "add", "-q", "-b", "spike", outside);
   const gone = addWorktree(r, "gone").path;
-  fs.rmSync(gone, { force: true, recursive: true });
+  removeTree(gone);
   const m = addWorktree(r, "m").path;
   commitIn(m, "m.txt");
   git(r, "merge", "-q", "wt/m");

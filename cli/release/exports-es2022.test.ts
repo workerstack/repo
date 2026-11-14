@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import { SLOW } from "../scripts/__fixtures__/turn-repo.ts";
 import { exportSubpaths } from "./exports.ts";
 
@@ -71,7 +72,7 @@ describe("exported source under the consumer's ES2022 lib", () => {
         "late.ts(1,39): error TS2339: Property 'toReversed' does not exist on type 'readonly [1, 2]'.",
       ]);
     } finally {
-      fs.rmSync(dir, { force: true, recursive: true });
+      removeTree(dir);
     }
   });
 });

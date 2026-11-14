@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { listedFiles } from "../docs-index.ts";
+import { removeTree } from "../remove-tree.ts";
 import { VALID_LESSON } from "../scripts/__fixtures__/persist-bodies.ts";
 import { GOLDEN_INDEX, INDEX, context, copyFixtureWs, indexText } from "./__fixtures__/maps-kit.ts";
 import { put, useTempDirs } from "./__fixtures__/temp-dirs.ts";
@@ -98,7 +99,7 @@ it("writes the lessons index, tracked, from the lesson files", () => {
 
 it("reports a lesson whose paths match nothing, and still writes the index", () => {
   const ws = withLesson();
-  fs.rmSync(path.join(ws, "src"), { recursive: true });
+  removeTree(path.join(ws, "src"));
   const result = lessons(context(ws));
   expect(result.errors).toStrictEqual([expect.stringMatching(/src\/\*\* matches no file/)]);
   expect(result.outputs).toHaveLength(1);

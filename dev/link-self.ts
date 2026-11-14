@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { childEnv } from "../cli/env.ts";
+import { removeTree } from "../cli/remove-tree.ts";
 import { toolEnv } from "../cli/scripts/tool-env.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import * as K from "./link-self.constants.ts";
@@ -33,7 +34,7 @@ function ensureLink(link: string, { target, abs, dir }: LinkTo): Result {
 
   if (current !== null && path.normalize(current) === path.normalize(want)) return "current";
   fs.mkdirSync(path.dirname(link), { recursive: true });
-  fs.rmSync(link, { force: true, recursive: true });
+  removeTree(link);
   fs.symlinkSync(want, link, win ? "junction" : undefined);
 
   return "linked";

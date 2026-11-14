@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { cleanTemps, consumer, SLOW } from "./__fixtures__/baseline-repo.ts";
 import { spies } from "./__fixtures__/lint-scripts-kit.ts";
 import { lintMain } from "./lint-main.ts";
@@ -51,7 +52,7 @@ it("lint --fix runs a single pass where git lists no files", { timeout: SLOW }, 
   const { read, root } = interacting();
   const dotGit = path.join(root, ".git");
   spies();
-  fs.rmSync(dotGit, { force: true, recursive: true });
+  removeTree(dotGit);
   fs.writeFileSync(dotGit, "gitdir: missing\n");
   process.chdir(root);
   await lintMain(["--fix", "src/a.ts"]);

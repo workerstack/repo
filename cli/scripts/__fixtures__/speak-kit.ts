@@ -7,10 +7,11 @@ import { loadCfg } from "../speak-config.ts";
 import type { FetchResult } from "../listen.types.ts";
 import type { FetchFn, SpeakCfg } from "../speak.types.ts";
 import { fetchResult } from "./fetch-result.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(dirs.splice(0));
 });
 
 /** A fresh planted directory, removed after the case. */

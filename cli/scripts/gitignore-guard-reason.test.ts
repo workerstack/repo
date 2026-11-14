@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { redundantIgnoreLines, redundantIgnoreReason } from "./redundant-ignore-lines.ts";
 
 const dirs: string[] = [];
@@ -12,7 +13,7 @@ const dirs: string[] = [];
 afterEach(() => {
   vi.unstubAllEnvs();
 
-  for (const d of dirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
 });
 
 function tmpDir(prefix: string) {

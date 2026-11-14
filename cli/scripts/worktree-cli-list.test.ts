@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { aliasOf } from "../../dev/test-paths";
+import { removeTree } from "../remove-tree.ts";
 import {
   addOrigin,
   captured,
@@ -30,7 +31,7 @@ it("lists every linked worktree with its state", () => {
   const r = tmp.repo();
   cli(r, ["add", "auth"]);
   cli(r, ["add", "gone"]);
-  fs.rmSync(wt(r, "gone"), { force: true, recursive: true });
+  removeTree(wt(r, "gone"));
   const outside = `${r}-outside`;
   git(r, "worktree", "add", "-q", outside, "-b", "spike");
   write(path.join(outside, "scratch.txt"), "x");

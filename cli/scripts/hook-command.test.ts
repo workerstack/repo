@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { expect, it, onTestFinished } from "vitest";
 
 import { fwd } from "../../dev/test-paths.ts";
+import { removeTree } from "../remove-tree.ts";
 import { repoEnv } from "../repo-env.ts";
 import { mainWithOutWorktree } from "./__fixtures__/worktree-repo.ts";
 import {
@@ -22,7 +23,7 @@ import {
 /** A temp dir removed when the test ends. */
 function tempDir(prefix: string): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  onTestFinished(() => fs.rmSync(dir, { force: true, recursive: true }));
+  onTestFinished(() => removeTree(dir));
 
   return dir;
 }

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { removeTree } from "../cli/remove-tree.ts";
 import { rootEnv, rootPath } from "./temp-root-env.ts";
 
 let dir = "";
@@ -18,7 +19,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
-  fs.rmSync(dir, { force: true, recursive: true });
+  removeTree(dir);
 });
 
 describe("the run root's path", () => {

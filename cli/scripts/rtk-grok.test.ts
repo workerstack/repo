@@ -4,8 +4,10 @@ import path from "node:path";
 
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { plantProgram } from "../__fixtures__/stub-bin.ts";
 import type { Json } from "../json.ts";
+import { removeTree } from "../remove-tree.ts";
 import { repoEnv } from "../repo-env.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
 import type { HookOutput } from "./gate-harness.ts";
@@ -26,7 +28,7 @@ const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
 
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 function tmp(prefix: string): string {
@@ -39,7 +41,7 @@ function tmp(prefix: string): string {
 let shared: string | undefined;
 
 afterAll(() => {
-  if (shared !== undefined) fs.rmSync(shared, { force: true, recursive: true });
+  if (shared !== undefined) removeTree(shared);
 });
 
 /** A directory holding an `rtk` that runs the stub; built once, since win32 compiles it to an .exe. */

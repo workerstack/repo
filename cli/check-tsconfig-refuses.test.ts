@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -16,6 +15,7 @@ import {
   write,
 } from "./__fixtures__/tsconfig-kit.ts";
 import { checkTsconfigs } from "./check-tsconfig.ts";
+import { removeTree } from "./remove-tree.ts";
 
 useTsconfigKit();
 
@@ -56,7 +56,7 @@ describe("checkTsconfigs", () => {
     const dir = consumerRepo();
     write(dir, "gone/tsconfig.json", { include: ["src"] });
     execFileSync("git", ["add", "gone/tsconfig.json"], { cwd: dir });
-    fs.rmSync(path.join(dir, "gone"), { recursive: true });
+    removeTree(path.join(dir, "gone"));
     expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 

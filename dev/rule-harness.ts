@@ -11,6 +11,7 @@ import * as parser from "@typescript-eslint/parser";
 import { TSESLint } from "@typescript-eslint/utils";
 
 import type { RepoRule } from "../cli/lint/rule.types.ts";
+import { removeTree } from "../cli/remove-tree.ts";
 
 /** Repo-relative path → source; package.json files among them are read by rules that read manifests. */
 export type Fixture = Record<string, string>;
@@ -58,7 +59,7 @@ function inFixture<T>(fixture: Fixture, lint: (dir: string) => T): T {
 
     return lint(dir);
   } finally {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 }
 

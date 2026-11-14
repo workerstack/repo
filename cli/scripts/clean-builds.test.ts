@@ -1,11 +1,14 @@
-import type fs from "node:fs";
-
 import { expect, it } from "vitest";
 
 import { build, buildRepo, cleanDirs, exists } from "./__fixtures__/clean-kit.ts";
 import { size } from "./clean-run.ts";
 
 const tempDir = cleanDirs();
+
+/** A remove that always finds the path busy. */
+function busy(): never {
+  throw Object.assign(new Error("busy"), { code: "EBUSY" });
+}
 
 it(
   "repo clean --build removes the ignored caches and tsbuildinfo, " +
@@ -26,10 +29,6 @@ it("repo clean --build takes the dir names the config adds", () => {
 });
 
 it("repo clean --build says why a path it cannot remove was skipped, and exits 1", () => {
-  const busy = (() => {
-    throw Object.assign(new Error("busy"), { code: "EBUSY" });
-  }) /* the stand-in takes the path and options the report passes */ as typeof fs.rmSync;
-
   const second = build(buildRepo(tempDir), { rm: busy });
   expect(second.code).toBe(1);
   expect(second.lines).toContain("skipped .next: EBUSY");

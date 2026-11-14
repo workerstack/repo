@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { commitIn, git, hasBranch, scratch, write, wt } from "./__fixtures__/worktree-repo.ts";
 import { mergedAndDirtyWorktrees } from "./__fixtures__/worktree-scenarios.ts";
 import { defaultBranch, hasOwnCommits, isMerged } from "./worktree-git.ts";
@@ -32,7 +33,7 @@ it("lists each linked worktree with its state, merge status and whether it is ma
   addWorktree(r, "done");
   commitIn(wt(r, "done"), "done.txt");
   git(r, "merge", "-q", "--no-edit", "wt/done");
-  fs.rmSync(wt(r, "gone"), { recursive: true });
+  removeTree(wt(r, "gone"));
   const outside = outsideOf(r);
   write(path.join(outside, "scratch.txt"), "x");
   git(outside, "switch", "-q", "--detach");

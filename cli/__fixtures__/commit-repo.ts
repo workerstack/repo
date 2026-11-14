@@ -3,11 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { removeTemps as removeEach } from "./remove-temps.ts";
+
 const temps: string[] = [];
 
 /** Removes every dir `tempDir` made; call it from an `afterEach`. */
 export function removeTemps(): void {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeEach(temps.splice(0));
 }
 
 /** A new temp dir with symlinks resolved, removed by `removeTemps`. */

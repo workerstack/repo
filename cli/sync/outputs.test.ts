@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import type { Pack } from "../config.ts";
+import { removeTree } from "../remove-tree.ts";
 import { context } from "./__fixtures__/context-kit.ts";
 import { benchWorkflow } from "./bench-workflow.ts";
 import { evalWorkflow } from "./eval-workflow.ts";
@@ -96,7 +97,7 @@ function withLessonsDir(packs: Pack[]) {
 
     return lessons({ ...context({ packs }), root });
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    removeTree(root);
   }
 }
 

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTree } from "../cli/remove-tree.ts";
 import { aliasOf, bunPath, installedBin, linkText, removeAlias, shellForm } from "./test-paths.ts";
 
 const dirs: string[] = [];
@@ -11,7 +12,7 @@ const dirs: string[] = [];
 afterEach(() => {
   for (const dir of dirs.splice(0)) {
     removeAlias(`${dir}-alias`);
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   }
 });
 

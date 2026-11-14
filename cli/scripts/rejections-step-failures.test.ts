@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { cleanTemps, tempDir, write } from "./__fixtures__/turn-repo.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import type { Turn } from "./turn-steps.ts";
@@ -40,7 +41,7 @@ it("a root git cannot list fails the step with git's reason", () => {
     expect(result?.label).toBe("rejections failed");
     expect(result?.output[0]).toMatch(/^repo turn: git ls-files failed: .*not a git repository/);
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    removeTree(root);
   }
 });
 

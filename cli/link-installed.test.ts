@@ -6,10 +6,11 @@ import { afterAll, expect, it } from "vitest";
 
 import { markersIn, readVersion } from "./link-installed.ts";
 import { MARKER_FILE, MODULES } from "./link.constants.ts";
+import { removeTree } from "./remove-tree.ts";
 
 const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-link-installed-")));
 
-afterAll(() => fs.rmSync(root, { force: true, recursive: true }));
+afterAll(() => removeTree(root));
 
 /** Writes `text` as `file` of the installed package `name`, and returns the package's dir. */
 function installed(name: string, file: string, text: string): string {

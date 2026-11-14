@@ -5,6 +5,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { oxlintCatalog } from "../../dev/oxlint-catalog.ts";
+import { removeTree } from "../remove-tree.ts";
 import { captureTool } from "../scripts/lint.ts";
 import catalog from "./oxlint-catalog.json" with { type: "json" };
 import { OFF_RULES } from "./oxlint-rules.ts";
@@ -18,7 +19,7 @@ function installedCatalog(): Record<string, string> {
   try {
     return oxlintCatalog(captureTool("oxlint", ["--rules", "--format=json"], root).stdout);
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    removeTree(root);
   }
 }
 

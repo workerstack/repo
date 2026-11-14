@@ -12,6 +12,7 @@ import { childEnv } from "../../env.ts";
 import { runDoctor as runDoctorImpl } from "../doctor.ts";
 import { globalsRow } from "../doctor-rows.ts";
 import type { DoctorResult } from "../doctor.types.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 export const here = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const script = fileURLToPath(new URL("../../../bin/repo.ts", import.meta.url));
@@ -21,7 +22,7 @@ useTempDirs();
 /** The skill packs the next `runDoctor` call sees as `agents.skills`. */
 let skills: readonly string[] = [];
 afterEach(() => {
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
   skills = [];
 });
 

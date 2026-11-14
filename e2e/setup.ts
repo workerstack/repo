@@ -13,6 +13,7 @@ import type { TestProject } from "vitest/node";
 
 import { tryJson } from "../cli/json.ts";
 import { packageJsonSchema } from "../cli/package-json.ts";
+import { removeTree } from "../cli/remove-tree.ts";
 import { repoEnv } from "../cli/repo-env.ts";
 import { packRepo, publish, type Registry, retagTarball, startRegistry } from "./registry";
 
@@ -128,7 +129,7 @@ export async function setup(project: TestProject) {
       await reg?.close();
     } finally {
       if ((repoEnv.process.REPO_E2E_KEEP ?? "") !== "") process.stdout.write(`kept e2e run root: ${runRoot}\n`);
-      else if (remove) fs.rmSync(runRoot, { force: true, recursive: true });
+      else if (remove) removeTree(runRoot);
     }
   }
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import {
   ownedFlat,
   readJson,
@@ -84,7 +85,7 @@ it("leaves a repo with no autorun scripts as rulesync wrote it", () => {
 
 it("writes the file when rulesync wrote none", () => {
   const ws = consumerRepo("union-cursor-new-");
-  fs.rmSync(path.join(ws, ".cursor"), { recursive: true });
+  removeTree(path.join(ws, ".cursor"));
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(cursorHooks(ws).version).toBe(1);
   expect(cursorHooks(ws).hooks.sessionStart.map(scriptOf)).toStrictEqual([

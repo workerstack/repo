@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { offSkills } from "../config.ts";
+import { removeTree } from "../remove-tree.ts";
 import { renderTasks } from "../scripts/vscode-tasks.ts";
 import { agentsFile, isAgentsFile } from "./agents-file.ts";
 import { loadSources } from "./agents/load-sources.ts";
@@ -138,7 +139,7 @@ export function renderTrees(ctx: SyncContext): TreesResult {
     result = { errors, ok: false };
   }
 
-  fs.rmSync(stage, { force: true, recursive: true });
+  removeTree(stage);
 
   return result;
 }

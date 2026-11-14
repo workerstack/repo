@@ -4,10 +4,11 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import { checkWorkspace } from "../check-workspace.ts";
 import { readWorkspace } from "../sync/workspace.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 const temps: string[] = [];
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(temps.splice(0));
 });
 
 export const ROOT = { private: true, workspaces: ["packages/*"], catalog: { zod: "^4.0.0", vitest: "^4.0.0" } };

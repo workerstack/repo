@@ -11,6 +11,7 @@ import { closingBlock } from "../closing-line.ts";
 import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import { mainWith } from "../orchestrate-parent.ts";
 import type { Approvable, Strategy } from "../strategy.types.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** The parent hook on the built-in agents defaults, answered in this process. */
 const main = mainWith(AGENT_DEFAULTS);
@@ -81,10 +82,7 @@ export interface OrchestrateKit {
 export function orchestrateKit(): OrchestrateKit {
   const dirs: string[] = [];
   afterEach(() => {
-    for (const d of dirs.splice(0)) {
-      fs.rmSync(d, { recursive: true, force: true });
-      fs.rmSync(`${d}-alias`, { force: true });
-    }
+    removeTemps(dirs.splice(0).flatMap((d) => [d, `${d}-alias`]));
   });
   const temp = (prefix = "orchestrate-parent-"): string => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));

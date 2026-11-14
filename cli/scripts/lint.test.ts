@@ -9,6 +9,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { standardsFiles } from "../__fixtures__/standards-files.ts";
 import { useTempTree } from "../__fixtures__/temp-tree.ts";
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import { captureTool, fmt, lint, runTool, type RunTool } from "./lint.ts";
 
 const BIN = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../bin/repo.ts");
@@ -30,7 +31,7 @@ const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"))
 
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
 
-afterAll(() => fs.rmSync(BUN_ONLY, { force: true, recursive: true }));
+afterAll(() => removeTree(BUN_ONLY));
 
 const NON_NULL = 'export function a(names: string[]): string {\n  return names.find((name) => name !== "")!;\n}\n';
 const FLOATING = "export function start(load: () => Promise<void>): void {\n  load();\n}\n";

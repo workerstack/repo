@@ -1,9 +1,8 @@
-import fs from "node:fs";
-
 import { installedDir, markersIn, readVersion } from "./link-installed.ts";
 import type { LinkContext } from "./link-io.types.ts";
 import { readState, writeState } from "./link-state.ts";
 import { EXIT_FAIL, NOT_INSTALLED, NO_LINKS, installFailed, unlinkedLine } from "./link.constants.ts";
+import { removeTree } from "./remove-tree.ts";
 
 /** Which links a command takes out: one name, or every one the state or a marker knows. */
 export type UnlinkScope = { all: true } | { all: false; name: string };
@@ -44,7 +43,7 @@ export function unlinkScope(ctx: LinkContext, scope: UnlinkScope): number {
   for (const name of names) delete state[name];
   writeState(root, state);
 
-  for (const name of removed) fs.rmSync(installedDir(root, name), { force: true, recursive: true });
+  for (const name of removed) removeTree(installedDir(root, name));
 
   if (removed.length > 0 && !installed(ctx, root)) return EXIT_FAIL;
 

@@ -29,6 +29,7 @@ import {
   typecheckCrash,
   under,
 } from "./docs.constants.ts";
+import { removeTree } from "./remove-tree.ts";
 import type { Captured } from "./scripts/lint.ts";
 
 /** The tools an example check runs: `tsc` with its arguments, and `bun`. Each runs in `cwd` and is captured. */
@@ -94,7 +95,7 @@ function fileOf(block: Block): string {
 function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
   const scratch = path.join(ctx.root, SCRATCH_DIR, ctx.dir);
   const own = path.join(ctx.root, ctx.dir, TSCONFIG_FILE);
-  fs.rmSync(scratch, { force: true, recursive: true });
+  removeTree(scratch);
 
   for (const block of blocks) {
     const file = path.join(scratch, fileOf(block));

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import type { Json } from "../json.ts";
 import { OK, PASSED, plant } from "../scripts/__fixtures__/ci-run.ts";
 import { cleanTemps } from "../scripts/__fixtures__/turn-repo.ts";
@@ -14,7 +15,7 @@ import { rustTests } from "./rust-tests.ts";
 const dirs: string[] = [];
 
 afterEach(() => {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(dirs.splice(0));
   cleanTemps();
 });
 

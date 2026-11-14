@@ -2,12 +2,13 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 const temps: string[] = [];
 
 /** Removes every dir made since the last call; each test file runs it after each test. */
 export function cleanSkillDirs(): void {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(temps.splice(0));
 }
 
 /** A fresh temp dir named from `prefix`. */

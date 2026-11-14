@@ -72,5 +72,6 @@ export type BuildRun = {
   dryRun: boolean;
   names: readonly string[];
   out: (line: string) => void;
-  rm?: typeof fs.rmSync | undefined;
+  /** Removes one planned path and what is under it; tests pass a failing one. */
+  rm?: ((target: string) => void) | undefined;
 };

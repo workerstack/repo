@@ -10,6 +10,7 @@ import { Readable } from "node:stream";
 import { describe, expect, it, onTestFinished } from "vitest";
 
 import { childEnv } from "../env.ts";
+import { removeTree } from "../remove-tree.ts";
 import { isKeyName, isScopeName, parseArgs, type ArgSpec } from "./env-args.ts";
 import { guarded, hiddenPrompt, inputRunner, ioOf, repoRoot, spawnInherit, textOf } from "./env-io.ts";
 
@@ -21,7 +22,7 @@ const GET: ArgSpec = { command: "none", switches: ["--reveal"], values: ["--scop
 function tempDir(): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "env-io-"));
   onTestFinished(() => {
-    fs.rmSync(dir, { force: true, recursive: true });
+    removeTree(dir);
   });
 
   return dir;

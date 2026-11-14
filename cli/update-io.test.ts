@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { expect, it } from "vitest";
 
+import { removeTree } from "./remove-tree.ts";
 import { formatFiles, updateIo } from "./update-io.ts";
 
 it("formats files and reports the tool's code and output", () => {
@@ -15,7 +16,7 @@ it("formats files and reports the tool's code and output", () => {
     expect(result.code).toBeTypeOf("number");
     expect(result.output).toBeTypeOf("string");
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    removeTree(root);
   }
 });
 

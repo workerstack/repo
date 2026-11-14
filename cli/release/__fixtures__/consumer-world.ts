@@ -3,6 +3,7 @@ import { tempDir, write } from "../../__fixtures__/planted-repo.ts";
 import { spawnRunner } from "../../scripts/ci-wait-run.ts";
 import type { Runner } from "../../scripts/ci-wait.ts";
 import { releaseConsumer, tscScript } from "../consumer.ts";
+import { removeTree } from "../../remove-tree.ts";
 
 export const TIMEOUT = 120_000;
 const TSC = tscScript();
@@ -30,7 +31,7 @@ export async function consume(cwd: string, argv: string[] = [], tools: Tools = {
       return dir;
     },
     list: tools.list ?? ((dir) => fs.readdirSync(dir)),
-    rm: (dir) => fs.rmSync(dir, { recursive: true, force: true }),
+    rm: (dir) => removeTree(dir),
     tsc: TSC,
   });
   return { code, out: out.join(""), err: err.join(""), tmp, made };

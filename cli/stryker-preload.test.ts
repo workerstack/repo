@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { childEnv } from "./env.ts";
+import { removeTree } from "./remove-tree.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
 
@@ -23,7 +24,7 @@ new C();
 
 let dir = "";
 
-afterEach(() => fs.rmSync(dir, { force: true, recursive: true }));
+afterEach(() => removeTree(dir));
 
 function repro({ preload }: { preload: boolean }) {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), "stryker-preload-"));

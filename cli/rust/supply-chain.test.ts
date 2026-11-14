@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import type { GitRun } from "../sync/standards.ts";
 import { cargoLock } from "./__fixtures__/cargo-lock.ts";
 import type { CargoResult } from "./clippy.ts";
@@ -15,7 +16,7 @@ const MISSING_CARGO = "Cargo.toml is here but cargo is not on PATH; install rust
 const TEMPS: string[] = [];
 
 afterAll(() => {
-  for (const dir of TEMPS) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(TEMPS);
 });
 
 /** A temp root holding the named files. */

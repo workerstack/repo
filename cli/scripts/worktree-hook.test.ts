@@ -2,6 +2,7 @@ import fs from "node:fs";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { removeTree } from "../remove-tree.ts";
 import { commitIn, git, hasBranch, scratch, wt } from "./__fixtures__/worktree-repo.ts";
 import type { HookInput } from "./hook-input.ts";
 import { addWorktree } from "./worktree-lifecycle.ts";
@@ -74,7 +75,7 @@ it("finds the branch by the dir name when git already forgot the worktree", () =
 it("removes a worktree whose dir is already gone", () => {
   const r = tmp.repo();
   addWorktree(r, "g");
-  fs.rmSync(wt(r, "g"), { recursive: true });
+  removeTree(wt(r, "g"));
   expect(worktreeHook(remove(r, "g"))).toStrictEqual(ok);
   expect(git(r, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1);
   expect(hasBranch(r, "wt/g")).toBe(false);

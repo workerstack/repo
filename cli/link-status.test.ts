@@ -6,6 +6,7 @@ import { expect, it, vi } from "vitest";
 import { linkedPair } from "./__fixtures__/link-two.ts";
 import { NAME, NONE, USAGE, mod, put, scene, stateFile } from "./__fixtures__/link-world.ts";
 import { main, unlinkMain } from "./link.ts";
+import { removeTree } from "./remove-tree.ts";
 
 it("lists each link with its versions and sync time", async () => {
   const w = scene();
@@ -46,7 +47,7 @@ it("shows a swapped dir whose state entry a lost race dropped", async () => {
 
 it("reports status without an install dir as no links", async () => {
   const w = scene();
-  fs.rmSync(mod(w.main), { recursive: true });
+  removeTree(mod(w.main));
   expect(await main(["status"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([NONE]);
 });

@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { processFatTools } from "./gate-fat-tools.ts";
 import { type ToolArgs } from "./gate-harness.ts";
 import { GLOB_IGNORE } from "./gate-limits.ts";
@@ -28,7 +29,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllEnvs();
 
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 function call(toolName: string, toolInput: ToolArgs, cwd = ws) {

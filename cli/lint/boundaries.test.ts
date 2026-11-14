@@ -6,6 +6,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { reportsOf } from "../../dev/rule-harness.ts";
 import { fwd } from "../../dev/test-paths.ts";
+import { removeTree } from "../remove-tree.ts";
 import { boundaries } from "./boundaries.ts";
 
 /** A repo of real packages: the rule reads each file's nearest package.json from disk. */
@@ -182,7 +183,7 @@ it("skips a file with no package.json at or above it", () => {
 describe("boundaries on an absolute specifier", () => {
   const other = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-boundaries-")));
   fs.writeFileSync(path.join(other, "package.json"), JSON.stringify({ name: "@app/other" }));
-  afterAll(() => fs.rmSync(other, { force: true, recursive: true }));
+  afterAll(() => removeTree(other));
 
   it("fails one into another package, naming that package", () => {
     // Forward slashes: a backslash in a string literal is an escape.

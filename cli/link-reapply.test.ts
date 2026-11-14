@@ -17,10 +17,11 @@ import {
 } from "./__fixtures__/link-world.ts";
 import { reapplyAt, reapplyLinks } from "./link-reapply.ts";
 import { main, unlinkMain } from "./link.ts";
+import { removeTree } from "./remove-tree.ts";
 
 /** What `bun install` does to a linked package: puts the npm copy back. */
 function installAgain(root: string, version: string): void {
-  fs.rmSync(mod(root, NAME), { force: true, recursive: true });
+  removeTree(mod(root, NAME));
   npmCopy(root, NAME, version);
 }
 
@@ -44,7 +45,7 @@ it("warns for a source that is gone and leaves npm in place", async () => {
   const w = scene();
   await main([NAME], w.io());
   installAgain(w.main, "0.3.3");
-  fs.rmSync(w.flare, { recursive: true });
+  removeTree(w.flare);
   w.out.length = 0;
   expect(await reapplyLinks(w.io())).toBe(0);
   expect(w.err).toStrictEqual([
@@ -98,7 +99,7 @@ it("says nothing and writes nothing with no links, no install dir, or no state",
   const w = scene();
   expect(await reapplyLinks(w.io())).toBe(0);
   expect(fs.existsSync(stateFile(w.main))).toBe(false);
-  fs.rmSync(mod(w.main), { recursive: true });
+  removeTree(mod(w.main));
   expect(await reapplyLinks(w.io())).toBe(0);
   expect([w.out, w.err]).toStrictEqual([[], []]);
 });
@@ -137,7 +138,7 @@ it("reapplies from a directory and prints a line each through the given writers"
   };
 
   await reapplyAt(w.main, writers);
-  fs.rmSync(w.flare, { recursive: true });
+  removeTree(w.flare);
   await reapplyAt(w.main, writers);
   expect(lines).toStrictEqual([
     `out repo link: relinked ${NAME} 0.4.0-dev from ${w.flare}\n`,

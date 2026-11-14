@@ -7,6 +7,7 @@ import { findRoot, loadConfig, missingConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
 import type { MutateDeps, MutateFs } from "./mutate-deps.ts";
 import { CARGO_MANIFEST, ROOT_PACKAGE } from "./mutate.constants.ts";
+import { removeTree } from "./remove-tree.ts";
 import { workspaceCrates } from "./rust/cargo-metadata.ts";
 import { runCargo, type CargoRun } from "./rust/clippy.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
@@ -25,7 +26,7 @@ export const realFs: MutateFs = {
   list: (dir) => (fs.existsSync(dir) ? fs.readdirSync(dir) : null),
   mkdtemp: (prefix) => fs.mkdtempSync(path.join(os.tmpdir(), prefix)),
   read: (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null),
-  rm: (target) => fs.rmSync(target, { force: true, recursive: true }),
+  rm: (target) => removeTree(target),
   write: (file, text) => {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, text);

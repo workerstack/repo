@@ -3,12 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import type { KnipRun } from "../knip-check.ts";
 import type { Workspace } from "../sync/workspace.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 const dirs: string[] = [];
 
 /** Removes every root `knipRoot` made; call it from an `afterEach`. */
 export function removeKnipRoots(): void {
-  for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(dirs.splice(0));
 }
 
 /** A temp root holding `files` (path to text) and a manifest declaring `dependencies`, as its workspace. */

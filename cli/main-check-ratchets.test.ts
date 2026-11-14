@@ -1,10 +1,9 @@
-import fs from "node:fs";
-
 import { expect, it } from "vitest";
 
 import { commitMain, writeConfigs } from "./__fixtures__/check-repo.ts";
 import { useMainCheckRepo } from "./__fixtures__/main-check-repo.ts";
 import { start } from "./main.ts";
+import { removeTree } from "./remove-tree.ts";
 
 const { fakes, repo } = useMainCheckRepo();
 
@@ -33,7 +32,7 @@ it("fails an it.fails case that known-failures.json does not list", { timeout: 6
 
 it("reads no test files outside a git checkout", async () => {
   writeConfigs(repo);
-  fs.rmSync(`${repo.dir()}/.git`, { force: true, recursive: true });
+  removeTree(`${repo.dir()}/.git`);
   await start(fakes);
   expect(repo.besidesKnip()).toBe("");
   expect(process.exitCode).toBe(0);

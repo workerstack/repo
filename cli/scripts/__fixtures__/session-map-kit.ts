@@ -8,6 +8,7 @@ import { afterEach, vi } from "vitest";
 
 import { main as sessionMain } from "../session-map.ts";
 import { runHook } from "./run-hook.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 export type MapOutput = {
   hookSpecificOutput: { hookEventName: string; additionalContext: string };
@@ -25,7 +26,7 @@ export type BoardRow = {
 const tmpDirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
-  for (const d of tmpDirs.splice(0)) fs.rmSync(d, { force: true, recursive: true });
+  removeTemps(tmpDirs.splice(0));
 });
 
 export function tmp(git: boolean) {

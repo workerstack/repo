@@ -8,6 +8,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { BASE_CONFIG } from "./base-config.ts";
 import { pkgRoot, pkgVersion, type MainFakes, type Written } from "./main-kit.ts";
 import { standards } from "../sync/standards.ts";
+import { removeTree } from "../remove-tree.ts";
 
 /** A fetch that answers every request with a registry document whose latest tag is `latest`. */
 export const latestFetch = (latest: string) => (): Promise<Response> =>
@@ -95,7 +96,7 @@ export function useCheckRepo(fakes: MainFakes, written: Written): CheckRepo {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
-    fs.rmSync(dir, { recursive: true, force: true });
+    removeTree(dir);
   });
   return repo;
 }

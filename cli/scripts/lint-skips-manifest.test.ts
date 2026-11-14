@@ -4,12 +4,13 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
+import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { checkLintSkipsAt } from "./lint-skips.ts";
 
 const temps: string[] = [];
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { force: true, recursive: true });
+  removeTemps(temps.splice(0));
 });
 
 it("checkLintSkipsAt hands a readable workspace to the skip check, which reports nothing with no skip", async () => {

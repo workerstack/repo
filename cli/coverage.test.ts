@@ -15,6 +15,7 @@ import {
   REPO_ROOT,
   RUN_MS,
 } from "./__fixtures__/coverage-project.ts";
+import { removeTree } from "./remove-tree.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 
 const { err, out, temps } = useCapturedRun();
@@ -169,7 +170,7 @@ it(
   { timeout: RUN_MS },
   async () => {
     const root = project(temps);
-    fs.rmSync(path.join(root, "src"), { recursive: true });
+    removeTree(path.join(root, "src"));
     expect(await coverage(root)).toBe(0);
     expect(floorsOf(root)).toStrictEqual({});
   },

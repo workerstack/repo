@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach } from "vitest";
 import { folderMap } from "../folder-map.ts";
 import type { MapOptions } from "../folder-map.types.ts";
+import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 
 /** A temp git repo maker; untracked unignored files count, so no commit is needed. Its dirs go after each case. */
 export function mapRepos(): {
@@ -14,7 +15,7 @@ export function mapRepos(): {
 } {
   const tmpDirs: string[] = [];
   afterEach(() => {
-    for (const d of tmpDirs.splice(0)) fs.rmSync(d, { recursive: true, force: true });
+    removeTemps(tmpDirs.splice(0));
   });
   const track = (dir: string): string => {
     tmpDirs.push(dir);

@@ -76,13 +76,13 @@ export type BuildResult = {
 /** Removes each item with `rm` unless `dryRun`; a failure is recorded and the rest go on. */
 export function removeBuild(
   items: readonly BuildItem[],
-  { dryRun, rm }: { dryRun: boolean; rm: typeof fs.rmSync },
+  { dryRun, rm }: { dryRun: boolean; rm: (target: string) => void },
 ): BuildResult {
   const result: BuildResult = { done: [], skipped: [] };
 
   for (const item of items) {
     try {
-      if (!dryRun) rm(item.path, { force: true, recursive: true });
+      if (!dryRun) rm(item.path);
       result.done.push(item);
     } catch (err) {
       result.skipped.push({

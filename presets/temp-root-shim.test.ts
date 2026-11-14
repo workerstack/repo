@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
+import { removeTree } from "../cli/remove-tree.ts";
 import { rootPath } from "./temp-root-env.ts";
 import { setup } from "./temp-root.ts";
 
@@ -27,7 +28,7 @@ afterEach(() => {
   process.exitCode = exitCode ?? 0;
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
-  fs.rmSync(parent, { force: true, recursive: true });
+  removeTree(parent);
 });
 
 it("lets a run pass that left only bun's node shim dir", () => {

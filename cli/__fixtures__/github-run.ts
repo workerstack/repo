@@ -1,8 +1,8 @@
-import fs from "node:fs";
 import { repoGithub } from "../github-apply.ts";
 import type { GhFailure } from "../github-gh.ts";
 import { GITHUB_TEMPS } from "./github-repo.ts";
 import { fakeGh, type FakeGh, type Settings } from "./github-store.ts";
+import { removeTemps } from "./remove-temps.ts";
 
 export const DENIED: GhFailure = { ok: false, kind: "http", status: 403, message: "gh: Forbidden (HTTP 403)" };
 export const DENIED_LINE =
@@ -10,7 +10,7 @@ export const DENIED_LINE =
 
 /** Removes the checkouts `githubRepo` made; a test file passes it to `afterEach`. */
 export function cleanGithubTemps(): void {
-  for (const dir of GITHUB_TEMPS.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
+  removeTemps(GITHUB_TEMPS.splice(0));
 }
 
 /** Runs `repo github` in `cwd` against `fake`, returning the exit code and what it printed. */
