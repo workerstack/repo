@@ -64,11 +64,14 @@ export const EXCLUDED: readonly RegExp[] = [
 /**
  * The Stryker options this repo needs; see plan 55's Context for why each is set. `timeoutMS` is 60 s, not Stryker's
  * 5 s: a mutant past its limit scores `Timeout`, a kill, so a machine that stalls 5 s would turn a survivor into a
- * kill and raise a floor; a mutant that truly hangs only costs 60 s.
+ * kill and raise a floor; a mutant that truly hangs only costs 60 s. `dryRunTimeoutMinutes` is 30, not Stryker's 5:
+ * the first run covers the whole suite, which takes about 4.5 min on a fast machine and longer on a CI runner, and the
+ * shard's 180 min job limit still leaves room for its mutants.
  */
 export const STRYKER_OPTIONS = {
   coverageAnalysis: "perTest",
   disableTypeChecks: false,
+  dryRunTimeoutMinutes: 30,
   ignoreStatic: true,
   inPlace: true,
   reporters: ["json"],
