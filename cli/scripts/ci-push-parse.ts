@@ -2,22 +2,24 @@
  * Reads the `git push`, `repo push` and pull-request `repo worktree finish` forms out of a shell command: where each
  * runs, and which branch and commit it names.
  */
-import path from "node:path";
+import type path from "node:path";
 
 import { readWorkflow } from "../workflow.ts";
-import { CD, CONFIG_OPTION, DIR_OPTION, GIT, HEAD, PUSH } from "./ci-push-parse.constants.ts";
+import { HEAD, PUSH } from "./ci-push-parse.constants.ts";
 import { recordRoot } from "./ci-wait-record.ts";
 import type { Runner } from "./ci-wait-run.ts";
+import { commandAt } from "./command-at.ts";
 import { pickTarget } from "./push-target.ts";
 import { BUN, REPO } from "./push.constants.ts";
+import type { ReadWord, Scope, Simple, Visited } from "./shell-ast.types.ts";
+import { readWord } from "./shell-fields.ts";
+import { shellFlow } from "./shell-flow.ts";
+import { processEnv } from "./shell-vars.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import { worktreeName } from "./worktree-git.ts";
+import { gitCommandOf } from "./worktree-shell.ts";
 import { BRANCH_PREFIX, FINISH_CMD, WORKTREE_SUB } from "./worktree.constants.ts";
 
-const SEGMENT = /&&|\|\||[;|\n]/;
-const WORD = /"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<bare>\S+)/g;
-const ENV_ASSIGN = /^[A-Za-z_]\w*=/;
-const WINDOWS_PATH = /^([A-Za-z]:[\\/]|\\\\)/;
 const HEADS = "refs/heads/";
 const FORCE_PREFIX = /^\+/;
 
@@ -32,33 +34,19 @@ export type PushedRef = { branch: string; src: string; sha: string; dir: string 
 
 type Push = { dir: string; refs: string[] };
 
-/** `dir` from `base`, in the spelling of whichever side is a Windows path. */
-function resolveDir(base: string, dir: string): string {
-  const flavor = WINDOWS_PATH.test(dir) || WINDOWS_PATH.test(base) ? path.win32 : path;
-
-  return flavor.resolve(base, dir);
-}
-
-function wordsOf(text: string): string[] {
-  return [...text.matchAll(WORD)].map(({ groups }) => String(groups?.double ?? groups?.single ?? groups?.bare));
-}
-
-/** The push in `git <words>`, with the directory its `-C` options lead to; null for any other git command. */
-function parsePush(words: string[], base: string): Push | null {
-  let dir = base;
-  let i = 0;
-
-  for (; words[i]?.startsWith("-") === true; i++) {
-    if (words[i] === DIR_OPTION) dir = resolveDir(dir, String(words[++i]));
-    else if (words[i] === CONFIG_OPTION) i++;
-  }
-
-  return words[i] === PUSH ? { dir, refs: specsOf(words.slice(i + 1)) } : null;
-}
+/** What reads a push: the git runner, and the path module of the host the command runs on. */
+type Host = { git: Runner; p: typeof path };
 
 /** The refspecs among the words after `push`: every word past the remote that is not a flag. */
 function specsOf(rest: readonly string[]): string[] {
   return rest.filter((w) => !w.startsWith("-")).slice(1);
+}
+
+/** The refspecs of a `git push` the walk read: one with an unknown part as `HEAD`, the push it may be. */
+function walkedSpecs(rest: readonly ReadWord[]): string[] {
+  const known = rest.map((w) => (w.literal ? w.text : HEAD));
+
+  return specsOf(known);
 }
 
 /**
@@ -100,23 +88,37 @@ function parseRepo(git: Runner, words: string[], dir: string): Push | null {
 }
 
 /**
- * Every `git push`, `repo push` and pull-request `repo worktree finish` in a shell command, each with the directory it
- * runs in after the `cd`s before it.
+ * The push one visited command makes: a `git push` where git runs, a `repo` push form where the program runs, or for a
+ * script the gate cannot read, `HEAD` of its dir, the push it may make; null for any other command and an unknown dir.
  */
-function pushesIn(git: Runner, command: string, cwd: string): Push[] {
+function pushOf(c: Host, v: Visited): Push | null {
+  if (v.kind === "opaque") return v.dir.known ? { dir: v.dir.path, refs: [HEAD] } : null;
+
+  return v.data === undefined ? commandPush(c, v) : null;
+}
+
+/** The push of a command the walk read: git's in the dir git runs in, else a `repo` form's in the run dir. */
+function commandPush(c: Host, v: Simple & Scope): Push | null {
+  const g = gitCommandOf(v.words, v, c.p);
+
+  if (g !== null) return g.sub === PUSH && g.at.known ? { dir: g.at.path, refs: walkedSpecs(g.rest) } : null;
+  const words = v.words.slice(commandAt(v.words)).map((w) => readWord(w).text);
+
+  return v.dir.known ? parseRepo(c.git, words, v.dir.path) : null;
+}
+
+/**
+ * Every `git push`, `repo push` and pull-request `repo worktree finish` in a shell command, each with the dir it runs
+ * in, read from the shared bash walk.
+ */
+function pushesIn(c: Host, command: string, cwd: string): Push[] {
   const found: Push[] = [];
-  let here = cwd;
 
-  for (const segment of command.split(SEGMENT)) {
-    const words = wordsOf(segment);
-
-    while (ENV_ASSIGN.test(words[0] ?? "")) words.shift();
-
-    if (words[0] === CD && words[1] !== undefined && words[1] !== "") here = resolveDir(here, words[1]);
-    const push = words[0] === GIT ? parsePush(words.slice(1), here) : parseRepo(git, words, here);
+  shellFlow(command, { cwd, env: processEnv(), p: c.p }, (v) => {
+    const push = pushOf(c, v);
 
     if (push !== null) found.push(push);
-  }
+  });
 
   return found;
 }
@@ -156,8 +158,8 @@ function refsOfPush(git: Runner, { dir, refs }: Push): PushedRef[] {
 }
 
 /** Every branch ref the push forms in `command` update, resolved where each push runs. */
-export function pushedRefs(git: Runner, command: string, cwd: string): PushedRef[] {
-  return pushesIn(git, command, cwd).flatMap((p) => refsOfPush(git, p));
+export function pushedRefs(c: Host, command: string, cwd: string): PushedRef[] {
+  return pushesIn(c, command, cwd).flatMap((push) => refsOfPush(c.git, push));
 }
 
 /** Every branch ref `git push <rest>` updates when it runs in `dir`. */
