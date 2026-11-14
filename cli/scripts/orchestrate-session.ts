@@ -34,9 +34,16 @@ export function sessionFile(data: HookInput, name: string): string | null {
   return isRealSession(sid) ? path.join(sessionDir(data, sid), name) : null;
 }
 
-/** The plans and roadmaps this session saved, one absolute path a line, in first-save order. */
+/** The plans and roadmaps session `sid` saved, one absolute path a line, in first-save order. */
+export function approvalsPath(root: string, sid: string): string {
+  return repoPath(root, STATE, "sessions", sid, "approvals.txt");
+}
+
+/** This session's approvals file; null when the payload names no real session. */
 export function approvalsFile(data: HookInput): string | null {
-  return sessionFile(data, "approvals.txt");
+  const sid = sessionIdOf(data);
+
+  return isRealSession(sid) ? approvalsPath(resolveRoots(data).root, sid) : null;
 }
 
 /** A file's trimmed non-empty lines; none when it cannot be read. */

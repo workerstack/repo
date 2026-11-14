@@ -144,6 +144,7 @@ main
 dir])
   phase-files       Map a parallel group's unstaged changes to its phases
   speak             Text-to-speech
+  su                List a session's plans and roadmaps, or all changed in a window, with boxes and blockers
   worktree          Managed worktrees: add, finish, list, prune, hook
   ci                Run every gate (--report: skipped tests); skips <dir>: tests skipped on every OS; wait: the run \
 for HEAD
