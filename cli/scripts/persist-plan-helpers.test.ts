@@ -7,7 +7,7 @@ import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 import { extractH1, nextSerial, slugify, utcDate } from "./persist-doc.ts";
 import { extractMode, extractStrategy } from "./persist-keys.ts";
 import { parseMistakes, reviewErrors } from "./persist-mistakes.ts";
-import { extractCommit, injectFrontmatter } from "./persist-plan-head.ts";
+import { extractCommit, injectFrontmatter, stripCommitLine } from "./persist-plan-head.ts";
 import { reviewsToEnter } from "./persist-plan.constants.ts";
 import { cardErrors, usageErrors } from "./persist-sections.ts";
 
@@ -46,6 +46,16 @@ describe("plan name and serial helpers", () => {
     expect(extractStrategy(bare)).toBeUndefined();
     expect(extractCommit("---\ncommit: a: b")).toBe("a: b");
     expect(extractCommit("no commit here")).toBeUndefined();
+  });
+});
+
+describe("the commit line", () => {
+  it("reads an empty commit line as empty and strips only that line", () => {
+    const body = "commit:\n# title\n\ntext\n";
+    expect(extractCommit(body)).toBe("");
+    expect(stripCommitLine(body)).toBe("# title\n\ntext\n");
+    expect(extractCommit("commit: fix: y\r\n# t")).toBe("fix: y");
+    expect(stripCommitLine("commit: fix: y\r\n# t")).toBe("# t");
   });
 });
 

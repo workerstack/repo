@@ -58,8 +58,10 @@ export const PARALLEL_RE: RegExp = /\(parallel:(?<files>[^)]*)\)\s*$/;
 export const FILE_SPLIT_RE: RegExp = /[,\s]+/;
 
 export const PLAN_NAME_RE: RegExp = /^\s*PLAN_NAME:\s*(\S.*?)\s*$/;
-export const COMMIT_LINE_RE: RegExp = /^commit:\s*(.*?)\s*$/m;
-export const COMMIT_STRIP_RE: RegExp = /^commit:\s*.*\n/m;
+
+/** The `commit:` line; its spaces never reach the next line, so an empty line reads as empty. */
+export const COMMIT_LINE_RE: RegExp = /^commit:[ \t]*(.*?)[ \t]*$/m;
+export const COMMIT_STRIP_RE: RegExp = /^commit:.*\r?\n/m;
 
 /** Paths a plan names, as non-global patterns: callers copy them to scan, so no call leaves match state behind. */
 export const ABSOLUTE_PATH: RegExp = /(?<![\w.:\\/-])(?:[A-Za-z]:[\\/]|\/)[^\s`'"()<>,;]+/;
