@@ -24,7 +24,7 @@ const SPECIFIER = String.raw`["']((?:@[\w.-]+\/)?[\w.-]+(?:\/[\w./-]+)?|node:[\w
 
 const IMPORT = new RegExp(
   [
-    String.raw`^\s*(?:import|export)\s+(?:[\w*{}\s,$]+?\s+from\s+)?${SPECIFIER}`,
+    String.raw`^\s*(?:import|export)\s+(?!type\s)(?:[\w*{}\s,$]+?\s+from\s+)?${SPECIFIER}`,
     String.raw`\b(?:import|require)\(\s*${SPECIFIER}\s*\)`,
   ].join("|"),
   "gm",
@@ -87,6 +87,11 @@ describe("shipped code dependencies", () => {
     expect(files).toContain("cli/scripts/emit-mcp-policy.ts");
     expect(packageImports("cli/scripts/emit-mcp-policy.ts")).toContain("smol-toml");
     expect(new Set(files.flatMap(packageImports))).toContain("cross-spawn");
+  });
+
+  it("skips a type-only import, which the runtime erases", () => {
+    expect(fs.readFileSync(path.join(root, "cli/syntax-node.ts"), "utf8")).toContain("@typescript-eslint/utils");
+    expect(packageImports("cli/syntax-node.ts")).not.toContain("@typescript-eslint/utils");
   });
 
   it("declares every package the shipped code imports under dependencies or a required peer", () => {
