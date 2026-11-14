@@ -3,6 +3,12 @@ import { IGNORED_DIRS } from "../repo-dirs.ts";
 /** The dir of a repo's own sync input, at the root and in a workspace package. */
 export const REPO_DIR = ".repo";
 
+/** The marker file sync writes in the root `.repo/`, so the dir is committed even when nothing else in it is. */
+const KEEP_FILE = ".gitkeep";
+
+/** Root-relative path of the marker sync writes, as an output and as an entry `.repo/` may hold. */
+export const KEEP_REL: string = `${REPO_DIR}/${KEEP_FILE}`;
+
 /** The repo's own skills, one folder each. */
 export const SKILLS_DIR: string = `${REPO_DIR}/skills`;
 

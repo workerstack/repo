@@ -1,4 +1,4 @@
-# repo:generated 93c00d74
+# repo:generated 0aa67ebf
 * text=auto eol=lf
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
@@ -46,6 +46,7 @@
 .grok/hooks/rtk.json linguist-generated
 .grok/hooks/rulesync.json linguist-generated
 .grok/roles/scout.toml linguist-generated
+.repo/.gitkeep linguist-generated
 .repo/lessons/INDEX.md linguist-generated
 .vscode/tasks.json linguist-generated
 CONTRIBUTING.md linguist-generated

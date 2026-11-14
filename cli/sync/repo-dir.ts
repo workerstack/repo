@@ -15,6 +15,7 @@ import {
   CLAUDE_SETTINGS_FILE,
   DEAD_ENTRY,
   IGNORED_ONLY_DIRS,
+  KEEP_REL,
   OTHER_READER_DIRS,
   OTHER_READERS,
   PACKAGE_DIRS,
@@ -35,8 +36,12 @@ function allowedList(): string {
     `${SETTINGS_DIR}/${CLAUDE_SETTINGS_FILE}`,
     ...READ_FILES,
     ...OTHER_READERS.map(([file, reader]) => `${file} (read by ${reader})`),
+    `${KEEP_NAME} (written by repo sync)`,
   ].join(", ");
 }
+
+/** The marker sync writes, as a `.repo/` entry name. */
+const KEEP_NAME = /* @__PURE__ */ path.basename(KEEP_REL);
 
 const ALLOWED = /* @__PURE__ */ allowedList();
 
@@ -103,7 +108,7 @@ function layoutProblems(root: string): string[] {
   for (const entry of entriesOf(dir)) {
     const known = entry.isDirectory()
       ? rootDirs().includes(entry.name)
-      : [...READ_FILES, ...OTHER_READERS.map(([file]) => file)].includes(entry.name);
+      : [...READ_FILES, ...OTHER_READERS.map(([file]) => file), KEEP_NAME].includes(entry.name);
 
     const rel = `${REPO_DIR}/${entry.name}${entry.isDirectory() ? "/" : ""}`;
 

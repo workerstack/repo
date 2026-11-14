@@ -66,12 +66,13 @@ it("runs every generator in order and concatenates outputs and errors", () => {
   // The git files pass runs after the generators, over what they produced, even when one of them failed.
   expect(plan.outputs.map((output) => output.path)).toStrictEqual([
     "references/INDEX.md",
+    ".repo/.gitkeep",
     ".gitignore",
     ".gitattributes",
     ".vscode/settings.json",
   ]);
   expect(plan.errors).toStrictEqual(["bunfig.toml is hand-written; delete it so repo sync can own it"]);
-  expect(plan.outputs[1]).toMatchObject({ repairs: ["closed repo:ignore"] });
+  expect(plan.outputs[2]).toMatchObject({ repairs: ["closed repo:ignore"] });
 });
 
 it("runs the given post-passes in order, each over the outputs planned before it, and reports one that throws", () => {
@@ -107,7 +108,8 @@ it("refuses two outputs with one path, naming the generators that planned them",
 
 it("plans every output for a clean repo", () => {
   const plan = planSync(context());
-  const expected = OUTPUTS.filter((rel) => !rel.startsWith("packages/"));
+  // Every generator runs here, so the .repo marker lands after the index, before the git files pass's outputs.
+  const expected = OUTPUTS.filter((rel) => !rel.startsWith("packages/")).toSpliced(2, 0, ".repo/.gitkeep");
   expect(plan.errors).toStrictEqual([]);
   expect(plan.outputs.map((output) => output.path)).toStrictEqual(expected);
 });

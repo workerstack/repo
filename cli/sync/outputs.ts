@@ -19,6 +19,7 @@ import { readme } from "./readme.ts";
 import { type Region, syntaxOf, writeRegions } from "./region.ts";
 import { releaseWorkflow } from "./release-workflow.ts";
 import { release } from "./release.ts";
+import { KEEP_REL } from "./repo-dir.constants.ts";
 import { rust } from "./rust.ts";
 import { depsLines, stackNames } from "./stack-deps.ts";
 import { renderTrees } from "./trees.ts";
@@ -171,6 +172,11 @@ export function lessons(ctx: SyncContext): GeneratorResult {
   return { errors, outputs: [output] };
 }
 
+/** `.repo/.gitkeep` in every repo, under any packs, so the root `.repo/` is always committed. */
+export function gitkeep(): GeneratorResult {
+  return { errors: [], outputs: [{ content: "", kind: "file", managed: "whole", path: KEEP_REL, tracked: true }] };
+}
+
 /** The agent trees of the enabled hosts, under the agents pack; a failed render is its errors and no outputs. */
 export function trees(ctx: SyncContext): GeneratorResult {
   if (!ctx.config.packs.includes("agents")) return { errors: [], outputs: [] };
@@ -185,6 +191,7 @@ export const GENERATORS: readonly Generator[] = [
   index,
   readme,
   lessons,
+  gitkeep,
   trees,
   release,
   nightly,

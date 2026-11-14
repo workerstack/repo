@@ -92,6 +92,7 @@
     ".grok/roles/scout.toml": true,
     ".oxfmtrc.jsonc": true,
     ".oxlintrc.jsonc": true,
+    ".repo/.gitkeep": true,
     ".repo/lessons/INDEX.md": true,
     ".vscode/tasks.json": true,
     "CONTRIBUTING.md": true,

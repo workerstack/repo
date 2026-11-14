@@ -7,6 +7,7 @@ import { z } from "zod";
 import { readJson } from "../json.ts";
 import { errorMessage } from "../sync-errors.ts";
 import type { CommentSyntax } from "./header.ts";
+import { KEEP_REL } from "./repo-dir.constants.ts";
 import { HOST_SCHEMAS, OXFMT_CONFIG, OXLINT_CONFIG } from "./validate-schemas.ts";
 
 /**
@@ -101,6 +102,7 @@ function textFormats(): FormatEntry[] {
     { comment: "//", format: "text", match: exact("vitest.config.ts") },
     { comment: null, format: "text", match: exact(".gitignore") },
     { comment: null, format: "text", match: exact(".gitattributes") },
+    { comment: "#", format: "text", match: exact(KEEP_REL) },
     { comment: "#", format: "text", match: exact(".githooks/pre-commit") },
     { comment: "#", format: "text", match: exact(".githooks/commit-msg") },
     { comment: "#", format: "text", match: exact(".githooks/pre-push") },
