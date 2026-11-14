@@ -78,7 +78,7 @@ it("a broken baseline or tool config fails its step with the reason", { timeout:
   );
   expect(broken.out).toContain(" · lint failed · ");
   expect(broken.code).toBe(1);
-  write(root, { ".oxfmtrc.jsonc": "{", ".oxlintrc.json": "{", [BASELINE]: "{}\n" });
+  write(root, { ".oxfmtrc.jsonc": "{", ".oxlintrc.jsonc": "{", [BASELINE]: "{}\n" });
   const tools = await turn(root, []);
   expect(tools.err).toContain("repo turn: oxlint exited 1: Failed to parse oxlint configuration file");
   expect(tools.out).toMatch(/^turn: 2 files · fmt failed · comments ok · lint failed · /);

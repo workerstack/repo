@@ -60,7 +60,7 @@ const RULES = [
 
 describe("the generated knip config: shape", () => {
   it("names its path and the unignored copies it makes", () => {
-    expect([KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB]).toStrictEqual(["knip.json", "knip.unignored-*.json"]);
+    expect([KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB]).toStrictEqual(["knip.jsonc", "knip.unignored-*.jsonc"]);
   });
 
   it("points at the schema and turns every rule to error", () => {

@@ -162,7 +162,7 @@ describe("runTool", () => {
   });
 
   it("runs the tool in the repo root with the arguments given, and returns its exit code", async () => {
-    const root = repo('["standards"]', { ".oxlintrc.json": "{}\n", "src/x.ts": "" });
+    const root = repo('["standards"]', { ".oxlintrc.jsonc": "{}\n", "src/x.ts": "" });
     const run = vi.fn<RunTool>(() => 3);
     const io = capture();
     expect(
@@ -181,6 +181,13 @@ describe("runTool", () => {
     expect(await runTool("bun fmt", ["--check"], { cwd: root, run, stderr: io.stderr })).toBe(1);
     expect(io.err.join("")).toBe("repo fmt: no .oxfmtrc.jsonc; run `bun repo sync` to write it\n");
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("asks for repo sync when the oxlint config is missing", async () => {
+    const root = repo('["standards"]');
+    const io = capture();
+    expect(await runTool("oxlint", [], { cwd: root, run: () => 0, stderr: io.stderr })).toBe(1);
+    expect(io.err.join("")).toBe("repo lint: no .oxlintrc.jsonc; run `bun repo sync` to write it\n");
   });
 
   it("reports a broken config and a missing one", async () => {

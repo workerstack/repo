@@ -9,7 +9,7 @@ type Strings = z.ZodArray<z.ZodString>;
 
 type Unknown = z.ZodOptional<z.ZodUnknown>;
 
-/** The shape of `.oxlintrc.json`'s schema. */
+/** The shape of `.oxlintrc.jsonc`'s schema. */
 export type OxlintConfig = z.ZodObject<
   {
     $schema: z.ZodOptional<z.ZodString>;
@@ -198,7 +198,7 @@ function buildOxfmtConfig(): OxfmtConfig {
   });
 }
 
-/** `.oxlintrc.json`, one key per property of oxlint's shipped `configuration_schema.json`. */
+/** `.oxlintrc.jsonc`, one key per property of oxlint's shipped `configuration_schema.json`. */
 export const OXLINT_CONFIG: OxlintConfig = /* @__PURE__ */ buildOxlintConfig();
 
 /** `.oxfmtrc.jsonc`, one key per property of oxfmt's shipped `configuration_schema.json`. */

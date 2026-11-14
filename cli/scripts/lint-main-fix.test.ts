@@ -34,7 +34,7 @@ const ONE_PASS = BOTH_FIXED.replace("}\n\n", "}\n");
 
 /** A consumer whose `src/a.ts` takes two `--fix` passes; its root and a reader of that file. */
 function interacting() {
-  const root = consumer({ ".oxlintrc.json": INTERACTING_RC, "src/a.ts": ELSE_RETURN });
+  const root = consumer({ ".oxlintrc.jsonc": INTERACTING_RC, "src/a.ts": ELSE_RETURN });
 
   return { read: () => fs.readFileSync(path.join(root, "src/a.ts"), "utf8"), root };
 }

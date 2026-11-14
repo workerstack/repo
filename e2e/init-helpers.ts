@@ -114,9 +114,9 @@ export const GENERATED = [
   ".agents",
   ".grok",
   ".cursor",
-  ".oxlintrc.json",
+  ".oxlintrc.jsonc",
   ".oxfmtrc.jsonc",
-  "knip.json",
+  "knip.jsonc",
 ];
 
 export const NON_NULL =

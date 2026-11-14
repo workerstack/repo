@@ -1,5 +1,5 @@
 /**
- * `@workerstack/repo/lint`: the oxlint JS plugin `repo`, which the standards pack's generated `.oxlintrc.json` loads
+ * `@workerstack/repo/lint`: the oxlint JS plugin `repo`, which the standards pack's generated `.oxlintrc.jsonc` loads
  * with every rule on. oxlint reads a plugin from its default export.
  */
 import type { TSESLint } from "@typescript-eslint/utils";
@@ -44,7 +44,7 @@ import { todoNeedsId } from "./todo-needs-id.ts";
 import { typesFile } from "./types-file.ts";
 
 /**
- * The oxlint plugin `repo`, which a generated `.oxlintrc.json` loads from `@workerstack/repo/lint` with every rule
+ * The oxlint plugin `repo`, which a generated `.oxlintrc.jsonc` loads from `@workerstack/repo/lint` with every rule
  * on.
  */
 const plugin: TSESLint.FlatConfig.Plugin & {

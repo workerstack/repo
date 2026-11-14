@@ -178,13 +178,13 @@ it(
   async () => {
     const root = consumer({ "data.json": '{\n  "old": true\n}\n' });
     const generated = '{"rules":{},"categories":{}}\n';
-    write(root, { ".oxlintrc.json": generated, "data.json": UNSORTED });
-    git(root, "add", "-f", "data.json", ".oxlintrc.json");
+    write(root, { ".oxlintrc.jsonc": generated, "data.json": UNSORTED });
+    git(root, "add", "-f", "data.json", ".oxlintrc.jsonc");
     const result = await turn(root, ["--staged"]);
     expect(result.out).toMatch(/^turn: 2 files · fmt 1 fixed · /);
-    expect(staged(root)).toStrictEqual([".oxlintrc.json", "data.json"]);
+    expect(staged(root)).toStrictEqual([".oxlintrc.jsonc", "data.json"]);
     expect(git(root, "show", ":data.json")).toBe(SORTED);
-    expect(git(root, "show", ":.oxlintrc.json")).toBe(generated);
+    expect(git(root, "show", ":.oxlintrc.jsonc")).toBe(generated);
   },
 );
 

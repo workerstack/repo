@@ -1,7 +1,7 @@
 /**
  * `repo check`'s knip lines: one knip run against the generated config without its ignores, every issue it finds a
  * problem unless a `knip.ignore` entry covers it, each entry reported with its reason, and an entry that matches
- * nothing (before or after the run) refused. The config is written beside `knip.json` for the run and named for the
+ * nothing (before or after the run) refused. The config is written beside `knip.jsonc` for the run and named for the
  * process, so two checks never remove each other's copy.
  */
 import fs from "node:fs";
@@ -23,7 +23,7 @@ import {
 import type { KnipIgnore } from "./knip-schema.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
 import { standardsWorkspace } from "./standards-workspace.ts";
-import { knipConfig } from "./sync/knip-config.ts";
+import { KNIP_CONFIG_PATH, knipConfig, knipUnignoredPath } from "./sync/knip-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
 
 /** What `repo check` prints of knip: report lines that pass, problem lines that fail it. */
@@ -39,7 +39,7 @@ export type KnipDeps = { run?: KnipRun };
 type Issue = { file: string; wording: Wording; name: string; namespace: string | undefined };
 
 const NONE: KnipCheck = { problems: [], report: [] };
-const FIX_CONFIG = "run `bun repo sync` and check knip.json";
+const FIX_CONFIG = `run \`bun repo sync\` and check ${KNIP_CONFIG_PATH}`;
 
 function entrySchema() {
   return z.object({ name: z.string(), namespace: z.string().optional() });
@@ -54,7 +54,7 @@ function manifestSchema() {
 }
 
 function unignoredPath(): string {
-  return `knip.unignored-${process.pid}.json`;
+  return knipUnignoredPath(process.pid);
 }
 
 /** The path of the knip bin in this package's install. */

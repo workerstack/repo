@@ -13,7 +13,7 @@ const tree = useTempTree("workerstack-fix-passes-");
 
 /** no-else-return's fix drops the `else`, after which require-readable-spacing wants a blank line before the return. */
 const INTERACTING = {
-  ".oxlintrc.json": JSON.stringify({
+  ".oxlintrc.jsonc": JSON.stringify({
     categories: { correctness: "off" },
     jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
     plugins: ["eslint"],

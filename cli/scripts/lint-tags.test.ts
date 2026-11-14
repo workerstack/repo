@@ -36,7 +36,7 @@ async function syncStandards(root: string): Promise<string[]> {
 it("a tagged workspace fails only lib's import of ui, under the options sync writes", { timeout: SLOW }, async () => {
   const root = taggedTree();
   expect(await syncStandards(root)).toStrictEqual([]);
-  const text = fs.readFileSync(path.join(root, ".oxlintrc.json"), "utf8");
+  const text = fs.readFileSync(path.join(root, ".oxlintrc.jsonc"), "utf8");
   const written = readJson(z.object({ rules: z.record(z.string(), z.json()) }), text);
   expect(written.rules["repo/boundaries"]).toStrictEqual(["error", TAGGED_BOUNDARIES]);
   const run = captureTool("oxlint", ["-f", "unix"], root);
@@ -51,5 +51,5 @@ it("sync refuses a tag naming a package the workspace lacks, writing nothing", {
   expect(await syncStandards(root)).toStrictEqual([
     'repo.config.ts: lint.boundaries.tags: "@tagged/gone" is not a workspace package',
   ]);
-  expect(fs.existsSync(path.join(root, ".oxlintrc.json"))).toBe(false);
+  expect(fs.existsSync(path.join(root, ".oxlintrc.jsonc"))).toBe(false);
 });

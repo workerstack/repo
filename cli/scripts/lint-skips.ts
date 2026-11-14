@@ -1,7 +1,7 @@
 /**
  * `repo check`'s view of `lint.skip`: every skip with its rule, path, hits and reason, a count per rule, and the
  * entries gone stale. The hits come from one more lint of the skipped files under the generated config without its
- * skips, written beside `.oxlintrc.json` for the run (oxlint reads override globs against the config's own dir) and
+ * skips, written beside `.oxlintrc.jsonc` for the run (oxlint reads override globs against the config's own dir) and
  * named for the process, so two checks never remove each other's copy.
  */
 import fs from "node:fs";

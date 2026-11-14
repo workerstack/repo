@@ -17,7 +17,7 @@ function tree() {
   return jsonDir({
     ".gitignore": ".oxfmtrc.jsonc\n",
     ".oxfmtrc.jsonc": ignoreConfig([]),
-    ".oxlintrc.json": "{}\n",
+    ".oxlintrc.jsonc": "{}\n",
     "__fixtures__/f.jsonc": WITH,
     "a.jsonc": WITH,
     "inline.jsonc": '{\n  "a": 1, /* kept */\n  "b": "/* kept */"\n}\n',

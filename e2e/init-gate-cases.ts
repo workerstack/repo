@@ -89,7 +89,7 @@ export function pluginAndSkipCases(get: GetSandbox) {
       await sb.run("bun", ["repo", "sync"]);
     }
 
-    expect(sb.read(".oxlintrc.json")).not.toContain("src/skipped.ts");
+    expect(sb.read(".oxlintrc.jsonc")).not.toContain("src/skipped.ts");
     expectClean(sb, await sb.run("bun", ["repo", "sync", "--check"]));
   });
 }

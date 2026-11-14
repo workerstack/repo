@@ -31,7 +31,7 @@ describe("runTool without an injected runner", () => {
     const root = tempDir();
     fs.writeFileSync(path.join(root, "package.json"), '{ "name": "app", "type": "module" }\n');
     fs.writeFileSync(path.join(root, "repo.config.ts"), 'export default { packs: ["standards"] };\n');
-    fs.writeFileSync(path.join(root, ".oxlintrc.json"), "{}\n");
+    fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), "{}\n");
     const killer = path.join(tempDir(), "killer");
     fs.writeFileSync(killer, "#!/bin/sh\nkill -9 $$\n", { mode: 0o755 });
     vi.spyOn(process, "execPath", "get").mockReturnValue(killer);
