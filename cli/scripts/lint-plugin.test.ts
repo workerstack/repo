@@ -5,6 +5,7 @@ import { expect, it, vi } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
 import { useTempTree } from "../__fixtures__/temp-tree.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { oxlintConfig } from "../sync/oxlint-config.ts";
 import { standards } from "../sync/standards.ts";
 import type { PackageJson } from "../sync/workspace.ts";
@@ -22,7 +23,7 @@ function consumer(files: Record<string, string>, manifest: PackageJson = { name:
   const root = tree({});
 
   const ctx = {
-    config: { agents: { hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
+    config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs: ["standards" as const], ...BASE_CONFIG },
     read: () => null,
     root,
     workspace: { manifest, packages: [], root },

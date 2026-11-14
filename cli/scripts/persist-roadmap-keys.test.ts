@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -9,6 +10,7 @@ import { CREATED, update } from "./__fixtures__/persist-roadmap-kit.ts";
 import { expectNothingSaved } from "./__fixtures__/persist-save-kit.ts";
 import { ROADMAP_DIR } from "./persist-roadmap.constants.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
+import type { Strategy } from "./strategy.types.ts";
 
 const { tempDir: tmpWs } = useTempDirs("persist-roadmap-");
 const NO_KEY = "strategy: free|spawn-fast|spawn-deep";
@@ -26,8 +28,8 @@ function withMode(body: string, value: string) {
   return body.replace(/^strategy:.*$/m, (l) => `${l}\nmode: ${value}`);
 }
 
-function save(content: string, ws = tmpWs()) {
-  return persistRoadmap({ content, created: CREATED, workspaceRoot: ws });
+function save(content: string, ws = tmpWs(), defaultStrategy?: Strategy) {
+  return persistRoadmap({ content, created: CREATED, defaultStrategy, workspaceRoot: ws });
 }
 
 describe("roadmap strategy on a new save", () => {
@@ -39,12 +41,27 @@ describe("roadmap strategy on a new save", () => {
     expect(head).toMatch(/\nsource: "auth program"\nstrategy: spawn-deep$/);
     expect(body.join("\n---\n")).not.toMatch(/^strategy:/m);
   });
+});
 
-  it("denies a save without it and an unknown value", () => {
+describe("roadmap strategy default on a new save", () => {
+  it("fills free on a save without it when no default is given, and the given default otherwise", () => {
     const ws = tmpWs();
     const missing = save(without(DRAFT_ROADMAP), ws);
-    expect(missing.ok).toBe(false);
-    expect(missing.errors).toContain(NO_KEY);
+    expect(missing.ok, missing.error).toBe(true);
+    expect(read(path.join(ws, savedOk(missing).path))).toMatch(/\nsource: "auth program"\nstrategy: free\n/);
+
+    const given = save(without(DRAFT_ROADMAP), ws, "spawn-fast");
+    expect(given.ok, given.error).toBe(true);
+    expect(read(path.join(ws, savedOk(given).path))).toMatch(/^strategy: spawn-fast$/m);
+  });
+
+  it("keeps a body line over the default and denies an unknown value", () => {
+    const ws = tmpWs();
+
+    const sent = save(withStrategy(DRAFT_ROADMAP, "spawn-deep"), ws, "spawn-fast");
+    expect(sent.ok, sent.error).toBe(true);
+    expect(read(path.join(ws, savedOk(sent).path)).match(/^strategy:.*$/gm)).toStrictEqual(["strategy: spawn-deep"]);
+    fs.rmSync(path.join(ws, ROADMAP_DIR), { force: true, recursive: true });
     const unknown = save(withStrategy(DRAFT_ROADMAP, "review-medium"), ws);
     expect(unknown.ok).toBe(false);
     expect(unknown.errors).toContain(NO_KEY);

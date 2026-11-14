@@ -1,9 +1,13 @@
 import { expect, it } from "vitest";
 
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
 import { FILLER_PROMPT, parseOut, scrubbedPrompt } from "./__fixtures__/scrub-kit.ts";
-import { main as orchMain } from "./orchestrate-parent.ts";
+import { mainWith } from "./orchestrate-parent.ts";
 import { main } from "./scrub-spawn-prompt.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const orchMain = mainWith(AGENT_DEFAULTS);
 
 it("rewrites prompt and preserves other fields", () => {
   const result = runHook(main, {

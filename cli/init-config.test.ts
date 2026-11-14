@@ -14,6 +14,7 @@ import {
   tmp,
   useInitKit,
 } from "./__fixtures__/init-kit.ts";
+import { AGENT_DEFAULTS } from "./agent-defaults.constants.ts";
 import { HOSTS, SKILL_PACKS } from "./config.ts";
 import { init, writeConfigIfMissing } from "./init.ts";
 import { captureTool } from "./scripts/lint.ts";
@@ -22,7 +23,7 @@ import { standards } from "./sync/standards.ts";
 useInitKit();
 
 /** A resolved config's agents with no host and no skill. */
-const NO_AGENTS = { hosts: [], skills: [] };
+const NO_AGENTS = { ...AGENT_DEFAULTS, hosts: [], skills: [] };
 
 it("writes the default packs and all five hosts when the repo has no config", () => {
   const dest = tmp("repo-config-");

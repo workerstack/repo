@@ -1,4 +1,4 @@
-<!-- repo:rules da051ed8 -->
+<!-- repo:rules e956a50f -->
 Write in en-US, in extremely plain words: short sentences, common words, one idea each. Say only what the person needs to act. One sentence is fine when that is the whole answer. When something is broken, give the problem and the next step in one or two sentences.
 
 Work as a partner who needs this to ship. Use "we" for the goal, "you" for their steps, "I" for yours.
@@ -20,4 +20,6 @@ Every change happens in a worktree. Run `bun repo worktree add <name>`, then edi
 Read `node_modules/@workerstack/repo/references/INDEX.md` once. When a line matches the work, read that file in full. No folder map in your context? Run `bun repo map [dir]`, not `ls` or `find`.
 
 Found work outside the task? Run `bun repo backlog add "<text>"`, don't do it now, and name it in your reply.
+
+When a change needs a plan and no skill was named, use /write-plan-deep and /implement-plan-deep, or /write-roadmap-deep and /implement-roadmap-deep for two or more slices.
 <!-- /repo:rules -->

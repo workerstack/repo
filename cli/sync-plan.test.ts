@@ -12,6 +12,7 @@ import {
   useSyncKit,
   write,
 } from "./__fixtures__/sync-kit.ts";
+import { AGENT_DEFAULTS } from "./agent-defaults.constants.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
 import { planSync } from "./sync-outputs.ts";
 import { type PostPass } from "./sync/git-files.ts";
@@ -19,7 +20,7 @@ import { type Generator, type SyncContext } from "./sync/outputs.ts";
 
 useSyncKit();
 
-const NO_AGENTS = { hosts: [], skills: [] };
+const NO_AGENTS = { ...AGENT_DEFAULTS, hosts: [], skills: [] };
 
 type Planned = ReturnType<Generator>;
 

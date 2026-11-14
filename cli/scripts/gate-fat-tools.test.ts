@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { useTmp } from "./__fixtures__/gate-workspace.ts";
 import { camelCall, replyCommand, replyInput, replyOf } from "./__fixtures__/hook-payload.ts";
 import { runHook, spawnHook } from "./__fixtures__/run-hook.ts";
@@ -10,8 +11,11 @@ import { main as gateMain, processHookPayload } from "./gate-fat-tools.ts";
 import { answerDeny, answerRewrite, type ToolArgs } from "./gate-harness.ts";
 import { DEFAULT_GREP_HEAD_LIMIT, REASON_DENYLIST } from "./gate.constants.ts";
 import type { HookInput } from "./hook-input.ts";
-import { main as orchMain } from "./orchestrate-parent.ts";
+import { mainWith } from "./orchestrate-parent.ts";
 import { ORCHESTRATOR_LOGS_DIR } from "./orchestrate.constants.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const orchMain = mainWith(AGENT_DEFAULTS);
 
 const tmp = useTmp();
 const GROK = { GROK_HOOK_EVENT: "pre_tool_use" };

@@ -4,17 +4,20 @@
  */
 import path from "node:path";
 
+import { agentDefaults } from "../agent-defaults.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { persistHandoff } from "./persist-handoff.ts";
 import { persistImplementation } from "./persist-implementation.ts";
 import { persistPlan } from "./persist-plan.ts";
 import { persistRoadmap } from "./persist-roadmap.ts";
 import { persistTmp } from "./persist-tmp.ts";
+import type { Strategy } from "./strategy.types.ts";
 import { resolveRoots } from "./workspace-root.ts";
 
 type Saved = { ok: true; serial: number; path: string; filename: string } | { ok: false; error: string };
 
-type Saver = (opts: { workspaceRoot: string; content: string }) => Saved;
+/** A save of one kind; a plan or roadmap sent without a `strategy:` line gets `defaultStrategy`. */
+type Saver = (opts: { workspaceRoot: string; content: string; defaultStrategy: Strategy }) => Saved;
 
 const SAVERS = {
   handoff: persistHandoff,
@@ -43,10 +46,11 @@ function workspaceOf(argv: string[]): string {
   return (at >= 0 ? argv[at + 1] : undefined) ?? resolveRoots().root;
 }
 
-function saveBody(save: Saver, argv: string[], io: HookIo): number {
+async function saveBody(save: Saver, argv: string[], io: HookIo): Promise<number> {
   try {
     const workspaceRoot = workspaceOf(argv);
-    const result = save({ content: readAllText(io), workspaceRoot });
+    const { defaultStrategy } = await agentDefaults(workspaceRoot);
+    const result = save({ content: readAllText(io), defaultStrategy, workspaceRoot });
 
     if (!result.ok) return fail(result.error);
     const { serial, path: saved, filename } = result;
@@ -58,7 +62,7 @@ function saveBody(save: Saver, argv: string[], io: HookIo): number {
   }
 }
 
-export function main(argv: string[] = [], io: HookIo = processHookIo()): number {
+export async function main(argv: string[] = [], io: HookIo = processHookIo()): Promise<number> {
   const kind = argv[0];
 
   if (kind === undefined) return fail(`repo persist: missing kind; ${KINDS}`);
@@ -66,5 +70,5 @@ export function main(argv: string[] = [], io: HookIo = processHookIo()): number 
 
   if (save === undefined) return fail(`repo persist: unknown kind "${kind}"; ${KINDS}`);
 
-  return saveBody(save, argv, io);
+  return await saveBody(save, argv, io);
 }

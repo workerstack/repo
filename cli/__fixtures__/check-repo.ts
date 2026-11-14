@@ -1,4 +1,5 @@
 // A consumer repo for the `repo check` suites: git, a changelog, and this checkout linked where an install puts it.
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { execFileSync as runGit } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -44,7 +45,7 @@ export function writeCleanManifest(repo: CheckRepo): void {
 
 /** The files the standards pack's sync writes, the oxlint config among them. */
 export function writeStandardsOutputs(repo: CheckRepo): void {
-  const config = { packs: ["standards" as const], agents: { hosts: [], skills: [] }, ...BASE_CONFIG };
+  const config = { packs: ["standards" as const], agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, ...BASE_CONFIG };
   const workspace = { root: "", manifest: {}, packages: [] };
   for (const output of standards({ root: "", config, workspace, read: () => null }, []).outputs)
     if (output.kind === "file") repo.put(output.path, output.content);

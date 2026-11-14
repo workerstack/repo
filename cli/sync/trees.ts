@@ -33,12 +33,12 @@ const TASKS_REL = ".vscode/tasks.json";
  * into the root `AGENTS.md`, and one problem line for each path two scopes plan.
  */
 function renderScopes(ctx: SyncContext, sources: Sources) {
-  const { hosts } = ctx.config.agents;
+  const { hosts, defaultEffort } = ctx.config.agents;
   const planned = new Map<string, RuleFile>();
   const clashes: string[] = [];
 
   for (const scope of ["", ...ctx.workspace.packages.map((pkg) => pkg.dir)]) {
-    for (const [rel, file] of renderRules(sources.rules, hosts, scope)) {
+    for (const [rel, file] of renderRules(sources.rules, { effort: defaultEffort, hosts, scope })) {
       const first = planned.get(rel);
 
       if (first === undefined) planned.set(rel, file);

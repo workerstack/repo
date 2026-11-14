@@ -20,7 +20,7 @@ Before writing, run `bun repo lessons match` on the repo-relative paths the plan
 
 Author `commit: type(scope): subject` on its own line before persist (scope optional). Conventional Commits subject: imperative lowercase, no trailing period. Types: feat fix perf refactor test docs build ci chore revert.
 
-Author `strategy: free|spawn-fast|spawn-deep` on its own line beside `commit:`. `free` for a small or docs-only plan. `spawn-fast` for multi-phase code work. `spawn-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `node_modules/@workerstack/repo/references/plan-format.md`.
+Omit the `strategy:` line to take `agents.defaultStrategy`. Author `strategy: free|spawn-fast|spawn-deep` on its own line beside `commit:` only when the plan's scope argues for another value. `free` for a small or docs-only plan. `spawn-fast` for multi-phase code work. `spawn-deep` for cross-cut, hook or gate, or hard-to-undo work. A roadmap slice copies the roadmap's value unless its scope argues for another. Meanings: `node_modules/@workerstack/repo/references/plan-format.md`.
 
 Author `mode: away` on its own line beside `strategy:` only when this session runs `/away`, and `mode: ask|away` only when the person asked for that mode. Otherwise send no `mode:` line. A session stamp beats a saved `mode:`; under away the Stop hook runs the approval block's `i` once the review settles, so do not wait for `y`.
 

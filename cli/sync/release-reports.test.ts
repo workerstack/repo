@@ -1,11 +1,12 @@
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import { REPORT_FILE } from "../scripts/ci-skips.constants.ts";
 import { release } from "./release.ts";
 
 const output = release({
-  config: { agents: { hosts: [], skills: [] }, packs: ["release"], ...BASE_CONFIG },
+  config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs: ["release"], ...BASE_CONFIG },
   read: () => null,
   root: "/repo",
   workspace: { manifest: {}, packages: [], root: "/repo" },

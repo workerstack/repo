@@ -1,6 +1,7 @@
 import type { LintTailwind } from "./config-resolved.types.ts";
 import type { Host, LintBoundaries, LintSkip, Pack, SkillPack } from "./config.ts";
 import type { KnipIgnoreEntry } from "./knip-schema.ts";
+import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
 import type { TurboTask } from "./turbo-config.ts";
 
 /** What repo.config.ts default-exports, as `defineConfig` takes it; config.ts checks its schema against it. */
@@ -14,6 +15,12 @@ export type RepoConfig = {
         hosts?: readonly Host[] | undefined;
         /** The optional skill packs to ship; omit it for none. */
         skills?: readonly SkillPack[] | undefined;
+        /** The strategy a new plan or roadmap saved without a `strategy:` line gets; omit it for `free`. */
+        defaultStrategy?: Strategy | undefined;
+        /** The mode a session runs when no /ask or /away and no in-progress item names one; omit it for `ask`. */
+        defaultMode?: Mode | undefined;
+        /** The plan skills the root `AGENTS.md` points an unnamed change at; omit it for `deep`. */
+        defaultEffort?: Effort | undefined;
       }
     | undefined;
   /** Limits the commit-msg hook holds a commit to. */

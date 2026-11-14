@@ -24,7 +24,7 @@ const API = pkgRule("api.md", { paths: ["src/api/**"] }, "Api body.");
 const sources = sourcesOf([BASE, SCOPED, COMPONENTS, API]);
 
 it("writes the package AGENTS.md: the pointer line, then a pointer per path rule, none of its pathless rules", () => {
-  const out = renderText(sources, ["codex"], WEB);
+  const out = renderText(sources, ["codex"], WEB, "fast");
   expect(out.get(`${WEB}/AGENTS.md`)).toBe(
     `${POINTER}\n\n## Rules by path\n- \`packages/web/src/api/**\`: read \`packages/web/.repo/rules/api.md\`\n`,
   );
@@ -68,11 +68,11 @@ function pkgSources(): Sources {
 }
 
 it("names the rule file's source, and renders a package without rules as the pointer line", () => {
-  const rendered = renderRules(sources.rules, ["claude"], WEB);
+  const rendered = renderRules(sources.rules, { effort: "deep", hosts: ["claude"], scope: WEB });
   expect(rendered.get(".claude/rules/packages/web/api.md")?.source).toBe(`${WEB}/.repo/rules/api.md`);
   expect(renderText(sources, ["claude"], "packages/empty").get("packages/empty/AGENTS.md")).toBe(`${POINTER}\n`);
 });
 
 it("emits nothing with no host on", () => {
-  expect(renderRules(sources.rules, [], WEB).size).toBe(0);
+  expect(renderRules(sources.rules, { effort: "deep", hosts: [], scope: WEB }).size).toBe(0);
 });

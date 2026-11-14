@@ -73,10 +73,10 @@ function stampedMode(data: HookInput): Mode | null {
 
 /**
  * The mode this session runs: the /ask or /away stamp, else the newest in-progress plan or roadmap in this
- * session's approvals with a valid `mode:`, else ask. Another session's files never count.
+ * session's approvals with a valid `mode:`, else `defaultMode`. Another session's files never count.
  */
-export function effectiveModeOf(data: HookInput): Mode {
-  return stampedMode(data) ?? itemMode(data) ?? ASK_MODE;
+export function effectiveModeOf(data: HookInput, defaultMode: Mode): Mode {
+  return stampedMode(data) ?? itemMode(data) ?? defaultMode;
 }
 
 function sessionReceiptContext(data: HookInput): string {
@@ -90,8 +90,8 @@ function sessionReceiptContext(data: HookInput): string {
   return `${countsLine(dir)} session=${REPO}/${STATE}/sessions/${sid}/`;
 }
 
-export function effectiveSessionContext(data: HookInput): string {
-  const gate = effectiveModeOf(data);
+export function effectiveSessionContext(data: HookInput, defaultMode: Mode): string {
+  const gate = effectiveModeOf(data, defaultMode);
   const receipt = sessionReceiptContext(data);
 
   return receipt === "" ? `sessionGate=${gate}` : `sessionGate=${gate}. ${receipt}`;

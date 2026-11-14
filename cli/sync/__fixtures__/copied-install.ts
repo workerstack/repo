@@ -1,4 +1,5 @@
 // The recorded copied install and the consumers the migrate suites run sync over, with typed file readers.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -20,7 +21,7 @@ import { tempDir } from "./temp-dirs.ts";
 export const SELF_ROOT: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const FIXTURE_TGZ = path.join(SELF_ROOT, "cli", "sync", "__fixtures__", "copied.tgz");
 /** A config with every host on and no optional pack. */
-export const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { hosts: HOSTS, skills: [] }, ...BASE_CONFIG };
+export const CONFIG: ResolvedConfig = { packs: ["agents"], agents: { ...AGENT_DEFAULTS, hosts: HOSTS, skills: [] }, ...BASE_CONFIG };
 /** The lines the migration of the recorded install prints for its moves, in order. */
 export const LINES: readonly string[] = [
   "repo sync: moved .rulesync/rules/team.md to .repo/rules/team.md",

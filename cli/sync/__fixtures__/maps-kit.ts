@@ -1,4 +1,5 @@
 // Workspaces and contexts for the maps suites: the packed maps workspace, a bare self workspace and the index text.
+import { AGENT_DEFAULTS } from "../../agent-defaults.constants.ts";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -37,7 +38,7 @@ export function context(ws: string, name = "@workerstack/repo"): SyncContext {
     root: ws,
     config: {
       packs: ["agents", "docs"],
-      agents: { hosts: [], skills: [] },
+      agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },
       ...BASE_CONFIG,
     },
     workspace: { root: ws, manifest: { name }, packages: [] },

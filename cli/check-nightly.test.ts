@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { BASE_CONFIG } from "./__fixtures__/base-config.ts";
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
+import { AGENT_DEFAULTS } from "./agent-defaults.constants.ts";
 import { checkNightlyAt, nightlyProblems } from "./check-nightly.ts";
 import type { Pack } from "./config.ts";
 import { INSTALL_HINT } from "./mutate.constants.ts";
@@ -23,7 +24,7 @@ const NO_FILE_LINE = "coverage.mutate (src/**/*.ts) matches no tracked file; set
 
 function input(manifest: PackageJson, tracked: string[], packs: Pack[] = ["release"]) {
   return {
-    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
+    config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs, ...BASE_CONFIG },
     tracked,
     workspace: { manifest, packages: [], root: "/repo" },
   };

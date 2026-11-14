@@ -2,6 +2,7 @@ import { parse, type TomlTable } from "smol-toml";
 import { expect, it } from "vitest";
 
 import { BASE_CONFIG } from "../__fixtures__/base-config.ts";
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import type { Pack } from "../config.ts";
 import { isTomlTable } from "../is-toml-table.ts";
 import type { SyncContext } from "./outputs.ts";
@@ -10,7 +11,7 @@ import { rust } from "./rust.ts";
 /** A context with `packs` whose root holds `files`. */
 function context(packs: Pack[], files: Record<string, string>): SyncContext {
   return {
-    config: { agents: { hosts: [], skills: [] }, packs, ...BASE_CONFIG },
+    config: { agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] }, packs, ...BASE_CONFIG },
     read: (rel) => files[rel] ?? null,
     root: "/work",
     workspace: { manifest: {}, packages: [], root: "/work" },

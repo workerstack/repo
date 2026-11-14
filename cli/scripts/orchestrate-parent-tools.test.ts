@@ -3,11 +3,15 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { AGENT_DEFAULTS } from "../agent-defaults.constants.ts";
 import type { Json } from "../json.ts";
 import { orchestrateKit, plantLesson, replyOf, type HookOut } from "./__fixtures__/orchestrate-kit.ts";
 import { VALID_HANDOFF, VALID_IMPL, VALID_PLAN, DRAFT_ROADMAP } from "./__fixtures__/persist-bodies.ts";
 import { runHook } from "./__fixtures__/run-hook.ts";
-import { main } from "./orchestrate-parent.ts";
+import { mainWith } from "./orchestrate-parent.ts";
+
+/** The parent hook on the built-in agents defaults, answered in this process. */
+const main = mainWith(AGENT_DEFAULTS);
 
 const kit = orchestrateKit();
 

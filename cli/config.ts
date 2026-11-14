@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { z } from "zod";
 
+import { agentDefaultsExample, agentDefaultKeys } from "./agent-defaults-schema.ts";
 import { ciOf, ciSchema } from "./ci-schema.ts";
 import { cleanSchema } from "./clean-schema.ts";
 import { commitSchema, DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
@@ -85,16 +86,20 @@ function uniqueList<S extends z.ZodType<string>>(item: S, error: string) {
 function buildAgentsSchema() {
   return z.strictObject(
     {
+      ...agentDefaultKeys(),
       hosts: uniqueList(hostSchema, "must be a list of host names")
         .refine((hosts) => hosts.length > 0, { error: "list at least one host" })
-        .optional(),
-      skills: uniqueList(skillSchema, "must be a list of skill pack names").optional(),
+        .default(HOSTS),
+      skills: uniqueList(skillSchema, "must be a list of skill pack names").default([]),
     },
-    { error: "must be an object like { hosts: [...], skills: [...] }" },
+    { error: `must be an object like { hosts: [...], skills: [...], ${agentDefaultsExample()} }` },
   );
 }
 
 const agentsSchema = /* @__PURE__ */ buildAgentsSchema();
+
+/** The agents an omitted `agents` key turns on: every host, no skills and each built-in default. */
+const NO_AGENTS: ResolvedAgents = /* @__PURE__ */ agentsSchema.parse({});
 
 /** A config section that only means something with its pack on. */
 function needsPack(key: "agents" | "commit" | "knip" | "lint" | "nightly" | "tdd" | "turbo", pack: Pack) {
@@ -228,15 +233,10 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
   return { config: resolve(parsed.data), ok: true };
 }
 
-/** The agent hosts and skills a config turns on; every host and no skills when omitted. */
-function agentsOf(agents: z.output<typeof agentsSchema> | undefined): ResolvedAgents {
-  return { hosts: agents?.hosts ?? HOSTS, skills: agents?.skills ?? [] };
-}
-
 /** A parsed config with every omitted value filled in. */
 function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
   return {
-    agents: agentsOf(d.agents),
+    agents: d.agents ?? NO_AGENTS,
     clean: d.clean,
     commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
     knip: { ignore: d.knip?.ignore ?? [] },
