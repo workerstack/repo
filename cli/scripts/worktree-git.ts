@@ -14,7 +14,9 @@ const TRAILING_DASHES = /-+$/;
 const BLANK_LINE_RUN = /\n\n+/;
 const ORIGIN_PREFIX = /^origin\//;
 const LEADING_SPACE = /^\s/;
-const REMOTES_REF = "refs/remotes/origin/";
+
+/** Where origin's branches are tracked. */
+export const REMOTES_REF = "refs/remotes/origin/";
 
 /** `raw`, or "" when there is none. */
 export function textOf(raw: string | undefined): string {
@@ -28,6 +30,13 @@ function trimmed(stream: string | null | undefined): string {
 
 export function git(cwd: string, args: string[]): GitRun {
   const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+
+  return { err: trimmed(r.stderr), ok: r.status === 0, out: trimmed(r.stdout) };
+}
+
+/** `git` with prompts off, for a run that talks to origin and must fail rather than wait on a credential prompt. */
+export function remoteGit(cwd: string, args: string[]): GitRun {
+  const r = spawnSync("git", args, { cwd, encoding: "utf8", env: childEnv({ GIT_TERMINAL_PROMPT: "0" }) });
 
   return { err: trimmed(r.stderr), ok: r.status === 0, out: trimmed(r.stdout) };
 }
@@ -202,15 +211,18 @@ export function dropRemoteBranch(root: string, branch: string, timeoutMs: number
 }
 
 /**
- * Move `target` to `branch`'s tip with a fast-forward only: in the root when it has `target` checked out, else
- * through the ref.
+ * Move `target` to the commit at the full ref `ref` with a fast-forward only: in the root when it has `target` checked
+ * out, else through the ref.
  */
-export function fastForward(root: string, branch: string, target: string): GitRun {
-  const source = HEADS_REF + branch;
-
+export function fastForwardTo(root: string, ref: string, target: string): GitRun {
   return isCheckedOut(root, target)
-    ? git(root, ["merge", "--ff-only", source])
-    : git(root, ["fetch", ".", `${source}:${HEADS_REF}${target}`]);
+    ? git(root, ["merge", "--ff-only", ref])
+    : git(root, ["fetch", ".", `${ref}:${HEADS_REF}${target}`]);
+}
+
+/** Move `target` to `branch`'s tip with a fast-forward only. */
+export function fastForward(root: string, branch: string, target: string): GitRun {
+  return fastForwardTo(root, HEADS_REF + branch, target);
 }
 
 /** Rebase the worktree onto `target`; on failure abort it and throw the conflict line or git's reason. */

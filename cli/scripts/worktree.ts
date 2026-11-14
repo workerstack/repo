@@ -4,7 +4,8 @@
  *
  *   bun repo worktree add <name>   make or reuse one; prints its path
  *   bun repo worktree finish [<name>]  rebase it onto the default branch, fast-forward that, remove worktree and
- *                                  branch, delete origin's copy and run `bun repo sync` in the root
+ *                                  branch, delete origin's copy and run `bun repo sync` in the root; under the
+ *                                  pull-request workflow push it and open its pull request, and clean up once merged
  *   bun repo worktree list         every linked worktree with its state
  *   bun repo worktree prune        remove clean ones whose own commits reached the default branch, and origin's copies
  *   bun repo worktree hook         Claude Code WorktreeCreate / WorktreeRemove on stdin
@@ -20,7 +21,7 @@ import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
 import { branchExists, git, isMerged, samePath, worktreeEntries } from "./worktree-git.ts";
-import { addWorktree, finishWorktree, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
+import { addWorktree, finishWith, listWorktrees, pruneWorktrees } from "./worktree-lifecycle.ts";
 import { WorktreeUsageError } from "./worktree-usage-error.ts";
 import {
   ADD_CMD,
@@ -33,9 +34,10 @@ import {
   REMOVE_EVENT,
   USAGE,
   USAGE_EXIT,
+  WORKTREE_CMD,
   WORKTREES_DIR,
 } from "./worktree.constants.ts";
-import type { FinishResult, HookResult, WorktreeInfo } from "./worktree.types.ts";
+import type { FinishDeps, FinishResult, HookResult, PullRequestFinish, WorktreeInfo } from "./worktree.types.ts";
 
 function quiet(): HookResult {
   return { code: 0, stderr: "", stdout: "" };
@@ -83,8 +85,24 @@ export function worktreeHook(data: HookInput | null): HookResult {
   }
 }
 
+/** The one-line outcome of a pull-request `finish`. */
+function pullRequestLine(result: PullRequestFinish, root: string): string {
+  const again = `run ${WORKTREE_CMD} ${FINISH_CMD} ${result.branch.slice(BRANCH_PREFIX.length)} again once it merges`;
+
+  if (result.kind === "opened") return `pushed ${result.branch} and opened ${result.url}; ${again}`;
+
+  if (result.kind === "updated") return `pushed ${result.branch} to ${result.url}; ${again}`;
+
+  return (
+    `${result.branch} merged through ${result.url}; ${result.defaultBranch} is at ${result.sha} ` +
+    `and removed ${result.path}; your shell may still be in it: cd ${root}`
+  );
+}
+
 /** The one-line outcome of `finish`. */
 function finishLine(result: FinishResult, root: string): string {
+  if ("kind" in result) return pullRequestLine(result, root);
+
   if (result.sha === null || result.sha === "")
     return `${result.branch} has no commits of its own; removed ${result.path}`;
 
@@ -132,17 +150,19 @@ function runHook(io: HookIo): number {
   return res.code;
 }
 
-function finish(arg: string | undefined): number {
+function finish(arg: string | undefined, deps: FinishDeps): number {
   const roots = resolveRoots({});
 
-  return print([finishLine(finishWorktree(roots.root, arg, roots.cwd), roots.root)]);
+  return print([finishLine(finishWith(deps)(roots.root, arg, roots.cwd), roots.root)]);
 }
 
-/** Run one subcommand; null when `cmd` is none of them. */
-function dispatch(cmd: string | undefined, arg: string | undefined, io: HookIo): number | null {
+/** Run the subcommand `argv` opens with; null when it is none of them. */
+function dispatch(argv: string[], io: HookIo, deps: FinishDeps): number | null {
+  const [cmd, arg] = argv;
+
   if (cmd === ADD_CMD && arg !== undefined) return print([addWorktree(resolveRoots({}).root, arg).path]);
 
-  if (cmd === FINISH_CMD) return finish(arg);
+  if (cmd === FINISH_CMD) return finish(arg, deps);
 
   if (cmd === LIST_CMD) return print(listWorktrees(resolveRoots({}).root).map(listRow));
 
@@ -153,11 +173,10 @@ function dispatch(cmd: string | undefined, arg: string | undefined, io: HookIo):
   return null;
 }
 
-export function main(argv: string[], io: HookIo = processHookIo()): number {
-  const [cmd, arg] = argv;
-
+/** Run `bun repo worktree <argv>`; `deps` swaps finish's gh and workflow read for tests. */
+export function main(argv: string[], io: HookIo = processHookIo(), deps: FinishDeps = {}): number {
   try {
-    const code = dispatch(cmd, arg, io);
+    const code = dispatch(argv, io, deps);
 
     if (code !== null) return code;
   } catch (e) {

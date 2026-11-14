@@ -2491,6 +2491,7 @@
   ],
   "cli/scripts/__fixtures__/use-logged-in-workspace.ts": ["12943f40de2aeb92"],
   "cli/scripts/__fixtures__/vscode-tasks-kit.ts": ["7c4d80d722a9c303", "fd75fde3503e811b"],
+  "cli/scripts/__fixtures__/worktree-pr.ts": ["9b6aabcd978d29b6"],
   "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "c116a6c95caadfdb", "ee0c1c5f02d43e6e"],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": [
@@ -3123,6 +3124,7 @@
     "035a87fc437b0569",
     "2152c5d645b2c1af",
     "2201514fb3aa2d78",
+    "5d5ee725087c8d24",
     "63090fdf82ad275d",
     "96a7c6c8ca33fb2c",
     "b4e83571657a4647"
@@ -3144,6 +3146,7 @@
     "8acfbd57100b2eda",
     "9d406115e155306a",
     "a96dcd28af908247",
+    "cbd33d098e875207",
     "d4a6dc061544ff1f",
     "d96e8df081cc00ff"
   ],
@@ -7980,6 +7983,9 @@
     "b5100226f9d573a2",
     "f052ebd7a2e2e8b8"
   ],
+  "cli/scripts/worktree-finish-pr-land.test.ts": ["7bbb3647cf0c8360"],
+  "cli/scripts/worktree-finish-pr.test.ts": ["b9c407de2f023f54"],
+  "cli/scripts/worktree-finish-steps.ts": ["a87ede4da37df39f"],
   "cli/scripts/worktree-finish.test.ts": [
     "13ab4b23b5bd5d7e",
     "4fbdc5f564c6a497",
@@ -7997,6 +8003,7 @@
     "64e22282e2bde8dc",
     "67df719b7dbb9d5c",
     "6b897361a05a1b6c",
+    "a923e8e2aa6500b0",
     "bbf0b633258416df",
     "c69bf870d71b7d5d",
     "c78b08a5b9e171aa"
@@ -8042,6 +8049,7 @@
     "58af7a35a3088386",
     "72e30d7c5b33e6b8",
     "956db8a905296cee",
+    "a6818a300b76e71e",
     "caba7bac04d1bf9f"
   ],
   "cli/scripts/worktree-list.test.ts": [
@@ -8071,6 +8079,7 @@
     "785ea122fdcf219f",
     "9ba86ce6be1adaa1"
   ],
+  "cli/scripts/worktree-pr.ts": ["c5774f039006e713"],
   "cli/scripts/worktree-remote-sync.test.ts": ["d22f25ccf78ae94c"],
   "cli/scripts/worktree-setup.ts": ["22d9040482cd4d82", "cce0db88c3a59871", "e920e2d3def0a510"],
   "cli/scripts/worktree-shared-shell.test.ts": [
@@ -8133,6 +8142,7 @@
     "39fe708a8275f215",
     "3e4fd65b76ee59b3",
     "5006500bd27d7fd4",
+    "64f39d2c8fea8ae9",
     "7cbb20cb23042c53",
     "885c1170d0531d79",
     "934bffd9e21e3129",
@@ -8141,7 +8151,13 @@
     "d9d9503985808498",
     "efd539adfca4fe5a"
   ],
-  "cli/scripts/worktree.types.ts": ["1343f6ad090172f1", "79b60437c44cd175", "c57765ec0e1d162c", "dbad01cf0c8356df"],
+  "cli/scripts/worktree.types.ts": [
+    "1343f6ad090172f1",
+    "79b60437c44cd175",
+    "c57765ec0e1d162c",
+    "dbad01cf0c8356df",
+    "dd2ca21ed7be8ef0"
+  ],
   "references/INDEX.md": [
     "0bdfb9d313ef5858",
     "1b5c605be587f519",
