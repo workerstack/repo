@@ -1,14 +1,24 @@
 import path from "node:path";
 
-import { IGNORED_DIRS, REPO, isIgnoredRepoPath } from "../repo-dirs.ts";
+import { isIgnoredRepoPath } from "../repo-dirs.ts";
+import { readWorkflow, rulesOf, type WorkflowRead } from "../workflow.ts";
+import { pushedRefs } from "./ci-push-parse.ts";
+import { spawnRunner } from "./ci-wait-run.ts";
 import { canonicalPath } from "./workspace-root.ts";
 import { defaultBranch, hasCommit, isManaged, relIn, textOf, worktreeName, worktreeOf } from "./worktree-git.ts";
 import {
   BRANCH_FORCE_FLAG,
   BRANCH_MOVE_FLAG,
+  defaultBranchPushReason,
+  defaultBranchReason,
+  destroyText,
   FORCE_OR_LONG_FORCE,
+  FORCE_PUSH_REASON,
   GIT_ASKED,
+  mainCheckoutWriteText,
   PLUS_REFSPEC,
+  PUSH_EVERY_REF,
+  shellQuoted,
   WT_BRANCH_PREFIX,
 } from "./worktree-guards.constants.ts";
 import { gitCommands, worktreeAddOf } from "./worktree-shell.ts";
@@ -26,6 +36,7 @@ import type {
   GitContext,
   GuardEnv,
   SharedAt,
+  SharedContext,
   SharedRule,
   ShellAt,
   Word,
@@ -76,11 +87,12 @@ function cwdOr(roots: WorktreeRoots, root: string): string {
 /**
  * The deny reason for a write into the main checkout (inside the root, outside `.repo/<ignored dir>` and `.worktrees`),
  * else null.
- * Null as well when the root is not a git repo or has no commit yet, since no worktree can be made there.
- * `guard.committed` is the git check, injectable for foreign-path tests.
+ * Null as well when the root is not a git repo or has no commit yet, since no worktree can be made there, and when
+ * the root's workflow lets the main checkout take writes (read last, as it loads repo.config.ts).
+ * `guard.committed` is the git check and `guard.workflow` the workflow read, injectable for foreign-path tests.
  */
 export function mainCheckoutWriteReason(target: string, roots: WorktreeRoots, guard: GuardEnv = {}): string | null {
-  const { p = path, committed = hasCommit } = guard;
+  const { p = path, committed = hasCommit, workflow = readWorkflow } = guard;
   const root = canonicalPath(roots.root, p);
   const abs = canonicalPath(p.resolve(cwdOr(roots, root), target), p);
 
@@ -88,13 +100,7 @@ export function mainCheckoutWriteReason(target: string, roots: WorktreeRoots, gu
 
   if (isIgnoredRepoPath(root, abs, p) || relIn(abs, p.join(root, WORKTREES_DIR), p) !== null) return null;
 
-  if (!committed(root)) return null;
-
-  return (
-    `the main checkout is shared: run ${WORKTREE_CMD} add <name> and write under ` +
-    `${p.join(root, WORKTREES_DIR, "<name>")}; ` +
-    `only ${p.join(root, REPO)}${p.sep}{${IGNORED_DIRS.join(",")}}${p.sep} is writable here`
-  );
+  return !committed(root) || rulesOf(workflow(root)).mainCheckoutWrites ? null : mainCheckoutWriteText(root, p);
 }
 
 /** The `.repo/lessons` dir of the root, or of the managed worktree, that holds `target`; null outside the root. */
@@ -117,33 +123,21 @@ export function gitAskedWords(prompt: string | undefined): string[] {
     .map(([word]) => word);
 }
 
-function defaultBranchReason(branch: string, sub: string): string {
-  return (
-    `${branch} is the shared default branch: move it only with ${WORKTREE_CMD} finish <name>, ` +
-    `or when the user's message asks for git ${sub}`
-  );
-}
-
 function commitReason(_g: GitCommand, c: GitContext): string | null {
-  return c.inMain
+  return c.inMain && !c.mainWrites()
     ? `the main checkout is shared: commit inside ${c.p.join(c.root, WORKTREES_DIR, "<name>")}, ` +
         `then run ${WORKTREE_CMD} finish <name>`
     : null;
 }
 
 function destroyReason(g: GitCommand, c: GitContext): string | null {
-  return c.inMain
-    ? `git ${g.sub} in the main checkout can destroy other sessions' work: do it inside your worktree, ` +
-        `or run it here only when the user's message asks for git ${g.sub}`
-    : null;
+  return c.inMain ? destroyText(g.sub, { mainWrites: c.mainWrites() }) : null;
 }
 
 function forcePushReason(g: GitCommand): string | null {
   const forced = g.rest.some((w) => FORCE_OR_LONG_FORCE.test(w.text) || PLUS_REFSPEC.test(w.text));
 
-  return forced
-    ? "a force push rewrites shared history: run it only when the user's message asks for a force push"
-    : null;
+  return forced ? FORCE_PUSH_REASON : null;
 }
 
 function branchReason(g: GitCommand, c: GitContext): string | null {
@@ -204,8 +198,32 @@ function isSharedSub(sub: string): sub is keyof typeof SHARED_GIT {
   return Object.hasOwn(SHARED_GIT, sub);
 }
 
+/**
+ * The deny reason for the pushes in `commands` under the root when the workflow keeps the default branch for pull
+ * requests and one sends it, `--all` or `--mirror`, else null; the workflow is read only when one exists. The pushes
+ * are read back as one shell line, so a prefix or a heredoc never hides one; a throw while resolving their refs denies.
+ */
+function defaultPushReason(commands: GitCommand[], c: SharedContext): string | null {
+  const { p, root } = c;
+  const pushes = commands.filter((g) => g.sub === PUSH_SUB && relIn(canonicalPath(g.at, p), root, p) !== null);
+
+  if (pushes.length === 0 || !c.committed() || rulesOf(c.read()).pushDefaultBranch) return null;
+  const reason = defaultBranchPushReason(c.defaultBranch(), c.read());
+
+  if (pushes.some((g) => g.rest.some((w) => PUSH_EVERY_REF.test(w.text)))) return reason;
+  const words = pushes.map((g) => ["git", "-C", g.at, PUSH_SUB, ...g.rest.map((w) => w.text)].map(shellQuoted));
+
+  try {
+    const refs = pushedRefs(c.git, words.map((line) => line.join(" ")).join("\n"), root);
+
+    return refs.some((ref) => ref.branch === c.defaultBranch()) ? reason : null;
+  } catch {
+    return reason;
+  }
+}
+
 /** The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. */
-function ruleReason(g: GitCommand, at: SharedAt, c: Omit<GitContext, "inMain">): string | null {
+function ruleReason(g: GitCommand, at: SharedAt, c: SharedContext): string | null {
   const rule = isSharedSub(g.sub) ? SHARED_GIT[g.sub] : undefined;
 
   if (rule === undefined || at.asked.has(g.sub === PUSH_SUB ? FORCE_GRANT : g.sub)) return null;
@@ -220,20 +238,44 @@ function ruleReason(g: GitCommand, at: SharedAt, c: Omit<GitContext, "inMain">):
  * The deny reason for a git command that commits or destroys work in the main checkout, or that hits shared refs
  * from anywhere in the repo, else null. Inside your own managed worktree every other command runs.
  * `at.asked` holds the grant words (`GIT_ASKED`) the user's latest message named; a named subcommand passes.
+ * A push of the default branch, `--all` or `--mirror` under the root is denied first, grant or not, when the root's
+ * workflow keeps the default branch for pull requests; the workflow is read only when the line pushes.
  * Null as well when the root is not a git repo or has no commit yet. `guard.committed` is the git check,
- * injectable for foreign-path tests.
+ * `guard.workflow` the workflow read and `guard.git` the push's ref resolver, injectable for foreign-path tests.
  */
 export function sharedGitReason(command: string, at: SharedAt, guard: GuardEnv = {}): string | null {
-  const { p = path, committed = hasCommit } = guard;
-  const root = canonicalPath(at.roots.root, p);
-  let defaultName: string | undefined;
-  const c = { defaultBranch: (): string => (defaultName ??= defaultBranch(root)), p, root };
+  const c = sharedContext(at.roots.root, guard);
+  const commands = [...gitCommands(command, at.cwd, c.p)];
+  const pushed = defaultPushReason(commands, c);
 
-  for (const g of gitCommands(command, at.cwd, p)) {
+  if (pushed !== null) return pushed;
+
+  for (const g of commands) {
     const reason = ruleReason(g, at, c);
 
-    if (reason !== null && committed(root)) return reason;
+    if (reason !== null && c.committed()) return reason;
   }
 
   return null;
+}
+
+/** The context the shared-git rules read, with each git call and the workflow read made at most once, on first ask. */
+function sharedContext(given: string, guard: GuardEnv): SharedContext {
+  const { p = path, committed = hasCommit, workflow = readWorkflow, git = spawnRunner("git") } = guard;
+  const root = canonicalPath(given, p);
+  let hasCommitted: boolean | undefined;
+  let defaultName: string | undefined;
+  let read: WorkflowRead | undefined;
+
+  const c: SharedContext = {
+    committed: () => (hasCommitted ??= committed(root)),
+    defaultBranch: () => (defaultName ??= defaultBranch(root)),
+    git,
+    mainWrites: () => rulesOf(c.read()).mainCheckoutWrites,
+    p,
+    read: () => (read ??= workflow(root)),
+    root,
+  };
+
+  return c;
 }

@@ -134,6 +134,7 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
       packs: ["agents", "docs"],
       tdd: false,
       turbo: undefined,
+      workflow: "worktree",
     },
     ok: true,
   });

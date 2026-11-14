@@ -5,6 +5,7 @@ import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Effort, Mode, Strategy } from "./scripts/strategy.types.ts";
 import type { ResolvedTurbo } from "./turbo-config.ts";
+import type { Workflow } from "./workflow.ts";
 
 /** What an agent session starts from when nothing else names it: the hooks and the root `AGENTS.md` read these. */
 export type AgentDefaults = {
@@ -85,6 +86,8 @@ export type ResolvedConfig = {
    * do.
    */
   readonly tdd: boolean;
+  /** Where changes are made and how they reach the default branch: worktree when the config omits `workflow`. */
+  readonly workflow: Workflow;
   /** The owner a public package under the release pack is checked against; `repo check` asks for it when missing. */
   readonly owner?: ResolvedOwner | undefined;
   /** The extra turbo tasks of the workspace pack; absent when the config has no `turbo`. */
