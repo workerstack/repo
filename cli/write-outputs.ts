@@ -6,6 +6,7 @@ import { headerStale } from "./sync/header-stale.ts";
 import { prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import type { Output } from "./sync/outputs.ts";
 import { applyCuts, type Cut, cutDriftLines, repairLines, splitPrune } from "./sync/prune-shared.ts";
+import { removeStaleRunCopies } from "./sync/run-copies.ts";
 import { markHooksExecutable, syncHooksPath } from "./sync/standards.ts";
 import { settleModes } from "./sync/write-modes.ts";
 import { writeAll } from "./sync/write.ts";
@@ -118,6 +119,9 @@ function writeChanges(run: Run, changes: Changes): number {
   const written = writeAll(root, { changed: changes.changed, manifest, prune: changes.prune }, write);
 
   if (!written.ok) return fail(run, written.refused ? [...written.errors, "nothing written"] : written.errors);
+
+  for (const name of removeStaleRunCopies(root))
+    io.stdout(`${SYNC_PREFIX}removed ${name}, left by a repo check that stopped\n`);
   // Git keeps no read-only bit, so a checkout leaves a current output writable; a warning, since its bytes are right.
   const locks = settleModes(root, outputs, platform);
   const hooks = setUpHooks(run);
