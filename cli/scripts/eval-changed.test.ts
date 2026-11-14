@@ -8,8 +8,13 @@ import { useGitTree } from "../__fixtures__/git-tree.ts";
 import { useEvalRun } from "./__fixtures__/eval-run.ts";
 import { parseArgs } from "./eval-args.ts";
 
-const COUNT = "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5 via (?:session|api)";
-const ESTIMATE = new RegExp(`^${COUNT}, at most \\$[\\d.]+ \\(cap \\$1\\.00\\)$`, "mv");
+const COUNT = "eval sample: 2 cases x 3 samples = 6 calls on claude-haiku-5-5";
+
+const ESTIMATE = new RegExp(
+  `^${COUNT} via (?:session, at most \\$[\\d.]+ \\(cap \\$5|api, at most \\$[\\d.]+ \\(cap \\$1)\\.00\\)$`,
+  "mv",
+);
+
 const NEEDS_BASE = "eval: --changed needs a git base, such as main\n";
 const SOLO = "export default { cases: [{ id: 'a', input: 'x', pass: () => true, source: 's' }], system: 's' };\n";
 const tree = useGitTree("eval-changed-main-");
@@ -27,7 +32,7 @@ function wroteRuns(): boolean {
 
 it("takes the base after --changed as its value, not as a second name", () => {
   expect(parseArgs(["sample", "--changed", "main"])).toStrictEqual({
-    args: { cap: 1, changed: "main", isDryRun: false, name: "sample", via: "session" },
+    args: { cap: 5, changed: "main", isDryRun: false, name: "sample", via: "session" },
     ok: true,
   });
 });

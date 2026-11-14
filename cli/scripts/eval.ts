@@ -2,13 +2,13 @@
  * `repo eval <name> [--dry-run] [--max-cost <usd>] [--changed <base>] [--via session|api]`: loads
  * `evals/<name>/eval.ts`; with `--changed`, prints the first file it reads that changed since the merge base with
  * `<base>`, or that none did and exits 0 there. Then it prints the worst-case cost of its uncached calls, refuses over
- * the cap (default $1.00), and otherwise runs every case through `claude -p` on the logged-in session (`--via
- * session`, the default, which reads no key) or the Anthropic API (`--via api`, which needs `ANTHROPIC_API_KEY`) and
- * prints pass or fail per case with the spend. Answers are cached under `.repo/tmp/evals/cache` of the main checkout,
- * so a rerun of unchanged text costs nothing; the run stops before a case whose bound would cross the cap, and every
- * run that started leaves a JSON summary under `.repo/tmp/evals/runs`. `--dry-run` stops after the estimate and never
- * reads `ANTHROPIC_API_KEY`. Exits 0 when every case ran, 1 when it refused, stopped or a call failed, 4 on a bad
- * argument.
+ * the cap (default $5.00 for a session run and $1.00 for an API run), and otherwise runs every case through `claude -p`
+ * on the logged-in session (`--via session`, the default, which reads no key) or the Anthropic API (`--via api`, which
+ * needs `ANTHROPIC_API_KEY`) and prints pass or fail per case with the spend. Answers are cached under
+ * `.repo/tmp/evals/cache` of the main checkout, so a rerun of unchanged text costs nothing; the run stops before a case
+ * whose bound would cross the cap, and every run that started leaves a JSON summary under `.repo/tmp/evals/runs`.
+ * `--dry-run` stops after the estimate and never reads `ANTHROPIC_API_KEY`. Exits 0 when every case ran, 1 when it
+ * refused, stopped or a call failed, 4 on a bad argument.
  */
 import path from "node:path";
 

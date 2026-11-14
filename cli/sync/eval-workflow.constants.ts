@@ -30,10 +30,10 @@ on:
         required: true
         type: string
       max-cost:
-        description: The most the run may spend, in US dollars
-        required: true
+        description: The most the run may spend, in US dollars; empty takes 5 for session and 1 for api
+        required: false
         type: string
-        default: "1"
+        default: ""
       via:
         description: How the eval is paid for, the Claude Code session or the API key
         required: true
@@ -77,7 +77,7 @@ export const EVAL_RUN_STEP: string = `      - name: Run the eval
           EVAL: \${{ inputs.eval }}
           MAX_COST: \${{ inputs.max-cost }}
           VIA: \${{ inputs.via }}
-        run: bun repo eval "$EVAL" --max-cost "$MAX_COST" --via "$VIA"`;
+        run: bun repo eval "$EVAL" --via "$VIA" \${MAX_COST:+--max-cost "$MAX_COST"}`;
 
 /** Saved and uploaded even when a case fails or the cap stops the run, so paid answers and the summary are kept. */
 export const EVAL_KEEP_STEPS: string = `      - uses: actions/cache/save@${CACHE_PIN}
