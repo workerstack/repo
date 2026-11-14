@@ -87,7 +87,7 @@ it("lets every git command run inside your own worktree and denies the main chec
   );
   expect(shared("git -C ../.. stash", at(r, a))).toMatch(/^git stash in the main checkout /);
   expect(shared("git status && git log --oneline && git diff && git add -A && git worktree list", at(r))).toBeNull();
-  expect(shared('git -C "$DIR" stash', at(r))).toBeNull();
+  expect(shared('git -C "$DIR" stash', at(r))).toMatch(/^git stash in the main checkout /);
 });
 
 it("frees other worktrees and wt/* branches", () => {

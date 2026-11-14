@@ -25,6 +25,9 @@ const PREFIXED = [
   "A=1 rtk git stash",
   "rtk env A=1 git stash",
   "cd packages && /usr/bin/git stash",
+  "sudo -u bob git stash",
+  "timeout -s KILL 5 git stash",
+  "nice -n 5 env -- git stash",
 ];
 
 it("checks a git command behind an rtk or env prefix like the bare one", () => {

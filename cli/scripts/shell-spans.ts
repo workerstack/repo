@@ -50,26 +50,36 @@ function pastQuoted(cmd: string, at: number): number {
   return end < 0 ? cmd.length : end + 1;
 }
 
-/**
- * The index of the `)` that closes a `$(` whose body starts at `from`, or the end of `cmd` when none does. Quotes,
- * backticks and escapes are skipped whole, and each `(` inside needs its own `)`.
- */
-export function substitutionEnd(cmd: string, from: number): number {
+/** The index of the `close` that pairs with an `open` before `from`, or the end of `cmd`; skips quotes and escapes. */
+function pairEnd(cmd: string, from: number, [open, close]: string): number {
   let depth = 1;
   let at = from;
 
   while (at < cmd.length) {
     const ch = cmd.charAt(at);
 
-    if (ch === ")" && --depth === 0) return at;
+    if (ch === close && --depth === 0) return at;
 
-    if (ch === "(") depth++;
+    if (ch === open) depth++;
 
     if ("'\"`".includes(ch)) at = pastQuoted(cmd, at);
     else at += ch === "\\" ? PAIR_LENGTH : 1;
   }
 
   return cmd.length;
+}
+
+/**
+ * The index of the `)` that closes a `$(` whose body starts at `from`, or the end of `cmd` when none does. Quotes,
+ * backticks and escapes are skipped whole, and each `(` inside needs its own `)`.
+ */
+export function substitutionEnd(cmd: string, from: number): number {
+  return pairEnd(cmd, from, "()");
+}
+
+/** The index of the `}` that closes a `${` whose body starts at `from`, or the end of `cmd`. */
+export function braceEnd(cmd: string, from: number): number {
+  return pairEnd(cmd, from, "{}");
 }
 
 /** The index of the backtick that closes one whose body starts at `from`, or the end of `cmd`. */

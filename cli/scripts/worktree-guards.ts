@@ -4,8 +4,18 @@ import { isIgnoredRepoPath } from "../repo-dirs.ts";
 import { readWorkflow, rulesOf, type WorkflowRead } from "../workflow.ts";
 import { spawnRunner } from "./ci-wait-run.ts";
 import { defaultPushReason } from "./default-push-reason.ts";
+import type { Dir, ReadWord } from "./shell-ast.types.ts";
 import { canonicalPath } from "./workspace-root.ts";
-import { defaultBranch, hasCommit, isManaged, relIn, textOf, worktreeName, worktreeOf } from "./worktree-git.ts";
+import {
+  defaultBranch,
+  dirUnder,
+  hasCommit,
+  isManaged,
+  relIn,
+  textOf,
+  worktreeName,
+  worktreeOf,
+} from "./worktree-git.ts";
 import {
   BRANCH_FORCE_FLAG,
   BRANCH_MOVE_FLAG,
@@ -18,7 +28,7 @@ import {
   PLUS_REFSPEC,
   WT_BRANCH_PREFIX,
 } from "./worktree-guards.constants.ts";
-import { gitCommands, worktreeAddOf } from "./worktree-shell.ts";
+import { gitLine, worktreeAddOf } from "./worktree-shell.ts";
 import {
   BRANCH_PREFIX,
   FORCE_GRANT,
@@ -36,7 +46,6 @@ import type {
   SharedContext,
   SharedRule,
   ShellAt,
-  Word,
   WorktreeAdd,
   WorktreeRoots,
 } from "./worktree.types.ts";
@@ -48,15 +57,26 @@ function suggestedName(branch: string | null, abs: string, p: typeof path): stri
   return worktreeName(wanted) ?? "<name>";
 }
 
-/** The deny reason for one `git worktree add`, else null: only `<root>/.worktrees/<name>` on `wt/<name>` passes. */
+/** Where a `git worktree add` target lands, canonical; null for a relative target from a dir the gate cannot know. */
+function targetPath(at: Dir, target: string, p: typeof path): string | null {
+  if (p.isAbsolute(target)) return canonicalPath(p.resolve(target), p);
+
+  return at.known ? canonicalPath(p.resolve(at.path, target), p) : null;
+}
+
+/**
+ * The deny reason for one `git worktree add`, else null: only `<root>/.worktrees/<name>` on `wt/<name>` passes. A
+ * target the shell sets as it runs passes; a relative one from a dir the gate cannot know denies, since it may land
+ * anywhere.
+ */
 function addReason(add: WorktreeAdd, root: string, p: typeof path): string | null {
   if (add.target?.literal !== true) return null;
-  const abs = canonicalPath(p.resolve(add.at, add.target.text), p);
-  const name = isManaged(abs, root, p) ? p.basename(abs) : null;
+  const abs = targetPath(add.at, add.target.text, p);
+  const name = abs !== null && isManaged(abs, root, p) ? p.basename(abs) : null;
   const branch = add.branch ?? (add.detach ? null : add.commitish);
 
   if (name !== null && branch === BRANCH_PREFIX + name) return null;
-  const suggest = suggestedName(add.branch, abs, p);
+  const suggest = suggestedName(add.branch, abs ?? add.target.text, p);
 
   return (
     `worktrees live in ${p.join(root, WORKTREES_DIR, "<name>")} on branch wt/<name>: ` +
@@ -66,7 +86,7 @@ function addReason(add: WorktreeAdd, root: string, p: typeof path): string | nul
 
 /** The deny reason for a `git worktree add` aimed anywhere but `<root>/.worktrees/<name>` on `wt/<name>`, else null. */
 export function worktreeAddReason(command: string, at: ShellAt, p: typeof path = path): string | null {
-  for (const g of gitCommands(command, at.cwd, p)) {
+  for (const g of gitLine(command, at.cwd, p).commands) {
     const add = worktreeAddOf(g);
     const reason = add === null ? null : addReason(add, at.roots.root, p);
 
@@ -152,8 +172,8 @@ function branchReason(g: GitCommand, c: GitContext): string | null {
 }
 
 /** The ref words of a `git update-ref`: every word that is not a flag or the `-m` message. */
-function refsOf(rest: Word[]): Word[] {
-  const refs: Word[] = [];
+function refsOf(rest: ReadWord[]): ReadWord[] {
+  const refs: ReadWord[] = [];
   const words = rest[Symbol.iterator]();
 
   for (const w of words) {
@@ -195,14 +215,17 @@ function isSharedSub(sub: string): sub is keyof typeof SHARED_GIT {
   return Object.hasOwn(SHARED_GIT, sub);
 }
 
-/** The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. */
+/**
+ * The reason one git command earns from its rule, else null; a granted subcommand or a dir outside the root passes. A
+ * dir the gate cannot know is judged as the main checkout.
+ */
 function ruleReason(g: GitCommand, at: SharedAt, c: SharedContext): string | null {
   const rule = isSharedSub(g.sub) ? SHARED_GIT[g.sub] : undefined;
 
   if (rule === undefined || at.asked.has(g.sub === PUSH_SUB ? FORCE_GRANT : g.sub)) return null;
-  const dir = canonicalPath(g.at, c.p);
+  const dir = dirUnder(g.at, c.root, c.p);
 
-  if (relIn(dir, c.root, c.p) === null) return null;
+  if (dir === null) return null;
 
   return rule(g, { ...c, inMain: worktreeOf(dir, c.root, c.p) === null });
 }
@@ -218,12 +241,12 @@ function ruleReason(g: GitCommand, at: SharedAt, c: SharedContext): string | nul
  */
 export function sharedGitReason(command: string, at: SharedAt, guard: GuardEnv = {}): string | null {
   const c = sharedContext(at.roots.root, guard);
-  const commands = [...gitCommands(command, at.cwd, c.p)];
-  const pushed = defaultPushReason(commands, c);
+  const line = gitLine(command, at.cwd, c.p);
+  const pushed = defaultPushReason(line, c);
 
   if (pushed !== null) return pushed;
 
-  for (const g of commands) {
+  for (const g of line.commands) {
     const reason = ruleReason(g, at, c);
 
     if (reason !== null && c.committed()) return reason;

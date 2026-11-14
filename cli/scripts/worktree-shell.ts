@@ -1,186 +1,123 @@
+/** The git commands a shell line runs, each with the dir it runs in, read from the shared bash walk. */
 import type path from "node:path";
 
+import { movedDir } from "./cd-effect.ts";
+import { commandAt } from "./command-at.ts";
+import type { Dir, ReadWord, ShellWord } from "./shell-ast.types.ts";
+import { shellFlow } from "./shell-flow.ts";
+import { isLiteral, readWord } from "./shell-lex-word.ts";
+import { programName } from "./shell-scripts.ts";
 import {
   ADD_CMD,
   ADD_VALUE_FLAGS,
-  CD_WORD,
   CONFIG_FLAG,
   DETACH_FLAG,
   DETACH_SHORT,
-  DIR_FLAG,
+  DIR_OPTIONS,
+  DIR_VARIABLES,
   GIT_BIN,
-  HERE_STRING,
-  HEREDOC,
+  LONG_DIR_OPTIONS,
   REASON_FLAG,
   WORKTREE_SUB,
 } from "./worktree.constants.ts";
-import type { GitCommand, Heredoc, ShellLexer, Word, WorktreeAdd } from "./worktree.types.ts";
+import type { GitCommand, GitLine, WorktreeAdd } from "./worktree.types.ts";
 
-const HEREDOC_OP = /<<(?<dash>-?)[ \t]*(?:'(?<sq>[^'\n]*)'|"(?<dq>[^"\n]*)"|\\?(?<bare>[^\s;&|<>()'"\\]+))/y;
-const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
-const CR_AT_END = /\r$/;
-const LEADING_TABS = /^\t+/;
-const SHELL_ACTIVE_CHARS = /[$`\\]/;
-const PROXY = /^(?:.*\/)?(?:rtk|env)$/;
+/** Where git's options left the scan: the dir they set and the index of the next word. */
+type OptionStep = { dir: Dir; next: number };
 
-/** Push the heredoc the `<<` at `i` opens, if any; the index the scan goes on from. */
-function heredocAt(line: string, i: number, opened: Heredoc[]): number {
-  HEREDOC_OP.lastIndex = i;
-  const m = HEREDOC_OP.exec(line);
+/** The words an option and its value take. */
+const OPTION_AND_VALUE = 2;
 
-  if (m === null) return i + 1;
-  const g = m.groups;
-  opened.push({ indented: g?.dash === "-", word: String(g?.sq ?? g?.dq ?? g?.bare) });
+/** `NAME=value` or `--name=value` as its value, still literal only when the value has no leading `~`. */
+function afterEquals(w: ReadWord): ReadWord {
+  const raw = w.raw.slice(w.raw.indexOf("=") + 1);
 
-  return i + m[0].length - 1;
+  return { literal: w.literal && !raw.startsWith("~"), raw, text: w.text.slice(w.text.indexOf("=") + 1) };
 }
 
-/** The heredoc delimiters opened on one line, in order: `{ word, indented }`; a quoted `<<` or a `<<<` opens none. */
-function heredocsOpenedBy(line: string): Heredoc[] {
-  const opened: Heredoc[] = [];
-  let quote = "";
+/** The name before the `=` of `w`, or "" when it has none. */
+function nameOf(w: ReadWord): string {
+  const eq = w.text.indexOf("=");
 
-  for (let i = 0; i < line.length; i++) {
-    const ch = line.charAt(i);
+  return eq < 0 ? "" : w.text.slice(0, eq);
+}
 
-    if (quote !== "") quote = ch === quote ? "" : quote;
-    else if (ch === "\\") i++;
-    else if (ch === "'" || ch === '"') quote = ch;
-    else if (line.startsWith(HERE_STRING, i)) i += HERE_STRING.length - 1;
-    else if (line.startsWith(HEREDOC, i)) i = heredocAt(line, i, opened);
+/**
+ * The index git runs at: the program past runners (`env`, `sudo`, `rtk`, …) when it is git or an expansion, which may
+ * be git; null for any other program.
+ */
+function gitAt(words: readonly ShellWord[]): number | null {
+  const at = commandAt(words);
+  const prog = words[at];
+
+  return prog !== undefined && (!isLiteral(prog) || programName(prog) === GIT_BIN) ? at : null;
+}
+
+/** The git option at `at.next`: the dir it sets and where the scan goes on; null at the end or a missing value. */
+function gitOption(words: readonly ReadWord[], at: OptionStep, p: typeof path): OptionStep | null {
+  const { dir, next: i } = at;
+  const w = words[i];
+  const value = words[i + 1];
+  const pastValue = i + OPTION_AND_VALUE;
+
+  if (w === undefined) return null;
+
+  if (DIR_OPTIONS.has(w.text)) return value === undefined ? null : { dir: movedDir(value, dir, p), next: pastValue };
+
+  if (LONG_DIR_OPTIONS.has(nameOf(w))) return { dir: movedDir(afterEquals(w), dir, p), next: i + 1 };
+
+  return { dir, next: w.text === CONFIG_FLAG ? pastValue : i + 1 };
+}
+
+/** The git command after git's own options, run where they lead; null when no subcommand follows. */
+function afterOptions(words: readonly ReadWord[], start: Dir, p: typeof path): GitCommand | null {
+  for (let step: OptionStep | null = { dir: start, next: 0 }; step !== null; step = gitOption(words, step, p)) {
+    const w = words[step.next];
+
+    if (w !== undefined && !w.text.startsWith("-"))
+      return { at: step.dir, rest: words.slice(step.next + 1), sub: w.text };
   }
 
-  return opened;
+  return null;
 }
 
-/** `command` without heredoc bodies and their terminator lines: they are data, not commands. */
-function dropHeredocBodies(command: string): string {
-  const kept: string[] = [];
-  let pending: Heredoc[] = [];
+/** The git command of one simple command, its dir moved by `GIT_DIR=` or `GIT_WORK_TREE=` before git; else null. */
+function gitCommandOf(words: readonly ShellWord[], dir: Dir, p: typeof path): GitCommand | null {
+  const at = gitAt(words);
 
-  for (const line of command.split("\n")) {
-    const [open] = pending;
+  if (at === null) return null;
+  const read = words.map(readWord);
+  let here = dir;
 
-    if (open !== undefined) {
-      const bare = line.replace(CR_AT_END, "");
+  for (const w of read.slice(0, at)) if (DIR_VARIABLES.has(nameOf(w))) here = movedDir(afterEquals(w), here, p);
 
-      if ((open.indented ? bare.replace(LEADING_TABS, "") : bare) === open.word) pending.shift();
-      continue;
+  return afterOptions(read.slice(at + 1), here, p);
+}
+
+/**
+ * Every git command a shell line runs from `cwd`, with its dir, and every script a shell runs that the gate cannot
+ * read.
+ */
+export function gitLine(command: string, cwd: string, p: typeof path): GitLine {
+  const line: GitLine = { commands: [], unread: [] };
+
+  shellFlow(command, { cwd, p }, (v) => {
+    if (v.kind === "opaque") {
+      line.unread.push({ at: v.dir, cause: v.cause });
+
+      return;
     }
 
-    kept.push(line);
-    pending = heredocsOpenedBy(line);
-  }
+    const g = v.data === true ? null : gitCommandOf(v.words, v.dir, p);
 
-  return kept.join("\n");
-}
+    if (g !== null) line.commands.push(g);
+  });
 
-function endWord(lx: ShellLexer): void {
-  if (lx.word !== null) lx.seg.push(lx.word);
-  lx.word = null;
-}
-
-function addText(lx: ShellLexer, text: string, { literal = true }: { literal?: boolean } = {}): void {
-  lx.word = lx.word ?? { literal: true, text: "" };
-  lx.word.text += text;
-
-  if (!literal) lx.word.literal = false;
-}
-
-/** The text of the quote opening at `lx.i`, to its close or the end; moves `lx.i` onto the close. */
-function quoted(lx: ShellLexer, q: string): string {
-  const close = lx.s.indexOf(q, lx.i + 1);
-  const inner = close < 0 ? lx.s.slice(lx.i + 1) : lx.s.slice(lx.i + 1, close);
-  lx.i = close < 0 ? lx.s.length : close;
-
-  return inner;
-}
-
-function endSegment(lx: ShellLexer): void {
-  endWord(lx);
-
-  if (lx.seg.length === 0) return;
-  lx.seg = [];
-  lx.segments.push(lx.seg);
-}
-
-function plain(lx: ShellLexer, ch: string): void {
-  addText(lx, ch, { literal: !(ch === "$" || ch === "`" || (ch === "~" && lx.word === null)) });
-}
-
-function step(lx: ShellLexer, ch: string): void {
-  if (" \t".includes(ch)) {
-    endWord(lx);
-  } else if (";&|\n".includes(ch)) {
-    endSegment(lx);
-  } else if (ch === "'") {
-    addText(lx, quoted(lx, ch));
-  } else if (ch === '"') {
-    const inner = quoted(lx, ch);
-    addText(lx, inner, { literal: !SHELL_ACTIVE_CHARS.test(inner) });
-  } else if (ch === "\\") {
-    addText(lx, lx.s.charAt(lx.i + 1));
-    lx.i++;
-  } else {
-    plain(lx, ch);
-  }
-}
-
-/** Shell words per command segment; a word holding `$`, a backtick or a leading `~` is not literal. */
-function shellSegments(command: string): Word[][] {
-  const seg: Word[] = [];
-  const lx: ShellLexer = { i: 0, s: dropHeredocBodies(command), seg, segments: [seg], word: null };
-
-  for (; lx.i < lx.s.length; lx.i++) step(lx, lx.s.charAt(lx.i));
-  endWord(lx);
-
-  return lx.segments.filter((words) => words.length > 0);
-}
-
-/** The git command after git's own options; null when none follows or a `-C` dir is not literal. */
-function afterOptions(words: Word[], at: string, p: typeof path): GitCommand | null {
-  const [opt, value, ...more] = words;
-
-  if (opt === undefined) return null;
-
-  if (!opt.text.startsWith("-")) return { at, rest: words.slice(1), sub: opt.text };
-
-  if (opt.text === DIR_FLAG) return value?.literal === true ? afterOptions(more, p.resolve(at, value.text), p) : null;
-
-  return afterOptions(opt.text === CONFIG_FLAG ? more : words.slice(1), at, p);
-}
-
-/** `{ at, sub, rest }` for a `[VAR=v] [rtk] [env VAR=v] git [-C dir] [-c k=v] <sub> …` segment; null for any other. */
-function gitCommandOf(words: Word[], cwd: string, p: typeof path): GitCommand | null {
-  // `FOO=1`, `env FOO=1` and the `rtk` proxy all stand before the real command.
-  const start = words.findIndex((w) => !ASSIGNMENT.test(w.text) && !PROXY.test(w.text));
-  const [bin, ...after] = start < 0 ? [] : words.slice(start);
-
-  if (bin === undefined || (bin.text !== GIT_BIN && !bin.text.endsWith(`/${GIT_BIN}`))) return null;
-
-  return afterOptions(after, cwd, p);
-}
-
-/** Each git command of a shell line with the dir it runs in, following `cd <literal>` between segments. */
-export function* gitCommands(command: string, cwd: string, p: typeof path): Generator<GitCommand> {
-  let here = cwd;
-
-  for (const words of shellSegments(command)) {
-    const [first, dir, extra] = words;
-
-    if (first?.text === CD_WORD && dir?.literal === true && extra === undefined) {
-      here = p.resolve(here, dir.text);
-      continue;
-    }
-
-    const g = gitCommandOf(words, here, p);
-
-    if (g !== null) yield g;
-  }
+  return line;
 }
 
 /** Fold one word of a `git worktree add` into `out`; a flag that takes a value takes the next word. */
-function addArg(out: WorktreeAdd, w: Word, words: Iterator<Word>): void {
+function addArg(out: WorktreeAdd, w: ReadWord, words: Iterator<ReadWord>): void {
   if (ADD_VALUE_FLAGS.includes(w.text)) {
     const value = words.next();
 

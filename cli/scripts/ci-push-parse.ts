@@ -53,10 +53,12 @@ function parsePush(words: string[], base: string): Push | null {
     else if (words[i] === CONFIG_OPTION) i++;
   }
 
-  if (words[i] !== PUSH) return null;
-  const args = words.slice(i + 1).filter((w) => !w.startsWith("-"));
+  return words[i] === PUSH ? { dir, refs: specsOf(words.slice(i + 1)) } : null;
+}
 
-  return { dir, refs: args.slice(1) };
+/** The refspecs among the words after `push`: every word past the remote that is not a flag. */
+function specsOf(rest: readonly string[]): string[] {
+  return rest.filter((w) => !w.startsWith("-")).slice(1);
 }
 
 /**
@@ -148,9 +150,17 @@ function resolveSpec(git: Runner, dir: string, spec: string): PushedRef | null {
   return given === "" || branch === null || sha.code !== 0 ? null : { branch, dir, sha: sha.stdout.trim(), src };
 }
 
+/** Every branch ref one push updates, resolved in its dir; no refspec pushes `HEAD`. */
+function refsOfPush(git: Runner, { dir, refs }: Push): PushedRef[] {
+  return (refs.length > 0 ? refs : [HEAD]).flatMap((spec) => resolveSpec(git, dir, spec) ?? []);
+}
+
 /** Every branch ref the push forms in `command` update, resolved where each push runs. */
 export function pushedRefs(git: Runner, command: string, cwd: string): PushedRef[] {
-  return pushesIn(git, command, cwd).flatMap((p) =>
-    (p.refs.length > 0 ? p.refs : [HEAD]).flatMap((spec) => resolveSpec(git, p.dir, spec) ?? []),
-  );
+  return pushesIn(git, command, cwd).flatMap((p) => refsOfPush(git, p));
+}
+
+/** Every branch ref `git push <rest>` updates when it runs in `dir`. */
+export function pushRefs(git: Runner, dir: string, rest: readonly string[]): PushedRef[] {
+  return refsOfPush(git, { dir, refs: specsOf(rest) });
 }
