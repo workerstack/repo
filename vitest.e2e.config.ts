@@ -7,7 +7,7 @@ import { defineConfig } from "./presets/vitest.ts";
 export default defineConfig({
   test: {
     fileParallelism: false,
-    globalSetup: ["e2e/setup.ts"],
+    globalSetup: ["dev/refuse-node.ts", "e2e/setup.ts"],
     hookTimeout: 600_000,
     include: ["e2e/**/*.e2e.ts"],
     maxConcurrency: 1,

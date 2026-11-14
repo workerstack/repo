@@ -9,3 +9,6 @@ export const GIT_CONFIG_COUNT = "GIT_CONFIG_COUNT";
 export const GIT_CONFIG_KEY = "GIT_CONFIG_KEY_";
 export const GIT_CONFIG_VALUE = "GIT_CONFIG_VALUE_";
 export const BUN_CACHE_VAR = "BUN_RUNTIME_TRANSPILER_CACHE_PATH";
+
+/** The project dirs host shells export; a test resolves its own roots, so they never reach it. */
+export const HOST_PROJECT_VARS: readonly string[] = ["CLAUDE_PROJECT_DIR", "GROK_WORKSPACE_ROOT"];
