@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Breaking:** reject files are checked with TypeScript 7, so a `rejects:` mark must quote the error text tsc 7 prints
+- **Breaking:** `bun repo check` fails a repo whose installed typescript is below 7, naming `bun add -d typescript@7.0.2` (`bun add typescript@7.0.2` when the root lists it under `dependencies`)
 
 ### Fixed
 

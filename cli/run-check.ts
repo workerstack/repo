@@ -29,15 +29,20 @@ function printer(failing: string[]): Printer {
   };
 }
 
-/** Tsconfig bases, env modules, fixture folders and defineEnv values, printed before sync's own lines. */
+/**
+ * The typescript floor, tsconfig bases, env modules, fixture folders and defineEnv values, printed before sync's
+ * own lines.
+ */
 async function checkSources(cwd: string, print: Printer): Promise<void> {
   // Loaded here so other commands never load typescript.
   const { checkTsconfigs } = await import("./check-tsconfig.ts");
   const { checkEnvModules } = await import("./check-env-modules.ts");
   const { checkFixtures } = await import("./check-fixtures.ts");
   const { checkEnvValues } = await import("./check-env-values.ts");
+  const { checkTypescript } = await import("./check-typescript.ts");
   const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
   print.fail([
+    ...checkTypescript(cwd, pkgRoot),
     ...(await checkTsconfigs(cwd, pkgRoot)),
     ...checkEnvModules(cwd),
     ...checkFixtures(cwd),

@@ -288,6 +288,13 @@ export default defineConfig({ test: { include: ["src/**/*.test.ts"] } });
 { "extends": "@workerstack/repo/tsconfig/bun", "include": ["**/*.ts"] }
 ```
 
+The presets and every check run on TypeScript 7. A repo whose root installs a typescript below 7 fails `bun repo check`, and the line names the add that moves it to the version this package ships with. A root that lists typescript under `dependencies` gets `bun add` in place of `bun add -d`. A repo with no typescript of its own passes.
+
+```console
+$ bun repo check
+repo check: typescript 5.9.3 is installed; repo needs typescript 7 or later; run `bun add -d typescript@7.0.2`
+```
+
 ### Commit messages
 
 The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its subject plus at most three more things. Anything else is refused, and each refusal names the fix:
