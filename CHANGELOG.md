@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Put agents.defaultApproval, agents.defaultEffort and agents.defaultStrategy in a gitignored repo.config.local.ts, set with defineLocalConfig, to override repo.config.ts for one checkout.
 - `link.push: "allow"` in repo.config.ts lets a push go while a public package depends on a linked package: the pre-push check prints `repo link: warning: <package> is public and depends on linked <name>; pushing since link.push is "allow"` and passes. The default, "block", refuses the push as before.
 - A linked source checkout now updates every repo on this machine that links it when its main branch moves; bun repo link push does it by hand and bun repo link status lists them.
+- `commit.coAuthors` in repo.config.ts lists the people a commit may credit, as `"Name <email>"`. The commit-msg hook and `repo commit-msg --range` pass a `Co-authored-by: <identity>` line (the key in any case) for a listed identity in the message's last paragraph, which holds only co-author lines, and refuse an unlisted one with `add it to commit.coAuthors in repo.config.ts`. An attribution such as `noreply@anthropic.com` is still refused, and the config refuses it as an entry.
 
 ### Changed
 

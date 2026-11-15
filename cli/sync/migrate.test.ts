@@ -130,7 +130,7 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
       },
       ci: { checks: {} },
       clean: undefined,
-      commit: { maxChangedLines: 1000 },
+      commit: { coAuthors: [], maxChangedLines: 1000 },
       coverage: DEFAULT_COVERAGE,
       knip: { ignore: [] },
       link: { paths: {}, push: "block" },

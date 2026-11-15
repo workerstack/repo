@@ -167,25 +167,38 @@ repo check: typescript 5.9.3 is installed; repo needs typescript 7 or later; run
 
 ## Commit messages
 
-The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its subject plus at most three more things. Anything else is refused, and each refusal names the fix:
+The generated `commit-msg` hook (`bun repo commit-msg`) holds a message to its subject plus at most four more things. Anything else is refused, and each refusal names the fix:
 
 | Refused | Passes instead |
 | --- | --- |
-| a `Key: value` line (`Co-Authored-By: A <a@b.c>`, `Signed-off-by:`, `Why: x`) | a plain sentence for a why |
+| a `Key: value` line (`Signed-off-by:`, `Why: x`) | a plain sentence for a why |
+| a `Co-authored-by:` line whose identity is not in `commit.coAuthors` | list the identity, exactly as the line names it, in `commit.coAuthors` in repo.config.ts |
+| a listed `Co-authored-by:` line outside the last paragraph, or sharing it with other lines | a last paragraph that holds only co-author lines |
 | an attribution: `🤖`, `noreply@anthropic.com`, or a line starting `Generated with` | nothing; the work is the author's (a subject that says "generated with" passes) |
 | a `Breaking:` line | a `BREAKING CHANGE: <what breaks>` footer (the line and the non-blank lines after it) |
 | any other body line | nothing: subject only |
 | a commit over `commit.maxChangedLines` with no body line | one line saying why, even beside a footer |
 | two or more why-lines over the limit | one line |
 
-Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), and, only over the size limit, one why-line. Merge commits pass. The subject takes the types `feat fix perf refactor test docs build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
+Allowed besides the subject: a `BREAKING CHANGE:` footer, git's revert line `This reverts commit <sha>.` (7 to 40 hex digits), a last paragraph of co-author lines, and, only over the size limit, one why-line. A co-author line is `Co-authored-by: Name <email>`, the key in any case, and passes only when `commit.coAuthors` in repo.config.ts lists that exact `Name <email>`. It is never the why-line. An attribution is refused even when listed, and `commit.coAuthors` refuses an AI tool's entry when the config loads. Merge commits pass. The subject takes the types `feat fix perf refactor test docs build ci chore revert`, with `!` before the colon for a breaking change; a plan's `commit:` line takes the same list.
 
 On Linux, `git commit --amend` (an alias for it too) is judged as the whole commit it makes: the size limit, the test and CHANGELOG rules and red-proof read the change from `HEAD^`, not only the newly staged lines. Elsewhere an amend is judged on its staged lines, as a plain commit is.
 
+```ts
+// repo.config.ts
+import { defineConfig } from "@workerstack/repo";
+
+export default defineConfig({ commit: { coAuthors: ["Ada Lovelace <ada@example.com>"] } });
+```
+
 ```console
-$ git commit -m "feat: add x" -m "Co-Authored-By: A <a@b.c>"
+$ git commit -m "chore: tidy x" -m "Co-authored-by: Ada Lovelace <ada@example.com>"
+$ git commit -m "chore: tidy x" -m "Co-authored-by: A <a@b.c>"
 commit-msg: the message was refused
-  - remove "Co-Authored-By: A <a@b.c>"; commits carry no Key: value lines (write a why as a plain sentence)
+  - the co-author "A <a@b.c>" is not listed; add it to commit.coAuthors in repo.config.ts, or remove the line
+$ git commit -m "chore: tidy x" -m "Signed-off-by: A <a@b.c>"
+commit-msg: the message was refused
+  - remove "Signed-off-by: A <a@b.c>"; commits carry no Key: value lines (write a why as a plain sentence)
 ```
 
 ## Push

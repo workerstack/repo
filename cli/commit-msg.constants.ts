@@ -14,10 +14,16 @@ export const KEBAB_SCOPE: RegExp = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 export const CAPITAL_START: RegExp = /^[A-Z]/;
 
 /**
- * A `Key: value` body line, a trailer such as `Co-Authored-By:` or `Why:`; the BREAKING CHANGE footer is checked
- * first.
+ * A `Key: value` body line, a trailer such as `Signed-off-by:` or `Why:`; the BREAKING CHANGE footer and co-author
+ * lines are checked first.
  */
 export const KEY_VALUE: RegExp = /^[A-Za-z][\w-]*: \S/;
+
+/** A `Co-authored-by: <identity>` trailer, with the key in any case as git and GitHub both write it. */
+export const CO_AUTHOR: RegExp = /^co-authored-by:\s*(?<identity>.*)$/iu;
+
+/** The fix an unlisted co-author's refusal names. */
+export const LIST_THE_CO_AUTHOR: string = "add it to commit.coAuthors in repo.config.ts, or remove the line";
 
 /** A `Breaking:` line, which belongs in a `BREAKING CHANGE:` footer. */
 export const BREAKING_KEY: RegExp = /^Breaking:/i;
@@ -31,7 +37,8 @@ export const REVERT_LINE: RegExp = /^This reverts commit [0-9a-f]{7,40}\.$/;
 /** The refusal of a free body under the size limit. */
 export const FREE_BODY: string =
   "remove the body; keep the subject, plus at most a BREAKING CHANGE: footer, " +
-  'a revert\'s "This reverts commit <sha>." line, or one line saying why when over the size limit';
+  'a revert\'s "This reverts commit <sha>." line, a last paragraph of co-authors listed in commit.coAuthors, ' +
+  "or one line saying why when over the size limit";
 
 /** The refusal of a why that runs past one line. */
 export const ONE_WHY: string = "keep the why to one line";

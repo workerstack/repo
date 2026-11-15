@@ -3,22 +3,12 @@ import path from "node:path";
 
 import { amendBase, amending, type Base, PLAIN_BASE } from "./commit-amend.ts";
 import { changelogProblems, type Kind } from "./commit-changelog.ts";
-import {
-  ATTRIBUTION,
-  BREAKING_KEY,
-  CAPITAL_START,
-  FREE_BODY,
-  KEBAB_SCOPE,
-  KEY_VALUE,
-  NEEDS_TEST,
-  NOT_FOUND,
-  ONE_WHY,
-  REVERT_LINE,
-} from "./commit-msg.constants.ts";
+import { CAPITAL_START, FREE_BODY, KEBAB_SCOPE, NEEDS_TEST, NOT_FOUND, ONE_WHY } from "./commit-msg.constants.ts";
 import { NAME_A_SOURCE } from "./commit-range.constants.ts";
 import { commitPush, commitRange, sourceOf } from "./commit-range.ts";
 import { DEFAULT_MAX_CHANGED_LINES, findRoot, loadConfig } from "./config.ts";
-import { BREAKING_FOOTER, HEADER, isBreaking, TYPES } from "./conventional.ts";
+import { HEADER, isBreaking, TYPES } from "./conventional.ts";
+import { readBody } from "./read-body.ts";
 import {
   type NameStatus,
   parseNameStatus,
@@ -42,17 +32,22 @@ const MAX_HEADER = 100;
 /** The line above the diff `git commit --verbose` appends; everything from it down is not the message. */
 const SCISSORS = "# ------------------------ >8 ------------------------";
 
-/** What a message is checked against: the staged paths and changed lines, the limit, and the workspace's scopes. */
+/**
+ * What a message is checked against: the staged paths and changed lines, the limit, the workspace's scopes, and the
+ * listed co-authors (none when left out).
+ */
 export type CommitFacts = {
   stagedFiles: string[];
   changedLines: number;
   maxChangedLines: number;
   scopes?: string[] | undefined;
+  coAuthors?: readonly string[] | undefined;
 };
 
-/** What the repo's config and workspace set: the size limit, and the scopes of a monorepo. */
+/** What the repo's config and workspace set: the size limit, the listed co-authors, and the scopes of a monorepo. */
 export type CommitRules = {
   maxChangedLines: number;
+  coAuthors: readonly string[];
   scopes?: string[] | undefined;
   /** Whether a feat or fix is held to red-proof even in private packages. */
   tdd: boolean;
@@ -83,47 +78,6 @@ function scopeProblems(scope: string | undefined, scopes: string[] | undefined):
   const known = `one of ${REPO_SCOPES.join(", ")} (${scopes.join(", ")})`;
 
   return [`unknown scope "${scope}"; use a workspace package name or ${known}`];
-}
-
-/** What the body holds: the refusals of its trailer and attribution lines, and its free lines, the why candidates. */
-type Body = { problems: string[]; free: string[] };
-
-/** The refusal of one body line, or null when the line is not a trailer, a `Breaking:` line or an attribution. */
-function lineProblem(line: string): string | null {
-  if (ATTRIBUTION.test(line)) return `remove the attribution "${line}"; the work is the author's`;
-
-  if (BREAKING_KEY.test(line)) return `write "${line}" as a "BREAKING CHANGE: <what breaks>" footer`;
-
-  if (KEY_VALUE.test(line))
-    return `remove "${line}"; commits carry no Key: value lines (write a why as a plain sentence)`;
-
-  return null;
-}
-
-/**
- * Sorts the body's lines: a BREAKING CHANGE footer with the non-blank lines under it, and git's revert line, pass; a
- * trailer, `Breaking:` line or attribution is refused wherever it stands; every other line is free text.
- */
-function readBody(body: readonly string[]): Body {
-  const problems: string[] = [];
-  const free: string[] = [];
-  let isInFooter = false;
-
-  for (const raw of body) {
-    const line = raw.trim();
-
-    if (line === "" || BREAKING_FOOTER.test(line)) {
-      isInFooter = line !== "";
-      continue;
-    }
-
-    const problem = lineProblem(line);
-
-    if (problem !== null) problems.push(problem);
-    else if (!isInFooter && !REVERT_LINE.test(line)) free.push(line);
-  }
-
-  return { free, problems };
 }
 
 /** The free-text problem, if any: under the size limit the body holds none; over it, exactly one line says why. */
@@ -188,7 +142,7 @@ function inspect(message: string, facts: CommitFacts): Inspected {
     problems.push(`a ${type} commit must include a test change (a *.test.* or *.spec.* file, or a file under e2e/)`);
 
   const body = lines.slice(at + 1);
-  const read = readBody(body);
+  const read = readBody(body, facts.coAuthors);
 
   return {
     kind: { breaking: isBreaking(header, body), type },
@@ -204,12 +158,15 @@ export function checkCommitMessage(message: string, facts: CommitFacts): string[
   return inspect(message, facts).problems;
 }
 
-/** The limit and scopes for the repo at or above `cwd`: the defaults without a config, or the problems loading it. */
+/**
+ * The limit, co-authors and scopes for the repo at or above `cwd`: the defaults without a config, or the problems
+ * loading it.
+ */
 async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   const root = findRoot(cwd);
   const owners = ownerLookup(cwd);
 
-  if (root === null) return { maxChangedLines: DEFAULT_MAX_CHANGED_LINES, owners, tdd: false };
+  if (root === null) return { coAuthors: [], maxChangedLines: DEFAULT_MAX_CHANGED_LINES, owners, tdd: false };
   const loaded = await loadConfig(root);
 
   if (!loaded.ok) return loaded.errors;
@@ -218,7 +175,13 @@ async function commitRules(cwd: string): Promise<CommitRules | string[]> {
   if (!workspace.ok) return workspace.errors;
   const { tdd, commit } = loaded.config;
 
-  return { maxChangedLines: commit.maxChangedLines, owners, scopes: scopesOf(workspace.workspace), tdd };
+  return {
+    coAuthors: commit.coAuthors,
+    maxChangedLines: commit.maxChangedLines,
+    owners,
+    scopes: scopesOf(workspace.workspace),
+    tdd,
+  };
 }
 
 /** The red-proof result for the change from `base`, or null when it does not apply to it. */

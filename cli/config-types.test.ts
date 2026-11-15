@@ -57,7 +57,7 @@ describe("defineConfig with its packs on", () => {
       agents: { hosts: ["claude"], skills: ["speak"] },
       ci: { checks: { e2e: ["bun", "run", "test:e2e"] } },
       clean: { build: [".astro"] },
-      commit: { maxChangedLines: 400 },
+      commit: { coAuthors: ["Ada Lovelace <ada@example.com>"], maxChangedLines: 400 },
       coverage: { mutate: ["src/**/*.ts"] },
       knip: {
         ignore: [

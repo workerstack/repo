@@ -108,3 +108,45 @@ describe("loadConfig", () => {
     expect(result.errors[0]).toMatch(/^repo\.config\.ts: packs: \S/);
   });
 });
+
+describe("loadConfig commit.coAuthors", () => {
+  it("reads the listed co-authors, and lists none when commit or coAuthors is left out", async () => {
+    const ada = "Ada Lovelace <ada@example.com>";
+    expect(
+      await loadConfig(repo(`export default { commit: { coAuthors: [${JSON.stringify(ada)}] } }\n`)),
+    ).toMatchObject({
+      config: { commit: { coAuthors: [ada], maxChangedLines: 1000 } },
+      ok: true,
+    });
+    expect(await loadConfig(repo("export default { commit: { maxChangedLines: 5 } }\n"))).toMatchObject({
+      config: { commit: { coAuthors: [], maxChangedLines: 5 } },
+      ok: true,
+    });
+    expect(await loadConfig(repo("export default {}\n"))).toMatchObject({ config: { commit: COMMIT }, ok: true });
+  });
+});
+
+describe("loadConfig commit.coAuthors refusals", () => {
+  it.each(['"ada"', '"Ada <ada>"', '" Ada <a@b.c>"', '"Ada<a@b.c>"', '"<a@b.c>"', "5"])(
+    "refuses the co-author %s",
+    async (entry) => {
+      expect(await loadConfig(repo(`export default { commit: { coAuthors: [${entry}] } }\n`))).toStrictEqual({
+        errors: ['repo.config.ts: commit.coAuthors[0]: must be "Name <email>", like "Ada Lovelace <ada@example.com>"'],
+        ok: false,
+      });
+    },
+  );
+
+  it("refuses a coAuthors that is not a list, and an AI tool listed as a co-author", async () => {
+    expect(await loadConfig(repo('export default { commit: { coAuthors: "Ada <a@b.c>" } }\n'))).toStrictEqual({
+      errors: ['repo.config.ts: commit.coAuthors: must be a list of "Name <email>" strings'],
+      ok: false,
+    });
+    expect(
+      await loadConfig(repo('export default { commit: { coAuthors: ["Claude <noreply@anthropic.com>"] } }\n')),
+    ).toStrictEqual({
+      errors: ["repo.config.ts: commit.coAuthors[0]: names an AI tool; list only people"],
+      ok: false,
+    });
+  });
+});

@@ -102,6 +102,15 @@ export type CommitConfig = {
    * @default 1000
    */
   maxChangedLines?: number | undefined;
+  /**
+   * The people a commit may credit with a `Co-authored-by: <identity>` line, each written exactly as that line names
+   * them: `"Name <email>"`. The lines go in the message's last paragraph, which holds only them. An AI tool is never a
+   * co-author.
+   *
+   * @default []
+   * @example coAuthors: ["Ada Lovelace <ada@example.com>"]
+   */
+  coAuthors?: readonly string[] | undefined;
 };
 
 /** `coverage`: the files that hold the test ratchets, and what mutation testing changes. */

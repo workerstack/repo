@@ -6,7 +6,7 @@ import type { z } from "zod";
 import { localSchema } from "./agent-defaults-schema.ts";
 import { checkLintPlugins } from "./check-lint-plugins.ts";
 import { ciOf } from "./ci-schema.ts";
-import { DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
+import { DEFAULT_MAX_CHANGED_LINES, resolveCommit } from "./commit-config.ts";
 import type {
   AgentDefaults,
   ResolvedAgents,
@@ -85,7 +85,7 @@ export type {
 } from "./config-resolved.types.ts";
 
 /** The commit rules a config gets when it omits `commit`. */
-export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
+export const DEFAULT_COMMIT: ResolvedCommit = { coAuthors: [], maxChangedLines: DEFAULT_MAX_CHANGED_LINES };
 
 /**
  * Types the default export of repo.config.ts, so the editor completes every key and shows what it does. Hover a key
@@ -93,7 +93,7 @@ export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHA
  *
  * - `packs`: the feature packs to turn on
  * - `agents`: what agents get, and how a session runs by default (agents pack)
- * - `commit`: the commit size limit (standards pack)
+ * - `commit`: the commit size limit and the listed co-authors (standards pack)
  * - `tdd`: test-first for private packages too (standards pack)
  * - `lint`: lint exceptions, package layers, the Tailwind sheet, your own plugins and their rules (standards pack)
  * - `knip`: what the unused-code check may skip (standards pack)
@@ -236,8 +236,8 @@ function withLocal(agents: ResolvedAgents, local: LocalAgents): ResolvedAgents {
 
 /**
  * Imports and validates `<root>/repo.config.ts`, filling omitted packs from `defaultPacks`, omitted agents with
- * every host and no skills, an omitted commit limit with the default, and omitted lint skips with none. A
- * `repo.config.local.ts` beside it sets the three agents defaults over its values.
+ * every host and no skills, an omitted commit limit with the default, omitted co-authors with none, and omitted
+ * lint skips with none. A `repo.config.local.ts` beside it sets the three agents defaults over its values.
  */
 export async function loadConfig(root: string, importer: ImportConfig = importConfig): Promise<LoadResult> {
   const loaded = await importModule(path.join(root, CONFIG_FILE), root, importer);
@@ -271,7 +271,7 @@ function resolve(d: z.output<typeof configSchema>): ResolvedConfig {
   return {
     agents: d.agents ?? NO_AGENTS,
     clean: d.clean,
-    commit: { maxChangedLines: d.commit?.maxChangedLines ?? DEFAULT_COMMIT.maxChangedLines },
+    commit: resolveCommit(d.commit),
     knip: { ignore: d.knip?.ignore ?? [] },
     link: d.link,
     lint: lintOf(d.lint),

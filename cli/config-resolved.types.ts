@@ -31,6 +31,8 @@ export type ResolvedAgents = AgentDefaults & {
 export type ResolvedCommit = {
   /** The most lines one commit may change before the commit-msg hook refuses it. */
   readonly maxChangedLines: number;
+  /** The `Name <email>` identities a `Co-authored-by:` line may name. */
+  readonly coAuthors: readonly string[];
 };
 
 /** One `lint.skip` entry: the rules (oxlint keys) it turns off, for the files its globs match, and why. */

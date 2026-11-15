@@ -14,7 +14,7 @@ export const AGENTS = {
   hosts: ["claude", "codex", "antigravity", "grok", "cursor"],
   skills: [],
 };
-export const COMMIT = { maxChangedLines: 1000 };
+export const COMMIT = { coAuthors: [], maxChangedLines: 1000 };
 export const LINT = { plugins: {}, rules: [], skip: [] };
 export const KNIP = { ignore: [] };
 export const CI = { checks: {} };

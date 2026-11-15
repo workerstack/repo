@@ -3,33 +3,12 @@ import path from "node:path";
 
 import { afterEach, expect, it } from "vitest";
 
-import { git, lines, put, removeTemps, tempDir } from "./__fixtures__/commit-repo.ts";
+import { git, lines, plant, removeTemps } from "./__fixtures__/commit-repo.ts";
 import { main } from "./commit-msg.ts";
 import { CONFIG_FILE } from "./config.constants.ts";
 
 /** `repo commit-msg --range` on planted repos. */
 afterEach(removeTemps);
-
-/** A repo with a base commit; `commit` adds files and commits with `message`, returning the sha. */
-function plant() {
-  const root = tempDir();
-  git(root, "init", "-q", "-b", "main");
-
-  function commit(files: Record<string, string | Buffer>, message: string) {
-    put(root, files);
-    git(root, "add", "-A");
-    git(root, "commit", "-q", "--no-verify", "-m", message);
-
-    return git(root, "rev-parse", "HEAD").trim();
-  }
-
-  const base = commit(
-    { [CONFIG_FILE]: "export default {}\n", "package.json": JSON.stringify({ name: "app", private: true }) },
-    "chore: base",
-  );
-
-  return { base, commit, root };
-}
 
 function range(root: string, ...args: string[]) {
   return pushed(root, "", ...args);

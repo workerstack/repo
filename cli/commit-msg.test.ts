@@ -120,11 +120,11 @@ function attribution(line: string): string {
 
 const BODY =
   "remove the body; keep the subject, plus at most a BREAKING CHANGE: footer, " +
-  'a revert\'s "This reverts commit <sha>." line, or one line saying why when over the size limit';
+  'a revert\'s "This reverts commit <sha>." line, a last paragraph of co-authors listed in commit.coAuthors, ' +
+  "or one line saying why when over the size limit";
 
 describe("the commit body rules: lines it refuses", () => {
   it("refuses a Key: value line, a why written as one included", () => {
-    expect(ok("feat: add x\n\nCo-Authored-By: A <a@b.c>\n")).toStrictEqual([trailer("Co-Authored-By: A <a@b.c>")]);
     expect(ok("feat: add x\n\nSigned-off-by: A <a@b.c>\n")).toStrictEqual([trailer("Signed-off-by: A <a@b.c>")]);
     expect(ok("feat: add x\n\nWhy: x\n")).toStrictEqual([trailer("Why: x")]);
   });
