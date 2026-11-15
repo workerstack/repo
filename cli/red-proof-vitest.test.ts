@@ -21,7 +21,7 @@ it("names node as missing when the node run finds no node on PATH", () => {
   vi.stubEnv("PATH", NO_NODE);
   expect(runVitest(["run"], REPO, { run: "node", timeoutMs: 10_000 })).toStrictEqual({
     code: 1,
-    stderr: "repo ci: vitest.node.config.ts runs on node, but node is not on PATH; install node",
+    stderr: "red-proof: vitest.node.config.ts runs on node, but node is not on PATH; install node",
   });
 });
 

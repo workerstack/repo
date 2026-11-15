@@ -35,6 +35,58 @@ describe("nightly jobs", () => {
   });
 });
 
+const NODE_CONFIG = { "vitest.node.config.ts": "export default {};\n" };
+const DEV: PackageJson = { devEngines: { runtime: { name: "node", version: ">=22.12.0" } } };
+const SETUP_NODE = "uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n";
+
+function synced(manifest: PackageJson, files: Record<string, string>) {
+  return nightly(context(["release"], manifest, files));
+}
+
+/** The nightly.yml text from `manifest` and `files`. */
+function syncedText(manifest: PackageJson, files: Record<string, string>): string {
+  const [output] = synced(manifest, files).outputs;
+
+  return output?.kind === "file" ? output.content : "";
+}
+
+function mutateJob(manifest: PackageJson, files: Record<string, string>) {
+  const text = syncedText(manifest, files);
+
+  return text.slice(text.indexOf("  mutate:"), text.indexOf("  mutate-floors:"));
+}
+
+describe("nightly mutate job on node", () => {
+  it("sets up the devEngines node after bun when the repo holds a node config", () => {
+    const job = mutateJob(DEV, NODE_CONFIG);
+    expect(job).toContain(`bun-version-file: package.json\n      - ${SETUP_NODE}          node-version: ">=22.12.0"\n`);
+  });
+
+  it("sets up the engines.node range before the devEngines one", () => {
+    expect(mutateJob({ ...DEV, engines: { node: ">=24" } }, NODE_CONFIG)).toContain('node-version: ">=24"');
+  });
+
+  it("sets up no node without a node config, nor in the floors job", () => {
+    expect(mutateJob(DEV, {})).not.toContain("setup-node");
+    const text = syncedText(DEV, NODE_CONFIG);
+    expect(text.slice(text.indexOf("  mutate-floors:"))).not.toContain("setup-node");
+  });
+
+  it("leaves engines.node ranges that differ across packages to release's refusal, adding no step", () => {
+    const base = context(["release"], { engines: { node: ">=24" } }, NODE_CONFIG);
+    const packages = [{ dir: "a", manifest: { engines: { node: ">=22" } } }];
+    const differing = nightly({ ...base, workspace: { ...base.workspace, packages } });
+    const [output] = differing.outputs;
+    expect(differing.errors).toStrictEqual([]);
+    expect(output?.kind === "file" ? output.content : "").not.toContain("setup-node");
+  });
+
+  it("leaves a node config with no range to release's refusal, adding no step and no error of its own", () => {
+    expect(synced({}, NODE_CONFIG).errors).toStrictEqual([]);
+    expect(mutateJob({}, NODE_CONFIG)).not.toContain("setup-node");
+  });
+});
+
 describe("nightly live job", () => {
   it("has no live job without a test:live script, secrets or not", () => {
     expect(render(1)).not.toContain("live");

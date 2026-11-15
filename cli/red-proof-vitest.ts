@@ -33,7 +33,7 @@ export function runVitest(args: string[], cwd: string, { run, timeoutMs }: Vites
   const { error } = result;
 
   if (error !== undefined && "code" in error && error.code === NOT_FOUND)
-    return { code: 1, stderr: missingNode(undefined) };
+    return { code: 1, stderr: missingNode("red-proof", undefined) };
 
   if (error !== undefined) return { code: 1, stderr: `vitest did not finish within ${timeoutMs}ms (${error.message})` };
 

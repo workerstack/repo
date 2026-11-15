@@ -2,6 +2,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { z } from "zod";
 
 import { findRoot, loadConfig, missingConfig } from "./config.ts";
 import { childEnv } from "./env.ts";
@@ -10,9 +13,11 @@ import { CARGO_MANIFEST, ROOT_PACKAGE } from "./mutate.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 import { workspaceCrates } from "./rust/cargo-metadata.ts";
 import { runCargo, type CargoRun } from "./rust/clippy.ts";
-import { captureBun, type Captured } from "./scripts/lint.ts";
+import { capture, captureBun, type Captured } from "./scripts/lint.ts";
+import { missingNode, NODE_CONFIG, nodeRangesAt } from "./scripts/node-run.ts";
 import { toolEnv } from "./scripts/tool-env.ts";
 import { spawnSync } from "./spawn.ts";
+import { errorMessage } from "./sync-errors.ts";
 import { readWorkspace } from "./sync/workspace.ts";
 
 /** `git <args>` in `cwd`, run without any `GIT_*` variable a hook set, which would aim it at another repo. */
@@ -72,10 +77,54 @@ function crateDirs(root: string, cargo: CargoRun): string[] {
 export function packagesWith(cargo: CargoRun): MutateDeps["packages"] {
   return (root) => {
     const read = readWorkspace(root);
-    const node = read.ok ? read.workspace.packages.map((pkg) => pkg.dir) : [];
+    const dirs = read.ok ? read.workspace.packages.map((pkg) => pkg.dir) : [];
 
-    return [...node, ...crateDirs(root, cargo)];
+    return [...dirs, ...crateDirs(root, cargo)];
   };
+}
+
+/**
+ * `node <args>` in `cwd`; when node is not on PATH, the line naming the range the repo at `cwd` declares for its node
+ * run, else for its packages.
+ */
+async function node(...[args, cwd, env]: Parameters<MutateDeps["node"]>): ReturnType<MutateDeps["node"]> {
+  const vars = { ...childEnv(), ...env };
+
+  if (Bun.which("node", vars) === null) {
+    const ranges = nodeRangesAt(cwd);
+    const range = ranges.ok ? (ranges.value.dev ?? ranges.value.engines) : undefined;
+
+    return { error: missingNode("repo mutate", range), ok: false };
+  }
+
+  return { ok: true, value: await capture("node", args, { cwd, env: vars }) };
+}
+
+/** A node config module as `nodeGlobs` reads it: its default export's coverage globs. */
+function buildNodeConfigSchema() {
+  return z.object({ default: z.object({ test: z.object({ coverage: z.object({ include: z.array(z.string()) }) }) }) });
+}
+
+const nodeConfigSchema = /* @__PURE__ */ buildNodeConfigSchema();
+
+/** The coverage globs of the clone's node config, loaded from the clone's own install; none without the file. */
+async function nodeGlobs(clone: string): ReturnType<MutateDeps["nodeGlobs"]> {
+  const file = path.join(clone, NODE_CONFIG);
+
+  if (!fs.existsSync(file)) return { ok: true, value: null };
+  let loaded: unknown;
+
+  try {
+    loaded = await import(pathToFileURL(file).href);
+  } catch (error) {
+    return { error: `could not load ${NODE_CONFIG}: ${errorMessage(error)}`, ok: false };
+  }
+
+  const parsed = nodeConfigSchema.safeParse(loaded);
+
+  if (parsed.success) return { ok: true, value: parsed.data.default.test.coverage.include };
+
+  return { error: `${NODE_CONFIG} sets no test.coverage.include; name the files its tests cover`, ok: false };
 }
 
 /** The collaborators of a run in `cwd`. */
@@ -87,6 +136,8 @@ export function realDeps(cwd: string): MutateDeps {
     err: (text) => process.stderr.write(text),
     fs: realFs,
     git,
+    node,
+    nodeGlobs,
     out: (text) => process.stdout.write(text),
     packages: packagesWith(runCargo),
     preload: path.join(import.meta.dirname, "stryker-preload.ts"),

@@ -1,4 +1,5 @@
 import { STRYKER_CORE, STRYKER_RUNNER } from "../mutate.constants.ts";
+import { NODE_CONFIG } from "../scripts/node-run.ts";
 import { MUTATE_RUST_STEPS } from "./ci-rust.constants.ts";
 import { isRust } from "./ci-rust.ts";
 import { hasOwnedHeader } from "./header.ts";
@@ -11,6 +12,7 @@ import {
   NIGHTLY_PATH,
   PREAMBLE,
 } from "./nightly.constants.ts";
+import { nodeRange } from "./node-range.ts";
 import type { Generator, SyncContext } from "./outputs.ts";
 import {
   CHECKOUT_STEP,
@@ -18,11 +20,25 @@ import {
   SETUP_BUN_STEP,
   SLOW_TIMEOUT_MINUTES,
   TEST_TIMEOUT_MINUTES,
+  setupNodeStep,
 } from "./release.constants.ts";
-import { hasScript } from "./release.ts";
+import { hasScript, testNodeRange } from "./release.ts";
 
 const SETUP = [CHECKOUT_STEP, SETUP_BUN_STEP, INSTALL_STEP];
 
+/**
+ * The step that sets up node for the mutate job's run of the node config, after setup-bun: none without a node config,
+ * and none without a range, which release's ci.yml refuses.
+ */
+function nodeSteps(ctx: SyncContext): string[] {
+  if (ctx.read(NODE_CONFIG) === null) return [];
+  const engines = nodeRange(ctx.workspace);
+  const range = engines.ok ? testNodeRange(ctx, engines.value) : engines;
+
+  return range.ok && range.value !== undefined ? [setupNodeStep(range.value)] : [];
+}
+
+/** A sharded job: checkout and setup-bun, then `steps`, which install and run the shard. */
 function shardJob(id: string, total: number, steps: readonly string[]) {
   return [
     `  ${id}:`,
@@ -34,17 +50,22 @@ function shardJob(id: string, total: number, steps: readonly string[]) {
     "      matrix:",
     `        shard: [${Array.from({ length: total }, (_, at) => at + 1).join(", ")}]`,
     "    steps:",
-    ...SETUP,
+    CHECKOUT_STEP,
+    SETUP_BUN_STEP,
     ...steps,
   ].join("\n");
 }
 
-function mutateJob(total: number) {
-  return shardJob("mutate", total, [MUTATE_STEPS.replace("%TOTAL%", String(total))]);
+function mutateJob(total: number, node: readonly string[]) {
+  return shardJob("mutate", total, [...node, INSTALL_STEP, MUTATE_STEPS.replace("%TOTAL%", String(total))]);
 }
 
 function mutateRustJob(total: number) {
-  return shardJob("mutate-rust", total, [MUTATE_RUST_STEPS, MUTATE_RUST_RUN.replaceAll("%TOTAL%", String(total))]);
+  return shardJob("mutate-rust", total, [
+    INSTALL_STEP,
+    MUTATE_RUST_STEPS,
+    MUTATE_RUST_RUN.replaceAll("%TOTAL%", String(total)),
+  ]);
 }
 
 function floorsJob(needs: readonly string[]) {
@@ -89,7 +110,7 @@ export function nightly(ctx: SyncContext): ReturnType<Generator> {
   const rust = isRust(ctx);
 
   const mutate = [
-    ...(stryker || !rust ? [{ id: "mutate", job: mutateJob(shards) }] : []),
+    ...(stryker || !rust ? [{ id: "mutate", job: mutateJob(shards, nodeSteps(ctx)) }] : []),
     ...(rust ? [{ id: "mutate-rust", job: mutateRustJob(shards) }] : []),
   ];
 

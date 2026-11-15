@@ -23,7 +23,7 @@ it("clones HEAD shared, detaches to its sha, installs frozen, runs Stryker there
     `git -C ${CLONE} checkout -q --detach ${SHA}`,
   ]);
   const order = f.calls.map((c) => c.split(" ")[0] + (c.includes("install") ? " install" : ""));
-  expect(order.slice(-3)).toStrictEqual(["bun install", "bun", "rm"]);
+  expect(order.slice(-4)).toStrictEqual(["bun install", "nodeGlobs", "bun", "rm"]);
   expect(f.calls).toContain(`bun install --frozen-lockfile @${CLONE}`);
   expect(f.calls.at(-1)).toBe(`rm ${BASE}`);
   expect(f.calls.filter((c) => c.startsWith("mkdtemp"))).toStrictEqual(["mkdtemp workerstack-mutate-"]);

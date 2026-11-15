@@ -13,14 +13,12 @@ import path from "node:path";
 import { CONFIG_FILE } from "../config.constants.ts";
 import { findRoot, loadConfig, missingConfig } from "../config.ts";
 import { childEnv } from "../env.ts";
-import type { Result } from "../result.ts";
-import { devNodeRange, nodeRange } from "../sync/node-range.ts";
 import { readWorkspace } from "../sync/workspace.ts";
 import type { Workspace } from "../sync/workspace.ts";
 import { changeSet, type Change, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { capture, captureBun } from "./lint.ts";
-import { missingNode, vitestCommand } from "./node-run.ts";
+import { missingNode, nodeRangesAt, type NodeRanges, vitestCommand } from "./node-run.ts";
 import { packageBin } from "./package-bin.ts";
 import { hasPass, passKeys, recordPasses } from "./pass-cache.ts";
 import { rejectionsStep } from "./rejections-step.ts";
@@ -54,9 +52,6 @@ const TURN_USE = "use repo turn [<path>]";
 /** Where a flag given to turn should go; an old hook that still passes `--staged` is fixed by a sync. */
 const INDEX_HINT = `${TURN_USE}, or repo precommit for the index (bun repo sync updates an old pre-commit hook)`;
 
-/** The node ranges of a workspace: `engines` runs the whole suite on node, `dev` is what the node run needs. */
-export type NodeRanges = { engines: string | undefined; dev: string | undefined };
-
 /**
  * Vitest from the package being tested, as its own tests would run: the node run on node; the main run on node when
  * the packages declare an engines.node range, else on bun. Node missing from PATH fails with an install hint.
@@ -69,7 +64,7 @@ export function vitestBin(ranges: NodeRanges): Bins["vitest"] {
     const env = childEnv({ NO_COLOR: "1" });
 
     if (run === "node")
-      return capture("node", command, { cwd, env, missing: missingNode(ranges.dev ?? ranges.engines) });
+      return capture("node", command, { cwd, env, missing: missingNode("repo ci", ranges.dev ?? ranges.engines) });
 
     if (ranges.engines === undefined) return captureBun(["--bun", ...command], cwd, env);
 
@@ -80,22 +75,6 @@ export function vitestBin(ranges: NodeRanges): Bins["vitest"] {
   };
 }
 
-/**
- * The node ranges of the workspace holding `cwd` (its repo root, else `cwd` itself), so a package dir sees a range
- * its root or a sibling declares; a workspace that cannot be read or declares two ranges fails as sync would.
- */
-function rangesAt(cwd: string): Result<NodeRanges, string> {
-  const read = readWorkspace(findRoot(cwd) ?? cwd);
-
-  if (!read.ok) return { error: read.errors.join("; "), ok: false };
-  const engines = nodeRange(read.workspace);
-  const dev = devNodeRange(read.workspace);
-
-  if (!engines.ok) return engines;
-
-  return dev.ok ? { ok: true, value: { dev: dev.value, engines: engines.value } } : dev;
-}
-
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
 export const BINS: Bins = {
   tsc: async (args, cwd) =>
@@ -104,7 +83,7 @@ export const BINS: Bins = {
       cwd,
     ),
   vitest: (args, cwd, run) => {
-    const ranges = rangesAt(cwd);
+    const ranges = nodeRangesAt(cwd);
 
     if (!ranges.ok) return Promise.resolve({ code: 1, stderr: `repo ci: ${ranges.error}\n`, stdout: "" });
 

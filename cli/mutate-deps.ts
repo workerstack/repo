@@ -1,4 +1,5 @@
 import { FAILED, NEWLINE } from "./mutate.constants.ts";
+import type { Result } from "./result.ts";
 import type { CargoRun } from "./rust/clippy.ts";
 import type { Captured } from "./scripts/lint.ts";
 
@@ -32,6 +33,16 @@ export type MutateDeps = {
   git: (cwd: string, args: string[]) => Captured;
   /** `bun <args>` in `cwd`, run with no `GIT_*` variable and with `env` over the rest. */
   run: (args: string[], cwd: string, env?: Readonly<Record<string, string>>) => Promise<Captured>;
+  /**
+   * `node <args>` in `cwd`, as `run` runs bun; the error is the whole line to print when node is not on PATH, naming
+   * the range the repo at `cwd` declares.
+   */
+  node: (args: string[], cwd: string, env?: Readonly<Record<string, string>>) => Promise<Result<Captured, string>>;
+  /**
+   * The globs of the files the node config of the clone at `clone` covers (its `test.coverage.include`), none when it
+   * has no node config, or the refusal when the config will not load or names none.
+   */
+  nodeGlobs: (clone: string) => Promise<Result<readonly string[] | null, string>>;
   /** `cargo <args>` in `cwd`, run with no `GIT_*` variable. */
   cargo: CargoRun;
   fs: MutateFs;

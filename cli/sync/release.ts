@@ -183,7 +183,10 @@ function handWritten(ctx: SyncContext) {
  * The node range the test job sets up: engines.node, else, when the root holds a node config, the devEngines node
  * range it needs; or the refusal of a node config with neither.
  */
-function testNodeRange(ctx: SyncContext, engines: string | undefined): Result<string | undefined, string> {
+export function testNodeRange(
+  ctx: Pick<SyncContext, "read" | "workspace">,
+  engines: string | undefined,
+): Result<string | undefined, string> {
   if (engines !== undefined || ctx.read(NODE_CONFIG) === null) return { ok: true, value: engines };
   const dev = devNodeRange(ctx.workspace);
 

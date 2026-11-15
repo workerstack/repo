@@ -82,7 +82,7 @@ async function measureRun(root: string, run: TestRun, dir: string): Promise<Capt
 
   if (run === "main") return await captureBun(["--bun", ...command], root, env);
 
-  return await capture("node", command, { cwd: root, env, missing: missingNode(undefined) });
+  return await capture("node", command, { cwd: root, env, missing: missingNode("repo coverage", undefined) });
 }
 
 /**

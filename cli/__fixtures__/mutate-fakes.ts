@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Captured } from "../scripts/lint.ts";
 import type { MutateConfig, MutateDeps } from "../mutate-deps.ts";
+import type { Result } from "../result.ts";
 
 export const SHA = "09ed564aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 /** The repo root, a native absolute path (`C:\repo` on Windows). */
@@ -26,6 +27,10 @@ export type Sim = {
   /** What a Stryker run does: its exit, its output and the raw report it leaves. */
   stryker: { code: number; output: string; report: unknown };
   config: MutateConfig | string[];
+  /** What the clone's node config names as the files its tests cover: none without a node config. */
+  nodeGlobs: Result<readonly string[] | null, string>;
+  /** The line the node run fails with when node is not on PATH, or null when node is there. */
+  nodeMissing: string | null;
 };
 
 const rawReport = (files: Record<string, string[]>) => ({
@@ -53,6 +58,8 @@ export function sim(over: Partial<Sim> = {}): Sim {
     installFails: false,
     stryker: { code: 0, output: "", report: rawReport({ "src/a.ts": ["Killed", "Survived"], "src/b.ts": ["Killed"] }) },
     config: { exclude: [], floors: "mutation-floors.json", mutate: ["src/**/*.ts"], root: ROOT },
+    nodeGlobs: { ok: true, value: null },
+    nodeMissing: null,
     ...over,
   };
 }
@@ -94,6 +101,15 @@ function runOf(state: Sim, calls: string[], files: Map<string, string>): MutateD
   };
 }
 
+function nodeOf(state: Sim, calls: string[], files: Map<string, string>): MutateDeps["node"] {
+  return async (args, cwd, env) => {
+    calls.push(`node ${args.join(" ")} @${cwd}${env === undefined ? "" : ` env ${JSON.stringify(env)}`}`);
+    if (state.nodeMissing !== null) return { ok: false, error: state.nodeMissing };
+    leave(state, files, args.at(-1) ?? "");
+    return { ok: true, value: { code: state.stryker.code, stdout: state.stryker.output, stderr: "" } };
+  };
+}
+
 export function fakes(state: Sim = sim(), packages: string[] = []): Fakes {
   const calls: string[] = [];
   const files = new Map<string, string>();
@@ -108,6 +124,11 @@ export function fakes(state: Sim = sim(), packages: string[] = []): Fakes {
     cargo: () => ({ status: 1, stdout: "", stderr: "no cargo in this fake", missing: false }),
     git,
     run,
+    node: nodeOf(state, calls, files),
+    nodeGlobs: async (clone) => {
+      calls.push(`nodeGlobs ${clone}`);
+      return state.nodeGlobs;
+    },
     preload: "/pkg/cli/stryker-preload.ts",
     out: (text) => out.push(text),
     err: (text) => err.push(text),

@@ -74,6 +74,21 @@ export default defineConfig({ test: { include: ["node/**/*.test.ts"], coverage: 
 });
 
 it(
+  "repo coverage: names node as missing when a node config runs without node on PATH",
+  { timeout: RUN_MS },
+  async () => {
+    const root = project(temps);
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-coverage-no-node-"));
+    temps.push(empty);
+    fs.writeFileSync(path.join(root, "vitest.node.config.ts"), "export default {};\n");
+    vi.stubEnv("PATH", empty);
+    expect(await coverage(root)).toBe(1);
+    const line = "repo coverage: vitest.node.config.ts runs on node, but node is not on PATH; install node\n";
+    expect(err.join("")).toContain(line);
+  },
+);
+
+it(
   "repo coverage: prints each raised floor with its old and new value and writes the file",
   { timeout: RUN_MS },
   async () => {

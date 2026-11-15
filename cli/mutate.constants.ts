@@ -11,6 +11,9 @@ export const CLONE_DIR = "repo";
 export const CONFIG_NAME = "stryker.json";
 export const RAW_REPORT_NAME = "stryker-report.json";
 
+/** The prefix of the node run's config and raw report, so the two runs in one temp dir never share a file. */
+export const NODE_PREFIX = "node-";
+
 /** Where an unsharded run writes its report, relative to the repo root. */
 export const DEFAULT_REPORT: string = `${REPO}/${STATE}/mutation/report.json`;
 

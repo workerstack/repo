@@ -22,6 +22,7 @@ import {
   JSON_INDENT,
   MANIFEST,
   NEWLINE,
+  NODE_PREFIX,
   RAW_REPORT_NAME,
   SHORT_SHA,
   STRYKER_BIN_NAME,
@@ -31,7 +32,9 @@ import {
   STRYKER_RUN,
   TEMP_PREFIX,
 } from "./mutate.constants.ts";
+import type { Result } from "./result.ts";
 import type { Captured } from "./scripts/lint.ts";
+import { NODE_CONFIG, type TestRun } from "./scripts/node-run.ts";
 
 /** What a run mutates: the root, the commit, every selected file and the shard of them this run takes. */
 export type Plan = { root: string; sha: string; files: string[]; shard: Shard };
@@ -88,9 +91,13 @@ function strykerBin(clone: string, deps: MutateDeps): string | null {
   return path.join(modules, STRYKER_CORE, relative);
 }
 
-/** The Stryker config for `files`, written beside the clone with its raw report path. */
-function configOf(files: string[], rawReport: string): string {
-  const config = { ...STRYKER_OPTIONS, jsonReporter: { fileName: rawReport }, mutate: files };
+/**
+ * The Stryker config for `files`, written beside the clone with its raw report path; the node run's vitest runs the
+ * node config.
+ */
+function configOf(files: string[], rawReport: string, run: TestRun): string {
+  const vitest = run === "node" ? { ...STRYKER_OPTIONS.vitest, configFile: NODE_CONFIG } : STRYKER_OPTIONS.vitest;
+  const config = { ...STRYKER_OPTIONS, jsonReporter: { fileName: rawReport }, mutate: files, vitest };
 
   return JSON.stringify(config, null, JSON_INDENT);
 }
@@ -103,8 +110,8 @@ function lineCounts(clone: string, files: string[], deps: MutateDeps): Map<strin
   return new Map(files.map((file) => [file, count(file)]));
 }
 
-/** What one Stryker run needs: the files to mutate, its bin, and the tests its run leaves out. */
-type StrykerRun = { files: string[]; bin: string; exclude: readonly string[] };
+/** What one Stryker run needs: the files to mutate, its bin, the tests its run leaves out, and which test run it is. */
+type StrykerRun = { files: string[]; bin: string; exclude: readonly string[]; testRun: TestRun };
 
 /**
  * The variables Stryker's run gets: the tests it leaves out, as the vitest preset reads them, since the run rewrites
@@ -114,14 +121,36 @@ function strykerEnv(exclude: readonly string[]): Readonly<Record<string, string>
   return exclude.length === 0 ? undefined : { [EXCLUDE_KEY]: JSON.stringify(exclude) };
 }
 
+type Launched = Result<Captured, string>;
+
+/** Stryker's bin running `config` in the clone: the main run under bun with the preload, the node run on node. */
+async function launch(run: StrykerRun, at: { clone: string; config: string }, deps: MutateDeps): Promise<Launched> {
+  const { clone, config } = at;
+  const env = strykerEnv(run.exclude);
+  const args = [STRYKER_RUN, config];
+
+  if (run.testRun === "node") return await deps.node([run.bin, ...args], clone, env);
+
+  return { ok: true, value: await deps.run([...BUN_FLAGS, deps.preload, run.bin, ...args], clone, env) };
+}
+
 /** Stryker over `files` in the clone: its per-file scores, or null after printing why it gave none. */
 async function stryker(base: string, run: StrykerRun, deps: MutateDeps): Promise<ShardReport["files"] | null> {
-  const { files, bin, exclude } = run;
+  const { files, testRun } = run;
   const clone = path.join(base, CLONE_DIR);
-  const config = path.join(base, CONFIG_NAME);
-  const raw = path.join(base, RAW_REPORT_NAME);
-  deps.fs.write(config, configOf(files, raw));
-  const ran = await deps.run([...BUN_FLAGS, deps.preload, bin, STRYKER_RUN, config], clone, strykerEnv(exclude));
+  const prefix = testRun === "node" ? NODE_PREFIX : "";
+  const config = path.join(base, `${prefix}${CONFIG_NAME}`);
+  const raw = path.join(base, `${prefix}${RAW_REPORT_NAME}`);
+  deps.fs.write(config, configOf(files, raw, testRun));
+  const launched = await launch(run, { clone, config }, deps);
+
+  if (!launched.ok) {
+    deps.err(`${launched.error}${NEWLINE}`);
+
+    return null;
+  }
+
+  const ran = launched.value;
 
   if (ran.code !== 0)
     return refuse(deps, "the tests failed before any mutant ran; fix them first", ran.stdout + ran.stderr);
@@ -157,9 +186,48 @@ async function mutateIn(base: string, plan: StrykerPlan, deps: MutateDeps): Prom
 
   if (installed.code !== 0) return refuse(deps, `${INSTALL_COMMAND} failed in the clone: ${detail(installed)}`);
   const bin = strykerBin(clone, deps);
-  const scores = bin === null ? null : await stryker(base, { bin, exclude: plan.exclude, files: mine }, deps);
+
+  if (bin === null) return null;
+  const globs = await deps.nodeGlobs(clone);
+
+  if (!globs.ok) return refuse(deps, globs.error);
+  const scores = await bothRuns(base, { bin, exclude: plan.exclude, files: mine, globs: globs.value }, deps);
 
   return scores === null ? null : ran(scores);
+}
+
+/** What the two runs of a shard need: its files, the bin, the tests left out, and the node config's globs, if any. */
+type Runs = { files: string[]; bin: string; exclude: readonly string[]; globs: readonly string[] | null };
+
+/**
+ * The shard's scores from Stryker on the main run for the files no node config glob matches, then on node for the rest,
+ * one after the other since both rewrite the clone's sources in place; a run with no files is skipped. Null after the
+ * first run that printed why it gave none.
+ */
+async function bothRuns(base: string, runs: Runs, deps: MutateDeps): Promise<ShardReport["files"] | null> {
+  const { files, bin, exclude, globs } = runs;
+
+  function isNode(file: string) {
+    return globs?.some((glob) => path.matchesGlob(file, glob)) === true;
+  }
+
+  async function scored(testRun: TestRun, mine: string[]): Promise<ShardReport["files"] | null> {
+    return mine.length === 0 ? {} : await stryker(base, { bin, exclude, files: mine, testRun }, deps);
+  }
+
+  const main = await scored(
+    "main",
+    files.filter((file) => !isNode(file)),
+  );
+
+  if (main === null) return null;
+
+  const node = await scored(
+    "node",
+    files.filter((file) => isNode(file)),
+  );
+
+  return node === null ? null : { ...main, ...node };
 }
 
 /** `mutate`'s result for the plan, run in a fresh dir under the OS temp dir, removed whether the run ends or throws. */
