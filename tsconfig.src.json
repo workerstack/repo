@@ -13,7 +13,8 @@
     "**/*.e2e.ts",
     "**/__fixtures__/**",
     "e2e",
-    "*.config.ts"
+    "*.config.ts",
+    "*.config.local.ts"
   ],
   "extends": ["./tsconfig.json", "./tsconfig/strict.json"]
 }
