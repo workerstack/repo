@@ -106,3 +106,34 @@ it("keeps the sibling's copy of a linked dependency through unlink", async () =>
   expect(await unlinkMain([NAME], w.io())).toBe(0);
   expect(fs.existsSync(installedFile(w.flare, "zod"))).toBe(true);
 });
+
+it("links an npm: alias dependency under its alias name from the checkout's install", async () => {
+  const w = scene();
+  sibling(w.flare, NAME, "0.4.0-dev", {
+    dependencies: {
+      "ts-5.9": "npm:typescript@5.9.3",
+      "ts-bare": "npm:typescript",
+      "ts-link": "link:../ts",
+      "ts-tag": "npm:typescript@latest:x",
+    },
+  });
+  put(w.flare, { "node_modules/ts-5.9/package.json": JSON.stringify({ name: "typescript", version: "5.9.3" }) });
+
+  for (const dep of ["ts-bare", "ts-tag"])
+    put(w.flare, { [`node_modules/${dep}/package.json`]: JSON.stringify({ name: "typescript", version: "5.9.3" }) });
+
+  put(w.flare, { "node_modules/ts-link/package.json": JSON.stringify({ name: "ts-link", version: "1.0.0" }) });
+  await main([NAME], w.io());
+  expect(resolvedFrom(w.main, "ts-5.9")).toBe(installedFile(w.flare, "ts-5.9"));
+  expect(() => resolvedFrom(w.main, "ts-link")).toThrow(/Cannot find/);
+  expect(() => resolvedFrom(w.main, "ts-bare")).toThrow(/Cannot find/);
+  expect(() => resolvedFrom(w.main, "ts-tag")).toThrow(/Cannot find/);
+});
+
+it("does not link an alias whose installed copy is another package or out of range", async () => {
+  const w = scene();
+  sibling(w.flare, NAME, "0.4.0-dev", { dependencies: { "ts-5.9": "npm:typescript@5.9.3" } });
+  put(w.flare, { "node_modules/ts-5.9/package.json": JSON.stringify({ name: "typescript", version: "5.8.0" }) });
+  await main([NAME], w.io());
+  expect(() => resolvedFrom(w.main, "ts-5.9")).toThrow(/Cannot find/);
+});

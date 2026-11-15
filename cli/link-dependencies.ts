@@ -6,14 +6,35 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { installedDir, readVersion, type Manifest } from "./link-installed.ts";
+import { installedDir, readName, readVersion, type Manifest } from "./link-installed.ts";
 import type { LinkTarget } from "./link-io.types.ts";
-import { CHECKOUT_TOP, DIR_LINK, MODULES, SCOPE_PREFIX } from "./link.constants.ts";
+import { CHECKOUT_TOP, DIR_LINK, MODULES, NPM_PREFIX, SCOPE_PREFIX } from "./link.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 
 /** npm:, file:, git and URL specifiers are not semver ranges, so they are not judged. */
 export function isSemverRange(range: string): boolean {
   return !range.includes(":") && !range.includes("/");
+}
+
+/** The package and range of an `npm:<name>@<range>` alias spec, or null for any other spec. */
+function parseAlias(spec: string): { name: string; range: string } | null {
+  if (!spec.startsWith(NPM_PREFIX)) return null;
+  const rest = spec.slice(NPM_PREFIX.length);
+  const at = rest.lastIndexOf("@");
+  const range = rest.slice(at + 1);
+
+  return at > 0 && isSemverRange(range) ? { name: rest.slice(0, at), range } : null;
+}
+
+type Wanted = { dep: string; name: string | null; range: string };
+
+/** What linking wants for one dependency: nothing for a spec that is neither a semver range nor an alias. */
+function wantedOf(dep: string, spec: string): Wanted[] {
+  const alias = parseAlias(spec);
+
+  if (alias !== null) return [{ dep, name: alias.name, range: alias.range }];
+
+  return isSemverRange(spec) ? [{ dep, name: null, range: spec }] : [];
 }
 
 /** The version of `dep` the copy at `copy` resolves: its nested install first, then `root`'s; null when neither. */
@@ -62,17 +83,22 @@ function linkedNames(dir: string): string[] {
 export function linkDependencies(root: string, target: LinkTarget, manifest: Manifest): void {
   const copy = installedDir(root, target.name);
   const nested = path.join(copy, MODULES);
-  const wanted = Object.entries(manifest.dependencies ?? {}).filter(([, range]) => isSemverRange(range));
-  const names = new Set(wanted.map(([dep]) => dep));
+  const wanted = Object.entries(manifest.dependencies ?? {}).flatMap(([dep, spec]) => wantedOf(dep, spec));
+  const names = new Set(wanted.map((entry) => entry.dep));
 
   for (const name of linkedNames(nested)) if (!names.has(name)) removeTree(path.join(nested, name));
+
   const dirs = checkoutDirs(target.dir);
 
-  for (const [dep, range] of wanted) {
+  for (const { dep, name, range } of wanted) {
     if (inRange(resolvedVersion(copy, root, dep), range)) continue;
-    const source = dirs.map((dir) => installedDir(dir, dep)).find((candidate) => fs.existsSync(candidate));
+
+    const source = dirs
+      .map((dir) => installedDir(dir, dep))
+      .find((candidate) => fs.existsSync(candidate) && (name === null || readName(candidate) === name));
 
     if (source === undefined || !inRange(readVersion(source), range)) continue;
+
     const link = path.join(nested, dep);
     removeTree(link);
     fs.mkdirSync(path.dirname(link), { recursive: true });

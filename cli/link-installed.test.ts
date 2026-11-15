@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterAll, expect, it } from "vitest";
 
-import { markersIn, readVersion } from "./link-installed.ts";
+import { markersIn, readName, readVersion } from "./link-installed.ts";
 import { MARKER_FILE, MODULES } from "./link.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 
@@ -28,6 +28,13 @@ it("reads no version from a package.json that is missing, no JSON or names no pa
   expect(readVersion(installed("named", "package.json", JSON.stringify({ name: "named", version: "1.0.0" })))).toBe(
     "1.0.0",
   );
+});
+
+it("reads the package name, or null when there is no package.json", () => {
+  expect(readName(path.join(root, "absent"))).toBeNull();
+  expect(
+    readName(installed("named-too", "package.json", JSON.stringify({ name: "named-too", version: "1.0.0" }))),
+  ).toBe("named-too");
 });
 
 it("lists only the markers that name a package and a source", () => {

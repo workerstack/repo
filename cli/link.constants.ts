@@ -141,3 +141,6 @@ export const WARNING_PREFIX = "repo link: warning: ";
 export function refusedPush(pkg: string, linked: string): string {
   return `${pkg} is public and depends on linked ${linked}; \`bun repo unlink ${linked}\` before pushing`;
 }
+
+/** The start of an alias dependency spec, `npm:<name>@<range>`. */
+export const NPM_PREFIX = "npm:";

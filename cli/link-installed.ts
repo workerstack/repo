@@ -64,6 +64,11 @@ export function readVersion(dir: string): string | null {
   return readManifest(dir)?.version ?? null;
 }
 
+/** The package name in `dir`'s package.json, or null when there is none. */
+export function readName(dir: string): string | null {
+  return readManifest(dir)?.name ?? null;
+}
+
 /** The marker of the swapped copy of `name`, or null for an npm copy. */
 function markerOf(root: string, name: string): Marker | null {
   return readInstalled(path.join(installedDir(root, name), MARKER_FILE), markerSchema());
