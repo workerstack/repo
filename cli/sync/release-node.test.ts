@@ -106,7 +106,10 @@ describe("a repo with a node test run", () => {
     ]);
   });
 
-  it("sets up nothing for a devEngines range without a node config", () => {
-    expect(text(context(["release"], dev))).not.toContain("setup-node");
+  it("sets up the devEngines node in the test job of a repo whose tests spawn node but has no node config", () => {
+    const ci = text(context(["release"], dev));
+    expect(job(ci, "test")).toContain(`${AFTER_BUN}${SETUP_NODE_STEP}`);
+    expect(job(ci, "test")).not.toContain("Remove node");
+    expect(job(ci, "e2e")).toContain(`${AFTER_BUN}${NODE_STEPS}`);
   });
 });
