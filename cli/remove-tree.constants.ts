@@ -15,3 +15,9 @@ export const GONE_CODE = "ENOENT";
 
 /** The code of the error thrown when rm returns but leaves the target behind. */
 export const LEFT_CODE = "ENOTEMPTY";
+
+/** The code rm throws for a dir it may not list or empty; the tree is unlocked once and tried again. */
+export const DENIED_CODE = "EACCES";
+
+/** The owner's read, write and search bits, added to every dir of a tree that refused removal. */
+export const OWNER_ALL = 0o700;

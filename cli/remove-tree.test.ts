@@ -121,9 +121,29 @@ it("removeTree throws ENOTEMPTY naming the dir when rm returns but leaves it", (
 
 it("removeTree throws an error it does not retry at once, unchanged", () => {
   const dir = tree();
+  const { rm, seen } = always("EIO");
+  expect(() => removeTree(dir, rm, noSleep)).toThrow(expect.objectContaining({ code: "EIO", path: dir }));
+  expect(seen.calls).toBe(1);
+});
+
+it.skipIf(process.platform === "win32")(
+  "removeTree removes a tree whose dirs a killed test left unwritable and unreadable",
+  () => {
+    const dir = tree();
+    fs.mkdirSync(path.join(dir, "shut"));
+    fs.chmodSync(path.join(dir, "a/b"), 0o500);
+    fs.chmodSync(path.join(dir, "shut"), 0o000);
+    removeTree(dir);
+    expect(fs.existsSync(dir)).toBe(false);
+  },
+);
+
+it("removeTree makes the tree writable once on EACCES, then throws the second EACCES unchanged", () => {
+  const dir = tree();
   const { rm, seen } = always("EACCES");
   expect(() => removeTree(dir, rm, noSleep)).toThrow(expect.objectContaining({ code: "EACCES", path: dir }));
-  expect(seen.calls).toBe(1);
+  expect(seen.calls).toBe(2);
+  expect(fs.statSync(path.join(dir, "a/b")).mode & 0o700).toBe(0o700);
 });
 
 it("removeTree throws an error with no code at once", () => {

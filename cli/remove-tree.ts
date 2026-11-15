@@ -1,6 +1,15 @@
 import fs from "node:fs";
+import path from "node:path";
 
-import { BUSY_CODES, GONE_CODE, LEFT_CODE, REMOVE_ATTEMPTS, REMOVE_DELAY_MS } from "./remove-tree.constants.ts";
+import {
+  BUSY_CODES,
+  DENIED_CODE,
+  GONE_CODE,
+  LEFT_CODE,
+  OWNER_ALL,
+  REMOVE_ATTEMPTS,
+  REMOVE_DELAY_MS,
+} from "./remove-tree.constants.ts";
 
 /** Blocks the thread for `ms`; removal runs in sync cleanup code, so it cannot await a timer. */
 function pause(ms: number): void {
@@ -12,22 +21,23 @@ function present(target: string): boolean {
   return fs.lstatSync(target, { throwIfNoEntry: false }) !== undefined;
 }
 
+/** Gives the owner every right on each dir in the tree at `target`, top down, so rm can list and empty them. */
+function unlock(target: string): void {
+  const stat = fs.lstatSync(target, { throwIfNoEntry: false });
+
+  if (stat?.isDirectory() !== true) return;
+  fs.chmodSync(target, stat.mode | OWNER_ALL);
+
+  for (const name of fs.readdirSync(target)) unlock(path.join(target, name));
+}
+
 /** Whether an rm error with `code` is worth another try while the target is still on disk. */
 function retryable(code: string | undefined): boolean {
   return code === GONE_CODE || BUSY_CODES.includes(code ?? "");
 }
 
-/**
- * Removes `target` and everything under it; a missing path is already done. A busy error, an entry that vanished
- * mid-walk, or an rm that returns but leaves `target` is tried again, waiting longer each time, because Windows
- * holds a file for a moment after the process that used it exits. Gives up after `REMOVE_ATTEMPTS` calls and throws
- * the last error unchanged, so its code and path reach the caller.
- */
-export function removeTree(
-  target: string,
-  rm: typeof fs.rmSync = fs.rmSync,
-  sleep: (ms: number) => void = pause,
-): void {
+/** rm on `target` until it is gone, trying a busy, vanished or left tree again, waiting longer each time. */
+function removeRetrying(target: string, rm: typeof fs.rmSync, sleep: (ms: number) => void): void {
   let last: unknown;
 
   for (let attempt = 1; ; attempt++) {
@@ -50,5 +60,26 @@ export function removeTree(
 
       last = error;
     }
+  }
+}
+
+/**
+ * Removes `target` and everything under it; a missing path is already done. A busy error, an entry that vanished
+ * mid-walk, or an rm that returns but leaves `target` is tried again, waiting longer each time, because Windows
+ * holds a file for a moment after the process that used it exits. The first EACCES gives the owner every right on the
+ * tree's dirs and tries again, since a test killed before its cleanup can leave a dir it locked to test a refusal.
+ * Gives up after `REMOVE_ATTEMPTS` calls and throws the last error unchanged, so its code and path reach the caller.
+ */
+export function removeTree(
+  target: string,
+  rm: typeof fs.rmSync = fs.rmSync,
+  sleep: (ms: number) => void = pause,
+): void {
+  try {
+    removeRetrying(target, rm, sleep);
+  } catch (error) {
+    if ((error /* rm throws fs errors that carry a code */ as NodeJS.ErrnoException).code !== DENIED_CODE) throw error;
+    unlock(target);
+    removeRetrying(target, rm, sleep);
   }
 }

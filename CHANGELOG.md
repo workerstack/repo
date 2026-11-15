@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- removeTree, and so the temp-root guard, removes a tree a killed test left with a dir it may not list or empty, instead of failing every later test run
+
 ## [0.2.0-rc.2] - 2026-11-15
 
 ### Changed
