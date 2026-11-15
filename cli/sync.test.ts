@@ -23,7 +23,7 @@ useSyncKit();
 const GITIGNORE = region("# ", "", [
   "ignore",
   [
-    ".tmp/\n.worktrees/\ncoverage/\n",
+    ".tmp/\n.worktrees/\ncoverage/\n.vitest/\n",
     "**/.repo/plans/\n**/.repo/plans-fast/\n**/.repo/roadmaps/\n**/.repo/roadmaps-fast/\n",
     "**/.repo/handoffs/\n**/.repo/implementations/\n**/.repo/scratch/\n**/.repo/tmp/\n**/.repo/backlog.md\n",
     "node_modules/",

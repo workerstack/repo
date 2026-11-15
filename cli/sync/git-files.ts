@@ -41,6 +41,7 @@ export const IGNORE_BASE: readonly string[] = [
   ".tmp/",
   ".worktrees/",
   "coverage/",
+  ".vitest/",
   .../* @__PURE__ */ IGNORED_DIRS.map((dir) => `**/${REPO}/${dir}/`),
   `**/${REPO}/${BACKLOG_FILE}`,
 ];

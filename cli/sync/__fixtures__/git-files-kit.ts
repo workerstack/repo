@@ -13,6 +13,7 @@ export const IGNORE_BASE = [
   ".tmp/",
   ".worktrees/",
   "coverage/",
+  ".vitest/",
   "**/.repo/plans/",
   "**/.repo/plans-fast/",
   "**/.repo/roadmaps/",

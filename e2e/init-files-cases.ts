@@ -31,6 +31,7 @@ const IGNORED = [
   ".tmp/",
   ".worktrees/",
   "coverage/",
+  ".vitest/",
   "**/.repo/plans/",
   "**/.repo/plans-fast/",
   "**/.repo/roadmaps/",

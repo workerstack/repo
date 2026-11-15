@@ -2,10 +2,11 @@ node_modules
 dist
 coverage
 
-# repo:ignore f18e8647
+# repo:ignore da9d0d3a
 .tmp/
 .worktrees/
 coverage/
+.vitest/
 **/.repo/plans/
 **/.repo/plans-fast/
 **/.repo/roadmaps/

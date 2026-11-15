@@ -42,10 +42,10 @@ it("lists an untracked output outside every host dir by its exact path, and an u
   expect(gitignoreOf({ hosts: ["claude"] }, outputs)).toBe(block("generated/out.txt", ".claude/"));
 });
 
-it("ignores the vitest preset's report directory, so lint does not scan generated coverage reports", () => {
+it("ignores the vitest report and attachment directories, so lint and git skip what a test run writes", () => {
   const hosts: Host[] = ["claude"];
-  expect(gitignoreOf({ hosts, name: "@workerstack/repo" }, treeOutputs(hosts, true)).split("\n")).toContain(
-    "coverage/",
+  expect(gitignoreOf({ hosts, name: "@workerstack/repo" }, treeOutputs(hosts, true)).split("\n")).toStrictEqual(
+    expect.arrayContaining(["coverage/", ".vitest/"]),
   );
 });
 
