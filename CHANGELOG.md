@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - removeTree, and so the temp-root guard, removes a tree a killed test left with a dir it may not list or empty, on Linux and macOS, instead of failing every later test run
+- `repo sync` writes the owned `bunfig.toml` in each workspace package dir too, with the same refusal of a hand-written one per path. Bun reads it only from its cwd, and the commit gate runs tests with cwd set to the package, where auto-install was on and could resolve a missing package from Bun's global cache.
 
 ## [0.2.0-rc.2] - 2026-11-15
 

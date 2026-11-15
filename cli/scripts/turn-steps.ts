@@ -242,9 +242,10 @@ function syncReads(turn: Turn, rel: string): boolean {
   return repoDir || rel.startsWith("references/") || isManifest(turn, rel) || rel === CONFIG_FILE;
 }
 
-/** Check holds the manifests, lockfiles, `bunfig.toml`, the config and every tracked file sync writes. */
+/** Check holds the manifests, lockfiles, every `bunfig.toml`, the config and every tracked file sync writes. */
 function checkReads(turn: Turn, rel: string, outputs: ReadonlySet<string>): boolean {
-  const named = LOCKFILES.has(path.posix.basename(rel)) || rel === BUNFIG_FILE || rel === CONFIG_FILE;
+  const base = path.posix.basename(rel);
+  const named = LOCKFILES.has(base) || base === BUNFIG_FILE || rel === CONFIG_FILE;
 
   return named || isManifest(turn, rel) || outputs.has(rel);
 }

@@ -71,16 +71,26 @@ const INDEX_PATH = INDEX_REL;
 const INDEX_NEW = "# References\n";
 const HEADING_MARK = /^# /;
 
-/** bunfig.toml, refusing to replace one that lacks sync's header. */
+/**
+ * bunfig.toml at the root and in each workspace package dir, refusing to replace one that lacks sync's header. Bun
+ * reads it only from the process's cwd, and the commit gate runs tests with cwd set to the owning package.
+ */
 export function bunfig(ctx: SyncContext): GeneratorResult {
-  const existing = ctx.read(BUNFIG_PATH);
+  const paths = [BUNFIG_PATH, ...ctx.workspace.packages.map(({ dir }) => `${dir}/${BUNFIG_PATH}`)];
 
-  if (existing !== null && !hasOwnedHeader(existing))
-    return { errors: [`${BUNFIG_PATH} is hand-written; delete it so repo sync can own it`], outputs: [] };
+  const errors = paths
+    .filter((rel) => {
+      const existing = ctx.read(rel);
+
+      return existing !== null && !hasOwnedHeader(existing);
+    })
+    .map((rel) => `${rel} is hand-written; delete it so repo sync can own it`);
+
+  if (errors.length > 0) return { errors, outputs: [] };
 
   return {
     errors: [],
-    outputs: [{ content: BUNFIG, kind: "file", managed: "whole", path: BUNFIG_PATH, tracked: true }],
+    outputs: paths.map((rel) => ({ content: BUNFIG, kind: "file", managed: "whole", path: rel, tracked: true })),
   };
 }
 

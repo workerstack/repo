@@ -83,7 +83,7 @@ function configFormats(): FormatEntry[] {
     { comment: "#", format: "toml", match: inDir(".grok/roles", ".toml") },
     { comment: "#", format: "toml", match: exact(".codex/config.toml") },
     { comment: "#", format: "toml", match: exact(".grok/config.toml") },
-    { comment: "#", format: "toml", match: exact("bunfig.toml") },
+    { comment: "#", format: "toml", match: named("bunfig.toml") },
     { comment: "#", format: "toml", match: exact("rust-toolchain.toml") },
     { comment: "#", format: "toml", match: exact("rustfmt.toml") },
     { comment: "#", format: "toml", match: exact("clippy.toml") },

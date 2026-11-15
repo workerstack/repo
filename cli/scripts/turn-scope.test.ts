@@ -65,7 +65,7 @@ it("a path is the whole package owning it, typechecked on its own tsconfig", { t
   const { bins, calls } = recording(root);
   const result = await turn(root, ["packages/api/src"], bins);
   expect(result.out).toBe(
-    "turn: 6 files · fmt ok · lint ok · sync ok · comments ok · typecheck packages/api · check ok\n",
+    "turn: 7 files · fmt ok · lint ok · sync ok · comments ok · typecheck packages/api · check ok\n",
   );
   expect(calls).toStrictEqual([tscCall("packages/api/tsconfig.json"), tscCall("packages/api/tsconfig.src.json")]);
 });

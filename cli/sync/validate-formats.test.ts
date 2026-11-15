@@ -23,6 +23,7 @@ it("accepts well-formed json, toml, markdown and text", () => {
     file(".vscode/tasks.json", "{}\n"),
     file("knip.jsonc", "{}\n"),
     file("bunfig.toml", '[install]\nlinker = "hoisted"\n'),
+    file("packages/api/bunfig.toml", '[install]\nlinker = "hoisted"\n'),
     file("AGENTS.md", "# Plain markdown\n"),
     file("references/INDEX.md", "---\n---\nEmpty frontmatter\n"),
     file(".gitignore", "anything\n"),
@@ -97,6 +98,11 @@ it("reports bad TOML with the parser's message", () => {
   const lines = validateOutputs(tmpRoot(), [file("bunfig.toml", "[install\nx = ")]);
   expect(lines).toHaveLength(1);
   expect(lines[0]).toMatch(/^bunfig\.toml: invalid TOML: /);
+});
+
+it("checks a package's bunfig.toml as TOML too", () => {
+  const lines = validateOutputs(tmpRoot(), [file("packages/api/bunfig.toml", "[install\nx = ")]);
+  expect(lines[0]).toMatch(/^packages\/api\/bunfig\.toml: invalid TOML: /);
 });
 
 it("reports bad YAML frontmatter", () => {

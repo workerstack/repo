@@ -30,8 +30,14 @@ const GITIGNORE = region("# ", "", [
   ].join(""),
 ]);
 
-const GITATTRIBUTES = region("# ", "", ["generated", "* text=auto eol=lf\nbunfig.toml linguist-generated"]);
-const SETTINGS = '{\n  "files.readonlyInclude": {\n    "bunfig.toml": true\n  }\n}\n';
+const GITATTRIBUTES = region("# ", "", [
+  "generated",
+  "* text=auto eol=lf\nbunfig.toml linguist-generated\npackages/api/bunfig.toml linguist-generated",
+]);
+
+const SETTINGS =
+  '{\n  "files.readonlyInclude": {\n    "bunfig.toml": true,\n    "packages/api/bunfig.toml": true\n  }\n}\n';
+
 const API_ENTRY = "- [@acme/api](../packages/api/references/INDEX.md): API worker";
 const STACK_ENTRY = "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)";
 const PACKAGES_REGION = region("<!-- ", " -->", ["packages", API_ENTRY]);
@@ -46,7 +52,7 @@ it("writes every output under the root on the first run, then reports up to date
     code: 0,
     stderr: "",
     stdout:
-      "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, " +
+      "repo sync: wrote bunfig.toml, packages/ (2), references/INDEX.md, " +
       ".gitignore, .gitattributes, .vscode/settings.json\n",
   });
   expect(read(root, "bunfig.toml")).toBe(BUNFIG);
@@ -81,7 +87,7 @@ it("finds the root from a nested cwd and writes there", async () => {
   const { code } = await sync(path.join(root, "packages", "api"));
   expect(code).toBe(0);
   expect(read(root, "bunfig.toml")).toBe(BUNFIG);
-  expect(fs.existsSync(path.join(root, "packages", "api", "bunfig.toml"))).toBe(false);
+  expect(read(root, "packages/api/bunfig.toml")).toBe(BUNFIG);
 });
 
 it("rewrites only the files that drifted and leaves no temp files", async () => {
@@ -132,6 +138,7 @@ it("--check names every stale file, exits 1 and writes nothing", async () => {
     code: 1,
     stderr:
       "repo sync: bunfig.toml is out of date; run `bun repo sync`\n" +
+      "repo sync: packages/api/bunfig.toml is out of date; run `bun repo sync`\n" +
       "repo sync: references/INDEX.md is out of date; run `bun repo sync`\n" +
       "repo sync: packages/api/references/INDEX.md is out of date; run `bun repo sync`\n" +
       "repo sync: .gitignore is out of date; run `bun repo sync`\n" +

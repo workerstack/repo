@@ -134,7 +134,7 @@ it("--postinstall writes like a plain run when there is no error", async () => {
     code: 0,
     stderr: "",
     stdout:
-      "repo sync: wrote bunfig.toml, references/INDEX.md, packages/api/references/INDEX.md, " +
+      "repo sync: wrote bunfig.toml, packages/ (2), references/INDEX.md, " +
       ".gitignore, .gitattributes, .vscode/settings.json\n",
   });
 });
