@@ -6,6 +6,8 @@ import { knipConfig } from "./knip-config.ts";
 const DEFAULT_ENTRIES = [
   "{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
   "src/{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
+  "**/*.config.ts",
+  "**/*.worker.ts",
 ];
 
 const generated = z.looseObject({ workspaces: z.record(z.string(), z.unknown()) });
@@ -25,7 +27,7 @@ it("makes each plugin file an entry of the workspace holding it, relative to tha
 
   expect(generated.parse(JSON.parse(knipConfig(ws, [], plugins)))).toMatchObject({
     workspaces: {
-      ".": { entry: [...DEFAULT_ENTRIES, "repo.config.ts", "lint/app.js", "packages/apix/c.js"] },
+      ".": { entry: [...DEFAULT_ENTRIES, "lint/app.js", "packages/apix/c.js"] },
       "packages/api": { entry: [...DEFAULT_ENTRIES, "lint/a.mjs"] },
       "packages/api/inner": { entry: [...DEFAULT_ENTRIES, "lint/b.ts"] },
       "packages/web": { entry: DEFAULT_ENTRIES },

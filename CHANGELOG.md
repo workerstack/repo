@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Sync makes every `*.config.ts` and `*.worker.ts` file a knip entry of its workspace, since tools load them by name or path, and lets `*.worker.ts` default-export in the generated oxlint config
+
 ### Changed
 
 - **Breaking:** reject files are checked with TypeScript 7, so a `rejects:` mark must quote the error text tsc 7 prints

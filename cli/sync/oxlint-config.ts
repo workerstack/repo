@@ -30,6 +30,7 @@ export const FIXTURES: string = `**/${FIXTURES_DIR}/**`;
 const REJECT_FILES = "**/*.reject.{ts,tsx}";
 const TESTS = ["**/*.{test,spec}.{ts,tsx}", "**/*.e2e.{ts,tsx}"];
 const CONFIGS = "**/*.config.ts";
+const WORKERS = "**/*.worker.ts";
 const REPO_CONFIG = `**/${CONFIG_FILE}`;
 const EVAL_FILES = "**/evals/*/eval.ts";
 const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
@@ -191,7 +192,7 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
 }
 
 /**
- * The overrides, in order: tests, configs, eval files, the workerstack config, the package, `lint.rules` and
+ * The overrides, in order: tests, configs, workers, eval files, the workerstack config, the package, `lint.rules` and
  * `lint.skip` ones.
  */
 function overridesOf(workspace: Workspace, lint: ResolvedLint) {
@@ -199,6 +200,8 @@ function overridesOf(workspace: Workspace, lint: ResolvedLint) {
     { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
     // vitest and workerstack configs must default-export, and call their define helper at import.
     { files: [CONFIGS], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
+    // Wrangler loads a Worker module's default export from the path its config names.
+    { files: [WORKERS], rules: OFF_DEFAULT_EXPORT },
     // `repo eval` imports an eval file's default export, which its `defineEval` call builds at import.
     { files: [EVAL_FILES], rules: { ...OFF_DEFAULT_EXPORT, ...OFF_SIDE_EFFECTS } },
     // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.

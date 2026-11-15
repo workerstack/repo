@@ -115,6 +115,9 @@ const CONFIG_OVERRIDE = {
   rules: { "import/no-default-export": "off", "repo/no-module-side-effects": "off" },
 };
 
+/** Wrangler loads a Worker module's default export from the path its config names. */
+const WORKER_OVERRIDE = { files: ["**/*.worker.ts"], rules: { "import/no-default-export": "off" } };
+
 /** An eval file default-exports the spec its define call builds at import, as a config does. */
 const EVAL_OVERRIDE = {
   files: ["**/evals/*/eval.ts"],
@@ -123,7 +126,7 @@ const EVAL_OVERRIDE = {
 
 /** `ci.checks` run in key order, so the workerstack config keeps its keys where the consumer put them. */
 const WORKERSTACK_OVERRIDE = { files: ["**/repo.config.ts"], rules: { "eslint/sort-keys": "off" } };
-const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, EVAL_OVERRIDE, WORKERSTACK_OVERRIDE];
+const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, WORKER_OVERRIDE, EVAL_OVERRIDE, WORKERSTACK_OVERRIDE];
 
 describe("oxlintConfig base", () => {
   it(

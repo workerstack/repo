@@ -1,12 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE } from "../config.constants.ts";
 import { isRecord, isString } from "../json.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
-import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL } from "./knip-config.constants.ts";
+import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL, TOOL_LOADED_ENTRIES } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
@@ -80,7 +79,11 @@ function isGenerated(file: string): boolean {
 const DEFAULT_ENTRIES = [
   "{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
   "src/{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
+  ...TOOL_LOADED_ENTRIES,
 ];
+
+/** The suffix of the configs the `*.config.ts` entry glob already holds, so no vitest one is listed twice. */
+const TS_CONFIG_SUFFIX = ".config.ts";
 
 type WorkspaceConfig = {
   entry: string[];
@@ -97,7 +100,7 @@ function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: string
   const configs = vitestConfigs(root, dir);
 
   return {
-    entry: [...DEFAULT_ENTRIES, ...extraEntry, ...configs],
+    entry: [...DEFAULT_ENTRIES, ...extraEntry, ...configs.filter((name) => !name.endsWith(TS_CONFIG_SUFFIX))],
     ...(configs.length > 0 ? { vitest: { config: configs } } : {}),
     ignore: [FIXTURES],
     ignoreBinaries: binNames(manifest),
@@ -121,7 +124,6 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[], plugin
   const evals = fs.existsSync(path.join(workspace.root, EVALS_DIR)) ? [EVAL_ENTRY] : [];
 
   const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [
-    CONFIG_FILE,
     ...evals,
     ...pluginEntries(workspace, ROOT, plugins),
   ]);
@@ -140,12 +142,13 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[], plugin
 }
 
 /**
- * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its
- * own (the root also `repo.config.ts`, and every `evals/<name>/eval.ts` when it has an `evals/` dir), the
- * vitest configs present read by knip's vitest plugin, fixtures ignored, a workspace's own bins not reported, and the
- * root carrying `ignores`. `repo check` passes no ignores for its ignore-free run.
- * Each of `plugins`, the repo-relative files
- * of `lint.plugins`, is an entry of the workspace holding it, relative to that workspace's dir.
+ * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries, every
+ * `*.config.ts` and `*.worker.ts` file (tools load them by name or path, so nothing imports them), and its own (the
+ * root also every `evals/<name>/eval.ts` when it has an `evals/` dir), the vitest configs present read by knip's
+ * vitest plugin and an entry where no `*.config.ts` glob holds them, fixtures ignored, a workspace's own bins not
+ * reported, and the root carrying `ignores`. `repo check` passes no ignores for its ignore-free run. Each of
+ * `plugins`, the repo-relative files of `lint.plugins`, is an entry of the workspace holding it, relative to that
+ * workspace's dir.
  */
 export function knipConfig(
   workspace: Workspace,
