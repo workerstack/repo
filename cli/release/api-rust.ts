@@ -72,7 +72,7 @@ async function crateChecks(io: RustIo): Promise<number | "none"> {
 export async function rustApi(
   against: string | undefined,
   io: RustIo,
-  typescript: (against: string | undefined) => number,
+  typescript: (against: string | undefined) => Promise<number>,
 ): Promise<number> {
   const published = isPublicPackage(io.cwd);
 
@@ -80,7 +80,7 @@ export async function rustApi(
   const crates = await crateChecks(io);
 
   if (crates === "none" && !published) return (io.stdout(`${API_PREFIX}${NOTHING_TO_COMPARE}\n`), 0);
-  const ts = published ? typescript(against) : 0;
+  const ts = published ? await typescript(against) : 0;
 
   return crates === 1 || ts !== 0 ? 1 : 0;
 }

@@ -37,7 +37,7 @@ const NEW_VERSION: Version = {
 };
 
 /** Installs the old and new fixture packages, each with its own copy of two dependencies, and diffs them. */
-export function diffFixtures(): Change[] {
+export function diffFixtures(): Promise<Change[]> {
   const world = apiWorld(OLD_VERSION, NEW_VERSION);
   plantDep(world.roots.old, { name: "dep", version: "1.0.0", types: DEP });
   plantDep(world.roots.next, { name: "dep", version: "1.0.1", types: DEP });

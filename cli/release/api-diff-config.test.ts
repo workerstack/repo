@@ -6,8 +6,8 @@ import { apiDiff } from "./api-diff.ts";
 
 afterAll(removePlanted);
 
-it("finds no change between two copies of this checkout's config types", { timeout: 120_000 }, () => {
-  const world = configTwins();
+it("finds no change between two copies of this checkout's config types", { timeout: 120_000 }, async () => {
+  const world = await configTwins();
 
-  expect(apiDiff(world.project, world.old, world.next)).toStrictEqual([]);
+  expect(await apiDiff(world.project, world.old, world.next)).toStrictEqual([]);
 });

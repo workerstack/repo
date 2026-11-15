@@ -151,11 +151,11 @@ function okLine(source: OldSource, found: { pair: Pair; changes: readonly Change
 }
 
 /** Diffs the pair and prints the refusals or the ok line; the exit code. */
-function report(source: OldSource, pair: Pair & { project: string }, io: ApiIo): number {
+async function report(source: OldSource, pair: Pair & { project: string }, io: ApiIo): Promise<number> {
   let changes: Change[];
 
   try {
-    changes = apiDiff(pair.project, pair.old, pair.next);
+    changes = await apiDiff(pair.project, pair.old, pair.next);
   } catch (error) {
     return refuse(io, API_PREFIX, (error /* apiDiff throws Errors only */ as Error).message);
   }
@@ -172,7 +172,7 @@ function report(source: OldSource, pair: Pair & { project: string }, io: ApiIo):
 }
 
 /** Packs this checkout, installs it beside the old version, and checks the diff against the commits. */
-function runApi(against: string | undefined, io: ApiIo): number {
+async function runApi(against: string | undefined, io: ApiIo): Promise<number> {
   const found = sourceOf(against, io);
 
   if ("done" in found) return found.done;
@@ -184,11 +184,11 @@ function runApi(against: string | undefined, io: ApiIo): number {
 
   if (!pair.ok) return refuse(io, API_PREFIX, pair.error);
 
-  return report(found.source, { ...pair.value, project }, io);
+  return await report(found.source, { ...pair.value, project }, io);
 }
 
 /** The TypeScript check, with the temp directories it made removed afterwards. */
-function typescriptApi(against: string | undefined, io: ApiIo): number {
+async function typescriptApi(against: string | undefined, io: ApiIo): Promise<number> {
   const dirs: string[] = [];
 
   const tracked = {
@@ -202,7 +202,7 @@ function typescriptApi(against: string | undefined, io: ApiIo): number {
   };
 
   try {
-    return runApi(against, tracked);
+    return await runApi(against, tracked);
   } finally {
     for (const dir of dirs) io.rm(dir);
   }
@@ -219,5 +219,5 @@ export function releaseApi(argv: readonly string[], io: ApiIo): Promise<number> 
 
   if (fs.existsSync(path.join(io.cwd, CARGO_MANIFEST))) return rustApi(argv[1], io, (a) => typescriptApi(a, io));
 
-  return Promise.resolve(typescriptApi(argv[1], io));
+  return typescriptApi(argv[1], io);
 }

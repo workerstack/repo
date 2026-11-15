@@ -3,10 +3,14 @@ import fs from "node:fs";
 import { ModifierFlags, type SourceFile, type VariableDeclaration } from "typescript/unstable/ast";
 import {
   isClassDeclaration,
+  isComputedPropertyName,
+  isExpressionStatement,
   isForOfStatement,
   isFunctionDeclaration,
   isImportDeclaration,
+  isInterfaceDeclaration,
   isNamedImports,
+  isParenthesizedExpression,
   isPropertyDeclaration,
   isStringLiteral,
   isVariableDeclarationList,
@@ -16,7 +20,7 @@ import { expect, it } from "vitest";
 
 import { put, tempDir, useTempDirs } from "./sync/__fixtures__/temp-dirs.ts";
 import { withFiles, withTsApi } from "./ts-api.ts";
-import { ancestorOf, modifierFlagsOf } from "./ts-nodes.ts";
+import { ancestorOf, isClassLike, modifierFlagsOf, nameOf } from "./ts-nodes.ts";
 import { posix } from "./ts-program.ts";
 
 useTempDirs();
@@ -33,10 +37,22 @@ const SOURCE = [
   "",
 ].join("\n");
 
-/** What `read` gives of `a.ts`, holding SOURCE, parsed on TypeScript 7. */
-function onSource<T>(read: (file: SourceFile) => T): Promise<T> {
+const CLASSES = [
+  "const key = Symbol();",
+  "export class C {",
+  "  constructor() {}",
+  "  m() {}",
+  "  [key]() {}",
+  "}",
+  "(class {});",
+  "export interface I {}",
+  "",
+].join("\n");
+
+/** What `read` gives of `a.ts`, holding `source`, parsed on TypeScript 7. */
+function onSource<T>(read: (file: SourceFile) => T, source = SOURCE): Promise<T> {
   const dir = posix(fs.realpathSync(tempDir("ts-nodes-")));
-  put(dir, "a.ts", SOURCE);
+  put(dir, "a.ts", source);
   put(dir, "b.ts", "export const a = 1;\n");
 
   return withTsApi(dir, (run) =>
@@ -109,4 +125,37 @@ it("finds the import a specifier sits in, and itself when it matches", async () 
 
 it("finds no ancestor that is not there", async () => {
   expect(await onSource((file) => ancestorOf(declarationAt(file, 1), isStringLiteral))).toBeUndefined();
+});
+
+it("tells a class declaration and a class expression from an interface", async () => {
+  const nodes = await onSource((file) => {
+    const [, declaration, statement, face] = file.statements;
+
+    if (statement === undefined || !isExpressionStatement(statement)) throw new Error("the class expression moved");
+    const expression = isParenthesizedExpression(statement.expression) ? statement.expression.expression : undefined;
+
+    if (declaration === undefined || expression === undefined || face === undefined || !isInterfaceDeclaration(face))
+      throw new Error("a class or the interface moved");
+
+    return { classes: [declaration, expression], face };
+  }, CLASSES);
+
+  expect(nodes.classes.map(isClassLike)).toStrictEqual([true, true]);
+  expect(isClassLike(nodes.face)).toBe(false);
+});
+
+it("gives a method its name and a constructor none, and a computed member its computed name", async () => {
+  const names = await onSource((file) => {
+    const [, cls] = file.statements;
+
+    if (cls === undefined || !isClassDeclaration(cls)) throw new Error("the class moved");
+
+    return cls.members.map((member) => {
+      const name = nameOf(member);
+
+      return name === undefined ? null : [name.getText(), isComputedPropertyName(name)];
+    });
+  }, CLASSES);
+
+  expect(names).toStrictEqual([null, ["m", false], ["[key]", true]]);
 });

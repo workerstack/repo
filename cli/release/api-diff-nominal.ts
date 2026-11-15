@@ -1,106 +1,150 @@
-import ts from "typescript-5.9";
+import type { Node } from "typescript/unstable/ast";
+import { isComputedPropertyName, isConstructorDeclaration, isPrivateIdentifier } from "typescript/unstable/ast/is";
+import { isIntersectionType, isTypeReference, isUnionType, SignatureKind, TypeFlags } from "typescript/unstable/async";
+import type { Project, Signature, Symbol as TsSymbol, Type } from "typescript/unstable/async";
 
-import {
-  NOMINAL_MODIFIERS,
-  NOMINAL_TYPES,
-  OPTIONAL_MARK,
-  PACKAGE_OF_FILE,
-  FULL_TYPE_FLAGS,
-  TEXT_SEPARATOR,
-} from "./api-diff.constants.ts";
+import { isClassLike, modifierFlagsOf, nameOf } from "../ts-nodes.ts";
+import { NOMINAL_MODIFIERS, NOMINAL_TYPES, noNode, noType, PACKAGE_OF_FILE } from "./api-diff.constants.ts";
 
-/** What a comparison reads types through: the checker, and the names the two compared packages are imported by. */
-export type Ctx = { checker: ts.TypeChecker; packages: readonly string[] };
+/** What a comparison reads types through: the project of the entry, and the names the two compared packages have. */
+export type Ctx = { project: Project; packages: readonly string[] };
+
+export function defined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
+/** What typeOf reads: a checker that gives a symbol's type. */
+type TypeReader<S> = { project: { checker: { getTypeOfSymbol(symbol: S): Promise<Type | undefined> } } };
+
+/** The type of a symbol's value; an Error when the checker has none, which no exported name lacks. */
+export async function typeOf<S extends { name: string }>(ctx: TypeReader<S>, symbol: S): Promise<Type> {
+  const type = await ctx.project.checker.getTypeOfSymbol(symbol);
+
+  if (type === undefined) throw new Error(noType(symbol.name));
+
+  return type;
+}
+
+/** A type's call signatures, then its construct signatures. */
+export async function signaturesOf(ctx: Ctx, type: Type): Promise<Signature[]> {
+  const { checker } = ctx.project;
+
+  return [
+    ...(await checker.getSignaturesOfType(type, SignatureKind.Call)),
+    ...(await checker.getSignaturesOfType(type, SignatureKind.Construct)),
+  ];
+}
+
+/** What nodeOf reads of a declaration handle: its file, and the node it resolves to in a project. */
+type Handle<P> = { path: string; resolve(project: P): Promise<Node | undefined> };
+
+/** The node a declaration handle stands for in the entry's project; an Error when its file is not in the project. */
+export async function nodeOf<P>(ctx: { project: P }, handle: Handle<P>): Promise<Node> {
+  const node = await handle.resolve(ctx.project);
+
+  if (node === undefined) throw new Error(noNode(handle.path));
+
+  return node;
+}
 
 /** Whether a class member, constructor or constructor parameter is `private`, `protected` or `#`. */
-function nominalMember(member: ts.Declaration): boolean {
-  const named = ts.getNameOfDeclaration(member);
+function nominalMember(member: Node): boolean {
+  const named = nameOf(member);
 
-  return (
-    (named !== undefined && ts.isPrivateIdentifier(named)) ||
-    (ts.getCombinedModifierFlags(member) & NOMINAL_MODIFIERS) !== 0
-  );
+  return (named !== undefined && isPrivateIdentifier(named)) || (modifierFlagsOf(member) & NOMINAL_MODIFIERS) !== 0;
 }
 
 /** Whether a declaration is a class with a `private`, `protected` or `#` member. */
-function nominalDeclaration(declaration: ts.Declaration): boolean {
-  if (!ts.isClassLike(declaration)) return false;
+function nominalDeclaration(declaration: Node): boolean {
+  if (!isClassLike(declaration)) return false;
 
-  const nodes: ts.Declaration[] = declaration.members.flatMap<ts.Declaration>((member) =>
-    ts.isConstructorDeclaration(member) ? [member, ...member.parameters] : [member],
+  const nodes = declaration.members.flatMap<Node>((member) =>
+    isConstructorDeclaration(member) ? [member, ...member.parameters] : [member],
   );
 
   return nodes.some(nominalMember);
 }
 
 /** Whether a declaration sits in a package other than the two compared. */
-function foreignDeclaration(ctx: Ctx, declaration: ts.Declaration): boolean {
+function foreignDeclaration(ctx: Ctx, declaration: Node): boolean {
   const owner = PACKAGE_OF_FILE.exec(declaration.getSourceFile().fileName)?.[1];
 
   return !ctx.packages.some((name) => name === owner);
 }
 
 /** Whether a declaration is the TypeScript library's, which both compared packages share as one copy. */
-function libraryDeclaration(declaration: ts.Declaration): boolean {
-  return declaration.getSourceFile().hasNoDefaultLib;
+function libraryDeclaration(ctx: Ctx, declaration: Node): Promise<boolean> {
+  return ctx.project.program.isSourceFileDefaultLibrary(declaration.getSourceFile());
+}
+
+/** The declarations of a type's symbol that are not the library's; none for a type with no symbol. */
+async function ownDeclarations(ctx: Ctx, type: Type): Promise<{ own: Node[]; all: number }> {
+  const handles = [await type.getSymbol()].filter(defined).flatMap((symbol) => symbol.declarations);
+  const own: Node[] = [];
+
+  for (const handle of handles) {
+    const node = await nodeOf(ctx, handle);
+
+    if (!(await libraryDeclaration(ctx, node))) own.push(node);
+  }
+
+  return { all: handles.length, own };
 }
 
 /**
  * Whether a property is keyed by a unique symbol, which each copy of its module declares anew; the library's own keys,
  * such as `Symbol.iterator`, are one copy for both.
  */
-function symbolKeyed(ctx: Ctx, prop: ts.Symbol): boolean {
-  const declaration = prop.valueDeclaration;
+async function symbolKeyed(ctx: Ctx, prop: TsSymbol): Promise<boolean> {
+  const handle = prop.valueDeclaration;
 
-  if (declaration === undefined || libraryDeclaration(declaration)) return false;
-  const name = ts.getNameOfDeclaration(declaration);
+  if (handle === undefined) return false;
+  const declaration = await nodeOf(ctx, handle);
 
-  if (name === undefined || !ts.isComputedPropertyName(name)) return false;
+  if (await libraryDeclaration(ctx, declaration)) return false;
+  const name = nameOf(declaration);
 
-  return (ctx.checker.getTypeAtLocation(name.expression).flags & ts.TypeFlags.UniqueESSymbol) !== 0;
+  if (name === undefined || !isComputedPropertyName(name)) return false;
+  const type = await ctx.project.checker.getTypeAtLocation(name.expression);
+
+  return [type].filter(defined).some((key) => (key.flags & TypeFlags.UniqueESSymbol) !== 0);
 }
 
 /** Whether one type cannot be told from its twin by structure: nominal, keyed by a unique symbol, or a dependency's. */
-function nominalHead(ctx: Ctx, type: ts.Type): boolean {
+async function nominalHead(ctx: Ctx, type: Type): Promise<boolean> {
   if ((type.flags & NOMINAL_TYPES) !== 0) return true;
-  const declarations = (type.getSymbol()?.declarations ?? []).filter((declaration) => !libraryDeclaration(declaration));
+  const { own } = await ownDeclarations(ctx, type);
 
-  if (declarations.some((declaration) => nominalDeclaration(declaration) || foreignDeclaration(ctx, declaration)))
-    return true;
+  if (own.some((declaration) => nominalDeclaration(declaration) || foreignDeclaration(ctx, declaration))) return true;
 
-  return ctx.checker.getPropertiesOfType(type).some((prop) => symbolKeyed(ctx, prop));
-}
+  for (const prop of await ctx.project.checker.getPropertiesOfType(type)) if (await symbolKeyed(ctx, prop)) return true;
 
-/** Whether a type is declared only by the TypeScript library, whose members are the same for both copies. */
-function isLibraryType(type: ts.Type): boolean {
-  const declarations = type.getSymbol()?.declarations ?? [];
-
-  return declarations.length > 0 && declarations.every(libraryDeclaration);
+  return false;
 }
 
 /** The type arguments of a generic reference, such as the `T` of `T[]`; none for any other type. */
-function typeArguments(ctx: Ctx, type: ts.Type): readonly ts.Type[] {
-  if ((type.flags & ts.TypeFlags.Object) === 0) return [];
-  const object = type /* the Object flag marks an ObjectType */ as ts.ObjectType;
-
-  if ((object.objectFlags & ts.ObjectFlags.Reference) === 0) return [];
-
-  return ctx.checker.getTypeArguments(object /* the Reference object flag marks a TypeReference */ as ts.TypeReference);
+function typeArguments(ctx: Ctx, type: Type): Promise<readonly Type[]> {
+  return isTypeReference(type) ? ctx.project.checker.getTypeArguments(type) : Promise.resolve([]);
 }
 
 /** What a type is made of: union and intersection members, type arguments, and, outside the library, its members. */
-function parts(ctx: Ctx, type: ts.Type): ts.Type[] {
-  const { checker } = ctx;
-  const members = type.isUnionOrIntersection() ? type.types : [];
-  const args = typeArguments(ctx, type);
+async function parts(ctx: Ctx, type: Type): Promise<Type[]> {
+  const { checker } = ctx.project;
+  const members = isUnionType(type) || isIntersectionType(type) ? await type.getTypes() : [];
+  const args = await typeArguments(ctx, type);
+  const { own, all } = await ownDeclarations(ctx, type);
 
-  if (isLibraryType(type)) return [...members, ...args];
-  const props = checker.getPropertiesOfType(type).map((prop) => checker.getTypeOfSymbol(prop));
+  if (all > 0 && own.length === 0) return [...members, ...args];
+  const props: Type[] = [];
 
-  const signatures = [...type.getCallSignatures(), ...type.getConstructSignatures()].flatMap((signature) => [
-    signature.getReturnType(),
-    ...signature.getParameters().map((parameter) => checker.getTypeOfSymbol(parameter)),
-  ]);
+  for (const prop of await checker.getPropertiesOfType(type)) props.push(await typeOf(ctx, prop));
+  const signatures: Type[] = [];
+
+  for (const signature of await signaturesOf(ctx, type)) {
+    signatures.push(...[await checker.getReturnTypeOfSignature(signature)].filter(defined));
+
+    for (const parameter of await signature.getParameters()) signatures.push(await typeOf(ctx, parameter));
+  }
 
   return [...members, ...args, ...props, ...signatures];
 }
@@ -109,43 +153,17 @@ function parts(ctx: Ctx, type: ts.Type): ts.Type[] {
  * Whether the type, or anything it is made of at any depth, is nominal or a dependency's: a field of a nominal type
  * is as nominal.
  */
-export function isNominal(ctx: Ctx, type: ts.Type): boolean {
-  const seen = new Set<ts.Type>();
+export async function isNominal(ctx: Ctx, type: Type): Promise<boolean> {
+  const seen = new Set<Type>();
   const queue = [type];
 
   for (const next of queue) {
     if (seen.has(next)) continue;
     seen.add(next);
 
-    if (nominalHead(ctx, next)) return true;
-    queue.push(...parts(ctx, next));
+    if (await nominalHead(ctx, next)) return true;
+    queue.push(...(await parts(ctx, next)));
   }
 
   return false;
-}
-
-/** The type in text: its name, its members and signatures, and the member names of an enum, class or namespace. */
-export function typeText(ctx: Ctx, type: ts.Type): string {
-  const { checker } = ctx;
-
-  function print(of: ts.Type): string {
-    return checker.typeToString(of, undefined, FULL_TYPE_FLAGS);
-  }
-
-  const props = (type.flags & ts.TypeFlags.Object) === 0 ? [] : checker.getPropertiesOfType(type);
-
-  const members = props
-    .map((prop) => {
-      const optional = (prop.flags & ts.SymbolFlags.Optional) === 0 ? "" : OPTIONAL_MARK;
-
-      return `${checker.symbolToString(prop)}${optional}:${print(checker.getTypeOfSymbol(prop))}`;
-    })
-    .toSorted();
-
-  const signatures = [...type.getCallSignatures(), ...type.getConstructSignatures()];
-  const exported = [...(type.getSymbol()?.exports?.keys() ?? [])].map(String);
-
-  return [print(type), ...members, ...signatures.map((s) => checker.signatureToString(s)), ...exported].join(
-    TEXT_SEPARATOR,
-  );
 }

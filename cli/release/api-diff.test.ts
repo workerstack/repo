@@ -18,8 +18,8 @@ function conditions(types: string, runtime: string) {
 const TIMEOUT = 120_000;
 let changes: Change[] = [];
 
-beforeAll(() => {
-  changes = diffFixtures();
+beforeAll(async () => {
+  changes = await diffFixtures();
 }, TIMEOUT);
 
 afterAll(removePlanted);
@@ -150,7 +150,7 @@ describe("apiDiff names, all together", () => {
 });
 
 describe("apiDiff refusals", () => {
-  it("names a types file that is not in the package", { timeout: TIMEOUT }, () => {
+  it("names a types file that is not in the package", { timeout: TIMEOUT }, async () => {
     const files = { "index.js": JS };
 
     const exports = {
@@ -159,6 +159,6 @@ describe("apiDiff refusals", () => {
 
     const version = { exports, files, version: "1.0.0" };
     const world = apiWorld(version, version);
-    expect(() => apiDiff(world.project, world.old, world.next)).toThrow('cannot resolve "old" to a module');
+    await expect(apiDiff(world.project, world.old, world.next)).rejects.toThrow('cannot resolve "old" to a module');
   });
 });
