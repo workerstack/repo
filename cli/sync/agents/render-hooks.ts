@@ -14,6 +14,7 @@ import { ANTIGRAVITY, CLAUDE, CODEX } from "./hook-targets.ts";
 import {
   ANTIGRAVITY_FILE,
   ANTIGRAVITY_FLAT,
+  ANTIGRAVITY_SET,
   CLAUDE_FILE,
   CLAUDE_SCHEMA,
   CODEX_FILE,
@@ -123,14 +124,14 @@ function cursorHooks(config: JsonObject): JsonObject {
   return out;
 }
 
-/** Antigravity's file: its flat events as bare handler lists, `{}` when no event is left. */
+/** Antigravity's file: its flat events as bare handler lists under the repo hook set, `{}` when no event is left. */
 function antigravityFile(config: JsonObject): JsonObject {
   const flat = Object.entries(toolHooks(config, ANTIGRAVITY)).map(([event, groups]): [string, Json] => [
     event,
     ANTIGRAVITY_FLAT.has(event) ? groups.flatMap((group) => group.hooks) : groups,
   ]);
 
-  return flat.length === 0 ? {} : { rulesync: Object.fromEntries(flat) };
+  return flat.length === 0 ? {} : { [ANTIGRAVITY_SET]: Object.fromEntries(flat) };
 }
 
 /** Path to text for each enabled host's hook file; `claudeBase` is the stock `agents/settings/claude.json`. */

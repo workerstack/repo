@@ -78,11 +78,11 @@ export function afterStage(files: ReadonlyMap<string, string>, { stock, consumer
   return new Map(HOOK_FILES.map((rel) => [rel, fs.readFileSync(path.join(stage, rel), "utf8")]));
 }
 
-/** One handler definition rendered for one host: the host's file's events object (`rulesync` for antigravity). */
+/** One handler definition rendered for one host: the host's file's events object (`repo` for antigravity). */
 export function renderOne(host: Host, event: string, def: JsonObject): Json | undefined {
   const files = renderHooks(hooksOf({ hooks: { [event]: [def] } }), [host], "{}");
   const file = parsed(files, [...files.keys()][0] ?? "");
-  return at(file, host === "antigravity" ? "rulesync" : "hooks");
+  return at(file, host === "antigravity" ? "repo" : "hooks");
 }
 
 /** Every passthrough field any host knows, plus one none does. */

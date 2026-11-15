@@ -22,7 +22,7 @@ import { applyUnion } from "./hooks-union.ts";
 const tmpDir = plantDirs();
 const AGY_SCRUB_GATE = [ownedPre[0], { ...ownedPre[1], matcher: "read_file|run_command|write_file|edit_file" }];
 
-/** A repo with rulesync's hook files and every consumer autorun script. */
+/** A repo with the generator's hook files and every consumer autorun script. */
 function consumerRepo(prefix: string): string {
   const ws = tmpDir(prefix);
   seedOwnedDrivers(ws);
@@ -42,11 +42,11 @@ function behindGroup(pre: HookGroup[]) {
 
 it("leaves the scrub and gate PreToolUse groups of every hook file byte-equal", () => {
   const ws = consumerRepo("union-owned-");
-  writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: AGY_SCRUB_GATE } });
+  writeJson(ws, ".agents/hooks.json", { repo: { PreToolUse: AGY_SCRUB_GATE } });
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(ownedGroups(readJson<ClaudeDoc>(ws, ".claude/settings.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
   expect(ownedGroups(readJson<ClaudeDoc>(ws, ".codex/hooks.json").hooks.PreToolUse)).toStrictEqual(ownedPre);
-  expect(ownedGroups(readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.PreToolUse)).toStrictEqual(AGY_SCRUB_GATE);
+  expect(ownedGroups(readJson<AgentsDoc>(ws, ".agents/hooks.json").repo.PreToolUse)).toStrictEqual(AGY_SCRUB_GATE);
 });
 
 it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
@@ -58,14 +58,14 @@ it("writes no top-level scrub or gate entry into .agents/hooks.json", () => {
   expect(keys).not.toContain("gate-fat-tools");
 });
 
-it("appends flat SessionStart entries after rulesync's, the session map first", () => {
+it("appends flat SessionStart entries after the generator's, the session map first", () => {
   const ws = consumerRepo("union-agy-session-");
   const mapEntry = { command: MAP, timeout: 5, type: "command" };
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
-  agents.rulesync.SessionStart = [mapEntry];
+  agents.repo.SessionStart = [mapEntry];
   writeJson(ws, ".agents/hooks.json", agents);
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-  const session = readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.SessionStart;
+  const session = readJson<AgentsDoc>(ws, ".agents/hooks.json").repo.SessionStart;
   expect(session[0]).toStrictEqual(mapEntry);
   expect(session.map((e: { command: string }) => AUTORUN_NEEDLES.find((n) => e.command.includes(n)))).toStrictEqual([
     undefined,
@@ -84,10 +84,10 @@ it("appends flat SessionStart entries after rulesync's, the session map first", 
   expect(fs.readFileSync(path.join(ws, ".agents/hooks.json"), "utf8")).toBe(first);
 });
 
-it("writes SessionStart without a map entry when rulesync wrote none", () => {
+it("writes SessionStart without a map entry when the generator wrote none", () => {
   const ws = consumerRepo("union-agy-nomap-");
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
-  const session = readJson<AgentsDoc>(ws, ".agents/hooks.json").rulesync.SessionStart;
+  const session = readJson<AgentsDoc>(ws, ".agents/hooks.json").repo.SessionStart;
   expect(session).toHaveLength(3);
   expect(JSON.stringify(session)).not.toContain("session-map");
 });
@@ -97,9 +97,9 @@ it("matches writes by Antigravity tool names, not Claude's", () => {
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
   expect(AGY_WRITE_MATCHER).toBe("write_file|edit_file");
-  expect(behindGroup(agents.rulesync.PreToolUse).matcher).toBe(AGY_WRITE_MATCHER);
+  expect(behindGroup(agents.repo.PreToolUse).matcher).toBe(AGY_WRITE_MATCHER);
   expect(agents["check-behind"].matcher).toBe(AGY_WRITE_MATCHER);
-  expect(must(agents.rulesync.PostToolUse[0]).matcher).toBe(AGY_WRITE_MATCHER);
+  expect(must(agents.repo.PostToolUse[0]).matcher).toBe(AGY_WRITE_MATCHER);
 
   for (const k of ["validate-artifact", "simulate-artifact"] as const)
     expect(agents[k].matcher).toBe(AGY_WRITE_MATCHER);

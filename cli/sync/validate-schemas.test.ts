@@ -36,6 +36,13 @@ it("reports a schema miss with its dotted path and zod's message", () => {
   ]);
 });
 
+it("checks the antigravity hook set under its repo key", () => {
+  const hooks = JSON.stringify({ repo: { Stop: "x" } });
+  expect(validateOutputs(tmpRoot(), [file(".agents/hooks.json", hooks)])).toStrictEqual([
+    ".agents/hooks.json: repo.Stop: Invalid input: expected array, received string",
+  ]);
+});
+
 it("reports a schema miss at the top level without a dotted path", () => {
   expect(validateOutputs(tmpRoot(), [file(".agents/mcp_config.json", "[]")])).toStrictEqual([
     ".agents/mcp_config.json: Invalid input: expected object, received array",
@@ -65,7 +72,7 @@ it("accepts keys the host may add", () => {
     ),
     file(
       ".agents/hooks.json",
-      JSON.stringify({ rulesync: { Stop: [{ command: "x" }, { hooks: [{ type: "command" }], matcher: "m" }] } }),
+      JSON.stringify({ repo: { Stop: [{ command: "x" }, { hooks: [{ type: "command" }], matcher: "m" }] } }),
     ),
     file(".agents/mcp_config.json", JSON.stringify({ mcpServers: { a: { command: "x" } } })),
     file(".grok/hooks/rtk.json", JSON.stringify(hooks)),
@@ -75,11 +82,7 @@ it("accepts keys the host may add", () => {
 });
 
 it("accepts the empty hook files the generators emit", () => {
-  const outputs = [
-    file(".agents/hooks.json", "{}"),
-    file(".grok/hooks/rulesync.json", '{"hooks":{}}'),
-    file(".agents/mcp_config.json", '{"mcpServers":{}}'),
-  ];
+  const outputs = [file(".agents/hooks.json", "{}"), file(".agents/mcp_config.json", '{"mcpServers":{}}')];
 
   expect(validateOutputs(tmpRoot(), outputs)).toStrictEqual([]);
 });

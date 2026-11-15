@@ -85,7 +85,7 @@ it("generated hooks map canonical beforeSubmitPrompt and stop", () => {
   expect(JSON.stringify(codex.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(codex.UserPromptSubmit)).toMatch(/hook orchestrate-parent/);
   expect(JSON.stringify(codex.Stop ?? codex.stop)).toMatch(/hook orchestrate-parent/);
-  const ag = readJson(z.object({ rulesync: z.record(z.string(), z.json()) }), text(".agents/hooks.json")).rulesync;
+  const ag = readJson(z.object({ repo: z.record(z.string(), z.json()) }), text(".agents/hooks.json")).repo;
   expect(JSON.stringify(ag.PreToolUse)).toMatch(/scrub-spawn-prompt/);
   expect(JSON.stringify(ag.PreToolUse)).toMatch(/gate-fat-tools/);
   expect([ag.UserPromptSubmit, ag.beforeSubmitPrompt, ag.userPromptSubmit]).toStrictEqual([

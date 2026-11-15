@@ -144,6 +144,9 @@ export const CODEX_FILE = ".codex/hooks.json";
 export const ANTIGRAVITY_FILE = ".agents/hooks.json";
 export const CURSOR_FILE = ".cursor/hooks.json";
 
+/** The hook set name antigravity's file keeps every hook under; Antigravity reads each top-level key as one. */
+export const ANTIGRAVITY_SET = "repo";
+
 /** The override block of each host in hooks.jsonc. */
 export const CLAUDE_KEY = "claudecode";
 export const CODEX_KEY = "codexcli";

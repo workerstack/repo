@@ -41,7 +41,7 @@ it("adds session-map SessionStart first on claude/codex (not agents/grok) and ch
   expect(JSON.stringify(readJson(ws, ".codex/hooks.json"))).toContain("hook session-map");
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
   expect(JSON.stringify(agents)).not.toContain("session-map");
-  expect(JSON.stringify(agents.rulesync.SessionStart)).toMatch(/daily-pull-check/);
+  expect(JSON.stringify(agents.repo.SessionStart)).toMatch(/daily-pull-check/);
   expect(readJson<GrokDoc>(ws, ".grok/hooks/orchestrate-parent.json").hooks.SessionStart).toBeUndefined();
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 
@@ -72,7 +72,7 @@ it("replaces an old-form map with the one repo hook command, and stays put", () 
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 });
 
-/** A consumer repo whose hook files hold only rulesync's groups, a write-path deny and an overlay deny. */
+/** A consumer repo whose hook files hold only the generator's groups, a write-path deny and an overlay deny. */
 function strippedConsumer(): string {
   const ws = tmpDir("union-consumer-");
   seedOwnedDrivers(ws);
@@ -83,7 +83,7 @@ function strippedConsumer(): string {
   claude.permissions.deny = [...claude.permissions.deny, WRITE_PLATFORM];
   writeJson(ws, ".claude/settings.json", claude);
   writeJson(ws, ".codex/hooks.json", { hooks: { PreToolUse: ownedPre } });
-  writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: ownedPre } });
+  writeJson(ws, ".agents/hooks.json", { repo: { PreToolUse: ownedPre } });
 
   return ws;
 }
@@ -110,15 +110,15 @@ function expectAgentsOverlay(ws: string): void {
   const agents = readJson<AgentsDoc>(ws, ".agents/hooks.json");
   expect(agents["validate-artifact"].matcher).toBe(AGY_WRITE_MATCHER);
   expect(agents["simulate-artifact"].matcher).toBe(AGY_WRITE_MATCHER);
-  expect(must(agents.rulesync.PostToolUse[0]).matcher).toBe(AGY_WRITE_MATCHER);
-  expect(JSON.stringify(agents.rulesync.PostToolUse)).not.toContain('"matcher": ".*"');
+  expect(must(agents.repo.PostToolUse[0]).matcher).toBe(AGY_WRITE_MATCHER);
+  expect(JSON.stringify(agents.repo.PostToolUse)).not.toContain('"matcher": ".*"');
   expect(JSON.stringify(agents["validate-artifact"])).not.toContain('"matcher": ".*"');
   expect(JSON.stringify(agents["simulate-artifact"])).not.toContain('"matcher": ".*"');
-  expect(JSON.stringify(agents.rulesync.Stop ?? agents.rulesync.stop)).toBeUndefined();
-  expect(JSON.stringify(agents.rulesync.PreToolUse)).toMatch(SCRUB);
+  expect(JSON.stringify(agents.repo.Stop ?? agents.repo.stop)).toBeUndefined();
+  expect(JSON.stringify(agents.repo.PreToolUse)).toMatch(SCRUB);
 }
 
-it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back beside rulesync's scrub/gate", () => {
+it("puts SessionStart / check-behind / validate+sim / overlay Edit deny back beside the generator's scrub/gate", () => {
   const ws = strippedConsumer();
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);

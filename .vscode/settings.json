@@ -90,7 +90,6 @@
     ".grok/config.toml": true,
     ".grok/hooks/orchestrate-parent.json": true,
     ".grok/hooks/rtk.json": true,
-    ".grok/hooks/rulesync.json": true,
     ".grok/roles/scout.toml": true,
     ".oxfmtrc.jsonc": true,
     ".oxlintrc.jsonc": true,

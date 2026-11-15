@@ -108,11 +108,11 @@ describe("odd tables", () => {
     put(ws, ".claude/settings.json", { hooks: [], permissions: [] });
     put(ws, ".codex/hooks.json", { hooks: [] });
     put(ws, ".cursor/hooks.json", { hooks: "none" });
-    put(ws, ".agents/hooks.json", { rulesync: [] });
+    put(ws, ".agents/hooks.json", { repo: [] });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     expect(get(ws, ".claude/settings.json")).toMatchObject({ hooks: { PreToolUse: [] }, permissions: { deny: [] } });
     expect(get(ws, ".cursor/hooks.json")).toMatchObject({ hooks: { preToolUse: [] }, version: 1 });
-    expect(get(ws, ".agents/hooks.json")).toMatchObject({ rulesync: { PreToolUse: [] } });
+    expect(get(ws, ".agents/hooks.json")).toMatchObject({ repo: { PreToolUse: [] } });
   });
 });
 
@@ -123,12 +123,12 @@ describe("flat session lists", () => {
     const keep = { command: "echo keep", type: "command" };
     const sessions = [{ hooks: [keep] }, "text", { command: "echo flat" }];
     put(ws, ".cursor/hooks.json", { hooks: { sessionStart: sessions } });
-    put(ws, ".agents/hooks.json", { rulesync: { SessionStart: sessions } });
+    put(ws, ".agents/hooks.json", { repo: { SessionStart: sessions } });
     expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
     const cursor = listAt(ws, ".cursor/hooks.json", "hooks", "sessionStart");
     expect(cursor.slice(0, 3)).toStrictEqual([keep, "text", { command: "echo flat" }]);
     expect(cursor).toHaveLength(6);
-    const agents = listAt(ws, ".agents/hooks.json", "rulesync", "SessionStart");
+    const agents = listAt(ws, ".agents/hooks.json", "repo", "SessionStart");
     expect(agents.slice(0, 3)).toStrictEqual(cursor.slice(0, 3));
   });
 });

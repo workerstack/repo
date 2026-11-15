@@ -44,7 +44,7 @@ export interface ClaudeDoc {
   };
 }
 export interface AgentsDoc {
-  rulesync: {
+  repo: {
     PreToolUse: HookGroup[];
     PostToolUse: HookGroup[];
     Stop?: HookGroup[];
@@ -74,7 +74,7 @@ const GATE_ENTRY: HookCommand = { type: "command", command: /* @__PURE__ */ hook
 const PARENT_ENTRY: HookCommand = { type: "command", command: /* @__PURE__ */ hookCommand(PARENT), timeout: 5 };
 const PARENT_STOP: HookCommand = { ...PARENT_ENTRY, timeout: 30 };
 
-/** The scrub and gate PreToolUse groups rulesync writes. */
+/** The scrub and gate PreToolUse groups the generator writes. */
 export const ownedPre: HookGroup[] = [
   { matcher: SCRUB_MATCHER, hooks: [SCRUB_ENTRY] },
   { matcher: GATE_MATCHER, hooks: [GATE_ENTRY] },
@@ -128,14 +128,14 @@ function seedHostFiles(ws: string): void {
     enabledMcpjsonServers: [],
   });
   writeJson(ws, ".codex/hooks.json", { hooks: { PreToolUse: ownedPre, UserPromptSubmit: [parentHook], ...stops } });
-  writeJson(ws, ".agents/hooks.json", { rulesync: { PreToolUse: ownedPre, Stop: [parentStop] } });
+  writeJson(ws, ".agents/hooks.json", { repo: { PreToolUse: ownedPre, Stop: [parentStop] } });
   writeJson(ws, ".cursor/hooks.json", {
     version: 1,
     hooks: { preToolUse: ownedFlat, beforeSubmitPrompt: [{ ...PARENT_ENTRY }], stop: [PARENT_STOP] },
   });
 }
 
-/** The hook files rulesync writes for a repo with scrub, gate and orchestrate-parent, and the source they come from. */
+/** The hook files the generator writes for a repo with scrub, gate and orchestrate-parent, and the source they come from. */
 export function seedOwnedDrivers(ws: string): void {
   seedHostFiles(ws);
   writeJson(ws, "agents/hooks.jsonc", {

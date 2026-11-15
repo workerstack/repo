@@ -62,7 +62,8 @@ it("generates the committed-shape files the generators and the emit steps own", 
 
 it("copies the static grok files and never a .grok/hooks script", () => {
   expect(find(outputs, ".grok/roles/scout.toml")?.kind).toBe("file");
-  expect(find(outputs, ".grok/hooks/rulesync.json")?.kind).toBe("file");
+  expect(find(outputs, ".grok/hooks/rtk.json")?.kind).toBe("file");
+  expect(paths(outputs).filter((rel) => rel.includes("rulesync"))).toStrictEqual([]);
   expect(find(outputs, ".grok/hooks/orchestrate-parent.json")?.kind).toBe("file");
   expect(paths(outputs).filter((rel) => rel.startsWith(".grok/hooks/") && /\.(ts|tsx)$/.test(rel))).toStrictEqual([]);
   expect(find(outputs, ".grok/hooks/package.json")).toBeUndefined();

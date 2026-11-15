@@ -95,7 +95,7 @@ it("translates every event of each host's map and skips the events a host lacks"
 
   expect(keysAt(parsed(files, ".claude/settings.json"), "hooks")).toStrictEqual(toolNames(CLAUDE_PAIRS));
   expect(keysAt(parsed(files, ".codex/hooks.json"), "hooks")).toStrictEqual(toolNames(CODEX_PAIRS));
-  expect(keysAt(parsed(files, ".agents/hooks.json"), "rulesync")).toStrictEqual(toolNames(ANTIGRAVITY_PAIRS));
+  expect(keysAt(parsed(files, ".agents/hooks.json"), "repo")).toStrictEqual(toolNames(ANTIGRAVITY_PAIRS));
   expect(keysAt(parsed(files, ".cursor/hooks.json"), "hooks")).toStrictEqual(
     events.filter((event) => cursorEvents.includes(event)),
   );

@@ -91,7 +91,7 @@ it("replaces a shared event in place with the target override and appends new ov
   expect(keysAt(claude, "hooks")).toStrictEqual(["PreToolUse", "Stop", "Notification"]);
   expect(at(claude, "hooks", "Stop")).toStrictEqual([{ hooks: [{ command: "override-stop", type: "command" }] }]);
   expect(parsed(files, ".agents/hooks.json")).toStrictEqual({
-    rulesync: {
+    repo: {
       PreToolUse: [{ hooks: [{ command: "r", type: "command" }], matcher: "(?:read_file|view_file)" }],
       Stop: [{ command: "shared-stop", type: "command" }],
     },

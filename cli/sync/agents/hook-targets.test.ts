@@ -89,7 +89,7 @@ it("flattens antigravity's matcher-less events untranslated and translates only 
   });
 
   expect(parsed(renderHooks(sources, ["antigravity"], "{}"), ".agents/hooks.json")).toStrictEqual({
-    rulesync: {
+    repo: {
       PostToolUse: [
         {
           hooks: [{ command: "p", type: "command" }],

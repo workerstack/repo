@@ -92,6 +92,7 @@
     "fca49ff6b0c704e8"
   ],
   ".agents/hooks.json": [
+    "115c97692b95e867",
     "1e15d1df37bfb2a7",
     "290b3c049d3664a9",
     "2b5c5eaf22b7f034",
@@ -2486,7 +2487,7 @@
     "b9ecd113fa8c32d4",
     "c3dc264337319278"
   ],
-  "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d"],
+  "cli/scripts/__fixtures__/hooks-union-kit.ts": ["64f91b35a0845a1d", "6ae1c1c0bfb553c2"],
   "cli/scripts/__fixtures__/ignore-kit.ts": ["9b61f61a57123cf7"],
   "cli/scripts/__fixtures__/jev-kit.ts": ["3aa91921de4a6986", "9bf3497a2822ca25", "ec7c7851b0011da7"],
   "cli/scripts/__fixtures__/job-http-server.ts": ["d4a8026dee635432"],
@@ -4865,12 +4866,14 @@
     "05a1eb620cc24300",
     "0f47b126540251ea",
     "2fcdacac1fe9e7ae",
-    "9d75ff899fbd040b"
+    "9d75ff899fbd040b",
+    "e6233964d1a7bc70"
   ],
   "cli/scripts/hooks-union-anystart.test.ts": [
     "06877c02177dbde7",
     "29d2c3beff059e74",
     "339543daa1163d5f",
+    "556d6690e055ca7b",
     "7ab91ead168a58c4",
     "8380f660775f8661",
     "cd833baf54d42901",
@@ -4880,6 +4883,7 @@
   "cli/scripts/hooks-union-apply.ts": [
     "110565ebf2e3e77b",
     "2b43a8c8c8a694c0",
+    "37352f815a92a1ee",
     "54d2c056f1eb31df",
     "7c397e6ad8031842",
     "93676fe863fa0ba1",
@@ -4900,7 +4904,8 @@
     "5e0485e5a80d11de",
     "673c3513e5887991",
     "6c1241cb77d3190a",
-    "7b913b148449e606"
+    "7b913b148449e606",
+    "dedcaacf9613bb67"
   ],
   "cli/scripts/hooks-union-desired.ts": [
     "2517c40be543310f",
@@ -4919,6 +4924,7 @@
     "6f63f90f4e60c3ee",
     "a1f2677823b22bd3",
     "c56468bc78af7d56",
+    "c818fb67ec07d1a8",
     "cfe14494cc174e0c",
     "eba38c8b357e8636"
   ],
@@ -4926,6 +4932,7 @@
     "03a88bfa5cabb6db",
     "0a699f24f15480f3",
     "1fd26bbc2338552c",
+    "2de9c53baa160bae",
     "6c3627b75441cc24",
     "e16c05f3e319d7cc"
   ],
@@ -4950,7 +4957,7 @@
     "d19167eca8124317",
     "df38d6fc1c8e80d5"
   ],
-  "cli/scripts/hooks-union.constants.ts": ["5f9affd3957b1dd8", "725cea2741a6cb3e"],
+  "cli/scripts/hooks-union.constants.ts": ["5f9affd3957b1dd8", "725cea2741a6cb3e", "9a982022f379a65e"],
   "cli/scripts/hooks-union.test.ts": [
     "010a256b0d40dd14",
     "3b807f23e742bd8b",
@@ -4963,9 +4970,11 @@
     "7b8343f42f2bc98b",
     "9e767f1f881691ff",
     "a09487e21c4ffde0",
+    "dd92bad923c9af6d",
     "ef54c6dfdd3361e6"
   ],
   "cli/scripts/hooks-union.ts": [
+    "07c214849ff2e295",
     "14d15f9a67d58295",
     "320ee662bd5ced9a",
     "345fd5a6924ccf02",
@@ -6156,7 +6165,8 @@
     "c0e4e5530880a318",
     "c2c2d26348037d4f",
     "d0bea5cd5a2b0e74",
-    "ec7e3df750cc2caf"
+    "ec7e3df750cc2caf",
+    "f3e0df21da606c5b"
   ],
   "cli/scripts/orchestrate-parent-defaults.test.ts": [
     "3d1bef5cf805a538",

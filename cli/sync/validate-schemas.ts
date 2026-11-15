@@ -1,6 +1,8 @@
 // The zod schemas sync checks its parsed outputs against, each built once by a factory marked pure.
 import { z } from "zod";
 
+import { ANTIGRAVITY_SET } from "./agents/hooks.constants.ts";
+
 type Severity = z.ZodEnum<{ error: "error"; deny: "deny"; off: "off"; allow: "allow"; warn: "warn" }>;
 
 type LintRules = z.ZodRecord<z.ZodString, z.ZodUnion<readonly [Severity, z.ZodTuple<[Severity], z.ZodUnknown>]>>;
@@ -110,9 +112,9 @@ function buildHostSchemas(): HostSchemas {
 
   return {
     agentFrontmatter: z.looseObject({ description: z.string(), name: z.string() }),
-    // Antigravity's file nests flat entries (a command) and matcher entries (handlers) under one `rulesync` key.
+    // Antigravity's file nests flat entries (a command) and matcher entries (handlers) under the `repo` hook set.
     agentsHooks: z.looseObject({
-      rulesync: z.record(z.string(), z.array(hookEntry.extend({ command: z.string().optional() }))).optional(),
+      [ANTIGRAVITY_SET]: z.record(z.string(), z.array(hookEntry.extend({ command: z.string().optional() }))).optional(),
     }),
     claudeRuleFrontmatter: z.looseObject({ paths: z.array(z.string()).optional() }),
     claudeSettings: z.looseObject({

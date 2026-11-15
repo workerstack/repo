@@ -6,6 +6,7 @@ import { headerStale } from "./sync/header-stale.ts";
 import { prunePaths, readManifest, renderManifest } from "./sync/manifest.ts";
 import type { Output } from "./sync/outputs.ts";
 import { applyCuts, type Cut, cutDriftLines, repairLines, splitPrune } from "./sync/prune-shared.ts";
+import { retiredStale } from "./sync/retired-stale.ts";
 import { removeStaleRunCopies } from "./sync/run-copies.ts";
 import { markHooksExecutable, syncHooksPath } from "./sync/standards.ts";
 import { settleModes } from "./sync/write-modes.ts";
@@ -58,8 +59,11 @@ function changesOf(run: Run): Changes {
     root,
   );
 
-  // A shared file no output writes any more is cut, not deleted: the user's lines in it stay.
-  const { cut, remove: prune } = splitPrune(root, [...stale, ...headerStale(root, outputs, deps.git)]);
+  // A retired output is found by its stock text, for a consumer whose manifest predates its retirement.
+  const found = [...stale, ...headerStale(root, outputs, deps.git), ...retiredStale(root)];
+  // A shared file no output writes any more is cut, not deleted: the user's lines in it stay; a path found twice is
+  // pruned once.
+  const { cut, remove: prune } = splitPrune(root, found);
 
   return { changed, cut, prune };
 }

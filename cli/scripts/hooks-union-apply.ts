@@ -2,6 +2,7 @@
 import path from "node:path";
 
 import { isRecord, isString, type Json, type JsonObject } from "../json.ts";
+import { ANTIGRAVITY_SET } from "../sync/agents/hooks.constants.ts";
 import { consumerNamed, desiredPost, desiredPre, loadConsumerDeny, sessionHooks } from "./hooks-union-desired.ts";
 import { flatEntries, flatSession, loadJson, saveJson, uniq, upsertGroups } from "./hooks-union-merge.ts";
 import {
@@ -82,13 +83,14 @@ export function applyAgents(roots: Roots): void {
   const root = roots.consumer;
   const abs = path.join(roots.ws, AGENTS_HOOKS);
   const live = loadJson(abs);
-  const rulesync = isRecord(live.rulesync) ? { ...live.rulesync } : {};
-  rulesync.PreToolUse = upsertGroups(rulesync.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
+  const liveSet = live[ANTIGRAVITY_SET];
+  const set = isRecord(liveSet) ? { ...liveSet } : {};
+  set.PreToolUse = upsertGroups(set.PreToolUse, desiredPre(root, AGY_WRITE_MATCHER));
   const session = sessionHooks(roots, { map: false });
 
-  if (session.length > 0) rulesync.SessionStart = flatSession(rulesync.SessionStart, session);
+  if (session.length > 0) set.SessionStart = flatSession(set.SessionStart, session);
   const post = desiredPost(root, AGY_WRITE_MATCHER);
 
-  if (post !== null) rulesync.PostToolUse = post;
-  saveJson(abs, { ...live, ...consumerNamed(root), rulesync });
+  if (post !== null) set.PostToolUse = post;
+  saveJson(abs, { ...live, ...consumerNamed(root), [ANTIGRAVITY_SET]: set });
 }

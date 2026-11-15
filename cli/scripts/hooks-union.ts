@@ -42,7 +42,7 @@ import {
   GIT_HOOKS,
   GIT_HOOKS_DIR,
   OWNED_HOOKS,
-  RULESYNC_ID,
+  STOCK_HOOKS_ID,
 } from "./hooks-union.constants.ts";
 import type { Roots } from "./hooks-union.types.ts";
 import { stripJsonc } from "./strip-jsonc.ts";
@@ -111,7 +111,7 @@ function staleOf(id: string, command: string): string | null {
 
   if (hook !== null) {
     // The stock source may hold the short form, which sync expands; every generated file holds the expanded text.
-    const short = id === RULESYNC_ID && command === `repo hook ${hook}`;
+    const short = id === STOCK_HOOKS_ID && command === `repo hook ${hook}`;
 
     if (command === hookCommand(hook) || short) return null;
 

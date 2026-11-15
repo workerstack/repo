@@ -52,7 +52,7 @@ export const JSON_INDENT = 2;
 export const COMMAND_KEY = "command";
 
 /** The stock hooks source, which may hold the short `repo hook <name>` form. */
-export const RULESYNC_ID = "rulesync";
+export const STOCK_HOOKS_ID = "stock";
 
 /** The hook files the union writes, from the workspace root. */
 export const CLAUDE_SETTINGS = ".claude/settings.json";
@@ -66,7 +66,7 @@ export const COMMAND_FILES: [string, string][] = [
   ["codex", CODEX_HOOKS],
   ["agents", AGENTS_HOOKS],
   ["cursor", CURSOR_HOOKS],
-  [RULESYNC_ID, "agents/hooks.jsonc"],
+  [STOCK_HOOKS_ID, "agents/hooks.jsonc"],
   ["grok", ".grok/hooks/orchestrate-parent.json"],
   ["grok", ".grok/hooks/rtk.json"],
 ];

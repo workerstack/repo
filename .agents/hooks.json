@@ -1,5 +1,5 @@
 {
-  "rulesync": {
+  "repo": {
     "PreToolUse": [
       {
         "hooks": [

@@ -74,7 +74,7 @@ function run(command: string, cwd: string, extra: Record<string, string> = {}) {
   return spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", env, input: "{}", timeout: 20_000 });
 }
 
-/** The repo's shipped hook sources, plus generated configs shaped like rulesync output of `hooks.jsonc`. */
+/** The repo's shipped hook sources, plus generated configs shaped like the generator's output of `hooks.jsonc`. */
 function seedShipped(root: string): void {
   const ssot = expandSource(fs.readFileSync(path.join(REPO_ROOT, "agents/hooks.jsonc"), "utf8"));
   fs.mkdirSync(path.join(root, "agents"), { recursive: true });
@@ -96,7 +96,7 @@ function seedShipped(root: string): void {
 
   writeJson(root, ".claude/settings.json", { hooks, permissions: { deny: [] } });
   writeJson(root, ".codex/hooks.json", { hooks });
-  writeJson(root, ".agents/hooks.json", { rulesync: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
+  writeJson(root, ".agents/hooks.json", { repo: { PreToolUse: hooks.PreToolUse, Stop: hooks.Stop } });
   writeJson(root, ".cursor/hooks.json", { hooks: ssotOf(ssot).hooks, version: 1 });
 }
 

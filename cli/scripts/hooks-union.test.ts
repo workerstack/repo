@@ -90,7 +90,7 @@ it("--check accepts rootCmd for a consumer script and rejects every other form",
   expect(checkGrok("bun scripts/validate.mjs --hook", "validate.mjs")).toHaveLength(1);
 });
 
-it("keeps rulesync's scrub/gate groups, UPS/Stop and the mcp deny", () => {
+it("keeps the generator's scrub/gate groups, UPS/Stop and the mcp deny", () => {
   const ws = tmpDir("union-repo-");
   seedOwnedDrivers(ws);
   const r = applyUnion({ workspaceRoot: ws });

@@ -1,4 +1,4 @@
-# repo:generated 7c68d133
+# repo:generated c6ccc108
 * text=auto eol=lf
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
@@ -45,7 +45,6 @@
 .grok/config.toml linguist-generated
 .grok/hooks/orchestrate-parent.json linguist-generated
 .grok/hooks/rtk.json linguist-generated
-.grok/hooks/rulesync.json linguist-generated
 .grok/roles/scout.toml linguist-generated
 .repo/.gitkeep linguist-generated
 .repo/lessons/INDEX.md linguist-generated

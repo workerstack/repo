@@ -28,7 +28,7 @@ function scriptOf(e: FlatEntry) {
   return AUTORUN_NEEDLES.find((n) => e.command.includes(n));
 }
 
-/** A repo with rulesync's hook files and every consumer autorun script. */
+/** A repo with the generator's hook files and every consumer autorun script. */
 function consumerRepo(prefix: string): string {
   const ws = tmpDir(prefix);
   seedOwnedDrivers(ws);
@@ -57,7 +57,7 @@ function expectCursorExtras({ version, hooks }: CursorDoc, mapEntry: FlatEntry):
   expect(hooks.preToolUse.filter((e) => OWNED_HOOKS.some((n) => e.command.includes(n)))).toStrictEqual(ownedFlat);
 }
 
-it("appends flat entries under sessionStart, preToolUse and postToolUse, rulesync's kept as written", () => {
+it("appends flat entries under sessionStart, preToolUse and postToolUse, the generator's kept as written", () => {
   const ws = consumerRepo("union-cursor-");
   const mapEntry = { command: MAP, timeout: 5, type: "command" };
   const seeded = cursorHooks(ws);
@@ -74,7 +74,7 @@ it("appends flat entries under sessionStart, preToolUse and postToolUse, rulesyn
   expect(fs.readFileSync(path.join(ws, ".cursor/hooks.json"), "utf8")).toBe(first);
 });
 
-it("leaves a repo with no autorun scripts as rulesync wrote it", () => {
+it("leaves a repo with no autorun scripts as the generator wrote it", () => {
   const ws = tmpDir("union-cursor-plain-");
   seedOwnedDrivers(ws);
   const before = cursorHooks(ws);
@@ -83,7 +83,7 @@ it("leaves a repo with no autorun scripts as rulesync wrote it", () => {
   expect(checkUnion({ workspaceRoot: ws })).toStrictEqual([]);
 });
 
-it("writes the file when rulesync wrote none", () => {
+it("writes the file when the generator wrote none", () => {
   const ws = consumerRepo("union-cursor-new-");
   removeTree(path.join(ws, ".cursor"));
   expect(applyUnion({ workspaceRoot: ws }).ok).toBe(true);
