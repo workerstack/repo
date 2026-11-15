@@ -15,11 +15,12 @@
 - `windows-paths-from-tools` (hits 3): A path passed to or read from another tool breaks on Windows
 - `commit-msg-size-limits` (hits 2): Keep the commit subject under 100 chars; add a body only past 1000 lines
 - `hook-events-in-hooks-jsonc` (hits 2): Declare hook events in agents/hooks.jsonc, not the hooks-union overlay
+- `local-ci-load-hides-failures` (hits 2): A loaded local ci hides real failures and makes fake ones
 - `one-spelling-per-path` (hits 2): Compare paths only after canonicalPath or resolveTyped
 - `oxlint-ast-null-children` (hits 2): oxlint's AST has null where typescript-eslint's has undefined
 - `heading-scan-skips-fences` (hits 1): A Markdown heading scan must skip fenced code
 - `hook-writes-target-file` (hits 1): A pre-tool hook must not write the file the tool is about to write
 - `lint-fix-breaks-tsc` (hits 1): Run tsc after every lint autofix; a safe fix can still break types
-- `local-ci-load-hides-failures` (hits 1): A loaded local ci hides real failures and makes fake ones
 - `path-move-rewrites-every-text-file` (hits 1): A dir move rewrites paths in every moved text file, not bare names
 - `quote-paths-in-test-commands` (hits 1): Single-quote every temp path a test puts in a shell command
+- `ts7-api-one-read-at-a-time` (hits 1): Read TypeScript 7's API through cli/ts-api.ts, one read at a time

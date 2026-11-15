@@ -1,9 +1,9 @@
 ---
 name: local-ci-load-hides-failures
 paths: ["cli/scripts/ci.ts","cli/scripts/ci-tests.ts","cli/scripts/doctor-*.test.ts"]
-hits: 1
-last-hit: 2026-11-11
-evidence: ["roadmap 5"]
+hits: 2
+last-hit: 2026-11-15
+evidence: ["roadmap 5","roadmap 17"]
 ---
 
 # A loaded local ci hides real failures and makes fake ones
