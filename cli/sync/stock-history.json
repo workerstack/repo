@@ -2468,7 +2468,7 @@
   "cli/scripts/__fixtures__/file-tree.ts": ["e3897f76f599cd04"],
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68", "d9c16a15af947dd6"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
-  "cli/scripts/__fixtures__/gate-kit.ts": ["46400aedc9775497", "63893c5b9274f09c"],
+  "cli/scripts/__fixtures__/gate-kit.ts": ["46400aedc9775497"],
   "cli/scripts/__fixtures__/gate-workspace.ts": ["f3f39ad0fef39b06", "fe6b45a1b4405eac"],
   "cli/scripts/__fixtures__/git-command-kit.ts": ["c2cc58de32087b5b"],
   "cli/scripts/__fixtures__/google-workspace-kit.ts": [
@@ -4517,10 +4517,10 @@
     "f3e7ee3341634cca",
     "f7afef622d2c1a47"
   ],
-  "cli/scripts/gate-run-joined.test.ts": ["5fee7423c9ca70a2", "6b1669ea9d124c84"],
-  "cli/scripts/gate-run-keys.test.ts": ["31566c66e86c79fb", "f65b8a806828888d"],
-  "cli/scripts/gate-run.test.ts": ["7fbb600f15afd3de", "aabbb84b7cf16115"],
-  "cli/scripts/gate-run.ts": ["d137d6cb08b63c96", "db80ebfae4ad4ec4"],
+  "cli/scripts/gate-run-joined.test.ts": ["5fee7423c9ca70a2"],
+  "cli/scripts/gate-run-keys.test.ts": ["31566c66e86c79fb"],
+  "cli/scripts/gate-run.test.ts": ["aabbb84b7cf16115"],
+  "cli/scripts/gate-run.ts": ["d137d6cb08b63c96"],
   "cli/scripts/gate-shell-guards.test.ts": ["853648a6d3a33477"],
   "cli/scripts/gate-shell.test.ts": [
     "1c6d99de3467ee71",
@@ -8920,6 +8920,7 @@
     "afe9efe70fd8047f",
     "bf798e8a41efb3f6",
     "c01c471098d8c32a",
+    "dc026132661c6e4c",
     "ef6e48d0ea4a9c61",
     "efa00621c5422da6",
     "f17e80cf143fe0fb",

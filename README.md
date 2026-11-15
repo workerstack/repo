@@ -171,6 +171,16 @@ export default defineConfig({
 });
 ```
 
+`repo.config.local.ts` beside `repo.config.ts` holds one person's overrides. It is gitignored: `bun repo sync` adds it to the generated `.gitignore`. It sets only `agents.defaultApproval`, `agents.defaultEffort` and `agents.defaultStrategy`; each resolves from the local file, then `repo.config.ts`, then the default, and any other key is refused.
+
+```ts
+import { defineLocalConfig } from "@workerstack/repo";
+
+export default defineLocalConfig({
+  agents: { defaultApproval: "away", defaultEffort: "fast" },
+});
+```
+
 ### Lint plugin
 
 `@workerstack/repo/lint` is the oxlint JS plugin behind every `repo/*` rule. `bun repo sync` names it in the generated `.oxlintrc.jsonc`, so a repo never imports it by hand.

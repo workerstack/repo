@@ -3,13 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { CONFIG_FILE, COPY_ID_BYTES } from "./config.constants.ts";
+import { COPY_ID_BYTES } from "./config.constants.ts";
 
 /**
- * Imports the config module of `root`; `loadConfig` takes another in tests, whose runner resolves packages its own
- * way.
+ * Imports the config module at the absolute path `file`; `loadConfig` takes another in tests, whose runner resolves
+ * packages its own way.
  */
-export type ImportConfig = (root: string) => Promise<ConfigModule>;
+export type ImportConfig = (file: string) => Promise<ConfigModule>;
 
 /** A config file's module namespace; `loadConfig` reads only its default export. */
 export type ConfigModule = {
@@ -25,8 +25,9 @@ async function importFile(file: string): Promise<ConfigModule> {
 }
 
 /** The module of a config whose text changed since it was loaded, imported from a temporary copy beside it. */
-async function importCopy(root: string, file: string): Promise<ConfigModule> {
-  const copy = path.join(root, `.repo.config.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
+async function importCopy(file: string): Promise<ConfigModule> {
+  const { dir, name } = path.parse(file);
+  const copy = path.join(dir, `.${name}.${randomBytes(COPY_ID_BYTES).toString("hex")}.ts`);
   fs.copyFileSync(file, copy);
 
   try {
@@ -45,18 +46,17 @@ async function importCopy(root: string, file: string): Promise<ConfigModule> {
 function cachedImporter(): ImportConfig {
   const loaded = new Map<string, { text: string; module: ConfigModule }>();
 
-  return async (root) => {
-    const file = path.join(root, CONFIG_FILE);
+  return async (file) => {
     const text = fs.readFileSync(file, "utf8");
     const known = loaded.get(file);
 
     if (known?.text === text) return known.module;
-    const module = known === undefined ? await importFile(file) : await importCopy(root, file);
+    const module = known === undefined ? await importFile(file) : await importCopy(file);
     loaded.set(file, { module, text });
 
     return module;
   };
 }
 
-/** Imports the config module of `root`, `loadConfig`'s default. */
+/** Imports the config module at a path, `loadConfig`'s default. */
 export const importConfig: ImportConfig = /* @__PURE__ */ cachedImporter();

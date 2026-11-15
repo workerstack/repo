@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { LOCAL_CONFIG_FILE } from "../config.constants.ts";
 import type { Host } from "../config.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import { blockOutput } from "./block-output.ts";
@@ -42,6 +43,7 @@ export const IGNORE_BASE: readonly string[] = [
   ".worktrees/",
   "coverage/",
   ".vitest/",
+  LOCAL_CONFIG_FILE,
   .../* @__PURE__ */ IGNORED_DIRS.map((dir) => `**/${REPO}/${dir}/`),
   `**/${REPO}/${BACKLOG_FILE}`,
 ];

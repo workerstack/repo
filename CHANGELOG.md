@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Sync makes every `*.config.ts` and `*.worker.ts` file a knip entry of its workspace, since tools load them by name or path, and lets `*.worker.ts` default-export in the generated oxlint config
+- Put agents.defaultApproval, agents.defaultEffort and agents.defaultStrategy in a gitignored repo.config.local.ts, set with defineLocalConfig, to override repo.config.ts for one checkout.
 
 ### Changed
 

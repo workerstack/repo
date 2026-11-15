@@ -2,11 +2,12 @@ node_modules
 dist
 coverage
 
-# repo:ignore da9d0d3a
+# repo:ignore e04e3ffa
 .tmp/
 .worktrees/
 coverage/
 .vitest/
+repo.config.local.ts
 **/.repo/plans/
 **/.repo/plans-fast/
 **/.repo/roadmaps/

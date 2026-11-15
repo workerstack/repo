@@ -1,6 +1,9 @@
 /** The file name `repo` looks for at a repo root, and the one `defineConfig` is exported from. */
 export const CONFIG_FILE: string = "repo.config.ts";
 
+/** The file name beside `repo.config.ts` that one person's gitignored session defaults are read from. */
+export const LOCAL_CONFIG_FILE: string = "repo.config.local.ts";
+
 /** The index `Array#at` reads the last item from, and the `slice` end that drops it. */
 export const LAST: number = -1;
 

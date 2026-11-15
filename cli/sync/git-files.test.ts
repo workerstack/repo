@@ -49,6 +49,13 @@ it("ignores the vitest report and attachment directories, so lint and git skip w
   );
 });
 
+it("ignores the local config file, so a personal override is never committed", () => {
+  const hosts: Host[] = ["claude"];
+  expect(gitignoreOf({ hosts, name: "@workerstack/repo" }, treeOutputs(hosts, true)).split("\n")).toContain(
+    "repo.config.local.ts",
+  );
+});
+
 it("lists nothing untracked for this repo, whose trees are committed, and keeps its own dependency line out", () => {
   const self = { hosts: ["claude", "codex"] /* both are hosts */ as Host[], name: "@workerstack/repo" };
   expect(gitignoreOf(self, treeOutputs(self.hosts, true))).toBe(region("ignore", IGNORE_BASE));

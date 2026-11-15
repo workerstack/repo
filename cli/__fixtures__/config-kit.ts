@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { CONFIG_FILE } from "../config.constants.ts";
+import { CONFIG_FILE, LOCAL_CONFIG_FILE } from "../config.constants.ts";
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 
 /** This checkout's root, the package a linked `@workerstack/repo` points at. */
@@ -37,10 +37,14 @@ export function configDir(): string {
   return tempDir("repo-config-");
 }
 
-/** A temp repo root holding `config` as repo.config.ts, and `manifest` as package.json unless it is null. */
-export function repo(config: string, manifest: object | string | null = { name: "fixture" }): string {
+/**
+ * A temp repo root holding `config` as repo.config.ts, `local` as repo.config.local.ts unless it is undefined, and
+ * `manifest` as package.json unless it is null.
+ */
+export function repo(config: string, manifest: object | string | null = { name: "fixture" }, local?: string): string {
   const root = configDir();
   fs.writeFileSync(path.join(root, CONFIG_FILE), config);
+  if (local !== undefined) fs.writeFileSync(path.join(root, LOCAL_CONFIG_FILE), local);
   if (manifest !== null) {
     const text = typeof manifest === "string" ? manifest : JSON.stringify(manifest);
     fs.writeFileSync(path.join(root, "package.json"), text);

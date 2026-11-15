@@ -14,6 +14,7 @@ export const IGNORE_BASE = [
   ".worktrees/",
   "coverage/",
   ".vitest/",
+  "repo.config.local.ts",
   "**/.repo/plans/",
   "**/.repo/plans-fast/",
   "**/.repo/roadmaps/",
