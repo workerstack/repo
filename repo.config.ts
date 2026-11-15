@@ -1,7 +1,14 @@
 import { defineConfig } from "@workerstack/repo";
 
 export default defineConfig({
-  agents: { skills: ["google-workspace", "listen", "speak", "clasp"] },
+  agents: {
+    defaultApproval: "ask",
+    defaultEffort: "fast",
+    defaultStrategy: "spawn-fast",
+    hosts: ["claude", "codex", "antigravity", "grok", "cursor"],
+    skills: ["google-workspace", "listen", "speak", "clasp"],
+  },
+  workflow: "main",
   coverage: {
     mutate: ["cli/**/*.ts", "presets/**/*.ts"],
     // A mutation run rewrites the source in place, and both read it: the scan greps every file for recursive removes,
