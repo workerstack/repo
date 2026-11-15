@@ -93,6 +93,7 @@ export default defineConfig({
         files: [
           "cli/docs-examples.ts",
           "cli/docs.ts",
+          "cli/run-check.ts",
           "cli/scripts/ci.ts",
           "cli/scripts/tests-step.ts",
           "cli/scripts/turn.ts",
@@ -108,6 +109,7 @@ export default defineConfig({
           "cli/check-magic.ts",
           "cli/check-rejections.ts",
           "cli/check-tsconfig.ts",
+          "cli/config-docs.test.ts",
           "cli/guard-diagnostics.ts",
           "cli/magic/magic-numbers.ts",
           "cli/magic/magic-strings.ts",
@@ -117,6 +119,8 @@ export default defineConfig({
           "cli/release/type-text.ts",
           "cli/ts-api.test.ts",
           "cli/ts-api.ts",
+          "cli/type-surface-scan.ts",
+          "cli/type-surface.ts",
         ],
         reason:
           "each loop reads one tsconfig, project or checker answer at a time on one typescript api; " +

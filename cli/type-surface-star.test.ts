@@ -13,8 +13,8 @@ const PLAIN = "export type P = 1;\n";
 const BASE = { bin: { pkg: "./bin.js" }, dependencies: { kit: "1.0.0" } };
 const SRC_STAR = { "./*": "./src/*.ts" };
 
-it("leaves out a file a null export key excludes, exactly or by pattern", () => {
-  const { uses, keys } = surfaceOf({
+it("leaves out a file a null export key excludes, exactly or by pattern", async () => {
+  const { uses, keys } = await surfaceOf({
     files: {
       "src/hidden.ts": KIT_TYPE,
       "src/internal/ok.ts": PLAIN,
@@ -40,13 +40,13 @@ const SWEPT = {
   "src/pub.ts": PLAIN,
 };
 
-it("expands a * export only over the files npm packs, or without files over all but tests and fixtures", () => {
-  const listed = surfaceOf({
+it("expands a * export only over the files npm packs, or without files over all but tests and fixtures", async () => {
+  const listed = await surfaceOf({
     files: SWEPT,
     manifest: { ...BASE, exports: SRC_STAR, files: ["./src/*.ts", "src/__fixtures__/", 1, "!src/draft.ts"] },
   });
 
-  const unlisted = surfaceOf({ files: SWEPT, manifest: { ...BASE, exports: SRC_STAR } });
+  const unlisted = await surfaceOf({ files: SWEPT, manifest: { ...BASE, exports: SRC_STAR } });
 
   expect(listed.keys).toStrictEqual({
     "src/__fixtures__/f.ts": "./__fixtures__/f",
@@ -68,16 +68,16 @@ function lockCache(dir: string): void {
   fs.chmodSync(cache(dir), 0);
 }
 
-it("skips a dir under a * export it cannot read", () => {
+it("skips a dir under a * export it cannot read", async () => {
   const kit = { files: { "src/a.ts": PLAIN }, manifest: { ...BASE, exports: SRC_STAR } };
-  const { dir, keys } = surfaceOf(kit, lockCache);
+  const { dir, keys } = await surfaceOf(kit, lockCache);
 
   fs.chmodSync(cache(dir), 0o755);
   expect(keys).toStrictEqual({ "src/a.ts": "./a" });
 });
 
-it("reads each file an extensionless * target matches by its own extension", () => {
-  const { uses, keys } = surfaceOf({
+it("reads each file an extensionless * target matches by its own extension", async () => {
+  const { uses, keys } = await surfaceOf({
     files: { "src/a.ts": KIT_TYPE, "src/b.json": "{}", "src/d.css": "" },
     installed: KIT,
     manifest: { ...BASE, exports: { "./*": "./src/*" } },
@@ -87,8 +87,8 @@ it("reads each file an extensionless * target matches by its own extension", () 
   expect(keys).toStrictEqual({ "src/a.ts": "./a.ts" });
 });
 
-it("reads a build config that reports parse errors as absent", () => {
-  const { missing } = surfaceOf({
+it("reads a build config that reports parse errors as absent", async () => {
+  const { missing } = await surfaceOf({
     files: { "src/a.ts": KIT_TYPE, "tsconfig.build.json": "{ nope" },
     installed: KIT,
     manifest: { ...BASE, exports: { "./*": { default: "./dist/*.js", types: "./dist/*.d.ts" } } },
@@ -97,8 +97,8 @@ it("reads a build config that reports parse errors as absent", () => {
   expect(missing).toStrictEqual([{ cause: "unmapped", key: "./*", types: "dist/*.d.ts" }]);
 });
 
-it("lists no missing types for a * export whose matches null keys or tests all exclude", () => {
-  const { keys, missing } = surfaceOf({
+it("lists no missing types for a * export whose matches null keys or tests all exclude", async () => {
+  const { keys, missing } = await surfaceOf({
     files: { "src/a.test.ts": PLAIN, "src/hidden.ts": PLAIN },
     manifest: { ...BASE, exports: { ...SRC_STAR, "./hidden": null } },
   });
@@ -107,8 +107,8 @@ it("lists no missing types for a * export whose matches null keys or tests all e
   expect(missing).toStrictEqual([]);
 });
 
-it("ranks a null key against a * key as Node does: the longer base, then the longer key", () => {
-  const { uses, keys } = surfaceOf({
+it("ranks a null key against a * key as Node does: the longer base, then the longer key", async () => {
+  const { uses, keys } = await surfaceOf({
     files: {
       "src/a.internal.ts": KIT_TYPE,
       "src/a.ts": PLAIN,
@@ -131,8 +131,8 @@ it("ranks a null key against a * key as Node does: the longer base, then the lon
   expect(keys).toStrictEqual({ "src/a.ts": "./a", "src/internal/pub/x.ts": "./internal/pub/x" });
 });
 
-it("reads a key whose every condition is null as an exclusion", () => {
-  const { uses, keys } = surfaceOf({
+it("reads a key whose every condition is null as an exclusion", async () => {
+  const { uses, keys } = await surfaceOf({
     files: { "src/a.ts": KIT_TYPE, "src/b.ts": PLAIN },
     installed: KIT,
     manifest: { ...BASE, exports: { ...SRC_STAR, "./a": { default: null, types: null } } },
@@ -142,9 +142,9 @@ it("reads a key whose every condition is null as an exclusion", () => {
   expect(keys).toStrictEqual({ "src/b.ts": "./b" });
 });
 
-it("reads a files entry with a leading slash from the package root, as npm does", () => {
+it("reads a files entry with a leading slash from the package root, as npm does", async () => {
   const manifest = { ...BASE, exports: SRC_STAR, files: ["/src"] };
-  const { keys } = surfaceOf({ files: { "src/pub.ts": PLAIN }, manifest });
+  const { keys } = await surfaceOf({ files: { "src/pub.ts": PLAIN }, manifest });
 
   expect(keys).toStrictEqual({ "src/pub.ts": "./pub" });
 });

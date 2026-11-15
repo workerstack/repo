@@ -32,7 +32,7 @@ export type TsRun = { readonly api: API; readonly virtual: Map<string, string>; 
 export type FilesSpec = Readonly<{ dir: string; base: string | null; files: readonly string[] }>;
 
 /** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
-const NO_OWNER_OPTIONS = {
+export const NO_OWNER_OPTIONS = {
   allowImportingTsExtensions: true,
   module: "preserve",
   moduleResolution: "bundler",

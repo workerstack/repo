@@ -14,6 +14,7 @@ import { packedUnder } from "./packed-under.ts";
 import { CURRENT_DIR, JSON_FILE, ROOT_KEY, STAR, TYPES_CONDITION } from "./release/consumer.constants.ts";
 import { exportSubpaths } from "./release/exports.ts";
 import type { PackageJson } from "./sync/workspace.ts";
+import type { TsRun } from "./ts-api.ts";
 import { posix } from "./ts-program.ts";
 import { fieldsOf } from "./type-surface-blame.ts";
 import {
@@ -185,11 +186,12 @@ function addKey(context: Context, key: string, { pattern, mode }: Target): void 
 }
 
 /** The files the types of `dir`'s exports start from, and the keys whose types file is absent. */
-export function entriesOf(dir: string, manifest: PackageJson): Entries {
+export async function entriesOf(run: TsRun, dir: string, manifest: PackageJson): Promise<Entries> {
   const raw = fieldsOf(path.join(dir, MANIFEST));
   const keyMap = keyMapOf(manifest.exports ?? raw.types ?? raw.typings ?? raw.main);
   const entries: Entries = { missing: [], roots: [] };
-  const context: Context = { build: buildOutputs(dir), dir, entries, files: raw.files, keys: Object.keys(keyMap) };
+  const build = await buildOutputs(run, dir);
+  const context: Context = { build, dir, entries, files: raw.files, keys: Object.keys(keyMap) };
 
   for (const [key, value] of Object.entries(keyMap)) {
     const target = targetOf(value);

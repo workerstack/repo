@@ -1,6 +1,3 @@
-/** The virtual dir under a package that the in-memory declarations sit in, so bare imports resolve from the package. */
-export const VIRTUAL_DIR = ".repo-surface";
-
 /** The build config whose outputs map an emitted `.d.ts` target back to its source. */
 export const BUILD_CONFIG = "tsconfig.build.json";
 
@@ -25,8 +22,8 @@ export const BARE_SPECIFIER: RegExp = /^(?![./])((?:@[^/:]+\/)?[^/:]+)(?:\/|$)/;
 /** A declaration file name. */
 export const DECLARATION: RegExp = /\.d\.[cm]?ts$/;
 
-/** A TypeScript source or declaration file name. */
-export const TYPESCRIPT: RegExp = /\.(?:[cm]?ts|tsx)$/;
+/** A TypeScript source or declaration file name; group 1 is the `c` or `m` of a module kind's extension. */
+export const TYPESCRIPT: RegExp = /\.(?:([cm])?ts|tsx)$/;
 
 /** A script file name, with the `m` or `c` of its extension captured. */
 export const SCRIPT: RegExp = /\.([cm]?)jsx?$/;
@@ -40,4 +37,27 @@ export const NAME_STAND_IN = "_";
 /** Where a package's installed manifest sits below a `node_modules` dir. */
 export function installedManifest(name: string): string {
   return `${INSTALLED_DIR}/${name}/${MANIFEST}`;
+}
+
+/** `jsx: preserve` as a number in parsed compiler options; TS 7 ships its JsxEmit enum as a type only. */
+export const JSX_PRESERVE = 1;
+
+/** The scope DefinitelyTyped publishes a package's types under, `@types/a` for `a` and `@types/s__p` for `@s/p`. */
+export const TYPES_SCOPE = "@types/";
+
+/** The config tsc emits the own declarations under, written in the surface's temp dir. */
+export const EMIT_CONFIG = "emit.json";
+
+/** The config the scan project extends, written beside the emit config. */
+export const SCAN_CONFIG = "scan.json";
+
+/** The prefix of the temp dir, under the package's `.repo/tmp`, that tsc emits the declarations into. */
+export const SURFACE_TEMP = "surface-";
+
+/** A line `tsc --listEmittedFiles` prints for each file it writes. */
+export const EMITTED_LINE: RegExp = /^TSFILE: (.+)$/;
+
+/** Why a surface cannot be read: tsc emitted no declaration for an exported source, with tsc's first line. */
+export function noDeclaration(source: string, first: string): string {
+  return `tsc emitted no declaration for ${source}: ${first}`;
 }

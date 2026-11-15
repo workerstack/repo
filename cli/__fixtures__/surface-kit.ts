@@ -8,14 +8,14 @@ import { typeSurface, type Surface } from "../type-surface.ts";
 export type Seen = { dir: string; uses: Record<string, string[]>; keys: Record<string, string>; missing: Surface["missing"] };
 
 /** Per test file: a scan of a kit, after `prepare` changes its dir; the dirs are removed after each test. */
-export function useSurfaceOf(prefix: string): (kit: Kit, prepare?: (dir: string) => void) => Seen {
+export function useSurfaceOf(prefix: string): (kit: Kit, prepare?: (dir: string) => void) => Promise<Seen> {
   const tree = useTempTree(prefix);
 
-  return (kit, prepare) => {
+  return async (kit, prepare) => {
     const dir = tree(kitFiles(kit));
     prepare?.(dir);
     const read = readWorkspace(dir);
-    const { uses, keys, missing } = typeSurface(dir, read.ok ? read.workspace.manifest : {});
+    const { uses, keys, missing } = await typeSurface(dir, read.ok ? read.workspace.manifest : {});
 
     return { dir, keys: Object.fromEntries(keys), missing, uses: Object.fromEntries(uses) };
   };

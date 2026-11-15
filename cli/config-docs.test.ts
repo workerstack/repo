@@ -1,127 +1,158 @@
 import path from "node:path";
 
-import ts from "typescript-5.9";
-import { describe, expect, it } from "vitest";
+import { isTypeAliasDeclaration } from "typescript/unstable/ast/is";
+import { SymbolFlags, TypeFlags } from "typescript/unstable/async";
+import type { Checker, Symbol as TsSymbol, Type } from "typescript/unstable/async";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { SECTION_PACKS } from "./config-schema.ts";
+import { withFiles, withTsApi } from "./ts-api.ts";
+import { posix } from "./ts-program.ts";
 
-const TYPES = path.join(import.meta.dirname, "repo-config.types.ts");
-
-/** In the forward-slash form the compiler hands its host on every platform, Windows too. */
-const PROBE = path.join(import.meta.dirname, "__config-docs-probe.ts").replaceAll(path.sep, "/");
+/** In the forward-slash form the API keys its files by on every platform, Windows too. */
+const DIR = posix(import.meta.dirname);
+const PROBE = "__config-docs-probe.ts";
 const PROBE_TEXT = 'import type { RepoConfig } from "./repo-config.types.ts";\nexport type Probe = RepoConfig;\n';
+const BASE = "tsconfig.config-docs.json";
 
-const OPTIONS: ts.CompilerOptions = {
+const OPTIONS = {
   allowImportingTsExtensions: true,
   exactOptionalPropertyTypes: true,
-  module: ts.ModuleKind.ESNext,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
+  module: "esnext",
+  moduleResolution: "bundler",
   noEmit: true,
   strict: true,
-  target: ts.ScriptTarget.ES2022,
+  target: "es2022",
   types: [],
 };
 
-/** The checker and the walk's cycle guard, shared by every step of one walk. */
-type Walk = { readonly checker: ts.TypeChecker; readonly seen: Set<ts.Type> };
+/** The checker and the walk's cycle guard, by type id, shared by every step of one walk. */
+type Walk = { readonly checker: Checker; readonly seen: Set<number> };
 
-/** A program over the config types plus one in-memory file that names `RepoConfig` with every pack on. */
-function probeChecker() {
-  const host = ts.createCompilerHost(OPTIONS);
-  const disk = ts.createCompilerHost(OPTIONS);
+/** What the three tests assert, read on one API: the doc problems, the options with no example, wrong pack notes. */
+type Read = { problems: string[]; unexampled: string[]; unpacked: string[] };
 
-  host.fileExists = (file) => file === PROBE || disk.fileExists(file);
-  host.readFile = (file) => (file === PROBE ? PROBE_TEXT : disk.readFile(file));
-  host.getSourceFile = (file, version, ...rest) =>
-    file === PROBE ? ts.createSourceFile(file, PROBE_TEXT, version) : disk.getSourceFile(file, version, ...rest);
-  const program = ts.createProgram([PROBE, TYPES], OPTIONS, host);
-  const checker = program.getTypeChecker();
-  const alias = program.getSourceFile(PROBE)?.statements.find(ts.isTypeAliasDeclaration);
+/** The object types one union member holds: itself when it has properties, and what its entries or values hold. */
+async function memberObjects(checker: Checker, member: Type): Promise<Type[]> {
+  const isList = (await checker.isArrayType(member)) || (await checker.isTupleType(member));
+  const found: Type[] = [];
 
-  if (alias === undefined) throw new Error("the probe file declares Probe");
+  if (isList && member.isTypeReference()) {
+    for (const arg of await checker.getTypeArguments(member)) found.push(...(await innerObjects(checker, arg)));
 
-  return { checker, probe: checker.getTypeAtLocation(alias.name) };
+    return found;
+  }
+
+  if ((member.flags & (TypeFlags.Object | TypeFlags.Intersection)) === 0) return [];
+
+  for (const info of await checker.getIndexInfosOfType(member))
+    found.push(...(await innerObjects(checker, info.valueType)));
+  const props = await checker.getPropertiesOfType(member);
+
+  return props.length > 0 ? [member, ...found] : found;
 }
 
 /** The object types to walk into: a nested section, an entry of a list or a value of a map; never a string union. */
-function innerObjects(checker: ts.TypeChecker, type: ts.Type): ts.Type[] {
-  const bare = checker.getNonNullableType(type);
-  const members = bare.isUnion() ? bare.types : [bare];
+async function innerObjects(checker: Checker, type: Type): Promise<Type[]> {
+  const bare = (await checker.getNonNullableType(type)) ?? type;
+  const members = bare.isUnionType() ? await bare.getTypes() : [bare];
+  const found: Type[] = [];
 
-  return members.flatMap((member) => {
-    if (checker.isArrayType(member) || checker.isTupleType(member)) {
-      return checker
-        .getTypeArguments(member /* an array or tuple type is a type reference */ as ts.TypeReference)
-        .flatMap((arg) => innerObjects(checker, arg));
-    }
+  for (const member of members) found.push(...(await memberObjects(checker, member)));
 
-    if ((member.flags & (ts.TypeFlags.Object | ts.TypeFlags.Intersection)) === 0) return [];
-    const index = checker.getIndexInfosOfType(member).flatMap((info) => innerObjects(checker, info.type));
-
-    return member.getProperties().length > 0 ? [member, ...index] : index;
-  });
+  return found;
 }
 
 /** Each problem with the docs of `type`'s properties, `at` the path that reaches it. */
-function docProblems(walk: Walk, type: ts.Type, at: string): string[] {
-  if (walk.seen.has(type)) return [];
-  walk.seen.add(type);
+async function docProblems(walk: Walk, type: Type, at: string): Promise<string[]> {
+  if (walk.seen.has(type.id)) return [];
+  walk.seen.add(type.id);
+  const problems: string[] = [];
 
-  return type.getProperties().flatMap((prop) => propProblems(walk, prop, at));
+  for (const prop of await walk.checker.getPropertiesOfType(type))
+    problems.push(...(await propProblems(walk, prop, at)));
+
+  return problems;
 }
 
 /** Each problem with the docs of one property and of the objects it holds. */
-function propProblems(walk: Walk, prop: ts.Symbol, at: string): string[] {
+async function propProblems(walk: Walk, prop: TsSymbol, at: string): Promise<string[]> {
   const { checker } = walk;
-  const declared = prop.valueDeclaration ?? prop.declarations?.[0];
-
-  if (declared === undefined) return [];
-  const propType = checker.getTypeOfSymbolAtLocation(prop, declared);
+  const propType = await checker.getTypeOfSymbol(prop);
+  const bare = propType === undefined ? undefined : await checker.getNonNullableType(propType);
 
   // A taken name (`?: never`) is a refusal, not an option.
-  if ((checker.getNonNullableType(propType).flags & ts.TypeFlags.Never) !== 0) return [];
+  if (propType === undefined || bare === undefined || (bare.flags & TypeFlags.Never) !== 0) return [];
   const name = `${at}${prop.name}`;
-  const inner = innerObjects(checker, propType);
-  const isOptional = (prop.flags & ts.SymbolFlags.Optional) !== 0;
+  const inner = await innerObjects(checker, propType);
+  const isOptional = (prop.flags & SymbolFlags.Optional) !== 0;
   const problems: string[] = [];
+  const text = await checker.getDocumentationCommentOfSymbol(prop);
+  const hasDefault = await hasTag(checker, prop, "default");
 
-  const text = ts.displayPartsToString(prop.getDocumentationComment(checker)).trim();
+  if (text.trim() === "") problems.push(`${name}: no description`);
 
-  if (text === "") problems.push(`${name}: no description`);
+  if (isOptional && inner.length === 0 && !hasDefault) problems.push(`${name}: no @default`);
+  const nested: string[] = [];
 
-  if (isOptional && inner.length === 0 && !hasTag(checker, prop, "default")) problems.push(`${name}: no @default`);
+  for (const object of inner) nested.push(...(await docProblems(walk, object, `${name}.`)));
 
-  return [...problems, ...inner.flatMap((object) => docProblems(walk, object, `${name}.`))];
+  return [...problems, ...nested];
 }
 
-function hasTag(checker: ts.TypeChecker, prop: ts.Symbol, tag: string) {
-  return prop.getJsDocTags(checker).some((each) => each.name === tag);
+async function hasTag(checker: Checker, prop: TsSymbol, tag: string): Promise<boolean> {
+  const tags = await checker.getJsDocTagsOfSymbol(prop);
+
+  return tags.some((each) => each.name === tag);
+}
+
+/** The three reads over a project of the config types plus one in-memory file that names `RepoConfig`. */
+function readDocs(): Promise<Read> {
+  return withTsApi(DIR, (run) => {
+    run.virtual.set(path.posix.join(DIR, PROBE), PROBE_TEXT);
+    run.virtual.set(path.posix.join(DIR, BASE), JSON.stringify({ compilerOptions: OPTIONS }));
+
+    return withFiles(run, { base: BASE, dir: DIR, files: [PROBE] }, async ({ checker, program }) => {
+      const file = await program.getSourceFile(path.posix.join(DIR, PROBE));
+      const alias = file?.statements.find(isTypeAliasDeclaration);
+      const probe = alias === undefined ? undefined : await checker.getTypeAtLocation(alias.name);
+
+      if (probe === undefined) throw new Error("the probe file declares Probe");
+      const problems = await docProblems({ checker, seen: new Set() }, probe, "");
+      const unexampled: string[] = [];
+
+      for (const prop of await checker.getPropertiesOfType(probe))
+        if (!(await hasTag(checker, prop, "example"))) unexampled.push(prop.name);
+      const unpacked: string[] = [];
+
+      for (const [key, pack] of Object.entries(SECTION_PACKS)) {
+        const prop = await checker.getPropertyOfType(probe, key);
+        const text = prop === undefined ? "" : await checker.getDocumentationCommentOfSymbol(prop);
+
+        if (!text.includes(`Needs the \`${pack}\` pack`)) unpacked.push(key);
+      }
+
+      return { problems, unexampled, unpacked };
+    });
+  });
 }
 
 describe("repo.config.ts docs", () => {
-  const { checker, probe } = probeChecker();
+  let read: Read;
+
+  beforeAll(async () => {
+    read = await readDocs();
+  });
 
   it("documents every option at every depth, with a default for each optional value", () => {
-    expect(docProblems({ checker, seen: new Set() }, probe, "")).toStrictEqual([]);
+    expect(read.problems).toStrictEqual([]);
   });
 
   it("gives each top-level option an example", () => {
-    const missing = probe
-      .getProperties()
-      .filter((prop) => !hasTag(checker, prop, "example"))
-      .map((prop) => prop.name);
-
-    expect(missing).toStrictEqual([]);
+    expect(read.unexampled).toStrictEqual([]);
   });
 
   it("names the pack each gated section needs", () => {
-    const wrong = Object.entries(SECTION_PACKS).filter(([key, pack]) => {
-      const prop = probe.getProperty(key);
-      const text = ts.displayPartsToString(prop?.getDocumentationComment(checker) ?? []);
-
-      return !text.includes(`Needs the \`${pack}\` pack`);
-    });
-
-    expect(wrong).toStrictEqual([]);
+    expect(read.unpacked).toStrictEqual([]);
   });
 });

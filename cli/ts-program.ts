@@ -1,19 +1,12 @@
 /**
- * The compiler options a script checks a file with: those of the `tsconfig.json` nearest above it (its owner), or of a
- * config beside that one, such as the strict `tsconfig.src.json`. Shared by the magic, guard, rejection and type
- * surface checks.
+ * Which files the scripts check, the `tsconfig.json` that owns each (the nearest above it), and typescript's path
+ * spelling. Shared by the magic, guard, rejection and type surface checks.
  */
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript-5.9";
-
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
-import type { Result } from "./result.ts";
 import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
-
-/** A program's options, and the files its tsconfig includes, as program paths. */
-export type Setup = { options: ts.CompilerOptions; fileNames: readonly string[] };
 
 const TOP = ".";
 const SOURCE = /\.(?:tsx?|mts|cts)$/;
@@ -23,17 +16,6 @@ const TEST = /\.(?:test|spec|e2e)\./;
 /** Code that must not compile, which `check-rejections.ts` checks instead. */
 const REJECT = /\.reject\.tsx?$/;
 const SKIPPED_DIRS = [FIXTURES_DIR, "e2e", "vendor", "node_modules"];
-
-/** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
-const DEFAULTS: ts.CompilerOptions = {
-  allowImportingTsExtensions: true,
-  module: ts.ModuleKind.Preserve,
-  moduleResolution: ts.ModuleResolutionKind.Bundler,
-  noEmit: true,
-  skipLibCheck: true,
-  strict: true,
-  target: ts.ScriptTarget.ESNext,
-};
 
 /**
  * Whether a root-relative file is TypeScript outside a fixture, e2e or vendored dir, and not a declaration or reject
@@ -74,23 +56,6 @@ export function ownerOf(root: string, rel: string): string | null {
     if (dir === TOP) return null;
     dir = path.posix.dirname(dir);
   }
-}
-
-/** The setup of `config` in the owner `dir` (root-relative), the defaults for no owner, or why it cannot be read. */
-export function setupOf(root: string, dir: string | null, config: string): Result<Setup> {
-  if (dir === null) return { ok: true, value: { fileNames: [], options: DEFAULTS } };
-  const file = posix(path.join(root, dir, config));
-  const read = ts.readConfigFile(file, (name) => ts.sys.readFile(name));
-
-  if (read.error !== undefined) {
-    const message = ts.flattenDiagnosticMessageText(read.error.messageText, " ");
-
-    return { error: [`${path.posix.join(dir, config)}: ${message}`], ok: false };
-  }
-
-  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-
-  return { ok: true, value: { fileNames: parsed.fileNames, options: { ...parsed.options, noEmit: true } } };
 }
 
 /** `files` (root-relative POSIX paths) as program paths under `real`, grouped by the dir of their owning tsconfig. */

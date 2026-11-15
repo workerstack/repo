@@ -71,7 +71,7 @@ async function publicSurfaces(cwd: string, workspace: Workspace, print: Printer)
 
   for (const pkg of scanned) {
     try {
-      surfaces.set(pkg.dir, typeSurface(path.join(cwd, pkg.dir), pkg.manifest));
+      surfaces.set(pkg.dir, await typeSurface(path.join(cwd, pkg.dir), pkg.manifest));
     } catch (error) {
       print.fail([surfaceUnreadable(manifestFileOf(pkg.dir), errorMessage(error))]);
     }

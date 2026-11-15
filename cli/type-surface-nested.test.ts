@@ -14,8 +14,8 @@ const tree = useTempTree("type-surface-outside-");
 const KIT_TYPE = 'import type { Kit } from "kit";\nexport type Api = Kit;\n';
 const BASE = { bin: { pkg: "./bin.js" }, dependencies: { kit: "1.0.0" } };
 
-it("reads a file under a nested package.json without a name as the package's own", () => {
-  const { uses, keys } = surfaceOf({
+it("reads a file under a nested package.json without a name as the package's own", async () => {
+  const { uses, keys } = await surfaceOf({
     files: {
       "dist/cjs/index.d.ts": KIT_TYPE,
       "dist/cjs/package.json": '{"type":"commonjs"}',
@@ -36,7 +36,7 @@ it("reads a file under a nested package.json without a name as the package's own
   expect(keys).toStrictEqual({ "dist/cjs/index.d.ts": "./cjs", "src/index.ts": "." });
 });
 
-it("counts a file outside the package and under no named package.json as no package", () => {
+it("counts a file outside the package and under no named package.json as no package", async () => {
   const files = kitFiles({
     files: { "index.d.ts": 'export type { S } from "../shared/s.ts";\n' },
     manifest: { ...BASE, exports: { ".": { default: "./index.js", types: "./index.d.ts" } } },
@@ -50,7 +50,7 @@ it("counts a file outside the package and under no named package.json as no pack
 
   const dir = path.join(root, "pkg");
   const read = readWorkspace(dir);
-  const { uses, keys } = typeSurface(dir, read.ok ? read.workspace.manifest : {});
+  const { uses, keys } = await typeSurface(dir, read.ok ? read.workspace.manifest : {});
 
   expect(Object.fromEntries(uses)).toStrictEqual({});
   expect(Object.fromEntries(keys)).toStrictEqual({ "index.d.ts": "." });

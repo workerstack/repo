@@ -66,8 +66,11 @@ function nameOf({ names }: Lookups, manifest: string | undefined): string | null
   return found;
 }
 
-/** The locator for the package at `dir`, whose own declarations are held under `virtual`. */
-export function packageLocator(native: string, virtual: string): Locator {
+/**
+ * The locator for the package at `dir`, whose own declarations tsc emitted under `virtual`; `sources` maps each
+ * emitted declaration to the source it is emitted from, whose name it goes by.
+ */
+export function packageLocator(native: string, virtual: string, sources: ReadonlyMap<string, string>): Locator {
   const dir = posix(native);
   const own = path.join(dir, MANIFEST);
   const lookups: Lookups = { dir, manifests: new Map(), names: new Map(), own, virtual };
@@ -78,7 +81,7 @@ export function packageLocator(native: string, virtual: string): Locator {
 
       if (manifestOf(lookups, file) !== own) return null;
 
-      return posix(path.relative(file.startsWith(`${virtual}/`) ? virtual : dir, file));
+      return posix(path.relative(dir, sources.get(file) ?? file));
     },
     packageOf: (file) => {
       const installed = PACKAGE_DIR.exec(file)?.[1];
