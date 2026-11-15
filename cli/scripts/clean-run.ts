@@ -79,29 +79,43 @@ function removeAll(run: CleanRun, remove: RemoveItem[], relOf: (p: string) => st
   return { bytes, done, failed };
 }
 
+/** What one sweep removed, their bytes, how many removes failed, and what it kept. */
+type Swept = { removed: RemoveItem[]; bytes: number; failed: number; keep: KeepItem[] };
+
+function relTo(root: string, p: string): string {
+  return path.relative(root, p).split(path.sep).join("/");
+}
+
+/** Plan the `.repo` dirs under `run.root` and remove each planned path unless a dry run. */
+export function sweepRepoDirs(run: CleanRun): Swept {
+  const { root, now } = run;
+  const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedRepoDirs(root), now, root });
+  const { done, bytes, failed } = removeAll(run, remove, (p) => relTo(root, p));
+
+  return { bytes, failed, keep, removed: done };
+}
+
+/** The report's first line: what the sweep removed (or would), by kind, and its size. */
+export function removedLine(swept: Swept, { root, dryRun }: { root: string; dryRun: boolean }): string {
+  const verb = dryRun ? "would remove" : "removed";
+  const parts = counted(swept.removed, REMOVE_ORDER, PLURAL);
+
+  return parts.length > 0
+    ? `${verb} ${parts.join(", ")} (${size(swept.bytes)})`
+    : `${verb} 0 entries from ${relTo(root, repoPath(root))}`;
+}
+
 /** Plan, delete unless dryRun, report through `out`; returns the exit code. */
 export function runClean(run: CleanRun): number {
-  const { root, now, dryRun, out } = run;
+  const { root, dryRun, out } = run;
+  const swept = sweepRepoDirs(run);
+  out(removedLine(swept, { dryRun, root }));
+  out(`${dryRun ? "would keep" : "kept"} ${keptLine(swept.keep)}`);
 
-  function relOf(p: string): string {
-    return path.relative(root, p).split(path.sep).join("/");
-  }
+  for (const item of swept.keep.filter((k) => k.kind === NESTED_KIND))
+    out(`kept nested ${relTo(root, item.path)}: holds ${item.holds}`);
 
-  const { remove, keep } = cleanPlan({ liveSessions: run.liveSessions, nested: nestedRepoDirs(root), now, root });
-  const { done, bytes, failed } = removeAll(run, remove, relOf);
-  const verb = dryRun ? "would remove" : "removed";
-  const parts = counted(done, REMOVE_ORDER, PLURAL);
-  out(
-    parts.length > 0
-      ? `${verb} ${parts.join(", ")} (${size(bytes)})`
-      : `${verb} 0 entries from ${relOf(repoPath(root))}`,
-  );
-  out(`${dryRun ? "would keep" : "kept"} ${keptLine(keep)}`);
-
-  for (const item of keep.filter((k) => k.kind === NESTED_KIND))
-    out(`kept nested ${relOf(item.path)}: holds ${item.holds}`);
-
-  return failed > 0 ? 1 : 0;
+  return swept.failed > 0 ? 1 : 0;
 }
 
 /** Session ids with a live host process on this machine's board. */

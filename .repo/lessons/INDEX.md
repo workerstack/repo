@@ -2,7 +2,7 @@
 
 # Lessons
 
-- `turn-green-is-not-coverage-green` (hits 9): A green turn still misses the 100% coverage floor
+- `turn-green-is-not-coverage-green` (hits 10): A green turn still misses the 100% coverage floor
 - `posix-only-path-parsing` (hits 6): A path regex that only knows `/` silently skips Windows
 - `temp-consumer-untyped-globals` (hits 5): A new lint rule or type-aware rule trips the sources lint tests plant
 - `migration-proved-on-packed-consumer` (hits 4): Prove a sync migration on a consumer built from the old packed tgz

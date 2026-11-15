@@ -1685,6 +1685,12 @@
     "lines": 100,
     "statements": 100
   },
+  "cli/read-body.ts": {
+    "branches": 100,
+    "functions": 100,
+    "lines": 100,
+    "statements": 100
+  },
   "cli/red-proof-vitest.ts": {
     "branches": 100,
     "functions": 100,

@@ -13,6 +13,8 @@ import { removeTemps } from "../../__fixtures__/remove-temps.ts";
 export const NOW: number = Date.parse("2026-11-03T12:00:00Z");
 export const HOUR = 3600_000;
 export const DAY: number = 24 * HOUR;
+/** Older than the 2-day window loose state keeps. */
+export const STALE_AGE: number = 3 * DAY;
 /** A live and a dead session id. */
 export const LIVE = "11111111-aaaa-4bbb-8ccc-000000000001";
 export const DEAD = "22222222-aaaa-4bbb-8ccc-000000000002";
@@ -69,18 +71,18 @@ export function sweepRepo(tempDir: (prefix: string) => string): string {
   for (const file of ["plans/1-a", "roadmaps/1-r", "handoffs/1-h", "implementations/1-i"])
     put(`${R}/${file}-20261103T000000Z.md`, 48 * HOUR);
   put(`${T}/3-notes-20261103T120000Z.md`, 48 * HOUR);
-  put(`${T}/old.log`, 2 * HOUR);
+  put(`${T}/old.log`, STALE_AGE);
   put(`${T}/new.log`, 5 * 60_000);
-  put(`${T}/review/notes.md`, 2 * HOUR);
-  age(path.join(root, T, "review"), 2 * HOUR);
-  for (const sid of [LIVE, DEAD]) put(`${S}/sessions/${sid}/wrote.txt`, 2 * HOUR);
-  for (const end of [LIVE, DEAD, "default"]) put(`${S}/orchestrator-logs/ask-stop-${end}`, 2 * HOUR);
+  put(`${T}/review/notes.md`, STALE_AGE);
+  age(path.join(root, T, "review"), STALE_AGE);
+  for (const sid of [LIVE, DEAD]) put(`${S}/sessions/${sid}/wrote.txt`, STALE_AGE);
+  for (const end of [LIVE, DEAD, "default"]) put(`${S}/orchestrator-logs/ask-stop-${end}`, STALE_AGE);
   put(`${S}/stash/old.txt`, 48 * HOUR);
   put(`${S}/stash/new.txt`, HOUR);
   put(`${S}/browser/session.json`, 48 * HOUR);
   put(`${S}/evals/cache/old.json`, 48 * HOUR);
   // Adding a file bumps its dir's mtime; the session dirs were last touched with their files.
-  for (const sid of [LIVE, DEAD]) age(path.join(root, S, "sessions", sid), 2 * HOUR);
+  for (const sid of [LIVE, DEAD]) age(path.join(root, S, "sessions", sid), STALE_AGE);
   for (const dir of ["evals/cache", "evals"]) age(path.join(root, S, dir), 48 * HOUR);
   return root;
 }

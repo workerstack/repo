@@ -13,6 +13,8 @@ import type { ShellAt } from "../worktree.types.ts";
 import { main } from "../worktree.ts";
 
 const REPO_BIN = path.join(import.meta.dirname, "../../../bin/repo.ts");
+/** A board home no test creates, so every session reads as dead. */
+const NO_BOARD = path.join(os.tmpdir(), "repo-worktree-tests-no-board");
 
 /** `bun repo worktree <args>` in `cwd` with the harness project-dir vars removed, so the root comes from `cwd` unless a case sets one. */
 export function cli(
@@ -20,7 +22,8 @@ export function cli(
   args: string[],
   { env = {}, input }: { env?: Record<string, string>; input?: string } = {},
 ): SpawnSyncReturns<string> {
-  const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined });
+  // finish sweeps the board home for live sessions; an empty one keeps that off the real home's board.
+  const e = childEnv({ GROK_WORKSPACE_ROOT: undefined, CLAUDE_PROJECT_DIR: undefined, REPO_BOARD_HOME: NO_BOARD });
   // win32 env names ignore case, so an override of PATH must drop the inherited Path.
   for (const k of Object.keys(e)) if (Object.keys(env).some((o) => o.toLowerCase() === k.toLowerCase())) delete e[k];
   return spawnSync(bunPath(), [REPO_BIN, "worktree", ...args], { cwd, env: { ...e, ...env }, input, encoding: "utf8" });
@@ -203,6 +206,8 @@ export function captured<T>(fn: () => T): { value: T; stdout: string; stderr: st
 /** `main(args)` in `cwd` with the harness project-dir vars removed, so the root comes from `cwd`. */
 export function mainIn(cwd: string, args: string[], stdin: string = ""): Run {
   for (const k of ["GROK_WORKSPACE_ROOT", "CLAUDE_PROJECT_DIR"]) vi.stubEnv(k, undefined);
+  // A case that stubs its own board home keeps it; every other one reads an empty board.
+  if ((process.env.REPO_BOARD_HOME ?? "") === "") vi.stubEnv("REPO_BOARD_HOME", NO_BOARD);
   process.chdir(cwd);
   const { value, stdout, stderr } = captured(() => main(args, stdinOf(stdin)));
   return { code: value, stdout, stderr };

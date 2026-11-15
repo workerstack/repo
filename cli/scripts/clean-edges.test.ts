@@ -7,14 +7,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { removeTemps } from "../__fixtures__/remove-temps.ts";
 import { childEnv } from "../env.ts";
-import { IGNORE_LINES } from "./__fixtures__/clean-kit.ts";
+import { IGNORE_LINES, STALE_AGE } from "./__fixtures__/clean-kit.ts";
 import { cleanPlan } from "./clean-plan.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedRepoDirs } from "./clean-scan.ts";
 import { main } from "./clean.ts";
 
 const NOW = Date.parse("2026-11-03T12:00:00Z");
-const DAY = 24 * 3600_000;
 
 const dirs: string[] = [];
 
@@ -36,7 +35,7 @@ function put(root: string, rel: string, body: string | Buffer) {
   const file = path.join(root, rel);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, body);
-  const t = new Date(NOW - 2 * DAY);
+  const t = new Date(NOW - STALE_AGE);
   fs.utimesSync(file, t, t);
 
   return file;

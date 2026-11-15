@@ -16,7 +16,9 @@ import path from "node:path";
 import { z } from "zod";
 
 import { readJson } from "../json.ts";
+import { REPO, repoPath } from "../repo-dirs.ts";
 import { errorMessage } from "../sync-errors.ts";
+import { liveSessions, removedLine, sweepRepoDirs } from "./clean-run.ts";
 import { parseHookInput, type HookInput } from "./hook-input.ts";
 import { processHookIo, readAllText, type HookIo } from "./hook-io.ts";
 import { resolveRoots } from "./workspace-root.ts";
@@ -150,10 +152,30 @@ function runHook(io: HookIo): number {
   return res.code;
 }
 
+/** The line for what the `.repo` sweep removed, if anything; a skipped path or a throw warns on stderr instead. */
+function cleanLines(root: string): string[] {
+  try {
+    const swept = sweepRepoDirs({
+      dryRun: false,
+      liveSessions: liveSessions(),
+      now: Date.now(),
+      out: (line) => process.stderr.write(`${line}\n`),
+      root,
+    });
+
+    return swept.removed.length > 0 ? [`cleaned ${REPO}: ${removedLine(swept, { dryRun: false, root })}`] : [];
+  } catch (e) {
+    process.stderr.write(`could not clean ${repoPath(root)}: ${errorMessage(e)}; run bun repo clean there\n`);
+
+    return [];
+  }
+}
+
 function finish(arg: string | undefined, deps: FinishDeps): number {
   const roots = resolveRoots({});
+  const line = finishLine(finishWith(deps)(roots.root, arg, roots.cwd), roots.root);
 
-  return print([finishLine(finishWith(deps)(roots.root, arg, roots.cwd), roots.root)]);
+  return print([line, ...cleanLines(roots.root)]);
 }
 
 /** Run the subcommand `argv` opens with; null when it is none of them. */

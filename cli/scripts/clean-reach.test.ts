@@ -8,7 +8,17 @@ import { expect, it } from "vitest";
 import { bunPath } from "../../dev/test-paths";
 import { childEnv } from "../env.ts";
 import { IGNORED_DIRS, STATE_DIRS, STATE } from "../repo-dirs.ts";
-import { cleanDirs, exists, IGNORE_LINES, HOUR, LIVE, NOW, planter, sweepRepo } from "./__fixtures__/clean-kit.ts";
+import {
+  cleanDirs,
+  exists,
+  IGNORE_LINES,
+  HOUR,
+  LIVE,
+  NOW,
+  planter,
+  STALE_AGE,
+  sweepRepo,
+} from "./__fixtures__/clean-kit.ts";
 import { SESSION_REL } from "./browser.constants.ts";
 import { liveSessions, runClean } from "./clean-run.ts";
 import { nestedHolds } from "./clean-scan.ts";
@@ -37,7 +47,7 @@ it("repo clean from a linked worktree cleans the main checkout's scratch", () =>
   git(root, "commit", "-qm", "init");
   git(root, "worktree", "add", "-q", ".worktrees/w", "-b", "wt/w");
   const put = planter(root);
-  put(".repo/scratch/old.log", 48 * HOUR);
+  put(".repo/scratch/old.log", STALE_AGE);
   put(".repo/plans/1-a-20261103T000000Z.md", 48 * HOUR);
   const cli = fileURLToPath(new URL("../../bin/repo.ts", import.meta.url));
   execFileSync(bunPath(), [cli, "clean"], {

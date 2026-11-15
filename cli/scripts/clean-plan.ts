@@ -21,12 +21,12 @@ import {
   AGE,
   DAY,
   DONE_STATUS,
-  HOUR,
   NESTED_KIND,
   oldKindOf,
   PLANS_DIR,
   PLANS_FAST_DIR,
   policyOf,
+  STALE,
 } from "./clean.constants.ts";
 import type { AgedEntry, CleanPlan, Decision, PlanInput, PlanState, Policy } from "./clean.types.ts";
 import { FILENAME_RE } from "./persist-tmp.ts";
@@ -34,7 +34,7 @@ import { FILENAME_RE } from "./persist-tmp.ts";
 /** One dir's planner: what to do with `p`, the dir `name` (or the state dir `name` of `.repo/tmp`). */
 type Planner = (state: PlanState, name: string, p: string) => void;
 
-function recent(state: PlanState, p: string, window: number = HOUR): boolean {
+function recent(state: PlanState, p: string, window: number = STALE): boolean {
   return newest(p) >= state.now - window;
 }
 

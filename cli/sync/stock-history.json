@@ -2450,6 +2450,7 @@
   "cli/scripts/__fixtures__/claude-hook.ts": ["f603daea29fa0079"],
   "cli/scripts/__fixtures__/clean-kit.ts": [
     "1673c94b1159c1c7",
+    "7769e92cb839cc34",
     "c27646e175908c01",
     "eb5bc9b085d09b98",
     "fbc9c5c71d216353"
@@ -2620,7 +2621,12 @@
   "cli/scripts/__fixtures__/vscode-tasks-kit.ts": ["7c4d80d722a9c303", "fd75fde3503e811b"],
   "cli/scripts/__fixtures__/workflow-guards.ts": ["44551a8016381a4f"],
   "cli/scripts/__fixtures__/worktree-pr.ts": ["9b6aabcd978d29b6"],
-  "cli/scripts/__fixtures__/worktree-repo.ts": ["27a3f02baa1f09e8", "c116a6c95caadfdb", "ee0c1c5f02d43e6e"],
+  "cli/scripts/__fixtures__/worktree-repo.ts": [
+    "15da09e0a2030007",
+    "27a3f02baa1f09e8",
+    "c116a6c95caadfdb",
+    "ee0c1c5f02d43e6e"
+  ],
   "cli/scripts/__fixtures__/worktree-scenarios.ts": ["15ac54339973f980"],
   "cli/scripts/agent-models-lines.ts": [
     "1531dd871777c4bb",
@@ -3408,6 +3414,7 @@
     "ffc85fe082084e43"
   ],
   "cli/scripts/clean-edges.test.ts": [
+    "13eca5accff9ffa9",
     "1544941ebaa25cf5",
     "1798d050fd681145",
     "23e0fed31889371a",
@@ -3434,6 +3441,7 @@
     "117dd56f5067850c",
     "1611304f68738382",
     "1741cb794eb36d8b",
+    "5055ab6bb87644f6",
     "5d5e55265a420934",
     "cb908429382d1906",
     "e8412cd605b96242"
@@ -3447,6 +3455,7 @@
     "6436cc755347a201",
     "76f573771fd1f795",
     "843c2290ece5ee5c",
+    "b221d9a17b3ccf03",
     "bb52d27d62fe487d",
     "d0c7b119ffd20654",
     "d991e71c6388b158"
@@ -3460,7 +3469,8 @@
     "75a5180d61de7442",
     "a4b3b4e592ee014e",
     "b9bc7814c7b278e7",
-    "db1a3471dea65ea4"
+    "db1a3471dea65ea4",
+    "f900ea80d6e986a3"
   ],
   "cli/scripts/clean-scan.ts": [
     "12b8dd48fa028f74",
@@ -3473,6 +3483,7 @@
   "cli/scripts/clean-sweep.test.ts": [
     "0bb42a0124d82fd5",
     "178081a0489af744",
+    "295867fad0092b4a",
     "398d2d3bd0b58474",
     "45dc1a5a9cfab839",
     "a5796d8065a8c793",
@@ -3487,6 +3498,7 @@
     "4737aa54f64c83b4",
     "76fdcf360347a11d",
     "86ac7fdac67ab50b",
+    "afafb61756a3876a",
     "b3be7dc4a6ffbac0",
     "c8c8b3b1b1b1b172",
     "d1cafa66d4ad453d",
@@ -8636,6 +8648,7 @@
     "f01c1d08fab52433",
     "ff919a43cb25a45d"
   ],
+  "cli/scripts/worktree-finish-clean.test.ts": ["8bd79193238941ae"],
   "cli/scripts/worktree-finish-errors.test.ts": [
     "081b2f4e6bd30559",
     "419e027274e62dce",
@@ -8852,6 +8865,7 @@
     "885c1170d0531d79",
     "934bffd9e21e3129",
     "b3f69756da47e5a9",
+    "c2d0c944792b4a94",
     "c4d138ce7c70d721",
     "d9d9503985808498",
     "efd539adfca4fe5a"
@@ -8964,6 +8978,7 @@
     "079e3d23d213aed6",
     "093ed3a655f55cd3",
     "1944509e7d5d4e7a",
+    "1aa4baec2afecd3d",
     "1f22c6ccecac01e8",
     "26b08d2101d7cd58",
     "2899ca86fc085154",
@@ -9159,5 +9174,5 @@
   ],
   "references/speak.md": ["14b52c94f8447bf2", "8afa8c253feb5a30", "d10c6b0673887ee4", "e0d1a1b48986c54c"],
   "references/sync.md": ["67c2caa5d4463b0b", "7e389acc08c15554", "a21ca531b861689e", "e27cec0b466c1dca"],
-  "references/workflow.md": ["6c8b827f6f52fe9b", "86bf876f4428f204"]
+  "references/workflow.md": ["6c8b827f6f52fe9b", "86bf876f4428f204", "9095665e220e94be"]
 }

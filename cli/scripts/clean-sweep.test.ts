@@ -4,15 +4,18 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import {
+  age,
   clean,
   cleanDirs,
   DEAD,
   exists,
   gitInit,
+  DAY,
   HOUR,
   LIVE,
   NOW,
   planter,
+  STALE_AGE,
   sweepRepo,
 } from "./__fixtures__/clean-kit.ts";
 
@@ -110,9 +113,9 @@ it("repo clean removes a stale stray file and a stale stray dir under .repo/tmp"
   const root = tempDir("repo-clean-stray-");
   gitInit(root);
   const put = planter(root);
-  put(".repo/tmp/stray.txt", 2 * HOUR);
-  put(".repo/tmp/stray-dir/x", 2 * HOUR);
-  fs.utimesSync(path.join(root, ".repo/tmp/stray-dir"), new Date(NOW - 2 * HOUR), new Date(NOW - 2 * HOUR));
+  put(".repo/tmp/stray.txt", STALE_AGE);
+  put(".repo/tmp/stray-dir/x", STALE_AGE);
+  fs.utimesSync(path.join(root, ".repo/tmp/stray-dir"), new Date(NOW - STALE_AGE), new Date(NOW - STALE_AGE));
   const { code } = clean(root);
   expect(code).toBe(0);
   expect(exists(root)(".repo/tmp/stray.txt")).toBe(false);
@@ -133,7 +136,7 @@ it("repo clean removes a symlink as a link and leaves its target", () => {
   fs.writeFileSync(path.join(outside, "keep.txt"), "x");
   const link = path.join(root, ".repo/scratch/linked");
   fs.symlinkSync(outside, link, "dir");
-  fs.lutimesSync(link, new Date(NOW - 2 * HOUR), new Date(NOW - 2 * HOUR));
+  fs.lutimesSync(link, new Date(NOW - STALE_AGE), new Date(NOW - STALE_AGE));
   clean(root);
   expect(fs.existsSync(link)).toBe(false);
   expect(fs.existsSync(path.join(outside, "keep.txt"))).toBe(true);
@@ -141,8 +144,32 @@ it("repo clean removes a symlink as a link and leaves its target", () => {
 
 it("repo clean outside git cleans the given root and skips the nested scan", () => {
   const root = tempDir("repo-clean-nogit-");
-  planter(root)(".repo/scratch/old.log", 2 * HOUR);
+  planter(root)(".repo/scratch/old.log", STALE_AGE);
   const { code } = clean(root);
   expect(code).toBe(0);
   expect(exists(root)(".repo/scratch/old.log")).toBe(false);
+});
+
+/** Loose entries of every kind the 2-day window covers, named by `when`, aged `ms`; their paths. */
+function plantLoose(root: string, { when, sid, ms }: { when: string; sid: string; ms: number }): string[] {
+  const put = planter(root);
+  const session = `.repo/tmp/sessions/${sid}`;
+  const files = [`.repo/scratch/${when}.log`, `.repo/tmp/${when}.txt`, `.repo/tmp/orchestrator-logs/ask-stop-${when}`];
+
+  for (const rel of [...files, `${session}/wrote.txt`]) put(rel, ms);
+  age(path.join(root, session), ms);
+
+  return [...files, session];
+}
+
+it("repo clean keeps loose state touched 1 day ago and removes it at 3 days", () => {
+  const root = tempDir("repo-clean-window-");
+  gitInit(root);
+  const day = plantLoose(root, { ms: DAY, sid: "33333333-aaaa-4bbb-8ccc-000000000003", when: "day" });
+  const old = plantLoose(root, { ms: STALE_AGE, sid: DEAD, when: "old" });
+  clean(root);
+
+  for (const rel of day) expect(exists(root)(rel), rel).toBe(true);
+
+  for (const rel of old) expect(exists(root)(rel), rel).toBe(false);
 });

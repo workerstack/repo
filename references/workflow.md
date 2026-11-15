@@ -11,7 +11,7 @@ order: 20
 
 Every change is made in a managed worktree: `bun repo worktree add <name>` makes `.worktrees/<name>` on branch `wt/<name>`. Edit, test and commit there.
 
-- `bun repo worktree finish <name>`, run from the root, rebases `wt/<name>` onto the default branch, fast-forwards the default branch to it, removes the worktree and deletes the branch, and origin's copy when there is one. It pushes nothing else.
+- `bun repo worktree finish <name>`, run from the root, rebases `wt/<name>` onto the default branch, fast-forwards the default branch to it, removes the worktree and deletes the branch, and origin's copy when there is one, then sweeps the root's `.repo` like `bun repo clean`. It pushes nothing else.
 - `bun repo push` from the root then pushes the default branch and waits on CI. On a `wt/*` branch it exits 1: finish first.
 - `bun repo release` runs in the main checkout on the default branch: it commits the release, pushes it, waits on CI, then tags.
 - Gates: a write into the main checkout is denied, outside `.worktrees/` and the ignored `.repo/` dirs. A commit, merge, cherry-pick, revert, am or pull there is denied with `the main checkout is shared: commit inside <root>/.worktrees/<name>, then run bun repo worktree finish <name>`. Stash, reset, checkout, switch, restore, clean and rebase there are denied as a risk to other sessions' work.

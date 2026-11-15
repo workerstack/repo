@@ -7,11 +7,11 @@ export const KB = 1024;
 export const MB: number = KB * KB;
 export const GB: number = MB * KB;
 
-/** An entry touched within this window counts as recent. */
-export const HOUR = 3600_000;
-
 /** A stash receipt lives this long. */
-export const DAY: number = 24 * HOUR;
+export const DAY: number = 24 * 3600_000;
+
+/** Loose scratch and tmp state, dead sessions and stale stamps touched within this window count as recent. */
+export const STALE: number = 2 * DAY;
 
 /** Repo files untouched this long age out (roadmap D12). */
 export const AGE: number = 30 * DAY;
