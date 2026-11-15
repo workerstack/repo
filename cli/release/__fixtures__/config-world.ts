@@ -15,7 +15,7 @@ function configFiles(): Record<string, string> {
   const program = ts.createProgram([path.join(ROOT, ENTRY)], options);
   const own = program
     .getSourceFiles()
-    .map((file) => path.relative(ROOT, file.fileName))
+    .map((file) => path.relative(ROOT, file.fileName).split(path.sep).join("/"))
     .filter((file) => file.startsWith("cli/"));
 
   return Object.fromEntries(own.map((file) => [file, fs.readFileSync(path.join(ROOT, file), "utf8")]));
@@ -30,6 +30,6 @@ function configVersion(version: string): Version {
 export function configTwins(): World {
   const world = apiWorld(configVersion("1.0.0"), configVersion("1.0.1"));
   const zod = path.dirname(createRequire(import.meta.url).resolve("zod/package.json"));
-  fs.symlinkSync(zod, path.join(world.project, INSTALLED_DIR, "zod"));
+  fs.symlinkSync(zod, path.join(world.project, INSTALLED_DIR, "zod"), "junction");
   return world;
 }
